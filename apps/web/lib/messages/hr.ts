@@ -246,7 +246,7 @@ export const hr = {
       kindLabel: "Loại việc",
       phaseLabel: "Thời điểm",
       requiredLabel: "Bắt buộc",
-      allowsPhotoLabel: "Cho phép kèm ảnh",
+      allowsPhotoLabel: "Bắt buộc ảnh minh chứng",
       doneDefinitionLabel: "Tiêu chí xong",
       doneDefinitionPlaceholder:
         "Dấu hiệu để quản lý và nhân viên biết việc đã xong",
@@ -272,8 +272,8 @@ export const hr = {
         consumption_report: "Tiêu hao bếp trong ngày",
       },
       phaseLabels: {
-        start_of_shift: "Khi bắt đầu ca",
-        end_of_shift: "Trước khi kết ca",
+        start_of_shift: "Đầu ca",
+        end_of_shift: "Cuối ca",
       },
       errors: {
         position_not_found: "Không tìm thấy vị trí.",

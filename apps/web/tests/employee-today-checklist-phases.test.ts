@@ -186,8 +186,8 @@ test("employee task UI renders inventory count as a count link, not a checkbox",
 
   assert.match(
     employeeTasksClientSource,
-    /\{isCountTask \? \(\s*<ItemMedia[\s\S]*?<IconCount \/>[\s\S]*?\) : \(\s*<div className="flex shrink-0 pt-0\.5">[\s\S]*<Checkbox/,
-    "Count task should render count media while normal tasks keep a left-side checkbox",
+    /\{isCountTask \? \(\s*<ItemMedia[\s\S]*?<IconCount \/>[\s\S]*needsPhoto && !item\.done/,
+    "Count task should render count media while photo tasks capture evidence",
   );
   assert.match(
     employeeTasksClientSource,
@@ -224,7 +224,7 @@ test("employee task checklist stays single-column and wraps long task copy", () 
   );
   assert.match(
     employeeTasksClientSource,
-    /<ItemContent className="min-w-0 gap-2">/,
+    /<ItemContent className="min-w-0 gap-1">/,
     "Task copy should render inside the flexible content column",
   );
   assert.match(
@@ -234,8 +234,8 @@ test("employee task checklist stays single-column and wraps long task copy", () 
   );
   assert.match(
     employeeTasksClientSource,
-    /<ItemDescription className="line-clamp-none max-w-full whitespace-normal break-words text-xs leading-5">/,
-    "Long done definitions must wrap without clamping",
+    /<ItemDescription className="line-clamp-1 max-w-full break-words text-xs leading-5">/,
+    "Long done definitions must clamp to one line on the compact task row",
   );
   assert.match(
     employeeTasksClientSource,
@@ -244,13 +244,13 @@ test("employee task checklist stays single-column and wraps long task copy", () 
   );
   assert.match(
     employeeTasksClientSource,
-    /className="flex w-full flex-wrap items-center gap-1\.5"[\s\S]*data-shift-task-meta/,
-    "Task badges should wrap under the task copy",
+    /needsPhoto && !item\.done/,
+    "Photo tasks should capture evidence instead of a free checkbox",
   );
-  assert.match(
+  assert.doesNotMatch(
     employeeTasksClientSource,
-    /!item\.done \? \([\s\S]*data-shift-task-meta/,
-    "Checked items should hide the metadata badges",
+    /photoOptionalHint|data-shift-task-meta/,
+    "Compact rows must not keep optional-photo hints or metadata badge piles",
   );
 });
 

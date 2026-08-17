@@ -36,7 +36,10 @@ export async function StaffSchedulePageContent({
 
   if (!ctx) {
     return (
-      <PageShell title={copy.scheduleTitle} hideHeaderOnMobile>
+      <PageShell
+        title={copy.scheduleTitle}
+        hideHeaderOnMobile={plane === "branch"}
+      >
         <EmployeeMissingProfileEmpty profileHref={profileHref} />
       </PageShell>
     );
@@ -57,7 +60,10 @@ export async function StaffSchedulePageContent({
   ]);
 
   return (
-    <PageShell title={copy.scheduleTitle} hideHeaderOnMobile>
+    <PageShell
+      title={copy.scheduleTitle}
+      hideHeaderOnMobile={plane === "branch"}
+    >
       <ScheduleClient
         initialData={
           scheduleResult.success

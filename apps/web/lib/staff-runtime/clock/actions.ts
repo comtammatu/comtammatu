@@ -219,6 +219,9 @@ function mapCheckoutError(message: string | undefined): string {
   if (message?.includes("checklist_incomplete")) {
     return "Cần hoàn thành tất cả việc trong ca trước khi kết ca.";
   }
+  if (message?.includes("photo_required")) {
+    return "Cần chụp ảnh minh chứng cho việc bắt buộc trước khi kết ca.";
+  }
   if (message?.includes("open_attendance_not_found")) {
     return "Không tìm thấy ca đang mở để kết ca.";
   }
@@ -391,7 +394,12 @@ export async function toggleChecklistItem(input: {
   });
 
   if (error) {
-    return { success: false, error: "Không thể cập nhật việc trong ca." };
+    return {
+      success: false,
+      error: error.message?.includes("photo_required")
+        ? "Cần chụp ảnh minh chứng trước khi đánh dấu xong."
+        : "Không thể cập nhật việc trong ca.",
+    };
   }
 
   revalidateEmployeeWorkPaths(ctx.branchId);

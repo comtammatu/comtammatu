@@ -33,7 +33,11 @@ import type {
   ControlSurfaceCoreModuleId,
   ControlSurfaceModuleId,
 } from "@/lib/control-surface-module";
-import type { ShellNavGroup, ShellNavItem } from "@/lib/shell-primitives";
+import {
+  isNavItemActive,
+  type ShellNavGroup,
+  type ShellNavItem,
+} from "@/lib/shell-primitives";
 import { messages } from "@lib/messages";
 import { workCopy } from "@lib/messages/work";
 
@@ -203,7 +207,30 @@ export function resolveControlSurfaceCoreDeepNav(
   return [];
 }
 
-/** Flatten inventory deep-nav groups into one untitled list (sidebar labels). */
+const MAX_BOTTOM_NAV_ITEMS = 4;
+
+/** Catalog cluster collapsed on desktop — membership stays in nav-config. */
+export const CONTROL_SURFACE_CATALOG_HREFS = [
+  "/menu",
+  "/promotions",
+  "/branches",
+  "/feedback",
+] as const;
+
+const INVENTORY_BOTTOM_NAV_HREFS = [
+  "/inventory/stock",
+  "/inventory/grn",
+  "/inventory/transfers",
+  "/inventory/production",
+] as const;
+
+const INVENTORY_BOTTOM_NAV_FILLERS = [
+  "/inventory/purchase-orders",
+  "/inventory/stocktake",
+  "/inventory/consumption",
+] as const;
+
+/** Flatten inventory deep-nav groups into one untitled list (WP0 pin). */
 export function flattenInventoryDeepNav(
   groups: ShellNavGroup[],
 ): ShellNavGroup[] {
@@ -213,6 +240,96 @@ export function flattenInventoryDeepNav(
       items: groups.flatMap((group) => group.items),
     },
   ];
+}
+
+function flattenNavGroups(groups: ShellNavGroup[]): ShellNavItem[] {
+  const seenHref = new Set<string>();
+  const items: ShellNavItem[] = [];
+  for (const group of groups) {
+    for (const entry of group.items) {
+      if (seenHref.has(entry.href)) continue;
+      seenHref.add(entry.href);
+      items.push(entry);
+    }
+  }
+  return items;
+}
+
+function pickHref(
+  items: ShellNavItem[],
+  href: string,
+): ShellNavItem | undefined {
+  return items.find((entry) => entry.href === href);
+}
+
+function appendUnique(
+  selected: ShellNavItem[],
+  candidate: ShellNavItem | undefined,
+): void {
+  if (!candidate) return;
+  if (selected.some((entry) => entry.href === candidate.href)) return;
+  selected.push(candidate);
+}
+
+function applyActiveSwap(
+  selected: ShellNavItem[],
+  pool: ShellNavItem[],
+  pathname: string,
+): ShellNavItem[] {
+  const visible = selected.slice(0, MAX_BOTTOM_NAV_ITEMS);
+  const active = pool.find((entry) => isNavItemActive(entry, pathname));
+  if (!active || visible.some((entry) => entry.href === active.href)) {
+    return visible;
+  }
+  return [...visible.slice(0, MAX_BOTTOM_NAV_ITEMS - 1), active];
+}
+
+export function partitionControlSurfacePrimaryNav(items: ShellNavItem[]): {
+  primary: ShellNavItem[];
+  catalog: ShellNavItem[];
+} {
+  const catalogHrefs = new Set<string>(CONTROL_SURFACE_CATALOG_HREFS);
+  const primary: ShellNavItem[] = [];
+  const catalog: ShellNavItem[] = [];
+  for (const entry of items) {
+    const path = entry.href.split(/[?#]/, 1)[0] ?? entry.href;
+    if (catalogHrefs.has(path)) catalog.push(entry);
+    else primary.push(entry);
+  }
+  return { primary, catalog };
+}
+
+export function selectControlSurfaceBottomNavItems({
+  groups,
+  fallbackItems,
+  pathname,
+  inventory = false,
+}: {
+  groups: ShellNavGroup[];
+  fallbackItems: ShellNavItem[];
+  pathname: string;
+  inventory?: boolean;
+}): ShellNavItem[] {
+  const pool = flattenNavGroups(groups);
+  const items = pool.length > 0 ? pool : fallbackItems;
+
+  if (!inventory) {
+    return applyActiveSwap(items.slice(0, MAX_BOTTOM_NAV_ITEMS), items, pathname);
+  }
+
+  const selected: ShellNavItem[] = [];
+  for (const href of INVENTORY_BOTTOM_NAV_HREFS) {
+    appendUnique(selected, pickHref(items, href));
+  }
+  for (const href of INVENTORY_BOTTOM_NAV_FILLERS) {
+    if (selected.length >= MAX_BOTTOM_NAV_ITEMS) break;
+    appendUnique(selected, pickHref(items, href));
+  }
+  for (const entry of items) {
+    if (selected.length >= MAX_BOTTOM_NAV_ITEMS) break;
+    appendUnique(selected, entry);
+  }
+  return applyActiveSwap(selected, items, pathname);
 }
 
 /**

@@ -16,10 +16,13 @@ test("production create drops kitchen/location ceremony and keeps compact plan f
   assert.doesNotMatch(client, /Nơi xuất nguyên liệu/);
   assert.doesNotMatch(client, /Nơi nhập thành phẩm/);
   assert.match(client, /resolveDefaultLocations/);
-  // Compact plan fields: recipe flexes, quantity column stays a fixed 11rem
-  // (named scale max-w-44) — no arbitrary grid template.
+  // Compact plan fields: recipe flexes; quantity Field must be w-auto so the
+  // default Field w-full cannot steal the row. Input stays named-scale w-44
+  // at field height to match Combobox — no arbitrary grid template.
   assert.match(client, /md:flex md:items-end/);
-  assert.match(client, /className="w-full max-w-44"/);
+  assert.match(client, /className="w-auto shrink-0 gap-1.5"/);
+  assert.match(client, /className="w-44"/);
+  assert.match(client, /controlSize="field"/);
   assert.doesNotMatch(client, /grid-cols-\[/);
 });
 

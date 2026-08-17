@@ -2,7 +2,7 @@
 
 import { useMemo, type ReactNode } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { MODULE_ACL, type StaffRole } from "@comtammatu/shared/auth";
+import type { StaffRole } from "@comtammatu/shared/auth";
 import { NotificationAttentionRuntime } from "@/_components/notification-attention-runtime";
 import { AppShell } from "@/components/app-shell";
 import { ControlSurfaceScopeControl } from "@/components/control-surface-scope-control";
@@ -18,7 +18,6 @@ import { useFinanceRealtimeRefresh } from "@/(protected)/finance/use-finance-rea
 import type { ControlSurfaceModuleId } from "@/lib/control-surface-module";
 import { CONTROL_SURFACE_MODULE_IDS } from "@/lib/control-surface-module";
 import {
-  flattenInventoryDeepNav,
   resolveControlSurfaceDeepNav,
   resolveControlSurfacePrimaryTabs,
   type FinanceNavFlags,
@@ -195,11 +194,9 @@ export function ControlSurfaceShell(props: ControlSurfaceShellProps) {
       const base = resolveControlSurfaceDeepNav(role, "inventory", {
         inventory: flags,
       });
-      return flattenInventoryDeepNav(
-        withInventoryBranchNavScope(base, inventoryCurrentBranchId, {
-          scopeAll: inventoryScopeAll && inventory.canSelectAll,
-        }),
-      );
+      return withInventoryBranchNavScope(base, inventoryCurrentBranchId, {
+        scopeAll: inventoryScopeAll && inventory.canSelectAll,
+      });
     }
 
     if (activeModule === "finance") {
@@ -308,9 +305,6 @@ export function ControlSurfaceShell(props: ControlSurfaceShellProps) {
       sidebarHeaderAccessory={scopeAccessory}
       mobileScopeAccessory={scopeAccessory}
       personalHref={personalHref}
-      mobileHeaderTitle={
-        activeModule === "me" ? MODULE_ACL.me.label : undefined
-      }
     >
       {activeModule === "finance" ? (
         <FinanceRealtimeBridge pathname={pathname} />

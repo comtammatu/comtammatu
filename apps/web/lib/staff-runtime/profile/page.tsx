@@ -298,7 +298,6 @@ export async function StaffProfilePageContent({
       title={copy.title}
       description={copy.description}
       badge={{ children: positionLabel, variant: "outline" }}
-      hideHeaderOnMobile
     >
       <EmployeePanel tone="info" size="sm">
         <div className="grid gap-4">

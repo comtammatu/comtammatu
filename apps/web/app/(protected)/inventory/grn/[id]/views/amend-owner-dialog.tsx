@@ -21,6 +21,7 @@ import { amendGrnLine } from "../../../grn-actions";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import {
   GRN_DETAIL_COPY as grnCopy,
+  grnLineOrderedDeliveredSummary,
   type EditableGrnLine as EditableLine,
 } from "@lib/inventory/grn-detail-model";
 
@@ -160,13 +161,7 @@ export function AmendOwnerDialog({
           <Item variant="outline" className="flex-col items-stretch gap-1 p-3">
             <p className="font-semibold">{line.name}</p>
             <p className="text-xs text-muted-foreground">
-              {grnCopy.line.orderedDeliveredAccepted(
-                line.required,
-                line.actual,
-                line.actual - line.rejected,
-                line.rejected,
-                line.unit,
-              )}
+              {grnLineOrderedDeliveredSummary(line)}
             </p>
           </Item>
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ChevronsUpDown as IconChevronsUpDown,
+  ChevronDown as IconChevronDown,
   LogOut as IconLogout,
   UserRound as IconUserRound,
 } from "lucide-react";
@@ -50,11 +51,17 @@ import {
 } from "@/lib/shell-primitives";
 import { NotificationBell } from "@/_components/notification-bell";
 import { useNotificationBadges } from "@/_hooks/use-notification-badges";
-import { AppPageHeader, AppShellPaddingBoundary } from "@/components/surface";
+import { AppShellPaddingBoundary } from "@/components/surface";
 import { BrandLogoBox, BrandMark } from "@/components/brand";
 import { ControlSurfaceBottomNav } from "@/components/control-surface-bottom-nav";
 import { ThemeMenuItem } from "@/components/theme-toggle";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@comtammatu/ui/components/collapsible";
+import { partitionControlSurfacePrimaryNav } from "@/lib/control-surface-nav";
 import { m, messages } from "@lib/messages";
 
 export interface AppShellProps {
@@ -65,10 +72,9 @@ export interface AppShellProps {
   /** Sub-tabs for the active primary tab. */
   tier2: ShellNavGroup[];
   sidebarHeaderAccessory?: ReactNode;
-  /** Touch (&lt;lg): sticky Phạm vi above the scroll content. */
+  /** Touch (&lt;lg): scope control in the mobile tools band. */
   mobileScopeAccessory?: ReactNode;
   personalHref?: string;
-  mobileHeaderTitle?: string;
   /**
    * Mobile-only control_surface bottom navbar (same nav model as the sidebar +
    * drawer trigger). Default true for control_surface shells.
@@ -175,6 +181,82 @@ function getSidebarSubNavGroups(
     .filter((group) => group.items.length > 0);
 }
 
+function PrimaryNavItem({
+  item,
+  active,
+  pathname,
+  isTouchLayout,
+  subNavGroups,
+}: {
+  item: ShellNavItem;
+  active: boolean;
+  pathname: string;
+  isTouchLayout: boolean;
+  subNavGroups: ShellNavGroup[];
+}) {
+  const Icon = item.icon;
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        isActive={active}
+        size={isTouchLayout ? "lg" : "default"}
+        tooltip={item.label}
+        className="rounded-lg font-medium transition-colors data-active:bg-primary data-active:text-primary-foreground data-active:shadow-sm hover:bg-sidebar-accent"
+        render={
+          <Link href={item.href} aria-current={active ? "page" : undefined}>
+            <Icon />
+            <span className="min-w-0 flex-1 truncate">{item.label}</span>
+            <UnreadBadge count={item.badgeCount} />
+          </Link>
+        }
+      />
+      {subNavGroups.length > 0 ? (
+        <SidebarMenuSub className="mx-4 my-1 gap-1 border-l-2 border-primary/20 px-2 py-1">
+          {subNavGroups.map((group) => (
+            <Fragment key={group.title}>
+              {subNavGroups.length > 1 ? (
+                <SidebarMenuSubItem>
+                  <SectionLabel
+                    density="dense"
+                    className="px-2 py-1 text-sidebar-foreground/70"
+                  >
+                    {group.title}
+                  </SectionLabel>
+                </SidebarMenuSubItem>
+              ) : null}
+              {group.items.map((subItem) => {
+                const SubIcon = subItem.icon;
+                const subActive = isNavItemActive(subItem, pathname);
+                return (
+                  <SidebarMenuSubItem key={subItem.href}>
+                    <SidebarMenuSubButton
+                      isActive={subActive}
+                      size={isTouchLayout ? "touch" : "md"}
+                      className="data-active:bg-primary/10 data-active:font-semibold data-active:text-primary dark:data-active:bg-primary/15 dark:data-active:text-sidebar-foreground"
+                      render={
+                        <Link
+                          href={subItem.linkHref ?? subItem.href}
+                          aria-current={subActive ? "page" : undefined}
+                        >
+                          <SubIcon />
+                          <span className="min-w-0 flex-1 truncate">
+                            {subItem.label}
+                          </span>
+                          <UnreadBadge count={subItem.badgeCount} />
+                        </Link>
+                      }
+                    />
+                  </SidebarMenuSubItem>
+                );
+              })}
+            </Fragment>
+          ))}
+        </SidebarMenuSub>
+      ) : null}
+    </SidebarMenuItem>
+  );
+}
+
 function UnreadBadge({ count = 0 }: { count?: number }) {
   if (count <= 0) return null;
   return (
@@ -201,7 +283,6 @@ export function AppShell({
   sidebarHeaderAccessory,
   mobileScopeAccessory,
   personalHref,
-  mobileHeaderTitle,
   bottomNav = true,
 }: AppShellProps) {
   const pathname = usePathname();
@@ -235,6 +316,11 @@ export function AppShell({
     () => findActivePrimaryNavItem(tier1WithBadges, pathname),
     [pathname, tier1WithBadges],
   );
+  const { primary: primaryItems, catalog: catalogItems } = useMemo(
+    () => partitionControlSurfacePrimaryNav(tier1WithBadges),
+    [tier1WithBadges],
+  );
+  const catalogActive = catalogItems.some((item) => item === activePrimaryItem);
   const showBottomNav = bottomNav && tier1WithBadges.length > 0;
 
   return (
@@ -276,88 +362,60 @@ export function AppShell({
             <SidebarGroupContent>
               <nav aria-label={controlSurfaceCopy.nav.ariaLabel}>
                 <SidebarMenu className="gap-1">
-                  {tier1WithBadges.map((item) => {
-                    const Icon = item.icon;
-                    const active = item === activePrimaryItem;
-                    const subNavGroups = active
-                      ? getSidebarSubNavGroups(tier2WithBadges, item.href)
-                      : [];
-
-                    return (
-                      <SidebarMenuItem key={item.href}>
-                        <SidebarMenuButton
-                          isActive={active}
-                          size={isTouchLayout ? "lg" : "default"}
-                          tooltip={item.label}
-                          className="rounded-lg font-medium transition-colors data-active:bg-primary data-active:text-primary-foreground data-active:shadow-sm hover:bg-sidebar-accent"
+                  {primaryItems.map((item) => (
+                    <PrimaryNavItem
+                      key={item.href}
+                      item={item}
+                      active={item === activePrimaryItem}
+                      pathname={pathname}
+                      isTouchLayout={isTouchLayout}
+                      subNavGroups={
+                        item === activePrimaryItem
+                          ? getSidebarSubNavGroups(tier2WithBadges, item.href)
+                          : []
+                      }
+                    />
+                  ))}
+                  {catalogItems.length > 0 ? (
+                    <Collapsible defaultOpen={catalogActive}>
+                      <SidebarMenuItem>
+                        <CollapsibleTrigger
                           render={
-                            <Link
-                              href={item.href}
-                              aria-current={active ? "page" : undefined}
-                            >
-                              <Icon />
-                              <span className="min-w-0 flex-1 truncate">
-                                {item.label}
-                              </span>
-                              <UnreadBadge count={item.badgeCount} />
-                            </Link>
+                            <SidebarMenuButton
+                              size={isTouchLayout ? "lg" : "default"}
+                              className="rounded-lg font-medium hover:bg-sidebar-accent"
+                            />
                           }
-                        />
-                        {subNavGroups.length > 0 ? (
-                          <SidebarMenuSub className="mx-4 my-1 gap-1 border-l-2 border-primary/20 px-2 py-1">
-                            {subNavGroups.map((group) => (
-                              <Fragment key={group.title}>
-                                {subNavGroups.length > 1 ? (
-                                  <SidebarMenuSubItem>
-                                    <SectionLabel
-                                      density="dense"
-                                      className="px-2 py-1 text-sidebar-foreground/70"
-                                    >
-                                      {group.title}
-                                    </SectionLabel>
-                                  </SidebarMenuSubItem>
-                                ) : null}
-                                {group.items.map((subItem) => {
-                                  const SubIcon = subItem.icon;
-                                  const subActive = isNavItemActive(
-                                    subItem,
-                                    pathname,
-                                  );
-                                  return (
-                                    <SidebarMenuSubItem key={subItem.href}>
-                                      <SidebarMenuSubButton
-                                        isActive={subActive}
-                                        size={isTouchLayout ? "touch" : "md"}
-                                        className="data-active:bg-primary/10 data-active:font-semibold data-active:text-primary dark:data-active:bg-primary/15 dark:data-active:text-sidebar-foreground"
-                                        render={
-                                          <Link
-                                            href={
-                                              subItem.linkHref ?? subItem.href
-                                            }
-                                            aria-current={
-                                              subActive ? "page" : undefined
-                                            }
-                                          >
-                                            <SubIcon />
-                                            <span className="min-w-0 flex-1 truncate">
-                                              {subItem.label}
-                                            </span>
-                                            <UnreadBadge
-                                              count={subItem.badgeCount}
-                                            />
-                                          </Link>
-                                        }
-                                      />
-                                    </SidebarMenuSubItem>
-                                  );
-                                })}
-                              </Fragment>
+                        >
+                          <span className="min-w-0 flex-1 truncate">
+                            {controlSurfaceCopy.nav.catalog}
+                          </span>
+                          <IconChevronDown className="ml-auto size-4 text-sidebar-foreground/60" />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <SidebarMenu className="mt-1 gap-1">
+                            {catalogItems.map((item) => (
+                              <PrimaryNavItem
+                                key={item.href}
+                                item={item}
+                                active={item === activePrimaryItem}
+                                pathname={pathname}
+                                isTouchLayout={isTouchLayout}
+                                subNavGroups={
+                                  item === activePrimaryItem
+                                    ? getSidebarSubNavGroups(
+                                        tier2WithBadges,
+                                        item.href,
+                                      )
+                                    : []
+                                }
+                              />
                             ))}
-                          </SidebarMenuSub>
-                        ) : null}
+                          </SidebarMenu>
+                        </CollapsibleContent>
                       </SidebarMenuItem>
-                    );
-                  })}
+                    </Collapsible>
+                  ) : null}
                 </SidebarMenu>
               </nav>
             </SidebarGroupContent>
@@ -384,40 +442,24 @@ export function AppShell({
         data-control-surface=""
         className="chrome-safe-pt min-h-0 overflow-hidden lg:max-h-[calc(100svh-1rem)] lg:ring-1 lg:ring-sidebar-border/50"
       >
-        {mobileHeaderTitle ? (
-          <div className="flex min-h-14 shrink-0 items-center justify-between gap-3 border-b border-border/70 bg-background px-3 lg:hidden">
-            <AppPageHeader
-              title={mobileHeaderTitle}
-              compactOnMobile
-              className="min-w-0 flex-1"
-              titleClassName="truncate text-lg"
-            />
-            <div className="flex shrink-0 items-center gap-2">
-              <NotificationBell
-                variant="header"
-                unreadCount={notificationSummary.unreadCount}
-              />
-              <AccountMenu
-                user={user}
-                isTouchLayout={isTouchLayout}
-                personalHref={personalHref}
-                variant="mobile"
-              />
-            </div>
-          </div>
-        ) : (
-          <div className="flex min-h-14 shrink-0 items-center justify-end gap-2 border-b border-border/70 bg-background px-3 lg:hidden">
+        <div
+          data-control-surface-mobile-tools=""
+          className="flex shrink-0 items-center gap-2 border-b border-border/70 bg-background px-3 py-2 lg:hidden"
+        >
+          <div className="min-w-0 flex-1">{mobileScopeAccessory}</div>
+          <div className="flex shrink-0 items-center gap-2">
             <NotificationBell
               variant="header"
               unreadCount={notificationSummary.unreadCount}
             />
+            <AccountMenu
+              user={user}
+              isTouchLayout={isTouchLayout}
+              personalHref={personalHref}
+              variant="mobile"
+            />
           </div>
-        )}
-        {mobileScopeAccessory ? (
-          <div className="sticky top-0 z-20 shrink-0 border-b border-border/70 bg-background px-3 py-2 lg:hidden">
-            {mobileScopeAccessory}
-          </div>
-        ) : null}
+        </div>
         <div
           data-control-surface-scroll=""
           className={cn(

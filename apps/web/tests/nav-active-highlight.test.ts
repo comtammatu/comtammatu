@@ -83,7 +83,7 @@ test("mobile Owner surface bottom nav reuses the shell nav model", () => {
     "AppShell must pass the notification-enriched shared nav model to the mobile bottom nav",
   );
   assert.match(bottomNav, /tier2: ShellNavGroup\[\]/);
-  assert.match(bottomNav, /flattenNavGroups\(tier2\)/);
+  assert.match(bottomNav, /selectControlSurfaceBottomNavItems/);
   assert.match(
     bottomNav,
     /className="lg:hidden"/,

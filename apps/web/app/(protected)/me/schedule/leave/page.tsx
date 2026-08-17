@@ -5,7 +5,6 @@ export default function SelfServiceLeavePage() {
     <EmployeeLeavePageContent
       returnHref="/me/schedule"
       profileHref="/me/profile"
-      hideHeaderOnMobile
     />
   );
 }

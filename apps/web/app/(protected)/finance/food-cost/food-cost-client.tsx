@@ -81,6 +81,7 @@ export function FoodCostClient({
         PRODUCT_VI.posItem,
         foodCopy.quantitySold,
         foodCopy.revenueCurrency,
+        foodCopy.unitFoodCostCurrency,
         foodCopy.foodCostCurrency,
         foodCopy.grossMargin,
       ],
@@ -88,6 +89,9 @@ export function FoodCostClient({
         row.item_name ?? "—",
         Number(row.quantity_sold ?? 0),
         Math.round(Number(row.revenue ?? 0)),
+        row.unit_ingredient_cost == null
+          ? "—"
+          : Math.round(Number(row.unit_ingredient_cost)),
         row.ingredient_cost == null
           ? "—"
           : Math.round(Number(row.ingredient_cost)),
@@ -113,6 +117,12 @@ export function FoodCostClient({
       header: foodCopy.revenueCurrency,
       className: "text-right font-mono tabular-nums",
       render: (row) => formatVND(Number(row.revenue ?? 0)),
+    },
+    {
+      key: "unit_food_cost",
+      header: foodCopy.unitFoodCostCurrency,
+      className: "text-right font-mono tabular-nums",
+      render: (row) => formatCostAmount(row.unit_ingredient_cost),
     },
     {
       key: "food_cost",
@@ -198,6 +208,10 @@ export function FoodCostClient({
                 </ItemContent>
                 <ItemFooter>
                   <span className="text-xs font-medium">
+                    {foodCopy.unitFoodCostCurrency}{" "}
+                    {formatCostAmount(row.unit_ingredient_cost)}
+                    {" · "}
+                    {foodCopy.foodCostCurrency}{" "}
                     {formatCostAmount(row.ingredient_cost)}
                   </span>
                   <span

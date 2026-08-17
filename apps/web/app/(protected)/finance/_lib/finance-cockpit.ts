@@ -956,6 +956,126 @@ function buildExceptions({
   ];
 }
 
+/** Home `/` attention only — exception counts/hrefs, not the full cockpit. */
+export async function fetchFinanceAttentionExceptions(
+  params: FinanceParams,
+  resolved: ResolvedFinanceRange,
+): Promise<FinanceException[]> {
+  const { supabase, claims } = await loadAuthState();
+  const includesBranchData = params.location !== "company";
+  const includesCompanyData =
+    params.location === "all" || params.location === "company";
+  const salesBranchIds = includesBranchData
+    ? await fetchSalesBranchIds(supabase as never, claims.tenant_id)
+    : null;
+
+  const [
+    cashVarianceRes,
+    cashVarianceTarget,
+    reconciliationAttention,
+    dashboardSummaryRes,
+    unpaidSupplierInvoices,
+    paymentDesync,
+  ] = await Promise.all([
+    includesBranchData
+      ? fetchCashVarianceSummary(params.branch, resolved.start, resolved.end)
+      : Promise.resolve({ success: true as const, data: null }),
+    includesBranchData
+      ? fetchCashVarianceActionTarget({
+          supabase,
+          branchId: params.branch,
+          startDate: resolved.start,
+          endDate: resolved.end,
+        })
+      : Promise.resolve(null),
+    includesCompanyData
+      ? fetchFinanceReconciliationAttention({
+          supabase,
+          startDate: resolved.start,
+          endDate: resolved.end,
+        })
+      : Promise.resolve(null),
+    includesBranchData
+      ? fetchFinanceDashboardSummary(
+          params.branch,
+          resolved.start,
+          resolved.end,
+        )
+      : Promise.resolve({ success: true as const, data: null }),
+    fetchUnpaidSupplierInvoiceRisk({
+      supabase,
+      tenantId: claims.tenant_id,
+      location: params.location,
+      branchId: params.branch,
+      startDate: resolved.start,
+      endDate: resolved.end,
+      salesBranchIds,
+    }),
+    includesBranchData
+      ? fetchPaymentOrderDesync({
+          supabase,
+          branchId: params.branch,
+          startDate: resolved.start,
+          endDate: resolved.end,
+        })
+      : Promise.resolve({ count: 0, amount: 0 }),
+  ]);
+
+  const cashVarianceHref =
+    cashVarianceTarget != null
+      ? `/br/${String(cashVarianceTarget.branch_id)}/pos-sessions?session=${String(cashVarianceTarget.session_id)}`
+      : params.branch != null
+        ? `/br/${String(params.branch)}/pos-sessions`
+        : undefined;
+  const reconciliationHref = financeHref(
+    "/finance/bank-transactions",
+    {
+      ...params,
+      range: "custom",
+      period: null,
+      from: resolved.start,
+      to: resolved.end,
+    },
+    { recon: "needs_review" },
+  );
+  const dashboardSummary = dashboardSummaryRes.success
+    ? (dashboardSummaryRes.data as FinanceDashboardSummary | null)
+    : null;
+
+  return buildExceptions({
+    params,
+    kpis: {
+      totalCollected: 0,
+      orderCount: 0,
+      netRevenueBeforeVat: 0,
+      inventoryValue: 0,
+      inventoryOpeningValue: 0,
+      inventoryChange: 0,
+      operatingExpense: 0,
+      operatingExpenseRecorded: true,
+      ingredientCost: 0,
+      grossProfit: null,
+      grossMargin: null,
+      operatingResult: null,
+      costAvailable: true,
+      costCoverageOrderCount: 0,
+      costCoverageRatio: 1,
+      cashRevenue: 0,
+      vietqrRevenue: 0,
+    },
+    dashboardSummary,
+    cashVariance: cashVarianceRes.success
+      ? (cashVarianceRes.data as CashVarianceSummary | null)
+      : null,
+    foodCostRows: [],
+    unpaidSupplierInvoices,
+    paymentDesync,
+    cashVarianceHref,
+    reconciliationHref,
+    reconciliationAttention,
+  }).filter((item) => item.tone !== "neutral");
+}
+
 export async function fetchFinanceCockpit(
   params: FinanceParams,
   resolved: ResolvedFinanceRange,

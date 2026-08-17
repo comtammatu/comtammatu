@@ -62,6 +62,7 @@ import {
 import { formatDateVN, formatTimeVN } from "./_lib/vn-business-date";
 import { AppEmptyState } from "@/components/surface";
 import { TasksClient } from "./tasks/tasks-client";
+import { ClockClient, type EmployeeClockRoutes } from "./clock/clock-client";
 import { StaffCountPanelContent } from "./count/page";
 
 type WorkdayTone = "default" | "success" | "warning" | "info" | "destructive";
@@ -289,15 +290,8 @@ function ShiftWorkflowPanel({
             <InlineState
               key={step.key}
               icon={step.icon}
-              title={
-                <span className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-                  <span className="text-xs font-medium text-muted-foreground">
-                    {copy.workflowStep(step.number)}
-                  </span>
-                  <span>{step.title}</span>
-                </span>
-              }
-              description={step.description}
+              title={step.title}
+              description={hasContent ? undefined : step.description}
               tone={step.tone}
               actions={
                 <Badge variant={step.statusVariant}>{step.statusLabel}</Badge>
@@ -582,6 +576,13 @@ export async function StaffWorkdayPageContent({
   const progressBadgeVariant =
     tone === "success" ? "success" : tone === "warning" ? "warning" : "info";
   const primaryActionClassName = "w-full sm:w-fit sm:min-w-44";
+  const clockRoutes: EmployeeClockRoutes = {
+    home: routes.tasks,
+    tasks: routes.tasks,
+    schedule: routes.schedule,
+    profile: routes.profile,
+    managerHr: routes.team ?? routes.clock,
+  };
   const todayMeta = currentShiftName
     ? `${formatDateVN(state.today)} · ${currentShiftName} ${currentShiftRange}`
     : formatDateVN(state.today);
@@ -802,7 +803,9 @@ export async function StaffWorkdayPageContent({
         }
         hideCountTask={Boolean(countPanel)}
         checkoutHref={
-          state.status === "working" && !canRequestCheckout(state)
+          workflowLayout !== "stepper" &&
+          state.status === "working" &&
+          canRequestCheckout(state)
             ? routes.clock
             : undefined
         }
@@ -966,14 +969,12 @@ export async function StaffWorkdayPageContent({
   const checkoutActive =
     hasClockedIn && state.status === "working" && canRequestCheckout(state);
   const checkoutAction = checkoutActive ? (
-    <Button
-      size="touch-lg"
-      className={primaryActionClassName}
-      render={<Link href={routes.clock} />}
-    >
-      <IconLogout data-icon="inline-start" />
-      {state.managerAttendanceOnly ? copy.clockOutDirect : copy.clockOut}
-    </Button>
+    <ClockClient
+      state={state}
+      routes={clockRoutes}
+      plane={plane}
+      surface="embedded"
+    />
   ) : undefined;
 
   const clockStep: ShiftWorkflowStep = {
@@ -985,7 +986,18 @@ export async function StaffWorkdayPageContent({
     statusLabel: hasClockedIn ? copy.shiftDone : copy.workflowCurrent,
     statusVariant: hasClockedIn ? "success" : "warning",
     tone: hasClockedIn ? "success" : "warning",
-    content: hasClockedIn ? undefined : primaryAction,
+    content: hasClockedIn
+      ? undefined
+      : state.shiftUnassigned
+        ? primaryAction
+        : (
+            <ClockClient
+              state={state}
+              routes={clockRoutes}
+              plane={plane}
+              surface="embedded"
+            />
+          ),
   };
   const taskStep: ShiftWorkflowStep = {
     key: "tasks",

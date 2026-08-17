@@ -27,6 +27,7 @@ import {
 } from "@lib/branch-operator/components/branch-operator-page";
 import {
   GRN_DETAIL_COPY as grnCopy,
+  grnLineOrderedDeliveredSummary,
   type GrnDetail,
 } from "@lib/inventory/grn-detail-model";
 
@@ -97,13 +98,7 @@ export function BranchGrnReceiptClient({
                           {line.name}
                         </ItemTitle>
                         <ItemDescription className="line-clamp-none text-xs">
-                          {grnCopy.line.orderedDeliveredAccepted(
-                            line.required,
-                            line.actual,
-                            line.actual - line.rejected,
-                            line.rejected,
-                            line.unit,
-                          )}
+                          {grnLineOrderedDeliveredSummary(line)}
                         </ItemDescription>
                         {line.rejectionReason ? (
                           <ItemDescription className="line-clamp-none text-xs">

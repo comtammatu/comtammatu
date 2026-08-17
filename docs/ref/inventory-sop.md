@@ -28,7 +28,11 @@
    / idempotent — không phải bước quy trình chính.
 4. Kho mở danh sách GRN, nhập thực nhận và từ chối; lý do + ảnh là bắt buộc khi
    có từ chối.
-5. Kho xác nhận GRN. Phần áp dụng PO dùng giá PO; phần dư ngoài đơn nhập giá `0`.
+5. Kho xác nhận GRN. Phần áp dụng PO dùng giá PO; phần dư ngoài đơn nhập giá `0`
+   và **không chặn chốt**. Ví dụ đặt 10 thùng: giao 9 thùng 6 hộp → áp dụng
+   9 thùng 6 hộp, PO `partially_received`, GRN nháp kế cho phần còn; giao
+   10 thùng 6 hộp → áp dụng 10 thùng, 6 hộp tồn giá `0`, PO `received`.
+   Cùng đơn vị (đặt 4, nhận 6) cũng chốt được: áp dụng 4, dư 2 giá `0`.
 6. Nếu PO còn thiếu sau confirm, hệ thống **tự tạo GRN nháp kế tiếp** cho phần
    còn lại. HĐ NCC → Finance/AP.
 

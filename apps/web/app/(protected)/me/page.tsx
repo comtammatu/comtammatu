@@ -14,7 +14,10 @@ import {
   ItemMedia,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
+import {
+  EmployeePage,
+  EmployeePanel,
+} from "@lib/staff-runtime/components/staff-runtime-page";
 import { messages } from "@lib/messages";
 
 const copy = messages.employee.home;
@@ -54,12 +57,11 @@ const HUB_LINKS = [
 
 export default function SelfServicePage() {
   return (
-    <AppPage density="compact" width="wide">
-      <AppPageHeader
-        title={copy.personalHubTitle}
-        description={copy.personalHubDescription}
-      />
-      <AppSection headingLevel="h2">
+    <EmployeePage
+      title={copy.personalHubTitle}
+      description={copy.personalHubDescription}
+    >
+      <EmployeePanel>
         <ItemGroup className="grid gap-2">
           {HUB_LINKS.map((item) => {
             const Icon = item.icon;
@@ -81,7 +83,7 @@ export default function SelfServicePage() {
             );
           })}
         </ItemGroup>
-      </AppSection>
-    </AppPage>
+      </EmployeePanel>
+    </EmployeePage>
   );
 }

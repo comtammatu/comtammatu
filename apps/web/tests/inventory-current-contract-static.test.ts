@@ -171,7 +171,7 @@ test("app authority uses PO approval to GRN and omits retired QC permissions", (
   assert.match(quality, /deriveGrnQualityStatus/);
   assert.doesNotMatch(quality, /Baseline|Variance|REVIEW_PCT/);
   assert.match(grnDetailClient, /\?\s*"Đã nhập kho"/);
-  assert.match(grnLineRow, /Dư ngoài đơn \$\{formatQty\(excessQuantity\)\}/);
+  assert.match(grnLineRow, /Dư ngoài đơn \$\{formatGrnPersistQty\(excessQuantity, line\)\}/);
 });
 
 test("catalog writes cannot bypass PO price authority", () => {

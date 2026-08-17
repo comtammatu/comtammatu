@@ -13,6 +13,7 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import { Label } from "@comtammatu/ui/components/label";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
   Item,
   ItemContent,
@@ -22,8 +23,17 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { AppSheet } from "@/components/surface";
 import { messages } from "@lib/messages";
 import type { TodayChecklistItem } from "../_lib/today-work-state";
+import {
+  MAX_CLOCK_PHOTO_BYTES,
+  MAX_UPLOAD_SOURCE_BYTES,
+  UPLOAD_PHOTO_ACCEPT,
+  UPLOAD_PHOTO_TYPES,
+  normalizePhotoFile,
+} from "../_lib/shift-photo";
+import { useLiveCamera } from "../_lib/use-live-camera";
 import {
   attachChecklistTaskPhoto,
   toggleChecklistItem,
@@ -50,6 +60,153 @@ function sortPhaseItems(items: TodayChecklistItem[]) {
   });
 }
 
+function TaskPhotoSheet({
+  item,
+  disabled,
+  onClose,
+  onCaptured,
+}: {
+  item: TodayChecklistItem | null;
+  disabled: boolean;
+  onClose: () => void;
+  onCaptured: (itemId: number, file: File) => void;
+}) {
+  const camera = useLiveCamera("environment");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const open = item !== null;
+
+  const { start, stop } = camera;
+
+  useEffect(() => {
+    if (!open) {
+      stop();
+      return;
+    }
+    void start();
+    return () => {
+      stop();
+    };
+  }, [open, start, stop]);
+
+  async function handleUpload(file: File | null) {
+    if (!file || !item || disabled) return;
+    setBusy(true);
+    if (!UPLOAD_PHOTO_TYPES.has(file.type)) {
+      toast.error(messages.employee.clock.uploadUnsupported);
+      setBusy(false);
+      return;
+    }
+    if (file.size > MAX_UPLOAD_SOURCE_BYTES) {
+      toast.error(messages.employee.clock.uploadTooLarge);
+      setBusy(false);
+      return;
+    }
+    let normalized: File | null;
+    try {
+      normalized = await normalizePhotoFile(file);
+    } catch {
+      normalized = null;
+    }
+    if (!normalized || normalized.size > MAX_CLOCK_PHOTO_BYTES) {
+      toast.error(messages.employee.clock.uploadUnreadable);
+      setBusy(false);
+      return;
+    }
+    onCaptured(item.id, normalized);
+    setBusy(false);
+  }
+
+  return (
+    <AppSheet
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+      title={item?.title ?? taskCopy.photoCaptureTitle}
+      description={taskCopy.photoCaptureHint}
+      side="bottom"
+      size="md"
+      footer={
+        item ? (
+          <div className="flex w-full flex-col gap-2">
+            <Button
+              type="button"
+              size="touch-lg"
+              className="w-full"
+              disabled={disabled || busy || camera.state !== "ready"}
+              onClick={() => {
+                void camera.capture(`task-${item.id}.webp`).then((file) => {
+                  if (!file) {
+                    toast.error(taskCopy.photoUploadError);
+                    return;
+                  }
+                  camera.stop();
+                  onCaptured(item.id, file);
+                });
+              }}
+            >
+              {camera.state === "capturing" || busy ? (
+                <Spinner data-icon="inline-start" />
+              ) : (
+                <IconCamera data-icon="inline-start" />
+              )}
+              {taskCopy.captureAndComplete}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              className="w-full"
+              disabled={disabled || busy}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {messages.employee.clock.uploadPhoto}
+            </Button>
+          </div>
+        ) : null
+      }
+    >
+      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-md bg-muted">
+        <video
+          ref={camera.videoRef}
+          className={
+            camera.state === "ready" || camera.state === "capturing"
+              ? "h-full w-full object-cover"
+              : "h-full w-full object-cover opacity-0"
+          }
+          autoPlay
+          muted
+          playsInline
+        />
+        {camera.state === "ready" || camera.state === "capturing" ? null : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
+            <Spinner />
+            <span>
+              {camera.state === "error"
+                ? messages.employee.clock.cameraDenied
+                : messages.employee.clock.cameraOpening}
+            </span>
+          </div>
+        )}
+      </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={UPLOAD_PHOTO_ACCEPT}
+        capture="environment"
+        className="sr-only"
+        disabled={disabled || busy}
+        onChange={(event) => {
+          const file = event.target.files?.[0] ?? null;
+          void handleUpload(file);
+          event.target.value = "";
+        }}
+      />
+    </AppSheet>
+  );
+}
+
 export function TasksClient({
   items,
   disabled = false,
@@ -63,6 +220,7 @@ export function TasksClient({
   const [pendingItemIds, setPendingItemIds] = useState<Set<number>>(
     () => new Set(),
   );
+  const [capturingItemId, setCapturingItemId] = useState<number | null>(null);
   const pendingItemIdsRef = useRef<Set<number>>(new Set());
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -118,12 +276,18 @@ export function TasksClient({
   }
 
   function handleToggle(itemId: number, done: boolean) {
-    const previousDone = localItems.find((item) => item.id === itemId)?.done;
-    if (disabled) return;
+    const item = localItems.find((row) => row.id === itemId);
+    if (disabled || !item) return;
+    if (done && item.allowsPhoto && !item.photoPath) {
+      toast.error(taskCopy.photoRequired);
+      setCapturingItemId(itemId);
+      return;
+    }
 
+    const previousDone = item.done;
     setItemPending(itemId, true);
     setLocalItems((current) =>
-      current.map((item) => (item.id === itemId ? { ...item, done } : item)),
+      current.map((row) => (row.id === itemId ? { ...row, done } : row)),
     );
 
     void toggleChecklistItem({ itemId, done })
@@ -143,9 +307,10 @@ export function TasksClient({
       });
   }
 
-  function handlePhotoChange(itemId: number, file: File | null) {
-    if (!file || disabled) return;
+  function handlePhotoCapture(itemId: number, file: File) {
+    if (disabled) return;
     setItemPending(itemId, true);
+    setCapturingItemId(null);
     const formData = new FormData();
     formData.set("itemId", String(itemId));
     formData.set("photo", file);
@@ -159,7 +324,7 @@ export function TasksClient({
         setLocalItems((current) =>
           current.map((item) =>
             item.id === itemId
-              ? { ...item, photoPath: item.photoPath ?? "local" }
+              ? { ...item, photoPath: item.photoPath ?? "local", done: true }
               : item,
           ),
         );
@@ -178,6 +343,10 @@ export function TasksClient({
   const visibleItems = hideCountTask
     ? localItems.filter((item) => item.taskKind !== "inventory_count")
     : localItems;
+  const capturingItem =
+    capturingItemId === null
+      ? null
+      : (visibleItems.find((item) => item.id === capturingItemId) ?? null);
 
   return (
     <div className="flex flex-col gap-4">
@@ -186,47 +355,45 @@ export function TasksClient({
         if (phaseItems.length === 0) return null;
         const sortedPhaseItems = sortPhaseItems(phaseItems);
         const phaseDone = phaseItems.filter((item) => item.done).length;
-        const phaseRequiredRemaining = phaseItems.filter(
-          (item) => item.isRequired && !item.done,
-        ).length;
         const headingId = `shift-task-phase-${phase}`;
 
         return (
           <section
             key={phase}
-            className="flex flex-col gap-3"
+            className="flex flex-col gap-2"
             aria-labelledby={headingId}
           >
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p id={headingId} className="text-sm font-medium">
-                {taskCopy.phaseLabels[phase]}
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                <Badge
-                  variant={
-                    phaseDone === phaseItems.length ? "success" : "secondary"
-                  }
-                >
-                  {phaseDone}/{phaseItems.length} {taskCopy.done}
-                </Badge>
-                {phaseRequiredRemaining > 0 ? (
-                  <Badge variant="warning">
-                    {phaseRequiredRemaining} {taskCopy.requiredRemaining}
-                  </Badge>
-                ) : null}
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <div className="min-w-0">
+                <p id={headingId} className="font-heading text-base font-semibold">
+                  {taskCopy.phaseLabels[phase]}
+                </p>
+                <p className="text-xs leading-5 text-muted-foreground">
+                  {taskCopy.phaseHints[phase]}
+                </p>
               </div>
+              <Badge
+                variant={
+                  phaseDone === phaseItems.length ? "success" : "secondary"
+                }
+              >
+                {phaseDone}/{phaseItems.length}
+              </Badge>
             </div>
             <ItemGroup className="gap-2">
               {sortedPhaseItems.map((item) => {
                 const checkboxId = `shift-task-${item.id}`;
                 const isCountTask = item.taskKind === "inventory_count";
                 const isItemPending = pendingItemIds.has(item.id);
+                const needsPhoto = item.allowsPhoto && !isCountTask;
+                const canMarkDoneWithoutPhoto = !needsPhoto || Boolean(item.photoPath);
                 return (
                   <Item
                     key={item.id}
                     variant="outline"
+                    size="sm"
                     className={cn(
-                      "items-start bg-card transition-[transform,background-color,border-color,box-shadow] duration-150",
+                      "items-start bg-card",
                       item.done
                         ? "border-success/20 bg-success/10"
                         : "hover:bg-muted/50",
@@ -243,6 +410,19 @@ export function TasksClient({
                       >
                         <IconCount />
                       </ItemMedia>
+                    ) : needsPhoto && !item.done ? (
+                      <div className="flex shrink-0 pt-0.5">
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="outline"
+                          disabled={disabled || isItemPending}
+                          aria-label={taskCopy.attachPhoto}
+                          onClick={() => setCapturingItemId(item.id)}
+                        >
+                          <IconCamera />
+                        </Button>
+                      </div>
                     ) : (
                       <div className="flex shrink-0 pt-0.5">
                         <Checkbox
@@ -250,6 +430,14 @@ export function TasksClient({
                           checked={item.done}
                           disabled={disabled || isItemPending}
                           onCheckedChange={(checked) => {
+                            if (
+                              checked === true &&
+                              !canMarkDoneWithoutPhoto
+                            ) {
+                              toast.error(taskCopy.photoRequired);
+                              setCapturingItemId(item.id);
+                              return;
+                            }
                             handleToggle(item.id, checked === true);
                           }}
                           aria-label={
@@ -258,15 +446,19 @@ export function TasksClient({
                         />
                       </div>
                     )}
-                    <ItemContent className="min-w-0 gap-2">
+                    <ItemContent className="min-w-0 gap-1">
                       <ItemTitle
                         className={cn(
-                          "line-clamp-none w-full max-w-full items-start text-sm leading-5",
+                          "line-clamp-2 w-full max-w-full items-start text-sm leading-5",
                           item.done && "text-muted-foreground",
                         )}
                       >
                         {isCountTask ? (
                           <span className="block min-w-0 max-w-full whitespace-normal break-words">
+                            {item.title}
+                          </span>
+                        ) : needsPhoto && !item.done ? (
+                          <span className="block min-w-0 max-w-full whitespace-normal break-words font-normal text-sm leading-5">
                             {item.title}
                           </span>
                         ) : (
@@ -279,63 +471,14 @@ export function TasksClient({
                         )}
                       </ItemTitle>
                       {!item.done && item.doneDefinition ? (
-                        <ItemDescription className="line-clamp-none max-w-full whitespace-normal break-words text-xs leading-5">
+                        <ItemDescription className="line-clamp-1 max-w-full break-words text-xs leading-5">
                           {item.doneDefinition}
                         </ItemDescription>
                       ) : null}
-                      {!item.done ? (
-                        <div
-                          className="flex w-full flex-wrap items-center gap-1.5"
-                          data-shift-task-meta
-                        >
-                          {item.isRequired ? (
-                            <Badge variant="outline">{taskCopy.required}</Badge>
-                          ) : null}
-                          <Badge variant="secondary">{taskCopy.todo}</Badge>
-                          {item.allowsPhoto ? (
-                            <Badge variant="outline">{taskCopy.attachPhoto}</Badge>
-                          ) : null}
-                        </div>
-                      ) : null}
-                      {item.allowsPhoto && !isCountTask ? (
-                        <div className="flex w-full flex-col gap-1.5">
-                          <p className="text-muted-foreground text-xs leading-5">
-                            {item.photoPath
-                              ? taskCopy.photoAttached
-                              : taskCopy.photoOptionalHint}
-                          </p>
-                          <Button
-                            type="button"
-                            size="touch"
-                            variant="outline"
-                            className="w-full sm:w-fit"
-                            disabled={disabled || isItemPending}
-                            onClick={() => {
-                              const input = document.getElementById(
-                                `shift-task-photo-${item.id}`,
-                              );
-                              if (input instanceof HTMLInputElement) {
-                                input.click();
-                              }
-                            }}
-                          >
-                            <IconCamera data-icon="inline-start" />
-                            {taskCopy.attachPhoto}
-                          </Button>
-                          <input
-                            id={`shift-task-photo-${item.id}`}
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp"
-                            capture="environment"
-                            className="sr-only"
-                            disabled={disabled || isItemPending}
-                            onChange={(event) => {
-                              const file = event.target.files?.[0] ?? null;
-                              handlePhotoChange(item.id, file);
-                              event.target.value = "";
-                            }}
-                          />
-                        </div>
+                      {needsPhoto && !item.done ? (
+                        <p className="text-xs text-muted-foreground">
+                          {taskCopy.photoRequiredHint}
+                        </p>
                       ) : null}
                       {isCountTask && !item.done ? (
                         <Button
@@ -366,6 +509,12 @@ export function TasksClient({
           {checkoutLabel}
         </Button>
       ) : null}
+      <TaskPhotoSheet
+        item={disabled ? null : capturingItem}
+        disabled={disabled}
+        onClose={() => setCapturingItemId(null)}
+        onCaptured={handlePhotoCapture}
+      />
     </div>
   );
 }

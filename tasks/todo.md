@@ -5,6 +5,73 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Shorten shift punch, tasks, and checkout
+
+State: verify
+Kind: feature
+Tier: T3
+Lane: hr/self-service
+Exit: Clock-in is one camera tap; in-shift tasks show short start/end phase rows; photo tasks cannot be marked done without a live photo; checkout is one tap on the personal shift page.
+Evidence: Migration `20260817141000_shift_task_photo_required.sql` applied on Production `enloyfnuerqgaqderbwb` 2026-08-17 (batch with GRN). Catalog: toggle/checkout raise `photo_required`; attach sets `is_done = true`. Types unchanged. Static + SQL tests; `lint:copy`; `corepack pnpm verify` green 2026-08-17.
+
+- [ ] Smoke: clock-in one tap; photo task rejects done without photo; capture marks done; checkout from `/br/.../shift`.
+
+UI Advisor Gate
+- Surface: `/br/[branchId]/shift` + `/shift/clock` + `/me/clock`; route family Branch personal day-flow / staff; plane: `branch` / `staff`; change: flow
+- Context: screen-context-map §2.4A personal shift tab; actor: cashier/chef/branch_staff; job: punch, complete shift tasks, request checkout
+- Journey: open shift page → camera → one tap clock-in → compact start then end tasks (photo = capture to complete) → one tap checkout; recovery: retake/upload if camera denied
+- Information order: 1) current step action 2) task title 3) one-line hint; exclude: long done-definition walls, extra clock page hops, optional photo
+- Pattern: LANDING; exemplar: `apps/web/lib/staff-runtime/page.tsx`; data display: Item list + live camera
+- States: not_started, working, photo capture, checkout ready, pending, offline, camera denied
+- Block: `employee-self-service`; components: Employee*/BranchOperator* + AppSheet; fallback: none
+- Responsive/accessibility: phone primary; `playsInline` camera; labels on capture/checkout
+- Verification: static UI + SQL functiondef tests, `lint:copy`, `lint:ui-contract`, `corepack pnpm verify`
+
+## GRN partial, over-receipt, pack+loose units
+
+State: verify
+Kind: feature
+Tier: T3
+Lane: inventory/procurement
+Exit: Partial receipt still allowed; over-receipt (gifts/extras) stocks at cost 0 instead of blocking confirm; warehouse staff can enter pack + loose units on one PO line; persist in the loose unit; remaining/apply compared in base.
+Evidence: Migration `20260817122500_grn_receive_base_qty_and_excess.sql` applied on Production `enloyfnuerqgaqderbwb` 2026-08-17 (batch with shift-task photo). Catalog: confirm compares remaining in base via `inv_to_base`. Types unchanged. Model + static tests; `lint:copy`; `corepack pnpm verify` green 2026-08-17.
+
+- [ ] Confirm Meizan draft `GRN-13082026-0055` (6 vs PO 4).
+- [ ] Smoke pack+loose: PO 10 pack units, GRN 9+6 → `partially_received`; 10+6 → `received` with 6 loose units at cost 0.
+
+UI Advisor Gate
+- Surface: `/inventory/grn` document overlay + branch `/br/…/stock/grn/[id]` review; plane `control_surface` / `branch`; change: flow
+- Context: screen-context-map §2.6; actor: warehouse receiving; job: record physical receipt per delivery
+- Journey: Auto-GRN → pack+loose (or one field) → shortage/excess badge → confirm; recovery: next draft if shortage
+- Information order: ordered qty (pack+loose) → accepted qty → rejected → applied/shortage/excess; exclude: purchase price
+- Pattern: DETAIL/DOC existing GRN; exemplar `grn-line-row.tsx`
+- States: draft edit, shortage, excess (warning, not block), QC reject, confirm
+- Block: none — extend existing line row / draft card / branch line sheet
+- Responsive: same two fields on desktop table and mobile card
+- Verification: targeted GRN/model/SQL tests, `lint:copy`, `lint:ui-contract`, then `corepack pnpm verify`
+
+## Control Surface layout rebuild (chrome, nav, compose)
+
+State: verify
+Kind: feature
+Tier: T2
+Lane: control-surface/layout
+Exit: Control Surface uses one chrome at three densities (tablet inherits phone IA, shell 1024), restored inventory nav groups, four mobile work slots (stock / inbound / transfer / production), LIST/home compose without KPI mosaics or a full `fetchFinanceCockpit` on `/`, `/me` on Employee* adapters, `/notifications` chrome-less per design-system A.7, and Control overlays limited to FormDialog / AppDialog document / AppSheet D1. No new design system, tokens, Owner* kits, or AppDetailFrame. DataTable presentation cut stays 1024 unless the owner explicitly forks tablet tables at 768.
+Evidence: WP0–WP10 landed in product code. Implementation canvas `control-surface-layout-implementation.canvas.tsx`; diagnosis + IA in `control-surface-layout-rebuild.canvas.tsx`; compose/overlay/data contracts in `control-surface-compose-wireframes.canvas.tsx`. `lint:copy`, `lint:ui-contract`, and `corepack pnpm verify` green after the last product edit. WP11 (DataTable 768) was not implemented.
+
+- [ ] Owner smoke: phone inventory bottom nav is stock / inbound / transfer / production; desktop catalog cluster is collapsed; `/` does not pull the full finance cockpit; `/orders` LIST has no KPI mosaic; `/notifications` has no AppShell.
+
+UI Advisor Gate
+- Surface: Control Surface shell + primary tabs / deep nav / bottom nav; routes `/`, `/orders`, `/inventory`, `/me`, `/notifications`; plane: `control_surface`; change: layout
+- Context: screen-context-map Control Surface; actor: owner/ops on L0; job: navigate and complete LIST/DOC work without competing chrome
+- Journey: open Control → module tab → deep work (or modules drawer on phone) → list/filter → overlay D1 when needed; recovery: in-page back on chrome-less `/notifications`
+- Information order: 1) scope + title 2) work 3) at most one list filter 4) bottom nav; exclude: Branch/station chrome, KPI mosaic on LIST/home, Ctrl+K
+- Pattern: mixed LIST / LANDING / STAFF_EMBED / chrome-less notifications; exemplar: GRN list + settings AppLinkCard + EmployeePage
+- States: loading, empty, permission, overlay D1, modules drawer
+- Block: `app-shell` / `control-surface-nav` / `AppListFrame` / `FormDialog`; components: existing App* / Employee* only; fallback: none — no second DS
+- Responsive/accessibility: one H1, max two sticky bands on phone; tablet uses phone IA until 1024; DataTable cards below 1024 unless owner forks
+- Verification: `lint:ui-contract`, `lint:copy`, targeted control-surface tests, then `corepack pnpm verify`
+
 ## POS convert completed cash orders to VietQR
 
 State: verify

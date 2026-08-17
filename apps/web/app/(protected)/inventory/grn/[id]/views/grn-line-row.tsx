@@ -15,10 +15,15 @@ import { PhotoUploadInput, QuantityInput } from "@/components/form";
 import {
   GRN_DETAIL_COPY as grnCopy,
   acceptedGrnQuantity,
+  combinePackLooseQuantity,
   deliveredGrnQuantity,
+  formatGrnPersistQty,
+  formatGrnPoQty,
+  grnLineHasPackLoose,
+  grnLineOrderedDeliveredSummary,
+  splitGrnAcceptedPackLoose,
   type EditableGrnLine as EditableLine,
 } from "@lib/inventory/grn-detail-model";
-import { formatQty } from "@lib/inventory/format";
 import { deriveGrnQualityStatus } from "@lib/inventory/grn-quality";
 import { messages } from "@lib/messages";
 
@@ -57,11 +62,29 @@ export function LineRow({
         ? grnCopy.line.qualityPartial
         : grnCopy.line.qualityRejected;
   const acceptedQuantity = acceptedGrnQuantity(line.actual, line.rejected);
-  const excessQuantity = Math.max(acceptedQuantity - line.poAppliedQuantity, 0);
-  const shortageQuantity = Math.max(
-    line.remainingQuantity - line.poAppliedQuantity,
-    0,
-  );
+  const excessQuantity = line.excessQuantity;
+  const shortageQuantity = line.shortageQuantity;
+  const hasPackLoose = grnLineHasPackLoose(line);
+  const packLooseSplit = splitGrnAcceptedPackLoose(line);
+  const showInspectedValues = line.actual > 0 || line.dirty;
+
+  function commitAccepted(nextAccepted: number) {
+    onChange({
+      actual: deliveredGrnQuantity(Math.max(0, nextAccepted), line.rejected),
+    });
+  }
+
+  function commitPackLoose(packQty: number, looseQty: number) {
+    if (!line.packUnit || !line.looseUnit) return;
+    commitAccepted(
+      combinePackLooseQuantity(
+        packQty,
+        looseQty,
+        line.packUnit.toBaseFactor,
+        line.looseUnit.toBaseFactor,
+      ),
+    );
+  }
   const content = (
     <>
       {showHeader ? (
@@ -71,19 +94,13 @@ export function LineRow({
             {!isDraft ? (
               <>
                 <p className="text-xs text-muted-foreground">
-                  {grnCopy.line.orderedDeliveredAccepted(
-                    line.required,
-                    line.actual,
-                    acceptedQuantity,
-                    line.rejected,
-                    line.unit,
-                  )}
+                  {grnLineOrderedDeliveredSummary(line)}
                 </p>
                 {excessQuantity > 0 || shortageQuantity > 0 ? (
                   <p className="text-xs text-warning-foreground">
                     {excessQuantity > 0
-                      ? `Dư ngoài đơn ${formatQty(excessQuantity)} ${line.unit}`
-                      : `Còn thiếu ${formatQty(shortageQuantity)} ${line.unit}`}
+                      ? `Dư ngoài đơn ${formatGrnPersistQty(excessQuantity, line)}`
+                      : `Còn thiếu ${formatGrnPoQty(shortageQuantity, line)}`}
                   </p>
                 ) : null}
               </>
@@ -137,27 +154,69 @@ export function LineRow({
 
       {isDraft ? (
         <>
-          <Field
-            id={`received-${idx}`}
-            label={grnCopy.line.acceptedLabel(line.unit)}
-            showLabel={showHeader}
-          >
-            <QuantityInput
+          {hasPackLoose && line.packUnit && line.looseUnit ? (
+            <div className="grid gap-3 md:grid-cols-2">
+              <Field
+                id={`received-pack-${idx}`}
+                label={grnCopy.line.acceptedLabel(line.packUnit.label)}
+                showLabel={showHeader}
+              >
+                <QuantityInput
+                  id={`received-pack-${idx}`}
+                  value={
+                    showInspectedValues
+                      ? String(packLooseSplit?.packQty ?? 0)
+                      : ""
+                  }
+                  onValueChange={(value) =>
+                    commitPackLoose(
+                      Math.max(0, Number(value || 0)),
+                      packLooseSplit?.looseQty ?? 0,
+                    )
+                  }
+                  maxFractionDigits={3}
+                />
+              </Field>
+              <Field
+                id={`received-loose-${idx}`}
+                label={grnCopy.line.acceptedLabel(line.looseUnit.label)}
+                showLabel={showHeader}
+              >
+                <QuantityInput
+                  id={`received-loose-${idx}`}
+                  value={
+                    showInspectedValues
+                      ? String(packLooseSplit?.looseQty ?? 0)
+                      : ""
+                  }
+                  onValueChange={(value) =>
+                    commitPackLoose(
+                      packLooseSplit?.packQty ?? 0,
+                      Math.max(0, Number(value || 0)),
+                    )
+                  }
+                  maxFractionDigits={3}
+                />
+              </Field>
+            </div>
+          ) : (
+            <Field
               id={`received-${idx}`}
-              value={
-                line.actual > 0 || line.dirty ? String(acceptedQuantity) : ""
-              }
-              onValueChange={(value) =>
-                onChange({
-                  actual: deliveredGrnQuantity(
-                    Math.max(0, Number(value || 0)),
-                    line.rejected,
-                  ),
-                })
-              }
-              maxFractionDigits={3}
-            />
-          </Field>
+              label={grnCopy.line.acceptedLabel(line.unit)}
+              showLabel={showHeader}
+            >
+              <QuantityInput
+                id={`received-${idx}`}
+                value={
+                  showInspectedValues ? String(acceptedQuantity) : ""
+                }
+                onValueChange={(value) =>
+                  commitAccepted(Math.max(0, Number(value || 0)))
+                }
+                maxFractionDigits={3}
+              />
+            </Field>
+          )}
 
           <details open={line.rejected > 0 ? true : undefined}>
             <summary className="cursor-pointer text-sm font-medium text-muted-foreground">

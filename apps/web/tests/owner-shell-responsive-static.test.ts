@@ -15,9 +15,9 @@ test("Owner bottom nav fits one module action and four destinations", () => {
   assert.match(source, /const MAX_VISIBLE_ITEMS = 4/);
   assert.equal(source.match(/min-w-14/g)?.length, 2);
   assert.doesNotMatch(source, /min-w-16/);
-  assert.match(source, /visible\.slice\(0, MAX_VISIBLE_ITEMS - 1\), active/);
-  assert.match(source, /const deepNavItems = flattenNavGroups\(tier2\);/);
-  assert.match(source, /deepNavItems\.length > 0 \? deepNavItems : tier1/);
+  assert.match(source, /selectControlSurfaceBottomNavItems/);
+  assert.match(source, /inventory: pathname\.startsWith\("\/inventory"\)/);
+  assert.match(source, /\.slice\(0, MAX_VISIBLE_ITEMS\)/);
   assert.match(source, /aria-expanded=\{openMobile\}/);
 });
 

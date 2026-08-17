@@ -536,12 +536,12 @@ test("stock never presents an all-location choice", () => {
   assert.match(branchStocktake, /locationId: selectedWarehouse\.id/);
 });
 
-test("Inventory sidebar keeps workflow labels out of the visible sub-navigation", () => {
+test("Inventory sidebar keeps the four resolveInventoryNav group titles", () => {
   const nav = read("app/lib/control-surface-nav.ts");
   const shell = read("app/components/control-surface-shell.tsx");
 
-  assert.match(nav, /title:\s*""/);
-  assert.match(nav, /\.flatMap\(\(group\) => group\.items\)/);
-  assert.match(shell, /flattenInventoryDeepNav/);
+  assert.match(nav, /export function flattenInventoryDeepNav/);
+  assert.doesNotMatch(shell, /flattenInventoryDeepNav/);
   assert.match(shell, /activeModule === "inventory"/);
+  assert.match(shell, /withInventoryBranchNavScope/);
 });

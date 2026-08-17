@@ -21,7 +21,6 @@ import type { BadgeProps } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { confirm } from "@/components/confirm-dialog";
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { formatVNTime, getVNMinutesOfDay } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
 import { useIsOnline } from "@/components/pwa-runtime";
@@ -41,7 +40,14 @@ import {
   EmployeePanel,
 } from "../components/staff-runtime-page";
 import type { TodayWorkState } from "../_lib/today-work-state";
-import type { EmployeeClockRoutes } from "./page";
+import {
+  MAX_CLOCK_PHOTO_BYTES,
+  MAX_UPLOAD_SOURCE_BYTES,
+  UPLOAD_PHOTO_ACCEPT,
+  UPLOAD_PHOTO_TYPES,
+  normalizePhotoFile,
+} from "../_lib/shift-photo";
+import { useLiveCamera } from "../_lib/use-live-camera";
 import {
   cancelCheckoutRequest,
   clockInWithPhoto,
@@ -49,10 +55,19 @@ import {
   requestCheckoutApproval,
 } from "./actions";
 
+export type EmployeeClockRoutes = {
+  home: string;
+  tasks: string;
+  schedule: string;
+  profile: string;
+  managerHr: string;
+};
+
 interface ClockClientProps {
   state: TodayWorkState;
   routes: EmployeeClockRoutes;
   plane?: ClockPlane;
+  surface?: "page" | "embedded";
 }
 
 type ClockTone = "default" | "success" | "warning" | "info" | "destructive";
@@ -121,22 +136,9 @@ const BRANCH_CLOCK_PRIMITIVES: ClockPlanePrimitives = {
 
 type PhotoState =
   "idle" | "ready" | "processing" | "submitting" | "success" | "error";
-type CameraState = "idle" | "starting" | "ready" | "capturing" | "error";
 type CheckoutState = "idle" | "submitting" | "success" | "error";
 
-const MAX_CLIENT_PHOTO_EDGE = 1280;
-const MAX_UPLOAD_SOURCE_BYTES = 15_000_000;
-const MAX_CLOCK_PHOTO_BYTES = 3_500_000;
-const PHOTO_QUALITY = 0.82;
-const UPLOAD_PHOTO_ACCEPT = "image/jpeg,image/png,image/webp";
-const UPLOAD_PHOTO_TYPES = new Set(UPLOAD_PHOTO_ACCEPT.split(","));
 const clockCopy = messages.employee.clock;
-
-function waitForNextAnimationFrame(): Promise<void> {
-  return new Promise((resolve) => {
-    requestAnimationFrame(() => resolve());
-  });
-}
 
 function formatTime(iso: string | null): string {
   return iso ? formatVNTime(iso) : "—";
@@ -191,98 +193,29 @@ function getCheckoutApprovalTargetLabel(state: TodayWorkState): string {
   return state.approvalTargetLabel;
 }
 
-async function capturePhotoFromVideo(
-  video: HTMLVideoElement,
-): Promise<File | null> {
-  const sourceWidth = video.videoWidth;
-  const sourceHeight = video.videoHeight;
-  if (!sourceWidth || !sourceHeight) return null;
-
-  const scale = Math.min(
-    1,
-    MAX_CLIENT_PHOTO_EDGE / Math.max(sourceWidth, sourceHeight),
-  );
-  const width = Math.max(1, Math.round(sourceWidth * scale));
-  const height = Math.max(1, Math.round(sourceHeight * scale));
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return null;
-  ctx.drawImage(video, 0, 0, width, height);
-
-  const blob = await new Promise<Blob | null>((resolve) => {
-    canvas.toBlob(resolve, "image/webp", PHOTO_QUALITY);
-  });
-  return blob
-    ? new File([blob], "attendance.webp", { type: "image/webp" })
-    : null;
-}
-
-function loadImageFromObjectUrl(url: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const image = new window.Image();
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("photo_decode_failed"));
-    image.src = url;
-  });
-}
-
-async function normalizePhotoFile(file: File): Promise<File | null> {
-  const objectUrl = URL.createObjectURL(file);
-
-  try {
-    const image = await loadImageFromObjectUrl(objectUrl);
-    const sourceWidth = image.naturalWidth;
-    const sourceHeight = image.naturalHeight;
-    if (!sourceWidth || !sourceHeight) return null;
-
-    const scale = Math.min(
-      1,
-      MAX_CLIENT_PHOTO_EDGE / Math.max(sourceWidth, sourceHeight),
-    );
-    const width = Math.max(1, Math.round(sourceWidth * scale));
-    const height = Math.max(1, Math.round(sourceHeight * scale));
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return null;
-    ctx.drawImage(image, 0, 0, width, height);
-
-    const blob = await new Promise<Blob | null>((resolve) => {
-      canvas.toBlob(resolve, "image/webp", PHOTO_QUALITY);
-    });
-
-    if (!blob) return null;
-    return new File([blob], "attendance-upload.webp", { type: "image/webp" });
-  } finally {
-    URL.revokeObjectURL(objectUrl);
-  }
-}
-
 export function ClockClient({
   state,
   routes,
   plane = "employee",
+  surface = "page",
 }: ClockClientProps) {
-  const { ActionGrid, DetailList, Frame, InlineState, Panel } =
+  const { ActionGrid, DetailList, Frame, Panel } =
     plane === "branch" ? BRANCH_CLOCK_PRIMITIVES : EMPLOYEE_CLOCK_PRIMITIVES;
   const router = useRouter();
   const isOnline = useIsOnline();
+  const camera = useLiveCamera("user");
   const [photoState, setPhotoState] = useState<PhotoState>("idle");
-  const [cameraState, setCameraState] = useState<CameraState>("idle");
   const [checkoutState, setCheckoutState] = useState<CheckoutState>("idle");
   const [photo, setPhoto] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const videoRef = useRef<HTMLVideoElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
-  const cameraStreamRef = useRef<MediaStream | null>(null);
+  const autoStartCameraRef = useRef(false);
   const managerAttendanceOnly = state.managerAttendanceOnly;
   const todayShiftName =
     state.attendance?.shiftName ?? state.todayShifts[0]?.shiftName ?? null;
+  const embedded = surface === "embedded";
 
   useEffect(() => {
     return () => {
@@ -290,97 +223,65 @@ export function ClockClient({
     };
   }, [previewUrl]);
 
-  const stopCamera = useCallback(() => {
-    if (cameraStreamRef.current) {
-      for (const track of cameraStreamRef.current.getTracks()) {
-        track.stop();
-      }
-      cameraStreamRef.current = null;
-    }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-  }, []);
-
-  useEffect(() => () => stopCamera(), [stopCamera]);
-
-  // The not-started screen has exactly one job — take the check-in photo —
-  // so the camera opens itself once on mount. One-shot: a manual cancel
-  // must not re-trigger it, and the "Mở camera" button stays as the
-  // fallback when permission is denied.
-  const autoStartCameraRef = useRef(false);
-
-  const startCamera = useCallback(async () => {
-    setError(null);
-
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setCameraState("error");
-      setError("Thiết bị hoặc trình duyệt chưa hỗ trợ chụp ảnh bằng camera.");
-      return;
-    }
-
-    setCameraState("starting");
-    stopCamera();
-
-    try {
-      await waitForNextAnimationFrame();
-
-      const video = videoRef.current;
-      if (!video) {
-        throw new Error("camera_video_not_ready");
-      }
-
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: {
-          facingMode: "user",
-          width: { ideal: 1280 },
-          height: { ideal: 960 },
-        },
-      });
-      cameraStreamRef.current = stream;
-
-      video.srcObject = stream;
-      await video.play();
-      setCameraState("ready");
-    } catch {
-      stopCamera();
-      setCameraState("error");
-      setError("Không thể mở camera. Cho phép quyền camera rồi thử lại.");
-    }
-  }, [stopCamera]);
-
   useEffect(() => {
     if (autoStartCameraRef.current) return;
     if (state.status !== "not_started" || state.shiftUnassigned) return;
     autoStartCameraRef.current = true;
-    void startCamera();
-  }, [startCamera, state.shiftUnassigned, state.status]);
+    void camera.start();
+  }, [camera.start, state.shiftUnassigned, state.status]);
 
-  const capturePhoto = useCallback(async () => {
-    const video = videoRef.current;
-    if (!video || video.readyState < 2) {
+  const completeClockIn = useCallback(
+    (file: File) => {
+      if (!isOnline) {
+        setError(clockCopy.offline);
+        return;
+      }
+
+      setPhoto(file);
+      setPhotoState("submitting");
+      setError(null);
+      startTransition(async () => {
+        const formData = new FormData();
+        formData.set("photo", file);
+        const result = await clockInWithPhoto(null, formData);
+
+        if (result.success) {
+          camera.stop();
+          setPhotoState("success");
+          if (navigator.vibrate) navigator.vibrate(150);
+          if (!embedded) {
+            router.replace(
+              result.data?.nextPath === "home" ? routes.home : routes.tasks,
+            );
+          }
+          router.refresh();
+        } else {
+          setPhotoState("error");
+          setPreviewUrl((current) => {
+            if (current) URL.revokeObjectURL(current);
+            return URL.createObjectURL(file);
+          });
+          setError(result.error ?? "Chấm công vào thất bại.");
+        }
+      });
+    },
+    [camera.stop, embedded, isOnline, router, routes.home, routes.tasks],
+  );
+
+  const punchFromCamera = useCallback(async () => {
+    if (!isOnline) {
+      setError(clockCopy.offline);
+      return;
+    }
+    setError(null);
+    const captured = await camera.capture("attendance.webp");
+    if (!captured) {
       setError("Camera chưa sẵn sàng. Thử lại sau một nhịp.");
       return;
     }
-
-    setError(null);
-    setPhotoState("idle");
-    setCameraState("capturing");
-    const captured = await capturePhotoFromVideo(video);
-
-    if (!captured) {
-      setCameraState("ready");
-      setError("Không thể chụp ảnh từ camera. Thử lại một lần nữa.");
-      return;
-    }
-
-    setPhoto(captured);
-    setPhotoState("ready");
-    setPreviewUrl(URL.createObjectURL(captured));
-    stopCamera();
-    setCameraState("idle");
-  }, [stopCamera]);
+    camera.stop();
+    completeClockIn(captured);
+  }, [camera, completeClockIn, isOnline]);
 
   const uploadPhoto = useCallback(
     async (file: File) => {
@@ -418,46 +319,11 @@ export function ClockClient({
         return;
       }
 
-      setPhoto(normalized);
-      setPreviewUrl(URL.createObjectURL(normalized));
-      setPhotoState("ready");
-      stopCamera();
-      setCameraState("idle");
+      camera.stop();
+      completeClockIn(normalized);
     },
-    [stopCamera],
+    [camera, completeClockIn],
   );
-
-  const submitClockIn = useCallback(() => {
-    if (!isOnline) {
-      setError(clockCopy.offline);
-      return;
-    }
-    if (!photo) {
-      setError(clockCopy.photoRequired);
-      return;
-    }
-
-    setPhotoState("submitting");
-    setError(null);
-    startTransition(async () => {
-      const formData = new FormData();
-      formData.set("photo", photo);
-      const result = await clockInWithPhoto(null, formData);
-
-      if (result.success) {
-        stopCamera();
-        setPhotoState("success");
-        if (navigator.vibrate) navigator.vibrate(150);
-        router.replace(
-          result.data?.nextPath === "home" ? routes.home : routes.tasks,
-        );
-        router.refresh();
-      } else {
-        setPhotoState("error");
-        setError(result.error ?? "Chấm công vào thất bại.");
-      }
-    });
-  }, [isOnline, photo, router, routes.home, routes.tasks, stopCamera]);
 
   const submitCheckout = useCallback(async () => {
     if (!isOnline) {
@@ -492,7 +358,9 @@ export function ClockClient({
       if (result.success) {
         setCheckoutState("success");
         if (navigator.vibrate) navigator.vibrate(150);
-        router.replace(routes.home);
+        if (!embedded) {
+          router.replace(routes.home);
+        }
         router.refresh();
       } else {
         setCheckoutState("error");
@@ -500,6 +368,7 @@ export function ClockClient({
       }
     });
   }, [
+    embedded,
     isOnline,
     managerAttendanceOnly,
     router,
@@ -526,22 +395,24 @@ export function ClockClient({
       const result = await cancelCheckoutRequest({ attendanceId });
       if (result.success) {
         if (navigator.vibrate) navigator.vibrate(80);
-        router.replace(routes.home);
+        if (!embedded) {
+          router.replace(routes.home);
+        }
         router.refresh();
       } else {
         setCheckoutState("error");
         setError(result.error ?? "Không thể rút yêu cầu kết ca.");
       }
     });
-  }, [isOnline, router, routes.home, state.attendance?.id]);
+  }, [embedded, isOnline, router, routes.home, state.attendance?.id]);
 
-  const cameraActive =
-    cameraState === "starting" ||
-    cameraState === "ready" ||
-    cameraState === "capturing";
   const photoBusy =
     isPending || photoState === "processing" || photoState === "submitting";
-  const visibleError = !isOnline ? clockCopy.offline : error;
+  const visibleError =
+    !isOnline
+      ? clockCopy.offline
+      : error ??
+        (camera.state === "error" ? clockCopy.cameraDenied : null);
 
   if (state.status === "missing_branch") {
     return (
@@ -640,11 +511,6 @@ export function ClockClient({
         <DetailList
           rows={[
             {
-              label: clockCopy.branchLabel,
-              value: state.branchName ?? clockCopy.notRecorded,
-              muted: !state.branchName,
-            },
-            {
               label: clockCopy.checkInLabel,
               value: formatTime(state.attendance?.checkIn ?? null),
             },
@@ -672,79 +538,28 @@ export function ClockClient({
 
   if (state.status === "working") {
     const pastShiftEnd = isPastShiftEnd(state);
-    const checkoutTitle = managerAttendanceOnly
-      ? pastShiftEnd
-        ? "Quá giờ ca - Chấm công ra"
-        : clockCopy.managerCheckoutTitle
-      : pastShiftEnd
-        ? "Quá giờ ca - Kết ca làm"
-        : clockCopy.staffCheckoutTitle;
-    const checkoutDescription = managerAttendanceOnly
-      ? pastShiftEnd
-        ? "Ca đã quá giờ kết thúc. Ghi giờ ra để chốt ca hiện tại."
-        : clockCopy.managerCheckoutDescription
-      : pastShiftEnd
-        ? `Ca đã quá giờ kết thúc. ${clockCopy.staffCheckoutDescriptionPrefix} ${state.approvalTargetLabel} ${clockCopy.staffCheckoutDescriptionSuffix}`
-        : `${clockCopy.staffCheckoutDescriptionPrefix} ${state.approvalTargetLabel} ${clockCopy.staffCheckoutDescriptionSuffix}`;
-    const checkoutBadge = managerAttendanceOnly
-      ? pastShiftEnd
-        ? "Quá giờ ca"
-        : clockCopy.managerCheckoutBadge
-      : pastShiftEnd
-        ? "Cần kết ca"
-        : clockCopy.staffCheckoutBadge;
     const checkoutButtonLabel = managerAttendanceOnly
       ? clockCopy.managerCheckoutButton
       : clockCopy.staffCheckoutButton;
     const checkoutPendingLabel = managerAttendanceOnly
       ? clockCopy.managerCheckoutSubmitting
       : clockCopy.staffCheckoutSubmitting;
-    const detailRows = managerAttendanceOnly
-      ? [
-          {
-            label: clockCopy.branchLabel,
-            value: state.branchName ?? clockCopy.notRecorded,
-            muted: !state.branchName,
-          },
-          {
-            label: clockCopy.checkInLabel,
-            value: formatTime(state.attendance?.checkIn ?? null),
-          },
-        ]
-      : [
-          {
-            label: clockCopy.branchLabel,
-            value: state.branchName ?? clockCopy.notRecorded,
-            muted: !state.branchName,
-          },
-          {
-            label: "Việc trong ca",
-            value: `${state.checklist.done}/${state.checklist.total} xong`,
-          },
-          {
-            label: clockCopy.checkInLabel,
-            value: formatTime(state.attendance?.checkIn ?? null),
-          },
-        ];
-
-    return (
-      <Panel
-        icon={IconClock}
-        title={checkoutTitle}
-        description={checkoutDescription}
-        tone={pastShiftEnd ? "warning" : "success"}
-        badge={{
-          children: checkoutBadge,
-          variant: pastShiftEnd ? "warning" : "success",
-        }}
-      >
-        <DetailList rows={detailRows} />
-
+    const checkoutBody = (
+      <>
+        {embedded ? null : (
+          <DetailList
+            rows={[
+              {
+                label: clockCopy.checkInLabel,
+                value: formatTime(state.attendance?.checkIn ?? null),
+              },
+            ]}
+          />
+        )}
         {visibleError ? <ErrorAlert message={visibleError} /> : null}
-
         <Button
-          size="touch"
-          className="w-full sm:w-fit"
+          size="touch-lg"
+          className="w-full"
           onClick={submitCheckout}
           disabled={!isOnline || isPending || checkoutState === "submitting"}
         >
@@ -753,92 +568,83 @@ export function ClockClient({
           ) : (
             <IconCircleCheck data-icon="inline-start" />
           )}
-          {checkoutButtonLabel}
+          {checkoutState === "submitting" || isPending
+            ? checkoutPendingLabel
+            : checkoutButtonLabel}
         </Button>
+      </>
+    );
 
-        {checkoutState === "submitting" ? (
-          <InlineState media={<Spinner />} title={checkoutPendingLabel} />
-        ) : null}
+    if (embedded) {
+      return <div className="flex w-full flex-col gap-3">{checkoutBody}</div>;
+    }
+
+    return (
+      <Panel
+        icon={IconClock}
+        title={
+          managerAttendanceOnly
+            ? clockCopy.managerCheckoutTitle
+            : clockCopy.staffCheckoutTitle
+        }
+        tone={pastShiftEnd ? "warning" : "success"}
+        badge={
+          pastShiftEnd
+            ? { children: clockCopy.pastShiftBadge, variant: "warning" }
+            : undefined
+        }
+      >
+        {checkoutBody}
       </Panel>
     );
   }
 
-  return (
-    <Panel
-      icon={IconCamera}
-      title={clockCopy.clockInTitle}
-      tone="info"
-      badge={{
-        children:
-          photoState === "success"
-            ? clockCopy.recordedBadge
-            : clockCopy.notClockedInBadge,
-        variant: photoState === "success" ? "success" : "info",
-      }}
-    >
-      <DetailList
-        rows={[
-          {
-            label: clockCopy.branchLabel,
-            value: state.branchName ?? clockCopy.noBranch,
-            muted: !state.branchName,
-          },
-          {
-            label: clockCopy.todayShiftLabel,
-            value: todayShiftName ?? clockCopy.noTodayShift,
-            muted: !todayShiftName,
-          },
-        ]}
-      />
+  const punchBody = (
+    <>
+      {embedded ? null : (
+        <p className="text-sm text-muted-foreground">
+          {todayShiftName ?? clockCopy.noTodayShift}
+        </p>
+      )}
 
-      {cameraActive ? (
-        <Frame className="overflow-hidden bg-muted/30">
-          <div className="relative aspect-[4/3] w-full">
-            <video
-              ref={videoRef}
-              className={
-                cameraState === "ready" || cameraState === "capturing"
-                  ? "h-full w-full object-cover"
-                  : "h-full w-full object-cover opacity-0"
-              }
-              autoPlay
-              muted
-              playsInline
-            />
-            {cameraState === "ready" || cameraState === "capturing" ? null : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
-                <Spinner />
-                <span>{clockCopy.cameraOpening}</span>
-              </div>
-            )}
-          </div>
-        </Frame>
-      ) : null}
-
-      {!cameraActive && previewUrl ? (
-        <InlineState
-          media={
-            <Image
-              src={previewUrl}
-              alt=""
-              width={48}
-              height={48}
-              className="size-full object-cover"
-              unoptimized
-            />
-          }
-          mediaClassName="size-12 rounded-md"
-          title={clockCopy.photoReadyTitle}
-          description={photo?.name}
-          className="bg-muted/30"
-        />
-      ) : !cameraActive ? (
-        <InlineState
-          icon={IconCamera}
-          description={clockCopy.cameraNotOpen}
-          className="bg-muted/30"
-        />
-      ) : null}
+      <Frame className="overflow-hidden bg-muted/30">
+        <div className="relative aspect-[4/3] w-full">
+          <video
+            ref={camera.videoRef}
+            className={
+              camera.state === "ready" || camera.state === "capturing"
+                ? "h-full w-full object-cover"
+                : "h-full w-full object-cover opacity-0"
+            }
+            autoPlay
+            muted
+            playsInline
+          />
+          {camera.state === "ready" || camera.state === "capturing" ? null : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
+              {photo && previewUrl ? (
+                <Image
+                  src={previewUrl}
+                  alt=""
+                  width={320}
+                  height={240}
+                  className="h-full w-full object-cover"
+                  unoptimized
+                />
+              ) : (
+                <>
+                  <Spinner />
+                  <span>
+                    {camera.state === "starting"
+                      ? clockCopy.cameraOpening
+                      : clockCopy.cameraNotOpen}
+                  </span>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      </Frame>
 
       {visibleError ? <ErrorAlert message={visibleError} /> : null}
 
@@ -856,93 +662,51 @@ export function ClockClient({
         }}
       />
 
-      {cameraState === "ready" || cameraState === "capturing" ? (
-        <ActionGrid>
-          <Button
-            type="button"
-            size="touch"
-            onClick={capturePhoto}
-            disabled={photoBusy || cameraState === "capturing"}
-          >
-            {cameraState === "capturing" ? (
-              <Spinner data-icon="inline-start" />
-            ) : (
-              <IconCamera data-icon="inline-start" />
-            )}
-            {clockCopy.capturePhoto}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="touch"
-            disabled={photoBusy || cameraState === "capturing"}
-            onClick={() => {
-              stopCamera();
-              setCameraState("idle");
-            }}
-          >
-            {ACTIONS_VI.cancel}
-          </Button>
-        </ActionGrid>
-      ) : photo ? (
-        <ActionGrid>
-          <Button
-            type="button"
-            variant="outline"
-            size="touch"
-            onClick={startCamera}
-            disabled={photoBusy || cameraState === "starting"}
-          >
-            {cameraState === "starting" ? (
-              <Spinner data-icon="inline-start" />
-            ) : (
-              <IconCamera data-icon="inline-start" />
-            )}
-            {cameraState === "starting"
-              ? clockCopy.cameraOpening
-              : clockCopy.retakePhoto}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="touch"
-            onClick={() => photoInputRef.current?.click()}
-            disabled={photoBusy}
-          >
-            {photoState === "processing" ? (
-              <Spinner data-icon="inline-start" />
-            ) : (
-              <IconUpload data-icon="inline-start" />
-            )}
-            {photoState === "processing"
-              ? clockCopy.uploadProcessing
-              : clockCopy.uploadAnotherPhoto}
-          </Button>
-          <Button
-            type="button"
-            size="touch"
-            className="sm:col-span-2"
-            onClick={submitClockIn}
-            disabled={photoBusy || !isOnline}
-          >
-            {photoState === "submitting" || isPending ? (
-              <Spinner data-icon="inline-start" />
-            ) : (
-              <IconCircleCheck data-icon="inline-start" />
-            )}
-            {clockCopy.clockInButton}
-          </Button>
-        </ActionGrid>
-      ) : cameraState === "starting" ? null : (
-        <ActionGrid>
-          <Button
-            type="button"
-            size="touch"
-            onClick={startCamera}
-            disabled={photoBusy}
-          >
+      {photoState === "submitting" || isPending ? (
+        <Button size="touch-lg" className="w-full" disabled>
+          <Spinner data-icon="inline-start" />
+          {clockCopy.clockInSubmitting}
+        </Button>
+      ) : camera.state === "starting" ? (
+        <Button size="touch-lg" className="w-full" disabled>
+          <Spinner data-icon="inline-start" />
+          {clockCopy.cameraOpening}
+        </Button>
+      ) : camera.state === "ready" || camera.state === "capturing" ? (
+        <Button
+          type="button"
+          size="touch-lg"
+          className="w-full"
+          onClick={() => void punchFromCamera()}
+          disabled={photoBusy || camera.state === "capturing"}
+        >
+          {camera.state === "capturing" ? (
+            <Spinner data-icon="inline-start" />
+          ) : (
             <IconCamera data-icon="inline-start" />
-            {clockCopy.openCamera}
+          )}
+          {clockCopy.clockInButton}
+        </Button>
+      ) : (
+        <ActionGrid>
+          <Button
+            type="button"
+            size="touch"
+            onClick={() => {
+              if (photo) {
+                completeClockIn(photo);
+                return;
+              }
+              void camera.start();
+            }}
+            disabled={photoBusy}
+          >
+            {photo ? (
+              <IconCircleCheck data-icon="inline-start" />
+            ) : (
+              <IconCamera data-icon="inline-start" />
+            )}
+            {photo ? clockCopy.clockInButton : clockCopy.openCamera}
           </Button>
           <Button
             type="button"
@@ -962,6 +726,20 @@ export function ClockClient({
           </Button>
         </ActionGrid>
       )}
+    </>
+  );
+
+  if (embedded) {
+    return <div className="flex w-full flex-col gap-3">{punchBody}</div>;
+  }
+
+  return (
+    <Panel
+      icon={IconCamera}
+      title={clockCopy.clockInTitle}
+      tone="info"
+    >
+      {punchBody}
     </Panel>
   );
 }

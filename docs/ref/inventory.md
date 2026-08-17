@@ -156,7 +156,8 @@ chỉ dùng hệ số này). Hai đơn vị chuẩn cùng `dimension` mặc đ�
 
 > **Quy tắc:** `stock_levels.current_quantity`, `stock_movements.quantity_change`
 > và giá vốn BQ **lưu và hiển thị** theo **Đơn vị chuẩn**. Chứng từ chọn mọi
-> `ingredient_units` active: YCM→PO→GRN kế thừa đơn vị; điều chuyển/xuất/tiêu
+> `ingredient_units` active: YCM→PO kế thừa đơn vị mua; GRN persist được đơn vị lẻ/neo
+> rồi so remaining theo Đơn vị chuẩn; điều chuyển/xuất/tiêu
 > hao/hao hụt/kiểm kê/định mức/công thức chọn đơn vị active; lệnh SX dùng
 > snapshot từ công thức. Mỗi dòng lưu snapshot đơn vị + factor. Đổi Đơn vị
 > chuẩn: RPC quy đổi tồn, ngưỡng, WAC và valuation hiện hành trong cùng
@@ -249,15 +250,17 @@ tiêu hao thủ công không ghi lại NL đã trừ từ POS.
    NCC, SL, đơn vị — không giá).
 4. PO `sent` → đúng một GRN nháp **Chờ nhập hàng** (copy dòng thiếu, khóa nháp
    thứ hai). Làm việc từ danh sách GRN.
-5. Kho nhập thực nhận/từ chối; confirm RPC khóa PO/GRN/dòng, áp dụng PO, tăng
-   tồn một lần. Giá tạm từ Hóa đơn NCC đã xác nhận trước đó (hoặc chờ HĐ). PO →
-   `partially_received` / `received`; còn thiếu → GRN nháp kế tiếp.
+5. Kho nhập thực nhận/từ chối (thùng + hộp lẻ khi có neo); confirm so remaining
+   theo Đơn vị chuẩn, áp dụng PO, tăng tồn một lần. Dư giá `0` không chặn chốt.
+   Giá tạm từ HĐ NCC (hoặc chờ HĐ). PO → `partially_received` / `received`; còn
+   thiếu → GRN nháp kế tiếp.
 6. Finance ghi **Hóa đơn NCC** riêng (đối chiếu nhiều GRN/PO); thanh toán /
    giảm công nợ phân bổ nhiều-nhiều.
 
-**Nguyên tắc nhận hàng theo PO:** `grn_items.po_applied_quantity` là phần thực nhận dùng
-hoàn thành PO. Giá cuối cùng thuộc dòng Hóa đơn NCC đã xác nhận và được phân bổ
-vào GRN; PO không là nguồn giá. Kho không được nhận monetary payload từ server.
+**Nguyên tắc nhận hàng theo PO:** `grn_items.po_applied_quantity` hoàn thành PO
+(đơn vị dòng PO). Remaining/áp dụng/dư theo Đơn vị chuẩn; dư nhập tồn cùng
+`grn_receipt` (WAC tử số = tiền áp dụng, mẫu số gồm dư). Giá cuối cùng thuộc
+Hóa đơn NCC đã xác nhận; PO không là nguồn giá. Kho không nhận monetary payload từ server.
 
 PO mới chỉ dùng `supplier_items.is_active = true` với NCC của PO. GRN suy NCC từ
 PO; không đổi NL/quy cách/NCC. Đối soát tiền: giá trị dòng HĐ trước VAT/chiết
@@ -266,7 +269,6 @@ không sửa SL lịch sử GRN. `vat_amount` chỉ vào AP; `vat_breakdown` 0%/
 suy ra header `subtotal` / `vat_amount` / `total_amount`.
 
 ### 5.2 QC vật lý trên GRN
-
 **`branch_id` trên GRN là inventory site nhận hàng.** GRN nhận vào active
 warehouse duy nhất của site.
 

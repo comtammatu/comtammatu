@@ -40,6 +40,10 @@ test("linked PO freezes GRN line and receiving-location mutations", () => {
     receivingSite,
     /\.eq\("status", "draft"\)\s*\.is\("po_id", null\)/,
   );
+  assert.match(
+    upsertLine,
+    /data\.entryUnitId != null\s*\? \{ entry_unit_id: data\.entryUnitId \}/,
+  );
 });
 
 test("free-draft lookup stays isolated while PO drafts cancel through the RPC", () => {

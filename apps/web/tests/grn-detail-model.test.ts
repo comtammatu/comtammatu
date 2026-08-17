@@ -3,11 +3,14 @@ import { test } from "node:test";
 import {
   acceptedGrnQuantity,
   calculateGrnQuantities,
+  combinePackLooseQuantity,
   createEditableGrnLine,
   deliveredGrnQuantity,
+  formatPackLooseQuantity,
   hasAcceptedGrnQuantity,
   isLinkedPoApproved,
   isGrnLookupParam,
+  splitPersistToPackLoose,
 } from "../lib/inventory/grn-detail-model";
 
 test("GRN quantity helpers preserve one accepted input plus rejected exception", () => {
@@ -80,6 +83,54 @@ test("GRN quantities cap PO fulfillment and keep accepted excess separate", () =
     shortageQuantity: 10,
     excessQuantity: 0,
   });
+});
+
+test("GRN pack+loose round-trips through the persist (loose) unit", () => {
+  assert.equal(combinePackLooseQuantity(9, 6, 24, 1), 222);
+  assert.deepEqual(splitPersistToPackLoose(222, 24, 1), {
+    packQty: 9,
+    looseQty: 6,
+  });
+  assert.equal(
+    formatPackLooseQuantity(9, "thùng", 6, "hộp"),
+    "9 thùng + 6 hộp",
+  );
+});
+
+test("GRN remaining in base allows partial pack+loose and excess at cost 0", () => {
+  assert.deepEqual(
+    calculateGrnQuantities(222, 0, 10, { persistToBase: 1, poToBase: 24 }),
+    {
+      acceptedQuantity: 222,
+      poAppliedQuantity: 9.25,
+      shortageQuantity: 0.75,
+      excessQuantity: 0,
+    },
+  );
+  assert.deepEqual(
+    calculateGrnQuantities(246, 0, 10, { persistToBase: 1, poToBase: 24 }),
+    {
+      acceptedQuantity: 246,
+      poAppliedQuantity: 10,
+      shortageQuantity: 0,
+      excessQuantity: 6,
+    },
+  );
+  assert.deepEqual(calculateGrnQuantities(6, 0, 4), {
+    acceptedQuantity: 6,
+    poAppliedQuantity: 4,
+    shortageQuantity: 0,
+    excessQuantity: 2,
+  });
+  assert.deepEqual(
+    calculateGrnQuantities(216, 0, 10, { persistToBase: 1, poToBase: 24 }),
+    {
+      acceptedQuantity: 216,
+      poAppliedQuantity: 9,
+      shortageQuantity: 1,
+      excessQuantity: 0,
+    },
+  );
 });
 
 test("GRN can only be confirmed after at least one accepted quantity", () => {

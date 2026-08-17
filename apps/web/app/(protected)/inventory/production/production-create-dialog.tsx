@@ -276,6 +276,8 @@ export function ProductionCreateDialog({
                 <FieldLabel htmlFor="production-recipe">Công thức</FieldLabel>
                 <Combobox
                   id="production-recipe"
+                  className="min-w-0"
+                  size="field"
                   value={recipeSpecId?.toString() ?? ""}
                   onValueChange={(value) => setRecipeSpecId(Number(value))}
                   options={finishedGoods.map((good) => ({
@@ -287,12 +289,13 @@ export function ProductionCreateDialog({
                   searchPlaceholder="Tìm thành phẩm"
                 />
               </Field>
-              <Field className="shrink-0 gap-1.5">
+              <Field className="w-auto shrink-0 gap-1.5">
                 <FieldLabel htmlFor="production-planned-quantity">Sản lượng kế hoạch</FieldLabel>
                 <div className="flex items-center gap-2">
                   <QuantityInput
                     id="production-planned-quantity"
-                    className="w-full max-w-44"
+                    className="w-44"
+                    controlSize="field"
                     value={plannedQuantity}
                     onValueChange={setPlannedQuantity}
                     min="0"

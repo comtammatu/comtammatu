@@ -11,17 +11,15 @@ import {
   EmployeePage,
 } from "../components/staff-runtime-page";
 import { getTodayWorkState } from "../_lib/today-work-state";
-import { ClockClient, type ClockPlane } from "./clock-client";
+import {
+  ClockClient,
+  type ClockPlane,
+  type EmployeeClockRoutes,
+} from "./clock-client";
+
+export type { EmployeeClockRoutes };
 
 const copy = messages.employee.home;
-
-export type EmployeeClockRoutes = {
-  home: string;
-  tasks: string;
-  schedule: string;
-  profile: string;
-  managerHr: string;
-};
 
 type StaffClockPageContentProps = {
   routes: EmployeeClockRoutes;
@@ -37,7 +35,10 @@ export async function StaffClockPageContent({
 
   if (state.status === "missing_profile") {
     return (
-      <PageShell title={copy.clockTodayTitle} hideHeaderOnMobile>
+      <PageShell
+        title={copy.clockTodayTitle}
+        hideHeaderOnMobile={plane === "branch"}
+      >
         <EmployeeMissingProfileEmpty profileHref={routes.profile} />
       </PageShell>
     );
@@ -46,7 +47,7 @@ export async function StaffClockPageContent({
   return (
     <PageShell
       title={copy.clockTodayTitle}
-      hideHeaderOnMobile
+      hideHeaderOnMobile={plane === "branch"}
       action={
         <Button
           variant="outline"

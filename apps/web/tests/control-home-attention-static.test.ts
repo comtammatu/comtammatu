@@ -30,7 +30,8 @@ test("Control home page loads ACL-gated attention and a queue-only overview", ()
 });
 
 test("Control home attention covers finance inventory HR ops buckets", () => {
-  assert.match(attention, /loadFinanceAttention|fetchFinanceCockpit/);
+  assert.match(attention, /loadFinanceAttention|fetchFinanceAttentionExceptions/);
+  assert.doesNotMatch(attention, /fetchFinanceCockpit/);
   assert.match(attention, /countOpenPurchaseOrders|listOpenGrnsForAttention/);
   assert.match(attention, /documentTitle/);
   assert.match(attention, /\/inventory\/grn\/\$\{/);

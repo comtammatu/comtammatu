@@ -11,12 +11,16 @@ import {
   Item,
   ItemActions,
   ItemContent,
-  ItemDescription,
   ItemGroup,
-  ItemMedia,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
+import {
+  AppLinkCard,
+  AppPage,
+  AppPageHeader,
+  AppSection,
+  LinkCardGrid,
+} from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import {
   currentUserHasAnyPermissionAny,
@@ -224,40 +228,25 @@ export default async function InventoryPage({
           const isCatalog = group.title.includes("Danh mục");
           return (
             <AppSection key={group.title} title={group.title} headingLevel="h2">
-              <ItemGroup
+              <LinkCardGrid
                 className={
-                  isCatalog
-                    ? "grid gap-2"
-                    : "grid gap-2 sm:grid-cols-2 xl:grid-cols-3"
+                  isCatalog ? undefined : "sm:grid-cols-2 xl:grid-cols-3"
                 }
               >
-              {group.items.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Item
-                    key={item.href}
-                    size="sm"
-                    className="group/inventory-lane chrome-tap min-h-16 select-none bg-background/50 px-3 py-3"
-                    render={<Link href={item.linkHref ?? item.href} />}
-                  >
-                    <ItemMedia
-                      variant="icon"
-                      className="size-10 rounded-md bg-primary/10 text-primary"
-                    >
-                      <Icon aria-hidden="true" className="size-5" />
-                    </ItemMedia>
-                    <ItemContent>
-                      <ItemTitle size="heading">{item.label}</ItemTitle>
-                      <ItemDescription>{copy.laneHint}</ItemDescription>
-                    </ItemContent>
-                    <ItemActions className="text-muted-foreground">
-                      <IconArrowRight aria-hidden="true" className="size-4" />
-                    </ItemActions>
-                  </Item>
-                );
-              })}
-            </ItemGroup>
-          </AppSection>
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <AppLinkCard
+                      key={item.href}
+                      href={item.linkHref ?? item.href}
+                      title={item.label}
+                      description={copy.laneHint}
+                      icon={<Icon aria-hidden="true" />}
+                    />
+                  );
+                })}
+              </LinkCardGrid>
+            </AppSection>
           );
         })}
       </div>

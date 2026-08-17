@@ -8,7 +8,6 @@ export default function SelfServicePayslipPage({
   return (
     <StaffPayslipPageContent
       searchParams={searchParams}
-      hideHeaderOnMobile
       profileHref="/me/profile"
     />
   );

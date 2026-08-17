@@ -48,7 +48,6 @@ import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import { AuditHistoryList } from "@/components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
 import { DocumentStockCorrectionDialog } from "../../_components/document-stock-correction-dialog";
-import { formatQty } from "@lib/inventory/format";
 import { tRoute } from "../../_lib/dictionary";
 import type { IngredientRow } from "@lib/inventory/types";
 import { useGrnDetailActions as useGrnLineActions } from "@lib/inventory/use-grn-detail-actions";
@@ -57,6 +56,10 @@ import {
   allLinkedPosApproved,
   GRN_DETAIL_COPY as grnCopy,
   acceptedGrnQuantity,
+  calculateGrnQuantities,
+  formatGrnPersistQty,
+  formatGrnPoQty,
+  grnLineQuantityConversion,
   hasAcceptedGrnQuantity,
 } from "@lib/inventory/grn-detail-model";
 import { supplierInvoiceHrefForGrn } from "@lib/inventory/grn-list-model";
@@ -328,13 +331,12 @@ export function GRNDetailClient({
         render: (line) => (
           <div>
             <p className="font-mono font-medium tabular-nums">
-              {formatQty(line.remainingQuantity)} {line.unit}
+              {formatGrnPoQty(line.remainingQuantity, line)}
             </p>
             {line.previouslyReceived > 0 ? (
               <p className="mt-1 text-xs text-muted-foreground">
-                {grnCopy.line.receivedBefore(
-                  line.previouslyReceived,
-                  line.unit,
+                {grnCopy.line.receivedBeforeText(
+                  formatGrnPoQty(line.previouslyReceived, line),
                 )}
               </p>
             ) : null}
@@ -368,7 +370,10 @@ export function GRNDetailClient({
               }
             >
               {acceptedGrnQuantity(line.actual, line.rejected) > 0
-                ? `${formatQty(acceptedGrnQuantity(line.actual, line.rejected))} ${line.unit}`
+                ? formatGrnPersistQty(
+                    acceptedGrnQuantity(line.actual, line.rejected),
+                    line,
+                  )
                 : grnCopy.line.enterQuantity}
             </p>
           ),
@@ -378,33 +383,41 @@ export function GRNDetailClient({
         header: "Kết quả",
         className: "align-top",
         render: (line) => {
-          const applied = isDraft
-            ? Math.min(
-                Math.max(line.actual - line.rejected, 0),
-                line.remainingQuantity,
-              )
-            : line.poAppliedQuantity;
-          const excess = Math.max(
-            line.actual - line.rejected - line.remainingQuantity,
-            0,
+          const quantities = calculateGrnQuantities(
+            line.actual,
+            line.rejected,
+            line.remainingQuantity,
+            grnLineQuantityConversion(line),
           );
-          const shortage = Math.max(line.remainingQuantity - applied, 0);
+          const applied = isDraft
+            ? quantities.poAppliedQuantity
+            : line.poAppliedQuantity;
+          const excess = isDraft
+            ? quantities.excessQuantity
+            : line.excessQuantity;
+          const shortage = isDraft
+            ? quantities.shortageQuantity
+            : line.shortageQuantity;
           if (line.actual <= 0) {
             return <Badge variant="outline">{grnCopy.line.notInspected}</Badge>;
           }
           return (
             <div>
               <p className="font-mono font-medium tabular-nums">
-                {grnCopy.line.acceptedShort(applied, line.unit)}
+                {grnCopy.line.acceptedShortText(formatGrnPoQty(applied, line))}
               </p>
               {shortage > 0 ? (
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {grnCopy.line.shortageShort(shortage, line.unit)}
+                  {grnCopy.line.shortageShortText(
+                    formatGrnPoQty(shortage, line),
+                  )}
                 </p>
               ) : null}
               {excess > 0 ? (
                 <Badge variant="warning" className="mt-1">
-                  {grnCopy.line.excessShort(excess, line.unit)}
+                  {grnCopy.line.excessShortText(
+                    formatGrnPersistQty(excess, line),
+                  )}
                 </Badge>
               ) : null}
               {!isDraft && line.costPending ? (

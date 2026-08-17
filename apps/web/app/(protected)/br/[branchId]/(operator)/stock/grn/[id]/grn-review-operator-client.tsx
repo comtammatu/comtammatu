@@ -36,6 +36,7 @@ import {
 } from "@lib/branch-operator/components/branch-operator-page";
 import {
   GRN_DETAIL_COPY as grnCopy,
+  grnLineOrderedDeliveredSummary,
   hasAcceptedGrnQuantity,
   type GrnDetail,
 } from "@lib/inventory/grn-detail-model";
@@ -180,13 +181,7 @@ export function GrnReviewOperatorClient({
                           {line.name}
                         </ItemTitle>
                         <ItemDescription className="line-clamp-none text-xs">
-                          {grnCopy.line.orderedDeliveredAccepted(
-                            line.required,
-                            line.actual,
-                            line.actual - line.rejected,
-                            line.rejected,
-                            line.unit,
-                          )}
+                          {grnLineOrderedDeliveredSummary(line)}
                         </ItemDescription>
                         {line.dirty ? (
                           <span className="text-xs font-medium text-warning">

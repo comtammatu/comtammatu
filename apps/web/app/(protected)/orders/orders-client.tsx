@@ -19,7 +19,6 @@ import {
   getPaymentMethodLabelVi,
 } from "@comtammatu/shared/labels";
 import { StatusBadge } from "@/components/status-badge";
-import { KpiCard } from "@/components/kpi/kpi-card";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -57,7 +56,6 @@ import {
   AppListFrame,
   AppSection,
   AppToolbar,
-  KpiRow,
 } from "@/components/surface";
 import { useFormControlSize } from "@/components/form/control-size";
 
@@ -460,41 +458,6 @@ export function OrdersClient({
 
   const listContent = (
     <>
-      <KpiRow density="compact" className="grid-cols-2 md:grid-cols-5">
-        <KpiCard
-          label={ORDERS_COPY.inProgressLabel}
-          value={summary.inProgressCount}
-          hint={ORDERS_COPY.inProgressHint}
-          density="compact"
-        />
-        <KpiCard
-          label={ORDERS_COPY.paidLabel}
-          value={summary.paidCount}
-          hint={ORDERS_COPY.paidHint}
-          density="compact"
-        />
-        <KpiCard
-          label={ORDERS_COPY.revenueLabel}
-          value={formatVND(summary.paidRevenue)}
-          hint={ORDERS_COPY.revenueHint}
-          density="compact"
-        />
-        <KpiCard
-          label={ORDERS_PAGE_COPY.warningCountLabel}
-          value={delayStats.warningCount}
-          hint={ORDERS_PAGE_COPY.warningCountHint}
-          density="compact"
-          className={delayStats.warningCount > 0 ? "border-warning/20 bg-warning/10" : ""}
-        />
-        <KpiCard
-          label={ORDERS_PAGE_COPY.criticalCountLabel}
-          value={delayStats.criticalCount}
-          hint={ORDERS_PAGE_COPY.criticalCountHint}
-          density="compact"
-          className={delayStats.criticalCount > 0 ? "border-destructive/20 bg-destructive/10 text-destructive" : ""}
-        />
-      </KpiRow>
-
       <AppListFrame
         contentScroll
         toolbar={

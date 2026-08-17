@@ -8,15 +8,17 @@ import { getAuthContextWithPermission } from "@/(protected)/inventory/_lib/auth"
 import { formatDate } from "@lib/inventory/format";
 import { fetchProcurementBranches } from "@/(protected)/inventory/_lib/procurement-branches";
 import { getIngredientUnitDisplayName } from "@/(protected)/inventory/_lib/unit-display";
-import type { IngredientRow } from "@lib/inventory/types";
+import type { IngredientRow, IngredientUnitRow } from "@lib/inventory/types";
 import { fetchIngredients } from "@/(protected)/inventory/ingredient-actions";
 import { fetchGrnDetail } from "@/(protected)/inventory/procurement-actions";
 import { messages } from "@lib/messages";
 import {
   allLinkedPosApproved,
   calculateGrnQuantities,
+  convertQuantityBetweenFactors,
   grnSupplierSummaryFromItems,
   hasLinkedPurchaseOrders,
+  resolveGrnPackLooseUnits,
   type GrnDetail,
   type GrnDetailData,
   type GrnLinkedPo,
@@ -40,6 +42,18 @@ export type GrnDetailLoadResult =
 function relatedOne<T>(value: T | T[] | null | undefined): T | null {
   if (!value) return null;
   return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
+function unitToBaseFactor(
+  units: IngredientUnitRow[] | undefined,
+  unitId: number | null | undefined,
+): number {
+  if (unitId == null) return 1;
+  const row = (units ?? []).find(
+    (unit) => unit.unit_id === unitId && unit.is_active,
+  );
+  const factor = Number(row?.to_base_factor);
+  return Number.isFinite(factor) && factor > 0 ? factor : 1;
 }
 
 export async function loadGrnDetailResult(
@@ -99,6 +113,7 @@ export async function loadGrnDetailResult(
       ingredient_id: number;
       supplier_id: number;
       po_quantity: number | null;
+      po_entry_unit_id?: number | null;
       previously_applied_quantity: number;
       po_applied_quantity: number;
       received_quantity: number;
@@ -146,23 +161,69 @@ export async function loadGrnDetailResult(
   );
   const items: GrnDetail["items"] = (data.lines ?? []).map((line) => {
     const ingredient = line.ingredients;
-    const received = Number(line.received_quantity ?? 0);
-    const rejected = Number(line.rejected_quantity ?? 0);
+    const storedReceived = Number(line.received_quantity ?? 0);
+    const storedRejected = Number(line.rejected_quantity ?? 0);
     const ordered = Number(line.po_quantity ?? 0);
     const previouslyReceived = Number(line.previously_applied_quantity ?? 0);
     const remaining = Math.max(ordered - previouslyReceived, 0);
-    const calculated = calculateGrnQuantities(received, rejected, remaining);
-    const applied = data.grn.status === "confirmed"
-      ? Number(line.po_applied_quantity ?? 0)
-      : calculated.poAppliedQuantity;
-    const entryUnitId = line.entry_unit_id ?? null;
     const catalogIngredient = ingredientById.get(
       line.ingredient_id ?? ingredient?.id ?? 0,
     );
+    const storedEntryUnitId = line.entry_unit_id ?? null;
+    const poEntryUnitId = line.po_entry_unit_id ?? storedEntryUnitId;
+    const packLoose = resolveGrnPackLooseUnits(
+      catalogIngredient?.units,
+      poEntryUnitId,
+    );
+    const persistUnit = packLoose?.loose ?? null;
+    const storedFactor = unitToBaseFactor(
+      catalogIngredient?.units,
+      storedEntryUnitId,
+    );
+    const persistFactor =
+      persistUnit?.toBaseFactor ??
+      unitToBaseFactor(catalogIngredient?.units, storedEntryUnitId);
+    const poFactor = unitToBaseFactor(catalogIngredient?.units, poEntryUnitId);
+    const persistUnitId = persistUnit?.unitId ?? storedEntryUnitId;
+    const received =
+      persistUnit != null && persistUnit.unitId !== storedEntryUnitId
+        ? convertQuantityBetweenFactors(
+            storedReceived,
+            storedFactor,
+            persistFactor,
+          )
+        : storedReceived;
+    const rejected =
+      persistUnit != null && persistUnit.unitId !== storedEntryUnitId
+        ? convertQuantityBetweenFactors(
+            storedRejected,
+            storedFactor,
+            persistFactor,
+          )
+        : storedRejected;
+    const calculated = calculateGrnQuantities(received, rejected, remaining, {
+      persistToBase: persistFactor,
+      poToBase: poFactor,
+    });
+    const applied = data.grn.status === "confirmed"
+      ? Number(line.po_applied_quantity ?? 0)
+      : calculated.poAppliedQuantity;
     const fallbackUnit =
       ingredient?.ingredient_units?.find((unit) => unit.is_base)?.units?.code ||
       "";
     const lineSupplier = relatedOne(line.suppliers);
+    const persistUnitLabel = persistUnit
+      ? persistUnit.label
+      : getIngredientUnitDisplayName(
+          catalogIngredient?.units,
+          persistUnitId,
+          fallbackUnit,
+        );
+    const poUnitLabel = getIngredientUnitDisplayName(
+      catalogIngredient?.units,
+      poEntryUnitId,
+      persistUnitLabel,
+    );
 
     return {
       lineId: line.id,
@@ -179,16 +240,18 @@ export async function loadGrnDetailResult(
       rejected,
       acceptedQuantity: calculated.acceptedQuantity,
       poAppliedQuantity: applied,
-      shortageQuantity: Math.max(remaining - applied, 0),
-      excessQuantity: Math.max(calculated.acceptedQuantity - applied, 0),
+      shortageQuantity: calculated.shortageQuantity,
+      excessQuantity: calculated.excessQuantity,
       rejectionReason: line.rejection_reason ?? "",
       rejectedPhotoUrl: line.rejected_photo_url ?? "",
-      unit: getIngredientUnitDisplayName(
-        catalogIngredient?.units,
-        entryUnitId,
-        fallbackUnit,
-      ),
-      entryUnitId,
+      unit: persistUnitLabel,
+      entryUnitId: persistUnitId,
+      poEntryUnitId,
+      poUnitLabel,
+      persistToBaseFactor: persistFactor,
+      poToBaseFactor: poFactor,
+      packUnit: packLoose?.pack ?? null,
+      looseUnit: packLoose?.loose ?? null,
       costPending: line.cost_pending === true,
       provisionalCostSource: line.provisional_cost_source ?? null,
       monetary:

@@ -46,6 +46,7 @@ export const controlSurface = {
     inventory: "Kho hàng",
     finance: "Tài chính",
     modules: "Phân hệ",
+    catalog: "Danh mục",
   },
   scopeControl: {
     label: "Phạm vi",

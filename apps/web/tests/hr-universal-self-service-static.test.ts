@@ -27,7 +27,7 @@ test("canonical self-service uses Control shell and keeps Owner denied", () => {
   assert.match(shell, /personalHref=\{personalHref\}/);
   assert.doesNotMatch(shell, /personalHref=\{canAccess\(role, "me"\)/);
   assert.match(appShell, /personalHref\?: string/);
-  assert.match(appShell, /mobileHeaderTitle\?: string/);
+  assert.doesNotMatch(appShell, /mobileHeaderTitle/);
   assert.match(appShell, /copy\.personalPage/);
   assert.match(appShell, /bottomNav && tier1WithBadges\.length > 0/);
   assert.ok(

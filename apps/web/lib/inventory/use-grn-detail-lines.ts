@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { EditableGrnLine, GrnDetailItem } from "./grn-detail-model";
+import { applyGrnLineQuantities } from "./grn-detail-model";
 
 interface UseGrnDetailLinesReturn {
   lines: EditableGrnLine[];
@@ -37,7 +38,11 @@ export function useGrnDetailLines(
       const next = previous.slice();
       const current = next[idx];
       if (!current) return previous;
-      next[idx] = { ...current, ...patchValue, dirty: true };
+      const merged = { ...current, ...patchValue, dirty: true };
+      next[idx] =
+        patchValue.actual != null || patchValue.rejected != null
+          ? applyGrnLineQuantities(merged)
+          : merged;
       return next;
     });
   }

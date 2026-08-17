@@ -56,11 +56,12 @@ test("Finance analysis routes use compact Design System composition", () => {
   assert.doesNotMatch(foodCost, /hint=\{foodCopy\./);
   assert.match(foodCost, /title=\{foodCopy\.tableTitle\}/);
   assert.match(foodCost, /foodCopy\.revenueCurrency/);
+  assert.match(foodCost, /foodCopy\.unitFoodCostCurrency/);
   assert.match(foodCost, /foodCopy\.foodCostCurrency/);
   assert.match(foodCost, /foodCopy\.grossMargin/);
   assert.doesNotMatch(foodCost, /foodCopy\.unitSellingPriceCurrency/);
-  assert.doesNotMatch(foodCost, /foodCopy\.unitFoodCostCurrency/);
   assert.doesNotMatch(foodCost, /foodCopy\.grossProfitCurrency/);
+  assert.match(foodCost, /unit_ingredient_cost/);
   assert.match(foodCost, /<DataTable/);
 
   assert.match(revenue, /<AppPageTabs/);

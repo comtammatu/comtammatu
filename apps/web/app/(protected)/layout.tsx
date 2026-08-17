@@ -13,6 +13,7 @@ import {
   currentUserHasPermission,
   currentUserHasPermissionAny,
 } from "@/_lib/permissions";
+import { NotificationAttentionRuntime } from "@/_components/notification-attention-runtime";
 import { ControlSurfaceShell } from "@/components/control-surface-shell";
 import { fetchActiveBranches } from "@/_lib/branch-context";
 import { canManageWorkTeam } from "@/(protected)/work/_lib/work-manage";
@@ -40,8 +41,21 @@ export default async function ProtectedLayout({
 }) {
   // Pickup lives under this route group but is a guest board. Proxy skips
   // auth; this layout must not call loadAuthState or the public kiosk 500s.
-  if (isPickupPublicDisplayPath(readRequestPathname(await headers()))) {
+  const pathname = readRequestPathname(await headers());
+  if (isPickupPublicDisplayPath(pathname)) {
     return children;
+  }
+  // design-system.md A.7 — /notifications is chrome-less (AppPage + back).
+  if (
+    pathname === "/notifications" ||
+    pathname.startsWith("/notifications/")
+  ) {
+    return (
+      <>
+        <NotificationAttentionRuntime />
+        {children}
+      </>
+    );
   }
 
   const { supabase, user, claims } = await loadAuthState();

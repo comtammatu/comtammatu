@@ -47,7 +47,7 @@ không void trực tiếp.
 
 ## Việc trong ca và KDS
 
-- SSOT việc theo vị trí: `position_shift_tasks` (có `allows_photo` tùy chọn).
+- SSOT việc theo vị trí: `position_shift_tasks` (`allows_photo` = bắt buộc ảnh minh chứng khi hoàn thành).
 - Không dùng `shift_checklist_template_items` cho photo evidence ca.
 - Seed tối thiểu đầu/cuối ca theo vị trí; HR có thể chỉnh sau.
 - KDS mặc định một station “Quầy lên món” khi chi nhánh chưa có station; typography

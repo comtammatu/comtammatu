@@ -1,4 +1,5 @@
-import type { IngredientRow } from "@lib/inventory/types";
+import { formatQuantity } from "@comtammatu/shared/format";
+import type { IngredientRow, IngredientUnitRow } from "@lib/inventory/types";
 import { messages } from "@lib/messages";
 import {
   formatGrnSupplierSummary,
@@ -6,6 +7,12 @@ import {
 } from "./grn-create-model";
 
 export const GRN_DETAIL_COPY = messages.inventory.grn;
+
+export type GrnPackLooseUnit = {
+  unitId: number;
+  label: string;
+  toBaseFactor: number;
+};
 
 export type GrnDetailItem = {
   lineId: number;
@@ -28,6 +35,12 @@ export type GrnDetailItem = {
   rejectedPhotoUrl: string;
   unit: string;
   entryUnitId: number | null;
+  poEntryUnitId: number | null;
+  poUnitLabel: string;
+  persistToBaseFactor: number;
+  poToBaseFactor: number;
+  packUnit: GrnPackLooseUnit | null;
+  looseUnit: GrnPackLooseUnit | null;
   /** True when line qty is received but WAC awaits supplier invoice settlement. */
   costPending: boolean;
   provisionalCostSource: string | null;
@@ -118,19 +131,282 @@ export function calculateGrnQuantities(
   receivedQuantity: number,
   rejectedQuantity: number,
   poRemainingQuantity: number,
+  conversion?: { persistToBase: number; poToBase: number },
 ) {
+  const persistToBase = conversion?.persistToBase ?? 1;
+  const poToBase = conversion?.poToBase ?? 1;
   const acceptedQuantity = acceptedGrnQuantity(
     receivedQuantity,
     rejectedQuantity,
   );
   const remainingQuantity = Math.max(poRemainingQuantity, 0);
-  const poAppliedQuantity = Math.min(acceptedQuantity, remainingQuantity);
+  const acceptedBase = acceptedQuantity * persistToBase;
+  const remainingBase = remainingQuantity * poToBase;
+  const appliedBase = Math.min(acceptedBase, remainingBase);
+  const poAppliedQuantity =
+    poToBase > 0 ? roundGrnQuantity(appliedBase / poToBase) : 0;
+  const excessQuantity =
+    persistToBase > 0
+      ? roundGrnQuantity((acceptedBase - appliedBase) / persistToBase)
+      : 0;
+  const shortageQuantity =
+    poToBase > 0
+      ? roundGrnQuantity((remainingBase - appliedBase) / poToBase)
+      : 0;
   return {
     acceptedQuantity,
     poAppliedQuantity,
-    shortageQuantity: remainingQuantity - poAppliedQuantity,
-    excessQuantity: acceptedQuantity - poAppliedQuantity,
+    shortageQuantity,
+    excessQuantity,
   };
+}
+
+export type GrnQuantityConversion = {
+  persistToBase: number;
+  poToBase: number;
+};
+
+export function grnLineQuantityConversion(
+  line: Pick<GrnDetailItem, "persistToBaseFactor" | "poToBaseFactor">,
+): GrnQuantityConversion {
+  return {
+    persistToBase: line.persistToBaseFactor,
+    poToBase: line.poToBaseFactor,
+  };
+}
+
+export function applyGrnLineQuantities<T extends GrnDetailItem>(line: T): T {
+  const calculated = calculateGrnQuantities(
+    line.actual,
+    line.rejected,
+    line.remainingQuantity,
+    grnLineQuantityConversion(line),
+  );
+  return { ...line, ...calculated };
+}
+
+const GRN_QTY_SCALE = 1000;
+
+export function roundGrnQuantity(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.round(value * GRN_QTY_SCALE) / GRN_QTY_SCALE;
+}
+
+export function convertQuantityBetweenFactors(
+  quantity: number,
+  fromToBase: number,
+  toToBase: number,
+): number {
+  if (!(toToBase > 0)) return 0;
+  return roundGrnQuantity(quantity * (fromToBase / toToBase));
+}
+
+function unitLabel(unit: IngredientUnitRow): string {
+  return unit.unit_name?.trim() || unit.unit_code;
+}
+
+export function resolveGrnPackLooseUnits(
+  units: IngredientUnitRow[] | undefined,
+  packUnitId: number | null | undefined,
+): { pack: GrnPackLooseUnit; loose: GrnPackLooseUnit } | null {
+  if (packUnitId == null) return null;
+  const active = (units ?? []).filter((unit) => unit.is_active);
+  const packRow = active.find((unit) => unit.unit_id === packUnitId);
+  if (
+    packRow == null ||
+    packRow.is_base ||
+    packRow.anchor_unit_id == null ||
+    !(packRow.to_base_factor > 0)
+  ) {
+    return null;
+  }
+  const looseRow = active.find(
+    (unit) => unit.unit_id === packRow.anchor_unit_id,
+  );
+  if (
+    looseRow == null ||
+    !(looseRow.to_base_factor > 0) ||
+    looseRow.unit_id === packRow.unit_id
+  ) {
+    return null;
+  }
+  return {
+    pack: {
+      unitId: packRow.unit_id,
+      label: unitLabel(packRow),
+      toBaseFactor: packRow.to_base_factor,
+    },
+    loose: {
+      unitId: looseRow.unit_id,
+      label: unitLabel(looseRow),
+      toBaseFactor: looseRow.to_base_factor,
+    },
+  };
+}
+
+export function combinePackLooseQuantity(
+  packQty: number,
+  looseQty: number,
+  packToBase: number,
+  persistToBase: number,
+): number {
+  if (!(persistToBase > 0)) return 0;
+  return roundGrnQuantity(
+    (Math.max(packQty, 0) * packToBase +
+      Math.max(looseQty, 0) * persistToBase) /
+      persistToBase,
+  );
+}
+
+export function splitPersistToPackLoose(
+  persistQty: number,
+  packToBase: number,
+  persistToBase: number,
+): { packQty: number; looseQty: number } {
+  if (!(persistToBase > 0) || !(packToBase > 0)) {
+    return { packQty: 0, looseQty: roundGrnQuantity(Math.max(persistQty, 0)) };
+  }
+  const packInPersist = packToBase / persistToBase;
+  const safe = Math.max(persistQty, 0);
+  const packQty = Math.floor((safe + 1e-9) / packInPersist);
+  const looseQty = roundGrnQuantity(safe - packQty * packInPersist);
+  return { packQty, looseQty };
+}
+
+export function formatPackLooseQuantity(
+  packQty: number,
+  packLabel: string,
+  looseQty: number,
+  looseLabel: string,
+): string {
+  const packText = `${formatQuantity(packQty)} ${packLabel}`;
+  const looseText = `${formatQuantity(looseQty)} ${looseLabel}`;
+  if (packQty > 0 && looseQty > 0) return `${packText} + ${looseText}`;
+  if (packQty > 0) return packText;
+  if (looseQty > 0) return looseText;
+  return `${formatQuantity(0)} ${packLabel}`;
+}
+
+export function grnLineHasPackLoose(
+  line: Pick<GrnDetailItem, "packUnit" | "looseUnit">,
+): boolean {
+  return line.packUnit != null && line.looseUnit != null;
+}
+
+export function formatGrnQuantity(
+  quantity: number,
+  unitToBase: number,
+  line: Pick<GrnDetailItem, "packUnit" | "looseUnit">,
+  fallbackLabel: string,
+): string {
+  if (line.packUnit && line.looseUnit && unitToBase > 0) {
+    const persistQty = convertQuantityBetweenFactors(
+      quantity,
+      unitToBase,
+      line.looseUnit.toBaseFactor,
+    );
+    const split = splitPersistToPackLoose(
+      persistQty,
+      line.packUnit.toBaseFactor,
+      line.looseUnit.toBaseFactor,
+    );
+    return formatPackLooseQuantity(
+      split.packQty,
+      line.packUnit.label,
+      split.looseQty,
+      line.looseUnit.label,
+    );
+  }
+  return `${formatQuantity(quantity)} ${fallbackLabel}`;
+}
+
+export function formatGrnPoQty(
+  quantity: number,
+  line: Pick<
+    GrnDetailItem,
+    "packUnit" | "looseUnit" | "poToBaseFactor" | "poUnitLabel"
+  >,
+): string {
+  return formatGrnQuantity(
+    quantity,
+    line.poToBaseFactor,
+    line,
+    line.poUnitLabel,
+  );
+}
+
+export function formatGrnPersistQty(
+  quantity: number,
+  line: Pick<
+    GrnDetailItem,
+    "packUnit" | "looseUnit" | "persistToBaseFactor" | "unit"
+  >,
+): string {
+  return formatGrnQuantity(
+    quantity,
+    line.persistToBaseFactor,
+    line,
+    line.unit,
+  );
+}
+
+export function splitGrnAcceptedPackLoose(
+  line: Pick<GrnDetailItem, "actual" | "rejected" | "packUnit" | "looseUnit">,
+): { packQty: number; looseQty: number } | null {
+  if (!line.packUnit || !line.looseUnit) return null;
+  return splitPersistToPackLoose(
+    acceptedGrnQuantity(line.actual, line.rejected),
+    line.packUnit.toBaseFactor,
+    line.looseUnit.toBaseFactor,
+  );
+}
+
+export function grnLineOrderedDeliveredSummary(
+  line: Pick<
+    GrnDetailItem,
+    | "required"
+    | "actual"
+    | "rejected"
+    | "packUnit"
+    | "looseUnit"
+    | "persistToBaseFactor"
+    | "poToBaseFactor"
+    | "poUnitLabel"
+    | "unit"
+  >,
+): string {
+  const accepted = acceptedGrnQuantity(line.actual, line.rejected);
+  const delivered = deliveredGrnQuantity(accepted, line.rejected);
+  return GRN_DETAIL_COPY.line.orderedDeliveredAcceptedText(
+    formatGrnPoQty(line.required, line),
+    formatGrnPersistQty(delivered, line),
+    formatGrnPersistQty(accepted, line),
+    formatGrnPersistQty(line.rejected, line),
+    delivered,
+    line.rejected,
+  );
+}
+
+export function grnLineReceiptSummary(
+  line: Pick<
+    GrnDetailItem,
+    | "remainingQuantity"
+    | "actual"
+    | "rejected"
+    | "packUnit"
+    | "looseUnit"
+    | "persistToBaseFactor"
+    | "poToBaseFactor"
+    | "poUnitLabel"
+    | "unit"
+  >,
+): string {
+  const accepted = acceptedGrnQuantity(line.actual, line.rejected);
+  return GRN_DETAIL_COPY.line.receiptSummaryText(
+    formatGrnPoQty(line.remainingQuantity, line),
+    formatGrnPersistQty(accepted, line),
+    accepted > 0,
+  );
 }
 
 export function hasAcceptedGrnQuantity(
@@ -187,6 +463,12 @@ export function createEditableGrnLine({
     rejectedPhotoUrl: "",
     unit,
     entryUnitId,
+    poEntryUnitId: entryUnitId,
+    poUnitLabel: unit,
+    persistToBaseFactor: 1,
+    poToBaseFactor: 1,
+    packUnit: null,
+    looseUnit: null,
     costPending: true,
     provisionalCostSource: "pending",
     monetary: null,

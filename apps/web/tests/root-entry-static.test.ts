@@ -42,6 +42,7 @@ test("root route renders the Control home", () => {
   assert.match(controlSurfaceShell, /mobileScopeAccessory=\{scopeAccessory\}/);
   assert.match(controlSurfaceShell, /canSelectAll/);
   assert.match(appShell, /mobileScopeAccessory/);
-  assert.match(appShell, /sticky top-0/);
+  assert.match(appShell, /data-control-surface-mobile-tools/);
+  assert.doesNotMatch(appShell, /sticky top-0/);
   assert.doesNotMatch(rootPage, /redirect\(/);
 });

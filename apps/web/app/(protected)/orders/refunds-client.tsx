@@ -58,11 +58,10 @@ import {
 
 /* ─── Status helpers ─── */
 
-import { BRANCH_VI, FORM_VI, STATES_VI } from "@comtammatu/shared/messages";
+import { BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
 import { StatusBadge } from "@/components/status-badge";
-import { KpiCard } from "@/components/kpi/kpi-card";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
-import { AppSection, AppToolbar, KpiRow } from "@/components/surface";
+import { AppListFrame, AppToolbar } from "@/components/surface";
 import {
   REFUND_PAYOUT_METHODS,
   type RefundPayoutMethod,
@@ -122,10 +121,6 @@ export function RefundsClient({
   const approvedCount = refunds.filter(
     (refund) => refund.status === "approved",
   ).length;
-  const totalRefundAmount = refunds.reduce(
-    (sum, refund) => sum + Number(refund.amount),
-    0,
-  );
   const createReasonLength = createReason.trim().length;
   const canCreateRefund =
     eligibility?.eligible === true &&
@@ -364,29 +359,12 @@ export function RefundsClient({
 
   return (
     <>
-      <KpiRow density="compact" className="grid-cols-2 md:grid-cols-3">
-        <KpiCard
-          label="Chờ duyệt"
-          value={formatCount(pendingCount)}
-          hint="Các yêu cầu cần quyết định ngay."
-          density="compact"
-        />
-        <KpiCard
-          label={STATES_VI.approved}
-          value={formatCount(approvedCount)}
-          hint="Yêu cầu đã được xử lý trong danh sách hiện tại."
-          density="compact"
-        />
-        <KpiCard
-          label="Tổng giá trị"
-          value={formatVND(totalRefundAmount)}
-          hint="Tổng số tiền hoàn của tập kết quả đang xem."
-          density="compact"
-          className="col-span-2 md:col-span-1"
-        />
-      </KpiRow>
-
-      <AppToolbar className="justify-between">
+      <AppListFrame
+        title="Yêu cầu hoàn tiền"
+        description="Duyệt, từ chối và rà soát các yêu cầu hoàn tiền tại một nơi."
+        contentScroll
+        toolbar={
+      <AppToolbar variant="inline" className="justify-between">
         <div className="flex flex-col gap-1.5">
           <SectionLabel>Điều phối hoàn tiền</SectionLabel>
           <p className="text-sm text-muted-foreground">
@@ -427,7 +405,8 @@ export function RefundsClient({
           </Button>
         </div>
       </AppToolbar>
-
+        }
+      >
       <ReasonConfirmDialog
         open={createOpen}
         onOpenChange={(open) => {
@@ -588,12 +567,6 @@ export function RefundsClient({
 
       {errorMsg && <p className="text-sm text-destructive">{errorMsg}</p>}
 
-      <AppSection
-        title="Yêu cầu hoàn tiền"
-        description="Duyệt, từ chối và rà soát các yêu cầu hoàn tiền tại một nơi."
-        contentFlush
-        contentScroll
-      >
         <DataTable
           columns={columns}
           data={refunds}
@@ -682,7 +655,7 @@ export function RefundsClient({
             </Item>
           )}
         />
-      </AppSection>
+      </AppListFrame>
     </>
   );
 }

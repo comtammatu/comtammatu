@@ -11,7 +11,7 @@ import {
   parseFinanceParams,
   resolveFinanceRange,
 } from "@/(protected)/finance/_lib/finance-params";
-import { fetchFinanceCockpit } from "@/(protected)/finance/_lib/finance-cockpit";
+import { fetchFinanceAttentionExceptions } from "@/(protected)/finance/_lib/finance-cockpit";
 import {
   countOpenPurchaseOrders,
   countOpenPurchaseRequests,
@@ -53,11 +53,11 @@ async function loadFinanceAttention(
   try {
     const params = parseFinanceParams({});
     const resolved = resolveFinanceRange(params);
-    const cockpit = await fetchFinanceCockpit(params, resolved);
-    return cockpit.exceptions
+    const exceptions = await fetchFinanceAttentionExceptions(params, resolved);
+    return exceptions
       .filter(
         (item): item is typeof item & { href: string } =>
-          item.tone !== "neutral" && item.href != null && item.href.length > 0,
+          item.href != null && item.href.length > 0,
       )
       .map((item, index) => ({
         id: `finance:${index}:${item.href}`,

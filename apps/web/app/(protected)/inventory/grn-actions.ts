@@ -411,8 +411,8 @@ export async function fetchGrnDetail(
     .from("grn_items")
     .select(
       (monetary.purchasePrice
-        ? "id, grn_id, tenant_id, ingredient_id, supplier_id, purchase_order_item_id, po_applied_quantity, received_quantity, rejected_quantity, rejection_reason, rejected_photo_url, entry_unit_id, unit_cost, total_cost, cost_pending, provisional_cost_source, suppliers ( id, name ), ingredients ( id, name ), purchase_order_items(quantity, unit_price_est)"
-        : "id, grn_id, tenant_id, ingredient_id, supplier_id, purchase_order_item_id, po_applied_quantity, received_quantity, rejected_quantity, rejection_reason, rejected_photo_url, entry_unit_id, cost_pending, provisional_cost_source, suppliers ( id, name ), ingredients ( id, name ), purchase_order_items(quantity)") as never,
+        ? "id, grn_id, tenant_id, ingredient_id, supplier_id, purchase_order_item_id, po_applied_quantity, received_quantity, rejected_quantity, rejection_reason, rejected_photo_url, entry_unit_id, unit_cost, total_cost, cost_pending, provisional_cost_source, suppliers ( id, name ), ingredients ( id, name ), purchase_order_items(quantity, unit_price_est, entry_unit_id)"
+        : "id, grn_id, tenant_id, ingredient_id, supplier_id, purchase_order_item_id, po_applied_quantity, received_quantity, rejected_quantity, rejection_reason, rejected_photo_url, entry_unit_id, cost_pending, provisional_cost_source, suppliers ( id, name ), ingredients ( id, name ), purchase_order_items(quantity, entry_unit_id)") as never,
     )
     .eq("grn_id", grn.id)
     .eq("tenant_id", claims.tenant_id);
@@ -448,10 +448,15 @@ export async function fetchGrnDetail(
       }>;
     } | null;
     purchase_order_items:
-      | { quantity: number | string; unit_price_est?: number | string | null }
+      | {
+          quantity: number | string;
+          unit_price_est?: number | string | null;
+          entry_unit_id?: number | null;
+        }
       | Array<{
           quantity: number | string;
           unit_price_est?: number | string | null;
+          entry_unit_id?: number | null;
         }>
       | null;
   }>;
@@ -515,6 +520,8 @@ export async function fetchGrnDetail(
     return {
       ...line,
       po_quantity: poLine == null ? null : Number(poLine.quantity),
+      po_entry_unit_id:
+        poLine?.entry_unit_id == null ? null : Number(poLine.entry_unit_id),
       previously_applied_quantity:
         line.purchase_order_item_id == null
           ? 0
@@ -809,6 +816,9 @@ export const upsertGrnLine = withAction(
           rejected_quantity: rejected,
           rejection_reason: data.rejectionReason ?? null,
           rejected_photo_url: data.rejectedPhotoUrl ?? null,
+          ...(data.entryUnitId != null
+            ? { entry_unit_id: data.entryUnitId }
+            : {}),
         })
         .eq("id", data.lineId)
         .eq("grn_id", data.grnId)
@@ -902,6 +912,7 @@ const saveGoodsReceiptNoteSchema = z.object({
           rejectedQuantity: grnQuantitySchema.default(0),
           rejectionReason: z.string().trim().max(500).nullable().optional(),
           rejectedPhotoUrl: z.string().trim().url().nullable().optional(),
+          entryUnitId: z.coerce.number().int().positive().nullable().optional(),
         })
         .refine(
           (line) => line.rejectedQuantity <= line.receivedQuantity,
@@ -937,6 +948,7 @@ export const saveGoodsReceiptNote = withAction(
           rejected_quantity: line.rejectedQuantity,
           rejection_reason: line.rejectionReason ?? null,
           rejected_photo_url: line.rejectedPhotoUrl ?? null,
+          entry_unit_id: line.entryUnitId ?? null,
         })),
       } as never,
     );

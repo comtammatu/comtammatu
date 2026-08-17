@@ -31,6 +31,11 @@ import {
 import {
   createEditableGrnLine,
   GRN_DETAIL_COPY,
+  acceptedGrnQuantity,
+  combinePackLooseQuantity,
+  deliveredGrnQuantity,
+  grnLineHasPackLoose,
+  splitGrnAcceptedPackLoose,
   type EditableGrnLine,
   type GrnDetail,
 } from "@lib/inventory/grn-detail-model";
@@ -322,22 +327,39 @@ export function BranchGrnReviewLineSheet({
   onDelete,
 }: BranchGrnReviewLineSheetProps) {
   const [numericField, setNumericField] = useState<
-    "actual" | "rejected" | null
+    "pack" | "loose" | "accepted" | "rejected" | null
   >(null);
   const needsRejectionDetails = line != null && line.rejected > 0;
+  const hasPackLoose = line != null && grnLineHasPackLoose(line);
+  const packLooseSplit = line ? splitGrnAcceptedPackLoose(line) : null;
+  const acceptedQuantity = line
+    ? acceptedGrnQuantity(line.actual, line.rejected)
+    : 0;
 
-  function patchActual(actual: number) {
+  function commitAccepted(nextAccepted: number) {
     if (!line) return;
     onPatch({
-      actual,
-      rejected: Math.min(line.rejected, actual),
+      actual: deliveredGrnQuantity(Math.max(0, nextAccepted), line.rejected),
     });
+  }
+
+  function commitPackLoose(packQty: number, looseQty: number) {
+    if (!line?.packUnit || !line.looseUnit) return;
+    commitAccepted(
+      combinePackLooseQuantity(
+        packQty,
+        looseQty,
+        line.packUnit.toBaseFactor,
+        line.looseUnit.toBaseFactor,
+      ),
+    );
   }
 
   function patchRejected(rejected: number) {
     if (!line) return;
     onPatch({
-      rejected: Math.min(line.actual, Math.max(0, rejected)),
+      actual: deliveredGrnQuantity(acceptedQuantity, Math.max(0, rejected)),
+      rejected: Math.max(0, rejected),
     });
   }
 
@@ -391,14 +413,33 @@ export function BranchGrnReviewLineSheet({
       >
         {line ? (
           <FieldGroup>
-            <div className="grid grid-cols-2 gap-3">
-              <NumberPadValueField
-                id={`branch-grn-actual-${line.lineId}`}
-                label={GRN_DETAIL_COPY.line.actualLabel(line.unit)}
-                value={formatQty(line.actual)}
-                emptyLabel={messages.inventory.grn.quantityEmptyLabel}
-                onClick={() => setNumericField("actual")}
-              />
+            <div className={hasPackLoose ? "grid gap-3" : "grid grid-cols-2 gap-3"}>
+              {hasPackLoose && line.packUnit && line.looseUnit ? (
+                <>
+                  <NumberPadValueField
+                    id={`branch-grn-pack-${line.lineId}`}
+                    label={GRN_DETAIL_COPY.line.acceptedLabel(line.packUnit.label)}
+                    value={formatQty(packLooseSplit?.packQty ?? 0)}
+                    emptyLabel={messages.inventory.grn.quantityEmptyLabel}
+                    onClick={() => setNumericField("pack")}
+                  />
+                  <NumberPadValueField
+                    id={`branch-grn-loose-${line.lineId}`}
+                    label={GRN_DETAIL_COPY.line.acceptedLabel(line.looseUnit.label)}
+                    value={formatQty(packLooseSplit?.looseQty ?? 0)}
+                    emptyLabel={messages.inventory.grn.quantityEmptyLabel}
+                    onClick={() => setNumericField("loose")}
+                  />
+                </>
+              ) : (
+                <NumberPadValueField
+                  id={`branch-grn-actual-${line.lineId}`}
+                  label={GRN_DETAIL_COPY.line.acceptedLabel(line.unit)}
+                  value={formatQty(acceptedQuantity)}
+                  emptyLabel={messages.inventory.grn.quantityEmptyLabel}
+                  onClick={() => setNumericField("accepted")}
+                />
+              )}
               <NumberPadValueField
                 id={`branch-grn-rejected-${line.lineId}`}
                 label={GRN_DETAIL_COPY.line.rejectedLabel(line.unit)}
@@ -452,14 +493,36 @@ export function BranchGrnReviewLineSheet({
         title={
           numericField === "rejected"
             ? GRN_DETAIL_COPY.line.rejectedLabel(line?.unit ?? "")
-            : GRN_DETAIL_COPY.line.actualLabel(line?.unit ?? "")
+            : numericField === "pack"
+              ? GRN_DETAIL_COPY.line.acceptedLabel(line?.packUnit?.label ?? "")
+              : numericField === "loose"
+                ? GRN_DETAIL_COPY.line.acceptedLabel(line?.looseUnit?.label ?? "")
+                : GRN_DETAIL_COPY.line.acceptedLabel(line?.unit ?? "")
         }
-        suffix={line?.unit}
+        suffix={
+          numericField === "pack"
+            ? line?.packUnit?.label
+            : numericField === "loose"
+              ? line?.looseUnit?.label
+              : line?.unit
+        }
         initialValue={
-          numericField === "rejected" ? line?.rejected : line?.actual
+          numericField === "rejected"
+            ? line?.rejected
+            : numericField === "pack"
+              ? packLooseSplit?.packQty
+              : numericField === "loose"
+                ? packLooseSplit?.looseQty
+                : acceptedQuantity
         }
         onConfirm={(value) => {
-          if (numericField === "actual") patchActual(value);
+          if (numericField === "accepted") commitAccepted(value);
+          if (numericField === "pack") {
+            commitPackLoose(value, packLooseSplit?.looseQty ?? 0);
+          }
+          if (numericField === "loose") {
+            commitPackLoose(packLooseSplit?.packQty ?? 0, value);
+          }
           if (numericField === "rejected") patchRejected(value);
         }}
         maxFractionDigits={3}

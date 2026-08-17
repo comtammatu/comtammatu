@@ -22,19 +22,19 @@ const ORDERS_PAGE_BODY = "apps/web/app/(protected)/orders/orders-page-body.tsx";
 const INGREDIENT_IMPORT_EXPORT =
   "apps/web/app/(protected)/inventory/ingredients/import-export-menu.tsx";
 
-test("Owner order KPI rows stay compact and expose work sooner on phones", () => {
+test("Owner order LIST pages have no KPI mosaic", () => {
   const orders = read(ORDERS_CLIENT);
   const refunds = read(REFUNDS_CLIENT);
 
-  assert.match(orders, /<KpiRow[\s\S]*density="compact"/);
-  assert.match(orders, /className="grid-cols-2 md:grid-cols-5"/);
-  assert.equal((orders.match(/density="compact"/g) ?? []).length, 6);
+  assert.doesNotMatch(orders, /\bKpiRow\b/);
+  assert.doesNotMatch(orders, /\bKpiCard\b/);
+  assert.match(orders, /<AppListFrame/);
   assert.doesNotMatch(orders, /<div className="grid gap-3 md:grid-cols-3">/);
 
-  assert.match(refunds, /<KpiRow[\s\S]*density="compact"/);
-  assert.match(refunds, /className="grid-cols-2 md:grid-cols-3"/);
-  assert.match(refunds, /className="col-span-2 md:col-span-1"/);
-  assert.equal((refunds.match(/density="compact"/g) ?? []).length, 4);
+  assert.doesNotMatch(refunds, /\bKpiRow\b/);
+  assert.doesNotMatch(refunds, /\bKpiCard\b/);
+  assert.match(refunds, /<AppListFrame/);
+  assert.match(refunds, /<AppToolbar[\s\S]{0,80}variant="inline"/);
   assert.doesNotMatch(refunds, /<div className="grid gap-3 md:grid-cols-3">/);
 });
 

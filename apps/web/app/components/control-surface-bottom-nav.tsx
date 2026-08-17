@@ -10,6 +10,7 @@ import {
   AppBottomNav,
   BOTTOM_NAV_ITEM_CLASS,
 } from "@/components/app-bottom-nav";
+import { selectControlSurfaceBottomNavItems } from "@/lib/control-surface-nav";
 import {
   isNavItemActive,
   type ShellNavGroup,
@@ -18,35 +19,6 @@ import {
 
 const copy = messages.controlSurface.nav;
 const MAX_VISIBLE_ITEMS = 4;
-
-function flattenNavGroups(navGroups: ShellNavGroup[]): ShellNavItem[] {
-  const seenHref = new Set<string>();
-  const items: ShellNavItem[] = [];
-
-  for (const group of navGroups) {
-    for (const item of group.items) {
-      if (seenHref.has(item.href)) continue;
-      seenHref.add(item.href);
-      items.push(item);
-    }
-  }
-
-  return items;
-}
-
-function selectBottomNavItems(
-  items: ShellNavItem[],
-  pathname: string,
-): ShellNavItem[] {
-  const visible = items.slice(0, MAX_VISIBLE_ITEMS);
-  const active = items.find((item) => isNavItemActive(item, pathname));
-
-  if (!active || visible.some((item) => item.href === active.href)) {
-    return visible;
-  }
-
-  return [...visible.slice(0, MAX_VISIBLE_ITEMS - 1), active];
-}
 
 /**
  * Mobile bottom navbar for control_surface (Quản trị) routes. Bar destinations are the
@@ -63,11 +35,12 @@ export function ControlSurfaceBottomNav({
 }) {
   const pathname = usePathname();
   const { openMobile, toggleSidebar } = useSidebar();
-  const deepNavItems = flattenNavGroups(tier2);
-  const items = selectBottomNavItems(
-    deepNavItems.length > 0 ? deepNavItems : tier1,
+  const items = selectControlSurfaceBottomNavItems({
+    groups: tier2,
+    fallbackItems: tier1,
     pathname,
-  );
+    inventory: pathname.startsWith("/inventory"),
+  }).slice(0, MAX_VISIBLE_ITEMS);
 
   return (
     <AppBottomNav

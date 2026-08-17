@@ -92,13 +92,10 @@ test("Control Surface chrome exposes Trang cá nhân and hides empty module nav"
   assert.match(protectedLayout, /canonicalizeSelfServicePath\(claims, "\/me"\)/);
   assert.match(shell, /personalHref=\{personalHref\}/);
 
-  // `/me` is a recognized module surface with its label as the mobile header
-  // title; it owns no deep nav (tier2 collapses to [] for `me`).
+  // `/me` is a recognized module surface; it owns no deep nav
+  // (tier2 collapses to [] for `me`). Work H1 stays on EmployeePage.
   assert.match(shell, /\| "me"/);
-  assert.match(
-    shell,
-    /activeModule === "me" \? MODULE_ACL\.me\.label : undefined/,
-  );
+  assert.doesNotMatch(shell, /mobileHeaderTitle|MODULE_ACL\.me\.label/);
   assert.match(shell, /activeModule === "me"[\s\S]*?return \[\]/);
 
   // Zero-module actors (empty tier1) suppress the bottom navbar so no empty

@@ -904,7 +904,7 @@ export const inventory = {
     cancelConfirmDesc: "Phiếu nhập sẽ bị đánh dấu hủy và không thể hòan tác.",
     confirmGrnTitle: "Chốt nhập kho?",
     confirmGrnDesc:
-      "Sau khi chốt, phiếu không thể sửa và tồn kho cập nhật ngay.",
+      "Phần theo đơn tính vào đơn đặt hàng. Phần dư ngoài đơn vẫn nhập tồn với giá 0. Sau khi chốt, phiếu không thể sửa.",
     confirmGrnAction: "Chốt nhập kho",
     detailTitle: "Chi tiết phiếu nhập",
     documentTab: "Phiếu nhập",
@@ -1029,22 +1029,47 @@ export const inventory = {
           : rejected > 0
             ? `${formatQuantity(ordered)} ${unit} đặt → ${formatQuantity(delivered)} ${unit} giao → Nhập kho ${formatQuantity(accepted)} ${unit} (từ chối ${formatQuantity(rejected)} ${unit})`
             : `${formatQuantity(ordered)} ${unit} đặt → ${formatQuantity(delivered)} ${unit} nhập kho`,
+      orderedDeliveredAcceptedText: (
+        ordered: string,
+        delivered: string,
+        accepted: string,
+        rejected: string,
+        deliveredQty: number,
+        rejectedQty: number,
+      ) =>
+        deliveredQty <= 0
+          ? `${ordered} theo đơn → Chưa kiểm nhận`
+          : rejectedQty > 0
+            ? `${ordered} đặt → ${delivered} giao → Nhập kho ${accepted} (từ chối ${rejected})`
+            : `${ordered} đặt → ${delivered} nhập kho`,
       notInspected: "Chưa kiểm nhận",
       enterQuantity: "Nhập số lượng",
       receiptSummary: (remaining: number, actual: number, unit: string) =>
         actual > 0
           ? `${formatQuantity(remaining)} ${unit} theo đơn · Thực nhận ${formatQuantity(actual)} ${unit}`
           : `${formatQuantity(remaining)} ${unit} theo đơn · Chưa nhập số lượng`,
+      receiptSummaryText: (
+        remaining: string,
+        actual: string,
+        inspected: boolean,
+      ) =>
+        inspected
+          ? `${remaining} theo đơn · Thực nhận ${actual}`
+          : `${remaining} theo đơn · Chưa nhập số lượng`,
       receivedBefore: (quantity: number, unit: string) =>
         `Đã nhận trước ${formatQuantity(quantity)} ${unit}`,
+      receivedBeforeText: (formatted: string) => `Đã nhận trước ${formatted}`,
       rejectedShort: (quantity: number, unit: string) =>
         `Từ chối ${formatQuantity(quantity)} ${unit}`,
       acceptedShort: (quantity: number, unit: string) =>
         `Nhập kho ${formatQuantity(quantity)} ${unit}`,
+      acceptedShortText: (formatted: string) => `Nhập kho ${formatted}`,
       shortageShort: (quantity: number, unit: string) =>
         `Còn thiếu ${formatQuantity(quantity)} ${unit}`,
+      shortageShortText: (formatted: string) => `Còn thiếu ${formatted}`,
       excessShort: (quantity: number, unit: string) =>
         `Dư ${formatQuantity(quantity)} ${unit}`,
+      excessShortText: (formatted: string) => `Dư ${formatted}`,
       rejectionReason: "Lý do từ chối:",
       unsaved: "chưa lưu",
       deleteLineAria: "Xóa dòng",

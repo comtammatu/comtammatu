@@ -67,6 +67,7 @@ export function useGrnDetailActions({
           rejectedQuantity: line.rejected,
           rejectionReason: line.rejectionReason || null,
           rejectedPhotoUrl: line.rejectedPhotoUrl || null,
+          entryUnitId: line.entryUnitId,
         })),
       });
       if (!result.success) {
@@ -159,6 +160,10 @@ export function useGrnDetailActions({
           line.actual,
           line.rejected,
           line.remainingQuantity,
+          {
+            persistToBase: line.persistToBaseFactor,
+            poToBase: line.poToBaseFactor,
+          },
         );
         if (quantities.acceptedQuantity > 0) result.acceptedLines += 1;
         if (quantities.shortageQuantity > 0) result.shortageLines += 1;

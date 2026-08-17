@@ -22,7 +22,7 @@ test("control_surface routes share one persistent protected shell", () => {
   assert.match(shell, /<NotificationAttentionRuntime/);
   assert.match(shell, /!activeModule \? \(/);
   assert.match(shell, /resolveControlSurfacePrimaryTabs/);
-  assert.match(shell, /flattenInventoryDeepNav/);
+  assert.doesNotMatch(shell, /flattenInventoryDeepNav/);
   assert.match(nav, /export function resolveControlSurfacePrimaryTabs/);
   assert.match(nav, /export function resolveControlSurfaceDeepNav/);
   assert.match(nav, /resolveControlSurfaceCoreDeepNav/);
@@ -43,6 +43,8 @@ test("control_surface routes share one persistent protected shell", () => {
   );
 
   assert.match(protectedLayout, /<ControlSurfaceShell/);
+  assert.match(protectedLayout, /\/notifications/);
+  assert.match(protectedLayout, /NotificationAttentionRuntime/);
   assert.match(protectedLayout, /resolveInventoryBranchScope/);
   assert.match(protectedLayout, /showSupplierPayables/);
   assert.doesNotMatch(rootPage, /ControlSurfaceShell|OwnerModuleShell|InventoryShell|FinanceShell/);

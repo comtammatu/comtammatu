@@ -77,6 +77,8 @@ same concept.
 | Stock transfer document | `Điều chuyển` | `Phiếu điều chuyển` | glossary `stock_transfer` |
 | Control surface | `Quản trị` | — | `APP_COPY_VI.ownerSurface` |
 | Shift checklist items | `Việc trong ca` | — | not the `/me` portal name |
+| Shift-start tasks | `Đầu ca` | — | checklist phase `start_of_shift` |
+| Shift-end tasks | `Cuối ca` | — | checklist phase `end_of_shift` |
 
 ## Product Dual Thesis
 
