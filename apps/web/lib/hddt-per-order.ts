@@ -13,6 +13,7 @@ import {
 import {
   buildHddtProviderLines,
 } from "@comtammatu/shared/hddt";
+import { getVNDateString } from "@comtammatu/shared/time";
 import { createInvoiceProvider } from "@lib/invoice-provider-init";
 import { z } from "zod";
 
@@ -357,6 +358,18 @@ export async function issuePreparedTaxInvoice({
       success: false,
       error: "Dữ liệu bản nháp HĐĐT không hợp lệ.",
       errorCode: "invoice_snapshot_invalid",
+    };
+  }
+
+  if (
+    getVNDateString(parsed.data.draftSnapshot.invoiceTime) !==
+    getVNDateString()
+  ) {
+    return {
+      success: false,
+      error:
+        "Ngày lập HĐĐT phải trùng ngày bán theo giờ Việt Nam. Không gửi sang Viettel khi đã sang ngày mới.",
+      errorCode: "invoice_issue_date_not_today",
     };
   }
 

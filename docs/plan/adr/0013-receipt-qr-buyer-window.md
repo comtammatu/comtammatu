@@ -23,12 +23,21 @@ buyer fields.
 
 The buyer request closes on the first terminal event:
 
-1. Customer confirms before `paid_at + 2 hours` — lock buyer request → issue job
+1. Customer confirms before the buyer deadline — lock buyer request → issue job
    → invoice; replace only the buyer snapshot; set
    `status = submitted`, `closed_at`, `close_reason = customer_submitted`; make
    the issue job eligible.
 2. Deadline first — same lock order; keep consumer-default buyer; set
    `status = expired`, `close_reason = deadline_elapsed`.
+
+The buyer deadline is `min(paid_at + 2 hours, Vietnam calendar day of paid_at
+at 23:55)`. Viettel MTT rejects `invoiceIssuedDate` on a later calendar day
+(`INVOICE_ISSUE_DATE_INVALID_TT78`). Cron is every 5 minutes, so the same-day
+ceiling leaves one cadence before midnight. Issuance still sends
+`invoiceIssuedDate = payments.paid_at`. A worker that would submit after that
+Vietnam date fail-closes with `invoice_issue_date_not_today` before
+`prepare_tax_invoice_issue_job_as_system` — no second create, no `signing`
+trap.
 
 Email is mandatory for customer-confirmed invoices. Business name/address are
 resolved server-side from the tax code. Once terminal, the request is immutable
@@ -55,9 +64,10 @@ route `/q/invoice/[token]` (`PUBLIC-WORKFLOW`).
 - Production activation requires written legal/tax confirmation, Viettel
   out-of-order proof, migration lineage + Preview replay, and authenticated
   smoke plus a rehearsed reconciliation path.
-- If legal/Viettel gates fail, issue at `payments.paid_at` and use existing
-  replacement/adjustment when buyer details arrive later — do not infer a
-  general two-hour legal grace period.
+- If legal/Viettel gates fail, issue at `payments.paid_at` on the same Vietnam
+  calendar day and use existing replacement/adjustment when buyer details
+  arrive later — do not infer a two-hour legal grace period that crosses
+  midnight.
 
 ## Verification
 

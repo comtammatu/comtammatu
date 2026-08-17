@@ -53,6 +53,10 @@ HĐ đã phát hành không dựng lại từ menu/config hiện tại. Đổi t
 chỉ giao dịch mới. Provider response chưa rõ → đối soát cùng idempotency
 identity; không tự phát hành HĐ mới.
 
+Cửa sổ QR người mua là `min(paid_at + 2 giờ, 23:55 cùng ngày VN)`. Viettel MTT
+từ chối ngày lập khác ngày bán (`INVOICE_ISSUE_DATE_INVALID_TT78`). Worker
+không gọi Viettel khi ngày lập (giờ VN) đã sang ngày mới.
+
 **Dòng bắt buộc:** tên HH/DV thực; ĐVT, SL, đơn giá; thuế suất/căn cứ theo
 dòng khi template yêu cầu; tổng trước thuế / VAT / thanh toán theo rounding đã
 duyệt; source order/payment; seller/buyer snapshot; thời điểm; template, series,

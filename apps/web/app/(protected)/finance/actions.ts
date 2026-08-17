@@ -220,6 +220,48 @@ export async function requeueTaxInvoiceIssueJob(
   return { success: true };
 }
 
+export async function requeueInvoiceTotalMismatchJobs(): Promise<
+  ActionResult<{ requeued: number }>
+> {
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.FINANCE_VIEW,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền đối soát HĐĐT." };
+
+  const rpc = ctx.supabase as unknown as {
+    rpc: <T>(
+      name: string,
+      args?: Record<string, unknown>,
+    ) => Promise<{
+      data: T | null;
+      error: { code?: string | null } | null;
+    }>;
+  };
+  const { data, error } = await rpc.rpc<{ requeued: number }>(
+    "requeue_invoice_total_mismatch_jobs",
+  );
+  if (error) {
+    console.error(
+      "[finance/actions:requeueInvoiceTotalMismatchJobs]",
+      error.code,
+    );
+    return { success: false, error: "Yêu cầu chưa đủ điều kiện phát hành lại." };
+  }
+  const requeued =
+    typeof data?.requeued === "number" && Number.isFinite(data.requeued)
+      ? data.requeued
+      : 0;
+  await logAudit(ctx.supabase, {
+    action: "update",
+    entityType: "tax_invoice",
+    entityId: null,
+    newData: { requeuedMismatchJobs: requeued },
+  });
+  revalidatePath("/finance/invoices");
+  return { success: true, data: { requeued } };
+}
+
 export async function reconcileTaxInvoiceProviderIssued(
   input: z.infer<typeof taxInvoiceReconcileSchema>,
 ): Promise<ActionResult> {

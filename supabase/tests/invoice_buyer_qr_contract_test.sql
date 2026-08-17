@@ -56,6 +56,7 @@ BEGIN
         'prepare_tax_invoice_provider_submission',
         'queue_tax_invoice_issue_job_for_completed_order',
         'reconcile_tax_invoice_provider_issued',
+        'requeue_invoice_total_mismatch_jobs',
         'requeue_tax_invoice_issue_job'
       )
       AND has_function_privilege('anon', function.oid, 'EXECUTE')

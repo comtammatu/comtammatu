@@ -543,6 +543,20 @@ export function sanitizeViettelInvoiceError(
   if (!error) return "";
   const lower = error.toLowerCase();
   if (
+    lower.includes("invoice_issue_date_not_today") ||
+    lower.includes("invoice_issue_date_invalid") ||
+    lower.includes("ngày lập không hợp lệ")
+  ) {
+    return "Ngày lập HĐĐT không còn trong ngày bán. Đối soát trên Viettel, không phát hành trùng.";
+  }
+  if (
+    lower.includes("invoice_total_mismatch") ||
+    lower.includes("sinvoice_total_mismatch") ||
+    lower.includes("sinvoice_gross_residual")
+  ) {
+    return "Tổng dòng HĐĐT chưa khớp tiền POS. Kiểm tra món/chiết khấu rồi phát hành lại trong cùng ngày bán.";
+  }
+  if (
     lower.includes("tax code") ||
     lower.includes("mst") ||
     lower.includes("ma so thue")

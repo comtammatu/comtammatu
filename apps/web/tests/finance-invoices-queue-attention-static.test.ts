@@ -43,3 +43,39 @@ test("invoice list preserves queue across Tải thêm pagination", () => {
   // The load-more fetch keeps the queue filter so paging stays narrowed.
   assert.match(src, /before:\s*nextCursor,\s*\n\s*queue,/);
 });
+
+test("attention banner bulk-requeues only invoice_total_mismatch jobs", () => {
+  const actions = read(ACTIONS);
+  const list = read(INVOICE_LIST);
+  const migration = read(
+    "supabase/migrations/20260817222103_requeue_invoice_total_mismatch_jobs.sql",
+  );
+  const bulkActionStart = actions.indexOf(
+    "export async function requeueInvoiceTotalMismatchJobs",
+  );
+  const bulkActionEnd = actions.indexOf(
+    "export async function reconcileTaxInvoiceProviderIssued",
+    bulkActionStart,
+  );
+  assert.notEqual(bulkActionStart, -1);
+  assert.notEqual(bulkActionEnd, -1);
+  const bulkAction = actions.slice(bulkActionStart, bulkActionEnd);
+  assert.match(bulkAction, /requeue_invoice_total_mismatch_jobs/);
+  assert.doesNotMatch(bulkAction, /for \(const job of/);
+  assert.doesNotMatch(bulkAction, /requeue_tax_invoice_issue_job/);
+  assert.match(
+    list,
+    /last_error === "invoice_total_mismatch"[\s\S]*Đưa tất cả lệch tổng vào hàng chờ/,
+  );
+  assert.match(list, /confirm\(\{[\s\S]*Đưa HĐĐT lệch tổng vào hàng chờ\?/);
+  assert.doesNotMatch(list, /còn trong ngày bán/);
+  assert.match(migration, /last_error = 'invoice_total_mismatch'/);
+  const functionBody = migration.slice(
+    migration.indexOf("CREATE OR REPLACE FUNCTION"),
+  );
+  assert.match(functionBody, /job.status = 'blocked'/);
+  assert.match(functionBody, /tax_invoice_id IS NULL/);
+  assert.match(functionBody, /available_at = now\(\)/);
+  assert.doesNotMatch(functionBody, /reconcile_required/);
+  assert.doesNotMatch(functionBody, /Asia\/Ho_Chi_Minh/);
+});

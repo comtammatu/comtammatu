@@ -14963,6 +14963,10 @@ export type Database = {
         }
         Returns: Json
       }
+      repoint_finance_fund_opening: {
+        Args: { p_effective_at: string; p_reason: string }
+        Returns: Json
+      }
       request_inventory_count_recount: {
         Args: { p_note?: string; p_slip_id: number }
         Returns: undefined
@@ -14971,6 +14975,7 @@ export type Database = {
         Args: { p_order_id: number; p_payout_method: string; p_reason: string }
         Returns: Json
       }
+      requeue_invoice_total_mismatch_jobs: { Args: never; Returns: Json }
       requeue_tax_invoice_issue_job: {
         Args: { p_job_id: number }
         Returns: Json
@@ -15049,6 +15054,16 @@ export type Database = {
           template_id: number
           template_version: number
         }[]
+      }
+      restore_mbbank_statement_gap: {
+        Args: {
+          p_bank_opening_delta: number
+          p_idempotency_key: string
+          p_opening_effective_at?: string
+          p_reason: string
+          p_rows: Json
+        }
+        Returns: Json
       }
       retry_print_job: { Args: { p_job_id: number }; Returns: boolean }
       reverse_payment_and_post: { Args: { p_refund_id: number }; Returns: Json }

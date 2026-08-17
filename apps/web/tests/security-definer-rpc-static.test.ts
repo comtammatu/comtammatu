@@ -226,13 +226,17 @@ test("browser-executable SECURITY DEFINER RPC grants have an auth boundary or br
       if (browserRolesAreFinallyRevoked(finalSource, functionName)) continue;
       if (isFinallySecurityInvoker(finalSource, functionName)) continue;
 
+      // Walk files in order so a later CREATE OR REPLACE wins. Do not scan
+      // concatenated SQL: an earlier `$$` body can swallow a later file.
       let body = "";
-      for (const definerMatch of allSource.matchAll(DEFINER_FUNCTION)) {
-        if (
-          definerMatch[1] === functionName &&
-          isSecurityDefinerFunction(definerMatch)
-        ) {
-          body = definerMatch[3] ?? "";
+      for (const { sql } of migrations) {
+        for (const definerMatch of sql.matchAll(DEFINER_FUNCTION)) {
+          if (
+            definerMatch[1] === functionName &&
+            isSecurityDefinerFunction(definerMatch)
+          ) {
+            body = definerMatch[3] ?? "";
+          }
         }
       }
 

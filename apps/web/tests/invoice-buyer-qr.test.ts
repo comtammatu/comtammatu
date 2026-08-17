@@ -202,6 +202,10 @@ test("POS and Self-Order defer buyer details to the receipt QR", () => {
   );
   assert.match(issuer, /if \(drift !== 0\)/);
   assert.doesNotMatch(issuer, /drift > 10/);
+  assert.match(
+    issuer,
+    /getVNDateString\(parsed\.data\.draftSnapshot\.invoiceTime\)[\s\S]*invoice_issue_date_not_today[\s\S]*prepare_tax_invoice_issue_job_as_system/,
+  );
   assert.doesNotMatch(issuer, /issueTaxInvoiceForPaidOrder|DRAFT-/);
   assert.match(buyerServer, /if \(result\.success\)/);
   assert.match(buyerServer, /buyerKind: "business" \| "individual"/);

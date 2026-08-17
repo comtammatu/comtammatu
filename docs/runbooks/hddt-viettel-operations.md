@@ -63,6 +63,7 @@ Không tạo hóa đơn mới chỉ vì ứng dụng chưa có số hóa đơn.
 | Bản nháp có `last_error`                              | Sửa dữ liệu/cấu hình rồi dùng phát hành lại trên `/finance/invoices`          |
 | CQT từ chối cấp mã                                    | Kiểm MST, mẫu số, ký hiệu và dữ liệu người mua                                |
 | Timeout hoặc trạng thái `signing`/`submitted` kéo dài | Tra `provider_ref` trên Viettel; không phát hành trùng                        |
+| `INVOICE_ISSUE_DATE_INVALID_TT78` / ngày lập không hợp lệ | Đơn đã sang ngày VN mới — đối soát Viettel, không requeue cùng `invoiceIssuedDate` hôm trước |
 | Cần PDF/XML                                           | Tải từ Viettel S-invoice và lưu theo quy trình chứng từ của đơn vị            |
 | Cần hủy/thay thế                                      | Dùng thao tác trên `/finance/invoices`, sau đó đối chiếu kết quả trên Viettel |
 

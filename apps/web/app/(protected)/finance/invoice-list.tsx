@@ -14,6 +14,7 @@ import {
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Label } from "@comtammatu/ui/components/label";
+import { confirm } from "@/components/confirm-dialog";
 import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
@@ -35,8 +36,10 @@ import {
 
 import {
   cancelTaxInvoice,
+  fetchTaxInvoiceIssueAttention,
   fetchTaxInvoicesPage,
   reconcileTaxInvoiceProviderIssued,
+  requeueInvoiceTotalMismatchJobs,
   requeueTaxInvoiceIssueJob,
   type TaxInvoiceIssueAttention,
 } from "./actions";
@@ -359,6 +362,56 @@ export function InvoiceList({
     });
   }
 
+  const mismatchAttention = issueAttention.filter(
+    (job) =>
+      job.status === "blocked" && job.last_error === "invoice_total_mismatch",
+  );
+
+  function handleRequeueMismatchJobs() {
+    const count = mismatchAttention.length;
+    if (count === 0) return;
+    void (async () => {
+      const ok = await confirm({
+        title: "Đưa HĐĐT lệch tổng vào hàng chờ?",
+        description:
+          "POS đã thu đủ tiền. Chỉ phát hành lại các lệnh đang chặn vì tổng không khớp. Không thay đổi lệnh đang đối soát Viettel.",
+        details: [{ label: "Số lệnh", value: String(count) }],
+        confirmText: "Đưa vào hàng chờ",
+        cancelText: "Hủy",
+      });
+      if (!ok) return;
+      startTransition(async () => {
+        const result = await requeueInvoiceTotalMismatchJobs();
+        if (!result.success) {
+          toast.error(
+            result.error ?? "Không thể đưa yêu cầu phát hành HĐĐT vào hàng chờ.",
+          );
+          return;
+        }
+        const attention = await fetchTaxInvoiceIssueAttention();
+        if (attention.success && attention.data) {
+          setIssueAttention(attention.data);
+        } else {
+          setIssueAttention((current) =>
+            current.filter(
+              (item) =>
+                !(
+                  item.status === "blocked" &&
+                  item.last_error === "invoice_total_mismatch"
+                ),
+            ),
+          );
+        }
+        const requeued = result.data?.requeued ?? 0;
+        if (requeued === 0) {
+          toast.success("Không còn lệnh lệch tổng cần đưa vào hàng chờ.");
+          return;
+        }
+        toast.success(`Đã đưa ${requeued} HĐĐT vào hàng chờ xử lý.`);
+      });
+    })();
+  }
+
   function openReconcileForInvoice(invoice: InvoiceRow) {
     if (!invoice.provider_ref) return;
     setReconcileTarget({
@@ -588,7 +641,7 @@ export function InvoiceList({
       <div className="flex flex-col gap-4">
         {issueAttention.length > 0 ? (
           <Item variant="outline" className="flex-col items-stretch gap-3">
-            <ItemHeader>
+            <ItemHeader className="items-start justify-between gap-3">
               <ItemContent>
                 <p className="font-semibold">HĐĐT cần kiểm tra trên Viettel</p>
                 <p className="text-sm text-muted-foreground">
@@ -596,6 +649,17 @@ export function InvoiceList({
                   ghi số HĐ sau khi xác minh; không phát hành lại.
                 </p>
               </ItemContent>
+              {canManageInvoices && mismatchAttention.length > 0 ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleRequeueMismatchJobs()}
+                  disabled={isPending}
+                >
+                  Đưa tất cả lệch tổng vào hàng chờ
+                </Button>
+              ) : null}
             </ItemHeader>
             {issueAttention.map((job) => (
               <Item

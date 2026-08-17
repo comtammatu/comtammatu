@@ -274,6 +274,7 @@ test("Finance requeues only the exact blocked HĐĐT job", () => {
   );
 
   assert.match(actionSrc, /requeue_tax_invoice_issue_job/);
+  assert.match(actionSrc, /requeue_invoice_total_mismatch_jobs/);
   assert.doesNotMatch(actionSrc, /reissueAllDraftInvoices/);
   assert.match(
     workerMigration,
