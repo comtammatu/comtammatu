@@ -61,11 +61,9 @@ const toneClassName = {
 export function BranchStocktakeDetailClient({
   data,
   stockBasePath,
-  countUnavailable = false,
 }: {
   data: BranchStocktakeDetail;
   stockBasePath: string;
-  countUnavailable?: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -197,14 +195,6 @@ export function BranchStocktakeDetailClient({
       </ItemGroup>
     ) : (
       <>
-        {countUnavailable ? (
-          <BranchOperatorInlineState
-            icon={IconCircleAlert}
-            tone="info"
-            title="Màn đếm chưa sẵn sàng"
-            description="Phiên kiểm kê vẫn được giữ nguyên. Liên hệ quản lý hệ thống để bật màn đếm mới cho chi nhánh này."
-          />
-        ) : null}
         {blockedReason ? (
           <BranchOperatorInlineState
             icon={IconCircleAlert}
@@ -283,8 +273,7 @@ export function BranchStocktakeDetailClient({
               contentClassName="gap-3"
               action={
                 session.status === "in_progress" &&
-                data.canCancel &&
-                !countUnavailable ? (
+                data.canCancel ? (
                   <Button
                     size="touch"
                     render={

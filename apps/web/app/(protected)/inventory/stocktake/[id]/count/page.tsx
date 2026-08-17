@@ -1,9 +1,5 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@comtammatu/database/supabase/server";
-import {
-  INVENTORY_FEATURE_FLAGS,
-  isFeatureEnabledForBranch,
-} from "../../../_lib/feature-flags";
 import { parseBranchIdParam } from "../../../_lib/inventory-scope";
 import { getStocktakeLinesBlind } from "../../../stocktake-actions";
 import type { CountUnitOption } from "../../../_lib/count-units";
@@ -45,18 +41,6 @@ async function StocktakeCountPageContent({
   }
   if (requestedBranchId !== sessionBranchId) {
     redirect(`${routeBase}/${sessionId}/count?branch=${sessionBranchId}`);
-  }
-
-  // Feature flag gate — route the counter to the pre-redesign detail screen when the flag is off.
-  const flagEnabled = await isFeatureEnabledForBranch(
-    supabase,
-    sessionBranchId,
-    INVENTORY_FEATURE_FLAGS.INVENTORY_STOCKTAKE_REDESIGNED,
-  );
-  if (!flagEnabled) {
-    redirect(
-      `${routeBase}/${sessionId}?branch=${sessionBranchId}&error=stocktake_redesigned_not_enabled`,
-    );
   }
 
   const linesRes = await getStocktakeLinesBlind(sessionId);

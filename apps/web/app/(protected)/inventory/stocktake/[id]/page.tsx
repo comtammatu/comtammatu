@@ -8,7 +8,6 @@ interface StocktakeDetailPageContentProps {
   stocktakeId: number;
   searchParams?: Promise<{
     branch?: string | string[];
-    error?: string;
     view?: string;
   }>;
   routeBranchId?: number;
@@ -67,8 +66,7 @@ export async function StocktakeDetailPageContent({
   const sp = searchParams ? await searchParams : {};
   const requestedBranchId = routeBranchId ?? parseBranchIdParam(sp.branch);
   const sessionBranchId = stocktakeSession.branch_id;
-  const isDetailView =
-    sp.view === "detail" || sp.error === "stocktake_redesigned_not_enabled";
+  const isDetailView = sp.view === "detail";
   const detailViewParam = isDetailView ? "&view=detail" : "";
 
   if (routeBranchId != null && routeBranchId !== sessionBranchId) {

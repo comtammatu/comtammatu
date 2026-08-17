@@ -4,7 +4,7 @@ import { loadBranchStocktakeDetailData } from "@lib/inventory/branch-stocktake-d
 
 interface PageProps {
   params: Promise<{ branchId: string; id: string }>;
-  searchParams: Promise<{ error?: string; view?: string }>;
+  searchParams: Promise<{ view?: string }>;
 }
 
 export default async function OperatorStocktakeDetailPage({
@@ -25,9 +25,7 @@ export default async function OperatorStocktakeDetailPage({
 
   const data = await loadBranchStocktakeDetailData(stocktakeId, branchId);
   const query = await searchParams;
-  const countUnavailable =
-    query.error === "stocktake_redesigned_not_enabled";
-  const isReviewView = query.view === "detail" || countUnavailable;
+  const isReviewView = query.view === "detail";
   if (data.session.status === "in_progress" && !isReviewView) {
     redirect(`/br/${branchId}/stock/stocktake/${stocktakeId}/count`);
   }
@@ -36,7 +34,6 @@ export default async function OperatorStocktakeDetailPage({
     <BranchStocktakeDetailClient
       data={data}
       stockBasePath={`/br/${branchId}/stock`}
-      countUnavailable={countUnavailable}
     />
   );
 }

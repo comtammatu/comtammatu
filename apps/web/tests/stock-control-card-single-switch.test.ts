@@ -51,4 +51,6 @@ test("feature-flags registry: gate flag key removed", () => {
   const source = read(FEATURE_FLAGS);
   assert.doesNotMatch(source, /POS_STOCK_AVAILABILITY_GATE/);
   assert.doesNotMatch(source, /pos_stock_availability_gate/);
+  assert.doesNotMatch(source, /INVENTORY_STOCKTAKE_REDESIGNED/);
+  assert.doesNotMatch(source, /inv_stocktake_redesigned/);
 });

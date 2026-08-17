@@ -78,7 +78,6 @@ export type BranchStocktakeCountData = {
   currentRound: 1 | 2 | 3 | 4;
   lines: BranchStocktakeCountLine[];
   unitOptionsByIngredient: Record<number, BranchStocktakeCountUnit[]>;
-  featureEnabled: boolean;
 };
 
 export function getBranchStocktakeProgress({

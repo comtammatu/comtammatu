@@ -942,11 +942,26 @@ test("operator stocktake routes keep session stocktake native to Branch", () => 
     stocktakeDetailRoute,
     /loadBranchStocktakeDetailData\(stocktakeId, branchId\)/,
   );
-  assert.match(stocktakeDetailRoute, /stocktake_redesigned_not_enabled/);
   assert.match(
     stocktakeCountRoute,
     /loadBranchStocktakeCountData\(stocktakeId, branchId\)/,
   );
+
+  for (const source of [
+    stocktakeRoute,
+    stocktakeNewRoute,
+    stocktakeDetailRoute,
+    stocktakeCountRoute,
+    branchDetailClient,
+    stocktakeData,
+    stocktakeModel,
+  ]) {
+    assert.doesNotMatch(source, /stocktake_redesigned_not_enabled/);
+    assert.doesNotMatch(
+      source,
+      /INVENTORY_STOCKTAKE_REDESIGNED|isFeatureEnabledForBranch|featureEnabled/,
+    );
+  }
 
   for (const source of [
     stocktakeRoute,
@@ -968,6 +983,7 @@ test("operator stocktake routes keep session stocktake native to Branch", () => 
   assert.match(branchDetailClient, /BranchOperatorStatusStrip/);
   assert.match(branchDetailClient, /canCompleteBranchStocktake/);
   assert.doesNotMatch(branchDetailClient, /DataTable|AuditHistoryList|reports/);
+  assert.doesNotMatch(branchDetailClient, /countUnavailable|Màn đếm chưa sẵn sàng/);
   assert.match(branchCountClient, /<BranchStocktakeCountList/);
   assert.match(branchCountClient, /onUnitChange=\{onUnitChange\}/);
   assert.match(branchCountClient, /useStocktakeDraftSaver/);
