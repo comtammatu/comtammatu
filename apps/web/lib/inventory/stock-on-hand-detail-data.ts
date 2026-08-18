@@ -47,7 +47,10 @@ type LocationRef = {
   name: string;
   code: string;
   location_kind: string;
-  branches?: { name: string } | { name: string }[] | null;
+  branches?:
+    | { name: string; branch_kind: string | null }
+    | { name: string; branch_kind: string | null }[]
+    | null;
 };
 
 type StockLevelRow = {
@@ -106,7 +109,7 @@ function ingredientSelect(includeValuation: boolean): string {
 
 function stockLevelSelect(includeValuation: boolean, withBranch = false): string {
   const locationJoin = withBranch
-    ? "inventory_locations ( name, code, location_kind, branches!inventory_locations_branch_id_fkey ( name ) )"
+    ? "inventory_locations ( name, code, location_kind, branches!inventory_locations_branch_id_fkey ( name, branch_kind ) )"
     : "inventory_locations ( name, code, location_kind )";
   return [
     "location_id",
@@ -133,6 +136,7 @@ function mapStockLevelRows(
       code: location?.code ?? "",
       locationKind: location?.location_kind ?? "unknown",
       branchName: branch?.name,
+      siteKind: branch?.branch_kind ?? undefined,
       qty: Number(row.current_quantity ?? 0),
       monetary: canReadValuation
         ? { avgUnitCost: row.avg_unit_cost ?? null }

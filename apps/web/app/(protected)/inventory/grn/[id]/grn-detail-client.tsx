@@ -150,6 +150,10 @@ export function GRNDetailClient({
   const showAmendAffordance = canAmendConfirmed && isConfirmed;
 
   const { lines, setLines, patch, dirtyLines } = useGrnLines(grn.items);
+  const ingredientById = useMemo(
+    () => new Map(ingredients.map((item) => [item.id, item])),
+    [ingredients],
+  );
   const hasAcceptedQuantity = hasAcceptedGrnQuantity(lines);
   const valuationKind = resolveGrnValuationDisplay({
     status: grn.status,
@@ -346,7 +350,7 @@ export function GRNDetailClient({
       {
         key: "actual",
         header: grnCopy.lineHeaderQty,
-        className: "min-w-80 align-top",
+        className: "min-w-96 align-top",
         render: (line, idx) =>
           canMutateDraft && isDesktopLineEdit ? (
             <LineRow
@@ -358,6 +362,7 @@ export function GRNDetailClient({
               showAmendAffordance={false}
               showHeader={false}
               chrome="plain"
+              ingredient={ingredientById.get(line.ingredientId)}
               onChange={(p) => patch(idx, p)}
               onAmend={() => undefined}
             />
@@ -460,6 +465,7 @@ export function GRNDetailClient({
       canChangeLineSet,
       canMutateDraft,
       handleDeleteLine,
+      ingredientById,
       isDesktopLineEdit,
       isDraft,
     ],
@@ -688,6 +694,7 @@ export function GRNDetailClient({
               idx={idx}
               isDraft={false}
               showAmendAffordance={false}
+              ingredient={ingredientById.get(line.ingredientId)}
               onChange={() => undefined}
               onDelete={() => undefined}
               onAmend={() => undefined}
@@ -718,6 +725,7 @@ export function GRNDetailClient({
             idx={idx}
             isDraft={false}
             showAmendAffordance={showAmendAffordance}
+            ingredient={ingredientById.get(line.ingredientId)}
             onChange={(p) => patch(idx, p)}
             onDelete={() => void handleDeleteLine(line)}
             onAmend={() => setAmendingLine(line)}
@@ -882,6 +890,7 @@ export function GRNDetailClient({
               isDraft
               showAmendAffordance={false}
               chrome="plain"
+              ingredient={ingredientById.get(editingLine.ingredientId)}
               onChange={(p) => patch(editingIdx, p)}
               onDelete={
                 canChangeLineSet

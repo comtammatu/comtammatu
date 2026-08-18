@@ -91,6 +91,8 @@ const VI_DICTIONARY = {
     refunded: { long: "Đã hoàn tiền" },
     partially_received: { short: "Nhận một phần", long: "Đã nhận một phần" },
     in_transit: { short: "Đang giao", long: "Đang vận chuyển" },
+    confirmed_ship: { short: "Đã xuất", long: "Đã xuất kho" },
+    confirmed_receive: { long: "Đang kiểm nhận" },
     received: { long: "Đã nhận" },
     completed: { short: "Xong", long: "Hoàn thành" },
     cancelled: { long: "Đã hủy" },

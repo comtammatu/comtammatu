@@ -248,12 +248,20 @@ tự ghi KH; lịch dự kiến + Accountant duyệt posting.
 Runtime hiện tại:
 
 ```text
-Doanh thu thuần trước GTGT − Giá vốn NL có dữ liệu = Lợi nhuận gộp vận hành
-Lợi nhuận gộp vận hành − Chi phí vận hành đã ghi nhận
-  + Biến động tồn kho (cuối − đầu) = Kết quả kinh doanh
+Doanh thu thuần − Giá vốn món = Lợi nhuận gộp
+
+Doanh thu thuần
+− Chi phí hàng (chi nhánh: ĐC đã nhận / cả quán: mua NCC)
+− Chi phí vận hành đã ghi nhận
++ Biến động tồn kho (cuối − đầu)
+= Kết quả kinh doanh
 ```
 
+Hai dòng độc lập. Cấm `Kết quả = LN gộp − chi vận hành + Δtồn`.
+Giá vốn món không trừ thêm vào kết quả.
 `Chi phí ban đầu` (vốn mở quán, đặt cọc) không nằm trong công thức trên.
+Tồn cuối là tài sản; Δ tồn ở công thức vì hàng vào là mua/ĐC, không vì tồn là lãi.
+Điều chuyển nội bộ không tạo P&L thêm ở tầm công ty (hàng vào = mua NCC).
 
 Giữ tên `Kết quả kinh doanh`; hiển thị coverage/confidence; không đổi nhãn
 `Lợi nhuận ròng`; chỉ cộng **biến động** tồn. Thang đầy đủ (DT → LNST) chỉ khi
@@ -271,8 +279,8 @@ HĐĐT/giá vốn/KH/GTGT/công nợ/TNDN + khóa sổ; trước đó: `Kết qu
 | Nhập NL chưa dùng | Tăng tồn + công nợ/giảm tiền |
 | Thanh toán NCC | Giảm công nợ và tiền |
 | Mua TSCĐ/CCDC vốn hóa/phân bổ | Tăng tài sản/chờ phân bổ + công nợ/giảm tiền |
-| Điều chuyển nội bộ | Đổi địa điểm/custody |
-| Tồn cuối còn nguyên | Tài sản — không cộng vào lợi nhuận |
+| Điều chuyển nội bộ | Đổi địa điểm/custody. Chi nhánh: hàng ĐC đã nhận vào công thức kỳ (không ghi chi vận hành). Công ty: không tạo P&L thêm |
+| Tồn cuối còn nguyên | Tài sản — không gọi là lãi. Δ tồn trong công thức kỳ vì đã trừ hàng vào |
 | GTGT đầu vào được khấu trừ | Tăng khoản thuế được khấu trừ — không phải doanh thu |
 | Thu GTGT đầu ra | Tăng nghĩa vụ thuế — không phải doanh thu Công ty |
 
@@ -292,8 +300,10 @@ ngừng ghi nhận; không cùng KH đi cả OPEX và tồn/COGS; không điều
 tạo DT/GTGT/chi phí; không file đính kèm tự khấu trừ; không HĐ thay thế từ data
 mutable hoặc auto-retry khi provider chưa rõ; GTGT ghi nhận = chờ+được+không;
 số kê khai có kỳ/duyệt/nguồn; điều chỉnh tham chiếu gốc; `GTGT tạm tính` fail
-closed; không đổi nhãn `Kết quả vận hành` → `Lợi nhuận sau thuế`; tồn/công nợ/
-tiền/tài sản không cộng trực tiếp vào LN. UI/hiện trạng/close:
+closed; không đổi nhãn `Kết quả vận hành` → `Lợi nhuận sau thuế`; tồn cuối là
+tài sản (Δ tồn trong identity periodic, không phải lãi); ĐC nội bộ không tạo
+DT/GTGT/opex — chi nhánh trừ hàng ĐC đã nhận, công ty trừ mua NCC. UI/hiện
+trạng/close:
 `docs/modules/finance.md`, `docs/ref/accounting-books-tt133-tt99.md`.
 
 ## 12. Nguồn pháp lý chính

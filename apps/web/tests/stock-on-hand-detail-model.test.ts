@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   computeStockIngredientDetailStatus,
+  stockDetailListedQuantity,
+  stockDetailListedValue,
   stockMovementReferenceHref,
+  type StockIngredientDetailLocation,
   type StockIngredientDetailMovement,
 } from "../lib/inventory/stock-on-hand-detail-model";
 
@@ -14,7 +17,7 @@ function makeMovement(
     type: "grn_receipt",
     movementSubtype: null,
     quantityChange: 1,
-    unitCost: null,
+    monetary: null,
     reason: null,
     createdAt: "2026-07-10T00:00:00.000Z",
     grnId: 9,
@@ -71,5 +74,51 @@ test("Owner surface movement links retain the management detail route", () => {
       branchId: 3,
     }),
     "/inventory/grn?grnId=44&mode=view",
+  );
+});
+
+function makeLocation(
+  patch: Partial<StockIngredientDetailLocation>,
+): StockIngredientDetailLocation {
+  return {
+    locationId: 1,
+    name: "Kho",
+    code: "WH",
+    locationKind: "warehouse",
+    qty: 0,
+    monetary: null,
+    lastCountedAt: null,
+    ...patch,
+  };
+}
+
+test("owner stock card header quantity sums visible system locations", () => {
+  assert.equal(stockDetailListedQuantity(42, undefined), 42);
+  assert.equal(
+    stockDetailListedQuantity(18, [
+      makeLocation({ locationId: 1, qty: 18 }),
+      makeLocation({ locationId: 2, qty: 1.3 }),
+      makeLocation({ locationId: 3, qty: 0 }),
+    ]),
+    19.3,
+  );
+});
+
+test("owner stock card header value sums the same visible locations", () => {
+  assert.equal(stockDetailListedValue(100, undefined), 100);
+  assert.equal(
+    stockDetailListedValue(100, [
+      makeLocation({
+        locationId: 1,
+        qty: 10,
+        monetary: { avgUnitCost: 2 },
+      }),
+      makeLocation({
+        locationId: 2,
+        qty: 5,
+        monetary: { avgUnitCost: 4 },
+      }),
+    ]),
+    40,
   );
 });

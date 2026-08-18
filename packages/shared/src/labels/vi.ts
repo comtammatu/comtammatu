@@ -221,6 +221,8 @@ export const INVENTORY_STATUS_LABELS_VI = {
   refunded: "Đã hoàn tiền",
   partially_received: "Nhận một phần",
   in_transit: "Đang giao",
+  confirmed_ship: "Đã xuất",
+  confirmed_receive: "Đang kiểm nhận",
   received: "Đã nhận",
   completed: "Xong",
   cancelled: "Đã hủy",

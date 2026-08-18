@@ -1,5 +1,6 @@
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { AppPage, AppPageHeader } from "@/components/surface";
+import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasPermissionAny } from "@/_lib/permissions";
 import { messages } from "@lib/messages";
 import {
@@ -14,6 +15,7 @@ import {
   resolveFinanceRange,
 } from "../_lib/finance-params";
 import { BankTransactionsTable } from "./bank-transactions-table";
+import { MbbankStatementRestoreDialog } from "./mbbank-statement-restore-dialog";
 import { SepayImportDialog } from "./sepay-import-dialog";
 
 const copy = messages.finance.bankTransactions;
@@ -35,12 +37,14 @@ export default async function BankTransactionsPage({
   };
   const resolved = resolveFinanceRange(params);
   const range = { start: resolved.start, end: resolved.end };
-  const [canLinkPayments, transactions, paymentWebhookSummary] =
+  const [auth, canLinkPayments, transactions, paymentWebhookSummary] =
     await Promise.all([
+      loadAuthState(),
       currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_VIEW),
       fetchSepayBankTransactions(range, { maxRows: SEPAY_LIST_PAGE_SIZE }),
       fetchSepayPaymentWebhookSummary(range),
     ]);
+  const isOwner = auth.claims.user_role === "owner";
   const expenseOptions = await loadExpenseMatchOptions(
     transactions.flatMap((transaction) => transaction.expenseIds),
   );
@@ -48,7 +52,14 @@ export default async function BankTransactionsPage({
     <AppPage width="xwide" density="compact">
       <AppPageHeader
         title={copy.title}
-        actions={canLinkPayments ? <SepayImportDialog /> : undefined}
+        actions={
+          canLinkPayments ? (
+            <>
+              {isOwner ? <MbbankStatementRestoreDialog /> : null}
+              <SepayImportDialog />
+            </>
+          ) : undefined
+        }
       />
       <BankTransactionsTable
         params={params}

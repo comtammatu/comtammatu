@@ -22,14 +22,17 @@ test("purchase request dialog keeps its actions visible with many lines", () => 
     "utf8",
   );
 
-  assert.match(requestSource, /<AppDialog[\s\S]*variant="document"/);
+  assert.doesNotMatch(
+    requestSource,
+    /<ScrollArea className="h-64">/,
+  );
   assert.match(frameSource, /variant\?: "default" \| "document"/);
   assert.match(
     frameSource,
     /grid-cols-1 grid-rows-\[auto_minmax\(0,1fr\)_auto\]/,
   );
   assert.match(frameSource, /sm:w-\[min\(1120px,96vw\)\]/);
-  assert.match(frameSource, /sm:max-h-\[95dvh\]/);
+  assert.match(frameSource, /sm:h-auto sm:max-h-\[min\(900px,95dvh\)\]/);
   assert.match(
     frameSource,
     /app-dialog-body col-span-full flex min-h-0 flex-col gap-4 overflow-y-auto overscroll-contain/,

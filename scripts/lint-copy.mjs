@@ -117,6 +117,7 @@ const CHECKS = [
     allowedPaths: new Set([
       ...FOOD_DELIVERY_VENDOR_SOURCE_PATHS,
       ...PAYMENT_VENDOR_DEEPLINK_SOURCE_PATHS,
+      "apps/web/app/(protected)/finance/bank-transactions/mbbank-statement-pre-sepay.ts",
     ]),
   },
   { pattern: /\b(QR Self-Order|Advanced Analytics|Delivery dispatch)\b/g, replacement: "chỉ ghi khi có D0xx/source-of-truth hiện hành" },

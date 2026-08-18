@@ -19,15 +19,15 @@ Period-result formula (two rows):
   is empty, not `0đ`; no-recipe is `0đ`). **`Giá thuần/phần`** is net revenue /
   qty after side split and discount, not `menu_price`. Company WAC is
   `Giá vốn`, not this column. See `docs/ref/inventory.md` § 3.
-- **`Lợi nhuận gộp`**: net revenue minus recorded food cost.
+- **`Lợi nhuận gộp`**: net revenue minus recorded food cost. Sales identity only.
+- **`Chi phí hàng` / `Chi phí hàng mua`**: inbound `transfer_in` at branch, or confirmed `/finance/supplier-invoices` `subtotal` (ex-VAT) at company. Bank settlement is payment, not a second P&L hit.
 - **`Chi phí vận hành`**: posted period expense (rent, utilities, payroll,
   repairs, consumables, marketing, fees/tax, hospitality, other). Excludes
   `capital`/`deposit`, capitalized equipment, ingredient COGS, cash↔bank.
 - **`Biến động tồn kho`**: closing minus opening inventory value (when readable).
-- **`Kết quả kinh doanh`**: gross profit − operating expense + inventory change.
+- **`Kết quả kinh doanh`**: revenue − goods-in − opex + inventory change. Not derived from GP.
 
-Missing food-cost coverage makes gross profit and period result unavailable.
-No recorded operating expense keeps period result unavailable (not zero).
+Missing food-cost coverage blanks gross profit only. No recorded operating expense keeps period result unavailable (not zero).
 
 After the period result, outside the formula: **`Chi phí ban đầu`**
 (`Vốn đã bỏ ra`) — all-time gross `capital`+`deposit`; ignores the period
@@ -51,11 +51,11 @@ presence blocks interactive init. Operator UI must not say "cutover": default
 boundary is `Ngay bây giờ`; `Từ 0 giờ ngày bắt đầu` only when evidence proves
 that boundary.
 
-`bank_transactions` is bank-ledger source of truth. Signed SePay webhooks and
-Owner-imported SePay exports are idempotent by stable SePay transaction ID.
-`webhook_events` is delivery evidence.
-`bank_transaction_reconciliation_matches` classifies only — never changes
-bank balance.
+`bank_transactions` is bank-ledger source of truth. Signed SePay webhooks,
+Owner-imported SePay exports, and Owner MB statement backfill
+(`restore_mbbank_statement_gap`, `repoint_finance_fund_opening`) are
+idempotent by stable transaction ID. `webhook_events` is delivery evidence.
+`bank_transaction_reconciliation_matches` classifies only — never changes bank balance.
 
 Cash supplier payments (`payment_method='cash'`) reduce cash.
 `bank_transfer` supplier payments update AP without a second bank movement;
@@ -99,7 +99,7 @@ Landing cards (formulas in Product Boundary):
 3. **Gross profit** — net revenue − food cost; margin only when coverage complete.
 4. **Operating expense** — operating categories only. Exclude COGS,
    `capital`, `deposit`, supplier payments, cash↔bank. None → `Chưa ghi nhận`.
-5. **Period result** — gross − opex + inventory change. Not "net profit".
+5. **Period result** — revenue − goods-in − opex + inventory change. Not from GP. Not "net profit".
 6. **Startup capital** — all-time `capital|deposit` gross; ignores period
    dates; outside the formula.
 
@@ -201,7 +201,7 @@ the actions above. RLS remains final enforcement.
 | `/finance/targets`           | Monthly revenue targets      | Finance-managed targets + non-cumulative reward tiers; no auto payroll |
 | `/finance/food-cost`         | Gross profit / margin        | Read-only analysis |
 | `/finance/supplier-invoices` | Supplier payable             | Thin AP entry; not expenses |
-| `/finance/invoices`          | HĐĐT queue                   | Support workflow |
+| `/finance/invoices`          | HĐĐT queue                   | Support workflow; same-VN-day issue window |
 
 Inventory owns stock-value detail; Finance shows only the current-value card.
 No `/accounting/*` app surface.
@@ -276,5 +276,4 @@ register in product → no equipment-value card until full source/recon contract
 - `packages/shared/src/auth/module-acl.ts`
 - `packages/shared/src/auth/nav-config.ts`
 - `packages/shared/src/auth/permissions.ts`
-- `supabase/migrations/*finance*.sql`
-- `supabase/migrations/*hddt*.sql` / `*supplier*.sql`
+- `supabase/migrations/*finance*.sql`, `*hddt*.sql`, `*supplier*.sql`

@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import { Button } from "@comtammatu/ui/components/button";
 import { Frame } from "@comtammatu/ui/components/frame";
 import { Item } from "@comtammatu/ui/components/item";
-import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Alert, AlertDescription, AlertTitle } from "@comtammatu/ui/components/alert";
 import { confirm } from "@/components/confirm-dialog";
@@ -266,51 +265,49 @@ export function ProductionDetailClient({
             <span className="w-36 shrink-0 text-right">Kế hoạch</span>
             <span className="w-36 shrink-0 text-right">Thực tế</span>
           </div>
-          <ScrollArea className="h-72">
-            <div className="divide-y">
-              {run.lines.map((line) => (
-                <div
-                  key={line.ingredient_id}
-                  className="flex flex-col gap-2 px-3 py-2.5 text-sm sm:flex-row sm:items-center"
-                >
-                  <span className="min-w-0 flex-1 font-medium text-foreground">
-                    {line.ingredient_name}
-                  </span>
-                  <span className="w-36 shrink-0 text-left sm:text-right tabular-nums text-muted-foreground text-xs sm:text-sm">
-                    {formatQty(line.planned_quantity)} {line.entry_unit_name}
-                  </span>
-                  <div className="w-36 shrink-0 flex items-center justify-start sm:justify-end gap-1.5">
-                    {run.status === "in_progress" ? (
-                      <div className="flex w-full items-center gap-1.5">
-                        <QuantityInput
-                          value={actualIngredients[line.ingredient_id] ?? ""}
-                          onValueChange={(value) =>
-                            setActualIngredients((current) => ({
-                              ...current,
-                              [line.ingredient_id]: value,
-                            }))
-                          }
-                          min="0"
-                          maxFractionDigits={3}
-                          className="h-8 text-xs"
-                          aria-label={`Thực tế ${line.ingredient_name}`}
-                        />
-                        <span className="text-xs text-muted-foreground shrink-0">
-                          {line.entry_unit_name}
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="tabular-nums font-medium text-foreground">
-                        {line.actual_quantity == null
-                          ? "—"
-                          : `${formatQty(line.actual_quantity)} ${line.entry_unit_name}`}
+          <div className="divide-y">
+            {run.lines.map((line) => (
+              <div
+                key={line.ingredient_id}
+                className="flex flex-col gap-2 px-3 py-2.5 text-sm sm:flex-row sm:items-center"
+              >
+                <span className="min-w-0 flex-1 font-medium text-foreground">
+                  {line.ingredient_name}
+                </span>
+                <span className="w-36 shrink-0 text-left sm:text-right tabular-nums text-muted-foreground text-xs sm:text-sm">
+                  {formatQty(line.planned_quantity)} {line.entry_unit_name}
+                </span>
+                <div className="w-36 shrink-0 flex items-center justify-start sm:justify-end gap-1.5">
+                  {run.status === "in_progress" ? (
+                    <div className="flex w-full items-center gap-1.5">
+                      <QuantityInput
+                        value={actualIngredients[line.ingredient_id] ?? ""}
+                        onValueChange={(value) =>
+                          setActualIngredients((current) => ({
+                            ...current,
+                            [line.ingredient_id]: value,
+                          }))
+                        }
+                        min="0"
+                        maxFractionDigits={3}
+                        className="h-8 text-xs"
+                        aria-label={`Thực tế ${line.ingredient_name}`}
+                      />
+                      <span className="text-xs text-muted-foreground shrink-0">
+                        {line.entry_unit_name}
                       </span>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <span className="tabular-nums font-medium text-foreground">
+                      {line.actual_quantity == null
+                        ? "—"
+                        : `${formatQty(line.actual_quantity)} ${line.entry_unit_name}`}
+                    </span>
+                  )}
                 </div>
-              ))}
-            </div>
-          </ScrollArea>
+              </div>
+            ))}
+          </div>
         </Frame>
       </AppSection>
 

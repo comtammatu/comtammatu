@@ -5,6 +5,69 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Transfer receive must keep company WAC
+
+State: verify
+Kind: defect
+Tier: T3
+Lane: inventory/valuation
+Exit: Operator can receive `DC-17082026-0049` at the oversold branch; `stock_transfer_receive` no longer writes negative `avg_unit_cost` when destination on-hand is negative and `unit_cost_at_ship` is lower than last WAC.
+Evidence: Production `enloyfnuerqgaqderbwb` applied `20260818012917` 2026-08-18; catalog `company_wac_only`; slip `DC-17082026-0049` still `confirmed_receive`. Static tests green.
+
+- [ ] Retry receive on `DC-17082026-0049`; dest WAC stays >= 0
+
+UI Advisor Gate
+- Surface: none (RPC-only; transfer receive UI unchanged)
+- Block: none
+- Verification: SQL catalog + oversold dest receive, static tests, `lint:migration-lineage`
+
+## Requeue blocked invoice_total_mismatch jobs
+
+State: verify
+Kind: defect
+Tier: T3
+Lane: finance/hddt
+Exit: Owner/accountant can confirm once on `/finance/invoices` to requeue every tenant job that is `blocked` with `invoice_total_mismatch` and a `draft` tax invoice; cron then issues them. `reconcile_required` and `provider_rejected` stay untouched.
+Evidence: Isolated `corepack pnpm verify` green. Production `enloyfnuerqgaqderbwb` applied `20260817222103` + `20260817222910` 2026-08-17. Types regenerated. 113 mismatch jobs still `blocked` until web deploy + Owner click.
+
+- [ ] After owner-delegated Production apply of `20260817222103` (same HĐĐT batch as `20260817222910`), then web deploy, confirm 113 jobs leave `blocked`.
+
+UI Advisor Gate
+- Surface: `/finance/invoices` attention banner; route family control finance; plane: `control_surface`; change: flow
+- Context: screen-context-map Finance; actor: Owner/accountant; job: retry HĐĐT after whole-VND peel fix
+- Journey: open invoices → see mismatch count → confirm → jobs queued; recovery: idempotent second click requeues 0
+- Information order: 1) count 2) confirm that POS money is already collected 3) result toast; exclude: Viettel-unknown reconcile jobs
+- Pattern: LIST existing; exemplar: `invoice-list.tsx` attention Item; data display: Item + confirm()
+- States: idle, confirm, pending, success, empty, permission
+- Block: none — existing attention Item + `confirm` + Button
+- Responsive: banner button in ItemHeader; touch size via existing Button
+- Verification: SQL ACL/functiondef test, static action/UI tests, `lint:copy`, isolated `corepack pnpm verify`
+
+## Unstick same-day HĐĐT before Vietnam midnight
+
+State: doing
+Kind: fix
+Tier: T3
+Lane: finance/hddt
+Exit: Evening paid orders issue on the same Vietnam calendar day; Viettel is not called with yesterday's `invoiceIssuedDate`. Buyer/issue window is `min(paid_at + 2h, 23:55 VN of paid_at)`. Bulk mismatch requeue stays mismatch-only; worker fail-closes if the calendar day already changed.
+Evidence: Owner locked the window 2026-08-17. Production `enloyfnuerqgaqderbwb` applied `20260817222103` + `20260817222910`. Worker fail-closes `invoice_issue_date_not_today` still needs web deploy.
+
+- [ ] Apply the two HĐĐT migrations to Production `enloyfnuerqgaqderbwb` after dry-run equals exactly those files
+- [ ] Deploy web so the date guard is live; confirm tonight's queued jobs including the post-22:00 order
+- [ ] Owner/accountant: on `/finance/invoices` tap `Đưa tất cả lệch tổng vào hàng chờ` for today's mismatch only
+- [ ] Reconcile 90 `signing` / `invoice_write_failed` on Viettel by `provider_ref`; do not create a second invoice
+
+UI Advisor Gate
+- Surface: `/finance/invoices`; route family: control finance; plane: `control_surface`; change: copy
+- Context: screen-context-map Finance HĐĐT queue; actor: Owner/Accountant; job: retry same-day drafts, reconcile unknown Viettel
+- Journey: open LIST attention → read error → same-day requeue or Viettel reconcile; recovery: toast, no second create
+- Information order: 1) attention jobs 2) date/error 3) requeue or reconcile; exclude: past-day auto-issue
+- Pattern: LIST existing; exemplar: `invoice-list.tsx`; data display: attention Item
+- States: queued, blocked, reconcile_required, issued
+- Block: none — existing attention banner copy only
+- Responsive/accessibility: same banner; confirm dialog labelled
+- Verification: SQL helper math, static issuer/date-guard tests, `lint:copy`
+
 ## Backfill sale consumption after today's recipe add
 
 State: verify

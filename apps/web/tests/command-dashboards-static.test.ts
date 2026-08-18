@@ -59,6 +59,9 @@ test("finance overview presents period results, current funds, and inventory in 
 
   assert.match(page, /xl:grid-cols-\[minmax\(0,1fr\)_auto/);
   assert.match(page, /label=\{financeCopy\.basic\.kpis\.netRevenue\}/);
+  assert.match(page, /kpis\.periodCost/);
+  assert.match(page, /kpis\.inboundTransfer/);
+  assert.match(page, /kpis\.inventoryPurchases/);
   assert.match(page, /label=\{financeCopy\.basic\.kpis\.ingredientCost\}/);
   assert.match(page, /label=\{financeCopy\.basic\.kpis\.grossProfit\}/);
   assert.match(page, /label=\{financeCopy\.basic\.kpis\.operatingExpense\}/);
@@ -84,6 +87,11 @@ test("finance overview presents period results, current funds, and inventory in 
   );
   assert.match(page, /item\.tone !== "neutral"/);
   assert.ok(
+    pageBody.indexOf("basic.sections.grossProfit") <
+      pageBody.indexOf("basic.sections.periodResult"),
+    "Gross profit must appear before period result",
+  );
+  assert.ok(
     pageBody.indexOf("basic.sections.periodResult") <
       pageBody.indexOf("basic.sections.startupCapital"),
     "Period results must appear before startup capital",
@@ -107,7 +115,11 @@ test("finance overview presents period results, current funds, and inventory in 
   assert.match(copy, /title: "Tài chính"/);
   assert.match(copy, /netRevenue: "Doanh thu thuần"/);
   assert.match(copy, /ingredientCost: "Giá vốn món"/);
+  assert.match(copy, /periodCost: "Chi phí"/);
+  assert.match(copy, /inboundTransfer: "Chi phí hàng"/);
+  assert.match(copy, /inventoryPurchases: "Chi phí hàng mua"/);
   assert.match(copy, /grossProfit: "Lợi nhuận gộp"/);
+  assert.match(copy, /sections: \{[\s\S]*grossProfit: "Lợi nhuận gộp"/);
   assert.match(copy, /operatingExpense: "Chi phí vận hành"/);
   assert.match(copy, /startupCapital: "Chi phí ban đầu"/);
   assert.match(copy, /startupCapital: "Vốn đã bỏ ra"/);
@@ -123,6 +135,8 @@ test("finance overview presents period results, current funds, and inventory in 
   assert.equal((page.match(/<span aria-hidden>=<\/span>/g) ?? []).length, 2);
   assert.doesNotMatch(copy, /netProfit: "Lợi nhuận ròng"/);
   assert.doesNotMatch(cockpit, /const netProfit =/);
+  assert.match(cockpit, /fetchPeriodGoodsIn/);
+  assert.match(cockpit, /branchIds: \[\.\.\.salesBranchIds\]/);
   assert.match(copy, /Đầu kỳ/);
   assert.match(copy, /Không gồm giá vốn món/);
   assert.match(copy, /bankReconciliationLabel: "Giao dịch"/);

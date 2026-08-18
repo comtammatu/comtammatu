@@ -239,6 +239,7 @@ export function GrnReviewOperatorClient({
         <BranchGrnReviewLineSheet
           grn={grn}
           line={canEditDraft ? editingLine : null}
+          ingredients={ingredients}
           isPending={isSaving}
           onClose={() => setEditingLineId(null)}
           onPatch={patchEditingLine}

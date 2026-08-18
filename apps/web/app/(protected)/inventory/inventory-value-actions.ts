@@ -17,6 +17,7 @@ const inventoryPeriodValueSchema = z.object({
   startDate: z.string().date(),
   endDate: z.string().date(),
   branchId: z.number().int().positive().optional(),
+  branchIds: z.array(z.number().int().positive()).optional(),
 });
 
 function computeLineValue(
@@ -148,6 +149,8 @@ export async function fetchInventoryPeriodValue(input: {
   startDate: string;
   endDate: string;
   branchId?: number;
+  /** When set (and `branchId` omitted), sum only these sites — sales CN. */
+  branchIds?: number[];
 }): Promise<ActionResult<{ openingValue: number; closingValue: number }>> {
   const parsed = inventoryPeriodValueSchema.safeParse(input);
   if (!parsed.success || parsed.data.startDate > parsed.data.endDate) {
@@ -196,7 +199,14 @@ export async function fetchInventoryPeriodValue(input: {
     };
   }
 
-  const totals = (data ?? []).reduce(
+  const scopedRows = (data ?? []).filter((row) => {
+    if (parsed.data.branchId != null) return row.branch_id === parsed.data.branchId;
+    if (parsed.data.branchIds != null) {
+      return parsed.data.branchIds.includes(row.branch_id);
+    }
+    return true;
+  });
+  const totals = scopedRows.reduce(
     (sum, row) => ({
       openingValue: sum.openingValue + Number(row.opening_value ?? 0),
       closingValue: sum.closingValue + Number(row.closing_value ?? 0),

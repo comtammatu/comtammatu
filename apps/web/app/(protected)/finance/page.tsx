@@ -18,6 +18,7 @@ import {
   ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
+import { Frame } from "@comtammatu/ui/components/frame";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import {
   AppPage,
@@ -231,6 +232,7 @@ export default async function FinancePage({
   const operatingResult = cockpit.kpis.operatingResult;
   const inventoryChange = cockpit.kpis.inventoryChange;
   const showInventoryChange = cockpit.canViewInventoryValuation;
+  const goodsInIsTransfer = cockpit.kpis.goodsInKind === "inbound_transfer";
   const attentionItems = actionableExceptions(cockpit.exceptions);
   const attentionCount = attentionItems.length;
 
@@ -297,92 +299,125 @@ export default async function FinancePage({
     );
   }
 
-  const formulaDetails = (
-    <>
-      <KpiRow
-        density="compact"
-        className="grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)]"
-      >
-        <div className="min-w-0 md:grid md:gap-2 xl:contents">
-          <span
-            className="min-h-0 md:min-h-6 xl:absolute xl:size-0"
-            aria-hidden
-          />
+  const grossProfitDetails = (
+    <KpiRow
+      density="compact"
+      className="grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)]"
+    >
+      <div className="min-w-0 md:grid md:gap-2 xl:contents">
+        <span
+          className="min-h-0 md:min-h-6 xl:absolute xl:size-0"
+          aria-hidden
+        />
+        <KpiCard
+          density="compact"
+          label={financeCopy.basic.kpis.netRevenue}
+          value={formatVND(cockpit.kpis.netRevenueBeforeVat)}
+          shortValue={formatCompactVND(cockpit.kpis.netRevenueBeforeVat)}
+          hint={targetHint}
+          tone="primary"
+          href={netRevenueHref}
+        />
+      </div>
+
+      <div className="grid min-w-0 gap-2 xl:contents">
+        <span className={formulaOperatorClass}>
+          <span aria-hidden>−</span>
+          <span className="sr-only">
+            {financeCopy.basic.operators.subtract}
+          </span>
+        </span>
+        <KpiCard
+          density="compact"
+          label={financeCopy.basic.kpis.ingredientCost}
+          value={
+            cockpit.kpis.costAvailable
+              ? formatVND(cockpit.kpis.ingredientCost)
+              : financeCopy.basic.kpis.missingCost
+          }
+          shortValue={
+            cockpit.kpis.costAvailable
+              ? formatCompactVND(cockpit.kpis.ingredientCost)
+              : undefined
+          }
+          hint={financeCopy.basic.kpis.ingredientCostHint(
+            formatCount(cockpit.kpis.costCoverageOrderCount),
+            formatCount(cockpit.kpis.orderCount),
+          )}
+          tone={cockpit.kpis.costAvailable ? "neutral" : "warning"}
+          href={financeHref("/finance/food-cost", params)}
+        />
+      </div>
+
+      <div className="grid min-w-0 gap-2 xl:contents">
+        <span className={formulaOperatorClass}>
+          <span aria-hidden>=</span>
+          <span className="sr-only">
+            {financeCopy.basic.operators.equals}
+          </span>
+        </span>
+        {renderGrossProfitCard()}
+      </div>
+    </KpiRow>
+  );
+
+  const periodResultDetails = (
+    <KpiRow
+      density="compact"
+      className={
+        showInventoryChange
+          ? "grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1.4fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)]"
+          : "grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1.4fr)_auto_minmax(0,1fr)]"
+      }
+    >
+      <div className="min-w-0 md:grid md:gap-2 xl:contents">
+        <span
+          className="min-h-0 md:min-h-6 xl:absolute xl:size-0"
+          aria-hidden
+        />
+        <KpiCard
+          density="compact"
+          label={financeCopy.basic.kpis.netRevenue}
+          value={formatVND(cockpit.kpis.netRevenueBeforeVat)}
+          shortValue={formatCompactVND(cockpit.kpis.netRevenueBeforeVat)}
+          hint={financeCopy.basic.kpis.netRevenueHint}
+          tone="primary"
+          href={netRevenueHref}
+        />
+      </div>
+
+      <div className="grid min-w-0 gap-2 xl:contents">
+        <span className={formulaOperatorClass}>
+          <span aria-hidden>−</span>
+          <span className="sr-only">
+            {financeCopy.basic.operators.subtract}
+          </span>
+        </span>
+        <Frame className="grid gap-2 p-2">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            {financeCopy.basic.kpis.periodCost}
+          </p>
           <KpiCard
             density="compact"
-            label={financeCopy.basic.kpis.netRevenue}
-            value={formatVND(cockpit.kpis.netRevenueBeforeVat)}
-            shortValue={formatCompactVND(cockpit.kpis.netRevenueBeforeVat)}
-            hint={targetHint}
-            tone="primary"
-            href={netRevenueHref}
-          />
-        </div>
-
-        <div className="grid min-w-0 gap-2 xl:contents">
-          <span className={formulaOperatorClass}>
-            <span aria-hidden>−</span>
-            <span className="sr-only">
-              {financeCopy.basic.operators.subtract}
-            </span>
-          </span>
-          <KpiCard
-            density="compact"
-            label={financeCopy.basic.kpis.ingredientCost}
-            value={
-              cockpit.kpis.costAvailable
-                ? formatVND(cockpit.kpis.ingredientCost)
-                : financeCopy.basic.kpis.missingCost
+            label={
+              goodsInIsTransfer
+                ? financeCopy.basic.kpis.inboundTransfer
+                : financeCopy.basic.kpis.inventoryPurchases
             }
-            shortValue={
-              cockpit.kpis.costAvailable
-                ? formatCompactVND(cockpit.kpis.ingredientCost)
-                : undefined
+            value={formatVND(cockpit.kpis.goodsIn)}
+            shortValue={formatCompactVND(cockpit.kpis.goodsIn)}
+            hint={
+              goodsInIsTransfer
+                ? financeCopy.basic.kpis.inboundTransferHint
+                : financeCopy.basic.kpis.inventoryPurchasesHint
             }
-            hint={financeCopy.basic.kpis.ingredientCostHint(
-              formatCount(cockpit.kpis.costCoverageOrderCount),
-              formatCount(cockpit.kpis.orderCount),
-            )}
-            tone={cockpit.kpis.costAvailable ? "neutral" : "warning"}
-            href={financeHref("/finance/food-cost", params)}
+            tone="neutral"
+            href={
+              goodsInIsTransfer
+                ? "/inventory/transfers"
+                : financeHref("/finance/supplier-invoices", params)
+            }
           />
-        </div>
-
-        <div className="grid min-w-0 gap-2 xl:contents">
-          <span className={formulaOperatorClass}>
-            <span aria-hidden>=</span>
-            <span className="sr-only">
-              {financeCopy.basic.operators.equals}
-            </span>
-          </span>
-          {renderGrossProfitCard()}
-        </div>
-      </KpiRow>
-
-      <KpiRow
-        density="compact"
-        className={
-          showInventoryChange
-            ? "grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)]"
-            : "grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)]"
-        }
-      >
-        {/* Bridge card only on xl equation layout — avoid duplicating gross profit when stacked. */}
-        <div className="hidden min-w-0 md:gap-2 xl:contents">
-          <span
-            className="min-h-0 md:min-h-6 xl:absolute xl:size-0"
-            aria-hidden
-          />
-          {renderGrossProfitCard()}
-        </div>
-
-        <div className="grid min-w-0 gap-2 xl:contents">
-          <span className={formulaOperatorClass}>
-            <span aria-hidden>−</span>
-            <span className="sr-only">
-              {financeCopy.basic.operators.subtract}
-            </span>
-          </span>
           <KpiCard
             density="compact"
             label={financeCopy.basic.kpis.operatingExpense}
@@ -406,44 +441,38 @@ export default async function FinancePage({
                 : "pending",
             })}
           />
-        </div>
+        </Frame>
+      </div>
 
-        {showInventoryChange ? (
-          <div className="grid min-w-0 gap-2 xl:contents">
-            <span className={formulaOperatorClass}>
-              <span aria-hidden>+</span>
-              <span className="sr-only">
-                {financeCopy.basic.operators.add}
-              </span>
-            </span>
-            <KpiCard
-              density="compact"
-              label={financeCopy.basic.kpis.inventoryChange}
-              value={formatVND(inventoryChange)}
-              shortValue={formatCompactVND(inventoryChange)}
-              hint={financeCopy.basic.kpis.inventoryChangeHint}
-              tone={
-                inventoryChange < 0
-                  ? "destructive"
-                  : inventoryChange > 0
-                    ? "success"
-                    : "neutral"
-              }
-            />
-          </div>
-        ) : null}
-
+      {showInventoryChange ? (
         <div className="grid min-w-0 gap-2 xl:contents">
           <span className={formulaOperatorClass}>
-            <span aria-hidden>=</span>
+            <span aria-hidden>+</span>
             <span className="sr-only">
-              {financeCopy.basic.operators.equals}
+              {financeCopy.basic.operators.add}
             </span>
           </span>
-          {renderOperatingResultCard()}
+          <KpiCard
+            density="compact"
+            label={financeCopy.basic.kpis.inventoryChange}
+            value={formatVND(inventoryChange)}
+            shortValue={formatCompactVND(inventoryChange)}
+            hint={financeCopy.basic.kpis.inventoryChangeHint}
+            tone="neutral"
+          />
         </div>
-      </KpiRow>
-    </>
+      ) : null}
+
+      <div className="grid min-w-0 gap-2 xl:contents">
+        <span className={formulaOperatorClass}>
+          <span aria-hidden>=</span>
+          <span className="sr-only">
+            {financeCopy.basic.operators.equals}
+          </span>
+        </span>
+        {renderOperatingResultCard()}
+      </div>
+    </KpiRow>
   );
 
   return (
@@ -481,10 +510,17 @@ export default async function FinancePage({
         hide={["branch", "granularity", "compare"]}
       />
 
+      <AppSection size="sm" title={financeCopy.basic.sections.grossProfit}>
+        <FinancePeriodFormulaShell
+          summary={renderGrossProfitCard()}
+          details={grossProfitDetails}
+        />
+      </AppSection>
+
       <AppSection size="sm" title={financeCopy.basic.sections.periodResult}>
         <FinancePeriodFormulaShell
           summary={renderOperatingResultCard()}
-          details={formulaDetails}
+          details={periodResultDetails}
         />
       </AppSection>
 

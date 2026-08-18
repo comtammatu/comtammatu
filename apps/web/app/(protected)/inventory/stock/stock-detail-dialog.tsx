@@ -9,6 +9,7 @@ import {
   Truck as IconTruck,
 } from "lucide-react";
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
+import { formatInventoryLocationLabelVi } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Collapsible,
@@ -46,6 +47,8 @@ import {
 } from "../_lib/stock-unit-format";
 import { visibleStockLocationRows } from "@lib/inventory/stock-on-hand-model";
 import {
+  stockDetailListedQuantity,
+  stockDetailListedValue,
   stockMovementLabel,
   stockMovementReferenceHref,
   stockMovementReferenceLabel,
@@ -62,12 +65,12 @@ const detailCopy = stockCopy.detail;
 function stockDetailLocationLabel(
   location: StockIngredientDetailLocation,
 ): string {
-  const locationName =
-    location.name === "main_warehouse" || location.code === "main_warehouse"
-      ? messages.inventory.ingredients.dialog.defaultFulfillSiteKindCentralSupply
-      : location.name;
-  const branchName = location.branchName?.trim();
-  return branchName ? `${branchName} · ${locationName}` : locationName;
+  return formatInventoryLocationLabelVi({
+    branchName: location.branchName,
+    siteKind: location.siteKind,
+    locationKind: location.locationKind,
+    fallbackName: location.name,
+  });
 }
 
 function valuationLabel(
@@ -115,16 +118,21 @@ export function StockDetailDialog({
     ? visibleStockLocationRows(detailData.systemLocations)
     : [];
   const showValuation = detailData?.valuation != null;
+  const headerQty = stockDetailListedQuantity(
+    detailData?.totalQty ?? 0,
+    detailData?.systemLocations,
+  );
+  const headerValue = stockDetailListedValue(
+    detailData?.valuation?.totalValue ?? null,
+    detailData?.systemLocations,
+  );
 
   const totalStockUnits = ingredient
-    ? formatStockUnits(detailData?.totalQty ?? 0, ingredient.units, formatQty)
+    ? formatStockUnits(headerQty, ingredient.units, formatQty)
     : { big: null, base: "" };
 
   const compactUnit = ingredient
-    ? resolveStockCompactUnit(
-        detailData?.totalQty ?? 0,
-        ingredient.units,
-      )
+    ? resolveStockCompactUnit(headerQty, ingredient.units)
     : undefined;
   const wacUnitLabel = ingredient
     ? stockUnitLabel(
@@ -133,14 +141,20 @@ export function StockDetailDialog({
       )
     : "";
 
-  const totalValue = detailData?.valuation?.totalValue ?? null;
-  const wac = detailData?.valuation?.wac ?? null;
+  const totalValue = headerValue;
+  const listedLedgerWac =
+    detailData?.systemLocations != null &&
+    headerQty > 0 &&
+    headerValue != null
+      ? headerValue / headerQty
+      : (detailData?.valuation?.wac ?? null);
+  const wac = listedLedgerWac;
   const displayWac = toStockDisplayUnitCost(wac, compactUnit);
   const valuationKind =
     detailData?.valuation == null
       ? null
       : resolveStockValuationDisplay({
-          quantity: detailData.totalQty,
+          quantity: headerQty,
           unitCost: wac,
         });
 

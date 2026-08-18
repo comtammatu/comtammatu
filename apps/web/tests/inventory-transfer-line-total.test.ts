@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { computeTransferLineTotal } from "../app/(protected)/inventory/transfers/[id]/line-view-model";
+import { computeTransferLineDisplayUnitCost, computeTransferLineTotal } from "../app/(protected)/inventory/transfers/[id]/line-view-model";
 
 test("transfer line total converts entry-unit qty to base before pricing", () => {
   // 2 thùng x 12kg/thùng x 10.000đ/kg = 240.000đ
@@ -37,4 +37,21 @@ test("transfer line total falls back to entry qty when factor is unresolved", ()
 
   assert.equal(baseQuantity, 3);
   assert.equal(total, 3000);
+});
+
+test("transfer unit cost label uses the same unit as quantity", () => {
+  assert.equal(
+    computeTransferLineDisplayUnitCost({
+      baseUnitCost: 1.28,
+      toBaseFactor: 1000,
+    }),
+    1280,
+  );
+  assert.equal(
+    computeTransferLineDisplayUnitCost({
+      baseUnitCost: 10000,
+      toBaseFactor: null,
+    }),
+    10000,
+  );
 });

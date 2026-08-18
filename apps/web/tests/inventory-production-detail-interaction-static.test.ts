@@ -17,4 +17,5 @@ test("production detail confirms cancellation and keeps state-specific actions",
   assert.match(source, /actualIngredients: actualRows/);
   assert.match(source, /detailCopy\.shipToBranchAction/);
   assert.match(source, /\/inventory\/transfers\/new\?branch=/);
+  assert.doesNotMatch(source, /<ScrollArea className="h-72">/);
 });

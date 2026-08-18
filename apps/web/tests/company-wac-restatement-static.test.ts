@@ -32,6 +32,19 @@ test("company WAC SQL proof covers pending GRN, FG skip GRN, equalize, and appen
   assert.match(sql, /production must cost consumed WAC/);
   assert.match(sql, /FG provisional must skip GRN/);
   assert.match(sql, /FG site WAC diverged after equalize/);
+  assert.match(sql, /transfer receive must not overwrite site WAC/);
+});
+
+test("transfer receive must not overwrite company WAC", () => {
+  const sql = read(
+    "supabase/migrations/20260818012917_transfer_receive_keep_company_wac.sql",
+  );
+  const proof = read("supabase/tests/stock_fulfillment_workflow_test.sql");
+
+  assert.match(sql, /CREATE OR REPLACE FUNCTION private\.execute_stock_transfer_receive/);
+  assert.doesNotMatch(sql, /avg_unit_cost = v_new_wac/);
+  assert.match(proof, /receive must not overwrite company WAC/);
+  assert.match(proof, /receive wrote negative WAC/);
 });
 
 test("ADR 0040 treats FG site WAC spread as a bug", () => {
@@ -40,7 +53,9 @@ test("ADR 0040 treats FG site WAC spread as a bug", () => {
   assert.match(adr, /Finished goods \*\*never GRN\*\*/);
   assert.match(adr, /second price at Branch vs Kitchen for the same FG is a bug/);
   assert.match(adr, /Finished-good provisional ignores [`]grn_receipt[`]/);
+  assert.match(adr, /execute_stock_transfer_receive/);
   assert.match(inventory, /không GRN, điều chuyển không/);
+  assert.match(inventory, /Nhận phiếu không trộn/);
 });
 
 test("sườn một gang restatement uses append-only provisional reprice", () => {

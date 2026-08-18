@@ -1,7 +1,7 @@
 import type { IngredientUnitRow } from "@lib/inventory/types";
 
 const QUANTITY_EPSILON = 5e-6;
-/** Compact stock line shows at most two unit tiers (e.g. "1 thùng 6 lon"). */
+/** Compact stock line shows at most two unit tiers (e.g. "1 thùng + 6 lon"). */
 const MAX_COMPACT_UNITS = 2;
 
 function snapNearInteger(value: number): number {
@@ -125,7 +125,7 @@ export function toStockDisplayUnitCost(
  *
  * Examples (base = ml, lon = 250, thùng = 6000):
  * - 3750 → big "15 lon", base "3750 ml"
- * - 7500 → big "1 thùng 6 lon", base "7500 ml"
+ * - 7500 → big "1 thùng + 6 lon", base "7500 ml"
  */
 export function formatStockUnits(
   qtyBase: number,
@@ -214,7 +214,7 @@ export function formatStockUnits(
   return {
     big: displayParts
       .map((part) => `${formatNumber(part.qty)} ${part.code}`.trim())
-      .join(" "),
+      .join(" + "),
     base,
   };
 }

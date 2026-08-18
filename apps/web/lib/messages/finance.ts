@@ -1,4 +1,5 @@
 import { formatCount } from "@comtammatu/shared/format";
+import { BRANCH_VI } from "@comtammatu/shared/messages";
 
 export const finance = {
   actionErrors: {
@@ -70,7 +71,7 @@ export const finance = {
   },
   common: {
     noValue: "—",
-    allBranches: "Tất cả chi nhánh",
+    allBranches: BRANCH_VI.selectAll,
     branchFallback: (branchId: number) => `Chi nhánh ${branchId}`,
     loading: "Đang tải...",
     emptyInRange: "Chưa có dữ liệu trong khoảng này.",
@@ -218,6 +219,7 @@ export const finance = {
     dateMeta: (date: string, branch: string) => `${date} · ${branch}`,
     periodMeta: (start: string, end: string) => `${start} → ${end}`,
     sections: {
+      grossProfit: "Lợi nhuận gộp",
       periodResult: "Kết quả kinh doanh",
       startupCapital: "Chi phí ban đầu",
       inventory: "Tồn kho",
@@ -238,9 +240,17 @@ export const finance = {
       ingredientCostHint: (covered: string, total: string) =>
         `${covered}/${total} đơn có giá vốn`,
       missingCost: "Chưa đủ dữ liệu",
+      periodCost: "Chi phí",
+      inboundTransfer: "Chi phí hàng",
+      inboundTransferHint:
+        "Điều chuyển đã nhận (yêu cầu hàng như yêu cầu mua của Kho Tổng / Bếp). Ghi lúc nhận, hàng đang đi chưa tính.",
+      inventoryPurchases: "Chi phí hàng mua",
+      inventoryPurchasesHint:
+        "Hóa đơn đầu vào đã xác nhận, chưa thuế GTGT. Công nợ chưa trả vẫn tính. Giao dịch ngân hàng là thanh toán, không trừ lần nữa. Không gồm điều chuyển nội bộ.",
       grossProfit: "Lợi nhuận gộp",
-      grossProfitHint: (margin: string) => `Biên gộp ${margin}`,
-      grossProfitMissingHint: "Cần đủ giá vốn món",
+      grossProfitHint: (margin: string) =>
+        `Biên gộp ${margin}. Bán món — không trừ vào kết quả kinh doanh.`,
+      grossProfitMissingHint: "Cần đủ giá vốn món. Không trừ vào kết quả kinh doanh.",
       operatingExpense: "Chi phí vận hành",
       operatingExpenseHint:
         "Thuê, điện, lương trong kỳ. Không gồm vốn mở quán. Chưa gồm thuế GTGT.",
@@ -248,11 +258,13 @@ export const finance = {
       startupCapitalHint:
         "Thi công, máy, xe, nội thất, thiết bị/TSCĐ, đặt cọc. Toàn bộ vốn đã bỏ ra, không theo kỳ. Đã gồm GTGT. Không trừ vào kết quả tháng.",
       inventoryChange: "Biến động tồn kho",
-      inventoryChangeHint: "Tồn cuối kỳ trừ tồn đầu kỳ.",
+      inventoryChangeHint:
+        "Tồn cuối kỳ trừ tồn đầu kỳ. Hàng còn lại, không phải lãi.",
       operatingResult: "Kết quả kinh doanh",
       operatingResultHint:
-        "Lợi nhuận gộp trừ chi vận hành, cộng biến động tồn kho.",
-      operatingResultHintWithoutInventory: "Lợi nhuận gộp trừ chi phí vận hành.",
+        "Doanh thu trừ chi phí hàng và chi vận hành, cộng biến động tồn. Không lấy từ lợi nhuận gộp.",
+      operatingResultHintWithoutInventory:
+        "Doanh thu trừ chi phí hàng và chi vận hành. Không lấy từ lợi nhuận gộp.",
       notCalculated: "Chưa tính",
       notRecorded: "Chưa ghi nhận",
       inventoryClosingValue: "Giá trị tồn kho cuối kỳ",
@@ -645,6 +657,20 @@ export const finance = {
     importAction: "Nhập file SePay",
     importTitle: "Nhập lịch sử giao dịch SePay",
     importDescription: "Tệp CSV từ SePay. Giao dịch đã có không bị cộng lại.",
+    statementRestoreAction: "Nhập sao kê trước SePay",
+    statementRestoreTitle: "Nhập sao kê trước 08/08",
+    statementRestoreDescription: (rowCount: string, openingDate: string) =>
+      `Nhập ${rowCount} giao dịch thiếu từ ngày mở sổ ${openingDate} đến trước SePay. Số dư đầu tài khoản là 0đ. Dòng đã có không bị cộng lại.`,
+    statementRestoreConfirm: "Đã đối chiếu với sao kê ngân hàng",
+    statementRestoreConfirmRequired: "Cần xác nhận trước khi nhập sao kê.",
+    statementRestoreSubmit: "Nhập sao kê",
+    statementRestorePending: "Đang nhập",
+    statementRestoreSuccess: (inserted: number, existing: number) =>
+      `Đã thêm ${inserted} giao dịch; ${existing} giao dịch đã có.`,
+    statementRestoreError: "Không thể nhập sao kê trước SePay.",
+    statementRestoreForbidden: "Không có quyền nhập sao kê trước SePay.",
+    statementRestoreLedgerReason:
+      "Đưa mốc mở sổ về 0 giờ 13/07/2026. Tài khoản MB bắt đầu ngày này, số dư đầu 0đ. SePay không có lịch sử trước 08/08.",
     importFileLabel: "Tệp CSV SePay",
     importHint: "Tối đa 5.000 giao dịch mỗi lần nhập.",
     importSubmit: "Nhập giao dịch",
@@ -940,7 +966,7 @@ export const finance = {
     location: "Vị trí",
     locationAll: "Tất cả",
     locationCompany: "Công ty",
-    locationAllBranches: "Toàn bộ chi nhánh",
+    locationAllBranches: BRANCH_VI.selectAll,
     branch: "Chi nhánh",
     branchPlaceholder: "Chọn chi nhánh",
     range: "Khoảng thời gian",
@@ -1052,7 +1078,7 @@ export const finance = {
     },
     periodTable: {
       title: "Bảng doanh thu thuần theo kỳ",
-      descriptionAll: "Tất cả chi nhánh — bấm ngày để xem chi tiết.",
+      descriptionAll: `${BRANCH_VI.selectAll} — bấm ngày để xem chi tiết.`,
       descriptionSingle: "Bấm ngày để xem đơn trong ngày.",
       empty: "Chưa có dữ liệu trong khoảng này.",
       colPeriod: "Kỳ",

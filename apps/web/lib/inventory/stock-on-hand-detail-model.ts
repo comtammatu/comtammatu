@@ -1,8 +1,9 @@
 import type { IngredientUnitRow } from "@lib/inventory/types";
 import { messages } from "@lib/messages";
-import type {
-  StockActionPermissions,
-  StockStatus,
+import {
+  visibleStockLocationRows,
+  type StockActionPermissions,
+  type StockStatus,
 } from "./stock-on-hand-model";
 
 const stockCopy = messages.inventory.stock;
@@ -27,6 +28,7 @@ export type StockIngredientDetailLocation = {
   locationKind: string;
   /** Populated on owner system-wide breakdown rows. */
   branchName?: string;
+  siteKind?: string;
   qty: number;
   monetary: { avgUnitCost: number | null } | null;
   lastCountedAt: string | null;
@@ -90,6 +92,30 @@ export function computeStockIngredientDetailStatus(
   if (qty <= 0) return "out";
   if (min > 0 && qty <= min) return "low";
   return "normal";
+}
+
+/** Header on-hand follows the location list the operator can see. */
+export function stockDetailListedQuantity(
+  totalQty: number,
+  systemLocations: StockIngredientDetailLocation[] | undefined,
+): number {
+  if (systemLocations == null) return totalQty;
+  return visibleStockLocationRows(systemLocations).reduce(
+    (sum, location) => sum + location.qty,
+    0,
+  );
+}
+
+export function stockDetailListedValue(
+  branchTotalValue: number | null,
+  systemLocations: StockIngredientDetailLocation[] | undefined,
+): number | null {
+  if (systemLocations == null) return branchTotalValue;
+  return visibleStockLocationRows(systemLocations).reduce(
+    (sum, location) =>
+      sum + location.qty * (location.monetary?.avgUnitCost ?? 0),
+    0,
+  );
 }
 
 export function stockStorageTemperature(type: string | null): string | null {

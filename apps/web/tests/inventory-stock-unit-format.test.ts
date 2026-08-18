@@ -47,7 +47,7 @@ test("multi-unit stock promotes to largest whole packs (max two tiers)", () => {
 
   const { big, base } = formatStockUnits(17000, units, plain);
 
-  assert.equal(big, "1 cây 5 kg");
+  assert.equal(big, "1 cây + 5 kg");
   assert.equal(base, "17000 g");
 });
 
@@ -61,15 +61,15 @@ test("below one largest pack shows the next whole unit", () => {
 test("two-tier compact line for mixed case and can stock", () => {
   const { big, base } = formatStockUnits(7500, cocaUnits, plain);
 
-  assert.equal(big, "1 thùng 6 lon");
+  assert.equal(big, "1 thùng + 6 lon");
   assert.equal(base, "7500 ml");
 });
 
 test("leftover that is not a whole mid-pack folds into the ledger unit", () => {
-  // 1 thùng + 1 lon + 123 ml → max two tiers → "1 thùng 373 ml"
+  // 1 thùng + 1 lon + 123 ml → max two tiers → "1 thùng + 373 ml"
   const { big, base } = formatStockUnits(6373, cocaUnits, plain);
 
-  assert.equal(big, "1 thùng 373 ml");
+  assert.equal(big, "1 thùng + 373 ml");
   assert.equal(base, "6373 ml");
 });
 
@@ -111,7 +111,7 @@ test("missing units returns base with empty code and no big line", () => {
 test("negative on-hand still promotes to whole packs", () => {
   const { big, base } = formatStockUnits(-7500, cocaUnits, plain);
 
-  assert.equal(big, "-1 thùng -6 lon");
+  assert.equal(big, "-1 thùng + -6 lon");
   assert.equal(base, "-7500 ml");
 });
 

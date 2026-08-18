@@ -25,3 +25,17 @@ export function computeTransferLineTotal(input: TransferLineTotalInput): {
   const baseQuantity = input.entryQuantity * factor;
   return { baseQuantity, total: baseQuantity * input.baseUnitCost };
 }
+
+/** Per-entry-unit WAC so the unit cost label matches the quantity unit. */
+export function computeTransferLineDisplayUnitCost(input: {
+  baseUnitCost: number;
+  toBaseFactor: number | null;
+}): number {
+  const factor =
+    input.toBaseFactor != null &&
+    Number.isFinite(input.toBaseFactor) &&
+    input.toBaseFactor > 0
+      ? input.toBaseFactor
+      : 1;
+  return input.baseUnitCost * factor;
+}

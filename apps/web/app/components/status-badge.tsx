@@ -195,6 +195,8 @@ const STATUS_DOMAINS = {
       refunded: "success",
       partially_received: "warning",
       in_transit: "info",
+      confirmed_ship: "info",
+      confirmed_receive: "warning",
       received: "success",
       completed: "success",
       cancelled: "destructive",

@@ -1,5 +1,6 @@
 export interface FinanceResultInput {
   netRevenueBeforeVat: number;
+  goodsIn: number;
   ingredientCost: number;
   operatingExpense: number;
   inventoryChange: number;
@@ -8,38 +9,48 @@ export interface FinanceResultInput {
 }
 
 export interface FinanceResult {
+  /** Menu-sales identity. Independent of `operatingResult`. */
   grossProfit: number | null;
   grossMargin: number | null;
   inventoryChange: number;
+  /** Period identity. Must not be derived from `grossProfit`. */
   operatingResult: number | null;
 }
 
+/**
+ * Two independent identities — `grossProfit` is not a parent of period result.
+ *
+ * - grossProfit = revenue − POS ingredient cost (Giá vốn món).
+ * - operatingResult = revenue − goods-in − opex + Δinventory.
+ *
+ * Mixing them (`grossProfit − opex + ΔInv`) double-counts sold goods with
+ * inbound stock that still sits in ΔInv.
+ */
 export function calculateFinanceResult({
   netRevenueBeforeVat,
+  goodsIn,
   ingredientCost,
   operatingExpense,
   inventoryChange,
   costAvailable,
   operatingExpenseRecorded,
 }: FinanceResultInput): FinanceResult {
-  if (!costAvailable) {
-    return {
-      grossProfit: null,
-      grossMargin: null,
-      inventoryChange,
-      operatingResult: null,
-    };
-  }
-
-  const grossProfit = netRevenueBeforeVat - ingredientCost;
+  const grossProfit = costAvailable
+    ? netRevenueBeforeVat - ingredientCost
+    : null;
+  const grossMargin =
+    grossProfit == null
+      ? null
+      : netRevenueBeforeVat > 0
+        ? (grossProfit / netRevenueBeforeVat) * 100
+        : 0;
 
   return {
     grossProfit,
-    grossMargin:
-      netRevenueBeforeVat > 0 ? (grossProfit / netRevenueBeforeVat) * 100 : 0,
+    grossMargin,
     inventoryChange,
     operatingResult: operatingExpenseRecorded
-      ? grossProfit - operatingExpense + inventoryChange
+      ? netRevenueBeforeVat - goodsIn - operatingExpense + inventoryChange
       : null,
   };
 }

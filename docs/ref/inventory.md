@@ -182,7 +182,8 @@ Master theo tenant. `unit_cost` trên `ingredients` không phải nguồn giá k
 - **`avg_unit_cost`:** **Giá vốn** — `company_wac` một số / NL mua (mọi
   site). Qty > 0: `book_value = qty × company_wac`. Qty 0/âm: giữ giá dương
   cuối. TP: **Giá vốn mẻ** một số mọi site — không GRN, điều chuyển không
-  tạo giá thứ hai. ADR 0040.
+  tạo giá thứ hai. Nhận phiếu không trộn `unit_cost_at_ship` với tồn âm
+  tại CN. ADR 0040.
 
 ---
 

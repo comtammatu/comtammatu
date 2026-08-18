@@ -338,6 +338,11 @@ test("Inventory branch selector keeps touch targets through tablet widths", () =
     scopeControl,
     /className=\{isTouchLayout \? "min-h-12 text-sm" : undefined\}/,
   );
+  assert.doesNotMatch(
+    scopeControl,
+    /truncate text-sm/,
+    "site rows must inherit SelectItem type size; do not override with text-sm",
+  );
 });
 
 test("Inventory ingredient editor keeps a touch-safe unit list", () => {
@@ -375,8 +380,13 @@ test("Owner page-header actions use responsive named button sizes", () => {
   );
   assert.match(
     bankPage,
-    /actions=\{canLinkPayments \? <SepayImportDialog \/> : undefined\}/,
-    "bank header keeps Import as the only primary action (shell owns back-nav)",
+    /isOwner \? <MbbankStatementRestoreDialog \/>/,
+    "owner restore stays a header action beside SePay import",
+  );
+  assert.match(
+    bankPage,
+    /<SepayImportDialog \/>/,
+    "bank header keeps SePay import as a header action (shell owns back-nav)",
   );
   assert.doesNotMatch(
     bankPage,
@@ -386,10 +396,18 @@ test("Owner page-header actions use responsive named button sizes", () => {
   const importDialog = read(
     "apps/web/app/(protected)/finance/bank-transactions/sepay-import-dialog.tsx",
   );
+  const restoreDialog = read(
+    "apps/web/app/(protected)/finance/bank-transactions/mbbank-statement-restore-dialog.tsx",
+  );
   assert.match(
     importDialog,
     /<ResponsiveActionButton[\s\S]*density="header"/,
     "bank Import trigger resolves touch below Owner shell cutover",
+  );
+  assert.match(
+    restoreDialog,
+    /<ResponsiveActionButton[\s\S]*density="header"/,
+    "MB statement restore trigger resolves touch below Owner shell cutover",
   );
 
   for (const path of [

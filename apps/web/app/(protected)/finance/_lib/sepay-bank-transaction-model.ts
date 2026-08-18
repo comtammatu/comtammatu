@@ -5,7 +5,10 @@ const SEPAY_LOCAL_DATE_TIME_PATTERN =
 const EXPLICIT_TIME_ZONE_PATTERN = /(?:Z|[+-]\d{2}:\d{2})$/i;
 
 export type SepayTransferType = "in" | "out";
-export type SepayBankIngestSource = "sepay_webhook" | "sepay_export";
+export type SepayBankIngestSource =
+  | "sepay_webhook"
+  | "sepay_export"
+  | "mbbank_statement";
 
 export interface SepayDateRange {
   start: string;

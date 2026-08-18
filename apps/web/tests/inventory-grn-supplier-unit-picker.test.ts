@@ -218,6 +218,22 @@ test("inventory unit display uses the catalog name, not the unit code", () => {
   assert.equal(getIngredientUnitDisplayName(units, 200, "bich"), "bịch");
 });
 
+test("inventory unit display falls back to unit code when the name is empty", () => {
+  const units = [
+    {
+      id: 2,
+      unit_id: 200,
+      unit_code: "bich",
+      unit_name: "",
+      to_base_factor: 0.5,
+      is_base: false,
+      is_active: true,
+      sort_order: 1,
+    },
+  ];
+  assert.equal(getIngredientUnitDisplayName(units, 200, "fallback"), "bich");
+});
+
 test("inventory unit option helpers use every active ingredient unit", () => {
   const sharedSource = readRepo("apps/web/lib/inventory/unit-options.ts");
   assert.match(sharedSource, /unit\.is_active && unit\.unit_code !== ""/);
@@ -332,4 +348,24 @@ test("GRN add-line dialog threads the picked entryUnitId to upsertGrnLine", () =
     /\bunit\s*:/,
     "saveLine must not send unit text/code to the write action",
   );
+});
+
+test("GRN draft line qty control shows and persists the selected entry unit", () => {
+  const lineRow = readRepo(
+    "apps/web/app/(protected)/inventory/grn/[id]/views/grn-line-row.tsx",
+  );
+  const sheet = readRepo(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/_components/grn-line-sheet.tsx",
+  );
+  const client = readRepo(
+    "apps/web/app/(protected)/inventory/grn/[id]/grn-detail-client.tsx",
+  );
+
+  assert.match(lineRow, /getPurchaseUnitOptions/);
+  assert.match(lineRow, /applyGrnLineEntryUnit/);
+  assert.match(lineRow, /<Select/);
+  assert.match(lineRow, /FORM_VI\.unit/);
+  assert.match(client, /ingredient=\{ingredientById\.get\(line\.ingredientId\)\}/);
+  assert.match(sheet, /applyGrnLineEntryUnit/);
+  assert.match(sheet, /getPurchaseUnitOptions\(ingredient\)/);
 });

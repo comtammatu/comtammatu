@@ -51,6 +51,13 @@ BEGIN
     RAISE EXCEPTION 'STOCK FULFILLMENT: legacy save RPC overload remains';
   END IF;
 
+  IF pg_get_functiondef(
+    'private.execute_stock_transfer_receive(bigint,jsonb)'::regprocedure
+  ) ~ 'avg_unit_cost = v_new_wac' THEN
+    RAISE EXCEPTION
+      'STOCK FULFILLMENT: receive must not overwrite company WAC';
+  END IF;
+
   IF pg_get_constraintdef(
     (
       SELECT constraint_row.oid
@@ -365,6 +372,32 @@ BEGIN
 
   PERFORM public.stock_transfer_confirm_receive(v_transfer_id);
 
+  UPDATE public.stock_transfer_items
+  SET unit_cost_at_ship = 2000
+  WHERE transfer_id = v_transfer_id
+    AND tenant_id = v_tenant;
+
+  INSERT INTO public.stock_levels (
+    tenant_id,
+    branch_id,
+    location_id,
+    ingredient_id,
+    current_quantity,
+    avg_unit_cost
+  )
+  VALUES (
+    v_tenant,
+    v_branch,
+    v_destination_location,
+    v_ingredient,
+    -3,
+    15000
+  )
+  ON CONFLICT (ingredient_id, branch_id, location_id, tenant_id)
+  DO UPDATE SET
+    current_quantity = EXCLUDED.current_quantity,
+    avg_unit_cost = EXCLUDED.avg_unit_cost;
+
   v_rejected := FALSE;
   BEGIN
     PERFORM public.stock_transfer_receive(
@@ -420,6 +453,17 @@ BEGIN
     WHERE transfer.id = v_transfer_id
   ) <> 'received' THEN
     RAISE EXCEPTION 'STOCK FULFILLMENT: receive did not complete';
+  END IF;
+
+  IF (
+    SELECT stock.avg_unit_cost
+    FROM public.stock_levels AS stock
+    WHERE stock.tenant_id = v_tenant
+      AND stock.branch_id = v_branch
+      AND stock.location_id = v_destination_location
+      AND stock.ingredient_id = v_ingredient
+  ) < 0 THEN
+    RAISE EXCEPTION 'STOCK FULFILLMENT: receive wrote negative WAC';
   END IF;
 
   IF NOT EXISTS (

@@ -453,7 +453,7 @@ export function AppDialog({
         className={cn(
           "grid-cols-1 grid-rows-[auto_minmax(0,1fr)_auto] gap-[0px] overflow-hidden p-0",
           documentVariant
-            ? "h-dvh max-h-dvh max-w-none rounded-none sm:h-[min(900px,95dvh)] sm:max-h-[95dvh] sm:w-[min(1120px,96vw)] sm:max-w-[min(1120px,96vw)] sm:rounded-lg"
+            ? "h-dvh max-h-dvh max-w-none rounded-none sm:h-auto sm:max-h-[min(900px,95dvh)] sm:w-[min(1120px,96vw)] sm:max-w-[min(1120px,96vw)] sm:rounded-lg"
             : "max-h-[calc(100dvh-2rem)] sm:max-w-lg",
           contentClassName,
         )}

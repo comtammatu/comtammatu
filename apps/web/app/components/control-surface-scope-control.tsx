@@ -179,7 +179,7 @@ export function ControlSurfaceScopeControl({
                     label={site.name}
                     className={isTouchLayout ? "min-h-12 text-sm" : undefined}
                   >
-                    <span className="block min-w-0 truncate text-sm">
+                    <span className="block min-w-0 truncate">
                       {site.name}
                     </span>
                   </SelectItem>
@@ -193,7 +193,7 @@ export function ControlSurfaceScopeControl({
                 label={site.name}
                 className={isTouchLayout ? "min-h-12 text-sm" : undefined}
               >
-                <span className="block min-w-0 truncate text-sm">
+                <span className="block min-w-0 truncate">
                   {site.name}
                 </span>
               </SelectItem>

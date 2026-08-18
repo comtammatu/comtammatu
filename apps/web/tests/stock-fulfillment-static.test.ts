@@ -251,32 +251,22 @@ test("embedded transfer dialog drops timeline and history chrome", () => {
   );
 });
 
-test("embedded transfer dialog scrolls the line list without moving the summary panel", () => {
+test("embedded transfer dialog lets the document body scroll the line list", () => {
   const transfer = read(
     "apps/web/app/(protected)/inventory/transfers/[id]/transfer-detail-client.tsx",
   );
-  const hub = read(
-    "apps/web/app/(protected)/inventory/transfers/stock-fulfillment-hub-client.tsx",
-  );
 
-  assert.match(transfer, /embedded && "lg:h-full lg:min-h-0"/);
-  assert.match(
+  assert.doesNotMatch(
     transfer,
     /import \{ ScrollArea \} from "@comtammatu\/ui\/components\/scroll-area"/,
   );
-  assert.match(
-    transfer,
-    /<ScrollArea className="lg:h-full">\{lineTable\}<\/ScrollArea>/,
-  );
-  assert.match(
-    transfer,
-    /embedded && "lg:flex lg:min-h-0 lg:flex-1 lg:flex-col"/,
-  );
+  assert.doesNotMatch(transfer, /<ScrollArea/);
+  assert.doesNotMatch(transfer, /lg:h-full lg:min-h-0/);
+  assert.match(transfer, /className="min-w-0"/);
   assert.match(
     transfer,
     /embedded \? "shrink-0 lg:self-start" : "lg:sticky lg:top-4"/,
   );
-  assert.match(hub, /selectedTransfer \? "lg:overflow-hidden"/);
 });
 
 test("branch confirm_receive navigates into native receive workspace", () => {

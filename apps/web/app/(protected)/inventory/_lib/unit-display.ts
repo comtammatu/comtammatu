@@ -45,5 +45,7 @@ export function getIngredientUnitDisplayName(
     entryUnitId != null
       ? activeUnits.find((unit) => unit.unit_id === entryUnitId)
       : activeUnits.find((unit) => unit.is_base);
-  return selected?.unit_name?.trim() || fallback;
+  return (
+    selected?.unit_name?.trim() || selected?.unit_code?.trim() || fallback
+  );
 }

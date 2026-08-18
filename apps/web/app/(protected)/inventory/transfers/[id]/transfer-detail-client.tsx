@@ -15,7 +15,6 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import { Item } from "@comtammatu/ui/components/item";
-import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { QuantityInput } from "@/components/form/domain-number-inputs";
 import { useIsOnline } from "@/components/pwa-runtime";
 import {
@@ -56,6 +55,7 @@ import {
   type TransferActionKind,
   type TransferDetail,
 } from "@lib/inventory/transfer-detail-model";
+import { computeTransferLineDisplayUnitCost } from "./line-view-model";
 import {
   applyInventoryActionError,
   inventoryShortageToastMessage,
@@ -288,7 +288,7 @@ export function TransferDetailClient({
       render: (item) => (
         <div
           className={cn(
-            "flex flex-col whitespace-normal break-words min-w-48 max-w-80",
+            "flex min-w-0 max-w-80 flex-col whitespace-normal break-words",
             shortageIngredientId === item.ingredientId && "text-destructive",
           )}
           data-shortage={
@@ -324,10 +324,13 @@ export function TransferDetailClient({
             className: "text-right font-mono tabular-nums",
             render: (item: TransferLineItem) => {
               const cost = item.monetary?.cost ?? 0;
-              const baseLabel = item.baseUnit || item.unit;
-              return baseLabel
-                ? `${formatVND(cost)}/${baseLabel}`
-                : formatVND(cost);
+              const displayCost = computeTransferLineDisplayUnitCost({
+                baseUnitCost: cost,
+                toBaseFactor: item.toBaseFactor,
+              });
+              return item.unit
+                ? `${formatVND(displayCost)}/${item.unit}`
+                : formatVND(displayCost);
             },
           },
           {
@@ -368,6 +371,7 @@ export function TransferDetailClient({
 
   const lineTable = (
     <DataTable
+      className="min-w-0"
       columns={lineColumns}
       data={transfer.items}
       getRowKey={(item) => item.sku || item.name}
@@ -477,13 +481,7 @@ export function TransferDetailClient({
   );
 
   const pageLayout = (
-    <div
-      className={cn(
-        "flex flex-col gap-6",
-        // Document dialog: fill body height on desktop so only the line list scrolls.
-        embedded && "lg:h-full lg:min-h-0",
-      )}
-    >
+    <div className="flex min-w-0 flex-col gap-6">
       <Item
         variant="outline"
         className="grid shrink-0 grid-cols-2 gap-4 p-4 text-xs sm:grid-cols-3 lg:grid-cols-5"
@@ -540,24 +538,11 @@ export function TransferDetailClient({
         </div>
       </Item>
       <div
-        className={cn(
-          "grid gap-4 lg:grid-cols-[minmax(0,1fr)_24rem]",
-          embedded
-            ? "min-h-0 flex-1 overflow-hidden lg:items-stretch"
-            : "lg:items-start",
-        )}
+        className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start"
       >
-          <div
-            className={cn(
-              "order-2 flex flex-col gap-4 lg:order-1",
-              embedded && "min-h-0 lg:overflow-hidden",
-            )}
-          >
+          <div className="order-2 flex min-w-0 flex-col gap-4 lg:order-1">
             <AppSection
-              className={cn(
-                "overflow-hidden",
-                embedded && "lg:flex lg:min-h-0 lg:flex-1 lg:flex-col",
-              )}
+              className="min-w-0 overflow-hidden"
               title={tTerm("ingredientsList")}
               description={copy.sectionLineCount(transfer.items.length)}
             headerHint={
@@ -566,13 +551,9 @@ export function TransferDetailClient({
                 : copy.receivedReadonlyHint
               }
               contentFlush
-              contentClassName={cn(embedded && "lg:min-h-0 lg:flex-1")}
+              contentClassName="min-w-0"
             >
-              {embedded ? (
-                <ScrollArea className="lg:h-full">{lineTable}</ScrollArea>
-              ) : (
-                lineTable
-              )}
+              {lineTable}
           </AppSection>
 
           {isReceiveMode && hasShort ? (
@@ -953,11 +934,16 @@ function TransferLineMobileCard({
         {item.monetary ? (
           <div>
             <p className="text-muted-foreground">
-              {item.baseUnit
-                ? copy.wacCostPerUnit(item.baseUnit)
-                : copy.wacCost}
+              {item.unit ? copy.wacCostPerUnit(item.unit) : copy.wacCost}
             </p>
-            <p className="font-semibold">{formatVND(item.monetary.cost)}</p>
+            <p className="font-semibold">
+              {formatVND(
+                computeTransferLineDisplayUnitCost({
+                  baseUnitCost: item.monetary.cost,
+                  toBaseFactor: item.toBaseFactor,
+                }),
+              )}
+            </p>
           </div>
         ) : null}
         {item.monetary ? (

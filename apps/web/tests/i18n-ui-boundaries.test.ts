@@ -12,6 +12,13 @@ test("unknown runtime values never echo technical keys", () => {
   assert.equal(getSiteKindLabelVi("new_site_kind"), "Không xác định");
 });
 
+test("transfer receive statuses have operator labels", () => {
+  assert.equal(getStatusBadgeMeta("inventory", "confirmed_ship").label, "Đã xuất");
+  assert.equal(getStatusBadgeMeta("inventory", "confirmed_receive").label, "Đang kiểm nhận");
+  assert.equal(tStatus("confirmed_ship"), "Đã xuất kho");
+  assert.equal(tStatus("confirmed_receive"), "Đang kiểm nhận");
+});
+
 test("sent keeps its domain-specific purchase order meaning", () => {
   assert.equal(getStatusBadgeMeta("purchase-order", "sent").label, "Đã duyệt");
   assert.equal(getStatusBadgeMeta("inventory", "sent").label, "Đã gửi");

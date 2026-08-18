@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   formatInventoryLocationLabelVi,
@@ -52,5 +53,26 @@ test("central sites retain canonical warehouse and production labels", () => {
   assert.equal(
     formatBranchSiteLabel({ name: "Nguyễn Hữu Thọ", branch_kind: "branch" }),
     "Chi nhánh: Nguyễn Hữu Thọ",
+  );
+});
+
+test("stock and transfer dialogs use the shared inventory location label", () => {
+  const stockDialog = readFileSync(
+    new URL(
+      "../app/(protected)/inventory/stock/stock-detail-dialog.tsx",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const transferDetail = readFileSync(
+    new URL("../lib/inventory/transfer-detail-data.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(stockDialog, /formatInventoryLocationLabelVi/);
+  assert.match(transferDetail, /formatInventoryLocationLabelVi/);
+  assert.match(
+    transferDetail,
+    /branches!inventory_locations_branch_id_fkey \( name, branch_kind \)/,
   );
 });

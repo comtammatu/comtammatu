@@ -158,7 +158,7 @@ describe("Finance UX scope flow", () => {
     assert.match(filterBar, /mergePreservedFinanceSearch/);
     assert.match(page, /FinancePeriodFormulaShell/);
     assert.match(page, /id=\{FINANCE_ATTENTION_ID\}/);
-    assert.match(page, /hidden min-w-0 md:gap-2 xl:contents/);
+    assert.match(page, /min-w-0 md:grid md:gap-2 xl:contents/);
     assert.doesNotMatch(bankPage, /backToFinance/);
     assert.match(invoicesPage, /basePath="\/finance\/invoices"/);
     assert.match(foodCostClient, /FinanceExportActions/);

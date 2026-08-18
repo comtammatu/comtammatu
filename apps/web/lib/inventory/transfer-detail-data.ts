@@ -12,6 +12,7 @@ import { formatDateTime } from "@lib/inventory/format";
 import { fetchStockTransferDetail } from "@/(protected)/inventory/transfer-actions";
 import { computeTransferLineTotal } from "@/(protected)/inventory/transfers/[id]/line-view-model";
 import type { TransferDetail } from "./transfer-detail-model";
+import { formatInventoryLocationLabelVi } from "@comtammatu/shared/labels";
 
 interface LoadTransferDetailPageDataOptions {
   transferId: number;
@@ -19,6 +20,39 @@ interface LoadTransferDetailPageDataOptions {
   queryBranch?: string | string[];
   includeAudit?: boolean;
   includeCorrections?: boolean;
+}
+
+type TransferLocationBranch = {
+  name: string | null;
+  branch_kind: string | null;
+};
+
+type TransferLocationRow = {
+  id: number;
+  name: string | null;
+  location_kind: string | null;
+  branches: TransferLocationBranch | TransferLocationBranch[] | null;
+};
+
+function relatedOne<T>(value: T | T[] | null | undefined): T | null {
+  if (!value) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
+function formatTransferLocationLabel(
+  location: TransferLocationRow | undefined,
+  fallbackBranchName: string | null,
+  fallbackBranchId: number,
+): string {
+  const branch = location ? relatedOne(location.branches) : null;
+  const formatted = formatInventoryLocationLabelVi({
+    branchName: branch?.name ?? fallbackBranchName,
+    siteKind: branch?.branch_kind,
+    locationKind: location?.location_kind,
+    fallbackName: location?.name,
+  });
+  if (formatted) return formatted;
+  return fallbackBranchName ?? `Chi nhánh #${fallbackBranchId}`;
 }
 
 export interface TransferDetailPageData {
@@ -97,14 +131,18 @@ export async function loadTransferDetailPageData({
 
   const { data: locations } = await supabase
     .from("inventory_locations")
-    .select("id, name")
+    .select(
+      "id, name, location_kind, branches!inventory_locations_branch_id_fkey ( name, branch_kind )",
+    )
     .eq("tenant_id", claims.tenant_id)
     .in("id", [
       detail.transfer.from_location_id,
       detail.transfer.to_location_id,
     ]);
-  const locationNameById = new Map(
-    (locations ?? []).map((location) => [location.id, location.name] as const),
+  const locationById = new Map(
+    ((locations ?? []) as unknown as TransferLocationRow[]).map(
+      (location) => [location.id, location] as const,
+    ),
   );
 
   const items: TransferDetail["items"] = (detail.lines ?? []).map((line) => {
@@ -169,14 +207,16 @@ export async function loadTransferDetailPageData({
     toBranch:
       detail.transfer.to_branch_name ??
       `Chi nhánh #${detail.transfer.to_branch_id}`,
-    fromLocation:
-      locationNameById.get(detail.transfer.from_location_id) ??
-      detail.transfer.from_branch_name ??
-      `Chi nhánh #${detail.transfer.from_branch_id}`,
-    toLocation:
-      locationNameById.get(detail.transfer.to_location_id) ??
-      detail.transfer.to_branch_name ??
-      `Chi nhánh #${detail.transfer.to_branch_id}`,
+    fromLocation: formatTransferLocationLabel(
+      locationById.get(detail.transfer.from_location_id),
+      detail.transfer.from_branch_name,
+      detail.transfer.from_branch_id,
+    ),
+    toLocation: formatTransferLocationLabel(
+      locationById.get(detail.transfer.to_location_id),
+      detail.transfer.to_branch_name,
+      detail.transfer.to_branch_id,
+    ),
     createdBy: "—",
     date: detail.transfer.shipped_at
       ? formatDateTime(detail.transfer.shipped_at)

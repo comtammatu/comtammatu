@@ -27,6 +27,15 @@ import type {
   ResolvedFinanceRange,
 } from "./finance-params";
 import { financeHref } from "./finance-params";
+import {
+  CONFIRMED_SUPPLIER_INVOICE_STATUSES,
+  periodGoodsInEventTypes,
+  periodGoodsInKindForLocation,
+  sumConfirmedSupplierInvoiceSubtotals,
+  sumPeriodGoodsIn,
+  type PeriodGoodsInAllocation,
+  type PeriodGoodsInKind,
+} from "./finance-goods-in";
 import { calculateFinanceResult } from "./finance-result";
 import {
   isExpenseLedgerCategory,
@@ -130,6 +139,8 @@ interface FinanceCockpitKpis {
   operatingExpenseRecorded: boolean;
   startupCapital: number;
   startupCapitalRecorded: boolean;
+  goodsIn: number;
+  goodsInKind: PeriodGoodsInKind;
   ingredientCost: number;
   grossProfit: number | null;
   grossMargin: number | null;
@@ -257,6 +268,8 @@ async function isInventoryValuationActive(
 function buildKpis({
   kpis,
   actualFoodCost,
+  goodsIn,
+  goodsInKind,
   inventoryValue,
   inventoryOpeningValue = inventoryValue,
   operatingExpense,
@@ -265,6 +278,8 @@ function buildKpis({
 }: {
   kpis: KpiBundle | null;
   actualFoodCost: ActualFoodCostSnapshot;
+  goodsIn: number;
+  goodsInKind: PeriodGoodsInKind;
   inventoryValue: number;
   inventoryOpeningValue?: number;
   operatingExpense: OperatingExpenseSummary;
@@ -289,6 +304,7 @@ function buildKpis({
     : 0;
   const financeResult = calculateFinanceResult({
     netRevenueBeforeVat,
+    goodsIn,
     ingredientCost,
     operatingExpense: operatingExpense.total,
     inventoryChange,
@@ -306,6 +322,8 @@ function buildKpis({
     operatingExpenseRecorded: operatingExpense.recorded,
     startupCapital: startupCapital.total,
     startupCapitalRecorded: startupCapital.recorded,
+    goodsIn,
+    goodsInKind,
     ingredientCost,
     ...financeResult,
     costAvailable,
@@ -695,6 +713,148 @@ function getVNDateRangeUtc(startDate: string, endDate: string) {
   const { startIso } = getVNDayUtcRange(startDate);
   const { endIso } = getVNDayUtcRange(endDate);
   return { startIso, endIso };
+}
+
+type GoodsInEventEmbed = {
+  event_type?: string | null;
+  stock_movements?:
+    | { branch_id?: number | null; grn_id?: number | null }
+    | Array<{ branch_id?: number | null; grn_id?: number | null }>
+    | null;
+};
+
+function asPeriodGoodsInAllocation(row: {
+  allocated_value?: number | string | null;
+  allocation_bucket?: string | null;
+  inventory_valuation_events?: GoodsInEventEmbed | GoodsInEventEmbed[] | null;
+}): PeriodGoodsInAllocation {
+  const event = Array.isArray(row.inventory_valuation_events)
+    ? row.inventory_valuation_events[0]
+    : row.inventory_valuation_events;
+  const movement = Array.isArray(event?.stock_movements)
+    ? event.stock_movements[0]
+    : event?.stock_movements;
+  return {
+    allocatedValue: toNumber(row.allocated_value),
+    allocationBucket: row.allocation_bucket ?? null,
+    eventType: event?.event_type ?? null,
+    branchId: movement?.branch_id ?? null,
+    grnId: movement?.grn_id ?? null,
+  };
+}
+
+async function fetchPeriodInvoiceGoodsIn({
+  supabase,
+  tenantId,
+  startDate,
+  endDate,
+}: {
+  supabase: SupabaseClient;
+  tenantId: number;
+  startDate: string;
+  endDate: string;
+}): Promise<number> {
+  const { startIso, endIso } = getVNDateRangeUtc(startDate, endDate);
+  const { data, error } = await fetchAllPagedRows((from, to) =>
+    supabase
+      .from("supplier_invoices")
+      .select("subtotal, document_status")
+      .eq("tenant_id", tenantId)
+      .in("document_status", [...CONFIRMED_SUPPLIER_INVOICE_STATUSES])
+      .gte("invoice_date", startIso)
+      .lt("invoice_date", endIso)
+      .order("id")
+      .range(from, to),
+  );
+  if (error) {
+    console.error("[finance:goods-in] invoice lookup failed", error.code);
+    return 0;
+  }
+
+  return sumConfirmedSupplierInvoiceSubtotals(
+    (data ?? []).map((row) => ({
+      documentStatus: String(
+        (row as { document_status?: string | null }).document_status ?? "",
+      ),
+      subtotal: toNumber((row as { subtotal?: number | string | null }).subtotal),
+    })),
+  );
+}
+
+async function fetchPeriodGoodsIn({
+  supabase,
+  allocationClient,
+  tenantId,
+  location,
+  branchId,
+  startDate,
+  endDate,
+  valuationActive,
+  salesBranchIds,
+}: {
+  supabase: SupabaseClient;
+  allocationClient: SupabaseClient | null;
+  tenantId: number;
+  location: FinanceLocation;
+  branchId: number | null;
+  startDate: string;
+  endDate: string;
+  valuationActive: boolean;
+  salesBranchIds: readonly number[] | null;
+}): Promise<number> {
+  const kind = periodGoodsInKindForLocation(location);
+  if (kind === "inventory_purchase") {
+    return fetchPeriodInvoiceGoodsIn({
+      supabase,
+      tenantId,
+      startDate,
+      endDate,
+    });
+  }
+
+  if (!allocationClient || !valuationActive) return 0;
+  const allowedBranchIds = new Set(
+    location === "branch" && branchId != null
+      ? [branchId]
+      : [...(salesBranchIds ?? [])],
+  );
+  if (allowedBranchIds.size === 0) return 0;
+
+  const { startIso, endIso } = getVNDateRangeUtc(startDate, endDate);
+  const { data, error } = await fetchAllPagedRows((from, to) =>
+    allocationClient
+      .from("inventory_value_allocations")
+      .select(
+        `
+        allocated_value,
+        allocation_bucket,
+        inventory_valuation_events!inner (
+          event_type,
+          effective_at,
+          stock_movements ( branch_id, grn_id )
+        )
+      `,
+      )
+      .eq("tenant_id", tenantId)
+      .eq("allocation_bucket", "inventory")
+      .in("inventory_valuation_events.event_type", [
+        ...periodGoodsInEventTypes(kind),
+      ])
+      .gte("inventory_valuation_events.effective_at", startIso)
+      .lt("inventory_valuation_events.effective_at", endIso)
+      .order("id")
+      .range(from, to),
+  );
+  if (error) {
+    console.error("[finance:goods-in] allocation lookup failed", error.code);
+    return 0;
+  }
+
+  return sumPeriodGoodsIn(
+    (data ?? []).map(asPeriodGoodsInAllocation),
+    kind,
+    allowedBranchIds,
+  );
 }
 
 async function fetchActualFoodCostSnapshot({
@@ -1127,6 +1287,8 @@ export async function fetchFinanceAttentionExceptions(
       operatingExpenseRecorded: true,
       startupCapital: 0,
       startupCapitalRecorded: false,
+      goodsIn: 0,
+      goodsInKind: periodGoodsInKindForLocation(params.location),
       ingredientCost: 0,
       grossProfit: null,
       grossMargin: null,
@@ -1175,13 +1337,13 @@ export async function fetchFinanceCockpit(
       : Promise.resolve(false),
   ]);
 
-  // Hub loader keys (distinct fetches, max 19 when compare + cash):
+  // Hub loader keys (distinct fetches, max 21 when compare + cash):
   // prefetch: salesBranchIds, valuationActive (2, before parallel batch)
-  // parallel (max 18): branches, revenueKpis, compareRevenueKpis, foodCost,
-  // actualFoodCost, compareActualFoodCost, inventoryByBranch, inventoryPeriod,
-  // cashVariance, cashVarianceTarget, reconciliation, dashboardSummary,
-  // periodExpenses, comparePeriodExpenses, startupCapital, unpaidAp,
-  // paymentDesync, currentFunds.
+  // parallel (max 20): branches, revenueKpis, compareRevenueKpis, foodCost,
+  // actualFoodCost, compareActualFoodCost, goodsIn, compareGoodsIn,
+  // inventoryByBranch, inventoryPeriod, cashVariance, cashVarianceTarget,
+  // reconciliation, dashboardSummary, periodExpenses, comparePeriodExpenses,
+  // startupCapital, unpaidAp, paymentDesync, currentFunds.
   // sequential (1): vatSummary (reuses periodExpenses rows).
   const [
     branchesRes,
@@ -1190,6 +1352,8 @@ export async function fetchFinanceCockpit(
     foodCostRes,
     actualFoodCost,
     compareActualFoodCost,
+    periodGoodsIn,
+    comparePeriodGoodsIn,
     inventoryValueRes,
     inventoryPeriodValueRes,
     cashVarianceRes,
@@ -1243,6 +1407,30 @@ export async function fetchFinanceCockpit(
           salesBranchIds: salesBranchIds ?? [],
         })
       : Promise.resolve({ rows: [], orderCount: 0 }),
+    fetchPeriodGoodsIn({
+      supabase,
+      allocationClient: monetaryClient,
+      tenantId: claims.tenant_id,
+      location: params.location,
+      branchId: params.branch,
+      startDate: resolved.start,
+      endDate: resolved.end,
+      valuationActive,
+      salesBranchIds,
+    }),
+    resolved.compare
+      ? fetchPeriodGoodsIn({
+          supabase,
+          allocationClient: monetaryClient,
+          tenantId: claims.tenant_id,
+          location: params.location,
+          branchId: params.branch,
+          startDate: resolved.compare.start,
+          endDate: resolved.compare.end,
+          valuationActive,
+          salesBranchIds,
+        })
+      : Promise.resolve(0),
     canReadRequestedValuation && includesBranchData
       ? fetchInventoryValueByBranch()
       : Promise.resolve({ success: false as const, error: "Không có quyền" }),
@@ -1250,7 +1438,11 @@ export async function fetchFinanceCockpit(
       ? fetchInventoryPeriodValue({
           startDate: resolved.start,
           endDate: resolved.end,
-          ...(params.branch != null ? { branchId: params.branch } : {}),
+          ...(params.branch != null
+            ? { branchId: params.branch }
+            : params.location === "branches" && salesBranchIds
+              ? { branchIds: [...salesBranchIds] }
+              : {}),
         })
       : Promise.resolve({ success: false as const, error: "Không có quyền" }),
     includesBranchData
@@ -1352,9 +1544,13 @@ export async function fetchFinanceCockpit(
   const inventoryRows = inventoryValueRes.success
     ? (inventoryValueRes.data?.rows ?? [])
     : [];
+  const salesInventoryRows =
+    params.location === "branches" && salesBranchIds
+      ? inventoryRows.filter((row) => salesBranchIds.includes(row.branchId))
+      : inventoryRows;
   const currentInventoryValue =
     params.branch == null
-      ? inventoryRows.reduce((sum, row) => sum + row.totalValue, 0)
+      ? salesInventoryRows.reduce((sum, row) => sum + row.totalValue, 0)
       : (inventoryRows.find((row) => row.branchId === params.branch)
           ?.totalValue ?? 0);
   const inventoryValue = inventoryPeriodValueRes.success
@@ -1367,9 +1563,12 @@ export async function fetchFinanceCockpit(
   const canViewInventoryValuation =
     canReadRequestedValuation && includesBranchData;
 
+  const goodsInKind = periodGoodsInKindForLocation(params.location);
   const kpis = buildKpis({
     kpis: kpisRes.success ? (kpisRes.data as KpiBundle | null) : null,
     actualFoodCost,
+    goodsIn: periodGoodsIn,
+    goodsInKind,
     inventoryValue,
     inventoryOpeningValue,
     operatingExpense: operatingExpenseSummary,
@@ -1383,6 +1582,8 @@ export async function fetchFinanceCockpit(
           ? (compareKpisRes.data as KpiBundle | null)
           : null,
         actualFoodCost: compareActualFoodCost,
+        goodsIn: comparePeriodGoodsIn,
+        goodsInKind,
         inventoryValue,
         operatingExpense: compareOperatingExpenseSummary,
         startupCapital: { total: 0, recorded: false },

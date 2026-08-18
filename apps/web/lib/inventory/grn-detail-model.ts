@@ -288,9 +288,40 @@ export function formatPackLooseQuantity(
 }
 
 export function grnLineHasPackLoose(
-  line: Pick<GrnDetailItem, "packUnit" | "looseUnit">,
+  line: Pick<GrnDetailItem, "packUnit" | "looseUnit" | "entryUnitId">,
 ): boolean {
-  return line.packUnit != null && line.looseUnit != null;
+  if (line.packUnit == null || line.looseUnit == null) return false;
+  if (line.entryUnitId == null) return true;
+  return line.entryUnitId === line.looseUnit.unitId;
+}
+
+export function applyGrnLineEntryUnit(
+  line: GrnDetailItem,
+  units: IngredientUnitRow[] | undefined,
+  nextUnitId: number,
+): Partial<GrnDetailItem> | null {
+  const nextRow = (units ?? []).find(
+    (unit) => unit.unit_id === nextUnitId && unit.is_active,
+  );
+  const toFactor = Number(nextRow?.to_base_factor);
+  if (!nextRow || !Number.isFinite(toFactor) || !(toFactor > 0)) {
+    return null;
+  }
+  if (!Number.isInteger(nextUnitId) || nextUnitId <= 0) {
+    return null;
+  }
+  const fromFactor = line.persistToBaseFactor > 0 ? line.persistToBaseFactor : 1;
+  return {
+    actual: convertQuantityBetweenFactors(line.actual, fromFactor, toFactor),
+    rejected: convertQuantityBetweenFactors(
+      line.rejected,
+      fromFactor,
+      toFactor,
+    ),
+    entryUnitId: nextUnitId,
+    unit: unitLabel(nextRow),
+    persistToBaseFactor: toFactor,
+  };
 }
 
 export function formatGrnQuantity(
@@ -442,6 +473,11 @@ export function createEditableGrnLine({
   supplierId: number;
   supplierName: string;
 }): EditableGrnLine {
+  const persistRow = (ingredient.units ?? []).find(
+    (item) => item.unit_id === entryUnitId && item.is_active,
+  );
+  const persistFactor = Number(persistRow?.to_base_factor);
+  const packLoose = resolveGrnPackLooseUnits(ingredient.units, entryUnitId);
   return {
     lineId,
     ingredientId: ingredient.id,
@@ -465,10 +501,12 @@ export function createEditableGrnLine({
     entryUnitId,
     poEntryUnitId: entryUnitId,
     poUnitLabel: unit,
-    persistToBaseFactor: 1,
-    poToBaseFactor: 1,
-    packUnit: null,
-    looseUnit: null,
+    persistToBaseFactor:
+      Number.isFinite(persistFactor) && persistFactor > 0 ? persistFactor : 1,
+    poToBaseFactor:
+      Number.isFinite(persistFactor) && persistFactor > 0 ? persistFactor : 1,
+    packUnit: packLoose?.pack ?? null,
+    looseUnit: packLoose?.loose ?? null,
     costPending: true,
     provisionalCostSource: "pending",
     monetary: null,

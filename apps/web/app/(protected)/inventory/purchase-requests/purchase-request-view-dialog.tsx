@@ -6,7 +6,6 @@ import { formatVNDate } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Item } from "@comtammatu/ui/components/item";
-import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { AppDialog } from "@/components/form";
 import {
   purchaseRequestStatusVariant,
@@ -201,23 +200,21 @@ export function PurchaseRequestViewDialog({
                 {detailCopy.sectionLineCount(selected.items.length)}
               </p>
             </div>
-            <ScrollArea className="h-64">
-              <div className="flex flex-col gap-2 pr-2">
-                {selected.items.map((item) => (
-                  <Item
-                    key={item.id}
-                    variant="outline"
-                    size="sm"
-                    className="grid gap-1 text-sm sm:grid-cols-[minmax(0,1fr)_auto]"
-                  >
-                    <span>{item.ingredientName}</span>
-                    <span className="font-mono tabular-nums">
-                      {item.orderedQuantity}/{item.quantity} {item.unitLabel}
-                    </span>
-                  </Item>
-                ))}
-              </div>
-            </ScrollArea>
+            <div className="flex flex-col gap-2">
+              {selected.items.map((item) => (
+                <Item
+                  key={item.id}
+                  variant="outline"
+                  size="sm"
+                  className="grid gap-1 text-sm sm:grid-cols-[minmax(0,1fr)_auto]"
+                >
+                  <span>{item.ingredientName}</span>
+                  <span className="font-mono tabular-nums">
+                    {item.orderedQuantity}/{item.quantity} {item.unitLabel}
+                  </span>
+                </Item>
+              ))}
+            </div>
           </div>
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-baseline justify-between gap-2">

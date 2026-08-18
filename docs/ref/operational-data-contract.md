@@ -57,17 +57,26 @@ Thiếu đủ trường → chỉ hiện việc cần xử lý / chưa đủ d�
 | HĐĐT đã phát hành | HĐĐT bán ra đã provider/CQT xử lý | Doanh thu vận hành nếu chưa/không xuất HĐĐT |
 | Giá trị tồn kho | Đầu/cuối kỳ từ stock ledger + giá vốn | Chi phí kỳ, tiền đã chi NCC |
 | Giá vốn món / food cost | Nguyên liệu đã duyệt/apply từ tiêu hao bán | Recipe theoretical, chi vận hành, HĐ NCC, PO chưa nhận |
-| Chi phí vận hành | Thuê, điện nước, gas, lương, sửa chữa, vật tư tiêu hao, khấu hao/phân bổ, marketing, phí/thuế, tiếp khách, khác | Giá vốn món, Chi phí ban đầu, nguyên giá TSCĐ, NL/vật tư kho, thanh toán NCC, nộp tiền mặt NH |
+| Chi phí vận hành | Thuê, điện nước, gas, lương, sửa chữa, vật tư tiêu hao, khấu hao/phân bổ, marketing, phí/thuế, tiếp khách, khác | Giá vốn món, Chi phí ban đầu, nguyên giá TSCĐ, NL/vật tư kho, thanh toán NCC, nộp tiền mặt NH, điều chuyển, hàng nhập mua |
 | Chi phí ban đầu | Vốn đã bỏ ra cho quán/chi nhánh: thi công, máy, xe, nội thất, đặt cọc. Toàn bộ, không theo kỳ, gồm GTGT | Chi phí vận hành tháng, giá vốn món, HĐ NCC, khấu hao kỳ |
-| Lợi nhuận gộp | Doanh thu thuần − giá vốn món | Kết quả KD, dòng tiền, LN ròng |
-| Kết quả kinh doanh | LN gộp − chi vận hành + biến động tồn | LN ròng hoặc kết quả kê khai thuế |
+| Chi phí hàng | Giá điều chuyển đã nhận vào kho chi nhánh trong kỳ (nhánh `Chi phí`) | Chi phí vận hành, YC chưa giao, phiếu đang chuyển, hóa đơn NCC công ty |
+| Chi phí hàng mua | HĐ đầu vào đã xác nhận (chưa VAT), gồm chưa thanh toán | Điều chuyển nội bộ, nháp HĐ, chi phí vận hành, trừ thêm khi khớp ngân hàng |
+| Lợi nhuận gộp | Doanh thu thuần − giá vốn món. Dòng độc lập | Kết quả KD, dòng tiền, LN ròng |
+| Kết quả kinh doanh | Doanh thu thuần − chi phí hàng − chi vận hành + biến động tồn. Không lấy từ LN gộp | LN ròng hoặc kết quả kê khai thuế |
 
 Nhãn: `finance.revenue.money_collected` → `Tổng tiền đã thu`. Kết quả kỳ bắt đầu từ `Doanh thu thuần`; kê khai → `Doanh thu tính thuế`; theo HĐ → `HĐĐT đã phát hành`.
 
 ## Contract Finance Basic
 
-Hai dòng kết quả kỳ: `Doanh thu thuần − Giá vốn món = Lợi nhuận gộp`; rồi
-`LN gộp − Chi phí vận hành + Biến động tồn (cuối − đầu) = Kết quả kinh doanh`.
+Hai dòng độc lập, không thác nước:
+
+`Doanh thu thuần − Giá vốn món = Lợi nhuận gộp`.
+
+`Doanh thu thuần − Chi phí hàng` (ĐC đã nhận / mua NCC) `− Chi phí vận hành + Biến động tồn = Kết quả kinh doanh`.
+
+Cấm `Kết quả = LN gộp − chi vận hành + Δtồn`. Chi phí hàng không ghi `expenses`.
+Giá vốn món không trừ trong kết quả. Δ tồn giữ vì hàng vào là mua/ĐC đã nhận —
+tồn cuối vẫn là tài sản, không phải lãi.
 Tiền mặt hiện có = tenant-wide; giá trị tồn cuối kỳ theo ngày/CN đang chọn;
 cần xử lý cuối trang. Section UI chỉ title — không mô tả theo/không theo bộ lọc.
 
@@ -81,11 +90,13 @@ cần xử lý cuối trang. Section UI chỉ title — không mô tả theo/kh�
 | `finance.inventory_value.current` | Giá trị tồn cuối kỳ | `get_inventory_value_period` | fallback cost → `needs_review` |
 | `finance.inventory_value.opening` | Tồn đầu kỳ | cuối − movement kỳ; `%` tone trung tính; đầu 0 → `Mới` | cùng closing |
 | `finance.expense.operating` | Chi phí vận hành | `expenses.subtotal` nhóm operating; `amount` = gross | chưa có → `not_recorded` |
+| `finance.inbound_transfer_value` | Chi phí hàng | `inventory_value_allocations` `event_type=transfer_in` bucket `inventory`, chi nhánh nhận trong kỳ | `location=branch`/`branches`; phiếu chưa nhận không tính |
+| `finance.inventory_purchases` | Chi phí hàng mua | `supplier_invoices.subtotal` status `confirmed`/`adjusted` theo `invoice_date` ngày VN; gồm chưa thanh toán; không `draft`; không ĐC; không trừ thêm khi khớp ngân hàng | `location=all`/`company` |
 | `finance.expense.startup_capital` | Chi phí ban đầu | `expenses.amount` (gross, gồm GTGT) `capital`+`deposit`, không theo kỳ; chi nhánh = `branch_id` khớp, không gồm `NULL` | chưa có → `not_recorded`; không trừ `Kết quả kinh doanh` |
-| `finance.food_cost.recorded` | Giá vốn món | `inventory_value_allocations` bucket `food_cost` khi cutover `active`; chưa cutover → trống | thiếu coverage / chưa cutover → `needs_review` |
+| `finance.food_cost.recorded` | Giá vốn món | `inventory_value_allocations` bucket `food_cost` khi cutover `active`; chưa cutover → trống | thiếu coverage / chưa cutover → `needs_review`; không trừ kết quả kỳ |
 | `finance.food_cost.theoretical` | Giá vốn lý thuyết | `fetchFoodCost` / `buildFoodCostRows`: định mức hiện tại × SL bán × resolver catalog (cùng `/inventory/menu-recipes`) | `estimated` |
-| `finance.gross_profit.readonly` | Lợi nhuận gộp | Doanh thu thuần − food cost recorded | thiếu coverage → không hiện số |
-| `finance.operating_result` | Kết quả kinh doanh | LN gộp − chi VH + (closing − opening); không gọi LN ròng | cần coverage + đã ghi chi VH |
+| `finance.gross_profit.readonly` | Lợi nhuận gộp | Doanh thu thuần − food cost recorded | thiếu coverage → không hiện số; dòng độc lập, không phải cha của kết quả kỳ |
+| `finance.operating_result` | Kết quả kinh doanh | DT thuần − chi phí hàng − chi VH + (closing − opening); không gọi LN ròng; không lấy từ LN gộp | cần đã ghi chi VH; không chờ coverage giá vốn món |
 
 ### Gate hiển thị VAT và thiết bị
 

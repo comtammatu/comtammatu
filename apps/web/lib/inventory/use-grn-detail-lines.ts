@@ -40,7 +40,9 @@ export function useGrnDetailLines(
       if (!current) return previous;
       const merged = { ...current, ...patchValue, dirty: true };
       next[idx] =
-        patchValue.actual != null || patchValue.rejected != null
+        patchValue.actual != null ||
+        patchValue.rejected != null ||
+        patchValue.persistToBaseFactor != null
           ? applyGrnLineQuantities(merged)
           : merged;
       return next;

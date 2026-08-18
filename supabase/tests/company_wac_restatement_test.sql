@@ -102,6 +102,15 @@ BEGIN
     RAISE EXCEPTION 'COMPANY WAC: FG provisional must skip GRN';
   END IF;
 
+  SELECT pg_catalog.pg_get_functiondef(procedure.oid)
+  INTO v_definition
+  FROM pg_catalog.pg_proc AS procedure
+  WHERE procedure.oid =
+    'private.execute_stock_transfer_receive(bigint,jsonb)'::pg_catalog.regprocedure;
+  IF v_definition ~ 'avg_unit_cost = v_new_wac' THEN
+    RAISE EXCEPTION 'COMPANY WAC: transfer receive must not overwrite site WAC';
+  END IF;
+
   SELECT stock.*
   INTO v_stock
   FROM public.stock_levels AS stock

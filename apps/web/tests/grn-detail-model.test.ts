@@ -2,11 +2,13 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   acceptedGrnQuantity,
+  applyGrnLineEntryUnit,
   calculateGrnQuantities,
   combinePackLooseQuantity,
   createEditableGrnLine,
   deliveredGrnQuantity,
   formatPackLooseQuantity,
+  grnLineHasPackLoose,
   hasAcceptedGrnQuantity,
   isLinkedPoApproved,
   isGrnLookupParam,
@@ -155,4 +157,72 @@ test("PO-first approved orders unlock GRN confirmation", () => {
   assert.equal(isLinkedPoApproved("partially_received"), true);
   assert.equal(isLinkedPoApproved("pending_approval"), false);
   assert.equal(isLinkedPoApproved("changes_requested"), false);
+});
+
+test("changing GRN persist unit converts received quantity into the selected unit", () => {
+  const units = [
+    {
+      id: 1,
+      unit_id: 10,
+      unit_code: "hop",
+      unit_name: "hộp",
+      to_base_factor: 1,
+      is_base: true,
+      is_active: true,
+      sort_order: 0,
+    },
+    {
+      id: 2,
+      unit_id: 20,
+      unit_code: "thung",
+      unit_name: "thùng",
+      to_base_factor: 24,
+      is_base: false,
+      is_active: true,
+      sort_order: 1,
+      anchor_unit_id: 10,
+      anchor_factor: 24,
+    },
+  ];
+  const line = createEditableGrnLine({
+    lineId: 1,
+    ingredient: {
+      id: 4,
+      name: "Gạo thơm",
+      sku: "GAO-01",
+      category: null,
+      category_id: null,
+      item_kind: "ingredient",
+      unit_cost: null,
+      min_stock_level: null,
+      max_stock_level: null,
+      reorder_point: null,
+      storage_type: null,
+      is_active: true,
+      updated_at: null,
+      units,
+    },
+    quantity: 24,
+    entryUnitId: 10,
+    unit: "hộp",
+    supplierId: 3,
+    supplierName: "NCC Gạo",
+  });
+
+  const next = applyGrnLineEntryUnit(line, units, 20);
+  assert.equal(next?.entryUnitId, 20);
+  assert.equal(next?.actual, 1);
+  assert.equal(next?.rejected, 0);
+  assert.equal(next?.unit, "thùng");
+  assert.equal(next?.persistToBaseFactor, 24);
+});
+
+test("pack+loose qty split is only for persist in the loose unit", () => {
+  const line = {
+    packUnit: { unitId: 20, label: "thùng", toBaseFactor: 24 },
+    looseUnit: { unitId: 10, label: "hộp", toBaseFactor: 1 },
+    entryUnitId: 10,
+  };
+  assert.equal(grnLineHasPackLoose(line), true);
+  assert.equal(grnLineHasPackLoose({ ...line, entryUnitId: 20 }), false);
 });

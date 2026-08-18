@@ -38,10 +38,16 @@ kho, công nợ, thuế và lợi nhuận của công ty tách khỏi tài sản
 
 Finance hiện là **tài chính vận hành**, không phải sổ cái hoặc báo cáo tài chính:
 
-- Nhập hàng: tăng tồn kho và công nợ/giảm tiền; chưa tự động là chi phí kỳ.
+- Nhập hàng: tăng tồn kho và công nợ/giảm tiền; chưa tự động là chi phí vận hành.
 - Thanh toán NCC: giảm tiền và công nợ; không tạo chi phí lần hai.
-- Giá trị tồn kho cuối kỳ là tài sản, không cộng/trừ trực tiếp vào kết quả.
-- Bán/tiêu hao đã duyệt mới chuyển giá trị liên quan vào giá vốn.
+- Điều chuyển nội bộ: đổi nơi giữ hàng. Công ty không tạo P&L thêm khi cộng
+  phiếu vào+ra. Chi nhánh ghi **hàng điều chuyển vào đã nhận** vào công thức kỳ
+  (không ghi `expenses`). Phiếu chưa nhận / đang chuyển không tính.
+- Giá trị tồn kho cuối kỳ là tài sản, không phải lãi. Công thức kỳ vẫn cộng
+  biến động tồn vì hàng vào là mua/ĐC đã nhận: giá vốn kỳ =
+  tồn đầu + hàng vào − tồn cuối.
+- Bán/tiêu hao đã duyệt làm giảm tồn; giá vốn món POS là chẩn đoán, không trừ
+  thêm vào kết quả kỳ (tránh tính hai lần với hàng vào + Δ tồn).
 - Hao hụt, hư hỏng, giảm giá được ghi nhận theo chứng từ điều chỉnh phù hợp.
 - Mua thiết bị không tự động là chi phí vận hành: TSCĐ ghi nhận theo nguyên giá
   và khấu hao theo kỳ; công cụ/vật dụng ghi trực tiếp hoặc phân bổ dần theo
@@ -51,10 +57,18 @@ Finance hiện là **tài chính vận hành**, không phải sổ cái hoặc b
   kỳ thuế trước khi tính GTGT phải nộp.
 
 ```text
+Lợi nhuận gộp
+= Doanh thu thuần − Giá vốn món
+
 Kết quả kinh doanh
-= Doanh thu thuần - Giá vốn món - Chi phí vận hành đã ghi nhận
-  + Biến động tồn kho (Tồn cuối kỳ - Tồn đầu kỳ)
+= Doanh thu thuần
+  − Chi phí hàng (Điều chuyển đã nhận, chi nhánh)
+    / Chi phí hàng mua (cả quán, hóa đơn NCC)
+  − Chi phí vận hành đã ghi nhận
+  + Biến động tồn kho (Tồn cuối kỳ − Tồn đầu kỳ)
 ```
+
+Hai dòng độc lập: không lấy kết quả từ lợi nhuận gộp.
 
 `Chi phí ban đầu` (vốn thi công/máy/xe/nội thất và đặt cọc) là tiền đã bỏ ra
 cho quán, không trừ vào kết quả tháng.

@@ -1088,7 +1088,7 @@ export const inventory = {
         `Ảnh chứng từ${required ? " *" : ""}`,
       viewProofPhoto: "Xem ảnh hàng từ chối",
     },
-    qcQueue: "Có hàng từ chối",
+    qcQueue: "Ghi hàng từ chối",
     qcIssueCount: (count: number) => `${count} dòng có hàng từ chối`,
   },
   po: {

@@ -40,7 +40,10 @@ purchased SKU across Central Supply, Central Kitchen, and Branch.
   unit cost onto every `stock_levels.avg_unit_cost` for the SKU and
   equalize `account.book_value = quantity × company_wac` with an
   append-only `company_wac_equalize` event (origin balances follow so
-  reconciliation still holds).
+  reconciliation still holds). Document RPCs such as
+  `execute_stock_transfer_receive` must not recompute site WAC from
+  `unit_cost_at_ship` and on-hand qty — that blend goes negative when
+  the destination is oversold (ADR 0026).
 - **`production_wac` (finished good):** a separate pool per FG SKU.
   Finished goods **never GRN**. They enter by `production_output` and
   move only by transfer (custody change). Output value is the **sum of

@@ -30,6 +30,7 @@ import {
   type GrnLineEditState,
 } from "@lib/inventory/grn-create-model";
 import {
+  applyGrnLineEntryUnit,
   createEditableGrnLine,
   GRN_DETAIL_COPY,
   acceptedGrnQuantity,
@@ -313,6 +314,7 @@ export function BranchGrnCreateLineSheet({
 type BranchGrnReviewLineSheetProps = {
   grn: GrnDetail;
   line: EditableGrnLine | null;
+  ingredients: IngredientRow[];
   isPending: boolean;
   onClose: () => void;
   onPatch: (patch: Partial<EditableGrnLine>) => void;
@@ -322,6 +324,7 @@ type BranchGrnReviewLineSheetProps = {
 export function BranchGrnReviewLineSheet({
   grn,
   line,
+  ingredients,
   isPending,
   onClose,
   onPatch,
@@ -336,6 +339,10 @@ export function BranchGrnReviewLineSheet({
   const acceptedQuantity = line
     ? acceptedGrnQuantity(line.actual, line.rejected)
     : 0;
+  const ingredient = line
+    ? ingredients.find((item) => item.id === line.ingredientId)
+    : undefined;
+  const unitOptions = getPurchaseUnitOptions(ingredient);
 
   function commitAccepted(nextAccepted: number) {
     if (!line) return;
@@ -448,6 +455,49 @@ export function BranchGrnReviewLineSheet({
                 emptyLabel={messages.inventory.grn.quantityEmptyLabel}
                 onClick={() => setNumericField("rejected")}
               />
+              {unitOptions.length > 0 ? (
+                <Field className={hasPackLoose ? undefined : "col-span-2"}>
+                  <FieldLabel htmlFor={`branch-grn-unit-${line.lineId}`}>
+                    {FORM_VI.unit}
+                  </FieldLabel>
+                  <Select
+                    value={
+                      line.entryUnitId != null ? String(line.entryUnitId) : ""
+                    }
+                    onValueChange={(value) => {
+                      const next = applyGrnLineEntryUnit(
+                        line,
+                        ingredient?.units,
+                        Number(value),
+                      );
+                      if (next) onPatch(next);
+                    }}
+                  >
+                    <SelectTrigger
+                      id={`branch-grn-unit-${line.lineId}`}
+                      size="touch"
+                      aria-label={FORM_VI.unit}
+                    >
+                      <SelectValue
+                        placeholder={GRN_DETAIL_COPY.addDialog.selectUnit}
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {unitOptions.map((option) => (
+                        <SelectItem
+                          key={option.unitId}
+                          value={String(option.unitId)}
+                          size="touch"
+                        >
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              ) : line.unit ? (
+                <p className="text-sm text-muted-foreground">{line.unit}</p>
+              ) : null}
             </div>
             {needsRejectionDetails ? (
               <>

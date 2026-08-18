@@ -325,12 +325,18 @@ test("Product UI copy bans recurring EN loanwords in Hint/Description dictionari
   assert.doesNotMatch(hrForm, /\bpayroll\b/i);
 });
 
-test("Finance gates gross profit and operating result on data coverage", () => {
+test("Finance keeps POS food-cost coverage diagnostic and period result on goods-in", () => {
   const cockpit = read(
     "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts",
   );
   const page = read("apps/web/app/(protected)/finance/page.tsx");
   const financeMessages = read("apps/web/lib/messages/finance.ts");
+  const goodsIn = read(
+    "apps/web/app/(protected)/finance/_lib/finance-goods-in.ts",
+  );
+  const result = read(
+    "apps/web/app/(protected)/finance/_lib/finance-result.ts",
+  );
 
   assert.match(
     cockpit,
@@ -361,10 +367,32 @@ test("Finance gates gross profit and operating result on data coverage", () => {
   );
   assert.match(cockpit, /addPaidOrdersWithoutRecipeNeed/);
   assert.match(cockpit, /missingCostCoverageHint/);
-  assert.match(page, /basic\.kpis\.grossProfit/);
+  assert.match(cockpit, /fetchPeriodGoodsIn/);
+  assert.match(cockpit, /fetchPeriodInvoiceGoodsIn/);
+  assert.match(cockpit, /CONFIRMED_SUPPLIER_INVOICE_STATUSES/);
+  assert.match(cockpit, /\.from\("supplier_invoices"\)/);
+  assert.match(goodsIn, /kind === "inbound_transfer"/);
+  assert.match(goodsIn, /eventType !== "transfer_in"/);
+  assert.match(goodsIn, /isConfirmedSupplierInvoiceGoodsIn/);
+  assert.match(goodsIn, /CONFIRMED_SUPPLIER_INVOICE_STATUSES/);
+  assert.match(
+    result,
+    /netRevenueBeforeVat - goodsIn - operatingExpense \+ inventoryChange/,
+  );
+  assert.doesNotMatch(result, /grossProfit - operatingExpense/);
+  assert.match(page, /renderGrossProfitCard/);
+  assert.match(page, /basic\.sections\.grossProfit/);
+  assert.match(page, /basic\.kpis\.periodCost/);
+  assert.match(page, /basic\.kpis\.inboundTransfer/);
   assert.match(page, /basic\.kpis\.operatingResult/);
   assert.doesNotMatch(page, /basic\.kpis\.moneyCollected/);
   assert.match(financeMessages, /netRevenue: "Doanh thu thuần"/);
+  assert.match(financeMessages, /inboundTransfer: "Chi phí hàng"/);
+  assert.match(financeMessages, /inventoryPurchases: "Chi phí hàng mua"/);
+  assert.doesNotMatch(
+    financeMessages,
+    /operatingResultHint:[\s\S]*Lợi nhuận gộp trừ chi vận hành/,
+  );
 });
 
 test("Finance cockpit branch filter also scopes supplier payable risk", () => {
