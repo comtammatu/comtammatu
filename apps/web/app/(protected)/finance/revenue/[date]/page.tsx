@@ -99,7 +99,6 @@ export default async function RevenueDrillPage({
       <AppPage width="xwide" density="compact">
         <AppPageHeader
           title={copy.selectBranchTitle(date)}
-          description={copy.selectBranchDescription}
           breadcrumb={<BackToRevenue />}
         />
         <AppSection title={copy.selectBranchSectionTitle}>

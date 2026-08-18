@@ -334,7 +334,6 @@ export function RevenueDrillTabs({
       <TabsContent value="danh-sach-don">
         <AppSection
           title={copy.ordersTitle(formatCount(totalOrders))}
-          description={copy.ordersDescription}
           contentFlush
           contentScroll
         >

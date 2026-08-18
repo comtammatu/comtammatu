@@ -253,7 +253,6 @@ function MissingWebhookStatusCell({
   return (
     <AppSheet
       title={copy.missingWebhookTable.reviewStatus}
-      description={copy.missingWebhookListDescription}
       trigger={badge}
     >
       <ReviewStatusSelect payment={payment} touch={touch} />

@@ -24,32 +24,17 @@ export interface TrendPoint {
 
 interface RevenueChartsProps {
   trendData: TrendPoint[];
-  resolvedStart: string;
-  resolvedEnd: string;
-  granularityLabel: string;
   showPace?: boolean;
 }
 
 export function RevenueCharts({
   trendData,
-  resolvedStart,
-  resolvedEnd,
-  granularityLabel,
   showPace = false,
 }: RevenueChartsProps) {
   const hasPace = showPace && trendData.some((point) => point.pace != null);
   return (
     <ChartCard
       title={hasPace ? paceCopy.paceChartTitle : revCopy.trendChart.title}
-      description={
-        hasPace
-          ? paceCopy.paceChartDescription
-          : revCopy.trendChart.description(
-              resolvedStart,
-              resolvedEnd,
-              granularityLabel,
-            )
-      }
       config={
         {
           revenue: {

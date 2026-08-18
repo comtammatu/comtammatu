@@ -85,9 +85,11 @@ function FinanceAttentionSection({
               >
                 <ItemContent className="min-w-0">
                   <ItemTitle className="line-clamp-none">{item.label}</ItemTitle>
-                  <ItemDescription className="line-clamp-none">
-                    {item.hint}
-                  </ItemDescription>
+                  {item.hint ? (
+                    <ItemDescription className="line-clamp-none">
+                      {item.hint}
+                    </ItemDescription>
+                  ) : null}
                 </ItemContent>
                 <ItemActions className="ml-auto">
                   <Badge
@@ -141,7 +143,7 @@ export default async function FinancePage({
         : await listBranchRevenueTargetProgress(yearMonth)
     : null;
 
-  let targetHint: ReactNode = financeCopy.basic.kpis.netRevenueHint;
+  let targetHint: ReactNode = null;
   let netRevenueHref = financeHref("/finance/revenue", params);
   if (showTargetProgress && targetProgressRes?.success) {
     if (
@@ -249,13 +251,6 @@ export default async function FinancePage({
         shortValue={
           grossProfit == null ? undefined : formatCompactVND(grossProfit)
         }
-        hint={
-          grossProfit == null || cockpit.kpis.grossMargin == null
-            ? financeCopy.basic.kpis.grossProfitMissingHint
-            : financeCopy.basic.kpis.grossProfitHint(
-                formatPercent(cockpit.kpis.grossMargin),
-              )
-        }
         tone={
           grossProfit == null
             ? "warning"
@@ -282,11 +277,6 @@ export default async function FinancePage({
           operatingResult == null
             ? undefined
             : formatCompactVND(operatingResult)
-        }
-        hint={
-          showInventoryChange
-            ? financeCopy.basic.kpis.operatingResultHint
-            : financeCopy.basic.kpis.operatingResultHintWithoutInventory
         }
         tone={
           operatingResult == null
@@ -380,7 +370,6 @@ export default async function FinancePage({
           label={financeCopy.basic.kpis.netRevenue}
           value={formatVND(cockpit.kpis.netRevenueBeforeVat)}
           shortValue={formatCompactVND(cockpit.kpis.netRevenueBeforeVat)}
-          hint={financeCopy.basic.kpis.netRevenueHint}
           tone="primary"
           href={netRevenueHref}
         />
@@ -406,11 +395,6 @@ export default async function FinancePage({
             }
             value={formatVND(cockpit.kpis.goodsIn)}
             shortValue={formatCompactVND(cockpit.kpis.goodsIn)}
-            hint={
-              goodsInIsTransfer
-                ? financeCopy.basic.kpis.inboundTransferHint
-                : financeCopy.basic.kpis.inventoryPurchasesHint
-            }
             tone="neutral"
             href={
               goodsInIsTransfer
@@ -431,7 +415,6 @@ export default async function FinancePage({
                 ? formatCompactVND(cockpit.kpis.operatingExpense)
                 : undefined
             }
-            hint={financeCopy.basic.kpis.operatingExpenseHint}
             tone={
               cockpit.kpis.operatingExpenseRecorded ? "neutral" : "warning"
             }
@@ -457,7 +440,6 @@ export default async function FinancePage({
             label={financeCopy.basic.kpis.inventoryChange}
             value={formatVND(inventoryChange)}
             shortValue={formatCompactVND(inventoryChange)}
-            hint={financeCopy.basic.kpis.inventoryChangeHint}
             tone="neutral"
           />
         </div>
@@ -542,7 +524,6 @@ export default async function FinancePage({
                 ? formatCompactVND(cockpit.kpis.startupCapital)
                 : undefined
             }
-            hint={financeCopy.basic.kpis.startupCapitalHint}
             href={financeHref("/finance/expenses", params)}
           />
         </KpiRow>
@@ -584,7 +565,6 @@ export default async function FinancePage({
                 ? undefined
                 : formatCompactVND(cockpit.vat.inputRecorded)
             }
-            hint={financeCopy.basic.kpis.vatInputHint}
             href={financeHref("/finance/supplier-invoices", params)}
           />
           <KpiCard
@@ -600,7 +580,6 @@ export default async function FinancePage({
                 ? undefined
                 : formatCompactVND(cockpit.vat.outputIssued)
             }
-            hint={financeCopy.invoicesPage.description}
             href={financeHref("/finance/invoices", params)}
           />
         </KpiRow>

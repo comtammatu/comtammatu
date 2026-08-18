@@ -200,9 +200,9 @@ export const finance = {
       missingCostLabel: "Thiếu giá vốn món",
       missingCostHint: "Có món bán nhưng chưa đủ giá vốn để tính biên gộp.",
       missingCostCoverageHint: (covered: string, total: string) =>
-        `${covered}/${total} đơn có giá vốn món`,
+        `${covered}/${total} đơn`,
       highFoodCostHint: (itemName: string, margin: string) =>
-        `${itemName} có tỷ lệ giá vốn ${margin}`,
+        `${itemName} · ${margin}`,
       costDataClear: "Không thấy món thiếu giá vốn trong kỳ",
       invoiceAttentionLabel: "Hóa đơn điện tử",
       invoiceAttentionHint: "Có hóa đơn còn nháp, đang ký hoặc chưa hoàn tất.",
@@ -412,11 +412,9 @@ export const finance = {
     listTitle: "Sổ chi phí",
     totalLabel: "Chi phí vận hành",
     monthLabel: "Chi phí tháng",
-    monthHint: (count: string) =>
-      `${count} khoản trong kỳ. Chưa gồm thuế GTGT.`,
+    monthHint: (count: string) => `${count} khoản`,
     startupLabel: "Chi phí ban đầu",
-    startupHint: (count: string) =>
-      `${count} khoản. Toàn bộ vốn đã bỏ ra, không theo kỳ lọc. Đã gồm GTGT.`,
+    startupHint: (count: string) => `${count} khoản`,
     totalHint: (count: string) => `${count} khoản, đã gồm GTGT`,
     needsActionLabel: "Cần xử lý",
     needsActionHint: (count: string) =>
@@ -1130,7 +1128,7 @@ export const finance = {
       noBranchAccess: "Bạn chưa có quyền xem chi nhánh nào.",
       detailTitle: (branch: string, date: string) => `${branch} · ${date}`,
       detailDescription: (orders: string, revenue: string) =>
-        `${orders} đơn · Tổng tiền đã thu ${revenue}.`,
+        `${orders} đơn · ${revenue}`,
       badge: "Chi tiết theo ngày",
       tabs: {
         overview: "Tổng quan",

@@ -53,6 +53,8 @@ test("finance landing presents immutable book funds", () => {
     2,
   );
   assert.match(currentFunds, /copy\.cash\.openingMeta\(openingDate\)/);
+  assert.doesNotMatch(currentFunds, /Chi →/);
+  assert.doesNotMatch(currentFunds, /totalOnHandHint/);
   assert.doesNotMatch(currentFunds, /<details|calculationDetails/);
   assert.match(currentFunds, /labelTooltip=\{/);
   assert.match(currentFunds, /copy\.cash\.onHandBreakdown\(/);

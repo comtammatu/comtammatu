@@ -1093,7 +1093,7 @@ function buildExceptions({
           ? copy.exceptions.cashVarianceClosedSessions(
               formatCount(toNumber(cashVariance?.session_count)),
             )
-          : copy.exceptions.cashVarianceNoClosedSession,
+          : "",
       href: cashVarianceHref,
       tone:
         toNumber(cashVariance?.abs_variance_total) >= 500_000
@@ -1127,7 +1127,7 @@ function buildExceptions({
       label: copy.exceptions.operatingExpenseLabel,
       value: formatVND(kpis.operatingExpense),
       hint: kpis.operatingExpenseRecorded
-        ? copy.exceptions.operatingExpenseRecorded
+        ? ""
         : copy.exceptions.operatingExpenseMissing,
       href: financeHref("/finance/expenses", params, {
         state: kpis.operatingExpenseRecorded ? null : "pending",
@@ -1148,14 +1148,14 @@ function buildExceptions({
                 highFoodCost.item_name ?? copy.exceptions.unnamedMenuItem,
                 formatPercent(toNumber(highFoodCost.food_cost_pct)),
               )
-            : copy.exceptions.costDataClear,
+            : "",
       href: financeHref("/finance/food-cost", params),
       tone: missingCostCount > 0 || highFoodCost ? "warning" : "neutral",
     },
     {
       label: copy.exceptions.invoiceAttentionLabel,
       value: formatCount(invoiceAttentionCount),
-      hint: copy.exceptions.invoiceAttentionHint,
+      hint: "",
       href: financeHref("/finance/invoices", params, {
         queue: invoiceAttentionCount > 0 ? "attention" : null,
       }),
@@ -1173,10 +1173,7 @@ function buildExceptions({
     {
       label: copy.exceptions.paymentDesyncLabel,
       value: formatCount(paymentDesync.count),
-      hint:
-        paymentDesync.count > 0
-          ? copy.exceptions.paymentDesyncHint(formatCount(paymentDesync.count))
-          : copy.exceptions.paymentDesyncClear,
+      hint: "",
       // Point at the bank-transactions reconciliation screen instead of the
       // revenue chart (which had no desync-fix affordance). The dedicated
       // desync resolution screen is a follow-up; this stops the dead-end link.

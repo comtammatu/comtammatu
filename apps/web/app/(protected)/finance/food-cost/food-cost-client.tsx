@@ -287,7 +287,6 @@ export function FoodCostClient({
           }
           emptyMode="no-results"
           emptyTitle={foodCopy.emptyTitle}
-          emptyDescription={foodCopy.emptyDescription}
           desktopFooterRows={rows.length > 0 ? footerRows : undefined}
           mobileFooter={
             rows.length > 0 ? (

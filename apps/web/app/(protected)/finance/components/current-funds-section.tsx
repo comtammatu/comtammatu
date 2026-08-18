@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Controller } from "react-hook-form";
@@ -34,7 +33,6 @@ import {
 import type { CashSummary } from "../_lib/cash-cockpit";
 
 const copy = messages.finance;
-const linkCopy = messages.finance.links;
 const formulaOperatorClass =
   "flex min-h-6 items-center justify-center font-heading text-lg font-semibold text-muted-foreground xl:min-h-0 xl:self-center";
 const FUND_AMOUNT = /^(?:0|[1-9]\d{0,12})(?:\.\d{1,2})?$/;
@@ -211,7 +209,7 @@ export function CurrentFundsSection({ cash }: { cash: CashSummary }) {
                   ? copy.cash.openingMeta(openingDate)
                   : cash.legacySettingsPresent
                     ? copy.cash.noOpeningLegacy
-                    : copy.cash.noOpening
+                    : undefined
               }
             />
           </div>
@@ -248,7 +246,7 @@ export function CurrentFundsSection({ cash }: { cash: CashSummary }) {
                   ? copy.cash.openingMeta(openingDate)
                   : cash.legacySettingsPresent
                     ? copy.cash.noOpeningLegacy
-                    : copy.cash.noOpening
+                    : undefined
               }
               href="/finance/bank-transactions"
             />
@@ -268,29 +266,10 @@ export function CurrentFundsSection({ cash }: { cash: CashSummary }) {
               shortValue={
                 cash.hasOpening ? formatCompactVND(totalOnHand) : undefined
               }
-              hint={copy.basic.kpis.totalOnHandHint}
               tone={cash.hasOpening ? "primary" : "warning"}
             />
           </div>
         </KpiRow>
-        {cash.hasOpening ? (
-          <p className="text-xs text-muted-foreground">
-            Chi →{" "}
-            <Link
-              href="/finance/supplier-invoices"
-              className="font-medium text-primary underline-offset-2 hover:underline"
-            >
-              {linkCopy.supplierInvoices.label}
-            </Link>
-            {" · Chi → "}
-            <Link
-              href="/finance/expenses"
-              className="font-medium text-primary underline-offset-2 hover:underline"
-            >
-              {linkCopy.expenses.label}
-            </Link>
-          </p>
-        ) : null}
       </AppSection>
 
       {!cash.hasOpening && !cash.legacySettingsPresent ? (

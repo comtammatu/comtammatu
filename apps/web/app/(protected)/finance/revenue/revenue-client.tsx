@@ -488,7 +488,6 @@ export function RevenueClient({
     <AppPage width="xwide" density="compact">
       <AppPageHeader
         title={revCopy.page.title}
-        description={revCopy.page.description}
         meta={revCopy.page.meta(
           branchLabel,
           `${resolvedStart} → ${resolvedEnd}`,
@@ -526,7 +525,6 @@ export function RevenueClient({
           value={formatVND(netRevenuePreVat)}
           shortValue={formatCompactVND(netRevenuePreVat)}
           tone="primary"
-          hint={revCopy.kpi.netRevenueHint}
           delta={delta(netRevenuePreVat, prevNetPreVat, "higher_better")}
           sparkline={sparkline.length > 0 ? sparkline : undefined}
           sparklineLabel={revCopy.trendChart.sparklineLabel}
@@ -535,7 +533,6 @@ export function RevenueClient({
           label={revCopy.kpi.totalCollected}
           value={formatVND(kpis?.net_revenue ?? 0)}
           shortValue={formatCompactVND(kpis?.net_revenue ?? 0)}
-          hint={revCopy.kpi.totalCollectedHint}
           delta={delta(
             kpis?.net_revenue ?? 0,
             prev?.net_revenue ?? 0,
@@ -545,7 +542,6 @@ export function RevenueClient({
         <KpiCard
           label={revCopy.kpi.orderCount}
           value={formatCount(kpis?.order_count ?? 0)}
-          hint={revCopy.kpi.orderCountHint}
           delta={delta(
             kpis?.order_count ?? 0,
             prev?.order_count ?? 0,
@@ -558,7 +554,6 @@ export function RevenueClient({
           shortValue={
             aovPerOrder > 0 ? formatCompactVND(aovPerOrder) : undefined
           }
-          hint={revCopy.kpi.aovOrderHint}
           delta={delta(aovPerOrder, prevAovOrder, "higher_better")}
         />
       </KpiRow>
@@ -585,19 +580,11 @@ export function RevenueClient({
           ) : null}
           <RevenueCharts
             trendData={trendData}
-            resolvedStart={resolvedStart}
-            resolvedEnd={resolvedEnd}
-            granularityLabel={granularityLabel}
             showPace={showPace}
           />
 
           <AppSection
             title={revCopy.periodTable.title}
-            description={
-              params.branch == null
-                ? revCopy.periodTable.descriptionAll
-                : revCopy.periodTable.descriptionSingle
-            }
             contentFlush
             contentScroll
           >
@@ -699,11 +686,6 @@ export function RevenueClient({
 
           <AppSection
             title={revCopy.heatmap.title}
-            description={
-              hourlyEnabled
-                ? revCopy.heatmap.description
-                : revCopy.heatmap.tooLargeRange
-            }
           >
             {hourlyEnabled && heatmapCells.length > 0 ? (
               <HeatmapGrid cells={heatmapCells} />
@@ -723,11 +705,6 @@ export function RevenueClient({
           <div className="grid gap-4 lg:grid-cols-2">
             <AppSection
               title={revCopy.cashierTable.title}
-              description={
-                cashierEnabled
-                  ? revCopy.cashierTable.description
-                  : revCopy.cashierTable.tooLargeRange
-              }
               contentFlush
               contentScroll
             >
@@ -765,7 +742,6 @@ export function RevenueClient({
 
             <AppSection
               title={revCopy.topItems.title}
-              description={revCopy.topItems.description}
               contentFlush
               contentScroll
             >
@@ -829,7 +805,7 @@ function CashVarianceCard({ variance }: { variance: CashVarianceSummary }) {
         ? "bad"
         : "warn";
   return (
-    <AppSection title={cashCopy.title} description={cashCopy.description}>
+    <AppSection title={cashCopy.title}>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div>
           <p className="text-xs text-muted-foreground">

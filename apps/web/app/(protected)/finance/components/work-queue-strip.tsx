@@ -20,7 +20,6 @@ import { financeHref, type FinanceParams } from "../_lib/finance-params";
 // data composition works for /finance/revenue and /finance/food-cost. The
 // owner page-level RSCs fetch the inputs once and pass them down.
 
-const FOOD_COST_EXCEPTION_THRESHOLD = 60;
 const copy = messages.finance.dashboard;
 
 interface WorkQueueStripProps {
@@ -93,7 +92,6 @@ export function WorkQueueStrip({
   return (
     <AppSection
       title={copy.workQueue.title}
-      description={copy.workQueue.description}
       className={className}
     >
       <KpiRow density="compact" className="lg:grid-cols-4">
@@ -102,7 +100,6 @@ export function WorkQueueStrip({
             density="compact"
             label={copy.workQueue.invoicesAttention}
             value={formatNullableCount(summary?.invoice_attention_count)}
-            hint={copy.workQueue.invoicesAttentionHint}
             tone={invoiceAttentionCount > 0 ? "warning" : "neutral"}
             href={invoicesHref}
           />
@@ -112,9 +109,7 @@ export function WorkQueueStrip({
             density="compact"
             label={copy.workQueue.cashVariance}
             value={formatNullableCount(health.cashVarianceSessionCount)}
-            hint={copy.workQueue.absoluteVarianceHint(
-              formatMoney(health.cashVarianceAbsAmount),
-            )}
+            hint={formatMoney(health.cashVarianceAbsAmount)}
             tone={
               health.cashVarianceAbsAmount >= 500_000
                 ? "destructive"
@@ -133,9 +128,7 @@ export function WorkQueueStrip({
             hint={
               health.topFoodCostExceptionName
                 ? `${health.topFoodCostExceptionName} · ${formatNullablePercent(health.topFoodCostExceptionPct)}`
-                : copy.workQueue.thresholdHint(
-                    formatNullablePercent(FOOD_COST_EXCEPTION_THRESHOLD),
-                  )
+                : undefined
             }
             tone={health.foodCostExceptionCount > 0 ? "warning" : "neutral"}
             href={foodCostHref}
@@ -146,7 +139,6 @@ export function WorkQueueStrip({
             density="compact"
             label={copy.workQueue.webhookFailures}
             value={formatNullableCount(summary?.failed_webhook_count)}
-            hint={copy.workQueue.webhookFailuresHint}
             tone={
               (summary?.failed_webhook_count ?? 0) > 0
                 ? "destructive"

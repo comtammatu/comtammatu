@@ -530,7 +530,6 @@ export function RevenueTargetsClient({
               : copy.editor.editTitle(editingRow.branchName)
             : copy.editor.editTitle("")
         }
-        description={copy.editor.description}
         contentClassName="sm:max-w-3xl"
         footer={
           <Button type="button" onClick={onSave} disabled={pending}>

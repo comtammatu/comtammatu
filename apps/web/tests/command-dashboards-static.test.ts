@@ -81,6 +81,12 @@ test("finance overview presents period results, current funds, and inventory in 
   assert.doesNotMatch(page, /\/finance\/inventory-value/);
   assert.match(page, /title=\{powerLiteCopy\.title\}/);
   assert.doesNotMatch(page, /description=\{powerLiteCopy\.description\}/);
+  assert.doesNotMatch(
+    page,
+    /grossProfitHint|operatingResultHint|inboundTransferHint|inventoryPurchasesHint|operatingExpenseHint|startupCapitalHint|inventoryChangeHint|vatInputHint|netRevenueHint/,
+  );
+  assert.match(page, /ingredientCostHint/);
+  assert.match(page, /inventoryValueHint/);
   assert.match(
     page,
     /<FinanceAttentionSection exceptions=\{cockpit\.exceptions\}/,
@@ -202,7 +208,11 @@ test("finance subroutes share the compact surface and operational vocabulary", (
   const copy = read(FINANCE_COPY);
 
   assert.doesNotMatch(revenue, /csvHeaders\.colVat|periodTable\.colVat/);
-  assert.match(revenue, /hint=\{revCopy\.kpi\.totalCollectedHint\}/);
+  assert.doesNotMatch(
+    revenue,
+    /hint=\{revCopy\.kpi\.(totalCollectedHint|netRevenueHint|orderCountHint|aovOrderHint)\}/,
+  );
+  assert.doesNotMatch(revenue, /description=\{revCopy\.page\.description\}/);
   assert.match(drill, /const netRevenue = totalRevenue - totalTax/);
   assert.match(drill, /label=\{copy\.kpis\.netRevenue\}/);
   assert.match(drill, /label=\{copy\.kpis\.totalCollected\}/);
