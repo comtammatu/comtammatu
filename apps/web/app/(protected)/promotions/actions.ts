@@ -51,6 +51,7 @@ const upsertSchema = z
     bxgyBuyQty: z.number().int().min(1).nullable().optional(),
     bxgyGetQty: z.number().int().min(1).nullable().optional(),
     freeSideQty: z.number().int().min(1).nullable().optional(),
+    freeItemQty: z.number().int().min(1).nullable().optional(),
     allowCode: z.boolean().default(true),
     allowAuto: z.boolean().default(false),
     branchIds: z.array(z.number().int().positive()).default([]),
@@ -61,7 +62,8 @@ const upsertSchema = z
     if (
       (values.kind === "order_pct" ||
         values.kind === "order_vnd" ||
-        (values.kind === "free_side" && values.allowCode)) &&
+        (values.kind === "free_side" && values.allowCode) ||
+        values.kind === "free_item") &&
       values.reusableCode.trim() === ""
     ) {
       ctx.addIssue({
@@ -83,6 +85,22 @@ const upsertSchema = z
           code: "custom",
           path: ["freeSideQty"],
           message: "Số phần tặng phải từ 1",
+        });
+      }
+    }
+    if (values.kind === "free_item") {
+      if ((values.freeItemQty ?? 0) < 1) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["freeItemQty"],
+          message: "Số phần tặng phải từ 1",
+        });
+      }
+      if (values.items.filter((item) => item.item_role === "get").length < 1) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["items"],
+          message: "Chọn món được tặng",
         });
       }
     }
@@ -137,6 +155,7 @@ export const upsertPromotion = withAction(
       p_bxgy_buy_qty: input.bxgyBuyQty ?? null,
       p_bxgy_get_qty: input.bxgyGetQty ?? null,
       p_free_side_qty: input.freeSideQty ?? null,
+      p_free_item_qty: input.freeItemQty ?? null,
       p_allow_code: input.allowCode,
       p_allow_auto: input.allowAuto,
       p_branch_ids: input.branchIds,

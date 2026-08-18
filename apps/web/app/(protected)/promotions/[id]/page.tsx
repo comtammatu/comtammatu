@@ -34,7 +34,7 @@ export default async function EditPromotionPage({
     supabase
       .from("promotions")
       .select(
-        "id, name, kind, status, discount_type, discount_value, min_subtotal, max_discount_amount, stack_with_item_discount, starts_at, ends_at, time_windows, service_modes, bxgy_buy_qty, bxgy_get_qty, free_side_qty, allow_code, allow_auto",
+        "id, name, kind, status, discount_type, discount_value, min_subtotal, max_discount_amount, stack_with_item_discount, starts_at, ends_at, time_windows, service_modes, bxgy_buy_qty, bxgy_get_qty, free_side_qty, free_item_qty, allow_code, allow_auto",
       )
       .eq("id", id)
       .eq("tenant_id", claims.tenant_id)
@@ -136,6 +136,7 @@ export default async function EditPromotionPage({
         bxgyBuyQty: promo.bxgy_buy_qty,
         bxgyGetQty: promo.bxgy_get_qty,
         freeSideQty: promo.free_side_qty,
+        freeItemQty: promo.free_item_qty,
         allowCode: promo.allow_code,
         allowAuto: promo.allow_auto,
         branchIds: (targetRes.data ?? []).map((row) => row.branch_id),

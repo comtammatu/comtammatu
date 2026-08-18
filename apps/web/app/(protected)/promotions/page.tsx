@@ -29,7 +29,7 @@ export default async function PromotionsPage() {
   const { data, error } = await supabase
     .from("promotions")
     .select(
-      "id, name, kind, status, discount_type, discount_value, min_subtotal, max_discount_amount, bxgy_buy_qty, bxgy_get_qty, free_side_qty, starts_at, ends_at, updated_at, promotion_codes(code, kind, status)",
+      "id, name, kind, status, discount_type, discount_value, min_subtotal, max_discount_amount, bxgy_buy_qty, bxgy_get_qty, free_side_qty, free_item_qty, starts_at, ends_at, updated_at, promotion_codes(code, kind, status)",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("updated_at", { ascending: false });
@@ -67,6 +67,7 @@ export default async function PromotionsPage() {
       bxgyBuyQty: row.bxgy_buy_qty,
       bxgyGetQty: row.bxgy_get_qty,
       freeSideQty: row.free_side_qty,
+      freeItemQty: row.free_item_qty,
       reusableCode: reusable?.code ?? null,
       totalCodesCount: codes.length,
       uniqueCodesCount: uniqueCodes.length,

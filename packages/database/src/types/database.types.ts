@@ -7200,6 +7200,7 @@ export type Database = {
           discount_type: string | null
           discount_value: number | null
           ends_at: string | null
+          free_item_qty: number | null
           free_side_qty: number | null
           id: number
           kind: string
@@ -7224,6 +7225,7 @@ export type Database = {
           discount_type?: string | null
           discount_value?: number | null
           ends_at?: string | null
+          free_item_qty?: number | null
           free_side_qty?: number | null
           id?: never
           kind: string
@@ -7248,6 +7250,7 @@ export type Database = {
           discount_type?: string | null
           discount_value?: number | null
           ends_at?: string | null
+          free_item_qty?: number | null
           free_side_qty?: number | null
           id?: never
           kind?: string
@@ -12836,6 +12839,15 @@ export type Database = {
         Args: { p_amount: number; p_credit_id: number; p_invoice_id: number }
         Returns: Json
       }
+      apply_free_item_selection: {
+        Args: {
+          p_code: string
+          p_order_id: number
+          p_promotion_id: number
+          p_selections: Json
+        }
+        Returns: Json
+      }
       apply_free_side_selection: {
         Args: {
           p_code: string
@@ -15841,6 +15853,7 @@ export type Database = {
           p_discount_type: string
           p_discount_value: number
           p_ends_at: string
+          p_free_item_qty?: number
           p_free_side_qty?: number
           p_id: number
           p_items: Json

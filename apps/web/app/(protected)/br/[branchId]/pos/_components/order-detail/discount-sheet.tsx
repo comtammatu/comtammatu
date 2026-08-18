@@ -542,26 +542,42 @@ export function DiscountSheet({
                 </p>
                 {!needsPick && preview.freeQty != null && autoPreviewAmount > 0 ? (
                   <p className="text-muted-foreground">
-                    {PROMOTIONS_VI.posAutoFreeSideHint(
-                      preview.freeQty,
-                      formatVND(autoPreviewAmount),
-                    )}
+                    {preview.kind === "free_item"
+                      ? PROMOTIONS_VI.posAutoFreeItemHint(
+                          preview.freeQty,
+                          formatVND(autoPreviewAmount),
+                        )
+                      : PROMOTIONS_VI.posAutoFreeSideHint(
+                          preview.freeQty,
+                          formatVND(autoPreviewAmount),
+                        )}
                   </p>
                 ) : null}
               </div>
             ) : null}
             {needsPick && candidateGroups.length > 0 ? (
               <div className="flex flex-col gap-2">
-                <FieldLabel>{PROMOTIONS_VI.posPickSidesTitle}</FieldLabel>
+                <FieldLabel>
+                  {preview?.kind === "free_item"
+                    ? PROMOTIONS_VI.posPickItemsTitle
+                    : PROMOTIONS_VI.posPickSidesTitle}
+                </FieldLabel>
+                {preview?.kind === "free_item" && preview.freeQty != null ? (
+                  <p className="text-sm text-muted-foreground">
+                    {PROMOTIONS_VI.posPickItemsHint(preview.freeQty)}
+                  </p>
+                ) : null}
                 <div className="flex flex-col gap-2">
                   {candidateGroups.map((group) => (
                     <Frame
                       key={group.orderItemId}
                       className="flex flex-col gap-2 p-2.5"
                     >
-                      <span className="text-xs font-semibold text-foreground/80">
-                        {group.parentName}
-                      </span>
+                      {preview?.kind === "free_item" ? null : (
+                        <span className="text-xs font-semibold text-foreground/80">
+                          {group.parentName}
+                        </span>
+                      )}
                       <ItemGroup className="gap-2">
                         {group.candidates.map((c) => {
                           const key = candidateKey(c);

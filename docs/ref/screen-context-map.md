@@ -193,13 +193,15 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 - **Archetype:** `/promotions` = `LIST`; `/promotions/new` và `/promotions/[id]` =
   `DOC-WORKFLOW` (kind-first sections).
 - **Actor:** `owner` (`promo:read` / `promo:write` / `promo:issue`).
-- **Job:** Tạo chiến dịch và mã (kể cả miễn phí ăn kèm); POS thu ngân/phục vụ
-  nhập `Mã giảm` hoặc chọn ăn kèm từ offer tự động (`pos:use`).
-- **Ưu tiên data:** Tên, loại, trạng thái, mã, món điều kiện / ăn kèm tặng.
-  **Không:** CRM, loyalty, SKU voucher.
+- **Job:** Tạo chiến dịch và mã (kể cả miễn phí ăn kèm và tặng món trên đơn);
+  POS thu ngân/phục vụ nhập `Mã giảm` hoặc chọn ăn kèm từ offer tự động (`pos:use`).
+- **Ưu tiên data:** Tên, loại, trạng thái, mã, món điều kiện / ăn kèm tặng / món tặng.
+  **Không:** CRM, loyalty, SKU voucher, xác minh Google review.
 - **POS:** Chiết khấu thủ công = `pos:apply_discount`; tiền vẫn ghi cột discount
   hiện có (ADR 0034). `free_side` = N phần ăn kèm **/ phần món chính**; auto khi
   mỗi dòng chỉ một ăn kèm get, StationSheet khi nhiều lựa chọn get / dòng.
+  `free_item` = N phần món **đã có trên hoá đơn** / đơn; chỉ nhập mã; StationSheet
+  khi nhiều dòng get.
 
 ---
 

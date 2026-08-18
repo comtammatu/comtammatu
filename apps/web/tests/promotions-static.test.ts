@@ -94,6 +94,17 @@ test("promotions migration writes existing discount columns via SECURITY DEFINER
   assert.match(recalc, /promotion_free_side_applied_amount/);
   assert.match(recalc, /Tính lại miễn phí ăn kèm/);
   assert.match(recalc, /'code', v_code/);
+
+  const freeItem = readRepo(
+    "supabase/migrations/20260818164309_promotion_free_item.sql",
+  );
+  assert.match(freeItem, /kind = 'free_item'/);
+  assert.match(freeItem, /free_item_qty/);
+  assert.match(freeItem, /apply_free_item_selection/);
+  assert.match(freeItem, /promotion_free_item_candidates/);
+  assert.match(freeItem, /promotion_item_selection_required/);
+  assert.match(freeItem, /allow_auto IS NOT TRUE/);
+  assert.match(freeItem, /Tính lại món tặng/);
 });
 
 test("promotions ACL is Owner-only with promo keys", () => {
@@ -147,6 +158,7 @@ test("Owner promotions LIST/DOC and POS Mã giảm surfaces exist", () => {
   assert.match(form, /AppSection/);
   assert.match(form, /kindConfigSection/);
   assert.match(form, /freeSideQty/);
+  assert.match(form, /freeItemQty/);
   assert.match(form, /buyItemIds/);
   assert.match(form, /getItemIds/);
   assert.match(form, /BusinessDateField/);
@@ -163,15 +175,19 @@ test("Owner promotions LIST/DOC and POS Mã giảm surfaces exist", () => {
   const messages = readRepo("packages/shared/src/messages/promotions.ts");
   assert.match(messages, /codeRequired:/);
   assert.match(messages, /kindFreeSide:/);
+  assert.match(messages, /kindFreeItem:/);
   assert.match(messages, /posOfferChip:/);
   assert.match(messages, /posPickSidesTitle:/);
+  assert.match(messages, /posPickItemsTitle:/);
 
   const kinds = readWeb("lib/promotions/kinds.ts");
   assert.match(kinds, /"free_side"/);
+  assert.match(kinds, /"free_item"/);
 
   const rpcErrors = readWeb("lib/promotions/rpc-errors.ts");
   assert.match(rpcErrors, /promotion_reusable_code_required/);
   assert.match(rpcErrors, /promotion_side_selection_required/);
+  assert.match(rpcErrors, /promotion_item_selection_required/);
 
   const statusBadge = readWeb("app/components/status-badge.tsx");
   assert.match(statusBadge, /promotion:/);
@@ -188,6 +204,8 @@ test("Owner promotions LIST/DOC and POS Mã giảm surfaces exist", () => {
   assert.match(sheet, /posAutoFreeSideHint/);
   assert.match(sheet, /resolvedCode/);
   assert.match(sheet, /posPickSidesTitle/);
+  assert.match(sheet, /posPickItemsTitle/);
+  assert.match(sheet, /posAutoFreeItemHint/);
   assert.match(sheet, /initialOffer/);
   assert.match(sheet, /onApplyFreeSide/);
   assert.match(sheet, /Item[\s\S]*variant="outline"/);
@@ -240,6 +258,7 @@ test("Owner promotions LIST/DOC and POS Mã giảm surfaces exist", () => {
 
   const glossary = readRepo("docs/ref/glossary.md");
   assert.match(glossary, /`promotion` \| Khuyến mãi/);
+  assert.match(glossary, /`free_item` \| Tặng món trên đơn/);
   assert.match(glossary, /`promo_code` \| Mã giảm/);
   assert.match(glossary, /`voucher_code` \| Mã voucher/);
 });

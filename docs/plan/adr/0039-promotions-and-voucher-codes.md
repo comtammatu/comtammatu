@@ -9,6 +9,9 @@
 **Amends:** 2026-08-14 — `free_side` kind, code/auto activation flags, staff
 side selection before money write. Money projection remains ADR 0034.
 
+**Amends:** 2026-08-18 — `free_item` kind. Staff picks N units already on the
+order (not sides JSON). Code-only; no auto offer. Same item-level VND landing.
+
 ## Context
 
 POS already has discretionary discounts (order `%`/`vnd`, item `vnd` only) that
@@ -46,13 +49,18 @@ Item-level VND discounts may coexist unless the campaign sets
 | `auto_order` | `evaluate_order_promotions` when eligible and no order-level discount exists | Order-level `%` or VND; a cashier code wins over auto |
 | `bxgy` | Same evaluate RPC | Item-level VND on cheapest qualifying lines (ADR 0034) |
 | `free_side` | Code and/or auto offer (`allow_code` / `allow_auto`); staff picks N side portions | Item-level VND on parent lines = selected `side.price × units`; do not mutate `sides` JSON |
+| `free_item` | Cashier/waiter reusable `promo_code` (`allow_code` required; `allow_auto` forbidden); staff picks N units already on the order | Item-level VND on selected lines = `unit_price × units`; do not change qty |
 
-Buy X get Y and free-side never use order `%`. Kitchen still sees full qty and
+Buy X get Y, free-side, and free-item never use order `%`. Kitchen still sees full qty and
 full side lists (commercial comp, not a void). `free_side` quota is N free side
 portions **per qualifying main unit** (`free_side_qty × order_item.quantity`, summed
-across buy lines). `promotion_items` roles: `buy` = trigger mains, `get` =
-freeable side menu items. Auto path returns offers only; money writes through
-`apply_free_side_selection` (or `apply_promotion_code` with selections).
+across buy lines). `free_item` quota is N units **per order** (`free_item_qty`), taken
+from existing `order_items` whose `menu_item_id` is a `get` row. `promotion_items` roles: `buy` = trigger mains, `get` =
+freeable side or freeable order-line menu items. Auto path returns offers only for
+`free_side`; money writes through `apply_free_side_selection` /
+`apply_free_item_selection` (or `apply_promotion_code` with selections). `free_item`
+does not surface evaluate offers — staff must enter the code after verifying the
+campaign condition (for example a 5-star review).
 
 ### 4. Schedule, lock, zero-total, restructure
 
@@ -68,7 +76,7 @@ freeable side menu items. Auto path returns offers only; money writes through
   `promo:issue` (tenant scope, not delegable). Empty `promotion_branches` means
   every selling branch.
 - Manual `chiết khấu`: `pos:apply_discount`.
-- Published code, unique voucher, auto, and free-side selection: `pos:use`
+- Published code, unique voucher, auto, free-side, and free-item selection: `pos:use`
   (amount is Owner-configured).
 
 Cashiers never write catalog tables. Apply/clear/evaluate/preview/
@@ -92,7 +100,8 @@ stays a menu price), selling vouchers as inventory SKUs.
 
 - HĐĐT/print/finance keep their current discount readers.
 - POS discount sheet gains a **`Mã giảm`** path beside **`Chiết khấu`**, with a
-  multi-step side picker for `free_side` and an auto offer chip on order detail.
+  multi-step picker for `free_side` / `free_item` and an auto offer chip on order
+  detail for `free_side` only.
 - Owner LIST `/promotions` and kind-first DOC-WORKFLOW `/promotions/new` +
   `/promotions/[id]`.
 

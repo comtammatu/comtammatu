@@ -83,11 +83,26 @@ export function mapPromotionRpcError(message: string): string {
   if (msg.includes("promotion_side_selection_qty")) {
     return "Số phần ăn kèm được chọn chưa đủ hoặc vượt mức tặng.";
   }
+  if (msg.includes("promotion_item_selection_required")) {
+    return "Vui lòng chọn món được tặng.";
+  }
+  if (msg.includes("promotion_item_selection_invalid")) {
+    return "Lựa chọn món tặng không hợp lệ. Vui lòng chọn lại.";
+  }
+  if (msg.includes("promotion_item_selection_qty")) {
+    return "Số phần được chọn chưa đủ hoặc vượt mức tặng.";
+  }
   if (msg.includes("promotion_free_side_items_required")) {
     return "Chọn món chính điều kiện và nhóm ăn kèm được tặng.";
   }
   if (msg.includes("promotion_free_side_qty_required")) {
     return "Số phần ăn kèm tặng phải từ 1 trở lên.";
+  }
+  if (msg.includes("promotion_free_item_items_required")) {
+    return "Chọn món được tặng trên hoá đơn.";
+  }
+  if (msg.includes("promotion_free_item_qty_required")) {
+    return "Số phần tặng phải từ 1 trở lên.";
   }
   if (msg.includes("promotion_activation_required")) {
     return "Chọn ít nhất một cách kích hoạt: mã hoặc tự động.";

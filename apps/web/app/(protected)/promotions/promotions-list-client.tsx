@@ -47,6 +47,7 @@ export type PromotionListRow = {
   bxgyBuyQty: number | null;
   bxgyGetQty: number | null;
   freeSideQty: number | null;
+  freeItemQty: number | null;
   reusableCode: string | null;
   totalCodesCount: number;
   uniqueCodesCount: number;
@@ -88,6 +89,9 @@ function getPromotionBenefit(row: PromotionListRow): string {
   }
   if (row.kind === "free_side") {
     return PROMOTIONS_VI.benefitFreeSide(row.freeSideQty ?? 1);
+  }
+  if (row.kind === "free_item") {
+    return PROMOTIONS_VI.benefitFreeItem(row.freeItemQty ?? 1);
   }
   return "—";
 }

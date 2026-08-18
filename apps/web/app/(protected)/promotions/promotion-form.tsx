@@ -108,6 +108,7 @@ export type PromotionFormValue = {
   bxgyBuyQty: number | null;
   bxgyGetQty: number | null;
   freeSideQty: number | null;
+  freeItemQty: number | null;
   allowCode: boolean;
   allowAuto: boolean;
   branchIds: number[];
@@ -148,6 +149,7 @@ const promotionFormSchema = z
     bxgyBuyQty: z.string(),
     bxgyGetQty: z.string(),
     freeSideQty: z.string(),
+    freeItemQty: z.string(),
     allowCode: z.boolean(),
     allowAuto: z.boolean(),
     branchIds: z.array(z.number().int().positive()),
@@ -160,7 +162,8 @@ const promotionFormSchema = z
     const needsReusable =
       values.kind === "order_pct" ||
       values.kind === "order_vnd" ||
-      (values.kind === "free_side" && values.allowCode);
+      (values.kind === "free_side" && values.allowCode) ||
+      values.kind === "free_item";
     if (needsReusable && values.reusableCode.trim() === "") {
       ctx.addIssue({
         code: "custom",
@@ -195,6 +198,22 @@ const promotionFormSchema = z
           code: "custom",
           path: ["getItemIds"],
           message: "Chọn ăn kèm được tặng",
+        });
+      }
+    }
+    if (values.kind === "free_item") {
+      if ((parseAmount(values.freeItemQty) ?? 0) < 1) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["freeItemQty"],
+          message: "Số phần tặng phải từ 1",
+        });
+      }
+      if (values.getItemIds.length < 1) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["getItemIds"],
+          message: "Chọn món được tặng",
         });
       }
     }
@@ -271,6 +290,8 @@ function toFormValues(initial: PromotionFormValue): PromotionFormValues {
     bxgyGetQty: initial.bxgyGetQty != null ? String(initial.bxgyGetQty) : "1",
     freeSideQty:
       initial.freeSideQty != null ? String(initial.freeSideQty) : "1",
+    freeItemQty:
+      initial.freeItemQty != null ? String(initial.freeItemQty) : "1",
     allowCode: initial.allowCode,
     allowAuto: initial.allowAuto,
     branchIds: initial.branchIds,
@@ -329,6 +350,11 @@ export function PromotionForm({
       setValue("allowAuto", true);
       setValue("freeSideQty", "1");
     }
+    if (kind === "free_item") {
+      setValue("allowCode", true);
+      setValue("allowAuto", false);
+      setValue("freeItemQty", "1");
+    }
   }, [kind, setValue]);
 
   const needsAmount =
@@ -339,12 +365,14 @@ export function PromotionForm({
   const needsCode =
     kind === "order_pct" ||
     kind === "order_vnd" ||
-    (kind === "free_side" && allowCode);
+    (kind === "free_side" && allowCode) ||
+    kind === "free_item";
   const needsWindows = kind === "auto_order";
   const needsBxgy = kind === "bxgy";
   const needsFreeSide = kind === "free_side";
+  const needsFreeItem = kind === "free_item";
   const needsSplitItems = kind === "bxgy" || kind === "free_side";
-  const needsEligibleItems = !needsSplitItems;
+  const needsEligibleItems = !needsSplitItems && !needsFreeItem;
   const needsIssue = kind === "voucher_face" && initial.id != null;
   const controlSize = useFormControlSize("responsive");
 
@@ -388,6 +416,12 @@ export function PromotionForm({
           : []),
       ];
     }
+    if (values.kind === "free_item") {
+      return values.getItemIds.map((menu_item_id) => ({
+        menu_item_id,
+        item_role: "get" as const,
+      }));
+    }
     return values.itemIds.map((menu_item_id) => ({
       menu_item_id,
       item_role: "eligible" as const,
@@ -426,6 +460,7 @@ export function PromotionForm({
         bxgyBuyQty: needsBxgy ? parseAmount(values.bxgyBuyQty) : null,
         bxgyGetQty: needsBxgy ? parseAmount(values.bxgyGetQty) : null,
         freeSideQty: needsFreeSide ? parseAmount(values.freeSideQty) : null,
+        freeItemQty: needsFreeItem ? parseAmount(values.freeItemQty) : null,
         allowCode: needsFreeSide ? values.allowCode : true,
         allowAuto: needsFreeSide ? values.allowAuto : false,
         branchIds: values.branchIds,
@@ -690,6 +725,17 @@ export function PromotionForm({
               </div>
             ) : null}
 
+            {needsFreeItem ? (
+              <NumberField
+                control={control}
+                name="freeItemQty"
+                label={PROMOTIONS_VI.freeItemQtyLabel}
+                placeholder="1"
+                maxFractionDigits={0}
+                required
+              />
+            ) : null}
+
             {needsCode ? (
               <TextField
                 control={control}
@@ -759,6 +805,20 @@ export function PromotionForm({
               </div>
             ) : null}
 
+            {needsFreeItem ? (
+              <div className="border-t border-border pt-3">
+                <MenuItemPicker
+                  control={control}
+                  name="getItemIds"
+                  label={PROMOTIONS_VI.freeItemGetLabel}
+                  query={getQuery}
+                  onQueryChange={setGetQuery}
+                  options={filteredGet}
+                  allItems={menuItems}
+                />
+              </div>
+            ) : null}
+
             <PromotionRuleSummary
               kind={kind}
               discountType={discountType}
@@ -770,6 +830,7 @@ export function PromotionForm({
               bxgyBuyQty={watch("bxgyBuyQty")}
               bxgyGetQty={watch("bxgyGetQty")}
               freeSideQty={watch("freeSideQty")}
+              freeItemQty={watch("freeItemQty")}
               allowCode={watch("allowCode")}
               allowAuto={watch("allowAuto")}
             />
@@ -1129,6 +1190,7 @@ function PromotionRuleSummary({
   bxgyBuyQty,
   bxgyGetQty,
   freeSideQty,
+  freeItemQty,
   allowCode,
   allowAuto,
 }: {
@@ -1142,6 +1204,7 @@ function PromotionRuleSummary({
   bxgyBuyQty: string;
   bxgyGetQty: string;
   freeSideQty: string;
+  freeItemQty: string;
   allowCode: boolean;
   allowAuto: boolean;
 }) {
@@ -1215,6 +1278,12 @@ function PromotionRuleSummary({
     summary = PROMOTIONS_VI.summaryFreeSide(
       freeSideQty || "1",
       actText,
+      minText,
+    );
+  } else if (kind === "free_item") {
+    summary = PROMOTIONS_VI.summaryFreeItem(
+      freeItemQty || "1",
+      codeDisplay,
       minText,
     );
   }

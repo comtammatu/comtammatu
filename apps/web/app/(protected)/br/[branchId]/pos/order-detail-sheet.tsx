@@ -1087,7 +1087,8 @@ export function OrderDetailSheet({
       } else {
         if (
           r.errorCode === "promotion_side_selection_required" ||
-          r.error?.includes("ăn kèm")
+          r.error?.includes("ăn kèm") ||
+          r.error?.includes("món được tặng")
         ) {
           setShowDiscount(true);
         }

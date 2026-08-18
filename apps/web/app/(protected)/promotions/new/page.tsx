@@ -45,6 +45,7 @@ export default async function NewPromotionPage() {
         bxgyBuyQty: 2,
         bxgyGetQty: 1,
         freeSideQty: 1,
+        freeItemQty: 1,
         allowCode: true,
         allowAuto: false,
         branchIds: [],

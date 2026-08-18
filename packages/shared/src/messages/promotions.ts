@@ -41,6 +41,8 @@ export const PROMOTIONS_VI = {
   freeSideQtyLabel: "Số phần ăn kèm tặng / phần món chính",
   freeSideBuyLabel: "Món chính điều kiện",
   freeSideGetLabel: "Ăn kèm được tặng",
+  freeItemQtyLabel: "Số phần tặng / đơn",
+  freeItemGetLabel: "Món được tặng",
   activationLabel: "Cách kích hoạt",
   activationCode: "Nhập mã",
   activationAuto: "Tự động trên đơn đủ điều kiện",
@@ -82,6 +84,8 @@ export const PROMOTIONS_VI = {
     `Mua ${buy} phần món điều kiện tặng ${get} phần món chỉ định, điều kiện ${min}.`,
   summaryFreeSide: (qty: string, act: string, min: string) =>
     `Tặng ${qty} phần ăn kèm cho mỗi phần món chính điều kiện (${act}), điều kiện ${min}.`,
+  summaryFreeItem: (qty: string, code: string, min: string) =>
+    `Tặng ${qty} phần món đã có trên hoá đơn khi nhập mã "${code}", điều kiện ${min}.`,
   summaryMaxLimit: (max: string) => ` (giảm tối đa ${max})`,
   summaryMaxAuto: (max: string) => ` (tối đa ${max})`,
   summaryActCode: (code: string) => `nhập mã "${code}"`,
@@ -107,6 +111,7 @@ export const PROMOTIONS_VI = {
   kindAuto: "Tự động theo giờ",
   kindBxgy: "Mua X tặng Y",
   kindFreeSide: "Miễn phí ăn kèm",
+  kindFreeItem: "Tặng món trên đơn",
   statusDraft: "Nháp",
   statusActive: "Đang chạy",
   statusPaused: "Tạm dừng",
@@ -140,11 +145,17 @@ export const PROMOTIONS_VI = {
   posPickSidesTitle: "Chọn ăn kèm được tặng",
   posPickSidesHint: (n: number) =>
     `Chọn đúng ${String(n)} phần ăn kèm trên toàn đơn (theo từng phần món chính)`,
+  posPickItemsTitle: "Chọn món được tặng",
+  posPickItemsHint: (n: number) =>
+    `Chọn đúng ${String(n)} phần đã có trên hoá đơn`,
   posAutoFreeSideHint: (n: number, amount: string) =>
     `Tự động miễn phí ${String(n)} phần ăn kèm (giảm ${amount})`,
+  posAutoFreeItemHint: (n: number, amount: string) =>
+    `Tự động miễn phí ${String(n)} phần (giảm ${amount})`,
   posPickSidesApply: "Áp dụng",
   posPreviewName: "Chiến dịch",
   posNeedsSidePick: "Chọn phần ăn kèm để áp mã",
+  posNeedsItemPick: "Chọn món được tặng để áp mã",
   posMaxUnits: (max: number) => `tối đa ${String(max)}`,
   applied: "Đã áp mã giảm",
   cleared: "Đã bỏ khuyến mãi",
@@ -158,6 +169,7 @@ export const PROMOTIONS_VI = {
   benefitBxgy: (buy: number, get: number) =>
     `Mua ${String(buy)} tặng ${String(get)}`,
   benefitFreeSide: (qty: number) => `Tặng ${String(qty)} món ăn kèm`,
+  benefitFreeItem: (qty: number) => `Tặng ${String(qty)} món trên đơn`,
   searchPlaceholder: "Tìm theo tên hoặc mã…",
   filterAll: "Tất cả",
   filterActive: "Đang chạy",
