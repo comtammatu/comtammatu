@@ -23,9 +23,6 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
-import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
-import { Separator } from "@comtammatu/ui/components/separator";
-
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { AppEmptyState } from "@/components/surface";
@@ -34,6 +31,7 @@ import {
   SheetClose,
   SheetContent,
   SheetDescription,
+  SheetFooter,
   SheetHeader,
   SheetTitle,
 } from "@/components/surface/app-sheet";
@@ -257,118 +255,120 @@ export function CartSheet(props: CartSheetProps) {
         <SheetContent
           side="bottom"
           showCloseButton={false}
-          className="mx-auto flex w-full max-w-2xl flex-col overflow-hidden p-0"
+          fullscreen
+          className="mx-auto w-full max-w-2xl overflow-hidden p-0"
         >
-          <SheetHeader className="pr-3 sm:pr-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <SheetTitle className="flex min-w-0 items-center gap-2 text-left">
-                  {SELF_ORDER_VI.cartTitle}
-                  {quantity > 0 ? (
-                    <Badge variant="secondary">{quantity}</Badge>
-                  ) : null}
-                </SheetTitle>
-                <SheetDescription className="text-left">
-                  {empty
-                    ? SELF_ORDER_VI.cartEmpty
-                    : SELF_ORDER_VI.cartReviewDescription}
-                </SheetDescription>
-              </div>
-              <SheetClose
-                render={
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-touch"
-                    className="-mt-1 -mr-1 shrink-0 self-start text-muted-foreground"
-                    aria-label={SELF_ORDER_VI.closeCartAria}
-                  >
-                    <IconX />
-                  </Button>
-                }
-              />
-            </div>
-          </SheetHeader>
-
-          <ScrollArea className="min-h-0 flex-1">
-            <div className="flex flex-col gap-4 px-4 py-3">
-              {empty ? (
-                <AppEmptyState
-                  title={SELF_ORDER_VI.cartEmpty}
-                  symbol="riceBowl"
-                  compact
+          <div className="flex h-full min-h-0 flex-col overflow-hidden">
+            <SheetHeader className="shrink-0 pr-3 sm:pr-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  <SheetTitle className="flex min-w-0 items-center gap-2 text-left">
+                    {SELF_ORDER_VI.cartTitle}
+                    {quantity > 0 ? (
+                      <Badge variant="secondary">{quantity}</Badge>
+                    ) : null}
+                  </SheetTitle>
+                  <SheetDescription className="text-left">
+                    {empty
+                      ? SELF_ORDER_VI.cartEmpty
+                      : SELF_ORDER_VI.cartReviewDescription}
+                  </SheetDescription>
+                </div>
+                <SheetClose
+                  render={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-touch"
+                      className="-mt-1 -mr-1 shrink-0 self-start text-muted-foreground"
+                      aria-label={SELF_ORDER_VI.closeCartAria}
+                    >
+                      <IconX />
+                    </Button>
+                  }
                 />
-              ) : (
-                <>
-                  <ItemGroup data-size="xs">
-                    {items.map((item, index) => (
-                      <div key={item.key}>
-                        {index > 0 ? <ItemSeparator /> : null}
-                        <CartLine
-                          item={item}
-                          disabled={editingDisabled}
-                          canEdit={
-                            findMenuItem(categories, item.menu_item_id) != null
-                          }
-                          onEdit={() => setEditingKey(item.key)}
-                          onQuantityChange={props.onQuantityChange}
-                          onRemove={props.onRemove}
-                        />
-                      </div>
-                    ))}
-                  </ItemGroup>
+              </div>
+            </SheetHeader>
 
-                  <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="self-order-note">
-                      {SELF_ORDER_VI.noteLabel}
-                    </Label>
-                    <Textarea
-                      id="self-order-note"
-                      name="customerNote"
-                      autoComplete="off"
-                      value={customerNote}
-                      disabled={editingDisabled}
-                      maxLength={500}
-                      rows={2}
-                      placeholder={SELF_ORDER_VI.notePlaceholder}
-                      onChange={(event) =>
-                        props.onCustomerNoteChange(event.target.value)
-                      }
-                    />
-                  </div>
-                </>
-              )}
-            </div>
-          </ScrollArea>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+              <div className="flex flex-col gap-4 px-4 py-3">
+                {empty ? (
+                  <AppEmptyState
+                    title={SELF_ORDER_VI.cartEmpty}
+                    symbol="riceBowl"
+                    compact
+                  />
+                ) : (
+                  <>
+                    <ItemGroup data-size="xs">
+                      {items.map((item, index) => (
+                        <div key={item.key}>
+                          {index > 0 ? <ItemSeparator /> : null}
+                          <CartLine
+                            item={item}
+                            disabled={editingDisabled}
+                            canEdit={
+                              findMenuItem(categories, item.menu_item_id) != null
+                            }
+                            onEdit={() => setEditingKey(item.key)}
+                            onQuantityChange={props.onQuantityChange}
+                            onRemove={props.onRemove}
+                          />
+                        </div>
+                      ))}
+                    </ItemGroup>
 
-          <Separator />
-          <div className="workflow-safe-pb flex shrink-0 flex-col gap-2 p-4">
-            {props.submitError ? (
-              <Alert variant="destructive">
-                <AlertDescription>{props.submitError}</AlertDescription>
-              </Alert>
-            ) : null}
-            <div className="flex items-center justify-between gap-3 text-sm font-semibold">
-              <span>{SELF_ORDER_VI.subtotal}</span>
-              <span className="font-mono tabular-nums text-primary">
-                {formatVND(total)}
-              </span>
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor="self-order-note">
+                        {SELF_ORDER_VI.noteLabel}
+                      </Label>
+                      <Textarea
+                        id="self-order-note"
+                        name="customerNote"
+                        autoComplete="off"
+                        value={customerNote}
+                        disabled={editingDisabled}
+                        maxLength={500}
+                        rows={2}
+                        placeholder={SELF_ORDER_VI.notePlaceholder}
+                        onChange={(event) =>
+                          props.onCustomerNoteChange(event.target.value)
+                        }
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
-            <Button
-              type="button"
-              size="touch-lg"
-              className="w-full"
-              disabled={submitDisabled}
-              onClick={props.onSubmit}
-            >
-              {props.isSubmitting ? <Spinner className="size-4" /> : null}
-              {props.isSubmitting ? SELF_ORDER_VI.submitting : ctaLabel}
-            </Button>
-            {ctaDisabled && ctaDisabledHint ? (
-              <p className="text-center text-xs text-muted-foreground">
-                {ctaDisabledHint}
-              </p>
-            ) : null}
+
+            <SheetFooter className="workflow-safe-pb shrink-0 bg-card p-4">
+              {props.submitError ? (
+                <Alert variant="destructive">
+                  <AlertDescription>{props.submitError}</AlertDescription>
+                </Alert>
+              ) : null}
+              <div className="flex items-center justify-between gap-3 text-sm font-semibold">
+                <span>{SELF_ORDER_VI.subtotal}</span>
+                <span className="font-mono tabular-nums text-primary">
+                  {formatVND(total)}
+                </span>
+              </div>
+              <Button
+                type="button"
+                size="touch-lg"
+                className="w-full"
+                disabled={submitDisabled}
+                onClick={props.onSubmit}
+              >
+                {props.isSubmitting ? <Spinner className="size-4" /> : null}
+                {props.isSubmitting ? SELF_ORDER_VI.submitting : ctaLabel}
+              </Button>
+              {ctaDisabled && ctaDisabledHint ? (
+                <p className="text-center text-xs text-muted-foreground">
+                  {ctaDisabledHint}
+                </p>
+              ) : null}
+            </SheetFooter>
           </div>
         </SheetContent>
       </Sheet>

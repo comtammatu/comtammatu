@@ -69,7 +69,7 @@ Full-viewport bottom sheet (`max-w-2xl`). Image: phone `h-80`; `sm+` `aspect-vid
 
 ### G3 · Cart sheet
 
-~90% viewport. Lines: name + tag, options, total, **`Sửa`** / stepper / remove; shared note; footer subtotal + send CTA.
+Full-viewport bottom sheet (`fullscreen`, same as G2/G6). Lines and shared note scroll; footer subtotal + send CTA stay pinned in `SheetFooter` so a long cart cannot cover **`Gửi món`**. Lines: name + tag, options, total, **`Sửa`** / stepper / remove.
 
 CTA: not open → **`Gửi món`** + staff-confirm hint; awaiting / open → **`Gửi thêm món`** (merge pending or straight to kitchen). Only guest confirmation control; edit replaces entry in place (same `key`).
 

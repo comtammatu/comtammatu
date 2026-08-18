@@ -213,10 +213,18 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
   );
   assert.match(
     cart,
-    /className="mx-auto flex w-full max-w-2xl flex-col overflow-hidden p-0"/,
+    /<SheetContent[\s\S]*fullscreen[\s\S]*className="mx-auto w-full max-w-2xl overflow-hidden p-0"/,
+  );
+  assert.match(
+    cart,
+    /className="flex h-full min-h-0 flex-col overflow-hidden"/,
   );
   assert.doesNotMatch(cart, /\bh-dvh\b|\bmax-h-dvh\b/);
-  assert.match(cart, /<ScrollArea className="min-h-0 flex-1">/);
+  assert.doesNotMatch(cart, /ScrollArea/);
+  assert.match(
+    cart,
+    /className="min-h-0 flex-1 overflow-y-auto overscroll-contain"/,
+  );
   assert.match(cart, /SELF_ORDER_VI\.editCartItem/);
   assert.match(cart, /onReplace/);
   assert.match(cart, /SelfOrderItemSheet/);
@@ -230,9 +238,21 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
   assert.match(cartLine, /size="touch"/);
   assert.equal(cartLine.match(/size="icon-touch"/g)?.length, 3);
   assert.doesNotMatch(cartLine, /size="(?:sm|icon-sm)"/);
+  const cartFooterIndex = cart.indexOf("<SheetFooter");
+  const cartNoteIndex = cart.indexOf('id="self-order-note"');
+  const cartSubmitIndex = cart.indexOf("onClick={props.onSubmit}");
+  assert.ok(cartFooterIndex > 0, "cart SheetFooter present");
+  assert.ok(
+    cartNoteIndex > 0 && cartNoteIndex < cartFooterIndex,
+    "shared note stays in the cart scroll body, not under the send CTA",
+  );
+  assert.ok(
+    cartSubmitIndex > cartFooterIndex,
+    "submit CTA stays in the pinned cart footer",
+  );
   assert.match(
     cart,
-    /workflow-safe-pb flex shrink-0[\s\S]*onClick=\{props\.onSubmit\}/,
+    /workflow-safe-pb shrink-0[\s\S]*onClick=\{props\.onSubmit\}/,
   );
 });
 
@@ -263,6 +283,10 @@ test("self-order menu availability reuses the POS stock gate", () => {
   assert.match(guestUi, /Sắp hỗ trợ/);
   assert.match(guestUi, /sticky category pills/);
   assert.match(guestUi, /\*\*No Tabs\*\*/);
+  assert.match(
+    guestUi,
+    /G3 · Cart sheet[\s\S]*fullscreen[\s\S]*SheetFooter[\s\S]*Gửi món/,
+  );
   assert.doesNotMatch(guestUi, /fixed lower-right/);
 });
 
