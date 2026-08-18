@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Select,
@@ -11,12 +10,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import {
-  Item,
-  ItemContent,
-  ItemDescription,
-  ItemTitle,
-} from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { FormField } from "@/components/form";
 import {
@@ -26,11 +19,6 @@ import {
   AppSection,
   DocumentFormFrame,
 } from "@/components/surface";
-import {
-  StocktakeModeSelector,
-  getModeMeta,
-  type StocktakeMode,
-} from "../../_components/stocktake-mode-selector";
 import { startStocktake } from "../../stocktake-actions";
 import { messages } from "@lib/messages";
 
@@ -66,16 +54,13 @@ export function NewStocktakeSessionClient({
   loadFailedTitle = messages.inventory.stocktake.startLoadFailed,
 }: Props) {
   const router = useRouter();
-  const [mode, setMode] = useState<StocktakeMode>("daily");
   const [branchId, setBranchId] = useState<number | null>(defaultBranchId);
   const [pending, startTransition] = useTransition();
+  const copy = messages.inventory.stocktake;
 
   useEffect(() => {
     setBranchId(defaultBranchId);
   }, [defaultBranchId]);
-
-  const meta = getModeMeta(mode);
-  const effectiveBlind = meta.defaultBlind;
 
   const branchLocations = useMemo(
     () => (branchId ? locations.filter((l) => l.branchId === branchId) : []),
@@ -90,34 +75,26 @@ export function NewStocktakeSessionClient({
   );
   function submit() {
     if (!branchId) {
-      toast.error(messages.inventory.stocktake.selectBranchFirst);
+      toast.error(copy.selectBranchFirst);
       return;
     }
     if (!selectedWarehouse) {
-      toast.error(messages.inventory.stocktake.warehouseRequired);
+      toast.error(copy.warehouseRequired);
       return;
     }
     startTransition(async () => {
       const res = await startStocktake({
         branchId,
         locationId: selectedWarehouse.id,
-        mode,
       });
       if (!res.success || !res.data) {
-        toast.error(
-          res.error ?? messages.inventory.stocktake.createSessionFailed,
-        );
+        toast.error(res.error ?? copy.createSessionFailed);
         return;
       }
       toast.success(
-        messages.inventory.stocktake.sessionCreated(
-          res.data.sessionId,
-          res.data.seededLines,
-        ),
+        copy.sessionCreated(res.data.sessionId, res.data.seededLines),
       );
-      router.push(
-        `${routeBase}/${res.data.sessionId}/count?branch=${branchId}`,
-      );
+      router.push(`${routeBase}/${res.data.sessionId}/count?branch=${branchId}`);
     });
   }
 
@@ -128,15 +105,11 @@ export function NewStocktakeSessionClient({
       onClick={submit}
       disabled={pending || !branchId}
     >
-      {pending
-        ? messages.inventory.stocktake.creating
-        : messages.inventory.stocktake.startCounting}
+      {pending ? copy.creating : copy.startCounting}
     </Button>
   );
 
-  const header = (
-    <AppPageHeader title={messages.inventory.stocktake.startTitle} />
-  );
+  const header = <AppPageHeader title={copy.startTitle} />;
 
   if (loadFailed) {
     return (
@@ -146,119 +119,48 @@ export function NewStocktakeSessionClient({
     );
   }
 
-  const content = (
-    <div className="grid gap-4 lg:grid-cols-3">
-        <AppSection
-          title={messages.inventory.stocktake.modeTitle}
-          className="lg:col-span-2"
-          contentClassName="gap-4"
-        >
-          <StocktakeModeSelector value={mode} onChange={setMode} />
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <FormField
-              controlId="stocktake-branch"
-              label={BRANCH_VI.long}
-              description={
-                branchId
-                  ? undefined
-                  : messages.inventory.stocktake.selectBranchFirst
-              }
-              required
-            >
-              <Select
-                value={branchId ? String(branchId) : ""}
-                onValueChange={(v) => setBranchId(Number(v))}
-              >
-                <SelectTrigger
-                  id="stocktake-branch"
-                  size="field"
-                  className="w-full"
-                  aria-required
-                >
-                  <SelectValue placeholder={BRANCH_VI.select} />
-                </SelectTrigger>
-                <SelectContent>
-                  {branches.map((b) => (
-                    <SelectItem key={b.id} value={String(b.id)}>
-                      {b.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FormField>
-
-          </div>
-
-          <Item variant="outline" size="sm">
-            <ItemContent className="min-w-0 flex-1">
-              <ItemTitle className="text-sm font-medium">
-                {messages.inventory.stocktake.blindMode}
-              </ItemTitle>
-              <ItemDescription className="text-xs text-muted-foreground">
-                {messages.inventory.stocktake.defaultByMode(
-                  meta.defaultBlind
-                    ? messages.inventory.stocktake.on
-                    : messages.inventory.stocktake.off,
-                )}
-              </ItemDescription>
-            </ItemContent>
-            <Badge
-              variant={effectiveBlind ? "default" : "outline"}
-              className="shrink-0"
-            >
-              {effectiveBlind
-                ? messages.inventory.stocktake.on
-                : messages.inventory.stocktake.off}
-            </Badge>
-          </Item>
-        </AppSection>
-
-        <AppSection
-          title={messages.inventory.stocktake.summary}
-          contentClassName="gap-2 text-sm"
-        >
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">
-              {messages.inventory.stocktake.mode}
-            </span>
-            <span className="font-medium">{mode}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">
-              {messages.inventory.stocktake.blind}
-            </span>
-            <span className="font-medium">
-              {effectiveBlind
-                ? messages.inventory.stocktake.on
-                : messages.inventory.stocktake.off}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">{BRANCH_VI.long}</span>
-            <span className="font-medium">
-              {branches.find((b) => b.id === branchId)?.name ?? "—"}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">
-              {messages.inventory.stock.filters.locationWarehouse}
-            </span>
-            <span className="font-medium">
-              {selectedWarehouse?.name ?? "—"}
-            </span>
-          </div>
-        </AppSection>
-    </div>
-  );
-
   return (
     <DocumentFormFrame
       header={header}
       scroll
       footer={<AppDetailFooter trailing={startButton} />}
     >
-      {content}
+      <AppSection title={copy.startTitle} contentClassName="gap-4">
+        <p className="text-sm text-muted-foreground">{copy.startDescription}</p>
+        <FormField
+          controlId="stocktake-branch"
+          label={BRANCH_VI.long}
+          description={branchId ? undefined : copy.selectBranchFirst}
+          required
+        >
+          <Select
+            value={branchId ? String(branchId) : ""}
+            onValueChange={(v) => setBranchId(Number(v))}
+          >
+            <SelectTrigger
+              id="stocktake-branch"
+              size="field"
+              className="w-full"
+              aria-required
+            >
+              <SelectValue placeholder={BRANCH_VI.select} />
+            </SelectTrigger>
+            <SelectContent>
+              {branches.map((b) => (
+                <SelectItem key={b.id} value={String(b.id)}>
+                  {b.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FormField>
+        <p className="text-sm">
+          <span className="text-muted-foreground">
+            {messages.inventory.stock.filters.locationWarehouse}:{" "}
+          </span>
+          <span className="font-medium">{selectedWarehouse?.name ?? "—"}</span>
+        </p>
+      </AppSection>
     </DocumentFormFrame>
   );
 }

@@ -96,10 +96,5 @@ export function canConfirmBranchStockIssue({
   lines,
   canManage,
 }: Pick<BranchStockIssueDetail, "issue" | "lines" | "canManage">) {
-  return (
-    canManage &&
-    issue.status === "draft" &&
-    lines.length > 0 &&
-    lines.every((line) => (line.reason ?? "").trim().length > 0)
-  );
+  return canManage && issue.status === "draft" && lines.length > 0;
 }

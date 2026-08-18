@@ -63,6 +63,7 @@ describe("Finance UX scope flow", () => {
       showSupplierPayables: true,
       showRevenueTargets: true,
     });
+    assert.equal(messages.finance.nav.groups.reports, "Doanh thu");
     assert.deepEqual(
       groups.map((group) => group.title),
       [
@@ -157,7 +158,8 @@ describe("Finance UX scope flow", () => {
     assert.match(cockpit, /recon: "needs_review"/);
     assert.match(filterBar, /mergePreservedFinanceSearch/);
     assert.match(page, /FinancePeriodFormulaShell/);
-    assert.match(page, /id=\{FINANCE_ATTENTION_ID\}/);
+    assert.match(page, /basic\.sections\.assets/);
+    assert.doesNotMatch(page, /FINANCE_ATTENTION_ID/);
     assert.match(page, /min-w-0 md:grid md:gap-2 xl:contents/);
     assert.doesNotMatch(bankPage, /backToFinance/);
     assert.match(invoicesPage, /basePath="\/finance\/invoices"/);

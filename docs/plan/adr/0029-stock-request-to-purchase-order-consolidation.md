@@ -1,53 +1,38 @@
 # ADR 0029 — Consolidate demand into supplier purchase orders
 
-**Status:** Accepted direction (Owner 2026-08-10) — schema design proposed in
-ADR 0032; Owner must Accept ADR 0032 before INV-9 build starts.
+**Status:** Withdrawn (Owner 2026-08-18). Multi-request consolidation (INV-9)
+is not being built. ADR 0032 was deleted without implementation. Suggested
+quantity (INV-10) remains independent of this ADR.
 
 **Decision owner:** Owner
 
-**Review tier:** T2 — procurement flow, demand aggregation, allocation
+**Review tier:** T2 — procurement flow
 
 ## Context
 
-Today each stock or purchase request is treated in isolation. Two branches
-asking for the same ingredient on the same day produce two independent paths to
-a supplier instead of one purchase order. The result is more, smaller orders and
-weaker supplier pricing on exactly the ingredients bought most often.
+On 2026-08-10 the Owner accepted a direction: several request vouchers for the
+same ingredient and supplier would consolidate into one purchase-order line,
+with receiving allocating arrived quantity back to those sources. Schema was
+deferred to a follow-up ADR. No consolidation code shipped.
 
-Consolidation is not a UI change. Aggregating demand across requests means one
-purchase-order line can satisfy several requests, so receiving must allocate
-the arriving quantity back to the contributing requests — including when the
-delivery is short.
+On 2026-08-18 the Owner dropped INV-9. Target buying is PO-authored at the
+warehouse (no `Yêu cầu mua` voucher), so there is no request-junction to
+allocate.
 
 ## Decision
 
-### 1. Direction accepted
+### 1. Multi-request consolidation is withdrawn
 
-Demand from multiple requests for the same ingredient and supplier consolidates
-into a single purchase order. This is the intended shape of procurement.
+Do not add a request-to-PO-line allocation engine. One PO may still carry many
+ingredient lines for one supplier; that is ordinary PO authorship.
 
-### 2. Schema is decided in ADR 0032 before build
+### 2. Suggested quantity (INV-10) remains
 
-ADR 0032 proposes the aggregation entity (PO + source junction), short-delivery
-allocation (requester-order fill), and GRN receiving shape. Until the Owner
-Accepts ADR 0032, requests continue one at a time; no partial consolidation.
-
-### 3. Suggested quantity ships independently (INV-10)
-
-The request editor prefills an editable quantity from
+Line pickers may prefill an editable quantity from
 `max(0, min_stock_level - current_quantity)` (`docs/ref/inventory.md` §9).
 `max_stock_level` / `reorder_point` remain retired UI columns.
 
-## Consequences
-
-- Procurement moves from one-request-to-one-order toward many-to-one, which
-  touches request, purchase order, and receiving together.
-- D099 already fixes supplier selection and pricing authority; this ADR sits
-  upstream of it, at demand formation, and does not change who picks the
-  supplier or who owns price.
-- Until ADR 0032 is Accepted, requests continue to flow one at a time; no
-  partial consolidation should be shipped.
-
 ## Canonical
 
-- ADR 0032, `docs/ref/inventory.md` §11, D093, D099, ADR 0017, ADR 0030
+- INV-10: `apps/web/lib/inventory/suggested-order-qty.ts`
+- Current Production buy path: `docs/ref/inventory.md`

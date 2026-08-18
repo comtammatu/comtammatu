@@ -1,22 +1,15 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { STOCKTAKE_SESSION_STATUS_LABELS_VI } from "@comtammatu/shared/labels";
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
-import { Badge } from "@comtammatu/ui/components/badge";
-import { Button } from "@comtammatu/ui/components/button";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
+  AppBackLink,
   AppPageHeader,
-  AppSection,
   DocumentFormFrame,
 } from "@/components/surface";
-import {
-  BlindCountingGridActions,
-  BlindCountingGrid,
-} from "../../../_components/blind-counting-grid";
+import { StocktakeCountWizard } from "./stocktake-count-wizard";
 import {
   StocktakeDraftSaverBadge,
   useStocktakeDraftSaver,
@@ -71,6 +64,7 @@ interface Props {
   sessionId: number;
   branchId: number;
   status: string;
+  /** RPC flag; pad never shows book qty regardless of this value. */
   blindMode: boolean;
   currentRound: 1 | 2 | 3 | 4;
   initialLines: StocktakeLineBlind[];
@@ -82,16 +76,15 @@ export function StocktakeCountClient({
   sessionId,
   branchId,
   status,
-  blindMode,
   currentRound,
   initialLines,
   unitOptionsByIngredient,
   routeBase = "/inventory/stocktake",
 }: Props) {
   const router = useRouter();
+  const stocktakeCopy = messages.inventory.stocktake;
   const [lines] = useState<StocktakeLineBlind[]>(initialLines);
   const [counts, setCounts] = useState<DraftCounts>({});
-  // Per-ingredient counting unit (entry_unit_id), defaulting to purchase/pack.
   const [unitByIngredient, setUnitByIngredient] = useState<
     Record<number, number>
   >(() => {
@@ -121,17 +114,26 @@ export function StocktakeCountClient({
     enabled: editable,
   });
 
-  // Session-wide zone id. Future: per-zone breakdown when layout supports it.
   const zoneId = `session-${sessionId}`;
+  const detailHref = `${routeBase}/${sessionId}?branch=${branchId}&view=detail`;
 
   const currentRoundLines = useMemo(
     () => lines.filter((line) => line.roundNo === currentRound),
     [currentRound, lines],
   );
 
-  // Label of the unit each count is actually recorded in (entry_unit_id), so the
-  // native wizard displays the SAME unit it submits — never the purchase unit
-  // while recording the base unit.
+  const unitLabelByIngredient = useMemo(() => {
+    const labels: Record<number, string> = {};
+    for (const [id, options] of Object.entries(unitOptionsByIngredient)) {
+      const ingredientId = Number(id);
+      const selected =
+        options.find(
+          (option) => option.unitId === unitByIngredient[ingredientId],
+        ) ?? pickDefaultCountUnit(options);
+      if (selected) labels[ingredientId] = selected.label;
+    }
+    return labels;
+  }, [unitOptionsByIngredient, unitByIngredient]);
 
   const unitPreviewByIngredient = useMemo(() => {
     const map: Record<number, string> = {};
@@ -180,35 +182,22 @@ export function StocktakeCountClient({
     }
 
     startTransition(async () => {
-      await flush(); // Force-save draft before round submit.
+      await flush();
       const res = await submitCountRound({
         sessionId,
         roundNo: currentRound,
         counts: payload,
       });
       if (!res.success || !res.data) {
-        const applied = applyInventoryActionError(
-          res,
-          toastSubmitRoundFailed,
-        );
+        const applied = applyInventoryActionError(res, toastSubmitRoundFailed);
         toast.error(applied.toastMessage);
         return;
       }
       toast.success(toastSavedCounts(res.data.appliedCount));
-      router.refresh();
+      router.push(detailHref);
     });
   }
 
-  const header = (
-    <AppPageHeader
-      title={`${messages.inventory.stocktake.startCounting} #${sessionId}`}
-      meta={`CN #${branchId} · Round R${currentRound}`}
-    />
-  );
-
-  // Safety chrome shared by both planes: draft-saver status + zone-lock
-  // lifecycle. The lock indicator self-manages acquire/heartbeat/release and
-  // gates `editable` through onStateChange; onLost flips it out of "held".
   const safetyChrome = (
     <>
       <div className="flex flex-wrap items-center gap-3">
@@ -217,76 +206,49 @@ export function StocktakeCountClient({
           lastSavedAt={lastSavedAt}
         />
       </div>
-
       {canCount ? (
         <ZoneLockIndicator
           sessionId={sessionId}
           zoneId={zoneId}
           onStateChange={setLockState}
           onLost={() => {
-            toast.error(messages.inventory.stocktake.zoneLockLost);
+            toast.error(stocktakeCopy.zoneLockLost);
           }}
         />
       ) : null}
     </>
   );
 
-  const content = (
-    <>
-      {safetyChrome}
-
-      <AppSection
-        title={
-          currentRound === 1
-            ? messages.inventory.stocktake.startCounting
-            : `R${currentRound}`
-        }
-        contentClassName="gap-3"
-      >
-        <BlindCountingGrid
-          lines={currentRoundLines}
-          counts={counts}
-          onCountChange={onCountChange}
-          unitOptionsByIngredient={unitOptionsByIngredient}
-          unitByIngredient={unitByIngredient}
-          unitPreviewByIngredient={unitPreviewByIngredient}
-          onUnitChange={onUnitChange}
-          blindMode={blindMode}
-          readOnly={!editable}
-          onlyNeedsRecount={currentRound > 1 ? true : undefined}
-        />
-        <BlindCountingGridActions
-          onSubmit={submit}
-          submitting={pending}
-          canSubmit={editable && Object.keys(counts).length > 0}
-        >
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            render={
-              <Link
-                href={`${routeBase}/${sessionId}?branch=${branchId}&view=detail`}
-              />
-            }
-          >
-            {messages.inventory.stocktake.detail.completeAction}
-          </Button>
-          {!canCount ? (
-            <Badge variant={status === "cancelled" ? "secondary" : "success"}>
-              {status === "cancelled"
-                ? STOCKTAKE_SESSION_STATUS_LABELS_VI.cancelled
-                : STOCKTAKE_SESSION_STATUS_LABELS_VI.completed}
-            </Badge>
-          ) : null}
-        </BlindCountingGridActions>
-      </AppSection>
-    </>
-  );
-
   return (
-    <DocumentFormFrame header={header} scroll>
-      {content}
+    <DocumentFormFrame
+      header={
+        <AppPageHeader
+          breadcrumb={
+            <AppBackLink href={detailHref}>
+              {stocktakeCopy.detail.reviewTitle}
+            </AppBackLink>
+          }
+          title={stocktakeCopy.countNative.countMode(currentRound)}
+          meta={`KK-${sessionId}`}
+        />
+      }
+      scroll
+    >
+      <StocktakeCountWizard
+        lines={currentRoundLines}
+        counts={counts}
+        onCountChange={onCountChange}
+        onSubmit={submit}
+        submitting={pending}
+        editable={editable}
+        currentRound={currentRound}
+        unitLabelByIngredient={unitLabelByIngredient}
+        unitPreviewByIngredient={unitPreviewByIngredient}
+        unitOptionsByIngredient={unitOptionsByIngredient}
+        unitByIngredient={unitByIngredient}
+        onUnitChange={onUnitChange}
+        chrome={safetyChrome}
+      />
     </DocumentFormFrame>
   );
 }

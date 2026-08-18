@@ -14,7 +14,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { Plus as IconPlus } from "lucide-react";
 import { notify } from "@comtammatu/ui/lib/notify";
-import { AppDialog, Combobox, QuantityInput } from "@/components/form";
+import { AppDialog, Combobox, MoneyVndInput, QuantityInput } from "@/components/form";
 import { upsertGrnLine } from "../../../grn-actions";
 import {
   getDefaultPurchaseUnit,
@@ -67,6 +67,7 @@ export function AddGrnLineDialog({
 
   const [ingredientId, setIngredientId] = useState("");
   const [quantity, setQuantity] = useState("");
+  const [unitPrice, setUnitPrice] = useState("");
   const [unit, setUnit] = useState("");
   const [entryUnitId, setEntryUnitId] = useState<number | null>(null);
   const [supplierId, setSupplierId] = useState(() =>
@@ -81,6 +82,7 @@ export function AddGrnLineDialog({
   function resetForm() {
     setIngredientId("");
     setQuantity("");
+    setUnitPrice("");
     setUnit("");
     setEntryUnitId(null);
     setSupplierId(
@@ -118,6 +120,7 @@ export function AddGrnLineDialog({
     event.preventDefault();
     const parsedIngredientId = Number(ingredientId);
     const parsedQuantity = Number(quantity);
+    const parsedUnitCost = Number(unitPrice);
     const ingredient = ingredients.find(
       (item) => item.id === parsedIngredientId,
     );
@@ -130,8 +133,16 @@ export function AddGrnLineDialog({
       notify.error(grnCopy.validation.invalidReceivedQuantity);
       return;
     }
+    if (!Number.isFinite(parsedUnitCost) || parsedUnitCost <= 0) {
+      notify.error(grnCopy.validation.invalidUnitPrice);
+      return;
+    }
     if (!unit.trim()) {
       notify.error(grnCopy.validation.unitRequired);
+      return;
+    }
+    if (entryUnitId == null) {
+      notify.error(grnCopy.line.invalidUnitPriceUnit);
       return;
     }
     const parsedSupplierId = Number(supplierId);
@@ -150,6 +161,8 @@ export function AddGrnLineDialog({
         supplierId: parsedSupplierId,
         receivedQuantity: parsedQuantity,
         entryUnitId,
+        unitCost: parsedUnitCost,
+        unitCostUnitId: entryUnitId,
         rejectedQuantity: 0,
         rejectionReason: null,
         rejectedPhotoUrl: null,
@@ -169,6 +182,8 @@ export function AddGrnLineDialog({
           unit: unit.trim(),
           supplierId: supplier.id,
           supplierName: supplier.name,
+          unitCost: parsedUnitCost,
+          unitCostUnitId: entryUnitId,
         }),
       );
       notify.success(grnCopy.addDialog.success);
@@ -266,6 +281,20 @@ export function AddGrnLineDialog({
               maxFractionDigits={3}
               placeholder="0"
             />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="grn-line-unit-price">
+              {grnCopy.addDialog.unitPriceLabel(unit)}
+            </Label>
+            <MoneyVndInput
+              id="grn-line-unit-price"
+              value={unitPrice}
+              onValueChange={setUnitPrice}
+              placeholder="0"
+            />
+            <p className="text-xs text-muted-foreground">
+              {grnCopy.addDialog.unitPriceHint}
+            </p>
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="grn-line-unit">{grnCopy.addDialog.unitLabel}</Label>

@@ -977,18 +977,22 @@ test("operator stocktake routes keep session stocktake native to Branch", () => 
   assert.match(branchListClient, /ItemGroup/);
   assert.doesNotMatch(branchListClient, /DataTable|useLongPress|Drawer/);
   assert.match(branchNewClient, /BranchOperatorPage/);
-  assert.match(branchNewClient, /<StocktakeModeSelector/);
+  assert.match(branchNewClient, /startStocktake/);
+  assert.doesNotMatch(branchNewClient, /StocktakeModeSelector/);
   assert.match(branchNewClient, /<AppDetailFooter[\s\S]*\bsticky\b/);
   assert.doesNotMatch(branchNewClient, /DocumentFormFrame|branches\.map/);
   assert.match(branchDetailClient, /BranchOperatorStatusStrip/);
   assert.match(branchDetailClient, /canCompleteBranchStocktake/);
   assert.doesNotMatch(branchDetailClient, /DataTable|AuditHistoryList|reports/);
-  assert.doesNotMatch(branchDetailClient, /countUnavailable|Màn đếm chưa sẵn sàng/);
+  assert.doesNotMatch(branchDetailClient, /Kiểm kê mù/);
   assert.match(branchCountClient, /<BranchStocktakeCountList/);
   assert.match(branchCountClient, /onUnitChange=\{onUnitChange\}/);
   assert.match(branchCountClient, /useStocktakeDraftSaver/);
   assert.match(branchCountClient, /ZoneLockIndicator/);
   assert.doesNotMatch(branchCountClient, /DocumentFormFrame|DataTable/);
+  assert.doesNotMatch(branchCountClient, /Đếm mù|Round R|Đếm kiểm kê/);
+  assert.match(branchCountClient, /countCopy\.countMode/);
+  assert.match(branchCountClient, /countCopy\.openReview/);
 
   assert.match(stocktakeData, /resolveInventoryListScope/);
   assert.match(stocktakeData, /resolveInventoryBranchScope/);

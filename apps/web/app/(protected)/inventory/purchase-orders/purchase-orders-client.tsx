@@ -265,7 +265,7 @@ export function PurchaseOrdersClient({
         onSelect: () => setReasonAction({ kind: "cancel", row }),
       });
     }
-    if (canManage && row.status === "partially_received") {
+    if ((canManage || canReceive) && row.status === "partially_received") {
       actions.push({
         key: "close",
         label: copy.closeRemainingAction,
@@ -289,7 +289,7 @@ export function PurchaseOrdersClient({
         onSelect: () => setReasonAction({ kind: "cancel", row }),
       });
     }
-    if (canManage && row.status === "partially_received") {
+    if ((canManage || canReceive) && row.status === "partially_received") {
       actions.push({
         key: "close-remaining",
         label: copy.closeRemainingAction,
@@ -574,7 +574,11 @@ export function PurchaseOrdersClient({
             ? copy.closeRemainingTitle
             : copy.cancelTitle
         }
-        description={reasonAction?.row.code}
+        description={
+          reasonAction?.kind === "close"
+            ? `${reasonAction.row.code}. ${copy.closeRemainingDescription}`
+            : reasonAction?.row.code
+        }
         reasonId="purchase-order-status-reason"
         reason={reason}
         onReasonChange={setReason}

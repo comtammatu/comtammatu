@@ -19,23 +19,26 @@ import {
   Trash as IconTrash,
   TriangleAlert as IconTriangleAlert,
 } from "lucide-react";
-import { PhotoUploadInput, QuantityInput } from "@/components/form";
+import { MoneyVndInput, PhotoUploadInput, QuantityInput } from "@/components/form";
 import { getPurchaseUnitOptions } from "@lib/inventory/purchase-units";
 import {
   GRN_DETAIL_COPY as grnCopy,
   acceptedGrnQuantity,
   applyGrnLineEntryUnit,
+  applyGrnLinePriceUnit,
   combinePackLooseQuantity,
   deliveredGrnQuantity,
   formatGrnPersistQty,
   formatGrnPoQty,
   grnLineHasPackLoose,
   grnLineOrderedDeliveredSummary,
+  patchGrnLineUnitPrice,
   splitGrnAcceptedPackLoose,
   type EditableGrnLine as EditableLine,
 } from "@lib/inventory/grn-detail-model";
 import { deriveGrnQualityStatus } from "@lib/inventory/grn-quality";
 import type { IngredientRow } from "@lib/inventory/types";
+import { formatVND } from "@lib/inventory/format";
 import { messages } from "@lib/messages";
 
 const valuationCopy = messages.inventory.valuationDisplay;
@@ -106,11 +109,27 @@ export function LineRow({
     if (next) onChange(next);
   }
 
+  function commitPriceUnit(nextUnitId: number) {
+    const next = applyGrnLinePriceUnit(line, ingredient?.units, nextUnitId);
+    if (next) onChange(next);
+  }
+
   const persistUnitSelect = (
-    <PersistUnitSelect
-      line={line}
+    <GrnLineUnitSelect
+      id={`received-unit-${line.lineId}`}
+      lineUnit={line.unit}
+      value={line.entryUnitId}
       unitOptions={unitOptions}
       onUnitChange={commitEntryUnit}
+    />
+  );
+  const priceUnitSelect = (
+    <GrnLineUnitSelect
+      id={`unit-price-unit-${line.lineId}`}
+      lineUnit={line.unitCostUnitLabel || line.unit}
+      value={line.unitCostUnitId}
+      unitOptions={unitOptions}
+      onUnitChange={commitPriceUnit}
     />
   );
   const content = (
@@ -127,8 +146,12 @@ export function LineRow({
                 {excessQuantity > 0 || shortageQuantity > 0 ? (
                   <p className="text-xs text-warning-foreground">
                     {excessQuantity > 0
-                      ? `Dư ngoài đơn ${formatGrnPersistQty(excessQuantity, line)}`
-                      : `Còn thiếu ${formatGrnPoQty(shortageQuantity, line)}`}
+                      ? grnCopy.line.excessShortText(
+                          formatGrnPersistQty(excessQuantity, line),
+                        )
+                      : grnCopy.line.shortageShortText(
+                          formatGrnPoQty(shortageQuantity, line),
+                        )}
                   </p>
                 ) : null}
               </>
@@ -257,6 +280,45 @@ export function LineRow({
             </div>
           )}
 
+          <div
+            className={
+              unitOptions.length > 0 || line.unitCostUnitLabel || line.unit
+                ? "flex min-w-0 items-end gap-2"
+                : "min-w-0"
+            }
+          >
+            <div className="min-w-0 flex-1">
+              <Field
+                id={`unit-price-${idx}`}
+                label={grnCopy.line.unitPriceLabel(
+                  line.unitCostUnitLabel || line.unit,
+                )}
+              >
+                <MoneyVndInput
+                  id={`unit-price-${idx}`}
+                  value={
+                    line.monetary?.unitPrice != null &&
+                    line.monetary.unitPrice > 0
+                      ? String(line.monetary.unitPrice)
+                      : ""
+                  }
+                  onValueChange={(value) =>
+                    onChange(patchGrnLineUnitPrice(line, Number(value || 0)))
+                  }
+                  placeholder="0"
+                  aria-describedby={`unit-price-hint-${idx}`}
+                />
+                <p
+                  id={`unit-price-hint-${idx}`}
+                  className="text-xs text-muted-foreground"
+                >
+                  {grnCopy.line.unitPriceHint}
+                </p>
+              </Field>
+            </div>
+            <div className="w-36 shrink-0">{priceUnitSelect}</div>
+          </div>
+
           <details open={line.rejected > 0 ? true : undefined}>
             <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
               {grnCopy.qcQueue}
@@ -319,26 +381,40 @@ export function LineRow({
             </div>
           </details>
         </>
-      ) : line.rejected > 0 ? (
+      ) : (
         <div className="grid gap-2 text-sm">
-          <p>
-            <span className="text-muted-foreground">
-              {grnCopy.line.rejectionReason}
-            </span>{" "}
-            {line.rejectionReason}
-          </p>
-          {line.rejectedPhotoUrl ? (
-            <a
-              href={line.rejectedPhotoUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="font-medium text-primary underline-offset-4 hover:underline"
-            >
-              {grnCopy.line.viewProofPhoto}
-            </a>
+          {line.monetary?.unitPrice != null && line.monetary.unitPrice > 0 ? (
+            <p>
+              <span className="text-muted-foreground">
+                {grnCopy.line.unitPriceLabel(
+                  line.unitCostUnitLabel || line.unit,
+                )}
+              </span>{" "}
+              {formatVND(line.monetary.unitPrice)}
+            </p>
+          ) : null}
+          {line.rejected > 0 ? (
+            <>
+              <p>
+                <span className="text-muted-foreground">
+                  {grnCopy.line.rejectionReason}
+                </span>{" "}
+                {line.rejectionReason}
+              </p>
+              {line.rejectedPhotoUrl ? (
+                <a
+                  href={line.rejectedPhotoUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  {grnCopy.line.viewProofPhoto}
+                </a>
+              ) : null}
+            </>
           ) : null}
         </div>
-      ) : null}
+      )}
     </>
   );
 
@@ -352,36 +428,36 @@ export function LineRow({
   );
 }
 
-function PersistUnitSelect({
-  line,
+function GrnLineUnitSelect({
+  id,
+  lineUnit,
+  value,
   unitOptions,
   onUnitChange,
 }: {
-  line: EditableLine;
+  id: string;
+  lineUnit: string;
+  value: number | null;
   unitOptions: ReturnType<typeof getPurchaseUnitOptions>;
   onUnitChange: (unitId: number) => void;
 }) {
   if (unitOptions.length === 0) {
-    return line.unit ? (
-      <Field id={`received-unit-${line.lineId}`} label={FORM_VI.unit}>
+    return lineUnit ? (
+      <Field id={id} label={FORM_VI.unit}>
         <p className="flex h-7 items-center text-sm text-muted-foreground">
-          {line.unit}
+          {lineUnit}
         </p>
       </Field>
     ) : null;
   }
 
   return (
-    <Field id={`received-unit-${line.lineId}`} label={FORM_VI.unit}>
+    <Field id={id} label={FORM_VI.unit}>
       <Select
-        value={line.entryUnitId != null ? String(line.entryUnitId) : ""}
-        onValueChange={(value) => onUnitChange(Number(value))}
+        value={value != null ? String(value) : ""}
+        onValueChange={(next) => onUnitChange(Number(next))}
       >
-        <SelectTrigger
-          id={`received-unit-${line.lineId}`}
-          className="w-full"
-          aria-label={FORM_VI.unit}
-        >
+        <SelectTrigger id={id} className="w-full" aria-label={FORM_VI.unit}>
           <SelectValue placeholder={grnCopy.addDialog.selectUnit} />
         </SelectTrigger>
         <SelectContent>

@@ -20,8 +20,8 @@ Period-result formula (two rows):
   qty after side split and discount, not `menu_price`. Company WAC is
   `Giá vốn`, not this column. See `docs/ref/inventory.md` § 3.
 - **`Lợi nhuận gộp`**: net revenue minus recorded food cost. Sales identity only.
-- **`Chi phí hàng` / `Chi phí hàng mua`**: inbound `transfer_in` at branch, or confirmed `/finance/supplier-invoices` `subtotal` (ex-VAT) at company. Bank settlement is payment, not a second P&L hit.
-- **`Chi phí vận hành`**: posted period expense (rent, utilities, payroll,
+- **`Chi phí hàng` / `Chi mua hàng`**: inbound `transfer_in` at branch, or confirmed `/finance/supplier-invoices` `subtotal` (ex-VAT) at company. Bank settlement is payment, not a second P&L hit.
+- **`Chi vận hành`**: posted period expense (rent, utilities, payroll,
   repairs, consumables, marketing, fees/tax, hospitality, other). Excludes
   `capital`/`deposit`, capitalized equipment, ingredient COGS, cash↔bank.
 - **`Biến động tồn kho`**: closing minus opening inventory value (when readable).
@@ -29,12 +29,14 @@ Period-result formula (two rows):
 
 Missing food-cost coverage blanks gross profit only. No recorded operating expense keeps period result unavailable (not zero).
 
-After the period result, outside the formula: **`Chi phí ban đầu`**
-(`Vốn đã bỏ ra`) — all-time gross `capital`+`deposit`; ignores the period
-filter. Branch filter matches opex (selected branch only, never tenant-level).
+After the period result, **`Tài sản`** (not a summed total): tenant-wide
+`Tiền mặt + Tiền tài khoản = Tổng tiền`; filtered period-end **`Tồn kho`**;
+all-time **`Thiết bị`** (`category = capital`, spend recorded, not a register;
+never `Giá trị thiết bị`); all-time **`Chi phí ban đầu`** (`capital`+`deposit`,
+period ignored, branch filter matches opex). `Thiết bị` is the capital slice
+of startup — do not add the two together.
 
-Below that, tenant-wide current funds (not period/branch filtered):
-`Tiền mặt + Tiền tài khoản = Tổng tiền`:
+Funds formula:
 
 - **`Tiền mặt`**: immutable opening cash + completed cash collections − cash
   refunds, cash expenses, cash supplier payments + append-only audited
@@ -61,9 +63,8 @@ Cash supplier payments (`payment_method='cash'`) reduce cash.
 `bank_transfer` supplier payments update AP without a second bank movement;
 the canonical outgoing `bank_transactions` row reduces bank funds.
 
-Inventory sits in a filtered **`Tồn kho`** section (**`Giá trị tồn kho cuối kỳ`**),
-not a full asset section. Attention queue is last. Tax/GTGT stay on existing
-HĐĐT routes — not on this landing formula.
+Inventory sits in **`Tài sản`** with funds, **`Thiết bị`**, and **`Chi phí ban đầu`**.
+No attention queue or VAT mosaic on this landing; tax/GTGT stay on HĐĐT routes.
 
 Do not expand Finance into a full enterprise accounting product by default.
 Metrics must follow `docs/ref/operational-data-contract.md`. Do not add or
@@ -100,10 +101,9 @@ Landing cards (formulas in Product Boundary):
 4. **Operating expense** — operating categories only. Exclude COGS,
    `capital`, `deposit`, supplier payments, cash↔bank. None → `Chưa ghi nhận`.
 5. **Period result** — revenue − goods-in − opex + inventory change. Not from GP. Not "net profit".
-6. **Startup capital** — all-time `capital|deposit` gross; ignores period
-   dates; outside the formula.
-
-Then: unfiltered funds, filtered period-end inventory, attention queue.
+6. **Assets** — unfiltered funds; filtered period-end inventory; all-time
+   capital equipment spend and `capital|deposit` startup. Outside the formula;
+   do not sum. Exceptions stay on `/` and list queues, not this landing.
 Layout: desktop two rows; tablet two cols; mobile one. Supporting (not first):
 food-cost analysis, cash sessions, desync recovery, HĐĐT, AP, export.
 
@@ -112,8 +112,9 @@ food-cost analysis, cash sessions, desync recovery, HĐĐT, AP, export.
 Closed POS session is the immutable physical-count record:
 
 1. `opening_cash` — counted cash at shift open.
-2. `cash_revenue` — sum completed `payments.amount` with `method='cash'` for
-   paid, non-cancelled orders in session.
+2. `cash_revenue` — completed cash `payments.amount` with `paid_at` in
+   `[opened_at, closed_at]` (or `now()` if open). D1 unpaid may remain after
+   close. Paying a carry-forward unpaid order rebinds `pos_session_id` to the open session.
 3. `expected_cash = opening_cash + cash_revenue`.
 4. `cash_difference = closing_cash - expected_cash`.
 
@@ -196,15 +197,17 @@ the actions above. RLS remains final enforcement.
 
 | Route family                 | Role                         | Decision |
 | ---------------------------- | ---------------------------- | -------- |
-| `/finance`                   | Finance Basic landing        | Period formula + funds + inventory card + attention |
+| `/finance`                   | Finance Basic landing        | Period formula then `Tài sản` (funds + inventory + equipment + startup) |
 | `/finance/bank-transactions` | Bank LIST | Manual match by `order_number` (`mã đơn`); classify only, never change bank balance |
+| `/finance/expenses`          | Operating expense LIST       | Period KPI from `get_finance_expense_period_summary`; list stays paged |
 | `/finance/targets`           | Monthly revenue targets      | Finance-managed targets + non-cumulative reward tiers; no auto payroll |
 | `/finance/food-cost`         | Gross profit / margin        | Read-only analysis |
 | `/finance/supplier-invoices` | Supplier payable             | Thin AP entry; not expenses |
 | `/finance/invoices`          | HĐĐT queue                   | Support workflow; same-VN-day issue window |
 
-Inventory owns stock-value detail; Finance shows only the current-value card.
-No `/accounting/*` app surface.
+Inventory owns stock-value detail; Finance shows only the current-value card
+inside `Tài sản`. Sidebar: `Tiền`, `Doanh thu`, `Chứng từ` (food-cost and
+targets stay sibling routes). No `/accounting/*` app surface.
 
 Supplier invoice matching/VAT/payment: actions +
 [ADR 0018](../plan/adr/0018-inventory-finance-route-boundary.md). Invariants:
@@ -258,13 +261,11 @@ register in product → no equipment-value card until full source/recon contract
 - No Accounting Advanced until Finance Basic meets acceptance above.
 - No new KPI unless daily operator or required accountant-export question.
 - Statutory routes must not be primary Finance experience.
-- Not "done" because enterprise objects exist in old migrations. Readiness =
-  cash, revenue, expense, HĐĐT, inventory value, accountant export.
+- Not "done" because enterprise objects exist in old migrations. Readiness is cash, revenue, expense, HĐĐT, inventory value, accountant export.
 
 ## Current Gaps
 
-- `/finance/expenses` is operating + opening-capital ledger, not a statutory
-  journal. Deductible VAT / equipment value / period close stay blocked (D020).
+- `/finance/expenses` is operating + opening-capital ledger, not a statutory journal. Deductible VAT / equipment value / period close stay blocked (D020).
 
 ## Source Files
 
@@ -273,7 +274,5 @@ register in product → no equipment-value card until full source/recon contract
 - `apps/web/app/(protected)/br/[branchId]/pos/payment-actions.ts`
 - `apps/web/app/(protected)/inventory/supplier-invoices/page.tsx` (REDIRECT-SHIM)
 - `apps/web/app/(protected)/inventory/report-actions.ts`
-- `packages/shared/src/auth/module-acl.ts`
-- `packages/shared/src/auth/nav-config.ts`
-- `packages/shared/src/auth/permissions.ts`
+- `packages/shared/src/auth/{module-acl,nav-config,permissions}.ts`
 - `supabase/migrations/*finance*.sql`, `*hddt*.sql`, `*supplier*.sql`

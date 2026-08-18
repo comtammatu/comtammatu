@@ -81,7 +81,7 @@ test("Branch stock landing is four doors then fulfillment list", () => {
   );
   assert.match(
     inventoryMessages,
-    /branchDoorStocktakeMeta:\s*"Phiên kiểm đối chiếu của quản lý"/,
+    /branchDoorStocktakeMeta:\s*"Đếm số đang có, rồi đối soát lệch"/,
   );
 
   assert.match(hubModel, /\/stock\/receive\/\$\{transferId\}/);

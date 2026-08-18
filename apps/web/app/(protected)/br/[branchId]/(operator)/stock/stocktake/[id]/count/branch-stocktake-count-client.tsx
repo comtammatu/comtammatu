@@ -209,6 +209,8 @@ export function BranchStocktakeCountClient({
   }
 
   const stocktakeCopy = messages.inventory.stocktake;
+  const countCopy = stocktakeCopy.countNative;
+  const remaining = currentRoundLines.length - countedLines;
   const safetyChrome = (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
@@ -230,8 +232,8 @@ export function BranchStocktakeCountClient({
 
   return (
     <BranchOperatorPage
-      title={`${stocktakeCopy.startCounting} #${data.sessionId}`}
-      description={`Round R${data.currentRound}`}
+      title={countCopy.countMode(data.currentRound)}
+      description={`KK-${data.sessionId}`}
       hideHeaderOnMobile
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
@@ -253,8 +255,7 @@ export function BranchStocktakeCountClient({
               KK-{data.sessionId}
             </p>
             <p className="truncate text-xs text-muted-foreground">
-              {data.blindMode ? "Đếm mù" : "Đếm kiểm kê"} · Round R
-              {data.currentRound}
+              {countCopy.countMode(data.currentRound)}
             </p>
           </div>
           <Button
@@ -267,7 +268,7 @@ export function BranchStocktakeCountClient({
               />
             }
           >
-            Xem & chốt
+            {countCopy.openReview}
           </Button>
         </BranchOperatorControlBar>
 
@@ -295,12 +296,10 @@ export function BranchStocktakeCountClient({
               disabled={!editable || isPending || countedLines === 0}
             >
               {isPending
-                ? "Đang lưu"
-                : countedLines < currentRoundLines.length
-                  ? `Nộp ${formatCount(countedLines)}/${formatCount(
-                      currentRoundLines.length,
-                    )} dòng`
-                  : "Nộp vòng đếm"}
+                ? countCopy.saving
+                : remaining > 0
+                  ? countCopy.countSubmitRemaining(remaining)
+                  : countCopy.countSubmitAll}
             </Button>
           }
         />

@@ -106,7 +106,13 @@ type OpeningValues = z.infer<typeof openingSchema>;
 type AdjustmentValues = z.infer<typeof adjustmentSchema>;
 type DialogMode = "opening" | "adjustment" | null;
 
-export function CurrentFundsSection({ cash }: { cash: CashSummary }) {
+export function CurrentFundsSection({
+  cash,
+  embedded = false,
+}: {
+  cash: CashSummary;
+  embedded?: boolean;
+}) {
   const router = useRouter();
   const isTouchLayout = useIsMobile(1024);
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
@@ -150,29 +156,21 @@ export function CurrentFundsSection({ cash }: { cash: CashSummary }) {
 
   const openingDate = formatVNDateTime(cash.openingEffectiveAt);
   const totalOnHand = cash.cashOnHand + cash.bankOnHand;
-
-  return (
-    <>
-      <AppSection
-        size="sm"
-        title={copy.cash.onHandTitle}
-        action={
-          <Button
-            variant="outline"
-            size={isTouchLayout ? "touch" : "sm"}
-            disabled={!cash.hasOpening && cash.legacySettingsPresent}
-            onClick={() =>
-              openDialog(cash.hasOpening ? "adjustment" : "opening")
-            }
-          >
-            {cash.hasOpening
-              ? copy.cash.adjustmentAction
-              : cash.legacySettingsPresent
-                ? copy.cash.legacyBlockedAction
-                : copy.cash.setOpening}
-          </Button>
-        }
-      >
+  const fundsAction = (
+    <Button
+      variant="outline"
+      size={isTouchLayout ? "touch" : "sm"}
+      disabled={!cash.hasOpening && cash.legacySettingsPresent}
+      onClick={() => openDialog(cash.hasOpening ? "adjustment" : "opening")}
+    >
+      {cash.hasOpening
+        ? copy.cash.adjustmentAction
+        : cash.legacySettingsPresent
+          ? copy.cash.legacyBlockedAction
+          : copy.cash.setOpening}
+    </Button>
+  );
+  const fundsFormula = (
         <KpiRow
           density="compact"
           className="grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)]"
@@ -270,7 +268,20 @@ export function CurrentFundsSection({ cash }: { cash: CashSummary }) {
             />
           </div>
         </KpiRow>
-      </AppSection>
+  );
+
+  return (
+    <>
+      {embedded ? (
+        <div className="flex flex-col gap-3">
+          <div className="flex justify-end">{fundsAction}</div>
+          {fundsFormula}
+        </div>
+      ) : (
+        <AppSection size="sm" title={copy.cash.onHandTitle} action={fundsAction}>
+          {fundsFormula}
+        </AppSection>
+      )}
 
       {!cash.hasOpening && !cash.legacySettingsPresent ? (
         <FormDialog

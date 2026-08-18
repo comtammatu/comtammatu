@@ -78,17 +78,6 @@ export const INVENTORY_VI = {
     "Đã vượt giới hạn chi nhánh — hao hụt mới tự chuyển mức 2 (cần QLV duyệt).",
   branchNearCapBanner:
     "Gần chạm giới hạn chi nhánh — phiếu tiếp theo có thể chuyển mức 2.",
-  stocktakeModeQuickDesc:
-    "Đếm nhanh cuối ca. Không có người kiểm tra, chênh lệch không chặn.",
-  stocktakeModeCycleDesc:
-    "Đếm theo nhóm ABC — A mỗi tuần, B/C xoay vòng. Người kiểm tra và QLV duyệt.",
-  stocktakeModeFullDesc:
-    "Kiểm kê toàn bộ theo chế độ đếm mù. Không hiển thị tồn hệ thống.",
-  stocktakeModePeerDesc:
-    "Đếm chéo: nhân sự chi nhánh khác đếm mù và kiểm tra lại.",
-  stocktakeModeSpotDesc:
-    "QLV kiểm tra đột xuất, chọn vài mặt hàng. Mặc định đếm mù.",
-  selectStocktakeMode: "Chọn chế độ kiểm kê",
   selectReason: "Chọn lý do",
   uploadImagePdf: "Tải ảnh / PDF",
   pasteUrlOpen: "Dán URL có sẵn",

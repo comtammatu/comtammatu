@@ -137,10 +137,10 @@ BEGIN
   ) RETURNING id INTO v_po;
 
   INSERT INTO public.purchase_order_items (
-    tenant_id, po_id, ingredient_id, quantity, unit_price_est,
+    tenant_id, po_id, ingredient_id, quantity,
     entry_unit_id
   ) VALUES (
-    v_tenant, v_po, v_ingredient, 1, 100, v_unit
+    v_tenant, v_po, v_ingredient, 1, v_unit
   ) RETURNING id INTO v_po_line;
 
   PERFORM set_config('request.jwt.claim.sub', v_owner::text, TRUE);

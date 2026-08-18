@@ -18,6 +18,7 @@ import {
   convertQuantityBetweenFactors,
   grnSupplierSummaryFromItems,
   hasLinkedPurchaseOrders,
+  resolveDefaultGrnPriceUnit,
   resolveGrnPackLooseUnits,
   type GrnDetail,
   type GrnDetailData,
@@ -132,6 +133,7 @@ export async function loadGrnDetailResult(
       } | null;
       cost_pending?: boolean | null;
       provisional_cost_source?: string | null;
+      unit_cost_unit_id?: number | null;
       monetary: {
         unit_price: number | null;
         total_cost: number;
@@ -224,6 +226,25 @@ export async function loadGrnDetailResult(
       poEntryUnitId,
       persistUnitLabel,
     );
+    const defaultPrice = resolveDefaultGrnPriceUnit({
+      packUnit: packLoose?.pack ?? null,
+      looseUnit: packLoose?.loose ?? null,
+      entryUnitId: persistUnitId,
+      persistToBaseFactor: persistFactor,
+      unit: persistUnitLabel,
+    });
+    const storedPriceUnitId =
+      line.unit_cost_unit_id == null ? null : Number(line.unit_cost_unit_id);
+    const priceUnitId = storedPriceUnitId ?? defaultPrice.unitId;
+    const unitCostToBaseFactor = unitToBaseFactor(
+      catalogIngredient?.units,
+      priceUnitId,
+    );
+    const unitCostUnitLabel = getIngredientUnitDisplayName(
+      catalogIngredient?.units,
+      priceUnitId,
+      defaultPrice.label,
+    );
 
     return {
       lineId: line.id,
@@ -252,6 +273,10 @@ export async function loadGrnDetailResult(
       poToBaseFactor: poFactor,
       packUnit: packLoose?.pack ?? null,
       looseUnit: packLoose?.loose ?? null,
+      unitCostUnitId: priceUnitId,
+      unitCostUnitLabel,
+      unitCostToBaseFactor:
+        unitCostToBaseFactor > 0 ? unitCostToBaseFactor : defaultPrice.toBaseFactor,
       costPending: line.cost_pending === true,
       provisionalCostSource: line.provisional_cost_source ?? null,
       monetary:

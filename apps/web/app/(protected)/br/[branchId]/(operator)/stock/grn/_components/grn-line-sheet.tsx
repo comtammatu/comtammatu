@@ -16,7 +16,7 @@ import { Textarea } from "@comtammatu/ui/components/textarea";
 import { notify } from "@comtammatu/ui/lib/notify";
 import { Combobox, PhotoUploadInput } from "@/components/form";
 import { NumberPadSheet } from "@/components/form/number-pad-sheet";
-import { formatQty } from "@lib/inventory/format";
+import { formatQty, formatVND } from "@lib/inventory/format";
 import {
   getDefaultPurchaseUnit,
   getPurchaseUnitOptions,
@@ -31,12 +31,14 @@ import {
 } from "@lib/inventory/grn-create-model";
 import {
   applyGrnLineEntryUnit,
+  applyGrnLinePriceUnit,
   createEditableGrnLine,
   GRN_DETAIL_COPY,
   acceptedGrnQuantity,
   combinePackLooseQuantity,
   deliveredGrnQuantity,
   grnLineHasPackLoose,
+  patchGrnLineUnitPrice,
   splitGrnAcceptedPackLoose,
   type EditableGrnLine,
   type GrnDetail,
@@ -331,7 +333,7 @@ export function BranchGrnReviewLineSheet({
   onDelete,
 }: BranchGrnReviewLineSheetProps) {
   const [numericField, setNumericField] = useState<
-    "pack" | "loose" | "accepted" | "rejected" | null
+    "pack" | "loose" | "accepted" | "rejected" | "unitPrice" | null
   >(null);
   const needsRejectionDetails = line != null && line.rejected > 0;
   const hasPackLoose = line != null && grnLineHasPackLoose(line);
@@ -361,6 +363,12 @@ export function BranchGrnReviewLineSheet({
         line.looseUnit.toBaseFactor,
       ),
     );
+  }
+
+  function commitPriceUnit(nextUnitId: number) {
+    if (!line) return;
+    const next = applyGrnLinePriceUnit(line, ingredient?.units, nextUnitId);
+    if (next) onPatch(next);
   }
 
   function patchRejected(rejected: number) {
@@ -499,6 +507,66 @@ export function BranchGrnReviewLineSheet({
                 <p className="text-sm text-muted-foreground">{line.unit}</p>
               ) : null}
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <NumberPadValueField
+                id={`branch-grn-unit-price-${line.lineId}`}
+                label={GRN_DETAIL_COPY.line.unitPriceLabel(
+                  line.unitCostUnitLabel || line.unit,
+                )}
+                value={
+                  line.monetary?.unitPrice != null && line.monetary.unitPrice > 0
+                    ? formatVND(line.monetary.unitPrice)
+                    : null
+                }
+                emptyLabel={messages.inventory.grn.quantityEmptyLabel}
+                onClick={() => setNumericField("unitPrice")}
+              />
+              {unitOptions.length > 0 ? (
+                <Field>
+                  <FieldLabel htmlFor={`branch-grn-price-unit-${line.lineId}`}>
+                    {FORM_VI.unit}
+                  </FieldLabel>
+                  <Select
+                    value={
+                      line.unitCostUnitId != null
+                        ? String(line.unitCostUnitId)
+                        : ""
+                    }
+                    onValueChange={(value) =>
+                      commitPriceUnit(Number(value))
+                    }
+                  >
+                    <SelectTrigger
+                      id={`branch-grn-price-unit-${line.lineId}`}
+                      size="touch"
+                      aria-label={FORM_VI.unit}
+                    >
+                      <SelectValue
+                        placeholder={GRN_DETAIL_COPY.addDialog.selectUnit}
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {unitOptions.map((option) => (
+                        <SelectItem
+                          key={option.unitId}
+                          value={String(option.unitId)}
+                          size="touch"
+                        >
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              ) : line.unitCostUnitLabel || line.unit ? (
+                <p className="text-sm text-muted-foreground">
+                  {line.unitCostUnitLabel || line.unit}
+                </p>
+              ) : null}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {GRN_DETAIL_COPY.line.unitPriceHint}
+            </p>
             {needsRejectionDetails ? (
               <>
                 <Field>
@@ -542,7 +610,11 @@ export function BranchGrnReviewLineSheet({
           if (!next) setNumericField(null);
         }}
         title={
-          numericField === "rejected"
+          numericField === "unitPrice"
+            ? GRN_DETAIL_COPY.line.unitPriceLabel(
+                line?.unitCostUnitLabel || line?.unit || "",
+              )
+            : numericField === "rejected"
             ? GRN_DETAIL_COPY.line.rejectedLabel(line?.unit ?? "")
             : numericField === "pack"
               ? GRN_DETAIL_COPY.line.acceptedLabel(line?.packUnit?.label ?? "")
@@ -551,14 +623,18 @@ export function BranchGrnReviewLineSheet({
                 : GRN_DETAIL_COPY.line.acceptedLabel(line?.unit ?? "")
         }
         suffix={
-          numericField === "pack"
+          numericField === "unitPrice"
+            ? line?.unitCostUnitLabel || line?.unit
+            : numericField === "pack"
             ? line?.packUnit?.label
             : numericField === "loose"
               ? line?.looseUnit?.label
               : line?.unit
         }
         initialValue={
-          numericField === "rejected"
+          numericField === "unitPrice"
+            ? line?.monetary?.unitPrice
+            : numericField === "rejected"
             ? line?.rejected
             : numericField === "pack"
               ? packLooseSplit?.packQty
@@ -567,6 +643,9 @@ export function BranchGrnReviewLineSheet({
                 : acceptedQuantity
         }
         onConfirm={(value) => {
+          if (numericField === "unitPrice" && line) {
+            onPatch(patchGrnLineUnitPrice(line, value));
+          }
           if (numericField === "accepted") commitAccepted(value);
           if (numericField === "pack") {
             commitPackLoose(value, packLooseSplit?.looseQty ?? 0);
@@ -576,7 +655,7 @@ export function BranchGrnReviewLineSheet({
           }
           if (numericField === "rejected") patchRejected(value);
         }}
-        maxFractionDigits={3}
+        maxFractionDigits={numericField === "unitPrice" ? 2 : 3}
       />
     </>
   );
@@ -603,9 +682,10 @@ export function BranchGrnAddLineSheet({
 }: BranchGrnAddLineSheetProps) {
   const [ingredientId, setIngredientId] = useState("");
   const [quantity, setQuantity] = useState("");
+  const [unitPrice, setUnitPrice] = useState("");
   const [unit, setUnit] = useState("");
   const [entryUnitId, setEntryUnitId] = useState<number | null>(null);
-  const [numericField, setNumericField] = useState<"quantity" | null>(null);
+  const [numericField, setNumericField] = useState<"quantity" | "unitPrice" | null>(null);
   const selectedIngredient = ingredients.find(
     (ingredient) => ingredient.id === Number(ingredientId),
   );
@@ -614,6 +694,7 @@ export function BranchGrnAddLineSheet({
   function resetForm() {
     setIngredientId("");
     setQuantity("");
+    setUnitPrice("");
     setUnit("");
     setEntryUnitId(null);
     setNumericField(null);
@@ -648,6 +729,7 @@ export function BranchGrnAddLineSheet({
   function handleSubmit() {
     const ingredient = selectedIngredient;
     const parsedQuantity = Number(quantity);
+    const parsedUnitCost = Number(unitPrice);
     if (!ingredient) {
       notify.error(GRN_DETAIL_COPY.validation.chooseIngredient);
       return;
@@ -656,8 +738,16 @@ export function BranchGrnAddLineSheet({
       notify.error(GRN_DETAIL_COPY.validation.invalidReceivedQuantity);
       return;
     }
+    if (!Number.isFinite(parsedUnitCost) || parsedUnitCost <= 0) {
+      notify.error(GRN_DETAIL_COPY.validation.invalidUnitPrice);
+      return;
+    }
     if (!unit.trim()) {
       notify.error(GRN_DETAIL_COPY.validation.unitRequired);
+      return;
+    }
+    if (entryUnitId == null) {
+      notify.error(GRN_DETAIL_COPY.line.invalidUnitPriceUnit);
       return;
     }
     startTransition(async () => {
@@ -679,6 +769,8 @@ export function BranchGrnAddLineSheet({
         supplierId,
         receivedQuantity: parsedQuantity,
         entryUnitId,
+        unitCost: parsedUnitCost,
+        unitCostUnitId: entryUnitId,
         rejectedQuantity: 0,
         rejectionReason: null,
         rejectedPhotoUrl: null,
@@ -697,6 +789,8 @@ export function BranchGrnAddLineSheet({
           unit: unit.trim(),
           supplierId,
           supplierName,
+          unitCost: parsedUnitCost,
+          unitCostUnitId: entryUnitId,
         }),
       );
       notify.success(GRN_DETAIL_COPY.addDialog.success);
@@ -798,6 +892,20 @@ export function BranchGrnAddLineSheet({
             emptyLabel={messages.inventory.grn.quantityEmptyLabel}
             onClick={() => setNumericField("quantity")}
           />
+          <NumberPadValueField
+            id="branch-grn-add-unit-price"
+            label={GRN_DETAIL_COPY.addDialog.unitPriceLabel(unit)}
+            value={
+              unitPrice === "" || !(Number(unitPrice) > 0)
+                ? null
+                : formatVND(Number(unitPrice))
+            }
+            emptyLabel={messages.inventory.grn.quantityEmptyLabel}
+            onClick={() => setNumericField("unitPrice")}
+          />
+          <p className="text-xs text-muted-foreground">
+            {GRN_DETAIL_COPY.addDialog.unitPriceHint}
+          </p>
         </FieldGroup>
       </AppSheet>
 
@@ -806,13 +914,29 @@ export function BranchGrnAddLineSheet({
         onOpenChange={(next) => {
           if (!next) setNumericField(null);
         }}
-        title={GRN_DETAIL_COPY.addDialog.quantityLabel}
+        title={
+          numericField === "unitPrice"
+            ? GRN_DETAIL_COPY.addDialog.unitPriceLabel(unit)
+            : GRN_DETAIL_COPY.addDialog.quantityLabel
+        }
         suffix={unit}
-        initialValue={quantity === "" ? null : Number(quantity)}
+        initialValue={
+          numericField === "unitPrice"
+            ? unitPrice === ""
+              ? null
+              : Number(unitPrice)
+            : quantity === ""
+              ? null
+              : Number(quantity)
+        }
         onConfirm={(value) => {
+          if (numericField === "unitPrice") {
+            setUnitPrice(String(value));
+            return;
+          }
           setQuantity(String(value));
         }}
-        maxFractionDigits={3}
+        maxFractionDigits={numericField === "unitPrice" ? 2 : 3}
       />
     </>
   );

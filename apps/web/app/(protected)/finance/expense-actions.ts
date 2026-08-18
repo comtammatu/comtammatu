@@ -5,8 +5,10 @@
  *
  * Single-entry expense-ledger writes for the owner finance cockpit. The summed
  * total feeds `fetchOperatingExpenseSummary` (finance-cockpit) which supplies
- * the operating-expense KPI and operating result. NOT a general ledger (D020);
- * supplier costs stay in supplier_invoices.
+ * the operating-expense KPI and operating result. Period list KPIs use
+ * `get_finance_expense_period_summary` so they are not capped at the first
+ * 100 ledger rows. NOT a general ledger (D020); supplier costs stay in
+ * supplier_invoices.
  */
 
 import { z } from "zod";
@@ -542,6 +544,125 @@ export async function fetchExpenses(params: {
       matchedBankTransactionIds: matchedByBankTransaction.get(row.id) ?? [],
     })),
   };
+}
+
+export async function fetchExpensePeriodSummary(params: {
+  location: FinanceLocation;
+  branchId?: number | null;
+  startDate: string;
+  endDate: string;
+}): Promise<
+  ActionResult<{
+    operatingTotal: string;
+    operatingCount: number;
+    needsActionTotal: string;
+    needsActionCount: number;
+  }>
+> {
+  const parsed = fetchExpensesSchema.safeParse(params);
+  if (!parsed.success) {
+    return { success: false, error: "Bộ lọc chi phí không hợp lệ." };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.FINANCE_VIEW,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền xem chi phí." };
+
+  const { data, error } = await ctx.supabase.rpc(
+    "get_finance_expense_period_summary",
+    {
+      p_location: parsed.data.location,
+      p_start_date: parsed.data.startDate,
+      p_end_date: parsed.data.endDate,
+      ...(parsed.data.location === "branch"
+        ? { p_branch_id: parsed.data.branchId ?? undefined }
+        : {}),
+    },
+  );
+
+  if (error) {
+    return {
+      success: false,
+      error: mapExpenseSummaryError(error.code),
+    };
+  }
+
+  const summary = parseExpensePeriodSummary(data);
+  if (!summary) {
+    return { success: false, error: "Không tải được tổng chi phí kỳ." };
+  }
+
+  return { success: true, data: summary };
+}
+
+function mapExpenseSummaryError(code: string | undefined): string {
+  if (code === "42501" || code === "28000") {
+    return "Không có quyền xem chi phí.";
+  }
+  if (code === "22023") {
+    return "Bộ lọc chi phí không hợp lệ.";
+  }
+  if (code === "PGRST202") {
+    return "Chức năng tổng chi phí kỳ chưa sẵn sàng.";
+  }
+  return "Không tải được tổng chi phí kỳ.";
+}
+
+function parseExpensePeriodSummary(raw: unknown): {
+  operatingTotal: string;
+  operatingCount: number;
+  needsActionTotal: string;
+  needsActionCount: number;
+} | null {
+  let payload: unknown = raw;
+  if (typeof payload === "string") {
+    try {
+      payload = JSON.parse(payload) as unknown;
+    } catch {
+      return null;
+    }
+  }
+  if (payload == null || typeof payload !== "object" || Array.isArray(payload)) {
+    return null;
+  }
+  const row = payload as Record<string, unknown>;
+  const operatingTotal = moneyText(row.operating_total);
+  const needsActionTotal = moneyText(row.needs_action_total);
+  const operatingCount = wholeCount(row.operating_count);
+  const needsActionCount = wholeCount(row.needs_action_count);
+  if (
+    operatingTotal == null ||
+    needsActionTotal == null ||
+    operatingCount == null ||
+    needsActionCount == null
+  ) {
+    return null;
+  }
+  return {
+    operatingTotal,
+    operatingCount,
+    needsActionTotal,
+    needsActionCount,
+  };
+}
+
+function moneyText(value: unknown): string | null {
+  if (typeof value === "string" && /^-?\d+(?:\.\d{1,2})?$/.test(value)) {
+    return value.includes(".") ? value : `${value}.00`;
+  }
+  return null;
+}
+
+function wholeCount(value: unknown): number | null {
+  if (typeof value === "number" && Number.isInteger(value) && value >= 0) {
+    return value;
+  }
+  if (typeof value === "string" && /^\d+$/.test(value)) {
+    return Number(value);
+  }
+  return null;
 }
 
 export async function fetchStartupCapitalSummary(params: {

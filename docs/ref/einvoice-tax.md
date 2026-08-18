@@ -51,9 +51,9 @@ Payment hoàn tất
 
 HĐ đã phát hành không dựng lại từ menu/config hiện tại. Đổi thuế/template/series
 chỉ giao dịch mới. Provider response chưa rõ → đối soát cùng idempotency
-identity; không tự phát hành HĐ mới. Cửa sổ QR: `min(paid_at + 2 giờ, 23:55
-cùng ngày VN)`. Viettel MTT từ chối ngày lập khác ngày bán; worker không gửi
-khi ngày lập (giờ VN) đã sang ngày mới.
+identity; không tự phát hành HĐ mới. Cửa sổ QR: trước 22:00 `min(paid_at + 2 giờ,
+23:55)`; từ 22:00 phát hành ngay. Cùng ngày gửi `paid_at`; HĐ mới lệch ngày không
+gửi Viettel. `transactionUuid` = `tax_invoices.id`, không `orders.id`. Số HĐ `issued` duy nhất; trùng thì đối soát thất bại.
 
 **Dòng bắt buộc:** tên HH/DV thực; ĐVT, SL, đơn giá; thuế suất/căn cứ theo
 dòng khi template yêu cầu; tổng trước thuế / VAT / thanh toán theo rounding đã

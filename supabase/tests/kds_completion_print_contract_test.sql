@@ -91,6 +91,12 @@ BEGIN
       'TEST FAILED: route_order_to_kds still uses category-type hardcode or fallback station routing';
   END IF;
 
+  IF v_route_def NOT ILIKE '%unique_violation%'
+     OR v_route_def NOT ILIKE '%v_ticket_base || ''-'' || v_ticket_seq%' THEN
+    RAISE EXCEPTION
+      'TEST FAILED: route_order_to_kds does not retry kitchen ticket unique collisions';
+  END IF;
+
   RAISE NOTICE
     'TEST PASSED: KDS completion owns kitchen print queueing';
 END;

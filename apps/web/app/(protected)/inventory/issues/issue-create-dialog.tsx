@@ -1,11 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
-import { FormDialog, SelectField, TextareaField } from "@/components/form";
+import { FormDialog, SelectField } from "@/components/form";
 import {
   ACTIONS_VI,
   BRANCH_VI,
-  FORM_VI,
   INVENTORY_VI,
 } from "@comtammatu/shared/messages";
 import type { IssueBranchOption } from "./issue-list-types";
@@ -101,13 +100,6 @@ export function IssueCreateDialog({
                     : option.label,
               }))}
               required
-            />
-            <TextareaField
-              control={form.control}
-              name="notes"
-              label={FORM_VI.notes}
-              rows={3}
-              placeholder={INVENTORY_VI.issueNotesPlaceholder}
             />
           </>
         );

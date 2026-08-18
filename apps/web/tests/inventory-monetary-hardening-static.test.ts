@@ -118,8 +118,6 @@ test("GRN valuation derives price only from confirmed supplier invoices", () => 
   assert.match(grnArchetype, /"create_grn_draft_from_po"/);
   assert.doesNotMatch(grnArchetype, /unit_price/);
   assert.doesNotMatch(grnArchetype, /save_purchase_orders_from_request/);
-  assert.match(
-    inventoryReference,
-    /Hóa đơn NCC đã xác nhận.*PO không là nguồn giá/s,
-  );
+  assert.match(inventoryReference, /PO không là nguồn giá/);
+  assert.match(inventoryReference, /Hóa đơn NCC không viết lại WAC/);
 });

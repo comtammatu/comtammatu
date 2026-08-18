@@ -388,7 +388,7 @@ test("Finance keeps POS food-cost coverage diagnostic and period result on goods
   assert.doesNotMatch(page, /basic\.kpis\.moneyCollected/);
   assert.match(financeMessages, /netRevenue: "Doanh thu thuần"/);
   assert.match(financeMessages, /inboundTransfer: "Chi phí hàng"/);
-  assert.match(financeMessages, /inventoryPurchases: "Chi phí hàng mua"/);
+  assert.match(financeMessages, /inventoryPurchases: "Chi mua hàng"/);
   assert.doesNotMatch(
     financeMessages,
     /operatingResultHint:[\s\S]*Lợi nhuận gộp trừ chi vận hành/,

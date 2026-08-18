@@ -81,17 +81,18 @@ test("finance overview presents period results, current funds, and inventory in 
   assert.doesNotMatch(page, /\/finance\/inventory-value/);
   assert.match(page, /title=\{powerLiteCopy\.title\}/);
   assert.doesNotMatch(page, /description=\{powerLiteCopy\.description\}/);
+  assert.doesNotMatch(page, /attentionBadge|viewAttention|ownerNewsTitle/);
+  assert.doesNotMatch(page, /FinanceAttentionSection|FINANCE_ATTENTION_ID/);
+  assert.doesNotMatch(page, /basic\.sections\.vat|kpis\.vatInput|kpis\.vatOutput/);
   assert.doesNotMatch(
     page,
     /grossProfitHint|operatingResultHint|inboundTransferHint|inventoryPurchasesHint|operatingExpenseHint|startupCapitalHint|inventoryChangeHint|vatInputHint|netRevenueHint/,
   );
   assert.match(page, /ingredientCostHint/);
   assert.match(page, /inventoryValueHint/);
-  assert.match(
-    page,
-    /<FinanceAttentionSection exceptions=\{cockpit\.exceptions\}/,
-  );
-  assert.match(page, /item\.tone !== "neutral"/);
+  assert.match(page, /basic\.sections\.assets/);
+  assert.match(page, /kpis\.equipment/);
+  assert.match(page, /CurrentFundsSection cash=\{cash\} embedded/);
   assert.ok(
     pageBody.indexOf("basic.sections.grossProfit") <
       pageBody.indexOf("basic.sections.periodResult"),
@@ -99,36 +100,43 @@ test("finance overview presents period results, current funds, and inventory in 
   );
   assert.ok(
     pageBody.indexOf("basic.sections.periodResult") <
-      pageBody.indexOf("basic.sections.startupCapital"),
-    "Period results must appear before startup capital",
+      pageBody.indexOf("basic.sections.assets"),
+    "Period results must appear before assets",
   );
   assert.ok(
-    pageBody.indexOf("basic.sections.startupCapital") <
+    pageBody.indexOf("basic.sections.assets") <
       pageBody.indexOf("<CurrentFundsSection"),
-    "Startup capital must appear before current funds",
+    "Assets section must wrap current funds",
   );
   assert.ok(
     pageBody.indexOf("<CurrentFundsSection") <
-      pageBody.indexOf("basic.sections.inventory"),
+      pageBody.indexOf("kpis.inventoryClosingValue"),
     "Current funds must appear before period-end inventory",
   );
   assert.ok(
-    pageBody.indexOf("basic.sections.inventory") <
-      pageBody.indexOf("<FinanceAttentionSection"),
-    "Inventory must appear before the exception queue",
+    pageBody.indexOf("kpis.inventoryClosingValue") <
+      pageBody.indexOf("kpis.equipment"),
+    "Inventory must appear before equipment",
   );
-  assert.equal((pageBody.match(/<FinanceAttentionSection/g) ?? []).length, 1);
+  assert.ok(
+    pageBody.indexOf("kpis.equipment") <
+      pageBody.indexOf("kpis.startupCapital"),
+    "Equipment must appear before startup capital",
+  );
   assert.match(copy, /title: "Tài chính"/);
   assert.match(copy, /netRevenue: "Doanh thu thuần"/);
   assert.match(copy, /ingredientCost: "Giá vốn món"/);
   assert.match(copy, /periodCost: "Chi phí"/);
   assert.match(copy, /inboundTransfer: "Chi phí hàng"/);
-  assert.match(copy, /inventoryPurchases: "Chi phí hàng mua"/);
+  assert.match(copy, /inventoryPurchases: "Chi mua hàng"/);
   assert.match(copy, /grossProfit: "Lợi nhuận gộp"/);
   assert.match(copy, /sections: \{[\s\S]*grossProfit: "Lợi nhuận gộp"/);
-  assert.match(copy, /operatingExpense: "Chi phí vận hành"/);
+  assert.match(copy, /operatingExpense: "Chi vận hành"/);
   assert.match(copy, /startupCapital: "Chi phí ban đầu"/);
-  assert.match(copy, /startupCapital: "Vốn đã bỏ ra"/);
+  assert.match(copy, /equipment: "Thiết bị"/);
+  assert.match(copy, /assets: "Tài sản"/);
+  assert.match(copy, /inventoryClosingValue: "Tồn kho"/);
+  assert.match(copy, /reports: "Doanh thu"/);
   assert.match(copy, /inventoryChange: "Biến động tồn kho"/);
   assert.match(copy, /operatingResult: "Kết quả kinh doanh"/);
   assert.match(copy, /inventory: "Tồn kho"/);
@@ -146,7 +154,6 @@ test("finance overview presents period results, current funds, and inventory in 
   assert.match(copy, /Đầu kỳ/);
   assert.match(copy, /Không gồm giá vốn món/);
   assert.match(copy, /bankReconciliationLabel: "Giao dịch"/);
-  assert.match(page, /FinanceAttentionSection/);
   assert.doesNotMatch(copy, /cashDeltaTitle:/);
 });
 

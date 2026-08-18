@@ -89,13 +89,6 @@ const upsertSchema = z
       }
     }
     if (values.kind === "free_item") {
-      if ((values.freeItemQty ?? 0) < 1) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["freeItemQty"],
-          message: "Số phần tặng phải từ 1",
-        });
-      }
       if (values.items.filter((item) => item.item_role === "get").length < 1) {
         ctx.addIssue({
           code: "custom",

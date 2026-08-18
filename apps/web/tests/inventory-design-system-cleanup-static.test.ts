@@ -80,13 +80,14 @@ test("inventory informational states are not disabled buttons", () => {
     issueDetailSource,
     /<Button[^>]*disabled>[\s\S]{0,120}ISSUES_VI\.draftAutoSaved/,
   );
-  assert.match(
-    stocktakeCountSource,
-    /<Badge variant=\{status === "cancelled" \? "secondary" : "success"\}>/,
-  );
   assert.doesNotMatch(
     stocktakeCountSource,
     /messages\.inventory\.stocktake\.detail\.updateFailed/,
+  );
+  assert.match(stocktakeCountSource, /editable=\{editable\}/);
+  assert.doesNotMatch(
+    stocktakeCountSource,
+    /<Button[^>]*disabled>[\s\S]{0,80}cancelled/,
   );
 });
 

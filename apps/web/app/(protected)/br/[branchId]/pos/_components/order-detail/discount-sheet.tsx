@@ -17,9 +17,11 @@ import { FormattedNumberInput } from "@/components/form";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import {
   Item,
+  ItemContent,
   ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
+import { Minus as IconMinus, Plus as IconPlus } from "lucide-react";
 
 import { ACTIONS_VI, FORM_VI, POS_VI, PROMOTIONS_VI } from "@comtammatu/shared/messages";
 import { StationSheet } from "@/components/surface";
@@ -265,9 +267,12 @@ export function DiscountSheet({
   const canPreviewCode =
     showPromo && codeTrim.length >= 3 && !isPending && !previewPending;
   const needsPick = preview?.needsSideSelection === true;
+  const isFreeItemPick = needsPick && preview?.kind === "free_item";
   const pickComplete =
     !needsPick ||
-    (preview?.freeQty != null && selectedUnitsTotal === preview.freeQty);
+    (preview?.freeQty != null &&
+      selectedUnitsTotal >= 1 &&
+      selectedUnitsTotal <= preview.freeQty);
   const autoPreviewAmount =
     (preview?.amount ?? 0) > 0
       ? (preview?.amount ?? 0)
@@ -350,6 +355,34 @@ export function DiscountSheet({
     }
     return Array.from(map.values());
   }, [preview?.candidates]);
+
+  const handleSetFreeItemUnits = (
+    c: PromoSideCandidate,
+    nextUnits: number,
+  ) => {
+    const targetKey = candidateKey(c);
+    setSideUnits((prev) => {
+      const next = { ...prev };
+      const usedElsewhere = Object.entries(next).reduce(
+        (sum, [k, n]) => (k === targetKey ? sum : sum + n),
+        0,
+      );
+      const remaining = Math.max(
+        0,
+        (preview?.freeQty ?? 0) - usedElsewhere,
+      );
+      const clamped = Math.max(
+        0,
+        Math.min(c.max_units, remaining, nextUnits),
+      );
+      if (clamped < 1) {
+        delete next[targetKey];
+      } else {
+        next[targetKey] = clamped;
+      }
+      return next;
+    });
+  };
 
   const handleToggleSide = (c: PromoSideCandidate, isChecked: boolean) => {
     const targetKey = candidateKey(c);
@@ -583,6 +616,72 @@ export function DiscountSheet({
                         {group.candidates.map((c) => {
                           const key = candidateKey(c);
                           const units = sideUnits[key] ?? 0;
+                          if (isFreeItemPick) {
+                            const usedElsewhere = selectedUnitsTotal - units;
+                            const remaining = Math.max(
+                              0,
+                              (preview?.freeQty ?? 0) - usedElsewhere,
+                            );
+                            const lineMax = Math.min(c.max_units, remaining);
+                            return (
+                              <Item
+                                key={key}
+                                variant="outline"
+                                className="items-center justify-between gap-3 px-3 py-2"
+                              >
+                                <ItemContent className="min-w-0">
+                                  <ItemTitle className="text-sm font-medium">
+                                    {c.name}
+                                  </ItemTitle>
+                                  <span className="text-xs text-muted-foreground">
+                                    {PROMOTIONS_VI.posCandidateLine(
+                                      c.max_units,
+                                      formatVND(c.unit_price),
+                                      lineMax,
+                                    )}
+                                  </span>
+                                </ItemContent>
+                                <div
+                                  role="group"
+                                  aria-label={PROMOTIONS_VI.posFreeItemQtyGroup(
+                                    c.name,
+                                  )}
+                                  className="flex shrink-0 items-center gap-1.5"
+                                >
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon-touch"
+                                    aria-label={PROMOTIONS_VI.posFreeItemDec}
+                                    disabled={isPending || units <= 0}
+                                    onClick={() =>
+                                      handleSetFreeItemUnits(c, units - 1)
+                                    }
+                                  >
+                                    <IconMinus />
+                                  </Button>
+                                  <output
+                                    aria-live="polite"
+                                    className="min-w-8 text-center font-mono text-base font-semibold tabular-nums"
+                                  >
+                                    {units}
+                                  </output>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon-touch"
+                                    aria-label={PROMOTIONS_VI.posFreeItemInc}
+                                    disabled={isPending || units >= lineMax}
+                                    onClick={() =>
+                                      handleSetFreeItemUnits(c, units + 1)
+                                    }
+                                  >
+                                    <IconPlus />
+                                  </Button>
+                                </div>
+                              </Item>
+                            );
+                          }
                           const checked = units > 0;
                           return (
                             <Item

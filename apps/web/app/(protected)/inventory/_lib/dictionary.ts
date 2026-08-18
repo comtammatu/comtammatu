@@ -27,7 +27,7 @@ const VI_DICTIONARY = {
     grn: { short: "Nhập kho", long: "Phiếu nhập kho" },
     supplierInvoices: { short: "HĐ NCC", long: "Hóa đơn NCC" },
     transfers: { short: "Giao nhận", long: "Giao nhận" },
-    stocktake: { short: "Kiểm kê", long: "Kiểm kê đối chiếu" },
+    stocktake: { short: "Kiểm kê", long: "Kiểm kê" },
     issues: { long: "Hao hụt" },
     consumption: { long: "Tiêu hao" },
     reports: { long: "Báo cáo" },
@@ -55,7 +55,7 @@ const VI_DICTIONARY = {
     },
     "/inventory/stocktake": {
       short: "Kiểm kê",
-      long: "Kiểm kê đối chiếu",
+      long: "Kiểm kê",
     },
     "/inventory/production": { long: "Sản xuất" },
     "/inventory/reports": { long: "Báo cáo" },

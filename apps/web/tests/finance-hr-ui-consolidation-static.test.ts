@@ -100,14 +100,15 @@ test("Finance analysis routes use compact Design System composition", () => {
   assert.doesNotMatch(workQueue, /rounded-md border p-3/);
 });
 
-test("Finance landing shows recorded input and issued output VAT totals", () => {
+test("Finance landing does not surface VAT cards on the operating hub", () => {
   const page = read("apps/web/app/(protected)/finance/page.tsx");
   const cockpit = read(
     "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts",
   );
 
-  assert.match(page, /cockpit\.vat\.inputRecorded/);
-  assert.match(page, /cockpit\.vat\.outputIssued/);
+  assert.doesNotMatch(page, /cockpit\.vat\.inputRecorded/);
+  assert.doesNotMatch(page, /cockpit\.vat\.outputIssued/);
+  assert.doesNotMatch(page, /basic\.sections\.vat/);
   assert.match(cockpit, /\.from\("supplier_invoices"\)/);
   assert.match(cockpit, /\.from\("expenses"\)/);
   assert.match(cockpit, /\.from\("tax_invoices"\)/);

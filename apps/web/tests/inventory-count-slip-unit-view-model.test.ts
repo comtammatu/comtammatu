@@ -105,8 +105,6 @@ test("employee count UI previews the comparison unit before submission", () => {
     sharedInventoryMessages,
     /conversionMissing: "Chưa cấu hình quy đổi"/,
   );
-  assert.match(clientSource, /Textarea/);
-  assert.match(clientSource, /maxLength=\{500\}/);
   assert.match(clientSource, /selectedUnit\?\.code/);
   assert.doesNotMatch(clientSource, /assignment\.measureUnit/);
   assert.doesNotMatch(pageSource, /measureUnit/);
@@ -125,13 +123,6 @@ test("stocktake count UI previews conversion to base unit before submission", ()
     join(
       process.cwd(),
       "app/(protected)/inventory/stocktake/[id]/count/count-client.tsx",
-    ),
-    "utf8",
-  );
-  const gridSource = readFileSync(
-    join(
-      process.cwd(),
-      "app/(protected)/inventory/_components/blind-counting-grid.tsx",
     ),
     "utf8",
   );
@@ -160,6 +151,6 @@ test("stocktake count UI previews conversion to base unit before submission", ()
     sharedInventoryMessages,
     /conversionMissing: "Chưa cấu hình quy đổi"/,
   );
-  assert.match(gridSource, /unitPreviewByIngredient/);
+  assert.match(clientSource, /unitPreviewByIngredient/);
   assert.match(wizardSource, /unitPreviewByIngredient/);
 });

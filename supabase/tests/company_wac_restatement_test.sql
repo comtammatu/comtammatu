@@ -41,9 +41,9 @@ BEGIN
   FROM pg_catalog.pg_proc AS procedure
   WHERE procedure.oid =
     'private.apply_latest_supplier_price_to_grn_line()'::pg_catalog.regprocedure;
-  IF v_definition !~ 'NEW.unit_cost := 0'
-     OR v_definition !~ 'NEW.cost_pending := TRUE' THEN
-    RAISE EXCEPTION 'COMPANY WAC: GRN document must stay unpriced until invoice';
+  IF v_definition !~ 'grn_receipt'
+     OR v_definition ~ 'NEW.unit_cost := 0' THEN
+    RAISE EXCEPTION 'COMPANY WAC: GRN must persist operator unit_cost';
   END IF;
 
   SELECT pg_catalog.pg_get_functiondef(procedure.oid)

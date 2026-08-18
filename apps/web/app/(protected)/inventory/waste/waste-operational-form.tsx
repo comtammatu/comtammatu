@@ -16,7 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Combobox, QuantityInput } from "@/components/form";
 import { AppDetailFooter, AppSection } from "@/components/surface";
@@ -345,15 +344,6 @@ export function WasteOperationalForm({
                     value={line.reasonCode as never}
                     onChange={(value) =>
                       patchLine(line.uid, { reasonCode: value })
-                    }
-                  />
-                </Field>
-                <Field className="md:col-span-2">
-                  <FieldLabel>{copy.lineNotesLabel}</FieldLabel>
-                  <Textarea
-                    value={line.note}
-                    onChange={(event) =>
-                      patchLine(line.uid, { note: event.target.value })
                     }
                   />
                 </Field>

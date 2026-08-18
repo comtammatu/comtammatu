@@ -89,6 +89,8 @@ interface OperatingExpenseSummary {
 interface StartupCapitalSummary {
   total: number;
   recorded: boolean;
+  equipment: number;
+  equipmentRecorded: boolean;
 }
 
 interface FinanceVatSummary {
@@ -139,6 +141,8 @@ interface FinanceCockpitKpis {
   operatingExpenseRecorded: boolean;
   startupCapital: number;
   startupCapitalRecorded: boolean;
+  equipment: number;
+  equipmentRecorded: boolean;
   goodsIn: number;
   goodsInKind: PeriodGoodsInKind;
   ingredientCost: number;
@@ -322,6 +326,8 @@ function buildKpis({
     operatingExpenseRecorded: operatingExpense.recorded,
     startupCapital: startupCapital.total,
     startupCapitalRecorded: startupCapital.recorded,
+    equipment: startupCapital.equipment,
+    equipmentRecorded: startupCapital.equipmentRecorded,
     goodsIn,
     goodsInKind,
     ingredientCost,
@@ -341,10 +347,17 @@ function summarizeStartupCapital(
     (row): row is { amount: number | string | null; category: string } =>
       row.category != null && isStartupCapitalCategory(row.category),
   );
+  // Equipment is the capital slice of startup outlay, shown separately on
+  // Tài sản. Do not add it to cash + inventory as a fake asset total.
+  const equipmentRows = capitalRows.filter((row) => row.category === "capital");
 
   return {
     total: toNumber(addMoney(capitalRows.map((row) => String(row.amount)))),
     recorded: capitalRows.length > 0,
+    equipment: toNumber(
+      addMoney(equipmentRows.map((row) => String(row.amount))),
+    ),
+    equipmentRecorded: equipmentRows.length > 0,
   };
 }
 
@@ -378,7 +391,14 @@ async function fetchStartupCapitalSummary({
   }
 
   const { data, error } = await query;
-  if (error) return { total: 0, recorded: false };
+  if (error) {
+    return {
+      total: 0,
+      recorded: false,
+      equipment: 0,
+      equipmentRecorded: false,
+    };
+  }
   return summarizeStartupCapital(
     (data ?? []) as Array<{
       amount: number | string | null;
@@ -1284,6 +1304,8 @@ export async function fetchFinanceAttentionExceptions(
       operatingExpenseRecorded: true,
       startupCapital: 0,
       startupCapitalRecorded: false,
+      equipment: 0,
+      equipmentRecorded: false,
       goodsIn: 0,
       goodsInKind: periodGoodsInKindForLocation(params.location),
       ingredientCost: 0,
@@ -1583,7 +1605,12 @@ export async function fetchFinanceCockpit(
         goodsInKind,
         inventoryValue,
         operatingExpense: compareOperatingExpenseSummary,
-        startupCapital: { total: 0, recorded: false },
+        startupCapital: {
+          total: 0,
+          recorded: false,
+          equipment: 0,
+          equipmentRecorded: false,
+        },
         includeInventoryChange: canViewInventoryValuation,
       })
     : null;

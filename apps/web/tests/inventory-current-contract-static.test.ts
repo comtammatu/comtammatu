@@ -50,7 +50,8 @@ test("Inventory references expose one warehouse and physical rejection QC only",
   assert.match(sop, /lý do \+ ảnh là bắt buộc/);
   assert.match(sop, /Yêu cầu mua → PO theo NCC → GRN theo\s+ lần giao/);
   assert.match(inventory, /Chờ nhập hàng/);
-  assert.match(inventory, /giá thương mại chỉ đến từ Hóa đơn NCC/);
+  assert.match(inventory, /Phiếu nhập ghi \*\*Đơn giá\*\* net/);
+  assert.match(inventory, /Hóa đơn NCC chỉ công nợ \+ VAT/);
 
   for (const source of [inventory, sop, glossary]) {
     assert.doesNotMatch(source, /branch_kitchen|po_unit_price/);
@@ -171,7 +172,8 @@ test("app authority uses PO approval to GRN and omits retired QC permissions", (
   assert.match(quality, /deriveGrnQualityStatus/);
   assert.doesNotMatch(quality, /Baseline|Variance|REVIEW_PCT/);
   assert.match(grnDetailClient, /\?\s*"Đã nhập kho"/);
-  assert.match(grnLineRow, /Dư ngoài đơn \$\{formatGrnPersistQty\(excessQuantity, line\)\}/);
+  assert.match(grnLineRow, /excessShortText\(/);
+  assert.match(grnLineRow, /formatGrnPersistQty\(excessQuantity, line\)/);
 });
 
 test("catalog writes cannot bypass PO price authority", () => {

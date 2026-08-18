@@ -63,8 +63,8 @@ Lợi nhuận gộp
 Kết quả kinh doanh
 = Doanh thu thuần
   − Chi phí hàng (Điều chuyển đã nhận, chi nhánh)
-    / Chi phí hàng mua (cả quán, hóa đơn NCC)
-  − Chi phí vận hành đã ghi nhận
+    / Chi mua hàng (cả quán, hóa đơn NCC)
+  − Chi vận hành đã ghi nhận
   + Biến động tồn kho (Tồn cuối kỳ − Tồn đầu kỳ)
 ```
 

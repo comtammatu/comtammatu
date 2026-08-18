@@ -202,11 +202,12 @@ const promotionFormSchema = z
       }
     }
     if (values.kind === "free_item") {
-      if ((parseAmount(values.freeItemQty) ?? 0) < 1) {
+      const freeItemQty = parseAmount(values.freeItemQty);
+      if (freeItemQty != null && freeItemQty < 1) {
         ctx.addIssue({
           code: "custom",
           path: ["freeItemQty"],
-          message: "Số phần tặng phải từ 1",
+          message: "Số phần tối đa phải từ 1, hoặc để trống nếu không giới hạn",
         });
       }
       if (values.getItemIds.length < 1) {
@@ -291,7 +292,7 @@ function toFormValues(initial: PromotionFormValue): PromotionFormValues {
     freeSideQty:
       initial.freeSideQty != null ? String(initial.freeSideQty) : "1",
     freeItemQty:
-      initial.freeItemQty != null ? String(initial.freeItemQty) : "1",
+      initial.freeItemQty != null ? String(initial.freeItemQty) : "",
     allowCode: initial.allowCode,
     allowAuto: initial.allowAuto,
     branchIds: initial.branchIds,
@@ -353,7 +354,7 @@ export function PromotionForm({
     if (kind === "free_item") {
       setValue("allowCode", true);
       setValue("allowAuto", false);
-      setValue("freeItemQty", "1");
+      setValue("freeItemQty", "");
     }
   }, [kind, setValue]);
 
@@ -730,9 +731,8 @@ export function PromotionForm({
                 control={control}
                 name="freeItemQty"
                 label={PROMOTIONS_VI.freeItemQtyLabel}
-                placeholder="1"
+                description={PROMOTIONS_VI.freeItemQtyHint}
                 maxFractionDigits={0}
-                required
               />
             ) : null}
 
@@ -1282,7 +1282,7 @@ function PromotionRuleSummary({
     );
   } else if (kind === "free_item") {
     summary = PROMOTIONS_VI.summaryFreeItem(
-      freeItemQty || "1",
+      freeItemQty,
       codeDisplay,
       minText,
     );

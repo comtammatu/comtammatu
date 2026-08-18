@@ -3,15 +3,18 @@ import { test } from "node:test";
 import {
   acceptedGrnQuantity,
   applyGrnLineEntryUnit,
+  applyGrnLinePriceUnit,
   calculateGrnQuantities,
   combinePackLooseQuantity,
   createEditableGrnLine,
   deliveredGrnQuantity,
   formatPackLooseQuantity,
+  grnLineBookTotal,
   grnLineHasPackLoose,
   hasAcceptedGrnQuantity,
   isLinkedPoApproved,
   isGrnLookupParam,
+  patchGrnLineUnitPrice,
   splitPersistToPackLoose,
 } from "../lib/inventory/grn-detail-model";
 
@@ -39,7 +42,7 @@ test("new locally-added GRN detail line starts persisted without manual QC state
       category: null,
       category_id: null,
       item_kind: "ingredient",
-      unit_cost: null,
+      monetary: { unitCost: null },
       min_stock_level: null,
       max_stock_level: null,
       reorder_point: null,
@@ -52,8 +55,12 @@ test("new locally-added GRN detail line starts persisted without manual QC state
     unit: "kg",
     supplierId: 3,
     supplierName: "NCC Gạo",
+    unitCost: 25000,
   });
 
+  assert.equal(line.monetary?.unitPrice, 25000);
+  assert.equal(line.costPending, false);
+  assert.equal(patchGrnLineUnitPrice(line, 0).costPending, true);
   assert.deepEqual(
     {
       id: line.lineId,
@@ -99,7 +106,7 @@ test("GRN pack+loose round-trips through the persist (loose) unit", () => {
   );
 });
 
-test("GRN remaining in base allows partial pack+loose and excess at cost 0", () => {
+test("GRN remaining in base allows partial pack+loose and over-receipt preview", () => {
   assert.deepEqual(
     calculateGrnQuantities(222, 0, 10, { persistToBase: 1, poToBase: 24 }),
     {
@@ -193,7 +200,7 @@ test("changing GRN persist unit converts received quantity into the selected uni
       category: null,
       category_id: null,
       item_kind: "ingredient",
-      unit_cost: null,
+      monetary: { unitCost: null },
       min_stock_level: null,
       max_stock_level: null,
       reorder_point: null,
@@ -215,6 +222,101 @@ test("changing GRN persist unit converts received quantity into the selected uni
   assert.equal(next?.rejected, 0);
   assert.equal(next?.unit, "thùng");
   assert.equal(next?.persistToBaseFactor, 24);
+});
+
+test("GRN carton quote on loose persist books converted value, not pack * qty", () => {
+  const units = [
+    {
+      id: 1,
+      unit_id: 10,
+      unit_code: "hop",
+      unit_name: "hộp",
+      to_base_factor: 1,
+      is_base: true,
+      is_active: true,
+      sort_order: 0,
+    },
+    {
+      id: 2,
+      unit_id: 20,
+      unit_code: "thung",
+      unit_name: "thùng",
+      to_base_factor: 24,
+      is_base: false,
+      is_active: true,
+      sort_order: 1,
+      anchor_unit_id: 10,
+      anchor_factor: 24,
+    },
+  ];
+  assert.equal(grnLineBookTotal(246, 1, 24000, 24), 246000);
+  assert.equal(grnLineBookTotal(246, 1, 24000, 1), 5_904_000);
+
+  const line = createEditableGrnLine({
+    lineId: 1,
+    ingredient: {
+      id: 4,
+      name: "Gạo thơm",
+      sku: "GAO-01",
+      category: null,
+      category_id: null,
+      item_kind: "ingredient",
+      monetary: { unitCost: null },
+      min_stock_level: null,
+      max_stock_level: null,
+      reorder_point: null,
+      storage_type: null,
+      is_active: true,
+      updated_at: null,
+      units,
+    },
+    quantity: 246,
+    entryUnitId: 10,
+    unit: "hộp",
+    supplierId: 3,
+    supplierName: "NCC Gạo",
+    unitCost: 24000,
+  });
+
+  assert.equal(line.unitCostUnitId, 20);
+  assert.equal(line.unitCostUnitLabel, "thùng");
+  assert.equal(line.unitCostToBaseFactor, 24);
+  assert.equal(line.entryUnitId, 10);
+  assert.equal(line.monetary?.unitPrice, 24000);
+  assert.equal(line.monetary?.lineTotal, 246000);
+
+  const afterPersistChange = applyGrnLineEntryUnit(line, units, 20);
+  assert.equal(afterPersistChange?.actual, 10.25);
+  assert.equal(afterPersistChange?.monetary?.unitPrice, 24000);
+  assert.equal(afterPersistChange?.unitCostUnitId, undefined);
+  assert.equal(
+    grnLineBookTotal(
+      afterPersistChange?.actual ?? 0,
+      afterPersistChange?.persistToBaseFactor ?? 0,
+      afterPersistChange?.monetary?.unitPrice ?? 0,
+      line.unitCostToBaseFactor,
+    ),
+    246000,
+  );
+
+  const afterPriceUnit = applyGrnLinePriceUnit(line, units, 10);
+  assert.equal(afterPriceUnit?.unitCostUnitId, 10);
+  assert.equal(afterPriceUnit?.monetary?.unitPrice, 1000);
+  assert.equal(afterPriceUnit?.monetary?.lineTotal, 246000);
+});
+
+test("patch GRN unit price keeps quote unit when persist qty is loose", () => {
+  const patched = patchGrnLineUnitPrice(
+    {
+      actual: 246,
+      rejected: 0,
+      persistToBaseFactor: 1,
+      unitCostToBaseFactor: 24,
+    },
+    24000,
+  );
+  assert.equal(patched.monetary?.unitPrice, 24000);
+  assert.equal(patched.monetary?.lineTotal, 246000);
 });
 
 test("pack+loose qty split is only for persist in the loose unit", () => {

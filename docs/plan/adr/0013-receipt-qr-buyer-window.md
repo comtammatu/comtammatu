@@ -5,14 +5,20 @@
 **Decision owner:** Owner, 2026-07-25
 
 **Amended by:** ADR 0034 (zero-total orders: `not_required` invoice, no issue
-job, receipt QR still prints, buyer page read-only)
+job, receipt QR still prints, buyer page read-only). Owner, 2026-08-18: 22:00
+VN skips the +2h buyer wait; a one-shot requeue may stamp
+`allowBacklogSubmitDate` on already-blocked leftover drafts only. A one-shot
+rebind may also stamp that flag on cloned drafts after an order-id vs
+tax-invoice-id S-invoice uuid collision; it does not cancel the leftover's
+Viettel original.
 
 ## Context
 
 POS and Self-Order must not collect HĐĐT buyer details. Payment still needs one
 immutable invoice draft immediately; the customer may supply tax identity from
-the receipt QR for at most two hours. Backdating `invoiceIssuedDate` to
-`payments.paid_at` remains a separate legal/provider gate.
+the receipt QR for at most two hours. Same-day `invoiceIssuedDate` stays
+`payments.paid_at`. A new draft whose Vietnam sale day has already passed
+fail-closes with `invoice_issue_date_not_today`.
 
 ## Decision
 
@@ -30,14 +36,17 @@ The buyer request closes on the first terminal event:
 2. Deadline first — same lock order; keep consumer-default buyer; set
    `status = expired`, `close_reason = deadline_elapsed`.
 
-The buyer deadline is `min(paid_at + 2 hours, Vietnam calendar day of paid_at
-at 23:55)`. Viettel MTT rejects `invoiceIssuedDate` on a later calendar day
+The buyer deadline is `paid_at` when Vietnam local hour is `>= 22:00`;
+otherwise `min(paid_at + 2 hours, Vietnam calendar day of paid_at at 23:55)`.
+After 22:00 the QR window is already closed and the issue job is eligible at
+payment time. Viettel MTT rejects `invoiceIssuedDate` on a later calendar day
 (`INVOICE_ISSUE_DATE_INVALID_TT78`). Cron is every 5 minutes, so the same-day
-ceiling leaves one cadence before midnight. Issuance still sends
-`invoiceIssuedDate = payments.paid_at`. A worker that would submit after that
-Vietnam date fail-closes with `invoice_issue_date_not_today` before
-`prepare_tax_invoice_issue_job_as_system` — no second create, no `signing`
-trap.
+ceiling before 22:00 leaves one cadence before midnight. Same-day issuance sends
+`invoiceIssuedDate = payments.paid_at`. If that Vietnam date is already past,
+the worker fail-closes unless the job payload has `allowBacklogSubmitDate`
+from the one-shot leftover requeue — only then it restamps `invoiceIssuedDate`
+to the submit instant. `tax_invoices.invoice_time` stays `paid_at`; no second
+create; `signing`/`submitted` stay reconcile-only.
 
 Email is mandatory for customer-confirmed invoices. Business name/address are
 resolved server-side from the tax code. Once terminal, the request is immutable
@@ -67,7 +76,8 @@ route `/q/invoice/[token]` (`PUBLIC-WORKFLOW`).
 - If legal/Viettel gates fail, issue at `payments.paid_at` on the same Vietnam
   calendar day and use existing replacement/adjustment when buyer details
   arrive later — do not infer a two-hour legal grace period that crosses
-  midnight.
+  midnight. A leftover draft after that day stays fail-closed unless the
+  one-shot requeue stamped `allowBacklogSubmitDate`.
 
 ## Verification
 

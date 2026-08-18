@@ -43,7 +43,6 @@ import {
   FORM_VI,
   INVENTORY_VI,
   PRODUCT_VI,
-  STATES_VI,
 } from "@comtammatu/shared/messages";
 
 export interface IngredientLineOption {
@@ -231,10 +230,9 @@ export function IngredientLinesEditor<T extends FieldValues>({
             GRID_TEMPLATE,
           )}
         >
-          <div className="col-span-3">{PRODUCT_VI.rawIngredient}</div>
-          <div className="col-span-2">{FORM_VI.quantity}</div>
+          <div className="col-span-6">{PRODUCT_VI.rawIngredient}</div>
+          <div className="col-span-3">{FORM_VI.quantity}</div>
           <div className="col-span-2">{FORM_VI.unit}</div>
-          <div className="col-span-4">{FORM_VI.notes}</div>
           <div />
         </div>
 
@@ -294,7 +292,6 @@ function IngredientLineRow<T extends FieldValues>({
   const quantityName = `${name}.${index}.quantity` as Path<T>;
   const unitLabelName = `${name}.${index}.unitLabel` as Path<T>;
   const entryUnitName = `${name}.${index}.entry_unit_id` as Path<T>;
-  const noteName = `${name}.${index}.note` as Path<T>;
 
   const selectedIngredientId = useWatch({ control, name: ingredientName }) as
     string | undefined;
@@ -320,7 +317,7 @@ function IngredientLineRow<T extends FieldValues>({
       </div>
 
       <div className={cn("grid items-center gap-2 px-3 py-2", GRID_TEMPLATE)}>
-        <div className="min-w-0 md:col-span-3">
+        <div className="min-w-0 md:col-span-6">
           <span className="mb-1 block text-xs font-medium text-muted-foreground md:hidden">
             {PRODUCT_VI.rawIngredient}
           </span>
@@ -352,7 +349,7 @@ function IngredientLineRow<T extends FieldValues>({
           />
         </div>
 
-        <div className="min-w-0 md:col-span-2">
+        <div className="min-w-0 md:col-span-3">
           <span className="mb-1 block text-xs font-medium text-muted-foreground md:hidden">
             {FORM_VI.quantity}
           </span>
@@ -447,25 +444,6 @@ function IngredientLineRow<T extends FieldValues>({
               )}
             />
           )}
-        </div>
-
-        <div className="min-w-0 md:col-span-4">
-          <span className="mb-1 block text-xs font-medium text-muted-foreground md:hidden">
-            {FORM_VI.notes}
-          </span>
-          <Controller
-            control={control}
-            name={noteName}
-            render={({ field }) => (
-              <Input
-                placeholder={STATES_VI.optional}
-                aria-label={`${FORM_VI.notes} ${index + 1}`}
-                {...field}
-                value={field.value ?? ""}
-                className="h-9"
-              />
-            )}
-          />
         </div>
 
         <Button

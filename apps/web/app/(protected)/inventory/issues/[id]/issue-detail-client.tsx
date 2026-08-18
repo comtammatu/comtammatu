@@ -40,7 +40,6 @@ import {
   Combobox,
   QuantityInput,
   FormDialog,
-  TextareaField,
 } from "@/components/form";
 import {
   DataTable,
@@ -146,9 +145,6 @@ const addIssueLineSchema = z.object({
       error: ISSUES_VI.lineQuantityPositive,
     }),
   entryUnitId: z.string().optional(),
-  reason: z.string().trim().min(1, {
-    error: ISSUES_VI.lineReasonRequired,
-  }),
   photoUrls: z.array(z.string().url()).max(1),
 });
 
@@ -773,7 +769,6 @@ function AddIssueLineDialog({
       entryUnitId: initialLine?.entry_unit_id
         ? String(initialLine.entry_unit_id)
         : "",
-      reason: initialLine?.reason ?? "",
       photoUrls: initialLine?.photo_urls ?? [],
     }),
     [initialLine],
@@ -785,7 +780,7 @@ function AddIssueLineDialog({
       ingredientId: Number(values.ingredientId),
       quantity: Number(values.quantity),
       entryUnitId: values.entryUnitId ? Number(values.entryUnitId) : null,
-      reason: values.reason.trim(),
+      reason: initialLine?.reason?.trim() || undefined,
       ...(showConsumptionPhoto ? { photoUrls: values.photoUrls } : {}),
     });
 
@@ -1070,14 +1065,6 @@ function AddIssueLineDialog({
               </p> : null}
             </Frame>
 
-            <TextareaField
-              control={form.control}
-              name="reason"
-              label={ISSUES_VI.reasonLabel}
-              rows={3}
-              placeholder={ISSUES_VI.reasonPlaceholder}
-              required
-            />
             {showConsumptionPhoto ? (
               <Field>
                 <FieldLabel>{ISSUES_VI.evidencePhotoLabel}</FieldLabel>
@@ -1200,12 +1187,14 @@ function IssueLineMobileCard({
           </div> : null}
         </div>
       </ItemContent>
-      <ItemFooter className="basis-full">
-        <div className="w-full rounded-md bg-background px-3 py-2 text-sm">
-          <p className="text-muted-foreground">{tTerm("issueReason")}</p>
-          <p className="mt-1">{item.reason ?? "—"}</p>
-        </div>
-      </ItemFooter>
+      {item.reason ? (
+        <ItemFooter className="basis-full">
+          <div className="w-full rounded-md bg-background px-3 py-2 text-sm">
+            <p className="text-muted-foreground">{tTerm("issueReason")}</p>
+            <p className="mt-1">{item.reason}</p>
+          </div>
+        </ItemFooter>
+      ) : null}
     </Item>
   );
 }

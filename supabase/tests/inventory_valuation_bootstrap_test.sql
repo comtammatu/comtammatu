@@ -24,11 +24,11 @@ BEGIN
   WHERE procedure.oid =
     'private.apply_latest_supplier_price_to_grn_line()'::pg_catalog.regprocedure;
 
-  IF v_definition !~ 'NEW.unit_cost := 0'
-     OR v_definition !~ 'NEW.cost_pending := TRUE'
+  IF v_definition ~ 'NEW.unit_cost := 0'
+     OR v_definition !~ 'grn_receipt'
      OR v_definition ~ 'supplier_ingredient_price_history'
   THEN
-    RAISE EXCEPTION 'VALUATION: GRN must wait for a confirmed supplier invoice';
+    RAISE EXCEPTION 'VALUATION: GRN must persist operator unit_cost';
   END IF;
 
   SELECT pg_catalog.pg_get_functiondef(procedure.oid)

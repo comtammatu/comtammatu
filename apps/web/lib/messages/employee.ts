@@ -160,9 +160,9 @@ export const employee = {
     approvalsCheckoutUnit: "kết ca",
     approvalsWasteUnit: "hao hụt",
     wasteApprovalsTitle: "Duyệt hao hụt",
-    countTitle: "Kiểm kê tồn",
+    countTitle: "Đếm tồn",
     countDescription:
-      "Bạn có nguyên liệu được giao cần đếm tồn và gửi quản lý duyệt.",
+      "Đếm nguyên liệu được giao trong ca và gửi quản lý duyệt.",
     countCta: "Đếm tồn ngay",
     staleShiftTitle: "Còn ca chưa kết",
     staleShiftDescription: (date: string) =>
@@ -207,7 +207,7 @@ export const employee = {
     cancelCheckoutPending: "Đang rút...",
     tasksTitle: "Việc trong ca",
     tasksDescription:
-      "Hoàn thành việc bắt buộc trong ca; Kiểm kê tồn mở khi được giao đếm.",
+      "Hoàn thành việc bắt buộc trong ca; Đếm tồn mở khi được giao đếm.",
     tasksButton: "Việc trong ca",
     managerCheckoutTitle: "Chấm công ra",
     staffCheckoutTitle: "Kết ca",
@@ -416,7 +416,7 @@ export const employee = {
     updateError: "Không thể cập nhật việc trong ca.",
   },
   count: {
-    title: "Kiểm kê tồn",
+    title: "Đếm tồn",
     unavailableTitle: "Chưa thể kiểm kê",
     missingBranchDescription:
       "Tài khoản chưa được gắn chi nhánh. Liên hệ quản lý để cập nhật hồ sơ.",

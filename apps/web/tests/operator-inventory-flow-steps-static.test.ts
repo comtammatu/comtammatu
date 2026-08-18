@@ -67,14 +67,18 @@ test("transfer receive keeps the phone first viewport on line receiving", () => 
 });
 
 test("stocktake count uses NumberPadSheet and a single sticky submit", () => {
-  const source = read(
+  const wizard = read(
     "apps/web/app/(protected)/inventory/stocktake/[id]/count/stocktake-count-wizard.tsx",
   );
+  const ownerCount = read(
+    "apps/web/app/(protected)/inventory/stocktake/[id]/count/count-client.tsx",
+  );
 
-  assert.doesNotMatch(source, /OperatorFlowSteps/);
-  assert.match(source, /@comtammatu\/ui\/components\/progress/);
-  assert.match(source, /progressValue/);
-  assert.match(source, /NumberPadSheet/);
-  assert.doesNotMatch(source, /NumberPadGrid/);
-  assert.match(source, /AppDetailFooter[\s\S]*sticky/);
+  assert.doesNotMatch(wizard, /OperatorFlowSteps/);
+  assert.match(wizard, /@comtammatu\/ui\/components\/progress/);
+  assert.match(wizard, /progressValue/);
+  assert.match(wizard, /NumberPadSheet/);
+  assert.doesNotMatch(wizard, /NumberPadGrid/);
+  assert.match(wizard, /AppDetailFooter[\s\S]*sticky/);
+  assert.match(ownerCount, /StocktakeCountWizard/);
 });

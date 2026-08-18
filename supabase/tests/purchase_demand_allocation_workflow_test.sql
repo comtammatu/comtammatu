@@ -93,7 +93,7 @@ BEGIN
     v_tenant,
     '__demand_ingredient_' || pg_catalog.gen_random_uuid()::text,
     '__DEMAND-' || pg_catalog.gen_random_uuid()::text,
-    0,
+    25000,
     'raw_material',
     'central_supply',
     TRUE,
@@ -458,6 +458,25 @@ BEGIN
     RAISE EXCEPTION 'PURCHASE DEMAND: approve replay contract failed';
   END IF;
 
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.grn_items AS item
+    JOIN public.goods_received_notes AS grn
+      ON grn.id = item.grn_id
+     AND grn.tenant_id = item.tenant_id
+    JOIN public.purchase_orders AS purchase_order
+      ON purchase_order.id = grn.po_id
+     AND purchase_order.tenant_id = grn.tenant_id
+    WHERE item.tenant_id = v_tenant
+      AND purchase_order.purchase_request_id = v_demand_id
+      AND item.unit_cost = 0
+      AND item.cost_pending = TRUE
+      AND item.provisional_cost_source = 'pending'
+  ) THEN
+    RAISE EXCEPTION
+      'PURCHASE DEMAND: GRN draft must stay unpriced until warehouse books';
+  END IF;
+
   v_failed := FALSE;
   BEGIN
     PERFORM public.save_purchase_demand(
@@ -503,17 +522,7 @@ BEGIN
     AND grn.status = 'draft';
 
   IF v_po_count <> 2
-     OR v_grn_count <> 2
-     OR EXISTS (
-       SELECT 1
-       FROM public.purchase_order_items AS item
-       JOIN public.purchase_orders AS purchase_order
-         ON purchase_order.id = item.po_id
-        AND purchase_order.tenant_id = item.tenant_id
-       WHERE purchase_order.tenant_id = v_tenant
-         AND purchase_order.purchase_request_id = v_demand_id
-         AND (item.unit_price_est IS NOT NULL OR item.line_total IS NOT NULL)
-     ) THEN
+     OR v_grn_count <> 2 THEN
     RAISE EXCEPTION 'PURCHASE DEMAND: PO/GRN atomic contract failed';
   END IF;
 

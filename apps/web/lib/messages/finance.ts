@@ -173,7 +173,7 @@ export const finance = {
       revenueBeforeVat: "Doanh thu thuần",
       ingredientCost: "Giá vốn món",
       grossMargin: "Biên gộp",
-      operatingExpense: "Chi phí vận hành",
+      operatingExpense: "Chi vận hành",
       currentInventory: "Tồn kho hiện tại",
       inventoryQuantity: (quantity: string) => `${quantity} tồn`,
       branchRevenue: "Doanh thu thuần",
@@ -194,7 +194,7 @@ export const finance = {
         paymentAmount: string,
       ) =>
         `${transactions} sao kê · ${transactionAmount}; ${payments} VietQR · ${paymentAmount}`,
-      operatingExpenseLabel: "Chi phí vận hành",
+      operatingExpenseLabel: "Chi vận hành",
       operatingExpenseRecorded: "Đã ghi nhận chi phí vận hành trong kỳ",
       operatingExpenseMissing: "Chưa ghi chi phí vận hành trong kỳ.",
       missingCostLabel: "Thiếu giá vốn món",
@@ -221,6 +221,7 @@ export const finance = {
     sections: {
       grossProfit: "Lợi nhuận gộp",
       periodResult: "Kết quả kinh doanh",
+      assets: "Tài sản",
       startupCapital: "Chi phí ban đầu",
       inventory: "Tồn kho",
       vat: "Thuế GTGT",
@@ -244,19 +245,20 @@ export const finance = {
       inboundTransfer: "Chi phí hàng",
       inboundTransferHint:
         "Điều chuyển đã nhận (yêu cầu hàng như yêu cầu mua của Kho Tổng / Bếp). Ghi lúc nhận, hàng đang đi chưa tính.",
-      inventoryPurchases: "Chi phí hàng mua",
+      inventoryPurchases: "Chi mua hàng",
       inventoryPurchasesHint:
         "Hóa đơn đầu vào đã xác nhận, chưa thuế GTGT. Công nợ chưa trả vẫn tính. Giao dịch ngân hàng là thanh toán, không trừ lần nữa. Không gồm điều chuyển nội bộ.",
       grossProfit: "Lợi nhuận gộp",
       grossProfitHint: (margin: string) =>
         `Biên gộp ${margin}. Bán món — không trừ vào kết quả kinh doanh.`,
       grossProfitMissingHint: "Cần đủ giá vốn món. Không trừ vào kết quả kinh doanh.",
-      operatingExpense: "Chi phí vận hành",
+      operatingExpense: "Chi vận hành",
       operatingExpenseHint:
         "Thuê, điện, lương trong kỳ. Không gồm vốn mở quán. Chưa gồm thuế GTGT.",
-      startupCapital: "Vốn đã bỏ ra",
+      startupCapital: "Chi phí ban đầu",
       startupCapitalHint:
         "Thi công, máy, xe, nội thất, thiết bị/TSCĐ, đặt cọc. Toàn bộ vốn đã bỏ ra, không theo kỳ. Đã gồm GTGT. Không trừ vào kết quả tháng.",
+      equipment: "Thiết bị",
       inventoryChange: "Biến động tồn kho",
       inventoryChangeHint:
         "Tồn cuối kỳ trừ tồn đầu kỳ. Hàng còn lại, không phải lãi.",
@@ -267,7 +269,7 @@ export const finance = {
         "Doanh thu trừ chi phí hàng và chi vận hành. Không lấy từ lợi nhuận gộp.",
       notCalculated: "Chưa tính",
       notRecorded: "Chưa ghi nhận",
-      inventoryClosingValue: "Giá trị tồn kho cuối kỳ",
+      inventoryClosingValue: "Tồn kho",
       inventoryValueHint: (opening: string) => `Đầu kỳ ${opening}`,
       inventoryOpeningCompare: "so với tồn đầu kỳ",
       vatInput: "Đầu vào",
@@ -287,7 +289,7 @@ export const finance = {
   nav: {
     groups: {
       money: "Tiền",
-      reports: "Báo cáo",
+      reports: "Doanh thu",
       documents: "Chứng từ",
     },
     items: {
@@ -410,8 +412,8 @@ export const finance = {
     },
     add: "Thêm khoản chi",
     listTitle: "Sổ chi phí",
-    totalLabel: "Chi phí vận hành",
-    monthLabel: "Chi phí tháng",
+    totalLabel: "Chi vận hành",
+    monthLabel: "Chi vận hành",
     monthHint: (count: string) => `${count} khoản`,
     startupLabel: "Chi phí ban đầu",
     startupHint: (count: string) => `${count} khoản`,

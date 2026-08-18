@@ -12,8 +12,8 @@ import {
 } from "@comtammatu/shared/providers";
 import {
   buildHddtProviderLines,
+  resolveSinvoiceIssuedAt,
 } from "@comtammatu/shared/hddt";
-import { getVNDateString } from "@comtammatu/shared/time";
 import { createInvoiceProvider } from "@lib/invoice-provider-init";
 import { z } from "zod";
 
@@ -103,6 +103,7 @@ const invoiceLineSchema = z.object({
 const preparedInvoicePayloadSchema = z
   .object({
     orderId: z.coerce.number().int().positive(),
+    allowBacklogSubmitDate: z.boolean().optional(),
     buyerName: z.string().trim().min(1).max(200),
     buyerTaxCode: z.string().trim().regex(MST_REGEX).optional(),
     buyerAddress: z.string().trim().max(500).optional(),
@@ -361,10 +362,13 @@ export async function issuePreparedTaxInvoice({
     };
   }
 
-  if (
-    getVNDateString(parsed.data.draftSnapshot.invoiceTime) !==
-    getVNDateString()
-  ) {
+  const invoiceIssuedAt = resolveSinvoiceIssuedAt(
+    parsed.data.draftSnapshot.invoiceTime,
+    {
+      allowBacklogSubmitDate: parsed.data.allowBacklogSubmitDate === true,
+    },
+  );
+  if (invoiceIssuedAt === null) {
     return {
       success: false,
       error:
@@ -520,7 +524,7 @@ export async function issuePreparedTaxInvoice({
     request: {
       orderId: taxInvoiceId,
       orderNumber: parsed.data.draftSnapshot.orderNumber,
-      invoiceIssuedAt: parsed.data.draftSnapshot.invoiceTime,
+      invoiceIssuedAt,
       sellerName: profile.sellerName,
       sellerTaxCode: profile.sellerTaxCode,
       sellerAddress: profile.sellerAddress,

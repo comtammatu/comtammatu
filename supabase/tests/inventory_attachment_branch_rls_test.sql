@@ -192,10 +192,10 @@ BEGIN
   ) RETURNING id INTO v_same_branch_po;
 
   INSERT INTO public.purchase_order_items (
-    tenant_id, po_id, ingredient_id, quantity, unit_price_est,
+    tenant_id, po_id, ingredient_id, quantity,
     entry_unit_id
   ) VALUES (
-    v_tenant, v_same_branch_po, v_ingredient, 1, 0, v_unit
+    v_tenant, v_same_branch_po, v_ingredient, 1, v_unit
   ) RETURNING id INTO v_same_branch_po_line;
 
   INSERT INTO public.purchase_orders (
@@ -206,10 +206,10 @@ BEGIN
   ) RETURNING id INTO v_other_branch_po;
 
   INSERT INTO public.purchase_order_items (
-    tenant_id, po_id, ingredient_id, quantity, unit_price_est,
+    tenant_id, po_id, ingredient_id, quantity,
     entry_unit_id
   ) VALUES (
-    v_tenant, v_other_branch_po, v_ingredient, 1, 0, v_unit
+    v_tenant, v_other_branch_po, v_ingredient, 1, v_unit
   ) RETURNING id INTO v_other_branch_po_line;
 
   INSERT INTO public.goods_received_notes (

@@ -5,6 +5,103 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## POS leftover cash counts on the paying till
+
+State: verify
+Kind: fix
+Tier: T3
+Lane: pos/finance
+Exit: Completing payment on an order tagged to a closed POS session rebinds it to the open branch session; `expected_cash` uses completed cash `paid_at` in the till window. Closed historical variances are not restated.
+Evidence: Static `pos-session-carry-forward-cash-static` test. SQL `pos_session_carry_forward_cash_test.sql`. Applied Production `20260818221238` on `enloyfnuerqgaqderbwb` (same batch: `20260818211203`, `20260818221612`, `20260818221613`). Open till at branch 3 now has 2 leftover cash bills / 196,000 VND rebound.
+- [ ] Smoke: leftover unpaid from the previous shift, cash collected on the next shift, then close — variance is no longer equal to those carry-forward bills
+
+## Prod 42703/23505: GRN draft price unit and kitchen ticket unique
+
+State: verify
+Kind: fix
+Tier: T3
+Lane: inventory/pos
+Exit: Approving a purchase demand creates unpriced GRN drafts even when the ingredient has WAC/reference cost. Concurrent kitchen sends that collapse to the same `#NNN` retry with the daily ticket_seq instead of 409. Deploy already-fixed GRN select (no `unit_price_est`).
+Evidence: Static GRN book-price + kitchen-ticket tests. SQL catalog proofs in `grn_book_unit_price_test.sql`, `purchase_demand_allocation_workflow_test.sql` (ingredient `unit_cost = 25000`), `kds_completion_print_contract_test.sql`. Applied Production `20260818221612` + `20260818221613`.
+- [ ] Smoke: approving a purchase demand with a priced catalog ingredient succeeds; POS append during lunch does not 409 on kitchen ticket unique
+- [ ] Deploy working-tree GRN detail select that dropped `purchase_order_items.unit_price_est`
+
+## Expense period KPI sums the whole period
+
+State: doing
+Kind: fix
+Tier: T3
+Lane: finance
+Exit: `/finance/expenses` `Chi vận hành` and `Cần xử lý` KPIs come from `get_finance_expense_period_summary` for the selected period/location, not the first 100 list rows. List stays paged.
+Evidence: Static `finance-expenses` tests. SQL `finance_expense_period_summary_test.sql` (101 operating rows). Applied Production `20260818171912`. Types regenerated from Production.
+- [ ] Smoke: period with >100 operating rows shows full `Chi vận hành`, not page-1 sum
+
+## Free-item promotion kind for 5-star drink comps
+
+State: verify
+Kind: feature
+Tier: T3
+Lane: promotions/pos
+Exit: Owner can publish a code-only `free_item` campaign; waiter/cashier with `pos:use` pick N units already on the bill; money lands on item VND discounts; no auto apply; kitchen qty unchanged.
+Evidence: Isolated `corepack pnpm --filter @comtammatu/web exec node --import tsx --test tests/promotions-static.test.ts`, web typecheck, `lint:copy`, `lint:migration-lineage`, `lint:language-policy`, security-definer static tests green. Applied Production `20260818164309` and `20260818211203`.
+
+- [ ] Smoke: create `5SAO` free 1 drink; POS code with one drink line auto-applies; two drink SKUs open the picker; clear promo before merge/split
+
+UI Advisor Gate
+- Surface: `/promotions` + `/br/[branchId]/pos` discount sheet; route family: control promotions / station POS; plane: `control_surface` + `station_chrome`; change: kind + picker copy
+- Context: screen-context-map 2.4D + POS 2.1; actor: owner catalog, cashier/waiter redeem; job: staff-select N drinks on the bill after verifying 5-star
+- Journey: Owner DOC-WORKFLOW kind `Tặng món trên đơn` → POS `Mã giảm` → picker if multiple lines → item VND; recovery: clear promo then re-enter code
+- Information order: 1) campaign name/code 2) drink lines on bill 3) selected units / amount; exclude: Google review API, auto chip
+- Pattern: existing DOC-WORKFLOW + StationSheet picker; exemplar `promotion-form.tsx` + `discount-sheet.tsx`; data display: document + station sheet
+- States: draft/active campaign, preview needs pick, auto one-line, applied, cleared on ineligible cart
+- Block: none — reuse StationSheet Item/Checkbox picker
+- Responsive: Owner document; POS touch sheet
+- Verification: static promotions tests, SQL helper/grant test, `lint:copy`, `lint:migration-lineage`
+
+## Kept GRN qty amends PO
+
+State: verify
+Kind: feature
+Tier: T3
+Lane: inventory/procurement
+Exit: Over-receipt raises `purchase_order_items.quantity` so `po_applied_quantity` equals kept qty; shortage close uses `close_purchase_order` (`closed`); warehouse `grn_confirm` or `po_approve` may close; UI copy is keep-and-raise PO qty / receive-again or close remainder.
+Evidence: Isolated `corepack pnpm verify` green. Applied Production `20260818121714` then `20260818160643`.
+
+- [ ] Smoke: over-receipt amends PO qty and invoice can bill kept qty; close remainder cancels draft GRN; `unit_cost = 0` still blocked
+
+UI Advisor Gate
+- Surface: `/inventory/grn` + `/inventory/purchase-orders`; route family: control inventory; plane: `control_surface` + central touch GRN; change: copy + flow
+- Context: screen-context-map GRN; actor: warehouse/owner; job: book kept qty as PO truth
+- Journey: confirm GRN with over-receipt → PO line qty rises; shortage → next Auto-GRN or close remainder; recovery: reason dialog
+- Information order: 1) kept qty 2) GRN net unit price 3) shortage/excess outcome; exclude: PO money, VAT
+- Pattern: existing LIST + document overlay / NumberPadSheet; exemplar GRN line row; data display: document
+- States: draft over-receipt, draft shortage, confirmed received, PO closed
+- Block: none — existing GRN pad and PO reason dialog
+- Responsive: Owner overlay; central touch GRN
+- Verification: SQL kept-qty + close remainder, static copy tests, `lint:copy`
+
+## GRN books unit price; invoice is AP only
+
+State: verify
+Kind: feature
+Tier: T3
+Lane: inventory/valuation
+Exit: PO has no `unit_price_est` / `line_total`; GRN accepted lines require net `Đơn giá` quoted in `unit_cost_unit_id`; confirm books converted value into company WAC; confirming a supplier invoice does not append `invoice_reprice` or change `Định mức/phần` / food cost.
+Evidence: Isolated `corepack pnpm verify` green. Applied Production `20260818121714`. Types regenerated from Production.
+
+- [ ] Smoke: GRN confirm without unit price blocked; carton quote + loose persist books converted total; supplier-invoice confirm leaves WAC unchanged
+
+UI Advisor Gate
+- Surface: `/inventory/grn/[id]` + branch GRN line sheet; route family: control inventory / branch stock; plane: `control_surface` + `branch`; change: copy + behavior
+- Context: screen-context-map inventory GRN; actor: warehouse/owner; job: book receipt qty and net unit price in a named unit
+- Journey: open draft GRN → enter qty + `Đơn giá` + price unit → confirm; invoice later is AP/VAT; recovery: toast `grn_unit_price_required` / `grn_unit_price_unit_required`
+- Information order: 1) ingredient 2) qty + persist unit 3) `Đơn giá` + price unit 4) QC; exclude: VAT, PO estimate, finished goods
+- Pattern: DOC-WORKFLOW existing; exemplar: `apps/web/app/(protected)/inventory/grn/[id]/views/grn-line-row.tsx`; data display: document line Field + MoneyVndInput + unit Select
+- States: draft missing price, draft priced with quote unit, confirmed valued, invoice AP-only
+- Block: none — existing GRN line Field + MoneyVndInput / NumberPadSheet + Select
+- Responsive: Owner document dialog; branch AppSheet number pad
+- Verification: SQL GRN price + carton-vs-pack book total, static GRN/PO tests, `lint:copy`
+
 ## Transfer receive must keep company WAC
 
 State: verify
@@ -43,30 +140,30 @@ UI Advisor Gate
 - Responsive: banner button in ItemHeader; touch size via existing Button
 - Verification: SQL ACL/functiondef test, static action/UI tests, `lint:copy`, isolated `corepack pnpm verify`
 
-## Unstick same-day HĐĐT before Vietnam midnight
+## Unstick leftover HĐĐT (date drafts + uuid collision)
 
 State: doing
 Kind: fix
 Tier: T3
 Lane: finance/hddt
-Exit: Evening paid orders issue on the same Vietnam calendar day; Viettel is not called with yesterday's `invoiceIssuedDate`. Buyer/issue window is `min(paid_at + 2h, 23:55 VN of paid_at)`. Bulk mismatch requeue stays mismatch-only; worker fail-closes if the calendar day already changed.
-Evidence: Owner locked the window 2026-08-17. Production `enloyfnuerqgaqderbwb` applied `20260817222103` + `20260817222910`. Worker fail-closes `invoice_issue_date_not_today` still needs web deploy.
+Exit: 58 leftover signing invoices rebound to their Viettel originals; 58 misbound orders get new drafts queued with `allowBacklogSubmitDate`; 80 date-blocked drafts requeued the same way; paid `TC-260816-067-NHT` leaves `pending_payment`. New invoices still fail-close when the sale VN day is past. Same-day sales still send `paid_at`. Buyer window is `paid_at` from 22:00 VN, else `min(paid_at + 2h, 23:55 VN)`.
+Evidence: S-invoice lookup 2026-08-18: 58/58 leftovers found by order-id uuid, 0 by stored tax-invoice uuid; those numbers already sat on later Má Tư rows.
 
-- [ ] Apply the two HĐĐT migrations to Production `enloyfnuerqgaqderbwb` after dry-run equals exactly those files
-- [ ] Deploy web so the date guard is live; confirm tonight's queued jobs including the post-22:00 order
-- [ ] Owner/accountant: on `/finance/invoices` tap `Đưa tất cả lệch tổng vào hàng chờ` for today's mismatch only
-- [ ] Reconcile 90 `signing` / `invoice_write_failed` on Viettel by `provider_ref`; do not create a second invoice
+- [ ] Deploy web so only flagged leftover jobs send submit-time `invoiceIssuedDate`
+- [ ] Apply HĐĐT migrations `20260818101813`, `20260818161136`, then `20260818224935` to Production `enloyfnuerqgaqderbwb` after dry-run equals exactly those files
+- [ ] Cron issues 80 date leftovers + 58 cloned misbound drafts + `TC-260816-067-NHT`; leftover 58 already `issued` after SQL
+- [ ] Owner/accountant: on `/finance/invoices` tap `Đưa tất cả lệch tổng vào hàng chờ` for mismatch only
 
 UI Advisor Gate
 - Surface: `/finance/invoices`; route family: control finance; plane: `control_surface`; change: copy
 - Context: screen-context-map Finance HĐĐT queue; actor: Owner/Accountant; job: retry same-day drafts, reconcile unknown Viettel
-- Journey: open LIST attention → read error → same-day requeue or Viettel reconcile; recovery: toast, no second create
-- Information order: 1) attention jobs 2) date/error 3) requeue or reconcile; exclude: past-day auto-issue
+- Journey: open LIST attention → read error → requeue mismatch/date-blocked drafts or Viettel reconcile; recovery: toast, no second create
+- Information order: 1) attention jobs 2) date/error 3) requeue or reconcile; exclude: second Viettel create
 - Pattern: LIST existing; exemplar: `invoice-list.tsx`; data display: attention Item
 - States: queued, blocked, reconcile_required, issued
 - Block: none — existing attention banner copy only
 - Responsive/accessibility: same banner; confirm dialog labelled
-- Verification: SQL helper math, static issuer/date-guard tests, `lint:copy`
+- Verification: SQL helper math, `resolveSinvoiceIssuedAt` tests, static issuer tests, `lint:copy`
 
 ## Backfill sale consumption after today's recipe add
 
@@ -346,18 +443,6 @@ Exit: Choosing an ingredient on stock-request and purchase-request editors prefi
 Evidence: `suggested-order-qty.ts`, request/purchase loaders, editor `chooseIngredient` prefill, unit test; Branch 3 YCH smoke (`Gạo` prefill then cancel) during `[QA-SMOKE-20260810]`.
 
 - [ ] Smoke prefill on one purchase-request editor after login (needs Production credential; ephemeral QA accounts deleted).
-
-## Accept INV-9 consolidation design (ADR 0032)
-
-State: blocked
-Kind: qa
-Tier: T2
-Lane: inventory/procurement
-Exit: Owner Accepts or revises ADR 0032 so INV-9 build can start; no consolidation code ships before Accept.
-Evidence: `docs/plan/adr/0032-purchase-demand-consolidation-design.md`; ADR 0029 pointer.
-Blocker: Owner decision on junction naming and short-delivery rule.
-
-- [ ] Owner Accept / revise ADR 0032; only then open an INV-9 implementation outcome.
 
 ## Decide inventory valuation cutover and POS stock flag go-live
 

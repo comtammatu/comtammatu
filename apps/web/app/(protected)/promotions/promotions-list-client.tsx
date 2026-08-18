@@ -91,7 +91,7 @@ function getPromotionBenefit(row: PromotionListRow): string {
     return PROMOTIONS_VI.benefitFreeSide(row.freeSideQty ?? 1);
   }
   if (row.kind === "free_item") {
-    return PROMOTIONS_VI.benefitFreeItem(row.freeItemQty ?? 1);
+    return PROMOTIONS_VI.benefitFreeItem(row.freeItemQty);
   }
   return "—";
 }

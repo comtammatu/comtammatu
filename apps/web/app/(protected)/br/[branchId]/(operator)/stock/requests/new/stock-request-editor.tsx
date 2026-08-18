@@ -15,7 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Combobox, QuantityInput } from "@/components/form";
 import { useIsOnline } from "@/components/pwa-runtime";
@@ -98,7 +97,7 @@ export function StockRequestEditor({
   const isOnline = useIsOnline();
   const [isPending, startTransition] = useTransition();
   const [neededAt, setNeededAt] = useState(toLocalDateTime(initialNeededAt));
-  const [notes, setNotes] = useState(initialNotes ?? "");
+  const notes = initialNotes ?? "";
   const [idempotencyKey] = useState(() => crypto.randomUUID());
   const [lines, setLines] = useState<DraftLine[]>(
     initialLines.length > 0
@@ -307,16 +306,6 @@ export function StockRequestEditor({
               type="datetime-local"
               value={neededAt}
               onChange={(event) => setNeededAt(event.target.value)}
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="stock-request-notes">{copy.notes}</Label>
-            <Textarea
-              id="stock-request-notes"
-              value={notes}
-              maxLength={500}
-              onChange={(event) => setNotes(event.target.value)}
-              placeholder={copy.notesPlaceholder}
             />
           </div>
         </div>

@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   ArrowRight as IconArrowRight,
   Ban as IconBan,
-  Check as IconCheck,
   CircleCheck as IconCircleCheck,
   CircleX as IconCircleX,
 } from "lucide-react";
@@ -35,7 +34,6 @@ import {
 } from "@/components/data-table/data-table";
 import { AuditHistoryList } from "@/components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
-import { QuantityInput } from "@/components/form/domain-number-inputs";
 import { WasteReasonDropdown } from "../../_components/waste-reason-dropdown";
 import { WASTE_REASON_LABELS_VI } from "@comtammatu/shared/labels";
 import { tRoute, tTerm } from "../../_lib/dictionary";
@@ -113,7 +111,6 @@ export function StocktakeDetailClient({
   const [isPending, startTransition] = useTransition();
   const [session, setSession] = useState<StocktakeSession>(initialSession);
   const [lines, setLines] = useState<StocktakeLine[]>(initialLines);
-  const [savedLines, setSavedLines] = useState<Set<number>>(new Set());
 
   const statusBadge = getStatusBadgeMeta("inventory", session.status);
   const statusLabel = statusBadge.label;
@@ -152,29 +149,6 @@ export function StocktakeDetailClient({
     });
   }, [session.id, startTransition]);
 
-  function handleLineBlur(lineId: number, value: string) {
-    const num = Number(value);
-    if (value !== "" && Number.isFinite(num) && num >= 0) {
-      const currentLine = lines.find((l) => l.id === lineId);
-      if (currentLine && currentLine.counted_quantity !== num) {
-        startTransition(async () => {
-          const res = await updateStocktakeLine({
-            lineId,
-            countedQuantity: num,
-            varianceReason: currentLine.variance_reason ?? undefined,
-            reasonCode: (currentLine.reason_code as WasteReason | null) ?? null,
-          });
-          if (!res.success) {
-            toast.error(res.error ?? stocktakeDetailCopy.updateFailed);
-          } else {
-            setSavedLines((prev) => new Set(prev).add(lineId));
-            refreshData();
-          }
-        });
-      }
-    }
-  }
-
   function handleReasonCodeChange(lineId: number, reasonCode: WasteReason) {
     const currentLine = lines.find((l) => l.id === lineId);
     if (!currentLine || currentLine.counted_quantity == null) return;
@@ -190,7 +164,6 @@ export function StocktakeDetailClient({
       if (!res.success) {
         toast.error(res.error ?? stocktakeDetailCopy.updateFailed);
       } else {
-        setSavedLines((prev) => new Set(prev).add(lineId));
         setLines((prev) =>
           prev.map((line) =>
             line.id === lineId ? { ...line, reason_code: reasonCode } : line,
@@ -215,7 +188,6 @@ export function StocktakeDetailClient({
       if (!res.success) {
         toast.error(res.error ?? stocktakeDetailCopy.updateFailed);
       } else {
-        setSavedLines((prev) => new Set(prev).add(lineId));
         refreshData();
       }
     });
@@ -275,6 +247,9 @@ export function StocktakeDetailClient({
     });
   }
 
+  const allCounted = lines.length > 0 && countedCount === lines.length;
+  const countHref = `${routeBase}/${session.id}/count?branch=${session.branch_id}`;
+
   const stocktakeActions =
     session.status === "in_progress" ? (
       <>
@@ -286,9 +261,12 @@ export function StocktakeDetailClient({
           <IconBan className="mr-2 size-4" />
           {stocktakeDetailCopy.cancelAction}
         </Button>
+        <Button variant="outline" render={<Link href={countHref} />}>
+          {stocktakeDetailCopy.continueCounting}
+        </Button>
         <Button
           onClick={handleComplete}
-          disabled={isPending}
+          disabled={isPending || !allCounted}
         >
           <IconCircleCheck className="mr-2 size-4" />
           {stocktakeDetailCopy.completeAction}
@@ -398,9 +376,9 @@ export function StocktakeDetailClient({
       {session.status === "in_progress" && (
         <CountingPhase
           lines={lines}
-          savedLines={savedLines}
+          allCounted={allCounted}
+          countHref={countHref}
           isPending={isPending}
-          onLineBlur={handleLineBlur}
           onReasonBlur={handleReasonBlur}
           onReasonCodeChange={handleReasonCodeChange}
         />
@@ -487,146 +465,136 @@ export function StocktakeDetailClient({
 
 function CountingPhase({
   lines,
-  savedLines,
+  allCounted,
+  countHref,
   isPending,
-  onLineBlur,
   onReasonBlur,
   onReasonCodeChange,
 }: {
   lines: StocktakeLine[];
-  savedLines: Set<number>;
+  allCounted: boolean;
+  countHref: string;
   isPending: boolean;
-  onLineBlur: (lineId: number, value: string) => void;
   onReasonBlur: (lineId: number, reason: string) => void;
   onReasonCodeChange: (lineId: number, reasonCode: WasteReason) => void;
 }) {
-  const countingColumns: DataTableColumn<StocktakeLine>[] = [
+  if (!allCounted) {
+    return (
+      <AppSection
+        title={stocktakeDetailCopy.countFirstTitle}
+        description={stocktakeDetailCopy.countFirstDescription}
+      >
+        <Button render={<Link href={countHref} />}>
+          {stocktakeDetailCopy.continueCounting}
+        </Button>
+      </AppSection>
+    );
+  }
+
+  const reviewColumns: DataTableColumn<StocktakeLine>[] = [
     {
       key: "ingredient",
       header: tTerm("ingredient"),
       render: (line) => (
-        <div className="flex items-center gap-2 text-sm font-medium">
+        <span className="text-sm font-medium">
           {line.ingredients?.name ?? `#${line.ingredient_id}`}
-          {savedLines.has(line.id) && (
-            <span className="inline-flex items-center gap-2 text-xs text-success">
-              <IconCheck className="size-3" />
-              {stocktakeDetailCopy.saved}
-            </span>
-          )}
-        </div>
+        </span>
       ),
     },
     {
-      key: "unit",
-      header: FORM_VI.unit,
+      key: "system",
+      header: tTerm("systemQuantity"),
       render: (line) => (
-        <span className="text-sm text-muted-foreground">
-          {line.ingredients?.unit ?? inventoryCommon.noValue}
+        <span className="font-mono tabular-nums text-sm">
+          {line.system_quantity}
         </span>
       ),
     },
     {
       key: "counted",
-      header: stocktakeDetailCopy.countedQtyPlaceholder,
+      header: tTerm("countedQuantity"),
       render: (line) => (
-        <QuantityInput
-          key={`stocktake-desktop-${line.id}`}
-          defaultValue={
-            line.counted_quantity != null ? String(line.counted_quantity) : ""
-          }
-          placeholder="0"
-          className="h-8 w-24 tabular-nums"
-          onValueBlur={(value) => onLineBlur(line.id, value)}
-          maxFractionDigits={3}
-          disabled={isPending}
-        />
+        <span className="font-mono tabular-nums text-sm">
+          {line.counted_quantity ?? "—"}
+        </span>
       ),
+    },
+    {
+      key: "variance",
+      header: stocktakeDetailCopy.kpiVariance,
+      render: (line) => {
+        const variance =
+          line.variance ??
+          (line.counted_quantity == null
+            ? null
+            : line.counted_quantity - line.system_quantity);
+        return (
+          <span
+            className={cn(
+              "font-mono tabular-nums text-sm",
+              variance != null && variance !== 0
+                ? "text-warning"
+                : "text-muted-foreground",
+            )}
+          >
+            {variance == null ? "—" : variance}
+          </span>
+        );
+      },
     },
     {
       key: "reason",
       header: stocktakeDetailCopy.varianceReason,
-      render: (line) => (
-        <div className="flex min-w-56 flex-col gap-1">
-          <WasteReasonDropdown
-            value={(line.reason_code as WasteReason | null) ?? ""}
-            onChange={(value) => onReasonCodeChange(line.id, value)}
-            disabled={isPending || line.counted_quantity == null}
-            size="sm"
-            className="h-8 w-full"
-          />
-          <Input
-            type="text"
-            defaultValue={line.variance_reason ?? ""}
-            placeholder={stocktakeDetailCopy.optionalReasonPlaceholder}
-            className="h-8 w-full text-sm"
-            onBlur={(e) => onReasonBlur(line.id, e.target.value.trim())}
-            disabled={isPending || line.counted_quantity == null}
-          />
-        </div>
-      ),
+      render: (line) => {
+        const variance =
+          line.variance ??
+          (line.counted_quantity == null
+            ? 0
+            : line.counted_quantity - line.system_quantity);
+        if (variance === 0) {
+          return (
+            <span className="text-sm text-muted-foreground">
+              {inventoryCommon.noValue}
+            </span>
+          );
+        }
+        return (
+          <div className="flex min-w-56 flex-col gap-1">
+            <WasteReasonDropdown
+              value={(line.reason_code as WasteReason | null) ?? ""}
+              onChange={(value) => onReasonCodeChange(line.id, value)}
+              disabled={isPending}
+              size="sm"
+              className="h-8 w-full"
+            />
+            <Input
+              type="text"
+              defaultValue={line.variance_reason ?? ""}
+              placeholder={stocktakeDetailCopy.optionalReasonPlaceholder}
+              className="h-8 w-full text-sm"
+              onBlur={(e) => onReasonBlur(line.id, e.target.value.trim())}
+              disabled={isPending}
+            />
+          </div>
+        );
+      },
     },
   ];
 
   return (
     <AppSection
       className="overflow-hidden"
+      title={stocktakeDetailCopy.reviewTitle}
+      description={stocktakeDetailCopy.reviewDescription}
       contentFlush
-      description={stocktakeDetailCopy.sectionLineCount(lines.length)}
     >
       <DataTable
-        columns={countingColumns}
+        columns={reviewColumns}
         data={lines}
         getRowKey={(line) => line.id}
         emptyTitle={stocktakeDetailCopy.emptyCountTitle}
         emptyDescription={stocktakeDetailCopy.emptyCountDescription}
         emptyMode="no-data"
-        mobileCardRender={(line) => (
-          <div className="flex flex-col gap-2 px-4 py-3">
-            <div className="flex items-center justify-between gap-2">
-              <span className="truncate text-sm font-medium">
-                {line.ingredients?.name ?? `#${line.ingredient_id}`}
-              </span>
-              {savedLines.has(line.id) && (
-                <span className="inline-flex shrink-0 items-center gap-2 text-xs text-success">
-                  <IconCheck className="size-3" />
-                  {stocktakeDetailCopy.saved}
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {line.ingredients?.unit ?? inventoryCommon.noValue}
-            </p>
-            <div className="flex items-center gap-2">
-              <QuantityInput
-                key={`stocktake-mobile-${line.id}`}
-                defaultValue={
-                  line.counted_quantity != null
-                    ? String(line.counted_quantity)
-                    : ""
-                }
-                placeholder={stocktakeDetailCopy.countedQtyPlaceholder}
-                className="h-8 flex-1 tabular-nums"
-                onValueBlur={(value) => onLineBlur(line.id, value)}
-                maxFractionDigits={3}
-                disabled={isPending}
-              />
-            </div>
-            <WasteReasonDropdown
-              value={(line.reason_code as WasteReason | null) ?? ""}
-              onChange={(value) => onReasonCodeChange(line.id, value)}
-              disabled={isPending || line.counted_quantity == null}
-              size="sm"
-            />
-            <Input
-              type="text"
-              defaultValue={line.variance_reason ?? ""}
-              placeholder={stocktakeDetailCopy.reasonPlaceholder}
-              className="h-8 text-sm"
-              onBlur={(e) => onReasonBlur(line.id, e.target.value.trim())}
-              disabled={isPending || line.counted_quantity == null}
-            />
-          </div>
-        )}
       />
     </AppSection>
   );

@@ -57,18 +57,29 @@ test("Owner and branch GRN save persist the loose unit with received quantity", 
   );
 
   assert.match(actions, /entry_unit_id: line\.entryUnitId \?\? null/);
+  assert.match(actions, /unit_cost_unit_id: line\.unitCostUnitId \?\? null/);
   assert.match(saveHook, /entryUnitId: line\.entryUnitId/);
+  assert.match(saveHook, /unitCostUnitId: line\.unitCostUnitId/);
   assert.match(lineRow, /commitPackLoose\(/);
   assert.match(branchSheet, /numericField === "pack"/);
-  assert.match(lineRow, /Dư ngoài đơn \$\{formatGrnPersistQty\(excessQuantity, line\)\}/);
+  assert.match(lineRow, /excessShortText\(/);
+  assert.match(lineRow, /formatGrnPersistQty\(excessQuantity, line\)/);
 });
 
-test("SQL proof covers partial pack+loose, excess at 0, and same-unit over-receipt", () => {
+test("SQL proof covers partial pack+loose, excess amends PO qty, and same-unit over-receipt", () => {
   const sql = read("supabase/tests/grn_receive_base_qty_and_excess_test.sql");
   assert.match(sql, /received_quantity', 222/);
   assert.match(sql, /received_quantity', 246/);
   assert.match(sql, /received_quantity', 6/);
+  assert.match(sql, /'unit_cost', 1000/);
+  assert.match(sql, /'unit_cost_unit_id', v_base_unit/);
+  assert.match(sql, /'unit_cost_unit_id', v_pack_unit/);
+  assert.match(sql, /carton-quoted total expected 246000/);
   assert.match(sql, /partially_received/);
+  assert.match(sql, /close_purchase_order/);
+  assert.match(sql, /excess po_applied expected 10\.250/);
+  assert.match(sql, /excess PO qty expected 10\.250/);
+  assert.match(sql, /same-unit po_applied expected 6/);
   assert.match(sql, /po_status.*received|status = 'received'/);
   assert.doesNotMatch(sql, /grn_over_receipt_not_allowed/);
 });

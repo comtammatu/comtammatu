@@ -105,6 +105,24 @@ test("promotions migration writes existing discount columns via SECURITY DEFINER
   assert.match(freeItem, /promotion_item_selection_required/);
   assert.match(freeItem, /allow_auto IS NOT TRUE/);
   assert.match(freeItem, /Tính lại món tặng/);
+
+  const freeItemStaffQty = readRepo(
+    "supabase/migrations/20260818211203_promotion_free_item_staff_qty.sql",
+  );
+  assert.match(
+    freeItemStaffQty,
+    /free_item_qty IS NULL OR free_item_qty >= 1/,
+  );
+  assert.match(freeItemStaffQty, /needs_side_selection', true/);
+  assert.match(freeItemStaffQty, /jsonb_array_length[\s\S]*>= 1/);
+  assert.match(
+    freeItemStaffQty,
+    /v_sum_units < 1 OR v_sum_units > v_quota/,
+  );
+  assert.match(
+    freeItemStaffQty,
+    /p_free_item_qty IS NOT NULL AND p_free_item_qty < 1/,
+  );
 });
 
 test("promotions ACL is Owner-only with promo keys", () => {
@@ -159,6 +177,7 @@ test("Owner promotions LIST/DOC and POS Mã giảm surfaces exist", () => {
   assert.match(form, /kindConfigSection/);
   assert.match(form, /freeSideQty/);
   assert.match(form, /freeItemQty/);
+  assert.match(form, /freeItemQtyHint/);
   assert.match(form, /buyItemIds/);
   assert.match(form, /getItemIds/);
   assert.match(form, /BusinessDateField/);
@@ -179,6 +198,8 @@ test("Owner promotions LIST/DOC and POS Mã giảm surfaces exist", () => {
   assert.match(messages, /posOfferChip:/);
   assert.match(messages, /posPickSidesTitle:/);
   assert.match(messages, /posPickItemsTitle:/);
+  assert.match(messages, /posFreeItemQtyGroup:/);
+  assert.match(messages, /freeItemQtyHint:/);
 
   const kinds = readWeb("lib/promotions/kinds.ts");
   assert.match(kinds, /"free_side"/);
@@ -206,6 +227,9 @@ test("Owner promotions LIST/DOC and POS Mã giảm surfaces exist", () => {
   assert.match(sheet, /posPickSidesTitle/);
   assert.match(sheet, /posPickItemsTitle/);
   assert.match(sheet, /posAutoFreeItemHint/);
+  assert.match(sheet, /handleSetFreeItemUnits/);
+  assert.match(sheet, /selectedUnitsTotal >= 1/);
+  assert.match(sheet, /size="icon-touch"/);
   assert.match(sheet, /initialOffer/);
   assert.match(sheet, /onApplyFreeSide/);
   assert.match(sheet, /Item[\s\S]*variant="outline"/);

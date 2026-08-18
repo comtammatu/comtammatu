@@ -78,23 +78,15 @@ test("stocktake count respects session blind mode", () => {
   assert.doesNotMatch(stocktakeCountClientSource, /const blindMode = true/);
 });
 
-test("classic stocktake count inputs keep stable keys across saved refreshes", () => {
-  assert.match(
-    stocktakeDetailSource,
-    /key=\{`stocktake-desktop-\$\{line\.id\}`\}/,
-  );
-  assert.match(
-    stocktakeDetailSource,
-    /key=\{`stocktake-mobile-\$\{line\.id\}`\}/,
-  );
+test("stocktake review does not edit counts; pad uses the NumberPad wizard", () => {
+  assert.doesNotMatch(stocktakeDetailSource, /QuantityInput/);
   assert.doesNotMatch(
     stocktakeDetailSource,
-    /stocktake-desktop-\$\{line\.id\}-/,
+    /stocktake-desktop-|stocktake-mobile-/,
   );
-  assert.doesNotMatch(
-    stocktakeDetailSource,
-    /stocktake-mobile-\$\{line\.id\}-/,
-  );
+  assert.match(stocktakeCountClientSource, /StocktakeCountWizard/);
+  assert.doesNotMatch(stocktakeCountClientSource, /BlindCountingGrid/);
+  assert.doesNotMatch(stocktakeCountClientSource, /Round R|Blind mode/);
 });
 
 test("production create uses recipe output ratio without actual usage inputs", () => {

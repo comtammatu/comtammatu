@@ -26,8 +26,9 @@ const STOCKTAKE_MODES = [
 const startStocktakeSchema = z.object({
   branchId: z.coerce.number().int().positive(),
   locationId: z.coerce.number().int().positive().optional(),
-  mode: z.enum(STOCKTAKE_MODES),
-  blindMode: z.boolean().optional(),
+  /** UI always starts a blind on-hand count; RPC still stores a mode. */
+  mode: z.enum(STOCKTAKE_MODES).default("spot"),
+  blindMode: z.boolean().optional().default(true),
   thresholdPct: z.coerce.number().min(0).max(100).optional(),
   thresholdVnd: z.coerce.number().min(0).optional(),
 });
@@ -44,10 +45,10 @@ export type StocktakeStartResult = {
 /**
  * Start a new stocktake session. Wraps `start_stocktake` RPC.
  * Server seeds round-1 lines from stock_levels snapshot + ABC class.
- * Blind mode default per mode unless explicit override.
+ * UI always starts a blind on-hand count (`spot`, `blindMode=true`).
  */
 export async function startStocktake(
-  input: z.infer<typeof startStocktakeSchema>,
+  input: z.input<typeof startStocktakeSchema>,
 ): Promise<ActionResult<StocktakeStartResult>> {
   const parsed = startStocktakeSchema.safeParse(input);
   if (!parsed.success) {

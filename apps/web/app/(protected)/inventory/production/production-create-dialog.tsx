@@ -15,7 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Combobox } from "@/components/form/combobox";
 import { AppDialog } from "@/components/form/form-dialog";
@@ -82,7 +81,6 @@ export function ProductionCreateDialog({
   );
   const [recipeSpecId, setRecipeSpecId] = useState<number | undefined>();
   const [plannedQuantity, setPlannedQuantity] = useState("");
-  const [notes, setNotes] = useState("");
   const [context, setContext] = useState<{
     ingredients: ProductionRecipeIngredient[];
     maxProductionQuantity: number | null;
@@ -113,7 +111,6 @@ export function ProductionCreateDialog({
     if (!open) {
       setRecipeSpecId(undefined);
       setPlannedQuantity("");
-      setNotes("");
       setContext(null);
       setContextError(null);
     }
@@ -175,7 +172,6 @@ export function ProductionCreateDialog({
         plannedQuantity: planned,
         sourceLocationId,
         targetLocationId,
-        notes: notes || undefined,
       });
       if (!result.success || !result.data) {
         toast.error(result.error ?? "Không thể tạo Lệnh sản xuất.");
@@ -389,19 +385,6 @@ export function ProductionCreateDialog({
             </div>
           )}
         </div>
-
-        {/* Section 3: Ghi chú */}
-        <Field className="gap-1.5">
-          <FieldLabel htmlFor="production-notes">Ghi chú</FieldLabel>
-          <Textarea
-            id="production-notes"
-            value={notes}
-            onChange={(event) => setNotes(event.target.value)}
-            maxLength={500}
-            placeholder="Ghi chú cho ca sản xuất"
-            rows={2}
-          />
-        </Field>
       </div>
     </AppDialog>
   );

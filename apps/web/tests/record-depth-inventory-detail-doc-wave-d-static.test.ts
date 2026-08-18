@@ -68,16 +68,21 @@ test("Wave D waste approvals D0 queue uses AppSection cards, not LIST frame", ()
   );
 });
 
-test("Wave D stocktake count DOC keeps AppSection + DocumentFormFrame", () => {
+test("Wave D stocktake count DOC keeps DocumentFormFrame + NumberPad wizard", () => {
   const client = read(
     "app/(protected)/inventory/stocktake/[id]/count/count-client.tsx",
   );
 
   assert.match(client, /DocumentFormFrame/, "stocktake count: DocumentFormFrame");
-  assert.match(client, /AppSection/, "stocktake count: AppSection");
+  assert.match(client, /StocktakeCountWizard/, "stocktake count: NumberPad wizard");
   assert.doesNotMatch(
     client,
     /from "@comtammatu\/ui\/components\/frame"/,
     "stocktake count: no Frame line-card chrome",
+  );
+  assert.doesNotMatch(
+    client,
+    /BlindCountingGrid/,
+    "stocktake count: retired DataTable pad",
   );
 });

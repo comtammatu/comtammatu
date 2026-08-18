@@ -26,7 +26,6 @@ import {
 import {
   QuantityInput,
   FormDialog,
-  TextareaField,
 } from "@/components/form";
 import { messages } from "@lib/messages";
 import {
@@ -50,18 +49,6 @@ const stockCopy = messages.inventory.stock;
 
 export type QuickIssueType = "consumption";
 
-const quickIssueTypeOptions: {
-  value: QuickIssueType;
-  label: string;
-  reasonPlaceholder: string;
-}[] = [
-  {
-    value: "consumption",
-    label: stockCopy.quickIssue.options.consumption,
-    reasonPlaceholder: stockCopy.quickIssue.placeholders.consumption,
-  },
-];
-
 function createQuickIssueSchema(
   maxBaseQuantity: number,
   issueUnitOptions: IssueUnitOption[],
@@ -73,10 +60,6 @@ function createQuickIssueSchema(
         error: stockCopy.quickIssue.quantityPositive,
       }),
       entryUnitId: z.string().optional(),
-      reason: z
-        .string()
-        .trim()
-        .min(1, { error: stockCopy.quickIssue.reasonRequired }),
     })
     .refine(
       (value) => {
@@ -140,14 +123,10 @@ export function QuickStockIssueDialog({
       issueType: target.issueType,
       quantity: "",
       entryUnitId: defaultIssueUnit ? String(defaultIssueUnit.unitId) : "",
-      reason: "",
     }),
     [defaultIssueUnit, target.issueType],
   );
   const title = stockCopy.quickIssue.issueTitle;
-  const activeIssueType = quickIssueTypeOptions.find(
-    (option) => option.value === target.issueType,
-  );
 
   async function handleSubmit(values: QuickIssueFormValues) {
     const selectedIssueUnit = issueUnitOptions.find(
@@ -156,7 +135,6 @@ export function QuickStockIssueDialog({
     const draftRes = await createStockIssueDraft({
       branchId,
       issueType: values.issueType,
-      notes: stockCopy.quickIssue.draftNotes(target.ingredient.name),
     });
     if (!draftRes.success || !draftRes.data) {
       return {
@@ -171,7 +149,6 @@ export function QuickStockIssueDialog({
       ingredientId: target.ingredient.id,
       quantity: Number(values.quantity),
       entryUnitId: selectedIssueUnit?.unitId ?? null,
-      reason: values.reason.trim(),
     });
     if (!lineRes.success) {
       return {
@@ -343,15 +320,6 @@ export function QuickStockIssueDialog({
                 </div>
               )}
             </div>
-
-            <TextareaField
-              control={form.control}
-              name="reason"
-              label={FORM_VI.reason}
-              rows={3}
-              placeholder={activeIssueType?.reasonPlaceholder}
-              required
-            />
           </>
         );
       }}

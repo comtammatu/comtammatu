@@ -134,7 +134,7 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 - **Quy chuẩn UX/UI:**
   - Bottom nav **chi nhánh** (`branch_kind=branch`) theo vai trò:
     - Nhân viên (`cashier` / `chef` / `branch_staff`): `Hôm nay` · `Ca` · `Lịch ca` · `Hồ sơ`.
-    - Quản lý (`branch_manager`; owner khi vào shell CN): `Hôm nay` · `Ca` · `Đội` · `Kho`. Tab **Kho** land `/stock` = 4 cửa hàng hóa trước (Kho hàng / Yêu cầu hàng / Kiểm kê phiên / Hao hụt) rồi list phiếu giao nhận (YCH + nhận). Phân công đếm / Phiếu đếm vào từ **Đội**. Không Tiêu Hao SX. Badge queue live.
+    - Quản lý (`branch_manager`; owner khi vào shell CN): `Hôm nay` · `Ca` · `Đội` · `Kho`. Tab **Kho** land `/stock` = 4 cửa hàng hóa trước (Kho hàng / Yêu cầu hàng / Kiểm kê / Hao hụt) rồi list phiếu giao nhận (YCH + nhận). Phân công đếm / Phiếu đếm vào từ **Đội**. Không Tiêu Hao SX. Badge queue live.
     - Chuông = unread inbox. `Phản hồi` / `Kết ngày` trong `⋯` (theo ACL). **Không** `Điều hành` / `Giới hạn bán` trong overflow — giới hạn bán là CTA trên Hôm nay (cùng Drawer với `/menu-limits`). Avatar header vẫn mở Hồ sơ cho mọi role.
   - Hub CN thứ tự: trạng thái ca (ẩn khi `not_required`) → **Chỉ tiêu doanh thu** (manager-like; mốc = chấm trên Progress) → **Cần duyệt** (khi > 0; preview + Xem thêm) → trạm **POS** / **KDS** (2 cột phone) → hàng **Giới hạn bán** + **Đơn hàng**. Không Màn gọi số trên home. Queue **không** GRN/SX (D093). **Giới hạn bán** là một `AppDrawer` (home + `/menu-limits` + header POS cho QL/Owner); Trần bán = nhập số, Cho phép bán thêm = Switch. Chỉ `branch_manager` và `owner` thấy và áp dụng.
   - **Exception hẹp (manager-like CN):** panel Doanh thu tháng | ngày + tiến độ chỉ tiêu với chấm mốc thưởng (sau trạng thái ca, trước queue). Cashier/chef/staff không thấy. Hub trung tâm không hiện doanh thu. Không badge chỉ tiêu trên hàng Đơn hàng.
@@ -200,8 +200,8 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 - **POS:** Chiết khấu thủ công = `pos:apply_discount`; tiền vẫn ghi cột discount
   hiện có (ADR 0034). `free_side` = N phần ăn kèm **/ phần món chính**; auto khi
   mỗi dòng chỉ một ăn kèm get, StationSheet khi nhiều lựa chọn get / dòng.
-  `free_item` = N phần món **đã có trên hoá đơn** / đơn; chỉ nhập mã; StationSheet
-  khi nhiều dòng get.
+  `free_item` = nhân viên chọn số phần món **đã có trên hoá đơn** / đơn (tối đa
+  `free_item_qty` hoặc không giới hạn); chỉ nhập mã; luôn mở StationSheet.
 
 ---
 
@@ -232,13 +232,14 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 - **Luồng thao tác (Workflow):**
   - **Yêu cầu mua:** Kho trung tâm ghi nhu cầu mua ngoài; một yêu cầu có thể
     tạo nhiều đơn đặt hàng theo NCC.
-  - **Đơn mua hàng:** Kế toán/Owner tạo từ Yêu cầu mua, nhập giá và duyệt. Mỗi
-    PO thuộc đúng một NCC và tạo GRN theo từng lần giao.
+  - **Đơn mua hàng:** Kế toán/Owner tạo từ Yêu cầu mua và duyệt. PO không chứa
+    giá. Mỗi PO thuộc đúng một NCC và tạo GRN theo từng lần giao.
   - **Nhập kho:** `/inventory/grn` là hàng đợi **Chờ nhập hàng**. Mở GRN được
-    tạo từ PO, kiểm nhận vật lý, lưu nháp rồi xác nhận để cập nhật tồn và WAC.
+    tạo từ PO, kiểm nhận vật lý, nhập **Đơn giá** net, lưu nháp rồi xác nhận
+    để cập nhật tồn và WAC.
   - **Sản xuất:** `/inventory/production` là LIST hai tab (Lệnh / Công thức). Tạo lệnh bằng `FormDialog`; mở lệnh bằng `AppDialog variant="document"` (`?runId=&mode=`). Công thức CRUD bằng `FormDialog`; BOM hơn 12 dòng escalate `AppSheet` (`?recipeSpecId=`). Chọn công thức đang dùng và sản lượng (kèm tồn/sản lượng tối đa) -> tạo lệnh snapshot tại Bếp TT; kho xuất/nhập lấy mặc định, không bắt chọn lại “Bếp và vị trí” -> Bắt đầu -> Nhập thực dùng và sản lượng thực tế -> Hoàn thành tại Bếp TT -> Điều chuyển riêng nếu cần giao chi nhánh.
   - **Định mức món bán:** `/inventory/menu-recipes` là LIST mọi `menu_item` đang bán. Hàng = phủ định mức + giá vốn/phần theo WAC Kho gốc (Nguồn hàng), không phải `Giá vốn món` đã ghi sổ. BOM chỉ trong `FormDialog`. Món chưa có định mức phải nhìn thấy khi POS đang trừ kho.
-  - **Kiểm kê (Stocktake):** Tạo đợt kiểm kê -> Nhân viên đi đếm thực tế (kiểm kê mù - blind stocktake) -> Quản lý đối chiếu chênh lệch -> Xác nhận cân đối kho.
+  - **Kiểm kê (Stocktake):** Mở phiên → đếm số đang có (không hiện sổ) → đối soát lệch → hoàn tất để ghi tồn. Nhân viên được giao trong ca dùng **Đếm tồn** (phiếu đếm, không tự sửa tồn).
   - **Điều chuyển (Transfer):** Chỉ chọn warehouse của site nguồn và đích;
     không có same-branch Kho↔Bếp. Kho Tổng → Bếp TT / chi nhánh; Bếp TT →
     chi nhánh hoặc trả về Kho Tổng; chi nhánh ↔ chi nhánh / Bếp TT. Quyền
@@ -266,23 +267,23 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
     Bếp TT dùng cùng route để yêu cầu Kho Tổng.
   - On-hand CN “Cần bổ sung” CTA → Yêu cầu hàng (không mở GRN).
   - Chi tiết phân vai: `docs/ref/inventory.md`.
-  - `/br/[branchId]/stock` là **stock home** CN: 4 cửa hàng hóa (tồn / YCH / kiểm kê phiên / hao) **trên**, list phiếu fulfillment **dưới**. Không đặt Phân công đếm / Phiếu đếm làm cửa Kho (entry từ Đội). `/stock/transfer` store → redirect `/stock`. Pad nhận `/receive/[id]` tự mở phiên kiểm nhận khi `in_transit` (hiện danh sách đếm ngay, không splash CTA). YCH CN: tiến độ 4 bước (Gửi yêu cầu → Đã duyệt → Giao hàng → Xác nhận); không hiện chuẩn bị Kho Tổng/Bếp TT; chi tiết thao tác chỉ bước 1 và 4.
+  - `/br/[branchId]/stock` là **stock home** CN: 4 cửa hàng hóa (tồn / YCH / Kiểm kê / hao) **trên**, list phiếu fulfillment **dưới**. Không đặt Phân công đếm / Phiếu đếm làm cửa Kho (entry từ Đội). `/stock/transfer` store → redirect `/stock`. Pad nhận `/receive/[id]` tự mở phiên kiểm nhận khi `in_transit` (hiện danh sách đếm ngay, không splash CTA). YCH CN: tiến độ 4 bước (Gửi yêu cầu → Đã duyệt → Giao hàng → Xác nhận); không hiện chuẩn bị Kho Tổng/Bếp TT; chi tiết thao tác chỉ bước 1 và 4.
   - `/br/[branchId]/stock/on-hand` là LIST tồn touch-first. Attention theo `branch_kind`. Không Tiêu Hao SX trên primary CN.
   - `/br/[branchId]/stock/on-hand/[ingredientId]` là `DETAIL` touch-native: tồn/trạng thái → vị trí → biến động → ngưỡng; primary CTA kind-aware trên sticky footer; secondary trong `DropdownMenu`; back → on-hand. Không WAC/audit/control_surface chrome. `/stock/receive` chỉ dành cho phiếu chuyển nội bộ.
   - Branch `/br/[branchId]/stock/grn` ưu tiên nháp của người đang nhận hàng, sau đó là hàng đợi GRN có tìm kiếm/lọc trạng thái. Mỗi row chỉ hiển thị mã, NCC, ngày và trạng thái; chạm để tiếp tục/xem phiếu, bỏ nháp là action riêng có xác nhận. Không đưa tổng tiền, tên chi nhánh, `DataTable` hay long-press từ control_surface sang route này.
   - Branch `/br/[branchId]/stock/grn/new` và `/br/[branchId]/stock/grn/new/[supplierId]` chỉ là redirect tương thích: chi nhánh thường về Yêu cầu hàng; Kho Tổng/Bếp TT về Yêu cầu mua. Không tạo phiếu nhập ngoài PO.
   - Branch `/br/[branchId]/stock/grn/[id]` giữ review/receipt native: nháp cho phép kiểm nhận, thêm/sửa dòng trong bottom sheet rồi lưu/chốt; phiếu đã chốt chỉ hiển thị biên nhận và các dòng thực nhận. Không đưa audit, sửa sau chốt, stock correction, hóa đơn NCC, hoặc `GRNDetailClient` control_surface vào Branch.
   - Branch `/br/[branchId]/stock/stocktake` là `LIST` touch-native cho phiên kiểm kê của quản lý chi nhánh: ưu tiên phiên đang thực hiện, sau đó là lịch sử theo trạng thái. Không dùng `DataTable`, long-press drawer, branch picker, audit, hay action control_surface; `/stock/count` vẫn là phiếu đếm được giao riêng cho nhân viên.
-  - Branch `/br/[branchId]/stock/stocktake/new` là `DOC-WORKFLOW` touch-native: URL khóa chi nhánh, người quản lý chỉ chọn mode và vị trí, rồi action sticky mở phiên và chuyển thẳng sang count. Không lặp selector đổi chi nhánh hoặc `DocumentFormFrame` control_surface.
-  - Branch `/br/[branchId]/stock/stocktake/[id]/count` là `DOC-WORKFLOW` số đếm mù: first viewport là nguyên liệu đang đếm, đơn vị ghi nhận, number pad và lưu/đi tiếp; draft, zone lock và submit round giữ authority Server Action/RPC hiện có. Không tải hay hiển thị số tồn hệ thống trước khi phiên hoàn tất, và không đổi tablet thành bảng control_surface.
-  - Branch `/br/[branchId]/stock/stocktake/[id]` là `DETAIL` touch-native: phiên đang thực hiện chỉ review số đếm mù/đếm lại và action tiếp tục/chốt theo quyền; khi hoàn tất mới hiển thị hệ thống, thực đếm và chênh lệch theo từng nguyên liệu. Không đưa audit history, report CTA, WAC, giá trị tồn hoặc control_surface detail chrome vào Branch.
+  - Branch `/br/[branchId]/stock/stocktake/new` là `DOC-WORKFLOW` touch-native: URL khóa chi nhánh, kho warehouse mặc định, action sticky **Bắt đầu đếm** rồi sang count. Không chọn 5 chế độ daily/weekly/…, không lặp selector đổi chi nhánh hoặc `DocumentFormFrame` control_surface.
+  - Branch `/br/[branchId]/stock/stocktake/[id]/count` là `DOC-WORKFLOW` đếm số đang có: first viewport là nguyên liệu đang đếm, đơn vị ghi nhận, number pad và lưu/đi tiếp; draft, zone lock và submit round giữ authority Server Action/RPC hiện có. Không tải hay hiển thị số tồn hệ thống trước khi phiên hoàn tất, và không đổi tablet thành bảng control_surface.
+  - Branch `/br/[branchId]/stock/stocktake/[id]` là `DETAIL` touch-native: phiên đang thực hiện chỉ review tiến độ đếm và action tiếp tục/chốt theo quyền; khi hoàn tất mới hiển thị hệ thống, thực đếm và chênh lệch theo từng nguyên liệu. Không đưa audit history, report CTA, WAC, giá trị tồn hoặc control_surface detail chrome vào Branch.
   - Branch `/br/[branchId]/stock/issues` là `LIST` touch-native cho phiếu hao
     hụt (`writeoff`) đã tạo: scope chi nhánh chỉ lấy từ URL; tạo hao hụt mới
     qua `/stock/waste`, không picker `other`. Không lặp branch picker, tổng giá
     trị, export, `DataTable` hoặc audit control_surface.
   - Branch `/br/[branchId]/stock/issues/[id]` là `DETAIL` touch-native: nháp cho thêm/sửa/xóa một dòng nguyên liệu bằng bottom sheet, bắt buộc lý do và kiểm tra số lượng theo đơn vị đã chọn trước khi gọi Server Action; chốt/hủy là action sticky có xác nhận. Phiếu cuối chỉ đọc; WAC, giá trị, audit và correction thuộc control_surface.
   - Branch `/br/[branchId]/stock/consumption` là `LIST` touch-native với hai view tách bạch: ledger tiêu hao đã ghi và chứng từ thủ công cần rà soát. Row giữ loại nguồn (`pos`, `manual`, `hrm`, `import`, `other`), trạng thái và thời điểm; `/stock/consumption/[id]` chỉ mở detail đúng loại tiêu hao. Không import presenter control_surface hoặc đổi thành bảng desktop ở tablet.
-  - Branch `/br/[branchId]/stock/count-assignments` và `/stock/count-slips` là hai `LIST` touch-native riêng cho quản lý (route stock, **entry từ Đội**): màn phân công nhóm nguyên liệu theo nhân viên; màn phiếu đếm review từng chênh lệch rồi duyệt/yêu cầu đếm lại trong bottom sheet có action sticky. Khác `/stock/stocktake` (phiên kiểm đối chiếu). Không dẫn quản lý vào phiếu đếm cá nhân của chính họ và không dùng client control_surface.
+  - Branch `/br/[branchId]/stock/count-assignments` và `/stock/count-slips` là hai `LIST` touch-native riêng cho quản lý (route stock, **entry từ Đội**): màn phân công nhóm nguyên liệu theo nhân viên; màn phiếu đếm review từng chênh lệch rồi duyệt/yêu cầu đếm lại trong bottom sheet có action sticky. Khác `/stock/stocktake` (phiên Kiểm kê). Không dẫn quản lý vào phiếu đếm cá nhân của chính họ và không dùng client control_surface.
   - control_surface `/inventory/count-assignments` và `/inventory/count-slips` giữ management list desktop-responsive bằng `DataTable`; chỉnh phân công và review dòng phiếu mở trong `AppDialog` với action hiển thị rõ. Không dùng swipe, long-press, drawer hoặc presenter Branch.
   - Branch `/br/[branchId]/stock/reports` là `REPORT` touch-native: branch URL và tháng hiện tại khóa phạm vi; first viewport là chênh lệch tiêu hao warning/critical, sau đó là các nguyên liệu biến động nhiều nhất. Mỗi quantity giữ nguyên unit của nguyên liệu và row chạm vào tồn thực tương ứng. Không đưa biểu đồ, KPI/tổng quantity chéo đơn vị, công nợ NCC, giá vốn, branch/date picker, export, `DataTable`, audit hoặc presenter control_surface vào phone/tablet.
   - Branch `/br/[branchId]/stock/waste` là `DOC-WORKFLOW` touch-native: vị trí kho và cảnh báo cap ở màn chính, danh sách dòng hao hụt chỉ hiển thị nguyên liệu, số lượng/đơn vị, tier và giá trị dự kiến; mỗi dòng sửa trong bottom sheet để giữ ngữ cảnh tồn, lý do và bằng chứng. URL khóa branch, không dùng branch picker, `DocumentFormFrame`, `DataTable`, header/toolbar control_surface, audit hoặc tổng quan chi phí control_surface. Server Action/RPC vẫn là authority cho WAC, tồn, tier và approval.
@@ -297,8 +298,8 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 - **Actor:** Quản lý kho / NV nhận hàng.
 - **Job:** Ghi thực nhận → cập nhật tồn + cơ sở WAC.
 - **Goal:** Mở **Chờ nhập hàng** từ PO → ghi đúng → giải phóng xe.
-- **Workflow:** Auto-GRN khi PO `sent|approved|partially_received` (1 nháp hoạt động/PO; partial → nháp kế) → kiểm nhận + từ chối (lý do+ảnh; thùng + hộp lẻ khi đơn vị PO có neo) → hệ thống suy trạng thái/đối chiếu PO theo Đơn vị chuẩn (Kho không nhập giá) → `Xác nhận nhập kho` (WAC phần PO; dư giá `0`, **dư không chặn confirm**). Handoff PO→GRN dùng `returnTo` về `/inventory/purchase-orders?tab=orders&poId=&mode=view`; GRN→PO luôn kèm `tab=orders`.
-- **Ưu tiên data:** GRN/NCC/PO/YCM/kho/ngày/SL đặt·đã nhận·còn·thực·từ chối·áp dụng PO·thiếu·dư·ĐVT. Sau chốt = chỉ đọc. **Không:** giá mua, price variance, biểu đồ giá, quỹ tiền mặt trên bề mặt Kho.
+- **Workflow:** Auto-GRN khi PO `sent|approved|partially_received` (1 nháp hoạt động/PO; partial → nháp kế hoặc **Đóng phần còn lại**) → kiểm nhận + **Đơn giá** net + từ chối (lý do+ảnh; thùng + hộp lẻ khi đơn vị PO có neo) → hệ thống suy trạng thái/đối chiếu PO theo Đơn vị chuẩn → `Xác nhận nhập kho` (số giữ ghi sổ theo Đơn giá; giao dư thì tăng SL dòng PO; chốt chặn khi Đơn giá = 0). Handoff PO→GRN dùng `returnTo` về `/inventory/purchase-orders?tab=orders&poId=&mode=view`; GRN→PO luôn kèm `tab=orders`.
+- **Ưu tiên data:** GRN/NCC/PO/YCM/kho/ngày/SL đặt·đã nhận·còn·thực·từ chối·Đơn giá net theo đơn vị·áp dụng PO·thiếu·giữ thêm·ĐVT. Sau chốt = chỉ đọc. **Không:** VAT, giá ước tính PO, price-QC (so lệch HĐ), biểu đồ giá, quỹ tiền mặt.
 - **UX:** control_surface L0 = LIST host + addressable document dialog (UI theo `grn.status`; không dùng `mode=receive`). Confirm/task phụ (`ReasonConfirmDialog` / `FormDialog` / bottom Sheet) chồng lên document — không đóng document URL. Branch = `BranchOperatorPage` + panel + `AppDetailFooter`; không khung L0/picker CN. CTA xác nhận + Dialog chống nhầm.
 
 ---
@@ -309,7 +310,7 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 - **Actor:** `owner`.
 - **Job:** Đối soát GRN ↔ HĐ NCC; chỉ trả đúng thực nhận + đơn giá chứng từ.
 - **Goal:** Phát hiện lệch giá/lượng trước khi duyệt thanh toán.
-- **Workflow:** Chọn GRN cùng NCC (HĐ mới bắt buộc gắn GRN) → ngày + VAT progressive + đính kèm tùy chọn → đối soát trước VAT (±1đ; VAT không so hàng; dòng/dư giá `0` được thiếu trên HĐ) → xử lý lệch → đính kèm HĐ GTGT trước thanh toán → thanh toán/giảm nợ/phân bổ ứng trước (không trừ tiền lần 2). Trả hàng không tự giảm nợ.
+- **Workflow:** Chọn GRN cùng NCC (HĐ mới bắt buộc gắn GRN) → ngày + VAT progressive + đính kèm tùy chọn → đối soát trước VAT (±1đ; VAT không so hàng; HĐ không vượt số giữ đã vào sổ) → lệch đơn giá là review AP (không viết lại WAC) → đính kèm HĐ GTGT trước thanh toán → thanh toán/giảm nợ/phân bổ ứng trước (không trừ tiền lần 2). Trả hàng không tự giảm nợ.
 - **Ưu tiên data:** Loại HĐ, trước VAT/VAT/phải trả, liên kết GRN/PO, chênh lệch, trạng thái đối soát/công nợ/đính kèm, ứng trước NCC. **Không:** doanh thu bán, sơ đồ bàn, ca phục vụ.
 - **UX:** Width `xwide`; detail `Sheet` phải. URL state: `?invoiceId&mode=view|pay|credit|advance` / `?mode=create&grnId`. Một overlay tại một thời điểm. Footer action theo `procurement:invoice_match` / `finance:ap_pay`.
 
@@ -376,11 +377,11 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
   và AP `/finance/supplier-invoices` (§2.7). Không dựng dashboard bán hàng/POS.
 - **Archetype:** `DASHBOARD`.
 - **Actor:** `owner`.
-- **Job:** Công thức KQKD theo kỳ (hai dòng); tách số dư hiện có và giá trị tồn.
-- **Goal:** Doanh thu thuần sau giá vốn món / chi phí VH / biến động tồn; drill báo cáo chuyên biệt khi cần.
-- **Workflow:** Chọn kỳ (`Nay`…`Năm`) → phạm vi (`Tất cả`/`Công ty`/`Toàn bộ CN`/`CN`) → đọc 2 dòng công thức → tiền mặt hiện có (không theo bộ lọc) → giá trị tồn cuối kỳ → mở route ngoại lệ (ca lệch, bank match, thiếu giá vốn…).
-- **Ưu tiên data:** Hai dòng KPI kỳ; 3 card tiền mặt; giá trị tồn cuối kỳ; danh sách cần xử lý. Tháng/`mtd` + chỉ tiêu → Progress trên Doanh thu thuần; đua CN/pace/editor → `/finance/revenue` · `/finance/targets`. **Không lặp:** bảng tồn chi tiết (Inventory). Thiếu coverage giá vốn → không tính Lợi nhuận gộp/KQKD; chưa chi phí → không KQKD. **Không:** LN sau thuế khi chưa sổ/khóa sổ; nút order/KDS.
-- **UX:** `formatVND`. Desktop: dòng 1 = 3 card, dòng 2 = 4 card (khi có quyền tồn); tablet 2 cột; mobile 1 cột (`KpiCard`/`KpiRow`/`AppSection`). Chart chỉ `chart-1`…`chart-5`.
+- **Job:** Công thức KQKD theo kỳ (hai dòng); khối **Tài sản** gồm quỹ hiện có, tồn cuối kỳ, thiết bị (`capital`) và chi phí ban đầu.
+- **Goal:** Doanh thu thuần sau giá vốn món / chi vận hành / biến động tồn; drill báo cáo chuyên biệt khi cần.
+- **Workflow:** Chọn kỳ (`Nay`…`Năm`) → phạm vi (`Tất cả`/`Công ty`/`Toàn bộ CN`/`CN`) → đọc 2 dòng công thức → Tài sản (tiền mặt không theo bộ lọc, tồn cuối kỳ, thiết bị, chi phí ban đầu). Ngoại lệ xử lý trên `/` và list Giao dịch / Chi phí / HĐĐT — không hàng đợi trên landing.
+- **Ưu tiên data:** Hai dòng KPI kỳ; công thức quỹ; tồn cuối kỳ; Thiết bị; Chi phí ban đầu. Tháng/`mtd` + chỉ tiêu → Progress trên Doanh thu thuần; đua CN/pace/editor → `/finance/revenue` · `/finance/targets`. **Không lặp:** bảng tồn chi tiết (Inventory). Thiếu coverage giá vốn → không tính Lợi nhuận gộp/KQKD; chưa chi phí → không KQKD. **Không:** LN sau thuế khi chưa sổ/khóa sổ; nút order/KDS; mosaic GTGT; danh sách cần xử lý trên `/finance`.
+- **UX:** `formatVND`. Desktop: dòng 1 = 3 card, dòng 2 = 4 card (khi có quyền tồn); khối Tài sản = công thức quỹ rồi hàng KPI; tablet 2 cột; mobile 1 cột (`KpiCard`/`KpiRow`/`AppSection`). Chart chỉ `chart-1`…`chart-5`.
 
 ---
 
@@ -388,7 +389,7 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 
 - **Archetype:** `PUBLIC-WORKFLOW`.
 - **Đối tượng sử dụng chính:** Khách hàng đã thanh toán.
-- **Mục tiêu Nghiệp vụ (Why?):** Cho khách bổ sung thông tin doanh nghiệp và email nhận HĐĐT trong thời hạn tối đa hai giờ mà không yêu cầu thu ngân nhập dữ liệu.
+- **Mục tiêu Nghiệp vụ (Why?):** Cho khách bổ sung thông tin doanh nghiệp và email nhận HĐĐT trong thời hạn tối đa hai giờ (đơn từ 22:00 giờ VN phát hành ngay, QR hết hạn) mà không yêu cầu thu ngân nhập dữ liệu.
 - **Mục tiêu Người dùng (Goal):** Quét QR trên hoá đơn thanh toán, đối chiếu đơn và số tiền, tra cứu MST, kiểm tra tên đơn vị và địa chỉ, nhập email rồi xác nhận xuất HĐĐT.
 - **Luồng thao tác (Workflow):**
   1. Quét QR trên hoá đơn thanh toán.

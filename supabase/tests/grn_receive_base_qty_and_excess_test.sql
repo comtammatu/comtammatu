@@ -18,6 +18,7 @@ DECLARE
   v_grn bigint;
   v_line bigint;
   v_applied numeric;
+  v_po_qty numeric;
   v_po_status text;
   v_movement_count integer;
   v_movement_qty numeric;
@@ -167,9 +168,9 @@ BEGIN
   ) RETURNING id INTO v_po;
 
   INSERT INTO public.purchase_order_items (
-    tenant_id, po_id, ingredient_id, quantity, unit_price_est, entry_unit_id
+    tenant_id, po_id, ingredient_id, quantity, entry_unit_id
   ) VALUES (
-    v_tenant, v_po, v_ingredient, 10, 24000, v_pack_unit
+    v_tenant, v_po, v_ingredient, 10, v_pack_unit
   ) RETURNING id INTO v_po_line;
 
   UPDATE public.purchase_orders SET status = 'sent' WHERE id = v_po;
@@ -194,7 +195,9 @@ BEGIN
       'rejected_quantity', 0,
       'rejection_reason', NULL,
       'rejected_photo_url', NULL,
-      'entry_unit_id', v_base_unit
+      'entry_unit_id', v_base_unit,
+      'unit_cost', 1000,
+      'unit_cost_unit_id', v_base_unit
     ))
   );
   PERFORM public.confirm_goods_receipt_note(v_grn);
@@ -227,6 +230,26 @@ BEGIN
     RAISE EXCEPTION 'GRN RECEIVE BASE: partial total_cost expected 222000 got %', v_total;
   END IF;
 
+  PERFORM public.close_purchase_order(
+    v_po,
+    'Supplier will not ship remainder'
+  );
+  SELECT po.status INTO v_po_status
+  FROM public.purchase_orders AS po
+  WHERE po.id = v_po;
+  IF v_po_status IS DISTINCT FROM 'closed' THEN
+    RAISE EXCEPTION 'GRN RECEIVE BASE: close remainder expected closed got %', v_po_status;
+  END IF;
+  IF EXISTS (
+    SELECT 1
+    FROM public.goods_received_notes AS grn
+    WHERE grn.tenant_id = v_tenant
+      AND grn.po_id = v_po
+      AND grn.status = 'draft'
+  ) THEN
+    RAISE EXCEPTION 'GRN RECEIVE BASE: close remainder left a draft GRN';
+  END IF;
+
   -- Excess: 10 thùng remaining, receive 10 thùng + 6 hộp = 246 hộp.
   INSERT INTO public.purchase_orders (
     tenant_id, branch_id, supplier_id, po_number, status, created_by
@@ -236,9 +259,9 @@ BEGIN
   ) RETURNING id INTO v_po;
 
   INSERT INTO public.purchase_order_items (
-    tenant_id, po_id, ingredient_id, quantity, unit_price_est, entry_unit_id
+    tenant_id, po_id, ingredient_id, quantity, entry_unit_id
   ) VALUES (
-    v_tenant, v_po, v_ingredient, 10, 24000, v_pack_unit
+    v_tenant, v_po, v_ingredient, 10, v_pack_unit
   ) RETURNING id INTO v_po_line;
 
   UPDATE public.purchase_orders SET status = 'sent' WHERE id = v_po;
@@ -263,16 +286,21 @@ BEGIN
       'rejected_quantity', 0,
       'rejection_reason', NULL,
       'rejected_photo_url', NULL,
-      'entry_unit_id', v_base_unit
+      'entry_unit_id', v_base_unit,
+      'unit_cost', 1000,
+      'unit_cost_unit_id', v_base_unit
     ))
   );
   PERFORM public.confirm_goods_receipt_note(v_grn);
 
-  SELECT item.po_applied_quantity, item.total_cost, po.status
-  INTO v_applied, v_total, v_po_status
+  SELECT item.po_applied_quantity, item.total_cost, po.status, po_item.quantity
+  INTO v_applied, v_total, v_po_status, v_po_qty
   FROM public.grn_items AS item
   JOIN public.purchase_orders AS po
     ON po.id = v_po AND po.tenant_id = item.tenant_id
+  JOIN public.purchase_order_items AS po_item
+    ON po_item.id = item.purchase_order_item_id
+   AND po_item.tenant_id = item.tenant_id
   WHERE item.id = v_line;
 
   SELECT count(*), max(movement.quantity_change)
@@ -282,8 +310,11 @@ BEGIN
     AND movement.grn_id = v_grn
     AND movement.type = 'grn_receipt';
 
-  IF v_applied IS DISTINCT FROM 10 THEN
-    RAISE EXCEPTION 'GRN RECEIVE BASE: excess po_applied expected 10 got %', v_applied;
+  IF v_applied IS DISTINCT FROM 10.250 THEN
+    RAISE EXCEPTION 'GRN RECEIVE BASE: excess po_applied expected 10.250 got %', v_applied;
+  END IF;
+  IF v_po_qty IS DISTINCT FROM 10.250 THEN
+    RAISE EXCEPTION 'GRN RECEIVE BASE: excess PO qty expected 10.250 got %', v_po_qty;
   END IF;
   IF v_po_status IS DISTINCT FROM 'received' THEN
     RAISE EXCEPTION 'GRN RECEIVE BASE: excess PO status expected received got %', v_po_status;
@@ -292,8 +323,8 @@ BEGIN
     RAISE EXCEPTION 'GRN RECEIVE BASE: excess movement expected 1x246 got % x %',
       v_movement_count, v_movement_qty;
   END IF;
-  IF v_total IS DISTINCT FROM 240000::numeric THEN
-    RAISE EXCEPTION 'GRN RECEIVE BASE: excess total_cost expected 240000 got %', v_total;
+  IF v_total IS DISTINCT FROM 246000::numeric THEN
+    RAISE EXCEPTION 'GRN RECEIVE BASE: excess total_cost expected 246000 got %', v_total;
   END IF;
 
   -- Same-unit over-receipt: order 4, receive 6.
@@ -305,9 +336,9 @@ BEGIN
   ) RETURNING id INTO v_po;
 
   INSERT INTO public.purchase_order_items (
-    tenant_id, po_id, ingredient_id, quantity, unit_price_est, entry_unit_id
+    tenant_id, po_id, ingredient_id, quantity, entry_unit_id
   ) VALUES (
-    v_tenant, v_po, v_same_unit_ingredient, 4, 1000, v_base_unit
+    v_tenant, v_po, v_same_unit_ingredient, 4, v_base_unit
   ) RETURNING id INTO v_po_line;
 
   UPDATE public.purchase_orders SET status = 'sent' WHERE id = v_po;
@@ -332,23 +363,92 @@ BEGIN
       'rejected_quantity', 0,
       'rejection_reason', NULL,
       'rejected_photo_url', NULL,
-      'entry_unit_id', v_base_unit
+      'entry_unit_id', v_base_unit,
+      'unit_cost', 1000,
+      'unit_cost_unit_id', v_base_unit
     ))
   );
   PERFORM public.confirm_goods_receipt_note(v_grn);
 
-  SELECT item.po_applied_quantity, po.status
-  INTO v_applied, v_po_status
+  SELECT item.po_applied_quantity, item.total_cost, po.status, po_item.quantity
+  INTO v_applied, v_total, v_po_status, v_po_qty
   FROM public.grn_items AS item
   JOIN public.purchase_orders AS po
     ON po.id = v_po AND po.tenant_id = item.tenant_id
+  JOIN public.purchase_order_items AS po_item
+    ON po_item.id = item.purchase_order_item_id
+   AND po_item.tenant_id = item.tenant_id
   WHERE item.id = v_line;
 
-  IF v_applied IS DISTINCT FROM 4 THEN
-    RAISE EXCEPTION 'GRN RECEIVE BASE: same-unit po_applied expected 4 got %', v_applied;
+  IF v_applied IS DISTINCT FROM 6 THEN
+    RAISE EXCEPTION 'GRN RECEIVE BASE: same-unit po_applied expected 6 got %', v_applied;
+  END IF;
+  IF v_po_qty IS DISTINCT FROM 6 THEN
+    RAISE EXCEPTION 'GRN RECEIVE BASE: same-unit PO qty expected 6 got %', v_po_qty;
   END IF;
   IF v_po_status IS DISTINCT FROM 'received' THEN
     RAISE EXCEPTION 'GRN RECEIVE BASE: same-unit PO status expected received got %', v_po_status;
+  END IF;
+  IF v_total IS DISTINCT FROM 6000::numeric THEN
+    RAISE EXCEPTION 'GRN RECEIVE BASE: same-unit total_cost expected 6000 got %', v_total;
+  END IF;
+
+  -- Carton quote + persist loose: 246 hộp at 24000/thùng = 246000, not 246*24000.
+  INSERT INTO public.purchase_orders (
+    tenant_id, branch_id, supplier_id, po_number, status, created_by
+  ) VALUES (
+    v_tenant, v_branch, v_supplier,
+    '__GRN-PO-U-' || v_suffix, 'draft', v_owner
+  ) RETURNING id INTO v_po;
+
+  INSERT INTO public.purchase_order_items (
+    tenant_id, po_id, ingredient_id, quantity, entry_unit_id
+  ) VALUES (
+    v_tenant, v_po, v_ingredient, 10, v_pack_unit
+  ) RETURNING id INTO v_po_line;
+
+  UPDATE public.purchase_orders SET status = 'sent' WHERE id = v_po;
+
+  SELECT grn.id INTO STRICT v_grn
+  FROM public.goods_received_notes AS grn
+  WHERE grn.tenant_id = v_tenant AND grn.po_id = v_po AND grn.status = 'draft';
+
+  SELECT item.id INTO STRICT v_line
+  FROM public.grn_items AS item
+  WHERE item.tenant_id = v_tenant
+    AND item.grn_id = v_grn
+    AND item.purchase_order_item_id = v_po_line;
+
+  PERFORM public.save_goods_receipt_note(
+    v_grn,
+    pg_catalog.now(),
+    NULL,
+    pg_catalog.jsonb_build_array(pg_catalog.jsonb_build_object(
+      'line_id', v_line,
+      'received_quantity', 246,
+      'rejected_quantity', 0,
+      'rejection_reason', NULL,
+      'rejected_photo_url', NULL,
+      'entry_unit_id', v_base_unit,
+      'unit_cost', 24000,
+      'unit_cost_unit_id', v_pack_unit
+    ))
+  );
+  PERFORM public.confirm_goods_receipt_note(v_grn);
+
+  SELECT item.total_cost, po_item.quantity
+  INTO v_total, v_po_qty
+  FROM public.grn_items AS item
+  JOIN public.purchase_order_items AS po_item
+    ON po_item.id = item.purchase_order_item_id
+   AND po_item.tenant_id = item.tenant_id
+  WHERE item.id = v_line;
+
+  IF v_total IS DISTINCT FROM 246000::numeric THEN
+    RAISE EXCEPTION 'GRN RECEIVE BASE: carton-quoted total expected 246000 got %', v_total;
+  END IF;
+  IF v_po_qty IS DISTINCT FROM 10.250 THEN
+    RAISE EXCEPTION 'GRN RECEIVE BASE: carton-quoted PO qty expected 10.250 got %', v_po_qty;
   END IF;
 END;
 $$;

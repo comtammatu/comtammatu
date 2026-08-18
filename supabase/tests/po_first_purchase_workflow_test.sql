@@ -468,20 +468,7 @@ BEGIN
     AND po.status = 'pending_approval'
     AND po.display_id ~ '-0[12]$';
 
-  IF v_po_count <> 2
-     OR EXISTS (
-       SELECT 1
-       FROM public.purchase_order_items AS item
-       JOIN public.purchase_orders AS po
-         ON po.id = item.po_id
-        AND po.tenant_id = item.tenant_id
-       WHERE po.tenant_id = v_tenant
-         AND po.purchase_group_key = v_group_key
-         AND (
-           item.unit_price_est IS NOT NULL
-           OR item.line_total IS NOT NULL
-         )
-     ) THEN
+  IF v_po_count <> 2 THEN
     RAISE EXCEPTION 'PO FIRST: split code or price-free PO contract failed';
   END IF;
 

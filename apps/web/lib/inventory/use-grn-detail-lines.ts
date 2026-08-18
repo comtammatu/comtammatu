@@ -42,7 +42,8 @@ export function useGrnDetailLines(
       next[idx] =
         patchValue.actual != null ||
         patchValue.rejected != null ||
-        patchValue.persistToBaseFactor != null
+        patchValue.persistToBaseFactor != null ||
+        patchValue.unitCostToBaseFactor != null
           ? applyGrnLineQuantities(merged)
           : merged;
       return next;

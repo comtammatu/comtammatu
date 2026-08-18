@@ -26,6 +26,31 @@ test("stocktake list exposes one create entrypoint", () => {
   assert.doesNotMatch(source, /<FormDialog/);
 });
 
+test("stocktake starts one on-hand count without a mode picker", () => {
+  const ownerNew = read(
+    "app/(protected)/inventory/stocktake/new/new-session-client.tsx",
+  );
+  const ownerCount = read(
+    "app/(protected)/inventory/stocktake/[id]/count/count-client.tsx",
+  );
+  const ownerDetail = read(
+    "app/(protected)/inventory/stocktake/[id]/stocktake-detail-client.tsx",
+  );
+  const inventoryMessages = read("lib/messages/inventory.ts");
+
+  assert.doesNotMatch(ownerNew, /StocktakeModeSelector|modeTitle/);
+  assert.match(ownerNew, /startStocktake\(\{\s*branchId,\s*locationId:/);
+  assert.match(ownerCount, /StocktakeCountWizard/);
+  assert.doesNotMatch(ownerCount, /BlindCountingGrid|Round R|Blind mode/);
+  assert.match(ownerDetail, /continueCounting/);
+  assert.doesNotMatch(ownerDetail, /QuantityInput|handleLineBlur/);
+  assert.match(
+    inventoryMessages,
+    /countMode: \(_round: number\) => "Đếm tồn"/,
+  );
+  assert.doesNotMatch(inventoryMessages, /Kiểm kê đối chiếu|Đếm mù/);
+});
+
 test("Branch keeps separate roles; Owner hubs consumption and waste as tabs", () => {
   const operatorConsumption = read(
     "app/(protected)/br/[branchId]/(operator)/stock/consumption/page.tsx",
@@ -56,7 +81,7 @@ test("Branch keeps separate roles; Owner hubs consumption and waste as tabs", ()
   assert.match(ownerConsumption, /scope="hub"/);
   assert.match(ownerConsumption, /detailBasePath="\/inventory\/consumption"/);
   assert.match(dictionary, /issues: \{ long: "Hao hụt" \}/);
-  assert.match(dictionary, /stocktake: \{ short: "Kiểm kê", long: "Kiểm kê đối chiếu" \}/);
+  assert.match(dictionary, /stocktake: \{ short: "Kiểm kê", long: "Kiểm kê" \}/);
 });
 
 test("Owner surface stock quick issue stays on consumption while Branch lookup stays read-only", () => {

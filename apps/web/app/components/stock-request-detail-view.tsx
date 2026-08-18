@@ -144,7 +144,9 @@ function RequestMetaSections({ data }: { data: StockRequestDetailData }) {
                 ? formatVNDateTime(data.neededAt)
                 : copy.notRequired,
             },
-            { term: copy.notes, description: data.notes || "—" },
+            ...(data.notes
+              ? [{ term: copy.notes, description: data.notes }]
+              : []),
             {
               term: copy.referenceCode,
               description: (
@@ -267,7 +269,9 @@ function BranchRequestDetailContent({
                 ? formatVNDateTime(data.neededAt)
                 : copy.notRequired,
             },
-            { term: copy.notes, description: data.notes || "—" },
+            ...(data.notes
+              ? [{ term: copy.notes, description: data.notes }]
+              : []),
             {
               term: copy.referenceCode,
               description: (

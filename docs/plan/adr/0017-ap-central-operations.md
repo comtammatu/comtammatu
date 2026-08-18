@@ -1,6 +1,6 @@
 # ADR 0017 — AP and central operations
 
-**Status:** Accepted
+**Status:** Accepted (amended by ADR 0041 for §9 and §13)
 
 **Scope:** Production roadmap for CTCP Chén Sứ in `comtammatu`.
 
@@ -32,8 +32,9 @@ and statutory accounting.
    runtime does not regain branch-level production.
 9. Goods supplier invoices may allocate multiple confirmed GRNs/POs from one
    supplier. Matching uses allocated receipt quantities and the invoice-line
-   price/discount. PO and GRN prices are not commercial price sources; header
-   subtotal, document discount, VAT, and total reconcile within `±1 VND`.
+   price/discount for AP and VAT. Header subtotal, document discount, VAT,
+   and total reconcile within `±1 VND`. GRN net unit price is the inventory
+   book price (ADR 0041); invoice line price does not restate stock.
 10. Service supplier invoices have no GRN allocation and require a manual,
     reasoned document verification before payment.
 11. Accountant may create invoices, recompute matching, verify service
@@ -42,10 +43,9 @@ and statutory accounting.
 12. Any payment amount not allocated to invoices remains visible as a supplier
     advance. Later allocation is append-only and never creates another cash or
     bank movement.
-13. Confirmed goods invoices settle the difference between provisional receipt
-    value and effective net acquisition value through an append-only valuation
-    subledger. The settlement changes value only, never receipt quantity or
-    historical movement snapshots.
+13. Confirmed goods invoices do not change inventory value, company WAC,
+   menu-recipe portion cost, or recorded food cost (ADR 0041). Receipt
+   quantity and historical movement snapshots stay immutable.
 14. Open periods receive value adjustments at the economic event date.
     Soft-closed and hard-closed periods remain unchanged; late differences post
     in the current period. This operational treatment does not create a

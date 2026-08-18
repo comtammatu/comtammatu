@@ -336,10 +336,6 @@ export function BranchStocktakeDetailClient({
                     label: "Người tạo",
                     value: session.createdBy,
                   },
-                  {
-                    label: "Kiểm kê mù",
-                    value: session.blindMode ? "Có" : "Không",
-                  },
                 ]}
               />
               {session.notes ? (

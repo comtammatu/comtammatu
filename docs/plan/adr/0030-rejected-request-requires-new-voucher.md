@@ -65,4 +65,4 @@ Implementation is open work in `tasks/todo.md`.
 
 ## Canonical
 
-- `docs/ref/inventory.md` §11, D093, D099, ADR 0029
+- `docs/ref/inventory.md` §11, D093, D099

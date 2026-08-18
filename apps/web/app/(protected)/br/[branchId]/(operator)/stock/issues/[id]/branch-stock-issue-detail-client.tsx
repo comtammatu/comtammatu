@@ -42,7 +42,6 @@ import {
 } from "@comtammatu/ui/components/select";
 
 import { toast } from "@comtammatu/ui/components/sonner";
-import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Combobox, QuantityInput } from "@/components/form";
 import {
   AppDetailFooter,
@@ -55,7 +54,6 @@ import {
   BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME,
   BranchOperatorControlBar,
   BranchOperatorDetailList,
-  BranchOperatorInlineState,
   BranchOperatorPage,
   BranchOperatorPanel,
   BranchOperatorStatusStrip,
@@ -123,7 +121,6 @@ function BranchStockIssueLineSheet({
   const [ingredientId, setIngredientId] = useState("");
   const [quantity, setQuantity] = useState("");
   const [entryUnitId, setEntryUnitId] = useState("");
-  const [reason, setReason] = useState("");
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -142,7 +139,6 @@ function BranchStockIssueLineSheet({
           ? String(defaultUnit.unitId)
           : "",
     );
-    setReason(line?.reason ?? "");
     setPhotoUrl(line?.photoUrls[0] ?? null);
   }, [ingredients, line, open]);
 
@@ -181,10 +177,6 @@ function BranchStockIssueLineSheet({
       toast.error(issuesCopy.lineUnitRequired);
       return;
     }
-    if (!reason.trim()) {
-      toast.error(issuesCopy.lineReasonRequired);
-      return;
-    }
     if (
       getIssueBaseQuantity(parsedQuantity, selectedUnit) >
       selectedIngredient.currentQuantity + 1e-9
@@ -199,7 +191,7 @@ function BranchStockIssueLineSheet({
         ingredientId: selectedIngredient.id,
         quantity: parsedQuantity,
         entryUnitId: selectedUnit.unitId,
-        reason: reason.trim(),
+        reason: line?.reason?.trim() || undefined,
         ...(showConsumptionPhoto
           ? { photoUrls: photoUrl ? [photoUrl] : [] }
           : {}),
@@ -333,18 +325,6 @@ function BranchStockIssueLineSheet({
           </Field>
         </div>
 
-        <Field>
-          <FieldLabel htmlFor="branch-stock-issue-reason">
-            {issuesCopy.reasonLabel}
-          </FieldLabel>
-          <Textarea
-            id="branch-stock-issue-reason"
-            rows={3}
-            value={reason}
-            placeholder={issuesCopy.reasonPlaceholder}
-            onChange={(event) => setReason(event.target.value)}
-          />
-        </Field>
         {showConsumptionPhoto ? (
           <Field>
             <FieldLabel>{issuesCopy.evidencePhotoLabel}</FieldLabel>
@@ -390,9 +370,6 @@ export function BranchStockIssueDetailClient({
     lines,
     canManage: data.canManage,
   });
-  const missingReasonCount = lines.filter(
-    (line) => !(line.reason ?? "").trim(),
-  ).length;
 
   useEffect(() => {
     setIssue(data.issue);
@@ -532,15 +509,6 @@ export function BranchStockIssueDetailClient({
               ) : undefined
             }
           >
-            {isDraft && lines.length > 0 && missingReasonCount > 0 ? (
-              <BranchOperatorInlineState
-                icon={IconFileText}
-                tone="warning"
-                title="Cần bổ sung lý do"
-                description={`Còn ${missingReasonCount} dòng chưa có lý do xuất kho.`}
-              />
-            ) : null}
-
             {lines.length === 0 ? (
               <AppEmptyState
                 compact
@@ -572,10 +540,11 @@ export function BranchStockIssueDetailClient({
                           <ItemTitle className="line-clamp-none text-sm font-semibold">
                             {line.ingredientName}
                           </ItemTitle>
-                          <ItemDescription className="line-clamp-none text-xs">
-                            {line.reason?.trim() ||
-                              issuesCopy.lineReasonRequired}
-                          </ItemDescription>
+                          {line.reason?.trim() ? (
+                            <ItemDescription className="line-clamp-none text-xs">
+                              {line.reason.trim()}
+                            </ItemDescription>
+                          ) : null}
                         </ItemContent>
                         <ItemActions className="shrink-0">
                           <Badge

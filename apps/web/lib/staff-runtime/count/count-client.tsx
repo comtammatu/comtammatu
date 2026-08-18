@@ -35,8 +35,8 @@ import {
 } from "@comtammatu/ui/components/select";
 
 import { toast } from "@comtammatu/ui/components/sonner";
-import { Textarea } from "@comtammatu/ui/components/textarea";
 import { formatQty } from "@lib/inventory/format";
+import { messages } from "@lib/messages";
 import { FormattedNumberInput } from "@/components/form/formatted-number-input";
 import {
   AppEmptyState,
@@ -496,22 +496,6 @@ export function CountSlipClient({
                 </span>
               </p>
             ) : null}
-            <div className="flex min-w-0 flex-col gap-1.5">
-              <Label htmlFor={`${inputId}-note`}>Ghi chú</Label>
-              <Textarea
-                id={`${inputId}-note`}
-                value={entry?.note ?? ""}
-                disabled={locked || isPending}
-                maxLength={500}
-                onChange={(event) =>
-                  updateLine(assignment.ingredientId, {
-                    note: event.target.value,
-                  })
-                }
-                placeholder="Ví dụ: bao rách, thiếu 1 chai..."
-                className="min-h-24 text-base md:text-sm"
-              />
-            </div>
           </div>
         ) : null}
       </AppSheet>
@@ -551,7 +535,7 @@ export function CountSlipClient({
       ) : null}
 
       {!activeGroup ? (
-        <Panel title="Kiểm kê tồn">
+        <Panel title={messages.employee.count.title}>
           <AppEmptyState
             title="Chọn kho để bắt đầu"
             description="Chọn kho ở trên để xem danh sách nguyên liệu cần đếm."

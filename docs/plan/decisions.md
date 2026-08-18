@@ -88,10 +88,10 @@ entry.
 **Net effect:** GRN is Central Supply/Kitchen only; Branch requests stock and receives transfers; no Branch production/GRN. Canonical: `docs/ref/inventory.md` §11.
 
 ## D099: Nhu cầu mua and supplier selection
-**Net effect:** Warehouse drafts Nhu cầu mua without NCC/price; when chỉ có một NCC active then auto PO; Kế toán chỉ chọn hoặc chia số lượng khi có nhiều NCC; lines bị chặn để bổ sung mapping before creating PO/NCC; GRN nháp/PO carry no price; Hóa đơn NCC is the price authority. Canonical: `docs/ref/inventory.md`, ADR 0017.
+**Net effect:** Warehouse drafts Nhu cầu mua without NCC/price; when chỉ có một NCC active then auto PO; Kế toán chỉ chọn hoặc chia số lượng khi có nhiều NCC; lines bị chặn để bổ sung mapping before creating PO/NCC; one GRN nháp/PO; PO carries no commercial price; kept GRN qty amends the PO line (ADR 0042); GRN net unit price is the inventory book price; Hóa đơn NCC is AP and VAT only. Canonical: `docs/ref/inventory.md`, ADR 0017, ADR 0041, ADR 0042.
 
 ## D101: Inventory valuation settlement
-**Net effect:** Purchased SKUs share one company WAC across stock-bearing sites (ADR 0040); finished goods are recipe-produced only and keep a production pool. GRN documents stay unpriced until the supplier invoice; origin provisional uses last invoice/WAC. Valuation subledger append-only settles the invoice delta (never a second quantity, never a movement snapshot rewrite); legacy variance posts as `legacy_purchase_price_variance`. Canonical: `docs/ref/inventory.md`, ADR 0017, ADR 0040.
+**Net effect:** Purchased SKUs share one company WAC across stock-bearing sites (ADR 0040); finished goods are recipe-produced only and keep a production pool. Valuation subledger append-only; never a second quantity. GRN confirm books net unit price into company WAC (ADR 0041). Kept GRN quantity amends the PO line so AP can bill the receipt (ADR 0042). Supplier invoice confirm does not reprice stock. Credit/return paths may still post `legacy_purchase_price_variance`. Canonical: `docs/ref/inventory.md`, ADR 0017, ADR 0040, ADR 0041, ADR 0042.
 
 ## D103: Food-delivery platform onboarding before adapters
 **Net effect:** Food-delivery adapters ship only after partner approval and a signed contract; until then, onboarding/readiness only. Canonical: `docs/runbooks/food-delivery-platform-onboarding.md`, `docs/ref/branch-operations.md`.

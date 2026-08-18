@@ -15,14 +15,63 @@ test("generic operational notes are not collected by new records", () => {
   const wasteForm = read(
     "app/(protected)/inventory/waste/waste-operational-form.tsx",
   );
+  const wasteLineSheet = read(
+    "app/(protected)/br/[branchId]/(operator)/stock/waste/_components/waste-line-sheet.tsx",
+  );
+  const issueCreate = read(
+    "app/(protected)/inventory/issues/issue-create-dialog.tsx",
+  );
+  const consumptionCreate = read(
+    "app/(protected)/br/[branchId]/(operator)/stock/consumption/branch-consumption-list-client.tsx",
+  );
+  const stockRequestEditor = read(
+    "app/(protected)/br/[branchId]/(operator)/stock/requests/new/stock-request-editor.tsx",
+  );
+  const productionCreate = read(
+    "app/(protected)/inventory/production/production-create-dialog.tsx",
+  );
+  const recipeLines = read(
+    "app/(protected)/inventory/_components/ingredient-lines-editor.tsx",
+  );
+  const countClient = read("lib/staff-runtime/count/count-client.tsx");
+  const issueDetail = read(
+    "app/(protected)/inventory/issues/[id]/issue-detail-client.tsx",
+  );
+  const branchIssue = read(
+    "app/(protected)/br/[branchId]/(operator)/stock/issues/[id]/branch-stock-issue-detail-client.tsx",
+  );
+  const quickIssue = read(
+    "app/(protected)/inventory/stock/quick-stock-issue-dialog.tsx",
+  );
 
   assert.doesNotMatch(
     purchaseRequests,
     /purchase-request-notes|purchase-order-notes|poNotes|setNotes/,
   );
   assert.doesNotMatch(supplierDialog, /name="notes"|values\.notes/);
-  assert.doesNotMatch(wasteForm, /slipNotesLabel|notes:\s*notes/);
-  assert.match(wasteForm, /lineNotesLabel/);
+  assert.doesNotMatch(
+    wasteForm,
+    /slipNotesLabel|lineNotesLabel|notes:\s*notes/,
+  );
+  assert.doesNotMatch(wasteLineSheet, /lineNotesLabel/);
+  assert.doesNotMatch(issueCreate, /FORM_VI\.notes|TextareaField/);
+  assert.doesNotMatch(
+    consumptionCreate,
+    /FORM_VI\.notes|branch-consumption-notes|setNotes/,
+  );
+  assert.doesNotMatch(
+    stockRequestEditor,
+    /stock-request-notes|copy\.notesPlaceholder/,
+  );
+  assert.doesNotMatch(productionCreate, /production-notes|setNotes/);
+  assert.doesNotMatch(recipeLines, /FORM_VI\.notes|noteName/);
+  assert.doesNotMatch(countClient, /inputId\}-note|Ghi chú/);
+  assert.doesNotMatch(issueDetail, /name="reason"|lineReasonRequired/);
+  assert.doesNotMatch(
+    branchIssue,
+    /branch-stock-issue-reason|lineReasonRequired|missingReasonCount|Cần bổ sung lý do/,
+  );
+  assert.doesNotMatch(quickIssue, /TextareaField|draftNotes|reasonRequired/);
 });
 
 test("rejections and audit-sensitive changes require a reason at both boundaries", () => {

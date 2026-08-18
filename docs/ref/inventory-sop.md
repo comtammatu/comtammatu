@@ -12,7 +12,8 @@
 - **Bổ sung CN:** phiếu **Yêu cầu hàng** → fulfill trung tâm → DC → CN nhận.
   Nguồn dòng = `ingredients.default_fulfill_site_kind` (Owner gán trên catalog;
   checklist sẵn sàng tại `/inventory/ingredients`).
-- Kho trên GRN nháp chỉ SL / đơn vị / từ chối (+ lý do/ảnh). Đơn giá trên PO.
+- Kho trên GRN nháp ghi SL / đơn vị / **Đơn giá** net (chưa VAT) / từ chối
+  (+ lý do/ảnh). PO không chứa giá thương mại.
 - Chi nhánh **không** GRN UI, **không** production, **không** PO/giá mua chuỗi.
 - Không dùng tài liệu này để suy ra quyền.
 
@@ -21,22 +22,27 @@
 ### 2a. Happy path — Kho Tổng / Bếp TT
 
 1. Kho tạo **Yêu cầu mua** tại site nhận trung tâm.
-2. Kế toán hoặc Owner tạo PO theo từng NCC, nhập giá và duyệt (`draft → sent`).
+2. Kế toán hoặc Owner tạo PO theo từng NCC và duyệt (`draft → sent`). PO
+   không nhập giá.
 3. Khi PO chuyển `sent` (hoặc `approved` / `partially_received`), hệ thống **tự
    tạo** đúng một GRN nháp **Chờ nhập hàng** (Auto-GRN). Một PO chỉ có một GRN
    nháp hoạt động tại một thời điểm. Nút «Tạo phiếu nhập» trên PO chỉ là recovery
    / idempotent — không phải bước quy trình chính.
-4. Kho mở danh sách GRN, nhập thực nhận và từ chối; lý do + ảnh là bắt buộc khi
-   có từ chối.
-5. Kho xác nhận GRN. Phần áp dụng PO dùng giá PO; phần dư ngoài đơn nhập giá `0`
-   và **không chặn chốt**. Ví dụ đặt 10 thùng: giao 9 thùng 6 hộp → áp dụng
-   9 thùng 6 hộp, PO `partially_received`, GRN nháp kế cho phần còn; giao
-   10 thùng 6 hộp → áp dụng 10 thùng, 6 hộp tồn giá `0`, PO `received`.
-   Cùng đơn vị (đặt 4, nhận 6) cũng chốt được: áp dụng 4, dư 2 giá `0`.
+4. Kho mở danh sách GRN, nhập thực nhận, **Đơn giá** net (gắn đơn vị giá, không
+   nhầm thùng/hộp), và từ chối; lý do + ảnh là bắt buộc khi có từ chối.
+5. Kho xác nhận GRN. Chốt bắt buộc Đơn giá > 0 trên dòng có số nhận hợp lệ.
+   Số giữ lại ghi sổ theo Đơn giá phiếu nhập và **viết lại số lượng dòng đơn mua** khi
+   NCC giao nhiều hơn phần còn. Ví dụ đặt 10 thùng: giao 9 thùng 6 hộp →
+   áp dụng 9 thùng 6 hộp, PO `partially_received`, GRN nháp kế cho phần còn
+   (hoặc **Đóng phần còn lại**); giao 10 thùng 6 hộp → dòng đơn mua tăng 10.25
+   thùng, áp dụng hết, PO `received`. Cùng đơn vị (đặt 4, nhận 6): dòng đơn mua
+   thành 6, áp dụng 6.
 6. Nếu PO còn thiếu sau confirm, hệ thống **tự tạo GRN nháp kế tiếp** cho phần
-   còn lại. HĐ NCC → Finance/AP.
+   còn lại, hoặc kho/kế toán **Đóng phần còn lại** (`closed` + lý do). HĐ NCC
+   bill ≤ số đã tính vào đơn (`po_applied` = số giữ lại).
 
-Hàng tặng biết trước là dòng PO giá `0`; không tạo phân hệ khuyến mãi.
+Hàng tặng nhập như hàng mua (Đơn giá > 0). HĐ 0đ / không bill là lệch AP;
+không dòng đơn mua giá 0.
 
 ### 2b. Chi nhánh — không GRN
 
@@ -74,10 +80,13 @@ Contract: [inventory.md](inventory.md) §2.1 — Đơn vị chuẩn và các đ�
 
 ## 5. Kiểm kê
 
-1. QL tạo phiên kiểm kê Kho CN.
-2. Gán người đếm; blind count khi yêu cầu.
-3. Chọn đơn vị đang hoạt động phù hợp lúc đếm; hệ thống quy về Đơn vị chuẩn.
-4. RPC hoàn tất mới post `count_adjustment`.
+Một cửa **Kiểm kê**. QL mở phiên tại kho của site → đếm số đang có (không hiện số sổ) → đối soát lệch → hoàn tất để ghi `count_adjustment`.
+
+Nhân viên được giao trong ca dùng **Đếm tồn** (phiếu đếm). Phiếu đó không tự sửa tồn; QL duyệt hoặc đếm trong phiên Kiểm kê.
+
+1. QL tạo phiên kiểm kê (một kho / site).
+2. Đếm theo Đơn vị đang dùng; hệ thống quy về Đơn vị chuẩn.
+3. RPC hoàn tất mới post `count_adjustment`.
 
 ## 6. Đóng ngày và bằng chứng
 

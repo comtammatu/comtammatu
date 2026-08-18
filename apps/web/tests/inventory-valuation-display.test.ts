@@ -85,7 +85,7 @@ test("stock and GRN surfaces wire valuation display copy and helpers", () => {
 
   const messages = readWeb("lib/messages/inventory.ts");
   assert.match(messages, /pendingWac:\s*"Chờ định giá"/);
-  assert.match(messages, /pendingInvoice:\s*"Chờ HĐ NCC"/);
+  assert.match(messages, /pendingInvoice:\s*"Chờ đơn giá"/);
   assert.match(messages, /hintReceivedAwaitingInvoice:/);
 
   const stockClient = readWeb(

@@ -9,6 +9,8 @@ DECLARE
     'private.tax_invoice_buyer_deadline(timestamptz)'
   );
   v_morning timestamptz;
+  v_evening_wait timestamptz;
+  v_at_cutoff timestamptz;
   v_evening timestamptz;
   v_late timestamptz;
 BEGIN
@@ -33,19 +35,36 @@ BEGIN
     RAISE EXCEPTION 'tax_invoice_buyer_deadline_morning_invalid: %', v_morning;
   END IF;
 
-  -- 22:10 VN; +2h would be 00:10 next VN day; cap to 23:55 VN = 16:55 UTC.
+  -- 21:00 VN; +2h stays 23:00 VN = 16:00 UTC.
+  v_evening_wait := private.tax_invoice_buyer_deadline(
+    timestamptz '2026-08-17 14:00:00+00'
+  );
+  IF v_evening_wait IS DISTINCT FROM timestamptz '2026-08-17 16:00:00+00' THEN
+    RAISE EXCEPTION 'tax_invoice_buyer_deadline_evening_wait_invalid: %',
+      v_evening_wait;
+  END IF;
+
+  -- 22:00 VN; skip +2h and become eligible immediately.
+  v_at_cutoff := private.tax_invoice_buyer_deadline(
+    timestamptz '2026-08-17 15:00:00+00'
+  );
+  IF v_at_cutoff IS DISTINCT FROM timestamptz '2026-08-17 15:00:00+00' THEN
+    RAISE EXCEPTION 'tax_invoice_buyer_deadline_cutoff_invalid: %', v_at_cutoff;
+  END IF;
+
+  -- 22:10 VN; skip +2h (would be next VN day) and issue at paid_at.
   v_evening := private.tax_invoice_buyer_deadline(
     timestamptz '2026-08-17 15:10:00+00'
   );
-  IF v_evening IS DISTINCT FROM timestamptz '2026-08-17 16:55:00+00' THEN
+  IF v_evening IS DISTINCT FROM timestamptz '2026-08-17 15:10:00+00' THEN
     RAISE EXCEPTION 'tax_invoice_buyer_deadline_evening_invalid: %', v_evening;
   END IF;
 
-  -- 23:58 VN; ceiling 23:55 VN is already past, so eligibility is immediate.
+  -- 23:58 VN; still immediate at paid_at, not the 23:55 ceiling.
   v_late := private.tax_invoice_buyer_deadline(
     timestamptz '2026-08-17 16:58:00+00'
   );
-  IF v_late IS DISTINCT FROM timestamptz '2026-08-17 16:55:00+00' THEN
+  IF v_late IS DISTINCT FROM timestamptz '2026-08-17 16:58:00+00' THEN
     RAISE EXCEPTION 'tax_invoice_buyer_deadline_late_invalid: %', v_late;
   END IF;
 

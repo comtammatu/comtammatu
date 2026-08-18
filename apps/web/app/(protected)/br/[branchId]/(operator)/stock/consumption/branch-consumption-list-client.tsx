@@ -38,9 +38,7 @@ import {
 
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
-import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { FormField } from "@/components/form";
 import {
   AppDetailFooter,
   AppEmptyState,
@@ -133,8 +131,6 @@ export function BranchConsumptionListClient({
   );
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<BranchStockIssueStatusFilter>("all");
-  const [createOpen, setCreateOpen] = useState(false);
-  const [notes, setNotes] = useState("");
   const [selectedOrder, setSelectedOrder] =
     useState<BranchRecordedConsumption | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -163,7 +159,6 @@ export function BranchConsumptionListClient({
       const result = await createStockIssueDraft({
         branchId,
         issueType: "consumption",
-        notes: notes.trim() || undefined,
       });
       if (!result.success || !result.data) {
         toast.error(result.error ?? issuesCopy.listLoadFailed);
@@ -171,8 +166,6 @@ export function BranchConsumptionListClient({
       }
       const created = result.data as { id: number };
       toast.success(INVENTORY_VI.issueCreated);
-      setCreateOpen(false);
-      setNotes("");
       router.push(`${basePath}/${created.id}`);
       router.refresh();
     });
@@ -403,53 +396,6 @@ export function BranchConsumptionListClient({
       </Tabs>
 
       <AppSheet
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        title={INVENTORY_VI.manualConsumptionCreateAction}
-        description={INVENTORY_VI.manualConsumptionCreateDescription}
-        side="bottom"
-        showCloseButton={false}
-        contentClassName="max-h-dvh-95 bg-background"
-        footer={
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              size="touch"
-              disabled={isPending}
-              onClick={() => setCreateOpen(false)}
-            >
-              {ACTIONS_VI.cancel}
-            </Button>
-            <Button
-              type="button"
-              size="touch-lg"
-              disabled={isPending}
-              onClick={createManualSlip}
-            >
-              {isPending ? <Spinner className="size-5" /> : null}
-              {INVENTORY_VI.manualConsumptionCreateAction}
-            </Button>
-          </>
-        }
-      >
-        <FormField
-          controlId="branch-consumption-notes"
-          label={FORM_VI.notes}
-        >
-          <Textarea
-            id="branch-consumption-notes"
-            name="notes"
-            rows={4}
-            maxLength={500}
-            value={notes}
-            onChange={(event) => setNotes(event.target.value)}
-            placeholder={INVENTORY_VI.issueNotesPlaceholder}
-          />
-        </FormField>
-      </AppSheet>
-
-      <AppSheet
         open={selectedOrder != null}
         onOpenChange={(open) => {
           if (!open) setSelectedOrder(null);
@@ -492,9 +438,10 @@ export function BranchConsumptionListClient({
               type="button"
               size="touch-lg"
               className="w-full"
-              onClick={() => setCreateOpen(true)}
+              disabled={isPending}
+              onClick={createManualSlip}
             >
-              <IconPlus className="size-4" />
+              {isPending ? <Spinner className="size-5" /> : <IconPlus className="size-4" />}
               {INVENTORY_VI.manualConsumptionCreateAction}
             </Button>
           }

@@ -75,7 +75,7 @@ test("Branch issue filters retain fixed-branch draft and final records", () => {
   );
 });
 
-test("Branch issue confirmation requires authority, a draft, and reasons", () => {
+test("Branch issue confirmation requires authority, a draft, and lines", () => {
   const issue = makeIssue();
   assert.equal(
     canConfirmBranchStockIssue({ issue, lines: [makeLine()], canManage: true }),
@@ -87,7 +87,7 @@ test("Branch issue confirmation requires authority, a draft, and reasons", () =>
       lines: [makeLine({ reason: " " })],
       canManage: true,
     }),
-    false,
+    true,
   );
   assert.equal(
     canConfirmBranchStockIssue({ issue, lines: [], canManage: true }),

@@ -9,8 +9,9 @@
 **Amends:** 2026-08-14 — `free_side` kind, code/auto activation flags, staff
 side selection before money write. Money projection remains ADR 0034.
 
-**Amends:** 2026-08-18 — `free_item` kind. Staff picks N units already on the
-order (not sides JSON). Code-only; no auto offer. Same item-level VND landing.
+**Amends:** 2026-08-18 — `free_item` staff-picked count. `free_item_qty` is an
+optional max; `NULL` = unlimited up to eligible units already on the order.
+Always open the POS picker (no auto-apply).
 
 ## Context
 
@@ -49,12 +50,14 @@ Item-level VND discounts may coexist unless the campaign sets
 | `auto_order` | `evaluate_order_promotions` when eligible and no order-level discount exists | Order-level `%` or VND; a cashier code wins over auto |
 | `bxgy` | Same evaluate RPC | Item-level VND on cheapest qualifying lines (ADR 0034) |
 | `free_side` | Code and/or auto offer (`allow_code` / `allow_auto`); staff picks N side portions | Item-level VND on parent lines = selected `side.price × units`; do not mutate `sides` JSON |
-| `free_item` | Cashier/waiter reusable `promo_code` (`allow_code` required; `allow_auto` forbidden); staff picks N units already on the order | Item-level VND on selected lines = `unit_price × units`; do not change qty |
+| `free_item` | Cashier/waiter reusable `promo_code` (`allow_code` required; `allow_auto` forbidden); staff picks 1..eligible units already on the order (optional campaign max) | Item-level VND on selected lines = `unit_price × units`; do not change qty |
 
 Buy X get Y, free-side, and free-item never use order `%`. Kitchen still sees full qty and
 full side lists (commercial comp, not a void). `free_side` quota is N free side
 portions **per qualifying main unit** (`free_side_qty × order_item.quantity`, summed
-across buy lines). `free_item` quota is N units **per order** (`free_item_qty`), taken
+across buy lines). `free_item` quota is at most N units **per order**
+(`free_item_qty`); `NULL` means no campaign cap (staff may pick 1..eligible qty
+on the bill). Staff always picks; there is no auto-apply. Taken
 from existing `order_items` whose `menu_item_id` is a `get` row. `promotion_items` roles: `buy` = trigger mains, `get` =
 freeable side or freeable order-line menu items. Auto path returns offers only for
 `free_side`; money writes through `apply_free_side_selection` /

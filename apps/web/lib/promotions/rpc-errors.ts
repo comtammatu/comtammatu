@@ -90,7 +90,7 @@ export function mapPromotionRpcError(message: string): string {
     return "Lựa chọn món tặng không hợp lệ. Vui lòng chọn lại.";
   }
   if (msg.includes("promotion_item_selection_qty")) {
-    return "Số phần được chọn chưa đủ hoặc vượt mức tặng.";
+    return "Số phần được chọn phải từ 1 đến mức tối đa trên hoá đơn.";
   }
   if (msg.includes("promotion_free_side_items_required")) {
     return "Chọn món chính điều kiện và nhóm ăn kèm được tặng.";
@@ -102,7 +102,7 @@ export function mapPromotionRpcError(message: string): string {
     return "Chọn món được tặng trên hoá đơn.";
   }
   if (msg.includes("promotion_free_item_qty_required")) {
-    return "Số phần tặng phải từ 1 trở lên.";
+    return "Số phần tối đa phải từ 1, hoặc để trống nếu không giới hạn.";
   }
   if (msg.includes("promotion_activation_required")) {
     return "Chọn ít nhất một cách kích hoạt: mã hoặc tự động.";

@@ -1,6 +1,7 @@
 # ADR 0040 — Company WAC and append-only cost restatement
 
-**Status:** Accepted
+**Status:** Accepted (amended by ADR 0041: GRN books purchased unit
+price; invoice no longer reprices stock)
 
 **Decision owner:** Owner, 2026-08-17 (implement plan Accept)
 
@@ -9,9 +10,9 @@
 **Amends:** D101 site-pool WAC; ADR 0026 Decision 4 first cost rung;
 `docs/ref/inventory.md` §2.3 (do not merge the three sites).
 
-**Keeps:** ADR 0017 §13–14 (invoice changes value only; no
-`stock_movements.unit_cost` rewrite; closed periods post in the current
-period).
+**Keeps:** ADR 0017 AP matching and closed-period posting; no
+`stock_movements.unit_cost` rewrite. ADR 0041 moves book price to GRN
+and stops invoice restatement.
 
 ## Context
 

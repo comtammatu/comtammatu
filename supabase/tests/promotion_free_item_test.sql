@@ -115,8 +115,8 @@ BEGIN
 
   IF public.promotion_free_item_needs_manual_selection(
     jsonb_build_array(v_candidates -> 0)
-  ) IS NOT FALSE THEN
-    RAISE EXCEPTION 'free_item_single_line_should_auto';
+  ) IS NOT TRUE THEN
+    RAISE EXCEPTION 'free_item_single_line_should_pick';
   END IF;
 END;
 $$;

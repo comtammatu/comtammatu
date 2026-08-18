@@ -89,6 +89,7 @@ type GrnDropdownLine = {
   received_quantity?: number | null;
   rejected_quantity?: number | null;
   unit_cost?: number | null;
+  total_cost?: number | null;
   supplier_id?: number | null;
   suppliers?: { id: number; name: string } | null;
   ingredients?: { id: number; name: string } | null;
@@ -114,6 +115,11 @@ function sumGrnNetAcceptedAmount(lines: GrnDropdownLine[] | null | undefined) {
   if (!lines || lines.length === 0) return null;
   let total = 0;
   for (const line of lines) {
+    const booked = Number(line.total_cost);
+    if (Number.isFinite(booked)) {
+      total += booked;
+      continue;
+    }
     const received = Number(line.received_quantity ?? 0);
     const rejected = Number(line.rejected_quantity ?? 0);
     const unitCost = Number(line.unit_cost ?? 0);
@@ -286,7 +292,7 @@ export async function fetchGrnIdsForDropdown(
   const selectWithoutNet =
     "id, grn_number, supplier_id, po_id, suppliers ( id, name ), purchase_orders_source:purchase_orders!purchase_orders_source_grn_id_fkey ( id, supplier_id )";
   const itemSelectWithNet =
-    "grn_id, id, ingredient_id, purchase_order_item_id, po_applied_quantity, entry_unit_id, received_quantity, rejected_quantity, unit_cost, supplier_id, suppliers ( id, name ), ingredients ( id, name ), units!grn_items_entry_unit_id_fkey ( id, code, name )";
+    "grn_id, id, ingredient_id, purchase_order_item_id, po_applied_quantity, entry_unit_id, received_quantity, rejected_quantity, unit_cost, total_cost, supplier_id, suppliers ( id, name ), ingredients ( id, name ), units!grn_items_entry_unit_id_fkey ( id, code, name )";
   const itemSelectWithoutNet =
     "grn_id, id, ingredient_id, purchase_order_item_id, po_applied_quantity, entry_unit_id, received_quantity, rejected_quantity, supplier_id, suppliers ( id, name ), ingredients ( id, name ), units!grn_items_entry_unit_id_fkey ( id, code, name )";
 
@@ -421,9 +427,7 @@ export async function fetchGrnDetail(
   const { data: linesRaw, error: e2 } = await lineReadClient
     .from("grn_items")
     .select(
-      (monetary.purchasePrice
-        ? "id, grn_id, tenant_id, ingredient_id, supplier_id, purchase_order_item_id, po_applied_quantity, received_quantity, rejected_quantity, rejection_reason, rejected_photo_url, entry_unit_id, unit_cost, total_cost, cost_pending, provisional_cost_source, suppliers ( id, name ), ingredients ( id, name ), purchase_order_items(quantity, unit_price_est, entry_unit_id)"
-        : "id, grn_id, tenant_id, ingredient_id, supplier_id, purchase_order_item_id, po_applied_quantity, received_quantity, rejected_quantity, rejection_reason, rejected_photo_url, entry_unit_id, cost_pending, provisional_cost_source, suppliers ( id, name ), ingredients ( id, name ), purchase_order_items(quantity, entry_unit_id)") as never,
+      "id, grn_id, tenant_id, ingredient_id, supplier_id, purchase_order_item_id, po_applied_quantity, received_quantity, rejected_quantity, rejection_reason, rejected_photo_url, entry_unit_id, unit_cost, unit_cost_unit_id, total_cost, cost_pending, provisional_cost_source, suppliers ( id, name ), ingredients ( id, name ), purchase_order_items(quantity, entry_unit_id)" as never,
     )
     .eq("grn_id", grn.id)
     .eq("tenant_id", claims.tenant_id);
@@ -446,6 +450,7 @@ export async function fetchGrnDetail(
     rejected_photo_url: string | null;
     entry_unit_id: number | null;
     unit_cost?: number | string;
+    unit_cost_unit_id?: number | string | null;
     total_cost?: number | string;
     cost_pending?: boolean | null;
     provisional_cost_source?: string | null;
@@ -461,12 +466,10 @@ export async function fetchGrnDetail(
     purchase_order_items:
       | {
           quantity: number | string;
-          unit_price_est?: number | string | null;
           entry_unit_id?: number | null;
         }
       | Array<{
           quantity: number | string;
-          unit_price_est?: number | string | null;
           entry_unit_id?: number | null;
         }>
       | null;
@@ -539,15 +542,13 @@ export async function fetchGrnDetail(
           : (previouslyApplied.get(line.purchase_order_item_id) ?? 0),
       cost_pending: line.cost_pending === true,
       provisional_cost_source: line.provisional_cost_source ?? null,
-      monetary: monetary.purchasePrice
-        ? {
-            unit_price:
-              poLine?.unit_price_est == null
-                ? null
-                : Number(poLine.unit_price_est),
-            total_cost: Number(line.total_cost ?? 0),
-          }
-        : null,
+      unit_cost_unit_id:
+        line.unit_cost_unit_id == null ? null : Number(line.unit_cost_unit_id),
+      monetary: {
+        unit_price:
+          line.unit_cost == null ? null : Number(line.unit_cost),
+        total_cost: Number(line.total_cost ?? 0),
+      },
     };
   });
   return {
@@ -727,6 +728,8 @@ const grnLineSchema = z
     rejectedQuantity: grnQuantitySchema.optional(),
     rejectionReason: z.string().trim().max(500).optional().nullable(),
     rejectedPhotoUrl: z.string().trim().url().optional().nullable(),
+    unitCost: z.coerce.number().min(0).max(99_999_999_999.99).optional(),
+    unitCostUnitId: z.coerce.number().int().positive().nullable().optional(),
   })
   .superRefine((data, context) => {
     const rejected = data.rejectedQuantity ?? 0;
@@ -749,6 +752,13 @@ const grnLineSchema = z
         code: "custom",
         message: "Phải có ảnh khi có hàng từ chối nhập.",
         path: ["rejectedPhotoUrl"],
+      });
+    }
+    if ((data.unitCost ?? 0) > 0 && data.unitCostUnitId == null) {
+      context.addIssue({
+        code: "custom",
+        message: "Đơn giá phải gắn đơn vị.",
+        path: ["unitCostUnitId"],
       });
     }
   });
@@ -827,10 +837,14 @@ export const upsertGrnLine = withAction(
           rejected_quantity: rejected,
           rejection_reason: data.rejectionReason ?? null,
           rejected_photo_url: data.rejectedPhotoUrl ?? null,
+          ...(data.unitCost != null ? { unit_cost: data.unitCost } : {}),
+          ...(data.unitCostUnitId != null
+            ? { unit_cost_unit_id: data.unitCostUnitId }
+            : {}),
           ...(data.entryUnitId != null
             ? { entry_unit_id: data.entryUnitId }
             : {}),
-        })
+        } as never)
         .eq("id", data.lineId)
         .eq("grn_id", data.grnId)
         .eq("tenant_id", claims.tenant_id)
@@ -881,6 +895,10 @@ export const upsertGrnLine = withAction(
           rejected_quantity: rejected,
           rejection_reason: data.rejectionReason ?? null,
           rejected_photo_url: data.rejectedPhotoUrl ?? null,
+          ...(data.unitCost != null ? { unit_cost: data.unitCost } : {}),
+          ...(data.unitCostUnitId != null
+            ? { unit_cost_unit_id: data.unitCostUnitId }
+            : {}),
         } as never,
         { onConflict: "grn_id,ingredient_id,tenant_id" },
       )
@@ -924,6 +942,13 @@ const saveGoodsReceiptNoteSchema = z.object({
           rejectionReason: z.string().trim().max(500).nullable().optional(),
           rejectedPhotoUrl: z.string().trim().url().nullable().optional(),
           entryUnitId: z.coerce.number().int().positive().nullable().optional(),
+          unitCost: z.coerce.number().min(0).max(99_999_999_999.99),
+          unitCostUnitId: z.coerce
+            .number()
+            .int()
+            .positive()
+            .nullable()
+            .optional(),
         })
         .refine(
           (line) => line.rejectedQuantity <= line.receivedQuantity,
@@ -934,6 +959,10 @@ const saveGoodsReceiptNoteSchema = z.object({
             line.rejectedQuantity === 0 ||
             Boolean(line.rejectionReason && line.rejectedPhotoUrl),
           "Hàng từ chối phải có đủ lý do và ảnh.",
+        )
+        .refine(
+          (line) => !(line.unitCost > 0) || line.unitCostUnitId != null,
+          "Đơn giá phải gắn đơn vị.",
         ),
     )
     .min(1)
@@ -960,6 +989,8 @@ export const saveGoodsReceiptNote = withAction(
           rejection_reason: line.rejectionReason ?? null,
           rejected_photo_url: line.rejectedPhotoUrl ?? null,
           entry_unit_id: line.entryUnitId ?? null,
+          unit_cost: line.unitCost,
+          unit_cost_unit_id: line.unitCostUnitId ?? null,
         })),
       } as never,
     );
@@ -967,7 +998,14 @@ export const saveGoodsReceiptNote = withAction(
       console.error("inventory.grn.save_failed", {
         error: error instanceof Error ? error.message : String(error),
       });
-      return { success: false, error: "Không thể lưu phiếu nhập." };
+      return mapInventoryRpcFailure(
+        error,
+        grnLineRpcMappings,
+        {
+          userMessage: "Không thể lưu phiếu nhập.",
+          errorCode: INVENTORY_ERROR_CODES.GRN_LINE_FAILED,
+        },
+      );
     }
     revalidatePath("/inventory/grn");
     revalidatePath(`/inventory/grn/${data.grnId}`);

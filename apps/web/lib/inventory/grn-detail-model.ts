@@ -41,7 +41,11 @@ export type GrnDetailItem = {
   poToBaseFactor: number;
   packUnit: GrnPackLooseUnit | null;
   looseUnit: GrnPackLooseUnit | null;
-  /** True when line qty is received but WAC awaits supplier invoice settlement. */
+  /** Ingredient unit that `monetary.unitPrice` is quoted in. */
+  unitCostUnitId: number | null;
+  unitCostUnitLabel: string;
+  unitCostToBaseFactor: number;
+  /** True when accepted qty is missing a GRN book unit price. */
   costPending: boolean;
   provisionalCostSource: string | null;
   monetary: {
@@ -182,7 +186,102 @@ export function applyGrnLineQuantities<T extends GrnDetailItem>(line: T): T {
     line.remainingQuantity,
     grnLineQuantityConversion(line),
   );
-  return { ...line, ...calculated };
+  const unitPrice = line.monetary?.unitPrice ?? null;
+  const priceToBase =
+    line.unitCostToBaseFactor > 0 ? line.unitCostToBaseFactor : 1;
+  const persistToBase =
+    line.persistToBaseFactor > 0 ? line.persistToBaseFactor : 1;
+  const monetary =
+    line.monetary == null
+      ? line.monetary
+      : {
+          unitPrice,
+          lineTotal:
+            unitPrice == null
+              ? line.monetary.lineTotal
+              : grnLineBookTotal(
+                  calculated.acceptedQuantity,
+                  persistToBase,
+                  unitPrice,
+                  priceToBase,
+                ),
+        };
+  return { ...line, ...calculated, monetary };
+}
+
+export function grnLineBookTotal(
+  acceptedQty: number,
+  persistToBase: number,
+  unitPrice: number,
+  priceToBase: number,
+): number {
+  if (
+    !(acceptedQty > 0) ||
+    !(unitPrice > 0) ||
+    !(persistToBase > 0) ||
+    !(priceToBase > 0)
+  ) {
+    return 0;
+  }
+  return Math.round(((acceptedQty * persistToBase * unitPrice) / priceToBase) * 100) / 100;
+}
+
+export function resolveDefaultGrnPriceUnit(
+  line: Pick<
+    GrnDetailItem,
+    | "packUnit"
+    | "looseUnit"
+    | "entryUnitId"
+    | "persistToBaseFactor"
+    | "unit"
+  >,
+): { unitId: number | null; label: string; toBaseFactor: number } {
+  if (
+    line.packUnit &&
+    line.looseUnit &&
+    line.entryUnitId === line.looseUnit.unitId
+  ) {
+    return {
+      unitId: line.packUnit.unitId,
+      label: line.packUnit.label,
+      toBaseFactor: line.packUnit.toBaseFactor,
+    };
+  }
+  return {
+    unitId: line.entryUnitId,
+    label: line.unit,
+    toBaseFactor: line.persistToBaseFactor > 0 ? line.persistToBaseFactor : 1,
+  };
+}
+
+export function patchGrnLineUnitPrice(
+  line: Pick<GrnDetailItem, "actual" | "rejected"> &
+    Partial<Pick<GrnDetailItem, "persistToBaseFactor" | "unitCostToBaseFactor">>,
+  unitPrice: number,
+): Pick<GrnDetailItem, "monetary" | "costPending" | "provisionalCostSource"> {
+  const accepted = acceptedGrnQuantity(line.actual, line.rejected);
+  const nextPrice = Number.isFinite(unitPrice) ? Math.max(0, unitPrice) : 0;
+  const persistToBase =
+    line.persistToBaseFactor && line.persistToBaseFactor > 0
+      ? line.persistToBaseFactor
+      : 1;
+  const priceToBase =
+    line.unitCostToBaseFactor && line.unitCostToBaseFactor > 0
+      ? line.unitCostToBaseFactor
+      : persistToBase;
+  return {
+    monetary: {
+      unitPrice: nextPrice,
+      lineTotal: grnLineBookTotal(
+        accepted,
+        persistToBase,
+        nextPrice,
+        priceToBase,
+      ),
+    },
+    costPending: !(nextPrice > 0),
+    provisionalCostSource: nextPrice > 0 ? "grn_receipt" : "pending",
+  };
 }
 
 const GRN_QTY_SCALE = 1000;
@@ -199,6 +298,17 @@ export function convertQuantityBetweenFactors(
 ): number {
   if (!(toToBase > 0)) return 0;
   return roundGrnQuantity(quantity * (fromToBase / toToBase));
+}
+
+export function convertUnitPriceBetweenFactors(
+  unitPrice: number,
+  fromToBase: number,
+  toToBase: number,
+): number {
+  if (!(fromToBase > 0) || !(toToBase > 0) || !Number.isFinite(unitPrice)) {
+    return 0;
+  }
+  return Math.round(((unitPrice * toToBase) / fromToBase) * 100) / 100;
 }
 
 function unitLabel(unit: IngredientUnitRow): string {
@@ -242,6 +352,24 @@ export function resolveGrnPackLooseUnits(
       toBaseFactor: looseRow.to_base_factor,
     },
   };
+}
+
+export function resolveGrnPackLooseForPersist(
+  units: IngredientUnitRow[] | undefined,
+  persistUnitId: number | null | undefined,
+): { pack: GrnPackLooseUnit; loose: GrnPackLooseUnit } | null {
+  const asPack = resolveGrnPackLooseUnits(units, persistUnitId);
+  if (asPack) return asPack;
+  if (persistUnitId == null) return null;
+  const packRow = (units ?? []).find(
+    (unit) =>
+      unit.is_active &&
+      !unit.is_base &&
+      unit.anchor_unit_id === persistUnitId,
+  );
+  return packRow
+    ? resolveGrnPackLooseUnits(units, packRow.unit_id)
+    : null;
 }
 
 export function combinePackLooseQuantity(
@@ -311,16 +439,69 @@ export function applyGrnLineEntryUnit(
     return null;
   }
   const fromFactor = line.persistToBaseFactor > 0 ? line.persistToBaseFactor : 1;
+  const nextActual = convertQuantityBetweenFactors(
+    line.actual,
+    fromFactor,
+    toFactor,
+  );
+  const nextRejected = convertQuantityBetweenFactors(
+    line.rejected,
+    fromFactor,
+    toFactor,
+  );
   return {
-    actual: convertQuantityBetweenFactors(line.actual, fromFactor, toFactor),
-    rejected: convertQuantityBetweenFactors(
-      line.rejected,
-      fromFactor,
-      toFactor,
-    ),
+    actual: nextActual,
+    rejected: nextRejected,
     entryUnitId: nextUnitId,
     unit: unitLabel(nextRow),
     persistToBaseFactor: toFactor,
+    ...patchGrnLineUnitPrice(
+      {
+        actual: nextActual,
+        rejected: nextRejected,
+        persistToBaseFactor: toFactor,
+        unitCostToBaseFactor: line.unitCostToBaseFactor,
+      },
+      line.monetary?.unitPrice ?? 0,
+    ),
+  };
+}
+
+export function applyGrnLinePriceUnit(
+  line: GrnDetailItem,
+  units: IngredientUnitRow[] | undefined,
+  nextUnitId: number,
+): Partial<GrnDetailItem> | null {
+  if (!Number.isInteger(nextUnitId) || nextUnitId <= 0) {
+    return null;
+  }
+  const nextRow = (units ?? []).find(
+    (unit) => unit.unit_id === nextUnitId && unit.is_active,
+  );
+  const toFactor = Number(nextRow?.to_base_factor);
+  if (!nextRow || !Number.isFinite(toFactor) || !(toFactor > 0)) {
+    return null;
+  }
+  const fromFactor =
+    line.unitCostToBaseFactor > 0 ? line.unitCostToBaseFactor : 1;
+  const currentPrice = line.monetary?.unitPrice ?? 0;
+  const nextPrice =
+    currentPrice > 0
+      ? convertUnitPriceBetweenFactors(currentPrice, fromFactor, toFactor)
+      : currentPrice;
+  return {
+    unitCostUnitId: nextUnitId,
+    unitCostUnitLabel: unitLabel(nextRow),
+    unitCostToBaseFactor: toFactor,
+    ...patchGrnLineUnitPrice(
+      {
+        actual: line.actual,
+        rejected: line.rejected,
+        persistToBaseFactor: line.persistToBaseFactor,
+        unitCostToBaseFactor: toFactor,
+      },
+      nextPrice,
+    ),
   };
 }
 
@@ -464,6 +645,8 @@ export function createEditableGrnLine({
   unit,
   supplierId,
   supplierName,
+  unitCost = 0,
+  unitCostUnitId,
 }: {
   lineId: number;
   ingredient: IngredientRow;
@@ -472,12 +655,38 @@ export function createEditableGrnLine({
   unit: string;
   supplierId: number;
   supplierName: string;
+  unitCost?: number;
+  unitCostUnitId?: number | null;
 }): EditableGrnLine {
   const persistRow = (ingredient.units ?? []).find(
     (item) => item.unit_id === entryUnitId && item.is_active,
   );
   const persistFactor = Number(persistRow?.to_base_factor);
-  const packLoose = resolveGrnPackLooseUnits(ingredient.units, entryUnitId);
+  const safePersistFactor =
+    Number.isFinite(persistFactor) && persistFactor > 0 ? persistFactor : 1;
+  const packLoose = resolveGrnPackLooseForPersist(
+    ingredient.units,
+    entryUnitId,
+  );
+  const defaultPrice = resolveDefaultGrnPriceUnit({
+    packUnit: packLoose?.pack ?? null,
+    looseUnit: packLoose?.loose ?? null,
+    entryUnitId,
+    persistToBaseFactor: safePersistFactor,
+    unit,
+  });
+  const priceUnitId = unitCostUnitId ?? defaultPrice.unitId;
+  const priceRow = (ingredient.units ?? []).find(
+    (item) => item.unit_id === priceUnitId && item.is_active,
+  );
+  const priceFactor = Number(priceRow?.to_base_factor);
+  const unitCostToBaseFactor =
+    Number.isFinite(priceFactor) && priceFactor > 0
+      ? priceFactor
+      : defaultPrice.toBaseFactor;
+  const unitCostUnitLabel = priceRow
+    ? unitLabel(priceRow)
+    : defaultPrice.label;
   return {
     lineId,
     ingredientId: ingredient.id,
@@ -501,15 +710,22 @@ export function createEditableGrnLine({
     entryUnitId,
     poEntryUnitId: entryUnitId,
     poUnitLabel: unit,
-    persistToBaseFactor:
-      Number.isFinite(persistFactor) && persistFactor > 0 ? persistFactor : 1,
-    poToBaseFactor:
-      Number.isFinite(persistFactor) && persistFactor > 0 ? persistFactor : 1,
+    persistToBaseFactor: safePersistFactor,
+    poToBaseFactor: safePersistFactor,
     packUnit: packLoose?.pack ?? null,
     looseUnit: packLoose?.loose ?? null,
-    costPending: true,
-    provisionalCostSource: "pending",
-    monetary: null,
+    unitCostUnitId: priceUnitId,
+    unitCostUnitLabel,
+    unitCostToBaseFactor,
+    ...patchGrnLineUnitPrice(
+      {
+        actual: quantity,
+        rejected: 0,
+        persistToBaseFactor: safePersistFactor,
+        unitCostToBaseFactor,
+      },
+      unitCost,
+    ),
     dirty: false,
   };
 }

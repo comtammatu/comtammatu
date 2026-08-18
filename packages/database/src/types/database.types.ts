@@ -2465,6 +2465,7 @@ export type Database = {
           tenant_id: number
           total_cost: number
           unit_cost: number
+          unit_cost_unit_id: number | null
         }
         Insert: {
           cost_pending?: boolean
@@ -2485,6 +2486,7 @@ export type Database = {
           tenant_id: number
           total_cost?: number
           unit_cost?: number
+          unit_cost_unit_id?: number | null
         }
         Update: {
           cost_pending?: boolean
@@ -2505,6 +2507,7 @@ export type Database = {
           tenant_id?: number
           total_cost?: number
           unit_cost?: number
+          unit_cost_unit_id?: number | null
         }
         Relationships: [
           {
@@ -2547,6 +2550,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grn_items_unit_cost_unit_id_fkey"
+            columns: ["unit_cost_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
             referencedColumns: ["id"]
           },
         ]
@@ -7282,12 +7292,10 @@ export type Database = {
           entry_unit_id: number | null
           id: number
           ingredient_id: number
-          line_total: number | null
           po_id: number
           purchase_request_item_id: number | null
           quantity: number
           tenant_id: number
-          unit_price_est: number | null
         }
         Insert: {
           entry_to_base_factor?: number | null
@@ -7295,12 +7303,10 @@ export type Database = {
           entry_unit_id?: number | null
           id?: never
           ingredient_id: number
-          line_total?: number | null
           po_id: number
           purchase_request_item_id?: number | null
           quantity: number
           tenant_id: number
-          unit_price_est?: number | null
         }
         Update: {
           entry_to_base_factor?: number | null
@@ -7308,12 +7314,10 @@ export type Database = {
           entry_unit_id?: number | null
           id?: never
           ingredient_id?: number
-          line_total?: number | null
           po_id?: number
           purchase_request_item_id?: number | null
           quantity?: number
           tenant_id?: number
-          unit_price_est?: number | null
         }
         Relationships: [
           {
@@ -13844,6 +13848,15 @@ export type Database = {
           invoice_not_required_count: number
         }[]
       }
+      get_finance_expense_period_summary: {
+        Args: {
+          p_branch_id?: number
+          p_end_date: string
+          p_location: string
+          p_start_date: string
+        }
+        Returns: Json
+      }
       get_finance_reconciliation_attention: {
         Args: { p_end_date: string; p_start_date: string }
         Returns: {
@@ -14567,6 +14580,10 @@ export type Database = {
         Args: { p_main_item_id: number; p_modifiers: Json; p_tenant_id: number }
         Returns: number
       }
+      pos_session_cash_revenue: {
+        Args: { p_session_id: number }
+        Returns: number
+      }
       post_pos_cancelled_ready_waste: {
         Args: { p_actor_id?: string; p_order_id: number; p_reason?: string }
         Returns: Json
@@ -14739,6 +14756,16 @@ export type Database = {
         }
         Returns: number
       }
+      promotion_apply_free_item_core: {
+        Args: {
+          p_code: Database["public"]["Tables"]["promotion_codes"]["Row"]
+          p_order: Database["public"]["Tables"]["orders"]["Row"]
+          p_promo: Database["public"]["Tables"]["promotions"]["Row"]
+          p_selections: Json
+          p_uid: string
+        }
+        Returns: number
+      }
       promotion_apply_free_side_core: {
         Args: {
           p_code: Database["public"]["Tables"]["promotion_codes"]["Row"]
@@ -14763,6 +14790,40 @@ export type Database = {
       promotion_assert_order_mutable: {
         Args: { p_order: Database["public"]["Tables"]["orders"]["Row"] }
         Returns: undefined
+      }
+      promotion_free_item_amount: {
+        Args: { p_candidates: Json; p_selections: Json }
+        Returns: number
+      }
+      promotion_free_item_applied_amount: {
+        Args: { p_order_id: number; p_promotion_id: number }
+        Returns: number
+      }
+      promotion_free_item_auto_selections: {
+        Args: { p_candidates: Json; p_need: number }
+        Returns: Json
+      }
+      promotion_free_item_candidates: {
+        Args: {
+          p_order: Database["public"]["Tables"]["orders"]["Row"]
+          p_promo: Database["public"]["Tables"]["promotions"]["Row"]
+        }
+        Returns: Json
+      }
+      promotion_free_item_capacity: {
+        Args: { p_candidates: Json }
+        Returns: number
+      }
+      promotion_free_item_needs_manual_selection: {
+        Args: { p_candidates: Json }
+        Returns: boolean
+      }
+      promotion_free_item_offer_json: {
+        Args: {
+          p_order: Database["public"]["Tables"]["orders"]["Row"]
+          p_promo: Database["public"]["Tables"]["promotions"]["Row"]
+        }
+        Returns: Json
       }
       promotion_free_side_applied_amount: {
         Args: { p_order_id: number; p_promotion_id: number }

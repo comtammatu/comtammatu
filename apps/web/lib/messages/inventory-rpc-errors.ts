@@ -324,6 +324,22 @@ export const grnLineRpcMappings: readonly RpcErrorMapping[] = [
     userMessage: "Nguyên liệu chưa được gán cho nhà cung cấp.",
   },
   {
+    match: includesAny("grn_unit_price_unit_required"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,
+    userMessage: "Đơn giá phải gắn đơn vị của nguyên liệu.",
+  },
+  {
+    match: includesAny("grn_unit_price_unit_invalid"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,
+    userMessage: "Đơn vị đơn giá không thuộc nguyên liệu này.",
+  },
+  {
+    match: includesAny("grn_lines_invalid"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,
+    userMessage:
+      "Dòng phiếu nhập không hợp lệ. Kiểm tra số lượng, đơn giá và đơn vị.",
+  },
+  {
     match: includesAny("not draft", "invalid_status"),
     errorCode: INVENTORY_ERROR_CODES.INVALID_STATUS,
     userMessage: "Chỉ sửa được dòng khi phiếu nhập còn nháp.",
@@ -358,6 +374,21 @@ export const grnConfirmRpcMappings: readonly RpcErrorMapping[] = [
     match: includesAny("grn_rejection_evidence_required"),
     errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,
     userMessage: "Hàng từ chối phải có đủ lý do và ảnh chứng từ.",
+  },
+  {
+    match: includesAny("grn_unit_price_required", "grn_unit_price_invalid"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,
+    userMessage: "Nhập đơn giá nguyên liệu trước khi chốt phiếu nhập.",
+  },
+  {
+    match: includesAny("grn_unit_price_unit_required"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,
+    userMessage: "Đơn giá phải gắn đơn vị của nguyên liệu.",
+  },
+  {
+    match: includesAny("grn_unit_price_unit_invalid"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,
+    userMessage: "Đơn vị đơn giá không thuộc nguyên liệu này.",
   },
   {
     match: includesAny("grn_has_no_accepted_quantity"),

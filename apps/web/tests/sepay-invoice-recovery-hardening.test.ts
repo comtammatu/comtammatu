@@ -154,8 +154,9 @@ test("one-shot HĐĐT worker claims only the requested job", () => {
   assert.match(issuer, /prepare_tax_invoice_issue_job_as_system/);
   assert.match(
     issuer,
-    /invoiceIssuedAt: parsed\.data\.draftSnapshot\.invoiceTime/,
+    /const invoiceIssuedAt = resolveSinvoiceIssuedAt\([\s\S]*allowBacklogSubmitDate: parsed\.data\.allowBacklogSubmitDate === true/,
   );
+  assert.match(issuer, /errorCode: "invoice_issue_date_not_today"/);
 });
 
 test("HĐĐT worker failures log bounded diagnostics and preserve recovery state", () => {

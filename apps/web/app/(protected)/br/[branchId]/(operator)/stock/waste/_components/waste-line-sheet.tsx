@@ -15,7 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { Textarea } from "@comtammatu/ui/components/textarea";
 import {
   Combobox,
   NumberPadSheet,
@@ -240,13 +239,6 @@ export function WasteLineSheet({
                   })}
                 </SelectContent>
               </Select>
-            </Field>
-            <Field>
-              <FieldLabel>{copy.lineNotesLabel}</FieldLabel>
-              <Textarea
-                value={line.note}
-                onChange={(event) => onPatch({ note: event.target.value })}
-              />
             </Field>
             <Field>
               <FieldLabel>{copy.evidenceLabel(evidenceRequired)}</FieldLabel>

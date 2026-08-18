@@ -63,7 +63,8 @@ Không tạo hóa đơn mới chỉ vì ứng dụng chưa có số hóa đơn.
 | Bản nháp có `last_error`                              | Sửa dữ liệu/cấu hình rồi dùng phát hành lại trên `/finance/invoices`          |
 | CQT từ chối cấp mã                                    | Kiểm MST, mẫu số, ký hiệu và dữ liệu người mua                                |
 | Timeout hoặc trạng thái `signing`/`submitted` kéo dài | Tra `provider_ref` trên Viettel; không phát hành trùng                        |
-| `INVOICE_ISSUE_DATE_INVALID_TT78` / ngày lập không hợp lệ | Đơn đã sang ngày VN mới — đối soát Viettel, không requeue cùng `invoiceIssuedDate` hôm trước |
+| `INVOICE_ISSUE_DATE_INVALID_TT78` / ngày lập không hợp lệ | HĐ mới lệch ngày bán: không gửi Viettel. Chỉ bản nháp tồn đọng đã gắn `allowBacklogSubmitDate` mới gửi thời điểm submit; `signing`/`submitted` thì đối soát, không tạo HĐ thứ hai |
+| `signing` mà Má Tư và S-invoice khác mã 32 ký tự | Tra S-invoice theo `HDDT` + id đơn (cũ) hoặc id hóa đơn (sau vá). Nếu số HĐ đã gắn đơn khác: không `createInvoice`, không đối soát tay — dùng one-shot rebind |
 | Cần PDF/XML                                           | Tải từ Viettel S-invoice và lưu theo quy trình chứng từ của đơn vị            |
 | Cần hủy/thay thế                                      | Dùng thao tác trên `/finance/invoices`, sau đó đối chiếu kết quả trên Viettel |
 

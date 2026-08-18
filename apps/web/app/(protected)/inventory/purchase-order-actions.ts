@@ -422,9 +422,12 @@ export const cancelPurchaseOrder = withAction(
 
 export const closePurchaseOrder = withAction(
   {
-    roles: PO_MUTATE_ROLES,
+    roles: PROCUREMENT_ROLES,
     schema: poReasonSchema,
-    permission: PERMISSION_KEYS.PROCUREMENT_PO_CREATE,
+    anyPermission: [
+      PERMISSION_KEYS.PROCUREMENT_PO_APPROVE,
+      PERMISSION_KEYS.PROCUREMENT_GRN_CONFIRM,
+    ],
   },
   async ({ poId, reason }, { supabase }) => {
     const { error } = await supabase.rpc("close_purchase_order" as never, {

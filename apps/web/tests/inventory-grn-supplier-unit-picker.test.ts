@@ -271,38 +271,49 @@ test("ingredients list does not render raw base-unit reference cost", () => {
   assert.doesNotMatch(source, /formatVND\(item\.unit_cost\)/);
 });
 
-test("GRN create editor no longer seeds commercial price from reference cost (D091)", () => {
+test("GRN create editor does not seed book price from catalog reference cost", () => {
   const source = readRepo(
     "apps/web/app/(protected)/inventory/grn/[id]/views/add-grn-line-dialog.tsx",
   );
 
   assert.doesNotMatch(source, /getReferenceCostForUnit/);
-  assert.doesNotMatch(source, /MoneyVndInput/);
   assert.doesNotMatch(source, /priceSetOnPoHint/);
 });
 
-test("GRN warehouse draft does not require unit price (D091)", () => {
+test("GRN warehouse draft requires net unit price (ADR 0041)", () => {
   const dialog = readRepo(
     "apps/web/app/(protected)/inventory/grn/[id]/views/add-grn-line-dialog.tsx",
+  );
+  const row = readRepo(
+    "apps/web/app/(protected)/inventory/grn/[id]/views/grn-line-row.tsx",
   );
   const sheet = readRepo(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/_components/grn-line-sheet.tsx",
   );
+  const actions = readRepo("apps/web/lib/inventory/use-grn-detail-actions.ts");
 
-  assert.doesNotMatch(dialog, /edit\.unitCost != null/);
-  assert.doesNotMatch(dialog, /MoneyVndInput/);
+  assert.match(dialog, /MoneyVndInput/);
+  assert.match(dialog, /unitCost: parsedUnitCost/);
+  assert.match(dialog, /unitCostUnitId: entryUnitId/);
   assert.doesNotMatch(dialog, /priceSetOnPoHint/);
-  assert.doesNotMatch(dialog, /GRN_CREATE_COPY\.linePriceRequired/);
-  assert.doesNotMatch(sheet, /MoneyVndInput/);
-  assert.doesNotMatch(sheet, /priceSetOnPoHint/);
+  assert.match(row, /MoneyVndInput/);
+  assert.match(row, /patchGrnLineUnitPrice/);
+  assert.match(row, /applyGrnLinePriceUnit/);
+  assert.match(sheet, /numericField === "unitPrice"/);
+  assert.match(sheet, /unitCost: parsedUnitCost/);
+  assert.match(sheet, /unitCostUnitId: entryUnitId/);
+  assert.match(sheet, /applyGrnLinePriceUnit/);
+  assert.match(actions, /unitCost: line\.monetary\?\.unitPrice \?\? 0/);
+  assert.match(actions, /unitCostUnitId: line\.unitCostUnitId/);
+  assert.match(actions, /unitPriceRequired/);
 });
 
-test("GRN add-line dialog is qty/UOM only without PO price hint (D091)", () => {
+test("GRN add-line dialog is qty/UOM/unit price without PO price hint", () => {
   const source = readRepo(
     "apps/web/app/(protected)/inventory/grn/[id]/views/add-grn-line-dialog.tsx",
   );
   assert.doesNotMatch(source, /getReferenceCostForUnit/);
-  assert.doesNotMatch(source, /const \[unitCost/);
+  assert.match(source, /const \[unitPrice/);
   assert.doesNotMatch(source, /priceSetOnPoHint/);
 });
 

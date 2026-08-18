@@ -203,11 +203,9 @@ BEGIN
   WHERE procedure.oid =
     'private.settle_supplier_invoice_valuation(bigint,uuid)'::pg_catalog.regprocedure;
 
-  IF v_definition !~ 'legacy_purchase_price_variance'
-     OR v_definition !~ 'allocated_document_discount'
-     OR v_definition !~ 'settled_current_period'
-     OR v_definition !~ 'inv_to_base_for_tenant' THEN
-    RAISE EXCEPTION 'INVOICE VALUATION: settlement contract is incomplete';
+  IF v_definition !~ '''ap_only'''
+     OR v_definition ~ 'invoice_reprice' THEN
+    RAISE EXCEPTION 'INVOICE VALUATION: settlement must stay AP-only';
   END IF;
 
   SELECT pg_catalog.pg_get_functiondef(procedure.oid)

@@ -92,6 +92,51 @@ test("customer invoice QR keeps buyer writes private and before issuance claim",
   );
 });
 
+test("backlog HĐĐT drafts send the S-invoice submit instant", () => {
+  const helper = readRepo("packages/shared/src/hddt/issue-date.ts");
+  const issuer = readRepo("apps/web/lib/hddt-per-order.ts");
+  const evening = readRepo(
+    "supabase/migrations/20260818101813_hddt_evening_immediate_issue.sql",
+  );
+  const requeue = readRepo(
+    "supabase/migrations/20260818161136_hddt_backlog_submit_date.sql",
+  );
+  const collision = readRepo(
+    "supabase/migrations/20260818224935_hddt_uuid_collision_rebind.sql",
+  );
+
+  assert.match(helper, /allowBacklogSubmitDate === true/);
+  assert.match(helper, /return submittedAt\.toISOString\(\)/);
+  assert.match(helper, /return null/);
+  assert.match(issuer, /allowBacklogSubmitDate: z\.boolean\(\)\.optional\(\)/);
+  assert.match(
+    issuer,
+    /allowBacklogSubmitDate: parsed\.data\.allowBacklogSubmitDate === true/,
+  );
+  assert.match(issuer, /errorCode: "invoice_issue_date_not_today"/);
+  assert.match(
+    evening,
+    /EXTRACT\(\s*HOUR FROM \(p_paid_at AT TIME ZONE 'Asia\/Ho_Chi_Minh'\)\s*\) >= 22 THEN p_paid_at/,
+  );
+  assert.match(requeue, /job\.status = 'blocked'/);
+  assert.match(requeue, /invoice\.status = 'draft'/);
+  assert.match(requeue, /last_error = 'invoice_issue_date_not_today'/);
+  assert.match(requeue, /INVOICE_ISSUE_DATE_INVALID_TT78/);
+  assert.match(
+    requeue,
+    /jsonb_build_object\('allowBacklogSubmitDate', true\)/,
+  );
+  assert.match(collision, /hddt_uuid_collision_expected_pairs_invalid/);
+  assert.match(collision, /uq_tax_invoices_issued_invoice_number/);
+  assert.match(collision, /tax_invoice_number_already_bound/);
+  assert.match(collision, /status = 'cancelled'/);
+  assert.match(
+    collision,
+    /jsonb_build_object\('allowBacklogSubmitDate', true\)/,
+  );
+  assert.doesNotMatch(requeue, /reconcile_required/);
+});
+
 test("buyer request submit close_reason matches queue_submitted constraint", () => {
   const submitMigration = readRepo(
     "supabase/migrations/20260808130119_hddt_buyer_kind_invoice_payload.sql",
@@ -202,9 +247,10 @@ test("POS and Self-Order defer buyer details to the receipt QR", () => {
   );
   assert.match(issuer, /if \(drift !== 0\)/);
   assert.doesNotMatch(issuer, /drift > 10/);
+  assert.match(issuer, /errorCode: "invoice_issue_date_not_today"/);
   assert.match(
     issuer,
-    /getVNDateString\(parsed\.data\.draftSnapshot\.invoiceTime\)[\s\S]*invoice_issue_date_not_today[\s\S]*prepare_tax_invoice_issue_job_as_system/,
+    /allowBacklogSubmitDate: parsed\.data\.allowBacklogSubmitDate === true/,
   );
   assert.doesNotMatch(issuer, /issueTaxInvoiceForPaidOrder|DRAFT-/);
   assert.match(buyerServer, /if \(result\.success\)/);

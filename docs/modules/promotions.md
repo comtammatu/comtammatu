@@ -15,7 +15,8 @@ Apply and selection use `pos:use`; manual `Chiết khấu` uses
 `void_promotion_code`.
 **Kinds:** `order_pct`, `order_vnd`, `voucher_face`, `auto_order`, `bxgy`,
 `free_side` (N free side portions **per qualifying main unit**; `buy`/`get` items;
-`allow_code` / `allow_auto`), `free_item` (N units **per order** already on the
-bill; `get` items; code-only).
+`allow_code` / `allow_auto`), `free_item` (staff picks 1..eligible units **per
+order** already on the bill; optional `free_item_qty` cap, `NULL` = no campaign
+cap; `get` items; code-only; always picker).
 **Out of scope:** loyalty, platform codes, combo engine, voucher SKUs, mutating
 `order_items.sides` prices, Google-review verification.

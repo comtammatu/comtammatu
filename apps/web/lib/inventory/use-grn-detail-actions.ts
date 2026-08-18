@@ -12,6 +12,7 @@ import {
 import { confirmGrn } from "@/(protected)/inventory/procurement-actions";
 import {
   GRN_DETAIL_COPY,
+  acceptedGrnQuantity,
   calculateGrnQuantities,
   hasAcceptedGrnQuantity,
   type EditableGrnLine,
@@ -68,6 +69,8 @@ export function useGrnDetailActions({
           rejectionReason: line.rejectionReason || null,
           rejectedPhotoUrl: line.rejectedPhotoUrl || null,
           entryUnitId: line.entryUnitId,
+          unitCost: line.monetary?.unitPrice ?? 0,
+          unitCostUnitId: line.unitCostUnitId,
         })),
       });
       if (!result.success) {
@@ -140,6 +143,19 @@ export function useGrnDetailActions({
       if (line.rejected > 0 && !line.rejectedPhotoUrl.trim()) {
         return GRN_DETAIL_COPY.validation.rejectPhotoRequired(line.name);
       }
+      if (
+        acceptedGrnQuantity(line.actual, line.rejected) > 0 &&
+        !(Number(line.monetary?.unitPrice ?? 0) > 0)
+      ) {
+        return GRN_DETAIL_COPY.line.unitPriceRequired(line.name);
+      }
+      if (
+        acceptedGrnQuantity(line.actual, line.rejected) > 0 &&
+        Number(line.monetary?.unitPrice ?? 0) > 0 &&
+        line.unitCostUnitId == null
+      ) {
+        return GRN_DETAIL_COPY.line.unitPriceUnitRequired(line.name);
+      }
     }
     return null;
   }
@@ -182,10 +198,22 @@ export function useGrnDetailActions({
       title: messages.inventory.grn.confirmGrnTitle,
       description: messages.inventory.grn.confirmGrnDesc,
       details: [
-        { label: "Nhận hợp lệ", value: `${summary.acceptedLines} dòng` },
-        { label: "Còn thiếu", value: `${summary.shortageLines} dòng` },
-        { label: "Dư ngoài đơn", value: `${summary.excessLines} dòng` },
-        { label: "Từ chối", value: `${summary.rejectedLines} dòng` },
+        {
+          label: messages.inventory.grn.confirmDetailAccepted,
+          value: `${summary.acceptedLines} dòng`,
+        },
+        {
+          label: messages.inventory.grn.confirmDetailShortage,
+          value: `${summary.shortageLines} dòng`,
+        },
+        {
+          label: messages.inventory.grn.confirmDetailExcess,
+          value: `${summary.excessLines} dòng`,
+        },
+        {
+          label: messages.inventory.grn.confirmDetailRejected,
+          value: `${summary.rejectedLines} dòng`,
+        },
       ],
       confirmText: GRN_DETAIL_COPY.confirmGrnAction,
     });
