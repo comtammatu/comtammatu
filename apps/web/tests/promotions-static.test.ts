@@ -224,6 +224,32 @@ test("Owner promotions LIST/DOC and POS Mã giảm surfaces exist", () => {
     /setCodeText\(event\.target\.value\.toUpperCase\(\)\)/,
   );
   assert.match(sheet, /codeText\.trim\(\)\.toUpperCase\(\)/);
+  assert.match(sheet, /kind: promo\.initialOffer\.kind \?\? "free_side"/);
+
+  const detailSheet = readWeb(
+    "app/(protected)/br/[branchId]/pos/order-detail-sheet.tsx",
+  );
+  const inlinePlaceholderAt = detailSheet.indexOf(
+    "PROMOTIONS_VI.inlinePromoPlaceholder",
+  );
+  const inlineInputStart = detailSheet.lastIndexOf("<Input", inlinePlaceholderAt);
+  const inlineInputEnd = detailSheet.indexOf("/>", inlinePlaceholderAt);
+  const inlinePromoInput = detailSheet.slice(
+    inlineInputStart,
+    inlineInputEnd + 2,
+  );
+  assert.match(inlinePromoInput, /controlSize="touch"/);
+  assert.match(inlinePromoInput, /className=\{cn\(/);
+  assert.doesNotMatch(inlinePromoInput, /uppercase/);
+  assert.doesNotMatch(inlinePromoInput, /autoCapitalize/);
+  assert.doesNotMatch(inlinePromoInput, /text-sm/);
+  assert.match(inlinePromoInput, /inputMode="text"/);
+  assert.match(detailSheet, /handleInlinePromoSubmit/);
+  assert.match(
+    detailSheet,
+    /previewPromotionCode[\s\S]*needsSideSelection[\s\S]*setShowDiscount\(true\)/,
+  );
+  assert.match(detailSheet, /inlinePromoCode\.trim\(\)\.toUpperCase\(\)/);
   assert.match(sheet, /wasOpenRef/);
   assert.match(sheet, /if \(wasOpenRef\.current\) return;/);
   assert.match(sheet, /modesKey/);

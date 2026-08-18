@@ -86,6 +86,7 @@ interface DiscountSheetProps {
     initialOffer?: {
       promotionId: number;
       name: string;
+      kind?: string;
       freeQty: number;
       needsSideSelection: boolean;
       amountHint: number;
@@ -197,7 +198,7 @@ export function DiscountSheet({
       setPreview({
         amount: promo.initialOffer.amountHint,
         name: promo.initialOffer.name,
-        kind: "free_side",
+        kind: promo.initialOffer.kind ?? "free_side",
         needsSideSelection: promo.initialOffer.needsSideSelection,
         freeQty: promo.initialOffer.freeQty,
         candidates: promo.initialOffer.candidates,

@@ -364,6 +364,7 @@ export function OrderDetailSheet({
   const [freeSideOffer, setFreeSideOffer] = useState<{
     promotionId: number;
     name: string;
+    kind: string;
     freeQty: number;
     needsSideSelection: boolean;
     amountHint: number;
@@ -463,6 +464,7 @@ export function OrderDetailSheet({
               ? {
                   promotionId: first.promotion_id,
                   name: first.name,
+                  kind: "free_side",
                   freeQty: first.free_qty,
                   needsSideSelection: first.needs_side_selection,
                   amountHint: first.amount_hint,
@@ -1085,13 +1087,43 @@ export function OrderDetailSheet({
         setInlinePromoCode("");
         load();
       } else {
-        if (
-          r.errorCode === "promotion_side_selection_required" ||
-          r.error?.includes("ăn kèm") ||
-          r.error?.includes("món được tặng")
-        ) {
-          setShowDiscount(true);
+        notify.error(r.error ?? PROMOTIONS_VI.loadFailed);
+      }
+    });
+  };
+
+  const handleInlinePromoSubmit = () => {
+    const code = inlinePromoCode.trim().toUpperCase();
+    if (orderId === null || code.length < 3) return;
+    startMutation(async () => {
+      const preview = await previewPromotionCode(branchId, { orderId, code });
+      if (!preview.success || !preview.data) {
+        notify.error(preview.error ?? PROMOTIONS_VI.loadFailed);
+        return;
+      }
+      if (preview.data.needsSideSelection) {
+        if (preview.data.promotionId == null) {
+          notify.error(PROMOTIONS_VI.loadFailed);
+          return;
         }
+        setFreeSideOffer({
+          promotionId: preview.data.promotionId,
+          name: preview.data.name,
+          kind: preview.data.kind,
+          freeQty: preview.data.freeQty ?? 1,
+          needsSideSelection: true,
+          amountHint: preview.data.amountHint ?? preview.data.amount,
+          code,
+          candidates: preview.data.candidates,
+        });
+        setShowDiscount(true);
+        return;
+      }
+      const r = await applyPromotionCode(branchId, { orderId, code });
+      if (r.success) {
+        setInlinePromoCode("");
+        load();
+      } else {
         notify.error(r.error ?? PROMOTIONS_VI.loadFailed);
       }
     });
@@ -1568,22 +1600,20 @@ export function OrderDetailSheet({
                           !isMutating
                         ) {
                           e.preventDefault();
-                          handleApplyPromoCode(inlinePromoCode.trim());
+                          handleInlinePromoSubmit();
                         }
                       }}
                       disabled={isMutating}
                       readOnly={hasPromotion}
                       placeholder={PROMOTIONS_VI.inlinePromoPlaceholder}
                       className={cn(
-                        "font-mono text-sm",
-                        hasPromotion
-                          ? "bg-muted text-foreground select-none"
-                          : "uppercase",
+                        "font-mono",
+                        hasPromotion && "bg-muted text-foreground select-none",
                       )}
-                      autoCapitalize="characters"
                       autoComplete="off"
                       autoCorrect="off"
                       spellCheck={false}
+                      inputMode="text"
                     />
                     {hasPromotion ? (
                       <Button
@@ -1606,7 +1636,7 @@ export function OrderDetailSheet({
                         size="icon-touch"
                         onClick={() => {
                           if (inlinePromoCode.trim().length >= 3) {
-                            handleApplyPromoCode(inlinePromoCode.trim());
+                            handleInlinePromoSubmit();
                           }
                         }}
                         disabled={
@@ -2025,6 +2055,7 @@ export function OrderDetailSheet({
                 ? {
                     promotionId: freeSideOffer.promotionId,
                     name: freeSideOffer.name,
+                    kind: freeSideOffer.kind,
                     freeQty: freeSideOffer.freeQty,
                     needsSideSelection: freeSideOffer.needsSideSelection,
                     amountHint: freeSideOffer.amountHint,
