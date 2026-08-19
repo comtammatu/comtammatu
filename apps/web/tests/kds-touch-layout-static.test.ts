@@ -71,16 +71,20 @@ test("KDS filter and mode controls use touch-sized targets", () => {
   assert.doesNotMatch(completionHistorySource, /size="sm"/);
 });
 
-test("KDS batch summary stays expanded, quantity-first, and touch-sized", () => {
-  assert.match(batchSummarySource, /useState\(true\)/);
-  assert.match(batchSummarySource, /size="icon-touch"/);
+test("KDS batch summary is title-free, quantity-first, and single-line chips", () => {
+  assert.doesNotMatch(batchSummarySource, /batchSummaryCollapse/);
+  assert.doesNotMatch(batchSummarySource, /batchSummaryExpand/);
+  assert.doesNotMatch(batchSummarySource, /KDS_VI\.batchSummary[^A]/);
+  assert.doesNotMatch(batchSummarySource, /useState/);
   assert.doesNotMatch(batchSummarySource, /size="sm"/);
   assert.doesNotMatch(batchSummarySource, /\bh-9\b/);
   assert.doesNotMatch(batchSummarySource, /text-xs/);
   assert.doesNotMatch(batchSummarySource, /overflow-x-auto/);
   assert.doesNotMatch(batchSummarySource, /<Badge/);
+  assert.doesNotMatch(batchSummarySource, /flex-col/);
   assert.match(batchSummarySource, /flex-wrap/);
-  assert.match(batchSummarySource, /flex-col items-center/);
+  assert.match(batchSummarySource, /whitespace-nowrap/);
+  assert.match(batchSummarySource, /inline-flex items-center gap-1\.5/);
   assert.match(
     batchSummarySource,
     /font-mono text-xl font-semibold leading-none tabular-nums/,
@@ -89,7 +93,6 @@ test("KDS batch summary stays expanded, quantity-first, and touch-sized", () => 
     batchSummarySource,
     /\{formatCount\(item\.totalQuantity\)\}[\s\S]*\{item\.itemName\}/,
   );
-  assert.match(batchSummarySource, /min-h-14/);
   assert.match(batchSummarySource, /KDS_ITEM_NAME_CLASS/);
   assert.match(batchSummarySource, /aggregateKdsBatchSummary/);
 });
