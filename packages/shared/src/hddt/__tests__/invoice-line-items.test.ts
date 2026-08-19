@@ -31,6 +31,7 @@ test("expands paid modifiers into separate HĐĐT lines", () => {
       quantity: line.quantity,
       unitPrice: line.unitPrice,
       amount: line.amount,
+      unit: line.unit,
     })),
     [
       {
@@ -38,10 +39,11 @@ test("expands paid modifiers into separate HĐĐT lines", () => {
         quantity: 1,
         unitPrice: 35_000,
         amount: 35_000,
+        unit: "Phần",
       },
-      { name: "Bì", quantity: 1, unitPrice: 7_000, amount: 7_000 },
-      { name: "Chả", quantity: 1, unitPrice: 7_000, amount: 7_000 },
-      { name: "Trứng", quantity: 1, unitPrice: 5_000, amount: 5_000 },
+      { name: "Bì", quantity: 1, unitPrice: 7_000, amount: 7_000, unit: "Phần" },
+      { name: "Chả", quantity: 1, unitPrice: 7_000, amount: 7_000, unit: "Phần" },
+      { name: "Trứng", quantity: 1, unitPrice: 5_000, amount: 5_000, unit: "Phần" },
     ],
   );
   assert.equal(
@@ -131,7 +133,7 @@ test("item discount is baked before order discount in provider projection", () =
   assert.ok(lines.every((line) => line.amount > 0));
 });
 
-test("omits lines reduced to zero and appends service charge", () => {
+test("omits lines reduced to zero and bakes service charge into remaining items", () => {
   const lines = buildHddtProviderLines({
     items: [
       {
@@ -154,11 +156,9 @@ test("omits lines reduced to zero and appends service charge", () => {
 
   assert.deepEqual(
     lines.map((line) => ({ name: line.name, amount: line.amount })),
-    [
-      { name: "Cơm", amount: 50_000 },
-      { name: "Phí dịch vụ", amount: 5_000 },
-    ],
+    [{ name: "Cơm", amount: 55_000 }],
   );
+  assert.ok(lines.every((line) => line.name !== "Phí dịch vụ"));
   assert.equal(resolveServiceChargeVatRate([{ vat_rate: 8 }, { vat_rate: 8 }]), 8);
 });
 
@@ -222,4 +222,64 @@ test("aggregates duplicate legal lines by name unit price and vat", () => {
   const egg = lines.find((line) => line.name === "Trứng");
   assert.equal(egg?.quantity, 2);
   assert.equal(egg?.amount, 10_000);
+});
+
+test("maps sold menu names to the invoice unit of measure", () => {
+  const lines = buildInvoiceLineItemsFromOrderItems([
+    {
+      item_name: "Sườn Cốt Lết",
+      quantity: 1,
+      unit_price: 55_000,
+      vat_rate: 8,
+    },
+    {
+      item_name: "Trà Đá",
+      quantity: 2,
+      unit_price: 5_000,
+      vat_rate: 8,
+    },
+    {
+      item_name: "Coca Cola",
+      quantity: 1,
+      unit_price: 15_000,
+      vat_rate: 8,
+    },
+    {
+      item_name: "Nước Suối",
+      quantity: 1,
+      unit_price: 10_000,
+      vat_rate: 8,
+    },
+    {
+      item_name: "Canh Khổ Qua",
+      quantity: 1,
+      unit_price: 12_000,
+      vat_rate: 8,
+    },
+    {
+      item_name: "Khăn Lạnh",
+      quantity: 1,
+      unit_price: 2_000,
+      vat_rate: 8,
+    },
+    {
+      item_name: "Dụng cụ mang về",
+      quantity: 1,
+      unit_price: 5_000,
+      vat_rate: 8,
+    },
+  ]);
+
+  assert.deepEqual(
+    Object.fromEntries(lines.map((line) => [line.name, line.unit])),
+    {
+      "Sườn Cốt Lết": "Phần",
+      "Trà Đá": "Ly",
+      "Coca Cola": "Lon",
+      "Nước Suối": "Chai",
+      "Canh Khổ Qua": "Tô",
+      "Khăn Lạnh": "Cái",
+      "Dụng cụ mang về": "Bộ",
+    },
+  );
 });

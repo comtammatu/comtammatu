@@ -5,6 +5,18 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## HĐĐT: omit service-charge line and map sold-item units
+
+State: verify
+Kind: fix
+Tier: T3
+Lane: finance/hddt
+Exit: Viettel lines have no named service-charge row; unit of measure follows the current menu; invoice GROSS still equals `orders.total_amount`.
+Evidence: `invoice-line-items.test.ts`, `invoice-units.test.ts`, `pos-mandatory-invoice.test.ts`.
+
+- [x] Owner: Coca/Fanta/Sprite = can (`Lon`); only bottled water = `Chai`
+- [ ] Smoke one issued invoice after deploy: drinks use `Ly`/`Lon`/`Chai`, rice uses `Phần`
+
 ## Early clock-in, delayed checkout auto-approve, and upcoming schedule
 
 State: doing

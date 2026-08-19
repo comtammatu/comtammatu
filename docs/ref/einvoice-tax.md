@@ -1,7 +1,7 @@
 # HĐĐT, thuế GTGT và thuế TNDN — Doanh nghiệp
 
 > Áp dụng cho doanh nghiệp F&B loại hình công ty cổ phần.
-> Last verified: 2026-07-27.
+> Last verified: 2026-08-19.
 
 ## 1. Ranh giới chứng từ
 
@@ -67,8 +67,8 @@ cho phép, lệch ±1₫ hấp thụ vào dòng khác (tách 1 phần cùng món
 Má Tư nhúng CK vào đơn giá/thành tiền sau giảm — không gửi `itemDiscount` /
 dòng “Chiết khấu” riêng. CK món chỉ VND; CK đơn `%` materialize VND rồi trừ
 món rẻ→đắt; dòng về 0đ omit khỏi payload. `total_amount = 0` →
-`not_required`, vẫn QR biên lai, trang buyer read-only. Phụ phí =
-dòng `Phí dịch vụ` khi > 0.
+`not_required`, vẫn QR biên lai, trang buyer read-only. Phụ phí > 0 cộng vào
+dòng món (không dòng `Phí dịch vụ`). ĐVT: `Phần`/`Ly`/`Lon`/`Chai`/`Tô`/`Cái`/`Bộ`.
 
 ## 4. Hóa đơn đầu vào
 

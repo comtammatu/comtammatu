@@ -24,8 +24,9 @@ item `%` discounts that drift under qty changes, and left
    do not keep a separate discount field on the provider payload.
 3. Apply `orders.order_discount_amount` (already whole VND; `%` materialized via
    `compute_discount_amount`) the same way across remaining lines.
-4. If `service_charge > 0`, append one line `Phí dịch vụ` (GROSS =
-   `service_charge`; VAT rate = modal non-cancelled item `vat_rate`, else `8`).
+4. If `service_charge > 0`, bake that GROSS into remaining legal lines
+   (expensive-first, whole VND). Do **not** emit a `Phí dịch vụ` line.
+   POS/`orders.service_charge` still records the surcharge.
 5. Omit lines with GROSS after discount `<= 0` from the provider payload.
    POS/`order_items` retain full history.
 6. Fail closed if `Σ` projected GROSS `!== orders.total_amount`.
@@ -69,7 +70,7 @@ buyer window unchanged.
 ## Verification
 
 - Cheap-first waterfill + omit-zero line tests; `Σ` matches `total_amount`
-  including service charge.
+  including baked service charge; payload has no `Phí dịch vụ` line.
 - Sinvoice payload has zero `itemDiscount` / discount rate on issue lines.
 - Aggregated qty>1 residuals peel one real-item unit (Orders 691/695) and still
   match `orders.total_amount`; qty=2 lines that already hit GROSS are not split.

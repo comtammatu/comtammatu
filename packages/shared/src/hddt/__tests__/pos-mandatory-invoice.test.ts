@@ -343,6 +343,12 @@ test("per-order HĐĐT payload expands POS modifiers and sides", () => {
     !createSrc.includes("applyInvoiceLineDiscount("),
     "prepared provider payload must not use proportional discount allocation",
   );
+  const lineItemsSrc = read("packages/shared/src/hddt/invoice-line-items.ts");
+  assert.doesNotMatch(
+    lineItemsSrc,
+    /Phí dịch vụ/,
+    "HĐĐT provider lines must not emit a named service-charge row",
+  );
 
   assert.ok(
     snapshotMigration.includes("v_old.invoice_snapshot - 'submissionSnapshot'"),

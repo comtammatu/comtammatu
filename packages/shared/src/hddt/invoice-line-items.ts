@@ -1,4 +1,5 @@
 import type { InvoiceLineItem } from "../providers/invoice";
+import { resolveInvoiceUnit } from "./invoice-units";
 
 export interface OrderItemForInvoiceLines {
   item_name: string | null;
@@ -8,6 +9,8 @@ export interface OrderItemForInvoiceLines {
   subtotal?: number | string | null;
   discount_amount?: number | string | null;
   vat_rate: number | string;
+  unit?: string | null;
+  category_type?: string | null;
   modifiers?: unknown;
   sides?: unknown;
 }
@@ -26,9 +29,7 @@ type PricedOption = {
   quantityPerParent: number;
 };
 
-const DEFAULT_UNIT = "Phần";
 const FALLBACK_ITEM_NAME = "Món ăn";
-const SERVICE_CHARGE_LINE_NAME = "Phí dịch vụ";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -114,7 +115,11 @@ function buildAggregateLine(item: OrderItemForInvoiceLines): InvoiceLineItem {
 
   return {
     name: formatItemName(item),
-    unit: DEFAULT_UNIT,
+    unit: resolveInvoiceUnit({
+      name: item.item_name,
+      unit: item.unit,
+      categoryType: item.category_type,
+    }),
     quantity,
     unitPrice,
     amount,
@@ -130,7 +135,7 @@ function buildOptionLine(
   const quantity = parentQuantity * option.quantityPerParent;
   return {
     name: option.name,
-    unit: DEFAULT_UNIT,
+    unit: resolveInvoiceUnit({ name: option.name }),
     quantity,
     unitPrice: option.unitPrice,
     amount: roundMoney(option.unitPrice * quantity),
@@ -207,6 +212,38 @@ export function bakeGrossDiscountCheapFirst(
   return result;
 }
 
+/**
+ * Add GROSS VND surcharge onto remaining lines, most expensive first.
+ * Never emits a named service-charge line; legal lines stay sold items.
+ */
+export function bakeGrossSurchargeExpensiveFirst(
+  lines: readonly InvoiceLineItem[],
+  surchargeAmount: number,
+): InvoiceLineItem[] {
+  const result = lines.map(withoutDiscountField);
+  const surcharge = Number.isFinite(surchargeAmount)
+    ? Math.max(0, toWholeVnd(surchargeAmount))
+    : 0;
+  if (surcharge <= 0 || result.length === 0) return result;
+
+  const order = result
+    .map((line, index) => ({
+      index,
+      amount: Math.max(0, toWholeVnd(toNumber(line.amount))),
+      name: line.name,
+      unitPrice: toNumber(line.unitPrice),
+    }))
+    .filter((line) => line.amount > 0)
+    .sort((a, b) => compareCheapFirst(b, a));
+
+  const first = order[0];
+  if (!first) return result;
+  const target = result[first.index];
+  if (!target) return result;
+  result[first.index] = setLineGross(target, first.amount + surcharge);
+  return result;
+}
+
 function aggregateDuplicateLines(
   lines: readonly InvoiceLineItem[],
 ): InvoiceLineItem[] {
@@ -258,7 +295,11 @@ function expandOrderItem(item: OrderItemForInvoiceLines): InvoiceLineItem[] {
   } else if (baseUnit > 0) {
     itemLines.push({
       name: formatItemName(item),
-      unit: DEFAULT_UNIT,
+      unit: resolveInvoiceUnit({
+        name: item.item_name,
+        unit: item.unit,
+        categoryType: item.category_type,
+      }),
       quantity: parentQuantity,
       unitPrice: baseUnit,
       amount: roundMoney(baseUnit * parentQuantity),
@@ -335,7 +376,8 @@ export function buildInvoiceLineItemsFromOrderItems(
 
 /**
  * Full HĐĐT provider projection: expand → item CK cheap-first → aggregate →
- * order CK cheap-first → service charge line → omit zero GROSS lines.
+ * order CK cheap-first → bake service charge into remaining item lines →
+ * omit zero GROSS lines.
  */
 export function buildHddtProviderLines(
   input: BuildHddtProviderLinesInput,
@@ -358,21 +400,10 @@ export function buildHddtProviderLines(
     projected,
     toNumber(input.orderDiscountAmount),
   );
-
-  const serviceCharge = Math.max(0, toWholeVnd(toNumber(input.serviceCharge)));
-  if (serviceCharge > 0) {
-    projected = [
-      ...projected,
-      {
-        name: SERVICE_CHARGE_LINE_NAME,
-        unit: DEFAULT_UNIT,
-        quantity: 1,
-        unitPrice: serviceCharge,
-        amount: serviceCharge,
-        vatRate: resolveServiceChargeVatRate(input.items),
-      },
-    ];
-  }
+  projected = bakeGrossSurchargeExpensiveFirst(
+    projected,
+    toNumber(input.serviceCharge),
+  );
 
   projected = projected
     .map(withoutDiscountField)
