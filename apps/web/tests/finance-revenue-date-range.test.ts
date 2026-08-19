@@ -244,16 +244,19 @@ test("Finance food-cost page shows actual cost coverage before estimate rows", (
   const financeMessages = read("apps/web/lib/messages/finance.ts");
 
   assert.match(page, /fetchActualFoodCostSummary/);
-  assert.doesNotMatch(page, /fetchRevenueKpis/);
+  assert.match(page, /fetchRevenueKpis/);
+  assert.match(page, /calculateGrossProfitIdentity/);
   assert.match(page, /actualFoodCost=\{actualSummary\.total\}/);
+  assert.match(page, /grossMarginPct=\{grossMarginPct\}/);
   assert.doesNotMatch(page, /operatingConsumption=\{actualSummary\.operatingConsumption\}/);
   assert.doesNotMatch(page, /coveredOrderCount=/);
   assert.match(client, /label=\{foodCopy\.actualFoodCost\}/);
+  assert.match(client, /label=\{foodCopy\.grossMargin\}/);
   assert.doesNotMatch(client, /label=\{foodCopy\.operatingConsumption\}/);
   assert.doesNotMatch(client, /foodCopy\.coverage/);
   assert.doesNotMatch(client, /hint=\{foodCopy\./);
   assert.doesNotMatch(client, /foodCopy\.unitSellingPriceCurrency/);
-  assert.equal((client.match(/<KpiCard/g) ?? []).length, 1);
+  assert.equal((client.match(/<KpiCard/g) ?? []).length, 2);
   assert.match(client, /title=\{foodCopy\.tableTitle\}[\s\S]*<DataTable/);
   assert.doesNotMatch(client, /const estimatedFoodCost = rows\.reduce/);
   assert.match(

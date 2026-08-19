@@ -17,6 +17,27 @@ export interface FinanceResult {
   operatingResult: number | null;
 }
 
+/** Sales identity: net revenue − recorded food cost. Blank without coverage. */
+export function calculateGrossProfitIdentity({
+  netRevenueBeforeVat,
+  ingredientCost,
+  costAvailable,
+}: Pick<
+  FinanceResultInput,
+  "netRevenueBeforeVat" | "ingredientCost" | "costAvailable"
+>): Pick<FinanceResult, "grossProfit" | "grossMargin"> {
+  const grossProfit = costAvailable
+    ? netRevenueBeforeVat - ingredientCost
+    : null;
+  const grossMargin =
+    grossProfit == null
+      ? null
+      : netRevenueBeforeVat > 0
+        ? (grossProfit / netRevenueBeforeVat) * 100
+        : 0;
+  return { grossProfit, grossMargin };
+}
+
 /**
  * Two independent identities — `grossProfit` is not a parent of period result.
  *
@@ -35,15 +56,11 @@ export function calculateFinanceResult({
   costAvailable,
   operatingExpenseRecorded,
 }: FinanceResultInput): FinanceResult {
-  const grossProfit = costAvailable
-    ? netRevenueBeforeVat - ingredientCost
-    : null;
-  const grossMargin =
-    grossProfit == null
-      ? null
-      : netRevenueBeforeVat > 0
-        ? (grossProfit / netRevenueBeforeVat) * 100
-        : 0;
+  const { grossProfit, grossMargin } = calculateGrossProfitIdentity({
+    netRevenueBeforeVat,
+    ingredientCost,
+    costAvailable,
+  });
 
   return {
     grossProfit,

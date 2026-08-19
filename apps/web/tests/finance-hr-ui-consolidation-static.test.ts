@@ -65,8 +65,9 @@ test("Finance analysis routes use compact Design System composition", () => {
   assert.doesNotMatch(bank, /<KpiRow|<KpiCard/);
   assert.doesNotMatch(bank, /variant=\{openQueueCount > 0 \? "warning"/);
 
-  assert.equal((foodCost.match(/<KpiCard/g) ?? []).length, 1);
+  assert.equal((foodCost.match(/<KpiCard/g) ?? []).length, 2);
   assert.match(foodCost, /label=\{foodCopy\.actualFoodCost\}/);
+  assert.match(foodCost, /label=\{foodCopy\.grossMargin\}/);
   assert.doesNotMatch(foodCost, /foodCopy\.coverage/);
   assert.doesNotMatch(foodCost, /foodCopy\.operatingConsumption/);
   assert.doesNotMatch(foodCost, /hint=\{foodCopy\./);

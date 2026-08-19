@@ -60,7 +60,6 @@ export function summarizeFoodCostRows(
   revenue: number;
   ingredientCost: number | null;
   unitIngredientCost: number | null;
-  grossMarginPct: number | null;
 } {
   let quantitySold = 0;
   let revenue = 0;
@@ -81,7 +80,6 @@ export function summarizeFoodCostRows(
       revenue: round2(revenue),
       ingredientCost: null,
       unitIngredientCost: null,
-      grossMarginPct: null,
     };
   }
   const roundedCost = round2(ingredientCost);
@@ -92,10 +90,6 @@ export function summarizeFoodCostRows(
     ingredientCost: roundedCost,
     unitIngredientCost:
       quantitySold > 0 ? round2(roundedCost / quantitySold) : null,
-    grossMarginPct:
-      roundedRevenue > 0
-        ? round2(((roundedRevenue - roundedCost) / roundedRevenue) * 100)
-        : null,
   };
 }
 
@@ -183,6 +177,7 @@ export function buildFoodCostRows({
         ? round2((row.ingredient_cost / row.revenue) * 100)
         : null;
     row.gross_profit = round2(row.revenue - row.ingredient_cost);
+    // Recipe implied complement of food_cost_pct — not finance.gross_margin.
     row.gross_margin_pct =
       row.revenue > 0 ? round2((row.gross_profit / row.revenue) * 100) : null;
   }

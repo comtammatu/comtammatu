@@ -8,6 +8,7 @@ import {
   overlayCatalogItemNames,
   summarizeFoodCostRows,
 } from "../app/_lib/food-cost-calculation";
+import { calculateGrossProfitIdentity } from "../app/(protected)/finance/_lib/finance-result";
 import type { IngredientUnitRow } from "../lib/inventory/types";
 
 const repoRoot = resolve(process.cwd(), "../..");
@@ -259,6 +260,11 @@ test("finance food cost keeps the resolved period in its filter, not the header"
   assert.match(client, /function RecipeCostCell/);
   assert.match(client, /foodCopy\.unitCostPerPortion/);
   assert.doesNotMatch(client, /key: "unit_food_cost"/);
+  assert.match(page, /fetchRevenueKpis/);
+  assert.match(page, /calculateGrossProfitIdentity/);
+  assert.match(client, /grossMarginPct/);
+  assert.doesNotMatch(client, /row\.gross_margin_pct/);
+  assert.doesNotMatch(client, /totals\.grossMarginPct/);
 });
 
 test("finance food cost table totals skip định mức when any row is unvalued", () => {
@@ -278,7 +284,6 @@ test("finance food cost table totals skip định mức when any row is unvalued
   assert.equal(complete.revenue, 150_000);
   assert.equal(complete.ingredientCost, 30_000);
   assert.equal(complete.unitIngredientCost, 10_000);
-  assert.equal(complete.grossMarginPct, 80);
 
   const partial = summarizeFoodCostRows([
     {
@@ -296,5 +301,43 @@ test("finance food cost table totals skip định mức when any row is unvalued
   assert.equal(partial.revenue, 150_000);
   assert.equal(partial.ingredientCost, null);
   assert.equal(partial.unitIngredientCost, null);
-  assert.equal(partial.grossMarginPct, null);
+});
+
+test("finance food cost gross margin uses recorded food cost, not theoretical portion cost", () => {
+  const theoretical = summarizeFoodCostRows([
+    {
+      quantity_sold: 2,
+      revenue: 100_000,
+      ingredient_cost: 20_000,
+    },
+    {
+      quantity_sold: 1,
+      revenue: 50_000,
+      ingredient_cost: 10_000,
+    },
+  ]);
+  assert.equal(theoretical.revenue, 150_000);
+  assert.equal(theoretical.ingredientCost, 30_000);
+
+  const recorded = calculateGrossProfitIdentity({
+    netRevenueBeforeVat: 150_000,
+    ingredientCost: 90_000,
+    costAvailable: true,
+  });
+  assert.equal(recorded.grossProfit, 60_000);
+  assert.equal(recorded.grossMargin, 40);
+  assert.notEqual(
+    recorded.grossMargin,
+    ((theoretical.revenue - (theoretical.ingredientCost ?? 0)) /
+      theoretical.revenue) *
+      100,
+  );
+
+  const incomplete = calculateGrossProfitIdentity({
+    netRevenueBeforeVat: 150_000,
+    ingredientCost: 90_000,
+    costAvailable: false,
+  });
+  assert.equal(incomplete.grossProfit, null);
+  assert.equal(incomplete.grossMargin, null);
 });

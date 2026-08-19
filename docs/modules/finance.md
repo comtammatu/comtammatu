@@ -19,7 +19,7 @@ Period-result formula (two rows):
   is empty, not `0đ`; no-recipe is `0đ`). **`Giá thuần/phần`** is net revenue /
   qty after side split and discount, not `menu_price`. Company WAC is
   `Giá vốn`, not this column. See `docs/ref/inventory.md` § 3.
-- **`Lợi nhuận gộp`**: net revenue minus recorded food cost. Sales identity only.
+- **`Lợi nhuận gộp`**: net revenue minus recorded food cost. Sales identity only. `/finance/food-cost` gross margin is recorded food cost over net sales, coverage-gated, not theoretical portion cost.
 - **`Chi phí hàng` / `Chi mua hàng`**: inbound `transfer_in` at branch, or confirmed `/finance/supplier-invoices` `subtotal` (ex-VAT) at company. Bank settlement is payment, not a second P&L hit.
 - **`Chi vận hành`**: posted period expense (rent, utilities, payroll,
   repairs, consumables, marketing, fees/tax, hospitality, other). Excludes
@@ -204,7 +204,7 @@ the actions above. RLS remains final enforcement.
 | `/finance/expenses`          | Operating expense LIST       | Period KPI from `get_finance_expense_period_summary`; list stays paged |
 | `/finance/equipment`         | Capital equipment LIST       | All-time `category=capital` spend; not a depreciation register |
 | `/finance/targets`           | Monthly revenue targets      | Finance-managed targets + non-cumulative reward tiers; no auto payroll |
-| `/finance/food-cost`         | Gross profit / margin        | Read-only analysis |
+| `/finance/food-cost`         | Gross profit / margin        | Recorded gross-margin KPI; per-item table is theoretical portion cost |
 | `/finance/supplier-invoices` | Supplier payable             | Thin AP entry; not expenses |
 | `/finance/invoices`          | HĐĐT queue                   | Support workflow; same-VN-day issue window |
 

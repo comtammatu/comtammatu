@@ -38,28 +38,26 @@ interface Props {
   branches: { id: number; name: string }[];
   rows: FoodCostRow[];
   actualFoodCost: number;
+  grossMarginPct: number | null;
 }
 
 const foodCopy = messages.finance.foodCost;
 const filterCopy = messages.finance.filterBar;
 const dash = messages.finance.common.noValue;
+const notCalculated = messages.finance.basic.kpis.notCalculated;
 
 const MARGIN_GREEN = 60;
 const MARGIN_WARN = 40;
 const MONEY_COL = "text-right whitespace-nowrap";
 const COUNT_COL = "w-16 text-right font-mono tabular-nums whitespace-nowrap";
-const MARGIN_COL =
-  "w-20 text-right font-mono tabular-nums whitespace-nowrap";
 
-function marginPct(row: FoodCostRow): number | null {
-  return row.gross_margin_pct == null ? null : Number(row.gross_margin_pct);
-}
-
-function marginToneClass(pct: number | null): string {
-  if (pct == null) return "";
-  if (pct >= MARGIN_GREEN) return "text-success";
-  if (pct >= MARGIN_WARN) return "text-warning";
-  return "text-destructive";
+function marginKpiTone(
+  pct: number | null,
+): "warning" | "success" | "destructive" {
+  if (pct == null) return "warning";
+  if (pct >= MARGIN_GREEN) return "success";
+  if (pct >= MARGIN_WARN) return "warning";
+  return "destructive";
 }
 
 function formatCostAmount(value: number | null | undefined): ReactNode {
@@ -106,6 +104,7 @@ export function FoodCostClient({
   branches,
   rows,
   actualFoodCost,
+  grossMarginPct,
 }: Props) {
   const range = getPresetRange(params.range, new Date(), {
     from: params.from,
@@ -127,7 +126,6 @@ export function FoodCostClient({
         foodCopy.revenueCurrency,
         foodCopy.unitFoodCostCurrency,
         foodCopy.foodCostCurrency,
-        foodCopy.grossMargin,
       ],
       rows: rows.map((row) => [
         row.item_name ?? dash,
@@ -139,7 +137,6 @@ export function FoodCostClient({
         row.ingredient_cost == null
           ? dash
           : Math.round(Number(row.ingredient_cost)),
-        marginPct(row) == null ? dash : Number(marginPct(row)?.toFixed(2)),
       ]),
     },
   ];
@@ -174,19 +171,6 @@ export function FoodCostClient({
         />
       ),
     },
-    {
-      key: "margin",
-      header: foodCopy.grossMargin,
-      className: MARGIN_COL,
-      render: (row) => {
-        const pct = marginPct(row);
-        return (
-          <span className={marginToneClass(pct)}>
-            {pct == null ? dash : formatPercent(pct)}
-          </span>
-        );
-      },
-    },
   ];
 
   const footerRows: DataTableFooterRow[] = [
@@ -219,17 +203,6 @@ export function FoodCostClient({
           ),
           className: `${MONEY_COL} font-semibold`,
         },
-        {
-          key: "margin",
-          content: (
-            <span className={marginToneClass(totals.grossMarginPct)}>
-              {totals.grossMarginPct == null
-                ? dash
-                : formatPercent(totals.grossMarginPct)}
-            </span>
-          ),
-          className: `${MARGIN_COL} font-semibold`,
-        },
       ],
     },
   ];
@@ -258,7 +231,7 @@ export function FoodCostClient({
 
       <KpiRow
         density="compact"
-        className="grid-cols-1 sm:grid-cols-1 lg:grid-cols-1 xl:grid-cols-1 sm:max-w-sm"
+        className="grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 sm:max-w-2xl"
       >
         <KpiCard
           density="compact"
@@ -266,6 +239,16 @@ export function FoodCostClient({
           value={formatVND(actualFoodCost)}
           shortValue={formatCompactVND(actualFoodCost)}
           tone="primary"
+        />
+        <KpiCard
+          density="compact"
+          label={foodCopy.grossMargin}
+          value={
+            grossMarginPct == null
+              ? notCalculated
+              : formatPercent(grossMarginPct)
+          }
+          tone={marginKpiTone(grossMarginPct)}
         />
       </KpiRow>
 
@@ -291,16 +274,7 @@ export function FoodCostClient({
           mobileFooter={
             rows.length > 0 ? (
               <Frame className="flex flex-col gap-1 bg-muted/30 p-3 text-sm">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium">{foodCopy.tableTotal}</span>
-                  <span
-                    className={`font-mono font-semibold tabular-nums ${marginToneClass(totals.grossMarginPct)}`}
-                  >
-                    {totals.grossMarginPct == null
-                      ? dash
-                      : formatPercent(totals.grossMarginPct)}
-                  </span>
-                </div>
+                <div className="font-medium">{foodCopy.tableTotal}</div>
                 <MetricPair
                   label={foodCopy.quantitySold}
                   value={formatCount(totals.quantitySold)}
@@ -321,42 +295,34 @@ export function FoodCostClient({
               </Frame>
             ) : null
           }
-          mobileCardRender={(row) => {
-            const pct = marginPct(row);
-            return (
-              <Item variant="outline" size="sm">
-                <ItemHeader>
-                  <ItemTitle className="min-w-0 break-words">
-                    {row.item_name ?? dash}
-                  </ItemTitle>
-                  <span
-                    className={`shrink-0 font-mono text-sm font-semibold tabular-nums ${marginToneClass(pct)}`}
-                  >
-                    {pct == null ? dash : formatPercent(pct)}
-                  </span>
-                </ItemHeader>
-                <ItemContent className="gap-1 text-xs">
-                  <MetricPair
-                    label={foodCopy.quantitySold}
-                    value={formatCount(Number(row.quantity_sold ?? 0))}
-                  />
-                  <MetricPair
-                    label={foodCopy.revenueCurrency}
-                    value={formatCostAmount(row.revenue ?? 0)}
-                  />
-                  <MetricPair
-                    label={foodCopy.foodCostCurrency}
-                    value={
-                      <RecipeCostCell
-                        total={row.ingredient_cost}
-                        unit={row.unit_ingredient_cost}
-                      />
-                    }
-                  />
-                </ItemContent>
-              </Item>
-            );
-          }}
+          mobileCardRender={(row) => (
+            <Item variant="outline" size="sm">
+              <ItemHeader>
+                <ItemTitle className="min-w-0 break-words">
+                  {row.item_name ?? dash}
+                </ItemTitle>
+              </ItemHeader>
+              <ItemContent className="gap-1 text-xs">
+                <MetricPair
+                  label={foodCopy.quantitySold}
+                  value={formatCount(Number(row.quantity_sold ?? 0))}
+                />
+                <MetricPair
+                  label={foodCopy.revenueCurrency}
+                  value={formatCostAmount(row.revenue ?? 0)}
+                />
+                <MetricPair
+                  label={foodCopy.foodCostCurrency}
+                  value={
+                    <RecipeCostCell
+                      total={row.ingredient_cost}
+                      unit={row.unit_ingredient_cost}
+                    />
+                  }
+                />
+              </ItemContent>
+            </Item>
+          )}
         />
       </AppSection>
     </>

@@ -98,6 +98,7 @@ cần xử lý cuối trang. Section UI chỉ title — không mô tả theo/kh�
 | `finance.food_cost.recorded` | Giá vốn món | `inventory_value_allocations` bucket `food_cost` khi cutover `active`; chưa cutover → trống | thiếu coverage / chưa cutover → `needs_review`; không trừ kết quả kỳ |
 | `finance.food_cost.theoretical` | Giá vốn lý thuyết | `fetchFoodCost` / `buildFoodCostRows`: định mức hiện tại × SL bán × resolver catalog (cùng `/inventory/menu-recipes`) | `estimated` |
 | `finance.gross_profit.readonly` | Lợi nhuận gộp | Doanh thu thuần − food cost recorded | thiếu coverage → không hiện số; dòng độc lập, không phải cha của kết quả kỳ |
+| `finance.gross_margin.readonly` | Biên gộp | Lợi nhuận gộp / doanh thu thuần; cùng gate coverage; KPI `/finance/food-cost`; không lấy từ Định mức | thiếu coverage / thiếu doanh thu thuần → trống |
 | `finance.operating_result` | Kết quả kinh doanh | DT thuần − chi phí hàng − chi VH + (closing − opening); không gọi LN ròng; không lấy từ LN gộp | cần đã ghi chi VH; không chờ coverage giá vốn món |
 
 ### Gate hiển thị VAT và thiết bị
