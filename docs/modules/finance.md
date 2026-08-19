@@ -154,7 +154,7 @@ role/route map: `docs/spec/role-route-matrix.md`. JWT central/accountant roles s
 | -------------- | ------ | ----------- |
 | Owner          | Tenant-wide `/finance`; same ops as Accountant | Landing metrics; cash/bank; POS variances; SePay unmatched; VietQR evidence; expenses; AP; HĐĐT; inventory open/close; exports; staff grants |
 | Accountant     | All `/finance` ops + Inventory GRN/PO view/manage; no stock/production/catalog | Supplier docs, matching, service invoice verify, payments/advances, bank reconcile, Finance records |
-| Branch Manager | Branch POS-session only; no tenant Finance; no purchase-price / chain-PO | `staff_repaid` / `accepted_adjustment` for subordinate shortage (neither changes book funds). May **read** MTD + day `Doanh thu thuần` / target progress via `get_branch_revenue_target_progress`; cannot edit targets or open `/finance` |
+| Branch Manager | Branch POS-session only; no tenant Finance; no purchase-price / chain-PO | Shortage `staff_repaid` / `accepted_adjustment`. May **read** MTD/day net revenue (`get_branch_revenue_target_progress`) and **day totals only** on `/close-day` (`get_branch_day_report`: gross profit, day operating result, top items). No `/finance`, WAC lines, or purchase price. |
 
 Do not map `office` or retired position codes to Finance. Period-close
 enterprise accounting remains outside product (D020).

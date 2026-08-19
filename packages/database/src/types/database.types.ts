@@ -13755,6 +13755,10 @@ export type Database = {
         Args: { p_since: string }
         Returns: Json
       }
+      get_branch_day_report: {
+        Args: { p_branch_id: number; p_business_date: string }
+        Returns: Json
+      }
       get_branch_day_summary: {
         Args: { p_branch_id: number; p_business_date: string }
         Returns: Json

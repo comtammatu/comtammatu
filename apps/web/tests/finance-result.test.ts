@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { calculateFinanceResult } from "../app/(protected)/finance/_lib/finance-result";
+import {
+  calculateBranchDayFinanceResult,
+  calculateFinanceResult,
+} from "../app/(protected)/finance/_lib/finance-result";
 
 test("finance result uses goods-in plus inventory change, not POS COGS", () => {
   assert.deepEqual(
@@ -85,4 +88,42 @@ test("finance result uses goods-in plus inventory change, not POS COGS", () => {
   });
   assert.equal(withLowFoodCost.operatingResult, withHighFoodCost.operatingResult);
   assert.notEqual(withLowFoodCost.grossProfit, withHighFoodCost.grossProfit);
+});
+
+test("branch-day KQKD keeps 0 opex and blanks only when valuation is inactive", () => {
+  const zeroOpex = calculateBranchDayFinanceResult({
+    netRevenueBeforeVat: 600_000,
+    goodsIn: 200_000,
+    ingredientCost: 180_000,
+    operatingExpense: 0,
+    inventoryChange: 50_000,
+    costAvailable: true,
+    valuationActive: true,
+  });
+  assert.equal(zeroOpex.grossProfit, 420_000);
+  assert.equal(zeroOpex.operatingResult, 450_000);
+
+  const missingCoverage = calculateBranchDayFinanceResult({
+    netRevenueBeforeVat: 600_000,
+    goodsIn: 200_000,
+    ingredientCost: 180_000,
+    operatingExpense: 0,
+    inventoryChange: 50_000,
+    costAvailable: false,
+    valuationActive: true,
+  });
+  assert.equal(missingCoverage.grossProfit, null);
+  assert.equal(missingCoverage.operatingResult, 450_000);
+
+  const noValuation = calculateBranchDayFinanceResult({
+    netRevenueBeforeVat: 600_000,
+    goodsIn: 200_000,
+    ingredientCost: 180_000,
+    operatingExpense: 0,
+    inventoryChange: 50_000,
+    costAvailable: true,
+    valuationActive: false,
+  });
+  assert.equal(noValuation.grossProfit, null);
+  assert.equal(noValuation.operatingResult, null);
 });

@@ -472,11 +472,12 @@ badge}`).
   breakdown → export action.
 - Branch operator variant: `BranchOperatorPage` → mobile
   `BranchOperatorControlBar` → `BranchOperatorPanel` + full-row `ItemGroup`
-  drill-ins. It is a fixed branch/current-period operational signal, not a
-  compact control_surface dashboard: no branch or date picker, KPI aggregation, chart,
-  `DataTable`, export, financial values, or audit history. Every quantity stays
-  paired with the unit of its ingredient; quantities from different ingredients
-  must never be aggregated.
+  drill-ins. Not a control_surface cockpit: no branch picker, chart,
+  `DataTable`, or export. **Stock qty REPORT** (thresholds, consumption lists):
+  no money aggregation; every quantity stays with its ingredient unit.
+  **Money REPORT** (`pos-sessions`, `close-day`): session or business-day
+  totals via `ItemGroup` / status strip. `close-day` may use a date toolbar
+  (`?date=`, 04:00 window) and stacked P&L totals; still no mosaic/`KpiRow`.
 - Drill-down (where the report has one): a dated child route, e.g.
   `finance/revenue/[date]/page.tsx`.
 - Status/money/date: per § 1.

@@ -38,7 +38,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/pos-sessions/page.tsx":
     "REPORT",
   "apps/web/app/(protected)/br/[branchId]/(operator)/close-day/page.tsx":
-    "DOC-WORKFLOW",
+    "REPORT",
   "apps/web/app/(protected)/br/[branchId]/(operator)/settings/pos/page.tsx":
     "SETTINGS-PANEL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/settings/printers/page.tsx":

@@ -9,10 +9,13 @@ import { CloseDayClient } from "./close-day-client";
 
 export default async function CloseDayPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ branchId: string }>;
+  searchParams: Promise<{ date?: string }>;
 }) {
   const { branchId: rawBranchId } = await params;
+  const { date: requestedDate } = await searchParams;
   const branchId = parseOperatorBranchId(rawBranchId);
   if (branchId == null) notFound();
 
@@ -25,6 +28,7 @@ export default async function CloseDayPage({
     claims,
     context.branchId,
     context.branch.name,
+    requestedDate,
   );
 
   return (
@@ -34,9 +38,11 @@ export default async function CloseDayPage({
     >
       <CloseDayClient
         branchId={context.branchId}
-        summary={data.summary}
+        report={data.report}
         sessions={data.sessions}
+        attendance={data.attendance}
         businessDate={data.businessDate}
+        todayBusinessDate={data.todayBusinessDate}
         pendingWasteCount={data.pendingWasteCount}
         pendingCountSlipsCount={data.pendingCountSlipsCount}
         pendingCheckoutsCount={data.pendingCheckoutsCount}

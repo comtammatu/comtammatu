@@ -71,3 +71,33 @@ export function calculateFinanceResult({
       : null,
   };
 }
+
+/**
+ * Branch business-day identity. Opex posted that calendar date may be 0đ
+ * without blanking KQKD. Inactive cutover blanks GP, margin, and KQKD.
+ */
+export function calculateBranchDayFinanceResult({
+  netRevenueBeforeVat,
+  goodsIn,
+  ingredientCost,
+  operatingExpense,
+  inventoryChange,
+  costAvailable,
+  valuationActive,
+}: Omit<FinanceResultInput, "operatingExpenseRecorded"> & {
+  valuationActive: boolean;
+}): FinanceResult {
+  const { grossProfit, grossMargin } = calculateGrossProfitIdentity({
+    netRevenueBeforeVat,
+    ingredientCost,
+    costAvailable: costAvailable && valuationActive,
+  });
+  return {
+    grossProfit,
+    grossMargin,
+    inventoryChange,
+    operatingResult: valuationActive
+      ? netRevenueBeforeVat - goodsIn - operatingExpense + inventoryChange
+      : null,
+  };
+}

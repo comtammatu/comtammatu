@@ -201,7 +201,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     allowedRoles: ["owner", "branch_manager"],
     label: getModuleLabelVi("branch_pos_sessions"),
   },
-  /** Branch end-of-day close workflow (operational roll-up). */
+  /** Branch business-day Daily Summary (read-only roll-up). */
   branch_close_day: {
     path: "/br/*/close-day",
     allowedRoles: ["owner", "branch_manager"],

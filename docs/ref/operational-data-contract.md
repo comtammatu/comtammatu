@@ -100,6 +100,10 @@ cần xử lý cuối trang. Section UI chỉ title — không mô tả theo/kh�
 | `finance.gross_profit.readonly` | Lợi nhuận gộp | Doanh thu thuần − food cost recorded | thiếu coverage → không hiện số; dòng độc lập, không phải cha của kết quả kỳ |
 | `finance.gross_margin.readonly` | Biên gộp | Lợi nhuận gộp / doanh thu thuần; cùng gate coverage; KPI `/finance/food-cost`; không lấy từ Định mức | thiếu coverage / thiếu doanh thu thuần → trống |
 | `finance.operating_result` | Kết quả kinh doanh | DT thuần − chi phí hàng − chi VH + (closing − opening); không gọi LN ròng; không lấy từ LN gộp | cần đã ghi chi VH; không chờ coverage giá vốn món |
+| `finance.operating_result.branch_day` | Kết quả kinh doanh ngày | Cùng identity, cửa sổ 04:00; chi VH = `expenses` `expense_date` = ngày KD, `branch_id` CN. 0đ ngày vẫn hiện 0 (không blank). Chi tháng không phân bổ. | cutover inactive → trống; không chờ coverage giá vốn |
+| `branch_day.top_items` | Món bán chạy | `paid_at` ∈ bounds 04:00; tách side, trừ doanh thu side khỏi món chính | `get_branch_day_report`; không cộng báo cáo ca |
+| `branch_day.waste_value` | Hao hụt (tiền) | Writeoff đã ghi trong bounds; không trừ GP | queue phiếu chờ là việc, không phải KPI |
+| `branch_day.manual_consumption` | Tiêu hao tay | Phiếu tiêu hao không `sale_consumption`; không vào GP | cùng RPC |
 
 ### Gate hiển thị VAT và thiết bị
 
@@ -175,8 +179,9 @@ hướng không đặt title như KPI.
 - Helpers: SQL `branch_business_day_bounds` / `branch_business_date`; TS
   `getVNBusinessDateString` / `getVNBusinessDayUtcRange` /
   `VN_BUSINESS_DAY_CUTOFF_HOUR = 4`.
-- `/close-day` = Daily Summary qua `get_branch_day_summary`. `close_branch_day`
-  raise `branch_day_close_retired`. Hàng đã đóng giữ audit.
+- `/close-day` = Daily Summary qua `get_branch_day_report` (tổng ngày; gate
+  `settings:branch` hoặc `finance:view`). `get_branch_day_summary` còn cho
+  drift test. `close_branch_day` raise `branch_day_close_retired`.
 - `open_session_count`: ca POS `opened_at` trong bounds + `status = 'open'`.
 - Lệch tạm: nhiều finance filter vẫn `getVNDayUtcRange` (00:00–24:00). Không
   align trong PR branch-ops; ODC follow-up khi Owner xác nhận đau đối chiếu.

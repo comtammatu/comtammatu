@@ -1,18 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo, useState } from "react";
 import {
-  CheckCircle2,
+  ChevronLeft,
   ChevronRight,
   ClipboardCheck,
   Package,
-  ShieldCheck,
-  Store,
   Users,
 } from "lucide-react";
-import { formatVND } from "@comtammatu/shared/format";
-import { formatVNTime } from "@comtammatu/shared/time";
+import { formatPercent, formatVND } from "@comtammatu/shared/format";
+import { getPaymentMethodLabelVi } from "@comtammatu/shared/labels";
+import {
+  addVNDateDays,
+  formatVNDate,
+  formatVNTime,
+} from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
 import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import {
   Item,
@@ -20,69 +25,74 @@ import {
   ItemContent,
   ItemDescription,
   ItemGroup,
-  ItemMedia,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
+import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import {
+  BranchOperatorControlBar,
   BranchOperatorPanel,
   BranchOperatorStatusStrip,
 } from "@lib/branch-operator/components/branch-operator-page";
 import { messages } from "@lib/messages";
-import type { BranchDaySummary, CloseDaySessionRow } from "./data";
+import type {
+  BranchDayReport,
+  CloseDayAttendanceRow,
+  CloseDaySessionRow,
+} from "./data";
 
 const copy = messages.settings.branch;
 
-function SectionHeader({
-  title,
-  description,
-  isComplete,
-  icon: Icon,
-}: {
-  title: string;
-  description: string;
-  isComplete: boolean;
-  icon: typeof Store;
-}) {
-  return (
-    <div className="flex items-start justify-between gap-2 border-b pb-2">
-      <div className="flex items-center gap-3 min-w-0">
-        <div
-          className={`flex size-8 shrink-0 items-center justify-center rounded-full ${
-            isComplete
-              ? "bg-success/15 text-success"
-              : "bg-warning/15 text-warning"
-          }`}
-        >
-          <Icon className="size-4" />
-        </div>
-        <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-          <p className="text-xs text-muted-foreground">{description}</p>
-        </div>
-      </div>
-      <Badge variant={isComplete ? "success" : "warning"} className="shrink-0">
-        {isComplete ? copy.closeDayStatusOk : copy.closeDayStatusAttention}
-      </Badge>
-    </div>
-  );
+const ITEM_SOURCE_LABEL: Record<string, string> = {
+  main: copy.closeDayItemSourceMain,
+  side: copy.closeDayItemSourceSide,
+  modifier: copy.closeDayItemSourceModifier,
+};
+
+function moneyOrDash(value: number | null | undefined): string {
+  if (value == null) return copy.closeDayUnavailable;
+  return formatVND(value);
 }
 
-function SessionItem({ session }: { session: CloseDaySessionRow }) {
+function SessionItem({
+  branchId,
+  session,
+}: {
+  branchId: number;
+  session: CloseDaySessionRow;
+}) {
+  const isOpen = session.status === "open";
   return (
-    <Item variant="outline" size="sm">
+    <Item
+      variant="outline"
+      size="sm"
+      render={
+        <Link href={`/br/${branchId}/pos-sessions?session=${session.id}`} />
+      }
+    >
       <ItemContent>
         <ItemTitle className="text-sm font-medium">
-          {session.terminal_name ?? "Ca chi nhánh"}
+          {session.terminal_name ?? copy.closeDayBranchSession}
         </ItemTitle>
         <ItemDescription className="text-xs">
           {session.opened_by_name ?? "—"} · {formatVNTime(session.opened_at)}
           {session.closed_at ? ` → ${formatVNTime(session.closed_at)}` : ""}
         </ItemDescription>
-        <span className="flex items-center gap-2 pt-1 text-xs tabular-nums text-muted-foreground">
+        <span className="flex flex-wrap items-center gap-2 pt-1 text-xs tabular-nums text-muted-foreground">
           <span>
-            {copy.closeDayCashLabel}:{" "}
-            {formatVND(session.closing_cash ?? session.opening_cash)}
+            {copy.closeDayOpeningCash}: {formatVND(session.opening_cash)}
           </span>
+          {session.expected_cash != null ? (
+            <span>
+              {copy.closeDayExpectedCash}: {formatVND(session.expected_cash)}
+            </span>
+          ) : null}
+          {session.closing_cash != null ? (
+            <span>
+              {copy.closeDayClosingCash}: {formatVND(session.closing_cash)}
+            </span>
+          ) : (
+            <Badge variant="warning">{copy.closeDaySessionOpen}</Badge>
+          )}
           {session.cash_difference != null ? (
             <Badge
               variant={
@@ -93,34 +103,64 @@ function SessionItem({ session }: { session: CloseDaySessionRow }) {
               {formatVND(session.cash_difference)}
             </Badge>
           ) : null}
+          {isOpen ? null : (
+            <Badge variant="secondary">{copy.closeDaySessionClosed}</Badge>
+          )}
         </span>
       </ItemContent>
+      <ItemActions>
+        <ChevronRight aria-hidden />
+      </ItemActions>
     </Item>
   );
 }
 
 export function CloseDayClient({
   branchId,
-  summary,
+  report,
   sessions,
+  attendance,
+  businessDate,
+  todayBusinessDate,
   pendingWasteCount,
   pendingCountSlipsCount,
   pendingCheckoutsCount,
   loadFailed,
 }: {
   branchId: number;
-  summary: BranchDaySummary | null;
+  report: BranchDayReport | null;
   sessions: CloseDaySessionRow[];
+  attendance: CloseDayAttendanceRow[];
   businessDate: string;
+  todayBusinessDate: string;
   pendingWasteCount: number;
   pendingCountSlipsCount: number;
   pendingCheckoutsCount: number;
   loadFailed: boolean;
 }) {
-  const openSessionCount = summary?.open_session_count ?? 0;
-  const posOk = openSessionCount === 0;
-  const stockOk = pendingWasteCount === 0 && pendingCountSlipsCount === 0;
-  const hrOk = pendingCheckoutsCount === 0;
+  const [itemSort, setItemSort] = useState<"qty" | "revenue">("qty");
+  const prevDate = addVNDateDays(businessDate, -1);
+  const nextDate = addVNDateDays(businessDate, 1);
+  const canGoNext = businessDate < todayBusinessDate;
+  const openSessions = sessions.filter((row) => row.status === "open");
+  const closedSessions = sessions.filter((row) => row.status !== "open");
+  const attentionCount =
+    (report?.open_session_count ?? 0) +
+    pendingWasteCount +
+    pendingCountSlipsCount +
+    pendingCheckoutsCount;
+
+  const topItems = useMemo(() => {
+    const items = [...(report?.top_items ?? [])];
+    items.sort((a, b) =>
+      itemSort === "qty"
+        ? b.qty - a.qty || b.revenue - a.revenue || a.name.localeCompare(b.name)
+        : b.revenue - a.revenue || b.qty - a.qty || a.name.localeCompare(b.name),
+    );
+    return items;
+  }, [itemSort, report?.top_items]);
+
+  const mixEntries = Object.entries(report?.payment_mix ?? {});
 
   if (loadFailed) {
     return (
@@ -134,33 +174,237 @@ export function CloseDayClient({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
-      <BranchOperatorPanel headingLevel="h2">
-        <SectionHeader
-          title={copy.closeDayStep1Title}
-          description={copy.closeDayStep1Desc}
-          isComplete={posOk}
-          icon={Store}
-        />
-        <NoteCallout tone="muted" className="mt-3 text-sm">
-          {copy.closeDayCutoffNote}
-        </NoteCallout>
-        {openSessionCount > 0 ? (
-          <NoteCallout tone="warning" className="mt-3">
-            {copy.closeDayOpenSessionsWarning(openSessionCount)}
-          </NoteCallout>
+      <BranchOperatorControlBar>
+        <Button
+          variant="ghost"
+          size="sm"
+          render={<Link href={`/br/${branchId}/close-day?date=${prevDate}`} />}
+        >
+          <ChevronLeft />
+          {copy.closeDayPrevDate}
+        </Button>
+        <span className="text-sm font-medium tabular-nums">
+          {formatVNDate(businessDate)}
+        </span>
+        {canGoNext ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            render={<Link href={`/br/${branchId}/close-day?date=${nextDate}`} />}
+          >
+            {copy.closeDayNextDate}
+            <ChevronRight />
+          </Button>
         ) : (
-          <div className="flex items-center gap-2 pt-2 text-xs text-success">
-            <CheckCircle2 className="size-4" />
-            <span>{copy.closeDayStep1Success}</span>
-          </div>
+          <Button variant="ghost" size="sm" disabled>
+            {copy.closeDayNextDate}
+            <ChevronRight />
+          </Button>
         )}
+      </BranchOperatorControlBar>
+      <p className="text-xs text-muted-foreground">{copy.closeDayCutoffNote}</p>
+
+      {attentionCount > 0 ? (
+        <NoteCallout tone="warning" title={copy.closeDayAttentionTitle}>
+          {copy.closeDayAttentionBody(
+            report?.open_session_count ?? 0,
+            pendingWasteCount,
+            pendingCountSlipsCount,
+            pendingCheckoutsCount,
+          )}
+        </NoteCallout>
+      ) : null}
+
+      <BranchOperatorPanel headingLevel="h2">
+        <SectionLabel>{copy.closeDayResultTitle}</SectionLabel>
+        <div className="mt-3">
+          <BranchOperatorStatusStrip
+            items={[
+              {
+                label: copy.closeDayNetRevenueLabel,
+                value: formatVND(report?.net_revenue ?? 0),
+                mono: true,
+              },
+              {
+                label: copy.closeDayFoodCostLabel,
+                value: moneyOrDash(report?.food_cost),
+                mono: true,
+                muted: report?.food_cost == null,
+              },
+              {
+                label: copy.closeDayGrossProfitLabel,
+                value: moneyOrDash(report?.gross_profit),
+                mono: true,
+                muted: report?.gross_profit == null,
+              },
+              {
+                label: copy.closeDayGrossMarginLabel,
+                value:
+                  report?.gross_margin == null
+                    ? copy.closeDayUnavailable
+                    : formatPercent(report.gross_margin),
+                mono: true,
+                muted: report?.gross_margin == null,
+              },
+            ]}
+          />
+        </div>
+        <div className="mt-3">
+          <BranchOperatorStatusStrip
+            items={[
+              {
+                label: copy.closeDayOperatingResultLabel,
+                value: moneyOrDash(report?.operating_result),
+                mono: true,
+                muted: report?.operating_result == null,
+              },
+              {
+                label: copy.closeDayGoodsInLabel,
+                value: moneyOrDash(report?.goods_in),
+                mono: true,
+                muted: report?.goods_in == null,
+              },
+              {
+                label: copy.closeDayOpexLabel,
+                value: formatVND(report?.operating_expense ?? 0),
+                mono: true,
+              },
+              {
+                label: copy.closeDayInventoryChangeLabel,
+                value: moneyOrDash(report?.inventory_change),
+                mono: true,
+                muted: report?.inventory_change == null,
+              },
+            ]}
+          />
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          {copy.closeDayOpexCaption}
+        </p>
+      </BranchOperatorPanel>
+
+      <BranchOperatorPanel headingLevel="h2">
+        <SectionLabel>{copy.closeDayCollectedTitle}</SectionLabel>
+        <div className="mt-3">
+          <BranchOperatorStatusStrip
+            items={[
+              {
+                label: copy.closeDayRevenueLabel,
+                value: formatVND(report?.money_collected ?? 0),
+                mono: true,
+              },
+              {
+                label: copy.closeDayCashRevenueLabel,
+                value: formatVND(report?.cash_revenue ?? 0),
+                mono: true,
+              },
+              {
+                label: copy.closeDayNoncashRevenueLabel,
+                value: formatVND(report?.noncash_revenue ?? 0),
+                mono: true,
+              },
+              {
+                label: copy.closeDayPaidOrdersLabel,
+                value: String(report?.paid_orders ?? 0),
+                mono: true,
+              },
+              {
+                label: copy.closeDayUnpaidOrdersLabel,
+                value: String(report?.unpaid_orders ?? 0),
+                mono: true,
+              },
+            ]}
+          />
+        </div>
+        {mixEntries.length > 0 ? (
+          <ItemGroup className="mt-3 gap-2">
+            {mixEntries.map(([method, amount]) => (
+              <Item key={method} variant="outline" size="sm">
+                <ItemContent>
+                  <ItemTitle className="text-sm">
+                    {getPaymentMethodLabelVi(method)}
+                  </ItemTitle>
+                </ItemContent>
+                <ItemActions>
+                  <span className="font-mono text-sm tabular-nums">
+                    {formatVND(amount)}
+                  </span>
+                </ItemActions>
+              </Item>
+            ))}
+          </ItemGroup>
+        ) : null}
+      </BranchOperatorPanel>
+
+      <BranchOperatorPanel headingLevel="h2">
+        <div className="flex items-center justify-between gap-2">
+          <SectionLabel>{copy.closeDayTopItemsTitle}</SectionLabel>
+          <div className="flex gap-1">
+            <Button
+              variant={itemSort === "qty" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setItemSort("qty")}
+            >
+              {copy.closeDaySortQty}
+            </Button>
+            <Button
+              variant={itemSort === "revenue" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setItemSort("revenue")}
+            >
+              {copy.closeDaySortRevenue}
+            </Button>
+          </div>
+        </div>
+        {topItems.length === 0 ? (
+          <p className="mt-3 text-xs text-muted-foreground">
+            {copy.closeDayTopItemsEmpty}
+          </p>
+        ) : (
+          <ItemGroup className="mt-3 gap-2">
+            {topItems.map((item) => (
+              <Item
+                key={`${item.source}-${item.name}`}
+                variant="outline"
+                size="sm"
+              >
+                <ItemContent>
+                  <ItemTitle className="text-sm">{item.name}</ItemTitle>
+                  <ItemDescription className="text-xs">
+                    {ITEM_SOURCE_LABEL[item.source] ?? copy.closeDayItemSourceMain} · {item.qty}
+                  </ItemDescription>
+                </ItemContent>
+                <ItemActions>
+                  <span className="font-mono text-sm tabular-nums">
+                    {formatVND(item.revenue)}
+                  </span>
+                </ItemActions>
+              </Item>
+            ))}
+          </ItemGroup>
+        )}
+      </BranchOperatorPanel>
+
+      <BranchOperatorPanel headingLevel="h2">
+        <SectionLabel>{copy.closeDaySessionsTitle}</SectionLabel>
         <div className="mt-3 flex flex-col gap-2">
           {sessions.length === 0 ? (
             <p className="text-xs text-muted-foreground">{copy.closeDayNoSessions}</p>
           ) : (
             <ItemGroup className="gap-2">
-              {sessions.map((session) => (
-                <SessionItem key={session.id} session={session} />
+              {openSessions.map((session) => (
+                <SessionItem
+                  key={session.id}
+                  branchId={branchId}
+                  session={session}
+                />
+              ))}
+              {closedSessions.map((session) => (
+                <SessionItem
+                  key={session.id}
+                  branchId={branchId}
+                  session={session}
+                />
               ))}
             </ItemGroup>
           )}
@@ -168,21 +412,37 @@ export function CloseDayClient({
       </BranchOperatorPanel>
 
       <BranchOperatorPanel headingLevel="h2">
-        <SectionHeader
-          title={copy.closeDayStep2Title}
-          description={copy.closeDayStep2Desc}
-          isComplete={stockOk}
-          icon={Package}
-        />
+        <SectionLabel>{copy.closeDayStockTitle}</SectionLabel>
+        <div className="mt-3">
+          <BranchOperatorStatusStrip
+            items={[
+              {
+                label: copy.closeDaySaleConsumptionLabel,
+                value: moneyOrDash(report?.sale_consumption_value),
+                mono: true,
+                muted: report?.sale_consumption_value == null,
+              },
+              {
+                label: copy.closeDayManualConsumptionLabel,
+                value: moneyOrDash(report?.manual_consumption_value),
+                mono: true,
+                muted: report?.manual_consumption_value == null,
+              },
+              {
+                label: copy.closeDayWasteValueLabel,
+                value: moneyOrDash(report?.waste_value),
+                mono: true,
+                muted: report?.waste_value == null,
+              },
+            ]}
+          />
+        </div>
         <ItemGroup className="mt-3 gap-2">
           <Item
             variant="outline"
             size="sm"
             render={<Link href={`/br/${branchId}/stock/waste-approvals`} />}
           >
-            <ItemMedia variant="icon" className="rounded-md bg-muted p-2">
-              <CheckCircle2 className="size-4" />
-            </ItemMedia>
             <ItemContent>
               <ItemTitle className="text-sm">{copy.closeDayStep2WasteTitle}</ItemTitle>
               <ItemDescription className="text-xs">
@@ -193,18 +453,14 @@ export function CloseDayClient({
               <Badge variant={pendingWasteCount > 0 ? "warning" : "secondary"}>
                 {pendingWasteCount}
               </Badge>
-              <ChevronRight aria-hidden />
+              <Package className="size-4" aria-hidden />
             </ItemActions>
           </Item>
-
           <Item
             variant="outline"
             size="sm"
             render={<Link href={`/br/${branchId}/stock/count-slips`} />}
           >
-            <ItemMedia variant="icon" className="rounded-md bg-muted p-2">
-              <ClipboardCheck className="size-4" />
-            </ItemMedia>
             <ItemContent>
               <ItemTitle className="text-sm">{copy.closeDayStep2CountTitle}</ItemTitle>
               <ItemDescription className="text-xs">
@@ -217,28 +473,56 @@ export function CloseDayClient({
               >
                 {pendingCountSlipsCount}
               </Badge>
-              <ChevronRight aria-hidden />
+              <ClipboardCheck className="size-4" aria-hidden />
             </ItemActions>
           </Item>
         </ItemGroup>
       </BranchOperatorPanel>
 
       <BranchOperatorPanel headingLevel="h2">
-        <SectionHeader
-          title={copy.closeDayStep3Title}
-          description={copy.closeDayStep3Desc}
-          isComplete={hrOk}
-          icon={Users}
-        />
+        <SectionLabel>{copy.closeDayAttendanceTitle}</SectionLabel>
         <ItemGroup className="mt-3 gap-2">
+          {attendance.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              {copy.closeDayNoAttendance}
+            </p>
+          ) : (
+            attendance.map((row) => (
+              <Item
+                key={row.id}
+                variant="outline"
+                size="sm"
+                render={<Link href={`/br/${branchId}/team`} />}
+              >
+                <ItemContent>
+                  <ItemTitle className="text-sm">{row.fullName}</ItemTitle>
+                  <ItemDescription className="text-xs">
+                    {[row.positionLabel, row.shiftName]
+                      .filter(Boolean)
+                      .join(" · ") || "—"}
+                    {" · "}
+                    {row.checkIn ? formatVNTime(row.checkIn) : "—"}
+                    {row.checkOut ? ` → ${formatVNTime(row.checkOut)}` : ""}
+                  </ItemDescription>
+                </ItemContent>
+                <ItemActions>
+                  {row.checkoutPending ? (
+                    <Badge variant="warning">{copy.closeDayCheckoutPending}</Badge>
+                  ) : row.checkOut ? (
+                    <Badge variant="secondary">{copy.closeDayCheckedOut}</Badge>
+                  ) : (
+                    <Badge variant="info">{copy.closeDayWorking}</Badge>
+                  )}
+                  <Users className="size-4" aria-hidden />
+                </ItemActions>
+              </Item>
+            ))
+          )}
           <Item
             variant="outline"
             size="sm"
             render={<Link href={`/br/${branchId}/shift/checkout-approvals`} />}
           >
-            <ItemMedia variant="icon" className="rounded-md bg-muted p-2">
-              <Users className="size-4" />
-            </ItemMedia>
             <ItemContent>
               <ItemTitle className="text-sm">
                 {copy.closeDayStep3CheckoutTitle}
@@ -257,65 +541,6 @@ export function CloseDayClient({
             </ItemActions>
           </Item>
         </ItemGroup>
-      </BranchOperatorPanel>
-
-      <BranchOperatorPanel headingLevel="h2">
-        <SectionHeader
-          title={copy.closeDayStep4Title}
-          description={copy.closeDayStep4Desc}
-          isComplete
-          icon={ShieldCheck}
-        />
-
-        <div className="mt-3">
-          <BranchOperatorStatusStrip
-            items={[
-              {
-                label: copy.closeDayRevenueLabel,
-                value: formatVND(summary?.revenue ?? 0),
-                mono: true,
-              },
-              {
-                label: copy.closeDayCashRevenueLabel,
-                value: formatVND(summary?.cash_revenue ?? 0),
-                mono: true,
-              },
-              {
-                label: copy.closeDayNoncashRevenueLabel,
-                value: formatVND(summary?.noncash_revenue ?? 0),
-                mono: true,
-              },
-              {
-                label: copy.closeDayPaidOrdersLabel,
-                value: String(summary?.paid_orders ?? 0),
-                mono: true,
-              },
-              {
-                label: copy.closeDayUnpaidOrdersLabel,
-                value: String(summary?.unpaid_orders ?? 0),
-                mono: true,
-              },
-            ]}
-          />
-        </div>
-
-        {summary?.is_closed === true && summary.closed_at ? (
-          <ItemGroup className="mt-3">
-            <Item variant="muted" size="sm">
-              <ItemContent>
-                <ItemTitle className="text-sm font-medium text-foreground">
-                  {copy.closeDayHistoricalClosedNote} (
-                  {formatVNTime(summary.closed_at)})
-                </ItemTitle>
-                {summary.note ? (
-                  <ItemDescription className="text-xs text-muted-foreground">
-                    {summary.note}
-                  </ItemDescription>
-                ) : null}
-              </ItemContent>
-            </Item>
-          </ItemGroup>
-        ) : null}
       </BranchOperatorPanel>
     </div>
   );

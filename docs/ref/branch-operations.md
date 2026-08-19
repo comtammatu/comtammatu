@@ -41,9 +41,12 @@ không void trực tiếp.
 
 ## Báo cáo tổng hợp ngày
 
-- Route `/br/[branchId]/close-day` là **Daily Summary** (đọc).
-- RPC `close_branch_day` retired (`branch_day_close_retired`).
-- Summary vẫn load khi chưa từng có bản ghi đóng ngày lịch sử.
+- Route `/br/[branchId]/close-day` là **Daily Summary** (đọc): kết quả ngày
+  (DT thuần, giá vốn món, lãi gộp, biên, KQKD ngày), món bán chạy, ca POS
+  (drill Đối soát ca), bấm ca HR, tiêu hao/hao hụt. Không checklist Chốt ngày.
+- RPC `get_branch_day_report`; `close_branch_day` retired (`branch_day_close_retired`).
+- Cửa sổ 04:00. Chi VH ngày = chi đã ghi `expense_date` hôm đó (0đ vẫn hiện);
+  chi tháng không phân bổ xuống ngày.
 
 ## Việc trong ca và KDS
 
