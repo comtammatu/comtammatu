@@ -10,10 +10,11 @@ contract. This document owns only loading, feedback, and motion boundaries.
 - `Hoá đơn` opens a drawer; the drawer switches between bill and payment.
 - The in-flow cart action opens the cart sheet. Its footer is the only guest
   submit control.
-- A pending request, rejection, payment lock, or multi-bill ambiguity is shown
+- A pending request, rejection, live payment, or multi-bill ambiguity is shown
   through the snapshot-derived guest state. Awaiting confirmation is an in-flow
-  `role="status"` banner on the menu, not an `AppDialog`. Do not add a second
-  state store, notification row, or realtime channel.
+  `role="status"` banner on the menu, not an `AppDialog`. Live payment does not
+  trap the guest in G7; they dismiss to the menu and reopen QR from the bill.
+  Do not add a second state store, notification row, or realtime channel.
 
 ## Loading And Feedback
 

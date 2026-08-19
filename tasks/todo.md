@@ -5,6 +5,40 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## QR payment no longer traps Self-Order and POS workflows
+
+State: verify
+Kind: fix
+Tier: T2
+Lane: pos
+Exit: Live VietQR/cash-call is a recoverable payment step, not a modal lock. Guests can dismiss payment, browse, and add more. POS does not auto-issue QR on bill open; cash can proceed after an unused POS QR; QR chrome stays compact so footer actions stay on-screen.
+Evidence: `corepack pnpm verify` green on the isolated QR slice. Static tests `self-order-payment-contract`, `pos-payment-single-tap`, `self-order-cutover-static`, `vietqr-auto-refresh-flow`, `qr-code-image-static` green.
+
+UI Advisor Gate
+- Surface: `/q/[token]` G1/G6/G7 + POS bill `StationSheet`; route family: public QR + station POS; plane: `public` + `station_chrome`; change: interaction + overlay
+- Context: screen-context-map §2.12 / §2.1; actor: guest + cashier/waiter; job: keep ordering and till work while a QR exists
+- Journey: create QR → dismiss → menu/till work → reopen QR from bill; bank-app return still restores G7; POS issues QR only on an explicit bank-transfer or create-QR tap
+- Information order: 1) menu or till 2) bill 3) compact QR; exclude: forced nested overlays, auto-create on sheet open
+- Pattern: PUBLIC-WORKFLOW + BOARD; block `public-transaction` + `pos-board`; exemplar `self-order-client.tsx` / `bill-receipt-sheet.tsx`
+- States: live intent / dismissed / bank-app return / POS cash after unused QR
+- Block: `public-transaction` + `pos-board` — overlay behavior only
+- Responsive: phone 390 self-order; station touch bill sheet
+- Verification: static tests + `lint:copy` + `corepack pnpm verify`
+
+- [ ] Phone: create VietQR, close drawers, add an item, reopen QR from bill
+- [ ] POS: opening Pay does not mint a QR; tapping bank transfer does; unused QR then cash still confirms
+
+## Sales-branch cash books and company fund rollup
+
+State: verify
+Kind: feature
+Tier: T3
+Lane: finance
+Exit: Company `Tiền mặt` is the sum of sales-branch cash books; company bank stays one ledger; `MATU NOP {branch_id}` records a cash deposit against that sales branch; bare `MATU NOP` waits for Owner branch pick.
+Evidence: static tests `finance-cash-bank-fund`, `bank-cash-deposit-reconciliation`, `sepay-cash-deposit-boundary`; SQL `finance_current_funds_test.sql` updated; `corepack pnpm verify`. Not Production-applied until owner delegates.
+
+- [ ] Owner-delegated Production apply of `20260820021152_sales_branch_cash_books.sql`, then `corepack pnpm db:types`
+
 ## Drink menu recipes consume one serving cup
 
 State: verify

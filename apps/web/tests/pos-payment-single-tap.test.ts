@@ -51,7 +51,17 @@ test("POS closes a pending VietQR sheet as waiting without confirming payment", 
   );
   assert.match(
     billReceiptSource,
-    /<PaymentQrCode[\s\S]*?className="max-h-56 max-w-56"/,
+    /<PaymentQrCode[\s\S]*?className="max-h-40 max-w-40"/,
+  );
+  assert.match(billReceiptSource, /REMOTE_PAYMENT_COPY\.createQr/);
+  assert.doesNotMatch(billReceiptSource, /autoQrTriggeredRef/);
+  assert.doesNotMatch(
+    billReceiptSource,
+    /Auto-create the QR payment when the bill dialog opens/,
+  );
+  assert.match(
+    billReceiptSource,
+    /if \(existingPaymentId != null && !selfOrderPaymentRequestId\)/,
   );
   assert.doesNotMatch(billReceiptSource, /InvoiceFormSection|invoiceForm/);
   assert.match(

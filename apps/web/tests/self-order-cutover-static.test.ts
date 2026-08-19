@@ -226,6 +226,8 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
   assert.doesNotMatch(client, /useState\("all"\)/);
   assert.doesNotMatch(bill, /paymentView/);
   assert.match(bill, /onOpenPayment/);
+  assert.match(bill, /paymentMethod/);
+  assert.match(bill, /SELF_ORDER_VI\.vietQrPendingTitle/);
   assert.doesNotMatch(bill, /onBackToBill/);
   assert.match(
     hooks,

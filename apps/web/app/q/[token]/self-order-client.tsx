@@ -402,14 +402,10 @@ export function SelfOrderClient({
     }
   }, [observedPaymentStatusClientOpId]);
 
-  // Spec G7: reload must re-show the stored VietQR/cash_call sheet.
   useEffect(() => {
     if (!livePaymentClientOpId) {
       restorePaymentAfterBankHandoffRef.current = false;
-      return;
     }
-    setPaymentOpen(true);
-    setBillOpen(true);
   }, [livePaymentClientOpId]);
 
   useEffect(() => {
@@ -681,6 +677,7 @@ export function SelfOrderClient({
         setSnapshot(parsedSnapshot.data);
         setLocalPaymentRequest(null);
         setPaymentStatusClientOpId(null);
+        setPaymentOpen(false);
         paymentIntentRef.current = null;
         setCartItems([]);
         setCustomerNote("");
@@ -965,7 +962,11 @@ export function SelfOrderClient({
                 >
                   <IconReceipt data-icon="inline-start" />
                   {SELF_ORDER_VI.billTab}
-                  <Badge variant={awaiting ? "warning" : "secondary"}>
+                  <Badge
+                    variant={
+                      awaiting || paymentPending ? "warning" : "secondary"
+                    }
+                  >
                     {awaiting ? (
                       <>
                         <IconClock className="size-3.5" aria-hidden />
@@ -1042,6 +1043,7 @@ export function SelfOrderClient({
           if (!nextOpen) setPaymentOpen(false);
         }}
         onOpenPayment={() => setPaymentOpen(true)}
+        paymentMethod={activePaymentRequest?.method ?? null}
         canPay={!ambiguous && order !== null}
         order={order}
         pendingItems={awaiting ? available.request?.items : undefined}

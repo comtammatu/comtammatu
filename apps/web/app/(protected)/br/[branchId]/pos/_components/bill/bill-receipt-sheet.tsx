@@ -139,6 +139,7 @@ const REMOTE_PAYMENT_COPY = {
   qrUnavailableDescription:
     "Phiên thanh toán đang chờ nhưng thiếu dữ liệu QR. Tạo lại QR để lấy mã mới.",
   retryCreate: "Tạo lại QR",
+  createQr: "Tạo mã QR",
   qrAltFallback: "thanh toán",
 } as const;
 
@@ -281,7 +282,7 @@ function PaymentLoadingFixture() {
 function PaymentQrPendingPreview() {
   return (
     <div className="flex flex-col gap-3">
-      <Skeleton className="mx-auto size-48" />
+      <Skeleton className="mx-auto size-36" />
       <Skeleton className="h-5 w-full" />
       <Skeleton className="h-5 w-4/5" />
     </div>
@@ -294,7 +295,7 @@ function PaymentQrPlaceholder({
   Icon: ComponentType<{ className?: string }>;
 }) {
   return (
-    <Frame className="mx-auto flex size-48 items-center justify-center bg-muted/50">
+    <Frame className="mx-auto flex size-36 items-center justify-center bg-muted/50">
       <Icon className="size-8 text-muted-foreground" />
     </Frame>
   );
@@ -447,9 +448,6 @@ export function BillReceipt({
   // method including cash), sheet close, orderId change.
   const [pendingOfflineMethod, setPendingOfflineMethod] =
     useState<PaymentMethod | null>(null);
-  // Tracks orderId we've already auto-fired QR createPayment for, so the
-  // auto-trigger fires once per dialog open even when render deps churn.
-  const autoQrTriggeredRef = useRef<number | null>(null);
   const hydratedPaymentOrderRef = useRef<number | null>(null);
   // Tracks orderId we've already defaulted selectedMethod for. Without this,
   // any dep churn (router.refresh from realtime / visibilitychange / phone
@@ -496,7 +494,6 @@ export function BillReceipt({
       setMethodPending(false);
       setPaymentCreateError(null);
       setPendingOfflineMethod(null);
-      autoQrTriggeredRef.current = null;
       hydratedPaymentOrderRef.current = null;
       methodDefaultedOrderRef.current = null;
       return;
@@ -646,6 +643,7 @@ export function BillReceipt({
       const isAmountStale =
         pendingExtras?.qr_info?.amount != null &&
         Number(pendingExtras.qr_info.amount) !== Number(order.total_amount);
+      const existingPaymentId = pendingExtras?.payment_id ?? null;
 
       if (
         method === selectedMethod &&
@@ -663,6 +661,30 @@ export function BillReceipt({
 
       if (method === "cash") {
         setCashInput(String(Math.round(Number(order.total_amount))));
+        if (existingPaymentId != null && !selfOrderPaymentRequestId) {
+          void (async () => {
+            const result = await cancelPendingPayment(
+              branchId,
+              existingPaymentId,
+            );
+            if (!result.success) {
+              toast.error(
+                result.error ?? messages.pos.payment.cancelPendingFailed,
+              );
+              return;
+            }
+            setOrder((current) =>
+              current
+                ? {
+                    ...current,
+                    payment_method: null,
+                    payment_status: "unpaid",
+                  }
+                : current,
+            );
+            await onOrderUpdated?.();
+          })();
+        }
         return;
       }
 
@@ -710,12 +732,15 @@ export function BillReceipt({
     [
       branchId,
       isOnline,
+      onOrderUpdated,
       order,
       orderId,
       pendingExtras?.payment_id,
       pendingExtras?.qr_data,
+      pendingExtras?.qr_info?.amount,
       pendingExtras?.redirect_url,
       selectedMethod,
+      selfOrderPaymentRequestId,
     ],
   );
 
@@ -776,39 +801,6 @@ export function BillReceipt({
     if (!isOnline) return;
     handleSelectMethod(pendingOfflineMethod);
   }, [isOnline, pendingOfflineMethod, handleSelectMethod]);
-
-  // Auto-create the QR payment when the bill dialog opens with a non-cash
-  // method pre-selected (staff-without-cash-confirm case — no `pos:confirm_payment`). Without
-  // this, "Chuyển khoản" is highlighted but the QR area sits at "Đang tạo"
-  // until the user re-taps the already-selected button. Bypasses for
-  // offline (handleSelectMethod offline-restore takes over later), already-
-  // issued QR, in-flight QR, and read-only orders.
-  useEffect(() => {
-    if (orderId === null) return;
-    if (!order || methods.length === 0) return;
-    if (selectedMethod === "cash") return;
-    if (pendingExtras !== null || methodPending) return;
-    if (!isOnline) return;
-    if (
-      order.payment_status === "paid" ||
-      order.status === "completed" ||
-      order.status === "cancelled"
-    ) {
-      return;
-    }
-    if (autoQrTriggeredRef.current === orderId) return;
-    autoQrTriggeredRef.current = orderId;
-    handleSelectMethod(selectedMethod);
-  }, [
-    orderId,
-    order,
-    methods,
-    selectedMethod,
-    pendingExtras,
-    methodPending,
-    isOnline,
-    handleSelectMethod,
-  ]);
 
   // Auto-refresh QR when order total changes while VietQR is selected
   useEffect(() => {
@@ -986,7 +978,6 @@ export function BillReceipt({
           ? { ...current, payment_method: null, payment_status: "unpaid" }
           : current,
       );
-      autoQrTriggeredRef.current = orderId;
       if (methods.includes("cash")) setSelectedMethod("cash");
       toast.success(messages.pos.payment.pendingCancelled);
       await onOrderUpdated?.();
@@ -1398,14 +1389,29 @@ export function BillReceipt({
                         {remoteQrValue ? (
                           <PaymentQrCode
                             value={remoteQrValue}
-                            className="max-h-56 max-w-56"
+                            className="max-h-40 max-w-40"
                             alt={`QR ${
                               METHOD_META[selectedMethod]?.label ??
                               REMOTE_PAYMENT_COPY.qrAltFallback
                             }`}
                           />
                         ) : (
-                          <PaymentQrPlaceholder Icon={MethodIcon} />
+                          <div className="flex flex-col items-center gap-3">
+                            <PaymentQrPlaceholder Icon={MethodIcon} />
+                            {remotePaymentNeedsRetry ? null : (
+                              <Button
+                                type="button"
+                                size="touch"
+                                onClick={() =>
+                                  handleSelectMethod(selectedMethod)
+                                }
+                                disabled={actionPending || methodPending}
+                              >
+                                <IconQrcode data-icon="inline-start" />
+                                {REMOTE_PAYMENT_COPY.createQr}
+                              </Button>
+                            )}
+                          </div>
                         )}
                         {remotePaymentNeedsRetry ? (
                           <Alert variant="destructive">

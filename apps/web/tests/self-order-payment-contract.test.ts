@@ -309,24 +309,38 @@ test("returning from a bank app restores the live VietQR payment sheet", () => {
   const client = readWeb("app/q/[token]/self-order-client.tsx");
   const paymentPanel = readWeb("app/q/[token]/self-order/payment-panel.tsx");
 
-  // Spec G7: reload / bank-app handoff must re-show the stored VietQR sheet,
-  // not drop the guest onto the menu with billOpen=false.
-  assert.match(
+  // Live intent is recoverable from the bill. Reload stays on the menu.
+  // Bank-app handoff is the only auto-restore of G7.
+  assert.doesNotMatch(
     client,
-    /livePaymentClientOpId[\s\S]*setPaymentOpen\(true\)[\s\S]*setBillOpen\(true\)/,
+    /useEffect\(\(\) => \{[\s\S]*livePaymentClientOpId[\s\S]*setPaymentOpen\(true\)[\s\S]*setBillOpen\(true\)[\s\S]*\}, \[livePaymentClientOpId\]\)/,
   );
   assert.match(client, /restorePaymentAfterBankHandoffRef/);
+  assert.match(
+    client,
+    /function restorePaymentUiAfterBankHandoff[\s\S]*setPaymentOpen\(true\)[\s\S]*setBillOpen\(true\)/,
+  );
+  assert.match(
+    client,
+    /const markBankAppHandoff = useCallback\(\(\) => \{[\s\S]*setPaymentOpen\(true\)[\s\S]*setBillOpen\(true\)/,
+  );
   assert.match(
     client,
     /visibilitychange[\s\S]*restorePaymentUiAfterBankHandoff/,
   );
   assert.match(client, /pageshow[\s\S]*restorePaymentUiAfterBankHandoff/);
   assert.match(client, /onBankAppHandoff=\{markBankAppHandoff\}/);
+  assert.match(client, /setPaymentOpen\(false\)/);
   assert.match(paymentPanel, /onBankAppHandoff\?: \(\) => void/);
   assert.match(paymentPanel, /onBankAppHandoff\?\.\(\)/);
   assert.match(paymentPanel, /render=\{<a href=\{href\} \/>\}/);
   assert.doesNotMatch(paymentPanel, /target="_blank"/);
   assert.match(paymentPanel, /resolveBankAppPlatform\(navigator\)/);
+  assert.match(paymentPanel, /className="size-40 max-w-40"/);
+  assert.match(
+    paymentPanel,
+    /SheetFooter[\s\S]*BankAppLauncher[\s\S]*SELF_ORDER_VI\.cancelVietQr/,
+  );
   // bfcache restore after bank handoff must keep polling the same live intent.
   const privacyScrub = client.match(
     /useSnapshotSync\([\s\S]*?,\s*\(\) => \{([\s\S]*?)\}\s*\);/,

@@ -72,7 +72,7 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 - **Goal:** Order → thanh toán → in hóa đơn dưới ~30s.
 - **Workflow:** Mở ca (tiền đầu) → chọn món/modifier → hình thức phục vụ → gửi KDS → thanh toán (tiền mặt/VietQR, mã giảm nếu có quyền) → kết ca & đối chiếu `cash variance`.
 - **Ưu tiên data:** Grid món + cart + trạng thái in/két + CTA thanh toán touch. **Không:** báo cáo tháng, ca khác, lương, tồn nguyên liệu, chuông thông báo trên board. Hết món / duyệt hủy khi không đang bán: Cổng **Đơn bán** (`/br/{id}/orders`).
-- **UX:** Mobile/tablet touch `≥44px`. Cart chỉ tạo đơn mới; sửa sau gửi/thanh toán qua Lịch sử đơn. **In tạm tính** chỉ Thu ngân / Quản lý / Chủ sở hữu — Phục vụ không thấy nút và server từ chối. **Đơn hoàn thành:** tìm theo số đơn hoặc mã thanh toán; đơn tiền mặt đã thu có thể đổi sang VietQR (`pos:confirm_payment`) rồi in mã QR thanh toán; đảo VietQR→tiền mặt ở Tài chính. **Giới hạn bán** (cùng drawer với `/menu-limits`) mở từ header POS, chỉ `branch_manager` và `owner` — chỉnh trần bán, cho phép bán thêm, bật/tắt món.
+- **UX:** Mobile/tablet touch `≥44px`. Cart chỉ tạo đơn mới; sửa sau gửi/thanh toán qua Lịch sử đơn. **In tạm tính** chỉ Thu ngân / Quản lý / Chủ sở hữu — Phục vụ không thấy nút và server từ chối. Mở **Thanh toán** không tự tạo VietQR; thu ngân chạm **Chuyển khoản** / **Tạo mã QR**. **Đơn hoàn thành:** tìm theo số đơn hoặc mã thanh toán; đơn tiền mặt đã thu có thể đổi sang VietQR (`pos:confirm_payment`) rồi in mã QR thanh toán; đảo VietQR→tiền mặt ở Tài chính. **Giới hạn bán** (cùng drawer với `/menu-limits`) mở từ header POS, chỉ `branch_manager` và `owner` — chỉnh trần bán, cho phép bán thêm, bật/tắt món.
 
 ---
 
@@ -511,7 +511,8 @@ Mỗi hàng = `page.tsx` (shim gộp vào cha). Adapter L0: `AppPage` / `DataTab
      (đăng nhập lại / về surface được phép).
   3. **Self-order:** `/q/[token]` → chọn món → giỏ → gửi → banner chờ duyệt trên
      menu (không dialog); `Hoá đơn` chỉ khi có yêu cầu chờ hoặc bill đang mở;
-     sau duyệt, khách nhập `Mã khuyến mãi` trên hoá đơn; token hết hạn / invalid →
+     sau duyệt, khách nhập `Mã khuyến mãi` trên hoá đơn; mã QR thanh toán đóng
+     được để gọi thêm món; token hết hạn / invalid →
      `notFound` hoặc unavailable chung; offline/retry giữ giao dịch dở
      (`public-transaction`).
   4. **HĐĐT:** §2.10 — quét QR → MST/email → xác nhận một lần.

@@ -210,8 +210,8 @@ export function PaymentPanel({
   const isVietQrPending = activePaymentRequest?.status === "vietqr_pending";
   const hasRecoverableVietQr =
     isVietQrPending &&
-    Boolean(activePaymentRequest.qrData) &&
-    Boolean(activePaymentRequest.paymentCode);
+    Boolean(activePaymentRequest?.qrData) &&
+    Boolean(activePaymentRequest?.paymentCode);
   const expiryLabel = formatVNTime(activePaymentRequest?.expiresAt, "") || null;
   const emailTrim = buyerEmail.trim();
   const emailInvalid = emailTrim.length > 0 && !EMAIL_PATTERN.test(emailTrim);
@@ -254,33 +254,19 @@ export function PaymentPanel({
               ) : null}
 
               {hasRecoverableVietQr ? (
-                <div className="flex flex-col items-center gap-3 rounded-md bg-muted/30 p-3 text-center">
+                <div className="flex flex-col items-center gap-2 rounded-md bg-muted/30 p-3 text-center">
                   <h3 className="font-heading text-sm font-semibold">
                     {SELF_ORDER_VI.vietQrPendingTitle}
                   </h3>
                   <QrCodeImage
                     value={activePaymentRequest.qrData ?? ""}
                     alt={SELF_ORDER_VI.vietQrPendingTitle}
-                    className="size-64 max-w-full"
+                    className="size-40 max-w-40"
                     errorMessage={SELF_ORDER_VI.qrRenderFailed}
                     retryLabel={SELF_ORDER_VI.retryQr}
                     downloadLabel={SELF_ORDER_VI.saveVietQr}
                     downloadName="ma-qr-thanh-toan-ma-tu.png"
-                  >
-                    {activePaymentRequest.accountNo &&
-                    activePaymentRequest.bankCode &&
-                    activePaymentRequest.paymentCode ? (
-                      <BankAppLauncher
-                        accountNo={activePaymentRequest.accountNo}
-                        bankCode={activePaymentRequest.bankCode}
-                        accountName={activePaymentRequest.accountName}
-                        amount={activePaymentRequest.amount}
-                        paymentCode={activePaymentRequest.paymentCode}
-                        qrData={activePaymentRequest.qrData ?? ""}
-                        onBankAppHandoff={onBankAppHandoff}
-                      />
-                    ) : null}
-                  </QrCodeImage>
+                  />
                   <p className="text-sm text-muted-foreground">
                     {SELF_ORDER_VI.otherBankScanHint}
                   </p>
@@ -303,22 +289,11 @@ export function PaymentPanel({
                       </p>
                     ) : null}
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="touch"
-                    className="w-full"
-                    disabled={isCancelling}
-                    onClick={() => void onCancelVietQr()}
-                  >
-                    {isCancelling ? (
-                      <Spinner className="size-4" />
-                    ) : (
-                      <IconCancel data-icon="inline-start" />
-                    )}
-                    {SELF_ORDER_VI.cancelVietQr}
-                  </Button>
                 </div>
+              ) : activePaymentRequest.method === "cash_call" ? (
+                <p className="text-sm text-muted-foreground">
+                  {SELF_ORDER_VI.cashCallOk}
+                </p>
               ) : null}
             </div>
           ) : (
@@ -434,7 +409,40 @@ export function PaymentPanel({
         </div>
       </ScrollArea>
 
-      {activePaymentRequest ? null : (
+      {hasRecoverableVietQr && activePaymentRequest ? (
+        <SheetFooter className="workflow-safe-pb shrink-0 border-border bg-card p-4">
+          <div className="flex flex-col gap-2">
+            {activePaymentRequest.accountNo &&
+            activePaymentRequest.bankCode &&
+            activePaymentRequest.paymentCode ? (
+              <BankAppLauncher
+                accountNo={activePaymentRequest.accountNo}
+                bankCode={activePaymentRequest.bankCode}
+                accountName={activePaymentRequest.accountName}
+                amount={activePaymentRequest.amount}
+                paymentCode={activePaymentRequest.paymentCode}
+                qrData={activePaymentRequest.qrData ?? ""}
+                onBankAppHandoff={onBankAppHandoff}
+              />
+            ) : null}
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              className="w-full"
+              disabled={isCancelling}
+              onClick={() => void onCancelVietQr()}
+            >
+              {isCancelling ? (
+                <Spinner className="size-4" />
+              ) : (
+                <IconCancel data-icon="inline-start" />
+              )}
+              {SELF_ORDER_VI.cancelVietQr}
+            </Button>
+          </div>
+        </SheetFooter>
+      ) : activePaymentRequest ? null : (
         <SheetFooter className="workflow-safe-pb shrink-0 border-border bg-card p-4">
           <div className="grid grid-cols-2 gap-2">
             <Button

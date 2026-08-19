@@ -22,6 +22,7 @@ interface BillDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onOpenPayment: () => void;
+  paymentMethod?: "cash_call" | "vietqr" | null;
   canPay: boolean;
   tableNumber?: number;
   order: PublicSelfOrderAvailableSnapshot["order"];
@@ -44,6 +45,7 @@ export function BillDrawer({
   open,
   onOpenChange,
   onOpenPayment,
+  paymentMethod = null,
   canPay,
   order,
   pendingItems,
@@ -168,7 +170,9 @@ export function BillDrawer({
                   className="w-full shadow-xs"
                   onClick={onOpenPayment}
                 >
-                  {SELF_ORDER_VI.paymentTitle}
+                  {paymentMethod === "vietqr"
+                    ? SELF_ORDER_VI.vietQrPendingTitle
+                    : SELF_ORDER_VI.paymentTitle}
                 </Button>
               ) : null}
             </SheetFooter>
