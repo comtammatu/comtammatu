@@ -58,7 +58,7 @@ test("Owner finance results stay one column on mobile, two on tablet, and expose
     (currentFunds.match(/className=\{formulaOperatorClass\}/g) ?? []).length,
     2,
   );
-  assert.equal((currentFunds.match(/density="compact"/g) ?? []).length, 4);
+  assert.equal((currentFunds.match(/density="compact"/g) ?? []).length, 7);
 });
 
 test("Owner list and finance controls use actual touch-sized fields below desktop", () => {

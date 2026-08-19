@@ -212,11 +212,24 @@ export const supplierInvoiceSchema = z
 
 export type SupplierInvoiceFormValues = z.infer<typeof supplierInvoiceSchema>;
 
-export const supplierPaymentSchema = z.object({
-  amount: positiveMoneySchema,
-  paymentMethod: z.enum(["cash", "bank_transfer"]),
-  referenceNote: z.string().trim().optional(),
-});
+export const supplierPaymentSchema = z
+  .object({
+    amount: positiveMoneySchema,
+    paymentMethod: z.enum(["cash", "bank_transfer"]),
+    cashBranchId: z.string().optional(),
+    referenceNote: z.string().trim().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.paymentMethod !== "cash") return;
+    const branchId = Number(data.cashBranchId);
+    if (!Number.isInteger(branchId) || branchId <= 0) {
+      ctx.addIssue({
+        code: "custom",
+        message: messages.inventory.supplierInvoices.cashBranchRequired,
+        path: ["cashBranchId"],
+      });
+    }
+  });
 
 export type SupplierPaymentFormValues = z.infer<typeof supplierPaymentSchema>;
 
@@ -301,6 +314,7 @@ export function editSupplierInvoiceDefaultValues(
 export function createSupplierPaymentDefaultValues(
   invoice?: SupplierInvoiceRow | null,
   outstanding?: string,
+  cashBranchId?: string,
 ): SupplierPaymentFormValues {
   return {
     amount: invoice
@@ -308,6 +322,7 @@ export function createSupplierPaymentDefaultValues(
         canonicalMoney(getSupplierInvoiceOutstandingAmount(invoice)))
       : "",
     paymentMethod: "bank_transfer",
+    cashBranchId: cashBranchId ?? "",
     referenceNote: "",
   };
 }

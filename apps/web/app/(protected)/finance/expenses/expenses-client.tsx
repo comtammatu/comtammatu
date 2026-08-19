@@ -233,8 +233,9 @@ export function ExpensesClient({
 
   const defaultValues: ExpenseFormValues = {
     expenseDate: todayBusinessDate,
-    branchId:
-      params.branch != null ? String(params.branch) : TENANT_LEVEL_BRANCH_VALUE,
+    branchId: String(
+      params.branch ?? branches[0]?.id ?? TENANT_LEVEL_BRANCH_VALUE,
+    ),
     category: lockedCategory ?? "",
     paymentMethod: "cash",
     note: "",

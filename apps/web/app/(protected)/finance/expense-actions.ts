@@ -133,6 +133,16 @@ const createExpenseSchema = expenseInputSchema.superRefine((data, ctx) => {
       path: ["vatBreakdown", index, field],
     });
   });
+  if (
+    data.paymentMethod === "cash" &&
+    (data.branchId == null || data.branchId <= 0)
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Chi tiền mặt phải chọn chi nhánh bán hàng.",
+      path: ["branchId"],
+    });
+  }
 });
 
 const updateExpenseSchema = expenseInputSchema

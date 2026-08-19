@@ -43,6 +43,7 @@ const linkSepayTransactionToPaymentSchema = z
   .refine((input) => input.bankTransactionId != null || input.eventId != null);
 const recordBankTransactionCashDepositSchema = z.object({
   bankTransactionId: z.coerce.number().int().positive(),
+  branchId: z.coerce.number().int().positive(),
 });
 
 type LinkPaymentRpcError = {
@@ -60,7 +61,7 @@ type LinkPaymentRpcClient = {
 type RecordCashDepositRpcClient = {
   rpc: (
     fn: "record_bank_transaction_cash_deposit",
-    args: { p_bank_transaction_id: number },
+    args: { p_bank_transaction_id: number; p_branch_id: number },
   ) => PromiseLike<{ data: unknown; error: LinkPaymentRpcError | null }>;
 };
 
@@ -171,6 +172,12 @@ function mapCashDepositError(error: LinkPaymentRpcError): string {
     normalized.includes("cash_deposit_link_invalid")
   ) {
     return "Giao dịch này đã được đối soát theo cách khác.";
+  }
+  if (
+    normalized.includes("finance_cash_branch_invalid") ||
+    normalized.includes("cash_deposit_branch_required")
+  ) {
+    return "Chọn chi nhánh bán hàng để trừ quỹ tiền mặt.";
   }
 
   console.error(
@@ -526,6 +533,7 @@ export async function recordBankTransactionCashDeposit(
     ctx.supabase as RecordCashDepositRpcClient
   ).rpc("record_bank_transaction_cash_deposit", {
     p_bank_transaction_id: parsed.data.bankTransactionId,
+    p_branch_id: parsed.data.branchId,
   });
 
   if (error) {

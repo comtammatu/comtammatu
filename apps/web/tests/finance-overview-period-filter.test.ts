@@ -77,7 +77,8 @@ describe("Finance overview period filter", () => {
       new URL("../app/components/control-surface-shell.tsx", import.meta.url),
       "utf8",
     );
-    assert.match(page, /hide=\{\["branch", "granularity", "compare"\]\}/);
+    assert.match(page, /locationFilter/);
+    assert.match(page, /hide=\{\["granularity", "compare"\]\}/);
     assert.match(shell, /ControlSurfaceScopeControl/);
     assert.match(
       filterBar,
@@ -119,7 +120,7 @@ describe("Finance overview period filter", () => {
       ),
       "utf8",
     );
-    assert.match(page, /<FilterBar[\s\S]*?hide=\{\["branch"/);
+    assert.match(page, /<FilterBar[\s\S]*?locationFilter/);
     assert.match(filterBar, /FINANCE_OVERVIEW_PERIODS\.map/);
     assert.match(filterBar, /lg:flex-row lg:flex-nowrap lg:items-center/);
     assert.match(filterBar, /<FinanceCalendarPeriodPicker/);

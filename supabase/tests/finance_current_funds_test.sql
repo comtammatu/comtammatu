@@ -33,6 +33,7 @@ DECLARE
   v_rejected boolean;
   v_audit_count integer;
   v_legacy_setting_id bigint;
+  v_sales_branch record;
 BEGIN
   SELECT profile.id, profile.tenant_id
   INTO v_owner, v_tenant_id
@@ -61,6 +62,8 @@ BEGIN
   INTO v_branch_id
   FROM public.branches branch
   WHERE branch.tenant_id = v_tenant_id
+    AND branch.branch_kind = 'branch'
+    AND COALESCE(branch.is_active, true)
   ORDER BY branch.id
   LIMIT 1;
 
@@ -112,7 +115,11 @@ BEGIN
     'EXECUTE'
   ) OR NOT has_function_privilege(
     'authenticated',
-    'public.create_finance_fund_adjustment(numeric,numeric,text,uuid)',
+    'public.create_finance_fund_adjustment(numeric,numeric,text,uuid,bigint)',
+    'EXECUTE'
+  ) OR NOT has_function_privilege(
+    'authenticated',
+    'public.initialize_branch_cash_opening(bigint,numeric,timestamptz,text,uuid)',
     'EXECUTE'
   ) OR NOT has_function_privilege(
     'authenticated',
@@ -367,6 +374,7 @@ BEGIN
     payment_method,
     amount,
     payment_date,
+    branch_id,
     created_by,
     created_at
   ) VALUES
@@ -377,6 +385,7 @@ BEGIN
       'cash',
       30,
       v_after,
+      v_branch_id,
       v_owner,
       v_after
     ),
@@ -387,6 +396,7 @@ BEGIN
       'cash',
       99,
       v_before,
+      v_branch_id,
       v_owner,
       v_before
     );
@@ -639,14 +649,42 @@ BEGIN
     true
   );
 
+  v_rejected := false;
+  BEGIN
+    PERFORM public.record_bank_transaction_cash_deposit(
+      v_bank_deposit_transaction
+    );
+  EXCEPTION
+    WHEN undefined_function THEN
+      v_rejected := true;
+  END;
+  IF NOT v_rejected THEN
+    RAISE EXCEPTION 'cash_deposit_without_branch_not_rejected';
+  END IF;
+
+  v_rejected := false;
+  BEGIN
+    PERFORM public.record_bank_transaction_cash_deposit(
+      v_bank_deposit_transaction,
+      NULL
+    );
+  EXCEPTION
+    WHEN check_violation THEN
+      v_rejected := SQLERRM LIKE '%finance_cash_branch_invalid%';
+  END;
+  IF NOT v_rejected THEN
+    RAISE EXCEPTION 'cash_deposit_null_branch_not_rejected';
+  END IF;
+
   PERFORM public.record_bank_transaction_cash_deposit(
-    v_bank_deposit_transaction
+    v_bank_deposit_transaction,
+    v_branch_id
   );
 
   v_rejected := false;
   BEGIN
     PERFORM public.initialize_finance_funds(
-      1000,
+      0,
       2000,
       '-infinity'::timestamptz,
       'Non finite boundary must fail',
@@ -663,14 +701,14 @@ BEGIN
   v_rejected := false;
   BEGIN
     v_opening := public.initialize_finance_funds(
-      1000,
+      0,
       2000,
       NULL,
       'Verified server cutover boundary',
       v_opening_key
     );
     v_opening_replay := public.initialize_finance_funds(
-      1000,
+      0,
       2000,
       NULL,
       'Verified server cutover boundary',
@@ -707,7 +745,7 @@ BEGIN
   v_rejected := false;
   BEGIN
     PERFORM public.initialize_finance_funds(
-      1000,
+      0,
       2000,
       v_cutoff,
       'Legacy evidence requires controlled cutover',
@@ -729,7 +767,7 @@ BEGIN
     true
   );
   v_opening := public.initialize_finance_funds(
-    1000,
+    0,
     2000,
     v_cutoff,
     'Verified controlled legacy cutover boundary',
@@ -741,7 +779,7 @@ BEGIN
     true
   );
   v_opening_replay := public.initialize_finance_funds(
-    1000,
+    0,
     2000,
     v_cutoff,
     'Verified controlled legacy cutover boundary',
@@ -764,8 +802,8 @@ BEGIN
   v_rejected := false;
   BEGIN
     PERFORM public.initialize_finance_funds(
-      1001,
-      2000,
+      0,
+      2001,
       v_cutoff,
       'Verified controlled legacy cutover boundary',
       v_opening_key
@@ -782,7 +820,7 @@ BEGIN
   v_rejected := false;
   BEGIN
     PERFORM public.initialize_finance_funds(
-      1000,
+      0,
       2000,
       v_cutoff,
       'Second opening must fail',
@@ -797,17 +835,52 @@ BEGIN
     RAISE EXCEPTION 'finance_second_opening_not_rejected';
   END IF;
 
+  FOR v_sales_branch IN
+    SELECT branch.id
+    FROM public.branches branch
+    WHERE branch.tenant_id = v_tenant_id
+      AND branch.branch_kind = 'branch'
+      AND COALESCE(branch.is_active, true)
+    ORDER BY branch.id
+  LOOP
+    PERFORM public.initialize_branch_cash_opening(
+      v_sales_branch.id,
+      CASE WHEN v_sales_branch.id = v_branch_id THEN 1000 ELSE 0 END,
+      v_cutoff,
+      'Verified branch cash opening',
+      gen_random_uuid()
+    );
+  END LOOP;
+
+  v_rejected := false;
+  BEGIN
+    PERFORM public.create_finance_fund_adjustment(
+      7,
+      -4,
+      'Audited correction from verified evidence',
+      v_adjustment_key
+    );
+  EXCEPTION
+    WHEN invalid_parameter_value THEN
+      v_rejected := SQLERRM LIKE '%finance_fund_adjustment_mixed_scope%';
+  END;
+  IF NOT v_rejected THEN
+    RAISE EXCEPTION 'finance_adjustment_mixed_scope_not_rejected';
+  END IF;
+
   v_adjustment := public.create_finance_fund_adjustment(
     7,
-    -4,
+    0,
     'Audited correction from verified evidence',
-    v_adjustment_key
+    v_adjustment_key,
+    v_branch_id
   );
   v_adjustment_replay := public.create_finance_fund_adjustment(
     7,
-    -4,
+    0,
     'Audited correction from verified evidence',
-    v_adjustment_key
+    v_adjustment_key,
+    v_branch_id
   );
 
   IF (v_adjustment ->> 'id') <> (v_adjustment_replay ->> 'id') THEN
@@ -818,9 +891,10 @@ BEGIN
   BEGIN
     PERFORM public.create_finance_fund_adjustment(
       8,
-      -4,
+      0,
       'Audited correction from verified evidence',
-      v_adjustment_key
+      v_adjustment_key,
+      v_branch_id
     );
   EXCEPTION
     WHEN unique_violation THEN
@@ -830,6 +904,13 @@ BEGIN
   IF NOT v_rejected THEN
     RAISE EXCEPTION 'finance_adjustment_payload_conflict_not_rejected';
   END IF;
+
+  PERFORM public.create_finance_fund_adjustment(
+    0,
+    -4,
+    'Audited bank correction from verified evidence',
+    gen_random_uuid()
+  );
 
   SELECT count(*)
   INTO v_audit_count
@@ -849,6 +930,8 @@ BEGIN
   v_summary := public.get_finance_current_funds();
 
   IF NOT (v_summary ->> 'has_opening')::boolean
+    OR (v_summary ->> 'has_company_opening')::boolean IS NOT TRUE
+    OR (v_summary ->> 'branches_complete')::boolean IS NOT TRUE
     OR (v_summary ->> 'opening_cash')::numeric <> 1000
     OR (v_summary ->> 'opening_bank')::numeric <> 2000
     OR (v_summary ->> 'cash_collections')::numeric <> 100
@@ -864,6 +947,14 @@ BEGIN
     OR (v_summary ->> 'bank_current')::numeric <> 2087
   THEN
     RAISE EXCEPTION 'finance_current_funds_formula_invalid: %', v_summary;
+  END IF;
+
+  IF (
+    SELECT coalesce(sum((book ->> 'cash_current')::numeric), 0)
+    FROM jsonb_array_elements(v_summary -> 'branches') book
+  ) <> (v_summary ->> 'cash_current')::numeric
+  THEN
+    RAISE EXCEPTION 'finance_company_cash_not_sum_of_branches: %', v_summary;
   END IF;
 
   IF (v_summary ->> 'cash_current')::numeric

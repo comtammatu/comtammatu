@@ -29,7 +29,7 @@ Period-result formula (two rows):
 
 Missing food-cost coverage blanks gross profit only. No recorded operating expense keeps period result unavailable (not zero).
 
-After the period result, **`Tài sản`** (not a summed total): tenant-wide
+After the period result, **`Tài sản`** (not a summed total): company
 `Tiền mặt + Tiền tài khoản = Tổng tiền`; filtered period-end **`Tồn kho`**;
 all-time **`Thiết bị`** (`category = capital`, spend recorded, not a register;
 never `Giá trị thiết bị`); all-time **`Chi phí ban đầu`** (`capital`+`deposit`,
@@ -38,20 +38,29 @@ of startup — do not add the two together.
 
 Funds formula:
 
-- **`Tiền mặt`**: immutable opening cash + completed cash collections − cash
-  refunds, cash expenses, cash supplier payments + append-only audited
-  adjustments. POS-session counts/variances are reconciliation evidence only.
-- **`Tiền tài khoản`**: immutable opening bank + every canonical SePay movement
-  in `bank_transactions` + append-only audited adjustments.
-- **`Tổng tiền`**: sum of the two.
+- **Company `Tiền mặt`**: sum of sales-branch cash books
+  (`branch_kind = branch`). `Kho Tổng` / `Bếp Trung Tâm` have no cash book.
+  Readable only when every active sales branch has a cash opening.
+- **Sales-branch `Tiền mặt`**: that branch's immutable cash opening + completed
+  cash collections − cash refunds, cash expenses, cash supplier payments, cash
+  bank deposits + append-only audited adjustments. POS-session counts/variances
+  are reconciliation evidence only.
+- **Company `Tiền tài khoản`**: one company bank ledger — immutable bank opening
+  + every canonical SePay movement in `bank_transactions` + append-only audited
+  adjustments. Not split by branch.
+- **Branch bank reporting**: period `vietqr_revenue` for that branch's orders
+  that landed on the company account (`get_revenue_kpis`). Not a bank balance.
+- **`Tổng tiền`**: company cash (when complete) + company bank.
 
-Show `Chưa mở sổ` until one verified opening via `initialize_finance_funds`.
-Opening cannot be edited/deleted; corrections use
-`create_finance_fund_adjustment`. Legacy `cash_opening_*` / `bank_opening_*`
+Show `Chưa mở sổ` until `initialize_finance_funds` (company bank) and
+`initialize_branch_cash_opening` (each sales branch). Openings cannot be
+edited/deleted; corrections use `create_finance_fund_adjustment` (`p_branch_id`
+required for cash, null for bank). Legacy `cash_opening_*` / `bank_opening_*`
 settings are frozen evidence only — never a calculation fallback; their
 presence blocks interactive init. Operator UI must not say "cutover": default
 boundary is `Ngay bây giờ`; `Từ 0 giờ ngày bắt đầu` only when evidence proves
-that boundary.
+that boundary. Cash deposits require a sales branch (`MATU NOP {branch_id}`
+or Owner pick).
 
 `bank_transactions` is bank-ledger source of truth. Signed SePay webhooks,
 Owner-imported SePay exports, and Owner MB statement backfill
@@ -101,11 +110,14 @@ Landing cards (formulas in Product Boundary):
 4. **Operating expense** — operating categories only. Exclude COGS,
    `capital`, `deposit`, supplier payments, cash↔bank. None → `Chưa ghi nhận`.
 5. **Period result** — revenue − goods-in − opex + inventory change. Not from GP. Not "net profit".
-6. **Assets** — unfiltered funds; then **`Tổng tiền + Tồn kho + Thiết bị = Tổng giá trị`**. Inventory term only with valuation permission. Funds not
-   opened → do not invent the total. **`Chi phí ban đầu`** (`capital`+`deposit`)
-   stays outside that sum. Equipment drills `/finance/equipment` (capital
-   spend LIST, not a `TSCĐ` register). Exceptions stay on `/` and list queues,
-   not this landing.
+6. **Assets** — company funds (`Tiền mặt` = sum of sales-branch books + one
+   bank ledger); single-branch scope shows that branch cash book plus period
+   VietQR inflows, not the company bank balance. Then
+   **`Tổng tiền + Tồn kho + Thiết bị = Tổng giá trị`**. Inventory term only with
+   valuation permission. Funds not opened → do not invent the total.
+   **`Chi phí ban đầu`** (`capital`+`deposit`) stays outside that sum. Equipment
+   drills `/finance/equipment` (capital spend LIST, not a `TSCĐ` register).
+   Exceptions stay on `/` and list queues, not this landing.
 Layout: desktop two rows; tablet two cols; mobile one. Supporting (not first):
 food-cost analysis, cash sessions, desync recovery, HĐĐT, AP, export.
 
@@ -184,6 +196,7 @@ Action-layer gates (mirrored by RPC):
   `confirmSupplierInvoice`, `recordSupplierPayment`, `allocateSupplierAdvance`,
   `createSupplierCreditAllocated`, `acceptSupplierInvoiceDiscrepancy`,
   `verifyServiceSupplierInvoice`, `initialize_finance_funds`,
+  `initialize_branch_cash_opening`,
   `create_finance_fund_adjustment`) → `finance:view` + `owner`/`accountant`
   position — not `finance:ap_pay`.
 - **`finance:ap_pay`** reserved for `attachSupplierInvoiceVatEvidence` (also

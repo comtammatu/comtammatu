@@ -109,6 +109,7 @@ interface BankTransactionsTableProps {
   missingBankWebhookPayments: SepayMissingBankWebhookPayment[];
   expenseOptions: ExpenseMatchOption[];
   canLinkPayments: boolean;
+  salesBranches: ReadonlyArray<{ id: number; name: string }>;
 }
 
 type BankReconciliationRow =
@@ -290,11 +291,13 @@ function BankRowStatus({
   expenseOptions,
   canLinkPayments,
   touch,
+  salesBranches,
 }: {
   tx: SepayBankTransaction;
   expenseOptions: ExpenseMatchOption[];
   canLinkPayments: boolean;
   touch: boolean;
+  salesBranches: ReadonlyArray<{ id: number; name: string }>;
 }) {
   const state = classifySepayReconciliationState(tx);
   const meta = reconciliationStateBadgeMeta(state);
@@ -349,6 +352,7 @@ function BankRowStatus({
       canLinkPayments={canLinkPayments}
       touch={touch}
       trigger={statusBadge}
+      salesBranches={salesBranches}
     />
   ) : moneyOutMatchable ? (
     <MatchExpenseCell
@@ -570,6 +574,7 @@ export function BankTransactionsTable({
   missingBankWebhookPayments,
   expenseOptions,
   canLinkPayments,
+  salesBranches,
 }: BankTransactionsTableProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -659,6 +664,7 @@ export function BankTransactionsTable({
             expenseOptions={expenseOptions}
             canLinkPayments={canLinkPayments}
             touch={isTouchLayout}
+            salesBranches={salesBranches}
           />
         ) : (
           <MissingWebhookStatusCell
@@ -727,6 +733,7 @@ export function BankTransactionsTable({
                 expenseOptions={expenseOptions}
                 canLinkPayments={canLinkPayments}
                 touch={isTouchLayout}
+                salesBranches={salesBranches}
               />
             ) : (
               <MissingWebhookStatusCell

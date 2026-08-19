@@ -109,6 +109,7 @@ export function SupplierInvoicesClient({
   filters,
   branchId,
   tenantId,
+  salesBranches = [],
   grnBasePath = "/inventory/grn",
   canCreateInvoice = false,
   canPaySupplier = false,
@@ -126,6 +127,7 @@ export function SupplierInvoicesClient({
   filters: SupplierInvoiceListFilters;
   branchId?: number;
   tenantId: number;
+  salesBranches?: ReadonlyArray<{ id: number; name: string }>;
   grnBasePath?: string;
   canCreateInvoice?: boolean;
   canPaySupplier?: boolean;
@@ -463,8 +465,9 @@ export function SupplierInvoicesClient({
       createSupplierPaymentDefaultValues(
         selectedInvoice,
         paymentOutstandingAmount,
+        branchId != null ? String(branchId) : "",
       ),
-    [selectedInvoice?.id, paymentOutstandingAmount],
+    [selectedInvoice?.id, paymentOutstandingAmount, branchId],
   );
   const selectedSupplierAdvances = useMemo(
     () =>
@@ -796,6 +799,10 @@ export function SupplierInvoicesClient({
         idempotencyKey,
         amount,
         paymentMethod: values.paymentMethod,
+        cashBranchId:
+          values.paymentMethod === "cash"
+            ? Number(values.cashBranchId)
+            : null,
         referenceNote: values.referenceNote?.trim() || undefined,
       });
 
@@ -1236,6 +1243,7 @@ export function SupplierInvoicesClient({
         paymentDefaultValues={paymentDefaultValues}
         selectedInvoiceIdForPayment={selectedInvoice?.id}
         paymentOutstandingAmount={paymentOutstandingAmount}
+        salesBranches={salesBranches}
         onRecordPayment={handleRecordPayment}
         creditOpen={creditOpen}
         onCreditOpenChange={handleCreditOpenChange}

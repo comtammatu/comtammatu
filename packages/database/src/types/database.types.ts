@@ -2280,6 +2280,7 @@ export type Database = {
       finance_fund_entries: {
         Row: {
           bank_delta: number
+          branch_id: number | null
           cash_delta: number
           created_at: string
           created_by: string
@@ -2292,6 +2293,7 @@ export type Database = {
         }
         Insert: {
           bank_delta?: number
+          branch_id?: number | null
           cash_delta?: number
           created_at?: string
           created_by: string
@@ -2304,6 +2306,7 @@ export type Database = {
         }
         Update: {
           bank_delta?: number
+          branch_id?: number | null
           cash_delta?: number
           created_at?: string
           created_by?: string
@@ -2315,6 +2318,20 @@ export type Database = {
           tenant_id?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "finance_fund_entries_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_fund_entries_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
           {
             foreignKeyName: "finance_fund_entries_created_by_fkey"
             columns: ["created_by"]
@@ -2755,6 +2772,8 @@ export type Database = {
           category_id: number | null
           created_at: string
           default_fulfill_site_kind: string | null
+          fulfill_from_central_kitchen: boolean
+          fulfill_from_central_supply: boolean
           id: number
           is_active: boolean
           issue_unit_id: number | null
@@ -2777,6 +2796,8 @@ export type Database = {
           category_id?: number | null
           created_at?: string
           default_fulfill_site_kind?: string | null
+          fulfill_from_central_kitchen?: boolean
+          fulfill_from_central_supply?: boolean
           id?: never
           is_active?: boolean
           issue_unit_id?: number | null
@@ -2799,6 +2820,8 @@ export type Database = {
           category_id?: number | null
           created_at?: string
           default_fulfill_site_kind?: string | null
+          fulfill_from_central_kitchen?: boolean
+          fulfill_from_central_supply?: boolean
           id?: never
           is_active?: boolean
           issue_unit_id?: number | null
@@ -10698,6 +10721,7 @@ export type Database = {
       supplier_payments: {
         Row: {
           amount: number
+          branch_id: number | null
           created_at: string
           created_by: string | null
           id: number
@@ -10714,6 +10738,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          branch_id?: number | null
           created_at?: string
           created_by?: string | null
           id?: never
@@ -10730,6 +10755,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          branch_id?: number | null
           created_at?: string
           created_by?: string | null
           id?: never
@@ -10745,6 +10771,20 @@ export type Database = {
           webhook_event_id?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "supplier_payments_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payments_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
           {
             foreignKeyName: "supplier_payments_supplier_invoice_id_fkey"
             columns: ["supplier_invoice_id"]
@@ -13297,6 +13337,7 @@ export type Database = {
       create_finance_fund_adjustment: {
         Args: {
           p_bank_delta: number
+          p_branch_id?: number
           p_cash_delta: number
           p_idempotency_key: string
           p_reason: string
@@ -13811,7 +13852,7 @@ export type Database = {
         }[]
       }
       get_cash_ledger_movement_since: {
-        Args: { p_since: string }
+        Args: { p_branch_id?: number; p_since: string }
         Returns: Json
       }
       get_cash_variance_action_target: {
@@ -14320,6 +14361,16 @@ export type Database = {
         Returns: string
       }
       import_sepay_bank_transactions: { Args: { p_rows: Json }; Returns: Json }
+      initialize_branch_cash_opening: {
+        Args: {
+          p_branch_id: number
+          p_cash_opening: number
+          p_effective_at: string
+          p_idempotency_key: string
+          p_reason: string
+        }
+        Returns: Json
+      }
       initialize_finance_funds: {
         Args: {
           p_bank_opening: number
@@ -14579,6 +14630,15 @@ export type Database = {
           p_reason: string
           p_unit_cost: number
           p_unit_cost_unit_id: number
+        }
+        Returns: Json
+      }
+      owner_set_company_wac: {
+        Args: {
+          p_idempotency_key: string
+          p_ingredient_id: number
+          p_reason: string
+          p_unit_cost: number
         }
         Returns: Json
       }
@@ -14953,7 +15013,7 @@ export type Database = {
         Returns: Json
       }
       record_bank_transaction_cash_deposit: {
-        Args: { p_bank_transaction_id: number }
+        Args: { p_bank_transaction_id: number; p_branch_id: number }
         Returns: Json
       }
       record_sepay_cash_deposit_as_system: {
@@ -14963,6 +15023,7 @@ export type Database = {
       record_supplier_payment: {
         Args: {
           p_amount: number
+          p_branch_id?: number
           p_idempotency_key: string
           p_payment_method: string
           p_reference_note?: string
@@ -14975,6 +15036,7 @@ export type Database = {
         Args: {
           p_allocations: Json
           p_amount: number
+          p_branch_id?: number
           p_idempotency_key: string
           p_payment_method: string
           p_reference_note: string
@@ -15217,6 +15279,8 @@ export type Database = {
         Args: {
           p_category_id: number
           p_default_fulfill_site_kind: string
+          p_fulfill_from_central_kitchen?: boolean
+          p_fulfill_from_central_supply?: boolean
           p_ingredient_id: number
           p_issue_unit_id: number
           p_item_kind: string

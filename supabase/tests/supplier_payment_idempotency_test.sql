@@ -101,18 +101,18 @@ DECLARE
   v_allocation_count integer;
 BEGIN
   IF pg_catalog.to_regprocedure(
-    'public.record_supplier_payment_allocated(bigint,bigint,numeric,text,uuid,text,jsonb)'
+    'public.record_supplier_payment_allocated(bigint,bigint,numeric,text,uuid,text,jsonb,bigint)'
   ) IS NULL THEN
     RAISE EXCEPTION 'current allocated supplier payment RPC is missing';
   END IF;
 
   IF NOT pg_catalog.has_function_privilege(
     'authenticated',
-    'public.record_supplier_payment_allocated(bigint,bigint,numeric,text,uuid,text,jsonb)',
+    'public.record_supplier_payment_allocated(bigint,bigint,numeric,text,uuid,text,jsonb,bigint)',
     'EXECUTE'
   ) OR pg_catalog.has_function_privilege(
     'anon',
-    'public.record_supplier_payment_allocated(bigint,bigint,numeric,text,uuid,text,jsonb)',
+    'public.record_supplier_payment_allocated(bigint,bigint,numeric,text,uuid,text,jsonb,bigint)',
     'EXECUTE'
   ) THEN
     RAISE EXCEPTION 'supplier payment RPC grants are invalid';

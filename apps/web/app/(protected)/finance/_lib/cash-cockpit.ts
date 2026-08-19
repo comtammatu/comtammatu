@@ -3,8 +3,27 @@ import { loadAuthState } from "@/_lib/auth";
 
 type FundsSupabaseClient = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
 
+export interface BranchCashBook {
+  branchId: number;
+  branchName: string;
+  hasOpening: boolean;
+  openingEntryId: number | null;
+  openingBalance: number;
+  openingEffectiveAt: string | null;
+  cashCollections: number;
+  cashRefunds: number;
+  cashExpenses: number;
+  cashSupplierPayments: number;
+  cashAdjustments: number;
+  cashInSince: number;
+  cashOutSince: number;
+  cashOnHand: number;
+}
+
 export interface CashSummary {
   hasOpening: boolean;
+  hasCompanyOpening: boolean;
+  branchesComplete: boolean;
   openingEntryId: number | null;
   openingBalance: number;
   bankOpeningBalance: number;
@@ -22,10 +41,13 @@ export interface CashSummary {
   bankAdjustments: number;
   bankOnHand: number;
   legacySettingsPresent: boolean;
+  branches: BranchCashBook[];
 }
 
-const EMPTY_FUNDS: CashSummary = {
+const EMPTY_FUNDS: Omit<CashSummary, "legacySettingsPresent" | "branches"> = {
   hasOpening: false,
+  hasCompanyOpening: false,
+  branchesComplete: false,
   openingEntryId: null,
   openingBalance: 0,
   bankOpeningBalance: 0,
@@ -42,7 +64,6 @@ const EMPTY_FUNDS: CashSummary = {
   bankOutSince: 0,
   bankAdjustments: 0,
   bankOnHand: 0,
-  legacySettingsPresent: false,
 };
 
 function requireObject(value: Json): Record<string, Json | undefined> {
@@ -64,6 +85,43 @@ function requireNumber(
   return parsed;
 }
 
+function parseBranchBooks(value: Json | undefined): BranchCashBook[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((entry) => {
+    const payload = requireObject(entry);
+    const cashCollections = requireNumber(payload, "cash_collections");
+    const cashRefunds = requireNumber(payload, "cash_refunds");
+    const cashExpenses = requireNumber(payload, "cash_expenses");
+    const cashSupplierPayments = requireNumber(
+      payload,
+      "cash_supplier_payments",
+    );
+    const hasOpening = payload.has_opening === true;
+    return {
+      branchId: requireNumber(payload, "branch_id"),
+      branchName:
+        typeof payload.branch_name === "string" ? payload.branch_name : "",
+      hasOpening,
+      openingEntryId: hasOpening
+        ? requireNumber(payload, "opening_entry_id")
+        : null,
+      openingBalance: requireNumber(payload, "opening_cash"),
+      openingEffectiveAt:
+        typeof payload.opening_effective_at === "string"
+          ? payload.opening_effective_at
+          : null,
+      cashCollections,
+      cashRefunds,
+      cashExpenses,
+      cashSupplierPayments,
+      cashAdjustments: requireNumber(payload, "cash_adjustments"),
+      cashInSince: cashCollections,
+      cashOutSince: cashRefunds + cashExpenses + cashSupplierPayments,
+      cashOnHand: requireNumber(payload, "cash_current"),
+    };
+  });
+}
+
 export async function fetchCashSummary(
   supabase?: FundsSupabaseClient,
 ): Promise<CashSummary> {
@@ -76,11 +134,19 @@ export async function fetchCashSummary(
   }
 
   const payload = requireObject(data);
-  const hasOpening = payload.has_opening === true;
+  const hasCompanyOpening = payload.has_company_opening === true;
+  const hasOpening = payload.has_opening === true || hasCompanyOpening;
+  const branchesComplete = payload.branches_complete === true;
   const legacySettingsPresent = payload.legacy_settings_present === true;
+  const branches = parseBranchBooks(payload.branches);
 
   if (!hasOpening) {
-    return { ...EMPTY_FUNDS, legacySettingsPresent };
+    return {
+      ...EMPTY_FUNDS,
+      branchesComplete,
+      legacySettingsPresent,
+      branches,
+    };
   }
 
   const cashCollections = requireNumber(payload, "cash_collections");
@@ -90,6 +156,8 @@ export async function fetchCashSummary(
 
   return {
     hasOpening: true,
+    hasCompanyOpening,
+    branchesComplete,
     openingEntryId: requireNumber(payload, "opening_entry_id"),
     openingBalance: requireNumber(payload, "opening_cash"),
     bankOpeningBalance: requireNumber(payload, "opening_bank"),
@@ -110,5 +178,6 @@ export async function fetchCashSummary(
     bankAdjustments: requireNumber(payload, "bank_adjustments"),
     bankOnHand: requireNumber(payload, "bank_current"),
     legacySettingsPresent,
+    branches,
   };
 }

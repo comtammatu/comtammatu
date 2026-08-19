@@ -14,6 +14,7 @@ import {
   parseFinanceParams,
   resolveFinanceRange,
 } from "../_lib/finance-params";
+import { fetchAccessibleBranches } from "../actions";
 import { BankTransactionsTable } from "./bank-transactions-table";
 import { MbbankStatementRestoreDialog } from "./mbbank-statement-restore-dialog";
 import { SepayImportDialog } from "./sepay-import-dialog";
@@ -37,17 +38,22 @@ export default async function BankTransactionsPage({
   };
   const resolved = resolveFinanceRange(params);
   const range = { start: resolved.start, end: resolved.end };
-  const [auth, canLinkPayments, transactions, paymentWebhookSummary] =
+  const [auth, canLinkPayments, transactions, paymentWebhookSummary, branchesRes] =
     await Promise.all([
       loadAuthState(),
       currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_VIEW),
       fetchSepayBankTransactions(range, { maxRows: SEPAY_LIST_PAGE_SIZE }),
       fetchSepayPaymentWebhookSummary(range),
+      fetchAccessibleBranches(),
     ]);
   const isOwner = auth.claims.user_role === "owner";
   const expenseOptions = await loadExpenseMatchOptions(
     transactions.flatMap((transaction) => transaction.expenseIds),
   );
+  const salesBranches = branchesRes.success
+    ? ((branchesRes.data as Array<{ id: number; name: string }> | undefined) ??
+      [])
+    : [];
   return (
     <AppPage width="xwide" density="compact">
       <AppPageHeader
@@ -69,6 +75,7 @@ export default async function BankTransactionsPage({
         }
         expenseOptions={expenseOptions}
         canLinkPayments={canLinkPayments}
+        salesBranches={salesBranches}
       />
     </AppPage>
   );

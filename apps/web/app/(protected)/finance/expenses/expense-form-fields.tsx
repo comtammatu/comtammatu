@@ -40,6 +40,7 @@ import {
   EMPTY_EXPENSE_LINE,
   expenseCategoryGroups,
   METHOD_OPTIONS,
+  TENANT_LEVEL_BRANCH_VALUE,
   VAT_RATE_OPTIONS,
   type ExpenseFormValues,
 } from "./expense-form-schema";
@@ -71,6 +72,13 @@ export function ExpenseFormFields({
   });
   const lines = form.watch("lines");
   const category = form.watch("category");
+  const paymentMethod = form.watch("paymentMethod");
+  const cashBranchOptions =
+    paymentMethod === "cash"
+      ? branchOptions.filter(
+          (option) => option.value !== TENANT_LEVEL_BRANCH_VALUE,
+        )
+      : branchOptions;
   const vatBreakdown = buildExpenseVatBreakdown(form.getValues());
   const subtotal = addMoney(vatBreakdown.map((line) => line.taxableAmount));
   const vatAmount = addMoney(vatBreakdown.map((line) => line.vatAmount));
@@ -91,7 +99,7 @@ export function ExpenseFormFields({
           control={form.control}
           name="branchId"
           label={copy.form.branch}
-          options={branchOptions}
+          options={cashBranchOptions}
           placeholder={copy.form.branchTenantLevel}
           disabled={readOnly}
         />

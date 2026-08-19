@@ -222,24 +222,36 @@ export type SupplierInvoiceValuationSummary = z.infer<
   typeof supplierInvoiceValuationSummarySchema
 >;
 
-const supplierPaymentSchema = z.object({
-  invoiceId: z.coerce.number().int().positive(),
-  supplierId: z.coerce.number().int().positive().optional(),
-  allocations: z
-    .array(
-      z.object({
-        invoiceId: z.coerce.number().int().positive(),
-        amount: positiveInvoiceMoneySchema,
-      }),
-    )
-    .min(1)
-    .max(200)
-    .optional(),
-  idempotencyKey: z.string().uuid(),
-  amount: positiveInvoiceMoneySchema,
-  paymentMethod: z.enum(["cash", "bank_transfer"]),
-  referenceNote: z.string().trim().max(500).optional(),
-});
+const supplierPaymentSchema = z
+  .object({
+    invoiceId: z.coerce.number().int().positive(),
+    supplierId: z.coerce.number().int().positive().optional(),
+    allocations: z
+      .array(
+        z.object({
+          invoiceId: z.coerce.number().int().positive(),
+          amount: positiveInvoiceMoneySchema,
+        }),
+      )
+      .min(1)
+      .max(200)
+      .optional(),
+    idempotencyKey: z.string().uuid(),
+    amount: positiveInvoiceMoneySchema,
+    paymentMethod: z.enum(["cash", "bank_transfer"]),
+    cashBranchId: z.coerce.number().int().positive().nullable().optional(),
+    referenceNote: z.string().trim().max(500).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.paymentMethod !== "cash") return;
+    if (data.cashBranchId == null || data.cashBranchId <= 0) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Trả tiền mặt phải chọn chi nhánh bán hàng.",
+        path: ["cashBranchId"],
+      });
+    }
+  });
 
 const supplierAdvanceSchema = z.object({
   paymentId: z.coerce.number().int().positive(),
@@ -588,6 +600,8 @@ export const recordSupplierPayment = withAction(
           invoice_id: allocation.invoiceId,
           amount: allocation.amount,
         })),
+        p_branch_id:
+          data.paymentMethod === "cash" ? (data.cashBranchId ?? null) : null,
       } as never,
     );
 
@@ -613,6 +627,12 @@ export const recordSupplierPayment = withAction(
           success: false,
           error:
             "Phân bổ thanh toán không hợp lệ hoặc có hóa đơn chưa đủ điều kiện.",
+        };
+      }
+      if (message.includes("finance_cash_branch_invalid")) {
+        return {
+          success: false,
+          error: "Trả tiền mặt phải chọn chi nhánh bán hàng.",
         };
       }
       if (message.includes("supplier_payment_idempotency_conflict")) {

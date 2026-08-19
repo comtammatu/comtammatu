@@ -3,6 +3,7 @@ import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasPermissionAny } from "@/_lib/permissions";
 import { messages } from "@lib/messages";
+import { fetchAccessibleBranches } from "../actions";
 import { fetchGrnIdsForDropdown } from "../../inventory/procurement-actions";
 import { fetchSuppliers } from "../../inventory/supplier-actions";
 import {
@@ -102,7 +103,8 @@ export default async function FinanceSupplierInvoicesPage({
       ? parsedGrnId
       : undefined;
 
-  const [res, suppliersRes, grnsRes, requestedInvoiceRes] = await Promise.all([
+  const [res, suppliersRes, grnsRes, requestedInvoiceRes, branchesRes] =
+    await Promise.all([
     fetchSupplierInvoicesPage({
       branchId: branchFilter,
       query: filters.query,
@@ -122,6 +124,7 @@ export default async function FinanceSupplierInvoicesPage({
           pageSize: 1,
         })
       : Promise.resolve(null),
+    fetchAccessibleBranches(),
   ]);
   if (
     !res.success ||
@@ -232,6 +235,12 @@ export default async function FinanceSupplierInvoicesPage({
       filters={filters}
       branchId={branchFilter}
       tenantId={authState.claims.tenant_id}
+      salesBranches={
+        branchesRes.success
+          ? ((branchesRes.data as Array<{ id: number; name: string }> | undefined) ??
+            [])
+          : []
+      }
       canCreateInvoice={hasInvoiceCreatePermission}
       canPaySupplier={hasPayPermission}
       canAttachVatEvidence={canAttachVatEvidence}

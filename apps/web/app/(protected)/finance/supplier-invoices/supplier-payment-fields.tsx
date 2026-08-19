@@ -29,6 +29,7 @@ export function SupplierPaymentFields({
   form,
   copy,
   outstanding,
+  salesBranches,
 }: {
   form: UseFormReturn<
     SupplierPaymentFormValues,
@@ -37,6 +38,7 @@ export function SupplierPaymentFields({
   >;
   copy: typeof messages.inventory.supplierInvoices;
   outstanding: string;
+  salesBranches: ReadonlyArray<{ id: number; name: string }>;
 }) {
   const amount = canonicalMoney(form.watch("amount"));
   const amountMinorUnits = parseMoneyToMinorUnits(amount);
@@ -87,6 +89,18 @@ export function SupplierPaymentFields({
         options={methodOptions}
         required
       />
+      {form.watch("paymentMethod") === "cash" ? (
+        <SelectField
+          control={form.control}
+          name="cashBranchId"
+          label={copy.cashBranchLabel}
+          options={salesBranches.map((branch) => ({
+            value: String(branch.id),
+            label: branch.name,
+          }))}
+          required
+        />
+      ) : null}
       <TextareaField
         control={form.control}
         name="referenceNote"

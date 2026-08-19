@@ -276,9 +276,19 @@ export default async function FinancePage({
     </KpiRow>
   );
 
+  const isBranchScope = params.location === "branch" && params.branch != null;
+  const branchBook = isBranchScope
+    ? (cash.branches.find((branch) => branch.branchId === params.branch) ??
+      null)
+    : null;
+  const fundsReady = isBranchScope
+    ? Boolean(branchBook?.hasOpening)
+    : cash.hasCompanyOpening && cash.branchesComplete;
   const totalOnHand = addMoney([
-    roundToCanonicalMoney(cash.cashOnHand),
-    roundToCanonicalMoney(cash.bankOnHand),
+    roundToCanonicalMoney(
+      isBranchScope ? (branchBook?.cashOnHand ?? 0) : cash.cashOnHand,
+    ),
+    roundToCanonicalMoney(isBranchScope ? 0 : cash.bankOnHand),
   ]);
   const totalAssetValue = addMoney([
     totalOnHand,
@@ -405,7 +415,8 @@ export default async function FinancePage({
         params={params}
         branches={cockpit.branches}
         basePath="/finance"
-        hide={["branch", "granularity", "compare"]}
+        locationFilter
+        hide={["granularity", "compare"]}
       />
 
       <AppSection size="sm" title={financeCopy.basic.sections.grossProfit}>
@@ -424,6 +435,9 @@ export default async function FinancePage({
 
       <CurrentFundsSection
         cash={cash}
+        location={params.location}
+        selectedBranchId={params.branch}
+        vietqrRevenue={cockpit.kpis.vietqrRevenue}
         title={financeCopy.basic.sections.assets}
       >
         <KpiRow
@@ -443,14 +457,14 @@ export default async function FinancePage({
               density="compact"
               label={financeCopy.basic.kpis.totalOnHand}
               value={
-                cash.hasOpening
+                fundsReady
                   ? formatVND(totalOnHand)
                   : messages.finance.cash.verifying
               }
               shortValue={
-                cash.hasOpening ? formatCompactVND(totalOnHand) : undefined
+                fundsReady ? formatCompactVND(totalOnHand) : undefined
               }
-              tone={cash.hasOpening ? "primary" : "warning"}
+              tone={fundsReady ? "primary" : "warning"}
             />
           </div>
 
@@ -509,14 +523,14 @@ export default async function FinancePage({
               density="compact"
               label={financeCopy.basic.kpis.totalAssetValue}
               value={
-                cash.hasOpening
+                fundsReady
                   ? formatVND(totalAssetValue)
                   : messages.finance.cash.verifying
               }
               shortValue={
-                cash.hasOpening ? formatCompactVND(totalAssetValue) : undefined
+                fundsReady ? formatCompactVND(totalAssetValue) : undefined
               }
-              tone={cash.hasOpening ? "primary" : "warning"}
+              tone={fundsReady ? "primary" : "warning"}
             />
           </div>
         </KpiRow>

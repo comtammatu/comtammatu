@@ -57,6 +57,7 @@ export type SupplierInvoiceDialogsProps = {
   paymentDefaultValues: SupplierPaymentFormValues;
   selectedInvoiceIdForPayment: number | undefined;
   paymentOutstandingAmount: string;
+  salesBranches: ReadonlyArray<{ id: number; name: string }>;
   onRecordPayment: (
     values: SupplierPaymentFormValues,
   ) => Promise<{ success: boolean; error?: string }>;
@@ -105,6 +106,7 @@ export function SupplierInvoiceDialogs({
   paymentDefaultValues,
   selectedInvoiceIdForPayment,
   paymentOutstandingAmount,
+  salesBranches,
   onRecordPayment,
   creditOpen,
   onCreditOpenChange,
@@ -205,6 +207,7 @@ export function SupplierInvoiceDialogs({
             form={form}
             copy={copy}
             outstanding={paymentOutstandingAmount}
+            salesBranches={salesBranches}
           />
         )}
       </FormDialog>

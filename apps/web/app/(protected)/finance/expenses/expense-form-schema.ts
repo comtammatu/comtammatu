@@ -86,6 +86,16 @@ export const expenseFormSchema = z
         });
       }
     });
+    if (
+      data.paymentMethod === "cash" &&
+      (!data.branchId || data.branchId === TENANT_LEVEL_BRANCH_VALUE)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: copy.form.cashBranchRequired,
+        path: ["branchId"],
+      });
+    }
   });
 
 export type ExpenseFormValues = z.infer<typeof expenseFormSchema>;

@@ -26,12 +26,17 @@ test("finance landing presents immutable book funds", () => {
 
   assert.match(page, /includeCash:\s*true/);
   assert.match(page, /CurrentFundsSection[\s\S]*cash=\{cash\}/);
-  assert.match(currentFunds, /cash\.hasOpening[\s\S]*cash\.cashOnHand/);
-  assert.match(currentFunds, /cash\.hasOpening[\s\S]*cash\.bankOnHand/);
+  assert.match(page, /locationFilter/);
+  assert.match(page, /vietqrRevenue=\{cockpit\.kpis\.vietqrRevenue\}/);
+  assert.match(currentFunds, /cashReady \? formatVND\(cash\.cashOnHand\)/);
+  assert.match(currentFunds, /bankReady \? formatVND\(cash\.bankOnHand\)/);
   assert.match(currentFunds, /totalOnHand/);
+  assert.match(currentFunds, /copy\.cash\.branchBooksTitle/);
+  assert.match(currentFunds, /copy\.basic\.kpis\.vietqrRevenue/);
   assert.match(copy, /cashOnHand: "Tiền mặt"/);
   assert.match(copy, /bankOnHand: "Tiền tài khoản"/);
   assert.match(copy, /totalOnHand: "Tổng tiền"/);
+  assert.match(copy, /vietqrRevenue: "Thu VietQR"/);
   assert.match(copy, /verifying: "Chưa mở sổ"/);
   assert.match(copy, /onHandTitle: "Tiền mặt hiện có"/);
   assert.doesNotMatch(copy, /onHandDescription|followsFilters/);
@@ -60,11 +65,12 @@ test("finance landing presents immutable book funds", () => {
   assert.match(currentFunds, /copy\.cash\.onHandBreakdown\(/);
   assert.match(currentFunds, /copy\.cash\.bankBreakdown\(/);
   assert.match(currentFunds, /initializeFinanceFunds/);
+  assert.match(currentFunds, /initializeBranchCashOpening/);
   assert.match(currentFunds, /createFinanceFundAdjustment/);
   assert.match(currentFunds, /allowNegative/);
   assert.match(
     currentFunds,
-    /disabled=\{!cash\.hasOpening && cash\.legacySettingsPresent\}/,
+    /disabled=\{!cash\.hasCompanyOpening && cash\.legacySettingsPresent\}/,
   );
   assert.match(currentFunds, /formatVNDateTime\(cash\.openingEffectiveAt\)/);
   assert.match(currentFunds, /openingConfirmation/);
@@ -72,15 +78,17 @@ test("finance landing presents immutable book funds", () => {
   assert.doesNotMatch(currentFunds, /editOpening|setCashOpening/);
 });
 
-test("current funds load from one tenant-wide PostgreSQL snapshot", () => {
+test("current funds load from one PostgreSQL snapshot of company and branch books", () => {
   const cockpit = read("apps/web/app/(protected)/finance/_lib/cash-cockpit.ts");
   const migration = read(
-    "supabase/migration-archive/20260726160405_remove_pos_variance_from_current_funds.sql",
+    "supabase/migrations/20260820021152_sales_branch_cash_books.sql",
   );
 
   assert.match(cockpit, /\.rpc\("get_finance_current_funds"\)/);
   assert.doesNotMatch(cockpit, /\.from\("system_settings"\)/);
   assert.doesNotMatch(cockpit, /getVNDayUtcRange|openingDate/);
+  assert.match(cockpit, /has_company_opening/);
+  assert.match(cockpit, /branches_complete/);
   assert.match(cockpit, /cash_collections/);
   assert.match(cockpit, /cash_refunds/);
   assert.match(cockpit, /cash_expenses/);
@@ -99,27 +107,21 @@ test("current funds load from one tenant-wide PostgreSQL snapshot", () => {
 
   assert.match(
     migration,
-    /public\.get_cash_ledger_movement_since\(v_opening\.effective_at\)/,
+    /public\.get_cash_ledger_movement_since\(\s*v_opening\.effective_at,\s*v_branch\.id/,
   );
   assert.match(
     migration,
-    /public\.get_bank_ledger_movement_since\(v_opening\.effective_at\)/,
-  );
-  assert.match(
-    migration,
-    /entry\.entry_type = 'adjustment'[\s\S]*entry\.effective_at >= v_opening\.effective_at/,
-  );
-  assert.match(
-    migration,
-    /v_opening\.cash_delta[\s\S]*\+ v_cash_collections[\s\S]*- v_cash_refunds[\s\S]*- v_cash_expenses[\s\S]*- v_cash_supplier_payments[\s\S]*\+ v_cash_adjustments/,
+    /public\.get_bank_ledger_movement_since\(v_company\.effective_at\)/,
   );
   assert.match(migration, /'cash_variance_adjustments', 0/);
   assert.doesNotMatch(migration, /public\.pos_sessions|cash_difference/);
   assert.match(migration, /supplier_payment\.payment_method = 'cash'/);
   assert.match(
     migration,
-    /v_opening\.bank_delta[\s\S]*\+ v_bank_in[\s\S]*- v_bank_out[\s\S]*\+ v_bank_adjustments/,
+    /v_company\.bank_delta[\s\S]*\+ v_bank_in[\s\S]*- v_bank_out[\s\S]*\+ v_bank_adjustments/,
   );
+  assert.match(migration, /finance_fund_entries_one_company_opening/);
+  assert.match(migration, /finance_fund_entries_one_opening_per_branch/);
   assert.doesNotMatch(
     migration,
     /setting\.value[\s\S]*opening_(cash|bank)|cash_opening_balance'::numeric/,
@@ -130,6 +132,12 @@ test("finance funds use one immutable append-only ledger contract", () => {
   const action = read("apps/web/app/(protected)/finance/cash-actions.ts");
   const migration = read(
     "supabase/migration-archive/20260726140000_immutable_finance_fund_ledger.sql",
+  );
+  const branchCashMigration = read(
+    "supabase/migrations/20260820021152_sales_branch_cash_books.sql",
+  );
+  const branchOpeningCutover = read(
+    "supabase/migrations/20260820025641_branch_cash_opening_cutover.sql",
   );
   const currentFundsMigration = read(
     "supabase/migration-archive/20260726160405_remove_pos_variance_from_current_funds.sql",
@@ -144,12 +152,14 @@ test("finance funds use one immutable append-only ledger contract", () => {
   );
   assert.match(
     action,
-    /\.rpc\(\s*"create_finance_fund_adjustment",/,
+    /\.rpc\(\s*"create_finance_fund_adjustment"/,
     "corrections must append through the adjustment RPC",
   );
+  assert.match(action, /initialize_branch_cash_opening/);
+  assert.match(action, /p_branch_id/);
   assert.doesNotMatch(action, /\.from\("system_settings"\)/);
   assert.match(action, /boundaryMode === "project_start_day"/);
-  assert.match(action, /: null\) as string,/);
+  assert.match(action, /p_cash_opening: 0/);
   assert.match(
     migration,
     /CREATE TABLE public\.finance_fund_entries/,
@@ -159,6 +169,26 @@ test("finance funds use one immutable append-only ledger contract", () => {
     migration,
     /CREATE UNIQUE INDEX finance_fund_entries_one_opening_per_tenant/,
     "database must allow one opening per tenant",
+  );
+  assert.match(
+    branchCashMigration,
+    /CREATE UNIQUE INDEX finance_fund_entries_one_company_opening/,
+  );
+  assert.match(
+    branchCashMigration,
+    /CREATE UNIQUE INDEX finance_fund_entries_one_opening_per_branch/,
+  );
+  assert.match(
+    branchCashMigration,
+    /CREATE OR REPLACE FUNCTION public\.initialize_branch_cash_opening/,
+  );
+  assert.match(
+    branchOpeningCutover,
+    /CREATE OR REPLACE FUNCTION private\.enforce_fund_entry_cash_sales_branch/,
+  );
+  assert.match(
+    branchOpeningCutover,
+    /timezone\('Asia\/Ho_Chi_Minh', timestamp '2026-08-14 00:00:00'\)/,
   );
   assert.match(
     migration,
@@ -210,5 +240,8 @@ test("finance funds use one immutable append-only ledger contract", () => {
     /finance_opening_non_finite_boundary_not_rejected/,
   );
   assert.match(databaseTest, /record_bank_transaction_cash_deposit/);
+  assert.match(databaseTest, /cash_deposit_without_branch_not_rejected/);
+  assert.match(databaseTest, /finance_company_cash_not_sum_of_branches/);
+  assert.match(databaseTest, /initialize_branch_cash_opening/);
   assert.match(databaseTest, /cash_to_bank_transfer_changed_total_funds/);
 });

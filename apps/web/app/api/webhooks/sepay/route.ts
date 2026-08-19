@@ -660,12 +660,23 @@ export async function POST(request: Request) {
   }
 
   if (bankCommand?.kind === "cash_deposit") {
+    const cashDepositBranchId = parseExpenseCommandId(bankCommand.value);
+    if (!cashDepositBranchId) {
+      return sepayAcceptedResponse();
+    }
+
     const { data: rawCashDepositData, error: cashDepositError } =
       await supabase.rpc("record_sepay_cash_deposit_as_system", {
         p_event_id: webhookEventId,
       });
 
     if (cashDepositError) {
+      const invalidBranch = (cashDepositError.message ?? "")
+        .toLowerCase()
+        .includes("finance_cash_branch_invalid");
+      if (invalidBranch) {
+        return sepayAcceptedResponse();
+      }
       console.error(
         "[sepay-webhook] failed to record bank_deposit expense",
         cashDepositError.code,

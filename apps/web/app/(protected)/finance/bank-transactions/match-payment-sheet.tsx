@@ -21,6 +21,13 @@ import {
 } from "@comtammatu/ui/components/radio-group";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
+import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@comtammatu/ui/components/toggle-group";
@@ -46,16 +53,23 @@ const table = copy.unmatchedMoneyInTable;
 
 type MoneyInPurpose = "order" | "cash_deposit";
 
+export type SalesBranchOption = {
+  id: number;
+  name: string;
+};
+
 export function MatchPaymentSheet({
   tx,
   canLinkPayments,
   touch,
   trigger,
+  salesBranches,
 }: {
   tx: SepayBankTransaction;
   canLinkPayments: boolean;
   touch: boolean;
   trigger: React.ReactElement;
+  salesBranches: readonly SalesBranchOption[];
 }) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
@@ -70,6 +84,7 @@ export function MatchPaymentSheet({
   const [isSearchPending, startSearchTransition] = React.useTransition();
   const [isPaymentPending, startPaymentTransition] = React.useTransition();
   const [isDepositPending, startDepositTransition] = React.useTransition();
+  const [cashBranchId, setCashBranchId] = React.useState<string>("");
   const bankTransactionId = tx.bankTransactionId ?? null;
   const eventId = tx.eventId;
   const previousOpenRef = React.useRef(false);
@@ -110,6 +125,7 @@ export function MatchPaymentSheet({
     setItems([]);
     setLoaded(false);
     setSearchError(null);
+    setCashBranchId("");
     loadOrders("");
   }, [loadOrders, open]);
 
@@ -164,10 +180,16 @@ export function MatchPaymentSheet({
 
   const handleCashDeposit = async () => {
     if (bankTransactionId == null) return;
+    const branchId = Number(cashBranchId);
+    const branch = salesBranches.find((item) => item.id === branchId);
+    if (!Number.isInteger(branchId) || branchId <= 0 || branch == null) {
+      toast.error(table.cashDepositBranchRequired);
+      return;
+    }
 
     const approved = await confirm({
       title: table.cashDepositConfirmTitle,
-      description: table.cashDepositConfirm(formatVND(tx.amount)),
+      description: table.cashDepositConfirm(formatVND(tx.amount), branch.name),
       confirmText: table.cashDepositAction,
     });
     if (!approved) return;
@@ -175,6 +197,7 @@ export function MatchPaymentSheet({
     startDepositTransition(async () => {
       const res = await recordBankTransactionCashDeposit({
         bankTransactionId,
+        branchId,
       });
       if (!res.success) {
         toast.error(res.error ?? table.cashDepositError);
@@ -213,7 +236,7 @@ export function MatchPaymentSheet({
             type="button"
             size={touch ? "touch" : "default"}
             className="w-full"
-            disabled={busy}
+            disabled={busy || cashBranchId === ""}
             onClick={() => void handleCashDeposit()}
           >
             {isDepositPending ? table.cashDepositPending : table.cashDepositAction}
@@ -361,11 +384,40 @@ export function MatchPaymentSheet({
             ) : null}
           </div>
         ) : (
-          <div className="grid gap-1">
+          <div className="grid gap-3">
             <p className="font-medium">{table.cashDepositTitle}</p>
             <p className="text-sm text-muted-foreground">
               {table.cashDepositDescription}
             </p>
+            <Field>
+              <FieldLabel htmlFor="bank-match-cash-branch">
+                {table.cashDepositBranchLabel}
+              </FieldLabel>
+              <Select
+                value={cashBranchId}
+                onValueChange={setCashBranchId}
+                disabled={busy}
+              >
+                <SelectTrigger
+                  id="bank-match-cash-branch"
+                  size={touch ? "touch" : "default"}
+                  className="w-full"
+                >
+                  <SelectValue placeholder={table.cashDepositBranchRequired} />
+                </SelectTrigger>
+                <SelectContent>
+                  {salesBranches.map((branch) => (
+                    <SelectItem
+                      key={branch.id}
+                      value={String(branch.id)}
+                      size={touch ? "touch" : "default"}
+                    >
+                      {branch.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
           </div>
         )}
       </div>

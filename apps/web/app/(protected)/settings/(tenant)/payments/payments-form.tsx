@@ -414,7 +414,7 @@ export function PaymentsForm({
                   term: copy.contentCashDepositPreview,
                   description: (
                     <code className="font-mono text-xs">
-                      {contentPreview(normalizedCashDepositToken)}
+                      {contentPreview(normalizedCashDepositToken, "12")}
                     </code>
                   ),
                 },

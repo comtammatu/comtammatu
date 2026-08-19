@@ -73,6 +73,13 @@ test("cash deposit has one verified atomic write boundary", () => {
   assert.match(migration, /e\.amount = v_amount/);
   assert.match(migration, /'status', 'already_recorded'/);
   assert.match(route, /"record_sepay_cash_deposit_as_system"/);
+  assert.match(route, /parseExpenseCommandId\(bankCommand\.value\)/);
+  assert.match(route, /finance_cash_branch_invalid/);
+  const branchCash = read(
+    "supabase/migrations/20260820021152_sales_branch_cash_books.sql",
+  );
+  assert.match(branchCash, /private\.sepay_cash_deposit_branch_id/);
+  assert.match(branchCash, /\\yNOP \(\[0-9\]\+\)\\y/);
 });
 
 test("Finance cannot synthesize SePay evidence for a cash deposit", () => {

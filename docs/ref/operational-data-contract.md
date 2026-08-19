@@ -77,8 +77,10 @@ Hai dòng độc lập, không thác nước:
 Cấm `Kết quả = LN gộp − chi vận hành + Δtồn`. Chi phí hàng không ghi `expenses`.
 Giá vốn món không trừ trong kết quả. Δ tồn giữ vì hàng vào là mua/ĐC đã nhận —
 tồn cuối vẫn là tài sản, không phải lãi.
-Tiền mặt hiện có = tenant-wide; giá trị tồn cuối kỳ theo ngày/CN đang chọn;
-cần xử lý cuối trang. Section UI chỉ title — không mô tả theo/không theo bộ lọc.
+Tiền mặt công ty = tổng sổ TM chi nhánh bán hàng; tiền tài khoản = một sổ NH
+công ty. Phạm vi một CN: sổ TM của CN đó + thu VietQR kỳ (không chia số dư NH).
+Giá trị tồn cuối kỳ theo ngày/CN đang chọn; cần xử lý cuối trang. Section UI
+chỉ title.
 
 | `contract_key` | Nhãn UI | Source/rule tóm tắt | Confidence |
 | --- | --- | --- | --- |
@@ -133,7 +135,7 @@ confidence/drilldown.
 | Thiết bị | `expenses` `capital` | all-time gross; lát của Chi phí ban đầu; drill `/finance/equipment`; không TSCĐ |
 | Tổng giá trị | quỹ + tồn + thiết bị | hiển thị trên `/finance` Tài sản; không gồm đặt cọc; chưa mở sổ thì không bịa |
 | Chi phí ban đầu | `expenses` `capital`+`deposit` | all-time gross, ignores period; ngoài công thức kết quả |
-| Quỹ TM/NH | `get_finance_current_funds` | Owner nhập số dư đầu; “Chưa mở sổ”; không = đếm ca POS |
+| Quỹ TM/NH | `get_finance_current_funds` | TM = tổng sổ CN bán hàng; NH = sổ công ty; “Chưa mở sổ”; không = đếm ca POS |
 | Giao dịch / VietQR | `bank_transactions` + matches | `needs_review`; không sửa doanh thu/số dư tự động |
 | HĐĐT queue | `get_finance_dashboard_summary` | workflow, không thay doanh thu VH |
 | Công nợ NCC | `supplier_invoices` / payments | AP queue; không = chi VH nếu chưa qua contract |
