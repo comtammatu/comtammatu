@@ -154,6 +154,17 @@ function getDefaultCountUnitChoice(units: CountUnitChoice[]) {
   return getBaseCountUnit(units);
 }
 
+function getNextCountUnit(
+  units: CountUnitChoice[],
+  currentUnitId: number | null,
+): CountUnitChoice | null {
+  if (units.length === 0) return null;
+  const currentIndex = units.findIndex((unit) => unit.unitId === currentUnitId);
+  const nextIndex =
+    currentIndex < 0 ? 0 : (currentIndex + 1) % units.length;
+  return units[nextIndex] ?? units[0] ?? null;
+}
+
 function buildDraftSummary({
   quantity,
   entryUnitId,
@@ -277,6 +288,20 @@ export function CountSlipClient({
       quantity: formatCountQuantity(value),
     });
     setSelectedIngredientId(null);
+  }
+
+  function cycleSelectedUnit() {
+    if (selectedAssignment == null) return;
+    const currentUnitId =
+      draft[selectedAssignment.ingredientId]?.entryUnitId ??
+      getDefaultCountUnitChoice(selectedAssignment.countUnits)?.unitId ??
+      null;
+    const next = getNextCountUnit(
+      selectedAssignment.countUnits,
+      currentUnitId,
+    );
+    if (next == null) return;
+    updateLine(selectedAssignment.ingredientId, { entryUnitId: next.unitId });
   }
 
   function updateLine(ingredientId: number, patch: Partial<DraftLine>) {
@@ -448,79 +473,39 @@ export function CountSlipClient({
                   entryUnitId: entry?.entryUnitId ?? null,
                   units: assignment.countUnits,
                 });
-                const unitInputId = `count-${assignment.ingredientId}-unit`;
                 return (
-                  <div
+                  <Item
                     key={assignment.ingredientId}
-                    className="flex min-w-0 flex-col gap-2"
-                  >
-                    <Item
-                      variant="outline"
-                      className="min-w-0 items-start gap-2 bg-card text-left hover:bg-muted/50"
-                      render={
-                        <button
-                          type="button"
-                          disabled={locked || isPending}
-                          onClick={() =>
-                            openIngredientSheet(assignment.ingredientId)
-                          }
-                        />
-                      }
-                    >
-                      <ItemContent className="min-w-0 gap-1">
-                        <ItemTitle
-                          size="heading"
-                          className="block w-full min-w-0 max-w-full whitespace-normal break-words line-clamp-2"
-                        >
-                          {assignment.ingredientName}
-                        </ItemTitle>
-                        <ItemDescription className="min-w-0 max-w-full whitespace-normal break-words line-clamp-2 text-xs">
-                          {summary ?? countCopy.tapToEnter}
-                        </ItemDescription>
-                      </ItemContent>
-                      <Badge
-                        className="shrink-0"
-                        variant={summary ? "success" : "secondary"}
-                      >
-                        {summary ? countCopy.entered : countCopy.notCounted}
-                      </Badge>
-                    </Item>
-                    {assignment.countUnits.length > 1 ? (
-                      <Select
-                        value={
-                          entry?.entryUnitId != null
-                            ? String(entry.entryUnitId)
-                            : ""
-                        }
-                        onValueChange={(value) =>
-                          updateLine(assignment.ingredientId, {
-                            entryUnitId: Number(value),
-                          })
-                        }
+                    variant="outline"
+                    className="min-w-0 items-start gap-2 bg-card text-left hover:bg-muted/50"
+                    render={
+                      <button
+                        type="button"
                         disabled={locked || isPending}
+                        onClick={() =>
+                          openIngredientSheet(assignment.ingredientId)
+                        }
+                      />
+                    }
+                  >
+                    <ItemContent className="min-w-0 gap-1">
+                      <ItemTitle
+                        size="heading"
+                        className="block w-full min-w-0 max-w-full whitespace-normal break-words line-clamp-2"
                       >
-                        <SelectTrigger
-                          id={unitInputId}
-                          size="touch"
-                          className="w-full min-w-0"
-                          aria-label={`${FORM_VI.unit} ${assignment.ingredientName}`}
-                        >
-                          <SelectValue placeholder={FORM_VI.unit} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {assignment.countUnits.map((unit) => (
-                            <SelectItem
-                              key={unit.unitId}
-                              value={String(unit.unitId)}
-                              size="touch"
-                            >
-                              {unit.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : null}
-                  </div>
+                        {assignment.ingredientName}
+                      </ItemTitle>
+                      <ItemDescription className="min-w-0 max-w-full whitespace-normal break-words line-clamp-2 text-xs">
+                        {summary ?? countCopy.tapToEnter}
+                      </ItemDescription>
+                    </ItemContent>
+                    <Badge
+                      className="shrink-0"
+                      variant={summary ? "success" : "secondary"}
+                    >
+                      {summary ? countCopy.entered : countCopy.notCounted}
+                    </Badge>
+                  </Item>
                 );
               })}
             </ItemGroup>
@@ -532,7 +517,17 @@ export function CountSlipClient({
                 }
               }}
               title={selectedAssignment?.ingredientName ?? ""}
-              suffix={selectedUnit?.code}
+              suffix={selectedUnit?.code || selectedUnit?.label}
+              onSuffixClick={
+                (selectedAssignment?.countUnits.length ?? 0) > 1
+                  ? cycleSelectedUnit
+                  : undefined
+              }
+              suffixAriaLabel={
+                selectedUnit
+                  ? `${FORM_VI.unit} ${selectedUnit.code || selectedUnit.label}. ${countCopy.cycleUnit}`
+                  : countCopy.cycleUnit
+              }
               initialValue={selectedQuantity}
               allowDecimal
               onConfirm={handleSheetConfirm}

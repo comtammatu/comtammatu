@@ -20,6 +20,9 @@ const employeeCountActionsSource = readWeb(
 const employeeCountClientSource = readWeb(
   "lib/staff-runtime/count/count-client.tsx",
 );
+const numberPadSheetSource = readWeb(
+  "app/components/form/number-pad-sheet.tsx",
+);
 const employeeMessagesSource = readWeb("lib/messages/employee.ts");
 
 test("today work state deduplicates and parallelizes independent reads", () => {
@@ -309,7 +312,33 @@ test("employee inventory count uses a one-column list and a number pad sheet", (
   );
   assert.match(
     employeeCountClientSource,
+    /onSuffixClick=\{[\s\S]*cycleSelectedUnit/,
+    "Count pad unit sits beside the quantity and cycles on tap",
+  );
+  assert.match(
+    employeeCountClientSource,
+    /function getNextCountUnit/,
+    "Multiple count units should cycle on the number pad, not a second list Select",
+  );
+  assert.doesNotMatch(
+    employeeCountClientSource,
+    /countUnits\.length > 1 \? \(/,
+    "Unit Select must not sit under each ingredient row",
+  );
+  assert.match(
+    employeeCountClientSource,
     /ignoreSheetDismissRef/,
     "The opening tap must not immediately dismiss the quantity pad",
   );
+  assert.match(
+    numberPadSheetSource,
+    /onSuffixClick \? \(/,
+    "Number pad suffix becomes a Button when the unit can cycle",
+  );
+  assert.match(
+    numberPadSheetSource,
+    /size="touch"/,
+    "Cycling unit control uses the named touch Button size",
+  );
+  assert.match(employeeMessagesSource, /cycleUnit: "Đổi đơn vị"/);
 });

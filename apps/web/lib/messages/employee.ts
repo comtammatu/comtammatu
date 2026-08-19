@@ -440,6 +440,7 @@ export const employee = {
     tapToEnter: "Nhập số",
     entered: "Đã nhập",
     notCounted: "Chưa đếm",
+    cycleUnit: "Đổi đơn vị",
     unavailableTitle: "Chưa thể kiểm kê",
     missingBranchDescription:
       "Tài khoản chưa được gắn chi nhánh. Liên hệ quản lý để cập nhật hồ sơ.",

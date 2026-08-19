@@ -26,6 +26,8 @@ type NumberPadSheetProps = {
   title: string;
   initialValue?: number | null;
   suffix?: string;
+  onSuffixClick?: () => void;
+  suffixAriaLabel?: string;
   onConfirm: (value: number) => void;
   confirmLabel?: string;
   allowDecimal?: boolean;
@@ -38,6 +40,8 @@ export function NumberPadSheet({
   title,
   initialValue,
   suffix,
+  onSuffixClick,
+  suffixAriaLabel,
   onConfirm,
   confirmLabel = ACTIONS_VI.confirm,
   allowDecimal = true,
@@ -82,12 +86,27 @@ export function NumberPadSheet({
           <SheetTitle className="text-sm font-medium text-muted-foreground">
             {title}
           </SheetTitle>
-          <div className="flex items-baseline gap-2 pt-1">
-            <span className="text-3xl font-semibold tabular-nums">
+          <div className="flex items-center gap-3 pt-1">
+            <span className="min-w-0 flex-1 text-3xl font-semibold tabular-nums">
               {buffer.length === 0 ? "0" : buffer}
             </span>
             {suffix ? (
-              <span className="text-lg text-muted-foreground">{suffix}</span>
+              onSuffixClick ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="touch"
+                  className="shrink-0"
+                  onClick={onSuffixClick}
+                  aria-label={suffixAriaLabel ?? suffix}
+                >
+                  {suffix}
+                </Button>
+              ) : (
+                <span className="shrink-0 text-lg text-muted-foreground">
+                  {suffix}
+                </span>
+              )
             ) : null}
           </div>
         </SheetHeader>
