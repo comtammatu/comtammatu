@@ -27,6 +27,7 @@ import {
 import {
   getKdsOrderItemColumnId,
   getKdsScopedGroupKey,
+  getKdsTicketBaseGroupKey,
 } from "./_lib/order-columns";
 import { getKdsTicketSequenceSortKey } from "./_lib/status-config";
 import {
@@ -39,7 +40,6 @@ import { isKdsActiveTicketStatus } from "./_lib/order-status";
 import { KDS_VI } from "@comtammatu/shared/messages";
 import { KdsBoardTopBar } from "./_components/board-header";
 import { StationToggleBar } from "./_components/station-toggle-bar";
-import { FilterBar } from "./_components/filter-bar";
 import { FocusView } from "./_components/focus-view";
 import { OrderGrid } from "./_components/order-grid";
 import { KdsCompletionHistorySheet } from "./_components/completion-history-sheet";
@@ -58,10 +58,15 @@ function isActiveKitchenTicket(ticket: KdsTicket): boolean {
   return isKdsActiveTicketStatus(ticket.status);
 }
 
-function getTicketBaseGroupKey(ticket: KdsTicket): string {
-  return ticket.kitchen_send_batch_id !== null
-    ? `batch-${String(ticket.kitchen_send_batch_id)}`
-    : String(ticket.order_id);
+function getTicketCreatedAtMs(
+  ticket: KdsTicket,
+  kitchenBatches: ReadonlyMap<number, { created_at: string }>,
+): number {
+  const batch =
+    ticket.kitchen_send_batch_id !== null
+      ? kitchenBatches.get(ticket.kitchen_send_batch_id)
+      : undefined;
+  return new Date(batch?.created_at ?? ticket.created_at).getTime();
 }
 
 function getKitchenQueueRank(order: KdsOrder): number {
@@ -411,7 +416,10 @@ export function KdsBoard({
         item,
         orderInfo?.order_type ?? "dine_in",
       );
-      const baseGroupKey = getTicketBaseGroupKey(ticket);
+      const baseGroupKey = getKdsTicketBaseGroupKey(
+        ticket,
+        orderInfo?.order_type ?? "dine_in",
+      );
       const groupKey = getKdsScopedGroupKey(baseGroupKey, columnId);
       const existing = orderMap.get(groupKey) ?? [];
       existing.push(ticket);
@@ -422,11 +430,20 @@ export function KdsBoard({
     for (const [groupKey, orderTickets] of orderMap) {
       const firstTicket = orderTickets[0];
       if (!firstTicket) continue;
-      const orderId = firstTicket.order_id;
+      let oldestTicket = firstTicket;
+      for (const ticket of orderTickets) {
+        if (
+          getTicketCreatedAtMs(ticket, kitchenBatches) <
+          getTicketCreatedAtMs(oldestTicket, kitchenBatches)
+        ) {
+          oldestTicket = ticket;
+        }
+      }
+      const orderId = oldestTicket.order_id;
       const orderInfo = orders.get(orderId);
       const batch =
-        firstTicket.kitchen_send_batch_id !== null
-          ? kitchenBatches.get(firstTicket.kitchen_send_batch_id)
+        oldestTicket.kitchen_send_batch_id !== null
+          ? kitchenBatches.get(oldestTicket.kitchen_send_batch_id)
           : undefined;
       const scopedItems = orderTickets
         .map((ticket) => orderItemById.get(ticket.order_item_id))
@@ -445,7 +462,7 @@ export function KdsBoard({
         orderType: orderInfo?.order_type ?? "dine_in",
         tableNumber: orderInfo?.tables?.number ?? null,
         createdAt:
-          batch?.created_at ?? orderInfo?.created_at ?? firstTicket.created_at,
+          batch?.created_at ?? orderInfo?.created_at ?? oldestTicket.created_at,
         sendSeq: batch?.send_seq ?? null,
         sendKind: batch?.kind ?? null,
         isPriority,
@@ -458,30 +475,11 @@ export function KdsBoard({
     result.sort(compareKdsOrdersForKitchenQueue);
 
     return result;
-  }, [
-    filteredTickets,
-    orders,
-    orderItemById,
-    kitchenBatches,
-    filters.activeStationId,
-  ]);
+  }, [filteredTickets, orders, orderItemById, kitchenBatches]);
 
-  const activeGroupedOrders = useMemo(
+  const displayOrders = useMemo(
     () => groupedOrders.filter((order) => orderHasKitchenWork(order.tickets)),
     [groupedOrders],
-  );
-
-  const displayOrders = useMemo(() => {
-    let list = activeGroupedOrders;
-    if (filters.orderTypeFilter !== "all") {
-      list = list.filter((o) => o.orderType === filters.orderTypeFilter);
-    }
-    return list;
-  }, [activeGroupedOrders, filters.orderTypeFilter]);
-
-  const pendingCount = useMemo(
-    () => tickets.filter((t) => isKdsActiveTicketStatus(t.status)).length,
-    [tickets],
   );
 
   const stationCounts = useMemo(() => {
@@ -525,7 +523,6 @@ export function KdsBoard({
         <div className="sticky top-0 z-30 shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85">
           <KdsBoardTopBar
             branchId={branchId}
-            pendingCount={pendingCount}
             mode={mode}
             audioMode={audioMode}
             isFullscreen={isFullscreen}
@@ -540,15 +537,6 @@ export function KdsBoard({
                 stationCounts={stationCounts}
                 totalActiveCount={totalActiveCount}
                 onChange={filters.setStation}
-              />
-            }
-            filterControls={
-              <FilterBar
-                orderTypeFilter={filters.orderTypeFilter}
-                hasFilters={filters.hasFilters}
-                displayCount={displayOrders.length}
-                onOrderTypeChange={filters.setOrderType}
-                onClearAll={filters.clearAll}
               />
             }
           />
@@ -567,7 +555,6 @@ export function KdsBoard({
             {mode === "focus" ? (
               <FocusView
                 orders={displayOrders}
-                hasGroupedOrders={activeGroupedOrders.length > 0}
                 pendingTicketIds={pendingTicketIds}
                 canMarkReady={canMarkReady}
                 canRecall={canRecall}
@@ -577,7 +564,6 @@ export function KdsBoard({
             ) : (
               <OrderGrid
                 displayOrders={displayOrders}
-                hasGroupedOrders={activeGroupedOrders.length > 0}
                 pendingTicketIds={pendingTicketIds}
                 canMarkReady={canMarkReady}
                 canRecall={canRecall}

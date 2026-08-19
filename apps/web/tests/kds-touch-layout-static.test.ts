@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 
@@ -11,11 +11,8 @@ const boardHeaderSource = readFileSync(
   "utf8",
 );
 
-const filterBarSource = readFileSync(
-  join(
-    process.cwd(),
-    "app/(protected)/br/[branchId]/kds/_components/filter-bar.tsx",
-  ),
+const kdsBoardSource = readFileSync(
+  join(process.cwd(), "app/(protected)/br/[branchId]/kds/kds-board.tsx"),
   "utf8",
 );
 
@@ -55,20 +52,53 @@ test("KDS header keeps tablet widths in the touch layout instead of md desktop t
   assert.doesNotMatch(boardHeaderSource, /className="h-8 px-2 text-sm"/);
 });
 
+test("KDS header drops redundant title, branch badge, pending count, and order-type filter", () => {
+  assert.doesNotMatch(boardHeaderSource, />\s*KDS\s*</);
+  assert.doesNotMatch(boardHeaderSource, /#\{branchId\}/);
+  assert.doesNotMatch(boardHeaderSource, /chờ/);
+  assert.doesNotMatch(boardHeaderSource, /pendingCount/);
+  assert.doesNotMatch(boardHeaderSource, /filterControls/);
+  assert.doesNotMatch(kdsBoardSource, /FilterBar/);
+  assert.doesNotMatch(kdsBoardSource, /orderTypeFilter/);
+  assert.equal(
+    existsSync(
+      join(
+        process.cwd(),
+        "app/(protected)/br/[branchId]/kds/_components/filter-bar.tsx",
+      ),
+    ),
+    false,
+  );
+});
+
 test("KDS filter and mode controls use touch-sized targets", () => {
   assert.equal(boardHeaderSource.match(/size="icon-touch"/g)?.length, 3);
   assert.doesNotMatch(boardHeaderSource, /size="icon-lg"/);
-  assert.match(filterBarSource, /size="touch"/);
-  assert.match(filterBarSource, /min-w-28/);
-  assert.match(filterBarSource, /size="icon-touch"/);
-  assert.match(filterBarSource, /inline-flex min-h-11/);
-  assert.doesNotMatch(filterBarSource, /size="icon-sm"/);
 
   assert.match(viewModeToggleSource, /size="touch"/);
   assert.doesNotMatch(viewModeToggleSource, /(?:min-)?h-11/);
   assert.doesNotMatch(viewModeToggleSource, /className="h-8"/);
   assert.match(completionHistorySource, /size="touch"/);
   assert.doesNotMatch(completionHistorySource, /size="sm"/);
+});
+
+test("KDS history sheet follows the station overlay height contract", () => {
+  assert.match(
+    completionHistorySource,
+    /side=\{isCompactLayout \? "bottom" : "right"\}/,
+  );
+  assert.match(completionHistorySource, /fullscreen=\{isCompactLayout\}/);
+  assert.match(completionHistorySource, /bodyClassName="p-0"/);
+  assert.match(
+    completionHistorySource,
+    /className="flex h-full min-h-0 flex-col"/,
+  );
+  assert.match(
+    completionHistorySource,
+    /<ScrollArea className="min-h-0 flex-1">/,
+  );
+  assert.doesNotMatch(completionHistorySource, /overflow-hidden/);
+  assert.doesNotMatch(completionHistorySource, /sm:max-w-xl/);
 });
 
 test("KDS batch summary is title-free, quantity-first, and single-line chips", () => {

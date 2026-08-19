@@ -361,7 +361,7 @@ Single helper: `useKeyboardShortcut` in
 | --- | --- |
 | POS cart (`cart-pane.tsx`) | `Cmd/Ctrl + Enter` send-to-kitchen confirm (fires while typing a note); `T` takeaway; `D` dine-in |
 | POS append draft (`append-draft-pane.tsx`) | None — appending must go through the explicit send button |
-| KDS (`kds-board.tsx`) | `Escape` clears station, status, and order-type filters |
+| KDS (`kds-board.tsx`) | `Escape` clears the station filter |
 
 Adding a shortcut means updating this table and the matching
 `aria-keyshortcuts`.

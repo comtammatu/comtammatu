@@ -7,6 +7,7 @@ import {
   getKdsOrderItemColumnId,
   getKdsOrderLabelOverride,
   getKdsScopedGroupKey,
+  getKdsTicketBaseGroupKey,
   groupKdsOrdersByColumn,
 } from "../app/(protected)/br/[branchId]/kds/_lib/order-columns";
 import { getStatusBadgeMeta } from "../app/components/status-badge";
@@ -216,19 +217,19 @@ test("KDS comprehensive board groups orders into item-category service columns",
     ]),
     [
       ["dine_in", ["dine-in", "append-main-dish"]],
-      ["takeaway", ["takeaway"]],
-      ["add_on", ["add-on", "mon-kem"]],
+      ["takeaway", ["takeaway", "add-on"]],
+      ["add_on", ["mon-kem"]],
     ],
   );
 });
 
-test("KDS món thêm lane takes accompaniment tickets, not only category Thêm", () => {
+test("KDS món thêm lane takes dine-in accompaniment tickets, not takeaway bags", () => {
   assert.equal(
     getKdsOrderItemColumnId(
       makeItem({ category_name: "Thêm", category_type: "side_dish" }),
       "takeaway",
     ),
-    "add_on",
+    "takeaway",
   );
   assert.equal(
     getKdsOrderItemColumnId(
@@ -242,7 +243,7 @@ test("KDS món thêm lane takes accompaniment tickets, not only category Thêm",
       makeItem({ category_name: "Món phụ", category_type: "side_dish" }),
       "takeaway",
     ),
-    "add_on",
+    "takeaway",
   );
   assert.equal(
     getKdsOrderItemColumnId(
@@ -298,7 +299,7 @@ test("KDS title keeps table target and ticket code without append labels", () =>
   assert.doesNotMatch(focusViewSource, /Gọi thêm/);
 });
 
-test("KDS mixed kitchen batch can split normal items from món thêm", () => {
+test("KDS mixed kitchen batch can split dine-in items from món thêm", () => {
   const baseGroupKey = "batch-42";
 
   assert.equal(
@@ -331,6 +332,45 @@ test("KDS mixed kitchen batch can split normal items from món thêm", () => {
     ),
     "batch-42:add_on",
   );
+});
+
+test("KDS takeaway accompaniments stay on the live takeaway ticket", () => {
+  const firstSend = {
+    order_id: 88,
+    kitchen_send_batch_id: 42,
+  };
+  const laterSend = {
+    order_id: 88,
+    kitchen_send_batch_id: 43,
+  };
+
+  assert.equal(getKdsTicketBaseGroupKey(firstSend, "takeaway"), "order-88");
+  assert.equal(getKdsTicketBaseGroupKey(laterSend, "takeaway"), "order-88");
+  assert.equal(
+    getKdsScopedGroupKey(
+      getKdsTicketBaseGroupKey(firstSend, "takeaway"),
+      getKdsOrderItemColumnId(
+        makeItem({ category_name: "Món chính", category_type: "main_dish" }),
+        "takeaway",
+      ),
+    ),
+    "order-88",
+  );
+  assert.equal(
+    getKdsScopedGroupKey(
+      getKdsTicketBaseGroupKey(laterSend, "takeaway"),
+      getKdsOrderItemColumnId(
+        makeItem({ category_name: "Món kèm", category_type: "side_dish" }),
+        "takeaway",
+      ),
+    ),
+    "order-88",
+  );
+  assert.equal(
+    getKdsTicketBaseGroupKey(firstSend, "dine_in"),
+    "batch-42",
+  );
+  assert.match(kdsBoardSource, /getKdsTicketBaseGroupKey\(/);
 });
 
 test("KDS keeps order note separate from item note", () => {

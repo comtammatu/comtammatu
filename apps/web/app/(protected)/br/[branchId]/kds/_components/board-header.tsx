@@ -1,7 +1,5 @@
 "use client";
 
-import { formatCount } from "@comtammatu/shared/format";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   History as IconHistory,
@@ -19,7 +17,6 @@ import type { KdsViewMode } from "../_hooks/use-kds-view-mode";
 
 interface KdsBoardTopBarProps {
   branchId: number;
-  pendingCount: number;
   mode: KdsViewMode;
   audioMode: OperationalAudioMode;
   isFullscreen: boolean;
@@ -28,12 +25,10 @@ interface KdsBoardTopBarProps {
   onSoundToggle: () => void;
   onFullscreenToggle: () => void;
   stationControls: ReactNode;
-  filterControls: ReactNode;
 }
 
 const KDS_HEADER_COPY = {
   completionHistory: "Lịch sử hoàn thành",
-  moreMenu: "Thao tác KDS",
 } as const;
 
 const KDS_AUDIO_MODE_LABEL: Record<OperationalAudioMode, string> = {
@@ -51,7 +46,6 @@ function KdsAudioModeIcon({ mode }: { mode: OperationalAudioMode }) {
 
 export function KdsBoardTopBar({
   branchId,
-  pendingCount,
   mode,
   audioMode,
   isFullscreen,
@@ -60,32 +54,16 @@ export function KdsBoardTopBar({
   onSoundToggle,
   onFullscreenToggle,
   stationControls,
-  filterControls,
 }: KdsBoardTopBarProps) {
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-2 px-2 py-2 xl:flex-nowrap xl:px-3">
       <div className="flex shrink-0 items-center gap-1.5">
         <BranchRuntimeBackControl branchId={branchId} />
-        <span className="font-heading text-base font-semibold text-foreground">
-          KDS
-        </span>
-        <Badge variant="outline" className="font-mono tabular-nums">
-          #{branchId}
-        </Badge>
       </div>
       <div className="order-3 min-w-0 basis-full overflow-x-auto xl:order-none xl:basis-auto xl:flex-1">
         {stationControls}
       </div>
-      <div className="order-2 flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1.5 xl:order-none xl:min-w-max xl:shrink-0 xl:flex-nowrap">
-        {filterControls}
-        <Badge
-          role="status"
-          aria-live="polite"
-          variant={pendingCount > 0 ? "warning" : "outline"}
-          className="rounded-full px-2 py-1 font-mono text-sm tabular-nums"
-        >
-          {`${formatCount(pendingCount)} chờ`}
-        </Badge>
+      <div className="order-2 ml-auto flex shrink-0 items-center gap-1.5 xl:order-none xl:min-w-max">
         <Button
           type="button"
           variant="ghost"

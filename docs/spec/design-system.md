@@ -837,10 +837,11 @@ and destructive flows require confirmation or safe recovery. POS/KDS must not
 introduce hover-only reveal — use visible copy, `NoteCallout`, tap-to-expand
 Sheet/Drawer, or multi-line layout.
 
-**KDS.** The live kitchen queue is the primary content. Station, status, and
-order-type filters stay compact and immediately reversible. Urgency/status has
-one visual source of truth per ticket, using semantic state tokens. Bump and
-complete actions need large touch targets and clear focus states.
+**KDS.** The live kitchen queue is the primary content. Station filters stay
+compact and immediately reversible. Service lanes (dine-in / takeaway / add-on)
+are columns, not a header filter. Urgency/status has one visual source of truth
+per ticket, using semantic state tokens. Bump and complete actions need large
+touch targets and clear focus states.
 
 **control_surface.** Use the shared shell, sidebar, breadcrumb, page heading
 rhythm, table/list/detail forms, and empty states. Breadcrumb recovery uses

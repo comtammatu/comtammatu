@@ -6,8 +6,6 @@ export const KDS_VI = {
   viewModeOverviewAria: "Tổng quan — hiển thị nhiều đơn",
   viewModeOverviewTooltip: "Tổng quan",
   filterAll: "Tất cả",
-  filterOrderTypeAria: "Lọc theo loại đơn",
-  filterOrderTypePlaceholder: "Loại đơn",
   statusErrorTitle: "KDS chưa sẵn sàng",
   statusErrorBadge: "Cần tải lại",
   stationsLoadFailed:
@@ -26,7 +24,6 @@ export const KDS_VI = {
     `Đã hoàn thành món, nhưng ${String(count)} món chưa có tuyến in. Kiểm tra cấu hình danh mục và máy in bếp.`,
   printEnqueueFailed:
     "Đã hoàn thành món, nhưng chưa tạo đủ phiếu in bếp. Kiểm tra máy in bếp hoặc báo trực tiếp.",
-  unitOrder: "đơn",
   batchSummaryAria: "Tổng hợp món cần làm",
   undoDone: "Đã xong",
   undoAction: "Hoàn tác",
@@ -34,6 +31,8 @@ export const KDS_VI = {
   undoFallbackOrder: "Đơn hàng",
   undoItemCount: (count: number) =>
     count > 1 ? `${String(count)} món` : "1 món",
+  boardEmptyTitle: "Bếp đang rảnh",
+  boardEmptyDescription: "Chưa có đơn hàng mới.",
 } as const;
 
 export type KdsKey = keyof typeof KDS_VI;

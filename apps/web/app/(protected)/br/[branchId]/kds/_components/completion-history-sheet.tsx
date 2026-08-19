@@ -7,7 +7,7 @@ import {
   getOrderTypeLabelVi,
   UNKNOWN_LABEL_VI,
 } from "@comtammatu/shared/labels";
-import { KDS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, KDS_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
@@ -23,12 +23,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import {
-  AppEmptyState,
-  StationSheet,
-} from "@/components/surface";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { AppEmptyState, StationSheet } from "@/components/surface";
 import {
   History as IconHistory,
   RefreshCcw as IconRefresh,
@@ -105,6 +102,7 @@ export function KdsCompletionHistorySheet({
   open,
   onOpenChange,
 }: KdsCompletionHistorySheetProps) {
+  const isCompactLayout = useIsMobile(1280);
   const [history, setHistory] = useState<KdsOperationalHistoryEntry[] | null>(
     null,
   );
@@ -150,6 +148,9 @@ export function KdsCompletionHistorySheet({
     <StationSheet
       open={open}
       onOpenChange={onOpenChange}
+      side={isCompactLayout ? "bottom" : "right"}
+      size="lg"
+      fullscreen={isCompactLayout}
       title={
         <span className="flex min-w-0 items-center gap-2">
           <IconHistory
@@ -161,10 +162,10 @@ export function KdsCompletionHistorySheet({
         </span>
       }
       description={KDS_COMPLETION_HISTORY_COPY.description}
-      contentClassName="w-full overflow-hidden sm:max-w-xl"
-      bodyClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-0"
+      bodyClassName="p-0"
     >
-        <div className="grid gap-3 border-y px-4 py-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+      <div className="flex h-full min-h-0 flex-col">
+        <div className="grid shrink-0 gap-3 border-b px-4 py-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="kds-history-date" className="text-xs">
               {KDS_COMPLETION_HISTORY_COPY.date}
@@ -229,9 +230,23 @@ export function KdsCompletionHistorySheet({
             )}
 
             {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
+              <AppEmptyState
+                compact
+                className="min-h-32"
+                title={KDS_VI.completionHistoryLoadFailed}
+                description={error}
+              >
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="touch"
+                  className="mt-2"
+                  onClick={loadHistory}
+                >
+                  <IconRefresh data-icon="inline-start" />
+                  {ACTIONS_VI.retry}
+                </Button>
+              </AppEmptyState>
             )}
 
             {!error && truncated && (
@@ -261,7 +276,6 @@ export function KdsCompletionHistorySheet({
                       role="listitem"
                       variant="outline"
                       className="items-start bg-card p-3 text-sm"
-                      render={<article />}
                     >
                       <ItemContent>
                         <div className="flex min-w-0 items-start justify-between gap-3">
@@ -368,6 +382,7 @@ export function KdsCompletionHistorySheet({
             )}
           </div>
         </ScrollArea>
+      </div>
     </StationSheet>
   );
 }

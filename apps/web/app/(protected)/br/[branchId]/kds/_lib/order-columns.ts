@@ -1,5 +1,5 @@
 import { ORDER_TYPE_LABELS_VI } from "@comtammatu/shared/labels";
-import type { KdsOrder, KdsOrderItem } from "../types";
+import type { KdsOrder, KdsOrderItem, KdsTicket } from "../types";
 
 const COM_CATEGORY_NAME = "cơm";
 const SIDE_DISH_CATEGORY_TYPE = "side_dish";
@@ -66,13 +66,27 @@ export function isKdsComCategory(
   return normalizeCategoryName(item?.category_name) === COM_CATEGORY_NAME;
 }
 
+/** Takeaway bags stay in one lane. Dine-in accompaniments use the add-on lane. */
 export function getKdsOrderItemColumnId(
   item: Pick<KdsOrderItem, "category_name" | "category_type"> | undefined,
   orderType: string | null | undefined,
 ): KdsOrderColumnId {
-  if (isKdsAddOnItem(item)) return "add_on";
   if (orderType === "takeaway") return "takeaway";
+  if (isKdsAddOnItem(item)) return "add_on";
   return "dine_in";
+}
+
+/** Takeaway keeps later sends on the live order ticket while it is still on KDS. */
+export function getKdsTicketBaseGroupKey(
+  ticket: Pick<KdsTicket, "order_id" | "kitchen_send_batch_id">,
+  orderType: string | null | undefined,
+): string {
+  if (orderType === "takeaway") {
+    return `order-${String(ticket.order_id)}`;
+  }
+  return ticket.kitchen_send_batch_id !== null
+    ? `batch-${String(ticket.kitchen_send_batch_id)}`
+    : String(ticket.order_id);
 }
 
 export function getKdsScopedGroupKey(
@@ -83,10 +97,10 @@ export function getKdsScopedGroupKey(
 }
 
 function getKdsOrderColumnId(order: KdsOrder): KdsOrderColumnId {
+  if (order.orderType === "takeaway") return "takeaway";
   if (order.items.length > 0 && order.items.every(isKdsAddOnItem)) {
     return "add_on";
   }
-  if (order.orderType === "takeaway") return "takeaway";
   return "dine_in";
 }
 

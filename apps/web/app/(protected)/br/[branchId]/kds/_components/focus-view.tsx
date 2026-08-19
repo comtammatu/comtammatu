@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { KDS_VI } from "@comtammatu/shared/messages";
 import { cn } from "@comtammatu/ui";
 import { AppEmptyState, OperationalBoardCard } from "@/components/surface";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -48,7 +49,6 @@ import type { KdsOrder, KdsTicket } from "../types";
 
 interface FocusViewProps {
   orders: KdsOrder[];
-  hasGroupedOrders: boolean;
   pendingTicketIds: Set<number>;
   canMarkReady: boolean;
   canRecall: boolean;
@@ -90,7 +90,6 @@ function findNextActiveIndex(orders: KdsOrder[], from: number): number {
 
 export function FocusView({
   orders,
-  hasGroupedOrders,
   pendingTicketIds,
   canMarkReady,
   canRecall,
@@ -172,14 +171,8 @@ export function FocusView({
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex min-h-80 items-center justify-center p-4 md:min-h-96">
           <AppEmptyState
-            title={
-              hasGroupedOrders ? "Không có đơn phù hợp bộ lọc" : "Bếp đang rảnh"
-            }
-            description={
-              hasGroupedOrders
-                ? "Thay đổi bộ lọc để xem thêm đơn."
-                : "Chưa có đơn hàng mới."
-            }
+            title={KDS_VI.boardEmptyTitle}
+            description={KDS_VI.boardEmptyDescription}
             icon={<IconChefHat />}
           />
         </div>

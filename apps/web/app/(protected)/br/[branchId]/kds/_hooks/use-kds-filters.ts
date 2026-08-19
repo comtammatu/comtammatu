@@ -3,19 +3,12 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { readDevicePref, writeDevicePref } from "@lib/device-prefs";
-import type { KdsStation, OrderTypeFilter } from "../types";
-
-function parseOrderTypeFilter(v: string | null): OrderTypeFilter {
-  if (v === "dine_in" || v === "takeaway") return v;
-  return "all";
-}
+import type { KdsStation } from "../types";
 
 export interface KdsFilters {
   activeStationId: number | null;
-  orderTypeFilter: OrderTypeFilter;
   hasFilters: boolean;
   setStation: (value: string | null) => void;
-  setOrderType: (value: OrderTypeFilter | null) => void;
   clearAll: () => void;
 }
 
@@ -61,12 +54,7 @@ export function useKdsFilters(stations: KdsStation[]): KdsFilters {
     replaceQuery({ station: saved });
   }, [replaceQuery, searchParams, stationPrefKey, stations]);
 
-  const orderTypeFilter = useMemo(
-    () => parseOrderTypeFilter(searchParams.get("orderType")),
-    [searchParams],
-  );
-
-  const hasFilters = activeStationId !== null || orderTypeFilter !== "all";
+  const hasFilters = activeStationId !== null;
 
   const setStation = useCallback(
     (value: string | null) => {
@@ -76,15 +64,6 @@ export function useKdsFilters(stations: KdsStation[]): KdsFilters {
     [replaceQuery, stationPrefKey],
   );
 
-  const setOrderType = useCallback(
-    (value: OrderTypeFilter | null) => {
-      replaceQuery({
-        orderType: value === null || value === "all" ? null : value,
-      });
-    },
-    [replaceQuery],
-  );
-
   const clearAll = useCallback(() => {
     writeDevicePref(stationPrefKey, "all");
     replaceQuery({ station: null, status: null, orderType: null });
@@ -92,10 +71,8 @@ export function useKdsFilters(stations: KdsStation[]): KdsFilters {
 
   return {
     activeStationId,
-    orderTypeFilter,
     hasFilters,
     setStation,
-    setOrderType,
     clearAll,
   };
 }

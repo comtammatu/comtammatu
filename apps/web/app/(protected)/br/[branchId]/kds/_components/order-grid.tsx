@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useMemo } from "react";
-import { PRODUCT_VI } from "@comtammatu/shared/messages";
+import { PRODUCT_VI, KDS_VI } from "@comtammatu/shared/messages";
 import { cn } from "@comtammatu/ui";
 import { AppEmptyState, OperationalBoardCard } from "@/components/surface";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -11,7 +11,6 @@ import { Item } from "@comtammatu/ui/components/item";
 import { StatusBadge } from "@/components/status-badge";
 import {
   Check as IconCheck,
-  ChefHat as IconChefHat,
   RotateCcw as IconRotate,
 } from "lucide-react";
 import { useBoardTick } from "../_hooks/use-board-tick";
@@ -58,7 +57,6 @@ const KDS_HEATMAP_LABELS = {
 
 interface OrderGridProps {
   displayOrders: KdsOrder[];
-  hasGroupedOrders: boolean;
   pendingTicketIds: Set<number>;
   canMarkReady: boolean;
   canRecall: boolean;
@@ -488,7 +486,6 @@ function OrderColumn({
 /** Comprehensive (TOÀN DIỆN) view: kitchen queue split by service lane. */
 export function OrderGrid({
   displayOrders,
-  hasGroupedOrders,
   pendingTicketIds,
   canMarkReady,
   canRecall,
@@ -506,16 +503,9 @@ export function OrderGrid({
       {displayOrders.length === 0 ? (
         <div className="flex min-h-80 items-center justify-center p-4 md:min-h-96">
           <AppEmptyState
-            title={
-              hasGroupedOrders ? "Không có đơn phù hợp bộ lọc" : "Bếp đang rảnh"
-            }
-            description={
-              hasGroupedOrders
-                ? "Thay đổi bộ lọc để xem thêm đơn."
-                : "Chưa có đơn hàng mới."
-            }
-            icon={hasGroupedOrders ? <IconChefHat /> : undefined}
-            symbol={hasGroupedOrders ? undefined : "riceBowl"}
+            title={KDS_VI.boardEmptyTitle}
+            description={KDS_VI.boardEmptyDescription}
+            symbol="riceBowl"
           />
         </div>
       ) : (

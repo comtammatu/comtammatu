@@ -115,12 +115,3 @@ export interface KdsBoardProps {
    */
   seeded?: boolean;
 }
-
-/** URL query: order type filter */
-export type OrderTypeFilter = "all" | "dine_in" | "takeaway";
-
-/** Filter option config */
-export interface FilterOption<T extends string> {
-  value: T;
-  label: string;
-}
