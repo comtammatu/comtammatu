@@ -1,27 +1,25 @@
-import { notFound } from "next/navigation";
-import { loadBranchLeaveApprovalData } from "@lib/hr/branch-leave-approval-data";
+import { notFound, redirect } from "next/navigation";
 import { parseOperatorBranchId } from "../../../_lib/parse-branch-id";
-import { BranchLeaveApprovalsClient } from "./branch-leave-approvals-client";
 
-/**
- * Full-page leave approval queue for branch managers.
- */
-export default async function OperatorLeaveApprovalsPage({
+/** Class C: old bookmarks and notification URLs land on `/team/leave-approvals`. */
+export default async function OperatorShiftLeaveApprovalsShimPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ branchId: string }>;
+  searchParams?: Promise<{ leaveRequestId?: string | string[] }>;
 }) {
   const { branchId: rawBranchId } = await params;
   const branchId = parseOperatorBranchId(rawBranchId);
   if (branchId == null) notFound();
-  const data = await loadBranchLeaveApprovalData(branchId);
-  return (
-    <BranchLeaveApprovalsClient
-      branchId={data.branchId}
-      branchName={data.branchName}
-      canApprove={data.canApprove}
-      initialRows={data.rows}
-      loadFailed={data.loadFailed}
-    />
-  );
+  const { leaveRequestId: rawLeaveRequestId } = searchParams
+    ? await searchParams
+    : {};
+  const leaveRequestId = Array.isArray(rawLeaveRequestId)
+    ? rawLeaveRequestId[0]
+    : rawLeaveRequestId;
+  const query = leaveRequestId
+    ? `?leaveRequestId=${encodeURIComponent(leaveRequestId)}`
+    : "";
+  redirect(`/br/${branchId}/team/leave-approvals${query}`);
 }

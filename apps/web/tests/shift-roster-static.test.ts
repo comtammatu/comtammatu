@@ -15,12 +15,12 @@ test("shift roster resolves before generic branch shift module", () => {
 
   assert.match(
     routeMap,
-    /id: "branch-shift-roster"[\s\S]*?entryPath: "\/br\/\[branchId\]\/shift\/roster"/,
+    /id: "branch-shift-roster"[\s\S]*?entryPath: "\/br\/\[branchId\]\/team\/roster"/,
   );
   assert.match(routeMap, /moduleKeys: \["branch_shift_roster"\]/);
 
-  const rosterGate = resolution.indexOf('/shift\\/roster(?:\\/|$)/');
-  const shiftGate = resolution.indexOf('/shift(?:\\/|$)/');
+  const rosterGate = resolution.indexOf("(?:team|shift)\\/roster");
+  const shiftGate = resolution.indexOf("\\/shift(?:\\/|$)");
   assert.ok(rosterGate >= 0, "roster route gate must exist");
   assert.ok(shiftGate > rosterGate, "roster must resolve before generic shift");
   assert.match(resolution, /return "branch_shift_roster"/);
@@ -28,7 +28,7 @@ test("shift roster resolves before generic branch shift module", () => {
 
 test("branch roster route uses leave-approvals auth gating pattern", () => {
   const page = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/roster/page.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/team/roster/page.tsx",
   );
   const loader = read("apps/web/lib/hr/roster/load-branch-roster-data.ts");
 
@@ -78,10 +78,10 @@ test("roster week grid keeps multi-shift cell editor", () => {
 
 test("Branch roster uses week cards without Owner DataTable", () => {
   const rosterClient = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/roster/roster-client.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/team/roster/roster-client.tsx",
   );
   const branchWeek = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/roster/branch-roster-week-client.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/team/roster/branch-roster-week-client.tsx",
   );
 
   assert.match(rosterClient, /BranchRosterWeekClient/);

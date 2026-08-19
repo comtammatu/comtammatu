@@ -1,249 +1,9 @@
 import { cache } from "react";
 import { PERMISSION_KEYS, type JwtClaims } from "@comtammatu/shared/auth";
-import { getRegisteredMethods } from "@comtammatu/shared/providers";
-import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import type { loadAuthState } from "@/_lib/auth";
-import { ensurePaymentProvidersRegistered } from "@lib/payment-providers-init";
 import { STOCK_FULFILLMENT_RECEIVE_READY_STATUSES } from "@lib/inventory/stock-fulfillment-hub-model";
 
 type ServerClient = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
-
-// Mirrors PrinterStatusIndicator: an agent is online when its heartbeat is
-// younger than this threshold.
-const AGENT_OFFLINE_THRESHOLD_MS = 60_000;
-
-const OPEN_KITCHEN_ORDER_STATES = ["pending", "preparing", "ready"] as const;
-const AWAITING_PAYMENT_ORDER_STATES = [
-  "confirmed",
-  "preparing",
-  "ready",
-  "served",
-] as const;
-
-export interface BranchDayStatus {
-  todayRevenue: number;
-  paidOrders: number;
-  tablesTotal: number;
-  tablesOccupied: number;
-  kitchenActiveOrders: number;
-  posSessionOpenedAt: string | null;
-  printerHasAgent: boolean;
-  printerOnline: boolean;
-  printerFailed24h: number;
-  pendingCheckouts: number;
-  menuLimitAvailableItems: number;
-  setupActiveTerminals: number;
-  setupActiveKdsStations: number;
-  setupActivePrinters: number;
-  setupActiveStaff: number;
-  setupPaymentReady: boolean;
-  setupHddtReady: boolean;
-  /** Cockpit live floor + payment lanes. Fail-soft like every other metric. */
-  ordersAwaitingPayment: number;
-  vietqrPending: number;
-  readyItems: number;
-}
-
-/**
- * Read-only day status for the Branch Command landing. Every metric is
- * fail-soft: a query error degrades that metric to 0/null instead of
- * blocking the page.
- *
- * Every query uses the caller's session so RLS/PBAC remains the authorization
- * boundary after the route resolves the requested Branch context. Checkout
- * counts use the authenticated hierarchy-aware RPC.
- */
-export async function fetchBranchDayStatus(
-  supabase: ServerClient,
-  claims: JwtClaims,
-  branchId: number,
-): Promise<BranchDayStatus> {
-  const todayRange = getVNDayUtcRange(getVNDateString());
-  const failedSinceIso = new Date(
-    Date.now() - 24 * 60 * 60 * 1000,
-  ).toISOString();
-  ensurePaymentProvidersRegistered();
-  const registeredPaymentMethods = getRegisteredMethods();
-  const hddtCredentialsReady =
-    !!process.env["SINVOICE_USERNAME"] && !!process.env["SINVOICE_PASSWORD"];
-
-  const [
-    paymentsRes,
-    tablesRes,
-    kitchenRes,
-    agentRes,
-    failedRes,
-    sessionRes,
-    checkoutRes,
-    menuLimitsRes,
-    terminalRes,
-    stationRes,
-    printerRes,
-    staffRes,
-    invoiceProfileRes,
-    awaitingPaymentRes,
-    vietqrPendingRes,
-    readyItemsRes,
-  ] = await Promise.all([
-    supabase
-      .from("payments")
-      .select("amount, orders!inner(status)")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("branch_id", branchId)
-      .eq("status", "completed")
-      .not("paid_at", "is", null)
-      .neq("orders.status", "cancelled")
-      .gte("paid_at", todayRange.startIso)
-      .lt("paid_at", todayRange.endIso),
-    supabase
-      .from("tables")
-      .select("status")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("branch_id", branchId)
-      .neq("status", "maintenance"),
-    supabase
-      .from("orders")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", claims.tenant_id)
-      .eq("branch_id", branchId)
-      .in("status", [...OPEN_KITCHEN_ORDER_STATES])
-      .gte("created_at", todayRange.startIso)
-      .lt("created_at", todayRange.endIso),
-    supabase
-      .from("printer_agent_status")
-      .select("agent_id, last_seen_at")
-      .eq("branch_id", branchId)
-      .maybeSingle(),
-    supabase
-      .from("print_jobs")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", claims.tenant_id)
-      .eq("branch_id", branchId)
-      .in("status", ["failed", "expired"])
-      .gte("created_at", failedSinceIso),
-    supabase
-      .from("pos_sessions")
-      .select("opened_at")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("branch_id", branchId)
-      .eq("status", "open")
-      .maybeSingle(),
-    supabase.rpc("get_checkout_review_queue", {
-      p_branch_id: branchId,
-      p_include_rows: false,
-    }),
-    supabase.rpc("list_branch_menu_daily_limits", {
-      p_branch_id: branchId,
-    }),
-    supabase
-      .from("pos_terminals")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", claims.tenant_id)
-      .eq("branch_id", branchId)
-      .eq("is_active", true),
-    supabase
-      .from("kds_stations")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", claims.tenant_id)
-      .eq("branch_id", branchId)
-      .eq("is_active", true),
-    supabase
-      .from("printers")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", claims.tenant_id)
-      .eq("branch_id", branchId)
-      .eq("is_active", true),
-    supabase
-      .from("profiles")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", claims.tenant_id)
-      .eq("branch_id", branchId)
-      .eq("is_active", true),
-    supabase
-      .from("invoice_profiles")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", claims.tenant_id)
-      .eq("status", "active"),
-    // Cockpit floor lane: open orders today still awaiting payment.
-    supabase
-      .from("orders")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", claims.tenant_id)
-      .eq("branch_id", branchId)
-      .in("status", [...AWAITING_PAYMENT_ORDER_STATES])
-      .eq("payment_status", "unpaid")
-      .gte("created_at", todayRange.startIso)
-      .lt("created_at", todayRange.endIso),
-    // Cockpit payment lane: pending VietQR remote payments.
-    supabase
-      .from("payments")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", claims.tenant_id)
-      .eq("branch_id", branchId)
-      .eq("status", "pending")
-      .gte("created_at", todayRange.startIso)
-      .lt("created_at", todayRange.endIso),
-    // Cockpit floor lane: items already bumped ready, awaiting serve. Branch
-    // scoping rides the order_items → orders join (order_items has no
-    // branch_id column).
-    supabase
-      .from("order_items")
-      .select("id, orders!inner(branch_id,created_at)", {
-        count: "exact",
-        head: true,
-      })
-      .eq("tenant_id", claims.tenant_id)
-      .eq("status", "ready")
-      .eq("orders.branch_id", branchId)
-      .gte("orders.created_at", todayRange.startIso)
-      .lt("orders.created_at", todayRange.endIso),
-  ]);
-
-  const paymentRows = paymentsRes.data ?? [];
-  const tableRows = tablesRes.data ?? [];
-  const lastSeenAt = agentRes.data?.last_seen_at ?? null;
-  const menuLimitRows = (menuLimitsRes.data ?? []) as Array<{
-    is_disabled: boolean | null;
-    available_to_sell: number | null;
-  }>;
-  const menuLimitAvailableItems = menuLimitsRes.error
-    ? 0
-    : menuLimitRows.filter((row) => {
-        if (row.is_disabled) {
-          return false;
-        }
-
-        return row.available_to_sell == null || row.available_to_sell > 0;
-      }).length;
-
-  return {
-    todayRevenue: paymentRows.reduce((sum, r) => sum + Number(r.amount), 0),
-    paidOrders: paymentRows.length,
-    tablesTotal: tableRows.length,
-    tablesOccupied: tableRows.filter((t) => t.status === "occupied").length,
-    kitchenActiveOrders: kitchenRes.count ?? 0,
-    posSessionOpenedAt: sessionRes.data?.opened_at ?? null,
-    printerHasAgent: lastSeenAt !== null,
-    printerOnline:
-      lastSeenAt !== null &&
-      Date.now() - new Date(lastSeenAt).getTime() < AGENT_OFFLINE_THRESHOLD_MS,
-    printerFailed24h: failedRes.count ?? 0,
-    pendingCheckouts: checkoutRes.data?.[0]?.pending_count ?? 0,
-    menuLimitAvailableItems,
-    setupActiveTerminals: terminalRes.count ?? 0,
-    setupActiveKdsStations: stationRes.count ?? 0,
-    setupActivePrinters: printerRes.count ?? 0,
-    setupActiveStaff: staffRes.count ?? 0,
-    setupPaymentReady: registeredPaymentMethods.length > 0,
-    setupHddtReady:
-      hddtCredentialsReady &&
-      !invoiceProfileRes.error &&
-      (invoiceProfileRes.count ?? 0) === 1,
-    ordersAwaitingPayment: awaitingPaymentRes.count ?? 0,
-    vietqrPending: vietqrPendingRes.count ?? 0,
-    readyItems: readyItemsRes.count ?? 0,
-  };
-}
 
 export interface BranchQueueCounts {
   pendingCheckouts: number | null;
@@ -252,6 +12,8 @@ export interface BranchQueueCounts {
   pendingWaste: number | null;
   inboundTransfers: number | null;
   openStockRequests: number | null;
+  pendingVoids: number | null;
+  outOfStockAlerts: number | null;
 }
 
 /**
@@ -273,6 +35,18 @@ export const fetchBranchQueueCounts = cache(
     branchKind?: string | null,
   ): Promise<BranchQueueCounts> {
     const isStoreBranch = branchKind === "branch";
+    const canSeeVoids =
+      isStoreBranch &&
+      (claims.user_role === "owner" ||
+        claims.user_role === "branch_manager" ||
+        claims.user_role === "cashier" ||
+        claims.user_role === "chef" ||
+        claims.user_role === "branch_staff");
+    const canSeeOutOfStock =
+      isStoreBranch &&
+      (claims.user_role === "owner" ||
+        claims.user_role === "branch_manager" ||
+        claims.user_role === "cashier");
     const [
       checkoutPermission,
       leavePermission,
@@ -319,6 +93,8 @@ export const fetchBranchQueueCounts = cache(
       wasteRes,
       inboundTransferRes,
       openStockRequestRes,
+      voidRes,
+      outOfStockRes,
     ] = await Promise.all([
       checkoutPermission.data === true
         ? supabase.rpc("get_checkout_review_queue", {
@@ -365,6 +141,25 @@ export const fetchBranchQueueCounts = cache(
             .eq("branch_id", branchId)
             .in("status", ["draft", "submitted"])
         : Promise.resolve(null),
+      canSeeVoids
+        ? supabase
+            .from("pos_void_requests")
+            .select("id", { count: "exact", head: true })
+            .eq("tenant_id", claims.tenant_id)
+            .eq("branch_id", branchId)
+            .eq("status", "pending")
+        : Promise.resolve(null),
+      canSeeOutOfStock
+        ? supabase
+            .from("notifications")
+            .select("id", { count: "exact", head: true })
+            .eq("tenant_id", claims.tenant_id)
+            .eq("target_branch_id", branchId)
+            .eq("kind", "pos.kds_out_of_stock")
+            .or(
+              `expires_at.is.null,expires_at.gt.${new Date().toISOString()}`,
+            )
+        : Promise.resolve(null),
     ]);
 
     return {
@@ -382,6 +177,8 @@ export const fetchBranchQueueCounts = cache(
       openStockRequests: openStockRequestRes
         ? (openStockRequestRes.count ?? 0)
         : null,
+      pendingVoids: voidRes ? (voidRes.count ?? 0) : null,
+      outOfStockAlerts: outOfStockRes ? (outOfStockRes.count ?? 0) : null,
     };
   },
 );

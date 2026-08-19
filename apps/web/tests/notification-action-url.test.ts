@@ -238,6 +238,34 @@ test("known notification kinds keep canonical Branch workflow URLs", () => {
       expected: "/br/3/shift/schedule/leave",
     },
     {
+      role: "accountant",
+      actionUrl: "/hr/attendance",
+      entityId: 11,
+      kind: "hr.leave_approved",
+      expected: "/me/schedule/leave",
+    },
+    {
+      role: "self_service",
+      actionUrl: "/hr/attendance?tab=leave",
+      entityId: 11,
+      kind: "hr.leave_rejected",
+      expected: "/me/schedule/leave",
+    },
+    {
+      role: "cashier",
+      actionUrl: "/hr/attendance",
+      entityId: 14,
+      kind: "hr.checkout_approved",
+      expected: "/br/3/shift/clock",
+    },
+    {
+      role: "self_service",
+      actionUrl: "/hr/attendance",
+      entityId: 14,
+      kind: "hr.checkout_rejected",
+      expected: "/me/clock",
+    },
+    {
       role: "branch_manager",
       actionUrl: "/br/3/pos-sessions?session=92",
       entityId: 92,
@@ -249,7 +277,21 @@ test("known notification kinds keep canonical Branch workflow URLs", () => {
       actionUrl: "/br/3/pos?orderId=12",
       entityId: 12,
       kind: "pos.void_resolved",
-      expected: "/br/3/pos?orderId=12",
+      expected: "/br/3/orders?orderId=12",
+    },
+    {
+      role: "cashier",
+      actionUrl: "/br/3/pos?voidRequest=44",
+      entityId: 44,
+      kind: "pos.void_requested",
+      expected: "/br/3/orders?voidRequest=44",
+    },
+    {
+      role: "cashier",
+      actionUrl: "/br/3/pos?order=9",
+      entityId: 9,
+      kind: "pos.kds_out_of_stock",
+      expected: "/br/3/orders?orderId=9",
     },
   ];
 
@@ -273,7 +315,7 @@ test("known notification kinds keep canonical Branch workflow URLs", () => {
       entityId: 5,
       targetBranchId: 3,
     }),
-    "/br/3/shift/leave-approvals?leaveRequestId=5",
+    "/br/3/team/leave-approvals?leaveRequestId=5",
   );
 });
 

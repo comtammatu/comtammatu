@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  Bell as IconBell,
   Calendar as IconCalendar,
   CalendarX as IconLeave,
   Camera as IconCamera,
@@ -46,6 +47,12 @@ const HUB_LINKS = [
     title: copy.payslipTitle,
     description: copy.payslipLongDescription,
     icon: IconWallet,
+  },
+  {
+    href: "/notifications",
+    title: copy.notificationsTitle,
+    description: copy.notificationsDescription,
+    icon: IconBell,
   },
   {
     href: "/me/clock",

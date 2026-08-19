@@ -521,7 +521,7 @@ export function CloseDayClient({
           <Item
             variant="outline"
             size="sm"
-            render={<Link href={`/br/${branchId}/shift/checkout-approvals`} />}
+            render={<Link href={`/br/${branchId}/team/checkout-approvals`} />}
           >
             <ItemContent>
               <ItemTitle className="text-sm">

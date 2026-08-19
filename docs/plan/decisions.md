@@ -16,7 +16,7 @@ entry.
 **Net effect:** `apps/print-agent` supports LAN printers only; no USB or runtime transport switch. Canonical: `docs/modules/infrastructure.md`.
 
 ## D012: Lean operations
-**Net effect:** No local-first POS; no non-consumer payment rail; floor role is `cashier`; shift-lead void exception per ADR 0023. Native Android clients are allowed per ADR 0038 (PWA remains production in this repo). Canonical: ADR 0023, ADR 0038.
+**Net effect:** No local-first POS; no non-consumer payment rail; floor role is `cashier`; shift-lead void exception per ADR 0023. Native Android clients are allowed per ADR 0038 (PWA remains production in this repo). Canonical: ADR 0023, ADR 0038, `docs/spec/pwa.md`.
 
 ## D015: `main` is the Production track for CTCP Chén Sứ
 **Net effect:** `main` serves CTCP Chén Sứ only; sole Production stack is Vercel `comtammatu` / Supabase `enloyfnuerqgaqderbwb` / `web.comtammatu.com`. Canonical: `docs/agent/rules/database.md`, ADR 0016.

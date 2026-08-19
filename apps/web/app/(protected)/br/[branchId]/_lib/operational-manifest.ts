@@ -1,7 +1,18 @@
 import { BROWSER_CHROME_THEME_COLORS } from "@/_lib/theme-tokens";
+import {
+  buildPwaLauncherIcons,
+  type PwaLauncherApp,
+} from "@/_lib/pwa-launcher-icons";
 
 type OperationalApp = "pos" | "kds" | "pickup" | "operator";
 type OperationalOrientation = "portrait" | "landscape";
+
+const LAUNCHER_ICON_APP: Record<OperationalApp, PwaLauncherApp> = {
+  pos: "pos",
+  kds: "kds",
+  pickup: "pickup",
+  operator: "cong",
+};
 
 const APP_LABELS: Record<
   OperationalApp,
@@ -67,29 +78,16 @@ function buildOperationalManifest(app: OperationalApp, branchId: string) {
     lang: "vi",
     display: "standalone",
     start_url: appUrl,
-    // The operator app and all single-job stations scope the entire origin so that
-    // navigations between them (including the toolbar return link and
-    // auth redirects) do not drop the installed PWA back into a browser tab.
+    // Overlapping origin scope is the locked isolation model (OQ-3): identity
+    // is `id` / `start_url` / name, not a narrower path. Auth redirects and
+    // station-to-operator toolbar links must stay inside the installed app.
     scope: "/",
     background_color: BROWSER_CHROME_THEME_COLORS.light,
     theme_color: BROWSER_CHROME_THEME_COLORS.light,
     orientation: appConfig.orientation,
     categories: ["business", "productivity"],
     prefer_related_applications: false,
-    icons: [
-      {
-        src: "/icons/icon-192.png",
-        sizes: "192x192",
-        type: "image/png",
-        purpose: "any maskable",
-      },
-      {
-        src: "/icons/icon-512.png",
-        sizes: "512x512",
-        type: "image/png",
-        purpose: "any maskable",
-      },
-    ],
+    icons: buildPwaLauncherIcons(LAUNCHER_ICON_APP[app]),
   };
 }
 

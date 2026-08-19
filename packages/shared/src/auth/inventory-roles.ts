@@ -66,10 +66,12 @@ export function isProcurementBranchInScope(
   return effectiveBranchId === targetBranchId;
 }
 
-/** Owner | Accountant create PO from YCM; central ops are hard-denied. */
+/** Owner, accountant, and pinned central warehouse/kitchen may author POs. */
 export const PO_CREATE_ROLES: readonly StaffRole[] = [
   "owner",
   "accountant",
+  "central_supply_ops",
+  "central_kitchen_lead",
 ] as const;
 
 export const PO_REVIEW_ROLES: readonly StaffRole[] = [

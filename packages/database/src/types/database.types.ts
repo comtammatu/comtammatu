@@ -13359,6 +13359,19 @@ export type Database = {
         }
         Returns: Json
       }
+      create_purchase_order: {
+        Args: {
+          p_branch_id: number
+          p_idempotency_key?: string
+          p_lines: Json
+          p_needed_by: string
+          p_notes: string
+          p_po_id: number
+          p_submit?: boolean
+          p_supplier_id: number
+        }
+        Returns: Json
+      }
       create_refund: {
         Args: { p_amount: number; p_payment_id: number; p_reason: string }
         Returns: Json
@@ -14487,6 +14500,7 @@ export type Database = {
           title: string
         }[]
       }
+      list_unpriced_confirmed_grn_lines: { Args: never; Returns: Json }
       log_audit: {
         Args: {
           p_action: string
@@ -14557,6 +14571,16 @@ export type Database = {
           p_tenant_id: number
         }
         Returns: boolean
+      }
+      owner_patch_confirmed_grn_unit_cost: {
+        Args: {
+          p_grn_item_id: number
+          p_idempotency_key: string
+          p_reason: string
+          p_unit_cost: number
+          p_unit_cost_unit_id: number
+        }
+        Returns: Json
       }
       period_status_at: {
         Args: { p_at: string; p_tenant_id: number }

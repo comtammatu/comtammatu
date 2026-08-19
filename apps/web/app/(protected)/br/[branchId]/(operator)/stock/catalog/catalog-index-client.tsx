@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {
+  ArrowLeft as IconArrowLeft,
   Carrot,
   ChevronRight,
   Ruler,
@@ -9,6 +10,7 @@ import {
   Tags,
   UsersRound,
 } from "lucide-react";
+import { Button } from "@comtammatu/ui/components/button";
 import {
   Item,
   ItemActions,
@@ -18,7 +20,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { messages } from "@lib/messages";
-import { CatalogBackControl } from "./catalog-back-header";
+import { BranchOperatorControlBar } from "@lib/branch-operator/components/branch-operator-page";
 
 const copy = messages.catalog.index;
 
@@ -79,10 +81,23 @@ export function CatalogIndexClient({
 
   return (
     <div className="flex flex-col gap-3">
-      <CatalogBackControl
-        title={copy.title}
-        backHref={basePath.replace(/\/catalog$/, "")}
-      />
+      <BranchOperatorControlBar className="sm:hidden">
+        <Button
+          variant="ghost"
+          size="icon-touch"
+          render={
+            <Link
+              href={`${basePath.replace(/\/stock\/catalog$/, "")}/settings`}
+              aria-label={copy.title}
+            />
+          }
+        >
+          <IconArrowLeft />
+        </Button>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold">{copy.title}</p>
+        </div>
+      </BranchOperatorControlBar>
       <ItemGroup className="gap-2">
         {rows.map((row) => (
           <Item

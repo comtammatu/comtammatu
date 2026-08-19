@@ -183,7 +183,7 @@ test("checkout approvals has no serious or critical axe violations", async ({
   try {
     await verifyAtRepresentativeViewports(
       page,
-      `/br/${branchId}/shift/checkout-approvals`,
+      `/br/${branchId}/team/checkout-approvals`,
       "checkout approvals",
     );
   } finally {

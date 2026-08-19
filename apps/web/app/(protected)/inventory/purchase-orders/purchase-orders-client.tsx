@@ -5,11 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   PackagePlus as IconPackagePlus,
+  Plus as IconPlus,
   Search as IconSearch,
   ShoppingCart as IconShoppingCart,
 } from "lucide-react";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
-import { formatVNDate } from "@comtammatu/shared/time";
+import { formatVNDate, getVNDateString } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   InputGroup,
@@ -53,8 +54,19 @@ import {
   cancelPurchaseOrder,
   closePurchaseOrder,
   createGrnDraftFromPurchaseOrder,
+  createPurchaseOrder,
 } from "../purchase-order-actions";
-import type { PurchaseOrderRow } from "@lib/inventory/purchase-request-model";
+import {
+  defaultPurchaseRequestUnit,
+  type PurchaseRequestIngredientOption,
+  type PurchaseOrderRow,
+} from "@lib/inventory/purchase-request-model";
+import type { PurchaseOrderSupplier } from "@lib/inventory/purchase-order-drafts";
+import {
+  blankRequestLine,
+  type RequestDraftLine,
+} from "../purchase-requests/purchase-request-draft-types";
+import { PurchaseOrderFormDialog } from "./purchase-order-form-dialog";
 
 export type {
   PurchaseOrderLineRow,
@@ -81,13 +93,21 @@ type ReasonAction = {
 export function PurchaseOrdersClient({
   rows,
   branches,
+  createBranches,
+  suppliers,
+  ingredients,
   canManage,
   canReceive,
+  canCreate,
 }: {
   rows: PurchaseOrderRow[];
   branches: Array<{ id: number; name: string }>;
+  createBranches: Array<{ id: number; name: string }>;
+  suppliers: PurchaseOrderSupplier[];
+  ingredients: PurchaseRequestIngredientOption[];
   canManage: boolean;
   canReceive: boolean;
+  canCreate: boolean;
 }) {
   const router = useRouter();
   const controlSize = useFormControlSize();
@@ -97,6 +117,15 @@ export function PurchaseOrdersClient({
   const [reason, setReason] = useState("");
   const [reasonAction, setReasonAction] = useState<ReasonAction>();
   const [isPending, startTransition] = useTransition();
+  const [supplierId, setSupplierId] = useState("");
+  const [branchId, setBranchId] = useState(() =>
+    String(createBranches[0]?.id ?? ""),
+  );
+  const [neededBy, setNeededBy] = useState(() => getVNDateString());
+  const [draftLines, setDraftLines] = useState<RequestDraftLine[]>(() => [
+    blankRequestLine(),
+  ]);
+  const [createKey, setCreateKey] = useState(() => crypto.randomUUID());
 
   const statusFilter = overlay.get("ordersStatus") ?? "all";
   const siteFilter = overlay.get("ordersSite") ?? "all";
@@ -110,6 +139,7 @@ export function PurchaseOrdersClient({
       ? null
       : (rows.find((row) => row.id === selectedPoId) ?? null);
   const viewOpen = mode === "view" && selectedRow != null;
+  const createOpen = canCreate && mode === "create";
   const filteredRows = useMemo(
     () =>
       rows.filter(
@@ -134,7 +164,7 @@ export function PurchaseOrdersClient({
   const updateUrl = useCallback(
     (
       poId: number | null,
-      nextMode: "view" | null,
+      nextMode: "view" | "create" | null,
       history: "push" | "replace" = "push",
     ) => {
       overlay.patchOverlay(
@@ -149,6 +179,90 @@ export function PurchaseOrdersClient({
     },
     [overlay.patchOverlay],
   );
+
+  function resetCreate() {
+    setSupplierId("");
+    setBranchId(String(createBranches[0]?.id ?? ""));
+    setNeededBy(getVNDateString());
+    setDraftLines([blankRequestLine()]);
+    setCreateKey(crypto.randomUUID());
+  }
+
+  function patchDraftLine(key: string, patch: Partial<RequestDraftLine>) {
+    setDraftLines((current) =>
+      current.map((line) => (line.key === key ? { ...line, ...patch } : line)),
+    );
+  }
+
+  function chooseIngredient(line: RequestDraftLine, value: string) {
+    const ingredient = ingredients.find((item) => item.id === Number(value));
+    const shouldPrefill =
+      line.quantity.trim() === "" || Number(line.quantity) <= 0;
+    const suggested =
+      ingredient != null && ingredient.suggestedOrderQty > 0
+        ? String(ingredient.suggestedOrderQty)
+        : line.quantity;
+    patchDraftLine(line.key, {
+      ingredientId: value,
+      entryUnitId: String(defaultPurchaseRequestUnit(ingredient)?.id ?? ""),
+      ...(shouldPrefill ? { quantity: suggested } : {}),
+    });
+  }
+
+  function saveOrder(submit: boolean) {
+    const parsedLines = draftLines.map((line) => ({
+      ingredientId: Number(line.ingredientId),
+      quantity: Number(line.quantity),
+      entryUnitId: Number(line.entryUnitId),
+    }));
+    const selectedSupplier = suppliers.find(
+      (supplier) => String(supplier.id) === supplierId,
+    );
+    const unmapped = parsedLines.filter(
+      (line) =>
+        line.ingredientId > 0 &&
+        selectedSupplier != null &&
+        !selectedSupplier.ingredientIds.includes(line.ingredientId),
+    );
+    if (
+      !Number(supplierId) ||
+      !Number(branchId) ||
+      parsedLines.some(
+        (line) =>
+          !line.ingredientId ||
+          !line.entryUnitId ||
+          !Number.isFinite(line.quantity) ||
+          line.quantity <= 0,
+      )
+    ) {
+      toast.error(copy.emptyInitialTitle);
+      return;
+    }
+    if (submit && unmapped.length > 0) {
+      toast.error(copy.unmappedSendBlocked);
+      return;
+    }
+    startTransition(async () => {
+      const result = await createPurchaseOrder({
+        supplierId: Number(supplierId),
+        branchId: Number(branchId),
+        neededBy: neededBy || null,
+        lines: parsedLines,
+        submit,
+        idempotencyKey: createKey,
+      });
+      if (!result.success || !result.data) {
+        toast.error(result.error ?? "Không thể lưu đơn mua.");
+        return;
+      }
+      toast.success(
+        submit ? copy.sentToast(result.data.code) : copy.createdToast,
+      );
+      resetCreate();
+      updateUrl(result.data.id, "view", "replace");
+      router.refresh();
+    });
+  }
 
   useEffect(() => {
     setSearch(overlay.get("ordersQ") ?? "");
@@ -447,6 +561,18 @@ export function PurchaseOrdersClient({
               ) : null}
             </>
           }
+          actions={
+            canCreate ? (
+              <Button
+                type="button"
+                size={controlSize}
+                onClick={() => updateUrl(null, "create")}
+              >
+                <IconPlus data-icon="inline-start" />
+                {copy.createAction}
+              </Button>
+            ) : null
+          }
         />
       }
     >
@@ -491,6 +617,42 @@ export function PurchaseOrdersClient({
   return (
     <>
       {list}
+      <PurchaseOrderFormDialog
+        open={createOpen}
+        supplierId={supplierId}
+        branchId={branchId}
+        neededBy={neededBy}
+        lines={draftLines}
+        suppliers={suppliers}
+        branches={createBranches}
+        ingredients={ingredients}
+        isPending={isPending}
+        onOpenChange={(open) => {
+          if (!open) {
+            resetCreate();
+            updateUrl(null, null, "replace");
+          }
+        }}
+        onSupplierIdChange={setSupplierId}
+        onBranchIdChange={setBranchId}
+        onNeededByChange={setNeededBy}
+        onChooseIngredient={chooseIngredient}
+        onPatchLine={patchDraftLine}
+        onRemoveLine={(key) =>
+          setDraftLines((current) =>
+            current.length === 1
+              ? current
+              : current.filter((line) => line.key !== key),
+          )
+        }
+        onAddLine={() => setDraftLines((current) => [...current, blankRequestLine()])}
+        onClose={() => {
+          resetCreate();
+          updateUrl(null, null, "replace");
+        }}
+        onSaveDraft={() => saveOrder(false)}
+        onSend={() => saveOrder(true)}
+      />
       <AppDialog
         open={viewOpen}
         onOpenChange={(open) => {

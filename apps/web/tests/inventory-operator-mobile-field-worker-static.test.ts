@@ -29,7 +29,7 @@ const countAssignmentsSource = readWeb(
 test("branch home queue only renders positive pending work", () => {
   assert.match(
     branchQueueSource,
-    /buildQueueRows\(basePath, queueCounts\)\.filter\(\s*\(row\) => row\.count > 0/,
+    /buildQueueRows\(basePath, queueCounts\)[\s\S]*\.filter\(\s*\(row\) => row\.count > 0/,
   );
   assert.match(branchQueueSource, /if \(queueRows\.length === 0\) return null/);
   assert.match(branchQueueSource, /<BranchQueueList rows=\{queueRows\} \/>/);

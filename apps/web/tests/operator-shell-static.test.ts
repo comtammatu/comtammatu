@@ -29,51 +29,51 @@ test("operator bottom nav stays limited to daily jobs", () => {
   const layout = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/layout.tsx",
   );
-  const settingsMessages = read("apps/web/lib/messages/settings.ts");
+  const navConfig = read("packages/shared/src/auth/nav-config.ts");
+  const capabilities = read(
+    "packages/shared/src/auth/operator-capabilities.ts",
+  );
+  const labels = read("packages/shared/src/labels/vi.ts");
 
-  for (const expected of ["`/br/${branchId}`", "`/br/${branchId}/shift`"]) {
-    assert.ok(bottomNav.includes(expected), expected);
-  }
+  assert.match(bottomNav, /function projectPrimaryTabs/);
+  assert.match(bottomNav, /tabs: readonly ResolvedBranchPrimaryTab\[\]/);
+  assert.match(layout, /resolveBranchPrimaryTabs\(/);
+  assert.match(layout, /tabs=\{primaryTabs\}/);
+  assert.doesNotMatch(layout, /showEmployeeLinks/);
+  assert.doesNotMatch(layout, /showBranchManagement/);
+  assert.doesNotMatch(layout, /canUseShiftTab/);
+  assert.doesNotMatch(
+    layout,
+    /canAccess\(claims\.user_role, "branch_settings"\) \|\|/,
+  );
+  assert.match(capabilities, /export function resolveBranchPrimaryTabs/);
+  assert.match(navConfig, /export const BRANCH_PRIMARY_TAB_ITEMS/);
+  assert.match(navConfig, /id: "tools"/);
+  assert.match(navConfig, /BRANCH_TEAM_MATCH_PATH_SUFFIXES/);
+  assert.match(navConfig, /BRANCH_KHO_MATCH_PATH_SUFFIXES/);
+  assert.match(navConfig, /BRANCH_TOOLS_MATCH_PATH_SUFFIXES/);
+  assert.match(navConfig, /"\/team\/roster"/);
   assert.doesNotMatch(bottomNav, /shift\/profile/);
   assert.doesNotMatch(bottomNav, /href: `\/br\/\$\{branchId\}\/shift\/leave`/);
   assert.doesNotMatch(bottomNav, /shift\/payslip/);
-  // Employees: Hôm nay · Ca · Lịch ca · Hồ sơ (when !showBranchManagement).
-  assert.match(
-    bottomNav,
-    /href: `\/br\/\$\{branchId\}\/shift\/schedule`[\s\S]*employeeNavCopy\.schedule/,
-  );
-  assert.match(
-    bottomNav,
-    /href: `\/br\/\$\{branchId\}\/profile`[\s\S]*employeeNavCopy\.profileShort/,
-  );
-  assert.match(bottomNav, /messages\.employee\.nav/);
-  assert.match(bottomNav, /icon: CalendarDays/);
-  assert.match(bottomNav, /icon: User\b/);
-  assert.match(
-    bottomNav,
-    /href: `\/br\/\$\{branchId\}\/shift`[\s\S]*?exact: true/,
-  );
-  // Managers keep schedule under Ca; employees use the Lịch tab instead.
-  assert.match(
-    bottomNav,
-    /matchPrefixes: showBranchManagement[\s\S]*?\/shift\/clock[\s\S]*?\/shift\/schedule[\s\S]*?: \[`\/br\/\$\{branchId\}\/shift\/clock`\]/,
-  );
-  assert.match(
-    bottomNav,
-    /href: `\/br\/\$\{branchId\}\/team`[\s\S]*?matchPrefixes: \[[\s\S]*?\/shift\/leave-approvals/,
-  );
-  assert.ok(bottomNav.includes("showBranchManagement"));
-  assert.match(bottomNav, /`\/br\/\$\{branchId\}\/team`/);
-  assert.match(bottomNav, /`\/br\/\$\{branchId\}\/stock`/);
+  assert.match(navConfig, /id: "schedule"/);
+  assert.match(navConfig, /id: "profile"/);
+  assert.match(navConfig, /hideForOwner: true/);
+  assert.match(labels, /employeeSchedule: "Lịch ca"/);
+  assert.match(labels, /employeeProfileShort: "Hồ sơ"/);
+  assert.match(labels, /branchNavTeam: "Đội"/);
+  assert.match(labels, /branchNavStock: "Kho"/);
+  assert.match(bottomNav, /CalendarDays/);
+  assert.match(bottomNav, /\bUser,/);
   assert.doesNotMatch(bottomNav, /`\/br\/\$\{branchId\}\/feedback`/);
   assert.doesNotMatch(bottomNav, /`\/br\/\$\{branchId\}\/dashboard`/);
   assert.doesNotMatch(bottomNav, /label: APP_COPY_VI\.operations/);
   assert.doesNotMatch(bottomNav, /icon: LayoutDashboard/);
-  assert.doesNotMatch(bottomNav, /`\/br\/\$\{branchId\}\/settings`/);
   assert.doesNotMatch(bottomNav, /`\/br\/\$\{branchId\}\/more`/);
   assert.equal(
     exists("apps/web/app/(protected)/br/[branchId]/(operator)/more/page.tsx"),
     false,
+    "more page must stay deleted",
   );
   assert.doesNotMatch(bottomNav, /branchManagementOverflowPrefixes/);
   assert.doesNotMatch(bottomNav, /Ellipsis/);
@@ -84,7 +84,8 @@ test("operator bottom nav stays limited to daily jobs", () => {
   assert.doesNotMatch(bottomNav, /label: messages\.operator\.nav\.schedule/);
   assert.doesNotMatch(bottomNav, /"\/notifications"/);
   assert.doesNotMatch(bottomNav, /MAX_VISIBLE_ITEMS/);
-  assert.match(settingsMessages, /branchNavStock: "Kho"/);
+  assert.match(labels, /branchTools: "Công cụ"/);
+  const settingsMessages = read("apps/web/lib/messages/settings.ts");
   assert.match(settingsMessages, /centralNavStock: "Tồn"/);
   // R04: central residual pad escapes to Control home `/`; no `/br` daily hub.
   assert.match(bottomNav, /function centralResidualNavItems/);
@@ -92,18 +93,9 @@ test("operator bottom nav stays limited to daily jobs", () => {
   assert.match(bottomNav, /href: "\/inventory\/production"/);
   assert.doesNotMatch(bottomNav, /href: "\/inventory"/);
   assert.doesNotMatch(bottomNav, /function centralNavItems/);
-  assert.match(
-    bottomNav,
-    /href: `\/br\/\$\{branchId\}\/stock`[\s\S]*branchCopy\.branchNavStock/,
-  );
   assert.match(layout, /branchNavBadgeCounts/);
   assert.match(layout, /fetchBranchQueueCounts/);
-  assert.match(bottomNav, /badgeCount: badges\?\.stock/);
-  assert.match(
-    layout,
-    /const canUseShiftTab =\s*claims\.user_role !== "owner"/,
-  );
-  assert.match(layout, /showEmployeeLinks=\{canUseShiftTab\}/);
+  assert.match(bottomNav, /tab\.badge === "stock"/);
 });
 
 test("operator header shows branch context and keeps profile and notifications", () => {
@@ -132,15 +124,10 @@ test("operator header shows branch context and keeps profile and notifications",
   assert.match(appHeader, /<Link[\s\S]*href=\{href\}/);
   assert.match(appHeader, /"min-h-11 min-w-11 shrink-0 justify-center"/);
   assert.doesNotMatch(layout, /IconLayoutDashboard|IconShieldAlert/);
-  assert.match(
-    layout,
-    /const usesHeaderOverflow =\s*canOpenOwnerHome \|\| canCloseDay \|\| canOpenFeedback/,
-  );
-  assert.match(layout, /canAccess\(claims\.user_role, "branch_feedback"\)/);
-  assert.match(layout, /showThemeToggle=\{!usesHeaderOverflow\}/);
+  assert.match(layout, /showThemeToggle=\{!canOpenOwnerHome\}/);
+  assert.match(layout, /\{canOpenOwnerHome \? \(/);
   assert.match(layout, /<DropdownMenu>/);
   assert.match(layout, /<ThemeMenuItem className="min-h-12 text-sm" \/>/);
-  assert.match(layout, /\{usesHeaderOverflow \? \(/);
   assert.doesNotMatch(
     layout,
     /href=\{`\/br\/\$\{context\.branchId\}\/dashboard`\}/,
@@ -149,14 +136,21 @@ test("operator header shows branch context and keeps profile and notifications",
     layout,
     /href=\{`\/br\/\$\{context\.branchId\}\/menu-limits`\}/,
   );
-  assert.match(layout, /href=\{`\/br\/\$\{context\.branchId\}\/feedback`\}/);
+  assert.doesNotMatch(
+    layout,
+    /href=\{`\/br\/\$\{context\.branchId\}\/feedback`\}/,
+  );
+  assert.doesNotMatch(
+    layout,
+    /href=\{`\/br\/\$\{context\.branchId\}\/close-day`\}/,
+  );
   assert.doesNotMatch(
     layout,
     /href=\{`\/br\/\$\{context\.branchId\}\/team`\}/,
   );
   assert.doesNotMatch(layout, /IconUsersRound/);
   assert.doesNotMatch(layout, /\{APP_COPY_VI\.branchCommand\}/);
-  assert.match(layout, /MODULE_ACL\.branch_feedback\.label/);
+  assert.doesNotMatch(layout, /MODULE_ACL\.branch_feedback\.label/);
   assert.match(layout, /IconUser/);
   assert.match(layout, /href=\{`\/br\/\$\{context\.branchId\}\/profile`\}/);
   assert.match(layout, /aria-label=\{messages\.operator\.nav\.profileShort\}/);
@@ -191,7 +185,7 @@ test("operator install hint dismissal persists across navigation", () => {
   );
   const sharedToolbar = read("apps/web/app/components/pwa-toolbar.tsx");
   const containedLayout = sharedToolbar.slice(
-    sharedToolbar.indexOf("// Contained (Employee)."),
+    sharedToolbar.indexOf("// Contained (operator portal)."),
   );
 
   assert.match(
@@ -254,7 +248,7 @@ test("operator home keeps visible mobile identity while detail pages may compact
   assert.match(surface, /compactOnMobile && "max-sm:hidden"/);
   assert.match(home, /hideHeaderOnMobile/);
   assert.match(stock, /hideHeaderOnMobile/);
-  assert.match(settings, /hideHeaderOnMobile/);
+  assert.doesNotMatch(settings, /hideHeaderOnMobile/);
   assert.match(dashboard, /redirect\(`\/br\/\$\{branchId\}`\)/);
   assert.doesNotMatch(dashboard, /hideHeaderOnMobile|BranchOperatorPage/);
 });
@@ -285,29 +279,28 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
   assert.match(home, /presentation="plain"/);
   assert.match(home, /moduleKey === "pos"/);
   assert.match(home, /moduleKey === "kds"/);
-  assert.doesNotMatch(home, /moduleKey === "pickup"/);
+  assert.match(home, /moduleKey === "pickup"/);
   assert.match(home, /claims\.user_role === "owner"/);
   assert.match(home, /resolveOperatorTileIcon/);
-  assert.match(home, /getBranchPrimaryHomeGroup/);
+  assert.match(home, /getOperatorHomeTileHrefs/);
   assert.doesNotMatch(home, /BranchOperatorControlBar/);
   assert.match(home, /href: "\/"/);
-  // Manager home tiles stay free of /team; pause/limits use the 1-touch sheet.
-  assert.doesNotMatch(
-    homeContract,
-    /BRANCH_MANAGER_HOME_TILE_SUFFIXES[\s\S]*?"\/team"/,
-  );
-  assert.doesNotMatch(
-    homeContract,
-    /BRANCH_MANAGER_HOME_TILE_SUFFIXES[\s\S]*?"\/menu-limits"/,
-  );
-  assert.doesNotMatch(
-    homeContract,
-    /BRANCH_MANAGER_HOME_TILE_SUFFIXES[\s\S]*?"\/pickup"/,
-  );
+  const managerHomeTiles = homeContract.match(
+    /export const BRANCH_MANAGER_HOME_TILE_SUFFIXES = \[[\s\S]*?\] as const/,
+  )?.[0];
+  assert.ok(managerHomeTiles, "manager home tile suffixes must exist");
+  assert.doesNotMatch(managerHomeTiles, /\/team"/);
+  assert.doesNotMatch(managerHomeTiles, /\/menu-limits"/);
+  assert.doesNotMatch(managerHomeTiles, /\/pickup"/);
   for (const suffix of ["/pos", "/kds"]) {
     assert.ok(homeContract.includes(`"${suffix}"`), suffix);
   }
-  assert.match(homeContract, /sales_kitchen" \? 2 : 4/);
+  assert.match(homeContract, /BRANCH_FLOOR_HOME_TILE_SUFFIXES/);
+  assert.match(homeContract, /return 4;/);
+  assert.match(
+    homeContract,
+    /BRANCH_FLOOR_HOME_TILE_SUFFIXES[\s\S]*?"\/pickup"/,
+  );
   assert.match(home, /BranchQuickMenuLimitTrigger/);
   const quickLimitSheet = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/_components/home/branch-quick-menu-limit-sheet.tsx",
@@ -557,32 +550,25 @@ test("branch dashboard redirects into Hôm nay instead of mounting a command sur
   const dashboard = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx",
   );
-  const commandConfig = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/_lib/command-config.tsx",
-  );
+  const tools = read("packages/shared/src/auth/nav-config.ts");
 
   assert.match(dashboard, /redirect\(`\/br\/\$\{branchId\}`\)/);
   assert.doesNotMatch(
     dashboard,
     /BranchOperatorPage|tileGroups\.liveOperations|BranchReadinessList/,
   );
-  assert.match(commandConfig, /liveOperations:/);
-  for (const moduleKey of [
-    "pos",
-    "kds",
-    "branch_menu_limits",
-    "branch_orders",
-  ]) {
-    assert.match(commandConfig, new RegExp(`moduleKey: "${moduleKey}"`));
-  }
-  assert.doesNotMatch(commandConfig, /moduleKey: "pickup"/);
-  assert.match(commandConfig, /title: "Bán hàng"/);
-  assert.match(commandConfig, /title: "KDS"/);
-  assert.match(commandConfig, /title: "Giới hạn bán"/);
-  assert.match(commandConfig, /title: "Đơn bán"/);
+  assert.match(tools, /hrefTemplate: "\/br\/\{branchId\}\/pos-sessions"/);
+  assert.match(tools, /hrefTemplate: "\/br\/\{branchId\}\/pickup"/);
+  assert.match(tools, /hrefTemplate: "\/br\/\{branchId\}\/close-day"/);
+  assert.equal(
+    exists(
+      "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/_lib/command-config.tsx",
+    ),
+    false,
+  );
 });
 
-test("branch settings landing stays a setup-only Branch operator surface", () => {
+test("branch settings landing is the Công cụ hub with setup as one section", () => {
   const settingsHub = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx",
   );
@@ -593,7 +579,7 @@ test("branch settings landing stays a setup-only Branch operator surface", () =>
 
   assert.match(settingsHub, /<BranchOperatorPage/);
   assert.match(settingsHub, /BranchOperatorActionSection/);
-  assert.match(settingsHub, /links=\{visibleLinks\}/);
+  assert.match(settingsHub, /resolveBranchToolsGroups/);
   assert.match(settingsHub, /canAccess\(role, link\.moduleKey\)/);
   assert.match(settingsHub, /canManageTenantStrategySettings\(role\)/);
   assert.match(settingsHub, /settings\/network/);
@@ -602,7 +588,7 @@ test("branch settings landing stays a setup-only Branch operator surface", () =>
     settingsHub,
     /AppLinkCard|LinkCardGrid|KpiRow|KpiCard|BranchManagementShell|AppPageHeader/,
   );
-  assert.doesNotMatch(settingsHub, /pos-sessions|menu-limits|\/hr|Attendance/);
+  assert.doesNotMatch(settingsHub, /href:\s*"\/"/);
 
   const tableIndex = settingsLinks.indexOf("settings/tables");
   const posIndex = settingsLinks.indexOf("settings/pos");
@@ -622,7 +608,8 @@ test("branch settings landing stays a setup-only Branch operator surface", () =>
     /branch_dashboard|branch_pos_sessions|moduleKey: "hr"|\/hr/,
   );
 
-  assert.match(settingsMessages, /landingTitle: "Thiết lập"/);
+  assert.match(settingsMessages, /landingTitle: "Công cụ"/);
+  assert.match(settingsMessages, /setupSectionTitle: "Thiết lập cửa hàng"/);
   assert.match(
     settingsMessages,
     /landingDescription: \(_branchName: string\) => ""/,

@@ -47,6 +47,26 @@ test("operator routes resolve to ACL modules", () => {
     resolveModuleFromPath("/br/7/shift/attendance"),
     "branch_shift_attendance",
   );
+  assert.equal(
+    resolveModuleFromPath("/br/7/team/checkout-approvals"),
+    "employee_checkout_approvals",
+  );
+  assert.equal(
+    resolveModuleFromPath("/br/7/team/leave-approvals"),
+    "employee_leave_approvals",
+  );
+  assert.equal(
+    resolveModuleFromPath("/br/7/team/roster"),
+    "branch_shift_roster",
+  );
+  assert.equal(
+    resolveModuleFromPath("/br/7/team/roster/extra"),
+    "branch_shift_roster",
+  );
+  assert.equal(
+    resolveModuleFromPath("/br/7/team/attendance"),
+    "branch_shift_attendance",
+  );
   assert.equal(resolveModuleFromPath("/br/7/stock"), "branch_stock");
   assert.equal(resolveModuleFromPath("/br/7/stock/count"), "branch_home");
   assert.equal(
@@ -85,6 +105,10 @@ test("branch route families use branch bottom nav", () => {
     ["/br/7/shift/leave-approvals", "branch-shift-leave-approvals"],
     ["/br/7/shift/roster", "branch-shift-roster"],
     ["/br/7/shift/attendance", "branch-shift-attendance"],
+    ["/br/7/team/checkout-approvals", "branch-shift-checkout-approvals"],
+    ["/br/7/team/leave-approvals", "branch-shift-leave-approvals"],
+    ["/br/7/team/roster", "branch-shift-roster"],
+    ["/br/7/team/attendance", "branch-shift-attendance"],
     ["/br/7/stock", "branch-stock"],
     ["/br/7/stock/count", "branch-stock"],
     ["/br/7/stock/count-slips", "branch-stock"],

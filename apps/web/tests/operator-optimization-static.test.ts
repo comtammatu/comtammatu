@@ -8,7 +8,7 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 test("operator queue views are URL-synced via searchParams, not local useState view", () => {
   for (const file of [
-    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/branch-leave-approvals-client.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/team/leave-approvals/branch-leave-approvals-client.tsx",
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-slips/branch-count-slips-client.tsx",
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/consumption/branch-consumption-list-client.tsx",
   ]) {
@@ -303,7 +303,7 @@ const STOCK_LIST_CLIENTS = [
 // contract as stock LISTs — portrait tablets must stay single-column.
 const BRANCH_OPS_CARD_CLIENTS = [
   "apps/web/app/(protected)/br/[branchId]/(operator)/team/team-board-client.tsx",
-  "apps/web/app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/branch-leave-approvals-client.tsx",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/team/leave-approvals/branch-leave-approvals-client.tsx",
 ];
 
 test("stock LIST card grids switch to two columns only at the lg landscape breakpoint", () => {

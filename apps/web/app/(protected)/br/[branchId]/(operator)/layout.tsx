@@ -3,17 +3,15 @@ import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
-  CalendarCheck as IconCalendarCheck,
   Ellipsis as IconEllipsis,
   House as IconHouse,
-  MessageSquareHeart as IconMessageSquareHeart,
   User as IconUser,
 } from "lucide-react";
 import {
-  canAccess,
   MODULE_ACL,
   ROLE_LABEL_VI,
   canSubscribeBranchOpsTopic,
+  resolveBranchPrimaryTabs,
   type BranchKind,
 } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
@@ -40,9 +38,14 @@ import { OperatorNotificationBell } from "./operator-notification-bell";
 import { OperatorPwaToolbar } from "./operator-pwa-toolbar";
 import { ThemeMenuItem } from "@/components/theme-toggle";
 
-export function generateMetadata(): Metadata {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ branchId: string }>;
+}): Promise<Metadata> {
+  const { branchId } = await params;
   return {
-    manifest: "/manifest.webmanifest",
+    manifest: `/br/${branchId}/manifest.webmanifest`,
     appleWebApp: {
       capable: true,
       statusBarStyle: "black-translucent",
@@ -66,24 +69,20 @@ export default async function OperatorLayout({
   const context = await resolveBranchContext(supabase, claims, branchId);
   if (!context) notFound();
 
-  const canUseShiftTab =
-    claims.user_role !== "owner" &&
-    (canAccess(claims.user_role, "branch_home") ||
-      canAccess(claims.user_role, "employee_checkout_approvals"));
-  const canManageBranch =
-    canAccess(claims.user_role, "branch_dashboard") ||
-    canAccess(claims.user_role, "branch_settings") ||
-    canAccess(claims.user_role, "branch_pos_sessions");
-  const canCloseDay = canAccess(claims.user_role, "branch_close_day");
-  const canOpenFeedback = canAccess(claims.user_role, "branch_feedback");
   const canOpenOwnerHome = claims.user_role === "owner";
-  const usesHeaderOverflow =
-    canOpenOwnerHome || canCloseDay || canOpenFeedback;
   const compactBranchName = context.branch.name.replace(/^Chi nhánh\s+/, "");
   const notificationsReturnTo = `/br/${context.branchId}`;
   const branchKind = context.branch.branch_kind as BranchKind;
+  const primaryTabs = resolveBranchPrimaryTabs(
+    claims.user_role,
+    context.branchId,
+    branchKind,
+  );
+  const showNavBadges = primaryTabs.some(
+    (tab) => tab.badge === "team" || tab.badge === "stock",
+  );
   const navBadges =
-    branchKind === "branch" && canManageBranch
+    branchKind === "branch" && showNavBadges
       ? branchNavBadgeCounts(
           await fetchBranchQueueCounts(
             supabase,
@@ -99,6 +98,8 @@ export default async function OperatorLayout({
               pendingWaste: null,
               inboundTransfers: null,
               openStockRequests: null,
+              pendingVoids: null,
+              outOfStockAlerts: null,
             };
           }),
         )
@@ -109,7 +110,7 @@ export default async function OperatorLayout({
       {canSubscribeBranchOpsTopic(claims, context.branchId) ? (
         <BranchOpsRefresh
           branchId={context.branchId}
-          disabledPathPrefixes={[`/br/${context.branchId}/shift/leave-approvals`]}
+          disabledPathPrefixes={[`/br/${context.branchId}/team/leave-approvals`]}
         />
       ) : null}
       <div className="chrome-safe-pt flex h-dvh w-full flex-col overflow-hidden touch-manipulation bg-muted/30">
@@ -132,11 +133,11 @@ export default async function OperatorLayout({
               ? APP_COPY_VI.branchHome
               : APP_COPY_VI.ownerTitle
           }
-          showThemeToggle={!usesHeaderOverflow}
+          showThemeToggle={!canOpenOwnerHome}
           wide
           actions={
             <>
-              {usesHeaderOverflow ? (
+              {canOpenOwnerHome ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger
                     render={
@@ -151,37 +152,13 @@ export default async function OperatorLayout({
                     }
                   />
                   <DropdownMenuContent align="end">
-                    {canOpenOwnerHome ? (
-                      <DropdownMenuItem
-                        className="min-h-12 text-sm"
-                        render={<Link href={MODULE_ACL.owner.path} />}
-                      >
-                        <IconHouse data-icon="inline-start" />
-                        {APP_COPY_VI.ownerTitle}
-                      </DropdownMenuItem>
-                    ) : null}
-                    {canCloseDay ? (
-                      <DropdownMenuItem
-                        className="min-h-12 text-sm"
-                        render={
-                          <Link href={`/br/${context.branchId}/close-day`} />
-                        }
-                      >
-                        <IconCalendarCheck data-icon="inline-start" />
-                        {messages.settings.branch.closeDayTitle}
-                      </DropdownMenuItem>
-                    ) : null}
-                    {canOpenFeedback ? (
-                      <DropdownMenuItem
-                        className="min-h-12 text-sm"
-                        render={
-                          <Link href={`/br/${context.branchId}/feedback`} />
-                        }
-                      >
-                        <IconMessageSquareHeart data-icon="inline-start" />
-                        {MODULE_ACL.branch_feedback.label}
-                      </DropdownMenuItem>
-                    ) : null}
+                    <DropdownMenuItem
+                      className="min-h-12 text-sm"
+                      render={<Link href={MODULE_ACL.owner.path} />}
+                    >
+                      <IconHouse data-icon="inline-start" />
+                      {APP_COPY_VI.ownerTitle}
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <ThemeMenuItem className="min-h-12 text-sm" />
                   </DropdownMenuContent>
@@ -207,7 +184,6 @@ export default async function OperatorLayout({
           className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-contain"
         >
           <AppPage
-            density="compact"
             className="flex min-h-0 flex-1 flex-col"
             contentClassName="min-h-0 flex-1 max-w-lg md:max-w-2xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-screen-2xl"
           >
@@ -216,8 +192,7 @@ export default async function OperatorLayout({
         </div>
         <OperatorBottomNav
           branchId={context.branchId}
-          showEmployeeLinks={canUseShiftTab}
-          showBranchManagement={canManageBranch}
+          tabs={primaryTabs}
           branchKind={branchKind}
           badges={navBadges}
         />

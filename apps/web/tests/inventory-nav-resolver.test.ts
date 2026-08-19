@@ -316,7 +316,7 @@ test("inventory settings sub-pages stay internal routes, not sidebar items", () 
   assert.doesNotMatch(settingsLayoutSource, /settings\/qc|icon: "qc"/);
 });
 
-test("central_supply_ops nav shows Yêu cầu mua without PO-owner branding", () => {
+test("central_supply_ops nav shows Mua hàng without hiding the YCM tab", () => {
   const groups = resolveInventoryNav({
     userRole: "central_supply_ops",
     showProcurement: true,
@@ -336,13 +336,13 @@ test("central_supply_ops nav shows Yêu cầu mua without PO-owner branding", ()
   assert.equal(visible.has("/inventory/stock-requests"), false);
   assert.equal(visible.has("/inventory/ingredients"), true);
   assert.equal(visible.has("/inventory/purchase-orders"), true);
-  assert.equal(purchaseItem?.label, "Yêu cầu mua");
+  assert.equal(purchaseItem?.label, "Mua hàng");
   assert.equal(visible.has("/inventory/menu-recipes"), false);
   assert.equal(visible.has("/inventory/recipes"), false);
   assert.equal(visible.has("/inventory/production"), false);
 });
 
-test("central_kitchen_lead sees production and Yêu cầu mua without catalog recipes", () => {
+test("central_kitchen_lead sees production and Mua hàng without catalog recipes", () => {
   const groups = resolveInventoryNav({
     userRole: "central_kitchen_lead",
     showProcurement: true,
@@ -362,5 +362,5 @@ test("central_kitchen_lead sees production and Yêu cầu mua without catalog re
   assert.equal(visible.has("/inventory/recipes"), false);
   assert.equal(visible.has("/inventory/ingredients"), true);
   assert.equal(visible.has("/inventory/purchase-orders"), true);
-  assert.equal(purchaseItem?.label, "Yêu cầu mua");
+  assert.equal(purchaseItem?.label, "Mua hàng");
 });

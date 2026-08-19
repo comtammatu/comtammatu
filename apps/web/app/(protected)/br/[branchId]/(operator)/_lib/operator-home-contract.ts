@@ -9,11 +9,19 @@ import type {
  * `resolveOperatorTiles` + stock hub / bottom-nav — not this home contract.
  */
 
-/** Stations + orders. Pickup stays off home; pause/limits share the orders row. */
+/** Stations + orders. Pickup stays off BM home; pause/limits share the orders row. */
 export const BRANCH_MANAGER_HOME_TILE_SUFFIXES = [
   "/pos",
   "/kds",
   // Branch-relative tile suffix for the branch orders surface.
+  `/${"orders"}`,
+] as const;
+
+/** Floor home: POS/KDS/Gọi số as stations, then Đơn bán. */
+export const BRANCH_FLOOR_HOME_TILE_SUFFIXES = [
+  "/pos",
+  "/kds",
+  "/pickup",
   `/${"orders"}`,
 ] as const;
 
@@ -28,10 +36,10 @@ export function getBranchPrimaryHomeGroup(
 }
 
 export function getBranchHomeTileLimit(
-  groupId: ResolvedOperatorTileGroup["id"],
+  _groupId: ResolvedOperatorTileGroup["id"],
 ): number {
-  // Home stations: Bán hàng + KDS only.
-  return groupId === "sales_kitchen" ? 2 : 4;
+  // Floor stations: POS + KDS + Gọi số + orders; BM: POS + KDS + orders.
+  return 4;
 }
 
 export function getOperatorHomeTileHrefs(
@@ -44,26 +52,18 @@ export function getOperatorHomeTileHrefs(
     return new Set();
   }
 
-  if (role === "branch_manager" || role === "owner") {
-    const result = new Set<string>();
-    for (const group of groups) {
-      for (const tile of group.tiles) {
-        if (
-          BRANCH_MANAGER_HOME_TILE_SUFFIXES.some((suffix) =>
-            tile.href.endsWith(suffix),
-          )
-        ) {
-          result.add(tile.href);
-        }
+  const suffixes =
+    role === "branch_manager" || role === "owner"
+      ? BRANCH_MANAGER_HOME_TILE_SUFFIXES
+      : BRANCH_FLOOR_HOME_TILE_SUFFIXES;
+
+  const result = new Set<string>();
+  for (const group of groups) {
+    for (const tile of group.tiles) {
+      if (suffixes.some((suffix) => tile.href.endsWith(suffix))) {
+        result.add(tile.href);
       }
     }
-    return result;
   }
-
-  const group = getBranchPrimaryHomeGroup(groups);
-  return new Set(
-    group?.tiles
-      .slice(0, getBranchHomeTileLimit(group.id))
-      .map((tile) => tile.href) ?? [],
-  );
+  return result;
 }

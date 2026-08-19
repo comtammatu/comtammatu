@@ -67,6 +67,7 @@ test("personal workday keeps Branch and Company route families distinct", () => 
 
   assert.match(mePage, /href: "\/me\/schedule\/leave"/);
   assert.match(mePage, /href: "\/me\/payslip"/);
+  assert.match(mePage, /href: "\/notifications"/);
   assert.match(
     branchPage,
     /leave: `\/br\/\$\{branchId\}\/shift\/schedule\/leave`/,

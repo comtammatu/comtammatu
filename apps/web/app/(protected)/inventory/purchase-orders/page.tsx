@@ -140,20 +140,21 @@ export default async function PurchaseOrdersPage({
   const supplierIngredientIds = Object.groupBy(supplierMappings, (item) =>
     String(item.supplier_id),
   );
-  const suppliers: PurchaseOrderSupplier[] = canAllocate
-    ? (supplierResult.data ?? []).map((supplier) => ({
-        id: supplier.id,
-        name: supplier.name,
-        ingredientIds: (supplierIngredientIds[String(supplier.id)] ?? []).map(
-          (item) => item.ingredient_id,
-        ),
-        preferredIngredientIds: (
-          supplierIngredientIds[String(supplier.id)] ?? []
-        )
-          .filter((item) => item.is_preferred)
-          .map((item) => item.ingredient_id),
-      }))
-    : [];
+  const suppliers: PurchaseOrderSupplier[] =
+    canAllocate || canManagePo
+      ? (supplierResult.data ?? []).map((supplier) => ({
+          id: supplier.id,
+          name: supplier.name,
+          ingredientIds: (supplierIngredientIds[String(supplier.id)] ?? []).map(
+            (item) => item.ingredient_id,
+          ),
+          preferredIngredientIds: (
+            supplierIngredientIds[String(supplier.id)] ?? []
+          )
+            .filter((item) => item.is_preferred)
+            .map((item) => item.ingredient_id),
+        }))
+      : [];
 
   const demandRows = demandLoad.rows;
   const poRows = poLoad.rows;
@@ -204,6 +205,10 @@ export default async function PurchaseOrdersPage({
     claims.user_role === "owner"
       ? branches
       : branches.filter((branch) => branch.id === claims.branch_id);
+  const createBranches =
+    claims.user_role === "owner" || claims.user_role === "accountant"
+      ? branches
+      : branches.filter((branch) => branch.id === claims.branch_id);
   const requestedTab = firstParam(params.tab);
   const hasPendingDemand = demandRows.some((row) =>
     ["submitted", "pending_allocation", "partially_ordered"].includes(
@@ -234,8 +239,12 @@ export default async function PurchaseOrdersPage({
     <PurchaseOrdersClient
       rows={poRows}
       branches={branches}
+      createBranches={createBranches}
+      suppliers={suppliers}
+      ingredients={ingredientOptions}
       canManage={canManagePo || canAllocate}
       canReceive={canReceive}
+      canCreate={canManagePo && createBranches.length > 0}
     />
   );
 

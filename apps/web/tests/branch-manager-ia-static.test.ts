@@ -129,56 +129,48 @@ test("Branch bottom nav only contains persistent daily job families", () => {
   const bottomNav = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/operator-bottom-nav.tsx",
   );
+  const navConfig = read("packages/shared/src/auth/nav-config.ts");
 
-  for (const expected of [
-    "`/br/${branchId}`",
-    "`/br/${branchId}/shift`",
-    "`/br/${branchId}/team`",
-    "`/br/${branchId}/stock`",
-  ]) {
-    assert.ok(bottomNav.includes(expected), `expected bottom nav ${expected}`);
-  }
+  assert.match(bottomNav, /function projectPrimaryTabs/);
+  assert.match(navConfig, /hrefTemplate: "\/br\/\{branchId\}"/);
+  assert.match(navConfig, /hrefTemplate: "\/br\/\{branchId\}\/shift"/);
+  assert.match(navConfig, /hrefTemplate: "\/br\/\{branchId\}\/team"/);
+  assert.match(navConfig, /hrefTemplate: "\/br\/\{branchId\}\/stock"/);
+  assert.match(navConfig, /hrefTemplate: "\/br\/\{branchId\}\/settings"/);
   assert.match(
-    bottomNav,
-    /href: `\/br\/\$\{branchId\}\/stock`[\s\S]*?exact: true[\s\S]*?matchPrefixes: \[`\/br\/\$\{branchId\}\/stock`\]/,
-    "Kho tab lands work-first /stock and stays active for /stock/*",
+    navConfig,
+    /id: "stock"[\s\S]*?exact: true[\s\S]*?matchSuffixes: BRANCH_KHO_MATCH_PATH_SUFFIXES/,
+    "Kho tab lands work-first /stock and stays active for Kho doors, not catalog/reports",
   );
   assert.match(
     bottomNav,
-    /badgeCount: badges\?\.stock/,
+    /tab\.badge === "stock"/,
     "Kho tab surfaces live queue badge",
   );
 
   assert.match(
-    bottomNav,
-    /href: `\/br\/\$\{branchId\}\/shift`[\s\S]*?exact: true/,
+    navConfig,
+    /id: "shift"[\s\S]*?exact: true/,
     "Ca tab must not stay active on deep shift management routes",
   );
-  // Managers keep schedule under Ca; employees get a dedicated Lịch ca tab.
   assert.match(
-    bottomNav,
-    /matchPrefixes: showBranchManagement[\s\S]*?\/shift\/clock[\s\S]*?\/shift\/schedule[\s\S]*?: \[`\/br\/\$\{branchId\}\/shift\/clock`\]/,
-    "Ca matchPrefixes stay role-scoped for clock vs schedule",
-  );
-  assert.match(
-    bottomNav,
-    /href: `\/br\/\$\{branchId\}\/shift\/schedule`[\s\S]*employeeNavCopy\.schedule/,
+    navConfig,
+    /id: "schedule"/,
     "Employees get Lịch ca on the bottom nav when not managing the branch",
   );
   assert.match(
-    bottomNav,
-    /href: `\/br\/\$\{branchId\}\/profile`[\s\S]*employeeNavCopy\.profileShort/,
+    navConfig,
+    /id: "profile"/,
     "Employees get Hồ sơ on the bottom nav when not managing the branch",
   );
   assert.match(
-    bottomNav,
-    /href: `\/br\/\$\{branchId\}\/team`[\s\S]*?matchPrefixes: \[[\s\S]*?\/shift\/roster[\s\S]*?\/shift\/attendance[\s\S]*?\/shift\/checkout-approvals[\s\S]*?\/shift\/leave-approvals/,
-    "Đội tab stays active for team hub and shift management routes",
+    navConfig,
+    /BRANCH_TEAM_MATCH_PATH_SUFFIXES[\s\S]*?\/team\/roster[\s\S]*?\/team\/attendance[\s\S]*?\/team\/checkout-approvals[\s\S]*?\/team\/leave-approvals/,
+    "Đội tab stays active for team hub and nested people routes",
   );
 
   for (const forbiddenRoute of [
     "/dashboard",
-    "/settings",
     "/menu-limits",
     "/pos-sessions",
     "/feedback",
@@ -192,7 +184,6 @@ test("Branch bottom nav only contains persistent daily job families", () => {
     );
   }
 
-  // Profile/User are employee-only bottom-nav items (!showBranchManagement).
   assert.doesNotMatch(bottomNav, /\bEllipsis\b/);
   assert.match(bottomNav, /\bUser\b/);
 });
@@ -335,29 +326,29 @@ test("Branch command dashboard redirects into Hôm nay", () => {
   const dashboard = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx",
   );
-  const commandConfig = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/_lib/command-config.tsx",
-  );
+  const tools = read("packages/shared/src/auth/nav-config.ts");
   const settingsMessages = read("apps/web/lib/messages/settings.ts");
 
   assert.match(dashboard, /redirect\(`\/br\/\$\{branchId\}`\)/);
   assert.doesNotMatch(dashboard, /BranchOperatorPage|BranchReadinessList/);
+  assert.equal(
+    existsSync(
+      resolve(
+        repoRoot,
+        "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/_lib/command-config.tsx",
+      ),
+    ),
+    false,
+  );
 
   for (const expected of [
-    "/br/${branchId}/pos",
-    "/br/${branchId}/kds",
-    "/br/${branchId}/menu-limits",
-    "/br/${branchId}/orders",
-    "/br/${branchId}/pos-sessions",
-    "/br/${branchId}/close-day",
+    "/br/{branchId}/menu-limits",
+    "/br/{branchId}/pos-sessions",
+    "/br/{branchId}/close-day",
+    "/br/{branchId}/pickup",
   ]) {
-    assert.ok(commandConfig.includes(expected), `expected ${expected}`);
+    assert.ok(tools.includes(expected), `expected ${expected}`);
   }
-  assert.doesNotMatch(
-    commandConfig,
-    /\/br\/\$\{branchId\}\/pickup/,
-    "Pickup (Gọi số) stays off Branch Command — station chrome only",
-  );
   assert.match(
     settingsMessages,
     /readinessMenuTitle: "Giới hạn bán"/,
@@ -382,20 +373,19 @@ test("Branch command dashboard redirects into Hôm nay", () => {
   assert.doesNotMatch(settingsMessages, /Chưa có món active/);
 });
 
-test("Branch settings landing exposes setup controls only", () => {
+test("Branch settings landing is the Công cụ hub", () => {
   const settingsLanding = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx",
   );
-  // The branch setup landing follows the operator/employee action-row rhythm; route
-  // hrefs stay in the co-located tile config.
   const settingsLinks = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/settings/_lib/settings-links.ts",
   );
   const settingsMessages = read("apps/web/lib/messages/settings.ts");
 
   assert.match(settingsLanding, /<BranchOperatorPage/);
-  assert.match(settingsLanding, /hideHeaderOnMobile/);
+  assert.doesNotMatch(settingsLanding, /hideHeaderOnMobile/);
   assert.match(settingsLanding, /<BranchOperatorActionSection/);
+  assert.match(settingsLanding, /resolveBranchToolsGroups/);
   assert.doesNotMatch(settingsLanding, /setupEssentialsTitle/);
   assert.doesNotMatch(settingsLanding, /<AppLinkCard/);
   assert.doesNotMatch(settingsLanding, /<LinkCardGrid/);
@@ -423,6 +413,11 @@ test("Branch settings landing exposes setup controls only", () => {
   assert.doesNotMatch(settingsLanding, /AttendanceSettingsCard/);
   assert.doesNotMatch(settingsLanding, /\/hr/);
   assert.doesNotMatch(settingsLanding, /className="md:p-6"/);
+  assert.match(
+    settingsMessages,
+    /landingTitle: "Công cụ"/,
+    "Settings landing is the Công cụ hub, not a hidden setup-only overlay",
+  );
   assert.match(
     settingsMessages,
     /landingDescription: \(_branchName: string\) => ""/,

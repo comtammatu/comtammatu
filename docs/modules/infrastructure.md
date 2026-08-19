@@ -47,6 +47,9 @@ Config: [`apps/web/vercel.json`](../../apps/web/vercel.json).
 - Crons: `/api/cron/kds-maintenance`, `/api/cron/tax-invoice-issue`, `/api/cron/attendance-checkout-auto-approve`
 - Preview: fail-closed via `scripts/check-preview-supabase-env.mjs` — do not put
   Supabase credentials on Vercel Preview
+- Service worker headers: `apps/web/next.config.ts` serves `/sw.js` with
+  `Cache-Control: no-cache` (contract: `docs/spec/pwa.md`). Security headers
+  still apply via `source: "/:path*"`.
 
 Owner env checklist: `docs/ref/setup.md`.
 

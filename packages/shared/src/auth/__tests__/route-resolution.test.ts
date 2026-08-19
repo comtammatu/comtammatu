@@ -15,6 +15,7 @@ test("all operational PWA manifests are public", () => {
   assert.equal(isPublicAppPath("/br/3/pos/manifest.webmanifest"), true);
   assert.equal(isPublicAppPath("/br/3/kds/manifest.webmanifest"), true);
   assert.equal(isPublicAppPath("/br/3/pickup/manifest.webmanifest"), true);
+  assert.equal(isPublicAppPath("/me/manifest.webmanifest"), true);
 });
 
 test("the precached offline fallback is public", () => {
@@ -24,6 +25,7 @@ test("the precached offline fallback is public", () => {
 test("manifest allowlist does not open arbitrary gated routes", () => {
   assert.equal(isPublicAppPath("/br/3/dashboard/manifest.webmanifest"), false);
   assert.equal(isPublicAppPath("/br/3/evil/manifest.webmanifest"), false);
+  assert.equal(isPublicAppPath("/me"), false);
   assert.equal(isPublicAppPath("/br/3"), false);
   assert.equal(isPublicAppPath("/br/3/pos"), false);
   assert.equal(isPublicAppPath("/br/3/runner"), false);

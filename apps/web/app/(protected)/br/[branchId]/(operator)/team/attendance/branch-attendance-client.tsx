@@ -3,6 +3,7 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: Branch attendance checklist/force-close copy mirrors Owner HR review strings */
 
 import Image from "next/image";
+import Link from "next/link";
 import {
   useCallback,
   useEffect,
@@ -17,6 +18,7 @@ import {
   Image as IconImage,
   ListChecks as IconListChecks,
   ShieldAlert as IconShieldAlert,
+  ArrowLeft as IconArrowLeft,
 } from "lucide-react";
 import { ACTIONS_VI, STAFF_VI } from "@comtammatu/shared/messages";
 import { formatQuantity } from "@comtammatu/shared/format";
@@ -69,6 +71,7 @@ import {
 } from "@/components/surface";
 import { useBranchOpsEvents } from "@/_hooks/use-branch-ops-events";
 import {
+  BranchOperatorControlBar,
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -503,6 +506,23 @@ export function BranchAttendanceClient({
       description={branchName}
       hideHeaderOnMobile
     >
+      <BranchOperatorControlBar className="sm:hidden">
+        <Button
+          variant="ghost"
+          size="icon-touch"
+          render={
+            <Link href={`/br/${branchId}/team`} aria-label="Quay lại đội" />
+          }
+        >
+          <IconArrowLeft />
+        </Button>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold">
+            {pageCopy.branchAttendanceTitle}
+          </p>
+          <p className="truncate text-xs text-muted-foreground">{branchName}</p>
+        </div>
+      </BranchOperatorControlBar>
       <div className="flex flex-col gap-3">
         {view === "clock" ? (
           <Button

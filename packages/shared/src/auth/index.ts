@@ -57,6 +57,12 @@ export type {
   BranchOperationNavItemConfig,
   OperatorTileConfig,
   OperatorTileGroupId,
+  BranchToolsGroupId,
+  BranchToolsItemConfig,
+  BranchPrimaryTabId,
+  BranchPrimaryTabAudience,
+  BranchPrimaryTabBadge,
+  BranchPrimaryTabConfig,
 } from "./nav-config";
 export {
   CONTROL_SURFACE_NAV_GROUPS,
@@ -65,12 +71,26 @@ export {
   OPERATOR_TILE_GROUP_ORDER,
   OPERATOR_TILE_GROUP_TITLES,
   OPERATOR_TILE_ITEMS,
+  BRANCH_TOOLS_GROUP_ORDER,
+  BRANCH_TOOLS_GROUP_TITLES,
+  BRANCH_TOOLS_ITEMS,
+  BRANCH_KHO_MATCH_PATH_SUFFIXES,
+  BRANCH_TEAM_MATCH_PATH_SUFFIXES,
+  BRANCH_TOOLS_MATCH_PATH_SUFFIXES,
+  BRANCH_PRIMARY_TAB_ITEMS,
 } from "./nav-config";
 export type {
   ResolvedOperatorTile,
   ResolvedOperatorTileGroup,
+  ResolvedBranchTool,
+  ResolvedBranchToolsGroup,
+  ResolvedBranchPrimaryTab,
 } from "./operator-capabilities";
-export { resolveOperatorTiles } from "./operator-capabilities";
+export {
+  resolveOperatorTiles,
+  resolveBranchToolsGroups,
+  resolveBranchPrimaryTabs,
+} from "./operator-capabilities";
 export type {
   QuickLaunchGroup,
   ResolvedNavGroup,

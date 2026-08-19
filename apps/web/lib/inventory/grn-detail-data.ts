@@ -12,6 +12,7 @@ import type { IngredientRow, IngredientUnitRow } from "@lib/inventory/types";
 import { fetchIngredients } from "@/(protected)/inventory/ingredient-actions";
 import { fetchGrnDetail } from "@/(protected)/inventory/procurement-actions";
 import { messages } from "@lib/messages";
+import { loadUnpricedConfirmedGrnQueue } from "./grn-list-data";
 import {
   allLinkedPosApproved,
   calculateGrnQuantities,
@@ -279,6 +280,11 @@ export async function loadGrnDetailResult(
         unitCostToBaseFactor > 0 ? unitCostToBaseFactor : defaultPrice.toBaseFactor,
       costPending: line.cost_pending === true,
       provisionalCostSource: line.provisional_cost_source ?? null,
+      suggestedUnitCost: null,
+      suggestedUnitCostUnitId: null,
+      suggestedUnitName: null,
+      suggestedSourceGrnId: null,
+      suggestedSourceGrnNumber: null,
       monetary:
         line.monetary == null
           ? null
@@ -307,6 +313,7 @@ export async function loadGrnDetailResult(
     canConfirmPermission,
     canAmendConfirmed,
     canManageSupplierInvoice,
+    unpricedQueue,
   ] = await Promise.all([
     loadCurrentReceivingLocationName({
       context,
@@ -333,7 +340,29 @@ export async function loadGrnDetailResult(
       data.grn.branch_id,
       PERMISSION_KEYS.PROCUREMENT_INVOICE_CREATE,
     ),
+    context != null &&
+      context.claims.user_role === "owner" &&
+      data.grn.status === "confirmed"
+      ? loadUnpricedConfirmedGrnQueue(context.supabase)
+      : Promise.resolve({ rows: [], total: 0 }),
   ]);
+
+  const canPatchConfirmedUnitCost =
+    context?.claims.user_role === "owner" && data.grn.status === "confirmed";
+  if (canPatchConfirmedUnitCost) {
+    const suggestionByLineId = new Map(
+      (unpricedQueue?.rows ?? []).map((row) => [row.grnItemId, row]),
+    );
+    for (const item of items) {
+      const suggestion = suggestionByLineId.get(item.lineId);
+      if (!suggestion) continue;
+      item.suggestedUnitCost = suggestion.suggestedUnitCost;
+      item.suggestedUnitCostUnitId = suggestion.suggestedUnitCostUnitId;
+      item.suggestedUnitName = suggestion.suggestedUnitName;
+      item.suggestedSourceGrnId = suggestion.suggestedSourceGrnId;
+      item.suggestedSourceGrnNumber = suggestion.suggestedSourceGrnNumber;
+    }
+  }
 
   const hasPoLink = hasLinkedPurchaseOrders(linkedPos, data.grn.po_id);
   const canEditDraftLines = canEditDraft && data.grn.status === "draft";
@@ -398,6 +427,7 @@ export async function loadGrnDetailResult(
       canManageSupplierInvoice,
       canAdjustStock,
       canAmendConfirmed,
+      canPatchConfirmedUnitCost,
       receivingLocationOptions,
     },
   };

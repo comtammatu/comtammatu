@@ -42,10 +42,6 @@ export async function EmployeeLeavePageContent({
   }
 
   const branchId = routeBranchId ?? ctx.branchId;
-  const branchName =
-    routeBranchId == null || routeBranchId === ctx.branchId
-      ? ctx.branchName
-      : null;
 
   let requestsQuery = ctx.supabase
     .from("leave_requests")
@@ -87,7 +83,6 @@ export async function EmployeeLeavePageContent({
     >
       <LeaveRequestClient
         branchId={branchId}
-        branchName={branchName}
         initialRequests={initialRequests}
         plane={plane}
       />

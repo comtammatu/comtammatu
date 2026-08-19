@@ -234,22 +234,22 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     label: getModuleLabelVi("branch_feedback"),
   },
   employee_checkout_approvals: {
-    path: "/br/*/shift/checkout-approvals",
+    path: "/br/*/team/checkout-approvals",
     allowedRoles: ["owner", "branch_manager"],
     label: getModuleLabelVi("employee_checkout_approvals"),
   },
   employee_leave_approvals: {
-    path: "/br/*/shift/leave-approvals",
+    path: "/br/*/team/leave-approvals",
     allowedRoles: ["owner", "branch_manager"],
     label: getModuleLabelVi("employee_leave_approvals"),
   },
   branch_shift_roster: {
-    path: "/br/*/shift/roster",
+    path: "/br/*/team/roster",
     allowedRoles: ["owner", "branch_manager"],
     label: getModuleLabelVi("branch_shift_roster"),
   },
   branch_shift_attendance: {
-    path: "/br/*/shift/attendance",
+    path: "/br/*/team/attendance",
     allowedRoles: ["owner", "branch_manager"],
     label: getModuleLabelVi("branch_shift_attendance"),
   },

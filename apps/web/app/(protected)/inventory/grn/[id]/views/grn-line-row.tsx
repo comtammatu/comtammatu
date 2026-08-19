@@ -53,6 +53,7 @@ export function LineRow({
   onChange,
   onDelete,
   onAmend,
+  onPatchUnitCost,
   chrome = "card",
   showHeader = true,
   ingredient,
@@ -66,6 +67,7 @@ export function LineRow({
   onChange: (patch: Partial<EditableLine>) => void;
   onDelete?: () => void;
   onAmend: () => void;
+  onPatchUnitCost?: () => void;
   chrome?: "card" | "plain";
   showHeader?: boolean;
   ingredient?: IngredientRow;
@@ -392,6 +394,13 @@ export function LineRow({
               </span>{" "}
               {formatVND(line.monetary.unitPrice)}
             </p>
+          ) : onPatchUnitCost && acceptedQuantity > 0 ? (
+            <div className="flex flex-col items-start gap-2">
+              <Badge variant="warning">{valuationCopy.pendingInvoice}</Badge>
+              <Button type="button" size="sm" onClick={onPatchUnitCost}>
+                {grnCopy.confirmedUnitCost.confirmAction}
+              </Button>
+            </div>
           ) : null}
           {line.rejected > 0 ? (
             <>

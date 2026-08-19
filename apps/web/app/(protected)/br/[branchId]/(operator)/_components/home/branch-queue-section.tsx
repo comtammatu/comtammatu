@@ -17,7 +17,7 @@ function buildQueueRows(
   if (counts.pendingCheckouts != null) {
     rows.push({
       key: "checkout-approvals",
-      href: `${basePath}/shift/checkout-approvals`,
+      href: `${basePath}/team/checkout-approvals`,
       title: branchCopy.readinessCheckoutTitle,
       count: counts.pendingCheckouts,
       priority: "high",
@@ -47,7 +47,7 @@ function buildQueueRows(
   if (counts.pendingLeaveRequests != null) {
     rows.push({
       key: "leave-approvals",
-      href: `${basePath}/shift/leave-approvals`,
+      href: `${basePath}/team/leave-approvals`,
       title: branchCopy.queueLeaveTitle,
       count: counts.pendingLeaveRequests,
       priority: "medium",
@@ -74,6 +74,26 @@ function buildQueueRows(
     });
   }
 
+  if (counts.pendingVoids != null) {
+    rows.push({
+      key: "void-approvals",
+      href: `${basePath}/orders?voidRequest=queue`,
+      title: branchCopy.queueVoidTitle,
+      count: counts.pendingVoids,
+      priority: "high",
+    });
+  }
+
+  if (counts.outOfStockAlerts != null) {
+    rows.push({
+      key: "out-of-stock",
+      href: `${basePath}/orders`,
+      title: branchCopy.queueOutOfStockTitle,
+      count: counts.outOfStockAlerts,
+      priority: "high",
+    });
+  }
+
   return rows;
 }
 
@@ -90,8 +110,6 @@ export async function BranchQueueSection({
     claims.user_role === "chef" ||
     claims.user_role === "branch_staff";
 
-  if (isFloorRole) return null;
-
   const queueCounts = await fetchBranchQueueCounts(
     supabase,
     claims,
@@ -102,9 +120,13 @@ export async function BranchQueueSection({
   if (!queueCounts) return null;
 
   const basePath = `/br/${branchId}`;
-  const queueRows = buildQueueRows(basePath, queueCounts).filter(
-    (row) => row.count > 0,
-  );
+  const queueRows = buildQueueRows(basePath, queueCounts)
+    .filter((row) => row.count > 0)
+    .filter((row) =>
+      isFloorRole
+        ? row.key === "void-approvals" || row.key === "out-of-stock"
+        : true,
+    );
   const queuePendingTotal = queueRows.reduce((sum, row) => sum + row.count, 0);
 
   if (queueRows.length === 0) return null;

@@ -21,6 +21,9 @@ export const operator = {
     statusNoBranch: "Thiếu chi nhánh",
     managerAttendanceTitle: "Đang trong ca quản lý",
     clockIn: "Chấm công vào",
+    businessDayPrefix: "Ngày kinh doanh",
+    tasksRemaining: (count: number) =>
+      `${formatCount(count)} việc trong ca`,
   },
   home: {
     stationsTitle: "Trạm",
@@ -126,6 +129,8 @@ export const operator = {
     installPending: "Đang mở...",
     installButtonAria: "Cài Cổng Má Tư lên thiết bị",
     dismissLabel: "Tạm ẩn lời nhắc cài đặt",
+    updateHint: "Có phiên bản mới của ứng dụng.",
+    updateButton: "Tải lại",
     iosDialogTitle: "Cài Cổng Má Tư trên iPhone/iPad",
     iosDialogDescription:
       "iOS cần thêm ứng dụng từ menu Chia sẻ của Safari.",
@@ -192,8 +197,6 @@ export const operator = {
     actionSectionDescription:
       "Mở nhanh các việc đang chờ quản lý chi nhánh xử lý hôm nay.",
     actionCheckoutApprovals: "Duyệt kết ca",
-    actionCountAssign: "Phân công đếm",
-    actionCountReview: "Phiếu đếm",
     actionCountFollowup: "Theo dõi kiểm kê",
     actionRoster: "Phân ca",
     actionAttendance: "Chấm công",

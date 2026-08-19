@@ -9,6 +9,8 @@ import {
   CONTROL_SURFACE_NAV_GROUPS,
   BRANCH_MANAGEMENT_ITEMS,
   OPERATOR_TILE_ITEMS,
+  BRANCH_PRIMARY_TAB_ITEMS,
+  BRANCH_TOOLS_ITEMS,
 } from "../nav-config";
 import {
   resolveControlSurfaceNavGroups,
@@ -43,6 +45,10 @@ const DEEPER_SUBPATH_BY_PREFIX: Record<string, string> = {
   "/br/[branchId]/shift/checkout-approvals": `/br/${BRANCH_ID}/shift/checkout-approvals`,
   "/br/[branchId]/shift/leave-approvals": `/br/${BRANCH_ID}/shift/leave-approvals`,
   "/br/[branchId]/shift/roster": `/br/${BRANCH_ID}/shift/roster`,
+  "/br/[branchId]/team/checkout-approvals": `/br/${BRANCH_ID}/team/checkout-approvals`,
+  "/br/[branchId]/team/leave-approvals": `/br/${BRANCH_ID}/team/leave-approvals`,
+  "/br/[branchId]/team/roster": `/br/${BRANCH_ID}/team/roster`,
+  "/br/[branchId]/team/attendance": `/br/${BRANCH_ID}/team/attendance`,
   "/br/[branchId]/profile": `/br/${BRANCH_ID}/profile/edit`,
   "/br/[branchId]/stock": `/br/${BRANCH_ID}/stock/waste`,
   "/br/[branchId]/menu-limits": `/br/${BRANCH_ID}/menu-limits`,
@@ -172,6 +178,38 @@ test("OPERATOR_TILE_ITEMS hrefTemplates resolve to a module reachable by an audi
     if (audienceRoles.length === 0) continue;
 
     const href = tile.hrefTemplate.replace("{branchId}", BRANCH_ID);
+    assertHrefResolvesForAudience(href, audienceRoles, failures);
+  }
+
+  assert.equal(failures.length, 0, failures.join("\n"));
+});
+
+test("BRANCH_TOOLS_ITEMS hrefTemplates resolve to a module reachable by an audience role", () => {
+  const failures: string[] = [];
+
+  for (const tile of BRANCH_TOOLS_ITEMS) {
+    const audienceRoles = STAFF_ROLES.filter((role) =>
+      canAccess(role, tile.moduleKey),
+    );
+    if (audienceRoles.length === 0) continue;
+
+    const href = tile.hrefTemplate.replace("{branchId}", BRANCH_ID);
+    assertHrefResolvesForAudience(href, audienceRoles, failures);
+  }
+
+  assert.equal(failures.length, 0, failures.join("\n"));
+});
+
+test("BRANCH_PRIMARY_TAB_ITEMS hrefTemplates resolve to a module reachable by an audience role", () => {
+  const failures: string[] = [];
+
+  for (const tab of BRANCH_PRIMARY_TAB_ITEMS) {
+    const audienceRoles = STAFF_ROLES.filter((role) =>
+      canAccess(role, tab.moduleKey),
+    );
+    if (audienceRoles.length === 0) continue;
+
+    const href = tab.hrefTemplate.replace("{branchId}", BRANCH_ID);
     assertHrefResolvesForAudience(href, audienceRoles, failures);
   }
 

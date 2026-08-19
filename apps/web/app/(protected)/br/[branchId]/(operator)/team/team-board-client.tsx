@@ -7,7 +7,6 @@ import {
   CalendarCheck,
   ChevronRight as IconChevronRight,
   ClipboardCheck,
-  ClipboardList,
   Clock as IconClock,
   Users as IconUsers,
 } from "lucide-react";
@@ -52,7 +51,6 @@ const branchCopy = messages.settings.branch;
 type TeamBoardApprovalCounts = {
   checkoutPending?: number;
   leavePending?: number;
-  countSlipsPending?: number;
 };
 
 type AttendanceState = "not_started" | "working" | "checkout_pending" | "done";
@@ -522,22 +520,16 @@ function TeamStripRows({ rows }: { rows: TeamStripRow[] }) {
 function TeamToolsStrip({
   checkoutApprovalsHref,
   leaveApprovalsHref,
-  countSlipsHref,
-  countAssignmentsHref,
   rosterHref,
   attendanceHref,
   canApproveCheckout,
-  canApproveCount,
   approvalCounts,
 }: {
   checkoutApprovalsHref: string;
   leaveApprovalsHref?: string;
-  countSlipsHref: string;
-  countAssignmentsHref?: string;
   rosterHref?: string;
   attendanceHref?: string;
   canApproveCheckout: boolean;
-  canApproveCount: boolean;
   approvalCounts?: TeamBoardApprovalCounts;
 }) {
   // Approvals panel: checkout + leave only, and only when pending > 0.
@@ -569,26 +561,7 @@ function TeamToolsStrip({
     });
   }
 
-  // Tools panel: count / roster / attendance shortcuts (never retitled to Cần duyệt).
   const toolRows: TeamStripRow[] = [];
-  if (canApproveCount) {
-    toolRows.push({
-      key: "count-slips",
-      href: countSlipsHref,
-      icon: ClipboardCheck,
-      title: copy.actionCountReview,
-      count: approvalCounts?.countSlipsPending,
-    });
-  }
-  if (countAssignmentsHref) {
-    toolRows.push({
-      key: "count-assignments",
-      href: countAssignmentsHref,
-      icon: ClipboardList,
-      title: copy.actionCountAssign,
-      count: undefined,
-    });
-  }
   if (rosterHref) {
     toolRows.push({
       key: "roster",
@@ -651,7 +624,6 @@ export function TeamBoardClient({
   branchId,
   membersHref,
   countSlipsHref,
-  countAssignmentsHref,
   checkoutApprovalsHref,
   leaveApprovalsHref,
   rosterHref,
@@ -667,7 +639,6 @@ export function TeamBoardClient({
   branchId: number;
   membersHref: string;
   countSlipsHref: string;
-  countAssignmentsHref?: string;
   checkoutApprovalsHref: string;
   leaveApprovalsHref?: string;
   rosterHref?: string;
@@ -703,12 +674,9 @@ export function TeamBoardClient({
     <TeamToolsStrip
       checkoutApprovalsHref={checkoutApprovalsHref}
       leaveApprovalsHref={leaveApprovalsHref}
-      countSlipsHref={countSlipsHref}
-      countAssignmentsHref={countAssignmentsHref}
       rosterHref={rosterHref}
       attendanceHref={attendanceHref}
       canApproveCheckout={canApproveCheckout}
-      canApproveCount={canApproveCount}
       approvalCounts={approvalCounts}
     />
   );

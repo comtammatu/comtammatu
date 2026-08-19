@@ -59,7 +59,7 @@ const targets: ShellNotificationTarget[] = [
   },
   {
     kind: "hr.leave_requested",
-    actionUrl: "/br/7/shift/leave-approvals",
+    actionUrl: "/br/7/team/leave-approvals",
     unreadCount: 5,
   },
   {

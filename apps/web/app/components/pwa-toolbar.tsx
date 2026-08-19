@@ -47,7 +47,7 @@ export interface PwaToolbarCopy {
   browserDialogDescription?: string;
   browserSteps?: readonly string[];
   close: string;
-  /** Update-available banner copy. Full-bleed layout only. */
+  /** Update-available banner copy. Both layouts; omit only if the surface has no reload path. */
   updateHint?: string;
   updateButton?: string;
 }
@@ -55,12 +55,14 @@ export interface PwaToolbarCopy {
 export interface PwaToolbarProps {
   copy: PwaToolbarCopy;
   /**
-   * "contained" = the Employee toolbar: centers at max-w-lg/lg:max-w-3xl, sm:
-   * breakpoints, always offers a manual-install fallback, no update banner,
-   * hides fully once installed+online. "full-bleed" = the Operations
-   * (POS/KDS/pickup) toolbar: edge-to-edge bar, md: breakpoints, install row
-   * only when a real install path exists, shows an undismissable update
-   * banner, and otherwise gets out of the operational screen.
+   * "contained" = operator portal and `/me` personnel shell:
+   * centers at max-w-lg/lg:max-w-3xl, sm: breakpoints, always offers a
+   * manual-install fallback, shows an undismissable update banner, hides
+   * fully once installed+online with no pending update. "full-bleed" = the
+   * Operations (POS/KDS/pickup) toolbar: edge-to-edge bar, md: breakpoints,
+   * install row only when a real install path exists, shows the same
+   * undismissable update banner, and otherwise gets out of the operational
+   * screen.
    */
   layout: "contained" | "full-bleed";
   /** Persist the install-dismiss flag under this key; omit to skip persistence. */
@@ -71,10 +73,10 @@ export interface PwaToolbarProps {
 
 /**
  * Canonical install/offline/update PWA toolbar (design-system.md § B). Single
- * source for the Operations (POS/KDS/pickup) and Employee toolbars: shares
- * the online/standalone/install-prompt state and handlers, and renders each
- * layout's exact pre-extraction markup so both consumers keep identical
- * behavior.
+ * source for the Operations (POS/KDS/pickup) and operator portal toolbars:
+ * shares the online/standalone/install-prompt state and handlers, and renders
+ * each layout's exact pre-extraction markup so both consumers keep identical
+ * update/offline behavior.
  */
 export function PwaToolbar({
   copy,
@@ -135,7 +137,7 @@ export function PwaToolbar({
     }
   }, [install, installPending, isIosPwaInstall]);
 
-  // Contained (Employee): always falls back to a help dialog (iOS or
+  // Contained: always falls back to a help dialog (iOS or
   // browser-manual steps) when there is no captured browser prompt.
   const handleInstallContained = useCallback(async () => {
     if (installPending) return;
@@ -285,7 +287,41 @@ export function PwaToolbar({
     );
   }
 
-  // Contained (Employee).
+  // Contained (operator portal).
+  // Same as full-bleed: the update row must also show in standalone. Installed
+  // operator tabs running across a deploy hit ChunkLoadError after skipWaiting.
+  if (hasNewVersion && copy.updateHint && copy.updateButton) {
+    return (
+      <div
+        className="border-b border-border/60 bg-background/95 px-3 py-2 print:hidden"
+        role="region"
+        aria-label={copy.regionLabel}
+      >
+        <div className="mx-auto flex max-w-lg items-center gap-2 lg:max-w-3xl">
+          <div
+            className="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-foreground"
+            role="alert"
+          >
+            <IconRefreshCw className="size-4 shrink-0" />
+            <span className="min-w-0 break-words">{copy.updateHint}</span>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="touch"
+            className="shrink-0 text-sm font-semibold"
+            onClick={() => {
+              window.location.reload();
+            }}
+          >
+            <IconRefreshCw data-icon="inline-start" />
+            {copy.updateButton}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (isStandalone && isOnline) return null;
   if (isOnline && installDismissed) return null;
 

@@ -93,7 +93,10 @@ type BranchGrnDraftRow = Pick<
   | "qcIssueCount"
 >;
 
-const statusFilterLabels: Record<GrnListStatusFilter, string> = {
+const statusFilterLabels: Record<
+  (typeof GRN_LIST_STATUS_FILTER_VALUES)[number],
+  string
+> = {
   all: KDS_VI.filterAll,
   draft: getStatusBadgeMeta("inventory", "draft").label,
   confirmed: getStatusBadgeMeta("inventory", "confirmed").label,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition, type ReactNode } from "react";
+import { useCallback, useMemo, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
@@ -73,6 +73,13 @@ import { AddGrnLineDialog } from "./views/add-grn-line-dialog";
 import { AmendOwnerDialog } from "./views/amend-owner-dialog";
 import { DraftGrnLineCard } from "./views/draft-grn-line-card";
 import { LineRow } from "./views/grn-line-row";
+import { getPurchaseUnitOptions } from "@lib/inventory/purchase-units";
+import {
+  confirmedGrnUnitCostTargetFromDetail,
+  isUnpricedConfirmedGrnLine,
+  type ConfirmedGrnUnitCostTarget,
+} from "@lib/inventory/grn-unpriced-queue-model";
+import { ConfirmedGrnUnitCostDialog } from "./views/confirmed-grn-unit-cost-dialog";
 import { DraftReceivingSiteDialog } from "./views/draft-receiving-site-dialog";
 import { discardGrnDraft } from "../../grn-actions";
 
@@ -93,6 +100,7 @@ export function GRNDetailClient({
   ingredients,
   canAdjustStock,
   canAmendConfirmed = false,
+  canPatchConfirmedUnitCost = false,
   canEditDraft = false,
   canConfirm = true,
   canManageSupplierInvoice = false,
@@ -108,6 +116,7 @@ export function GRNDetailClient({
   ingredients: IngredientRow[];
   canAdjustStock: boolean;
   canAmendConfirmed?: boolean;
+  canPatchConfirmedUnitCost?: boolean;
   canEditDraft?: boolean;
   canConfirm?: boolean;
   canManageSupplierInvoice?: boolean;
@@ -129,6 +138,8 @@ export function GRNDetailClient({
   const [isCancelling, startCancel] = useTransition();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [amendingLine, setAmendingLine] = useState<EditableLine | null>(null);
+  const [unitCostTarget, setUnitCostTarget] =
+    useState<ConfirmedGrnUnitCostTarget | null>(null);
   const [editingLineId, setEditingLineId] = useState<number | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
@@ -153,6 +164,20 @@ export function GRNDetailClient({
   const ingredientById = useMemo(
     () => new Map(ingredients.map((item) => [item.id, item])),
     [ingredients],
+  );
+
+  const openConfirmedUnitCostDialog = useCallback(
+    (line: EditableLine) => {
+      const ingredient = ingredientById.get(line.ingredientId);
+      const unitOptions = getPurchaseUnitOptions(ingredient).map((option) => ({
+        unitId: option.unitId,
+        label: option.label,
+      }));
+      setUnitCostTarget(
+        confirmedGrnUnitCostTargetFromDetail(grn, line, unitOptions),
+      );
+    },
+    [grn, ingredientById],
   );
   const hasAcceptedQuantity = hasAcceptedGrnQuantity(lines);
   const valuationKind = resolveGrnValuationDisplay({
@@ -440,34 +465,53 @@ export function GRNDetailClient({
           <span className="sr-only">{GRN_CREATE_COPY.lineActionsAria}</span>
         ),
         className: "w-20 align-top text-right",
-        render: (line) =>
-          canChangeLineSet ? (
+        render: (line) => {
+          const showUnitCostPatch =
+            canPatchConfirmedUnitCost &&
+            !isDraft &&
+            isUnpricedConfirmedGrnLine(line);
+          if (!canChangeLineSet && !showUnitCostPatch) return null;
+          return (
             <div
               className="flex items-center justify-end gap-1"
               onClick={(event) => event.stopPropagation()}
               onKeyDown={(event) => event.stopPropagation()}
             >
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                onClick={() => void handleDeleteLine(line)}
-                aria-label={grnCopy.line.deleteLineAria}
-              >
-                <IconTrash className="size-4" />
-              </Button>
+              {showUnitCostPatch ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => openConfirmedUnitCostDialog(line)}
+                >
+                  {grnCopy.confirmedUnitCost.confirmAction}
+                </Button>
+              ) : null}
+              {canChangeLineSet ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() => void handleDeleteLine(line)}
+                  aria-label={grnCopy.line.deleteLineAria}
+                >
+                  <IconTrash className="size-4" />
+                </Button>
+              ) : null}
             </div>
-          ) : null,
+          );
+        },
       },
     ],
     [
       canChangeLineSet,
       canMutateDraft,
+      canPatchConfirmedUnitCost,
       handleDeleteLine,
       ingredientById,
       isDesktopLineEdit,
       isDraft,
+      openConfirmedUnitCostDialog,
     ],
   );
 
@@ -729,6 +773,11 @@ export function GRNDetailClient({
             onChange={(p) => patch(idx, p)}
             onDelete={() => void handleDeleteLine(line)}
             onAmend={() => setAmendingLine(line)}
+            onPatchUnitCost={
+              canPatchConfirmedUnitCost && isUnpricedConfirmedGrnLine(line)
+                ? () => openConfirmedUnitCostDialog(line)
+                : undefined
+            }
           />
         )}
       />
@@ -936,6 +985,34 @@ export function GRNDetailClient({
           router.refresh();
         }}
         startTransition={startAmend}
+      />
+      <ConfirmedGrnUnitCostDialog
+        target={unitCostTarget}
+        onClose={() => setUnitCostTarget(null)}
+        onPatched={(patch) => {
+          setLines((prev) =>
+            prev.map((item) =>
+              item.lineId === patch.grnItemId
+                ? {
+                    ...item,
+                    unitCostUnitId: patch.unitCostUnitId,
+                    unitCostUnitLabel: patch.unitCostUnitLabel,
+                    costPending: false,
+                    suggestedUnitCost: null,
+                    suggestedUnitCostUnitId: null,
+                    suggestedUnitName: null,
+                    suggestedSourceGrnId: null,
+                    suggestedSourceGrnNumber: null,
+                    monetary: {
+                      unitPrice: patch.unitCost,
+                      lineTotal: patch.totalCost,
+                    },
+                  }
+                : item,
+            ),
+          );
+          router.refresh();
+        }}
       />
       {draftLineSheet}
       <ReasonConfirmDialog

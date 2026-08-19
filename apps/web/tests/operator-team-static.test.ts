@@ -62,7 +62,7 @@ test("operator team tabs use shared Tabs and preserve client-side switching", ()
   assert.doesNotMatch(teamTabsSource, /window\.history\.replaceState/);
   assert.match(teamTabsSource, /useTransition/);
   assert.match(teamTabsSource, /PageSkeleton/);
-  assert.match(teamTabsSource, /sticky top-0 z-20/);
+  assert.doesNotMatch(teamTabsSource, /sticky top-0/);
   assert.match(teamTabsSource, /<TabsList\s+size="touch"/);
   assert.doesNotMatch(teamTabsSource, /group-data-horizontal\/tabs:!h-12/);
   assert.doesNotMatch(teamTabsSource, /\bh-10\b/);
@@ -90,17 +90,17 @@ test("operator team hub keeps only board and members peer tabs", () => {
   assert.doesNotMatch(teamTabsSource, /value: "leaves"/);
 });
 
-test("legacy team hub tab query params redirect to shift routes", () => {
+test("legacy team hub tab query params redirect to team routes", () => {
   assert.match(teamPageSource, /function redirectLegacyTeamTab/);
-  assert.match(teamPageSource, /case "roster":[\s\S]*\/shift\/roster/);
-  assert.match(teamPageSource, /case "attendance":[\s\S]*\/shift\/attendance/);
+  assert.match(teamPageSource, /case "roster":[\s\S]*\/team\/roster/);
+  assert.match(teamPageSource, /case "attendance":[\s\S]*\/team\/attendance/);
   assert.match(
     teamPageSource,
-    /case "checkouts":[\s\S]*\/shift\/checkout-approvals/,
+    /case "checkouts":[\s\S]*\/team\/checkout-approvals/,
   );
   assert.match(
     teamPageSource,
-    /case "leaves":[\s\S]*\/shift\/leave-approvals/,
+    /case "leaves":[\s\S]*\/team\/leave-approvals/,
   );
 });
 
@@ -173,11 +173,12 @@ test("operator team board exposes a real status filter", () => {
   assert.doesNotMatch(teamBoardSource, /TeamApprovalsStrip/);
   assert.match(teamBoardSource, /function TeamToolsStrip/);
   assert.match(teamBoardSource, /function TeamStripRows/);
-  assert.match(teamBoardSource, /countAssignmentsHref/);
-  assert.match(teamBoardSource, /key: "count-assignments"/);
-  assert.match(teamBoardSource, /copy\.actionCountAssign/);
-  assert.match(teamBoardSource, /copy\.actionCountReview/);
-  // Two panels: Cần duyệt (checkout/leave when pending) + Quản lý đội (tools).
+  assert.doesNotMatch(teamBoardSource, /countAssignmentsHref/);
+  assert.doesNotMatch(teamBoardSource, /key: "count-assignments"/);
+  assert.doesNotMatch(teamBoardSource, /key: "count-slips"/);
+  assert.doesNotMatch(teamBoardSource, /copy\.actionCountAssign/);
+  assert.doesNotMatch(teamBoardSource, /copy\.actionCountReview/);
+  // Two panels: Cần duyệt (checkout/leave when pending) + Quản lý đội (roster/attendance).
   assert.match(teamBoardSource, /copy\.approvalsStripTitle/);
   assert.match(teamBoardSource, /copy\.toolsStripTitle/);
   assert.match(teamBoardSource, /const approvalRows: TeamStripRow\[\]/);
@@ -188,7 +189,7 @@ test("operator team board exposes a real status filter", () => {
   );
   assert.match(
     teamBoardSource,
-    /key: "count-slips"[\s\S]*key: "count-assignments"[\s\S]*key: "roster"[\s\S]*key: "attendance"/,
+    /key: "roster"[\s\S]*key: "attendance"/,
   );
   // Tools panel must not retitle to Cần duyệt when any pending exists.
   assert.doesNotMatch(
@@ -200,8 +201,8 @@ test("operator team board exposes a real status filter", () => {
   assert.match(teamBoardSource, /copy\.viewMembersCta/);
   assert.match(operatorMessagesSource, /approvalsStripTitle:\s*"Cần duyệt"/);
   assert.match(operatorMessagesSource, /toolsStripTitle:\s*"Quản lý đội"/);
-  assert.match(operatorMessagesSource, /actionCountAssign:\s*"Phân công đếm"/);
-  assert.match(operatorMessagesSource, /actionCountReview:\s*"Phiếu đếm"/);
+  assert.doesNotMatch(operatorMessagesSource, /actionCountAssign:/);
+  assert.doesNotMatch(operatorMessagesSource, /actionCountReview:/);
   assert.match(operatorMessagesSource, /emptyNoStaffTitle:/);
   assert.match(operatorMessagesSource, /viewMembersCta:/);
   assert.doesNotMatch(
@@ -432,7 +433,7 @@ test("operator team members use a roster grid with real profile fields", () => {
   assert.match(teamMembersSource, /canManageEmployeeOverrides/);
   assert.match(teamMembersSource, /BranchEmployeeTasksSheet/);
   // Drawer stays a short touch summary: contact + today. Month KPIs and the
-  // attendance deep-link belong on /shift/attendance, not inside the drawer.
+  // attendance deep-link belong on /team/attendance, not inside the drawer.
   assert.match(teamMembersSource, /<AppDrawer/);
   assert.match(teamMembersSource, /footerClassName="shrink-0/);
   assert.doesNotMatch(
@@ -459,23 +460,20 @@ test("operator team board derives checklist progress from attendance snapshots",
   );
 });
 
-test("operator team board keeps focused approval actions on shift routes", () => {
+test("operator team board keeps focused approval actions on team routes", () => {
   assert.match(teamPageSource, /canApproveCheckout=\{canApproveCheckout\}/);
   assert.match(
     teamPageSource,
-    /checkoutApprovalsHref=\{`\$\{basePath\}\/shift\/checkout-approvals`\}/,
+    /checkoutApprovalsHref=\{`\$\{basePath\}\/team\/checkout-approvals`\}/,
   );
   assert.match(
     teamPageSource,
-    /leaveApprovalsHref=[\s\S]*\/shift\/leave-approvals/,
+    /leaveApprovalsHref=[\s\S]*\/team\/leave-approvals/,
   );
-  assert.match(teamPageSource, /rosterHref=[\s\S]*\/shift\/roster/);
-  assert.match(teamPageSource, /attendanceHref=[\s\S]*\/shift\/attendance/);
-  assert.match(
-    teamPageSource,
-    /countAssignmentsHref=[\s\S]*\/stock\/count-assignments/,
-  );
-  assert.match(teamPageSource, /INVENTORY_COUNT_ASSIGN/);
+  assert.match(teamPageSource, /rosterHref=[\s\S]*\/team\/roster/);
+  assert.match(teamPageSource, /attendanceHref=[\s\S]*\/team\/attendance/);
+  assert.doesNotMatch(teamPageSource, /countAssignmentsHref/);
+  assert.match(teamPageSource, /INVENTORY_COUNT_APPROVE/);
   assert.match(teamPageSource, /approverRole=\{claims\.user_role as StaffRole\}/);
   assert.match(teamPageSource, /canApproveCount=\{canApproveCount\}/);
   assert.match(

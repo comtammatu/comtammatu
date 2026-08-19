@@ -282,7 +282,7 @@ test.describe("branch route shell ownership", () => {
       `/br/${branchId}/shift/schedule`,
       `/br/${branchId}/shift/schedule/leave`,
       `/br/${branchId}/shift/clock`,
-      `/br/${branchId}/shift/checkout-approvals`,
+      `/br/${branchId}/team/checkout-approvals`,
     ]) {
       await expectHealthyRoute(page, path, {
         ownerLinkCount: path === `/br/${branchId}` ? 1 : 0,
@@ -322,7 +322,7 @@ test.describe("branch route shell ownership", () => {
       `/br/${branchId}/stock/consumption`,
       `/br/${branchId}/stock/count-assignments`,
       `/br/${branchId}/stock/count-slips`,
-      `/br/${branchId}/shift/leave-approvals`,
+      `/br/${branchId}/team/leave-approvals`,
     ];
 
     for (const viewport of [

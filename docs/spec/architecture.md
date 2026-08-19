@@ -44,7 +44,7 @@ monorepo.
 | Data authority       | Supabase Cloud owns Auth, Postgres, PostgREST, RLS, Realtime, and Storage                                                              |
 | Authorization        | `proxy.ts` gates session/surface/scope; RLS and authorized RPCs own data/action authority                                              |
 | Mutation correctness | Server Action input is Zod-validated; multi-row correctness is implemented in one Postgres RPC                                         |
-| Offline posture      | Cloud-first PWA; cached shell/static assets may degrade gracefully, but POS has no local-first transaction authority                   |
+| Offline posture      | Cloud-first PWA (D012); no local-first POS. Install / SW / OS: `docs/spec/pwa.md`                                                       |
 | Printing             | `print_jobs` is the durable queue; the branch agent claims idempotently, retries LAN delivery, and recovery-polls around Realtime gaps |
 | Delivery             | Web deploys through Vercel; database and branch-agent releases have separate promotion gates                                           |
 
@@ -170,6 +170,7 @@ Two product halves — structure, naming, chrome, and adapters must make both ob
 | **`Quản lý hệ thống`**            | Tenant/branch oversight, menu, central inventory, finance, HR, settings | `control_surface` | `/`, `/menu`, `/orders`, `/inventory`, `/finance`, `/hr`, `/branches`, `/settings`, `/feedback` | `AppShell` (nav-as-data) | `App*`            |
 | **`Vận hành bán hàng` (ca)**      | Shift work, branch stock, team, branch settings                         | `branch_surface`  | `/br/[branchId]/*` (excl. stations)                                                             | Branch operator chrome   | `BranchOperator*` |
 | **`Vận hành bán hàng` (station)** | Sell / kitchen / pickup queue                                           | `station_chrome`  | `/br/[branchId]/{pos,kds,pickup}`                                                               | Station chrome           | station adapters  |
+| **`Trang cá nhân`**               | Self `/me` (ADR 0012/0037); Owner excluded (`module-acl` `me`)          | `self_surface`    | `/me/*`                                                                                         | Control shell / `Employee*` | `Employee*`    |
 | **Public / `khách`**              | Auth, guest order, feedback QR, pickup display                          | `public`          | `/login`, `/q`, `/r`, …                                                                         | none                     | —                 |
 
 - UI copy for the L0 half: **`Quản trị`** / **`Hệ thống`**. Role ACL `owner` is not a plane name.
@@ -200,7 +201,8 @@ D009 — path-based, no sub-domain. Exact role/module mappings:
 | Surface (product) | Plane ID                            | Route families                                                                                  | Boundary                                                             |
 | ----------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | **`Quản lý hệ thống`**  | `control_surface`                   | `/`, `/menu`, `/orders`, `/inventory`, `/finance`, `/branches`, `/hr`, `/settings`, `/feedback` | L0 Tenant Command; runtime `RouteSurface: "owner"` is the code alias |
-| **`Vận hành bán hàng`** | `branch_surface` + `station_chrome` | `/br/[branchId]/*`                                                                              | Module ACL + URL/JWT branch scope; PBAC/RLS owns actions and data    |
+| **`Trang cá nhân`**     | `self_surface`                      | `/me/*`                                                                                         | ADR 0012/0037; Owner excluded (`module-acl` `me`)                    |
+| **`Vận hành bán hàng`** | `branch_surface` + `station_chrome` | `/br/[branchId]/*`                                                                              | MODULE_ACL + JWT `user_role` / URL branch scope; `has_permission()` + RLS own actions and rows (`docs/modules/auth.md`) |
 | Utility           | —                                   | `/notifications`, `/access-denied`                                                              | Explicit utility/public contracts, not a product plane               |
 
 BM/Staff daily work stays under `/br/[branchId]/*`; `control_surface` is
@@ -209,6 +211,6 @@ L0-gated per ADR 0012.
 ## Infrastructure Strategy
 
 Web + DB remain cloud-authoritative. D012 still rejects local-first POS. This
-repo keeps the PWA and branch print-agent. Native Android clients (repository
-`app`) are ADR 0038 and optional per branch. Topology, secrets, CI, promotion:
-`docs/modules/infrastructure.md`.
+repo keeps the PWA (`docs/spec/pwa.md`) and branch print-agent. Native Android
+clients (repository `app`) are ADR 0038 and optional per branch. Topology,
+secrets, CI, promotion: `docs/modules/infrastructure.md`.

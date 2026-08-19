@@ -61,8 +61,13 @@ test("operator home shows manager revenue strip with month, day, and milestones"
   assert.match(strip, /BranchOperatorPanel/);
   assert.match(strip, /homeCopy\.revenueTargetTitle/);
   assert.match(strip, /style=\{\{ left:/);
+  assert.match(strip, /progressCopy\.targetLabel/);
+  assert.match(strip, /progressCopy\.dayHint/);
+  assert.match(strip, /progressCopy\.businessDayCaption/);
+  assert.match(strip, /progressCopy\.nextMilestone/);
+  assert.match(strip, /nextRevenueRewardGap/);
+  assert.match(strip, /getVNBusinessDateString/);
   assert.doesNotMatch(strip, /<Collapsible>|CollapsibleTrigger|CollapsibleContent/);
-  assert.doesNotMatch(strip, /mtdHint|dayHint|progressCopy\.targetLabel/);
   assert.doesNotMatch(strip, /\b(?:KpiCard|KpiRow)\b/);
 });
 
@@ -91,11 +96,26 @@ test("no KpiCard/KpiRow stat surfaces remain under the /br/ route tree", () => {
   }
 });
 
+test("home revenue RPC measures MTD and today on the 04:00 business day", () => {
+  const sql = read(
+    "supabase/migrations/20260820010000_branch_revenue_target_progress_business_day.sql",
+  );
+  const sqlTest = read("supabase/tests/branch_revenue_targets_test.sql");
+
+  assert.match(sql, /branch_business_date\(p_branch_id, now\(\)\)/);
+  assert.match(sql, /branch_business_day_bounds\(p_branch_id, v_today\)/);
+  assert.match(sql, /branch_business_day_bounds\(p_branch_id, v_month\)/);
+  assert.doesNotMatch(sql, /calendar-day/);
+  assert.match(sqlTest, /branch_business_date/);
+  assert.match(sqlTest, /branch_business_day_bounds/);
+});
+
 test("revenue strip copy is localized through finance messages", () => {
   const financeCopy = read("apps/web/lib/messages/finance.ts");
   assert.match(financeCopy, /monthRevenueLabel: "Doanh thu tháng"/);
   assert.match(financeCopy, /dayRevenueLabel: "Doanh thu ngày"/);
-  assert.match(financeCopy, /targetLabel: "Chỉ tiêu doanh thu"/);
+  assert.match(financeCopy, /targetLabel: "Chỉ tiêu tháng"/);
+  assert.match(financeCopy, /dayHint: "Ngày kinh doanh \(04:00–04:00\)"/);
   assert.match(financeCopy, /milestone: \(threshold: string\) => `Mốc \$\{threshold\}`/);
 
   const operatorCopy = read("apps/web/lib/messages/operator.ts");
@@ -112,6 +132,10 @@ test("revenue strip copy is localized through finance messages", () => {
     "apps/web/app/(protected)/br/[branchId]/(operator)/_components/home/branch-today-status.tsx",
   );
   assert.match(today, /status === "not_required"\) return null/);
+  assert.match(today, /copy\.businessDayPrefix/);
+  assert.match(today, /copy\.tasksRemaining/);
+  assert.match(today, /status === "working" && state\.checklist\.remaining > 0/);
+  assert.match(today, /\/br\/\$\{branchId\}\/shift(?!\/clock)/);
 
   const queueList = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/_components/home/branch-queue-list.tsx",

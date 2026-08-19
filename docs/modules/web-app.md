@@ -28,10 +28,10 @@ the contract changes.
 | Root | `/` | Single-branch resolver | `getDefaultRedirect`; multi-branch → picker; wrong scope fails closed |
 | Public / auth | `/login`, `/access-denied`, `/br/…/pickup`, health/webhooks | `/login` or pickup display URL | No app shell; pickup page validates branch itself |
 | control_surface | L0 `/`, `/menu/*`, `/promotions/*`, `/orders/*`, `/inventory/*`, `/finance/*`, `/hr/*`, `/work/*`, `/branches/*`, `/settings/*`, `/feedback/*` | `/` | `ControlSurfaceShell` → `AppShell`; breadcrumb `Quản trị`; filters/tabs in URL |
-| Utility | `/notifications/*` | `returnTo` | Not a product plane |
+| Utility | `/notifications` | `returnTo` | LIST feed; device permission in toolbar; not a product plane |
 | Branch ops | `/br/[branchId]/*` | `/br/[branchId]` | Branch/station chrome; `branchId` in URL; proxy scope + network gate |
 | Staff day | `/br/…/shift/*`, `/profile/*` | `/br/…/shift` | Branch bottom nav; do not mix HR admin hot path |
-| Self | `/me`, `/me/clock`, `/me/schedule`, `/me/profile`, `/me/payslip` | `/me` (not post-login; login → `/`) | Profile hub in Control shell; punch `/me/clock`; site-pinned → Branch; Owner denied |
+| Self | `/me`, `/me/clock`, `/me/schedule`, `/me/profile`, `/me/payslip` | `/me` (not post-login; login → `/`) | Profile hub in Control shell (includes `/notifications`); punch `/me/clock`; site-pinned → Branch; Owner denied |
 
 History: `Link` / `router.push` between pages; `router.replace` only for tab/filter
 on the same page.
@@ -124,6 +124,13 @@ new **page** inside an existing module still needs 1–5 + proof.
 | Missing route-resolution | 404 / no ACL | Add URL → ModuleKey |
 | Missing nav | Unreachable from sidebar | Add to `CONTROL_SURFACE_NAV_GROUPS` (or intentional direct-only) |
 | Layout re-checks auth | Double redirect | Remove; proxy owns gate |
+
+## PWA
+
+Installable identities, service-worker cache, and OS/browser support:
+`docs/spec/pwa.md`. Distinct `id` / `start_url` / name per launcher; all keep
+`scope: "/"` on purpose (OQ-3). Do not install the owner root app as the
+branch station.
 
 ## Design Rationale
 

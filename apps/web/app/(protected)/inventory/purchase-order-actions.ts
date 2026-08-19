@@ -3,6 +3,7 @@
 import { z } from "zod";
 import {
   PERMISSION_KEYS,
+  PO_CREATE_ROLES,
   PO_MUTATE_ROLES,
   PO_REVIEW_ROLES,
   PROCUREMENT_ROLES,
@@ -95,6 +96,23 @@ const reviewPurchaseDemandSchema = z
 
 const poReasonSchema = poIdSchema.extend(documentReasonSchema.shape);
 
+const createPurchaseOrderLineSchema = z.object({
+  ingredientId: z.coerce.number().int().positive(),
+  quantity: inventoryPositiveQuantitySchema,
+  entryUnitId: z.coerce.number().int().positive(),
+});
+
+const createPurchaseOrderSchema = z.object({
+  poId: z.coerce.number().int().positive().nullable().optional(),
+  supplierId: z.coerce.number().int().positive(),
+  branchId: z.coerce.number().int().positive(),
+  neededBy: z.iso.date().nullable().optional(),
+  notes: z.string().trim().max(500).optional(),
+  lines: z.array(createPurchaseOrderLineSchema).min(1).max(200),
+  submit: z.boolean().default(false),
+  idempotencyKey: z.string().uuid().optional(),
+});
+
 function mapProcurementRpcError<T = never>(
   error: { code?: string; message: string },
   fallback: string,
@@ -104,6 +122,93 @@ function mapProcurementRpcError<T = never>(
     errorCode: INVENTORY_ERROR_CODES.PROCUREMENT_FAILED,
   });
 }
+
+export const createPurchaseOrder = withAction(
+  {
+    roles: PO_CREATE_ROLES,
+    schema: createPurchaseOrderSchema,
+    permission: PERMISSION_KEYS.PROCUREMENT_PO_CREATE,
+    permissionBranchId: (data) => data.branchId,
+  },
+  async (
+    {
+      poId,
+      supplierId,
+      branchId,
+      neededBy,
+      notes,
+      lines,
+      submit,
+      idempotencyKey,
+    },
+    { supabase, claims },
+  ) => {
+    if (
+      !isProcurementBranchInScope(
+        claims.user_role,
+        claims.branch_id,
+        branchId,
+      )
+    ) {
+      return {
+        success: false,
+        error: "Kho nhận nằm ngoài phạm vi địa điểm của bạn.",
+      };
+    }
+    if (poId == null && idempotencyKey == null) {
+      return {
+        success: false,
+        error: "Thiếu mã chống gửi trùng.",
+      };
+    }
+
+    const { data, error } = await supabase.rpc(
+      "create_purchase_order" as never,
+      {
+        p_po_id: poId ?? null,
+        p_supplier_id: supplierId,
+        p_branch_id: branchId,
+        p_notes: notes ?? "",
+        p_needed_by: neededBy ?? null,
+        p_lines: lines.map((line) => ({
+          ingredient_id: line.ingredientId,
+          quantity: line.quantity,
+          entry_unit_id: line.entryUnitId,
+        })),
+        p_submit: submit,
+        p_idempotency_key: idempotencyKey ?? null,
+      } as never,
+    );
+    if (error) {
+      return mapProcurementRpcError(error, "Không thể lưu đơn mua.");
+    }
+    const parsed = z
+      .object({
+        po_id: z.coerce.number().int().positive(),
+        po_number: z.string(),
+        status: z.enum(["draft", "approved"]),
+        grn_id: z.coerce.number().int().positive().nullable().optional(),
+      })
+      .safeParse(data);
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: "Phản hồi lưu đơn mua không hợp lệ.",
+      };
+    }
+    revalidateSurfacePath("/inventory/purchase-orders");
+    revalidateSurfacePath("/inventory/grn");
+    return {
+      success: true,
+      data: {
+        id: parsed.data.po_id,
+        code: parsed.data.po_number,
+        status: parsed.data.status,
+        grnId: parsed.data.grn_id ?? null,
+      },
+    };
+  },
+);
 
 export const savePurchaseDemand = withAction(
   {

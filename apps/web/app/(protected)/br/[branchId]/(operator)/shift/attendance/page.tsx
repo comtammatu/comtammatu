@@ -1,12 +1,8 @@
-import { notFound } from "next/navigation";
-import { loadBranchAttendanceData } from "@lib/hr/branch-attendance-data";
+import { notFound, redirect } from "next/navigation";
 import { parseOperatorBranchId } from "../../../_lib/parse-branch-id";
-import { BranchAttendanceClient } from "./branch-attendance-client";
 
-/**
- * Full-page branch attendance for branch managers.
- */
-export default async function BranchAttendancePage({
+/** Class C: old bookmarks land on `/team/attendance`. */
+export default async function OperatorShiftAttendanceShimPage({
   params,
 }: {
   params: Promise<{ branchId: string }>;
@@ -14,17 +10,5 @@ export default async function BranchAttendancePage({
   const { branchId: rawBranchId } = await params;
   const branchId = parseOperatorBranchId(rawBranchId);
   if (branchId == null) notFound();
-  const data = await loadBranchAttendanceData(branchId);
-  return (
-    <BranchAttendanceClient
-      branchId={data.branchId}
-      branchName={data.branchName}
-      canView={data.canView}
-      canForceClose={data.canForceClose}
-      today={data.today}
-      month={data.month}
-      initialRecords={data.records}
-      loadFailed={data.loadFailed}
-    />
-  );
+  redirect(`/br/${branchId}/team/attendance`);
 }

@@ -26,6 +26,8 @@ import {
   grnConfirmRpcMappings,
   grnLineRpcFallback,
   grnLineRpcMappings,
+  grnOwnerUnitCostRpcFallback,
+  grnOwnerUnitCostRpcMappings,
   INVENTORY_ERROR_CODES,
 } from "@lib/messages/inventory-rpc-errors";
 
@@ -1249,3 +1251,69 @@ export const amendGrnLine = withAction(
     return { success: true, data: row };
   },
 );
+
+const ownerPatchConfirmedGrnUnitCostSchema = z.object({
+  grnItemId: z.coerce.number().int().positive(),
+  unitCost: z.coerce.number().gt(0).max(99_999_999_999.99),
+  unitCostUnitId: z.coerce.number().int().positive(),
+  reason: z.string().trim().min(10).max(500),
+  idempotencyKey: z.string().uuid(),
+});
+
+const ownerPatchConfirmedGrnUnitCostResultSchema = z.object({
+  grn_item_id: z.coerce.number().int().positive(),
+  unit_cost: z.coerce.number(),
+  unit_cost_unit_id: z.coerce.number().int().positive(),
+  total_cost: z.coerce.number(),
+  book_total: z.coerce.number(),
+  quantity_delta: z.coerce.number(),
+});
+
+export const ownerPatchConfirmedGrnUnitCost = withAction(
+  {
+    roles: ["owner"] as const,
+    schema: ownerPatchConfirmedGrnUnitCostSchema,
+    forbiddenError: "Chỉ Chủ sở hữu được xác nhận đơn giá phiếu đã chốt.",
+    forbiddenErrorCode: INVENTORY_ERROR_CODES.FORBIDDEN,
+  },
+  async (data, { supabase }) => {
+    const { data: raw, error } = await supabase.rpc(
+      "owner_patch_confirmed_grn_unit_cost" as never,
+      {
+        p_grn_item_id: data.grnItemId,
+        p_unit_cost: data.unitCost,
+        p_unit_cost_unit_id: data.unitCostUnitId,
+        p_reason: data.reason,
+        p_idempotency_key: data.idempotencyKey,
+      } as never,
+    );
+    if (error) {
+      return mapInventoryRpcFailure(
+        error,
+        grnOwnerUnitCostRpcMappings,
+        grnOwnerUnitCostRpcFallback,
+      );
+    }
+    const parsed = ownerPatchConfirmedGrnUnitCostResultSchema.safeParse(raw);
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: grnOwnerUnitCostRpcFallback.userMessage,
+        errorCode: INVENTORY_ERROR_CODES.GRN_UNIT_COST_PATCH_FAILED,
+      };
+    }
+    revalidatePath("/inventory/grn");
+    return {
+      success: true as const,
+      data: {
+        grnItemId: parsed.data.grn_item_id,
+        unitCost: parsed.data.unit_cost,
+        unitCostUnitId: parsed.data.unit_cost_unit_id,
+        totalCost: parsed.data.total_cost,
+        bookTotal: parsed.data.book_total,
+        quantityDelta: parsed.data.quantity_delta,
+      },
+    };
+  },
+);
+

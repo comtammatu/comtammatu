@@ -26,6 +26,7 @@ Hierarchy: `Tenant (L0) → Branch (L1)`.
 | External skill, plugin, browser, subagent | `skills.md`; add `orchestration.md` only for fan-out |
 | Authority or onboarding | `references.md` |
 | Notification, alert, scheduled report | `docs/spec/toast-notification-system.md` |
+| PWA install, offline, OS support | `docs/spec/pwa.md` |
 
 All rule paths above are under `docs/agent/rules/`. When `.codegraph/` exists,
 use CodeGraph first for supported-source symbols, flows, callers, and impact.
@@ -64,7 +65,7 @@ use built-in search tools; indexing remains an owner decision.
   gate as the CI `gates` job (`deps:security`, `deps:audit`, `deps:boundaries`,
   `typecheck`, `lint`, `build`, `test`). Read command output; Turbo cache replay
   is not fresh proof after deletions or cross-package test reads (see
-  `tasks/lessons.md`). The tracked `pre-push` hook enforces this on push.
+  `docs/agent/rules/workflow.md`). The tracked `pre-push` hook enforces this on push.
 
 ## Communication And Git
 

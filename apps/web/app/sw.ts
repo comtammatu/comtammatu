@@ -6,7 +6,6 @@ import type {
 } from "serwist";
 import {
   CacheFirst,
-  NetworkFirst,
   NetworkOnly,
   Serwist,
   StaleWhileRevalidate,
@@ -20,30 +19,17 @@ declare global {
 
 declare const self: ServiceWorkerGlobalScope;
 
-// POS PWA cache policy — explicit allowlist.
+// POS PWA cache policy.
 //
 // HARD RULE: anything that mutates state, carries auth, or returns RSC payload
 // MUST hit the network. A cached payment POST is the worst-possible failure
 // (silent double-charge). See regressions: POS-PAYMENT-REUSE-UNIQUE-SLOT,
 // HDDT-PAYMENT-FIRST-FAILSOFT-ORPHAN.
-// Protected route prefixes. Their SSR'd HTML embeds user identity, so the
-// service worker must never persist a navigation response for them.
-const AUTHED_NAV_PREFIXES = [
-  "/",
-  "/br",
-  "/inventory",
-  "/finance",
-  "/hr",
-  "/menu",
-  "/orders",
-  "/notifications",
-  "/payment",
-];
-const isAuthedPath = (pathname: string) =>
-  AUTHED_NAV_PREFIXES.some(
-    (p) => pathname === p || pathname.startsWith(`${p}/`),
-  );
-
+//
+// Navigation HTML is NetworkOnly by default. Do not add a NetworkFirst `pages`
+// cache for App Router documents — identity HTML used to leak through an
+// incomplete prefix list.
+//
 // Branch shell only (PWA-2) — branch-scoped routes under
 // `/br/{branchId}` (dashboard/orders/profile/settings/shift/
 // stock/team), excluding the POS/KDS/pickup station apps. Stations keep their
@@ -135,31 +121,23 @@ const runtimeCaching: RuntimeCaching[] = [
     handler: new NetworkOnly(),
   },
   // 9. Operator entry/shell navigations: never cache the response (same
-  //    identity-leak rule as #10), but on network failure serve the precached
-  //    offline shell instead of the browser's default error page. Data stays
-  //    correct — this only replaces the error page, never the live HTML.
+  //    identity-leak rule as remaining navigations), but on network failure
+  //    serve the precached offline shell instead of the browser's default
+  //    error page. Data stays correct — this only replaces the error page,
+  //    never the live HTML.
   {
     matcher: ({ request, url }) =>
       request.mode === "navigate" && isOperatorShellPath(url.pathname),
     handler: new NetworkOnly({ plugins: [operatorOfflineFallback] }),
   },
-  // 10. Remaining authed navigations (POS/KDS/pickup stations and admin/domain
-  //    workspaces): never cache, no offline fallback.
-  //    Protected shells embed user identity in the SSR'd HTML, so the service
-  //    worker must never persist a navigation response.
-  {
-    matcher: ({ request, url }) =>
-      request.mode === "navigate" && isAuthedPath(url.pathname),
-    handler: new NetworkOnly(),
-  },
-  // 11. Remaining public HTML navigation: network-first with short timeout,
-  //     cached fallback.
+  // 10. Remaining navigations (POS/KDS/pickup, /me, /settings, /promotions,
+  //    /branches, /feedback, /work, control_surface HTML, /access-denied,
+  //    and any new App Router shell): never cache. Do not maintain an
+  //    authed-prefix allowlist — a missing prefix used to fall through to a
+  //    NetworkFirst `pages` cache of identity HTML.
   {
     matcher: ({ request }) => request.mode === "navigate",
-    handler: new NetworkFirst({
-      cacheName: "pages",
-      networkTimeoutSeconds: 3,
-    }),
+    handler: new NetworkOnly(),
   },
 ];
 

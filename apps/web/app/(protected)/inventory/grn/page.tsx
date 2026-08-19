@@ -27,6 +27,9 @@ export async function GRNListPageContent({
         filters={data.filters}
         basePath={basePath}
         canManageSupplierInvoice={data.canManageSupplierInvoice}
+        canPatchConfirmedUnitCost={data.canPatchConfirmedUnitCost}
+        unpricedLines={data.unpricedLines}
+        unpricedTotal={data.unpricedTotal}
         loadFailed={data.loadFailed}
       />
       <GrnDocumentDialogHost basePath={basePath} />

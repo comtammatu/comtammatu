@@ -154,22 +154,79 @@ function rewriteLegacyTeamTabPath(url: string): string {
     const query = leaveRequestId
       ? `?leaveRequestId=${encodeURIComponent(leaveRequestId)}`
       : "";
-    return `/br/${branchId}/shift/leave-approvals${query}`;
+    return `/br/${branchId}/team/leave-approvals${query}`;
   }
   if (tab === "checkouts") {
     const attendanceId = params.get("attendanceId");
     const query = attendanceId
       ? `?attendanceId=${encodeURIComponent(attendanceId)}`
       : "";
-    return `/br/${branchId}/shift/checkout-approvals${query}`;
+    return `/br/${branchId}/team/checkout-approvals${query}`;
   }
   if (tab === "roster") {
     const week = params.get("week");
     const query = week ? `?week=${encodeURIComponent(week)}` : "";
-    return `/br/${branchId}/shift/roster${query}`;
+    return `/br/${branchId}/team/roster${query}`;
   }
   if (tab === "attendance") {
-    return `/br/${branchId}/shift/attendance`;
+    return `/br/${branchId}/team/attendance`;
+  }
+  return url;
+}
+
+/** Personal outcomes belong on Trang cá nhân; branch staff remap via `/me` → `/br/.../shift`. */
+function rewritePersonalOutcomePath(
+  claims: JwtClaims,
+  kind: string,
+  url: string,
+): string {
+  if (kind === "hr.leave_approved" || kind === "hr.leave_rejected") {
+    const resolved = resolvePostLoginRedirect(claims, "/me/schedule/leave");
+    if (
+      resolved.startsWith("/me/schedule/leave") ||
+      /\/br\/\d+\/shift\/schedule\/leave(?:\?|$)/.test(resolved)
+    ) {
+      return resolved;
+    }
+    return url;
+  }
+  if (kind === "hr.checkout_approved" || kind === "hr.checkout_rejected") {
+    const resolved = resolvePostLoginRedirect(claims, "/me/clock");
+    if (
+      resolved.startsWith("/me/clock") ||
+      /\/br\/\d+\/shift\/clock(?:\?|$)/.test(resolved)
+    ) {
+      return resolved;
+    }
+    return url;
+  }
+  return url;
+}
+
+/**
+ * Cashier follow-up for void / hết món must stay on Cổng Đơn bán, not the
+ * live POS cart (D046: board owns attention while selling).
+ */
+function rewriteCashierFloorPath(kind: string, url: string): string {
+  const voidMatch = /^\/br\/(\d+)\/pos(?:\/)?\?(.*)$/.exec(url);
+  if (!voidMatch) return url;
+  const branchId = voidMatch[1];
+  const params = new URLSearchParams(voidMatch[2] ?? "");
+  if (kind === "pos.void_requested") {
+    const requestId = params.get("voidRequest");
+    return requestId
+      ? `/br/${branchId}/orders?voidRequest=${encodeURIComponent(requestId)}`
+      : `/br/${branchId}/orders`;
+  }
+  if (
+    kind === "pos.kds_out_of_stock" ||
+    kind === "pos.void_resolved" ||
+    kind === "pos.void_rejected"
+  ) {
+    const orderId = params.get("order") ?? params.get("orderId");
+    return orderId
+      ? `/br/${branchId}/orders?orderId=${encodeURIComponent(orderId)}`
+      : `/br/${branchId}/orders`;
   }
   return url;
 }
@@ -186,8 +243,8 @@ function rewriteHrPath(
   ) {
     const leaveRequestId = target.entityId;
     return leaveRequestId != null
-      ? `/br/${claims.branch_id}/shift/leave-approvals?leaveRequestId=${leaveRequestId}`
-      : `/br/${claims.branch_id}/shift/leave-approvals`;
+      ? `/br/${claims.branch_id}/team/leave-approvals?leaveRequestId=${leaveRequestId}`
+      : `/br/${claims.branch_id}/team/leave-approvals`;
   }
   if (
     claims.user_role === "branch_manager" &&
@@ -197,8 +254,8 @@ function rewriteHrPath(
   ) {
     const attendanceId = target.entityId;
     return attendanceId != null
-      ? `/br/${claims.branch_id}/shift/checkout-approvals?attendanceId=${attendanceId}`
-      : `/br/${claims.branch_id}/shift/checkout-approvals`;
+      ? `/br/${claims.branch_id}/team/checkout-approvals?attendanceId=${attendanceId}`
+      : `/br/${claims.branch_id}/team/checkout-approvals`;
   }
   return url;
 }
@@ -221,16 +278,23 @@ function finalizeNotificationUrl(
     return null;
   }
 
-  const rewritten = rewriteHrPath(
+  const rewritten = rewritePersonalOutcomePath(
     claims,
-    target,
-    rewriteLegacyTeamTabPath(
-      rewriteInventoryBranchStockPathForL0(
-        claims.user_role,
-        // Branch GRN rewrite only for non-L0 shells (BM / floor).
-        isL0InventoryShellRole(claims.user_role)
-          ? url
-          : rewriteRetiredBranchGrnPath(url),
+    target.kind,
+    rewriteHrPath(
+      claims,
+      target,
+      rewriteLegacyTeamTabPath(
+        rewriteCashierFloorPath(
+          target.kind,
+          rewriteInventoryBranchStockPathForL0(
+            claims.user_role,
+            // Branch GRN rewrite only for non-L0 shells (BM / floor).
+            isL0InventoryShellRole(claims.user_role)
+              ? url
+              : rewriteRetiredBranchGrnPath(url),
+          ),
+        ),
       ),
     ),
   );

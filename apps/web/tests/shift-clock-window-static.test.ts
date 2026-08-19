@@ -49,14 +49,15 @@ test("Kết ca waits for manager; leftover pending auto-closes after 2 hours", (
   assert.doesNotMatch(clockClient, /checkoutPendingAutoApproveHint/);
 });
 
-test("Lịch merges rostered upcoming shifts onto the month grid", () => {
+test("Lịch merges rostered shifts onto calendar days, not a side list", () => {
   const actions = readWeb("lib/staff-runtime/schedule/actions.ts");
   const client = readWeb("lib/staff-runtime/schedule/schedule-client.tsx");
   const messages = readWeb("lib/messages/employee.ts");
   assert.match(actions, /from\("shift_assignments"\)/);
   assert.match(actions, /mergeScheduleAttendanceWithAssignments/);
-  assert.match(client, /listUpcomingScheduleShifts/);
-  assert.match(client, /upcomingTitle/);
-  assert.match(messages, /upcomingTitle: "Ca sắp tới"/);
+  assert.match(client, /att\.shift_name \?\? copy\.rowShift/);
+  assert.doesNotMatch(client, /listUpcomingScheduleShifts/);
+  assert.doesNotMatch(client, /upcomingTitle/);
+  assert.doesNotMatch(messages, /upcomingTitle/);
   assert.match(messages, /scheduledShift: "Đã xếp ca"/);
 });

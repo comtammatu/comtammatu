@@ -60,7 +60,7 @@ không void trực tiếp.
 
 | Vị trí | Đầu ca | Cuối ca |
 | --- | --- | --- |
-| Thu ngân | Đếm quỹ lẻ, mở ca POS; setup sảnh; lau sàn chống ruồi | Đếm tiền, chốt ca POS; dọn khu phụ trách (ảnh) |
+| Thu ngân | Đếm quỹ lẻ, mở ca POS; setup sảnh; lau sàn chống ruồi | Đếm tiền, chốt ca POS; đếm tồn nhóm Nước; dọn khu phụ trách (ảnh) |
 | Quầy lên món | Bật KDS; setup quầy | Cất thừa; tắt KDS, dọn quầy; dọn khu phụ trách (ảnh) |
 | Quầy nướng | Nhóm than, lấy sườn | Rửa vỉ, vệ sinh lò; dọn khu phụ trách (ảnh) |
 | Phụ bếp | Bật điện; nấu cơm/canh; sơ chế topping | Vệ sinh nồi/tủ/bếp; dọn khu phụ trách (ảnh) |
@@ -75,10 +75,12 @@ không void trực tiếp.
 | --- | --- |
 | POS | `/br/[branchId]/pos` |
 | KDS | `/br/[branchId]/kds` |
-| Gọi số (public pickup) | `/br/[branchId]/pickup` |
+| Gọi số (public pickup) | `/br/[branchId]/pickup` — cửa nhân viên: tab **Công cụ** |
+| Công cụ (hub QL) | `/br/[branchId]/settings` |
 | Chốt ca POS | `/br/[branchId]/pos-sessions` |
 | Báo cáo ngày | `/br/[branchId]/close-day` |
-| Phân ca | `/br/[branchId]/shift/roster` |
+| Phân ca | `/br/[branchId]/team/roster` |
+| Đếm tồn (thu ngân, nhóm Nước) | `/br/[branchId]/stock/count` — cửa **Ca**; QL gán/duyệt từ **Kho** (`/stock/count-assignments`, `/stock/count-slips`) |
 
 ## Disposition — không tái mở khi dọn kỹ thuật
 

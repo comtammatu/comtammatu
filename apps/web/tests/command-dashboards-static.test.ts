@@ -34,8 +34,6 @@ const PRINT_JOBS_CLIENT =
   "apps/web/app/(protected)/settings/printers/jobs/print-jobs-client.tsx";
 const BRANCH_PAGE =
   "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx";
-const BRANCH_COMMAND_CONFIG =
-  "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/_lib/command-config.tsx";
 const BRANCH_DATA =
   "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/data.ts";
 const TODAY_WORK_STATE = "apps/web/lib/staff-runtime/_lib/today-work-state.ts";
@@ -95,6 +93,9 @@ test("finance overview presents period results, current funds, and inventory in 
   assert.match(page, /kpis\.equipment/);
   assert.match(page, /kpis\.totalAssetValue/);
   assert.match(page, /addMoney/);
+  assert.match(page, /roundToCanonicalMoney/);
+  assert.doesNotMatch(page, /String\(cash\.cashOnHand\)/);
+  assert.doesNotMatch(page, /String\(cockpit\.kpis\.inventoryValue\)/);
   assert.match(page, /financeHref\("\/finance\/equipment"/);
   assert.match(page, /className="pb-4"/);
   assert.match(
@@ -313,17 +314,15 @@ test("print job monitor keeps the owner recovery filter", () => {
   );
 });
 
-test("branch command landing redirects into Hôm nay while helpers stay available", () => {
+test("branch command landing redirects into Hôm nay; tools live on nav-config", () => {
   const page = read(BRANCH_PAGE);
-  const surface = read(BRANCH_COMMAND_CONFIG);
+  const tools = read("packages/shared/src/auth/nav-config.ts");
 
   assert.match(page, /redirect\(`\/br\/\$\{branchId\}`\)/);
   assert.doesNotMatch(page, /\bKpi(?:Row|Card)\b|fetchBranchDayStatus|readinessTitle/);
-  assert.match(surface, /readinessPosTitle/);
-  assert.match(surface, /readinessPrinterTitle/);
-  assert.match(surface, /readinessCheckoutTitle/);
-  assert.match(surface, /checkoutApprovalsHref/);
-  assert.doesNotMatch(surface, /\/employee\/checkout-approvals/);
+  assert.match(tools, /BRANCH_TOOLS_ITEMS/);
+  assert.match(tools, /hrefTemplate: "\/br\/\{branchId\}\/pickup"/);
+  assert.match(tools, /hrefTemplate: "\/br\/\{branchId\}\/pos-sessions"/);
 });
 
 test("branch runtime reads stay session-scoped with hierarchy-aware checkout projections", () => {
@@ -331,9 +330,7 @@ test("branch runtime reads stay session-scoped with hierarchy-aware checkout pro
   const todayWorkState = read(TODAY_WORK_STATE);
   const attendancePolicy = read(ATTENDANCE_POLICY_MIGRATION);
 
-  assert.match(data, /supabase\.rpc\("list_branch_menu_daily_limits"/);
-  assert.match(data, /menuLimitAvailableItems/);
-  assert.match(data, /available_to_sell/);
+  assert.doesNotMatch(data, /fetchBranchDayStatus|list_branch_menu_daily_limits/);
   assert.doesNotMatch(data, /setupActiveMenuItems/);
   assert.doesNotMatch(data, /\.from\("menu_items"\)/);
   assert.doesNotMatch(data, /createServiceClient|\bservice\b/);
@@ -341,10 +338,6 @@ test("branch runtime reads stay session-scoped with hierarchy-aware checkout pro
   assert.match(
     todayWorkState,
     /supabase\s*\.from\("inventory_count_assignments"\)[\s\S]{0,240}?\.eq\("employee_id", employeeId\)/,
-  );
-  assert.match(
-    data,
-    /supabase\s*\.from\("pos_sessions"\)[\s\S]{0,200}?\.eq\("tenant_id", claims\.tenant_id\)\s*\.eq\("branch_id", branchId\)/,
   );
   assert.match(
     data,

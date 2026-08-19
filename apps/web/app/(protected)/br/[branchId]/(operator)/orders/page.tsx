@@ -48,6 +48,7 @@ export default async function OperatorOrdersPage({
     >
       {result.success && result.data ? (
         <OperatorOrdersClient
+          branchId={branchId}
           orders={result.data.orders}
           totalCount={result.data.summary.totalCount}
           inProgressCount={result.data.summary.inProgressCount}

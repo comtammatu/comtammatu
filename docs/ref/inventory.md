@@ -52,8 +52,8 @@ Những thứ dưới đây không thuộc Inventory current contract dù có xu
   (`location_kind = 'warehouse'`). Không có location tồn kho Bếp. Chi nhánh xin
   cấp hàng nội bộ bằng **Yêu cầu hàng**; không tạo Yêu cầu mua, PO hoặc GRN.
 - **Kho Tổng (`central_supply`) và Bếp Trung Tâm (`central_kitchen`):** cùng happy
-  path Yêu cầu mua → PO theo NCC → GRN theo lần giao; mỗi site active có đúng
-  một `warehouse`.
+  path **Tạo đơn** (không YCM) hoặc Yêu cầu mua → PO theo NCC → GRN theo lần giao;
+  mỗi site active có đúng một `warehouse`.
   `production_storage` chỉ hợp lệ khi production trung tâm chọn tường minh,
   không làm fallback cho site/branch thiếu warehouse.
 - **Tiêu hao chi nhánh:** nguyên liệu đã dùng để tạo doanh thu hoặc tiêu hao
@@ -61,7 +61,7 @@ Những thứ dưới đây không thuộc Inventory current contract dù có xu
   `movement_subtype = 'sale_consumption'`.
 
 ```
-Kho trung tâm → Yêu cầu mua → PO theo NCC → GRN theo lần giao → `*/warehouse`
+Kho trung tâm → Tạo đơn / Yêu cầu mua → PO theo NCC → GRN theo lần giao → `*/warehouse`
 
 Site ── [production_run hiện hành] → trừ nguyên liệu, cộng thành phẩm
   (branch: warehouse; trung tâm: warehouse hoặc production_storage đã chọn)
@@ -202,6 +202,9 @@ Ba đường số: POS `post_pos_sale_consumption_if_ready` ghi sổ theo WAC c�
 catalog + Finance **Định mức/phần** cùng `company_wac` (không hai giá Kho gốc / CN).
 `Giá vốn món` = POS `sale_consumption` tại CN khi cutover `active`. Không bịa
 gram. Gửi hàng Bếp/Kho Tổng → CN = điều chuyển, không phiếu tiêu hao.
+Món Nước trừ 1 `Ly nhựa trơn PP 95 - 650ml` / phần (Cam Ép, Nước Sâm, Rau Má,
+Trà Đá, Trà Tắc, Coca, Fanta, Sprite). Nước suối / khăn lạnh / dụng cụ mang về
+không trừ ly.
 
 ### 3b. Công thức sản xuất & mẻ sản xuất (`production_runs`)
 
@@ -249,13 +252,9 @@ tiêu hao thủ công không ghi lại NL đã trừ từ POS.
 ### 5.1 Quy trình
 
 1. Thiết lập **NCC**, điều khoản và `supplier_items`.
-2. Kho Tổng / Bếp TT tạo **Yêu cầu mua** (mua ngoài). **Yêu cầu hàng** = cấp nội bộ về CN.
-3. Một NCC active/NL → **Duyệt & tạo đơn mua** tự gom PO/NCC; nhiều NCC thì màn
-   **Phân bổ** mặc định một dòng (NCC ưu tiên, hoặc NCC duy nhất, hoặc chọn tay)
-   và **Thêm dòng phân bổ** khi chia nhiều nhà; thiếu mapping thì chặn. Mỗi PO =
-   một YCM + một NCC (nhu cầu, NCC, SL, đơn vị — không giá).
-4. PO `sent` → đúng một GRN nháp **Chờ nhập hàng** (copy dòng thiếu, khóa nháp
-   thứ hai). Làm việc từ danh sách GRN.
+2. Kho Tổng / Bếp TT **Tạo đơn** (một NCC + một kho nhận, không giá). Tab Yêu cầu mua còn dùng đến Wave 4. **Yêu cầu hàng** = cấp nội bộ về CN.
+3. Gửi đơn (`approved`) chặn dòng chưa `supplier_items` (cảnh báo khi thêm). YCM: một NCC → **Duyệt & tạo đơn mua**; nhiều NCC thì **Phân bổ**. PO mới không gắn YCM.
+4. Gửi đơn → đúng một GRN nháp **Chờ nhập hàng** (Auto-GRN). Làm việc từ danh sách GRN.
 5. Kho nhập thực nhận/từ chối (thùng + hộp lẻ khi có neo); confirm so remaining
    theo Đơn vị chuẩn, tăng tồn một lần theo số giữ. Chốt bắt buộc **Đơn giá** > 0
    cho số lượng nhập, gắn đúng đơn vị giá (`unit_cost_unit_id`) — không suy giá
@@ -271,6 +270,7 @@ remaining/áp dụng theo Đơn vị chuẩn. Nếu số giữ > remaining, tăn
 `purchase_order_items.quantity` rồi áp dụng hết số giữ — một `grn_receipt`,
 Đơn giá net trên toàn bộ số vào sổ (ADR 0041), theo đơn vị giá trên dòng
 phiếu nhập. PO không là nguồn giá. Hóa đơn NCC không viết lại WAC.
+Phiếu đã chốt còn Đơn giá 0: Chủ sở hữu xác nhận/gõ trên tab Chờ đơn giá (gợi ý cùng NCC); sau khi giá vào sổ thì kiểm kê mọi kho.
 
 PO mới chỉ dùng `supplier_items.is_active = true` với NCC của PO. GRN suy NCC từ
 PO; không đổi NL/quy cách/NCC. Đối soát tiền: giá trị dòng HĐ trước VAT/chiết
@@ -331,7 +331,7 @@ nhiều cấp, AP liên pháp nhân.
 
 ## 8. Kiểm kê kho (Stocktake)
 
-Routes: `/inventory/stocktake`, `/inventory/stocktake/[id]`. Pad nhân viên `/me` là **Đếm tồn** (phiếu được giao), không phải phiên Kiểm kê thứ hai.
+Routes: `/inventory/stocktake`, `/inventory/stocktake/[id]`. Pad nhân viên `/me` là **Đếm tồn** (phiếu được giao, không phiên Kiểm kê thứ hai): chọn đơn vị đếm (mặc định Đơn vị chuẩn); duyệt tồn sổ / thực đếm / lệch cùng đơn vị đó; sổ theo Đơn vị chuẩn.
 
 1. **Tạo:** kho warehouse của site. UI không chọn daily/weekly/monthly/quarterly/spot; phiên mới đếm số đang có, không hiện sổ (`spot`).
 2. **Đếm** (`get_stocktake_lines_blind`): màn đếm là viewport đầu. Số sổ ẩn đến khi đếm đủ dòng.
@@ -377,7 +377,7 @@ Tóm tắt vai (D093):
 - `branch_manager`: hub `/br/{id}/stock` (tồn / YCH / kiểm kê / hao); nhận DC
   inbound; **không** GRN, PO, production, giá mua, `procurement:read` /
   `supplier_manage` / `supplier_return:*` (R08/R09); không tạo/ship DC.
-- `cashier` / `chef` / `branch_staff`: chỉ đếm khi được gán.
+- `cashier`: tạm thời đếm Coca, Sprite, Fanta cam, Fanta xá xị, Nước suối theo ca được gán; phiếu/duyệt cùng đơn vị nhân viên chọn, không tự sửa sổ. `chef` / `branch_staff`: chỉ đếm khi được gán.
 
 Permission keys (D093):
 

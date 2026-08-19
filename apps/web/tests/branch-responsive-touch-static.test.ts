@@ -17,19 +17,16 @@ const operatorLoadingRoutes = [
   "shift/loading.tsx",
 ];
 
-test("Branch Manager header collapses secondary controls into the existing overflow menu", () => {
+test("Branch Manager header overflow is Owner-only; tools live on Công cụ", () => {
   const source = read(
     "app/(protected)/br/[branchId]/(operator)/layout.tsx",
   );
 
-  assert.match(
-    source,
-    /const usesHeaderOverflow =[\s\S]*canOpenOwnerHome \|\| canCloseDay \|\| canOpenFeedback/,
-  );
-  assert.match(source, /showThemeToggle=\{!usesHeaderOverflow\}/);
-  assert.match(source, /\{usesHeaderOverflow \? \([\s\S]*<DropdownMenu>/);
+  assert.match(source, /showThemeToggle=\{!canOpenOwnerHome\}/);
+  assert.match(source, /\{canOpenOwnerHome \? \([\s\S]*<DropdownMenu>/);
   assert.match(source, /<ThemeMenuItem className="min-h-12 text-sm" \/>/);
-  assert.doesNotMatch(source, /canManageBranch && !canOpenOwnerHome/);
+  assert.doesNotMatch(source, /canCloseDay/);
+  assert.doesNotMatch(source, /canOpenFeedback/);
 });
 
 test("operator loading states reuse the layout AppPage instead of nesting page shells", () => {

@@ -1,4 +1,3 @@
-import { addVNDateDays } from "@comtammatu/shared/time";
 import type { ScheduleAttendance } from "../schedule/actions";
 
 export interface ScheduleAssignment {
@@ -50,19 +49,4 @@ export function mergeScheduleAttendanceWithAssignments(
     if (a.date !== b.date) return a.date.localeCompare(b.date);
     return (a.start_time ?? "").localeCompare(b.start_time ?? "");
   });
-}
-
-export function listUpcomingScheduleShifts(
-  attendance: readonly ScheduleAttendance[],
-  today: string,
-  days = 7,
-): ScheduleAttendance[] {
-  const until = addVNDateDays(today, days);
-  return attendance.filter(
-    (row) =>
-      row.status === "scheduled" &&
-      row.date >= today &&
-      row.date < until &&
-      !row.check_in,
-  );
 }

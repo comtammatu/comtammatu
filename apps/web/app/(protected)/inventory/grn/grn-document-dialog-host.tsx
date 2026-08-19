@@ -120,6 +120,7 @@ export function GrnDocumentDialogHost({
       ingredients={detail.ingredients}
       canAdjustStock={detail.canAdjustStock}
       canAmendConfirmed={detail.canAmendConfirmed}
+      canPatchConfirmedUnitCost={detail.canPatchConfirmedUnitCost}
       canEditDraft={detail.canEditDraft}
       canConfirm={detail.canConfirm}
       canManageSupplierInvoice={detail.canManageSupplierInvoice}

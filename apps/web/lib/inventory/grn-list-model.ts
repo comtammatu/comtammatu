@@ -1,10 +1,12 @@
 import { matchesSearch } from "@lib/search";
+import { OWNER_UNPRICED_GRN_STATUS } from "./grn-unpriced-queue-model";
 
 export type GrnListStatusFilter =
   | "draft"
   | "confirmed"
   | "cancelled"
-  | "all";
+  | "all"
+  | typeof OWNER_UNPRICED_GRN_STATUS;
 
 export type GrnListDateField = "expected" | "received";
 
@@ -70,10 +72,11 @@ export function parseGrnListStatus(
   value: string | string[] | undefined,
 ): GrnListStatusFilter {
   const raw = Array.isArray(value) ? value[0] : value;
+  if (raw === OWNER_UNPRICED_GRN_STATUS) return OWNER_UNPRICED_GRN_STATUS;
   return GRN_LIST_STATUS_FILTER_VALUES.includes(
-    raw as GrnListStatusFilter,
+    raw as (typeof GRN_LIST_STATUS_FILTER_VALUES)[number],
   )
-    ? (raw as GrnListStatusFilter)
+    ? (raw as (typeof GRN_LIST_STATUS_FILTER_VALUES)[number])
     : "draft";
 }
 

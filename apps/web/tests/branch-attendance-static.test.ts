@@ -9,10 +9,10 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 test("Branch attendance owns a fixed-scope touch presenter", () => {
   const route = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/attendance/page.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/team/attendance/page.tsx",
   );
   const client = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/attendance/branch-attendance-client.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/team/attendance/branch-attendance-client.tsx",
   );
   const data = read("apps/web/lib/hr/branch-attendance-data.ts");
 
@@ -42,7 +42,7 @@ test("Branch attendance owns a fixed-scope touch presenter", () => {
 
 test("Branch attendance summary drills into employee month days via URL", () => {
   const client = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/attendance/branch-attendance-client.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/team/attendance/branch-attendance-client.tsx",
   );
   const model = read("apps/web/lib/hr/branch-attendance-model.ts");
   const copy = read("apps/web/lib/messages/employee.ts");

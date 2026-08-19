@@ -247,6 +247,58 @@ function BranchStockDoors({ basePath }: { basePath: string }) {
   );
 }
 
+function BranchStockCountDoors({ basePath }: { basePath: string }) {
+  const doors = [
+    {
+      key: "count-assignments",
+      href: `${basePath}/stock/count-assignments`,
+      icon: ClipboardList,
+      title: stockCopy.branchDoorCountAssign,
+      meta: stockCopy.branchDoorCountAssignMeta,
+    },
+    {
+      key: "count-slips",
+      href: `${basePath}/stock/count-slips`,
+      icon: ClipboardCheck,
+      title: stockCopy.branchDoorCountSlips,
+      meta: stockCopy.branchDoorCountSlipsMeta,
+    },
+  ] as const;
+
+  return (
+    <BranchOperatorPanel
+      title={stockCopy.branchCountDoorsTitle}
+      icon={ClipboardCheck}
+      size="sm"
+      headingLevel="h2"
+    >
+      <div className="grid grid-cols-2 gap-2">
+        {doors.map((door) => (
+          <Item
+            key={door.key}
+            variant="outline"
+            size="sm"
+            className="chrome-tap min-h-14 select-none bg-card transition-transform motion-safe:active:scale-[0.97]"
+            render={<Link href={door.href} />}
+          >
+            <ItemMedia variant="icon" className="rounded-md bg-muted p-2">
+              <door.icon />
+            </ItemMedia>
+            <ItemContent className="min-w-0">
+              <ItemTitle size="heading" className="line-clamp-none text-sm">
+                {door.title}
+              </ItemTitle>
+              <ItemDescription className="line-clamp-2 text-xs">
+                {door.meta}
+              </ItemDescription>
+            </ItemContent>
+          </Item>
+        ))}
+      </div>
+    </BranchOperatorPanel>
+  );
+}
+
 export default async function OperatorStockPage({
   params,
 }: {
@@ -296,6 +348,7 @@ export default async function OperatorStockPage({
       >
         <div className="flex min-w-0 flex-col gap-4 pb-[5rem] sm:pb-0">
           <BranchStockDoors basePath={basePath} />
+          <BranchStockCountDoors basePath={basePath} />
           <BranchStockFulfillmentHubClient
             rows={rows}
             mode="branch"

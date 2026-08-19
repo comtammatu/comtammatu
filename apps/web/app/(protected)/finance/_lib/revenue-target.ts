@@ -107,6 +107,39 @@ export function isRevenueRewardTierAchieved(
   );
 }
 
+/** Remaining net revenue to the next unachieved reward (or 100% target) mốc. */
+export function nextRevenueRewardGap(
+  netRevenueMtd: number,
+  targetAmount: number | null,
+  tiers: readonly RevenueRewardTier[],
+): { thresholdPct: number; gapAmount: number } | null {
+  if (
+    targetAmount == null ||
+    !Number.isFinite(targetAmount) ||
+    targetAmount <= 0 ||
+    !Number.isFinite(netRevenueMtd)
+  ) {
+    return null;
+  }
+
+  const thresholds = [
+    ...new Set([
+      ...tiers
+        .map((tier) => tier.thresholdPct)
+        .filter((value) => Number.isFinite(value) && value > 0),
+      100,
+    ]),
+  ].sort((left, right) => left - right);
+
+  for (const thresholdPct of thresholds) {
+    const gapAmount = (targetAmount * thresholdPct) / 100 - netRevenueMtd;
+    if (gapAmount > 0) {
+      return { thresholdPct, gapAmount };
+    }
+  }
+  return null;
+}
+
 export function previewTargetProgress(
   currentNetRevenue: number | null,
   targetAmount: number | null,

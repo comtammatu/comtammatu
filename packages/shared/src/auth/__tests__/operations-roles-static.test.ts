@@ -89,6 +89,7 @@ test("central site templates can create, ship, and receive manual transfers", ()
     assert.match(template, /'inventory:transfer_receive'/);
     assert.match(template, /'inventory:transfer_ship'/);
     assert.match(template, /'inventory:transfer_create'/);
+    assert.match(template, /'procurement:po_create'/);
   }
 });
 

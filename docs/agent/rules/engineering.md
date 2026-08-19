@@ -40,3 +40,11 @@ claims and ACL rules are owned by `database.md` and `docs/modules/auth.md`.
 - Parallel writers use isolated worktrees. Before staging, inspect the scoped
   diff, stage only owned files, commit immediately, and never leave a partial
   index.
+
+## Documentation gates
+
+`lint:docs-budget` always fails `docs/worklog/**` and line caps on ADRs
+(≤150) and `docs/agent/rules/*` (≤400). Spec, module, and ref line caps
+in `scripts/check-docs-budget.mjs` warn in default mode and fail only
+with `--strict`; they must not block `pnpm lint` / `verify`. Shape budget
+is not behavioral evidence (ADR 0021).

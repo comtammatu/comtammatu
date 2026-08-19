@@ -8,10 +8,10 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 test("Branch leave approvals own a fixed-scope touch presenter", () => {
   const route = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/page.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/team/leave-approvals/page.tsx",
   );
   const client = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/branch-leave-approvals-client.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/team/leave-approvals/branch-leave-approvals-client.tsx",
   );
   const data = read("apps/web/lib/hr/branch-leave-approval-data.ts");
   assert.match(route, /loadBranchLeaveApprovalData/);
@@ -57,7 +57,7 @@ test("leave data is neutral while Owner surface keeps its desktop presenter", ()
   assert.match(action, /fetchLeaveRequestRows/);
   assert.match(
     action,
-    /revalidatePath\(`\/br\/\$\{branchId\}\/shift\/leave-approvals`\)/,
+    /revalidatePath\(`\/br\/\$\{branchId\}\/team\/leave-approvals`\)/,
   );
   assert.match(service, /fetchLeaveRequestRows/);
   assert.match(service, /annual_leave_balance/);

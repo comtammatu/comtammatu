@@ -1,12 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Check as IconCheck,
   ChevronRight as IconChevronRight,
   ClipboardCheck as IconClipboardCheck,
   RotateCcw as IconRecount,
+  ArrowLeft as IconArrowLeft,
 } from "lucide-react";
 import {
   ACTIONS_VI,
@@ -37,6 +39,7 @@ import {
 } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
 import {
+  BranchOperatorControlBar,
   BranchOperatorDetailList,
   BranchOperatorPage,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -202,6 +205,26 @@ export function BranchCountSlipsClient({
       description={branchName}
       hideHeaderOnMobile
     >
+      <BranchOperatorControlBar className="sm:hidden">
+        <Button
+          variant="ghost"
+          size="icon-touch"
+          render={
+            <Link
+              href={pathname.replace(/\/stock\/count-slips.*$/, "/stock")}
+              aria-label={ACTIONS_VI.back}
+            />
+          }
+        >
+          <IconArrowLeft />
+        </Button>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold">
+            {INVENTORY_VI.countSlipTitle}
+          </p>
+          <p className="truncate text-xs text-muted-foreground">{branchName}</p>
+        </div>
+      </BranchOperatorControlBar>
       <Tabs value={view} onValueChange={(value) => setView(value as QueueView)}>
         <TabsList size="touch" className="grid w-full grid-cols-2">
           <TabsTrigger value="pending">

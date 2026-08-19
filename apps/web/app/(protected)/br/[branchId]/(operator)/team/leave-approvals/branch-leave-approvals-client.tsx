@@ -7,6 +7,7 @@ import {
   useState,
   useTransition,
 } from "react";
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   CalendarCheck as IconCalendarCheck,
@@ -15,6 +16,7 @@ import {
   ChevronRight as IconChevronRight,
   ShieldAlert as IconShieldAlert,
   X as IconX,
+  ArrowLeft as IconArrowLeft,
 } from "lucide-react";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import {
@@ -44,6 +46,7 @@ import {
 import { useBranchOpsEvents } from "@/_hooks/use-branch-ops-events";
 import { employee } from "@lib/messages/employee";
 import {
+  BranchOperatorControlBar,
   BranchOperatorDetailList,
   BranchOperatorPage,
   BranchOperatorPanel,
@@ -239,6 +242,24 @@ export function BranchLeaveApprovalsClient({
       description={branchName}
       hideHeaderOnMobile
     >
+      <BranchOperatorControlBar className="sm:hidden">
+        <Button
+          variant="ghost"
+          size="icon-touch"
+          render={
+            <Link
+              href={`/br/${branchId}/team`}
+              aria-label={messages.hr.roster.backToTeamAria}
+            />
+          }
+        >
+          <IconArrowLeft />
+        </Button>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold">{copy.approvalsTitle}</p>
+          <p className="truncate text-xs text-muted-foreground">{branchName}</p>
+        </div>
+      </BranchOperatorControlBar>
       <div className="flex flex-col gap-3">
         {view === "pending" ? (
           <Button

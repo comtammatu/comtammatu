@@ -5,6 +5,7 @@ export const PUBLIC_APP_PATHS = [
   "/api/webhooks",
   "/brand",
   "/manifest.webmanifest",
+  "/me/manifest.webmanifest",
   "/sw.js",
   "/offline",
   "/access-denied",
@@ -79,10 +80,10 @@ export function rewriteRetiredRunnerPath(pathname: string): string | null {
 export function isPublicAppPath(pathname: string): boolean {
   if (pathname.startsWith("/swe-worker-")) return true;
   if (pathname.startsWith("/demo/")) return true;
-  // Operational PWA manifests (Branch home plus POS/KDS/pickup stations).
-  // Browsers fetch `<link rel="manifest">` without credentials, so a gated
-  // manifest 302s to /login and the PWA becomes uninstallable. The manifest
-  // body carries no sensitive data (name/icons/colors only).
+  // Operational + personnel PWA manifests. Browsers fetch
+  // `<link rel="manifest">` without credentials, so a gated manifest 302s to
+  // /login and the PWA becomes uninstallable. The body is name/icons/colors
+  // only. `/me/manifest.webmanifest` is listed in PUBLIC_APP_PATHS.
   if (
     /^\/br\/\d+\/(?:(?:pos|kds|pickup)\/)?manifest\.webmanifest$/.test(
       pathname,
@@ -131,27 +132,29 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   if (matchesPathPrefix(pathname, "/hr")) return "hr";
   if (matchesPathPrefix(pathname, "/me")) return "me";
   if (/^\/br\/\d+\/?$/.test(pathname)) return "branch_home";
-  // Approval routes use dedicated module keys and must precede the generic
-  // shift prefix so only explicit approver roles pass the route gate.
-  if (/^\/br\/\d+\/shift\/checkout-approvals(?:\/|$)/.test(pathname)) {
+  // Team children and Class C `/shift/*` shims must precede generic `/team`
+  // and personal `/shift` so only explicit approver/roster roles pass.
+  if (
+    /^\/br\/\d+\/(?:team|shift)\/checkout-approvals(?:\/|$)/.test(pathname)
+  ) {
     return "employee_checkout_approvals";
   }
-  if (/^\/br\/\d+\/shift\/leave-approvals(?:\/|$)/.test(pathname)) {
+  if (/^\/br\/\d+\/(?:team|shift)\/leave-approvals(?:\/|$)/.test(pathname)) {
     return "employee_leave_approvals";
   }
-  if (/^\/br\/\d+\/shift\/roster(?:\/|$)/.test(pathname)) {
+  if (/^\/br\/\d+\/(?:team|shift)\/roster(?:\/|$)/.test(pathname)) {
     return "branch_shift_roster";
   }
-  if (/^\/br\/\d+\/shift\/attendance(?:\/|$)/.test(pathname)) {
+  if (/^\/br\/\d+\/(?:team|shift)\/attendance(?:\/|$)/.test(pathname)) {
     return "branch_shift_attendance";
   }
+  if (/^\/br\/\d+\/team(?:\/|$)/.test(pathname)) return "branch_team";
   if (/^\/br\/\d+\/shift(?:\/|$)/.test(pathname)) return "branch_home";
   if (/^\/br\/\d+\/profile(?:\/|$)/.test(pathname)) return "branch_home";
   if (/^\/br\/\d+\/stock\/count(?:\/|$)/.test(pathname)) return "branch_home";
   if (/^\/br\/\d+\/stock(?:\/|$)/.test(pathname)) return "branch_stock";
   if (/^\/br\/\d+\/orders(?:\/|$)/.test(pathname)) return "branch_orders";
   if (/^\/br\/\d+\/dashboard(?:\/|$)/.test(pathname)) return "branch_dashboard";
-  if (/^\/br\/\d+\/team(?:\/|$)/.test(pathname)) return "branch_team";
   if (/^\/br\/\d+\/feedback(?:\/|$)/.test(pathname)) return "branch_feedback";
   if (/^\/br\/\d+\/menu-limits(?:\/|$)/.test(pathname))
     return "branch_menu_limits";

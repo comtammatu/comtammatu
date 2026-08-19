@@ -5,6 +5,8 @@ export type BranchQueueCountFields = {
   pendingWaste: number | null;
   inboundTransfers: number | null;
   openStockRequests: number | null;
+  pendingVoids: number | null;
+  outOfStockAlerts: number | null;
 };
 
 export type BranchNavBadgeCounts = {
@@ -24,5 +26,7 @@ export function branchNavBadgeCounts(
     (counts.openStockRequests ?? 0) +
     (counts.pendingCountSlips ?? 0) +
     (counts.pendingWaste ?? 0);
-  return { home: team + stock, team, stock };
+  const floor =
+    (counts.pendingVoids ?? 0) + (counts.outOfStockAlerts ?? 0);
+  return { home: team + stock + floor, team, stock };
 }

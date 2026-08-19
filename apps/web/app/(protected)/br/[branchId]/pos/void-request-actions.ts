@@ -68,6 +68,7 @@ export const requestPosVoidAfterPaid = withAction(
     }
 
     revalidatePath(`/br/${String(branchId)}/pos`);
+    revalidatePath(`/br/${String(branchId)}/orders`);
     return { success: true, data: { requestId } };
   },
 );
@@ -104,6 +105,7 @@ export const resolvePosVoidRequest = withAction(
 
     const status = String((data as { status?: string } | null)?.status ?? "");
     revalidatePath(`/br/${String(branchId)}/pos`);
+    revalidatePath(`/br/${String(branchId)}/orders`);
     return { success: true, data: { status } };
   },
 );

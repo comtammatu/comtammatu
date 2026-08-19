@@ -25,6 +25,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { OrderDetailSheet } from "@/(protected)/orders/order-detail-sheet";
 import type { OrderRow } from "@/(protected)/orders/actions";
 import { orders as ORDERS_COPY } from "@lib/messages/orders";
+import { VoidRequestQueue } from "@/(protected)/br/[branchId]/pos/_components/void-request-queue";
 
 import {
   computeOrderWaitInfo,
@@ -38,11 +39,13 @@ export function OperatorOrdersClient({
   orders,
   totalCount,
   inProgressCount,
+  branchId,
   initialSelectedOrder = null,
 }: {
   orders: OrderRow[];
   totalCount: number;
   inProgressCount: number;
+  branchId: number;
   initialSelectedOrder?: OrderRow | null;
 }) {
   const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(
@@ -95,17 +98,21 @@ export function OperatorOrdersClient({
 
   if (orders.length === 0) {
     return (
-      <AppEmptyState
-        title={ORDERS_COPY.emptyTitle}
-        description={ORDERS_COPY.emptyDescription}
-        compact
-        symbol="riceBowl"
-      />
+      <>
+        <VoidRequestQueue branchId={branchId} />
+        <AppEmptyState
+          title={ORDERS_COPY.emptyTitle}
+          description={ORDERS_COPY.emptyDescription}
+          compact
+          symbol="riceBowl"
+        />
+      </>
     );
   }
 
   return (
     <>
+      <VoidRequestQueue branchId={branchId} />
       <ToggleGroup
         type="single"
         variant="outline"

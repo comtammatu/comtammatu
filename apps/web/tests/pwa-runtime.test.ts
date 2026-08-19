@@ -33,3 +33,32 @@ test("Vercel observability intakes bypass the session proxy", () => {
   assert.match(source, /_vercel\(\?:\/\|\$\)/);
   assert.match(source, /\[a-f0-9\]\{16\}\/\(\?:script\\\\\.js\|vitals\)\$/);
 });
+
+test("sw.js is served with Cache-Control no-cache and keeps security headers", () => {
+  const config = readFileSync(
+    new URL("../next.config.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    config,
+    /source: "\/sw\.js",\s*headers: \[\s*\{\s*key: "Cache-Control",\s*value: "no-cache"\s*\}\s*\]/,
+  );
+  assert.match(config, /source: "\/:path\*"/);
+  assert.match(config, /key: "Content-Security-Policy"/);
+  assert.match(config, /key: "X-Frame-Options", value: "DENY"/);
+  assert.match(config, /key: "X-Content-Type-Options", value: "nosniff"/);
+  assert.match(
+    config,
+    /key: "Referrer-Policy", value: "strict-origin-when-cross-origin"/,
+  );
+  assert.match(
+    config,
+    /key: "Permissions-Policy",\s*value: "camera=\(self\), microphone=\(\), geolocation=\(\), interest-cohort=\(\)"/,
+  );
+  assert.match(
+    config,
+    /key: "Strict-Transport-Security",\s*value: "max-age=63072000; includeSubDomains; preload"/,
+  );
+  assert.match(config, /poweredByHeader: false/);
+});

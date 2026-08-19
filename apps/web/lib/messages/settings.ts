@@ -745,6 +745,8 @@ export const settings = {
     queueOpenRequestsTitle: "YCH đang mở",
     queueOpenRequestsMeta: (count: number) =>
       `${formatCount(count)} yêu cầu hàng đang theo dõi`,
+    queueVoidTitle: "Duyệt hủy đơn",
+    queueOutOfStockTitle: "Bếp hết món",
     centralSupplyTilesTitle: "Kho Tổng",
     centralSupplyTilesDescription:
       "Tồn kho, nhập hàng, giao nhận và kiểm kê — không POS/KDS/Gọi số.",
@@ -766,6 +768,8 @@ export const settings = {
     branchNavStock: "Kho",
     /** Branch bottom-nav label — lands on team hub. */
     branchNavTeam: "Đội",
+    /** Branch bottom-nav label — lands on tools hub `/settings`. */
+    branchNavTools: "Công cụ",
     /** Branch bottom-nav label — lands on feedback. */
     branchNavFeedback: "Phản hồi",
     /** Kho Tổng bottom-nav middle tab. */
@@ -779,7 +783,8 @@ export const settings = {
     posBack: "Về POS",
     employeeBack: "Về Cổng",
     branchSettingsBack: "Thiết lập",
-    landingTitle: "Thiết lập",
+    landingTitle: "Công cụ",
+    setupSectionTitle: "Thiết lập cửa hàng",
     landingDescription: (_branchName: string) => "",
     landingEmptyTitle: "Không có mục thiết lập khả dụng",
     landingEmptyDescription:

@@ -60,11 +60,12 @@ export async function BranchTodayStatus({
   const currentShiftRange = currentShiftStart
     ? `${formatVNClockTime(currentShiftStart)} - ${formatVNClockTime(currentShiftEnd)}`
     : "—";
+  const dateLabel = `${copy.businessDayPrefix} ${formatDateVN(state.today)}`;
   const todayMeta = blocked?.description
-    ? blocked.description
+    ? `${dateLabel} · ${blocked.description}`
     : currentShiftName
-      ? `${formatDateVN(state.today)} · ${currentShiftName} ${currentShiftRange}`
-      : formatDateVN(state.today);
+      ? `${dateLabel} · ${currentShiftName} ${currentShiftRange}`
+      : dateLabel;
 
   return (
     <BranchOperatorControlBar
@@ -76,7 +77,15 @@ export async function BranchTodayStatus({
         <p className="truncate text-sm font-semibold">{title}</p>
         <p className="truncate text-xs text-muted-foreground">{todayMeta}</p>
       </div>
-      {state.status === "not_started" && !isClockInBlocked(state) ? (
+      {state.status === "working" && state.checklist.remaining > 0 ? (
+        <Button
+          variant="outline"
+          size="touch"
+          render={<Link href={`/br/${branchId}/shift`} />}
+        >
+          {copy.tasksRemaining(state.checklist.remaining)}
+        </Button>
+      ) : state.status === "not_started" && !isClockInBlocked(state) ? (
         <Button
           size="touch"
           render={<Link href={`/br/${branchId}/shift/clock`} />}

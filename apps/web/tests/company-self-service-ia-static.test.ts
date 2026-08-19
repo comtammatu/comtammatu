@@ -25,6 +25,7 @@ test("/me personal self-service routes stay company-scoped under Control Surface
   assert.match(mePage, /href: "\/me\/profile"/);
   assert.match(mePage, /href: "\/me\/schedule"/);
   assert.match(mePage, /href: "\/me\/payslip"/);
+  assert.match(mePage, /href: "\/notifications"/);
   assert.doesNotMatch(mePage, /StaffWorkdayPageContent/);
   assert.doesNotMatch(mePage, /href: "\/work"/);
 

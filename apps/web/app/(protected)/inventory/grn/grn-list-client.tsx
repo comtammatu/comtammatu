@@ -55,6 +55,15 @@ import {
   type GrnListRow,
 } from "@lib/inventory/grn-list-model";
 import { resolveGrnValuationDisplay } from "@lib/inventory/valuation-display";
+import {
+  OWNER_UNPRICED_GRN_STATUS,
+  confirmedGrnUnitCostTargetFromQueue,
+  filterUnpricedConfirmedGrnLines,
+  type ConfirmedGrnUnitCostTarget,
+  type UnpricedConfirmedGrnLine,
+} from "@lib/inventory/grn-unpriced-queue-model";
+import { GrnUnpricedQueueTable } from "./grn-unpriced-queue";
+import { ConfirmedGrnUnitCostDialog } from "./[id]/views/confirmed-grn-unit-cost-dialog";
 
 import {
   OWNER_SHELL_BREAKPOINT,
@@ -80,6 +89,9 @@ export function GrnListClient({
   filters,
   basePath = "/inventory/grn",
   canManageSupplierInvoice,
+  canPatchConfirmedUnitCost = false,
+  unpricedLines = [],
+  unpricedTotal = 0,
   loadFailed,
 }: {
   rows: GrnListRow[];
@@ -89,6 +101,9 @@ export function GrnListClient({
   filters: GrnListFilters;
   basePath?: string;
   canManageSupplierInvoice: boolean;
+  canPatchConfirmedUnitCost?: boolean;
+  unpricedLines?: UnpricedConfirmedGrnLine[];
+  unpricedTotal?: number;
   loadFailed: boolean;
 }) {
   const router = useRouter();
@@ -100,6 +115,13 @@ export function GrnListClient({
   const [openActionRowId, setOpenActionRowId] = useState<number | null>(null);
   const [cancelRow, setCancelRow] = useState<GrnListRow | null>(null);
   const [cancelReason, setCancelReason] = useState("");
+  const [unitCostTarget, setUnitCostTarget] =
+    useState<ConfirmedGrnUnitCostTarget | null>(null);
+  const isUnpricedQueue = filters.status === OWNER_UNPRICED_GRN_STATUS;
+  const visibleUnpricedLines = useMemo(
+    () => filterUnpricedConfirmedGrnLines(unpricedLines, query),
+    [query, unpricedLines],
+  );
 
   useEffect(() => {
     setQuery(filters.query);
@@ -370,11 +392,16 @@ export function GrnListClient({
             aria-label={grnCopy.listSearchAria}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder={grnCopy.listSearchPlaceholder}
+            placeholder={
+              isUnpricedQueue
+                ? grnCopy.confirmedUnitCost.searchPlaceholder
+                : grnCopy.listSearchPlaceholder
+            }
           />
         </InputGroup>
       }
       filters={
+        isUnpricedQueue ? undefined : (
         <>
           <BusinessDatePicker
             aria-label={`${dateRangeScopeLabel} · ${grnCopy.dateFrom}`}
@@ -395,6 +422,7 @@ export function GrnListClient({
             className="w-36"
           />
         </>
+        )
       }
       reset={
         hasGrnListFilters(filters) ? (
@@ -427,13 +455,31 @@ export function GrnListClient({
       <TabsList aria-label={grnCopy.statusTabsAria}>
         <TabsTrigger value="draft">{statusLabels.draft}</TabsTrigger>
         <TabsTrigger value="confirmed">{statusLabels.confirmed}</TabsTrigger>
+        {canPatchConfirmedUnitCost ? (
+          <TabsTrigger value={OWNER_UNPRICED_GRN_STATUS}>
+            {grnCopy.confirmedUnitCost.tab}
+            {unpricedTotal > 0 ? ` (${unpricedTotal})` : ""}
+          </TabsTrigger>
+        ) : null}
         <TabsTrigger value="cancelled">{statusLabels.cancelled}</TabsTrigger>
         <TabsTrigger value="all">{grnCopy.allStatuses}</TabsTrigger>
       </TabsList>
     </Tabs>
   );
 
-  const table = loadFailed ? (
+  const table = isUnpricedQueue ? (
+    <GrnUnpricedQueueTable
+      rows={visibleUnpricedLines}
+      loadFailed={loadFailed}
+      onRetry={() => router.refresh()}
+      onOpenGrn={(grnId) =>
+        overlay.patchOverlay({ grnId, mode: "view" }, "push")
+      }
+      onConfirmLine={(row) =>
+        setUnitCostTarget(confirmedGrnUnitCostTargetFromQueue(row))
+      }
+    />
+  ) : loadFailed ? (
     <AppEmptyState
       compact
       mode="error"
@@ -494,16 +540,16 @@ export function GrnListClient({
                 <span className="inline-flex items-center gap-1.5">
                   <span>{grnCopy.listMetaPage}</span>
                   <span className="font-mono font-semibold tabular-nums text-foreground">
-                    {rows.length}
+                    {isUnpricedQueue ? visibleUnpricedLines.length : rows.length}
                   </span>
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <span>{grnCopy.listMetaTotal}</span>
                   <span className="font-mono font-semibold tabular-nums text-foreground">
-                    {total}
+                    {isUnpricedQueue ? unpricedTotal : total}
                   </span>
                 </span>
-                {pageMetrics.exceptionCount > 0 ? (
+                {!isUnpricedQueue && pageMetrics.exceptionCount > 0 ? (
                   <span className="inline-flex items-center gap-1.5">
                     <span>{grnCopy.listMetaExceptions}</span>
                     <span className="font-mono font-semibold tabular-nums text-foreground">
@@ -511,7 +557,7 @@ export function GrnListClient({
                     </span>
                   </span>
                 ) : null}
-                {pageMetrics.pendingInvoiceCount > 0 ? (
+                {!isUnpricedQueue && pageMetrics.pendingInvoiceCount > 0 ? (
                   <span className="inline-flex items-center gap-1.5">
                     <span>{grnCopy.listMetaPendingInvoice}</span>
                     <span className="font-mono font-semibold tabular-nums text-foreground">
@@ -549,6 +595,11 @@ export function GrnListClient({
         onConfirm={() => {
           startTransition(cancelDraft);
         }}
+      />
+      <ConfirmedGrnUnitCostDialog
+        target={unitCostTarget}
+        onClose={() => setUnitCostTarget(null)}
+        onPatched={() => router.refresh()}
       />
     </>
   );

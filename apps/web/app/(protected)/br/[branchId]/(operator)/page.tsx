@@ -2,7 +2,6 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import {
-  canAccess,
   resolveOperatorTiles,
   type BranchKind,
 } from "@comtammatu/shared/auth";
@@ -17,11 +16,7 @@ import { messages } from "@lib/messages";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
 import { parseOperatorBranchId } from "../_lib/parse-branch-id";
-import {
-  getBranchHomeTileLimit,
-  getBranchPrimaryHomeGroup,
-  getOperatorHomeTileHrefs,
-} from "./_lib/operator-home-contract";
+import { getOperatorHomeTileHrefs } from "./_lib/operator-home-contract";
 import { resolveOperatorTileIcon } from "./operator-tile-icons";
 
 import { BranchQueueSection } from "./_components/home/branch-queue-section";
@@ -58,40 +53,20 @@ export default async function OperatorHomePage({
     context.branchId,
     branchKind,
   );
-  const canManageBranch = canAccess(claims.user_role, "branch_settings");
-
-  const branchTodayGroup = getBranchPrimaryHomeGroup(rawGroups);
-  const branchTodayTileLimit = branchTodayGroup
-    ? getBranchHomeTileLimit(branchTodayGroup.id)
-    : 0;
-
   const isManagerLike =
     claims.user_role === "branch_manager" || claims.user_role === "owner";
 
-  const groups = canManageBranch
-    ? (() => {
-        const managerHomeHrefs = getOperatorHomeTileHrefs(
-          rawGroups,
-          branchKind,
-          claims.user_role,
-        );
-        return rawGroups
-          .map((group) => ({
-            ...group,
-            tiles: group.tiles.filter((tile) =>
-              managerHomeHrefs.has(tile.href),
-            ),
-          }))
-          .filter((group) => group.tiles.length > 0);
-      })()
-    : branchTodayGroup
-      ? [
-          {
-            ...branchTodayGroup,
-            tiles: branchTodayGroup.tiles.slice(0, branchTodayTileLimit),
-          },
-        ].filter((group) => group.tiles.length > 0)
-      : [];
+  const homeHrefs = getOperatorHomeTileHrefs(
+    rawGroups,
+    branchKind,
+    claims.user_role,
+  );
+  const groups = rawGroups
+    .map((group) => ({
+      ...group,
+      tiles: group.tiles.filter((tile) => homeHrefs.has(tile.href)),
+    }))
+    .filter((group) => group.tiles.length > 0);
 
   const ownerLinks =
     claims.user_role === "owner"
@@ -131,9 +106,12 @@ export default async function OperatorHomePage({
       </Suspense>
 
       {groups.map((group) => {
-        // Home stations: Bán hàng + KDS only — pickup stays off this surface.
+        // Stations: POS / KDS; floor also keeps Gọi số as station tile 2.
         const stationTiles = group.tiles.filter(
-          (tile) => tile.moduleKey === "pos" || tile.moduleKey === "kds",
+          (tile) =>
+            tile.moduleKey === "pos" ||
+            tile.moduleKey === "kds" ||
+            tile.moduleKey === "pickup",
         );
         const supportingTiles = group.tiles.filter(
           (tile) =>

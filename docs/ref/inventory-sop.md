@@ -7,11 +7,13 @@
 
 - Site active: `branch`, `central_supply`, `central_kitchen`. Mỗi site một
   warehouse active (default receive/issue/consumption).
-- **Mua NCC:** chỉ Kho Tổng / Bếp TT — Yêu cầu mua → PO theo NCC → GRN theo
+- **Mua NCC:** chỉ Kho Tổng / Bếp TT — Tạo đơn hoặc Yêu cầu mua → PO theo NCC → GRN theo
   lần giao.
 - **Bổ sung CN:** phiếu **Yêu cầu hàng** → fulfill trung tâm → DC → CN nhận.
-  Nguồn dòng = `ingredients.default_fulfill_site_kind` (Owner gán trên catalog;
-  checklist sẵn sàng tại `/inventory/ingredients`).
+  Nguồn dòng = Owner gán Nguồn hàng trên catalog (Kho Tổng, Bếp TT, hoặc cả
+  hai — OD-4). Production hôm nay copy một `default_fulfill_site_kind`;
+  checklist sẵn sàng tại `/inventory/ingredients`. «Thiếu» = chưa tick kho nào,
+  không phải hết tồn.
 - Kho trên GRN nháp ghi SL / đơn vị / **Đơn giá** net (chưa VAT) / từ chối
   (+ lý do/ảnh). PO không chứa giá thương mại.
 - Chi nhánh **không** GRN UI, **không** production, **không** PO/giá mua chuỗi.
@@ -21,9 +23,8 @@
 
 ### 2a. Happy path — Kho Tổng / Bếp TT
 
-1. Kho tạo **Yêu cầu mua** tại site nhận trung tâm.
-2. Kế toán hoặc Owner tạo PO theo từng NCC và duyệt (`draft → sent`). PO
-   không nhập giá.
+1. Kho **Tạo đơn** (một NCC + kho nhận) trên tab Đơn mua, hoặc còn tạo **Yêu cầu mua**.
+2. Gửi đơn (`approved`). PO không nhập giá. Tab Yêu cầu mua / Phân bổ còn dùng.
 3. Khi PO chuyển `sent` (hoặc `approved` / `partially_received`), hệ thống **tự
    tạo** đúng một GRN nháp **Chờ nhập hàng** (Auto-GRN). Một PO chỉ có một GRN
    nháp hoạt động tại một thời điểm. Nút «Tạo phiếu nhập» trên PO chỉ là recovery
@@ -56,7 +57,10 @@ Contract: [inventory.md](inventory.md) §2.1 — Đơn vị chuẩn và các đ�
 
 1. QL CN tạo phiếu yêu cầu (draft) trên `/br/.../stock/requests`.
 2. Thêm dòng nguyên liệu: hệ thống copy `default_fulfill_site_kind`; thiếu
-   mapping → không thêm được.
+   mapping → không thêm được («Thiếu Nguồn hàng» = chưa tick kho nào).
+   Production hôm nay một nguồn/dòng. Mục tiêu OD-4: tick Kho Tổng, Bếp TT,
+   hoặc cả hai; phiếu điền sẵn Kho Tổng khi cả hai còn tồn, Bếp TT khi Kho
+   Tổng không phải nguồn hoặc hết tồn (vẫn đổi được trên phiếu).
 3. Submit. Kho Tổng / Bếp TT thấy inbox dòng thuộc nguồn mình trên
    `/inventory/transfers`.
 4. Bên nguồn fulfill → tạo DC → ship. Có thể 1 hoặc 2 DC / phiếu.
@@ -83,6 +87,8 @@ Contract: [inventory.md](inventory.md) §2.1 — Đơn vị chuẩn và các đ�
 Một cửa **Kiểm kê**. QL mở phiên tại kho của site → đếm số đang có (không hiện số sổ) → đối soát lệch → hoàn tất để ghi `count_adjustment`.
 
 Nhân viên được giao trong ca dùng **Đếm tồn** (phiếu đếm). Phiếu đó không tự sửa tồn; QL duyệt hoặc đếm trong phiên Kiểm kê.
+
+Thu ngân chi nhánh được gán đếm tồn nước theo ca (sáng/chiều/tối). Tạm thời chỉ Coca, Sprite, Fanta cam, Fanta xá xị, Nước suối (chưa sâm/rau má). Việc cuối ca có **Đếm tồn nước**. Cửa nhân viên: tab **Ca** → phiếu đếm; QL xem/duyệt tại **Đội** / `/stock/count-slips`. Nhân viên chọn đơn vị đếm (mặc định Đơn vị chuẩn). Phiếu và màn duyệt đối chiếu tồn sổ / thực đếm / lệch cùng đơn vị đó.
 
 1. QL tạo phiên kiểm kê (một kho / site).
 2. Đếm theo Đơn vị đang dùng; hệ thống quy về Đơn vị chuẩn.

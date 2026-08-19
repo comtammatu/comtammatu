@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { test } from "node:test";
 import { GET as getOperatorManifest } from "../app/(protected)/br/[branchId]/(operator)/manifest.webmanifest/route";
 import { GET as getKdsManifest } from "../app/(protected)/br/[branchId]/kds/manifest.webmanifest/route";
 import { GET as getPosManifest } from "../app/(protected)/br/[branchId]/pos/manifest.webmanifest/route";
 import { GET as getPickupManifest } from "../app/(protected)/br/[branchId]/pickup/manifest.webmanifest/route";
+import { GET as getMeManifest } from "../app/(protected)/me/manifest.webmanifest/route";
+import { PWA_LAUNCHER_APPS } from "../app/_lib/pwa-launcher-icons";
 import { normalizeEol } from "./static-source";
 
 test("protected Vercel previews do not register a service worker", () => {
@@ -45,7 +47,7 @@ test("root PWA manifest opens the operator entry instead of the retired employee
     orientation?: unknown;
     scope?: unknown;
     short_name?: unknown;
-    shortcuts?: Array<{ name?: unknown; url?: unknown }>;
+    shortcuts?: unknown;
     start_url?: unknown;
   };
 
@@ -56,10 +58,7 @@ test("root PWA manifest opens the operator entry instead of the retired employee
   assert.equal(manifest.short_name, "Cổng Má Tư");
   assert.equal(manifest.start_url, "/");
   assert.deepEqual(manifest.categories, ["business", "productivity"]);
-  assert.deepEqual(
-    manifest.shortcuts?.map((shortcut) => shortcut.url),
-    ["/", "/", "/", "/"],
-  );
+  assert.equal(manifest.shortcuts, undefined);
 });
 
 test("POS PWA manifest requests portrait orientation per branch", async () => {
@@ -161,12 +160,51 @@ test("operator PWA manifest keeps branch identity in its start route", async () 
   assert.equal(manifest.display, "standalone");
   assert.equal(manifest.short_name, "Cổng Má Tư");
   assert.equal(manifest.orientation, "portrait");
-  assert.ok(manifest.icons && manifest.icons.length >= 2);
+  assert.ok(manifest.icons && manifest.icons.length >= 3);
   assert.ok(
     manifest.icons?.some(
-      (icon) => icon.sizes === "512x512" && icon.purpose === "any maskable",
+      (icon) =>
+        icon.sizes === "512x512" &&
+        icon.purpose === "any" &&
+        icon.src === "/icons/icon-cong-any-512.png",
     ),
   );
+  assert.ok(
+    manifest.icons?.some(
+      (icon) =>
+        icon.sizes === "512x512" &&
+        icon.purpose === "maskable" &&
+        icon.src === "/icons/icon-cong-maskable-512.png",
+    ),
+  );
+});
+
+test("operational manifests keep overlapping origin scope", () => {
+  const operationalSource = readFileSync(
+    new URL(
+      "../app/(protected)/br/[branchId]/_lib/operational-manifest.ts",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const meManifestSource = readFileSync(
+    new URL(
+      "../app/(protected)/me/manifest.webmanifest/route.ts",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const rootManifest = JSON.parse(
+    readFileSync(
+      new URL("../public/manifest.webmanifest", import.meta.url),
+      "utf8",
+    ),
+  ) as { scope?: unknown };
+
+  assert.match(operationalSource, /scope: "\/"/);
+  assert.doesNotMatch(operationalSource, /scope: `\/br/);
+  assert.match(meManifestSource, /scope: "\/"/);
+  assert.equal(rootManifest.scope, "/");
 });
 
 test("operator PWA manifest keeps rejecting invalid branch ids", async () => {
@@ -319,7 +357,16 @@ test("authenticated shell roots own top safe-area padding", () => {
   }
 });
 
-test("operator layout mounts its manifest link and install toolbar", () => {
+test("root layout keeps the owner control_surface manifest", () => {
+  const rootLayoutSource = readFileSync(
+    new URL("../app/layout.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(rootLayoutSource, /manifest: "\/manifest\.webmanifest"/);
+});
+
+test("operator layout mounts its per-branch manifest link and install toolbar", () => {
   const layoutSource = readFileSync(
     new URL(
       "../app/(protected)/br/[branchId]/(operator)/layout.tsx",
@@ -328,8 +375,30 @@ test("operator layout mounts its manifest link and install toolbar", () => {
     "utf8",
   );
 
-  assert.match(layoutSource, /manifest: "\/manifest\.webmanifest"/);
+  assert.match(
+    layoutSource,
+    /manifest: `\/br\/\$\{branchId\}\/manifest\.webmanifest`/,
+  );
+  assert.doesNotMatch(layoutSource, /manifest: "\/manifest\.webmanifest"/);
+  assert.match(layoutSource, /title: "Cổng Má Tư"/);
   assert.match(layoutSource, /<OperatorPwaToolbar \/>/);
+});
+
+test("/me layout mounts its personnel manifest and contained install toolbar", () => {
+  const layoutSource = readFileSync(
+    new URL("../app/(protected)/me/layout.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(layoutSource, /manifest: "\/me\/manifest\.webmanifest"/);
+  assert.match(layoutSource, /title: "Trang cá nhân"/);
+  assert.match(layoutSource, /<PwaRuntimeProvider>/);
+  assert.match(layoutSource, /<MePwaToolbar \/>/);
+  assert.equal(
+    layoutSource.match(/<PwaRuntimeProvider>/g)?.length,
+    1,
+    "/me must not double-wrap PwaRuntimeProvider",
+  );
 });
 
 test("SW offline fallback (PWA-2) only precaches/serves the operator shell, never station or authed data", () => {
@@ -356,12 +425,14 @@ test("SW offline fallback (PWA-2) only precaches/serves the operator shell, neve
     /handlerDidError: async \(\) => serwist\.matchPrecache\("\/offline"\)/,
   );
 
-  // Remaining authed navigations (stations + admin/domain workspaces) stay
-  // NetworkOnly with no fallback plugin.
+  // Remaining navigations (stations, /me, control_surface) stay NetworkOnly
+  // with no fallback plugin. Do not restore a NetworkFirst `pages` HTML cache.
   assert.match(
     swSource,
-    /request\.mode === "navigate" && isAuthedPath\(url\.pathname\),\s*\n\s*handler: new NetworkOnly\(\),/,
+    /matcher: \(\{ request \}\) => request\.mode === "navigate",\s*\n\s*handler: new NetworkOnly\(\),/,
   );
+  assert.doesNotMatch(swSource, /AUTHED_NAV_PREFIXES/);
+  assert.doesNotMatch(swSource, /new NetworkFirst/);
 });
 
 test("self-order navigations never cache seating-specific SSR HTML", () => {
@@ -375,14 +446,14 @@ test("self-order navigations never cache seating-specific SSR HTML", () => {
   );
 
   const selfOrderGuard = swSource.indexOf('url.pathname.startsWith("/q/")');
-  const publicPageCache = swSource.indexOf(
-    'handler: new NetworkFirst({\n      cacheName: "pages"',
+  const remainingNav = swSource.indexOf(
+    'matcher: ({ request }) => request.mode === "navigate",\n    handler: new NetworkOnly()',
   );
   assert.ok(selfOrderGuard >= 0, "expected a self-order navigation guard");
-  assert.ok(publicPageCache >= 0, "expected the generic public page cache");
+  assert.ok(remainingNav >= 0, "expected the remaining-navigation NetworkOnly");
   assert.ok(
-    selfOrderGuard < publicPageCache,
-    "self-order NetworkOnly must precede the generic navigation cache",
+    selfOrderGuard < remainingNav,
+    "self-order NetworkOnly must precede the remaining-navigation NetworkOnly",
   );
 });
 
@@ -397,14 +468,14 @@ test("login navigation never serves a cached page shell", () => {
   );
 
   const loginGuard = swSource.indexOf('url.pathname === "/login"');
-  const publicPageCache = swSource.indexOf(
-    'handler: new NetworkFirst({\n      cacheName: "pages"',
+  const remainingNav = swSource.indexOf(
+    'matcher: ({ request }) => request.mode === "navigate",\n    handler: new NetworkOnly()',
   );
   assert.ok(loginGuard >= 0, "expected a login navigation guard");
-  assert.ok(publicPageCache >= 0, "expected the generic public page cache");
+  assert.ok(remainingNav >= 0, "expected the remaining-navigation NetworkOnly");
   assert.ok(
-    loginGuard < publicPageCache,
-    "login NetworkOnly must precede the generic navigation cache",
+    loginGuard < remainingNav,
+    "login NetworkOnly must precede the remaining-navigation NetworkOnly",
   );
 });
 
@@ -484,4 +555,294 @@ test("offline page is explicitly precached and reuses the shared error copy", ()
   assert.match(offlinePageSource, /ACTIONS_VI\.retry/);
   assert.match(offlinePageSource, /AppEmptyState/);
   assert.match(offlinePageSource, /size="touch"/);
+});
+
+test("authenticated HTML navigations never match a NetworkFirst pages cache", () => {
+  const swSource = normalizeEol(
+    readFileSync(new URL("../app/sw.ts", import.meta.url), "utf8"),
+  );
+
+  const operatorFallback = swSource.indexOf(
+    "request.mode === \"navigate\" && isOperatorShellPath(url.pathname)",
+  );
+  const remainingNav = swSource.indexOf(
+    'matcher: ({ request }) => request.mode === "navigate",\n    handler: new NetworkOnly()',
+  );
+  assert.ok(operatorFallback >= 0, "expected operator NetworkOnly + offline fallback");
+  assert.ok(remainingNav >= 0, "expected remaining-navigation NetworkOnly");
+  assert.ok(
+    operatorFallback < remainingNav,
+    "operator offline fallback must precede remaining-navigation NetworkOnly",
+  );
+
+  assert.match(swSource, /\/me/);
+  assert.match(swSource, /\/settings/);
+  assert.match(swSource, /\/promotions/);
+  assert.match(swSource, /\/branches/);
+  assert.match(swSource, /\/feedback/);
+  assert.match(swSource, /\/work/);
+  assert.match(swSource, /control_surface HTML/);
+  assert.doesNotMatch(swSource, /cacheName: "pages"/);
+  assert.doesNotMatch(swSource, /networkTimeoutSeconds/);
+});
+
+test("contained operator toolbar shows the undismissable update banner", () => {
+  const pwaToolbarSource = readFileSync(
+    new URL("../app/components/pwa-toolbar.tsx", import.meta.url),
+    "utf8",
+  );
+  const operatorToolbarSource = readFileSync(
+    new URL(
+      "../app/(protected)/br/[branchId]/(operator)/operator-pwa-toolbar.tsx",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const operatorMessagesSource = readFileSync(
+    new URL("../lib/messages/operator.ts", import.meta.url),
+    "utf8",
+  );
+  const stationToolbarSource = readFileSync(
+    new URL(
+      "../app/(protected)/br/[branchId]/_components/operational-pwa/toolbar.tsx",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const meToolbarSource = readFileSync(
+    new URL("../app/(protected)/me/me-pwa-toolbar.tsx", import.meta.url),
+    "utf8",
+  );
+  const employeeMessagesSource = readFileSync(
+    new URL("../lib/messages/employee.ts", import.meta.url),
+    "utf8",
+  );
+
+  const containedLayout = pwaToolbarSource.slice(
+    pwaToolbarSource.indexOf("// Contained (operator portal)."),
+  );
+  const hideStandalone = containedLayout.indexOf(
+    "if (isStandalone && isOnline) return null;",
+  );
+  const updateBanner = containedLayout.indexOf(
+    "hasNewVersion && copy.updateHint && copy.updateButton",
+  );
+  assert.ok(updateBanner >= 0, "contained layout must render the update row");
+  assert.ok(hideStandalone >= 0, "contained layout still hides when quiet");
+  assert.ok(
+    updateBanner < hideStandalone,
+    "update banner must precede the standalone+online hide",
+  );
+  assert.match(containedLayout, /window\.location\.reload\(\)/);
+  assert.match(containedLayout, /role="alert"/);
+  assert.doesNotMatch(
+    containedLayout.slice(0, hideStandalone),
+    /handleDismiss/,
+  );
+
+  assert.match(operatorToolbarSource, /updateHint: copy\.updateHint/);
+  assert.match(operatorToolbarSource, /updateButton: copy\.updateButton/);
+  assert.match(
+    operatorMessagesSource,
+    /updateHint: "Có phiên bản mới của ứng dụng\."/,
+  );
+  assert.match(operatorMessagesSource, /updateButton: "Tải lại"/);
+  assert.match(
+    stationToolbarSource,
+    /updateHint: "Có phiên bản mới của ứng dụng\."/,
+  );
+  assert.match(stationToolbarSource, /updateButton: "Tải lại"/);
+  assert.match(meToolbarSource, /updateHint: copy\.updateHint/);
+  assert.match(meToolbarSource, /updateButton: copy\.updateButton/);
+  assert.match(
+    employeeMessagesSource,
+    /updateHint: "Có phiên bản mới của ứng dụng\."/,
+  );
+  assert.match(employeeMessagesSource, /updateButton: "Tải lại"/);
+  assert.doesNotMatch(employeeMessagesSource, /Má Tư NV/);
+});
+
+type ManifestIcons = Array<{ src?: unknown; purpose?: unknown }>;
+
+function meManifestRequest() {
+  return new Request(
+    "https://app.test/me/manifest.webmanifest",
+  ) as Parameters<typeof getMeManifest>[0];
+}
+
+test("/me PWA manifest uses personnel identity and overlapping origin scope", async () => {
+  const response = await getMeManifest(meManifestRequest());
+  const manifest = (await response.json()) as {
+    id?: unknown;
+    name?: unknown;
+    orientation?: unknown;
+    scope?: unknown;
+    short_name?: unknown;
+    start_url?: unknown;
+    icons?: ManifestIcons;
+  };
+
+  assert.equal(response.status, 200);
+  assert.equal(
+    response.headers.get("Content-Type"),
+    "application/manifest+json; charset=utf-8",
+  );
+  assert.equal(manifest.id, "/me");
+  assert.equal(manifest.start_url, "/me");
+  assert.equal(manifest.scope, "/");
+  assert.equal(manifest.short_name, "Trang cá nhân");
+  assert.equal(manifest.name, "Cơm Tấm Má Tư - Trang cá nhân");
+  assert.equal(manifest.orientation, "portrait");
+  assert.ok(
+    manifest.icons?.some(
+      (icon) =>
+        icon.purpose === "any" && icon.src === "/icons/icon-me-any-512.png",
+    ),
+  );
+  assert.ok(
+    manifest.icons?.some(
+      (icon) =>
+        icon.purpose === "maskable" &&
+        icon.src === "/icons/icon-me-maskable-512.png",
+    ),
+  );
+});
+
+test("launcher icons split any vs maskable and stay distinct per app", async () => {
+  const operationalSource = readFileSync(
+    new URL(
+      "../app/(protected)/br/[branchId]/_lib/operational-manifest.ts",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const rootManifest = readFileSync(
+    new URL("../public/manifest.webmanifest", import.meta.url),
+    "utf8",
+  );
+  const iconsDir = new URL("../public/icons/", import.meta.url);
+
+  assert.doesNotMatch(operationalSource, /any maskable/);
+  assert.doesNotMatch(rootManifest, /any maskable/);
+
+  for (const app of PWA_LAUNCHER_APPS) {
+    for (const file of [
+      `icon-${app}-any-192.png`,
+      `icon-${app}-any-512.png`,
+      `icon-${app}-maskable-512.png`,
+    ]) {
+      assert.equal(
+        existsSync(new URL(file, iconsDir)),
+        true,
+        `missing ${file}`,
+      );
+    }
+  }
+
+  const pos = (await (
+    await getPosManifest(
+      new Request("https://app.test/br/3/pos/manifest.webmanifest") as Parameters<
+        typeof getPosManifest
+      >[0],
+      { params: Promise.resolve({ branchId: "3" }) },
+    )
+  ).json()) as { icons?: ManifestIcons };
+  const kds = (await (
+    await getKdsManifest(
+      new Request("https://app.test/br/3/kds/manifest.webmanifest") as Parameters<
+        typeof getKdsManifest
+      >[0],
+      { params: Promise.resolve({ branchId: "3" }) },
+    )
+  ).json()) as { icons?: ManifestIcons };
+  const pickup = (await (
+    await getPickupManifest(
+      new Request(
+        "https://app.test/br/3/pickup/manifest.webmanifest",
+      ) as Parameters<typeof getPickupManifest>[0],
+      { params: Promise.resolve({ branchId: "3" }) },
+    )
+  ).json()) as { icons?: ManifestIcons };
+  const operator = (await (
+    await getOperatorManifest(
+      new Request("https://app.test/br/3/manifest.webmanifest") as Parameters<
+        typeof getOperatorManifest
+      >[0],
+      { params: Promise.resolve({ branchId: "3" }) },
+    )
+  ).json()) as { icons?: ManifestIcons };
+  const me = (await (
+    await getMeManifest(meManifestRequest())
+  ).json()) as { icons?: ManifestIcons };
+  const root = JSON.parse(rootManifest) as { icons?: ManifestIcons };
+
+  const srcs = (icons: ManifestIcons | undefined) =>
+    (icons ?? []).map((icon) => String(icon.src)).sort();
+
+  assert.deepEqual(srcs(pos.icons), [
+    "/icons/icon-pos-any-192.png",
+    "/icons/icon-pos-any-512.png",
+    "/icons/icon-pos-maskable-512.png",
+  ]);
+  assert.deepEqual(srcs(kds.icons), [
+    "/icons/icon-kds-any-192.png",
+    "/icons/icon-kds-any-512.png",
+    "/icons/icon-kds-maskable-512.png",
+  ]);
+  assert.deepEqual(srcs(pickup.icons), [
+    "/icons/icon-pickup-any-192.png",
+    "/icons/icon-pickup-any-512.png",
+    "/icons/icon-pickup-maskable-512.png",
+  ]);
+  assert.deepEqual(srcs(operator.icons), [
+    "/icons/icon-cong-any-192.png",
+    "/icons/icon-cong-any-512.png",
+    "/icons/icon-cong-maskable-512.png",
+  ]);
+  assert.deepEqual(srcs(me.icons), [
+    "/icons/icon-me-any-192.png",
+    "/icons/icon-me-any-512.png",
+    "/icons/icon-me-maskable-512.png",
+  ]);
+  assert.deepEqual(srcs(root.icons), srcs(operator.icons));
+
+  const uniqueAny512 = new Set(
+    [pos, kds, pickup, operator, me].map(
+      (manifest) =>
+        manifest.icons?.find(
+          (icon) =>
+            icon.purpose === "any" && String(icon.src).endsWith("-512.png"),
+        )?.src,
+    ),
+  );
+  assert.equal(uniqueAny512.size, 5);
+});
+
+test("pickup is not given an iOS splash matrix; KDS and pickup request Wake Lock", () => {
+  const pickupLayout = readFileSync(
+    new URL(
+      "../app/(protected)/br/[branchId]/pickup/layout.tsx",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const kdsLayout = readFileSync(
+    new URL("../app/(protected)/br/[branchId]/kds/layout.tsx", import.meta.url),
+    "utf8",
+  );
+  const rootLayout = readFileSync(
+    new URL("../app/layout.tsx", import.meta.url),
+    "utf8",
+  );
+  const meLayout = readFileSync(
+    new URL("../app/(protected)/me/layout.tsx", import.meta.url),
+    "utf8",
+  );
+
+  for (const source of [pickupLayout, kdsLayout, rootLayout, meLayout]) {
+    assert.doesNotMatch(source, /apple-touch-startup-image/);
+    assert.doesNotMatch(source, /startupImage/);
+  }
+  assert.match(kdsLayout, /<ScreenWakeLock \/>/);
+  assert.match(pickupLayout, /<ScreenWakeLock \/>/);
 });

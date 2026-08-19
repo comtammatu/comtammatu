@@ -10,6 +10,8 @@ import {
 import {
   canAccess,
   canManageTenantStrategySettings,
+  resolveBranchToolsGroups,
+  type BranchKind,
 } from "@comtammatu/shared/auth";
 import { AppEmptyState } from "@/components/surface";
 import {
@@ -18,6 +20,7 @@ import {
 } from "@lib/branch-operator/components/branch-operator-page";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
+import { resolveOperatorTileIcon } from "../operator-tile-icons";
 import { buildSettingsLinks } from "./_lib/settings-links";
 
 type SettingsTile = {
@@ -52,6 +55,11 @@ export default async function BranchSettingsPage({
 
   const copy = messages.settings.branch;
   const role = claims.user_role;
+  const toolGroups = resolveBranchToolsGroups(
+    role,
+    branchId,
+    branch.branch_kind as BranchKind,
+  );
 
   const links = buildSettingsLinks(branchId, copy, {
     tables: IconArmchair,
@@ -60,7 +68,7 @@ export default async function BranchSettingsPage({
     kds: IconChefHat,
   });
 
-  const visibleLinks: SettingsTile[] = links
+  const setupLinks: SettingsTile[] = links
     .filter((link) => canAccess(role, link.moduleKey))
     .map((link) => ({
       key: `${link.moduleKey}-${link.href}`,
@@ -70,9 +78,8 @@ export default async function BranchSettingsPage({
       description: link.description || undefined,
     }));
 
-  // Owner-only network gate: emergency bypass + trusted egress IPs.
   if (canManageTenantStrategySettings(role)) {
-    visibleLinks.push({
+    setupLinks.push({
       key: "network",
       href: `/br/${branchId}/settings/network`,
       icon: IconShield,
@@ -81,16 +88,41 @@ export default async function BranchSettingsPage({
     });
   }
 
-  const hasContent = visibleLinks.length > 0;
+  const hasContent =
+    toolGroups.some((group) => group.tiles.length > 0) ||
+    setupLinks.length > 0;
 
   return (
-    <BranchOperatorPage title={copy.landingTitle} hideHeaderOnMobile>
+    <BranchOperatorPage title={copy.landingTitle}>
       {hasContent ? (
-        <BranchOperatorActionSection
-          presentation="plain"
-          mobileColumns={2}
-          links={visibleLinks}
-        />
+        <>
+          {toolGroups.map((group) => (
+            <BranchOperatorActionSection
+              key={group.id}
+              title={group.title}
+              presentation="plain"
+              mobileColumns={2}
+              columns={2}
+              wideColumns
+              links={group.tiles.map((tile) => ({
+                key: `${group.id}-${tile.moduleKey}-${tile.href}`,
+                href: tile.href,
+                icon: resolveOperatorTileIcon(tile.icon),
+                title: tile.label,
+              }))}
+            />
+          ))}
+          {setupLinks.length > 0 ? (
+            <BranchOperatorActionSection
+              title={copy.setupSectionTitle}
+              presentation="plain"
+              mobileColumns={2}
+              columns={2}
+              wideColumns
+              links={setupLinks}
+            />
+          ) : null}
+        </>
       ) : (
         <AppEmptyState
           mode="no-access"

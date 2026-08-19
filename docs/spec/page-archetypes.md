@@ -456,7 +456,7 @@ badge}`).
   No module launcher grid, no KPI mosaic. Sidebar remains module entry.
 - No data tables. No KPI values beyond a small count badge on a link card.
 - Operator variant: `apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx`
-  (`buildSettingsLinks`) uses the Branch plane recipe:
+  (`resolveBranchToolsGroups` + `buildSettingsLinks`) uses the Branch plane recipe:
   `BranchOperatorPage` → `BranchOperatorActionSection` from
   `@lib/branch-operator/components/branch-operator-page`. It does not render
   `AppPageHeader`, `AppSection`, `AppLinkCard`, or an control_surface `*PageContent`
@@ -655,11 +655,11 @@ allowlist, not a precedent for stretching another archetype's definition:
     queues. Rows remain touch actions at phone and tablet widths; slip review
     and approve/request-recount actions live in a bottom sheet with a sticky
     decision footer. Classified **LIST** (assignment/review variants).
-22. `apps/web/app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/page.tsx`
+22. `apps/web/app/(protected)/br/[branchId]/(operator)/team/leave-approvals/page.tsx`
     — fixed-branch leave review queue with status tabs, full-row touch items,
     and approve/reject in a bottom sheet. control_surface retains its desktop HR table.
     Classified **LIST** (Branch review variant).
-23. `apps/web/app/(protected)/br/[branchId]/(operator)/shift/attendance/page.tsx`
+23. `apps/web/app/(protected)/br/[branchId]/(operator)/team/attendance/page.tsx`
     — fixed-branch attendance list using the shared attendance table, without a
     cross-branch selector. It exposes audited stale-shift closing only when the
     Branch capability is present. Classified **LIST** (Branch review variant).

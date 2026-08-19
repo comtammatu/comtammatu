@@ -42,8 +42,10 @@ BEGIN
     OR v_definition NOT LIKE '%discount_amount%'
     OR v_definition NOT LIKE '%net_revenue_today%'
     OR v_definition NOT LIKE '%reward_tiers%'
+    OR v_definition NOT LIKE '%branch_business_date%'
+    OR v_definition NOT LIKE '%branch_business_day_bounds%'
   THEN
-    RAISE EXCEPTION 'get_branch_revenue_target_progress missing BM scope, day revenue, tiers, or Doanh thu thuần formula';
+    RAISE EXCEPTION 'get_branch_revenue_target_progress missing BM scope, day revenue, tiers, Doanh thu thuần formula, or 04:00 business-day bounds';
   END IF;
 
   SELECT pg_get_functiondef(

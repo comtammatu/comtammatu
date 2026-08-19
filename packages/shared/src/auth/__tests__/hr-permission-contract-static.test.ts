@@ -316,7 +316,7 @@ test("HR imports the shared staff runtime, not the retired employee runtime", ()
     "apps/web/app/(protected)/hr/actions.ts",
     "apps/web/lib/hr/payroll-day-math.ts",
     "apps/web/lib/hr/leave-request-data.ts",
-    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/branch-leave-approvals-client.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/team/leave-approvals/branch-leave-approvals-client.tsx",
   ];
 
   assert.equal(existsSync(resolve(repoRoot, "apps/web/lib/employee")), false);
@@ -339,7 +339,7 @@ test("HR imports the shared staff runtime, not the retired employee runtime", ()
   );
   assert.match(
     read(
-      "apps/web/app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/branch-leave-approvals-client.tsx",
+      "apps/web/app/(protected)/br/[branchId]/(operator)/team/leave-approvals/branch-leave-approvals-client.tsx",
     ),
     /@lib\/branch-operator\/components\/branch-operator-page/,
   );

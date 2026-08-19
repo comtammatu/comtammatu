@@ -59,9 +59,10 @@ test("Branch stock landing is four doors then fulfillment list", () => {
   assert.match(landing, /loadStockFulfillmentRows/);
   assert.match(landing, /BranchStockFulfillmentHubClient/);
   assert.match(landing, /BranchStockDoors/);
+  assert.match(landing, /BranchStockCountDoors/);
   assert.match(
     landing,
-    /<BranchStockDoors[\s\S]*<BranchStockFulfillmentHubClient/,
+    /<BranchStockDoors[\s\S]*<BranchStockCountDoors[\s\S]*<BranchStockFulfillmentHubClient/,
   );
   assert.match(landing, /branchDoorOnHand/);
   assert.match(landing, /branchDoorWaste/);
@@ -71,14 +72,12 @@ test("Branch stock landing is four doors then fulfillment list", () => {
   assert.doesNotMatch(landing, /key: "consumption"/);
   assert.doesNotMatch(landing, /ItemGroup className="grid/);
   assert.doesNotMatch(landing, /sticky bottom-0/);
-  assert.doesNotMatch(
-    landing,
-    /function BranchStockDoors[\s\S]*count-assignments/,
-  );
-  assert.doesNotMatch(
-    landing,
-    /function BranchStockDoors[\s\S]*count-slips/,
-  );
+  const dailyDoors = landing.match(
+    /function BranchStockDoors[\s\S]*?\nfunction /,
+  )?.[0];
+  assert.ok(dailyDoors, "BranchStockDoors must exist");
+  assert.doesNotMatch(dailyDoors, /count-assignments|count-slips/);
+  assert.match(landing, /function BranchStockCountDoors/);
   assert.match(
     inventoryMessages,
     /branchDoorStocktakeMeta:\s*"Đếm số đang có, rồi đối soát lệch"/,

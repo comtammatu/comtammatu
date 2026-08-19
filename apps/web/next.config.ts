@@ -51,7 +51,15 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      {
+        // Serwist writes public/sw.js. Browsers and the CDN must revalidate
+        // it on every load so skipWaiting clients pick up a new worker.
+        source: "/sw.js",
+        headers: [{ key: "Cache-Control", value: "no-cache" }],
+      },
+      { source: "/:path*", headers: securityHeaders },
+    ];
   },
   transpilePackages: [
     "@comtammatu/shared",

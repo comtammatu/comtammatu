@@ -614,6 +614,8 @@ test("isPublicAppPath PWA manifests and pickup display bypass auth proxy", () =>
   );
   assert.equal(isPublicAppPath("/br/3/pos/manifest.webmanifest"), true);
   assert.equal(isPublicAppPath("/br/3/kds/manifest.webmanifest"), true);
+  assert.equal(isPublicAppPath("/me/manifest.webmanifest"), true);
+  assert.equal(isPublicAppPath("/me"), false);
   assert.equal(isPublicAppPath("/br/3/pickup"), true);
   assert.equal(isPublicAppPath("/br/3/pickup/"), true);
   assert.equal(isPickupPublicDisplayPath("/br/3/pickup"), true);
@@ -893,7 +895,7 @@ test("resolveDiscoveredApps → settings entries are discoverable for authorized
   );
   assert.deepEqual(
     branchManagementGroup?.items.map((app) => app.moduleKey),
-    ["branch_dashboard", "branch_team", "branch_settings", "branch_feedback"],
+    ["branch_team", "branch_settings", "branch_feedback"],
   );
   assert.deepEqual(
     branchOperationGroup?.items.map((app) => app.moduleKey),
@@ -910,16 +912,9 @@ test("resolveDiscoveredApps → settings entries are discoverable for authorized
     branchManagerApps.some((app) => app.moduleKey === "settings"),
     false,
   );
-  assert.ok(
-    branchManagerApps.some(
-      (app) =>
-        app.moduleKey === "branch_dashboard" && app.href === "/br/3/dashboard",
-    ),
-  );
   assert.equal(
-    branchManagerApps.find((app) => app.moduleKey === "branch_dashboard")
-      ?.surface,
-    "branch_management",
+    branchManagerApps.some((app) => app.moduleKey === "branch_dashboard"),
+    false,
   );
   assert.ok(
     branchManagerApps.some(

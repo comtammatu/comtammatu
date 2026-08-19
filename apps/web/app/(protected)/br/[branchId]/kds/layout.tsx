@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { ForceLightMode } from "@/components/force-light-mode";
+import { ScreenWakeLock } from "@/components/screen-wake-lock";
 import { OperationalPwaProvider } from "../_components/operational-pwa/provider";
 import { KdsPwaToolbar } from "../_components/operational-pwa/toolbar";
 
@@ -36,6 +37,7 @@ export default async function KdsLayout({
       className="theme-light-only chrome-safe-pt flex h-dvh flex-col overflow-hidden bg-background text-foreground touch-manipulation"
     >
       <ForceLightMode />
+      <ScreenWakeLock />
       <OperationalPwaProvider>
         <KdsPwaToolbar branchId={branchId} />
         {children}

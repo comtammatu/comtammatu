@@ -129,11 +129,17 @@ test("ACL modules wire Owner /feedback and Branch /br/*/feedback", () => {
   );
   assert.doesNotMatch(bottomNav, /`\/br\/\$\{branchId\}\/feedback`/);
 
+  const tools = readRepo("packages/shared/src/auth/nav-config.ts");
+  assert.match(tools, /hrefTemplate: "\/br\/\{branchId\}\/feedback"/);
+
   const layout = readWeb(
     "app/(protected)/br/[branchId]/(operator)/layout.tsx",
   );
-  assert.match(layout, /canAccess\(claims\.user_role, "branch_feedback"\)/);
-  assert.match(layout, /href=\{`\/br\/\$\{context\.branchId\}\/feedback`\}/);
+  assert.doesNotMatch(
+    layout,
+    /canAccess\(claims\.user_role, "branch_feedback"\)/,
+  );
+  assert.doesNotMatch(layout, /href=\{`\/br\/\$\{context\.branchId\}\/feedback`\}/);
 });
 
 test("Feedback LIST surfaces use AppToolbar section nav and AppListFrame", () => {

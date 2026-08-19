@@ -37,7 +37,7 @@ function revalidateLeavePaths(branchId: number | null) {
   revalidatePath("/hr");
   revalidatePath("/hr/attendance");
   if (branchId != null) {
-    revalidatePath(`/br/${branchId}/shift/leave-approvals`);
+    revalidatePath(`/br/${branchId}/team/leave-approvals`);
     revalidatePath(`/br/${branchId}/team`);
   }
 }

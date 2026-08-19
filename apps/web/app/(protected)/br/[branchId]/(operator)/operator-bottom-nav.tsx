@@ -5,23 +5,37 @@ import {
   ChefHat,
   Clock,
   Home,
+  LayoutGrid,
   MoreHorizontal,
   Package,
   Send,
   Truck,
   User,
   Users,
+  type LucideIcon,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
+import type {
+  BranchKind,
+  ResolvedBranchPrimaryTab,
+} from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
-import type { BranchKind } from "@comtammatu/shared/auth";
 import { AppBottomNav } from "@/components/app-bottom-nav";
 import { isNavItemActive, type ShellNavItem } from "@/lib/shell-primitives";
 import { messages } from "@lib/messages";
 import type { BranchNavBadgeCounts } from "./_lib/branch-nav-badges";
 
 const branchCopy = messages.settings.branch;
-const employeeNavCopy = messages.employee.nav;
+
+const TAB_ICONS: Record<string, LucideIcon> = {
+  Home,
+  Clock,
+  CalendarDays,
+  User,
+  Users,
+  Package,
+  LayoutGrid,
+};
 
 /**
  * R04 residual pad when central deep-links into `/br/{site}/stock/*`.
@@ -109,16 +123,35 @@ function pendingBadgeLabel(count: number | undefined): string | undefined {
   return messages.operator.nav.pendingBadge(count);
 }
 
+function projectPrimaryTabs(
+  tabs: readonly ResolvedBranchPrimaryTab[],
+  badges?: BranchNavBadgeCounts,
+): ShellNavItem[] {
+  return tabs.map((tab) => ({
+    href: tab.href,
+    label: tab.label,
+    icon: TAB_ICONS[tab.icon] ?? LayoutGrid,
+    exact: tab.exact,
+    matchPrefixes: tab.matchPrefixes,
+    badgeCount:
+      tab.badge === "home"
+        ? badges?.home
+        : tab.badge === "team"
+          ? badges?.team
+          : tab.badge === "stock"
+            ? badges?.stock
+            : undefined,
+  }));
+}
+
 export function OperatorBottomNav({
   branchId,
-  showEmployeeLinks,
-  showBranchManagement,
+  tabs,
   branchKind = "branch",
   badges,
 }: {
   branchId: number;
-  showEmployeeLinks: boolean;
-  showBranchManagement: boolean;
+  tabs: readonly ResolvedBranchPrimaryTab[];
   branchKind?: BranchKind;
   badges?: BranchNavBadgeCounts;
 }) {
@@ -127,78 +160,7 @@ export function OperatorBottomNav({
   const items: ShellNavItem[] =
     branchKind !== "branch"
       ? centralResidualNavItems(branchId, branchKind)
-      : [
-          {
-            href: `/br/${branchId}`,
-            label: APP_COPY_VI.branchHome,
-            icon: Home,
-            exact: true,
-            badgeCount: badges?.home,
-          },
-          ...(showEmployeeLinks
-            ? [
-                {
-                  href: `/br/${branchId}/shift`,
-                  label: APP_COPY_VI.operatorShift,
-                  icon: Clock,
-                  exact: true,
-                  // Managers keep schedule under Ca; employees have a Lịch tab.
-                  matchPrefixes: showBranchManagement
-                    ? [
-                        `/br/${branchId}/shift/clock`,
-                        `/br/${branchId}/shift/schedule`,
-                      ]
-                    : [`/br/${branchId}/shift/clock`],
-                },
-                ...(!showBranchManagement
-                  ? [
-                      {
-                        href: `/br/${branchId}/shift/schedule`,
-                        label: employeeNavCopy.schedule,
-                        icon: CalendarDays,
-                        exact: false,
-                      },
-                    ]
-                  : []),
-              ]
-            : []),
-          ...(showBranchManagement
-            ? [
-                {
-                  href: `/br/${branchId}/team`,
-                  label: branchCopy.branchNavTeam,
-                  icon: Users,
-                  exact: false,
-                  badgeCount: badges?.team,
-                  matchPrefixes: [
-                    `/br/${branchId}/team`,
-                    `/br/${branchId}/shift/roster`,
-                    `/br/${branchId}/shift/attendance`,
-                    `/br/${branchId}/shift/checkout-approvals`,
-                    `/br/${branchId}/shift/leave-approvals`,
-                  ],
-                },
-                {
-                  // Work-first stock landing (phiếu + tiles), not bare on-hand.
-                  href: `/br/${branchId}/stock`,
-                  label: branchCopy.branchNavStock,
-                  icon: Package,
-                  exact: true,
-                  badgeCount: badges?.stock,
-                  matchPrefixes: [`/br/${branchId}/stock`],
-                },
-              ]
-            : showEmployeeLinks
-              ? [
-                  {
-                    href: `/br/${branchId}/profile`,
-                    label: employeeNavCopy.profileShort,
-                    icon: User,
-                    exact: false,
-                  },
-                ]
-              : []),
-        ];
+      : projectPrimaryTabs(tabs, badges);
 
   return (
     <AppBottomNav

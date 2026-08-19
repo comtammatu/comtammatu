@@ -47,6 +47,7 @@ Preview is fail-closed. Topology:
 ## Docs
 
 - Module map: [`docs/modules/web-app.md`](../../docs/modules/web-app.md)
+- PWA contract: [`docs/spec/pwa.md`](../../docs/spec/pwa.md)
 - UI contract: [`docs/spec/design-system.md`](../../docs/spec/design-system.md)
 - Auth: [`docs/modules/auth.md`](../../docs/modules/auth.md)
 - Infrastructure: [`docs/modules/infrastructure.md`](../../docs/modules/infrastructure.md)

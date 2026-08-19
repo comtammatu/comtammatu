@@ -154,7 +154,7 @@ function revalidateEmployeeWorkPaths(branchId?: number | null) {
   revalidatePath(`/br/${branchId}`);
   revalidatePath(`/br/${branchId}/shift`);
   revalidatePath(`/br/${branchId}/shift/clock`);
-  revalidatePath(`/br/${branchId}/shift/checkout-approvals`);
+  revalidatePath(`/br/${branchId}/team/checkout-approvals`);
   revalidatePath(`/br/${branchId}/team`);
 }
 

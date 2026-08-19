@@ -538,7 +538,7 @@ test("Every route page family stays inside the archetype and boundary contract",
   );
   assert.deepEqual(
     archetypeModule.PAGE_DISPOSITIONS[
-      "apps/web/app/(protected)/br/[branchId]/(operator)/shift/checkout-approvals/page.tsx"
+      "apps/web/app/(protected)/br/[branchId]/(operator)/team/checkout-approvals/page.tsx"
     ],
     { status: "tune", evidence: "implemented-static", final: false },
   );

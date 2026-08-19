@@ -24,10 +24,10 @@ export interface ShellNotificationTarget {
 const NOTIFICATION_KIND_TARGET_PATH: Readonly<Record<string, string>> = {
   "attendance.checkout_requested": "/hr/attendance",
   "hr.checkout_requested": "/hr/attendance",
-  "hr.checkout_approved": "/hr/attendance",
-  "hr.checkout_rejected": "/hr/attendance",
-  "hr.leave_approved": "/hr/attendance",
-  "hr.leave_rejected": "/hr/attendance",
+  "hr.checkout_approved": "/me/clock",
+  "hr.checkout_rejected": "/me/clock",
+  "hr.leave_approved": "/me/schedule/leave",
+  "hr.leave_rejected": "/me/schedule/leave",
   "hr.leave_requested": "/hr/attendance",
   "hr.payroll_period_ready": "/hr/payroll",
   "inventory.count_slip_submitted": "/inventory/count-slips",
@@ -50,6 +50,7 @@ const NOTIFICATION_KIND_TARGET_PATH: Readonly<Record<string, string>> = {
   "pos.void_requested": "/orders",
   "pos.void_resolved": "/orders",
   "pos.void_rejected": "/orders",
+  "pos.kds_out_of_stock": "/orders",
   "order.delay_sla_breach": "/orders",
   "work.task_assigned": "/work",
 };

@@ -33,11 +33,11 @@ function redirectLegacyTeamTab(
       const week = search.week
         ? `?week=${encodeURIComponent(search.week)}`
         : "";
-      redirect(`/br/${branchId}/shift/roster${week}`);
+      redirect(`/br/${branchId}/team/roster${week}`);
       return;
     }
     case "attendance":
-      redirect(`/br/${branchId}/shift/attendance`);
+      redirect(`/br/${branchId}/team/attendance`);
       return;
     case "checkouts": {
       const raw = search.attendanceId;
@@ -45,11 +45,11 @@ function redirectLegacyTeamTab(
       const query = attendanceId
         ? `?attendanceId=${encodeURIComponent(attendanceId)}`
         : "";
-      redirect(`/br/${branchId}/shift/checkout-approvals${query}`);
+      redirect(`/br/${branchId}/team/checkout-approvals${query}`);
       return;
     }
     case "leaves":
-      redirect(`/br/${branchId}/shift/leave-approvals`);
+      redirect(`/br/${branchId}/team/leave-approvals`);
       return;
     default:
       return;
@@ -99,7 +99,6 @@ export default async function TeamBoardPage({
     canApproveCheckout,
     canForceClose,
     canApproveCount,
-    canAssignCount,
     canApproveLeave,
     canRoster,
     canViewAttendance,
@@ -126,11 +125,6 @@ export default async function TeamBoardPage({
     ),
     probePermission(
       { supabase, claims },
-      PERMISSION_KEYS.INVENTORY_COUNT_ASSIGN,
-      context.branchId,
-    ),
-    probePermission(
-      { supabase, claims },
       PERMISSION_KEYS.HR_APPROVE_LEAVE_REQUEST,
       context.branchId,
     ),
@@ -140,8 +134,7 @@ export default async function TeamBoardPage({
 
   const isStoreBranch = context.branch.branch_kind === "branch";
   const canSeeApprovals =
-    activeTab === "board" &&
-    (canApproveCheckout || canApproveCount || canApproveLeave);
+    activeTab === "board" && (canApproveCheckout || canApproveLeave);
 
   const [result, queueCounts] = await Promise.all([
     activeTab === "board" && canViewTeam
@@ -176,23 +169,18 @@ export default async function TeamBoardPage({
               branchId={context.branchId}
               membersHref={`${basePath}/team?tab=members`}
               countSlipsHref={`${basePath}/stock/count-slips`}
-              countAssignmentsHref={
-                canAssignCount
-                  ? `${basePath}/stock/count-assignments`
-                  : undefined
-              }
-              checkoutApprovalsHref={`${basePath}/shift/checkout-approvals`}
+              checkoutApprovalsHref={`${basePath}/team/checkout-approvals`}
               leaveApprovalsHref={
                 canApproveLeave && isStoreBranch
-                  ? `${basePath}/shift/leave-approvals`
+                  ? `${basePath}/team/leave-approvals`
                   : undefined
               }
               rosterHref={
-                canRoster ? `${basePath}/shift/roster` : undefined
+                canRoster ? `${basePath}/team/roster` : undefined
               }
               attendanceHref={
                 canViewAttendance && canViewTeam
-                  ? `${basePath}/shift/attendance`
+                  ? `${basePath}/team/attendance`
                   : undefined
               }
               canApproveCheckout={canApproveCheckout}
@@ -200,12 +188,10 @@ export default async function TeamBoardPage({
               canApproveCount={canApproveCount}
               approverRole={claims.user_role as StaffRole}
               approvalCounts={
-                queueCounts
+                    queueCounts
                   ? {
                       checkoutPending: queueCounts.pendingCheckouts ?? undefined,
                       leavePending: queueCounts.pendingLeaveRequests ?? undefined,
-                      countSlipsPending:
-                        queueCounts.pendingCountSlips ?? undefined,
                     }
                   : undefined
               }

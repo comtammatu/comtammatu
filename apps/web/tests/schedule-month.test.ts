@@ -1,9 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import {
-  listUpcomingScheduleShifts,
-  mergeScheduleAttendanceWithAssignments,
-} from "../lib/staff-runtime/_lib/schedule-month";
+import { mergeScheduleAttendanceWithAssignments } from "../lib/staff-runtime/_lib/schedule-month";
 import type { ScheduleAttendance } from "../lib/staff-runtime/schedule/actions";
 
 test("merge adds rostered shifts that have not been punched", () => {
@@ -40,34 +37,4 @@ test("merge adds rostered shifts that have not been punched", () => {
   assert.equal(merged[1]?.status, "scheduled");
   assert.equal(merged[1]?.shift_name, "Ca chiều");
   assert.equal(merged[1]?.check_in, null);
-});
-
-test("upcoming list only includes future scheduled shifts", () => {
-  const rows: ScheduleAttendance[] = [
-    {
-      date: "2026-08-19",
-      check_in: null,
-      check_out: null,
-      scheduled_start_at: null,
-      scheduled_end_at: null,
-      status: "scheduled",
-      shift_name: "Ca chiều",
-      start_time: "15:00:00",
-      end_time: "22:00:00",
-    },
-    {
-      date: "2026-08-28",
-      check_in: null,
-      check_out: null,
-      scheduled_start_at: null,
-      scheduled_end_at: null,
-      status: "scheduled",
-      shift_name: "Ca sáng",
-      start_time: "08:00:00",
-      end_time: "16:00:00",
-    },
-  ];
-  const upcoming = listUpcomingScheduleShifts(rows, "2026-08-19", 7);
-  assert.equal(upcoming.length, 1);
-  assert.equal(upcoming[0]?.shift_name, "Ca chiều");
 });

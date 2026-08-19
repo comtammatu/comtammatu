@@ -14,6 +14,11 @@ import {
   type GrnListFilters,
   type GrnListRow,
 } from "./grn-list-model";
+import {
+  OWNER_UNPRICED_GRN_STATUS,
+  parseUnpricedConfirmedGrnQueue,
+  type UnpricedConfirmedGrnLine,
+} from "./grn-unpriced-queue-model";
 
 const PAGE_SIZE = 50;
 
@@ -78,6 +83,9 @@ export type GrnListPageData = {
   filters: GrnListFilters;
   canManageSupplierInvoice: boolean;
   canViewMonetary: boolean;
+  canPatchConfirmedUnitCost: boolean;
+  unpricedLines: UnpricedConfirmedGrnLine[];
+  unpricedTotal: number;
   loadFailed: boolean;
 };
 
@@ -88,6 +96,16 @@ function first(value: string | string[] | undefined): string {
 function dateValue(value: string | string[] | undefined): string {
   const raw = first(value);
   return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : "";
+}
+
+export async function loadUnpricedConfirmedGrnQueue(
+  supabase: Awaited<ReturnType<typeof loadAuthState>>["supabase"],
+): Promise<{ rows: UnpricedConfirmedGrnLine[]; total: number } | null> {
+  const result = await supabase.rpc(
+    "list_unpriced_confirmed_grn_lines" as never,
+  );
+  if (result.error) return null;
+  return parseUnpricedConfirmedGrnQueue(result.data);
 }
 
 export async function loadGrnListPageData(
@@ -101,7 +119,13 @@ export async function loadGrnListPageData(
   });
   if (scope.outOfScope) notFound();
 
-  const status = parseGrnListStatus(params.status);
+  const isOwner = claims.user_role === "owner";
+  const requestedStatus = parseGrnListStatus(params.status);
+  const status =
+    requestedStatus === OWNER_UNPRICED_GRN_STATUS && !isOwner
+      ? "draft"
+      : requestedStatus;
+  const isUnpricedQueue = status === OWNER_UNPRICED_GRN_STATUS;
   const requestedDateField = first(params.dateField);
   const dateField: GrnListDateField =
     requestedDateField === "expected" || requestedDateField === "received"
@@ -121,27 +145,53 @@ export async function loadGrnListPageData(
     branchId: scope.selectedBranchId,
   };
 
-  const [canManageSupplierInvoice, monetaryAccess, result] = await Promise.all([
-    probePermission(
-      auth,
-      PERMISSION_KEYS.PROCUREMENT_INVOICE_CREATE,
-      scope.selectedBranchId,
-    ),
-    loadInventoryMonetaryAccess(claims.user_role),
-    supabase.rpc("list_goods_receipt_notes" as never, {
-      p_query: filters.query || null,
-      p_status: filters.status,
-      p_supplier_id: filters.supplierId,
-      p_date_field: filters.dateField,
-      p_date_from: filters.dateFrom || null,
-      p_date_to: filters.dateTo || null,
-      p_po_id: filters.poId,
-      p_purchase_request_id: filters.purchaseRequestId,
-      p_branch_id: filters.branchId,
-      p_limit: PAGE_SIZE,
-      p_offset: (page - 1) * PAGE_SIZE,
-    } as never),
-  ]);
+  const [canManageSupplierInvoice, monetaryAccess, result, unpricedQueue] =
+    await Promise.all([
+      probePermission(
+        auth,
+        PERMISSION_KEYS.PROCUREMENT_INVOICE_CREATE,
+        scope.selectedBranchId,
+      ),
+      loadInventoryMonetaryAccess(claims.user_role),
+      isUnpricedQueue
+        ? Promise.resolve({ data: null, error: null })
+        : supabase.rpc("list_goods_receipt_notes" as never, {
+            p_query: filters.query || null,
+            p_status: filters.status,
+            p_supplier_id: filters.supplierId,
+            p_date_field: filters.dateField,
+            p_date_from: filters.dateFrom || null,
+            p_date_to: filters.dateTo || null,
+            p_po_id: filters.poId,
+            p_purchase_request_id: filters.purchaseRequestId,
+            p_branch_id: filters.branchId,
+            p_limit: PAGE_SIZE,
+            p_offset: (page - 1) * PAGE_SIZE,
+          } as never),
+      isOwner && params.routeBranchId == null
+        ? loadUnpricedConfirmedGrnQueue(supabase)
+        : Promise.resolve({ rows: [], total: 0 }),
+    ]);
+
+  const unpricedLines = unpricedQueue?.rows ?? [];
+  const unpricedTotal = unpricedQueue?.total ?? 0;
+  const canPatchConfirmedUnitCost = isOwner && params.routeBranchId == null;
+
+  if (isUnpricedQueue) {
+    return {
+      rows: [],
+      total: unpricedQueue == null ? 0 : unpricedTotal,
+      page: 1,
+      pageSize: PAGE_SIZE,
+      filters,
+      canManageSupplierInvoice,
+      canViewMonetary: monetaryAccess.purchasePrice,
+      canPatchConfirmedUnitCost,
+      unpricedLines,
+      unpricedTotal,
+      loadFailed: unpricedQueue == null,
+    };
+  }
 
   const parsed = responseSchema.safeParse(result.data);
   if (result.error || !parsed.success) {
@@ -153,6 +203,9 @@ export async function loadGrnListPageData(
       filters,
       canManageSupplierInvoice,
       canViewMonetary: monetaryAccess.purchasePrice,
+      canPatchConfirmedUnitCost,
+      unpricedLines,
+      unpricedTotal,
       loadFailed: true,
     };
   }
@@ -169,6 +222,9 @@ export async function loadGrnListPageData(
     filters,
     canManageSupplierInvoice,
     canViewMonetary: monetaryAccess.purchasePrice,
+    canPatchConfirmedUnitCost,
+    unpricedLines,
+    unpricedTotal,
     loadFailed: false,
   };
 }

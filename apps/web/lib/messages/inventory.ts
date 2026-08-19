@@ -175,6 +175,11 @@ export const inventory = {
     branchDoorWaste: "Hao hụt",
     branchDoorWasteMeta: "Ghi hao hụt thủ công trong ngày",
     branchDoorsTitle: "Việc kho",
+    branchCountDoorsTitle: "Đếm tồn",
+    branchDoorCountAssign: "Phân công đếm",
+    branchDoorCountAssignMeta: "Giao danh sách hàng cần đếm cho nhân viên",
+    branchDoorCountSlips: "Phiếu đếm",
+    branchDoorCountSlipsMeta: "Duyệt phiếu đã nộp hoặc yêu cầu đếm lại",
     operationalMetricsTitle: "Số liệu vận hành",
     operationalMetricsDescription:
       "Số việc đang mở; xử lý qua phiếu ở các mục bên dưới.",
@@ -839,6 +844,31 @@ export const inventory = {
     viewPendingOrders: "Xem đơn chờ nhận",
     statusTabsAria: "Trạng thái phiếu nhập",
     allStatuses: "Tất cả",
+    confirmedUnitCost: {
+      tab: "Chờ đơn giá",
+      empty: "Không còn dòng phiếu đã nhập kho thiếu đơn giá.",
+      emptyDescription:
+        "Phiếu đã chốt còn đơn giá 0 hiện ở đây để Chủ sở hữu xác nhận hoặc gõ đơn giá.",
+      searchPlaceholder: "Tìm nguyên liệu, nhà cung cấp hoặc mã phiếu...",
+      confirmAction: "Xác nhận đơn giá",
+      dialogTitle: "Xác nhận đơn giá",
+      dialogDescription: (name: string, quantity: string, unit: string) =>
+        unit.trim()
+          ? `${name} · ${quantity} ${unit}. Gợi ý lấy phiếu nhập cùng nhà cung cấp đã có đơn giá — kiểm tra rồi xác nhận, hoặc gõ nếu chưa có gợi ý.`
+          : `${name} · ${quantity}. Gợi ý lấy phiếu nhập cùng nhà cung cấp đã có đơn giá — kiểm tra rồi xác nhận, hoặc gõ nếu chưa có gợi ý.`,
+      suggestedHint: (amount: string, unit: string, grnNumber: string) =>
+        unit.trim()
+          ? `Gợi ý: ${amount}/${unit} (phiếu ${grnNumber}).`
+          : `Gợi ý: ${amount} (phiếu ${grnNumber}).`,
+      noSuggestion: "Không có đơn giá cùng nhà cung cấp. Gõ đơn giá.",
+      reasonLabel: "Lý do xác nhận",
+      reasonPlaceholder:
+        "Ví dụ: theo phiếu nhập gần nhất cùng nhà cung cấp, hoặc giá nhà cung cấp báo.",
+      success: "Đã ghi đơn giá vào phiếu nhập.",
+      ingredient: "Nguyên liệu",
+      quantity: "Số lượng",
+      suggested: "Gợi ý",
+    },
     listTitle: "Phiếu nhập kho",
     listMetaPage: "Trên trang",
     listMetaTotal: "Tổng lọc",
@@ -1143,7 +1173,7 @@ export const inventory = {
     pageTitle: "Phiếu mua hàng",
     pageDescription:
       "Kho lập phiếu; Kế toán duyệt; Kho xác nhận hàng thực nhận.",
-    createAction: "Lập phiếu mua",
+    createAction: "Tạo đơn",
     discardAction: "Bỏ phiếu",
     requestChangesAction: "Gửi lại Kho",
     rejectAction: "Từ chối mua",
@@ -1152,7 +1182,14 @@ export const inventory = {
     receiveMoreAction: "Nhập tiếp",
     emptyTitle: "Chưa có phiếu mua",
     emptyDescription: "Kho lập danh sách nguyên liệu cần mua tại đây.",
-    createTitle: "Lập phiếu mua",
+    createTitle: "Tạo đơn mua",
+    createDescription:
+      "Một nhà cung cấp và một kho nhận. Đơn giá ghi lúc nhập hàng.",
+    unmappedLineWarning: "Chưa gán nhà cung cấp này.",
+    unmappedSendBlocked:
+      "Gán nhà cung cấp cho mọi nguyên liệu trước khi gửi đơn.",
+    saveDraft: "Lưu nháp",
+    createdToast: "Đã lưu đơn mua.",
     editTitle: "Chỉnh sửa phiếu mua",
     formDescription:
       "NCC được tự động lấy từ cấu hình mặc định của nguyên liệu.",
@@ -1193,7 +1230,7 @@ export const inventory = {
     loadErrorDescription: "Hãy tải lại trước khi tiếp tục mua hoặc nhận hàng.",
     emptyInitialTitle: "Chưa có đơn đặt hàng",
     emptyInitialDescription:
-      "Tạo đơn mua từ nguyên liệu đã gán nhà cung cấp.",
+      "Tạo đơn mua cho một nhà cung cấp, không cần yêu cầu mua.",
     lineCount: (count: number) => `${formatCount(count)} dòng`,
     supplierRequired: "Nhà cung cấp",
     quantityShort: "SL",

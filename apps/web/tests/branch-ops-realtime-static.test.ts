@@ -30,8 +30,8 @@ const operatorLayout = readFileSync(
 );
 
 const operatorChildPages = [
-  "../app/(protected)/br/[branchId]/(operator)/shift/checkout-approvals/page.tsx",
-  "../app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/page.tsx",
+    "../app/(protected)/br/[branchId]/(operator)/team/checkout-approvals/page.tsx",
+    "../app/(protected)/br/[branchId]/(operator)/team/leave-approvals/page.tsx",
   "../app/(protected)/br/[branchId]/(operator)/shift/page.tsx",
   "../app/(protected)/br/[branchId]/(operator)/stock/count-assignments/page.tsx",
   "../app/(protected)/br/[branchId]/(operator)/stock/count-slips/page.tsx",
@@ -48,7 +48,7 @@ const branchTodayStatus = readFileSync(
 
 const branchLeaveApprovals = readFileSync(
   new URL(
-    "../app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/branch-leave-approvals-client.tsx",
+    "../app/(protected)/br/[branchId]/(operator)/team/leave-approvals/branch-leave-approvals-client.tsx",
     import.meta.url,
   ),
   "utf8",
@@ -176,7 +176,7 @@ test("useRealtimeChannel skips setup when access token is null", () => {
 test("operator leave approvals owns its realtime subscriber without layout duplication", () => {
   assert.match(
     operatorLayout,
-    /disabledPathPrefixes=\{\[\s*`\/br\/\$\{context\.branchId\}\/shift\/leave-approvals`,?\s*\]\}/,
+    /disabledPathPrefixes=\{\[\s*`\/br\/\$\{context\.branchId\}\/team\/leave-approvals`,?\s*\]\}/,
   );
   assert.match(branchLeaveApprovals, /useBranchOpsEvents\(\{/);
 });

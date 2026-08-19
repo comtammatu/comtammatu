@@ -547,6 +547,7 @@ export const hr = {
   },
   roster: {
     title: "Phân ca theo tuần",
+    backToTeamAria: "Quay lại đội",
     description:
       "Gán ca làm cho từng nhân viên theo ngày. Nhân viên chỉ chấm công khi đã được phân ca.",
     officeSiteLabel: "Văn phòng",

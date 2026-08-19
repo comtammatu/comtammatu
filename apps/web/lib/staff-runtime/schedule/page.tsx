@@ -24,12 +24,14 @@ type StaffSchedulePageContentProps = {
   leaveHref: string;
   profileHref: string;
   plane?: SchedulePlane;
+  routeBranchId?: number;
 };
 
 export async function StaffSchedulePageContent({
   leaveHref,
   profileHref,
   plane = "employee",
+  routeBranchId,
 }: StaffSchedulePageContentProps) {
   const ctx = await getEmployeeContext();
   const PageShell = plane === "branch" ? BranchOperatorPage : EmployeePage;
@@ -72,6 +74,7 @@ export async function StaffSchedulePageContent({
         }
         initialMonthStart={monthStart}
         leaveHref={leaveHref}
+        branchId={routeBranchId ?? ctx.branchId}
         monthlySalary={employeeResult.data?.base_salary ?? 0}
         plane={plane}
       />

@@ -1,9 +1,11 @@
 import {
+  Ban,
   CalendarCheck,
   CheckCircle,
   ClipboardCheck,
   ClipboardList,
   ShieldAlert,
+  TriangleAlert,
   Truck,
 } from "lucide-react";
 
@@ -14,6 +16,8 @@ export const QUEUE_ROW_KEYS = [
   "leave-approvals",
   "inbound-transfers",
   "open-stock-requests",
+  "void-approvals",
+  "out-of-stock",
 ] as const;
 
 export type QueueRowKey = (typeof QUEUE_ROW_KEYS)[number];
@@ -33,4 +37,6 @@ export const QUEUE_ROW_ICONS = {
   "leave-approvals": CalendarCheck,
   "inbound-transfers": Truck,
   "open-stock-requests": ClipboardList,
+  "void-approvals": Ban,
+  "out-of-stock": TriangleAlert,
 } as const;

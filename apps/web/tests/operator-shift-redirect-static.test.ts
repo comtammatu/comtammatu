@@ -47,14 +47,32 @@ test("Branch shift landing leads with personal work for every branch role", () =
   assert.doesNotMatch(source, /manager-dashboard|redirect\("\/me/);
 });
 
-test("Branch Manager shift routes stay branch-native", () => {
-  for (const path of [
-    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/attendance/page.tsx",
-    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/checkout-approvals/page.tsx",
-    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/page.tsx",
-  ]) {
+test("Branch Manager people routes nest under team with Class C shift shims", () => {
+  const shims = [
+    [
+      "apps/web/app/(protected)/br/[branchId]/(operator)/shift/attendance/page.tsx",
+      "/team/attendance",
+    ],
+    [
+      "apps/web/app/(protected)/br/[branchId]/(operator)/shift/checkout-approvals/page.tsx",
+      "/team/checkout-approvals",
+    ],
+    [
+      "apps/web/app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/page.tsx",
+      "/team/leave-approvals",
+    ],
+    [
+      "apps/web/app/(protected)/br/[branchId]/(operator)/shift/roster/page.tsx",
+      "/team/roster",
+    ],
+  ] as const;
+
+  for (const [path, dest] of shims) {
     assert.equal(existsSync(resolve(repoRoot, path)), true, path);
-    assert.doesNotMatch(read(path), /redirect\("\/me/);
+    const source = read(path);
+    assert.match(source, /redirect\(`\/br\/\$\{branchId\}/);
+    assert.ok(source.includes(dest), `${path} must redirect to ${dest}`);
+    assert.doesNotMatch(source, /redirect\("\/me/);
   }
 });
 

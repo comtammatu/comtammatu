@@ -1,6 +1,6 @@
 # Toast And Notification System
 
-> Status: design and producer contract | Updated: 2026-08-09 | Scope: app-wide transient toast, durable in-app notifications, foreground PWA popup, external notification outbox, and boundary vs operational audio
+> Status: design and producer contract | Updated: 2026-08-20 | Scope: app-wide transient toast, durable in-app notifications, foreground PWA popup, external notification outbox, and boundary vs operational audio
 
 ## UI Scope Declaration
 
@@ -17,7 +17,7 @@ The system has these feedback channels with different durability:
 - Toast: short-lived client feedback for the action currently happening on screen. On a visible control-surface route, it is also the transient attention layer for a newly arrived durable notification; the durable row remains the source of truth. Use `toast` from `@comtammatu/ui/components/sonner`.
 - In-app notification: durable, role/branch-scoped work item stored in `public.notifications`, read state in `public.notification_reads`, and surfaced through `/notifications`, `Cổng nhân viên`, or an approved bell/entry point.
 - Foreground popup: device-level OS notification fired by the open PWA via the `Notification` API for new unread durable notifications the user can see, across `info`, `warning`, and `critical`. A visible control-surface route uses Sonner instead to avoid duplicate foreground alerts. A visible POS/KDS/pickup route mutes durable Sonner and OS popup so the live board owns attention; backgrounded floor tabs still use the OS popup. The OS popup links back to `/notifications` or the action URL and fires only while the app is open; there is no closed-app delivery.
-- External outbox: delivery attempt queue in `public.notification_outbox` for configured webhook-style workers.
+- External outbox: `public.notification_outbox` is retained but unused. There is no worker (no FCM, email, or Telegram). Producers must not enqueue `pending` rows; leftover pending is `skipped`.
 - Operational audio (POS/KDS): device-local beep and optional pre-recorded voice on the open board/terminal. Not durable, not role-feed, not Telegram. Contract: `docs/spec/operational-audio-alerts.md`.
 
 Do not collapse these channels. A toast is not an audit trail. An in-app notification is not a replacement for immediate form feedback. The foreground popup is only an attention layer over durable notifications. The external outbox is not the unread feed. Operational audio is not a notification row and must not be routed through `public.notifications`.
@@ -32,7 +32,7 @@ Use these sources in order:
 4. Durable feed UI: `apps/web/app/_components/notification-*`
 5. Foreground popup runtime: `apps/web/app/_hooks/use-foreground-notifications.ts`, `apps/web/app/_components/notification-popup-control.tsx`, and `apps/web/app/sw.ts` (notificationclick)
 6. Database contract: `supabase/migrations/20260727120000_baseline.sql` (notifications tables) and forward notification migrations
-7. External outbox: `public.notification_outbox` and module-specific dispatchers
+7. External outbox: unused `public.notification_outbox` (no worker; do not enqueue `pending`)
 8. Product vocabulary: `docs/ref/glossary.md`, `packages/shared/src/labels/vi.ts`, and domain dictionaries
 
 ## Core Model
@@ -65,16 +65,15 @@ Unread / badge freshness
   -> same-tab also emits ctmt:notifications-changed
 
 External delivery
-  -> notification_outbox row
-  -> dispatcher / worker retries bounded delivery
-  -> status is sent, failed, skipped, or pending
+  -> not in product scope (no worker)
+  -> do not insert notification_outbox pending rows
 ```
 
 ## PM Scope
 
 MVP: one clear immediate feedback path per client action (inline / toast / blocking dialog); durable notifications for work that survives navigation or needs another role; feed supports unread, mark-read, deep links, severity, expiry, dedup; shared severity semantics without shared storage; foreground OS popups while PWA open only (no closed-app push); producers auditable by kind, entity, target role/branch, dedup key.
 
-Out of scope: native APNs/FCM or channel SDKs; a second visual system outside Má Tư DS/Sonner; per-user notification rows (targeting stays role/branch; read state is per user).
+Out of scope: native APNs/FCM or channel SDKs; a second visual system outside Má Tư DS/Sonner; per-user notification rows (targeting stays role/branch; read state is per user). PWA install/offline/OS support: `docs/spec/pwa.md`.
 
 ## BA Rules
 
@@ -270,16 +269,19 @@ is shortcut. Row click may mark read then navigate `action_url`.
 
 ## Surface Placement
 
-- **POS:** toasts for payment/order/print/session; no global chrome competing with
-  cart; durable rows = manager follow-up.
+- **POS:** toasts for payment/order/print/session; no notification bell on the
+  live cart; durable void / out-of-stock follow-up is Branch operator Orders
+  (`/br/{id}/orders`).
 - **KDS:** live queue primary; toast only mutation feedback; ticket sound =
-  operational audio, not durable.
+  operational audio, not durable; no notification bell.
 - **Owner:** full feed + module badges; link to review/finance/staff/inventory
   exceptions.
 - **Inventory:** durable for stock low, stocktake conflict, approvals; Branch
   requests → central sites; purchase demand → Owner + Accountant; PR/PO →
   purchase queues; GRN → goods-receipt queues.
-- **Staff (`Cổng nhân viên`):** task-led only — not an Owner control surface.
+- **Staff (`Cổng nhân viên` / `/me`):** operator bell + `/notifications`; personal
+  leave/checkout results deep-link `/me` (branch floor hydrates to
+  `/br/{id}/shift/*`). Not an Owner control surface.
 
 ## Domain producer matrix (P0–P1)
 
@@ -287,18 +289,20 @@ Inventory: `procurement.purchase_request_submitted` /
 `procurement.po_pending_approval`; `inventory.stock_request_*` /
 `inventory.waste_pending_approval` / `workflow.transfer_in_transit`. Finance:
 `inventory.valuation_variance` / `inventory.valuation_reconciliation_failed`.
-Orders: `pos.void_*`. HR: `hr.leave_*`, `hr.checkout_*` /
-`attendance.checkout_requested`, `hr.payroll_period_ready`. Closed-app Web Push
-/ APNs / FCM remains out of scope.
+Orders: `pos.void_*`, `pos.kds_out_of_stock`. Do **not** insert `pos.order_new`
+— live POS/KDS/self-order boards own new sales. HR: `hr.leave_*`, `hr.checkout_*` /
+`attendance.checkout_requested`, `hr.payroll_period_ready`. PO status kinds
+`workflow.po_sent` / `workflow.po_approved` / `procurement.po_pending_approval`
+use stable `dedup_key` `{kind}:{po_id}` so re-send / re-approve does not create
+a second unread row. Closed-app Web Push / APNs / FCM remains out of scope.
+Foreground OS popup stays D046: only while the PWA is open.
 
 ## External Outbox
 
-`notification_outbox` is delivery attempts, not unread state. A workflow may
-write both `notifications` (in-app) and `notification_outbox` (external).
-Dispatchers must be idempotent with bounded retries; missing webhook →
-`skipped` (not infinite `pending`). Failed external delivery must not roll back
-the parent transaction unless the business requires acknowledgement. Payloads
-carry stable ids/links only — no raw DB errors or secrets.
+`notification_outbox` has no consumer in this repo. Do not enqueue `pending`
+rows. The NCC return-slip trigger is a no-op; existing `pending` is marked
+`skipped`. Table and status check stay for history. Do not invent FCM, email,
+or Telegram dispatchers here.
 
 ## Error Handling
 

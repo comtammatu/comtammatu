@@ -39,7 +39,6 @@ import {
   type ScheduleLeave,
   type ScheduleMonthData,
 } from "./actions";
-import { listUpcomingScheduleShifts } from "../_lib/schedule-month";
 import {
   formatISODateParts,
   formatVNBusinessDate,
@@ -54,6 +53,7 @@ import {
   type VNMonthCalendarCell,
 } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
+import { DayLeaveRequestForm } from "../leave/leave-request-form";
 import {
   expandLeaveRangesByDate,
   type CalendarLeaveStatus,
@@ -70,11 +70,13 @@ import {
 
 
 const copy = messages.employee.schedule;
+const leaveCopy = messages.employee.leave;
 
 interface ScheduleClientProps {
   initialData: ScheduleMonthData;
   initialMonthStart: string;
   leaveHref: string;
+  branchId: number | null;
   monthlySalary?: number;
   plane?: SchedulePlane;
 }
@@ -363,9 +365,15 @@ function CalendarCellContent({
               )}
               aria-hidden="true"
             />
-            <span className="hidden min-w-0 truncate text-xs leading-4 text-muted-foreground sm:inline">
-              {att.shift_name ?? "\u2014"}
-              {att.check_in ? ` ${formatTime(att.check_in)}` : ""}
+            <span className="min-w-0 truncate text-2xs text-muted-foreground">
+              {att.status === "day_off"
+                ? copy.rest
+                : (att.shift_name ?? copy.rowShift)}
+              {att.check_in ? (
+                <span className="hidden sm:inline">
+                  {` ${formatTime(att.check_in)}`}
+                </span>
+              ) : null}
             </span>
           </div>
         ))}
@@ -453,18 +461,25 @@ function ScheduleMonthCalendarGrid({
 
 function SelectedDayDetail({
   attendances,
+  branchId,
+  canRequestLeave,
   dateStr,
   Frame,
   leave,
+  leaveHref,
+  onLeaveSubmitted,
   todayStr,
 }: {
   attendances: ScheduleAttendance[];
+  branchId: number | null;
+  canRequestLeave: boolean;
   dateStr: string;
   Frame: ScheduleFrameComponent;
   leave: CalendarLeaveStatus | undefined;
+  leaveHref: string;
+  onLeaveSubmitted: (startDate: string, endDate: string) => void;
   todayStr: string;
 }) {
-
   return (
       <div className="pb-4">
         <Frame pad="sm" className="flex flex-col gap-3 bg-background">
@@ -513,6 +528,26 @@ function SelectedDayDetail({
               })}
             </div>
           )}
+
+          {canRequestLeave && !leave ? (
+            <DayLeaveRequestForm
+              branchId={branchId}
+              startDate={dateStr}
+              title={copy.requestLeaveCta}
+              onSubmitted={(values) =>
+                onLeaveSubmitted(values.startDate, values.endDate)
+              }
+            />
+          ) : null}
+          <Button
+            variant="outline"
+            size="touch"
+            className="w-full sm:w-fit"
+            render={<Link href={leaveHref} />}
+          >
+            <IconCalendarX data-icon="inline-start" />
+            {leaveCopy.myRequestsLink}
+          </Button>
         </Frame>
       </div>
   );
@@ -522,6 +557,7 @@ export function ScheduleClient({
   initialData,
   initialMonthStart,
   leaveHref,
+  branchId,
   monthlySalary = 0,
   plane = "employee",
 }: ScheduleClientProps) {
@@ -567,6 +603,17 @@ export function ScheduleClient({
     loadMonth(currentMonthStart);
   }
 
+  function handleLeaveSubmitted(startDate: string, endDate: string) {
+    setMonthData((current) => ({
+      ...current,
+      leaves: [
+        ...current.leaves,
+        { start_date: startDate, end_date: endDate, status: "pending" },
+      ],
+    }));
+    setSelectedDate(null);
+  }
+
   const { attendanceByDate, leaveByDate } = createScheduleMaps(
     monthData,
     monthStart,
@@ -592,10 +639,6 @@ export function ScheduleClient({
   const estimatedPay = hasMonthlySalary
     ? (workdaysCount * monthlySalary) / monthData.standardWorkdays
     : null;
-  const upcomingShifts = isCurrentMonth
-    ? listUpcomingScheduleShifts(monthData.attendance, todayStr)
-    : [];
-
   return (
     <>
       <Panel contentClassName="gap-3">
@@ -672,37 +715,6 @@ export function ScheduleClient({
           ]}
         />
 
-        {isCurrentMonth ? (
-          <div className="flex flex-col gap-2">
-            <p className="text-sm font-medium">{copy.upcomingTitle}</p>
-            {upcomingShifts.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{copy.upcomingEmpty}</p>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {upcomingShifts.slice(0, 6).map((shift, index) => (
-                  <div
-                    key={`${shift.date}-${shift.shift_name ?? index}`}
-                    className="flex min-w-0 items-center justify-between gap-2 rounded-md bg-muted/30 px-3 py-2"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">
-                        {shift.shift_name ?? copy.scheduledShift}
-                      </p>
-                      <p className="truncate font-mono text-xs tabular-nums text-muted-foreground">
-                        {formatDate(shift.date)}
-                        {shift.start_time
-                          ? ` · ${formatShiftWindow(shift.start_time, shift.end_time)}`
-                          : ""}
-                      </p>
-                    </div>
-                    <StatusBadge domain="attendance" value="scheduled" />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ) : null}
-
         {error ? (
           <div className="flex flex-col gap-2">
             <Alert variant="destructive">
@@ -758,26 +770,17 @@ export function ScheduleClient({
         }}
         title={selectedDate ? formatDate(selectedDate) : copy.dayDetailTitle}
         description={formatMonthTitle(monthStart)}
-        footer={
-          selectedDate && selectedDate >= todayStr ? (
-            <Button
-              variant="outline"
-              size="touch"
-              className="w-full sm:w-fit"
-              render={<Link href={leaveHref} />}
-            >
-              <IconCalendarX data-icon="inline-start" />
-              {copy.requestLeaveCta}
-            </Button>
-          ) : undefined
-        }
       >
           {selectedDate ? (
             <SelectedDayDetail
               attendances={selectedAttendance}
+              branchId={branchId}
+              canRequestLeave={selectedDate >= todayStr}
               dateStr={selectedDate}
               Frame={Frame}
               leave={selectedLeave}
+              leaveHref={leaveHref}
+              onLeaveSubmitted={handleLeaveSubmitted}
               todayStr={todayStr}
             />
           ) : null}

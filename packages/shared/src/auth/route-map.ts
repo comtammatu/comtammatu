@@ -47,6 +47,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
       "/api/health",
       "/api/webhooks",
       "/manifest.webmanifest",
+      "/me/manifest.webmanifest",
       "/sw.js",
       "/r",
       "/api/feedback",
@@ -229,13 +230,15 @@ export const ROUTE_FAMILY_CONTRACTS = [
     requiresBranchId: true,
   },
   {
-    // Full-page checkout queue (Team hub links here; legacy `?tab=checkouts`
-    // redirects to this route). Breadcrumb root is branch management.
+    // Full-page checkout queue. Class C `/shift/checkout-approvals` shims here.
     id: "branch-shift-checkout-approvals",
     label: MODULE_ACL.employee_checkout_approvals.label,
     surface: "branch_management",
-    entryPath: "/br/[branchId]/shift/checkout-approvals",
-    matchPrefixes: ["/br/[branchId]/shift/checkout-approvals"],
+    entryPath: "/br/[branchId]/team/checkout-approvals",
+    matchPrefixes: [
+      "/br/[branchId]/team/checkout-approvals",
+      "/br/[branchId]/shift/checkout-approvals",
+    ],
     moduleKeys: ["employee_checkout_approvals"],
     primaryNav: "operator-bottom-nav",
     backBehavior: "in-flow",
@@ -243,12 +246,15 @@ export const ROUTE_FAMILY_CONTRACTS = [
     requiresBranchId: true,
   },
   {
-    // Full-page leave queue (legacy Team `?tab=leaves` redirects here).
+    // Full-page leave queue. Class C `/shift/leave-approvals` shims here.
     id: "branch-shift-leave-approvals",
     label: MODULE_ACL.employee_leave_approvals.label,
     surface: "branch_management",
-    entryPath: "/br/[branchId]/shift/leave-approvals",
-    matchPrefixes: ["/br/[branchId]/shift/leave-approvals"],
+    entryPath: "/br/[branchId]/team/leave-approvals",
+    matchPrefixes: [
+      "/br/[branchId]/team/leave-approvals",
+      "/br/[branchId]/shift/leave-approvals",
+    ],
     moduleKeys: ["employee_leave_approvals"],
     primaryNav: "operator-bottom-nav",
     backBehavior: "in-flow",
@@ -256,12 +262,15 @@ export const ROUTE_FAMILY_CONTRACTS = [
     requiresBranchId: true,
   },
   {
-    // Full-page weekly roster (legacy Team `?tab=roster` redirects here).
+    // Full-page weekly roster. Class C `/shift/roster` shims here.
     id: "branch-shift-roster",
     label: MODULE_ACL.branch_shift_roster.label,
     surface: "branch_management",
-    entryPath: "/br/[branchId]/shift/roster",
-    matchPrefixes: ["/br/[branchId]/shift/roster"],
+    entryPath: "/br/[branchId]/team/roster",
+    matchPrefixes: [
+      "/br/[branchId]/team/roster",
+      "/br/[branchId]/shift/roster",
+    ],
     moduleKeys: ["branch_shift_roster"],
     primaryNav: "operator-bottom-nav",
     backBehavior: "in-flow",
@@ -269,12 +278,15 @@ export const ROUTE_FAMILY_CONTRACTS = [
     requiresBranchId: true,
   },
   {
-    // Full-page attendance table (legacy Team `?tab=attendance` redirects here).
+    // Full-page attendance table. Class C `/shift/attendance` shims here.
     id: "branch-shift-attendance",
     label: MODULE_ACL.branch_shift_attendance.label,
     surface: "branch_management",
-    entryPath: "/br/[branchId]/shift/attendance",
-    matchPrefixes: ["/br/[branchId]/shift/attendance"],
+    entryPath: "/br/[branchId]/team/attendance",
+    matchPrefixes: [
+      "/br/[branchId]/team/attendance",
+      "/br/[branchId]/shift/attendance",
+    ],
     moduleKeys: ["branch_shift_attendance"],
     primaryNav: "operator-bottom-nav",
     backBehavior: "in-flow",
@@ -286,7 +298,11 @@ export const ROUTE_FAMILY_CONTRACTS = [
     label: APP_COPY_VI.employeePortal,
     surface: "branch_operation",
     entryPath: "/br/[branchId]/shift",
-    matchPrefixes: ["/br/[branchId]/shift"],
+    matchPrefixes: [
+      "/br/[branchId]/shift",
+      "/br/[branchId]/shift/clock",
+      "/br/[branchId]/shift/schedule",
+    ],
     moduleKeys: ["branch_home"],
     primaryNav: "operator-bottom-nav",
     backBehavior: "in-flow",
@@ -462,7 +478,12 @@ function escapeRegex(input: string): string {
 function matchesRoutePrefix(pathname: string, prefix: string): boolean {
   if (prefix.includes("[branchId]")) {
     const expression = escapeRegex(prefix).replace("\\[branchId\\]", "\\d+");
-    if (prefix === "/br/[branchId]") {
+    // Hub prefixes must not steal nested families (Ca vs Đội children).
+    if (
+      prefix === "/br/[branchId]" ||
+      prefix === "/br/[branchId]/shift" ||
+      prefix === "/br/[branchId]/team"
+    ) {
       return new RegExp(`^${expression}/?$`).test(pathname);
     }
     return new RegExp(`^${expression}(?:/|$)`).test(pathname);

@@ -90,23 +90,22 @@ export const CONTROL_SURFACE_NAV_GROUPS: NavGroupConfig[] = [
   },
 ];
 
+export type BranchToolsGroupId = "sales" | "day" | "stock_extra";
+
+export interface BranchToolsItemConfig extends BranchScopedNavItemConfig {
+  group: BranchToolsGroupId;
+  kinds?: readonly BranchKind[];
+}
+
 /** Branch-scoped management entry points */
 export const BRANCH_MANAGEMENT_ITEMS: BranchManagementNavItemConfig[] = [
   {
-    moduleKey: "branch_dashboard",
-    icon: "LayoutDashboard",
-    hrefTemplate: "/br/{branchId}/dashboard",
-    label: APP_COPY_VI.branchCommand,
-  },
-  {
-    // The Team hub is the single home for branch staff management: board,
-    // members, roster, attendance, checkout/leave approvals (Manager IA
-    // redesign). Former `/shift/{roster,attendance,checkout-approvals,
-    // leave-approvals}` routes now redirect into this hub via `?tab=`.
+    // Team hub: board + members. Roster / attendance / checkout / leave
+    // approvals are full `/team/*` routes opened from the team tools strip.
     moduleKey: "branch_team",
     icon: "Users",
     hrefTemplate: "/br/{branchId}/team",
-    label: APP_COPY_VI.hrWorkspace,
+    label: APP_COPY_VI.branchNavTeam,
   },
   {
     moduleKey: "branch_settings",
@@ -170,6 +169,231 @@ export const OPERATOR_TILE_GROUP_ORDER: readonly OperatorTileGroupId[] = [
   "approvals",
   "stock",
 ] as const;
+
+export const BRANCH_TOOLS_GROUP_TITLES: Record<BranchToolsGroupId, string> = {
+  sales: "Bán hàng",
+  day: "Trong ngày",
+  stock_extra: "Danh mục kho",
+};
+
+export const BRANCH_TOOLS_GROUP_ORDER: readonly BranchToolsGroupId[] = [
+  "sales",
+  "day",
+  "stock_extra",
+] as const;
+
+/**
+ * Tools that used to exist only as ACL/routes (or header overflow). The
+ * `Công cụ` tab and `/settings` landing render this list — do not hide it.
+ */
+export const BRANCH_TOOLS_ITEMS = [
+  {
+    moduleKey: "pickup",
+    icon: "MonitorUp",
+    group: "sales",
+    hrefTemplate: "/br/{branchId}/pickup",
+    label: APP_COPY_VI.branchOperationsPickup,
+    kinds: ["branch"],
+  },
+  {
+    moduleKey: "branch_pos_sessions",
+    icon: "ReceiptText",
+    group: "sales",
+    hrefTemplate: "/br/{branchId}/pos-sessions",
+    kinds: ["branch"],
+  },
+  {
+    moduleKey: "branch_menu_limits",
+    icon: "Utensils",
+    group: "sales",
+    hrefTemplate: "/br/{branchId}/menu-limits",
+    kinds: ["branch"],
+  },
+  {
+    moduleKey: "branch_close_day",
+    icon: "CalendarCheck",
+    group: "day",
+    hrefTemplate: "/br/{branchId}/close-day",
+    kinds: ["branch"],
+  },
+  {
+    moduleKey: "branch_feedback",
+    icon: "MessageSquareHeart",
+    group: "day",
+    hrefTemplate: "/br/{branchId}/feedback",
+    label: MODULE_LABELS_VI.branch_feedback,
+    kinds: ["branch"],
+  },
+  {
+    moduleKey: "branch_stock",
+    icon: "ChartBar",
+    group: "stock_extra",
+    hrefTemplate: "/br/{branchId}/stock/reports",
+    label: APP_COPY_VI.reportsLabel,
+    kinds: ["branch"],
+  },
+  {
+    moduleKey: "branch_stock",
+    icon: "Tags",
+    group: "stock_extra",
+    hrefTemplate: "/br/{branchId}/stock/catalog",
+    label: "Danh mục",
+    kinds: ["branch"],
+  },
+  {
+    moduleKey: "branch_stock",
+    icon: "ClipboardCheck",
+    group: "stock_extra",
+    hrefTemplate: "/br/{branchId}/stock/catalog/thresholds",
+    label: "Ngưỡng tồn",
+    kinds: ["branch"],
+  },
+] satisfies readonly BranchToolsItemConfig[];
+
+/** Daily Kho tab: work doors only — catalog/reports live under Công cụ. */
+export const BRANCH_KHO_MATCH_PATH_SUFFIXES = [
+  "/stock/on-hand",
+  "/stock/requests",
+  "/stock/receive",
+  "/stock/transfer",
+  "/stock/stocktake",
+  "/stock/waste",
+  "/stock/count",
+  "/stock/issues",
+  "/stock/consumption",
+  "/stock/grn",
+  "/stock/purchase-requests",
+  "/stock/count-assignments",
+  "/stock/count-slips",
+] as const;
+
+/** Đội tab: hub plus people workflows (Class C `/shift/*` shims stay highlighted). */
+export const BRANCH_TEAM_MATCH_PATH_SUFFIXES = [
+  "/team",
+  "/team/roster",
+  "/team/attendance",
+  "/team/checkout-approvals",
+  "/team/leave-approvals",
+  "/shift/roster",
+  "/shift/attendance",
+  "/shift/checkout-approvals",
+  "/shift/leave-approvals",
+] as const;
+
+/** Công cụ tab: setup hub plus tools that are not daily Kho/Đội/Hôm nay. */
+export const BRANCH_TOOLS_MATCH_PATH_SUFFIXES = [
+  "/settings",
+  "/pos-sessions",
+  "/close-day",
+  "/feedback",
+  "/menu-limits",
+  "/stock/catalog",
+  "/stock/reports",
+] as const;
+
+export type BranchPrimaryTabId =
+  | "home"
+  | "shift"
+  | "schedule"
+  | "profile"
+  | "team"
+  | "stock"
+  | "tools";
+
+export type BranchPrimaryTabAudience = "all" | "floor" | "manager";
+
+export type BranchPrimaryTabBadge = "home" | "team" | "stock";
+
+export interface BranchPrimaryTabConfig {
+  id: BranchPrimaryTabId;
+  moduleKey: ModuleKey;
+  icon: string;
+  hrefTemplate: string;
+  label: string;
+  exact: boolean;
+  audience: BranchPrimaryTabAudience;
+  hideForOwner?: boolean;
+  badge?: BranchPrimaryTabBadge;
+  matchSuffixes?: readonly string[];
+}
+
+/**
+ * Store-branch bottom nav. `resolveBranchPrimaryTabs` filters by ACL;
+ * the UI layer only maps icons. Central residual chrome stays local.
+ */
+export const BRANCH_PRIMARY_TAB_ITEMS = [
+  {
+    id: "home",
+    moduleKey: "branch_home",
+    icon: "Home",
+    hrefTemplate: "/br/{branchId}",
+    label: APP_COPY_VI.branchHome,
+    exact: true,
+    audience: "all",
+    badge: "home",
+  },
+  {
+    id: "shift",
+    moduleKey: "branch_home",
+    icon: "Clock",
+    hrefTemplate: "/br/{branchId}/shift",
+    label: APP_COPY_VI.operatorShift,
+    exact: true,
+    audience: "all",
+    hideForOwner: true,
+    matchSuffixes: ["/shift/clock", "/shift/schedule"],
+  },
+  {
+    id: "schedule",
+    moduleKey: "branch_home",
+    icon: "CalendarDays",
+    hrefTemplate: "/br/{branchId}/shift/schedule",
+    label: APP_COPY_VI.employeeSchedule,
+    exact: false,
+    audience: "floor",
+  },
+  {
+    id: "profile",
+    moduleKey: "branch_home",
+    icon: "User",
+    hrefTemplate: "/br/{branchId}/profile",
+    label: APP_COPY_VI.employeeProfileShort,
+    exact: false,
+    audience: "floor",
+  },
+  {
+    id: "team",
+    moduleKey: "branch_team",
+    icon: "Users",
+    hrefTemplate: "/br/{branchId}/team",
+    label: APP_COPY_VI.branchNavTeam,
+    exact: false,
+    audience: "manager",
+    badge: "team",
+    matchSuffixes: BRANCH_TEAM_MATCH_PATH_SUFFIXES,
+  },
+  {
+    id: "stock",
+    moduleKey: "branch_stock",
+    icon: "Package",
+    hrefTemplate: "/br/{branchId}/stock",
+    label: APP_COPY_VI.branchNavStock,
+    exact: true,
+    audience: "manager",
+    badge: "stock",
+    matchSuffixes: BRANCH_KHO_MATCH_PATH_SUFFIXES,
+  },
+  {
+    id: "tools",
+    moduleKey: "branch_settings",
+    icon: "LayoutGrid",
+    hrefTemplate: "/br/{branchId}/settings",
+    label: APP_COPY_VI.branchTools,
+    exact: true,
+    audience: "manager",
+    matchSuffixes: BRANCH_TOOLS_MATCH_PATH_SUFFIXES,
+  },
+] as const satisfies readonly BranchPrimaryTabConfig[];
 
 export const OPERATOR_TILE_ITEMS = [
   {

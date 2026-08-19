@@ -15,6 +15,7 @@ import {
   Trash as IconTrash,
   Truck as IconTruck,
   X as IconX,
+  ArrowLeft as IconArrowLeft,
 } from "lucide-react";
 import type { BranchKind } from "@comtammatu/shared/auth";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
@@ -49,6 +50,7 @@ import { formatQty } from "@lib/inventory/format";
 import { formatStockUnits } from "@/(protected)/inventory/_lib/stock-unit-format";
 import { ITEM_KIND_LABELS } from "@/(protected)/inventory/_lib/constants";
 import {
+  BranchOperatorControlBar,
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -324,6 +326,23 @@ export function BranchStockOnHandClient({
       description={stockCopy.operatorDescription}
       hideHeaderOnMobile
     >
+      <BranchOperatorControlBar className="sm:hidden">
+        <Button
+          variant="ghost"
+          size="icon-touch"
+          render={
+            <Link href={`/br/${branchId}/stock`} aria-label={ACTIONS_VI.back} />
+          }
+        >
+          <IconArrowLeft />
+        </Button>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold">{stockCopy.title}</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {stockCopy.operatorDescription}
+          </p>
+        </div>
+      </BranchOperatorControlBar>
       {!coreDataLoadFailed && underThresholdCount > 0 ? (
         <NoteCallout
           tone="warning"

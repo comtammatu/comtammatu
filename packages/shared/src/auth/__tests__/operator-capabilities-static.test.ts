@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { resolveOperatorTiles } from "../operator-capabilities";
+import { resolveOperatorTiles, resolveBranchToolsGroups, resolveBranchPrimaryTabs } from "../operator-capabilities";
 
 test("resolveOperatorTiles -> cashier sees sales tools but not kitchen", () => {
   const groups = resolveOperatorTiles("cashier", 7);
@@ -246,4 +246,70 @@ test("resolveOperatorTiles -> cashier sees the branch-native orders tile", () =>
     (tile) => tile.moduleKey === "branch_orders",
   );
   assert.equal(ordersTile?.href, "/br/7/orders");
+});
+
+test("resolveBranchToolsGroups -> branch manager sees advertised tools, not a hidden overlay", () => {
+  const groups = resolveBranchToolsGroups("branch_manager", 3, "branch");
+  const hrefs = groups.flatMap((group) => group.tiles.map((tile) => tile.href));
+
+  assert.deepEqual(
+    groups.map((group) => group.id),
+    ["sales", "day", "stock_extra"],
+  );
+  assert.equal(groups.find((group) => group.id === "stock_extra")?.title, "Danh mục kho");
+  assert.equal(hrefs.includes("/br/3/pickup"), true);
+  assert.equal(hrefs.includes("/br/3/pos-sessions"), true);
+  assert.equal(hrefs.includes("/br/3/menu-limits"), true);
+  assert.equal(hrefs.includes("/br/3/close-day"), true);
+  assert.equal(hrefs.includes("/br/3/feedback"), true);
+  assert.equal(hrefs.includes("/br/3/stock/reports"), true);
+  assert.equal(hrefs.includes("/br/3/stock/catalog"), true);
+  assert.equal(hrefs.includes("/br/3/stock/catalog/thresholds"), true);
+  assert.equal(hrefs.includes("/br/3/dashboard"), false);
+});
+
+test("resolveBranchToolsGroups -> cashier only sees pickup; central kind drops store tools", () => {
+  const cashier = resolveBranchToolsGroups("cashier", 7, "branch");
+  assert.deepEqual(
+    cashier.flatMap((group) => group.tiles.map((tile) => tile.href)),
+    ["/br/7/pickup"],
+  );
+
+  const central = resolveBranchToolsGroups("owner", 20, "central_supply");
+  assert.deepEqual(central, []);
+});
+
+test("resolveBranchPrimaryTabs -> branch manager gets five job-family tabs", () => {
+  const tabs = resolveBranchPrimaryTabs("branch_manager", 3, "branch");
+  assert.deepEqual(
+    tabs.map((tab) => tab.id),
+    ["home", "shift", "team", "stock", "tools"],
+  );
+  assert.equal(
+    tabs.find((tab) => tab.id === "team")?.matchPrefixes.includes(
+      "/br/3/team/roster",
+    ),
+    true,
+  );
+  assert.equal(
+    tabs.find((tab) => tab.id === "shift")?.matchPrefixes.includes(
+      "/br/3/shift/schedule",
+    ),
+    true,
+  );
+});
+
+test("resolveBranchPrimaryTabs -> owner skips Ca; cashier gets floor extras not Đội/Kho/Công cụ", () => {
+  assert.deepEqual(
+    resolveBranchPrimaryTabs("owner", 3, "branch").map((tab) => tab.id),
+    ["home", "team", "stock", "tools"],
+  );
+  assert.deepEqual(
+    resolveBranchPrimaryTabs("cashier", 7, "branch").map((tab) => tab.id),
+    ["home", "shift", "schedule", "profile"],
+  );
+  assert.deepEqual(
+    resolveBranchPrimaryTabs("branch_manager", 3, "central_supply"),
+    [],
+  );
 });

@@ -5,6 +5,7 @@ import {
   ClipboardCheck as IconClipboardCheck,
   Home as IconHome,
   ShieldAlert as IconShieldAlert,
+  ArrowLeft as IconArrowLeft,
 } from "lucide-react";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import { formatCount } from "@comtammatu/shared/format";
@@ -15,6 +16,7 @@ import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { AppEmptyState } from "@/components/surface";
 import {
+  BranchOperatorControlBar,
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -245,6 +247,27 @@ export async function StaffCheckoutApprovalsPageContent({
         ) : undefined
       }
     >
+      {plane === "branch" && routeBranchId != null ? (
+        <BranchOperatorControlBar className="sm:hidden">
+          <Button
+            variant="ghost"
+            size="icon-touch"
+            render={
+              <Link
+                href={`/br/${routeBranchId}/team`}
+                aria-label="Quay lại đội"
+              />
+            }
+          >
+            <IconArrowLeft />
+          </Button>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">
+              {copy.checkoutApprovalsTitle}
+            </p>
+          </div>
+        </BranchOperatorControlBar>
+      ) : null}
       {plane === "branch" ? (
         queue
       ) : (

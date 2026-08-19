@@ -24,6 +24,7 @@ HOT — load by default for matching work:
   docs under `docs/architecture/target-*` are future.
 - Routes/scopes: `docs/spec/role-route-matrix.md`
 - Notifications: `docs/spec/toast-notification-system.md`
+- PWA (install, offline, OS matrix): `docs/spec/pwa.md`
 - Finance: `docs/modules/finance.md`
 - Inventory: `docs/ref/inventory.md`, `docs/ref/inventory-sop.md`
 - Infrastructure: `docs/modules/infrastructure.md`

@@ -5,6 +5,8 @@ import { existsSync, readFileSync } from "node:fs";
 const DURABLE = [
   /^docs\/plan\/decisions\.md$/,
   /^docs\/plan\/adr\//,
+  /^docs\/plan\/inventory-operating-cutover\.md$/,
+  /^docs\/plan\/pwa-remediation\.md$/,
   /(^|\/)README\.md$/i,
 ];
 const SNAPSHOT_MARKERS = [
@@ -156,10 +158,18 @@ Blocker: External dependency.
     true,
   );
   assert.equal(
+    isDurablePath("docs/plan/inventory-operating-cutover.md"),
+    true,
+  );
+  assert.equal(
+    isDurablePath("docs/plan/pwa-remediation.md"),
+    true,
+  );
+  assert.equal(
     isDurablePath(["docs", "plan", "rollout.md"].join("/")),
     false,
   );
-  console.log("doc-staleness self-test: 10 lifecycle fixtures passed.");
+  console.log("doc-staleness self-test: 12 lifecycle fixtures passed.");
 }
 
 function main() {

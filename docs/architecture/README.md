@@ -11,6 +11,7 @@ the repo or build a parallel product runtime.
 ## Read First
 
 - [../spec/architecture.md](../spec/architecture.md) — **current** architecture + Product Dual Thesis (`Quản lý hệ thống` + `Vận hành bán hàng`)
+- [../spec/pwa.md](../spec/pwa.md) — installable PWA surfaces, offline/SW, OS matrix
 - [../ref/glossary.md](../ref/glossary.md) — current-state vocabulary for the running system
 - [../plan/decisions.md](../plan/decisions.md) — net-effect decisions, including D015/D091
 - [../spec/database-schema.md](../spec/database-schema.md) — canonical schema and data boundaries

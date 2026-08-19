@@ -1,4 +1,9 @@
 #!/usr/bin/env node
+/**
+ * Default (`lint` / `verify`): fail `docs/worklog/**`, ADR >150 lines,
+ * and `docs/agent/rules/*` >400 lines. `--strict` also fails LINE_BUDGETS
+ * (optional local check; not wired into `lint`). Policy: `engineering.md`.
+ */
 import assert from "node:assert/strict";
 import {
   existsSync,
@@ -36,6 +41,7 @@ const LINE_BUDGETS = [
   { path: "docs/modules/web-app.md", maxLines: 150 },
   { path: "docs/ref/third-party-integrations.md", maxLines: 120 },
   { path: "docs/spec/operational-audio-alerts.md", maxLines: 120 },
+  { path: "docs/spec/pwa.md", maxLines: 200 },
   { path: "docs/ref/branch-route-inventory.md", maxLines: 150 },
   { path: "docs/ref/einvoice-tax.md", maxLines: 120 },
 ];
@@ -91,12 +97,35 @@ export function collectDocsBudgetErrors(repoRoot = REPO_ROOT) {
       const rel = `docs/plan/adr/${entry.name}`;
       const lines = countLines(join(adrDir, entry.name));
       if (lines > ADR_MAX_LINES) {
-        errors.push(`${rel}: ${lines} lines exceeds budget ${ADR_MAX_LINES}`);
+        errors.push(
+          `${rel}: ${lines} lines exceeds budget ${ADR_MAX_LINES}`,
+        );
       }
     }
   }
 
   return errors;
+}
+
+export function isDocsBudgetLintGate(error) {
+  return (
+    error.includes("docs/worklog") ||
+    error.startsWith("docs/agent/rules/") ||
+    error.startsWith("docs/plan/adr/")
+  );
+}
+
+export function selectDocsBudgetErrors(allErrors, { strict }) {
+  if (strict) return { errors: allErrors, advisories: [] };
+  return {
+    errors: allErrors.filter(isDocsBudgetLintGate),
+    advisories: allErrors.filter((error) => !isDocsBudgetLintGate(error)),
+  };
+}
+
+function writeLines(filePath, lineCount) {
+  mkdirSync(join(filePath, ".."), { recursive: true });
+  writeFileSync(filePath, `${"x\n".repeat(lineCount)}`);
 }
 
 function runSelfTest() {
@@ -106,9 +135,30 @@ function runSelfTest() {
     // docs/worklog/*.md path (dead-doc-reference scans scripts/).
     mkdirSync(join(fixture, "docs", "worklog"), { recursive: true });
     writeFileSync(join(fixture, "docs", "worklog", "README.md"), "# worklog\n");
+    // Segment paths so this source never embeds contiguous docs/*/*.md
+    // fixture names (dead-doc-reference scans scripts/).
+    writeLines(join(fixture, "docs", "spec", "design-system.md"), 1201);
+    writeLines(join(fixture, "docs", "plan", "adr", "9999-over.md"), 151);
+    writeLines(join(fixture, "docs", "agent", "rules", "over.md"), 401);
 
-    const errors = collectDocsBudgetErrors(fixture);
+    const all = collectDocsBudgetErrors(fixture);
+    assert.match(all.join("\n"), /docs\/worklog/);
+    assert.match(all.join("\n"), /docs\/plan\/adr\/9999-over\.md/);
+    assert.match(all.join("\n"), /docs\/agent\/rules\/over\.md/);
+    assert.match(all.join("\n"), /docs\/spec\/design-system\.md/);
+
+    const { errors, advisories } = selectDocsBudgetErrors(all, {
+      strict: false,
+    });
     assert.match(errors.join("\n"), /docs\/worklog/);
+    assert.match(errors.join("\n"), /docs\/plan\/adr\/9999-over\.md/);
+    assert.match(errors.join("\n"), /docs\/agent\/rules\/over\.md/);
+    assert.doesNotMatch(errors.join("\n"), /design-system/);
+    assert.match(advisories.join("\n"), /design-system/);
+
+    const strict = selectDocsBudgetErrors(all, { strict: true });
+    assert.match(strict.errors.join("\n"), /design-system/);
+    assert.equal(strict.advisories.length, 0);
   } finally {
     rmSync(fixture, { recursive: true, force: true });
   }
@@ -121,12 +171,15 @@ function main() {
     return;
   }
 
-  // Default mode enforces structural bans. --strict also enforces line budgets.
   const strict = process.argv.includes("--strict");
-  const errors = collectDocsBudgetErrors(REPO_ROOT).filter((error) => {
-    if (strict) return true;
-    return error.includes("docs/worklog");
-  });
+  const { errors, advisories } = selectDocsBudgetErrors(
+    collectDocsBudgetErrors(REPO_ROOT),
+    { strict },
+  );
+
+  for (const advisory of advisories) {
+    console.warn(`[docs-budget] advisory (not a lint fail): ${advisory}`);
+  }
 
   if (errors.length > 0) {
     for (const error of errors) console.error(`[docs-budget] ${error}`);
@@ -135,8 +188,8 @@ function main() {
 
   console.log(
     strict
-      ? "[docs-budget] structural bans and line budgets ok"
-      : "[docs-budget] worklog ban ok",
+      ? "[docs-budget] worklog ban, ADR/agent-rule caps, and spec line budgets ok"
+      : "[docs-budget] worklog ban, ADR cap (150), and agent-rule cap (400) ok",
   );
 }
 

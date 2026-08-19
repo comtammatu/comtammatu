@@ -144,6 +144,7 @@ test("Canonical self-service exposes leave requests from /me/schedule", () => {
   );
   const page = read("apps/web/lib/staff-runtime/leave/page.tsx");
   const client = read("apps/web/lib/staff-runtime/leave/leave-client.tsx");
+  const form = read("apps/web/lib/staff-runtime/leave/leave-request-form.tsx");
   const actions = read("apps/web/lib/staff-runtime/leave/actions.ts");
   const messages = read("apps/web/lib/messages/employee.ts");
 
@@ -179,12 +180,14 @@ test("Canonical self-service exposes leave requests from /me/schedule", () => {
   for (const expected of [
     "submitLeaveRequest",
     "cancelLeaveRequest",
-    "Textarea",
     "LEAVE_TYPE_LABELS_VI",
     'status === "pending"',
+    "FormSheet",
+    "DayLeaveRequestForm",
   ]) {
-    assert.ok(client.includes(expected), `expected client ${expected}`);
+    assert.ok(client.includes(expected) || form.includes(expected), `expected client ${expected}`);
   }
+  assert.ok(form.includes("TextareaField"), "expected leave form TextareaField");
 
   for (const expected of [
     "getEmployeeContext",

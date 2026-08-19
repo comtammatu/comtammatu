@@ -48,6 +48,12 @@ export type GrnDetailItem = {
   /** True when accepted qty is missing a GRN book unit price. */
   costPending: boolean;
   provisionalCostSource: string | null;
+  /** Last same-supplier priced confirmed GRN; UI prefill only. */
+  suggestedUnitCost: number | null;
+  suggestedUnitCostUnitId: number | null;
+  suggestedUnitName: string | null;
+  suggestedSourceGrnId: number | null;
+  suggestedSourceGrnNumber: string | null;
   monetary: {
     unitPrice: number | null;
     lineTotal: number;
@@ -112,6 +118,7 @@ export type GrnDetailData = {
   canManageSupplierInvoice: boolean;
   canAdjustStock: boolean;
   canAmendConfirmed: boolean;
+  canPatchConfirmedUnitCost: boolean;
   receivingLocationOptions: ReceivingLocationOption[];
 };
 
@@ -726,6 +733,11 @@ export function createEditableGrnLine({
       },
       unitCost,
     ),
+    suggestedUnitCost: null,
+    suggestedUnitCostUnitId: null,
+    suggestedUnitName: null,
+    suggestedSourceGrnId: null,
+    suggestedSourceGrnNumber: null,
     dirty: false,
   };
 }

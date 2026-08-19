@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { ScreenWakeLock } from "@/components/screen-wake-lock";
 import { OperationalPwaProvider } from "../_components/operational-pwa/provider";
 import { PickupPwaToolbar } from "../_components/operational-pwa/toolbar";
 import { PickupLightMode } from "./pickup-light-mode";
@@ -36,6 +37,7 @@ export default async function PickupLayout({
       className="theme-light-only chrome-safe-pt flex h-dvh min-h-dvh flex-col overflow-hidden bg-background text-foreground touch-manipulation"
     >
       <PickupLightMode />
+      <ScreenWakeLock />
       <OperationalPwaProvider>
         <PickupPwaToolbar branchId={branchId} />
         {children}

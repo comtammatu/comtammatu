@@ -113,7 +113,7 @@ export function TeamWorkspaceTabs({
     >
       <div
         ref={listRef}
-        className="sticky top-0 z-20 min-w-0 max-w-full bg-background/95 backdrop-blur"
+        className="min-w-0 max-w-full"
       >
         <TabsList
           size="touch"

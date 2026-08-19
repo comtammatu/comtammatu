@@ -16,6 +16,7 @@ not own policy. On any conflict the owner below wins.
 | Adapter/block recipes (`need` / `use` / `fallback` / `forbidden` / `exemplar`) | `scripts/ui-component-registry.mjs` |
 | Agent guardrails, Decision Ladder, UI Review Checklist | `docs/agent/rules/ui.md` |
 | Toast, notification, severity, routing | `docs/spec/toast-notification-system.md` |
+| Installable PWA, offline/SW, OS support | `docs/spec/pwa.md` |
 | Negative rules from incidents | `tasks/regressions.md` |
 
 Do not restate token values, class recipes, copy budgets, or archetype contracts
@@ -270,7 +271,7 @@ export. Detail and edit steps open a bottom `Sheet` with a sticky
 | `/stock/count-assignments`, `/stock/count-slips` | LIST | Assignments group by employee; slip review approves or requests recount in a `Sheet`. |
 | `/stock/transfer` | LIST | Incoming, history, and detail only. Branch has no create route or CTA. |
 | `/stock/reports` | REPORT | URL branch and current month; consumption variance first, then per-ingredient movement with drill-in. Every quantity carries its ingredient unit. |
-| `/shift/leave-approvals` | LIST | Status tabs plus full-row items; approve/reject in a bottom `Sheet`. |
+| `/team/leave-approvals` | LIST | Status tabs plus full-row items; approve/reject in a bottom `Sheet`. |
 
 control_surface counterparts keep their own management presenters
 (`StockClient`, `GrnListClient`, `ReportsPageContent`, `LeaveRequestsTable`,

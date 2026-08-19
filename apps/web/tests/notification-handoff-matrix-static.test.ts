@@ -177,3 +177,52 @@ test("attention hygiene: control toast; visible POS KDS mute durable attention",
   assert.match(shell, /<NotificationAttentionRuntime/);
   assert.doesNotMatch(pwa, /useForegroundNotifications/);
 });
+
+test("feed remediation stops order spam, dedups PO, skips outbox, and routes follow-up", () => {
+  const remediation = read(
+    "supabase/migrations/20260820003251_notification_feed_remediation.sql",
+  );
+  const sqlTest = read("supabase/tests/notification_feed_remediation_test.sql");
+  const mePage = read("apps/web/app/(protected)/me/page.tsx");
+  const ordersClient = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/orders/operator-orders-client.tsx",
+  );
+  const posLayout = read(
+    "apps/web/app/(protected)/br/[branchId]/pos/layout.tsx",
+  );
+  const kdsLayout = read(
+    "apps/web/app/(protected)/br/[branchId]/kds/layout.tsx",
+  );
+  const queue = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/_components/home/branch-queue-section.tsx",
+  );
+
+  assert.match(remediation, /DROP TRIGGER IF EXISTS notify_order_new_after_insert/);
+  assert.doesNotMatch(
+    remediation,
+    /CREATE TRIGGER notify_order_new_after_insert/,
+  );
+  assert.match(remediation, /kind = 'pos\.order_new'/);
+  assert.match(remediation, /v_dedup_key := format\('%s:%s', v_kind, NEW\.id\)/);
+  assert.match(remediation, /'workflow\.po_sent'/);
+  assert.match(remediation, /'workflow\.po_approved'/);
+  assert.match(remediation, /ON CONFLICT \(tenant_id, dedup_key\)/);
+  assert.match(remediation, /expires_at = NULL/);
+  assert.doesNotMatch(
+    remediation,
+    /DO UPDATE SET[\s\S]*created_at = now\(\)/,
+  );
+  assert.match(remediation, /DROP TRIGGER IF EXISTS trg_supplier_returns_outbox/);
+  assert.match(remediation, /SET status = 'skipped'/);
+  assert.match(remediation, /'\/me\/schedule\/leave'/);
+  assert.match(remediation, /'\/me\/clock'/);
+  assert.match(remediation, /\/br\/%s\/orders\?voidRequest=%s/);
+  assert.doesNotMatch(remediation, /\/br\/%s\/pos\?voidRequest=%s/);
+  assert.match(sqlTest, /pos\.order_new trigger must stay dropped/);
+  assert.match(mePage, /href: "\/notifications"/);
+  assert.match(ordersClient, /<VoidRequestQueue branchId=\{branchId\} \/>/);
+  assert.doesNotMatch(posLayout, /NotificationBell/);
+  assert.doesNotMatch(kdsLayout, /NotificationBell/);
+  assert.match(queue, /row\.key === "void-approvals"/);
+  assert.match(queue, /row\.key === "out-of-stock"/);
+});

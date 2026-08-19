@@ -31,7 +31,7 @@ const ROUTES: ReadonlyArray<{ name: string; path: string }> = [
   { name: "branch-home-schedule", path: "/br/1/shift/schedule" },
   {
     name: "branch-home-checkout-approvals",
-    path: "/br/1/shift/checkout-approvals",
+    path: "/br/1/team/checkout-approvals",
   },
   { name: "branch-home-count", path: "/br/1/stock/count" },
   { name: "branch-home-payslip", path: "/br/1/profile/payslip" },

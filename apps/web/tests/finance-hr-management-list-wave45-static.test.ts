@@ -144,7 +144,7 @@ test("Wave 5 burns dead CheckoutsTab embed; keeps Owner attendance embed", () =>
   assert.match(attendance, /\bembedded\b/);
 
   const branchCheckout = readRepo(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/checkout-approvals/page.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/team/checkout-approvals/page.tsx",
   );
   assert.match(branchCheckout, /StaffCheckoutApprovalsPageContent/);
   assert.doesNotMatch(branchCheckout, /\bembedded\b/);

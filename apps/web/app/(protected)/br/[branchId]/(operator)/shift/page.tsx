@@ -22,7 +22,7 @@ export default async function OperatorShiftPage({
         leave: `/br/${branchId}/shift/schedule/leave`,
         payslip: `/br/${branchId}/profile/payslip`,
         profile: `/br/${branchId}/profile`,
-        checkoutApprovals: `/br/${branchId}/shift/checkout-approvals`,
+        checkoutApprovals: `/br/${branchId}/team/checkout-approvals`,
         count: `/br/${branchId}/stock/count`,
         wasteApprovals: `/br/${branchId}/stock/waste-approvals`,
         team: `/br/${branchId}/team`,

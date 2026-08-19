@@ -82,7 +82,7 @@ function mapPositionTaskError(message: string | undefined): string {
 
 function revalidateBranchTaskPaths(branchId: number) {
   revalidatePath(`/br/${branchId}/team`);
-  revalidatePath(`/br/${branchId}/shift/attendance`);
+  revalidatePath(`/br/${branchId}/team/attendance`);
   revalidatePath(`/${"hr"}`);
 }
 

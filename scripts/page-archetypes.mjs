@@ -46,15 +46,15 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/settings/tables/page.tsx":
     "SETTINGS-PANEL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/checkout-approvals/page.tsx":
-    "EMBED-WRAPPER",
+    "REDIRECT-SHIM",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/attendance/page.tsx":
-    "LIST",
+    "REDIRECT-SHIM",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/clock/page.tsx":
     "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/page.tsx":
-    "EMBED-WRAPPER",
+    "REDIRECT-SHIM",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/roster/page.tsx":
-    "EMBED-WRAPPER",
+    "REDIRECT-SHIM",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/page.tsx":
     "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/schedule/leave/page.tsx":
@@ -139,7 +139,15 @@ export const PAGE_ARCHETYPES = {
     "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste/page.tsx":
     "DOC-WORKFLOW",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/team/attendance/page.tsx":
+    "LIST",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/team/checkout-approvals/page.tsx":
+    "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/team/leave-approvals/page.tsx":
+    "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/team/page.tsx": "LIST",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/team/roster/page.tsx":
+    "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/kds/page.tsx": "BOARD",
   "apps/web/app/(protected)/br/[branchId]/pos/page.tsx": "BOARD",
   "apps/web/app/(protected)/br/[branchId]/pickup/page.tsx": "BOARD",
@@ -489,7 +497,7 @@ const PAGE_DISPOSITION_OVERRIDES = {
   },
   "apps/web/app/(protected)/hr/attendance/checkout-approvals/page.tsx": {
     // Gate exception: EMBED-WRAPPER shared staff-runtime body; Owner tab embeds
-    // intentionally; branch uses native /shift/checkout-approvals.
+    // intentionally; branch uses native /team/checkout-approvals.
     status: "keep",
     evidence: "implemented-static",
     final: false,
@@ -514,19 +522,19 @@ const PAGE_DISPOSITION_OVERRIDES = {
     evidence: "implemented-static",
     final: false,
   },
-  "apps/web/app/(protected)/br/[branchId]/(operator)/shift/checkout-approvals/page.tsx":
+  "apps/web/app/(protected)/br/[branchId]/(operator)/team/checkout-approvals/page.tsx":
     {
       status: "tune",
       evidence: "implemented-static",
       final: false,
     },
-  "apps/web/app/(protected)/br/[branchId]/(operator)/shift/attendance/page.tsx":
+  "apps/web/app/(protected)/br/[branchId]/(operator)/team/attendance/page.tsx":
     {
       status: "tune",
       evidence: "implemented-static",
       final: false,
     },
-  "apps/web/app/(protected)/br/[branchId]/(operator)/shift/roster/page.tsx": {
+  "apps/web/app/(protected)/br/[branchId]/(operator)/team/roster/page.tsx": {
     status: "tune",
     evidence: "implemented-static",
     final: false,

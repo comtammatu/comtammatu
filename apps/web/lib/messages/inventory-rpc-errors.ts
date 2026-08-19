@@ -39,6 +39,7 @@ export const INVENTORY_ERROR_CODES = {
   ISSUE_CONFIRM_FAILED: "inventory.issue.confirm_failed",
   GRN_LINE_FAILED: "inventory.grn.line_failed",
   GRN_CONFIRM_FAILED: "inventory.grn.confirm_failed",
+  GRN_UNIT_COST_PATCH_FAILED: "inventory.grn.unit_cost_patch_failed",
   STOCK_REQUEST_FAILED: "inventory.stock_request.failed",
   PROCUREMENT_FAILED: "inventory.procurement.failed",
 } as const;
@@ -410,6 +411,66 @@ export const grnConfirmRpcMappings: readonly RpcErrorMapping[] = [
   notFound,
 ];
 
+export const grnOwnerUnitCostRpcMappings: readonly RpcErrorMapping[] = [
+  {
+    match: includesAny("forbidden_owner_only"),
+    errorCode: INVENTORY_ERROR_CODES.FORBIDDEN,
+    userMessage: "Chỉ Chủ sở hữu được xác nhận đơn giá phiếu đã chốt.",
+  },
+  {
+    match: includesAny("grn_unit_price_invalid"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,
+    userMessage: "Đơn giá phải lớn hơn 0.",
+  },
+  {
+    match: includesAny("grn_unit_price_unit_required"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,
+    userMessage: "Đơn giá phải gắn đơn vị của nguyên liệu.",
+  },
+  {
+    match: includesAny("grn_unit_price_unit_invalid"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,
+    userMessage: "Đơn vị đơn giá không thuộc nguyên liệu này.",
+  },
+  {
+    match: includesAny("grn_unit_cost_already_booked"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_STATUS,
+    userMessage: "Dòng phiếu nhập này đã có đơn giá.",
+  },
+  {
+    match: includesAny("grn_not_confirmed"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_STATUS,
+    userMessage: "Chỉ xác nhận đơn giá trên phiếu nhập đã chốt.",
+  },
+  {
+    match: includesAny("grn_has_no_accepted_quantity"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,
+    userMessage: "Chưa có số lượng nhận hợp lệ để ghi đơn giá.",
+  },
+  {
+    match: includesAny("grn_cost_origin_missing", "grn_item_not_found", "grn_not_found"),
+    errorCode: INVENTORY_ERROR_CODES.NOT_FOUND,
+    userMessage: "Không tìm thấy dòng phiếu nhập hoặc gốc giá vốn để ghi đơn giá.",
+  },
+  {
+    match: includesAny("reason_required"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,
+    userMessage: "Nhập lý do ít nhất 10 ký tự.",
+  },
+  {
+    match: includesAny("reason_too_long"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,
+    userMessage: "Lý do tối đa 500 ký tự.",
+  },
+  privilege,
+  notFound,
+];
+
+export const grnOwnerUnitCostRpcFallback: RpcErrorFallback = {
+  userMessage: "Không thể ghi đơn giá vào phiếu nhập đã chốt.",
+  errorCode: INVENTORY_ERROR_CODES.GRN_UNIT_COST_PATCH_FAILED,
+};
+
 /* ─── Stock request ─── */
 
 export const stockRequestRpcMappings: readonly RpcErrorMapping[] = [
@@ -519,6 +580,16 @@ export const procurementRpcMappings: readonly RpcErrorMapping[] = [
   },
   {
     match: includesAny("purchase_demand_idempotency_required"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,
+    userMessage: "Không thể chống gửi trùng cho thao tác này.",
+  },
+  {
+    match: includesAny("purchase_order_central_site_required"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,
+    userMessage: "Đơn mua phải nhận tại Kho Tổng hoặc Bếp Trung Tâm.",
+  },
+  {
+    match: includesAny("purchase_order_idempotency_required"),
     errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,
     userMessage: "Không thể chống gửi trùng cho thao tác này.",
   },

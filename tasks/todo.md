@@ -5,6 +5,52 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Drink menu recipes consume one serving cup
+
+State: verify
+Kind: fix
+Tier: T3
+Lane: inventory/catalog
+Exit: House drinks plus Coca/Fanta/Sprite each have 1 `"Ly nhựa trơn PP 95 - 650ml"` (`cái`) on `recipes`; `"Nước suối"` / `"Khăn Lạnh"` / `"Dụng cụ mang về"` do not; canned-drink paid orders post the missing cup via per-ingredient sale_consumption.
+Evidence: Production `enloyfnuerqgaqderbwb` applied `20260820002602` in the owner-authorized four-file batch (`20260820001437`, `20260820002602`, `20260820003251`, `20260820010000`). Live recipes: nine drinks x 1 `"Ly nhựa trơn PP 95 - 650ml"` (`cái`); `"Nước suối"` / `"Khăn Lạnh"` / `"Dụng cụ mang về"` have 0 cup lines. `corepack pnpm db:types` regenerated.
+
+- [ ] Reload `/inventory/menu-recipes` and confirm Coca/Fanta/Sprite show the cup line
+
+## PWA remediation (install identity + SW)
+
+State: verify
+Kind: feature
+Tier: T3
+Lane: web/pwa
+Exit: Phase 0 contract in `docs/spec/pwa.md` includes locked OQ-2 `/me` PWA, OQ-3 isolation (overlapping `scope: "/"`, per-branch `"Cổng"` `start_url`), OQ-4 distinct icons/badges, OQ-5 no iOS splash (Android TV pickup). Phase 1 H5/H9/H6, Phase 2 H2/H20/H7/H8, Phase 3 icons, and KDS/pickup Wake Lock landed. POS stays cloud-first. Unrelated dirty KDS layout files are untouched.
+Evidence: `docs/spec/pwa.md`; `apps/web/tests/pwa-manifest.test.ts`; `lint:copy`; `lint:language-policy`; `corepack pnpm verify`
+
+Plan pointer: `docs/plan/pwa-remediation.md` (do not implement Phases 0–4 from it). Remaining later: optional H11 station `themeColor`, H12 screenshots, Phase 5 HyperOS ops runbook (H1). H10 cancelled.
+
+- [ ] Optional later polish (H11/H12) or Phase 5 H1 runbook — not this slice
+
+## Branch `Công cụ` hub: advertise tools instead of hiding them
+
+State: verify
+Kind: feature
+Tier: T2
+Lane: branch-ops
+Exit: Branch manager bottom nav has a persistent `Công cụ` tab landing on `/settings`; that hub lists pickup, POS sessions, menu-limits, close-day, feedback, catalog/reports, and store setup; dead command cockpit files are gone; tests encode advertisement not hiding.
+Evidence: `operator-shell-static.test.ts`, `branch-manager-ia-static.test.ts`, `operator-capabilities-static.test.ts`, `corepack pnpm verify`
+
+UI Advisor Gate
+- Surface: `/br/[branchId]/settings` + operator bottom nav; route family: branch; plane: `branch`; change: IA + landing composition
+- Context: screen-context-map §2.4A tools tab (`Công cụ`); actor: branch_manager / owner-in-branch; job: find every branch tool from one persistent door
+- Journey: daily tabs stay `Hôm nay` / `Ca` / `Đội` / `Kho`; fifth tab `Công cụ` opens the hub; stations stay standalone
+- Information order: 1) sales tools 2) in-day tools 3) catalog/reports 4) store setup; exclude: KPI mosaic, header overflow as the only door
+- Pattern: LANDING; block `branch-action-home` analog via `BranchOperatorActionSection`; exemplar `settings/page.tsx`
+- States: ACL-empty hub
+- Block: none — existing BranchOperator action sections
+- Responsive: phone-first comfortable density
+- Verification: static tests + `corepack pnpm verify`
+
+- [ ] Phone smoke: BM taps `Công cụ` and reaches pickup, pos-sessions, close-day, feedback, setup without using header overflow
+
 ## HĐĐT: omit service-charge line and map sold-item units
 
 State: verify
@@ -95,11 +141,10 @@ Kind: feature
 Tier: T3
 Lane: inventory
 Exit: Warehouse creates PO with `purchase_request_id` null and Auto-GRN; YCM/YCH writes frozen; tables dropped only after soak. Do not convert a YCM already turned into a PO, or a YCH already fulfilled into a received DC.
-Blocker: Production has no `create_purchase_order` without YCM (`send_purchase_order` dropped). Hiding YCM create would trap central warehouse / kitchen operators.
-Evidence: Production read-only 2026-08-19 (`enloyfnuerqgaqderbwb`): 1 open YCM (`partially_ordered`, ginseng 50 sets), 2 submitted YCH with received DCs, 0 PO without YCM. Plan section in `inventory_queue-first_84da3fb0.plan.md`.
+Blocker: Hide YCM create only after warehouse `"Tạo đơn"` works live on Production.
+Evidence: Production `enloyfnuerqgaqderbwb` applied `20260820001437` in the owner-authorized four-file batch. Contract: ADR 0040–0042 + `docs/ref/inventory.md`. Plan: `docs/plan/inventory-operating-cutover.md`.
 
-- [ ] Wave 1 T3 RPC `create_purchase_order` (null YCM, grant `po_create` to central ops, fold Auto-GRN)
-- [ ] Hide YCM create / allocate only after that RPC is Production-ready
+- [ ] Hide YCM create / allocate only after warehouse `"Tạo đơn"` works live
 - [ ] Wave 3 dest-initiated DC + BM `inventory:transfer_create` (separate)
 - [ ] Wave 4 REVOKE write RPCs; Wave 5 soak then DROP FKs/tables
 
@@ -577,19 +622,6 @@ Exit: Owner `/inventory/purchase-orders` (no branch filter) no longer times out;
 Evidence: Flattened purchase workspace loader; `includeUnits: false` plus companion units on PO/YCM pages; dead-action deletions; RLS wrap + DROP applied on Production `20260813142100` / `20260813142200`; `corepack pnpm db:types`; `corepack pnpm verify`.
 
 - [ ] Owner smoke `/inventory/purchase-orders` unfiltered and one GRN confirm path.
-
-## Ship notification attention on Control Surface
-
-State: verify
-Kind: feature
-Tier: T2
-Lane: notifications/attention
-Exit: Owner control-surface routes show Sonner on a visible tab and OS popup when the tab is hidden; bell peek works on desktop Popover / mobile Sheet; `/notifications` is a LIST feed with device permission in the toolbar.
-Evidence: `NotificationAttentionRuntime` mounted once from `ControlSurfaceShell`; `useForegroundNotifications` removed from `PwaRuntimeProvider`.
-
-- [ ] Mount one attention runtime for every `(protected)` route and keep POS/KDS popup-only.
-- [ ] Ship compact bell peek without colliding the full-page Realtime topic.
-- [ ] Move device notification settings onto the `/notifications` LIST toolbar.
 
 ## Prove one money day on Production
 

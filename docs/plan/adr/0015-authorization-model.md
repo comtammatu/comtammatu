@@ -1,6 +1,11 @@
 # ADR 0015 — Authorization model
 
-**Status:** Accepted
+**Status:** Accepted TARGET cutover, **not** runtime.
+
+Until cutover, runtime authority is
+[`docs/modules/auth.md`](../../modules/auth.md) (JWT custom claims,
+`positions.code` → `user_role`, MODULE_ACL). This ADR is the accepted
+destination model only; do not implement it from this document.
 
 **Decision owner:** Owner, 2026-07-27
 

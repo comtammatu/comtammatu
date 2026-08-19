@@ -20,10 +20,12 @@ test("ingredient catalog read includes central ops", () => {
   ]);
 });
 
-test("PO create is Owner|Accountant only; central ops hard-denied", () => {
-  assert.deepEqual([...PO_CREATE_ROLES], ["owner", "accountant"]);
-  assert.equal(PO_CREATE_ROLES.includes("central_supply_ops"), false);
-  assert.equal(PO_CREATE_ROLES.includes("central_kitchen_lead"), false);
+test("PO create includes central warehouse roles; BM stays out", () => {
+  assert.deepEqual(
+    [...PO_CREATE_ROLES],
+    ["owner", "accountant", "central_supply_ops", "central_kitchen_lead"],
+  );
+  assert.equal(PO_CREATE_ROLES.includes("branch_manager"), false);
   assert.deepEqual([...PO_REVIEW_ROLES], ["owner", "accountant"]);
 });
 

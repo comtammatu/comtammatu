@@ -271,7 +271,7 @@ async function loadRosterWeekData(
 function revalidateRosterPaths(branchId: number | null) {
   revalidatePath("/hr/attendance");
   if (branchId != null) {
-    revalidatePath(`/br/${branchId}/shift/roster`);
+    revalidatePath(`/br/${branchId}/team/roster`);
     revalidatePath(`/br/${branchId}/team`);
   }
 }

@@ -16,7 +16,8 @@ and ADR 0023 void-leader stay). ADR 0025 (native clients are no longer a
 non-goal; `apps/web` still must not split into module micro-apps).
 
 **Related:** ADR 0025 (web ERP evolve-in-place), D011 (this repo’s print-agent
-remains LAN-only until a branch cuts over to native POS print).
+remains LAN-only until a branch cuts over to native POS print), PWA contract
+`docs/spec/pwa.md`.
 
 ## Context
 

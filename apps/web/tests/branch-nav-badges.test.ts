@@ -11,8 +11,10 @@ test("branchNavBadgeCounts splits HR vs stock and sums home", () => {
       pendingWaste: null,
       inboundTransfers: 1,
       openStockRequests: 1,
+      pendingVoids: 2,
+      outOfStockAlerts: 1,
     }),
-    { home: 5, team: 3, stock: 2 },
+    { home: 8, team: 3, stock: 2 },
   );
 });
 
@@ -25,6 +27,8 @@ test("branchNavBadgeCounts treats null permission fields as zero", () => {
       pendingWaste: null,
       inboundTransfers: null,
       openStockRequests: null,
+      pendingVoids: null,
+      outOfStockAlerts: null,
     }),
     { home: 0, team: 0, stock: 0 },
   );

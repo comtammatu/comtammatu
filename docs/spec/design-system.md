@@ -970,10 +970,11 @@ contract change; route-local chrome outside this list is drift.
    stuck. Do not sticky a page-level filter that sits above KPI/dashboard cards.
 2. **Branch runtime chrome** — the branch-scoped operator layout
    (`apps/web/app/(protected)/br/[branchId]/(operator)/layout.tsx`). Covers the
-   branch home, `/br/[branchId]/shift/*`, `/br/[branchId]/stock/*`, and branch
-   management (`/dashboard`, `/settings/*`). It uses shared brand components,
-   compact `AppPage`, and `AppBottomNav`; `branch_management` is a route family
-   inside this chrome, not a reason to enter `control_surface` chrome.
+   branch home, `/br/[branchId]/shift/*`, `/br/[branchId]/team/*`,
+   `/br/[branchId]/stock/*`, and `/br/[branchId]/settings/*`. It uses shared
+   brand components, comfortable `AppPage`, and `AppBottomNav`;
+   `branch_management` is a route family inside this chrome, not a reason to
+   enter `control_surface` chrome.
 3. **station_chrome** — purpose-built, full-screen, single-job surfaces that
    cannot wear the management sidebar: POS, KDS, Runner under
    `/br/[branchId]/*`. Bespoke layout, same tokens, typography, status

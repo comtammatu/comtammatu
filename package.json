@@ -16,7 +16,7 @@
     "git:hooks:install": "node scripts/install-git-hooks.mjs",
     "lint:agent-start": "node --test scripts/agent-start.test.mjs",
     "lint:git-hooks": "node --test scripts/git-hooks.test.mjs && node scripts/check-git-hooks.mjs",
-    "lint:docs-budget": "node scripts/check-docs-budget.mjs --self-test && node scripts/check-docs-budget.mjs --strict",
+    "lint:docs-budget": "node scripts/check-docs-budget.mjs --self-test && node scripts/check-docs-budget.mjs",
     "lint:language-policy": "node scripts/check-language-policy.mjs --self-test && node scripts/check-language-policy.mjs",
     "lint:client-storage": "node scripts/check-client-storage.mjs",
     "lint:copy": "node scripts/lint-copy.mjs",

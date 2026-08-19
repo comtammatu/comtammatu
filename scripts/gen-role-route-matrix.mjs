@@ -268,11 +268,15 @@ function parseNavAdvertisementSources(source) {
     { name: "CONTROL_SURFACE_NAV_GROUPS", label: "Control surface nav" },
     { name: "BRANCH_MANAGEMENT_ITEMS", label: "Branch management nav" },
     { name: "BRANCH_OPERATION_ITEMS", label: "Branch operation nav" },
+    { name: "BRANCH_TOOLS_ITEMS", label: "Branch tools hub" },
+    { name: "BRANCH_PRIMARY_TAB_ITEMS", label: "Branch primary tabs" },
   ];
 
   for (const { name, label } of namedArrays) {
     const arrayMatch = source.match(
-      new RegExp(`export const ${name}[^=]*=\\s*\\[([\\s\\S]*?)\\n\\];`),
+      new RegExp(
+        `export const ${name}[^=]*=\\s*\\[([\\s\\S]*?)\\n\\](?:\\s*satisfies[^;]+)?;`,
+      ),
     );
     if (!arrayMatch) continue;
     for (const m of arrayMatch[1].matchAll(/moduleKey:\s*"(\w+)"/g)) {

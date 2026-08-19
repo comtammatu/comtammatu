@@ -95,7 +95,7 @@ test("Wave E GRN DETAIL confirmed lines use DataTable + physical-QC footer", () 
   assert.match(client, /footerLineSummary/, "grn detail: line-count footer");
   assert.doesNotMatch(
     client,
-    /desktopFooterRows|mobileFooter|unitCost|line\.monetary/,
+    /desktopFooterRows|mobileFooter|line\.monetary/,
     "grn detail: no GRN monetary footer",
   );
   assert.match(
@@ -208,7 +208,7 @@ test("Wave E GRN DETAIL draft aligns with create DOC density", () => {
   );
   assert.doesNotMatch(
     client,
-    /line\.monetary|unitCost/,
+    /line\.monetary/,
     "draft DETAIL does not expose the PO price snapshot",
   );
   assert.doesNotMatch(

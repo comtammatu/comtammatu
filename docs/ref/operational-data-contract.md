@@ -183,8 +183,9 @@ hướng không đặt title như KPI.
   `settings:branch` hoặc `finance:view`). `get_branch_day_summary` còn cho
   drift test. `close_branch_day` raise `branch_day_close_retired`.
 - `open_session_count`: ca POS `opened_at` trong bounds + `status = 'open'`.
-- Lệch tạm: nhiều finance filter vẫn `getVNDayUtcRange` (00:00–24:00). Không
-  align trong PR branch-ops; ODC follow-up khi Owner xác nhận đau đối chiếu.
+- Home KPI `get_branch_revenue_target_progress`: cửa sổ 04:00 (ngày KD + MTD
+  đến hết ngày KD hiện tại). Lệch tạm còn: nhiều finance list filter vẫn
+  `getVNDayUtcRange` (00:00–24:00); không align trong PR này.
 - Tiền mặt SSOT: chốt `pos_sessions`. Không `carryover_cash` (ADR 0024 rejected).
 
 ## Quy tắc cho Agent

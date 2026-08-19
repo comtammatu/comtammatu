@@ -75,6 +75,7 @@ same concept.
 | Personal account plane | `Trang cá nhân` | `/me` hub | Avatar Footer `personalPage` |
 | Personal work surface | `Ca của tôi` | Branch `/shift` | `APP_COPY_VI.employeePortal` |
 | Branch home / today chip | `Hôm nay` | — | `MODULE_LABELS_VI.branch_home` |
+| Branch tools hub / tab | `Công cụ` | not accounting `tool_equipment` | `APP_COPY_VI.branchTools` |
 | Stock fulfillment workspace | `Giao nhận` | covers YCH + nhận/giao | inventory dictionary `transfers` |
 | Stock transfer document | `Điều chuyển` | `Phiếu điều chuyển` | glossary `stock_transfer` |
 | Control surface | `Quản trị` | — | `APP_COPY_VI.ownerSurface` |
@@ -498,8 +499,8 @@ Detail: `inventory.md`, `inventory-sop.md`.
 | `consumption` | tiêu hao | Stock decrease from sale, production, waste, or approved use. |
 | `stocktake` / `inventory_count_slip` | kiểm kê / phiếu đếm tồn | Session that counts on-hand then confirms to adjust stock / shift-assigned staff slip (review only; not a second stocktake). |
 | `base_unit` / `entry_unit_id` / `to_base_factor` | đơn vị chuẩn / đơn vị chứng từ / quy đổi | Ledger unit / document unit / snapshot factor to base. |
-| `default_fulfill_site_kind` | Nguồn hàng | Prefill Kho Tổng / Bếp Trung Tâm khi chi nhánh xin hàng (YCH → DC). Không phải kho đang chứa tồn. |
-| `purchase_unit_cost` / `average_unit_cost` / `weighted_average_cost` | đơn giá nhập / giá vốn BQ (`WAC`) | Confirmed GRN net unit price quoted per `unit_cost_unit_id` / company WAC. Invoice does not restate stock. Queue chrome for draft lines missing that price: `Chờ đơn giá`. |
+| `default_fulfill_site_kind` | Nguồn hàng | Đánh dấu nguyên liệu được xin từ Kho Tổng, Bếp Trung Tâm, hoặc cả hai khi chi nhánh xin hàng (YCH hôm nay → DC mục tiêu). Không phải kho đang chứa tồn. «Thiếu Nguồn hàng» = chưa tick kho nào. |
+| `purchase_unit_cost` / `average_unit_cost` / `weighted_average_cost` | đơn giá nhập / giá vốn BQ (`WAC`) | Confirmed GRN net unit price quoted per `unit_cost_unit_id` / company WAC. Invoice does not restate stock. Queue chrome for draft lines missing that price: `Chờ đơn giá`. Owner-only queue for confirmed lines that still have `unit_cost = 0` uses the same label on `/inventory/grn`. |
 | `reference_unit_cost` / `movement_unit_cost` / `inventory_value` / `company_wac` / `production_wac` | giá tham chiếu / đơn giá ghi sổ / giá trị tồn / giá vốn / giá vốn mẻ | Catalog hint cost / movement snapshot cost / book value of on-hand / company WAC / FG batch WAC. |
 | `raw_material` / `finished_good` | nguyên liệu / thành phẩm | Hàng mua (PO/GRN/NCC) / hàng Bếp Trung Tâm sản xuất có công thức. |
 | `recipe` / `production_recipe` / `production_order` | định mức món bán / công thức sản xuất / lệnh sản xuất | POS consumption BOM / FG BOM / production run. |

@@ -6,6 +6,7 @@ import {
   isRevenueRewardTierAchieved,
   isSingleCalendarMonth,
   monthStartFromIsoDate,
+  nextRevenueRewardGap,
   normalizeRevenueRewardTiers,
   paceTargetAmount,
   previewTargetProgress,
@@ -94,5 +95,22 @@ describe("revenue-target helpers", () => {
     assert.equal(isRevenueRewardTierAchieved(80, 80), true);
     assert.equal(isRevenueRewardTierAchieved(79.9, 80), false);
     assert.equal(isRevenueRewardTierAchieved(null, 80), false);
+  });
+
+  it("computes remaining net revenue to the next reward or 100% target mốc", () => {
+    const tiers = [
+      { thresholdPct: 80, rewardType: "fixed_amount" as const, rewardValue: 500_000 },
+      { thresholdPct: 100, rewardType: "fixed_amount" as const, rewardValue: 1_000_000 },
+    ];
+    assert.deepEqual(nextRevenueRewardGap(700_000, 1_000_000, tiers), {
+      thresholdPct: 80,
+      gapAmount: 100_000,
+    });
+    assert.deepEqual(nextRevenueRewardGap(850_000, 1_000_000, tiers), {
+      thresholdPct: 100,
+      gapAmount: 150_000,
+    });
+    assert.equal(nextRevenueRewardGap(1_000_000, 1_000_000, tiers), null);
+    assert.equal(nextRevenueRewardGap(400_000, null, tiers), null);
   });
 });

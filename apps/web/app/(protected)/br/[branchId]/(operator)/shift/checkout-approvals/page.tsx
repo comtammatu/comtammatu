@@ -1,11 +1,8 @@
-import { notFound } from "next/navigation";
-import { StaffCheckoutApprovalsPageContent } from "@lib/staff-runtime/checkout-approvals/page";
+import { notFound, redirect } from "next/navigation";
 import { parseOperatorBranchId } from "../../../_lib/parse-branch-id";
 
-/**
- * Full-page checkout approval queue for branch managers.
- */
-export default async function OperatorCheckoutApprovalsPage({
+/** Class C: old bookmarks and notification URLs land on `/team/checkout-approvals`. */
+export default async function OperatorShiftCheckoutApprovalsShimPage({
   params,
   searchParams,
 }: {
@@ -19,18 +16,8 @@ export default async function OperatorCheckoutApprovalsPage({
   const attendanceId = Array.isArray(rawAttendanceId)
     ? rawAttendanceId[0]
     : rawAttendanceId;
-  const focusAttendanceId = Number(attendanceId);
-
-  return (
-    <StaffCheckoutApprovalsPageContent
-      routeBranchId={branchId}
-      focusAttendanceId={
-        Number.isInteger(focusAttendanceId) && focusAttendanceId > 0
-          ? focusAttendanceId
-          : undefined
-      }
-      plane="branch"
-      hideHeaderOnMobile
-    />
-  );
+  const query = attendanceId
+    ? `?attendanceId=${encodeURIComponent(attendanceId)}`
+    : "";
+  redirect(`/br/${branchId}/team/checkout-approvals${query}`);
 }
