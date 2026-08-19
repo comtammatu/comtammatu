@@ -47,7 +47,7 @@ export interface PwaToolbarCopy {
   browserDialogDescription?: string;
   browserSteps?: readonly string[];
   close: string;
-  /** Update-available banner copy. Full-bleed layout only. */
+  /** Update-available banner copy. Required to show the undismissable reload row. */
   updateHint?: string;
   updateButton?: string;
 }
@@ -55,12 +55,12 @@ export interface PwaToolbarCopy {
 export interface PwaToolbarProps {
   copy: PwaToolbarCopy;
   /**
-   * "contained" = the Employee toolbar: centers at max-w-lg/lg:max-w-3xl, sm:
-   * breakpoints, always offers a manual-install fallback, no update banner,
-   * hides fully once installed+online. "full-bleed" = the Operations
-   * (POS/KDS/pickup) toolbar: edge-to-edge bar, md: breakpoints, install row
-   * only when a real install path exists, shows an undismissable update
-   * banner, and otherwise gets out of the operational screen.
+   * "contained" = operator/employee toolbar: centers at max-w-lg/lg:max-w-3xl,
+   * sm: breakpoints, always offers a manual-install fallback, and hides
+   * install chrome once installed+online unless an update is waiting.
+   * "full-bleed" = Operations (POS/KDS/pickup): edge-to-edge bar, md:
+   * breakpoints, install row with native prompt or browser-help fallback,
+   * undismissable update banner, otherwise out of the operational screen.
    */
   layout: "contained" | "full-bleed";
   /** Persist the install-dismiss flag under this key; omit to skip persistence. */
@@ -105,7 +105,6 @@ export function PwaToolbar({
   }, [dismissStorageKey]);
 
   const hasBrowserPrompt = install != null && install.available;
-  const installAvailable = hasBrowserPrompt || isIosPwaInstall;
 
   const handleDismiss = useCallback(() => {
     setInstallDismissed(true);
@@ -119,12 +118,10 @@ export function PwaToolbar({
     }
   }, [dismissStorageKey]);
 
-  // Full-bleed (Operations): only the iOS help dialog is offered — there is
-  // no browser-manual-install fallback copy.
   const handleInstallFullBleed = useCallback(async () => {
     if (installPending) return;
     if (install == null || !install.available) {
-      if (isIosPwaInstall) setHelpMode("ios");
+      setHelpMode(isIosPwaInstall ? "ios" : "browser");
       return;
     }
     setInstallPending(true);
@@ -179,43 +176,65 @@ export function PwaToolbar({
     />
   );
 
-  if (layout === "full-bleed") {
-    // The update banner is the one row that must ALSO show in standalone —
-    // installed tablets running a whole shift are exactly the clients that
-    // break on a stale chunk after a deploy. It cannot be dismissed.
-    if (hasNewVersion && copy.updateHint && copy.updateButton) {
+  // The update banner is the one row that must ALSO show in standalone —
+  // installed devices on a long shift are the clients that break on a stale
+  // chunk after a deploy. It cannot be dismissed.
+  if (hasNewVersion && copy.updateHint && copy.updateButton) {
+    const updateInner = (
+      <>
+        {layout === "full-bleed" ? entryLink : null}
+        <div
+          className="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-foreground"
+          role="alert"
+        >
+          <IconRefreshCw className="size-4 shrink-0" />
+          <span className="min-w-0 break-words sm:truncate">
+            {copy.updateHint}
+          </span>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="touch"
+          className="shrink-0 text-sm font-semibold"
+          onClick={() => {
+            window.location.reload();
+          }}
+        >
+          <IconRefreshCw data-icon="inline-start" />
+          {copy.updateButton}
+        </Button>
+      </>
+    );
+
+    if (layout === "full-bleed") {
       return (
         <div
           className="flex shrink-0 items-center gap-2 border-b border-border/60 bg-background/90 px-2 py-2 md:px-4"
           role="region"
           aria-label={copy.regionLabel}
         >
-          {entryLink}
-          <div
-            className="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-foreground"
-            role="alert"
-          >
-            <IconRefreshCw className="size-4 shrink-0" />
-            <span className="truncate">{copy.updateHint}</span>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="touch"
-            className="shrink-0 text-sm font-semibold"
-            onClick={() => {
-              window.location.reload();
-            }}
-          >
-            <IconRefreshCw data-icon="inline-start" />
-            {copy.updateButton}
-          </Button>
+          {updateInner}
         </div>
       );
     }
 
+    return (
+      <div
+        className="border-b border-border/60 bg-background/95 px-3 py-2 print:hidden"
+        role="region"
+        aria-label={copy.regionLabel}
+      >
+        <div className="mx-auto flex max-w-lg items-center gap-2 lg:max-w-3xl">
+          {updateInner}
+        </div>
+      </div>
+    );
+  }
+
+  if (layout === "full-bleed") {
     const showInstallRow =
-      !isStandalone && (!isOnline || (!installDismissed && installAvailable));
+      !isStandalone && (!isOnline || !installDismissed);
 
     if (!showInstallRow) {
       return null;
@@ -256,7 +275,7 @@ export function PwaToolbar({
             size="touch"
             className="shrink-0 text-sm font-semibold"
             onClick={handleInstallFullBleed}
-            disabled={!installAvailable || installPending}
+            disabled={installPending}
             aria-label={copy.installButtonAria}
           >
             {isIosPwaInstall && !hasBrowserPrompt ? (
@@ -267,7 +286,7 @@ export function PwaToolbar({
             <span className="md:hidden">{copy.installButtonShort}</span>
             <span className="hidden md:inline">{copy.installButton}</span>
           </Button>
-          {isOnline && installAvailable ? (
+          {isOnline ? (
             <Button
               type="button"
               variant="ghost"

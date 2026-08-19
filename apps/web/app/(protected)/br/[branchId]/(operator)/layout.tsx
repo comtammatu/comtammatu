@@ -40,9 +40,14 @@ import { OperatorNotificationBell } from "./operator-notification-bell";
 import { OperatorPwaToolbar } from "./operator-pwa-toolbar";
 import { ThemeMenuItem } from "@/components/theme-toggle";
 
-export function generateMetadata(): Metadata {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ branchId: string }>;
+}): Promise<Metadata> {
+  const { branchId } = await params;
   return {
-    manifest: "/manifest.webmanifest",
+    manifest: `/br/${branchId}/manifest.webmanifest`,
     appleWebApp: {
       capable: true,
       statusBarStyle: "black-translucent",

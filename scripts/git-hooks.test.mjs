@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import {
@@ -98,6 +99,27 @@ test("runPrePushHook blocks push when verify fails", () => {
 test("tracked pre-push hook delegates to the Node runner", () => {
   const hook = readFileSync(join(process.cwd(), GIT_HOOKS_DIR, "pre-push"), "utf8");
   assert.match(hook, /scripts\/git-hooks-pre-push\.mjs/);
+});
+
+test("readGitHooksPath follows worktree gitdir + commondir", () => {
+  const root = mkdtempSync(join(tmpdir(), "matu-hooks-"));
+  try {
+    const commonGit = join(root, "common.git");
+    const worktreeGit = join(commonGit, "worktrees", "pwa");
+    const checkout = join(root, "checkout");
+    mkdirSync(worktreeGit, { recursive: true });
+    mkdirSync(checkout);
+    writeFileSync(join(commonGit, "config"), "\thooksPath = git-hooks\n");
+    writeFileSync(join(worktreeGit, "commondir"), "../..\n");
+    writeFileSync(join(worktreeGit, "config"), "\n");
+    writeFileSync(
+      join(checkout, ".git"),
+      `gitdir: ${worktreeGit.replaceAll("\\", "/")}\n`,
+    );
+    assert.equal(readGitHooksPath(checkout), GIT_HOOKS_DIR);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test("installGitHooks sets core.hooksPath when missing", () => {

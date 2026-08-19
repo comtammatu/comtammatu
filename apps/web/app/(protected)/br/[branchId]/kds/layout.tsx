@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { ForceLightMode } from "@/components/force-light-mode";
 import { OperationalPwaProvider } from "../_components/operational-pwa/provider";
+import { StationLandscapeHint } from "../_components/operational-pwa/landscape-hint";
 import { KdsPwaToolbar } from "../_components/operational-pwa/toolbar";
 
 export async function generateMetadata({
@@ -38,6 +39,7 @@ export default async function KdsLayout({
       <ForceLightMode />
       <OperationalPwaProvider>
         <KdsPwaToolbar branchId={branchId} />
+        <StationLandscapeHint />
         {children}
       </OperationalPwaProvider>
     </main>

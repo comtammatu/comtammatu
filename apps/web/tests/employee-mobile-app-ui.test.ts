@@ -38,10 +38,7 @@ test("root PWA manifest opens the operator entry, not the retired employee app",
   assert.equal(manifest.short_name, "Cổng Má Tư");
   assert.equal(manifest.start_url, "/");
   assert.equal(manifest.scope, "/");
-  assert.deepEqual(
-    manifest.shortcuts?.map((shortcut) => shortcut.url),
-    ["/", "/", "/", "/"],
-  );
+  assert.equal(manifest.shortcuts, undefined);
 });
 
 test("operator entry owns the mobile shell and keeps bottom nav outside scroll content", () => {

@@ -5,6 +5,28 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Harden PWA taps, update recovery, and install identity
+
+State: verify
+Kind: fix
+Tier: T2
+Lane: pwa/ui
+Exit: Operator/POS/KDS taps work after sheet close and after a deploy; OEM Android Install opens help; operator Home Screen launches `/br/{id}`; bottom chrome clears Chrome 135 gesture inset.
+Evidence: `corepack pnpm verify` green in worktree `comtammatu-pwa` on `pwa/android-ios-hardening`. Device smoke still open.
+
+- [ ] Device smoke: HyperOS Reduce Motion sheet close; iOS Home Screen safe-area; Operator standalone shows Reload after SW swap.
+
+UI Advisor Gate
+- Surface: operator `/br/[branchId]/*`, stations `/pos` `/kds` `/pickup`; route family: Branch operator + Station; plane: `branch` + `station_chrome`; change: behavior + chrome layout
+- Context: screen-context-map §1A; actor: BM / cashier / chef / runner; job: open installed app and complete the shift job
+- Journey: Home Screen → usable chrome → install or reload when needed; recovery: one-tap reload, clear overlay
+- Information order: 1) update/offline/install banner 2) primary job 3) install help; exclude: Web Push, native APK, local-first payment
+- Pattern: existing shells; exemplar: `apps/web/app/components/pwa-toolbar.tsx`
+- States: online, offline, standalone, update-available, overlay-closing, chunk-fail
+- Block: none — PWA toolbar and Base UI overlays already exist
+- Responsive/accessibility: touch 44pt; zoom stays allowed; safe-area on viewport-fit cover
+- Verification: `pwa-manifest` / `pwa-runtime` / overlay primitives tests, `lint:copy`, `corepack pnpm verify`
+
 ## POS leftover cash counts on the paying till
 
 State: verify

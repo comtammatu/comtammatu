@@ -33,3 +33,22 @@ test("Vercel observability intakes bypass the session proxy", () => {
   assert.match(source, /_vercel\(\?:\/\|\$\)/);
   assert.match(source, /\[a-f0-9\]\{16\}\/\(\?:script\\\\\.js\|vitals\)\$/);
 });
+
+test("PWA reloads once per session on a stale chunk after a service-worker swap", () => {
+  const source = readFileSync(
+    new URL("../app/components/pwa-runtime.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /CHUNK_RELOAD_STORAGE_KEY = "matu-pwa-chunk-reload"/);
+  assert.match(source, /function isChunkLoadFailure/);
+  assert.match(source, /ChunkLoadError/);
+  assert.match(source, /sessionStorage\.getItem\(CHUNK_RELOAD_STORAGE_KEY\)/);
+  assert.match(source, /addEventListener\("error", handleWindowError\)/);
+  assert.match(
+    source,
+    /addEventListener\("unhandledrejection", handleUnhandledRejection\)/,
+  );
+  assert.match(source, /window\.location\.reload\(\)/);
+});
+

@@ -47,6 +47,8 @@ test("root PWA manifest opens the operator entry instead of the retired employee
     short_name?: unknown;
     shortcuts?: Array<{ name?: unknown; url?: unknown }>;
     start_url?: unknown;
+    launch_handler?: { client_mode?: unknown };
+    icons?: Array<{ src?: unknown; sizes?: unknown; purpose?: unknown }>;
   };
 
   assert.equal(manifest.id, "/");
@@ -56,9 +58,20 @@ test("root PWA manifest opens the operator entry instead of the retired employee
   assert.equal(manifest.short_name, "Cổng Má Tư");
   assert.equal(manifest.start_url, "/");
   assert.deepEqual(manifest.categories, ["business", "productivity"]);
-  assert.deepEqual(
-    manifest.shortcuts?.map((shortcut) => shortcut.url),
-    ["/", "/", "/", "/"],
+  assert.equal(manifest.shortcuts, undefined);
+  assert.equal(manifest.launch_handler?.client_mode, "focus-existing");
+  assert.ok(
+    manifest.icons?.some(
+      (icon) => icon.sizes === "512x512" && icon.purpose === "any",
+    ),
+  );
+  assert.ok(
+    manifest.icons?.some(
+      (icon) => icon.sizes === "512x512" && icon.purpose === "maskable",
+    ),
+  );
+  assert.ok(
+    !manifest.icons?.some((icon) => icon.purpose === "any maskable"),
   );
 });
 
@@ -146,6 +159,7 @@ test("operator PWA manifest keeps branch identity in its start route", async () 
     scope?: unknown;
     short_name?: unknown;
     start_url?: unknown;
+    launch_handler?: { client_mode?: unknown };
     icons?: Array<{ src?: unknown; sizes?: unknown; purpose?: unknown }>;
   };
 
@@ -154,6 +168,10 @@ test("operator PWA manifest keeps branch identity in its start route", async () 
     response.headers.get("Content-Type"),
     "application/manifest+json; charset=utf-8",
   );
+  assert.match(
+    response.headers.get("Cache-Control") ?? "",
+    /must-revalidate/,
+  );
   assert.equal(manifest.id, "/br/3");
   assert.equal(manifest.name, "Cơm Tấm Má Tư - Cổng vận hành");
   assert.equal(manifest.start_url, "/br/3");
@@ -161,11 +179,20 @@ test("operator PWA manifest keeps branch identity in its start route", async () 
   assert.equal(manifest.display, "standalone");
   assert.equal(manifest.short_name, "Cổng Má Tư");
   assert.equal(manifest.orientation, "portrait");
-  assert.ok(manifest.icons && manifest.icons.length >= 2);
+  assert.equal(manifest.launch_handler?.client_mode, "focus-existing");
+  assert.ok(manifest.icons && manifest.icons.length >= 4);
   assert.ok(
     manifest.icons?.some(
-      (icon) => icon.sizes === "512x512" && icon.purpose === "any maskable",
+      (icon) => icon.sizes === "512x512" && icon.purpose === "any",
     ),
+  );
+  assert.ok(
+    manifest.icons?.some(
+      (icon) => icon.sizes === "512x512" && icon.purpose === "maskable",
+    ),
+  );
+  assert.ok(
+    !manifest.icons?.some((icon) => icon.purpose === "any maskable"),
   );
 });
 
@@ -328,7 +355,10 @@ test("operator layout mounts its manifest link and install toolbar", () => {
     "utf8",
   );
 
-  assert.match(layoutSource, /manifest: "\/manifest\.webmanifest"/);
+  assert.match(
+    layoutSource,
+    /manifest: `\/br\/\$\{branchId\}\/manifest\.webmanifest`/,
+  );
   assert.match(layoutSource, /<OperatorPwaToolbar \/>/);
 });
 
@@ -485,3 +515,122 @@ test("offline page is explicitly precached and reuses the shared error copy", ()
   assert.match(offlinePageSource, /AppEmptyState/);
   assert.match(offlinePageSource, /size="touch"/);
 });
+
+test("operator contained toolbar still shows an update row in standalone", () => {
+  const toolbarSource = readFileSync(
+    new URL("../app/components/pwa-toolbar.tsx", import.meta.url),
+    "utf8",
+  );
+  const operatorToolbarSource = readFileSync(
+    new URL(
+      "../app/(protected)/br/[branchId]/(operator)/operator-pwa-toolbar.tsx",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const operatorCopySource = readFileSync(
+    new URL("../lib/messages/operator.ts", import.meta.url),
+    "utf8",
+  );
+
+  const updateGate = toolbarSource.indexOf(
+    "hasNewVersion && copy.updateHint && copy.updateButton",
+  );
+  const standaloneHide = toolbarSource.indexOf(
+    "if (isStandalone && isOnline) return null;",
+  );
+  assert.ok(updateGate >= 0, "expected an update-banner gate");
+  assert.ok(standaloneHide >= 0, "expected standalone hide for install chrome");
+  assert.ok(
+    updateGate < standaloneHide,
+    "update banner must run before contained standalone hide",
+  );
+  assert.match(operatorToolbarSource, /updateHint: copy\.updateHint/);
+  assert.match(operatorToolbarSource, /updateButton: copy\.updateButton/);
+  assert.match(operatorCopySource, /updateHint: "Có phiên bản mới của ứng dụng\."/);
+  assert.match(operatorCopySource, /updateButton: "Tải lại"/);
+});
+
+test("full-bleed install falls back to browser help when no native prompt exists", () => {
+  const toolbarSource = readFileSync(
+    new URL("../app/components/pwa-toolbar.tsx", import.meta.url),
+    "utf8",
+  );
+  const operationalToolbarSource = readFileSync(
+    new URL(
+      "../app/(protected)/br/[branchId]/_components/operational-pwa/toolbar.tsx",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+
+  assert.match(
+    toolbarSource,
+    /setHelpMode\(isIosPwaInstall \? "ios" : "browser"\)/,
+  );
+  assert.doesNotMatch(
+    toolbarSource,
+    /disabled=\{!installAvailable \|\| installPending\}/,
+  );
+  assert.match(operationalToolbarSource, /browserDialogTitle:/);
+  assert.match(operationalToolbarSource, /browserSteps:/);
+});
+
+test("KDS and Pickup show a landscape rotate hint; POS keeps dvh height", () => {
+  const kdsLayout = readFileSync(
+    new URL("../app/(protected)/br/[branchId]/kds/layout.tsx", import.meta.url),
+    "utf8",
+  );
+  const pickupLayout = readFileSync(
+    new URL(
+      "../app/(protected)/br/[branchId]/pickup/layout.tsx",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const posLayout = readFileSync(
+    new URL("../app/(protected)/br/[branchId]/pos/layout.tsx", import.meta.url),
+    "utf8",
+  );
+  const hintSource = readFileSync(
+    new URL(
+      "../app/(protected)/br/[branchId]/_components/operational-pwa/landscape-hint.tsx",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+
+  assert.match(kdsLayout, /<StationLandscapeHint \/>/);
+  assert.match(pickupLayout, /<StationLandscapeHint \/>/);
+  assert.doesNotMatch(posLayout, /StationLandscapeHint/);
+  assert.doesNotMatch(posLayout, /md:min-h-screen/);
+  assert.match(hintSource, /orientation\.lock\("landscape"\)/);
+  assert.match(hintSource, /messages\.common\.stationRotateLandscape/);
+});
+
+test("bottom chrome prefers Chrome 135 max safe-area inset", () => {
+  const uiStyles = readFileSync(
+    new URL("../../../packages/ui/src/styles/globals.css", import.meta.url),
+    "utf8",
+  );
+  const dock = readFileSync(
+    new URL(
+      "../app/(protected)/br/[branchId]/pos/_components/pos-mobile-action-bar.tsx",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+
+  assert.match(
+    uiStyles,
+    /@utility chrome-safe-pb \{[\s\S]*safe-area-max-inset-bottom/,
+  );
+  assert.match(
+    uiStyles,
+    /@utility pos-safe-bottom \{[\s\S]*safe-area-max-inset-bottom/,
+  );
+  assert.match(uiStyles, /@utility pos-keyboard-lift/);
+  assert.match(dock, /pos-keyboard-lift/);
+  assert.match(dock, /useVisualViewportKeyboardInset/);
+});
+

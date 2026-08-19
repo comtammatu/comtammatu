@@ -41,7 +41,10 @@ test("POS stale self-order requests remain openable after a sync failure", () =>
     dock,
     /const retrySelfOrderOnly = selfOrderSyncFailed && selfOrderRequestCount === 0/,
   );
-  assert.match(dock, /h-\[env\(safe-area-inset-bottom\)\] bg-card\/95/);
+  assert.match(
+    dock,
+    /h-\[env\(safe-area-max-inset-bottom,env\(safe-area-inset-bottom\)\)\] bg-card\/95 pos-keyboard-lift/,
+  );
   assert.match(dock, /APPEND_ACTION_BAR_CLASS/);
   assert.match(dock, /grid-cols-\[auto_minmax\(0,1fr\)_minmax\(0,1fr\)\]/);
 });

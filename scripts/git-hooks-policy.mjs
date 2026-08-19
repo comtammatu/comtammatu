@@ -1,5 +1,5 @@
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { isAbsolute, join } from "node:path";
 
 export const GIT_HOOKS_DIR = "git-hooks";
 export const PRE_PUSH_HOOK = "pre-push";
@@ -40,8 +40,23 @@ export function shouldRunCiGatesVerify({
   return paths.some((path) => !isCiGatesPathIgnored(path));
 }
 
-export function readGitHooksPath(repoRoot) {
-  const configPath = join(repoRoot, ".git", "config");
+function resolveGitDir(repoRoot) {
+  const gitPath = join(repoRoot, ".git");
+  if (!existsSync(gitPath)) {
+    return null;
+  }
+  if (statSync(gitPath).isDirectory()) {
+    return gitPath;
+  }
+  const match = readFileSync(gitPath, "utf8").match(/^gitdir:\s*(.+)\s*$/m);
+  if (!match) {
+    return null;
+  }
+  const gitDir = match[1].trim();
+  return isAbsolute(gitDir) ? gitDir : join(repoRoot, gitDir);
+}
+
+function readHooksPathFromConfig(configPath) {
   if (!existsSync(configPath)) {
     return null;
   }
@@ -52,4 +67,21 @@ export function readGitHooksPath(repoRoot) {
     return null;
   }
   return match[1].trim().replace(/^"(.*)"$/, "$1");
+}
+
+export function readGitHooksPath(repoRoot) {
+  const gitDir = resolveGitDir(repoRoot);
+  if (!gitDir) {
+    return null;
+  }
+  const fromWorktree = readHooksPathFromConfig(join(gitDir, "config"));
+  if (fromWorktree) {
+    return fromWorktree;
+  }
+  const commonDirFile = join(gitDir, "commondir");
+  if (!existsSync(commonDirFile)) {
+    return null;
+  }
+  const commonRel = readFileSync(commonDirFile, "utf8").trim();
+  return readHooksPathFromConfig(join(gitDir, commonRel, "config"));
 }

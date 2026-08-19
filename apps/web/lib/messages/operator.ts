@@ -127,6 +127,8 @@ export const operator = {
       "Mở biểu tượng Cổng Má Tư khi bắt đầu ca.",
     ],
     close: "Đóng",
+    updateHint: "Có phiên bản mới của ứng dụng.",
+    updateButton: "Tải lại",
   },
   teamBoard: {
     title: "Nhân sự",

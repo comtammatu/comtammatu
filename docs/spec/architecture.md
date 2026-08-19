@@ -44,7 +44,7 @@ monorepo.
 | Data authority       | Supabase Cloud owns Auth, Postgres, PostgREST, RLS, Realtime, and Storage                                                              |
 | Authorization        | `proxy.ts` gates session/surface/scope; RLS and authorized RPCs own data/action authority                                              |
 | Mutation correctness | Server Action input is Zod-validated; multi-row correctness is implemented in one Postgres RPC                                         |
-| Offline posture      | Cloud-first PWA; cached shell/static assets may degrade gracefully, but POS has no local-first transaction authority                   |
+| Offline posture      | Cloud-first PWA; cached shell/static assets may degrade gracefully, but POS has no local-first transaction authority. Operator and station toolbars surface an undismissable reload row after a service-worker swap; a one-shot session reload recovers `ChunkLoadError`. |
 | Printing             | `print_jobs` is the durable queue; the branch agent claims idempotently, retries LAN delivery, and recovery-polls around Realtime gaps |
 | Delivery             | Web deploys through Vercel; database and branch-agent releases have separate promotion gates                                           |
 
@@ -211,4 +211,9 @@ L0-gated per ADR 0012.
 Web + DB remain cloud-authoritative. D012 still rejects local-first POS. This
 repo keeps the PWA and branch print-agent. Native Android clients (repository
 `app`) are ADR 0038 and optional per branch. Topology, secrets, CI, promotion:
-`docs/modules/infrastructure.md`.
+`docs/modules/infrastructure.md`. PWA support is feature-detected (no UA
+version gates): station = Android 13+ Chrome N/N-1 (Chrome 135+ gesture +
+HyperOS in-scope) and iPadOS 18/26 Safari for KDS/Pickup; operator BYOD =
+iOS 18/26 + Android 10+ Chrome N/N-1; desktop control surface = Chrome N/N-1
+(Edge is Chromium; macOS Safari browsing best-effort, no desktop Safari PWA).
+Unsupported: Android 9-, iOS 15-. Review after Apple's September OS.

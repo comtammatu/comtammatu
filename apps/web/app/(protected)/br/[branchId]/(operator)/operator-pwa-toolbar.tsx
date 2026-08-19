@@ -29,6 +29,8 @@ export function OperatorPwaToolbar() {
         browserDialogDescription: copy.browserDialogDescription,
         browserSteps: copy.browserSteps,
         close: copy.close,
+        updateHint: copy.updateHint,
+        updateButton: copy.updateButton,
       }}
     />
   );

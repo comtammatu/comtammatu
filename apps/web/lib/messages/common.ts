@@ -22,4 +22,5 @@ export const common = {
   sessionExpired: ERRORS_VI.sessionExpired,
   forbidden: ERRORS_VI.forbidden,
   networkError: ERRORS_VI.networkError,
+  stationRotateLandscape: "Xoay ngang máy tính bảng",
 } as const;

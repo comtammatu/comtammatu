@@ -472,13 +472,22 @@
  * bar on iPhone X+ / Android with gesture nav. Prefixed `pos-` to avoid
  * collision with the retired-helper rule. */
 @utility pos-safe-bottom {
-  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  /* Chrome 135+ edge-to-edge: prefer the stable max inset so bottom chrome
+   * does not thrash when the gesture bar inset animates. Fall back to the
+   * live inset on engines that only expose safe-area-inset-*. */
+  padding-bottom: max(
+    0.75rem,
+    env(safe-area-max-inset-bottom, env(safe-area-inset-bottom))
+  );
 }
 
 /* Safe-area padding for customer-facing workflow action bars and bottom-sheet
  * footers. This is separate from authenticated shell chrome and POS controls. */
 @utility workflow-safe-pb {
-  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  padding-bottom: max(
+    0.75rem,
+    env(safe-area-max-inset-bottom, env(safe-area-inset-bottom))
+  );
 }
 @utility workflow-safe-pt {
   padding-top: max(0.5rem, env(safe-area-inset-top));
@@ -496,7 +505,13 @@
   padding-top: env(safe-area-inset-top);
 }
 @utility chrome-safe-pb {
-  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  padding-bottom: max(
+    0.5rem,
+    env(safe-area-max-inset-bottom, env(safe-area-inset-bottom))
+  );
+}
+@utility pos-keyboard-lift {
+  bottom: var(--visual-viewport-keyboard-inset, 0px);
 }
 @utility chrome-safe-top {
   top: max(0.5rem, env(safe-area-inset-top));

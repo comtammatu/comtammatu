@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { OperationalPwaProvider } from "../_components/operational-pwa/provider";
+import { StationLandscapeHint } from "../_components/operational-pwa/landscape-hint";
 import { PickupPwaToolbar } from "../_components/operational-pwa/toolbar";
 import { PickupLightMode } from "./pickup-light-mode";
 
@@ -38,6 +39,7 @@ export default async function PickupLayout({
       <PickupLightMode />
       <OperationalPwaProvider>
         <PickupPwaToolbar branchId={branchId} />
+        <StationLandscapeHint />
         {children}
       </OperationalPwaProvider>
     </main>

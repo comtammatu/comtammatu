@@ -34,7 +34,34 @@ const APP_LABELS: Record<
 // route-specific install identities.
 const OPERATOR_APP: OperationalApp = "operator";
 
-const OPERATIONAL_MANIFEST_REVALIDATE_SECONDS = 3600;
+const OPERATIONAL_MANIFEST_REVALIDATE_SECONDS = 60;
+
+const OPERATIONAL_ICONS = [
+  {
+    src: "/icons/icon-192.png",
+    sizes: "192x192",
+    type: "image/png",
+    purpose: "any",
+  },
+  {
+    src: "/icons/icon-192.png",
+    sizes: "192x192",
+    type: "image/png",
+    purpose: "maskable",
+  },
+  {
+    src: "/icons/icon-512.png",
+    sizes: "512x512",
+    type: "image/png",
+    purpose: "any",
+  },
+  {
+    src: "/icons/icon-512.png",
+    sizes: "512x512",
+    type: "image/png",
+    purpose: "maskable",
+  },
+] as const;
 
 function normalizeManifestBranchId(rawBranchId: string): string | null {
   const branchNum = Number.parseInt(rawBranchId, 10);
@@ -76,20 +103,8 @@ function buildOperationalManifest(app: OperationalApp, branchId: string) {
     orientation: appConfig.orientation,
     categories: ["business", "productivity"],
     prefer_related_applications: false,
-    icons: [
-      {
-        src: "/icons/icon-192.png",
-        sizes: "192x192",
-        type: "image/png",
-        purpose: "any maskable",
-      },
-      {
-        src: "/icons/icon-512.png",
-        sizes: "512x512",
-        type: "image/png",
-        purpose: "any maskable",
-      },
-    ],
+    launch_handler: { client_mode: "focus-existing" },
+    icons: [...OPERATIONAL_ICONS],
   };
 }
 
@@ -105,7 +120,7 @@ export function buildOperationalManifestResponse(
   return new Response(JSON.stringify(buildOperationalManifest(app, branchId)), {
     headers: {
       "Content-Type": "application/manifest+json; charset=utf-8",
-      "Cache-Control": `public, max-age=${OPERATIONAL_MANIFEST_REVALIDATE_SECONDS}`,
+      "Cache-Control": `public, max-age=${OPERATIONAL_MANIFEST_REVALIDATE_SECONDS}, must-revalidate`,
     },
   });
 }

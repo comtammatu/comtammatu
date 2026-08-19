@@ -10,6 +10,10 @@ const ALLOWLIST = {
     count: 2,
     reason: "operational PWA install hint dismissal only",
   },
+  "apps/web/app/components/pwa-runtime.tsx": {
+    count: 2,
+    reason: "one-shot stale-chunk reload latch across location.reload only",
+  },
   "apps/web/lib/device-prefs.ts": {
     count: 2,
     reason: "device-local operational preferences (POS/KDS sound) only",

@@ -47,7 +47,7 @@ function DialogOverlay({
       className={cn(
         // Base UI keeps data-starting-style for one frame only — CSS transitions
         // (not data-[starting-style]:animate-in) run after the attribute drops.
-        "fixed inset-0 isolate z-50 bg-effect-scrim transition-opacity duration-[var(--motion-fast)] ease-[var(--ease-move)] data-[starting-style]:opacity-0 data-[ending-style]:opacity-0",
+        "fixed inset-0 isolate z-50 bg-effect-scrim transition-opacity duration-[var(--motion-fast)] ease-[var(--ease-move)] data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 data-[ending-style]:pointer-events-none",
         className,
       )}
       {...props}
@@ -70,7 +70,7 @@ function DialogContent({
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] max-h-[calc(100dvh-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto overscroll-contain rounded-lg bg-popover p-4 text-xs/relaxed text-popover-foreground shadow-effect-dialog outline-none transition-[opacity,transform] duration-[var(--motion-overlay)] ease-[var(--ease-move)] sm:max-w-sm data-[starting-style]:scale-95 data-[starting-style]:opacity-0 data-[ending-style]:scale-95 data-[ending-style]:opacity-0",
+          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] max-h-[calc(100dvh-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto overscroll-contain rounded-lg bg-popover p-4 text-xs/relaxed text-popover-foreground shadow-effect-dialog outline-none transition-[opacity,transform] duration-[var(--motion-overlay)] ease-[var(--ease-move)] sm:max-w-sm data-[starting-style]:scale-95 data-[starting-style]:opacity-0 data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[ending-style]:pointer-events-none",
           className,
         )}
         {...props}

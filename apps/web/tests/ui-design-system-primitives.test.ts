@@ -664,3 +664,21 @@ test("Item content regions can shrink inside responsive card layouts", () => {
     2,
   );
 });
+
+test("overlay backdrops drop pointer events while ending so reduced-motion cannot leave a dead tap layer", () => {
+  const dialogSource = read("packages/ui/src/components/dialog.tsx");
+  const sheetSource = read("packages/ui/src/components/sheet.tsx");
+  const drawerSource = read("packages/ui/src/components/drawer.tsx");
+  const alertDialogSource = read("packages/ui/src/components/alert-dialog.tsx");
+
+  for (const source of [
+    dialogSource,
+    sheetSource,
+    drawerSource,
+    alertDialogSource,
+  ]) {
+    assert.match(source, /data-\[ending-style\]:pointer-events-none/);
+    assert.match(source, /data-slot="(?:dialog|sheet|drawer|alert-dialog)-overlay"/);
+  }
+});
+

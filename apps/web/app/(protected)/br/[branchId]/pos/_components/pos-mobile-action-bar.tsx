@@ -14,6 +14,7 @@ import {
   X as IconX,
 } from "lucide-react";
 import { messages } from "@lib/messages";
+import { useVisualViewportKeyboardInset } from "@/_hooks/use-visual-viewport-keyboard-inset";
 
 export interface PosMobileActionBarProps {
   isTouchLayout: boolean;
@@ -42,7 +43,7 @@ export interface PosMobileActionBarProps {
 }
 
 const TOUCH_DOCK_CLASS =
-  "pointer-events-none fixed inset-x-3 bottom-0 z-40 flex flex-col gap-2 pos-safe-bottom xl:hidden";
+  "pointer-events-none fixed inset-x-3 bottom-0 z-40 flex flex-col gap-2 pos-safe-bottom pos-keyboard-lift xl:hidden";
 
 const ACTION_BAR_SURFACE_CLASS =
   "pointer-events-auto rounded-lg bg-card/95 p-2 shadow-2xl ring-1 ring-border backdrop-blur";
@@ -90,6 +91,7 @@ function PosMobileActionBarComponent({
   onCancelAppend,
   onOpenSelfOrderApproval,
 }: PosMobileActionBarProps) {
+  useVisualViewportKeyboardInset();
   if (!isTouchLayout) return null;
 
   const showSelfOrderAction = selfOrderSyncFailed || selfOrderRequestCount > 0;
@@ -98,7 +100,7 @@ function PosMobileActionBarComponent({
     <>
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-30 h-[env(safe-area-inset-bottom)] bg-card/95 xl:hidden"
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-30 h-[env(safe-area-max-inset-bottom,env(safe-area-inset-bottom))] bg-card/95 pos-keyboard-lift xl:hidden"
       />
       <div className={TOUCH_DOCK_CLASS}>
         {showSelfOrderAction ? (

@@ -46,6 +46,8 @@ export const employee = {
       "Mở biểu tượng Má Tư NV khi bắt đầu ca.",
     ],
     close: "Đóng",
+    updateHint: "Có phiên bản mới của ứng dụng.",
+    updateButton: "Tải lại",
   },
   home: {
     title: "Ca của tôi",

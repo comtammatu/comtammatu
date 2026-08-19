@@ -43,6 +43,14 @@ function buildCopy(surface: OperationalPwaSurface) {
       "Chọn Thêm vào Màn hình chính.",
       `Giữ tên ${appLabel} mặc định và bấm Thêm.`,
     ],
+    browserDialogTitle: `Cài đặt ${appLabel} trên thiết bị này`,
+    browserDialogDescription:
+      "Nếu trình duyệt không mở hộp thoại cài đặt, dùng menu của trình duyệt.",
+    browserSteps: [
+      "Mở menu của trình duyệt.",
+      "Chọn Cài đặt ứng dụng hoặc Thêm vào màn hình chính.",
+      `Mở biểu tượng ${appLabel} khi bắt đầu ca.`,
+    ],
     close: "Đóng",
   };
 }

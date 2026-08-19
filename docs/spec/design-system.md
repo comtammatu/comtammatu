@@ -249,7 +249,7 @@ Brand mapping: `background` = `kem gạo`; `foreground` = `xanh đậm`; `primar
 - `max-h-dvh-95` and `max-h-dvh-80` are bottom-sheet height utilities for mobile
   dynamic viewport constraints.
 - `pos-text-overlay` is limited to text over POS menu item photos.
-- `pos-safe-bottom` is limited to POS PWA floating bottom bars.
+- `pos-safe-bottom` is limited to POS PWA floating bottom bars. Padding uses `safe-area-max-inset-bottom`; `pos-keyboard-lift` is POS fixed chrome (`--visual-viewport-keyboard-inset`).
 - `workflow-safe-pb` is limited to public workflow fixed action bars and
   bottom-sheet footers above a mobile home indicator; `workflow-safe-pt`
   protects public workflow headers below standalone-PWA status chrome.
@@ -584,7 +584,7 @@ elevation communicates a real layering relationship.
 | Toast | `--effect-toast` on `.cn-toast` | Sonner (applied in `globals.css`, no utility class) |
 | Sticky CTA | `shadow-lg` | CTAs inside a genuinely sticky/fixed action bar |
 | Ceiling | `shadow-xl` / `shadow-2xl` | Only fixed surfaces over scrolling content (POS mobile action bar, KDS focus card, chart tooltip) |
-| Overlay scrim | `bg-effect-scrim` / `drawer-scrim` | Dialog/Sheet backdrop; Drawer backdrop (scrim + blur) |
+| Overlay scrim | `bg-effect-scrim` / `drawer-scrim` | Dialog/Sheet backdrop; Drawer backdrop (scrim + blur). Overlay ending-style MUST set `pointer-events-none`. |
 
 `pos-text-overlay` and `drop-shadow-*` image filters are legibility effects, not
 elevation rungs, and must never be reused as surface shadows. Avoid elevation

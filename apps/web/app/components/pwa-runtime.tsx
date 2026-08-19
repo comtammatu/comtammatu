@@ -30,6 +30,35 @@ interface PwaRuntimeContextValue {
 
 const PwaRuntimeContext = createContext<PwaRuntimeContextValue | null>(null);
 
+// sessionStorage survives location.reload so a missing chunk cannot loop.
+// Module flag is the private-mode fallback (see check-client-storage.mjs).
+const CHUNK_RELOAD_STORAGE_KEY = "matu-pwa-chunk-reload";
+
+let chunkReloadAttempted = false;
+
+function isChunkLoadFailure(value: unknown): boolean {
+  const text =
+    typeof value === "string"
+      ? value
+      : value instanceof Error
+        ? `${value.name} ${value.message}`
+        : "";
+  return /ChunkLoadError|Loading chunk|Failed to fetch dynamically imported module|error loading dynamically imported module/i.test(
+    text,
+  );
+}
+
+function reloadOnceForStaleChunk(): void {
+  try {
+    if (sessionStorage.getItem(CHUNK_RELOAD_STORAGE_KEY) === "1") return;
+    sessionStorage.setItem(CHUNK_RELOAD_STORAGE_KEY, "1");
+  } catch {
+    if (chunkReloadAttempted) return;
+    chunkReloadAttempted = true;
+  }
+  window.location.reload();
+}
+
 function isIosLikePlatform(): boolean {
   const navigatorWithTouchPoints = navigator as Navigator & {
     maxTouchPoints?: number;
@@ -132,6 +161,25 @@ export function PwaRuntimeProvider({ children }: { children: ReactNode }) {
     displayModeQuery.addEventListener("change", handleDisplayModeChange);
     return () => {
       displayModeQuery.removeEventListener("change", handleDisplayModeChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleWindowError = (event: ErrorEvent) => {
+      if (isChunkLoadFailure(event.error ?? event.message)) {
+        reloadOnceForStaleChunk();
+      }
+    };
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      if (isChunkLoadFailure(event.reason)) {
+        reloadOnceForStaleChunk();
+      }
+    };
+    window.addEventListener("error", handleWindowError);
+    window.addEventListener("unhandledrejection", handleUnhandledRejection);
+    return () => {
+      window.removeEventListener("error", handleWindowError);
+      window.removeEventListener("unhandledrejection", handleUnhandledRejection);
     };
   }, []);
 
