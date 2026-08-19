@@ -129,7 +129,7 @@ test("Finance separates period results, inventory, and current book funds", () =
     /CREATE OR REPLACE FUNCTION public\.get_inventory_value_period/,
   );
   assert.match(financePage, /inventoryOpeningValue/);
-  assert.match(financePage, /CurrentFundsSection cash=\{cash\}/);
+  assert.match(financePage, /CurrentFundsSection[\s\S]*cash=\{cash\}/);
   assert.match(financeMessages, /netRevenue: "Doanh thu thuần"/);
   assert.match(financeMessages, /grossProfit: "Lợi nhuận gộp"/);
   assert.match(financeMessages, /operatingResult: "Kết quả kinh doanh"/);

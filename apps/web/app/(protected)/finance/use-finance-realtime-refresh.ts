@@ -28,6 +28,7 @@ export function resolveFinanceRealtimeEvents(
     case "bank-transactions":
       return ["sepay", "payment"];
     case "expenses":
+    case "equipment":
     case "revenue":
     case "invoices":
     case "targets":

@@ -18,6 +18,7 @@ const readWeb = (path: string) =>
 
 const EXPENSE_CLIENT_PATHS = [
   "app/(protected)/finance/expenses/expenses-client.tsx",
+  "app/(protected)/finance/expenses/expense-list-kpis.tsx",
   "app/(protected)/finance/expenses/expense-form-schema.ts",
   "app/(protected)/finance/expenses/expense-form-fields.tsx",
   "app/(protected)/finance/expenses/expense-view-dialog.tsx",
@@ -269,6 +270,10 @@ test("expense LIST loader bounds first paint and fails closed on missing evidenc
   );
   assert.match(
     actions,
+    /export async function fetchEquipmentExpenses[\s\S]*?categories: \["capital"\]/,
+  );
+  assert.match(
+    actions,
     /export async function fetchStartupCapitalSummary[\s\S]*?EXPENSE_CATEGORIES_BY_GROUP\.startup/,
   );
   assert.doesNotMatch(
@@ -313,20 +318,21 @@ test("expense list shows period opex and startup capital as sibling KPI cards", 
   const client = readWeb(
     "app/(protected)/finance/expenses/expenses-client.tsx",
   );
+  const kpis = readWeb(
+    "app/(protected)/finance/expenses/expense-list-kpis.tsx",
+  );
   const page = readWeb("app/(protected)/finance/expenses/page.tsx");
   const messages = readWeb("lib/messages/finance.ts");
   const successPage = page.slice(page.indexOf("const todayBusinessDate"));
-  const headerEnd = client.indexOf("<AppListFrame");
-  const kpiBlock = client.slice(client.indexOf("<KpiRow"), headerEnd);
 
-  assert.ok(client.indexOf("<KpiRow") < headerEnd);
-  assert.equal((kpiBlock.match(/<KpiCard/g) ?? []).length, 2);
-  assert.match(kpiBlock, /label=\{copy\.monthLabel\}/);
-  assert.match(kpiBlock, /label=\{copy\.startupLabel\}/);
+  assert.match(client, /<ExpenseListKpis/);
+  assert.equal((kpis.match(/<KpiCard/g) ?? []).length, 3);
+  assert.match(kpis, /label=\{copy\.monthLabel\}/);
+  assert.match(kpis, /label=\{copy\.startupLabel\}/);
   assert.match(client, /expenseCategoryBucketLabel/);
   assert.match(client, /function categoryCell/);
-  assert.match(kpiBlock, /hint=\{copy\.monthHint\(formatCount\(summary\.operatingCount\)\)\}/);
-  assert.match(kpiBlock, /hint=\{copy\.startupHint\(formatCount\(summary\.startupCount\)\)\}/);
+  assert.match(kpis, /hint=\{copy\.monthHint\(formatCount\(operatingCount\)\)\}/);
+  assert.match(kpis, /hint=\{copy\.startupHint\(formatCount\(startupCount\)\)\}/);
   assert.match(messages, /monthLabel: "Chi vận hành"/);
   assert.match(messages, /startupLabel: "Chi phí ban đầu"/);
   assert.doesNotMatch(client, /listSummaryMeta/);
@@ -377,7 +383,7 @@ test("expense location filter keeps company and branch scopes distinct", () => {
   const actions = readWeb("app/(protected)/finance/expense-actions.ts");
 
   assert.match(page, /fetchExpenses\(\{[\s\S]*?location: params\.location/);
-  assert.match(client, /<FilterBar[\s\S]*?hide=\{\["branch"/);
+  assert.match(client, /\["branch", "compare", "granularity"\]/);
   assert.match(actions, /fetchExpensesSchema\.safeParse\(params\)/);
   assert.match(
     actions,
@@ -628,5 +634,5 @@ test("expense list keeps the ledger compact and uses consistent operator terms",
   assert.match(messages, /branchTenantLevel: "Công ty"/);
   assert.match(bundle, /className="grid gap-4 md:grid-cols-2"/);
   assert.match(bundle, /className="md:col-span-2"/);
-  assert.match(client, /<FilterBar[\s\S]*?hide=\{\["branch"/);
+  assert.match(client, /\["branch", "compare", "granularity"\]/);
 });

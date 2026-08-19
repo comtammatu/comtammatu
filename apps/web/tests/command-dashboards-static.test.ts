@@ -13,6 +13,7 @@ const FINANCE_COCKPIT =
 const FINANCE_COPY = "apps/web/lib/messages/finance.ts";
 const FINANCE_SUBROUTE_SURFACES = [
   "apps/web/app/(protected)/finance/bank-transactions/page.tsx",
+  "apps/web/app/(protected)/finance/equipment/page.tsx",
   "apps/web/app/(protected)/finance/expenses/page.tsx",
   "apps/web/app/(protected)/finance/food-cost/page.tsx",
   "apps/web/app/(protected)/finance/invoices/page.tsx",
@@ -92,7 +93,14 @@ test("finance overview presents period results, current funds, and inventory in 
   assert.match(page, /inventoryValueHint/);
   assert.match(page, /basic\.sections\.assets/);
   assert.match(page, /kpis\.equipment/);
-  assert.match(page, /CurrentFundsSection cash=\{cash\} embedded/);
+  assert.match(page, /kpis\.totalAssetValue/);
+  assert.match(page, /addMoney/);
+  assert.match(page, /financeHref\("\/finance\/equipment"/);
+  assert.match(page, /className="pb-4"/);
+  assert.match(
+    page,
+    /<CurrentFundsSection[\s\S]*title=\{financeCopy\.basic\.sections\.assets\}/,
+  );
   assert.ok(
     pageBody.indexOf("basic.sections.grossProfit") <
       pageBody.indexOf("basic.sections.periodResult"),
@@ -105,8 +113,10 @@ test("finance overview presents period results, current funds, and inventory in 
   );
   assert.ok(
     pageBody.indexOf("basic.sections.assets") <
-      pageBody.indexOf("<CurrentFundsSection"),
-    "Assets section must wrap current funds",
+      pageBody.indexOf("kpis.inventoryClosingValue") ||
+      pageBody.indexOf("<CurrentFundsSection") <
+        pageBody.indexOf("kpis.inventoryClosingValue"),
+    "Assets section must wrap current funds before inventory",
   );
   assert.ok(
     pageBody.indexOf("<CurrentFundsSection") <
@@ -114,14 +124,19 @@ test("finance overview presents period results, current funds, and inventory in 
     "Current funds must appear before period-end inventory",
   );
   assert.ok(
-    pageBody.indexOf("kpis.inventoryClosingValue") <
-      pageBody.indexOf("kpis.equipment"),
+    pageBody.indexOf("label={financeCopy.basic.kpis.inventoryClosingValue}") <
+      pageBody.indexOf("label={financeCopy.basic.kpis.equipment}"),
     "Inventory must appear before equipment",
   );
   assert.ok(
-    pageBody.indexOf("kpis.equipment") <
-      pageBody.indexOf("kpis.startupCapital"),
-    "Equipment must appear before startup capital",
+    pageBody.indexOf("label={financeCopy.basic.kpis.equipment}") <
+      pageBody.indexOf("label={financeCopy.basic.kpis.totalAssetValue}"),
+    "Equipment must appear before total asset value",
+  );
+  assert.ok(
+    pageBody.indexOf("label={financeCopy.basic.kpis.totalAssetValue}") <
+      pageBody.indexOf("label={financeCopy.basic.kpis.startupCapital}"),
+    "Total asset value must appear before startup capital",
   );
   assert.match(copy, /title: "Tài chính"/);
   assert.match(copy, /netRevenue: "Doanh thu thuần"/);
@@ -134,6 +149,7 @@ test("finance overview presents period results, current funds, and inventory in 
   assert.match(copy, /operatingExpense: "Chi vận hành"/);
   assert.match(copy, /startupCapital: "Chi phí ban đầu"/);
   assert.match(copy, /equipment: "Thiết bị"/);
+  assert.match(copy, /totalAssetValue: "Tổng giá trị"/);
   assert.match(copy, /assets: "Tài sản"/);
   assert.match(copy, /inventoryClosingValue: "Tồn kho"/);
   assert.match(copy, /reports: "Doanh thu"/);
@@ -142,11 +158,11 @@ test("finance overview presents period results, current funds, and inventory in 
   assert.match(copy, /inventory: "Tồn kho"/);
   assert.equal(
     (page.match(/className=\{formulaOperatorClass\}/g) ?? []).length,
-    5,
+    8,
   );
   assert.equal((page.match(/<span aria-hidden>−<\/span>/g) ?? []).length, 2);
-  assert.equal((page.match(/<span aria-hidden>\+<\/span>/g) ?? []).length, 1);
-  assert.equal((page.match(/<span aria-hidden>=<\/span>/g) ?? []).length, 2);
+  assert.equal((page.match(/<span aria-hidden>\+<\/span>/g) ?? []).length, 3);
+  assert.equal((page.match(/<span aria-hidden>=<\/span>/g) ?? []).length, 3);
   assert.doesNotMatch(copy, /netProfit: "Lợi nhuận ròng"/);
   assert.doesNotMatch(cockpit, /const netProfit =/);
   assert.match(cockpit, /fetchPeriodGoodsIn/);

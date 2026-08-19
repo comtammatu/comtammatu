@@ -74,7 +74,7 @@ describe("Finance UX scope flow", () => {
     );
     assert.deepEqual(
       groups[0]?.items.map((item) => item.href),
-      ["/finance", "/finance/bank-transactions", "/finance/expenses"],
+      ["/finance", "/finance/bank-transactions", "/finance/expenses", "/finance/equipment"],
     );
     assert.deepEqual(
       groups[1]?.items.map((item) => item.href),
@@ -171,6 +171,7 @@ describe("Finance UX scope flow", () => {
       "revenue",
       "bank-transactions",
       "expenses",
+      "equipment",
       "food-cost",
       "invoices",
       "supplier-invoices",

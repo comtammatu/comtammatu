@@ -112,7 +112,23 @@ export function buildExpenseVatBreakdown(values: ExpenseFormValues) {
   });
 }
 
-export function expenseCategoryGroups(currentCategory: string) {
+export function expenseCategoryGroups(
+  currentCategory: string,
+  lockedCategory?: ExpenseCategory,
+) {
+  if (lockedCategory) {
+    return [
+      {
+        label: copy.startupLabel,
+        options: [
+          {
+            value: lockedCategory,
+            label: copy.categoryLabels[lockedCategory],
+          },
+        ],
+      },
+    ];
+  }
   const operatingOptions = EXPENSE_CATEGORIES_BY_GROUP.operating.map(
     (value) => ({
       value,

@@ -283,6 +283,7 @@ export const finance = {
       bankOnHandMissing: "Chưa nhập số dư đầu",
       totalOnHand: "Tổng tiền",
       totalOnHandHint: "Tiền mặt + tiền tài khoản",
+      totalAssetValue: "Tổng giá trị",
       currentFundsScope: "Cả quán",
     },
   },
@@ -298,6 +299,7 @@ export const finance = {
       revenue: "Doanh thu",
       bankTransactions: "Giao dịch",
       expenses: "Chi phí",
+      equipment: "Thiết bị",
       supplierPayables: "HĐ đầu vào",
       invoices: "HĐ đầu ra",
       foodCost: "Giá vốn món",
@@ -547,6 +549,26 @@ export const finance = {
       transfer: "Chuyển khoản",
       unpaid: "Ghi nợ",
     },
+  },
+  equipment: {
+    page: {
+      title: "Thiết bị",
+    },
+    add: "Thêm thiết bị",
+    listTitle: "Máy móc, thiết bị",
+    totalHint: (count: string) => `${count} khoản`,
+    loadErrorTitle: "Không tải được thiết bị",
+    loadErrorDescription:
+      "Không tải được danh sách máy móc, thiết bị. Thử tải lại trang.",
+    empty: {
+      title: "Chưa có thiết bị",
+      description: "Thêm máy móc, thiết bị đã mua của công ty.",
+      clearedTitle: "Không còn khoản cần xử lý",
+      clearedDescription:
+        "Không có thiết bị nào chưa trả hoặc chờ khớp ngân hàng.",
+    },
+    formTitle: "Thêm thiết bị",
+    formEditTitle: "Sửa thiết bị",
   },
   supplierInvoicesPage: {
     eyebrow: "Tài chính",

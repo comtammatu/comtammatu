@@ -12,11 +12,7 @@ import {
   Trash2 as IconTrash,
   TriangleAlert as IconAlertTriangle,
 } from "lucide-react";
-import {
-  formatAccountingVND,
-  formatCompactVND,
-  formatCount,
-} from "@comtammatu/shared/format";
+import { formatAccountingVND } from "@comtammatu/shared/format";
 import { formatVNBusinessDate } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
 import { cn } from "@comtammatu/ui/lib/utils";
@@ -43,13 +39,13 @@ import {
   type RowActionItem,
 } from "@/components/row-actions-menu";
 import { StatusBadge } from "@/components/status-badge";
-import { KpiCard } from "@/components/kpi/kpi-card";
-import { AppListFrame, AppPageHeader, KpiRow } from "@/components/surface";
+import { AppListFrame, AppPageHeader } from "@/components/surface";
 import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { FormDialog } from "@/components/form";
+import { messages } from "@lib/messages";
 import { useDocumentOverlayUrl } from "@lib/navigation/use-document-overlay-url";
 import { FilterBar } from "../components/filter-bar";
 import { FinanceAmountCell } from "../components/finance-amount-cell";
@@ -74,6 +70,7 @@ import {
   type ExpenseRow,
 } from "../expense-actions";
 import { ExpenseFormFields } from "./expense-form-fields";
+import { ExpenseListKpis } from "./expense-list-kpis";
 import {
   buildExpenseVatBreakdown,
   canDeleteExpense,
@@ -114,6 +111,7 @@ interface Props {
   todayBusinessDate: string;
   canManageExpenses: boolean;
   tenantId: number;
+  listMode?: "ledger" | "equipment";
 }
 
 export function ExpensesClient({
@@ -125,12 +123,22 @@ export function ExpensesClient({
   todayBusinessDate,
   canManageExpenses,
   tenantId,
+  listMode = "ledger",
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const overlay = useDocumentOverlayUrl(EXPENSE_OVERLAY_KEYS);
   const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+  const isEquipmentList = listMode === "equipment";
+  const equipmentCopy = messages.finance.equipment;
+  const pageCopy = isEquipmentList ? equipmentCopy.page : copy.page;
+  const listTitle = isEquipmentList ? equipmentCopy.listTitle : copy.listTitle;
+  const emptyCopy = isEquipmentList ? equipmentCopy.empty : copy.empty;
+  const lockedCategory = isEquipmentList ? ("capital" as const) : undefined;
+  const listBasePath = isEquipmentList
+    ? "/finance/equipment"
+    : "/finance/expenses";
   const showOnlyNeedsAction = stateFilter === "pending";
   const visibleRows = useMemo(
     () => (showOnlyNeedsAction ? rows.filter(expenseNeedsAction) : rows),
@@ -227,7 +235,7 @@ export function ExpensesClient({
     expenseDate: todayBusinessDate,
     branchId:
       params.branch != null ? String(params.branch) : TENANT_LEVEL_BRANCH_VALUE,
-    category: "",
+    category: lockedCategory ?? "",
     paymentMethod: "cash",
     note: "",
     invoiceAttachmentUrl: "",
@@ -593,7 +601,7 @@ export function ExpensesClient({
   return (
     <>
       <AppPageHeader
-        title={copy.page.title}
+        title={pageCopy.title}
         actions={
           canManageExpenses ? (
             <Button
@@ -601,42 +609,35 @@ export function ExpensesClient({
               onClick={openCreateExpense}
             >
               <IconPlus data-icon="inline-start" />
-              {copy.add}
+              {isEquipmentList ? equipmentCopy.add : copy.add}
             </Button>
           ) : undefined
         }
       />
 
-      <KpiRow
-        density="compact"
-        className="grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2"
-      >
-        <KpiCard
-          density="compact"
-          label={copy.monthLabel}
-          value={formatAccountingVND(summary.operatingTotal)}
-          shortValue={formatCompactVND(summary.operatingTotal)}
-          hint={copy.monthHint(formatCount(summary.operatingCount))}
-        />
-        <KpiCard
-          density="compact"
-          label={copy.startupLabel}
-          value={formatAccountingVND(summary.startupTotal)}
-          shortValue={formatCompactVND(summary.startupTotal)}
-          hint={copy.startupHint(formatCount(summary.startupCount))}
-        />
-      </KpiRow>
+      <ExpenseListKpis
+        isEquipmentList={isEquipmentList}
+        operatingTotal={summary.operatingTotal}
+        operatingCount={summary.operatingCount}
+        startupTotal={summary.startupTotal}
+        startupCount={summary.startupCount}
+      />
 
       <AppListFrame
-        title={copy.listTitle}
+        title={listTitle}
         contentScroll
         toolbar={
           <FilterBar
             variant="inline"
             params={params}
             branches={branches}
-            basePath="/finance/expenses"
-            hide={["branch", "compare", "granularity"]}
+            basePath={listBasePath}
+            hide={
+              isEquipmentList
+                ? ["compare", "granularity", "range"]
+                : ["branch", "compare", "granularity"]
+            }
+            locationFilter={isEquipmentList}
             trailing={needsActionFilterButton}
           />
         }
@@ -665,12 +666,12 @@ export function ExpensesClient({
           }}
           emptyMode="no-data"
           emptyTitle={
-            showOnlyNeedsAction ? copy.empty.clearedTitle : copy.empty.title
+            showOnlyNeedsAction ? emptyCopy.clearedTitle : emptyCopy.title
           }
           emptyDescription={
             showOnlyNeedsAction
-              ? copy.empty.clearedDescription
-              : copy.empty.description
+              ? emptyCopy.clearedDescription
+              : emptyCopy.description
           }
           mobileCardRender={(row) => {
             const detail = expenseDetail(row);
@@ -753,9 +754,9 @@ export function ExpensesClient({
                 />
               </div>
             ) : editingExpense ? (
-              `${copy.form.editTitle} - #${editingExpense.id}`
+              `${isEquipmentList ? equipmentCopy.formEditTitle : copy.form.editTitle} - #${editingExpense.id}`
             ) : (
-              copy.form.title
+              isEquipmentList ? equipmentCopy.formTitle : copy.form.title
             )
           }
           schema={expenseFormSchema}
@@ -873,6 +874,7 @@ export function ExpensesClient({
                 onCopyTransferContent={(content) =>
                   void copyTransferContent(content)
                 }
+                lockedCategory={lockedCategory}
               />
             );
           }}

@@ -1646,7 +1646,7 @@ const perFileCountBudgets = [
       "apps/web/app/(protected)/finance/components/finance-money-block.tsx": 1,
       "apps/web/app/(protected)/finance/expenses/expense-document-view.tsx": 1,
       "apps/web/app/(protected)/finance/manual-issue-invoice-dialog.tsx": 1,
-      "apps/web/app/(protected)/finance/page.tsx": 3,
+      "apps/web/app/(protected)/finance/page.tsx": 5,
       "apps/web/app/(protected)/finance/supplier-invoices/supplier-invoice-create-fields.tsx": 2,
       "apps/web/app/(protected)/finance/supplier-invoices/supplier-invoice-list-ui.tsx": 1,
       "apps/web/app/(protected)/finance/targets/targets-client.tsx": 2,

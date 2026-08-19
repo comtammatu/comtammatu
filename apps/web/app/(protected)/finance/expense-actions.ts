@@ -31,6 +31,7 @@ import {
   EXPENSE_CATEGORIES_BY_GROUP,
   EXPENSE_CATEGORY_VALUES,
   EXPENSE_PAYMENT_METHODS,
+  type ExpenseCategory,
 } from "./_lib/expense-categories";
 import { FINANCE_LOCATIONS, type FinanceLocation } from "./_lib/finance-params";
 import { addPaidOrdersWithoutRecipeNeed } from "./_lib/food-cost-coverage";
@@ -459,6 +460,41 @@ export async function fetchExpenses(params: {
     return { success: false, error: "Bộ lọc chi phí không hợp lệ." };
   }
 
+  return fetchExpenseLedgerPage({
+    location: parsed.data.location,
+    branchId: parsed.data.branchId,
+    startDate: parsed.data.startDate,
+    endDate: parsed.data.endDate,
+    categories: [
+      ...EXPENSE_CATEGORIES_BY_GROUP.operating,
+      ...EXPENSE_CATEGORIES_BY_GROUP.startup,
+    ],
+  });
+}
+
+export async function fetchEquipmentExpenses(params: {
+  location: FinanceLocation;
+  branchId?: number | null;
+}): Promise<ActionResult<ExpenseRow[]>> {
+  const parsed = fetchStartupCapitalSchema.safeParse(params);
+  if (!parsed.success) {
+    return { success: false, error: "Bộ lọc chi phí không hợp lệ." };
+  }
+
+  return fetchExpenseLedgerPage({
+    location: parsed.data.location,
+    branchId: parsed.data.branchId,
+    categories: ["capital"],
+  });
+}
+
+async function fetchExpenseLedgerPage(params: {
+  location: FinanceLocation;
+  branchId?: number | null;
+  startDate?: string;
+  endDate?: string;
+  categories: readonly ExpenseCategory[];
+}): Promise<ActionResult<ExpenseRow[]>> {
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
     PERMISSION_KEYS.FINANCE_VIEW,
@@ -473,29 +509,29 @@ export async function fetchExpenses(params: {
       "id, branch_id, expense_date, category, amount, subtotal, vat_amount, vat_breakdown, payment_method, paid_at, transfer_content, vendor_name, note, invoice_attachment_url, created_at",
     )
     .eq("tenant_id", claims.tenant_id)
-    .in("category", [
-      ...EXPENSE_CATEGORIES_BY_GROUP.operating,
-      ...EXPENSE_CATEGORIES_BY_GROUP.startup,
-    ])
-    .gte("expense_date", parsed.data.startDate)
-    .lte("expense_date", parsed.data.endDate)
+    .in("category", [...params.categories]);
+
+  if (params.startDate != null && params.endDate != null) {
+    query = query
+      .gte("expense_date", params.startDate)
+      .lte("expense_date", params.endDate);
+  }
+
+  query = query
     .order("expense_date", { ascending: false })
     .order("id", { ascending: false })
     .range(0, EXPENSE_LIST_PAGE_SIZE - 1);
 
-  if (parsed.data.location === "company") {
+  if (params.location === "company") {
     query = query.is("branch_id", null);
-  } else if (parsed.data.location === "branches") {
+  } else if (params.location === "branches") {
     const salesBranchIds = await fetchSalesBranchIds(
       supabase as never,
       claims.tenant_id,
     );
     query = applySalesBranchesFilter(query, "branch_id", salesBranchIds);
-  } else if (
-    parsed.data.location === "branch" &&
-    parsed.data.branchId != null
-  ) {
-    query = query.eq("branch_id", parsed.data.branchId);
+  } else if (params.location === "branch" && params.branchId != null) {
+    query = query.eq("branch_id", params.branchId);
   }
 
   const { data, error } = await query;
@@ -668,7 +704,14 @@ function wholeCount(value: unknown): number | null {
 export async function fetchStartupCapitalSummary(params: {
   location: FinanceLocation;
   branchId?: number | null;
-}): Promise<ActionResult<{ total: string; count: number }>> {
+}): Promise<
+  ActionResult<{
+    total: string;
+    count: number;
+    equipmentTotal: string;
+    equipmentCount: number;
+  }>
+> {
   const parsed = fetchStartupCapitalSchema.safeParse(params);
   if (!parsed.success) {
     return { success: false, error: "Bộ lọc chi phí không hợp lệ." };
@@ -709,11 +752,16 @@ export async function fetchStartupCapitalSummary(params: {
   }
 
   const rows = data ?? [];
+  const equipmentRows = rows.filter((row) => row.category === "capital");
   return {
     success: true,
     data: {
       total: addMoney(rows.map((row) => String(row.amount ?? 0))),
       count: rows.length,
+      equipmentTotal: addMoney(
+        equipmentRows.map((row) => String(row.amount ?? 0)),
+      ),
+      equipmentCount: equipmentRows.length,
     },
   };
 }

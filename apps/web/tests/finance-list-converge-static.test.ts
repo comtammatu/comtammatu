@@ -172,7 +172,7 @@ test("Expenses LIST primary CTA is header-only (filter not beside create)", () =
   const source = read(
     "app/(protected)/finance/expenses/expenses-client.tsx",
   );
-  assert.match(source, /AppPageHeader[\s\S]*?\{copy\.add\}/);
+  assert.match(source, /AppPageHeader[\s\S]*?copy\.add/);
   // Needs-action filter must live in toolbar, not header actions with create.
   const headerActions = source.match(
     /AppPageHeader[\s\S]*?actions=\{([\s\S]*?)\}[\s\S]*?<AppListFrame/,

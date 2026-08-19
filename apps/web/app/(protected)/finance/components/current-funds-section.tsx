@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Controller } from "react-hook-form";
 import { z } from "zod";
@@ -108,10 +108,12 @@ type DialogMode = "opening" | "adjustment" | null;
 
 export function CurrentFundsSection({
   cash,
-  embedded = false,
+  title,
+  children,
 }: {
   cash: CashSummary;
-  embedded?: boolean;
+  title?: string;
+  children?: ReactNode;
 }) {
   const router = useRouter();
   const isTouchLayout = useIsMobile(1024);
@@ -272,16 +274,14 @@ export function CurrentFundsSection({
 
   return (
     <>
-      {embedded ? (
-        <div className="flex flex-col gap-3">
-          <div className="flex justify-end">{fundsAction}</div>
-          {fundsFormula}
-        </div>
-      ) : (
-        <AppSection size="sm" title={copy.cash.onHandTitle} action={fundsAction}>
-          {fundsFormula}
-        </AppSection>
-      )}
+      <AppSection
+        size="sm"
+        title={title ?? copy.cash.onHandTitle}
+        action={fundsAction}
+      >
+        {fundsFormula}
+        {children}
+      </AppSection>
 
       {!cash.hasOpening && !cash.legacySettingsPresent ? (
         <FormDialog

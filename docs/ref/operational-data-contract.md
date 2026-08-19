@@ -93,7 +93,8 @@ cần xử lý cuối trang. Section UI chỉ title — không mô tả theo/kh�
 | `finance.inbound_transfer_value` | Chi phí hàng | `inventory_value_allocations` `event_type=transfer_in` bucket `inventory`, chi nhánh nhận trong kỳ | `location=branch`/`branches`; phiếu chưa nhận không tính |
 | `finance.inventory_purchases` | Chi mua hàng | `supplier_invoices.subtotal` status `confirmed`/`adjusted` theo `invoice_date` ngày VN; gồm chưa thanh toán; không `draft`; không ĐC; không trừ thêm khi khớp ngân hàng | `location=all`/`company` |
 | `finance.expense.startup_capital` | Chi phí ban đầu | `expenses.amount` (gross, gồm GTGT) `capital`+`deposit`, không theo kỳ; chi nhánh = `branch_id` khớp, không gồm `NULL` | chưa có → `not_recorded`; không trừ `Kết quả kinh doanh` |
-| `finance.asset.equipment` | Thiết bị | `expenses.amount` `category=capital`, all-time, cùng scope Chi phí ban đầu | chưa có → `not_recorded`; là lát `capital` của Chi phí ban đầu, không cộng với tiền+tồn thành tổng tài sản; không phải TSCĐ / giá trị còn lại |
+| `finance.asset.equipment` | Thiết bị | `expenses.amount` `category=capital`, all-time, cùng scope Chi phí ban đầu | chưa có → `not_recorded`; lát `capital` của Chi phí ban đầu; drill `/finance/equipment`; không phải TSCĐ / giá trị còn lại |
+| `finance.asset.total_value` | Tổng giá trị | Tổng tiền + tồn kho (nếu có quyền định giá) + thiết bị `capital` | chưa mở sổ quỹ → không bịa; không gồm đặt cọc; không phải tổng tài sản GL |
 | `finance.food_cost.recorded` | Giá vốn món | `inventory_value_allocations` bucket `food_cost` khi cutover `active`; chưa cutover → trống | thiếu coverage / chưa cutover → `needs_review`; không trừ kết quả kỳ |
 | `finance.food_cost.theoretical` | Giá vốn lý thuyết | `fetchFoodCost` / `buildFoodCostRows`: định mức hiện tại × SL bán × resolver catalog (cùng `/inventory/menu-recipes`) | `estimated` |
 | `finance.gross_profit.readonly` | Lợi nhuận gộp | Doanh thu thuần − food cost recorded | thiếu coverage → không hiện số; dòng độc lập, không phải cha của kết quả kỳ |
@@ -105,12 +106,15 @@ cần xử lý cuối trang. Section UI chỉ title — không mô tả theo/kh�
 | --- | --- | --- |
 | `supplier_invoices.vat_breakdown` / `expenses.vat_breakdown` | GTGT đầu vào đã ghi nhận | GTGT được khấu trừ |
 | HĐĐT bán ra hiệu lực | GTGT đầu ra theo HĐĐT | GTGT phải nộp |
-| `stock_levels` / ledger | Tồn kho | Tổng tài sản |
+| `stock_levels` / ledger | Tồn kho | Tổng tài sản kế toán |
+| Tổng tiền + tồn + chi `capital` | `Tổng giá trị` | Tổng tài sản GL, TSCĐ, giá trị còn lại |
 | Chi mua thiết bị / thi công trong `expenses` | `Thiết bị` (`capital`, all-time) | TSCĐ, giá trị còn lại, chi vận hành kỳ |
 
 `Thiết bị` trên `/finance` là số tiền đã chi `capital`, không phải sổ TSCĐ.
-Chưa thêm KPI `GTGT phải nộp`, `GTGT đầu vào được khấu trừ`, `Giá trị thiết bị`
-(giá trị còn lại) cho đến khi đủ source/formula/exclusions/confidence/drilldown.
+`Tổng giá trị` là công thức hiển thị (tiền + tồn + thiết bị), không phải tổng
+tài sản kế toán. Chưa thêm KPI `GTGT phải nộp`, `GTGT đầu vào được khấu trừ`,
+`Giá trị thiết bị` (giá trị còn lại) cho đến khi đủ source/formula/exclusions/
+confidence/drilldown.
 
 ### Bộ dữ liệu + nguồn `/finance` (tóm tắt)
 
@@ -121,7 +125,8 @@ Chưa thêm KPI `GTGT phải nộp`, `GTGT đầu vào được khấu trừ`, `
 | Food cost thật | `sale_consumption` movements | thiếu `order_id` coverage → không LN gộp |
 | Giá trị tồn | `get_inventory_value_period` | không phải chi phí kỳ |
 | Chi VH | `expenses` nhóm operating | không suy từ PO/GRN/NCC; không gồm `capital`/`deposit` |
-| Thiết bị | `expenses` `capital` | all-time gross; lát của Chi phí ban đầu; không TSCĐ |
+| Thiết bị | `expenses` `capital` | all-time gross; lát của Chi phí ban đầu; drill `/finance/equipment`; không TSCĐ |
+| Tổng giá trị | quỹ + tồn + thiết bị | hiển thị trên `/finance` Tài sản; không gồm đặt cọc; chưa mở sổ thì không bịa |
 | Chi phí ban đầu | `expenses` `capital`+`deposit` | all-time gross, ignores period; ngoài công thức kết quả |
 | Quỹ TM/NH | `get_finance_current_funds` | Owner nhập số dư đầu; “Chưa mở sổ”; không = đếm ca POS |
 | Giao dịch / VietQR | `bank_transactions` + matches | `needs_review`; không sửa doanh thu/số dư tự động |

@@ -48,7 +48,7 @@ test("Owner finance results stay one column on mobile, two on tablet, and expose
   );
   assert.equal(
     (page.match(/className=\{formulaOperatorClass\}/g) ?? []).length,
-    5,
+    8,
   );
   assert.match(
     currentFunds,

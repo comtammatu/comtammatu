@@ -255,7 +255,7 @@ test("SePay expense matching UI and actions use the plural RPC path", () => {
   assert.match(table, /ReviewStatusSelect/);
   assert.match(actions, /parsed\.data\.category === "bank_deposit"/);
   assert.match(expenseClientBundle, /EXPENSE_CATEGORIES_BY_GROUP\.operating/);
-  assert.match(expenseClientBundle, /expenseCategoryGroups\(category\)/);
+  assert.match(expenseClientBundle, /expenseCategoryGroups\(category/);
   assert.match(expenseClient, /getExpenseRowActions/);
   assert.match(expenseClient, /paymentState === "transfer_matched"/);
   assert.match(expenseClient, /<RowActionsMenu/);

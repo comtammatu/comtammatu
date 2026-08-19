@@ -13,6 +13,7 @@ const root = join(import.meta.dirname, "..");
 
 const EXPENSE_CLIENT_PATHS = [
   "app/(protected)/finance/expenses/expenses-client.tsx",
+  "app/(protected)/finance/expenses/expense-list-kpis.tsx",
   "app/(protected)/finance/expenses/expense-form-schema.ts",
   "app/(protected)/finance/expenses/expense-form-fields.tsx",
   "app/(protected)/finance/expenses/expense-view-dialog.tsx",

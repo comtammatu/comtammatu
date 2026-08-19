@@ -101,9 +101,12 @@ Landing cards (formulas in Product Boundary):
 4. **Operating expense** — operating categories only. Exclude COGS,
    `capital`, `deposit`, supplier payments, cash↔bank. None → `Chưa ghi nhận`.
 5. **Period result** — revenue − goods-in − opex + inventory change. Not from GP. Not "net profit".
-6. **Assets** — unfiltered funds; filtered period-end inventory; all-time
-   capital equipment spend and `capital|deposit` startup. Outside the formula;
-   do not sum. Exceptions stay on `/` and list queues, not this landing.
+6. **Assets** — unfiltered funds; then **Tổng tiền + Tồn kho + Thiết bị =
+   Tổng giá trị**. Inventory term only with valuation permission. Funds not
+   opened → do not invent the total. **Chi phí ban đầu** (`capital`+`deposit`)
+   stays outside that sum. Equipment drills `/finance/equipment` (capital
+   spend LIST, not a TSCĐ register). Exceptions stay on `/` and list queues,
+   not this landing.
 Layout: desktop two rows; tablet two cols; mobile one. Supporting (not first):
 food-cost analysis, cash sessions, desync recovery, HĐĐT, AP, export.
 
@@ -197,16 +200,17 @@ the actions above. RLS remains final enforcement.
 
 | Route family                 | Role                         | Decision |
 | ---------------------------- | ---------------------------- | -------- |
-| `/finance`                   | Finance Basic landing        | Period formula then `Tài sản` (funds + inventory + equipment + startup) |
+| `/finance`                   | Finance Basic landing        | Period formula then `Tài sản` (funds, then Tổng tiền + inventory + equipment = Tổng giá trị; startup outside the sum) |
 | `/finance/bank-transactions` | Bank LIST | Manual match by `order_number` (`mã đơn`); classify only, never change bank balance |
 | `/finance/expenses`          | Operating expense LIST       | Period KPI from `get_finance_expense_period_summary`; list stays paged |
+| `/finance/equipment`         | Capital equipment LIST       | All-time `category=capital` spend; not a depreciation register |
 | `/finance/targets`           | Monthly revenue targets      | Finance-managed targets + non-cumulative reward tiers; no auto payroll |
 | `/finance/food-cost`         | Gross profit / margin        | Read-only analysis |
 | `/finance/supplier-invoices` | Supplier payable             | Thin AP entry; not expenses |
 | `/finance/invoices`          | HĐĐT queue                   | Support workflow; same-VN-day issue window |
 
 Inventory owns stock-value detail; Finance shows only the current-value card
-inside `Tài sản`. Sidebar: `Tiền`, `Doanh thu`, `Chứng từ` (food-cost and
+inside `Tài sản`. Sidebar: `Tiền` (includes Thiết bị), `Doanh thu`, `Chứng từ` (food-cost and
 targets stay sibling routes). No `/accounting/*` app surface.
 
 Supplier invoice matching/VAT/payment: actions +
@@ -244,8 +248,9 @@ allocation, period, and adjustment state. Operating-expense KPI uses pre-VAT
 Output VAT belongs to issued/corrected sales invoice snapshots — not revenue.
 
 Equipment: classify before operating result (fixed asset → depreciation;
-below-criteria tools → expense/allocate; period consumables → expense). No asset
-register in product → no equipment-value card until full source/recon contract.
+below-criteria tools → expense/allocate; period consumables → expense).
+`/finance/equipment` lists recorded `capital` spend (máy móc, thiết bị). It is
+not a TSCĐ register or carrying-value card.
 
 ## Acceptance Criteria
 

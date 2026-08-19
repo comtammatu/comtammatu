@@ -29,6 +29,9 @@ test("Finance analysis routes use compact Design System composition", () => {
   const expenses = read(
     "apps/web/app/(protected)/finance/expenses/expenses-client.tsx",
   );
+  const expenseKpis = read(
+    "apps/web/app/(protected)/finance/expenses/expense-list-kpis.tsx",
+  );
   const bank = read(
     "apps/web/app/(protected)/finance/bank-transactions/bank-transactions-table.tsx",
   );
@@ -45,12 +48,12 @@ test("Finance analysis routes use compact Design System composition", () => {
     "apps/web/app/(protected)/finance/components/work-queue-strip.tsx",
   );
 
-  assert.match(expenses, /<AppListFrame[\s\S]*title=\{copy\.listTitle\}/);
+  assert.match(expenses, /<AppListFrame[\s\S]*title=\{listTitle\}/);
   assert.match(expenses, /<FilterBar[\s\S]{0,120}variant="inline"/);
   assert.match(expenses, /<DataTable/);
-  assert.equal((expenses.match(/<KpiCard/g) ?? []).length, 2);
-  assert.match(expenses, /label=\{copy\.monthLabel\}/);
-  assert.match(expenses, /label=\{copy\.startupLabel\}/);
+  assert.equal((expenseKpis.match(/<KpiCard/g) ?? []).length, 3);
+  assert.match(expenseKpis, /label=\{copy\.monthLabel\}/);
+  assert.match(expenseKpis, /label=\{copy\.startupLabel\}/);
   assert.match(expenses, /copy\.needsActionFilter/);
   assert.match(expenses, /expensePaymentMethod\(row\)/);
 

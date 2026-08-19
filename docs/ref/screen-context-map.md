@@ -47,7 +47,7 @@ Mỗi hàng là *gia đình* — chi tiết màn con nằm ở §2.x được tr
 | Gia đình | Actor chính | Việc (job) | Entry → success → recovery | Show / hide (tóm tắt) | Archetype / exemplar |
 | --- | --- | --- | --- | --- | --- |
 | **Inventory** `/inventory/*` (+ stock CN ở Branch) | Owner, Kế toán (PO/GRN), Kho Tổng, Bếp TT; BM trên `/br/…/stock` | Quyết định tồn, chứng từ mua/nhập/SX/DC/kiểm/hao — không dashboard bán hàng | Vào hub/list đúng plane → hoàn thành phiếu (nháp→chốt) → lỗi recoverable qua retry/confirm; lệch tồn qua stocktake/waste | Hiện tồn, trạng thái phiếu, ngoại lệ; ẩn doanh thu POS, lương, giá mua trên mặt Kho (giá thuộc Finance) | Parent §2.5–2.6; LIST + D1 document (`AppDialog variant="document"`); Branch touch `branch-touch-list`. Exemplar GRN list: `/inventory/grn`; stock home CN: `/br/[branchId]/stock` |
-| **Finance** `/finance/*` | Owner, Kế toán | Kết quả KD theo kỳ, AP/NCC, chi phí, ngân hàng, chỉ tiêu | Chọn kỳ/phạm vi → đọc công thức / xử lý ngoại lệ → drill `/revenue` `/expenses` `/bank-transactions` `/supplier-invoices` `/targets`; thiếu coverage → không bịa số | Hiện KPI công thức, tiền mặt, AP; ẩn POS/KDS, bảng công, tạo order | Parent §2.9 + §2.7; DASHBOARD `/finance`; REPORT exemplar `finance/revenue/page.tsx`; LIST AP §2.7 |
+| **Finance** `/finance/*` | Owner, Kế toán | Kết quả KD theo kỳ, AP/NCC, chi phí, ngân hàng, chỉ tiêu | Chọn kỳ/phạm vi → đọc công thức / xử lý ngoại lệ → drill `/revenue` `/expenses` `/equipment` `/bank-transactions` `/supplier-invoices` `/targets`; thiếu coverage → không bịa số | Hiện KPI công thức, tiền mặt, AP; ẩn POS/KDS, bảng công, tạo order | Parent §2.9 + §2.7; DASHBOARD `/finance`; REPORT exemplar `finance/revenue/page.tsx`; LIST AP §2.7 |
 | **HR** `/hr/*` | Owner (admin HR L0) | Hồ sơ · thời gian · lương · quy tắc · phân quyền | `/hr` strip **Cần xử lý** (chỉ khi có việc) → tab/profile → attendance/payroll/setup; blocker preflight trước khi chốt lương | Hiện hồ sơ/công/lương tiếng Việt; ẩn KPI bán hàng/kho, raw `pay_basis` | Parent §2.8–2.8d; LIST + SETTINGS-PANEL. Exemplar hồ sơ: `/hr` client |
 | **Branch operator** `/br/[branchId]/*` (trừ station) | BM, staff theo bottom-nav; Owner khi vào shell CN | Việc ca: hub → đội/kho/shift/settings CN | `/br/[id]` → đúng tab/workflow → duyệt/hoàn thành; deep link recovery về owning route | Hiện queue ca, readiness, stock touch; ẩn mosaic KPI L0, `DataTable` control_surface trên phone | Parent §2.4A; LANDING hub. Exemplar hub: `br/[branchId]/(operator)/page.tsx`; `/dashboard` = REDIRECT-SHIM |
 | **Station** POS / KDS / Runner | Cashier / chef / runner (+ BM hỗ trợ) | Một việc realtime: bán · bump · served | Mở station → queue/cart sống → success bump/pay/serve → recall/retry khi lỡ | Hiện món/bàn/thời gian; ẩn giá (KDS/Runner), lương, tồn kho, báo cáo tháng | Parent §2.1–2.3; BOARD + blocks `pos-board` / `realtime-board` / `runner-board`. Exemplar: `pos/session-gate.tsx`, `kds/page.tsx`, `runner/page.tsx` |
@@ -373,15 +373,26 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 ### 2.9. Tài chính — `/finance`
 
 - **Gia đình:** Finance (spine §1A). Sibling oversight cùng plane: `/finance/revenue`
-  (REPORT), `/finance/expenses`, `/finance/bank-transactions`, `/finance/targets`,
+  (REPORT), `/finance/expenses`, `/finance/equipment`, `/finance/bank-transactions`, `/finance/targets`,
   và AP `/finance/supplier-invoices` (§2.7). Không dựng dashboard bán hàng/POS.
 - **Archetype:** `DASHBOARD`.
 - **Actor:** `owner`.
-- **Job:** Công thức KQKD theo kỳ (hai dòng); khối **Tài sản** gồm quỹ hiện có, tồn cuối kỳ, thiết bị (`capital`) và chi phí ban đầu.
+- **Job:** Công thức KQKD theo kỳ (hai dòng); khối **Tài sản** gồm quỹ hiện có, rồi Tổng tiền + tồn cuối kỳ + thiết bị (`capital`) = **Tổng giá trị**; Chi phí ban đầu đứng ngoài công thức đó.
 - **Goal:** Doanh thu thuần sau giá vốn món / chi vận hành / biến động tồn; drill báo cáo chuyên biệt khi cần.
-- **Workflow:** Chọn kỳ (`Nay`…`Năm`) → phạm vi (`Tất cả`/`Công ty`/`Toàn bộ CN`/`CN`) → đọc 2 dòng công thức → Tài sản (tiền mặt không theo bộ lọc, tồn cuối kỳ, thiết bị, chi phí ban đầu). Ngoại lệ xử lý trên `/` và list Giao dịch / Chi phí / HĐĐT — không hàng đợi trên landing.
-- **Ưu tiên data:** Hai dòng KPI kỳ; công thức quỹ; tồn cuối kỳ; Thiết bị; Chi phí ban đầu. Tháng/`mtd` + chỉ tiêu → Progress trên Doanh thu thuần; đua CN/pace/editor → `/finance/revenue` · `/finance/targets`. **Không lặp:** bảng tồn chi tiết (Inventory). Thiếu coverage giá vốn → không tính Lợi nhuận gộp/KQKD; chưa chi phí → không KQKD. **Không:** LN sau thuế khi chưa sổ/khóa sổ; nút order/KDS; mosaic GTGT; danh sách cần xử lý trên `/finance`.
-- **UX:** `formatVND`. Desktop: dòng 1 = 3 card, dòng 2 = 4 card (khi có quyền tồn); khối Tài sản = công thức quỹ rồi hàng KPI; tablet 2 cột; mobile 1 cột (`KpiCard`/`KpiRow`/`AppSection`). Chart chỉ `chart-1`…`chart-5`.
+- **Workflow:** Chọn kỳ (`Nay`…`Năm`) → phạm vi (`Tất cả`/`Công ty`/`Toàn bộ CN`/`CN`) → đọc 2 dòng công thức → Tài sản (tiền mặt không theo bộ lọc; Tổng giá trị; chi phí ban đầu). Drill thiết bị → `/finance/equipment`. Ngoại lệ xử lý trên `/` và list Giao dịch / Chi phí / HĐĐT — không hàng đợi trên landing.
+- **Ưu tiên data:** Hai dòng KPI kỳ; công thức quỹ; Tổng tiền + Tồn kho + Thiết bị = Tổng giá trị; Chi phí ban đầu ngoài tổng. Tháng/`mtd` + chỉ tiêu → Progress trên Doanh thu thuần; đua CN/pace/editor → `/finance/revenue` · `/finance/targets`. **Không lặp:** bảng tồn chi tiết (Inventory). Thiếu coverage giá vốn → không tính Lợi nhuận gộp/KQKD; chưa chi phí → không KQKD. **Không:** LN sau thuế khi chưa sổ/khóa sổ; nút order/KDS; mosaic GTGT; danh sách cần xử lý trên `/finance`.
+- **UX:** `formatVND`. Desktop: dòng 1 = 3 card, dòng 2 = 4 card (khi có quyền tồn); khối Tài sản = công thức quỹ, công thức Tổng giá trị, rồi Chi phí ban đầu; tablet 2 cột; mobile 1 cột (`KpiCard`/`KpiRow`/`AppSection`). Chart chỉ `chart-1`…`chart-5`.
+
+### 2.9a. Thiết bị — `/finance/equipment`
+
+- **Gia đình:** Finance. Sibling của `/finance/expenses`.
+- **Archetype:** `LIST`.
+- **Actor:** `owner`, `accountant`.
+- **Job:** Ghi nhận và theo dõi máy móc, thiết bị đã mua (`expenses.category = capital`).
+- **Goal:** Thấy số tiền đã chi cho thiết bị; thêm/sửa khoản capital; không giả sổ TSCĐ.
+- **Workflow:** Vào từ card Thiết bị trên `/finance` → lọc phạm vi → thêm khoản → thanh toán/khớp như sổ chi phí.
+- **Ưu tiên data:** KPI all-time `capital`; danh sách khoản. **Không:** khấu hao, giá trị còn lại, đặt cọc.
+- **UX:** Cùng LIST recipe với `/finance/expenses` (`AppListFrame` + overlay chứng từ).
 
 ---
 

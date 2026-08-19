@@ -25,6 +25,7 @@ function readRepo(path: string): string {
 test("Wave 4 Finance LIST pages use xwide+compact AppPage shells", () => {
   const shells = [
     "app/(protected)/finance/expenses/page.tsx",
+    "app/(protected)/finance/equipment/page.tsx",
     "app/(protected)/finance/bank-transactions/page.tsx",
     "app/(protected)/finance/invoices/page.tsx",
     "app/(protected)/finance/supplier-invoices/page.tsx",

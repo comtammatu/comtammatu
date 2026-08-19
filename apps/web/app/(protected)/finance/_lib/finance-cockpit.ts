@@ -348,7 +348,7 @@ function summarizeStartupCapital(
       row.category != null && isStartupCapitalCategory(row.category),
   );
   // Equipment is the capital slice of startup outlay, shown separately on
-  // Tài sản. Do not add it to cash + inventory as a fake asset total.
+  // Tài sản and included in Tổng giá trị with cash and inventory.
   const equipmentRows = capitalRows.filter((row) => row.category === "capital");
 
   return {

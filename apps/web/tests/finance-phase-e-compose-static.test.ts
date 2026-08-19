@@ -26,6 +26,7 @@ test("Expenses LIST shell stays under megaclient budget and imports overlays", (
   assert.match(source, /export function ExpensesClient/);
   assert.match(source, /useDocumentOverlayUrl/);
   assert.match(source, /from "\.\/expense-form-fields"/);
+  assert.match(source, /from "\.\/expense-list-kpis"/);
   assert.match(source, /from "\.\/expense-view-dialog"/);
   assert.match(source, /from "\.\/expense-form-schema"/);
   assert.match(source, /EXPENSE_OVERLAY_KEYS|expenseId/);

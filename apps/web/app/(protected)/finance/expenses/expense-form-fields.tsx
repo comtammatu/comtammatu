@@ -26,6 +26,7 @@ import {
   moneyLabels,
 } from "../components/finance-money-block";
 import {
+  type ExpenseCategory,
   type ExpensePaymentMethod,
 } from "../_lib/expense-categories";
 import {
@@ -52,6 +53,7 @@ export function ExpenseFormFields({
   readOnly = false,
   transferContent = null,
   onCopyTransferContent,
+  lockedCategory,
 }: {
   form: UseFormReturn<ExpenseFormValues>;
   branchOptions: readonly { value: string; label: string }[];
@@ -61,6 +63,7 @@ export function ExpenseFormFields({
   readOnly?: boolean;
   transferContent?: string | null;
   onCopyTransferContent?: (content: string) => void;
+  lockedCategory?: ExpenseCategory;
 }) {
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -96,10 +99,10 @@ export function ExpenseFormFields({
           control={form.control}
           name="category"
           label={copy.form.category}
-          groups={expenseCategoryGroups(category)}
+          groups={expenseCategoryGroups(category, lockedCategory)}
           placeholder={copy.form.categoryPlaceholder}
           required
-          disabled={readOnly}
+          disabled={readOnly || lockedCategory != null}
         />
         {showPaymentMethodAsText ? (
           <div className="flex flex-col gap-1">
