@@ -15,8 +15,8 @@ const SIZE_CLASS: Record<
   { container: string; number: string }
 > = {
   compact: {
-    container: "rounded-md px-2 py-1 xl:px-2.5",
-    number: "text-xs xl:text-sm",
+    container: "min-h-12 rounded-md px-2.5",
+    number: "text-sm xl:text-base",
   },
   default: {
     container: "rounded-md px-3 py-1",

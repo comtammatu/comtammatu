@@ -452,10 +452,7 @@ function OrderColumn({
   return (
     <section
       data-testid={`kds-column-${column.id}`}
-      className={cn(
-        "flex min-h-0 min-w-0 flex-col xl:h-full",
-        column.widthClass,
-      )}
+      className="flex min-h-0 min-w-0 flex-col xl:h-full"
       aria-label={column.title}
     >
       <div
@@ -524,7 +521,7 @@ export function OrderGrid({
       ) : (
         <div
           data-testid="kds-order-columns"
-          className="grid min-h-full gap-1.5 p-1.5 md:grid-cols-3 xl:h-full xl:min-h-0 xl:grid-cols-8 xl:gap-2 xl:overflow-hidden xl:p-2"
+          className="grid min-h-full grid-cols-1 gap-1.5 p-1.5 md:grid-cols-3 xl:h-full xl:min-h-0 xl:grid-cols-3 xl:gap-2 xl:overflow-hidden xl:p-2"
         >
           {columns.map((column) => (
             <OrderColumn

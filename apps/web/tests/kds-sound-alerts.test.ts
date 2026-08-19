@@ -83,10 +83,16 @@ test("KDS new-ticket sound follows the audible kind taxonomy", () => {
     item: makeItem({ category_name: "Thêm", category_type: "side_dish" }),
     kitchenBatches: appendBatches,
   });
+  const accompanimentTone = getKdsNewTicketSignalTone({
+    ticket: makeTicket(),
+    item: makeItem({ category_name: "Món kèm", category_type: "side_dish" }),
+    kitchenBatches: initialBatches,
+  });
 
   assert.equal(normalTone, "kds-new");
   assert.equal(appendTone, "kds-append");
   assert.equal(addOnTone, "kds-add-on");
+  assert.equal(accompanimentTone, "kds-add-on");
 });
 
 test("KDS add-on sound wins over append when multiple ticket types arrive together", () => {

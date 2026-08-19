@@ -147,6 +147,13 @@ test("KDS ready status uses the shared Sẵn sàng wording", () => {
   assert.equal(getStatusBadgeMeta("order-item", "ready").label, "Sẵn sàng");
 });
 
+test("KDS comprehensive board pins service lanes so add-on cannot wrap into dine-in", () => {
+  assert.match(orderGridSource, /md:grid-cols-3/);
+  assert.match(orderGridSource, /xl:grid-cols-3/);
+  assert.doesNotMatch(orderGridSource, /xl:grid-cols-8/);
+  assert.doesNotMatch(orderGridSource, /column\.widthClass/);
+});
+
 test("KDS comprehensive board groups orders into item-category service columns", () => {
   const dineIn = makeOrder({ groupKey: "dine-in", orderType: "dine_in" });
   const takeaway = makeOrder({
@@ -170,12 +177,24 @@ test("KDS comprehensive board groups orders into item-category service columns",
       }),
     ],
   });
+  const sideDish = makeOrder({
+    groupKey: "mon-kem",
+    orderType: "dine_in",
+    items: [
+      makeItem({
+        item_name: "Canh",
+        category_name: "Món kèm",
+        category_type: "side_dish",
+      }),
+    ],
+  });
 
   const columns = groupKdsOrdersByColumn([
     dineIn,
     takeaway,
     appendMainDish,
     addOn,
+    sideDish,
   ]);
 
   assert.deepEqual(
@@ -185,9 +204,9 @@ test("KDS comprehensive board groups orders into item-category service columns",
       column.widthClass,
     ]),
     [
-      ["dine_in", "Tại bàn", "xl:col-span-3"],
-      ["takeaway", "Mang về", "xl:col-span-3"],
-      ["add_on", "Món thêm", "xl:col-span-2"],
+      ["dine_in", "Tại bàn", "md:col-start-1"],
+      ["takeaway", "Mang về", "md:col-start-2"],
+      ["add_on", "Món thêm", "md:col-start-3"],
     ],
   );
   assert.deepEqual(
@@ -198,12 +217,12 @@ test("KDS comprehensive board groups orders into item-category service columns",
     [
       ["dine_in", ["dine-in", "append-main-dish"]],
       ["takeaway", ["takeaway"]],
-      ["add_on", ["add-on"]],
+      ["add_on", ["add-on", "mon-kem"]],
     ],
   );
 });
 
-test("KDS món thêm lane requires category Thêm and type Món phụ", () => {
+test("KDS món thêm lane takes accompaniment tickets, not only category Thêm", () => {
   assert.equal(
     getKdsOrderItemColumnId(
       makeItem({ category_name: "Thêm", category_type: "side_dish" }),
@@ -213,17 +232,31 @@ test("KDS món thêm lane requires category Thêm and type Món phụ", () => {
   );
   assert.equal(
     getKdsOrderItemColumnId(
-      makeItem({ category_name: "Thêm", category_type: "main_dish" }),
+      makeItem({ category_name: "Món kèm", category_type: "side_dish" }),
       "dine_in",
     ),
-    "dine_in",
+    "add_on",
   );
   assert.equal(
     getKdsOrderItemColumnId(
       makeItem({ category_name: "Món phụ", category_type: "side_dish" }),
       "takeaway",
     ),
-    "takeaway",
+    "add_on",
+  );
+  assert.equal(
+    getKdsOrderItemColumnId(
+      { category_name: "Món kèm", category_type: null },
+      "dine_in",
+    ),
+    "add_on",
+  );
+  assert.equal(
+    getKdsOrderItemColumnId(
+      makeItem({ category_name: "Thêm", category_type: "main_dish" }),
+      "dine_in",
+    ),
+    "dine_in",
   );
 });
 
@@ -288,6 +321,16 @@ test("KDS mixed kitchen batch can split normal items from món thêm", () => {
     ),
     "batch-42:add_on",
   );
+  assert.equal(
+    getKdsScopedGroupKey(
+      baseGroupKey,
+      getKdsOrderItemColumnId(
+        makeItem({ category_name: "Món kèm", category_type: "side_dish" }),
+        "dine_in",
+      ),
+    ),
+    "batch-42:add_on",
+  );
 });
 
 test("KDS keeps order note separate from item note", () => {
@@ -306,6 +349,7 @@ test("KDS selects and renders order notes in board and focus modes", () => {
   // hook that fetches the ticket snapshot.
   assert.match(kdsRealtimeSource, /order_type, table_id, is_priority, note,/);
   assert.match(kdsRealtimeSource, /order_type, table_id, note,/);
+  assert.match(kdsRealtimeSource, /category_type_snapshot/);
   assert.match(kdsRealtimeSource, /menu_items\(menu_categories\(name,type\)\)/);
   assert.match(kdsRealtimeSource, /oldRow\.note === newRow\.note/);
   assert.match(orderGridSource, /<OrderNote[\s\S]*note=\{order\.orderNote\}/);

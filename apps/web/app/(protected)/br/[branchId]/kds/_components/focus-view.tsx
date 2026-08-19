@@ -294,7 +294,7 @@ function FocusOrderPanel({
           <OperationalBoardCard
             data-testid={`kds-focus-card-${order.groupKey}`}
             className={cn(
-              "gap-1 overflow-hidden border-l-4 py-0",
+              "gap-1 overflow-hidden border-l-4 p-0",
               getCardLeftAccent(overallStatus, elapsedMinutes),
               isNewTicket && getKdsNewTicketSignalClass(),
             )}
@@ -360,7 +360,7 @@ function FocusOrderPanel({
               </div>
             </div>
 
-            <div className="divide-y divide-border/50">
+            <div className="flex min-w-0 flex-col">
               {order.items.map((item) => {
                 const ticket = ticketByItemId.get(item.id);
                 const status = ticket?.status ?? "pending";
@@ -381,7 +381,7 @@ function FocusOrderPanel({
                     data-testid={`kds-focus-item-${String(item.id)}`}
                     data-kds-effect={rowEffect ?? undefined}
                     className={cn(
-                      "relative grid min-w-0 grid-cols-[3.5rem_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2 md:px-4 p-0 rounded-none border-x-0 border-b-0",
+                      "relative grid min-w-0 grid-cols-[3.5rem_minmax(0,1fr)_auto] items-start gap-x-2 gap-y-1 rounded-none border-x-0 border-b-0 border-t border-border/40 px-3 py-2 first:border-t-0 md:px-4",
                       getItemRowStatusClass(status),
                       getKdsRowEffectClass(rowEffect ?? null),
                       isCancelled && "opacity-100",
@@ -390,7 +390,7 @@ function FocusOrderPanel({
                     {isCancelled && <CancelledOverlay />}
                     <span
                       className={cn(
-                        "flex h-9 w-14 items-center justify-center rounded-md px-2 font-mono text-2xl font-semibold leading-none tabular-nums ring-1 ring-inset",
+                        "flex min-h-12 w-14 items-center justify-center rounded-md font-mono text-2xl font-semibold leading-none tabular-nums ring-1 ring-inset",
                         getQuantityStatusClass(status),
                       )}
                     >
@@ -513,7 +513,7 @@ function FocusOrderPanel({
                     key={ticket.id}
                     data-kds-effect={rowEffect ?? undefined}
                     className={cn(
-                      "grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2 p-0 rounded-none border-x-0 border-b-0",
+                      "grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-none border-x-0 border-b-0 border-t border-border/40 px-3 py-2 first:border-t-0 md:px-4",
                       getItemRowStatusClass(status),
                       getKdsRowEffectClass(rowEffect),
                     )}

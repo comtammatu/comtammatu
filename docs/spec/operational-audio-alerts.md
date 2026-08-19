@@ -65,8 +65,8 @@ QR guest events use dedicated tones. One poll tick plays one guest alert
 (payment call > self-order > staff call). Cashier-confirmed cash stays silent.
 Store finite table lines including “Bàn {n} gọi món” (not a live POS kind yet).
 Do not prefetch every VND total: round to 1,000₫, speak Vietnamese words on
-demand, LRU ~80 amount clips. Takeaway omits the table slot. Routine order sync
-stays beep-only (`pos`).
+demand, LRU ~80 amount clips. Takeaway omits the table slot. Kitchen send,
+append, add-on, ready, and cancel stay silent on POS (ready/cancel may toast).
 
 ## Audio Modes
 

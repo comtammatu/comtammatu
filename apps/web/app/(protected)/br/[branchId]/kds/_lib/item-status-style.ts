@@ -1,6 +1,6 @@
 export function getItemRowStatusClass(status: string): string | false {
   if (status === "ready") {
-    return "bg-success/10 ring-1 ring-inset ring-success/20";
+    return "bg-success/10";
   }
   return false;
 }
@@ -12,5 +12,5 @@ export function getQuantityStatusClass(status: string): string {
   if (status === "cancelled") {
     return "bg-muted text-muted-foreground ring-border";
   }
-  return "bg-warning/10 text-warning ring-warning/20";
+  return "bg-muted text-foreground ring-border";
 }

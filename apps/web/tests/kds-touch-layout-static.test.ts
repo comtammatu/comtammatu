@@ -35,6 +35,14 @@ const completionHistorySource = readFileSync(
   "utf8",
 );
 
+const batchSummarySource = readFileSync(
+  join(
+    process.cwd(),
+    "app/(protected)/br/[branchId]/kds/_components/batch-summary-bar.tsx",
+  ),
+  "utf8",
+);
+
 test("KDS header keeps tablet widths in the touch layout instead of md desktop toolbar", () => {
   assert.match(boardHeaderSource, /xl:flex-nowrap/);
   assert.match(boardHeaderSource, /xl:order-none/);
@@ -61,4 +69,27 @@ test("KDS filter and mode controls use touch-sized targets", () => {
   assert.doesNotMatch(viewModeToggleSource, /className="h-8"/);
   assert.match(completionHistorySource, /size="touch"/);
   assert.doesNotMatch(completionHistorySource, /size="sm"/);
+});
+
+test("KDS batch summary stays expanded, quantity-first, and touch-sized", () => {
+  assert.match(batchSummarySource, /useState\(true\)/);
+  assert.match(batchSummarySource, /size="icon-touch"/);
+  assert.doesNotMatch(batchSummarySource, /size="sm"/);
+  assert.doesNotMatch(batchSummarySource, /\bh-9\b/);
+  assert.doesNotMatch(batchSummarySource, /text-xs/);
+  assert.doesNotMatch(batchSummarySource, /overflow-x-auto/);
+  assert.doesNotMatch(batchSummarySource, /<Badge/);
+  assert.match(batchSummarySource, /flex-wrap/);
+  assert.match(batchSummarySource, /flex-col items-center/);
+  assert.match(
+    batchSummarySource,
+    /font-mono text-xl font-semibold leading-none tabular-nums/,
+  );
+  assert.match(
+    batchSummarySource,
+    /\{formatCount\(item\.totalQuantity\)\}[\s\S]*\{item\.itemName\}/,
+  );
+  assert.match(batchSummarySource, /min-h-14/);
+  assert.match(batchSummarySource, /KDS_ITEM_NAME_CLASS/);
+  assert.match(batchSummarySource, /aggregateKdsBatchSummary/);
 });

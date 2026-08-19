@@ -67,4 +67,6 @@ test("operational cloud TTS stays allowlisted, authenticated, and cloud-only", (
   assert.match(provider, /tableVoiceLabels/);
   assert.match(sync, /shouldAnnouncePaymentReceived/);
   assert.match(sync, /amountVnd:/);
+  assert.match(sync, /Bếp hoàn thành/);
+  assert.doesNotMatch(sync, /playAppSignal/);
 });

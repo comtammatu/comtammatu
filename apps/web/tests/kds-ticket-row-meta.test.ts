@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { TicketRowMeta } from "../app/(protected)/br/[branchId]/kds/_components/ticket-row-meta";
 import { classifyModifier } from "../app/(protected)/br/[branchId]/kds/_lib/modifier-format";
 
-test("TicketRowMeta renders side badges with clean + prefix and unified styling", () => {
+test("TicketRowMeta renders side badges with clean + prefix and per-side colors", () => {
   const html = renderToStaticMarkup(
     createElement(TicketRowMeta, {
       note: null,
@@ -32,7 +32,9 @@ test("TicketRowMeta renders side badges with clean + prefix and unified styling"
   assert.match(html, /\+ Trứng ốp la/);
   assert.doesNotMatch(html, /Canh thêm x1/);
   assert.doesNotMatch(html, /Trứng ốp la x2/);
-  assert.match(html, /bg-muted\/50/);
+  assert.match(html, /bg-chart-1\/15/);
+  assert.match(html, /bg-chart-2\/15/);
+  assert.doesNotMatch(html, /bg-muted\/50/);
 });
 
 test("TicketRowMeta renders item notes with a Ghi chú prefix", () => {

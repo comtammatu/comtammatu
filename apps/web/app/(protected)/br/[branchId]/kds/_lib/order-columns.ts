@@ -1,8 +1,16 @@
 import { ORDER_TYPE_LABELS_VI } from "@comtammatu/shared/labels";
 import type { KdsOrder, KdsOrderItem } from "../types";
 
-const ADD_ON_CATEGORY_NAME = "thêm";
+const COM_CATEGORY_NAME = "cơm";
 const SIDE_DISH_CATEGORY_TYPE = "side_dish";
+/** Category display names treated as accompaniment when sale-time type is missing. */
+const ADD_ON_CATEGORY_NAMES = new Set([
+  "thêm",
+  "món thêm",
+  "món kèm",
+  "kèm",
+  "món phụ",
+]);
 
 export type KdsOrderColumnId = "dine_in" | "takeaway" | "add_on";
 
@@ -10,6 +18,7 @@ export interface KdsOrderColumnDefinition {
   id: KdsOrderColumnId;
   title: string;
   emptyTitle: string;
+  /** Pin the lane to a fixed track so a sibling cannot auto-place it. */
   widthClass: string;
 }
 
@@ -22,19 +31,19 @@ export const KDS_ORDER_COLUMN_DEFINITIONS = [
     id: "dine_in",
     title: ORDER_TYPE_LABELS_VI.dine_in,
     emptyTitle: "Chưa có đơn tại bàn",
-    widthClass: "xl:col-span-3",
+    widthClass: "md:col-start-1",
   },
   {
     id: "takeaway",
     title: ORDER_TYPE_LABELS_VI.takeaway,
     emptyTitle: "Chưa có đơn mang về",
-    widthClass: "xl:col-span-3",
+    widthClass: "md:col-start-2",
   },
   {
     id: "add_on",
     title: "Món thêm",
     emptyTitle: "Chưa có món thêm",
-    widthClass: "xl:col-span-2",
+    widthClass: "md:col-start-3",
   },
 ] as const satisfies readonly KdsOrderColumnDefinition[];
 
@@ -45,10 +54,16 @@ function normalizeCategoryName(value: string | null | undefined): string {
 export function isKdsAddOnItem(
   item: Pick<KdsOrderItem, "category_name" | "category_type"> | undefined,
 ): boolean {
-  return (
-    item?.category_type === SIDE_DISH_CATEGORY_TYPE &&
-    normalizeCategoryName(item.category_name) === ADD_ON_CATEGORY_NAME
-  );
+  if (item?.category_type === SIDE_DISH_CATEGORY_TYPE) return true;
+  if (item?.category_type) return false;
+  return ADD_ON_CATEGORY_NAMES.has(normalizeCategoryName(item?.category_name));
+}
+
+/** Named Cơm category only — not item names and not other main_dish categories. */
+export function isKdsComCategory(
+  item: Pick<KdsOrderItem, "category_name"> | undefined,
+): boolean {
+  return normalizeCategoryName(item?.category_name) === COM_CATEGORY_NAME;
 }
 
 export function getKdsOrderItemColumnId(

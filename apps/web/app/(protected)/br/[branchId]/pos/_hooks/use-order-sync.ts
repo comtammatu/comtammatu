@@ -2,9 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
-import { playAppSignal } from "@lib/audio-signal";
 import {
-  audioModeHasBeep,
   playOperationalAlert,
   shouldAnnouncePaymentReceived,
   type OperationalAudioMode,
@@ -132,7 +130,6 @@ function notifyOrderTransition(
     getStringField(next, "order_number") ?? currentOrder.order_number;
   const nextStatus = getStringField(next, "status");
   const nextPaymentStatus = getStringField(next, "payment_status");
-  const beepEnabled = audioModeHasBeep(audioMode);
 
   if (nextPaymentStatus === "paid" && currentOrder.payment_status !== "paid") {
     const paymentMethod =
@@ -152,8 +149,9 @@ function notifyOrderTransition(
     return;
   }
 
+  // Kitchen owns ticket audio. POS keeps a silent toast so the counter
+  // can see ready/cancel without echoing KDS.
   if (nextStatus === "ready" && currentOrder.status !== "ready") {
-    if (beepEnabled) playAppSignal("pos");
     toast.success(`Bếp hoàn thành #${orderNumber}`, {
       description: "Món đã xong — có thể thanh toán",
     });
@@ -161,7 +159,6 @@ function notifyOrderTransition(
   }
 
   if (nextStatus === "cancelled" && currentOrder.status !== "cancelled") {
-    if (beepEnabled) playAppSignal("pos");
     toast.warning(`Đơn #${orderNumber} đã hủy`, {
       description: getOrderContextDescription(currentOrder),
     });
@@ -552,9 +549,6 @@ export function useOrderSync({
               }
               setOrdersRef.current((prev) => {
                 if (prev.some((o) => o.id === optimistic.id)) return prev;
-                if (audioModeHasBeep(audioModeRef.current)) {
-                  playAppSignal("pos");
-                }
                 return [optimistic, ...prev];
               });
               // Deduped refresh as fallback: covers fields fetchSessionOrders

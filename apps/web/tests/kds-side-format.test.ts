@@ -36,7 +36,7 @@ test("sidePortionQuantity falls back to one when stored side quantity is missing
   assert.equal(sidePortionQuantity(0), 1);
 });
 
-test("getSideBadgeToneClass assigns stable unified badge styling", () => {
+test("getSideBadgeToneClass assigns a stable categorical color per side item", () => {
   const canhThem = {
     side_item_id: 1,
     name: "Canh thêm",
@@ -50,10 +50,24 @@ test("getSideBadgeToneClass assigns stable unified badge styling", () => {
     quantity: 2,
     is_default: false,
   };
+  const canhThemAgain = {
+    side_item_id: 1,
+    name: "Canh thêm",
+    price: 0,
+    is_default: false,
+  };
 
+  assert.equal(getSideBadgeToneClass(canhThem), "border-chart-1/40 bg-chart-1/15");
   assert.equal(
+    getSideBadgeToneClass(trungOpLa),
+    "border-chart-2/40 bg-chart-2/15",
+  );
+  assert.notEqual(
     getSideBadgeToneClass(canhThem),
     getSideBadgeToneClass(trungOpLa),
   );
-  assert.match(getSideBadgeToneClass(canhThem), /bg-muted\/50/);
+  assert.equal(
+    getSideBadgeToneClass(canhThem),
+    getSideBadgeToneClass(canhThemAgain),
+  );
 });

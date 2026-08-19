@@ -68,7 +68,7 @@ export function TicketRowMeta({
   }
 
   return (
-    <div className={cn("flex flex-col gap-1 text-sm font-medium leading-snug mt-1")}>
+    <div className="flex flex-col gap-1 text-sm font-medium leading-snug">
       {hasSides && (
         <div className="flex flex-wrap items-center gap-1">
           {sides.map((s, idx) => (

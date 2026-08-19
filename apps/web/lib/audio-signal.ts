@@ -59,7 +59,7 @@ export const APP_SIGNAL_PATTERNS: Record<SignalTone, SignalPattern> = {
     pulseDurationSeconds: 0.28,
     oscillatorType: "square",
   },
-  // POS baseline (sync / ready / cancel / print): short falling pair.
+  // POS baseline (print / OOS): short falling pair.
   // KDS new-ticket stays a long rising square; do not reuse that contour.
   pos: {
     frequencies: [784, 659, 523],

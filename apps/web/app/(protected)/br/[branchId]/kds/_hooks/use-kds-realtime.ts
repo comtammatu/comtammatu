@@ -29,9 +29,9 @@ const KDS_ORDER_SELECT_WITH_PRIORITY =
 const KDS_ORDER_SELECT_BASE =
   "id, order_number, order_type, table_id, note, created_at, tables(number)";
 const KDS_ORDER_ITEM_SELECT_WITH_PRIORITY =
-  "id, order_id, menu_item_id, item_name, variant_name, quantity, unit_price, status, is_priority, note, modifiers, sides, menu_items(menu_categories(name,type))";
+  "id, order_id, menu_item_id, item_name, variant_name, quantity, unit_price, status, is_priority, note, modifiers, sides, category_type_snapshot, menu_items(menu_categories(name,type))";
 const KDS_ORDER_ITEM_SELECT_BASE =
-  "id, order_id, menu_item_id, item_name, variant_name, quantity, unit_price, status, note, modifiers, sides, menu_items(menu_categories(name,type))";
+  "id, order_id, menu_item_id, item_name, variant_name, quantity, unit_price, status, note, modifiers, sides, category_type_snapshot, menu_items(menu_categories(name,type))";
 const KDS_TICKET_SELECT =
   "id, station_id, order_id, order_item_id, kitchen_send_batch_id, status, bumped_at, created_at, updated_at";
 const KDS_ACTIVE_STATUSES = ["pending", "preparing"];
@@ -71,6 +71,21 @@ function normalizeKdsOrders(
   }));
 }
 
+function firstRelation<T>(value: T | T[] | null | undefined): T | null {
+  if (value == null) return null;
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value;
+}
+
+type KdsMenuCategoryEmbed = {
+  name?: string | null;
+  type?: string | null;
+};
+
+type KdsMenuItemEmbed = {
+  menu_categories?: KdsMenuCategoryEmbed | KdsMenuCategoryEmbed[] | null;
+};
+
 function normalizeKdsOrderItems(
   rows: unknown[] | null | undefined,
 ): KdsOrderItem[] {
@@ -78,21 +93,23 @@ function normalizeKdsOrderItems(
     (rows ?? []) as Array<
       Omit<KdsOrderItem, "is_priority" | "category_name" | "category_type"> & {
         is_priority?: boolean | null;
-        menu_items?: {
-          menu_categories?: {
-            name?: string | null;
-            type?: string | null;
-          } | null;
-        } | null;
+        category_type_snapshot?: string | null;
+        menu_items?: KdsMenuItemEmbed | KdsMenuItemEmbed[] | null;
       }
     >
   ).map((row) => {
-    const { menu_items: menuItem, is_priority, ...item } = row;
-    const category = menuItem?.menu_categories ?? null;
+    const {
+      menu_items: menuItemRaw,
+      is_priority,
+      category_type_snapshot,
+      ...item
+    } = row;
+    const menuItem = firstRelation(menuItemRaw);
+    const category = firstRelation(menuItem?.menu_categories);
     return {
       ...item,
       category_name: category?.name ?? null,
-      category_type: category?.type ?? null,
+      category_type: category_type_snapshot ?? category?.type ?? null,
       is_priority: is_priority === true,
     };
   });
