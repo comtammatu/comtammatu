@@ -51,7 +51,9 @@ interface TodayAttendance {
   checkoutApprovalTargetRoles: string[];
   checkoutApprovedAt: string | null;
   checkoutApprovedBy: string | null;
+  checkoutApprovalNote: string | null;
   checkInPhotoPath: string | null;
+  shiftId: number;
   shiftName: string | null;
   shiftStartTime: string | null;
   shiftEndTime: string | null;
@@ -212,8 +214,7 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
   const managerAttendanceOnly = isManagerSimpleAttendanceRole(claims.user_role);
 
   // Per-shift attendance: a day may have a morning and an evening record.
-  // Resolve the shift for the current VN time and drive state from that record.
-  // Resolve assigned shift (hard roster) before inferring wall-clock default shift.
+  // An open punch owns the current shift after the clock-in window closes.
   let assignmentsQuery = supabase
     .from("shift_assignments" as never)
     .select(
@@ -261,6 +262,7 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
       checkout_approval_target_roles,
       checkout_approved_at,
       checkout_approved_by,
+      checkout_approval_note,
       check_in_photo_path,
       branches ( name ),
       shifts ( name, start_time, end_time )
@@ -308,7 +310,6 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
   const shiftUnassigned =
     clockInGate.kind === "unassigned" &&
     isDefaultAttendanceRole(claims.user_role);
-  const currentShiftId = assignedShift?.shiftId ?? null;
   const businessDate = assignedShift?.businessDate ?? calendarDate;
   const records = (candidateRecords ?? []).filter((item) => {
     if (assignedShift) {
@@ -330,8 +331,11 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
     records.find((item) => !item.check_out && item.check_in) ??
     null;
 
+  // Open punch owns count/checklist scope after the clock-in window closes
+  // (reject-and-recount still belongs to the punched shift, not the next one).
+  const currentShiftId = record?.shift_id ?? assignedShift?.shiftId ?? null;
   const displayShiftId =
-    assignedShift?.shiftId ??
+    currentShiftId ??
     (clockInGate.kind === "too_early" ? clockInGate.shiftId : null);
   const todayShifts: TodayShiftEntry[] = assignmentCandidates
     .filter(
@@ -375,7 +379,9 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
         checkoutApprovalTargetRoles: record.checkout_approval_target_roles,
         checkoutApprovedAt: record.checkout_approved_at,
         checkoutApprovedBy: record.checkout_approved_by,
+        checkoutApprovalNote: record.checkout_approval_note,
         checkInPhotoPath: record.check_in_photo_path,
+        shiftId: record.shift_id,
         shiftName: shiftData?.name ?? null,
         shiftStartTime: shiftData?.start_time ?? null,
         shiftEndTime: shiftData?.end_time ?? null,

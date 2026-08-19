@@ -11,6 +11,45 @@ function readRepo(path: string): string {
   return readFileSync(join(process.cwd(), "../..", path), "utf8");
 }
 
+test("rejected checkout keeps shift tasks and count on the open punch", () => {
+  const workday = readWeb("lib/staff-runtime/page.tsx");
+  const workState = readWeb("lib/staff-runtime/_lib/today-work-state.ts");
+  const countPage = readWeb("lib/staff-runtime/count/page.tsx");
+  const tasksClient = readWeb("lib/staff-runtime/tasks/tasks-client.tsx");
+  const messages = readWeb("lib/messages/employee.ts");
+  const operator = readWeb("lib/messages/operator.ts");
+
+  assert.match(
+    workday,
+    /tasksActive =[\s\S]*state\.status === "working";/,
+    "Ca stepper must keep Việc trong ca while the punch is still working",
+  );
+  assert.doesNotMatch(
+    workday,
+    /tasksActive =[\s\S]*!requiredTasksDone/,
+    "Completed required rows must not hide the task step after a checkout reject",
+  );
+  assert.match(
+    workday,
+    /state\.attendance\?\.shiftId \?\?/,
+    "Embedded count must follow the open attendance shift, not the next clock window",
+  );
+  assert.match(workday, /checkoutRejectedTitle/);
+  assert.match(workState, /checkout_approval_note/);
+  assert.match(
+    workState,
+    /const currentShiftId = record\?\.shift_id \?\? assignedShift\?\.shiftId \?\? null/,
+  );
+  assert.match(
+    countPage,
+    /\.is\("check_out", null\)[\s\S]*\.not\("check_in", "is", null\)/,
+    "Standalone count must prefer the open punch before wall-clock default shift",
+  );
+  assert.match(tasksClient, /item\.done \? taskCopy\.retakePhoto : taskCopy\.attachPhoto/);
+  assert.match(messages, /checkoutRejectedTitle:/);
+  assert.match(operator, /checkoutRejectedTitle:/);
+});
+
 test("clock-in captures and submits in one tap", () => {
   const clockClient = readWeb("lib/staff-runtime/clock/clock-client.tsx");
   assert.match(clockClient, /punchFromCamera/);

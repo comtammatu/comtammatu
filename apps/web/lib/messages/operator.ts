@@ -71,6 +71,9 @@ export const operator = {
     clockOut: "Kết ca",
     clockOutDirect: "Chấm công ra",
     checkoutPending: "Chờ duyệt",
+    checkoutRejectedTitle: "Kết ca bị từ chối",
+    checkoutRejectedDescription: (note: string) =>
+      `Lý do: ${note}. Làm lại việc trong ca rồi gửi kết ca.`,
     completed: "Đã hoàn thành",
     shiftTasks: "Việc trong ca",
     tasksShort: "Việc",

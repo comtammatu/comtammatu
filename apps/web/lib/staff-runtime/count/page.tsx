@@ -104,6 +104,18 @@ async function resolveCurrentCountShiftId(
   employeeId: number,
   today: string,
 ): Promise<number | null> {
+  const { data: openRecords } = await supabase
+    .from("attendance_records")
+    .select("shift_id")
+    .eq("tenant_id", tenantId)
+    .eq("employee_id", employeeId)
+    .is("check_out", null)
+    .not("check_in", "is", null)
+    .order("date", { ascending: false })
+    .limit(1);
+  const openShiftId = openRecords?.[0]?.shift_id ?? null;
+  if (openShiftId != null) return openShiftId;
+
   const { data: activeShifts } = await supabase
     .from("shifts")
     .select("id, start_time, end_time")
@@ -135,6 +147,7 @@ interface EmployeeCountSurfaceProps {
   baseHref?: string;
   profileHref: string;
   plane?: CountPlane;
+  shiftId?: number | null;
 }
 
 interface EmployeeCountPageContentProps extends EmployeeCountSurfaceProps {
@@ -147,6 +160,7 @@ async function buildEmployeeCountSurface({
   baseHref,
   profileHref,
   plane = "employee",
+  shiftId: shiftIdOverride,
 }: EmployeeCountSurfaceProps): Promise<{
   branchId: number | null;
   branchName: string | null;
@@ -188,13 +202,16 @@ async function buildEmployeeCountSurface({
 
   const countReadClient = createServiceClient();
   const today = getVNDateString();
-  const currentShiftId = await resolveCurrentCountShiftId(
-    supabase,
-    claims.tenant_id,
-    branchId,
-    employeeId,
-    today,
-  );
+  const currentShiftId =
+    shiftIdOverride !== undefined
+      ? shiftIdOverride
+      : await resolveCurrentCountShiftId(
+          supabase,
+          claims.tenant_id,
+          branchId,
+          employeeId,
+          today,
+        );
   let assignmentQuery = countReadClient
     .from("inventory_count_assignments")
     .select(

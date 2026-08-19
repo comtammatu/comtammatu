@@ -98,6 +98,9 @@ export const employee = {
     clockOut: "Kết ca",
     clockOutDirect: "Chấm công ra",
     checkoutPending: "Chờ duyệt",
+    checkoutRejectedTitle: "Kết ca bị từ chối",
+    checkoutRejectedDescription: (note: string) =>
+      `Lý do: ${note}. Làm lại việc trong ca rồi gửi kết ca.`,
     completed: "Đã hoàn thành",
     shiftTasks: "Việc trong ca",
     tasksShort: "Việc",
@@ -420,6 +423,7 @@ export const employee = {
     markTodo: "Đánh dấu chưa làm",
     markDone: "Đánh dấu xong",
     attachPhoto: "Chụp ảnh minh chứng",
+    retakePhoto: "Chụp lại",
     photoAttached: "Đã kèm ảnh",
     photoRequired: "Cần chụp ảnh minh chứng để đánh dấu xong.",
     photoRequiredHint: "Chụp ảnh để hoàn thành việc này.",

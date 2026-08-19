@@ -11,6 +11,7 @@ import {
   ListChecks as IconListChecks,
   LogOut as IconLogout,
   Briefcase as IconBriefcase,
+  CircleX as IconCircleX,
   ReceiptText as IconPayslip,
   UserCircle as IconUserCircle,
 } from "lucide-react";
@@ -22,6 +23,11 @@ import {
 import { formatPercent } from "@comtammatu/shared/format";
 import { formatVNClockTime } from "@comtammatu/shared/time";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@comtammatu/ui/components/alert";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Progress } from "@comtammatu/ui/components/progress";
@@ -97,6 +103,8 @@ type WorkdayCopy = {
   clockOut: string;
   clockOutDirect: string;
   checkoutPending: string;
+  checkoutRejectedTitle: string;
+  checkoutRejectedDescription: (note: string) => string;
   completed: string;
   shiftTasks: string;
   tasksShort: string;
@@ -510,10 +518,12 @@ export async function StaffWorkdayPageContent({
   // assignments — RLS + the inner-join on profile_id keep it to their own rows
   // (a manager who can read branch-wide assignments still only sees their own).
   let countAssignmentCount = 0;
+  const currentShiftId =
+    state.attendance?.shiftId ??
+    state.todayShifts.find((shift) => shift.isCurrent)?.shiftId ??
+    null;
   if (session?.user?.id) {
     const service = createServiceClient();
-    const currentShiftId =
-      state.todayShifts.find((shift) => shift.isCurrent)?.shiftId ?? null;
     const countBranchId = state.attendance?.branchId ?? state.branchId;
     let countAssignmentQuery = service
       .from("inventory_count_assignments")
@@ -825,9 +835,23 @@ export async function StaffWorkdayPageContent({
           baseHref={routes.tasks}
           profileHref={routes.profile}
           plane={plane}
+          shiftId={currentShiftId}
         />
       </div>
     ) : null;
+  const checkoutRejectedNote =
+    state.status === "working"
+      ? (state.attendance?.checkoutApprovalNote?.trim() || null)
+      : null;
+  const checkoutRejectedNotice = checkoutRejectedNote ? (
+    <Alert variant="destructive">
+      <IconCircleX />
+      <AlertTitle>{copy.checkoutRejectedTitle}</AlertTitle>
+      <AlertDescription>
+        {copy.checkoutRejectedDescription(checkoutRejectedNote)}
+      </AlertDescription>
+    </Alert>
+  ) : null;
   const checklistContent =
     state.checklist.items.length > 0 ? (
       <TasksClient
@@ -964,6 +988,7 @@ export async function StaffWorkdayPageContent({
       contentClassName="gap-3"
       size="sm"
     >
+      {checkoutRejectedNotice}
       {checklistContent}
     </Panel>
   ) : null;
@@ -1010,8 +1035,7 @@ export async function StaffWorkdayPageContent({
   const tasksActive =
     !state.managerAttendanceOnly &&
     hasClockedIn &&
-    state.status === "working" &&
-    !requiredTasksDone;
+    state.status === "working";
   const checkoutActive =
     hasClockedIn && state.status === "working" && canRequestCheckout(state);
   const checkoutAction = checkoutActive ? (
@@ -1068,6 +1092,7 @@ export async function StaffWorkdayPageContent({
     tone: tasksDone ? "success" : tasksActive ? "info" : "default",
     content: tasksActive ? (
       <>
+        {checkoutRejectedNotice}
         {checklistContent}
         {countPanel}
       </>

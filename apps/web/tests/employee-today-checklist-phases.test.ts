@@ -103,8 +103,8 @@ test("employee inventory count is scoped to the current shift", () => {
   );
   assert.match(
     employeeCountPageSource,
-    /resolveCurrentCountShiftId[\s\S]*resolveDefaultShiftId/,
-    "employee count page should derive the current count shift from active shift windows",
+    /resolveCurrentCountShiftId[\s\S]*is\("check_out", null\)[\s\S]*resolveDefaultShiftId/,
+    "employee count page should prefer the open punch then fall back to active shift windows",
   );
   assert.match(
     employeeCountPageSource,

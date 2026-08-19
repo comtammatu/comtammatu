@@ -412,14 +412,16 @@ export function TasksClient({
                       >
                         <IconCount />
                       </ItemMedia>
-                    ) : needsPhoto && !item.done ? (
+                    ) : needsPhoto ? (
                       <div className="flex shrink-0 pt-0.5">
                         <Button
                           type="button"
                           size="icon"
                           variant="outline"
                           disabled={disabled || isItemPending}
-                          aria-label={taskCopy.attachPhoto}
+                          aria-label={
+                            item.done ? taskCopy.retakePhoto : taskCopy.attachPhoto
+                          }
                           onClick={() => setCapturingItemId(item.id)}
                         >
                           <IconCamera />
@@ -459,7 +461,7 @@ export function TasksClient({
                           <span className="block min-w-0 max-w-full whitespace-normal break-words">
                             {item.title}
                           </span>
-                        ) : needsPhoto && !item.done ? (
+                        ) : needsPhoto ? (
                           <span className="block min-w-0 max-w-full whitespace-normal break-words font-normal text-sm leading-5">
                             {item.title}
                           </span>
