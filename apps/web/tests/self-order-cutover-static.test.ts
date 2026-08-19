@@ -64,17 +64,18 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
   assert.match(client, /SELF_ORDER_VI\.billTab/);
   assert.doesNotMatch(client, /fixed right-3 z-30/);
   assert.doesNotMatch(client, /bottom-20/);
-  assert.match(client, /billView/);
-  assert.match(client, /onOpenPayment=\{\(\) => setBillView\("payment"\)\}/);
+  assert.match(client, /paymentOpen/);
+  assert.match(client, /onOpenPayment=\{\(\) => setPaymentOpen\(true\)\}/);
   assert.match(client, /from "next\/dynamic"/);
   assert.match(
     client,
     /const PaymentPanel = dynamic\([\s\S]*import\("\.\/self-order\/payment-panel"\)/,
   );
   assert.match(client, /ssr: false, loading: PaymentPanelLoading/);
+  assert.match(client, /<AppDrawer/);
   assert.match(
     client,
-    /billOpen && billView === "payment" && !ambiguous && order \? \(/,
+    /paymentOpen && !ambiguous && order != null/,
   );
   assert.match(client, /toast\.error\(refreshError\)/);
   assert.match(client, /toast\.warning\(SELF_ORDER_VI\.rejectedCalloutTitle/);
@@ -223,13 +224,14 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
     /defaultSelfOrderCategoryValue\(initialSnapshot\.menu\)/,
   );
   assert.doesNotMatch(client, /useState\("all"\)/);
-  assert.match(bill, /paymentView/);
+  assert.doesNotMatch(bill, /paymentView/);
   assert.match(bill, /onOpenPayment/);
-  assert.match(bill, /onBackToBill/);
+  assert.doesNotMatch(bill, /onBackToBill/);
   assert.match(
     hooks,
-    /const fast = snapshot\.ok && snapshot\.state === "awaiting_confirmation"/,
+    /snapshot\.state === "awaiting_confirmation"/,
   );
+  assert.match(hooks, /snapshot\.kitchenServed !== true/);
   assert.doesNotMatch(hooks, /fast[\s\S]{0,120}payment_pending/);
   assert.match(hooks, /fast \? 3_000 : 15_000/);
   assert.doesNotMatch(hooks, /realtimeTopic|\.channel\(/);
@@ -316,6 +318,7 @@ test("self-order menu availability reuses the POS stock gate", () => {
   assert.match(server, /pos_stock_outcome_posting/);
   assert.match(server, /withMenuAvailability/);
   assert.match(server, /withKitchenProgress/);
+  assert.match(server, /resolveSelfOrderKitchenProgress/);
   assert.match(server, /from\("kds_tickets"\)/);
   assert.match(server, /findCartSoldOutMessage/);
   assert.match(
@@ -334,6 +337,8 @@ test("self-order menu availability reuses the POS stock gate", () => {
   assert.match(guestUi, /Gọi nhân viên/);
   assert.match(guestUi, /MB Bank only/);
   assert.match(guestUi, /Do not list disabled banks as peer CTAs/);
+  assert.match(guestUi, /G7 Payment step \(drawer\)/);
+  assert.match(guestUi, /opens `AppDrawer` over the bill sheet/);
   assert.doesNotMatch(guestUi, /Sắp hỗ trợ/);
   assert.match(guestUi, /in-flow `role="status"` banner/);
   assert.match(guestUi, /opaque overlay/);

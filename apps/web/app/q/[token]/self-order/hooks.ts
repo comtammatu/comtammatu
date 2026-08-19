@@ -73,7 +73,10 @@ export function useSnapshotSync(
   }, [refreshSnapshot]);
 
   useEffect(() => {
-    const fast = snapshot.ok && snapshot.state === "awaiting_confirmation";
+    const fast =
+      snapshot.ok &&
+      (snapshot.state === "awaiting_confirmation" ||
+        (snapshot.order != null && snapshot.kitchenServed !== true));
     const timer = window.setInterval(
       () => void refreshSnapshot(),
       fast ? 3_000 : 15_000,

@@ -236,7 +236,7 @@ export function PaymentPanel({
   }
 
   return (
-    <>
+    <div className="flex min-h-0 flex-1 flex-col">
       <ScrollArea className="min-h-0 flex-1 overflow-hidden overscroll-contain">
         <div className="flex flex-col gap-4 px-3 py-4 sm:px-4">
           {error ? (
@@ -244,12 +244,6 @@ export function PaymentPanel({
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           ) : null}
-
-          <p className="font-mono text-xl font-semibold tabular-nums text-primary">
-            {formatVND(
-              activePaymentRequest?.amount ?? activeOrder.totalAmount,
-            )}
-          </p>
 
           {activePaymentRequest ? (
             <div className="flex flex-col gap-3" aria-live="polite">
@@ -473,6 +467,6 @@ export function PaymentPanel({
           </div>
         </SheetFooter>
       )}
-    </>
+    </div>
   );
 }

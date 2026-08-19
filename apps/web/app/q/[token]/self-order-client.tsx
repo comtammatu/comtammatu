@@ -26,7 +26,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { AppPage } from "@/components/surface";
+import { AppDrawer, AppPage } from "@/components/surface";
 import { BrandMascot } from "@/components/brand";
 import { ForceLightMode } from "@/components/force-light-mode";
 import {
@@ -331,7 +331,7 @@ export function SelfOrderClient({
     defaultSelfOrderCategoryValue(initialSnapshot.menu),
   );
   const [billOpen, setBillOpen] = useState(false);
-  const [billView, setBillView] = useState<"bill" | "payment">("bill");
+  const [paymentOpen, setPaymentOpen] = useState(false);
   const [pendingPaymentMethod, setPendingPaymentMethod] = useState<
     "cash_call" | "vietqr" | null
   >(null);
@@ -408,7 +408,7 @@ export function SelfOrderClient({
       restorePaymentAfterBankHandoffRef.current = false;
       return;
     }
-    setBillView("payment");
+    setPaymentOpen(true);
     setBillOpen(true);
   }, [livePaymentClientOpId]);
 
@@ -420,7 +420,7 @@ export function SelfOrderClient({
         restorePaymentAfterBankHandoffRef.current = false;
         return;
       }
-      setBillView("payment");
+      setPaymentOpen(true);
       setBillOpen(true);
     }
     document.addEventListener(
@@ -439,7 +439,7 @@ export function SelfOrderClient({
 
   const markBankAppHandoff = useCallback(() => {
     restorePaymentAfterBankHandoffRef.current = true;
-    setBillView("payment");
+    setPaymentOpen(true);
     setBillOpen(true);
   }, []);
 
@@ -743,7 +743,7 @@ export function SelfOrderClient({
           paymentIntentRef.current,
           intent.clientOpId,
         );
-        setBillView("payment");
+        setPaymentOpen(true);
         setBillOpen(true);
         void refreshSnapshot();
       } catch {
@@ -960,7 +960,6 @@ export function SelfOrderClient({
                   size="touch"
                   className="shrink-0"
                   onClick={() => {
-                    setBillView("bill");
                     setBillOpen(true);
                   }}
                 >
@@ -1040,11 +1039,9 @@ export function SelfOrderClient({
         open={billOpen}
         onOpenChange={(nextOpen) => {
           setBillOpen(nextOpen);
-          if (!nextOpen) setBillView("bill");
+          if (!nextOpen) setPaymentOpen(false);
         }}
-        view={billView}
-        onOpenPayment={() => setBillView("payment")}
-        onBackToBill={() => setBillView("bill")}
+        onOpenPayment={() => setPaymentOpen(true)}
         canPay={!ambiguous && order !== null}
         order={order}
         pendingItems={awaiting ? available.request?.items : undefined}
@@ -1061,8 +1058,15 @@ export function SelfOrderClient({
           onApply: applyPromoCode,
           onClear: clearPromoCode,
         }}
+      />
+      <AppDrawer
+        open={paymentOpen && !ambiguous && order != null}
+        onOpenChange={setPaymentOpen}
+        title={SELF_ORDER_VI.paymentTitle}
+        contentClassName="max-h-dvh-80"
+        bodyClassName="flex min-h-0 flex-col overflow-hidden p-0"
       >
-        {billOpen && billView === "payment" && !ambiguous && order ? (
+        {order ? (
           <PaymentPanel
             disabled={awaiting || paymentPending}
             activeOrder={order}
@@ -1076,7 +1080,7 @@ export function SelfOrderClient({
             onBankAppHandoff={markBankAppHandoff}
           />
         ) : null}
-      </BillDrawer>
+      </AppDrawer>
     </AppPage>
   );
 }

@@ -21,6 +21,7 @@ import {
   isAvailabilityBlocked,
   type SelfOrderAvailability,
 } from "./availability";
+import { resolveSelfOrderKitchenProgress } from "./kitchen-progress";
 
 type RpcResult<T> = {
   data: T | null;
@@ -479,35 +480,27 @@ async function withKitchenProgress(
   snapshot: PublicSelfOrderSnapshot,
 ): Promise<PublicSelfOrderSnapshot> {
   if (!snapshot.ok || !snapshot.order) return snapshot;
-  const orderId = snapshot.order.id;
+  const fromOrder = resolveSelfOrderKitchenProgress({
+    orderStatus: snapshot.order.status,
+  });
   const { data, error } = await service()
     .from("kds_tickets")
-    .select("status, first_ready_at")
-    .eq("order_id", orderId);
-  if (error || !Array.isArray(data) || data.length === 0) {
-    return { ...snapshot, kitchenReady: false, kitchenServed: false };
+    .select("status")
+    .eq("order_id", snapshot.order.id);
+  if (error) {
+    console.error("[self-order] kitchen progress failed", error);
+    return { ...snapshot, ...fromOrder };
   }
-
-  let readyCount = 0;
-  let servedCount = 0;
-  for (const row of data) {
-    if (typeof row !== "object" || row === null) continue;
-    const record = row as { status?: unknown; first_ready_at?: unknown };
-    const status = typeof record.status === "string" ? record.status : "";
-    if (status === "served") {
-      servedCount += 1;
-      readyCount += 1;
-      continue;
-    }
-    if (status === "ready" || typeof record.first_ready_at === "string") {
-      readyCount += 1;
-    }
+  if (!Array.isArray(data) || data.length === 0) {
+    return { ...snapshot, ...fromOrder };
   }
 
   return {
     ...snapshot,
-    kitchenReady: readyCount > 0,
-    kitchenServed: servedCount > 0 && servedCount === data.length,
+    ...resolveSelfOrderKitchenProgress({
+      orderStatus: snapshot.order.status,
+      tickets: data,
+    }),
   };
 }
 

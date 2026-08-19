@@ -37,7 +37,7 @@ Kind: feature
 Tier: T2
 Lane: pos
 Exit: Guest QR menu fits brand + table + actions; cards use `+` then `- qty +`; bill progress reaches `Phục vụ`; accompaniment names have no extra `+đ`; promo sits in the bill footer as `Mã khuyến mãi`; payment is `Tiền mặt` / `Chuyển khoản` with optional GTGT MST lookup.
-Evidence: `self-order-cutover-static.test.ts`, `self-order-payment-contract.test.ts`, `self-order-bill-lines.test.ts`, `self-order-simple-cart.test.ts`, `self-order-promo-static.test.ts`.
+Evidence: `self-order-cutover-static.test.ts`, `self-order-payment-contract.test.ts`, `self-order-bill-lines.test.ts`, `self-order-simple-cart.test.ts`, `self-order-promo-static.test.ts`, `self-order-kitchen-progress.test.ts`.
 
 UI Advisor Gate
 - Surface: `/q/[token]` G1/G6/G7; route family: public QR; plane: `public`; change: layout + copy + payment flow

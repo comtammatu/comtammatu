@@ -194,6 +194,11 @@ test("Self-Order creates the selected payment from footer CTAs and may send a VA
   assert.match(paymentPanel, /PROVEN_VIETQR_BANK_APP_ID/);
   assert.match(paymentPanel, /openMbBank/);
   assert.match(paymentPanel, /otherBankScanHint/);
+  assert.doesNotMatch(
+    paymentPanel,
+    /activePaymentRequest\?\.amount \?\? activeOrder\.totalAmount/,
+  );
+  assert.match(client, /<AppDrawer/);
   assert.doesNotMatch(paymentPanel, /bankAppComingSoon/);
   assert.doesNotMatch(paymentPanel, /getVietQrBankAppCatalogUrl/);
   assert.doesNotMatch(paymentPanel, /orderedApps\.map/);
@@ -308,7 +313,7 @@ test("returning from a bank app restores the live VietQR payment sheet", () => {
   // not drop the guest onto the menu with billOpen=false.
   assert.match(
     client,
-    /livePaymentClientOpId[\s\S]*setBillView\("payment"\)[\s\S]*setBillOpen\(true\)/,
+    /livePaymentClientOpId[\s\S]*setPaymentOpen\(true\)[\s\S]*setBillOpen\(true\)/,
   );
   assert.match(client, /restorePaymentAfterBankHandoffRef/);
   assert.match(
