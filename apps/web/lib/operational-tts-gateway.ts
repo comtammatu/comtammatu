@@ -11,9 +11,11 @@ const RECEIVED_AMOUNT_PREFIX = "Đã nhận ";
 const clipCache = new Map<string, Buffer>();
 
 function getOperationalTtsToken(): string | null {
-  const gatewayKey = process.env.AI_GATEWAY_API_KEY?.trim();
+  // Bracket access: Vercel Sensitive env and OIDC are runtime-only.
+  // Dotted process.env access is inlined empty at `next build`.
+  const gatewayKey = process.env["AI_GATEWAY_API_KEY"]?.trim();
   if (gatewayKey) return gatewayKey;
-  const oidc = process.env.VERCEL_OIDC_TOKEN?.trim();
+  const oidc = process.env["VERCEL_OIDC_TOKEN"]?.trim();
   return oidc && oidc.length > 0 ? oidc : null;
 }
 
@@ -62,7 +64,7 @@ export async function synthesizeOperationalUtterance(
     },
     body: JSON.stringify({
       text,
-      voice: process.env.OPERATIONAL_TTS_VOICE?.trim() || "nova",
+      voice: process.env["OPERATIONAL_TTS_VOICE"]?.trim() || "nova",
       outputFormat: "mp3",
       speed: 1,
       language: "vi",

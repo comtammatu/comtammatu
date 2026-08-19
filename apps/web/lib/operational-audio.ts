@@ -8,6 +8,7 @@ import {
 import {
   buildAlertUtterance,
   selectPosGuestAlert,
+  shouldAnnouncePaymentReceived,
   type OperationalAlertKind,
   type OperationalAlertSlots,
   type PosGuestAlertCandidate,
@@ -27,7 +28,11 @@ export type {
   PosGuestAlertCandidate,
   PosGuestAlertKind,
 };
-export { buildAlertUtterance, selectPosGuestAlert };
+export {
+  buildAlertUtterance,
+  selectPosGuestAlert,
+  shouldAnnouncePaymentReceived,
+};
 
 export const KDS_VOICE_COOLDOWN_MS = 15_000;
 const VOICE_AFTER_BEEP_GAP_MS = 120;

@@ -30,12 +30,20 @@ test("operational cloud TTS stays allowlisted, authenticated, and fail-open", ()
   assert.doesNotMatch(gateway, /tts-1-hd/);
   assert.doesNotMatch(gateway, /OPERATIONAL_TTS_MODEL/);
   assert.match(gateway, /server-only/);
-  assert.match(gateway, /AI_GATEWAY_API_KEY/);
+  assert.match(gateway, /process\.env\["AI_GATEWAY_API_KEY"\]/);
+  assert.match(gateway, /process\.env\["VERCEL_OIDC_TOKEN"\]/);
+  assert.doesNotMatch(gateway, /process\.env\.AI_GATEWAY_API_KEY/);
 
   assert.match(voice, /primeOperationalVoice/);
   assert.match(voice, /prefetchOperationalVoiceCatalog/);
+  assert.match(voice, /code === "tts_unconfigured"/);
+  assert.doesNotMatch(
+    voice,
+    /if \(response\.status === 503\) \{\s*cloudTtsAvailable = false;/,
+  );
   assert.match(audio, /primeOperationalVoice\(text\)/);
   assert.match(audio, /prefetchOperationalVoiceCatalog\(/);
   assert.match(provider, /tableLabels: tables.map/);
+  assert.match(sync, /shouldAnnouncePaymentReceived/);
   assert.match(sync, /amountVnd:/);
 });

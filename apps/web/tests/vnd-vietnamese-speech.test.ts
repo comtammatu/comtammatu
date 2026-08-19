@@ -32,6 +32,10 @@ test("roundVndForSpeech keeps a closed amount set", () => {
   assert.equal(roundVndForSpeech(21_000_000), null);
   assert.equal(
     buildReceivedAmountUtterance(165_000),
-    "Đã nhận một trăm sáu mươi lăm nghìn đồng",
+    "Đã nhận một trăm sáu mươi lăm nghìn thanh toán",
+  );
+  assert.equal(
+    buildReceivedAmountUtterance(165_000, "12"),
+    "Đã nhận một trăm sáu mươi lăm nghìn thanh toán bàn 12",
   );
 });

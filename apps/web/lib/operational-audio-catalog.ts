@@ -101,8 +101,12 @@ export function buildAlertUtterance(
 ): string {
   if (kind === "pos.payment_received") {
     if (slots?.amountVnd !== undefined) {
+      const table = slots.tableLabel?.trim();
       return (
-        buildReceivedAmountUtterance(slots.amountVnd) ?? ALERT_PHRASES[kind]
+        buildReceivedAmountUtterance(
+          slots.amountVnd,
+          table && isAllowedTableLabel(table) ? table : undefined,
+        ) ?? ALERT_PHRASES[kind]
       );
     }
     return ALERT_PHRASES[kind];
@@ -122,6 +126,13 @@ export function buildAlertUtterance(
     return `${ALERT_PHRASES[kind]} bàn ${table}`;
   }
   return ALERT_PHRASES[kind];
+}
+
+/** Cash is cashier-confirmed in place; only VietQR needs an incoming-paid ping. */
+export function shouldAnnouncePaymentReceived(
+  paymentMethod: string | null | undefined,
+): boolean {
+  return paymentMethod === "vietqr";
 }
 
 export function selectPosGuestAlert(
@@ -200,8 +211,15 @@ function getReceivedAmountUtterances(): ReadonlySet<string> {
 }
 
 function isAllowedReceivedAmountUtterance(text: string): boolean {
-  if (!text.startsWith(RECEIVED_AMOUNT_PREFIX) || text.length > 96) {
+  if (!text.startsWith(RECEIVED_AMOUNT_PREFIX) || text.length > 120) {
     return false;
+  }
+  const tableMatch = / thanh toán bàn ([1-9][0-9]{0,2})$/.exec(text);
+  const table = tableMatch?.[1];
+  if (table) {
+    if (!isAllowedTableLabel(table)) return false;
+    const base = text.slice(0, text.length - ` bàn ${table}`.length);
+    return getReceivedAmountUtterances().has(base);
   }
   return getReceivedAmountUtterances().has(text);
 }

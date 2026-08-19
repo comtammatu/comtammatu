@@ -134,7 +134,7 @@ UI Advisor Gate
 - Verification: unit + static tests
 
 - [ ] Voice mode on a branch with tables 3 and 12 stores those four table lines
-- [ ] Paying 165,000 speaks “Đã nhận một trăm sáu mươi lăm nghìn đồng” without a pre-warmed clip pack of every VND total
+- [ ] VietQR paying 165,000 at table 12 speaks “Đã nhận một trăm sáu mươi lăm nghìn thanh toán bàn 12”; cashier cash confirm stays silent
 
 ## Inventory screen contract and landing queue
 

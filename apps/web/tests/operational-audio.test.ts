@@ -16,6 +16,7 @@ import {
   OPERATIONAL_ALERT_TONES,
   resolveAudioMode,
   selectPosGuestAlert,
+  shouldAnnouncePaymentReceived,
   shouldSpeakKdsVoice,
 } from "../lib/operational-audio";
 import {
@@ -89,7 +90,14 @@ test("buildAlertUtterance appends the table slot only when present", () => {
   );
   assert.equal(
     buildAlertUtterance("pos.payment_received", { amountVnd: 165_000 }),
-    "Đã nhận một trăm sáu mươi lăm nghìn đồng",
+    "Đã nhận một trăm sáu mươi lăm nghìn thanh toán",
+  );
+  assert.equal(
+    buildAlertUtterance("pos.payment_received", {
+      amountVnd: 165_000,
+      tableLabel: "12",
+    }),
+    "Đã nhận một trăm sáu mươi lăm nghìn thanh toán bàn 12",
   );
   assert.equal(buildAlertUtterance("pos.payment_received"), "Đã thanh toán");
   assert.equal(buildAlertUtterance("pos.print_failed"), "In lỗi");
@@ -160,6 +168,13 @@ test("POS guest and paid tones stay distinct from KDS ticket tones", () => {
   }
 });
 
+test("paid audio announces VietQR only, not cashier-confirmed cash", () => {
+  assert.equal(shouldAnnouncePaymentReceived("vietqr"), true);
+  assert.equal(shouldAnnouncePaymentReceived("cash"), false);
+  assert.equal(shouldAnnouncePaymentReceived(null), false);
+  assert.equal(shouldAnnouncePaymentReceived(undefined), false);
+});
+
 test("POS catalog kinds map onto distinct guest tones", () => {
   assert.equal(OPERATIONAL_ALERT_TONES["pos.self_order"], "pos-self-order");
   assert.equal(OPERATIONAL_ALERT_TONES["pos.payment_call"], "pos-payment-call");
@@ -206,12 +221,23 @@ test("cloud TTS allowlist stores POS table lines and spoken amounts", () => {
   assert.equal(isAllowedOperationalUtterance("Bàn 12 gọi món"), true);
   assert.equal(isAllowedOperationalUtterance("Bàn 100 cần duyệt đơn"), true);
   assert.equal(
-    isAllowedOperationalUtterance("Đã nhận một trăm sáu mươi lăm nghìn đồng"),
+    isAllowedOperationalUtterance(
+      "Đã nhận một trăm sáu mươi lăm nghìn thanh toán",
+    ),
+    true,
+  );
+  assert.equal(
+    isAllowedOperationalUtterance(
+      "Đã nhận một trăm sáu mươi lăm nghìn thanh toán bàn 12",
+    ),
     true,
   );
   assert.equal(isAllowedOperationalUtterance("Read this bill please"), false);
   assert.equal(isAllowedOperationalUtterance("Bàn 1000 cần duyệt đơn"), false);
-  assert.equal(isAllowedOperationalUtterance("Đã nhận một tỷ đồng"), false);
+  assert.equal(
+    isAllowedOperationalUtterance("Đã nhận một tỷ thanh toán"),
+    false,
+  );
   assert.ok(listCatalogUtterances().includes("Phiếu mới"));
   assert.ok(
     listPrefetchUtterances({

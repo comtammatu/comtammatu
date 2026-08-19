@@ -86,7 +86,7 @@ SINVOICE_USERNAME=
 SINVOICE_PASSWORD=
 SINVOICE_BASE_URL=https://api-vinvoice.viettel.vn
 SINVOICE_SANDBOX=false
-AI_GATEWAY_API_KEY=      # optional POS/KDS cloud voice; OIDC on Vercel Production also works
+AI_GATEWAY_API_KEY=      # giọng POS/KDS cloud; Sensitive trên Vercel chỉ có lúc chạy
 OPERATIONAL_TTS_VOICE=nova
 ```
 

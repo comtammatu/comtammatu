@@ -6,6 +6,7 @@ import { playAppSignal } from "@lib/audio-signal";
 import {
   audioModeHasBeep,
   playOperationalAlert,
+  shouldAnnouncePaymentReceived,
   type OperationalAudioMode,
 } from "@lib/operational-audio";
 import { toast } from "@comtammatu/ui/components/sonner";
@@ -134,16 +135,20 @@ function notifyOrderTransition(
   const beepEnabled = audioModeHasBeep(audioMode);
 
   if (nextPaymentStatus === "paid" && currentOrder.payment_status !== "paid") {
-    const tableNumber = currentOrder.tables?.number;
-    playOperationalAlert({
-      kind: "pos.payment_received",
-      mode: audioMode,
-      slots: {
-        tableLabel:
-          typeof tableNumber === "number" ? String(tableNumber) : undefined,
-        amountVnd: coerceMoney(next.total_amount) ?? currentOrder.total_amount,
-      },
-    });
+    const paymentMethod =
+      getStringField(next, "payment_method") ?? currentOrder.payment_method;
+    if (shouldAnnouncePaymentReceived(paymentMethod)) {
+      const tableNumber = currentOrder.tables?.number;
+      playOperationalAlert({
+        kind: "pos.payment_received",
+        mode: audioMode,
+        slots: {
+          tableLabel:
+            typeof tableNumber === "number" ? String(tableNumber) : undefined,
+          amountVnd: coerceMoney(next.total_amount) ?? currentOrder.total_amount,
+        },
+      });
+    }
     return;
   }
 

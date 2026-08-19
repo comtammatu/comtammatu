@@ -131,7 +131,15 @@ async function fetchCloudClip(
   try {
     const response = await fetch(clipRequest(text), { signal });
     if (response.status === 503) {
-      cloudTtsAvailable = false;
+      let code = "";
+      try {
+        const body = (await response.json()) as { error?: unknown };
+        code = typeof body.error === "string" ? body.error : "";
+      } catch {
+        code = "";
+      }
+      // Unconfigured stays latched; transient gateway failures may recover.
+      if (code === "tts_unconfigured") cloudTtsAvailable = false;
       return null;
     }
     if (!response.ok) return null;

@@ -62,8 +62,8 @@ export function roundVndForSpeech(amountVnd: number): number | null {
   return rounded;
 }
 
-export function formatVndAsVietnamese(amountVnd: number): string {
-  if (amountVnd === 0) return "không đồng";
+function formatVndAmountWords(amountVnd: number): string {
+  if (amountVnd === 0) return "không";
   const million = Math.floor(amountVnd / 1_000_000);
   const thousand = Math.floor((amountVnd % 1_000_000) / 1_000);
   const units = amountVnd % 1_000;
@@ -77,14 +77,24 @@ export function formatVndAsVietnamese(amountVnd: number): string {
   if (units > 0) {
     parts.push(...readGroup(units, million > 0 || thousand > 0));
   }
-  parts.push("đồng");
   return parts.join(" ");
+}
+
+export function formatVndAsVietnamese(amountVnd: number): string {
+  if (amountVnd === 0) return "không đồng";
+  return `${formatVndAmountWords(amountVnd)} đồng`;
 }
 
 export function buildReceivedAmountUtterance(
   amountVnd: number,
+  tableLabel?: string | undefined,
 ): string | null {
   const rounded = roundVndForSpeech(amountVnd);
   if (rounded === null) return null;
-  return `Đã nhận ${formatVndAsVietnamese(rounded)}`;
+  const amountWords = formatVndAmountWords(rounded);
+  const table = tableLabel?.trim();
+  if (table) {
+    return `Đã nhận ${amountWords} thanh toán bàn ${table}`;
+  }
+  return `Đã nhận ${amountWords} thanh toán`;
 }

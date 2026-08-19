@@ -57,15 +57,16 @@ Align with `getKdsNewTicketSignalTone` / alert kinds in `sound-alerts.ts`.
 | `pos.self_order` | QR request needs approval | `pos-self-order` | “Bàn {n} cần duyệt đơn” |
 | `pos.payment_call` | Guest cash / VietQR call | `pos-payment-call` | “Bàn {n} gọi thanh toán” |
 | `pos.staff_call` | Guest calls staff | `pos-staff-call` | “Bàn {n} gọi nhân viên” |
-| `pos.payment_received` | Order → `paid` | `pos-payment-received` | “Đã nhận {amount words}” |
+| `pos.payment_received` | VietQR → `paid` | `pos-payment-received` | “Đã nhận {amount} thanh toán bàn {n}” |
 | `pos.print_failed` | Print job failed | `pos` | “In lỗi” |
 | `pos.out_of_stock` | KDS marked unavailable | `pos` | “Hết món” |
 
 QR guest events use dedicated tones. One poll tick plays one guest alert
-(payment call > self-order > staff call). Store finite table lines including
-“Bàn {n} gọi món” (not a live POS kind yet). Do not prefetch every VND total:
-round to 1,000₫, speak Vietnamese words on demand, LRU ~80 amount clips.
-Routine order sync stays beep-only (`pos`).
+(payment call > self-order > staff call). Cashier-confirmed cash stays silent.
+Store finite table lines including “Bàn {n} gọi món” (not a live POS kind yet).
+Do not prefetch every VND total: round to 1,000₫, speak Vietnamese words on
+demand, LRU ~80 amount clips. Takeaway omits the table slot. Routine order sync
+stays beep-only (`pos`).
 
 ## Audio Modes
 
@@ -101,7 +102,7 @@ Allowlisted templates only. POS voice mode prefetches that branch’s table
 lines, not tables 1–99 and not bill totals. Cycle preview prefetches generics.
 
 - **KDS:** board = SoT; bell cycles mode; voice kind aligns with signal tone.
-- **POS:** catalog kinds speak; guest events coalesce per tick; paid speaks amount.
+- **POS:** catalog kinds speak; guest events coalesce per tick; VietQR paid speaks amount plus table.
 - **Other:** Owner / inventory / employee / pickup display — no operational audio.
 
 ```ts

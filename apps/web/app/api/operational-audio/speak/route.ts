@@ -28,6 +28,7 @@ function badRequest() {
 
 export async function GET(request: Request) {
   if (!isOperationalTtsConfigured()) {
+    console.error("[operational-tts] tts_unconfigured");
     return NextResponse.json({ error: "tts_unconfigured" }, { status: 503 });
   }
 
