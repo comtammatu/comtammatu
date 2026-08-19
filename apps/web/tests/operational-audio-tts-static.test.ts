@@ -22,7 +22,8 @@ test("operational cloud TTS stays allowlisted, authenticated, and fail-open", ()
   assert.match(route, /PERMISSION_KEYS\.POS_USE/);
   assert.match(route, /PERMISSION_KEYS\.KDS_USE/);
   assert.match(route, /tts_unconfigured/);
-  assert.match(route, /rateLimit\.limit/);
+  assert.match(route, /ttsRateLimit\.limit/);
+  assert.match(route, /getCachedOperationalUtterance/);
   assert.doesNotMatch(route, /openai\.com/);
 
   assert.match(gateway, /ai-gateway\.vercel\.sh\/v4\/ai\/speech-model/);
@@ -30,13 +31,17 @@ test("operational cloud TTS stays allowlisted, authenticated, and fail-open", ()
   assert.doesNotMatch(gateway, /tts-1-hd/);
   assert.doesNotMatch(gateway, /OPERATIONAL_TTS_MODEL/);
   assert.match(gateway, /server-only/);
-  assert.match(gateway, /process\.env\["AI_GATEWAY_API_KEY"\]/);
-  assert.match(gateway, /process\.env\["VERCEL_OIDC_TOKEN"\]/);
+  assert.match(gateway, /globalThis\.process\?\.env/);
+  assert.match(gateway, /readRuntimeSecret\("AI_GATEWAY_API_KEY"\)/);
+  assert.match(gateway, /readRuntimeSecret\("VERCEL_OIDC_TOKEN"\)/);
   assert.doesNotMatch(gateway, /process\.env\.AI_GATEWAY_API_KEY/);
+  assert.doesNotMatch(gateway, /process\.env\["AI_GATEWAY_API_KEY"\]/);
 
   assert.match(voice, /primeOperationalVoice/);
   assert.match(voice, /prefetchOperationalVoiceCatalog/);
   assert.match(voice, /code === "tts_unconfigured"/);
+  assert.match(voice, /PREFETCH_NETWORK_GAP_MS = 2_000/);
+  assert.match(voice, /"rate_limited"/);
   assert.doesNotMatch(
     voice,
     /if \(response\.status === 503\) \{\s*cloudTtsAvailable = false;/,

@@ -67,3 +67,10 @@ export const loginRateLimit: Limiter = buildLimiter({
   windowDuration: "5 m",
   prefix: "rl:login",
 });
+
+/** POS/KDS cloud TTS: catalog prefetch plus live alerts */
+export const ttsRateLimit: Limiter = buildLimiter({
+  windowLimit: 120,
+  windowDuration: "1 m",
+  prefix: "rl:tts",
+});

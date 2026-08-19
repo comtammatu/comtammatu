@@ -10,13 +10,24 @@ const RECEIVED_AMOUNT_PREFIX = "Đã nhận ";
 
 const clipCache = new Map<string, Buffer>();
 
+function readRuntimeSecret(name: string): string | null {
+  // Dynamic lookup: Next inlines `process.env.NAME` (and often literal
+  // bracket access) at build. Vercel Sensitive env exists only at runtime.
+  const value = globalThis.process?.env?.[name];
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
 function getOperationalTtsToken(): string | null {
-  // Bracket access: Vercel Sensitive env and OIDC are runtime-only.
-  // Dotted process.env access is inlined empty at `next build`.
-  const gatewayKey = process.env["AI_GATEWAY_API_KEY"]?.trim();
-  if (gatewayKey) return gatewayKey;
-  const oidc = process.env["VERCEL_OIDC_TOKEN"]?.trim();
-  return oidc && oidc.length > 0 ? oidc : null;
+  return (
+    readRuntimeSecret("AI_GATEWAY_API_KEY") ??
+    readRuntimeSecret("VERCEL_OIDC_TOKEN")
+  );
+}
+
+export function getCachedOperationalUtterance(text: string): Buffer | null {
+  return clipCache.get(text) ?? null;
 }
 
 export function isOperationalTtsConfigured(): boolean {
@@ -64,7 +75,7 @@ export async function synthesizeOperationalUtterance(
     },
     body: JSON.stringify({
       text,
-      voice: process.env["OPERATIONAL_TTS_VOICE"]?.trim() || "nova",
+      voice: readRuntimeSecret("OPERATIONAL_TTS_VOICE") || "nova",
       outputFormat: "mp3",
       speed: 1,
       language: "vi",

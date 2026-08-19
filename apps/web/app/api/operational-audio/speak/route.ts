@@ -4,10 +4,11 @@ import {
   PERMISSION_KEYS,
   type StaffRole,
 } from "@comtammatu/shared/auth";
-import { rateLimit } from "@comtammatu/security";
+import { ttsRateLimit } from "@comtammatu/security";
 import { getAuthContextWithAnyPermission } from "@/_lib/auth";
 import { isAllowedOperationalUtterance } from "@lib/operational-audio-catalog";
 import {
+  getCachedOperationalUtterance,
   isOperationalTtsConfigured,
   synthesizeOperationalUtterance,
 } from "@lib/operational-tts-gateway";
@@ -26,12 +27,17 @@ function badRequest() {
   return NextResponse.json({ error: "invalid_utterance" }, { status: 400 });
 }
 
-export async function GET(request: Request) {
-  if (!isOperationalTtsConfigured()) {
-    console.error("[operational-tts] tts_unconfigured");
-    return NextResponse.json({ error: "tts_unconfigured" }, { status: 503 });
-  }
+function audioResponse(bytes: Buffer) {
+  return new NextResponse(new Uint8Array(bytes), {
+    status: 200,
+    headers: {
+      "Content-Type": "audio/mpeg",
+      "Cache-Control": "private, max-age=2592000, immutable",
+    },
+  });
+}
 
+export async function GET(request: Request) {
   const ctx = await getAuthContextWithAnyPermission(STATION_ROLES, [
     PERMISSION_KEYS.POS_USE,
     PERMISSION_KEYS.KDS_USE,
@@ -40,26 +46,38 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
-  const limited = await rateLimit.limit(`tts:${ctx.user.id}`);
-  if (!limited.success) {
-    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
-  }
-
   const text = new URL(request.url).searchParams.get("text")?.trim() ?? "";
   if (!isAllowedOperationalUtterance(text)) return badRequest();
+
+  const cached = getCachedOperationalUtterance(text);
+  if (cached) return audioResponse(cached);
+
+  if (!isOperationalTtsConfigured()) {
+    console.error("[operational-tts] tts_unconfigured");
+    return NextResponse.json({ error: "tts_unconfigured" }, { status: 503 });
+  }
+
+  const limited = await ttsRateLimit.limit(ctx.user.id);
+  if (!limited.success) {
+    const retryAfterSec = Math.max(
+      1,
+      Math.ceil((limited.reset - Date.now()) / 1000),
+    );
+    return NextResponse.json(
+      { error: "rate_limited" },
+      {
+        status: 429,
+        headers: { "Retry-After": String(retryAfterSec) },
+      },
+    );
+  }
 
   try {
     const bytes = await synthesizeOperationalUtterance(text);
     if (!bytes) {
       return NextResponse.json({ error: "tts_unavailable" }, { status: 503 });
     }
-    return new NextResponse(new Uint8Array(bytes), {
-      status: 200,
-      headers: {
-        "Content-Type": "audio/mpeg",
-        "Cache-Control": "private, max-age=2592000, immutable",
-      },
-    });
+    return audioResponse(bytes);
   } catch {
     return NextResponse.json({ error: "tts_unavailable" }, { status: 503 });
   }

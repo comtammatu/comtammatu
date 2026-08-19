@@ -1,1 +1,1 @@
-export { rateLimit, loginRateLimit } from "./rate-limit";
+export { rateLimit, loginRateLimit, ttsRateLimit } from "./rate-limit";

@@ -3,7 +3,9 @@ import { listPrefetchUtterances } from "./operational-audio-catalog";
 
 const TTS_CACHE_NAME = "ctmt-operational-tts-v1";
 const TTS_FETCH_TIMEOUT_MS = 1_800;
-const PREFETCH_NETWORK_GAP_MS = 800;
+const PREFETCH_NETWORK_GAP_MS = 2_000;
+const PREFETCH_FETCH_TIMEOUT_MS = 8_000;
+const RATE_LIMITED_FALLBACK_WAIT_MS = 15_000;
 const SPEAK_PATH = "/api/operational-audio/speak";
 const RECEIVED_AMOUNT_PREFIX = "Đã nhận ";
 const AMOUNT_MEMORY_LIMIT = 80;
@@ -120,7 +122,7 @@ async function storeClip(text: string, buffer: ArrayBuffer): Promise<void> {
 async function fetchCloudClip(
   text: string,
   signal: AbortSignal,
-): Promise<ArrayBuffer | null> {
+): Promise<ArrayBuffer | null | "rate_limited"> {
   if (cloudTtsAvailable === false) return null;
   const cached = await readCachedClip(text);
   if (cached) {
@@ -130,6 +132,7 @@ async function fetchCloudClip(
 
   try {
     const response = await fetch(clipRequest(text), { signal });
+    if (response.status === 429) return "rate_limited";
     if (response.status === 503) {
       let code = "";
       try {
@@ -172,10 +175,7 @@ function speakBrowser(text: string): void {
   const synth = window.speechSynthesis as SpeechSynthesis | undefined;
   if (!synth) return;
 
-  const voices = synth.getVoices();
-  const vietnamese = pickVietnameseVoice(voices);
-  if (voices.length > 0 && vietnamese === undefined) return;
-
+  const vietnamese = pickVietnameseVoice(synth.getVoices());
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = "vi-VN";
   utterance.rate = 0.95;
@@ -188,12 +188,12 @@ function speakBrowser(text: string): void {
 
 async function playPrimedVoice(
   text: string,
-  clipPromise: Promise<ArrayBuffer | null>,
+  clipPromise: Promise<ArrayBuffer | null | "rate_limited">,
   generation: number,
 ): Promise<void> {
   const clip = await clipPromise.catch(() => null);
   if (generation !== speakGeneration) return;
-  if (clip) {
+  if (clip && clip !== "rate_limited") {
     const playback = playAlertAudioBuffer(clip);
     stopCurrentClip = playback.stop;
     await playback.stopped;
@@ -232,13 +232,28 @@ export function prefetchOperationalVoiceCatalog(options?: {
   surface?: "pos" | "kds" | undefined;
 }): void {
   if (isCloudTtsUnavailable()) return;
-  const texts = listPrefetchUtterances(options);
+  const queue = [...listPrefetchUtterances(options)];
   void (async () => {
-    for (const text of texts) {
+    let rateLimitedStreak = 0;
+    while (queue.length > 0) {
       if (isCloudTtsUnavailable()) return;
-      if (readMemoryClip(text)) continue;
+      const text = queue.shift();
+      if (!text || readMemoryClip(text)) continue;
       const startedAt = Date.now();
-      await fetchCloudClip(text, AbortSignal.timeout(TTS_FETCH_TIMEOUT_MS));
+      const result = await fetchCloudClip(
+        text,
+        AbortSignal.timeout(PREFETCH_FETCH_TIMEOUT_MS),
+      );
+      if (result === "rate_limited") {
+        rateLimitedStreak += 1;
+        if (rateLimitedStreak > 3) return;
+        queue.unshift(text);
+        await new Promise<void>((resolve) => {
+          window.setTimeout(resolve, RATE_LIMITED_FALLBACK_WAIT_MS);
+        });
+        continue;
+      }
+      rateLimitedStreak = 0;
       const waitMs = PREFETCH_NETWORK_GAP_MS - (Date.now() - startedAt);
       if (waitMs > 0) {
         await new Promise<void>((resolve) => {
