@@ -1,4 +1,7 @@
-import type { SelfOrderMenuCategory } from "@lib/self-order/contracts";
+import type {
+  SelfOrderMenuCategory,
+  SelfOrderMenuItem,
+} from "@lib/self-order/contracts";
 
 export const ALL_MENU_VALUE = "all";
 
@@ -21,6 +24,20 @@ export function isSelfOrderComCategory(
   category: Pick<SelfOrderMenuCategory, "name">,
 ): boolean {
   return normalizeCategoryName(category.name) === "cơm";
+}
+
+/** True when the guest has no variant, modifier, or side choice to make. */
+export function isSelfOrderItemSimple(
+  item: Pick<
+    SelfOrderMenuItem,
+    "menu_item_variants" | "menu_item_modifiers" | "menu_item_available_sides"
+  >,
+): boolean {
+  return (
+    item.menu_item_variants.length <= 1 &&
+    item.menu_item_modifiers.length === 0 &&
+    item.menu_item_available_sides.length === 0
+  );
 }
 
 /** Prefer the Cơm category; else first non-empty category that is not Khác. */

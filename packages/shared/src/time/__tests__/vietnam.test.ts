@@ -5,6 +5,7 @@ import {
   diffVNDateDays,
   formatVNBusinessDate,
   formatVNClockTime,
+  formatMinutesOfDay,
   formatVNDate,
   formatVNDateTime,
   formatVNDayMonth,
@@ -54,6 +55,8 @@ test("VN display helpers pin timestamps and clock ranges to the contract", () =>
   assert.equal(formatVNDateTime(timestamp), "08:30 22/05/2026");
   assert.equal(formatVNClockTime("8:05:33"), "08:05");
   assert.equal(formatVNClockTime("08:60"), "—");
+  assert.equal(formatMinutesOfDay(7 * 60), "07:00");
+  assert.equal(formatMinutesOfDay(-30), "23:30");
   assert.equal(formatVNDurationMinutes(65), "1 giờ 05 phút");
   assert.equal(
     formatVNDuration("2026-05-22T01:00:00Z", "2026-05-22T02:05:00Z"),

@@ -55,6 +55,15 @@ test("guest staff-call notifies POS without a second order request", () => {
   assert.match(tables, /staffCallTableIds/);
   assert.match(tables, /SELF_ORDER_VI\.staffCallBadge/);
   assert.match(sync, /self_order_staff_calls/);
+
+  const desktop = readWeb(
+    "app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx",
+  );
+  assert.match(desktop, /kind: "pos\.staff_call"/);
+  assert.doesNotMatch(
+    desktop,
+    /playAppSignal\("pos-payment-call"\)[\s\S]*staffCall/,
+  );
 });
 
 test("awaiting copy leads with sent-and-wait, not browse-more", () => {

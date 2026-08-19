@@ -38,12 +38,14 @@ import type { MenuItemDailyLimit } from "../pos-menu-types";
 import { makeRealtimeCoalescer } from "@/_utils/realtime-scheduler";
 import { readDevicePref, writeDevicePref } from "@lib/device-prefs";
 import {
+  audioModeHasVoice,
   cycleAudioMode,
   getPosAudioModeKey,
   playOperationalAlert,
   resolveAudioMode,
   type OperationalAudioMode,
 } from "@lib/operational-audio";
+import { prefetchOperationalVoiceCatalog } from "@lib/operational-voice";
 import type { OrderType } from "../types";
 
 export type DailyLimitsMap = ReadonlyMap<number, MenuItemDailyLimit>;
@@ -270,6 +272,13 @@ export function PosDesktopProvider({
   useEffect(() => {
     setAudioMode(resolveAudioMode(readDevicePref(audioModeKey)));
   }, [audioModeKey]);
+  useEffect(() => {
+    if (!audioModeHasVoice(audioMode)) return;
+    prefetchOperationalVoiceCatalog({
+      surface: "pos",
+      tableLabels: tables.map((table) => String(table.number)),
+    });
+  }, [audioMode, tables]);
   const bumpArchivedToken = useCallback(() => {
     setArchivedToken((t) => t + 1);
   }, []);

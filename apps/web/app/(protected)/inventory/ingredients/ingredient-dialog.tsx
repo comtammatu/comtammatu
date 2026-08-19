@@ -34,7 +34,9 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
@@ -61,13 +63,15 @@ import type {
   IngredientRow,
   UnitOption,
 } from "@lib/inventory/types";
-import { parseOptionalNumber } from "@lib/inventory/format";
+import { parseOptionalNumber, formatVND } from "@lib/inventory/format";
+import { getDisplayReferenceCost } from "@lib/inventory/reference-cost";
 import { formatDecimal } from "@comtammatu/shared/format";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
 import { cn } from "@comtammatu/ui";
 import {
   buildCatalogUnits,
+  defaultAnchorUnitId,
   deriveEffectiveUnitFactor,
   findDirectDependents,
   IngredientUnitModelError,
@@ -85,6 +89,59 @@ const copy = messages.inventoryMaster.ingredientForm;
 const dialogCopy = messages.inventory.ingredients.dialog;
 const NO_CATEGORY = "none";
 const FULFILL_SITE_NONE = "none";
+
+type UnitSelectOption = { value: string; label: string };
+type UnitSelectOptionGroup = {
+  label: string;
+  options: UnitSelectOption[];
+};
+
+function groupUnitSelectOptions(
+  unitOptions: readonly UnitOption[],
+  include?: ReadonlySet<number>,
+): UnitSelectOptionGroup[] {
+  const mass: UnitSelectOption[] = [];
+  const volume: UnitSelectOption[] = [];
+  const packaging: UnitSelectOption[] = [];
+
+  for (const unit of unitOptions) {
+    if (include != null && !include.has(unit.id)) continue;
+    const option = { value: String(unit.id), label: unit.name };
+    if (unit.is_standard && unit.dimension === "mass") mass.push(option);
+    else if (unit.is_standard && unit.dimension === "volume") volume.push(option);
+    else packaging.push(option);
+  }
+
+  return [
+    { label: copy.units.groupMass, options: mass },
+    { label: copy.units.groupVolume, options: volume },
+    { label: copy.units.groupPackaging, options: packaging },
+  ].filter((group) => group.options.length > 0);
+}
+
+function UnitSelectOptionGroups({
+  groups,
+  controlSize,
+}: {
+  groups: readonly UnitSelectOptionGroup[];
+  controlSize: "field" | "touch";
+}) {
+  const itemSize = controlSize === "touch" ? "touch" : "default";
+  return (
+    <>
+      {groups.map((group) => (
+        <SelectGroup key={group.label}>
+          <SelectLabel>{group.label}</SelectLabel>
+          {group.options.map((option) => (
+            <SelectItem key={option.value} value={option.value} size={itemSize}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectGroup>
+      ))}
+    </>
+  );
+}
 
 const ingredientSchemaBase = z.object({
   name: z.string().trim().min(1, { error: dialogCopy.nameRequired }),
@@ -481,14 +538,6 @@ export function IngredientDialog({
     ],
     [categoryOptions],
   );
-  const unitSelectOptions = useMemo(
-    () =>
-      unitOptions.map((unit) => ({
-        value: String(unit.id),
-        label: unit.name,
-      })),
-    [unitOptions],
-  );
 
   async function handleSubmit(values: IngredientFormValues) {
     try {
@@ -653,10 +702,10 @@ export function IngredientDialog({
         <IngredientDialogFields
           form={form}
           categorySelectOptions={categorySelectOptions}
-          unitSelectOptions={unitSelectOptions}
           unitOptions={unitOptions}
           focusField={focusField}
           defaultUnitsOpen={!isEdit || (resolvedIngredient?.units?.length ?? 0) > 1}
+          referenceIngredient={resolvedIngredient}
         />
       )}
     </FormChrome>
@@ -666,17 +715,17 @@ export function IngredientDialog({
 function IngredientDialogFields({
   form,
   categorySelectOptions,
-  unitSelectOptions,
   unitOptions,
   focusField,
   defaultUnitsOpen,
+  referenceIngredient,
 }: {
   form: UseFormReturn<IngredientFormValues>;
   categorySelectOptions: Array<{ value: string; label: string }>;
-  unitSelectOptions: Array<{ value: string; label: string }>;
   unitOptions: UnitOption[];
   focusField?: "default_fulfill_site_kind";
   defaultUnitsOpen: boolean;
+  referenceIngredient: IngredientRow | null;
 }) {
   const itemKind = form.watch("item_kind");
   const unitIds = form.watch("unit_ids");
@@ -708,9 +757,18 @@ function IngredientDialogFields({
   const selectedUnitIds = [...new Set(unitIds.map(Number))];
   const unitsById = new Map(unitOptions.map((unit) => [unit.id, unit]));
   const baseUnit = unitsById.get(Number(baseUnitId));
-  const availableUnitOptions = unitSelectOptions.filter(
-    (option) => !unitIds.includes(option.value),
+  const availableUnitGroups = groupUnitSelectOptions(
+    unitOptions,
+    new Set(
+      unitOptions
+        .filter((unit) => !unitIds.includes(String(unit.id)))
+        .map((unit) => unit.id),
+    ),
   );
+  const allUnitGroups = groupUnitSelectOptions(unitOptions);
+  const referenceCost = referenceIngredient
+    ? getDisplayReferenceCost(referenceIngredient)
+    : null;
 
   const relations = useMemo<UnitRelationInput | null>(() => {
     if (!baseUnit) return null;
@@ -758,9 +816,15 @@ function IngredientDialogFields({
         { shouldDirty: true, shouldValidate: true },
       );
     } else {
+      const nextAnchorId = defaultAnchorUnitId({
+        newUnitId: Number(nextValue),
+        selectedUnitIds,
+        baseUnitId: Number(baseUnitId),
+        unitOptions,
+      });
       form.setValue(
         "unit_anchor_ids",
-        { ...unitAnchorIds, [nextValue]: baseUnitId },
+        { ...unitAnchorIds, [nextValue]: String(nextAnchorId) },
         { shouldDirty: true, shouldValidate: true },
       );
       form.setValue(
@@ -928,6 +992,7 @@ function IngredientDialogFields({
           control={form.control}
           name="default_fulfill_site_kind"
           label={dialogCopy.defaultFulfillSiteKindLabel}
+          description={dialogCopy.defaultFulfillSiteKindHint}
           options={[
             {
               value: FULFILL_SITE_NONE,
@@ -943,7 +1008,30 @@ function IngredientDialogFields({
             },
           ]}
         />
-        {selectedUnitIds.length > 0 && baseUnit && relations ? (
+        {selectedUnitIds.length === 0 ? (
+          <Field>
+            <FieldLabel htmlFor="base-unit-select">
+              {copy.units.baseUnit}
+            </FieldLabel>
+            <Select value="" onValueChange={addUnit}>
+              <SelectTrigger
+                id="base-unit-select"
+                size={controlSize}
+                className="w-full"
+                aria-label={copy.units.baseUnit}
+              >
+                <SelectValue placeholder={copy.units.selectBase} />
+              </SelectTrigger>
+              <SelectContent>
+                <UnitSelectOptionGroups
+                  groups={allUnitGroups}
+                  controlSize={controlSize}
+                />
+              </SelectContent>
+            </Select>
+            <FieldDescription>{copy.units.baseUnitDescription}</FieldDescription>
+          </Field>
+        ) : selectedUnitIds.length > 0 && baseUnit && relations ? (
           <Field data-invalid={Boolean(baseFieldState.error)}>
             <FieldLabel htmlFor="base-unit-select">
               {copy.units.baseUnit}
@@ -982,9 +1070,23 @@ function IngredientDialogFields({
                 })}
               </SelectContent>
             </Select>
+            <FieldDescription>{copy.units.baseUnitDescription}</FieldDescription>
             {baseFieldState.error ? (
               <FieldError id={baseErrorId} errors={[baseFieldState.error]} />
             ) : null}
+          </Field>
+        ) : null}
+        {referenceIngredient?.monetary != null ? (
+          <Field>
+            <FieldLabel>{dialogCopy.referenceCostLabel}</FieldLabel>
+            <output className="text-sm font-mono tabular-nums">
+              {referenceCost
+                ? `${formatVND(referenceCost.value)}${
+                    referenceCost.unit ? `/${referenceCost.unit}` : ""
+                  }`
+                : dialogCopy.referenceCostEmpty}
+            </output>
+            <FieldDescription>{dialogCopy.referenceCostHint}</FieldDescription>
           </Field>
         ) : null}
         <div className="sm:col-span-2">
@@ -995,12 +1097,23 @@ function IngredientDialogFields({
             <Switch
               id="item-kind-finished-good"
               checked={itemKind === "finished_good"}
-              onCheckedChange={(checked) =>
+              onCheckedChange={(checked) => {
                 form.setValue(
                   "item_kind",
                   checked ? "finished_good" : "raw_material",
-                )
-              }
+                );
+                if (
+                  checked &&
+                  form.getValues("default_fulfill_site_kind") ===
+                    FULFILL_SITE_NONE
+                ) {
+                  form.setValue(
+                    "default_fulfill_site_kind",
+                    "central_kitchen",
+                    { shouldDirty: true },
+                  );
+                }
+              }}
             />
           </Field>
           <FieldDescription>{dialogCopy.finishedGoodHint}</FieldDescription>
@@ -1086,6 +1199,7 @@ function IngredientDialogFields({
                           anchorUnitId,
                           relations.anchorFactors[unitId] ?? null,
                         )}
+                        baseUnitName={baseUnit.name}
                         removalError={blockedRemovalErrors[unitId]}
                         removeDisabled={selectedUnitIds.length === 1}
                         onRemove={() => removeUnit(unitId)}
@@ -1094,7 +1208,7 @@ function IngredientDialogFields({
                   })}
               </ItemGroup>
             ) : null}
-            {availableUnitOptions.length > 0 && unitIds.length < 20 ? (
+            {availableUnitGroups.length > 0 && unitIds.length < 20 ? (
               <div className="w-full">
                 <Select value="" onValueChange={addUnit}>
                   <SelectTrigger
@@ -1105,15 +1219,10 @@ function IngredientDialogFields({
                     <SelectValue placeholder={copy.units.add} />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableUnitOptions.map((option) => (
-                      <SelectItem
-                        key={option.value}
-                        value={option.value}
-                        size={controlSize === "touch" ? "touch" : "default"}
-                      >
-                        {option.label}
-                      </SelectItem>
-                    ))}
+                    <UnitSelectOptionGroups
+                      groups={availableUnitGroups}
+                      controlSize={controlSize}
+                    />
                   </SelectContent>
                 </Select>
               </div>
@@ -1131,6 +1240,7 @@ function UnitRelationRow({
   anchorOptions,
   effectiveFactor,
   automatic,
+  baseUnitName,
   removalError,
   removeDisabled,
   onRemove,
@@ -1140,6 +1250,7 @@ function UnitRelationRow({
   anchorOptions: Array<{ value: string; label: string }>;
   effectiveFactor: number | null;
   automatic: boolean;
+  baseUnitName: string;
   removalError: string | undefined;
   removeDisabled: boolean;
   onRemove: () => void;
@@ -1200,6 +1311,7 @@ function UnitRelationRow({
               ref={factor.field.ref}
               controlSize={controlSize}
               maxFractionDigits={9}
+              placeholder={copy.units.factorPlaceholder}
               aria-invalid={Boolean(factor.fieldState.error)}
               aria-describedby={factorErrorId}
               aria-label={copy.units.factorAria(unit.name)}
@@ -1250,6 +1362,14 @@ function UnitRelationRow({
           </ItemActions>
         </div>
       </Item>
+      {!automatic && effectiveFactor != null ? (
+        <p className="text-xs text-muted-foreground">
+          {copy.units.effectiveEquals(
+            formatDecimal(effectiveFactor, 9),
+            baseUnitName,
+          )}
+        </p>
+      ) : null}
       {factor.fieldState.error ? (
         <FieldError id={factorErrorId} errors={[factor.fieldState.error]} />
       ) : null}

@@ -52,15 +52,13 @@ test("public QR surfaces use the shared web QR renderer", () => {
   assert.match(selfOrderPayment, /<BankAppLauncher/);
   assert.doesNotMatch(selfOrderPayment, /onRefreshPayment/);
   assert.match(selfOrderPayment, /BankAppLauncher/);
-  assert.match(
-    selfOrderPayment,
-    /getVietQrBankAppCatalogUrl[\s\S]*parseVietQrBankApps/,
-  );
-  assert.match(selfOrderPayment, /orderedApps\.map\(\(app\)/);
   assert.match(selfOrderPayment, /PROVEN_VIETQR_BANK_APP_ID/);
-  assert.match(selfOrderPayment, /bankAppComingSoon/);
+  assert.match(selfOrderPayment, /openMbBank/);
   assert.match(selfOrderPayment, /otherBankScanHint/);
   assert.match(selfOrderPayment, /resolveBankAppPlatform/);
+  assert.doesNotMatch(selfOrderPayment, /getVietQrBankAppCatalogUrl/);
+  assert.doesNotMatch(selfOrderPayment, /orderedApps\.map\(\(app\)/);
+  assert.doesNotMatch(selfOrderPayment, /bankAppComingSoon/);
   assert.doesNotMatch(selfOrderPayment, /target="_blank"/);
   assert.doesNotMatch(selfOrderPayment, /AUTOFILL_BANK_APPS/);
   assert.doesNotMatch(selfOrderPayment, /import QRCode from "qrcode"/);
@@ -225,7 +223,10 @@ test("native EMV handoffs carry the QR payload for supported bank apps", () => {
     platform: "ios",
   });
   assert.ok(acb);
-  assert.match(acb, /^acbone:\/\/ZaloPay\/external\/transactions\/v1\/qrcode\?/);
+  assert.match(
+    acb,
+    /^acbone:\/\/ZaloPay\/external\/transactions\/v1\/qrcode\?/,
+  );
   assert.equal(new URL(acb).searchParams.get("qrCode"), qrData);
 
   const tpb = buildVietQrBankAppUrl({

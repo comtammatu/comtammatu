@@ -228,7 +228,7 @@ export function CartSheet(props: CartSheetProps) {
   return (
     <>
       {!empty ? (
-        <div className="workflow-safe-pb fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-2xl border-t border-border/60 bg-background/95 px-3 py-2 backdrop-blur">
+        <div className="workflow-safe-pb shrink-0 border-t border-border bg-background px-3 py-2">
           {props.submitError ? (
             <Alert variant="destructive" className="mb-2">
               <AlertDescription>{props.submitError}</AlertDescription>
@@ -259,7 +259,7 @@ export function CartSheet(props: CartSheetProps) {
           className="mx-auto w-full max-w-2xl overflow-hidden p-0"
         >
           <div className="flex h-full min-h-0 flex-col overflow-hidden">
-            <SheetHeader className="shrink-0 pr-3 sm:pr-4">
+            <SheetHeader className="shrink-0 border-border bg-background bg-none pr-3 sm:pr-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <SheetTitle className="flex min-w-0 items-center gap-2 text-left">
@@ -308,7 +308,8 @@ export function CartSheet(props: CartSheetProps) {
                             item={item}
                             disabled={editingDisabled}
                             canEdit={
-                              findMenuItem(categories, item.menu_item_id) != null
+                              findMenuItem(categories, item.menu_item_id) !=
+                              null
                             }
                             onEdit={() => setEditingKey(item.key)}
                             onQuantityChange={props.onQuantityChange}
@@ -341,7 +342,7 @@ export function CartSheet(props: CartSheetProps) {
               </div>
             </div>
 
-            <SheetFooter className="workflow-safe-pb shrink-0 bg-card p-4">
+            <SheetFooter className="workflow-safe-pb shrink-0 border-border bg-card p-4">
               {props.submitError ? (
                 <Alert variant="destructive">
                   <AlertDescription>{props.submitError}</AlertDescription>

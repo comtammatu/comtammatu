@@ -13,6 +13,7 @@ import {
   type LeaveRange,
 } from "@lib/hr/payroll-day-math";
 import { fetchTenantHrLeavePolicy } from "@lib/hr/leave-policy-data";
+import { mergeScheduleAttendanceWithAssignments } from "../_lib/schedule-month";
 
 const monthStartSchema = z
   .string()
@@ -88,6 +89,7 @@ export async function fetchMySchedule(
 
   const [
     attendanceResult,
+    assignmentResult,
     leaveResult,
     entitlementResult,
     approvedAnnualLeaveResult,
@@ -103,6 +105,16 @@ export async function fetchMySchedule(
       .gte("date", parsed.data)
       .lte("date", monthEndDate)
       .order("date"),
+    supabase
+      .from("shift_assignments")
+      .select(
+        "work_date, shift_id, shifts ( name, start_time, end_time )",
+      )
+      .eq("employee_id", employeeId)
+      .eq("tenant_id", claims.tenant_id)
+      .gte("work_date", parsed.data)
+      .lte("work_date", monthEndDate)
+      .order("work_date"),
     // Leave ranges overlapping the viewed month (RLS self-select).
     supabase
       .from("leave_requests")
@@ -137,6 +149,7 @@ export async function fetchMySchedule(
 
   if (
     attendanceResult.error ||
+    assignmentResult.error ||
     leaveResult.error ||
     entitlementResult.error ||
     approvedAnnualLeaveResult.error ||
@@ -145,7 +158,7 @@ export async function fetchMySchedule(
     return { success: false, error: "Không tải được lịch ca." };
   }
 
-  const attendance: ScheduleAttendance[] = (attendanceResult.data ?? []).map(
+  const punched: ScheduleAttendance[] = (attendanceResult.data ?? []).map(
     (row) => {
       // supabase-js typegen infers M:1 FK as array, but PostgREST returns
       // a single object at runtime. Cast through unknown to match runtime.
@@ -166,6 +179,24 @@ export async function fetchMySchedule(
         end_time: shift?.end_time ?? null,
       };
     },
+  );
+  const assignments = (assignmentResult.data ?? []).map((row) => {
+    const shift = row.shifts as unknown as {
+      name: string;
+      start_time: string;
+      end_time: string;
+    } | null;
+    return {
+      workDate: row.work_date,
+      shiftId: row.shift_id,
+      shiftName: shift?.name ?? null,
+      startTime: shift?.start_time ?? null,
+      endTime: shift?.end_time ?? null,
+    };
+  });
+  const attendance = mergeScheduleAttendanceWithAssignments(
+    punched,
+    assignments,
   );
 
   const leaves: ScheduleLeave[] = (leaveResult.data ?? []).flatMap((row) =>

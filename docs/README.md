@@ -41,6 +41,7 @@
 ## Inventory nhanh
 
 - Canonical reference: [ref/inventory.md](ref/inventory.md)
+- Cutover discussion (English): [plan/inventory-operating-cutover.md](plan/inventory-operating-cutover.md)
 - SOP: [ref/inventory-sop.md](ref/inventory-sop.md)
 - QA gate: [runbooks/inventory/pre-release-qa.md](runbooks/inventory/pre-release-qa.md)
 - Runtime route/UI contract: [modules/web-app.md](modules/web-app.md)
@@ -53,5 +54,6 @@
 - `agent/rules/`: agent entry rules, workflow gates, skill routing, database/UI/engineering constraints
 - `spec/design-system.md`: Má Tư visual contract; primitive behavior,
   workflow composition và regression proof có owner riêng trong authority map
-- `plan/`: compatibility decisions and ADR records; not a rollout archive
+- `plan/`: compatibility decisions, ADR records, and active discussion plans
+  (inventory operating cutover); not a rollout archive
 - `runbooks/`: operational verification (gồm `db/` cho Preview branch và re-baseline)

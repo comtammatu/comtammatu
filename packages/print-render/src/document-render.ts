@@ -229,6 +229,18 @@ function renderReceiptItem(
       });
     }
   }
+
+  const lineDiscount = it.discount_amount ?? 0;
+  if (lineDiscount > 0) {
+    const note = it.discount_note?.trim();
+    const promoText = note
+      ? `  Khuyến mãi: -${fmtMoney(lineDiscount)} · ${note}`
+      : `  Khuyến mãi: -${fmtMoney(lineDiscount)}`;
+    const promoChunks = wrapText(promoText, RECEIPT_COL_NAME);
+    for (const chunk of promoChunks) {
+      out.push(ops.line(receiptRow("", chunk, "", "")));
+    }
+  }
 }
 
 /** Each priced modifier/side renders on its own row with its own unit and
@@ -411,6 +423,8 @@ function normalizeReceiptItems(
     modifiers: Array.isArray(item.modifiers) ? item.modifiers : null,
     sides: Array.isArray(item.sides) ? item.sides : null,
     note: item.note ? clampText(item.note) : null,
+    discount_amount: numberOrZero(item.discount_amount),
+    discount_note: item.discount_note ? clampText(item.discount_note) : null,
   }));
 }
 

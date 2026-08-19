@@ -7,10 +7,15 @@ import {
   getTodayWorkState,
   type TodayWorkState,
 } from "@lib/staff-runtime/_lib/today-work-state";
+import {
+  getClockInBlockedMessage,
+  isClockInBlocked,
+} from "@lib/staff-runtime/_lib/clock-in-copy";
 import { formatDateVN } from "@lib/staff-runtime/_lib/vn-business-date";
 import { messages } from "@lib/messages";
 
 const copy = messages.operator.todayStatus;
+const shiftCopy = messages.operator.shift;
 
 function getWorkTitle(state: TodayWorkState): string {
   const status = state.status;
@@ -22,7 +27,11 @@ function getWorkTitle(state: TodayWorkState): string {
 
   if (status === "missing_profile") return copy.statusNoProfile;
   if (status === "missing_branch") return copy.statusNoBranch;
-  if (status === "not_started") return copy.statusNotStarted;
+  if (status === "not_started") {
+    const blocked = getClockInBlockedMessage(state.clockInGate, shiftCopy);
+    if (blocked) return blocked.title;
+    return copy.statusNotStarted;
+  }
   if (status === "working") return copy.statusWorking;
   if (status === "checkout_pending") return copy.statusCheckoutPending;
   return copy.statusDone;
@@ -37,13 +46,25 @@ export async function BranchTodayStatus({
   if (state.status === "not_required") return null;
 
   const title = getWorkTitle(state);
-  const currentShiftName = state.attendance?.shiftName ?? null;
-  const currentShiftRange = state.attendance?.shiftStartTime
-    ? `${formatVNClockTime(state.attendance.shiftStartTime)} - ${formatVNClockTime(state.attendance.shiftEndTime)}`
+  const blocked = getClockInBlockedMessage(state.clockInGate, shiftCopy);
+  const currentShift =
+    state.todayShifts.find((shift) => shift.isCurrent) ??
+    state.todayShifts[0] ??
+    null;
+  const currentShiftName =
+    state.attendance?.shiftName ?? currentShift?.shiftName ?? null;
+  const currentShiftStart =
+    state.attendance?.shiftStartTime ?? currentShift?.startTime ?? null;
+  const currentShiftEnd =
+    state.attendance?.shiftEndTime ?? currentShift?.endTime ?? null;
+  const currentShiftRange = currentShiftStart
+    ? `${formatVNClockTime(currentShiftStart)} - ${formatVNClockTime(currentShiftEnd)}`
     : "—";
-  const todayMeta = currentShiftName
-    ? `${formatDateVN(state.today)} · ${currentShiftName} ${currentShiftRange}`
-    : formatDateVN(state.today);
+  const todayMeta = blocked?.description
+    ? blocked.description
+    : currentShiftName
+      ? `${formatDateVN(state.today)} · ${currentShiftName} ${currentShiftRange}`
+      : formatDateVN(state.today);
 
   return (
     <BranchOperatorControlBar
@@ -55,7 +76,7 @@ export async function BranchTodayStatus({
         <p className="truncate text-sm font-semibold">{title}</p>
         <p className="truncate text-xs text-muted-foreground">{todayMeta}</p>
       </div>
-      {state.status === "not_started" ? (
+      {state.status === "not_started" && !isClockInBlocked(state) ? (
         <Button
           size="touch"
           render={<Link href={`/br/${branchId}/shift/clock`} />}

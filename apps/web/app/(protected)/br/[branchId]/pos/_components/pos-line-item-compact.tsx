@@ -12,6 +12,7 @@ interface PosLineItemCompactProps {
   modifiers?: readonly string[];
   sides?: readonly string[];
   discount?: string | null;
+  originalTotal?: string | null;
   note: string | null;
   isPriority?: boolean;
   afterTitle?: ReactNode;
@@ -34,6 +35,7 @@ function useLineChangeFeedback({
   modifiers,
   sides,
   discount,
+  originalTotal,
   note,
   isPriority,
 }: Pick<
@@ -45,6 +47,7 @@ function useLineChangeFeedback({
   | "modifiers"
   | "sides"
   | "discount"
+  | "originalTotal"
   | "note"
   | "isPriority"
 >): { tone: LineChangeTone; quantityDelta: number | null } {
@@ -58,6 +61,7 @@ function useLineChangeFeedback({
         modifiers,
         sides,
         discount,
+        originalTotal,
         note,
         isPriority,
       }),
@@ -67,6 +71,7 @@ function useLineChangeFeedback({
       modifiers,
       note,
       options,
+      originalTotal,
       quantity,
       sides,
       title,
@@ -139,6 +144,7 @@ export function PosLineItemCompact({
   modifiers = [],
   sides = [],
   discount,
+  originalTotal,
   note,
   isPriority,
   afterTitle,
@@ -158,6 +164,7 @@ export function PosLineItemCompact({
     modifiers,
     sides,
     discount,
+    originalTotal,
     note,
     isPriority,
   });
@@ -207,14 +214,21 @@ export function PosLineItemCompact({
           ) : null}
           {afterTitle ? <span className="shrink-0">{afterTitle}</span> : null}
         </div>
-        <p
-          className={cn(
-            "mt-0.5 text-base font-bold leading-snug text-primary tabular-nums",
-            totalClassName,
-          )}
-        >
-          {total}
-        </p>
+        <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          {originalTotal ? (
+            <p className="text-sm tabular-nums text-muted-foreground line-through">
+              {originalTotal}
+            </p>
+          ) : null}
+          <p
+            className={cn(
+              "text-base font-bold leading-snug text-primary tabular-nums",
+              totalClassName,
+            )}
+          >
+            {total}
+          </p>
+        </div>
         <div className="mt-1 flex flex-col gap-1 text-muted-foreground">
           <DetailLine
             label={POS_VI.options}

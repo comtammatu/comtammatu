@@ -130,6 +130,10 @@ export const POS_VI = {
   notePrefix: "Ghi chú: ",
   statusPrefix: "Trạng thái: ",
   itemDiscountLabel: "Chiết khấu món",
+  itemDiscountLine: (amount: string, note?: string) =>
+    note
+      ? `Chiết khấu món: -${amount} · ${note}`
+      : `Chiết khấu món: -${amount}`,
   discountReduceLabel: "Giảm",
   discountTitle: "Chiết khấu",
   reasonPrefix: "Lý do: ",

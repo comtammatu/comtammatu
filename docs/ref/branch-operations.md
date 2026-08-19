@@ -10,7 +10,7 @@ D009, D012, D019, D052, D069, D076, D093, D103.
 
 ## Hai vòng độc lập
 
-1. **Ca làm (HR):** phân ca, chấm công, checklist `position_shift_tasks`, trưởng ca.
+1. **Ca làm (HR):** phân ca, chấm công (được vào sớm 60 phút trước giờ ca), checklist `position_shift_tasks`, kết ca chờ quản lý duyệt rồi tự duyệt sau 2 giờ nếu quên, trưởng ca.
 2. **Ca bán (POS):** một phiên POS mở / chi nhánh; giao ca Close → Open; tiền chỉ
    qua `opening_cash` / `closing_cash` đếm tay.
 3. **Không** gộp hai vòng thành ceremony “Chốt ngày”. Không `carryover_cash`.

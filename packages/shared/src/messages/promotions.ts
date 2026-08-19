@@ -4,7 +4,8 @@ export const PROMOTIONS_VI = {
   editTitle: "Sửa chiến dịch",
   loadFailed: "Không thể tải khuyến mãi.",
   emptyTitle: "Chưa có chiến dịch",
-  emptyDescription: "Tạo chiến dịch để POS áp mã giảm hoặc khuyến mãi tự động.",
+  emptyDescription:
+    "Tạo chiến dịch để khách tự nhập mã trên QR gọi món, POS áp mã, hoặc khuyến mãi tự động.",
   create: "Tạo chiến dịch",
   save: "Lưu",
   nameLabel: "Tên chiến dịch",
@@ -13,7 +14,8 @@ export const PROMOTIONS_VI = {
   codeLabel: "Mã giảm",
   codePlaceholder: "TET10",
   codeRequired: "Mã giảm không được để trống",
-  codeHint: "Thu ngân nhập mã này trên màn hình POS để kích hoạt giảm giá.",
+  codeHint:
+    "Khách nhập trên QR gọi món, hoặc thu ngân / phục vụ nhập trên POS.",
   valueLabel: "Giá trị giảm",
   pctValueLabel: "Tỷ lệ giảm giá (%)",
   vndValueLabel: "Số tiền giảm (VNĐ)",

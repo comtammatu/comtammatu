@@ -241,22 +241,29 @@ export default async function PurchaseOrdersPage({
 
   return (
     <AppPage width="xwide" density="compact">
-      <AppPageHeader title={messages.inventory.po.workspaceTitle} />
+      <AppPageHeader
+        title={messages.inventory.po.workspaceTitle}
+        description={messages.inventory.po.workspaceDescription}
+      />
       <AppPageTabs
         items={[
           {
             value: "needs",
-            label: "Nhu cầu mua",
+            label: messages.inventory.po.needsTab,
             count: demandRows.filter((row) =>
               ["submitted", "pending_allocation", "partially_ordered"].includes(
                 row.status,
               ),
             ).length,
           },
-          { value: "orders", label: "Đơn mua", count: poRows.length },
+          {
+            value: "orders",
+            label: messages.inventory.po.ordersTab,
+            count: poRows.length,
+          },
         ]}
         defaultValue={defaultTab}
-        ariaLabel="Mua hàng"
+        ariaLabel={messages.inventory.po.workspaceTabsAria}
         queryKeysByValue={{
           needs: [
             "demandId",

@@ -139,12 +139,16 @@ const STATUS_DOMAINS = {
       checked_out: "default",
       in_shift: "secondary",
       stale_open: "destructive",
+      scheduled: "info",
+      day_off: "secondary",
     },
     dots: {
       present: "bg-success",
       late: "bg-warning",
       absent: "bg-destructive",
       half_day: "bg-info",
+      scheduled: "bg-info",
+      day_off: "bg-muted-foreground",
     },
   },
   "leave-request": {

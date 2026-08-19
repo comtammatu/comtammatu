@@ -32,10 +32,81 @@ export interface ShiftAssignmentCandidate {
   endTime: string;
 }
 
+/** Floor staff may punch this many minutes before scheduled start. */
+export const CLOCK_IN_EARLY_MINUTES = 60;
+
+export type ClockInGate =
+  | {
+      kind: "open";
+      shiftId: number;
+      businessDate: string;
+      shiftName: string | null;
+      startTime: string;
+      endTime: string;
+    }
+  | {
+      kind: "too_early";
+      shiftId: number;
+      businessDate: string;
+      shiftName: string | null;
+      startTime: string;
+      endTime: string;
+      clockInFromMinutes: number;
+    }
+  | {
+      kind: "too_late";
+      shiftName: string | null;
+      endTime: string;
+    }
+  | { kind: "unassigned" }
+  | { kind: "multiple" };
+
+function isDayShiftWindow(startMin: number, endMin: number): boolean {
+  return endMin > startMin;
+}
+
+function isInClockInWindow(
+  nowMinutes: number,
+  startMin: number,
+  endMin: number,
+  earlyMinutes: number,
+): boolean {
+  const clockFrom = startMin - earlyMinutes;
+  if (isDayShiftWindow(startMin, endMin)) {
+    return nowMinutes >= clockFrom && nowMinutes < endMin;
+  }
+  return nowMinutes >= clockFrom || nowMinutes < endMin;
+}
+
+function isBeforeClockInWindow(
+  nowMinutes: number,
+  startMin: number,
+  endMin: number,
+  earlyMinutes: number,
+): boolean {
+  const clockFrom = startMin - earlyMinutes;
+  if (isDayShiftWindow(startMin, endMin)) {
+    return nowMinutes < clockFrom;
+  }
+  return nowMinutes >= endMin && nowMinutes < clockFrom;
+}
+
+function isAfterClockInWindow(
+  nowMinutes: number,
+  startMin: number,
+  endMin: number,
+): boolean {
+  if (isDayShiftWindow(startMin, endMin)) {
+    return nowMinutes >= endMin;
+  }
+  return nowMinutes >= endMin && nowMinutes < startMin;
+}
+
 export function listAssignedShiftsInWindow(
   assignments: readonly ShiftAssignmentCandidate[],
   calendarDate: string,
   nowMinutes: number,
+  earlyMinutes: number = CLOCK_IN_EARLY_MINUTES,
 ): ShiftAssignmentCandidate[] {
   if (assignments.length === 0) return [];
 
@@ -46,15 +117,12 @@ export function listAssignedShiftsInWindow(
       const endMin = parseClockTimeToMinutes(assignment.endTime);
       if (startMin === null || endMin === null) return null;
 
-      const isDayShift = endMin > startMin;
       const inWindowToday =
         assignment.workDate === calendarDate &&
-        (isDayShift
-          ? nowMinutes >= startMin && nowMinutes < endMin
-          : nowMinutes >= startMin || nowMinutes < endMin);
+        isInClockInWindow(nowMinutes, startMin, endMin, earlyMinutes);
       const overnightYesterday =
         assignment.workDate === previousDate &&
-        !isDayShift &&
+        !isDayShiftWindow(startMin, endMin) &&
         nowMinutes < endMin;
 
       if (!inWindowToday && !overnightYesterday) return null;
@@ -67,11 +135,13 @@ export function pickAssignedShiftInWindow(
   assignments: readonly ShiftAssignmentCandidate[],
   calendarDate: string,
   nowMinutes: number,
+  earlyMinutes: number = CLOCK_IN_EARLY_MINUTES,
 ): { shiftId: number; businessDate: string; shiftName: string | null } | null {
   const eligible = listAssignedShiftsInWindow(
     assignments,
     calendarDate,
     nowMinutes,
+    earlyMinutes,
   );
   if (eligible.length !== 1) return null;
 
@@ -81,6 +151,80 @@ export function pickAssignedShiftInWindow(
     businessDate: best.workDate,
     shiftName: best.shiftName,
   };
+}
+
+export function resolveClockInGate(
+  assignments: readonly ShiftAssignmentCandidate[],
+  calendarDate: string,
+  nowMinutes: number,
+  earlyMinutes: number = CLOCK_IN_EARLY_MINUTES,
+): ClockInGate {
+  const open = listAssignedShiftsInWindow(
+    assignments,
+    calendarDate,
+    nowMinutes,
+    earlyMinutes,
+  );
+  if (open.length > 1) return { kind: "multiple" };
+  const current = open[0];
+  if (current) {
+    return {
+      kind: "open",
+      shiftId: current.shiftId,
+      businessDate: current.workDate,
+      shiftName: current.shiftName,
+      startTime: current.startTime,
+      endTime: current.endTime,
+    };
+  }
+
+  const upcoming = assignments
+    .map((assignment) => {
+      if (assignment.workDate !== calendarDate) return null;
+      const startMin = parseClockTimeToMinutes(assignment.startTime);
+      const endMin = parseClockTimeToMinutes(assignment.endTime);
+      if (startMin === null || endMin === null) return null;
+      if (!isBeforeClockInWindow(nowMinutes, startMin, endMin, earlyMinutes)) {
+        return null;
+      }
+      return { assignment, startMin };
+    })
+    .filter((row): row is NonNullable<typeof row> => row !== null)
+    .sort((a, b) => a.startMin - b.startMin);
+  const next = upcoming[0];
+  if (next) {
+    return {
+      kind: "too_early",
+      shiftId: next.assignment.shiftId,
+      businessDate: next.assignment.workDate,
+      shiftName: next.assignment.shiftName,
+      startTime: next.assignment.startTime,
+      endTime: next.assignment.endTime,
+      clockInFromMinutes: next.startMin - earlyMinutes,
+    };
+  }
+
+  const ended = assignments
+    .map((assignment) => {
+      if (assignment.workDate !== calendarDate) return null;
+      const startMin = parseClockTimeToMinutes(assignment.startTime);
+      const endMin = parseClockTimeToMinutes(assignment.endTime);
+      if (startMin === null || endMin === null) return null;
+      if (!isAfterClockInWindow(nowMinutes, startMin, endMin)) return null;
+      return { assignment, endMin };
+    })
+    .filter((row): row is NonNullable<typeof row> => row !== null)
+    .sort((a, b) => b.endMin - a.endMin);
+  const last = ended[0];
+  if (last) {
+    return {
+      kind: "too_late",
+      shiftName: last.assignment.shiftName,
+      endTime: last.assignment.endTime,
+    };
+  }
+
+  return { kind: "unassigned" };
 }
 
 export function resolveShiftBusinessDate(

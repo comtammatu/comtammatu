@@ -446,6 +446,44 @@ test("receipt line amounts stay gross when vat_rate is absent", () => {
   );
 });
 
+test("receipt item discount prints under the line without changing Thành tiền", () => {
+  const receipt = SAMPLE_PAYLOADS.receipt as Extract<
+    PrintPayload,
+    { kind: "receipt" }
+  >;
+  const payload: PrintPayload = {
+    ...receipt,
+    items: receipt.items.map((item, index) =>
+      index === 0
+        ? {
+            ...item,
+            discount_amount: 10_000,
+            discount_note: "Tặng món · TET10",
+          }
+        : item,
+    ),
+    discount_amount: 0,
+  };
+  const lines = renderDocumentToOps(buildFallbackDocument(payload)).flatMap(
+    (op) => (op.kind === "line" ? [op.text] : []),
+  );
+
+  assert.ok(
+    lines.some(
+      (line) => /^\|\s*1\|Cơm tấm/.test(line) && line.includes("90.000đ"),
+    ),
+    "item Thành tiền must stay gross",
+  );
+  assert.ok(
+    lines.some((line) => line.includes("Khuyến mãi: -10.000đ")),
+    "missing item Khuyến mãi subline",
+  );
+  assert.ok(
+    lines.some((line) => line.includes("Tặng món · TET10")),
+    "missing item discount note",
+  );
+});
+
 test("receipt render wraps long branch address", () => {
   const branchAddress =
     "123 Nguyễn Huệ, Phường Bến Nghé, Quận 1, Thành phố Hồ Chí Minh";

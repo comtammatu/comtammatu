@@ -30,8 +30,10 @@ export const inventory = {
     laneHint: "Mở danh sách và làm tiếp trong phân hệ.",
     attentionTitle: "Cần xử lý",
     attentionGrn: "Chờ nhập",
+    attentionGrnPrice: "Chờ đơn giá",
     attentionWaste: "Chờ duyệt hao",
-    attentionTransfers: "YCH đang mở",
+    attentionStockRequests: "Yêu cầu hàng đang mở",
+    attentionTransfers: "Điều chuyển đang giao",
   },
   productionDetail: {
     kpiLines: "Dòng NL",
@@ -393,11 +395,14 @@ export const inventory = {
       nameRequired: "Tên nguyên liệu không được trống",
       namePlaceholder: "Ví dụ: Sườn cốt lết",
       skuLabel: "Mã hàng",
-      referenceCostLabel: "Giá nhập tham chiếu (VND)",
+      referenceCostLabel: "Giá tham chiếu",
+      referenceCostHint:
+        "Gợi ý catalog theo Đơn vị chuẩn. Không phải Giá vốn tồn — giá sổ đến từ Đơn giá phiếu nhập.",
+      referenceCostEmpty: "Chưa có gợi ý catalog. Giá vốn xem ở Tồn kho.",
       itemKindLabel: "Loại hàng",
       finishedGoodLabel: "Là thành phẩm",
       finishedGoodHint:
-        "Chỉ hàng Bếp Trung Tâm sản xuất, có công thức sản xuất. Hàng mua là nguyên liệu.",
+        "Bật khi hàng do Bếp Trung Tâm nấu và có công thức sản xuất. Không mua từ nhà cung cấp. Nguồn hàng thường là Bếp Trung Tâm.",
       minStockLabel: "Tồn tối thiểu",
       maxStockLabel: "Tồn tối đa",
       reorderPointLabel: "Điểm đặt hàng",
@@ -405,6 +410,8 @@ export const inventory = {
       reloadAfterSaveFailed:
         "Đã lưu nhưng chưa tải lại được danh sách nguyên liệu.",
       defaultFulfillSiteKindLabel: "Nguồn hàng",
+      defaultFulfillSiteKindHint:
+        "Kho nào giao khi chi nhánh xin hàng. Không phải nơi đang chứa tồn, không phải đơn vị đo.",
       defaultFulfillSiteKindNone: "Không gán",
       defaultFulfillSiteKindCentralSupply: "Kho Tổng",
       defaultFulfillSiteKindCentralKitchen: "Bếp Trung Tâm",
@@ -695,6 +702,8 @@ export const inventory = {
     saveAllocationAction: "Lưu phân bổ",
     approveAllocationAction: "Duyệt & tạo đơn mua",
     noActiveSuppliers: "Chưa có NCC đang hoạt động.",
+    chooseSupplier: "Chọn nhà cung cấp",
+    addAllocationLine: "Thêm dòng phân bổ",
     allocationProgress: (allocated: number, remaining: number, unit: string) =>
       `Đã phân bổ ${allocated} · Còn thiếu ${Math.max(remaining, 0)} ${unit}`,
     approveSuccess: (codes: string[]) =>
@@ -1113,7 +1122,10 @@ export const inventory = {
   po: {
     workspaceTitle: "Mua hàng",
     workspaceDescription:
-      "Lập nhu cầu, phân bổ nhà cung cấp và theo dõi nhận hàng.",
+      "Đơn mua theo từng nhà cung cấp. Phiếu nhập ghi Đơn giá khi nhận hàng.",
+    needsTab: "Yêu cầu mua",
+    ordersTab: "Đơn mua",
+    workspaceTabsAria: "Mua hàng",
     searchPlaceholder: "Tìm theo số đơn mua, nhà cung cấp hoặc ghi chú",
     statusFilterAria: "Trạng thái đơn mua",
     statusFilterPlaceholder: "Trạng thái",
@@ -1181,7 +1193,7 @@ export const inventory = {
     loadErrorDescription: "Hãy tải lại trước khi tiếp tục mua hoặc nhận hàng.",
     emptyInitialTitle: "Chưa có đơn đặt hàng",
     emptyInitialDescription:
-      "Đơn mua sẽ xuất hiện sau khi được tạo từ yêu cầu mua.",
+      "Tạo đơn mua từ nguyên liệu đã gán nhà cung cấp.",
     lineCount: (count: number) => `${formatCount(count)} dòng`,
     supplierRequired: "Nhà cung cấp",
     quantityShort: "SL",

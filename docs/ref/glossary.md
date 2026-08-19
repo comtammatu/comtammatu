@@ -48,6 +48,8 @@ approved file extensions.
 | `draft` / `template` / `checklist` / `inbox` / `ID` / `job` / `sheet` in UI | Vietnamese business wording (`bản nháp`, `mẫu`, `việc trong ca`, `mã …`) |
 | `Topping` / `blind` / `peer cross` | `Món thêm` / `đếm mù` / `đếm chéo` |
 | Embedded `GRN`/`PO` in UI sentences | `phiếu nhập` / `đơn đặt hàng` (acronym only as pill/badge) |
+| `YCH` / `YCM` in chrome sentences | `Yêu cầu hàng` / `Yêu cầu mua` (badge/pill OK until those docs hide) |
+| `Chờ hóa đơn` on GRN valuation chrome | `Chờ đơn giá` (giá ghi trên phiếu nhập; HĐ NCC không định giá tồn) |
 | `Quầy Bếp` (chrome) | `KDS` |
 | `Runner` (chrome) / `Màn gọi số` on tiles/nav | `Gọi số` (`pickup_display`) |
 | `Quản lý kho` / `Bản điều hành kho` (module chrome) | `Kho hàng` (role title `Quản lý kho Tổng` stays) |
@@ -455,7 +457,7 @@ domain doc.
 | `combo` | combo | Bundled sellable set under one price/promo. |
 | `promotion` | Khuyến mãi | Owner campaign that attributes a POS discount (ADR 0039). |
 | `free_item` | Tặng món trên đơn | Staff-selected item-level comp of units already on the POS order; optional max per order (ADR 0039). |
-| `promo_code` | Mã giảm | Reusable campaign code entered at POS. |
+| `promo_code` | Mã giảm | Reusable campaign code entered at POS or by the guest on QR gọi món. |
 | `voucher_code` | Mã voucher | One-time unique code with optional face value. |
 | `portion_quantity` | số phần (`Nx`) | Leading `Nx` = number of main portions. |
 | `side_portion_qty` | SL trên phần (`xN`) | Trailing `xN` = qty per portion, not multiplied across portions. |
@@ -479,9 +481,10 @@ Detail: `inventory.md`, `inventory-sop.md`.
 
 | Term | Label | Definition |
 | --- | --- | --- |
-| `stock_request` | yêu cầu hàng | Internal replenishment request from central sites to a branch. |
-| `purchase_request` | yêu cầu mua | Central purchase need that may spawn POs per supplier. |
-| `purchase_order` | đơn đặt hàng NCC | Commitment to one supplier under one purchase request. |
+| `stock_request` | yêu cầu hàng | Phiếu vận hành đã rút (`YC`). Giữ hàng đến freeze-then-drop; chi nhánh xin hàng bằng DC do CN tạo. |
+| `purchase_request` | yêu cầu mua | Phiếu vận hành đã rút (`YCM`). Giữ hàng đến freeze-then-drop; kho trung tâm lập PO trực tiếp. |
+| `purchase_order` | đơn đặt hàng NCC | Một NCC + một kho nhận. PO mới không gắn YCM; phiếu cũ có thể còn trỏ YCM. |
+| `preferred_supplier` | NCC ưu tiên | `supplier_items.is_preferred` — default NCC on the allocate worksheet when a demand line maps to more than one supplier. |
 | `goods_received_note` | phiếu nhập kho | One physical receipt against one PO. |
 | `supplier_invoice` | hóa đơn NCC | Supplier input invoice; AP and VAT only (ADR 0041). Inventory book price is the GRN unit price. |
 | `accounts_payable` | công nợ NCC | Amount still owed after payments/credits. |
@@ -495,7 +498,8 @@ Detail: `inventory.md`, `inventory-sop.md`.
 | `consumption` | tiêu hao | Stock decrease from sale, production, waste, or approved use. |
 | `stocktake` / `inventory_count_slip` | kiểm kê / phiếu đếm tồn | Session that counts on-hand then confirms to adjust stock / shift-assigned staff slip (review only; not a second stocktake). |
 | `base_unit` / `entry_unit_id` / `to_base_factor` | đơn vị chuẩn / đơn vị chứng từ / quy đổi | Ledger unit / document unit / snapshot factor to base. |
-| `purchase_unit_cost` / `average_unit_cost` / `weighted_average_cost` | đơn giá nhập / giá vốn BQ (`WAC`) | Confirmed GRN net unit price quoted per `unit_cost_unit_id` / company WAC. Invoice does not restate stock. |
+| `default_fulfill_site_kind` | Nguồn hàng | Prefill Kho Tổng / Bếp Trung Tâm khi chi nhánh xin hàng (YCH → DC). Không phải kho đang chứa tồn. |
+| `purchase_unit_cost` / `average_unit_cost` / `weighted_average_cost` | đơn giá nhập / giá vốn BQ (`WAC`) | Confirmed GRN net unit price quoted per `unit_cost_unit_id` / company WAC. Invoice does not restate stock. Queue chrome for draft lines missing that price: `Chờ đơn giá`. |
 | `reference_unit_cost` / `movement_unit_cost` / `inventory_value` / `company_wac` / `production_wac` | giá tham chiếu / đơn giá ghi sổ / giá trị tồn / giá vốn / giá vốn mẻ | Catalog hint cost / movement snapshot cost / book value of on-hand / company WAC / FG batch WAC. |
 | `raw_material` / `finished_good` | nguyên liệu / thành phẩm | Hàng mua (PO/GRN/NCC) / hàng Bếp Trung Tâm sản xuất có công thức. |
 | `recipe` / `production_recipe` / `production_order` | định mức món bán / công thức sản xuất / lệnh sản xuất | POS consumption BOM / FG BOM / production run. |

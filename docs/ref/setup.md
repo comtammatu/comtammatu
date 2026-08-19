@@ -115,6 +115,7 @@ Thiết lập các biến sau trên Vercel **Production** (và Production only):
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase API |
 | `UPSTASH_REDIS_REST_URL` | Upstash console |
 | `UPSTASH_REDIS_REST_TOKEN` | Upstash console |
+| `AI_GATEWAY_API_KEY` | Không bắt buộc. Giọng POS/KDS cloud; để trống thì dùng giọng trình duyệt |
 
 Không set `VERCEL_URL` thủ công; Vercel tự inject biến này.
 

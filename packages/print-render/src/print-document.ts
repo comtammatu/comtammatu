@@ -74,6 +74,8 @@ export type PrintDocumentReceiptItem = {
     quantity?: number;
   }> | null;
   note?: string | null;
+  discount_amount?: number | null;
+  discount_note?: string | null;
 };
 
 export type PrintDocumentItemsTableBlock = {

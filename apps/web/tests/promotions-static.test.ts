@@ -123,6 +123,15 @@ test("promotions migration writes existing discount columns via SECURITY DEFINER
     freeItemStaffQty,
     /p_free_item_qty IS NOT NULL AND p_free_item_qty < 1/,
   );
+
+  const freeItemNullQty = readRepo(
+    "supabase/migrations/20260819125825_promotion_free_item_null_qty_candidates.sql",
+  );
+  assert.match(freeItemNullQty, /CREATE OR REPLACE FUNCTION public\.promotion_free_item_candidates\(/);
+  assert.doesNotMatch(
+    freeItemNullQty,
+    /COALESCE\(p_promo\.free_item_qty, 0\) < 1/,
+  );
 });
 
 test("promotions ACL is Owner-only with promo keys", () => {
@@ -309,7 +318,7 @@ test("Owner promotions LIST/DOC and POS Mã giảm surfaces exist", () => {
   const glossary = readRepo("docs/ref/glossary.md");
   assert.match(glossary, /`promotion` \| Khuyến mãi/);
   assert.match(glossary, /`free_item` \| Tặng món trên đơn/);
-  assert.match(glossary, /`promo_code` \| Mã giảm/);
+  assert.match(glossary, /`promo_code` \| Mã giảm \| .*QR gọi món/);
   assert.match(glossary, /`voucher_code` \| Mã voucher/);
 });
 

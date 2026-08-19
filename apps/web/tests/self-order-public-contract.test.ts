@@ -6,6 +6,8 @@ import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import {
   publicSelfOrderSnapshotSchema,
   selfOrderPaymentActionResponseSchema,
+  selfOrderPromotionApplyRequestSchema,
+  selfOrderPromotionClearRequestSchema,
   selfOrderSubmitActionResponseSchema,
 } from "../lib/self-order/contracts";
 
@@ -125,6 +127,73 @@ test("public snapshot accepts the stored request and current order shapes", () =
           },
         ],
       },
+    }).success,
+    true,
+  );
+});
+
+test("public snapshot accepts guest promo fields on the open order", () => {
+  assert.equal(
+    publicSelfOrderSnapshotSchema.safeParse({
+      ...publicSnapshot,
+      state: "open",
+      openOrderCount: 1,
+      order: {
+        id: 12,
+        orderNumber: "MT-12",
+        status: "preparing",
+        paymentStatus: "unpaid",
+        paymentMethod: null,
+        subtotal: 65_000,
+        serviceCharge: 0,
+        discountAmount: 10_000,
+        orderDiscountAmount: 10_000,
+        itemDiscountAmount: 0,
+        discountNote: "Tết · TET10",
+        promotionName: "Tết",
+        promotionCode: "TET10",
+        totalAmount: 55_000,
+        itemCount: 1,
+        items: [
+          {
+            id: 20,
+            menuItemId: 2,
+            itemName: "Cơm tấm sườn",
+            variantId: null,
+            variantName: null,
+            quantity: 1,
+            unitPrice: 65_000,
+            lineTotal: 65_000,
+            discountAmount: 5_000,
+            discountNote: "Tặng món · TET10",
+            modifiers: [],
+            sides: [],
+            note: null,
+          },
+        ],
+      },
+    }).success,
+    true,
+  );
+});
+
+test("guest promo mutation contracts require a client operation id", () => {
+  assert.equal(
+    selfOrderPromotionApplyRequestSchema.safeParse({
+      clientOpId: "0b8c51aa-1e3a-4c4d-a407-1e37128959ac",
+      code: "TET10",
+    }).success,
+    true,
+  );
+  assert.equal(
+    selfOrderPromotionApplyRequestSchema.safeParse({
+      clientOpId: "0b8c51aa-1e3a-4c4d-a407-1e37128959ac",
+    }).success,
+    false,
+  );
+  assert.equal(
+    selfOrderPromotionClearRequestSchema.safeParse({
+      clientOpId: "0b8c51aa-1e3a-4c4d-a407-1e37128959ac",
     }).success,
     true,
   );

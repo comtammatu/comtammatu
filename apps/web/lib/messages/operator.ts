@@ -45,12 +45,26 @@ export const operator = {
     statusNotRequired: "Không bắt buộc chấm công",
     statusDone: "Đã hoàn thành hôm nay",
     statusNotStarted: "Chưa chấm công",
+    statusClockInTooEarly: "Chưa đến giờ chấm công",
+    statusClockInTooLate: "Đã hết giờ chấm công",
+    statusShiftUnassigned: "Chưa phân ca hôm nay",
     statusNoProfile: "Thiếu hồ sơ nhân viên",
     statusNoBranch: "Thiếu chi nhánh",
-    descriptionCheckoutPending: "Yêu cầu kết ca đã gửi, chờ quản lý duyệt.",
+    descriptionCheckoutPending:
+      "Yêu cầu kết ca đã gửi, chờ quản lý duyệt. Nếu quên duyệt, hệ thống tự duyệt sau 2 giờ.",
     descriptionNotRequired: "Tài khoản này không có ca cần chấm công hôm nay.",
+    descriptionClockInTooEarly: (
+      shiftName: string,
+      startTime: string,
+      fromTime: string,
+    ) =>
+      `${shiftName ? `Ca ${shiftName}` : "Ca làm của bạn"} bắt đầu lúc ${startTime}. Bạn có thể chấm công từ ${fromTime}.`,
+    descriptionClockInTooLate: (shiftName: string, endTime: string) =>
+      `${shiftName ? `Ca ${shiftName}` : "Ca làm của bạn"} đã hết giờ chấm công lúc ${endTime}.`,
     descriptionShiftUnassigned:
       "Chưa được phân ca hôm nay. Liên hệ quản lý để được xếp ca.",
+    descriptionMultipleShifts:
+      "Có nhiều ca trong khung giờ. Liên hệ quản lý để xếp đúng một ca.",
     checkInShort: "Vào",
     checkOutShort: "Ra",
     clockIn: "Chấm công vào",
@@ -74,7 +88,7 @@ export const operator = {
     workflowTasksDescription: "Làm việc đầu ca, rồi việc cuối ca.",
     workflowCheckoutStep: "Kết ca",
     workflowManagerCheckoutStep: "Ra ca",
-    workflowCheckoutDescription: "Gửi kết ca.",
+    workflowCheckoutDescription: "Chốt giờ ra.",
     viewSchedule: "Xem lịch ca",
     profileTitle: "Hồ sơ",
     checkoutApprovalsTitle: "Duyệt kết ca",

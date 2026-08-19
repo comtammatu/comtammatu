@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { getEmployeeContext } from "./staff-runtime-context";
-import { pickAssignedShiftInWindow } from "./default-shift";
+import { resolveClockInGate, type ClockInGate } from "./default-shift";
 import { isRequiredChecklistItemComplete } from "./checklist-complete";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import {
@@ -59,6 +59,8 @@ interface TodayAttendance {
 export interface TodayShiftEntry {
   shiftId: number;
   shiftName: string | null;
+  startTime: string | null;
+  endTime: string | null;
   checkIn: string | null;
   checkOut: string | null;
   checkoutRequestedAt: string | null;
@@ -75,6 +77,7 @@ export interface TodayWorkState {
   attendanceRequired: boolean;
   approvalTargetLabel: string;
   shiftUnassigned: boolean;
+  clockInGate: ClockInGate;
   attendance: TodayAttendance | null;
   staleOpenShift: { id: number; date: string } | null;
   todayShifts: TodayShiftEntry[];
@@ -188,6 +191,7 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
       attendanceRequired: false,
       approvalTargetLabel: getApprovalTargetLabel(null),
       shiftUnassigned: false,
+      clockInGate: { kind: "unassigned" },
       attendance: null,
       staleOpenShift: null,
       todayShifts: [],
@@ -287,13 +291,22 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
     })
     .filter((row): row is NonNullable<typeof row> => row !== null);
 
-  const assignedShift = pickAssignedShiftInWindow(
+  const clockInGate = resolveClockInGate(
     assignmentCandidates,
     calendarDate,
     nowMinutes,
   );
+  const assignedShift =
+    clockInGate.kind === "open"
+      ? {
+          shiftId: clockInGate.shiftId,
+          businessDate: clockInGate.businessDate,
+          shiftName: clockInGate.shiftName,
+        }
+      : null;
   const shiftUnassigned =
-    !assignedShift && isDefaultAttendanceRole(claims.user_role);
+    clockInGate.kind === "unassigned" &&
+    isDefaultAttendanceRole(claims.user_role);
   const currentShiftId = assignedShift?.shiftId ?? null;
   const businessDate = assignedShift?.businessDate ?? calendarDate;
   const records = (candidateRecords ?? []).filter((item) => {
@@ -316,28 +329,35 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
     records.find((item) => !item.check_out && item.check_in) ??
     null;
 
-  const todayShifts: TodayShiftEntry[] = assignedShift
-    ? (() => {
-        const shift = (activeShifts ?? []).find(
-          (item) => item.id === assignedShift.shiftId,
-        );
-        const rec = records.find(
-          (item) =>
-            item.shift_id === assignedShift.shiftId &&
-            item.date === assignedShift.businessDate,
-        );
-        return [
-          {
-            shiftId: assignedShift.shiftId,
-            shiftName: shift?.name ?? assignedShift.shiftName,
-            checkIn: rec?.check_in ?? null,
-            checkOut: rec?.check_out ?? null,
-            checkoutRequestedAt: rec?.checkout_requested_at ?? null,
-            isCurrent: true,
-          },
-        ];
-      })()
-    : [];
+  const displayShiftId =
+    assignedShift?.shiftId ??
+    (clockInGate.kind === "too_early" ? clockInGate.shiftId : null);
+  const todayShifts: TodayShiftEntry[] = assignmentCandidates
+    .filter(
+      (assignment) =>
+        assignment.workDate === calendarDate ||
+        assignment.workDate === previousDate,
+    )
+    .map((assignment) => {
+      const rec = (candidateRecords ?? []).find(
+        (item) =>
+          item.shift_id === assignment.shiftId &&
+          item.date === assignment.workDate,
+      );
+      const catalog = (activeShifts ?? []).find(
+        (item) => item.id === assignment.shiftId,
+      );
+      return {
+        shiftId: assignment.shiftId,
+        shiftName: catalog?.name ?? assignment.shiftName,
+        startTime: assignment.startTime,
+        endTime: assignment.endTime,
+        checkIn: rec?.check_in ?? null,
+        checkOut: rec?.check_out ?? null,
+        checkoutRequestedAt: rec?.checkout_requested_at ?? null,
+        isCurrent: displayShiftId === assignment.shiftId,
+      };
+    });
 
   const branchData = normalizeBranch(record?.branches);
   const shiftData = normalizeShift(record?.shifts);
@@ -512,7 +532,7 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
   const requiredRemaining = Math.max(requiredTotal - requiredDone, 0);
   const attendanceRequired =
     Boolean(attendance) ||
-    Boolean(assignedShift) ||
+    clockInGate.kind !== "unassigned" ||
     isDefaultAttendanceRole(claims.user_role) ||
     managerAttendanceOnly;
 
@@ -566,6 +586,7 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
     attendanceRequired,
     approvalTargetLabel: getApprovalTargetLabel(claims.user_role),
     shiftUnassigned,
+    clockInGate,
     attendance,
     staleOpenShift,
     todayShifts,

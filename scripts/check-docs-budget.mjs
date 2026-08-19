@@ -23,7 +23,7 @@ const LINE_BUDGETS = [
   { path: "docs/spec/toast-notification-system.md", maxLines: 360 },
   { path: "docs/spec/page-archetypes.md", maxLines: 700 },
   { path: "docs/ref/inventory.md", maxLines: 400 },
-  { path: "docs/ref/screen-context-map.md", maxLines: 500 },
+  { path: "docs/ref/screen-context-map.md", maxLines: 540 },
   { path: "docs/ref/payroll-pit.md", maxLines: 300 },
   { path: "docs/modules/finance.md", maxLines: 280 },
   { path: "docs/modules/auth.md", maxLines: 260 },

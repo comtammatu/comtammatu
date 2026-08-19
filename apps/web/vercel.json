@@ -17,6 +17,10 @@
     {
       "path": "/api/cron/tax-invoice-issue",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/attendance-checkout-auto-approve",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

@@ -19,8 +19,9 @@ with toast / durable / Telegram (`docs/spec/toast-notification-system.md`).
 1. ADR: `docs/plan/adr/0008-operational-audio-alerts.md`
 2. Entrypoint + mode: `apps/web/lib/operational-audio.ts`
 3. Beep: `apps/web/lib/audio-signal.ts`
-4. KDS taxonomy: `…/kds/_lib/sound-alerts.ts`
-5. Prefs: `apps/web/lib/device-prefs.ts` (+ `scripts/check-client-storage.mjs`)
+4. Voice: `…/operational-voice.ts` + `/api/operational-audio/speak`
+5. KDS taxonomy: `…/kds/_lib/sound-alerts.ts`
+6. Prefs: `apps/web/lib/device-prefs.ts` (+ `scripts/check-client-storage.mjs`)
 
 ## Core Model
 
@@ -29,12 +30,12 @@ Board/realtime event on open POS|KDS
   → classify stable alert kind
   → device mode (off | beep | voice | beep+voice)
   → beep: mapped SignalTone (debounce)
-  → voice: speechSynthesis template (single-flight + coalesce)
+  → voice: cached cloud clip else browser TTS (single-flight)
   → UI toast/board independent
 ```
 
-**Non-goals:** cloud/realtime TTS; clip pack MVP; full menu readouts;
-server-synced prefs; `public.notifications` inserts; Pickup display audio (needs ADR).
+**Non-goals:** uncached live TTS on the beep path; clip pack MVP; full menu
+readouts; server-synced prefs; `public.notifications`; Pickup display audio.
 
 ## Alert Catalog
 
@@ -51,16 +52,20 @@ Align with `getKdsNewTicketSignalTone` / alert kinds in `sound-alerts.ts`.
 
 ### POS
 
-| kind | When | Beep | Voice (VI) | Notes |
-| --- | --- | --- | --- | --- |
-| `pos.self_order` | New QR self-order needs approval | `pos-self-order` | “Khách tự gọi” | Distinct from POS order ping |
-| `pos.payment_received` | Table order → `paid` | `pos` | “Bàn {table} đã thanh toán” | Real table only |
-| `pos.print_failed` | Print job failed | `pos` | “In lỗi” | Critical |
-| `pos.out_of_stock` | KDS marked unavailable | `pos` | “Hết món” | Detail on UI |
+| kind | When | Beep | Voice (VI) |
+| --- | --- | --- | --- |
+| `pos.self_order` | QR request needs approval | `pos-self-order` | “Bàn {n} cần duyệt đơn” |
+| `pos.payment_call` | Guest cash / VietQR call | `pos-payment-call` | “Bàn {n} gọi thanh toán” |
+| `pos.staff_call` | Guest calls staff | `pos-staff-call` | “Bàn {n} gọi nhân viên” |
+| `pos.payment_received` | Order → `paid` | `pos-payment-received` | “Đã nhận {amount words}” |
+| `pos.print_failed` | Print job failed | `pos` | “In lỗi” |
+| `pos.out_of_stock` | KDS marked unavailable | `pos` | “Hết món” |
 
-No voice for every POS ping. QR self-order + payment-call beeps use dedicated
-tones (`pos-self-order` / `pos-payment-call`); payment-call does not speak —
-only confirmed table payment does.
+QR guest events use dedicated tones. One poll tick plays one guest alert
+(payment call > self-order > staff call). Store finite table lines including
+“Bàn {n} gọi món” (not a live POS kind yet). Do not prefetch every VND total:
+round to 1,000₫, speak Vietnamese words on demand, LRU ~80 amount clips.
+Routine order sync stays beep-only (`pos`).
 
 ## Audio Modes
 
@@ -82,30 +87,32 @@ supplies the user gesture for `AudioContext` / `speechSynthesis`.
 2. **Beep debounce** — ~2.5s per-tone unless `force` (preview).
 3. **Voice single-flight** — one utterance per page runtime.
 4. **Coalesce** — one sync tick: one beep (highest-priority kind) + at most one voice. KDS voice 15s quiet window (beep/toast/queue continue; no delayed speak). Mode preview bypasses window.
-5. **Length** — ≤ ~1.5s; reject sentence copy.
-6. **Failure** — no `vi-*` / speech error / autoplay block → skip voice; beep still follows mode; never throw to UI.
+5. **Length** — catalog ≤ ~1.5s; paid-amount speech may run longer.
+6. **Failure** — cloud 503 / timeout / no `vi-*` / autoplay block → skip or
+   browser TTS; beep still follows mode; never throw to UI.
 7. **Priority** — higher-priority voice MAY cut current; lower waiting may drop when coalesced.
 8. **Sequential** — in `beep+voice`: finish beep, wait 120 ms, then speak. Newer alert replaces voice still waiting.
 
 ## Voice / surfaces / API
 
-Engine: `speechSynthesis` + `SpeechSynthesisUtterance`; `lang = "vi-VN"`; first
-`vi-*` when list loaded (empty → speak; loaded no `vi-*` → skip). Templates
-pure/unit-tested; volume `1`. Kinds stable if brand pack replaces engine later.
+Engine: locked AI Gateway `openai/tts-1` clip through Web Audio. Fetch starts
+with the beep; play after 120 ms. Missing key/OIDC → `speechSynthesis` `vi-VN`.
+Allowlisted templates only. POS voice mode prefetches that branch’s table
+lines, not tables 1–99 and not bill totals. Cycle preview prefetches generics.
 
-- **KDS:** board = SoT; bell cycles mode; voice kind aligns with signal tone (no new-ticket Sonner).
-- **POS:** only four catalog kinds speak; payment request beep-only; confirmed payment needs real table.
+- **KDS:** board = SoT; bell cycles mode; voice kind aligns with signal tone.
+- **POS:** catalog kinds speak; guest events coalesce per tick; paid speaks amount.
 - **Other:** Owner / inventory / employee / pickup display — no operational audio.
 
 ```ts
 type OperationalAudioMode = "off" | "beep" | "voice" | "beep+voice";
 type OperationalAlertKind =
   | "kds.new" | "kds.append" | "kds.add_on"
-  | "pos.self_order" | "pos.payment_received" | "pos.print_failed" | "pos.out_of_stock";
-// playOperationalAlert({ kind, mode, slots?, force? }): void — no-op off, never throws, no notifications tables
+  | "pos.self_order" | "pos.payment_call" | "pos.staff_call"
+  | "pos.payment_received" | "pos.print_failed" | "pos.out_of_stock";
+// playOperationalAlert({ kind, mode, slots?, force? }): void
 ```
 
-Audio-namespace only — not durable notification `kind` registry. Tests:
-`operational-audio.test.ts`, `kds-sound-alerts.test.ts`. Gate: typecheck + lint
-+ build. **T2**; escalate **T3** if durable notifications / server prefs /
-schema. Acceptance history → ADR 0008.
+Audio-namespace only. Tests: `operational-audio.test.ts`,
+`vnd-vietnamese-speech.test.ts`, `operational-audio-tts-static.test.ts`.
+Gate: typecheck + lint + build. **T2**. History → ADR 0008.

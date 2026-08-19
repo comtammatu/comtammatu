@@ -5,6 +5,159 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Early clock-in, delayed checkout auto-approve, and upcoming schedule
+
+State: doing
+Kind: feature
+Tier: T3
+Lane: hr/self-service
+Exit: Assigned staff can punch 60 minutes before shift start; Ca names the wait ("chưa đến giờ chấm công") instead of "chưa phân ca"; "Lịch" shows rostered upcoming shifts; "Kết ca" waits for manager and auto-closes only after 2 hours if still pending.
+Evidence: `employee-default-shift.test.ts`, `schedule-month.test.ts`, `shift-clock-window-static.test.ts`, `checkout-auto-approve.test.ts`.
+
+UI Advisor Gate
+- Surface: `/br/[branchId]/shift` + `/shift/schedule` + `/me/clock` + `/me/schedule`; route family: branch personal / staff; plane: `branch` / `staff`; change: behavior + copy
+- Context: screen-context-map §2.4A Ca / "Lịch ca"; actor: cashier/chef/branch_staff; job: punch the assigned shift at the workplace and see the next rostered shifts
+- Journey: arrive early → wait copy with start/open time → punch from T-60; end of shift → "Kết ca" waits for manager → leftover pending auto-closes after 2 hours; "Lịch" lists upcoming roster
+- Information order: 1) assigned shift name/window 2) punch-open time 3) upcoming roster; exclude: wall-clock default shift
+- Pattern: LANDING + SETTINGS-PANEL punch; exemplar `lib/staff-runtime/page.tsx` + `schedule-client.tsx`
+- States: too_early / open / too_late / unassigned / working / checkout_pending / done
+- Block: none — existing BranchOperator/Employee panels
+- Responsive: phone primary
+- Verification: unit + static tests, cron registration
+
+- [ ] Smoke: arrive 30 minutes before a rostered shift and punch; "Lịch" shows the next assigned shift
+- [ ] Smoke: "Kết ca" stays pending for the manager; a leftover request older than 2 hours auto-closes
+
+UI Advisor Gate extras: clock-in still requires `shift_assignments`. Leftover checkout auto-approve runs on Vercel cron (`/api/cron/attendance-checkout-auto-approve`) because two unrelated pending migrations already occupy `supabase/migrations/`. Fold into a service-role RPC + pg_cron when that apply window is clean.
+
+## Self-Order guest promo codes and line discount visibility
+
+State: verify
+Kind: feature
+Tier: T3
+Lane: pos
+Exit: Guest can enter their own promo/voucher code on Self-Order G6 after one open POS order exists. Staff and guests see which line is discounted. Printed line amount stays gross; a promo subline names the item amount. Guest apply is order_pct / order_vnd / voucher_face only.
+Evidence: Applied Production `20260819131047` on `enloyfnuerqgaqderbwb` (dry-run list was that file only). Catalog: both guest RPCs `SECURITY DEFINER`, empty `search_path`, execute `service_role` only. `corepack pnpm db:types` regenerated (`self_order_apply_promotion_code`, `self_order_clear_promotion`). Static promo/print tests green. Full `corepack pnpm verify` still blocked by unrelated dirty-tree typecheck.
+
+UI Advisor Gate
+- Surface: `/q/[token]` G6 + POS order lines + receipt print; route family: public QR + station POS; plane: `public` + `station_chrome`; change: guest promo apply + line money visibility
+- Context: screen-context-map §2.12 / §2.4D; actor: guest on phone + cashier; job: apply a code and follow promotional money per line
+- Journey: staff opens table → guest opens bill → enters code → snapshot totals; live payment intent locks apply/clear
+- Information order: 1) discounted line net vs gross 2) campaign/code footer 3) payable total; exclude: picker kinds, cart-stage codes
+- Pattern: PUBLIC-WORKFLOW; block `public-transaction`; exemplar `apps/web/app/q/[token]/page.tsx` + `self-order-client.tsx` / `bill-drawer.tsx`
+- States: no open order / open / payment locked / applied / staff-required fail
+- Block: `public-transaction`
+- Responsive: phone-first bill sheet
+- Verification: static tests, print-render, `lint:copy`, `lint:migration-lineage`, `corepack pnpm verify`
+
+- [ ] Guest applies an order-level code on G6 after staff opens the table
+- [ ] Discounted POS/Self-Order/print lines show the promotional amount on that line
+
+## YCM/YCH schema cleanup (freeze then drop)
+
+State: blocked
+Kind: feature
+Tier: T3
+Lane: inventory
+Exit: Warehouse creates PO with `purchase_request_id` null and Auto-GRN; YCM/YCH writes frozen; tables dropped only after soak. Do not convert a YCM already turned into a PO, or a YCH already fulfilled into a received DC.
+Blocker: Production has no `create_purchase_order` without YCM (`send_purchase_order` dropped). Hiding YCM create would trap central warehouse / kitchen operators.
+Evidence: Production read-only 2026-08-19 (`enloyfnuerqgaqderbwb`): 1 open YCM (`partially_ordered`, ginseng 50 sets), 2 submitted YCH with received DCs, 0 PO without YCM. Plan section in `inventory_queue-first_84da3fb0.plan.md`.
+
+- [ ] Wave 1 T3 RPC `create_purchase_order` (null YCM, grant `po_create` to central ops, fold Auto-GRN)
+- [ ] Hide YCM create / allocate only after that RPC is Production-ready
+- [ ] Wave 3 dest-initiated DC + BM `inventory:transfer_create` (separate)
+- [ ] Wave 4 REVOKE write RPCs; Wave 5 soak then DROP FKs/tables
+
+## POS/KDS operational audio no longer mix guest events
+
+State: verify
+Kind: fix
+Tier: T2
+Lane: pos
+Exit: Open POS can tell QR self-order, staff call, payment call, and paid from each other and from KDS ticket beeps. One poll tick plays one guest alert. Staff call no longer shares the payment-call tone.
+Evidence: `operational-audio.test.ts`, `self-order-cutover-static.test.ts`, `self-order-staff-call-static.test.ts`, `kds-sound-alerts.test.ts` green. Web `tsc --noEmit` green on owned files. `lint:copy` + ESLint on owned files green. Full `corepack pnpm verify` blocked by unrelated dirty-tree `packages/shared/src/messages/promotions.ts` (duplicate `emptyDescription`) and `docs/modules/finance.md` budget.
+
+UI Advisor Gate
+- Surface: `/br/[branchId]/pos` audio + KDS tone isolation; route family: station POS; plane: `station_chrome`; change: operational audio catalog
+- Context: screen-context-map POS 2.1; actor: cashier on the open till; job: hear which QR guest event needs attention without confusing it for a kitchen ticket
+- Journey: guest submits / calls staff / asks to pay / paid → one distinct POS beep+voice; kitchen send stays on KDS tones
+- Information order: 1) payment call 2) self-order approval 3) staff call; exclude: durable notifications, Telegram
+- Pattern: existing station audio; exemplar `pos-desktop-inner.tsx`; data display: none (device-local sound)
+- States: audio off / beep / beep+voice; first poll seeds ids silent
+- Block: `pos-board` — audio only, no layout compose
+- Responsive: n/a
+- Verification: unit + static tests; owned-file typecheck/lint green; repo `verify` blocked by unrelated dirty tree
+
+- [ ] Cashier with beep+voice hears distinct copy for self-order, staff call, and payment
+
+## POS/KDS voice uses cached cloud TTS then louder browser fallback
+
+State: verify
+Kind: feature
+Tier: T2
+Lane: pos
+Exit: Beep stays immediate. Voice prefers cached AI Gateway clips played through Web Audio; missing key or timeout uses slower, clearer browser `vi-VN`. Free-form text cannot be synthesized.
+Evidence: `operational-audio.test.ts` allowlist + `operational-audio-tts-static.test.ts`.
+
+UI Advisor Gate
+- Surface: POS/KDS operational audio; route family: station; plane: `station_chrome`; change: voice engine
+- Context: screen-context-map POS 2.1 / KDS; actor: cashier/chef; job: hear catalog copy over kitchen noise
+- Journey: enable beep+voice → preview prefetches phrases → live alert fetches during beep → play after 120 ms
+- Information order: 1) beep 2) spoken kind+table; exclude: menu readouts
+- Pattern: existing station audio; exemplar `operational-audio.ts`; data display: none
+- States: cloud configured / unconfigured / timeout
+- Block: `pos-board` — audio only
+- Responsive: n/a
+- Verification: unit + static tests
+
+- [ ] Set `AI_GATEWAY_API_KEY` on Production and hear nova Vietnamese on POS beep+voice
+- [ ] With key unset, browser TTS still speaks and does not block the beep
+
+## POS stores table voice clips; paid amounts speak on demand
+
+State: verify
+Kind: feature
+Tier: T2
+Lane: pos
+Exit: Open POS with voice prefetches “Bàn {n} gọi món / cần duyệt đơn / gọi thanh toán / gọi nhân viên” for that branch’s tables. Paid speaks “Đã nhận {Vietnamese amount}” without prefetching every total.
+Evidence: `operational-audio.test.ts`, `vnd-vietnamese-speech.test.ts`, `operational-audio-tts-static.test.ts` green. Web `tsc --noEmit` green on owned files. ESLint on owned files green. Full `corepack pnpm verify` not claimed.
+
+UI Advisor Gate
+- Surface: POS operational audio; route family: station POS; plane: `station_chrome`; change: voice catalog + amount speech
+- Context: screen-context-map POS 2.1; actor: cashier; job: hear which table event fired, then hear the received total
+- Journey: enable voice → prefetch table lines → QR event speaks stored table clip → paid speaks on-demand amount
+- Information order: 1) table event 2) received amount; exclude: digit-by-digit totals, 1–99 blind prefetch
+- Pattern: existing station audio; exemplar `operational-audio-catalog.ts`; data display: none
+- States: table clip cached / amount miss / amount over 20M fallback
+- Block: `pos-board` — audio only
+- Responsive: n/a
+- Verification: unit + static tests
+
+- [ ] Voice mode on a branch with tables 3 and 12 stores those four table lines
+- [ ] Paying 165,000 speaks “Đã nhận một trăm sáu mươi lăm nghìn đồng” without a pre-warmed clip pack of every VND total
+
+## Inventory screen contract and landing queue
+
+State: doing
+Kind: feature
+Tier: T2
+Lane: inventory
+Exit: Every Inventory and Branch-stock `page.tsx` is listed in `docs/ref/screen-context-map.md` §2.5A with load / display / submit / current-vs-target. Control `/inventory` attention queue splits stock requests vs transfers and adds missing GRN unit-price. Catalog form and allocate 1-supplier drafts stay.
+Evidence: Static landing attention + wave23 tests. `lint:copy`. Canvas `inventory-screens.canvas.tsx`.
+
+UI Advisor Gate
+- Surface: `/inventory` landing + `/inventory/purchase-orders` chrome; route family: control inventory; plane: `control_surface`; change: copy + attention queues
+- Context: screen-context-map §2.5–2.5A; actor: owner / accountant / central; job: name the next warehouse document without mixing stock request and transfer
+- Journey: open Inventory home → attention names the document → deep-link list; recovery: empty queue hides the row
+- Information order: 1) open GRN 2) GRN missing unit price 3) stock request 4) transfer 5) waste; exclude: Finance AP, POS revenue
+- Pattern: LANDING queue already on page; exemplar `apps/web/app/(protected)/inventory/page.tsx`; data display: Item list
+- States: each queue 0 (hidden) vs >0
+- Block: none — existing `AppSection` + `ItemGroup` on this LANDING
+- Responsive: same IA, compact density
+- Verification: static tests, `lint:copy`, typecheck/lint/web tests owned here
+
+- [ ] Owner browse canvas + confirm next page family (fulfillment hub vs Branch doors)
+
 ## POS leftover cash counts on the paying till
 
 State: verify
@@ -142,17 +295,14 @@ UI Advisor Gate
 
 ## Unstick leftover HĐĐT (date drafts + uuid collision)
 
-State: doing
+State: verify
 Kind: fix
 Tier: T3
 Lane: finance/hddt
 Exit: 58 leftover signing invoices rebound to their Viettel originals; 58 misbound orders get new drafts queued with `allowBacklogSubmitDate`; 80 date-blocked drafts requeued the same way; paid `TC-260816-067-NHT` leaves `pending_payment`. New invoices still fail-close when the sale VN day is past. Same-day sales still send `paid_at`. Buyer window is `paid_at` from 22:00 VN, else `min(paid_at + 2h, 23:55 VN)`.
-Evidence: S-invoice lookup 2026-08-18: 58/58 leftovers found by order-id uuid, 0 by stored tax-invoice uuid; those numbers already sat on later Má Tư rows.
+Evidence: Production applied `20260818101813`, `20260818161136`, `20260818224935` after dry-run matched those files only. 58 leftovers `issued`; 58 stolen cancelled locally; 139 jobs flagged `allowBacklogSubmitDate` (80+58+1); `TC-260816-067-NHT` job queued on payment 482.
 
-- [ ] Deploy web so only flagged leftover jobs send submit-time `invoiceIssuedDate`
-- [ ] Apply HĐĐT migrations `20260818101813`, `20260818161136`, then `20260818224935` to Production `enloyfnuerqgaqderbwb` after dry-run equals exactly those files
 - [ ] Cron issues 80 date leftovers + 58 cloned misbound drafts + `TC-260816-067-NHT`; leftover 58 already `issued` after SQL
-- [ ] Owner/accountant: on `/finance/invoices` tap `Đưa tất cả lệch tổng vào hàng chờ` for mismatch only
 
 UI Advisor Gate
 - Surface: `/finance/invoices`; route family: control finance; plane: `control_surface`; change: copy

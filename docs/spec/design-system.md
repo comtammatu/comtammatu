@@ -427,9 +427,9 @@ that preserves hierarchy, touch targets, and scanability. `AppPage` owns outer
 rhythm and `Card` owns inner rhythm; route-local composition may differ for a
 distinct workflow, reviewed by rendered density rather than utility strings.
 
-`AppPage mobile` constrains content to the public workflow width; it does not
-reserve space for fixed chrome — the fixed/sticky owner provides its own
-clearance and safe-area padding.
+`AppPage mobile` constrains content to the public workflow width. Public
+workflow chrome is in-flow (`shrink-0`, opaque `bg-background`) outside the
+single scrollport (`workflow-safe-pt` / `workflow-safe-pb`); do not overlay with `fixed`/`sticky` + `bg-*/95` `backdrop-blur`.
 
 Use `CardContent flush` for table-edge or list-edge alignment and
 `CardContent scroll` for a horizontally scrolling table instead of overriding

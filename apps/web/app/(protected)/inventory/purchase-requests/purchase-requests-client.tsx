@@ -29,9 +29,12 @@ import {
   savePurchaseDemandAllocations,
 } from "../purchase-order-actions";
 import {
+  addPurchaseDemandAllocationRow,
   buildAutomaticPurchaseDemandAllocations,
   buildPurchaseOrderDrafts,
   findUnassignedPurchaseRequestItemIds,
+  reassignPurchaseDemandAllocationSupplier,
+  removePurchaseDemandAllocationRow,
   type PurchaseDemandAllocation,
   type PurchaseOrderDraft,
   type PurchaseOrderDraftLine,
@@ -383,7 +386,7 @@ export function PurchaseRequestsClient({
   }
 
   function patchAllocation(
-    supplierId: number,
+    supplierId: number | null,
     key: string,
     patch: Partial<PurchaseOrderDraftLine>,
   ) {
@@ -405,7 +408,8 @@ export function PurchaseRequestsClient({
     return allocationDrafts.flatMap((draft) =>
       draft.lines.flatMap((line) => {
         const quantity = Number(line.quantity);
-        return line.quantity.trim() !== "" &&
+        return draft.supplierId != null &&
+          line.quantity.trim() !== "" &&
           Number.isFinite(quantity) &&
           quantity > 0
           ? [
@@ -696,6 +700,7 @@ export function PurchaseRequestsClient({
         open={allocateOpen}
         selected={selected}
         allocationDrafts={allocationDrafts}
+        suppliers={suppliers}
         missingSupplierItems={missingSupplierItems}
         allocationComplete={allocationComplete}
         totals={totals}
@@ -713,6 +718,32 @@ export function PurchaseRequestsClient({
         onSaveDraft={() => saveAllocations(false)}
         onApprove={() => saveAllocations(true)}
         onPatchAllocation={patchAllocation}
+        onAddAllocationRow={(requestItemId, ingredientId) =>
+          setAllocationDrafts((current) =>
+            addPurchaseDemandAllocationRow(
+              current,
+              requestItemId,
+              ingredientId,
+              suppliers,
+            ),
+          )
+        }
+        onRemoveAllocationRow={(supplierId, key) =>
+          setAllocationDrafts((current) =>
+            removePurchaseDemandAllocationRow(current, supplierId, key),
+          )
+        }
+        onChangeAllocationSupplier={(fromSupplierId, key, toSupplierId) =>
+          setAllocationDrafts((current) =>
+            reassignPurchaseDemandAllocationSupplier(
+              current,
+              fromSupplierId,
+              key,
+              toSupplierId,
+              suppliers,
+            ),
+          )
+        }
       />
 
       <ReasonConfirmDialog

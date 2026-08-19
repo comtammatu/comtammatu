@@ -15316,6 +15316,10 @@ export type Database = {
         Args: { p_order_id: number }
         Returns: number
       }
+      self_order_apply_promotion_code: {
+        Args: { p_client_op_id: string; p_code: string; p_token: string }
+        Returns: Json
+      }
       self_order_branch_has_open_pos_session: {
         Args: { p_branch_id: number; p_tenant_id: number }
         Returns: boolean
@@ -15343,6 +15347,10 @@ export type Database = {
       }
       self_order_canonicalize_cart: {
         Args: { p_items: Json; p_tenant_id: number }
+        Returns: Json
+      }
+      self_order_clear_promotion: {
+        Args: { p_client_op_id: string; p_token: string }
         Returns: Json
       }
       self_order_consume_rate_limits: {

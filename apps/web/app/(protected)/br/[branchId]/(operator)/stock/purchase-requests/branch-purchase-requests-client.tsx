@@ -84,9 +84,14 @@ import {
   savePurchaseDemandAllocations,
 } from "@/(protected)/inventory/purchase-order-actions";
 import {
+  addPurchaseDemandAllocationRow,
   buildAutomaticPurchaseDemandAllocations,
   buildPurchaseOrderDrafts,
+  canAddPurchaseDemandAllocationRow,
   findUnassignedPurchaseRequestItemIds,
+  matchingSuppliersForIngredient,
+  reassignPurchaseDemandAllocationSupplier,
+  removePurchaseDemandAllocationRow,
   type PurchaseDemandAllocation,
   type PurchaseOrderDraft,
   type PurchaseOrderDraftLine,
@@ -121,7 +126,7 @@ type QtyPadTarget =
   | { kind: "request"; key: string; title: string; unit: string }
   | {
       kind: "allocation";
-      supplierId: number;
+      supplierId: number | null;
       lineKey: string;
       title: string;
       unit: string;
@@ -466,7 +471,7 @@ export function BranchPurchaseRequestsClient({
   }
 
   function patchAllocation(
-    supplierId: number,
+    supplierId: number | null,
     key: string,
     patch: Partial<PurchaseOrderDraftLine>,
   ) {
@@ -488,7 +493,8 @@ export function BranchPurchaseRequestsClient({
     return allocationDrafts.flatMap((draft) =>
       draft.lines.flatMap((line) => {
         const quantity = Number(line.quantity);
-        return line.quantity.trim() !== "" &&
+        return draft.supplierId != null &&
+          line.quantity.trim() !== "" &&
           Number.isFinite(quantity) &&
           quantity > 0
           ? [
@@ -1415,6 +1421,25 @@ export function BranchPurchaseRequestsClient({
                   .filter((draft) => draft.lines.length > 0);
                 const allocated = totals.get(item.id) ?? 0;
                 const remaining = item.remainingQuantity - allocated;
+                const mapped = matchingSuppliersForIngredient(
+                  item.ingredientId,
+                  suppliers,
+                );
+                const usedSupplierIds = new Set(
+                  supplierDrafts.flatMap((draft) =>
+                    draft.supplierId != null ? [draft.supplierId] : [],
+                  ),
+                );
+                const rowCount = supplierDrafts.reduce(
+                  (count, draft) => count + draft.lines.length,
+                  0,
+                );
+                const canAdd = canAddPurchaseDemandAllocationRow(
+                  allocationDrafts,
+                  item.id,
+                  item.ingredientId,
+                  suppliers,
+                );
                 return (
                   <Item key={item.id} variant="outline" className="items-stretch">
                     <ItemHeader>
@@ -1428,50 +1453,124 @@ export function BranchPurchaseRequestsClient({
                       </Badge>
                     </ItemHeader>
                     <div className="flex basis-full flex-col gap-2">
-                      {supplierDrafts.length === 0 ? (
+                      {mapped.length === 0 ? (
                         <p className="text-sm text-muted-foreground">
                           {copy.noActiveSuppliers}
                         </p>
                       ) : (
-                        supplierDrafts.map((draft) => {
-                          const line = draft.lines[0];
-                          if (!line) return null;
-                          return (
-                            <div
-                              key={draft.supplierId}
-                              className="flex flex-col gap-1"
-                            >
-                              <span className="text-sm">
-                                {draft.supplierName}
-                              </span>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="touch"
-                                className="w-full justify-between font-mono tabular-nums"
-                                onClick={() =>
-                                  setQtyPad({
-                                    kind: "allocation",
-                                    supplierId: draft.supplierId,
-                                    lineKey: line.key,
-                                    title: `${item.ingredientName} · ${draft.supplierName}`,
-                                    unit: item.unitLabel,
-                                  })
-                                }
+                        supplierDrafts.flatMap((draft) =>
+                          draft.lines.map((line) => {
+                            const options = mapped
+                              .filter(
+                                (supplier) =>
+                                  supplier.id === draft.supplierId ||
+                                  !usedSupplierIds.has(supplier.id),
+                              )
+                              .map((supplier) => ({
+                                value: String(supplier.id),
+                                label: supplier.name,
+                              }));
+                            return (
+                              <div
+                                key={line.key}
+                                className="flex flex-col gap-2"
                               >
-                                <span>
-                                  {line.quantity.trim() !== ""
-                                    ? line.quantity
-                                    : copy.quantity}
-                                </span>
-                                <span className="text-muted-foreground">
-                                  {item.unitLabel}
-                                </span>
-                              </Button>
-                            </div>
-                          );
-                        })
+                                <div className="flex items-center gap-2">
+                                  <div className="min-w-0 flex-1">
+                                    <Combobox
+                                      size="touch"
+                                      value={
+                                        draft.supplierId != null
+                                          ? String(draft.supplierId)
+                                          : ""
+                                      }
+                                      onValueChange={(value) =>
+                                        setAllocationDrafts((current) =>
+                                          reassignPurchaseDemandAllocationSupplier(
+                                            current,
+                                            draft.supplierId,
+                                            line.key,
+                                            value ? Number(value) : null,
+                                            suppliers,
+                                          ),
+                                        )
+                                      }
+                                      options={options}
+                                      placeholder={copy.chooseSupplier}
+                                      aria-label={`${item.ingredientName}: ${copy.supplier}`}
+                                    />
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon-touch"
+                                    disabled={rowCount <= 1}
+                                    onClick={() =>
+                                      setAllocationDrafts((current) =>
+                                        removePurchaseDemandAllocationRow(
+                                          current,
+                                          draft.supplierId,
+                                          line.key,
+                                        ),
+                                      )
+                                    }
+                                    aria-label={ACTIONS_VI.delete}
+                                  >
+                                    <IconTrash />
+                                  </Button>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="touch"
+                                  className="w-full justify-between font-mono tabular-nums"
+                                  onClick={() =>
+                                    setQtyPad({
+                                      kind: "allocation",
+                                      supplierId: draft.supplierId,
+                                      lineKey: line.key,
+                                      title: `${item.ingredientName} · ${
+                                        draft.supplierName || copy.chooseSupplier
+                                      }`,
+                                      unit: item.unitLabel,
+                                    })
+                                  }
+                                >
+                                  <span>
+                                    {line.quantity.trim() !== ""
+                                      ? line.quantity
+                                      : copy.quantity}
+                                  </span>
+                                  <span className="text-muted-foreground">
+                                    {item.unitLabel}
+                                  </span>
+                                </Button>
+                              </div>
+                            );
+                          }),
+                        )
                       )}
+                      {canAdd ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="touch"
+                          className="self-start"
+                          onClick={() =>
+                            setAllocationDrafts((current) =>
+                              addPurchaseDemandAllocationRow(
+                                current,
+                                item.id,
+                                item.ingredientId,
+                                suppliers,
+                              ),
+                            )
+                          }
+                        >
+                          <IconPlus data-icon="inline-start" />
+                          {copy.addAllocationLine}
+                        </Button>
+                      ) : null}
                       <p className="text-xs text-muted-foreground">
                         {copy.allocationProgress(
                           allocated,

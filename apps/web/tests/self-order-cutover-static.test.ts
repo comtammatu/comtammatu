@@ -47,10 +47,7 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
     client,
     /className="theme-light-only h-dvh min-h-0 overflow-hidden bg-background"/,
   );
-  assert.match(
-    client,
-    /contentClassName="h-full min-h-0 p-0"/,
-  );
+  assert.match(client, /contentClassName="h-full min-h-0 p-0"/);
   assert.doesNotMatch(client, /contentClassName="h-dvh/);
   assert.doesNotMatch(surface, /mobile && "pb-28"/);
   assert.match(client, /SELF_ORDER_VI\.branchFallback/);
@@ -58,7 +55,10 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
   assert.match(client, /from "@\/components\/force-light-mode"/);
   assert.match(client, /<ForceLightMode/);
   assert.doesNotMatch(client, /<ThemeToggle/);
-  assert.match(client, /size="icon-touch"/);
+  assert.match(client, /<StaffCallButton/);
+  assert.match(client, /size="touch"/);
+  assert.doesNotMatch(client, /size="icon-touch"/);
+  assert.match(client, /showBillCta = awaiting \|\| order != null/);
   assert.doesNotMatch(client, /billAvailable/);
   assert.match(client, /variant="default"/);
   assert.match(client, /SELF_ORDER_VI\.billTab/);
@@ -79,19 +79,21 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
   assert.match(client, /toast\.error\(refreshError\)/);
   assert.match(client, /toast\.warning\(SELF_ORDER_VI\.rejectedCalloutTitle/);
   assert.match(client, /guestToastKeyRef/);
-  assert.match(client, /from "@\/components\/form"/);
-  assert.match(client, /<AppDialog/);
-  assert.match(client, /awaitingDialogOpen/);
+  assert.doesNotMatch(client, /from "@\/components\/form"/);
+  assert.doesNotMatch(client, /<AppDialog/);
+  assert.doesNotMatch(client, /awaitingDialogOpen/);
+  assert.match(client, /role="status"/);
   assert.match(client, /pendingDialogTitle/);
   assert.match(client, /pendingDialogDescription/);
-  assert.match(client, /SELF_ORDER_VI\.continueBrowsing/);
+  assert.doesNotMatch(client, /SELF_ORDER_VI\.continueBrowsing/);
   assert.match(client, /SELF_ORDER_VI\.callStaff/);
-  assert.match(client, /const isFirstPendingSubmit = !awaiting/);
-  assert.match(
+  assert.doesNotMatch(client, /const isFirstPendingSubmit = !awaiting/);
+  assert.doesNotMatch(client, /setAwaitingDialogOpen/);
+  assert.match(client, /addOrIncrementSimpleCartItem/);
+  assert.doesNotMatch(
     client,
-    /state === "awaiting_confirmation"[\s\S]*isFirstPendingSubmit[\s\S]*setAwaitingDialogOpen\(true\)/,
+    /toast\.warning\(SELF_ORDER_VI\.awaitingCalloutTitle/,
   );
-  assert.doesNotMatch(client, /toast\.warning\(SELF_ORDER_VI\.awaitingCalloutTitle/);
   assert.match(client, /rejectedCalloutTitle/);
   assert.match(client, /SELF_ORDER_VI\.submitAddMore/);
   assert.match(client, /<BillDrawer/);
@@ -104,7 +106,14 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
   assert.match(bill, /<SheetContent/);
   assert.match(bill, /\bfullscreen\b/);
   assert.doesNotMatch(bill, /<Drawer/);
-  assert.match(bill, /<ScrollArea className="min-h-0 flex-1">/);
+  assert.match(
+    bill,
+    /<ScrollArea className="min-h-0 flex-1 overflow-hidden overscroll-contain">/,
+  );
+  assert.match(
+    bill,
+    /className="flex h-full min-h-0 flex-col overflow-hidden"/,
+  );
   assert.doesNotMatch(bill, /SELF_ORDER_VI\.tableLabel/);
   assert.doesNotMatch(bill, /visibleRounds|RoundItem/);
   assert.match(bill, /pendingItems/);
@@ -137,20 +146,36 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
   assert.match(menu, /isSelfOrderComCategory\(category\)/);
   assert.match(menu, /compact=\{!isSelfOrderComCategory\(category\)\}/);
   assert.match(menu, /<MenuRowButton/);
+  assert.match(menu, /isSelfOrderItemSimple/);
+  assert.match(menu, /onClick=\{addOrCustomize\}/);
+  assert.match(menu, /onQuickAdd=\{addOrCustomize\}/);
+  assert.doesNotMatch(menu, /onClick=\{\(\) => \{/);
   assert.match(menu, /defaultSelfOrderCategoryValue/);
-  assert.match(client, /hasCartItems=\{cartItems\.length > 0\}/);
-  assert.match(menu, /hasCartItems \? "pb-44 sm:pb-32" : "pb-2"/);
+  assert.doesNotMatch(client, /hasCartItems=/);
+  assert.doesNotMatch(menu, /hasCartItems/);
+  assert.doesNotMatch(menu, /pb-44|pb-32/);
   assert.match(menu, /splitMenuItemDisplayName/);
   assert.match(menu, /from "\.\/menu-display"/);
   assert.match(menu, /menuPromptTitle/);
+  assert.doesNotMatch(menu, /menuPromptDescription/);
+  assert.match(menu, /mb-2 text-base font-medium/);
+  assert.match(menu, /isSimple && cartDemand > 0/);
   assert.doesNotMatch(menu, /bg-gradient-to-t from-black/);
   assert.doesNotMatch(menu, /featuredMainDishes|MenuPhotoButton/);
   assert.match(menu, /grid grid-cols-1 gap-3 md:grid-cols-2/);
   assert.doesNotMatch(menu, /category\.type !== "main_dish"/);
   assert.match(menu, /items-stretch justify-start gap-4 p-3/);
-  assert.match(menu, /active:scale-95/);
-  assert.match(menu, /group-active:scale-105/);
-  assert.match(menu, /className="object-cover transition-transform duration-150 group-active:scale-105"/);
+  assert.match(menu, /active:scale-\[0\.97\]/);
+  assert.match(
+    menu,
+    /transition-transform duration-150 ease-\[var\(--ease-move\)\]/,
+  );
+  assert.doesNotMatch(menu, /active:scale-95/);
+  assert.doesNotMatch(menu, /group-active:scale-105/);
+  assert.doesNotMatch(menu, /transition-\[transform,background-color/);
+  assert.match(menu, /prioritizeLeadingImages/);
+  assert.match(menu, /\[contain:layout_paint\]/);
+  assert.match(menu, /className="object-cover"/);
   assert.doesNotMatch(
     menu,
     /text-xs font-medium tracking-wide text-muted-foreground uppercase/,
@@ -172,18 +197,27 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
   assert.match(menu, /h-16 w-16/);
   assert.match(menu, /text-2xl leading-tight/);
   assert.match(menu, /text-lg leading-snug/);
-  assert.match(menu, /font-heading text-2xl font-semibold tracking-tight/);
+  assert.doesNotMatch(
+    menu,
+    /font-heading text-2xl font-semibold tracking-tight/,
+  );
   assert.ok(
     menu.indexOf("SELF_ORDER_VI.menuPromptTitle") < menu.indexOf("<ScrollArea"),
   );
   const menuDisplay = read("app/q/[token]/self-order/menu-display.ts");
   assert.match(menuDisplay, /isSelfOrderComCategory/);
-  assert.match(menuDisplay, /normalizeCategoryName\(category\.name\) === "cơm"/);
+  assert.match(
+    menuDisplay,
+    /normalizeCategoryName\(category\.name\) === "cơm"/,
+  );
   assert.match(menuDisplay, /!== "khác"/);
   assert.match(menuDisplay, /Truyền thống/);
   assert.doesNotMatch(menuDisplay, /Nên thử/);
   assert.match(menuDisplay, /Chờ 20 phút/);
-  assert.match(client, /defaultSelfOrderCategoryValue\(initialSnapshot\.menu\)/);
+  assert.match(
+    client,
+    /defaultSelfOrderCategoryValue\(initialSnapshot\.menu\)/,
+  );
   assert.doesNotMatch(client, /useState\("all"\)/);
   assert.match(bill, /paymentView/);
   assert.match(bill, /onOpenPayment/);
@@ -201,16 +235,26 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
   assert.match(payment, /QrCode as IconQrcode/);
   assert.match(payment, /BankAppLauncher/);
   assert.match(payment, /PROVEN_VIETQR_BANK_APP_ID/);
-  assert.match(payment, /bankAppComingSoon/);
+  assert.match(payment, /openMbBank/);
   assert.match(payment, /otherBankScanHint/);
   assert.doesNotMatch(payment, /CreditCard/);
-  assert.match(payment, /getVietQrBankAppCatalogUrl/);
-  assert.match(payment, /parseVietQrBankApps/);
-  assert.match(payment, /orderedApps\.map/);
+  assert.doesNotMatch(payment, /getVietQrBankAppCatalogUrl/);
+  assert.doesNotMatch(payment, /parseVietQrBankApps/);
+  assert.doesNotMatch(payment, /orderedApps\.map/);
+  assert.doesNotMatch(payment, /bankAppComingSoon/);
   assert.match(
     cart,
-    /fixed inset-x-0 bottom-0[\s\S]*?onClick=\{\(\) => setOpen\(true\)\}/,
+    /workflow-safe-pb shrink-0 border-t border-border bg-background[\s\S]*?onClick=\{\(\) => setOpen\(true\)\}/,
   );
+  assert.doesNotMatch(cart, /fixed inset-x-0 bottom-0/);
+  assert.doesNotMatch(cart, /bg-background\/95|backdrop-blur/);
+  assert.doesNotMatch(client, /fixed inset-x-0 bottom-0/);
+  assert.doesNotMatch(client, /bg-background\/95|backdrop-blur/);
+  assert.match(
+    client,
+    /workflow-safe-pt shrink-0 border-b border-border bg-background/,
+  );
+  assert.doesNotMatch(menu, /bg-background\/95|backdrop-blur/);
   assert.match(
     cart,
     /<SheetContent[\s\S]*fullscreen[\s\S]*className="mx-auto w-full max-w-2xl overflow-hidden p-0"/,
@@ -269,7 +313,10 @@ test("self-order menu availability reuses the POS stock gate", () => {
   assert.match(server, /pos_stock_outcome_posting/);
   assert.match(server, /withMenuAvailability/);
   assert.match(server, /findCartSoldOutMessage/);
-  assert.match(server, /itemQuotaExceeded|itemSoldOutBlocked|itemDisabledBlocked/);
+  assert.match(
+    server,
+    /itemQuotaExceeded|itemSoldOutBlocked|itemDisabledBlocked/,
+  );
   assert.doesNotMatch(server, /soldOutBlocked/);
   assert.match(availability, /remainingAfterDemand/);
   assert.match(availability, /isAvailabilityBlocked/);
@@ -278,10 +325,17 @@ test("self-order menu availability reuses the POS stock gate", () => {
   assert.match(contracts, /manual_limit_quantity/);
   assert.match(guestUi, /branch_menu_limit_availability/);
   assert.match(guestUi, /primary `Hoá đơn` \(terracotta/);
+  assert.match(guestUi, /only when a pending request or an open order exists/);
   assert.match(guestUi, /Gọi nhân viên/);
   assert.match(guestUi, /MB Bank only/);
-  assert.match(guestUi, /Sắp hỗ trợ/);
+  assert.match(guestUi, /Do not list disabled banks as peer CTAs/);
+  assert.doesNotMatch(guestUi, /Sắp hỗ trợ/);
+  assert.match(guestUi, /in-flow `role="status"` banner/);
+  assert.match(guestUi, /opaque overlay/);
+  assert.doesNotMatch(guestUi, /blurred pending overlay/);
+  assert.doesNotMatch(guestUi, /One `AppDialog` after first pending submit/);
   assert.match(guestUi, /sticky category pills/);
+  assert.match(guestUi, /Simple items never mount this sheet from the menu/);
   assert.match(guestUi, /\*\*No Tabs\*\*/);
   assert.match(
     guestUi,
@@ -318,7 +372,7 @@ test("item sheet supports add and cart-edit commit paths", () => {
   );
   assert.match(
     itemSheet,
-    /flex shrink-0 flex-wrap items-center gap-2 p-3 sm:flex-nowrap[\s\S]*className="min-w-0 flex-1 max-sm:basis-full"[\s\S]*commitCustomizedItem/,
+    /flex shrink-0 flex-wrap items-center gap-2 bg-background p-3 sm:flex-nowrap[\s\S]*className="min-w-0 flex-1 max-sm:basis-full"[\s\S]*commitCustomizedItem/,
   );
 });
 
@@ -370,8 +424,12 @@ test("S5 routes pending QR requests through the table and bill surfaces", () => 
   assert.match(tables, /variant="warning"/);
 
   assert.match(desktop, /fetchSelfOrderPosState/);
-  assert.match(desktop, /playOperationalAlert\(\{ kind: "pos\.self_order"/);
-  assert.match(desktop, /playAppSignal\("pos-payment-call"\)/);
+  assert.match(desktop, /selectPosGuestAlert/);
+  assert.match(desktop, /playOperationalAlert\(\{/);
+  assert.match(desktop, /kind: "pos\.self_order"/);
+  assert.match(desktop, /kind: "pos\.payment_call"/);
+  assert.match(desktop, /kind: "pos\.staff_call"/);
+  assert.doesNotMatch(desktop, /playAppSignal\("pos-payment-call"\)/);
   assert.match(desktop, /knownSelfOrderPaymentRequestIdsRef/);
   assert.match(desktop, /5_000/);
   assert.match(desktop, /pendingSelfOrderRequestByTable\.get/);

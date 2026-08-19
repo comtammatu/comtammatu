@@ -8,8 +8,9 @@ export const UNITS_VI = {
   emptyPackaging: "Chưa có đơn vị đóng gói. Thêm đơn vị đầu tiên.",
   showInactive: "Hiện đơn vị đã ngừng dùng",
   standard: {
-    title: "Đơn vị chuẩn",
-    description: "Đơn vị đo hệ thống. Hệ số quy đổi cố định, không sửa được.",
+    title: "Đơn vị đo hệ thống",
+    description:
+      "Gam, kg, ml, lít. Tỷ lệ khối lượng và thể tích cố định, không sửa trên từng nguyên liệu.",
     mass: "Khối lượng",
     volume: "Thể tích",
     factor: (unit: string) => `1 = ${unit}`,
@@ -110,11 +111,18 @@ export const INGREDIENT_FORM_VI = {
   },
   units: {
     baseUnit: "Đơn vị chuẩn",
-    baseUnitDescription: "Tồn kho và giá vốn được lưu theo đơn vị này.",
+    baseUnitDescription:
+      "Tồn kho và giá vốn ghi theo đơn vị này. Chọn nhỏ nhất hay dùng (ml, g, cái).",
     unitPending: "…",
     sectionLabel: "Đơn vị và quy đổi",
     sectionToggle: "Đơn vị quy đổi",
-    sectionToggleHint: "Thêm bao, thùng, lít… ngoài đơn vị chuẩn.",
+    sectionToggleHint: "Ví dụ: 1 hộp = 250 ml, rồi 1 thùng = 24 hộp.",
+    groupMass: "Khối lượng",
+    groupVolume: "Thể tích",
+    groupPackaging: "Đóng gói",
+    factorPlaceholder: "24",
+    effectiveEquals: (quantity: string, unit: string) =>
+      `≈ ${quantity} ${unit}`,
     unitsLoading: "Đang tải đơn vị…",
     unitsLoadFailed: "Không tải được đơn vị. Đóng rồi mở lại để thử.",
     anchorAria: (unit: string) => `Quy đổi ${unit} sang đơn vị`,

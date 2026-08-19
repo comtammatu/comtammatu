@@ -36,6 +36,8 @@ export interface BillRow {
   quantity: number;
   unitPrice: number;
   lineTotal: number;
+  discountAmount: number;
+  discountNote: string | null;
   modifiers: SelfOrderOrderLine["modifiers"];
   sides: SelfOrderOrderLine["sides"];
   note: string | null;
@@ -50,6 +52,8 @@ export function buildBillRow(item: SelfOrderOrderLine): BillRow {
     quantity: item.quantity,
     unitPrice: item.unitPrice,
     lineTotal: item.lineTotal,
+    discountAmount: Math.max(0, Number(item.discountAmount ?? 0)),
+    discountNote: item.discountNote ?? null,
     modifiers: item.modifiers,
     sides: item.sides,
     note: item.note,
@@ -58,6 +62,15 @@ export function buildBillRow(item: SelfOrderOrderLine): BillRow {
 
 export function buildBillRows(item: SelfOrderOrderLine): BillRow[] {
   return [buildBillRow(item)];
+}
+
+function LinePromo({ amount, note }: { amount: number; note: string | null }) {
+  if (amount <= 0) return null;
+  return (
+    <p className="mt-1 text-xs font-medium text-success">
+      {SELF_ORDER_VI.linePromo(formatVND(amount), note ?? undefined)}
+    </p>
+  );
 }
 
 function optionSummary(item: {
@@ -128,6 +141,7 @@ const BILL_COLUMNS: DataTableColumn<BillRow>[] = [
             {SELF_ORDER_VI.itemNoteLabel}: {row.note}
           </p>
         ) : null}
+        <LinePromo amount={row.discountAmount} note={row.discountNote} />
       </div>
     ),
   },
@@ -147,11 +161,19 @@ const BILL_COLUMNS: DataTableColumn<BillRow>[] = [
     key: "line-total",
     header: SELF_ORDER_VI.billLineTotalColumn,
     className: "whitespace-nowrap text-right text-xs font-mono tabular-nums",
-    render: (row) => (
-      <span className="font-semibold text-primary">
-        {formatVND(row.lineTotal)}
-      </span>
-    ),
+    render: (row) => {
+      const net = Math.max(0, row.lineTotal - row.discountAmount);
+      return (
+        <div className="flex flex-col items-end gap-1">
+          {row.discountAmount > 0 ? (
+            <span className="text-muted-foreground line-through">
+              {formatVND(row.lineTotal)}
+            </span>
+          ) : null}
+          <span className="font-semibold text-primary">{formatVND(net)}</span>
+        </div>
+      );
+    },
   },
 ];
 
@@ -175,9 +197,16 @@ function FlatOrderLines({ items }: { items: SelfOrderOrderLine[] }) {
                 </span>
                 <span>{row.label}</span>
               </ItemTitle>
-              <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-primary">
-                {formatVND(row.lineTotal)}
-              </span>
+              <div className="flex shrink-0 flex-col items-end gap-1">
+                {row.discountAmount > 0 ? (
+                  <span className="font-mono text-2xs tabular-nums text-muted-foreground line-through">
+                    {formatVND(row.lineTotal)}
+                  </span>
+                ) : null}
+                <span className="font-mono text-sm font-semibold tabular-nums text-primary">
+                  {formatVND(Math.max(0, row.lineTotal - row.discountAmount))}
+                </span>
+              </div>
             </div>
 
             {row.modifiers.length > 0 || row.sides.length > 0 ? (
@@ -225,6 +254,7 @@ function FlatOrderLines({ items }: { items: SelfOrderOrderLine[] }) {
                 {SELF_ORDER_VI.itemNoteLabel}: {row.note}
               </p>
             ) : null}
+            <LinePromo amount={row.discountAmount} note={row.discountNote} />
           </ItemContent>
           {row.quantity > 1 ? (
             <ItemFooter className="justify-end border-t border-border/40 pt-1.5 font-mono text-2xs tabular-nums text-muted-foreground">
@@ -364,7 +394,7 @@ export function OrderSummary({
 
       {pendingItems.length > 0 ? (
         <Item variant="outline" className="relative overflow-hidden">
-          <div className="pointer-events-none flex flex-col gap-2 p-2 opacity-50 blur-[2px] select-none">
+          <div className="pointer-events-none flex flex-col gap-2 p-2 opacity-50 select-none">
             <SectionLabel density="dense">
               <IconClock className="size-3.5" aria-hidden />
               {SELF_ORDER_VI.awaitingCalloutTitle}
@@ -372,7 +402,7 @@ export function OrderSummary({
             <PendingRequestLines items={pendingItems} />
           </div>
           <div
-            className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-background/75 px-4 text-center backdrop-blur-sm"
+            className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-background px-4 text-center"
             role="status"
           >
             <BrandMascot decorative size="sm" />
@@ -386,9 +416,7 @@ export function OrderSummary({
         </Item>
       ) : null}
 
-      {items.length > 0 ? (
-        <FlatOrderLines items={items} />
-      ) : null}
+      {items.length > 0 ? <FlatOrderLines items={items} /> : null}
     </div>
   );
 }

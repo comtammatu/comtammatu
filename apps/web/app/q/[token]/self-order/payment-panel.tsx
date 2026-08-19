@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import {
   Banknote as IconCash,
   Landmark as IconBank,
@@ -11,24 +10,15 @@ import {
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { formatVND } from "@comtammatu/shared/format";
 import { formatVNTime } from "@comtammatu/shared/time";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@comtammatu/ui/components/avatar";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { AppDrawer, PublicSection } from "@/components/surface";
+import { PublicSection } from "@/components/surface";
 import { QrCodeImage } from "@/components/qr-code-image";
 import {
   PROVEN_VIETQR_BANK_APP_ID,
   buildVietQrBankAppUrl,
-  getVietQrBankAppCatalogUrl,
-  parseVietQrBankApps,
   resolveBankAppPlatform,
-  type VietQrBankApp,
 } from "@lib/self-order/bank-app-link";
 import type { PublicSelfOrderAvailableSnapshot } from "@lib/self-order/contracts";
 
@@ -63,57 +53,6 @@ export interface PaymentPanelProps {
   onBankAppHandoff?: () => void;
 }
 
-function isProvenBankApp(appId: string): boolean {
-  return appId.toLowerCase() === PROVEN_VIETQR_BANK_APP_ID;
-}
-
-function BankAppRow({
-  app,
-  href,
-  onBankAppHandoff,
-}: {
-  app: VietQrBankApp;
-  href: string | null;
-  onBankAppHandoff?: () => void;
-}) {
-  const ready = isProvenBankApp(app.id) && Boolean(href);
-  const avatar = (
-    <Avatar aria-hidden="true">
-      {app.logoUrl ? <AvatarImage src={app.logoUrl} alt="" /> : null}
-      <AvatarFallback>{app.name.slice(0, 2).toUpperCase()}</AvatarFallback>
-    </Avatar>
-  );
-
-  if (ready && href) {
-    return (
-      <Button
-        variant="outline"
-        size="touch"
-        className="w-full justify-start"
-        render={<a href={href} />}
-        onClick={() => onBankAppHandoff?.()}
-      >
-        {avatar}
-        {app.name}
-      </Button>
-    );
-  }
-
-  return (
-    <Button
-      type="button"
-      variant="outline"
-      size="touch"
-      className="w-full justify-start"
-      disabled
-    >
-      {avatar}
-      <span className="min-w-0 flex-1 truncate text-left">{app.name}</span>
-      <Badge variant="secondary">{SELF_ORDER_VI.bankAppComingSoon}</Badge>
-    </Button>
-  );
-}
-
 function BankAppLauncher({
   accountNo,
   bankCode,
@@ -131,107 +70,29 @@ function BankAppLauncher({
   qrData: string;
   onBankAppHandoff?: () => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const [apps, setApps] = useState<VietQrBankApp[] | null>(null);
-  const [loadFailed, setLoadFailed] = useState(false);
-  const [loadAttempt, setLoadAttempt] = useState(0);
-  const platform = resolveBankAppPlatform(navigator);
-
-  useEffect(() => {
-    if (!open || apps !== null) return;
-    const controller = new AbortController();
-    setLoadFailed(false);
-
-    void fetch(getVietQrBankAppCatalogUrl(navigator), {
-      cache: "force-cache",
-      signal: controller.signal,
-    })
-      .then((response) => {
-        if (!response.ok) throw new Error("bank_app_catalog_unavailable");
-        return response.json() as Promise<unknown>;
-      })
-      .then((payload) => {
-        const parsedApps = parseVietQrBankApps(payload);
-        setApps(parsedApps);
-      })
-      .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === "AbortError")
-          return;
-        setLoadFailed(true);
-      });
-
-    return () => controller.abort();
-  }, [apps, loadAttempt, open]);
-
-  const orderedApps = apps
-    ? [...apps].toSorted((left, right) => {
-        const leftReady = isProvenBankApp(left.id);
-        const rightReady = isProvenBankApp(right.id);
-        if (leftReady !== rightReady) return leftReady ? -1 : 1;
-        return 0;
-      })
-    : null;
+  const href = buildVietQrBankAppUrl({
+    appId: PROVEN_VIETQR_BANK_APP_ID,
+    accountNo,
+    bankCode,
+    amount,
+    paymentCode,
+    accountName,
+    qrData,
+    platform: resolveBankAppPlatform(navigator),
+  });
+  if (!href) return null;
 
   return (
-    <AppDrawer
-      open={open}
-      onOpenChange={setOpen}
-      title={SELF_ORDER_VI.chooseBankAppTitle}
-      description={SELF_ORDER_VI.chooseBankAppDescription}
-      trigger={
-        <Button type="button" size="touch" className="w-full">
-          <IconBank data-icon="inline-start" />
-          {SELF_ORDER_VI.openBankApp}
-        </Button>
-      }
+    <Button
+      variant="outline"
+      size="touch"
+      className="w-full"
+      render={<a href={href} />}
+      onClick={() => onBankAppHandoff?.()}
     >
-      <div>
-        {orderedApps ? (
-          <ul className="grid gap-2">
-            {orderedApps.map((app) => {
-              const href = buildVietQrBankAppUrl({
-                appId: app.id,
-                accountNo,
-                bankCode,
-                amount,
-                paymentCode,
-                accountName,
-                qrData,
-                platform,
-              });
-              return (
-                <li key={app.id}>
-                  <BankAppRow
-                    app={app}
-                    href={href}
-                    onBankAppHandoff={onBankAppHandoff}
-                  />
-                </li>
-              );
-            })}
-          </ul>
-        ) : loadFailed ? (
-          <div className="my-6 flex flex-col items-center gap-3 text-center">
-            <p className="text-sm text-muted-foreground">
-              {SELF_ORDER_VI.bankAppsLoadFailed}
-            </p>
-            <Button
-              type="button"
-              variant="outline"
-              size="touch"
-              onClick={() => setLoadAttempt((attempt) => attempt + 1)}
-            >
-              {SELF_ORDER_VI.retryRefresh}
-            </Button>
-          </div>
-        ) : (
-          <div className="my-8 flex items-center justify-center gap-2 text-sm text-muted-foreground">
-            <Spinner className="size-4" />
-            {SELF_ORDER_VI.bankAppsLoading}
-          </div>
-        )}
-      </div>
-    </AppDrawer>
+      <IconBank data-icon="inline-start" />
+      {SELF_ORDER_VI.openMbBank}
+    </Button>
   );
 }
 

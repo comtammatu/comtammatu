@@ -11,6 +11,7 @@ import {
   selfOrderSubmitActionResponseSchema,
   selfOrderVietQrResponseSchema,
 } from "./contracts";
+import { mapPromotionRpcError } from "@lib/promotions/rpc-errors";
 import {
   findCartSoldOutMessage,
   isAvailabilityBlocked,
@@ -57,7 +58,8 @@ type SelfOrderErrorContext =
   | "default"
   | "payment"
   | "payment_cancel"
-  | "staff_call";
+  | "staff_call"
+  | "promo";
 type RateLimitPurpose = "batch" | "payment";
 type SelfOrderPaymentRequestStatus =
   | "cash_call"
@@ -112,9 +114,11 @@ function mapSelfOrderError(
       status: 409,
       code: "active_payment_intent",
       message:
-        context === "payment"
-          ? SELF_ORDER_VI.activePaymentIntent
-          : SELF_ORDER_VI.pendingPaymentBlocked,
+        context === "promo"
+          ? SELF_ORDER_VI.promoLocked
+          : context === "payment"
+            ? SELF_ORDER_VI.activePaymentIntent
+            : SELF_ORDER_VI.pendingPaymentBlocked,
     };
   }
   if (message.includes("self_order_payment_cancel_staff_required")) {
@@ -190,6 +194,22 @@ function mapSelfOrderError(
       status: 409,
       code: "order_ambiguous",
       message: SELF_ORDER_VI.paymentNotReady,
+    };
+  }
+  if (message.includes("self_order_order_not_open")) {
+    return {
+      ok: false,
+      status: 409,
+      code: "order_not_open",
+      message: SELF_ORDER_VI.promoNeedOpenOrder,
+    };
+  }
+  if (message.includes("promotion_guest_staff_required")) {
+    return {
+      ok: false,
+      status: 409,
+      code: "promo_staff_required",
+      message: SELF_ORDER_VI.promoStaffRequired,
     };
   }
   if (
@@ -274,6 +294,18 @@ function mapSelfOrderError(
       status: 409,
       code: "out_of_stock",
       message: SELF_ORDER_VI.itemOutOfStockBlocked(itemName),
+    };
+  }
+
+  if (context === "promo") {
+    return {
+      ok: false,
+      status: 409,
+      code: "promo_failed",
+      message:
+        !message || message.includes("promo_failed")
+          ? SELF_ORDER_VI.promoApplyFailed
+          : mapPromotionRpcError(message),
     };
   }
 
@@ -808,6 +840,78 @@ export async function cancelSelfOrderVietQrPayment(input: {
     );
   }
   return { ok: true, data: parsed.data };
+}
+
+export async function applySelfOrderPromotionCode(input: {
+  token: string;
+  ipHash: string | null;
+  clientOpId: string;
+  code: string;
+}): Promise<SelfOrderActionResult<Record<string, unknown>>> {
+  const rateLimit = await consumeSelfOrderRateLimit({
+    purpose: "batch",
+    token: input.token,
+    ipHash: input.ipHash,
+  });
+  if (!rateLimit.ok) return rateLimit;
+
+  const { data, error } = await service().rpc<Record<string, unknown>>(
+    "self_order_apply_promotion_code",
+    {
+      p_token: input.token,
+      p_client_op_id: input.clientOpId,
+      p_code: input.code,
+    },
+  );
+  if (error) {
+    console.error("[self-order] apply promotion failed", error);
+    return mapSelfOrderError(error, "promo");
+  }
+  const payload = data ?? {};
+  const failure = dataFailure(payload, "promo");
+  if (failure) return failure;
+  if (payload.ok !== true) {
+    return mapSelfOrderError(
+      { message: String(payload.code ?? "promo_failed") },
+      "promo",
+    );
+  }
+  return { ok: true, data: payload };
+}
+
+export async function clearSelfOrderPromotion(input: {
+  token: string;
+  ipHash: string | null;
+  clientOpId: string;
+}): Promise<SelfOrderActionResult<Record<string, unknown>>> {
+  const rateLimit = await consumeSelfOrderRateLimit({
+    purpose: "batch",
+    token: input.token,
+    ipHash: input.ipHash,
+  });
+  if (!rateLimit.ok) return rateLimit;
+
+  const { data, error } = await service().rpc<Record<string, unknown>>(
+    "self_order_clear_promotion",
+    {
+      p_token: input.token,
+      p_client_op_id: input.clientOpId,
+    },
+  );
+  if (error) {
+    console.error("[self-order] clear promotion failed", error);
+    return mapSelfOrderError(error, "promo");
+  }
+  const payload = data ?? {};
+  const failure = dataFailure(payload, "promo");
+  if (failure) return failure;
+  if (payload.ok !== true) {
+    return mapSelfOrderError(
+      { message: String(payload.code ?? "promo_failed") },
+      "promo",
+    );
+  }
+  return { ok: true, data: payload };
 }
 
 export async function callSelfOrderStaff(input: {

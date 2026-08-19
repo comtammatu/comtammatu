@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   isShiftEndedForBusinessDate,
   pickAssignedShiftInWindow,
+  resolveClockInGate,
   resolveCurrentShiftContext,
   resolveDefaultShiftId,
   resolveShiftBusinessDate,
@@ -187,9 +188,30 @@ test("assigned shift rejects today assignment outside window", () => {
       },
     ],
     "2026-07-11",
-    7 * 60,
+    6 * 60 + 59,
   );
   assert.equal(picked, null);
+});
+
+test("assigned shift accepts 60 minutes early clock-in", () => {
+  const picked = pickAssignedShiftInWindow(
+    [
+      {
+        workDate: "2026-07-11",
+        shiftId: 2,
+        shiftName: "Ca sáng",
+        startTime: "08:00:00",
+        endTime: "16:00:00",
+      },
+    ],
+    "2026-07-11",
+    7 * 60,
+  );
+  assert.deepEqual(picked, {
+    shiftId: 2,
+    businessDate: "2026-07-11",
+    shiftName: "Ca sáng",
+  });
 });
 
 test("assigned shift accepts overnight yesterday in window", () => {
@@ -211,4 +233,66 @@ test("assigned shift accepts overnight yesterday in window", () => {
     businessDate: "2026-07-10",
     shiftName: "Ca đêm",
   });
+});
+
+const MORNING = {
+  workDate: "2026-07-11",
+  shiftId: 2,
+  shiftName: "Ca sáng",
+  startTime: "08:00:00",
+  endTime: "16:00:00",
+};
+
+test("clock-in gate is too early more than 60 minutes before start", () => {
+  const gate = resolveClockInGate([MORNING], "2026-07-11", 6 * 60 + 59);
+  assert.equal(gate.kind, "too_early");
+  if (gate.kind !== "too_early") return;
+  assert.equal(gate.shiftName, "Ca sáng");
+  assert.equal(gate.clockInFromMinutes, 7 * 60);
+});
+
+test("clock-in gate opens at 60 minutes before start", () => {
+  const gate = resolveClockInGate([MORNING], "2026-07-11", 7 * 60);
+  assert.equal(gate.kind, "open");
+  if (gate.kind !== "open") return;
+  assert.equal(gate.shiftId, 2);
+});
+
+test("clock-in gate is too late after the last assigned shift ends", () => {
+  const gate = resolveClockInGate([MORNING], "2026-07-11", 16 * 60);
+  assert.equal(gate.kind, "too_late");
+  if (gate.kind !== "too_late") return;
+  assert.equal(gate.endTime, "16:00:00");
+});
+
+test("clock-in gate is unassigned when no roster row exists", () => {
+  const gate = resolveClockInGate([], "2026-07-11", 8 * 60);
+  assert.equal(gate.kind, "unassigned");
+});
+
+test("gap between today's shifts points at the next shift, not unassigned", () => {
+  const gate = resolveClockInGate(
+    [
+      {
+        workDate: "2026-07-11",
+        shiftId: 1,
+        shiftName: "Ca sáng",
+        startTime: "05:00:00",
+        endTime: "13:00:00",
+      },
+      {
+        workDate: "2026-07-11",
+        shiftId: 2,
+        shiftName: "Ca chiều",
+        startTime: "15:00:00",
+        endTime: "22:00:00",
+      },
+    ],
+    "2026-07-11",
+    13 * 60 + 30,
+  );
+  assert.equal(gate.kind, "too_early");
+  if (gate.kind !== "too_early") return;
+  assert.equal(gate.shiftName, "Ca chiều");
+  assert.equal(gate.clockInFromMinutes, 14 * 60);
 });

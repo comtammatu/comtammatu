@@ -12,6 +12,8 @@
 
 Contract vận hành Inventory hiện tại, không phải roadmap. Ý tưởng ngoài bảng dưới đây mặc định ngoài scope. Card/KPI/report summary đọc cùng [operational-data-contract.md](operational-data-contract.md); số liệu kho không map được thì cập nhật contract trước khi thêm UI.
 
+**Từng màn** (route / load / hiển thị / submit / hiện vs mục tiêu): [screen-context-map.md](screen-context-map.md) §2.5A — Landing, Tồn, Catalog, Mua, Nhập, Giao nhận, SX, Hao, Kiểm kê, Branch `/stock`. Không mở tài liệu song song.
+
 ## Current Contract
 
 | Nội dung                        | Current contract                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Boundary                                                                                               |
@@ -20,7 +22,7 @@ Contract vận hành Inventory hiện tại, không phải roadmap. Ý tưởng 
 | Tồn kho `stock_levels`          | `current_quantity`, `avg_unit_cost`; valuation account giữ book value chính xác và chiếu WAC hiện tại sang stock level                                                                                                                                                                                                                                                                                                                                                                | Không chuyển sang FIFO engine                                                                          |
 | Biến động `stock_movements`     | Append-only quantity ledger; valuation events append-only giữ value adjustment và lineage qua receipt, transfer, production, consumption, waste và stocktake                                                                                                                                                                                                                                                                                                                          | Không mở lot-first ledger / batch accounting                                                           |
 | Mô hình site                    | `branches` là site table Production; kinds active: `branch`, `central_supply` (Kho Tổng), `central_kitchen` (Bếp Trung Tâm). Mỗi site active có đúng một active `warehouse`, đồng thời là default receive/issue/consumption; Branch không có stock location Bếp.                                                                                                                                                                                                                      | `production_storage` chỉ dùng tường minh cho production trung tâm; V1 chưa đổi sang `operational_site` |
-| Nhu cầu mua / PO / GRN / NCC    | Kho trung tâm lập `purchase_request` chỉ gồm nguyên liệu, số lượng, đơn vị và ngày cần. Nếu mỗi nguyên liệu còn thiếu chỉ có một NCC active, hệ thống tự lấy toàn bộ số lượng còn lại và tạo một PO/NCC. Kế toán chỉ chọn hoặc chia số lượng khi có nhiều NCC; dòng chưa có NCC bị chặn để bổ sung mapping. Một RPC tạo PO và một GRN nháp/PO. PO không chứa giá. Số giữ trên phiếu nhập viết lại SL dòng PO khi NCC giao dư (ADR 0042). Phiếu nhập ghi **Đơn giá** net (chưa VAT) cho nguyên liệu; đó là giá ghi sổ. Hóa đơn NCC chỉ công nợ + VAT. Một PO có nhiều GRN đã chốt nhưng tối đa một nháp hoạt động. | Không có promotion engine, duyệt nhiều cấp, OCR hoặc price-QC (so lệch giá HĐ) tại GRN               |
+| Nhu cầu mua / PO / GRN / NCC    | Kho trung tâm lập `purchase_request` chỉ gồm nguyên liệu, số lượng, đơn vị và ngày cần. Nếu mỗi nguyên liệu còn thiếu chỉ có một NCC active, hệ thống tự lấy toàn bộ số lượng còn lại và tạo một PO/NCC. Nhiều NCC: màn Phân bổ mặc định một dòng (NCC ưu tiên / NCC duy nhất / chọn tay) và thêm dòng khi chia; dòng chưa có NCC bị chặn để bổ sung mapping. Một RPC tạo PO và một GRN nháp/PO. PO không chứa giá. Số giữ trên phiếu nhập viết lại SL dòng PO khi NCC giao dư (ADR 0042). Phiếu nhập ghi **Đơn giá** net (chưa VAT) cho nguyên liệu; đó là giá ghi sổ. Hóa đơn NCC chỉ công nợ + VAT. Một PO có nhiều GRN đã chốt nhưng tối đa một nháp hoạt động. | Không có promotion engine, duyệt nhiều cấp, OCR hoặc price-QC (so lệch giá HĐ) tại GRN               |
 | QC nhận hàng                    | Kho nhập `received_quantity` và `rejected_quantity`; số đạt = thực nhận − từ chối. Có hàng từ chối thì bắt buộc lý do + ảnh. Trạng thái chỉ là giá trị hiển thị được suy ra.                                                                                                                                                                                                                                                                                                          | Không lưu status, tolerance, lot/HSD/nhiệt độ, price variance hoặc auto-approval                       |
 | Luân chuyển nội bộ              | Transfer có chủ đích chỉ đi giữa các warehouse hợp lệ. Tiêu hao, write-off và production không được mô phỏng bằng transfer cùng site.                                                                                                                                                                                                                                                                                                                                                 | Không có target Kho↔Bếp trong cùng branch                                                              |
 | HĐ NCC                          | `supplier_invoices` + đối soát GRN + thanh toán NCC là Finance handoff; thanh toán bắt buộc có file HĐ GTGT đính kèm (ADR 0017)                                                                                                                                                                                                                                                                                                                                                       | Không mở payment proposal engine trong Inventory                                                       |
@@ -113,10 +115,10 @@ năm; không reset theo ngày). PO dùng `next_po_display_id`. Phiếu cũ giữ
 | Lệnh sản xuất     | `LSX`  | `production_runs.production_number`                         |
 | Kiểm kê           | `KK`   | `stocktake_sessions.session_number`                         |
 | Phiếu đếm         | `PD`   | `inventory_count_slips.slip_number`                         |
-| Yêu cầu hàng      | `YC`   | `stock_requests.request_number`                             |
+| Yêu cầu hàng / mua | `YC` / `YCM` | lịch sử `stock_requests` / `purchase_requests` |
 | Tiêu hao HRM      | `THB`  | `stock_issues.issue_number` = `THB-{report_id}` (không đổi) |
 
-Prefix là identifier; UI dùng nhãn Việt. Cột trên + generated types là contract hiện hành.
+Prefix là identifier; UI dùng nhãn Việt. `YC`/`YCM` freeze ghi trước DROP; không chuyển phiếu đã thành PO/DC (trùng tồn).
 
 ---
 
@@ -248,9 +250,10 @@ tiêu hao thủ công không ghi lại NL đã trừ từ POS.
 
 1. Thiết lập **NCC**, điều khoản và `supplier_items`.
 2. Kho Tổng / Bếp TT tạo **Yêu cầu mua** (mua ngoài). **Yêu cầu hàng** = cấp nội bộ về CN.
-3. Một NCC active/NL → **Duyệt & tạo đơn mua** tự gom PO/NCC; nhiều NCC thì Kế
-   toán chọn/chia; thiếu mapping thì chặn. Mỗi PO = một YCM + một NCC (nhu cầu,
-   NCC, SL, đơn vị — không giá).
+3. Một NCC active/NL → **Duyệt & tạo đơn mua** tự gom PO/NCC; nhiều NCC thì màn
+   **Phân bổ** mặc định một dòng (NCC ưu tiên, hoặc NCC duy nhất, hoặc chọn tay)
+   và **Thêm dòng phân bổ** khi chia nhiều nhà; thiếu mapping thì chặn. Mỗi PO =
+   một YCM + một NCC (nhu cầu, NCC, SL, đơn vị — không giá).
 4. PO `sent` → đúng một GRN nháp **Chờ nhập hàng** (copy dòng thiếu, khóa nháp
    thứ hai). Làm việc từ danh sách GRN.
 5. Kho nhập thực nhận/từ chối (thùng + hộp lẻ khi có neo); confirm so remaining
@@ -394,4 +397,3 @@ Permission keys (D093):
 
 - [einvoice-tax.md](einvoice-tax.md) — VAT đầu vào, HĐ NCC
 - [inventory-sop.md](inventory-sop.md) — SOP vận hành
-- [screen-context-map.md](screen-context-map.md) — audience/device cho màn kho

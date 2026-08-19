@@ -466,6 +466,15 @@ export function getVNMinutesOfDay(
   return hour * 60 + minute;
 }
 
+/** Format minutes since midnight (wraps 1440) as `HH:MM`. */
+export function formatMinutesOfDay(totalMinutes: number, dash = "—"): string {
+  if (!Number.isFinite(totalMinutes)) return dash;
+  const normalized = ((Math.floor(totalMinutes) % 1440) + 1440) % 1440;
+  const hour = Math.floor(normalized / 60);
+  const minute = normalized % 60;
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
 /** Parse a "HH:MM" / "HH:MM:SS" clock string to minutes since midnight. */
 export function parseClockTimeToMinutes(value: string): number | null {
   const match = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(value);

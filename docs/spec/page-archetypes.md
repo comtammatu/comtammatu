@@ -528,7 +528,8 @@ badge}`).
   chrome. The route token establishes the workflow context; invalid or expired
   tokens fail closed through `notFound()` or one shared unavailable state.
 - Skeleton: `AppPage mobile` or an equivalent full-height standalone frame;
-  touch-sized controls; one visible primary action per decision step.
+  in-flow opaque header/footer outside one scrollport; touch-sized controls;
+  one visible primary action per decision step.
 - Data display follows the transaction journey rather than a control_surface list:
   browse/select → review cart → submit → success or recoverable failure. Reuse
   `Item`, shared form controls, money/date helpers, and status vocabulary; do

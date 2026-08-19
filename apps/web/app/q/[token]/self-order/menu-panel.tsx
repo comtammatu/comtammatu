@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { Star as IconStar, ThumbsUp as IconThumbsUp, Plus as IconPlus } from "lucide-react";
+import {
+  Star as IconStar,
+  ThumbsUp as IconThumbsUp,
+  Plus as IconPlus,
+} from "lucide-react";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { formatVND } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -25,6 +29,7 @@ import {
 import {
   ALL_MENU_VALUE,
   isSelfOrderComCategory,
+  isSelfOrderItemSimple,
   selfOrderItemImageBadges,
   splitMenuItemDisplayName,
 } from "./menu-display";
@@ -34,6 +39,7 @@ export {
   ALL_MENU_VALUE,
   defaultSelfOrderCategoryValue,
   isSelfOrderComCategory,
+  isSelfOrderItemSimple,
   selfOrderItemImageBadges,
   splitMenuItemDisplayName,
 } from "./menu-display";
@@ -43,7 +49,6 @@ export interface MenuPanelProps {
   activeCategoryValue: string;
   onActiveCategoryChange: (value: string) => void;
   onAdd: (item: SelfOrderCartItem) => void;
-  hasCartItems: boolean;
   disabled?: boolean;
   cartDemandByMenuItemId?: ReadonlyMap<number, number>;
 }
@@ -53,7 +58,6 @@ export function MenuPanel({
   activeCategoryValue,
   onActiveCategoryChange,
   onAdd,
-  hasCartItems,
   disabled = false,
   cartDemandByMenuItemId,
 }: MenuPanelProps) {
@@ -116,22 +120,13 @@ export function MenuPanel({
   return (
     <section className="flex min-h-0 flex-1 flex-col">
       <div className="shrink-0 border-b border-border bg-background px-3 py-2">
+        <p className="mb-2 text-base font-medium">
+          {SELF_ORDER_VI.menuPromptTitle}
+        </p>
         <div className="flex items-center">{categoryPills}</div>
       </div>
-      <div className="flex shrink-0 flex-col gap-1.5 px-3 py-4">
-        <h2 className="font-heading text-2xl font-semibold tracking-tight">
-          {SELF_ORDER_VI.menuPromptTitle}
-        </h2>
-        <p className="text-base text-muted-foreground">
-          {SELF_ORDER_VI.menuPromptDescription}
-        </p>
-      </div>
-      <ScrollArea className="min-h-0 flex-1 overflow-hidden">
-        <div
-          className={`flex flex-col gap-4 px-2 pt-2 ${
-            hasCartItems ? "pb-44 sm:pb-32" : "pb-2"
-          }`}
-        >
+      <ScrollArea className="min-h-0 flex-1 overflow-hidden overscroll-contain">
+        <div className="flex flex-col gap-4 px-2 pt-2 pb-2">
           {availableCategories.length === 0 || !hasVisibleItems ? (
             <AppEmptyState
               title={SELF_ORDER_VI.menuEmpty}
@@ -147,7 +142,7 @@ export function MenuPanel({
                   className="flex min-w-0 flex-col gap-3"
                 >
                   {isAllMenuActive ? (
-                    <div className="sticky top-0 z-10 -mx-2 flex min-w-0 items-center justify-between gap-3 bg-background/95 px-2 py-2 backdrop-blur">
+                    <div className="sticky top-0 z-10 -mx-2 flex min-w-0 items-center justify-between gap-3 border-b border-border bg-background px-2 py-2">
                       <h2 className="font-heading truncate text-base font-semibold">
                         {category.name}
                       </h2>
@@ -161,6 +156,9 @@ export function MenuPanel({
                     onAdd={onAdd}
                     disabled={disabled}
                     compact={!isSelfOrderComCategory(category)}
+                    prioritizeLeadingImages={
+                      !isAllMenuActive && isSelfOrderComCategory(category)
+                    }
                     cartDemandByMenuItemId={cartDemandByMenuItemId}
                   />
                 </section>
@@ -171,13 +169,6 @@ export function MenuPanel({
       </ScrollArea>
     </section>
   );
-}
-
-function isItemSimple(item: SelfOrderMenuItem): boolean {
-  const hasMultipleVariants = item.menu_item_variants.length > 1;
-  const hasModifiers = item.menu_item_modifiers.length > 0;
-  const hasSides = item.menu_item_available_sides.length > 0;
-  return !hasMultipleVariants && !hasModifiers && !hasSides;
 }
 
 function createDefaultCartItem(item: SelfOrderMenuItem): SelfOrderCartItem {
@@ -218,23 +209,26 @@ function MenuItemGrid({
   onAdd,
   disabled = false,
   compact = false,
+  prioritizeLeadingImages = false,
   cartDemandByMenuItemId,
 }: {
   items: SelfOrderMenuItem[];
   onAdd: (item: SelfOrderCartItem) => void;
   disabled?: boolean;
   compact?: boolean;
+  prioritizeLeadingImages?: boolean;
   cartDemandByMenuItemId?: ReadonlyMap<number, number>;
 }) {
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-      {items.map((item) => (
+      {items.map((item, index) => (
         <MenuItemCard
           key={item.id}
           item={item}
           onAdd={onAdd}
           disabled={disabled}
           compact={compact}
+          priority={prioritizeLeadingImages && index < 2}
           cartDemand={cartDemandByMenuItemId?.get(item.id) ?? 0}
         />
       ))}
@@ -248,31 +242,33 @@ function MenuItemCard({
   disabled,
   compact,
   cartDemand,
+  priority = false,
 }: {
   item: SelfOrderMenuItem;
   onAdd: (item: SelfOrderCartItem) => void;
   disabled: boolean;
   compact: boolean;
   cartDemand: number;
+  priority?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const availability = menuItemAvailability(item);
   const soldOut = isAvailabilityBlocked(availability, cartDemand);
   const blocked = disabled || soldOut;
-  const isSimple = isItemSimple(item);
+  const isSimple = isSelfOrderItemSimple(item);
 
   useEffect(() => {
     if (blocked) setOpen(false);
   }, [blocked]);
 
-  const handleQuickAdd = () => {
+  const addOrCustomize = () => {
     if (blocked) return;
     if (isSimple) {
       onAdd(createDefaultCartItem(item));
       toast.success(item.name);
-    } else {
-      setOpen(true);
+      return;
     }
+    setOpen(true);
   };
 
   return (
@@ -283,20 +279,20 @@ function MenuItemCard({
         compact={compact}
         cartDemand={cartDemand}
         isSimple={isSimple}
-        onQuickAdd={handleQuickAdd}
-        onClick={() => {
-          if (soldOut) return;
-          setOpen(true);
-        }}
+        priority={priority}
+        onQuickAdd={addOrCustomize}
+        onClick={addOrCustomize}
       />
-      <SelfOrderItemSheet
-        item={item}
-        open={open && !blocked}
-        disabled={blocked}
-        cartDemand={cartDemand}
-        onOpenChange={(nextOpen) => setOpen(blocked ? false : nextOpen)}
-        onCommit={onAdd}
-      />
+      {isSimple ? null : (
+        <SelfOrderItemSheet
+          item={item}
+          open={open && !blocked}
+          disabled={blocked}
+          cartDemand={cartDemand}
+          onOpenChange={(nextOpen) => setOpen(blocked ? false : nextOpen)}
+          onCommit={onAdd}
+        />
+      )}
     </>
   );
 }
@@ -307,6 +303,7 @@ function MenuRowButton({
   compact,
   cartDemand,
   isSimple,
+  priority = false,
   onQuickAdd,
   onClick,
 }: {
@@ -315,6 +312,7 @@ function MenuRowButton({
   compact: boolean;
   cartDemand: number;
   isSimple: boolean;
+  priority?: boolean;
   onQuickAdd: () => void;
   onClick: () => void;
 }) {
@@ -339,8 +337,8 @@ function MenuRowButton({
       role="button"
       tabIndex={disabled ? -1 : 0}
       aria-disabled={disabled}
-      aria-label={`${SELF_ORDER_VI.customizeItem}: ${item.name}, ${priceLabel}`}
-      className={`group relative flex h-auto w-full cursor-pointer items-stretch justify-start gap-4 p-3 text-left whitespace-normal rounded-lg border border-border bg-card transition-[transform,background-color,border-color,box-shadow] duration-150 active:scale-95 disabled:opacity-60 ${
+      aria-label={`${isSimple ? SELF_ORDER_VI.addToCart : SELF_ORDER_VI.customizeItem}: ${item.name}, ${priceLabel}`}
+      className={`relative isolate flex h-auto w-full cursor-pointer items-stretch justify-start gap-4 p-3 text-left whitespace-normal rounded-lg border border-border bg-card [contain:layout_paint] transition-transform duration-150 ease-[var(--ease-move)] active:scale-[0.97] disabled:opacity-60 ${
         disabled ? "pointer-events-none opacity-60" : ""
       }`}
       onClick={onClick}
@@ -360,9 +358,9 @@ function MenuRowButton({
             alt=""
             fill
             sizes={compact ? "64px" : "128px"}
-            className="object-cover transition-transform duration-150 group-active:scale-105"
-            loading="lazy"
+            className="object-cover"
             decoding="async"
+            {...(priority ? { priority: true } : { loading: "lazy" as const })}
           />
         ) : (
           <span className="flex size-full items-center justify-center">
@@ -382,13 +380,23 @@ function MenuRowButton({
             {imageIcon}
           </Badge>
         ) : null}
+        {isSimple && cartDemand > 0 ? (
+          <Badge
+            variant="default"
+            className="absolute right-2 top-2 z-10 min-w-8 justify-center tabular-nums"
+          >
+            {cartDemand}
+          </Badge>
+        ) : null}
       </span>
 
       <div className="flex min-w-0 flex-1 flex-col justify-between py-0.5">
         <div className="flex flex-col items-start gap-1">
           {remaining || reason || imageBadges.length > 0 ? (
             <div className="flex flex-wrap items-center gap-1.5">
-              {remaining ? <Badge variant="secondary">{remaining}</Badge> : null}
+              {remaining ? (
+                <Badge variant="secondary">{remaining}</Badge>
+              ) : null}
               {imageBadges.map((badge) => (
                 <Badge key={badge} variant="default">
                   {badge}
@@ -417,7 +425,11 @@ function MenuRowButton({
             variant={isSimple ? "default" : "secondary"}
             className={`shrink-0 ${isSimple ? "size-8 rounded-full shadow-xs" : "h-8 rounded-full px-3 text-xs"}`}
             disabled={disabled}
-            aria-label={isSimple ? `${SELF_ORDER_VI.addToCart}: ${item.name}` : `${SELF_ORDER_VI.customizeItem}: ${item.name}`}
+            aria-label={
+              isSimple
+                ? `${SELF_ORDER_VI.addToCart}: ${item.name}`
+                : `${SELF_ORDER_VI.customizeItem}: ${item.name}`
+            }
             onClick={(e) => {
               e.stopPropagation();
               onQuickAdd();

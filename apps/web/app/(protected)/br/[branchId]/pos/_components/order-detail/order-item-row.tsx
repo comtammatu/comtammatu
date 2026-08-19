@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@comtammatu/ui";
 import { formatVND } from "@comtammatu/shared/format";
+import { POS_VI } from "@comtammatu/shared/messages";
 import { getStatusBadgeMeta } from "@/components/status-badge";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -154,7 +155,12 @@ export function OrderItemRow({ row, onTap }: OrderItemRowProps) {
   const discountAmount = Math.max(0, Number(row.discount_amount ?? 0));
   const netSubtotal = Math.max(0, row.subtotal - discountAmount);
   const discountLine =
-    discountAmount > 0 ? `Chiết khấu món: -${formatVND(discountAmount)}` : null;
+    discountAmount > 0
+      ? POS_VI.itemDiscountLine(
+          formatVND(discountAmount),
+          row.discount_note ?? undefined,
+        )
+      : null;
 
   return (
     <li className="w-full min-w-0 max-w-full">
@@ -180,6 +186,9 @@ export function OrderItemRow({ row, onTap }: OrderItemRowProps) {
             quantity={row.quantity}
             title={displayName}
             total={formatVND(netSubtotal)}
+            originalTotal={
+              discountAmount > 0 ? formatVND(row.subtotal) : null
+            }
             options={summary.options}
             modifiers={summary.modifiers}
             sides={summary.sides}

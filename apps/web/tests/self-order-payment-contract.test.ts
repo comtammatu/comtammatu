@@ -180,10 +180,11 @@ test("Self-Order creates the selected buyer-neutral payment without a hidden con
   assert.match(paymentPanel, /<QrCodeImage[\s\S]*saveVietQr/);
   assert.match(paymentPanel, /<BankAppLauncher/);
   assert.match(paymentPanel, /PROVEN_VIETQR_BANK_APP_ID/);
-  assert.match(paymentPanel, /bankAppComingSoon/);
+  assert.match(paymentPanel, /openMbBank/);
   assert.match(paymentPanel, /otherBankScanHint/);
-  assert.match(paymentPanel, /getVietQrBankAppCatalogUrl/);
-  assert.match(paymentPanel, /orderedApps\.map/);
+  assert.doesNotMatch(paymentPanel, /bankAppComingSoon/);
+  assert.doesNotMatch(paymentPanel, /getVietQrBankAppCatalogUrl/);
+  assert.doesNotMatch(paymentPanel, /orderedApps\.map/);
 });
 
 test("guest can cancel only the exact active VietQR request", () => {
@@ -302,10 +303,7 @@ test("returning from a bank app restores the live VietQR payment sheet", () => {
     client,
     /visibilitychange[\s\S]*restorePaymentUiAfterBankHandoff/,
   );
-  assert.match(
-    client,
-    /pageshow[\s\S]*restorePaymentUiAfterBankHandoff/,
-  );
+  assert.match(client, /pageshow[\s\S]*restorePaymentUiAfterBankHandoff/);
   assert.match(client, /onBankAppHandoff=\{markBankAppHandoff\}/);
   assert.match(paymentPanel, /onBankAppHandoff\?: \(\) => void/);
   assert.match(paymentPanel, /onBankAppHandoff\?\.\(\)/);

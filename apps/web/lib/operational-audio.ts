@@ -5,25 +5,37 @@ import {
   playAppSignal,
   type SignalTone,
 } from "./audio-signal";
+import {
+  buildAlertUtterance,
+  selectPosGuestAlert,
+  type OperationalAlertKind,
+  type OperationalAlertSlots,
+  type PosGuestAlertCandidate,
+  type PosGuestAlertKind,
+} from "./operational-audio-catalog";
+import {
+  cancelOperationalVoice,
+  prefetchOperationalVoiceCatalog,
+  primeOperationalVoice,
+} from "./operational-voice";
 
 export type OperationalAudioMode = "off" | "beep" | "voice" | "beep+voice";
+
+export type {
+  OperationalAlertKind,
+  OperationalAlertSlots,
+  PosGuestAlertCandidate,
+  PosGuestAlertKind,
+};
+export { buildAlertUtterance, selectPosGuestAlert };
 
 export const KDS_VOICE_COOLDOWN_MS = 15_000;
 const VOICE_AFTER_BEEP_GAP_MS = 120;
 
-export type OperationalAlertKind =
-  | "kds.new"
-  | "kds.append"
-  | "kds.add_on"
-  | "pos.self_order"
-  | "pos.payment_received"
-  | "pos.print_failed"
-  | "pos.out_of_stock";
-
 export interface PlayOperationalAlertInput {
   kind: OperationalAlertKind;
   mode: OperationalAudioMode;
-  slots?: { tableLabel?: string | undefined };
+  slots?: OperationalAlertSlots;
   force?: boolean;
 }
 
@@ -44,25 +56,18 @@ const AUDIO_MODE_CYCLE: readonly OperationalAudioMode[] = [
 let lastKdsVoiceAt = 0;
 let pendingVoiceTimer: number | null = null;
 
-const ALERT_TONES: Record<OperationalAlertKind, SignalTone> = {
-  "kds.new": "kds-new",
-  "kds.append": "kds-append",
-  "kds.add_on": "kds-add-on",
-  "pos.self_order": "pos-self-order",
-  "pos.payment_received": "pos",
-  "pos.print_failed": "pos",
-  "pos.out_of_stock": "pos",
-};
-
-const ALERT_PHRASES: Record<OperationalAlertKind, string> = {
-  "kds.new": "Phiếu mới",
-  "kds.append": "Gọi thêm",
-  "kds.add_on": "Món thêm",
-  "pos.self_order": "Khách tự gọi",
-  "pos.payment_received": "Đã thanh toán",
-  "pos.print_failed": "In lỗi",
-  "pos.out_of_stock": "Hết món",
-};
+export const OPERATIONAL_ALERT_TONES: Record<OperationalAlertKind, SignalTone> =
+  {
+    "kds.new": "kds-new",
+    "kds.append": "kds-append",
+    "kds.add_on": "kds-add-on",
+    "pos.self_order": "pos-self-order",
+    "pos.payment_call": "pos-payment-call",
+    "pos.staff_call": "pos-staff-call",
+    "pos.payment_received": "pos-payment-received",
+    "pos.print_failed": "pos",
+    "pos.out_of_stock": "pos",
+  };
 
 export const KDS_TONE_TO_ALERT_KIND: Record<
   Extract<SignalTone, "kds-new" | "kds-append" | "kds-add-on">,
@@ -110,54 +115,24 @@ export function shouldSpeakKdsVoice(
   return nowMs - lastSpokenAtMs >= KDS_VOICE_COOLDOWN_MS;
 }
 
-export function buildAlertUtterance(
-  kind: OperationalAlertKind,
-  tableLabel?: string | undefined,
-): string {
-  const phrase = ALERT_PHRASES[kind];
-  const table = tableLabel?.trim();
-  if (kind === "pos.payment_received" && table) {
-    return `Bàn ${table} đã thanh toán`;
-  }
-  return table ? `${phrase} bàn ${table}` : phrase;
-}
-
-function speak(text: string): void {
-  const synth = window.speechSynthesis as SpeechSynthesis | undefined;
-  if (!synth) return;
-
-  const voices = synth.getVoices();
-  const vietnamese = voices.find((voice) => voice.lang.startsWith("vi"));
-  // An empty list means voices have not loaded yet; let the engine pick.
-  // A loaded list without Vietnamese would read the copy with a wrong locale.
-  if (voices.length > 0 && vietnamese === undefined) return;
-
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "vi-VN";
-  utterance.rate = 1.1;
-  utterance.volume = 1;
-  if (vietnamese) utterance.voice = vietnamese;
-  // Single-flight: a newer alert cuts the line still speaking.
-  synth.cancel();
-  synth.speak(utterance);
-}
-
 function cancelPendingSpeech(): void {
   if (pendingVoiceTimer !== null) {
     window.clearTimeout(pendingVoiceTimer);
     pendingVoiceTimer = null;
   }
+  cancelOperationalVoice();
 }
 
 function scheduleSpeech(text: string, delayMs: number): void {
   cancelPendingSpeech();
+  const primed = primeOperationalVoice(text);
   if (delayMs === 0) {
-    speak(text);
+    primed.play();
     return;
   }
   pendingVoiceTimer = window.setTimeout(() => {
     pendingVoiceTimer = null;
-    speak(text);
+    primed.play();
   }, delayMs);
 }
 
@@ -167,7 +142,7 @@ export function playOperationalAlert(input: PlayOperationalAlertInput): void {
   if (mode === "off") return;
 
   if (audioModeHasBeep(mode)) {
-    playAppSignal(ALERT_TONES[kind], force);
+    playAppSignal(OPERATIONAL_ALERT_TONES[kind], force);
   }
 
   if (!audioModeHasVoice(mode)) return;
@@ -176,14 +151,17 @@ export function playOperationalAlert(input: PlayOperationalAlertInput): void {
     if (!shouldSpeakKdsVoice(now, lastKdsVoiceAt)) return;
     lastKdsVoiceAt = now;
   }
+  if (force) {
+    prefetchOperationalVoiceCatalog({
+      surface: kind.startsWith("kds.") ? "kds" : "pos",
+    });
+  }
   try {
     const voiceDelayMs = audioModeHasBeep(mode)
-      ? getAppSignalDurationMs(ALERT_TONES[kind]) + VOICE_AFTER_BEEP_GAP_MS
+      ? getAppSignalDurationMs(OPERATIONAL_ALERT_TONES[kind]) +
+        VOICE_AFTER_BEEP_GAP_MS
       : 0;
-    scheduleSpeech(
-      buildAlertUtterance(kind, slots?.tableLabel),
-      voiceDelayMs,
-    );
+    scheduleSpeech(buildAlertUtterance(kind, slots), voiceDelayMs);
   } catch {
     // Speech unavailable or blocked by the browser; the beep already fired.
   }

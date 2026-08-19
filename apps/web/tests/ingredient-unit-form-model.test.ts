@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   buildCatalogUnits,
+  defaultAnchorUnitId,
   deriveEffectiveUnitFactor,
   deriveEffectiveUnitFactors,
   findDirectDependents,
@@ -549,4 +550,34 @@ test("rebasing validates the complete generated graph before returning", () => {
   );
   assert.deepEqual(anchorUnitIds, beforeAnchors);
   assert.deepEqual(anchorFactors, beforeFactors);
+});
+
+test("new packaging units chain to the last pack; SI units stay on base", () => {
+  assert.equal(
+    defaultAnchorUnitId({
+      newUnitId: 6,
+      selectedUnitIds: [3],
+      baseUnitId: 3,
+      unitOptions: units,
+    }),
+    3,
+  );
+  assert.equal(
+    defaultAnchorUnitId({
+      newUnitId: 7,
+      selectedUnitIds: [3, 6],
+      baseUnitId: 3,
+      unitOptions: units,
+    }),
+    6,
+  );
+  assert.equal(
+    defaultAnchorUnitId({
+      newUnitId: 2,
+      selectedUnitIds: [1, 5],
+      baseUnitId: 1,
+      unitOptions: units,
+    }),
+    1,
+  );
 });

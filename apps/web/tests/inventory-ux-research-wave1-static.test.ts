@@ -80,6 +80,16 @@ test("Demand view/allocate dialogs lead with KPI strip and status badge title", 
     /variant="outline"[\s\S]*detailCopy\.kpiLines/,
     "allocate dialog: KPI Item strip",
   );
+  assert.match(
+    allocate,
+    /copy\.addAllocationLine/,
+    "allocate dialog: add allocation row",
+  );
+  assert.match(
+    allocate,
+    /onAddAllocationRow/,
+    "allocate dialog: add allocation handler",
+  );
 });
 
 test("Issue DETAIL leads with KPI strip and StatusBadge title", () => {

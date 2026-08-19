@@ -225,10 +225,7 @@ export function SelfOrderItemSheet({
     () =>
       item.menu_item_available_sides
         .filter((side) => selectedSideIds.has(side.side_item.id))
-        .reduce(
-          (sum, side) => sum + Number(side.side_item.base_price),
-          0,
-        ),
+        .reduce((sum, side) => sum + Number(side.side_item.base_price), 0),
     [item.menu_item_available_sides, selectedSideIds],
   );
   const total = (unitPrice + modifierTotal + sideTotal) * quantity;
@@ -325,7 +322,8 @@ export function SelfOrderItemSheet({
                 fill
                 sizes="(min-width: 1024px) 42rem, (min-width: 640px) 36rem, 100vw"
                 className="object-cover object-center"
-                priority
+                decoding="async"
+                priority={open}
               />
             ) : (
               <span className="flex size-full items-center justify-center">
@@ -365,7 +363,7 @@ export function SelfOrderItemSheet({
             />
           </div>
 
-          <div className="flex shrink-0 items-center border-b border-border/60 px-4 py-3">
+          <div className="flex shrink-0 items-center border-b border-border bg-background px-4 py-3">
             <SheetTitle className="min-w-0 flex-1 text-left font-heading text-2xl font-semibold tracking-tight">
               {title}
             </SheetTitle>
@@ -374,7 +372,7 @@ export function SelfOrderItemSheet({
             </SheetDescription>
           </div>
 
-          <ScrollArea className="min-h-0 flex-1">
+          <ScrollArea className="min-h-0 flex-1 overflow-hidden overscroll-contain">
             <div className="flex flex-col gap-4 px-4 py-4">
               {item.menu_item_variants.length > 0 ? (
                 <FieldSet className="gap-2">
@@ -534,7 +532,7 @@ export function SelfOrderItemSheet({
           </ScrollArea>
 
           <Separator />
-          <div className="workflow-safe-pb flex shrink-0 flex-wrap items-center gap-2 p-3 sm:flex-nowrap">
+          <div className="workflow-safe-pb flex shrink-0 flex-wrap items-center gap-2 bg-background p-3 sm:flex-nowrap">
             <p
               className="min-w-0 shrink-0 font-mono text-lg font-semibold tabular-nums text-primary"
               aria-label={`${SELF_ORDER_VI.subtotal}: ${formatVND(total)}`}

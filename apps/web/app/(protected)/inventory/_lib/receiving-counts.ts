@@ -32,6 +32,43 @@ export async function countOpenPurchaseOrders(
   return error ? 0 : (count ?? 0);
 }
 
+/** Draft GRNs that already have received qty but still miss a booked unit price. */
+export async function countGrnsAwaitingUnitPrice(
+  branchId?: number,
+): Promise<number> {
+  const ctx = await getAuthContextWithPermission(
+    PROCUREMENT_ROLES,
+    PERMISSION_KEYS.PROCUREMENT_READ,
+  );
+  if (!ctx) return 0;
+  const { supabase, claims } = ctx;
+  let query = supabase
+    .from("grn_items")
+    .select(
+      "grn_id, unit_cost, unit_cost_unit_id, goods_received_notes!inner(status, branch_id)",
+    )
+    .eq("tenant_id", claims.tenant_id)
+    .gt("received_quantity", 0)
+    .in("goods_received_notes.status", ["draft", "pending"]);
+  if (branchId != null) {
+    query = query.eq("goods_received_notes.branch_id", branchId);
+  }
+  const { data, error } = await query.limit(1000);
+  if (error || data == null) return 0;
+  const awaiting = new Set<number>();
+  for (const row of data) {
+    if (row.grn_id == null) continue;
+    const unitCost =
+      row.unit_cost == null ? Number.NaN : Number(row.unit_cost);
+    const hasPrice =
+      Number.isFinite(unitCost) &&
+      unitCost > 0 &&
+      row.unit_cost_unit_id != null;
+    if (!hasPrice) awaiting.add(row.grn_id);
+  }
+  return awaiting.size;
+}
+
 export async function countOpenGrns(branchId?: number): Promise<number> {
   const ctx = await getAuthContextWithPermission(
     PROCUREMENT_ROLES,
@@ -146,6 +183,39 @@ export async function countPendingWasteApprovals(
     .eq("issue_type", "writeoff")
     .eq("approval_status", "pending");
   if (branchId != null) query = query.eq("branch_id", branchId);
+  const { count, error } = await query;
+  return error ? 0 : (count ?? 0);
+}
+
+/** Open stock transfers still moving (not completed / cancelled). */
+export async function countOpenStockTransfers(
+  branchId?: number,
+): Promise<number> {
+  const ctx = await getAuthContextWithAnyPermission(
+    INVENTORY_ATTENTION_ROLES,
+    [
+      PERMISSION_KEYS.INVENTORY_REQUEST_FULFILL,
+      PERMISSION_KEYS.INVENTORY_READ,
+    ],
+  );
+  if (!ctx) return 0;
+  const { supabase, claims } = ctx;
+  let query = supabase
+    .from("stock_transfers")
+    .select("id", { count: "exact", head: true })
+    .eq("tenant_id", claims.tenant_id)
+    .in("status", [
+      "draft",
+      "confirmed",
+      "confirmed_ship",
+      "in_transit",
+      "confirmed_receive",
+    ]);
+  if (branchId != null) {
+    query = query.or(
+      `from_branch_id.eq.${branchId},to_branch_id.eq.${branchId}`,
+    );
+  }
   const { count, error } = await query;
   return error ? 0 : (count ?? 0);
 }

@@ -37,8 +37,10 @@ import {
 } from "./_lib/inventory-nav";
 import { resolveRequestedBranchId } from "./_lib/inventory-scope";
 import {
+  countGrnsAwaitingUnitPrice,
   countOpenGrns,
   countOpenStockRequests,
+  countOpenStockTransfers,
   countPendingWasteApprovals,
 } from "./_lib/receiving-counts";
 import {
@@ -160,15 +162,22 @@ export default async function InventoryPage({
     branchId,
   );
 
-  const [grnCount, wasteCount, transferCount] = await Promise.all([
-    flags.showProcurement
-      ? settledCount(countOpenGrns(branchId ?? undefined))
-      : Promise.resolve(0),
-    settledCount(countPendingWasteApprovals(branchId ?? undefined)),
-    flags.showStockRequestInbox
-      ? settledCount(countOpenStockRequests(branchId ?? undefined))
-      : Promise.resolve(0),
-  ]);
+  const [grnCount, grnPriceCount, wasteCount, requestCount, transferCount] =
+    await Promise.all([
+      flags.showProcurement
+        ? settledCount(countOpenGrns(branchId ?? undefined))
+        : Promise.resolve(0),
+      flags.showProcurement
+        ? settledCount(countGrnsAwaitingUnitPrice(branchId ?? undefined))
+        : Promise.resolve(0),
+      settledCount(countPendingWasteApprovals(branchId ?? undefined)),
+      flags.showStockRequestInbox
+        ? settledCount(countOpenStockRequests(branchId ?? undefined))
+        : Promise.resolve(0),
+      flags.showStockRequestInbox
+        ? settledCount(countOpenStockTransfers(branchId ?? undefined))
+        : Promise.resolve(0),
+    ]);
 
   const attentionItems = [
     grnCount > 0
@@ -179,12 +188,20 @@ export default async function InventoryPage({
           href: scopeHref("/inventory/grn", branchId),
         }
       : null,
-    wasteCount > 0
+    grnPriceCount > 0
       ? {
-          id: "waste",
-          label: copy.attentionWaste,
-          count: wasteCount,
-          href: scopeHref("/inventory/waste/approvals", branchId),
+          id: "grn-price",
+          label: copy.attentionGrnPrice,
+          count: grnPriceCount,
+          href: scopeHref("/inventory/grn", branchId),
+        }
+      : null,
+    requestCount > 0
+      ? {
+          id: "stock-requests",
+          label: copy.attentionStockRequests,
+          count: requestCount,
+          href: scopeHref("/inventory/transfers?work=request", branchId),
         }
       : null,
     transferCount > 0
@@ -192,7 +209,15 @@ export default async function InventoryPage({
           id: "transfers",
           label: copy.attentionTransfers,
           count: transferCount,
-          href: scopeHref("/inventory/transfers", branchId),
+          href: scopeHref("/inventory/transfers?work=dispatch", branchId),
+        }
+      : null,
+    wasteCount > 0
+      ? {
+          id: "waste",
+          label: copy.attentionWaste,
+          count: wasteCount,
+          href: scopeHref("/inventory/waste/approvals", branchId),
         }
       : null,
   ].filter((item): item is NonNullable<typeof item> => item != null);

@@ -59,17 +59,31 @@ export const employee = {
     statusNotRequired: "Không bắt buộc chấm công",
     statusDone: "Đã hoàn thành hôm nay",
     statusNotStarted: "Chưa chấm công",
+    statusClockInTooEarly: "Chưa đến giờ chấm công",
+    statusClockInTooLate: "Đã hết giờ chấm công",
+    statusShiftUnassigned: "Chưa phân ca hôm nay",
     statusNoProfile: "Thiếu hồ sơ nhân viên",
     statusNoBranch: "Thiếu chi nhánh",
     descriptionWorking: "Hoàn thành việc trong ca, sau đó gửi kết ca.",
     descriptionReadyToCheckout:
-      "Đã hoàn thành việc trong ca, gửi quản lý duyệt kết ca.",
-    descriptionCheckoutPending: "Yêu cầu kết ca đã gửi, chờ quản lý duyệt.",
+      "Đã hoàn thành việc trong ca, bấm Kết ca để chốt công.",
+    descriptionCheckoutPending:
+      "Yêu cầu kết ca đã gửi, chờ quản lý duyệt. Nếu quên duyệt, hệ thống tự duyệt sau 2 giờ.",
     descriptionNotRequired: "Tài khoản này không có ca cần chấm công hôm nay.",
     descriptionDone: "Chấm công hôm nay đã đủ giờ vào và giờ ra.",
     descriptionNotStarted: "Chụp ảnh để chấm công vào ca.",
+    descriptionClockInTooEarly: (
+      shiftName: string,
+      startTime: string,
+      fromTime: string,
+    ) =>
+      `${shiftName ? `Ca ${shiftName}` : "Ca làm của bạn"} bắt đầu lúc ${startTime}. Bạn có thể chấm công từ ${fromTime}.`,
+    descriptionClockInTooLate: (shiftName: string, endTime: string) =>
+      `${shiftName ? `Ca ${shiftName}` : "Ca làm của bạn"} đã hết giờ chấm công lúc ${endTime}.`,
     descriptionShiftUnassigned:
       "Chưa được phân ca hôm nay. Liên hệ quản lý để được xếp ca.",
+    descriptionMultipleShifts:
+      "Có nhiều ca trong khung giờ. Liên hệ quản lý để xếp đúng một ca.",
     descriptionNoProfile:
       "Tài khoản chưa được liên kết hồ sơ nhân viên hoặc chi nhánh.",
     descriptionNoBranch: "Tài khoản chưa được gắn chi nhánh. Liên hệ quản lý.",
@@ -88,7 +102,7 @@ export const employee = {
     shiftTasks: "Việc trong ca",
     tasksShort: "Việc",
     clockTodayTitle: "Chấm công hôm nay",
-    clockLongDescription: "Chấm công vào bằng ảnh; kết ca gửi quản lý duyệt.",
+    clockLongDescription: "Chấm công vào bằng ảnh; kết ca chốt giờ ra ngay.",
     managerClockLongDescription:
       "Quản lý chỉ ghi giờ vào và giờ ra ca, không cần danh sách việc hoặc duyệt.",
     managerAttendanceTitle: "Đang trong ca quản lý",
@@ -113,7 +127,7 @@ export const employee = {
     workflowTasksDescription: "Làm việc đầu ca, rồi việc cuối ca.",
     workflowCheckoutStep: "Kết ca",
     workflowManagerCheckoutStep: "Ra ca",
-    workflowCheckoutDescription: "Gửi kết ca.",
+    workflowCheckoutDescription: "Chốt giờ ra.",
     viewSchedule: "Xem lịch ca",
     scheduleTitle: "Lịch làm",
     scheduleDescription: "Ca làm và ngày công",
@@ -201,6 +215,8 @@ export const employee = {
     checkOutLabel: "Giờ ra",
     checkoutPendingTitle: "Chờ quản lý duyệt",
     checkoutPendingDescriptionPrefix: "Yêu cầu kết ca đã gửi đến",
+    checkoutPendingAutoApproveHint:
+      "Nếu chưa được duyệt, hệ thống tự duyệt sau 2 giờ.",
     checkoutPendingBadge: "Chờ duyệt",
     checkoutRequestLabel: "Yêu cầu ra",
     cancelCheckoutButton: "Rút yêu cầu kết ca",
@@ -213,8 +229,9 @@ export const employee = {
     staffCheckoutTitle: "Kết ca",
     managerCheckoutDescription:
       "Ghi giờ ra ca trực tiếp, không cần danh sách việc hoặc duyệt.",
-    staffCheckoutDescriptionPrefix: "Gửi yêu cầu kết ca cho",
-    staffCheckoutDescriptionSuffix: "duyệt.",
+    staffCheckoutDescriptionPrefix: "Chốt giờ ra ca. Kết ca",
+    staffCheckoutDescriptionSuffix:
+      "gửi quản lý duyệt. Nếu quên duyệt, hệ thống tự duyệt sau 2 giờ.",
     managerCheckoutBadge: "Sẵn sàng ra ca",
     staffCheckoutBadge: "Sẵn sàng gửi kết ca",
     managerCheckoutButton: "Chấm công ra",
@@ -222,6 +239,8 @@ export const employee = {
     managerCheckoutSubmitting: "Đang ghi giờ ra...",
     staffCheckoutSubmitting: "Đang gửi kết ca...",
     clockInTitle: "Bắt đầu ca",
+    clockInTooEarlyTitle: "Chưa đến giờ chấm công",
+    clockInTooLateTitle: "Đã hết giờ chấm công",
     clockInDescription: "Chụp ảnh để bắt đầu ca hôm nay.",
     recordedBadge: "Đã ghi nhận",
     notClockedInBadge: "Chưa vào ca",
@@ -365,6 +384,9 @@ export const employee = {
     monthLabel: "Tháng",
     emptyDescription: "Liên hệ quản lý xếp ca.",
     emptyTitle: "Chưa có lịch ca tháng này",
+    upcomingTitle: "Ca sắp tới",
+    upcomingEmpty: "Không có ca đã xếp trong 7 ngày tới.",
+    scheduledShift: "Đã xếp ca",
     checkInShort: "Vào",
     checkOutShort: "Ra",
     dayDetailTitle: "Chi tiết ngày",

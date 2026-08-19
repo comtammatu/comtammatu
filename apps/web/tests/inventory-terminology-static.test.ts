@@ -58,6 +58,8 @@ test("ingredient unit dialog models active units around one standard unit", () =
   assert.match(messages, /baseUnit: "Đơn vị chuẩn"/);
   assert.match(messages, /sectionLabel: "Đơn vị và quy đổi"/);
   assert.match(messages, /add: "Thêm đơn vị mới"/);
+  assert.match(source, /dialogCopy\.referenceCostHint/);
+  assert.doesNotMatch(source, /name="unit_cost"/);
   assert.doesNotMatch(messages, /Đơn vị nhập|Đơn vị xuất|vai trò độc lập/);
   assert.doesNotMatch(messages, /Nhập ≥ Xuất ≥ Sản xuất/);
   assert.doesNotMatch(messages, /Số đơn vị xuất \/ 1 đơn vị nhập/);

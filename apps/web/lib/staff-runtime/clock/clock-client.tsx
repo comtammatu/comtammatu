@@ -41,6 +41,10 @@ import {
 } from "../components/staff-runtime-page";
 import type { TodayWorkState } from "../_lib/today-work-state";
 import {
+  getClockInBlockedMessage,
+  isClockInBlocked,
+} from "../_lib/clock-in-copy";
+import {
   MAX_CLOCK_PHOTO_BYTES,
   MAX_UPLOAD_SOURCE_BYTES,
   UPLOAD_PHOTO_ACCEPT,
@@ -214,7 +218,10 @@ export function ClockClient({
   const autoStartCameraRef = useRef(false);
   const managerAttendanceOnly = state.managerAttendanceOnly;
   const todayShiftName =
-    state.attendance?.shiftName ?? state.todayShifts[0]?.shiftName ?? null;
+    state.attendance?.shiftName ??
+    state.todayShifts.find((shift) => shift.isCurrent)?.shiftName ??
+    state.todayShifts[0]?.shiftName ??
+    null;
   const embedded = surface === "embedded";
 
   useEffect(() => {
@@ -225,10 +232,10 @@ export function ClockClient({
 
   useEffect(() => {
     if (autoStartCameraRef.current) return;
-    if (state.status !== "not_started" || state.shiftUnassigned) return;
+    if (state.status !== "not_started" || isClockInBlocked(state)) return;
     autoStartCameraRef.current = true;
     void camera.start();
-  }, [camera.start, state.shiftUnassigned, state.status]);
+  }, [camera.start, state.clockInGate.kind, state.shiftUnassigned, state.status]);
 
   const completeClockIn = useCallback(
     (file: File) => {
@@ -424,13 +431,29 @@ export function ClockClient({
     );
   }
 
-  if (state.status === "not_started" && state.shiftUnassigned) {
+  if (state.status === "not_started" && isClockInBlocked(state)) {
+    const blocked = getClockInBlockedMessage(
+      state.clockInGate,
+      messages.employee.home,
+    );
     return (
       <AppEmptyState
-        title={messages.employee.home.statusNotStarted}
-        description={messages.employee.home.descriptionShiftUnassigned}
-        icon={<IconCircleX />}
-      />
+        title={blocked?.title ?? messages.employee.home.statusShiftUnassigned}
+        description={
+          blocked?.description ??
+          messages.employee.home.descriptionShiftUnassigned
+        }
+        icon={<IconClock />}
+      >
+        <Button
+          variant="outline"
+          size="touch"
+          className="w-full sm:w-fit"
+          render={<Link href={routes.schedule} />}
+        >
+          {clockCopy.viewSchedule}
+        </Button>
+      </AppEmptyState>
     );
   }
 
@@ -504,7 +527,7 @@ export function ClockClient({
         title={clockCopy.checkoutPendingTitle}
         description={`${clockCopy.checkoutPendingDescriptionPrefix} ${getCheckoutApprovalTargetLabel(
           state,
-        )}.`}
+        )}. ${clockCopy.checkoutPendingAutoApproveHint}`}
         tone="warning"
         badge={{ children: clockCopy.checkoutPendingBadge, variant: "warning" }}
       >

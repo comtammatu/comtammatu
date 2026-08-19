@@ -54,10 +54,13 @@ test("warehouse creates demand and accountant allocation creates POs with GRN dr
   assert.doesNotMatch(actions, /createPurchaseOrderFromGrn/);
   assert.match(demandClient, /copy\.submitAction/);
   assert.match(demandClient, /copy\.approveAllocationAction/);
+  assert.match(demandClient, /copy\.addAllocationLine/);
   assert.match(
     inventoryMessages,
     /approveAllocationAction: "Duyệt & tạo đơn mua"/,
   );
+  assert.match(inventoryMessages, /addAllocationLine: "Thêm dòng phân bổ"/);
+  assert.match(inventoryMessages, /chooseSupplier: "Chọn nhà cung cấp"/);
   assert.match(demandClient, /variant="document"/);
   assert.match(migration, /save_purchase_demand/);
   assert.match(migration, /review_purchase_demand/);

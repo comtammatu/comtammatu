@@ -40,7 +40,7 @@ Guest-visible state is **derived**, never stored. One stored enum:
 2. **`Gửi món`** → one `self_order_requests` row, `status='pending'`. Pre-decision **`Gửi thêm món`** merges into that request; replay returns original outcome.
 3. Staff badge → **`Duyệt`** → `create_order` → `route_order_to_kds`.
 4. Post-approval add-more → `append_order_items` (no approval).
-5. Bill sheet → `orders.items + totalAmount` → **`Thanh toán`** → `cash_call` | `vietqr` + optional HĐĐT buyer fields.
+5. Bill sheet → `orders.items + totalAmount` → **`Thanh toán`** → `cash_call` | `vietqr`.
 6. Payment settles → existing triggers complete order and release table.
 
 **Already open:** one open order → submit appends (no approval). Two+ open orders → `pending`; staff pick destination; token never chooses a bill; guest cannot read bill or create payment intent until accept.
@@ -55,15 +55,17 @@ Static `BrandMascot` (`animated={false}`) + title + description. Causes: invalid
 
 ### G1 Menu (only page)
 
-Header: `Cơm Tấm Má Tư` above table label (H1); `ThemeToggle` + icon-touch `Gọi nhân viên` + primary `Hoá đơn` (terracotta `Button` + `Badge`: approved count or `Clock` while pending). No branch name. `Hoá đơn` opens full-viewport bottom `Sheet`, never auto-opens; unopened/multi-bill → safe empty bill, payment unavailable. `Gọi nhân viên` writes `self_order_staff_calls` (POS table badge `Gọi NV` + `pos-payment-call` beep).
+Header: `Cơm Tấm Má Tư` above table label (H1); labeled `Gọi nhân viên` (`Button size="touch"`, not icon-only). The primary `Hoá đơn` (terracotta `Button` + `Badge`: approved count or `Clock` while pending) only when a pending request or an open order exists — omit it on an empty table. No branch name, no `ThemeToggle`. `Hoá đơn` opens full-viewport bottom `Sheet`, never auto-opens; unopened/multi-bill → safe empty bill, payment unavailable. `Gọi nhân viên` writes `self_order_staff_calls` (POS table badge `Gọi NV` + `pos-staff-call` beep). Header, category pills, wait banner, and the cart bar are in-flow (`shrink-0`, opaque `bg-background`) outside the single menu scrollport — not `fixed`/`sticky` overlays and not `bg-*/95` + `backdrop-blur`.
 
-Body: sticky category pills; default named `Cơm` else first non-empty non-`Khác`; `Tất cả` last. Horizontal item rows (image left); one column phone / two tablet+. Sold-out from `branch_menu_limit_availability` → `Hết suất`; finite quota → `Còn N phần`. Curated badges: `Sườn Cốt Lết` → `Truyền thống`; `Sườn Một Gang` → `Nên thử` + `Chờ 20 phút`. Trailing parenthetical in name → image `Badge` if no curated badge; cart/kitchen keep raw `menu_items.name`.
+Body: sticky category pills (in-flow above the menu scrollport) with short prompt `Hôm nay ăn gì?` (`text-base` in the pill row; no subtitle); default named `Cơm` else first non-empty non-`Khác`; `Tất cả` last. Horizontal item rows (image left); one column phone / two tablet+. Sold-out from `branch_menu_limit_availability` → `Hết suất`; finite quota → `Còn N phần`. Curated badges: `Sườn Cốt Lết` → `Truyền thống`; `Sườn Một Gang` → `Nên thử` + `Chờ 20 phút`. Trailing parenthetical in name → image `Badge` if no curated badge; cart/kitchen keep raw `menu_items.name`. In `Tất cả`, category titles may stick inside the list with opaque `bg-background`. Tap/add on a simple item (≤1 variant, no modifiers, no sides) increments a matching uncustomized cart line and shows qty on the card; G2 opens only when the guest has a choice.
 
-Prominence by **category name** (not `menu_categories.type`): named `Cơm` → large thumb (`h-32`, `text-2xl`/`text-xl`); else compact (`h-16`, `text-lg`). Motion: DS `transition-[transform,…] duration-150` + press scale only.
+Prominence by **category name** (not `menu_categories.type`): named `Cơm` → large thumb (`h-32`, `text-2xl`/`text-xl`); else compact (`h-16`, `text-lg`). Motion: transform-only press (`active:scale-[0.97]`, `duration-150` / `--ease-move`); no nested photo scale, no `transition-all`.
 
-Footer: sticky cart button when cart non-empty (opens sheet; never submits). **No Tabs**, **no `StatusPill`**.
+Footer: sticky cart button when cart non-empty (in-flow; opens sheet; never submits). **No Tabs**, **no `StatusPill`**.
 
 ### G2 · Item sheet
+
+Opens only when the item has a guest choice: 2+ variants, any modifier, or any side. Simple items never mount this sheet from the menu.
 
 Full-viewport bottom sheet (`max-w-2xl`). Image: phone `h-80`; `sm+` `aspect-video` with max-height caps. Close on image; title under image; variant · modifiers · sides · note; footer: total · quantity · add/update.
 
@@ -75,7 +77,7 @@ CTA: not open → **`Gửi món`** + staff-confirm hint; awaiting / open → **`
 
 ### G4 · Awaiting confirmation
 
-One `AppDialog` after first pending submit this session: **`Đã gửi đơn`** / **`Vui lòng chờ nhân viên duyệt. Món vào bếp sau khi được duyệt.`** / **`Đã hiểu`** · **`Gọi nhân viên`**. Does not remount from poll/reload/later add-more. Bill: `Clock` + blurred pending overlay + static `BrandMascot`; no payable total.
+When derived state is `Chờ xác nhận`, an in-flow `role="status"` banner stays on the menu (not an `AppDialog`): **`Đã gửi đơn`** / kitchen starts after cashier **`Duyệt`** / secondary **`Gọi nhân viên`**. Guest does not dismiss to see status. After accept, the banner goes away and `Hoá đơn` remains. Bill: `Clock` + faded pending list under an opaque overlay + static `BrandMascot`; no filter/`backdrop-blur`. No payable total.
 
 ### G5 · Rejected
 
@@ -83,11 +85,11 @@ One Sonner `toast.warning` + **`Gửi lại`** (reload rejected cart). No dialog
 
 ### G6 · Bill sheet
 
-`orders.items` + `totalAmount`; round history from `kitchen_send_batches`. One **`Thanh toán`** only when order unambiguous and open.
+`orders.items` + `totalAmount`; round history from `kitchen_send_batches`. One **`Thanh toán`** only when order unambiguous and open. After one open order and no live payment intent, guest enters **`Mã giảm` / `Mã voucher`** (`order_pct` / `order_vnd` / `voucher_face`); picker kinds fail closed (**`Mã này cần nhân viên hỗ trợ`**). Item discount: struck gross + net + **`Khuyến mãi: -X`**. Order-level campaign stays in the footer, not faked per line.
 
 ### G7 Payment step (in sheet)
 
-Replaces bill with `cash_call` | VietQR + HĐĐT buyer fields; back → G6. Exactly one live intent; locks add-more, customize, buyer fields. VietQR reload uses stored amount/code/QR/bank/expiry — never rebuilds from current settings. Bank-app catalog stays visible. Handoff is **MB Bank only** (proven EMV payload). Other listed banks stay visible and disabled (`Sắp hỗ trợ`); guests scan the on-screen QR. MoMo never a Self-Order method. Guest may cancel exact active VietQR only; late verified SePay still settles. Cash cancel is staff-owned.
+Replaces bill with `cash_call` | VietQR; back → G6. Exactly one live intent; locks add-more and customize. VietQR reload uses stored amount/code/QR/bank/expiry — never rebuilds from current settings. After VietQR exists, primary action is the on-screen QR plus one line to scan it from another bank app. Handoff is **MB Bank only** (proven EMV payload). Do not list disabled banks as peer CTAs. MoMo never a Self-Order method. Guest may cancel exact active VietQR only; late verified SePay still settles. Cash cancel is staff-owned. ADR 0013: no HĐĐT buyer MST fields on this surface.
 
 ### G8 · Paid
 
@@ -113,9 +115,9 @@ Open POS surface (device-local, ADR 0008):
 
 | Event | Tone | Notes |
 | --- | --- | --- |
-| New pending `self_order_requests` | `pos-self-order` | Distinct from ordinary POS beep |
-| New active `self_order_payment_requests` (`cash_call` / `vietqr_pending`) | `pos-payment-call` | Distinct from QR-order and POS beeps |
-| New pending `self_order_staff_calls` | `pos-payment-call` | Same “come to the table” attention as a cash call |
+| New pending `self_order_requests` | `pos-self-order` | Distinct from ordinary POS beep; voice “Bàn {n} cần duyệt đơn” |
+| New active `self_order_payment_requests` (`cash_call` / `vietqr_pending`) | `pos-payment-call` | Distinct from QR-order, staff-call, and POS beeps; voice “Bàn {n} gọi thanh toán” |
+| New pending `self_order_staff_calls` | `pos-staff-call` | Distinct from payment-call; voice “Bàn {n} gọi nhân viên” |
 
 Honor POS sound preference. First poll seeds ids without beep. Neither writes `public.notifications` nor Telegram.
 
@@ -163,6 +165,8 @@ Deleted: `self_order_sessions`, batches, session devices, capability/realtime to
 | `self_order_cancel_payment_request(...)`              | staff  | keyed by request/order |
 | `self_order_call_staff(token, op_id)`                 | guest  | one pending staff-call per table; 45s cooldown |
 | `self_order_ack_staff_call(call_id)`                  | staff  | clears the table badge |
+| `self_order_apply_promotion_code(token, op_id, code)` | guest  | order-level `order_pct` / `order_vnd` / `voucher_face` on the unique open bill; picker kinds fail closed |
+| `self_order_clear_promotion(token, op_id)`            | guest  | clear those same guest-applied order-level kinds; staff comps stay |
 
 One-arg snapshot overload is compatibility only (no rejected context).
 
@@ -184,4 +188,4 @@ Device binding removed: photo of QR can read bill and append while open. Staff g
 
 Non-goals: no desktop IA fork; no change to `finalize_paid_order` / KDS / pay-before-ready; no `is_featured`; no admin for `self_order_enabled`/QR print; no new DS tokens (`workflow-safe-pb` remains approved).
 
-Runtime: `apps/web/app/q/[token]/{page,self-order-client}.tsx`, `self-order/{menu-panel,cart-sheet,bill-drawer,payment-panel}.tsx`, `…/pos/{pos-table-gate,self-order-actions}.tsx`, `packages/shared/src/messages/self-order.ts`.
+Runtime: `apps/web/app/q/[token]/{page,self-order-client}.tsx`, `self-order/{menu-panel,cart-sheet,bill-drawer,promo-code-panel,payment-panel}.tsx`, `…/pos/{pos-table-gate,self-order-actions}.tsx`, `packages/shared/src/messages/self-order.ts`.

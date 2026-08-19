@@ -7,7 +7,9 @@ export type SignalTone =
   | "kds-add-on"
   | "pos"
   | "pos-self-order"
-  | "pos-payment-call";
+  | "pos-payment-call"
+  | "pos-staff-call"
+  | "pos-payment-received";
 type AudioContextConstructor = new () => AudioContext;
 type AudioWindow = Window &
   typeof globalThis & {
@@ -57,28 +59,45 @@ export const APP_SIGNAL_PATTERNS: Record<SignalTone, SignalPattern> = {
     pulseDurationSeconds: 0.28,
     oscillatorType: "square",
   },
-  // POS order/sync/print: mid rising pair — baseline cashier ping.
+  // POS baseline (sync / ready / cancel / print): short falling pair.
+  // KDS new-ticket stays a long rising square; do not reuse that contour.
   pos: {
-    frequencies: [660, 880, 1046],
+    frequencies: [784, 659, 523],
     pulses: 2,
-    pulseGapSeconds: 0.18,
-    pulseDurationSeconds: 0.42,
+    pulseGapSeconds: 0.2,
+    pulseDurationSeconds: 0.16,
     oscillatorType: "square",
   },
-  // QR self-order pending approval: brighter triple chirp, not the POS pair.
+  // QR self-order pending approval: rising triplet, not a kitchen ticket.
   "pos-self-order": {
-    frequencies: [784, 988, 1175],
+    frequencies: [659, 784, 988],
     pulses: 3,
     pulseGapSeconds: 0.09,
     pulseDurationSeconds: 0.2,
     oscillatorType: "square",
   },
-  // Guest payment call (cash / VietQR): insistent alternating ding.
+  // Guest payment call (cash / VietQR): insistent high alternating ding.
   "pos-payment-call": {
-    frequencies: [1046, 784, 1046],
+    frequencies: [1397, 1046, 1397],
     pulses: 4,
     pulseGapSeconds: 0.07,
     pulseDurationSeconds: 0.16,
+    oscillatorType: "square",
+  },
+  // Guest staff call: low pager pair, not the payment-call rhythm.
+  "pos-staff-call": {
+    frequencies: [392, 494, 392],
+    pulses: 2,
+    pulseGapSeconds: 0.28,
+    pulseDurationSeconds: 0.32,
+    oscillatorType: "square",
+  },
+  // Confirmed table payment: descending pair, not the POS/KDS baseline ping.
+  "pos-payment-received": {
+    frequencies: [988, 784, 523],
+    pulses: 2,
+    pulseGapSeconds: 0.14,
+    pulseDurationSeconds: 0.22,
     oscillatorType: "square",
   },
 };
@@ -129,6 +148,31 @@ function schedulePulse(
   oscillator.stop(endAt);
 }
 
+function getAudioContext(): AudioContext | null {
+  const audioWindow = window as AudioWindow;
+  const AudioContextCtor: AudioContextConstructor | undefined =
+    audioWindow.AudioContext ?? audioWindow.webkitAudioContext;
+  if (!AudioContextCtor) return null;
+  if (!audioCtx) {
+    audioCtx = new AudioContextCtor();
+  }
+  if (audioCtx.state === "suspended") {
+    void audioCtx.resume();
+  }
+  return audioCtx;
+}
+
+function connectAlertCompressor(context: AudioContext): DynamicsCompressorNode {
+  const compressor = context.createDynamicsCompressor();
+  compressor.threshold.setValueAtTime(-18, context.currentTime);
+  compressor.knee.setValueAtTime(6, context.currentTime);
+  compressor.ratio.setValueAtTime(4, context.currentTime);
+  compressor.attack.setValueAtTime(0.003, context.currentTime);
+  compressor.release.setValueAtTime(0.12, context.currentTime);
+  compressor.connect(context.destination);
+  return compressor;
+}
+
 export function playAppSignal(tone: SignalTone, force = false): void {
   const now = Date.now();
   const lastSignalAt = lastSignalAtByTone[tone] ?? 0;
@@ -136,30 +180,14 @@ export function playAppSignal(tone: SignalTone, force = false): void {
   lastSignalAtByTone = { ...lastSignalAtByTone, [tone]: now };
 
   try {
-    const audioWindow = window as AudioWindow;
-    const AudioContextCtor: AudioContextConstructor | undefined =
-      audioWindow.AudioContext ?? audioWindow.webkitAudioContext;
-    if (!AudioContextCtor) return;
-    if (!audioCtx) {
-      audioCtx = new AudioContextCtor();
-    }
-    if (audioCtx.state === "suspended") {
-      void audioCtx.resume();
-    }
-
-    const compressor = audioCtx.createDynamicsCompressor();
-    compressor.threshold.setValueAtTime(-18, audioCtx.currentTime);
-    compressor.knee.setValueAtTime(6, audioCtx.currentTime);
-    compressor.ratio.setValueAtTime(4, audioCtx.currentTime);
-    compressor.attack.setValueAtTime(0.003, audioCtx.currentTime);
-    compressor.release.setValueAtTime(0.12, audioCtx.currentTime);
-    compressor.connect(audioCtx.destination);
-
-    const startAt = audioCtx.currentTime;
+    const context = getAudioContext();
+    if (!context) return;
+    const compressor = connectAlertCompressor(context);
+    const startAt = context.currentTime;
     const pattern = APP_SIGNAL_PATTERNS[tone];
     for (let index = 0; index < pattern.pulses; index += 1) {
       schedulePulse(
-        audioCtx,
+        context,
         compressor,
         startAt +
           index * (pattern.pulseDurationSeconds + pattern.pulseGapSeconds),
@@ -175,4 +203,56 @@ export function playAppSignal(tone: SignalTone, force = false): void {
   } catch {
     // Audio not available or blocked by the browser.
   }
+}
+
+const VOICE_PLAYBACK_GAIN = 1.35;
+
+export function playAlertAudioBuffer(buffer: ArrayBuffer): {
+  stopped: Promise<void>;
+  stop: () => void;
+} {
+  const context = getAudioContext();
+  if (!context) {
+    return { stopped: Promise.resolve(), stop() {} };
+  }
+
+  let source: AudioBufferSourceNode | null = null;
+  let compressor: DynamicsCompressorNode | null = null;
+  let stopped = false;
+
+  const stoppedPromise = context.decodeAudioData(buffer.slice(0)).then(
+    (audioBuffer) =>
+      new Promise<void>((resolve) => {
+        if (stopped) {
+          resolve();
+          return;
+        }
+        compressor = connectAlertCompressor(context);
+        const gainNode = context.createGain();
+        gainNode.gain.setValueAtTime(VOICE_PLAYBACK_GAIN, context.currentTime);
+        source = context.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(gainNode);
+        gainNode.connect(compressor);
+        source.onended = () => {
+          compressor?.disconnect();
+          resolve();
+        };
+        source.start(context.currentTime);
+      }),
+    () => undefined,
+  );
+
+  return {
+    stopped: stoppedPromise,
+    stop() {
+      stopped = true;
+      try {
+        source?.stop();
+      } catch {
+        // Already stopped.
+      }
+      compressor?.disconnect();
+    },
+  };
 }

@@ -146,6 +146,8 @@ export const ATTENDANCE_STATUS_LABELS_VI = {
   checked_out: "Đã kết ca",
   in_shift: "Đang trong ca",
   stale_open: "Treo (chưa kết ca)",
+  scheduled: "Đã xếp ca",
+  day_off: "Ngày nghỉ",
 } as const;
 
 export const LEAVE_REQUEST_STATUS_LABELS_VI = {

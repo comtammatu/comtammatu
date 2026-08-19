@@ -34,6 +34,8 @@ test("ingredient unit editor owns per-row anchor targets and derived previews", 
   assert.match(dialog, /deriveEffectiveUnitFactor/);
   assert.match(dialog, /wouldCreateUnitCycle/);
   assert.match(dialog, /findDirectDependents/);
+  assert.match(dialog, /defaultAnchorUnitId/);
+  assert.match(dialog, /SelectGroup/);
 });
 
 test("catalog payload preserves selected anchors instead of flattening to base", () => {

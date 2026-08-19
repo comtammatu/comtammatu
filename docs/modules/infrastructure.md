@@ -44,7 +44,7 @@ Config: [`apps/web/vercel.json`](../../apps/web/vercel.json).
 - Git deploy: `main` only; other branches disabled
 - `ignoreCommand`: skip deploy when the commit does not touch apps, packages,
   scripts, supabase, or root workspace manifests
-- Crons: `/api/cron/kds-maintenance`, `/api/cron/tax-invoice-issue`
+- Crons: `/api/cron/kds-maintenance`, `/api/cron/tax-invoice-issue`, `/api/cron/attendance-checkout-auto-approve`
 - Preview: fail-closed via `scripts/check-preview-supabase-env.mjs` — do not put
   Supabase credentials on Vercel Preview
 

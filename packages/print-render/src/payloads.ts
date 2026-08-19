@@ -87,6 +87,9 @@ export type BillBase = {
     modifiers?: ModifierLine[] | null;
     sides?: SideLine[] | null;
     note?: string | null;
+    /** Item-level campaign/comp; Thành tiền stays gross. */
+    discount_amount?: number | null;
+    discount_note?: string | null;
   }>;
   subtotal: number;
   tax_amount?: number | null;

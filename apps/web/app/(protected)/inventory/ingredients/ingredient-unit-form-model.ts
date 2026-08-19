@@ -479,6 +479,29 @@ function isAutomaticStandardRelation(unit: UnitOption, baseUnit: UnitOption): bo
   );
 }
 
+/** Default new conversion row: SI stays on base; packs chain to the last pack. */
+export function defaultAnchorUnitId(input: {
+  newUnitId: number;
+  selectedUnitIds: readonly number[];
+  baseUnitId: number;
+  unitOptions: readonly UnitOption[];
+}): number {
+  const unitsById = new Map(input.unitOptions.map((unit) => [unit.id, unit]));
+  const newUnit = unitsById.get(input.newUnitId);
+  const baseUnit = unitsById.get(input.baseUnitId);
+  if (
+    newUnit != null &&
+    baseUnit != null &&
+    isAutomaticStandardRelation(newUnit, baseUnit)
+  ) {
+    return input.baseUnitId;
+  }
+  const lastPackaging = [...input.selectedUnitIds]
+    .reverse()
+    .find((unitId) => unitId !== input.baseUnitId);
+  return lastPackaging ?? input.baseUnitId;
+}
+
 function pathReachesUnit(
   anchorUnitIds: Readonly<Record<number, number | null>>,
   unitId: number,

@@ -76,7 +76,7 @@ test("assigned company staff can clock in only through live self-service scope",
   assert.ok(migrationName, "missing company self-service clock-in migration");
   const migration = read(`supabase/migration-archive/${migrationName}`);
 
-  assert.match(todayWorkState, /Boolean\(assignedShift\)/);
+  assert.match(todayWorkState, /clockInGate\.kind !== "unassigned"/);
   assert.match(todayWorkState, /claims\.user_role !== "self_service"/);
   assert.match(clockClient, /state\.todayShifts\[0\]\?\.shiftName/);
   assert.match(migration, /v_is_company_self_service boolean/);

@@ -1,6 +1,6 @@
 # ADR 0008 — Operational Audio Alerts (Beep + Voice)
 
-**Status:** Accepted (2026-07-09; amended 2026-07-10/11)
+**Status:** Accepted (2026-07-09; amended 2026-07-10/11; guest-tone split 2026-08-19; cached cloud TTS 2026-08-19; table-clip cache + spoken paid amount 2026-08-19)
 
 **Decision drivers:** Kitchen/POS need eyes-free attention during service; current Web Audio beeps are reliable but content-blind; a recorded clip pack ships no voice until someone records it.
 
@@ -10,7 +10,7 @@ POS and KDS already ship device-local sound alerts:
 
 - Runtime beep engine: `apps/web/lib/audio-signal.ts` (`playAppSignal`, `SignalTone`)
 - KDS taxonomy: `kds-new` / `kds-append` / `kds-add-on` in `apps/web/app/(protected)/br/[branchId]/kds/_lib/sound-alerts.ts`
-- POS baseline tone `pos` for order sync / stock / print-failure; QR guest events use dedicated `pos-self-order` and `pos-payment-call`
+- POS baseline tone `pos` for order sync / stock / print-failure; QR guest events use dedicated `pos-self-order`, `pos-payment-call`, and `pos-staff-call`; confirmed payment uses `pos-payment-received`
 - Prefs are device-local via `apps/web/lib/device-prefs.ts` (`kds:audio-mode:{branchId}`, `pos:audio-mode:{branchId}`)
 
 Owner direction: add spoken Vietnamese alerts (“Má Tư voice”) instead of relying only on beeps. The open product question was whether TTS should **replace** beeps.
@@ -28,9 +28,9 @@ Constraints that matter in-store:
 
 2. **Device-local operational audio only.** Audio alerts fire on the open POS/KDS surface that already owns the event. They MUST NOT write `public.notifications`, MUST NOT use Telegram/outbox, and MUST NOT sync prefs to the server. Prefs stay in `device-prefs` (allowed exception in `scripts/check-client-storage.mjs`).
 
-3. **Browser TTS is the voice engine** (amended 2026-07-10). Speak the template through `window.speechSynthesis` with `lang = "vi-VN"`. No audio assets, no bundle cost, and the table-number slot is plain string interpolation. When the device exposes a loaded voice list without any `vi-*` voice, skip voice for that event; beep still follows the mode. Cloud/realtime TTS stays rejected.
+3. **Cached cloud TTS, browser fallback** (amended 2026-08-19). Catalog templates speak through AI Gateway **`openai/tts-1`** (locked; not env-switched) when `AI_GATEWAY_API_KEY` or Vercel OIDC is present. Clips cache on the device; the beep never waits on the network. Unconfigured or failed cloud TTS uses `speechSynthesis` `vi-VN`. Free-form text is rejected. A recorded brand pack may still replace the engine later without changing `kind`s.
 
-4. **KDS first, POS critical events second.** KDS ships the three existing alert kinds with short fixed copy (event type + table label). POS speaks only self-order approval, confirmed table payment, print failure, and out-of-stock. A guest payment request remains beep-only; confirmed payment copy is exactly “Bàn {table} đã thanh toán”. Do not read amounts, full item lists, or routine POS state transitions.
+4. **KDS first, POS critical events second.** KDS ships the three existing alert kinds with short fixed copy (event type + table label). POS speaks self-order approval, guest payment call, staff call, confirmed payment, print failure, and out-of-stock. Persist finite “Bàn {n} …” clips for the open branch (including stored “gọi món”). Confirmed payment speaks “Đã nhận {Vietnamese amount}” on demand — round to 1,000₫, LRU the clip, do not prefetch every total. Do not read item lists or routine POS state transitions. POS guest beeps must not reuse KDS ticket contours.
 
 5. **Single playback API.** New call sites go through one operational-alert entrypoint (e.g. `playOperationalAlert`) that:
    - classifies a stable `kind`
@@ -43,7 +43,7 @@ Constraints that matter in-store:
 
 7. **KDS voice has a 15-second quiet window.** Beeps remain immediate. Spoken KDS alerts inside the window are dropped rather than queued, so a rush cannot create delayed narration that no longer matches the board. User-triggered previews bypass the window and do not postpone the next live alert.
 
-8. **Beep and voice do not overlap.** In `beep+voice`, finish the mapped beep, leave a short 120 ms gap, then start TTS at `volume = 1`. A newer alert replaces any voice still waiting to start. `voice`-only starts immediately.
+8. **Beep and voice do not overlap.** In `beep+voice`, start the cloud fetch with the beep, finish the mapped beep, leave 120 ms, then play the clip (or browser TTS). A newer alert replaces any voice still waiting. `voice`-only starts immediately.
 
 ## Alternatives Rejected
 
@@ -55,13 +55,17 @@ Constraints that matter in-store:
 
 - Rejected (2026-07-10): the pack needs recording, asset discipline, and digit concatenation before a single line can play. Voice quality is device-dependent under TTS, but a device with no Vietnamese voice degrades to today's beep, which is the current shipped behavior anyway.
 
-**C. Cloud / realtime TTS**
+**C. Uncached live cloud TTS on the beep path**
 
-- Rejected for MVP: network dependency, cost, and latency during service peaks.
+- Rejected: network and latency during service peaks. Cached catalog overlay via AI Gateway is accepted (2026-08-19): beep stays local; voice fetch overlaps the beep and fails open to browser TTS.
 
 **D. Route kitchen audio through `public.notifications`**
 
 - Rejected: wrong durability and audience model; kitchen attention is ephemeral and board-local.
+
+**E. `tts-1-hd` or an env-switched speech model**
+
+- Rejected (2026-08-19): Gateway speech REST is OpenAI-only; `tts-1` is the cheapest listed OpenAI speech model. Spend is saved by clip cache, not HD.
 
 ## Consequences
 
@@ -70,11 +74,11 @@ Constraints that matter in-store:
 - Beep reliability is preserved; voice is additive and kill-switchable per device.
 - Stable `kind` catalog lets UI, tests, and a future voice pack evolve independently.
 - Clear boundary from toast / durable notification / Telegram channels.
-- Zero audio assets: voice ships the day the code lands.
+- No bundled audio assets: cloud clips cache on the device after first speak.
 
 **Negative / trade-offs**
 
-- Vietnamese voice quality, rate, and latency vary by OS/browser; a device without a `vi-*` voice gets beep only.
+- Vietnamese voice quality, rate, and latency vary by OS/browser when cloud TTS is unset; a device without a `vi-*` voice then gets beep only.
 - Voice-on-by-default is intentionally deferred until kitchen smoke feedback.
 - A recorded brand voice pack and Runner audio stay optional / out of scope until a separate decision.
 

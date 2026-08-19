@@ -96,7 +96,12 @@ export function OrderItemActionsSheet({
   const netSubtotal =
     item == null ? 0 : Math.max(0, item.subtotal - discountAmount);
   const discountLine =
-    discountAmount > 0 ? `Chiết khấu món: -${formatVND(discountAmount)}` : null;
+    discountAmount > 0
+      ? POS_VI.itemDiscountLine(
+          formatVND(discountAmount),
+          item?.discount_note ?? undefined,
+        )
+      : null;
 
   return (
     <StationSheet
@@ -116,6 +121,11 @@ export function OrderItemActionsSheet({
               quantity={item.quantity}
               title={displayName}
               total={formatVND(netSubtotal)}
+              originalTotal={
+                discountAmount > 0 && item
+                  ? formatVND(item.subtotal)
+                  : null
+              }
               options={summary.options}
               modifiers={summary.modifiers}
               sides={summary.sides}

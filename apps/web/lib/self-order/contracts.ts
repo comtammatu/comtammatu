@@ -74,6 +74,19 @@ export const selfOrderStaffCallRequestSchema = z
   })
   .strict();
 
+export const selfOrderPromotionApplyRequestSchema = z
+  .object({
+    clientOpId: selfOrderClientOpIdSchema,
+    code: z.string().trim().min(1).max(40),
+  })
+  .strict();
+
+export const selfOrderPromotionClearRequestSchema = z
+  .object({
+    clientOpId: selfOrderClientOpIdSchema,
+  })
+  .strict();
+
 export const selfOrderStaffCallResponseSchema = z
   .object({
     ok: z.literal(true),
@@ -193,6 +206,8 @@ const publicSelfOrderOrderLineSchema = z
     quantity: z.number().int().positive(),
     unitPrice: z.number().finite().min(0),
     lineTotal: z.number().finite().min(0),
+    discountAmount: z.number().finite().min(0).optional().default(0),
+    discountNote: z.string().max(200).nullable().optional(),
     modifiers: z.array(selfOrderModifierSchema).max(20),
     sides: z.array(selfOrderSideSchema).max(20),
     note: z.string().max(300).nullable(),
@@ -209,6 +224,11 @@ const publicSelfOrderOrderSchema = z
     subtotal: z.number().finite().min(0),
     serviceCharge: z.number().finite().min(0),
     discountAmount: z.number().finite().min(0),
+    orderDiscountAmount: z.number().finite().min(0).optional().default(0),
+    itemDiscountAmount: z.number().finite().min(0).optional().default(0),
+    discountNote: z.string().max(200).nullable().optional(),
+    promotionName: z.string().max(200).nullable().optional(),
+    promotionCode: z.string().max(40).nullable().optional(),
     totalAmount: z.number().finite().min(0),
     itemCount: z.number().int().min(0),
     items: z.array(publicSelfOrderOrderLineSchema),

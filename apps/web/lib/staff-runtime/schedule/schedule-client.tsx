@@ -39,6 +39,7 @@ import {
   type ScheduleLeave,
   type ScheduleMonthData,
 } from "./actions";
+import { listUpcomingScheduleShifts } from "../_lib/schedule-month";
 import {
   formatISODateParts,
   formatVNBusinessDate,
@@ -496,7 +497,9 @@ function SelectedDayDetail({
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">
-                        {att.shift_name ?? copy.noShiftForDay}
+                        {att.status === "day_off"
+                          ? copy.rest
+                          : (att.shift_name ?? copy.noShiftForDay)}
                       </p>
                       <p className="truncate font-mono text-xs tabular-nums text-muted-foreground">
                         {timeText}
@@ -584,11 +587,14 @@ export function ScheduleClient({
     })),
   );
   const monthlyLeaveBalance = monthData.monthlyLeaveBalance;
+  const annualLeaveBalance = monthData.annualLeaveBalance;
   const hasMonthlySalary = monthlySalary > 0;
   const estimatedPay = hasMonthlySalary
     ? (workdaysCount * monthlySalary) / monthData.standardWorkdays
     : null;
-  const annualLeaveBalance = monthData.annualLeaveBalance;
+  const upcomingShifts = isCurrentMonth
+    ? listUpcomingScheduleShifts(monthData.attendance, todayStr)
+    : [];
 
   return (
     <>
@@ -665,6 +671,37 @@ export function ScheduleClient({
             },
           ]}
         />
+
+        {isCurrentMonth ? (
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-medium">{copy.upcomingTitle}</p>
+            {upcomingShifts.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{copy.upcomingEmpty}</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {upcomingShifts.slice(0, 6).map((shift, index) => (
+                  <div
+                    key={`${shift.date}-${shift.shift_name ?? index}`}
+                    className="flex min-w-0 items-center justify-between gap-2 rounded-md bg-muted/30 px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">
+                        {shift.shift_name ?? copy.scheduledShift}
+                      </p>
+                      <p className="truncate font-mono text-xs tabular-nums text-muted-foreground">
+                        {formatDate(shift.date)}
+                        {shift.start_time
+                          ? ` · ${formatShiftWindow(shift.start_time, shift.end_time)}`
+                          : ""}
+                      </p>
+                    </div>
+                    <StatusBadge domain="attendance" value="scheduled" />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : null}
 
         {error ? (
           <div className="flex flex-col gap-2">

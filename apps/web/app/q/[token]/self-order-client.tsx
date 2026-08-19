@@ -18,7 +18,6 @@ import { SELF_ORDER_VI, STATES_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { AppDialog } from "@/components/form";
 import {
   Item,
   ItemContent,
@@ -56,6 +55,7 @@ import {
   defaultSelfOrderCategoryValue,
 } from "./self-order/menu-panel";
 import type { GuestPaymentRequestState } from "./self-order/payment-panel";
+import { addOrIncrementSimpleCartItem } from "./self-order/simple-cart";
 
 interface SelfOrderClientProps {
   token: string;
@@ -63,6 +63,33 @@ interface SelfOrderClientProps {
 }
 
 const PAYMENT_COMPLETED_DISPLAY_MS = 10_000;
+
+function StaffCallButton({
+  isCalling,
+  onClick,
+}: {
+  isCalling: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="touch"
+      className="shrink-0"
+      aria-label={SELF_ORDER_VI.callStaff}
+      disabled={isCalling}
+      onClick={onClick}
+    >
+      {isCalling ? (
+        <Spinner className="size-4" />
+      ) : (
+        <IconBell data-icon="inline-start" />
+      )}
+      {SELF_ORDER_VI.callStaff}
+    </Button>
+  );
+}
 
 function PaymentPanelLoading() {
   return (
@@ -300,7 +327,6 @@ export function SelfOrderClient({
   );
   const [billOpen, setBillOpen] = useState(false);
   const [billView, setBillView] = useState<"bill" | "payment">("bill");
-  const [awaitingDialogOpen, setAwaitingDialogOpen] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
     "cash_call" | "vietqr" | null
   >(null);
@@ -311,6 +337,8 @@ export function SelfOrderClient({
   const [isPaymentPending, startPayment] = useTransition();
   const [isPaymentCancelling, startPaymentCancel] = useTransition();
   const [isCallingStaff, startStaffCall] = useTransition();
+  const [isPromoPending, startPromo] = useTransition();
+  const [promoError, setPromoError] = useState<string | null>(null);
   const staffCallClientOpIdRef = useRef<string | null>(null);
   const staffCallCooldownUntilRef = useRef(0);
   const batchIntentRef = useRef<SelfOrderClientIntent | null>(null);
@@ -354,17 +382,14 @@ export function SelfOrderClient({
       : currentPaymentStatusClientOpId;
 
   const livePaymentRequest =
-    (snapshot.ok
-      ? normalizePaymentRequest(snapshot.paymentRequest)
-      : null) ?? localPaymentRequest;
+    (snapshot.ok ? normalizePaymentRequest(snapshot.paymentRequest) : null) ??
+    localPaymentRequest;
   const livePaymentClientOpId =
     livePaymentRequest &&
     (livePaymentRequest.status === "vietqr_pending" ||
       livePaymentRequest.status === "cash_call")
       ? (livePaymentRequest.clientOpId ??
-        (livePaymentRequest.id != null
-          ? String(livePaymentRequest.id)
-          : null))
+        (livePaymentRequest.id != null ? String(livePaymentRequest.id) : null))
       : null;
   const livePaymentClientOpIdRef = useRef(livePaymentClientOpId);
   livePaymentClientOpIdRef.current = livePaymentClientOpId;
@@ -541,6 +566,7 @@ export function SelfOrderClient({
   const paymentPending = available.state === "payment_pending";
   const ambiguous = available.state === "multiple_open_orders";
   const open = available.state === "open" || paymentPending;
+  const showBillCta = awaiting || order != null;
   const itemCount = order?.itemCount ?? 0;
   const cartQuantity = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const cartTotal = cartItems.reduce((sum, item) => sum + lineTotal(item), 0);
@@ -549,9 +575,8 @@ export function SelfOrderClient({
       ? SELF_ORDER_VI.submitAddMore
       : SELF_ORDER_VI.submitFirstBatch;
   const ctaDisabled = false;
-  const ctaDisabledHint = !open && !awaiting
-    ? SELF_ORDER_VI.firstSubmitHint
-    : null;
+  const ctaDisabledHint =
+    !open && !awaiting ? SELF_ORDER_VI.firstSubmitHint : null;
 
   if (paymentCompleted) {
     return (
@@ -576,7 +601,7 @@ export function SelfOrderClient({
   }
 
   function addCartItem(item: SelfOrderCartItem) {
-    setCartItems((current) => [...current, item]);
+    setCartItems((current) => addOrIncrementSimpleCartItem(current, item));
     setSubmitError(null);
   }
 
@@ -607,7 +632,6 @@ export function SelfOrderClient({
 
   function submitCart() {
     if (cartItems.length === 0 || ctaDisabled) return;
-    const isFirstPendingSubmit = !awaiting;
     const intent = resolveClientIntent(
       batchIntentRef.current,
       buildBatchIntentKey({ items: cartItems, customerNote }),
@@ -657,15 +681,8 @@ export function SelfOrderClient({
           batchIntentRef.current,
           intent.clientOpId,
         );
-        if (parsedSnapshot.data.ok) {
-          if (
-            parsedSnapshot.data.state === "awaiting_confirmation" &&
-            isFirstPendingSubmit
-          ) {
-            setAwaitingDialogOpen(true);
-          } else if (parsedSnapshot.data.state === "open") {
-            toast.success(SELF_ORDER_VI.addedOk);
-          }
+        if (parsedSnapshot.data.ok && parsedSnapshot.data.state === "open") {
+          toast.success(SELF_ORDER_VI.addedOk);
         }
       } catch {
         setSubmitError(SELF_ORDER_VI.submitFailed);
@@ -806,7 +823,6 @@ export function SelfOrderClient({
   function callStaff() {
     if (Date.now() < staffCallCooldownUntilRef.current) {
       toast.success(SELF_ORDER_VI.callStaffPending);
-      setAwaitingDialogOpen(false);
       return;
     }
 
@@ -833,7 +849,6 @@ export function SelfOrderClient({
             toast.success(
               result.error.message ?? SELF_ORDER_VI.callStaffPending,
             );
-            setAwaitingDialogOpen(false);
             return;
           }
           toast.error(result.error.message ?? SELF_ORDER_VI.callStaffFailed);
@@ -842,9 +857,69 @@ export function SelfOrderClient({
         staffCallCooldownUntilRef.current = Date.now() + 45_000;
         staffCallClientOpIdRef.current = null;
         toast.success(SELF_ORDER_VI.callStaffOk);
-        setAwaitingDialogOpen(false);
       } catch {
         toast.error(SELF_ORDER_VI.callStaffFailed);
+      }
+    });
+  }
+
+  function applyPromoCode(code: string) {
+    const trimmed = code.trim();
+    if (!trimmed || !order) return;
+    const nextClientOpId = crypto.randomUUID();
+    setPromoError(null);
+    startPromo(async () => {
+      try {
+        const response = await postSelfOrderJson(
+          `/api/self-order/${encodeURIComponent(token)}/promotion`,
+          { clientOpId: nextClientOpId, code: trimmed },
+        );
+        const result = await readApiResponse(response);
+        if (!result.ok) {
+          setPromoError(result.error.message ?? SELF_ORDER_VI.promoApplyFailed);
+          return;
+        }
+        const parsedSnapshot = publicSelfOrderSnapshotSchema.safeParse(
+          result.payload.snapshot,
+        );
+        if (!parsedSnapshot.success) {
+          setPromoError(SELF_ORDER_VI.retryChanged);
+          return;
+        }
+        setSnapshot(parsedSnapshot.data);
+        toast.success(SELF_ORDER_VI.promoApplied);
+      } catch {
+        setPromoError(SELF_ORDER_VI.promoApplyFailed);
+      }
+    });
+  }
+
+  function clearPromoCode() {
+    if (!order) return;
+    const nextClientOpId = crypto.randomUUID();
+    setPromoError(null);
+    startPromo(async () => {
+      try {
+        const response = await postSelfOrderJson(
+          `/api/self-order/${encodeURIComponent(token)}/promotion/clear`,
+          { clientOpId: nextClientOpId },
+        );
+        const result = await readApiResponse(response);
+        if (!result.ok) {
+          setPromoError(result.error.message ?? SELF_ORDER_VI.promoClearFailed);
+          return;
+        }
+        const parsedSnapshot = publicSelfOrderSnapshotSchema.safeParse(
+          result.payload.snapshot,
+        );
+        if (!parsedSnapshot.success) {
+          setPromoError(SELF_ORDER_VI.retryChanged);
+          return;
+        }
+        setSnapshot(parsedSnapshot.data);
+        toast.success(SELF_ORDER_VI.promoCleared);
+      } catch {
+        setPromoError(SELF_ORDER_VI.promoClearFailed);
       }
     });
   }
@@ -863,7 +938,7 @@ export function SelfOrderClient({
     >
       <ForceLightMode />
       <div className="flex h-full min-h-0 flex-col">
-        <header className="workflow-safe-pt sticky top-0 z-30 shrink-0 border-b border-border bg-background/95 px-3 py-2 backdrop-blur">
+        <header className="workflow-safe-pt shrink-0 border-b border-border bg-background px-3 py-2">
           <div className="flex items-start gap-2">
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-primary">
@@ -873,90 +948,64 @@ export function SelfOrderClient({
                 {SELF_ORDER_VI.tableLabel(available.table.number)}
               </h1>
             </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="icon-touch"
-                className="shrink-0"
-                aria-label={SELF_ORDER_VI.callStaff}
-                disabled={isCallingStaff}
-                onClick={callStaff}
-              >
-                {isCallingStaff ? (
-                  <Spinner className="size-4" />
-                ) : (
-                  <IconBell />
-                )}
-              </Button>
-              <Button
-                type="button"
-                variant="default"
-                size="touch"
-                className="shrink-0"
-                onClick={() => {
-                  setBillView("bill");
-                  setBillOpen(true);
-                }}
-              >
-                <IconReceipt data-icon="inline-start" />
-                {SELF_ORDER_VI.billTab}
-                <Badge variant={awaiting ? "warning" : "secondary"}>
-                  {awaiting ? (
-                    <>
-                      <IconClock className="size-3.5" aria-hidden />
-                      <span className="sr-only">
-                        {SELF_ORDER_VI.statusPendingApproval}
-                      </span>
-                    </>
-                  ) : (
-                    itemCount
-                  )}
-                </Badge>
-              </Button>
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+              <StaffCallButton isCalling={isCallingStaff} onClick={callStaff} />
+              {showBillCta ? (
+                <Button
+                  type="button"
+                  variant="default"
+                  size="touch"
+                  className="shrink-0"
+                  onClick={() => {
+                    setBillView("bill");
+                    setBillOpen(true);
+                  }}
+                >
+                  <IconReceipt data-icon="inline-start" />
+                  {SELF_ORDER_VI.billTab}
+                  <Badge variant={awaiting ? "warning" : "secondary"}>
+                    {awaiting ? (
+                      <>
+                        <IconClock className="size-3.5" aria-hidden />
+                        <span className="sr-only">
+                          {SELF_ORDER_VI.statusPendingApproval}
+                        </span>
+                      </>
+                    ) : (
+                      itemCount
+                    )}
+                  </Badge>
+                </Button>
+              ) : null}
             </div>
           </div>
         </header>
+
+        {awaiting ? (
+          <div
+            role="status"
+            className="shrink-0 border-b border-border bg-muted/30 px-3 py-3"
+          >
+            <p className="font-heading text-base font-semibold">
+              {SELF_ORDER_VI.pendingDialogTitle}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {SELF_ORDER_VI.pendingDialogDescription}
+            </p>
+            <div className="mt-2">
+              <StaffCallButton isCalling={isCallingStaff} onClick={callStaff} />
+            </div>
+          </div>
+        ) : null}
 
         <MenuPanel
           categories={available.menu}
           activeCategoryValue={activeCategoryValue}
           onActiveCategoryChange={setActiveCategoryValue}
           onAdd={addCartItem}
-          hasCartItems={cartItems.length > 0}
           disabled={false}
           cartDemandByMenuItemId={cartDemandByMenuItemId}
         />
-
-        {cartItems.length === 0 && (itemCount > 0 || awaiting) ? (
-          <div className="workflow-safe-pb fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-2xl border-t border-border bg-background/95 px-3 py-2 shadow-xs backdrop-blur">
-            <Button
-              type="button"
-              variant="outline"
-              size="touch-lg"
-              className="w-full justify-between bg-card"
-              onClick={() => {
-                setBillView("bill");
-                setBillOpen(true);
-              }}
-            >
-              <span className="flex items-center gap-2 font-medium">
-                <IconReceipt className="size-4 text-primary" />
-                <span>
-                  {awaiting
-                    ? SELF_ORDER_VI.statusPendingApproval
-                    : `${itemCount} ${SELF_ORDER_VI.quantity.toLowerCase()}`}
-                </span>
-                <Badge variant={awaiting ? "warning" : "secondary"}>
-                  {awaiting ? SELF_ORDER_VI.statusPendingApproval : itemCount}
-                </Badge>
-              </span>
-              <span className="font-semibold text-primary">
-                {SELF_ORDER_VI.viewBill} →
-              </span>
-            </Button>
-          </div>
-        ) : null}
 
         <CartSheet
           categories={available.menu}
@@ -991,6 +1040,17 @@ export function SelfOrderClient({
         canPay={!ambiguous && order !== null}
         order={order}
         pendingItems={awaiting ? available.request?.items : undefined}
+        promo={{
+          canEdit:
+            Boolean(order) &&
+            available.state === "open" &&
+            !activePaymentRequest &&
+            !ambiguous,
+          isPending: isPromoPending,
+          error: promoError,
+          onApply: applyPromoCode,
+          onClear: clearPromoCode,
+        }}
       >
         {billOpen && billView === "payment" && !ambiguous && order ? (
           <PaymentPanel
@@ -1009,24 +1069,6 @@ export function SelfOrderClient({
           />
         ) : null}
       </BillDrawer>
-
-      <AppDialog
-        open={awaitingDialogOpen}
-        onOpenChange={setAwaitingDialogOpen}
-        title={SELF_ORDER_VI.pendingDialogTitle}
-        description={SELF_ORDER_VI.pendingDialogDescription}
-        footer={
-          <Button
-            type="button"
-            variant="default"
-            size="touch"
-            className="w-full"
-            onClick={() => setAwaitingDialogOpen(false)}
-          >
-            {SELF_ORDER_VI.continueBrowsing}
-          </Button>
-        }
-      />
     </AppPage>
   );
 }

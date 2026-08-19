@@ -59,6 +59,7 @@ import {
   type TodayWorkState,
   type TodayWorkStatus,
 } from "./_lib/today-work-state";
+import { getClockInBlockedMessage, isClockInBlocked } from "./_lib/clock-in-copy";
 import { formatDateVN, formatTimeVN } from "./_lib/vn-business-date";
 import { AppEmptyState } from "@/components/surface";
 import { TasksClient } from "./tasks/tasks-client";
@@ -75,11 +76,21 @@ type WorkdayCopy = {
   statusNotRequired: string;
   statusDone: string;
   statusNotStarted: string;
+  statusClockInTooEarly: string;
+  statusClockInTooLate: string;
+  statusShiftUnassigned: string;
   statusNoProfile: string;
   statusNoBranch: string;
   descriptionCheckoutPending: string;
   descriptionNotRequired: string;
+  descriptionClockInTooEarly: (
+    shiftName: string,
+    startTime: string,
+    fromTime: string,
+  ) => string;
+  descriptionClockInTooLate: (shiftName: string, endTime: string) => string;
   descriptionShiftUnassigned: string;
+  descriptionMultipleShifts: string;
   checkInShort: string;
   checkOutShort: string;
   clockIn: string;
@@ -352,13 +363,22 @@ function getWorkTitle(state: TodayWorkState, copy: WorkdayCopy): string {
   if (status === "missing_profile") return copy.statusNoProfile;
   if (status === "missing_branch") return copy.statusNoBranch;
   if (status === "not_required") return copy.statusNotRequired;
-  if (status === "not_started" && state.shiftUnassigned) {
-    return copy.descriptionShiftUnassigned;
+  if (status === "not_started") {
+    const blocked = getClockInBlockedMessage(state.clockInGate, copy);
+    if (blocked) return blocked.title;
+    return copy.statusNotStarted;
   }
-  if (status === "not_started") return copy.statusNotStarted;
   if (status === "working") return copy.statusWorking;
   if (status === "checkout_pending") return copy.statusCheckoutPending;
   return copy.statusDone;
+}
+
+function getWorkDescription(
+  state: TodayWorkState,
+  copy: WorkdayCopy,
+): string | undefined {
+  if (state.status !== "not_started") return undefined;
+  return getClockInBlockedMessage(state.clockInGate, copy)?.description;
 }
 
 export type StaffWorkdayPageContentProps = {
@@ -540,9 +560,19 @@ export async function StaffWorkdayPageContent({
 
   const tone = getWorkTone(state.status);
   const title = getWorkTitle(state, copy);
-  const currentShiftName = state.attendance?.shiftName ?? null;
-  const currentShiftRange = state.attendance?.shiftStartTime
-    ? `${formatVNClockTime(state.attendance.shiftStartTime)} - ${formatVNClockTime(state.attendance.shiftEndTime)}`
+  const workDescription = getWorkDescription(state, copy);
+  const currentShift =
+    state.todayShifts.find((shift) => shift.isCurrent) ??
+    state.todayShifts[0] ??
+    null;
+  const currentShiftName =
+    state.attendance?.shiftName ?? currentShift?.shiftName ?? null;
+  const currentShiftStart =
+    state.attendance?.shiftStartTime ?? currentShift?.startTime ?? null;
+  const currentShiftEnd =
+    state.attendance?.shiftEndTime ?? currentShift?.endTime ?? null;
+  const currentShiftRange = currentShiftStart
+    ? `${formatVNClockTime(currentShiftStart)} - ${formatVNClockTime(currentShiftEnd)}`
     : "—";
 
   const progressValue = state.managerAttendanceOnly
@@ -659,15 +689,15 @@ export async function StaffWorkdayPageContent({
         <IconClock data-icon="inline-start" />
         {copy.viewSchedule}
       </Button>
-    ) : state.status === "not_started" && state.shiftUnassigned ? (
+    ) : isClockInBlocked(state) ? (
       <Button
         variant="outline"
         size="touch-lg"
         className={primaryActionClassName}
-        disabled
+        render={<Link href={routes.schedule} />}
       >
         <IconClock data-icon="inline-start" />
-        {copy.clockIn}
+        {copy.viewSchedule}
       </Button>
     ) : state.status === "not_started" ? (
       <Button
@@ -731,6 +761,11 @@ export async function StaffWorkdayPageContent({
             <p className="mt-1 text-xs font-medium leading-5 text-muted-foreground">
               {todayMeta}
             </p>
+            {workDescription ? (
+              <p className="mt-2 text-sm leading-5 text-muted-foreground">
+                {workDescription}
+              </p>
+            ) : null}
           </div>
           <Badge variant={progressBadgeVariant} className="shrink-0">
             {formatPercent(progressValue, 0)}
@@ -757,7 +792,7 @@ export async function StaffWorkdayPageContent({
 
   if (mode === "compact-status") {
     const compactCta =
-      state.status === "not_started" ? (
+      state.status === "not_started" && !isClockInBlocked(state) ? (
         <Button size="touch" render={<Link href={routes.clock} />}>
           <IconCamera data-icon="inline-start" />
           {copy.clockIn}
@@ -768,7 +803,9 @@ export async function StaffWorkdayPageContent({
       <ControlBar>
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold">{title}</p>
-          <p className="truncate text-xs text-muted-foreground">{todayMeta}</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {workDescription ?? todayMeta}
+          </p>
         </div>
         {compactCta}
       </ControlBar>
@@ -826,9 +863,18 @@ export async function StaffWorkdayPageContent({
         <div className="flex flex-col gap-2">
           {state.todayShifts.map((shift) => {
             const badge = getShiftStateBadge(shift, copy);
-            const shiftTimeRange = `${shift.checkIn ? formatTimeVN(shift.checkIn) : "—"} - ${
-              shift.checkOut ? formatTimeVN(shift.checkOut) : "—"
-            }`;
+            const scheduledRange = shift.startTime
+              ? `${formatVNClockTime(shift.startTime)} - ${formatVNClockTime(shift.endTime)}`
+              : null;
+            const punchedRange = shift.checkIn
+              ? `${formatTimeVN(shift.checkIn)}${
+                  shift.checkOut ? ` - ${formatTimeVN(shift.checkOut)}` : ""
+                }`
+              : null;
+            const shiftTimeRange =
+              scheduledRange && punchedRange
+                ? `${scheduledRange} · ${punchedRange}`
+                : (scheduledRange ?? punchedRange ?? "—");
             return (
               <InlineState
                 key={shift.shiftId}
@@ -982,13 +1028,13 @@ export async function StaffWorkdayPageContent({
     number: 1,
     icon: IconCamera,
     title: copy.workflowClockInStep,
-    description: hasClockedIn ? undefined : title,
+    description: hasClockedIn ? undefined : (workDescription ?? title),
     statusLabel: hasClockedIn ? copy.shiftDone : copy.workflowCurrent,
     statusVariant: hasClockedIn ? "success" : "warning",
     tone: hasClockedIn ? "success" : "warning",
     content: hasClockedIn
       ? undefined
-      : state.shiftUnassigned
+      : isClockInBlocked(state)
         ? primaryAction
         : (
             <ClockClient

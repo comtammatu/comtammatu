@@ -224,7 +224,7 @@ test("P2 migration leans HR keys: 4 dead keys removed, approve key renamed", () 
   }
 });
 
-test("P2 app no longer references shift assignments except roster clock-in paths", () => {
+test("P2 app no longer references shift assignments except roster clock-in and schedule paths", () => {
   for (const gone of [
     "apps/web/app/(protected)/hr/shift-assignments-table.tsx",
     "apps/web/app/(protected)/hr/shift-assignment-actions.ts",
@@ -238,7 +238,6 @@ test("P2 app no longer references shift assignments except roster clock-in paths
   for (const path of [
     "apps/web/app/(protected)/hr/hr-client.tsx",
     "apps/web/app/(protected)/hr/actions.ts",
-    "apps/web/lib/staff-runtime/schedule/actions.ts",
     "apps/web/lib/staff-runtime/schedule/page.tsx",
   ]) {
     assert.ok(
@@ -250,6 +249,7 @@ test("P2 app no longer references shift assignments except roster clock-in paths
   for (const path of [
     "apps/web/lib/staff-runtime/clock/actions.ts",
     "apps/web/lib/staff-runtime/_lib/today-work-state.ts",
+    "apps/web/lib/staff-runtime/schedule/actions.ts",
     "apps/web/lib/hr/roster/actions.ts",
   ]) {
     assert.ok(

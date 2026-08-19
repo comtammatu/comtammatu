@@ -13,6 +13,11 @@ side selection before money write. Money projection remains ADR 0034.
 optional max; `NULL` = unlimited up to eligible units already on the order.
 Always open the POS picker (no auto-apply).
 
+**Amends:** 2026-08-19 — Guest Self-Order (`/q/[token]` G6) may apply
+`order_pct` / `order_vnd` / `voucher_face` codes via
+`self_order_apply_promotion_code`. Picker kinds stay staff-owned. Money still
+writes ADR 0034 columns.
+
 ## Context
 
 POS already has discretionary discounts (order `%`/`vnd`, item `vnd` only) that
@@ -104,7 +109,8 @@ stays a menu price), selling vouchers as inventory SKUs.
 - HĐĐT/print/finance keep their current discount readers.
 - POS discount sheet gains a **`Mã giảm`** path beside **`Chiết khấu`**, with a
   multi-step picker for `free_side` / `free_item` and an auto offer chip on order
-  detail for `free_side` only.
+  detail for `free_side` only. Guests may enter the same order-level codes on
+  Self-Order G6; item discounts print and display on the discounted line.
 - Owner LIST `/promotions` and kind-first DOC-WORKFLOW `/promotions/new` +
   `/promotions/[id]`.
 

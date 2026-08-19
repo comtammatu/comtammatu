@@ -48,8 +48,11 @@ import {
   fetchSelfOrderPosState,
   type SelfOrderPosState,
 } from "./self-order-actions";
-import { playAppSignal } from "@lib/audio-signal";
-import { audioModeHasBeep, playOperationalAlert } from "@lib/operational-audio";
+import {
+  playOperationalAlert,
+  selectPosGuestAlert,
+  type PosGuestAlertCandidate,
+} from "@lib/operational-audio";
 
 // Lazy-load these modals OFF the cash path, code-splitting their JS out of
 // the initial POS bundle. Trims first-paint JS without affecting payment
@@ -159,6 +162,28 @@ import { makeCartKey, makeNotedCartKey } from "./_utils/cart-key";
 import { messages } from "@lib/messages";
 import { StationSheet } from "@/components/surface";
 
+function tableLabelForTableId(
+  tables: readonly BranchTable[],
+  tableId: number,
+): string | undefined {
+  const tableNumber = tables.find((table) => table.id === tableId)?.number;
+  return typeof tableNumber === "number" ? String(tableNumber) : undefined;
+}
+
+function tableLabelForOrderId(
+  tables: readonly BranchTable[],
+  orders: readonly SessionOrder[],
+  orderId: number,
+): string | undefined {
+  const order = orders.find((item) => item.id === orderId);
+  if (typeof order?.tables?.number === "number") {
+    return String(order.tables.number);
+  }
+  if (typeof order?.table_id === "number") {
+    return tableLabelForTableId(tables, order.table_id);
+  }
+  return undefined;
+}
 
 /* ─── Inner (consumes hooks) ─── */
 
@@ -360,6 +385,10 @@ export function PosDesktopInner({
   const knownSelfOrderPaymentRequestIdsRef = useRef<Set<number> | null>(null);
   const knownSelfOrderStaffCallIdsRef = useRef<Set<number> | null>(null);
   const selfOrderLoadGenerationRef = useRef(0);
+  const selfOrderTablesRef = useRef(tables);
+  const selfOrderOrdersRef = useRef(orders);
+  selfOrderTablesRef.current = tables;
+  selfOrderOrdersRef.current = orders;
   // Multi-order-per-table: when the user taps an occupied table, show a
   // picker listing active orders + a "Tạo đơn mới" button. The picker is the
   // only path to start a 2nd order on the same physical table.
@@ -428,27 +457,57 @@ export function PosDesktopInner({
     const knownRequestIds = knownSelfOrderRequestIdsRef.current;
     const knownPaymentIds = knownSelfOrderPaymentRequestIdsRef.current;
     const knownStaffCallIds = knownSelfOrderStaffCallIdsRef.current;
-    // Distinct tones from the POS order ping so cashiers do not confuse
-    // QR guest events with ordinary POS sync alerts.
-    if (
-      knownRequestIds !== null &&
-      nextState.requests.some((request) => !knownRequestIds.has(request.id))
-    ) {
-      playOperationalAlert({ kind: "pos.self_order", mode: audioMode });
+    const guestAlerts: PosGuestAlertCandidate[] = [];
+    if (knownRequestIds !== null) {
+      const newRequest = nextState.requests.find(
+        (request) => !knownRequestIds.has(request.id),
+      );
+      if (newRequest) {
+        guestAlerts.push({
+          kind: "pos.self_order",
+          tableLabel: tableLabelForTableId(
+            selfOrderTablesRef.current,
+            newRequest.tableId,
+          ),
+        });
+      }
     }
-    if (
-      knownPaymentIds !== null &&
-      nextState.paymentRequests.some(
+    if (knownPaymentIds !== null) {
+      const newPayment = nextState.paymentRequests.find(
         (request) => !knownPaymentIds.has(request.id),
-      )
-    ) {
-      if (audioModeHasBeep(audioMode)) playAppSignal("pos-payment-call");
+      );
+      if (newPayment) {
+        guestAlerts.push({
+          kind: "pos.payment_call",
+          tableLabel: tableLabelForOrderId(
+            selfOrderTablesRef.current,
+            selfOrderOrdersRef.current,
+            newPayment.orderId,
+          ),
+        });
+      }
     }
-    if (
-      knownStaffCallIds !== null &&
-      nextStaffCalls.some((call) => !knownStaffCallIds.has(call.id))
-    ) {
-      if (audioModeHasBeep(audioMode)) playAppSignal("pos-payment-call");
+    if (knownStaffCallIds !== null) {
+      const newStaffCall = nextStaffCalls.find(
+        (call) => !knownStaffCallIds.has(call.id),
+      );
+      if (newStaffCall) {
+        guestAlerts.push({
+          kind: "pos.staff_call",
+          tableLabel: tableLabelForTableId(
+            selfOrderTablesRef.current,
+            newStaffCall.tableId,
+          ),
+        });
+      }
+    }
+    const guestAlert = selectPosGuestAlert(guestAlerts);
+    if (guestAlert) {
+      playOperationalAlert({
+        kind: guestAlert.kind,
+        mode: audioMode,
+        slots: { tableLabel: guestAlert.tableLabel },
+      });
     }
     knownSelfOrderRequestIdsRef.current = nextRequestIds;
     knownSelfOrderPaymentRequestIdsRef.current = nextPaymentIds;

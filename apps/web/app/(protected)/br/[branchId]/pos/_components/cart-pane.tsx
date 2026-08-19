@@ -450,6 +450,11 @@ function CartPaneComponent({
                           quantity={item.quantity}
                           title={displayName}
                           total={formatVND(netSubtotal)}
+                          originalTotal={
+                            discountAmount > 0
+                              ? formatVND(netSubtotal + discountAmount)
+                              : null
+                          }
                           options={summary.options}
                           modifiers={summary.modifiers}
                           sides={summary.sides}

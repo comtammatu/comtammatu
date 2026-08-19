@@ -8,11 +8,12 @@ contract. This document owns only loading, feedback, and motion boundaries.
 
 - The menu is the only guest page.
 - `Hoá đơn` opens a drawer; the drawer switches between bill and payment.
-- The sticky cart action opens the cart sheet. Its footer is the only guest
+- The in-flow cart action opens the cart sheet. Its footer is the only guest
   submit control.
 - A pending request, rejection, payment lock, or multi-bill ambiguity is shown
-  through the snapshot-derived guest state. Do not add a second state store,
-  notification row, or realtime channel.
+  through the snapshot-derived guest state. Awaiting confirmation is an in-flow
+  `role="status"` banner on the menu, not an `AppDialog`. Do not add a second
+  state store, notification row, or realtime channel.
 
 ## Loading And Feedback
 
@@ -24,15 +25,20 @@ contract. This document owns only loading, feedback, and motion boundaries.
   and rejected states emit one deduplicated warning toast; successful polling
   clears the corresponding toast key.
 - Submit and payment errors stay inside the cart sheet or bill drawer that owns
-  the action. They must not overlap the sticky cart launcher or create a second
+  the action. They must not overlap the in-flow cart launcher or create a second
   menu CTA.
 - Cart quantity never falls below one. Removal is explicit.
 
 ## Motion Boundary
 
 - Reuse Sheet/Drawer transitions, `Spinner`, `PageSkeleton`,
-  `transition-[transform,…] duration-150`, and press scale already provided by
-  the design system.
+  transform-only press (`active:scale` ≥ `0.97`, `duration-150`), and tokens
+  already provided by the design system.
+- Menu rows animate `transform` only. Do not animate background, border, or
+  shadow on those rows, and do not nest a second scale on the photo.
+- Pending bill overlay is an opaque surface over a faded list. Do not use
+  `filter: blur` or `backdrop-filter` on this path (paint cost on the bill
+  sheet).
 - Do not add custom keyframes, animation tokens, Framer Motion, or a route-local
   motion helper.
 - Adaptive polling is the freshness mechanism: 3 seconds while awaiting or

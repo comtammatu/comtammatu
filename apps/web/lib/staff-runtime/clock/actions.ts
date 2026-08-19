@@ -12,7 +12,9 @@ import {
   getVNMinutesOfDay,
 } from "@comtammatu/shared/time";
 import { getAuthContext } from "@/_lib/auth";
-import { pickAssignedShiftInWindow } from "../_lib/default-shift";
+import { resolveClockInGate } from "../_lib/default-shift";
+import { getClockInBlockedMessage } from "../_lib/clock-in-copy";
+import { messages } from "@lib/messages";
 import { getEmployeeContext } from "../_lib/staff-runtime-context";
 
 const CHECKOUT_APPROVAL_ROLES: readonly StaffRole[] = [
@@ -77,7 +79,10 @@ async function resolveAssignedShiftForEmployee(
   ctx: StaffRuntimeContext,
   calendarDate: string,
   nowMinutes: number,
-): Promise<{ shiftId: number; businessDate: string } | null> {
+): Promise<
+  | { ok: true; shiftId: number; businessDate: string }
+  | { ok: false; error: string }
+> {
   const previousDate = addVNDateDays(calendarDate, -1);
   let assignmentsQuery = service
     .from("shift_assignments" as never)
@@ -119,14 +124,25 @@ async function resolveAssignedShiftForEmployee(
     })
     .filter((row): row is NonNullable<typeof row> => row !== null);
 
-  const picked = pickAssignedShiftInWindow(
-    assignments,
-    calendarDate,
-    nowMinutes,
-  );
-  return picked
-    ? { shiftId: picked.shiftId, businessDate: picked.businessDate }
-    : null;
+  const gate = resolveClockInGate(assignments, calendarDate, nowMinutes);
+  if (gate.kind === "open") {
+    return {
+      ok: true,
+      shiftId: gate.shiftId,
+      businessDate: gate.businessDate,
+    };
+  }
+  if (gate.kind === "multiple") {
+    return {
+      ok: false,
+      error: "Có nhiều ca trong khung giờ. Chọn ca trước khi chấm công.",
+    };
+  }
+  const blocked = getClockInBlockedMessage(gate, messages.employee.home);
+  return {
+    ok: false,
+    error: blocked?.description ?? "Chưa được phân ca. Liên hệ quản lý.",
+  };
 }
 
 function revalidateEmployeeWorkPaths(branchId?: number | null) {
@@ -284,10 +300,10 @@ export async function clockInWithPhoto(
     nowMinutes,
   );
 
-  if (!shiftContext) {
+  if (!shiftContext.ok) {
     return {
       success: false,
-      error: "Chưa được phân ca. Liên hệ quản lý.",
+      error: shiftContext.error,
     };
   }
   const { shiftId, businessDate } = shiftContext;
@@ -579,7 +595,7 @@ export async function clockOutManagerShift(
     getTodayVN(now),
     getVNMinutesOfDay(now),
   );
-  if (!currentShift) {
+  if (!currentShift.ok) {
     return {
       success: false,
       error: "Chi nhánh chưa khai ca làm. Liên hệ quản lý.",

@@ -4,6 +4,7 @@ import {
   ALL_MENU_VALUE,
   defaultSelfOrderCategoryValue,
   isSelfOrderComCategory,
+  isSelfOrderItemSimple,
   selfOrderItemImageBadges,
   splitMenuItemDisplayName,
 } from "../app/q/[token]/self-order/menu-display";
@@ -88,14 +89,56 @@ test("splitMenuItemDisplayName lifts trailing parenthetical tags", () => {
 });
 
 test("selfOrderItemImageBadges curates Sườn Cốt Lết and Sườn Một Gang", () => {
-  assert.deepEqual(selfOrderItemImageBadges("Sườn Cốt Lết"), [
-    "Truyền thống",
-  ]);
-  assert.deepEqual(selfOrderItemImageBadges("Cốt Lết (WOW)"), [
-    "Truyền thống",
-  ]);
-  assert.deepEqual(selfOrderItemImageBadges("Sườn Một Gang"), [
-    "Chờ 20 phút",
-  ]);
+  assert.deepEqual(selfOrderItemImageBadges("Sườn Cốt Lết"), ["Truyền thống"]);
+  assert.deepEqual(selfOrderItemImageBadges("Cốt Lết (WOW)"), ["Truyền thống"]);
+  assert.deepEqual(selfOrderItemImageBadges("Sườn Một Gang"), ["Chờ 20 phút"]);
   assert.deepEqual(selfOrderItemImageBadges("Cơm sườn"), []);
+});
+
+test("isSelfOrderItemSimple skips the customizer when the guest has no choice", () => {
+  const simple = category({ id: 1, name: "Cơm", type: "main_dish" })
+    .menu_items[0];
+  assert.ok(simple);
+  assert.equal(isSelfOrderItemSimple(simple), true);
+  assert.equal(
+    isSelfOrderItemSimple({
+      ...simple,
+      menu_item_variants: [
+        { id: 1, name: "Thường", price_adjustment: 0, sort_order: 0 },
+        { id: 2, name: "Đặc biệt", price_adjustment: 5000, sort_order: 1 },
+      ],
+    }),
+    false,
+  );
+  assert.equal(
+    isSelfOrderItemSimple({
+      ...simple,
+      menu_item_modifiers: [
+        { id: 1, name: "Thêm trứng", price: 5000, sort_order: 0 },
+      ],
+    }),
+    false,
+  );
+  assert.equal(
+    isSelfOrderItemSimple({
+      ...simple,
+      menu_item_available_sides: [
+        {
+          id: 1,
+          is_default: true,
+          side_item: { id: 9, name: "Canh", base_price: 0 },
+        },
+      ],
+    }),
+    false,
+  );
+  assert.equal(
+    isSelfOrderItemSimple({
+      ...simple,
+      menu_item_variants: [
+        { id: 1, name: "Thường", price_adjustment: 0, sort_order: 0 },
+      ],
+    }),
+    true,
+  );
 });
