@@ -3,7 +3,7 @@ import {
   formatCount,
   formatPercent,
 } from "@comtammatu/shared/format";
-import { addMoney } from "@comtammatu/shared/money";
+import { addMoney, roundToCanonicalMoney } from "@comtammatu/shared/money";
 import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import { loadAuthState } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
@@ -352,10 +352,14 @@ function summarizeStartupCapital(
   const equipmentRows = capitalRows.filter((row) => row.category === "capital");
 
   return {
-    total: toNumber(addMoney(capitalRows.map((row) => String(row.amount)))),
+    total: toNumber(
+      addMoney(capitalRows.map((row) => roundToCanonicalMoney(row.amount ?? 0))),
+    ),
     recorded: capitalRows.length > 0,
     equipment: toNumber(
-      addMoney(equipmentRows.map((row) => String(row.amount))),
+      addMoney(
+        equipmentRows.map((row) => roundToCanonicalMoney(row.amount ?? 0)),
+      ),
     ),
     equipmentRecorded: equipmentRows.length > 0,
   };
@@ -416,7 +420,11 @@ function summarizeOperatingExpenses(
   );
 
   return {
-    total: toNumber(addMoney(operatingRows.map((row) => String(row.subtotal)))),
+    total: toNumber(
+      addMoney(
+        operatingRows.map((row) => roundToCanonicalMoney(row.subtotal ?? 0)),
+      ),
+    ),
     recorded: operatingRows.length > 0,
   };
 }
@@ -602,7 +610,9 @@ async function fetchFinanceVatSummary({
           typeof row === "object" && row !== null && "vat_amount" in row
             ? row.vat_amount
             : null;
-        return String(value ?? "0");
+        return roundToCanonicalMoney(
+          typeof value === "number" || typeof value === "string" ? value : 0,
+        );
       }),
     );
 

@@ -14,7 +14,11 @@
 import { z } from "zod";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { getVNDayUtcRange } from "@comtammatu/shared/time";
-import { addMoney, parseMoneyToMinorUnits } from "@comtammatu/shared/money";
+import {
+  addMoney,
+  parseMoneyToMinorUnits,
+  roundToCanonicalMoney,
+} from "@comtammatu/shared/money";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
@@ -756,10 +760,12 @@ export async function fetchStartupCapitalSummary(params: {
   return {
     success: true,
     data: {
-      total: addMoney(rows.map((row) => String(row.amount ?? 0))),
+      total: addMoney(
+        rows.map((row) => roundToCanonicalMoney(row.amount ?? 0)),
+      ),
       count: rows.length,
       equipmentTotal: addMoney(
-        equipmentRows.map((row) => String(row.amount ?? 0)),
+        equipmentRows.map((row) => roundToCanonicalMoney(row.amount ?? 0)),
       ),
       equipmentCount: equipmentRows.length,
     },

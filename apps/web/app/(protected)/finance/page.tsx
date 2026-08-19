@@ -6,7 +6,7 @@ import {
   formatCount,
   formatPercent,
 } from "@comtammatu/shared/format";
-import { addMoney } from "@comtammatu/shared/money";
+import { addMoney, roundToCanonicalMoney } from "@comtammatu/shared/money";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { Frame } from "@comtammatu/ui/components/frame";
 import { KpiCard } from "@/components/kpi/kpi-card";
@@ -277,16 +277,16 @@ export default async function FinancePage({
   );
 
   const totalOnHand = addMoney([
-    String(cash.cashOnHand),
-    String(cash.bankOnHand),
+    roundToCanonicalMoney(cash.cashOnHand),
+    roundToCanonicalMoney(cash.bankOnHand),
   ]);
   const totalAssetValue = addMoney([
     totalOnHand,
     ...(cockpit.canViewInventoryValuation
-      ? [String(cockpit.kpis.inventoryValue)]
+      ? [roundToCanonicalMoney(cockpit.kpis.inventoryValue)]
       : []),
     cockpit.kpis.equipmentRecorded
-      ? String(cockpit.kpis.equipment)
+      ? roundToCanonicalMoney(cockpit.kpis.equipment)
       : "0.00",
   ]);
 

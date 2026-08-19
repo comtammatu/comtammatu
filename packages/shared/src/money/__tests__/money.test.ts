@@ -8,6 +8,7 @@ import {
   minorUnitsToCanonical,
   multiplyUnitPrice,
   parseMoneyToMinorUnits,
+  roundToCanonicalMoney,
   subtractMoney,
 } from "../index";
 
@@ -43,4 +44,15 @@ test("database numeric values normalize scientific notation before money arithme
   assert.equal(canonicalizeMoney(1e21), "1000000000000000000000.00");
   assert.equal(canonicalizeMoney(1234.5), "1234.50");
   assert.throws(() => canonicalizeMoney(Number.NaN));
+});
+
+test("roundToCanonicalMoney half-up converts valuation floats to money", () => {
+  assert.equal(roundToCanonicalMoney(0.1 + 0.2), "0.30");
+  assert.equal(roundToCanonicalMoney(7_083.33333333), "7083.33");
+  assert.equal(roundToCanonicalMoney("16666.66666667"), "16666.67");
+  assert.equal(roundToCanonicalMoney(-1.225), "-1.23");
+  assert.equal(roundToCanonicalMoney(999.996), "1000.00");
+  assert.throws(() => roundToCanonicalMoney(Number.NaN));
+  assert.throws(() => canonicalizeMoney("7083.333"));
+  assert.throws(() => addMoney(["7083.333"]));
 });

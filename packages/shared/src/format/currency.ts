@@ -11,9 +11,9 @@ export {
   sidePortionQuantity,
 } from "./portion-quantity";
 import {
-  canonicalizeMoney,
   minorUnitsToCanonical,
   parseMoneyToMinorUnits,
+  roundToCanonicalMoney,
 } from "../money/index";
 
 export type DecimalLike = string | number;
@@ -74,18 +74,9 @@ function toCanonicalMoney(value: DecimalLike): string | null {
   if (typeof value === "number" && !Number.isFinite(value)) return null;
 
   try {
-    return canonicalizeMoney(value);
+    return roundToCanonicalMoney(value);
   } catch {
-    const raw = typeof value === "number" ? String(value) : value;
-    const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(raw);
-    if (!match) return null;
-
-    const [, sign, whole, fraction = ""] = match;
-    const minorUnits =
-      BigInt(whole ?? "0") * 100n +
-      BigInt(fraction.slice(0, 2).padEnd(2, "0")) +
-      (fraction[2] != null && fraction[2] >= "5" ? 1n : 0n);
-    return minorUnitsToCanonical(sign === "-" ? -minorUnits : minorUnits);
+    return null;
   }
 }
 
