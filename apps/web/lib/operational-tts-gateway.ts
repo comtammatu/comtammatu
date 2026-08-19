@@ -1,6 +1,7 @@
 import "server-only";
+import { generateSpeech } from "ai";
+import { gateway } from "@ai-sdk/gateway";
 
-const GATEWAY_SPEECH_URL = "https://ai-gateway.vercel.sh/v4/ai/speech-model";
 // Locked cost choice: cheapest OpenAI speech model on Gateway. Not env-switched.
 const TTS_MODEL = "openai/tts-1";
 const TTS_VOICE = "nova";
@@ -32,7 +33,11 @@ export function getCachedOperationalUtterance(text: string): Buffer | null {
 }
 
 export function isOperationalTtsConfigured(): boolean {
-  return getOperationalTtsToken() !== null;
+  // On Vercel the SDK authenticates with OIDC even when the Sensitive key is
+  // not visible to this module. Locally, require an explicit Gateway key.
+  return (
+    getOperationalTtsToken() !== null || readRuntimeSecret("VERCEL") === "1"
+  );
 }
 
 function isAmountUtterance(text: string): boolean {
@@ -64,39 +69,26 @@ export async function synthesizeOperationalUtterance(
   const cached = clipCache.get(text);
   if (cached) return cached;
 
-  const token = getOperationalTtsToken();
-  if (!token) return null;
+  if (!isOperationalTtsConfigured()) return null;
 
-  const response = await fetch(GATEWAY_SPEECH_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "ai-model-id": TTS_MODEL,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
+  try {
+    const result = await generateSpeech({
+      model: gateway.speechModel(TTS_MODEL),
       text,
       voice: TTS_VOICE,
       outputFormat: "mp3",
-    }),
-    signal: AbortSignal.timeout(TTS_TIMEOUT_MS),
-  });
-  if (!response.ok) {
-    const raw = (await response.text()).slice(0, 180);
+      maxRetries: 0,
+      abortSignal: AbortSignal.timeout(TTS_TIMEOUT_MS),
+    });
+    const bytes = Buffer.from(result.audio.uint8Array);
+    if (bytes.byteLength === 0) return null;
+    rememberClip(text, bytes);
+    return bytes;
+  } catch (error) {
     console.error(
-      "[operational-tts] gateway status=%s detail=%s",
-      String(response.status),
-      raw,
+      "[operational-tts] gateway failed=%s",
+      error instanceof Error ? error.name : "unknown",
     );
     return null;
   }
-
-  const payload = (await response.json()) as { audio?: unknown };
-  if (typeof payload.audio !== "string" || payload.audio.length === 0) {
-    return null;
-  }
-  const bytes = Buffer.from(payload.audio, "base64");
-  if (bytes.byteLength === 0) return null;
-  rememberClip(text, bytes);
-  return bytes;
 }

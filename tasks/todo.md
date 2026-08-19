@@ -14,7 +14,6 @@ Lane: finance/hddt
 Exit: Viettel lines have no named service-charge row; unit of measure follows the current menu; invoice GROSS still equals `orders.total_amount`.
 Evidence: `invoice-line-items.test.ts`, `invoice-units.test.ts`, `pos-mandatory-invoice.test.ts`.
 
-- [x] Owner: Coca/Fanta/Sprite = can (`Lon`); only bottled water = `Chai`
 - [ ] Smoke one issued invoice after deploy: drinks use `Ly`/`Lon`/`Chai`, rice uses `Phần`
 
 ## Early clock-in, delayed checkout auto-approve, and upcoming schedule
@@ -126,13 +125,13 @@ UI Advisor Gate
 
 - [ ] Cashier with beep+voice hears distinct copy for self-order, staff call, and payment
 
-## POS/KDS voice uses cached cloud TTS then louder browser fallback
+## POS/KDS voice uses cached AI SDK Gateway clips
 
 State: verify
 Kind: feature
 Tier: T2
 Lane: pos
-Exit: Beep stays immediate. Voice is cached AI Gateway `nova` clips through Web Audio at 1.15x. Clip miss stays silent. Free-form text cannot be synthesized.
+Exit: Beep stays immediate. Voice is cached AI SDK `generateSpeech` `nova` clips through Web Audio at 1.15x. Clip miss stays silent. Free-form text cannot be synthesized.
 Evidence: `operational-audio.test.ts` allowlist + `operational-audio-tts-static.test.ts`.
 
 UI Advisor Gate

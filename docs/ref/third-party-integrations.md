@@ -78,7 +78,7 @@ Không API trực tiếp. HTKK desktop hoặc `thuedientu.gdt.gov.vn`. Export t�
 | Finance | Viettel S-invoice |
 | Nhân sự & tiền lương | Export BHXH / thuế TNCN (no API) |
 | Đã loại bỏ | VNPay (D012) |
-| POS/KDS voice | AI Gateway TTS, cached; missing key → beep only |
+| POS/KDS voice | AI SDK `generateSpeech` via Gateway TTS, cached; miss → beep only |
 
 ```bash
 SEPAY_WEBHOOK_SECRET=    # HMAC-SHA256 trên SePay; VietQR bank/account trong Owner UI

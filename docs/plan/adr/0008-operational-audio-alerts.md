@@ -28,7 +28,7 @@ Constraints that matter in-store:
 
 2. **Device-local operational audio only.** Audio alerts fire on the open POS/KDS surface that already owns the event. They MUST NOT write `public.notifications`, MUST NOT use Telegram/outbox, and MUST NOT sync prefs to the server. Prefs stay in `device-prefs` (allowed exception in `scripts/check-client-storage.mjs`).
 
-3. **Cached cloud TTS only** (amended 2026-08-19). Catalog templates speak through AI Gateway **`openai/tts-1`** voice **`nova`** (locked; not env-switched) when `AI_GATEWAY_API_KEY` or Vercel OIDC is present. Clips cache on the device and play at 1.15x through Web Audio. The beep never waits on the network. Unconfigured or failed cloud TTS stays silent (beep still follows mode). Do not use OS `speechSynthesis`. Free-form text is rejected. A recorded brand pack may still replace the engine later without changing `kind`s.
+3. **Cached cloud TTS only** (amended 2026-08-19). Catalog templates speak through AI SDK **`generateSpeech`** + AI Gateway **`openai/tts-1`** voice **`nova`** (locked; not env-switched) when `AI_GATEWAY_API_KEY` or Vercel OIDC is present. Do not hand-roll `/v4/ai/speech-model`; the SDK owns the protocol version header. Clips cache on the device and play at 1.15x through Web Audio. The beep never waits on the network. Unconfigured or failed cloud TTS stays silent (beep still follows mode). Do not use OS `speechSynthesis`. Free-form text is rejected. A recorded brand pack may still replace the engine later without changing `kind`s.
 
 4. **KDS first, POS critical events second.** KDS ships the three existing alert kinds with short fixed copy (event type + table label). POS speaks self-order approval, guest payment call, staff call, VietQR paid, print failure, and out-of-stock. Persist finite “Bàn {n} …” clips for the open branch (including stored “gọi món”). VietQR paid speaks “Đã nhận {Vietnamese amount} thanh toán bàn {n}” on demand — round to 1,000₫, LRU the clip, do not prefetch every total. Takeaway omits the table. Cashier-confirmed cash does not play `pos.payment_received`. Do not read item lists or routine POS state transitions. POS guest beeps must not reuse KDS ticket contours.
 
@@ -65,7 +65,7 @@ Constraints that matter in-store:
 
 **E. `tts-1-hd` or an env-switched speech model**
 
-- Rejected (2026-08-19): Gateway speech REST is OpenAI-only; `tts-1` is the cheapest listed OpenAI speech model. Spend is saved by clip cache, not HD.
+- Rejected (2026-08-19): Gateway speech is OpenAI-only; `tts-1` is the cheapest listed OpenAI speech model. Spend is saved by clip cache, not HD. Hand-rolled REST without `ai-speech-model-specification-version` returns 400 `Unsupported gateway protocol version`.
 
 ## Consequences
 
@@ -78,7 +78,7 @@ Constraints that matter in-store:
 
 **Negative / trade-offs**
 
-- Vietnamese voice quality, rate, and latency vary by OS/browser when cloud TTS is unset; a device without a `vi-*` voice then gets beep only.
+- Unconfigured or failed cloud TTS stays beep-only; there is no OS voice fallback.
 - Voice-on-by-default is intentionally deferred until kitchen smoke feedback.
 - A recorded brand voice pack and Runner audio stay optional / out of scope until a separate decision.
 

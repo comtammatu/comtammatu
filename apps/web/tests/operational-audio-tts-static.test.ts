@@ -26,12 +26,15 @@ test("operational cloud TTS stays allowlisted, authenticated, and cloud-only", (
   assert.match(route, /getCachedOperationalUtterance/);
   assert.doesNotMatch(route, /openai\.com/);
 
-  assert.match(gateway, /ai-gateway\.vercel\.sh\/v4\/ai\/speech-model/);
+  assert.match(gateway, /from "ai"/);
+  assert.match(gateway, /from "@ai-sdk\/gateway"/);
+  assert.match(gateway, /generateSpeech/);
+  assert.match(gateway, /gateway\.speechModel\(TTS_MODEL\)/);
   assert.match(gateway, /outputFormat: "mp3"/);
-  assert.doesNotMatch(gateway, /language: "vi"/);
+  assert.match(gateway, /const TTS_MODEL = "openai\/tts-1"/);
+  assert.doesNotMatch(gateway, /language:/);
   assert.doesNotMatch(gateway, /instructions:/);
-  assert.doesNotMatch(gateway, /from "ai"/);
-  assert.doesNotMatch(gateway, /@ai-sdk\/gateway/);
+  assert.doesNotMatch(gateway, /ai-gateway\.vercel\.sh/);
   assert.doesNotMatch(gateway, /tts-1-hd/);
   assert.match(gateway, /const TTS_VOICE = "nova"/);
   assert.doesNotMatch(gateway, /OPERATIONAL_TTS_VOICE/);
@@ -39,6 +42,7 @@ test("operational cloud TTS stays allowlisted, authenticated, and cloud-only", (
   assert.match(gateway, /globalThis\.process\?\.env/);
   assert.match(gateway, /readRuntimeSecret\("AI_GATEWAY_API_KEY"\)/);
   assert.match(gateway, /readRuntimeSecret\("VERCEL_OIDC_TOKEN"\)/);
+  assert.match(gateway, /readRuntimeSecret\("VERCEL"\) === "1"/);
   assert.doesNotMatch(gateway, /process\.env\.AI_GATEWAY_API_KEY/);
   assert.doesNotMatch(gateway, /process\.env\["AI_GATEWAY_API_KEY"\]/);
 

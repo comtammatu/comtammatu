@@ -10,7 +10,10 @@ const nextConfig = readFileSync(
 );
 
 test("Next keeps ExcelJS on the native Node.js runtime boundary", () => {
-  assert.match(nextConfig, /serverExternalPackages: \["exceljs"\]/);
+  assert.match(
+    nextConfig,
+    /serverExternalPackages: \["exceljs", "ai", "@ai-sdk\/gateway"\]/,
+  );
 });
 
 test("ExcelJS writes and reads an xlsx workbook through the pinned unzipper", async () => {

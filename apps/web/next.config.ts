@@ -60,7 +60,7 @@ const nextConfig: NextConfig = {
     "@comtammatu/security",
     "@comtammatu/print-render",
   ],
-  serverExternalPackages: ["exceljs"],
+  serverExternalPackages: ["exceljs", "ai", "@ai-sdk/gateway"],
   turbopack: {
     root: resolve(import.meta.dirname, "../.."),
   },
