@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   APP_SIGNAL_PATTERNS,
   getAppSignalDurationMs,
+  VOICE_PLAYBACK_RATE,
 } from "../lib/audio-signal";
 import {
   audioModeHasBeep,
@@ -212,6 +213,10 @@ test("signal duration includes every pulse and the gaps between them", () => {
   assert.equal(getAppSignalDurationMs("pos-payment-call"), 850);
   assert.equal(getAppSignalDurationMs("pos-staff-call"), 920);
   assert.equal(getAppSignalDurationMs("pos-payment-received"), 580);
+});
+
+test("cloud voice plays nova clips faster than recorded speed", () => {
+  assert.equal(VOICE_PLAYBACK_RATE, 1.15);
 });
 
 test("cloud TTS allowlist stores POS table lines and spoken amounts", () => {

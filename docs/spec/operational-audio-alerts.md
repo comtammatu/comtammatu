@@ -30,7 +30,7 @@ Board/realtime event on open POS|KDS
   → classify stable alert kind
   → device mode (off | beep | voice | beep+voice)
   → beep: mapped SignalTone (debounce)
-  → voice: cached cloud clip else browser TTS (single-flight)
+  → voice: cached cloud clip (single-flight; miss stays silent)
   → UI toast/board independent
 ```
 
@@ -80,7 +80,7 @@ stays beep-only (`pos`).
 Never auto-enable. Keys (device-local): `kds:audio-mode:{branchId}`,
 `pos:audio-mode:{branchId}` → `off|beep|voice|beep+voice`. KDS chrome cycles
 `off → beep → beep+voice → off` (`voice`-only valid if stored). Cycle preview
-supplies the user gesture for `AudioContext` / `speechSynthesis`.
+supplies the user gesture for `AudioContext`.
 
 ## Playback Rules
 
@@ -89,18 +89,17 @@ supplies the user gesture for `AudioContext` / `speechSynthesis`.
 3. **Voice single-flight** — one utterance per page runtime.
 4. **Coalesce** — one sync tick: one beep (highest-priority kind) + at most one voice. KDS voice 15s quiet window (beep/toast/queue continue; no delayed speak). Mode preview bypasses window.
 5. **Length** — catalog ≤ ~1.5s; paid-amount speech may run longer.
-6. **Failure** — cloud 503 / 429 / timeout / autoplay block → skip or
-   browser TTS; beep still follows mode; never throw to UI.
+6. **Failure** — cloud 503 / 429 / timeout / autoplay → skip voice; beep still follows mode; never throw to UI.
 7. **Priority** — higher-priority voice MAY cut current; lower waiting may drop when coalesced.
 8. **Sequential** — in `beep+voice`: finish beep, wait 120 ms, then speak. Newer alert replaces voice still waiting.
 
 ## Voice / surfaces / API
 
-Engine: locked AI Gateway `openai/tts-1` clip through Web Audio. Fetch starts
-with the beep; play after 120 ms. Missing key/OIDC → `speechSynthesis` `vi-VN`.
-Allowlisted templates only. POS voice mode prefetches that branch’s table
-lines slowly (2s gap, dedicated 120/min limiter), not tables 1–99 and not
-bill totals. Cycle preview prefetches generics.
+Engine: locked Gateway `openai/tts-1` `nova` REST clip at 1.15x (no SDK, no
+OS TTS). Fetch with the beep; play after 120 ms. Miss → beep only. Allowlisted
+templates only. POS prefetches that branch’s table lines slowly (2s gap,
+dedicated 120/min limiter), not 1–99 and not bill totals. Cycle preview
+prefetches generics.
 
 - **KDS:** board = SoT; bell cycles mode; voice kind aligns with signal tone.
 - **POS:** catalog kinds speak; guest events coalesce per tick; VietQR paid speaks amount plus table.

@@ -120,7 +120,7 @@ State: verify
 Kind: feature
 Tier: T2
 Lane: pos
-Exit: Beep stays immediate. Voice prefers cached AI Gateway clips played through Web Audio; missing key or timeout uses slower, clearer browser `vi-VN`. Free-form text cannot be synthesized.
+Exit: Beep stays immediate. Voice is cached AI Gateway `nova` clips through Web Audio at 1.15x. Clip miss stays silent. Free-form text cannot be synthesized.
 Evidence: `operational-audio.test.ts` allowlist + `operational-audio-tts-static.test.ts`.
 
 UI Advisor Gate
@@ -135,7 +135,7 @@ UI Advisor Gate
 - Verification: unit + static tests
 
 - [ ] Set `AI_GATEWAY_API_KEY` on Production and hear nova Vietnamese on POS beep+voice
-- [ ] With key unset, browser TTS still speaks and does not block the beep
+- [ ] With key unset or clip miss, OS voice does not speak; beep still follows mode
 
 ## POS stores table voice clips; paid amounts speak on demand
 

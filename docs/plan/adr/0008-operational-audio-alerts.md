@@ -28,7 +28,7 @@ Constraints that matter in-store:
 
 2. **Device-local operational audio only.** Audio alerts fire on the open POS/KDS surface that already owns the event. They MUST NOT write `public.notifications`, MUST NOT use Telegram/outbox, and MUST NOT sync prefs to the server. Prefs stay in `device-prefs` (allowed exception in `scripts/check-client-storage.mjs`).
 
-3. **Cached cloud TTS, browser fallback** (amended 2026-08-19). Catalog templates speak through AI Gateway **`openai/tts-1`** (locked; not env-switched) when `AI_GATEWAY_API_KEY` or Vercel OIDC is present. Clips cache on the device; the beep never waits on the network. Unconfigured or failed cloud TTS uses `speechSynthesis` `vi-VN`. Free-form text is rejected. A recorded brand pack may still replace the engine later without changing `kind`s.
+3. **Cached cloud TTS only** (amended 2026-08-19). Catalog templates speak through AI Gateway **`openai/tts-1`** voice **`nova`** (locked; not env-switched) when `AI_GATEWAY_API_KEY` or Vercel OIDC is present. Clips cache on the device and play at 1.15x through Web Audio. The beep never waits on the network. Unconfigured or failed cloud TTS stays silent (beep still follows mode). Do not use OS `speechSynthesis`. Free-form text is rejected. A recorded brand pack may still replace the engine later without changing `kind`s.
 
 4. **KDS first, POS critical events second.** KDS ships the three existing alert kinds with short fixed copy (event type + table label). POS speaks self-order approval, guest payment call, staff call, VietQR paid, print failure, and out-of-stock. Persist finite “Bàn {n} …” clips for the open branch (including stored “gọi món”). VietQR paid speaks “Đã nhận {Vietnamese amount} thanh toán bàn {n}” on demand — round to 1,000₫, LRU the clip, do not prefetch every total. Takeaway omits the table. Cashier-confirmed cash does not play `pos.payment_received`. Do not read item lists or routine POS state transitions. POS guest beeps must not reuse KDS ticket contours.
 
@@ -43,7 +43,7 @@ Constraints that matter in-store:
 
 7. **KDS voice has a 15-second quiet window.** Beeps remain immediate. Spoken KDS alerts inside the window are dropped rather than queued, so a rush cannot create delayed narration that no longer matches the board. User-triggered previews bypass the window and do not postpone the next live alert.
 
-8. **Beep and voice do not overlap.** In `beep+voice`, start the cloud fetch with the beep, finish the mapped beep, leave 120 ms, then play the clip (or browser TTS). A newer alert replaces any voice still waiting. `voice`-only starts immediately.
+8. **Beep and voice do not overlap.** In `beep+voice`, start the cloud fetch with the beep, finish the mapped beep, leave 120 ms, then play the clip. A newer alert replaces any voice still waiting. `voice`-only starts immediately.
 
 ## Alternatives Rejected
 
@@ -57,7 +57,7 @@ Constraints that matter in-store:
 
 **C. Uncached live cloud TTS on the beep path**
 
-- Rejected: network and latency during service peaks. Cached catalog overlay via AI Gateway is accepted (2026-08-19): beep stays local; voice fetch overlaps the beep and fails open to browser TTS.
+- Rejected: network and latency during service peaks. Cached catalog overlay via AI Gateway is accepted (2026-08-19): beep stays local; voice fetch overlaps the beep and stays silent if the clip misses.
 
 **D. Route kitchen audio through `public.notifications`**
 

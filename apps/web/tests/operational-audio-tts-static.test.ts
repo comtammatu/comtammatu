@@ -6,7 +6,7 @@ import { test } from "node:test";
 const root = join(import.meta.dirname, "..");
 const read = (path: string) => readFileSync(join(root, path), "utf8");
 
-test("operational cloud TTS stays allowlisted, authenticated, and fail-open", () => {
+test("operational cloud TTS stays allowlisted, authenticated, and cloud-only", () => {
   const route = read("app/api/operational-audio/speak/route.ts");
   const voice = read("lib/operational-voice.ts");
   const audio = read("lib/operational-audio.ts");
@@ -27,9 +27,14 @@ test("operational cloud TTS stays allowlisted, authenticated, and fail-open", ()
   assert.doesNotMatch(route, /openai\.com/);
 
   assert.match(gateway, /ai-gateway\.vercel\.sh\/v4\/ai\/speech-model/);
-  assert.match(gateway, /const TTS_MODEL = "openai\/tts-1"/);
+  assert.match(gateway, /outputFormat: "mp3"/);
+  assert.doesNotMatch(gateway, /language: "vi"/);
+  assert.doesNotMatch(gateway, /instructions:/);
+  assert.doesNotMatch(gateway, /from "ai"/);
+  assert.doesNotMatch(gateway, /@ai-sdk\/gateway/);
   assert.doesNotMatch(gateway, /tts-1-hd/);
-  assert.doesNotMatch(gateway, /OPERATIONAL_TTS_MODEL/);
+  assert.match(gateway, /const TTS_VOICE = "nova"/);
+  assert.doesNotMatch(gateway, /OPERATIONAL_TTS_VOICE/);
   assert.match(gateway, /server-only/);
   assert.match(gateway, /globalThis\.process\?\.env/);
   assert.match(gateway, /readRuntimeSecret\("AI_GATEWAY_API_KEY"\)/);
@@ -40,7 +45,10 @@ test("operational cloud TTS stays allowlisted, authenticated, and fail-open", ()
   assert.match(voice, /primeOperationalVoice/);
   assert.match(voice, /prefetchOperationalVoiceCatalog/);
   assert.match(voice, /code === "tts_unconfigured"/);
+  assert.match(voice, /TTS_FETCH_TIMEOUT_MS = 2_500/);
   assert.match(voice, /PREFETCH_NETWORK_GAP_MS = 2_000/);
+  assert.doesNotMatch(voice, /speechSynthesis/);
+  assert.doesNotMatch(voice, /speakBrowser/);
   assert.match(voice, /"rate_limited"/);
   assert.doesNotMatch(
     voice,

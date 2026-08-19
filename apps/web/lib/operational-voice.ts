@@ -2,7 +2,7 @@ import { playAlertAudioBuffer } from "./audio-signal";
 import { listPrefetchUtterances } from "./operational-audio-catalog";
 
 const TTS_CACHE_NAME = "ctmt-operational-tts-v1";
-const TTS_FETCH_TIMEOUT_MS = 1_800;
+const TTS_FETCH_TIMEOUT_MS = 2_500;
 const PREFETCH_NETWORK_GAP_MS = 2_000;
 const PREFETCH_FETCH_TIMEOUT_MS = 8_000;
 const RATE_LIMITED_FALLBACK_WAIT_MS = 15_000;
@@ -33,7 +33,6 @@ export function cancelOperationalVoice(): void {
   pendingClipAbort = null;
   stopCurrentClip?.();
   stopCurrentClip = null;
-  window.speechSynthesis?.cancel();
 }
 
 function clipRequest(text: string): Request {
@@ -156,38 +155,7 @@ async function fetchCloudClip(
   }
 }
 
-function pickVietnameseVoice(
-  voices: readonly SpeechSynthesisVoice[],
-): SpeechSynthesisVoice | undefined {
-  const vietnamese = voices.filter((voice) =>
-    voice.lang.toLowerCase().startsWith("vi"),
-  );
-  return (
-    vietnamese.find((voice) =>
-      /neural|google|microsoft|hoai|minh|linh/i.test(voice.name),
-    ) ??
-    vietnamese.find((voice) => voice.lang.toLowerCase() === "vi-vn") ??
-    vietnamese[0]
-  );
-}
-
-function speakBrowser(text: string): void {
-  const synth = window.speechSynthesis as SpeechSynthesis | undefined;
-  if (!synth) return;
-
-  const vietnamese = pickVietnameseVoice(synth.getVoices());
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "vi-VN";
-  utterance.rate = 0.95;
-  utterance.pitch = 1;
-  utterance.volume = 1;
-  if (vietnamese) utterance.voice = vietnamese;
-  synth.cancel();
-  synth.speak(utterance);
-}
-
 async function playPrimedVoice(
-  text: string,
   clipPromise: Promise<ArrayBuffer | null | "rate_limited">,
   generation: number,
 ): Promise<void> {
@@ -198,9 +166,7 @@ async function playPrimedVoice(
     stopCurrentClip = playback.stop;
     await playback.stopped;
     if (generation === speakGeneration) stopCurrentClip = null;
-    return;
   }
-  speakBrowser(text);
 }
 
 export function primeOperationalVoice(text: string): { play: () => void } {
@@ -208,7 +174,6 @@ export function primeOperationalVoice(text: string): { play: () => void } {
   pendingClipAbort?.abort();
   stopCurrentClip?.();
   stopCurrentClip = null;
-  window.speechSynthesis?.cancel();
 
   const abort = new AbortController();
   pendingClipAbort = abort;
@@ -222,7 +187,7 @@ export function primeOperationalVoice(text: string): { play: () => void } {
   return {
     play() {
       if (generation !== speakGeneration) return;
-      void playPrimedVoice(text, clipPromise, generation);
+      void playPrimedVoice(clipPromise, generation);
     },
   };
 }

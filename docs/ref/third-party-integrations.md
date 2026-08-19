@@ -11,7 +11,7 @@
 | Card payment | VNPay | — | **Đã loại bỏ (D012)** |
 | HĐĐT | Viettel S-invoice | — | Finance |
 | BHXH | iBHXH / VNPT-BHXH | Manual portal | Nhân sự & tiền lương |
-| TTS vận hành POS/KDS | Vercel AI Gateway `openai/tts-1` | Browser `speechSynthesis` | Operational audio |
+| TTS vận hành POS/KDS | Vercel AI Gateway `openai/tts-1` `nova` | Beep only | Operational audio |
 
 ## 1. Thanh toán — VietQR + SePay
 
@@ -78,7 +78,7 @@ Không API trực tiếp. HTKK desktop hoặc `thuedientu.gdt.gov.vn`. Export t�
 | Finance | Viettel S-invoice |
 | Nhân sự & tiền lương | Export BHXH / thuế TNCN (no API) |
 | Đã loại bỏ | VNPay (D012) |
-| POS/KDS voice | AI Gateway TTS, cached; missing key → browser TTS |
+| POS/KDS voice | AI Gateway TTS, cached; missing key → beep only |
 
 ```bash
 SEPAY_WEBHOOK_SECRET=    # HMAC-SHA256 trên SePay; VietQR bank/account trong Owner UI
@@ -87,7 +87,6 @@ SINVOICE_PASSWORD=
 SINVOICE_BASE_URL=https://api-vinvoice.viettel.vn
 SINVOICE_SANDBOX=false
 AI_GATEWAY_API_KEY=      # giọng POS/KDS cloud; Sensitive trên Vercel chỉ có lúc chạy
-OPERATIONAL_TTS_VOICE=nova
 ```
 
 Secrets: Supabase Vault / Vercel env — **không commit**.

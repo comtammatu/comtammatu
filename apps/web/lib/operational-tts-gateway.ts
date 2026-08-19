@@ -3,6 +3,7 @@ import "server-only";
 const GATEWAY_SPEECH_URL = "https://ai-gateway.vercel.sh/v4/ai/speech-model";
 // Locked cost choice: cheapest OpenAI speech model on Gateway. Not env-switched.
 const TTS_MODEL = "openai/tts-1";
+const TTS_VOICE = "nova";
 const TTS_TIMEOUT_MS = 2_500;
 const MAX_CATALOG_CLIPS = 200;
 const MAX_AMOUNT_CLIPS = 80;
@@ -75,19 +76,17 @@ export async function synthesizeOperationalUtterance(
     },
     body: JSON.stringify({
       text,
-      voice: readRuntimeSecret("OPERATIONAL_TTS_VOICE") || "nova",
+      voice: TTS_VOICE,
       outputFormat: "mp3",
-      speed: 1,
-      language: "vi",
-      instructions:
-        "Speak Vietnamese clearly as a short restaurant floor alert. Firm, no pause, no extra words.",
     }),
     signal: AbortSignal.timeout(TTS_TIMEOUT_MS),
   });
   if (!response.ok) {
+    const raw = (await response.text()).slice(0, 180);
     console.error(
-      "[operational-tts] gateway status=%s",
+      "[operational-tts] gateway status=%s detail=%s",
       String(response.status),
+      raw,
     );
     return null;
   }

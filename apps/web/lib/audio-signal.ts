@@ -206,6 +206,8 @@ export function playAppSignal(tone: SignalTone, force = false): void {
 }
 
 const VOICE_PLAYBACK_GAIN = 1.35;
+/** nova at 1.0 is slow for floor alerts; rate-change keeps Gateway payload valid. */
+export const VOICE_PLAYBACK_RATE = 1.15;
 
 export function playAlertAudioBuffer(buffer: ArrayBuffer): {
   stopped: Promise<void>;
@@ -232,6 +234,7 @@ export function playAlertAudioBuffer(buffer: ArrayBuffer): {
         gainNode.gain.setValueAtTime(VOICE_PLAYBACK_GAIN, context.currentTime);
         source = context.createBufferSource();
         source.buffer = audioBuffer;
+        source.playbackRate.value = VOICE_PLAYBACK_RATE;
         source.connect(gainNode);
         gainNode.connect(compressor);
         source.onended = () => {
