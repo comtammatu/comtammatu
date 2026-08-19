@@ -18,7 +18,7 @@ test("formatSideLabel shows clean side name for default side quantity <= 1", () 
   );
 });
 
-test("formatSideLabel shows explicit side quantity per main item portion", () => {
+test("formatSideLabel always returns pure side name without quantity suffix", () => {
   assert.equal(
     formatSideLabel({
       side_item_id: 11,
@@ -27,7 +27,7 @@ test("formatSideLabel shows explicit side quantity per main item portion", () =>
       quantity: 2,
       is_default: false,
     }),
-    "Trứng ốp la x2",
+    "Trứng ốp la",
   );
 });
 
@@ -36,7 +36,7 @@ test("sidePortionQuantity falls back to one when stored side quantity is missing
   assert.equal(sidePortionQuantity(0), 1);
 });
 
-test("getSideBadgeToneClass assigns stable semantic chart colors per side item", () => {
+test("getSideBadgeToneClass assigns stable unified badge styling", () => {
   const canhThem = {
     side_item_id: 1,
     name: "Canh thêm",
@@ -53,12 +53,7 @@ test("getSideBadgeToneClass assigns stable semantic chart colors per side item",
 
   assert.equal(
     getSideBadgeToneClass(canhThem),
-    getSideBadgeToneClass(canhThem),
-  );
-  assert.notEqual(
-    getSideBadgeToneClass(canhThem),
     getSideBadgeToneClass(trungOpLa),
   );
-  assert.match(getSideBadgeToneClass(canhThem), /bg-chart-1\/15/);
-  assert.match(getSideBadgeToneClass(trungOpLa), /bg-chart-2\/15/);
+  assert.match(getSideBadgeToneClass(canhThem), /bg-muted\/50/);
 });

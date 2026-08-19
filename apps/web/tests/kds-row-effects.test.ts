@@ -150,21 +150,21 @@ test("KDS row effects classify added, quantity, content, status, and removal ton
   );
 });
 
-test("KDS row effect classes use semantic tokens and motion-safe animation", () => {
+test("KDS row effect classes use semantic tokens without pulse or ring", () => {
   assert.equal(KDS_ROW_EFFECT_MS, 1800);
-  assert.match(getKdsRowEffectClass("added") || "", /bg-info\/10/);
-  assert.match(
+  assert.match(getKdsRowEffectClass("added") || "", /bg-info\/15/);
+  assert.doesNotMatch(
     getKdsRowEffectClass("added") || "",
     /motion-safe:animate-pulse/,
   );
-  assert.match(getKdsRowEffectClass("quantity") || "", /bg-warning\/10/);
-  assert.match(
+  assert.match(getKdsRowEffectClass("quantity") || "", /bg-warning\/15/);
+  assert.doesNotMatch(
     getKdsRowEffectClass("quantity") || "",
     /motion-safe:animate-pulse/,
   );
-  assert.match(getKdsRowEffectClass("content") || "", /ring-info\/20/);
-  assert.match(getKdsRowEffectClass("status") || "", /ring-success\/20/);
-  assert.match(getKdsRowEffectClass("removed") || "", /ring-destructive\/20/);
+  assert.match(getKdsRowEffectClass("content") || "", /bg-info\/15/);
+  assert.match(getKdsRowEffectClass("status") || "", /bg-success\/15/);
+  assert.match(getKdsRowEffectClass("removed") || "", /bg-destructive\/15/);
 });
 
 test("KDS row effects are wired across board, comprehensive, and focus rows", () => {

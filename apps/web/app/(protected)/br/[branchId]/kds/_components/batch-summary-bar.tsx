@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { formatCount, formatPortionQuantity } from "@comtammatu/shared/format";
+import { formatCount } from "@comtammatu/shared/format";
 import { KDS_VI } from "@comtammatu/shared/messages";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -65,7 +65,7 @@ export function BatchSummaryBar({ orders, className }: BatchSummaryBarProps) {
   return (
     <div
       className={cn(
-        "border-b border-border/50 bg-muted/30 px-2 py-1 transition-colors xl:px-3",
+        "flex h-9 items-center border-b border-border/50 bg-muted/30 px-2 xl:px-3",
         className,
       )}
       aria-label={KDS_VI.batchSummaryAria}
@@ -75,7 +75,7 @@ export function BatchSummaryBar({ orders, className }: BatchSummaryBarProps) {
           type="button"
           variant="ghost"
           size="sm"
-          className="shrink-0 gap-1.5 px-2 text-xs font-semibold text-muted-foreground hover:text-foreground"
+          className="h-7 shrink-0 gap-1.5 px-2 text-xs font-semibold text-muted-foreground hover:text-foreground"
           onClick={() => setIsExpanded(!isExpanded)}
           aria-expanded={isExpanded}
           aria-label={
@@ -85,8 +85,8 @@ export function BatchSummaryBar({ orders, className }: BatchSummaryBarProps) {
           }
         >
           <IconLayers className="size-3.5 text-primary" aria-hidden />
-          <span className="font-heading">{KDS_VI.batchSummary}</span>
-          <span className="font-mono tabular-nums text-foreground">
+          <span className="font-heading font-semibold text-foreground">{KDS_VI.batchSummary}</span>
+          <span className="font-mono text-xs font-semibold tabular-nums text-primary">
             ({formatCount(totalPortions)})
           </span>
           {isExpanded ? (
@@ -102,13 +102,13 @@ export function BatchSummaryBar({ orders, className }: BatchSummaryBarProps) {
               <Badge
                 key={item.itemName}
                 variant="outline"
-                className="shrink-0 gap-1.5 bg-card px-2 py-1 text-xs"
+                className="shrink-0 gap-1.5 border-border/70 bg-card px-2 py-0.5 text-xs"
               >
                 <span className="font-medium text-foreground">
                   {item.itemName}
                 </span>
-                <span className="inline-flex min-w-5 items-center justify-center rounded-md bg-primary/10 px-1 py-0.5 font-mono font-semibold tabular-nums text-primary">
-                  {formatPortionQuantity(item.totalQuantity)}
+                <span className="inline-flex min-w-5 items-center justify-center rounded bg-primary/10 px-1 py-0.5 font-mono text-xs font-semibold tabular-nums text-primary">
+                  {formatCount(item.totalQuantity)}
                 </span>
               </Badge>
             ))}

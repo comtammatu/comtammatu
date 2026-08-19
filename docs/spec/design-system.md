@@ -445,7 +445,7 @@ card padding with route-local utility strings.
 | Page-header eyebrow | `text-xs font-medium uppercase tracking-wide` | `AppPageHeader.eyebrow` |
 | Panel / field / section label | `text-xs font-medium uppercase tracking-wide text-muted-foreground` | `SectionLabel` (`density="dense"` → `text-2xs … tracking-wider`) |
 | Table column header | `text-xs font-medium uppercase tracking-wider text-muted-foreground` | `TableHead` |
-| KDS kitchen item-name | `text-base font-semibold leading-6 xl:text-lg xl:leading-6` | KDS ticket |
+| KDS kitchen item-name | `text-lg font-semibold leading-6 xl:text-xl xl:leading-6` | KDS ticket |
 | Numeric input echo | `text-3xl font-semibold tabular-nums` | Number pad, scale display |
 | Runner board header / row / footer / empty secondary | `text-runner-header` / `text-runner-board` / `text-runner-footer` / `text-runner-empty-secondary` + `font-semibold` | Height-responsive display tokens |
 | Display call target | `font-mono text-6xl sm:text-7xl lg:text-8xl font-semibold tabular-nums` | Customer-facing pickup / queue display only |

@@ -22,13 +22,13 @@ export const KDS_ORDER_COLUMN_DEFINITIONS = [
     id: "dine_in",
     title: ORDER_TYPE_LABELS_VI.dine_in,
     emptyTitle: "Chưa có đơn tại bàn",
-    widthClass: "xl:col-span-4",
+    widthClass: "xl:col-span-3",
   },
   {
     id: "takeaway",
     title: ORDER_TYPE_LABELS_VI.takeaway,
     emptyTitle: "Chưa có đơn mang về",
-    widthClass: "xl:col-span-4",
+    widthClass: "xl:col-span-3",
   },
   {
     id: "add_on",
@@ -75,9 +75,8 @@ function getKdsOrderColumnId(order: KdsOrder): KdsOrderColumnId {
   return "dine_in";
 }
 
-export function getKdsOrderLabelOverride(order: KdsOrder): string | undefined {
-  if (getKdsOrderColumnId(order) === "add_on") return undefined;
-  if (order.sendKind === "append") return "Gọi thêm";
+/** Append and add-on tickets use the same table/order title as the first send. */
+export function getKdsOrderLabelOverride(_order: KdsOrder): string | undefined {
   return undefined;
 }
 

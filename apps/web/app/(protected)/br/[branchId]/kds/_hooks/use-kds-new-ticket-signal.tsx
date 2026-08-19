@@ -10,9 +10,9 @@ import {
 } from "react";
 import type { KdsTicket } from "../types";
 
-// How long the new-ticket ring accent lingers on a card. The enter animation
-// itself is duration-150 per § G "One-shot content enter"; this window only
-// controls how long the (static) ring stays before it clears.
+// How long the new-ticket highlight lingers on a card. The board stays
+// static — no pulse, ring, or fade — this window only controls how long
+// the info wash stays before it clears.
 export const KDS_NEW_TICKET_SIGNAL_MS = 1500;
 
 const EMPTY_SIGNAL_IDS: ReadonlySet<number> = new Set<number>();
@@ -37,13 +37,8 @@ export function useKdsNewTicketSignalIds(): ReadonlySet<number> {
   return useContext(KdsNewTicketSignalContext);
 }
 
-/**
- * § G one-shot content enter for a genuinely new KDS ticket: a narrow info
- * ring plus a single fade-in, `duration-150` only. No slide, no loop — the
- * existing row pulse / age badge stay in charge of ongoing state.
- */
 export function getKdsNewTicketSignalClass(): string {
-  return "motion-safe:animate-in motion-safe:fade-in motion-safe:duration-150 ring-2 ring-inset ring-info/20";
+  return "bg-info/15";
 }
 
 /**

@@ -70,7 +70,11 @@ test("KDS batch completion action moves into the compact card title area", () =>
   assert.doesNotMatch(batchActionsSource, /confirm\(/);
 });
 
-test("KDS compact cards preserve item recall and ready actions only", () => {
+test("KDS compact item rows use a bare quantity, stacked meta, and Xong label", () => {
+  assert.doesNotMatch(orderGridSource, /quantitySuffix/);
+  assert.match(orderGridSource, /completeVisible: "Xong"/);
+  assert.doesNotMatch(orderGridSource, /transition-colors duration-150/);
+  assert.match(orderGridSource, /elapsedMs=\{elapsedMs\}/);
   assert.match(orderGridSource, /canRecall=\{canRecall\}/);
   assert.match(orderGridSource, /onRecall=\{onRecall\}/);
   assert.match(orderGridSource, /data-testid=\{`kds-recall-/);

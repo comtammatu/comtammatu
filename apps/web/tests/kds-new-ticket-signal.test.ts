@@ -69,12 +69,12 @@ test("duplicate inserted ids collapse to a single signal", () => {
   assert.deepEqual(added, [11, 12]);
 });
 
-test("signal class is a § G one-shot content enter: fade + narrow ring, duration-150, no loop or slide", () => {
+test("signal class is a static info wash with no pulse, ring, or enter animation", () => {
   const cls = getKdsNewTicketSignalClass();
-  assert.match(cls, /motion-safe:animate-in/);
-  assert.match(cls, /motion-safe:fade-in/);
-  assert.match(cls, /motion-safe:duration-150/);
-  assert.match(cls, /ring-info\//);
+  assert.match(cls, /bg-info\/15/);
+  assert.doesNotMatch(cls, /ring-/);
+  assert.doesNotMatch(cls, /animate-in/);
+  assert.doesNotMatch(cls, /fade-in/);
   assert.doesNotMatch(cls, /duration-300/);
   assert.doesNotMatch(cls, /slide-in/);
   assert.doesNotMatch(cls, /transition-all/);

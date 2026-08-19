@@ -4,13 +4,15 @@ import * as React from "react";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
-  TriangleAlert as IconAlertTriangle,
+  Ban as IconBan,
   NotebookText as IconNote,
   Plus as IconPlus,
 } from "lucide-react";
 import { classifyModifier } from "../_lib/modifier-format";
 import { formatSideLabel, getSideBadgeToneClass } from "../_lib/side-format";
 import type { OrderItemModifier, OrderItemSide } from "../types";
+
+const ITEM_NOTE_PREFIX = "Ghi chú";
 
 interface TicketRowMetaProps {
   note: string | null;
@@ -33,77 +35,73 @@ export function TicketRowMeta({
 
   if (layout === "inline") {
     return (
-      <>
-        {hasModifiers &&
-          modifiers.map((m, idx) => (
-            <ModifierChip
-              key={`${m.modifier_id}-${idx}`}
-              label={m.name}
-              compact
-            />
-          ))}
-
+      <span className="inline-flex min-w-0 flex-wrap items-center gap-1 text-sm font-medium leading-snug">
         {hasSides &&
           sides.map((s, idx) => (
             <Badge
               key={`${s.side_item_id}-${idx}`}
               variant="outline"
               className={cn(
-                "h-auto min-h-6 rounded-md px-2 py-1 text-sm font-semibold leading-tight text-foreground",
+                "h-auto min-h-5 rounded-md px-1.5 py-0.5 text-xs font-semibold leading-tight text-foreground xl:text-sm xl:px-2",
                 getSideBadgeToneClass(s),
               )}
             >
-              {formatSideLabel(s)}
+              + {formatSideLabel(s)}
             </Badge>
           ))}
 
+        {hasModifiers &&
+          modifiers.map((m, idx) => (
+            <ModifierChip key={`${m.modifier_id}-${idx}`} label={m.name} />
+          ))}
+
         {hasNote && (
-          <span className="inline-flex min-h-6 min-w-0 max-w-full items-center gap-1.5 rounded-md bg-warning/15 px-2 py-1 text-warning">
+          <span className="inline-flex min-h-6 min-w-0 max-w-full items-center gap-1 rounded-md bg-warning/15 px-2 py-0.5 text-warning">
             <IconNote aria-hidden className="size-3 shrink-0 text-warning" />
-            <span className="max-h-16 min-w-0 overflow-y-auto break-words pr-1 text-sm font-semibold leading-tight">
-              {note}
+            <span className="max-h-16 min-w-0 overflow-y-auto break-words pr-1 text-xs font-semibold leading-tight xl:text-sm">
+              {ITEM_NOTE_PREFIX}: {note}
             </span>
           </span>
         )}
-      </>
+      </span>
     );
   }
 
   return (
-    <div className="mt-2 flex flex-col gap-1.5 text-sm font-medium leading-snug">
+    <div className={cn("flex flex-col gap-1 text-sm font-medium leading-snug mt-1")}>
+      {hasSides && (
+        <div className="flex flex-wrap items-center gap-1">
+          {sides.map((s, idx) => (
+            <Badge
+              key={`${s.side_item_id}-${idx}`}
+              variant="outline"
+              className={cn(
+                "h-auto min-h-5 rounded-md px-1.5 py-0.5 text-xs font-semibold leading-tight text-foreground xl:text-sm xl:px-2",
+                getSideBadgeToneClass(s),
+              )}
+            >
+              + {formatSideLabel(s)}
+            </Badge>
+          ))}
+        </div>
+      )}
+
       {hasModifiers && (
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1">
           {modifiers.map((m, idx) => (
             <ModifierChip key={`${m.modifier_id}-${idx}`} label={m.name} />
           ))}
         </div>
       )}
 
-      {hasSides && (
-        <div className="flex flex-wrap items-center gap-1.5">
-          {sides.map((s, idx) => (
-            <Badge
-              key={`${s.side_item_id}-${idx}`}
-              variant="outline"
-              className={cn(
-                "h-auto min-h-6 rounded-md px-2 py-1 text-sm font-semibold leading-tight text-foreground",
-                getSideBadgeToneClass(s),
-              )}
-            >
-              {formatSideLabel(s)}
-            </Badge>
-          ))}
-        </div>
-      )}
-
       {hasNote && (
-        <div className="mt-1 flex items-start gap-1.5 rounded-md bg-warning/15 px-2 py-1 text-warning">
+        <div className="flex items-start gap-1 rounded-md bg-warning/15 px-2 py-0.5 text-xs font-medium text-warning xl:text-sm">
           <IconNote
             aria-hidden
-            className="mt-0.5 size-4 shrink-0 text-warning"
+            className="mt-0.5 size-3 shrink-0 text-warning"
           />
-          <span className="max-h-20 min-w-0 overflow-y-auto break-words pr-1 text-sm font-semibold">
-            {note}
+          <span className="max-h-20 min-w-0 overflow-y-auto break-words pr-1">
+            {ITEM_NOTE_PREFIX}: {note}
           </span>
         </div>
       )}
@@ -111,22 +109,15 @@ export function TicketRowMeta({
   );
 }
 
-function ModifierChip({
-  label,
-  compact = false,
-}: {
-  label: string;
-  compact?: boolean;
-}) {
+function ModifierChip({ label }: { label: string }) {
   const tone = classifyModifier(label);
-  const className = compact
-    ? "h-auto min-h-6 rounded-md px-2 py-1 text-sm font-semibold leading-tight"
-    : "h-auto min-h-6 rounded-md px-2 py-1 text-sm font-semibold leading-tight";
+  const className =
+    "h-auto min-h-5 rounded-md px-1.5 py-0.5 text-xs font-semibold leading-tight xl:px-2 xl:text-sm";
 
   if (tone === "negation") {
     return (
       <Badge variant="destructive" className={className}>
-        <IconAlertTriangle data-icon="inline-start" aria-hidden />
+        <IconBan data-icon="inline-start" className="size-3" aria-hidden />
         {label}
       </Badge>
     );
@@ -135,7 +126,7 @@ function ModifierChip({
   if (tone === "addition") {
     return (
       <Badge variant="warning" className={className}>
-        <IconPlus data-icon="inline-start" aria-hidden />
+        <IconPlus data-icon="inline-start" className="size-3" aria-hidden />
         {label}
       </Badge>
     );

@@ -10,6 +10,7 @@ import {
   groupKdsOrdersByColumn,
 } from "../app/(protected)/br/[branchId]/kds/_lib/order-columns";
 import { getStatusBadgeMeta } from "../app/components/status-badge";
+import { formatKdsElapsedClock } from "../app/(protected)/br/[branchId]/kds/_lib/age-style";
 import { formatKdsTicketSequenceDisplay } from "../app/(protected)/br/[branchId]/kds/_lib/status-config";
 import type {
   KdsOrder,
@@ -184,8 +185,8 @@ test("KDS comprehensive board groups orders into item-category service columns",
       column.widthClass,
     ]),
     [
-      ["dine_in", "Tại bàn", "xl:col-span-4"],
-      ["takeaway", "Mang về", "xl:col-span-4"],
+      ["dine_in", "Tại bàn", "xl:col-span-3"],
+      ["takeaway", "Mang về", "xl:col-span-3"],
       ["add_on", "Món thêm", "xl:col-span-2"],
     ],
   );
@@ -226,7 +227,7 @@ test("KDS món thêm lane requires category Thêm and type Món phụ", () => {
   );
 });
 
-test("KDS title context keeps table target and ticket code visible", () => {
+test("KDS title keeps table target and ticket code without append labels", () => {
   const addOnDineIn = makeOrder({
     groupKey: "add-on-dine-in",
     orderType: "dine_in",
@@ -248,20 +249,20 @@ test("KDS title context keeps table target and ticket code visible", () => {
   });
 
   assert.equal(getKdsOrderLabelOverride(addOnDineIn), undefined);
-  assert.equal(getKdsOrderLabelOverride(appendMainDish), "Gọi thêm");
+  assert.equal(getKdsOrderLabelOverride(appendMainDish), undefined);
   assert.match(
     orderTitleLineSource,
     /const callTarget = getCallTarget\(orderType, tableNumber\);/,
   );
-  assert.doesNotMatch(orderTitleLineSource, /labelOverride \?\? getCallTarget/);
-  assert.doesNotMatch(orderTitleLineSource, /contextLabel \?\? getCallTarget/);
-  assert.match(orderTitleLineSource, /aria-label=\{accessibleLabel\}/);
-  assert.match(orderTitleLineSource, /\$\{contextLabel\} \$\{callTarget\}/);
+  assert.doesNotMatch(orderTitleLineSource, /contextLabel/);
+  assert.doesNotMatch(orderTitleLineSource, /Gọi thêm/);
   assert.doesNotMatch(orderTitleLineSource, /title=/);
   assert.doesNotMatch(orderTitleLineSource, /truncate|line-clamp/);
   assert.doesNotMatch(orderNoteSource, /truncate|line-clamp|overflow-hidden/);
-  assert.match(orderGridSource, /contextLabel=\{contextLabel\}/);
-  assert.match(focusViewSource, /contextLabel=\{getKdsOrderLabelOverride/);
+  assert.doesNotMatch(orderGridSource, /contextLabel=/);
+  assert.doesNotMatch(focusViewSource, /contextLabel=/);
+  assert.doesNotMatch(orderGridSource, /Gọi thêm/);
+  assert.doesNotMatch(focusViewSource, /Gọi thêm/);
 });
 
 test("KDS mixed kitchen batch can split normal items from món thêm", () => {
@@ -338,4 +339,18 @@ test("KDS layout owns the viewport while board states fill the remaining workspa
     kdsErrorSource,
     /className="flex min-h-0 flex-1 items-center justify-center p-4"/,
   );
+});
+
+test("KDS elapsed clock is a static mm:ss label", () => {
+  assert.equal(formatKdsElapsedClock(0), "00:00");
+  assert.equal(formatKdsElapsedClock(3 * 60_000 + 20_000), "03:20");
+  assert.equal(formatKdsElapsedClock(7 * 60_000 + 15_000), "07:15");
+  assert.equal(formatKdsElapsedClock(12 * 60_000 + 40_000), "12:40");
+});
+
+test("KDS focus view advances immediately without blur or pulse", () => {
+  assert.match(focusViewSource, /const ADVANCE_DELAY_MS = 0;/);
+  assert.doesNotMatch(focusViewSource, /backdrop-blur-sm/);
+  assert.doesNotMatch(focusViewSource, /animate-pulse/);
+  assert.doesNotMatch(focusViewSource, /transition-colors duration-150/);
 });

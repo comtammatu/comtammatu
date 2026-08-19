@@ -7,7 +7,7 @@ import { getKdsTicketDisplayStatus } from "./order-status";
  * heatmap grid and focus view cannot diverge in item-name size.
  */
 export const KDS_ITEM_NAME_CLASS =
-  "text-base font-semibold leading-6 xl:text-lg xl:leading-6";
+  "text-lg font-semibold leading-6 xl:text-xl xl:leading-6";
 
 export function shouldShowTicketStatusBadge(status: string): boolean {
   return getKdsTicketDisplayStatus(status) !== "pending";

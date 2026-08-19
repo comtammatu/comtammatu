@@ -31,7 +31,6 @@ import {
   getKdsNewTicketSignalClass,
   useKdsNewTicketSignalIds,
 } from "../_hooks/use-kds-new-ticket-signal";
-import { getKdsOrderLabelOverride } from "../_lib/order-columns";
 import {
   KDS_ITEM_NAME_CLASS,
   shouldShowTicketStatusBadge,
@@ -57,17 +56,17 @@ interface FocusViewProps {
   onCompleteTickets: (ticketIds: number[]) => Promise<void>;
 }
 
-const ADVANCE_DELAY_MS = 1500;
+const ADVANCE_DELAY_MS = 0;
 
 const KDS_FOCUS_COPY = {
   completeBatch: (count: number) =>
     count > 1 ? `Hoàn tất ${String(count)} món` : "Hoàn tất phiếu bếp",
   completeItem: "Hoàn tất món",
   completeNamedItem: (itemName: string) => `Hoàn tất ${itemName}`,
+  completeVisible: "Xong",
   nextOrder: "Đơn kế tiếp",
   previousOrder: "Đơn trước",
   priority: "Ưu tiên",
-  quantitySuffix: "×",
   readyAdvance: "Đơn đã sẵn sàng - chuyển đơn kế tiếp",
   recallItem: "Thu hồi món",
   recallNamedItem: (itemName: string) => `Thu hồi ${itemName}`,
@@ -304,7 +303,7 @@ function FocusOrderPanel({
                 destructive ≥10ph, success when complete). */}
             <div
               className={cn(
-                "flex items-start justify-between gap-3 border-b px-4 py-3 transition-colors",
+                "flex items-start justify-between gap-3 border-b px-4 py-3",
                 heroBg,
               )}
             >
@@ -315,7 +314,6 @@ function FocusOrderPanel({
                     orderNumber={order.orderNumber}
                     orderType={order.orderType}
                     tableNumber={order.tableNumber}
-                    contextLabel={getKdsOrderLabelOverride(order)}
                   />
                   {order.isPriority && (
                     <Badge
@@ -355,7 +353,7 @@ function FocusOrderPanel({
                   </div>
                 )}
                 <AgeBadge
-                  elapsedMinutes={elapsedMinutes}
+                  elapsedMs={Math.max(0, now - createdMs)}
                   isComplete={isComplete}
                   size="lg"
                 />
@@ -383,7 +381,7 @@ function FocusOrderPanel({
                     data-testid={`kds-focus-item-${String(item.id)}`}
                     data-kds-effect={rowEffect ?? undefined}
                     className={cn(
-                      "relative grid min-w-0 grid-cols-[3.5rem_minmax(0,1fr)_auto] items-center gap-2 bg-card px-3 py-2 transition-colors duration-150 md:px-4 p-0 rounded-none border-x-0 border-b-0",
+                      "relative grid min-w-0 grid-cols-[3.5rem_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2 md:px-4 p-0 rounded-none border-x-0 border-b-0",
                       getItemRowStatusClass(status),
                       getKdsRowEffectClass(rowEffect ?? null),
                       isCancelled && "opacity-100",
@@ -397,27 +395,34 @@ function FocusOrderPanel({
                       )}
                     >
                       {item.quantity}
-                      {KDS_FOCUS_COPY.quantitySuffix}
                     </span>
-                    <div className="flex min-h-9 min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
-                      <span className="min-w-0 break-words text-xl font-semibold leading-7">
-                        {item.item_name}
-                      </span>
-                      {item.is_priority && (
-                        <Badge
-                          variant="warning"
-                          className="h-6 rounded-md px-2 py-0 text-sm font-semibold leading-none"
+                    <div className="flex min-w-0 flex-1 flex-col gap-1">
+                      <div className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+                        <span
+                          className={cn(
+                            "min-w-0 break-words font-heading text-foreground",
+                            KDS_ITEM_NAME_CLASS,
+                            status === "ready" && "line-through opacity-50",
+                          )}
                         >
-                          {KDS_FOCUS_COPY.priority}
-                        </Badge>
-                      )}
-                      {item.variant_name && (
-                        <span className="min-w-0 break-words text-base font-medium leading-6 text-muted-foreground">
-                          {item.variant_name}
+                          {item.item_name}
                         </span>
-                      )}
+                        {item.is_priority && (
+                          <Badge
+                            variant="warning"
+                            className="h-6 rounded-md px-2 py-0 text-sm font-semibold leading-none"
+                          >
+                            {KDS_FOCUS_COPY.priority}
+                          </Badge>
+                        )}
+                        {item.variant_name && (
+                          <span className="min-w-0 break-words text-base font-medium leading-6 text-muted-foreground">
+                            ({item.variant_name})
+                          </span>
+                        )}
+                      </div>
                       <TicketRowMeta
-                        layout="inline"
+                        layout="stacked"
                         note={item.note}
                         modifiers={item.modifiers}
                         sides={item.sides}
@@ -464,7 +469,7 @@ function FocusOrderPanel({
                                 type="button"
                                 variant="default"
                                 size="touch"
-                                className="w-12 px-0"
+                                className="px-2.5"
                                 disabled={isMutating}
                                 onClick={() =>
                                   void onCompleteTickets([ticket.id])
@@ -481,6 +486,7 @@ function FocusOrderPanel({
                                     aria-hidden
                                   />
                                 )}
+                                {KDS_FOCUS_COPY.completeVisible}
                               </Button>
                             )}
                           </>
@@ -507,7 +513,7 @@ function FocusOrderPanel({
                     key={ticket.id}
                     data-kds-effect={rowEffect ?? undefined}
                     className={cn(
-                      "grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 bg-card px-3 py-2 transition-colors duration-150 p-0 rounded-none border-x-0 border-b-0",
+                      "grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2 p-0 rounded-none border-x-0 border-b-0",
                       getItemRowStatusClass(status),
                       getKdsRowEffectClass(rowEffect),
                     )}
@@ -557,7 +563,7 @@ function FocusOrderPanel({
                               type="button"
                               variant="default"
                               size="touch"
-                              className="w-12 px-0"
+                              className="px-2.5"
                               disabled={isMutating}
                               onClick={() =>
                                 void onCompleteTickets([ticket.id])
@@ -572,6 +578,7 @@ function FocusOrderPanel({
                                   aria-hidden
                                 />
                               )}
+                              {KDS_FOCUS_COPY.completeVisible}
                             </Button>
                           )}
                         </>
@@ -616,7 +623,7 @@ function FocusOrderPanel({
         <div
           role="status"
           aria-live="polite"
-          className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-success/15 backdrop-blur-sm motion-safe:animate-in motion-safe:fade-in"
+          className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-success/15"
         >
           <div className="flex flex-col items-center gap-2 rounded-md bg-success px-4 py-3 text-success-foreground">
             <IconCheck className="size-6" aria-hidden />
