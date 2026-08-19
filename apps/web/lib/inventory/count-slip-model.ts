@@ -15,6 +15,7 @@ export type CountSlipLineViewInput = {
 export type CountSlipLineView = {
   id: number;
   ingredientName: string;
+  /** Book quantity converted into the employee's entry unit when a factor exists. */
   systemQuantity: number;
   systemUnit: string;
   countedQuantity: number;
@@ -41,33 +42,52 @@ export type CountSlipRow = {
   lines: CountSlipLineView[];
 };
 
+function resolveEntryToBaseFactor(
+  input: CountSlipLineViewInput,
+  countedUnit: string,
+  baseUnit: string,
+): number | null {
+  const sameUnit =
+    countedUnit !== "" && baseUnit !== "" && countedUnit === baseUnit;
+  const factor =
+    input.entryUnitId === null || sameUnit ? 1 : input.toBaseFactor;
+  if (factor === null || !Number.isFinite(factor) || factor <= 0) {
+    return null;
+  }
+  return factor;
+}
+
 export function buildCountSlipLineView(
   input: CountSlipLineViewInput,
 ): CountSlipLineView {
-  const systemUnit = input.baseUnitCode ?? input.entryUnitCode ?? "";
-  const countedUnit = input.entryUnitCode ?? systemUnit;
-  const sameUnit =
-    systemUnit !== "" && countedUnit !== "" && systemUnit === countedUnit;
-  const factor =
-    input.entryUnitId === null || sameUnit ? 1 : input.toBaseFactor;
-  const countedBaseQuantity =
-    factor === null || !Number.isFinite(factor)
-      ? null
-      : input.countedQuantity * factor;
+  const baseUnit = input.baseUnitCode ?? input.entryUnitCode ?? "";
+  const countedUnit = input.entryUnitCode ?? baseUnit;
+  const factor = resolveEntryToBaseFactor(input, countedUnit, baseUnit);
+  if (factor === null) {
+    return {
+      id: input.id,
+      ingredientName: input.ingredientName,
+      systemQuantity: input.systemQuantity,
+      systemUnit: baseUnit,
+      countedQuantity: input.countedQuantity,
+      countedUnit,
+      countedBaseQuantity: null,
+      variance: null,
+      varianceUnit: baseUnit,
+      note: input.note,
+    };
+  }
 
   return {
     id: input.id,
     ingredientName: input.ingredientName,
-    systemQuantity: input.systemQuantity,
-    systemUnit,
+    systemQuantity: input.systemQuantity / factor,
+    systemUnit: countedUnit,
     countedQuantity: input.countedQuantity,
     countedUnit,
-    countedBaseQuantity,
-    variance:
-      countedBaseQuantity === null
-        ? null
-        : countedBaseQuantity - input.systemQuantity,
-    varianceUnit: systemUnit,
+    countedBaseQuantity: input.countedQuantity * factor,
+    variance: input.countedQuantity - input.systemQuantity / factor,
+    varianceUnit: countedUnit,
     note: input.note,
   };
 }

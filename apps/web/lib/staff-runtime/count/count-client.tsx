@@ -17,7 +17,12 @@ import { Send as IconSend, Warehouse as IconWarehouse } from "lucide-react";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { parseVietnameseNumericInput } from "@comtammatu/shared/format";
-import { INVENTORY_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, FORM_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+} from "@comtammatu/ui/components/field";
 import {
   Item,
   ItemContent,
@@ -25,7 +30,6 @@ import {
   ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import { Label } from "@comtammatu/ui/components/label";
 import {
   Select,
   SelectContent,
@@ -156,45 +160,7 @@ function getBaseCountUnit(units: CountUnitChoice[]) {
 }
 
 function getDefaultCountUnitChoice(units: CountUnitChoice[]) {
-  const withFactor = units.filter(
-    (unit): unit is CountUnitChoice & { toBaseFactor: number } =>
-      unit.toBaseFactor != null &&
-      Number.isFinite(unit.toBaseFactor) &&
-      unit.toBaseFactor > 0,
-  );
-  if (withFactor.length === 0) return getBaseCountUnit(units);
-  return withFactor.reduce((best, unit) =>
-    unit.toBaseFactor > best.toBaseFactor ? unit : best,
-  );
-}
-
-function buildCountUnitPreview({
-  quantity,
-  entryUnitId,
-  units,
-}: {
-  quantity: string;
-  entryUnitId: number | null;
-  units: CountUnitChoice[];
-}): string | null {
-  const baseUnit = getBaseCountUnit(units);
-  const entryUnit =
-    entryUnitId == null
-      ? getDefaultCountUnitChoice(units)
-      : (units.find((unit) => unit.unitId === entryUnitId) ??
-        getDefaultCountUnitChoice(units));
-  if (!baseUnit || !entryUnit || baseUnit.unitId === entryUnit.unitId) {
-    return null;
-  }
-
-  const quantityValue = parseDraftQuantity(quantity);
-  const factor = entryUnit.toBaseFactor;
-  if (factor === null || !Number.isFinite(factor) || factor <= 0) {
-    return INVENTORY_VI.conversionMissing;
-  }
-
-  const displayQuantity = quantityValue ?? 1;
-  return `${INVENTORY_VI.convertedColon} ${formatCountQuantity(displayQuantity)} ${entryUnit.code} = ${formatCountQuantity(displayQuantity * factor)} ${baseUnit.code}`;
+  return getBaseCountUnit(units);
 }
 
 function buildDraftSummary({
@@ -374,27 +340,6 @@ export function CountSlipClient({
     const entry = assignment ? draft[assignment.ingredientId] : undefined;
     const inputId = assignment ? `count-${assignment.ingredientId}` : "count";
     const unitInputId = `${inputId}-unit`;
-    const baseUnit = assignment
-      ? getBaseCountUnit(assignment.countUnits)
-      : null;
-    const selectedUnit =
-      assignment == null
-        ? null
-        : entry?.entryUnitId == null
-          ? getDefaultCountUnitChoice(assignment.countUnits)
-          : (assignment.countUnits.find(
-              (unit) => unit.unitId === entry.entryUnitId,
-            ) ?? getDefaultCountUnitChoice(assignment.countUnits));
-    const quantityPlaceholder = selectedUnit?.code
-      ? `Ví dụ: 5 ${selectedUnit.code}`
-      : "Ví dụ: 5";
-    const unitPreview = assignment
-      ? buildCountUnitPreview({
-          quantity: entry?.quantity ?? "",
-          entryUnitId: entry?.entryUnitId ?? null,
-          units: assignment.countUnits,
-        })
-      : null;
 
     return (
       <AppSheet
@@ -405,35 +350,33 @@ export function CountSlipClient({
           if (!open) setSelectedIngredientId(null);
         }}
         title={assignment?.ingredientName ?? ""}
-        description={
-          baseUnit?.code
-            ? `Đơn vị chuẩn (tồn sổ): ${baseUnit.code}`
-            : "Nhập số đếm thực tế."
-        }
         contentClassName="overflow-hidden"
         headerClassName="[&_h2]:min-w-0 [&_h2]:break-words [&_h2]:pr-8"
         footer={
           <Button
             type="button"
             variant="outline"
-            size="touch"
+            size="touch-lg"
+            className="w-full"
             onClick={() => setSelectedIngredientId(null)}
           >
-            Xong
+            {ACTIONS_VI.close}
           </Button>
         }
       >
         {assignment ? (
-          <div className="flex min-h-0 flex-1 flex-col gap-3">
+          <FieldGroup>
             <div
               className={
                 assignment.countUnits.length > 0
-                  ? "grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(7.5rem,9rem)]"
-                  : "grid gap-2"
+                  ? "grid grid-cols-1 gap-3 sm:grid-cols-2 sm:items-end"
+                  : undefined
               }
             >
-              <div className="flex min-w-0 flex-col gap-1.5">
-                <Label htmlFor={inputId}>Số đếm được</Label>
+              <Field>
+                <FieldLabel htmlFor={inputId}>
+                  {INVENTORY_VI.countedQtyHeader}
+                </FieldLabel>
                 <FormattedNumberInput
                   id={inputId}
                   inputMode="decimal"
@@ -441,18 +384,18 @@ export function CountSlipClient({
                   value={entry?.quantity ?? ""}
                   disabled={locked || isPending}
                   maxFractionDigits={3}
+                  controlSize="touch"
+                  className="tabular-nums"
                   onValueChange={(quantity) =>
                     updateLine(assignment.ingredientId, {
                       quantity,
                     })
                   }
-                  placeholder={quantityPlaceholder}
-                  className="min-h-12 text-base tabular-nums md:text-sm"
                 />
-              </div>
+              </Field>
               {assignment.countUnits.length > 0 ? (
-                <div className="flex min-w-0 flex-col gap-1.5">
-                  <Label htmlFor={unitInputId}>Đơn vị đếm</Label>
+                <Field>
+                  <FieldLabel htmlFor={unitInputId}>{FORM_VI.unit}</FieldLabel>
                   <Select
                     value={
                       entry?.entryUnitId != null
@@ -470,9 +413,9 @@ export function CountSlipClient({
                       id={unitInputId}
                       size="touch"
                       className="w-full min-w-0"
-                      aria-label={`Đơn vị đếm ${assignment.ingredientName}`}
+                      aria-label={`${FORM_VI.unit} ${assignment.ingredientName}`}
                     >
-                      <SelectValue placeholder="Đơn vị" />
+                      <SelectValue placeholder={FORM_VI.unit} />
                     </SelectTrigger>
                     <SelectContent>
                       {assignment.countUnits.map((unit) => (
@@ -486,17 +429,10 @@ export function CountSlipClient({
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
+                </Field>
               ) : null}
             </div>
-            {unitPreview ? (
-              <p className="text-xs leading-5 text-muted-foreground">
-                <span className="font-medium tabular-nums text-foreground">
-                  {unitPreview}
-                </span>
-              </p>
-            ) : null}
-          </div>
+          </FieldGroup>
         ) : null}
       </AppSheet>
     );
@@ -505,11 +441,7 @@ export function CountSlipClient({
   return (
     <>
       {groups.length > 1 ? (
-        <Panel
-          icon={IconWarehouse}
-          title="Khu vực kiểm kê"
-          description="Chọn kho bạn đang đếm."
-        >
+        <Panel icon={IconWarehouse} title="Khu vực kiểm kê">
           <Select
             value={
               selectedLocationId !== null ? String(selectedLocationId) : ""
@@ -545,7 +477,6 @@ export function CountSlipClient({
       ) : (
         <Panel
           title={activeGroup.locationName}
-          description="Nhập số đếm được cho từng nguyên liệu."
           badge={
             slipMeta
               ? {
@@ -561,11 +492,6 @@ export function CountSlipClient({
                 {
                   label: "Nguyên liệu",
                   value: `${activeGroup.assignments.length} mục`,
-                },
-                {
-                  label: "Trạng thái",
-                  value: slipMeta ? slipMeta.label : "Chưa gửi",
-                  muted: !slip,
                 },
               ]}
             />
@@ -594,13 +520,11 @@ export function CountSlipClient({
             <ItemGroup className="grid grid-cols-2 gap-2">
               {activeGroup.assignments.map((assignment) => {
                 const entry = draft[assignment.ingredientId];
-                const baseUnit = getBaseCountUnit(assignment.countUnits);
                 const summary = buildDraftSummary({
                   quantity: entry?.quantity ?? "",
                   entryUnitId: entry?.entryUnitId ?? null,
                   units: assignment.countUnits,
                 });
-                const stockUnitLabel = baseUnit?.code ?? null;
                 return (
                   <Item
                     key={assignment.ingredientId}
@@ -622,12 +546,11 @@ export function CountSlipClient({
                       >
                         {assignment.ingredientName}
                       </ItemTitle>
-                      <ItemDescription className="line-clamp-none break-words text-xs">
-                        {summary ??
-                          (stockUnitLabel
-                            ? `Đơn vị chuẩn: ${stockUnitLabel}`
-                            : "Chưa nhập")}
-                      </ItemDescription>
+                      {summary ? (
+                        <ItemDescription className="line-clamp-none break-words text-xs">
+                          {summary}
+                        </ItemDescription>
+                      ) : null}
                     </ItemContent>
                     <Badge variant={summary ? "success" : "secondary"}>
                       {summary ? "Đã nhập" : "Chưa đếm"}
@@ -642,8 +565,8 @@ export function CountSlipClient({
               <ActionBar>
                 <Button
                   type="button"
-                  size="touch"
-                  className="w-full sm:w-fit"
+                  size="touch-lg"
+                  className="w-full"
                   disabled={isPending}
                   onClick={submit}
                 >
