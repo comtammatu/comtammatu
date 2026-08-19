@@ -1,6 +1,6 @@
 import "server-only";
 import { generateSpeech } from "ai";
-import { GatewayRateLimitError, gateway } from "@ai-sdk/gateway";
+import { GatewayError, gateway } from "@ai-sdk/gateway";
 
 // Locked cost choice: cheapest OpenAI speech model on Gateway. Not env-switched.
 const TTS_MODEL = "openai/tts-1";
@@ -9,8 +9,10 @@ const TTS_TIMEOUT_MS = 2_500;
 const MAX_CATALOG_CLIPS = 200;
 const MAX_AMOUNT_CLIPS = 80;
 const RECEIVED_AMOUNT_PREFIX = "Đã nhận ";
+const GATEWAY_COOLDOWN_MS = 60_000;
 
 const clipCache = new Map<string, Buffer>();
+let gatewayCoolDownUntil = 0;
 
 function readRuntimeSecret(name: string): string | null {
   // Dynamic lookup: Next inlines `process.env.NAME` (and often literal
@@ -68,6 +70,7 @@ export async function synthesizeOperationalUtterance(
 ): Promise<Buffer | null | "rate_limited"> {
   const cached = clipCache.get(text);
   if (cached) return cached;
+  if (Date.now() < gatewayCoolDownUntil) return "rate_limited";
 
   if (!isOperationalTtsConfigured()) return null;
 
@@ -85,11 +88,14 @@ export async function synthesizeOperationalUtterance(
     rememberClip(text, bytes);
     return bytes;
   } catch (error) {
-    console.error(
+    console.warn(
       "[operational-tts] gateway failed=%s",
       error instanceof Error ? error.name : "unknown",
     );
-    if (GatewayRateLimitError.isInstance(error)) return "rate_limited";
+    if (GatewayError.isInstance(error)) {
+      gatewayCoolDownUntil = Date.now() + GATEWAY_COOLDOWN_MS;
+      return "rate_limited";
+    }
     return null;
   }
 }

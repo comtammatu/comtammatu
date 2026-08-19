@@ -165,7 +165,6 @@ export function listPrefetchUtterances(options?: {
     if (surface === "kds") return kind.startsWith("kds.");
     return true;
   });
-  const texts: string[] = kinds.map((kind) => buildAlertUtterance(kind));
   const tables: string[] = [];
   const seen = new Set<string>();
   for (const raw of options?.tableLabels ?? []) {
@@ -175,9 +174,19 @@ export function listPrefetchUtterances(options?: {
     tables.push(table);
     if (tables.length >= OPERATIONAL_TTS_PREFETCH_TABLE_LIMIT) break;
   }
+  const skipGenericGuestCopy = tables.length > 0;
+  const texts: string[] = kinds
+    .filter(
+      (kind) =>
+        !skipGenericGuestCopy ||
+        (kind !== "pos.self_order" &&
+          kind !== "pos.payment_call" &&
+          kind !== "pos.staff_call"),
+    )
+    .map((kind) => buildAlertUtterance(kind));
   for (const table of tables) {
     if (surface !== "kds") {
-      for (const tail of POS_STORED_TABLE_TAILS) {
+      for (const tail of Object.values(POS_TABLE_EVENT_TAIL)) {
         texts.push(buildPosTableUtterance(table, tail));
       }
     }

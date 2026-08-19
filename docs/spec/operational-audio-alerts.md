@@ -97,8 +97,8 @@ supplies the user gesture for `AudioContext`.
 
 Engine: AI SDK `generateSpeech` + Gateway `openai/tts-1` `nova` at 1.15x
 (no OS TTS). Fetch with the beep; play after 120 ms. Miss → beep only.
-Allowlisted templates only. POS prefetches that branch’s table lines slowly
-(2s gap, one in-flight run, shared 20/min limiter), not 1–99 and not totals.
+Allowlisted templates only. POS prefetches table lines (not generic guest
+copy) slowly; Gateway errors cool 60s. Not 1–99 or totals.
 Cycle preview prefetches generics. Gateway 429 maps to HTTP 429.
 
 - **KDS:** board = SoT; bell cycles mode; voice kind aligns with signal tone.

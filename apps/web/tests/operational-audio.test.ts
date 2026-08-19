@@ -248,7 +248,21 @@ test("cloud TTS allowlist stores POS table lines and spoken amounts", () => {
     listPrefetchUtterances({
       surface: "pos",
       tableLabels: ["5", "5", "1000"],
+    }).includes("Bàn 5 gọi nhân viên"),
+  );
+  assert.equal(
+    listPrefetchUtterances({
+      surface: "pos",
+      tableLabels: ["5"],
+    }).includes("Gọi nhân viên"),
+    false,
+  );
+  assert.equal(
+    listPrefetchUtterances({
+      surface: "pos",
+      tableLabels: ["5"],
     }).includes("Bàn 5 gọi món"),
+    false,
   );
   assert.equal(
     listPrefetchUtterances({
