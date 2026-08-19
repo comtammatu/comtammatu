@@ -70,6 +70,7 @@ import {
   summarizeCatalogReadiness,
   type CatalogReadinessGap,
 } from "@lib/inventory/catalog-readiness";
+import { resolveFulfillSiteFlags } from "@lib/inventory/fulfill-site";
 import {
   applyIngredientsListFilterPatch,
   filterIngredientListRows,
@@ -132,18 +133,26 @@ function toReadinessInput(item: IngredientRow) {
   return {
     isActive: item.is_active,
     defaultFulfillSiteKind: item.default_fulfill_site_kind,
+    fulfillFromCentralSupply: item.fulfill_from_central_supply,
+    fulfillFromCentralKitchen: item.fulfill_from_central_kitchen,
     hasActiveSupplierLink: item.has_active_supplier_link === true,
     itemKind: item.item_kind,
   };
 }
 
-function fulfillSiteLabel(
-  kind: IngredientRow["default_fulfill_site_kind"],
-): string | null {
-  if (kind === "central_supply") {
+function fulfillSiteLabel(item: IngredientRow): string | null {
+  const flags = resolveFulfillSiteFlags({
+    fulfillFromCentralSupply: item.fulfill_from_central_supply,
+    fulfillFromCentralKitchen: item.fulfill_from_central_kitchen,
+    defaultFulfillSiteKind: item.default_fulfill_site_kind,
+  });
+  if (flags.fulfillFromCentralSupply && flags.fulfillFromCentralKitchen) {
+    return dialogCopy.defaultFulfillSiteKindBoth;
+  }
+  if (flags.fulfillFromCentralSupply) {
     return dialogCopy.defaultFulfillSiteKindCentralSupply;
   }
-  if (kind === "central_kitchen") {
+  if (flags.fulfillFromCentralKitchen) {
     return dialogCopy.defaultFulfillSiteKindCentralKitchen;
   }
   return null;
@@ -160,7 +169,7 @@ function ReadinessCell({
   onAssignFulfill?: (item: IngredientRow) => void;
   onLinkSupplier?: (item: IngredientRow) => void;
 }) {
-  const fulfillLabel = fulfillSiteLabel(item.default_fulfill_site_kind);
+  const fulfillLabel = fulfillSiteLabel(item);
   const { gaps } = resolveCatalogReadiness(toReadinessInput(item));
   const gapLabel = (gap: CatalogReadinessGap) =>
     gap === "missing_fulfill_site"

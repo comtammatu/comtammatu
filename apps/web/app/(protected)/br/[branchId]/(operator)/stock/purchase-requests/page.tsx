@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { PURCHASE_ORDER_CREATE_HREF } from "@lib/inventory/purchase-order-paths";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasPermissionAny } from "@/_lib/permissions";
@@ -23,12 +24,19 @@ import { BranchPurchaseRequestsClient } from "./branch-purchase-requests-client"
 
 export default async function OperatorPurchaseRequestsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ branchId: string }>;
+  searchParams: Promise<{ mode?: string | string[] }>;
 }) {
   const { branchId: rawBranchId } = await params;
   const branchId = parseOperatorBranchId(rawBranchId);
   if (branchId == null) notFound();
+  const query = await searchParams;
+  const mode = Array.isArray(query.mode) ? query.mode[0] : query.mode;
+  if (mode === "create" || mode === "create-po") {
+    redirect(PURCHASE_ORDER_CREATE_HREF);
+  }
 
   const { supabase, claims } = await loadAuthState();
   const branchContext = await resolveBranchContext(supabase, claims, branchId);
@@ -40,14 +48,12 @@ export default async function OperatorPurchaseRequestsPage({
   const [
     procurementBranches,
     ingredientResult,
-    canCreateRequest,
     canAllocate,
     supplierResult,
     supplierItemResult,
   ] = await Promise.all([
     fetchProcurementBranches(supabase, claims.tenant_id),
     fetchIngredients(2000, undefined, { includeUnits: false }),
-    currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_REQUEST_MANAGE),
     currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_PO_APPROVE),
     supabase
       .from("suppliers")
@@ -183,7 +189,7 @@ export default async function OperatorPurchaseRequestsPage({
       ingredients={ingredientOptions}
       suppliers={suppliers}
       mappedIngredientIds={mappedIngredientIds}
-      canCreateRequest={canCreateRequest}
+      canCreateRequest={false}
       canAllocate={canAllocate}
       branchId={branchId}
       branchName={branchContext.branch.name}

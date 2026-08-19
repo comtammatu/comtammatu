@@ -59,6 +59,8 @@ export type StockActionPermissions = {
   canAdjustException: boolean;
   /** Owner-only ingredient catalog edit from stock card. */
   canEditIngredient: boolean;
+  /** Owner-only company WAC restatement (ISS-06). */
+  canSetCompanyWac: boolean;
 };
 
 export interface StockOnHandPageData {

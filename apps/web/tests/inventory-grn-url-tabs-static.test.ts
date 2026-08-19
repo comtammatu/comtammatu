@@ -38,6 +38,9 @@ test("GRN status uses header tabs on the compact operational list", () => {
   assert.doesNotMatch(grnListClientSource, /purchaseOrderFilter/);
   assert.doesNotMatch(grnListClientSource, /header: "Đơn đặt hàng"/);
   assert.doesNotMatch(grnListClientSource, /header: "Yêu cầu mua"/);
+  assert.doesNotMatch(grnListClientSource, /requestId: filters\.purchaseRequestId/);
+  assert.match(grnListClientSource, /OWNER_UNPRICED_GRN_STATUS/);
+  assert.match(grnListClientSource, /grnCopy\.confirmedUnitCost\.tab/);
   assert.doesNotMatch(grnListClientSource, /header: "Giá trị nhập"/);
   assert.doesNotMatch(grnListClientSource, /header: "Hóa đơn"/);
   assert.doesNotMatch(grnListClientSource, /viewPendingOrders/);

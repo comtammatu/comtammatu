@@ -44,7 +44,6 @@ export default async function PurchaseOrdersPage({
   const [
     procurementBranches,
     ingredientResult,
-    canCreateRequest,
     canAllocate,
     canManagePo,
     canReceive,
@@ -53,7 +52,6 @@ export default async function PurchaseOrdersPage({
   ] = await Promise.all([
     fetchProcurementBranches(supabase, claims.tenant_id),
     fetchIngredients(2000, undefined, { includeUnits: false }),
-    currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_REQUEST_MANAGE),
     currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_PO_APPROVE),
     currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_PO_CREATE),
     currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_GRN_CREATE),
@@ -210,19 +208,7 @@ export default async function PurchaseOrdersPage({
       ? branches
       : branches.filter((branch) => branch.id === claims.branch_id);
   const requestedTab = firstParam(params.tab);
-  const hasPendingDemand = demandRows.some((row) =>
-    ["submitted", "pending_allocation", "partially_ordered"].includes(
-      row.status,
-    ),
-  );
-  const defaultTab =
-    requestedTab === "needs" || requestedTab === "orders"
-      ? requestedTab
-      : claims.user_role === "accountant" || claims.user_role === "owner"
-        ? hasPendingDemand
-          ? "needs"
-          : "orders"
-        : "needs";
+  const defaultTab = requestedTab === "needs" ? "needs" : "orders";
 
   const needsContent = (
     <PurchaseRequestsClient
@@ -231,7 +217,7 @@ export default async function PurchaseOrdersPage({
       ingredients={ingredientOptions}
       suppliers={suppliers}
       mappedIngredientIds={mappedIngredientIds}
-      canCreateRequest={canCreateRequest && requestBranches.length > 0}
+      canCreateRequest={false}
       canAllocate={canAllocate}
     />
   );

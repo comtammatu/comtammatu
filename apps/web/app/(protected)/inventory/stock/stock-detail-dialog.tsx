@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   ArrowDownToLine as IconArrowDownToLine,
   ArrowUpFromLine as IconArrowUpFromLine,
+  Banknote as IconBanknote,
   Pencil as IconPencil,
   SquarePen as IconSquarePen,
   Truck as IconTruck,
@@ -41,9 +42,8 @@ import {
 import { resolveStockValuationDisplay } from "@lib/inventory/valuation-display";
 import {
   formatStockUnits,
-  resolveStockCompactUnit,
+  resolveStockDisplayUnit,
   stockUnitLabel,
-  toStockDisplayUnitCost,
 } from "../_lib/stock-unit-format";
 import { visibleStockLocationRows } from "@lib/inventory/stock-on-hand-model";
 import {
@@ -90,8 +90,10 @@ export interface StockDetailDialogProps {
   isTouchLayout: boolean;
   canAdjustStock?: boolean;
   canEditIngredient?: boolean;
+  canSetCompanyWac?: boolean;
   onAdjustStock?: () => void;
   onEditIngredient?: () => void;
+  onSetCompanyWac?: () => void;
   onQuickIssue?: () => void;
 }
 
@@ -103,8 +105,10 @@ export function StockDetailDialog({
   isTouchLayout,
   canAdjustStock = false,
   canEditIngredient = false,
+  canSetCompanyWac = false,
   onAdjustStock,
   onEditIngredient,
+  onSetCompanyWac,
   onQuickIssue,
 }: StockDetailDialogProps) {
   const actionSize = isTouchLayout ? "touch" : "default";
@@ -131,12 +135,12 @@ export function StockDetailDialog({
     ? formatStockUnits(headerQty, ingredient.units, formatQty)
     : { big: null, base: "" };
 
-  const compactUnit = ingredient
-    ? resolveStockCompactUnit(headerQty, ingredient.units)
+  const baseUnit = ingredient
+    ? resolveStockDisplayUnit(ingredient.units)
     : undefined;
   const wacUnitLabel = ingredient
     ? stockUnitLabel(
-        compactUnit,
+        baseUnit,
         ingredient.unit || inventoryCommon.noValue,
       )
     : "";
@@ -149,7 +153,7 @@ export function StockDetailDialog({
       ? headerValue / headerQty
       : (detailData?.valuation?.wac ?? null);
   const wac = listedLedgerWac;
-  const displayWac = toStockDisplayUnitCost(wac, compactUnit);
+  const displayWac = wac;
   const valuationKind =
     detailData?.valuation == null
       ? null
@@ -163,6 +167,14 @@ export function StockDetailDialog({
     : { big: null, base: "" };
 
   const overflowItems: RowActionItem[] = [];
+  if (canSetCompanyWac && onSetCompanyWac) {
+    overflowItems.push({
+      key: "set-company-wac",
+      label: stockCopy.actions.setCompanyWac,
+      icon: <IconBanknote />,
+      onSelect: onSetCompanyWac,
+    });
+  }
   if (canEditIngredient && onEditIngredient) {
     overflowItems.push({
       key: "edit",
@@ -277,6 +289,18 @@ export function StockDetailDialog({
                 : null,
             )}
           </span>
+          {canSetCompanyWac && onSetCompanyWac ? (
+            <Button
+              type="button"
+              variant="outline"
+              size={actionSize}
+              className="mt-2"
+              onClick={onSetCompanyWac}
+            >
+              <IconBanknote data-icon="inline-start" />
+              {stockCopy.actions.setCompanyWac}
+            </Button>
+          ) : null}
         </div>
       </Item>
 

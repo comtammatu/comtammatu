@@ -35,31 +35,30 @@ import { QuantityInput } from "@/components/form/domain-number-inputs";
 import {
   AppEmptyState,
   AppSection,
-  DescriptionList,
 } from "@/components/surface";
 import type { TransferCreatePageData } from "@lib/inventory/transfer-create-data";
-import {
-  formatTransferLocationLabel,
-  formatTransferTargetOption,
-  getTransferWarehouseUnit,
-} from "@lib/inventory/transfer-create-model";
+import { TransferCreateRouteFields } from "@lib/inventory/transfer-create-route-fields";
+import { getTransferWarehouseUnit } from "@lib/inventory/transfer-create-model";
 import { useTransferCreateController } from "@lib/inventory/use-transfer-create-controller";
+import type { TransferCreateDirection } from "@lib/inventory/use-transfer-create-controller";
 import { messages } from "@lib/messages";
 
 interface CreateTransferFormProps extends TransferCreatePageData {
   basePath?: string;
+  initialDirection?: TransferCreateDirection;
 }
 
 export function CreateTransferForm({
   basePath = "/inventory/transfers",
+  initialDirection,
   ...data
 }: CreateTransferFormProps) {
   const controller = useTransferCreateController({
     ...data,
     basePath,
+    initialDirection,
   });
   const copy = messages.inventory.transfer;
-  const sourceBranch = controller.currentBranch;
   const isTouchLayout = useIsMobile(1024);
   const controlSize = isTouchLayout ? "touch" : "field";
   const optionSize = isTouchLayout ? "touch" : "default";
@@ -77,110 +76,11 @@ export function CreateTransferForm({
         />
       ) : null}
       <AppSection title={copy.createTransferTitle}>
-        {controller.canCreateOutbound ? (
-          <div className="flex flex-col gap-3">
-            <DescriptionList
-              className="grid gap-3 sm:grid-cols-2 sm:items-start"
-              items={[
-                {
-                  term: copy.sourceBranchLabel,
-                  description: (
-                    <span className="font-semibold">
-                      {controller.myBranchName ?? copy.outboundFromSelected}
-                    </span>
-                  ),
-                },
-                {
-                  term: (
-                    <>
-                      {copy.targetBranchLabel}
-                      <span aria-hidden="true"> *</span>
-                    </>
-                  ),
-                  description: (
-                    <Select
-                      value={controller.outboundToBranchId}
-                      onValueChange={controller.setOutboundToBranchId}
-                    >
-                      <SelectTrigger
-                        id="owner-transfer-target"
-                        size={controlSize}
-                        className="w-full font-normal"
-                        aria-required
-                        aria-label={copy.targetBranchLabel}
-                      >
-                        <SelectValue
-                          placeholder={copy.chooseReceivingWarehouse}
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          {controller.outboundDestinationOptions.map(
-                            (option) => (
-                              <SelectItem
-                                key={option.value}
-                                value={option.value}
-                                size={optionSize}
-                              >
-                                {formatTransferTargetOption(option)}
-                              </SelectItem>
-                            ),
-                          )}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                  ),
-                },
-              ]}
-            />
-            {controller.outboundSourceLocationOptions.length > 1 &&
-            sourceBranch ? (
-              <FormField
-                controlId="owner-transfer-source-location"
-                label={copy.sourceLocationRequired}
-                required
-              >
-                <Select
-                  value={controller.outboundSourceLocationId}
-                  onValueChange={controller.handleOutboundSourceLocationChange}
-                >
-                  <SelectTrigger
-                    id="owner-transfer-source-location"
-                    size={controlSize}
-                    className="w-full"
-                    aria-required
-                  >
-                    <SelectValue placeholder={copy.chooseSourceLocation} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      {controller.outboundSourceLocationOptions.map(
-                        (location) => (
-                          <SelectItem
-                            key={location.id}
-                            value={String(location.id)}
-                            size={optionSize}
-                          >
-                            {formatTransferLocationLabel(
-                              sourceBranch,
-                              location.kind,
-                            )}
-                          </SelectItem>
-                        ),
-                      )}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </FormField>
-            ) : null}
-          </div>
-        ) : (
-          <AppEmptyState
-            compact
-            title={copy.createUnavailableTitle}
-            description={copy.createForbidden}
-          />
-        )}
+        <TransferCreateRouteFields
+          controller={controller}
+          controlSize={controlSize}
+          optionSize={optionSize}
+        />
       </AppSection>
 
       <AppSection title={copy.ingredientsQtyRequired}>
@@ -216,17 +116,19 @@ export function CreateTransferForm({
               <IconPlus />
             </Button>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size={controlSize}
-            className="w-full shrink-0 sm:w-auto"
-            onClick={controller.addAllAvailableStockLines}
-            disabled={controller.selectedSourceLocationId == null}
-          >
-            <IconPackageCheck data-icon="inline-start" />
-            {copy.transferAllStock}
-          </Button>
+          {controller.isPull ? null : (
+            <Button
+              type="button"
+              variant="outline"
+              size={controlSize}
+              className="w-full shrink-0 sm:w-auto"
+              onClick={controller.addAllAvailableStockLines}
+              disabled={controller.selectedSourceLocationId == null}
+            >
+              <IconPackageCheck data-icon="inline-start" />
+              {copy.transferAllStock}
+            </Button>
+          )}
         </div>
 
         {controller.draftLines.length === 0 ? (

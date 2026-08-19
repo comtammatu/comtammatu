@@ -1,5 +1,7 @@
 export type InventoryRouteBase = "/inventory";
 
+export { PURCHASE_ORDER_CREATE_HREF } from "@lib/inventory/purchase-order-paths";
+
 export type InventoryPaths = {
   home: InventoryRouteBase;
   stock: string;

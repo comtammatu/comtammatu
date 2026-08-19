@@ -90,13 +90,12 @@ function relatedOne<T>(value: T | T[] | null | undefined): T | null {
   return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
-function ingredientSelect(includeValuation: boolean): string {
+function ingredientSelect(): string {
   return [
     "id",
     "name",
     "sku",
     "category",
-    includeValuation ? "unit_cost" : null,
     "min_stock_level",
     "max_stock_level",
     "reorder_point",
@@ -229,7 +228,7 @@ export async function loadStockIngredientDetailData({
       : Promise.resolve({ ok: true as const, locationIds: [] }),
     readClient
       .from("ingredients")
-      .select(ingredientSelect(canReadValuation))
+      .select(ingredientSelect())
       .eq("tenant_id", claims.tenant_id)
       .eq("id", ingredientId)
       .maybeSingle(),
@@ -351,20 +350,19 @@ export async function loadStockIngredientDetailData({
     },
     null,
   );
-  const referenceUnitCost = canReadValuation
-    ? Number(ingredientRow.unit_cost ?? 0)
-    : 0;
+  const lastPositiveWac =
+    locations
+      .map((location) => location.monetary?.avgUnitCost)
+      .find((cost): cost is number => cost != null && cost > 0) ?? 0;
   const totalValue = canReadValuation
     ? locations.reduce(
         (sum, location) =>
-          sum +
-          location.qty *
-            (location.monetary?.avgUnitCost ?? referenceUnitCost),
+          sum + location.qty * (location.monetary?.avgUnitCost ?? 0),
         0,
       )
     : null;
   const ledgerWac =
-    totalQty > 0 ? (totalValue ?? 0) / totalQty : referenceUnitCost;
+    totalQty > 0 ? (totalValue ?? 0) / totalQty : lastPositiveWac;
   // WAC is a base/standard-unit figure per docs/ref/inventory.md §2.1/§6; never
   // convert it into the quantity-dependent compact pack so two rows compare on
   // the same denominator regardless of on-hand level.

@@ -39,6 +39,6 @@ test("purchase workspace chrome leads with đơn mua, not nhu cầu", () => {
   assert.match(copy, /needsTab: "Yêu cầu mua"/);
   assert.match(
     copy,
-    /workspaceDescription:\s*\n\s*"Đơn mua theo từng nhà cung cấp/,
+    /workspaceDescription:\s*\n\s*"Tạo đơn mua theo từng nhà cung cấp/,
   );
 });

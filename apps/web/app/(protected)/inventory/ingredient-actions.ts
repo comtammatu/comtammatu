@@ -33,6 +33,10 @@ import type {
   IngredientUnitRow,
   UnitOption,
 } from "@lib/inventory/types";
+import {
+  exclusiveFulfillSiteKind,
+  resolveFulfillSiteFlags,
+} from "@lib/inventory/fulfill-site";
 import { fetchUnits } from "./settings/units/units-actions";
 import { fetchCategories } from "./settings/categories/categories-actions";
 import {
@@ -127,6 +131,8 @@ const ingredientBaseSchema = z.object({
     .enum(["central_supply", "central_kitchen"])
     .nullable()
     .optional(),
+  fulfill_from_central_supply: z.boolean().optional(),
+  fulfill_from_central_kitchen: z.boolean().optional(),
   units: z
     .array(unitRowSchema)
     .min(1, { error: "Cần ít nhất 1 đơn vị" })
@@ -238,14 +244,34 @@ type SaveCatalogArgs = {
   p_shelf_life_days: number | null;
   p_units: ReturnType<typeof buildRpcUnits>;
   p_default_fulfill_site_kind: "central_supply" | "central_kitchen" | null;
+  p_fulfill_from_central_supply: boolean;
+  p_fulfill_from_central_kitchen: boolean;
   p_receipt_unit_id: number;
   p_issue_unit_id: number;
   p_production_unit_id: number | null;
 };
 
-// The RPC accepts NULL for the nullable params (p_ingredient_id, p_category_id,
-// thresholds, …) but the generated Args type marks them non-nullable. Cast the
-// nullable scalars through `never` to satisfy the call signature.
+function resolveCatalogFulfillFlags(data: {
+  fulfill_from_central_supply?: boolean;
+  fulfill_from_central_kitchen?: boolean;
+  default_fulfill_site_kind?: "central_supply" | "central_kitchen" | null;
+}): {
+  exclusive: "central_supply" | "central_kitchen" | null;
+  fulfillFromCentralSupply: boolean;
+  fulfillFromCentralKitchen: boolean;
+} {
+  const flags = resolveFulfillSiteFlags({
+    fulfillFromCentralSupply: data.fulfill_from_central_supply,
+    fulfillFromCentralKitchen: data.fulfill_from_central_kitchen,
+    defaultFulfillSiteKind: data.default_fulfill_site_kind,
+  });
+  return {
+    exclusive: exclusiveFulfillSiteKind(flags),
+    fulfillFromCentralSupply: flags.fulfillFromCentralSupply,
+    fulfillFromCentralKitchen: flags.fulfillFromCentralKitchen,
+  };
+}
+
 function rpcCatalogArgs(
   ingredientId: number | null,
   data: IngredientInput,
@@ -254,6 +280,11 @@ function rpcCatalogArgs(
 ): SaveCatalogArgs {
   const baseUnitId = data.units.find((unit) => unit.is_base)?.unit_id;
   if (baseUnitId == null) throw new Error("base_unit_missing");
+  const flags = resolveCatalogFulfillFlags({
+    fulfill_from_central_supply: data.fulfill_from_central_supply,
+    fulfill_from_central_kitchen: data.fulfill_from_central_kitchen,
+    default_fulfill_site_kind: defaultFulfillSiteKind,
+  });
   return {
     p_ingredient_id: ingredientId,
     p_name: data.name,
@@ -266,8 +297,9 @@ function rpcCatalogArgs(
     p_reorder_point: data.reorder_point ?? null,
     p_shelf_life_days: shelfLifeDays,
     p_units: buildRpcUnits(data.units),
-    p_default_fulfill_site_kind: defaultFulfillSiteKind,
-    // Compatibility mirrors until the legacy role columns are removed.
+    p_default_fulfill_site_kind: flags.exclusive,
+    p_fulfill_from_central_supply: flags.fulfillFromCentralSupply,
+    p_fulfill_from_central_kitchen: flags.fulfillFromCentralKitchen,
     p_receipt_unit_id: baseUnitId,
     p_issue_unit_id: baseUnitId,
     p_production_unit_id: null,
@@ -308,11 +340,11 @@ const getIngredientsCached = cache(
     const withUnitsMonetary =
       "*, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))";
     const withUnitsLean =
-      "id, tenant_id, name, sku, category, category_id, item_kind, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active, updated_at, default_fulfill_site_kind, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))";
+      "id, tenant_id, name, sku, category, category_id, item_kind, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active, updated_at, default_fulfill_site_kind, fulfill_from_central_supply, fulfill_from_central_kitchen, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))";
     const withoutUnitsMonetary =
       "*, ingredient_categories!ingredients_category_tenant_fkey(name)";
     const withoutUnitsLean =
-      "id, tenant_id, name, sku, category, category_id, item_kind, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active, updated_at, default_fulfill_site_kind, ingredient_categories!ingredients_category_tenant_fkey(name)";
+      "id, tenant_id, name, sku, category, category_id, item_kind, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active, updated_at, default_fulfill_site_kind, fulfill_from_central_supply, fulfill_from_central_kitchen, ingredient_categories!ingredients_category_tenant_fkey(name)";
 
     const select = includeUnits
       ? includeMonetary
@@ -434,6 +466,8 @@ export async function fetchIngredients(
         | "central_supply"
         | "central_kitchen"
         | null;
+      fulfill_from_central_supply?: boolean | null;
+      fulfill_from_central_kitchen?: boolean | null;
       is_active?: boolean | null;
       updated_at?: string | null;
       unit_cost?: number | null;
@@ -466,6 +500,8 @@ export async function fetchIngredients(
       reorder_point: rest.reorder_point ?? null,
       storage_type: rest.storage_type ?? null,
       default_fulfill_site_kind: rest.default_fulfill_site_kind ?? null,
+      fulfill_from_central_supply: rest.fulfill_from_central_supply ?? null,
+      fulfill_from_central_kitchen: rest.fulfill_from_central_kitchen ?? null,
       is_active: Boolean(rest.is_active),
       updated_at: rest.updated_at ?? null,
       monetary: monetary.purchasePrice ? { unitCost } : null,
@@ -511,7 +547,7 @@ export async function fetchIngredientDetail(
       : readClient
           .from("ingredients")
           .select(
-            "id, tenant_id, name, sku, category, category_id, item_kind, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active, updated_at, default_fulfill_site_kind, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+            "id, tenant_id, name, sku, category, category_id, item_kind, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active, updated_at, default_fulfill_site_kind, fulfill_from_central_supply, fulfill_from_central_kitchen, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
           )
           .eq("tenant_id", claims.tenant_id)
           .eq("id", parsedId.data)
@@ -548,6 +584,8 @@ export async function fetchIngredientDetail(
     reorder_point?: number | null;
     storage_type?: string | null;
     default_fulfill_site_kind?: "central_supply" | "central_kitchen" | null;
+    fulfill_from_central_supply?: boolean | null;
+    fulfill_from_central_kitchen?: boolean | null;
     is_active?: boolean | null;
     updated_at?: string | null;
     unit_cost?: number | null;
@@ -579,6 +617,8 @@ export async function fetchIngredientDetail(
       reorder_point: rest.reorder_point ?? null,
       storage_type: rest.storage_type ?? null,
       default_fulfill_site_kind: rest.default_fulfill_site_kind ?? null,
+      fulfill_from_central_supply: rest.fulfill_from_central_supply ?? null,
+      fulfill_from_central_kitchen: rest.fulfill_from_central_kitchen ?? null,
       is_active: Boolean(rest.is_active),
       updated_at: rest.updated_at ?? null,
       monetary: monetary.purchasePrice ? { unitCost } : null,
@@ -631,13 +671,14 @@ export const createIngredient = withAction<
     anyPermission: CATALOG_MANAGE_PERMISSIONS,
   },
   async (data, { supabase }) => {
-    const {
-      default_fulfill_site_kind: defaultFulfillSiteKind,
-      ...catalogData
-    } = data;
     const { data: id, error } = await saveIngredientCatalog(
       supabase,
-      rpcCatalogArgs(null, catalogData, null, defaultFulfillSiteKind ?? null),
+      rpcCatalogArgs(
+        null,
+        data,
+        null,
+        data.default_fulfill_site_kind ?? null,
+      ),
     );
 
     if (error) {
@@ -773,7 +814,9 @@ export async function updateIngredient(
 
   const { data: existing, error: existingError } = await supabase
     .from("ingredients")
-    .select("shelf_life_days, default_fulfill_site_kind")
+    .select(
+      "shelf_life_days, default_fulfill_site_kind, fulfill_from_central_supply, fulfill_from_central_kitchen",
+    )
     .eq("id", parsedId.data)
     .eq("tenant_id", claims.tenant_id)
     .maybeSingle();
@@ -788,19 +831,16 @@ export async function updateIngredient(
     return { success: false, error: "Nguyên liệu không tồn tại." };
   }
 
-  const { default_fulfill_site_kind: defaultFulfillSiteKind, ...catalogData } =
-    parsedInput.data;
-
   const { error } = await saveIngredientCatalog(
     supabase,
     rpcCatalogArgs(
       parsedId.data,
-      catalogData,
+      parsedInput.data,
       existing.shelf_life_days,
-      defaultFulfillSiteKind === undefined
+      parsedInput.data.default_fulfill_site_kind === undefined
         ? (existing.default_fulfill_site_kind as
             "central_supply" | "central_kitchen" | null)
-        : defaultFulfillSiteKind,
+        : parsedInput.data.default_fulfill_site_kind,
     ),
   );
 

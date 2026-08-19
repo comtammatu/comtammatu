@@ -48,7 +48,7 @@ test("Inventory references expose one warehouse and physical rejection QC only",
   assert.match(inventory, /Mỗi site active có đúng một active `warehouse`/);
   assert.match(inventory, /received_quantity - rejected_quantity/);
   assert.match(sop, /lý do \+ ảnh là bắt buộc/);
-  assert.match(sop, /Yêu cầu mua → PO theo NCC → GRN theo\s+ lần giao/);
+  assert.match(sop, /\*\*Tạo đơn\*\* → PO theo NCC → GRN theo\s+ lần giao/);
   assert.match(inventory, /Chờ nhập hàng/);
   assert.match(inventory, /Phiếu nhập ghi \*\*Đơn giá\*\* net/);
   assert.match(inventory, /Hóa đơn NCC chỉ công nợ \+ VAT/);

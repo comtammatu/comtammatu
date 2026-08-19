@@ -44,8 +44,8 @@ const TRANSFER_NUMBER_SERVER_ALLOCATED = "";
 
 const ROLES = INVENTORY_OPS_ROLES;
 const BRANCH_SCOPED_TRANSFER_ROLES: readonly StaffRole[] = ["branch_manager"];
-const BRANCH_MANAGER_INTER_SITE_TRANSFER_ERROR =
-  "Quản lý chi nhánh chỉ được nhận phiếu chuyển về chi nhánh.";
+const BRANCH_MANAGER_OWN_SITE_TRANSFER_ERROR =
+  "Bạn chỉ được tạo hoặc xuất Điều chuyển từ chi nhánh của mình, hoặc xin hàng về chi nhánh của mình.";
 
 function isBranchScopedTransferRole(role: StaffRole): boolean {
   return BRANCH_SCOPED_TRANSFER_ROLES.includes(role);
@@ -90,10 +90,6 @@ function enforceTransferActionScope(
   }
 
   if (claims.user_role === "branch_manager") {
-    if (requiredPermission === PERMISSION_KEYS.INVENTORY_TRANSFER_SHIP) {
-      return BRANCH_MANAGER_INTER_SITE_TRANSFER_ERROR;
-    }
-
     if (
       requiredPermission === PERMISSION_KEYS.INVENTORY_TRANSFER_RECEIVE &&
       transfer.to_branch_id !== ownBranchId
@@ -348,20 +344,26 @@ export async function createStockTransfer(
   const ctx = await getAuthContext(ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
+  const ownBranchId = claims.branch_id;
   if (claims.user_role === "branch_manager") {
-    return { success: false, error: BRANCH_MANAGER_INTER_SITE_TRANSFER_ERROR };
-  }
-  if (
+    if (ownBranchId !== fromBranchId && ownBranchId !== toBranchId) {
+      return { success: false, error: BRANCH_MANAGER_OWN_SITE_TRANSFER_ERROR };
+    }
+  } else if (
     claims.user_role !== "owner" &&
     claims.user_role !== "central_supply_ops" &&
     claims.user_role !== "central_kitchen_lead"
   ) {
     return { success: false, error: "Không có quyền tạo phiếu chuyển." };
   }
-  if (claims.user_role !== "owner" && claims.branch_id !== fromBranchId) {
+  if (
+    claims.user_role !== "owner" &&
+    claims.branch_id !== fromBranchId &&
+    claims.branch_id !== toBranchId
+  ) {
     return {
       success: false,
-      error: "Bạn chỉ được tạo phiếu xuất từ điểm vận hành của mình.",
+      error: "Bạn chỉ được tạo phiếu xuất từ điểm vận hành của mình, hoặc xin hàng về kho của mình.",
     };
   }
 
@@ -394,14 +396,25 @@ export async function createStockTransfer(
         "Luồng luân chuyển không hợp lệ. Chỉ hỗ trợ Kho Tổng/Bếp Trung Tâm cấp chi nhánh, Kho Tổng ↔ Bếp Trung Tâm, hoặc điều chuyển giữa các chi nhánh.",
     };
   }
-  const { data: canCreate, error: canCreateError } = await supabase.rpc(
+  const { data: canCreateFrom, error: canCreateFromError } = await supabase.rpc(
     "has_permission",
     {
       p_branch_id: fromBranch.id,
       p_key: PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE,
     },
   );
-  if (canCreateError || canCreate !== true) {
+  const { data: canCreateTo, error: canCreateToError } = await supabase.rpc(
+    "has_permission",
+    {
+      p_branch_id: toBranch.id,
+      p_key: PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE,
+    },
+  );
+  if (
+    canCreateFromError ||
+    canCreateToError ||
+    (canCreateFrom !== true && canCreateTo !== true)
+  ) {
     return { success: false, error: "Không có quyền tạo phiếu chuyển." };
   }
 

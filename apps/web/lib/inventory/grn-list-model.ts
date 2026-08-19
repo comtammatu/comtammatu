@@ -1,4 +1,5 @@
 import { matchesSearch } from "@lib/search";
+import { isBranchScopedProcurementRole } from "@comtammatu/shared/auth";
 import { OWNER_UNPRICED_GRN_STATUS } from "./grn-unpriced-queue-model";
 
 export type GrnListStatusFilter =
@@ -78,6 +79,11 @@ export function parseGrnListStatus(
   )
     ? (raw as (typeof GRN_LIST_STATUS_FILTER_VALUES)[number])
     : "draft";
+}
+
+/** Warehouse GRN chrome never offers HĐ NCC; Owner/accountant keep Finance handoff. */
+export function canShowGrnInvoiceChrome(role: string | null | undefined): boolean {
+  return role != null && !isBranchScopedProcurementRole(role);
 }
 
 export function defaultGrnDateField(

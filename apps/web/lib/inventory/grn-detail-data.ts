@@ -13,6 +13,7 @@ import { fetchIngredients } from "@/(protected)/inventory/ingredient-actions";
 import { fetchGrnDetail } from "@/(protected)/inventory/procurement-actions";
 import { messages } from "@lib/messages";
 import { loadUnpricedConfirmedGrnQueue } from "./grn-list-data";
+import { canShowGrnInvoiceChrome } from "./grn-list-model";
 import {
   allLinkedPosApproved,
   calculateGrnQuantities,
@@ -312,7 +313,7 @@ export async function loadGrnDetailResult(
     canEditDraft,
     canConfirmPermission,
     canAmendConfirmed,
-    canManageSupplierInvoice,
+    invoiceCreate,
     unpricedQueue,
   ] = await Promise.all([
     loadCurrentReceivingLocationName({
@@ -346,6 +347,9 @@ export async function loadGrnDetailResult(
       ? loadUnpricedConfirmedGrnQueue(context.supabase)
       : Promise.resolve({ rows: [], total: 0 }),
   ]);
+
+  const canManageSupplierInvoice =
+    invoiceCreate && canShowGrnInvoiceChrome(context?.claims.user_role);
 
   const canPatchConfirmedUnitCost =
     context?.claims.user_role === "owner" && data.grn.status === "confirmed";

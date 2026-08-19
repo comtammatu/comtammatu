@@ -44,15 +44,29 @@ mock.module(monetaryAccessModule.href, {
 
 const { createStockTransfer } =
   await import("../../app/(protected)/inventory/transfer-actions.ts");
-const result = await createStockTransfer({
+
+const destInitiated = await createStockTransfer({
   fromBranchId: 1,
   toBranchId: 7,
   toLocationKind: "default_receive",
   lines: [{ ingredientId: 10, quantity: 1 }],
 });
 
-assert.deepEqual(result, {
+assert.equal(destInitiated.success, false);
+assert.equal(destInitiated.error, "Điểm vận hành không hợp lệ.");
+assert.equal(rpcCalls, 1);
+
+rpcCalls = 0;
+const neitherSide = await createStockTransfer({
+  fromBranchId: 1,
+  toBranchId: 2,
+  toLocationKind: "default_receive",
+  lines: [{ ingredientId: 10, quantity: 1 }],
+});
+
+assert.deepEqual(neitherSide, {
   success: false,
-  error: "Quản lý chi nhánh chỉ được nhận phiếu chuyển về chi nhánh.",
+  error:
+    "Bạn chỉ được tạo hoặc xuất Điều chuyển từ chi nhánh của mình, hoặc xin hàng về chi nhánh của mình.",
 });
 assert.equal(rpcCalls, 0);

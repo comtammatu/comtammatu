@@ -65,6 +65,7 @@ import type {
 } from "@lib/inventory/types";
 import { parseOptionalNumber, formatVND } from "@lib/inventory/format";
 import { getDisplayReferenceCost } from "@lib/inventory/reference-cost";
+import { resolveFulfillSiteFlags } from "@lib/inventory/fulfill-site";
 import { formatDecimal } from "@comtammatu/shared/format";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
@@ -88,7 +89,6 @@ import type {
 const copy = messages.inventoryMaster.ingredientForm;
 const dialogCopy = messages.inventory.ingredients.dialog;
 const NO_CATEGORY = "none";
-const FULFILL_SITE_NONE = "none";
 
 type UnitSelectOption = { value: string; label: string };
 type UnitSelectOptionGroup = {
@@ -149,9 +149,8 @@ const ingredientSchemaBase = z.object({
   category_id: z.string().trim().optional(),
   item_kind: z.enum(["raw_material", "finished_good"]),
   min_stock_level: z.string().optional(),
-  default_fulfill_site_kind: z
-    .enum(["none", "central_supply", "central_kitchen"])
-    .optional(),
+  fulfill_from_central_supply: z.boolean(),
+  fulfill_from_central_kitchen: z.boolean(),
   unit_ids: z
     .array(z.string().trim().min(1))
     .min(1, { error: copy.units.selectUnit })
@@ -366,6 +365,11 @@ function toFormValues(
     activeUnits[0]?.unit_id ?? null,
     unitOptions,
   );
+  const flags = resolveFulfillSiteFlags({
+    fulfillFromCentralSupply: ingredient?.fulfill_from_central_supply,
+    fulfillFromCentralKitchen: ingredient?.fulfill_from_central_kitchen,
+    defaultFulfillSiteKind: ingredient?.default_fulfill_site_kind,
+  });
 
   return {
     name: ingredient?.name ?? "",
@@ -379,8 +383,8 @@ function toFormValues(
       ingredient?.min_stock_level != null
         ? String(ingredient.min_stock_level)
         : "",
-    default_fulfill_site_kind:
-      ingredient?.default_fulfill_site_kind ?? FULFILL_SITE_NONE,
+    fulfill_from_central_supply: flags.fulfillFromCentralSupply,
+    fulfill_from_central_kitchen: flags.fulfillFromCentralKitchen,
     unit_ids: activeUnits.map((unit) => String(unit.unit_id)),
     base_unit_id: String(unitModel.baseUnitId ?? ""),
     unit_anchor_ids: Object.fromEntries(
@@ -552,11 +556,10 @@ export function IngredientDialog({
         resolvedIngredient?.storage_type === "frozen"
           ? resolvedIngredient.storage_type
           : "ambient";
-      const fulfillSiteKind =
-        values.default_fulfill_site_kind &&
-        values.default_fulfill_site_kind !== FULFILL_SITE_NONE
-          ? values.default_fulfill_site_kind
-          : null;
+      const fulfillFlags = {
+        fulfill_from_central_supply: values.fulfill_from_central_supply,
+        fulfill_from_central_kitchen: values.fulfill_from_central_kitchen,
+      };
       const payload = {
         name: values.name,
         sku: values.sku || undefined,
@@ -564,7 +567,12 @@ export function IngredientDialog({
         item_kind: values.item_kind,
         storage_type: storageType,
         min_stock_level: parseOptionalNumber(values.min_stock_level) ?? 0,
-        default_fulfill_site_kind: fulfillSiteKind,
+        default_fulfill_site_kind: values.fulfill_from_central_supply
+          ? ("central_supply" as const)
+          : values.fulfill_from_central_kitchen
+            ? ("central_kitchen" as const)
+            : null,
+        ...fulfillFlags,
         units,
       };
       const result =
@@ -601,7 +609,9 @@ export function IngredientDialog({
         max_stock_level: resolvedIngredient?.max_stock_level ?? null,
         reorder_point: resolvedIngredient?.reorder_point ?? null,
         storage_type: storageType,
-        default_fulfill_site_kind: fulfillSiteKind,
+        default_fulfill_site_kind: payload.default_fulfill_site_kind,
+        fulfill_from_central_supply: values.fulfill_from_central_supply,
+        fulfill_from_central_kitchen: values.fulfill_from_central_kitchen,
         has_active_supplier_link:
           resolvedIngredient?.has_active_supplier_link === true,
         unit: baseUnit
@@ -745,6 +755,10 @@ function IngredientDialogFields({
   useEffect(() => {
     if (!focusField) return;
     const frame = window.requestAnimationFrame(() => {
+      if (focusField === "default_fulfill_site_kind") {
+        document.getElementById("fulfill-from-central-supply")?.focus();
+        return;
+      }
       form.setFocus(focusField);
     });
     return () => window.cancelAnimationFrame(frame);
@@ -988,26 +1002,42 @@ function IngredientDialogFields({
           name="min_stock_level"
           label={dialogCopy.minStockLabel}
         />
-        <SelectField
-          control={form.control}
-          name="default_fulfill_site_kind"
-          label={dialogCopy.defaultFulfillSiteKindLabel}
-          description={dialogCopy.defaultFulfillSiteKindHint}
-          options={[
-            {
-              value: FULFILL_SITE_NONE,
-              label: dialogCopy.defaultFulfillSiteKindNone,
-            },
-            {
-              value: "central_supply",
-              label: dialogCopy.defaultFulfillSiteKindCentralSupply,
-            },
-            {
-              value: "central_kitchen",
-              label: dialogCopy.defaultFulfillSiteKindCentralKitchen,
-            },
-          ]}
-        />
+        <div className="sm:col-span-2 flex flex-col gap-2">
+          <span className="text-sm font-medium">
+            {dialogCopy.defaultFulfillSiteKindLabel}
+          </span>
+          <FieldDescription>
+            {dialogCopy.defaultFulfillSiteKindHint}
+          </FieldDescription>
+          <Field orientation="horizontal">
+            <FieldLabel htmlFor="fulfill-from-central-supply">
+              {dialogCopy.defaultFulfillSiteKindCentralSupply}
+            </FieldLabel>
+            <Switch
+              id="fulfill-from-central-supply"
+              checked={form.watch("fulfill_from_central_supply")}
+              onCheckedChange={(checked) =>
+                form.setValue("fulfill_from_central_supply", checked, {
+                  shouldDirty: true,
+                })
+              }
+            />
+          </Field>
+          <Field orientation="horizontal">
+            <FieldLabel htmlFor="fulfill-from-central-kitchen">
+              {dialogCopy.defaultFulfillSiteKindCentralKitchen}
+            </FieldLabel>
+            <Switch
+              id="fulfill-from-central-kitchen"
+              checked={form.watch("fulfill_from_central_kitchen")}
+              onCheckedChange={(checked) =>
+                form.setValue("fulfill_from_central_kitchen", checked, {
+                  shouldDirty: true,
+                })
+              }
+            />
+          </Field>
+        </div>
         {selectedUnitIds.length === 0 ? (
           <Field>
             <FieldLabel htmlFor="base-unit-select">
@@ -1102,16 +1132,10 @@ function IngredientDialogFields({
                   "item_kind",
                   checked ? "finished_good" : "raw_material",
                 );
-                if (
-                  checked &&
-                  form.getValues("default_fulfill_site_kind") ===
-                    FULFILL_SITE_NONE
-                ) {
-                  form.setValue(
-                    "default_fulfill_site_kind",
-                    "central_kitchen",
-                    { shouldDirty: true },
-                  );
+                if (checked && !form.getValues("fulfill_from_central_kitchen")) {
+                  form.setValue("fulfill_from_central_kitchen", true, {
+                    shouldDirty: true,
+                  });
                 }
               }}
             />

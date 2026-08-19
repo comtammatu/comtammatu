@@ -263,6 +263,10 @@ function QuickActionButton({
 }
 
 import { StockDetailDialog } from "./stock-detail-dialog";
+import {
+  CompanyWacDialog,
+  type CompanyWacTarget,
+} from "./company-wac-dialog";
 import { fetchStockIngredientDetailAction } from "../stock-actions";
 import type { StockIngredientDetailData } from "@lib/inventory/stock-on-hand-detail-model";
 
@@ -302,6 +306,8 @@ export function StockClient({
     useState<QuickIssueTarget | null>(null);
   const [editIngredientTarget, setEditIngredientTarget] =
     useState<EditIngredientTarget | null>(null);
+  const [companyWacTarget, setCompanyWacTarget] =
+    useState<CompanyWacTarget | null>(null);
   const [openActionRowId, setOpenActionRowId] = useState<number | null>(null);
   const [viewingIngredientId, setViewingIngredientId] = useState<number | null>(
     initialIngredientId,
@@ -314,7 +320,8 @@ export function StockClient({
   const secondaryOverlayOpen =
     adjustTarget != null ||
     quickIssueTarget != null ||
-    editIngredientTarget != null;
+    editIngredientTarget != null ||
+    companyWacTarget != null;
 
   const refreshStockDetail = async (ingredientId: number) => {
     const res = await fetchStockIngredientDetailAction({
@@ -1090,6 +1097,20 @@ export function StockClient({
         />
       ) : null}
 
+      {companyWacTarget ? (
+        <CompanyWacDialog
+          target={companyWacTarget}
+          onClose={() => setCompanyWacTarget(null)}
+          onSaved={() => {
+            const ingredientId = companyWacTarget.ingredientId;
+            router.refresh();
+            if (viewingIngredientId === ingredientId) {
+              void refreshStockDetail(ingredientId);
+            }
+          }}
+        />
+      ) : null}
+
       <StockDetailDialog
         open={viewingIngredientId !== null && !secondaryOverlayOpen}
         onOpenChange={(open) => {
@@ -1100,8 +1121,26 @@ export function StockClient({
         isTouchLayout={controlSize === "touch"}
         canAdjustStock={permissions.canAdjustException}
         canEditIngredient={permissions.canEditIngredient}
+        canSetCompanyWac={
+          permissions.canSetCompanyWac &&
+          ingredients.find((item) => item.id === viewingIngredientId)
+            ?.itemKind === "raw_material"
+        }
         onEditIngredient={() => {
           void openEditIngredientFromDetail();
+        }}
+        onSetCompanyWac={() => {
+          const target = ingredients.find((i) => i.id === viewingIngredientId);
+          if (!target || target.itemKind !== "raw_material") return;
+          setCompanyWacTarget({
+            ingredientId: target.id,
+            name: target.name,
+            units: target.units ?? [],
+            currentWac:
+              detailData?.valuation?.wac ??
+              target.monetary?.averageUnitCost ??
+              null,
+          });
         }}
         onAdjustStock={() => {
           const target = ingredients.find((i) => i.id === viewingIngredientId);

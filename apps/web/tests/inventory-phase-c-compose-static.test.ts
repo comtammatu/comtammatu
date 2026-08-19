@@ -64,12 +64,11 @@ test("Count slips queue view binds to URL queue param", () => {
   assert.match(source, /replaceListParams/);
 });
 
-test("DOC authoring keeps DocumentFormFrame on transfers/new + stock-requests/new", () => {
-  for (const path of [
-    "app/(protected)/inventory/transfers/new/page.tsx",
-    "app/(protected)/inventory/stock-requests/new/page.tsx",
-  ] as const) {
-    assert.ok(statSync(join(process.cwd(), path)).isFile());
-    assert.match(read(path), /DocumentFormFrame/);
-  }
+test("DOC authoring keeps DocumentFormFrame on transfers/new", () => {
+  const path = "app/(protected)/inventory/transfers/new/page.tsx";
+  assert.ok(statSync(join(process.cwd(), path)).isFile());
+  assert.match(read(path), /DocumentFormFrame/);
+  const ychNew = read("app/(protected)/inventory/stock-requests/new/page.tsx");
+  assert.match(ychNew, /controlTransferCreateHref/);
+  assert.doesNotMatch(ychNew, /DocumentFormFrame|StockRequestEditor/);
 });

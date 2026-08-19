@@ -1,11 +1,12 @@
 import "server-only";
 
 import { notFound } from "next/navigation";
-import { STOCK_REQUEST_FULFILL_ROLES } from "@comtammatu/shared/auth";
+import { INVENTORY_OPS_ROLES } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchIngredients } from "@/(protected)/inventory/ingredient-actions";
 import { fetchBranchesForTransfer } from "@/(protected)/inventory/transfer-actions";
 import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
+import { resolveFulfillSiteFlags } from "@lib/inventory/fulfill-site";
 import type { IngredientRow } from "@lib/inventory/types";
 import {
   type BranchForTransfer,
@@ -30,12 +31,19 @@ export interface TransferCreatePageData {
 function toTransferIngredientOption(
   ingredient: IngredientRow,
 ): TransferIngredientOption {
+  const flags = resolveFulfillSiteFlags({
+    fulfillFromCentralSupply: ingredient.fulfill_from_central_supply,
+    fulfillFromCentralKitchen: ingredient.fulfill_from_central_kitchen,
+    defaultFulfillSiteKind: ingredient.default_fulfill_site_kind,
+  });
   return {
     id: ingredient.id,
     name: ingredient.name,
     is_active: ingredient.is_active,
     itemKind: ingredient.item_kind ?? null,
     units: ingredient.units,
+    fulfillFromCentralSupply: flags.fulfillFromCentralSupply,
+    fulfillFromCentralKitchen: flags.fulfillFromCentralKitchen,
   };
 }
 
@@ -45,8 +53,8 @@ export async function loadTransferCreatePageData({
 }: LoadTransferCreatePageDataOptions = {}): Promise<TransferCreatePageData> {
   const { supabase, claims } = await loadAuthState();
   if (
-    !STOCK_REQUEST_FULFILL_ROLES.includes(
-      claims.user_role as (typeof STOCK_REQUEST_FULFILL_ROLES)[number],
+    !INVENTORY_OPS_ROLES.includes(
+      claims.user_role as (typeof INVENTORY_OPS_ROLES)[number],
     )
   ) {
     notFound();
@@ -71,7 +79,20 @@ export async function loadTransferCreatePageData({
       )
     : [];
   let loadFailed = !branchResult.success || !ingredientResult.success;
-  const sourceBranchIds = userBranchId == null ? [] : [userBranchId];
+  const sourceBranchIds = [
+    ...new Set(
+      [
+        userBranchId,
+        ...branches
+          .filter(
+            (branch) =>
+              branch.branch_kind === "central_supply" ||
+              branch.branch_kind === "central_kitchen",
+          )
+          .map((branch) => branch.id),
+      ].filter((id): id is number => id != null),
+    ),
+  ];
   const sourceLocationsByBranch: Record<number, TransferSourceLocation[]> = {};
   const sourceStockByLocation: Record<number, Record<number, number>> = {};
 

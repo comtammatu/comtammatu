@@ -39,7 +39,7 @@ test("Wave 1 RPC creates a PO without YCM and mints Auto-GRN on send", () => {
   assert.match(proof, /branch_manager must be forbidden/);
 });
 
-test("Wave 1 orders tab can Tạo đơn while the YCM tab stays usable", () => {
+test("Wave 1 orders tab can Tạo đơn; YCM tab stays readable without create", () => {
   const actions = read(
     "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
   );
@@ -65,7 +65,7 @@ test("Wave 1 orders tab can Tạo đơn while the YCM tab stays usable", () => {
   assert.match(actions, /export const reviewPurchaseDemand/);
   assert.match(page, /canCreate=\{canManagePo && createBranches\.length > 0\}/);
   assert.match(page, /PurchaseRequestsClient/);
-  assert.match(page, /canCreateRequest=\{canCreateRequest && requestBranches\.length > 0\}/);
+  assert.match(page, /canCreateRequest=\{false\}/);
   assert.match(client, /copy\.createAction/);
   assert.match(client, /mode === "create"/);
   assert.match(client, /unmappedSendBlocked/);

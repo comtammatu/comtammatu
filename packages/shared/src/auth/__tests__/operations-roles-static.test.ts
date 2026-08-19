@@ -112,6 +112,8 @@ test("R08/R09 branch_manager seed strips retired procurement keys", () => {
 
   assert.match(bmTemplate, /'inventory:request_create'/);
   assert.match(bmTemplate, /'inventory:request_submit'/);
+  assert.match(bmTemplate, /'inventory:transfer_create'/);
+  assert.match(bmTemplate, /'inventory:transfer_ship'/);
 
   const accountant = fixture.match(
     /\('accountant', 'accountant', ARRAY\[([^\]]+)\]\)/,

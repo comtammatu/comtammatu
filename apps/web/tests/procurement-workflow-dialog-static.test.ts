@@ -116,7 +116,7 @@ test("submitted demands remain allocatable during cutover", () => {
       purchasePage.match(
         /\["submitted", "pending_allocation", "partially_ordered"\]/g,
       ) ?? []
-    ).length >= 2,
+    ).length >= 1,
   );
   assert.match(
     migration,
@@ -128,14 +128,19 @@ test("submitted demands remain allocatable during cutover", () => {
   );
 });
 
-test("purchase request URLs redirect to the PO-first workspace", () => {
+test("purchase request URLs redirect history to needs and create to Tạo đơn", () => {
   const requestPage = read(
     "apps/web/app/(protected)/inventory/purchase-requests/page.tsx",
+  );
+  const newPage = read(
+    "apps/web/app/(protected)/inventory/purchase-requests/new/page.tsx",
   );
 
   assert.match(requestPage, /params\.set\("tab", "needs"\)/);
   assert.match(requestPage, /key === "requestId" \? "demandId" : key/);
-  assert.match(requestPage, /value === "create-po" \? "allocate" : value/);
+  assert.match(requestPage, /redirect\(PURCHASE_ORDER_CREATE_HREF\)/);
+  assert.doesNotMatch(requestPage, /create-po" \? "allocate"/);
+  assert.match(newPage, /PURCHASE_ORDER_CREATE_HREF/);
 });
 
 test("PO cancellation permits only trusted cancellation after linked GRNs are cancelled", () => {

@@ -15,11 +15,11 @@ test("Finance desync attention follows the selected local period and branch", ()
   assert.match(source, /query = query\.eq\("branch_id", branchId\)/);
 });
 
-test("Inventory fulfillment hub keeps manual transfer as a secondary route", () => {
+test("Inventory fulfillment hub treats dest-initiated DC as the primary create route", () => {
   const list = read("app/(protected)/inventory/transfers/page.tsx");
   const create = read("app/(protected)/inventory/transfers/new/page.tsx");
 
   assert.match(list, /copy\.manualTransferAction/);
-  assert.match(list, /variant="outline"/);
+  assert.doesNotMatch(list, /stock-requests\/new/);
   assert.match(create, /<CreateTransferForm/);
 });

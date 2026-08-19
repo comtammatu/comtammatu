@@ -149,7 +149,7 @@ test("all ingredient save actions use the atomic RPC without direct ingredient u
   );
   assert.match(
     ingredientActions,
-    /\.select\("shelf_life_days, default_fulfill_site_kind"\)/,
+    /\.select\(\s*"shelf_life_days, default_fulfill_site_kind, fulfill_from_central_supply, fulfill_from_central_kitchen"\s*,?\s*\)/,
   );
   assert.doesNotMatch(ingredientActions, /persistDefaultFulfillSiteKind/);
 });

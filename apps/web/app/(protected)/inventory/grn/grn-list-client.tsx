@@ -142,7 +142,6 @@ export function GrnListClient({
         dateTo: filters.dateTo || null,
         supplierId: filters.supplierId?.toString() ?? null,
         poId: filters.poId?.toString() ?? null,
-        requestId: filters.purchaseRequestId?.toString() ?? null,
         branchId: filters.branchId?.toString() ?? null,
         page: String(page),
         ...next,
@@ -186,7 +185,6 @@ export function GrnListClient({
       dateField: null,
       supplierId: null,
       poId: null,
-      requestId: null,
       page: null,
     });
   }
@@ -303,7 +301,8 @@ export function GrnListClient({
               value={row.status}
               label={statusLabels[row.status] ?? grnCopy.unknownStatus}
             />
-            {resolveGrnValuationDisplay({
+            {canManageSupplierInvoice &&
+            resolveGrnValuationDisplay({
               status: row.status,
               invoiceId: row.invoiceId,
             }) === "pending_invoice" ? (
@@ -522,6 +521,7 @@ export function GrnListClient({
         <GrnMobileCard
           row={row}
           actions={rowActions(row)}
+          showInvoiceChrome={canManageSupplierInvoice}
           onOpen={() => openDetail(row)}
         />
       )}
@@ -557,7 +557,9 @@ export function GrnListClient({
                     </span>
                   </span>
                 ) : null}
-                {!isUnpricedQueue && pageMetrics.pendingInvoiceCount > 0 ? (
+                {!isUnpricedQueue &&
+                canManageSupplierInvoice &&
+                pageMetrics.pendingInvoiceCount > 0 ? (
                   <span className="inline-flex items-center gap-1.5">
                     <span>{grnCopy.listMetaPendingInvoice}</span>
                     <span className="font-mono font-semibold tabular-nums text-foreground">
@@ -639,10 +641,12 @@ function ExceptionBadges({ row }: { row: GrnListRow }) {
 function GrnMobileCard({
   row,
   actions,
+  showInvoiceChrome,
   onOpen,
 }: {
   row: GrnListRow;
   actions: RowActionItem[];
+  showInvoiceChrome: boolean;
   onOpen: () => void;
 }) {
   const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
@@ -671,7 +675,8 @@ function GrnMobileCard({
               value={row.status}
               label={statusLabels[row.status] ?? grnCopy.unknownStatus}
             />
-            {resolveGrnValuationDisplay({
+            {showInvoiceChrome &&
+            resolveGrnValuationDisplay({
               status: row.status,
               invoiceId: row.invoiceId,
             }) === "pending_invoice" ? (

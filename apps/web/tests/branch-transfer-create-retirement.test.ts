@@ -8,7 +8,7 @@ const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 const exists = (path: string) => existsSync(resolve(repoRoot, path));
 
-test("Branch transfer creation stays central-site only with Branch DOC presenter", () => {
+test("Branch transfer create is dest-initiated DOC with pull or outbound", () => {
   const createRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/new/page.tsx",
   );
@@ -21,16 +21,17 @@ test("Branch transfer creation stays central-site only with Branch DOC presenter
     ),
     true,
   );
-  assert.match(createRoute, /branch_kind !== "central_supply"/);
-  assert.match(createRoute, /branch_kind !== "central_kitchen"/);
-  assert.match(createRoute, /redirect\(`\/br\/\$\{branchId\}\/stock\/transfer`\)/);
+  assert.match(createRoute, /kind !== "branch"/);
+  assert.match(createRoute, /parseTransferCreateDirection/);
   assert.match(createRoute, /BranchTransferCreateClient/);
+  assert.doesNotMatch(createRoute, /redirect\(`\/br\/\$\{branchId\}\/stock\/transfer`\)/);
   assert.doesNotMatch(createRoute, /CreateTransferForm/);
 
   assert.match(createClient, /basePath = `\/br\/\$\{branchId\}\/stock\/transfer`/);
   assert.match(createClient, /NumberPadSheet/);
   assert.match(createClient, /AppDetailFooter/);
   assert.match(createClient, /useTransferCreateController/);
+  assert.match(createClient, /TransferCreateRouteFields/);
   assert.doesNotMatch(createClient, /DataTable|QuantityInput/);
 
   const branchList = read(
@@ -41,6 +42,7 @@ test("Branch transfer creation stays central-site only with Branch DOC presenter
   assert.match(branchList, /stock\/transfer\/new/);
   assert.doesNotMatch(operatorNav, /stock\/transfer\/new/);
   assert.doesNotMatch(branchList, /BranchOperatorActionSection|fetchBranchesForTransfer/);
+  assert.doesNotMatch(branchList, /stock\/requests\/new/);
 
   for (const source of [
     read("apps/web/lib/inventory/transfer-create-model.ts"),
@@ -54,7 +56,7 @@ test("Branch transfer creation stays central-site only with Branch DOC presenter
   ]) {
     assert.doesNotMatch(
       source,
-      /branch_manager|isBranchManager|canCreateInboundRequest|inboundFromBranchId|requestGoods/,
+      /isBranchManager|canCreateInboundRequest|inboundFromBranchId|requestGoods/,
     );
   }
 
@@ -67,7 +69,7 @@ test("Branch transfer creation stays central-site only with Branch DOC presenter
   }
 });
 
-test("direct Branch action invocation cannot call the transfer RPC", () => {
+test("direct Branch dest-initiated create reaches the transfer RPC; foreign sites stay denied", () => {
   const fixture = resolve(
     repoRoot,
     "apps/web/tests/fixtures/branch-transfer-action-denial.fixture.ts",

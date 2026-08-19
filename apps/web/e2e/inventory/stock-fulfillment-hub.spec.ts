@@ -59,7 +59,7 @@ test("owner sees the central fulfillment queues at required viewports", async ({
     await expectHub(
       page,
       "/inventory/transfers",
-      /Điều chuyển thủ công/,
+      /Tạo điều chuyển/,
       /^\/inventory\/transfers\/new/,
     );
   } finally {
@@ -90,16 +90,18 @@ test("branch and central operators see only their fulfillment workspace", async 
     {
       code: "branch_manager",
       branchKind: "branch",
-      path: (branchId: number) => `/br/${branchId}/stock/transfer`,
-      actionLabel: /Yêu cầu hàng/,
+      path: (branchId: number) => `/br/${branchId}/stock`,
+      actionLabel: /Tạo điều chuyển/,
       cta: (branchId: number) =>
-        new RegExp(`^/br/${branchId}/stock/requests/new$`),
+        new RegExp(
+          `^/br/${branchId}/stock/transfer/new\\?direction=pull$`,
+        ),
     },
     {
       code: "central_supply_ops",
       branchKind: "central_supply",
       path: () => "/inventory/transfers",
-      actionLabel: /Điều chuyển thủ công/,
+      actionLabel: /Tạo điều chuyển/,
       cta: (branchId: number) =>
         new RegExp(`^/inventory/transfers/new\\?branch=${branchId}$`),
     },
@@ -107,11 +109,9 @@ test("branch and central operators see only their fulfillment workspace", async 
       code: "central_kitchen_lead",
       branchKind: "central_kitchen",
       path: () => "/inventory/transfers",
-      actionLabel: /Yêu cầu Kho Tổng/,
+      actionLabel: /Tạo điều chuyển/,
       cta: (branchId: number) =>
-        new RegExp(
-          `^/inventory/stock-requests/new\\?branch=${branchId}$`,
-        ),
+        new RegExp(`^/inventory/transfers/new\\?branch=${branchId}$`),
     },
   ] as const;
 

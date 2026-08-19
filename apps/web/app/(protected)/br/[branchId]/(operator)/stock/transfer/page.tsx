@@ -78,10 +78,6 @@ export default async function OperatorStockTransferPage({
     seeAllSources: claims.user_role === "owner",
   });
 
-  const canRequestCentralSupply =
-    kind === "central_kitchen" &&
-    (claims.user_role === "owner" ||
-      claims.user_role === "central_kitchen_lead");
   const canCreateManualTransfer =
     isCentralKind &&
     (claims.user_role === "owner" ||
@@ -90,19 +86,9 @@ export default async function OperatorStockTransferPage({
 
   const createAction = (
     <div className="flex flex-wrap gap-2">
-      {canRequestCentralSupply ? (
-        <Button
-          size="touch"
-          render={<Link href={`/br/${branchId}/stock/requests/new`} />}
-        >
-          <IconPlus data-icon="inline-start" />
-          {copy.centralSupplyRequestAction}
-        </Button>
-      ) : null}
       {canCreateManualTransfer ? (
         <Button
           size="touch"
-          variant="outline"
           render={<Link href={`/br/${branchId}/stock/transfer/new`} />}
         >
           <IconPlus data-icon="inline-start" />

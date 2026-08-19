@@ -128,7 +128,9 @@ export function PurchaseRequestsClient({
       : (rows.find((row) => row.id === selectedId) ?? null);
   const editingPendingDemand =
     mode === "edit" && selected?.status === "pending_allocation";
-  const createOpen = mode === "create" || (mode === "edit" && selected != null);
+  const createOpen =
+    canCreateRequest &&
+    (mode === "create" || (mode === "edit" && selected != null));
   const allocateOpen = mode === "allocate" && selected != null;
   const recordMode = mode === "view" || mode === "edit" || mode === "allocate";
   const ingredientOptions = useMemo(

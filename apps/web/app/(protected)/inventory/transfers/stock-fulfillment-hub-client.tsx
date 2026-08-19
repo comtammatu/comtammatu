@@ -429,7 +429,7 @@ export function StockFulfillmentHubClient({
           emptyTitle="Không có hành trình phù hợp"
           emptyDescription={
             mode === "branch"
-              ? "Tạo yêu cầu hàng khi điểm vận hành cần bổ sung nguyên liệu."
+              ? "Tạo điều chuyển khi điểm vận hành cần bổ sung nguyên liệu."
               : "Thử thay đổi phân loại, trạng thái hoặc từ khóa tìm kiếm."
           }
           emptyMode={

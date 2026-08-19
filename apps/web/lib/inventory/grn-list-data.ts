@@ -10,6 +10,7 @@ import {
   defaultGrnDateField,
   parseGrnListStatus,
   parsePositiveId,
+  canShowGrnInvoiceChrome,
   type GrnListDateField,
   type GrnListFilters,
   type GrnListRow,
@@ -141,11 +142,11 @@ export async function loadGrnListPageData(
     dateFrom: dateValue(params.dateFrom),
     dateTo: dateValue(params.dateTo),
     poId: parsePositiveId(params.poId),
-    purchaseRequestId: parsePositiveId(params.requestId),
+    purchaseRequestId: null,
     branchId: scope.selectedBranchId,
   };
 
-  const [canManageSupplierInvoice, monetaryAccess, result, unpricedQueue] =
+  const [invoiceCreate, monetaryAccess, result, unpricedQueue] =
     await Promise.all([
       probePermission(
         auth,
@@ -172,6 +173,9 @@ export async function loadGrnListPageData(
         ? loadUnpricedConfirmedGrnQueue(supabase)
         : Promise.resolve({ rows: [], total: 0 }),
     ]);
+
+  const canManageSupplierInvoice =
+    invoiceCreate && canShowGrnInvoiceChrome(claims.user_role);
 
   const unpricedLines = unpricedQueue?.rows ?? [];
   const unpricedTotal = unpricedQueue?.total ?? 0;

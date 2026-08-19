@@ -199,6 +199,7 @@ export async function loadStockOnHandPageData({
 
   const canEditIngredient =
     INVENTORY_CATALOG_ROLES.includes(claims.user_role) && canManageCatalog;
+  const canSetCompanyWac = claims.user_role === "owner";
 
   // Fail-soft: a denied/failed ingredient catalog read degrades to an empty
   // list + coreDataLoadFailed flag instead of crashing the whole page. Stock
@@ -389,6 +390,7 @@ export async function loadStockOnHandPageData({
     canWriteoff,
     canAdjustException,
     canEditIngredient,
+    canSetCompanyWac,
   };
 
   return {

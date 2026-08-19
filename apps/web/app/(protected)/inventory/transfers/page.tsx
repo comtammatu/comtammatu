@@ -100,10 +100,6 @@ export default async function TransfersPage({
     claims.user_role === "owner" ||
     claims.user_role === "central_supply_ops" ||
     claims.user_role === "central_kitchen_lead";
-  const canRequestCentralSupply =
-    selectedBranch?.branch_kind === "central_kitchen" &&
-    (claims.user_role === "owner" ||
-      claims.user_role === "central_kitchen_lead");
   const writeRequiresSitePick = scope.scopeMode === "all" || branchId == null;
   const sitePickTitle = messages.controlSurface.scopeControl.pickSite;
   const activeCount = rows.filter((row) => row.lifecycle === "active").length;
@@ -138,52 +134,29 @@ export default async function TransfersPage({
           </div>
         }
         actions={
-          canRequestCentralSupply || canCreateManualTransfer ? (
+          canCreateManualTransfer ? (
             <div className="flex flex-wrap gap-2">
-              {canRequestCentralSupply ? (
-                writeRequiresSitePick ? (
-                  <Button type="button" disabled title={sitePickTitle}>
-                    <IconPlus data-icon="inline-start" />
-                    {copy.centralSupplyRequestAction}
-                  </Button>
-                ) : (
-                  <Button
-                    render={
-                      <Link
-                        href={`/inventory/stock-requests/new?branch=${branchId}&branch=${branchId}`}
-                      />
-                    }
-                  >
-                    <IconPlus data-icon="inline-start" />
-                    {copy.centralSupplyRequestAction}
-                  </Button>
-                )
-              ) : null}
-              {canCreateManualTransfer ? (
-                writeRequiresSitePick ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled
-                    title={sitePickTitle}
-                  >
-                    <IconPlus data-icon="inline-start" />
-                    {copy.manualTransferAction}
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    render={
-                      <Link
-                        href={`/inventory/transfers/new?branch=${branchId}&branch=${branchId}`}
-                      />
-                    }
-                  >
-                    <IconPlus data-icon="inline-start" />
-                    {copy.manualTransferAction}
-                  </Button>
-                )
-              ) : null}
+              {writeRequiresSitePick ? (
+                <Button
+                  type="button"
+                  disabled
+                  title={sitePickTitle}
+                >
+                  <IconPlus data-icon="inline-start" />
+                  {copy.manualTransferAction}
+                </Button>
+              ) : (
+                <Button
+                  render={
+                    <Link
+                      href={`/inventory/transfers/new?branch=${branchId}&branch=${branchId}`}
+                    />
+                  }
+                >
+                  <IconPlus data-icon="inline-start" />
+                  {copy.manualTransferAction}
+                </Button>
+              )}
             </div>
           ) : null
         }

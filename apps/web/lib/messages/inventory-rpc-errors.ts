@@ -40,6 +40,7 @@ export const INVENTORY_ERROR_CODES = {
   GRN_LINE_FAILED: "inventory.grn.line_failed",
   GRN_CONFIRM_FAILED: "inventory.grn.confirm_failed",
   GRN_UNIT_COST_PATCH_FAILED: "inventory.grn.unit_cost_patch_failed",
+  COMPANY_WAC_SET_FAILED: "inventory.stock.company_wac_set_failed",
   STOCK_REQUEST_FAILED: "inventory.stock_request.failed",
   PROCUREMENT_FAILED: "inventory.procurement.failed",
 } as const;
@@ -433,6 +434,12 @@ export const grnOwnerUnitCostRpcMappings: readonly RpcErrorMapping[] = [
     userMessage: "Đơn vị đơn giá không thuộc nguyên liệu này.",
   },
   {
+    match: includesAny("inventory_origin_balances_book_value_check"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_STATUS,
+    userMessage:
+      "Không ghi được đơn giá vì giá vốn tại kho sẽ bị âm. Kiểm tra phiếu nhập đã có hóa đơn NCC chưa.",
+  },
+  {
     match: includesAny("grn_unit_cost_already_booked"),
     errorCode: INVENTORY_ERROR_CODES.INVALID_STATUS,
     userMessage: "Dòng phiếu nhập này đã có đơn giá.",
@@ -469,6 +476,51 @@ export const grnOwnerUnitCostRpcMappings: readonly RpcErrorMapping[] = [
 export const grnOwnerUnitCostRpcFallback: RpcErrorFallback = {
   userMessage: "Không thể ghi đơn giá vào phiếu nhập đã chốt.",
   errorCode: INVENTORY_ERROR_CODES.GRN_UNIT_COST_PATCH_FAILED,
+};
+
+export const ownerSetCompanyWacRpcMappings: readonly RpcErrorMapping[] = [
+  {
+    match: includesAny("forbidden_owner_only"),
+    errorCode: INVENTORY_ERROR_CODES.FORBIDDEN,
+    userMessage: "Chỉ Chủ sở hữu được ghi Giá vốn.",
+  },
+  {
+    match: includesAny("company_wac_invalid"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,
+    userMessage: "Giá vốn phải lớn hơn 0 theo Đơn vị chuẩn.",
+  },
+  {
+    match: includesAny("finished_good_wac_overwrite_forbidden"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,
+    userMessage: "Thành phẩm dùng Giá vốn mẻ, không ghi Giá vốn mua.",
+  },
+  {
+    match: includesAny("base_unit_required"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,
+    userMessage: "Nguyên liệu chưa có Đơn vị chuẩn để ghi Giá vốn.",
+  },
+  {
+    match: includesAny("reason_required"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,
+    userMessage: "Nhập lý do ít nhất 10 ký tự.",
+  },
+  {
+    match: includesAny("reason_too_long"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,
+    userMessage: "Lý do tối đa 500 ký tự.",
+  },
+  {
+    match: includesAny("ingredient_not_found", "ingredient_required"),
+    errorCode: INVENTORY_ERROR_CODES.NOT_FOUND,
+    userMessage: "Không tìm thấy nguyên liệu để ghi Giá vốn.",
+  },
+  privilege,
+  notFound,
+];
+
+export const ownerSetCompanyWacRpcFallback: RpcErrorFallback = {
+  userMessage: "Không thể ghi Giá vốn.",
+  errorCode: INVENTORY_ERROR_CODES.COMPANY_WAC_SET_FAILED,
 };
 
 /* ─── Stock request ─── */

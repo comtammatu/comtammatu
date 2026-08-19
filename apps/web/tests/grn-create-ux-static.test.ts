@@ -32,10 +32,8 @@ test("branch operators cannot create a GRN outside the purchase workflow", () =>
   assert.doesNotMatch(actions, /export const loadActiveGrnDraft/);
 
   for (const route of [page, supplierPage]) {
-    assert.match(
-      route,
-      /redirect\(`\/br\/\$\{branchId\}\/stock\/purchase-requests`\)/,
-    );
+    assert.match(route, /PURCHASE_ORDER_CREATE_HREF/);
+    assert.doesNotMatch(route, /stock\/purchase-requests/);
     assert.doesNotMatch(
       route,
       /BranchGrnSourcePickerClient|BranchGrnCreateClient|loadGrnSourcePageData|loadGrnCreatePageData/,
@@ -47,5 +45,6 @@ test("branch operators cannot create a GRN outside the purchase workflow", () =>
   );
   assert.doesNotMatch(home, /stock\/grn\/new/);
   assert.doesNotMatch(list, /stock\/grn\/new/);
-  assert.match(list, /stock\/purchase-requests/);
+  assert.match(list, /PURCHASE_ORDER_CREATE_HREF/);
+  assert.doesNotMatch(list, /stock\/purchase-requests/);
 });

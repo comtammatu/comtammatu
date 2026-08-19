@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { resolveBranchContext } from "@/_lib/branch-context";
 import { loadAuthState } from "@/_lib/auth";
+import { PURCHASE_ORDER_CREATE_HREF } from "@lib/inventory/purchase-order-paths";
 import { parseOperatorBranchId } from "../../../../_lib/parse-branch-id";
 
 interface PageProps {
@@ -20,5 +21,5 @@ export default async function OperatorStockGrnNewPage({
   if (branchContext.branch.branch_kind === "branch") {
     redirect(`/br/${branchId}/stock/requests/new`);
   }
-  redirect(`/br/${branchId}/stock/purchase-requests`);
+  redirect(PURCHASE_ORDER_CREATE_HREF);
 }

@@ -1,14 +1,17 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
 import { loadTransferCreatePageData } from "@lib/inventory/transfer-create-data";
+import { parseTransferCreateDirection } from "@lib/inventory/transfer-paths";
 import { BranchTransferCreateClient } from "./branch-transfer-create-client";
 import { parseOperatorBranchId } from "../../../../_lib/parse-branch-id";
 
 export default async function OperatorManualTransferNewPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ branchId: string }>;
+  searchParams: Promise<{ direction?: string | string[] }>;
 }) {
   const { branchId: rawBranchId } = await params;
   const branchId = parseOperatorBranchId(rawBranchId);
@@ -17,16 +20,26 @@ export default async function OperatorManualTransferNewPage({
   const { supabase, claims } = await loadAuthState();
   const branchContext = await resolveBranchContext(supabase, claims, branchId);
   if (!branchContext) notFound();
+
+  const kind = branchContext.branch.branch_kind;
   if (
-    branchContext.branch.branch_kind !== "central_supply" &&
-    branchContext.branch.branch_kind !== "central_kitchen"
+    kind !== "branch" &&
+    kind !== "central_supply" &&
+    kind !== "central_kitchen"
   ) {
-    redirect(`/br/${branchId}/stock/transfer`);
+    notFound();
   }
 
+  const query = await searchParams;
   const data = await loadTransferCreatePageData({
     routeBranchId: branchId,
   });
 
-  return <BranchTransferCreateClient branchId={branchId} data={data} />;
+  return (
+    <BranchTransferCreateClient
+      branchId={branchId}
+      data={data}
+      initialDirection={parseTransferCreateDirection(query.direction)}
+    />
+  );
 }

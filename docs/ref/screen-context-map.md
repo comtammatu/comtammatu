@@ -135,10 +135,10 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 - **Quy chuẩn UX/UI:**
   - Bottom nav **chi nhánh** (`branch_kind=branch`) theo vai trò:
     - Nhân viên (`cashier` / `chef` / `branch_staff`): `Hôm nay` · `Ca` · `Lịch ca` · `Hồ sơ`.
-    - Quản lý (`branch_manager`): `Hôm nay` · `Ca` · `Đội` · `Kho` · `Công cụ`. Owner vào shell CN: không tab `Ca` (`Hôm nay` · `Đội` · `Kho` · `Công cụ`). Tab **Kho** land `/stock` = cửa hàng hóa ngày (tồn / YCH / kiểm kê / hao / **đếm tồn**) rồi list phiếu giao nhận. Catalog / báo cáo / ngưỡng tồn vào **Công cụ**. Không Tiêu Hao SX. Badge queue live.
+    - Quản lý (`branch_manager`): `Hôm nay` · `Ca` · `Đội` · `Kho` · `Công cụ`. Owner vào shell CN: không tab `Ca` (`Hôm nay` · `Đội` · `Kho` · `Công cụ`). Tab **Kho** land `/stock` = cửa hàng hóa ngày (tồn / Điều chuyển / kiểm kê / hao / **đếm tồn**) rồi list phiếu giao nhận. Catalog / báo cáo / ngưỡng tồn vào **Công cụ**. Không Tiêu Hao SX. Badge queue live.
     - Chuông = unread inbox. Tab **Công cụ** (`/settings`) là cửa thật: Gọi số, Đối soát ca POS, Giới hạn bán (trang), **Báo cáo tổng hợp ngày** (Daily Summary 04:00: kết quả + món + ca POS drill + bấm ca; không Chốt ngày), Phản hồi, danh mục/báo cáo kho, thiết lập bàn/POS/KDS/máy in. Header `⋯` chỉ Owner → Quản trị + theme. Giới hạn bán vẫn CTA Drawer trên Hôm nay. Avatar header vẫn mở Hồ sơ.
-  - Hub CN thứ tự: trạng thái ca (Ngày kinh doanh; ẩn khi `not_required`; CTA việc trong ca khi còn việc) → **Chỉ tiêu doanh thu** (manager-like; tháng | ngày KD 04:00; chấm mốc + nhãn Đã đạt/Chưa đạt) → **Cần duyệt** (khi > 0; preview + Xem thêm) → trạm **POS** / **KDS** (2 cột phone) → hàng **Giới hạn bán** + **Đơn hàng**. QL/Owner không Gọi số trên home (cửa **Công cụ**). Nhân viên: Gọi số là ô trạm 2, **Đơn hàng** hàng hai. Queue **không** GRN/SX (D093). **Giới hạn bán** là một `AppDrawer` (home + `/menu-limits` + header POS cho QL/Owner); Trần bán = nhập số, Cho phép bán thêm = Switch. Chỉ `branch_manager` và `owner` thấy và áp dụng.
-  - **Exception hẹp (manager-like CN):** panel Doanh thu tháng | ngày + tiến độ chỉ tiêu với chấm mốc thưởng (sau trạng thái ca, trước queue). Cashier/chef/staff không thấy. Hub trung tâm không hiện doanh thu. Không badge chỉ tiêu trên hàng Đơn hàng.
+  - Hub CN thứ tự: trạng thái ca (Ngày kinh doanh; ẩn khi `not_required`; CTA việc trong ca khi còn việc) → **Chỉ tiêu doanh thu** (manager-like; tháng | ngày; bấm thanh mốc mở thưởng) → **Cần duyệt** (khi > 0; preview + Xem thêm) → trạm **POS** / **KDS** (2 cột phone) → hàng **Giới hạn bán** + **Đơn hàng**. QL/Owner không Gọi số trên home (cửa **Công cụ**). Nhân viên: Gọi số là ô trạm 2, **Đơn hàng** hàng hai. Queue **không** GRN/SX (D093). **Giới hạn bán** là một `AppDrawer` (home + `/menu-limits` + header POS cho QL/Owner); Trần bán = nhập số, Cho phép bán thêm = Switch. Chỉ `branch_manager` và `owner` thấy và áp dụng.
+  - **Exception hẹp (manager-like CN):** panel Doanh thu tháng | ngày + tiến độ chỉ tiêu; chấm mốc thưởng, bấm thanh để xem mốc (sau trạng thái ca, trước queue). Cashier/chef/staff không thấy. Hub trung tâm không hiện doanh thu. Không badge chỉ tiêu trên hàng Đơn hàng.
   - `Ca` sở hữu ngày làm việc cá nhân (CN). Chấm công mở từ 60 phút trước giờ bắt đầu ca đã xếp (không nhầm thành chưa phân ca); việc trong ca nhóm **Đầu ca** / **Cuối ca** (ảnh minh chứng bắt buộc khi bật); Kết ca một thao tác trên cùng trang, chờ quản lý duyệt, tự chốt sau 2 giờ nếu quên. `Lịch ca` hiện ca đã xếp trên từng ngày lưới (không danh sách phụ); xin nghỉ gửi ngay trong ngăn ngày đã chọn. Owner không thấy tab này; truy cập trực tiếp route gốc chuyển về `Đội`. Nhân viên: `/shift/schedule` và `/profile` là tab riêng; QL giữ lịch dưới shortcut trong `Ca` + avatar.
   - `Đội` mở hub 2 tab (`Ca hôm nay`, `Nhân viên`). Trên board: panel **Cần duyệt** chỉ Duyệt kết ca / Duyệt nghỉ khi có pending; panel **Quản lý đội** luôn hiện Phân ca / Chấm công. Workflow sâu gắn bottom-nav Đội qua `/team/roster|attendance|checkout-approvals|leave-approvals` (shim `/shift/*` vẫn highlight Đội).
 
@@ -234,9 +234,9 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
   - Kiểm soát chính xác số lượng nguyên liệu tồn kho thực tế, tính toán giá vốn hàng bán (WAC), giảm thiểu hao hụt/thất thoát nguyên liệu và tối ưu hóa chi phí mua hàng.
 - **Mục tiêu Người dùng (Goal):** Nhìn tồn để quyết định đúng việc cần làm, nhập kho nhanh và tạo lệnh sản xuất không sai lệch.
 - **Luồng thao tác (Workflow):**
-  - **Yêu cầu mua:** Kho trung tâm ghi nhu cầu mua ngoài; một yêu cầu có thể
-    tạo nhiều đơn đặt hàng theo NCC.
-  - **Đơn mua hàng:** Kế toán/Owner tạo từ Yêu cầu mua và duyệt. PO không chứa
+  - **Yêu cầu mua:** Tab lịch sử trên `/inventory/purchase-orders?tab=needs`.
+    Không tạo nhu cầu mới; happy path là **Tạo đơn**.
+  - **Đơn mua hàng:** Kho/Owner **Tạo đơn** (một NCC + một kho nhận). PO không chứa
     giá. Mỗi PO thuộc đúng một NCC và tạo GRN theo từng lần giao.
   - **Nhập kho:** `/inventory/grn` là hàng đợi **Chờ nhập hàng**. Mở GRN được
     tạo từ PO, kiểm nhận vật lý, nhập **Đơn giá** net, lưu nháp rồi xác nhận
@@ -244,13 +244,11 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
   - **Sản xuất:** `/inventory/production` là LIST hai tab (Lệnh / Công thức). Tạo lệnh bằng `FormDialog`; mở lệnh bằng `AppDialog variant="document"` (`?runId=&mode=`). Công thức CRUD bằng `FormDialog`; BOM hơn 12 dòng escalate `AppSheet` (`?recipeSpecId=`). Chọn công thức đang dùng và sản lượng (kèm tồn/sản lượng tối đa) -> tạo lệnh snapshot tại Bếp TT; kho xuất/nhập lấy mặc định, không bắt chọn lại “Bếp và vị trí” -> Bắt đầu -> Nhập thực dùng và sản lượng thực tế -> Hoàn thành tại Bếp TT -> Điều chuyển riêng nếu cần giao chi nhánh.
   - **Định mức món bán:** `/inventory/menu-recipes` là LIST mọi `menu_item` đang bán. Hàng = phủ định mức + giá vốn/phần theo WAC Kho gốc (Nguồn hàng), không phải `Giá vốn món` đã ghi sổ. BOM chỉ trong `FormDialog`. Món chưa có định mức phải nhìn thấy khi POS đang trừ kho.
   - **Kiểm kê (Stocktake):** Mở phiên → đếm số đang có (không hiện sổ) → đối soát lệch → hoàn tất để ghi tồn. Nhân viên được giao trong ca dùng **Đếm tồn** (phiếu đếm, không tự sửa tồn).
-  - **Điều chuyển (Transfer):** Chỉ chọn warehouse của site nguồn và đích;
-    không có same-branch Kho↔Bếp. Kho Tổng → Bếp TT / chi nhánh; Bếp TT →
-    chi nhánh hoặc trả về Kho Tổng; chi nhánh ↔ chi nhánh / Bếp TT. Quyền
-    tạo/giao/nhận tiếp tục theo role matrix. Hub Giao nhận hiển thị một YCH
-    thành một dòng với lane Kho Tổng/Bếp TT; DC liên kết không thành dòng độc
-    lập. Bếp TT có CTA `Yêu cầu Kho Tổng` khi đúng site và chỉ chọn nguyên
-    liệu nguồn Kho Tổng.
+  - **Điều chuyển (Transfer):** Một loại phiếu. CN tạo nháp xin hàng (Kho Tổng
+    hoặc Bếp TT → CN) hoặc giao đi (CN → trung tâm / CN khác); chưa trừ tồn.
+    Ship = điểm from; nhận = điểm to. Hub Giao nhận CTA **Tạo điều chuyển**.
+    YCH lịch sử còn đọc (filter YCH); không tạo YCH mới. Bếp TT xin Kho Tổng
+    cũng bằng DC.
   - **Xuất nội bộ (Issue):** Mở phiếu hủy hỏng hoặc xuất khác tại chi nhánh -> thêm từng nguyên liệu với đơn vị, số lượng và lý do -> rà soát phiếu nháp -> xác nhận để ghi giảm tồn hoặc hủy trước khi chốt.
   - **Hao hụt thủ công (Waste):** Chọn đúng vị trí kho của chi nhánh -> thêm từng nguyên liệu trong một dòng chạm riêng -> nhập số lượng không vượt tồn, lý do và ảnh khi được yêu cầu -> xem cảnh báo cap theo ca/ngày -> tạo phiếu để ghi giảm hoặc chờ quản lý duyệt theo tier. WAC, đơn vị và bằng chứng được server kiểm tra lại khi submit.
   - **Hàng NCC bị từ chối:** Ghi trực tiếp trên dòng GRN bằng số lượng từ chối,
@@ -260,22 +258,22 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
   - **Nên hiển thị:** Danh sách nguyên liệu kèm tồn khả dụng, đơn vị tính; Trạng thái các phiếu kho (Nháp / Đang giao / Hoàn thành); Cảnh báo tồn dưới mức an toàn.
   - **KHÔNG hiển thị:** Doanh thu bán hàng chi tiết, thông tin thẻ tín dụng của khách, bảng lương nhân sự.
 - **Quy chuẩn UX/UI:**
-  - CN `/br/[branchId]/stock` (D093): ưu tiên `Tồn kho` → `Yêu cầu hàng` →
+  - CN `/br/[branchId]/stock` (D093): ưu tiên `Tồn kho` → `Điều chuyển` →
     `Tiêu hao`; kiểm kê, hao hụt, giao đếm, danh mục ở nhóm sau. **Không** tile
     Nhập hàng (GRN) hay Sản xuất trên kind `branch` (route redirect). Nhận hàng
-    nội bộ qua DC gắn yêu cầu.
+    nội bộ qua DC.
   - Kho Tổng / Bếp TT `/br/[siteId]/stock`: tile GRN, Giao nhận, Yêu cầu mua,
     Tồn/Kiểm/Hao hụt; Bếp TT thêm Sản xuất. Route GRN/SX chỉ mount khi
     `branch_kind` trung tâm.
-  - Branch `/br/[branchId]/stock/requests` — phiếu yêu cầu hàng (LIST/DOC);
-    Bếp TT dùng cùng route để yêu cầu Kho Tổng.
-  - On-hand CN “Cần bổ sung” CTA → Yêu cầu hàng (không mở GRN).
+  - Branch `/br/[branchId]/stock/requests` — lịch sử YCH (DETAIL đọc);
+    `/requests/new` redirect tạo DC xin hàng.
+  - On-hand CN “Cần bổ sung” CTA → Tạo điều chuyển xin hàng (không mở GRN).
   - Chi tiết phân vai: `docs/ref/inventory.md`.
-  - `/br/[branchId]/stock` là **stock home** CN: 4 cửa hàng hóa (tồn / YCH / Kiểm kê / hao) **trên**, list phiếu fulfillment **dưới**. Không đặt Phân công đếm / Phiếu đếm làm cửa Kho (entry từ Đội). `/stock/transfer` store → redirect `/stock`. Pad nhận `/receive/[id]` tự mở phiên kiểm nhận khi `in_transit` (hiện danh sách đếm ngay, không splash CTA). YCH CN: tiến độ 4 bước (Gửi yêu cầu → Đã duyệt → Giao hàng → Xác nhận); không hiện chuẩn bị Kho Tổng/Bếp TT; chi tiết thao tác chỉ bước 1 và 4.
+  - `/br/[branchId]/stock` là **stock home** CN: 4 cửa hàng hóa (tồn / Điều chuyển / Kiểm kê / hao) **trên**, list phiếu fulfillment **dưới**. Không đặt Phân công đếm / Phiếu đếm làm cửa Kho (entry từ Đội). `/stock/transfer` store → redirect `/stock`. Pad nhận `/receive/[id]` tự mở phiên kiểm nhận khi `in_transit` (hiện danh sách đếm ngay, không splash CTA). Tạo DC tại `/stock/transfer/new` (xin hàng / giao đi). YCH lịch sử còn đọc.
   - `/br/[branchId]/stock/on-hand` là LIST tồn touch-first. Attention theo `branch_kind`. Không Tiêu Hao SX trên primary CN.
   - `/br/[branchId]/stock/on-hand/[ingredientId]` là `DETAIL` touch-native: tồn/trạng thái → vị trí → biến động → ngưỡng; primary CTA kind-aware trên sticky footer; secondary trong `DropdownMenu`; back → on-hand. Không WAC/audit/control_surface chrome. `/stock/receive` chỉ dành cho phiếu chuyển nội bộ.
   - Branch `/br/[branchId]/stock/grn` ưu tiên nháp của người đang nhận hàng, sau đó là hàng đợi GRN có tìm kiếm/lọc trạng thái. Mỗi row chỉ hiển thị mã, NCC, ngày và trạng thái; chạm để tiếp tục/xem phiếu, bỏ nháp là action riêng có xác nhận. Không đưa tổng tiền, tên chi nhánh, `DataTable` hay long-press từ control_surface sang route này.
-  - Branch `/br/[branchId]/stock/grn/new` và `/br/[branchId]/stock/grn/new/[supplierId]` chỉ là redirect tương thích: chi nhánh thường về Yêu cầu hàng; Kho Tổng/Bếp TT về Yêu cầu mua. Không tạo phiếu nhập ngoài PO.
+  - Branch `/br/[branchId]/stock/grn/new` và `/br/[branchId]/stock/grn/new/[supplierId]` chỉ là redirect tương thích: chi nhánh thường về Yêu cầu hàng; Kho Tổng/Bếp TT về **Tạo đơn**. Không tạo phiếu nhập ngoài PO.
   - Branch `/br/[branchId]/stock/grn/[id]` giữ review/receipt native: nháp cho phép kiểm nhận, thêm/sửa dòng trong bottom sheet rồi lưu/chốt; phiếu đã chốt chỉ hiển thị biên nhận và các dòng thực nhận. Không đưa audit, sửa sau chốt, stock correction, hóa đơn NCC, hoặc `GRNDetailClient` control_surface vào Branch.
   - Branch `/br/[branchId]/stock/stocktake` là `LIST` touch-native cho phiên kiểm kê của quản lý chi nhánh: ưu tiên phiên đang thực hiện, sau đó là lịch sử theo trạng thái. Không dùng `DataTable`, long-press drawer, branch picker, audit, hay action control_surface; `/stock/count` vẫn là phiếu đếm được giao riêng cho nhân viên.
   - Branch `/br/[branchId]/stock/stocktake/new` là `DOC-WORKFLOW` touch-native: URL khóa chi nhánh, kho warehouse mặc định, action sticky **Bắt đầu đếm** rồi sang count. Không chọn 5 chế độ daily/weekly/…, không lặp selector đổi chi nhánh hoặc `DocumentFormFrame` control_surface.
@@ -301,23 +299,23 @@ Mỗi hàng = `page.tsx` (shim gộp vào cha). Adapter L0: `AppPage` / `DataTab
 | Lane | Route (archetype · components) | Load → hiển thị → submit | Hiện → mục tiêu |
 | --- | --- | --- | --- |
 | Landing | `/inventory` LANDING · `AppSection` `Item` `AppLinkCard` | Đếm GRN/Đơn giá/Yêu cầu hàng/DC/hao → `Cần xử lý` + lane → chỉ điều hướng | Tách Yêu cầu hàng vs Điều chuyển + **Chờ đơn giá** → ẩn YCM/YCH |
-| Landing | `/br/[branchId]/stock` LANDING · cửa + hub | Tile `branch_kind` + fulfillment → 4 cửa rồi list phiếu → mở phiếu | Cửa YCH → DC hai chiều; ẩn list YCH |
-| Tồn | `/inventory/stock` LIST+D1 · `DataTable` `AppDialog` (`[id]` shim `?ingredientId=`) | `loadStockOnHandPageData` → tồn/Đơn vị chuẩn/ngưỡng; WAC sau nếp → điều chỉnh dialog | Giữ; Nguồn hàng ≠ vị trí tồn |
-| Tồn | `/br/…/stock/on-hand` LIST + `[id]` DETAIL | Tồn site → cảnh báo, không WAC → CTA kind-aware / `AppSheet` | CTA YCH → tạo DC |
+| Landing | `/br/[branchId]/stock` LANDING · cửa + hub | Tile `branch_kind` + fulfillment → 4 cửa rồi list phiếu → mở phiếu | Cửa Điều chuyển hai chiều; YCH lịch sử còn đọc |
+| Tồn | `/inventory/stock` LIST+D1 · `DataTable` `AppDialog` (`[id]` shim `?ingredientId=`) | `loadStockOnHandPageData` → tồn/Đơn vị chuẩn/ngưỡng; WAC sau nếp; Owner **Ghi Giá vốn** theo Đơn vị chuẩn (không Đơn giá GRN) | Giữ; Nguồn hàng ≠ vị trí tồn |
+| Tồn | `/br/…/stock/on-hand` LIST + `[id]` DETAIL | Tồn site → cảnh báo, không WAC → CTA kind-aware / `AppSheet` | CTA tạo DC xin hàng |
 | Catalog | `/inventory/ingredients` LIST · `FormDialog` | `fetchIngredients`+đơn vị → kind, Nguồn hàng, Đơn vị chuẩn, Giá tham chiếu đọc → `save_ingredient_catalog` | Giữ form neo/TP; TP không mua; Nguồn hàng tick Kho Tổng và/hoặc Bếp TT (OD-4) |
 | Catalog | `/inventory/suppliers` + `/[id]/items` LIST | NCC + `supplier_items` → gán NL/NCC ưu tiên → CRUD / gán | Catalog, không giá HĐ |
 | Catalog | `/inventory/menu-recipes` LIST · `FormDialog` | Định mức + WAC công ty → phủ BOM → CRUD dòng | Giữ; không Giá vốn món đã ghi |
 | Catalog | `/inventory/settings/*` SETTINGS (`/` và `/recipes` shim) | units/categories/`min_stock_level` → registry → CRUD | Neo trên form NL |
 | Catalog | `/br/…/stock/catalog*` LANDING/LIST đọc | Cùng loader L0 → tra cứu → không ghi | CRUD Owner L0 |
-| Mua | `/inventory/purchase-orders` LIST+D1 · tabs `AppDialog` ( `/purchase-requests` shim `tab=needs`) | **Tạo đơn** không YCM + tab Yêu cầu mua → `create_purchase_order` / `save_purchase_demand` / duyệt / gửi-đóng PO | Ẩn YCM+Phân bổ sau Wave 4 |
-| Mua | `/br/…/stock/purchase-requests` LIST | Nhu cầu site → YCM → tạo nhu cầu | Ẩn khi PO-only |
-| Nhập | `/inventory/grn` LIST+D1 (`[id]`/`new*` shim) | `loadGrnListPageData` → mã/NCC/trạng thái → SL, từ chối, **Đơn giá**, `grn_confirm` | **Chờ đơn giá**; HĐ không định giá |
+| Mua | `/inventory/purchase-orders` LIST+D1 · tabs `AppDialog` ( `/purchase-requests` shim `tab=needs`; `/new` → `tab=orders&mode=create`) | **Tạo đơn** không YCM; tab Yêu cầu mua lịch sử/đọc → `create_purchase_order` / xem YCM; không CTA tạo nhu cầu | Wave 4 REVOKE `save_purchase_demand*` + ẩn Phân bổ |
+| Mua | `/br/…/stock/purchase-requests` LIST | Lịch sử YCM site; `mode=create` → **Tạo đơn** | Wave 4 freeze ghi |
+| Nhập | `/inventory/grn` LIST+D1 (`[id]`/`new*` shim) | `loadGrnListPageData` mặc định **Chờ nhập hàng** → SL, từ chối, **Đơn giá**, `grn_confirm`; không CTA HĐ cho kho; Owner tab **Chờ đơn giá** | HĐ NCC chỉ Finance |
 | Nhập | `/inventory/supplier-invoices` shim | — | → `/finance/supplier-invoices` AP |
 | Nhập | `/br/…/stock/grn` LIST + `[id]` DETAIL (`new*` shim) | Nháp người nhận → mã/NCC/ngày; kiểm nhận+Đơn giá → lưu/chốt | CN `branch` không tile GRN |
-| Giao nhận | `/inventory/transfers` LIST hub · `DataTable` | `loadStockFulfillmentRows` → filter `work=` → fulfill/ship | Hub YCH+DC → chỉ DC |
-| Giao nhận | `/inventory/transfers/new` DOC · `[id]` DETAIL | Site+NL / phiếu DC → tạo/xem → `stock_transfer_*` | Một loại DC |
-| Giao nhận | `/inventory/stock-requests*` shim/DOC/DETAIL | NL nguồn Kho Tổng → YCH + DC liên kết → `stock_request_*` | Ẩn; DC hai chiều |
-| Giao nhận | `/br/…/stock/transfer*` `/receive*` `/requests*` | Fulfillment / DC `in_transit` / YCH 4 bước → tạo/gửi/nhận | Ẩn YCH; CN tạo DC; nhận trên DC |
+| Giao nhận | `/inventory/transfers` LIST hub · `DataTable` | `loadStockFulfillmentRows` → filter `work=` → ship/nhận DC; YCH lịch sử | CTA **Tạo điều chuyển**; ẩn tạo YCH |
+| Giao nhận | `/inventory/transfers/new` DOC · `[id]` DETAIL | Site+NL / phiếu DC → tạo/xem → `stock_transfer_*` | Một loại DC; xin hàng hoặc giao đi |
+| Giao nhận | `/inventory/stock-requests*` shim/DETAIL | `/new` → DC xin hàng; `[id]` lịch sử YCH | Wave 4 REVOKE ghi YCH |
+| Giao nhận | `/br/…/stock/transfer*` `/receive*` `/requests*` | CN tạo DC; nhận trên DC; `/requests/new` redirect | YCH lịch sử đọc |
 | SX | `/inventory/production` LIST 2 tab (`/new` `[id]` shim) | Runs+recipes → Lệnh/Công thức → tạo/bắt đầu/hoàn thành | TP không PO/GRN |
 | SX | `/br/…/stock/production*` shim | — | CN không SX |
 | Hao | `/inventory/consumption` LIST · `/[id]` DETAIL (`/issues` shim waste) | Ledger+phiếu → nguồn pos/manual → chốt/hủy | Giữ tách tiêu hao vs hao |
@@ -417,7 +415,7 @@ Mỗi hàng = `page.tsx` (shim gộp vào cha). Adapter L0: `AppPage` / `DataTab
 - **Actor:** `owner`.
 - **Job:** Công thức KQKD theo kỳ (hai dòng); khối **Tài sản** gồm quỹ hiện có, rồi Tổng tiền + tồn cuối kỳ + thiết bị (`capital`) = **Tổng giá trị**; Chi phí ban đầu đứng ngoài công thức đó.
 - **Goal:** Doanh thu thuần sau giá vốn món / chi vận hành / biến động tồn; drill báo cáo chuyên biệt khi cần.
-- **Workflow:** Chọn kỳ (`Nay`…`Năm`) → phạm vi (`Tất cả`/`Công ty`/`Toàn bộ CN`/`CN`) → đọc 2 dòng công thức → Tài sản (tiền mặt không theo bộ lọc; Tổng giá trị; chi phí ban đầu). Drill thiết bị → `/finance/equipment`. Ngoại lệ xử lý trên `/` và list Giao dịch / Chi phí / HĐĐT — không hàng đợi trên landing.
+- **Workflow:** Chọn kỳ (`Nay`…`Năm`) → phạm vi (`Tất cả`/`Công ty`/`Toàn bộ CN`/`CN`) → đọc 2 dòng công thức → Tài sản (TM công ty = tổng sổ CN bán hàng + một sổ NH; một CN = sổ TM CN + thu VietQR kỳ, không số dư NH; Tổng giá trị; chi phí ban đầu). Drill thiết bị → `/finance/equipment`. Ngoại lệ xử lý trên `/` và list Giao dịch / Chi phí / HĐĐT — không hàng đợi trên landing.
 - **Ưu tiên data:** Hai dòng KPI kỳ; công thức quỹ; Tổng tiền + Tồn kho + Thiết bị = Tổng giá trị; Chi phí ban đầu ngoài tổng. Tháng/`mtd` + chỉ tiêu → Progress trên Doanh thu thuần; đua CN/pace/editor → `/finance/revenue` · `/finance/targets`. **Không lặp:** bảng tồn chi tiết (Inventory). Thiếu coverage giá vốn → không tính Lợi nhuận gộp/KQKD; chưa chi phí → không KQKD. **Không:** LN sau thuế khi chưa sổ/khóa sổ; nút order/KDS; mosaic GTGT; danh sách cần xử lý trên `/finance`.
 - **UX:** `formatVND`. Desktop: dòng 1 = 3 card, dòng 2 = 4 card (khi có quyền tồn); khối Tài sản = công thức quỹ, công thức Tổng giá trị, rồi Chi phí ban đầu; tablet 2 cột; mobile 1 cột (`KpiCard`/`KpiRow`/`AppSection`). Chart chỉ `chart-1`…`chart-5`.
 

@@ -154,10 +154,10 @@ export const inventory = {
     stockFlowBuyCountDescription:
       "Yêu cầu mua, mở phiên kiểm và xử lý phiếu đếm tại kho trung tâm.",
     stockJobOnHand: "Danh sách tồn thực và cảnh báo cần bổ sung.",
-    stockJobRequests: "Tạo và theo dõi yêu cầu hàng gửi kho trung tâm.",
-    stockJobReceive: "Nhận hàng từ phiếu chuyển nội bộ về chi nhánh.",
+    stockJobRequests: "Tạo phiếu điều chuyển xin hàng hoặc giao đi.",
+    stockJobReceive: "Nhận hàng từ phiếu điều chuyển về chi nhánh.",
     stockJobTransfer:
-      "Yêu cầu hàng, nhận hàng về chi nhánh và chuyển nội bộ — một hàng đợi giao nhận.",
+      "Xin hàng, nhận hàng về chi nhánh và giao đi — một hàng đợi giao nhận.",
     stockJobStocktake: "Mở kiểm kê: đếm số đang có, rồi đối soát lệch.",
     stockJobCountAssignments: "Phân công nhóm nguyên liệu cho nhân viên đếm.",
     stockJobCountSlips: "Duyệt hoặc yêu cầu đếm lại phiếu đã nộp.",
@@ -165,11 +165,11 @@ export const inventory = {
     stockJobConsumption:
       "Xem sổ tiêu hao và phiếu ghi tay cần kiểm tra.",
     stockJobCatalog: "Tra cứu nguyên liệu, đơn vị và danh mục kho.",
-    stockJobPurchaseRequests: "Tạo và theo dõi yêu cầu mua cho kho trung tâm.",
+    stockJobPurchaseRequests: "Xem lịch sử yêu cầu mua của kho trung tâm.",
     branchDoorOnHand: "Kho hàng",
     branchDoorOnHandMeta: "Tồn thực và cảnh báo cần bổ sung",
-    branchDoorRequest: "Yêu cầu hàng",
-    branchDoorRequestMeta: "Xin hàng từ Kho Tổng hoặc Bếp TT",
+    branchDoorRequest: "Điều chuyển",
+    branchDoorRequestMeta: "Xin hàng hoặc giao đi giữa các điểm kho",
     branchDoorStocktake: "Kiểm kê",
     branchDoorStocktakeMeta: "Đếm số đang có, rồi đối soát lệch",
     branchDoorWaste: "Hao hụt",
@@ -416,10 +416,11 @@ export const inventory = {
         "Đã lưu nhưng chưa tải lại được danh sách nguyên liệu.",
       defaultFulfillSiteKindLabel: "Nguồn hàng",
       defaultFulfillSiteKindHint:
-        "Kho nào giao khi chi nhánh xin hàng. Không phải nơi đang chứa tồn, không phải đơn vị đo.",
+        "Tick Kho Tổng và/hoặc Bếp Trung Tâm — nơi chi nhánh xin hàng. Có thể chọn cả hai. Không phải nơi đang chứa tồn, không phải đơn vị đo.",
       defaultFulfillSiteKindNone: "Không gán",
       defaultFulfillSiteKindCentralSupply: "Kho Tổng",
       defaultFulfillSiteKindCentralKitchen: "Bếp Trung Tâm",
+      defaultFulfillSiteKindBoth: "Kho Tổng và Bếp Trung Tâm",
     },
   },
   stockRequests: {
@@ -615,7 +616,8 @@ export const inventory = {
       kpiNeeded: "Cần trước",
       centralHubDescription:
         "Xử lý yêu cầu, giao hàng và kiểm nhận theo từng hàng đợi.",
-      branchHubDescription: "Theo dõi phiếu yêu cầu hàng và xác nhận khi hàng về.",
+      branchHubDescription:
+        "Theo dõi phiếu điều chuyển và xác nhận khi hàng về chi nhánh.",
       hubSearchPlaceholder: "Tìm mã phiếu hoặc điểm vận hành",
       hubWorkKindAria: "Phân loại",
       hubWorkKindPlaceholder: "Phân loại",
@@ -625,13 +627,13 @@ export const inventory = {
       hubStateCompleted: "Hoàn tất",
       hubStateCancelled: "Đã hủy",
       receiveCta: "Kiểm nhận",
-      requestAction: "Yêu cầu hàng",
-      centralSupplyRequestAction: "Yêu cầu Kho Tổng",
+      requestAction: "Tạo điều chuyển",
+      centralSupplyRequestAction: "Tạo điều chuyển",
       centralSupplyRequestDescription: (siteName: string) =>
         `${siteName} bổ sung nguyên liệu phục vụ sản xuất.`,
-      manualTransferAction: "Điều chuyển thủ công",
+      manualTransferAction: "Tạo điều chuyển",
       manualTransferDescription:
-        "Tạo phiếu ngoài luồng yêu cầu hàng khi có nghiệp vụ phát sinh.",
+        "Xin hàng về điểm vận hành hoặc giao đi. Nháp chưa trừ tồn.",
       back: "Quay lại",
       detailTitle: "Yêu cầu hàng",
       submittedAt: (value: string) => `Đã gửi yêu cầu lúc ${value}`,
@@ -676,7 +678,7 @@ export const inventory = {
   purchaseRequests: {
     title: "Nhu cầu mua",
     description:
-      "Kho ghi số lượng cần; hệ thống tự chọn NCC duy nhất, Kế toán chỉ xử lý ngoại lệ.",
+      "Lịch sử nhu cầu mua. Đơn mới tạo bằng Tạo đơn trên Đơn mua.",
     createAction: "Tạo nhu cầu mua",
     createTitle: "Tạo nhu cầu mua",
     createSuccess: "Đã lưu nhu cầu mua.",
@@ -724,7 +726,7 @@ export const inventory = {
     createPoFailed: "Không thể tạo đơn đặt hàng.",
     searchPlaceholder: "Tìm mã nhu cầu, kho hoặc nguyên liệu...",
     emptyTitle: "Chưa có nhu cầu mua",
-    emptyDescription: "Tạo nhu cầu khi kho cần bổ sung nguyên liệu.",
+    emptyDescription: "Đơn mới tạo bằng Tạo đơn. Đây chỉ còn lịch sử.",
     loadFailed: "Không thể tải danh sách nhu cầu mua.",
     notFound: "Nhu cầu mua không còn tồn tại.",
     codeColumn: "Nhu cầu mua",
@@ -1152,7 +1154,7 @@ export const inventory = {
   po: {
     workspaceTitle: "Mua hàng",
     workspaceDescription:
-      "Đơn mua theo từng nhà cung cấp. Phiếu nhập ghi Đơn giá khi nhận hàng.",
+      "Tạo đơn mua theo từng nhà cung cấp. Yêu cầu mua chỉ còn lịch sử.",
     needsTab: "Yêu cầu mua",
     ordersTab: "Đơn mua",
     workspaceTabsAria: "Mua hàng",
@@ -1313,8 +1315,8 @@ export const inventory = {
     },
     actions: {
       receiveGrn: "Yêu cầu hàng",
-      requestStock: "Yêu cầu hàng",
-      requestFromCentralSupply: "Yêu cầu Kho Tổng",
+      requestStock: "Tạo điều chuyển",
+      requestFromCentralSupply: "Tạo điều chuyển",
       openGrn: "Nhập kho",
       openPurchaseRequest: "Yêu cầu mua",
       transfer: "Điều chuyển",
@@ -1327,6 +1329,7 @@ export const inventory = {
       issueStock: "Ghi tiêu hao",
       viewStockCard: "Xem thẻ kho",
       exception: "Ngoại lệ",
+      setCompanyWac: "Ghi Giá vốn",
       edit: "Chỉnh sửa",
       moreStockJobs: "Thêm chức năng kho",
       applyFilters: "Áp dụng",
@@ -1410,6 +1413,19 @@ export const inventory = {
       noLocationStockDescription: "Chưa có tồn ở kho vận hành của chi nhánh.",
       tabValuation: "Giá trị",
       tabMovements: "Biến động",
+      setCompanyWacTitle: "Ghi Giá vốn",
+      setCompanyWacDescription: (name: string, unit: string) =>
+        `Nhập Giá vốn mới của ${name} theo Đơn vị chuẩn (${unit}). Không đổi số lượng tồn. Không sửa Đơn giá phiếu nhập.`,
+      setCompanyWacHint:
+        "Giá vốn theo Đơn vị chuẩn, không theo thùng hay lốc. Giá tham chiếu trên danh mục không phải Giá vốn.",
+      setCompanyWacCurrent: (amount: string, unit: string) =>
+        `Giá vốn hiện tại: ${amount} / ${unit}`,
+      setCompanyWacReasonLabel: "Lý do ghi Giá vốn",
+      setCompanyWacReasonPlaceholder:
+        "Ví dụ: Tồn đầu kỳ còn lại, giá vốn bị về 0.",
+      setCompanyWacSuccess: "Đã ghi Giá vốn.",
+      setCompanyWacFinishedGood:
+        "Thành phẩm dùng Giá vốn mẻ, không ghi Giá vốn mua.",
       movementTitle: "Lịch sử biến động",
       movementHint: (count: number) => `${formatCount(count)}/30 gần nhất`,
       movementColOperation: "Nghiệp vụ",
@@ -1701,12 +1717,16 @@ export const inventory = {
     created: "Tạo chuyển kho {code} thành công",
     approved: "Đã duyệt chuyển kho {code}",
     received: "Đã nhận chuyển kho {code}",
-    createTransferTitle: "Tạo phiếu luân chuyển",
+    createTransferTitle: "Tạo phiếu điều chuyển",
     transferDescription:
       "Điều chuyển hàng giữa các điểm còn giữ tồn sau khi nhận.",
     createUnavailableTitle: "Không thể tạo phiếu điều chuyển",
     createForbidden:
-      "Tài khoản này chỉ được nhận phiếu chuyển về điểm vận hành của mình.",
+      "Tài khoản này không được tạo phiếu điều chuyển tại điểm vận hành này.",
+    directionLabel: "Hướng phiếu",
+    pullAction: "Xin hàng",
+    outboundAction: "Giao đi",
+    pullFromLabel: "Nguồn",
     receivingWarehouseRequired: "Nơi nhận *",
     outboundFromSelected: "Xuất từ chi nhánh được chọn.",
     chooseReceivingWarehouse: "Chọn nơi nhận",
@@ -2037,6 +2057,8 @@ export const inventory = {
       bank_transfer: "Chuyển khoản",
       cash: "Tiền mặt",
     },
+    cashBranchLabel: "Chi nhánh trừ quỹ tiền mặt",
+    cashBranchRequired: "Trả tiền mặt phải chọn chi nhánh bán hàng.",
     referenceNote: "Ghi chú thanh toán",
     referenceNotePlaceholder: "Ví dụ: mã giao dịch ngân hàng",
     vatAttachmentLabel: "Hóa đơn GTGT đính kèm",

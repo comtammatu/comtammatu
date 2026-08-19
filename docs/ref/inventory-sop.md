@@ -7,13 +7,14 @@
 
 - Site active: `branch`, `central_supply`, `central_kitchen`. Mỗi site một
   warehouse active (default receive/issue/consumption).
-- **Mua NCC:** chỉ Kho Tổng / Bếp TT — Tạo đơn hoặc Yêu cầu mua → PO theo NCC → GRN theo
-  lần giao.
-- **Bổ sung CN:** phiếu **Yêu cầu hàng** → fulfill trung tâm → DC → CN nhận.
-  Nguồn dòng = Owner gán Nguồn hàng trên catalog (Kho Tổng, Bếp TT, hoặc cả
-  hai — OD-4). Production hôm nay copy một `default_fulfill_site_kind`;
-  checklist sẵn sàng tại `/inventory/ingredients`. «Thiếu» = chưa tick kho nào,
-  không phải hết tồn.
+- **Mua NCC:** chỉ Kho Tổng / Bếp TT — **Tạo đơn** → PO theo NCC → GRN theo
+  lần giao. Yêu cầu mua chỉ còn lịch sử.
+- **Bổ sung CN:** phiếu **Điều chuyển** xin hàng (QL CN tạo nháp, chưa trừ tồn)
+  → Kho Tổng / Bếp TT ship từ điểm nguồn → CN nhận. Nguồn dòng = Owner tick
+  Nguồn hàng trên catalog (Kho Tổng, Bếp TT, hoặc cả hai — OD-4). Prefill
+  `from` = Kho Tổng khi cả hai còn tồn; Bếp TT khi Kho Tổng = 0 và Bếp còn
+  tồn. Lịch sử Yêu cầu hàng vẫn đọc được. Checklist sẵn sàng tại
+  `/inventory/ingredients`. «Thiếu» = chưa tick kho nào, không phải hết tồn.
 - Kho trên GRN nháp ghi SL / đơn vị / **Đơn giá** net (chưa VAT) / từ chối
   (+ lý do/ảnh). PO không chứa giá thương mại.
 - Chi nhánh **không** GRN UI, **không** production, **không** PO/giá mua chuỗi.
@@ -23,8 +24,8 @@
 
 ### 2a. Happy path — Kho Tổng / Bếp TT
 
-1. Kho **Tạo đơn** (một NCC + kho nhận) trên tab Đơn mua, hoặc còn tạo **Yêu cầu mua**.
-2. Gửi đơn (`approved`). PO không nhập giá. Tab Yêu cầu mua / Phân bổ còn dùng.
+1. Kho **Tạo đơn** (một NCC + kho nhận) trên Đơn mua. Yêu cầu mua chỉ còn lịch sử.
+2. Gửi đơn (`approved`). PO không nhập giá. Phân bổ YCM không còn happy path.
 3. Khi PO chuyển `sent` (hoặc `approved` / `partially_received`), hệ thống **tự
    tạo** đúng một GRN nháp **Chờ nhập hàng** (Auto-GRN). Một PO chỉ có một GRN
    nháp hoạt động tại một thời điểm. Nút «Tạo phiếu nhập» trên PO chỉ là recovery
@@ -47,25 +48,26 @@ không dòng đơn mua giá 0.
 
 ### 2b. Chi nhánh — không GRN
 
-CN không nhận NCC trực tiếp. Dùng §3 Yêu cầu hàng.
+CN không nhận NCC trực tiếp. Dùng §3 Điều chuyển xin hàng.
 
 ## 2c. Chọn đơn vị nguyên liệu
 
 Contract: [inventory.md](inventory.md) §2.1 — Đơn vị chuẩn và các đơn vị quy đổi.
 
-## 3. Yêu cầu hàng chi nhánh → điều chuyển
+## 3. Điều chuyển chi nhánh (xin hàng và giao đi)
 
-1. QL CN tạo phiếu yêu cầu (draft) trên `/br/.../stock/requests`.
-2. Thêm dòng nguyên liệu: hệ thống copy `default_fulfill_site_kind`; thiếu
+1. QL CN tạo phiếu **Điều chuyển** nháp trên `/br/.../stock/transfer/new`
+   (`Xin hàng` hoặc `Giao đi`). Không trừ tồn lúc tạo.
+2. Xin hàng: chọn Nguồn (Kho Tổng / Bếp TT). Catalog tick Nguồn hàng; thiếu
    mapping → không thêm được («Thiếu Nguồn hàng» = chưa tick kho nào).
-   Production hôm nay một nguồn/dòng. Mục tiêu OD-4: tick Kho Tổng, Bếp TT,
-   hoặc cả hai; phiếu điền sẵn Kho Tổng khi cả hai còn tồn, Bếp TT khi Kho
-   Tổng không phải nguồn hoặc hết tồn (vẫn đổi được trên phiếu).
-3. Submit. Kho Tổng / Bếp TT thấy inbox dòng thuộc nguồn mình trên
-   `/inventory/transfers`.
-4. Bên nguồn fulfill → tạo DC → ship. Có thể 1 hoặc 2 DC / phiếu.
-5. QL CN nhận DC trên hub `/br/.../stock` (filter cần nhận hoặc bước Xác nhận
-   của YCH); tồn CN tăng theo cost snapshot nguồn.
+   Prefill Kho Tổng khi cả hai còn tồn; Bếp TT khi Kho Tổng hết tồn mà Bếp
+   còn (đổi được trên phiếu).
+3. Giao đi: chọn nơi nhận (Kho Tổng, Bếp TT, hoặc chi nhánh khác); số lượng
+   không vượt tồn nguồn.
+4. Điểm **from** ship (`stock_transfer_confirm_ship`) — QL CN chỉ ship phiếu
+   xuất từ CN mình. Điểm **to** nhận.
+5. Lịch sử YCH còn đọc tại `/br/.../stock/requests/[id]` và filter YCH trên
+   hub. Không tạo YCH mới (`/requests/new` chuyển sang tạo DC).
 
 ## 4. Sản xuất và tiêu hao
 
@@ -78,7 +80,7 @@ Contract: [inventory.md](inventory.md) §2.1 — Đơn vị chuẩn và các đ�
 - Thành phẩm hoàn thành nằm tại Bếp TT. Giao về chi nhánh từ lệnh sản xuất bằng
   CTA **Giao chi nhánh** → `/inventory/transfers/new` (cùng form Điều chuyển
   thủ công trên hub Giao nhận). Sau khi xuất kho, inbound hiện trên hub nhận
-  của CN (cùng chỗ với YCH cần nhận) — CN không quản lý lifecycle DC xuất. Trả
+  của CN — CN không quản lý lifecycle DC xuất từ trung tâm. Trả
   nguyên liệu thừa / tồn dư về Kho Tổng cũng dùng Điều chuyển (Bếp TT → Kho Tổng).
 - Tiêu hao / hao hụt theo contract hiện hành tại site được cấp.
 

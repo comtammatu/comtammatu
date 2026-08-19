@@ -23,6 +23,8 @@ export interface TransferIngredientOption {
   is_active: boolean;
   itemKind: string | null;
   units?: IngredientUnitRow[];
+  fulfillFromCentralSupply?: boolean;
+  fulfillFromCentralKitchen?: boolean;
 }
 
 export interface TransferDraftLine {
@@ -55,7 +57,9 @@ export interface TransferCreatePolicy {
   currentBranchKind: string | null;
   outboundSourceBranchId: number | null;
   canCreateOutbound: boolean;
+  canCreatePull: boolean;
   outboundDestinationOptions: TransferTargetOption[];
+  pullSourceOptions: TransferTargetOption[];
 }
 
 export type TransferLinesPayloadResult =
@@ -144,6 +148,22 @@ export function getTransferSourceLocationOptions({
   return locations.filter((location) => location.kind === "warehouse");
 }
 
+export function ingredientMatchesPullFromSite(
+  ingredient: TransferIngredientOption,
+  fromKind: string | null,
+): boolean {
+  if (fromKind === "central_supply") {
+    return ingredient.fulfillFromCentralSupply === true;
+  }
+  if (fromKind === "central_kitchen") {
+    return ingredient.fulfillFromCentralKitchen === true;
+  }
+  return (
+    ingredient.fulfillFromCentralSupply === true ||
+    ingredient.fulfillFromCentralKitchen === true
+  );
+}
+
 export function getTransferSelectableIngredients({
   ingredients,
   sourceBranchKind,
@@ -208,16 +228,45 @@ export function getTransferOutboundDestinationOptions({
       ];
     }
 
-    if (sourceBranchKind === "branch" && branchKind === "central_kitchen") {
-      return [
-        {
-          value: transferTargetValue(branch.id, "warehouse"),
-          branch,
-          kind: "warehouse" as const,
-        },
-      ];
+    if (sourceBranchKind === "branch") {
+      if (
+        branchKind === "central_kitchen" ||
+        branchKind === "central_supply" ||
+        branchKind === "branch"
+      ) {
+        return [
+          {
+            value: transferTargetValue(branch.id, "warehouse"),
+            branch,
+            kind: "warehouse" as const,
+          },
+        ];
+      }
+      return [];
     }
-    if (branchKind !== "branch") return [];
+    return [
+      {
+        value: transferTargetValue(branch.id, "warehouse"),
+        branch,
+        kind: "warehouse" as const,
+      },
+    ];
+  });
+}
+
+export function getTransferPullSourceOptions({
+  branches,
+  destBranchId,
+}: {
+  branches: BranchForTransfer[];
+  destBranchId: number | null;
+}): TransferTargetOption[] {
+  if (destBranchId == null) return [];
+  return branches.flatMap((branch) => {
+    if (!branch.is_active) return [];
+    if (branch.id === destBranchId) return [];
+    const kind = branch.branch_kind;
+    if (kind !== "central_supply" && kind !== "central_kitchen") return [];
     return [
       {
         value: transferTargetValue(branch.id, "warehouse"),
@@ -243,6 +292,9 @@ export function resolveTransferCreatePolicy({
   const outboundSourceBranchId = userBranchId;
   const canCreateOutbound =
     outboundSourceBranchId != null && isTransferSourceKind(currentBranchKind);
+  const canCreatePull =
+    outboundSourceBranchId != null &&
+    (currentBranchKind === "branch" || currentBranchKind === "central_kitchen");
   const outboundDestinationOptions = canCreateOutbound
     ? getTransferOutboundDestinationOptions({
         branches,
@@ -251,13 +303,21 @@ export function resolveTransferCreatePolicy({
         sourceLocationKind: "warehouse",
       })
     : [];
+  const pullSourceOptions = canCreatePull
+    ? getTransferPullSourceOptions({
+        branches,
+        destBranchId: outboundSourceBranchId,
+      })
+    : [];
 
   return {
     currentBranch,
     currentBranchKind,
     outboundSourceBranchId,
     canCreateOutbound,
+    canCreatePull,
     outboundDestinationOptions,
+    pullSourceOptions,
   };
 }
 
@@ -336,11 +396,13 @@ export function buildTransferLinesPayload({
   ingredients,
   sourceStockByLocation,
   sourceLocationId,
+  skipSourceStockCheck = false,
 }: {
   lines: TransferDraftLine[];
   ingredients: TransferIngredientOption[];
   sourceStockByLocation: Record<number, Record<number, number>>;
   sourceLocationId: number | null;
+  skipSourceStockCheck?: boolean;
 }): TransferLinesPayloadResult {
   if (lines.length === 0) {
     return { success: false, error: "empty_lines" };
@@ -366,13 +428,16 @@ export function buildTransferLinesPayload({
     }
     const issueUnit = getTransferLineIssueUnit(line, ingredients);
     if (!issueUnit) return { success: false, error: "invalid_line" };
-    const maxEntryQuantity = getTransferLineMaxEntryQuantity({
-      line,
-      ingredients,
-      sourceStockByLocation,
-      sourceLocationId,
-    });
+    const maxEntryQuantity = skipSourceStockCheck
+      ? Number.POSITIVE_INFINITY
+      : getTransferLineMaxEntryQuantity({
+          line,
+          ingredients,
+          sourceStockByLocation,
+          sourceLocationId,
+        });
     if (
+      !skipSourceStockCheck &&
       getIssueBaseQuantity(quantity, issueUnit) >
       getIssueBaseQuantity(maxEntryQuantity, issueUnit) + 1e-9
     ) {

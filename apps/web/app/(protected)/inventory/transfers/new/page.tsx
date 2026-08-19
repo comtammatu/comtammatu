@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppPageHeader, DocumentFormFrame } from "@/components/surface";
 import { loadTransferCreatePageData } from "@lib/inventory/transfer-create-data";
+import { parseTransferCreateDirection } from "@lib/inventory/transfer-paths";
 import { messages } from "@lib/messages";
 import { CreateTransferForm } from "../create-transfer-dialog";
 
@@ -10,7 +11,10 @@ const copy = messages.inventory.stockRequests.journey;
 export default async function NewTransferPage({
   searchParams,
 }: {
-  searchParams: Promise<{ branch?: string | string[] }>;
+  searchParams: Promise<{
+    branch?: string | string[];
+    direction?: string | string[];
+  }>;
 }) {
   const params = await searchParams;
   const data = await loadTransferCreatePageData({
@@ -34,7 +38,10 @@ export default async function NewTransferPage({
         />
       }
     >
-      <CreateTransferForm {...data} />
+      <CreateTransferForm
+        {...data}
+        initialDirection={parseTransferCreateDirection(params.direction)}
+      />
     </DocumentFormFrame>
   );
 }

@@ -7,8 +7,12 @@
 > discussion log. Wave 1 not Production-applied is a **status fact**, not
 > a license to code from the essay.
 
-**Status:** Wave 1 is in the repository and is **not** Production-applied.
-That does not make this file implementation SSOT.
+**Status:** Wave 1 is in the repository (Owner complete 2026-08-20) and is
+**not** Production-applied. Wave 2 (hide YCM create + GRN chrome) is in the
+repository; no new SQL. Wave 3 (dest-initiated DC, hide YCH create, OD-4
+flags) is in the repository and is **not** Production-applied
+(`supabase/migrations/20260820030125_dest_dc_and_fulfill_sites.sql`). That
+does not make this file implementation SSOT.
 
 **Review tier:** T2 for UI, nav, copy, and screen-map chrome. T3 for RPCs,
 ACL templates, migrations, valuation restatement, and any Production apply —
@@ -334,7 +338,7 @@ the 4 SKUs matches remaining book / qty (rounding-only site spread);
 `stock_movements` qty totals unchanged; no new GRN numbers; invoice
 `invoice_reprice` still absent.
 
-**Do not mix with.** ISS-06 Owner overwrite of `Giá tham chiếu`. ISS-11
+**Do not mix with.** ISS-06 Owner overwrite of `Giá vốn` (company WAC). ISS-11
 DROP. Re-opening ADR 0041 invoice reprice. Generic
 `repair_company_wac_valuation` as a substitute for typing `Đơn giá`.
 
@@ -398,6 +402,13 @@ company WAC unchanged.
 
 **Do not mix with.** ISS-05 historical GRN zeros. Overlay “make the number
 match” by writing the catalog field. FIFO. Rewriting ADR 0040 formulas.
+
+**Repo status (2026-08-20).** RPC `owner_set_company_wac`, Owner stock-overlay
+dialog labeled `Ghi Giá vốn` (quoted per base unit), and proof tests are in
+the repository. **Not applied to Production.** `corepack pnpm db:types`
+waits until apply. Distinct from ISS-05
+`owner_patch_confirmed_grn_unit_cost` (confirmed GRN book unit cost).
+Catalog `Giá tham chiếu` stays a non-book hint.
 
 ---
 
@@ -826,9 +837,9 @@ Hard gates, not optional follow-ups:
 | --- | --- | --- | --- |
 | **0 Docs** | `inventory.md` / SOP / §2.5A / glossary to the target loop | Owner Accept of ISS-01; OD-3/4/5 copy locked 2026-08-19 (`Nguồn hàng` = both sites allowed) | Pointer-only edits |
 | **ISS-05 repair** | Patch 17 `Đơn giá` (same-NCC last priced GRN, or Owner-typed if none) + restatement qty 0; then `kiểm kê` **every warehouse** | OD-1, OD-2 locked 2026-08-19; prefer ISS-04 | Independent of YCM hide |
-| **1 PO without YCM** | RPC `create_purchase_order` + `PO_CREATE_ROLES` + orders-tab `"Tạo đơn"` + Auto-GRN; OD-5 warn-on-add / block-on-send. **Repo shipped; Production apply waits Owner «apply Production».** | Wave 0 copy for PO; ISS-08/09/10; OD-5 locked 2026-08-19. | ISS-05 |
-| **2 GRN chrome** | LIST `Chờ nhập hàng`; strip invoice CTA / YCM filters; `Chờ đơn giá` for drafts | Wave 1 recovery path exists | ISS-05 overlay copy |
-| **3 Dest DC / retire YCH UI** | BM `inventory:transfer_create`; prefill ISS-07 (both sites allowed; `central_supply` first when both stocked); hub door; close 2 YCH without convert | OD-4 locked 2026-08-19 (both sites + `Kho Tổng`-first prefill); in-transit DCs complete in old path | After Wave 1 |
+| **1 PO without YCM** | RPC `create_purchase_order` + `PO_CREATE_ROLES` + orders-tab `"Tạo đơn"` + Auto-GRN; OD-5 warn-on-add / block-on-send. **Repo shipped; Owner complete 2026-08-20. Production apply waits Owner «apply Production».** | Wave 0 copy for PO; ISS-08/09/10; OD-5 locked 2026-08-19. | ISS-05 |
+| **2 GRN chrome + hide YCM create** | Hide **`Tạo yêu cầu mua`**; needs tab history/read; `/purchase-requests/new` → **`Tạo đơn`**; LIST default `Chờ nhập hàng`; strip warehouse invoice CTA / YCM filters; Owner **`Chờ đơn giá`** stays. `save_purchase_demand*` still executable (Wave 4 freeze). **Repo done (Owner continue 2026-08-20).** No SQL. Production hide waits Wave 1 apply. | Wave 1 RPC in repo (Owner 2026-08-20). | ISS-05 overlay copy |
+| **3 Dest DC / retire YCH UI** | BM `inventory:transfer_create` + `transfer_ship`; OD-4 both-site flags; hub door to dest-initiated DC; `/requests/new` redirects to DC create. **Repo shipped 2026-08-20. Production apply waits Owner «apply Production».** `save_stock_request*` still executable (Wave 4 freeze). | OD-4 locked 2026-08-19 (both sites + `Kho Tổng`-first prefill); in-transit DCs complete in old path | After Wave 1 |
 | **4 Freeze writes** | REVOKE YCM/YCH writes; strip ACL; redirects; expire request notifications | Wave 1 **and** Wave 3 live; hygiene close leftover vouchers | — |
 | **5 Soak then DROP** | DROP FKs → tables → frozen functions → `YC`/`YCM` prefixes | Soak evidence; re-count | ISS-13 mirrors **not** in this DROP |
 

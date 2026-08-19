@@ -72,20 +72,25 @@ function makeLine(patch: Partial<TransferDraftLine> = {}): TransferDraftLine {
   };
 }
 
-test("branch warehouse outbound destinations include Central Kitchen and active branches", () => {
+test("branch warehouse outbound destinations include Kho Tổng, Central Kitchen and active branches", () => {
   const policy = resolveTransferCreatePolicy({
     branches,
     userBranchId: 10,
   });
 
   assert.equal(policy.canCreateOutbound, true);
+  assert.equal(policy.canCreatePull, true);
   assert.deepEqual(
     policy.outboundDestinationOptions.map((option) => option.value),
-    ["30:warehouse", "40:warehouse"],
+    ["20:warehouse", "30:warehouse", "40:warehouse"],
+  );
+  assert.deepEqual(
+    policy.pullSourceOptions.map((option) => option.value),
+    ["20:warehouse", "30:warehouse"],
   );
 });
 
-test("branch source has no same-branch kitchen destination after D091", () => {
+test("branch source can send to Kho Tổng after dest-initiated DC", () => {
   assert.deepEqual(
     getTransferOutboundDestinationOptions({
       branches,
@@ -93,7 +98,7 @@ test("branch source has no same-branch kitchen destination after D091", () => {
       sourceBranchKind: "branch",
       sourceLocationKind: "warehouse",
     }).map((option) => option.value),
-    ["30:warehouse", "40:warehouse"],
+    ["20:warehouse", "30:warehouse", "40:warehouse"],
   );
 });
 
@@ -175,6 +180,22 @@ test("target parser rejects malformed route values", () => {
   assert.equal(parseTransferTargetValue("0:warehouse"), null);
   assert.equal(parseTransferTargetValue("40:office"), null);
   assert.equal(parseTransferTargetValue("branch:kitchen"), null);
+});
+
+test("dest-initiated pull payload skips source stock at draft", () => {
+  assert.deepEqual(
+    buildTransferLinesPayload({
+      lines: [makeLine({ quantity: "99" })],
+      ingredients: [ingredient],
+      sourceStockByLocation: { 200: { 100: 0 } },
+      sourceLocationId: 200,
+      skipSourceStockCheck: true,
+    }),
+    {
+      success: true,
+      lines: [{ ingredientId: 100, quantity: 99, entryUnitId: 2 }],
+    },
+  );
 });
 
 test("line payload converts entry units against the selected source location stock", () => {

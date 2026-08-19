@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  canShowGrnInvoiceChrome,
   filterGrnDraftRows,
   filterGrnListRows,
   grnDraftHref,
@@ -26,6 +27,14 @@ const rows = [
     qcIssueCount: 1,
   },
 ];
+
+test("GRN invoice chrome is hidden for warehouse roles", () => {
+  assert.equal(canShowGrnInvoiceChrome("central_supply_ops"), false);
+  assert.equal(canShowGrnInvoiceChrome("central_kitchen_lead"), false);
+  assert.equal(canShowGrnInvoiceChrome("owner"), true);
+  assert.equal(canShowGrnInvoiceChrome("accountant"), true);
+  assert.equal(canShowGrnInvoiceChrome(null), false);
+});
 
 test("GRN list filters combine status with document, supplier, and PO search", () => {
   assert.deepEqual(

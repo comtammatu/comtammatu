@@ -70,7 +70,7 @@ test("ingredient catalog updates preserve shelf life required by the RPC", () =>
   assert.match(ingredientActionSource, /p_shelf_life_days:\s*shelfLifeDays/);
   assert.match(
     ingredientActionSource,
-    /\.select\("shelf_life_days, default_fulfill_site_kind"\)[\s\S]*\.eq\("tenant_id", claims\.tenant_id\)[\s\S]*rpcCatalogArgs\([\s\S]*existing\.shelf_life_days/,
+    /\.select\(\s*"shelf_life_days, default_fulfill_site_kind, fulfill_from_central_supply, fulfill_from_central_kitchen"\s*,?\s*\)[\s\S]*\.eq\("tenant_id", claims\.tenant_id\)[\s\S]*rpcCatalogArgs\([\s\S]*existing\.shelf_life_days/,
   );
 });
 

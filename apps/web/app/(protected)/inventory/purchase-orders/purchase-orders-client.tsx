@@ -422,14 +422,7 @@ export function PurchaseOrdersClient({
       key: "code",
       header: copy.codeColumn,
       render: (row) => (
-        <div className="flex flex-col">
-          <span className="font-mono font-medium">{row.code}</span>
-          {row.groupCode ? (
-            <span className="text-xs text-muted-foreground">
-              {row.groupCode}
-            </span>
-          ) : null}
-        </div>
+        <span className="font-mono font-medium">{row.code}</span>
       ),
     },
     {
@@ -679,9 +672,6 @@ export function PurchaseOrdersClient({
               <span className="text-muted-foreground">
                 {" "}
                 · {selectedRow.branchName}
-                {selectedRow.groupCode
-                  ? ` · ${copy.groupCode} ${selectedRow.groupCode}`
-                  : ""}
               </span>
             </span>
           ) : undefined

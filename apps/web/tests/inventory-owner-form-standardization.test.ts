@@ -37,7 +37,7 @@ test("Owner surface Inventory entry surfaces use the shared field contract", () 
   );
   const transferDialog = readWorkspaceFile(
     "app/(protected)/inventory/transfers/create-transfer-dialog.tsx",
-  );
+  ) + readWorkspaceFile("lib/inventory/transfer-create-route-fields.tsx");
 
   assert.match(productionRecipe, /<ComboboxField/);
   assert.match(newStocktake, /controlId="stocktake-branch"/);

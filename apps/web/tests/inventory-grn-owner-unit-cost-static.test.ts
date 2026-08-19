@@ -10,6 +10,9 @@ test("ISS-05 owner patch RPC is owner-only append-only GRN price repair", () => 
   const sql = read(
     "supabase/migrations/20260819173021_owner_patch_confirmed_grn_unit_cost.sql",
   );
+  const booked = read(
+    "supabase/migrations/20260820014701_owner_patch_confirmed_grn_booked_value.sql",
+  );
 
   assert.match(sql, /auth_is_owner/);
   assert.match(sql, /owner_patch_confirmed_grn_unit_cost/);
@@ -28,6 +31,9 @@ test("ISS-05 owner patch RPC is owner-only append-only GRN price repair", () => 
   assert.doesNotMatch(sql, /UPDATE public\.stock_levels/);
   assert.doesNotMatch(sql, /yield_factor/);
   assert.doesNotMatch(sql, /create_purchase_order\s*\(/);
+  assert.match(booked, /coalesce\(v_origin\.finalized_value, 0\) > 0/);
+  assert.match(booked, /private\.ingredient_company_wac/);
+  assert.match(booked, /IF v_delta <> 0 THEN/);
 });
 
 test("ISS-05 SQL proof covers same-NCC suggestion, empty, book total, qty 0, and rejects", () => {
@@ -46,6 +52,9 @@ test("ISS-05 SQL proof covers same-NCC suggestion, empty, book total, qty 0, and
   assert.match(proof, /wrong unit must be rejected/);
   assert.match(proof, /non-owner must be rejected/);
   assert.match(proof, /provisional_reprice with quantity_delta 0/);
+  assert.match(proof, /partial booked origin must be value_delta 0/);
+  assert.match(proof, /matching booked value must not insert restatement/);
+  assert.match(proof, /matching booked value must not change origin book/);
 });
 
 test("ISS-05 Server Action is owner-only Zod wrap of the patch RPC", () => {
@@ -62,6 +71,10 @@ test("ISS-05 Server Action is owner-only Zod wrap of the patch RPC", () => {
   assert.match(patchBlock, /z\.string\(\)\.trim\(\)\.min\(10\)/);
   assert.match(patchBlock, /owner_patch_confirmed_grn_unit_cost" as never/);
   assert.match(patchBlock, /grnOwnerUnitCostRpcMappings/);
+  assert.match(
+    read("apps/web/lib/messages/inventory-rpc-errors.ts"),
+    /inventory_origin_balances_book_value_check/,
+  );
   assert.doesNotMatch(patchBlock, /confirm_goods_receipt_note/);
 });
 

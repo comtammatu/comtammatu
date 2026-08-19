@@ -39,6 +39,14 @@ DECLARE
   v_rejected boolean;
   v_suffix text := pg_catalog.substr(pg_catalog.gen_random_uuid()::text, 1, 8);
   v_key uuid := pg_catalog.gen_random_uuid();
+  v_partial_po bigint;
+  v_partial_po_line bigint;
+  v_partial_grn bigint;
+  v_partial_line bigint;
+  v_partial_key uuid := pg_catalog.gen_random_uuid();
+  v_origin_id bigint;
+  v_book_before numeric;
+  v_book_after numeric;
 BEGIN
   SELECT pg_catalog.pg_get_functiondef(procedure.oid)
   INTO v_definition
@@ -50,6 +58,8 @@ BEGIN
      OR v_definition !~ 'quantity_delta'
      OR v_definition !~ 'private.grn_line_book_total'
      OR v_definition !~ 'private.project_company_wac'
+     OR v_definition !~ 'private.ingredient_company_wac'
+     OR v_definition !~ 'coalesce\\(v_origin.finalized_value, 0\\) > 0'
      OR v_definition !~ 'private.propagate_inventory_origin_reprice'
      OR v_definition ~ 'confirm_goods_receipt_note'
      OR v_definition ~ 'UPDATE public.stock_movements'
@@ -570,6 +580,161 @@ BEGIN
      OR v_event.event_type IS DISTINCT FROM 'provisional_reprice' THEN
     RAISE EXCEPTION
       'ISS-05: restatement must be provisional_reprice with quantity_delta 0';
+  END IF;
+
+  INSERT INTO public.purchase_orders (
+    tenant_id, branch_id, supplier_id, po_number, status, created_by
+  ) VALUES (
+    v_tenant, v_branch, v_supplier,
+    '__ISS05-PO-PV-' || v_suffix, 'draft', v_owner
+  ) RETURNING id INTO v_partial_po;
+
+  INSERT INTO public.purchase_order_items (
+    tenant_id, po_id, ingredient_id, quantity, entry_unit_id
+  ) VALUES (
+    v_tenant, v_partial_po, v_ingredient, 20, v_pack_unit
+  ) RETURNING id INTO v_partial_po_line;
+
+  UPDATE public.purchase_orders SET status = 'sent' WHERE id = v_partial_po;
+
+  SELECT grn.id INTO STRICT v_partial_grn
+  FROM public.goods_received_notes AS grn
+  WHERE grn.tenant_id = v_tenant
+    AND grn.po_id = v_partial_po
+    AND grn.status = 'draft';
+
+  SELECT item.id INTO STRICT v_partial_line
+  FROM public.grn_items AS item
+  WHERE item.tenant_id = v_tenant
+    AND item.grn_id = v_partial_grn
+    AND item.purchase_order_item_id = v_partial_po_line;
+
+  PERFORM public.save_goods_receipt_note(
+    v_partial_grn,
+    pg_catalog.now(),
+    NULL,
+    pg_catalog.jsonb_build_array(pg_catalog.jsonb_build_object(
+      'line_id', v_partial_line,
+      'received_quantity', 246,
+      'rejected_quantity', 0,
+      'rejection_reason', NULL,
+      'rejected_photo_url', NULL,
+      'entry_unit_id', v_base_unit,
+      'unit_cost', 0,
+      'unit_cost_unit_id', v_base_unit
+    ))
+  );
+
+  UPDATE public.goods_received_notes
+  SET status = 'confirmed',
+      received_date = pg_catalog.now(),
+      received_by = v_owner,
+      location_id = coalesce(location_id, v_location)
+  WHERE id = v_partial_grn
+    AND tenant_id = v_tenant;
+
+  INSERT INTO public.stock_movements (
+    tenant_id,
+    branch_id,
+    ingredient_id,
+    type,
+    quantity_change,
+    reason,
+    created_by,
+    grn_id,
+    grn_item_id,
+    unit_cost,
+    location_id,
+    entry_unit_id,
+    entry_quantity
+  )
+  VALUES (
+    v_tenant,
+    v_branch,
+    v_ingredient,
+    'grn_receipt',
+    246,
+    'ISS-05 partial GRN ' || v_suffix,
+    v_owner,
+    v_partial_grn,
+    v_partial_line,
+    0,
+    v_location,
+    v_base_unit,
+    246
+  );
+
+  SELECT origin.id
+  INTO STRICT v_origin_id
+  FROM public.inventory_cost_origins AS origin
+  WHERE origin.tenant_id = v_tenant
+    AND origin.ingredient_id = v_ingredient
+    AND origin.source_kind = 'grn_receipt'
+    AND (
+      origin.grn_item_id = v_partial_line
+      OR (
+        origin.grn_item_id IS NULL
+        AND origin.source_id IN (
+          SELECT movement.id
+          FROM public.stock_movements AS movement
+          WHERE movement.tenant_id = v_tenant
+            AND movement.grn_id = v_partial_grn
+            AND movement.ingredient_id = v_ingredient
+            AND movement.type = 'grn_receipt'
+        )
+      )
+    );
+
+  UPDATE public.inventory_cost_origins
+  SET cost_status = 'partial',
+      provisional_value = 0,
+      finalized_value = 246000
+  WHERE id = v_origin_id
+    AND tenant_id = v_tenant;
+
+  UPDATE public.inventory_origin_balances
+  SET book_value = 246000
+  WHERE tenant_id = v_tenant
+    AND origin_id = v_origin_id
+    AND holder_kind = 'stock_pool'
+    AND quantity > 0;
+
+  SELECT coalesce(pg_catalog.sum(balance.book_value), 0)
+  INTO v_book_before
+  FROM public.inventory_origin_balances AS balance
+  WHERE balance.tenant_id = v_tenant
+    AND balance.origin_id = v_origin_id;
+
+  v_result := public.owner_patch_confirmed_grn_unit_cost(
+    v_partial_line,
+    24000,
+    v_pack_unit,
+    'Chuỗi kiểm thử ISS-05 đơn giá trùng HĐ NCC đã ghi.',
+    v_partial_key
+  );
+
+  IF (v_result ->> 'value_delta')::numeric IS DISTINCT FROM 0 THEN
+    RAISE EXCEPTION
+      'ISS-05: partial booked origin must be value_delta 0, got %',
+      v_result ->> 'value_delta';
+  END IF;
+  IF v_result ->> 'event_id' IS NOT NULL THEN
+    RAISE EXCEPTION
+      'ISS-05: matching booked value must not insert restatement';
+  END IF;
+  IF (v_result ->> 'book_total')::numeric IS DISTINCT FROM 246000 THEN
+    RAISE EXCEPTION
+      'ISS-05: partial document book total expected 246000, got %',
+      v_result ->> 'book_total';
+  END IF;
+
+  SELECT coalesce(pg_catalog.sum(balance.book_value), 0)
+  INTO v_book_after
+  FROM public.inventory_origin_balances AS balance
+  WHERE balance.tenant_id = v_tenant
+    AND balance.origin_id = v_origin_id;
+  IF v_book_after IS DISTINCT FROM v_book_before THEN
+    RAISE EXCEPTION 'ISS-05: matching booked value must not change origin book';
   END IF;
 END;
 $$;

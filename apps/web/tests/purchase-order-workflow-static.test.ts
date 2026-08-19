@@ -123,20 +123,18 @@ test("warehouse cannot submit demand lines without an active supplier", () => {
   assert.match(migration, /supplier\.is_active/);
 });
 
-test("warehouse can edit an unallocated pending demand without reopening draft", () => {
+test("pending demand edit RPC remains; Wave 2 hides the create/edit chrome", () => {
   const client = readDemandModule();
+  const page = read(
+    "apps/web/app/(protected)/inventory/purchase-orders/page.tsx",
+  );
   const migration = read(
     "supabase/migration-archive/20260730121028_allow_pending_demand_edit_before_allocation.sql",
   );
 
-  assert.match(
-    client,
-    /row\.status === "pending_allocation"[\s\S]*key: "edit"/,
-  );
-  assert.match(
-    client,
-    /\(row\.status === "draft" \|\| row\.status === "changes_requested"\)[\s\S]*key: "cancel"/,
-  );
+  assert.match(page, /canCreateRequest=\{false\}/);
+  assert.match(client, /canCreateRequest &&/);
+  assert.match(client, /key: "edit"/);
   assert.match(client, /editingPendingDemand/);
   assert.match(client, /ACTIONS_VI\.saveChanges/);
   const rpcErrors = read("apps/web/lib/messages/inventory-rpc-errors.ts");
