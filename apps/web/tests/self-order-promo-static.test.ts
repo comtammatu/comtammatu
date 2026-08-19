@@ -85,8 +85,15 @@ test("guest promo API and bill UI wire apply, clear, and line amounts", () => {
     /\/api\/self-order\/\$\{encodeURIComponent\(token\)\}\/promotion\/clear/,
   );
   assert.match(bill, /SelfOrderPromoPanel/);
+  assert.match(
+    bill,
+    /<SheetFooter className="shrink-0[\s\S]*SelfOrderPromoPanel/,
+  );
   assert.match(summary, /SELF_ORDER_VI\.linePromo/);
   assert.match(panel, /SELF_ORDER_VI\.promoCodeLabel/);
+  assert.match(panel, /controlSize="touch"/);
+  assert.match(messages, /promoCodeLabel: "Mã khuyến mãi"/);
+  assert.match(guestUi, /Mã khuyến mãi/);
   assert.match(messages, /promoStaffRequired/);
   assert.match(posMessages, /itemDiscountLine/);
   assert.match(posRow, /POS_VI\.itemDiscountLine/);

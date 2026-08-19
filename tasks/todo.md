@@ -30,6 +30,30 @@ UI Advisor Gate
 
 UI Advisor Gate extras: clock-in still requires `shift_assignments`. Leftover checkout auto-approve runs on Vercel cron (`/api/cron/attendance-checkout-auto-approve`) because two unrelated pending migrations already occupy `supabase/migrations/`. Fold into a service-role RPC + pg_cron when that apply window is clean.
 
+## Self-Order guest UX: header, qty, bill, VAT payment
+
+State: verify
+Kind: feature
+Tier: T2
+Lane: pos
+Exit: Guest QR menu fits brand + table + actions; cards use `+` then `- qty +`; bill progress reaches `Phục vụ`; accompaniment names have no extra `+đ`; promo sits in the bill footer as `Mã khuyến mãi`; payment is `Tiền mặt` / `Chuyển khoản` with optional GTGT MST lookup.
+Evidence: `self-order-cutover-static.test.ts`, `self-order-payment-contract.test.ts`, `self-order-bill-lines.test.ts`, `self-order-simple-cart.test.ts`, `self-order-promo-static.test.ts`.
+
+UI Advisor Gate
+- Surface: `/q/[token]` G1/G6/G7; route family: public QR; plane: `public`; change: layout + copy + payment flow
+- Context: screen-context-map §2.12; actor: guest on phone; job: order, follow kitchen, pay
+- Journey: browse → qty stepper / variant sheet → bill → pay cash or transfer; optional VAT MST
+- Information order: 1) table + menu 2) line total 3) payable total + methods; exclude: select-then-continue payment
+- Pattern: PUBLIC-WORKFLOW; block `public-transaction`; exemplar `apps/web/app/q/[token]/page.tsx` + `self-order-client.tsx`
+- States: empty cart / qty / pending / cooking / serving / payment / VAT lookup
+- Block: `public-transaction`
+- Responsive: phone-first 390
+- Verification: static + unit tests, `corepack pnpm verify`
+
+- [ ] Phone smoke: header does not wrap brand+table into the two actions
+- [ ] Phone smoke: kitchen ready advances progress to `Phục vụ`
+- [ ] Phone smoke: VAT check looks up MST then `Tiền mặt` / `Chuyển khoản` create the intent
+
 ## Self-Order guest promo codes and line discount visibility
 
 State: verify

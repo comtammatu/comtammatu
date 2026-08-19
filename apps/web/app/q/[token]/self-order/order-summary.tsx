@@ -28,6 +28,8 @@ import type {
 interface OrderSummaryProps {
   pendingItems?: Array<Omit<SelfOrderCartItem, "key"> & { key?: string }>;
   items?: SelfOrderOrderLine[];
+  kitchenReady?: boolean;
+  kitchenServed?: boolean;
 }
 
 export interface BillRow {
@@ -100,40 +102,13 @@ const BILL_COLUMNS: DataTableColumn<BillRow>[] = [
         {row.modifiers.length > 0 || row.sides.length > 0 ? (
           <div className="mt-1 flex flex-col gap-1 border-l-2 border-border/50 pl-2 text-2xs text-muted-foreground">
             {row.modifiers.map((modifier) => (
-              <div
-                key={`mod-${modifier.modifier_id}`}
-                className="flex items-center justify-between gap-2"
-              >
-                <span>+ {modifier.name}</span>
-                {modifier.price > 0 ? (
-                  <span className="font-mono tabular-nums">
-                    +{formatVND(modifier.price * row.quantity)}
-                  </span>
-                ) : null}
+              <div key={`mod-${modifier.modifier_id}`}>+ {modifier.name}</div>
+            ))}
+            {row.sides.map((side) => (
+              <div key={`side-${side.side_item_id}`}>
+                + {formatSidePortionLabel(side.name, side.quantity)}
               </div>
             ))}
-            {row.sides.map((side) => {
-              const totalSideQty = side.quantity * row.quantity;
-              const sideAmt =
-                side.price > 0 && totalSideQty > 0
-                  ? side.price * totalSideQty
-                  : 0;
-              return (
-                <div
-                  key={`side-${side.side_item_id}`}
-                  className="flex items-center justify-between gap-2"
-                >
-                  <span>
-                    + {formatSidePortionLabel(side.name, side.quantity)}
-                  </span>
-                  {sideAmt > 0 ? (
-                    <span className="font-mono tabular-nums">
-                      +{formatVND(sideAmt)}
-                    </span>
-                  ) : null}
-                </div>
-              );
-            })}
           </div>
         ) : null}
         {row.note ? (
@@ -212,40 +187,13 @@ function FlatOrderLines({ items }: { items: SelfOrderOrderLine[] }) {
             {row.modifiers.length > 0 || row.sides.length > 0 ? (
               <div className="mt-1 flex flex-col gap-1 border-l-2 border-border/50 pl-2.5 text-xs text-muted-foreground">
                 {row.modifiers.map((modifier) => (
-                  <div
-                    key={`mod-${modifier.modifier_id}`}
-                    className="flex items-center justify-between gap-2"
-                  >
-                    <span>+ {modifier.name}</span>
-                    {modifier.price > 0 ? (
-                      <span className="font-mono tabular-nums text-2xs">
-                        +{formatVND(modifier.price * row.quantity)}
-                      </span>
-                    ) : null}
+                  <div key={`mod-${modifier.modifier_id}`}>+ {modifier.name}</div>
+                ))}
+                {row.sides.map((side) => (
+                  <div key={`side-${side.side_item_id}`}>
+                    + {formatSidePortionLabel(side.name, side.quantity)}
                   </div>
                 ))}
-                {row.sides.map((side) => {
-                  const totalSideQty = side.quantity * row.quantity;
-                  const sideAmt =
-                    side.price > 0 && totalSideQty > 0
-                      ? side.price * totalSideQty
-                      : 0;
-                  return (
-                    <div
-                      key={`side-${side.side_item_id}`}
-                      className="flex items-center justify-between gap-2"
-                    >
-                      <span>
-                        + {formatSidePortionLabel(side.name, side.quantity)}
-                      </span>
-                      {sideAmt > 0 ? (
-                        <span className="font-mono tabular-nums text-2xs">
-                          +{formatVND(sideAmt)}
-                        </span>
-                      ) : null}
-                    </div>
-                  );
-                })}
               </div>
             ) : null}
 
@@ -302,30 +250,57 @@ function PendingRequestLines({
   );
 }
 
-export function OrderStatusTracker({
+export function buildSelfOrderProgressSteps({
   hasPending,
   hasConfirmedItems,
+  hasKitchenReady,
+  hasKitchenServed,
 }: {
   hasPending: boolean;
   hasConfirmedItems: boolean;
-}) {
-  const steps = [
+  hasKitchenReady: boolean;
+  hasKitchenServed: boolean;
+}): Array<{ label: string; done: boolean; active: boolean }> {
+  const sent = hasPending || hasConfirmedItems;
+  const cooking = hasConfirmedItems;
+  const serving = hasKitchenReady || hasKitchenServed;
+
+  return [
     {
       label: SELF_ORDER_VI.stepSent,
-      done: true,
-      active: hasPending,
+      done: sent,
+      active: hasPending && !cooking,
     },
     {
       label: SELF_ORDER_VI.stepCooking,
-      done: hasConfirmedItems && !hasPending,
-      active: hasConfirmedItems && !hasPending,
+      done: serving,
+      active: cooking && !serving,
     },
     {
       label: SELF_ORDER_VI.stepServing,
-      done: false,
-      active: false,
+      done: hasKitchenServed,
+      active: serving && !hasKitchenServed,
     },
   ];
+}
+
+export function OrderStatusTracker({
+  hasPending,
+  hasConfirmedItems,
+  hasKitchenReady = false,
+  hasKitchenServed = false,
+}: {
+  hasPending: boolean;
+  hasConfirmedItems: boolean;
+  hasKitchenReady?: boolean;
+  hasKitchenServed?: boolean;
+}) {
+  const steps = buildSelfOrderProgressSteps({
+    hasPending,
+    hasConfirmedItems,
+    hasKitchenReady,
+    hasKitchenServed,
+  });
 
   return (
     <Frame
@@ -373,6 +348,8 @@ export function OrderStatusTracker({
 export function OrderSummary({
   pendingItems = [],
   items = [],
+  kitchenReady = false,
+  kitchenServed = false,
 }: OrderSummaryProps) {
   if (pendingItems.length === 0 && items.length === 0) {
     return (
@@ -390,6 +367,8 @@ export function OrderSummary({
       <OrderStatusTracker
         hasPending={pendingItems.length > 0}
         hasConfirmedItems={items.length > 0}
+        hasKitchenReady={kitchenReady}
+        hasKitchenServed={kitchenServed}
       />
 
       {pendingItems.length > 0 ? (

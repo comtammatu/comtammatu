@@ -349,7 +349,7 @@ export function CartSheet(props: CartSheetProps) {
                 </Alert>
               ) : null}
               <div className="flex items-center justify-between gap-3 text-sm font-semibold">
-                <span>{SELF_ORDER_VI.subtotal}</span>
+                <span>{SELF_ORDER_VI.total}</span>
                 <span className="font-mono tabular-nums text-primary">
                   {formatVND(total)}
                 </span>

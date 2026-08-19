@@ -55,7 +55,8 @@ import {
   defaultSelfOrderCategoryValue,
 } from "./self-order/menu-panel";
 import type { GuestPaymentRequestState } from "./self-order/payment-panel";
-import { addOrIncrementSimpleCartItem } from "./self-order/simple-cart";
+import type { SelfOrderInvoicePayload } from "@lib/self-order/contracts";
+import { addOrIncrementSimpleCartItem, decreaseCartItemByMenuItemId } from "./self-order/simple-cart";
 
 interface SelfOrderClientProps {
   token: string;
@@ -67,15 +68,17 @@ const PAYMENT_COMPLETED_DISPLAY_MS = 10_000;
 function StaffCallButton({
   isCalling,
   onClick,
+  labeled = false,
 }: {
   isCalling: boolean;
   onClick: () => void;
+  labeled?: boolean;
 }) {
   return (
     <Button
       type="button"
       variant="outline"
-      size="touch"
+      size={labeled ? "touch" : "icon-touch"}
       className="shrink-0"
       aria-label={SELF_ORDER_VI.callStaff}
       disabled={isCalling}
@@ -83,10 +86,12 @@ function StaffCallButton({
     >
       {isCalling ? (
         <Spinner className="size-4" />
-      ) : (
+      ) : labeled ? (
         <IconBell data-icon="inline-start" />
+      ) : (
+        <IconBell />
       )}
-      {SELF_ORDER_VI.callStaff}
+      {labeled ? SELF_ORDER_VI.callStaff : null}
     </Button>
   );
 }
@@ -327,9 +332,6 @@ export function SelfOrderClient({
   );
   const [billOpen, setBillOpen] = useState(false);
   const [billView, setBillView] = useState<"bill" | "payment">("bill");
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
-    "cash_call" | "vietqr" | null
-  >(null);
   const [pendingPaymentMethod, setPendingPaymentMethod] = useState<
     "cash_call" | "vietqr" | null
   >(null);
@@ -618,6 +620,11 @@ export function SelfOrderClient({
     setSubmitError(null);
   }
 
+  function decreaseMenuItem(menuItemId: number) {
+    setCartItems((current) => decreaseCartItemByMenuItemId(current, menuItemId));
+    setSubmitError(null);
+  }
+
   function replaceCartItem(item: SelfOrderCartItem) {
     setCartItems((current) =>
       current.map((existing) => (existing.key === item.key ? item : existing)),
@@ -690,7 +697,10 @@ export function SelfOrderClient({
     });
   }
 
-  function requestPayment(method: "cash_call" | "vietqr") {
+  function requestPayment(
+    method: "cash_call" | "vietqr",
+    invoice: SelfOrderInvoicePayload,
+  ) {
     if (!order || activePaymentRequest) return;
     const intent = resolveClientIntent(
       paymentIntentRef.current,
@@ -709,7 +719,7 @@ export function SelfOrderClient({
       try {
         const response = await postSelfOrderJson(
           `/api/self-order/${encodeURIComponent(token)}/payment`,
-          { clientOpId: intent.clientOpId, method },
+          { clientOpId: intent.clientOpId, method, invoice },
         );
         const result = await readApiResponse(response);
         if (!result.ok) {
@@ -729,7 +739,6 @@ export function SelfOrderClient({
           return;
         }
         setLocalPaymentRequest(paymentRequest);
-        setSelectedPaymentMethod(null);
         paymentIntentRef.current = clearClientIntent(
           paymentIntentRef.current,
           intent.clientOpId,
@@ -743,11 +752,6 @@ export function SelfOrderClient({
         setPendingPaymentMethod(null);
       }
     });
-  }
-
-  function createSelectedPayment() {
-    if (!selectedPaymentMethod || !order || activePaymentRequest) return;
-    requestPayment(selectedPaymentMethod);
   }
 
   async function cancelVietQrPayment() {
@@ -810,7 +814,6 @@ export function SelfOrderClient({
         setLocalPaymentRequest(null);
         ignoredPaymentStatusClientOpIdRef.current = currentClientOpId;
         setPaymentStatusClientOpId(null);
-        setSelectedPaymentMethod(null);
         paymentIntentRef.current = null;
         toast.success(SELF_ORDER_VI.cancelVietQrSuccess);
         await refreshSnapshot();
@@ -939,16 +942,16 @@ export function SelfOrderClient({
       <ForceLightMode />
       <div className="flex h-full min-h-0 flex-col">
         <header className="workflow-safe-pt shrink-0 border-b border-border bg-background px-3 py-2">
-          <div className="flex items-start gap-2">
+          <div className="flex items-center gap-2">
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-primary">
+              <p className="truncate text-xs font-medium text-primary">
                 {SELF_ORDER_VI.branchFallback}
               </p>
-              <h1 className="font-heading text-xl font-semibold">
+              <h1 className="font-heading truncate text-lg font-semibold">
                 {SELF_ORDER_VI.tableLabel(available.table.number)}
               </h1>
             </div>
-            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            <div className="flex shrink-0 items-center gap-1.5">
               <StaffCallButton isCalling={isCallingStaff} onClick={callStaff} />
               {showBillCta ? (
                 <Button
@@ -993,7 +996,11 @@ export function SelfOrderClient({
               {SELF_ORDER_VI.pendingDialogDescription}
             </p>
             <div className="mt-2">
-              <StaffCallButton isCalling={isCallingStaff} onClick={callStaff} />
+              <StaffCallButton
+                labeled
+                isCalling={isCallingStaff}
+                onClick={callStaff}
+              />
             </div>
           </div>
         ) : null}
@@ -1003,6 +1010,7 @@ export function SelfOrderClient({
           activeCategoryValue={activeCategoryValue}
           onActiveCategoryChange={setActiveCategoryValue}
           onAdd={addCartItem}
+          onDecrease={decreaseMenuItem}
           disabled={false}
           cartDemandByMenuItemId={cartDemandByMenuItemId}
         />
@@ -1040,6 +1048,8 @@ export function SelfOrderClient({
         canPay={!ambiguous && order !== null}
         order={order}
         pendingItems={awaiting ? available.request?.items : undefined}
+        kitchenReady={available.kitchenReady}
+        kitchenServed={available.kitchenServed}
         promo={{
           canEdit:
             Boolean(order) &&
@@ -1057,13 +1067,11 @@ export function SelfOrderClient({
             disabled={awaiting || paymentPending}
             activeOrder={order}
             activePaymentRequest={activePaymentRequest}
-            selectedPaymentMethod={selectedPaymentMethod}
             isPending={isPaymentPending}
             isCancelling={isPaymentCancelling}
             pendingMethod={pendingPaymentMethod}
             error={paymentError}
-            onPaymentMethodChange={setSelectedPaymentMethod}
-            onCreatePayment={createSelectedPayment}
+            onRequestPayment={requestPayment}
             onCancelVietQr={cancelVietQrPayment}
             onBankAppHandoff={markBankAppHandoff}
           />

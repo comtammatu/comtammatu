@@ -105,7 +105,7 @@ export const SELF_ORDER_VI = {
   itemPromo: "Khuyến mãi món",
   linePromo: (amount: string, note?: string) =>
     note ? `Khuyến mãi: -${amount} · ${note}` : `Khuyến mãi: -${amount}`,
-  promoCodeLabel: "Mã giảm / mã voucher",
+  promoCodeLabel: "Mã khuyến mãi",
   promoCodePlaceholder: "TET10",
   promoApply: "Áp mã",
   promoClear: "Bỏ mã",
@@ -190,8 +190,12 @@ export const SELF_ORDER_VI = {
   paymentTitle: "Thanh toán",
   cashCall: "Tiền mặt",
   vietQrCreate: "VietQR",
+  bankTransfer: "Chuyển khoản",
   cashCallAction: "Gọi nhân viên thu tiền",
   vietQrCreateAction: "Tạo mã QR",
+  issueVatInvoice: "Xuất hoá đơn GTGT",
+  companyName: "Tên công ty",
+  companyAddress: "Địa chỉ",
   paymentConfirmAction: "Xác nhận thanh toán",
   paymentConfirmTitle: "Xác nhận thanh toán?",
   paymentConfirmDescription:
@@ -333,9 +337,9 @@ export const SELF_ORDER_VI = {
     `${itemName} hết nguyên liệu — đổi món khác.`,
   orderProgressAria: "Tiến trình món ăn",
   feedbackTagsAria: "Gợi ý đánh giá nhanh",
-  stepSent: "Gửi yêu cầu",
-  stepCooking: "Bếp chế biến",
-  stepServing: "Phục vụ tại bàn",
+  stepSent: "Gửi",
+  stepCooking: "Chế biến",
+  stepServing: "Phục vụ",
 } as const;
 
 export type SelfOrderKey = keyof typeof SELF_ORDER_VI;

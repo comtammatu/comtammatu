@@ -457,7 +457,7 @@ domain doc.
 | `combo` | combo | Bundled sellable set under one price/promo. |
 | `promotion` | Khuyến mãi | Owner campaign that attributes a POS discount (ADR 0039). |
 | `free_item` | Tặng món trên đơn | Staff-selected item-level comp of units already on the POS order; optional max per order (ADR 0039). |
-| `promo_code` | Mã giảm | Reusable campaign code entered at POS or by the guest on QR gọi món. |
+| `promo_code` | Mã khuyến mãi | Reusable campaign code entered at POS or by the guest on QR gọi món. |
 | `voucher_code` | Mã voucher | One-time unique code with optional face value. |
 | `portion_quantity` | số phần (`Nx`) | Leading `Nx` = number of main portions. |
 | `side_portion_qty` | SL trên phần (`xN`) | Trailing `xN` = qty per portion, not multiplied across portions. |

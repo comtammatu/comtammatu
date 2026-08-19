@@ -10,13 +10,19 @@ VN skips the +2h buyer wait; a one-shot requeue may stamp
 `allowBacklogSubmitDate` on already-blocked leftover drafts only. A one-shot
 rebind may also stamp that flag on cloned drafts after an order-id vs
 tax-invoice-id S-invoice uuid collision; it does not cancel the leftover's
-Viettel original.
+Viettel original. Owner, 2026-08-19: Self-Order G7 may collect optional
+business VAT invoice details (MST lookup, company name/address, email) and
+pass them as `p_invoice_payload`. POS stays buyer-neutral. The receipt QR
+buyer window remains for later correction.
 
 ## Context
 
-POS and Self-Order must not collect HĐĐT buyer details. Payment still needs one
-immutable invoice draft immediately; the customer may supply tax identity from
-the receipt QR for at most two hours. Same-day `invoiceIssuedDate` stays
+POS must not collect HĐĐT buyer details. Self-Order G7 may collect optional
+business VAT invoice identity (MST lookup + email) into
+`self_order_payment_requests.invoice_payload`; default remains
+`"Bán cho người tiêu dùng"`. Payment still needs one immutable invoice draft
+immediately; the customer may still supply or correct tax identity from the
+receipt QR for at most two hours. Same-day `invoiceIssuedDate` stays
 `payments.paid_at`. A new draft whose Vietnam sale day has already passed
 fail-closes with `invoice_issue_date_not_today`.
 
@@ -24,8 +30,9 @@ fail-closes with `invoice_issue_date_not_today`.
 
 Payment completion creates exactly one internal `tax_invoices` draft with the
 full line/amount/payment-time snapshot. Default buyer is
-`"Bán cho người tiêu dùng"`. POS and Self-Order have no buyer form and reject
-buyer fields.
+`"Bán cho người tiêu dùng"`. POS has no buyer form and rejects buyer fields.
+Self-Order G7 may send a business `invoice_payload` when the guest checks
+`Xuất hoá đơn GTGT`.
 
 The buyer request closes on the first terminal event:
 

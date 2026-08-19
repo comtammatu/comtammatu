@@ -163,7 +163,7 @@ test("buyer request submit close_reason matches queue_submitted constraint", () 
   );
 });
 
-test("POS and Self-Order defer buyer details to the receipt QR", () => {
+test("POS defers buyer details to the receipt QR; Self-Order may collect VAT invoice on G7", () => {
   const bill = readRepo(
     "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx",
   );
@@ -206,16 +206,15 @@ test("POS and Self-Order defer buyer details to the receipt QR", () => {
     posPaymentActions,
     /p_invoice_payload: POS_DEFAULT_INVOICE_PAYLOAD/,
   );
-  assert.doesNotMatch(
+  assert.match(
     selfOrderPaymentPanel,
     /buyerTaxCode|buyerNotGetInvoice|lookupBusinessTaxCode/,
   );
-  assert.doesNotMatch(
+  assert.match(selfOrderClient, /invoice/);
+  assert.match(
     selfOrderClient,
-    /buyerTaxCode|buyerNotGetInvoice|paymentConfirmInvoice/,
+    /\{ clientOpId: intent\.clientOpId, method, invoice \}/,
   );
-  assert.match(selfOrderClient, /\{ clientOpId: intent\.clientOpId, method \}/);
-  assert.doesNotMatch(selfOrderClient, /invoice: invoicePayload/);
   assert.match(action, /buyerKind: z\.literal\("business"\)/);
   assert.match(action, /buyerKind: z\.literal\("individual"\)/);
   assert.match(action, /fetchBusinessTaxCode\(parsed\.data\.taxCode\)/);

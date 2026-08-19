@@ -137,7 +137,7 @@ test("Self-Order permits payment while KDS is still preparing", () => {
   assert.doesNotMatch(paymentPanel, /paymentNotReady/);
 });
 
-test("Self-Order creates the selected buyer-neutral payment without a hidden confirmation step", () => {
+test("Self-Order creates the selected payment from footer CTAs and may send a VAT invoice payload", () => {
   const paymentPanel = readWeb("app/q/[token]/self-order/payment-panel.tsx");
   const client = readWeb("app/q/[token]/self-order-client.tsx");
   const route = readWeb("app/api/self-order/[token]/payment/route.ts");
@@ -152,31 +152,43 @@ test("Self-Order creates the selected buyer-neutral payment without a hidden con
   assert.equal(
     selfOrderPaymentRequestSchema.safeParse({
       ...request,
+      invoice: {
+        buyerNotGetInvoice: false,
+        buyerKind: "business",
+        buyerTaxCode: "0312345678",
+        buyerName: "CTY TNHH VI DU",
+        buyerAddress: "1 Nguyen Hue",
+        buyerEmail: "ke.toan@example.com",
+      },
+    }).success,
+    true,
+  );
+  assert.equal(
+    selfOrderPaymentRequestSchema.safeParse({
+      ...request,
       invoice: { buyerTaxCode: "0312345678" },
     }).success,
     false,
   );
-  assert.match(paymentPanel, /selectedPaymentMethod/);
-  assert.match(paymentPanel, /onPaymentMethodChange\("cash_call"\)/);
-  assert.match(paymentPanel, /onPaymentMethodChange\("vietqr"\)/);
-  assert.match(paymentPanel, /onClick=\{onCreatePayment\}/);
-  assert.doesNotMatch(paymentPanel, /onRequestPayment/);
-  assert.match(client, /requestPayment\(selectedPaymentMethod\)/);
+  assert.match(paymentPanel, /onRequestPayment\("cash_call"/);
+  assert.match(paymentPanel, /onRequestPayment\("vietqr"/);
+  assert.match(paymentPanel, /issueVatInvoice/);
+  assert.match(paymentPanel, /lookupBusinessTaxCode/);
+  assert.match(paymentPanel, /SELF_ORDER_VI\.bankTransfer/);
+  assert.doesNotMatch(paymentPanel, /onCreatePayment/);
+  assert.doesNotMatch(paymentPanel, /selectedPaymentMethod/);
+  assert.match(client, /onRequestPayment=\{requestPayment\}/);
   assert.doesNotMatch(client, /paymentConfirmationMethod/);
   assert.match(
     client,
-    /postSelfOrderJson\([\s\S]*?\/payment`[\s\S]*?\{ clientOpId: intent\.clientOpId, method \}/,
+    /postSelfOrderJson\([\s\S]*?\/payment`[\s\S]*?\{ clientOpId: intent\.clientOpId, method, invoice \}/,
   );
-  assert.doesNotMatch(client, /invoice: invoicePayload|buyerTaxCode/);
-  assert.doesNotMatch(route, /parsed\.data\.invoice/);
-  assert.match(server, /p_invoice_payload: \{\}/);
-  assert.doesNotMatch(paymentPanel, /buyerTaxCode|buyerNotGetInvoice/);
-  assert.match(messages, /cashCallAction: "Gọi nhân viên thu tiền"/);
-  assert.match(messages, /vietQrCreateAction: "Tạo mã QR"/);
-  assert.match(
-    paymentPanel,
-    /selectedPaymentMethod === "vietqr"[\s\S]*vietQrCreateAction/,
-  );
+  assert.match(route, /parsed\.data\.invoice/);
+  assert.match(server, /p_invoice_payload: input\.invoice \?\? \{\}/);
+  assert.match(paymentPanel, /buyerTaxCode|buyerNotGetInvoice/);
+  assert.match(messages, /cashCall: "Tiền mặt"/);
+  assert.match(messages, /bankTransfer: "Chuyển khoản"/);
+  assert.match(messages, /issueVatInvoice: "Xuất hoá đơn GTGT"/);
   assert.match(paymentPanel, /<QrCodeImage[\s\S]*saveVietQr/);
   assert.match(paymentPanel, /<BankAppLauncher/);
   assert.match(paymentPanel, /PROVEN_VIETQR_BANK_APP_ID/);

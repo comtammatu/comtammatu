@@ -32,6 +32,8 @@ interface BillDrawerProps {
   pendingItems?: NonNullable<
     PublicSelfOrderAvailableSnapshot["request"]
   >["items"];
+  kitchenReady?: boolean;
+  kitchenServed?: boolean;
   children?: ReactNode;
   promo?: {
     canEdit: boolean;
@@ -51,6 +53,8 @@ export function BillDrawer({
   canPay,
   order,
   pendingItems,
+  kitchenReady = false,
+  kitchenServed = false,
   children,
   promo,
 }: BillDrawerProps) {
@@ -107,99 +111,95 @@ export function BillDrawer({
               />
             </div>
           </SheetHeader>
-          <ScrollArea className="min-h-0 flex-1 overflow-hidden overscroll-contain">
-            <div className="px-3 py-4 sm:px-4">
-              {paymentView ? (
-                children
-              ) : (
-                <>
+          {paymentView ? (
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              {children}
+            </div>
+          ) : (
+            <>
+              <ScrollArea className="min-h-0 flex-1 overflow-hidden overscroll-contain">
+                <div className="px-3 py-4 sm:px-4">
                   <OrderSummary
                     pendingItems={pendingItems}
                     items={order?.items ?? []}
+                    kitchenReady={kitchenReady}
+                    kitchenServed={kitchenServed}
                   />
-                  {order && promo ? (
-                    <div className="mt-4">
-                      <SelfOrderPromoPanel
-                        promotionName={order.promotionName}
-                        promotionCode={order.promotionCode}
-                        orderDiscountAmount={visibleOrderDiscount}
-                        canEdit={promo.canEdit}
-                        isPending={promo.isPending}
-                        error={promo.error}
-                        onApply={promo.onApply}
-                        onClear={promo.onClear}
-                      />
-                    </div>
+                </div>
+              </ScrollArea>
+              {order?.totalAmount != null ? (
+                <SheetFooter className="shrink-0 border-border bg-card p-4">
+                  {promo ? (
+                    <SelfOrderPromoPanel
+                      promotionName={order.promotionName}
+                      promotionCode={order.promotionCode}
+                      orderDiscountAmount={visibleOrderDiscount}
+                      canEdit={promo.canEdit}
+                      isPending={promo.isPending}
+                      error={promo.error}
+                      onApply={promo.onApply}
+                      onClear={promo.onClear}
+                    />
                   ) : null}
-                </>
-              )}
-            </div>
-          </ScrollArea>
-          {!paymentView && order?.totalAmount != null ? (
-            <SheetFooter className="shrink-0 border-border bg-card p-4">
-              <div className="flex flex-col gap-2 text-sm">
-                <div className="flex items-center justify-between gap-3 text-muted-foreground">
-                  <span>{SELF_ORDER_VI.subtotal}</span>
-                  <span className="font-mono tabular-nums">
-                    {formatVND(order.subtotal)}
-                  </span>
-                </div>
-                {Number(order.serviceCharge) > 0 ? (
-                  <div className="flex items-center justify-between gap-3 text-muted-foreground">
-                    <span>{SELF_ORDER_VI.serviceCharge}</span>
-                    <span className="font-mono tabular-nums">
-                      {formatVND(order.serviceCharge)}
-                    </span>
-                  </div>
-                ) : null}
-                {visibleItemDiscount > 0 ? (
-                  <div className="flex items-center justify-between gap-3 text-success">
-                    <span>{SELF_ORDER_VI.itemPromo}</span>
-                    <span className="font-mono tabular-nums">
-                      -{formatVND(visibleItemDiscount)}
-                    </span>
-                  </div>
-                ) : null}
-                {visibleOrderDiscount > 0 ? (
-                  <div className="flex flex-col gap-1 text-success">
-                    <div className="flex items-center justify-between gap-3">
-                      <span>
-                        {visibleItemDiscount > 0
-                          ? SELF_ORDER_VI.orderPromo
-                          : order.promotionName
-                            ? SELF_ORDER_VI.orderPromo
-                            : SELF_ORDER_VI.discount}
-                      </span>
-                      <span className="font-mono tabular-nums">
-                        -{formatVND(visibleOrderDiscount)}
+                  <div className="flex flex-col gap-2 text-sm">
+                    {Number(order.serviceCharge) > 0 ? (
+                      <div className="flex items-center justify-between gap-3 text-muted-foreground">
+                        <span>{SELF_ORDER_VI.serviceCharge}</span>
+                        <span className="font-mono tabular-nums">
+                          {formatVND(order.serviceCharge)}
+                        </span>
+                      </div>
+                    ) : null}
+                    {visibleItemDiscount > 0 ? (
+                      <div className="flex items-center justify-between gap-3 text-success">
+                        <span>{SELF_ORDER_VI.itemPromo}</span>
+                        <span className="font-mono tabular-nums">
+                          -{formatVND(visibleItemDiscount)}
+                        </span>
+                      </div>
+                    ) : null}
+                    {visibleOrderDiscount > 0 ? (
+                      <div className="flex flex-col gap-1 text-success">
+                        <div className="flex items-center justify-between gap-3">
+                          <span>
+                            {visibleItemDiscount > 0
+                              ? SELF_ORDER_VI.orderPromo
+                              : order.promotionName
+                                ? SELF_ORDER_VI.orderPromo
+                                : SELF_ORDER_VI.discount}
+                          </span>
+                          <span className="font-mono tabular-nums">
+                            -{formatVND(visibleOrderDiscount)}
+                          </span>
+                        </div>
+                        {order.discountNote ? (
+                          <p className="text-xs italic text-muted-foreground">
+                            {order.discountNote}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    <div className="mt-1 flex items-center justify-between gap-3 border-t border-border/60 pt-2 text-base font-semibold">
+                      <span>{SELF_ORDER_VI.totalAmount}</span>
+                      <span className="font-mono text-xl tabular-nums text-primary">
+                        {formatVND(order.totalAmount)}
                       </span>
                     </div>
-                    {order.discountNote ? (
-                      <p className="text-xs italic text-muted-foreground">
-                        {order.discountNote}
-                      </p>
-                    ) : null}
                   </div>
-                ) : null}
-                <div className="mt-1 flex items-center justify-between gap-3 border-t border-border/60 pt-2 text-base font-semibold">
-                  <span>{SELF_ORDER_VI.totalAmount}</span>
-                  <span className="font-mono text-xl tabular-nums text-primary">
-                    {formatVND(order.totalAmount)}
-                  </span>
-                </div>
-              </div>
-              {canPay ? (
-                <Button
-                  type="button"
-                  size="touch-lg"
-                  className="w-full shadow-xs"
-                  onClick={onOpenPayment}
-                >
-                  {SELF_ORDER_VI.paymentTitle}
-                </Button>
+                  {canPay ? (
+                    <Button
+                      type="button"
+                      size="touch-lg"
+                      className="w-full shadow-xs"
+                      onClick={onOpenPayment}
+                    >
+                      {SELF_ORDER_VI.paymentTitle}
+                    </Button>
+                  ) : null}
+                </SheetFooter>
               ) : null}
-            </SheetFooter>
-          ) : null}
+            </>
+          )}
         </div>
       </SheetContent>
     </Sheet>

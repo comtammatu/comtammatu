@@ -34,6 +34,7 @@ import {
   splitMenuItemDisplayName,
 } from "./menu-display";
 import { SelfOrderItemSheet } from "./item-sheet";
+import { QuantityStepper } from "./quantity-stepper";
 
 export {
   ALL_MENU_VALUE,
@@ -49,6 +50,7 @@ export interface MenuPanelProps {
   activeCategoryValue: string;
   onActiveCategoryChange: (value: string) => void;
   onAdd: (item: SelfOrderCartItem) => void;
+  onDecrease: (menuItemId: number) => void;
   disabled?: boolean;
   cartDemandByMenuItemId?: ReadonlyMap<number, number>;
 }
@@ -58,6 +60,7 @@ export function MenuPanel({
   activeCategoryValue,
   onActiveCategoryChange,
   onAdd,
+  onDecrease,
   disabled = false,
   cartDemandByMenuItemId,
 }: MenuPanelProps) {
@@ -120,9 +123,6 @@ export function MenuPanel({
   return (
     <section className="flex min-h-0 flex-1 flex-col">
       <div className="shrink-0 border-b border-border bg-background px-3 py-2">
-        <p className="mb-2 text-base font-medium">
-          {SELF_ORDER_VI.menuPromptTitle}
-        </p>
         <div className="flex items-center">{categoryPills}</div>
       </div>
       <ScrollArea className="min-h-0 flex-1 overflow-hidden overscroll-contain">
@@ -154,6 +154,7 @@ export function MenuPanel({
                   <MenuItemGrid
                     items={items}
                     onAdd={onAdd}
+                    onDecrease={onDecrease}
                     disabled={disabled}
                     compact={!isSelfOrderComCategory(category)}
                     prioritizeLeadingImages={
@@ -207,6 +208,7 @@ function createDefaultCartItem(item: SelfOrderMenuItem): SelfOrderCartItem {
 function MenuItemGrid({
   items,
   onAdd,
+  onDecrease,
   disabled = false,
   compact = false,
   prioritizeLeadingImages = false,
@@ -214,6 +216,7 @@ function MenuItemGrid({
 }: {
   items: SelfOrderMenuItem[];
   onAdd: (item: SelfOrderCartItem) => void;
+  onDecrease: (menuItemId: number) => void;
   disabled?: boolean;
   compact?: boolean;
   prioritizeLeadingImages?: boolean;
@@ -226,6 +229,7 @@ function MenuItemGrid({
           key={item.id}
           item={item}
           onAdd={onAdd}
+          onDecrease={onDecrease}
           disabled={disabled}
           compact={compact}
           priority={prioritizeLeadingImages && index < 2}
@@ -239,6 +243,7 @@ function MenuItemGrid({
 function MenuItemCard({
   item,
   onAdd,
+  onDecrease,
   disabled,
   compact,
   cartDemand,
@@ -246,6 +251,7 @@ function MenuItemCard({
 }: {
   item: SelfOrderMenuItem;
   onAdd: (item: SelfOrderCartItem) => void;
+  onDecrease: (menuItemId: number) => void;
   disabled: boolean;
   compact: boolean;
   cartDemand: number;
@@ -280,6 +286,7 @@ function MenuItemCard({
         cartDemand={cartDemand}
         isSimple={isSimple}
         priority={priority}
+        onDecrease={() => onDecrease(item.id)}
         onQuickAdd={addOrCustomize}
         onClick={addOrCustomize}
       />
@@ -304,6 +311,7 @@ function MenuRowButton({
   cartDemand,
   isSimple,
   priority = false,
+  onDecrease,
   onQuickAdd,
   onClick,
 }: {
@@ -313,6 +321,7 @@ function MenuRowButton({
   cartDemand: number;
   isSimple: boolean;
   priority?: boolean;
+  onDecrease: () => void;
   onQuickAdd: () => void;
   onClick: () => void;
 }) {
@@ -380,14 +389,6 @@ function MenuRowButton({
             {imageIcon}
           </Badge>
         ) : null}
-        {isSimple && cartDemand > 0 ? (
-          <Badge
-            variant="default"
-            className="absolute right-2 top-2 z-10 min-w-8 justify-center tabular-nums"
-          >
-            {cartDemand}
-          </Badge>
-        ) : null}
       </span>
 
       <div className="flex min-w-0 flex-1 flex-col justify-between py-0.5">
@@ -419,25 +420,30 @@ function MenuRowButton({
             {priceLabel}
           </span>
 
-          <Button
-            type="button"
-            size={isSimple ? "icon-touch" : "touch"}
-            variant={isSimple ? "default" : "secondary"}
-            className={`shrink-0 ${isSimple ? "size-8 rounded-full shadow-xs" : "h-8 rounded-full px-3 text-xs"}`}
-            disabled={disabled}
-            aria-label={
-              isSimple
-                ? `${SELF_ORDER_VI.addToCart}: ${item.name}`
-                : `${SELF_ORDER_VI.customizeItem}: ${item.name}`
-            }
-            onClick={(e) => {
-              e.stopPropagation();
-              onQuickAdd();
-            }}
-          >
-            <IconPlus className={isSimple ? "size-4" : "size-3"} />
-            {!isSimple ? SELF_ORDER_VI.editCartItem : null}
-          </Button>
+          {cartDemand > 0 ? (
+            <QuantityStepper
+              quantity={cartDemand}
+              disabled={disabled}
+              decreaseLabel={`${SELF_ORDER_VI.decreaseQuantityAria}: ${item.name}`}
+              increaseLabel={`${SELF_ORDER_VI.increaseQuantityAria}: ${item.name}`}
+              onDecrease={onDecrease}
+              onIncrease={onQuickAdd}
+            />
+          ) : (
+            <Button
+              type="button"
+              size="icon-touch"
+              className="size-8 shadow-xs"
+              disabled={disabled}
+              aria-label={`${SELF_ORDER_VI.addToCart}: ${item.name}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onQuickAdd();
+              }}
+            >
+              <IconPlus className="size-4" />
+            </Button>
+          )}
         </div>
       </div>
     </div>

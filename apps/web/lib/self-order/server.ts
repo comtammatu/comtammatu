@@ -2,7 +2,11 @@ import "server-only";
 
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
-import type { PublicSelfOrderSnapshot, SelfOrderCartItem } from "./contracts";
+import type {
+  PublicSelfOrderSnapshot,
+  SelfOrderCartItem,
+  SelfOrderInvoicePayload,
+} from "./contracts";
 import {
   publicSelfOrderSnapshotSchema,
   selfOrderPaymentActionResponseSchema,
@@ -471,6 +475,42 @@ async function loadBranchAvailabilityMap(
   return map;
 }
 
+async function withKitchenProgress(
+  snapshot: PublicSelfOrderSnapshot,
+): Promise<PublicSelfOrderSnapshot> {
+  if (!snapshot.ok || !snapshot.order) return snapshot;
+  const orderId = snapshot.order.id;
+  const { data, error } = await service()
+    .from("kds_tickets")
+    .select("status, first_ready_at")
+    .eq("order_id", orderId);
+  if (error || !Array.isArray(data) || data.length === 0) {
+    return { ...snapshot, kitchenReady: false, kitchenServed: false };
+  }
+
+  let readyCount = 0;
+  let servedCount = 0;
+  for (const row of data) {
+    if (typeof row !== "object" || row === null) continue;
+    const record = row as { status?: unknown; first_ready_at?: unknown };
+    const status = typeof record.status === "string" ? record.status : "";
+    if (status === "served") {
+      servedCount += 1;
+      readyCount += 1;
+      continue;
+    }
+    if (status === "ready" || typeof record.first_ready_at === "string") {
+      readyCount += 1;
+    }
+  }
+
+  return {
+    ...snapshot,
+    kitchenReady: readyCount > 0,
+    kitchenServed: servedCount > 0 && servedCount === data.length,
+  };
+}
+
 function enrichMenuWithAvailability(
   snapshot: Extract<PublicSelfOrderSnapshot, { ok: true }>,
   availabilityByItemId: Map<number, SelfOrderAvailability>,
@@ -641,9 +681,10 @@ export async function getSelfOrderSnapshot(
     return publicPayloadFailure("snapshot", parsed.error.issues);
   }
   const normalized = await normalizeUnavailableSnapshot(token, parsed.data);
+  const withMenu = await withMenuAvailability(token, normalized);
   return {
     ok: true,
-    data: await withMenuAvailability(token, normalized),
+    data: await withKitchenProgress(withMenu),
   };
 }
 
@@ -749,6 +790,7 @@ export async function createSelfOrderPaymentRequest(input: {
   ipHash: string | null;
   clientOpId: string;
   method: "cash_call" | "vietqr";
+  invoice?: SelfOrderInvoicePayload;
 }): Promise<SelfOrderActionResult<Record<string, unknown>>> {
   const rateLimit = await consumeSelfOrderRateLimit({
     purpose: "payment",
@@ -763,7 +805,7 @@ export async function createSelfOrderPaymentRequest(input: {
       p_token: input.token,
       p_client_op_id: input.clientOpId,
       p_method: input.method,
-      p_invoice_payload: {},
+      p_invoice_payload: input.invoice ?? {},
     },
   );
   if (error) {

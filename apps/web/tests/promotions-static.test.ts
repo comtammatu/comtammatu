@@ -318,7 +318,7 @@ test("Owner promotions LIST/DOC and POS Mã giảm surfaces exist", () => {
   const glossary = readRepo("docs/ref/glossary.md");
   assert.match(glossary, /`promotion` \| Khuyến mãi/);
   assert.match(glossary, /`free_item` \| Tặng món trên đơn/);
-  assert.match(glossary, /`promo_code` \| Mã giảm \| .*QR gọi món/);
+  assert.match(glossary, /`promo_code` \| Mã khuyến mãi \| .*QR gọi món/);
   assert.match(glossary, /`voucher_code` \| Mã voucher/);
 });
 

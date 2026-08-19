@@ -133,15 +133,19 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
   assert.match(summary, /items\.map\(buildBillRow\)/);
   assert.match(summary, /formatVND\(row\.unitPrice\)/);
   assert.match(summary, /formatVND\(row\.lineTotal\)/);
+  assert.doesNotMatch(summary, /\+\{formatVND\(modifier/);
+  assert.doesNotMatch(summary, /sideAmt/);
+  assert.match(summary, /buildSelfOrderProgressSteps/);
+  assert.match(summary, /hasKitchenReady/);
   assert.match(summary, /import \{ BrandMascot \} from "@\/components\/brand"/);
   assert.match(summary, /<BrandMascot decorative size="sm" \/>/);
   assert.match(summary, /awaitingCalloutTitle/);
   assert.match(summary, /awaitingCalloutDescription/);
   assert.match(summary, /role="status"/);
-  assert.match(bill, /SELF_ORDER_VI\.subtotal/);
   assert.match(bill, /SELF_ORDER_VI\.serviceCharge/);
   assert.match(bill, /SELF_ORDER_VI\.discount/);
   assert.match(bill, /SELF_ORDER_VI\.totalAmount/);
+  assert.doesNotMatch(bill, /SELF_ORDER_VI\.subtotal/);
   assert.doesNotMatch(menu, /<Tabs|TabsTrigger|TabsList/);
   assert.match(menu, /isSelfOrderComCategory\(category\)/);
   assert.match(menu, /compact=\{!isSelfOrderComCategory\(category\)\}/);
@@ -156,10 +160,12 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
   assert.doesNotMatch(menu, /pb-44|pb-32/);
   assert.match(menu, /splitMenuItemDisplayName/);
   assert.match(menu, /from "\.\/menu-display"/);
-  assert.match(menu, /menuPromptTitle/);
+  assert.doesNotMatch(menu, /menuPromptTitle/);
   assert.doesNotMatch(menu, /menuPromptDescription/);
-  assert.match(menu, /mb-2 text-base font-medium/);
-  assert.match(menu, /isSimple && cartDemand > 0/);
+  assert.doesNotMatch(menu, /mb-2 text-base font-medium/);
+  assert.match(menu, /QuantityStepper/);
+  assert.match(menu, /onDecrease/);
+  assert.doesNotMatch(menu, /isSimple && cartDemand > 0/);
   assert.doesNotMatch(menu, /bg-gradient-to-t from-black/);
   assert.doesNotMatch(menu, /featuredMainDishes|MenuPhotoButton/);
   assert.match(menu, /grid grid-cols-1 gap-3 md:grid-cols-2/);
@@ -201,9 +207,7 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
     menu,
     /font-heading text-2xl font-semibold tracking-tight/,
   );
-  assert.ok(
-    menu.indexOf("SELF_ORDER_VI.menuPromptTitle") < menu.indexOf("<ScrollArea"),
-  );
+  assert.doesNotMatch(menu, /SELF_ORDER_VI.menuPromptTitle/);
   const menuDisplay = read("app/q/[token]/self-order/menu-display.ts");
   assert.match(menuDisplay, /isSelfOrderComCategory/);
   assert.match(
@@ -230,9 +234,8 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
   assert.match(hooks, /fast \? 3_000 : 15_000/);
   assert.doesNotMatch(hooks, /realtimeTopic|\.channel\(/);
   const payment = read("app/q/[token]/self-order/payment-panel.tsx");
-  assert.match(payment, /ReceiptText as IconReceipt/);
   assert.match(payment, /Banknote as IconCash/);
-  assert.match(payment, /QrCode as IconQrcode/);
+  assert.doesNotMatch(payment, /QrCode as IconQrcode/);
   assert.match(payment, /BankAppLauncher/);
   assert.match(payment, /PROVEN_VIETQR_BANK_APP_ID/);
   assert.match(payment, /openMbBank/);
@@ -312,6 +315,8 @@ test("self-order menu availability reuses the POS stock gate", () => {
   assert.match(server, /branch_menu_limit_availability/);
   assert.match(server, /pos_stock_outcome_posting/);
   assert.match(server, /withMenuAvailability/);
+  assert.match(server, /withKitchenProgress/);
+  assert.match(server, /from\("kds_tickets"\)/);
   assert.match(server, /findCartSoldOutMessage/);
   assert.match(
     server,

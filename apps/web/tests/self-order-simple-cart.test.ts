@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { SelfOrderCartItem } from "../lib/self-order/contracts";
-import { addOrIncrementSimpleCartItem } from "../app/q/[token]/self-order/simple-cart";
+import { addOrIncrementSimpleCartItem, decreaseCartItemByMenuItemId } from "../app/q/[token]/self-order/simple-cart";
 
 function line(
   partial: Partial<SelfOrderCartItem> &
@@ -75,6 +75,19 @@ test("addOrIncrementSimpleCartItem appends when variant, note, sides, or modifie
     ).length,
     2,
   );
+});
+
+test("decreaseCartItemByMenuItemId reduces the last matching line", () => {
+  const first = line({ key: "a", menu_item_id: 10, quantity: 2 });
+  const second = line({ key: "b", menu_item_id: 11, quantity: 1 });
+  const decreased = decreaseCartItemByMenuItemId([first, second], 10);
+  assert.equal(decreased.length, 2);
+  assert.equal(decreased[0]?.quantity, 1);
+  assert.equal(decreased[1]?.key, "b");
+
+  const removed = decreaseCartItemByMenuItemId(decreased, 10);
+  assert.equal(removed.length, 1);
+  assert.equal(removed[0]?.key, "b");
 });
 
 test("addOrIncrementSimpleCartItem appends customized incoming even if a simple line exists", () => {

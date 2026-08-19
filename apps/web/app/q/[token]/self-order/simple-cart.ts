@@ -32,3 +32,25 @@ export function addOrIncrementSimpleCartItem(
       : existing,
   );
 }
+
+export function decreaseCartItemByMenuItemId(
+  items: readonly SelfOrderCartItem[],
+  menuItemId: number,
+): SelfOrderCartItem[] {
+  let lastIndex = -1;
+  for (let index = items.length - 1; index >= 0; index -= 1) {
+    if (items[index]?.menu_item_id === menuItemId) {
+      lastIndex = index;
+      break;
+    }
+  }
+  if (lastIndex < 0) return [...items];
+  const target = items[lastIndex];
+  if (!target) return [...items];
+  if (target.quantity <= 1) {
+    return items.filter((_, index) => index !== lastIndex);
+  }
+  return items.map((item, index) =>
+    index === lastIndex ? { ...item, quantity: item.quantity - 1 } : item,
+  );
+}

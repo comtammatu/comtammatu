@@ -510,7 +510,7 @@ Mỗi hàng = `page.tsx` (shim gộp vào cha). Adapter L0: `AppPage` / `DataTab
      (đăng nhập lại / về surface được phép).
   3. **Self-order:** `/q/[token]` → chọn món → giỏ → gửi → banner chờ duyệt trên
      menu (không dialog); `Hoá đơn` chỉ khi có yêu cầu chờ hoặc bill đang mở;
-     sau duyệt, khách nhập `Mã giảm` trên hoá đơn; token hết hạn / invalid →
+     sau duyệt, khách nhập `Mã khuyến mãi` trên hoá đơn; token hết hạn / invalid →
      `notFound` hoặc unavailable chung; offline/retry giữ giao dịch dở
      (`public-transaction`).
   4. **HĐĐT:** §2.10 — quét QR → MST/email → xác nhận một lần.

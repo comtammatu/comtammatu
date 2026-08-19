@@ -55,10 +55,34 @@ export const selfOrderSubmitRequestSchema = z
   })
   .strict();
 
+const MST_REGEX = /^\d{10}(-\d{3})?$/;
+
+export const selfOrderInvoicePayloadSchema = z.discriminatedUnion(
+  "buyerNotGetInvoice",
+  [
+    z
+      .object({
+        buyerNotGetInvoice: z.literal(true),
+      })
+      .strict(),
+    z
+      .object({
+        buyerNotGetInvoice: z.literal(false),
+        buyerKind: z.literal("business"),
+        buyerTaxCode: z.string().trim().regex(MST_REGEX),
+        buyerName: z.string().trim().min(1).max(200),
+        buyerAddress: z.string().trim().min(1).max(500),
+        buyerEmail: z.email(),
+      })
+      .strict(),
+  ],
+);
+
 export const selfOrderPaymentRequestSchema = z
   .object({
     clientOpId: selfOrderClientOpIdSchema,
     method: z.enum(["cash_call", "vietqr"]),
+    invoice: selfOrderInvoicePayloadSchema.optional(),
   })
   .strict();
 
@@ -372,6 +396,8 @@ export const publicSelfOrderAvailableSnapshotSchema = z
     request: publicSelfOrderRequestSchema.nullable(),
     paymentRequest: publicSelfOrderPaymentRequestSchema.nullable(),
     menu: z.array(publicSelfOrderMenuCategorySchema),
+    kitchenReady: z.boolean().optional().default(false),
+    kitchenServed: z.boolean().optional().default(false),
   })
   .strict();
 
@@ -385,6 +411,9 @@ export type SelfOrderCartModifier = z.infer<typeof selfOrderModifierSchema>;
 export type SelfOrderCartSide = z.infer<typeof selfOrderSideSchema>;
 export type SelfOrderPaymentRequest = z.infer<
   typeof selfOrderPaymentRequestSchema
+>;
+export type SelfOrderInvoicePayload = z.infer<
+  typeof selfOrderInvoicePayloadSchema
 >;
 export type SelfOrderRequestStatus = z.infer<
   typeof selfOrderRequestStatusSchema

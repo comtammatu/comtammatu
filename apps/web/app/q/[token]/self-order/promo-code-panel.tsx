@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { X as IconX } from "lucide-react";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { formatVND } from "@comtammatu/shared/format";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
@@ -40,34 +41,39 @@ export function SelfOrderPromoPanel({
   if (applied) {
     return (
       <div className="flex flex-col gap-2">
-        <div className="flex items-start justify-between gap-3 text-sm text-success">
-          <div className="min-w-0">
-            <p className="font-medium">{SELF_ORDER_VI.promoApplied}</p>
-            <p className="text-xs text-muted-foreground">
-              {[promotionName, promotionCode].filter(Boolean).join(" · ")}
-            </p>
-          </div>
+        <div className="flex items-center gap-2">
+          <Input
+            controlSize="touch"
+            readOnly
+            value={[promotionName, promotionCode].filter(Boolean).join(" · ")}
+            className="min-w-0 flex-1 bg-muted font-mono"
+            aria-label={SELF_ORDER_VI.promoCodeLabel}
+          />
+          {canEdit ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon-touch"
+              className="shrink-0"
+              disabled={isPending}
+              aria-label={SELF_ORDER_VI.promoClear}
+              onClick={onClear}
+            >
+              {isPending ? <Spinner className="size-4" /> : <IconX />}
+            </Button>
+          ) : null}
+        </div>
+        <div className="flex items-center justify-between gap-3 text-sm text-success">
+          <span className="font-medium">{SELF_ORDER_VI.promoApplied}</span>
           <span className="shrink-0 font-mono tabular-nums">
             -{formatVND(orderDiscountAmount)}
           </span>
         </div>
-        {canEdit ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="touch"
-            className="w-full"
-            disabled={isPending}
-            onClick={onClear}
-          >
-            {isPending ? <Spinner className="size-4" /> : null}
-            {SELF_ORDER_VI.promoClear}
-          </Button>
-        ) : (
+        {!canEdit ? (
           <p className="text-xs text-muted-foreground">
             {SELF_ORDER_VI.promoLocked}
           </p>
-        )}
+        ) : null}
         {error ? (
           <Alert variant="destructive">
             <AlertDescription>{error}</AlertDescription>
@@ -85,10 +91,12 @@ export function SelfOrderPromoPanel({
         <FieldLabel htmlFor="self-order-promo-code">
           {SELF_ORDER_VI.promoCodeLabel}
         </FieldLabel>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <Input
             id="self-order-promo-code"
             name="promoCode"
+            controlSize="touch"
+            className="min-w-0 flex-1 font-mono"
             autoComplete="off"
             autoCapitalize="characters"
             spellCheck={false}
@@ -107,6 +115,7 @@ export function SelfOrderPromoPanel({
           <Button
             type="button"
             size="touch"
+            className="shrink-0"
             disabled={isPending || trimmed.length < 1}
             onClick={() => onApply(trimmed)}
           >
