@@ -46,8 +46,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
-  const text = new URL(request.url).searchParams.get("text")?.trim() ?? "";
+  const url = new URL(request.url);
+  const text = url.searchParams.get("text")?.trim() ?? "";
   if (!isAllowedOperationalUtterance(text)) return badRequest();
+  const isLive = url.searchParams.get("live") === "1";
 
   const cached = getCachedOperationalUtterance(text);
   if (cached) return audioResponse(cached);
@@ -55,6 +57,12 @@ export async function GET(request: Request) {
   if (!isOperationalTtsConfigured()) {
     console.error("[operational-tts] tts_unconfigured");
     return NextResponse.json({ error: "tts_unconfigured" }, { status: 503 });
+  }
+
+  // Prefetch and stale POS/KDS JS must not spend Gateway quota. Live alerts
+  // are the only synthesize path (`live=1`).
+  if (!isLive) {
+    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
   }
 
   const limited = await ttsRateLimit.limit("operational");

@@ -3,9 +3,6 @@ import { listPrefetchUtterances } from "./operational-audio-catalog";
 
 const TTS_CACHE_NAME = "ctmt-operational-tts-v1";
 const TTS_FETCH_TIMEOUT_MS = 2_500;
-const PREFETCH_NETWORK_GAP_MS = 2_000;
-const PREFETCH_FETCH_TIMEOUT_MS = 8_000;
-const RATE_LIMITED_FALLBACK_WAIT_MS = 15_000;
 const SPEAK_PATH = "/api/operational-audio/speak";
 const RECEIVED_AMOUNT_PREFIX = "Đã nhận ";
 const AMOUNT_MEMORY_LIMIT = 80;
@@ -35,9 +32,10 @@ export function cancelOperationalVoice(): void {
   stopCurrentClip = null;
 }
 
-function clipRequest(text: string): Request {
-  const url = `${SPEAK_PATH}?text=${encodeURIComponent(text)}`;
-  return new Request(url, {
+function clipRequest(text: string, live = false): Request {
+  const params = new URLSearchParams({ text });
+  if (live) params.set("live", "1");
+  return new Request(`${SPEAK_PATH}?${params.toString()}`, {
     method: "GET",
     credentials: "include",
   });
@@ -130,7 +128,7 @@ async function fetchCloudClip(
   }
 
   try {
-    const response = await fetch(clipRequest(text), { signal });
+    const response = await fetch(clipRequest(text, true), { signal });
     if (response.status === 429) return "rate_limited";
     if (response.status === 503) {
       let code = "";
@@ -204,35 +202,12 @@ export function prefetchOperationalVoiceCatalog(options?: {
 }): void {
   if (isCloudTtsUnavailable()) return;
   const generation = ++prefetchGeneration;
-  const queue = [...listPrefetchUtterances(options)];
   void (async () => {
-    let rateLimitedStreak = 0;
-    while (queue.length > 0) {
+    for (const text of listPrefetchUtterances(options)) {
       if (generation !== prefetchGeneration) return;
       if (isCloudTtsUnavailable()) return;
-      const text = queue.shift();
       if (!text || readMemoryClip(text)) continue;
-      const startedAt = Date.now();
-      const result = await fetchCloudClip(
-        text,
-        AbortSignal.timeout(PREFETCH_FETCH_TIMEOUT_MS),
-      );
-      if (result === "rate_limited") {
-        rateLimitedStreak += 1;
-        if (rateLimitedStreak > 3) return;
-        queue.unshift(text);
-        await new Promise<void>((resolve) => {
-          window.setTimeout(resolve, RATE_LIMITED_FALLBACK_WAIT_MS);
-        });
-        continue;
-      }
-      rateLimitedStreak = 0;
-      const waitMs = PREFETCH_NETWORK_GAP_MS - (Date.now() - startedAt);
-      if (waitMs > 0) {
-        await new Promise<void>((resolve) => {
-          window.setTimeout(resolve, waitMs);
-        });
-      }
+      await readCachedClip(text);
     }
   })();
 }

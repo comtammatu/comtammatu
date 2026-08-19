@@ -97,9 +97,9 @@ supplies the user gesture for `AudioContext`.
 
 Engine: AI SDK `generateSpeech` + Gateway `openai/tts-1` `nova` at 1.15x
 (no OS TTS). Fetch with the beep; play after 120 ms. Miss → beep only.
-Allowlisted templates only. POS prefetches table lines (not generic guest
-copy) slowly; Gateway errors cool 60s. Not 1–99 or totals.
-Cycle preview prefetches generics. Gateway 429 maps to HTTP 429.
+Allowlisted templates only. Live speak (`live=1`) is the only Gateway path;
+prefetch warms device cache only. Not 1–99 or totals.
+Cycle preview speaks live. Gateway 429 maps to HTTP 429.
 
 - **KDS:** board = SoT; bell cycles mode; voice kind aligns with signal tone.
 - **POS:** catalog kinds speak; guest events coalesce per tick; VietQR paid speaks amount plus table.

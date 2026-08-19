@@ -24,6 +24,7 @@ test("operational cloud TTS stays allowlisted, authenticated, and cloud-only", (
   assert.match(route, /tts_unconfigured/);
   assert.match(route, /ttsRateLimit\.limit\("operational"\)/);
   assert.match(route, /bytes === "rate_limited"/);
+  assert.match(route, /get\("live"\) === "1"/);
   assert.match(route, /getCachedOperationalUtterance/);
   assert.doesNotMatch(route, /openai\.com/);
 
@@ -54,8 +55,11 @@ test("operational cloud TTS stays allowlisted, authenticated, and cloud-only", (
   assert.match(voice, /prefetchOperationalVoiceCatalog/);
   assert.match(voice, /code === "tts_unconfigured"/);
   assert.match(voice, /TTS_FETCH_TIMEOUT_MS = 2_500/);
-  assert.match(voice, /PREFETCH_NETWORK_GAP_MS = 2_000/);
+  assert.match(voice, /params\.set\("live", "1"\)/);
+  assert.match(voice, /clipRequest\(text, true\)/);
   assert.match(voice, /prefetchGeneration/);
+  assert.doesNotMatch(voice, /PREFETCH_NETWORK_GAP_MS/);
+  assert.doesNotMatch(voice, /PREFETCH_FETCH_TIMEOUT_MS/);
   assert.doesNotMatch(voice, /speechSynthesis/);
   assert.doesNotMatch(voice, /speakBrowser/);
   assert.match(voice, /"rate_limited"/);
