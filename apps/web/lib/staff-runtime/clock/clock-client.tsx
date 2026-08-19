@@ -527,7 +527,7 @@ export function ClockClient({
         title={clockCopy.checkoutPendingTitle}
         description={`${clockCopy.checkoutPendingDescriptionPrefix} ${getCheckoutApprovalTargetLabel(
           state,
-        )}. ${clockCopy.checkoutPendingAutoApproveHint}`}
+        )}.`}
         tone="warning"
         badge={{ children: clockCopy.checkoutPendingBadge, variant: "warning" }}
       >

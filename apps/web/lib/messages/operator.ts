@@ -50,8 +50,7 @@ export const operator = {
     statusShiftUnassigned: "Chưa phân ca hôm nay",
     statusNoProfile: "Thiếu hồ sơ nhân viên",
     statusNoBranch: "Thiếu chi nhánh",
-    descriptionCheckoutPending:
-      "Yêu cầu kết ca đã gửi, chờ quản lý duyệt. Nếu quên duyệt, hệ thống tự duyệt sau 2 giờ.",
+    descriptionCheckoutPending: "Chờ quản lý duyệt.",
     descriptionNotRequired: "Tài khoản này không có ca cần chấm công hôm nay.",
     descriptionClockInTooEarly: (
       shiftName: string,

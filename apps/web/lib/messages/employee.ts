@@ -67,8 +67,7 @@ export const employee = {
     descriptionWorking: "Hoàn thành việc trong ca, sau đó gửi kết ca.",
     descriptionReadyToCheckout:
       "Đã hoàn thành việc trong ca, bấm Kết ca để chốt công.",
-    descriptionCheckoutPending:
-      "Yêu cầu kết ca đã gửi, chờ quản lý duyệt. Nếu quên duyệt, hệ thống tự duyệt sau 2 giờ.",
+    descriptionCheckoutPending: "Chờ quản lý duyệt.",
     descriptionNotRequired: "Tài khoản này không có ca cần chấm công hôm nay.",
     descriptionDone: "Chấm công hôm nay đã đủ giờ vào và giờ ra.",
     descriptionNotStarted: "Chụp ảnh để chấm công vào ca.",
@@ -218,8 +217,6 @@ export const employee = {
     checkOutLabel: "Giờ ra",
     checkoutPendingTitle: "Chờ quản lý duyệt",
     checkoutPendingDescriptionPrefix: "Yêu cầu kết ca đã gửi đến",
-    checkoutPendingAutoApproveHint:
-      "Nếu chưa được duyệt, hệ thống tự duyệt sau 2 giờ.",
     checkoutPendingBadge: "Chờ duyệt",
     checkoutRequestLabel: "Yêu cầu ra",
     cancelCheckoutButton: "Rút yêu cầu kết ca",
@@ -230,11 +227,6 @@ export const employee = {
     tasksButton: "Việc trong ca",
     managerCheckoutTitle: "Chấm công ra",
     staffCheckoutTitle: "Kết ca",
-    managerCheckoutDescription:
-      "Ghi giờ ra ca trực tiếp, không cần danh sách việc hoặc duyệt.",
-    staffCheckoutDescriptionPrefix: "Chốt giờ ra ca. Kết ca",
-    staffCheckoutDescriptionSuffix:
-      "gửi quản lý duyệt. Nếu quên duyệt, hệ thống tự duyệt sau 2 giờ.",
     managerCheckoutBadge: "Sẵn sàng ra ca",
     staffCheckoutBadge: "Sẵn sàng gửi kết ca",
     managerCheckoutButton: "Chấm công ra",

@@ -1170,9 +1170,9 @@ improvisation.
 - Utility copy beats marketing copy. Secondary budget: page / `AppSection`
   description ≈ one idea, ≤ ~80 characters; KPI or field hint ≤ ~60. Drop the
   prop when it restates the title. Destructive confirm keeps its risk meaning.
-- Never put agent notes, implementation commentary, or dev history into product
-  UI. Layout safety: `AppSection` / `AppPageHeader` descriptions clamp; do not
-  clamp `FieldDescription` — shorten the copy. `CardDescription` stays unclamped.
+- Never put SOP, recovery policy, timers, agent notes, or implementation
+  commentary into product UI (`docs/ref/**`). Clamp `AppSection` /
+  `AppPageHeader` descriptions; shorten `FieldDescription`; leave `CardDescription`.
 
 ## Enforcement
 

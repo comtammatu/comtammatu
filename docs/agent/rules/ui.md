@@ -132,8 +132,9 @@ walk the **UI Review Checklist** below.
 - Accessibility basics are non-negotiable: keyboard reachability, visible focus,
   labels/names, semantic status not conveyed by color alone, and adequate touch
   targets.
-- Never put agent notes, internal implementation commentary, or dev history into
-  product UI.
+- Never put agent notes, SOP, recovery policy, internal timers, or
+  implementation commentary into product UI. Copy Contract in
+  `design-system.md` owns the budget.
 
 ## Copy And State
 
@@ -199,7 +200,7 @@ When the diff touches station routes or shared station adapters:
 
 - [ ] Vietnamese product copy follows glossary / shared dictionaries; one
       concept keeps one name
-- [ ] No agent notes, implementation commentary, or dev history in product UI
+- [ ] No agent notes, SOP, recovery policy, or implementation commentary in product UI
 - [ ] Loading / empty / error / permission / recovery states are explicit where
       the workflow requires them
 - [ ] No raw Supabase/Postgres/`SQLSTATE` text, secrets, or internal ids as

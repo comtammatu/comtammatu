@@ -35,6 +35,8 @@ test("Kết ca waits for manager; leftover pending auto-closes after 2 hours", (
   );
   const vercel = readFileSync(join(process.cwd(), "vercel.json"), "utf8");
   const employee = readWeb("lib/messages/employee.ts");
+  const operator = readWeb("lib/messages/operator.ts");
+  const clockClient = readWeb("lib/staff-runtime/clock/clock-client.tsx");
 
   assert.match(actions, /self_service_request_checkout/);
   assert.doesNotMatch(actions, /Tự động duyệt kết ca/);
@@ -42,7 +44,9 @@ test("Kết ca waits for manager; leftover pending auto-closes after 2 hours", (
   assert.match(worker, /Tự động duyệt kết ca/);
   assert.match(route, /autoApproveStaleCheckouts/);
   assert.match(vercel, /\/api\/cron\/attendance-checkout-auto-approve/);
-  assert.match(employee, /hệ thống tự duyệt sau 2 giờ/);
+  assert.doesNotMatch(employee, /tự duyệt sau 2 giờ/);
+  assert.doesNotMatch(operator, /tự duyệt sau 2 giờ/);
+  assert.doesNotMatch(clockClient, /checkoutPendingAutoApproveHint/);
 });
 
 test("Lịch merges rostered upcoming shifts onto the month grid", () => {
