@@ -140,9 +140,13 @@ async function fetchCloudClip(
       } catch {
         code = "";
       }
-      // Unconfigured stays latched; transient gateway failures may recover.
-      if (code === "tts_unconfigured") cloudTtsAvailable = false;
-      return null;
+      // Unconfigured stays latched. Other 503s are treated as rate-limit so
+      // prefetch stops instead of retrying every 2s against a hot Gateway.
+      if (code === "tts_unconfigured") {
+        cloudTtsAvailable = false;
+        return null;
+      }
+      return "rate_limited";
     }
     if (!response.ok) return null;
     const buffer = await response.arrayBuffer();
@@ -192,15 +196,19 @@ export function primeOperationalVoice(text: string): { play: () => void } {
   };
 }
 
+let prefetchGeneration = 0;
+
 export function prefetchOperationalVoiceCatalog(options?: {
   tableLabels?: readonly string[] | undefined;
   surface?: "pos" | "kds" | undefined;
 }): void {
   if (isCloudTtsUnavailable()) return;
+  const generation = ++prefetchGeneration;
   const queue = [...listPrefetchUtterances(options)];
   void (async () => {
     let rateLimitedStreak = 0;
     while (queue.length > 0) {
+      if (generation !== prefetchGeneration) return;
       if (isCloudTtsUnavailable()) return;
       const text = queue.shift();
       if (!text || readMemoryClip(text)) continue;

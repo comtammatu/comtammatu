@@ -1,6 +1,6 @@
 import "server-only";
 import { generateSpeech } from "ai";
-import { gateway } from "@ai-sdk/gateway";
+import { GatewayRateLimitError, gateway } from "@ai-sdk/gateway";
 
 // Locked cost choice: cheapest OpenAI speech model on Gateway. Not env-switched.
 const TTS_MODEL = "openai/tts-1";
@@ -65,7 +65,7 @@ function rememberClip(text: string, bytes: Buffer): void {
 
 export async function synthesizeOperationalUtterance(
   text: string,
-): Promise<Buffer | null> {
+): Promise<Buffer | null | "rate_limited"> {
   const cached = clipCache.get(text);
   if (cached) return cached;
 
@@ -89,6 +89,7 @@ export async function synthesizeOperationalUtterance(
       "[operational-tts] gateway failed=%s",
       error instanceof Error ? error.name : "unknown",
     );
+    if (GatewayRateLimitError.isInstance(error)) return "rate_limited";
     return null;
   }
 }

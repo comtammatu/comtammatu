@@ -6,7 +6,7 @@ Rate limiting via Upstash Redis in `packages/security/`.
 | --- | --- | --- | --- |
 | `rateLimit` | 60 | 1 min | General API routes |
 | `loginRateLimit` | 10 | 5 min | Login action |
-| `ttsRateLimit` | 120 | 1 min | POS/KDS `/api/operational-audio/speak` |
+| `ttsRateLimit` | 20 shared | 1 min | POS/KDS `/api/operational-audio/speak` |
 
 Env: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` (see `.env.example`).
 Missing env or Upstash failure **fails open** (availability over abuse

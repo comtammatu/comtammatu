@@ -68,9 +68,9 @@ export const loginRateLimit: Limiter = buildLimiter({
   prefix: "rl:login",
 });
 
-/** POS/KDS cloud TTS: catalog prefetch plus live alerts */
+/** Shared POS/KDS cloud TTS budget (all stations). Gateway RPM is tighter. */
 export const ttsRateLimit: Limiter = buildLimiter({
-  windowLimit: 120,
+  windowLimit: 20,
   windowDuration: "1 m",
   prefix: "rl:tts",
 });

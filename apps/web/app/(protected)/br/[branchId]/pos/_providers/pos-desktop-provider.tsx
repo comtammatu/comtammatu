@@ -272,13 +272,16 @@ export function PosDesktopProvider({
   useEffect(() => {
     setAudioMode(resolveAudioMode(readDevicePref(audioModeKey)));
   }, [audioModeKey]);
+  const tableVoiceLabels = tables.map((table) => String(table.number)).join(",");
   useEffect(() => {
     if (!audioModeHasVoice(audioMode)) return;
     prefetchOperationalVoiceCatalog({
       surface: "pos",
-      tableLabels: tables.map((table) => String(table.number)),
+      tableLabels: tableVoiceLabels
+        ? tableVoiceLabels.split(",")
+        : undefined,
     });
-  }, [audioMode, tables]);
+  }, [audioMode, tableVoiceLabels]);
   const bumpArchivedToken = useCallback(() => {
     setArchivedToken((t) => t + 1);
   }, []);

@@ -57,7 +57,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "tts_unconfigured" }, { status: 503 });
   }
 
-  const limited = await ttsRateLimit.limit(ctx.user.id);
+  const limited = await ttsRateLimit.limit("operational");
   if (!limited.success) {
     const retryAfterSec = Math.max(
       1,
@@ -74,6 +74,15 @@ export async function GET(request: Request) {
 
   try {
     const bytes = await synthesizeOperationalUtterance(text);
+    if (bytes === "rate_limited") {
+      return NextResponse.json(
+        { error: "rate_limited" },
+        {
+          status: 429,
+          headers: { "Retry-After": "30" },
+        },
+      );
+    }
     if (!bytes) {
       return NextResponse.json({ error: "tts_unavailable" }, { status: 503 });
     }
