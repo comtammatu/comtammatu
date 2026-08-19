@@ -75,8 +75,8 @@ test("inventory count task status comes from today's submitted or approved slips
   );
   assert.match(
     todayWorkStateSource,
-    /item\.taskKind === "inventory_count"[\s\S]*done: countTaskDone/,
-    "inventory_count checklist rows should display the derived count status",
+    /isShiftCountDutyItem\(item\)[\s\S]*taskKind: "inventory_count"[\s\S]*done: countTaskDone/,
+    "count-duty checklist rows, including catalog drink-count tasks, should display the derived count status",
   );
   assert.match(
     todayWorkStateSource,
@@ -148,6 +148,33 @@ test("employee inventory count keeps in-progress input across same-data refreshe
     employeeCountClientSource,
     /if \(draftSeedKeyRef\.current === nextSeedKey\) return;[\s\S]*setDraft\(next\);/,
     "same-data RSC refreshes must not wipe local count input before submit",
+  );
+});
+
+test("employee task UI hides catalog count duty when the count panel is embedded", () => {
+  const employeeHomeSource = readWeb("lib/staff-runtime/page.tsx");
+  const countDutySource = readWeb("lib/staff-runtime/_lib/count-duty.ts");
+  const clockActionsSource = readWeb("lib/staff-runtime/clock/actions.ts");
+
+  assert.match(
+    employeeTasksClientSource,
+    /hideCountTask[\s\S]*isShiftCountDutyItem\(item\)/,
+    "Embedded count on Ca should hide both inventory_count and catalog drink-count rows",
+  );
+  assert.match(
+    employeeHomeSource,
+    /hideCountTask=\{Boolean\(countPanel\)\}/,
+    "Ca should hide the count checklist row while the count sheet is on the same page",
+  );
+  assert.match(
+    countDutySource,
+    /catalogTaskTitle[\s\S]*clockInTaskTitle/,
+    "Count-duty matching must cover the cashier catalog task and the clock-in injected title",
+  );
+  assert.match(
+    clockActionsSource,
+    /markCompletedCountDutyChecklistItems/,
+    "Checkout must persist count-duty completion from submitted slips",
   );
 });
 
@@ -234,8 +261,8 @@ test("employee task checklist stays single-column and wraps long task copy", () 
   );
   assert.match(
     employeeTasksClientSource,
-    /<ItemDescription className="line-clamp-1 max-w-full break-words text-xs leading-5">/,
-    "Long done definitions must clamp to one line on the compact task row",
+    /<ItemDescription className="line-clamp-2 max-w-full whitespace-normal break-words text-xs leading-5">/,
+    "Long done definitions must wrap instead of overflowing the card",
   );
   assert.match(
     employeeTasksClientSource,
@@ -254,30 +281,35 @@ test("employee task checklist stays single-column and wraps long task copy", () 
   );
 });
 
-test("employee inventory count uses a compact grid and per-ingredient sheet", () => {
+test("employee inventory count uses a one-column list and a number pad sheet", () => {
   assert.match(
     employeeCountClientSource,
-    /@\/components\/surface/,
-    "Count entry should use the AppSheet chrome adapter",
+    /@\/components\/form\/number-pad-sheet/,
+    "Count entry should use the shared number pad sheet",
   );
   assert.match(
     employeeCountClientSource,
-    /<ItemGroup className="grid grid-cols-2 gap-2">/,
-    "Count assignments should render as a compact two-column grid",
+    /<ItemGroup className="gap-2">/,
+    "Count assignments should render as a single-column list",
+  );
+  assert.doesNotMatch(
+    employeeCountClientSource,
+    /grid-cols-2/,
+    "Count assignment cards must not squeeze names into two phone columns",
   );
   assert.match(
     employeeCountClientSource,
-    /setSelectedIngredientId\(assignment\.ingredientId\)/,
-    "Tapping an ingredient should open its entry sheet",
+    /openIngredientSheet\(assignment\.ingredientId\)/,
+    "Tapping an ingredient should open its quantity pad",
   );
   assert.match(
     employeeCountClientSource,
-    /<AppSheet[\s\S]*open=\{assignment !== null\}/,
-    "Ingredient entry should be isolated in a drawer",
+    /<NumberPadSheet[\s\S]*open=\{selectedAssignment !== null\}/,
+    "Ingredient quantity should be isolated in a bottom number pad",
   );
   assert.match(
     employeeCountClientSource,
-    /<AppSheet[\s\S]*side="right"[\s\S]*size="md"[\s\S]*contentClassName="overflow-hidden"/,
-    "The drawer should constrain overflow on mobile and desktop",
+    /ignoreSheetDismissRef/,
+    "The opening tap must not immediately dismiss the quantity pad",
   );
 });

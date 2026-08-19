@@ -11,11 +11,13 @@ import {
   getVNDateString,
   getVNMinutesOfDay,
 } from "@comtammatu/shared/time";
+import { messages } from "@lib/messages";
 import { getAuthContext } from "@/_lib/auth";
 import { resolveClockInGate } from "../_lib/default-shift";
 import { getClockInBlockedMessage } from "../_lib/clock-in-copy";
-import { messages } from "@lib/messages";
+import { markCompletedCountDutyChecklistItems } from "../_lib/count-duty";
 import { getEmployeeContext } from "../_lib/staff-runtime-context";
+import { getTodayWorkState } from "../_lib/today-work-state";
 
 const CHECKOUT_APPROVAL_ROLES: readonly StaffRole[] = [
   "owner",
@@ -504,6 +506,16 @@ export async function requestCheckoutApproval(
 
   if (!record) {
     return { success: false, error: "Không tìm thấy ca đang mở để kết ca." };
+  }
+
+  const workState = await getTodayWorkState();
+  if (workState.attendance?.id === record.id) {
+    await markCompletedCountDutyChecklistItems({
+      service,
+      tenantId: ctx.claims.tenant_id,
+      attendanceId: record.id,
+      items: workState.checklist.items,
+    });
   }
 
   const { data: requestedAt, error } = await ctx.supabase.rpc(

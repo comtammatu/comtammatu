@@ -439,6 +439,11 @@ export const employee = {
   },
   count: {
     title: "Đếm tồn",
+    catalogTaskTitle: "Đếm tồn nước",
+    clockInTaskTitle: "Kiểm kê tồn",
+    tapToEnter: "Nhập số",
+    entered: "Đã nhập",
+    notCounted: "Chưa đếm",
     unavailableTitle: "Chưa thể kiểm kê",
     missingBranchDescription:
       "Tài khoản chưa được gắn chi nhánh. Liên hệ quản lý để cập nhật hồ sơ.",

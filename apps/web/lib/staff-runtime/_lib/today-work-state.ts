@@ -1,7 +1,4 @@
 import { cache } from "react";
-import { getEmployeeContext } from "./staff-runtime-context";
-import { resolveClockInGate, type ClockInGate } from "./default-shift";
-import { isRequiredChecklistItemComplete } from "./checklist-complete";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import {
   addVNDateDays,
@@ -9,6 +6,10 @@ import {
   getVNMinutesOfDay,
 } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
+import { isRequiredChecklistItemComplete } from "./checklist-complete";
+import { isShiftCountDutyItem } from "./count-duty";
+import { resolveClockInGate, type ClockInGate } from "./default-shift";
+import { getEmployeeContext } from "./staff-runtime-context";
 
 export type TodayWorkStatus =
   | "missing_profile"
@@ -491,12 +492,17 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
       );
 
       checklistItems = checklistItems.map((item) =>
-        item.taskKind === "inventory_count"
-          ? { ...item, done: countTaskDone, isRequired: true }
+        isShiftCountDutyItem(item)
+          ? {
+              ...item,
+              taskKind: "inventory_count",
+              done: countTaskDone,
+              isRequired: true,
+            }
           : item,
       );
 
-      if (!checklistItems.some((item) => item.taskKind === "inventory_count")) {
+      if (!checklistItems.some((item) => isShiftCountDutyItem(item))) {
         checklistItems.push({
           id: -1,
           templateItemId: null,
@@ -514,7 +520,7 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
       }
     } else {
       checklistItems = checklistItems.map((item) =>
-        item.taskKind === "inventory_count"
+        isShiftCountDutyItem(item)
           ? { ...item, done: true, isRequired: false }
           : item,
       );

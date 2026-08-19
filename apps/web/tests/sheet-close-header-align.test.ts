@@ -61,7 +61,6 @@ test("compact right-sheet workflows use the shared size contract", () => {
     "app/(protected)/br/[branchId]/pos/_components/order-detail/merge-orders-sheet.tsx",
     "app/(protected)/br/[branchId]/pos/_components/order-detail/service-charge-sheet.tsx",
     "app/(protected)/br/[branchId]/pos/_components/order-detail/split-order-sheet.tsx",
-    "lib/staff-runtime/count/count-client.tsx",
   ]) {
     const workflow = readFileSync(join(process.cwd(), path), "utf8");
     assert.match(

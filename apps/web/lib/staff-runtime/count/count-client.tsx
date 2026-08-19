@@ -17,12 +17,7 @@ import { Send as IconSend, Warehouse as IconWarehouse } from "lucide-react";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { parseVietnameseNumericInput } from "@comtammatu/shared/format";
-import { ACTIONS_VI, FORM_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
-import {
-  Field,
-  FieldGroup,
-  FieldLabel,
-} from "@comtammatu/ui/components/field";
+import { FORM_VI } from "@comtammatu/shared/messages";
 import {
   Item,
   ItemContent,
@@ -41,11 +36,8 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { formatQty } from "@lib/inventory/format";
 import { messages } from "@lib/messages";
-import { FormattedNumberInput } from "@/components/form/formatted-number-input";
-import {
-  AppEmptyState,
-  AppSheet,
-} from "@/components/surface";
+import { NumberPadSheet } from "@/components/form/number-pad-sheet";
+import { AppEmptyState } from "@/components/surface";
 import { getStatusBadgeMeta } from "@/components/status-badge";
 import {
   EmployeeActionBar,
@@ -61,7 +53,6 @@ import {
 } from "@lib/branch-operator/components/branch-operator-page";
 import { submitCountSlip } from "./actions";
 import type {
-  CountAssignment,
   CountLocationGroup,
   CountSlipHeader,
   CountUnitChoice,
@@ -216,10 +207,12 @@ export function CountSlipClient({
   const [selectedIngredientId, setSelectedIngredientId] = useState<
     number | null
   >(null);
+  const ignoreSheetDismissRef = useRef(false);
   const selectedAssignment =
     activeGroup?.assignments.find(
       (assignment) => assignment.ingredientId === selectedIngredientId,
     ) ?? null;
+  const countCopy = messages.employee.count;
 
   useEffect(() => {
     if (!activeGroup) {
@@ -257,15 +250,33 @@ export function CountSlipClient({
   }, [activeGroup, prefill]);
 
   useEffect(() => {
-    if (selectedIngredientId !== null && !selectedAssignment) {
-      setSelectedIngredientId(null);
-    }
-  }, [selectedIngredientId, selectedAssignment]);
+    if (selectedIngredientId === null || !activeGroup) return;
+    const stillAssigned = activeGroup.assignments.some(
+      (assignment) => assignment.ingredientId === selectedIngredientId,
+    );
+    if (!stillAssigned) setSelectedIngredientId(null);
+  }, [selectedIngredientId, activeGroup]);
 
   function changeLocation(value: string) {
     const params = new URLSearchParams(searchParams.toString());
     params.set("location", value);
     router.replace(`${baseHref}?${params.toString()}`);
+  }
+
+  function openIngredientSheet(ingredientId: number) {
+    ignoreSheetDismissRef.current = true;
+    setSelectedIngredientId(ingredientId);
+    window.setTimeout(() => {
+      ignoreSheetDismissRef.current = false;
+    }, 400);
+  }
+
+  function handleSheetConfirm(value: number) {
+    if (selectedIngredientId == null) return;
+    updateLine(selectedIngredientId, {
+      quantity: formatCountQuantity(value),
+    });
+    setSelectedIngredientId(null);
   }
 
   function updateLine(ingredientId: number, patch: Partial<DraftLine>) {
@@ -335,108 +346,20 @@ export function CountSlipClient({
     value: String(group.locationId),
     label: group.locationName,
   }));
-
-  function renderIngredientSheet(assignment: CountAssignment | null) {
-    const entry = assignment ? draft[assignment.ingredientId] : undefined;
-    const inputId = assignment ? `count-${assignment.ingredientId}` : "count";
-    const unitInputId = `${inputId}-unit`;
-
-    return (
-      <AppSheet
-        side="right"
-        size="md"
-        open={assignment !== null}
-        onOpenChange={(open) => {
-          if (!open) setSelectedIngredientId(null);
-        }}
-        title={assignment?.ingredientName ?? ""}
-        contentClassName="overflow-hidden"
-        headerClassName="[&_h2]:min-w-0 [&_h2]:break-words [&_h2]:pr-8"
-        footer={
-          <Button
-            type="button"
-            variant="outline"
-            size="touch-lg"
-            className="w-full"
-            onClick={() => setSelectedIngredientId(null)}
-          >
-            {ACTIONS_VI.close}
-          </Button>
-        }
-      >
-        {assignment ? (
-          <FieldGroup>
-            <div
-              className={
-                assignment.countUnits.length > 0
-                  ? "grid grid-cols-1 gap-3 sm:grid-cols-2 sm:items-end"
-                  : undefined
-              }
-            >
-              <Field>
-                <FieldLabel htmlFor={inputId}>
-                  {INVENTORY_VI.countedQtyHeader}
-                </FieldLabel>
-                <FormattedNumberInput
-                  id={inputId}
-                  inputMode="decimal"
-                  autoComplete="off"
-                  value={entry?.quantity ?? ""}
-                  disabled={locked || isPending}
-                  maxFractionDigits={3}
-                  controlSize="touch"
-                  className="tabular-nums"
-                  onValueChange={(quantity) =>
-                    updateLine(assignment.ingredientId, {
-                      quantity,
-                    })
-                  }
-                />
-              </Field>
-              {assignment.countUnits.length > 0 ? (
-                <Field>
-                  <FieldLabel htmlFor={unitInputId}>{FORM_VI.unit}</FieldLabel>
-                  <Select
-                    value={
-                      entry?.entryUnitId != null
-                        ? String(entry.entryUnitId)
-                        : ""
-                    }
-                    onValueChange={(value) =>
-                      updateLine(assignment.ingredientId, {
-                        entryUnitId: Number(value),
-                      })
-                    }
-                    disabled={locked || isPending}
-                  >
-                    <SelectTrigger
-                      id={unitInputId}
-                      size="touch"
-                      className="w-full min-w-0"
-                      aria-label={`${FORM_VI.unit} ${assignment.ingredientName}`}
-                    >
-                      <SelectValue placeholder={FORM_VI.unit} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {assignment.countUnits.map((unit) => (
-                        <SelectItem
-                          key={unit.unitId}
-                          value={String(unit.unitId)}
-                          size="touch"
-                        >
-                          {unit.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </Field>
-              ) : null}
-            </div>
-          </FieldGroup>
-        ) : null}
-      </AppSheet>
-    );
-  }
+  const selectedEntry = selectedAssignment
+    ? draft[selectedAssignment.ingredientId]
+    : undefined;
+  const selectedUnit =
+    selectedAssignment == null
+      ? null
+      : selectedEntry?.entryUnitId == null
+        ? getDefaultCountUnitChoice(selectedAssignment.countUnits)
+        : (selectedAssignment.countUnits.find(
+            (unit) => unit.unitId === selectedEntry.entryUnitId,
+          ) ?? getDefaultCountUnitChoice(selectedAssignment.countUnits));
+  const selectedQuantity = selectedEntry
+    ? parseDraftQuantity(selectedEntry.quantity)
+    : null;
 
   return (
     <>
@@ -517,7 +440,7 @@ export function CountSlipClient({
               </Frame>
             ) : null}
 
-            <ItemGroup className="grid grid-cols-2 gap-2">
+            <ItemGroup className="gap-2">
               {activeGroup.assignments.map((assignment) => {
                 const entry = draft[assignment.ingredientId];
                 const summary = buildDraftSummary({
@@ -525,41 +448,95 @@ export function CountSlipClient({
                   entryUnitId: entry?.entryUnitId ?? null,
                   units: assignment.countUnits,
                 });
+                const unitInputId = `count-${assignment.ingredientId}-unit`;
                 return (
-                  <Item
+                  <div
                     key={assignment.ingredientId}
-                    variant="outline"
-                    className="min-h-24 cursor-pointer items-start gap-2 bg-card text-left hover:bg-muted/50"
-                    render={
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setSelectedIngredientId(assignment.ingredientId)
-                        }
-                      />
-                    }
+                    className="flex min-w-0 flex-col gap-2"
                   >
-                    <ItemContent className="min-w-0 gap-1">
-                      <ItemTitle
-                        size="heading"
-                        className="line-clamp-none w-full break-words"
-                      >
-                        {assignment.ingredientName}
-                      </ItemTitle>
-                      {summary ? (
-                        <ItemDescription className="line-clamp-none break-words text-xs">
-                          {summary}
+                    <Item
+                      variant="outline"
+                      className="min-w-0 items-start gap-2 bg-card text-left hover:bg-muted/50"
+                      render={
+                        <button
+                          type="button"
+                          disabled={locked || isPending}
+                          onClick={() =>
+                            openIngredientSheet(assignment.ingredientId)
+                          }
+                        />
+                      }
+                    >
+                      <ItemContent className="min-w-0 gap-1">
+                        <ItemTitle
+                          size="heading"
+                          className="block w-full min-w-0 max-w-full whitespace-normal break-words line-clamp-2"
+                        >
+                          {assignment.ingredientName}
+                        </ItemTitle>
+                        <ItemDescription className="min-w-0 max-w-full whitespace-normal break-words line-clamp-2 text-xs">
+                          {summary ?? countCopy.tapToEnter}
                         </ItemDescription>
-                      ) : null}
-                    </ItemContent>
-                    <Badge variant={summary ? "success" : "secondary"}>
-                      {summary ? "Đã nhập" : "Chưa đếm"}
-                    </Badge>
-                  </Item>
+                      </ItemContent>
+                      <Badge
+                        className="shrink-0"
+                        variant={summary ? "success" : "secondary"}
+                      >
+                        {summary ? countCopy.entered : countCopy.notCounted}
+                      </Badge>
+                    </Item>
+                    {assignment.countUnits.length > 1 ? (
+                      <Select
+                        value={
+                          entry?.entryUnitId != null
+                            ? String(entry.entryUnitId)
+                            : ""
+                        }
+                        onValueChange={(value) =>
+                          updateLine(assignment.ingredientId, {
+                            entryUnitId: Number(value),
+                          })
+                        }
+                        disabled={locked || isPending}
+                      >
+                        <SelectTrigger
+                          id={unitInputId}
+                          size="touch"
+                          className="w-full min-w-0"
+                          aria-label={`${FORM_VI.unit} ${assignment.ingredientName}`}
+                        >
+                          <SelectValue placeholder={FORM_VI.unit} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {assignment.countUnits.map((unit) => (
+                            <SelectItem
+                              key={unit.unitId}
+                              value={String(unit.unitId)}
+                              size="touch"
+                            >
+                              {unit.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : null}
+                  </div>
                 );
               })}
             </ItemGroup>
-            {renderIngredientSheet(selectedAssignment)}
+            <NumberPadSheet
+              open={selectedAssignment !== null}
+              onOpenChange={(open) => {
+                if (!open && !ignoreSheetDismissRef.current) {
+                  setSelectedIngredientId(null);
+                }
+              }}
+              title={selectedAssignment?.ingredientName ?? ""}
+              suffix={selectedUnit?.code}
+              initialValue={selectedQuantity}
+              allowDecimal
+              onConfirm={handleSheetConfirm}
+            />
 
             {!locked ? (
               <ActionBar>

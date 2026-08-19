@@ -26,6 +26,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { AppSheet } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { isRequiredChecklistItemComplete } from "../_lib/checklist-complete";
+import { isShiftCountDutyItem } from "../_lib/count-duty";
 import type { TodayChecklistItem } from "../_lib/today-work-state";
 import {
   MAX_CLOCK_PHOTO_BYTES,
@@ -342,7 +343,7 @@ export function TasksClient({
     (item) => !isRequiredChecklistItemComplete(item),
   ).length;
   const visibleItems = hideCountTask
-    ? localItems.filter((item) => item.taskKind !== "inventory_count")
+    ? localItems.filter((item) => !isShiftCountDutyItem(item))
     : localItems;
   const capturingItem =
     capturingItemId === null
@@ -450,7 +451,7 @@ export function TasksClient({
                     <ItemContent className="min-w-0 gap-1">
                       <ItemTitle
                         className={cn(
-                          "line-clamp-2 w-full max-w-full items-start text-sm leading-5",
+                          "block w-full min-w-0 max-w-full whitespace-normal break-words line-clamp-2 text-sm leading-5",
                           item.done && "text-muted-foreground",
                         )}
                       >
@@ -472,7 +473,7 @@ export function TasksClient({
                         )}
                       </ItemTitle>
                       {!item.done && item.doneDefinition ? (
-                        <ItemDescription className="line-clamp-1 max-w-full break-words text-xs leading-5">
+                        <ItemDescription className="line-clamp-2 max-w-full whitespace-normal break-words text-xs leading-5">
                           {item.doneDefinition}
                         </ItemDescription>
                       ) : null}

@@ -1678,7 +1678,6 @@ const perFileCountBudgets = [
       "apps/web/app/r/[token]/feedback-form.tsx": 1,
       "apps/web/lib/branch-operator/components/branch-operator-page.tsx": 1,
       "apps/web/lib/hr/roster/weekly-schedule-dialog.tsx": 1,
-      "apps/web/lib/staff-runtime/count/count-client.tsx": 1,
       "apps/web/lib/staff-runtime/profile/page.tsx": 2,
       "apps/web/lib/staff-runtime/schedule/schedule-client.tsx": 2,
     },

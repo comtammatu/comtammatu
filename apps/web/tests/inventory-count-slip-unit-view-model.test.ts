@@ -154,10 +154,9 @@ test("employee count UI uses named touch sizes without extra unit hints", () => 
   assert.match(pageSource, /to_base_factor/);
   assert.match(pageSource, /toBaseFactor/);
   assert.match(clientSource, /formatQty/);
-  assert.match(clientSource, /controlSize="touch"/);
+  assert.match(clientSource, /NumberPadSheet/);
   assert.match(clientSource, /size="touch-lg"/);
-  assert.match(clientSource, /FieldGroup/);
-  assert.match(clientSource, /sm:grid-cols-2 sm:items-end/);
+  assert.match(clientSource, /size="touch"/);
   assert.doesNotMatch(clientSource, /buildCountUnitPreview/);
   assert.doesNotMatch(clientSource, /INVENTORY_VI\.convertedColon/);
   assert.doesNotMatch(clientSource, /Đơn vị chuẩn/);
@@ -171,6 +170,7 @@ test("employee count UI uses named touch sizes without extra unit hints", () => 
   assert.doesNotMatch(clientSource, /assignment\.measureUnit/);
   assert.doesNotMatch(pageSource, /measureUnit/);
   assert.doesNotMatch(clientSource, /className="w-24 shrink-0"/);
+  assert.doesNotMatch(clientSource, /grid-cols-2/);
 });
 
 test("stocktake count UI previews conversion to base unit before submission", () => {
