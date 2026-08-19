@@ -31,11 +31,11 @@ test("Branch transfer hub stays on central; store redirects to /stock", () => {
   assert.match(client, /Đang lọc: cần nhận/);
   assert.match(client, /receiveFocus/);
   assert.match(client, /omitLinkedTransferSearch: mode === "branch"/);
-  assert.match(client, /YCH-first/);
+  assert.match(client, /Historical YCH remains readable/);
   assert.match(client, /inbound receive-ready/);
   // Branch drops document-type toggles (Tất cả|YCH|Nhận); central keeps them.
   assert.doesNotMatch(client, /grid-cols-3/);
-  assert.match(client, /Yêu cầu hàng và phiếu đang tới/);
+  assert.match(client, /Điều chuyển và phiếu đang tới/);
   assert.match(
     client,
     /ToggleGroupItem value="request">YCH<\/ToggleGroupItem>/,
@@ -67,7 +67,10 @@ test("Branch stock landing is four doors then fulfillment list", () => {
   assert.match(landing, /branchDoorOnHand/);
   assert.match(landing, /branchDoorWaste/);
   assert.match(landing, /grid grid-cols-2/);
-  assert.match(landing, /pb-\[5rem\] sm:pb-0/);
+  assert.match(landing, /AppDetailFooter sticky className="sm:hidden"/);
+  assert.doesNotMatch(landing, /pb-20/);
+  assert.match(landing, /min-w-0 flex-nowrap/);
+  assert.doesNotMatch(landing, /line-clamp-none text-sm/);
   assert.doesNotMatch(landing, /BranchStockWorkPanel/);
   assert.doesNotMatch(landing, /key: "consumption"/);
   assert.doesNotMatch(landing, /ItemGroup className="grid/);

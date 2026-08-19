@@ -202,8 +202,8 @@ test("Feedback LIST surfaces use AppToolbar section nav and AppListFrame", () =>
   const branchQr = readWeb(
     "app/(protected)/br/[branchId]/(operator)/feedback/qr/page.tsx",
   );
-  assert.match(branchInbox, /BranchOperatorPage/);
-  assert.match(branchQr, /BranchOperatorPage/);
+  assert.match(branchInbox, /BranchFeedbackPage/);
+  assert.match(branchQr, /BranchFeedbackPage/);
   assert.doesNotMatch(branchInbox, /<AppPage\b/);
   assert.doesNotMatch(branchQr, /<AppPage\b/);
   assert.match(branchInbox, /BranchFeedbackInboxList/);

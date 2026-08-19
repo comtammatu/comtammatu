@@ -68,6 +68,7 @@ import {
   type StockIngredient,
 } from "@lib/inventory/stock-on-hand-model";
 import { messages } from "@lib/messages";
+import { PURCHASE_ORDER_CREATE_HREF } from "@lib/inventory/purchase-order-paths";
 
 const stockCopy = messages.inventory.stock;
 
@@ -119,17 +120,18 @@ function StockTouchRow({
     <Item
       variant="default"
       size="sm"
-      className="min-h-12 touch-manipulation gap-2 rounded-none border-x-0 border-t-0 border-b border-border px-2 py-1.5 last:border-b-0"
+      className="min-h-12 min-w-0 flex-nowrap touch-manipulation gap-2 rounded-none border-x-0 border-t-0 border-b border-border px-2 py-1.5 last:border-b-0"
       render={
         <Link
           href={`/br/${branchId}/stock/on-hand/${item.id}`}
+          prefetch={true}
           aria-label={stockCopy.actions.viewDetailAria(item.name)}
           role="listitem"
         />
       }
     >
       <ItemContent className="min-w-0">
-        <ItemTitle size="heading" className="min-w-0">
+        <ItemTitle size="heading" className="min-w-0 w-auto max-w-full">
           {item.name}
         </ItemTitle>
         <ItemDescription>
@@ -139,7 +141,7 @@ function StockTouchRow({
         </ItemDescription>
       </ItemContent>
 
-      <ItemActions className="min-w-0 justify-end">
+      <ItemActions className="shrink-0 justify-end">
         <StockQuantity item={item} />
         <IconChevronRight className="size-4 shrink-0 text-muted-foreground" />
       </ItemActions>
@@ -179,30 +181,30 @@ function resolveAttentionCtas({
     }
     if (permissions.canManagePurchaseRequest) {
       ctas.push({
-        key: "ycm",
-        href: `${base}/purchase-requests`,
-        label: stockCopy.actions.openPurchaseRequest,
+        key: "po",
+        href: PURCHASE_ORDER_CREATE_HREF,
+        label: messages.inventory.po.createAction,
         icon: IconPurchase,
       });
     }
     return ctas;
   }
   if (branchKind === "central_kitchen") {
-    if (!permissions.canCreateStockRequest) return [];
+    if (!permissions.canCreateTransfer) return [];
     return [
       {
         key: "request-cs",
-        href: `${base}/requests/new`,
+        href: `${base}/transfer/new?direction=pull`,
         label: stockCopy.actions.requestFromCentralSupply,
         icon: IconTruck,
       },
     ];
   }
-  if (!permissions.canCreateStockRequest) return [];
+  if (!permissions.canCreateTransfer) return [];
   return [
     {
       key: "request",
-      href: `${base}/requests/new`,
+      href: `${base}/transfer/new?direction=pull`,
       label: stockCopy.actions.requestStock,
       icon: IconTruck,
     },
@@ -272,10 +274,6 @@ export function BranchStockOnHandClient({
     branchKind,
     permissions,
   });
-  const showIdleCta =
-    attentionCtas.length > 0 &&
-    !coreDataLoadFailed &&
-    underThresholdCount === 0;
 
   const multiSelectOptions = useMemo(() => {
     const selected = new Set(normalizeStockOnHandCategories(draftCategories));
@@ -344,19 +342,17 @@ export function BranchStockOnHandClient({
         </div>
       </BranchOperatorControlBar>
       {!coreDataLoadFailed && underThresholdCount > 0 ? (
-        <NoteCallout
-          tone="warning"
-          className="min-h-12 items-center"
-          label={
-            <div className="flex min-w-0 flex-1 items-center gap-2">
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-foreground">
-                  {attentionTitle(branchKind)}
-                </p>
-                <p className="truncate text-xs text-muted-foreground">
-                  {stockCopy.attention.description(underThresholdCount)}
-                </p>
-              </div>
+        <NoteCallout tone="warning" className="min-h-12 items-center">
+          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium text-foreground">
+                {attentionTitle(branchKind)}
+              </p>
+              <p className="truncate text-xs font-normal text-muted-foreground">
+                {stockCopy.attention.description(underThresholdCount)}
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
               <Badge variant="warning">{underThresholdCount}</Badge>
               {primaryAttentionCta ? (
                 <Button
@@ -372,8 +368,8 @@ export function BranchStockOnHandClient({
                 </Button>
               ) : null}
             </div>
-          }
-        />
+          </div>
+        </NoteCallout>
       ) : null}
 
       <BranchOperatorPanel
@@ -386,20 +382,6 @@ export function BranchStockOnHandClient({
           ),
           variant: "secondary",
         }}
-        action={
-          showIdleCta && attentionCtas[0] ? (
-            <Button
-              size="touch"
-              render={<Link href={attentionCtas[0].href} />}
-            >
-              {(() => {
-                const Icon = attentionCtas[0].icon;
-                return <Icon />;
-              })()}
-              {attentionCtas[0].label}
-            </Button>
-          ) : undefined
-        }
         contentClassName="gap-3"
       >
         {coreDataLoadFailed ? (

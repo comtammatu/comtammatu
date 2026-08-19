@@ -74,7 +74,10 @@ export function BranchOperatorPage({
   return (
     <div
       data-slot="branch-operator-page"
-      className={cn("flex min-w-0 flex-col gap-3", fill && "min-h-0 flex-1")}
+      className={cn(
+        "flex min-h-0 min-w-0 flex-1 flex-col gap-3",
+        fill && "h-full",
+      )}
     >
       <AppPageHeader
         title={title}
@@ -215,7 +218,10 @@ export function BranchOperatorControlBar({
   return (
     <BranchOperatorFrame
       pad="sm"
-      className={cn("flex items-center justify-between gap-2", className)}
+      className={cn(
+        "flex min-w-0 w-full items-center justify-between gap-2",
+        className,
+      )}
       {...props}
     >
       {children}
@@ -377,7 +383,8 @@ export function BranchOperatorStatusStrip({
         "grid gap-2",
         items.length === 1 && "grid-cols-1",
         items.length === 2 && "grid-cols-2",
-        items.length >= 3 && "grid-cols-3",
+        items.length === 3 && "grid-cols-3",
+        items.length >= 4 && "grid-cols-2",
         className,
       )}
     >
@@ -522,7 +529,7 @@ function BranchOperatorActionItem({
         size={size}
         aria-disabled="true"
         className={cn(
-          "items-start bg-card opacity-50",
+          "min-w-0 flex-nowrap items-start bg-card opacity-50",
           presentation === "stations"
             ? "min-h-14 items-center"
             : "min-h-14 lg:items-center",
@@ -543,13 +550,13 @@ function BranchOperatorActionItem({
           </ItemMedia>
         ) : null}
         <ItemContent className="min-w-0">
-          <ItemTitle size="heading" className="line-clamp-none w-full">
+          <ItemTitle size="heading" className="min-w-0 w-full">
             {title}
           </ItemTitle>
           {description ? (
             <ItemDescription
               className={cn(
-                "line-clamp-none",
+                "line-clamp-2",
                 presentation !== "stations" && "text-sm leading-6",
               )}
             >
@@ -557,7 +564,7 @@ function BranchOperatorActionItem({
             </ItemDescription>
           ) : null}
           {disabledReason ? (
-            <ItemDescription className="line-clamp-none text-xs font-medium text-warning">
+            <ItemDescription className="line-clamp-2 text-xs font-medium text-warning">
               {disabledReason}
             </ItemDescription>
           ) : null}
@@ -571,7 +578,7 @@ function BranchOperatorActionItem({
       variant="outline"
       size={size}
       className={cn(
-        "group/branch-operator-action chrome-tap items-start bg-card transition-[background-color,border-color,box-shadow,transform] duration-150 select-none hover:bg-muted/50 hover:shadow-effect-card-hover active:scale-[0.97]",
+        "group/branch-operator-action chrome-tap min-w-0 flex-nowrap items-start bg-card transition-[background-color,border-color,box-shadow,transform] duration-150 select-none hover:bg-muted/50 hover:shadow-effect-card-hover active:scale-[0.97]",
         presentation === "stations"
           ? "min-h-14 items-center"
           : "min-h-14 lg:items-center",
@@ -591,13 +598,13 @@ function BranchOperatorActionItem({
         </ItemMedia>
       ) : null}
       <ItemContent className="min-w-0">
-        <ItemTitle size="heading" className="line-clamp-none w-full">
+        <ItemTitle size="heading" className="min-w-0 w-full">
           {title}
         </ItemTitle>
         {description ? (
           <ItemDescription
             className={cn(
-              "line-clamp-none",
+              "line-clamp-2",
               presentation !== "stations" && "text-sm leading-6",
             )}
           >
@@ -606,7 +613,7 @@ function BranchOperatorActionItem({
         ) : null}
       </ItemContent>
       {presentation === "stations" ? null : (
-        <ItemActions className="self-center text-muted-foreground">
+        <ItemActions className="shrink-0 self-center text-muted-foreground">
           <IconChevronRight />
         </ItemActions>
       )}

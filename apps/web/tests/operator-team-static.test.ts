@@ -368,13 +368,22 @@ test("operator team members use a roster grid with real profile fields", () => {
   assert.match(teamMembersSource, /todayStatus/);
   assert.match(
     teamMembersSource,
-    /grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5/,
+    /grid gap-2 lg:grid-cols-2/,
   );
+  assert.doesNotMatch(
+    teamMembersSource,
+    /(?:^|[^l])md:grid-cols-/,
+  );
+  assert.match(teamMembersSource, /layout="row"/);
   assert.match(teamMembersSource, /size="touch"/);
   assert.match(teamMembersSource, /<InputGroup size="touch">/);
   assert.doesNotMatch(teamMembersSource, /className="h-11"/);
   assert.doesNotMatch(teamMembersSource, /h-7 cursor-pointer/);
-  assert.match(teamMembersSource, /grid grid-cols-2 gap-2/);
+  assert.match(
+    teamMembersSource,
+    /className="no-scrollbar flex touch-pan-x gap-1.5 overflow-x-auto overscroll-x-contain pb-1"/,
+  );
+  assert.match(teamMembersSource, /grid gap-2 lg:grid-cols-2/);
   assert.match(teamMembersSource, /TeamMemberTile/);
   assert.match(
     teamMemberTileSource,

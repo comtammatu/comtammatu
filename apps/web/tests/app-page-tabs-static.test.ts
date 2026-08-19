@@ -45,13 +45,20 @@ test("toolbar Tabs keep content width and the muted track token", () => {
 });
 
 test("Branch workflow tabs use the named touch contract", () => {
-  for (const path of [
+  const source = read(
     "../app/(protected)/br/_shared/settings/tables/tables-client.tsx",
+  );
+  assert.match(source, /<TabsList[\s\S]*?size="touch"/);
+  assert.doesNotMatch(source, /<Tabs(?:List|Trigger)[^>]*className="[^"]*h-1[1246]/);
+});
+
+test("operator queue filters use ToggleGroup touch, not Tabs", () => {
+  for (const path of [
     "../app/(protected)/br/[branchId]/(operator)/stock/count-slips/branch-count-slips-client.tsx",
     "../app/(protected)/br/[branchId]/(operator)/stock/consumption/branch-consumption-list-client.tsx",
   ]) {
     const source = read(path);
-    assert.match(source, /<TabsList[\s\S]*?size="touch"/);
-    assert.doesNotMatch(source, /<Tabs(?:List|Trigger)[^>]*className="[^"]*h-1[1246]/);
+    assert.match(source, /<ToggleGroup[\s\S]*?size="touch"/);
+    assert.doesNotMatch(source, /from "@comtammatu\/ui\/components\/tabs"/);
   }
 });

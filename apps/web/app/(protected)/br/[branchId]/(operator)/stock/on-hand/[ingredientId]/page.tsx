@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import type { BranchKind } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
+import { PageSkeleton } from "@/components/page-skeleton";
 import { loadStockIngredientDetailData } from "@lib/inventory/stock-on-hand-detail-data";
 import { parseOperatorBranchId } from "../../../../_lib/parse-branch-id";
 import { BranchStockIngredientDetail } from "./branch-stock-ingredient-detail";
@@ -10,9 +12,17 @@ interface PageProps {
   params: Promise<{ branchId: string; ingredientId: string }>;
 }
 
-export default async function OperatorStockIngredientDetailPage({
+export default function OperatorStockIngredientDetailPage({
   params,
 }: PageProps) {
+  return (
+    <Suspense fallback={<PageSkeleton bare />}>
+      <OperatorStockIngredientDetailBody params={params} />
+    </Suspense>
+  );
+}
+
+async function OperatorStockIngredientDetailBody({ params }: PageProps) {
   const { branchId: rawBranchId, ingredientId: rawIngredientId } = await params;
   const branchId = parseOperatorBranchId(rawBranchId);
   const ingredientId = Number(rawIngredientId);

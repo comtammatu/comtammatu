@@ -35,6 +35,7 @@ export default async function CloseDayPage({
     <BranchOperatorPage
       title={messages.settings.branch.closeDayTitle}
       description={context.branch.name}
+      hideHeaderOnMobile
     >
       <CloseDayClient
         branchId={context.branchId}

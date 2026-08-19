@@ -159,9 +159,20 @@ test("operator header shows branch context and keeps profile and notifications",
   );
   const sharedBell = read("apps/web/app/_components/notification-bell.tsx");
   assert.match(layout, /<OperatorNotificationBell/);
+  assert.doesNotMatch(layout, /notificationsReturnTo/);
+  assert.doesNotMatch(
+    layout,
+    /<OperatorNotificationBell[\s\S]*returnTo=\{/,
+  );
+  assert.doesNotMatch(
+    layout,
+    /returnTo=\{`\/br\/\$\{(?:context\.)?branchId\}`\}/,
+  );
   assert.match(bell, /from "@\/_components\/notification-bell"/);
   assert.match(bell, /<NotificationBell/);
-  assert.match(bell, /returnTo=\{returnTo \|\| pathname\}/);
+  assert.match(bell, /usePathname\(\)/);
+  assert.match(bell, /useSearchParams\(\)/);
+  assert.match(bell, /returnTo=\{returnTo \|\| currentPath\}/);
   assert.doesNotMatch(bell, /messages\.employee\.(?:nav|header)/);
   assert.match(sharedBell, /messages\.notifications\.bellAriaLabel/);
   assert.match(sharedBell, /encodeURIComponent/);
@@ -267,11 +278,16 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
   const todaySource = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/_components/home/branch-today-status.tsx",
   );
+  const todayControlBar = todaySource.match(
+    /<BranchOperatorControlBar[\s\S]*?<\/BranchOperatorControlBar>/,
+  )?.[0];
   assert.match(todaySource, /BranchOperatorControlBar/);
   assert.match(todaySource, /getTodayWorkState/);
   assert.match(todaySource, /messages\.operator\.todayStatus/);
   assert.doesNotMatch(todaySource, /EmployeeHomePageContent/);
   assert.doesNotMatch(todaySource, /messages\.employee\.home/);
+  assert.ok(todayControlBar, "today status must render a ControlBar");
+  assert.doesNotMatch(todayControlBar, /size="touch"/);
   assert.match(home, /groups\.map/);
   assert.match(home, /BranchOperatorActionSection/);
   assert.match(home, /BranchOperatorPanel/);
@@ -463,6 +479,12 @@ test("branch management roots use Branch operator shell adapters", () => {
   assert.match(branchOperatorPage, /align === "end" && "lg:justify-end"/);
   assert.match(branchOperatorPage, /wideColumns &&/);
   assert.match(branchOperatorPage, /"xl:grid-cols-3 2xl:grid-cols-4"/);
+  assert.match(branchOperatorPage, /items.length === 3 && "grid-cols-3"/);
+  assert.match(branchOperatorPage, /items.length >= 4 && "grid-cols-2"/);
+  assert.doesNotMatch(
+    branchOperatorPage,
+    /items.length >= 3 && "grid-cols-3"/,
+  );
   assert.match(
     branchOperatorPage,
     /presentation === "stations" && itemCount === 2 && "grid grid-cols-2"/,

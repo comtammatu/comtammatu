@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useMemo, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
+  ArrowLeft as IconArrowLeft,
   ChevronRight as IconChevronRight,
   ClipboardList as IconClipboard,
   History as IconHistory,
@@ -37,7 +38,10 @@ import {
 } from "@comtammatu/ui/components/select";
 
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@comtammatu/ui/components/toggle-group";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
   AppDetailFooter,
@@ -46,6 +50,7 @@ import {
 } from "@/components/surface";
 import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import {
+  BranchOperatorControlBar,
   BranchOperatorDetailList,
   BranchOperatorPage,
   BranchOperatorPanel,
@@ -177,28 +182,49 @@ export function BranchConsumptionListClient({
       description={branchName}
       hideHeaderOnMobile
     >
-      <Tabs
-        value={view}
-        onValueChange={(value) => {
-          setView(value as ConsumptionView);
-          setQuery("");
-          setStatus("all");
-        }}
-      >
-        <TabsList
-          size="touch"
-          className={showRecorded ? "grid w-full grid-cols-2" : "grid w-full"}
+      <BranchOperatorControlBar className="sm:hidden">
+        <Button
+          variant="ghost"
+          size="icon-touch"
+          render={
+            <Link
+              href={`/br/${branchId}/stock`}
+              aria-label={ACTIONS_VI.back}
+            />
+          }
         >
-          {showRecorded ? (
-            <TabsTrigger value="recorded">
-              {INVENTORY_VI.recordedConsumptionTitle}
-            </TabsTrigger>
-          ) : null}
-          <TabsTrigger value="manual">
-            {INVENTORY_VI.manualConsumptionSlipsTitle}
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value={view}>
+          <IconArrowLeft />
+        </Button>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold">
+            {issuesCopy.surface.consumption.eyebrow}
+          </p>
+          <p className="truncate text-xs text-muted-foreground">{branchName}</p>
+        </div>
+      </BranchOperatorControlBar>
+      {showRecorded ? (
+        <ToggleGroup
+          type="single"
+          variant="outline"
+          size="touch"
+          className="grid w-full grid-cols-2"
+          value={view}
+          onValueChange={(next) => {
+            if (!next) return;
+            setView(next as ConsumptionView);
+            setQuery("");
+            setStatus("all");
+          }}
+          aria-label={issuesCopy.surface.consumption.eyebrow}
+        >
+          <ToggleGroupItem value="recorded">
+            {INVENTORY_VI.consumptionTabRecorded}
+          </ToggleGroupItem>
+          <ToggleGroupItem value="manual">
+            {INVENTORY_VI.consumptionTabManual}
+          </ToggleGroupItem>
+        </ToggleGroup>
+      ) : null}
       <BranchOperatorPanel
         title={
           view === "recorded"
@@ -305,7 +331,7 @@ export function BranchConsumptionListClient({
                 <Item
                   key={order.orderId}
                   variant="outline"
-                  className="min-h-20 touch-manipulation"
+                  className="min-h-20 min-w-0 flex-nowrap touch-manipulation"
                   render={
                     <button
                       type="button"
@@ -363,7 +389,7 @@ export function BranchConsumptionListClient({
               <Item
                 key={issue.id}
                 variant="outline"
-                className="min-h-20 touch-manipulation"
+                className="min-h-20 min-w-0 flex-nowrap touch-manipulation"
                 render={<Link href={`${basePath}/${issue.id}`} />}
               >
                 <ItemContent className="min-w-0 gap-1">
@@ -392,8 +418,6 @@ export function BranchConsumptionListClient({
           </ItemGroup>
         )}
       </BranchOperatorPanel>
-        </TabsContent>
-      </Tabs>
 
       <AppSheet
         open={selectedOrder != null}

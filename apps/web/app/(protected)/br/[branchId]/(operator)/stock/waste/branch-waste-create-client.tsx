@@ -249,13 +249,11 @@ export function BranchWasteCreateClient({
             title={copy.panelTitle}
             description={copy.panelDescription}
             size="sm"
-            action={
-              <Button type="button" variant="outline" size="touch" onClick={addLine}>
-                <IconPlus className="size-4" />
-                {copy.addLine}
-              </Button>
-            }
           >
+            <Button type="button" variant="outline" size="touch" className="w-full" onClick={addLine}>
+              <IconPlus className="size-4" />
+              {copy.addLine}
+            </Button>
             {context.capStatus.requiresReview || evidenceRequired ? (
               <NoteCallout tone="warning">{copy.priceReviewHint}</NoteCallout>
             ) : null}

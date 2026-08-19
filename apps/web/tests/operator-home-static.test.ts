@@ -62,11 +62,10 @@ test("operator home shows manager revenue strip with month, day, and milestones"
   assert.match(strip, /homeCopy\.revenueTargetTitle/);
   assert.match(strip, /style=\{\{ left:/);
   assert.match(strip, /progressCopy\.targetLabel/);
-  assert.match(strip, /progressCopy\.dayHint/);
-  assert.match(strip, /progressCopy\.businessDayCaption/);
-  assert.match(strip, /progressCopy\.nextMilestone/);
-  assert.match(strip, /nextRevenueRewardGap/);
-  assert.match(strip, /getVNBusinessDateString/);
+  assert.match(strip, /<AppSheet\b/);
+  assert.match(strip, /rewardCopy\.trackingTitle/);
+  assert.match(strip, /setMilestonesOpen/);
+  assert.doesNotMatch(strip, /progressCopy\.dayHint|progressCopy\.nextMilestone|progressCopy\.paceToday|progressCopy\.businessDayCaption/);
   assert.doesNotMatch(strip, /<Collapsible>|CollapsibleTrigger|CollapsibleContent/);
   assert.doesNotMatch(strip, /\b(?:KpiCard|KpiRow)\b/);
 });
@@ -115,8 +114,8 @@ test("revenue strip copy is localized through finance messages", () => {
   assert.match(financeCopy, /monthRevenueLabel: "Doanh thu tháng"/);
   assert.match(financeCopy, /dayRevenueLabel: "Doanh thu ngày"/);
   assert.match(financeCopy, /targetLabel: "Chỉ tiêu tháng"/);
-  assert.match(financeCopy, /dayHint: "Ngày kinh doanh \(04:00–04:00\)"/);
   assert.match(financeCopy, /milestone: \(threshold: string\) => `Mốc \$\{threshold\}`/);
+  assert.match(financeCopy, /trackingTitle: "Các mốc chỉ tiêu"/);
 
   const operatorCopy = read("apps/web/lib/messages/operator.ts");
   assert.match(operatorCopy, /revenueTargetTitle: "Chỉ tiêu doanh thu"/);

@@ -3,14 +3,26 @@ import {
   fetchUnits,
   type UnitRow,
 } from "@/(protected)/inventory/settings/units/units-actions";
-import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { messages } from "@lib/messages";
 import { parseOperatorBranchId } from "../../../../_lib/parse-branch-id";
+import { CatalogPageShell } from "../catalog-page-shell";
 import { CatalogUnitsClient } from "./catalog-units-client";
 
 const copy = messages.catalog.units;
 
-export default async function OperatorCatalogUnitsPage({
+export default function OperatorCatalogUnitsPage({
+  params,
+}: {
+  params: Promise<{ branchId: string }>;
+}) {
+  return (
+    <CatalogPageShell title={copy.title}>
+      <CatalogUnitsBody params={params} />
+    </CatalogPageShell>
+  );
+}
+
+async function CatalogUnitsBody({
   params,
 }: {
   params: Promise<{ branchId: string }>;
@@ -23,8 +35,6 @@ export default async function OperatorCatalogUnitsPage({
   const rows: UnitRow[] = res.success ? (res.data ?? []) : [];
 
   return (
-    <BranchOperatorPage title={copy.title} hideHeaderOnMobile>
-      <CatalogUnitsClient backHref={`/br/${branchId}/stock/catalog`} rows={rows} />
-    </BranchOperatorPage>
+    <CatalogUnitsClient backHref={`/br/${branchId}/stock/catalog`} rows={rows} />
   );
 }

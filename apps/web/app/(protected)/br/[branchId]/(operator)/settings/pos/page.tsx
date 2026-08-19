@@ -16,6 +16,7 @@ import {
   INVENTORY_FEATURE_FLAGS,
   isFeatureEnabledForBranch,
 } from "@/(protected)/inventory/_lib/feature-flags";
+import { BranchSettingsBackControl } from "../_components/branch-settings-back-control";
 
 export default async function BranchPosSettingsPage({
   params,
@@ -57,11 +58,15 @@ export default async function BranchPosSettingsPage({
   if (terminalsRes.error)
     throw new Error(messages.settings.branch.posTerminalsLoadFailed);
 
+  const title = messages.settings.pages.posTitle;
+
   return (
     <BranchOperatorPage
-      title={messages.settings.pages.posTitle}
+      title={title}
       description={`${branchRes.data.name} · ${messages.settings.branch.posSetupDescription}`}
+      hideHeaderOnMobile
     >
+      <BranchSettingsBackControl branchId={branchId} title={title} />
       <BranchOperatorPanel title={messages.settings.pos.registrationSectionTitle}>
         <TerminalsClient
           branches={[branchRes.data] as BranchOption[]}

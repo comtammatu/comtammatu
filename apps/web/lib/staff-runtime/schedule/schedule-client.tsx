@@ -565,6 +565,7 @@ export function ScheduleClient({
     plane === "branch"
       ? BRANCH_SCHEDULE_PRIMITIVES
       : EMPLOYEE_SCHEDULE_PRIMITIVES;
+  const MonthNav = plane === "branch" ? "div" : ControlBar;
   const [monthStart, setMonthStart] = useState(initialMonthStart);
   const [monthData, setMonthData] = useState<ScheduleMonthData>(initialData);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -642,7 +643,13 @@ export function ScheduleClient({
   return (
     <>
       <Panel contentClassName="gap-3">
-        <ControlBar>
+        <MonthNav
+          className={
+            plane === "branch"
+              ? "flex min-w-0 w-full items-center justify-between gap-2"
+              : undefined
+          }
+        >
           <Button
             variant="outline"
             size="touch"
@@ -680,7 +687,7 @@ export function ScheduleClient({
           >
             <IconChevronRight />
           </Button>
-        </ControlBar>
+        </MonthNav>
 
         <StatusStrip
           className="grid-cols-2"

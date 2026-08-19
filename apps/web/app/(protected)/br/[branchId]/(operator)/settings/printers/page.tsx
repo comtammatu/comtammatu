@@ -12,6 +12,7 @@ import {
   type Category,
   type Printer,
 } from "@/(protected)/br/_shared/settings/printers/printers-client";
+import { BranchSettingsBackControl } from "../_components/branch-settings-back-control";
 import { attachPrinterRouting } from "./_lib/printer-routing";
 
 export default async function BranchPrintersPage({
@@ -92,14 +93,17 @@ export default async function BranchPrintersPage({
     printTypesRes.data ?? [],
     categoryRoutesRes.data ?? [],
   );
+  const title = messages.settings.pages.printersTitle;
 
   return (
     <BranchOperatorPage
-      title={messages.settings.pages.printersTitle}
+      title={title}
       description={messages.settings.branch.printersDescription(
         branchRes.data.name,
       )}
+      hideHeaderOnMobile
     >
+      <BranchSettingsBackControl branchId={branchId} title={title} />
       <BranchOperatorPanel>
         <PrintersClient
           branches={[branchRes.data]}

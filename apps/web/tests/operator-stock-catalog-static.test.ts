@@ -14,6 +14,7 @@ const catalogListSource = readWeb(
 );
 
 test("operator stock catalog index uses stable touch rows", () => {
+  assert.match(catalogIndexSource, /prefetch=\{true\}/);
   assert.match(catalogIndexSource, /className="chrome-tap min-h-12/);
   assert.match(catalogIndexSource, /<row\.icon aria-hidden="true" \/>/);
   assert.match(
@@ -27,7 +28,7 @@ test("operator stock catalog index uses stable touch rows", () => {
 test("operator stock catalog lists stay touch-first on narrow and tablet widths", () => {
   assert.match(
     catalogListSource,
-    /<Item\s+key=\{getRowKey\(row\)\}\s+variant="outline"\s+size="sm"\s+className="min-h-12"\s*>/,
+    /<Item\s+key=\{getRowKey\(row\)\}\s+variant="outline"\s+size="sm"\s+className="min-h-12 min-w-0 flex-nowrap"\s*>/,
   );
   assert.match(catalogListSource, /size="icon-touch"/);
   assert.match(catalogListSource, /aria-label=\{action\.ariaLabel\(row\)\}/);

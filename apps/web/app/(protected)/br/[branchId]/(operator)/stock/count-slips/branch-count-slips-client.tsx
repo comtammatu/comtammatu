@@ -30,7 +30,10 @@ import {
 import { Label } from "@comtammatu/ui/components/label";
 
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@comtammatu/ui/components/toggle-group";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
@@ -225,16 +228,25 @@ export function BranchCountSlipsClient({
           <p className="truncate text-xs text-muted-foreground">{branchName}</p>
         </div>
       </BranchOperatorControlBar>
-      <Tabs value={view} onValueChange={(value) => setView(value as QueueView)}>
-        <TabsList size="touch" className="grid w-full grid-cols-2">
-          <TabsTrigger value="pending">
-            {INVENTORY_VI.countSlipPendingBadge(pendingRows.length)}
-          </TabsTrigger>
-          <TabsTrigger value="history">
-            {INVENTORY_VI.countSlipHistoryTitle}
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value={view}>
+      <ToggleGroup
+        type="single"
+        variant="outline"
+        size="touch"
+        className="grid w-full grid-cols-2"
+        value={view}
+        onValueChange={(next) => {
+          if (!next) return;
+          setView(next as QueueView);
+        }}
+        aria-label={INVENTORY_VI.countSlipTitle}
+      >
+        <ToggleGroupItem value="pending">
+          {INVENTORY_VI.countSlipPendingBadge(pendingRows.length)}
+        </ToggleGroupItem>
+        <ToggleGroupItem value="history">
+          {INVENTORY_VI.countSlipHistoryTitle}
+        </ToggleGroupItem>
+      </ToggleGroup>
       <section
         aria-label={
           view === "pending"
@@ -267,7 +279,7 @@ export function BranchCountSlipsClient({
               <Item
                 key={row.id}
                 variant="outline"
-                className="min-h-20 touch-manipulation"
+                className="min-h-20 min-w-0 flex-nowrap touch-manipulation"
                 render={
                   <button type="button" onClick={() => setSelectedId(row.id)} />
                 }
@@ -284,7 +296,7 @@ export function BranchCountSlipsClient({
                     {INVENTORY_VI.varianceLineCount(changedLineCount(row))}
                   </ItemDescription>
                 </ItemContent>
-                <ItemActions>
+                <ItemActions className="shrink-0">
                   <StatusBadge
                     domain="count-slip"
                     value={row.status}
@@ -297,8 +309,6 @@ export function BranchCountSlipsClient({
           </ItemGroup>
         )}
       </section>
-        </TabsContent>
-      </Tabs>
 
       <AppSheet
         open={selected != null}

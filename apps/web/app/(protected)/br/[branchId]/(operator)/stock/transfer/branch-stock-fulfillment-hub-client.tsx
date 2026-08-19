@@ -143,7 +143,7 @@ export function BranchStockFulfillmentHubClient({
       omitLinkedTransferSearch: mode === "branch",
     });
     if (mode !== "branch") return next;
-    // YCH-first, then inbound DCs; newest within each kind.
+    // Historical YCH remains readable; dest-initiated DC is the create path.
     return next.toSorted((left, right) => {
       if (left.kind !== right.kind) {
         return left.kind === "request" ? -1 : 1;
@@ -156,6 +156,49 @@ export function BranchStockFulfillmentHubClient({
     (mode === "branch"
       ? receiveFocus || state !== stateDefault || search.length > 0
       : resolvedWork !== "all" || state !== stateDefault || search.length > 0);
+
+  function clearAllFilters() {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("work");
+    params.delete("queue");
+    params.delete("q");
+    params.delete("page");
+    params.delete("requestId");
+    params.delete("transferId");
+    if (stateDefault === "all") params.delete("state");
+    else params.set("state", stateDefault);
+    // Branch default state=active is implicit — drop it from URL.
+    if (mode === "branch") params.delete("state");
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, {
+      scroll: false,
+    });
+  }
+
+  const filterActions = (
+    <>
+      <Button
+        type="button"
+        variant={state !== stateDefault ? "secondary" : "outline"}
+        size="icon-touch"
+        aria-label="Lọc trạng thái"
+        onClick={() => setFilterOpen(true)}
+      >
+        <IconFilter />
+      </Button>
+      {hasFilters ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-touch"
+          aria-label={ACTIONS_VI.clearFilters}
+          onClick={clearAllFilters}
+        >
+          <IconX />
+        </Button>
+      ) : null}
+    </>
+  );
 
   return (
     <div className="flex min-w-0 flex-col gap-3">
@@ -193,7 +236,7 @@ export function BranchStockFulfillmentHubClient({
       </InputGroup>
 
       {mode === "branch" ? (
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           {receiveFocus ? (
             <Button
               type="button"
@@ -207,21 +250,13 @@ export function BranchStockFulfillmentHubClient({
             </Button>
           ) : (
             <p className="min-w-0 flex-1 text-sm text-muted-foreground">
-              Yêu cầu hàng và phiếu đang tới
+              Điều chuyển và phiếu đang tới
             </p>
           )}
-          <Button
-            type="button"
-            variant={state !== stateDefault ? "secondary" : "outline"}
-            size="icon-touch"
-            aria-label="Lọc trạng thái"
-            onClick={() => setFilterOpen(true)}
-          >
-            <IconFilter />
-          </Button>
+          {filterActions}
         </div>
       ) : (
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           <ToggleGroup
             type="single"
             value={resolvedWork}
@@ -236,7 +271,7 @@ export function BranchStockFulfillmentHubClient({
               }
             }}
             size="touch"
-            className="grid min-w-0 flex-1 grid-cols-4"
+            className="grid min-w-0 flex-1 grid-cols-2 sm:grid-cols-4"
             aria-label="Phân loại hành trình"
           >
             <ToggleGroupItem value="all">Tất cả</ToggleGroupItem>
@@ -244,15 +279,7 @@ export function BranchStockFulfillmentHubClient({
             <ToggleGroupItem value="dispatch">Giao</ToggleGroupItem>
             <ToggleGroupItem value="receive">Nhận</ToggleGroupItem>
           </ToggleGroup>
-          <Button
-            type="button"
-            variant={state !== "all" ? "secondary" : "outline"}
-            size="icon-touch"
-            aria-label="Lọc trạng thái"
-            onClick={() => setFilterOpen(true)}
-          >
-            <IconFilter />
-          </Button>
+          {filterActions}
         </div>
       )}
 
@@ -266,34 +293,6 @@ export function BranchStockFulfillmentHubClient({
         icon={IconTruck}
         badge={{ children: filtered.length }}
         size="sm"
-        action={
-          hasFilters ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="touch"
-              onClick={() => {
-                const params = new URLSearchParams(searchParams.toString());
-                params.delete("work");
-                params.delete("queue");
-                params.delete("q");
-                params.delete("page");
-                params.delete("requestId");
-                params.delete("transferId");
-                if (stateDefault === "all") params.delete("state");
-                else params.set("state", stateDefault);
-                // Branch default state=active is implicit — drop it from URL.
-                if (mode === "branch") params.delete("state");
-                const query = params.toString();
-                router.replace(query ? `${pathname}?${query}` : pathname, {
-                  scroll: false,
-                });
-              }}
-            >
-              {ACTIONS_VI.clearFilters}
-            </Button>
-          ) : undefined
-        }
       >
         {filtered.length === 0 ? (
           <AppEmptyState
@@ -307,8 +306,8 @@ export function BranchStockFulfillmentHubClient({
             description={
               mode === "branch"
                 ? receiveFocus
-                  ? "Khi hàng đang giao tới chi nhánh (YCH hoặc điều chuyển), phiếu sẽ hiện ở đây để xác nhận."
-                  : "Tạo yêu cầu hàng khi điểm vận hành cần bổ sung nguyên liệu."
+                  ? "Khi hàng đang giao tới chi nhánh, phiếu sẽ hiện ở đây để xác nhận."
+                  : "Tạo điều chuyển khi điểm vận hành cần bổ sung nguyên liệu."
                 : "Thử thay đổi phân loại, trạng thái hoặc từ khóa tìm kiếm."
             }
           />
@@ -342,7 +341,7 @@ export function BranchStockFulfillmentHubClient({
                       : `transfer-${row.transferId}`
                   }
                   variant="outline"
-                  className="min-h-20 touch-manipulation"
+                  className="min-h-20 min-w-0 flex-nowrap touch-manipulation"
                   render={<Link href={href} scroll={false} />}
                 >
                   <ItemContent className="min-w-0 gap-1 text-left">
@@ -376,7 +375,7 @@ export function BranchStockFulfillmentHubClient({
                       </ItemDescription>
                     ) : null}
                   </ItemContent>
-                  <ItemActions>
+                  <ItemActions className="shrink-0">
                     {showReceiveCta ? (
                       <Badge variant="default">{copy.receiveCta}</Badge>
                     ) : (

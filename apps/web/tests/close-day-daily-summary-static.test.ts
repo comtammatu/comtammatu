@@ -25,6 +25,9 @@ test("close-day is Daily Summary only (ADR 0024)", () => {
   const reportRpc = read(
     "supabase/migrations/20260819203012_get_branch_day_report.sql",
   );
+  const reportRpcFrom = read(
+    "supabase/migrations/20260820014659_get_branch_day_report_order_facts_from.sql",
+  );
 
   assert.equal(
     existsSync(
@@ -43,6 +46,33 @@ test("close-day is Daily Summary only (ADR 0024)", () => {
   assert.doesNotMatch(client, /closing_cash \?\? opening_cash/);
   assert.match(client, /closeDayCutoffNote/);
   assert.match(client, /pos-sessions\?session=\$\{session\.id\}/);
+  const dateNav = client.slice(
+    client.indexOf("const dateNav = ("),
+    client.indexOf("if (loadFailed)"),
+  );
+  assert.match(
+    dateNav,
+    /<div className="flex w-full min-w-0 flex-nowrap items-center gap-2">/,
+  );
+  assert.match(dateNav, /size="icon-touch"/);
+  assert.match(dateNav, /aria-label=\{copy\.closeDayPrevDate\}/);
+  assert.match(dateNav, /aria-label=\{copy\.closeDayNextDate\}/);
+  assert.doesNotMatch(dateNav, /size="sm"/);
+  assert.doesNotMatch(dateNav, />\s*\{copy\.closeDayPrevDate\}/);
+  assert.doesNotMatch(dateNav, />\s*\{copy\.closeDayNextDate\}/);
+  const mobileTitleBars = [
+    ...client.matchAll(
+      /<BranchOperatorControlBar className="sm:hidden">[\s\S]*?<\/BranchOperatorControlBar>/g,
+    ),
+  ].map((match) => match[0]);
+  assert.ok(
+    mobileTitleBars.length >= 2,
+    "close-day must keep mobile ControlBars",
+  );
+  for (const bar of mobileTitleBars) {
+    assert.doesNotMatch(bar, /formatVNDate/);
+    assert.doesNotMatch(bar, /size="touch"/);
+  }
   assert.match(data, /get_branch_day_report/);
   assert.match(page, /searchParams/);
   assert.match(page, /date\?: string/);
@@ -58,4 +88,6 @@ test("close-day is Daily Summary only (ADR 0024)", () => {
   assert.match(reportRpc, /has_permission\(p_branch_id, 'settings:branch'\)/);
   assert.match(reportRpc, /has_permission\(p_branch_id, 'finance:view'\)/);
   assert.doesNotMatch(reportRpc, /GRANT.*finance:view/);
+  assert.match(reportRpcFrom, /v_paid_orders\s+FROM order_facts/);
+  assert.match(reportRpcFrom, /CREATE OR REPLACE FUNCTION public\.get_branch_day_report/);
 });

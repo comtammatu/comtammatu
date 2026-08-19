@@ -9,7 +9,6 @@ import {
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { messages } from "@lib/messages";
-import { BranchOperatorControlBar } from "@lib/branch-operator/components/branch-operator-page";
 import { EmployeeControlBar } from "../components/staff-runtime-page";
 
 const copy = messages.employee.payslip;
@@ -29,8 +28,6 @@ export function YearPicker({
 }: YearPickerProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const ControlBar =
-    plane === "branch" ? BranchOperatorControlBar : EmployeeControlBar;
 
   const isCurrent = selectedYear === currentYear;
   const canGoNext = selectedYear < currentYear;
@@ -44,8 +41,8 @@ export function YearPicker({
     });
   }
 
-  return (
-    <ControlBar>
+  const yearNav = (
+    <>
       <Button
         type="button"
         variant="outline"
@@ -87,6 +84,16 @@ export function YearPicker({
       >
         <IconChevronRight />
       </Button>
-    </ControlBar>
+    </>
   );
+
+  if (plane === "branch") {
+    return (
+      <div className="flex min-w-0 w-full items-center justify-between gap-2">
+        {yearNav}
+      </div>
+    );
+  }
+
+  return <EmployeeControlBar>{yearNav}</EmployeeControlBar>;
 }

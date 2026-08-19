@@ -42,7 +42,7 @@ export function BranchFeedbackInboxList({
       <BranchOperatorPanel contentFlush>
         <ItemGroup className="gap-2">
           {items.map((item) => (
-            <Item key={item.id} variant="outline" size="sm" className="min-h-12">
+            <Item key={item.id} variant="outline" size="sm" className="min-h-12 min-w-0 flex-nowrap">
               <ItemContent className="min-w-0 gap-1">
                 <ItemTitle className="text-sm font-medium">
                   {feedbackCopy.rating}: {item.rating}

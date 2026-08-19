@@ -258,19 +258,17 @@ export function BranchStocktakeCountClient({
               {countCopy.countMode(data.currentRound)}
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="touch"
-            className="shrink-0"
-            render={
-              <Link
-                href={`${stocktakeBasePath}/${data.sessionId}?view=detail`}
-              />
-            }
-          >
-            {countCopy.openReview}
-          </Button>
         </BranchOperatorControlBar>
+        <Button
+          variant="outline"
+          size="touch"
+          className="w-full"
+          render={
+            <Link href={`${stocktakeBasePath}/${data.sessionId}?view=detail`} />
+          }
+        >
+          {countCopy.openReview}
+        </Button>
 
         <BranchStocktakeCountList
           lines={currentRoundLines}

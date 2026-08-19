@@ -1,6 +1,9 @@
 import { getEmployeeContext } from "../_lib/staff-runtime-context";
 import { PayslipClient } from "./payslip-client";
-import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
+import {
+  BranchOperatorControlBar,
+  BranchOperatorPage,
+} from "@lib/branch-operator/components/branch-operator-page";
 import {
   EmployeeMissingProfileEmpty,
   EmployeePage,
@@ -8,6 +11,10 @@ import {
 import { YearPicker } from "./year-picker";
 import { getTodayVN } from "../_lib/vn-business-date";
 import { messages } from "@lib/messages";
+import Link from "next/link";
+import { ArrowLeft as IconArrowLeft } from "lucide-react";
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { Button } from "@comtammatu/ui/components/button";
 
 const copy = messages.employee.payslip;
 
@@ -24,6 +31,26 @@ export async function StaffPayslipPageContent(props: {
   const currentYear = Number(getTodayVN().slice(0, 4));
   const year = isValidYear(yearParam) ? Number(yearParam) : currentYear;
   const PageShell = props.plane === "branch" ? BranchOperatorPage : EmployeePage;
+  const mobileTitleBar =
+    props.plane === "branch" ? (
+      <BranchOperatorControlBar className="sm:hidden">
+        <Button
+          variant="ghost"
+          size="icon-touch"
+          render={
+            <Link href={props.profileHref} aria-label={ACTIONS_VI.back} />
+          }
+        >
+          <IconArrowLeft />
+        </Button>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold">{copy.title}</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {copy.description}
+          </p>
+        </div>
+      </BranchOperatorControlBar>
+    ) : null;
 
   if (!ctx) {
     return (
@@ -32,6 +59,7 @@ export async function StaffPayslipPageContent(props: {
         description={copy.description}
         hideHeaderOnMobile={props.hideHeaderOnMobile}
       >
+        {mobileTitleBar}
         <EmployeeMissingProfileEmpty
           title={copy.missingProfileTitle}
           description={copy.missingProfileDescription}
@@ -68,6 +96,7 @@ export async function StaffPayslipPageContent(props: {
       description={copy.description}
       hideHeaderOnMobile={props.hideHeaderOnMobile}
     >
+      {mobileTitleBar}
       <YearPicker
         selectedYear={year}
         currentYear={currentYear}

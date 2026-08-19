@@ -6,6 +6,7 @@ import {
   getVNMinutesOfDay,
 } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
+import { requestNow } from "@/_lib/request-now";
 import { isRequiredChecklistItemComplete } from "./checklist-complete";
 import { isShiftCountDutyItem } from "./count-duty";
 import { resolveClockInGate, type ClockInGate } from "./default-shift";
@@ -177,7 +178,7 @@ function assignmentCellKey(row: {
 }
 
 async function loadTodayWorkState(): Promise<TodayWorkState> {
-  const now = new Date();
+  const now = await requestNow();
   const calendarDate = getVNDateString(now);
   const previousDate = addVNDateDays(calendarDate, -1);
   const nowMinutes = getVNMinutesOfDay(now);

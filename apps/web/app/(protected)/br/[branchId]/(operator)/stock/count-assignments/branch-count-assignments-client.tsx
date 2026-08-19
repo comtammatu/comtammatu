@@ -279,7 +279,7 @@ export function BranchCountAssignmentsClient({
               <Item
                 key={employee.id}
                 variant="outline"
-                className="min-h-20 touch-manipulation"
+                className="min-h-20 min-w-0 flex-nowrap touch-manipulation"
                 render={
                   <button
                     type="button"
@@ -342,18 +342,17 @@ export function BranchCountAssignmentsClient({
           data.employees.length,
         ),
       }}
-      action={
-        <Button
-          variant="outline"
-          size="touch"
-          render={<Link href={`/br/${data.branchId}/stock/count-slips`} />}
-        >
-          <IconFileText className="size-4" />
-          {INVENTORY_VI.countSlipTitle}
-        </Button>
-      }
       size="sm"
     >
+      <Button
+        variant="outline"
+        size="touch"
+        className="w-full"
+        render={<Link href={`/br/${data.branchId}/stock/count-slips`} />}
+      >
+        <IconFileText className="size-4" />
+        {INVENTORY_VI.countSlipTitle}
+      </Button>
       {content}
     </BranchOperatorPanel>
   );

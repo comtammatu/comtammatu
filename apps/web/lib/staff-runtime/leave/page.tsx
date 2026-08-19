@@ -1,12 +1,19 @@
 import Link from "next/link";
-import { CalendarDays as IconCalendarDays } from "lucide-react";
+import {
+  ArrowLeft as IconArrowLeft,
+  CalendarDays as IconCalendarDays,
+} from "lucide-react";
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import { getEmployeeContext } from "../_lib/staff-runtime-context";
 import {
   EmployeeMissingProfileEmpty,
   EmployeePage,
 } from "../components/staff-runtime-page";
-import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
+import {
+  BranchOperatorControlBar,
+  BranchOperatorPage,
+} from "@lib/branch-operator/components/branch-operator-page";
 import { LeaveRequestClient } from "./leave-client";
 import { messages } from "@lib/messages";
 
@@ -28,6 +35,24 @@ export async function EmployeeLeavePageContent({
 }) {
   const ctx = await getEmployeeContext();
   const Page = plane === "branch" ? BranchOperatorPage : EmployeePage;
+  const mobileTitleBar =
+    plane === "branch" ? (
+      <BranchOperatorControlBar className="sm:hidden">
+        <Button
+          variant="ghost"
+          size="icon-touch"
+          render={<Link href={returnHref} aria-label={ACTIONS_VI.back} />}
+        >
+          <IconArrowLeft />
+        </Button>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold">{copy.title}</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {copy.description}
+          </p>
+        </div>
+      </BranchOperatorControlBar>
+    ) : null;
 
   if (!ctx) {
     return (
@@ -36,6 +61,7 @@ export async function EmployeeLeavePageContent({
         description={copy.description}
         hideHeaderOnMobile={hideHeaderOnMobile}
       >
+        {mobileTitleBar}
         <EmployeeMissingProfileEmpty profileHref={profileHref} />
       </Page>
     );
@@ -70,17 +96,20 @@ export async function EmployeeLeavePageContent({
       description={copy.description}
       hideHeaderOnMobile={hideHeaderOnMobile}
       action={
-        <Button
-          variant="outline"
-          size="touch"
-          className="w-full sm:w-fit"
-          render={<Link href={returnHref} />}
-        >
-          <IconCalendarDays data-icon="inline-start" />
-          {copy.backToSchedule}
-        </Button>
+        plane === "employee" ? (
+          <Button
+            variant="outline"
+            size="touch"
+            className="w-full sm:w-fit"
+            render={<Link href={returnHref} />}
+          >
+            <IconCalendarDays data-icon="inline-start" />
+            {copy.backToSchedule}
+          </Button>
+        ) : undefined
       }
     >
+      {mobileTitleBar}
       <LeaveRequestClient
         branchId={branchId}
         initialRequests={initialRequests}

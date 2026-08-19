@@ -28,7 +28,8 @@ test("operator stock sticky action bars route through AppDetailFooter", () => {
   );
   const redundantBottomNavPadding = stockFiles.filter(
     (path) =>
-      path.includes("/(operator)/stock/") && read(path).includes("pb-28"),
+      path.includes("/(operator)/stock/") &&
+      (read(path).includes("pb-28") || read(path).includes("pb-[6rem]")),
   );
   const nestedFooterCallSites = stockFiles.filter((path) =>
     /<AppDetailFooter\s+sticky\s+trailing=\{footer\}/.test(read(path)),
@@ -89,7 +90,7 @@ test("operator stock receive merges into the native transfer queue and keeps nat
   assert.match(transferRoute, /mode = "central"/);
   assert.match(transferRoute, /isBranchKind/);
   assert.match(transferRoute, /redirect\([\s\S]*\/stock/);
-  assert.match(transferRoute, /stock\/requests\/new/);
+  assert.match(transferRoute, /stock\/transfer\/new/);
   assert.doesNotMatch(transferRoute, /(?<!Branch)StockFulfillmentHubClient/);
   assert.doesNotMatch(
     navConfig,
@@ -276,7 +277,7 @@ test("operator stock on-hand list forks Branch presentation over the shared load
   assert.match(branchClientSource, /attentionTitle/);
   assert.match(branchClientSource, /resolveAttentionCtas/);
   assert.doesNotMatch(branchClientSource, /md:grid md:grid-cols-3/);
-  assert.match(branchClientSource, /requests\/new/);
+  assert.match(branchClientSource, /transfer\/new\?direction=pull/);
   assert.doesNotMatch(
     branchClientSource,
     /DataTable|AppPage|StockPageContent|StockClient|embedded|overflow-x-auto|QuickStockIssueDialog|QuickInternalTransferDialog|AdjustStockDialog/,
@@ -348,7 +349,7 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
   assert.match(branchDetailSource, /ItemGroup/);
   assert.match(branchDetailSource, /AppDetailFooter/);
   assert.match(branchDetailSource, /\$\{stockBasePath\}\/on-hand/);
-  assert.match(branchDetailSource, /\$\{stockBasePath\}\/requests\/new/);
+  assert.match(branchDetailSource, /\$\{stockBasePath\}\/transfer\/new/);
   assert.match(branchDetailSource, /\$\{stockBasePath\}\/transfer/);
   assert.match(branchDetailSource, /\$\{stockBasePath\}\/stocktake/);
   assert.match(branchDetailSource, /\$\{stockBasePath\}\/consumption/);
@@ -384,7 +385,7 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
   assert.match(stockDetailDataSource, /import "server-only"/);
   assert.match(stockDetailDataSource, /resolveInventoryListScope/);
   assert.match(stockDetailDataSource, /fetchStockBearingLocationIds/);
-  assert.match(stockDetailDataSource, /includeValuation \? "unit_cost" : null/);
+  assert.match(stockDetailDataSource, /includeValuation \? "avg_unit_cost" : null/);
   assert.match(stockDetailDataSource, /\.from\("stock_levels"\)/);
   assert.match(stockDetailDataSource, /\.from\("stock_movements"\)/);
   assert.match(
@@ -424,8 +425,8 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
     /canReceiveStock = actionPermissions\.canReceiveGrn/,
   );
   assert.match(stockDataSource, /PERMISSION_KEYS\.INVENTORY_TRANSFER_RECEIVE/);
-  assert.match(branchClientSource, /\$\{base\}\/requests\/new/);
-  assert.match(branchClientSource, /canCreateStockRequest/);
+  assert.match(branchClientSource, /\$\{base\}\/transfer\/new\?direction=pull/);
+  assert.match(branchClientSource, /canCreateTransfer/);
 });
 
 test("Owner surface stock workbench keeps manager action affordances after the plane split", () => {
@@ -508,10 +509,8 @@ test("branch GRN routes keep branch redirect; direct central creation is retired
     grnNewRoute,
     /redirect\(`\/br\/\$\{branchId\}\/stock\/requests\/new`\)/,
   );
-  assert.match(
-    grnNewRoute,
-    /redirect\(`\/br\/\$\{branchId\}\/stock\/purchase-requests`\)/,
-  );
+  assert.match(grnNewRoute, /PURCHASE_ORDER_CREATE_HREF/);
+  assert.doesNotMatch(grnNewRoute, /stock\/purchase-requests/);
   assert.doesNotMatch(
     grnNewRoute,
     /BranchGrnSourcePickerClient|loadGrnSourcePageData/,
@@ -521,10 +520,8 @@ test("branch GRN routes keep branch redirect; direct central creation is retired
     grnCreateRoute,
     /redirect\(`\/br\/\$\{branchId\}\/stock\/requests\/new`\)/,
   );
-  assert.match(
-    grnCreateRoute,
-    /redirect\(`\/br\/\$\{branchId\}\/stock\/purchase-requests`\)/,
-  );
+  assert.match(grnCreateRoute, /PURCHASE_ORDER_CREATE_HREF/);
+  assert.doesNotMatch(grnCreateRoute, /stock\/purchase-requests/);
   assert.doesNotMatch(
     grnCreateRoute,
     /BranchGrnCreateClient|loadGrnCreatePageData/,
@@ -732,10 +729,8 @@ test("GRN create routes redirect into the current purchase workflow", () => {
     grnNewRoute,
     /redirect\(`\/br\/\$\{branchId\}\/stock\/requests\/new`\)/,
   );
-  assert.match(
-    grnNewRoute,
-    /redirect\(`\/br\/\$\{branchId\}\/stock\/purchase-requests`\)/,
-  );
+  assert.match(grnNewRoute, /PURCHASE_ORDER_CREATE_HREF/);
+  assert.doesNotMatch(grnNewRoute, /stock\/purchase-requests/);
   assert.doesNotMatch(
     grnNewRoute,
     /BranchGrnSourcePickerClient|loadGrnSourcePageData/,
@@ -746,10 +741,8 @@ test("GRN create routes redirect into the current purchase workflow", () => {
     grnCreateRoute,
     /redirect\(`\/br\/\$\{branchId\}\/stock\/requests\/new`\)/,
   );
-  assert.match(
-    grnCreateRoute,
-    /redirect\(`\/br\/\$\{branchId\}\/stock\/purchase-requests`\)/,
-  );
+  assert.match(grnCreateRoute, /PURCHASE_ORDER_CREATE_HREF/);
+  assert.doesNotMatch(grnCreateRoute, /stock\/purchase-requests/);
   assert.doesNotMatch(
     grnCreateRoute,
     /loadGrnCreatePageData|BranchGrnCreateClient/,
@@ -1026,7 +1019,7 @@ test("operator and central routes share the fulfillment hub while details stay c
   assert.match(transferRoute, /mode = "central"/);
   assert.match(transferRoute, /isBranchKind/);
   assert.match(transferRoute, /redirect\([\s\S]*\/stock/);
-  assert.match(transferRoute, /stock.requests.new/);
+  assert.match(transferRoute, /stock\/transfer\/new/);
   assert.doesNotMatch(
     transferRoute,
     /fetchBranchesForTransfer|TransfersListClient|(?<!Branch)StockFulfillmentHubClient/,

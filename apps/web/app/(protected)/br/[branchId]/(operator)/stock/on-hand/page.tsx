@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import {
   resolveOperatorTiles,
@@ -6,6 +7,7 @@ import {
 } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
+import { PageSkeleton } from "@/components/page-skeleton";
 import { loadStockOnHandPageData } from "@lib/inventory/stock-on-hand-data";
 import { messages } from "@lib/messages";
 import { parseOperatorBranchId } from "../../../_lib/parse-branch-id";
@@ -83,7 +85,15 @@ function resolveSecondaryJobs({
   return jobs;
 }
 
-export default async function OperatorStockOnHandPage({ params }: PageProps) {
+export default function OperatorStockOnHandPage({ params }: PageProps) {
+  return (
+    <Suspense fallback={<PageSkeleton bare />}>
+      <OperatorStockOnHandBody params={params} />
+    </Suspense>
+  );
+}
+
+async function OperatorStockOnHandBody({ params }: PageProps) {
   const { branchId: rawBranchId } = await params;
   const branchId = parseOperatorBranchId(rawBranchId);
   if (branchId == null) notFound();

@@ -2,6 +2,7 @@
 import type { ElementType, ReactNode } from "react";
 import Link from "next/link";
 import {
+  ArrowLeft as IconArrowLeft,
   CalendarDays as IconCalendar,
   CalendarX2 as IconLeave,
   Camera as IconCamera,
@@ -21,6 +22,7 @@ import {
   type StaffRole,
 } from "@comtammatu/shared/auth";
 import { formatPercent } from "@comtammatu/shared/format";
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { formatVNClockTime } from "@comtammatu/shared/time";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import {
@@ -803,22 +805,28 @@ export async function StaffWorkdayPageContent({
   if (mode === "compact-status") {
     const compactCta =
       state.status === "not_started" && !isClockInBlocked(state) ? (
-        <Button size="touch" render={<Link href={routes.clock} />}>
+        <Button
+          size="touch"
+          className="w-full"
+          render={<Link href={routes.clock} />}
+        >
           <IconCamera data-icon="inline-start" />
           {copy.clockIn}
         </Button>
       ) : null;
 
     return (
-      <ControlBar>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">{title}</p>
-          <p className="truncate text-xs text-muted-foreground">
-            {workDescription ?? todayMeta}
-          </p>
-        </div>
+      <>
+        <ControlBar>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">{title}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {workDescription ?? todayMeta}
+            </p>
+          </div>
+        </ControlBar>
         {compactCta}
-      </ControlBar>
+      </>
     );
   }
 
@@ -1229,6 +1237,28 @@ export async function StaffWorkdayPageContent({
       description={copy.description}
       hideHeaderOnMobile
     >
+      {plane === "branch" && state.branchId != null ? (
+        <BranchOperatorControlBar className="sm:hidden">
+          <Button
+            variant="ghost"
+            size="icon-touch"
+            render={
+              <Link
+                href={`/br/${state.branchId}`}
+                aria-label={ACTIONS_VI.back}
+              />
+            }
+          >
+            <IconArrowLeft />
+          </Button>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">{copy.title}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {copy.description}
+            </p>
+          </div>
+        </BranchOperatorControlBar>
+      ) : null}
       {enableBranchOpsRefresh &&
       state.branchId !== null &&
       canSubscribeBranchOpsTopic(claims, state.branchId) ? (

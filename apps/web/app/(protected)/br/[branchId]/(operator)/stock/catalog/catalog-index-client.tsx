@@ -10,6 +10,7 @@ import {
   Tags,
   UsersRound,
 } from "lucide-react";
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Item,
@@ -88,7 +89,7 @@ export function CatalogIndexClient({
           render={
             <Link
               href={`${basePath.replace(/\/stock\/catalog$/, "")}/settings`}
-              aria-label={copy.title}
+              aria-label={ACTIONS_VI.back}
             />
           }
         >
@@ -104,8 +105,8 @@ export function CatalogIndexClient({
             key={row.key}
             variant="outline"
             size="sm"
-            className="chrome-tap min-h-12 select-none bg-card"
-            render={<Link href={row.href} />}
+            className="chrome-tap min-h-12 min-w-0 flex-nowrap select-none bg-card"
+            render={<Link href={row.href} prefetch={true} />}
           >
             <ItemMedia
               variant="icon"

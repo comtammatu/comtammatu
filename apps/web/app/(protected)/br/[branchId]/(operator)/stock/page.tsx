@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  ArrowLeft as IconArrowLeft,
   ClipboardCheck,
   ClipboardList,
   Package,
   Plus as IconPlus,
   Trash2,
 } from "lucide-react";
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import {
   resolveOperatorTiles,
   type BranchKind,
@@ -23,6 +25,7 @@ import {
 import { AppDetailFooter, AppEmptyState } from "@/components/surface";
 import {
   BranchOperatorActionSection,
+  BranchOperatorControlBar,
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -30,6 +33,7 @@ import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
 import { loadStockFulfillmentRows } from "@lib/inventory/stock-fulfillment-data";
 import type { StockFulfillmentSiteKind } from "@lib/inventory/stock-fulfillment-projection";
+import { branchTransferCreateHref } from "@lib/inventory/transfer-paths";
 import { messages } from "@lib/messages";
 import { parseOperatorBranchId } from "../../_lib/parse-branch-id";
 import { resolveOperatorTileIcon } from "../operator-tile-icons";
@@ -45,6 +49,32 @@ interface OperatorStockLink {
 
 const stockCopy = messages.inventory.dashboard;
 const journeyCopy = messages.inventory.stockRequests.journey;
+
+function StockLandingMobileTitleBar({
+  branchId,
+  title,
+  description,
+}: {
+  branchId: number;
+  title: string;
+  description: string;
+}) {
+  return (
+    <BranchOperatorControlBar className="sm:hidden">
+      <Button
+        variant="ghost"
+        size="icon-touch"
+        render={<Link href={`/br/${branchId}`} aria-label={ACTIONS_VI.back} />}
+      >
+        <IconArrowLeft />
+      </Button>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold">{title}</p>
+        <p className="truncate text-xs text-muted-foreground">{description}</p>
+      </div>
+    </BranchOperatorControlBar>
+  );
+}
 
 type CentralStockGroupId = "lookup" | "buy_count" | "waste";
 
@@ -191,7 +221,7 @@ function BranchStockDoors({ basePath }: { basePath: string }) {
     },
     {
       key: "request",
-      href: `${basePath}/stock/requests/new`,
+      href: `${basePath}/stock/transfer/new?direction=pull`,
       icon: ClipboardList,
       title: stockCopy.branchDoorRequest,
       meta: stockCopy.branchDoorRequestMeta,
@@ -226,14 +256,14 @@ function BranchStockDoors({ basePath }: { basePath: string }) {
             key={door.key}
             variant="outline"
             size="sm"
-            className="chrome-tap min-h-14 select-none bg-card transition-transform motion-safe:active:scale-[0.97]"
+            className="chrome-tap min-h-14 min-w-0 flex-nowrap select-none bg-card transition-transform motion-safe:active:scale-[0.97]"
             render={<Link href={door.href} />}
           >
             <ItemMedia variant="icon" className="rounded-md bg-muted p-2">
               <door.icon />
             </ItemMedia>
             <ItemContent className="min-w-0">
-              <ItemTitle size="heading" className="line-clamp-none text-sm">
+              <ItemTitle size="heading" className="min-w-0 text-sm">
                 {door.title}
               </ItemTitle>
               <ItemDescription className="line-clamp-2 text-xs">
@@ -278,14 +308,14 @@ function BranchStockCountDoors({ basePath }: { basePath: string }) {
             key={door.key}
             variant="outline"
             size="sm"
-            className="chrome-tap min-h-14 select-none bg-card transition-transform motion-safe:active:scale-[0.97]"
+            className="chrome-tap min-h-14 min-w-0 flex-nowrap select-none bg-card transition-transform motion-safe:active:scale-[0.97]"
             render={<Link href={door.href} />}
           >
             <ItemMedia variant="icon" className="rounded-md bg-muted p-2">
               <door.icon />
             </ItemMedia>
             <ItemContent className="min-w-0">
-              <ItemTitle size="heading" className="line-clamp-none text-sm">
+              <ItemTitle size="heading" className="min-w-0 text-sm">
                 {door.title}
               </ItemTitle>
               <ItemDescription className="line-clamp-2 text-xs">
@@ -332,7 +362,7 @@ export default async function OperatorStockPage({
     const createAction = (
       <Button
         size="touch"
-        render={<Link href={`${stockRoot}/requests/new`} />}
+        render={<Link href={branchTransferCreateHref(context.branchId, "pull")} />}
       >
         <IconPlus data-icon="inline-start" />
         {journeyCopy.requestAction}
@@ -346,7 +376,12 @@ export default async function OperatorStockPage({
         hideHeaderOnMobile
         action={<div className="max-sm:hidden">{createAction}</div>}
       >
-        <div className="flex min-w-0 flex-col gap-4 pb-[5rem] sm:pb-0">
+        <StockLandingMobileTitleBar
+          branchId={context.branchId}
+          title={journeyCopy.hubTitle}
+          description={journeyCopy.branchHubDescription}
+        />
+        <div className="flex min-w-0 flex-col gap-4">
           <BranchStockDoors basePath={basePath} />
           <BranchStockCountDoors basePath={basePath} />
           <BranchStockFulfillmentHubClient
@@ -398,6 +433,11 @@ export default async function OperatorStockPage({
       description={messages.inventory.dashboard.mainFlowsOperatorDescription}
       hideHeaderOnMobile
     >
+      <StockLandingMobileTitleBar
+        branchId={context.branchId}
+        title={stockGroup?.title ?? messages.inventory.shell.moduleName}
+        description={messages.inventory.dashboard.mainFlowsOperatorDescription}
+      />
       {links.length > 0 ? (
         <StockWorkflowSections
           sections={[

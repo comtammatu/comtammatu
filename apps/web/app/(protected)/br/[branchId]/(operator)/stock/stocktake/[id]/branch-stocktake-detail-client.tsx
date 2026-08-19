@@ -260,6 +260,18 @@ export function BranchStocktakeDetailClient({
           <StatusBadge domain="inventory" value={session.status} size="sm" />
         </BranchOperatorControlBar>
 
+        {session.status === "in_progress" && data.canCancel ? (
+          <Button
+            size="touch"
+            className="w-full"
+            render={
+              <Link href={`${stocktakeBasePath}/${session.id}/count`} />
+            }
+          >
+            Tiếp tục đếm
+          </Button>
+        ) : null}
+
         <div className={BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME}>
           <div className="flex min-w-0 flex-col gap-3">
             <BranchOperatorPanel
@@ -271,19 +283,6 @@ export function BranchStocktakeDetailClient({
               icon={IconClipboardCheck}
               size="sm"
               contentClassName="gap-3"
-              action={
-                session.status === "in_progress" &&
-                data.canCancel ? (
-                  <Button
-                    size="touch"
-                    render={
-                      <Link href={`${stocktakeBasePath}/${session.id}/count`} />
-                    }
-                  >
-                    Tiếp tục đếm
-                  </Button>
-                ) : null
-              }
             >
               {reviewContent}
             </BranchOperatorPanel>

@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
+  ArrowLeft as IconArrowLeft,
   Banknote as IconCash,
   Clock as IconClock,
   Receipt as IconReceipt,
@@ -13,6 +14,7 @@ import {
   CircleCheck as IconCircleCheck,
   ChevronRight as IconChevronRight,
 } from "lucide-react";
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { AppEmptyState, AppDrawer } from "@/components/surface";
 import {
   Drawer,
@@ -66,6 +68,30 @@ import { messages } from "@lib/messages";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { CloseSessionSheet } from "../../pos/close-session-sheet";
+
+function PosSessionsMobileTitleBar({ branchId }: { branchId: number }) {
+  return (
+    <BranchOperatorControlBar className="sm:hidden">
+      <Button
+        variant="ghost"
+        size="icon-touch"
+        render={
+          <Link href={`/br/${branchId}`} aria-label={ACTIONS_VI.back} />
+        }
+      >
+        <IconArrowLeft />
+      </Button>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold">
+          {messages.settings.pages.posSessionsTitle}
+        </p>
+        <p className="truncate text-xs text-muted-foreground">
+          {messages.settings.pages.posSessionsDescription}
+        </p>
+      </div>
+    </BranchOperatorControlBar>
+  );
+}
 
 export interface PosSessionRow {
   id: number;
@@ -206,11 +232,14 @@ export function PosSessionsClient({
 
   if (sessions.length === 0) {
     return (
-      <AppEmptyState
-        title={messages.settings.posSessions.emptyTitle}
-        description={messages.settings.posSessions.emptyDescription}
-        symbol="roof"
-      />
+      <div className="flex min-h-0 flex-1 flex-col gap-3">
+        <PosSessionsMobileTitleBar branchId={branchId} />
+        <AppEmptyState
+          title={messages.settings.posSessions.emptyTitle}
+          description={messages.settings.posSessions.emptyDescription}
+          symbol="roof"
+        />
+      </div>
     );
   }
 
@@ -283,6 +312,7 @@ export function PosSessionsClient({
       ) : null}
 
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
+        <PosSessionsMobileTitleBar branchId={branchId} />
         {isTouchLayout ? (
           <>
             <Button
@@ -513,51 +543,54 @@ function SessionContextBar({
   const isOpen = session.status === "open";
 
   return (
-    <BranchOperatorControlBar className="sticky top-0 z-10 bg-card">
-      <div className="min-w-0">
-        <div className="flex min-w-0 items-center gap-2">
-          <p className="truncate font-heading text-sm font-semibold">
-            {resolveSessionLabel(session)}
+    <div className="flex flex-col gap-2">
+      <BranchOperatorControlBar className="min-w-0 shrink-0 bg-card">
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-nowrap items-center gap-2">
+            <p className="min-w-0 truncate font-heading text-sm font-semibold">
+              {resolveSessionLabel(session)}
+            </p>
+            <Badge className="shrink-0" variant={isOpen ? "warning" : "outline"}>
+              {isOpen
+                ? messages.settings.posSessions.open
+                : messages.settings.posSessions.closed}
+            </Badge>
+          </div>
+          <p
+            className={cn(
+              "truncate text-xs tabular-nums text-muted-foreground",
+              breached && "text-destructive",
+            )}
+          >
+            {session.cash_difference == null
+              ? messages.settings.posSessions.notClosed
+              : messages.settings.posSessions.sessionVarianceLine(
+                  formatVND(session.cash_difference),
+                )}
           </p>
-          <Badge className="shrink-0" variant={isOpen ? "warning" : "outline"}>
-            {isOpen
-              ? messages.settings.posSessions.open
-              : messages.settings.posSessions.closed}
-          </Badge>
         </div>
-        <p
-          className={cn(
-            "truncate text-xs tabular-nums text-muted-foreground",
-            breached && "text-destructive",
-          )}
-        >
-          {session.cash_difference == null
-            ? messages.settings.posSessions.notClosed
-            : messages.settings.posSessions.sessionVarianceLine(
-                formatVND(session.cash_difference),
-              )}
-        </p>
-      </div>
+      </BranchOperatorControlBar>
       {onOpenInsights || isOpen ? (
-        <div className="flex shrink-0 gap-2">
+        <div className="flex w-full flex-col gap-2 sm:flex-row">
           {onOpenInsights ? (
             <Button
               type="button"
               variant="outline"
               size="touch"
+              className="w-full"
               onClick={onOpenInsights}
             >
               {messages.settings.posSessions.reportTab}
             </Button>
           ) : null}
           {isOpen ? (
-            <Button size="touch" onClick={onCloseShift}>
+            <Button size="touch" className="w-full" onClick={onCloseShift}>
               {messages.settings.posSessions.closeShift}
             </Button>
           ) : null}
         </div>
       ) : null}
-    </BranchOperatorControlBar>
+    </div>
   );
 }
 

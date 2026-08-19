@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
+  ArrowLeft as IconArrowLeft,
   ChevronLeft,
   ChevronRight,
   ClipboardCheck,
   Package,
   Users,
 } from "lucide-react";
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { formatPercent, formatVND } from "@comtammatu/shared/format";
 import { getPaymentMethodLabelVi } from "@comtammatu/shared/labels";
 import {
@@ -162,46 +164,87 @@ export function CloseDayClient({
 
   const mixEntries = Object.entries(report?.payment_mix ?? {});
 
+  const dateNav = (
+    <div className="flex w-full min-w-0 flex-nowrap items-center gap-2">
+      <Button
+        variant="ghost"
+        size="icon-touch"
+        className="shrink-0"
+        aria-label={copy.closeDayPrevDate}
+        render={<Link href={`/br/${branchId}/close-day?date=${prevDate}`} />}
+      >
+        <ChevronLeft />
+      </Button>
+      <span className="min-w-0 flex-1 truncate text-center text-sm font-medium tabular-nums">
+        {formatVNDate(businessDate)}
+      </span>
+      {canGoNext ? (
+        <Button
+          variant="ghost"
+          size="icon-touch"
+          className="shrink-0"
+          aria-label={copy.closeDayNextDate}
+          render={<Link href={`/br/${branchId}/close-day?date=${nextDate}`} />}
+        >
+          <ChevronRight />
+        </Button>
+      ) : (
+        <Button
+          variant="ghost"
+          size="icon-touch"
+          className="shrink-0"
+          disabled
+          aria-label={copy.closeDayNextDate}
+        >
+          <ChevronRight />
+        </Button>
+      )}
+    </div>
+  );
+
   if (loadFailed) {
     return (
-      <BranchOperatorPanel title={copy.closeDayTitle}>
-        <NoteCallout tone="warning" title={copy.closeDayLoadFailedTitle}>
-          {copy.closeDayLoadFailedBody}
-        </NoteCallout>
-      </BranchOperatorPanel>
+      <div className="flex min-h-0 flex-1 flex-col gap-4">
+        <BranchOperatorControlBar className="sm:hidden">
+          <Button
+            variant="ghost"
+            size="icon-touch"
+            render={
+              <Link href={`/br/${branchId}`} aria-label={ACTIONS_VI.back} />
+            }
+          >
+            <IconArrowLeft />
+          </Button>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">{copy.closeDayTitle}</p>
+          </div>
+        </BranchOperatorControlBar>
+        <BranchOperatorPanel title={copy.closeDayTitle}>
+          <NoteCallout tone="warning" title={copy.closeDayLoadFailedTitle}>
+            {copy.closeDayLoadFailedBody}
+          </NoteCallout>
+        </BranchOperatorPanel>
+      </div>
     );
   }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
-      <BranchOperatorControlBar>
+      <BranchOperatorControlBar className="sm:hidden">
         <Button
           variant="ghost"
-          size="sm"
-          render={<Link href={`/br/${branchId}/close-day?date=${prevDate}`} />}
+          size="icon-touch"
+          render={
+            <Link href={`/br/${branchId}`} aria-label={ACTIONS_VI.back} />
+          }
         >
-          <ChevronLeft />
-          {copy.closeDayPrevDate}
+          <IconArrowLeft />
         </Button>
-        <span className="text-sm font-medium tabular-nums">
-          {formatVNDate(businessDate)}
-        </span>
-        {canGoNext ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            render={<Link href={`/br/${branchId}/close-day?date=${nextDate}`} />}
-          >
-            {copy.closeDayNextDate}
-            <ChevronRight />
-          </Button>
-        ) : (
-          <Button variant="ghost" size="sm" disabled>
-            {copy.closeDayNextDate}
-            <ChevronRight />
-          </Button>
-        )}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold">{copy.closeDayTitle}</p>
+        </div>
       </BranchOperatorControlBar>
+      {dateNav}
       <p className="text-xs text-muted-foreground">{copy.closeDayCutoffNote}</p>
 
       {attentionCount > 0 ? (
@@ -337,9 +380,11 @@ export function CloseDayClient({
       </BranchOperatorPanel>
 
       <BranchOperatorPanel headingLevel="h2">
-        <div className="flex items-center justify-between gap-2">
-          <SectionLabel>{copy.closeDayTopItemsTitle}</SectionLabel>
-          <div className="flex gap-1">
+        <div className="flex min-w-0 items-center justify-between gap-2">
+          <SectionLabel className="min-w-0 truncate">
+            {copy.closeDayTopItemsTitle}
+          </SectionLabel>
+          <div className="flex shrink-0 gap-1">
             <Button
               variant={itemSort === "qty" ? "secondary" : "ghost"}
               size="sm"

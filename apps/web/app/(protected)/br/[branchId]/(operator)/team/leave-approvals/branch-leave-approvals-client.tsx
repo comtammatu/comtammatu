@@ -227,6 +227,24 @@ export function BranchLeaveApprovalsClient({
         description={branchName}
         hideHeaderOnMobile
       >
+        <BranchOperatorControlBar className="sm:hidden">
+          <Button
+            variant="ghost"
+            size="icon-touch"
+            render={
+              <Link
+                href={`/br/${branchId}/team`}
+                aria-label={messages.hr.roster.backToTeamAria}
+              />
+            }
+          >
+            <IconArrowLeft />
+          </Button>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">{copy.approvalsTitle}</p>
+            <p className="truncate text-xs text-muted-foreground">{branchName}</p>
+          </div>
+        </BranchOperatorControlBar>
         <AppEmptyState
           icon={<IconShieldAlert />}
           title={copy.approvalsNoAccessTitle}
@@ -331,7 +349,7 @@ export function BranchLeaveApprovalsClient({
                 <Item
                   key={request.id}
                   variant="outline"
-                  className="min-h-20 touch-manipulation"
+                  className="min-h-20 min-w-0 flex-nowrap touch-manipulation"
                   render={
                     <button
                       type="button"

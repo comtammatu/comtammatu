@@ -213,7 +213,7 @@ export function BranchFeedbackQrClient({
                   key={item.id}
                   variant="outline"
                   size="sm"
-                  className="min-h-12 items-start gap-3"
+                  className="min-h-12 min-w-0 flex-nowrap items-start gap-3"
                 >
                   <QrCodeImage
                     value={url}

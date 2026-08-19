@@ -8,8 +8,10 @@ import {
   useState,
   useTransition,
 } from "react";
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
+  ArrowLeft as IconArrowLeft,
   ChevronRight as IconChevronRight,
   ClipboardList as IconClipboardList,
   Plus as IconPlus,
@@ -63,6 +65,7 @@ import {
   AppSheet,
 } from "@/components/surface";
 import {
+  BranchOperatorControlBar,
   BranchOperatorDetailList,
   BranchOperatorPage,
   BranchOperatorPanel,
@@ -219,7 +222,9 @@ export function BranchPurchaseRequestsClient({
       : (rows.find((row) => row.id === selectedId) ?? null);
   const editingPendingDemand =
     mode === "edit" && selected?.status === "pending_allocation";
-  const createOpen = mode === "create" || (mode === "edit" && selected != null);
+  const createOpen =
+    canCreateRequest &&
+    (mode === "create" || (mode === "edit" && selected != null));
   const allocateOpen = mode === "allocate" && selected != null;
   const viewOpen = mode === "view" && selected != null;
   const recordMode = mode === "view" || mode === "edit" || mode === "allocate";
@@ -721,7 +726,29 @@ export function BranchPurchaseRequestsClient({
       description={messages.inventory.po.workspaceDescription}
       hideHeaderOnMobile
     >
-      <div className="flex min-w-0 touch-manipulation flex-col gap-3 pb-[6rem]">
+      <BranchOperatorControlBar className="sm:hidden">
+        <Button
+          variant="ghost"
+          size="icon-touch"
+          render={
+            <Link
+              href={`/br/${branchId}/stock`}
+              aria-label={ACTIONS_VI.back}
+            />
+          }
+        >
+          <IconArrowLeft />
+        </Button>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold">
+            {messages.settings.branch.centralPurchaseRequestsJob}
+          </p>
+          <p className="truncate text-xs text-muted-foreground">
+            {messages.inventory.po.workspaceDescription}
+          </p>
+        </div>
+      </BranchOperatorControlBar>
+      <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <BranchOperatorPanel
           title={copy.title}
           description={branchName}
@@ -763,7 +790,7 @@ export function BranchPurchaseRequestsClient({
               }}
               variant="outline"
               size="touch"
-              className="w-full justify-start overflow-x-auto"
+              className="w-full justify-start"
               aria-label={copy.statusFilterAria}
             >
               <ToggleGroupItem value="all">{copy.allStatuses}</ToggleGroupItem>
@@ -810,7 +837,7 @@ export function BranchPurchaseRequestsClient({
                   key={row.id}
                   role="listitem"
                   variant="default"
-                  className="min-h-20 touch-manipulation gap-2 rounded-none border-x-0 border-t-0 border-b border-border px-2 py-1.5 last:border-b-0"
+                  className="min-h-20 min-w-0 flex-nowrap touch-manipulation gap-2 rounded-none border-x-0 border-t-0 border-b border-border px-2 py-1.5 last:border-b-0"
                   render={
                     <button
                       type="button"

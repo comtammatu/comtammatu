@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import { fetchIngredients } from "@/(protected)/inventory/ingredient-actions";
 import { messages } from "@lib/messages";
-import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { parseOperatorBranchId } from "../../../../_lib/parse-branch-id";
+import { CatalogPageShell } from "../catalog-page-shell";
 import {
   CatalogThresholdsClient,
   type ThresholdRow,
@@ -10,7 +10,19 @@ import {
 
 const copy = messages.catalog.thresholds;
 
-export default async function OperatorCatalogThresholdsPage({
+export default function OperatorCatalogThresholdsPage({
+  params,
+}: {
+  params: Promise<{ branchId: string }>;
+}) {
+  return (
+    <CatalogPageShell title={copy.title}>
+      <CatalogThresholdsBody params={params} />
+    </CatalogPageShell>
+  );
+}
+
+async function CatalogThresholdsBody({
   params,
 }: {
   params: Promise<{ branchId: string }>;
@@ -42,11 +54,9 @@ export default async function OperatorCatalogThresholdsPage({
     }));
 
   return (
-    <BranchOperatorPage title={copy.title} hideHeaderOnMobile>
-      <CatalogThresholdsClient
-        backHref={`/br/${branchId}/stock/catalog`}
-        rows={rows}
-      />
-    </BranchOperatorPage>
+    <CatalogThresholdsClient
+      backHref={`/br/${branchId}/stock/catalog`}
+      rows={rows}
+    />
   );
 }

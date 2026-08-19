@@ -138,20 +138,19 @@ export function GrnReviewOperatorClient({
             size="sm"
             className="min-w-0 lg:col-start-1 lg:row-start-1"
             contentClassName="gap-2"
-            action={
-              canEditDraft ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="touch"
-                  onClick={() => setAddLineOpen(true)}
-                >
-                  <IconPlus data-icon="inline-start" />
-                  {grnCopy.addLine}
-                </Button>
-              ) : null
-            }
           >
+            {canEditDraft ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="touch"
+                className="w-full"
+                onClick={() => setAddLineOpen(true)}
+              >
+                <IconPlus data-icon="inline-start" />
+                {grnCopy.addLine}
+              </Button>
+            ) : null}
             {lines.length === 0 ? (
               <AppEmptyState
                 compact

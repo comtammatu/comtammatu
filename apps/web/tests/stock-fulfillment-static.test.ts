@@ -46,7 +46,7 @@ test("stock requests and transfers share job-based canonical hubs", () => {
   assert.match(projection, /workKinds\.includes\("receive"\)/);
   assert.match(branchHubClient, /omitLinkedTransferSearch: mode === "branch"/);
   assert.match(branchHubClient, /Đang lọc: cần nhận/);
-  assert.match(branchHubClient, /Yêu cầu hàng và phiếu đang tới/);
+  assert.match(branchHubClient, /Điều chuyển và phiếu đang tới/);
   assert.doesNotMatch(branchHubClient, /grid-cols-3/);
   assert.match(
     read(
@@ -56,7 +56,7 @@ test("stock requests and transfers share job-based canonical hubs", () => {
   );
   assert.doesNotMatch(centralHub, /AppPageTabs|TabsContent/);
   assert.match(centralHub, /state.*"all"/s);
-  assert.match(inventoryMessages, /requestAction: "Yêu cầu hàng"/);
+  assert.match(inventoryMessages, /requestAction: "Tạo điều chuyển"/);
   assert.match(branchHub, /AppDetailFooter|permanentRedirect|redirect\(/);
   assert.match(
     read("apps/web/app/(protected)/inventory/transfers/page.tsx"),
@@ -307,7 +307,7 @@ test("mixed-source requests expose source ownership without source tabs", () => 
   assert.match(transfer, /AppDialogFooter/);
 });
 
-test("central kitchen request route and database authority stay supply-only", () => {
+test("central kitchen request create redirects to dest-initiated DC", () => {
   const route = read(
     "apps/web/app/(protected)/inventory/stock-requests/new/page.tsx",
   );
@@ -317,9 +317,9 @@ test("central kitchen request route and database authority stay supply-only", ()
   );
 
   assert.match(roles, /STOCK_REQUEST_ROLES[\s\S]*central_kitchen_lead/);
-  assert.match(route, /default_fulfill_site_kind", "central_supply"/);
-  assert.match(route, /branch_kind !== "central_kitchen"/);
-  assert.match(route, /returnHref[\s\S]*requestId=:requestId/);
+  assert.match(route, /controlTransferCreateHref/);
+  assert.match(route, /"pull"/);
+  assert.doesNotMatch(route, /StockRequestEditor/);
   assert.match(
     migration,
     /branch\.branch_kind IN \('branch', 'central_kitchen'\)/,

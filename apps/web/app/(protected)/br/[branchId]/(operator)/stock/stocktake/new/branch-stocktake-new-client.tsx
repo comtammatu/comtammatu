@@ -73,6 +73,25 @@ export function BranchStocktakeNewClient({
         description={branchName}
         hideHeaderOnMobile
       >
+        <BranchOperatorControlBar className="sm:hidden">
+          <Button
+            variant="ghost"
+            size="icon-touch"
+            render={
+              <Link href={stocktakeBasePath} aria-label="Quay lại kiểm kê" />
+            }
+          >
+            <IconArrowLeft />
+          </Button>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">
+              {stocktakeCopy.startTitle}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {branchName}
+            </p>
+          </div>
+        </BranchOperatorControlBar>
         <AppEmptyState
           compact
           mode="no-access"

@@ -10,7 +10,7 @@ import {
   FileText as IconFileText,
   Search as IconSearch,
 } from "lucide-react";
-import { ACTIONS_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -101,17 +101,6 @@ export function BranchStockIssuesListClient({
       title={INVENTORY_VI.issueSlipsTitle}
       description={branchName}
       hideHeaderOnMobile
-      action={
-        canCreateWaste ? (
-          <Button
-            size="touch"
-            render={<Link href={wasteHref} />}
-          >
-            <IconCirclePlus data-icon="inline-start" />
-            {INVENTORY_VI.issueCreateAction}
-          </Button>
-        ) : undefined
-      }
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <BranchOperatorControlBar className="sm:hidden">
@@ -130,16 +119,17 @@ export function BranchStockIssuesListClient({
               {branchName}
             </p>
           </div>
-          {canCreateWaste ? (
-            <Button
-              size="touch"
-              className="shrink-0"
-              render={<Link href={wasteHref} />}
-            >
-              {ACTIONS_VI.create}
-            </Button>
-          ) : null}
         </BranchOperatorControlBar>
+        {canCreateWaste ? (
+          <Button
+            size="touch"
+            className="w-full"
+            render={<Link href={wasteHref} />}
+          >
+            <IconCirclePlus data-icon="inline-start" />
+            {INVENTORY_VI.issueCreateAction}
+          </Button>
+        ) : null}
 
         <BranchOperatorPanel
           title={INVENTORY_VI.issueSlipsTitle}
@@ -218,8 +208,8 @@ export function BranchStockIssuesListClient({
                     variant="outline"
                     className={
                       issue.status === "cancelled"
-                        ? "min-h-16 touch-manipulation opacity-60"
-                        : "min-h-16 touch-manipulation"
+                        ? "min-h-16 min-w-0 flex-nowrap touch-manipulation opacity-60"
+                        : "min-h-16 min-w-0 flex-nowrap touch-manipulation"
                     }
                     render={<Link href={`${issuesBasePath}/${issue.id}`} />}
                   >

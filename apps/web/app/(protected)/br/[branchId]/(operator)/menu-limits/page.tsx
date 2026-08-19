@@ -4,7 +4,7 @@ import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { BranchMenuLimitsHost } from "./menu-limits-host";
 
-export const dynamic = "force-dynamic";
+export const instant = false;
 
 export default async function BranchMenuLimitsPage({
   params,
@@ -32,6 +32,7 @@ export default async function BranchMenuLimitsPage({
     <BranchOperatorPage
       title={messages.settings.branch.menuLimitsTitle}
       description={branch.name}
+      hideHeaderOnMobile
     >
       <BranchMenuLimitsHost branchId={branchId} />
     </BranchOperatorPage>

@@ -26,17 +26,27 @@ test("Branch feedback inbox is a native touch LIST isolated from Owner FeedbackI
 
   assert.match(route, /<BranchFeedbackInboxList/);
   assert.match(route, /<BranchFeedbackTabs/);
+  assert.match(route, /<BranchFeedbackPage/);
   assert.match(route, /listFeedbackInbox/);
   assert.doesNotMatch(route, ownerChrome);
 
   assert.match(list, /BranchOperatorPanel/);
   assert.match(list, /ItemGroup/);
+  assert.match(list, /flex-nowrap/);
   assert.match(list, /size="touch"/);
   assert.doesNotMatch(list, ownerChrome);
   assert.doesNotMatch(list, /\bfont-bold\b|style=\{\{/);
 
+  assert.match(tabs, /ToggleGroup/);
   assert.match(tabs, /size="touch"/);
-  assert.doesNotMatch(tabs, /AppToolbar|FeedbackSubNav/);
+  assert.doesNotMatch(tabs, /AppToolbar|FeedbackSubNav|flex-wrap/);
+
+  const chrome = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/feedback/_components/branch-feedback-page.tsx",
+  );
+  assert.match(chrome, /hideHeaderOnMobile/);
+  assert.match(chrome, /<BranchOperatorControlBar className="sm:hidden">/);
+  assert.match(chrome, /\/settings/);
 
   assert.match(ownerPage, /<FeedbackInbox/);
   assert.match(ownerInbox, /\bDataTable\b/);
@@ -60,11 +70,13 @@ test("Branch feedback QR is a native touch LIST isolated from Owner QrManagement
 
   assert.match(route, /<BranchFeedbackQrClient/);
   assert.match(route, /<BranchFeedbackTabs/);
+  assert.match(route, /<BranchFeedbackPage/);
   assert.match(route, /listFeedbackQrCodes/);
   assert.doesNotMatch(route, ownerChrome);
 
   assert.match(client, /BranchOperatorPanel/);
   assert.match(client, /ItemGroup/);
+  assert.match(client, /flex-nowrap/);
   assert.match(client, /<AppSheet/);
   assert.match(client, /RowActionsMenu/);
   assert.match(client, /QrCodeImage/);

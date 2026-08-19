@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  ArrowLeft as IconArrowLeft,
   ChevronRight as IconChevronRight,
   FileText as IconFileText,
   Plus as IconPlus,
@@ -46,7 +47,9 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { AppEmptyState } from "@/components/surface";
 import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import { discardGrnDraft } from "@/(protected)/inventory/grn-actions";
+import { PURCHASE_ORDER_CREATE_HREF } from "@lib/inventory/purchase-order-paths";
 import {
+  BranchOperatorControlBar,
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -126,7 +129,7 @@ function BranchGrnDraftItem({
     <Item
       role="listitem"
       variant="outline"
-      className="min-h-20 items-center gap-2 p-0 touch-manipulation"
+      className="min-h-20 min-w-0 flex-nowrap items-center gap-2 p-0 touch-manipulation"
     >
       <Link
         href={href}
@@ -214,8 +217,8 @@ function BranchGrnListItem({
         variant="outline"
         className={
           grn.status === "cancelled"
-            ? "min-h-20 touch-manipulation opacity-60"
-            : "min-h-20 touch-manipulation"
+            ? "min-h-20 min-w-0 flex-nowrap touch-manipulation opacity-60"
+            : "min-h-20 min-w-0 flex-nowrap touch-manipulation"
         }
         render={
           <Link href={grnDetailHref(`/br/${branchId}/stock/grn`, grn.id)} />
@@ -321,14 +324,36 @@ export function BranchGrnListClient({
       description={messages.inventory.operatorFlow.grnListDescription}
       hideHeaderOnMobile
     >
+      <BranchOperatorControlBar className="sm:hidden">
+        <Button
+          variant="ghost"
+          size="icon-touch"
+          render={
+            <Link
+              href={`/br/${branchId}/stock`}
+              aria-label={ACTIONS_VI.back}
+            />
+          }
+        >
+          <IconArrowLeft />
+        </Button>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold">
+            {messages.inventory.operatorFlow.grnListTitle}
+          </p>
+          <p className="truncate text-xs text-muted-foreground">
+            {messages.inventory.operatorFlow.grnListDescription}
+          </p>
+        </div>
+      </BranchOperatorControlBar>
       {canCreate ? (
         <Button
           size="touch"
           className="w-full"
-          render={<Link href={`/br/${branchId}/stock/purchase-requests`} />}
+          render={<Link href={PURCHASE_ORDER_CREATE_HREF} />}
         >
           <IconPlus className="size-4" />
-          {grnCopy.purchaseRequestFilter}
+          {messages.inventory.po.createAction}
         </Button>
       ) : null}
 

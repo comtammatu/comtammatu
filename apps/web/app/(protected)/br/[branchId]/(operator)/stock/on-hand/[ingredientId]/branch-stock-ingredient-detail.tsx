@@ -42,6 +42,7 @@ import {
   type StockIngredientDetailData,
 } from "@lib/inventory/stock-on-hand-detail-model";
 import { messages } from "@lib/messages";
+import { PURCHASE_ORDER_CREATE_HREF } from "@lib/inventory/purchase-order-paths";
 import { formatDate, formatDateTime, formatQty } from "@lib/inventory/format";
 import { formatStockUnits } from "@/(protected)/inventory/_lib/stock-unit-format";
 
@@ -108,30 +109,30 @@ function resolvePrimaryActions({
     }
     if (permissions.canManagePurchaseRequest) {
       actions.push({
-        key: "ycm",
-        href: `${stockBasePath}/purchase-requests`,
-        label: stockCopy.actions.openPurchaseRequest,
+        key: "po",
+        href: PURCHASE_ORDER_CREATE_HREF,
+        label: messages.inventory.po.createAction,
         icon: IconPurchase,
       });
     }
     return actions;
   }
   if (branchKind === "central_kitchen") {
-    if (!permissions.canCreateStockRequest) return [];
+    if (!permissions.canCreateTransfer) return [];
     return [
       {
         key: "request-cs",
-        href: `${stockBasePath}/requests/new`,
+        href: `${stockBasePath}/transfer/new?direction=pull`,
         label: stockCopy.actions.requestFromCentralSupply,
         icon: IconReceipt,
       },
     ];
   }
-  if (!permissions.canCreateStockRequest) return [];
+  if (!permissions.canCreateTransfer) return [];
   return [
     {
       key: "request",
-      href: `${stockBasePath}/requests/new`,
+      href: `${stockBasePath}/transfer/new?direction=pull`,
       label: stockCopy.actions.requestStock,
       icon: IconReceipt,
     },
@@ -157,7 +158,9 @@ export function BranchStockIngredientDetail({
         description={[ingredient.sku, ingredient.category, ingredient.unit]
           .filter(Boolean)
           .join(" · ")}
-        action={
+        hideHeaderOnMobile
+      >
+        <BranchOperatorControlBar className="sm:hidden">
           <Button
             variant="ghost"
             size="icon-touch"
@@ -167,8 +170,10 @@ export function BranchStockIngredientDetail({
           >
             <IconArrowLeft />
           </Button>
-        }
-      >
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">{ingredient.name}</p>
+          </div>
+        </BranchOperatorControlBar>
         <AppEmptyState
           compact
           mode="error"
@@ -254,36 +259,6 @@ export function BranchStockIngredientDetail({
               {[ingredient.sku, ingredient.unit].filter(Boolean).join(" · ")}
             </p>
           </div>
-          {secondaryActions.length > 0 ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon-touch"
-                    aria-label={stockCopy.actions.actionsDropdown}
-                  >
-                    <IconMore />
-                  </Button>
-                }
-              />
-              <DropdownMenuContent align="end" className="w-56">
-                {secondaryActions.map((action) => {
-                  const Icon = action.icon;
-                  return (
-                    <DropdownMenuItem
-                      key={action.key}
-                      size="touch"
-                      render={<Link href={action.href} />}
-                    >
-                      <Icon />
-                      {action.title}
-                    </DropdownMenuItem>
-                  );
-                })}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : null}
         </BranchOperatorControlBar>
 
         <div className={BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME}>

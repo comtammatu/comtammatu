@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
@@ -38,6 +39,8 @@ import { OperatorNotificationBell } from "./operator-notification-bell";
 import { OperatorPwaToolbar } from "./operator-pwa-toolbar";
 import { ThemeMenuItem } from "@/components/theme-toggle";
 
+export const instant = false;
+
 export async function generateMetadata({
   params,
 }: {
@@ -71,7 +74,6 @@ export default async function OperatorLayout({
 
   const canOpenOwnerHome = claims.user_role === "owner";
   const compactBranchName = context.branch.name.replace(/^Chi nhánh\s+/, "");
-  const notificationsReturnTo = `/br/${context.branchId}`;
   const branchKind = context.branch.branch_kind as BranchKind;
   const primaryTabs = resolveBranchPrimaryTabs(
     claims.user_role,
@@ -172,7 +174,9 @@ export default async function OperatorLayout({
               >
                 <IconUser />
               </Button>
-              <OperatorNotificationBell returnTo={notificationsReturnTo} />
+              <Suspense>
+                <OperatorNotificationBell />
+              </Suspense>
             </>
           }
         />

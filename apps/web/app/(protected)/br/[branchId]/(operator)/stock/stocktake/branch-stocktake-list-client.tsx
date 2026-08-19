@@ -73,23 +73,22 @@ export function BranchStocktakeListClient({
     });
   }, [search, sessions, status]);
   const hasFilter = status !== "all" || search.trim().length > 0;
+  const createAction = canManage ? (
+    <Button
+      size="touch"
+      className="w-full"
+      render={<Link href={`${stocktakeBasePath}/new`} />}
+    >
+      <IconClipboardCheck data-icon="inline-start" />
+      {stocktakeCopy.openSession}
+    </Button>
+  ) : null;
 
   return (
     <BranchOperatorPage
       title={stocktakeCopy.title}
       description={branchName}
       hideHeaderOnMobile
-      action={
-        canManage ? (
-          <Button
-            size="touch"
-            render={<Link href={`${stocktakeBasePath}/new`} />}
-          >
-            <IconClipboardCheck data-icon="inline-start" />
-            {stocktakeCopy.openSession}
-          </Button>
-        ) : undefined
-      }
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <BranchOperatorControlBar className="sm:hidden">
@@ -108,16 +107,8 @@ export function BranchStocktakeListClient({
               {branchName}
             </p>
           </div>
-          {canManage ? (
-            <Button
-              size="touch"
-              className="shrink-0"
-              render={<Link href={`${stocktakeBasePath}/new`} />}
-            >
-              Mở đợt
-            </Button>
-          ) : null}
         </BranchOperatorControlBar>
+        {createAction}
 
         <BranchOperatorPanel
           title="Phiên kiểm kê"
@@ -192,7 +183,7 @@ export function BranchStocktakeListClient({
                   <div key={session.id} role="listitem">
                     <Item
                       variant="outline"
-                      className="min-h-16 touch-manipulation"
+                      className="min-h-16 min-w-0 flex-nowrap touch-manipulation"
                       render={
                         <Link href={`${stocktakeBasePath}/${session.id}`} />
                       }

@@ -1,5 +1,10 @@
-import Link from "next/link";
-import { Button } from "@comtammatu/ui/components/button";
+"use client";
+
+import { useRouter } from "next/navigation";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@comtammatu/ui/components/toggle-group";
 import { feedbackCopy } from "@lib/messages/feedback";
 
 export function BranchFeedbackTabs({
@@ -11,27 +16,23 @@ export function BranchFeedbackTabs({
   qrHref: string;
   active: "inbox" | "qr";
 }) {
-  const items = [
-    { key: "inbox" as const, href: inboxHref, label: feedbackCopy.tabInbox },
-    { key: "qr" as const, href: qrHref, label: feedbackCopy.tabQr },
-  ];
+  const router = useRouter();
 
   return (
-    <div className="flex flex-wrap gap-2">
-      {items.map((item) => {
-        const isActive = item.key === active;
-        return (
-          <Button
-            key={item.key}
-            variant={isActive ? "secondary" : "ghost"}
-            size="touch"
-            aria-current={isActive ? "page" : undefined}
-            render={<Link href={item.href} />}
-          >
-            {item.label}
-          </Button>
-        );
-      })}
-    </div>
+    <ToggleGroup
+      type="single"
+      variant="outline"
+      size="touch"
+      className="grid w-full grid-cols-2"
+      value={active}
+      onValueChange={(next) => {
+        if (!next || next === active) return;
+        router.push(next === "qr" ? qrHref : inboxHref);
+      }}
+      aria-label={feedbackCopy.pageTitle}
+    >
+      <ToggleGroupItem value="inbox">{feedbackCopy.tabInbox}</ToggleGroupItem>
+      <ToggleGroupItem value="qr">{feedbackCopy.tabQr}</ToggleGroupItem>
+    </ToggleGroup>
   );
 }

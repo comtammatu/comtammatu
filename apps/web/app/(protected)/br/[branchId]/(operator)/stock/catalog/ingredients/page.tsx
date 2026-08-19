@@ -9,14 +9,26 @@ import type {
   IngredientRow,
   UnitOption,
 } from "@lib/inventory/types";
-import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { messages } from "@lib/messages";
 import { parseOperatorBranchId } from "../../../../_lib/parse-branch-id";
+import { CatalogPageShell } from "../catalog-page-shell";
 import { CatalogIngredientsClient } from "./catalog-ingredients-client";
 
 const copy = messages.catalog.ingredients;
 
-export default async function OperatorCatalogIngredientsPage({
+export default function OperatorCatalogIngredientsPage({
+  params,
+}: {
+  params: Promise<{ branchId: string }>;
+}) {
+  return (
+    <CatalogPageShell title={copy.title}>
+      <CatalogIngredientsBody params={params} />
+    </CatalogPageShell>
+  );
+}
+
+async function CatalogIngredientsBody({
   params,
 }: {
   params: Promise<{ branchId: string }>;
@@ -42,13 +54,11 @@ export default async function OperatorCatalogIngredientsPage({
     : [];
 
   return (
-    <BranchOperatorPage title={copy.title} hideHeaderOnMobile>
-      <CatalogIngredientsClient
-        backHref={`/br/${branchId}/stock/catalog`}
-        initial={rows}
-        unitOptions={units}
-        categoryOptions={categories}
-      />
-    </BranchOperatorPage>
+    <CatalogIngredientsClient
+      backHref={`/br/${branchId}/stock/catalog`}
+      initial={rows}
+      unitOptions={units}
+      categoryOptions={categories}
+    />
   );
 }

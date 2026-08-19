@@ -41,6 +41,22 @@ test("operator orders uses a URL-synced ToggleGroup segmented control, not raw T
   assert.match(source, /aria-label=\{ORDERS_COPY\.operatorTabsAriaLabel\}/);
 });
 
+test("operator consumption and count-slip queues use URL-synced ToggleGroup, not Tabs", () => {
+  for (const file of [
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/consumption/branch-consumption-list-client.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-slips/branch-count-slips-client.tsx",
+  ]) {
+    const source = read(file);
+    assert.match(source, /ToggleGroup/, `${file}: queue filter must be ToggleGroup`);
+    assert.match(source, /useSearchParams\(\)/, `${file}: must read view from searchParams`);
+    assert.doesNotMatch(
+      source,
+      /from "@comtammatu\/ui\/components\/tabs"/,
+      `${file}: must not use Tabs as a queue filter`,
+    );
+  }
+});
+
 test("operator stock hub groups tiles into ordered workflow sections", () => {
   const source = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/page.tsx",
@@ -304,6 +320,7 @@ const STOCK_LIST_CLIENTS = [
 const BRANCH_OPS_CARD_CLIENTS = [
   "apps/web/app/(protected)/br/[branchId]/(operator)/team/team-board-client.tsx",
   "apps/web/app/(protected)/br/[branchId]/(operator)/team/leave-approvals/branch-leave-approvals-client.tsx",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/team/members/members-client.tsx",
 ];
 
 test("stock LIST card grids switch to two columns only at the lg landscape breakpoint", () => {
@@ -366,4 +383,26 @@ test("stock detail screens use the shared BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME,
     /md:grid-cols-\[minmax\(0,1\.35fr\)_minmax\(17rem,0\.65fr\)\]/,
     "issues detail must not hand-roll the detail grid at the md breakpoint",
   );
+});
+
+const OPERATOR_LIST_ITEM_CLIENTS = [
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/consumption/branch-consumption-list-client.tsx",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/issues/branch-stock-issues-list-client.tsx",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/stocktake/branch-stocktake-list-client.tsx",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste-approvals/branch-waste-approvals-client.tsx",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/purchase-requests/branch-purchase-requests-client.tsx",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/team/leave-approvals/branch-leave-approvals-client.tsx",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/team/attendance/branch-attendance-client.tsx",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/feedback/_components/branch-feedback-inbox-list.tsx",
+];
+
+test("operator LIST Item rows nowrap title and actions instead of wrapping", () => {
+  for (const file of OPERATOR_LIST_ITEM_CLIENTS) {
+    const source = read(file);
+    assert.match(
+      source,
+      /flex-nowrap/,
+      `${file}: list Item rows must override Item flex-wrap`,
+    );
+  }
 });

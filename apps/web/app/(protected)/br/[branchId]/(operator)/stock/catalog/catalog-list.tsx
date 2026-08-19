@@ -57,7 +57,7 @@ export function CatalogList<TRow>({
                 key={getRowKey(row)}
                 variant="outline"
                 size="sm"
-                className="min-h-12"
+                className="min-h-12 min-w-0 flex-nowrap"
               >
                 <ItemContent className="min-w-0">
                   <ItemTitle className="line-clamp-2 min-w-0 break-words text-sm font-medium">

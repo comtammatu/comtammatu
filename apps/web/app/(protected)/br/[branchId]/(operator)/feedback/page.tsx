@@ -3,7 +3,7 @@ import { canAccess } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
 import { AppEmptyState } from "@/components/surface";
-import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
+import { BranchFeedbackPage } from "./_components/branch-feedback-page";
 import { listFeedbackInbox } from "@/(protected)/feedback/actions";
 import { feedbackCopy } from "@lib/messages/feedback";
 import { parseOperatorBranchId } from "../../_lib/parse-branch-id";
@@ -33,9 +33,9 @@ export default async function BranchFeedbackInboxPage({
 
   if (!canAccess(claims.user_role, "branch_feedback")) {
     return (
-      <BranchOperatorPage title={feedbackCopy.pageTitle}>
+      <BranchFeedbackPage branchId={branchId} title={feedbackCopy.pageTitle}>
         <AppEmptyState mode="no-access" />
-      </BranchOperatorPage>
+      </BranchFeedbackPage>
     );
   }
 
@@ -49,7 +49,7 @@ export default async function BranchFeedbackInboxPage({
   const qrHref = `/br/${branchId}/feedback/qr`;
 
   return (
-    <BranchOperatorPage title={feedbackCopy.pageTitle}>
+    <BranchFeedbackPage branchId={branchId} title={feedbackCopy.pageTitle}>
       <div className="flex flex-col gap-3">
         <BranchFeedbackTabs
           inboxHref={inboxHref}
@@ -70,6 +70,6 @@ export default async function BranchFeedbackInboxPage({
           />
         )}
       </div>
-    </BranchOperatorPage>
+    </BranchFeedbackPage>
   );
 }

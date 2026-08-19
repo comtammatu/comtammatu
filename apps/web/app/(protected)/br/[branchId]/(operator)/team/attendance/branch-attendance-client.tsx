@@ -166,7 +166,11 @@ function ChecklistDetail({ record }: { record: BranchAttendanceRecord }) {
             </div>
             <ItemGroup>
               {phaseItems.map((item) => (
-                <Item key={item.id} variant="outline" className="items-start">
+                <Item
+                  key={item.id}
+                  variant="outline"
+                  className="min-w-0 flex-nowrap items-start"
+                >
                   <Badge variant={item.is_done ? "success" : "secondary"}>
                     {item.is_done ? "Xong" : "Chưa làm"}
                   </Badge>
@@ -483,6 +487,23 @@ export function BranchAttendanceClient({
         description={branchName}
         hideHeaderOnMobile
       >
+        <BranchOperatorControlBar className="sm:hidden">
+          <Button
+            variant="ghost"
+            size="icon-touch"
+            render={
+              <Link href={`/br/${branchId}/team`} aria-label="Quay lại đội" />
+            }
+          >
+            <IconArrowLeft />
+          </Button>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">
+              {pageCopy.branchAttendanceTitle}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">{branchName}</p>
+          </div>
+        </BranchOperatorControlBar>
         <AppEmptyState
           icon={<IconShieldAlert />}
           mode="no-access"
@@ -605,7 +626,7 @@ export function BranchAttendanceClient({
                     <Item
                       key={record.id}
                       variant="outline"
-                      className="min-h-20 touch-manipulation"
+                      className="min-h-20 min-w-0 flex-nowrap touch-manipulation"
                       render={
                         <button
                           type="button"
@@ -665,7 +686,7 @@ export function BranchAttendanceClient({
                 <Item
                   key={row.employee_id}
                   variant="outline"
-                  className="min-h-20 touch-manipulation"
+                  className="min-h-20 min-w-0 flex-nowrap touch-manipulation"
                   render={
                     <button
                       type="button"

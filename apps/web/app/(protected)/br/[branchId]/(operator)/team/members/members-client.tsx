@@ -199,12 +199,10 @@ function MemberCard({
   return (
     <TeamMemberTile
       name={member.name}
-      subtitle={member.positionLabel ?? "Chưa có chức danh"}
-      secondarySubtitle={codeOrPlaceholder}
-      avatar={<MemberAvatar member={member} size="lg" />}
+      subtitle={`${member.positionLabel ?? "Chưa có chức danh"} · ${codeOrPlaceholder}`}
       badges={renderMemberCardBadges(member)}
       ariaLabel={`Mở hồ sơ ${member.name}`}
-      layout="grid"
+      layout="row"
       onSelect={() => onOpenDrawer(member)}
     />
   );
@@ -349,7 +347,7 @@ export function MembersClient({
             />
           </InputGroup>
           <div
-            className="flex flex-wrap gap-1.5"
+            className="no-scrollbar flex touch-pan-x gap-1.5 overflow-x-auto overscroll-x-contain pb-1"
             role="group"
             aria-label="Lọc nhân viên"
           >
@@ -376,7 +374,7 @@ export function MembersClient({
         </div>
 
         {filteredMembers.length > 0 ? (
-          <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <div className="grid gap-2 lg:grid-cols-2">
             {filteredMembers.map((member) => (
               <MemberCard
                 key={member.id}
@@ -431,6 +429,9 @@ export function MembersClient({
       >
           {activeMember ? (
                 <div className="flex flex-col gap-4">
+                  <div className="flex justify-center">
+                    <MemberAvatar member={activeMember} size="lg" />
+                  </div>
                   <MemberDetailBlock title={detailCopy.contactSection}>
                     <InfoTile
                       icon={<Phone />}

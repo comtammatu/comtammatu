@@ -73,14 +73,16 @@ export default async function OperatorTransferDetailPage({
         variant: statusBadge.variant,
       }}
       action={
-        <Button
-          variant="outline"
-          size="touch"
-          render={<Link href={listHref} />}
-        >
-          <IconArrowLeft data-icon="inline-start" />
-          {ACTIONS_VI.back}
-        </Button>
+        <div className="max-sm:hidden">
+          <Button
+            variant="outline"
+            size="touch"
+            render={<Link href={listHref} />}
+          >
+            <IconArrowLeft data-icon="inline-start" />
+            {ACTIONS_VI.back}
+          </Button>
+        </div>
       }
     >
       <BranchTransferDetailClient

@@ -203,6 +203,23 @@ export function BranchWasteApprovalsClient({
         description={branchName}
         hideHeaderOnMobile
       >
+        <BranchOperatorControlBar className="sm:hidden">
+          <Button
+            variant="ghost"
+            size="icon-touch"
+            render={
+              <Link href={stockBasePath} aria-label={ACTIONS_VI.back} />
+            }
+          >
+            <IconArrowLeft aria-hidden="true" />
+          </Button>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">{copy.title}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {branchName}
+            </p>
+          </div>
+        </BranchOperatorControlBar>
         <AppEmptyState
           compact
           mode="no-access"
@@ -221,6 +238,23 @@ export function BranchWasteApprovalsClient({
         description={branchName}
         hideHeaderOnMobile
       >
+        <BranchOperatorControlBar className="sm:hidden">
+          <Button
+            variant="ghost"
+            size="icon-touch"
+            render={
+              <Link href={stockBasePath} aria-label={ACTIONS_VI.back} />
+            }
+          >
+            <IconArrowLeft aria-hidden="true" />
+          </Button>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">{copy.title}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {branchName}
+            </p>
+          </div>
+        </BranchOperatorControlBar>
         <AppEmptyState
           compact
           mode="no-data"
@@ -294,7 +328,7 @@ export function BranchWasteApprovalsClient({
                     key={row.issueId}
                     role="listitem"
                     variant="default"
-                    className="min-h-20 touch-manipulation gap-2 rounded-none border-x-0 border-t-0 border-b border-border px-2 py-1 last:border-b-0"
+                    className="min-h-20 min-w-0 flex-nowrap touch-manipulation gap-2 rounded-none border-x-0 border-t-0 border-b border-border px-2 py-1 last:border-b-0"
                     render={
                       <button
                         type="button"

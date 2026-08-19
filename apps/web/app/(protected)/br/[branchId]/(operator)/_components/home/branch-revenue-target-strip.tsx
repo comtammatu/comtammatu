@@ -1,33 +1,30 @@
 "use client";
 
+import { useState } from "react";
 import { formatPercent, formatVND } from "@comtammatu/shared/format";
-import { formatVNBusinessDate, getVNBusinessDateString } from "@comtammatu/shared/time";
+import { Button } from "@comtammatu/ui/components/button";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { Progress } from "@comtammatu/ui/components/progress";
 import { BranchOperatorPanel } from "@lib/branch-operator/components/branch-operator-page";
 import { messages } from "@lib/messages";
 import {
-  daysInMonthFromStart,
   isRevenueRewardTierAchieved,
-  monthStartFromIsoDate,
-  nextRevenueRewardGap,
-  paceTargetAmount,
   progressTrackPosition,
   progressTrackScale,
   targetProgressTone,
 } from "@/(protected)/finance/_lib/revenue-target";
 import type { BranchRevenueTargetProgress } from "@/(protected)/finance/targets/actions";
+import { AppSheet } from "@/components/surface";
 
 const progressCopy = messages.finance.revenueTargets.progress;
 const rewardCopy = messages.finance.revenueTargets.rewardTiers;
 const homeCopy = messages.operator.home;
-
-function monthLabel(yearMonth: string): string {
-  const monthStart = monthStartFromIsoDate(yearMonth);
-  const month = Number(monthStart.slice(5, 7));
-  const year = monthStart.slice(0, 4);
-  if (!Number.isFinite(month) || year.length !== 4) return yearMonth;
-  return progressCopy.monthCaption(month, year);
-}
 
 function rewardLabel(
   rewardType: "fixed_amount" | "revenue_percent",
@@ -38,48 +35,40 @@ function rewardLabel(
     : `${formatPercent(rewardValue, 2)} ${progressCopy.revenueLabel}`;
 }
 
+type MilestoneRow = {
+  thresholdPct: number;
+  reward: string | null;
+};
+
+function milestoneRows(progress: BranchRevenueTargetProgress): MilestoneRow[] {
+  const rows: MilestoneRow[] = progress.rewardTiers.map((tier) => ({
+    thresholdPct: tier.thresholdPct,
+    reward: rewardLabel(tier.rewardType, tier.rewardValue),
+  }));
+  if (!rows.some((row) => row.thresholdPct === 100)) {
+    rows.push({ thresholdPct: 100, reward: null });
+  }
+  return rows.sort((left, right) => left.thresholdPct - right.thresholdPct);
+}
+
 export function BranchRevenueTargetStrip({
   progress,
 }: {
   progress: BranchRevenueTargetProgress;
 }) {
+  const [milestonesOpen, setMilestonesOpen] = useState(false);
   const tone = targetProgressTone(progress.progressPct);
   const hasTarget = progress.targetAmount != null && progress.targetAmount > 0;
+  const rows = milestoneRows(progress);
   const scale = progressTrackScale(
     progress.progressPct,
-    progress.rewardTiers.map((tier) => tier.thresholdPct),
+    rows.map((row) => row.thresholdPct),
   );
   const fillPct = progressTrackPosition(progress.progressPct ?? 0, scale);
   const progressTone =
     tone === "neutral"
       ? "default"
       : (tone as "success" | "warning" | "destructive");
-  const businessDate = getVNBusinessDateString();
-  const nextGap = nextRevenueRewardGap(
-    progress.netRevenueMtd,
-    progress.targetAmount,
-    progress.rewardTiers,
-  );
-  const dayIndex = Number(businessDate.slice(8, 10));
-  const daysInMonth = daysInMonthFromStart(
-    monthStartFromIsoDate(progress.yearMonth),
-  );
-  const paceAmount =
-    hasTarget && Number.isFinite(dayIndex)
-      ? paceTargetAmount(progress.targetAmount ?? 0, dayIndex, daysInMonth)
-      : 0;
-
-  const markers = [
-    { key: "target", thresholdPct: 100 },
-    ...progress.rewardTiers.map((tier) => ({
-      key: `tier-${tier.thresholdPct}`,
-      thresholdPct: tier.thresholdPct,
-    })),
-  ].filter(
-    (marker, index, list) =>
-      list.findIndex((item) => item.thresholdPct === marker.thresholdPct) ===
-      index,
-  );
 
   return (
     <BranchOperatorPanel title={homeCopy.revenueTargetTitle} size="sm">
@@ -92,9 +81,6 @@ export function BranchRevenueTargetStrip({
             <span className="text-base font-semibold tabular-nums text-foreground">
               {formatVND(progress.netRevenueMtd)}
             </span>
-            <span className="truncate text-xs text-muted-foreground">
-              {monthLabel(progress.yearMonth)}
-            </span>
           </div>
           <div className="flex min-w-0 flex-col gap-1 rounded-md bg-muted/50 px-3 py-2.5">
             <span className="text-xs font-medium text-muted-foreground">
@@ -102,11 +88,6 @@ export function BranchRevenueTargetStrip({
             </span>
             <span className="text-base font-semibold tabular-nums text-foreground">
               {formatVND(progress.netRevenueToday)}
-            </span>
-            <span className="truncate text-xs text-muted-foreground">
-              {progressCopy.businessDayCaption(
-                formatVNBusinessDate(businessDate),
-              )}
             </span>
           </div>
         </div>
@@ -132,88 +113,86 @@ export function BranchRevenueTargetStrip({
             ) : null}
           </div>
           {hasTarget ? (
-            <>
-              <div className="relative">
-                <Progress
-                  value={fillPct}
-                  tone={progressTone}
-                  className="h-2.5 rounded-full"
-                />
-                {markers.map((marker) => {
-                  const achieved = isRevenueRewardTierAchieved(
-                    progress.progressPct,
-                    marker.thresholdPct,
-                  );
-                  const left = progressTrackPosition(marker.thresholdPct, scale);
-                  return (
-                    <span
-                      key={marker.key}
-                      aria-hidden="true"
-                      className={
-                        achieved
-                          ? "pointer-events-none absolute top-1/2 z-10 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-success ring-2 ring-background"
-                          : "pointer-events-none absolute top-1/2 z-10 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-background ring-2 ring-border"
-                      }
-                      style={{ left: left.toFixed(2) + "%" }}
-                    />
-                  );
-                })}
-              </div>
-              {progress.rewardTiers.length > 0 ? (
-                <ul className="grid grid-cols-1 gap-1 sm:grid-cols-2">
-                  {progress.rewardTiers.map((tier) => {
-                    const achieved = isRevenueRewardTierAchieved(
-                      progress.progressPct,
-                      tier.thresholdPct,
-                    );
-                    const threshold = formatPercent(tier.thresholdPct, 2);
-                    const reward = rewardLabel(tier.rewardType, tier.rewardValue);
-                    return (
-                      <li
-                        key={tier.thresholdPct}
-                        className="flex min-w-0 items-baseline justify-between gap-2 text-xs"
-                      >
-                        <span className="min-w-0 truncate text-muted-foreground">
-                          {rewardCopy.milestone(threshold)}
-                          {" · "}
-                          {rewardCopy.reward(reward)}
-                        </span>
-                        <span
-                          className={
-                            achieved
-                              ? "shrink-0 font-medium text-success"
-                              : "shrink-0 text-muted-foreground"
-                          }
-                        >
-                          {achieved ? rewardCopy.achieved : rewardCopy.pending}
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : null}
-              <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-                {nextGap ? (
-                  <span>
-                    {progressCopy.nextMilestone(
-                      formatPercent(nextGap.thresholdPct, 2),
-                      formatVND(nextGap.gapAmount),
-                    )}
-                  </span>
-                ) : progress.gapAmount != null && progress.gapAmount > 0 ? (
-                  <span>{progressCopy.remaining(formatVND(progress.gapAmount))}</span>
-                ) : progress.progressPct != null && progress.progressPct >= 100 ? (
-                  <span>{progressCopy.achieved}</span>
-                ) : null}
-                {paceAmount > 0 ? (
-                  <span>{progressCopy.paceToday(formatVND(paceAmount))}</span>
-                ) : null}
-                <span>{progressCopy.dayHint}</span>
-              </div>
-            </>
+            <Button
+              type="button"
+              variant="ghost"
+              size="touch"
+              className="relative w-full px-0 hover:bg-transparent"
+              aria-label={rewardCopy.trackingTitle}
+              onClick={() => setMilestonesOpen(true)}
+            >
+              <Progress
+                value={fillPct}
+                tone={progressTone}
+                className="pointer-events-none h-2.5 w-full rounded-full"
+              />
+              {rows.map((row) => {
+                const achieved = isRevenueRewardTierAchieved(
+                  progress.progressPct,
+                  row.thresholdPct,
+                );
+                const left = progressTrackPosition(row.thresholdPct, scale);
+                return (
+                  <span
+                    key={row.thresholdPct}
+                    aria-hidden="true"
+                    className={
+                      achieved
+                        ? "pointer-events-none absolute top-1/2 z-10 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-success ring-2 ring-background"
+                        : "pointer-events-none absolute top-1/2 z-10 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-background ring-2 ring-border"
+                    }
+                    style={{ left: left.toFixed(2) + "%" }}
+                  />
+                );
+              })}
+            </Button>
           ) : null}
         </div>
       </div>
+
+      <AppSheet
+        open={milestonesOpen}
+        onOpenChange={setMilestonesOpen}
+        title={rewardCopy.trackingTitle}
+        size="md"
+        side="bottom"
+      >
+        <ItemGroup>
+          {rows.map((row) => {
+            const achieved = isRevenueRewardTierAchieved(
+              progress.progressPct,
+              row.thresholdPct,
+            );
+            const needed =
+              progress.targetAmount != null
+                ? (progress.targetAmount * row.thresholdPct) / 100
+                : null;
+            const gap =
+              needed != null
+                ? Math.max(needed - progress.netRevenueMtd, 0)
+                : null;
+            const threshold = formatPercent(row.thresholdPct, 2);
+            return (
+              <Item key={row.thresholdPct} variant="outline">
+                <ItemContent>
+                  <ItemTitle>{rewardCopy.milestone(threshold)}</ItemTitle>
+                  <ItemDescription>
+                    {row.reward
+                      ? rewardCopy.reward(row.reward)
+                      : progressCopy.targetLabel}
+                    {" · "}
+                    {achieved
+                      ? rewardCopy.achieved
+                      : gap != null
+                        ? progressCopy.remaining(formatVND(gap))
+                        : rewardCopy.pending}
+                  </ItemDescription>
+                </ItemContent>
+              </Item>
+            );
+          })}
+        </ItemGroup>
+      </AppSheet>
     </BranchOperatorPanel>
   );
 }

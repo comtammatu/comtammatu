@@ -107,17 +107,40 @@ export async function StaffCheckoutApprovalsPageContent({
         description={copy.checkoutApprovalsDescriptionAll}
         hideHeaderOnMobile={hideHeaderOnMobile}
         action={
-          <Button
-            variant="outline"
-            size="touch"
-            className="w-full sm:w-fit"
-            render={<Link href={homeLink.href} />}
-          >
-            <IconHome data-icon="inline-start" />
-            {homeLink.label}
-          </Button>
+          plane === "employee" ? (
+            <Button
+              variant="outline"
+              size="touch"
+              className="w-full sm:w-fit"
+              render={<Link href={homeLink.href} />}
+            >
+              <IconHome data-icon="inline-start" />
+              {homeLink.label}
+            </Button>
+          ) : undefined
         }
       >
+        {plane === "branch" && routeBranchId != null ? (
+          <BranchOperatorControlBar className="sm:hidden">
+            <Button
+              variant="ghost"
+              size="icon-touch"
+              render={
+                <Link
+                  href={`/br/${routeBranchId}/team`}
+                  aria-label="Quay lại đội"
+                />
+              }
+            >
+              <IconArrowLeft />
+            </Button>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold">
+                {copy.checkoutApprovalsTitle}
+              </p>
+            </div>
+          </BranchOperatorControlBar>
+        ) : null}
         <AppEmptyState
           title="Không có quyền duyệt kết ca"
           description="Chỉ tài khoản quản lý có quyền nhân sự mới duyệt yêu cầu kết ca."

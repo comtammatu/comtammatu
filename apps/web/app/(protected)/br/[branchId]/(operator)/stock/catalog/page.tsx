@@ -3,14 +3,26 @@ import { fetchCategories } from "@/(protected)/inventory/settings/categories/cat
 import { fetchUnits } from "@/(protected)/inventory/settings/units/units-actions";
 import { fetchIngredients } from "@/(protected)/inventory/ingredient-actions";
 import { fetchSuppliers } from "@/(protected)/inventory/procurement-actions";
-import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { messages } from "@lib/messages";
 import { parseOperatorBranchId } from "../../../_lib/parse-branch-id";
 import { CatalogIndexClient } from "./catalog-index-client";
+import { CatalogPageShell } from "./catalog-page-shell";
 
 const copy = messages.catalog.index;
 
-export default async function OperatorCatalogPage({
+export default function OperatorCatalogPage({
+  params,
+}: {
+  params: Promise<{ branchId: string }>;
+}) {
+  return (
+    <CatalogPageShell title={copy.title}>
+      <CatalogIndex params={params} />
+    </CatalogPageShell>
+  );
+}
+
+async function CatalogIndex({
   params,
 }: {
   params: Promise<{ branchId: string }>;
@@ -45,17 +57,15 @@ export default async function OperatorCatalogPage({
     : 0;
 
   return (
-    <BranchOperatorPage title={copy.title} hideHeaderOnMobile>
-      <CatalogIndexClient
-        basePath={`/br/${branchId}/stock/catalog`}
-        counts={{
-          categories: categoryCount,
-          ingredients: activeIngredientCount,
-          units: unitCount,
-          thresholds: activeIngredientCount,
-          suppliers: supplierCount,
-        }}
-      />
-    </BranchOperatorPage>
+    <CatalogIndexClient
+      basePath={`/br/${branchId}/stock/catalog`}
+      counts={{
+        categories: categoryCount,
+        ingredients: activeIngredientCount,
+        units: unitCount,
+        thresholds: activeIngredientCount,
+        suppliers: supplierCount,
+      }}
+    />
   );
 }

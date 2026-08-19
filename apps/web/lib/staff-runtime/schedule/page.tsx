@@ -5,10 +5,18 @@ import {
   EmployeeMissingProfileEmpty,
   EmployeePage,
 } from "../components/staff-runtime-page";
-import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
+import {
+  BranchOperatorControlBar,
+  BranchOperatorPage,
+} from "@lib/branch-operator/components/branch-operator-page";
 import { getVNMonthStartDateString } from "@comtammatu/shared/time";
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
+import { requestNow } from "@/_lib/request-now";
 import type { SchedulePlane } from "./schedule-client";
+import Link from "next/link";
+import { ArrowLeft as IconArrowLeft } from "lucide-react";
+import { Button } from "@comtammatu/ui/components/button";
 
 const copy = messages.employee.home;
 
@@ -35,6 +43,25 @@ export async function StaffSchedulePageContent({
 }: StaffSchedulePageContentProps) {
   const ctx = await getEmployeeContext();
   const PageShell = plane === "branch" ? BranchOperatorPage : EmployeePage;
+  const backHref =
+    plane === "branch" && routeBranchId != null
+      ? `/br/${routeBranchId}/shift`
+      : null;
+  const mobileTitleBar =
+    plane === "branch" && backHref ? (
+      <BranchOperatorControlBar className="sm:hidden">
+        <Button
+          variant="ghost"
+          size="icon-touch"
+          render={<Link href={backHref} aria-label={ACTIONS_VI.back} />}
+        >
+          <IconArrowLeft />
+        </Button>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold">{copy.scheduleTitle}</p>
+        </div>
+      </BranchOperatorControlBar>
+    ) : null;
 
   if (!ctx) {
     return (
@@ -42,6 +69,7 @@ export async function StaffSchedulePageContent({
         title={copy.scheduleTitle}
         hideHeaderOnMobile={plane === "branch"}
       >
+        {mobileTitleBar}
         <EmployeeMissingProfileEmpty profileHref={profileHref} />
       </PageShell>
     );
@@ -49,7 +77,7 @@ export async function StaffSchedulePageContent({
 
   const { supabase, claims, employeeId } = ctx;
 
-  const monthStart = getVNMonthStartDateString(new Date());
+  const monthStart = getVNMonthStartDateString(await requestNow());
 
   const [scheduleResult, employeeResult] = await Promise.all([
     fetchMySchedule(monthStart),
@@ -66,6 +94,7 @@ export async function StaffSchedulePageContent({
       title={copy.scheduleTitle}
       hideHeaderOnMobile={plane === "branch"}
     >
+      {mobileTitleBar}
       <ScheduleClient
         initialData={
           scheduleResult.success

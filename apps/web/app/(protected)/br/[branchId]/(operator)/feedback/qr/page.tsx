@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { loadAuthState, probePermission } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
 import { AppEmptyState } from "@/components/surface";
-import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
+import { BranchFeedbackPage } from "../_components/branch-feedback-page";
 import { listFeedbackQrCodes } from "@/(protected)/feedback/actions";
 import { feedbackCopy } from "@lib/messages/feedback";
 import { parseOperatorBranchId } from "../../../_lib/parse-branch-id";
@@ -26,9 +26,9 @@ export default async function BranchFeedbackQrPage({
 
   if (!canAccess(claims.user_role, "branch_feedback")) {
     return (
-      <BranchOperatorPage title={feedbackCopy.qrTitle}>
+      <BranchFeedbackPage branchId={branchId} title={feedbackCopy.qrTitle}>
         <AppEmptyState mode="no-access" />
-      </BranchOperatorPage>
+      </BranchFeedbackPage>
     );
   }
 
@@ -63,7 +63,7 @@ export default async function BranchFeedbackQrPage({
   const qrHref = `/br/${branchId}/feedback/qr`;
 
   return (
-    <BranchOperatorPage title={feedbackCopy.qrTitle}>
+    <BranchFeedbackPage branchId={branchId} title={feedbackCopy.qrTitle}>
       <div className="flex flex-col gap-3">
         <BranchFeedbackTabs
           inboxHref={inboxHref}
@@ -84,6 +84,6 @@ export default async function BranchFeedbackQrPage({
           />
         )}
       </div>
-    </BranchOperatorPage>
+    </BranchFeedbackPage>
   );
 }

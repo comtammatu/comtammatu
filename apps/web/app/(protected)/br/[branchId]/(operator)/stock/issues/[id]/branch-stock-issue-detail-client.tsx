@@ -500,15 +500,18 @@ export function BranchStockIssueDetailClient({
             icon={IconFileText}
             size="sm"
             contentClassName="gap-3"
-            action={
-              canEdit ? (
-                <Button type="button" size="touch" onClick={openNewLine}>
-                  <IconCirclePlus data-icon="inline-start" />
-                  {issuesCopy.addLinePrefixed("nguyên liệu")}
-                </Button>
-              ) : undefined
-            }
           >
+            {canEdit ? (
+              <Button
+                type="button"
+                size="touch"
+                className="w-full"
+                onClick={openNewLine}
+              >
+                <IconCirclePlus data-icon="inline-start" />
+                {issuesCopy.addLinePrefixed("nguyên liệu")}
+              </Button>
+            ) : null}
             {lines.length === 0 ? (
               <AppEmptyState
                 compact

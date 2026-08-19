@@ -29,7 +29,11 @@ test("POS session history stays immediately reachable on touch layouts", () => {
 
 test("POS session workspace keeps context visible while each desktop pane scrolls", () => {
   assert.match(source, /paramKey="view"/);
-  assert.match(source, /<BranchOperatorControlBar className="sticky top-0 z-10 bg-card">/);
+  assert.match(
+    source,
+    /<BranchOperatorControlBar className="min-w-0 shrink-0 bg-card">/,
+  );
+  assert.doesNotMatch(source, /sticky top-0 z-10 bg-card/);
   assert.match(
     source,
     /className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden"/,
