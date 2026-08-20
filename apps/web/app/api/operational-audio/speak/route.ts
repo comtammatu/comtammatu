@@ -13,7 +13,6 @@ import {
   synthesizeOperationalUtterance,
 } from "@lib/operational-tts-gateway";
 
-export const dynamic = "force-dynamic";
 export const maxDuration = 15;
 
 const STATION_ROLES: readonly StaffRole[] = Array.from(
