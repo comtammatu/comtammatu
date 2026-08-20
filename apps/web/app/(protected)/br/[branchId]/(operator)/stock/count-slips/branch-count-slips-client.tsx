@@ -1,14 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
-import Link from "next/link";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Check as IconCheck,
   ChevronRight as IconChevronRight,
   ClipboardCheck as IconClipboardCheck,
   RotateCcw as IconRecount,
-  ArrowLeft as IconArrowLeft,
 } from "lucide-react";
 import {
   ACTIONS_VI,
@@ -36,13 +40,9 @@ import {
 } from "@comtammatu/ui/components/toggle-group";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
-import {
-  AppEmptyState,
-  AppSheet,
-} from "@/components/surface";
+import { AppEmptyState, AppSheet } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
 import {
-  BranchOperatorControlBar,
   BranchOperatorDetailList,
   BranchOperatorPage,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -206,28 +206,7 @@ export function BranchCountSlipsClient({
     <BranchOperatorPage
       title={INVENTORY_VI.countSlipTitle}
       description={branchName}
-      hideHeaderOnMobile
     >
-      <BranchOperatorControlBar className="sm:hidden">
-        <Button
-          variant="ghost"
-          size="icon-touch"
-          render={
-            <Link
-              href={pathname.replace(/\/stock\/count-slips.*$/, "/stock")}
-              aria-label={ACTIONS_VI.back}
-            />
-          }
-        >
-          <IconArrowLeft />
-        </Button>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">
-            {INVENTORY_VI.countSlipTitle}
-          </p>
-          <p className="truncate text-xs text-muted-foreground">{branchName}</p>
-        </div>
-      </BranchOperatorControlBar>
       <ToggleGroup
         type="single"
         variant="outline"

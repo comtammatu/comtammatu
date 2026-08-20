@@ -20,7 +20,6 @@ import {
   SupplierDialog,
   type SupplierRow,
 } from "@/(protected)/inventory/suppliers/supplier-dialog";
-import { CatalogBackControl } from "../catalog-back-header";
 import {
   CatalogList,
   CATALOG_DELETE_ICON,
@@ -30,10 +29,8 @@ import {
 const copy = messages.catalog.suppliers;
 
 export function CatalogSuppliersClient({
-  backHref,
   initial,
 }: {
-  backHref: string;
   initial: SupplierRow[];
 }) {
   const [rows, setRows] = useState(initial);
@@ -87,8 +84,6 @@ export function CatalogSuppliersClient({
 
   return (
     <div className="flex flex-col gap-3">
-      <CatalogBackControl title={copy.title} backHref={backHref} />
-
       <InputGroup className="h-11">
         <InputGroupAddon>
           <IconSearch />

@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft as IconArrowLeft, Plus as IconPlus } from "lucide-react";
+import { Plus as IconPlus } from "lucide-react";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { getWasteReasonLabelVi } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
@@ -27,7 +27,6 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { AppEmptyState, AppDetailFooter } from "@/components/surface";
 import {
-  BranchOperatorControlBar,
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -199,7 +198,9 @@ export function BranchWasteCreateClient({
       });
       if (!result.success) {
         const applied = applyInventoryActionError(result, copy.createFailed);
-        if (applied.errorCode === INVENTORY_ERROR_CODES.WASTE_EVIDENCE_REQUIRED) {
+        if (
+          applied.errorCode === INVENTORY_ERROR_CODES.WASTE_EVIDENCE_REQUIRED
+        ) {
           setEvidenceRequired(true);
         }
         const named =
@@ -223,24 +224,7 @@ export function BranchWasteCreateClient({
   }
 
   return (
-    <BranchOperatorPage
-      title={copy.title}
-      description={branchName}
-      hideHeaderOnMobile
-    >
-      <BranchOperatorControlBar className="sm:hidden">
-        <Button
-          variant="ghost"
-          size="icon-touch"
-          render={<Link href={stockBasePath} aria-label={ACTIONS_VI.back} />}
-        >
-          <IconArrowLeft />
-        </Button>
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold">{copy.title}</p>
-          <p className="truncate text-xs text-muted-foreground">{branchName}</p>
-        </div>
-      </BranchOperatorControlBar>
+    <BranchOperatorPage title={copy.title} description={branchName}>
       {!canCreateWaste || !context ? (
         <AppEmptyState compact title={unavailable} />
       ) : (
@@ -250,7 +234,13 @@ export function BranchWasteCreateClient({
             description={copy.panelDescription}
             size="sm"
           >
-            <Button type="button" variant="outline" size="touch" className="w-full" onClick={addLine}>
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              className="w-full"
+              onClick={addLine}
+            >
               <IconPlus className="size-4" />
               {copy.addLine}
             </Button>

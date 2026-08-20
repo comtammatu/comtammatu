@@ -35,7 +35,6 @@ test("Branch waste approvals preserve touch review and Owner surface isolation",
   assert.match(model, /export type PendingWasteRow/);
 
   assert.match(client, /BranchOperatorPage/);
-  assert.match(client, /BranchOperatorControlBar/);
   assert.match(client, /BranchOperatorPanel/);
   assert.match(client, /<AppSheet[\s\S]*side="bottom"/);
   assert.match(client, /overscroll-contain/);

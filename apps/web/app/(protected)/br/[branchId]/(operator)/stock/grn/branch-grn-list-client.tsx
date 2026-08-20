@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft as IconArrowLeft,
   ChevronRight as IconChevronRight,
   FileText as IconFileText,
   Plus as IconPlus,
@@ -49,7 +48,6 @@ import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import { discardGrnDraft } from "@/(protected)/inventory/grn-actions";
 import { PURCHASE_ORDER_CREATE_HREF } from "@lib/inventory/purchase-order-paths";
 import {
-  BranchOperatorControlBar,
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -322,30 +320,7 @@ export function BranchGrnListClient({
     <BranchOperatorPage
       title={messages.inventory.operatorFlow.grnListTitle}
       description={messages.inventory.operatorFlow.grnListDescription}
-      hideHeaderOnMobile
     >
-      <BranchOperatorControlBar className="sm:hidden">
-        <Button
-          variant="ghost"
-          size="icon-touch"
-          render={
-            <Link
-              href={`/br/${branchId}/stock`}
-              aria-label={ACTIONS_VI.back}
-            />
-          }
-        >
-          <IconArrowLeft />
-        </Button>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">
-            {messages.inventory.operatorFlow.grnListTitle}
-          </p>
-          <p className="truncate text-xs text-muted-foreground">
-            {messages.inventory.operatorFlow.grnListDescription}
-          </p>
-        </div>
-      </BranchOperatorControlBar>
       {canCreate ? (
         <Button
           size="touch"

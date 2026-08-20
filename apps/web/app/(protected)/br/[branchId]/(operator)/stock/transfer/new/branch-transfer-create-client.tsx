@@ -3,16 +3,11 @@
 import Link from "next/link";
 import { useState } from "react";
 import {
-  ArrowLeft as IconArrowLeft,
   PackageCheck as IconPackageCheck,
   Plus as IconPlus,
   Trash as IconTrash,
 } from "lucide-react";
-import {
-  ACTIONS_VI,
-  FORM_VI,
-  INVENTORY_VI,
-} from "@comtammatu/shared/messages";
+import { ACTIONS_VI, FORM_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Item,
@@ -35,13 +30,15 @@ import { Combobox } from "@/components/form/combobox";
 import { NumberPadSheet } from "@/components/form/number-pad-sheet";
 import { AppDetailFooter, AppEmptyState } from "@/components/surface";
 import {
-  BranchOperatorControlBar,
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
 import type { TransferCreatePageData } from "@lib/inventory/transfer-create-data";
 import { TransferCreateRouteFields } from "@lib/inventory/transfer-create-route-fields";
-import { getTransferWarehouseUnit, type TransferDraftLine } from "@lib/inventory/transfer-create-model";
+import {
+  getTransferWarehouseUnit,
+  type TransferDraftLine,
+} from "@lib/inventory/transfer-create-model";
 import {
   useTransferCreateController,
   type TransferCreateDirection,
@@ -77,27 +74,11 @@ export function BranchTransferCreateClient({
     <BranchOperatorPage
       title={journeyCopy.manualTransferAction}
       description={journeyCopy.manualTransferDescription}
-      hideHeaderOnMobile
     >
-      <BranchOperatorControlBar className="sm:hidden">
-        <Button
-          variant="ghost"
-          size="icon-touch"
-          render={<Link href={basePath} aria-label={ACTIONS_VI.back} />}
-        >
-          <IconArrowLeft />
-        </Button>
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold">
-            {journeyCopy.manualTransferAction}
-          </p>
-          <p className="truncate text-xs text-muted-foreground">
-            {journeyCopy.manualTransferDescription}
-          </p>
-        </div>
-      </BranchOperatorControlBar>
-
-      <form onSubmit={controller.submit} className="flex min-w-0 flex-col gap-3">
+      <form
+        onSubmit={controller.submit}
+        className="flex min-w-0 flex-col gap-3"
+      >
         {controller.loadFailed ? (
           <AppEmptyState
             compact
@@ -179,7 +160,11 @@ export function BranchTransferCreateClient({
                   controller.getLineMaxQuantityValue(line);
                 const qty = Number(line.quantity);
                 return (
-                  <Item key={line.key} variant="outline" className="items-start">
+                  <Item
+                    key={line.key}
+                    variant="outline"
+                    className="items-start"
+                  >
                     <ItemContent className="min-w-0 gap-2">
                       <ItemTitle size="heading" className="line-clamp-none">
                         {line.name}
@@ -258,7 +243,10 @@ export function BranchTransferCreateClient({
         </BranchOperatorPanel>
 
         <div className="flex flex-col gap-2">
-          <label htmlFor="branch-transfer-notes" className="text-sm font-medium">
+          <label
+            htmlFor="branch-transfer-notes"
+            className="text-sm font-medium"
+          >
             {copy.transportNote}
           </label>
           <Textarea
@@ -303,9 +291,7 @@ export function BranchTransferCreateClient({
         title={padLine ? padLine.name : ""}
         suffix={padLine?.unit}
         initialValue={
-          padLine && padLine.quantity
-            ? Number(padLine.quantity)
-            : null
+          padLine && padLine.quantity ? Number(padLine.quantity) : null
         }
         onConfirm={(value) => {
           if (!padLine) return;

@@ -1,8 +1,4 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft as IconArrowLeft } from "lucide-react";
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
-import { Button } from "@comtammatu/ui/components/button";
 import { getStatusBadgeMeta } from "@/components/status-badge";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
@@ -57,7 +53,6 @@ export default async function OperatorTransferDetailPage({
 
   const copy = messages.inventory.transfer;
   const statusBadge = getStatusBadgeMeta("inventory", data.transfer.status);
-  const listHref = `/br/${branchId}/stock/transfer`;
 
   return (
     <BranchOperatorPage
@@ -67,30 +62,16 @@ export default async function OperatorTransferDetailPage({
         data.transfer.toLocation,
         data.transfer.date,
       )}
-      hideHeaderOnMobile
       badge={{
         children: statusBadge.label,
         variant: statusBadge.variant,
       }}
-      action={
-        <div className="max-sm:hidden">
-          <Button
-            variant="outline"
-            size="touch"
-            render={<Link href={listHref} />}
-          >
-            <IconArrowLeft data-icon="inline-start" />
-            {ACTIONS_VI.back}
-          </Button>
-        </div>
-      }
     >
       <BranchTransferDetailClient
         branchId={branchId}
         transfer={data.transfer}
         userRole={data.userRole}
         userBranchId={data.userBranchId}
-        listHref={listHref}
       />
     </BranchOperatorPage>
   );

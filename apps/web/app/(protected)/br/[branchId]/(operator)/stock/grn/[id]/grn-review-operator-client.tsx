@@ -24,11 +24,10 @@ import {
 } from "@comtammatu/ui/components/item";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { AppDetailFooter, AppEmptyState } from "@/components/surface";
-import { StatusBadge, getStatusBadgeMeta } from "@/components/status-badge";
+import { getStatusBadgeMeta } from "@/components/status-badge";
 import { OperatorFlowSteps } from "@/(protected)/inventory/_components/operator-flow-steps";
 import type { IngredientRow } from "@lib/inventory/types";
 import {
-  BranchOperatorControlBar,
   BranchOperatorDetailList,
   BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME,
   BranchOperatorPage,
@@ -100,29 +99,9 @@ export function GrnReviewOperatorClient({
     <BranchOperatorPage
       title={grn.code}
       description={`${grn.supplier} · ${grn.date}`}
-      hideHeaderOnMobile
       badge={{ children: statusBadge.label, variant: statusBadge.variant }}
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button
-            variant="ghost"
-            size="icon-touch"
-            render={<Link href={grnListBasePath} aria-label={grnCopy.back} />}
-          >
-            <IconArrowLeft />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-mono text-sm font-semibold tabular-nums">
-              {grn.code}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {grn.supplier} · {grn.date}
-            </p>
-          </div>
-          <StatusBadge domain="inventory" value={grn.status} size="sm" />
-        </BranchOperatorControlBar>
-
         <OperatorFlowSteps
           title={grnCopy.inspectionItemsTitle}
           description={grnCopy.draftSavedReviewHint}

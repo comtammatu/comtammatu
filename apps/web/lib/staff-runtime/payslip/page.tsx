@@ -1,9 +1,6 @@
 import { getEmployeeContext } from "../_lib/staff-runtime-context";
 import { PayslipClient } from "./payslip-client";
-import {
-  BranchOperatorControlBar,
-  BranchOperatorPage,
-} from "@lib/branch-operator/components/branch-operator-page";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import {
   EmployeeMissingProfileEmpty,
   EmployeePage,
@@ -11,10 +8,6 @@ import {
 import { YearPicker } from "./year-picker";
 import { getTodayVN } from "../_lib/vn-business-date";
 import { messages } from "@lib/messages";
-import Link from "next/link";
-import { ArrowLeft as IconArrowLeft } from "lucide-react";
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
-import { Button } from "@comtammatu/ui/components/button";
 
 const copy = messages.employee.payslip;
 
@@ -22,7 +15,6 @@ type PayslipPlane = "employee" | "branch";
 
 export async function StaffPayslipPageContent(props: {
   searchParams: Promise<{ year?: string }>;
-  hideHeaderOnMobile?: boolean;
   profileHref: string;
   plane?: PayslipPlane;
 }) {
@@ -30,36 +22,12 @@ export async function StaffPayslipPageContent(props: {
   const { year: yearParam } = await props.searchParams;
   const currentYear = Number(getTodayVN().slice(0, 4));
   const year = isValidYear(yearParam) ? Number(yearParam) : currentYear;
-  const PageShell = props.plane === "branch" ? BranchOperatorPage : EmployeePage;
-  const mobileTitleBar =
-    props.plane === "branch" ? (
-      <BranchOperatorControlBar className="sm:hidden">
-        <Button
-          variant="ghost"
-          size="icon-touch"
-          render={
-            <Link href={props.profileHref} aria-label={ACTIONS_VI.back} />
-          }
-        >
-          <IconArrowLeft />
-        </Button>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">{copy.title}</p>
-          <p className="truncate text-xs text-muted-foreground">
-            {copy.description}
-          </p>
-        </div>
-      </BranchOperatorControlBar>
-    ) : null;
+  const PageShell =
+    props.plane === "branch" ? BranchOperatorPage : EmployeePage;
 
   if (!ctx) {
     return (
-      <PageShell
-        title={copy.title}
-        description={copy.description}
-        hideHeaderOnMobile={props.hideHeaderOnMobile}
-      >
-        {mobileTitleBar}
+      <PageShell title={copy.title} description={copy.description}>
         <EmployeeMissingProfileEmpty
           title={copy.missingProfileTitle}
           description={copy.missingProfileDescription}
@@ -91,12 +59,7 @@ export async function StaffPayslipPageContent(props: {
     .limit(12);
 
   return (
-    <PageShell
-      title={copy.title}
-      description={copy.description}
-      hideHeaderOnMobile={props.hideHeaderOnMobile}
-    >
-      {mobileTitleBar}
+    <PageShell title={copy.title} description={copy.description}>
       <YearPicker
         selectedYear={year}
         currentYear={currentYear}
@@ -109,7 +72,6 @@ export async function StaffPayslipPageContent(props: {
     </PageShell>
   );
 }
-
 
 function isValidYear(s: string | undefined): boolean {
   if (typeof s !== "string") return false;

@@ -28,16 +28,10 @@ async function CatalogCategoriesBody({
   params: Promise<{ branchId: string }>;
 }) {
   const { branchId: rawBranchId } = await params;
-  const branchId = parseOperatorBranchId(rawBranchId);
-  if (branchId == null) notFound();
+  if (parseOperatorBranchId(rawBranchId) == null) notFound();
 
   const res = await fetchCategories();
   const rows: CategoryRow[] = res.success ? (res.data ?? []) : [];
 
-  return (
-    <CatalogCategoriesClient
-      backHref={`/br/${branchId}/stock/catalog`}
-      rows={rows}
-    />
-  );
+  return <CatalogCategoriesClient rows={rows} />;
 }

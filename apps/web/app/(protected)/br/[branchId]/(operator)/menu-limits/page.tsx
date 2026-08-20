@@ -32,7 +32,6 @@ export default async function BranchMenuLimitsPage({
     <BranchOperatorPage
       title={messages.settings.branch.menuLimitsTitle}
       description={branch.name}
-      hideHeaderOnMobile
     >
       <BranchMenuLimitsHost branchId={branchId} />
     </BranchOperatorPage>

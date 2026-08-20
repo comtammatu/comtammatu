@@ -1,20 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState, useTransition } from "react";
-import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { formatVNDateTime } from "@comtammatu/shared/time";
-import {
-  ACTIONS_VI,
-  BRANCH_VI,
-  ORDER_VI,
-  STAFF_VI,
-} from "@comtammatu/shared/messages";
+import { BRANCH_VI, STAFF_VI } from "@comtammatu/shared/messages";
 import { getPaymentMethodLabelVi } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
-import { Button } from "@comtammatu/ui/components/button";
 import {
   Item,
   ItemContent,
@@ -32,7 +24,6 @@ import { AppEmptyState } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
 import { OrderDetailSheet } from "@/(protected)/orders/order-detail-sheet";
 import type { OrderRow } from "@/(protected)/orders/actions";
-import { BranchOperatorControlBar } from "@lib/branch-operator/components/branch-operator-page";
 import { orders as ORDERS_COPY } from "@lib/messages/orders";
 import { VoidRequestQueue } from "@/(protected)/br/[branchId]/pos/_components/void-request-queue";
 
@@ -43,28 +34,6 @@ import {
 
 type OrderView = "active" | "recent";
 const VALID_VIEWS: readonly OrderView[] = ["active", "recent"] as const;
-
-function OrdersMobileControlBar({ branchId }: { branchId: number }) {
-  return (
-    <BranchOperatorControlBar className="sm:hidden">
-      <Button
-        variant="ghost"
-        size="icon-touch"
-        render={
-          <Link href={`/br/${branchId}`} aria-label={ACTIONS_VI.back} />
-        }
-      >
-        <IconArrowLeft />
-      </Button>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold">{ORDER_VI.long}</p>
-        <p className="truncate text-xs text-muted-foreground">
-          {ORDERS_COPY.operatorDescription}
-        </p>
-      </div>
-    </BranchOperatorControlBar>
-  );
-}
 
 export function OperatorOrdersClient({
   orders,
@@ -130,7 +99,6 @@ export function OperatorOrdersClient({
   if (orders.length === 0) {
     return (
       <>
-        <OrdersMobileControlBar branchId={branchId} />
         <VoidRequestQueue branchId={branchId} />
         <AppEmptyState
           title={ORDERS_COPY.emptyTitle}
@@ -144,7 +112,6 @@ export function OperatorOrdersClient({
 
   return (
     <>
-      <OrdersMobileControlBar branchId={branchId} />
       <VoidRequestQueue branchId={branchId} />
       <ToggleGroup
         type="single"

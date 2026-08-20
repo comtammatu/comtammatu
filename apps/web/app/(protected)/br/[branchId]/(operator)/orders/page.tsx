@@ -44,7 +44,6 @@ export default async function OperatorOrdersPage({
     <BranchOperatorPage
       title={ORDER_VI.long}
       description={ORDERS_COPY.operatorDescription}
-      hideHeaderOnMobile
     >
       {result.success && result.data ? (
         <OperatorOrdersClient

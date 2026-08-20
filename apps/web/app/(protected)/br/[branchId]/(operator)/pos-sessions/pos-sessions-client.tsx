@@ -5,7 +5,6 @@ import type { ReactNode } from "react";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft as IconArrowLeft,
   Banknote as IconCash,
   Clock as IconClock,
   Receipt as IconReceipt,
@@ -14,7 +13,6 @@ import {
   CircleCheck as IconCircleCheck,
   ChevronRight as IconChevronRight,
 } from "lucide-react";
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { AppEmptyState, AppDrawer } from "@/components/surface";
 import {
   Drawer,
@@ -68,30 +66,6 @@ import { messages } from "@lib/messages";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { CloseSessionSheet } from "../../pos/close-session-sheet";
-
-function PosSessionsMobileTitleBar({ branchId }: { branchId: number }) {
-  return (
-    <BranchOperatorControlBar className="sm:hidden">
-      <Button
-        variant="ghost"
-        size="icon-touch"
-        render={
-          <Link href={`/br/${branchId}`} aria-label={ACTIONS_VI.back} />
-        }
-      >
-        <IconArrowLeft />
-      </Button>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold">
-          {messages.settings.pages.posSessionsTitle}
-        </p>
-        <p className="truncate text-xs text-muted-foreground">
-          {messages.settings.pages.posSessionsDescription}
-        </p>
-      </div>
-    </BranchOperatorControlBar>
-  );
-}
 
 export interface PosSessionRow {
   id: number;
@@ -233,7 +207,6 @@ export function PosSessionsClient({
   if (sessions.length === 0) {
     return (
       <div className="flex min-h-0 flex-1 flex-col gap-3">
-        <PosSessionsMobileTitleBar branchId={branchId} />
         <AppEmptyState
           title={messages.settings.posSessions.emptyTitle}
           description={messages.settings.posSessions.emptyDescription}
@@ -312,7 +285,6 @@ export function PosSessionsClient({
       ) : null}
 
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
-        <PosSessionsMobileTitleBar branchId={branchId} />
         {isTouchLayout ? (
           <>
             <Button
@@ -410,10 +382,10 @@ export function PosSessionsClient({
           title={messages.settings.posSessions.reportTitle}
           contentClassName="flex h-full flex-col overflow-hidden"
         >
-              <div className="flex flex-col gap-3">
-                {settlementPanel}
-                {report ? <SessionReportCard report={report} /> : null}
-              </div>
+          <div className="flex flex-col gap-3">
+            {settlementPanel}
+            {report ? <SessionReportCard report={report} /> : null}
+          </div>
         </AppDrawer>
       ) : null}
 
@@ -550,7 +522,10 @@ function SessionContextBar({
             <p className="min-w-0 truncate font-heading text-sm font-semibold">
               {resolveSessionLabel(session)}
             </p>
-            <Badge className="shrink-0" variant={isOpen ? "warning" : "outline"}>
+            <Badge
+              className="shrink-0"
+              variant={isOpen ? "warning" : "outline"}
+            >
               {isOpen
                 ? messages.settings.posSessions.open
                 : messages.settings.posSessions.closed}
@@ -1289,263 +1264,247 @@ function OrderDetailDrawer({
         }
         contentClassName="flex h-full flex-col overflow-hidden"
       >
-            {order ? (
-              <div className="flex flex-col gap-4">
-                <div className="flex flex-wrap gap-2">
-                  <StatusBadge
-                    domain="order"
-                    value={order.status}
-                    label={`${messages.settings.posSessions.orderStatus}: ${
-                      getStatusBadgeMeta("order", order.status).label
-                    }`}
-                  />
-                  <Badge
-                    variant={
-                      order.payment_status === "paid" ? "secondary" : "outline"
-                    }
-                  >
-                    {messages.settings.posSessions.payment}:{" "}
-                    {order.payment_status === "paid"
-                      ? messages.settings.posSessions.paidWithMethod(
-                          paymentMethodLabel(order.payment_method),
-                        )
-                      : messages.settings.posSessions.unpaid}
-                  </Badge>
-                  {canOfferMethodFix ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="touch"
-                      onClick={() => setMethodFixOpen(true)}
-                    >
-                      {messages.finance.invoiceList.methodFix}:{" "}
-                      {paymentMethodLabel(targetMethod)}
-                    </Button>
-                  ) : null}
-                </div>
-
-                <NoteCallout
-                  label={messages.settings.posSessions.orderInvestigationPrompt}
-                >
-                  <div className="flex flex-col gap-2">
-                    <p>
-                      {
-                        messages.settings.posSessions
-                          .orderInvestigationDescription
-                      }
-                    </p>
-                    <Button
-                      variant="outline"
-                      size="touch"
-                      className="w-full"
-                      render={
-                        <Link
-                          href={`/br/${String(branchId)}/orders?orderId=${String(order.id)}`}
-                        />
-                      }
-                    >
-                      {messages.settings.posSessions.orderInvestigationAction}
-                    </Button>
-                  </div>
-                </NoteCallout>
-
-                {order.payments.length > 0 ? (
-                  <div>
-                    <SectionLabel>
-                      {messages.settings.posSessions.paymentAttempts}
-                    </SectionLabel>
-                    <ItemGroup className="mt-2">
-                      {[...order.payments]
-                        .sort(
-                          (a, b) =>
-                            new Date(
-                              b.paid_at ?? "1970-01-01T00:00:00.000Z",
-                            ).getTime() -
-                              new Date(
-                                a.paid_at ?? "1970-01-01T00:00:00.000Z",
-                              ).getTime() || b.id - a.id,
-                        )
-                        .map((payment) => (
-                          <Item key={payment.id} variant="outline" size="xs">
-                            <ItemContent>
-                              <ItemTitle>
-                                {paymentMethodLabel(payment.method)}
-                              </ItemTitle>
-                              <ItemDescription>
-                                {formatDateTime(payment.paid_at)}
-                              </ItemDescription>
-                            </ItemContent>
-                            <ItemFooter>
-                              <StatusBadge
-                                domain="payment"
-                                value={payment.status}
-                              />
-                              <span className="font-mono tabular-nums">
-                                {formatVND(payment.amount)}
-                              </span>
-                            </ItemFooter>
-                          </Item>
-                        ))}
-                    </ItemGroup>
-                  </div>
-                ) : null}
-
-                <Item
+        {order ? (
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-wrap gap-2">
+              <StatusBadge
+                domain="order"
+                value={order.status}
+                label={`${messages.settings.posSessions.orderStatus}: ${
+                  getStatusBadgeMeta("order", order.status).label
+                }`}
+              />
+              <Badge
+                variant={
+                  order.payment_status === "paid" ? "secondary" : "outline"
+                }
+              >
+                {messages.settings.posSessions.payment}:{" "}
+                {order.payment_status === "paid"
+                  ? messages.settings.posSessions.paidWithMethod(
+                      paymentMethodLabel(order.payment_method),
+                    )
+                  : messages.settings.posSessions.unpaid}
+              </Badge>
+              {canOfferMethodFix ? (
+                <Button
+                  type="button"
                   variant="outline"
-                  className="block p-3"
-                  render={<details />}
+                  size="touch"
+                  onClick={() => setMethodFixOpen(true)}
                 >
-                  <summary className="cursor-pointer text-sm font-medium">
-                    {messages.settings.posSessions.billBreakdown(
-                      order.order_items.length,
-                    )}
-                  </summary>
-                  <div className="mt-3 flex flex-col gap-3">
-                    <BranchOperatorFrame className="divide-y">
-                      {order.order_items.map((item) => {
-                        const hasAddOns =
-                          item.modifiers.length > 0 || item.sides.length > 0;
-                        const modifierUnit = item.modifiers.reduce(
-                          (sum, modifier) => sum + modifier.price,
-                          0,
-                        );
-                        const sideUnit = item.sides.reduce(
-                          (sum, side) => sum + side.price * side.quantity,
-                          0,
-                        );
-                        const baseUnit = Math.max(
-                          0,
-                          item.unit_price - modifierUnit - sideUnit,
-                        );
+                  {messages.finance.invoiceList.methodFix}:{" "}
+                  {paymentMethodLabel(targetMethod)}
+                </Button>
+              ) : null}
+            </div>
 
-                        return (
-                          <div key={item.id} className="flex gap-3 px-3 py-2">
-                            <span className="w-10 shrink-0 font-medium tabular-nums">
-                              {messages.settings.posSessions.quantityPrefix(
-                                item.quantity,
-                              )}
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <div className="text-sm font-medium">
-                                {item.item_name}
-                                {item.variant_name ? (
-                                  <span className="text-muted-foreground">
-                                    {" "}
-                                    ({item.variant_name})
-                                  </span>
-                                ) : null}
-                              </div>
-                              <div className="text-xs text-muted-foreground tabular-nums">
-                                {messages.settings.posSessions.linePrice(
-                                  formatVND(
-                                    hasAddOns ? baseUnit : item.unit_price,
-                                  ),
-                                  item.quantity,
-                                )}
-                                {item.status === "cancelled" ? (
-                                  <span className="ml-2 text-destructive">
-                                    {
-                                      messages.settings.posSessions
-                                        .cancelledItem
-                                    }
-                                  </span>
-                                ) : null}
-                              </div>
-                              {hasAddOns ? (
-                                <div className="mt-1 flex flex-col gap-1">
-                                  {item.modifiers.map((modifier) => (
-                                    <AddOnLine
-                                      key={`modifier-${String(modifier.modifier_id)}`}
-                                      label={
-                                        messages.settings.posSessions.modifier
-                                      }
-                                      name={modifier.name}
-                                      amount={modifier.price * item.quantity}
-                                    />
-                                  ))}
-                                  {item.sides.map((side) => {
-                                    const totalQuantity =
-                                      side.quantity * item.quantity;
-                                    const name = formatSidePortionLabel(
-                                      side.name,
-                                      side.quantity,
-                                    );
+            <NoteCallout
+              label={messages.settings.posSessions.orderInvestigationPrompt}
+            >
+              <div className="flex flex-col gap-2">
+                <p>
+                  {messages.settings.posSessions.orderInvestigationDescription}
+                </p>
+                <Button
+                  variant="outline"
+                  size="touch"
+                  className="w-full"
+                  render={
+                    <Link
+                      href={`/br/${String(branchId)}/orders?orderId=${String(order.id)}`}
+                    />
+                  }
+                >
+                  {messages.settings.posSessions.orderInvestigationAction}
+                </Button>
+              </div>
+            </NoteCallout>
 
-                                    return (
-                                      <AddOnLine
-                                        key={`side-${String(side.side_item_id)}`}
-                                        label={
-                                          messages.settings.posSessions.side
-                                        }
-                                        name={name}
-                                        amount={side.price * totalQuantity}
-                                      />
-                                    );
-                                  })}
-                                </div>
-                              ) : null}
-                              {item.note ? (
-                                <div className="mt-1 text-xs italic text-muted-foreground">
-                                  {messages.settings.posSessions.itemNote}:{" "}
-                                  {item.note}
-                                </div>
-                              ) : null}
-                            </div>
-                            <span
-                              className={cn(
-                                "text-sm font-medium tabular-nums",
-                                item.status === "cancelled" &&
-                                  "text-muted-foreground line-through",
-                              )}
-                            >
-                              {formatVND(item.subtotal)}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </BranchOperatorFrame>
-
-                    <BranchOperatorFrame className="flex flex-col gap-1.5 px-3 py-2 text-sm">
-                      <KVRow
-                        label={messages.settings.posSessions.subtotal}
-                        value={formatVND(order.subtotal)}
-                      />
-                      {order.discount_amount > 0 ? (
-                        <KVRow
-                          label={messages.settings.posSessions.discount}
-                          value={`-${formatVND(order.discount_amount)}`}
-                          tone="success"
-                        />
-                      ) : null}
-                      {order.service_charge > 0 ? (
-                        <KVRow
-                          label={messages.settings.posSessions.serviceCharge}
-                          value={formatVND(order.service_charge)}
-                        />
-                      ) : null}
-                      {order.tax_amount > 0 ? (
-                        <KVRow
-                          label={messages.settings.posSessions.tax}
-                          value={formatVND(order.tax_amount)}
-                        />
-                      ) : null}
-                      <Separator />
-                      <KVRow
-                        label={messages.settings.posSessions.total}
-                        value={formatVND(order.total_amount)}
-                        bold
-                      />
-                    </BranchOperatorFrame>
-                  </div>
-                </Item>
-
-                {order.note ? (
-                  <NoteCallout label={messages.settings.posSessions.billNote}>
-                    {order.note}
-                  </NoteCallout>
-                ) : null}
+            {order.payments.length > 0 ? (
+              <div>
+                <SectionLabel>
+                  {messages.settings.posSessions.paymentAttempts}
+                </SectionLabel>
+                <ItemGroup className="mt-2">
+                  {[...order.payments]
+                    .sort(
+                      (a, b) =>
+                        new Date(
+                          b.paid_at ?? "1970-01-01T00:00:00.000Z",
+                        ).getTime() -
+                          new Date(
+                            a.paid_at ?? "1970-01-01T00:00:00.000Z",
+                          ).getTime() || b.id - a.id,
+                    )
+                    .map((payment) => (
+                      <Item key={payment.id} variant="outline" size="xs">
+                        <ItemContent>
+                          <ItemTitle>
+                            {paymentMethodLabel(payment.method)}
+                          </ItemTitle>
+                          <ItemDescription>
+                            {formatDateTime(payment.paid_at)}
+                          </ItemDescription>
+                        </ItemContent>
+                        <ItemFooter>
+                          <StatusBadge
+                            domain="payment"
+                            value={payment.status}
+                          />
+                          <span className="font-mono tabular-nums">
+                            {formatVND(payment.amount)}
+                          </span>
+                        </ItemFooter>
+                      </Item>
+                    ))}
+                </ItemGroup>
               </div>
             ) : null}
+
+            <Item variant="outline" className="block p-3" render={<details />}>
+              <summary className="cursor-pointer text-sm font-medium">
+                {messages.settings.posSessions.billBreakdown(
+                  order.order_items.length,
+                )}
+              </summary>
+              <div className="mt-3 flex flex-col gap-3">
+                <BranchOperatorFrame className="divide-y">
+                  {order.order_items.map((item) => {
+                    const hasAddOns =
+                      item.modifiers.length > 0 || item.sides.length > 0;
+                    const modifierUnit = item.modifiers.reduce(
+                      (sum, modifier) => sum + modifier.price,
+                      0,
+                    );
+                    const sideUnit = item.sides.reduce(
+                      (sum, side) => sum + side.price * side.quantity,
+                      0,
+                    );
+                    const baseUnit = Math.max(
+                      0,
+                      item.unit_price - modifierUnit - sideUnit,
+                    );
+
+                    return (
+                      <div key={item.id} className="flex gap-3 px-3 py-2">
+                        <span className="w-10 shrink-0 font-medium tabular-nums">
+                          {messages.settings.posSessions.quantityPrefix(
+                            item.quantity,
+                          )}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-medium">
+                            {item.item_name}
+                            {item.variant_name ? (
+                              <span className="text-muted-foreground">
+                                {" "}
+                                ({item.variant_name})
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="text-xs text-muted-foreground tabular-nums">
+                            {messages.settings.posSessions.linePrice(
+                              formatVND(hasAddOns ? baseUnit : item.unit_price),
+                              item.quantity,
+                            )}
+                            {item.status === "cancelled" ? (
+                              <span className="ml-2 text-destructive">
+                                {messages.settings.posSessions.cancelledItem}
+                              </span>
+                            ) : null}
+                          </div>
+                          {hasAddOns ? (
+                            <div className="mt-1 flex flex-col gap-1">
+                              {item.modifiers.map((modifier) => (
+                                <AddOnLine
+                                  key={`modifier-${String(modifier.modifier_id)}`}
+                                  label={messages.settings.posSessions.modifier}
+                                  name={modifier.name}
+                                  amount={modifier.price * item.quantity}
+                                />
+                              ))}
+                              {item.sides.map((side) => {
+                                const totalQuantity =
+                                  side.quantity * item.quantity;
+                                const name = formatSidePortionLabel(
+                                  side.name,
+                                  side.quantity,
+                                );
+
+                                return (
+                                  <AddOnLine
+                                    key={`side-${String(side.side_item_id)}`}
+                                    label={messages.settings.posSessions.side}
+                                    name={name}
+                                    amount={side.price * totalQuantity}
+                                  />
+                                );
+                              })}
+                            </div>
+                          ) : null}
+                          {item.note ? (
+                            <div className="mt-1 text-xs italic text-muted-foreground">
+                              {messages.settings.posSessions.itemNote}:{" "}
+                              {item.note}
+                            </div>
+                          ) : null}
+                        </div>
+                        <span
+                          className={cn(
+                            "text-sm font-medium tabular-nums",
+                            item.status === "cancelled" &&
+                              "text-muted-foreground line-through",
+                          )}
+                        >
+                          {formatVND(item.subtotal)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </BranchOperatorFrame>
+
+                <BranchOperatorFrame className="flex flex-col gap-1.5 px-3 py-2 text-sm">
+                  <KVRow
+                    label={messages.settings.posSessions.subtotal}
+                    value={formatVND(order.subtotal)}
+                  />
+                  {order.discount_amount > 0 ? (
+                    <KVRow
+                      label={messages.settings.posSessions.discount}
+                      value={`-${formatVND(order.discount_amount)}`}
+                      tone="success"
+                    />
+                  ) : null}
+                  {order.service_charge > 0 ? (
+                    <KVRow
+                      label={messages.settings.posSessions.serviceCharge}
+                      value={formatVND(order.service_charge)}
+                    />
+                  ) : null}
+                  {order.tax_amount > 0 ? (
+                    <KVRow
+                      label={messages.settings.posSessions.tax}
+                      value={formatVND(order.tax_amount)}
+                    />
+                  ) : null}
+                  <Separator />
+                  <KVRow
+                    label={messages.settings.posSessions.total}
+                    value={formatVND(order.total_amount)}
+                    bold
+                  />
+                </BranchOperatorFrame>
+              </div>
+            </Item>
+
+            {order.note ? (
+              <NoteCallout label={messages.settings.posSessions.billNote}>
+                {order.note}
+              </NoteCallout>
+            ) : null}
+          </div>
+        ) : null}
       </AppDrawer>
 
       <ReasonConfirmDialog

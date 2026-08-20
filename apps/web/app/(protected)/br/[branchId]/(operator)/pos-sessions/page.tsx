@@ -153,7 +153,6 @@ export default async function BranchPosSessionsPage({
     <BranchOperatorPage
       title={messages.settings.pages.posSessionsTitle}
       description={messages.settings.pages.posSessionsDescription}
-      hideHeaderOnMobile
       fill
     >
       <PosSessionsClient

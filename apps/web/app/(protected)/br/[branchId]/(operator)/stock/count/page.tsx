@@ -19,7 +19,6 @@ export default async function OperatorStockCountPage({
       searchParams={searchParams}
       routeBranchId={branchId}
       profileHref={`/br/${branchId}/profile`}
-      hideHeaderOnMobile
       plane="branch"
     />
   );

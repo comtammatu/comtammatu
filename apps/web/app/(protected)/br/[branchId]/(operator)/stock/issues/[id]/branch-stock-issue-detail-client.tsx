@@ -3,10 +3,8 @@
 
 import { useEffect, useState, useTransition } from "react";
 import type { TransitionStartFunction } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft as IconArrowLeft,
   CircleCheck as IconCircleCheck,
   CirclePlus as IconCirclePlus,
   FileText as IconFileText,
@@ -43,16 +41,11 @@ import {
 
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Combobox, QuantityInput } from "@/components/form";
-import {
-  AppDetailFooter,
-  AppEmptyState,
-  AppSheet,
-} from "@/components/surface";
-import { StatusBadge, getStatusBadgeMeta } from "@/components/status-badge";
+import { AppDetailFooter, AppEmptyState, AppSheet } from "@/components/surface";
+import { getStatusBadgeMeta } from "@/components/status-badge";
 import { PhotoUploadInput } from "@/components/form";
 import {
   BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME,
-  BranchOperatorControlBar,
   BranchOperatorDetailList,
   BranchOperatorPage,
   BranchOperatorPanel,
@@ -345,8 +338,6 @@ function BranchStockIssueLineSheet({
 
 export function BranchStockIssueDetailClient({
   data,
-  stockBasePath,
-  listBasePath = `${stockBasePath}/issues`,
 }: {
   data: BranchStockIssueDetail;
   stockBasePath: string;
@@ -360,7 +351,6 @@ export function BranchStockIssueDetailClient({
   const [editingLine, setEditingLine] = useState<BranchStockIssueLine | null>(
     null,
   );
-  const issuesBasePath = listBasePath;
   const surface = issueSurface(issue.type);
   const statusBadge = getStatusBadgeMeta("inventory", issue.status);
   const isDraft = issue.status === "draft";
@@ -465,30 +455,9 @@ export function BranchStockIssueDetailClient({
     <BranchOperatorPage
       title={issue.code}
       description={formatVNDateTime(issue.issuedAt)}
-      hideHeaderOnMobile
       badge={{ children: statusBadge.label, variant: statusBadge.variant }}
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button
-            variant="ghost"
-            size="icon-touch"
-            title={ACTIONS_VI.back}
-            render={<Link href={issuesBasePath} aria-label={ACTIONS_VI.back} />}
-          >
-            <IconArrowLeft />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-mono text-sm font-semibold">
-              {issue.code}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {issueTypeLabel(issue.type)}
-            </p>
-          </div>
-          <StatusBadge domain="inventory" value={issue.status} size="sm" />
-        </BranchOperatorControlBar>
-
         <div className={BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME}>
           <BranchOperatorPanel
             title={issuesCopy.linesTab}

@@ -15,7 +15,6 @@ import {
   Trash as IconTrash,
   Truck as IconTruck,
   X as IconX,
-  ArrowLeft as IconArrowLeft,
 } from "lucide-react";
 import type { BranchKind } from "@comtammatu/shared/auth";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
@@ -41,16 +40,12 @@ import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@comtammatu/ui/components/toggle-group";
-import {
-  AppEmptyState,
-  AppSheet,
-} from "@/components/surface";
+import { AppEmptyState, AppSheet } from "@/components/surface";
 import { MultiSelectCombobox } from "@/components/form/multi-select-combobox";
 import { formatQty } from "@lib/inventory/format";
 import { formatStockUnits } from "@/(protected)/inventory/_lib/stock-unit-format";
 import { ITEM_KIND_LABELS } from "@/(protected)/inventory/_lib/constants";
 import {
-  BranchOperatorControlBar,
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -217,7 +212,11 @@ function secondaryJobIcon(key: string) {
     return IconClipboardList;
   }
   if (key.includes("purchase") || key.includes("grn")) return IconPurchase;
-  if (key.includes("request") || key.includes("receive") || key.includes("transfer")) {
+  if (
+    key.includes("request") ||
+    key.includes("receive") ||
+    key.includes("transfer")
+  ) {
     return IconTruck;
   }
   return IconPackage;
@@ -250,7 +249,9 @@ export function BranchStockOnHandClient({
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [categories, setCategories] = useState<string[]>([]);
-  const [status, setStatus] = useState<StockFilter>(STOCK_ON_HAND_DEFAULT_STATUS);
+  const [status, setStatus] = useState<StockFilter>(
+    STOCK_ON_HAND_DEFAULT_STATUS,
+  );
   const [filterOpen, setFilterOpen] = useState(false);
   const [moreJobsOpen, setMoreJobsOpen] = useState(false);
   const [draftCategories, setDraftCategories] = useState<string[]>([]);
@@ -311,9 +312,7 @@ export function BranchStockOnHandClient({
   }
 
   function removeCategory(value: string) {
-    setDraftCategories((current) =>
-      current.filter((item) => item !== value),
-    );
+    setDraftCategories((current) => current.filter((item) => item !== value));
   }
 
   const primaryAttentionCta = attentionCtas[0] ?? null;
@@ -322,25 +321,7 @@ export function BranchStockOnHandClient({
     <BranchOperatorPage
       title={stockCopy.title}
       description={stockCopy.operatorDescription}
-      hideHeaderOnMobile
     >
-      <BranchOperatorControlBar className="sm:hidden">
-        <Button
-          variant="ghost"
-          size="icon-touch"
-          render={
-            <Link href={`/br/${branchId}/stock`} aria-label={ACTIONS_VI.back} />
-          }
-        >
-          <IconArrowLeft />
-        </Button>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">{stockCopy.title}</p>
-          <p className="truncate text-xs text-muted-foreground">
-            {stockCopy.operatorDescription}
-          </p>
-        </div>
-      </BranchOperatorControlBar>
       {!coreDataLoadFailed && underThresholdCount > 0 ? (
         <NoteCallout tone="warning" className="min-h-12 items-center">
           <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
@@ -468,11 +449,7 @@ export function BranchStockOnHandClient({
                 type="single"
                 value={status === "low" ? "in_stock" : status}
                 onValueChange={(next) => {
-                  if (
-                    next === "in_stock" ||
-                    next === "out" ||
-                    next === "all"
-                  ) {
+                  if (next === "in_stock" || next === "out" || next === "all") {
                     setStatus(next);
                   }
                 }}

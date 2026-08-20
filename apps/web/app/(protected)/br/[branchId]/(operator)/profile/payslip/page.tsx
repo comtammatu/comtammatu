@@ -15,7 +15,6 @@ export default async function OperatorProfilePayslipPage({
   return (
     <StaffPayslipPageContent
       searchParams={searchParams}
-      hideHeaderOnMobile
       profileHref={`/br/${branchId}/profile`}
       plane="branch"
     />

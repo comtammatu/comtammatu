@@ -209,8 +209,17 @@ test("mobile chrome is tools-only and does not compete with the page H1", () => 
   const schedule = read("apps/web/lib/staff-runtime/schedule/page.tsx");
   const clock = read("apps/web/lib/staff-runtime/clock/page.tsx");
   const profile = read("apps/web/lib/staff-runtime/profile/page.tsx");
-  assert.match(schedule, /hideHeaderOnMobile=\{plane === "branch"\}/);
-  assert.match(clock, /hideHeaderOnMobile=\{plane === "branch"\}/);
+  // Branch plane keeps one AppPageHeader H1 — no hideHeaderOnMobile swap strip.
+  assert.doesNotMatch(schedule, /hideHeaderOnMobile=\{plane === "branch"\}/);
+  assert.doesNotMatch(clock, /hideHeaderOnMobile=\{plane === "branch"\}/);
+  assert.doesNotMatch(
+    schedule,
+    /<BranchOperatorControlBar className="sm:hidden">/,
+  );
+  assert.doesNotMatch(
+    clock,
+    /<BranchOperatorControlBar className="sm:hidden">/,
+  );
   assert.doesNotMatch(
     profile,
     /<EmployeePage[\s\S]*hideHeaderOnMobile/,

@@ -1,16 +1,11 @@
 import Link from "next/link";
 import {
-  ArrowLeft as IconArrowLeft,
   CalendarDays as IconCalendarDays,
   ListChecks as IconListChecks,
 } from "lucide-react";
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import { messages } from "@lib/messages";
-import {
-  BranchOperatorControlBar,
-  BranchOperatorPage,
-} from "@lib/branch-operator/components/branch-operator-page";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import {
   EmployeeMissingProfileEmpty,
   EmployeePage,
@@ -37,23 +32,10 @@ export async function StaffClockPageContent({
 }: StaffClockPageContentProps) {
   const state = await getTodayWorkState();
   const PageShell = plane === "branch" ? BranchOperatorPage : EmployeePage;
-  const mobileTitleBar =
-    plane === "branch" ? (
-      <BranchOperatorControlBar className="sm:hidden">
-        <Button
-          variant="ghost"
-          size="icon-touch"
-          render={<Link href={routes.tasks} aria-label={ACTIONS_VI.back} />}
-        >
-          <IconArrowLeft />
-        </Button>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">{copy.clockTodayTitle}</p>
-        </div>
-      </BranchOperatorControlBar>
-    ) : null;
   const managerHrCta =
-    plane === "branch" && state.status !== "missing_profile" && state.managerAttendanceOnly ? (
+    plane === "branch" &&
+    state.status !== "missing_profile" &&
+    state.managerAttendanceOnly ? (
       <Button
         variant="outline"
         size="touch"
@@ -67,11 +49,7 @@ export async function StaffClockPageContent({
 
   if (state.status === "missing_profile") {
     return (
-      <PageShell
-        title={copy.clockTodayTitle}
-        hideHeaderOnMobile={plane === "branch"}
-      >
-        {mobileTitleBar}
+      <PageShell title={copy.clockTodayTitle}>
         <EmployeeMissingProfileEmpty profileHref={routes.profile} />
       </PageShell>
     );
@@ -80,7 +58,7 @@ export async function StaffClockPageContent({
   return (
     <PageShell
       title={copy.clockTodayTitle}
-      hideHeaderOnMobile={plane === "branch"}
+
       action={
         plane === "employee" ? (
           <Button
@@ -100,12 +78,13 @@ export async function StaffClockPageContent({
             ) : (
               <IconListChecks data-icon="inline-start" />
             )}
-            {state.managerAttendanceOnly ? copy.managerHrTitle : copy.shiftTasks}
+            {state.managerAttendanceOnly
+              ? copy.managerHrTitle
+              : copy.shiftTasks}
           </Button>
         ) : undefined
       }
     >
-      {mobileTitleBar}
       {managerHrCta}
       <ClockClient state={state} routes={routes} plane={plane} />
     </PageShell>

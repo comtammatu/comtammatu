@@ -8,10 +8,8 @@ import {
   useState,
   useTransition,
 } from "react";
-import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
-  ArrowLeft as IconArrowLeft,
   ChevronRight as IconChevronRight,
   ClipboardList as IconClipboardList,
   Plus as IconPlus,
@@ -59,13 +57,8 @@ import {
 import { Combobox } from "@/components/form/combobox";
 import { BusinessDatePicker } from "@/components/form";
 import { NumberPadSheet } from "@/components/form/number-pad-sheet";
+import { AppDetailFooter, AppEmptyState, AppSheet } from "@/components/surface";
 import {
-  AppDetailFooter,
-  AppEmptyState,
-  AppSheet,
-} from "@/components/surface";
-import {
-  BranchOperatorControlBar,
   BranchOperatorDetailList,
   BranchOperatorPage,
   BranchOperatorPanel,
@@ -234,8 +227,7 @@ export function BranchPurchaseRequestsClient({
     const ordered = [
       ...KEY_STATUSES.filter((status) => present.has(status)),
       ...[...present].filter(
-        (status) =>
-          !(KEY_STATUSES as readonly string[]).includes(status),
+        (status) => !(KEY_STATUSES as readonly string[]).includes(status),
       ),
     ];
     return ordered;
@@ -653,9 +645,7 @@ export function BranchPurchaseRequestsClient({
     setDraftBranchId(nextBranchId);
     setNeededBy(nextNeededBy);
     setRequestLines(nextLines);
-    setRequestBaseline(
-      JSON.stringify([nextBranchId, nextNeededBy, nextLines]),
-    );
+    setRequestBaseline(JSON.stringify([nextBranchId, nextNeededBy, nextLines]));
     setCopyFromRequestId(null);
     updateUrl(null, "create");
   }
@@ -676,9 +666,7 @@ export function BranchPurchaseRequestsClient({
     setDraftBranchId(nextBranchId);
     setNeededBy(nextNeededBy);
     setRequestLines(nextLines);
-    setRequestBaseline(
-      JSON.stringify([nextBranchId, nextNeededBy, nextLines]),
-    );
+    setRequestBaseline(JSON.stringify([nextBranchId, nextNeededBy, nextLines]));
     setCopyFromRequestId(selected.id);
     updateUrl(null, "create");
   }
@@ -724,30 +712,7 @@ export function BranchPurchaseRequestsClient({
     <BranchOperatorPage
       title={messages.settings.branch.centralPurchaseRequestsJob}
       description={messages.inventory.po.workspaceDescription}
-      hideHeaderOnMobile
     >
-      <BranchOperatorControlBar className="sm:hidden">
-        <Button
-          variant="ghost"
-          size="icon-touch"
-          render={
-            <Link
-              href={`/br/${branchId}/stock`}
-              aria-label={ACTIONS_VI.back}
-            />
-          }
-        >
-          <IconArrowLeft />
-        </Button>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">
-            {messages.settings.branch.centralPurchaseRequestsJob}
-          </p>
-          <p className="truncate text-xs text-muted-foreground">
-            {messages.inventory.po.workspaceDescription}
-          </p>
-        </div>
-      </BranchOperatorControlBar>
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <BranchOperatorPanel
           title={copy.title}
@@ -864,9 +829,7 @@ export function BranchPurchaseRequestsClient({
                         row.orderedLineCount,
                         row.lineCount,
                       )}
-                      {row.neededBy
-                        ? ` · ${formatVNDate(row.neededBy)}`
-                        : ""}
+                      {row.neededBy ? ` · ${formatVNDate(row.neededBy)}` : ""}
                     </ItemDescription>
                     <ItemDescription className="line-clamp-none text-xs">
                       {formatVNDateTime(row.updatedAt)}
@@ -1182,176 +1145,168 @@ export function BranchPurchaseRequestsClient({
         }
       >
         <div className="flex flex-col gap-3">
-              {copyFromRequestId != null ? (
-                <Item variant="muted" size="sm">
-                  {copy.copyToNewBanner}
-                </Item>
-              ) : null}
-              {selected?.status === "changes_requested" &&
-              selected.statusReason ? (
-                <Item variant="muted" size="sm">
-                  <span className="font-medium">{copy.returnedReasonLabel}</span>{" "}
-                  {selected.statusReason}
-                </Item>
-              ) : null}
+          {copyFromRequestId != null ? (
+            <Item variant="muted" size="sm">
+              {copy.copyToNewBanner}
+            </Item>
+          ) : null}
+          {selected?.status === "changes_requested" && selected.statusReason ? (
+            <Item variant="muted" size="sm">
+              <span className="font-medium">{copy.returnedReasonLabel}</span>{" "}
+              {selected.statusReason}
+            </Item>
+          ) : null}
 
-              {branches.length > 1 ? (
-                <Select value={draftBranchId} onValueChange={setDraftBranchId}>
-                  <SelectTrigger
-                    size="touch"
-                    className="w-full"
-                    aria-label={copy.branchRequired}
-                  >
-                    <SelectValue placeholder={copy.branchRequired} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {branches.map((branch) => (
-                      <SelectItem
-                        key={branch.id}
-                        value={String(branch.id)}
-                        size="touch"
-                      >
-                        {branch.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm text-muted-foreground">
-                    {copy.branchRequired}
-                  </span>
-                  <span className="font-semibold">{branchName}</span>
-                </div>
-              )}
-
-              <BusinessDatePicker
-                value={neededBy}
-                onValueChange={setNeededBy}
-                aria-label={copy.neededBy}
-                className="min-h-12"
-              />
-
-              {requestLines.map((line) => {
-                const ingredient = ingredients.find(
-                  (item) => item.id === Number(line.ingredientId),
-                );
-                const hasSupplier = mappedIngredientIds.includes(
-                  Number(line.ingredientId),
-                );
-                return (
-                  <Item key={line.key} variant="outline" className="items-start">
-                    <ItemContent className="min-w-0 gap-2">
-                      <Combobox
-                        size="touch"
-                        value={line.ingredientId}
-                        onValueChange={(value) =>
-                          chooseIngredient(line, value)
-                        }
-                        options={ingredients.map((item) => ({
-                          value: String(item.id),
-                          label: item.name,
-                        }))}
-                        placeholder={copy.ingredient}
-                        searchPlaceholder={copy.searchPlaceholder}
-                      />
-                      {line.ingredientId && !hasSupplier ? (
-                        <span className="text-xs text-warning-foreground">
-                          {copy.missingSupplierShort}
-                        </span>
-                      ) : null}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="touch"
-                        className="w-full justify-between font-mono tabular-nums"
-                        onClick={() =>
-                          setQtyPad({
-                            kind: "request",
-                            key: line.key,
-                            title:
-                              ingredient?.name ?? copy.quantity,
-                            unit:
-                              ingredient?.units.find(
-                                (unit) =>
-                                  String(unit.id) === line.entryUnitId,
-                              )?.label ?? copy.unit,
-                          })
-                        }
-                      >
-                        <span>
-                          {line.quantity.trim() !== ""
-                            ? line.quantity
-                            : copy.quantity}
-                        </span>
-                        <span className="text-muted-foreground">
-                          {ingredient?.units.find(
-                            (unit) => String(unit.id) === line.entryUnitId,
-                          )?.label ?? copy.unit}
-                        </span>
-                      </Button>
-                      <Select
-                        value={line.entryUnitId}
-                        onValueChange={(value) =>
-                          patchRequestLine(line.key, { entryUnitId: value })
-                        }
-                      >
-                        <SelectTrigger
-                          size="touch"
-                          className="w-full"
-                          aria-label={copy.unit}
-                        >
-                          <SelectValue placeholder={copy.unit} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(ingredient?.units ?? []).map((unit) => (
-                            <SelectItem
-                              key={unit.id}
-                              value={String(unit.id)}
-                              size="touch"
-                            >
-                              {unit.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </ItemContent>
-                    <ItemActions>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-touch"
-                        disabled={requestLines.length === 1}
-                        onClick={() =>
-                          setRequestLines((current) =>
-                            current.filter((item) => item.key !== line.key),
-                          )
-                        }
-                        aria-label={ACTIONS_VI.delete}
-                      >
-                        <IconTrash />
-                      </Button>
-                    </ItemActions>
-                  </Item>
-                );
-              })}
-
-              <Button
-                type="button"
-                variant="outline"
+          {branches.length > 1 ? (
+            <Select value={draftBranchId} onValueChange={setDraftBranchId}>
+              <SelectTrigger
                 size="touch"
-                className="self-start"
-                onClick={() =>
-                  setRequestLines((current) => [
-                    ...current,
-                    blankRequestLine(),
-                  ])
-                }
+                className="w-full"
+                aria-label={copy.branchRequired}
               >
-                <IconPlus data-icon="inline-start" />
-                {copy.addLine}
-              </Button>
+                <SelectValue placeholder={copy.branchRequired} />
+              </SelectTrigger>
+              <SelectContent>
+                {branches.map((branch) => (
+                  <SelectItem
+                    key={branch.id}
+                    value={String(branch.id)}
+                    size="touch"
+                  >
+                    {branch.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <div className="flex flex-col gap-1">
+              <span className="text-sm text-muted-foreground">
+                {copy.branchRequired}
+              </span>
+              <span className="font-semibold">{branchName}</span>
             </div>
+          )}
+
+          <BusinessDatePicker
+            value={neededBy}
+            onValueChange={setNeededBy}
+            aria-label={copy.neededBy}
+            className="min-h-12"
+          />
+
+          {requestLines.map((line) => {
+            const ingredient = ingredients.find(
+              (item) => item.id === Number(line.ingredientId),
+            );
+            const hasSupplier = mappedIngredientIds.includes(
+              Number(line.ingredientId),
+            );
+            return (
+              <Item key={line.key} variant="outline" className="items-start">
+                <ItemContent className="min-w-0 gap-2">
+                  <Combobox
+                    size="touch"
+                    value={line.ingredientId}
+                    onValueChange={(value) => chooseIngredient(line, value)}
+                    options={ingredients.map((item) => ({
+                      value: String(item.id),
+                      label: item.name,
+                    }))}
+                    placeholder={copy.ingredient}
+                    searchPlaceholder={copy.searchPlaceholder}
+                  />
+                  {line.ingredientId && !hasSupplier ? (
+                    <span className="text-xs text-warning-foreground">
+                      {copy.missingSupplierShort}
+                    </span>
+                  ) : null}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="touch"
+                    className="w-full justify-between font-mono tabular-nums"
+                    onClick={() =>
+                      setQtyPad({
+                        kind: "request",
+                        key: line.key,
+                        title: ingredient?.name ?? copy.quantity,
+                        unit:
+                          ingredient?.units.find(
+                            (unit) => String(unit.id) === line.entryUnitId,
+                          )?.label ?? copy.unit,
+                      })
+                    }
+                  >
+                    <span>
+                      {line.quantity.trim() !== ""
+                        ? line.quantity
+                        : copy.quantity}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {ingredient?.units.find(
+                        (unit) => String(unit.id) === line.entryUnitId,
+                      )?.label ?? copy.unit}
+                    </span>
+                  </Button>
+                  <Select
+                    value={line.entryUnitId}
+                    onValueChange={(value) =>
+                      patchRequestLine(line.key, { entryUnitId: value })
+                    }
+                  >
+                    <SelectTrigger
+                      size="touch"
+                      className="w-full"
+                      aria-label={copy.unit}
+                    >
+                      <SelectValue placeholder={copy.unit} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(ingredient?.units ?? []).map((unit) => (
+                        <SelectItem
+                          key={unit.id}
+                          value={String(unit.id)}
+                          size="touch"
+                        >
+                          {unit.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </ItemContent>
+                <ItemActions>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-touch"
+                    disabled={requestLines.length === 1}
+                    onClick={() =>
+                      setRequestLines((current) =>
+                        current.filter((item) => item.key !== line.key),
+                      )
+                    }
+                    aria-label={ACTIONS_VI.delete}
+                  >
+                    <IconTrash />
+                  </Button>
+                </ItemActions>
+              </Item>
+            );
+          })}
+
+          <Button
+            type="button"
+            variant="outline"
+            size="touch"
+            className="self-start"
+            onClick={() =>
+              setRequestLines((current) => [...current, blankRequestLine()])
+            }
+          >
+            <IconPlus data-icon="inline-start" />
+            {copy.addLine}
+          </Button>
+        </div>
       </AppSheet>
 
       <AppSheet
@@ -1424,192 +1379,187 @@ export function BranchPurchaseRequestsClient({
         }
       >
         <div className="flex flex-col gap-3">
-              {missingSupplierItems.length > 0 ? (
-                <Item variant="muted" size="sm" className="flex-col items-start">
-                  <p className="font-medium">
-                    {copy.missingSupplierMappingsTitle}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {missingSupplierItems
-                      .map((item) => item.ingredientName)
-                      .join(", ")}
-                  </p>
-                </Item>
-              ) : null}
+          {missingSupplierItems.length > 0 ? (
+            <Item variant="muted" size="sm" className="flex-col items-start">
+              <p className="font-medium">{copy.missingSupplierMappingsTitle}</p>
+              <p className="text-sm text-muted-foreground">
+                {missingSupplierItems
+                  .map((item) => item.ingredientName)
+                  .join(", ")}
+              </p>
+            </Item>
+          ) : null}
 
-              {selected?.items.map((item) => {
-                const supplierDrafts = allocationDrafts
-                  .map((draft) => ({
-                    ...draft,
-                    lines: draft.lines.filter(
-                      (line) => line.requestItemId === item.id,
-                    ),
-                  }))
-                  .filter((draft) => draft.lines.length > 0);
-                const allocated = totals.get(item.id) ?? 0;
-                const remaining = item.remainingQuantity - allocated;
-                const mapped = matchingSuppliersForIngredient(
-                  item.ingredientId,
-                  suppliers,
-                );
-                const usedSupplierIds = new Set(
-                  supplierDrafts.flatMap((draft) =>
-                    draft.supplierId != null ? [draft.supplierId] : [],
-                  ),
-                );
-                const rowCount = supplierDrafts.reduce(
-                  (count, draft) => count + draft.lines.length,
-                  0,
-                );
-                const canAdd = canAddPurchaseDemandAllocationRow(
-                  allocationDrafts,
-                  item.id,
-                  item.ingredientId,
-                  suppliers,
-                );
-                return (
-                  <Item key={item.id} variant="outline" className="items-stretch">
-                    <ItemHeader>
-                      <ItemTitle size="heading">{item.ingredientName}</ItemTitle>
-                      <Badge
-                        variant={
-                          Math.abs(remaining) <= 0.0005 ? "success" : "warning"
-                        }
-                      >
-                        {allocated}/{item.remainingQuantity} {item.unitLabel}
-                      </Badge>
-                    </ItemHeader>
-                    <div className="flex basis-full flex-col gap-2">
-                      {mapped.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                          {copy.noActiveSuppliers}
-                        </p>
-                      ) : (
-                        supplierDrafts.flatMap((draft) =>
-                          draft.lines.map((line) => {
-                            const options = mapped
-                              .filter(
-                                (supplier) =>
-                                  supplier.id === draft.supplierId ||
-                                  !usedSupplierIds.has(supplier.id),
-                              )
-                              .map((supplier) => ({
-                                value: String(supplier.id),
-                                label: supplier.name,
-                              }));
-                            return (
-                              <div
-                                key={line.key}
-                                className="flex flex-col gap-2"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <div className="min-w-0 flex-1">
-                                    <Combobox
-                                      size="touch"
-                                      value={
-                                        draft.supplierId != null
-                                          ? String(draft.supplierId)
-                                          : ""
-                                      }
-                                      onValueChange={(value) =>
-                                        setAllocationDrafts((current) =>
-                                          reassignPurchaseDemandAllocationSupplier(
-                                            current,
-                                            draft.supplierId,
-                                            line.key,
-                                            value ? Number(value) : null,
-                                            suppliers,
-                                          ),
-                                        )
-                                      }
-                                      options={options}
-                                      placeholder={copy.chooseSupplier}
-                                      aria-label={`${item.ingredientName}: ${copy.supplier}`}
-                                    />
-                                  </div>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon-touch"
-                                    disabled={rowCount <= 1}
-                                    onClick={() =>
-                                      setAllocationDrafts((current) =>
-                                        removePurchaseDemandAllocationRow(
-                                          current,
-                                          draft.supplierId,
-                                          line.key,
-                                        ),
-                                      )
-                                    }
-                                    aria-label={ACTIONS_VI.delete}
-                                  >
-                                    <IconTrash />
-                                  </Button>
-                                </div>
-                                <Button
-                                  type="button"
-                                  variant="outline"
+          {selected?.items.map((item) => {
+            const supplierDrafts = allocationDrafts
+              .map((draft) => ({
+                ...draft,
+                lines: draft.lines.filter(
+                  (line) => line.requestItemId === item.id,
+                ),
+              }))
+              .filter((draft) => draft.lines.length > 0);
+            const allocated = totals.get(item.id) ?? 0;
+            const remaining = item.remainingQuantity - allocated;
+            const mapped = matchingSuppliersForIngredient(
+              item.ingredientId,
+              suppliers,
+            );
+            const usedSupplierIds = new Set(
+              supplierDrafts.flatMap((draft) =>
+                draft.supplierId != null ? [draft.supplierId] : [],
+              ),
+            );
+            const rowCount = supplierDrafts.reduce(
+              (count, draft) => count + draft.lines.length,
+              0,
+            );
+            const canAdd = canAddPurchaseDemandAllocationRow(
+              allocationDrafts,
+              item.id,
+              item.ingredientId,
+              suppliers,
+            );
+            return (
+              <Item key={item.id} variant="outline" className="items-stretch">
+                <ItemHeader>
+                  <ItemTitle size="heading">{item.ingredientName}</ItemTitle>
+                  <Badge
+                    variant={
+                      Math.abs(remaining) <= 0.0005 ? "success" : "warning"
+                    }
+                  >
+                    {allocated}/{item.remainingQuantity} {item.unitLabel}
+                  </Badge>
+                </ItemHeader>
+                <div className="flex basis-full flex-col gap-2">
+                  {mapped.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      {copy.noActiveSuppliers}
+                    </p>
+                  ) : (
+                    supplierDrafts.flatMap((draft) =>
+                      draft.lines.map((line) => {
+                        const options = mapped
+                          .filter(
+                            (supplier) =>
+                              supplier.id === draft.supplierId ||
+                              !usedSupplierIds.has(supplier.id),
+                          )
+                          .map((supplier) => ({
+                            value: String(supplier.id),
+                            label: supplier.name,
+                          }));
+                        return (
+                          <div key={line.key} className="flex flex-col gap-2">
+                            <div className="flex items-center gap-2">
+                              <div className="min-w-0 flex-1">
+                                <Combobox
                                   size="touch"
-                                  className="w-full justify-between font-mono tabular-nums"
-                                  onClick={() =>
-                                    setQtyPad({
-                                      kind: "allocation",
-                                      supplierId: draft.supplierId,
-                                      lineKey: line.key,
-                                      title: `${item.ingredientName} · ${
-                                        draft.supplierName || copy.chooseSupplier
-                                      }`,
-                                      unit: item.unitLabel,
-                                    })
+                                  value={
+                                    draft.supplierId != null
+                                      ? String(draft.supplierId)
+                                      : ""
                                   }
-                                >
-                                  <span>
-                                    {line.quantity.trim() !== ""
-                                      ? line.quantity
-                                      : copy.quantity}
-                                  </span>
-                                  <span className="text-muted-foreground">
-                                    {item.unitLabel}
-                                  </span>
-                                </Button>
+                                  onValueChange={(value) =>
+                                    setAllocationDrafts((current) =>
+                                      reassignPurchaseDemandAllocationSupplier(
+                                        current,
+                                        draft.supplierId,
+                                        line.key,
+                                        value ? Number(value) : null,
+                                        suppliers,
+                                      ),
+                                    )
+                                  }
+                                  options={options}
+                                  placeholder={copy.chooseSupplier}
+                                  aria-label={`${item.ingredientName}: ${copy.supplier}`}
+                                />
                               </div>
-                            );
-                          }),
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-touch"
+                                disabled={rowCount <= 1}
+                                onClick={() =>
+                                  setAllocationDrafts((current) =>
+                                    removePurchaseDemandAllocationRow(
+                                      current,
+                                      draft.supplierId,
+                                      line.key,
+                                    ),
+                                  )
+                                }
+                                aria-label={ACTIONS_VI.delete}
+                              >
+                                <IconTrash />
+                              </Button>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="touch"
+                              className="w-full justify-between font-mono tabular-nums"
+                              onClick={() =>
+                                setQtyPad({
+                                  kind: "allocation",
+                                  supplierId: draft.supplierId,
+                                  lineKey: line.key,
+                                  title: `${item.ingredientName} · ${
+                                    draft.supplierName || copy.chooseSupplier
+                                  }`,
+                                  unit: item.unitLabel,
+                                })
+                              }
+                            >
+                              <span>
+                                {line.quantity.trim() !== ""
+                                  ? line.quantity
+                                  : copy.quantity}
+                              </span>
+                              <span className="text-muted-foreground">
+                                {item.unitLabel}
+                              </span>
+                            </Button>
+                          </div>
+                        );
+                      }),
+                    )
+                  )}
+                  {canAdd ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="touch"
+                      className="self-start"
+                      onClick={() =>
+                        setAllocationDrafts((current) =>
+                          addPurchaseDemandAllocationRow(
+                            current,
+                            item.id,
+                            item.ingredientId,
+                            suppliers,
+                          ),
                         )
-                      )}
-                      {canAdd ? (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="touch"
-                          className="self-start"
-                          onClick={() =>
-                            setAllocationDrafts((current) =>
-                              addPurchaseDemandAllocationRow(
-                                current,
-                                item.id,
-                                item.ingredientId,
-                                suppliers,
-                              ),
-                            )
-                          }
-                        >
-                          <IconPlus data-icon="inline-start" />
-                          {copy.addAllocationLine}
-                        </Button>
-                      ) : null}
-                      <p className="text-xs text-muted-foreground">
-                        {copy.allocationProgress(
-                          allocated,
-                          remaining,
-                          item.unitLabel,
-                        )}
-                      </p>
-                    </div>
-                  </Item>
-                );
-              })}
-            </div>
+                      }
+                    >
+                      <IconPlus data-icon="inline-start" />
+                      {copy.addAllocationLine}
+                    </Button>
+                  ) : null}
+                  <p className="text-xs text-muted-foreground">
+                    {copy.allocationProgress(
+                      allocated,
+                      remaining,
+                      item.unitLabel,
+                    )}
+                  </p>
+                </div>
+              </Item>
+            );
+          })}
+        </div>
       </AppSheet>
 
       <NumberPadSheet

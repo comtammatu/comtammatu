@@ -7,7 +7,6 @@ import {
   useState,
   useTransition,
 } from "react";
-import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   CalendarCheck as IconCalendarCheck,
@@ -16,7 +15,6 @@ import {
   ChevronRight as IconChevronRight,
   ShieldAlert as IconShieldAlert,
   X as IconX,
-  ArrowLeft as IconArrowLeft,
 } from "lucide-react";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import {
@@ -39,14 +37,10 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { StatusBadge } from "@/components/status-badge";
-import {
-  AppEmptyState,
-  AppSheet,
-} from "@/components/surface";
+import { AppEmptyState, AppSheet } from "@/components/surface";
 import { useBranchOpsEvents } from "@/_hooks/use-branch-ops-events";
 import { employee } from "@lib/messages/employee";
 import {
-  BranchOperatorControlBar,
   BranchOperatorDetailList,
   BranchOperatorPage,
   BranchOperatorPanel,
@@ -97,8 +91,7 @@ export function BranchLeaveApprovalsClient({
   const searchParams = useSearchParams();
 
   const requestedView = searchParams.get("view");
-  const view: QueueView =
-    requestedView === "history" ? "history" : "pending";
+  const view: QueueView = requestedView === "history" ? "history" : "pending";
   const setView = useCallback(
     (next: QueueView) => {
       const params = new URLSearchParams(searchParams.toString());
@@ -222,29 +215,7 @@ export function BranchLeaveApprovalsClient({
 
   if (!canApprove) {
     return (
-      <BranchOperatorPage
-        title={copy.approvalsTitle}
-        description={branchName}
-        hideHeaderOnMobile
-      >
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button
-            variant="ghost"
-            size="icon-touch"
-            render={
-              <Link
-                href={`/br/${branchId}/team`}
-                aria-label={messages.hr.roster.backToTeamAria}
-              />
-            }
-          >
-            <IconArrowLeft />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{copy.approvalsTitle}</p>
-            <p className="truncate text-xs text-muted-foreground">{branchName}</p>
-          </div>
-        </BranchOperatorControlBar>
+      <BranchOperatorPage title={copy.approvalsTitle} description={branchName}>
         <AppEmptyState
           icon={<IconShieldAlert />}
           title={copy.approvalsNoAccessTitle}
@@ -255,29 +226,7 @@ export function BranchLeaveApprovalsClient({
   }
 
   return (
-    <BranchOperatorPage
-      title={copy.approvalsTitle}
-      description={branchName}
-      hideHeaderOnMobile
-    >
-      <BranchOperatorControlBar className="sm:hidden">
-        <Button
-          variant="ghost"
-          size="icon-touch"
-          render={
-            <Link
-              href={`/br/${branchId}/team`}
-              aria-label={messages.hr.roster.backToTeamAria}
-            />
-          }
-        >
-          <IconArrowLeft />
-        </Button>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">{copy.approvalsTitle}</p>
-          <p className="truncate text-xs text-muted-foreground">{branchName}</p>
-        </div>
-      </BranchOperatorControlBar>
+    <BranchOperatorPage title={copy.approvalsTitle} description={branchName}>
       <div className="flex flex-col gap-3">
         {view === "pending" ? (
           <Button
@@ -300,94 +249,94 @@ export function BranchLeaveApprovalsClient({
             {copy.pendingTab(pendingRows.length)}
           </Button>
         )}
-      <BranchOperatorPanel
-        title={
-          view === "pending"
-            ? copy.approvalsTitle
-            : copy.historyTab(historyRows.length)
-        }
-        description={copy.summary(pendingRows.length, rows.length)}
-        icon={view === "pending" ? IconCalendarCheck : IconCalendarX}
-        badge={{ children: visibleRows.length }}
-        size="sm"
-      >
-        {loadFailed ? (
-          <AppEmptyState
-            compact
-            mode="error"
-            icon={<IconCalendarX />}
-            title={copy.loadFailed}
-          >
-            <Button size="touch" onClick={reload}>
-              {ACTIONS_VI.retry}
-            </Button>
-          </AppEmptyState>
-        ) : visibleRows.length === 0 ? (
-          <AppEmptyState
-            compact
-            mode="no-data"
-            icon={<IconCalendarCheck />}
-            title={
-              view === "pending"
-                ? copy.emptyPendingTitle
-                : copy.emptyHistoryTitle
-            }
-            description={
-              view === "pending"
-                ? copy.emptyPendingDescription
-                : copy.emptyHistoryDescription
-            }
-          />
-        ) : (
-          <ItemGroup className="grid gap-2 lg:grid-cols-2">
-            {visibleRows.map((request) => {
-              const days = countInclusiveDays(
-                request.start_date,
-                request.end_date,
-              );
-              return (
-                <Item
-                  key={request.id}
-                  variant="outline"
-                  className="min-h-20 min-w-0 flex-nowrap touch-manipulation"
-                  render={
-                    <button
-                      type="button"
-                      onClick={() => setSelectedId(request.id)}
-                    />
-                  }
-                >
-                  <ItemContent className="min-w-0 gap-1 text-left">
-                    <ItemTitle size="heading">
-                      {getLeaveRequestEmployeeName(
-                        request,
-                        copy.fallbackEmployee,
-                      )}
-                    </ItemTitle>
-                    <ItemDescription className="line-clamp-none">
-                      {formatDateRange(request.start_date, request.end_date)} ·{" "}
-                      {days} {copy.dayUnit}
-                    </ItemDescription>
-                    <ItemDescription className="line-clamp-2 break-words">
-                      {copy.types[request.leave_type]}
-                      {request.reason ? ` · ${request.reason}` : ""}
-                    </ItemDescription>
-                  </ItemContent>
-                  <ItemActions>
-                    <StatusBadge
-                      domain="leave-request"
-                      value={request.status}
-                      label={copy.status[request.status]}
-                      size="sm"
-                    />
-                    <IconChevronRight className="size-4 text-muted-foreground" />
-                  </ItemActions>
-                </Item>
-              );
-            })}
-          </ItemGroup>
-        )}
-      </BranchOperatorPanel>
+        <BranchOperatorPanel
+          title={
+            view === "pending"
+              ? copy.approvalsTitle
+              : copy.historyTab(historyRows.length)
+          }
+          description={copy.summary(pendingRows.length, rows.length)}
+          icon={view === "pending" ? IconCalendarCheck : IconCalendarX}
+          badge={{ children: visibleRows.length }}
+          size="sm"
+        >
+          {loadFailed ? (
+            <AppEmptyState
+              compact
+              mode="error"
+              icon={<IconCalendarX />}
+              title={copy.loadFailed}
+            >
+              <Button size="touch" onClick={reload}>
+                {ACTIONS_VI.retry}
+              </Button>
+            </AppEmptyState>
+          ) : visibleRows.length === 0 ? (
+            <AppEmptyState
+              compact
+              mode="no-data"
+              icon={<IconCalendarCheck />}
+              title={
+                view === "pending"
+                  ? copy.emptyPendingTitle
+                  : copy.emptyHistoryTitle
+              }
+              description={
+                view === "pending"
+                  ? copy.emptyPendingDescription
+                  : copy.emptyHistoryDescription
+              }
+            />
+          ) : (
+            <ItemGroup className="grid gap-2 lg:grid-cols-2">
+              {visibleRows.map((request) => {
+                const days = countInclusiveDays(
+                  request.start_date,
+                  request.end_date,
+                );
+                return (
+                  <Item
+                    key={request.id}
+                    variant="outline"
+                    className="min-h-20 min-w-0 flex-nowrap touch-manipulation"
+                    render={
+                      <button
+                        type="button"
+                        onClick={() => setSelectedId(request.id)}
+                      />
+                    }
+                  >
+                    <ItemContent className="min-w-0 gap-1 text-left">
+                      <ItemTitle size="heading">
+                        {getLeaveRequestEmployeeName(
+                          request,
+                          copy.fallbackEmployee,
+                        )}
+                      </ItemTitle>
+                      <ItemDescription className="line-clamp-none">
+                        {formatDateRange(request.start_date, request.end_date)}{" "}
+                        · {days} {copy.dayUnit}
+                      </ItemDescription>
+                      <ItemDescription className="line-clamp-2 break-words">
+                        {copy.types[request.leave_type]}
+                        {request.reason ? ` · ${request.reason}` : ""}
+                      </ItemDescription>
+                    </ItemContent>
+                    <ItemActions>
+                      <StatusBadge
+                        domain="leave-request"
+                        value={request.status}
+                        label={copy.status[request.status]}
+                        size="sm"
+                      />
+                      <IconChevronRight className="size-4 text-muted-foreground" />
+                    </ItemActions>
+                  </Item>
+                );
+              })}
+            </ItemGroup>
+          )}
+        </BranchOperatorPanel>
       </div>
 
       <AppSheet

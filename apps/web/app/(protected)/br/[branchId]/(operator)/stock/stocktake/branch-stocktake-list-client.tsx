@@ -4,7 +4,6 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
-  ArrowLeft as IconArrowLeft,
   ArrowRight as IconArrowRight,
   ClipboardCheck as IconClipboardCheck,
   Search as IconSearch,
@@ -36,7 +35,6 @@ import {
 import { AppEmptyState } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
 import {
-  BranchOperatorControlBar,
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -85,29 +83,8 @@ export function BranchStocktakeListClient({
   ) : null;
 
   return (
-    <BranchOperatorPage
-      title={stocktakeCopy.title}
-      description={branchName}
-      hideHeaderOnMobile
-    >
+    <BranchOperatorPage title={stocktakeCopy.title} description={branchName}>
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button
-            variant="ghost"
-            size="icon-touch"
-            render={<Link href={stockBasePath} aria-label="Quay lại kho" />}
-          >
-            <IconArrowLeft />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">
-              {stocktakeCopy.title}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {branchName}
-            </p>
-          </div>
-        </BranchOperatorControlBar>
         {createAction}
 
         <BranchOperatorPanel

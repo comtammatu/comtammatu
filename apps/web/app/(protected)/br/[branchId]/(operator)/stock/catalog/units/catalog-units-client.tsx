@@ -30,7 +30,6 @@ import {
   updateUnit,
   type UnitRow,
 } from "@/(protected)/inventory/settings/units/units-actions";
-import { CatalogBackControl } from "../catalog-back-header";
 
 const copy = messages.catalog.units;
 const formCopy = messages.inventoryMaster.units;
@@ -47,13 +46,7 @@ const NEW_UNIT_DEFAULTS: UnitFormValues = {
   is_active: true,
 };
 
-export function CatalogUnitsClient({
-  backHref,
-  rows,
-}: {
-  backHref: string;
-  rows: UnitRow[];
-}) {
+export function CatalogUnitsClient({ rows }: { rows: UnitRow[] }) {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editRow, setEditRow] = useState<UnitRow | null>(null);
@@ -125,8 +118,6 @@ export function CatalogUnitsClient({
 
   return (
     <div className="flex flex-col gap-3">
-      <CatalogBackControl title={copy.title} backHref={backHref} />
-
       {packagingRows.length === 0 ? (
         <AppEmptyState compact title={copy.empty} symbol="riceGrain" />
       ) : (

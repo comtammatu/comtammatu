@@ -7,7 +7,6 @@ import {
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { TablesClient } from "@/(protected)/br/_shared/settings/tables/tables-client";
-import { BranchSettingsBackControl } from "../_components/branch-settings-back-control";
 import { shapeTableRows } from "./_lib/data";
 
 export default async function BranchTablesSettingsPage({
@@ -50,7 +49,8 @@ export default async function BranchTablesSettingsPage({
 
   if (branchRes.error || !branchRes.data) notFound();
   if (zonesRes.error) throw new Error(messages.settings.branch.zonesLoadFailed);
-  if (tablesRes.error) throw new Error(messages.settings.branch.tablesLoadFailed);
+  if (tablesRes.error)
+    throw new Error(messages.settings.branch.tablesLoadFailed);
 
   const tables = shapeTableRows(tablesRes.data ?? []);
   const title = messages.settings.pages.tablesTitle;
@@ -61,9 +61,7 @@ export default async function BranchTablesSettingsPage({
       description={messages.settings.branch.tablesDescription(
         branchRes.data.name,
       )}
-      hideHeaderOnMobile
     >
-      <BranchSettingsBackControl branchId={branchId} title={title} />
       <BranchOperatorPanel>
         <TablesClient
           branches={[branchRes.data]}

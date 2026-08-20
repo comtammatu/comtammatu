@@ -7,7 +7,6 @@ import {
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { StationsClient } from "@/(protected)/br/_shared/settings/kds/stations-client";
-import { BranchSettingsBackControl } from "../_components/branch-settings-back-control";
 import {
   mapStationRows,
   type CategoryOption,
@@ -80,9 +79,7 @@ export default async function BranchKdsSettingsPage({
     <BranchOperatorPage
       title={title}
       description={`${branchRes.data.name} · ${messages.settings.branch.kdsSetupDescription}`}
-      hideHeaderOnMobile
     >
-      <BranchSettingsBackControl branchId={branchId} title={title} />
       <BranchOperatorPanel>
         <StationsClient
           branches={[branchRes.data]}

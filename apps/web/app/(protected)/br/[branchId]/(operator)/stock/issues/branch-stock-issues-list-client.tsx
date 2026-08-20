@@ -1,10 +1,8 @@
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 "use client";
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  ArrowLeft as IconArrowLeft,
   ChevronRight as IconChevronRight,
   CirclePlus as IconCirclePlus,
   FileText as IconFileText,
@@ -37,7 +35,6 @@ import {
 import { AppEmptyState } from "@/components/surface";
 import { StatusBadge, getStatusBadgeMeta } from "@/components/status-badge";
 import {
-  BranchOperatorControlBar,
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -100,26 +97,8 @@ export function BranchStockIssuesListClient({
     <BranchOperatorPage
       title={INVENTORY_VI.issueSlipsTitle}
       description={branchName}
-      hideHeaderOnMobile
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button
-            variant="ghost"
-            size="icon-touch"
-            render={<Link href={stockBasePath} aria-label="Quay lại kho" />}
-          >
-            <IconArrowLeft />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">
-              {INVENTORY_VI.issueSlipsTitle}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {branchName}
-            </p>
-          </div>
-        </BranchOperatorControlBar>
         {canCreateWaste ? (
           <Button
             size="touch"

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useCallback, useMemo, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
-  ArrowLeft as IconArrowLeft,
   ChevronRight as IconChevronRight,
   ClipboardList as IconClipboard,
   History as IconHistory,
@@ -43,14 +42,9 @@ import {
   ToggleGroupItem,
 } from "@comtammatu/ui/components/toggle-group";
 import { toast } from "@comtammatu/ui/components/sonner";
-import {
-  AppDetailFooter,
-  AppEmptyState,
-  AppSheet,
-} from "@/components/surface";
+import { AppDetailFooter, AppEmptyState, AppSheet } from "@/components/surface";
 import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import {
-  BranchOperatorControlBar,
   BranchOperatorDetailList,
   BranchOperatorPage,
   BranchOperatorPanel,
@@ -180,28 +174,7 @@ export function BranchConsumptionListClient({
     <BranchOperatorPage
       title={issuesCopy.surface.consumption.eyebrow}
       description={branchName}
-      hideHeaderOnMobile
     >
-      <BranchOperatorControlBar className="sm:hidden">
-        <Button
-          variant="ghost"
-          size="icon-touch"
-          render={
-            <Link
-              href={`/br/${branchId}/stock`}
-              aria-label={ACTIONS_VI.back}
-            />
-          }
-        >
-          <IconArrowLeft />
-        </Button>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">
-            {issuesCopy.surface.consumption.eyebrow}
-          </p>
-          <p className="truncate text-xs text-muted-foreground">{branchName}</p>
-        </div>
-      </BranchOperatorControlBar>
       {showRecorded ? (
         <ToggleGroup
           type="single"
@@ -345,7 +318,9 @@ export function BranchConsumptionListClient({
                     </ItemTitle>
                     <ItemDescription className="line-clamp-none flex flex-wrap items-center gap-x-2 gap-y-1">
                       <span>
-                        {INVENTORY_VI.ingredientCountBadge(order.ingredientCount)}
+                        {INVENTORY_VI.ingredientCountBadge(
+                          order.ingredientCount,
+                        )}
                       </span>
                       <span>{formatVNDateTime(order.recordedAt)}</span>
                     </ItemDescription>
@@ -465,7 +440,11 @@ export function BranchConsumptionListClient({
               disabled={isPending}
               onClick={createManualSlip}
             >
-              {isPending ? <Spinner className="size-5" /> : <IconPlus className="size-4" />}
+              {isPending ? (
+                <Spinner className="size-5" />
+              ) : (
+                <IconPlus className="size-4" />
+              )}
               {INVENTORY_VI.manualConsumptionCreateAction}
             </Button>
           }

@@ -26,7 +26,6 @@ import { formatQty } from "@lib/inventory/format";
 import { BranchOperatorPanel } from "@lib/branch-operator/components/branch-operator-page";
 import { messages } from "@lib/messages";
 import { matchesSearch } from "@lib/search";
-import { CatalogBackControl } from "../catalog-back-header";
 
 const copy = messages.catalog.thresholds;
 const editorCopy = messages.inventory.settings.thresholds;
@@ -41,9 +40,7 @@ export type ThresholdRow = {
 
 type EditableRow = ThresholdRow & { initialMin: string };
 
-type PadTarget =
-  | { mode: "row"; id: number }
-  | { mode: "bulk" };
+type PadTarget = { mode: "row"; id: number } | { mode: "bulk" };
 
 function minValue(row: EditableRow): number | null {
   const value = Number(row.minStock.trim());
@@ -63,13 +60,7 @@ function rowClassName(row: EditableRow): string {
     : "min-h-12 bg-warning/10";
 }
 
-export function CatalogThresholdsClient({
-  backHref,
-  rows,
-}: {
-  backHref: string;
-  rows: ThresholdRow[];
-}) {
+export function CatalogThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
   const [editable, setEditable] = useState<EditableRow[]>(() =>
     rows.map((row) => ({ ...row, initialMin: row.minStock })),
   );
@@ -173,14 +164,10 @@ export function CatalogThresholdsClient({
     });
   }
 
-  const emptyTitle =
-    editable.length === 0
-      ? copy.empty
-      : copy.noResults;
+  const emptyTitle = editable.length === 0 ? copy.empty : copy.noResults;
 
   return (
     <div className="flex flex-col gap-3">
-      <CatalogBackControl title={copy.title} backHref={backHref} />
       <p className="text-xs text-muted-foreground">{editorCopy.hint}</p>
 
       <InputGroup className="h-11">

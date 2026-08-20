@@ -7,7 +7,6 @@ import {
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { NetworkConfigPanel } from "@/(protected)/branches/network-config-dialog";
-import { BranchSettingsBackControl } from "../_components/branch-settings-back-control";
 
 export default async function BranchNetworkSettingsPage({
   params,
@@ -40,9 +39,7 @@ export default async function BranchNetworkSettingsPage({
     <BranchOperatorPage
       title={title}
       description={messages.settings.network.description}
-      hideHeaderOnMobile
     >
-      <BranchSettingsBackControl branchId={branchId} title={title} />
       <BranchOperatorPanel>
         <NetworkConfigPanel branch={{ id: branch.id, name: branch.name }} />
       </BranchOperatorPanel>

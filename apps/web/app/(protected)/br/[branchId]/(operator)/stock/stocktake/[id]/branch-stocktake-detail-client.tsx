@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft as IconArrowLeft,
   CircleAlert as IconCircleAlert,
   CircleCheck as IconCircleCheck,
   CircleX as IconCircleX,
@@ -25,9 +24,8 @@ import {
 } from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { AppDetailFooter, AppEmptyState } from "@/components/surface";
-import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
+import { getStatusBadgeMeta } from "@/components/status-badge";
 import {
-  BranchOperatorControlBar,
   BranchOperatorDetailList,
   BranchOperatorInlineState,
   BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME,
@@ -235,38 +233,14 @@ export function BranchStocktakeDetailClient({
     <BranchOperatorPage
       title={`KK-${session.id}`}
       description={formatVNDateTime(session.startedAt ?? session.createdAt)}
-      hideHeaderOnMobile
       badge={{ children: statusBadge.label, variant: statusBadge.variant }}
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button
-            variant="ghost"
-            size="icon-touch"
-            render={
-              <Link href={stocktakeBasePath} aria-label="Quay lại kiểm kê" />
-            }
-          >
-            <IconArrowLeft />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-mono text-sm font-semibold">
-              KK-{session.id}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {formatVNDateTime(session.startedAt ?? session.createdAt)}
-            </p>
-          </div>
-          <StatusBadge domain="inventory" value={session.status} size="sm" />
-        </BranchOperatorControlBar>
-
         {session.status === "in_progress" && data.canCancel ? (
           <Button
             size="touch"
             className="w-full"
-            render={
-              <Link href={`${stocktakeBasePath}/${session.id}/count`} />
-            }
+            render={<Link href={`${stocktakeBasePath}/${session.id}/count`} />}
           >
             Tiếp tục đếm
           </Button>

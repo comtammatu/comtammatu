@@ -1,20 +1,13 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import {
-  ArrowLeft as IconArrowLeft,
-  Plus as IconPlus,
-} from "lucide-react";
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { Plus as IconPlus } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppDetailFooter } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
 import { loadStockFulfillmentRows } from "@lib/inventory/stock-fulfillment-data";
 import type { StockFulfillmentSiteKind } from "@lib/inventory/stock-fulfillment-projection";
-import {
-  BranchOperatorControlBar,
-  BranchOperatorPage,
-} from "@lib/branch-operator/components/branch-operator-page";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { messages } from "@lib/messages";
 import { BranchStockFulfillmentHubClient } from "./branch-stock-fulfillment-hub-client";
 import { parseOperatorBranchId } from "../../../_lib/parse-branch-id";
@@ -98,36 +91,16 @@ export default async function OperatorStockTransferPage({
     </div>
   );
 
-  const stockBasePath = `/br/${branchId}/stock`;
-
   return (
     <BranchOperatorPage
       title={copy.hubTitle}
       description={copy.centralHubDescription}
-      hideHeaderOnMobile
       action={
         createAction ? (
           <div className="max-sm:hidden">{createAction}</div>
         ) : undefined
       }
     >
-      <BranchOperatorControlBar className="sm:hidden">
-        <Button
-          variant="ghost"
-          size="icon-touch"
-          render={
-            <Link href={stockBasePath} aria-label={ACTIONS_VI.back} />
-          }
-        >
-          <IconArrowLeft />
-        </Button>
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold">{copy.hubTitle}</p>
-          <p className="truncate text-xs text-muted-foreground">
-            {copy.centralHubDescription}
-          </p>
-        </div>
-      </BranchOperatorControlBar>
       <BranchStockFulfillmentHubClient
         rows={rows}
         mode={mode}

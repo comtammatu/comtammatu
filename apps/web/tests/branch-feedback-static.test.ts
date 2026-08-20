@@ -44,9 +44,12 @@ test("Branch feedback inbox is a native touch LIST isolated from Owner FeedbackI
   const chrome = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/feedback/_components/branch-feedback-page.tsx",
   );
-  assert.match(chrome, /hideHeaderOnMobile/);
-  assert.match(chrome, /<BranchOperatorControlBar className="sm:hidden">/);
-  assert.match(chrome, /\/settings/);
+  assert.match(chrome, /BranchOperatorPage/);
+  assert.doesNotMatch(chrome, /hideHeaderOnMobile/);
+  assert.doesNotMatch(
+    chrome,
+    /BranchOperatorControlBar|ACTIONS_VI\.back|IconArrowLeft/,
+  );
 
   assert.match(ownerPage, /<FeedbackInbox/);
   assert.match(ownerInbox, /\bDataTable\b/);

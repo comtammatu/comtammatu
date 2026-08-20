@@ -3,7 +3,6 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: Branch attendance checklist/force-close copy mirrors Owner HR review strings */
 
 import Image from "next/image";
-import Link from "next/link";
 import {
   useCallback,
   useEffect,
@@ -18,7 +17,6 @@ import {
   Image as IconImage,
   ListChecks as IconListChecks,
   ShieldAlert as IconShieldAlert,
-  ArrowLeft as IconArrowLeft,
 } from "lucide-react";
 import { ACTIONS_VI, STAFF_VI } from "@comtammatu/shared/messages";
 import { formatQuantity } from "@comtammatu/shared/format";
@@ -65,13 +63,9 @@ import {
 } from "@/(protected)/hr/checklist-types";
 import { StatusBadge } from "@/components/status-badge";
 import { AppDialog } from "@/components/form";
-import {
-  AppEmptyState,
-  AppSheet,
-} from "@/components/surface";
+import { AppEmptyState, AppSheet } from "@/components/surface";
 import { useBranchOpsEvents } from "@/_hooks/use-branch-ops-events";
 import {
-  BranchOperatorControlBar,
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -220,10 +214,7 @@ function SummaryMeta({
           [attendanceCopy.summaryOpenShifts, openShifts],
         ] as const
       ).map(([label, value]) => (
-        <div
-          key={label}
-          className="rounded-md bg-muted/50 px-2 py-1.5"
-        >
+        <div key={label} className="rounded-md bg-muted/50 px-2 py-1.5">
           <div className="text-xs text-muted-foreground">{label}</div>
           <div className="font-mono text-sm tabular-nums">
             {formatQuantity(value)}
@@ -303,7 +294,8 @@ export function BranchAttendanceClient({
     return map;
   }, [monthRecords, records]);
 
-  const selected = selectedId != null ? (recordById.get(selectedId) ?? null) : null;
+  const selected =
+    selectedId != null ? (recordById.get(selectedId) ?? null) : null;
   const canForceCloseSelected =
     selected != null &&
     canForceClose &&
@@ -485,29 +477,8 @@ export function BranchAttendanceClient({
       <BranchOperatorPage
         title={pageCopy.branchAttendanceTitle}
         description={branchName}
-        hideHeaderOnMobile
       >
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button
-            variant="ghost"
-            size="icon-touch"
-            render={
-              <Link href={`/br/${branchId}/team`} aria-label="Quay lại đội" />
-            }
-          >
-            <IconArrowLeft />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">
-              {pageCopy.branchAttendanceTitle}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">{branchName}</p>
-          </div>
-        </BranchOperatorControlBar>
-        <AppEmptyState
-          icon={<IconShieldAlert />}
-          mode="no-access"
-        />
+        <AppEmptyState icon={<IconShieldAlert />} mode="no-access" />
       </BranchOperatorPage>
     );
   }
@@ -525,25 +496,7 @@ export function BranchAttendanceClient({
     <BranchOperatorPage
       title={pageCopy.branchAttendanceTitle}
       description={branchName}
-      hideHeaderOnMobile
     >
-      <BranchOperatorControlBar className="sm:hidden">
-        <Button
-          variant="ghost"
-          size="icon-touch"
-          render={
-            <Link href={`/br/${branchId}/team`} aria-label="Quay lại đội" />
-          }
-        >
-          <IconArrowLeft />
-        </Button>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">
-            {pageCopy.branchAttendanceTitle}
-          </p>
-          <p className="truncate text-xs text-muted-foreground">{branchName}</p>
-        </div>
-      </BranchOperatorControlBar>
       <div className="flex flex-col gap-3">
         {view === "clock" ? (
           <Button
@@ -729,7 +682,11 @@ export function BranchAttendanceClient({
           if (!open) closeEmployeeMonth();
         }}
         title={employeeSheetTitle}
-        description={[employeeSheetCode, month, attendanceCopy.employeeMonthTitle]
+        description={[
+          employeeSheetCode,
+          month,
+          attendanceCopy.employeeMonthTitle,
+        ]
           .filter(Boolean)
           .join(" · ")}
         side="bottom"

@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft as IconArrowLeft,
   ChartBar as IconChartBar,
   ChevronRight as IconChevronRight,
   RefreshCw as IconRefresh,
@@ -24,7 +23,6 @@ import {
 } from "@comtammatu/ui/components/item";
 import { AppEmptyState } from "@/components/surface";
 import {
-  BranchOperatorControlBar,
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -182,7 +180,6 @@ export function BranchStockReportsClient({
   movementHighlights: BranchStockMovement[];
 }) {
   const router = useRouter();
-  const stockBasePath = `/br/${branchId}/stock`;
   const periodLabel = `${formatVNDate(periodStart)} - ${formatVNDate(periodEnd)}`;
   const varianceTone = varianceExceptions.some((row) => row.flag === "critical")
     ? "destructive"
@@ -191,30 +188,8 @@ export function BranchStockReportsClient({
       : "default";
 
   return (
-    <BranchOperatorPage
-      title={reportCopy.pageTitle}
-      description={branchName}
-      hideHeaderOnMobile
-    >
+    <BranchOperatorPage title={reportCopy.pageTitle} description={branchName}>
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button
-            variant="ghost"
-            size="icon-touch"
-            render={<Link href={stockBasePath} aria-label={ACTIONS_VI.back} />}
-          >
-            <IconArrowLeft />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">
-              {reportCopy.pageTitle}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {branchName}
-            </p>
-          </div>
-        </BranchOperatorControlBar>
-
         <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] lg:items-start">
           <BranchOperatorPanel
             title={reportCopy.branchVarianceTitle}

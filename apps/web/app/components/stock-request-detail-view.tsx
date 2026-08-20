@@ -2,8 +2,6 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ArrowLeft as IconArrowLeft } from "lucide-react";
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { formatVNDate, formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -30,10 +28,7 @@ import {
   DescriptionList,
 } from "@/components/surface";
 import { AuditHistoryList } from "@/components/audit-history-list";
-import {
-  BranchOperatorControlBar,
-  BranchOperatorPage,
-} from "@lib/branch-operator/components/branch-operator-page";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { messages } from "@lib/messages";
 import type { StockRequestDetailData } from "@lib/inventory/stock-request-detail-data";
 import {
@@ -314,7 +309,6 @@ export function StockRequestDetailView({
   embedded?: boolean;
   onTransferOpen?: (transferId: number) => void;
 }) {
-  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
   const stageIndex = STAGES.indexOf(data.journey.stage);
   const backHref =
     mode === "branch"
@@ -402,33 +396,7 @@ export function StockRequestDetailView({
         title={copy.detailTitle}
         description={description}
         badge={{ children: statusLabel }}
-        hideHeaderOnMobile
-        action={
-          <Button
-            variant="ghost"
-            className="max-sm:hidden"
-            render={<Link href={backHref} />}
-          >
-            {copy.back}
-          </Button>
-        }
       >
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button
-            variant="ghost"
-            size={isTouchLayout ? "icon-touch" : "icon-sm"}
-            render={<Link href={backHref} aria-label={ACTIONS_VI.back} />}
-          >
-            <IconArrowLeft />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-semibold">{copy.detailTitle}</p>
-            <p className="truncate text-xs text-muted-foreground">
-              {description}
-            </p>
-          </div>
-          <Badge variant="secondary">{statusLabel}</Badge>
-        </BranchOperatorControlBar>
         <BranchRequestDetailContent data={data} actions={actions} />
       </BranchOperatorPage>
     );

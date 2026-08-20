@@ -30,7 +30,6 @@ export default async function OperatorCheckoutApprovalsPage({
           : undefined
       }
       plane="branch"
-      hideHeaderOnMobile
     />
   );
 }

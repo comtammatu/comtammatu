@@ -8,7 +8,6 @@ import {
   ClipboardCheck as IconClipboardCheck,
   FileText as IconFileText,
   Search as IconSearch,
-  ArrowLeft as IconArrowLeft,
 } from "lucide-react";
 import { ACTIONS_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
 import { formatVNClockTime } from "@comtammatu/shared/time";
@@ -40,12 +39,8 @@ import {
 
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { AppEmptyState, AppSheet } from "@/components/surface";
 import {
-  AppEmptyState,
-  AppSheet,
-} from "@/components/surface";
-import {
-  BranchOperatorControlBar,
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -361,30 +356,7 @@ export function BranchCountAssignmentsClient({
     <BranchOperatorPage
       title={INVENTORY_VI.countAssignTitle}
       description={data.branchName}
-      hideHeaderOnMobile
     >
-      <BranchOperatorControlBar className="sm:hidden">
-        <Button
-          variant="ghost"
-          size="icon-touch"
-          render={
-            <Link
-              href={`/br/${data.branchId}/stock`}
-              aria-label={ACTIONS_VI.back}
-            />
-          }
-        >
-          <IconArrowLeft />
-        </Button>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">
-            {INVENTORY_VI.countAssignTitle}
-          </p>
-          <p className="truncate text-xs text-muted-foreground">
-            {data.branchName}
-          </p>
-        </div>
-      </BranchOperatorControlBar>
       {panel}
     </BranchOperatorPage>
   );

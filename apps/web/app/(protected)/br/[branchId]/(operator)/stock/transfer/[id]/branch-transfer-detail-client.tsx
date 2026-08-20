@@ -4,13 +4,10 @@ import Link from "next/link";
 import { useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft as IconArrowLeft,
-  ArrowRight as IconArrowRight,
   ClipboardList as IconClipboardList,
   PackageCheck as IconPackageCheck,
 } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Item,
@@ -23,9 +20,7 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { AppDetailFooter, AppEmptyState } from "@/components/surface";
 import { useIsOnline } from "@/components/pwa-runtime";
-import { StatusBadge } from "@/components/status-badge";
 import {
-  BranchOperatorControlBar,
   BranchOperatorDetailList,
   BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME,
   BranchOperatorPanel,
@@ -47,8 +42,6 @@ interface BranchTransferDetailClientProps {
   transfer: TransferDetail;
   userRole: StaffRole;
   userBranchId: number | null;
-  presentation?: "page" | "sheet";
-  listHref?: string;
   receiveHref?: string;
 }
 
@@ -65,16 +58,12 @@ export function BranchTransferDetailClient({
   transfer,
   userRole,
   userBranchId,
-  presentation = "page",
-  listHref: listHrefOverride,
   receiveHref: receiveHrefOverride,
 }: BranchTransferDetailClientProps) {
   const router = useRouter();
   const isOnline = useIsOnline();
   const [isPending, startTransition] = useTransition();
   const copy = messages.inventory.transfer;
-  const listHref =
-    listHrefOverride ?? `/br/${branchId}/stock`;
   const receiveHref =
     receiveHrefOverride ?? `/br/${branchId}/stock/receive/${transfer.id}`;
   const actionConfig = useMemo(
@@ -147,29 +136,6 @@ export function BranchTransferDetailClient({
 
   return (
     <div className="flex min-w-0 flex-col gap-3">
-      {presentation === "page" ? (
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button
-            variant="ghost"
-            size="icon-touch"
-            render={<Link href={listHref} aria-label={ACTIONS_VI.back} />}
-          >
-            <IconArrowLeft />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-mono text-sm font-semibold tabular-nums">
-              {transfer.code}
-            </p>
-            <p className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
-              <span className="truncate">{transfer.fromLocation}</span>
-              <IconArrowRight className="size-3 shrink-0" />
-              <span className="truncate">{transfer.toLocation}</span>
-            </p>
-          </div>
-          <StatusBadge domain="inventory" value={transfer.status} size="sm" />
-        </BranchOperatorControlBar>
-      ) : null}
-
       <div className={BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME}>
         <div className="flex min-w-0 flex-col gap-3 lg:col-start-2 lg:row-start-1">
           <BranchOperatorPanel

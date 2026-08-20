@@ -1,14 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  ArrowLeft as IconArrowLeft,
   ClipboardCheck,
   ClipboardList,
   Package,
   Plus as IconPlus,
   Trash2,
 } from "lucide-react";
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import {
   resolveOperatorTiles,
   type BranchKind,
@@ -25,7 +23,6 @@ import {
 import { AppDetailFooter, AppEmptyState } from "@/components/surface";
 import {
   BranchOperatorActionSection,
-  BranchOperatorControlBar,
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -49,32 +46,6 @@ interface OperatorStockLink {
 
 const stockCopy = messages.inventory.dashboard;
 const journeyCopy = messages.inventory.stockRequests.journey;
-
-function StockLandingMobileTitleBar({
-  branchId,
-  title,
-  description,
-}: {
-  branchId: number;
-  title: string;
-  description: string;
-}) {
-  return (
-    <BranchOperatorControlBar className="sm:hidden">
-      <Button
-        variant="ghost"
-        size="icon-touch"
-        render={<Link href={`/br/${branchId}`} aria-label={ACTIONS_VI.back} />}
-      >
-        <IconArrowLeft />
-      </Button>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold">{title}</p>
-        <p className="truncate text-xs text-muted-foreground">{description}</p>
-      </div>
-    </BranchOperatorControlBar>
-  );
-}
 
 type CentralStockGroupId = "lookup" | "buy_count" | "waste";
 
@@ -362,7 +333,9 @@ export default async function OperatorStockPage({
     const createAction = (
       <Button
         size="touch"
-        render={<Link href={branchTransferCreateHref(context.branchId, "pull")} />}
+        render={
+          <Link href={branchTransferCreateHref(context.branchId, "pull")} />
+        }
       >
         <IconPlus data-icon="inline-start" />
         {journeyCopy.requestAction}
@@ -373,14 +346,8 @@ export default async function OperatorStockPage({
       <BranchOperatorPage
         title={journeyCopy.hubTitle}
         description={journeyCopy.branchHubDescription}
-        hideHeaderOnMobile
         action={<div className="max-sm:hidden">{createAction}</div>}
       >
-        <StockLandingMobileTitleBar
-          branchId={context.branchId}
-          title={journeyCopy.hubTitle}
-          description={journeyCopy.branchHubDescription}
-        />
         <div className="flex min-w-0 flex-col gap-4">
           <BranchStockDoors basePath={basePath} />
           <BranchStockCountDoors basePath={basePath} />
@@ -407,8 +374,7 @@ export default async function OperatorStockPage({
   const excludeSuffixes = CENTRAL_BOTTOM_NAV_SUFFIXES[branchKind] ?? [];
   const links = isCentralKind(branchKind)
     ? allLinks.filter(
-        (link) =>
-          !excludeSuffixes.some((suffix) => link.href.endsWith(suffix)),
+        (link) => !excludeSuffixes.some((suffix) => link.href.endsWith(suffix)),
       )
     : allLinks;
 
@@ -431,13 +397,7 @@ export default async function OperatorStockPage({
     <BranchOperatorPage
       title={stockGroup?.title ?? messages.inventory.shell.moduleName}
       description={messages.inventory.dashboard.mainFlowsOperatorDescription}
-      hideHeaderOnMobile
     >
-      <StockLandingMobileTitleBar
-        branchId={context.branchId}
-        title={stockGroup?.title ?? messages.inventory.shell.moduleName}
-        description={messages.inventory.dashboard.mainFlowsOperatorDescription}
-      />
       {links.length > 0 ? (
         <StockWorkflowSections
           sections={[

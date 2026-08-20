@@ -32,10 +32,7 @@ import {
   transferConfirmReceive,
   transferReceive,
 } from "@/(protected)/inventory/transfer-actions";
-import {
-  BranchOperatorControlBar,
-  BranchOperatorPage,
-} from "@lib/branch-operator/components/branch-operator-page";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import {
   isTransferReceiveReady,
   isTransferReceiveStartable,
@@ -58,12 +55,10 @@ const receiveSessionStartRequested = new Set<number>();
 
 function ReceiveChrome({
   transfer,
-  backHref,
   documentTitle,
   children,
 }: {
   transfer: TransferDetail;
-  backHref: string;
   documentTitle: string;
   children: ReactNode;
 }) {
@@ -72,27 +67,8 @@ function ReceiveChrome({
     <BranchOperatorPage
       title={documentTitle}
       description={receiveCopy.receiveFrom(transfer.fromBranch)}
-      hideHeaderOnMobile
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button
-            variant="ghost"
-            size="icon-touch"
-            className="shrink-0"
-            render={<Link href={backHref} aria-label={ACTIONS_VI.back} />}
-          >
-            <IconArrowLeft />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-mono text-sm font-semibold tabular-nums">
-              {documentTitle}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {receiveCopy.receiveFrom(transfer.fromBranch)}
-            </p>
-          </div>
-        </BranchOperatorControlBar>
         {children}
       </div>
     </BranchOperatorPage>
@@ -141,7 +117,9 @@ export function TransferReceiveClient({
   const remaining = total - confirmed.size;
   const progress = total === 0 ? 0 : confirmed.size / total;
   const confirmBlocked =
-    isPending || !isOnline || (canStartReceive && (isStarting || startError != null));
+    isPending ||
+    !isOnline ||
+    (canStartReceive && (isStarting || startError != null));
 
   const sheetItem = useMemo(
     () => items.find((item) => item.ingredientId === sheetId) ?? null,
@@ -273,11 +251,7 @@ export function TransferReceiveClient({
   if (!showReceiveWorkspace) {
     const waitingShip = transfer.status === "confirmed_ship";
     return (
-      <ReceiveChrome
-        transfer={transfer}
-        backHref={backHref}
-        documentTitle={chromeTitle}
-      >
+      <ReceiveChrome transfer={transfer} documentTitle={chromeTitle}>
         <AppEmptyState
           compact
           mode="no-data"
@@ -308,11 +282,7 @@ export function TransferReceiveClient({
   }
 
   return (
-    <ReceiveChrome
-      transfer={transfer}
-      backHref={backHref}
-      documentTitle={chromeTitle}
-    >
+    <ReceiveChrome transfer={transfer} documentTitle={chromeTitle}>
       {canStartReceive && isStarting ? (
         <div className="flex items-center gap-2 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
           <Spinner className="size-3.5" />
@@ -415,7 +385,9 @@ export function TransferReceiveClient({
                   <IconCircle className="size-5 shrink-0 text-muted-foreground" />
                 )}
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium">{item.name}</div>
+                  <div className="truncate text-sm font-medium">
+                    {item.name}
+                  </div>
                   <div className="truncate text-xs text-muted-foreground">
                     {receiveCopy.receiveSent(String(item.qty), item.unit)}
                   </div>

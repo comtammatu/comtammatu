@@ -16,7 +16,6 @@ import {
   INVENTORY_FEATURE_FLAGS,
   isFeatureEnabledForBranch,
 } from "@/(protected)/inventory/_lib/feature-flags";
-import { BranchSettingsBackControl } from "../_components/branch-settings-back-control";
 
 export default async function BranchPosSettingsPage({
   params,
@@ -64,10 +63,10 @@ export default async function BranchPosSettingsPage({
     <BranchOperatorPage
       title={title}
       description={`${branchRes.data.name} · ${messages.settings.branch.posSetupDescription}`}
-      hideHeaderOnMobile
     >
-      <BranchSettingsBackControl branchId={branchId} title={title} />
-      <BranchOperatorPanel title={messages.settings.pos.registrationSectionTitle}>
+      <BranchOperatorPanel
+        title={messages.settings.pos.registrationSectionTitle}
+      >
         <TerminalsClient
           branches={[branchRes.data] as BranchOption[]}
           terminals={(terminalsRes.data ?? []) as TerminalRow[]}

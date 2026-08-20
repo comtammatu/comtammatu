@@ -1,10 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import {
-  resolveOperatorTiles,
-  type BranchKind,
-} from "@comtammatu/shared/auth";
+import { resolveOperatorTiles, type BranchKind } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -21,7 +18,10 @@ import { resolveOperatorTileIcon } from "./operator-tile-icons";
 
 import { BranchQueueSection } from "./_components/home/branch-queue-section";
 import { BranchTodayStatus } from "./_components/home/branch-today-status";
-import { BranchTodayStatusPending, BranchQueuePending } from "./_components/home/branch-home-skeletons";
+import {
+  BranchTodayStatusPending,
+  BranchQueuePending,
+} from "./_components/home/branch-home-skeletons";
 import { BranchQuickMenuLimitTrigger } from "./_components/home/branch-quick-menu-limit-trigger";
 import { BranchRevenueTargetStrip } from "./_components/home/branch-revenue-target-strip";
 import { fetchBranchRevenueTargetProgress } from "@/(protected)/finance/targets/actions";
@@ -87,7 +87,7 @@ export default async function OperatorHomePage({
     revenueTargetRes?.success === true ? revenueTargetRes.data : null;
 
   return (
-    <BranchOperatorPage title={APP_COPY_VI.branchHome} hideHeaderOnMobile>
+    <BranchOperatorPage title={APP_COPY_VI.branchHome}>
       {claims.user_role !== "owner" ? (
         <Suspense fallback={<BranchTodayStatusPending />}>
           <BranchTodayStatus branchId={context.branchId} />

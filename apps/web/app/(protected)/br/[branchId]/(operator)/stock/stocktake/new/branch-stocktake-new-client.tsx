@@ -1,18 +1,13 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 "use client";
 
-import Link from "next/link";
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import {
-  ArrowLeft as IconArrowLeft,
-  ClipboardCheck as IconClipboardCheck,
-} from "lucide-react";
+import { ClipboardCheck as IconClipboardCheck } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { AppDetailFooter, AppEmptyState } from "@/components/surface";
 import {
-  BranchOperatorControlBar,
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -71,27 +66,7 @@ export function BranchStocktakeNewClient({
       <BranchOperatorPage
         title={stocktakeCopy.startTitle}
         description={branchName}
-        hideHeaderOnMobile
       >
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button
-            variant="ghost"
-            size="icon-touch"
-            render={
-              <Link href={stocktakeBasePath} aria-label="Quay lại kiểm kê" />
-            }
-          >
-            <IconArrowLeft />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">
-              {stocktakeCopy.startTitle}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {branchName}
-            </p>
-          </div>
-        </BranchOperatorControlBar>
         <AppEmptyState
           compact
           mode="no-access"
@@ -107,29 +82,8 @@ export function BranchStocktakeNewClient({
     <BranchOperatorPage
       title={stocktakeCopy.startTitle}
       description={stocktakeCopy.startDescription}
-      hideHeaderOnMobile
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button
-            variant="ghost"
-            size="icon-touch"
-            render={
-              <Link href={stocktakeBasePath} aria-label="Quay lại kiểm kê" />
-            }
-          >
-            <IconArrowLeft />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">
-              {stocktakeCopy.startTitle}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {branchName}
-            </p>
-          </div>
-        </BranchOperatorControlBar>
-
         <BranchOperatorPanel
           title={stocktakeCopy.startTitle}
           description={`${branchName} · ${selectedWarehouse?.name ?? "—"}`}

@@ -28,7 +28,6 @@ import {
 } from "@comtammatu/ui/components/item";
 import { AppDetailFooter, AppEmptyState } from "@/components/surface";
 import {
-  BranchOperatorControlBar,
   BranchOperatorDetailList,
   BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME,
   BranchOperatorPage,
@@ -158,22 +157,7 @@ export function BranchStockIngredientDetail({
         description={[ingredient.sku, ingredient.category, ingredient.unit]
           .filter(Boolean)
           .join(" · ")}
-        hideHeaderOnMobile
       >
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button
-            variant="ghost"
-            size="icon-touch"
-            render={
-              <Link href={onHandHref} aria-label={detailCopy.backToStock} />
-            }
-          >
-            <IconArrowLeft />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{ingredient.name}</p>
-          </div>
-        </BranchOperatorControlBar>
         <AppEmptyState
           compact
           mode="error"
@@ -240,27 +224,8 @@ export function BranchStockIngredientDetail({
       description={[ingredient.sku, ingredient.category, ingredient.unit]
         .filter(Boolean)
         .join(" · ")}
-      hideHeaderOnMobile
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button
-            variant="ghost"
-            size="icon-touch"
-            render={
-              <Link href={onHandHref} aria-label={detailCopy.backToStock} />
-            }
-          >
-            <IconArrowLeft />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{ingredient.name}</p>
-            <p className="truncate text-xs text-muted-foreground">
-              {[ingredient.sku, ingredient.unit].filter(Boolean).join(" · ")}
-            </p>
-          </div>
-        </BranchOperatorControlBar>
-
         <div className={BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME}>
           <div className="flex min-w-0 flex-col gap-3">
             <BranchOperatorPanel

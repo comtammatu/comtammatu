@@ -11,7 +11,7 @@ export function CatalogPageShell({
   children: ReactNode;
 }) {
   return (
-    <BranchOperatorPage title={title} hideHeaderOnMobile>
+    <BranchOperatorPage title={title}>
       <Suspense fallback={<PageSkeleton bare />}>{children}</Suspense>
     </BranchOperatorPage>
   );

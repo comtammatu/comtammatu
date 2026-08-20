@@ -135,8 +135,11 @@ test("operator stock receive merges into the native transfer queue and keeps nat
     receiveDetailRoute,
     /detailHref=\{\s*isStoreBranch\s*\?\s*null\s*:\s*`\/br\/\$\{branchId\}\/stock\/transfer\/\$\{transferId\}`\s*\}/,
   );
-  assert.match(receiveClient, /size="icon-touch"/);
   assert.match(receiveClient, /<AppDetailFooter[\s\S]*\bsticky\b/);
+  assert.match(
+    receiveClient,
+    /<AppDetailFooter[\s\S]*size="touch"[\s\S]*ACTIONS_VI\.back/,
+  );
   assert.match(
     receiveClient,
     /initialValue=\{\s*sheetItem\s*\?\s*confirmed\.has\(sheetItem\.ingredientId\)[\s\S]*: null\s*: null\s*\}/,
@@ -152,7 +155,7 @@ test("operator stock count renders employee count inside the branch operator she
 
   assert.match(source, /StaffCountPageContent/);
   assert.match(source, /routeBranchId=\{branchId\}/);
-  assert.match(source, /hideHeaderOnMobile/);
+  assert.doesNotMatch(source, /hideHeaderOnMobile/);
   assert.match(source, /plane="branch"/);
   assert.doesNotMatch(source, /redirect\(`\/inventory\/stocktake/);
   assert.match(

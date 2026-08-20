@@ -1,19 +1,14 @@
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 "use client";
 
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { formatCount } from "@comtammatu/shared/format";
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { AppDetailFooter } from "@/components/surface";
-import {
-  BranchOperatorControlBar,
-  BranchOperatorPage,
-} from "@lib/branch-operator/components/branch-operator-page";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import {
   type BranchStocktakeCountData,
   type BranchStocktakeCountUnit,
@@ -51,7 +46,7 @@ function buildCountUnitPreview({
     options.find((option) => option.isBase) ?? options[0] ?? null;
   const selectedUnit =
     selectedUnitId === null
-      ? pickBranchDefaultCountUnit(options) ?? baseUnit
+      ? (pickBranchDefaultCountUnit(options) ?? baseUnit)
       : (options.find((option) => option.unitId === selectedUnitId) ??
         pickBranchDefaultCountUnit(options) ??
         baseUnit);
@@ -234,31 +229,8 @@ export function BranchStocktakeCountClient({
     <BranchOperatorPage
       title={countCopy.countMode(data.currentRound)}
       description={`KK-${data.sessionId}`}
-      hideHeaderOnMobile
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button
-            variant="ghost"
-            size="icon-touch"
-            render={
-              <Link
-                href={`${stocktakeBasePath}/${data.sessionId}?view=detail`}
-                aria-label="Quay lại phiên kiểm kê"
-              />
-            }
-          >
-            <IconArrowLeft />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-mono text-sm font-semibold">
-              KK-{data.sessionId}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {countCopy.countMode(data.currentRound)}
-            </p>
-          </div>
-        </BranchOperatorControlBar>
         <Button
           variant="outline"
           size="touch"

@@ -1,19 +1,12 @@
 import Link from "next/link";
-import {
-  ArrowLeft as IconArrowLeft,
-  CalendarDays as IconCalendarDays,
-} from "lucide-react";
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { CalendarDays as IconCalendarDays } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { getEmployeeContext } from "../_lib/staff-runtime-context";
 import {
   EmployeeMissingProfileEmpty,
   EmployeePage,
 } from "../components/staff-runtime-page";
-import {
-  BranchOperatorControlBar,
-  BranchOperatorPage,
-} from "@lib/branch-operator/components/branch-operator-page";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { LeaveRequestClient } from "./leave-client";
 import { messages } from "@lib/messages";
 
@@ -23,45 +16,20 @@ type LeavePlane = "employee" | "branch";
 export async function EmployeeLeavePageContent({
   returnHref,
   routeBranchId,
-  hideHeaderOnMobile,
   profileHref,
   plane = "employee",
 }: {
   returnHref: string;
   routeBranchId?: number;
-  hideHeaderOnMobile?: boolean;
   profileHref: string;
   plane?: LeavePlane;
 }) {
   const ctx = await getEmployeeContext();
   const Page = plane === "branch" ? BranchOperatorPage : EmployeePage;
-  const mobileTitleBar =
-    plane === "branch" ? (
-      <BranchOperatorControlBar className="sm:hidden">
-        <Button
-          variant="ghost"
-          size="icon-touch"
-          render={<Link href={returnHref} aria-label={ACTIONS_VI.back} />}
-        >
-          <IconArrowLeft />
-        </Button>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">{copy.title}</p>
-          <p className="truncate text-xs text-muted-foreground">
-            {copy.description}
-          </p>
-        </div>
-      </BranchOperatorControlBar>
-    ) : null;
 
   if (!ctx) {
     return (
-      <Page
-        title={copy.title}
-        description={copy.description}
-        hideHeaderOnMobile={hideHeaderOnMobile}
-      >
-        {mobileTitleBar}
+      <Page title={copy.title} description={copy.description}>
         <EmployeeMissingProfileEmpty profileHref={profileHref} />
       </Page>
     );
@@ -94,7 +62,7 @@ export async function EmployeeLeavePageContent({
     <Page
       title={copy.title}
       description={copy.description}
-      hideHeaderOnMobile={hideHeaderOnMobile}
+
       action={
         plane === "employee" ? (
           <Button
@@ -109,7 +77,6 @@ export async function EmployeeLeavePageContent({
         ) : undefined
       }
     >
-      {mobileTitleBar}
       <LeaveRequestClient
         branchId={branchId}
         initialRequests={initialRequests}

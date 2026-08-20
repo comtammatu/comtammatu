@@ -5,18 +5,11 @@ import {
   EmployeeMissingProfileEmpty,
   EmployeePage,
 } from "../components/staff-runtime-page";
-import {
-  BranchOperatorControlBar,
-  BranchOperatorPage,
-} from "@lib/branch-operator/components/branch-operator-page";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { getVNMonthStartDateString } from "@comtammatu/shared/time";
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
 import { requestNow } from "@/_lib/request-now";
 import type { SchedulePlane } from "./schedule-client";
-import Link from "next/link";
-import { ArrowLeft as IconArrowLeft } from "lucide-react";
-import { Button } from "@comtammatu/ui/components/button";
 
 const copy = messages.employee.home;
 
@@ -43,33 +36,10 @@ export async function StaffSchedulePageContent({
 }: StaffSchedulePageContentProps) {
   const ctx = await getEmployeeContext();
   const PageShell = plane === "branch" ? BranchOperatorPage : EmployeePage;
-  const backHref =
-    plane === "branch" && routeBranchId != null
-      ? `/br/${routeBranchId}/shift`
-      : null;
-  const mobileTitleBar =
-    plane === "branch" && backHref ? (
-      <BranchOperatorControlBar className="sm:hidden">
-        <Button
-          variant="ghost"
-          size="icon-touch"
-          render={<Link href={backHref} aria-label={ACTIONS_VI.back} />}
-        >
-          <IconArrowLeft />
-        </Button>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">{copy.scheduleTitle}</p>
-        </div>
-      </BranchOperatorControlBar>
-    ) : null;
 
   if (!ctx) {
     return (
-      <PageShell
-        title={copy.scheduleTitle}
-        hideHeaderOnMobile={plane === "branch"}
-      >
-        {mobileTitleBar}
+      <PageShell title={copy.scheduleTitle}>
         <EmployeeMissingProfileEmpty profileHref={profileHref} />
       </PageShell>
     );
@@ -90,11 +60,7 @@ export async function StaffSchedulePageContent({
   ]);
 
   return (
-    <PageShell
-      title={copy.scheduleTitle}
-      hideHeaderOnMobile={plane === "branch"}
-    >
-      {mobileTitleBar}
+    <PageShell title={copy.scheduleTitle}>
       <ScheduleClient
         initialData={
           scheduleResult.success

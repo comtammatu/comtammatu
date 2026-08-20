@@ -1,11 +1,10 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { UserCircle as IconUserCircle } from "lucide-react";
 import {
-  ArrowLeft as IconArrowLeft,
-  UserCircle as IconUserCircle,
-} from "lucide-react";
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
-import { canSubscribeBranchOpsTopic, type JwtClaims } from "@comtammatu/shared/auth";
+  canSubscribeBranchOpsTopic,
+  type JwtClaims,
+} from "@comtammatu/shared/auth";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { getVNDateString } from "@comtammatu/shared/time";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -20,7 +19,6 @@ import {
   EmployeePage,
 } from "../components/staff-runtime-page";
 import {
-  BranchOperatorControlBar,
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -153,10 +151,6 @@ interface EmployeeCountSurfaceProps {
   profileHref: string;
   plane?: CountPlane;
   shiftId?: number | null;
-}
-
-interface EmployeeCountPageContentProps extends EmployeeCountSurfaceProps {
-  hideHeaderOnMobile?: boolean;
 }
 
 async function buildEmployeeCountSurface({
@@ -480,44 +474,14 @@ export async function StaffCountPanelContent(props: EmployeeCountSurfaceProps) {
   return content;
 }
 
-export async function StaffCountPageContent({
-  hideHeaderOnMobile,
-  ...props
-}: EmployeeCountPageContentProps) {
+export async function StaffCountPageContent(props: EmployeeCountSurfaceProps) {
   const { branchId, branchName, claims, content } =
     await buildEmployeeCountSurface(props);
   const PageShell =
     props.plane === "branch" ? BranchOperatorPage : EmployeePage;
-  const backHref =
-    props.plane === "branch" && props.routeBranchId != null
-      ? `/br/${props.routeBranchId}/stock`
-      : null;
 
   return (
-    <PageShell
-      title={copy.title}
-      description={branchName ?? undefined}
-      hideHeaderOnMobile={hideHeaderOnMobile}
-    >
-      {backHref ? (
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button
-            variant="ghost"
-            size="icon-touch"
-            render={<Link href={backHref} aria-label={ACTIONS_VI.back} />}
-          >
-            <IconArrowLeft />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{copy.title}</p>
-            {branchName ? (
-              <p className="truncate text-xs text-muted-foreground">
-                {branchName}
-              </p>
-            ) : null}
-          </div>
-        </BranchOperatorControlBar>
-      ) : null}
+    <PageShell title={copy.title} description={branchName ?? undefined}>
       {branchId !== null &&
       props.routeBranchId == null &&
       claims !== null &&

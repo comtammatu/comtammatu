@@ -3,14 +3,12 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
-  ArrowLeft as IconArrowLeft,
   ChevronLeft,
   ChevronRight,
   ClipboardCheck,
   Package,
   Users,
 } from "lucide-react";
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { formatPercent, formatVND } from "@comtammatu/shared/format";
 import { getPaymentMethodLabelVi } from "@comtammatu/shared/labels";
 import {
@@ -31,7 +29,6 @@ import {
 } from "@comtammatu/ui/components/item";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import {
-  BranchOperatorControlBar,
   BranchOperatorPanel,
   BranchOperatorStatusStrip,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -157,7 +154,9 @@ export function CloseDayClient({
     items.sort((a, b) =>
       itemSort === "qty"
         ? b.qty - a.qty || b.revenue - a.revenue || a.name.localeCompare(b.name)
-        : b.revenue - a.revenue || b.qty - a.qty || a.name.localeCompare(b.name),
+        : b.revenue - a.revenue ||
+          b.qty - a.qty ||
+          a.name.localeCompare(b.name),
     );
     return items;
   }, [itemSort, report?.top_items]);
@@ -205,20 +204,6 @@ export function CloseDayClient({
   if (loadFailed) {
     return (
       <div className="flex w-full min-w-0 flex-col gap-4">
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button
-            variant="ghost"
-            size="icon-touch"
-            render={
-              <Link href={`/br/${branchId}`} aria-label={ACTIONS_VI.back} />
-            }
-          >
-            <IconArrowLeft />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{copy.closeDayTitle}</p>
-          </div>
-        </BranchOperatorControlBar>
         <BranchOperatorPanel title={copy.closeDayTitle}>
           <NoteCallout tone="warning" title={copy.closeDayLoadFailedTitle}>
             {copy.closeDayLoadFailedBody}
@@ -230,20 +215,6 @@ export function CloseDayClient({
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-4">
-      <BranchOperatorControlBar className="sm:hidden">
-        <Button
-          variant="ghost"
-          size="icon-touch"
-          render={
-            <Link href={`/br/${branchId}`} aria-label={ACTIONS_VI.back} />
-          }
-        >
-          <IconArrowLeft />
-        </Button>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">{copy.closeDayTitle}</p>
-        </div>
-      </BranchOperatorControlBar>
       {dateNav}
       <p className="text-xs text-muted-foreground">{copy.closeDayCutoffNote}</p>
 
@@ -416,7 +387,9 @@ export function CloseDayClient({
                 <ItemContent>
                   <ItemTitle className="text-sm">{item.name}</ItemTitle>
                   <ItemDescription className="text-xs">
-                    {ITEM_SOURCE_LABEL[item.source] ?? copy.closeDayItemSourceMain} · {item.qty}
+                    {ITEM_SOURCE_LABEL[item.source] ??
+                      copy.closeDayItemSourceMain}{" "}
+                    · {item.qty}
                   </ItemDescription>
                 </ItemContent>
                 <ItemActions>
@@ -434,7 +407,9 @@ export function CloseDayClient({
         <SectionLabel>{copy.closeDaySessionsTitle}</SectionLabel>
         <div className="mt-3 flex flex-col gap-2">
           {sessions.length === 0 ? (
-            <p className="text-xs text-muted-foreground">{copy.closeDayNoSessions}</p>
+            <p className="text-xs text-muted-foreground">
+              {copy.closeDayNoSessions}
+            </p>
           ) : (
             <ItemGroup className="gap-2">
               {openSessions.map((session) => (
@@ -489,7 +464,9 @@ export function CloseDayClient({
             render={<Link href={`/br/${branchId}/stock/waste-approvals`} />}
           >
             <ItemContent>
-              <ItemTitle className="text-sm">{copy.closeDayStep2WasteTitle}</ItemTitle>
+              <ItemTitle className="text-sm">
+                {copy.closeDayStep2WasteTitle}
+              </ItemTitle>
               <ItemDescription className="text-xs">
                 {copy.closeDayPendingWasteText(pendingWasteCount)}
               </ItemDescription>
@@ -507,7 +484,9 @@ export function CloseDayClient({
             render={<Link href={`/br/${branchId}/stock/count-slips`} />}
           >
             <ItemContent>
-              <ItemTitle className="text-sm">{copy.closeDayStep2CountTitle}</ItemTitle>
+              <ItemTitle className="text-sm">
+                {copy.closeDayStep2CountTitle}
+              </ItemTitle>
               <ItemDescription className="text-xs">
                 {copy.closeDayPendingCountSlipsText(pendingCountSlipsCount)}
               </ItemDescription>
@@ -552,7 +531,9 @@ export function CloseDayClient({
                 </ItemContent>
                 <ItemActions>
                   {row.checkoutPending ? (
-                    <Badge variant="warning">{copy.closeDayCheckoutPending}</Badge>
+                    <Badge variant="warning">
+                      {copy.closeDayCheckoutPending}
+                    </Badge>
                   ) : row.checkOut ? (
                     <Badge variant="secondary">{copy.closeDayCheckedOut}</Badge>
                   ) : (

@@ -15,7 +15,6 @@ import {
   updateCategory,
   type CategoryRow,
 } from "@/(protected)/inventory/settings/categories/categories-actions";
-import { CatalogBackControl } from "../catalog-back-header";
 import {
   CatalogList,
   CATALOG_DELETE_ICON,
@@ -39,13 +38,7 @@ const NEW_CATEGORY_DEFAULTS: CategoryFormValues = {
   is_active: true,
 };
 
-export function CatalogCategoriesClient({
-  backHref,
-  rows,
-}: {
-  backHref: string;
-  rows: CategoryRow[];
-}) {
+export function CatalogCategoriesClient({ rows }: { rows: CategoryRow[] }) {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editRow, setEditRow] = useState<CategoryRow | null>(null);
@@ -99,8 +92,6 @@ export function CatalogCategoriesClient({
 
   return (
     <div className="flex flex-col gap-3">
-      <CatalogBackControl title={copy.title} backHref={backHref} />
-
       <CatalogList
         rows={rows}
         getRowKey={(row) => row.id}

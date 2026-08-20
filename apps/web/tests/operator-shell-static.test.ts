@@ -257,9 +257,18 @@ test("operator home keeps visible mobile identity while detail pages may compact
   assert.match(surface, /compactOnMobile\?: boolean/);
   assert.match(surface, /compactOnMobile && "max-sm:text-base"/);
   assert.match(surface, /compactOnMobile && "max-sm:hidden"/);
-  assert.match(home, /hideHeaderOnMobile/);
-  assert.match(stock, /hideHeaderOnMobile/);
+  // Page title stays in AppPageHeader — no duplicate mobile ControlBar title strip.
+  assert.doesNotMatch(home, /hideHeaderOnMobile/);
+  assert.doesNotMatch(stock, /hideHeaderOnMobile/);
   assert.doesNotMatch(settings, /hideHeaderOnMobile/);
+  assert.doesNotMatch(
+    home,
+    /<BranchOperatorControlBar className="sm:hidden">/,
+  );
+  assert.doesNotMatch(
+    stock,
+    /<BranchOperatorControlBar className="sm:hidden">/,
+  );
   assert.match(dashboard, /redirect\(`\/br\/\$\{branchId\}`\)/);
   assert.doesNotMatch(dashboard, /hideHeaderOnMobile|BranchOperatorPage/);
 });

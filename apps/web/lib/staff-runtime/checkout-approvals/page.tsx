@@ -5,7 +5,6 @@ import {
   ClipboardCheck as IconClipboardCheck,
   Home as IconHome,
   ShieldAlert as IconShieldAlert,
-  ArrowLeft as IconArrowLeft,
 } from "lucide-react";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import { formatCount } from "@comtammatu/shared/format";
@@ -16,7 +15,6 @@ import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { AppEmptyState } from "@/components/surface";
 import {
-  BranchOperatorControlBar,
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -64,7 +62,6 @@ interface CheckoutApprovalsPageContentProps {
   routeBranchId: number | null;
   ownerHomeHref?: string;
   focusAttendanceId?: number;
-  hideHeaderOnMobile?: boolean;
   plane?: CheckoutApprovalsPlane;
   /** Render queue without Employee/Branch page chrome (Owner attendance tab). */
   embedded?: boolean;
@@ -76,7 +73,6 @@ export async function StaffCheckoutApprovalsPageContent({
   routeBranchId,
   ownerHomeHref,
   focusAttendanceId,
-  hideHeaderOnMobile,
   plane = "employee",
   embedded = false,
 }: CheckoutApprovalsPageContentProps) {
@@ -105,7 +101,7 @@ export async function StaffCheckoutApprovalsPageContent({
       <PageShell
         title={copy.checkoutApprovalsTitle}
         description={copy.checkoutApprovalsDescriptionAll}
-        hideHeaderOnMobile={hideHeaderOnMobile}
+
         action={
           plane === "employee" ? (
             <Button
@@ -120,27 +116,6 @@ export async function StaffCheckoutApprovalsPageContent({
           ) : undefined
         }
       >
-        {plane === "branch" && routeBranchId != null ? (
-          <BranchOperatorControlBar className="sm:hidden">
-            <Button
-              variant="ghost"
-              size="icon-touch"
-              render={
-                <Link
-                  href={`/br/${routeBranchId}/team`}
-                  aria-label="Quay lại đội"
-                />
-              }
-            >
-              <IconArrowLeft />
-            </Button>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold">
-                {copy.checkoutApprovalsTitle}
-              </p>
-            </div>
-          </BranchOperatorControlBar>
-        ) : null}
         <AppEmptyState
           title="Không có quyền duyệt kết ca"
           description="Chỉ tài khoản quản lý có quyền nhân sự mới duyệt yêu cầu kết ca."
@@ -255,7 +230,7 @@ export async function StaffCheckoutApprovalsPageContent({
     <PageShell
       title={copy.checkoutApprovalsTitle}
       description={copy.checkoutApprovalsDescriptionAll}
-      hideHeaderOnMobile={hideHeaderOnMobile}
+
       action={
         plane === "employee" ? (
           <Button
@@ -270,27 +245,6 @@ export async function StaffCheckoutApprovalsPageContent({
         ) : undefined
       }
     >
-      {plane === "branch" && routeBranchId != null ? (
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button
-            variant="ghost"
-            size="icon-touch"
-            render={
-              <Link
-                href={`/br/${routeBranchId}/team`}
-                aria-label="Quay lại đội"
-              />
-            }
-          >
-            <IconArrowLeft />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">
-              {copy.checkoutApprovalsTitle}
-            </p>
-          </div>
-        </BranchOperatorControlBar>
-      ) : null}
       {plane === "branch" ? (
         queue
       ) : (

@@ -26,16 +26,10 @@ async function CatalogSuppliersBody({
   params: Promise<{ branchId: string }>;
 }) {
   const { branchId: rawBranchId } = await params;
-  const branchId = parseOperatorBranchId(rawBranchId);
-  if (branchId == null) notFound();
+  if (parseOperatorBranchId(rawBranchId) == null) notFound();
 
   const res = await fetchSuppliers();
   const rows: SupplierRow[] = res.success ? (res.data as SupplierRow[]) : [];
 
-  return (
-    <CatalogSuppliersClient
-      backHref={`/br/${branchId}/stock/catalog`}
-      initial={rows}
-    />
-  );
+  return <CatalogSuppliersClient initial={rows} />;
 }

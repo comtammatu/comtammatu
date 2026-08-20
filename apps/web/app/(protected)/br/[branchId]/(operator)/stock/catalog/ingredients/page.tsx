@@ -34,8 +34,7 @@ async function CatalogIngredientsBody({
   params: Promise<{ branchId: string }>;
 }) {
   const { branchId: rawBranchId } = await params;
-  const branchId = parseOperatorBranchId(rawBranchId);
-  if (branchId == null) notFound();
+  if (parseOperatorBranchId(rawBranchId) == null) notFound();
 
   const [ingredients, unitOptions, categoryOptions] = await Promise.all([
     fetchIngredients(),
@@ -55,7 +54,6 @@ async function CatalogIngredientsBody({
 
   return (
     <CatalogIngredientsClient
-      backHref={`/br/${branchId}/stock/catalog`}
       initial={rows}
       unitOptions={units}
       categoryOptions={categories}

@@ -1,17 +1,9 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 "use client";
 
-import Link from "next/link";
-import {
-  useEffect,
-  useMemo,
-  useState,
-  useTransition,
-  type MouseEvent,
-} from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft as IconArrowLeft,
   Check as IconCheck,
   ChevronRight as IconChevronRight,
   PackageCheck as IconPackageCheck,
@@ -37,12 +29,8 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
+import { AppEmptyState, AppSheet } from "@/components/surface";
 import {
-  AppEmptyState,
-  AppSheet,
-} from "@/components/surface";
-import {
-  BranchOperatorControlBar,
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -61,7 +49,6 @@ function getHighestTier(row: PendingWasteRow): number {
 }
 
 export function BranchWasteApprovalsClient({
-  branchId,
   branchName,
   canApproveWaste,
   loadFailed,
@@ -75,7 +62,6 @@ export function BranchWasteApprovalsClient({
 }) {
   const router = useRouter();
   const copy = messages.inventory.waste.approvals;
-  const stockBasePath = `/br/${branchId}/stock`;
   const [rows, setRows] = useState(initial);
   const [selectedIssueId, setSelectedIssueId] = useState<number | null>(null);
   const [reviewNotes, setReviewNotes] = useState<Record<number, string>>({});
@@ -113,27 +99,6 @@ export function BranchWasteApprovalsClient({
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [hasUnsavedNotes]);
-
-  async function requestLeave() {
-    if (isSubmitting) return;
-    if (hasUnsavedNotes) {
-      const confirmed = await confirm({
-        title: "Bỏ lý do từ chối?",
-        description: "Lý do từ chối chưa gửi sẽ bị mất.",
-        confirmText: "Bỏ lý do",
-        cancelText: "Tiếp tục duyệt",
-        variant: "destructive",
-      });
-      if (!confirmed) return;
-    }
-    router.push(stockBasePath);
-  }
-
-  function handleLeaveClick(event: MouseEvent<HTMLAnchorElement>) {
-    if (!isSubmitting && !hasUnsavedNotes) return;
-    event.preventDefault();
-    if (!isSubmitting) void requestLeave();
-  }
 
   async function requestDecision(
     row: PendingWasteRow,
@@ -198,28 +163,7 @@ export function BranchWasteApprovalsClient({
 
   if (!canApproveWaste) {
     return (
-      <BranchOperatorPage
-        title={copy.title}
-        description={branchName}
-        hideHeaderOnMobile
-      >
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button
-            variant="ghost"
-            size="icon-touch"
-            render={
-              <Link href={stockBasePath} aria-label={ACTIONS_VI.back} />
-            }
-          >
-            <IconArrowLeft aria-hidden="true" />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{copy.title}</p>
-            <p className="truncate text-xs text-muted-foreground">
-              {branchName}
-            </p>
-          </div>
-        </BranchOperatorControlBar>
+      <BranchOperatorPage title={copy.title} description={branchName}>
         <AppEmptyState
           compact
           mode="no-access"
@@ -233,28 +177,7 @@ export function BranchWasteApprovalsClient({
 
   if (loadFailed) {
     return (
-      <BranchOperatorPage
-        title={copy.title}
-        description={branchName}
-        hideHeaderOnMobile
-      >
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button
-            variant="ghost"
-            size="icon-touch"
-            render={
-              <Link href={stockBasePath} aria-label={ACTIONS_VI.back} />
-            }
-          >
-            <IconArrowLeft aria-hidden="true" />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{copy.title}</p>
-            <p className="truncate text-xs text-muted-foreground">
-              {branchName}
-            </p>
-          </div>
-        </BranchOperatorControlBar>
+      <BranchOperatorPage title={copy.title} description={branchName}>
         <AppEmptyState
           compact
           mode="no-data"
@@ -271,38 +194,8 @@ export function BranchWasteApprovalsClient({
   }
 
   return (
-    <BranchOperatorPage
-      title={copy.title}
-      description={branchName}
-      hideHeaderOnMobile
-    >
+    <BranchOperatorPage title={copy.title} description={branchName}>
       <div className="flex min-w-0 touch-manipulation flex-col gap-3 pb-4">
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button
-            variant="ghost"
-            size="icon-touch"
-            render={
-              <Link
-                href={stockBasePath}
-                aria-label="Quay lại kho"
-                aria-disabled={isSubmitting || undefined}
-                className={
-                  isSubmitting ? "pointer-events-none opacity-50" : undefined
-                }
-                onClick={handleLeaveClick}
-              />
-            }
-          >
-            <IconArrowLeft aria-hidden="true" />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{copy.title}</p>
-            <p className="truncate text-xs text-muted-foreground">
-              {branchName}
-            </p>
-          </div>
-        </BranchOperatorControlBar>
-
         <BranchOperatorPanel
           title="Phiếu chờ duyệt"
           description={copy.principle}
@@ -338,31 +231,31 @@ export function BranchWasteApprovalsClient({
                       />
                     }
                   >
-                      <ItemContent className="min-w-0 gap-1">
-                        <ItemTitle className="line-clamp-none break-words text-sm font-semibold">
-                          {row.issueNumber}
-                        </ItemTitle>
-                        <ItemDescription className="line-clamp-none break-words text-xs">
-                          {row.createdByName} · {formatVNDateTime(row.issuedAt)}
-                        </ItemDescription>
-                        <ItemDescription className="line-clamp-none text-xs">
-                          {row.shiftKey || "Chưa có ca"} ·{" "}
-                          {copy.lineCount(row.items.length)}
-                        </ItemDescription>
-                        {row.isSelfCreated ? (
-                          <Badge variant="outline" className="w-fit text-xs">
-                            {copy.selfCreatedBadge}
-                          </Badge>
-                        ) : null}
-                      </ItemContent>
-                      <ItemActions className="shrink-0">
-                        <WasteTierBadge tier={highestTier} compact />
-                        <IconChevronRight
-                          aria-hidden="true"
-                          className="size-4 text-muted-foreground"
-                        />
-                      </ItemActions>
-                    </Item>
+                    <ItemContent className="min-w-0 gap-1">
+                      <ItemTitle className="line-clamp-none break-words text-sm font-semibold">
+                        {row.issueNumber}
+                      </ItemTitle>
+                      <ItemDescription className="line-clamp-none break-words text-xs">
+                        {row.createdByName} · {formatVNDateTime(row.issuedAt)}
+                      </ItemDescription>
+                      <ItemDescription className="line-clamp-none text-xs">
+                        {row.shiftKey || "Chưa có ca"} ·{" "}
+                        {copy.lineCount(row.items.length)}
+                      </ItemDescription>
+                      {row.isSelfCreated ? (
+                        <Badge variant="outline" className="w-fit text-xs">
+                          {copy.selfCreatedBadge}
+                        </Badge>
+                      ) : null}
+                    </ItemContent>
+                    <ItemActions className="shrink-0">
+                      <WasteTierBadge tier={highestTier} compact />
+                      <IconChevronRight
+                        aria-hidden="true"
+                        className="size-4 text-muted-foreground"
+                      />
+                    </ItemActions>
+                  </Item>
                 );
               })}
             </div>
@@ -427,10 +320,7 @@ export function BranchWasteApprovalsClient({
                     pendingDecision.decision === "approved" ? (
                       <Spinner className="size-5" />
                     ) : (
-                      <IconCheck
-                        aria-hidden="true"
-                        data-icon="inline-start"
-                      />
+                      <IconCheck aria-hidden="true" data-icon="inline-start" />
                     )}
                     {copy.approve}
                   </Button>

@@ -1,5 +1,4 @@
 import {
-  ArrowLeft as IconArrowLeft,
   CalendarDays as IconBirthDate,
   CalendarRange as IconSchedule,
   FileSpreadsheet as IconLeave,
@@ -8,7 +7,6 @@ import {
   Phone as IconPhone,
   Receipt as IconReceipt,
 } from "lucide-react";
-import Link from "next/link";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import {
   Avatar,
@@ -20,7 +18,6 @@ import { loadAuthState } from "@/_lib/auth";
 import {
   BranchOperatorActionBar,
   BranchOperatorActionSection,
-  BranchOperatorControlBar,
   BranchOperatorDetailList,
   BranchOperatorInlineState,
   BranchOperatorPage,
@@ -183,30 +180,7 @@ export async function StaffProfilePageContent({
         title={copy.title}
         description={copy.description}
         badge={{ children: positionLabel, variant: "outline" }}
-        hideHeaderOnMobile
       >
-        {effectiveBranchId != null ? (
-          <BranchOperatorControlBar className="sm:hidden">
-            <Button
-              variant="ghost"
-              size="icon-touch"
-              render={
-                <Link
-                  href={`/br/${effectiveBranchId}`}
-                  aria-label={ACTIONS_VI.back}
-                />
-              }
-            >
-              <IconArrowLeft />
-            </Button>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold">{copy.title}</p>
-              <p className="truncate text-xs text-muted-foreground">
-                {copy.description}
-              </p>
-            </div>
-          </BranchOperatorControlBar>
-        ) : null}
         <BranchOperatorPanel tone="info">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:items-start sm:gap-4 sm:text-left">
@@ -458,4 +432,3 @@ export async function StaffProfilePageContent({
     </EmployeePage>
   );
 }
-

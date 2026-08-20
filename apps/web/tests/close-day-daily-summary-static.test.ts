@@ -70,19 +70,10 @@ test("close-day is Daily Summary only (ADR 0024)", () => {
   assert.doesNotMatch(dateNav, /size="sm"/);
   assert.doesNotMatch(dateNav, />\s*\{copy\.closeDayPrevDate\}/);
   assert.doesNotMatch(dateNav, />\s*\{copy\.closeDayNextDate\}/);
-  const mobileTitleBars = [
-    ...client.matchAll(
-      /<BranchOperatorControlBar className="sm:hidden">[\s\S]*?<\/BranchOperatorControlBar>/g,
-    ),
-  ].map((match) => match[0]);
-  assert.ok(
-    mobileTitleBars.length >= 2,
-    "close-day must keep mobile ControlBars",
+  assert.doesNotMatch(
+    client,
+    /<BranchOperatorControlBar className="sm:hidden">/,
   );
-  for (const bar of mobileTitleBars) {
-    assert.doesNotMatch(bar, /formatVNDate/);
-    assert.doesNotMatch(bar, /size="touch"/);
-  }
   assert.match(data, /get_branch_day_report/);
   assert.match(page, /searchParams/);
   assert.match(page, /date\?: string/);

@@ -2,7 +2,6 @@
 import type { ElementType, ReactNode } from "react";
 import Link from "next/link";
 import {
-  ArrowLeft as IconArrowLeft,
   CalendarDays as IconCalendar,
   CalendarX2 as IconLeave,
   Camera as IconCamera,
@@ -22,7 +21,6 @@ import {
   type StaffRole,
 } from "@comtammatu/shared/auth";
 import { formatPercent } from "@comtammatu/shared/format";
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { formatVNClockTime } from "@comtammatu/shared/time";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import {
@@ -67,7 +65,10 @@ import {
   type TodayWorkState,
   type TodayWorkStatus,
 } from "./_lib/today-work-state";
-import { getClockInBlockedMessage, isClockInBlocked } from "./_lib/clock-in-copy";
+import {
+  getClockInBlockedMessage,
+  isClockInBlocked,
+} from "./_lib/clock-in-copy";
 import { formatDateVN, formatTimeVN } from "./_lib/vn-business-date";
 import { AppEmptyState } from "@/components/surface";
 import { TasksClient } from "./tasks/tasks-client";
@@ -849,7 +850,7 @@ export async function StaffWorkdayPageContent({
     ) : null;
   const checkoutRejectedNote =
     state.status === "working"
-      ? (state.attendance?.checkoutApprovalNote?.trim() || null)
+      ? state.attendance?.checkoutApprovalNote?.trim() || null
       : null;
   const checkoutRejectedNotice = checkoutRejectedNote ? (
     <Alert variant="destructive">
@@ -1041,9 +1042,7 @@ export async function StaffWorkdayPageContent({
     state.managerAttendanceOnly ||
     (hasClockedIn && (requiredTasksDone || checkoutPending || checkoutDone));
   const tasksActive =
-    !state.managerAttendanceOnly &&
-    hasClockedIn &&
-    state.status === "working";
+    !state.managerAttendanceOnly && hasClockedIn && state.status === "working";
   const checkoutActive =
     hasClockedIn && state.status === "working" && canRequestCheckout(state);
   const checkoutAction = checkoutActive ? (
@@ -1064,18 +1063,16 @@ export async function StaffWorkdayPageContent({
     statusLabel: hasClockedIn ? copy.shiftDone : copy.workflowCurrent,
     statusVariant: hasClockedIn ? "success" : "warning",
     tone: hasClockedIn ? "success" : "warning",
-    content: hasClockedIn
-      ? undefined
-      : isClockInBlocked(state)
-        ? primaryAction
-        : (
-            <ClockClient
-              state={state}
-              routes={clockRoutes}
-              plane={plane}
-              surface="embedded"
-            />
-          ),
+    content: hasClockedIn ? undefined : isClockInBlocked(state) ? (
+      primaryAction
+    ) : (
+      <ClockClient
+        state={state}
+        routes={clockRoutes}
+        plane={plane}
+        surface="embedded"
+      />
+    ),
   };
   const taskStep: ShiftWorkflowStep = {
     key: "tasks",
@@ -1232,33 +1229,7 @@ export async function StaffWorkdayPageContent({
     );
 
   return (
-    <PageShell
-      title={copy.title}
-      description={copy.description}
-      hideHeaderOnMobile
-    >
-      {plane === "branch" && state.branchId != null ? (
-        <BranchOperatorControlBar className="sm:hidden">
-          <Button
-            variant="ghost"
-            size="icon-touch"
-            render={
-              <Link
-                href={`/br/${state.branchId}`}
-                aria-label={ACTIONS_VI.back}
-              />
-            }
-          >
-            <IconArrowLeft />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{copy.title}</p>
-            <p className="truncate text-xs text-muted-foreground">
-              {copy.description}
-            </p>
-          </div>
-        </BranchOperatorControlBar>
-      ) : null}
+    <PageShell title={copy.title} description={copy.description}>
       {enableBranchOpsRefresh &&
       state.branchId !== null &&
       canSubscribeBranchOpsTopic(claims, state.branchId) ? (
