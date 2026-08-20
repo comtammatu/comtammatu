@@ -373,7 +373,7 @@ export function GRNDetailClient({
       {
         key: "name",
         header: grnCopy.lineHeaderName,
-        className: "min-w-64 max-w-80 align-top",
+        className: "min-w-56 max-w-72 align-top",
         render: (line) => (
           <div className="min-w-0">
             <p className="min-w-0 truncate font-medium">{line.name}</p>
@@ -398,7 +398,7 @@ export function GRNDetailClient({
       {
         key: "ordered",
         header: grnCopy.lineHeaderOrdered,
-        className: "align-top",
+        className: "w-28 min-w-24 align-top",
         render: (line) => {
           const orderedQty = line.poQuantity ?? line.remainingQuantity;
           return (
@@ -420,7 +420,7 @@ export function GRNDetailClient({
       {
         key: "actual",
         header: grnCopy.lineHeaderQty,
-        className: "min-w-44 align-top",
+        className: "min-w-52 align-top",
         render: (line, idx) =>
           canMutateDraft && isDesktopLineEdit ? (
             <LineRow

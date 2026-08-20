@@ -13,15 +13,8 @@ import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@comtammatu/ui/components/toggle-group";
-import {
-  Bike as IconBike,
   LayoutGrid as IconLayoutGrid,
-  Package as IconPackage,
   Trash as IconTrash,
-  Utensils as IconUtensils,
   X as IconX,
 } from "lucide-react";
 import { Spinner } from "@comtammatu/ui/components/spinner";
@@ -35,7 +28,7 @@ import {
   getPosLineItemDisplayName,
   getPosLineItemSummary,
 } from "../types";
-import type { CartItem, OrderType } from "../types";
+import type { CartItem } from "../types";
 import { DELIVERY_PLATFORMS } from "../types";
 import {
   DeliveryPlatformMark,
@@ -65,7 +58,6 @@ interface CartPaneProps {
   canSubmit: boolean;
   isSubmitting: boolean;
   onSubmitOrder: (options?: SubmitOrderOptions) => void;
-  onOrderTypeChange: (type: OrderType) => void;
   onCustomizeItem: (item: CartItem) => void;
   onClosePane?: () => void;
   onReturnToTables?: () => void;
@@ -75,7 +67,6 @@ function CartPaneComponent({
   canSubmit,
   isSubmitting,
   onSubmitOrder,
-  onOrderTypeChange,
   onCustomizeItem,
   onClosePane,
   onReturnToTables,
@@ -101,7 +92,6 @@ function CartPaneComponent({
 
   const selectedTableNumber = activeTable.table?.number;
   const totalQuantity = cart.quantity;
-  const modeLocked = cart.items.length > 0 || selectedTableNumber != null;
   const contextLabel =
     cart.orderType === "delivery"
       ? messages.pos.desktop.newDeliveryTarget
@@ -113,9 +103,6 @@ function CartPaneComponent({
 
   const deliveryReady =
     cart.deliveryPlatform != null && cart.externalOrderRef.trim().length > 0;
-
-  const shouldShowOrderTypeSelector =
-    cart.items.length === 0 && selectedTableNumber == null;
   const hasRemovingItems = removingKeys.size > 0;
 
   // One-shot enter for newly added cart lines. A merged quantity++ reuses the
@@ -177,24 +164,6 @@ function CartPaneComponent({
         ) {
           onSubmitOrder();
         }
-      },
-    },
-    {
-      key: "g",
-      handler: () => {
-        if (!cartDialogOpen && !modeLocked) onOrderTypeChange("delivery");
-      },
-    },
-    {
-      key: "t",
-      handler: () => {
-        if (!cartDialogOpen && !modeLocked) onOrderTypeChange("takeaway");
-      },
-    },
-    {
-      key: "d",
-      handler: () => {
-        if (!cartDialogOpen && !modeLocked) onOrderTypeChange("dine_in");
       },
     },
   ]);
@@ -262,7 +231,7 @@ function CartPaneComponent({
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-background">
       {isMobileDrawer ? (
-        shouldShowOrderTypeSelector ? null : cart.items.length > 0 ? (
+        cart.items.length > 0 ? (
           <div className="flex shrink-0 items-center justify-between border-b border-border/60 px-3 py-2">
             <Badge variant="outline" className="max-w-full truncate">
               {contextLabel}
@@ -280,112 +249,52 @@ function CartPaneComponent({
           </div>
         ) : null
       ) : (
-        <div
-          className={cn(
-            "shrink-0 border-b border-border/60",
-            shouldShowOrderTypeSelector ? "p-0" : "px-3 py-3 sm:px-4 sm:py-4",
-          )}
-        >
-          {!shouldShowOrderTypeSelector && (
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <h2 className="font-heading text-base font-semibold tracking-tight text-foreground">
-                  {messages.pos.desktop.pendingNewTitle}
-                </h2>
-                <Badge variant="outline" className="mt-1 max-w-full truncate">
-                  {contextLabel}
-                </Badge>
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                {cart.orderType === "dine_in" &&
-                  selectedTableNumber != null && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="touch"
-                      className="min-w-12 px-3 text-sm text-muted-foreground"
-                      onClick={() => {
-                        if (onReturnToTables) {
-                          onReturnToTables();
-                        } else {
-                          activeTable.setTable(null);
-                        }
-                      }}
-                    >
-                      <IconLayoutGrid data-icon="inline-start" />
-                      {messages.pos.desktop.changeTarget}
-                    </Button>
-                  )}
-                {cart.items.length > 0 && (
+        <div className="shrink-0 border-b border-border/60 px-3 py-3 sm:px-4 sm:py-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="font-heading text-base font-semibold tracking-tight text-foreground">
+                {messages.pos.desktop.pendingNewTitle}
+              </h2>
+              <Badge variant="outline" className="mt-1 max-w-full truncate">
+                {contextLabel}
+              </Badge>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              {cart.orderType === "dine_in" &&
+                selectedTableNumber != null && (
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="outline"
                     size="touch"
-                    className="min-w-12 shrink-0 px-3 text-sm text-muted-foreground"
-                    onClick={() => void handleClearCart()}
+                    className="min-w-12 px-3 text-sm text-muted-foreground"
+                    onClick={() => {
+                      if (onReturnToTables) {
+                        onReturnToTables();
+                      } else {
+                        activeTable.setTable(null);
+                      }
+                    }}
                   >
-                    <IconTrash data-icon="inline-start" />
-                    {messages.pos.pendingDraft.clear}
+                    <IconLayoutGrid data-icon="inline-start" />
+                    {messages.pos.desktop.changeTarget}
                   </Button>
                 )}
-              </div>
+              {cart.items.length > 0 && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="touch"
+                  className="min-w-12 shrink-0 px-3 text-sm text-muted-foreground"
+                  onClick={() => void handleClearCart()}
+                >
+                  <IconTrash data-icon="inline-start" />
+                  {messages.pos.pendingDraft.clear}
+                </Button>
+              )}
             </div>
-          )}
-
-          {shouldShowOrderTypeSelector && (
-            <ToggleGroup
-              type="single"
-              value={cart.orderType}
-              variant="outline"
-              size="touch"
-              spacing={0}
-              className="grid w-full grid-cols-3"
-              aria-label={messages.pos.desktop.serviceModeAria}
-              onValueChange={(value) => {
-                if (
-                  !modeLocked &&
-                  (value === "dine_in" ||
-                    value === "takeaway" ||
-                    value === "delivery")
-                ) {
-                  onOrderTypeChange(value);
-                }
-              }}
-            >
-            <ToggleGroupItem
-              value="dine_in"
-              className="min-w-0 justify-center gap-2 text-base font-semibold"
-              aria-keyshortcuts="D"
-              disabled={modeLocked && cart.orderType !== "dine_in"}
-            >
-              <IconUtensils data-icon="inline-start" />
-              {messages.pos.desktop.dineIn}
-              <Kbd className="hidden [@media(hover:hover)]:inline-flex border-current/20 bg-current/10 text-inherit">D</Kbd>
-            </ToggleGroupItem>
-            <ToggleGroupItem
-              value="takeaway"
-              className="min-w-0 justify-center gap-2 text-base font-semibold"
-              aria-keyshortcuts="T"
-              disabled={modeLocked && cart.orderType !== "takeaway"}
-            >
-              <IconPackage data-icon="inline-start" />
-              {messages.pos.desktop.takeaway}
-              <Kbd className="hidden [@media(hover:hover)]:inline-flex border-current/20 bg-current/10 text-inherit">T</Kbd>
-            </ToggleGroupItem>
-            <ToggleGroupItem
-              value="delivery"
-              className="min-w-0 justify-center gap-1.5 text-base font-semibold"
-              aria-keyshortcuts="G"
-              disabled={modeLocked && cart.orderType !== "delivery"}
-            >
-              <IconBike data-icon="inline-start" />
-              {messages.pos.desktop.delivery}
-              <Kbd className="hidden [@media(hover:hover)]:inline-flex border-current/20 bg-current/10 text-inherit">G</Kbd>
-            </ToggleGroupItem>
-          </ToggleGroup>
-        )}
-      </div>
-    )}
+          </div>
+        </div>
+      )}
 
       {cart.orderType === "delivery" ? (
         <div

@@ -359,7 +359,7 @@ Single helper: `useKeyboardShortcut` in
 
 | Surface | Keys |
 | --- | --- |
-| POS cart (`cart-pane.tsx`) | `Cmd/Ctrl + Enter` send-to-kitchen confirm (fires while typing a note); `T` takeaway; `D` dine-in |
+| POS cart (`cart-pane.tsx`) | `Cmd/Ctrl + Enter` send-to-kitchen confirm (fires while typing a note) |
 | POS append draft (`append-draft-pane.tsx`) | None — appending must go through the explicit send button |
 | KDS (`kds-board.tsx`) | `Escape` clears the station filter |
 

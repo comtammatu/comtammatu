@@ -35,7 +35,6 @@ function SplitSidebarComponent({
     isPending,
     appendDraft,
     onSubmitOrder,
-    onOrderTypeChange,
     onCustomizeItem,
     onReturnToTables,
     onViewBill,
@@ -99,7 +98,6 @@ function SplitSidebarComponent({
               canSubmit={canSubmit}
               isSubmitting={isPending}
               onSubmitOrder={onSubmitOrder}
-              onOrderTypeChange={onOrderTypeChange}
               onCustomizeItem={onCustomizeItem}
               onReturnToTables={onReturnToTables}
             />

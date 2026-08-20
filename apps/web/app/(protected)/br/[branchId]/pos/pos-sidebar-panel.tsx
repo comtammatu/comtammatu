@@ -7,7 +7,7 @@ import { OrderListPane } from "./_components/order-list-pane";
 import type { BillReceiptIntent } from "./_components/bill/bill-receipt-types";
 import type { SessionOrder } from "./order-history";
 import type { SelfOrderPaymentCallKind } from "./self-order-actions";
-import type { CartItem, OrderType } from "./types";
+import type { CartItem } from "./types";
 
 interface PosSidebarContentProps {
   showOrders: boolean;
@@ -28,7 +28,6 @@ interface PosSidebarContentProps {
   };
   onClosePane?: () => void;
   onSubmitOrder: (options?: SubmitOrderOptions) => void;
-  onOrderTypeChange: (type: OrderType) => void;
   onCustomizeItem: (item: CartItem) => void;
   onViewBill: (orderId: number, intent?: BillReceiptIntent) => void;
   onViewDetail: (
@@ -49,7 +48,6 @@ function PosSidebarContentComponent({
   appendDraft,
   onClosePane,
   onSubmitOrder,
-  onOrderTypeChange,
   onCustomizeItem,
   onViewBill,
   onViewDetail,
@@ -91,7 +89,6 @@ function PosSidebarContentComponent({
       canSubmit={canSubmit}
       isSubmitting={isPending}
       onSubmitOrder={onSubmitOrder}
-      onOrderTypeChange={onOrderTypeChange}
       onCustomizeItem={onCustomizeItem}
       onClosePane={onClosePane}
       onReturnToTables={onReturnToTables}

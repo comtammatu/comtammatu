@@ -2,8 +2,14 @@
 
 import { useState, type ReactNode } from "react";
 import { FORM_VI } from "@comtammatu/shared/messages";
+import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupText,
+} from "@comtammatu/ui/components/input-group";
 import { Item } from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
 import {
@@ -139,6 +145,7 @@ export function LineRow({
       unitOptions={unitOptions}
       onUnitChange={commitEntryUnit}
       showLabel={showFieldLabels}
+      compact={compactLabels}
     />
   );
   const priceUnitSelect = (
@@ -149,17 +156,18 @@ export function LineRow({
       unitOptions={unitOptions}
       onUnitChange={commitPriceUnit}
       showLabel={showFieldLabels}
+      compact={compactLabels}
     />
   );
 
   const quantityFields = hasPackLoose && line.packUnit && line.looseUnit ? (
-    <div className="flex min-w-0 flex-col gap-2">
-      <div className="grid min-w-0 gap-3 md:grid-cols-2">
-        <Field
-          id={`received-pack-${idx}`}
-          label={grnCopy.line.acceptedLabel(line.packUnit.label)}
-          showLabel={showFieldLabels}
-        >
+    <div className="grid min-w-0 grid-cols-2 gap-1.5">
+      <Field
+        id={`received-pack-${idx}`}
+        label={grnCopy.line.acceptedLabel(line.packUnit.label)}
+        showLabel={showFieldLabels}
+      >
+        <InputGroup size="default">
           <QuantityInput
             id={`received-pack-${idx}`}
             value={
@@ -174,13 +182,21 @@ export function LineRow({
               )
             }
             maxFractionDigits={3}
+            className="h-full text-right"
           />
-        </Field>
-        <Field
-          id={`received-loose-${idx}`}
-          label={grnCopy.line.acceptedLabel(line.looseUnit.label)}
-          showLabel={showFieldLabels}
-        >
+          <InputGroupAddon align="inline-end">
+            <InputGroupText className="text-2xs font-medium text-muted-foreground">
+              {line.packUnit.label}
+            </InputGroupText>
+          </InputGroupAddon>
+        </InputGroup>
+      </Field>
+      <Field
+        id={`received-loose-${idx}`}
+        label={grnCopy.line.acceptedLabel(line.looseUnit.label)}
+        showLabel={showFieldLabels}
+      >
+        <InputGroup size="default">
           <QuantityInput
             id={`received-loose-${idx}`}
             value={
@@ -195,47 +211,63 @@ export function LineRow({
               )
             }
             maxFractionDigits={3}
+            className="h-full text-right"
           />
-        </Field>
-      </div>
-      {persistUnitSelect}
+          <InputGroupAddon align="inline-end">
+            <InputGroupText className="text-2xs font-medium text-muted-foreground">
+              {line.looseUnit.label}
+            </InputGroupText>
+          </InputGroupAddon>
+        </InputGroup>
+      </Field>
     </div>
   ) : (
-    <div
-      className={
-        unitOptions.length > 0 || line.unit
-          ? "flex min-w-0 items-end gap-2"
-          : "min-w-0"
-      }
-    >
+    <div className="flex min-w-0 items-end gap-1.5">
       <div className="min-w-0 flex-1">
         <Field
           id={`received-${idx}`}
           label={grnCopy.line.acceptedLabel(line.unit)}
           showLabel={showFieldLabels}
         >
-          <QuantityInput
-            id={`received-${idx}`}
-            value={showInspectedValues ? String(acceptedQuantity) : ""}
-            onValueChange={(value) =>
-              commitAccepted(Math.max(0, Number(value || 0)))
-            }
-            maxFractionDigits={3}
-          />
+          {unitOptions.length > 1 ? (
+            <QuantityInput
+              id={`received-${idx}`}
+              value={showInspectedValues ? String(acceptedQuantity) : ""}
+              onValueChange={(value) =>
+                commitAccepted(Math.max(0, Number(value || 0)))
+              }
+              maxFractionDigits={3}
+            />
+          ) : (
+            <InputGroup size="default">
+              <QuantityInput
+                id={`received-${idx}`}
+                value={showInspectedValues ? String(acceptedQuantity) : ""}
+                onValueChange={(value) =>
+                  commitAccepted(Math.max(0, Number(value || 0)))
+                }
+                maxFractionDigits={3}
+                className="h-full text-right"
+              />
+              {line.unit ? (
+                <InputGroupAddon align="inline-end">
+                  <InputGroupText className="text-2xs font-medium text-muted-foreground">
+                    {line.unit}
+                  </InputGroupText>
+                </InputGroupAddon>
+              ) : null}
+            </InputGroup>
+          )}
         </Field>
       </div>
-      <div className="w-36 shrink-0">{persistUnitSelect}</div>
+      {unitOptions.length > 1 ? (
+        <div className="shrink-0">{persistUnitSelect}</div>
+      ) : null}
     </div>
   );
 
   const unitPriceFields = (
-    <div
-      className={
-        unitOptions.length > 0 || line.unitCostUnitLabel || line.unit
-          ? "flex min-w-0 items-end gap-2"
-          : "min-w-0"
-      }
-    >
+    <div className="flex min-w-0 items-end gap-1.5">
       <div className="min-w-0 flex-1">
         <Field
           id={`unit-price-${idx}`}
@@ -244,21 +276,48 @@ export function LineRow({
           )}
           showLabel={showFieldLabels}
         >
-          <MoneyVndInput
-            id={`unit-price-${idx}`}
-            value={
-              line.monetary?.unitPrice != null && line.monetary.unitPrice > 0
-                ? String(line.monetary.unitPrice)
-                : ""
-            }
-            onValueChange={(value) =>
-              onChange(patchGrnLineUnitPrice(line, Number(value || 0)))
-            }
-            placeholder="0"
-          />
+          {unitOptions.length > 1 ? (
+            <MoneyVndInput
+              id={`unit-price-${idx}`}
+              value={
+                line.monetary?.unitPrice != null && line.monetary.unitPrice > 0
+                  ? String(line.monetary.unitPrice)
+                  : ""
+              }
+              onValueChange={(value) =>
+                onChange(patchGrnLineUnitPrice(line, Number(value || 0)))
+              }
+              placeholder="0"
+            />
+          ) : (
+            <InputGroup size="default">
+              <MoneyVndInput
+                id={`unit-price-${idx}`}
+                value={
+                  line.monetary?.unitPrice != null && line.monetary.unitPrice > 0
+                    ? String(line.monetary.unitPrice)
+                    : ""
+                }
+                onValueChange={(value) =>
+                  onChange(patchGrnLineUnitPrice(line, Number(value || 0)))
+                }
+                placeholder="0"
+                className="h-full text-right"
+              />
+              <InputGroupAddon align="inline-end">
+                <InputGroupText className="text-2xs font-medium text-muted-foreground">
+                  {line.unitCostUnitLabel || line.unit
+                    ? `/${line.unitCostUnitLabel || line.unit}`
+                    : "đ"}
+                </InputGroupText>
+              </InputGroupAddon>
+            </InputGroup>
+          )}
         </Field>
       </div>
-      <div className="w-36 shrink-0">{priceUnitSelect}</div>
+      {unitOptions.length > 1 ? (
+        <div className="shrink-0">{priceUnitSelect}</div>
+      ) : null}
     </div>
   );
 
@@ -467,6 +526,7 @@ function GrnLineUnitSelect({
   unitOptions,
   onUnitChange,
   showLabel = true,
+  compact = false,
 }: {
   id: string;
   lineUnit: string;
@@ -474,34 +534,60 @@ function GrnLineUnitSelect({
   unitOptions: ReturnType<typeof getPurchaseUnitOptions>;
   onUnitChange: (unitId: number) => void;
   showLabel?: boolean;
+  compact?: boolean;
 }) {
   if (unitOptions.length === 0) {
-    return lineUnit ? (
+    if (!lineUnit) return null;
+    if (compact || !showLabel) {
+      return (
+        <span className="flex h-7 items-center text-xs font-medium text-muted-foreground whitespace-nowrap">
+          {lineUnit}
+        </span>
+      );
+    }
+    return (
       <Field id={id} label={FORM_VI.unit} showLabel={showLabel}>
         <p className="flex h-7 items-center text-sm text-muted-foreground">
           {lineUnit}
         </p>
       </Field>
-    ) : null;
+    );
+  }
+
+  const select = (
+    <Select
+      value={value != null ? String(value) : ""}
+      onValueChange={(next) => onUnitChange(Number(next))}
+    >
+      <SelectTrigger
+        id={id}
+        size={compact ? "sm" : "default"}
+        className={cn(
+          compact
+            ? "h-7 w-auto min-w-16 max-w-28 px-2 text-xs font-normal"
+            : "w-full",
+        )}
+        aria-label={FORM_VI.unit}
+      >
+        <SelectValue placeholder={grnCopy.addDialog.selectUnit} />
+      </SelectTrigger>
+      <SelectContent>
+        {unitOptions.map((option) => (
+          <SelectItem key={option.unitId} value={String(option.unitId)}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+
+  if (compact || !showLabel) {
+    return select;
   }
 
   return (
     <Field id={id} label={FORM_VI.unit} showLabel={showLabel}>
-      <Select
-        value={value != null ? String(value) : ""}
-        onValueChange={(next) => onUnitChange(Number(next))}
-      >
-        <SelectTrigger id={id} className="w-full" aria-label={FORM_VI.unit}>
-          <SelectValue placeholder={grnCopy.addDialog.selectUnit} />
-        </SelectTrigger>
-        <SelectContent>
-          {unitOptions.map((option) => (
-            <SelectItem key={option.unitId} value={String(option.unitId)}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      {select}
     </Field>
   );
 }
