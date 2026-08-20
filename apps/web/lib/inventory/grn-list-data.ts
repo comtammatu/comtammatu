@@ -35,7 +35,7 @@ const rowSchema = z.object({
   id: z.coerce.number().int().positive(),
   code: z.string(),
   status: z.string(),
-  supplierId: z.coerce.number().int().positive(),
+  supplierId: z.number().int().positive().nullable(),
   supplierName: z.string(),
   poId: z.coerce.number().int().positive(),
   poCode: z.string(),

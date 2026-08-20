@@ -109,7 +109,7 @@ test("supplier invoice matching uses confirmed GRN quantities and invoice line p
     vatMigration,
     /IF p_po_id IS NOT NULL AND p_po_id IS DISTINCT FROM v_grn\.po_id/,
   );
-  assert.match(grnActions, /\.eq\("status", "confirmed"\)/);
+  assert.match(grnActions, /\.in\("status", \["confirmed", "draft"\]\)/);
   assert.match(grnActions, /expandGrnDropdownOptions/);
   assert.match(grnActions, /billedByLine/);
   assert.match(grnActions, /purchase_orders_source:purchase_orders!purchase_orders_source_grn_id_fkey/);

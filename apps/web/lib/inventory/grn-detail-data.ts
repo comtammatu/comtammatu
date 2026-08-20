@@ -119,6 +119,7 @@ export async function loadGrnDetailResult(
       po_entry_unit_id?: number | null;
       previously_applied_quantity: number;
       po_applied_quantity: number;
+      confirmed_at?: string | null;
       received_quantity: number;
       rejected_quantity: number | null;
       rejection_reason: string | null;
@@ -209,9 +210,10 @@ export async function loadGrnDetailResult(
       persistToBase: persistFactor,
       poToBase: poFactor,
     });
-    const applied = data.grn.status === "confirmed"
-      ? Number(line.po_applied_quantity ?? 0)
-      : calculated.poAppliedQuantity;
+    const applied =
+      data.grn.status === "confirmed" || line.confirmed_at != null
+        ? Number(line.po_applied_quantity ?? 0)
+        : calculated.poAppliedQuantity;
     const fallbackUnit =
       ingredient?.ingredient_units?.find((unit) => unit.is_base)?.units?.code ||
       "";
@@ -286,6 +288,7 @@ export async function loadGrnDetailResult(
       suggestedUnitName: null,
       suggestedSourceGrnId: null,
       suggestedSourceGrnNumber: null,
+      confirmedAt: line.confirmed_at ?? null,
       monetary:
         line.monetary == null
           ? null

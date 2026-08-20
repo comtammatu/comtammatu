@@ -7,8 +7,9 @@
 
 - Site active: `branch`, `central_supply`, `central_kitchen`. Mỗi site một
   warehouse active (default receive/issue/consumption).
-- **Mua NCC:** chỉ Kho Tổng / Bếp TT — **Tạo đơn** → PO theo NCC → GRN theo
-  lần giao. Yêu cầu mua chỉ còn lịch sử.
+- **Mua NCC:** chỉ Kho Tổng / Bếp TT — **Tạo đơn** theo nguyên liệu (NCC trên
+  từng dòng; một phiếu có thể nhiều NCC) → **một GRN** chung. Mỗi lần NCC giao,
+  chốt đúng dòng của NCC đó. Yêu cầu mua chỉ còn lịch sử.
 - **Bổ sung CN:** phiếu **Điều chuyển** xin hàng (QL CN tạo nháp, chưa trừ tồn)
   → Kho Tổng / Bếp TT ship từ điểm nguồn → CN nhận. Nguồn dòng = Owner tick
   Nguồn hàng trên catalog (Kho Tổng, Bếp TT, hoặc cả hai — OD-4). Prefill
@@ -24,24 +25,17 @@
 
 ### 2a. Happy path — Kho Tổng / Bếp TT
 
-1. Kho **Tạo đơn** (một NCC + kho nhận) trên Đơn mua. Yêu cầu mua chỉ còn lịch sử.
+1. Kho **Tạo đơn** (kho nhận + nguyên liệu; NCC trên từng dòng) trên Đơn mua.
+   Yêu cầu mua chỉ còn lịch sử.
 2. Gửi đơn (`approved`). PO không nhập giá. Phân bổ YCM không còn happy path.
-3. Khi PO chuyển `sent` (hoặc `approved` / `partially_received`), hệ thống **tự
-   tạo** đúng một GRN nháp **Chờ nhập hàng** (Auto-GRN). Một PO chỉ có một GRN
-   nháp hoạt động tại một thời điểm. Nút «Tạo phiếu nhập» trên PO chỉ là recovery
-   / idempotent — không phải bước quy trình chính.
-4. Kho mở danh sách GRN, nhập thực nhận, **Đơn giá** net (gắn đơn vị giá, không
-   nhầm thùng/hộp), và từ chối; lý do + ảnh là bắt buộc khi có từ chối.
-5. Kho xác nhận GRN. Chốt bắt buộc Đơn giá > 0 trên dòng có số nhận hợp lệ.
-   Số giữ lại ghi sổ theo Đơn giá phiếu nhập và **viết lại số lượng dòng đơn mua** khi
-   NCC giao nhiều hơn phần còn. Ví dụ đặt 10 thùng: giao 9 thùng 6 hộp →
-   áp dụng 9 thùng 6 hộp, PO `partially_received`, GRN nháp kế cho phần còn
-   (hoặc **Đóng phần còn lại**); giao 10 thùng 6 hộp → dòng đơn mua tăng 10.25
-   thùng, áp dụng hết, PO `received`. Cùng đơn vị (đặt 4, nhận 6): dòng đơn mua
-   thành 6, áp dụng 6.
-6. Nếu PO còn thiếu sau confirm, hệ thống **tự tạo GRN nháp kế tiếp** cho phần
-   còn lại, hoặc kho/kế toán **Đóng phần còn lại** (`closed` + lý do). HĐ NCC
-   bill ≤ số đã tính vào đơn (`po_applied` = số giữ lại).
+3. Hệ thống **tự tạo đúng một GRN nháp** cho cả phiếu (Auto-GRN), kể cả khi
+   nhiều NCC. Nút «Tạo phiếu nhập» trên PO chỉ là recovery / idempotent.
+4. Kho mở GRN, nhập thực nhận và **Đơn giá** net cho dòng NCC đang giao; từ chối
+   cần lý do + ảnh. Chốt **theo NCC** (không ghi sổ dòng NCC chưa giao).
+5. Số giữ lại ghi sổ theo Đơn giá dòng và **viết lại SL dòng đơn mua** khi NCC
+   giao dư (ADR 0042). Thiếu → dòng còn lại trên **cùng GRN**. Hết phần còn:
+   **Đóng phần còn lại** (không hủy dòng đã ghi sổ). HĐ NCC bill ≤ `po_applied`
+   của **đúng NCC**.
 
 Hàng tặng nhập như hàng mua (Đơn giá > 0). HĐ 0đ / không bill là lệch AP;
 không dòng đơn mua giá 0.
@@ -106,3 +100,10 @@ Thu ngân chi nhánh được gán đếm tồn nước theo ca (sáng/chiều/t
 
 - [inventory.md](inventory.md)
 - [operational-data-contract.md](operational-data-contract.md)
+
+## 6. Hygiene cutover (Production 2026-08-20)
+
+Chờ đơn giá GRN đã chốt = 0. Còn đóng **không convert:** YCM-07082026-0022
+(`partially_ordered`); YC-31072026-0001 và YC-08082026-0002 (`submitted`, DC
+đã nhận). Map NL↔NCC + NCC ưu tiên trước khi dựa Tạo đơn NL-first. Wave 4
+REVOKE ghi YCM/YCH sau soak.

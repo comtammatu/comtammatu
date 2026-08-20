@@ -139,7 +139,7 @@ test("GRN detail derives mutation and supplier-invoice authority", () => {
     client,
     /const canChangeLineSet =\s*canMutateDraft && grn\.poId == null && grn\.linkedPos\.length === 0;/,
   );
-  assert.match(client, /!isDraft && canManageSupplierInvoice/);
+  assert.match(client, /\(!isDraft \|\| hasBookedLines\) && canManageSupplierInvoice/);
   assert.match(client, /const receivingLocationName = grn\.locationName;/);
   assert.doesNotMatch(client, /receivingLocationOptions\.find/);
 });
@@ -163,7 +163,7 @@ test("confirm delegates approved-PO and physical QC checks to the final RPC", ()
     "/* ─── amendGrnLine",
   );
 
-  assert.match(confirmAction, /\.rpc\("confirm_goods_receipt_note"/);
+  assert.match(confirmAction, /\.rpc\(\s*"confirm_goods_receipt_note"/);
   assert.doesNotMatch(confirmAction, /\.from\("supplier_items"\)/);
   assert.doesNotMatch(confirmAction, /supplier_item_mapping_required/);
 });

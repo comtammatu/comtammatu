@@ -100,7 +100,7 @@ type GrnDropdownLine = {
 
 type GrnDropdownSourcePo = {
   id: number;
-  supplier_id: number;
+  supplier_id: number | null;
 };
 
 type GrnDropdownRow = {
@@ -199,23 +199,23 @@ function expandGrnDropdownOptions(
       });
 
       const sourcePo =
-        sourcePos.find((po) => Number(po.supplier_id) === supplierId) ?? null;
-      const legacyPoId =
-        Number(row.supplier_id) === supplierId && row.po_id != null
+        sourcePos.find((po) => Number(po.supplier_id) === supplierId) ??
+        sourcePos[0] ??
+        null;
+      const headerPoId =
+        row.po_id != null &&
+        Number.isSafeInteger(Number(row.po_id)) &&
+        Number(row.po_id) > 0
           ? Number(row.po_id)
           : null;
-      const poId = sourcePo?.id ?? legacyPoId;
+      const poId = sourcePo?.id ?? headerPoId;
       const supplierName = supplierNameById.get(supplierId) ?? null;
       const availableLines = linesForSupplier.flatMap((line) => {
         const grnItemId = Number(line.id);
         const poItemId = Number(line.purchase_order_item_id);
         const ingredientId = Number(line.ingredient_id);
         const unitId = Number(line.entry_unit_id);
-        const accepted = Number(
-          line.po_applied_quantity ??
-            Number(line.received_quantity ?? 0) -
-              Number(line.rejected_quantity ?? 0),
-        );
+        const accepted = Number(line.po_applied_quantity ?? 0);
         const billed = billedByLine.get(`${row.id}:${poItemId}`) ?? 0;
         const available = Math.max(accepted - billed, 0);
         if (
@@ -263,7 +263,11 @@ function expandGrnDropdownOptions(
               ? row.suppliers
               : null,
         net_accepted_amount: withNetAmount
-          ? sumGrnNetAcceptedAmount(linesForSupplier)
+          ? sumGrnNetAcceptedAmount(
+              linesForSupplier.filter(
+                (line) => Number(line.po_applied_quantity ?? 0) > 0,
+              ),
+            )
           : null,
         lines: availableLines,
       });
@@ -302,7 +306,7 @@ export async function fetchGrnIdsForDropdown(
     .from("goods_received_notes")
     .select(monetary.purchasePrice ? selectWithNet : selectWithoutNet)
     .eq("tenant_id", claims.tenant_id)
-    .eq("status", "confirmed")
+    .in("status", ["confirmed", "draft"])
     .order("received_date", { ascending: false })
     .limit(100);
   if (branchId != null) query = query.eq("branch_id", branchId);
@@ -429,7 +433,7 @@ export async function fetchGrnDetail(
   const { data: linesRaw, error: e2 } = await lineReadClient
     .from("grn_items")
     .select(
-      "id, grn_id, tenant_id, ingredient_id, supplier_id, purchase_order_item_id, po_applied_quantity, received_quantity, rejected_quantity, rejection_reason, rejected_photo_url, entry_unit_id, unit_cost, unit_cost_unit_id, total_cost, cost_pending, provisional_cost_source, suppliers ( id, name ), ingredients ( id, name ), purchase_order_items(quantity, entry_unit_id)" as never,
+      "id, grn_id, tenant_id, ingredient_id, supplier_id, purchase_order_item_id, po_applied_quantity, received_quantity, rejected_quantity, rejection_reason, rejected_photo_url, entry_unit_id, unit_cost, unit_cost_unit_id, total_cost, cost_pending, provisional_cost_source, confirmed_at, suppliers ( id, name ), ingredients ( id, name ), purchase_order_items(quantity, entry_unit_id)" as never,
     )
     .eq("grn_id", grn.id)
     .eq("tenant_id", claims.tenant_id);
@@ -456,6 +460,7 @@ export async function fetchGrnDetail(
     total_cost?: number | string;
     cost_pending?: boolean | null;
     provisional_cost_source?: string | null;
+    confirmed_at?: string | null;
     suppliers: { id: number; name: string } | null;
     ingredients: {
       id: number;
@@ -498,11 +503,10 @@ export async function fetchGrnDetail(
         : supabase
             .from("grn_items")
             .select(
-              "purchase_order_item_id, po_applied_quantity, goods_received_notes!inner(id, status)" as never,
+              "id, purchase_order_item_id, po_applied_quantity, confirmed_at, goods_received_notes!inner(id, status)" as never,
             )
             .eq("tenant_id", claims.tenant_id)
-            .in("purchase_order_item_id" as never, poItemIds)
-            .eq("goods_received_notes.status" as never, "confirmed"),
+            .in("purchase_order_item_id" as never, poItemIds),
       loadIngredientBaseUnitEmbeds({
         supabase: lineReadClient,
         tenantId: claims.tenant_id,
@@ -513,8 +517,10 @@ export async function fetchGrnDetail(
   const linkedPoRows = linkedPos ?? [];
   const previouslyApplied = new Map<number, number>();
   for (const row of (previousResult.data ?? []) as unknown as Array<{
+    id: number;
     purchase_order_item_id: number | null;
     po_applied_quantity: number | string;
+    confirmed_at?: string | null;
     goods_received_notes:
       { id: number; status: string } | Array<{ id: number; status: string }>;
   }>) {
@@ -522,7 +528,9 @@ export async function fetchGrnDetail(
     const linkedGrn = Array.isArray(row.goods_received_notes)
       ? row.goods_received_notes[0]
       : row.goods_received_notes;
-    if (linkedGrn?.id === grn.id) continue;
+    const booked =
+      row.confirmed_at != null || linkedGrn?.status === "confirmed";
+    if (!booked) continue;
     previouslyApplied.set(
       row.purchase_order_item_id,
       (previouslyApplied.get(row.purchase_order_item_id) ?? 0) +
@@ -542,6 +550,7 @@ export async function fetchGrnDetail(
         line.purchase_order_item_id == null
           ? 0
           : (previouslyApplied.get(line.purchase_order_item_id) ?? 0),
+      confirmed_at: line.confirmed_at ?? null,
       cost_pending: line.cost_pending === true,
       provisional_cost_source: line.provisional_cost_source ?? null,
       unit_cost_unit_id:
@@ -1070,10 +1079,23 @@ export const deleteGrnLine = withAction(
   },
 );
 
-export async function confirmGrn(grnId: number): Promise<ActionResult> {
+export async function confirmGrn(
+  grnId: number,
+  supplierId?: number | null,
+): Promise<ActionResult> {
   const id = z.coerce.number().int().positive().safeParse(grnId);
   if (!id.success)
     return { success: false, error: "Mã phiếu nhập không hợp lệ" };
+  const supplier = z.coerce
+    .number()
+    .int()
+    .positive()
+    .nullable()
+    .optional()
+    .safeParse(supplierId ?? null);
+  if (!supplier.success) {
+    return { success: false, error: "Nhà cung cấp không hợp lệ." };
+  }
   const ctx = await getAuthContextWithPermission(
     ROLES,
     PERMISSION_KEYS.PROCUREMENT_GRN_CONFIRM,
@@ -1081,9 +1103,13 @@ export async function confirmGrn(grnId: number): Promise<ActionResult> {
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase } = ctx;
 
-  const { data, error } = await supabase.rpc("confirm_goods_receipt_note", {
-    p_grn_id: id.data,
-  });
+  const { data, error } = await supabase.rpc(
+    "confirm_goods_receipt_note" as never,
+    {
+      p_grn_id: id.data,
+      p_supplier_id: supplier.data ?? null,
+    } as never,
+  );
   if (error) {
     console.error("inventory.grn.confirm_failed", {
       error: error,

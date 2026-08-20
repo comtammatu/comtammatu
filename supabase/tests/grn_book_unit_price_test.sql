@@ -81,7 +81,7 @@ BEGIN
   INTO v_definition
   FROM pg_catalog.pg_proc AS procedure
   WHERE procedure.oid =
-    'public.confirm_goods_receipt_note(bigint)'::pg_catalog.regprocedure;
+    'public.confirm_goods_receipt_note(bigint,bigint)'::pg_catalog.regprocedure;
   IF v_definition !~ 'grn_unit_price_required'
      OR v_definition !~ 'private.grn_line_book_total'
      OR v_definition ~ 'WHEN v_item.cost_pending' THEN

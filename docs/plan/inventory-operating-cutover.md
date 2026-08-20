@@ -871,7 +871,9 @@ Already locked (do not re-ask unless Owner reopens): no YCM, no YCH;
 PO-only buy; GRN books net `Đơn giá`; `HĐ NCC` AP/VAT only; one DC type,
 branch both ways; INV-9/ADR 0032 deleted; ADR 0029 withdrawn; leftover
 YCM `Sâm 50 set` **close without convert**; two submitted YCH **do not
-convert**; 1 PO = 1 NCC; no re-receive for ISS-05; stocktake ≠ price;
+convert**; **ADR 0043 (2026-08-20): 1 PO may have many NCC (line `supplier_id`);
+1 shared GRN; confirm by NCC group** — supersedes “1 PO = 1 NCC”; no re-receive
+for ISS-05; stocktake ≠ price;
 `yield_factor` stays; OD-1 / OD-2 / OD-3 B / **OD-4 both sites + `Kho Tổng`-first prefill** / OD-5 as the table above. No remaining OD-4 UX
 fork. Does not mix with Wave 1.
 

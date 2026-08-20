@@ -168,9 +168,9 @@ BEGIN
   ) RETURNING id INTO v_po;
 
   INSERT INTO public.purchase_order_items (
-    tenant_id, po_id, ingredient_id, quantity, entry_unit_id
+    tenant_id, po_id, ingredient_id, quantity, entry_unit_id, supplier_id
   ) VALUES (
-    v_tenant, v_po, v_ingredient, 10, v_pack_unit
+    v_tenant, v_po, v_ingredient, 10, v_pack_unit, v_supplier
   ) RETURNING id INTO v_po_line;
 
   UPDATE public.purchase_orders SET status = 'sent' WHERE id = v_po;
@@ -259,9 +259,9 @@ BEGIN
   ) RETURNING id INTO v_po;
 
   INSERT INTO public.purchase_order_items (
-    tenant_id, po_id, ingredient_id, quantity, entry_unit_id
+    tenant_id, po_id, ingredient_id, quantity, entry_unit_id, supplier_id
   ) VALUES (
-    v_tenant, v_po, v_ingredient, 10, v_pack_unit
+    v_tenant, v_po, v_ingredient, 10, v_pack_unit, v_supplier
   ) RETURNING id INTO v_po_line;
 
   UPDATE public.purchase_orders SET status = 'sent' WHERE id = v_po;
@@ -336,9 +336,9 @@ BEGIN
   ) RETURNING id INTO v_po;
 
   INSERT INTO public.purchase_order_items (
-    tenant_id, po_id, ingredient_id, quantity, entry_unit_id
+    tenant_id, po_id, ingredient_id, quantity, entry_unit_id, supplier_id
   ) VALUES (
-    v_tenant, v_po, v_same_unit_ingredient, 4, v_base_unit
+    v_tenant, v_po, v_same_unit_ingredient, 4, v_base_unit, v_supplier
   ) RETURNING id INTO v_po_line;
 
   UPDATE public.purchase_orders SET status = 'sent' WHERE id = v_po;
@@ -402,9 +402,9 @@ BEGIN
   ) RETURNING id INTO v_po;
 
   INSERT INTO public.purchase_order_items (
-    tenant_id, po_id, ingredient_id, quantity, entry_unit_id
+    tenant_id, po_id, ingredient_id, quantity, entry_unit_id, supplier_id
   ) VALUES (
-    v_tenant, v_po, v_ingredient, 10, v_pack_unit
+    v_tenant, v_po, v_ingredient, 10, v_pack_unit, v_supplier
   ) RETURNING id INTO v_po_line;
 
   UPDATE public.purchase_orders SET status = 'sent' WHERE id = v_po;

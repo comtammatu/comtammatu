@@ -31,12 +31,11 @@ test("D099 is the current external purchasing authority", () => {
   const current = decision(decisions, "D099");
 
   assert.match(current, /Nhu cầu mua/);
-  assert.match(current, /chỉ có một NCC active/);
-  assert.match(current, /chỉ chọn hoặc chia số lượng khi có nhiều NCC/);
-  assert.match(current, /bị chặn để bổ sung mapping/);
-  assert.match(current, /PO\/NCC/);
-  assert.match(current, /GRN nháp\/PO/);
-  assert.match(current, /Hóa đơn NCC/);
+  assert.match(current, /ingredient-first/);
+  assert.match(current, /ADR 0043/);
+  assert.match(current, /One Auto-GRN per PO/);
+  assert.match(current, /confirm books one NCC group/);
+  assert.match(current, /`HĐ NCC`/);
 });
 
 test("Inventory references expose one warehouse and physical rejection QC only", () => {
@@ -47,11 +46,11 @@ test("Inventory references expose one warehouse and physical rejection QC only",
 
   assert.match(inventory, /Mỗi site active có đúng một active `warehouse`/);
   assert.match(inventory, /received_quantity - rejected_quantity/);
-  assert.match(sop, /lý do \+ ảnh là bắt buộc/);
-  assert.match(sop, /\*\*Tạo đơn\*\* → PO theo NCC → GRN theo\s+ lần giao/);
+  assert.match(sop, /lý do \+ ảnh/);
+  assert.match(sop, /\*\*Tạo đơn\*\* theo nguyên liệu/);
   assert.match(inventory, /Chờ nhập hàng/);
-  assert.match(inventory, /Phiếu nhập ghi \*\*Đơn giá\*\* net/);
-  assert.match(inventory, /Hóa đơn NCC chỉ công nợ \+ VAT/);
+  assert.match(inventory, /\*\*Đơn giá\*\* net trên dòng GRN/);
+  assert.match(inventory, /HĐ NCC công nợ \+ VAT/);
 
   for (const source of [inventory, sop, glossary]) {
     assert.doesNotMatch(source, /branch_kitchen|po_unit_price/);

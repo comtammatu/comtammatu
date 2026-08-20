@@ -12,6 +12,8 @@ import {
   grnLineBookTotal,
   grnLineHasPackLoose,
   hasAcceptedGrnQuantity,
+  confirmableGrnSuppliers,
+  isGrnLineBooked,
   isLinkedPoApproved,
   isGrnLookupParam,
   patchGrnLineUnitPrice,
@@ -156,6 +158,47 @@ test("GRN can only be confirmed after at least one accepted quantity", () => {
       { actual: 5, rejected: 1 },
     ]),
     true,
+  );
+  assert.equal(
+    hasAcceptedGrnQuantity([
+      { actual: 8, rejected: 0, confirmedAt: "2026-08-20T00:00:00Z" },
+    ]),
+    false,
+  );
+});
+
+test("shared GRN confirm targets unconfirmed lines of one supplier", () => {
+  const lines = [
+    {
+      supplierId: 1,
+      supplierName: "NCC A",
+      actual: 10,
+      rejected: 0,
+      confirmedAt: null,
+    },
+    {
+      supplierId: 2,
+      supplierName: "NCC B",
+      actual: 4,
+      rejected: 0,
+      confirmedAt: null,
+    },
+    {
+      supplierId: 1,
+      supplierName: "NCC A",
+      actual: 3,
+      rejected: 0,
+      confirmedAt: "2026-08-20T00:00:00Z",
+    },
+  ];
+  assert.equal(isGrnLineBooked(lines[2]!), true);
+  assert.deepEqual(confirmableGrnSuppliers(lines), [
+    { id: 1, name: "NCC A" },
+    { id: 2, name: "NCC B" },
+  ]);
+  assert.deepEqual(
+    confirmableGrnSuppliers(lines.filter((line) => line.supplierId === 2)),
+    [{ id: 2, name: "NCC B" }],
   );
 });
 

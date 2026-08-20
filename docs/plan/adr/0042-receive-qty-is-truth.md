@@ -9,6 +9,9 @@
 **Amends:** ADR 0041 (PO remains qty-only and unpriced; this ADR
 changes how GRN kept quantity relates to the PO line).
 
+**Amended by:** ADR 0043 (kept qty still amends the PO line; confirm
+may book one NCC group on a shared GRN).
+
 **Keeps:** ADR 0041 GRN book price and AP-only invoices; ADR 0028
 transfer shortfall ownership; finished goods never purchased; no
 branch PO/GRN.

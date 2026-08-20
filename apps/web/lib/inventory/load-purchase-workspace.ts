@@ -25,7 +25,7 @@ export const ORDER_LIST_SELECT =
   "id, po_number, display_id, status, ordered_at, expected_delivery_date, notes, status_reason, supplier_id, branch_id, purchase_group_key, purchase_group_code, group_sequence";
 
 export const ORDER_ITEM_SELECT =
-  "id, po_id, ingredient_id, quantity, entry_unit_id, ingredients(name), units!purchase_order_items_entry_unit_id_fkey(code, name)";
+  "id, po_id, ingredient_id, quantity, entry_unit_id, supplier_id, ingredients(name), units!purchase_order_items_entry_unit_id_fkey(code, name)";
 
 export const DEMAND_COVERAGE_SELECT =
   "id, po_number, display_id, status, supplier_id, purchase_request_id";
@@ -72,7 +72,7 @@ type CoverageOrderRecord = {
   po_number: string;
   display_id: string | null;
   status: string;
-  supplier_id: number;
+  supplier_id: number | null;
   purchase_request_id: number | null;
   purchase_order_items: Array<{
     purchase_request_item_id: number | null;
@@ -103,7 +103,7 @@ type PurchaseOrderRecord = {
   expected_delivery_date: string | null;
   notes: string | null;
   status_reason: string | null;
-  supplier_id: number;
+  supplier_id: number | null;
   branch_id: number;
   purchase_group_key: string | null;
   purchase_group_code: string | null;
@@ -113,6 +113,7 @@ type PurchaseOrderRecord = {
     ingredient_id: number;
     quantity: number | string;
     entry_unit_id: number;
+    supplier_id?: number | null;
     ingredients: NamedEmbed;
     units: UnitEmbed;
   }>;
@@ -132,6 +133,7 @@ type GrnRecord = {
     purchase_order_item_id: number | null;
     received_quantity: number | string;
     rejected_quantity: number | string;
+    confirmed_at?: string | null;
   }>;
 };
 
@@ -255,7 +257,10 @@ export function mapPurchaseDemandRows({
         id: po.id,
         code: po.display_id ?? po.po_number,
         status: po.status,
-        supplierName: supplierNames.get(po.supplier_id) ?? "Nhà cung cấp",
+        supplierName:
+          po.supplier_id != null
+            ? (supplierNames.get(po.supplier_id) ?? "Nhà cung cấp")
+            : messages.inventory.po.multiSupplierBadge,
       })),
     };
   });
@@ -290,8 +295,10 @@ export function mapPurchaseOrderRows({
     }));
     const receivedByLine = new Map<number, number>();
     for (const grn of linked) {
-      if (grn.status !== "confirmed") continue;
       for (const line of grn.grn_items ?? []) {
+        const booked =
+          grn.status === "confirmed" || line.confirmed_at != null;
+        if (!booked) continue;
         if (line.purchase_order_item_id == null) continue;
         receivedByLine.set(
           line.purchase_order_item_id,
@@ -301,6 +308,23 @@ export function mapPurchaseOrderRows({
         );
       }
     }
+    const lineSupplierIds = uniqueIds(
+      (po.purchase_order_items ?? []).flatMap((line) =>
+        line.supplier_id != null && line.supplier_id > 0
+          ? [line.supplier_id]
+          : po.supplier_id != null
+            ? [po.supplier_id]
+            : [],
+      ),
+    );
+    const supplierName =
+      po.supplier_id != null
+        ? (supplierNames.get(po.supplier_id) ??
+          messages.inventory.po.supplierRequired)
+        : lineSupplierIds.length > 1
+          ? messages.inventory.po.multiSupplierBadge
+          : (supplierNames.get(lineSupplierIds[0] ?? 0) ??
+            messages.inventory.po.supplierRequired);
     return {
       id: po.id,
       code: po.display_id ?? po.po_number,
@@ -313,9 +337,8 @@ export function mapPurchaseOrderRows({
       expectedDeliveryDate: po.expected_delivery_date,
       notes: po.notes,
       supplierId: po.supplier_id,
-      supplierName:
-        supplierNames.get(po.supplier_id) ??
-        messages.inventory.po.supplierRequired,
+      supplierIds: lineSupplierIds,
+      supplierName,
       branchId: po.branch_id,
       branchName:
         branchNames.get(po.branch_id) ?? messages.inventory.po.branchLabel,
@@ -327,6 +350,15 @@ export function mapPurchaseOrderRows({
         receivedQuantity: receivedByLine.get(line.id) ?? 0,
         entryUnitId: line.entry_unit_id,
         unitLabel: unitLabel(line.units),
+        supplierId: line.supplier_id ?? po.supplier_id,
+        supplierName:
+          (line.supplier_id != null
+            ? supplierNames.get(line.supplier_id)
+            : null) ??
+          (po.supplier_id != null
+            ? supplierNames.get(po.supplier_id)
+            : null) ??
+          messages.inventory.po.supplierRequired,
       })),
       linkedGrns,
       activeDraftGrnId:
@@ -522,7 +554,7 @@ export async function loadPurchaseOrderRows({
       ? { data: [] as PurchaseOrderItemRecord[], error: null }
       : supabase
           .from("purchase_order_items")
-          .select(ORDER_ITEM_SELECT)
+          .select(ORDER_ITEM_SELECT as never)
           .eq("tenant_id", tenantId)
           .in("po_id", poIds),
     poIds.length === 0
@@ -557,7 +589,7 @@ export async function loadPurchaseOrderRows({
       : await supabase
           .from("grn_items")
           .select(
-            "grn_id, purchase_order_item_id, received_quantity, rejected_quantity",
+            "grn_id, purchase_order_item_id, received_quantity, rejected_quantity, confirmed_at" as never,
           )
           .eq("tenant_id", tenantId)
           .in("grn_id", grnIds);
@@ -571,6 +603,7 @@ export async function loadPurchaseOrderRows({
       purchase_order_item_id: item.purchase_order_item_id,
       received_quantity: item.received_quantity,
       rejected_quantity: item.rejected_quantity,
+      confirmed_at: item.confirmed_at ?? null,
     });
     itemsByGrnId.set(item.grn_id, list);
   }

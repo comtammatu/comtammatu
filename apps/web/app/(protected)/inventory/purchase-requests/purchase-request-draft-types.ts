@@ -3,6 +3,7 @@ export type RequestDraftLine = {
   ingredientId: string;
   quantity: string;
   entryUnitId: string;
+  supplierId: string;
 };
 
 export type ReasonAction = {
@@ -16,5 +17,6 @@ export function blankRequestLine(): RequestDraftLine {
     ingredientId: "",
     quantity: "",
     entryUnitId: "",
+    supplierId: "",
   };
 }

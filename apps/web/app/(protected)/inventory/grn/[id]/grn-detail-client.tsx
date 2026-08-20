@@ -60,7 +60,8 @@ import {
   formatGrnPersistQty,
   formatGrnPoQty,
   grnLineQuantityConversion,
-  hasAcceptedGrnQuantity,
+  confirmableGrnSuppliers,
+  isGrnLineBooked,
 } from "@lib/inventory/grn-detail-model";
 import { supplierInvoiceHrefForGrn } from "@lib/inventory/grn-list-model";
 import { GRN_CREATE_COPY } from "@lib/inventory/grn-create-copy";
@@ -179,7 +180,8 @@ export function GRNDetailClient({
     },
     [grn, ingredientById],
   );
-  const hasAcceptedQuantity = hasAcceptedGrnQuantity(lines);
+  const confirmableSuppliers = confirmableGrnSuppliers(lines);
+  const hasBookedLines = lines.some((line) => isGrnLineBooked(line));
   const valuationKind = resolveGrnValuationDisplay({
     status: grn.status,
     invoiceId: grn.invoiceId,
@@ -217,6 +219,35 @@ export function GRNDetailClient({
       grnListBasePath,
       onConfirmed: presentation === "dialog" ? closeOwnerDialogUrl : undefined,
     });
+
+  const confirmButtons =
+    confirmableSuppliers.length === 0 ? (
+      <Button
+        type="button"
+        size="default"
+        className="sm:min-w-80"
+        disabled
+        aria-disabled
+      >
+        <IconCircleCheck className="size-5" />
+        {grnCopy.confirmGrnAction}
+      </Button>
+    ) : (
+      confirmableSuppliers.map((supplier) => (
+        <Button
+          key={supplier.id}
+          type="button"
+          size="default"
+          className="sm:min-w-80"
+          disabled={!canConfirm || isConfirming}
+          aria-disabled={!canConfirm || isConfirming}
+          onClick={() => void handleConfirmGrn(supplier.id)}
+        >
+          <IconCircleCheck className="size-5" />
+          {grnCopy.confirmSupplierAction(supplier.name)}
+        </Button>
+      ))
+    );
 
   function cancelDraft() {
     startCancel(async () => {
@@ -345,6 +376,16 @@ export function GRNDetailClient({
         render: (line) => (
           <div className="min-w-0">
             <p className="min-w-0 truncate font-medium">{line.name}</p>
+            {line.supplierName ? (
+              <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                {line.supplierName}
+              </p>
+            ) : null}
+            {isGrnLineBooked(line) ? (
+              <Badge variant="secondary" className="mt-1 text-2xs">
+                {grnCopy.line.bookedLine}
+              </Badge>
+            ) : null}
             {line.dirty ? (
               <Badge variant="outline" className="mt-1 text-2xs">
                 {grnCopy.line.unsaved}
@@ -383,7 +424,7 @@ export function GRNDetailClient({
               grnId={grn.id}
               line={line}
               idx={idx}
-              isDraft
+              isDraft={isDraft && !isGrnLineBooked(line)}
               showAmendAffordance={false}
               showHeader={false}
               chrome="plain"
@@ -561,7 +602,7 @@ export function GRNDetailClient({
               }))}
             />
           ) : null}
-          {!isDraft && canManageSupplierInvoice ? (
+          {(!isDraft || hasBookedLines) && canManageSupplierInvoice ? (
             <Button
               variant={
                 valuationKind === "pending_invoice" ? "default" : "outline"
@@ -596,19 +637,7 @@ export function GRNDetailClient({
               {grnCopy.saveChanges(dirtyLines.length)}
             </Button>
           ) : (
-            <Button
-              type="button"
-              size="default"
-              className="sm:min-w-80"
-              disabled={!canConfirm || isConfirming || !hasAcceptedQuantity}
-              aria-disabled={
-                !canConfirm || isConfirming || !hasAcceptedQuantity
-              }
-              onClick={handleConfirmGrn}
-            >
-              <IconCircleCheck className="size-5" />
-              {grnCopy.confirmGrnAction}
-            </Button>
+            confirmButtons
           )
         ) : null
       }
@@ -717,7 +746,10 @@ export function GRNDetailClient({
         getRowKey={(line) => line.lineId}
         onRowClick={
           canMutateDraft && !isDesktopLineEdit
-            ? (line) => setEditingLineId(line.lineId)
+            ? (line) => {
+                if (isGrnLineBooked(line)) return;
+                setEditingLineId(line.lineId);
+              }
             : undefined
         }
         emptyTitle={grnCopy.overviewLinesEmpty}
@@ -725,9 +757,15 @@ export function GRNDetailClient({
           canMutateDraft ? (
             <DraftGrnLineCard
               line={line}
-              onEdit={() => setEditingLineId(line.lineId)}
+              onEdit={
+                isGrnLineBooked(line)
+                  ? undefined
+                  : () => setEditingLineId(line.lineId)
+              }
               onRemove={
-                canChangeLineSet ? () => void handleDeleteLine(line) : undefined
+                canChangeLineSet && !isGrnLineBooked(line)
+                  ? () => void handleDeleteLine(line)
+                  : undefined
               }
             />
           ) : (
@@ -936,7 +974,7 @@ export function GRNDetailClient({
               grnId={grn.id}
               line={editingLine}
               idx={editingIdx}
-              isDraft
+              isDraft={isDraft && !isGrnLineBooked(editingLine)}
               showAmendAffordance={false}
               chrome="plain"
               ingredient={ingredientById.get(editingLine.ingredientId)}
@@ -1110,7 +1148,7 @@ export function GRNDetailClient({
     };
 
     const invoiceIsPrimary =
-      !isDraft &&
+      (!isDraft || hasBookedLines) &&
       canManageSupplierInvoice &&
       valuationKind === "pending_invoice";
     const dialogOverflowItems: RowActionItem[] = [];
@@ -1123,7 +1161,7 @@ export function GRNDetailClient({
         onSelect: () => setCancelOpen(true),
       });
     }
-    if (!isDraft && canManageSupplierInvoice && !invoiceIsPrimary) {
+    if ((!isDraft || hasBookedLines) && canManageSupplierInvoice && !invoiceIsPrimary) {
       dialogOverflowItems.push({
         key: "invoice",
         label: grn.invoiceId ? grnCopy.viewInvoice : grnCopy.createInvoice,
@@ -1177,18 +1215,9 @@ export function GRNDetailClient({
             {grnCopy.saveChanges(dirtyLines.length)}
           </Button>
         ) : null}
-        {isDraft && !(canMutateDraft && dirtyLines.length > 0) ? (
-          <Button
-            type="button"
-            size="default"
-            disabled={!canConfirm || isConfirming || !hasAcceptedQuantity}
-            aria-disabled={!canConfirm || isConfirming || !hasAcceptedQuantity}
-            onClick={handleConfirmGrn}
-          >
-            <IconCircleCheck className="size-5" />
-            {grnCopy.confirmGrnAction}
-          </Button>
-        ) : null}
+        {isDraft && !(canMutateDraft && dirtyLines.length > 0)
+          ? confirmButtons
+          : null}
         {invoiceIsPrimary ? (
           <Button
             variant="default"

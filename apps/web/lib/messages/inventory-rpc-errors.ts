@@ -393,6 +393,12 @@ export const grnConfirmRpcMappings: readonly RpcErrorMapping[] = [
     userMessage: "Đơn vị đơn giá không thuộc nguyên liệu này.",
   },
   {
+    match: includesAny("grn_supplier_confirm_required"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,
+    userMessage:
+      "Chọn nhà cung cấp đang giao. Không chốt dòng NCC khác trên phiếu này.",
+  },
+  {
     match: includesAny("grn_has_no_accepted_quantity"),
     errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,
     userMessage: "Chưa có số lượng nhận hợp lệ để chốt nhập kho.",

@@ -110,5 +110,5 @@ test("supplier mapping gates draft construction, not GRN confirmation", () => {
     confirmAction,
     /supplier_items|supplier_item_mapping_required/,
   );
-  assert.match(confirmAction, /\.rpc\("confirm_goods_receipt_note"/);
+  assert.match(confirmAction, /\.rpc\(\s*"confirm_goods_receipt_note"/);
 });

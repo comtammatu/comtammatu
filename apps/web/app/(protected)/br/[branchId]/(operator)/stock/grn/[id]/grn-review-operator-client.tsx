@@ -35,8 +35,9 @@ import {
 } from "@lib/branch-operator/components/branch-operator-page";
 import {
   GRN_DETAIL_COPY as grnCopy,
+  confirmableGrnSuppliers,
   grnLineOrderedDeliveredSummary,
-  hasAcceptedGrnQuantity,
+  isGrnLineBooked,
   type GrnDetail,
 } from "@lib/inventory/grn-detail-model";
 import { useGrnDetailActions } from "@lib/inventory/use-grn-detail-actions";
@@ -68,7 +69,7 @@ export function GrnReviewOperatorClient({
   const [editingLineId, setEditingLineId] = useState<number | null>(null);
   const statusBadge = getStatusBadgeMeta("inventory", grn.status);
   const { lines, setLines, patch, dirtyLines } = useGrnDetailLines(grn.items);
-  const hasAcceptedQuantity = hasAcceptedGrnQuantity(lines);
+  const confirmableSuppliers = confirmableGrnSuppliers(lines);
   const { handleSave, handleDeleteLine, upsertLocalLine, handleConfirmGrn } =
     useGrnDetailActions({
       grn,
@@ -140,7 +141,9 @@ export function GrnReviewOperatorClient({
               />
             ) : (
               <ItemGroup className="gap-2" role="list">
-                {lines.map((line) => (
+                {lines.map((line) => {
+                  const booked = isGrnLineBooked(line);
+                  return (
                   <div key={line.lineId} role="listitem">
                     <Item
                       variant="outline"
@@ -149,8 +152,11 @@ export function GrnReviewOperatorClient({
                         <button
                           type="button"
                           className="w-full text-left"
-                          onClick={() => setEditingLineId(line.lineId)}
-                          disabled={!canEditDraft}
+                          onClick={() => {
+                            if (booked) return;
+                            setEditingLineId(line.lineId);
+                          }}
+                          disabled={!canEditDraft || booked}
                         />
                       }
                     >
@@ -159,8 +165,15 @@ export function GrnReviewOperatorClient({
                           {line.name}
                         </ItemTitle>
                         <ItemDescription className="line-clamp-none text-xs">
-                          {grnLineOrderedDeliveredSummary(line)}
+                          {line.supplierName
+                            ? `${line.supplierName} · ${grnLineOrderedDeliveredSummary(line)}`
+                            : grnLineOrderedDeliveredSummary(line)}
                         </ItemDescription>
+                        {booked ? (
+                          <span className="text-xs font-medium text-muted-foreground">
+                            {grnCopy.line.bookedLine}
+                          </span>
+                        ) : null}
                         {line.dirty ? (
                           <span className="text-xs font-medium text-warning">
                             {grnCopy.line.unsaved}
@@ -168,20 +181,23 @@ export function GrnReviewOperatorClient({
                         ) : null}
                       </ItemContent>
                       <ItemActions className="shrink-0">
-                        {line.actual <= 0 ? (
+                        {booked ? (
+                          <IconCircleCheck className="size-5 text-success" />
+                        ) : line.actual <= 0 ? (
                           <IconInfoCircle className="size-5 text-muted-foreground" />
                         ) : line.rejected > 0 ? (
                           <IconAlertTriangle className="size-5 text-warning" />
                         ) : (
                           <IconCircleCheck className="size-5 text-success" />
                         )}
-                        {canEditDraft ? (
+                        {canEditDraft && !booked ? (
                           <IconChevronRight className="size-4 text-muted-foreground" />
                         ) : null}
                       </ItemActions>
                     </Item>
                   </div>
-                ))}
+                  );
+                })}
               </ItemGroup>
             )}
           </BranchOperatorPanel>
@@ -216,7 +232,7 @@ export function GrnReviewOperatorClient({
 
         <BranchGrnReviewLineSheet
           grn={grn}
-          line={canEditDraft ? editingLine : null}
+          line={canEditDraft && editingLine && !isGrnLineBooked(editingLine) ? editingLine : null}
           ingredients={ingredients}
           isPending={isSaving}
           onClose={() => setEditingLineId(null)}
@@ -269,24 +285,37 @@ export function GrnReviewOperatorClient({
                   {grnCopy.saveChanges(dirtyLines.length)}
                 </Button>
               ) : null}
-              <Button
-                type="button"
-                size="touch-lg"
-                disabled={
-                  !canConfirm ||
-                  isConfirming ||
-                  dirtyLines.length > 0 ||
-                  !hasAcceptedQuantity
-                }
-                onClick={() => void handleConfirmGrn()}
-              >
-                {isConfirming ? (
-                  <Spinner className="size-5" />
-                ) : (
+              {confirmableSuppliers.length === 0 ? (
+                <Button
+                  type="button"
+                  size="touch-lg"
+                  disabled
+                >
                   <IconCircleCheck />
-                )}
-                {grnCopy.confirmGrnAction}
-              </Button>
+                  {grnCopy.confirmGrnAction}
+                </Button>
+              ) : (
+                confirmableSuppliers.map((supplier) => (
+                  <Button
+                    key={supplier.id}
+                    type="button"
+                    size="touch-lg"
+                    disabled={
+                      !canConfirm ||
+                      isConfirming ||
+                      dirtyLines.length > 0
+                    }
+                    onClick={() => void handleConfirmGrn(supplier.id)}
+                  >
+                    {isConfirming ? (
+                      <Spinner className="size-5" />
+                    ) : (
+                      <IconCircleCheck />
+                    )}
+                    {grnCopy.confirmSupplierAction(supplier.name)}
+                  </Button>
+                ))
+              )}
             </div>
           }
         />

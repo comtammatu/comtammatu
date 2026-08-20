@@ -53,6 +53,8 @@ export type PurchaseOrderLineRow = {
   receivedQuantity: number;
   entryUnitId: number;
   unitLabel: string;
+  supplierId: number | null;
+  supplierName: string;
 };
 
 export type PurchaseOrderLinkedGrn = {
@@ -73,7 +75,8 @@ export type PurchaseOrderRow = {
   orderedAt: string;
   expectedDeliveryDate: string | null;
   notes: string | null;
-  supplierId: number;
+  supplierId: number | null;
+  supplierIds: number[];
   supplierName: string;
   branchId: number;
   branchName: string;

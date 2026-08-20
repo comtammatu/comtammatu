@@ -225,10 +225,12 @@ export function SupplierInvoicesClient({
   const createdInvoiceIdRef = useRef<number | null>(null);
   const [isPending, startTransition] = useTransition();
   const copy = messages.inventory.supplierInvoices;
-  const preselectGrnOptionKey =
+  const matchingGrns =
     preselectGrnId != null
-      ? (grns.find((option) => option.id === preselectGrnId)?.optionKey ?? null)
-      : null;
+      ? grns.filter((option) => option.id === preselectGrnId)
+      : [];
+  const preselectGrnOptionKey =
+    matchingGrns.length === 1 ? (matchingGrns[0]?.optionKey ?? null) : null;
   const createDefaultValues = useMemo(
     () => createSupplierInvoiceDefaultValues(preselectGrnOptionKey),
     [createOpen, preselectGrnOptionKey],

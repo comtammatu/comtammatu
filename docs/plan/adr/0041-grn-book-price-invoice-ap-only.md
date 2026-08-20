@@ -10,7 +10,8 @@
 reprice); D099; D101.
 
 **Amended by:** ADR 0042 (kept GRN quantity amends the PO line; the PO
-stays unpriced).
+stays unpriced); ADR 0043 (PO lines may carry different NCC; one
+shared GRN; confirm books one supplier group).
 
 **Keeps:** ADR 0017 remaining AP rules; ADR 0040 company WAC and
 production WAC; finished goods never purchased (PO / GRN / NCC).

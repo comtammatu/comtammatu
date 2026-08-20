@@ -77,6 +77,14 @@ const statusLabels: Record<string, string> = {
 
 const grnCopy = messages.inventory.grn;
 const valuationCopy = messages.inventory.valuationDisplay;
+const multiSupplierBadge = messages.inventory.po.multiSupplierBadge;
+
+function GrnSupplierLabel({ name }: { name: string }) {
+  if (name === multiSupplierBadge) {
+    return <Badge variant="secondary">{name}</Badge>;
+  }
+  return name;
+}
 const GRN_OVERLAY_KEYS = ["grnId", "mode"] as const;
 
 export type { GrnListRow } from "@lib/inventory/grn-list-model";
@@ -318,7 +326,7 @@ export function GrnListClient({
     {
       key: "supplier",
       header: "Nhà cung cấp",
-      render: (row) => row.supplierName,
+      render: (row) => <GrnSupplierLabel name={row.supplierName} />,
     },
     {
       key: "site",
@@ -683,7 +691,9 @@ function GrnMobileCard({
               <Badge variant="warning">{valuationCopy.pendingInvoice}</Badge>
             ) : null}
           </div>
-          <p className="mt-1 truncate text-sm">{row.supplierName}</p>
+          <p className="mt-1 truncate text-sm">
+            <GrnSupplierLabel name={row.supplierName} />
+          </p>
           <p className="truncate text-xs text-muted-foreground">
             {row.poCode} · {row.receivingSiteName}
           </p>

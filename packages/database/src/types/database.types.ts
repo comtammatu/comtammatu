@@ -2464,6 +2464,7 @@ export type Database = {
       }
       grn_items: {
         Row: {
+          confirmed_at: string | null
           cost_pending: boolean
           entry_to_base_factor: number | null
           entry_unit_code: string | null
@@ -2485,6 +2486,7 @@ export type Database = {
           unit_cost_unit_id: number | null
         }
         Insert: {
+          confirmed_at?: string | null
           cost_pending?: boolean
           entry_to_base_factor?: number | null
           entry_unit_code?: string | null
@@ -2506,6 +2508,7 @@ export type Database = {
           unit_cost_unit_id?: number | null
         }
         Update: {
+          confirmed_at?: string | null
           cost_pending?: boolean
           entry_to_base_factor?: number | null
           entry_unit_code?: string | null
@@ -7318,6 +7321,7 @@ export type Database = {
           po_id: number
           purchase_request_item_id: number | null
           quantity: number
+          supplier_id: number
           tenant_id: number
         }
         Insert: {
@@ -7329,6 +7333,7 @@ export type Database = {
           po_id: number
           purchase_request_item_id?: number | null
           quantity: number
+          supplier_id: number
           tenant_id: number
         }
         Update: {
@@ -7340,6 +7345,7 @@ export type Database = {
           po_id?: number
           purchase_request_item_id?: number | null
           quantity?: number
+          supplier_id?: number
           tenant_id?: number
         }
         Relationships: [
@@ -7370,6 +7376,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "purchase_request_items"
             referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "purchase_order_items_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "purchase_order_items_tenant_id_fkey"
@@ -7406,7 +7419,7 @@ export type Database = {
           status_reason: string | null
           submitted_at: string | null
           submitted_by: string | null
-          supplier_id: number
+          supplier_id: number | null
           tenant_id: number
           updated_at: string
         }
@@ -7435,7 +7448,7 @@ export type Database = {
           status_reason?: string | null
           submitted_at?: string | null
           submitted_by?: string | null
-          supplier_id: number
+          supplier_id?: number | null
           tenant_id: number
           updated_at?: string
         }
@@ -7464,7 +7477,7 @@ export type Database = {
           status_reason?: string | null
           submitted_at?: string | null
           submitted_by?: string | null
-          supplier_id?: number
+          supplier_id?: number | null
           tenant_id?: number
           updated_at?: string
         }
@@ -13268,7 +13281,10 @@ export type Database = {
             }
             Returns: Json
           }
-      confirm_goods_receipt_note: { Args: { p_grn_id: number }; Returns: Json }
+      confirm_goods_receipt_note: {
+        Args: { p_grn_id: number; p_supplier_id?: number }
+        Returns: Json
+      }
       confirm_sepay_payment: {
         Args: {
           p_account_number: string

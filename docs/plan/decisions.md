@@ -88,7 +88,7 @@ entry.
 **Net effect:** GRN is Central Supply/Kitchen only; Branch requests stock and receives transfers; no Branch production/GRN. Canonical: `docs/ref/inventory.md` §11.
 
 ## D099: Nhu cầu mua and supplier selection
-**Net effect:** Warehouse drafts Nhu cầu mua without NCC/price; when chỉ có một NCC active then auto PO; Kế toán chỉ chọn hoặc chia số lượng khi có nhiều NCC; lines bị chặn để bổ sung mapping before creating PO/NCC; one GRN nháp/PO; PO carries no commercial price; kept GRN qty amends the PO line (ADR 0042); GRN net unit price is the inventory book price; Hóa đơn NCC is AP and VAT only. Canonical: `docs/ref/inventory.md`, ADR 0017, ADR 0041, ADR 0042.
+**Net effect:** Happy path is warehouse `Tạo đơn` (ingredient-first; NCC on each PO line; ADR 0043). YCM is history-only until Wave 4. One Auto-GRN per PO; confirm books one NCC group on that GRN. PO carries no commercial price; kept GRN qty amends the PO line (ADR 0042); GRN net unit price is book price; `HĐ NCC` is AP/VAT only and matches line NCC. Canonical: `docs/ref/inventory.md`, ADR 0017, ADR 0041, ADR 0042, ADR 0043.
 
 ## D101: Inventory valuation settlement
 **Net effect:** Purchased SKUs share one company WAC across stock-bearing sites (ADR 0040); finished goods are recipe-produced only and keep a production pool. Valuation subledger append-only; never a second quantity. GRN confirm books net unit price into company WAC (ADR 0041). Kept GRN quantity amends the PO line so AP can bill the receipt (ADR 0042). Supplier invoice confirm does not reprice stock. Credit/return paths may still post `legacy_purchase_price_variance`. Canonical: `docs/ref/inventory.md`, ADR 0017, ADR 0040, ADR 0041, ADR 0042.

@@ -504,7 +504,7 @@ Detail: `inventory.md`, `inventory-sop.md`.
 | `reference_unit_cost` / `movement_unit_cost` / `inventory_value` / `company_wac` / `production_wac` | giá tham chiếu / đơn giá ghi sổ / giá trị tồn / giá vốn / giá vốn mẻ | Catalog hint cost / movement snapshot cost / book value of on-hand / company WAC / FG batch WAC. |
 | `raw_material` / `finished_good` | nguyên liệu / thành phẩm | Hàng mua (PO/GRN/NCC) / hàng Bếp Trung Tâm sản xuất có công thức. |
 | `recipe` / `production_recipe` / `production_order` | định mức món bán / công thức sản xuất / lệnh sản xuất | POS consumption BOM / FG BOM / production run. |
-| `three_way_matching` | đối soát 3 chứng từ | Match PO + GRN + supplier invoice. |
+| `three_way_matching` | đối soát 3 chứng từ | Match PO + GRN + supplier invoice. HĐ một NCC chỉ allocate dòng GRN/PO của NCC đó (ADR 0043). |
 
 ### Payments & cash
 

@@ -100,11 +100,12 @@ const createPurchaseOrderLineSchema = z.object({
   ingredientId: z.coerce.number().int().positive(),
   quantity: inventoryPositiveQuantitySchema,
   entryUnitId: z.coerce.number().int().positive(),
+  supplierId: z.coerce.number().int().positive(),
 });
 
 const createPurchaseOrderSchema = z.object({
   poId: z.coerce.number().int().positive().nullable().optional(),
-  supplierId: z.coerce.number().int().positive(),
+  supplierId: z.coerce.number().int().positive().nullable().optional(),
   branchId: z.coerce.number().int().positive(),
   neededBy: z.iso.date().nullable().optional(),
   notes: z.string().trim().max(500).optional(),
@@ -166,7 +167,7 @@ export const createPurchaseOrder = withAction(
       "create_purchase_order" as never,
       {
         p_po_id: poId ?? null,
-        p_supplier_id: supplierId,
+        p_supplier_id: supplierId ?? null,
         p_branch_id: branchId,
         p_notes: notes ?? "",
         p_needed_by: neededBy ?? null,
@@ -174,6 +175,7 @@ export const createPurchaseOrder = withAction(
           ingredient_id: line.ingredientId,
           quantity: line.quantity,
           entry_unit_id: line.entryUnitId,
+          supplier_id: line.supplierId,
         })),
         p_submit: submit,
         p_idempotency_key: idempotencyKey ?? null,

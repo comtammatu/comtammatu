@@ -237,9 +237,9 @@ BEGIN
     v_tenant, v_branch, v_supplier, '__IUR-PO-' || v_suffix, 'draft', v_owner
   ) RETURNING id INTO v_po;
   INSERT INTO public.purchase_order_items (
-    tenant_id, po_id, ingredient_id, quantity, entry_unit_id
+    tenant_id, po_id, ingredient_id, quantity, entry_unit_id, supplier_id
   ) VALUES (
-    v_tenant, v_po, v_ingredient, 1, v_receipt_unit
+    v_tenant, v_po, v_ingredient, 1, v_receipt_unit, v_supplier
   ) RETURNING id INTO v_po_item;
 
   PERFORM public.save_ingredient_catalog(

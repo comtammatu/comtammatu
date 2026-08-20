@@ -34,15 +34,13 @@ test("GRN list and detail keep controls inside one coherent workflow", () => {
   assert.match(lineRow, /<details/);
   assert.match(messages, /qcQueue: "Ghi hàng từ chối"/);
   assert.match(detail, /header: "Kết quả"/);
-  assert.match(detail, /hasAcceptedGrnQuantity\(lines\)/);
+  assert.match(detail, /confirmableGrnSuppliers\(lines\)/);
   assert.match(detail, /grnCopy\.line\.notInspected/);
-  assert.match(operatorDetail, /hasAcceptedGrnQuantity\(lines\)/);
+  assert.match(operatorDetail, /confirmableGrnSuppliers\(lines\)/);
   assert.match(actions, /confirmNoAcceptedQuantity/);
   assert.match(detail, /<DocumentFormFrame/);
-  assert.match(
-    detail,
-    /canMutateDraft && dirtyLines\.length > 0 \? \([\s\S]*?handleSave[\s\S]*?\) : \([\s\S]*?handleConfirmGrn/,
-  );
+  assert.match(detail, /confirmButtons/);
+  assert.match(detail, /handleConfirmGrn/);
   assert.doesNotMatch(detail, /grnCopy\.acceptedLines/);
   assert.doesNotMatch(detail, /grnCopy\.nextStepReadyTitle/);
   assert.doesNotMatch(detail, /formatVND/);

@@ -54,6 +54,7 @@ export type GrnDetailItem = {
   suggestedUnitName: string | null;
   suggestedSourceGrnId: number | null;
   suggestedSourceGrnNumber: string | null;
+  confirmedAt: string | null;
   monetary: {
     unitPrice: number | null;
     lineTotal: number;
@@ -629,10 +630,33 @@ export function grnLineReceiptSummary(
 }
 
 export function hasAcceptedGrnQuantity(
-  lines: readonly Pick<GrnDetailItem, "actual" | "rejected">[],
+  lines: readonly Pick<GrnDetailItem, "actual" | "rejected" | "confirmedAt">[],
 ): boolean {
   return lines.some(
-    (line) => acceptedGrnQuantity(line.actual, line.rejected) > 0,
+    (line) =>
+      line.confirmedAt == null &&
+      acceptedGrnQuantity(line.actual, line.rejected) > 0,
+  );
+}
+
+export function isGrnLineBooked(
+  line: Pick<GrnDetailItem, "confirmedAt">,
+): boolean {
+  return line.confirmedAt != null;
+}
+
+export function confirmableGrnSuppliers(
+  lines: readonly Pick<
+    GrnDetailItem,
+    "supplierId" | "supplierName" | "actual" | "rejected" | "confirmedAt"
+  >[],
+): GrnCreateSupplierOption[] {
+  return uniqueGrnSuppliers(
+    lines.filter(
+      (line) =>
+        line.confirmedAt == null &&
+        acceptedGrnQuantity(line.actual, line.rejected) > 0,
+    ),
   );
 }
 
@@ -738,6 +762,7 @@ export function createEditableGrnLine({
     suggestedUnitName: null,
     suggestedSourceGrnId: null,
     suggestedSourceGrnNumber: null,
+    confirmedAt: null,
     dirty: false,
   };
 }

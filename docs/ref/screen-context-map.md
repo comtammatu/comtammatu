@@ -236,11 +236,10 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 - **Luồng thao tác (Workflow):**
   - **Yêu cầu mua:** Tab lịch sử trên `/inventory/purchase-orders?tab=needs`.
     Không tạo nhu cầu mới; happy path là **Tạo đơn**.
-  - **Đơn mua hàng:** Kho/Owner **Tạo đơn** (một NCC + một kho nhận). PO không chứa
-    giá. Mỗi PO thuộc đúng một NCC và tạo GRN theo từng lần giao.
-  - **Nhập kho:** `/inventory/grn` là hàng đợi **Chờ nhập hàng**. Mở GRN được
-    tạo từ PO, kiểm nhận vật lý, nhập **Đơn giá** net, lưu nháp rồi xác nhận
-    để cập nhật tồn và WAC.
+  - **Đơn mua hàng:** Kho/Owner **Tạo đơn** theo nguyên liệu (NCC trên dòng;
+    một phiếu có thể nhiều NCC). PO không chứa giá. Gửi đơn tạo **một** GRN.
+  - **Nhập kho:** `/inventory/grn` **Chờ nhập hàng**. Chốt theo NCC đang giao
+    trên cùng GRN; Đơn giá net; HĐ Finance theo NCC dòng.
   - **Sản xuất:** `/inventory/production` là LIST hai tab (Lệnh / Công thức). Tạo lệnh bằng `FormDialog`; mở lệnh bằng `AppDialog variant="document"` (`?runId=&mode=`). Công thức CRUD bằng `FormDialog`; BOM hơn 12 dòng escalate `AppSheet` (`?recipeSpecId=`). Chọn công thức đang dùng và sản lượng (kèm tồn/sản lượng tối đa) -> tạo lệnh snapshot tại Bếp TT; kho xuất/nhập lấy mặc định, không bắt chọn lại “Bếp và vị trí” -> Bắt đầu -> Nhập thực dùng và sản lượng thực tế -> Hoàn thành tại Bếp TT -> Điều chuyển riêng nếu cần giao chi nhánh.
   - **Định mức món bán:** `/inventory/menu-recipes` là LIST mọi `menu_item` đang bán. Hàng = định mức đang khai (lượng + đơn vị) + giá vốn/phần theo WAC công ty hiện tại, không phải `Giá vốn món` đã ghi sổ. Sửa BOM trong `FormDialog`. Món chưa có định mức phải nhìn thấy khi POS đang trừ kho.
   - **Kiểm kê (Stocktake):** Mở phiên → đếm số đang có (không hiện sổ) → đối soát lệch → hoàn tất để ghi tồn. Nhân viên được giao trong ca dùng **Đếm tồn** (phiếu đếm, không tự sửa tồn).

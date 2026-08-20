@@ -210,6 +210,7 @@ export function PurchaseRequestsClient({
       ingredientId: String(item.ingredientId),
       quantity: String(item.quantity),
       entryUnitId: String(item.entryUnitId),
+      supplierId: "",
     }));
     setBranchId(nextBranchId);
     setNeededBy(nextNeededBy);
@@ -248,6 +249,7 @@ export function PurchaseRequestsClient({
             ingredientId: String(item.ingredientId),
             quantity: String(item.quantity),
             entryUnitId: String(item.entryUnitId),
+            supplierId: "",
           }))
         : [blankRequestLine()];
     setBranchId(nextBranchId);

@@ -947,7 +947,10 @@ export const inventory = {
     cancelConfirmDesc: "Phiếu nhập sẽ bị đánh dấu hủy và không thể hòan tác.",
     confirmGrnTitle: "Chốt nhập kho?",
     confirmGrnDesc:
-      "Số giữ lại ghi sổ theo đơn giá phiếu nhập. Giao dư thì đơn mua tăng đúng số giữ. Giao thiếu thì nhập lần sau hoặc đóng phần còn trên đơn mua. Sau khi chốt, phiếu không thể sửa.",
+      "Chỉ ghi sổ dòng nhà cung cấp đang xác nhận. Dòng NCC khác giữ trên cùng phiếu nhập. Số giữ lại ghi sổ theo đơn giá phiếu nhập. Giao dư thì đơn mua tăng đúng số giữ. Giao thiếu thì nhập lần sau hoặc đóng phần còn trên đơn mua.",
+    confirmSupplierAction: (name: string) => `Xác nhận giao ${name}`,
+    confirmSupplierRequired:
+      "Chọn nhà cung cấp đang giao. Không chốt dòng NCC khác trên phiếu này.",
     confirmDetailAccepted: "Nhận hợp lệ",
     confirmDetailShortage: "Còn thiếu — nhập lần sau",
     confirmDetailExcess: "Giữ thêm — đơn mua tăng số lượng",
@@ -1134,6 +1137,7 @@ export const inventory = {
         `Giữ thêm ${formatted} — đơn mua tăng số lượng`,
       rejectionReason: "Lý do từ chối:",
       unsaved: "chưa lưu",
+      bookedLine: "Đã nhận",
       deleteLineAria: "Xóa dòng",
       actualLabel: (unit: string) => `Số đã giao (${unit})`,
       acceptedLabel: (unit: string) => `Thực nhận (${unit})`,
@@ -1186,13 +1190,15 @@ export const inventory = {
     emptyDescription: "Kho lập danh sách nguyên liệu cần mua tại đây.",
     createTitle: "Tạo đơn mua",
     createDescription:
-      "Chọn nhà cung cấp trước. Chỉ hiện nguyên liệu đã gán NCC đó. Đơn giá ghi lúc nhập hàng.",
-    selectSupplierFirst: "Chọn nhà cung cấp trước khi chọn kho và nguyên liệu.",
+      "Chọn kho nhận và nguyên liệu cần mua. Gán nhà cung cấp từng dòng. Một phiếu có thể nhiều NCC. Đơn giá ghi lúc nhập hàng.",
+    multiSupplierPreview: (count: number) =>
+      `${formatCount(count)} NCC trên một phiếu`,
+    multiSupplierBadge: "Nhiều NCC",
     noMappedIngredients:
-      "NCC này chưa có nguyên liệu được gán. Gán nguyên liệu trong danh mục NCC trước.",
-    unmappedLineWarning: "Chưa gán nhà cung cấp này.",
+      "Chưa có nguyên liệu được gán nhà cung cấp. Gán nguyên liệu trong danh mục NCC trước.",
+    unmappedLineWarning: "Chưa gán nhà cung cấp dòng này.",
     unmappedSendBlocked:
-      "Chỉ gửi được nguyên liệu đã gán nhà cung cấp của đơn.",
+      "Chỉ gửi được nguyên liệu đã gán nhà cung cấp trên từng dòng.",
     saveDraft: "Lưu nháp",
     createdToast: "Đã lưu đơn mua.",
     editTitle: "Chỉnh sửa phiếu mua",
@@ -1235,7 +1241,7 @@ export const inventory = {
     loadErrorDescription: "Hãy tải lại trước khi tiếp tục mua hoặc nhận hàng.",
     emptyInitialTitle: "Chưa có đơn đặt hàng",
     emptyInitialDescription:
-      "Tạo đơn mua cho một nhà cung cấp, không cần yêu cầu mua.",
+      "Tạo đơn mua theo nguyên liệu; một phiếu có thể nhiều nhà cung cấp.",
     lineCount: (count: number) => `${formatCount(count)} dòng`,
     supplierRequired: "Nhà cung cấp",
     quantityShort: "SL",

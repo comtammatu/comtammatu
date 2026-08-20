@@ -36,7 +36,7 @@ interface UseGrnDetailActionsReturn {
   handleSave: () => Promise<void>;
   handleDeleteLine: (line: EditableGrnLine) => Promise<boolean>;
   upsertLocalLine: (line: EditableGrnLine) => void;
-  handleConfirmGrn: () => Promise<void>;
+  handleConfirmGrn: (supplierId?: number | null) => Promise<void>;
 }
 
 export function useGrnDetailActions({
@@ -120,7 +120,7 @@ export function useGrnDetailActions({
   function upsertLocalLine(line: EditableGrnLine) {
     setLines((previous) => {
       const existingIndex = previous.findIndex(
-        (item) => item.ingredientId === line.ingredientId,
+        (item) => item.lineId === line.lineId,
       );
       if (existingIndex < 0) return [...previous, line];
       return previous.map((item, index) =>
@@ -129,11 +129,20 @@ export function useGrnDetailActions({
     });
   }
 
-  function validateBeforeConfirm(): string | null {
-    if (!hasAcceptedGrnQuantity(lines)) {
+  function targetConfirmLines(supplierId?: number | null) {
+    return lines.filter(
+      (line) =>
+        line.confirmedAt == null &&
+        (supplierId == null || line.supplierId === supplierId),
+    );
+  }
+
+  function validateBeforeConfirm(supplierId?: number | null): string | null {
+    const target = targetConfirmLines(supplierId);
+    if (!hasAcceptedGrnQuantity(target)) {
       return GRN_DETAIL_COPY.confirmNoAcceptedQuantity;
     }
-    for (const line of lines) {
+    for (const line of target) {
       if (line.rejected > line.actual) {
         return GRN_DETAIL_COPY.validation.rejectedExceedsDelivered(line.name);
       }
@@ -160,17 +169,23 @@ export function useGrnDetailActions({
     return null;
   }
 
-  async function handleConfirmGrn() {
+  async function handleConfirmGrn(supplierId?: number | null) {
     if (dirtyLines.length > 0) {
       notify.error(messages.inventory.grn.confirmBlockedByDirty);
       return;
     }
-    const validationError = validateBeforeConfirm();
+    const target = targetConfirmLines(supplierId);
+    const validationError = validateBeforeConfirm(supplierId);
     if (validationError) {
       notify.error(validationError);
       return;
     }
-    const summary = lines.reduce(
+    const supplierName =
+      supplierId != null
+        ? (target.find((line) => line.supplierId === supplierId)?.supplierName ??
+          "")
+        : "";
+    const summary = target.reduce(
       (result, line) => {
         const quantities = calculateGrnQuantities(
           line.actual,
@@ -215,12 +230,15 @@ export function useGrnDetailActions({
           value: `${summary.rejectedLines} dòng`,
         },
       ],
-      confirmText: GRN_DETAIL_COPY.confirmGrnAction,
+      confirmText:
+        supplierName !== ""
+          ? messages.inventory.grn.confirmSupplierAction(supplierName)
+          : GRN_DETAIL_COPY.confirmGrnAction,
     });
     if (!shouldConfirm) return;
 
     startConfirm(async () => {
-      const result = await confirmGrn(grn.id);
+      const result = await confirmGrn(grn.id, supplierId ?? null);
       if (!result.success) {
         notify.error(result.error ?? messages.inventory.grn.confirmFailed);
         return;

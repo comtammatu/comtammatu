@@ -27,7 +27,7 @@ export type GrnListRow = {
   id: number;
   code: string;
   status: string;
-  supplierId: number;
+  supplierId: number | null;
   supplierName: string;
   poId: number;
   poCode: string;

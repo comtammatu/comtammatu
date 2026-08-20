@@ -11,7 +11,7 @@ BEGIN
   INTO v_confirm
   FROM pg_catalog.pg_proc AS procedure
   WHERE procedure.oid =
-    'public.confirm_goods_receipt_note(bigint)'::pg_catalog.regprocedure;
+    'public.confirm_goods_receipt_note(bigint,bigint)'::pg_catalog.regprocedure;
   IF v_confirm !~ 'quantity = v_previously_applied \+ v_applied'
      OR v_confirm !~ 'v_accepted_base > v_remaining_base' THEN
     RAISE EXCEPTION 'GRN KEPT QTY: confirm must amend PO line on over-receipt';

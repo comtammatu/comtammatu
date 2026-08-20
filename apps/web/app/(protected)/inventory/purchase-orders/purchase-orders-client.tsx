@@ -12,6 +12,7 @@ import {
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { formatVNDate, getVNDateString } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
+import { Badge } from "@comtammatu/ui/components/badge";
 import {
   InputGroup,
   InputGroupAddon,
@@ -62,6 +63,7 @@ import {
   type PurchaseOrderRow,
 } from "@lib/inventory/purchase-request-model";
 import type { PurchaseOrderSupplier } from "@lib/inventory/purchase-order-drafts";
+import { pickDefaultPurchaseDemandSupplier } from "@lib/inventory/purchase-order-drafts";
 import {
   blankRequestLine,
   type RequestDraftLine,
@@ -117,7 +119,6 @@ export function PurchaseOrdersClient({
   const [reason, setReason] = useState("");
   const [reasonAction, setReasonAction] = useState<ReasonAction>();
   const [isPending, startTransition] = useTransition();
-  const [supplierId, setSupplierId] = useState("");
   const [branchId, setBranchId] = useState(() =>
     String(createBranches[0]?.id ?? ""),
   );
@@ -181,7 +182,6 @@ export function PurchaseOrdersClient({
   );
 
   function resetCreate() {
-    setSupplierId("");
     setBranchId(String(createBranches[0]?.id ?? ""));
     setNeededBy(getVNDateString());
     setDraftLines([blankRequestLine()]);
@@ -194,22 +194,12 @@ export function PurchaseOrdersClient({
     );
   }
 
-  function changeSupplier(nextSupplierId: string) {
-    setSupplierId(nextSupplierId);
-    setDraftLines([blankRequestLine()]);
-  }
-
   function chooseIngredient(line: RequestDraftLine, value: string) {
-    const selectedSupplier = suppliers.find(
-      (supplier) => String(supplier.id) === supplierId,
-    );
-    if (
-      selectedSupplier != null &&
-      !selectedSupplier.ingredientIds.includes(Number(value))
-    ) {
-      return;
-    }
     const ingredient = ingredients.find((item) => item.id === Number(value));
+    const defaultSupplier = pickDefaultPurchaseDemandSupplier(
+      Number(value),
+      suppliers,
+    );
     const shouldPrefill =
       line.quantity.trim() === "" || Number(line.quantity) <= 0;
     const suggested =
@@ -218,6 +208,7 @@ export function PurchaseOrdersClient({
         : line.quantity;
     patchDraftLine(line.key, {
       ingredientId: value,
+      supplierId: defaultSupplier != null ? String(defaultSupplier.id) : "",
       entryUnitId: String(defaultPurchaseRequestUnit(ingredient)?.id ?? ""),
       ...(shouldPrefill ? { quantity: suggested } : {}),
     });
@@ -228,23 +219,18 @@ export function PurchaseOrdersClient({
       ingredientId: Number(line.ingredientId),
       quantity: Number(line.quantity),
       entryUnitId: Number(line.entryUnitId),
+      supplierId: Number(line.supplierId),
     }));
-    const selectedSupplier = suppliers.find(
-      (supplier) => String(supplier.id) === supplierId,
-    );
     const unmapped = parsedLines.filter(
-      (line) =>
-        line.ingredientId > 0 &&
-        selectedSupplier != null &&
-        !selectedSupplier.ingredientIds.includes(line.ingredientId),
+      (line) => line.ingredientId > 0 && !(line.supplierId > 0),
     );
     if (
-      !Number(supplierId) ||
       !Number(branchId) ||
       parsedLines.some(
         (line) =>
           !line.ingredientId ||
           !line.entryUnitId ||
+          !line.supplierId ||
           !Number.isFinite(line.quantity) ||
           line.quantity <= 0,
       )
@@ -256,9 +242,13 @@ export function PurchaseOrdersClient({
       toast.error(copy.unmappedSendBlocked);
       return;
     }
+    const uniqueSuppliers = [
+      ...new Set(parsedLines.map((line) => line.supplierId)),
+    ];
     startTransition(async () => {
       const result = await createPurchaseOrder({
-        supplierId: Number(supplierId),
+        supplierId:
+          uniqueSuppliers.length === 1 ? (uniqueSuppliers[0] ?? null) : null,
         branchId: Number(branchId),
         neededBy: neededBy || null,
         lines: parsedLines,
@@ -442,7 +432,12 @@ export function PurchaseOrdersClient({
     {
       key: "supplier",
       header: copy.supplierRequired,
-      render: (row) => row.supplierName,
+      render: (row) =>
+        row.supplierIds.length > 1 ? (
+          <Badge variant="secondary">{copy.multiSupplierBadge}</Badge>
+        ) : (
+          row.supplierName
+        ),
     },
     { key: "branch", header: copy.warehouse, render: (row) => row.branchName },
     {
@@ -626,7 +621,6 @@ export function PurchaseOrdersClient({
       {list}
       <PurchaseOrderFormDialog
         open={createOpen}
-        supplierId={supplierId}
         branchId={branchId}
         neededBy={neededBy}
         lines={draftLines}
@@ -640,7 +634,6 @@ export function PurchaseOrdersClient({
             updateUrl(null, null, "replace");
           }
         }}
-        onSupplierIdChange={changeSupplier}
         onBranchIdChange={setBranchId}
         onNeededByChange={setNeededBy}
         onChooseIngredient={chooseIngredient}
@@ -859,7 +852,9 @@ function PurchaseOrderDocumentBody({
                           <p className="font-medium text-foreground">
                             {line.ingredientName}
                           </p>
-                          <p className="text-muted-foreground">{line.unitLabel}</p>
+                          <p className="text-muted-foreground">
+                            {line.supplierName} · {line.unitLabel}
+                          </p>
                         </div>
                         <div className="grid grid-cols-3 gap-3 sm:min-w-56">
                           <div className="min-w-0">
