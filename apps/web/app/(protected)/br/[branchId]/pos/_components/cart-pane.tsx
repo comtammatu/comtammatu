@@ -35,10 +35,12 @@ import {
   getPosLineItemDisplayName,
   getPosLineItemSummary,
 } from "../types";
-import type { CartItem, DeliveryPlatform, OrderType } from "../types";
+import type { CartItem, OrderType } from "../types";
 import { DELIVERY_PLATFORMS } from "../types";
-import { getDeliveryPlatformLabelVi } from "@comtammatu/shared/labels";
-import { DeliveryPlatformMark } from "@/components/delivery-platform-mark";
+import {
+  DeliveryPlatformMark,
+  deliveryPlatformChipLabel,
+} from "@/components/delivery-platform-mark";
 import { useCart } from "../_hooks/use-cart";
 import { useActiveTable } from "../_hooks/use-active-table";
 import { useSwipeReveal } from "@lib/hooks/use-swipe-reveal";
@@ -394,35 +396,40 @@ function CartPaneComponent({
             <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               {messages.pos.delivery.platformLabel}
             </Label>
-            <ToggleGroup
-              type="single"
-              value={cart.deliveryPlatform ?? ""}
-              variant="outline"
-              size="touch"
-              spacing={0}
-              className="grid w-full grid-cols-2 gap-2 sm:grid-cols-4"
+            {/*
+              Joined Toggle strip + 4-up grid overlaps on the narrow cart
+              sidebar. Keep a 2×2 button grid for platform identity.
+            */}
+            <div
+              role="radiogroup"
               aria-label={messages.pos.delivery.platformAria}
-              onValueChange={(value) => {
-                if (!value) return;
-                cart.setDeliveryPlatform(value as DeliveryPlatform);
-              }}
+              className="grid w-full grid-cols-2 gap-2"
             >
-              {DELIVERY_PLATFORMS.map((platform) => (
-                <ToggleGroupItem
-                  key={platform}
-                  value={platform}
-                  className="min-w-0 justify-center text-sm font-semibold"
-                  disabled={
-                    cart.items.length > 0 && cart.deliveryPlatform !== platform
-                  }
-                >
-                  <span className="inline-flex items-center gap-1.5">
-                    <DeliveryPlatformMark platform={platform} size="xs" />
-                    {getDeliveryPlatformLabelVi(platform)}
-                  </span>
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
+              {DELIVERY_PLATFORMS.map((platform) => {
+                const selected = cart.deliveryPlatform === platform;
+                return (
+                  <Button
+                    key={platform}
+                    type="button"
+                    variant={selected ? "default" : "outline"}
+                    size="touch"
+                    role="radio"
+                    aria-checked={selected}
+                    className="min-w-0 justify-start gap-2 px-2.5"
+                    disabled={
+                      cart.items.length > 0 &&
+                      cart.deliveryPlatform !== platform
+                    }
+                    onClick={() => cart.setDeliveryPlatform(platform)}
+                  >
+                    <DeliveryPlatformMark platform={platform} size="sm" />
+                    <span className="min-w-0 truncate text-sm font-semibold">
+                      {deliveryPlatformChipLabel(platform)}
+                    </span>
+                  </Button>
+                );
+              })}
+            </div>
           </div>
           <div className="flex flex-col gap-1.5">
             <Label
@@ -446,21 +453,25 @@ function CartPaneComponent({
       ) : null}
 
       {cart.items.length === 0 ? (
-        <div className="flex min-h-0 flex-1 items-center justify-center px-4">
-          <AppEmptyState
-            compact
-            symbol="roundPlate"
-            title={
-              cart.orderType === "delivery" && !deliveryReady
-                ? messages.pos.delivery.emptySetup
-                : cart.orderType === "delivery" ||
-                    cart.orderType === "takeaway" ||
-                    selectedTableNumber != null
+        // Delivery identity fields above already state the next step — do not
+        // park a centered empty-state in the remaining drawer height.
+        cart.orderType === "delivery" && !deliveryReady ? (
+          <div className="min-h-0 flex-1" aria-hidden="true" />
+        ) : (
+          <div className="flex min-h-0 flex-1 items-start justify-center px-4 pt-4">
+            <AppEmptyState
+              compact
+              symbol="roundPlate"
+              title={
+                cart.orderType === "delivery" ||
+                cart.orderType === "takeaway" ||
+                selectedTableNumber != null
                   ? messages.pos.pendingDraft.emptyWithContext
                   : messages.pos.pendingDraft.emptyNoContext
-            }
-          />
-        </div>
+              }
+            />
+          </div>
+        )
       ) : (
         <>
           <ScrollArea className="min-h-0 flex-1">

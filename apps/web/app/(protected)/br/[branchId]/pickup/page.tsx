@@ -487,8 +487,6 @@ function toPickupListRow({
     }),
     status: resolvePickupListStatus(index),
     sortAt: item.sortAt,
-    callLane: item.callLane,
-    deliveryPlatform: item.deliveryPlatform,
   };
 }
 

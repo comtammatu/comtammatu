@@ -110,6 +110,10 @@ test("Pickup page follows the KDS order-list vocabulary", () => {
     pickupPageSource,
     /const PICKUP_ACTIVE_STATUSES = \["pending", "preparing", "ready"\] as const;/,
   );
+  assert.match(pickupPageSource, /isPickupGuestBoardVisible/);
+  assert.doesNotMatch(pickupPageSource, /laneDineIn/);
+  assert.doesNotMatch(pickupPageSource, /PickupLaneBoard/);
+  assert.doesNotMatch(pickupPageSource, /md:grid-cols-2/);
   assert.doesNotMatch(pickupPageSource, /PICKUP_VISIBLE_STATUSES/);
   assert.match(pickupPageSource, /\.in\("status", PICKUP_ACTIVE_STATUSES\)/);
   assert.match(pickupPageSource, /const PICKUP_ROW_LIMIT_BASE = 4;/);
@@ -178,13 +182,7 @@ test("Pickup page follows the KDS order-list vocabulary", () => {
   assert.doesNotMatch(pickupLightModeSource, /localStorage/);
   assert.match(pickupPageSource, /grid-rows-4/);
   assert.match(pickupPageSource, /grid-cols-2/);
-  assert.match(pickupPageSource, /md:grid-cols-2/);
   assert.match(pickupPageSource, /sm:grid-cols-12/);
-  assert.match(pickupPageSource, /laneDineIn: "Bàn"/);
-  assert.match(pickupPageSource, /laneTakeaway: "Mang về"/);
-  assert.match(pickupPageSource, /PickupLaneBoard/);
-  assert.match(pickupPageSource, /isPickupGuestBoardVisible/);
-  assert.match(pickupPageSource, /DeliveryPlatformMark/);
   assert.match(pickupPageSource, /const PICKUP_COLUMN_CLASS = \{/);
   assert.match(pickupPageSource, /order: "col-span-1 border-r sm:col-span-4"/);
   assert.match(

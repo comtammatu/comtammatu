@@ -1,8 +1,10 @@
 # Third-party delivery platform marks
 
-Place official partner wordmarks/app icons here as `{grab,shopee,be,green_sm}.svg`
-when a license allows embedding. Má Tư POS/KDS/Pickup identify the order source
-only; do not route these through `/brand/` or `BrandMark`.
+`DeliveryPlatformMark` renders inline SVG identification badges (Grab / Shopee /
+be / Green SM) so POS/KDS/Pickup never depend on a public URL fetch.
 
-Until an official asset is present, `DeliveryPlatformMark` uses a monogram
-fallback (G / SF / Be / SM). Do not add unofficial redrawn logos.
+Optional files here (`grab.svg`, `shopee.svg`, `be.svg`, `green_sm.svg`) may
+hold official partner marks when a license allows embedding; they are not
+wired by default. Do not route these through `/brand/` or `BrandMark`.
+
+Thermal print and TTS stay text only.

@@ -403,7 +403,6 @@ export const pos = {
     platformAria: "Chọn nền tảng giao hàng",
     externalRefLabel: "Mã đơn ứng dụng",
     externalRefPlaceholder: "Ví dụ: 1234, A-5678...",
-    emptySetup: "Chọn nền tảng và nhập mã đơn ứng dụng.",
     platformRequired: "Chọn nền tảng giao hàng",
     externalRefRequired: "Nhập mã đơn ứng dụng",
     submitBlockedHint: "Chọn nền tảng và nhập mã đơn ứng dụng để gửi bếp.",

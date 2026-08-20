@@ -1733,6 +1733,7 @@ const perFileCountBudgets = [
     allowlist: {
       "apps/web/app/_lib/theme-tokens.ts": 10,
       "apps/web/app/components/chart.tsx": 5,
+      "apps/web/app/components/delivery-platform-mark.tsx": 8,
     },
   },
   {

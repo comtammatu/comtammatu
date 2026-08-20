@@ -52,6 +52,23 @@ test("DeliveryPlatformMark is not BrandMark", () => {
   assert.doesNotMatch(mark, /BrandMark/);
   assert.doesNotMatch(mark, /\/brand\//);
   assert.match(mark, /aria-hidden="true"/);
+  assert.match(mark, /function PlatformSvg/);
+  assert.match(mark, /fill="#00B14F"/);
+  assert.doesNotMatch(mark, /\/delivery-platforms\//);
+});
+
+test("POS delivery platform picker uses a 2-col button grid not ToggleGroup strip", () => {
+  const cartPane = read(
+    "app/(protected)/br/[branchId]/pos/_components/cart-pane.tsx",
+  );
+  const identityBlock =
+    /data-testid="pos-delivery-identity"[\s\S]*?id="pos-delivery-external-ref"/.exec(
+      cartPane,
+    )?.[0] ?? "";
+  assert.match(identityBlock, /grid w-full grid-cols-2 gap-2/);
+  assert.match(identityBlock, /deliveryPlatformChipLabel/);
+  assert.doesNotMatch(identityBlock, /<ToggleGroup/);
+  assert.doesNotMatch(identityBlock, /sm:grid-cols-4/);
 });
 
 test("finance revenue types expose delivery and platform KPIs", () => {
@@ -70,7 +87,6 @@ test("POS delivery identity is reachable on empty cart before first item", () =>
     "app/(protected)/br/[branchId]/pos/_components/cart-pane.tsx",
   );
   assert.match(cartPane, /data-testid="pos-delivery-identity"/);
-  assert.match(cartPane, /messages\.pos\.delivery\.emptySetup/);
   assert.doesNotMatch(cartPane, /externalRefHint/);
   // Identity must not be nested only under the non-empty cart footer path.
   const identityIdx = cartPane.indexOf('data-testid="pos-delivery-identity"');
@@ -79,6 +95,11 @@ test("POS delivery identity is reachable on empty cart before first item", () =>
   assert.ok(
     identityIdx < emptyStateUsageIdx,
     "delivery identity must render above empty cart state",
+  );
+  // Incomplete delivery identity must not center a large empty-state panel.
+  assert.match(
+    cartPane,
+    /orderType === "delivery" && !deliveryReady \? \(\s*<div className="min-h-0 flex-1"/,
   );
 
   const posInner = read(
