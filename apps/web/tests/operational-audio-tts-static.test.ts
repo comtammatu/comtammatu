@@ -54,7 +54,9 @@ test("operational cloud TTS stays allowlisted, authenticated, and cloud-only", (
   assert.match(voice, /primeOperationalVoice/);
   assert.match(voice, /prefetchOperationalVoiceCatalog/);
   assert.match(voice, /code === "tts_unconfigured"/);
-  assert.match(voice, /TTS_FETCH_TIMEOUT_MS = 2_500/);
+  assert.match(voice, /TTS_FETCH_TIMEOUT_MS = 10_000/);
+  assert.match(gateway, /const TTS_TIMEOUT_MS = 8_000/);
+  assert.match(route, /maxDuration = 15/);
   assert.match(voice, /params\.set\("live", "1"\)/);
   assert.match(voice, /clipRequest\(text, true\)/);
   assert.match(voice, /prefetchGeneration/);

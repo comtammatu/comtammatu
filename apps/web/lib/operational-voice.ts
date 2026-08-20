@@ -2,7 +2,9 @@ import { playAlertAudioBuffer } from "./audio-signal";
 import { listPrefetchUtterances } from "./operational-audio-catalog";
 
 const TTS_CACHE_NAME = "ctmt-operational-tts-v1";
-const TTS_FETCH_TIMEOUT_MS = 2_500;
+// Whole-request budget: session auth RPCs plus Gateway speech. The 2.5s
+// beep debounce is unrelated — aborting here left every first clip silent.
+const TTS_FETCH_TIMEOUT_MS = 10_000;
 const SPEAK_PATH = "/api/operational-audio/speak";
 const RECEIVED_AMOUNT_PREFIX = "Đã nhận ";
 const AMOUNT_MEMORY_LIMIT = 80;
@@ -128,7 +130,10 @@ async function fetchCloudClip(
   }
 
   try {
-    const response = await fetch(clipRequest(text, true), { signal });
+    const response = await fetch(clipRequest(text, true), {
+      signal,
+      cache: "no-store",
+    });
     if (response.status === 429) return "rate_limited";
     if (response.status === 503) {
       let code = "";

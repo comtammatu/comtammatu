@@ -5,7 +5,7 @@ import { GatewayError, gateway } from "@ai-sdk/gateway";
 // Locked cost choice: cheapest OpenAI speech model on Gateway. Not env-switched.
 const TTS_MODEL = "openai/tts-1";
 const TTS_VOICE = "nova";
-const TTS_TIMEOUT_MS = 2_500;
+const TTS_TIMEOUT_MS = 8_000;
 const MAX_CATALOG_CLIPS = 200;
 const MAX_AMOUNT_CLIPS = 80;
 const RECEIVED_AMOUNT_PREFIX = "Đã nhận ";
@@ -90,7 +90,9 @@ export async function synthesizeOperationalUtterance(
   } catch (error) {
     console.warn(
       "[operational-tts] gateway failed=%s",
-      error instanceof Error ? error.name : "unknown",
+      error instanceof Error
+        ? `${error.name}:${error.message.slice(0, 80)}`
+        : "unknown",
     );
     if (GatewayError.isInstance(error)) {
       gatewayCoolDownUntil = Date.now() + GATEWAY_COOLDOWN_MS;
