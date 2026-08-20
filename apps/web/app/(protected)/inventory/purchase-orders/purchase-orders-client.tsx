@@ -194,7 +194,21 @@ export function PurchaseOrdersClient({
     );
   }
 
+  function changeSupplier(nextSupplierId: string) {
+    setSupplierId(nextSupplierId);
+    setDraftLines([blankRequestLine()]);
+  }
+
   function chooseIngredient(line: RequestDraftLine, value: string) {
+    const selectedSupplier = suppliers.find(
+      (supplier) => String(supplier.id) === supplierId,
+    );
+    if (
+      selectedSupplier != null &&
+      !selectedSupplier.ingredientIds.includes(Number(value))
+    ) {
+      return;
+    }
     const ingredient = ingredients.find((item) => item.id === Number(value));
     const shouldPrefill =
       line.quantity.trim() === "" || Number(line.quantity) <= 0;
@@ -626,7 +640,7 @@ export function PurchaseOrdersClient({
             updateUrl(null, null, "replace");
           }
         }}
-        onSupplierIdChange={setSupplierId}
+        onSupplierIdChange={changeSupplier}
         onBranchIdChange={setBranchId}
         onNeededByChange={setNeededBy}
         onChooseIngredient={chooseIngredient}

@@ -1186,10 +1186,13 @@ export const inventory = {
     emptyDescription: "Kho lập danh sách nguyên liệu cần mua tại đây.",
     createTitle: "Tạo đơn mua",
     createDescription:
-      "Một nhà cung cấp và một kho nhận. Đơn giá ghi lúc nhập hàng.",
+      "Chọn nhà cung cấp trước. Chỉ hiện nguyên liệu đã gán NCC đó. Đơn giá ghi lúc nhập hàng.",
+    selectSupplierFirst: "Chọn nhà cung cấp trước khi chọn kho và nguyên liệu.",
+    noMappedIngredients:
+      "NCC này chưa có nguyên liệu được gán. Gán nguyên liệu trong danh mục NCC trước.",
     unmappedLineWarning: "Chưa gán nhà cung cấp này.",
     unmappedSendBlocked:
-      "Gán nhà cung cấp cho mọi nguyên liệu trước khi gửi đơn.",
+      "Chỉ gửi được nguyên liệu đã gán nhà cung cấp của đơn.",
     saveDraft: "Lưu nháp",
     createdToast: "Đã lưu đơn mua.",
     editTitle: "Chỉnh sửa phiếu mua",
