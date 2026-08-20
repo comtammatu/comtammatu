@@ -515,6 +515,8 @@ export async function fetchGrnDetail(
     ]);
   attachIngredientBaseUnitEmbeds(lines, unitsByIngredient);
   const linkedPoRows = linkedPos ?? [];
+  // Prior booked qty on the PO line only — exclude this GRN so "Theo đơn" /
+  // remaining does not collapse to 0 after the current phiếu is confirmed.
   const previouslyApplied = new Map<number, number>();
   for (const row of (previousResult.data ?? []) as unknown as Array<{
     id: number;
@@ -528,6 +530,7 @@ export async function fetchGrnDetail(
     const linkedGrn = Array.isArray(row.goods_received_notes)
       ? row.goods_received_notes[0]
       : row.goods_received_notes;
+    if (linkedGrn?.id === grn.id) continue;
     const booked =
       row.confirmed_at != null || linkedGrn?.status === "confirmed";
     if (!booked) continue;

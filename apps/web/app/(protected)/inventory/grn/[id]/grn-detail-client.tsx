@@ -397,22 +397,25 @@ export function GRNDetailClient({
       },
       {
         key: "ordered",
-        header: "Theo đơn",
+        header: grnCopy.lineHeaderOrdered,
         className: "align-top",
-        render: (line) => (
-          <div>
-            <p className="font-mono font-medium tabular-nums">
-              {formatGrnPoQty(line.remainingQuantity, line)}
-            </p>
-            {line.previouslyReceived > 0 ? (
-              <p className="mt-1 text-xs text-muted-foreground">
-                {grnCopy.line.receivedBeforeText(
-                  formatGrnPoQty(line.previouslyReceived, line),
-                )}
+        render: (line) => {
+          const orderedQty = line.poQuantity ?? line.remainingQuantity;
+          return (
+            <div>
+              <p className="font-mono font-medium tabular-nums">
+                {formatGrnPoQty(orderedQty, line)}
               </p>
-            ) : null}
-          </div>
-        ),
+              {line.previouslyReceived > 0 ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {grnCopy.line.receivedBeforeText(
+                    formatGrnPoQty(line.previouslyReceived, line),
+                  )}
+                </p>
+              ) : null}
+            </div>
+          );
+        },
       },
       {
         key: "actual",

@@ -16,6 +16,7 @@ test("GRN list and detail keep controls inside one coherent workflow", () => {
     "app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/grn-review-operator-client.tsx",
   );
   const actions = read("lib/inventory/use-grn-detail-actions.ts");
+  const grnActions = read("app/(protected)/inventory/grn-actions.ts");
   const messages = read("lib/messages/inventory.ts");
 
   assert.match(
@@ -23,8 +24,13 @@ test("GRN list and detail keep controls inside one coherent workflow", () => {
     /min-w-64 flex-1/,
   );
   assert.doesNotMatch(detail, /function LineMetrics/);
-  assert.match(detail, /header: "Theo đơn"/);
+  assert.match(detail, /header: grnCopy\.lineHeaderOrdered/);
+  assert.match(detail, /line\.poQuantity \?\? line\.remainingQuantity/);
   assert.match(detail, /header: grnCopy\.lineHeaderQty/);
+  assert.match(
+    grnActions,
+    /if \(linkedGrn\?\.id === grn\.id\) continue/,
+  );
   assert.match(detail, /header: grnCopy\.lineHeaderUnitPrice/);
   assert.match(detail, /section="quantity"/);
   assert.match(detail, /section="unitPrice"/);

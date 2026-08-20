@@ -78,10 +78,7 @@ supabase/.branches/
 AGENTS.local.md
 CLAUDE.local.md
 .headroom/
-.cursor/.cache/
-.cursor/cache/
-.cursor/logs/
-.cursor/tmp/
+.cursor/
 .claire/
 .trae/
 .qoder/
