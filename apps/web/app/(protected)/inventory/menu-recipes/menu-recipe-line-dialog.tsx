@@ -171,16 +171,6 @@ export function MenuRecipeLineDialog({
         const errors = form.formState.errors;
         const linesRootError =
           errors.lines?.root?.message ?? errors.lines?.message;
-        const watchedLines = form.watch("lines");
-        const ingredientById = new Map(
-          ingredients.map((ingredient) => [ingredient.id, ingredient]),
-        );
-        const hasCostSignals = (watchedLines ?? []).some((line) => {
-          const id = Number(line.ingredient_id);
-          if (!Number.isFinite(id) || id <= 0) return false;
-          const signals = ingredientById.get(id)?.costSignals;
-          return signals != null && signals.length > 0;
-        });
 
         return (
           <>
@@ -207,11 +197,9 @@ export function MenuRecipeLineDialog({
                 {INVENTORY_VI.ingredientListLabel}
               </h3>
 
-              {hasCostSignals ? (
-                <p className="text-sm text-muted-foreground">
-                  {INVENTORY_VI.menuRecipeCostSignalsHint}
-                </p>
-              ) : null}
+              <p className="text-sm text-muted-foreground">
+                {INVENTORY_VI.menuRecipeCostSignalsHint}
+              </p>
 
               <IngredientLinesEditor
                 control={form.control}

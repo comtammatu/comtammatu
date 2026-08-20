@@ -95,6 +95,8 @@ test("finance food cost action aggregates sales via SQL RPC", () => {
   assert.match(source, /from\("menu_items"\)/);
   assert.match(source, /resolveMenuRecipeUnitCost/);
   assert.match(source, /buildSourceSiteWacMap/);
+  assert.match(source, /buildCompanyWacMap/);
+  assert.match(source, /companyWacMap/);
   assert.doesNotMatch(source, /FOOD_COST_PAGE_SIZE/);
   assert.doesNotMatch(source, /\.range\(/);
 });
@@ -258,13 +260,16 @@ test("finance food cost keeps the resolved period in its filter, not the header"
   assert.match(client, /summarizeFoodCostRows/);
   assert.match(client, /density="compact"/);
   assert.match(client, /function RecipeCostCell/);
+  assert.match(client, /function MarginCell/);
   assert.match(client, /foodCopy\.unitCostPerPortion/);
   assert.doesNotMatch(client, /key: "unit_food_cost"/);
   assert.match(page, /fetchRevenueKpis/);
   assert.match(page, /calculateGrossProfitIdentity/);
   assert.match(client, /grossMarginPct/);
-  assert.doesNotMatch(client, /row\.gross_margin_pct/);
-  assert.doesNotMatch(client, /totals\.grossMarginPct/);
+  assert.match(client, /row\.gross_margin_pct/);
+  assert.match(client, /row\.gross_profit/);
+  assert.match(client, /totals\.grossMarginPct/);
+  assert.match(client, /foodCopy\.grossProfitCurrency/);
 });
 
 test("finance food cost table totals skip định mức when any row is unvalued", () => {
@@ -284,23 +289,29 @@ test("finance food cost table totals skip định mức when any row is unvalued
   assert.equal(complete.revenue, 150_000);
   assert.equal(complete.ingredientCost, 30_000);
   assert.equal(complete.unitIngredientCost, 10_000);
+  assert.equal(complete.grossProfit, 120_000);
+  assert.equal(complete.grossMarginPct, 80);
 
   const partial = summarizeFoodCostRows([
     {
       quantity_sold: 2,
       revenue: 100_000,
       ingredient_cost: 20_000,
+      gross_profit: 80_000,
     },
     {
       quantity_sold: 1,
       revenue: 50_000,
       ingredient_cost: null,
+      gross_profit: null,
     },
   ]);
   assert.equal(partial.quantitySold, 3);
   assert.equal(partial.revenue, 150_000);
   assert.equal(partial.ingredientCost, null);
   assert.equal(partial.unitIngredientCost, null);
+  assert.equal(partial.grossProfit, null);
+  assert.equal(partial.grossMarginPct, null);
 });
 
 test("finance food cost gross margin uses recorded food cost, not theoretical portion cost", () => {

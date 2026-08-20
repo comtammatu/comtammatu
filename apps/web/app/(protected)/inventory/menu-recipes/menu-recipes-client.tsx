@@ -57,6 +57,7 @@ import type {
   MenuRecipeLineDraft,
 } from "./menu-recipe-line-dialog";
 import {
+  formatMenuRecipeBomSummary,
   resolveMenuRecipeListCostState,
   type MenuRecipeCostSignal,
 } from "../_lib/menu-recipe-cost";
@@ -235,7 +236,16 @@ export function MenuRecipesClient({
     {
       key: "name",
       header: INVENTORY_VI.menuRecipeColMenuItem,
-      render: (menuRecipe) => <span>{menuRecipe.name}</span>,
+      render: (menuRecipe) => (
+        <div className="min-w-0">
+          <span>{menuRecipe.name}</span>
+          {menuRecipe.items.length > 0 ? (
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {formatMenuRecipeBomSummary(menuRecipe.items)}
+            </p>
+          ) : null}
+        </div>
+      ),
     },
     {
       key: "category",
@@ -389,6 +399,7 @@ export function MenuRecipesClient({
     <AppPage width="xwide" density="compact">
       <AppPageHeader
         title={INVENTORY_VI.menuRecipesPageTitle}
+        description={INVENTORY_VI.menuRecipesPageDescription}
         actions={
           <Button type="button" size="lg" onClick={openCreate}>
             <IconPlus data-icon="inline-start" />
@@ -475,7 +486,7 @@ function MenuRecipeCard({
         <ItemDescription>
           {menuRecipe.items.length === 0
             ? INVENTORY_VI.menuRecipeMissingLines
-            : INVENTORY_VI.menuRecipeLineCount(menuRecipe.items.length)}
+            : formatMenuRecipeBomSummary(menuRecipe.items)}
         </ItemDescription>
         <ItemDescription>
           {INVENTORY_VI.menuRecipeColUnitCost}:{" "}

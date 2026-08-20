@@ -242,7 +242,7 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
     tạo từ PO, kiểm nhận vật lý, nhập **Đơn giá** net, lưu nháp rồi xác nhận
     để cập nhật tồn và WAC.
   - **Sản xuất:** `/inventory/production` là LIST hai tab (Lệnh / Công thức). Tạo lệnh bằng `FormDialog`; mở lệnh bằng `AppDialog variant="document"` (`?runId=&mode=`). Công thức CRUD bằng `FormDialog`; BOM hơn 12 dòng escalate `AppSheet` (`?recipeSpecId=`). Chọn công thức đang dùng và sản lượng (kèm tồn/sản lượng tối đa) -> tạo lệnh snapshot tại Bếp TT; kho xuất/nhập lấy mặc định, không bắt chọn lại “Bếp và vị trí” -> Bắt đầu -> Nhập thực dùng và sản lượng thực tế -> Hoàn thành tại Bếp TT -> Điều chuyển riêng nếu cần giao chi nhánh.
-  - **Định mức món bán:** `/inventory/menu-recipes` là LIST mọi `menu_item` đang bán. Hàng = phủ định mức + giá vốn/phần theo WAC Kho gốc (Nguồn hàng), không phải `Giá vốn món` đã ghi sổ. BOM chỉ trong `FormDialog`. Món chưa có định mức phải nhìn thấy khi POS đang trừ kho.
+  - **Định mức món bán:** `/inventory/menu-recipes` là LIST mọi `menu_item` đang bán. Hàng = định mức đang khai (lượng + đơn vị) + giá vốn/phần theo WAC công ty hiện tại, không phải `Giá vốn món` đã ghi sổ. Sửa BOM trong `FormDialog`. Món chưa có định mức phải nhìn thấy khi POS đang trừ kho.
   - **Kiểm kê (Stocktake):** Mở phiên → đếm số đang có (không hiện sổ) → đối soát lệch → hoàn tất để ghi tồn. Nhân viên được giao trong ca dùng **Đếm tồn** (phiếu đếm, không tự sửa tồn).
   - **Điều chuyển (Transfer):** Một loại phiếu. CN tạo nháp xin hàng (Kho Tổng
     hoặc Bếp TT → CN) hoặc giao đi (CN → trung tâm / CN khác); chưa trừ tồn.

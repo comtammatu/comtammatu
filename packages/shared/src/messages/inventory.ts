@@ -498,6 +498,8 @@ export const INVENTORY_VI = {
   adjustIngredientLine: (name: string) => `Nguyên liệu: ${name}`,
   adjustStockSuccess: (name: string) => `Đã điều chỉnh tồn kho ${name}`,
   menuRecipesPageTitle: "Định mức món bán",
+  menuRecipesPageDescription:
+    "Lượng nguyên liệu cho 1 phần đang bán. Giá vốn/phần nhân giá vốn BQ hiện tại, không khóa lúc lưu.",
   menuRecipeCreateAction: "Tạo định mức",
   menuRecipeEditAction: "Sửa định mức",
   menuRecipesEmptyTitle: "Chưa có định mức món bán nào",
@@ -521,7 +523,7 @@ export const INVENTORY_VI = {
   menuRecipeCoverageFilterAria: "Lọc theo phủ định mức",
   menuRecipeLineCount: (count: number) => `${formatCount(count)} nguyên liệu`,
   menuRecipeCostSignalsHint:
-    "Giá vốn/phần = giá vốn BQ tại Kho gốc đúng Nguồn hàng (sau HĐ NCC hoặc hoàn thành sản xuất). Sửa định mức/Nguồn hàng không tự tạo giá — nếu giá vốn BQ đang ở site khác, đổi Nguồn hàng cho khớp.",
+    "Giá vốn/phần = định mức × giá vốn BQ hiện tại (mọi kho). Thiếu Nguồn hàng hoặc chưa có giá thì không tính.",
   amountDong: (amount: string) =>
     amount.trim().endsWith("đ") ? amount : `${amount} đ`,
   daysAgo: (days: number) => `${days} ngày trước`,

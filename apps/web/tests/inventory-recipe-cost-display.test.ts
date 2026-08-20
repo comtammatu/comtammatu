@@ -91,4 +91,6 @@ test("recipe WAC keys Kho gốc from stock-bearing locations", () => {
   );
   assert.match(recipeActionsSource, /select\("id, branch_kind"\)/);
   assert.match(recipeActionsSource, /buildSourceSiteWacMap/);
+  assert.match(recipeActionsSource, /buildCompanyWacMap/);
+  assert.match(recipeActionsSource, /revalidatePath/);
 });

@@ -5,6 +5,7 @@ import { test } from "node:test";
 import {
   buildCompanyWacMap,
   buildSourceSiteWacMap,
+  formatMenuRecipeBomSummary,
   getMenuRecipeLineBaseQuantity,
   menuRecipeSourceWacKey,
   resolveMenuRecipeCostSignals,
@@ -136,6 +137,48 @@ test("resolveMenuRecipeUnitCost uses company WAC from any site", () => {
       sourceSiteWacMap,
     }),
     null,
+  );
+});
+
+test("resolveMenuRecipeUnitCost prefers company WAC over Kho gốc average", () => {
+  const sourceSiteWacMap = buildSourceSiteWacMap([
+    {
+      ingredientId: 72,
+      branchKind: "central_supply",
+      avgUnitCost: 2500,
+    },
+    {
+      ingredientId: 72,
+      branchKind: "central_kitchen",
+      avgUnitCost: 2400,
+    },
+  ]);
+  const companyWacMap = buildCompanyWacMap([
+    {
+      ingredientId: 72,
+      branchKind: "central_supply",
+      avgUnitCost: 2500,
+    },
+    {
+      ingredientId: 72,
+      branchKind: "central_kitchen",
+      avgUnitCost: 2400,
+    },
+    {
+      ingredientId: 72,
+      branchKind: "branch",
+      avgUnitCost: 2600,
+    },
+  ]);
+
+  assert.equal(
+    resolveMenuRecipeUnitCost({
+      ingredientId: 72,
+      sourceSiteKind: "central_supply",
+      sourceSiteWacMap,
+      companyWacMap,
+    }),
+    2500,
   );
 });
 
@@ -335,6 +378,29 @@ test("getMenuRecipeLineBaseQuantity matches inv_to_base_for_tenant: no silent 1"
       units: [unit({ unit_id: 2, to_base_factor: 1000, is_active: false })],
     }),
     null,
+  );
+  assert.equal(
+    getMenuRecipeLineBaseQuantity({
+      quantity: 38.5,
+      entryUnitId: 2,
+      units: [
+        unit({
+          unit_id: "2" as unknown as number,
+          to_base_factor: "0.001" as unknown as number,
+        }),
+      ],
+    }),
+    0.0385,
+  );
+});
+
+test("formatMenuRecipeBomSummary keeps declared qty and unit", () => {
+  assert.equal(
+    formatMenuRecipeBomSummary([
+      { ingredientName: "Gạo", qty: 1, unitLabel: "phần" },
+      { ingredientName: "Dưa leo", qty: 38.5, unitLabel: "g" },
+    ]),
+    "Gạo 1 phần · Dưa leo 38.5 g",
   );
 });
 

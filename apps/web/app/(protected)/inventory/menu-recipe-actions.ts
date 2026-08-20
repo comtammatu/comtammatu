@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
   PERMISSION_KEYS,
@@ -8,13 +9,62 @@ import {
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { messages } from "@lib/messages";
+import type { IngredientUnitRow } from "@lib/inventory/types";
 import { withAction } from "@/_lib/with-action";
 import { getAuthContextWithPermission } from "./_lib/auth";
 import { CATALOG_MANAGE_PERMISSIONS } from "./_lib/catalog-permissions";
 import { fetchStockBearingLocationIds } from "./_lib/stock-bearing-locations";
 import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 import { inventoryPositiveQuantitySchema } from "./_lib/inventory-quantity-schema";
-import { buildSourceSiteWacMap } from "./_lib/menu-recipe-cost";
+import {
+  buildCompanyWacMap,
+  buildSourceSiteWacMap,
+} from "./_lib/menu-recipe-cost";
+
+const MENU_RECIPES_PATH = "/inventory/menu-recipes";
+
+type RecipeUnitEmbed = {
+  ingredient_id: number;
+  id: number;
+  unit_id: number;
+  to_base_factor: number | string | null;
+  is_base: boolean;
+  is_active: boolean | null;
+  sort_order: number | null;
+  units:
+    | { code: string | null; name: string | null }
+    | { code: string | null; name: string | null }[]
+    | null;
+};
+
+function mapRecipeIngredientUnits(
+  rows: readonly RecipeUnitEmbed[],
+): Map<number, IngredientUnitRow[]> {
+  const map = new Map<number, IngredientUnitRow[]>();
+  for (const row of rows) {
+    const ingredientId = Number(row.ingredient_id);
+    const list = map.get(ingredientId) ?? [];
+    const unitsEmbed = row.units;
+    const unit = Array.isArray(unitsEmbed)
+      ? (unitsEmbed[0] ?? null)
+      : unitsEmbed;
+    list.push({
+      id: Number(row.id),
+      unit_id: Number(row.unit_id),
+      unit_code: unit?.code ?? "",
+      unit_name: unit?.name ?? unit?.code ?? "",
+      to_base_factor: Number(row.to_base_factor ?? 1),
+      is_base: row.is_base === true,
+      is_active: row.is_active !== false,
+      sort_order: Number(row.sort_order ?? 0),
+    });
+    map.set(ingredientId, list);
+  }
+  for (const list of map.values()) {
+    list.sort((a, b) => a.sort_order - b.sort_order);
+  }
+  return map;
+}
 
 /* ─── Menu recipes (Kho gốc WAC display + recipe line CRUD) ─── */
 
@@ -111,7 +161,7 @@ export async function fetchMenuRecipes(): Promise<ActionResult> {
       : supabase
           .from("ingredient_units")
           .select(
-            "ingredient_id, is_base, units!ingredient_units_unit_tenant_fkey ( code )",
+            "id, ingredient_id, unit_id, to_base_factor, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey ( code, name )",
           )
           .eq("tenant_id", claims.tenant_id)
           .eq("is_active", true)
@@ -124,24 +174,9 @@ export async function fetchMenuRecipes(): Promise<ActionResult> {
     return { success: false, error: messages.inventory.menuRecipes.loadFailed };
   }
 
-  const unitsByIngredient = new Map<
-    number,
-    Array<{ is_base: boolean; units: { code: string } | null }>
-  >();
-  for (const row of unitResult.data ?? []) {
-    const ingredientId = Number(row.ingredient_id);
-    const list = unitsByIngredient.get(ingredientId) ?? [];
-    const unitsEmbed = row.units as
-      | { code: string }
-      | { code: string }[]
-      | null;
-    const unit = Array.isArray(unitsEmbed) ? (unitsEmbed[0] ?? null) : unitsEmbed;
-    list.push({
-      is_base: row.is_base === true,
-      units: unit?.code ? { code: unit.code } : null,
-    });
-    unitsByIngredient.set(ingredientId, list);
-  }
+  const unitsByIngredient = mapRecipeIngredientUnits(
+    (unitResult.data ?? []) as RecipeUnitEmbed[],
+  );
 
   const ingredientById = new Map<number, { id: number; name: string }>();
   for (const row of ingredientResult.data ?? []) {
@@ -180,7 +215,13 @@ export async function fetchMenuRecipes(): Promise<ActionResult> {
           note: menuRecipe.note,
           ingredients: {
             ...ingredient,
-            ingredient_units: unitsByIngredient.get(ingredient.id) ?? [],
+            units: unitsByIngredient.get(ingredient.id) ?? [],
+            ingredient_units: (unitsByIngredient.get(ingredient.id) ?? []).map(
+              (unit) => ({
+                is_base: unit.is_base,
+                units: unit.unit_code ? { code: unit.unit_code } : null,
+              }),
+            ),
           },
         };
       },
@@ -199,6 +240,7 @@ export async function fetchBranchWacMap(
 ): Promise<
   ActionResult<{
     monetary: Record<string, number>;
+    company: Record<number, number>;
     branchFallback: Record<number, number>;
     lastKnownSource: Record<string, number>;
   }>
@@ -232,7 +274,12 @@ export async function fetchBranchWacMap(
   if (stockBearingLocations.locationIds.length === 0) {
     return {
       success: true,
-      data: { monetary: {}, branchFallback: {}, lastKnownSource: {} },
+      data: {
+        monetary: {},
+        company: {},
+        branchFallback: {},
+        lastKnownSource: {},
+      },
     };
   }
 
@@ -302,6 +349,7 @@ export async function fetchBranchWacMap(
     avgUnitCost: row.avg_unit_cost,
   }));
   const map = buildSourceSiteWacMap(stockRows);
+  const company = buildCompanyWacMap(stockRows);
 
   const branchFallbackAccum = new Map<number, { sum: number; count: number }>();
   for (const row of stockRows) {
@@ -346,7 +394,7 @@ export async function fetchBranchWacMap(
 
   return {
     success: true,
-    data: { monetary: map, branchFallback, lastKnownSource },
+    data: { monetary: map, company, branchFallback, lastKnownSource },
   };
 }
 
@@ -461,6 +509,7 @@ export const upsertMenuRecipeLines = withAction(
       };
     }
 
+    revalidatePath(MENU_RECIPES_PATH);
     return { success: true };
   },
 );

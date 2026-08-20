@@ -54,16 +54,20 @@ export function summarizeFoodCostRows(
     quantity_sold: number | null;
     revenue: number | null;
     ingredient_cost: number | null;
+    gross_profit?: number | null;
   }[],
 ): {
   quantitySold: number;
   revenue: number;
   ingredientCost: number | null;
   unitIngredientCost: number | null;
+  grossProfit: number | null;
+  grossMarginPct: number | null;
 } {
   let quantitySold = 0;
   let revenue = 0;
   let ingredientCost = 0;
+  let grossProfit = 0;
   let missingCost = false;
   for (const row of rows) {
     quantitySold += Number(row.quantity_sold ?? 0);
@@ -73,6 +77,11 @@ export function summarizeFoodCostRows(
       continue;
     }
     ingredientCost += Number(row.ingredient_cost);
+    if (row.gross_profit != null) {
+      grossProfit += Number(row.gross_profit);
+    } else {
+      grossProfit += Number(row.revenue ?? 0) - Number(row.ingredient_cost);
+    }
   }
   if (missingCost) {
     return {
@@ -80,16 +89,24 @@ export function summarizeFoodCostRows(
       revenue: round2(revenue),
       ingredientCost: null,
       unitIngredientCost: null,
+      grossProfit: null,
+      grossMarginPct: null,
     };
   }
   const roundedCost = round2(ingredientCost);
   const roundedRevenue = round2(revenue);
+  const roundedProfit = round2(grossProfit);
   return {
     quantitySold,
     revenue: roundedRevenue,
     ingredientCost: roundedCost,
     unitIngredientCost:
       quantitySold > 0 ? round2(roundedCost / quantitySold) : null,
+    grossProfit: roundedProfit,
+    grossMarginPct:
+      roundedRevenue > 0
+        ? round2((roundedProfit / roundedRevenue) * 100)
+        : null,
   };
 }
 

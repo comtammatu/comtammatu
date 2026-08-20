@@ -32,15 +32,40 @@ export function getMenuRecipeLineBaseQuantity({
   }
 
   const entryUnit = units?.find(
-    (unit) => unit.unit_id === entryUnitId && unit.is_active,
+    (unit) => Number(unit.unit_id) === entryUnitId && unit.is_active,
   );
-  const factor = entryUnit?.to_base_factor;
+  const factor = Number(entryUnit?.to_base_factor);
 
-  if (typeof factor === "number" && Number.isFinite(factor) && factor > 0) {
+  if (Number.isFinite(factor) && factor > 0) {
     return safeQuantity * factor;
   }
 
   return null;
+}
+
+export function formatMenuRecipeQuantity(quantity: number): string {
+  if (!Number.isFinite(quantity)) return "";
+  if (Number.isInteger(quantity)) return String(quantity);
+  return String(Number(quantity.toFixed(3)));
+}
+
+export function formatMenuRecipeBomSummary(
+  items: readonly {
+    ingredientName: string;
+    qty: number;
+    unitLabel: string;
+  }[],
+): string {
+  return items
+    .map((item) => {
+      const qty = formatMenuRecipeQuantity(item.qty);
+      const unit = item.unitLabel.trim();
+      return [item.ingredientName.trim(), qty, unit]
+        .filter((part) => part.length > 0)
+        .join(" ");
+    })
+    .filter((part) => part.length > 0)
+    .join(" · ");
 }
 
 /** Catalog food-cost treats 0 / null WAC as “not valued yet”, never as free. */

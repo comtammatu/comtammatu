@@ -65,6 +65,11 @@ function formatCostAmount(value: number | null | undefined): ReactNode {
   return <FinanceAmountCell amount={Number(value)} />;
 }
 
+function formatMarginPct(value: number | null | undefined): ReactNode {
+  if (value == null) return dash;
+  return formatPercent(Number(value));
+}
+
 function RecipeCostCell({
   total,
   unit,
@@ -79,6 +84,23 @@ function RecipeCostCell({
         {unit == null
           ? dash
           : foodCopy.unitCostPerPortion(formatVND(Number(unit)))}
+      </span>
+    </div>
+  );
+}
+
+function MarginCell({
+  profit,
+  marginPct,
+}: {
+  profit: number | null | undefined;
+  marginPct: number | null | undefined;
+}) {
+  return (
+    <div className="flex flex-col items-end gap-1 leading-tight text-right">
+      {formatCostAmount(profit)}
+      <span className="font-mono text-xs font-normal tabular-nums text-muted-foreground">
+        {formatMarginPct(marginPct)}
       </span>
     </div>
   );
@@ -126,6 +148,8 @@ export function FoodCostClient({
         foodCopy.revenueCurrency,
         foodCopy.unitFoodCostCurrency,
         foodCopy.foodCostCurrency,
+        foodCopy.grossProfitCurrency,
+        foodCopy.grossMargin,
       ],
       rows: rows.map((row) => [
         row.item_name ?? dash,
@@ -137,6 +161,10 @@ export function FoodCostClient({
         row.ingredient_cost == null
           ? dash
           : Math.round(Number(row.ingredient_cost)),
+        row.gross_profit == null ? dash : Math.round(Number(row.gross_profit)),
+        row.gross_margin_pct == null
+          ? dash
+          : formatPercent(Number(row.gross_margin_pct)),
       ]),
     },
   ];
@@ -171,6 +199,17 @@ export function FoodCostClient({
         />
       ),
     },
+    {
+      key: "gross_profit",
+      header: foodCopy.grossProfitCurrency,
+      className: MONEY_COL,
+      render: (row) => (
+        <MarginCell
+          profit={row.gross_profit}
+          marginPct={row.gross_margin_pct}
+        />
+      ),
+    },
   ];
 
   const footerRows: DataTableFooterRow[] = [
@@ -199,6 +238,16 @@ export function FoodCostClient({
             <RecipeCostCell
               total={totals.ingredientCost}
               unit={totals.unitIngredientCost}
+            />
+          ),
+          className: `${MONEY_COL} font-semibold`,
+        },
+        {
+          key: "gross_profit",
+          content: (
+            <MarginCell
+              profit={totals.grossProfit}
+              marginPct={totals.grossMarginPct}
             />
           ),
           className: `${MONEY_COL} font-semibold`,
@@ -292,6 +341,15 @@ export function FoodCostClient({
                     />
                   }
                 />
+                <MetricPair
+                  label={foodCopy.grossProfitCurrency}
+                  value={
+                    <MarginCell
+                      profit={totals.grossProfit}
+                      marginPct={totals.grossMarginPct}
+                    />
+                  }
+                />
               </Frame>
             ) : null
           }
@@ -317,6 +375,15 @@ export function FoodCostClient({
                     <RecipeCostCell
                       total={row.ingredient_cost}
                       unit={row.unit_ingredient_cost}
+                    />
+                  }
+                />
+                <MetricPair
+                  label={foodCopy.grossProfitCurrency}
+                  value={
+                    <MarginCell
+                      profit={row.gross_profit}
+                      marginPct={row.gross_margin_pct}
                     />
                   }
                 />

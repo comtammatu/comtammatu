@@ -43,7 +43,7 @@ export function getIngredientUnitDisplayName(
   const activeUnits = (units ?? []).filter((unit) => unit.is_active);
   const selected =
     entryUnitId != null
-      ? activeUnits.find((unit) => unit.unit_id === entryUnitId)
+      ? activeUnits.find((unit) => Number(unit.unit_id) === entryUnitId)
       : activeUnits.find((unit) => unit.is_base);
   return (
     selected?.unit_name?.trim() || selected?.unit_code?.trim() || fallback

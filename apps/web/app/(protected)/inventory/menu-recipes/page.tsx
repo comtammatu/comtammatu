@@ -45,6 +45,7 @@ type MenuItemRow = {
     ingredients: {
       id: number;
       name: string;
+      units?: IngredientUnitRow[];
       ingredient_units?: { is_base: boolean; units: { code: string } | null }[];
     } | null;
   }> | null;
@@ -86,6 +87,9 @@ export default async function MenuRecipesPage({
   const wacMap = (
     wacMapAvailable ? (wacRes.data?.monetary ?? {}) : {}
   ) as Record<string, number>;
+  const companyWacMap = (
+    wacMapAvailable ? (wacRes.data?.company ?? {}) : {}
+  ) as Record<number, number>;
   const branchFallbackWacMap = (
     wacMapAvailable ? (wacRes.data?.branchFallback ?? {}) : {}
   ) as Record<number, number>;
@@ -124,11 +128,16 @@ export default async function MenuRecipesPage({
       const qty = Number(line.quantity ?? 0);
       const ingredientId = line.ingredients?.id ?? line.ingredient_id ?? 0;
       const catalogIngredient = ingredientById.get(ingredientId);
+      const units =
+        line.ingredients?.units && line.ingredients.units.length > 0
+          ? line.ingredients.units
+          : catalogIngredient?.units;
       const unitCost = wacMapAvailable
         ? resolveMenuRecipeUnitCost({
             ingredientId,
             sourceSiteKind: catalogIngredient?.default_fulfill_site_kind,
             sourceSiteWacMap: wacMap,
+            companyWacMap,
             branchFallbackWacMap,
             lastKnownSourceWacMap,
           })
@@ -138,11 +147,13 @@ export default async function MenuRecipesPage({
       const baseQuantity = getMenuRecipeLineBaseQuantity({
         quantity: qty,
         entryUnitId,
-        units: catalogIngredient?.units,
+        units,
       });
       const fallbackUnit =
+        units?.find((unit) => unit.is_base)?.unit_code ??
         line.ingredients?.ingredient_units?.find((u) => u.is_base)?.units
-          ?.code ?? "";
+          ?.code ??
+        "";
       const costSignals = !isMenuRecipeSourceSiteKind(
         catalogIngredient?.default_fulfill_site_kind,
       )
@@ -152,6 +163,7 @@ export default async function MenuRecipesPage({
               ingredientId,
               sourceSiteKind: catalogIngredient?.default_fulfill_site_kind,
               sourceSiteWacMap: wacMap,
+              companyWacMap,
               branchFallbackWacMap,
               lastKnownSourceWacMap,
             })
@@ -161,7 +173,7 @@ export default async function MenuRecipesPage({
         ingredientName: line.ingredients?.name ?? "—",
         qty,
         unitLabel: getIngredientUnitDisplayName(
-          catalogIngredient?.units,
+          units,
           entryUnitId,
           fallbackUnit,
         ),
@@ -210,6 +222,7 @@ export default async function MenuRecipesPage({
                 ingredientId: i.id,
                 sourceSiteKind: i.default_fulfill_site_kind,
                 sourceSiteWacMap: wacMap,
+                companyWacMap,
                 branchFallbackWacMap,
                 lastKnownSourceWacMap,
               })

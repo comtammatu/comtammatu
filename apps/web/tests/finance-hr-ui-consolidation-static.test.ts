@@ -82,7 +82,8 @@ test("Finance analysis routes use compact Design System composition", () => {
   assert.doesNotMatch(foodCost, /key: "unit_food_cost"/);
   assert.match(foodCost, /foodCopy\.grossMargin/);
   assert.doesNotMatch(foodCost, /foodCopy\.unitSellingPriceCurrency/);
-  assert.doesNotMatch(foodCost, /foodCopy\.grossProfitCurrency/);
+  assert.match(foodCost, /foodCopy\.grossProfitCurrency/);
+  assert.match(foodCost, /function MarginCell/);
   assert.match(foodCost, /unit_ingredient_cost/);
   assert.match(foodCost, /<DataTable/);
 

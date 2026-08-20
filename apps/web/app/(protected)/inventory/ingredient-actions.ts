@@ -74,8 +74,8 @@ function mapIngredientUnitRows(
 ): IngredientUnitRow[] {
   return (ingredientUnits ?? [])
     .map((unit) => ({
-      id: unit.id,
-      unit_id: unit.unit_id,
+      id: Number(unit.id),
+      unit_id: Number(unit.unit_id),
       unit_code: unit.units?.code ?? "",
       unit_name: unit.units?.name ?? unit.units?.code ?? "",
       to_base_factor: Number(unit.to_base_factor ?? 1),

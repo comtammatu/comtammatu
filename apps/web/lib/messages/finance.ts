@@ -1238,7 +1238,8 @@ export const finance = {
   },
   foodCost: {
     eyebrow: "Tài chính",
-    description: "Giá vốn định mức theo công thức món. Khác số đã trừ kho ở trên.",
+    description:
+      "Định mức và lãi theo món = công thức hiện tại × giá vốn BQ hiện tại. Biên gộp phía trên dùng giá vốn thực tế đã trừ kho.",
     actualFoodCost: "Giá vốn thực tế",
     actualFoodCostHint: "Đã trừ kho theo đơn thanh toán.",
     operatingConsumption: "Tiêu hao vận hành",

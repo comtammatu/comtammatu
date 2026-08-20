@@ -24,6 +24,7 @@ test("menu recipe list shows every active item and omits Yield", () => {
     /\.filter\(\(menuRecipe\) => menuRecipe\.items\.length > 0\)/,
   );
   assert.match(page, /fetchBranchWacMap\(null\)/);
+  assert.match(page, /companyWacMap/);
   assert.match(page, /resolveMenuRecipeUnitCost/);
   assert.match(page, /resolveMenuRecipeCostSignals/);
   assert.match(page, /default_fulfill_site_kind/);
@@ -32,6 +33,9 @@ test("menu recipe list shows every active item and omits Yield", () => {
   assert.doesNotMatch(page, /stockCapacityRes\.error/);
   assert.match(actions, /\.gt\("avg_unit_cost", 0\)/);
   assert.match(actions, /buildSourceSiteWacMap/);
+  assert.match(actions, /buildCompanyWacMap/);
+  assert.match(actions, /revalidatePath/);
+  assert.match(actions, /unit_id, to_base_factor/);
   assert.doesNotMatch(actions, /select\("id, name, unit_cost"\)/);
   assert.match(menuRecipeCost, /buildSourceSiteWacMap/);
   assert.match(menuRecipeCost, /buildCompanyWacMap/);
@@ -39,6 +43,8 @@ test("menu recipe list shows every active item and omits Yield", () => {
   assert.match(menuRecipeCost, /resolveMenuRecipeCostSignals/);
   assert.match(menuRecipeCost, /resolveMenuRecipeListCostState/);
   assert.match(client, /menuRecipeColIngredientCount/);
+  assert.match(client, /formatMenuRecipeBomSummary/);
+  assert.match(client, /menuRecipesPageDescription/);
   assert.match(client, /menuRecipeMissingLines/);
   assert.match(client, /menuRecipeCoverageMissing/);
   assert.match(client, /showStockCapacity/);
@@ -57,6 +63,8 @@ test("menu recipe list shows every active item and omits Yield", () => {
   assert.doesNotMatch(foodCostCalculation, /foodCostUnitCostKey\(row\.branch_id/);
   assert.doesNotMatch(foodCostCalculation, /buildSourceSiteWacMap/);
   assert.match(foodCostActions, /buildSourceSiteWacMap/);
+  assert.match(foodCostActions, /buildCompanyWacMap/);
+  assert.match(foodCostActions, /companyWacMap/);
   assert.match(foodCostActions, /resolveMenuRecipeUnitCost/);
   assert.doesNotMatch(
     [

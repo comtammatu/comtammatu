@@ -98,7 +98,7 @@ chỉ title.
 | `finance.asset.equipment` | Thiết bị | `expenses.amount` `category=capital`, all-time, cùng scope Chi phí ban đầu | chưa có → `not_recorded`; lát `capital` của Chi phí ban đầu; drill `/finance/equipment`; không phải TSCĐ / giá trị còn lại |
 | `finance.asset.total_value` | Tổng giá trị | Tổng tiền + tồn kho (nếu có quyền định giá) + thiết bị `capital` | chưa mở sổ quỹ → không bịa; không gồm đặt cọc; không phải tổng tài sản GL |
 | `finance.food_cost.recorded` | Giá vốn món | `inventory_value_allocations` bucket `food_cost` khi cutover `active`; chưa cutover → trống | thiếu coverage / chưa cutover → `needs_review`; không trừ kết quả kỳ |
-| `finance.food_cost.theoretical` | Giá vốn lý thuyết | `fetchFoodCost` / `buildFoodCostRows`: định mức hiện tại × SL bán × resolver catalog (cùng `/inventory/menu-recipes`) | `estimated` |
+| `finance.food_cost.theoretical` | Giá vốn lý thuyết | `fetchFoodCost` / `buildFoodCostRows`: định mức món bán hiện tại × SL bán × giá vốn BQ công ty (cùng resolver `/inventory/menu-recipes`) | `estimated` |
 | `finance.gross_profit.readonly` | Lợi nhuận gộp | Doanh thu thuần − food cost recorded | thiếu coverage → không hiện số; dòng độc lập, không phải cha của kết quả kỳ |
 | `finance.gross_margin.readonly` | Biên gộp | Lợi nhuận gộp / doanh thu thuần; cùng gate coverage; KPI `/finance/food-cost`; không lấy từ Định mức | thiếu coverage / thiếu doanh thu thuần → trống |
 | `finance.operating_result` | Kết quả kinh doanh | DT thuần − chi phí hàng − chi VH + (closing − opening); không gọi LN ròng; không lấy từ LN gộp | cần đã ghi chi VH; không chờ coverage giá vốn món |

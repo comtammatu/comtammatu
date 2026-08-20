@@ -18,6 +18,7 @@ import {
 import type { IngredientUnitRow } from "@lib/inventory/types";
 import { fetchStockBearingLocationIds } from "../(protected)/inventory/_lib/stock-bearing-locations";
 import {
+  buildCompanyWacMap,
   buildSourceSiteWacMap,
   resolveMenuRecipeUnitCost,
 } from "../(protected)/inventory/_lib/menu-recipe-cost";
@@ -169,6 +170,7 @@ export async function fetchFoodCost(
   }
 
   let sourceSiteWacMap: Record<string, number> = {};
+  let companyWacMap: Record<number, number> = {};
   const branchFallbackWacMap: Record<number, number> = {};
   const lastKnownSourceWacMap: Record<string, number> = {};
 
@@ -215,7 +217,9 @@ export async function fetchFoodCost(
       branchKind: branchKindById.get(Number(row.branch_id)) ?? null,
       avgUnitCost: row.avg_unit_cost,
     }));
+    // Same company WAC as /inventory/menu-recipes (ADR 0040).
     sourceSiteWacMap = buildSourceSiteWacMap(stockRows);
+    companyWacMap = buildCompanyWacMap(stockRows);
 
     const branchFallbackAccum = new Map<
       number,
@@ -290,6 +294,7 @@ export async function fetchFoodCost(
         ingredientId: row.ingredient_id,
         sourceSiteKind: ingredient?.default_fulfill_site_kind,
         sourceSiteWacMap,
+        companyWacMap,
         branchFallbackWacMap,
         lastKnownSourceWacMap,
       }),
