@@ -14,8 +14,6 @@ import {
   RotateCcw as IconRotate,
 } from "lucide-react";
 import { useBoardTick } from "../_hooks/use-board-tick";
-import { AgeBadge } from "./age-badge";
-import { getAgeStyle, getCardLeftAccent, getElapsedMinutes } from "../_lib/age-style";
 import {
   getItemRowStatusClass,
   getQuantityStatusClass,
@@ -41,8 +39,7 @@ import {
   shouldShowTicketStatusBadge,
 } from "../_lib/status-config";
 import { BatchActions } from "./batch-actions";
-import { OrderNote } from "./order-note";
-import { OrderTitleLine } from "./order-title-line";
+import { KdsTicketHeader } from "./kds-ticket-header";
 import { TicketRowMeta } from "./ticket-row-meta";
 import type { KdsOrder, KdsOrderItem, KdsTicket } from "../types";
 
@@ -98,7 +95,7 @@ const CompactItemRow = memo(function CompactItemRow({
       data-testid={`kds-heatmap-item-${String(item.id)}`}
       data-kds-effect={rowEffect ?? undefined}
       className={cn(
-        "grid min-w-0 grid-cols-[2.75rem_minmax(0,1fr)_auto] items-start gap-x-2 gap-y-1 border-t border-border/40 py-2 first:border-t-0 first:pt-0 last:pb-0 xl:grid-cols-[3.25rem_minmax(0,1fr)_auto] xl:items-start p-0 rounded-none border-x-0 border-b-0",
+        "grid min-w-0 grid-cols-[2.75rem_minmax(0,1fr)_auto] items-start gap-x-2 gap-y-1 rounded-none border-x-0 border-b-0 border-t border-border/40 p-0 py-2 first:border-t-0 first:pt-0 last:pb-0 xl:grid-cols-[3.25rem_minmax(0,1fr)_auto] xl:items-start",
         getItemRowStatusClass(status),
         getKdsRowEffectClass(rowEffect),
       )}
@@ -222,7 +219,7 @@ const CompactOrphanRow = memo(function CompactOrphanRow({
     <Item
       data-kds-effect={rowEffect ?? undefined}
       className={cn(
-        "grid min-w-0 grid-cols-[minmax(0,1fr)] items-start gap-1.5 border-t border-border/40 py-1.5 first:border-t-0 first:pt-0 last:pb-0 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center xl:gap-2 xl:py-2 p-0 rounded-none border-x-0 border-b-0",
+        "grid min-w-0 grid-cols-[minmax(0,1fr)] items-start gap-1.5 rounded-none border-x-0 border-b-0 border-t border-border/40 p-0 py-1.5 first:border-t-0 first:pt-0 last:pb-0 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center xl:gap-2 xl:py-2",
         getItemRowStatusClass(ticket.status),
         getKdsRowEffectClass(rowEffect),
       )}
@@ -304,13 +301,11 @@ function HeatmapCard({
 }) {
   const now = useBoardTick();
   const elapsedMs = useMemo(() => getOrderElapsedMs(order, now), [now, order]);
-  const elapsed = getElapsedMinutes(elapsedMs);
   const newTicketSignalIds = useKdsNewTicketSignalIds();
   const isNewTicket = order.tickets.some((ticket) =>
     newTicketSignalIds.has(ticket.id),
   );
   const status = getKdsOrderDisplayStatus({ tickets: order.tickets });
-  const ageStyle = getAgeStyle(elapsed, status === "ready");
   const showOrderStatusBadge = shouldShowTicketStatusBadge(status);
   const ticketByItemId = useMemo(() => {
     const map = new Map<number, KdsTicket>();
@@ -343,39 +338,24 @@ function HeatmapCard({
         // shrink-0: Card sets overflow-hidden, which collapses a flex item's
         // auto min-height to 0 — without this the lane's flex column squeezes
         // cards instead of scrolling, clipping their content.
-        "min-w-0 shrink-0 gap-1 overflow-hidden border-l-2 p-2 xl:p-3",
-        ageStyle.bg,
-        getCardLeftAccent(status, elapsed),
+        "min-w-0 shrink-0 gap-1 overflow-hidden p-0",
         isNewTicket && getKdsNewTicketSignalClass(),
       )}
     >
-      <div className="flex min-w-0 flex-col gap-1.5 xl:flex-row xl:items-start xl:justify-between xl:gap-2">
-        <div className="min-w-0 xl:flex-1">
-          <OrderTitleLine
-            kitchenTicketNumber={order.kitchenTicketNumber}
-            orderNumber={order.orderNumber}
-            orderType={order.orderType}
-            tableNumber={order.tableNumber}
-            size="compact"
-          />
-          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            {order.isPriority && (
-              <Badge
-                variant="warning"
-                className="px-2 py-0.5 text-xs xl:px-2.5 xl:py-1 xl:text-sm"
-              >
-                {KDS_HEATMAP_LABELS.priority}
-              </Badge>
-            )}
-          </div>
-          <OrderNote
-            note={order.orderNote}
-            compact
-            className="mt-1.5 max-w-full xl:mt-2"
-          />
-        </div>
-        <div className="flex w-full flex-wrap items-center justify-start gap-1 xl:w-auto xl:shrink-0 xl:justify-end">
-          {canMarkReady && (
+      <KdsTicketHeader
+        kitchenTicketNumber={order.kitchenTicketNumber}
+        orderNumber={order.orderNumber}
+        orderType={order.orderType}
+        tableNumber={order.tableNumber}
+        orderNote={order.orderNote}
+        isPriority={order.isPriority}
+        elapsedMs={elapsedMs}
+        isComplete={status === "ready"}
+        status={status}
+        showStatusBadge={showOrderStatusBadge}
+        density="compact"
+        actions={
+          canMarkReady ? (
             <BatchActions
               layout="title"
               orderGroupKey={order.groupKey}
@@ -383,22 +363,10 @@ function HeatmapCard({
               pendingTicketIds={pendingTicketIds}
               onCompleteTickets={onCompleteTickets}
             />
-          )}
-          {showOrderStatusBadge && (
-            <StatusBadge
-              domain="order"
-              value={status}
-              className="px-2 py-0.5 text-xs xl:px-2.5 xl:py-1 xl:text-sm"
-            />
-          )}
-          <AgeBadge
-            elapsedMs={elapsedMs}
-            isComplete={status === "ready"}
-            size="compact"
-          />
-        </div>
-      </div>
-      <div className="mt-2 flex min-w-0 flex-col border-t border-border/40 pt-1.5 xl:mt-2.5">
+          ) : null
+        }
+      />
+      <div className="flex min-w-0 flex-col px-2 xl:px-3">
         {order.items.map((item) => {
           const ticket = ticketByItemId.get(item.id);
           return (

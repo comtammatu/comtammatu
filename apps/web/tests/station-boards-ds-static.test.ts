@@ -184,6 +184,23 @@ test("audit route family maps /app/r/ to public-feedback, not runner", () => {
   assert.doesNotMatch(audit, /\["runner-display"/);
 });
 
+test("KDS tickets do not use left-border SLA accent", () => {
+  const orderGrid = readFileSync(
+    join(kdsDir, "_components/order-grid.tsx"),
+    "utf8",
+  );
+  const focusView = readFileSync(
+    join(kdsDir, "_components/focus-view.tsx"),
+    "utf8",
+  );
+  const ageStyle = readFileSync(join(kdsDir, "_lib/age-style.ts"), "utf8");
+  assert.doesNotMatch(orderGrid, /getCardLeftAccent/);
+  assert.doesNotMatch(focusView, /getCardLeftAccent/);
+  assert.doesNotMatch(ageStyle, /getCardLeftAccent/);
+  assert.match(orderGrid, /KdsTicketHeader/);
+  assert.match(focusView, /KdsTicketHeader/);
+});
+
 test("KDS and pickup stay overlay-free of AppDialog/AppSheet/route Sheet/Drawer", () => {
   const pattern = /\bAppDialog\b|\bAppSheet\b|<SheetContent\b|<DrawerContent\b/;
   assert.deepEqual(

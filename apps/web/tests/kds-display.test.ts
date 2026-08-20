@@ -11,7 +11,10 @@ import {
   groupKdsOrdersByColumn,
 } from "../app/(protected)/br/[branchId]/kds/_lib/order-columns";
 import { getStatusBadgeMeta } from "../app/components/status-badge";
-import { formatKdsElapsedClock } from "../app/(protected)/br/[branchId]/kds/_lib/age-style";
+import {
+  formatKdsElapsedClock,
+  getAgeStyle,
+} from "../app/(protected)/br/[branchId]/kds/_lib/age-style";
 import { formatKdsTicketSequenceDisplay } from "../app/(protected)/br/[branchId]/kds/_lib/status-config";
 import type {
   KdsOrder,
@@ -74,6 +77,14 @@ const orderNoteSource = readFileSync(
   join(
     process.cwd(),
     "app/(protected)/br/[branchId]/kds/_components/order-note.tsx",
+  ),
+  "utf8",
+);
+
+const ticketHeaderSource = readFileSync(
+  join(
+    process.cwd(),
+    "app/(protected)/br/[branchId]/kds/_components/kds-ticket-header.tsx",
   ),
   "utf8",
 );
@@ -392,8 +403,9 @@ test("KDS selects and renders order notes in board and focus modes", () => {
   assert.match(kdsRealtimeSource, /category_type_snapshot/);
   assert.match(kdsRealtimeSource, /menu_items\(menu_categories\(name,type\)\)/);
   assert.match(kdsRealtimeSource, /oldRow\.note === newRow\.note/);
-  assert.match(orderGridSource, /<OrderNote[\s\S]*note=\{order\.orderNote\}/);
-  assert.match(focusViewSource, /<OrderNote[\s\S]*note=\{order\.orderNote\}/);
+  assert.match(orderGridSource, /orderNote=\{order\.orderNote\}/);
+  assert.match(focusViewSource, /orderNote=\{order\.orderNote\}/);
+  assert.match(ticketHeaderSource, /<OrderNote[\s\S]*note=\{orderNote\}/);
   assert.match(orderNoteSource, /messages\.pos\.kds\.orderNote/);
   assert.match(orderNoteSource, /note\?\.trim\(\)/);
 });
@@ -430,6 +442,20 @@ test("KDS elapsed clock is a static mm:ss label", () => {
   assert.equal(formatKdsElapsedClock(3 * 60_000 + 20_000), "03:20");
   assert.equal(formatKdsElapsedClock(7 * 60_000 + 15_000), "07:15");
   assert.equal(formatKdsElapsedClock(12 * 60_000 + 40_000), "12:40");
+});
+
+test("KDS ticket header tint uses SLA age wash, not a left accent bar", () => {
+  assert.equal(getAgeStyle(0, false).bg, "");
+  assert.equal(getAgeStyle(7, false).bg, "bg-warning/10");
+  assert.equal(getAgeStyle(12, false).bg, "bg-destructive/10");
+  assert.equal(getAgeStyle(20, true).bg, "bg-success/10");
+  assert.match(ticketHeaderSource, /getAgeStyle\(elapsedMinutes, isComplete\)\.bg/);
+  assert.match(orderGridSource, /<KdsTicketHeader/);
+  assert.match(focusViewSource, /<KdsTicketHeader/);
+  assert.doesNotMatch(orderGridSource, /getCardLeftAccent/);
+  assert.doesNotMatch(focusViewSource, /getCardLeftAccent/);
+  assert.doesNotMatch(orderGridSource, /border-l-(2|4)/);
+  assert.doesNotMatch(focusViewSource, /border-l-4/);
 });
 
 test("KDS focus view advances immediately without blur or pulse", () => {

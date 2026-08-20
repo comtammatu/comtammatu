@@ -19,7 +19,6 @@ import {
   RotateCcw as IconRotate,
 } from "lucide-react";
 import { useBoardTick } from "../_hooks/use-board-tick";
-import { getAgeStyle, getCardLeftAccent } from "../_lib/age-style";
 import {
   getItemRowStatusClass,
   getQuantityStatusClass,
@@ -40,10 +39,8 @@ import {
   getKdsOrderDisplayStatus,
   isKdsActiveTicketStatus,
 } from "../_lib/order-status";
-import { AgeBadge } from "./age-badge";
 import { CancelledOverlay } from "./cancelled-overlay";
-import { OrderNote } from "./order-note";
-import { OrderTitleLine } from "./order-title-line";
+import { KdsTicketHeader } from "./kds-ticket-header";
 import { TicketRowMeta } from "./ticket-row-meta";
 import type { KdsOrder, KdsTicket } from "../types";
 
@@ -247,14 +244,7 @@ function FocusOrderPanel({
   }, [order.tickets]);
 
   const isComplete = overallStatus === "ready";
-  const elapsedMinutes = useMemo(
-    () => Math.max(0, Math.floor((now - createdMs) / 60000)),
-    [now, createdMs],
-  );
-  // Hero tint mirrors the grid card header — keeps urgency signaling
-  // consistent across modes; success tint when the order is fully done.
-  const ageStyle = getAgeStyle(elapsedMinutes, isComplete);
-  const heroBg = isComplete ? "bg-success/10" : ageStyle.bg || "bg-card";
+  const elapsedMs = Math.max(0, now - createdMs);
 
   const orphanTickets = useMemo(
     () =>
@@ -287,40 +277,23 @@ function FocusOrderPanel({
           <OperationalBoardCard
             data-testid={`kds-focus-card-${order.groupKey}`}
             className={cn(
-              "gap-1 overflow-hidden border-l-4 p-0",
-              getCardLeftAccent(overallStatus, elapsedMinutes),
+              "gap-1 overflow-hidden p-0",
               isNewTicket && getKdsNewTicketSignalClass(),
             )}
           >
-            {/* Hero header — tinted by elapsed-time tier (warning ≥5ph,
-                destructive ≥10ph, success when complete). */}
-            <div
-              className={cn(
-                "flex items-start justify-between gap-3 border-b px-4 py-3",
-                heroBg,
-              )}
-            >
-              <div className="flex min-w-0 flex-1 flex-col gap-2">
-                <div className="flex min-w-0 flex-wrap items-center gap-2">
-                  <OrderTitleLine
-                    kitchenTicketNumber={order.kitchenTicketNumber}
-                    orderNumber={order.orderNumber}
-                    orderType={order.orderType}
-                    tableNumber={order.tableNumber}
-                  />
-                  {order.isPriority && (
-                    <Badge
-                      variant="warning"
-                      className="px-2 py-1 text-sm font-semibold"
-                    >
-                      {KDS_FOCUS_COPY.priority}
-                    </Badge>
-                  )}
-                </div>
-                <OrderNote note={order.orderNote} className="max-w-full" />
-              </div>
-              <div className="flex shrink-0 flex-col items-end gap-1.5">
-                {total > 1 && (
+            <KdsTicketHeader
+              kitchenTicketNumber={order.kitchenTicketNumber}
+              orderNumber={order.orderNumber}
+              orderType={order.orderType}
+              tableNumber={order.tableNumber}
+              orderNote={order.orderNote}
+              isPriority={order.isPriority}
+              elapsedMs={elapsedMs}
+              isComplete={isComplete}
+              status={overallStatus}
+              showStatusBadge={shouldShowTicketStatusBadge(overallStatus)}
+              actions={
+                total > 1 ? (
                   <div className="flex items-center gap-1">
                     <Button
                       type="button"
@@ -344,14 +317,9 @@ function FocusOrderPanel({
                       <IconChevronRight aria-hidden />
                     </Button>
                   </div>
-                )}
-                <AgeBadge
-                  elapsedMs={Math.max(0, now - createdMs)}
-                  isComplete={isComplete}
-                  size="lg"
-                />
-              </div>
-            </div>
+                ) : null
+              }
+            />
 
             <div className="flex min-w-0 flex-col">
               {order.items.map((item) => {
