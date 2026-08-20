@@ -8,6 +8,7 @@ export type BranchStocktakeSession = {
   completedAt: string | null;
   createdAt: string;
   createdBy: string;
+  createdByName: string;
   status: BranchStocktakeStatus;
   notes: string | null;
   totalItems: number;

@@ -6,6 +6,8 @@ import { INVENTORY_OPS_ROLES } from "@comtammatu/shared/auth";
 import { messages } from "@lib/messages";
 import { getAuthContext } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
+import { resolveProfileDisplayNames } from "@/_lib/profile-display-names";
+import { STAFF_VI } from "@comtammatu/shared/messages";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
 import { getEmbeddedIngredientBaseUnitDisplayName } from "./_lib/unit-display";
 import { inventoryNonnegativeQuantitySchema } from "./_lib/inventory-quantity-schema";
@@ -189,7 +191,24 @@ export async function fetchStocktakeDetail(
     };
   });
 
-  return { success: true, data: { session, lines: normalizedLines } };
+  const createdByIds = session.created_by ? [session.created_by] : [];
+  const createdByNames = await resolveProfileDisplayNames(
+    supabase,
+    createdByIds,
+  );
+
+  return {
+    success: true,
+    data: {
+      session: {
+        ...session,
+        created_by_name: session.created_by
+          ? (createdByNames.get(session.created_by) ?? STAFF_VI.long)
+          : STAFF_VI.long,
+      },
+      lines: normalizedLines,
+    },
+  };
 }
 
 /* ─── updateStocktakeLine ─── */

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import type { Database } from "@comtammatu/database/types";
 import { withAction, type ActionContext } from "@/_lib/with-action";
+import { staffDisplayLabel } from "@/_lib/profile-display-names";
 import {
   includesAny,
   mapRpcError,
@@ -677,7 +678,7 @@ export const listWorkDepartmentMembers = withAction(
         id: row.id,
         departmentId: row.department_id,
         userId: row.user_id,
-        fullName: profile?.full_name ?? row.user_id,
+        fullName: staffDisplayLabel(profile?.full_name),
         role: mapMemberRole(row.role),
         isActive: row.is_active,
       };

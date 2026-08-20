@@ -1,6 +1,7 @@
 import { createClient as createServerClient } from "@comtammatu/database/supabase/server";
 import type { createClient } from "@comtammatu/database/supabase/server";
 import { resolveEntityHref } from "@lib/entity-href";
+import { resolveProfileDisplayNames } from "@/_lib/profile-display-names";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -52,14 +53,7 @@ async function resolveActorNames(
   supabase: SupabaseServerClient,
   userIds: string[],
 ): Promise<Map<string, string>> {
-  if (userIds.length === 0) return new Map();
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, full_name")
-    .in("id", userIds);
-  return new Map(
-    (profiles ?? []).map((profile) => [profile.id, profile.full_name]),
-  );
+  return resolveProfileDisplayNames(supabase, userIds);
 }
 
 function mapAuditRows(

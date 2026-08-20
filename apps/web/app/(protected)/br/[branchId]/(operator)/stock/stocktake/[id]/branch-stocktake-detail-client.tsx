@@ -333,7 +333,7 @@ export function BranchStocktakeDetailClient({
                     : []),
                   {
                     label: "Người tạo",
-                    value: session.createdBy,
+                    value: session.createdByName,
                   },
                 ]}
               />

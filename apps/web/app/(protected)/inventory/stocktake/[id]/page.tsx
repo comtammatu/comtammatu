@@ -45,6 +45,7 @@ export async function StocktakeDetailPageContent({
       notes: string | null;
       created_at: string;
       created_by: string;
+      created_by_name: string;
     };
     lines: Array<{
       id: number;

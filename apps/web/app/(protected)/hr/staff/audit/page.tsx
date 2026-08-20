@@ -3,6 +3,7 @@ import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { getVNDayUtcRange } from "@comtammatu/shared/time";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
+import { resolveProfileDisplayNames } from "@/_lib/profile-display-names";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { messages } from "@lib/messages";
@@ -87,10 +88,8 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
     ),
   );
 
-  const [{ data: profiles }, { data: positions }] = await Promise.all([
-    userIds.length
-      ? supabase.from("profiles").select("id, full_name").in("id", userIds)
-      : Promise.resolve({ data: [] as { id: string; full_name: string }[] }),
+  const [nameByUserId, { data: positions }] = await Promise.all([
+    resolveProfileDisplayNames(supabase, userIds),
     positionCodes.length
       ? supabase
           .from("positions")
@@ -100,10 +99,6 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
           data: [] as { code: string; label_vi: string | null }[],
         }),
   ]);
-
-  const nameByUserId = new Map<string, string>(
-    (profiles ?? []).map((p) => [p.id, p.full_name]),
-  );
   const positionLabelByCode = new Map(
     (positions ?? []).map((position) => [
       position.code,

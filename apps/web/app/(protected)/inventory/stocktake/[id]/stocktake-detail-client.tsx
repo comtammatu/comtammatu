@@ -69,6 +69,7 @@ interface StocktakeSession {
   notes: string | null;
   created_at: string;
   created_by: string;
+  created_by_name: string;
 }
 
 function stocktakeCode(session: Pick<StocktakeSession, "id" | "session_number">): string {
@@ -282,7 +283,7 @@ export function StocktakeDetailClient({
         items={[
           {
             term: labelCreator,
-            description: session.created_by,
+            description: session.created_by_name,
           },
           ...(session.completed_at
             ? [

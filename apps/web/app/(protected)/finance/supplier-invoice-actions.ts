@@ -449,7 +449,15 @@ export const createSupplierInvoice = withAction(
           error: "Chi tiết thuế GTGT của hóa đơn không hợp lệ.",
         };
       }
-      if (error.message?.includes("supplier_invoice_over_allocation")) {
+      if (
+        error.message?.includes("supplier_invoice_over_allocation") ||
+        error.message?.includes("supplier_invoice_allocation_overbilled") ||
+        error.message?.includes("supplier_invoice_allocation_grn_item_missing") ||
+        error.message?.includes(
+          "supplier_invoice_allocation_ingredient_mismatch",
+        ) ||
+        error.message?.includes("supplier_invoice_allocations_invalid")
+      ) {
         return {
           success: false,
           error: "Số lượng lập hóa đơn vượt số lượng thực nhận còn lại.",

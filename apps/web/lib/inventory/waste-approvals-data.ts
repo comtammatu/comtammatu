@@ -13,6 +13,8 @@ import {
 } from "@/(protected)/inventory/_lib/unit-display";
 import { loadInventoryMonetaryAccess } from "./monetary-access";
 import type { PendingWasteRow } from "./waste-approval-model";
+import { resolveProfileDisplayNames } from "@/_lib/profile-display-names";
+import { STAFF_VI } from "@comtammatu/shared/messages";
 
 type LoadWasteApprovalsOptions = {
   routeBranchId?: number;
@@ -144,8 +146,14 @@ export async function loadWasteApprovalsData({
       ? supabase.from("branches").select("id, name").in("id", branchIds)
       : Promise.resolve({ data: [] as never[], error: null }),
     creatorIds.length > 0
-      ? supabase.from("profiles").select("id, full_name").in("id", creatorIds)
-      : Promise.resolve({ data: [] as never[], error: null }),
+      ? resolveProfileDisplayNames(supabase, creatorIds).then((data) => ({
+          data,
+          error: null,
+        }))
+      : Promise.resolve({
+          data: new Map<string, string>(),
+          error: null,
+        }),
   ]);
 
   if (itemsRes.error || branchesRes.error || creatorsRes.error) {
@@ -162,10 +170,7 @@ export async function loadWasteApprovalsData({
   for (const branch of branchesRes.data ?? []) {
     branchMap.set(branch.id, branch.name);
   }
-  const creatorMap = new Map<string, string>();
-  for (const profile of creatorsRes.data ?? []) {
-    if (profile.id) creatorMap.set(profile.id, profile.full_name ?? profile.id);
-  }
+  const creatorMap = creatorsRes.data;
 
   type ItemRow = NonNullable<typeof itemsRes.data>[number];
   type IngredientUnitJoin = {
@@ -289,7 +294,7 @@ export async function loadWasteApprovalsData({
       shiftKey: issue.shift_key ?? "",
       sourceType: issue.source_type ?? "manual",
       createdBy: creatorId,
-      createdByName: creatorMap.get(creatorId) ?? creatorId,
+      createdByName: creatorMap.get(creatorId) ?? STAFF_VI.long,
       isSelfCreated: creatorId === session.user.id,
       monetary: monetaryAccess.valuation ? { totalValue } : null,
       notes: issue.notes ?? null,

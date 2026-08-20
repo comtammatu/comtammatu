@@ -45,3 +45,14 @@ test("supplier invoice RPC payload persists net unit price and additive gross li
   assert.doesNotMatch(action, /pricing_mode,/);
   assert.doesNotMatch(action, /gross_unit_price,/);
 });
+
+test("supplier invoice maps allocation overbill exceptions to remaining-received copy", () => {
+  assert.match(
+    action,
+    /supplier_invoice_over_allocation[\s\S]*supplier_invoice_allocation_overbilled[\s\S]*Số lượng lập hóa đơn vượt số lượng thực nhận còn lại/,
+  );
+  assert.match(action, /supplier_invoice_allocation_grn_item_missing/);
+  assert.match(action, /supplier_invoice_allocation_ingredient_mismatch/);
+  assert.match(action, /supplier_invoice_allocations_invalid/);
+  assert.match(action, /Không thể tạo hóa đơn NCC\./);
+});

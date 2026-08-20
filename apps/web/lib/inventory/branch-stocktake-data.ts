@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { currentUserHasPermission } from "@/_lib/permissions";
 import { loadAuthState } from "@/_lib/auth";
+import { resolveProfileDisplayNames } from "@/_lib/profile-display-names";
+import { STAFF_VI } from "@comtammatu/shared/messages";
 import {
   resolveInventoryBranchScope,
   resolveInventoryListScope,
@@ -104,7 +106,10 @@ function toStatus(value: string): BranchStocktakeStatus {
   return "in_progress";
 }
 
-function toBranchStocktakeSession(row: SessionListRow): BranchStocktakeSession {
+function toBranchStocktakeSession(
+  row: SessionListRow,
+  createdByName: string,
+): BranchStocktakeSession {
   return {
     id: row.id,
     sessionNumber: toSessionNumber(row),
@@ -113,6 +118,7 @@ function toBranchStocktakeSession(row: SessionListRow): BranchStocktakeSession {
     completedAt: row.completed_at,
     createdAt: row.created_at,
     createdBy: row.created_by,
+    createdByName,
     status: toStatus(row.status),
     notes: row.notes,
     totalItems: Number(row.total_items ?? 0),
@@ -138,17 +144,26 @@ export async function loadBranchStocktakeListData(routeBranchId: number) {
     (item) => item.id === routeBranchId,
   );
 
+  const sessions = sessionsResult.success
+    ? ((sessionsResult.data ?? []) as SessionListRow[])
+    : [];
+  const createdByNames = await resolveProfileDisplayNames(
+    supabase,
+    sessions.map((row) => row.created_by),
+  );
+
   return {
     branchId: routeBranchId,
     branchName: branch
       ? getBranchSiteDisplayName(branch)
       : `CN #${routeBranchId}`,
     canManage,
-    sessions: sessionsResult.success
-      ? ((sessionsResult.data ?? []) as SessionListRow[]).map(
-          toBranchStocktakeSession,
-        )
-      : [],
+    sessions: sessions.map((row) =>
+      toBranchStocktakeSession(
+        row,
+        createdByNames.get(row.created_by) ?? STAFF_VI.long,
+      ),
+    ),
   };
 }
 
@@ -263,6 +278,10 @@ export async function loadBranchStocktakeDetailData(
     }));
   }
 
+  const names = await resolveProfileDisplayNames(supabase, [
+    session.created_by,
+  ]);
+
   return {
     session: {
       id: session.id,
@@ -272,6 +291,7 @@ export async function loadBranchStocktakeDetailData(
       completedAt: session.completed_at,
       createdAt: session.created_at,
       createdBy: session.created_by,
+      createdByName: names.get(session.created_by) ?? STAFF_VI.long,
       status,
       notes: session.notes,
       blindMode: session.blind_mode === true,

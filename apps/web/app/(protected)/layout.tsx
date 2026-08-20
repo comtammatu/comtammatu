@@ -7,6 +7,11 @@ import {
   isPickupPublicDisplayPath,
 } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
+import {
+  resolveProfileDisplayNames,
+  staffDisplayLabel,
+} from "@/_lib/profile-display-names";
+import { STAFF_VI } from "@comtammatu/shared/messages";
 import { readRequestPathname } from "@/_lib/request-pathname";
 import {
   currentUserHasAnyPermissionAny,
@@ -69,6 +74,7 @@ export default async function ProtectedLayout({
   const granted = Promise.resolve(true);
 
   const [
+    profileNames,
     inventoryScope,
     activeBranches,
     hasProcurementRead,
@@ -83,6 +89,7 @@ export default async function ProtectedLayout({
     canOpenHrPayroll,
     canManageWorkTeamFlag,
   ] = await Promise.all([
+    resolveProfileDisplayNames(supabase, user?.id ? [user.id] : []),
     canOpenInventory
       ? resolveInventoryBranchScope(supabase, claims, null)
       : Promise.resolve(null),
@@ -143,11 +150,15 @@ export default async function ProtectedLayout({
   const hrBranches = isOwner
     ? activeBranches
     : activeBranches.filter((branch) => branch.id === claims.branch_id);
+  const shellUserName = staffDisplayLabel(
+    user?.id ? profileNames.get(user.id) : null,
+    STAFF_VI.long,
+  );
 
   return (
     <ControlSurfaceShell
       user={{
-        name: user?.user_metadata?.["display_name"] ?? user?.email ?? "",
+        name: shellUserName,
       }}
       role={role}
       homeBranchId={claims.branch_id}
