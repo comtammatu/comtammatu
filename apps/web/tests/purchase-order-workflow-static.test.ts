@@ -216,11 +216,13 @@ test("PO list keeps its URL-addressable document dialog and never shows an empty
   );
   assert.match(loader, /ORDER_ITEM_SELECT/);
   assert.match(loader, /from\("purchase_order_items"\)/);
-  assert.match(loader, /\.in\("po_id", poIds\)/);
+  assert.match(loader, /\.in\("po_id", idChunk\)/);
   assert.match(loader, /from\("goods_received_notes"\)/);
-  assert.match(loader, /\.in\("po_id", poIds\)/);
+  assert.match(loader, /\.in\("po_id", idChunk\)/);
   assert.match(loader, /from\("grn_items"\)/);
-  assert.match(loader, /\.in\("grn_id", grnIds\)/);
+  assert.match(loader, /\.in\("grn_id", idChunk\)/);
+  assert.match(loader, /PURCHASE_WORKSPACE_IN_CHUNK_SIZE/);
+  assert.match(loader, /fetchRowsInChunks/);
   assert.match(loader, /purchase_group_key/);
   assert.doesNotMatch(
     loader,
@@ -256,6 +258,7 @@ test("demand progress converts PO receipt qty into demand entry units", () => {
   );
   assert.match(loader, /DEMAND_COVERAGE_ITEM_SELECT/);
   assert.match(loader, /from\("purchase_order_items"\)/);
+  assert.match(loader, /\.in\("po_id", idChunk\)/);
   assert.match(helper, /entryToBaseFactor/);
   assert.match(helper, /demandToBaseFactor/);
   assert.match(migration, /purchase_request_item_ordered_base/);
@@ -295,4 +298,22 @@ test("purchase_order_items entry snapshot columns are granted to authenticated",
       table,
     );
   }
+});
+
+test("ADR 0043 line columns are granted to authenticated", () => {
+  const migration = read(
+    "supabase/migrations/20260820133724_grant_po_grn_line_column_access_and_fix_grn_trigger_coalesce.sql",
+  );
+  assert.match(
+    migration,
+    /GRANT SELECT \(supplier_id\) ON public\.purchase_order_items TO authenticated/,
+  );
+  assert.match(
+    migration,
+    /GRANT SELECT \(confirmed_at\) ON public\.grn_items TO authenticated/,
+  );
+  assert.match(
+    migration,
+    /'false'::pg_catalog\.text/,
+  );
 });

@@ -10,9 +10,12 @@ import { messages } from "@lib/messages";
 
 export const PURCHASE_WORKSPACE_LIST_LIMIT = 200;
 
+/** Large `.in(id)` lists on child tables hit statement timeout on Production. */
+export const PURCHASE_WORKSPACE_IN_CHUNK_SIZE = 40;
+
 // Nested PostgREST embeds re-evaluate RLS EXISTS + has_permission per parent
 // row and timed out (SQLSTATE 57014) on /inventory/purchase-orders. Keep
-// parent selects flat and load children with `.in(id)`.
+// parent selects flat and load children with chunked `.in(id)`.
 
 /** Parent rows only. Child rows load in a follow-up `.in(id)` query. */
 export const DEMAND_LIST_SELECT =
@@ -143,6 +146,41 @@ function one<T>(value: T | T[] | null): T | null {
 
 function uniqueIds(values: Iterable<number>): number[] {
   return [...new Set(values)];
+}
+
+function chunkIds(
+  values: readonly number[],
+  chunkSize = PURCHASE_WORKSPACE_IN_CHUNK_SIZE,
+): number[][] {
+  const ids = uniqueIds(values);
+  if (ids.length === 0) return [];
+
+  const size = Math.max(1, Math.floor(chunkSize));
+  const chunks: number[][] = [];
+  for (let index = 0; index < ids.length; index += size) {
+    chunks.push(ids.slice(index, index + size));
+  }
+  return chunks;
+}
+
+async function fetchRowsInChunks<T>({
+  ids,
+  fetchChunk,
+}: {
+  ids: readonly number[];
+  fetchChunk: (
+    chunkIds: number[],
+  ) => Promise<{ data: T[] | null; error: unknown | null }>;
+}): Promise<{ data: T[]; error: unknown | null }> {
+  if (ids.length === 0) return { data: [], error: null };
+
+  const rows: T[] = [];
+  for (const idChunk of chunkIds(ids)) {
+    const { data, error } = await fetchChunk(idChunk);
+    if (error) return { data: [], error };
+    rows.push(...(data ?? []));
+  }
+  return { data: rows, error: null };
 }
 
 function unitLabel(units: UnitEmbed): string {
@@ -405,55 +443,72 @@ export async function loadPurchaseDemandRows({
     data: [] as Omit<CoverageOrderRecord, "purchase_order_items">[],
     error: null,
   };
-  const emptyCoverageItems = {
-    data: [] as Array<{
-      po_id: number;
-      purchase_request_item_id: number | null;
-      quantity: number | string;
-      entry_to_base_factor: number | string | null;
-    }>,
-    error: null,
-  };
   const emptyAllocations = { data: [] as AllocationRecord[], error: null };
 
-  const [itemResult, coverageResult, coverageItemResult, allocationResult, factorResult] =
+  const [itemResult, coverageResult, allocationResult, factorResult] =
     await Promise.all([
-    demandIds.length === 0
-      ? emptyItems
-      : supabase
-          .from("purchase_request_items" as never)
-          .select(DEMAND_ITEM_SELECT as never)
-          .eq("tenant_id" as never, tenantId)
-          .in("purchase_request_id" as never, demandIds as never),
-    demandIds.length === 0
-      ? emptyCoverage
-      : supabase
-          .from("purchase_orders")
-          .select(DEMAND_COVERAGE_SELECT)
-          .eq("tenant_id", tenantId)
-          .in("purchase_request_id", demandIds),
-    demandIds.length === 0
-      ? emptyCoverageItems
-      : supabase
-          .from("purchase_order_items")
-          .select(DEMAND_COVERAGE_ITEM_SELECT)
-          .eq("tenant_id", tenantId)
-          .not("purchase_request_item_id", "is", null),
-    canAllocate && demandIds.length > 0
-      ? supabase
-          .from("purchase_request_allocations")
-          .select(
-            "purchase_request_id, purchase_request_item_id, supplier_id, quantity",
-          )
-          .eq("tenant_id", tenantId)
-          .in("purchase_request_id", demandIds)
-      : emptyAllocations,
-    supabase
-      .from("ingredient_units")
-      .select("ingredient_id, unit_id, to_base_factor")
-      .eq("tenant_id", tenantId)
-      .eq("is_active", true),
-  ]);
+      demandIds.length === 0
+        ? emptyItems
+        : fetchRowsInChunks({
+            ids: demandIds,
+            fetchChunk: async (idChunk) =>
+              supabase
+                .from("purchase_request_items" as never)
+                .select(DEMAND_ITEM_SELECT as never)
+                .eq("tenant_id" as never, tenantId)
+                .in("purchase_request_id" as never, idChunk as never),
+          }),
+      demandIds.length === 0
+        ? emptyCoverage
+        : supabase
+            .from("purchase_orders")
+            .select(DEMAND_COVERAGE_SELECT)
+            .eq("tenant_id", tenantId)
+            .in("purchase_request_id", demandIds),
+      canAllocate && demandIds.length > 0
+        ? fetchRowsInChunks({
+            ids: demandIds,
+            fetchChunk: async (idChunk) =>
+              supabase
+                .from("purchase_request_allocations")
+                .select(
+                  "purchase_request_id, purchase_request_item_id, supplier_id, quantity",
+                )
+                .eq("tenant_id", tenantId)
+                .in("purchase_request_id", idChunk),
+          })
+        : emptyAllocations,
+      supabase
+        .from("ingredient_units")
+        .select("ingredient_id, unit_id, to_base_factor")
+        .eq("tenant_id", tenantId)
+        .eq("is_active", true),
+    ]);
+
+  const coverageHeaders = (coverageResult.data ?? []) as unknown as Array<
+    Omit<CoverageOrderRecord, "purchase_order_items">
+  >;
+  const coveragePoIds = uniqueIds(coverageHeaders.map((po) => po.id));
+  const coverageItemResult =
+    coveragePoIds.length === 0
+      ? {
+          data: [] as Array<{
+            po_id: number;
+            purchase_request_item_id: number | null;
+            quantity: number | string;
+            entry_to_base_factor: number | string | null;
+          }>,
+          error: null,
+        }
+      : await fetchRowsInChunks({
+          ids: coveragePoIds,
+          fetchChunk: async (idChunk) =>
+            supabase
+              .from("purchase_order_items")
+              .select(DEMAND_COVERAGE_ITEM_SELECT)
+              .eq("tenant_id", tenantId)
+              .in("po_id", idChunk),
+        });
 
   if (
     itemResult.error ||
@@ -465,7 +520,7 @@ export async function loadPurchaseDemandRows({
     return { success: false };
   }
 
-  const demandItems = (itemResult.data ?? []) as unknown as DemandItemRecord[];
+  const demandItems = itemResult.data as DemandItemRecord[];
   const itemsByDemandId = new Map<number, DemandRecord["purchase_request_items"]>();
   for (const item of demandItems) {
     const list = itemsByDemandId.get(item.purchase_request_id) ?? [];
@@ -477,9 +532,6 @@ export async function loadPurchaseDemandRows({
     purchase_request_items: itemsByDemandId.get(demand.id) ?? [],
   }));
 
-  const coverageHeaders = (coverageResult.data ?? []) as unknown as Array<
-    Omit<CoverageOrderRecord, "purchase_order_items">
-  >;
   const coverageItemsByPoId = new Map<
     number,
     CoverageOrderRecord["purchase_order_items"]
@@ -552,23 +604,31 @@ export async function loadPurchaseOrderRows({
   const [itemResult, grnHeaderResult] = await Promise.all([
     poIds.length === 0
       ? { data: [] as PurchaseOrderItemRecord[], error: null }
-      : supabase
-          .from("purchase_order_items")
-          .select(ORDER_ITEM_SELECT as never)
-          .eq("tenant_id", tenantId)
-          .in("po_id", poIds),
+      : fetchRowsInChunks({
+          ids: poIds,
+          fetchChunk: async (idChunk) =>
+            supabase
+              .from("purchase_order_items")
+              .select(ORDER_ITEM_SELECT as never)
+              .eq("tenant_id", tenantId)
+              .in("po_id", idChunk),
+        }),
     poIds.length === 0
       ? { data: [] as Omit<GrnRecord, "grn_items">[], error: null }
-      : supabase
-          .from("goods_received_notes")
-          .select(GRN_BY_PO_SELECT)
-          .eq("tenant_id", tenantId)
-          .in("po_id", poIds),
+      : fetchRowsInChunks({
+          ids: poIds,
+          fetchChunk: async (idChunk) =>
+            supabase
+              .from("goods_received_notes")
+              .select(GRN_BY_PO_SELECT)
+              .eq("tenant_id", tenantId)
+              .in("po_id", idChunk),
+        }),
   ]);
 
   if (itemResult.error || grnHeaderResult.error) return { success: false };
 
-  const poItems = (itemResult.data ?? []) as unknown as PurchaseOrderItemRecord[];
+  const poItems = itemResult.data as PurchaseOrderItemRecord[];
   const itemsByPoId = new Map<number, PurchaseOrderRecord["purchase_order_items"]>();
   for (const item of poItems) {
     const list = itemsByPoId.get(item.po_id) ?? [];
@@ -586,18 +646,22 @@ export async function loadPurchaseOrderRows({
   const grnItemResult =
     grnIds.length === 0
       ? { data: [] as GrnItemRecord[], error: null }
-      : await supabase
-          .from("grn_items")
-          .select(
-            "grn_id, purchase_order_item_id, received_quantity, rejected_quantity, confirmed_at" as never,
-          )
-          .eq("tenant_id", tenantId)
-          .in("grn_id", grnIds);
+      : await fetchRowsInChunks({
+          ids: grnIds,
+          fetchChunk: async (idChunk) =>
+            supabase
+              .from("grn_items")
+              .select(
+                "grn_id, purchase_order_item_id, received_quantity, rejected_quantity, confirmed_at" as never,
+              )
+              .eq("tenant_id", tenantId)
+              .in("grn_id", idChunk),
+        });
 
   if (grnItemResult.error) return { success: false };
 
   const itemsByGrnId = new Map<number, GrnRecord["grn_items"]>();
-  for (const item of (grnItemResult.data ?? []) as GrnItemRecord[]) {
+  for (const item of grnItemResult.data as GrnItemRecord[]) {
     const list = itemsByGrnId.get(item.grn_id) ?? [];
     list.push({
       purchase_order_item_id: item.purchase_order_item_id,
