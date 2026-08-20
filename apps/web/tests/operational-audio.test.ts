@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   APP_SIGNAL_PATTERNS,
   getAppSignalDurationMs,
+  VOICE_PLAYBACK_GAIN,
   VOICE_PLAYBACK_RATE,
 } from "../lib/audio-signal";
 import {
@@ -215,7 +216,8 @@ test("signal duration includes every pulse and the gaps between them", () => {
   assert.equal(getAppSignalDurationMs("pos-payment-received"), 580);
 });
 
-test("cloud voice plays nova clips faster than recorded speed", () => {
+test("cloud voice plays nova clips louder and faster than recorded speed", () => {
+  assert.equal(VOICE_PLAYBACK_GAIN, 3.5);
   assert.equal(VOICE_PLAYBACK_RATE, 1.15);
 });
 

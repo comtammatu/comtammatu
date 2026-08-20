@@ -205,7 +205,8 @@ export function playAppSignal(tone: SignalTone, force = false): void {
   }
 }
 
-const VOICE_PLAYBACK_GAIN = 1.35;
+/** nova MP3 is much quieter than square beeps; keep floor alerts audible. */
+export const VOICE_PLAYBACK_GAIN = 3.5;
 /** nova at 1.0 is slow for floor alerts; rate-change keeps Gateway payload valid. */
 export const VOICE_PLAYBACK_RATE = 1.15;
 
