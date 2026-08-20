@@ -8,7 +8,6 @@ import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
 import { Item } from "@comtammatu/ui/components/item";
 import {
   Field,
-  FieldDescription,
   FieldLabel,
 } from "@comtammatu/ui/components/field";
 import {
@@ -654,11 +653,6 @@ export function RevenueTargetsClient({
                           disabled={pending}
                         />
                       )}
-                      <FieldDescription>
-                        {tier.rewardType === "fixed_amount"
-                          ? copy.rewardTiers.fixedAmountHint
-                          : copy.rewardTiers.revenuePercentHint}
-                      </FieldDescription>
                     </Field>
                     <Button
                       type="button"
