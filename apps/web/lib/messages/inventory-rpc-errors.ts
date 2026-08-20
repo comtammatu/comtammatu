@@ -690,6 +690,41 @@ export const procurementRpcMappings: readonly RpcErrorMapping[] = [
       "Đơn đặt hàng đã có phiếu nhập xác nhận hoặc không còn được phép hủy.",
   },
   {
+    match: includesAny("purchase_order_status_transition_invalid"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_STATUS,
+    userMessage: "Trạng thái đơn mua không hợp lệ cho thao tác này.",
+  },
+  {
+    match: includesAny("purchase_order_status_requires_rpc"),
+    errorCode: INVENTORY_ERROR_CODES.FORBIDDEN,
+    userMessage: "Không thể thay đổi trạng thái đơn mua trực tiếp.",
+  },
+  {
+    match: includesAny("purchase_order_initial_status_invalid"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_STATUS,
+    userMessage: "Trạng thái khởi tạo đơn mua không hợp lệ.",
+  },
+  {
+    match: includesAny("purchase_order_insert_requires_rpc"),
+    errorCode: INVENTORY_ERROR_CODES.FORBIDDEN,
+    userMessage: "Chỉ có thể tạo đơn mua qua chức năng hệ thống.",
+  },
+  {
+    match: includesAny("purchase_order_fully_received"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_STATUS,
+    userMessage: "Đơn mua đã nhận đủ hàng.",
+  },
+  {
+    match: includesAny("purchase_order_not_receivable"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_STATUS,
+    userMessage: "Đơn mua chưa sẵn sàng nhận hàng.",
+  },
+  {
+    match: includesAny("purchase_order_not_draft"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_STATUS,
+    userMessage: "Đơn mua không còn ở trạng thái nháp.",
+  },
+  {
     match: includesAny("purchase_order_not_closable"),
     errorCode: INVENTORY_ERROR_CODES.INVALID_STATUS,
     userMessage: "Chỉ đóng được đơn đặt hàng đã nhận một phần.",

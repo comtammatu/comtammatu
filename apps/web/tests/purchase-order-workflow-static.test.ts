@@ -317,3 +317,24 @@ test("ADR 0043 line columns are granted to authenticated", () => {
     /'false'::pg_catalog\.text/,
   );
 });
+
+test("purchase order immutability allows direct approved transition and maps status transition error", () => {
+  const migration = read(
+    "supabase/migrations/20260820212536_fix_po_status_transition_approved.sql",
+  );
+  const rpcErrors = read("apps/web/lib/messages/inventory-rpc-errors.ts");
+
+  assert.match(
+    migration,
+    /OLD\.status = 'draft'[\s\S]*?NEW\.status IN \('approved', 'sent', 'pending_approval', 'cancelled'\)/,
+  );
+  assert.match(
+    migration,
+    /NEW\.status NOT IN \('draft', 'pending_approval', 'approved'\)/,
+  );
+  assert.match(
+    rpcErrors,
+    /purchase_order_status_transition_invalid/,
+  );
+});
+
