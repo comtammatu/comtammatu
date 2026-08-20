@@ -7,6 +7,7 @@ import { addMoney, roundToCanonicalMoney } from "@comtammatu/shared/money";
 import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import { loadAuthState } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
+import { currentUserHasPermissionAny } from "@/_lib/permissions";
 import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 import {
   fetchInventoryPeriodValue,
@@ -20,6 +21,7 @@ import {
   fetchRevenueKpis,
   type FinanceDashboardSummary,
 } from "../actions";
+import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { fetchFoodCost } from "@/_lib/food-cost-actions";
 import type {
   FinanceLocation,
@@ -189,6 +191,15 @@ interface BranchOption {
   name: string;
 }
 
+function shouldLogFinanceAttentionRpcFailure(code: string | undefined): boolean {
+  // Callers soft-fail; forbidden is expected when finance:view is absent.
+  return code !== "42501";
+}
+
+async function canViewFinanceAttention(): Promise<boolean> {
+  return currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_VIEW);
+}
+
 async function fetchCashVarianceActionTarget({
   supabase,
   branchId,
@@ -209,7 +220,9 @@ async function fetchCashVarianceActionTarget({
     },
   );
   if (error) {
-    console.error("[finance:cash-variance-target] RPC failed", error.code);
+    if (shouldLogFinanceAttentionRpcFailure(error.code)) {
+      console.error("[finance:cash-variance-target] RPC failed", error.code);
+    }
     return null;
   }
   return (data?.[0] as CashVarianceActionTarget | undefined) ?? null;
@@ -232,7 +245,9 @@ async function fetchFinanceReconciliationAttention({
     },
   );
   if (error) {
-    console.error("[finance:reconciliation-attention] RPC failed", error.code);
+    if (shouldLogFinanceAttentionRpcFailure(error.code)) {
+      console.error("[finance:reconciliation-attention] RPC failed", error.code);
+    }
     return null;
   }
   return (data?.[0] as FinanceReconciliationAttention | undefined) ?? null;
@@ -1224,6 +1239,10 @@ export async function fetchFinanceAttentionExceptions(
   const includesBranchData = params.location !== "company";
   const includesCompanyData =
     params.location === "all" || params.location === "company";
+  const canViewFinanceAttentionRpc =
+    includesBranchData || includesCompanyData
+      ? await canViewFinanceAttention()
+      : false;
   const salesBranchIds = includesBranchData
     ? await fetchSalesBranchIds(supabase as never, claims.tenant_id)
     : null;
@@ -1239,7 +1258,7 @@ export async function fetchFinanceAttentionExceptions(
     includesBranchData
       ? fetchCashVarianceSummary(params.branch, resolved.start, resolved.end)
       : Promise.resolve({ success: true as const, data: null }),
-    includesBranchData
+    includesBranchData && canViewFinanceAttentionRpc
       ? fetchCashVarianceActionTarget({
           supabase,
           branchId: params.branch,
@@ -1247,7 +1266,7 @@ export async function fetchFinanceAttentionExceptions(
           endDate: resolved.end,
         })
       : Promise.resolve(null),
-    includesCompanyData
+    includesCompanyData && canViewFinanceAttentionRpc
       ? fetchFinanceReconciliationAttention({
           supabase,
           startDate: resolved.start,
@@ -1357,12 +1376,16 @@ export async function fetchFinanceCockpit(
       (await canAccessBranch(supabase, claims, params.branch)));
   const monetaryClient = canReadRequestedValuation ? monetary.client : null;
 
-  const [salesBranchIds, valuationActive] = await Promise.all([
+  const [salesBranchIds, valuationActive, canViewFinanceAttentionRpc] =
+    await Promise.all([
     includesBranchData
       ? fetchSalesBranchIds(supabase as never, claims.tenant_id)
       : Promise.resolve(null),
     includesBranchData && monetaryClient
       ? isInventoryValuationActive(monetaryClient, claims.tenant_id)
+      : Promise.resolve(false),
+    includesBranchData || includesCompanyData
+      ? canViewFinanceAttention()
       : Promise.resolve(false),
   ]);
 
@@ -1477,7 +1500,7 @@ export async function fetchFinanceCockpit(
     includesBranchData
       ? fetchCashVarianceSummary(params.branch, resolved.start, resolved.end)
       : Promise.resolve({ success: true as const, data: null }),
-    includesBranchData
+    includesBranchData && canViewFinanceAttentionRpc
       ? fetchCashVarianceActionTarget({
           supabase,
           branchId: params.branch,
@@ -1485,7 +1508,7 @@ export async function fetchFinanceCockpit(
           endDate: resolved.end,
         })
       : Promise.resolve(null),
-    includesCompanyData
+    includesCompanyData && canViewFinanceAttentionRpc
       ? fetchFinanceReconciliationAttention({
           supabase,
           startDate: resolved.start,

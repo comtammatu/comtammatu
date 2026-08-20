@@ -22,6 +22,7 @@ test("root route renders the Control home", () => {
   assert.match(protectedLayout, /<ControlSurfaceShell/);
   assert.match(rootPage, /<ControlSurfaceOverview/);
   assert.match(rootPage, /loadControlHomeAttention/);
+  assert.match(rootPage, /await connection\(\)/);
   assert.match(rootPage, /getTodayWorkState/);
   assert.match(overview, /<AppPageHeader/);
   assert.match(overview, /<AppSection/);

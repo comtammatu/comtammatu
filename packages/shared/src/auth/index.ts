@@ -137,6 +137,7 @@ export {
   isOwnerRoutePath,
   isPublicAppPath,
   isPickupPublicDisplayPath,
+  isStationChromePath,
   rewriteRetiredRunnerPath,
   resolveModuleFromPath,
 } from "./route-resolution";

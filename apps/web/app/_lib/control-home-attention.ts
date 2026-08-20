@@ -22,6 +22,7 @@ import { listMyWorkTasks } from "@/(protected)/work/actions";
 import { fetchHrAttentionSummary } from "@/(protected)/hr/hr-attention";
 import { getUnreadCount } from "@/(protected)/notifications/actions";
 import { countPrintJobsNeedingAttention } from "@/_lib/print-attention";
+import { currentUserHasPermissionAny } from "@/_lib/permissions";
 import { messages } from "@lib/messages";
 
 export type ControlHomeAttentionItem = {
@@ -50,6 +51,9 @@ async function loadFinanceAttention(
   role: StaffRole,
 ): Promise<ControlHomeAttentionItem[]> {
   if (!canAccess(role, "finance")) return [];
+  if (!(await currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_VIEW))) {
+    return [];
+  }
   try {
     const params = parseFinanceParams({});
     const resolved = resolveFinanceRange(params);

@@ -5,6 +5,7 @@ import {
   canAccess,
   canonicalizeSelfServicePath,
   isPickupPublicDisplayPath,
+  isStationChromePath,
 } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import {
@@ -50,6 +51,10 @@ export default async function ProtectedLayout({
   // auth; this layout must not call loadAuthState or the public kiosk 500s.
   const pathname = readRequestPathname(await headers());
   if (isPickupPublicDisplayPath(pathname)) {
+    return children;
+  }
+  // Station boards (POS/KDS/pickup) own chrome; proxy already authenticated.
+  if (isStationChromePath(pathname)) {
     return children;
   }
   // design-system.md A.7 — /notifications is chrome-less (AppPage + back).

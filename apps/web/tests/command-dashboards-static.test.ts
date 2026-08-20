@@ -50,6 +50,7 @@ function literalWith(pattern: string, flags = "i"): RegExp {
 
 test("finance overview presents period results, current funds, and inventory in order", () => {
   const page = read(FINANCE_PAGE);
+  assert.match(page, /await connection\(\)/);
   const pageBody = page.slice(
     page.indexOf("export default async function FinancePage"),
   );

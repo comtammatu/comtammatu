@@ -66,6 +66,11 @@ export function isPickupPublicDisplayPath(pathname: string): boolean {
   return /^\/br\/\d+\/pickup\/?$/.test(pathname);
 }
 
+/** POS / KDS / pickup station chrome — skip control_surface shell in layout. */
+export function isStationChromePath(pathname: string): boolean {
+  return /^\/br\/\d+\/(?:pos|kds|pickup)(?:\/|$)/.test(pathname);
+}
+
 /**
  * Retired staff-runner URL. Canonical guest board is `/br/{id}/pickup`.
  * Proxy 308s these to pickup so old bookmarks never hit the staff layout.

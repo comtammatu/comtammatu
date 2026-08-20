@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { canAccess } from "@comtammatu/shared/auth";
 import { ControlSurfaceOverview } from "@/_components/control-surface-overview";
 import { loadAuthState } from "@/_lib/auth";
@@ -19,6 +20,9 @@ async function loadTodayWorkForHome(
 }
 
 export default async function RootPage() {
+  // Attention buckets call Supabase during render; defer until request time
+  // so Cache Components prerender does not abort in-flight fetch() calls.
+  await connection();
   const { claims } = await loadAuthState();
   const [attention, todayWork] = await Promise.all([
     loadControlHomeAttention(claims.user_role),

@@ -47,6 +47,7 @@ test("public pickup skips staff layout auth; retired /runner redirects to pickup
 
   assert.ok(skipIdx >= 0 && authIdx > skipIdx);
   assert.match(protectedLayout, /readRequestPathname\(await headers\(\)\)/);
+  assert.match(protectedLayout, /isStationChromePath/);
   assert.match(protectedLayout, /return children;/);
   assert.ok(rewriteIdx >= 0 && publicIdx > rewriteIdx);
   assert.match(proxy, /NextResponse\.redirect\(url, 308\)/);

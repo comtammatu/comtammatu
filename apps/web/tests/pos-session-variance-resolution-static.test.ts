@@ -118,6 +118,9 @@ test("Finance attention deep-links to the exact unresolved POS session", () => {
     /pos-sessions\?session=\$\{String\(cashVarianceTarget\.session_id\)\}/,
   );
   assert.match(cockpit, /get_finance_reconciliation_attention/);
+  assert.match(cockpit, /canViewFinanceAttention/);
+  assert.match(cockpit, /FINANCE_VIEW/);
+  assert.match(cockpit, /shouldLogFinanceAttentionRpcFailure/);
   assert.match(
     cockpit,
     /financeHref\("\/finance\/bank-transactions", params, \{\s*recon: "needs_review"/,

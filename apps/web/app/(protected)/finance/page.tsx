@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { connection } from "next/server";
 import type { ReactNode } from "react";
 import {
   formatAccountingVND as formatVND,
@@ -46,6 +47,7 @@ export default async function FinancePage({
 }: {
   searchParams?: Promise<FinanceOverviewSearchParams>;
 }) {
+  await connection();
   const rawParams = searchParams ? await searchParams : {};
   const params = parseFinanceParams(rawParams);
   const resolved = resolveFinanceRange(params);

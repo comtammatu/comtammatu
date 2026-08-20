@@ -23,6 +23,7 @@ import {
   isPublicAppPath,
   resolveModuleFromPath,
   isPickupPublicDisplayPath,
+  isStationChromePath,
 } from "../route-resolution";
 
 function tokenWithAppMetadata(appMetadata: Record<string, unknown>): string {
@@ -619,6 +620,10 @@ test("isPublicAppPath PWA manifests and pickup display bypass auth proxy", () =>
   assert.equal(isPublicAppPath("/br/3/pickup"), true);
   assert.equal(isPublicAppPath("/br/3/pickup/"), true);
   assert.equal(isPickupPublicDisplayPath("/br/3/pickup"), true);
+  assert.equal(isStationChromePath("/br/3/pos"), true);
+  assert.equal(isStationChromePath("/br/3/kds/"), true);
+  assert.equal(isStationChromePath("/br/3/pos-sessions"), false);
+  assert.equal(isStationChromePath("/br/3/dashboard"), false);
   assert.equal(isPublicAppPath("/br/3/runner"), false);
   assert.equal(isPublicAppPath("/br/3/runner/"), false);
   assert.equal(isPublicAppPath("/r/abc123DEF4567"), true);
