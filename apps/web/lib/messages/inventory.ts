@@ -999,6 +999,7 @@ export const inventory = {
     lineHeaderName: "Nguyên liệu",
     lineHeaderOrdered: "SL đặt",
     lineHeaderQty: "Thực nhận",
+    lineHeaderUnitPrice: "Đơn giá",
     lineHeaderStatus: "Trạng thái",
     draftQcHint:
       "Ghi số lượng giao thực tế và đơn giá chưa thuế GTGT. Hàng từ chối cần số lượng, lý do và ảnh.",

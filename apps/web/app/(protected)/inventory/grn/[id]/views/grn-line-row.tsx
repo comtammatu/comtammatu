@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { FORM_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -43,6 +43,8 @@ import { messages } from "@lib/messages";
 
 const valuationCopy = messages.inventory.valuationDisplay;
 
+type LineRowSection = "all" | "quantity" | "unitPrice" | "rejection";
+
 export function LineRow({
   tenantId,
   grnId,
@@ -56,6 +58,8 @@ export function LineRow({
   onPatchUnitCost,
   chrome = "card",
   showHeader = true,
+  section = "all",
+  compactLabels = false,
   ingredient,
 }: {
   tenantId: number;
@@ -70,8 +74,11 @@ export function LineRow({
   onPatchUnitCost?: () => void;
   chrome?: "card" | "plain";
   showHeader?: boolean;
+  section?: LineRowSection;
+  compactLabels?: boolean;
   ingredient?: IngredientRow;
 }) {
+  const [rejectionExpanded, setRejectionExpanded] = useState(false);
   const qualityStatus = deriveGrnQualityStatus(line.actual, line.rejected);
   const qualityLabel =
     qualityStatus === "accepted"
@@ -116,6 +123,14 @@ export function LineRow({
     if (next) onChange(next);
   }
 
+  const showFieldLabels = !compactLabels;
+  const showQuantitySection = section === "all" || section === "quantity";
+  const showUnitPriceSection = section === "all" || section === "unitPrice";
+  const showRejectionSection = section === "all" || section === "rejection";
+  const showRejectionFields = line.rejected > 0 || rejectionExpanded;
+  const canRecordRejection =
+    acceptedQuantity > 0 && line.rejected <= 0 && !rejectionExpanded;
+
   const persistUnitSelect = (
     <GrnLineUnitSelect
       id={`received-unit-${line.lineId}`}
@@ -123,6 +138,7 @@ export function LineRow({
       value={line.entryUnitId}
       unitOptions={unitOptions}
       onUnitChange={commitEntryUnit}
+      showLabel={showFieldLabels}
     />
   );
   const priceUnitSelect = (
@@ -132,8 +148,187 @@ export function LineRow({
       value={line.unitCostUnitId}
       unitOptions={unitOptions}
       onUnitChange={commitPriceUnit}
+      showLabel={showFieldLabels}
     />
   );
+
+  const quantityFields = hasPackLoose && line.packUnit && line.looseUnit ? (
+    <div className="flex min-w-0 flex-col gap-2">
+      <div className="grid min-w-0 gap-3 md:grid-cols-2">
+        <Field
+          id={`received-pack-${idx}`}
+          label={grnCopy.line.acceptedLabel(line.packUnit.label)}
+          showLabel={showFieldLabels}
+        >
+          <QuantityInput
+            id={`received-pack-${idx}`}
+            value={
+              showInspectedValues
+                ? String(packLooseSplit?.packQty ?? 0)
+                : ""
+            }
+            onValueChange={(value) =>
+              commitPackLoose(
+                Math.max(0, Number(value || 0)),
+                packLooseSplit?.looseQty ?? 0,
+              )
+            }
+            maxFractionDigits={3}
+          />
+        </Field>
+        <Field
+          id={`received-loose-${idx}`}
+          label={grnCopy.line.acceptedLabel(line.looseUnit.label)}
+          showLabel={showFieldLabels}
+        >
+          <QuantityInput
+            id={`received-loose-${idx}`}
+            value={
+              showInspectedValues
+                ? String(packLooseSplit?.looseQty ?? 0)
+                : ""
+            }
+            onValueChange={(value) =>
+              commitPackLoose(
+                packLooseSplit?.packQty ?? 0,
+                Math.max(0, Number(value || 0)),
+              )
+            }
+            maxFractionDigits={3}
+          />
+        </Field>
+      </div>
+      {persistUnitSelect}
+    </div>
+  ) : (
+    <div
+      className={
+        unitOptions.length > 0 || line.unit
+          ? "flex min-w-0 items-end gap-2"
+          : "min-w-0"
+      }
+    >
+      <div className="min-w-0 flex-1">
+        <Field
+          id={`received-${idx}`}
+          label={grnCopy.line.acceptedLabel(line.unit)}
+          showLabel={showFieldLabels}
+        >
+          <QuantityInput
+            id={`received-${idx}`}
+            value={showInspectedValues ? String(acceptedQuantity) : ""}
+            onValueChange={(value) =>
+              commitAccepted(Math.max(0, Number(value || 0)))
+            }
+            maxFractionDigits={3}
+          />
+        </Field>
+      </div>
+      <div className="w-36 shrink-0">{persistUnitSelect}</div>
+    </div>
+  );
+
+  const unitPriceFields = (
+    <div
+      className={
+        unitOptions.length > 0 || line.unitCostUnitLabel || line.unit
+          ? "flex min-w-0 items-end gap-2"
+          : "min-w-0"
+      }
+    >
+      <div className="min-w-0 flex-1">
+        <Field
+          id={`unit-price-${idx}`}
+          label={grnCopy.line.unitPriceLabel(
+            line.unitCostUnitLabel || line.unit,
+          )}
+          showLabel={showFieldLabels}
+        >
+          <MoneyVndInput
+            id={`unit-price-${idx}`}
+            value={
+              line.monetary?.unitPrice != null && line.monetary.unitPrice > 0
+                ? String(line.monetary.unitPrice)
+                : ""
+            }
+            onValueChange={(value) =>
+              onChange(patchGrnLineUnitPrice(line, Number(value || 0)))
+            }
+            placeholder="0"
+          />
+        </Field>
+      </div>
+      <div className="w-36 shrink-0">{priceUnitSelect}</div>
+    </div>
+  );
+
+  const rejectionFields = showRejectionFields ? (
+    <div className="flex flex-col gap-3">
+      <Field
+        id={`rejected-${idx}`}
+        label={grnCopy.line.rejectedLabel(line.unit)}
+        showLabel={showFieldLabels}
+      >
+        <QuantityInput
+          id={`rejected-${idx}`}
+          value={String(line.rejected)}
+          onValueChange={(value) => {
+            const rejected = Math.max(0, Number(value || 0));
+            onChange({
+              actual: deliveredGrnQuantity(acceptedQuantity, rejected),
+              rejected,
+            });
+          }}
+          maxFractionDigits={3}
+        />
+      </Field>
+
+      {line.rejected > 0 ? (
+        <div className="grid gap-3 md:grid-cols-2">
+          <Field
+            id={`reason-${idx}`}
+            label={grnCopy.line.rejectReasonRequired}
+            showLabel={showFieldLabels}
+          >
+            <Textarea
+              id={`reason-${idx}`}
+              rows={2}
+              value={line.rejectionReason}
+              placeholder={grnCopy.line.rejectReasonPlaceholder}
+              onChange={(event) =>
+                onChange({ rejectionReason: event.target.value })
+              }
+            />
+          </Field>
+          <Field
+            id={`reject-photo-${idx}`}
+            label={grnCopy.line.proofPhotoLabel(true)}
+            showLabel={showFieldLabels}
+          >
+            <PhotoUploadInput
+              tenantId={tenantId}
+              folder={`grn/${grnId}/rejected/${line.lineId}`}
+              value={line.rejectedPhotoUrl || null}
+              onChange={(url) => onChange({ rejectedPhotoUrl: url ?? "" })}
+              acceptTypes="image"
+              allowPaste={false}
+            />
+          </Field>
+        </div>
+      ) : null}
+    </div>
+  ) : canRecordRejection ? (
+    <Button
+      type="button"
+      variant="link"
+      size="sm"
+      className="h-auto px-0 text-muted-foreground"
+      onClick={() => setRejectionExpanded(true)}
+    >
+      {grnCopy.qcQueue}
+    </Button>
+  ) : null;
+
   const content = (
     <>
       {showHeader ? (
@@ -207,181 +402,9 @@ export function LineRow({
 
       {isDraft ? (
         <>
-          {hasPackLoose && line.packUnit && line.looseUnit ? (
-            <div className="flex min-w-0 flex-col gap-2">
-              <div className="grid min-w-0 gap-3 md:grid-cols-2">
-                <Field
-                  id={`received-pack-${idx}`}
-                  label={grnCopy.line.acceptedLabel(line.packUnit.label)}
-                >
-                  <QuantityInput
-                    id={`received-pack-${idx}`}
-                    value={
-                      showInspectedValues
-                        ? String(packLooseSplit?.packQty ?? 0)
-                        : ""
-                    }
-                    onValueChange={(value) =>
-                      commitPackLoose(
-                        Math.max(0, Number(value || 0)),
-                        packLooseSplit?.looseQty ?? 0,
-                      )
-                    }
-                    maxFractionDigits={3}
-                  />
-                </Field>
-                <Field
-                  id={`received-loose-${idx}`}
-                  label={grnCopy.line.acceptedLabel(line.looseUnit.label)}
-                >
-                  <QuantityInput
-                    id={`received-loose-${idx}`}
-                    value={
-                      showInspectedValues
-                        ? String(packLooseSplit?.looseQty ?? 0)
-                        : ""
-                    }
-                    onValueChange={(value) =>
-                      commitPackLoose(
-                        packLooseSplit?.packQty ?? 0,
-                        Math.max(0, Number(value || 0)),
-                      )
-                    }
-                    maxFractionDigits={3}
-                  />
-                </Field>
-              </div>
-              {persistUnitSelect}
-            </div>
-          ) : (
-            <div
-              className={
-                unitOptions.length > 0 || line.unit
-                  ? "flex min-w-0 items-end gap-2"
-                  : "min-w-0"
-              }
-            >
-              <div className="min-w-0 flex-1">
-                <Field
-                  id={`received-${idx}`}
-                  label={grnCopy.line.acceptedLabel(line.unit)}
-                >
-                  <QuantityInput
-                    id={`received-${idx}`}
-                    value={
-                      showInspectedValues ? String(acceptedQuantity) : ""
-                    }
-                    onValueChange={(value) =>
-                      commitAccepted(Math.max(0, Number(value || 0)))
-                    }
-                    maxFractionDigits={3}
-                  />
-                </Field>
-              </div>
-              <div className="w-36 shrink-0">{persistUnitSelect}</div>
-            </div>
-          )}
-
-          <div
-            className={
-              unitOptions.length > 0 || line.unitCostUnitLabel || line.unit
-                ? "flex min-w-0 items-end gap-2"
-                : "min-w-0"
-            }
-          >
-            <div className="min-w-0 flex-1">
-              <Field
-                id={`unit-price-${idx}`}
-                label={grnCopy.line.unitPriceLabel(
-                  line.unitCostUnitLabel || line.unit,
-                )}
-              >
-                <MoneyVndInput
-                  id={`unit-price-${idx}`}
-                  value={
-                    line.monetary?.unitPrice != null &&
-                    line.monetary.unitPrice > 0
-                      ? String(line.monetary.unitPrice)
-                      : ""
-                  }
-                  onValueChange={(value) =>
-                    onChange(patchGrnLineUnitPrice(line, Number(value || 0)))
-                  }
-                  placeholder="0"
-                  aria-describedby={`unit-price-hint-${idx}`}
-                />
-                <p
-                  id={`unit-price-hint-${idx}`}
-                  className="text-xs text-muted-foreground"
-                >
-                  {grnCopy.line.unitPriceHint}
-                </p>
-              </Field>
-            </div>
-            <div className="w-36 shrink-0">{priceUnitSelect}</div>
-          </div>
-
-          <details open={line.rejected > 0 ? true : undefined}>
-            <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
-              {grnCopy.qcQueue}
-            </summary>
-            <div className="mt-3 flex flex-col gap-3">
-              <Field
-                id={`rejected-${idx}`}
-                label={grnCopy.line.rejectedLabel(line.unit)}
-              >
-                <QuantityInput
-                  id={`rejected-${idx}`}
-                  value={String(line.rejected)}
-                  onValueChange={(value) => {
-                    const rejected = Math.max(0, Number(value || 0));
-                    onChange({
-                      actual: deliveredGrnQuantity(
-                        acceptedQuantity,
-                        rejected,
-                      ),
-                      rejected,
-                    });
-                  }}
-                  maxFractionDigits={3}
-                />
-              </Field>
-
-              {line.rejected > 0 ? (
-                <div className="grid gap-3 md:grid-cols-2">
-                  <Field
-                    id={`reason-${idx}`}
-                    label={grnCopy.line.rejectReasonRequired}
-                  >
-                    <Textarea
-                      id={`reason-${idx}`}
-                      rows={2}
-                      value={line.rejectionReason}
-                      placeholder={grnCopy.line.rejectReasonPlaceholder}
-                      onChange={(event) =>
-                        onChange({ rejectionReason: event.target.value })
-                      }
-                    />
-                  </Field>
-                  <Field
-                    id={`reject-photo-${idx}`}
-                    label={grnCopy.line.proofPhotoLabel(true)}
-                  >
-                    <PhotoUploadInput
-                      tenantId={tenantId}
-                      folder={`grn/${grnId}/rejected/${line.lineId}`}
-                      value={line.rejectedPhotoUrl || null}
-                      onChange={(url) =>
-                        onChange({ rejectedPhotoUrl: url ?? "" })
-                      }
-                      acceptTypes="image"
-                      allowPaste={false}
-                    />
-                  </Field>
-                </div>
-              ) : null}
-            </div>
-          </details>
+          {showQuantitySection ? quantityFields : null}
+          {showUnitPriceSection ? unitPriceFields : null}
+          {showRejectionSection ? rejectionFields : null}
         </>
       ) : (
         <div className="grid gap-2 text-sm">
@@ -443,16 +466,18 @@ function GrnLineUnitSelect({
   value,
   unitOptions,
   onUnitChange,
+  showLabel = true,
 }: {
   id: string;
   lineUnit: string;
   value: number | null;
   unitOptions: ReturnType<typeof getPurchaseUnitOptions>;
   onUnitChange: (unitId: number) => void;
+  showLabel?: boolean;
 }) {
   if (unitOptions.length === 0) {
     return lineUnit ? (
-      <Field id={id} label={FORM_VI.unit}>
+      <Field id={id} label={FORM_VI.unit} showLabel={showLabel}>
         <p className="flex h-7 items-center text-sm text-muted-foreground">
           {lineUnit}
         </p>
@@ -461,7 +486,7 @@ function GrnLineUnitSelect({
   }
 
   return (
-    <Field id={id} label={FORM_VI.unit}>
+    <Field id={id} label={FORM_VI.unit} showLabel={showLabel}>
       <Select
         value={value != null ? String(value) : ""}
         onValueChange={(next) => onUnitChange(Number(next))}

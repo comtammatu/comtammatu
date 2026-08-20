@@ -59,6 +59,7 @@ import {
   calculateGrnQuantities,
   formatGrnPersistQty,
   formatGrnPoQty,
+  formatGrnLineUnitPrice,
   grnLineQuantityConversion,
   confirmableGrnSuppliers,
   isGrnLineBooked,
@@ -416,7 +417,7 @@ export function GRNDetailClient({
       {
         key: "actual",
         header: grnCopy.lineHeaderQty,
-        className: "min-w-96 align-top",
+        className: "min-w-44 align-top",
         render: (line, idx) =>
           canMutateDraft && isDesktopLineEdit ? (
             <LineRow
@@ -427,6 +428,8 @@ export function GRNDetailClient({
               isDraft={isDraft && !isGrnLineBooked(line)}
               showAmendAffordance={false}
               showHeader={false}
+              section="quantity"
+              compactLabels
               chrome="plain"
               ingredient={ingredientById.get(line.ingredientId)}
               onChange={(p) => patch(idx, p)}
@@ -450,10 +453,39 @@ export function GRNDetailClient({
           ),
       },
       {
+        key: "unitPrice",
+        header: grnCopy.lineHeaderUnitPrice,
+        className: "min-w-44 align-top",
+        render: (line, idx) =>
+          canMutateDraft && isDesktopLineEdit ? (
+            <LineRow
+              tenantId={grn.tenantId}
+              grnId={grn.id}
+              line={line}
+              idx={idx}
+              isDraft={isDraft && !isGrnLineBooked(line)}
+              showAmendAffordance={false}
+              showHeader={false}
+              section="unitPrice"
+              compactLabels
+              chrome="plain"
+              ingredient={ingredientById.get(line.ingredientId)}
+              onChange={(p) => patch(idx, p)}
+              onAmend={() => undefined}
+            />
+          ) : formatGrnLineUnitPrice(line) ? (
+            <p className="font-mono font-medium tabular-nums">
+              {formatGrnLineUnitPrice(line)}
+            </p>
+          ) : (
+            <p className="text-muted-foreground">—</p>
+          ),
+      },
+      {
         key: "applied",
         header: "Kết quả",
         className: "align-top",
-        render: (line) => {
+        render: (line, idx) => {
           const quantities = calculateGrnQuantities(
             line.actual,
             line.rejected,
@@ -470,31 +502,71 @@ export function GRNDetailClient({
             ? quantities.shortageQuantity
             : line.shortageQuantity;
           if (line.actual <= 0) {
-            return <Badge variant="outline">{grnCopy.line.notInspected}</Badge>;
+            return (
+              <div className="flex flex-col gap-2">
+                <Badge variant="outline">{grnCopy.line.notInspected}</Badge>
+                {canMutateDraft && isDesktopLineEdit && !isGrnLineBooked(line) ? (
+                  <LineRow
+                    tenantId={grn.tenantId}
+                    grnId={grn.id}
+                    line={line}
+                    idx={idx}
+                    isDraft={isDraft}
+                    showAmendAffordance={false}
+                    showHeader={false}
+                    section="rejection"
+                    compactLabels
+                    chrome="plain"
+                    ingredient={ingredientById.get(line.ingredientId)}
+                    onChange={(p) => patch(idx, p)}
+                    onAmend={() => undefined}
+                  />
+                ) : null}
+              </div>
+            );
           }
           return (
-            <div>
-              <p className="font-mono font-medium tabular-nums">
-                {grnCopy.line.acceptedShortText(formatGrnPoQty(applied, line))}
-              </p>
-              {shortage > 0 ? (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {grnCopy.line.shortageShortText(
-                    formatGrnPoQty(shortage, line),
-                  )}
+            <div className="flex flex-col gap-2">
+              <div>
+                <p className="font-mono font-medium tabular-nums">
+                  {grnCopy.line.acceptedShortText(formatGrnPoQty(applied, line))}
                 </p>
-              ) : null}
-              {excess > 0 ? (
-                <Badge variant="warning" className="mt-1">
-                  {grnCopy.line.excessShortText(
-                    formatGrnPersistQty(excess, line),
-                  )}
-                </Badge>
-              ) : null}
-              {!isDraft && line.costPending ? (
-                <Badge variant="warning" className="mt-1">
-                  {valuationCopy.pendingInvoice}
-                </Badge>
+                {shortage > 0 ? (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {grnCopy.line.shortageShortText(
+                      formatGrnPoQty(shortage, line),
+                    )}
+                  </p>
+                ) : null}
+                {excess > 0 ? (
+                  <Badge variant="warning" className="mt-1">
+                    {grnCopy.line.excessShortText(
+                      formatGrnPersistQty(excess, line),
+                    )}
+                  </Badge>
+                ) : null}
+                {!isDraft && line.costPending ? (
+                  <Badge variant="warning" className="mt-1">
+                    {valuationCopy.pendingInvoice}
+                  </Badge>
+                ) : null}
+              </div>
+              {canMutateDraft && isDesktopLineEdit && !isGrnLineBooked(line) ? (
+                <LineRow
+                  tenantId={grn.tenantId}
+                  grnId={grn.id}
+                  line={line}
+                  idx={idx}
+                  isDraft={isDraft}
+                  showAmendAffordance={false}
+                  showHeader={false}
+                  section="rejection"
+                  compactLabels
+                  chrome="plain"
+                  ingredient={ingredientById.get(line.ingredientId)}
+                  onChange={(p) => patch(idx, p)}
+                  onAmend={() => undefined}
+                />
               ) : null}
             </div>
           );

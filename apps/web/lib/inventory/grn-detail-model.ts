@@ -570,6 +570,14 @@ export function formatGrnPersistQty(
   );
 }
 
+export function formatGrnLineUnitPrice(
+  line: Pick<GrnDetailItem, "monetary">,
+): string | null {
+  const unitPrice = line.monetary?.unitPrice;
+  if (unitPrice == null || !(unitPrice > 0)) return null;
+  return unitPrice.toLocaleString("vi-VN");
+}
+
 export function splitGrnAcceptedPackLoose(
   line: Pick<GrnDetailItem, "actual" | "rejected" | "packUnit" | "looseUnit">,
 ): { packQty: number; looseQty: number } | null {
