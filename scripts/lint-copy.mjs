@@ -66,6 +66,8 @@ const WRONG_ACRONYM_CASING_PATTERN =
 const FOOD_DELIVERY_VENDOR_SOURCE_PATHS = new Set([
   "docs/runbooks/README.md",
   "docs/runbooks/food-delivery-platform-onboarding.md",
+  "docs/plan/decisions.md",
+  "docs/ref/einvoice-tax.md",
 ]);
 /** Native bank / wallet deeplink scheme paths (EMV QR handoff literals). */
 const PAYMENT_VENDOR_DEEPLINK_SOURCE_PATHS = new Set([

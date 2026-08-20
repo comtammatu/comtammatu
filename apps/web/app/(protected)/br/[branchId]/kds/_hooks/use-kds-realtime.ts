@@ -25,9 +25,9 @@ import type {
 const POLL_INTERVAL_MS = 3_000;
 const POLL_STALE_MS = 3_000;
 const KDS_ORDER_SELECT_WITH_PRIORITY =
-  "id, order_number, order_type, table_id, is_priority, note, created_at, tables(number)";
+  "id, order_number, order_type, table_id, is_priority, note, created_at, delivery_platform, external_order_ref, tables(number)";
 const KDS_ORDER_SELECT_BASE =
-  "id, order_number, order_type, table_id, note, created_at, tables(number)";
+  "id, order_number, order_type, table_id, note, created_at, delivery_platform, external_order_ref, tables(number)";
 const KDS_ORDER_ITEM_SELECT_WITH_PRIORITY =
   "id, order_id, menu_item_id, item_name, variant_name, quantity, unit_price, status, is_priority, note, modifiers, sides, category_type_snapshot, menu_items(menu_categories(name,type))";
 const KDS_ORDER_ITEM_SELECT_BASE =
@@ -68,6 +68,8 @@ function normalizeKdsOrders(
   ).map((row) => ({
     ...row,
     is_priority: row.is_priority === true,
+    delivery_platform: row.delivery_platform ?? null,
+    external_order_ref: row.external_order_ref ?? null,
   }));
 }
 

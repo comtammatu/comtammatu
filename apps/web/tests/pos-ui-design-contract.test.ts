@@ -151,15 +151,16 @@ test("POS menu mounts one responsive toolbar tree", () => {
 
 test("POS takeaway mode uses a context grid before entering the new-order menu", () => {
   assert.match(posDesktopSource, /const \[takeawayDraftActive/);
+  assert.match(posDesktopSource, /const \[deliveryDraftActive/);
   assert.match(
     posDesktopSource,
-    /const orderContextReady = takeawayDraftReady \|\| selectedTableUsable;/,
+    /const orderContextReady =\s*takeawayDraftReady \|\| deliveryDraftReady \|\| selectedTableUsable;/,
   );
   assert.match(
     posDesktopSource,
-    /const isTakeawayGateActive\s*=\s*!menuContextReady\s*&&\s*cartOrderType === "takeaway";/,
+    /const isServiceGateActive\s*=\s*!menuContextReady\s*&&\s*\(cartOrderType === "takeaway" \|\| cartOrderType === "delivery"\);/,
   );
-  assert.match(posDesktopSource, /hideTakeawayOrders: isTakeawayGateActive/);
+  assert.match(posDesktopSource, /hideTakeawayOrders: isServiceGateActive/);
   assert.match(posDesktopSource, /currentOrderTarget/);
   assert.match(posDesktopSource, /orderTargetRow/);
   assert.match(posDesktopSource, /headerAction=\{serviceModeSelector\}/);
@@ -212,7 +213,7 @@ test("POS takeaway mode uses a context grid before entering the new-order menu",
   assert.match(orderListPaneSource, /hideTakeawayOrders = false/);
   assert.match(
     orderListPaneSource,
-    /orders\.filter\(\(order\) => order\.order_type !== "takeaway"\)/,
+    /orders\.filter\(\(order\) => order\.order_type === "dine_in"\)/,
   );
   assert.match(
     orderListPaneSource,
@@ -253,18 +254,22 @@ test("POS takeaway mode uses a context grid before entering the new-order menu",
   assert.match(sidebarPanelSource, /hideTakeawayOrders=\{hideTakeawayOrders\}/);
   assert.match(posDesktopSource, /pendingNewTitle/);
   assert.match(posDesktopSource, /<PosTakeawayGate/);
-  assert.match(posDesktopSource, /onCreateNew=\{handleCreateTakeawayOrder\}/);
+  assert.match(posDesktopSource, /handleCreateDeliveryOrder/);
+  assert.match(
+    posDesktopSource,
+    /onCreateNew=\{\s*cartOrderType === "delivery"\s*\?\s*handleCreateDeliveryOrder\s*:\s*handleCreateTakeawayOrder\s*\}/,
+  );
 
   assert.doesNotMatch(takeawayGateSource, /OperationalBoardCard/);
   assert.match(takeawayGateSource, /<OperationalTile/);
-  assert.match(takeawayGateSource, /data-testid="pos-takeaway-create-tile"/);
+  assert.match(takeawayGateSource, /data-testid=\{`pos-\$\{mode\}-create-tile`\}/);
   assert.match(takeawayGateSource, /onClick=\{onCreateNew\}/);
-  assert.match(takeawayGateSource, /data-testid=\{`pos-takeaway-order-tile-/);
+  assert.match(takeawayGateSource, /data-testid=\{`pos-\$\{mode\}-order-tile-/);
   assert.match(
     takeawayGateSource,
     /onViewDetail\(order\.id, order\.order_number, order\)/,
   );
-  assert.match(takeawayGateSource, /order\.order_type === "takeaway"/);
+  assert.match(takeawayGateSource, /order\.order_type === mode/);
   assert.doesNotMatch(takeawayGateSource, /onAppendOrder/);
   assert.doesNotMatch(takeawayGateSource, /<OrderCardSummary/);
   assert.doesNotMatch(takeawayGateSource, /<ItemFooter/);
@@ -322,7 +327,10 @@ test("POS active order sidebar stays a single queue without status section heade
 test("POS order cards show compact operational sequence instead of full order code", () => {
   assert.match(orderHistorySource, /const ORDER_SEQUENCE_RE/);
   assert.match(orderHistorySource, /function getCompactOrderTitle/);
-  assert.match(orderHistorySource, /order\.order_type === "takeaway"/);
+  assert.match(
+    orderHistorySource,
+    /order\.order_type === "takeaway" \|\| order\.order_type === "delivery"/,
+  );
   assert.match(orderHistorySource, /\$\{contextLabel\} #\$\{sequence\}/);
   assert.match(
     orderHistorySource,

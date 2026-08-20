@@ -24,7 +24,7 @@ export type KitchenPayload = {
   kitchen_ticket_number?: string;
   source_order_number?: string;
   order_number: string;
-  order_type: "dine_in" | "takeaway";
+  order_type: "dine_in" | "takeaway" | "delivery";
   table_number?: number | null;
   cashier_name?: string;
   send_seq: number;
@@ -70,7 +70,7 @@ export type BillBase = {
   branch_phone?: string;
   branch_tax_code?: string | null;
   order_number: string;
-  order_type: "dine_in" | "takeaway";
+  order_type: "dine_in" | "takeaway" | "delivery";
   table_number?: number | null;
   cashier_name?: string;
   split_from_order_number?: string | null;
@@ -113,7 +113,7 @@ export type ProvisionalBillPayload = BillBase & {
 export type ReceiptPayload = BillBase & {
   kind: "receipt";
   /** Unknown values pass through and render as the raw key. */
-  payment_method?: "cash" | "vietqr" | "bank_transfer" | string | null;
+  payment_method?: "cash" | "vietqr" | "bank_transfer" | "platform" | string | null;
   /** Present on paid VietQR receipts; cash receipts omit or ignore this. */
   payment_qr?: PaymentQR | null;
   invoice_qr?: InvoiceQR | null;
@@ -125,7 +125,7 @@ export type ReceiptPayload = BillBase & {
 export type CancelTicketPayload = {
   kind: "cancel_ticket";
   order_number: string;
-  order_type: "dine_in" | "takeaway";
+  order_type: "dine_in" | "takeaway" | "delivery";
   table_number?: number | null;
   slot: number;
   /** Length 1 today; array shape reserved for batched order-level cancel. */

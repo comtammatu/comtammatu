@@ -95,3 +95,6 @@ entry.
 
 ## D103: Food-delivery platform onboarding before adapters
 **Net effect:** Food-delivery adapters ship only after partner approval and a signed contract; until then, onboarding/readiness only. Canonical: `docs/runbooks/food-delivery-platform-onboarding.md`, `docs/ref/branch-operations.md`.
+
+## D104: Internal delivery channel does not lift D103
+**Net effect:** Manual POS intake for Grab / ShopeeFood / beFood / Green SM (`orders.order_type = delivery`, channel list prices, `payments.method = platform` vs Cash Merchant) is an internal sales channel. It does **not** authorize HTTP adapters, webhooks, or menu push to partner APIs (D103 still gates those). Merchant-of-record for the meal sale is Chén Sứ; Foody/partner commission invoices are AP later, not a reduction of POS `orders.total_amount`. Sales HĐĐT MTT auto-queues GROSS channel prices like cash/VietQR (guest / walk-in buyer); S-Invoice Phase 1 does not carry the platform order code. Canonical: `docs/ref/einvoice-tax.md`, `docs/ref/branch-operations.md`, ShopeeFood contract `SHOPEEFOOD_VN_0392303`.

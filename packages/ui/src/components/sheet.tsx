@@ -77,8 +77,8 @@ function SheetContent({
         className={cn(
           "group/sheet fixed z-50 flex flex-col overscroll-contain bg-popover bg-clip-padding text-xs/relaxed text-popover-foreground shadow-effect-drawer transition-[opacity,transform] duration-[var(--motion-drawer)] ease-[var(--ease-move)] data-[side=bottom]:inset-x-0 data-[side=bottom]:bottom-0 data-[side=bottom]:border-t data-[side=left]:inset-y-0 data-[side=left]:left-0 data-[side=left]:h-full data-[side=left]:w-full data-[side=left]:border-r data-[side=right]:inset-y-0 data-[side=right]:right-0 data-[side=right]:h-full data-[side=right]:w-full data-[side=right]:border-l data-[side=top]:inset-x-0 data-[side=top]:top-0 data-[side=top]:border-b data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 data-[side=bottom]:data-[starting-style]:translate-y-full data-[side=bottom]:data-[ending-style]:translate-y-full data-[side=left]:data-[starting-style]:-translate-x-full data-[side=left]:data-[ending-style]:-translate-x-full data-[side=right]:data-[starting-style]:translate-x-full data-[side=right]:data-[ending-style]:translate-x-full data-[side=top]:data-[starting-style]:-translate-y-full data-[side=top]:data-[ending-style]:-translate-y-full",
           fullscreen
-            ? "data-[side=bottom]:h-dvh data-[side=bottom]:max-h-dvh data-[side=top]:h-dvh data-[side=top]:max-h-dvh"
-            : "data-[side=bottom]:h-auto data-[side=bottom]:max-h-dvh-95 data-[side=top]:h-auto data-[side=top]:max-h-dvh-95",
+            ? "data-[side=bottom]:h-dvh data-[side=bottom]:max-h-dvh data-[side=bottom]:pt-[env(safe-area-inset-top)] data-[side=top]:h-dvh data-[side=top]:max-h-dvh"
+            : "data-[side=bottom]:h-auto data-[side=bottom]:max-h-dvh-95 data-[side=bottom]:rounded-t-2xl data-[side=top]:h-auto data-[side=top]:max-h-dvh-95",
           size === "md"
             ? "data-[side=left]:sm:max-w-md data-[side=right]:sm:max-w-md"
             : "data-[side=left]:sm:max-w-lg data-[side=right]:sm:max-w-lg",

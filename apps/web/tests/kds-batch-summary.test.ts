@@ -53,6 +53,8 @@ function makeOrder(
     orderNumber: "TC-20260525-001-PH",
     kitchenTicketNumber: "PB-260525-001",
     orderType: "dine_in",
+    deliveryPlatform: null,
+    externalOrderRef: null,
     tableNumber: 5,
     createdAt: "2026-05-25T01:00:00.000Z",
     sendSeq: 1,

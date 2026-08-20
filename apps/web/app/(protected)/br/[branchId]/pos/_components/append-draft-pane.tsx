@@ -14,7 +14,6 @@ import {
   Plus as IconPlus,
   Send as IconSend,
   Trash as IconTrash,
-  X as IconX,
 } from "lucide-react";
 import {
   calcCartTotal,
@@ -84,17 +83,6 @@ function AppendDraftPaneComponent({
               {targetLabel}
             </p>
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-touch"
-            className="shrink-0 text-muted-foreground"
-            aria-label={messages.pos.appendDraft.cancelAria}
-            disabled={isSubmitting}
-            onClick={onCancel}
-          >
-            <IconX />
-          </Button>
         </div>
       ) : null}
 

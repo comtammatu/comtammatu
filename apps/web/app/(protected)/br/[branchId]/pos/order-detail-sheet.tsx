@@ -44,7 +44,6 @@ import {
   NotebookPen as IconNotebookPen,
   Plus as IconPlus,
   Printer as IconPrinter,
-  Receipt as IconReceipt,
   Split as IconSplit,
   Trash2 as IconTrash,
   X as IconX,
@@ -1740,18 +1739,6 @@ export function OrderDetailSheet({
                             {canShowBillInMenu && (
                               <DropdownMenuItem
                                 className="min-h-12 text-sm"
-                                onClick={() => {
-                                  onOpenBill(data.id, data);
-                                  onClose();
-                                }}
-                              >
-                                <IconReceipt />
-                                {messages.pos.orderDetail.receipt}
-                              </DropdownMenuItem>
-                            )}
-                            {canShowBillInMenu && (
-                              <DropdownMenuItem
-                                className="min-h-12 text-sm"
                                 disabled={isMutating}
                                 onClick={() => handleReprintReceipt()}
                               >
@@ -1779,18 +1766,6 @@ export function OrderDetailSheet({
                                 {data.is_priority === true
                                   ? messages.pos.orderDetail.removePriority
                                   : messages.pos.orderDetail.kitchenPriority}
-                              </DropdownMenuItem>
-                            )}
-                            {canEditNote && (
-                              <DropdownMenuItem
-                                className="min-h-12 text-sm"
-                                disabled={isMutating}
-                                onClick={() => setShowEditNote(true)}
-                              >
-                                <IconNotebookPen />
-                                {data.note
-                                  ? messages.pos.orderDetail.editNote
-                                  : messages.pos.orderDetail.addNote}
                               </DropdownMenuItem>
                             )}
                             {canShowReorder && (

@@ -9,6 +9,7 @@ import { Item } from "@comtammatu/ui/components/item";
 import { Kbd, KbdGroup } from "@comtammatu/ui/components/kbd";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Textarea } from "@comtammatu/ui/components/textarea";
+import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import {
@@ -16,6 +17,7 @@ import {
   ToggleGroupItem,
 } from "@comtammatu/ui/components/toggle-group";
 import {
+  Bike as IconBike,
   LayoutGrid as IconLayoutGrid,
   Package as IconPackage,
   Trash as IconTrash,
@@ -33,7 +35,10 @@ import {
   getPosLineItemDisplayName,
   getPosLineItemSummary,
 } from "../types";
-import type { CartItem, OrderType } from "../types";
+import type { CartItem, DeliveryPlatform, OrderType } from "../types";
+import { DELIVERY_PLATFORMS } from "../types";
+import { getDeliveryPlatformLabelVi } from "@comtammatu/shared/labels";
+import { DeliveryPlatformMark } from "@/components/delivery-platform-mark";
 import { useCart } from "../_hooks/use-cart";
 import { useActiveTable } from "../_hooks/use-active-table";
 import { useSwipeReveal } from "@lib/hooks/use-swipe-reveal";
@@ -96,11 +101,16 @@ function CartPaneComponent({
   const totalQuantity = cart.quantity;
   const modeLocked = cart.items.length > 0 || selectedTableNumber != null;
   const contextLabel =
-    cart.orderType === "takeaway"
-      ? messages.pos.desktop.newTakeawayTarget
-      : selectedTableNumber != null
-        ? messages.pos.desktop.newDineInTarget(selectedTableNumber)
-        : "Chưa chọn bàn";
+    cart.orderType === "delivery"
+      ? messages.pos.desktop.newDeliveryTarget
+      : cart.orderType === "takeaway"
+        ? messages.pos.desktop.newTakeawayTarget
+        : selectedTableNumber != null
+          ? messages.pos.desktop.newDineInTarget(selectedTableNumber)
+          : "Chưa chọn bàn";
+
+  const deliveryReady =
+    cart.deliveryPlatform != null && cart.externalOrderRef.trim().length > 0;
 
   const shouldShowOrderTypeSelector =
     cart.items.length === 0 && selectedTableNumber == null;
@@ -168,6 +178,12 @@ function CartPaneComponent({
       },
     },
     {
+      key: "g",
+      handler: () => {
+        if (!cartDialogOpen && !modeLocked) onOrderTypeChange("delivery");
+      },
+    },
+    {
       key: "t",
       handler: () => {
         if (!cartDialogOpen && !modeLocked) onOrderTypeChange("takeaway");
@@ -201,13 +217,15 @@ function CartPaneComponent({
     try {
       const ok = await confirm({
         title:
-          cart.orderType === "takeaway"
-            ? messages.pos.pendingDraft.priorityTakeawayTitle
-            : selectedTableNumber != null
-              ? messages.pos.pendingDraft.priorityTableTitle(
-                  selectedTableNumber,
-                )
-              : messages.pos.pendingDraft.priorityGenericTitle,
+          cart.orderType === "delivery"
+            ? messages.pos.pendingDraft.priorityDeliveryTitle
+            : cart.orderType === "takeaway"
+              ? messages.pos.pendingDraft.priorityTakeawayTitle
+              : selectedTableNumber != null
+                ? messages.pos.pendingDraft.priorityTableTitle(
+                    selectedTableNumber,
+                  )
+                : messages.pos.pendingDraft.priorityGenericTitle,
         description: messages.pos.pendingDraft.priorityDescription(
           totalQuantity,
           formatVND(cart.total),
@@ -242,11 +260,7 @@ function CartPaneComponent({
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-background">
       {isMobileDrawer ? (
-        shouldShowOrderTypeSelector ? (
-          <div className="shrink-0 border-b border-border/60 p-0">
-            {/* Type selector rendered inside ToggleGroup below */}
-          </div>
-        ) : cart.items.length > 0 ? (
+        shouldShowOrderTypeSelector ? null : cart.items.length > 0 ? (
           <div className="flex shrink-0 items-center justify-between border-b border-border/60 px-3 py-2">
             <Badge variant="outline" className="max-w-full truncate">
               {contextLabel}
@@ -323,12 +337,14 @@ function CartPaneComponent({
               variant="outline"
               size="touch"
               spacing={0}
-              className="grid w-full grid-cols-2"
+              className="grid w-full grid-cols-3"
               aria-label={messages.pos.desktop.serviceModeAria}
               onValueChange={(value) => {
                 if (
                   !modeLocked &&
-                  (value === "dine_in" || value === "takeaway")
+                  (value === "dine_in" ||
+                    value === "takeaway" ||
+                    value === "delivery")
                 ) {
                   onOrderTypeChange(value);
                 }
@@ -354,10 +370,80 @@ function CartPaneComponent({
               {messages.pos.desktop.takeaway}
               <Kbd className="hidden [@media(hover:hover)]:inline-flex border-current/20 bg-current/10 text-inherit">T</Kbd>
             </ToggleGroupItem>
+            <ToggleGroupItem
+              value="delivery"
+              className="min-w-0 justify-center gap-1.5 text-base font-semibold"
+              aria-keyshortcuts="G"
+              disabled={modeLocked && cart.orderType !== "delivery"}
+            >
+              <IconBike data-icon="inline-start" />
+              {messages.pos.desktop.delivery}
+              <Kbd className="hidden [@media(hover:hover)]:inline-flex border-current/20 bg-current/10 text-inherit">G</Kbd>
+            </ToggleGroupItem>
           </ToggleGroup>
         )}
       </div>
     )}
+
+      {cart.orderType === "delivery" ? (
+        <div
+          className="flex shrink-0 flex-col gap-3 border-b border-border/60 px-3 py-3 sm:px-4"
+          data-testid="pos-delivery-identity"
+        >
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {messages.pos.delivery.platformLabel}
+            </Label>
+            <ToggleGroup
+              type="single"
+              value={cart.deliveryPlatform ?? ""}
+              variant="outline"
+              size="touch"
+              spacing={0}
+              className="grid w-full grid-cols-2 gap-2 sm:grid-cols-4"
+              aria-label={messages.pos.delivery.platformAria}
+              onValueChange={(value) => {
+                if (!value) return;
+                cart.setDeliveryPlatform(value as DeliveryPlatform);
+              }}
+            >
+              {DELIVERY_PLATFORMS.map((platform) => (
+                <ToggleGroupItem
+                  key={platform}
+                  value={platform}
+                  className="min-w-0 justify-center text-sm font-semibold"
+                  disabled={
+                    cart.items.length > 0 && cart.deliveryPlatform !== platform
+                  }
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    <DeliveryPlatformMark platform={platform} size="xs" />
+                    {getDeliveryPlatformLabelVi(platform)}
+                  </span>
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label
+              htmlFor="pos-delivery-external-ref"
+              className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+            >
+              {messages.pos.delivery.externalRefLabel}
+            </Label>
+            <Input
+              id="pos-delivery-external-ref"
+              value={cart.externalOrderRef}
+              onChange={(event) =>
+                cart.setExternalOrderRef(event.target.value)
+              }
+              placeholder={messages.pos.delivery.externalRefPlaceholder}
+              maxLength={64}
+              className="font-mono text-base"
+            />
+          </div>
+        </div>
+      ) : null}
 
       {cart.items.length === 0 ? (
         <div className="flex min-h-0 flex-1 items-center justify-center px-4">
@@ -365,9 +451,13 @@ function CartPaneComponent({
             compact
             symbol="roundPlate"
             title={
-              cart.orderType === "takeaway" || selectedTableNumber != null
-                ? messages.pos.pendingDraft.emptyWithContext
-                : messages.pos.pendingDraft.emptyNoContext
+              cart.orderType === "delivery" && !deliveryReady
+                ? messages.pos.delivery.emptySetup
+                : cart.orderType === "delivery" ||
+                    cart.orderType === "takeaway" ||
+                    selectedTableNumber != null
+                  ? messages.pos.pendingDraft.emptyWithContext
+                  : messages.pos.pendingDraft.emptyNoContext
             }
           />
         </div>
@@ -576,6 +666,14 @@ function CartPaneComponent({
                     shows count + total, and pending items stay editable
 	                    after send (editPendingOrderItem). Only the rare
 	                    queue-jumping priority send keeps its confirm. */}
+                {!canSubmit &&
+                  cart.items.length > 0 &&
+                  cart.orderType === "delivery" &&
+                  !deliveryReady && (
+                    <p className="text-center text-sm text-muted-foreground">
+                      {messages.pos.delivery.submitBlockedHint}
+                    </p>
+                  )}
                 {!canSubmit &&
                   cart.items.length > 0 &&
                   cart.orderType === "dine_in" && (

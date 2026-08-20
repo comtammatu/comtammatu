@@ -1,3 +1,5 @@
+import { formatDeliveryCallLabel } from "../delivery/call-label";
+
 export type PickupTicketStatus = "pending" | "preparing" | "ready" | "served";
 export type PickupOrderStatus =
   | "new"
@@ -9,7 +11,7 @@ export type PickupOrderStatus =
   | "cancelled"
   | string;
 
-export type PickupOrderType = "dine_in" | "takeaway" | string;
+export type PickupOrderType = "dine_in" | "takeaway" | "delivery" | string;
 
 export interface PickupTicketRow {
   id: number;
@@ -30,6 +32,8 @@ export interface PickupOrderRow {
   status: PickupOrderStatus;
   created_at: string;
   is_priority?: boolean | null;
+  delivery_platform?: string | null;
+  external_order_ref?: string | null;
   tables?: { number: number } | null;
 }
 
@@ -50,6 +54,8 @@ export interface PickupKitchenBatchRow {
 
 export type PickupQueueLane = "active" | "ready" | "served";
 
+export type PickupCallLane = "dine_in" | "takeaway";
+
 export interface PickupQueueItem {
   id: string;
   lane: PickupQueueLane;
@@ -65,6 +71,9 @@ export interface PickupQueueItem {
   referenceNumber: string;
   referenceNumbers: string[];
   orderType: PickupOrderType;
+  deliveryPlatform: string | null;
+  externalOrderRef: string | null;
+  callLane: PickupCallLane;
   targetKey: string;
   tableNumber: number | null;
   ticketCount: number;
@@ -82,10 +91,53 @@ export interface BuildPickupQueueInput {
 const ORDER_DATE_SEGMENT_PATTERN = /^\d{6}(?:\d{2})?$/;
 const ORDER_SEQUENCE_SEGMENT_PATTERN = /^\d{1,5}$/;
 
-export function formatPickupOrderLabel(
-  item: Pick<PickupQueueItem, "orderNumber" | "orderType" | "tableNumber">,
-): string {
+export type PickupOrderLabelInput = Pick<
+  PickupQueueItem,
+  | "orderNumber"
+  | "orderType"
+  | "tableNumber"
+  | "deliveryPlatform"
+  | "externalOrderRef"
+>;
+
+export function getPickupCallLane(
+  orderType: PickupOrderType | null | undefined,
+): PickupCallLane {
+  if (orderType === "delivery" || orderType === "takeaway") return "takeaway";
+  return "dine_in";
+}
+
+/** Guest board: walk-in stays pending/preparing; delivery stays until KDS served. */
+export function isPickupGuestBoardVisible(
+  item: Pick<PickupQueueItem, "orderType" | "status">,
+): boolean {
+  if (item.status === "served") return false;
+  if (item.orderType === "delivery") {
+    return (
+      item.status === "pending" ||
+      item.status === "preparing" ||
+      item.status === "ready"
+    );
+  }
+  return item.status === "pending" || item.status === "preparing";
+}
+
+export function formatPickupOrderLabel(item: PickupOrderLabelInput): string {
   if (item.tableNumber !== null) return `Bàn ${String(item.tableNumber)}`;
+
+  const externalRef = (item.externalOrderRef ?? "").trim();
+  const isDelivery =
+    item.orderType === "delivery" ||
+    item.orderNumber.trim().toUpperCase().startsWith("GH-") ||
+    externalRef.length > 0;
+
+  if (isDelivery) {
+    return formatDeliveryCallLabel({
+      orderNumber: item.orderNumber,
+      externalOrderRef: item.externalOrderRef,
+      deliveryPlatform: item.deliveryPlatform,
+    });
+  }
 
   if (item.orderType === "takeaway") {
     const sequence = extractDateBasedOrderSequence(item.orderNumber);
@@ -182,6 +234,9 @@ export function buildPickupQueue(
       referenceNumber: displayTarget.referenceNumber,
       referenceNumbers: [displayTarget.referenceNumber],
       orderType: order.order_type,
+      deliveryPlatform: order.delivery_platform ?? null,
+      externalOrderRef: order.external_order_ref ?? null,
+      callLane: getPickupCallLane(order.order_type),
       targetKey: displayTarget.targetKey,
       tableNumber,
       ticketCount: 1,

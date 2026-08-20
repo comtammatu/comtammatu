@@ -6,7 +6,7 @@ Surface. Quyết định kiến trúc nằm ở ADR; tài liệu này giữ mô 
 
 **Authority:** [ADR 0023](../plan/adr/0023-shift-leader-delegation.md),
 [ADR 0024](../plan/adr/0024-branch-business-day-summary-no-manual-close.md),
-D009, D012, D019, D052, D069, D076, D093, D103.
+D009, D012, D019, D052, D069, D076, D093, D103, D104.
 
 ## Hai vòng độc lập
 
@@ -101,6 +101,7 @@ và dừng; không tạo ticket “để dành soft”.
 | Mục | Trigger |
 | --- | --- |
 | Adapter nền tảng giao đồ ăn | D103: duyệt đối tác + contract kỹ thuật chính thức; readiness theo `docs/runbooks/food-delivery-platform-onboarding.md` — không đoán payload |
+| Giao hàng thủ công trên POS | D104: `order_type = delivery`, giá kênh, tender `platform` / Cash Merchant; KDS/Pickup chung lane Mang về; không mở HTTP adapter |
 | SOP dài ngoài file này dưới `docs/ref/` | Owner yêu cầu tên file/mục cụ thể |
 
 ### Scheduled — follow-up ODC riêng

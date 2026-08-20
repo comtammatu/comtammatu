@@ -98,6 +98,8 @@ function makeOrder(
     orderNumber: overrides.orderNumber ?? "TC-20260525-001-PH",
     kitchenTicketNumber: overrides.kitchenTicketNumber ?? "PB-260525-001",
     orderType: overrides.orderType ?? "dine_in",
+    deliveryPlatform: overrides.deliveryPlatform ?? null,
+    externalOrderRef: overrides.externalOrderRef ?? null,
     tableNumber: overrides.tableNumber ?? null,
     createdAt: overrides.createdAt ?? "2026-05-25T01:00:00.000Z",
     sendSeq: overrides.sendSeq ?? 1,
@@ -234,6 +236,49 @@ test("KDS comprehensive board groups orders into item-category service columns",
   );
 });
 
+test("KDS delivery tickets use Mang về column regardless of item category", () => {
+  assert.equal(
+    getKdsOrderItemColumnId(
+      makeItem({ category_name: "Thêm", category_type: "side_dish" }),
+      "delivery",
+    ),
+    "takeaway",
+  );
+  assert.equal(
+    getKdsOrderItemColumnId(
+      makeItem({ category_name: "Cơm", category_type: "main_dish" }),
+      "delivery",
+    ),
+    "takeaway",
+  );
+});
+
+test("KDS delivery shares Mang về column and order grouping with takeaway", () => {
+  assert.equal(
+    getKdsTicketBaseGroupKey(
+      { order_id: 42, kitchen_send_batch_id: 9 },
+      "delivery",
+    ),
+    "order-42",
+  );
+  const columns = groupKdsOrdersByColumn([
+    makeOrder({
+      groupKey: "delivery-1",
+      orderType: "delivery",
+      deliveryPlatform: "grab",
+      externalOrderRef: "1234",
+    }),
+  ]);
+  assert.deepEqual(
+    columns.map((column) => [column.id, column.orders.map((o) => o.groupKey)]),
+    [
+      ["dine_in", []],
+      ["takeaway", ["delivery-1"]],
+      ["add_on", []],
+    ],
+  );
+});
+
 test("KDS món thêm lane takes dine-in accompaniment tickets, not takeaway bags", () => {
   assert.equal(
     getKdsOrderItemColumnId(
@@ -297,8 +342,10 @@ test("KDS title keeps table target and ticket code without append labels", () =>
   assert.equal(getKdsOrderLabelOverride(appendMainDish), undefined);
   assert.match(
     orderTitleLineSource,
-    /const callTarget = getCallTarget\(orderType, tableNumber\);/,
+    /const callTarget = getCallTarget\(orderType, tableNumber, \{/,
   );
+  assert.match(orderTitleLineSource, /formatDeliveryCallLabel/);
+  assert.match(orderTitleLineSource, /DeliveryPlatformMark/);
   assert.doesNotMatch(orderTitleLineSource, /contextLabel/);
   assert.doesNotMatch(orderTitleLineSource, /Gọi thêm/);
   assert.doesNotMatch(orderTitleLineSource, /title=/);

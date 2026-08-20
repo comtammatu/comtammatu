@@ -122,7 +122,14 @@ import {
 import { useBillSurface } from "./_hooks/use-bill-surface";
 import { useOrderDetailSurface } from "./_hooks/use-order-detail-surface";
 import { submitPosOrderWithRetry } from "./_utils/submit-with-retry";
-import type { CartItem, CartModifier, CartSide, OrderType } from "./types";
+import { resolvePosMenuListPrice } from "./_lib/delivery-channel";
+import type {
+  CartItem,
+  CartModifier,
+  CartSide,
+  DeliveryPlatform,
+  OrderType,
+} from "./types";
 import type { MenuCategory, MenuItem } from "./pos-menu-types";
 import type { BranchTable } from "./page";
 import type { PaymentMethod } from "@comtammatu/shared/providers";
@@ -331,6 +338,8 @@ export function PosDesktopInner({
   const [editingSentItem, setEditingSentItem] = useState<{
     orderItemId: number;
     seedCartItem: CartItem;
+    orderType: OrderType;
+    deliveryPlatform: DeliveryPlatform | null;
   } | null>(null);
   const [isPending, startTransition] = useTransition();
   const [showCloseSession, setShowCloseSession] = useState(false);
@@ -366,6 +375,7 @@ export function PosDesktopInner({
     setOrderDetailSeed,
   } = useOrderDetailSurface({ closeCartDrawer });
   const [takeawayDraftActive, setTakeawayDraftActive] = useState(false);
+  const [deliveryDraftActive, setDeliveryDraftActive] = useState(false);
   const [appendDraftItems, setAppendDraftItems] = useState<CartItem[]>([]);
   const [appendSubmitting, setAppendSubmitting] = useState(false);
   const [hotkeyOpen, setHotkeyOpen] = useState(false);
@@ -605,11 +615,15 @@ export function PosDesktopInner({
 
   const takeawayDraftReady =
     cartOrderType === "takeaway" && takeawayDraftActive;
-  const orderContextReady = takeawayDraftReady || selectedTableUsable;
+  const deliveryDraftReady =
+    cartOrderType === "delivery" && deliveryDraftActive;
+  const orderContextReady =
+    takeawayDraftReady || deliveryDraftReady || selectedTableUsable;
   const isAppendingToOrder = appendTarget != null;
   const menuContextReady = orderContextReady || isAppendingToOrder;
-  const isTakeawayGateActive =
-    !menuContextReady && cartOrderType === "takeaway";
+  const isServiceGateActive =
+    !menuContextReady &&
+    (cartOrderType === "takeaway" || cartOrderType === "delivery");
   const selectedTableNumber = selectedTable?.number;
   const appendDraftQuantity = useMemo(
     () => appendDraftItems.reduce((sum, item) => sum + item.quantity, 0),
@@ -641,6 +655,13 @@ export function PosDesktopInner({
       };
     }
 
+    if (deliveryDraftReady) {
+      return {
+        kind: "new-delivery",
+        label: messages.pos.desktop.newDeliveryTarget,
+      };
+    }
+
     if (selectedTableUsable && selectedTableNumber != null) {
       return {
         kind: "new-dine-in",
@@ -655,6 +676,7 @@ export function PosDesktopInner({
     selectedTableNumber,
     selectedTableUsable,
     takeawayDraftReady,
+    deliveryDraftReady,
   ]);
 
   useEffect(() => {
@@ -793,9 +815,37 @@ export function PosDesktopInner({
     }
   }, [pickerTableId, pickerOrders.length]);
 
-  const canSubmit =
-    cartItemCount > 0 && (takeawayDraftReady || selectedTableUsable);
   const cartSnapshot = useCartSnapshot();
+  // Append / edit-sent prices follow the target order channel, not cart mode.
+  const listPriceOrderType: OrderType =
+    editingSentItem?.orderType ??
+    (appendOrderSummary?.order_type === "delivery" ||
+    appendOrderSummary?.order_type === "takeaway" ||
+    appendOrderSummary?.order_type === "dine_in"
+      ? appendOrderSummary.order_type
+      : cartOrderType);
+  const listPriceDeliveryPlatform: DeliveryPlatform | null =
+    listPriceOrderType === "delivery"
+      ? editingSentItem != null
+        ? editingSentItem.deliveryPlatform
+        : appendOrderSummary != null
+          ? appendOrderSummary.delivery_platform === "grab" ||
+            appendOrderSummary.delivery_platform === "shopee" ||
+            appendOrderSummary.delivery_platform === "be" ||
+            appendOrderSummary.delivery_platform === "green_sm"
+            ? appendOrderSummary.delivery_platform
+            : null
+          : cartSnapshot.deliveryPlatform
+      : null;
+  const deliveryContextReady =
+    cartSnapshot.orderType !== "delivery" ||
+    (cartSnapshot.deliveryPlatform != null &&
+      cartSnapshot.externalOrderRef.trim().length > 0);
+
+  const canSubmit =
+    cartItemCount > 0 &&
+    deliveryContextReady &&
+    (takeawayDraftReady || deliveryDraftReady || selectedTableUsable);
   const { getAddToCartBlock, dailyLimitDemandByMenuItem } = useAddToCartGate({
     cartItems: cartSnapshot.items,
     appendDraftItems,
@@ -1124,6 +1174,18 @@ export function PosDesktopInner({
     setShowOrders(false);
     setCartDrawerOpen(false);
     setTakeawayDraftActive(true);
+    setDeliveryDraftActive(false);
+  }, [setActiveTable, setCartOrderType]);
+
+  const handleCreateDeliveryOrder = useCallback(() => {
+    setCartOrderType("delivery");
+    setActiveTable(null);
+    setShowOrders(false);
+    // Open cart so platform + app ref are reachable before the first item
+    // (delivery identity gates add-to-cart).
+    setCartDrawerOpen(true);
+    setDeliveryDraftActive(true);
+    setTakeawayDraftActive(false);
   }, [setActiveTable, setCartOrderType]);
 
   const handleOrderTypeChange = useCallback(
@@ -1136,10 +1198,11 @@ export function PosDesktopInner({
       }
 
       setCartOrderType(type);
-      if (type === "takeaway") {
+      if (type === "takeaway" || type === "delivery") {
         setActiveTable(null);
       }
       setTakeawayDraftActive(false);
+      setDeliveryDraftActive(false);
     },
     [
       cartItemCount,
@@ -1194,6 +1257,7 @@ export function PosDesktopInner({
           resetDailyLimitHoldToken("pos_cart");
           clearCart();
           setTakeawayDraftActive(false);
+          setDeliveryDraftActive(false);
           setPostSubmitPaymentOrderId(null);
           focusOrderWorkflow(orderId, orderNumber);
           setActiveTable(null);
@@ -1239,6 +1303,7 @@ export function PosDesktopInner({
       const hasVariants = item.menu_item_variants.length > 0;
       const hasModifiers = item.menu_item_modifiers.length > 0;
       const hasSides = item.menu_item_available_sides.length > 0;
+      const cartSnap = cartStore.getSnapshot();
 
       if (appendTarget) {
         if (appendSubmitting) {
@@ -1260,18 +1325,49 @@ export function PosDesktopInner({
             toast.warning(formatAddToCartBlockMessage(block));
             return;
           }
+          const listPrice = resolvePosMenuListPrice(
+            item,
+            listPriceOrderType,
+            listPriceDeliveryPlatform,
+          );
+          if (!listPrice.ok) {
+            toast.warning(
+              messages.pos.menu.blockedChannelPriceMissing(item.name),
+            );
+            return;
+          }
           const line: CartItem = {
             key: makeCartKey(item.id, undefined, [], []),
             menu_item_id: item.id,
             item_name: item.name,
             quantity: 1,
-            unit_price: item.base_price,
+            unit_price: listPrice.unitPrice,
             modifiers: [],
             sides: [],
           };
           addAppendDraftItem(line);
         }
         return;
+      }
+
+      if (cartSnap.orderType === "delivery") {
+        if (cartSnap.deliveryPlatform == null) {
+          toast.warning(messages.pos.menu.choosePlatformFirst);
+          return;
+        }
+        if (cartSnap.externalOrderRef.trim().length === 0) {
+          toast.warning(messages.pos.menu.enterAppRefFirst);
+          return;
+        }
+        const resolved = resolvePosMenuListPrice(
+          item,
+          "delivery",
+          cartSnap.deliveryPlatform,
+        );
+        if (!resolved.ok) {
+          toast.warning(messages.pos.menu.blockedChannelPriceMissing(item.name));
+          return;
+        }
       }
 
       if (hasVariants || hasModifiers || hasSides) {
@@ -1289,8 +1385,17 @@ export function PosDesktopInner({
           toast.warning(formatAddToCartBlockMessage(block));
           return;
         }
+        const listPrice = resolvePosMenuListPrice(
+          item,
+          listPriceOrderType,
+          listPriceDeliveryPlatform,
+        );
+        if (!listPrice.ok) {
+          toast.warning(messages.pos.menu.blockedChannelPriceMissing(item.name));
+          return;
+        }
         setShowOrders(false);
-        addCartItem(item);
+        addCartItem(item, { unitPrice: listPrice.unitPrice });
       }
     },
     [
@@ -1298,7 +1403,10 @@ export function PosDesktopInner({
       addCartItem,
       appendSubmitting,
       appendTarget,
+      cartStore,
       getAddToCartBlock,
+      listPriceDeliveryPlatform,
+      listPriceOrderType,
     ],
   );
 
@@ -1345,13 +1453,31 @@ export function PosDesktopInner({
         sides: snapshot.sides,
         note: snapshot.note ?? undefined,
       };
+      const sentOrderType: OrderType =
+        orderDetailSummary?.order_type === "delivery" ||
+        orderDetailSummary?.order_type === "takeaway" ||
+        orderDetailSummary?.order_type === "dine_in"
+          ? orderDetailSummary.order_type
+          : "dine_in";
+      const sentPlatform =
+        orderDetailSummary?.delivery_platform === "grab" ||
+        orderDetailSummary?.delivery_platform === "shopee" ||
+        orderDetailSummary?.delivery_platform === "be" ||
+        orderDetailSummary?.delivery_platform === "green_sm"
+          ? orderDetailSummary.delivery_platform
+          : null;
       // Clear other editing modes — only one customizer flow active at a time.
       setEditingCartItem(null);
       setEditingAppendItem(null);
-      setEditingSentItem({ orderItemId: snapshot.id, seedCartItem });
+      setEditingSentItem({
+        orderItemId: snapshot.id,
+        seedCartItem,
+        orderType: sentOrderType,
+        deliveryPlatform: sentPlatform,
+      });
       setCustomizerItem(menuItem);
     },
-    [menuItemById],
+    [menuItemById, orderDetailSummary],
   );
 
   const handleCustomizerConfirm = useCallback(
@@ -1637,6 +1763,7 @@ export function PosDesktopInner({
         key: "F2",
         preventDefault: true,
         handler: () => {
+          if (cartOrderType === "delivery") return;
           handleOrderTypeChange(
             cartOrderType === "takeaway" ? "dine_in" : "takeaway",
           );
@@ -1703,7 +1830,7 @@ export function PosDesktopInner({
       onViewDetail: openDetail,
       onOpenArchivedSheet: handleOpenArchivedSheet,
       onReturnToTables: handleReturnToTables,
-      hideTakeawayOrders: isTakeawayGateActive,
+      hideTakeawayOrders: isServiceGateActive,
       paymentCallByOrderId,
     }),
     [
@@ -1725,7 +1852,7 @@ export function PosDesktopInner({
       openDetail,
       handleOpenArchivedSheet,
       handleReturnToTables,
-      isTakeawayGateActive,
+      isServiceGateActive,
       paymentCallByOrderId,
     ],
   );
@@ -1738,10 +1865,14 @@ export function PosDesktopInner({
         variant="outline"
         size="touch"
         spacing={0}
-        className="grid w-full grid-cols-2"
+        className="grid w-full grid-cols-3"
         aria-label={messages.pos.desktop.serviceModeAria}
         onValueChange={(value) => {
-          if (value === "dine_in" || value === "takeaway") {
+          if (
+            value === "dine_in" ||
+            value === "takeaway" ||
+            value === "delivery"
+          ) {
             handleOrderTypeChange(value);
           }
         }}
@@ -1759,6 +1890,13 @@ export function PosDesktopInner({
           disabled={cartItemCount > 0 && cartOrderType !== "takeaway"}
         >
           {messages.pos.desktop.takeaway}
+        </ToggleGroupItem>
+        <ToggleGroupItem
+          value="delivery"
+          className="w-full min-w-0 justify-center text-sm font-semibold"
+          disabled={cartItemCount > 0 && cartOrderType !== "delivery"}
+        >
+          {messages.pos.desktop.delivery}
         </ToggleGroupItem>
       </ToggleGroup>
     </Frame>
@@ -1778,6 +1916,10 @@ export function PosDesktopInner({
     setCartDrawerOpen(false);
     if (cartOrderType === "takeaway") {
       setTakeawayDraftActive(false);
+      return;
+    }
+    if (cartOrderType === "delivery") {
+      setDeliveryDraftActive(false);
       return;
     }
     setActiveTable(null);
@@ -1903,16 +2045,7 @@ export function PosDesktopInner({
       {!menuContextReady ? (
         <div className="flex min-h-0 flex-1 overflow-hidden bg-background/35">
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            {cartOrderType === "takeaway" ? (
-              <PosTakeawayGate
-                orders={orders}
-                onCreateNew={handleCreateTakeawayOrder}
-                onViewDetail={openDetail}
-                hasStackedTouchActions={selfOrderActionVisible}
-                headerAction={serviceModeSelector}
-                className="min-h-0 flex-1"
-              />
-            ) : (
+            {cartOrderType === "dine_in" ? (
               <PosTableGate
                 tables={tables}
                 selectedTableId={selectedTableId}
@@ -1923,6 +2056,20 @@ export function PosDesktopInner({
                 tableTimingByTable={tableTimingByTable}
                 pendingSelfOrderTableIds={pendingSelfOrderTableIds}
                 staffCallTableIds={staffCallTableIds}
+                hasStackedTouchActions={selfOrderActionVisible}
+                headerAction={serviceModeSelector}
+                className="min-h-0 flex-1"
+              />
+            ) : (
+              <PosTakeawayGate
+                mode={cartOrderType === "delivery" ? "delivery" : "takeaway"}
+                orders={orders}
+                onCreateNew={
+                  cartOrderType === "delivery"
+                    ? handleCreateDeliveryOrder
+                    : handleCreateTakeawayOrder
+                }
+                onViewDetail={openDetail}
                 hasStackedTouchActions={selfOrderActionVisible}
                 headerAction={serviceModeSelector}
                 className="min-h-0 flex-1"
@@ -1939,6 +2086,8 @@ export function PosDesktopInner({
               categories={categories}
               dailyLimitDemandByMenuItem={dailyLimitDemandByMenuItem}
               hasStackedTouchActions={selfOrderActionVisible}
+              orderType={listPriceOrderType}
+              deliveryPlatform={listPriceDeliveryPlatform}
               onItemTap={handleItemTap}
             />
           </div>
@@ -2014,6 +2163,8 @@ export function PosDesktopInner({
         initialCartItem={
           editingSentItem?.seedCartItem ?? editingCartItem ?? editingAppendItem
         }
+        listPriceOrderType={listPriceOrderType}
+        listPriceDeliveryPlatform={listPriceDeliveryPlatform}
       />
 
       <OrderDetailSheet

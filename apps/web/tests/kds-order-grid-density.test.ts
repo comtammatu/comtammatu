@@ -25,7 +25,7 @@ test("KDS service columns keep semantic labels without visible title bars", () =
   assert.doesNotMatch(orderGridSource, /<h2[\s\S]*\{column\.title\}/);
   assert.match(
     orderGridSource,
-    /className="flex min-h-0 flex-1 flex-col gap-1\.5 overflow-y-auto xl:gap-2"/,
+    /className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-1 pb-4 xl:gap-3\.5"/,
   );
   assert.doesNotMatch(orderGridSource, /space-y-/);
   assert.doesNotMatch(orderGridSource, /column\.orders\.length > 5/);
@@ -36,7 +36,7 @@ test("KDS service columns keep semantic labels without visible title bars", () =
   );
   assert.match(
     orderGridSource,
-    /className="grid min-h-full grid-cols-1 gap-1\.5 p-1\.5 md:grid-cols-3 xl:h-full xl:min-h-0 xl:grid-cols-3/,
+    /className="grid min-h-full grid-cols-1 gap-3 p-2\.5 md:grid-cols-3 md:gap-3\.5 md:p-3 xl:h-full xl:min-h-0 xl:grid-cols-3 xl:gap-4 xl:overflow-hidden xl:p-3\.5"/,
   );
   assert.doesNotMatch(orderGridSource, /xl:grid-cols-8/);
   assert.doesNotMatch(orderGridSource, /column\.widthClass/);

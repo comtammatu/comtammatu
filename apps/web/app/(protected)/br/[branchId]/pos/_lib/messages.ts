@@ -802,6 +802,27 @@ export const submitOrderRpcMappings: readonly RpcErrorMapping[] = [
   },
   {
     match: includesAny(
+      "delivery_platform_required",
+      "external_order_ref_required",
+      "delivery_orders_forbid_table",
+    ),
+    errorCode: POS_ERROR_CODES.INPUT_INVALID_CART,
+    userMessage: "Thiếu nền tảng hoặc mã đơn ứng dụng cho giao hàng.",
+  },
+  {
+    match: includesAny("delivery_external_ref_duplicate"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage:
+      "Mã đơn ứng dụng đã tồn tại trên chi nhánh — kiểm tra trùng lặp.",
+  },
+  {
+    match: includesAny("channel_price_missing"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage:
+      "Thiếu giá kênh giao hàng cho một hoặc nhiều món — cập nhật menu trước khi bán.",
+  },
+  {
+    match: includesAny(
       "order_items_discount_metadata_paired",
       "discount_note_required",
       "discount_invalid",
@@ -919,6 +940,20 @@ export const appendOrderItemsRpcMappings: readonly RpcErrorMapping[] = [
     errorCode: POS_ERROR_CODES.CART_STALE_MENU_OPTION,
     userMessage:
       "Tùy chọn món đã thay đổi. Vui lòng mở món và chọn lại trước khi thêm.",
+  },
+  {
+    match: includesAny("channel_price_missing"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage:
+      "Món chưa có giá theo sàn — cập nhật giá kênh trước khi thêm vào đơn giao hàng.",
+  },
+  {
+    match: includesAny(
+      "delivery_platform_required",
+      "external_order_ref_required",
+    ),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Đơn giao hàng thiếu nền tảng hoặc mã đơn ứng dụng.",
   },
 ];
 

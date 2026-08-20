@@ -24,6 +24,15 @@ export const cashConfirmSchema = z.object({
     .nonnegative({ error: "Số tiền nhận không được âm" }),
 });
 
+/** Schema for `confirmPlatformPayment(branchId, orderId)`. */
+export const platformConfirmSchema = z.object({
+  branchId: z.coerce
+    .number()
+    .int()
+    .positive({ error: "Mã chi nhánh không hợp lệ" }),
+  orderId: z.coerce.number().int().positive({ error: "Mã đơn hàng không hợp lệ" }),
+});
+
 /**
  * Schema for `createPayment(branchId, orderId, method, amount)`.
  *

@@ -4418,6 +4418,51 @@ export type Database = {
           },
         ]
       }
+      menu_item_channel_prices: {
+        Row: {
+          created_at: string
+          delivery_platform: string
+          id: number
+          menu_item_id: number
+          tenant_id: number
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_platform: string
+          id?: number
+          menu_item_id: number
+          tenant_id: number
+          unit_price: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          delivery_platform?: string
+          id?: number
+          menu_item_id?: number
+          tenant_id?: number
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_item_channel_prices_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_item_channel_prices_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       menu_item_modifiers: {
         Row: {
           created_at: string
@@ -4990,10 +5035,12 @@ export type Database = {
           cash_received: number | null
           created_at: string
           created_by: string
+          delivery_platform: string | null
           discount_amount: number
           discount_note: string | null
           discount_type: string | null
           discount_value: number | null
+          external_order_ref: string | null
           id: number
           idempotency_key: string | null
           is_priority: boolean
@@ -5031,10 +5078,12 @@ export type Database = {
           cash_received?: number | null
           created_at?: string
           created_by: string
+          delivery_platform?: string | null
           discount_amount?: number
           discount_note?: string | null
           discount_type?: string | null
           discount_value?: number | null
+          external_order_ref?: string | null
           id?: never
           idempotency_key?: string | null
           is_priority?: boolean
@@ -5072,10 +5121,12 @@ export type Database = {
           cash_received?: number | null
           created_at?: string
           created_by?: string
+          delivery_platform?: string | null
           discount_amount?: number
           discount_note?: string | null
           discount_type?: string | null
           discount_value?: number | null
+          external_order_ref?: string | null
           id?: never
           idempotency_key?: string | null
           is_priority?: boolean
@@ -13285,6 +13336,11 @@ export type Database = {
         Args: { p_grn_id: number; p_supplier_id?: number }
         Returns: Json
       }
+      confirm_platform_payment: { Args: { p_order_id: number }; Returns: Json }
+      confirm_platform_payment_with_invoice_binding: {
+        Args: { p_invoice_payload: Json; p_order_id: number }
+        Returns: Json
+      }
       confirm_sepay_payment: {
         Args: {
           p_account_number: string
@@ -13380,6 +13436,8 @@ export type Database = {
         Args: {
           p_branch_id: number
           p_created_by: string
+          p_delivery_platform?: string
+          p_external_order_ref?: string
           p_idempotency_key?: string
           p_items: Json
           p_note?: string
@@ -13395,6 +13453,8 @@ export type Database = {
           p_branch_id: number
           p_created_by: string
           p_daily_limit_hold_token?: string
+          p_delivery_platform?: string
+          p_external_order_ref?: string
           p_idempotency_key?: string
           p_items: Json
           p_note?: string
@@ -14208,10 +14268,12 @@ export type Database = {
         Args: { p_branch_id: number; p_end_date: string; p_start_date: string }
         Returns: {
           cash_revenue: number
+          delivery_revenue: number
           dine_in_revenue: number
           discount_amount: number
           net_revenue: number
           order_count: number
+          platform_revenue: number
           refreshed_at: string
           subtotal_revenue: number
           takeaway_revenue: number
@@ -14234,12 +14296,14 @@ export type Database = {
         Returns: {
           branch_id: number
           cash_revenue: number
+          delivery_revenue: number
           dine_in_revenue: number
           discount_amount: number
           order_count: number
           period_end: string
           period_label: string
           period_start: string
+          platform_revenue: number
           subtotal_revenue: number
           takeaway_revenue: number
           total_covers: number
@@ -14709,6 +14773,15 @@ export type Database = {
       }
       pos_order_modifier_sum: {
         Args: { p_main_item_id: number; p_modifiers: Json; p_tenant_id: number }
+        Returns: number
+      }
+      pos_resolve_item_list_price: {
+        Args: {
+          p_delivery_platform?: string
+          p_menu_item_id: number
+          p_order_type: string
+          p_tenant_id: number
+        }
         Returns: number
       }
       pos_session_cash_revenue: {
@@ -15442,6 +15515,14 @@ export type Database = {
       }
       scan_inventory_alerts: { Args: never; Returns: number }
       scan_order_delay_sla: { Args: never; Returns: number }
+      seed_menu_item_channel_prices: {
+        Args: {
+          p_delivery_platform: string
+          p_markup_percent?: number
+          p_menu_item_ids?: number[]
+        }
+        Returns: Json
+      }
       self_order_accept_request: {
         Args: { p_request_id: number; p_target_order_id?: number }
         Returns: Json

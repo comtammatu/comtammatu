@@ -35,6 +35,7 @@ export const PROMOTIONS_VI = {
   stackItemLabel: "Cho phép áp dụng cùng chiết khấu món",
   serviceModesLabel: "Hình thức phục vụ",
   dineIn: "Tại bàn",
+  delivery: "Giao hàng",
   takeaway: "Mang về",
   bxgyBuyLabel: "Mua (số phần)",
   bxgyGetLabel: "Tặng (số phần)",

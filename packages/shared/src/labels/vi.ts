@@ -417,6 +417,7 @@ export const PAYMENT_METHOD_LABELS_VI = {
   cash: "Tiền mặt",
   vietqr: "VietQR",
   bank_transfer: "Chuyển khoản",
+  platform: "Nền tảng",
 } as const;
 
 /** orders.status (DB orders_status_check) — full Owner vocabulary.
@@ -505,7 +506,27 @@ export const ORDER_ITEM_STATUS_LABELS_VI = {
 export const ORDER_TYPE_LABELS_VI = {
   dine_in: "Tại bàn",
   takeaway: "Mang về",
+  delivery: "Giao hàng",
 } as const;
+
+export const DELIVERY_PLATFORM_LABELS_VI = {
+  grab: "Grab",
+  shopee: "Shopee",
+  be: "beFood",
+  green_sm: "Green SM Food",
+} as const;
+
+export type DeliveryPlatformCode = keyof typeof DELIVERY_PLATFORM_LABELS_VI;
+
+export function getDeliveryPlatformLabelVi(
+  platform: string | null | undefined,
+): string {
+  if (!platform) return "";
+  return (
+    (DELIVERY_PLATFORM_LABELS_VI as Record<string, string>)[platform] ??
+    UNKNOWN_LABEL_VI
+  );
+}
 
 export function getOrderTypeLabelVi(
   orderType: string | null | undefined,

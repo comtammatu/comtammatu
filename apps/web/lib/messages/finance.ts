@@ -1134,6 +1134,9 @@ export const finance = {
       colOrders: "Đơn",
       colNetRevenue: "Doanh thu thuần",
       colCash: "Tiền mặt",
+      colVietqr: "VietQR",
+      colPlatform: "Nền tảng",
+      colDelivery: "Giao hàng",
       total: "Tổng",
     },
     cashierTable: {
@@ -1163,6 +1166,8 @@ export const finance = {
       colNetRevenue: "Doanh thu thuần",
       colCash: "Tiền mặt",
       colVietqr: "VietQR",
+      colPlatform: "Nền tảng",
+      colDelivery: "Giao hàng",
       colCashier: "Thu ngân",
       colQr: "VietQR",
       total: "Tổng",

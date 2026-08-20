@@ -423,7 +423,7 @@ function OrderColumn({
     >
       <div
         data-testid={`kds-column-list-${column.id}`}
-        className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto xl:gap-2"
+        className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-1 pb-4 xl:gap-3.5"
       >
         {column.orders.length === 0 ? (
           <AppEmptyState
@@ -479,7 +479,7 @@ export function OrderGrid({
       ) : (
         <div
           data-testid="kds-order-columns"
-          className="grid min-h-full grid-cols-1 gap-1.5 p-1.5 md:grid-cols-3 xl:h-full xl:min-h-0 xl:grid-cols-3 xl:gap-2 xl:overflow-hidden xl:p-2"
+          className="grid min-h-full grid-cols-1 gap-3 p-2.5 md:grid-cols-3 md:gap-3.5 md:p-3 xl:h-full xl:min-h-0 xl:grid-cols-3 xl:gap-4 xl:overflow-hidden xl:p-3.5"
         >
           {columns.map((column) => (
             <OrderColumn

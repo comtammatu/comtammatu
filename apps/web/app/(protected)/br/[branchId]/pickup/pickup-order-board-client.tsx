@@ -8,6 +8,7 @@ import { Item, ItemGroup } from "@comtammatu/ui/components/item";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { PickupIdleVisual, type PickupIdleState } from "./pickup-idle-visual";
 import { PickupWaitTime } from "./pickup-wait-time";
+import { DeliveryPlatformMark } from "@/components/delivery-platform-mark";
 
 const PICKUP_EXIT_MS = 320;
 const PICKUP_ROW_LIMIT_BASE = 4;
@@ -29,6 +30,9 @@ const PICKUP_BOARD_COPY = {
   itemUnit: "món",
   moreOrders: (count: number) => `Còn ${String(count)} đơn`,
   overflowLabel: "Đơn tiếp theo",
+  laneDineIn: "Bàn",
+  laneTakeaway: "Mang về",
+  laneEmpty: "Chưa có đơn",
   tableHeaders: {
     order: "Đơn",
     quantity: "Số món",
@@ -39,12 +43,16 @@ const PICKUP_BOARD_COPY = {
 
 export type PickupBoardStatus = "in_progress" | "pending";
 
+export type PickupCallLane = "dine_in" | "takeaway";
+
 export type PickupBoardRow = {
   key: string;
   orderLabel: string;
   itemQuantity: number;
   status: PickupBoardStatus;
   sortAt: string;
+  callLane: PickupCallLane;
+  deliveryPlatform?: string | null;
 };
 
 type PickupColumn = keyof typeof PICKUP_COLUMN_CLASS;
@@ -88,14 +96,52 @@ export function PickupOrderBoardClient({
     );
   }
 
+  const dineInRows = displayRows.filter((row) => row.callLane === "dine_in");
+  const takeawayRows = displayRows.filter((row) => row.callLane === "takeaway");
+
+  return (
+    <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden bg-background md:grid-cols-2">
+      <PickupLaneBoard
+        title={PICKUP_BOARD_COPY.laneDineIn}
+        rows={dineInRows}
+        nowMs={nowMs}
+        usesBaseRowLimit={usesBaseRowLimit}
+      />
+      <PickupLaneBoard
+        title={PICKUP_BOARD_COPY.laneTakeaway}
+        rows={takeawayRows}
+        nowMs={nowMs}
+        usesBaseRowLimit={usesBaseRowLimit}
+      />
+    </div>
+  );
+}
+
+function PickupLaneBoard({
+  title,
+  rows,
+  nowMs,
+  usesBaseRowLimit,
+}: {
+  title: string;
+  rows: DisplayPickupBoardRow[];
+  nowMs: number;
+  usesBaseRowLimit: boolean;
+}) {
   const rowLimit = usesBaseRowLimit
     ? PICKUP_ROW_LIMIT_BASE
     : PICKUP_ROW_LIMIT_XL;
-  const visibleRows = displayRows.slice(0, rowLimit);
-  const overflowRows = displayRows.slice(rowLimit);
+  const visibleRows = rows.slice(0, rowLimit);
+  const overflowRows = rows.slice(rowLimit);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
+    <section
+      aria-label={title}
+      className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden border-border md:border-r md:last:border-r-0"
+    >
+      <h2 className="shrink-0 border-b border-border bg-muted/50 px-4 py-2 font-heading text-pickup-header font-semibold text-foreground xl:py-3">
+        {title}
+      </h2>
       <div className="grid grid-cols-2 border-b border-border bg-muted/50 sm:grid-cols-12">
         <PickupColumnHeading column="order">
           {PICKUP_BOARD_COPY.tableHeaders.order}
@@ -110,22 +156,28 @@ export function PickupOrderBoardClient({
           {PICKUP_BOARD_COPY.tableHeaders.wait}
         </PickupColumnHeading>
       </div>
-      <ItemGroup
-        role="list"
-        className="grid min-h-0 flex-1 grid-rows-4 overflow-hidden xl:grid-rows-6 p-0 rounded-none border-0"
-      >
-        {visibleRows.map((row, index) => (
-          <PickupOrderListRow
-            key={row.key}
-            row={row}
-            featured={!row.exiting && index === 0}
-            queueIndex={index + 1}
-            nowMs={nowMs}
-          />
-        ))}
-      </ItemGroup>
+      {visibleRows.length === 0 ? (
+        <p className="flex min-h-0 flex-1 items-center justify-center px-4 py-4 text-center font-heading text-pickup-empty-secondary font-semibold text-muted-foreground">
+          {PICKUP_BOARD_COPY.laneEmpty}
+        </p>
+      ) : (
+        <ItemGroup
+          role="list"
+          className="grid min-h-0 flex-1 grid-rows-4 overflow-hidden xl:grid-rows-6 p-0 rounded-none border-0"
+        >
+          {visibleRows.map((row, index) => (
+            <PickupOrderListRow
+              key={row.key}
+              row={row}
+              featured={!row.exiting && index === 0}
+              queueIndex={index + 1}
+              nowMs={nowMs}
+            />
+          ))}
+        </ItemGroup>
+      )}
       <PickupOverflowRail rows={overflowRows} />
-    </div>
+    </section>
   );
 }
 
@@ -153,7 +205,15 @@ function PickupOverflowRail({ rows }: { rows: DisplayPickupBoardRow[] }) {
             role="listitem"
           >
             <span className="truncate font-heading text-pickup-footer font-semibold text-foreground">
-              {row.orderLabel}
+              <span className="inline-flex max-w-full items-center gap-1.5">
+                {row.deliveryPlatform ? (
+                  <DeliveryPlatformMark
+                    platform={row.deliveryPlatform}
+                    size="xs"
+                  />
+                ) : null}
+                <span className="truncate">{row.orderLabel}</span>
+              </span>
             </span>
             <span className="font-mono text-pickup-footer text-muted-foreground tabular-nums">
               {formatCount(row.itemQuantity)} {PICKUP_BOARD_COPY.itemUnit}
@@ -329,7 +389,12 @@ function PickupOrderListRow({
           <span className="text-muted-foreground font-mono text-pickup-header">
             #{queueIndex}
           </span>
-          <span>{row.orderLabel}</span>
+          <span className="inline-flex min-w-0 items-center gap-1.5">
+            {row.deliveryPlatform ? (
+              <DeliveryPlatformMark platform={row.deliveryPlatform} size="sm" />
+            ) : null}
+            <span className="min-w-0">{row.orderLabel}</span>
+          </span>
         </span>
       </PickupOrderCell>
       <PickupOrderCell column="quantity" mono>

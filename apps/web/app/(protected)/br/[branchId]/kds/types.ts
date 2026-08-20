@@ -38,6 +38,8 @@ export interface KdsOrderInfo {
   is_priority: boolean;
   note: string | null;
   created_at: string;
+  delivery_platform: string | null;
+  external_order_ref: string | null;
   tables: { number: number } | null;
 }
 
@@ -82,6 +84,8 @@ export interface KdsOrder {
   orderNumber: string;
   kitchenTicketNumber: string;
   orderType: string;
+  deliveryPlatform: string | null;
+  externalOrderRef: string | null;
   tableNumber: number | null;
   createdAt: string;
   sendSeq: number | null;

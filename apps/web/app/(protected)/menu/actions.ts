@@ -1539,3 +1539,101 @@ export async function downloadMenuTemplate(): Promise<ActionResult> {
     },
   };
 }
+
+/* ─── Channel prices (delivery platforms) ─── */
+
+const DELIVERY_PLATFORMS = ["grab", "shopee", "be", "green_sm"] as const;
+
+const channelPriceEntrySchema = z.object({
+  delivery_platform: z.enum(DELIVERY_PLATFORMS),
+  unit_price: z.coerce.number().int().min(0),
+});
+
+const saveChannelPricesSchema = z.object({
+  menuItemId: z.coerce.number().int().positive(),
+  prices: z.array(channelPriceEntrySchema),
+});
+
+const seedChannelPricesSchema = z.object({
+  menuItemId: z.coerce.number().int().positive(),
+  deliveryPlatform: z.union([z.enum(DELIVERY_PLATFORMS), z.literal("all")]),
+  markupPercent: z.coerce.number().min(0).max(500).optional(),
+});
+
+export const fetchItemChannelPrices = withAction(
+  {
+    roles: MENU_MANAGER_ROLES,
+    schema: z.object({ menuItemId: z.coerce.number().int().positive() }),
+    permission: PERMISSION_KEYS.MENU_WRITE,
+  },
+  async ({ menuItemId }, { supabase, claims }): Promise<ActionResult> => {
+    const { data, error } = await supabase
+      .from("menu_item_channel_prices")
+      .select("delivery_platform, unit_price")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("menu_item_id", menuItemId);
+
+    if (error) {
+      return { success: false, error: mapDbError(error.code) };
+    }
+
+    return { success: true, data: data ?? [] };
+  },
+);
+
+export const saveItemChannelPrices = withAction(
+  {
+    roles: MENU_MANAGER_ROLES,
+    schema: saveChannelPricesSchema,
+    permission: PERMISSION_KEYS.MENU_WRITE,
+  },
+  async ({ menuItemId, prices }, { supabase, claims }): Promise<ActionResult> => {
+    for (const row of prices) {
+      const { error } = await supabase.from("menu_item_channel_prices").upsert(
+        {
+          tenant_id: claims.tenant_id,
+          menu_item_id: menuItemId,
+          delivery_platform: row.delivery_platform,
+          unit_price: row.unit_price,
+        },
+        { onConflict: "tenant_id,menu_item_id,delivery_platform" },
+      );
+      if (error) {
+        return { success: false, error: mapDbError(error.code) };
+      }
+    }
+
+    updateTag("menu-structure");
+    return { success: true };
+  },
+);
+
+export const seedItemChannelPrices = withAction(
+  {
+    roles: MENU_MANAGER_ROLES,
+    schema: seedChannelPricesSchema,
+    permission: PERMISSION_KEYS.MENU_WRITE,
+  },
+  async (
+    { menuItemId, deliveryPlatform, markupPercent },
+    { supabase },
+  ): Promise<ActionResult> => {
+    const platforms =
+      deliveryPlatform === "all" ? DELIVERY_PLATFORMS : [deliveryPlatform];
+
+    for (const platform of platforms) {
+      const { error } = await supabase.rpc("seed_menu_item_channel_prices", {
+        p_delivery_platform: platform,
+        ...(markupPercent != null ? { p_markup_percent: markupPercent } : {}),
+        p_menu_item_ids: [menuItemId],
+      });
+
+      if (error) {
+        return { success: false, error: mapDbError(error.code) };
+      }
+    }
+
+    updateTag("menu-structure");
+    return { success: true };
+  },
+);

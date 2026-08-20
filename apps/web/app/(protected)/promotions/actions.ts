@@ -45,7 +45,7 @@ const upsertSchema = z
     endsAt: z.string().nullable().optional(),
     timeWindows: z.array(timeWindowSchema).default([]),
     serviceModes: z
-      .array(z.enum(["dine_in", "takeaway"]))
+      .array(z.enum(["dine_in", "takeaway", "delivery"]))
       .min(1, { error: "Chọn ít nhất một hình thức phục vụ" })
       .default(["dine_in", "takeaway"]),
     bxgyBuyQty: z.number().int().min(1).nullable().optional(),

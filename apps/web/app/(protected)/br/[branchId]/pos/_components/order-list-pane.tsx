@@ -47,7 +47,7 @@ function OrderListPaneComponent({
   const orders = usePosOrders();
   const { refreshOrders } = usePosOperationalDispatch();
   const displayedOrders = hideTakeawayOrders
-    ? orders.filter((order) => order.order_type !== "takeaway")
+    ? orders.filter((order) => order.order_type === "dine_in")
     : orders;
   const activeOrderCount = displayedOrders.length;
   const title = hideTakeawayOrders

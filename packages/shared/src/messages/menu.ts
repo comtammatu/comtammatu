@@ -84,6 +84,20 @@ export const MENU_VI = {
   uploadImage: "Tải ảnh món (≤ 5 MB)",
   imageUploading: "Đang tải…",
   sidesSaved: "Đã lưu món ăn kèm",
+  channelPricesTitle: "Giá bán theo sàn",
+  channelPricesLoading: "Đang tải giá kênh…",
+  channelPricePlaceholder: "Chưa đặt",
+  channelPricesSave: "Lưu giá kênh",
+  channelPricesSaveFailed: "Không lưu được giá kênh",
+  channelPricesSaved: "Đã lưu giá kênh giao hàng",
+  channelPricesApplyAllLabel: "Áp dụng tất cả sàn (VND)",
+  channelPricesApplyAllAction: "Ghi cùng giá cho cả 4 sàn",
+  channelPricesApplyAllEmpty: "Nhập số tiền trước khi áp dụng tất cả sàn",
+  channelPricesMarkupLabel: "Markup từ giá quán (%)",
+  channelPricesMarkupAll: "Áp markup tất cả sàn",
+  channelPricesMarkupOne: (platform: string) => `Áp markup ${platform}`,
+  channelPricesMarkupFailed: "Không áp được markup giá kênh",
+  channelPricesMarkupSaved: "Đã áp markup giá kênh",
 } as const;
 
 export type MenuKey = keyof typeof MENU_VI;

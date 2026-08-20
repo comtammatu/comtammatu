@@ -127,6 +127,7 @@ function defaultContentSqlSection(kind: string): string {
 test("order display helpers", () => {
   assert.equal(extractOrderSequence("TC-260525-087-PH"), "087");
   assert.equal(extractOrderSequence("#MV-260525-088-PH"), "088");
+  assert.equal(extractOrderSequence("GH-260525-042-PH"), "042");
   assert.equal(extractOrderSequence("TC-20260525-087-CN1"), "087");
   assert.equal(
     formatOrderHeaderLabel({
@@ -150,6 +151,15 @@ test("order display helpers", () => {
       tableNumber: null,
     }),
     "Tại bàn #087",
+  );
+  assert.equal(
+    formatOrderHeaderLabel({
+      orderNumber: "GH-260525-042-PH",
+      orderType: "delivery",
+      deliveryPlatform: "grab",
+      externalOrderRef: "1234",
+    }),
+    "Mang về #042\nGRAB 1234",
   );
 });
 

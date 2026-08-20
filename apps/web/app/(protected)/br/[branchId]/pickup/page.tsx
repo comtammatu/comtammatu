@@ -8,6 +8,7 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import {
   buildPickupQueue,
   formatPickupOrderLabel,
+  isPickupGuestBoardVisible,
   type BuildPickupQueueInput,
   type PickupOrderItemRow,
   type PickupQueueItem,
@@ -34,13 +35,13 @@ const PICKUP_ERROR_BADGE = "Cần tải lại";
 const PICKUP_TICKET_SELECT =
   "id, order_id, order_item_id, kitchen_send_batch_id, status, bumped_at, created_at, updated_at";
 const PICKUP_ORDER_SELECT_WITH_PRIORITY =
-  "id, order_number, order_type, table_id, status, created_at, is_priority, tables(number)";
+  "id, order_number, order_type, table_id, status, created_at, is_priority, delivery_platform, external_order_ref, tables(number)";
 const PICKUP_ORDER_SELECT_BASE =
-  "id, order_number, order_type, table_id, status, created_at, tables(number)";
+  "id, order_number, order_type, table_id, status, created_at, delivery_platform, external_order_ref, tables(number)";
 const PICKUP_ORDER_ITEM_SELECT_WITH_PRIORITY =
   "id, order_id, quantity, is_priority";
 const PICKUP_ORDER_ITEM_SELECT_BASE = "id, order_id, quantity";
-const PICKUP_ACTIVE_STATUSES = ["pending", "preparing"] as const;
+const PICKUP_ACTIVE_STATUSES = ["pending", "preparing", "ready"] as const;
 const PICKUP_COPY = {
   eyebrow: MODULE_LABELS_VI.pickup,
   footer: {
@@ -141,11 +142,15 @@ function normalizePickupOrders(
     (rows ?? []) as Array<
       Omit<BuildPickupQueueInput["orders"][number], "is_priority"> & {
         is_priority?: boolean | null;
+        delivery_platform?: string | null;
+        external_order_ref?: string | null;
       }
     >
   ).map((row) => ({
     ...row,
     is_priority: row.is_priority === true,
+    delivery_platform: row.delivery_platform ?? null,
+    external_order_ref: row.external_order_ref ?? null,
   }));
 }
 
@@ -389,14 +394,16 @@ export default async function PickupPage({
   const orderItemIdByTicketId = new Map(
     tickets.map((ticket) => [ticket.id, ticket.order_item_id]),
   );
-  const rows = queue.map((item, index) =>
-    toPickupListRow({
-      item,
-      index,
-      orderItemIdByTicketId,
-      quantityByOrderItemId,
-    }),
-  );
+  const rows = queue
+    .filter(isPickupGuestBoardVisible)
+    .map((item, index) =>
+      toPickupListRow({
+        item,
+        index,
+        orderItemIdByTicketId,
+        quantityByOrderItemId,
+      }),
+    );
   let idleState: PickupIdleState | null = null;
 
   if (rows.length === 0) {
@@ -480,6 +487,8 @@ function toPickupListRow({
     }),
     status: resolvePickupListStatus(index),
     sortAt: item.sortAt,
+    callLane: item.callLane,
+    deliveryPlatform: item.deliveryPlatform,
   };
 }
 

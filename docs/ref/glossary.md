@@ -290,10 +290,10 @@ Nếu chưa có source dữ liệu trong hệ thống, agent được phép đá
 | `refund`                  | hoàn tiền                        | Trả lại tiền sau khi paid/completed.                                           | void/cancel trước paid         |
 | `service_charge`          | phí dịch vụ                      | Phí tính thêm cho dịch vụ nếu có chính sách rõ.                                | tip, VAT, doanh thu món        |
 | `tip`                     | tiền tip                         | Tiền khách thưởng nhân viên; không mặc định là doanh thu nhà hàng.             | service charge, revenue        |
-| `sales_channel`           | kênh bán                         | Nguồn phát sinh nhu cầu: dine-in, takeaway, delivery, app/platform.            | payment method                 |
-| `payment_method`          | phương thức thanh toán           | Cách khách trả tiền: cash, bank transfer, VietQR.                              | sales channel                  |
-| `delivery_platform_sales` | doanh thu qua nền tảng giao hàng | Doanh thu đơn đến từ nền tảng giao hàng bên thứ ba nếu tích hợp.               | payout về ngân hàng            |
-| `platform_commission`     | phí nền tảng                     | Phí nền tảng khấu trừ hoặc xuất hóa đơn dịch vụ.                               | food cost, discount            |
+| `sales_channel`           | kênh bán                         | Nguồn phát sinh nhu cầu: dine-in, takeaway, delivery (POS thủ công Grab/Shopee/be/Green SM), app/platform adapter (D103). | payment method                 |
+| `payment_method`          | phương thức thanh toán           | Cách khách trả tiền: cash, bank transfer, VietQR, platform (đã thu nền tảng). | sales channel                  |
+| `delivery_platform_sales` | doanh thu qua nền tảng giao hàng | Doanh thu GROSS đơn `order_type = delivery` (giá kênh); KPI `delivery_revenue` / tender `platform_revenue`. | payout về ngân hàng            |
+| `platform_commission`     | phí nền tảng                     | Phí nền tảng khấu trừ hoặc xuất hóa đơn dịch vụ (Foody Phí Hoa Hồng) — AP sau, không giảm đơn POS. | food cost, discount            |
 | `net_payout`              | tiền nền tảng thực chuyển        | Tiền về sau khi trừ commission/fee/adjustment.                                 | doanh thu ròng                 |
 | `settlement_lag`          | độ trễ đối soát tiền             | Khoảng thời gian giữa paid/order completed và tiền thực về ngân hàng.          | công nợ xấu                    |
 | `sales_mix`               | cơ cấu doanh thu theo nhóm       | Tỷ trọng doanh thu theo món/nhóm/kênh.                                         | payment split                  |

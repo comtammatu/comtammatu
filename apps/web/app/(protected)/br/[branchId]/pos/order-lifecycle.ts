@@ -302,6 +302,14 @@ export const submitOrder = withActionPositional(
 
     const rpcItems = cartItemsToRpcItems(cart.items);
 
+    const deliveryRpcArgs =
+      cart.order_type === "delivery"
+        ? {
+            p_delivery_platform: cart.delivery_platform ?? undefined,
+            p_external_order_ref: cart.external_order_ref ?? undefined,
+          }
+        : {};
+
     const { data, error } =
       dailyLimitHoldToken !== undefined
         ? await supabase.rpc("create_order_with_daily_limit_hold", {
@@ -315,6 +323,7 @@ export const submitOrder = withActionPositional(
             p_note: cart.note ?? undefined,
             p_idempotency_key: idempotencyKey ?? undefined,
             p_daily_limit_hold_token: dailyLimitHoldToken,
+            ...deliveryRpcArgs,
           })
         : await supabase.rpc("create_order", {
             p_tenant_id: claims.tenant_id,
@@ -326,6 +335,7 @@ export const submitOrder = withActionPositional(
             p_pos_session_id: posSessionId ?? undefined,
             p_note: cart.note ?? undefined,
             p_idempotency_key: idempotencyKey ?? undefined,
+            ...deliveryRpcArgs,
           });
 
     if (error) {

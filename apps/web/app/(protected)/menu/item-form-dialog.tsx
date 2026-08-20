@@ -13,6 +13,7 @@ import {
 import { Field, FieldLabel } from "@comtammatu/ui/components/field";
 import { createItem, updateItem } from "./actions";
 import { MenuImageInput } from "./menu-image-input";
+import { ItemChannelPricesFields } from "./item-channel-prices-fields";
 import type { CategoryRow } from "./category-table";
 import type { ItemRow } from "./item-table";
 
@@ -158,6 +159,9 @@ export function ItemFormDialog({
               </Field>
             )}
           />
+          {isEdit && item ? (
+            <ItemChannelPricesFields menuItemId={item.id} open={open} />
+          ) : null}
         </>
       )}
     </FormDialog>

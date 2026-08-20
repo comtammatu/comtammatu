@@ -117,6 +117,8 @@ interface PeriodAggregateRow {
   total_tax: number;
   cash_revenue: number;
   vietqr_revenue: number;
+  platform_revenue: number;
+  delivery_revenue: number;
   branch_ids: number[];
 }
 
@@ -133,6 +135,8 @@ function aggregateByPeriod(rows: RollupRow[]): PeriodAggregateRow[] {
       existing.total_tax += r.total_tax ?? 0;
       existing.cash_revenue += r.cash_revenue ?? 0;
       existing.vietqr_revenue += r.vietqr_revenue ?? 0;
+      existing.platform_revenue += r.platform_revenue ?? 0;
+      existing.delivery_revenue += r.delivery_revenue ?? 0;
       if (!existing.branch_ids.includes(r.branch_id)) {
         existing.branch_ids.push(r.branch_id);
       }
@@ -148,6 +152,8 @@ function aggregateByPeriod(rows: RollupRow[]): PeriodAggregateRow[] {
         total_tax: r.total_tax ?? 0,
         cash_revenue: r.cash_revenue ?? 0,
         vietqr_revenue: r.vietqr_revenue ?? 0,
+        platform_revenue: r.platform_revenue ?? 0,
+        delivery_revenue: r.delivery_revenue ?? 0,
         branch_ids: [r.branch_id],
       });
     }
@@ -297,6 +303,8 @@ export function RevenueClient({
         revCopy.csvHeaders.colNetRevenue,
         revCopy.csvHeaders.colCash,
         revCopy.csvHeaders.colVietqr,
+        revCopy.csvHeaders.colPlatform,
+        revCopy.csvHeaders.colDelivery,
       ],
       rows: periodRows.map((r) => [
         r.period_label,
@@ -304,6 +312,8 @@ export function RevenueClient({
         Math.round(netRevenuePreVatFor(r)),
         Math.round(r.cash_revenue),
         Math.round(r.vietqr_revenue),
+        Math.round(r.platform_revenue),
+        Math.round(r.delivery_revenue),
       ]),
       footer: kpis
         ? [
@@ -312,6 +322,8 @@ export function RevenueClient({
             Math.round(netRevenuePreVat),
             Math.round(kpis.cash_revenue),
             Math.round(kpis.vietqr_revenue),
+            Math.round(kpis.platform_revenue),
+            Math.round(kpis.delivery_revenue),
           ]
         : undefined,
     },
@@ -390,9 +402,21 @@ export function RevenueClient({
     },
     {
       key: "vietqr",
-      header: "VietQR",
+      header: revCopy.periodTable.colVietqr,
       className: "text-right font-mono tabular-nums text-muted-foreground",
       render: (row) => formatVND(row.vietqr_revenue),
+    },
+    {
+      key: "platform",
+      header: revCopy.periodTable.colPlatform,
+      className: "text-right font-mono tabular-nums text-muted-foreground",
+      render: (row) => formatVND(row.platform_revenue),
+    },
+    {
+      key: "delivery",
+      header: revCopy.periodTable.colDelivery,
+      className: "text-right font-mono tabular-nums text-muted-foreground",
+      render: (row) => formatVND(row.delivery_revenue),
     },
   ];
 
@@ -424,6 +448,16 @@ export function RevenueClient({
         {
           key: "vietqr",
           content: formatVND(kpis?.vietqr_revenue ?? 0),
+          className: "text-right font-mono tabular-nums",
+        },
+        {
+          key: "platform",
+          content: formatVND(kpis?.platform_revenue ?? 0),
+          className: "text-right font-mono tabular-nums",
+        },
+        {
+          key: "delivery",
+          content: formatVND(kpis?.delivery_revenue ?? 0),
           className: "text-right font-mono tabular-nums",
         },
       ],
@@ -608,8 +642,13 @@ export function RevenueClient({
                         {formatCount(row.order_count)}{" "}
                         {revCopy.periodTable.colOrders} ·{" "}
                         {revCopy.periodTable.colCash}:{" "}
-                        {formatVND(row.cash_revenue)} · VietQR:{" "}
-                        {formatVND(row.vietqr_revenue)}
+                        {formatVND(row.cash_revenue)} ·{" "}
+                        {revCopy.periodTable.colVietqr}:{" "}
+                        {formatVND(row.vietqr_revenue)} ·{" "}
+                        {revCopy.periodTable.colPlatform}:{" "}
+                        {formatVND(row.platform_revenue)} ·{" "}
+                        {revCopy.periodTable.colDelivery}:{" "}
+                        {formatVND(row.delivery_revenue)}
                       </ItemDescription>
                     </ItemContent>
                     <ItemFooter>

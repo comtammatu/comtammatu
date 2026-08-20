@@ -18,8 +18,9 @@ import { cn } from "@comtammatu/ui";
 import { messages } from "@lib/messages";
 import { Minus as IconMinus, Plus as IconPlus } from "lucide-react";
 import { FormattedNumberInput } from "@/components/form";
-import type { CartItem, CartModifier, CartSide } from "./types";
+import type { CartItem, CartModifier, CartSide, DeliveryPlatform, OrderType } from "./types";
 import type { MenuItem, MenuVariant } from "./pos-menu-types";
+import { resolvePosMenuListPrice } from "./_lib/delivery-channel";
 import { QuickReasonChips } from "./_components/quick-reason-chips";
 import {
   ITEM_DISCOUNT_PRESETS,
@@ -55,6 +56,8 @@ interface ItemCustomizerProps {
   mode?: "new" | "append" | "edit" | "edit-sent";
   appendOrderLabel?: string | null;
   initialCartItem?: CartItem | null;
+  listPriceOrderType?: OrderType;
+  listPriceDeliveryPlatform?: DeliveryPlatform | null;
 }
 
 export function ItemCustomizer({
@@ -64,6 +67,8 @@ export function ItemCustomizer({
   mode = "new",
   appendOrderLabel,
   initialCartItem,
+  listPriceOrderType = "takeaway",
+  listPriceDeliveryPlatform = null,
 }: ItemCustomizerProps) {
   const [selectedVariant, setSelectedVariant] = useState<MenuVariant | null>(
     null,
@@ -145,10 +150,26 @@ export function ItemCustomizer({
 
   const unitPrice = useMemo(() => {
     if (!item) return 0;
-    const base = item.base_price;
+    const resolved = resolvePosMenuListPrice(
+      item,
+      listPriceOrderType,
+      listPriceDeliveryPlatform,
+    );
+    // Fail loud for delivery: never silently fall back to dine-in/takeaway base.
+    const base = resolved.ok ? resolved.unitPrice : 0;
     const variantAdj = selectedVariant?.price_adjustment ?? 0;
     return base + variantAdj;
-  }, [item, selectedVariant]);
+  }, [item, listPriceDeliveryPlatform, listPriceOrderType, selectedVariant]);
+
+  const channelPriceReady = useMemo(() => {
+    if (!item) return false;
+    if (listPriceOrderType !== "delivery") return true;
+    return resolvePosMenuListPrice(
+      item,
+      listPriceOrderType,
+      listPriceDeliveryPlatform,
+    ).ok;
+  }, [item, listPriceDeliveryPlatform, listPriceOrderType]);
 
   const modifierTotal = useMemo(() => {
     if (!item) return 0;
@@ -191,6 +212,7 @@ export function ItemCustomizer({
 
   const handleConfirm = useCallback(() => {
     if (!item) return;
+    if (!channelPriceReady) return;
     if (discountEnabled && !discountValid) return;
 
     const modifiers: CartModifier[] = item.menu_item_modifiers
@@ -233,6 +255,7 @@ export function ItemCustomizer({
     note,
     quantity,
     onConfirm,
+    channelPriceReady,
     discountEnabled,
     discountValid,
     discountAmount,
@@ -342,14 +365,25 @@ export function ItemCustomizer({
                   {messages.pos.customizer.discountHint}
                 </p>
               ) : null}
+              {!channelPriceReady ? (
+                <p className="text-right text-xs text-destructive sm:text-sm">
+                  {messages.pos.menu.blockedChannelPriceMissing(
+                    item?.name ?? "",
+                  )}
+                </p>
+              ) : null}
               <Button
                 size="touch"
                 className="w-full font-semibold sm:w-auto sm:min-w-36"
-                disabled={!discountValid}
+                disabled={!discountValid || !channelPriceReady}
                 title={
-                  discountEnabled && !discountValid
-                    ? messages.pos.customizer.discountHint
-                    : undefined
+                  !channelPriceReady
+                    ? messages.pos.menu.blockedChannelPriceMissing(
+                        item?.name ?? "",
+                      )
+                    : discountEnabled && !discountValid
+                      ? messages.pos.customizer.discountHint
+                      : undefined
                 }
                 onClick={handleConfirm}
               >
@@ -504,6 +538,7 @@ export function ItemCustomizer({
                   placeholder={messages.pos.customizer.notePlaceholder}
                   rows={2}
                   maxLength={200}
+                  className="text-base resize-none"
                 />
               </div>
 
@@ -530,12 +565,14 @@ export function ItemCustomizer({
                     <div className="flex flex-col gap-3">
                       <FormattedNumberInput
                         id="item-discount-value"
+                        controlSize="touch"
                         maxFractionDigits={0}
                         value={discountValueText}
                         onValueChange={setDiscountValueText}
                         placeholder={
                           messages.pos.customizer.discountValuePlaceholderVnd
                         }
+                        className="text-base"
                       />
                       <QuickReasonChips
                         presets={ITEM_DISCOUNT_PRESETS}
@@ -554,6 +591,7 @@ export function ItemCustomizer({
                         }
                         rows={2}
                         maxLength={200}
+                        className="text-base resize-none"
                         aria-invalid={
                           discountEnabled && discountNoteTrimLen > 0
                             ? !discountValid

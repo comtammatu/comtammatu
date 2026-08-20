@@ -9,7 +9,9 @@ export interface OrderRow {
   branch_name: string | null;
   paid_at: string;
   paid_hour: number;
-  order_type: "dine_in" | "takeaway";
+  order_type: "dine_in" | "takeaway" | "delivery" | string;
+  delivery_platform?: string | null;
+  external_order_ref?: string | null;
   subtotal: number;
   discount_amount: number;
   tax_amount: number;

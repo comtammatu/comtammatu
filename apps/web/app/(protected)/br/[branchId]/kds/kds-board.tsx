@@ -460,6 +460,8 @@ export function KdsBoard({
           orderInfo?.order_number ??
           `#${String(orderId)}`,
         orderType: orderInfo?.order_type ?? "dine_in",
+        deliveryPlatform: orderInfo?.delivery_platform ?? null,
+        externalOrderRef: orderInfo?.external_order_ref ?? null,
         tableNumber: orderInfo?.tables?.number ?? null,
         createdAt:
           batch?.created_at ?? orderInfo?.created_at ?? oldestTicket.created_at,
@@ -507,6 +509,52 @@ export function KdsBoard({
       handler: () => {
         if (filters.hasFilters) {
           filters.clearAll();
+        }
+      },
+    },
+    {
+      key: "1",
+      handler: () => {
+        setMode("focus");
+      },
+    },
+    {
+      key: "2",
+      handler: () => {
+        setMode("comprehensive");
+      },
+    },
+    {
+      key: "m",
+      handler: () => {
+        toggleSound();
+      },
+    },
+    {
+      key: "f",
+      handler: () => {
+        toggleFullscreen();
+      },
+    },
+    {
+      key: "h",
+      handler: () => {
+        setCompletionHistoryOpen(true);
+      },
+    },
+    {
+      key: "z",
+      handler: () => {
+        if (lastUndoAction && lastUndoAction.ticketIds.length > 0) {
+          void handleUndoRecall(lastUndoAction.ticketIds);
+        }
+      },
+    },
+    {
+      key: "u",
+      handler: () => {
+        if (lastUndoAction && lastUndoAction.ticketIds.length > 0) {
+          void handleUndoRecall(lastUndoAction.ticketIds);
         }
       },
     },

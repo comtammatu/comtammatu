@@ -99,6 +99,7 @@ export const pos = {
     submitKitchen: (quantity: number) => `Gửi bếp (${quantity})`,
     priority: "Ưu tiên",
     priorityTakeawayTitle: "Ưu tiên đơn mang về?",
+    priorityDeliveryTitle: "Ưu tiên đơn giao hàng?",
     priorityTableTitle: (tableNumber: number | string) =>
       `Ưu tiên đơn bàn ${tableNumber}?`,
     priorityGenericTitle: "Ưu tiên đơn này?",
@@ -177,6 +178,15 @@ export const pos = {
     printVietQrSuccessOffline:
       "Máy in đang mất kết nối — phiếu VietQR sẽ in khi kết nối lại",
     printVietQrFailed: "Không thể in VietQR.",
+    deliveryTenderTitle: "Hình thức thu",
+    platformPrepaid: "Đã thu nền tảng",
+    counterCollection: "Thu tại quán",
+    platformPrepaidHint:
+      "Khách đã trả qua ứng dụng (Công cụ quản lý). Không vào ngăn kéo tiền mặt.",
+    platformConfirmSuccess: "Đã xác nhận thu nền tảng",
+    platformConfirmSuccessInvoice:
+      "Đã xác nhận thu nền tảng — HĐĐT đang xử lý",
+    platformConfirmFailed: "Không thể xác nhận thu nền tảng",
   },
   receipt: {
     paymentCancelled: "Đã hủy",
@@ -187,6 +197,7 @@ export const pos = {
     orderType: "Loại:",
     dineIn: "Tại bàn",
     takeaway: "Mang về",
+    delivery: "Giao hàng",
     table: "Bàn:",
     payment: "Thanh toán:",
     item: "Món",
@@ -222,6 +233,10 @@ export const pos = {
       `${itemName} đã hết nguyên liệu ở kho chi nhánh.`,
     blockedStockLow: (itemName: string, available: number) =>
       `${itemName} chỉ còn đủ nguyên liệu kho chi nhánh cho ${available} phần.`,
+    blockedChannelPriceMissing: (itemName: string) =>
+      `${itemName}: chưa có giá kênh giao hàng — cập nhật menu trước khi bán.`,
+    choosePlatformFirst: "Chọn nền tảng giao hàng trước khi thêm món",
+    enterAppRefFirst: "Nhập mã đơn ứng dụng trước khi thêm món",
     empty: "Chưa có món trong thực đơn",
     menuLimitsEmptyDescription: "Thêm món trước khi cấu hình giới hạn bán.",
     loadMenuLimitsFailed: "Không thể tải giới hạn bán. Vui lòng thử lại.",
@@ -365,6 +380,34 @@ export const pos = {
     customerName: (name: string) => `Khách: ${name}`,
     priority: "Ưu tiên",
   },
+  deliveryGate: {
+    title: "Giao hàng",
+    empty: "Chưa có đơn giao hàng đang mở",
+    createNew: "Tạo đơn giao hàng",
+    createTileLabel: "Tạo mới",
+    newOrder: "Đơn mới",
+    orderLabel: "Đơn",
+    orderAria: (
+      orderNumber: string,
+      platformLabel: string,
+      appRef: string,
+      status: string,
+      total: string,
+    ) =>
+      `Giao hàng ${orderNumber}, ${platformLabel} ${appRef}, ${status}, ${total}`,
+    appRefLabel: (ref: string) => `Mã đơn sàn: ${ref}`,
+    priority: "Ưu tiên",
+  },
+  delivery: {
+    platformLabel: "Nền tảng",
+    platformAria: "Chọn nền tảng giao hàng",
+    externalRefLabel: "Mã đơn ứng dụng",
+    externalRefPlaceholder: "Ví dụ: 1234, A-5678...",
+    emptySetup: "Chọn nền tảng và nhập mã đơn ứng dụng.",
+    platformRequired: "Chọn nền tảng giao hàng",
+    externalRefRequired: "Nhập mã đơn ứng dụng",
+    submitBlockedHint: "Chọn nền tảng và nhập mã đơn ứng dụng để gửi bếp.",
+  },
   sessionGate: {
     branch: (branchId: number) => `Chi nhánh #${branchId}`,
     title: "Mở ca bán hàng",
@@ -487,9 +530,11 @@ export const pos = {
     serviceModeAria: "Chọn hình thức phục vụ",
     dineIn: "Tại bàn",
     takeaway: "Mang về",
+    delivery: "Giao hàng",
     newDineInTarget: (tableNumber: number | string) =>
       `Bàn ${tableNumber} · Đơn mới`,
     newTakeawayTarget: "Mang về · Đơn mới",
+    newDeliveryTarget: "Giao hàng · Đơn mới",
     changeTarget: "Đổi",
     cancelTarget: "Hủy",
     pendingNewTitle: "Giỏ hàng",

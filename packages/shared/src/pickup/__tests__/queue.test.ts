@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   buildPickupQueue,
   formatPickupOrderLabel,
+  isPickupGuestBoardVisible,
   type BuildPickupQueueInput,
   type PickupQueueItem,
 } from "../queue";
@@ -104,6 +105,9 @@ function makePickupItem(overrides: Partial<PickupQueueItem>): PickupQueueItem {
     referenceNumber: "MV-260525-055-PH",
     referenceNumbers: ["MV-260525-055-PH"],
     orderType: "takeaway",
+    deliveryPlatform: null,
+    externalOrderRef: null,
+    callLane: "takeaway",
     targetKey: "order-10",
     tableNumber: null,
     ticketCount: 1,
@@ -156,6 +160,88 @@ test("formatPickupOrderLabel keeps dine-in table labels unchanged", () => {
     ),
     "Bàn 5",
   );
+});
+
+test("formatPickupOrderLabel formats delivery orders with platform ref", () => {
+  assert.equal(
+    formatPickupOrderLabel(
+      makePickupItem({
+        orderNumber: "GH-260525-042-PH",
+        orderType: "delivery",
+        deliveryPlatform: "grab",
+        externalOrderRef: "1234",
+      }),
+    ),
+    "Mang về #042 · 1234",
+  );
+  assert.equal(
+    formatPickupOrderLabel(
+      makePickupItem({
+        orderNumber: "GH-20260525-042-CN1",
+        orderType: "delivery",
+        deliveryPlatform: "shopee",
+        externalOrderRef: "5678",
+      }),
+    ),
+    "Mang về #042 · 5678",
+  );
+});
+
+test("formatPickupOrderLabel keeps walk-in takeaway unchanged", () => {
+  assert.equal(
+    formatPickupOrderLabel(
+      makePickupItem({
+        orderNumber: "MV-260525-055-PH",
+        orderType: "takeaway",
+      }),
+    ),
+    "Mang về #055",
+  );
+});
+
+test("isPickupGuestBoardVisible keeps delivery through ready until served", () => {
+  assert.equal(
+    isPickupGuestBoardVisible(
+      makePickupItem({ orderType: "delivery", status: "preparing" }),
+    ),
+    true,
+  );
+  assert.equal(
+    isPickupGuestBoardVisible(
+      makePickupItem({ orderType: "delivery", status: "ready" }),
+    ),
+    true,
+  );
+  assert.equal(
+    isPickupGuestBoardVisible(
+      makePickupItem({ orderType: "delivery", status: "served" }),
+    ),
+    false,
+  );
+  assert.equal(
+    isPickupGuestBoardVisible(
+      makePickupItem({ orderType: "takeaway", status: "ready" }),
+    ),
+    false,
+  );
+  assert.equal(
+    isPickupGuestBoardVisible(
+      makePickupItem({ orderType: "takeaway", status: "preparing" }),
+    ),
+    true,
+  );
+});
+
+test("buildPickupQueue sets callLane Bàn vs Mang về", () => {
+  const queue = buildPickupQueue(base);
+  const dineIn = queue.find(
+    (item) => item.orderNumber === "TC-20260524-008-CN1",
+  );
+  const takeaway = queue.find(
+    (item) => item.orderNumber === "MV-20260524-007-CN1",
+  );
+  assert.equal(dineIn?.callLane, "dine_in");
+  assert.equal(takeaway?.callLane, "takeaway");
 });
 
 test("buildPickupQueue groups completed takeaway tickets by kitchen batch and uses stable fallback number", () => {

@@ -18,9 +18,11 @@ import {
   formatCount,
 } from "@comtammatu/shared/format";
 import {
+  getDeliveryPlatformLabelVi,
   getOrderTypeLabelVi,
   getPaymentMethodLabelVi,
 } from "@comtammatu/shared/labels";
+import { formatDeliveryCallLabel } from "@comtammatu/shared/delivery";
 import { AppEmptyState, AppSection, KpiRow } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import {
@@ -49,6 +51,23 @@ function formatHourBucket(hour: number): string {
   const start = String(hour).padStart(2, "0");
   const end = String((hour + 1) % 24).padStart(2, "0");
   return `${start}:00-${end}:00`;
+}
+
+function formatOrderTypeCell(row: OrderRow): string {
+  if (row.order_type !== "delivery") {
+    return getOrderTypeLabelVi(row.order_type);
+  }
+
+  const platform = getDeliveryPlatformLabelVi(row.delivery_platform);
+  const callLabel = formatDeliveryCallLabel({
+    orderNumber: row.order_number,
+    externalOrderRef: row.external_order_ref,
+    deliveryPlatform: row.delivery_platform,
+  });
+  const parts = [getOrderTypeLabelVi("delivery")];
+  if (platform) parts.push(platform);
+  parts.push(callLabel);
+  return parts.join(" · ");
 }
 
 function invoiceBadge(row: OrderRow) {
@@ -111,7 +130,7 @@ export function RevenueDrillTabs({
     {
       key: "type",
       header: "Loại",
-      render: (row) => getOrderTypeLabelVi(row.order_type),
+      render: (row) => formatOrderTypeCell(row),
     },
     {
       key: "branch",
@@ -348,8 +367,7 @@ export function RevenueDrillTabs({
                 <ItemContent>
                   <ItemTitle>{row.order_number}</ItemTitle>
                   <ItemDescription>
-                    {formatVNTime(row.paid_at)} ·{" "}
-                    {getOrderTypeLabelVi(row.order_type)}
+                    {formatVNTime(row.paid_at)} · {formatOrderTypeCell(row)}
                   </ItemDescription>
                   <ItemDescription>
                     {formatCount(row.main_dish_quantity)} phần cơm đã ghi nhận ·{" "}

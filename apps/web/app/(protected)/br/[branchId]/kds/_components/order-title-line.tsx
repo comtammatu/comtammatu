@@ -1,7 +1,10 @@
 "use client";
 
+import { formatDeliveryCallLabel } from "@comtammatu/shared/delivery";
+import { getDeliveryPlatformLabelVi } from "@comtammatu/shared/labels";
 import { TABLE_VI } from "@comtammatu/shared/messages";
 import { cn } from "@comtammatu/ui";
+import { DeliveryPlatformMark } from "@/components/delivery-platform-mark";
 import {
   formatKdsTicketSequenceDisplay,
   getOrderTypeLabel,
@@ -12,6 +15,8 @@ interface OrderTitleLineProps {
   orderNumber: string;
   orderType: string;
   tableNumber: number | null;
+  deliveryPlatform?: string | null;
+  externalOrderRef?: string | null;
   size?: "default" | "compact";
   className?: string;
 }
@@ -33,10 +38,26 @@ function formatTableNumber(tableNumber: number): string {
     : String(tableNumber);
 }
 
-function getCallTarget(orderType: string, tableNumber: number | null): string {
+function getCallTarget(
+  orderType: string,
+  tableNumber: number | null,
+  deliveryOptions?: {
+    orderNumber?: string;
+    externalOrderRef?: string | null;
+    deliveryPlatform?: string | null;
+  },
+): string {
+  if (orderType === "delivery" && deliveryOptions?.deliveryPlatform) {
+    return formatDeliveryCallLabel({
+      orderNumber: deliveryOptions.orderNumber ?? "",
+      externalOrderRef: deliveryOptions.externalOrderRef,
+      deliveryPlatform: deliveryOptions.deliveryPlatform,
+    });
+  }
   if (orderType === "dine_in" && tableNumber !== null) {
     return `${TABLE_VI.long} ${formatTableNumber(tableNumber)}`;
   }
+  if (orderType === "delivery") return "Mang về";
   return getOrderTypeLabel(orderType);
 }
 
@@ -45,6 +66,8 @@ export function OrderTitleLine({
   orderNumber,
   orderType,
   tableNumber,
+  deliveryPlatform = null,
+  externalOrderRef = null,
   size = "default",
   className,
 }: OrderTitleLineProps) {
@@ -52,8 +75,15 @@ export function OrderTitleLine({
     kitchenTicketNumber,
     orderNumber,
   );
-  const callTarget = getCallTarget(orderType, tableNumber);
-  const accessibleLabel = `${callTarget} ${sequenceDisplay}`;
+  const isDelivery = orderType === "delivery";
+  const callTarget = getCallTarget(orderType, tableNumber, {
+    orderNumber,
+    externalOrderRef,
+    deliveryPlatform,
+  });
+  const accessibleLabel = isDelivery
+    ? `${getDeliveryPlatformLabelVi(deliveryPlatform)} ${callTarget}`.trim()
+    : `${callTarget} ${sequenceDisplay}`;
   const sizeClass = TITLE_SIZE_CLASSES[size];
 
   return (
@@ -64,22 +94,28 @@ export function OrderTitleLine({
         className,
       )}
     >
+      {isDelivery ? (
+        <DeliveryPlatformMark platform={deliveryPlatform} size="sm" />
+      ) : null}
       <span
         className={cn(
-          "shrink-0 font-heading font-semibold uppercase leading-tight text-foreground",
+          "min-w-0 font-heading font-semibold uppercase leading-tight text-foreground",
+          isDelivery ? "font-mono normal-case" : "shrink-0",
           sizeClass.target,
         )}
       >
         {callTarget}
       </span>
-      <span
-        className={cn(
-          "shrink-0 font-mono font-semibold leading-tight text-muted-foreground tabular-nums",
-          sizeClass.sequence,
-        )}
-      >
-        {sequenceDisplay}
-      </span>
+      {isDelivery ? null : (
+        <span
+          className={cn(
+            "shrink-0 font-mono font-semibold leading-tight text-muted-foreground tabular-nums",
+            sizeClass.sequence,
+          )}
+        >
+          {sequenceDisplay}
+        </span>
+      )}
     </div>
   );
 }

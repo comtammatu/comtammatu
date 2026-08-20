@@ -1,4 +1,4 @@
-import type { CartItem, CartModifier, CartSide, OrderType } from "../types";
+import type { CartItem, CartModifier, CartSide, DeliveryPlatform, OrderType } from "../types";
 import type { MenuItem } from "../pos-menu-types";
 import { makeCartKey, makeNotedCartKey } from "../_utils/cart-key";
 
@@ -6,6 +6,8 @@ export type CartSnapshot = {
   items: CartItem[];
   note: string;
   orderType: OrderType;
+  deliveryPlatform: DeliveryPlatform | null;
+  externalOrderRef: string;
 };
 
 type Listener = () => void;
@@ -19,6 +21,8 @@ export class CartStore {
       items: initial?.items ?? [],
       note: initial?.note ?? "",
       orderType: initial?.orderType ?? "takeaway",
+      deliveryPlatform: initial?.deliveryPlatform ?? null,
+      externalOrderRef: initial?.externalOrderRef ?? "",
     };
     this.subscribe = this.subscribe.bind(this);
     this.getSnapshot = this.getSnapshot.bind(this);
@@ -122,7 +126,13 @@ export class CartStore {
   }
 
   clear() {
-    this.setState({ ...this.state, items: [], note: "" });
+    this.setState({
+      ...this.state,
+      items: [],
+      note: "",
+      deliveryPlatform: null,
+      externalOrderRef: "",
+    });
   }
 
   setNote(note: string) {
@@ -130,7 +140,20 @@ export class CartStore {
   }
 
   setOrderType(orderType: OrderType) {
-    this.setState({ ...this.state, orderType });
+    const next: CartSnapshot = { ...this.state, orderType };
+    if (orderType !== "delivery") {
+      next.deliveryPlatform = null;
+      next.externalOrderRef = "";
+    }
+    this.setState(next);
+  }
+
+  setDeliveryPlatform(deliveryPlatform: DeliveryPlatform | null) {
+    this.setState({ ...this.state, deliveryPlatform });
+  }
+
+  setExternalOrderRef(externalOrderRef: string) {
+    this.setState({ ...this.state, externalOrderRef });
   }
 
   replaceItems(items: CartItem[]) {

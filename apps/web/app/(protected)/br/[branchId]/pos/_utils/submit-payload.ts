@@ -19,6 +19,16 @@ export function buildSubmitOrderCart({
     note: cartSnapshot.note.trim() || undefined,
   };
 
+  if (cartSnapshot.orderType === "delivery") {
+    if (cartSnapshot.deliveryPlatform != null) {
+      cart.delivery_platform = cartSnapshot.deliveryPlatform;
+    }
+    const ref = cartSnapshot.externalOrderRef.trim();
+    if (ref.length > 0) {
+      cart.external_order_ref = ref;
+    }
+  }
+
   if (isPriority === true) {
     cart.is_priority = true;
   }

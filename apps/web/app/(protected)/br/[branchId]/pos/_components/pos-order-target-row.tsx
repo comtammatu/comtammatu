@@ -7,6 +7,7 @@ import { messages } from "@lib/messages";
 export type OrderTarget =
   | { kind: "new-dine-in"; label: string }
   | { kind: "new-takeaway"; label: string }
+  | { kind: "new-delivery"; label: string }
   | { kind: "existing-order"; label: string };
 
 export function PosOrderTargetRow({
@@ -31,14 +32,13 @@ export function PosOrderTargetRow({
         <p className="font-heading min-w-0 truncate text-base font-semibold tracking-tight text-foreground">
           {target.label}
         </p>
-        {!isExisting ? (
-          <Badge variant="outline" className="shrink-0 text-xs font-semibold">
-            {messages.pos.desktop.pendingNewTitle}
-          </Badge>
-        ) : appendDraftQuantity > 0 ? (
-          <span className="shrink-0 text-sm text-muted-foreground tabular-nums">
+        {isExisting && appendDraftQuantity > 0 ? (
+          <Badge
+            variant="secondary"
+            className="shrink-0 text-xs font-semibold tabular-nums"
+          >
             {messages.pos.appendDraft.itemCount(appendDraftQuantity)}
-          </span>
+          </Badge>
         ) : null}
       </div>
       <Button

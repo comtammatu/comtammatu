@@ -104,7 +104,7 @@ export type PromotionFormValue = {
   startsAt: string | null;
   endsAt: string | null;
   timeWindows: Array<{ dow: number; start: string; end: string }>;
-  serviceModes: Array<"dine_in" | "takeaway">;
+  serviceModes: Array<"dine_in" | "takeaway" | "delivery">;
   bxgyBuyQty: number | null;
   bxgyGetQty: number | null;
   freeSideQty: number | null;
@@ -144,7 +144,7 @@ const promotionFormSchema = z
     endsTime: z.string(),
     timeWindows: z.array(timeWindowSchema),
     serviceModes: z
-      .array(z.enum(["dine_in", "takeaway"]))
+      .array(z.enum(["dine_in", "takeaway", "delivery"]))
       .min(1, { error: "Chọn ít nhất một hình thức phục vụ" }),
     bxgyBuyQty: z.string(),
     bxgyGetQty: z.string(),
@@ -1068,7 +1068,7 @@ function ServiceModeFields({
     control,
     name: "serviceModes",
   });
-  function toggle(mode: "dine_in" | "takeaway") {
+  function toggle(mode: "dine_in" | "takeaway" | "delivery") {
     field.onChange(
       field.value.includes(mode)
         ? field.value.filter((value) => value !== mode)
@@ -1092,6 +1092,13 @@ function ServiceModeFields({
             onCheckedChange={() => toggle("takeaway")}
           />
           {PROMOTIONS_VI.takeaway}
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <Checkbox
+            checked={field.value.includes("delivery")}
+            onCheckedChange={() => toggle("delivery")}
+          />
+          {PROMOTIONS_VI.delivery}
         </label>
       </div>
       {fieldState.error ? <FieldError errors={[fieldState.error]} /> : null}

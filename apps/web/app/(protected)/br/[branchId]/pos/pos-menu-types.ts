@@ -48,6 +48,10 @@ export interface MenuItem {
   menu_item_modifiers: MenuModifier[];
   menu_item_available_sides: MenuAvailableSide[];
   daily_limit: MenuItemDailyLimit | null;
+  /** Per-platform list prices for delivery; absent key = not configured. */
+  channel_prices: Partial<
+    Record<"grab" | "shopee" | "be" | "green_sm", number>
+  >;
 }
 
 export interface MenuCategory {

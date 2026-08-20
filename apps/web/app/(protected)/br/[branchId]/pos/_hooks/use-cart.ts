@@ -4,7 +4,7 @@ import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { usePosCartStore } from "../_providers/pos-desktop-provider";
 import type { CartSnapshot } from "../_providers/cart-store";
 import { calcCartTotal } from "../types";
-import type { CartItem, CartModifier, CartSide, OrderType } from "../types";
+import type { CartItem, CartModifier, CartSide, DeliveryPlatform, OrderType } from "../types";
 import type { MenuItem } from "../pos-menu-types";
 
 export function useCartSnapshot(): CartSnapshot {
@@ -104,6 +104,14 @@ export function useCartActions() {
     (t: OrderType) => store.setOrderType(t),
     [store],
   );
+  const setDeliveryPlatform = useCallback(
+    (platform: DeliveryPlatform | null) => store.setDeliveryPlatform(platform),
+    [store],
+  );
+  const setExternalOrderRef = useCallback(
+    (ref: string) => store.setExternalOrderRef(ref),
+    [store],
+  );
   const replaceItems = useCallback(
     (items: CartItem[]) => store.replaceItems(items),
     [store],
@@ -117,6 +125,8 @@ export function useCartActions() {
       clear,
       setNote,
       setOrderType,
+      setDeliveryPlatform,
+      setExternalOrderRef,
       replaceItems,
     }),
     [
@@ -126,6 +136,8 @@ export function useCartActions() {
       clear,
       setNote,
       setOrderType,
+      setDeliveryPlatform,
+      setExternalOrderRef,
       replaceItems,
     ],
   );
@@ -147,6 +159,8 @@ export function useCart() {
     items: snapshot.items,
     note: snapshot.note,
     orderType: snapshot.orderType,
+    deliveryPlatform: snapshot.deliveryPlatform,
+    externalOrderRef: snapshot.externalOrderRef,
     total,
     quantity,
     ...actions,

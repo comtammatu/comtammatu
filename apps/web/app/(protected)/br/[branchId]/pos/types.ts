@@ -7,8 +7,16 @@ import { z } from "zod";
 
 /* ─── Order Types ─── */
 
-const ORDER_TYPES = ["dine_in", "takeaway"] as const;
+const ORDER_TYPES = ["dine_in", "takeaway", "delivery"] as const;
 export type OrderType = (typeof ORDER_TYPES)[number];
+
+export const DELIVERY_PLATFORMS = [
+  "grab",
+  "shopee",
+  "be",
+  "green_sm",
+] as const;
+export type DeliveryPlatform = (typeof DELIVERY_PLATFORMS)[number];
 
 /* ─── Cart Modifier ─── */
 
@@ -211,13 +219,57 @@ export function getPosLineItemSummary(
 
 /* ─── Cart State ─── */
 
-export const cartStateSchema = z.object({
-  items: z.array(cartItemSchema),
-  order_type: z.enum(ORDER_TYPES),
-  table_id: z.number().int().positive().optional(),
-  note: z.string().max(500).optional(),
-  is_priority: z.boolean().optional(),
-});
+export const cartStateSchema = z
+  .object({
+    items: z.array(cartItemSchema),
+    order_type: z.enum(ORDER_TYPES),
+    table_id: z.number().int().positive().optional(),
+    note: z.string().max(500).optional(),
+    is_priority: z.boolean().optional(),
+    delivery_platform: z.enum(DELIVERY_PLATFORMS).optional(),
+    external_order_ref: z.string().trim().max(64).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.order_type !== "delivery") {
+      if (
+        data.delivery_platform !== undefined ||
+        (data.external_order_ref !== undefined &&
+          data.external_order_ref.length > 0)
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Thông tin nền tảng chỉ dùng cho đơn giao hàng",
+          path: ["delivery_platform"],
+        });
+      }
+      return;
+    }
+
+    if (data.table_id !== undefined) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Đơn giao hàng không gắn bàn",
+        path: ["table_id"],
+      });
+    }
+
+    if (data.delivery_platform === undefined) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Chọn nền tảng giao hàng",
+        path: ["delivery_platform"],
+      });
+    }
+
+    const ref = data.external_order_ref?.trim() ?? "";
+    if (ref.length === 0) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Nhập mã đơn ứng dụng",
+        path: ["external_order_ref"],
+      });
+    }
+  });
 
 export type CartState = z.infer<typeof cartStateSchema>;
 

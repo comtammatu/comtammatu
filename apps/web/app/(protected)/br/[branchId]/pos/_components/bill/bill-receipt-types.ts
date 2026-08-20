@@ -20,6 +20,8 @@ export interface OrderData {
   id: number;
   order_number: string;
   order_type: string;
+  delivery_platform?: string | null;
+  external_order_ref?: string | null;
   status: string;
   payment_status: string | null;
   payment_method: string | null;

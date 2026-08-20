@@ -74,6 +74,7 @@ function getOrderContextDescription(order: {
     return "Tại bàn";
   }
   if (order.order_type === "takeaway") return "Mang về";
+  if (order.order_type === "delivery") return "Giao hàng";
   return "Đơn POS";
 }
 
@@ -223,6 +224,12 @@ function applyOrderUpdate(
   const paymentMethod = coerceNullableString(payload.payment_method);
   if (paymentMethod !== undefined) next.payment_method = paymentMethod;
 
+  const deliveryPlatform = coerceNullableString(payload.delivery_platform);
+  if (deliveryPlatform !== undefined) next.delivery_platform = deliveryPlatform;
+
+  const externalOrderRef = coerceNullableString(payload.external_order_ref);
+  if (externalOrderRef !== undefined) next.external_order_ref = externalOrderRef;
+
   const subtotal = coerceMoney(payload.subtotal);
   if (subtotal !== null) next.subtotal = subtotal;
 
@@ -342,6 +349,14 @@ function buildOptimisticOrder(
     payment_method:
       typeof payload.payment_method === "string"
         ? payload.payment_method
+        : null,
+    delivery_platform:
+      typeof payload.delivery_platform === "string"
+        ? payload.delivery_platform
+        : null,
+    external_order_ref:
+      typeof payload.external_order_ref === "string"
+        ? payload.external_order_ref
         : null,
     subtotal: Number(payload.subtotal ?? 0),
     tax_amount: Number(payload.tax_amount ?? 0),

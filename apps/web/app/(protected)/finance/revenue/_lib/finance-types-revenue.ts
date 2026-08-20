@@ -15,8 +15,10 @@ export interface RollupRow {
   discount_amount: number | null;
   cash_revenue: number | null;
   vietqr_revenue: number | null;
+  platform_revenue: number | null;
   dine_in_revenue: number | null;
   takeaway_revenue: number | null;
+  delivery_revenue: number | null;
 }
 
 export interface KpiBundle {
@@ -29,8 +31,10 @@ export interface KpiBundle {
   order_count: number;
   cash_revenue: number;
   vietqr_revenue: number;
+  platform_revenue: number;
   dine_in_revenue: number;
   takeaway_revenue: number;
+  delivery_revenue: number;
   voided_amount: number;
   voided_count: number;
   refreshed_at: string;

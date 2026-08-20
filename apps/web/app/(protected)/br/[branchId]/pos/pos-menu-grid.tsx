@@ -35,6 +35,8 @@ import {
   X as IconX,
 } from "lucide-react";
 import { type MenuCategory, type MenuItem } from "./pos-menu-types";
+import type { DeliveryPlatform, OrderType } from "./types";
+import { resolvePosMenuListPrice } from "./_lib/delivery-channel";
 import { useDailyLimit } from "./_providers/pos-desktop-provider";
 import { useCartItemQuantity } from "./_hooks/use-cart";
 import { remainingDailyQuotaAfterDemand } from "./_utils/daily-limit-draft";
@@ -43,6 +45,8 @@ interface PosMenuGridProps {
   categories: MenuCategory[];
   dailyLimitDemandByMenuItem?: ReadonlyMap<number, number>;
   hasStackedTouchActions?: boolean;
+  orderType?: OrderType;
+  deliveryPlatform?: DeliveryPlatform | null;
   onItemTap: (item: MenuItem) => void;
 }
 
@@ -50,6 +54,8 @@ interface MenuItemButtonProps {
   item: MenuItem;
   sparseMenu: boolean;
   dailyLimitDemandByMenuItem?: ReadonlyMap<number, number>;
+  orderType: OrderType;
+  deliveryPlatform: DeliveryPlatform | null;
   onItemTap: (item: MenuItem) => void;
 }
 
@@ -57,6 +63,8 @@ interface MenuItemGridProps {
   items: MenuItem[];
   sparseMenu: boolean;
   dailyLimitDemandByMenuItem?: ReadonlyMap<number, number>;
+  orderType: OrderType;
+  deliveryPlatform: DeliveryPlatform | null;
   onItemTap: (item: MenuItem) => void;
 }
 
@@ -120,13 +128,19 @@ const MenuItemButton = memo(function MenuItemButton({
   item,
   sparseMenu,
   dailyLimitDemandByMenuItem,
+  orderType,
+  deliveryPlatform,
   onItemTap,
 }: MenuItemButtonProps) {
   const dailyLimit = useDailyLimit(item.id);
   const inCartQuantity = useCartItemQuantity(item.id);
   const draftDemand = dailyLimitDemandByMenuItem?.get(item.id) ?? 0;
   const status = getMenuCardStatus(dailyLimit, draftDemand);
-  const blocked = status.blocked;
+  const listPrice = resolvePosMenuListPrice(item, orderType, deliveryPlatform);
+  const channelBlocked =
+    orderType === "delivery" && deliveryPlatform != null && !listPrice.ok;
+  const blocked = status.blocked || channelBlocked;
+  const displayPrice = listPrice.ok ? listPrice.unitPrice : item.base_price;
   const handleClick = useCallback(() => {
     if (blocked) return;
     onItemTap(item);
@@ -138,11 +152,11 @@ const MenuItemButton = memo(function MenuItemButton({
       variant="outline"
       disabled={blocked}
       aria-disabled={blocked}
-      aria-label={`${item.name}, ${formatVND(item.base_price)}`}
+      aria-label={`${item.name}, ${formatVND(displayPrice)}`}
       className={cn(
         // aspect-[1/1] on mobile gives compact square cards, displaying 6-8 items
         // per viewport instead of 3, while preserving sm/md landscape layout.
-        "group relative aspect-[1/1] sm:aspect-[4/3] md:aspect-[4/3] h-auto min-w-0 w-full overflow-hidden p-0 text-left transition-transform hover:shadow-effect-card-hover active:scale-[0.97]",
+        "group relative aspect-[1/1] sm:aspect-[4/3] md:aspect-[4/3] h-auto min-w-0 w-full overflow-hidden p-0 text-left transition-transform hover:shadow-effect-card-hover active:scale-[0.97] touch-manipulation select-none chrome-tap",
         sparseMenu && "md:aspect-[3/2]",
         blocked && "opacity-60 grayscale",
         inCartQuantity > 0 && "ring-2 ring-primary",
@@ -190,6 +204,10 @@ const MenuItemButton = memo(function MenuItemButton({
           >
             {status.reasonLabel}
           </Badge>
+        ) : channelBlocked ? (
+          <Badge variant="destructive" className="truncate text-xs font-semibold">
+            {messages.pos.menu.soldOut}
+          </Badge>
         ) : status.remainingLabel !== null ? (
           <Badge
             variant="secondary"
@@ -207,7 +225,7 @@ const MenuItemButton = memo(function MenuItemButton({
           sparseMenu && "md:text-lg",
         )}
       >
-        {formatVND(item.base_price)}
+        {formatVND(displayPrice)}
       </span>
 
       {/* Item name — overlaid at the photo bottom; white text + drop shadow for contrast. */}
@@ -227,6 +245,8 @@ const MenuItemGrid = memo(function MenuItemGrid({
   items,
   sparseMenu,
   dailyLimitDemandByMenuItem,
+  orderType,
+  deliveryPlatform,
   onItemTap,
 }: MenuItemGridProps) {
   return (
@@ -244,6 +264,8 @@ const MenuItemGrid = memo(function MenuItemGrid({
           item={item}
           sparseMenu={sparseMenu}
           dailyLimitDemandByMenuItem={dailyLimitDemandByMenuItem}
+          orderType={orderType}
+          deliveryPlatform={deliveryPlatform}
           onItemTap={onItemTap}
         />
       ))}
@@ -255,6 +277,8 @@ function PosMenuGridComponent({
   categories,
   dailyLimitDemandByMenuItem,
   hasStackedTouchActions = false,
+  orderType = "takeaway",
+  deliveryPlatform = null,
   onItemTap,
 }: PosMenuGridProps) {
   const isCompactMenu = useIsMobile();
@@ -378,6 +402,7 @@ function PosMenuGridComponent({
         autoFocus={isSearchActive}
         placeholder={messages.pos.menu.searchPlaceholder}
         aria-label={messages.pos.menu.searchAria}
+        className="text-base md:text-sm"
       />
       {query.trim() !== "" && (
         <InputGroupAddon align="inline-end">
@@ -401,14 +426,14 @@ function PosMenuGridComponent({
   // TabsList width) — `!flex-none` is required so chips keep content width
   // and overflow scrolls horizontally.
   const tabPillClassName =
-    "group/tab !flex-none gap-1 bg-muted/50 px-2.5 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground sm:gap-1.5 sm:px-3 sm:py-2 sm:text-sm md:gap-2 md:px-4";
+    "group/tab !flex-none gap-1 bg-muted/50 px-3 py-2 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground sm:gap-1.5 sm:px-3.5 sm:py-2 sm:text-sm md:gap-2 md:px-4 touch-manipulation select-none chrome-tap min-h-10";
   const tabBadgeClassName =
     "hidden shrink-0 text-xs sm:inline-flex group-data-[state=active]/tab:border-primary-foreground/30 group-data-[state=active]/tab:bg-primary-foreground/15 group-data-[state=active]/tab:text-primary-foreground";
   const unifiedTabs = (
     <Tabs
       value={activeTabValue}
       onValueChange={handleCategoryChange}
-      className="min-w-0 flex-1 gap-1 overflow-x-auto overflow-y-hidden xl:flex-1"
+      className="min-w-0 flex-1 gap-1 overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x xl:flex-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       <TabsList
         aria-label={messages.pos.menu.categoriesAria}
@@ -504,6 +529,8 @@ function PosMenuGridComponent({
                     items={category.menu_items}
                     sparseMenu={false}
                     dailyLimitDemandByMenuItem={dailyLimitDemandByMenuItem}
+                    orderType={orderType}
+                    deliveryPlatform={deliveryPlatform}
                     onItemTap={onItemTap}
                   />
                 </section>
@@ -522,6 +549,8 @@ function PosMenuGridComponent({
                 items={visibleItems}
                 sparseMenu={sparseMenu}
                 dailyLimitDemandByMenuItem={dailyLimitDemandByMenuItem}
+                orderType={orderType}
+                deliveryPlatform={deliveryPlatform}
                 onItemTap={onItemTap}
               />
             </div>

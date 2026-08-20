@@ -33,6 +33,7 @@ import {
   convertCashToVietQrSchema,
   createPaymentSchema,
   fetchPendingRemotePaymentSchema,
+  platformConfirmSchema,
 } from "./_lib/payment-schemas";
 import {
   confirmCashPaymentRpcFallback,
@@ -1085,6 +1086,169 @@ export async function confirmCashPaymentWithInvoice(
     success: true,
     data: {
       ...paymentResult.data,
+      invoice: { status: "queued" },
+    },
+  };
+}
+
+export interface PlatformPaymentResult {
+  status?: string;
+  order_id: number;
+  payment_id: number;
+  print_job_id?: number | null;
+  print_warning?: string | null;
+}
+
+export interface PlatformPaymentWithInvoiceResult extends PlatformPaymentResult {
+  invoice: InvoiceOutcome;
+}
+
+/** Delivery platform prepaid tender (Công cụ quản lý). */
+export const confirmPlatformPayment = withActionPositional(
+  {
+    argsToInput: (branchId: number, orderId: number) => ({
+      branchId,
+      orderId,
+    }),
+    schema: platformConfirmSchema,
+    customAuth: posConfirmPaymentAuth,
+  },
+  async (
+    { branchId, orderId },
+    { supabase, claims },
+  ): Promise<ActionResult<PlatformPaymentResult>> => {
+    if (!isPosBranchInScope(claims, branchId)) {
+      return {
+        success: false,
+        error: "Không có quyền truy cập chi nhánh này",
+        errorCode: POS_ERROR_CODES.SCOPE_BRANCH_MISMATCH,
+      };
+    }
+
+    const evalError = await evaluateOrderPromotionsBlocking(supabase, orderId);
+    if (evalError) {
+      return { success: false, error: evalError };
+    }
+
+    const rpc = supabase as unknown as RpcCaller;
+    const { data, error } = await rpc.rpc<PlatformPaymentResult>(
+      "confirm_platform_payment",
+      { p_order_id: orderId },
+    );
+
+    if (error) {
+      console.error(
+        "[confirmPlatformPayment] rpc failed:",
+        String(error.message ?? ""),
+      );
+      return mapRpcError<PlatformPaymentResult>(
+        error,
+        confirmCashPaymentRpcMappings,
+        confirmCashPaymentRpcFallback,
+      );
+    }
+
+    const result = data as unknown as PlatformPaymentResult & {
+      status?: string;
+      error_code?: string | null;
+      detail?: string | null;
+    };
+
+    if (result?.status === "stock_failed") {
+      return {
+        success: false,
+        error: "Không đủ tồn kho để hoàn tất thanh toán.",
+        errorCode: POS_ERROR_CODES.RPC_GENERIC,
+      };
+    }
+
+    if (result?.status === "amount_mismatch_recomputed") {
+      return {
+        success: false,
+        error:
+          "Tổng tiền đơn đã thay đổi so với dữ liệu món. Vui lòng tải lại đơn và kiểm tra trước khi thanh toán.",
+        errorCode: POS_ERROR_CODES.RPC_GENERIC,
+      };
+    }
+
+    return { success: true, data: result };
+  },
+);
+
+export async function confirmPlatformPaymentWithInvoice(
+  branchId: number,
+  orderId: number,
+): Promise<ActionResult<PlatformPaymentWithInvoiceResult>> {
+  const parsed = platformConfirmSchema.safeParse({ branchId, orderId });
+  if (!parsed.success) {
+    return { success: false, error: "Dữ liệu thanh toán không hợp lệ" };
+  }
+
+  const ctx = await posConfirmPaymentAuth();
+  if (!ctx) {
+    return { success: false, error: "Không có quyền xác nhận thanh toán" };
+  }
+
+  const { supabase, claims } = ctx;
+  if (!isPosBranchInScope(claims, branchId)) {
+    return {
+      success: false,
+      error: "Không có quyền truy cập chi nhánh này",
+      errorCode: POS_ERROR_CODES.SCOPE_BRANCH_MISMATCH,
+    };
+  }
+
+  const evalError = await evaluateOrderPromotionsBlocking(supabase, orderId);
+  if (evalError) {
+    return { success: false, error: evalError };
+  }
+
+  const rpc = supabase as unknown as RpcCaller;
+  const { data, error } = await rpc.rpc<PlatformPaymentResult>(
+    "confirm_platform_payment_with_invoice_binding",
+    {
+      p_order_id: orderId,
+      p_invoice_payload: POS_DEFAULT_INVOICE_PAYLOAD,
+    },
+  );
+
+  if (error) {
+    console.error(
+      "[confirmPlatformPaymentWithInvoice] rpc failed:",
+      String(error.message ?? ""),
+    );
+    return mapRpcError<PlatformPaymentWithInvoiceResult>(
+      error,
+      confirmCashPaymentRpcMappings,
+      confirmCashPaymentRpcFallback,
+    );
+  }
+
+  const result = data as unknown as PlatformPaymentResult & {
+    status?: string;
+  };
+
+  if (result?.status === "stock_failed") {
+    return {
+      success: false,
+      error: "Không đủ tồn kho để hoàn tất thanh toán.",
+      errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    };
+  }
+
+  if (result?.status === "amount_mismatch_recomputed") {
+    return {
+      success: false,
+      error:
+        "Tổng tiền đơn đã thay đổi so với dữ liệu món. Vui lòng tải lại đơn và kiểm tra trước khi thanh toán.",
+      errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    };
+  }
+
+  return {
+    success: true,
+    data: {
+      ...result,
       invoice: { status: "queued" },
     },
   };

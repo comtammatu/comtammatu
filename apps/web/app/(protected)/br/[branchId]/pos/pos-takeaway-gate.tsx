@@ -5,18 +5,29 @@ import { AppEmptyState, OperationalTile } from "@/components/surface";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
-import { Plus as IconPlus, ShoppingBag as IconShoppingBag } from "lucide-react";
+import {
+  Bike as IconBike,
+  Plus as IconPlus,
+  ShoppingBag as IconShoppingBag,
+} from "lucide-react";
 import { messages } from "@lib/messages";
 import { formatVND } from "@comtammatu/shared/format";
+import { getDeliveryPlatformLabelVi } from "@comtammatu/shared/labels";
 import { formatVNTime } from "@comtammatu/shared/time";
+import { DeliveryPlatformMark } from "@/components/delivery-platform-mark";
 import type { SessionOrder } from "./order-history";
 import {
   ACTIVE_POS_STATUSES,
   compareOrdersByNextAction,
 } from "./order-history";
 import { getPosOrderStatusInfo } from "./_lib/order-status-display";
+import { formatGateOrderTileNumber } from "./_lib/delivery-channel";
+import type { OrderType } from "./types";
+
+export type PosServiceGateMode = Extract<OrderType, "takeaway" | "delivery">;
 
 interface PosTakeawayGateProps {
+  mode?: PosServiceGateMode;
   orders: SessionOrder[];
   onCreateNew: () => void;
   onViewDetail: (
@@ -29,63 +40,77 @@ interface PosTakeawayGateProps {
   className?: string;
 }
 
-function isActiveTakeawayOrder(order: SessionOrder): boolean {
+function isActiveServiceGateOrder(
+  order: SessionOrder,
+  mode: PosServiceGateMode,
+): boolean {
   return (
-    order.order_type === "takeaway" &&
+    order.order_type === mode &&
     order.payment_status !== "paid" &&
     ACTIVE_POS_STATUSES.includes(order.status)
   );
 }
 
-const TAKEAWAY_SEQUENCE_RE = /^(?:MV)-(?:(?:\d{6}|\d{8})-)?(\d{1,4})(?:-.+)?$/i;
-
-function formatTakeawayTileNumber(orderNumber: string): string {
-  const cleaned = orderNumber.trim().replace(/^#+/, "");
-  const sequence = TAKEAWAY_SEQUENCE_RE.exec(cleaned)?.[1];
-  return `#${sequence ?? cleaned}`;
-}
-
-function getTakeawayTileTone(order: SessionOrder) {
+function getServiceGateTone(order: SessionOrder) {
   if (order.status === "ready" || order.status === "served") return "success";
   return "warning";
 }
 
-function TakeawayOrderTile({
+function ServiceOrderTile({
   order,
+  mode,
   onViewDetail,
 }: {
   order: SessionOrder;
+  mode: PosServiceGateMode;
   onViewDetail: PosTakeawayGateProps["onViewDetail"];
 }) {
   const statusInfo = getPosOrderStatusInfo(order);
-  const displayNumber = formatTakeawayTileNumber(order.order_number);
+  const displayNumber = formatGateOrderTileNumber(order.order_number);
   const customerName = order.note?.trim() ? order.note.trim() : null;
+  const platformLabel =
+    mode === "delivery"
+      ? getDeliveryPlatformLabelVi(order.delivery_platform)
+      : null;
+  const appRef =
+    mode === "delivery" ? order.external_order_ref?.trim() ?? null : null;
+
+  const gateCopy =
+    mode === "delivery" ? messages.pos.deliveryGate : messages.pos.takeawayGate;
 
   return (
     <OperationalTile
       type="button"
-      tone={getTakeawayTileTone(order)}
+      tone={getServiceGateTone(order)}
       size="tile"
-      data-testid={`pos-takeaway-order-tile-${order.id}`}
+      data-testid={`pos-${mode}-order-tile-${order.id}`}
       aria-label={
-        customerName
-          ? `${messages.pos.takeawayGate.orderAria(
+        mode === "delivery"
+          ? messages.pos.deliveryGate.orderAria(
               displayNumber,
-              statusInfo.label,
-              formatVND(order.total_amount),
-            )}, ${messages.pos.takeawayGate.customerName(customerName)}`
-          : messages.pos.takeawayGate.orderAria(
-              displayNumber,
+              platformLabel ?? "",
+              appRef ?? "",
               statusInfo.label,
               formatVND(order.total_amount),
             )
+          : customerName
+            ? `${messages.pos.takeawayGate.orderAria(
+                displayNumber,
+                statusInfo.label,
+                formatVND(order.total_amount),
+              )}, ${messages.pos.takeawayGate.customerName(customerName)}`
+            : messages.pos.takeawayGate.orderAria(
+                displayNumber,
+                statusInfo.label,
+                formatVND(order.total_amount),
+              )
       }
-      className="w-full min-w-0 flex-col items-stretch justify-start gap-1.5 p-2.5 text-left whitespace-normal hover:shadow-effect-card-hover sm:gap-3 sm:p-3.5 lg:p-4"
+      className="w-full min-w-0 flex-col items-stretch justify-start gap-1.5 p-2.5 text-left whitespace-normal hover:shadow-effect-card-hover active:scale-[0.98] transition-transform touch-manipulation select-none chrome-tap sm:gap-3 sm:p-3.5 lg:p-4"
       onClick={() => onViewDetail(order.id, order.order_number, order)}
     >
       <div className="flex w-full min-w-0 items-center justify-between gap-1">
         <p className="shrink-0 text-xs font-medium uppercase tracking-wide opacity-60">
-          {messages.pos.takeawayGate.orderLabel}
+          {gateCopy.orderLabel}
         </p>
         <Badge
           variant={statusInfo.variant}
@@ -97,10 +122,21 @@ function TakeawayOrderTile({
 
       <div className="mt-auto flex w-full min-w-0 items-end justify-between gap-1.5">
         <div className="min-w-0 flex-1">
-          <p className="shrink-0 text-xl font-semibold leading-none tabular-nums sm:text-2xl">
+          <p className="shrink-0 font-mono text-xl font-semibold leading-none tabular-nums sm:text-2xl">
             {displayNumber}
           </p>
-          {customerName ? (
+          {mode === "delivery" && platformLabel ? (
+            <p className="mt-1 inline-flex max-w-full items-center gap-1.5 truncate text-xs font-medium text-foreground sm:text-sm">
+              <DeliveryPlatformMark
+                platform={order.delivery_platform}
+                size="xs"
+              />
+              <span className="truncate">
+                {platformLabel}
+                {appRef ? ` · ${appRef}` : null}
+              </span>
+            </p>
+          ) : customerName ? (
             <p className="mt-1 truncate text-xs font-medium text-foreground sm:text-sm">
               {customerName}
             </p>
@@ -112,7 +148,7 @@ function TakeawayOrderTile({
         <div className="flex shrink-0 flex-col items-end gap-1">
           {order.is_priority ? (
             <Badge variant="warning" className="shrink-0 text-xs font-semibold">
-              {messages.pos.takeawayGate.priority}
+              {gateCopy.priority}
             </Badge>
           ) : null}
           <p className="font-mono text-xs font-semibold tabular-nums text-primary sm:text-sm">
@@ -125,6 +161,7 @@ function TakeawayOrderTile({
 }
 
 function PosTakeawayGateComponent({
+  mode = "takeaway",
   orders,
   onCreateNew,
   onViewDetail,
@@ -133,9 +170,16 @@ function PosTakeawayGateComponent({
   className,
 }: PosTakeawayGateProps) {
   const activeOrders = useMemo(
-    () => orders.filter(isActiveTakeawayOrder).sort(compareOrdersByNextAction),
-    [orders],
+    () =>
+      orders
+        .filter((order) => isActiveServiceGateOrder(order, mode))
+        .sort(compareOrdersByNextAction),
+    [mode, orders],
   );
+
+  const gateCopy =
+    mode === "delivery" ? messages.pos.deliveryGate : messages.pos.takeawayGate;
+  const GateIcon = mode === "delivery" ? IconBike : IconShoppingBag;
 
   return (
     <div
@@ -157,10 +201,10 @@ function PosTakeawayGateComponent({
           <section className="flex flex-col gap-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex min-w-0 items-center gap-2">
-                <IconShoppingBag className="size-5 shrink-0 text-primary" />
+                <GateIcon className="size-5 shrink-0 text-primary" />
                 <div className="min-w-0">
                   <p className="truncate text-base font-semibold text-foreground">
-                    {messages.pos.takeawayGate.title}
+                    {gateCopy.title}
                   </p>
                 </div>
               </div>
@@ -171,32 +215,33 @@ function PosTakeawayGateComponent({
                 type="button"
                 tone="default"
                 size="tile"
-                data-testid="pos-takeaway-create-tile"
-                aria-label={messages.pos.takeawayGate.createNew}
-                className="w-full min-w-0 flex-col items-stretch justify-start gap-2 p-3 text-left whitespace-normal hover:shadow-effect-card-hover sm:gap-3 lg:p-4"
+                data-testid={`pos-${mode}-create-tile`}
+                aria-label={gateCopy.createNew}
+                className="w-full min-w-0 flex-col items-stretch justify-start gap-2 p-3 text-left whitespace-normal hover:shadow-effect-card-hover active:scale-[0.98] transition-transform touch-manipulation select-none chrome-tap sm:gap-3 lg:p-4"
                 onClick={onCreateNew}
               >
                 <div className="flex w-full min-w-0 items-center justify-between gap-1.5">
                   <p className="shrink-0 text-xs font-medium uppercase tracking-wide opacity-60">
-                    {messages.pos.takeawayGate.title}
+                    {gateCopy.title}
                   </p>
                   <Badge variant="success" className="text-xs font-semibold">
-                    {messages.pos.takeawayGate.newOrder}
+                    {gateCopy.newOrder}
                   </Badge>
                 </div>
 
                 <div className="mt-auto flex w-full min-w-0 items-end justify-between gap-2">
                   <p className="text-2xl font-semibold leading-none">
-                    {messages.pos.takeawayGate.createTileLabel}
+                    {gateCopy.createTileLabel}
                   </p>
                   <IconPlus data-icon="inline-end" />
                 </div>
               </OperationalTile>
 
               {activeOrders.map((order) => (
-                <TakeawayOrderTile
+                <ServiceOrderTile
                   key={order.id}
                   order={order}
+                  mode={mode}
                   onViewDetail={onViewDetail}
                 />
               ))}
@@ -204,9 +249,9 @@ function PosTakeawayGateComponent({
 
             {activeOrders.length === 0 ? (
               <AppEmptyState
-                title={messages.pos.takeawayGate.empty}
+                title={gateCopy.empty}
                 compact
-                icon={<IconShoppingBag />}
+                icon={<GateIcon />}
               />
             ) : null}
           </section>

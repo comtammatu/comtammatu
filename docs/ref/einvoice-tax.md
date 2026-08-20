@@ -115,6 +115,26 @@ DN nhỏ và vừa đăng ký lần đầu có thể miễn ba năm. Không hard
 Chỉ hiện `thuế TNDN ước tính` khi có version quy tắc + nguồn + `estimated`.
 **Lợi nhuận sau thuế TNDN** chỉ sau kỳ kế toán đầy đủ và khóa sổ.
 
-## 7. Nguồn pháp lý
+## 7. Đơn giao hàng (POS thủ công) và HĐĐT
+
+Căn cứ hợp đồng ShopeeFood số `SHOPEEFOOD_VN_0392303` (20/08/2026, CTCP Chén Sứ
+↔ CTCP Foody). Grab / beFood / Green SM: cùng mô hình POS cho đến khi có HĐ riêng.
+
+| Quy tắc | Hệ quả sản phẩm |
+| --- | --- |
+| NBH bán trực tiếp cho Người Mua (Điều 4.1–4.2) | Đơn Má Tư = bán hàng Chén Sứ; không phải Foody bán lại |
+| Phí Hoa Hồng 25% trên Giá Trị Thực Nhận (Điều 3.1) | Seed giá kênh Shopee ≈ +25%; **không** trừ hoa hồng trên `orders.total_amount` |
+| Công Cụ Quản Lý vs Cash Merchant (Điều 3.1(b)) | Tender `platform` vs tiền mặt/VietQR tại quán |
+| Foody xuất HĐ phí hoa hồng (Điều 3.2) | AP/input Phase 2+ — không phải HĐĐT bán hàng MTT |
+| NBH cung cấp hóa đơn/chứng từ cho Người Mua (Điều 4.6) | HĐĐT bán hàng MTT **tự xếp hàng** khi thanh toán xong (cả `platform` và COD), GROSS giá kênh, khách lẻ + QR `/q/invoice/[token]` |
+| Giá Trị Thực Nhận không gồm phí giao (Điều 1.7) | Không ghi phí shipper vào doanh thu món Má Tư |
+
+**S-Invoice Phase 1:** payload Viettel vẫn buyer + dòng hàng + tiền +
+`transactionUuid` nội bộ. **Không** truyền mã đơn sàn (`external_order_ref`)
+hay `GH-…` lên mặt HĐ qua S-Invoice. Mã sàn và `GH-…` dùng trên POS/KDS/Pickup.
+
+Kênh nội bộ này **không** mở cổng adapter HTTP (D103 / D104).
+
+## 8. Nguồn pháp lý
 
 Danh mục văn bản và ngày hiệu lực: [legal-framework-2026.md](legal-framework-2026.md).

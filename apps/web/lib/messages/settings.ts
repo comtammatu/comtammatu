@@ -539,7 +539,7 @@ export const settings = {
       "Theo dõi ca POS, kho, nhân sự và doanh thu theo ngày kinh doanh (04:00).",
     closeDayRevenueLabel: "Tổng tiền đã thu",
     closeDayCashRevenueLabel: "Tiền mặt",
-    closeDayNoncashRevenueLabel: "Chuyển khoản / QR",
+    closeDayNoncashRevenueLabel: "VietQR / nền tảng",
     closeDayPaidOrdersLabel: "Đơn đã thanh toán",
     closeDayUnpaidOrdersLabel: "Đơn chưa thanh toán",
     closeDaySessionsLabel: "Ca POS trong ngày",

@@ -94,7 +94,9 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
           <span>
             {order.order_type === "dine_in"
               ? messages.pos.receipt.dineIn
-              : messages.pos.receipt.takeaway}
+              : order.order_type === "delivery"
+                ? messages.pos.receipt.delivery
+                : messages.pos.receipt.takeaway}
           </span>
         </div>
         {order.tables && (

@@ -66,12 +66,19 @@ export function isKdsComCategory(
   return normalizeCategoryName(item?.category_name) === COM_CATEGORY_NAME;
 }
 
-/** Takeaway bags stay in one lane. Dine-in accompaniments use the add-on lane. */
+/** Takeaway bags stay in one lane. Dine-in accompaniments use the add-on lane.
+ * Delivery shares the Mang về (takeaway) column — no fourth service lane. */
+export function isKdsTakeawayLane(
+  orderType: string | null | undefined,
+): boolean {
+  return orderType === "takeaway" || orderType === "delivery";
+}
+
 export function getKdsOrderItemColumnId(
   item: Pick<KdsOrderItem, "category_name" | "category_type"> | undefined,
   orderType: string | null | undefined,
 ): KdsOrderColumnId {
-  if (orderType === "takeaway") return "takeaway";
+  if (isKdsTakeawayLane(orderType)) return "takeaway";
   if (isKdsAddOnItem(item)) return "add_on";
   return "dine_in";
 }
@@ -81,7 +88,7 @@ export function getKdsTicketBaseGroupKey(
   ticket: Pick<KdsTicket, "order_id" | "kitchen_send_batch_id">,
   orderType: string | null | undefined,
 ): string {
-  if (orderType === "takeaway") {
+  if (isKdsTakeawayLane(orderType)) {
     return `order-${String(ticket.order_id)}`;
   }
   return ticket.kitchen_send_batch_id !== null
@@ -97,7 +104,7 @@ export function getKdsScopedGroupKey(
 }
 
 function getKdsOrderColumnId(order: KdsOrder): KdsOrderColumnId {
-  if (order.orderType === "takeaway") return "takeaway";
+  if (isKdsTakeawayLane(order.orderType)) return "takeaway";
   if (order.items.length > 0 && order.items.every(isKdsAddOnItem)) {
     return "add_on";
   }

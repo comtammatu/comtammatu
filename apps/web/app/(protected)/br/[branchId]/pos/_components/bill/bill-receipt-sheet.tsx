@@ -48,6 +48,7 @@ import { fetchOrderForBill } from "../../actions";
 import type { SessionOrder } from "../../order-history";
 import {
   confirmCashPaymentWithInvoice,
+  confirmPlatformPaymentWithInvoice,
   cancelPendingPayment,
   createPayment,
   fetchPendingRemotePaymentForBill,
@@ -129,6 +130,8 @@ const METHOD_META: Record<
   cash: { label: PAYMENT_METHOD_LABELS_VI.cash, icon: IconCash },
   vietqr: { label: PAYMENT_METHOD_LABELS_VI.vietqr, icon: IconQrcode },
 };
+
+type DeliveryTender = "platform" | PaymentMethod;
 
 const REMOTE_PAYMENT_COPY = {
   accountLabel: "STK:",
@@ -430,6 +433,7 @@ export function BillReceipt({
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>(
     canConfirmCash ? "cash" : "vietqr",
   );
+  const [deliveryTender, setDeliveryTender] = useState<DeliveryTender>("platform");
   const [cashInput, setCashInput] = useState("");
   const [pendingExtras, setPendingExtras] = useState<PendingExtras | null>(
     null,
@@ -459,10 +463,14 @@ export function BillReceipt({
   const totalAmount = Number(order?.total_amount ?? 0);
   const cashReceived = Number(cashInput) || 0;
   const cashChange = cashReceived - totalAmount;
+  const isDeliveryOrder = order?.order_type === "delivery";
   // Cash is the only cashier-confirmable payment. VietQR settles only through
   // the verified SePay webhook.
   const canConfirmPaid =
-    isOnline && selectedMethod === "cash" && cashReceived >= totalAmount;
+    isOnline &&
+    (isDeliveryOrder && deliveryTender === "platform"
+      ? canConfirmCash
+      : selectedMethod === "cash" && cashReceived >= totalAmount);
 
   // Tooltip explaining why the button is disabled — a dimmed button must
   // tell the cashier what is missing (offline, bad tax code, not enough
@@ -471,9 +479,11 @@ export function BillReceipt({
     ? null
     : !isOnline
       ? "Mất kết nối — không thể thanh toán khi mất mạng"
-      : selectedMethod === "cash"
-        ? "Khách chưa thanh toán đủ tổng đơn"
-        : "Chưa tạo mã chuyển khoản";
+      : isDeliveryOrder && deliveryTender === "platform"
+        ? "Không có quyền xác nhận thu nền tảng"
+        : selectedMethod === "cash"
+          ? "Khách chưa thanh toán đủ tổng đơn"
+          : "Chưa tạo mã chuyển khoản";
 
   const cashSuggestions = useMemo(
     () => buildCashSuggestions(totalAmount),
@@ -489,6 +499,7 @@ export function BillReceipt({
       setOrder(null);
       setError(null);
       setSelectedMethod(canConfirmCash ? "cash" : "vietqr");
+      setDeliveryTender("platform");
       setCashInput("");
       setPendingExtras(null);
       setMethodPending(false);
@@ -832,6 +843,36 @@ export function BillReceipt({
     if (!order || orderId === null || !canConfirmPaid) return;
 
     startActionTransition(async () => {
+      if (isDeliveryOrder && deliveryTender === "platform") {
+        const result = await confirmPlatformPaymentWithInvoice(branchId, orderId);
+        if (!result.success) {
+          toast.error(
+            result.error ?? messages.pos.payment.platformConfirmFailed,
+          );
+          if (isAmountMismatchError(result.error)) {
+            await onOrderUpdated?.();
+          }
+          return;
+        }
+        const inv = result.data?.invoice ?? null;
+        const printWarning = result.data?.print_warning;
+        const successTitle =
+          inv?.status === "queued"
+            ? messages.pos.payment.platformConfirmSuccessInvoice
+            : messages.pos.payment.platformConfirmSuccess;
+        if (printWarning) {
+          toast.warning(`${successTitle} — không in được hóa đơn`, {
+            description: printWarning,
+            duration: 8000,
+          });
+        } else {
+          toast.success(successTitle);
+        }
+        await onOrderUpdated?.();
+        onClose();
+        return;
+      }
+
       if (selectedMethod === "cash") {
         const result = await confirmCashPaymentWithInvoice(
           branchId,
@@ -889,6 +930,8 @@ export function BillReceipt({
     [
       branchId,
       cashReceived,
+      deliveryTender,
+      isDeliveryOrder,
       isOnline,
       onClose,
       onOrderUpdated,
@@ -1240,6 +1283,51 @@ export function BillReceipt({
                     </div>
                   </Alert>
                 ) : null}
+                {isDeliveryOrder ? (
+                  <>
+                    <p className="text-sm font-medium text-foreground">
+                      {messages.pos.payment.deliveryTenderTitle}
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="touch-lg"
+                        aria-pressed={deliveryTender === "platform"}
+                        className={cn(
+                          "flex-col gap-2",
+                          deliveryTender === "platform" &&
+                            "border-foreground bg-muted text-foreground hover:bg-muted",
+                        )}
+                        onClick={() => setDeliveryTender("platform")}
+                        disabled={actionPending || methodPending}
+                      >
+                        {messages.pos.payment.platformPrepaid}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="touch-lg"
+                        aria-pressed={deliveryTender !== "platform"}
+                        className={cn(
+                          "flex-col gap-2",
+                          deliveryTender !== "platform" &&
+                            "border-foreground bg-muted text-foreground hover:bg-muted",
+                        )}
+                        onClick={() => setDeliveryTender("cash")}
+                        disabled={actionPending || methodPending}
+                      >
+                        {messages.pos.payment.counterCollection}
+                      </Button>
+                    </div>
+                    {deliveryTender === "platform" ? (
+                      <p className="text-sm text-muted-foreground">
+                        {messages.pos.payment.platformPrepaidHint}
+                      </p>
+                    ) : null}
+                  </>
+                ) : null}
+                {(!isDeliveryOrder || deliveryTender !== "platform") && (
                 <div
                   className="grid grid-cols-2 gap-2"
                   role="group"
@@ -1274,6 +1362,7 @@ export function BillReceipt({
                     );
                   })}
                 </div>
+                )}
 
                 {pendingOfflineMethod !== null && (
                   <p className="text-sm text-muted-foreground">
@@ -1285,7 +1374,8 @@ export function BillReceipt({
                   </p>
                 )}
 
-                {selectedMethod === "cash" ? (
+                {selectedMethod === "cash" &&
+                (!isDeliveryOrder || deliveryTender !== "platform") ? (
                   <div className="flex flex-col gap-3 rounded-md bg-muted/30 p-3">
                     {order && hasPaymentBreakdown ? (
                       <OrderTotalsSummary
@@ -1372,7 +1462,7 @@ export function BillReceipt({
                       </span>
                     </div>
                   </div>
-                ) : (
+                ) : !isDeliveryOrder || deliveryTender !== "platform" ? (
                   <div className="flex flex-col gap-3 rounded-md bg-muted/30 p-3">
                     {methodPending ? (
                       <AppBoneyardSkeleton
@@ -1461,7 +1551,7 @@ export function BillReceipt({
                       </>
                     )}
                   </div>
-                )}
+                ) : null}
               </>
             </StationSection>
           </div>
@@ -1500,10 +1590,30 @@ export function BillReceipt({
                 </Button>
               ) : null}
             </div>
-            {selectedMethod === "cash" && disabledReason ? (
+            {selectedMethod === "cash" &&
+            (!isDeliveryOrder || deliveryTender !== "platform") &&
+            disabledReason ? (
               <p className="text-sm text-muted-foreground">{disabledReason}</p>
             ) : null}
-            {selectedMethod === "cash" ? (
+            {isDeliveryOrder && deliveryTender === "platform" && disabledReason ? (
+              <p className="text-sm text-muted-foreground">{disabledReason}</p>
+            ) : null}
+            {isDeliveryOrder && deliveryTender === "platform" ? (
+              <Button
+                data-testid="bill-confirm-platform"
+                type="button"
+                size="touch-lg"
+                className="w-full"
+                onClick={() => void handleConfirmPaid()}
+                disabled={
+                  isPending || methodPending || actionPending || !canConfirmPaid
+                }
+                title={disabledReason ?? undefined}
+              >
+                {actionPending ? <Spinner data-icon="inline-start" /> : null}
+                {messages.pos.payment.platformPrepaid}
+              </Button>
+            ) : selectedMethod === "cash" ? (
               <Button
                 data-testid="bill-confirm-cash"
                 type="button"

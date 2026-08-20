@@ -68,7 +68,7 @@ test("operational overlays keep all exposed controls touch-sized", () => {
   assert.equal(sessionHeader.match(/min-h-12 text-sm/g)?.length, 3);
   assert.match(orderDetail, /size="icon-touch"/);
   assert.match(orderDetail, /variant="outline"\s+size="touch"/);
-  assert.equal(orderDetail.match(/className="min-h-12 text-sm"/g)?.length, 13);
+  assert.equal(orderDetail.match(/className="min-h-12 text-sm"/g)?.length, 11);
   assert.match(voidPaidDialog, /SelectTrigger[^>]*size="touch"/);
   assert.doesNotMatch(kdsHeader, /ThemeMenuItem/);
 });

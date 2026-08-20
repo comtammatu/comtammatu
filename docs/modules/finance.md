@@ -60,6 +60,11 @@ Funds formula:
   ledger (not a branch bank book).
 - Period `vietqr_revenue` (orders that landed on the company account) belongs on
   revenue reports — not on **`Tài sản`**.
+- Period `platform_revenue` is completed `payments.method = platform` GROSS
+  (partner prepaid / platform tender) — sales identity, not cash drawer.
+- Period `delivery_revenue` is completed paid orders with
+  `orders.order_type = delivery` at channel list GROSS. Commission invoices from
+  Foody/partners are AP later (D104), not a net-of-commission rewrite of POS totals.
 
 Show `Chưa mở sổ` until `initialize_finance_funds` (company bank) and
 `initialize_branch_cash_opening` (each sales branch). Openings cannot be

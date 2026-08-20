@@ -1,0 +1,151 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { test } from "node:test";
+import { normalizeEol } from "./static-source";
+
+const read = (path: string) =>
+  normalizeEol(readFileSync(join(process.cwd(), path), "utf8"));
+
+const migration = read(
+  "../../supabase/migrations/20260820174417_pos_delivery_channel.sql",
+);
+const menuFields = read(
+  "app/(protected)/menu/item-channel-prices-fields.tsx",
+);
+const menuActions = read("app/(protected)/menu/actions.ts");
+const mark = read("app/components/delivery-platform-mark.tsx");
+const financeTypes = read(
+  "app/(protected)/finance/revenue/_lib/finance-types-revenue.ts",
+);
+const decisions = read("../../docs/plan/decisions.md");
+const einvoice = read("../../docs/ref/einvoice-tax.md");
+
+test("delivery migration allows platform tender and channel prices", () => {
+  assert.match(migration, /order_type = ANY \(ARRAY\['dine_in'::text, 'takeaway'::text, 'delivery'::text\]\)/);
+  assert.match(
+    migration,
+    /payment_method = ANY \(ARRAY\['cash'::text, 'vietqr'::text, 'platform'::text\]\)/,
+  );
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.menu_item_channel_prices/);
+  assert.match(migration, /FUNCTION public\.confirm_platform_payment/);
+  assert.match(
+    migration,
+    /v_payment\.method NOT IN \('vietqr', 'cash', 'platform'\)/,
+  );
+  assert.match(migration, /platform_revenue/);
+  assert.match(migration, /delivery_revenue/);
+  assert.match(migration, /seed_menu_item_channel_prices/);
+  assert.match(migration, /payments_method_check[\s\S]*platform/);
+});
+
+test("menu channel prices UI supports per-platform and apply-all", () => {
+  assert.match(menuFields, /channelPricesTitle/);
+  assert.match(menuFields, /channelPricesApplyAllAction/);
+  assert.match(menuFields, /channelPricesMarkupAll/);
+  assert.match(menuActions, /deliveryPlatform === "all"/);
+  assert.match(menuActions, /seed_menu_item_channel_prices/);
+});
+
+test("DeliveryPlatformMark is not BrandMark", () => {
+  assert.match(mark, /export function DeliveryPlatformMark/);
+  assert.doesNotMatch(mark, /BrandMark/);
+  assert.doesNotMatch(mark, /\/brand\//);
+  assert.match(mark, /aria-hidden="true"/);
+});
+
+test("finance revenue types expose delivery and platform KPIs", () => {
+  assert.match(financeTypes, /platform_revenue: number/);
+  assert.match(financeTypes, /delivery_revenue: number/);
+});
+
+test("docs lock internal delivery channel HĐĐT and D104", () => {
+  assert.match(decisions, /## D104: Internal delivery channel does not lift D103/);
+  assert.match(einvoice, /SHOPEEFOOD_VN_0392303/);
+  assert.match(einvoice, /truyền mã đơn sàn/);
+});
+
+test("POS delivery identity is reachable on empty cart before first item", () => {
+  const cartPane = read(
+    "app/(protected)/br/[branchId]/pos/_components/cart-pane.tsx",
+  );
+  assert.match(cartPane, /data-testid="pos-delivery-identity"/);
+  assert.match(cartPane, /messages\.pos\.delivery\.emptySetup/);
+  assert.doesNotMatch(cartPane, /externalRefHint/);
+  // Identity must not be nested only under the non-empty cart footer path.
+  const identityIdx = cartPane.indexOf('data-testid="pos-delivery-identity"');
+  const emptyStateUsageIdx = cartPane.indexOf("<AppEmptyState");
+  assert.ok(identityIdx >= 0 && emptyStateUsageIdx >= 0);
+  assert.ok(
+    identityIdx < emptyStateUsageIdx,
+    "delivery identity must render above empty cart state",
+  );
+
+  const posInner = read(
+    "app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx",
+  );
+  assert.match(
+    posInner,
+    /handleCreateDeliveryOrder[\s\S]*?setCartDrawerOpen\(true\)/,
+  );
+  assert.match(posInner, /editingSentItem\?\.orderType/);
+  assert.match(posInner, /deliveryPlatform: sentPlatform/);
+});
+
+test("POS session list treats delivery as Mang về ops queue with dual identity", () => {
+  const history = read(
+    "app/(protected)/br/[branchId]/pos/order-history.tsx",
+  );
+  assert.match(
+    history,
+    /order\.order_type === "takeaway" \|\| order\.order_type === "delivery"/,
+  );
+  assert.match(history, /DeliveryPlatformMark/);
+  assert.match(history, /external_order_ref/);
+
+  const display = read(
+    "app/(protected)/br/[branchId]/pos/_utils/order-display.ts",
+  );
+  assert.match(display, /MV\|GH/);
+  assert.match(display, /Giao hàng/);
+
+  const billSummary = read(
+    "app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-summary.tsx",
+  );
+  assert.match(billSummary, /messages\.pos\.receipt\.delivery/);
+
+  const appendMessages = read(
+    "app/(protected)/br/[branchId]/pos/_lib/messages.ts",
+  );
+  assert.match(appendMessages, /channel_price_missing/);
+});
+
+test("server re-prices from channel helper; POS list price follows append target", () => {
+  assert.match(migration, /pos_resolve_item_list_price\(/);
+  assert.match(migration, /channel_price_missing/);
+  assert.match(
+    migration,
+    /v_base_price := public\.pos_resolve_item_list_price\(\s*p_tenant_id/,
+  );
+  assert.match(
+    migration,
+    /v_base_price := public\.pos_resolve_item_list_price\(\s*v_order\.tenant_id/,
+  );
+
+  const posInner = read(
+    "app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx",
+  );
+  assert.match(posInner, /listPriceOrderType/);
+  assert.match(posInner, /appendOrderSummary\?\.order_type === "delivery"/);
+  assert.match(posInner, /orderType=\{listPriceOrderType\}/);
+  assert.doesNotMatch(
+    posInner,
+    /unit_price: item\.base_price,\s*modifiers: \[\],\s*sides: \[\],\s*\};\s*addAppendDraftItem/,
+  );
+
+  const customizer = read(
+    "app/(protected)/br/[branchId]/pos/item-customizer.tsx",
+  );
+  assert.match(customizer, /never silently fall back/);
+  assert.match(customizer, /channelPriceReady/);
+});

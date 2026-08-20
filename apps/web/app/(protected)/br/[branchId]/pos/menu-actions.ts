@@ -136,6 +136,7 @@ export async function fetchMenuForPos(
   // route revalidation; daily-limits stay fresh.
   let categories: Awaited<ReturnType<typeof getCachedMenuStructure>>;
   let limitRows: unknown;
+  let channelPriceRows: unknown;
   try {
     // `p_exclude_hold_tokens` is not yet in generated types — call via the
     // cast escape hatch.
@@ -150,12 +151,17 @@ export async function fetchMenuForPos(
       "get_branch_menu_daily_limits_for_pos",
       { p_branch_id: parsedBranchId.data },
     );
-    const [structure, limitsRes] = await Promise.all([
+    const [structure, limitsRes, channelPricesRes] = await Promise.all([
       getCachedMenuStructure(claims.tenant_id),
       limitsPromise,
+      supabase
+        .from("menu_item_channel_prices")
+        .select("menu_item_id, delivery_platform, unit_price")
+        .eq("tenant_id", claims.tenant_id),
     ]);
     categories = structure;
     limitRows = limitsRes.data;
+    channelPriceRows = channelPricesRes.data;
   } catch {
     return { success: false, error: messages.pos.menu.loadFailed };
   }
@@ -188,6 +194,21 @@ export async function fetchMenuForPos(
       });
     }
   }
+  const channelPricesByItemId = new Map<
+    number,
+    Partial<Record<"grab" | "shopee" | "be" | "green_sm", number>>
+  >();
+  if (Array.isArray(channelPriceRows)) {
+    for (const row of channelPriceRows as Array<{
+      menu_item_id: number;
+      delivery_platform: "grab" | "shopee" | "be" | "green_sm";
+      unit_price: number;
+    }>) {
+      const existing = channelPricesByItemId.get(row.menu_item_id) ?? {};
+      existing[row.delivery_platform] = Number(row.unit_price);
+      channelPricesByItemId.set(row.menu_item_id, existing);
+    }
+  }
   // Filter nested variants/modifiers to active only, resolve side_item
   const menu = (categories ?? []).map((cat) => ({
     ...cat,
@@ -217,6 +238,7 @@ export async function fetchMenuForPos(
         })
         .filter((s) => s !== null),
       daily_limit: limitsByItemId.get(item.id) ?? null,
+      channel_prices: channelPricesByItemId.get(item.id) ?? {},
     })),
   }));
 

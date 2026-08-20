@@ -20,6 +20,8 @@ import {
 } from "@comtammatu/ui/components/item";
 import { formatVND } from "@comtammatu/shared/format";
 import { formatVNTime } from "@comtammatu/shared/time";
+import { getDeliveryPlatformLabelVi } from "@comtammatu/shared/labels";
+import { DeliveryPlatformMark } from "@/components/delivery-platform-mark";
 import type { BillReceiptIntent } from "./_components/bill/bill-receipt-types";
 import { getPosOrderStatusInfo } from "./_lib/order-status-display";
 import { deriveOrderTimingInfo } from "./_lib/table-timing";
@@ -28,6 +30,8 @@ export interface SessionOrder {
   id: number;
   order_number: string;
   order_type: string;
+  delivery_platform: string | null;
+  external_order_ref: string | null;
   status: string;
   payment_status: string | null;
   payment_method: string | null;
@@ -51,7 +55,8 @@ export interface SessionOrder {
   tables: { number: number } | null;
 }
 
-const ORDER_SEQUENCE_RE = /^(?:TC|MV)-(?:(?:\d{6}|\d{8})-)?(\d{1,4})(?:-.+)?$/i;
+const ORDER_SEQUENCE_RE =
+  /^(?:TC|MV|GH)-(?:(?:\d{6}|\d{8})-)?(\d{1,4})(?:-.+)?$/i;
 
 function cleanOrderNumber(orderNumber: string): string {
   return orderNumber.trim().replace(/^#+/, "");
@@ -63,6 +68,9 @@ function extractOrderSequence(orderNumber: string): string | null {
 }
 
 function getOrderContextLabel(order: SessionOrder): string {
+  if (order.order_type === "delivery") {
+    return messages.pos.receipt.delivery;
+  }
   if (order.order_type === "takeaway") {
     return messages.pos.orderHistory.takeaway;
   }
@@ -77,7 +85,7 @@ function getCompactOrderTitle(
   options: { showDineInSequence?: boolean } = {},
 ): string {
   const contextLabel = getOrderContextLabel(order);
-  if (order.order_type === "takeaway") {
+  if (order.order_type === "takeaway" || order.order_type === "delivery") {
     const sequence = extractOrderSequence(order.order_number);
     if (sequence !== null) return `${contextLabel} #${sequence}`;
 
@@ -114,10 +122,20 @@ export function compareOrdersByNextAction(
   if (aIsKitchenWaiting && !bIsKitchenWaiting) return -1;
   if (!aIsKitchenWaiting && bIsKitchenWaiting) return 1;
 
-  // 3. Trong nhóm đang chờ Bếp: đơn mang về ưu tiên nhẹ nếu cùng thời điểm
+  // 3. Trong nhóm đang chờ Bếp: đơn mang về / giao hàng ưu tiên nhẹ nếu cùng thời điểm
   if (aIsKitchenWaiting && bIsKitchenWaiting) {
-    if (a.order_type === "takeaway" && b.order_type !== "takeaway") return -1;
-    if (a.order_type !== "takeaway" && b.order_type === "takeaway") return 1;
+    if (
+      (a.order_type === "takeaway" || a.order_type === "delivery") &&
+      b.order_type !== "takeaway" &&
+      b.order_type !== "delivery"
+    )
+      return -1;
+    if (
+      (b.order_type === "takeaway" || b.order_type === "delivery") &&
+      a.order_type !== "takeaway" &&
+      a.order_type !== "delivery"
+    )
+      return 1;
   }
 
   // 4. Trong cùng nhóm: đơn vào lâu nhất xếp LÊN TRÊN (created_at cũ nhất trước - FIFO)
@@ -162,11 +180,34 @@ export function OrderCardSummary({
   /** Defaults to created_at. Archived rows pass updated_at (closed time). */
   metaTimestamp?: string;
 }) {
+  const deliveryAppRef = order.external_order_ref?.trim() ?? "";
+  const deliveryIdentity =
+    order.order_type === "delivery"
+      ? [
+          getDeliveryPlatformLabelVi(order.delivery_platform),
+          deliveryAppRef.length > 0 ? deliveryAppRef : null,
+        ]
+          .filter((part): part is string => Boolean(part))
+          .join(" · ")
+      : null;
+
   return (
     <ItemContent className="w-full min-w-0 gap-1.5">
       <ItemTitle className="w-full min-w-0 max-w-full justify-between gap-3 text-base">
         <span className="min-w-0 flex-1 truncate">
-          {getCompactOrderTitle(order, { showDineInSequence })}
+          {order.order_type === "delivery" && order.delivery_platform ? (
+            <span className="inline-flex max-w-full items-center gap-1.5">
+              <DeliveryPlatformMark
+                platform={order.delivery_platform}
+                size="xs"
+              />
+              <span className="truncate">
+                {getCompactOrderTitle(order, { showDineInSequence })}
+              </span>
+            </span>
+          ) : (
+            getCompactOrderTitle(order, { showDineInSequence })
+          )}
         </span>
         <span
           className={cn(
@@ -178,8 +219,10 @@ export function OrderCardSummary({
         </span>
       </ItemTitle>
       <ItemDescription className="flex w-full min-w-0 flex-wrap items-center justify-between gap-x-2 gap-y-1 text-sm">
-        <span className="shrink-0 tabular-nums text-muted-foreground">
-          {formatTime(metaTimestamp ?? order.created_at)}
+        <span className="min-w-0 truncate tabular-nums text-muted-foreground">
+          {deliveryIdentity
+            ? `${deliveryIdentity} · ${formatTime(metaTimestamp ?? order.created_at)}`
+            : formatTime(metaTimestamp ?? order.created_at)}
         </span>
         <span className="flex min-w-0 flex-wrap items-center gap-1.5">
           {rightMeta}
@@ -352,7 +395,7 @@ function ActiveOrdersListComponent({
       } else if (order.order_type === "dine_in") {
         dining += 1;
       }
-      if (order.order_type === "takeaway") {
+      if (order.order_type === "takeaway" || order.order_type === "delivery") {
         takeaway += 1;
       }
     }
@@ -371,7 +414,10 @@ function ActiveOrdersListComponent({
           KITCHEN_WAITING_STATUSES.has(order.status),
         );
       case "takeaway":
-        return allActiveOrders.filter((order) => order.order_type === "takeaway");
+        return allActiveOrders.filter(
+          (order) =>
+            order.order_type === "takeaway" || order.order_type === "delivery",
+        );
       case "dining":
         return allActiveOrders.filter(
           (order) =>

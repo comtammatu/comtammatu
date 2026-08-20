@@ -1,4 +1,5 @@
 export type {
+  DeliveryPlatformCode,
   InventoryLocationLabelLength,
   ModuleLabelKey,
   PayBasisCode,
@@ -39,6 +40,7 @@ export {
   ORDER_STATUS_LABELS_VI,
   ORDER_ITEM_STATUS_LABELS_VI,
   ORDER_TYPE_LABELS_VI,
+  DELIVERY_PLATFORM_LABELS_VI,
   ORDER_PAYMENT_STATUS_LABELS_VI,
   PAYMENT_RECORD_STATUS_LABELS_VI,
   EXPENSE_PAYMENT_STATE_LABELS_VI,
@@ -49,6 +51,7 @@ export {
   STOCKTAKE_SESSION_STATUS_LABELS_VI,
   COUNT_SLIP_STATUS_LABELS_VI,
   getOrderTypeLabelVi,
+  getDeliveryPlatformLabelVi,
   getPaymentMethodLabelVi,
   sanitizeViettelInvoiceError,
 } from "./vi";

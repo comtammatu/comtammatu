@@ -42,10 +42,10 @@ export interface PosMobileActionBarProps {
 }
 
 const TOUCH_DOCK_CLASS =
-  "pointer-events-none fixed inset-x-3 bottom-0 z-40 flex flex-col gap-2 pos-safe-bottom xl:hidden";
+  "pointer-events-none fixed inset-x-3 bottom-0 z-40 flex flex-col gap-2 pos-safe-bottom select-none chrome-tap xl:hidden";
 
 const ACTION_BAR_SURFACE_CLASS =
-  "pointer-events-auto rounded-lg bg-card/95 p-2 shadow-2xl ring-1 ring-border backdrop-blur";
+  "pointer-events-auto rounded-lg bg-card/95 p-2 shadow-2xl ring-1 ring-border/80 backdrop-blur-md";
 
 const ACTION_BAR_CLASS = `${ACTION_BAR_SURFACE_CLASS} flex gap-2`;
 
@@ -54,19 +54,19 @@ const APPEND_ACTION_BAR_CLASS = `${ACTION_BAR_SURFACE_CLASS} grid grid-cols-[aut
 const SESSION_ORDERS_BAR_CLASS = "pointer-events-auto flex justify-end";
 
 const SELF_ORDER_BUTTON_CLASS =
-  "pointer-events-auto self-end bg-card/95 ring-1 ring-border backdrop-blur";
+  "pointer-events-auto self-end rounded-lg bg-card/95 ring-1 ring-border/80 backdrop-blur-md transition-transform active:scale-[0.98]";
 
 const ACTION_PRIMARY_BUTTON_CLASS =
-  "min-w-0 flex-1 px-2 text-sm font-bold sm:min-w-14 sm:px-4 sm:text-base";
+  "min-w-0 flex-1 px-2 text-sm font-bold tracking-wide transition-transform active:scale-[0.98] sm:min-w-14 sm:px-4 sm:text-base";
 
 const ACTION_SECONDARY_BUTTON_CLASS =
-  "min-w-0 flex-1 border border-border bg-secondary px-2 text-sm font-bold text-secondary-foreground sm:min-w-14 sm:px-4 sm:text-base";
+  "min-w-0 flex-1 border border-border bg-secondary px-2 text-sm font-bold text-secondary-foreground transition-transform active:scale-[0.98] sm:min-w-14 sm:px-4 sm:text-base";
 
 const ACTION_CANCEL_BUTTON_CLASS =
-  "w-12 min-w-12 shrink-0 border border-border px-0 text-sm font-semibold text-muted-foreground sm:w-auto sm:min-w-14 sm:px-3 sm:text-base";
+  "w-12 min-w-12 shrink-0 border border-border px-0 text-sm font-semibold text-muted-foreground transition-transform active:scale-[0.98] sm:w-auto sm:min-w-14 sm:px-3 sm:text-base";
 
 const SESSION_ORDERS_BUTTON_CLASS =
-  "min-w-14 bg-card/95 px-4 text-sm font-bold ring-1 ring-border backdrop-blur sm:text-base";
+  "min-w-14 rounded-lg bg-card/95 px-4 text-sm font-bold ring-1 ring-border/80 backdrop-blur-md transition-transform active:scale-[0.98] sm:text-base";
 
 function PosMobileActionBarComponent({
   isTouchLayout,

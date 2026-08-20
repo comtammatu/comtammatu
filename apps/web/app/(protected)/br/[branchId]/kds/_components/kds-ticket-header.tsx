@@ -25,19 +25,19 @@ const DENSITY_CLASS: Record<
 > = {
   compact: {
     shell:
-      "flex min-w-0 flex-col gap-1.5 px-2 py-2 xl:flex-row xl:items-start xl:justify-between xl:gap-2 xl:px-3 xl:py-2.5",
+      "flex min-w-0 flex-col gap-2 px-3 py-2.5 xl:flex-row xl:items-start xl:justify-between xl:gap-2 xl:px-3.5 xl:py-3",
     identity: "min-w-0 xl:flex-1",
     cluster:
-      "flex w-full flex-wrap items-center justify-start gap-1 xl:w-auto xl:shrink-0 xl:justify-end",
+      "flex w-full flex-wrap items-center justify-start gap-1.5 xl:w-auto xl:shrink-0 xl:justify-end",
     priority: "px-2 py-0.5 text-xs xl:px-2.5 xl:py-1 xl:text-sm",
     status: "px-2 py-0.5 text-xs xl:px-2.5 xl:py-1 xl:text-sm",
   },
   default: {
-    shell: "flex items-start justify-between gap-3 px-4 py-3",
+    shell: "flex items-start justify-between gap-3.5 px-4 py-3.5",
     identity: "flex min-w-0 flex-1 flex-col gap-2",
     cluster: "flex shrink-0 flex-col items-end gap-1.5",
-    priority: "px-2 py-1 text-sm font-semibold",
-    status: "px-2 py-1 text-sm font-semibold",
+    priority: "px-2.5 py-1 text-sm font-semibold",
+    status: "px-2.5 py-1 text-sm font-semibold",
   },
 };
 
@@ -46,6 +46,8 @@ interface KdsTicketHeaderProps {
   orderNumber: string;
   orderType: string;
   tableNumber: number | null;
+  deliveryPlatform?: string | null;
+  externalOrderRef?: string | null;
   orderNote: string | null;
   isPriority: boolean;
   elapsedMs: number;
@@ -61,6 +63,8 @@ export function KdsTicketHeader({
   orderNumber,
   orderType,
   tableNumber,
+  deliveryPlatform = null,
+  externalOrderRef = null,
   orderNote,
   isPriority,
   elapsedMs,
@@ -86,6 +90,8 @@ export function KdsTicketHeader({
               orderNumber={orderNumber}
               orderType={orderType}
               tableNumber={tableNumber}
+              deliveryPlatform={deliveryPlatform}
+              externalOrderRef={externalOrderRef}
               size={titleSize}
             />
             {isPriority ? (
@@ -109,6 +115,8 @@ export function KdsTicketHeader({
                 orderNumber={orderNumber}
                 orderType={orderType}
                 tableNumber={tableNumber}
+                deliveryPlatform={deliveryPlatform}
+                externalOrderRef={externalOrderRef}
                 size={titleSize}
               />
               {isPriority ? (

@@ -45,7 +45,7 @@ const completionHistorySchema = z.object({
 });
 
 const KDS_COMPLETION_ORDER_SELECT =
-  "id, order_number, order_type, table_id, created_at, tables(number)";
+  "id, order_number, order_type, table_id, created_at, delivery_platform, external_order_ref, tables(number)";
 
 type KdsHistoryRpc = (
   name: "get_kds_ticket_history",

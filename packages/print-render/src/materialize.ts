@@ -75,6 +75,8 @@ export const payloadText = (payload: LoosePayload, field: string): string => {
           rawText(payload, "order_number"),
         orderType: rawText(payload, "order_type"),
         tableNumber: rawText(payload, "table_number") || null,
+        deliveryPlatform: rawText(payload, "delivery_platform") || null,
+        externalOrderRef: rawText(payload, "external_order_ref") || null,
       });
     case "order_destination":
       return orderDestination(payload);
