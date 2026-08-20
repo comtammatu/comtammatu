@@ -158,7 +158,7 @@ test("Hub cockpit calls get_finance_current_funds at most once per request path"
   const combined = `${cockpit}\n${cash}\n${page}`;
   const matches = combined.match(/get_finance_current_funds/g) ?? [];
   // One RPC definition in cash-cockpit; hub page loads via fetchFinanceCockpit includeCash.
-  // Max distinct hub loader keys documented in finance-cockpit.ts (18 with compare + cash).
+  // Hub path: operating cockpit (+ compare) + funds + branches + startup capital.
   assert.ok(
     matches.length <= 3,
     `get_finance_current_funds appears ${matches.length} times across hub loaders`,

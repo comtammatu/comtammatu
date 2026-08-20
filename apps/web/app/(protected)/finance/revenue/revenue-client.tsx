@@ -58,7 +58,6 @@ import {
 import { FilterBar } from "../components/filter-bar";
 import { HeatmapGrid, type HeatmapCell } from "../components/heatmap-grid";
 import { KpiCard } from "@/components/kpi/kpi-card";
-import { MvStalenessBanner } from "../components/mv-staleness-banner";
 import { WorkQueueStrip } from "../components/work-queue-strip";
 import { BranchTargetCompetition } from "../components/branch-target-competition";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
@@ -99,7 +98,6 @@ interface Props {
   dashboardHealth: FinanceDashboardHealth;
   resolvedStart: string;
   resolvedEnd: string;
-  canRefreshFinanceViews: boolean;
   targetRows: BranchRevenueTargetProgressRow[];
   showTargetMonth: boolean;
 }
@@ -191,7 +189,6 @@ export function RevenueClient({
   dashboardHealth,
   resolvedStart,
   resolvedEnd,
-  canRefreshFinanceViews,
   targetRows,
   showTargetMonth,
 }: Props) {
@@ -512,11 +509,6 @@ export function RevenueClient({
         branches={branches}
         basePath="/finance/revenue"
         hide={["branch"]}
-      />
-
-      <MvStalenessBanner
-        lastRefreshAt={kpis?.refreshed_at ?? null}
-        canRefresh={canRefreshFinanceViews}
       />
 
       <KpiRow density="compact" className="lg:grid-cols-4">

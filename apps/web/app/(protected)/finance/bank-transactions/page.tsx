@@ -8,6 +8,10 @@ import {
   fetchSepayPaymentWebhookSummary,
   SEPAY_LIST_PAGE_SIZE,
 } from "../_lib/sepay-bank-transactions";
+import {
+  BANK_RECONCILIATION_FILTER_PARAM,
+  parseBankReconciliationFilter,
+} from "../_lib/bank-reconciliation-filter";
 import { loadExpenseMatchOptions } from "../_lib/expense-match-options";
 import {
   type FinanceParams,
@@ -38,11 +42,19 @@ export default async function BankTransactionsPage({
   };
   const resolved = resolveFinanceRange(params);
   const range = { start: resolved.start, end: resolved.end };
+  const recon = parseBankReconciliationFilter(
+    typeof sp[BANK_RECONCILIATION_FILTER_PARAM] === "string"
+      ? sp[BANK_RECONCILIATION_FILTER_PARAM]
+      : null,
+  );
   const [auth, canLinkPayments, transactions, paymentWebhookSummary, branchesRes] =
     await Promise.all([
       loadAuthState(),
       currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_VIEW),
-      fetchSepayBankTransactions(range, { maxRows: SEPAY_LIST_PAGE_SIZE }),
+      fetchSepayBankTransactions(range, {
+        maxRows: SEPAY_LIST_PAGE_SIZE,
+        recon,
+      }),
       fetchSepayPaymentWebhookSummary(range),
       fetchAccessibleBranches(),
     ]);

@@ -81,8 +81,6 @@ export default async function FoodCostPage({
       : calculateGrossProfitIdentity({
           netRevenueBeforeVat,
           ingredientCost: actualSummary.total,
-          costAvailable:
-            paidOrderCount === 0 || actualSummary.orderCount >= paidOrderCount,
         }).grossMargin;
   const loadFailed =
     !branchesRes.success ||

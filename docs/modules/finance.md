@@ -19,7 +19,11 @@ Period-result formula (two rows):
   is empty, not `0đ`; no-recipe is `0đ`). **`Giá thuần/phần`** is net revenue /
   qty after side split and discount, not `menu_price`. Company WAC is
   `Giá vốn`, not this column. See `docs/ref/inventory.md` § 3.
-- **`Lợi nhuận gộp`**: net revenue minus recorded food cost. Sales identity only. `/finance/food-cost` gross margin is recorded food cost over net sales, coverage-gated, not theoretical portion cost.
+- **`Lợi nhuận gộp`**: net revenue minus recorded food cost. Sales identity only.
+  Incomplete POS coverage still shows the recorded portion with a coverage
+  badge (`N/M` orders, `needs_review`); blank only when valuation cutover is
+  inactive. `/finance/food-cost` gross margin uses recorded food cost over net
+  sales, not theoretical portion cost.
 - **`Chi phí hàng` / `Chi mua hàng`**: inbound `transfer_in` at branch, or confirmed `/finance/supplier-invoices` `subtotal` (ex-VAT) at company. Bank settlement is payment, not a second P&L hit.
 - **`Chi vận hành`**: posted period expense (rent, utilities, payroll,
   repairs, consumables, marketing, fees/tax, hospitality, other). Excludes
@@ -27,7 +31,9 @@ Period-result formula (two rows):
 - **`Biến động tồn kho`**: closing minus opening inventory value (when readable).
 - **`Kết quả kinh doanh`**: revenue − goods-in − opex + inventory change. Not derived from GP.
 
-Missing food-cost coverage blanks gross profit only. No recorded operating expense keeps period result unavailable (not zero).
+Incomplete food-cost coverage does not blank gross profit; it warns via
+coverage badge. No recorded operating expense keeps period result unavailable
+(not zero).
 
 After the period result, **`Tài sản`**: scoped
 `Tiền mặt + Tiền tài khoản = Tổng tiền`; filtered period-end **`Tồn kho`**;
@@ -109,8 +115,8 @@ Landing cards (formulas in Product Boundary):
    `netRevenueBeforeVat` is legacy adapter ID only. `totalCollected` =
    `Tổng tiền đã thu` in detail, not a landing card. `Top món` shares
    `resolved.start→end`; `order_items.sides` are own `món` (parent revenue reduced).
-2. **Food cost** — sale-consumption for paid orders; incomplete → missing-data.
-3. **Gross profit** — net revenue − food cost; margin only when coverage complete.
+2. **Food cost** — sale-consumption for paid orders; incomplete → warning + `N/M` coverage, still show recorded amount.
+3. **Gross profit** — net revenue − recorded food cost; warning tone when coverage incomplete; blank only when valuation is inactive.
 4. **Operating expense** — operating categories only. Exclude COGS,
    `capital`, `deposit`, supplier payments, cash↔bank. None → `Chưa ghi nhận`.
 5. **Period result** — revenue − goods-in − opex + inventory change. Not from GP. Not "net profit".

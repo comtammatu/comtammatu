@@ -13931,6 +13931,19 @@ export type Database = {
         }
         Returns: Json
       }
+      get_finance_food_cost_recorded: {
+        Args: { p_branch_id?: number; p_end_date: string; p_start_date: string }
+        Returns: Json
+      }
+      get_finance_operating_cockpit: {
+        Args: {
+          p_branch_id?: number
+          p_end_date: string
+          p_location: string
+          p_start_date: string
+        }
+        Returns: Json
+      }
       get_finance_reconciliation_attention: {
         Args: { p_end_date: string; p_start_date: string }
         Returns: {
@@ -14499,6 +14512,16 @@ export type Database = {
           year_month: string
         }[]
       }
+      list_finance_bank_transactions: {
+        Args: {
+          p_cursor_id?: number
+          p_end_date: string
+          p_limit?: number
+          p_recon?: string
+          p_start_date: string
+        }
+        Returns: Json
+      }
       list_goods_receipt_notes: {
         Args: {
           p_branch_id?: number
@@ -14588,6 +14611,10 @@ export type Database = {
         Returns: Json
       }
       mark_order_item_served: { Args: { p_item_id: number }; Returns: Json }
+      match_bank_by_transfer_token: {
+        Args: { p_bank_transaction_ids: number[] }
+        Returns: Json
+      }
       match_sepay_transaction_expenses: {
         Args: { p_event_id: number; p_expense_ids: number[] }
         Returns: Json

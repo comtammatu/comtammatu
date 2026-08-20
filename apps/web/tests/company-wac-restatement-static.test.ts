@@ -77,6 +77,14 @@ test("sườn một gang restatement uses append-only provisional reprice", () =
   assert.match(sql, /pos_sale_shortfall/);
   assert.match(sql, /provisional_reprice/);
   assert.doesNotMatch(sql, /UPDATE public\.stock_movements/);
-  assert.match(cockpit, /eventType === "provisional_reprice"/);
-  assert.match(expenses, /"provisional_reprice"/);
+  const foodCostMigration = read(
+    "supabase/migrations/20260820151656_finance_food_cost_recorded.sql",
+  );
+  assert.match(foodCostMigration, /'provisional_reprice'/);
+  assert.match(
+    foodCostMigration,
+    /event\.event_type NOT IN[\s\S]*'provisional_reprice'/,
+  );
+  assert.match(cockpit, /get_finance_operating_cockpit/);
+  assert.match(expenses, /get_finance_food_cost_recorded/);
 });

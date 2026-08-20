@@ -19,6 +19,9 @@ test("paid sale consumption no longer waits for kitchen dispatch", () => {
   const sql = read(
     "supabase/migrations/20260816172557_post_paid_sale_consumption_without_dispatch.sql",
   );
+  const foodCostMigration = read(
+    "supabase/migrations/20260820151656_finance_food_cost_recorded.sql",
+  );
   const cockpit = read(
     "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts",
   );
@@ -29,6 +32,8 @@ test("paid sale consumption no longer waits for kitchen dispatch", () => {
   assert.match(sql, /TRUE\s+AND NOT EXISTS/);
   assert.match(sql, /post_pos_sale_consumption_if_ready/);
   assert.match(sql, /branch_kind = 'branch'/);
-  assert.match(cockpit, /addPaidOrdersWithoutRecipeNeed/);
-  assert.match(expenses, /addPaidOrdersWithoutRecipeNeed/);
+  assert.match(foodCostMigration, /paid\.status = 'completed'/);
+  assert.match(foodCostMigration, /no_recipe AS/);
+  assert.match(cockpit, /get_finance_operating_cockpit/);
+  assert.match(expenses, /get_finance_food_cost_recorded/);
 });

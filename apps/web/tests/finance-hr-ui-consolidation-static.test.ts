@@ -114,10 +114,10 @@ test("Finance landing does not surface VAT cards on the operating hub", () => {
   assert.doesNotMatch(page, /cockpit\.vat\.inputRecorded/);
   assert.doesNotMatch(page, /cockpit\.vat\.outputIssued/);
   assert.doesNotMatch(page, /basic\.sections\.vat/);
-  assert.match(cockpit, /\.from\("supplier_invoices"\)/);
+  assert.match(cockpit, /vat: \{ inputRecorded: null, outputIssued: null \}/);
   assert.match(cockpit, /\.from\("expenses"\)/);
-  assert.match(cockpit, /\.from\("tax_invoices"\)/);
-  assert.match(cockpit, /\.eq\("status", "issued"\)/);
+  assert.doesNotMatch(cockpit, /\.from\("supplier_invoices"\)/);
+  assert.doesNotMatch(cockpit, /\.from\("tax_invoices"\)/);
 });
 
 test("HR long screens preserve hierarchy and LIST viewport width", () => {

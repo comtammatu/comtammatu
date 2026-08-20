@@ -92,10 +92,15 @@ describe("Finance overview period filter", () => {
     );
     assert.match(cockpit, /query = query\.is\("branch_id", null\)/);
     assert.match(cockpit, /fetchSalesBranchIds/);
-    assert.match(
-      cockpit,
-      /supplierInvoiceQuery = supplierInvoiceQuery\.is\("grn_id", null\)/,
+    assert.match(cockpit, /get_finance_operating_cockpit/);
+    const operatingCockpitMigration = readFileSync(
+      new URL(
+        "../../../supabase/migrations/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
+        import.meta.url,
+      ),
+      "utf8",
     );
+    assert.match(operatingCockpitMigration, /invoice\.grn_id IS NULL/);
   });
 
   it("offers the seven approved period choices on the overview", () => {

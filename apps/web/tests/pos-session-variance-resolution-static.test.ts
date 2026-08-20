@@ -111,16 +111,18 @@ test("Finance attention deep-links to the exact unresolved POS session", () => {
   const migration = read(
     "supabase/migration-archive/20260719225000_create_finance_attention_targets.sql",
   );
+  const operatingCockpitMigration = read(
+    "supabase/migrations/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
+  );
 
-  assert.match(cockpit, /get_cash_variance_action_target/);
+  assert.match(cockpit, /cashVarianceSessionId/);
   assert.match(
     cockpit,
-    /pos-sessions\?session=\$\{String\(cashVarianceTarget\.session_id\)\}/,
+    /pos-sessions\?session=\$\{String\(ex\.cashVarianceSessionId\)\}/,
   );
-  assert.match(cockpit, /get_finance_reconciliation_attention/);
-  assert.match(cockpit, /canViewFinanceAttention/);
-  assert.match(cockpit, /FINANCE_VIEW/);
-  assert.match(cockpit, /shouldLogFinanceAttentionRpcFailure/);
+  assert.match(operatingCockpitMigration, /get_cash_variance_action_target/);
+  assert.match(cockpit, /fetchFinanceAttentionExceptions/);
+  assert.match(cockpit, /PERMISSION_KEYS\.FINANCE_VIEW/);
   assert.match(
     cockpit,
     /financeHref\("\/finance\/bank-transactions", params, \{\s*recon: "needs_review"/,

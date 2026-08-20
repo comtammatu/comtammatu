@@ -801,16 +801,19 @@ test("SePay reconciliation LIST loader bounds first paint without exhaust scan",
   const messages = read("apps/web/lib/messages/finance.ts");
 
   assert.match(loader, /SEPAY_LIST_PAGE_SIZE\s*=\s*100/);
-  assert.match(loader, /fetchSepayBankLedgerRowsPage/);
+  assert.match(loader, /list_finance_bank_transactions/);
+  assert.match(loader, /fetchSepayBankTransactionsViaListRpc/);
   assert.match(loader, /fetchSupplierPaymentMatchesForPage/);
   assert.match(
     loader,
     /fetchSepayBankTransactions[\s\S]*?maxRows\s*\?\?\s*SEPAY_LIST_PAGE_SIZE/,
   );
   assert.match(page, /maxRows:\s*SEPAY_LIST_PAGE_SIZE/);
+  assert.match(page, /recon,/);
   assert.match(loader, /SEPAY_DATA_API_PAGE_SIZE = 1000/);
   assert.match(loader, /SEPAY_DATA_API_IN_CHUNK_SIZE = 200/);
   assert.match(loader, /fetchSepayChunkedDataApiRows/);
+  // Legacy page-scan remains as fallback when list RPC is unavailable.
   assert.match(
     loader,
     /fetchSepayBankLedgerRowsPage[\s\S]*?\.range\(0, limit - 1\)/,

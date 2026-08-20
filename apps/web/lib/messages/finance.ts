@@ -198,7 +198,7 @@ export const finance = {
       operatingExpenseRecorded: "Đã ghi nhận chi phí vận hành trong kỳ",
       operatingExpenseMissing: "Chưa ghi chi phí vận hành trong kỳ.",
       missingCostLabel: "Thiếu giá vốn món",
-      missingCostHint: "Có món bán nhưng chưa đủ giá vốn để tính biên gộp.",
+      missingCostHint: "Có đơn chưa ghi giá vốn. Số đang hiện phần đã ghi.",
       missingCostCoverageHint: (covered: string, total: string) =>
         `${covered}/${total} đơn`,
       highFoodCostHint: (itemName: string, margin: string) =>
@@ -240,7 +240,7 @@ export const finance = {
       ingredientCost: "Giá vốn món",
       ingredientCostHint: (covered: string, total: string) =>
         `${covered}/${total} đơn có giá vốn`,
-      missingCost: "Chưa đủ dữ liệu",
+      missingCost: (missing: string) => `Thiếu ${missing} đơn`,
       periodCost: "Chi phí",
       inboundTransfer: "Chi phí hàng",
       inboundTransferHint:
@@ -251,7 +251,8 @@ export const finance = {
       grossProfit: "Lợi nhuận gộp",
       grossProfitHint: (margin: string) =>
         `Biên gộp ${margin}. Bán món — không trừ vào kết quả kinh doanh.`,
-      grossProfitMissingHint: "Cần đủ giá vốn món. Không trừ vào kết quả kinh doanh.",
+      grossProfitMissingHint:
+        "Đang tính trên giá vốn đã ghi. Không trừ vào kết quả kinh doanh.",
       operatingExpense: "Chi vận hành",
       operatingExpenseHint:
         "Thuê, điện, lương trong kỳ. Không gồm vốn mở quán. Chưa gồm thuế GTGT.",
@@ -356,9 +357,6 @@ export const finance = {
       rewardValue: "Mức thưởng",
       fixedAmount: "Số tiền",
       revenuePercent: "% Doanh thu thuần",
-      fixedAmountHint: "Số tiền thưởng cố định (VND).",
-      revenuePercentHint:
-        "Tỷ lệ trên Doanh thu thuần của chi nhánh trong tháng.",
       maxReached: "Tối đa 10 mốc thưởng.",
     },
     editor: {
@@ -759,6 +757,16 @@ export const finance = {
       webhookError: "Lỗi đồng bộ",
     },
     queueCount: (count: string) => `${count} cần xử lý`,
+    autoMatchTokenAction: "Khớp CHI / NỘP",
+    autoMatchTokenPending: "Đang khớp",
+    autoMatchTokenSuccess: (
+      matched: string,
+      skipped: string,
+      needsReview: string,
+    ) =>
+      `Đã khớp ${matched}; bỏ qua ${skipped}; cần xem lại ${needsReview}.`,
+    autoMatchTokenError: "Không thể khớp theo mã chuyển khoản.",
+    autoMatchTokenEmpty: "Không có giao dịch chưa khớp để thử.",
     queueEmptyTitle: "Không còn việc cần xử lý",
     queueEmptyDescription:
       "Mở Tất cả để xem lịch sử hoặc Lỗi đồng bộ để kiểm tra sự cố.",
@@ -1251,6 +1259,7 @@ export const finance = {
     coverageHint: "Đơn thanh toán đã có giá vốn.",
     tableTitle: "Theo món",
     tableTotal: "Tổng",
+    tableIncompleteHint: "Tổng định mức chỉ gồm món đã có giá vốn BQ.",
     itemCount: (count: string) => `${count} món`,
     quantitySold: "SL",
     revenueCurrency: "Doanh thu thuần",

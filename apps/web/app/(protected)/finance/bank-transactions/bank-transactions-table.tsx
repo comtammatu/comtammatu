@@ -80,6 +80,7 @@ import { FilterBar } from "../components/filter-bar";
 import { financeFilterReconTriggerClassName } from "../components/finance-list-filters";
 import { MatchExpenseCell } from "./match-expense-cell";
 import { MatchPaymentSheet } from "./match-payment-sheet";
+import { AutoMatchTransferTokenButton } from "./auto-match-transfer-token-button";
 import { displayBankContent } from "../_lib/display-bank-content";
 
 export { displayBankContent };
@@ -760,6 +761,10 @@ export function BankTransactionsTable({
           hide={["branch", "granularity", "compare"]}
           trailing={
             <>
+              <AutoMatchTransferTokenButton
+                transactions={transactions}
+                enabled={canLinkPayments}
+              />
               <span className="text-xs text-muted-foreground">
                 {copy.queueCount(formatCount(openQueueCount))}
               </span>

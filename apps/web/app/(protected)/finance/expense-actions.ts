@@ -13,7 +13,6 @@
 
 import { z } from "zod";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
-import { getVNDayUtcRange } from "@comtammatu/shared/time";
 import {
   addMoney,
   parseMoneyToMinorUnits,
@@ -23,7 +22,6 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
 import { logAudit } from "@/_lib/audit";
-import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 import type { SepayRefundMatchOption } from "./_lib/sepay-bank-transaction-model";
 import {
   fetchExpenseBankTransactionMatchMap,
@@ -38,8 +36,7 @@ import {
   type ExpenseCategory,
 } from "./_lib/expense-categories";
 import { FINANCE_LOCATIONS, type FinanceLocation } from "./_lib/finance-params";
-import { addPaidOrdersWithoutRecipeNeed } from "./_lib/food-cost-coverage";
-import { fetchAllPagedRows } from "./_lib/supabase-page";
+import { parseFoodCostRecordedRpc } from "./_lib/finance-operating-rpc";
 import {
   applySalesBranchesFilter,
   fetchSalesBranchIds,
@@ -846,17 +843,8 @@ export async function fetchExpenseById(
   };
 }
 
-function getVNDateRangeUtc(startDate: string, endDate: string) {
-  const { startIso } = getVNDayUtcRange(startDate);
-  const { endIso } = getVNDayUtcRange(endDate);
-  return { startIso, endIso };
-}
-
 // Read-only actual food cost (giá vốn món) from inventory valuation
-// allocations, mirroring the finance cockpit's ingredientCost so the expenses
-// page shows the same figure. NOT an expense-ledger row: keeps it out of
-// operating expense / net profit (which already nets food cost via gross
-// profit), so no double count.
+// allocations via get_finance_food_cost_recorded. NOT an expense-ledger row.
 export async function fetchActualFoodCostTotal(params: {
   branchId?: number | null;
   startDate: string;
@@ -884,6 +872,9 @@ export async function fetchActualFoodCostSummary(params: {
     /** Manual phiếu tiêu hao at Chi nhánh — not Giá vốn món. */
     operatingConsumption: number;
     orderCount: number;
+    paidOrderCount: number;
+    coverageComplete: boolean;
+    valuationActive: boolean;
   }>
 > {
   const ctx = await getAuthContextWithPermission(
@@ -899,187 +890,36 @@ export async function fetchActualFoodCostSummary(params: {
   ) {
     return { success: false, error: "Không có quyền xem giá vốn." };
   }
-  const monetary = await loadInventoryMonetaryAccess(claims.user_role);
-  if (!monetary.client) {
-    return { success: false, error: "Không có quyền xem giá vốn." };
-  }
-  const client = monetary.client;
-  const { startIso, endIso } = getVNDateRangeUtc(
-    params.startDate,
-    params.endDate,
-  );
-  const { data: cutover, error: cutoverError } = await client
-    .from("inventory_valuation_cutovers")
-    .select("status")
-    .eq("tenant_id", claims.tenant_id)
-    .maybeSingle();
-  if (cutoverError) {
+
+  const { data, error } = await supabase.rpc("get_finance_food_cost_recorded", {
+    p_start_date: params.startDate,
+    p_end_date: params.endDate,
+    ...(params.branchId != null ? { p_branch_id: params.branchId } : {}),
+  });
+  if (error) {
     return { success: false, error: "Không tải được giá vốn món." };
   }
-  if (cutover?.status !== "active") {
+
+  const parsed = parseFoodCostRecordedRpc(data);
+  if (!parsed) {
+    return { success: false, error: "Không tải được giá vốn món." };
+  }
+  if (!parsed.valuationActive) {
     return {
       success: false,
       error: "Giá vốn món yêu cầu sổ định giá kho đang hoạt động.",
     };
   }
 
-  const salesBranchIds = await fetchSalesBranchIds(
-    client as never,
-    claims.tenant_id,
-  );
-  const allowedBranchIds =
-    params.branchId != null
-      ? salesBranchIds.includes(params.branchId)
-        ? [params.branchId]
-        : []
-      : salesBranchIds;
-  if (allowedBranchIds.length === 0) {
-    return {
-      success: true,
-      data: { total: 0, operatingConsumption: 0, orderCount: 0 },
-    };
-  }
-  const allowedBranchSet = new Set(allowedBranchIds);
-
-  const [eventsResult, repriceResult] = await Promise.all([
-    fetchAllPagedRows((from, to) =>
-      client
-        .from("inventory_valuation_events")
-        .select(
-          "value_delta, stock_movements!inner ( order_id, issue_id, branch_id )",
-        )
-        .eq("tenant_id", claims.tenant_id)
-        .eq("terminal_bucket", "food_cost")
-        .gte("effective_at", startIso)
-        .lt("effective_at", endIso)
-        .in("stock_movements.branch_id", allowedBranchIds)
-        .order("id")
-        .range(from, to),
-    ),
-    fetchAllPagedRows((from, to) =>
-      client
-        .from("inventory_value_allocations")
-        .select(
-          "source_origin_id, allocated_value, inventory_valuation_events!inner ( effective_at, event_type )",
-        )
-        .eq("tenant_id", claims.tenant_id)
-        .eq("allocation_bucket", "food_cost")
-        .in("inventory_valuation_events.event_type", [
-          "invoice_reprice",
-          "credit_reprice",
-          "provisional_reprice",
-        ])
-        .gte("inventory_valuation_events.effective_at", startIso)
-        .lt("inventory_valuation_events.effective_at", endIso)
-        .order("id")
-        .range(from, to),
-    ),
-  ]);
-  if (eventsResult.error || repriceResult.error) {
-    return { success: false, error: "Không tải được giá vốn món." };
-  }
-
-  const orderIds = new Set<number>();
-  let saleFoodCostTotal = 0;
-  let operatingConsumptionTotal = 0;
-  for (const row of eventsResult.data ?? []) {
-    const movement = Array.isArray(row.stock_movements)
-      ? row.stock_movements[0]
-      : row.stock_movements;
-    if (movement?.branch_id == null || !allowedBranchSet.has(movement.branch_id)) {
-      continue;
-    }
-    const amount = Math.abs(Number(row.value_delta));
-    // Giá vốn món = POS (order_id). Manual phiếu tiêu hao = tiêu hao vận hành,
-    // never folded into Giá vốn món / lãi gộp.
-    if (movement.order_id != null) {
-      orderIds.add(movement.order_id);
-      saleFoodCostTotal += amount;
-    } else {
-      operatingConsumptionTotal += amount;
-    }
-  }
-  const repriceTotal = (repriceResult.data ?? []).reduce(
-    (sum, row) => sum + Number(row.allocated_value),
-    0,
-  );
-  let scopedRepriceTotal: number;
-  if ((repriceResult.data?.length ?? 0) > 0) {
-    const originIds = [
-      ...new Set((repriceResult.data ?? []).map((row) => row.source_origin_id)),
-    ];
-    const { data: lineageRows, error: lineageError } = await fetchAllPagedRows(
-      (from, to) =>
-        client
-          .from("inventory_value_allocations")
-          .select(
-            "source_origin_id, allocated_quantity, inventory_valuation_events!inner ( terminal_bucket, stock_movements!inner ( branch_id, order_id ) )",
-          )
-          .eq("tenant_id", claims.tenant_id)
-          .in("source_origin_id", originIds)
-          .eq("inventory_valuation_events.terminal_bucket", "food_cost")
-          .order("id")
-          .range(from, to),
-    );
-    if (lineageError) {
-      return { success: false, error: "Không tải được giá vốn món." };
-    }
-    const quantities = new Map<
-      number,
-      { total: number; selectedBranch: number }
-    >();
-    for (const row of lineageRows ?? []) {
-      const originId = Number(row.source_origin_id);
-      const event = Array.isArray(row.inventory_valuation_events)
-        ? row.inventory_valuation_events[0]
-        : row.inventory_valuation_events;
-      const movement = Array.isArray(event?.stock_movements)
-        ? event.stock_movements[0]
-        : event?.stock_movements;
-      const current = quantities.get(originId) ?? {
-        total: 0,
-        selectedBranch: 0,
-      };
-      const quantity = Number(row.allocated_quantity);
-      current.total += quantity;
-      if (
-        movement?.branch_id != null &&
-        movement.order_id != null &&
-        allowedBranchSet.has(movement.branch_id)
-      ) {
-        current.selectedBranch += quantity;
-      }
-      quantities.set(originId, current);
-    }
-    scopedRepriceTotal = (repriceResult.data ?? []).reduce((sum, row) => {
-      const quantity = quantities.get(Number(row.source_origin_id));
-      if (!quantity || quantity.total <= 0) return sum;
-      // Only the POS/sales-CN share of reprice counts as Giá vốn món.
-      return (
-        sum +
-        (Number(row.allocated_value) * quantity.selectedBranch) / quantity.total
-      );
-    }, 0);
-  } else {
-    scopedRepriceTotal = repriceTotal;
-  }
-  // Invoice, credit, and provisional reprice adjust inventory that already
-  // flowed to food cost; attribute it to sale food cost (not operating slips).
-  const total = saleFoodCostTotal + scopedRepriceTotal;
-  await addPaidOrdersWithoutRecipeNeed({
-    supabase,
-    tenantId: claims.tenant_id,
-    allowedBranchIds,
-    startIso,
-    endIso,
-    coveredOrderIds: orderIds,
-  });
   return {
     success: true,
     data: {
-      total,
-      operatingConsumption: operatingConsumptionTotal,
-      orderCount: orderIds.size,
+      total: parsed.ingredientCost,
+      operatingConsumption: parsed.operatingConsumption,
+      orderCount: parsed.coveredOrderCount,
+      paidOrderCount: parsed.paidOrderCount,
+      coverageComplete: parsed.coverageComplete,
+      valuationActive: parsed.valuationActive,
     },
   };
 }

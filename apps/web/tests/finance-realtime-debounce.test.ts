@@ -78,11 +78,8 @@ test("finance realtime refresh listens for SePay bank webhooks", () => {
   assert.match(source, /filter: "provider=eq\.sepay"/);
 });
 
-test("finance hub refreshes on payment and sepay events only", () => {
-  assert.deepEqual(resolveFinanceRealtimeEvents("/finance"), [
-    "payment",
-    "sepay",
-  ]);
+test("finance hub refreshes on payment events only", () => {
+  assert.deepEqual(resolveFinanceRealtimeEvents("/finance"), ["payment"]);
 });
 
 test("bank transactions refresh on sepay and payment match scope", () => {

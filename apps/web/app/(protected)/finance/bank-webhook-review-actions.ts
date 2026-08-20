@@ -588,3 +588,59 @@ export async function reviewMissingBankWebhookPayment(
   revalidateSurfacePath("/finance/bank-transactions");
   return { success: true };
 }
+
+const matchBankByTransferTokenSchema = z.object({
+  bankTransactionIds: z
+    .array(z.number().int().positive())
+    .min(1)
+    .max(100),
+});
+
+export async function matchBankByTransferToken(
+  input: z.infer<typeof matchBankByTransferTokenSchema>,
+): Promise<
+  ActionResult<{ matched: number; skipped: number; needsReview: number }>
+> {
+  const parsed = matchBankByTransferTokenSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Dữ liệu không hợp lệ" };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.FINANCE_VIEW,
+  );
+  if (!ctx) {
+    return { success: false, error: "Không có quyền khớp giao dịch." };
+  }
+
+  const { data, error } = await ctx.supabase.rpc("match_bank_by_transfer_token", {
+    p_bank_transaction_ids: parsed.data.bankTransactionIds,
+  });
+  if (error) {
+    console.error(
+      "[finance:bank-webhook-review] match_bank_by_transfer_token failed",
+      error.code,
+    );
+    return { success: false, error: "Không thể khớp theo mã chuyển khoản." };
+  }
+
+  const payload =
+    data != null && typeof data === "object" && !Array.isArray(data)
+      ? (data as Record<string, unknown>)
+      : null;
+  const matched = Number(payload?.matched ?? 0);
+  const skipped = Number(payload?.skipped ?? 0);
+  const needsReview = Number(payload?.needs_review ?? 0);
+
+  revalidateSurfacePath("/finance/bank-transactions");
+  revalidateSurfacePath("/finance");
+  return {
+    success: true,
+    data: {
+      matched: Number.isFinite(matched) ? matched : 0,
+      skipped: Number.isFinite(skipped) ? skipped : 0,
+      needsReview: Number.isFinite(needsReview) ? needsReview : 0,
+    },
+  };
+}

@@ -736,10 +736,18 @@ test("supplier_invoices monetary/VAT columns are granted after column lockdown",
     "supabase/migration-archive/20260729150200_grant_supplier_invoices_monetary_columns.sql",
   );
   const cockpit = readWeb("app/(protected)/finance/_lib/finance-cockpit.ts");
+  const operatingCockpitMigration = readRoot(
+    "supabase/migrations/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
+  );
 
   assert.match(
     migration,
     /GRANT SELECT \([\s\S]*total_amount[\s\S]*paid_amount[\s\S]*credit_applied_amount[\s\S]*subtotal[\s\S]*vat_amount[\s\S]*vat_rate[\s\S]*vat_breakdown[\s\S]*vat_invoice_attachment_path[\s\S]*\) ON public\.supplier_invoices TO authenticated/,
   );
-  assert.match(cockpit, /total_amount,\s*paid_amount,\s*credit_applied_amount/);
+  assert.match(cockpit, /unpaidApAmount/);
+  assert.match(operatingCockpitMigration, /credit_applied_amount/);
+  assert.match(
+    operatingCockpitMigration,
+    /total_amount[\s\S]*paid_amount[\s\S]*credit_applied_amount/,
+  );
 });

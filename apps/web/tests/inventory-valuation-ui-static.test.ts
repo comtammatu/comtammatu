@@ -55,24 +55,25 @@ test("finance valuation surfaces do not fall back to mutable reference cost", ()
   const cockpit = readWeb("app/(protected)/finance/_lib/finance-cockpit.ts");
   const foodCost = readWeb("app/_lib/food-cost-actions.ts");
   const actualFoodCost = readWeb("app/(protected)/finance/expense-actions.ts");
-
-  assert.match(cockpit, /data\?\.status === "active"/);
-  assert.match(
-    cockpit,
-    /inventory valuation cutover is not active/,
+  const foodCostMigration = readRoot(
+    "supabase/migrations/20260820151656_finance_food_cost_recorded.sql",
   );
+
+  assert.match(cockpit, /costReadable: cockpit\.foodCost\.valuationActive/);
   assert.doesNotMatch(cockpit, /movement_subtype", "sale_consumption"/);
   assert.doesNotMatch(cockpit, /ingredient\?\.unit_cost/);
   assert.equal(
     foodCost.includes("fallbackUnitCost: Number(ingredient?.unit_cost"),
     false,
   );
-  assert.match(actualFoodCost, /\.from\("inventory_valuation_events"\)/);
-  assert.match(actualFoodCost, /allocation_bucket", "food_cost"/);
+  assert.match(actualFoodCost, /get_finance_food_cost_recorded/);
+  assert.match(actualFoodCost, /valuationActive/);
   assert.match(
     actualFoodCost,
     /Giá vốn món yêu cầu sổ định giá kho đang hoạt động/,
   );
+  assert.doesNotMatch(actualFoodCost, /\.from\("inventory_valuation_events"\)/);
+  assert.match(foodCostMigration, /cutover\.status = 'active'/);
   assert.doesNotMatch(
     actualFoodCost,
     /movement_subtype", "sale_consumption"/,

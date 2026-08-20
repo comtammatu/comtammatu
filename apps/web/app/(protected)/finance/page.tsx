@@ -166,6 +166,7 @@ export default async function FinancePage({
   const goodsInIsTransfer = cockpit.kpis.goodsInKind === "inbound_transfer";
 
   function renderGrossProfitCard() {
+    const coverageIncomplete = !cockpit.kpis.costAvailable;
     return (
       <KpiCard
         density="compact"
@@ -178,8 +179,13 @@ export default async function FinancePage({
         shortValue={
           grossProfit == null ? undefined : formatCompactVND(grossProfit)
         }
+        hint={
+          coverageIncomplete
+            ? financeCopy.basic.kpis.grossProfitMissingHint
+            : undefined
+        }
         tone={
-          grossProfit == null
+          grossProfit == null || coverageIncomplete
             ? "warning"
             : grossProfit < 0
               ? "destructive"
@@ -248,19 +254,31 @@ export default async function FinancePage({
           density="compact"
           label={financeCopy.basic.kpis.ingredientCost}
           value={
-            cockpit.kpis.costAvailable
-              ? formatVND(cockpit.kpis.ingredientCost)
-              : financeCopy.basic.kpis.missingCost
+            cockpit.kpis.grossProfit == null
+              ? financeCopy.basic.kpis.notCalculated
+              : formatVND(cockpit.kpis.ingredientCost)
           }
           shortValue={
-            cockpit.kpis.costAvailable
-              ? formatCompactVND(cockpit.kpis.ingredientCost)
-              : undefined
+            cockpit.kpis.grossProfit == null
+              ? undefined
+              : formatCompactVND(cockpit.kpis.ingredientCost)
           }
-          hint={financeCopy.basic.kpis.ingredientCostHint(
-            formatCount(cockpit.kpis.costCoverageOrderCount),
-            formatCount(cockpit.kpis.orderCount),
-          )}
+          hint={
+            cockpit.kpis.costAvailable
+              ? financeCopy.basic.kpis.ingredientCostHint(
+                  formatCount(cockpit.kpis.costCoverageOrderCount),
+                  formatCount(cockpit.kpis.orderCount),
+                )
+              : financeCopy.basic.kpis.missingCost(
+                  formatCount(
+                    Math.max(
+                      0,
+                      cockpit.kpis.orderCount -
+                        cockpit.kpis.costCoverageOrderCount,
+                    ),
+                  ),
+                )
+          }
           tone={cockpit.kpis.costAvailable ? "neutral" : "warning"}
           href={financeHref("/finance/food-cost", params)}
         />

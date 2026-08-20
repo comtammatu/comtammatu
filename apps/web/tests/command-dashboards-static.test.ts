@@ -176,8 +176,8 @@ test("finance overview presents period results, current funds, and inventory in 
   assert.equal((page.match(/<span aria-hidden>=<\/span>/g) ?? []).length, 3);
   assert.doesNotMatch(copy, /netProfit: "Lợi nhuận ròng"/);
   assert.doesNotMatch(cockpit, /const netProfit =/);
-  assert.match(cockpit, /fetchPeriodGoodsIn/);
-  assert.match(cockpit, /branchIds: \[\.\.\.salesBranchIds\]/);
+  assert.match(cockpit, /get_finance_operating_cockpit/);
+  assert.match(cockpit, /applySalesBranchesFilter\(query, "branch_id", branchIds\)/);
   assert.match(copy, /Đầu kỳ/);
   assert.match(copy, /Không gồm giá vốn món/);
   assert.match(copy, /bankReconciliationLabel: "Giao dịch"/);

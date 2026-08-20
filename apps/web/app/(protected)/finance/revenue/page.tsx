@@ -1,5 +1,3 @@
-import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
-import { currentUserHasPermissionAny } from "@/_lib/permissions";
 import {
   parseFinanceParams,
   resolveFinanceRange,
@@ -23,9 +21,8 @@ export default async function RevenueReportPage({
   const showTargetMonth = isSingleCalendarMonth(resolved.start, resolved.end);
   const yearMonth = monthStartFromIsoDate(resolved.start);
 
-  const [bundle, canRefreshFinanceViews, targetProgressRes] = await Promise.all([
+  const [bundle, targetProgressRes] = await Promise.all([
     loadRevenueBundle(params, resolved),
-    currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_VIEW),
     showTargetMonth
       ? listBranchRevenueTargetProgress(yearMonth)
       : Promise.resolve(null),
@@ -51,7 +48,6 @@ export default async function RevenueReportPage({
       dashboardHealth={bundle.dashboardHealth}
       resolvedStart={resolved.start}
       resolvedEnd={resolved.end}
-      canRefreshFinanceViews={canRefreshFinanceViews}
       targetRows={targetRows}
       showTargetMonth={showTargetMonth}
     />

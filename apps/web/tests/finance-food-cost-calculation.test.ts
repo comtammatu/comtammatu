@@ -270,9 +270,10 @@ test("finance food cost keeps the resolved period in its filter, not the header"
   assert.match(client, /row\.gross_profit/);
   assert.match(client, /totals\.grossMarginPct/);
   assert.match(client, /foodCopy\.grossProfitCurrency/);
+  assert.match(client, /tableIncompleteHint/);
 });
 
-test("finance food cost table totals skip định mức when any row is unvalued", () => {
+test("finance food cost table totals sum valued định mức rows and flag incomplete", () => {
   const complete = summarizeFoodCostRows([
     {
       quantity_sold: 2,
@@ -291,6 +292,7 @@ test("finance food cost table totals skip định mức when any row is unvalued
   assert.equal(complete.unitIngredientCost, 10_000);
   assert.equal(complete.grossProfit, 120_000);
   assert.equal(complete.grossMarginPct, 80);
+  assert.equal(complete.incomplete, false);
 
   const partial = summarizeFoodCostRows([
     {
@@ -308,10 +310,11 @@ test("finance food cost table totals skip định mức when any row is unvalued
   ]);
   assert.equal(partial.quantitySold, 3);
   assert.equal(partial.revenue, 150_000);
-  assert.equal(partial.ingredientCost, null);
-  assert.equal(partial.unitIngredientCost, null);
-  assert.equal(partial.grossProfit, null);
-  assert.equal(partial.grossMarginPct, null);
+  assert.equal(partial.ingredientCost, 20_000);
+  assert.equal(partial.unitIngredientCost, 10_000);
+  assert.equal(partial.grossProfit, 80_000);
+  assert.equal(partial.grossMarginPct, 53.33);
+  assert.equal(partial.incomplete, true);
 });
 
 test("finance food cost gross margin uses recorded food cost, not theoretical portion cost", () => {
@@ -333,7 +336,6 @@ test("finance food cost gross margin uses recorded food cost, not theoretical po
   const recorded = calculateGrossProfitIdentity({
     netRevenueBeforeVat: 150_000,
     ingredientCost: 90_000,
-    costAvailable: true,
   });
   assert.equal(recorded.grossProfit, 60_000);
   assert.equal(recorded.grossMargin, 40);
@@ -347,8 +349,16 @@ test("finance food cost gross margin uses recorded food cost, not theoretical po
   const incomplete = calculateGrossProfitIdentity({
     netRevenueBeforeVat: 150_000,
     ingredientCost: 90_000,
-    costAvailable: false,
+    costReadable: true,
   });
-  assert.equal(incomplete.grossProfit, null);
-  assert.equal(incomplete.grossMargin, null);
+  assert.equal(incomplete.grossProfit, 60_000);
+  assert.equal(incomplete.grossMargin, 40);
+
+  const unread = calculateGrossProfitIdentity({
+    netRevenueBeforeVat: 150_000,
+    ingredientCost: 90_000,
+    costReadable: false,
+  });
+  assert.equal(unread.grossProfit, null);
+  assert.equal(unread.grossMargin, null);
 });

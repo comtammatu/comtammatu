@@ -4,8 +4,11 @@ export interface FinanceResultInput {
   ingredientCost: number;
   operatingExpense: number;
   inventoryChange: number;
+  /** Coverage-complete flag for UI tone/badge — does not blank GP. */
   costAvailable: boolean;
   operatingExpenseRecorded: boolean;
+  /** False when inventory valuation cutover is inactive — blanks GP. */
+  costReadable?: boolean;
 }
 
 export interface FinanceResult {
@@ -17,16 +20,19 @@ export interface FinanceResult {
   operatingResult: number | null;
 }
 
-/** Sales identity: net revenue − recorded food cost. Blank without coverage. */
+/**
+ * Sales identity: net revenue − recorded food cost.
+ * Incomplete coverage still shows the recorded portion (`needs_review`).
+ * Blank only when cost is not readable (valuation cutover inactive).
+ */
 export function calculateGrossProfitIdentity({
   netRevenueBeforeVat,
   ingredientCost,
-  costAvailable,
-}: Pick<
-  FinanceResultInput,
-  "netRevenueBeforeVat" | "ingredientCost" | "costAvailable"
->): Pick<FinanceResult, "grossProfit" | "grossMargin"> {
-  const grossProfit = costAvailable
+  costReadable = true,
+}: Pick<FinanceResultInput, "netRevenueBeforeVat" | "ingredientCost"> & {
+  costReadable?: boolean;
+}): Pick<FinanceResult, "grossProfit" | "grossMargin"> {
+  const grossProfit = costReadable
     ? netRevenueBeforeVat - ingredientCost
     : null;
   const grossMargin =
@@ -53,13 +59,14 @@ export function calculateFinanceResult({
   ingredientCost,
   operatingExpense,
   inventoryChange,
-  costAvailable,
+  costAvailable: _costAvailable,
   operatingExpenseRecorded,
+  costReadable = true,
 }: FinanceResultInput): FinanceResult {
   const { grossProfit, grossMargin } = calculateGrossProfitIdentity({
     netRevenueBeforeVat,
     ingredientCost,
-    costAvailable,
+    costReadable,
   });
 
   return {
@@ -82,7 +89,7 @@ export function calculateBranchDayFinanceResult({
   ingredientCost,
   operatingExpense,
   inventoryChange,
-  costAvailable,
+  costAvailable: _costAvailable,
   valuationActive,
 }: Omit<FinanceResultInput, "operatingExpenseRecorded"> & {
   valuationActive: boolean;
@@ -90,7 +97,7 @@ export function calculateBranchDayFinanceResult({
   const { grossProfit, grossMargin } = calculateGrossProfitIdentity({
     netRevenueBeforeVat,
     ingredientCost,
-    costAvailable: costAvailable && valuationActive,
+    costReadable: valuationActive,
   });
   return {
     grossProfit,

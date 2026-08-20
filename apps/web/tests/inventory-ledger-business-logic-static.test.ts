@@ -148,26 +148,26 @@ test("finance cockpit does not fold writeoff or adjustments into operating expen
   const finance = read(
     "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts",
   );
-  const operatingExpense = sliceBetween(
-    finance,
-    "function summarizeOperatingExpenses",
-    "async function fetchUnpaidSupplierInvoiceRisk",
+  const foodCostMigration = read(
+    "supabase/migrations/20260820151656_finance_food_cost_recorded.sql",
   );
-  const actualFoodCost = sliceBetween(
-    finance,
-    "async function fetchActualFoodCostSnapshot",
-    "function buildExceptions",
+  const cockpitMigration = read(
+    "supabase/migrations/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
   );
 
-  assert.match(operatingExpense, /\.from\("expenses"\)/);
-  assert.match(operatingExpense, /isOperatingExpenseCategory/);
+  assert.match(finance, /get_finance_operating_cockpit/);
   assert.doesNotMatch(
-    operatingExpense,
+    finance,
     /stock_movements|writeoff|adjustment|count_adjustment/,
   );
-
-  assert.match(actualFoodCost, /\.from\("inventory_value_allocations"\)/);
-  assert.match(actualFoodCost, /\.eq\("allocation_bucket", "food_cost"\)/);
-  assert.match(actualFoodCost, /isFoodCostRepriceEvent/);
-  assert.doesNotMatch(actualFoodCost, /writeoff|adjustment|count_adjustment/);
+  assert.match(foodCostMigration, /allocation_bucket[\s\S]*food_cost/);
+  assert.doesNotMatch(
+    foodCostMigration,
+    /writeoff|adjustment|count_adjustment/,
+  );
+  assert.match(cockpitMigration, /get_finance_food_cost_recorded/);
+  assert.doesNotMatch(
+    cockpitMigration,
+    /writeoff|adjustment|count_adjustment/,
+  );
 });

@@ -9,7 +9,6 @@ import {
   fetchTopItems,
   type FinanceDashboardSummary,
 } from "../../actions";
-import { fetchFoodCost } from "@/_lib/food-cost-actions";
 import { diffVNDateDays } from "@comtammatu/shared/time";
 import type {
   FinanceDashboardHealth,
@@ -24,14 +23,12 @@ import type {
   CashVarianceSummary,
   CashierRow,
   ComparePeriod,
-  FinanceFoodCostRow,
   HourBucket,
   KpiBundle,
   RollupRow,
   WorstCashier,
 } from "./finance-types-revenue";
 
-const FOOD_COST_EXCEPTION_THRESHOLD = 60;
 // Hour-of-day RPC caps at 90d. The contract gives owners up to YTD on
 // the same surface, so when the resolved range exceeds 90d we skip
 // fetching the heatmap and show an inline "range too large" hint.
@@ -64,9 +61,8 @@ export async function loadRevenueBundle(
     diffDays(resolved.start, resolved.end) <= HOURLY_MAX_DAYS;
   const cashierEnabled = hourlyEnabled;
 
-  // Single Promise.all — branches + 12 data RPCs run concurrently. Previous
-  // code awaited branches first then started the data fetch, paying one
-  // unnecessary RTT per page load.
+  // Single Promise.all — branches + data RPCs run concurrently. Theoretical
+  // food-cost exception queue lives on /finance/food-cost only.
   const [
     branchesRes,
     rollupRes,
@@ -77,7 +73,6 @@ export async function loadRevenueBundle(
     hourRes,
     cashierRes,
     dashboardSummaryRes,
-    foodCostRes,
   ] = await Promise.all([
     fetchAccessibleBranches(),
     fetchRevenueRollup(params.branch, resolved.start, resolved.end, params.gran),
@@ -98,11 +93,6 @@ export async function loadRevenueBundle(
       ? fetchRevenueByCashier(params.branch, resolved.start, resolved.end)
       : Promise.resolve({ success: true as const, data: [] }),
     fetchFinanceDashboardSummary(params.branch, resolved.start, resolved.end),
-    fetchFoodCost({
-      startDate: resolved.start,
-      endDate: resolved.end,
-      ...(params.branch != null ? { branchId: params.branch } : {}),
-    }),
   ]);
 
   const branches = (
@@ -151,8 +141,6 @@ export async function loadRevenueBundle(
     }
   }
 
-  // Work-queue health (cash variance, food cost exceptions) via the
-  // shared <WorkQueueStrip>.
   const dashboardSummary = (
     dashboardSummaryRes.success ? dashboardSummaryRes.data : null
   ) as FinanceDashboardSummary | null;
@@ -160,25 +148,12 @@ export async function loadRevenueBundle(
   const cashVarianceSessionCount = cashVariance?.session_count ?? 0;
   const cashVarianceAbsAmount = cashVariance?.abs_variance_total ?? 0;
 
-  const foodCostRows = foodCostRes.success
-    ? ((foodCostRes.data ?? []) as FinanceFoodCostRow[])
-    : [];
-  const foodCostExceptions = foodCostRows
-    .filter(
-      (row) => Number(row.food_cost_pct ?? 0) >= FOOD_COST_EXCEPTION_THRESHOLD,
-    )
-    .sort((a, b) => Number(b.food_cost_pct ?? 0) - Number(a.food_cost_pct ?? 0));
-  const topFoodCostException = foodCostExceptions[0] ?? null;
-
   const dashboardHealth: FinanceDashboardHealth = {
     cashVarianceSessionCount,
     cashVarianceAbsAmount,
-    foodCostExceptionCount: foodCostExceptions.length,
-    topFoodCostExceptionName: topFoodCostException?.item_name ?? null,
-    topFoodCostExceptionPct:
-      topFoodCostException?.food_cost_pct == null
-        ? null
-        : Number(topFoodCostException.food_cost_pct),
+    foodCostExceptionCount: 0,
+    topFoodCostExceptionName: null,
+    topFoodCostExceptionPct: null,
   };
 
   return {

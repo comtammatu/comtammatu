@@ -138,6 +138,9 @@ export function FoodCostClient({
       : (branches.find((branch) => branch.id === params.branch)?.name ??
         messages.finance.common.branchFallback(params.branch));
   const totals = summarizeFoodCostRows(rows);
+  const tableTitleBadge = totals.incomplete
+    ? foodCopy.tableIncompleteHint
+    : foodCopy.itemCount(formatCount(rows.length));
   const csvFilename = `gia-von-mon_${range.start}_${range.end}.csv`;
   const csvSections: CsvSection[] = [
     {
@@ -305,8 +308,8 @@ export function FoodCostClient({
         size="sm"
         title={foodCopy.tableTitle}
         badge={{
-          children: foodCopy.itemCount(formatCount(rows.length)),
-          variant: "secondary",
+          children: tableTitleBadge,
+          variant: totals.incomplete ? "warning" : "secondary",
         }}
         contentFlush
         contentScroll

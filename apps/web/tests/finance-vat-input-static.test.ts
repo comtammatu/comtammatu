@@ -11,6 +11,7 @@ const readRoot = (path: string) =>
 
 test("VAT cockpit sums supplier and operating-expense input VAT, and issued HĐĐT output VAT", () => {
   const cockpit = readWeb("app/(protected)/finance/_lib/finance-cockpit.ts");
+  const page = readWeb("app/(protected)/finance/page.tsx");
 
   assert.match(
     readRoot(
@@ -18,26 +19,13 @@ test("VAT cockpit sums supplier and operating-expense input VAT, and issued HĐ�
     ),
     /GRANT SELECT\s+\(document_status\)\s+ON public\.supplier_invoices\s+TO authenticated/,
   );
-  assert.match(
-    cockpit,
-    /\.in\("document_status", \["confirmed", "adjusted"\]\)/,
-  );
-  assert.match(
-    cockpit,
-    /\.from\("expenses"\)\s*\.select\("subtotal, vat_amount, category"\)/,
-  );
-  assert.match(
-    cockpit,
-    /sumVat\(\s*expenseRows\.filter\(\s*\(row\): row is PeriodExpenseRow & \{ category: string \} =>\s*row\.category != null &&\s*isExpenseLedgerCategory\(row\.category\)/,
-  );
-  assert.match(
-    cockpit,
-    /\.from\("tax_invoices"\)[\s\S]*?\.eq\("status", "issued"\)/,
-  );
-  assert.match(
-    cockpit,
-    /location === "branches"[\s\S]*?outputInvoiceQuery = applySalesBranchesFilter\([\s\S]*?"branch_id"/,
-  );
+  // Operating hub no longer fans out VAT reads; grants stay for future surfaces.
+  assert.match(cockpit, /vat: \{ inputRecorded: null, outputIssued: null \}/);
+  assert.doesNotMatch(cockpit, /\.from\("supplier_invoices"\)/);
+  assert.doesNotMatch(cockpit, /\.from\("tax_invoices"\)/);
+  assert.doesNotMatch(cockpit, /\.in\("document_status", \["confirmed", "adjusted"\]\)/);
+  assert.doesNotMatch(page, /cockpit\.vat\.inputRecorded/);
+  assert.doesNotMatch(page, /basic\.sections\.vat/);
   assert.match(
     readWeb("lib/messages/finance.ts"),
     /vatUnavailable: "Không tải được dữ liệu"/,

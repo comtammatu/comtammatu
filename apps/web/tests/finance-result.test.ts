@@ -51,9 +51,23 @@ test("finance result uses goods-in plus inventory change, not POS COGS", () => {
     costAvailable: false,
     operatingExpenseRecorded: true,
   });
-  assert.equal(missingPosCoverage.grossProfit, null);
-  assert.equal(missingPosCoverage.grossMargin, null);
+  assert.equal(missingPosCoverage.grossProfit, 420_000);
+  assert.equal(missingPosCoverage.grossMargin, 70);
   assert.equal(missingPosCoverage.operatingResult, 200_000);
+
+  assert.equal(
+    calculateFinanceResult({
+      netRevenueBeforeVat: 600_000,
+      goodsIn: 200_000,
+      ingredientCost: 180_000,
+      operatingExpense: 250_000,
+      inventoryChange: 50_000,
+      costAvailable: false,
+      operatingExpenseRecorded: true,
+      costReadable: false,
+    }).grossProfit,
+    null,
+  );
 
   assert.equal(
     calculateFinanceResult({
@@ -112,7 +126,7 @@ test("branch-day KQKD keeps 0 opex and blanks only when valuation is inactive", 
     costAvailable: false,
     valuationActive: true,
   });
-  assert.equal(missingCoverage.grossProfit, null);
+  assert.equal(missingCoverage.grossProfit, 420_000);
   assert.equal(missingCoverage.operatingResult, 450_000);
 
   const noValuation = calculateBranchDayFinanceResult({

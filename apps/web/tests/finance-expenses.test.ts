@@ -370,8 +370,8 @@ test("operating KPI uses pre-VAT totals while action totals keep gross cash", ()
     /startupTotal: startupRes\.data\?\.total \?\? "0\.00"/,
   );
   assert.doesNotMatch(page, /isStartupCapitalCategory/);
-  assert.match(cockpit, /\.select\("subtotal, vat_amount, category"\)/);
-  assert.match(cockpit, /roundToCanonicalMoney\(row\.subtotal \?\? 0\)/);
+  assert.match(cockpit, /get_finance_operating_cockpit/);
+  assert.match(cockpit, /operatingExpense: cockpit\.operatingExpenseTotal/);
   assert.doesNotMatch(page, /formatCount\(rows\.length\)/);
 });
 

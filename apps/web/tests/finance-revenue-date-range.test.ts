@@ -101,37 +101,32 @@ test("Finance cockpit actual food cost follows the VN business-day window", () =
   const cockpit = read(
     "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts",
   );
+  const foodCostMigration = read(
+    "supabase/migrations/20260820151656_finance_food_cost_recorded.sql",
+  );
 
-  assert.match(cockpit, /getVNDayUtcRange/);
-  assert.match(cockpit, /getVNDateString/);
-  assert.match(
-    cockpit,
-    /\.gte\("inventory_valuation_events\.effective_at",\s*startIso\)/,
-  );
-  assert.match(
-    cockpit,
-    /\.lt\("inventory_valuation_events\.effective_at",\s*endIso\)/,
-  );
-  assert.match(cockpit, /const period = getVNDateString\(event\.effective_at\)/);
-  assert.match(cockpit, /fetchAllPagedRows/);
-  assert.doesNotMatch(cockpit, /\.gte\("created_at",\s*startIso\)/);
-  assert.doesNotMatch(cockpit, /function nextDate/);
+  assert.match(cockpit, /get_finance_operating_cockpit/);
+  assert.match(foodCostMigration, /Asia\/Ho_Chi_Minh/);
+  assert.match(foodCostMigration, /effective_at >= v_start_utc/);
+  assert.match(foodCostMigration, /effective_at < v_end_utc/);
+  assert.doesNotMatch(cockpit, /getVNDayUtcRange/);
+  assert.doesNotMatch(cockpit, /fetchAllPagedRows/);
 });
 
 test("Finance expenses actual food cost follows the VN business-day window", () => {
   const expenseActions = read(
     "apps/web/app/(protected)/finance/expense-actions.ts",
   );
-
-  assert.match(expenseActions, /getVNDayUtcRange/);
-  assert.match(expenseActions, /\.gte\("effective_at",\s*startIso\)/);
-  assert.match(expenseActions, /\.lt\("effective_at",\s*endIso\)/);
-  assert.match(
-    expenseActions,
-    /\.gte\("inventory_valuation_events\.effective_at",\s*startIso\)/,
+  const foodCostMigration = read(
+    "supabase/migrations/20260820151656_finance_food_cost_recorded.sql",
   );
-  assert.match(expenseActions, /fetchAllPagedRows/);
-  assert.doesNotMatch(expenseActions, /function nextDate/);
+
+  assert.match(expenseActions, /get_finance_food_cost_recorded/);
+  assert.match(foodCostMigration, /Asia\/Ho_Chi_Minh/);
+  assert.match(foodCostMigration, /effective_at >= v_start_utc/);
+  assert.match(foodCostMigration, /effective_at < v_end_utc/);
+  assert.doesNotMatch(expenseActions, /getVNDayUtcRange/);
+  assert.doesNotMatch(expenseActions, /fetchAllPagedRows/);
 });
 
 test("Finance operating expense excludes food-cost and transfer categories", () => {
@@ -151,6 +146,12 @@ test("Finance operating expense excludes food-cost and transfer categories", () 
     "apps/web/app/(protected)/finance/expenses/expenses-client.tsx",
   );
   const dataContract = read("docs/ref/operational-data-contract.md");
+  const expenseSummaryMigration = read(
+    "supabase/migrations/20260818171912_finance_expense_period_summary.sql",
+  );
+  const operatingCockpitMigration = read(
+    "supabase/migrations/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
+  );
 
   assert.match(categories, /cogs_manual: "materials"/);
   assert.match(categories, /bank_deposit: "transfer"/);
@@ -158,13 +159,15 @@ test("Finance operating expense excludes food-cost and transfer categories", () 
   assert.match(categories, /deposit: "startup"/);
   assert.match(categories, /isOperatingExpenseCategory/);
   assert.match(categories, /isStartupCapitalCategory/);
-  assert.match(cockpit, /select\("subtotal, vat_amount, category"\)/);
-  assert.match(cockpit, /isOperatingExpenseCategory\(row\.category\)/);
+  assert.match(cockpit, /get_finance_operating_cockpit/);
   assert.match(cockpit, /\.in\("category", \["capital", "deposit"\]\)/);
+  assert.match(operatingCockpitMigration, /get_finance_expense_period_summary/);
+  assert.doesNotMatch(expenseSummaryMigration, /cogs_manual/);
+  assert.doesNotMatch(expenseSummaryMigration, /bank_deposit/);
   assert.doesNotMatch(
     cockpit.slice(
       cockpit.indexOf("async function fetchStartupCapitalSummary"),
-      cockpit.indexOf("function summarizeOperatingExpenses"),
+      cockpit.indexOf("async function fetchOperatingCockpitRpc"),
     ),
     /expense_date/,
   );
@@ -259,13 +262,11 @@ test("Finance food-cost page shows actual cost coverage before estimate rows", (
   assert.equal((client.match(/<KpiCard/g) ?? []).length, 2);
   assert.match(client, /title=\{foodCopy\.tableTitle\}[\s\S]*<DataTable/);
   assert.doesNotMatch(client, /const estimatedFoodCost = rows\.reduce/);
-  assert.match(
-    expenseActions,
-    /\.from\("inventory_valuation_events"\)/,
-  );
-  assert.match(expenseActions, /orderIds\.add\(movement\.order_id\)/);
-  assert.match(expenseActions, /operatingConsumptionTotal/);
-  assert.match(expenseActions, /allocation_bucket", "food_cost"/);
+  assert.match(expenseActions, /get_finance_food_cost_recorded/);
+  assert.match(expenseActions, /operatingConsumption/);
+  assert.match(expenseActions, /coverageComplete/);
+  assert.match(expenseActions, /valuationActive/);
+  assert.doesNotMatch(expenseActions, /\.from\("inventory_valuation_events"\)/);
   assert.match(financeMessages, /actualFoodCost: "Giá vốn thực tế"/);
   assert.match(financeMessages, /tableTitle: "Theo món"/);
   assert.match(financeMessages, /tableTotal: "Tổng"/);
@@ -340,40 +341,23 @@ test("Finance keeps POS food-cost coverage diagnostic and period result on goods
   const result = read(
     "apps/web/app/(protected)/finance/_lib/finance-result.ts",
   );
+  const expenseActions = read(
+    "apps/web/app/(protected)/finance/expense-actions.ts",
+  );
 
-  assert.match(
-    cockpit,
-    /stock_movements \( branch_id, order_id \)/,
-    "actual food cost must keep order_id for coverage",
-  );
-  assert.match(cockpit, /const orderIds = new Set<number>\(\)/);
-  assert.match(cockpit, /orderIds\.add\(movement\.order_id\)/);
-  assert.match(
-    cockpit,
-    /POS-only at sales Chi nhánh/,
-    "recorded food cost must exclude manual slips and central sites",
-  );
-  assert.match(cockpit, /salesBranchIds/);
-  assert.match(
-    cockpit,
-    /inventory valuation cutover is not active/,
-    "food cost must not fall back to legacy WAC movements",
-  );
-  assert.doesNotMatch(
-    cockpit,
-    /movement_subtype", "sale_consumption"/,
-  );
+  assert.match(cockpit, /get_finance_operating_cockpit/);
+  assert.match(cockpit, /parseFinanceOperatingCockpitRpc/);
+  assert.match(expenseActions, /get_finance_food_cost_recorded/);
   assert.match(
     cockpit,
     /const costAvailable =\s*orderCount === 0 \|\| costCoverageOrderCount >= orderCount/,
-    "gross profit must not be trusted when only a subset of paid orders has posted consumption",
+    "coverage still drives UI tone when only a subset of paid orders has posted consumption",
   );
-  assert.match(cockpit, /addPaidOrdersWithoutRecipeNeed/);
   assert.match(cockpit, /missingCostCoverageHint/);
-  assert.match(cockpit, /fetchPeriodGoodsIn/);
-  assert.match(cockpit, /fetchPeriodInvoiceGoodsIn/);
-  assert.match(cockpit, /CONFIRMED_SUPPLIER_INVOICE_STATUSES/);
-  assert.match(cockpit, /\.from\("supplier_invoices"\)/);
+  assert.match(cockpit, /costReadable: cockpit\.foodCost\.valuationActive/);
+  assert.doesNotMatch(cockpit, /fetchFoodCost\(/);
+  assert.doesNotMatch(cockpit, /fetchActualFoodCostSnapshot/);
+  assert.doesNotMatch(cockpit, /fetchPeriodGoodsIn/);
   assert.match(goodsIn, /kind === "inbound_transfer"/);
   assert.match(goodsIn, /eventType !== "transfer_in"/);
   assert.match(goodsIn, /isConfirmedSupplierInvoiceGoodsIn/);
@@ -402,22 +386,17 @@ test("Finance cockpit branch filter also scopes supplier payable risk", () => {
   const cockpit = read(
     "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts",
   );
+  const migration = read(
+    "supabase/migrations/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
+  );
 
   assert.match(cockpit, /branchId: number \| null/);
-  assert.match(cockpit, /goods_received_notes!inner/);
-  assert.match(cockpit, /credit_applied_amount/);
+  assert.match(cockpit, /get_finance_operating_cockpit/);
+  assert.match(migration, /unpaid_ap_count/);
+  assert.match(migration, /unpaid_ap_amount/);
   assert.match(
-    cockpit,
-    /toNumber\(row\.total_amount\) -[\s\S]*toNumber\(row\.paid_amount\) -[\s\S]*toNumber\(row\.credit_applied_amount\)/,
-  );
-  assert.match(cockpit, /if \(outstanding <= 0\) return acc/);
-  assert.match(
-    cockpit,
-    /query = query\.eq\("goods_received_notes\.branch_id", branchId\)/,
-  );
-  assert.match(
-    cockpit,
-    /fetchUnpaidSupplierInvoiceRisk\(\{[\s\S]*branchId: params\.branch,[\s\S]*\}\)/,
+    migration,
+    /goods_received_notes|supplier_invoices/,
   );
 });
 

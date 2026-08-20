@@ -114,6 +114,246 @@ export const SEPAY_LIST_PAGE_SIZE = 100;
 
 export interface FetchSepayBankTransactionsOptions {
   maxRows?: number;
+  recon?: string;
+}
+
+function asJsonRecord(value: unknown): Record<string, unknown> | null {
+  let payload: unknown = value;
+  if (typeof payload === "string") {
+    try {
+      payload = JSON.parse(payload) as unknown;
+    } catch {
+      return null;
+    }
+  }
+  if (payload == null || typeof payload !== "object" || Array.isArray(payload)) {
+    return null;
+  }
+  return payload as Record<string, unknown>;
+}
+
+function jsonIdArray(value: unknown): number[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    const n = typeof entry === "number" ? entry : Number(entry);
+    return Number.isInteger(n) && n > 0 ? [n] : [];
+  });
+}
+
+function mapListFinanceBankRow(
+  row: Record<string, unknown>,
+): SepayBankTransaction | null {
+  const bankTransactionId = Number(row.bank_transaction_id);
+  const amount = Number(row.amount);
+  const transferType = row.transfer_type;
+  if (
+    !Number.isInteger(bankTransactionId) ||
+    bankTransactionId <= 0 ||
+    !Number.isFinite(amount) ||
+    (transferType !== "in" && transferType !== "out")
+  ) {
+    return null;
+  }
+
+  const expenseIds = jsonIdArray(row.expense_ids);
+  const paymentIdRaw = row.payment_id;
+  const paymentId =
+    paymentIdRaw == null
+      ? null
+      : Number.isInteger(Number(paymentIdRaw)) && Number(paymentIdRaw) > 0
+        ? Number(paymentIdRaw)
+        : null;
+  const webhookEventId =
+    row.webhook_event_id == null ? null : Number(row.webhook_event_id);
+  const accumulated =
+    row.balance_after == null ? null : Number(row.balance_after);
+  const requestId =
+    typeof row.request_id === "string" && row.request_id.length > 0
+      ? row.request_id
+      : typeof row.provider_transaction_id === "string"
+        ? row.provider_transaction_id
+        : String(bankTransactionId);
+  const createdAt =
+    typeof row.occurred_at === "string"
+      ? row.occurred_at
+      : typeof row.webhook_created_at === "string"
+        ? row.webhook_created_at
+        : new Date(0).toISOString();
+  const processingStatus =
+    typeof row.processing_status === "string"
+      ? row.processing_status
+      : transferType === "out"
+        ? "ignored"
+        : "processed";
+  const errorCode =
+    typeof row.error_code === "string"
+      ? row.error_code
+      : transferType === "out" && processingStatus === "ignored"
+        ? "transfer_type_out"
+        : null;
+
+  return {
+    bankTransactionId,
+    eventId:
+      webhookEventId != null &&
+      Number.isInteger(webhookEventId) &&
+      webhookEventId > 0
+        ? webhookEventId
+        : null,
+    ingestSource:
+      row.ingest_source === "sepay_webhook" ||
+      row.ingest_source === "sepay_export" ||
+      row.ingest_source === "mbbank_statement"
+        ? row.ingest_source
+        : undefined,
+    requestId,
+    createdAt,
+    processingStatus,
+    httpStatus:
+      row.http_status == null ? null : Number(row.http_status) || null,
+    errorCode,
+    orderId:
+      row.order_id == null
+        ? null
+        : Number.isInteger(Number(row.order_id))
+          ? Number(row.order_id)
+          : null,
+    orderNumber: null,
+    paymentId,
+    expenseId: expenseIds[0] ?? null,
+    expenseIds,
+    supplierPaymentMatches: [],
+    supplierPaymentMatchConfirmed: false,
+    refundMatches: [],
+    refundMatchConfirmed: false,
+    transactionDate:
+      typeof row.occurred_at === "string" ? row.occurred_at : null,
+    accountNumber:
+      typeof row.account_number === "string" ? row.account_number : null,
+    code: typeof row.code === "string" ? row.code : null,
+    content: typeof row.content === "string" ? row.content : null,
+    transferType,
+    amount: Math.abs(amount),
+    accumulated:
+      accumulated != null && Number.isFinite(accumulated) ? accumulated : null,
+    referenceCode:
+      typeof row.reference_code === "string" ? row.reference_code : null,
+  };
+}
+
+async function fetchSepayBankTransactionsViaListRpc(
+  supabase: SupabaseClient,
+  range: SepayDateRange,
+  options: FetchSepayBankTransactionsOptions,
+): Promise<{
+  transactions: SepayBankTransaction[];
+  listRows: Array<Record<string, unknown>>;
+} | null> {
+  const recon =
+    options.recon != null &&
+    options.recon !== "missing_webhook" &&
+    options.recon.length > 0
+      ? options.recon
+      : "all";
+  const { data, error } = await supabase.rpc("list_finance_bank_transactions", {
+    p_start_date: range.start,
+    p_end_date: range.end,
+    p_recon: recon,
+    p_limit: options.maxRows ?? SEPAY_LIST_PAGE_SIZE,
+  });
+  if (error) {
+    console.error(
+      "[finance:sepay-bank] list_finance_bank_transactions failed",
+      error.code,
+    );
+    return null;
+  }
+
+  const payload = asJsonRecord(data);
+  const rows = Array.isArray(payload?.rows) ? payload.rows : null;
+  if (rows == null) return null;
+
+  const listRows: Array<Record<string, unknown>> = [];
+  const transactions: SepayBankTransaction[] = [];
+  for (const row of rows) {
+    const record = asJsonRecord(row);
+    if (!record) continue;
+    const mapped = mapListFinanceBankRow(record);
+    if (!mapped) continue;
+    listRows.push(record);
+    transactions.push(mapped);
+  }
+  return { transactions, listRows };
+}
+
+async function hydrateBankMatchDetails(
+  supabase: SupabaseClient,
+  tenantId: number,
+  transactions: SepayBankTransaction[],
+  listRows: Array<Record<string, unknown>> | null,
+): Promise<SepayBankTransaction[]> {
+  const supplierPaymentIds = new Set<number>();
+  const refundIds = new Set<number>();
+  const supplierBankTransactionById = new Map<number, number>();
+  const refundBankTransactionById = new Map<number, number>();
+
+  if (listRows != null) {
+    for (const row of listRows) {
+      const bankId = Number(row.bank_transaction_id);
+      if (!Number.isInteger(bankId) || bankId <= 0) continue;
+      for (const id of jsonIdArray(row.supplier_payment_ids)) {
+        supplierPaymentIds.add(id);
+        supplierBankTransactionById.set(id, bankId);
+      }
+      for (const id of jsonIdArray(row.refund_ids)) {
+        refundIds.add(id);
+        refundBankTransactionById.set(id, bankId);
+      }
+    }
+  }
+
+  const eventIds = transactions
+    .map((tx) => tx.eventId)
+    .filter((id): id is number => id != null);
+
+  const [supplierPaymentRows, webhookRefundMatches, canonicalRefundRows] =
+    await Promise.all([
+      fetchSupplierPaymentMatchesForPage(
+        supabase,
+        tenantId,
+        Array.from(supplierPaymentIds),
+        eventIds,
+      ),
+      fetchConfirmedRefundMatches(supabase, tenantId, eventIds),
+      fetchRefundMatchesByIds(supabase, tenantId, Array.from(refundIds)),
+    ]);
+
+  const refundMatches = Array.from(
+    new Map(
+      [...webhookRefundMatches, ...canonicalRefundRows].map((refund) => [
+        refund.id,
+        {
+          ...refund,
+          bankTransactionId:
+            refundBankTransactionById.get(refund.id) ??
+            refund.bankTransactionId ??
+            null,
+        },
+      ]),
+    ).values(),
+  );
+  const supplierPaymentMatches = supplierPaymentRows.map((payment) => ({
+    ...payment,
+    bankTransactionId:
+      supplierBankTransactionById.get(payment.id) ??
+      payment.bankTransactionId ??
+      null,
+  }));
+
+  return attachRefundMatches(
+    attachSupplierPaymentMatches(transactions, supplierPaymentMatches),
+    refundMatches,
+  );
 }
 
 export async function fetchSepayDataApiRows<T>(
@@ -783,6 +1023,23 @@ export async function fetchSepayBankTransactions(
 ): Promise<SepayBankTransaction[]> {
   const maxRows = options.maxRows ?? SEPAY_LIST_PAGE_SIZE;
   const { supabase, claims } = await loadAuthState();
+
+  if (range != null) {
+    const listed = await fetchSepayBankTransactionsViaListRpc(
+      supabase,
+      range,
+      { ...options, maxRows },
+    );
+    if (listed != null) {
+      return hydrateBankMatchDetails(
+        supabase,
+        claims.tenant_id,
+        listed.transactions,
+        listed.listRows,
+      );
+    }
+  }
+
   const ledgerRows = await fetchSepayBankLedgerRowsPage(
     supabase,
     claims.tenant_id,

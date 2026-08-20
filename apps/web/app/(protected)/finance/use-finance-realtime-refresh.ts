@@ -20,8 +20,9 @@ export function resolveFinanceRealtimeEvents(
 
   const segment = pathname.split("/")[2] ?? "";
 
+  // Hub P&L is payment-driven; SePay webhooks only matter on bank/AP surfaces.
   if (segment === "") {
-    return ["payment", "sepay"];
+    return ["payment"];
   }
 
   switch (segment) {
