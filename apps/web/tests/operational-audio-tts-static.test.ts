@@ -51,6 +51,16 @@ test("operational cloud TTS stays allowlisted, authenticated, and cloud-only", (
   assert.doesNotMatch(gateway, /process\.env\.AI_GATEWAY_API_KEY/);
   assert.doesNotMatch(gateway, /process\.env\["AI_GATEWAY_API_KEY"\]/);
 
+  const signal = read("lib/audio-signal.ts");
+  assert.match(signal, /VOICE_PLAYBACK_GAIN = 6;/);
+  assert.match(signal, /VOICE_PLAYBACK_RATE = 1;/);
+  assert.match(signal, /connectAlertCompressor\(context\);/);
+  assert.match(signal, /connectVoiceLimiter\(context\);/);
+  assert.doesNotMatch(
+    signal,
+    /playAlertAudioBuffer[\s\S]*connectAlertCompressor/,
+  );
+
   assert.match(voice, /primeOperationalVoice/);
   assert.match(voice, /prefetchOperationalVoiceCatalog/);
   assert.match(voice, /code === "tts_unconfigured"/);

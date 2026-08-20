@@ -173,6 +173,18 @@ function connectAlertCompressor(context: AudioContext): DynamicsCompressorNode {
   return compressor;
 }
 
+/** Catch peaks after voice gain; the beep compressor at -18 dB ate prior boosts. */
+function connectVoiceLimiter(context: AudioContext): DynamicsCompressorNode {
+  const limiter = context.createDynamicsCompressor();
+  limiter.threshold.setValueAtTime(-3, context.currentTime);
+  limiter.knee.setValueAtTime(2, context.currentTime);
+  limiter.ratio.setValueAtTime(20, context.currentTime);
+  limiter.attack.setValueAtTime(0.002, context.currentTime);
+  limiter.release.setValueAtTime(0.08, context.currentTime);
+  limiter.connect(context.destination);
+  return limiter;
+}
+
 export function playAppSignal(tone: SignalTone, force = false): void {
   const now = Date.now();
   const lastSignalAt = lastSignalAtByTone[tone] ?? 0;
@@ -205,10 +217,10 @@ export function playAppSignal(tone: SignalTone, force = false): void {
   }
 }
 
-/** nova MP3 is much quieter than square beeps; keep floor alerts audible. */
-export const VOICE_PLAYBACK_GAIN = 3.5;
-/** nova at 1.0 is slow for floor alerts; rate-change keeps Gateway payload valid. */
-export const VOICE_PLAYBACK_RATE = 1.15;
+/** nova MP3 stays well below square beeps; boost then peak-limit. */
+export const VOICE_PLAYBACK_GAIN = 6;
+/** Recorded nova speed. Do not pitch-shift clips with playbackRate. */
+export const VOICE_PLAYBACK_RATE = 1;
 
 export function playAlertAudioBuffer(buffer: ArrayBuffer): {
   stopped: Promise<void>;
@@ -220,7 +232,7 @@ export function playAlertAudioBuffer(buffer: ArrayBuffer): {
   }
 
   let source: AudioBufferSourceNode | null = null;
-  let compressor: DynamicsCompressorNode | null = null;
+  let limiter: DynamicsCompressorNode | null = null;
   let stopped = false;
 
   const stoppedPromise = context.decodeAudioData(buffer.slice(0)).then(
@@ -230,16 +242,16 @@ export function playAlertAudioBuffer(buffer: ArrayBuffer): {
           resolve();
           return;
         }
-        compressor = connectAlertCompressor(context);
+        limiter = connectVoiceLimiter(context);
         const gainNode = context.createGain();
         gainNode.gain.setValueAtTime(VOICE_PLAYBACK_GAIN, context.currentTime);
         source = context.createBufferSource();
         source.buffer = audioBuffer;
         source.playbackRate.value = VOICE_PLAYBACK_RATE;
         source.connect(gainNode);
-        gainNode.connect(compressor);
+        gainNode.connect(limiter);
         source.onended = () => {
-          compressor?.disconnect();
+          limiter?.disconnect();
           resolve();
         };
         source.start(context.currentTime);
@@ -256,7 +268,7 @@ export function playAlertAudioBuffer(buffer: ArrayBuffer): {
       } catch {
         // Already stopped.
       }
-      compressor?.disconnect();
+      limiter?.disconnect();
     },
   };
 }

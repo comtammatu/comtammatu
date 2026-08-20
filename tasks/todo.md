@@ -234,7 +234,7 @@ State: verify
 Kind: feature
 Tier: T2
 Lane: pos
-Exit: Beep stays immediate. Voice is cached AI SDK `generateSpeech` `nova` clips through Web Audio at 1.15x. Clip miss stays silent. Free-form text cannot be synthesized.
+Exit: Beep stays immediate. Voice is cached AI SDK `generateSpeech` `nova` clips through Web Audio at recorded speed. Clip miss stays silent. Free-form text cannot be synthesized.
 Evidence: `operational-audio.test.ts` allowlist + `operational-audio-tts-static.test.ts`.
 
 UI Advisor Gate

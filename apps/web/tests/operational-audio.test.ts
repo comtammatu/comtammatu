@@ -216,9 +216,9 @@ test("signal duration includes every pulse and the gaps between them", () => {
   assert.equal(getAppSignalDurationMs("pos-payment-received"), 580);
 });
 
-test("cloud voice plays nova clips louder and faster than recorded speed", () => {
-  assert.equal(VOICE_PLAYBACK_GAIN, 3.5);
-  assert.equal(VOICE_PLAYBACK_RATE, 1.15);
+test("cloud voice plays nova clips louder at recorded speed", () => {
+  assert.equal(VOICE_PLAYBACK_GAIN, 6);
+  assert.equal(VOICE_PLAYBACK_RATE, 1);
 });
 
 test("cloud TTS allowlist stores POS table lines and spoken amounts", () => {
