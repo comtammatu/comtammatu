@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { unstable_cache } from "next/cache";
 import { CircleAlert as IconAlertCircle } from "lucide-react";
 import { AppEmptyState } from "@/components/surface";
@@ -24,6 +25,7 @@ import {
 } from "./pickup-order-board-client";
 import type { PickupIdleState } from "./pickup-idle-visual";
 import { PickupRealtimeRefresh } from "./pickup-realtime-refresh";
+import { requestNowMs } from "@/_lib/request-now";
 
 const PICKUP_ERROR_MESSAGE =
   "Không tải được màn gọi số. Vui lòng tải lại trang.";
@@ -301,6 +303,7 @@ export default async function PickupPage({
 }: {
   params: Promise<{ branchId: string }>;
 }) {
+  await connection();
   const { branchId } = await params;
   const branchIdNum = Number(branchId);
   if (!Number.isInteger(branchIdNum) || branchIdNum <= 0) {
@@ -412,7 +415,7 @@ export default async function PickupPage({
     idleState = todayTicketCountResult.count > 0 ? "done" : "empty";
   }
 
-  const nowMs = Date.now();
+  const nowMs = await requestNowMs();
 
   return (
     <>

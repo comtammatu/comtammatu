@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { connection } from "next/server";
 import { getVNMonthYear } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
@@ -70,6 +71,7 @@ export default async function PayrollPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
+  await connection();
   const params = await searchParams;
   const { month, year } = parseMonth(params.month);
   const monthKey = monthValue(year, month);

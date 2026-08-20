@@ -5,6 +5,8 @@ import { OperationalPwaProvider } from "../_components/operational-pwa/provider"
 import { PickupPwaToolbar } from "../_components/operational-pwa/toolbar";
 import { PickupLightMode } from "./pickup-light-mode";
 
+export const instant = false;
+
 export async function generateMetadata({
   params,
 }: {

@@ -209,4 +209,4 @@ export default async function PrintJobsPage({
   );
 }
 
-export const dynamic = "force-dynamic";
+export const instant = false;

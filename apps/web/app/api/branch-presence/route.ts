@@ -20,7 +20,6 @@ import { z } from "zod";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { getClientIp } from "@lib/network/client-ip";
 
-export const runtime = "nodejs";
 
 const presenceBodySchema = z.object({
   tenant_id: z.coerce.number().int().positive(),

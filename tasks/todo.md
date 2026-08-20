@@ -28,6 +28,19 @@ UI Advisor Gate
 - [ ] Phone: create VietQR, close drawers, add an item, reopen QR from bill
 - [ ] POS: opening Pay does not mint a QR; tapping bank transfer does; unused QR then cash still confirms
 
+## Next.js 16.3 Instant Navigations on `Cổng`
+
+State: verify
+Kind: feature
+Tier: T2
+Lane: `web/cổng`
+Exit: `apps/web` is on Next.js 16.3; `cacheComponents` and `partialPrefetching` are on; `Cổng` `/br/[branchId]` catalog and stock lists show a prefetched shell on click; POS/KDS/pickup rendering is unchanged this slice; `experimental.useOffline` stays off; PWA NetworkOnly for RSC/Server Actions still holds.
+Evidence: lockfile `next@16.3.1`; `apps/web/next.config.ts` (`cacheComponents`, `partialPrefetching`, `agentRules: false`, no `useOffline`); `nextjs-16-3-instant-navigations-static.test.ts`; `corepack pnpm verify` green. Phone smoke pending.
+
+Owner lock 2026-08-20: `Cổng`/kho only; no `useOffline`; `'use cache'` later with `updateTag`; `prefetch={true}` only list→detail.
+
+- [ ] Phone smoke: `Cổng` list→detail shows shell immediately; POS add-item and KDS ticket flow still match today
+
 ## Sales-branch cash books and company fund rollup
 
 State: verify
@@ -35,9 +48,20 @@ Kind: feature
 Tier: T3
 Lane: finance
 Exit: Company `Tiền mặt` is the sum of sales-branch cash books; company bank stays one ledger; `MATU NOP {branch_id}` records a cash deposit against that sales branch; bare `MATU NOP` waits for Owner branch pick.
-Evidence: static tests `finance-cash-bank-fund`, `bank-cash-deposit-reconciliation`, `sepay-cash-deposit-boundary`; SQL `finance_current_funds_test.sql` updated; `corepack pnpm verify`. Not Production-applied until owner delegates.
+Evidence: Production `enloyfnuerqgaqderbwb` applied `20260820021152` and `20260820025641`. Dry-run after apply: remote up to date. `Nguyễn Hữu Thọ` cash book opens `2026-08-14` 00:00 Vietnam time; current cash matches the prior company book (`66,483,400`). `corepack pnpm db:types` regenerated after `20260820021152`. Static tests `finance-cash-bank-fund`, `bank-cash-deposit-reconciliation`, `sepay-cash-deposit-boundary`; SQL `finance_current_funds_test.sql` updated. Full `corepack pnpm verify` blocked by unrelated dirty-tree inventory/UI contract failures.
 
-- [ ] Owner-delegated Production apply of `20260820021152_sales_branch_cash_books.sql`, then `corepack pnpm db:types`
+- [ ] Reload `/finance` and confirm company `Tiền mặt` equals the `Nguyễn Hữu Thọ` cash book (`66,483,400`)
+
+## Close-day order_facts FROM and GRN partial booked value
+
+State: verify
+Kind: defect
+Tier: T3
+Lane: finance/inventory
+Exit: `get_branch_day_report` aggregates `order_facts` with an explicit `FROM`; `owner_patch_confirmed_grn_unit_cost` treats `finalized_value` as already-booked when `cost_status` is `partial` so matching document `"Đơn giá"` is `value_delta` 0 and does not re-run WAC equalize.
+Evidence: Production `enloyfnuerqgaqderbwb` applied `20260820014659`, `20260820014701`, and `20260820014906` (owner-authorized three-file batch). Catalog: `get_branch_day_report` has `FROM order_facts`; `owner_patch_confirmed_grn_unit_cost` uses `finalized_value` when booked; `owner_set_company_wac` exists. Dry-run after apply: remote up to date. `corepack pnpm db:types` regenerated (`owner_set_company_wac`).
+
+- [ ] Retry close-day and `"Mật ong Tây Bắc"` `"Chờ đơn giá"` after web deploy
 
 ## Drink menu recipes consume one serving cup
 

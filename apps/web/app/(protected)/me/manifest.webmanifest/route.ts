@@ -2,8 +2,6 @@ import type { NextRequest } from "next/server";
 import { BROWSER_CHROME_THEME_COLORS } from "@/_lib/theme-tokens";
 import { buildPwaLauncherIcons } from "@/_lib/pwa-launcher-icons";
 
-export const revalidate = 3600;
-
 const PERSONNEL_MANIFEST_REVALIDATE_SECONDS = 3600;
 
 export function GET(_request: NextRequest) {

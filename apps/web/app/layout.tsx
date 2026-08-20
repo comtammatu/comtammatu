@@ -24,6 +24,8 @@ import {
   resolveThemeMode,
 } from "./_lib/theme-tokens";
 
+export const instant = false;
+
 export const metadata: Metadata = {
   title: "Cơm Tấm Má Tư",
   description: "Hệ thống điều hành nhà hàng Cơm Tấm Má Tư",

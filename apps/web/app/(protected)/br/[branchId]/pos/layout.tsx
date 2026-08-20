@@ -5,6 +5,8 @@ import { ForceLightMode } from "@/components/force-light-mode";
 import { PosPwaProvider } from "./_components/pwa/online-status-provider";
 import { PosPwaToolbar } from "./_components/pwa/pos-pwa-toolbar";
 
+export const instant = false;
+
 export async function generateMetadata({
   params,
 }: {

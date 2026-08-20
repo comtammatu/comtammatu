@@ -257,7 +257,7 @@ export. Detail and edit steps open a bottom `Sheet` with a sticky
 | `/stock/on-hand` | LIST | `loadStockOnHandPageData` + filter model; `Item` separator rows, `ToggleGroup` status, filter `Sheet`. |
 | `/stock/on-hand/[ingredientId]` | DETAIL | `loadStockIngredientDetailData` with `includeValuation: false`. Supplier receiving links to `/stock/grn/new`, never `/stock/receive`. |
 | `/stock/grn` | LIST | `loadGrnListPageData`; own drafts first, then queue. Row shows code, supplier, date, status only. |
-| `/stock/grn/new`, `/stock/grn/new/[supplierId]` | REDIRECT-SHIM | Compatibility redirects: store → `Yêu cầu hàng`; `Kho Tổng`/`Bếp TT` → `Yêu cầu mua`. No live create UI. |
+| `/stock/grn/new`, `/stock/grn/new/[supplierId]` | REDIRECT-SHIM | Compatibility redirects: store → `Yêu cầu hàng`; `Kho Tổng`/`Bếp TT` → `Tạo đơn`. No live create UI. |
 | `/stock/grn/[id]` | DETAIL | Draft owns a touch receiving list and line sheet; confirmed slips are read-only. Post-confirm correction stays on control_surface `/inventory/grn?grnId=&mode=view`. |
 | `/stock/stocktake` | LIST | `loadBranchStocktakeListData`; manager sessions, distinct from `/stock/count` slips. |
 | `/stock/stocktake/new` | DOC-WORKFLOW | Mode + location only, then open the session and enter count. |

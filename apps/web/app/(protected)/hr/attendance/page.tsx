@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { getVNDateString, getVNMonthString } from "@comtammatu/shared/time";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
@@ -84,6 +85,7 @@ export default async function HrAttendancePage({
 }: {
   searchParams: Promise<AttendanceSearchParams>;
 }) {
+  await connection();
   const { supabase, claims } = await loadAuthState();
   const params = await searchParams;
   const [{ data }, canForceClose, canCorrect] = await Promise.all([

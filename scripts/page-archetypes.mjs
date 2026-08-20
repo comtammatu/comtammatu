@@ -189,6 +189,8 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/inventory/production/new/page.tsx": "REDIRECT-SHIM",
   "apps/web/app/(protected)/inventory/production/[id]/page.tsx": "REDIRECT-SHIM",
   "apps/web/app/(protected)/inventory/purchase-orders/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/purchase-requests/new/page.tsx":
+    "REDIRECT-SHIM",
   "apps/web/app/(protected)/inventory/purchase-requests/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/menu-recipes/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/recipes/page.tsx": "REDIRECT-SHIM",
@@ -366,6 +368,11 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/inventory/purchase-orders/page.tsx": {
+    status: "keep",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/purchase-requests/new/page.tsx": {
     status: "keep",
     evidence: "implemented-static",
     final: false,
@@ -633,6 +640,8 @@ export const CONTROL_SURFACE_COMPOSE = {
   "apps/web/app/(protected)/inventory/production/new/page.tsx": "REDIRECT",
   "apps/web/app/(protected)/inventory/production/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/purchase-orders/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/purchase-requests/new/page.tsx":
+    "REDIRECT",
   "apps/web/app/(protected)/inventory/purchase-requests/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/recipes/page.tsx": "REDIRECT",
   "apps/web/app/(protected)/inventory/reports/page.tsx": "DASHBOARD_REPORT",

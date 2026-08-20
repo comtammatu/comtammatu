@@ -3,6 +3,7 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { KDS_VI } from "@comtammatu/shared/messages";
 import { AppEmptyState } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
+import { requestNowMs } from "@/_lib/request-now";
 import { currentUserHasPermission } from "@/_lib/permissions";
 import { KdsBoard } from "./kds-board";
 import type { KdsStation } from "./types";
@@ -89,7 +90,7 @@ export default async function KdsPage({
   return (
     <KdsBoard
       branchId={branchIdNum}
-      initialNowMs={Date.now()}
+      initialNowMs={await requestNowMs()}
       stations={stations}
       fallbackStationIds={fallbackStationIds}
       canMarkReady={canMarkReady}

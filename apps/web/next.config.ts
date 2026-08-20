@@ -50,6 +50,12 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Instant Navigations (16.3). Routes not yet converted keep
+  // `export const instant = false`. Do not enable experimental.useOffline —
+  // PWA keeps NetworkOnly for RSC/Server Actions (`docs/spec/pwa.md`).
+  cacheComponents: true,
+  partialPrefetching: true,
+  agentRules: false,
   async headers() {
     return [
       {

@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 
-// Health must reflect live state — never prerender or cache.
-export const dynamic = "force-dynamic";
+const NO_STORE = { "Cache-Control": "no-store" } as const;
 
 // Liveness + DB readiness. A static 200 hides a down database from uptime
 // monitors; do a lightweight Postgres round-trip and fail with 503 so the
@@ -19,10 +18,13 @@ export async function GET() {
       );
       return NextResponse.json(
         { status: "error", db: "down", timestamp },
-        { status: 503 },
+        { status: 503, headers: NO_STORE },
       );
     }
-    return NextResponse.json({ status: "ok", db: "ok", timestamp });
+    return NextResponse.json(
+      { status: "ok", db: "ok", timestamp },
+      { headers: NO_STORE },
+    );
   } catch (err) {
     console.error(
       "[api/health] unexpected:",
@@ -30,7 +32,7 @@ export async function GET() {
     );
     return NextResponse.json(
       { status: "error", db: "down", timestamp },
-      { status: 503 },
+      { status: 503, headers: NO_STORE },
     );
   }
 }

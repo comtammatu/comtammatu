@@ -2,6 +2,7 @@ import { cache } from "react";
 import { PERMISSION_KEYS, type JwtClaims } from "@comtammatu/shared/auth";
 import type { loadAuthState } from "@/_lib/auth";
 import { STOCK_FULFILLMENT_RECEIVE_READY_STATUSES } from "@lib/inventory/stock-fulfillment-hub-model";
+import { requestNow } from "@/_lib/request-now";
 
 type ServerClient = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
 
@@ -35,6 +36,7 @@ export const fetchBranchQueueCounts = cache(
     branchKind?: string | null,
   ): Promise<BranchQueueCounts> {
     const isStoreBranch = branchKind === "branch";
+    const nowIso = (await requestNow()).toISOString();
     const canSeeVoids =
       isStoreBranch &&
       (claims.user_role === "owner" ||
@@ -157,7 +159,7 @@ export const fetchBranchQueueCounts = cache(
             .eq("target_branch_id", branchId)
             .eq("kind", "pos.kds_out_of_stock")
             .or(
-              `expires_at.is.null,expires_at.gt.${new Date().toISOString()}`,
+              `expires_at.is.null,expires_at.gt.${nowIso}`,
             )
         : Promise.resolve(null),
     ]);

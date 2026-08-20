@@ -30,7 +30,8 @@ BEGIN
      OR position('expense_date' IN v_definition) = 0
      OR position('transfer_in' IN v_definition) = 0
      OR position('subtotal - order_facts.discount_amount' IN v_definition) = 0
-     OR position('v_gross_profit := NULL' IN v_definition) = 0 THEN
+     OR position('v_gross_profit := NULL' IN v_definition) = 0
+     OR v_definition !~ 'v_paid_orders[[:space:]]+FROM order_facts' THEN
     RAISE EXCEPTION 'get_branch_day_report_payload_drift';
   END IF;
 

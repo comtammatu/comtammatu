@@ -5,7 +5,7 @@ import { getStocktakeLinesBlind } from "../../../stocktake-actions";
 import type { CountUnitOption } from "../../../_lib/count-units";
 import { StocktakeCountClient } from "./count-client";
 
-export const dynamic = "force-dynamic";
+export const instant = false;
 
 interface StocktakeCountPageContentProps {
   stocktakeId: number;

@@ -3,8 +3,6 @@ import { NextResponse } from "next/server";
 import { getCronSecret } from "@comtammatu/shared/runtime";
 import { runTaxInvoiceIssueWorker } from "@lib/tax-invoice-issue-worker";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 function timingSafeEquals(a: string, b: string): boolean {

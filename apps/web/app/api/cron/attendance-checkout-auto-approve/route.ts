@@ -10,8 +10,6 @@ import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { getCronSecret } from "@comtammatu/shared/runtime";
 import { autoApproveStaleCheckouts } from "@lib/staff-runtime/_lib/checkout-auto-approve";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 function timingSafeEquals(a: string, b: string): boolean {

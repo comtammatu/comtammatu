@@ -16,8 +16,6 @@ import {
   getKdsResetBeforeLocalDate,
 } from "@comtammatu/shared/kds";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 function timingSafeEquals(a: string, b: string): boolean {

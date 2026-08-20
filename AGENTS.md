@@ -14,7 +14,9 @@ Hierarchy: `Tenant (L0) → Branch (L1)`.
    drift and installs the tracked `git-hooks/pre-push` hook (`core.hooksPath`).
    `corepack pnpm install` also runs the hook installer via `prepare`. IDE plugins
    and global skills are additive; they do not replace these rules.
-2. Read `docs/agent/rules/engineering.md`, then only the topic rule needed:
+2. Read `docs/agent/rules/engineering.md`, then only the topic rule needed.
+   Next.js APIs for this checkout live in `apps/web/node_modules/next/dist/docs/`
+   (`agentRules` is off so `next dest` does not rewrite this file).
 
 | Signal | Read |
 | --- | --- |

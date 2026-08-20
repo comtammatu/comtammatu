@@ -394,7 +394,7 @@ async function resolveAllowedPaymentMethods(
  * POS route revalidations to near-zero cache hits.
  *
  * Tag: `payment-config` — admin payment-settings save calls
- *      `revalidateTag('payment-config')` to bust. Existing
+ *      `updateTag('payment-config')` to bust. Existing
  *      `revalidatePath('/br/[branchId]/pos', 'page')` route bust complements
  *      the tag bust (both fire on the same admin save).
  *

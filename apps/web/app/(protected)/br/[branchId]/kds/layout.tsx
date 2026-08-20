@@ -5,6 +5,8 @@ import { ScreenWakeLock } from "@/components/screen-wake-lock";
 import { OperationalPwaProvider } from "../_components/operational-pwa/provider";
 import { KdsPwaToolbar } from "../_components/operational-pwa/toolbar";
 
+export const instant = false;
+
 export async function generateMetadata({
   params,
 }: {

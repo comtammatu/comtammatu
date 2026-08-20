@@ -9,7 +9,7 @@ import {
   type CountSlipStatus,
 } from "@lib/inventory/count-slip-model";
 
-export const dynamic = "force-dynamic";
+export const instant = false;
 
 const REVIEW_STATES = ["submitted", "needs_changes", "approved"] as const;
 

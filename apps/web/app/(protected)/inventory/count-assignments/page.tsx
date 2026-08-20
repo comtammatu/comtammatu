@@ -13,7 +13,7 @@ import type {
   CountAssignmentShift as ShiftOption,
 } from "@lib/inventory/count-assignment-model";
 
-export const dynamic = "force-dynamic";
+export const instant = false;
 
 const ALL_SHIFTS_PARAM = "all";
 

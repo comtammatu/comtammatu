@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { unstable_cache, revalidateTag } from "next/cache";
+import { unstable_cache, updateTag } from "next/cache";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
@@ -31,8 +31,8 @@ interface DailyLimitRow {
 /**
  * Cached menu structure (categories + items + variants + modifiers + sides).
  * Tenant-scoped, low-volatility — admin menu CRUD invalidates via
- * `revalidateTag('menu-structure')`. 5-minute TTL is a safety net for any
- * mutation path that forgets to call revalidateTag.
+ * `updateTag('menu-structure')`. 5-minute TTL is a safety net for any
+ * mutation path that forgets to call updateTag.
  *
  * Service-role client bypasses RLS but the explicit `tenant_id` filter
  * preserves tenant isolation. Outer fetchMenuForPos validates the caller's
@@ -116,9 +116,7 @@ export async function fetchMenuForPos(
   }
 
   if (forceRefresh) {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    revalidateTag("menu-structure");
+    updateTag("menu-structure");
   }
 
   const ctx = await getAuthContextWithPermission(

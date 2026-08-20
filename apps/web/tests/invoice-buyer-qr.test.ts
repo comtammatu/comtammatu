@@ -277,7 +277,7 @@ test("POS defers buyer details to the receipt QR; Self-Order may collect VAT inv
   assert.match(form, /result && !result\.ok && result\.terminal/);
   assert.match(page, /InvoiceBuyerOrderCard/);
   assert.match(page, /expiresAt=\{request\.expiresAt\}/);
-  assert.match(page, /export const dynamic = "force-dynamic"/);
+  assert.match(page, /export const instant = false/);
   assert.match(page, /request\.state === "not_required"/);
   assert.match(page, /invoiceBuyer\.notRequiredTitle/);
   assert.match(orderCard, /<Collapsible/);

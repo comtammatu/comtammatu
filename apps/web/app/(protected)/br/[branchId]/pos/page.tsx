@@ -174,7 +174,7 @@ async function PosDesktopData({
       fetchTablesForBranch(branchId),
       // Tenant-stable settings seeded in RSC. The admin payment-settings save
       // must call `revalidatePath('/br/[branchId]/pos', 'page')` +
-      // `revalidateTag('payment-config')` to bust this cache.
+      // `updateTag('payment-config')` to bust this cache.
       fetchPaymentMethodsForPos(branchId),
       fetchVietQrConfig(branchId),
     ]);

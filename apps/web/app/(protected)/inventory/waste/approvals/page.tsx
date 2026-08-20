@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { WasteApprovalsClient } from "./waste-approvals-client";
 import { loadWasteApprovalsData } from "@lib/inventory/waste-approvals-data";
 
-export const dynamic = "force-dynamic";
+export const instant = false;
 
 export default async function WasteApprovalsPage({
   searchParams,

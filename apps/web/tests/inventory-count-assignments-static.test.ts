@@ -212,7 +212,7 @@ test("Branch stays touch-native while Owner surface uses a management table and 
   );
   assert.match(
     branchClientSource,
-    /className="min-h-20 touch-manipulation"/,
+    /className="min-h-20 min-w-0 flex-nowrap touch-manipulation"/,
     "Branch count assignment rows should keep touch-height targets",
   );
   const touchButtons = branchClientSource.match(/size="touch"/g) ?? [];
