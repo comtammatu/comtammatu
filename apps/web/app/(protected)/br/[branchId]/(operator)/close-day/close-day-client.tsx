@@ -204,7 +204,7 @@ export function CloseDayClient({
 
   if (loadFailed) {
     return (
-      <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="flex w-full min-w-0 flex-col gap-4">
         <BranchOperatorControlBar className="sm:hidden">
           <Button
             variant="ghost"
@@ -229,7 +229,7 @@ export function CloseDayClient({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4">
+    <div className="flex w-full min-w-0 flex-col gap-4">
       <BranchOperatorControlBar className="sm:hidden">
         <Button
           variant="ghost"

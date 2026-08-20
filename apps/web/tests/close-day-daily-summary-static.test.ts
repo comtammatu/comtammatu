@@ -46,6 +46,16 @@ test("close-day is Daily Summary only (ADR 0024)", () => {
   assert.doesNotMatch(client, /closing_cash \?\? opening_cash/);
   assert.match(client, /closeDayCutoffNote/);
   assert.match(client, /pos-sessions\?session=\$\{session\.id\}/);
+  assert.match(
+    client,
+    /className="flex w-full min-w-0 flex-col gap-4"/,
+    "close-day report stack must grow with content, not flex-1/min-h-0",
+  );
+  assert.doesNotMatch(
+    client,
+    /className="flex min-h-0 flex-1 flex-col gap-4"/,
+    "close-day must not height-constrain its panel stack",
+  );
   const dateNav = client.slice(
     client.indexOf("const dateNav = ("),
     client.indexOf("if (loadFailed)"),

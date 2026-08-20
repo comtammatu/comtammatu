@@ -75,8 +75,10 @@ export function BranchOperatorPage({
     <div
       data-slot="branch-operator-page"
       className={cn(
-        "flex min-h-0 min-w-0 flex-1 flex-col gap-3",
-        fill && "h-full",
+        "flex min-w-0 flex-col gap-3",
+        // Only fill-height boards (internal scroll) opt in. Report stacks must
+        // grow with content so Card overflow-hidden panels are not flex-shrunk.
+        fill && "min-h-0 flex-1",
       )}
     >
       <AppPageHeader

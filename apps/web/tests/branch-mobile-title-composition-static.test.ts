@@ -29,6 +29,24 @@ test("Branch operator headers hide visually only on mobile when a compact title 
   assert.match(source, /compactOnMobile=\{hideHeaderOnMobile\}/);
 });
 
+test("BranchOperatorPage only height-fills when fill is opted in", () => {
+  const source = read(
+    "lib/branch-operator/components/branch-operator-page.tsx",
+  );
+  assert.match(source, /fill\?: boolean/);
+  assert.match(
+    source,
+    /fill && "min-h-0 flex-1"/,
+    "fill boards keep min-h-0 flex-1",
+  );
+  assert.doesNotMatch(
+    source,
+    /"flex min-h-0 min-w-0 flex-1 flex-col gap-3"/,
+    "report pages must not always be height-constrained",
+  );
+  assert.doesNotMatch(source, /fill && "h-full"/);
+});
+
 test("Branch stock pages with an inline mobile title opt into the responsive header contract", () => {
   const stockRoot = join(
     process.cwd(),
