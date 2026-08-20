@@ -284,13 +284,13 @@ export default async function FinancePage({
       null)
     : null;
   const fundsReady = isBranchScope
-    ? Boolean(branchBook?.hasOpening)
+    ? Boolean(branchBook?.hasOpening) && cash.hasCompanyOpening
     : cash.hasCompanyOpening && cash.branchesComplete;
   const totalOnHand = addMoney([
     roundToCanonicalMoney(
       isBranchScope ? (branchBook?.cashOnHand ?? 0) : cash.cashOnHand,
     ),
-    roundToCanonicalMoney(isBranchScope ? 0 : cash.bankOnHand),
+    roundToCanonicalMoney(cash.bankOnHand),
   ]);
   const totalAssetValue = addMoney([
     totalOnHand,
@@ -301,6 +301,109 @@ export default async function FinancePage({
       ? roundToCanonicalMoney(cockpit.kpis.equipment)
       : "0.00",
   ]);
+
+  const totalAssetValueDetails = (
+    <KpiRow
+      density="compact"
+      className={
+        cockpit.canViewInventoryValuation
+          ? "grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)]"
+          : "grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)]"
+      }
+    >
+      <div className="min-w-0 md:grid md:gap-2 xl:contents">
+        <span
+          className="min-h-0 md:min-h-6 xl:absolute xl:size-0"
+          aria-hidden
+        />
+        <KpiCard
+          density="compact"
+          label={financeCopy.basic.kpis.totalOnHand}
+          value={
+            fundsReady
+              ? formatVND(totalOnHand)
+              : messages.finance.cash.verifying
+          }
+          shortValue={
+            fundsReady ? formatCompactVND(totalOnHand) : undefined
+          }
+          tone={fundsReady ? "primary" : "warning"}
+        />
+      </div>
+
+      {cockpit.canViewInventoryValuation ? (
+        <div className="grid min-w-0 gap-2 xl:contents">
+          <span className={formulaOperatorClass}>
+            <span aria-hidden>+</span>
+            <span className="sr-only">
+              {financeCopy.basic.operators.add}
+            </span>
+          </span>
+          <KpiCard
+            density="compact"
+            label={financeCopy.basic.kpis.inventoryClosingValue}
+            value={formatVND(cockpit.kpis.inventoryValue)}
+            shortValue={formatCompactVND(cockpit.kpis.inventoryValue)}
+            hint={financeCopy.basic.kpis.inventoryValueHint(
+              formatVND(cockpit.kpis.inventoryOpeningValue),
+            )}
+          />
+        </div>
+      ) : null}
+
+      <div className="grid min-w-0 gap-2 xl:contents">
+        <span className={formulaOperatorClass}>
+          <span aria-hidden>+</span>
+          <span className="sr-only">
+            {financeCopy.basic.operators.add}
+          </span>
+        </span>
+        <KpiCard
+          density="compact"
+          label={financeCopy.basic.kpis.equipment}
+          value={
+            cockpit.kpis.equipmentRecorded
+              ? formatVND(cockpit.kpis.equipment)
+              : financeCopy.basic.kpis.notRecorded
+          }
+          shortValue={
+            cockpit.kpis.equipmentRecorded
+              ? formatCompactVND(cockpit.kpis.equipment)
+              : undefined
+          }
+          href={financeHref("/finance/equipment", params)}
+        />
+      </div>
+
+      <div className="grid min-w-0 gap-2 xl:contents">
+        <span className={formulaOperatorClass}>
+          <span aria-hidden>=</span>
+          <span className="sr-only">
+            {financeCopy.basic.operators.equals}
+          </span>
+        </span>
+        {renderTotalAssetValueCard()}
+      </div>
+    </KpiRow>
+  );
+
+  function renderTotalAssetValueCard() {
+    return (
+      <KpiCard
+        density="compact"
+        label={financeCopy.basic.kpis.totalAssetValue}
+        value={
+          fundsReady
+            ? formatVND(totalAssetValue)
+            : messages.finance.cash.verifying
+        }
+        shortValue={
+          fundsReady ? formatCompactVND(totalAssetValue) : undefined
+        }
+        tone={fundsReady ? "primary" : "warning"}
+      />
+    );
+  }
 
   const periodResultDetails = (
     <KpiRow
@@ -439,103 +542,15 @@ export default async function FinancePage({
         cash={cash}
         location={params.location}
         selectedBranchId={params.branch}
-        vietqrRevenue={cockpit.kpis.vietqrRevenue}
         title={financeCopy.basic.sections.assets}
       >
-        <KpiRow
-          density="compact"
-          className={
-            cockpit.canViewInventoryValuation
-              ? "grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)]"
-              : "grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)]"
-          }
-        >
-          <div className="min-w-0 md:grid md:gap-2 xl:contents">
-            <span
-              className="min-h-0 md:min-h-6 xl:absolute xl:size-0"
-              aria-hidden
-            />
-            <KpiCard
-              density="compact"
-              label={financeCopy.basic.kpis.totalOnHand}
-              value={
-                fundsReady
-                  ? formatVND(totalOnHand)
-                  : messages.finance.cash.verifying
-              }
-              shortValue={
-                fundsReady ? formatCompactVND(totalOnHand) : undefined
-              }
-              tone={fundsReady ? "primary" : "warning"}
-            />
-          </div>
+        <FinancePeriodFormulaShell
+          summary={renderTotalAssetValueCard()}
+          details={totalAssetValueDetails}
+        />
+      </CurrentFundsSection>
 
-          {cockpit.canViewInventoryValuation ? (
-            <div className="grid min-w-0 gap-2 xl:contents">
-              <span className={formulaOperatorClass}>
-                <span aria-hidden>+</span>
-                <span className="sr-only">
-                  {financeCopy.basic.operators.add}
-                </span>
-              </span>
-              <KpiCard
-                density="compact"
-                label={financeCopy.basic.kpis.inventoryClosingValue}
-                value={formatVND(cockpit.kpis.inventoryValue)}
-                shortValue={formatCompactVND(cockpit.kpis.inventoryValue)}
-                hint={financeCopy.basic.kpis.inventoryValueHint(
-                  formatVND(cockpit.kpis.inventoryOpeningValue),
-                )}
-              />
-            </div>
-          ) : null}
-
-          <div className="grid min-w-0 gap-2 xl:contents">
-            <span className={formulaOperatorClass}>
-              <span aria-hidden>+</span>
-              <span className="sr-only">
-                {financeCopy.basic.operators.add}
-              </span>
-            </span>
-            <KpiCard
-              density="compact"
-              label={financeCopy.basic.kpis.equipment}
-              value={
-                cockpit.kpis.equipmentRecorded
-                  ? formatVND(cockpit.kpis.equipment)
-                  : financeCopy.basic.kpis.notRecorded
-              }
-              shortValue={
-                cockpit.kpis.equipmentRecorded
-                  ? formatCompactVND(cockpit.kpis.equipment)
-                  : undefined
-              }
-              href={financeHref("/finance/equipment", params)}
-            />
-          </div>
-
-          <div className="grid min-w-0 gap-2 xl:contents">
-            <span className={formulaOperatorClass}>
-              <span aria-hidden>=</span>
-              <span className="sr-only">
-                {financeCopy.basic.operators.equals}
-              </span>
-            </span>
-            <KpiCard
-              density="compact"
-              label={financeCopy.basic.kpis.totalAssetValue}
-              value={
-                fundsReady
-                  ? formatVND(totalAssetValue)
-                  : messages.finance.cash.verifying
-              }
-              shortValue={
-                fundsReady ? formatCompactVND(totalAssetValue) : undefined
-              }
-              tone={fundsReady ? "primary" : "warning"}
-            />
-          </div>
-        </KpiRow>
+      <AppSection size="sm" title={financeCopy.basic.sections.startupCapital}>
         <KpiRow density="compact" className="grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
           <KpiCard
             density="compact"
@@ -553,7 +568,7 @@ export default async function FinancePage({
             href={financeHref("/finance/expenses", params)}
           />
         </KpiRow>
-      </CurrentFundsSection>
+      </AppSection>
     </AppPage>
   );
 }

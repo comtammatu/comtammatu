@@ -78,7 +78,8 @@ Cấm `Kết quả = LN gộp − chi vận hành + Δtồn`. Chi phí hàng kh�
 Giá vốn món không trừ trong kết quả. Δ tồn giữ vì hàng vào là mua/ĐC đã nhận —
 tồn cuối vẫn là tài sản, không phải lãi.
 Tiền mặt công ty = tổng sổ TM chi nhánh bán hàng; tiền tài khoản = một sổ NH
-công ty. Phạm vi một CN: sổ TM của CN đó + thu VietQR kỳ (không chia số dư NH).
+công ty. Phạm vi một CN trên Tài sản: sổ TM của CN đó + cùng sổ NH công ty
+(không chia số dư NH theo CN; thu VietQR kỳ không hiện trên Tài sản).
 Giá trị tồn cuối kỳ theo ngày/CN đang chọn; cần xử lý cuối trang. Section UI
 chỉ title.
 

@@ -29,12 +29,12 @@ Period-result formula (two rows):
 
 Missing food-cost coverage blanks gross profit only. No recorded operating expense keeps period result unavailable (not zero).
 
-After the period result, **`Tài sản`** (not a summed total): company
+After the period result, **`Tài sản`**: scoped
 `Tiền mặt + Tiền tài khoản = Tổng tiền`; filtered period-end **`Tồn kho`**;
 all-time **`Thiết bị`** (`category = capital`, spend recorded, not a register;
-never `Giá trị thiết bị`); all-time **`Chi phí ban đầu`** (`capital`+`deposit`,
-period ignored, branch filter matches opex). `Thiết bị` is the capital slice
-of startup — do not add the two together.
+never `Giá trị thiết bị`); then a separate **`Chi phí ban đầu`** section
+(`capital`+`deposit`, period ignored, branch filter matches opex). `Thiết bị`
+is the capital slice of startup — do not add the two together.
 
 Funds formula:
 
@@ -47,10 +47,13 @@ Funds formula:
   are reconciliation evidence only.
 - **Company `Tiền tài khoản`**: one company bank ledger — immutable bank opening
   + every canonical SePay movement in `bank_transactions` + append-only audited
-  adjustments. Not split by branch.
-- **Branch bank reporting**: period `vietqr_revenue` for that branch's orders
-  that landed on the company account (`get_revenue_kpis`). Not a bank balance.
-- **`Tổng tiền`**: company cash (when complete) + company bank.
+  adjustments. Not split by branch. Shown on `/finance` **`Tài sản`** for every
+  location scope (including a single sales branch).
+- **`Tổng tiền`**: scoped cash (company sum of sales-branch books, or one
+  branch book) + company bank. Branch scope still adds the full company bank
+  ledger (not a branch bank book).
+- Period `vietqr_revenue` (orders that landed on the company account) belongs on
+  revenue reports — not on **`Tài sản`**.
 
 Show `Chưa mở sổ` until `initialize_finance_funds` (company bank) and
 `initialize_branch_cash_opening` (each sales branch). Openings cannot be
@@ -72,7 +75,8 @@ Cash supplier payments (`payment_method='cash'`) reduce cash.
 `bank_transfer` supplier payments update AP without a second bank movement;
 the canonical outgoing `bank_transactions` row reduces bank funds.
 
-Inventory sits in **`Tài sản`** with funds, **`Thiết bị`**, and **`Chi phí ban đầu`**.
+Inventory sits in **`Tài sản`** with funds and **`Thiết bị`**. **`Chi phí ban đầu`**
+is a separate section after **`Tài sản`** (outside `Tổng giá trị`).
 No attention queue or VAT mosaic on this landing; tax/GTGT stay on HĐĐT routes.
 
 Do not expand Finance into a full enterprise accounting product by default.
@@ -212,7 +216,7 @@ the actions above. RLS remains final enforcement.
 
 | Route family                 | Role                         | Decision |
 | ---------------------------- | ---------------------------- | -------- |
-| `/finance`                   | Finance Basic landing        | Period formula then `Tài sản` (funds, then `Tổng tiền` + inventory + equipment = `Tổng giá trị`; startup outside the sum) |
+| `/finance`                   | Finance Basic landing        | Period formula then `Tài sản` (funds `TM + NH = Tổng tiền`, then `Tổng tiền` + inventory + equipment = `Tổng giá trị`); `Chi phí ban đầu` in its own section after assets |
 | `/finance/bank-transactions` | Bank LIST | Manual match by `order_number` (`mã đơn`); classify only, never change bank balance |
 | `/finance/expenses`          | Operating expense LIST       | Period KPI from `get_finance_expense_period_summary`; list stays paged |
 | `/finance/equipment`         | Capital equipment LIST       | All-time `category=capital` spend; not a depreciation register |

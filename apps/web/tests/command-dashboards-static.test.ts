@@ -103,6 +103,15 @@ test("finance overview presents period results, current funds, and inventory in 
     page,
     /<CurrentFundsSection[\s\S]*title=\{financeCopy\.basic\.sections\.assets\}/,
   );
+  assert.match(
+    page,
+    /<CurrentFundsSection[\s\S]*FinancePeriodFormulaShell[\s\S]*details=\{totalAssetValueDetails\}/,
+  );
+  assert.match(
+    page,
+    /totalAssetValueDetails[\s\S]*kpis\.inventoryClosingValue[\s\S]*kpis\.equipment[\s\S]*renderTotalAssetValueCard/,
+  );
+  assert.match(page, /basic\.sections\.startupCapital/);
   assert.ok(
     pageBody.indexOf("basic.sections.grossProfit") <
       pageBody.indexOf("basic.sections.periodResult"),
@@ -115,15 +124,8 @@ test("finance overview presents period results, current funds, and inventory in 
   );
   assert.ok(
     pageBody.indexOf("basic.sections.assets") <
-      pageBody.indexOf("kpis.inventoryClosingValue") ||
-      pageBody.indexOf("<CurrentFundsSection") <
-        pageBody.indexOf("kpis.inventoryClosingValue"),
-    "Assets section must wrap current funds before inventory",
-  );
-  assert.ok(
-    pageBody.indexOf("<CurrentFundsSection") <
-      pageBody.indexOf("kpis.inventoryClosingValue"),
-    "Current funds must appear before period-end inventory",
+      pageBody.indexOf("basic.sections.startupCapital"),
+    "Assets section must appear before startup capital section",
   );
   assert.ok(
     pageBody.indexOf("label={financeCopy.basic.kpis.inventoryClosingValue}") <
@@ -136,10 +138,17 @@ test("finance overview presents period results, current funds, and inventory in 
     "Equipment must appear before total asset value",
   );
   assert.ok(
+    pageBody.indexOf("</CurrentFundsSection>") <
+      pageBody.indexOf("label={financeCopy.basic.kpis.startupCapital}"),
+    "Startup capital must appear outside CurrentFundsSection",
+  );
+  assert.ok(
     pageBody.indexOf("label={financeCopy.basic.kpis.totalAssetValue}") <
       pageBody.indexOf("label={financeCopy.basic.kpis.startupCapital}"),
     "Total asset value must appear before startup capital",
   );
+  assert.match(page, /roundToCanonicalMoney\(cash\.bankOnHand\)/);
+  assert.doesNotMatch(page, /isBranchScope \? 0 : cash\.bankOnHand/);
   assert.match(copy, /title: "Tài chính"/);
   assert.match(copy, /netRevenue: "Doanh thu thuần"/);
   assert.match(copy, /ingredientCost: "Giá vốn món"/);

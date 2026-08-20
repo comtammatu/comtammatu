@@ -124,14 +124,12 @@ export function CurrentFundsSection({
   cash,
   location,
   selectedBranchId,
-  vietqrRevenue,
   title,
   children,
 }: {
   cash: CashSummary;
   location: FinanceLocation;
   selectedBranchId: number | null;
-  vietqrRevenue: number;
   title?: string;
   children?: ReactNode;
 }) {
@@ -155,14 +153,27 @@ export function CurrentFundsSection({
     ? Boolean(selectedBook?.hasOpening)
     : cash.branchesComplete;
   const bankReady = cash.hasCompanyOpening;
-  const openingDate = formatVNDateTime(
+  const cashOpeningDate = formatVNDateTime(
     isBranchScope
       ? (selectedBook?.openingEffectiveAt ?? null)
       : cash.openingEffectiveAt,
   );
-  const branchCashOnHand = selectedBook?.cashOnHand ?? 0;
-  const displayCash = isBranchScope ? branchCashOnHand : cash.cashOnHand;
-  const totalOnHand = cash.cashOnHand + cash.bankOnHand;
+  const displayCash = isBranchScope
+    ? (selectedBook?.cashOnHand ?? 0)
+    : cash.cashOnHand;
+  const cashOpeningBalance = isBranchScope
+    ? (selectedBook?.openingBalance ?? 0)
+    : cash.openingBalance;
+  const cashInSince = isBranchScope
+    ? (selectedBook?.cashInSince ?? 0)
+    : cash.cashInSince;
+  const cashOutSince = isBranchScope
+    ? (selectedBook?.cashOutSince ?? 0)
+    : cash.cashOutSince;
+  const cashAdjustments = isBranchScope
+    ? (selectedBook?.cashAdjustments ?? 0)
+    : cash.cashAdjustments;
+  const totalOnHand = displayCash + cash.bankOnHand;
   const currentOpeningSchema = useMemo(
     () =>
       openingSchema(
@@ -272,7 +283,7 @@ export function CurrentFundsSection({
     </Button>
   );
 
-  const companyFormula = (
+  const fundsFormula = (
     <KpiRow
       density="compact"
       className="grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)]"
@@ -286,18 +297,18 @@ export function CurrentFundsSection({
           labelTooltip={
             cashReady
               ? copy.cash.onHandBreakdown(
-                  formatVND(cash.openingBalance),
-                  formatVND(cash.cashInSince),
-                  formatVND(cash.cashOutSince),
-                  formatVND(cash.cashAdjustments),
+                  formatVND(cashOpeningBalance),
+                  formatVND(cashInSince),
+                  formatVND(cashOutSince),
+                  formatVND(cashAdjustments),
                 )
               : undefined
           }
-          value={cashReady ? formatVND(cash.cashOnHand) : copy.cash.verifying}
-          shortValue={cashReady ? formatCompactVND(cash.cashOnHand) : undefined}
+          value={cashReady ? formatVND(displayCash) : copy.cash.verifying}
+          shortValue={cashReady ? formatCompactVND(displayCash) : undefined}
           hint={
             cashReady
-              ? copy.cash.openingMeta(openingDate)
+              ? copy.cash.openingMeta(cashOpeningDate)
               : cash.legacySettingsPresent
                 ? copy.cash.noOpeningLegacy
                 : undefined
@@ -357,42 +368,6 @@ export function CurrentFundsSection({
     </KpiRow>
   );
 
-  const branchFormula = (
-    <KpiRow density="compact" className="grid-cols-1 sm:grid-cols-2">
-      <KpiCard
-        density="compact"
-        icon={<IconWallet className="size-4 text-muted-foreground" />}
-        label={copy.basic.kpis.cashOnHand}
-        labelTooltip={
-          selectedBook?.hasOpening
-            ? copy.cash.onHandBreakdown(
-                formatVND(selectedBook.openingBalance),
-                formatVND(selectedBook.cashInSince),
-                formatVND(selectedBook.cashOutSince),
-                formatVND(selectedBook.cashAdjustments),
-              )
-            : undefined
-        }
-        value={cashReady ? formatVND(displayCash) : copy.cash.verifying}
-        shortValue={cashReady ? formatCompactVND(displayCash) : undefined}
-        hint={
-          cashReady
-            ? copy.cash.openingMeta(openingDate)
-            : cash.legacySettingsPresent
-              ? copy.cash.noOpeningLegacy
-              : undefined
-        }
-      />
-      <KpiCard
-        density="compact"
-        label={copy.basic.kpis.vietqrRevenue}
-        value={formatVND(vietqrRevenue)}
-        shortValue={formatCompactVND(vietqrRevenue)}
-        hint={copy.cash.vietqrPeriodHint}
-      />
-    </KpiRow>
-  );
-
   return (
     <>
       <AppSection
@@ -400,7 +375,7 @@ export function CurrentFundsSection({
         title={title ?? copy.cash.onHandTitle}
         action={fundsAction}
       >
-        {isBranchScope ? branchFormula : companyFormula}
+        {fundsFormula}
         {!isBranchScope && cash.branches.length > 0 ? (
           <div className="grid gap-2">
             <p className="text-xs font-medium text-muted-foreground">

@@ -27,16 +27,15 @@ test("finance landing presents immutable book funds", () => {
   assert.match(page, /includeCash:\s*true/);
   assert.match(page, /CurrentFundsSection[\s\S]*cash=\{cash\}/);
   assert.match(page, /locationFilter/);
-  assert.match(page, /vietqrRevenue=\{cockpit\.kpis\.vietqrRevenue\}/);
-  assert.match(currentFunds, /cashReady \? formatVND\(cash\.cashOnHand\)/);
+  assert.doesNotMatch(page, /vietqrRevenue=\{/);
+  assert.match(currentFunds, /cashReady \? formatVND\(displayCash\)/);
   assert.match(currentFunds, /bankReady \? formatVND\(cash\.bankOnHand\)/);
   assert.match(currentFunds, /totalOnHand/);
   assert.match(currentFunds, /copy\.cash\.branchBooksTitle/);
-  assert.match(currentFunds, /copy\.basic\.kpis\.vietqrRevenue/);
+  assert.doesNotMatch(currentFunds, /vietqrRevenue|vietqrPeriodHint|kpis\.vietqrRevenue/);
   assert.match(copy, /cashOnHand: "Tiền mặt"/);
   assert.match(copy, /bankOnHand: "Tiền tài khoản"/);
   assert.match(copy, /totalOnHand: "Tổng tiền"/);
-  assert.match(copy, /vietqrRevenue: "Thu VietQR"/);
   assert.match(copy, /verifying: "Chưa mở sổ"/);
   assert.match(copy, /onHandTitle: "Tiền mặt hiện có"/);
   assert.doesNotMatch(copy, /onHandDescription|followsFilters/);
@@ -57,7 +56,7 @@ test("finance landing presents immutable book funds", () => {
     (currentFunds.match(/className=\{formulaOperatorClass\}/g) ?? []).length,
     2,
   );
-  assert.match(currentFunds, /copy\.cash\.openingMeta\(openingDate\)/);
+  assert.match(currentFunds, /copy\.cash\.openingMeta\(cashOpeningDate\)/);
   assert.doesNotMatch(currentFunds, /Chi →/);
   assert.doesNotMatch(currentFunds, /totalOnHandHint/);
   assert.doesNotMatch(currentFunds, /<details|calculationDetails/);
