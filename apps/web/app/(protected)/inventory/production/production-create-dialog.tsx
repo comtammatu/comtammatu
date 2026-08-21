@@ -21,7 +21,7 @@ import { Combobox } from "@/components/form/combobox";
 import { AppDialog } from "@/components/form/form-dialog";
 import { QuantityInput } from "@/components/form/domain-number-inputs";
 import { AppEmptyState } from "@/components/surface";
-import { formatQty } from "@lib/inventory/format";
+import { formatQty, formatSmartQuantityUnit } from "@lib/inventory/format";
 import { messages } from "@lib/messages";
 import {
   createProductionRun,
@@ -410,39 +410,44 @@ export function ProductionCreateDialog({
               </div>
               <ScrollArea className="h-60">
                 <div className="divide-y">
-                  {ingredientRows.map(({ ingredient, needed, onHand, short, missing }) => (
-                    <div
-                      key={ingredient.ingredient_id}
-                      className="flex items-center gap-2 px-3 py-2.5 text-sm"
-                    >
-                      <span className="min-w-0 flex-1 truncate font-medium">
-                        {ingredient.ingredient_name}
-                      </span>
-                      <span className="w-24 shrink-0 text-right tabular-nums text-xs font-mono">
-                        {formatCleanQuantity(needed)}{" "}
-                        <span className="text-muted-foreground">
-                          {ingredient.unit_name}
+                  {ingredientRows.map(({ ingredient, needed, onHand, short, missing }) => {
+                    const smartNeeded = formatSmartQuantityUnit(needed, ingredient.unit_name);
+                    const smartOnHand = formatSmartQuantityUnit(onHand, ingredient.unit_name);
+                    const smartMissing = formatSmartQuantityUnit(missing, ingredient.unit_name);
+                    return (
+                      <div
+                        key={ingredient.ingredient_id}
+                        className="flex items-center gap-2 px-3 py-2.5 text-sm"
+                      >
+                        <span className="min-w-0 flex-1 truncate font-medium">
+                          {ingredient.ingredient_name}
                         </span>
-                      </span>
-                      <span className="w-24 shrink-0 text-right tabular-nums text-xs font-mono">
-                        {formatCleanQuantity(onHand)}{" "}
-                        <span className="text-muted-foreground">
-                          {ingredient.unit_name}
+                        <span className="w-24 shrink-0 text-right tabular-nums text-xs font-mono">
+                          {smartNeeded.formattedQty}{" "}
+                          <span className="text-muted-foreground">
+                            {smartNeeded.displayUnit}
+                          </span>
                         </span>
-                      </span>
-                      <span className="w-28 shrink-0 text-right">
-                        {short ? (
-                          <Badge variant="warning" className="font-mono text-2xs">
-                            Thiếu {formatCleanQuantity(missing)} {ingredient.unit_name}
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-success text-2xs">
-                            Đủ tồn
-                          </Badge>
-                        )}
-                      </span>
-                    </div>
-                  ))}
+                        <span className="w-24 shrink-0 text-right tabular-nums text-xs font-mono">
+                          {smartOnHand.formattedQty}{" "}
+                          <span className="text-muted-foreground">
+                            {smartOnHand.displayUnit}
+                          </span>
+                        </span>
+                        <span className="w-28 shrink-0 text-right">
+                          {short ? (
+                            <Badge variant="warning" className="font-mono text-2xs">
+                              Thiếu {smartMissing.formattedQty} {smartMissing.displayUnit}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-success text-2xs">
+                              Đủ tồn
+                            </Badge>
+                          )}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </ScrollArea>
             </Frame>

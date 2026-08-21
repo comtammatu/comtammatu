@@ -17,7 +17,7 @@ import {
   DescriptionList,
 } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
-import { formatDateTime, formatQty } from "@lib/inventory/format";
+import { formatDateTime, formatQty, formatSmartQuantityUnit } from "@lib/inventory/format";
 import { messages } from "@lib/messages";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import {
@@ -179,10 +179,13 @@ export function ProductionDetailClient({
   }
 
   const unit = run.entry_unit_name ?? "";
+  const actualSmart = formatSmartQuantityUnit(run.actual_quantity, unit);
   const actualQtyLabel =
     run.actual_quantity == null
       ? "—"
-      : `${formatQty(run.actual_quantity)} ${unit}`.trim();
+      : `${actualSmart.formattedQty} ${actualSmart.displayUnit}`.trim();
+
+  const plannedSmart = formatSmartQuantityUnit(run.planned_quantity, unit);
 
   const body = (
     <div className="flex flex-col gap-5">
@@ -203,7 +206,7 @@ export function ProductionDetailClient({
             {detailCopy.kpiPlanned}
           </span>
           <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
-            {`${formatQty(run.planned_quantity)} ${unit}`.trim()}
+            {`${plannedSmart.formattedQty} ${plannedSmart.displayUnit}`.trim()}
           </span>
         </div>
         <div className="min-w-0">
@@ -266,47 +269,51 @@ export function ProductionDetailClient({
             <span className="w-36 shrink-0 text-right">Thực tế</span>
           </div>
           <div className="divide-y">
-            {run.lines.map((line) => (
-              <div
-                key={line.ingredient_id}
-                className="flex flex-col gap-2 px-3 py-2.5 text-sm sm:flex-row sm:items-center"
-              >
-                <span className="min-w-0 flex-1 font-medium text-foreground">
-                  {line.ingredient_name}
-                </span>
-                <span className="w-36 shrink-0 text-left sm:text-right tabular-nums text-muted-foreground text-xs sm:text-sm">
-                  {formatQty(line.planned_quantity)} {line.entry_unit_name}
-                </span>
-                <div className="w-36 shrink-0 flex items-center justify-start sm:justify-end gap-1.5">
-                  {run.status === "in_progress" ? (
-                    <div className="flex w-full items-center gap-1.5">
-                      <QuantityInput
-                        value={actualIngredients[line.ingredient_id] ?? ""}
-                        onValueChange={(value) =>
-                          setActualIngredients((current) => ({
-                            ...current,
-                            [line.ingredient_id]: value,
-                          }))
-                        }
-                        min="0"
-                        maxFractionDigits={3}
-                        className="h-8 text-xs"
-                        aria-label={`Thực tế ${line.ingredient_name}`}
-                      />
-                      <span className="text-xs text-muted-foreground shrink-0">
-                        {line.entry_unit_name}
+            {run.lines.map((line) => {
+              const plannedSmartLine = formatSmartQuantityUnit(line.planned_quantity, line.entry_unit_name);
+              const actualSmartLine = formatSmartQuantityUnit(line.actual_quantity, line.entry_unit_name);
+              return (
+                <div
+                  key={line.ingredient_id}
+                  className="flex flex-col gap-2 px-3 py-2.5 text-sm sm:flex-row sm:items-center"
+                >
+                  <span className="min-w-0 flex-1 font-medium text-foreground">
+                    {line.ingredient_name}
+                  </span>
+                  <span className="w-36 shrink-0 text-left sm:text-right tabular-nums text-muted-foreground text-xs sm:text-sm font-mono">
+                    {plannedSmartLine.formattedQty} {plannedSmartLine.displayUnit}
+                  </span>
+                  <div className="w-36 shrink-0 flex items-center justify-start sm:justify-end gap-1.5">
+                    {run.status === "in_progress" ? (
+                      <div className="flex w-full items-center gap-1.5">
+                        <QuantityInput
+                          value={actualIngredients[line.ingredient_id] ?? ""}
+                          onValueChange={(value) =>
+                            setActualIngredients((current) => ({
+                              ...current,
+                              [line.ingredient_id]: value,
+                            }))
+                          }
+                          min="0"
+                          maxFractionDigits={3}
+                          className="h-8 text-xs"
+                          aria-label={`Thực tế ${line.ingredient_name}`}
+                        />
+                        <span className="text-xs text-muted-foreground shrink-0">
+                          {line.entry_unit_name}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="tabular-nums font-medium text-foreground font-mono">
+                        {line.actual_quantity == null
+                          ? "—"
+                          : `${actualSmartLine.formattedQty} ${actualSmartLine.displayUnit}`}
                       </span>
-                    </div>
-                  ) : (
-                    <span className="tabular-nums font-medium text-foreground">
-                      {line.actual_quantity == null
-                        ? "—"
-                        : `${formatQty(line.actual_quantity)} ${line.entry_unit_name}`}
-                    </span>
-                  )}
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </Frame>
       </AppSection>
