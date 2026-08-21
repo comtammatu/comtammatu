@@ -2,10 +2,12 @@
 
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
+import type { PickupOrderType } from "@comtammatu/shared/pickup";
 import { formatCount } from "@comtammatu/shared/format";
 import { cn } from "@comtammatu/ui";
 import { Item, ItemGroup } from "@comtammatu/ui/components/item";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { DeliveryPlatformMark } from "@/components/delivery-platform-mark";
 import { PickupIdleVisual, type PickupIdleState } from "./pickup-idle-visual";
 import { PickupWaitTime } from "./pickup-wait-time";
 
@@ -45,6 +47,10 @@ export type PickupBoardRow = {
   itemQuantity: number;
   status: PickupBoardStatus;
   sortAt: string;
+  orderType?: PickupOrderType;
+  deliveryPlatform?: string | null;
+  externalOrderRef?: string | null;
+  orderNumber?: string;
 };
 
 type PickupColumn = keyof typeof PICKUP_COLUMN_CLASS;
@@ -152,8 +158,14 @@ function PickupOverflowRail({ rows }: { rows: DisplayPickupBoardRow[] }) {
             className="min-w-0 border-border bg-background p-2"
             role="listitem"
           >
-            <span className="truncate font-heading text-pickup-footer font-semibold text-foreground">
-              {row.orderLabel}
+            <span className="inline-flex items-center gap-1.5 truncate font-heading text-pickup-footer font-semibold text-foreground">
+              {row.orderType === "delivery" && row.deliveryPlatform ? (
+                <DeliveryPlatformMark
+                  platform={row.deliveryPlatform}
+                  size="xs"
+                />
+              ) : null}
+              <span className="truncate">{row.orderLabel}</span>
             </span>
             <span className="font-mono text-pickup-footer text-muted-foreground tabular-nums">
               {formatCount(row.itemQuantity)} {PICKUP_BOARD_COPY.itemUnit}
@@ -308,6 +320,7 @@ function PickupOrderListRow({
   nowMs: number;
 }) {
   const statusLabel = getPickupStatusLabel(row.status);
+  const isDelivery = row.orderType === "delivery";
 
   return (
     <Item
@@ -329,6 +342,12 @@ function PickupOrderListRow({
           <span className="text-muted-foreground font-mono text-pickup-header">
             #{queueIndex}
           </span>
+          {isDelivery && row.deliveryPlatform ? (
+            <DeliveryPlatformMark
+              platform={row.deliveryPlatform}
+              size="md"
+            />
+          ) : null}
           <span>{row.orderLabel}</span>
         </span>
       </PickupOrderCell>

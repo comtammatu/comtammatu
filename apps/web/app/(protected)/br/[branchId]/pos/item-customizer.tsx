@@ -164,12 +164,32 @@ export function ItemCustomizer({
   const channelPriceReady = useMemo(() => {
     if (!item) return false;
     if (listPriceOrderType !== "delivery") return true;
-    return resolvePosMenuListPrice(
-      item,
-      listPriceOrderType,
-      listPriceDeliveryPlatform,
-    ).ok;
-  }, [item, listPriceDeliveryPlatform, listPriceOrderType]);
+    if (
+      !resolvePosMenuListPrice(
+        item,
+        listPriceOrderType,
+        listPriceDeliveryPlatform,
+      ).ok
+    ) {
+      return false;
+    }
+    // Selected sides must also have channel list prices (no silent base fallback).
+    return item.menu_item_available_sides
+      .filter((s) => selectedSideIds.has(s.side_item.id))
+      .every(
+        (s) =>
+          resolvePosMenuListPrice(
+            s.side_item,
+            listPriceOrderType,
+            listPriceDeliveryPlatform,
+          ).ok,
+      );
+  }, [
+    item,
+    listPriceDeliveryPlatform,
+    listPriceOrderType,
+    selectedSideIds,
+  ]);
 
   const modifierTotal = useMemo(() => {
     if (!item) return 0;
@@ -182,8 +202,20 @@ export function ItemCustomizer({
     if (!item) return 0;
     return item.menu_item_available_sides
       .filter((s) => selectedSideIds.has(s.side_item.id))
-      .reduce((sum, s) => sum + s.side_item.base_price, 0);
-  }, [item, selectedSideIds]);
+      .reduce((sum, s) => {
+        const resolved = resolvePosMenuListPrice(
+          s.side_item,
+          listPriceOrderType,
+          listPriceDeliveryPlatform,
+        );
+        return sum + (resolved.ok ? resolved.unitPrice : 0);
+      }, 0);
+  }, [
+    item,
+    listPriceDeliveryPlatform,
+    listPriceOrderType,
+    selectedSideIds,
+  ]);
 
   const lineUnitPrice = unitPrice + modifierTotal + sideTotal;
   const totalPrice = lineUnitPrice * quantity;
@@ -221,13 +253,21 @@ export function ItemCustomizer({
 
     const sides: CartSide[] = item.menu_item_available_sides
       .filter((s) => selectedSideIds.has(s.side_item.id))
-      .map((s) => ({
-        side_item_id: s.side_item.id,
-        name: s.side_item.name,
-        price: s.side_item.base_price,
-        quantity: 1,
-        is_default: s.is_default,
-      }));
+      .map((s) => {
+        const resolved = resolvePosMenuListPrice(
+          s.side_item,
+          listPriceOrderType,
+          listPriceDeliveryPlatform,
+        );
+        return {
+          side_item_id: s.side_item.id,
+          name: s.side_item.name,
+          // Server re-prices via pos_enrich_order_sides; cart preview must match.
+          price: resolved.ok ? resolved.unitPrice : 0,
+          quantity: 1,
+          is_default: s.is_default,
+        };
+      });
 
     const trimmedNote = note.trim();
     const trimmedDiscountNote = discountNote.trim();
@@ -261,6 +301,8 @@ export function ItemCustomizer({
     discountAmount,
     discountValue,
     discountNote,
+    listPriceOrderType,
+    listPriceDeliveryPlatform,
   ]);
 
   const toggleModifier = useCallback((modId: number) => {
@@ -478,41 +520,52 @@ export function ItemCustomizer({
                     {messages.pos.customizer.sides}
                   </h3>
                   <ItemGroup className="gap-2">
-                    {item.menu_item_available_sides.map((s) => (
-                      <Item
-                        key={s.id}
-                        variant="outline"
-                        className="cursor-pointer hover:bg-accent"
-                        render={
-                          <FieldLabel
-                            htmlFor={`side-${String(s.id)}`}
-                            className="flex items-center gap-3 w-full font-normal cursor-pointer"
+                    {item.menu_item_available_sides.map((s) => {
+                      const sideListPrice = resolvePosMenuListPrice(
+                        s.side_item,
+                        listPriceOrderType,
+                        listPriceDeliveryPlatform,
+                      );
+                      // Delivery: never preview dine-in base when channel missing.
+                      const sideDisplayPrice = sideListPrice.ok
+                        ? sideListPrice.unitPrice
+                        : 0;
+                      return (
+                        <Item
+                          key={s.id}
+                          variant="outline"
+                          className="cursor-pointer hover:bg-accent"
+                          render={
+                            <FieldLabel
+                              htmlFor={`side-${String(s.id)}`}
+                              className="flex items-center gap-3 w-full font-normal cursor-pointer"
+                            />
+                          }
+                        >
+                          <Checkbox
+                            id={`side-${String(s.id)}`}
+                            size="touch"
+                            checked={selectedSideIds.has(s.side_item.id)}
+                            onCheckedChange={() => toggleSide(s.side_item.id)}
                           />
-                        }
-                      >
-                        <Checkbox
-                          id={`side-${String(s.id)}`}
-                          size="touch"
-                          checked={selectedSideIds.has(s.side_item.id)}
-                          onCheckedChange={() => toggleSide(s.side_item.id)}
-                        />
-                        <ItemContent>
-                          <ItemTitle className="text-base">
-                            <span>{s.side_item.name}</span>
-                            {s.is_default && (
-                              <span className="ml-1.5 text-sm font-normal text-muted-foreground">
-                                {messages.pos.customizer.defaultSide}
-                              </span>
-                            )}
-                          </ItemTitle>
-                        </ItemContent>
-                        <ItemActions>
-                          <span className="text-base text-muted-foreground">
-                            +{formatVND(s.side_item.base_price)}
-                          </span>
-                        </ItemActions>
-                      </Item>
-                    ))}
+                          <ItemContent>
+                            <ItemTitle className="text-base">
+                              <span>{s.side_item.name}</span>
+                              {s.is_default && (
+                                <span className="ml-1.5 text-sm font-normal text-muted-foreground">
+                                  {messages.pos.customizer.defaultSide}
+                                </span>
+                              )}
+                            </ItemTitle>
+                          </ItemContent>
+                          <ItemActions>
+                            <span className="text-base text-muted-foreground">
+                              +{formatVND(sideDisplayPrice)}
+                            </span>
+                          </ItemActions>
+                        </Item>
+                      );
+                    })}
                   </ItemGroup>
                 </div>
               )}

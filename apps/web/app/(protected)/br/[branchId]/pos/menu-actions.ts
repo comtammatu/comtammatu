@@ -166,20 +166,6 @@ export async function fetchMenuForPos(
     return { success: false, error: messages.pos.menu.loadFailed };
   }
 
-  // Build item lookup for resolving side_item references
-  const itemLookup = new Map<
-    number,
-    { id: number; name: string; base_price: number }
-  >();
-  for (const cat of categories ?? []) {
-    for (const item of cat.menu_items ?? []) {
-      itemLookup.set(item.id, {
-        id: item.id,
-        name: item.name,
-        base_price: item.base_price,
-      });
-    }
-  }
   const limitsByItemId = new Map<number, MenuItemDailyLimit>();
   if (Array.isArray(limitRows)) {
     // Availability fields are absent from generated types until the migration
@@ -207,6 +193,28 @@ export async function fetchMenuForPos(
       const existing = channelPricesByItemId.get(row.menu_item_id) ?? {};
       existing[row.delivery_platform] = Number(row.unit_price);
       channelPricesByItemId.set(row.menu_item_id, existing);
+    }
+  }
+  // Build item lookup for resolving side_item references (incl. channel prices).
+  const itemLookup = new Map<
+    number,
+    {
+      id: number;
+      name: string;
+      base_price: number;
+      channel_prices: Partial<
+        Record<"grab" | "shopee" | "be" | "green_sm", number>
+      >;
+    }
+  >();
+  for (const cat of categories ?? []) {
+    for (const item of cat.menu_items ?? []) {
+      itemLookup.set(item.id, {
+        id: item.id,
+        name: item.name,
+        base_price: item.base_price,
+        channel_prices: channelPricesByItemId.get(item.id) ?? {},
+      });
     }
   }
   // Filter nested variants/modifiers to active only, resolve side_item

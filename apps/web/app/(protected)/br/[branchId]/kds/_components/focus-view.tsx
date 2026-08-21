@@ -357,7 +357,7 @@ function FocusOrderPanel({
                     >
                       {item.quantity}
                     </span>
-                    <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    <div className="flex min-w-0 flex-1 flex-col justify-center min-h-12 gap-1">
                       <div className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
                         <span
                           className={cn(

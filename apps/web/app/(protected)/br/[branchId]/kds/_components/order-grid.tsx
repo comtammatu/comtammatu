@@ -95,7 +95,7 @@ const CompactItemRow = memo(function CompactItemRow({
       data-testid={`kds-heatmap-item-${String(item.id)}`}
       data-kds-effect={rowEffect ?? undefined}
       className={cn(
-        "grid min-w-0 grid-cols-[2.75rem_minmax(0,1fr)_auto] items-start gap-x-2 gap-y-1 rounded-none border-x-0 border-b-0 border-t border-border/40 p-0 py-2 first:border-t-0 first:pt-0 last:pb-0 xl:grid-cols-[3.25rem_minmax(0,1fr)_auto] xl:items-start",
+        "grid min-w-0 grid-cols-[2.75rem_minmax(0,1fr)_auto] items-start gap-x-2 gap-y-1 rounded-none border-0 p-0 py-1.5 first:pt-0 last:pb-0 xl:grid-cols-[3.25rem_minmax(0,1fr)_auto] xl:py-2 xl:first:pt-0 xl:last:pb-0",
         getItemRowStatusClass(status),
         getKdsRowEffectClass(rowEffect),
       )}
@@ -110,7 +110,7 @@ const CompactItemRow = memo(function CompactItemRow({
           {item.quantity}
         </span>
       </div>
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
+      <div className="flex min-w-0 flex-1 flex-col justify-center min-h-8 gap-1 xl:min-h-9">
         <div className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
           <span
             className={cn(
@@ -155,8 +155,8 @@ const CompactItemRow = memo(function CompactItemRow({
             data-testid={`kds-recall-${String(ticket.id)}`}
             type="button"
             variant="outline"
-            size="touch"
-            className="w-11 px-0 xl:w-12"
+            size="default"
+            className="h-8 w-8 px-0 xl:h-9 xl:w-9"
             disabled={isMutating}
             onClick={() => void onRecall(ticket.id)}
             aria-label={KDS_HEATMAP_LABELS.recallNamedItem(item.item_name)}
@@ -173,8 +173,8 @@ const CompactItemRow = memo(function CompactItemRow({
             data-testid={`kds-heatmap-complete-ticket-${String(ticket.id)}`}
             type="button"
             variant="default"
-            size="touch"
-            className="px-2 xl:px-2.5"
+            size="default"
+            className="h-8 px-2.5 text-xs font-semibold xl:h-9 xl:px-3 xl:text-sm"
             disabled={isMutating}
             onClick={() => void onCompleteTickets([ticket.id])}
             aria-label={KDS_HEATMAP_LABELS.completeNamedItem(item.item_name)}
@@ -219,7 +219,7 @@ const CompactOrphanRow = memo(function CompactOrphanRow({
     <Item
       data-kds-effect={rowEffect ?? undefined}
       className={cn(
-        "grid min-w-0 grid-cols-[minmax(0,1fr)] items-start gap-1.5 rounded-none border-x-0 border-b-0 border-t border-border/40 p-0 py-1.5 first:border-t-0 first:pt-0 last:pb-0 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center xl:gap-2 xl:py-2",
+        "grid min-w-0 grid-cols-[minmax(0,1fr)] items-start gap-1.5 rounded-none border-0 p-0 py-1.5 first:pt-0 last:pb-0 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center xl:gap-2 xl:py-2 xl:first:pt-0 xl:last:pb-0",
         getItemRowStatusClass(ticket.status),
         getKdsRowEffectClass(rowEffect),
       )}
@@ -245,8 +245,8 @@ const CompactOrphanRow = memo(function CompactOrphanRow({
             data-testid={`kds-recall-${String(ticket.id)}`}
             type="button"
             variant="outline"
-            size="touch"
-            className="w-12 px-0"
+            size="default"
+            className="h-8 w-8 px-0 xl:h-9 xl:w-9"
             disabled={isMutating}
             onClick={() => void onRecall(ticket.id)}
             aria-label={KDS_HEATMAP_LABELS.recallItem}
@@ -263,8 +263,8 @@ const CompactOrphanRow = memo(function CompactOrphanRow({
             data-testid={`kds-heatmap-complete-ticket-${String(ticket.id)}`}
             type="button"
             variant="default"
-            size="touch"
-            className="px-2"
+            size="default"
+            className="h-8 px-2.5 text-xs font-semibold xl:h-9 xl:px-3 xl:text-sm"
             disabled={isMutating}
             onClick={() => void onCompleteTickets([ticket.id])}
             aria-label={KDS_HEATMAP_LABELS.completeItem}
@@ -338,7 +338,7 @@ function HeatmapCard({
         // shrink-0: Card sets overflow-hidden, which collapses a flex item's
         // auto min-height to 0 — without this the lane's flex column squeezes
         // cards instead of scrolling, clipping their content.
-        "min-w-0 shrink-0 gap-1 overflow-hidden p-0",
+        "min-w-0 shrink-0 overflow-hidden p-0",
         isNewTicket && getKdsNewTicketSignalClass(),
       )}
     >
@@ -366,7 +366,7 @@ function HeatmapCard({
           ) : null
         }
       />
-      <div className="flex min-w-0 flex-col px-2 xl:px-3">
+      <div className="flex min-w-0 flex-col divide-y divide-border/40 px-2.5 py-1.5 xl:px-3 xl:py-2">
         {order.items.map((item) => {
           const ticket = ticketByItemId.get(item.id);
           return (

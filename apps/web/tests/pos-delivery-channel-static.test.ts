@@ -170,3 +170,52 @@ test("server re-prices from channel helper; POS list price follows append target
   assert.match(customizer, /never silently fall back/);
   assert.match(customizer, /channelPriceReady/);
 });
+
+test("delivery sides use channel list price on server and POS customizer", () => {
+  const sidesMigration = read(
+    "../../supabase/migrations/20260821044934_delivery_side_channel_list_price.sql",
+  );
+  assert.match(
+    sidesMigration,
+    /pos_resolve_item_list_price\(\s*p_tenant_id,\s*mi\.id/,
+  );
+  // Production append_order_items identity (not p_request_key text).
+  assert.match(
+    sidesMigration,
+    /p_order_id bigint, p_items jsonb, p_idempotency_key uuid/,
+  );
+  assert.doesNotMatch(
+    sidesMigration,
+    /p_order_id bigint, p_items jsonb, p_request_key text/,
+  );
+  assert.match(
+    sidesMigration,
+    /COALESCE\(v_item -> 'sides', '\[\]'::JSONB\),\s*p_order_type,\s*v_platform/,
+  );
+  assert.match(
+    sidesMigration,
+    /COALESCE\(v_item -> 'sides', '\[\]'::JSONB\),\s*v_order\.order_type,\s*v_order\.delivery_platform/,
+  );
+  assert.match(
+    sidesMigration,
+    /COALESCE\(p_sides, '\[\]'::JSONB\),\s*v_order\.order_type,\s*v_order\.delivery_platform/,
+  );
+
+  const customizer = read(
+    "app/(protected)/br/[branchId]/pos/item-customizer.tsx",
+  );
+  assert.match(
+    customizer,
+    /resolvePosMenuListPrice\(\s*s\.side_item,\s*listPriceOrderType,\s*listPriceDeliveryPlatform/,
+  );
+  assert.doesNotMatch(customizer, /price: s\.side_item\.base_price/);
+  assert.doesNotMatch(customizer, /sum \+ s\.side_item\.base_price/);
+
+  const menuActions = read(
+    "app/(protected)/br/[branchId]/pos/menu-actions.ts",
+  );
+  assert.match(
+    menuActions,
+    /channel_prices: channelPricesByItemId\.get\(item\.id\) \?\? \{\}/,
+  );
+});

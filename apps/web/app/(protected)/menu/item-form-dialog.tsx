@@ -160,7 +160,11 @@ export function ItemFormDialog({
             )}
           />
           {isEdit && item ? (
-            <ItemChannelPricesFields menuItemId={item.id} open={open} />
+            <ItemChannelPricesFields
+              menuItemId={item.id}
+              basePrice={item.base_price}
+              open={open}
+            />
           ) : null}
         </>
       )}

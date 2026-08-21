@@ -107,18 +107,10 @@ export function getPickupCallLane(
   return "dine_in";
 }
 
-/** Guest board: walk-in stays pending/preparing; delivery stays until KDS served. */
+/** Guest board: only in-progress kitchen work (pending / preparing) is shown. */
 export function isPickupGuestBoardVisible(
   item: Pick<PickupQueueItem, "orderType" | "status">,
 ): boolean {
-  if (item.status === "served") return false;
-  if (item.orderType === "delivery") {
-    return (
-      item.status === "pending" ||
-      item.status === "preparing" ||
-      item.status === "ready"
-    );
-  }
   return item.status === "pending" || item.status === "preparing";
 }
 

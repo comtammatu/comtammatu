@@ -91,6 +91,12 @@ test("central site templates can create, ship, and receive manual transfers", ()
     assert.match(template, /'inventory:transfer_create'/);
     assert.match(template, /'procurement:po_create'/);
   }
+
+  const centralSupplyTemplate = fixture.match(
+    /\('central_supply_ops', 'central_supply_ops', ARRAY\[([^\]]+)\]\)/,
+  )?.[1];
+  assert.ok(centralSupplyTemplate);
+  assert.match(centralSupplyTemplate, /'procurement:price_list_read'/);
 });
 
 test("R08/R09 branch_manager seed strips retired procurement keys", () => {

@@ -14765,7 +14765,13 @@ export type Database = {
         }[]
       }
       pos_enrich_order_sides: {
-        Args: { p_main_item_id: number; p_sides: Json; p_tenant_id: number }
+        Args: {
+          p_delivery_platform?: string
+          p_main_item_id: number
+          p_order_type?: string
+          p_sides: Json
+          p_tenant_id: number
+        }
         Returns: {
           enriched_sides: Json
           sides_sum: number

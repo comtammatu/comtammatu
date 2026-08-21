@@ -28,10 +28,19 @@ test("inventory monetary reads fail closed at the current runtime boundary", () 
     fixture.match(/\('accountant', 'accountant', ARRAY\[[^\]]*\]\)/)?.[0] ?? "";
   const ownerTemplate =
     fixture.match(/\('owner', 'owner', ARRAY\[[^\]]*\]\)/)?.[0] ?? "";
+  const centralSupplyTemplate =
+    fixture.match(
+      /\('central_supply_ops', 'central_supply_ops', ARRAY\[[^\]]*\]\)/,
+    )?.[0] ?? "";
   assert.match(accountantTemplate, /procurement:price_list_read/);
+  assert.match(centralSupplyTemplate, /procurement:price_list_read/);
   assert.doesNotMatch(accountantTemplate, /inventory:valuation_read/);
+  assert.doesNotMatch(centralSupplyTemplate, /inventory:valuation_read/);
   assert.match(ownerTemplate, /inventory:valuation_read/);
-  assert.match(boundary, /role !== "owner" && role !== "accountant"/);
+  assert.match(
+    boundary,
+    /role !== "owner" &&\s*role !== "accountant" &&\s*role !== "central_supply_ops"/,
+  );
   assert.match(boundary, /client: null/);
 
   assert.match(ingredientActions, /getAuthContext\(PROCUREMENT_ROLES\)/);

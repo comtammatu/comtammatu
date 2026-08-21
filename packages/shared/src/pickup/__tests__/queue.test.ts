@@ -172,7 +172,7 @@ test("formatPickupOrderLabel formats delivery orders with platform ref", () => {
         externalOrderRef: "1234",
       }),
     ),
-    "Mang về #042 · 1234",
+    "1234",
   );
   assert.equal(
     formatPickupOrderLabel(
@@ -183,9 +183,22 @@ test("formatPickupOrderLabel formats delivery orders with platform ref", () => {
         externalOrderRef: "5678",
       }),
     ),
-    "Mang về #042 · 5678",
+    "5678",
   );
 });
+
+test("formatPickupOrderLabel formats delivery orders without platform ref", () => {
+  assert.equal(
+    formatPickupOrderLabel(
+      makePickupItem({
+        orderNumber: "GH-260525-042-PH",
+        orderType: "delivery",
+      }),
+    ),
+    "Giao hàng #042",
+  );
+});
+
 
 test("formatPickupOrderLabel keeps walk-in takeaway unchanged", () => {
   assert.equal(
@@ -199,7 +212,13 @@ test("formatPickupOrderLabel keeps walk-in takeaway unchanged", () => {
   );
 });
 
-test("isPickupGuestBoardVisible keeps delivery through ready until served", () => {
+test("isPickupGuestBoardVisible keeps only pending and preparing orders visible", () => {
+  assert.equal(
+    isPickupGuestBoardVisible(
+      makePickupItem({ orderType: "delivery", status: "pending" }),
+    ),
+    true,
+  );
   assert.equal(
     isPickupGuestBoardVisible(
       makePickupItem({ orderType: "delivery", status: "preparing" }),
@@ -210,7 +229,7 @@ test("isPickupGuestBoardVisible keeps delivery through ready until served", () =
     isPickupGuestBoardVisible(
       makePickupItem({ orderType: "delivery", status: "ready" }),
     ),
-    true,
+    false,
   );
   assert.equal(
     isPickupGuestBoardVisible(
@@ -229,6 +248,18 @@ test("isPickupGuestBoardVisible keeps delivery through ready until served", () =
       makePickupItem({ orderType: "takeaway", status: "preparing" }),
     ),
     true,
+  );
+  assert.equal(
+    isPickupGuestBoardVisible(
+      makePickupItem({ orderType: "dine_in", status: "pending" }),
+    ),
+    true,
+  );
+  assert.equal(
+    isPickupGuestBoardVisible(
+      makePickupItem({ orderType: "dine_in", status: "ready" }),
+    ),
+    false,
   );
 });
 

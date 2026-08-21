@@ -17,7 +17,11 @@ export type InventoryMonetaryAccess = {
 export async function loadInventoryMonetaryAccess(
   role: StaffRole,
 ): Promise<InventoryMonetaryAccess> {
-  if (role !== "owner" && role !== "accountant") {
+  if (
+    role !== "owner" &&
+    role !== "accountant" &&
+    role !== "central_supply_ops"
+  ) {
     return {
       purchasePrice: false,
       valuation: false,

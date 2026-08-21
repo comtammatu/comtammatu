@@ -36,22 +36,21 @@ export function formatDeliveryCallLabel(input: {
   externalOrderRef?: string | null | undefined;
   deliveryPlatform?: DeliveryPlatform | string | null | undefined;
 }): string {
-  const sequence = extractDeliveryOrderSequence(input.orderNumber);
-  const cleaned = cleanOrderNumber(input.orderNumber);
   const externalRef = (input.externalOrderRef ?? "").trim();
+  if (externalRef.length > 0) {
+    return externalRef;
+  }
 
-  let label: string;
+  const sequence = extractDeliveryOrderSequence(input.orderNumber);
   if (sequence) {
-    label = `Mang về #${sequence}`;
-  } else if (cleaned) {
-    label = `Mang về ${cleaned}`;
-  } else {
-    label = "Mang về";
+    return `Giao hàng #${sequence}`;
   }
 
-  if (externalRef) {
-    label = `${label} · ${externalRef}`;
+  const cleaned = cleanOrderNumber(input.orderNumber);
+  if (cleaned) {
+    return `Giao hàng ${cleaned}`;
   }
 
-  return label;
+  return "Giao hàng";
 }
+

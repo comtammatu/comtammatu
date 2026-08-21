@@ -66,7 +66,8 @@ function formatOrderTypeCell(row: OrderRow): string {
   });
   const parts = [getOrderTypeLabelVi("delivery")];
   if (platform) parts.push(platform);
-  parts.push(callLabel);
+  const normalizedCallLabel = callLabel.replace(/^Giao hàng\s*/i, "");
+  if (normalizedCallLabel) parts.push(normalizedCallLabel);
   return parts.join(" · ");
 }
 

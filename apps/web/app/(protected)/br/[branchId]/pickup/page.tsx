@@ -487,6 +487,10 @@ function toPickupListRow({
     }),
     status: resolvePickupListStatus(index),
     sortAt: item.sortAt,
+    orderType: item.orderType,
+    deliveryPlatform: item.deliveryPlatform,
+    externalOrderRef: item.externalOrderRef,
+    orderNumber: item.orderNumber,
   };
 }
 

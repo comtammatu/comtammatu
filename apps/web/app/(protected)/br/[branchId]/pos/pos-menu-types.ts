@@ -17,7 +17,15 @@ interface MenuModifier {
 interface MenuAvailableSide {
   id: number;
   is_default: boolean;
-  side_item: { id: number; name: string; base_price: number };
+  side_item: {
+    id: number;
+    name: string;
+    base_price: number;
+    /** Per-platform list prices; absent key = not configured. */
+    channel_prices: Partial<
+      Record<"grab" | "shopee" | "be" | "green_sm", number>
+    >;
+  };
 }
 
 /**

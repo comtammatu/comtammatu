@@ -47,17 +47,16 @@ function getCallTarget(
     deliveryPlatform?: string | null;
   },
 ): string {
-  if (orderType === "delivery" && deliveryOptions?.deliveryPlatform) {
+  if (orderType === "delivery") {
     return formatDeliveryCallLabel({
-      orderNumber: deliveryOptions.orderNumber ?? "",
-      externalOrderRef: deliveryOptions.externalOrderRef,
-      deliveryPlatform: deliveryOptions.deliveryPlatform,
+      orderNumber: deliveryOptions?.orderNumber ?? "",
+      externalOrderRef: deliveryOptions?.externalOrderRef,
+      deliveryPlatform: deliveryOptions?.deliveryPlatform,
     });
   }
   if (orderType === "dine_in" && tableNumber !== null) {
     return `${TABLE_VI.long} ${formatTableNumber(tableNumber)}`;
   }
-  if (orderType === "delivery") return "Mang về";
   return getOrderTypeLabel(orderType);
 }
 
@@ -82,7 +81,7 @@ export function OrderTitleLine({
     deliveryPlatform,
   });
   const accessibleLabel = isDelivery
-    ? `${getDeliveryPlatformLabelVi(deliveryPlatform)} ${callTarget}`.trim()
+    ? `${getDeliveryPlatformLabelVi(deliveryPlatform)} Giao hàng ${callTarget} ${sequenceDisplay}`.trim()
     : `${callTarget} ${sequenceDisplay}`;
   const sizeClass = TITLE_SIZE_CLASSES[size];
 
@@ -95,7 +94,11 @@ export function OrderTitleLine({
       )}
     >
       {isDelivery ? (
-        <DeliveryPlatformMark platform={deliveryPlatform} size="sm" />
+        <DeliveryPlatformMark
+          platform={deliveryPlatform}
+          size={size === "compact" ? "xs" : "sm"}
+          className="self-center"
+        />
       ) : null}
       <span
         className={cn(
@@ -106,16 +109,14 @@ export function OrderTitleLine({
       >
         {callTarget}
       </span>
-      {isDelivery ? null : (
-        <span
-          className={cn(
-            "shrink-0 font-mono font-semibold leading-tight text-muted-foreground tabular-nums",
-            sizeClass.sequence,
-          )}
-        >
-          {sequenceDisplay}
-        </span>
-      )}
+      <span
+        className={cn(
+          "shrink-0 font-mono font-semibold leading-tight text-muted-foreground tabular-nums",
+          sizeClass.sequence,
+        )}
+      >
+        {sequenceDisplay}
+      </span>
     </div>
   );
 }
