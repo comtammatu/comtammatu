@@ -490,9 +490,15 @@ export function BillReceipt({
     [totalAmount],
   );
   const orderIdRef = useRef(orderId);
+  const intentRef = useRef(intent);
+  const onCloseRef = useRef(onClose);
+  const onOrderUpdatedRef = useRef(onOrderUpdated);
   useEffect(() => {
     orderIdRef.current = orderId;
-  }, [orderId]);
+    intentRef.current = intent;
+    onCloseRef.current = onClose;
+    onOrderUpdatedRef.current = onOrderUpdated;
+  }, [intent, onClose, onOrderUpdated, orderId]);
 
   useEffect(() => {
     if (orderId === null) {
@@ -539,6 +545,21 @@ export function BillReceipt({
 
       if (orderResult.success && orderResult.data) {
         const nextOrder = orderResult.data as OrderData;
+        if (
+          intentRef.current !== "receipt" &&
+          (nextOrder.status === "completed" ||
+            nextOrder.payment_status === "paid" ||
+            nextOrder.status === "cancelled")
+        ) {
+          if (nextOrder.status === "cancelled") {
+            toast.warning("Đơn đã bị huỷ — đóng thanh toán.");
+          } else {
+            toast.success("Đơn đã hoàn tất thanh toán.");
+          }
+          void onOrderUpdatedRef.current?.();
+          onCloseRef.current();
+          return;
+        }
         setOrder(nextOrder);
         setError(null);
         setCashInput(String(Math.round(Number(nextOrder.total_amount))));
@@ -573,7 +594,23 @@ export function BillReceipt({
     const result = await fetchOrderForBill(targetOrderId);
     if (orderIdRef.current !== targetOrderId) return;
     if (result.success && result.data) {
-      setOrder(result.data as OrderData);
+      const nextOrder = result.data as OrderData;
+      if (
+        intentRef.current !== "receipt" &&
+        (nextOrder.status === "completed" ||
+          nextOrder.payment_status === "paid" ||
+          nextOrder.status === "cancelled")
+      ) {
+        if (nextOrder.status === "cancelled") {
+          toast.warning("Đơn đã bị huỷ — đóng thanh toán.");
+        } else {
+          toast.success("Đơn đã hoàn tất thanh toán.");
+        }
+        await onOrderUpdatedRef.current?.();
+        onCloseRef.current();
+        return;
+      }
+      setOrder(nextOrder);
     }
   }, []);
   const refetchOrder = useMemo(
@@ -612,7 +649,29 @@ export function BillReceipt({
             table: "orders",
             filter: `id=eq.${String(orderId)}`,
           },
-          () => {
+          (payload) => {
+            if (intentRef.current !== "receipt") {
+              const updated = payload.new as Record<string, unknown> | null;
+              if (updated) {
+                const status =
+                  typeof updated.status === "string" ? updated.status : null;
+                const paymentStatus =
+                  typeof updated.payment_status === "string"
+                    ? updated.payment_status
+                    : null;
+                if (status === "cancelled") {
+                  toast.warning("Đơn đã bị huỷ — đóng thanh toán.");
+                  onCloseRef.current();
+                  return;
+                }
+                if (status === "completed" || paymentStatus === "paid") {
+                  toast.success("Đơn đã hoàn tất thanh toán.");
+                  void onOrderUpdatedRef.current?.();
+                  onCloseRef.current();
+                  return;
+                }
+              }
+            }
             refetchOrderRef.current();
           },
         )

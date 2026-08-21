@@ -441,40 +441,47 @@ export function OrderDetailSheet({
     if (orderIdRef.current !== targetOrderId) return;
     if (result.success && result.data) {
       const order = result.data.order as unknown as OrderDetailData;
+      const isTerminal =
+        order.status === "completed" ||
+        order.status === "cancelled" ||
+        order.payment_status === "paid";
+      if (isTerminal) {
+        if (order.status === "cancelled") {
+          notify.warning("Đơn đã bị huỷ — đóng chi tiết.");
+        } else {
+          notify.success("Đơn đã hoàn tất thanh toán — đóng chi tiết.");
+        }
+        setData(null);
+        setFreeSideOffer(null);
+        onCloseRef.current();
+        return;
+      }
       setData(order);
       setCanManage(result.data.canManageOrders);
       setCanVoidPaid(result.data.canVoidPaidOrder);
       setCanApplyDiscount(result.data.canApplyDiscount);
       setError(null);
-      const isTerminal =
-        order.status === "completed" ||
-        order.status === "cancelled" ||
-        order.payment_status === "paid";
-      if (!isTerminal) {
-        const offerResult = await evaluateOrderPromotionOffers(
-          branchId,
-          targetOrderId,
+      const offerResult = await evaluateOrderPromotionOffers(
+        branchId,
+        targetOrderId,
+      );
+      if (orderIdRef.current !== targetOrderId) return;
+      if (offerResult.success && offerResult.data) {
+        const first = offerResult.data.offers[0];
+        setFreeSideOffer(
+          first && first.free_qty > 0 && first.candidates.length > 0
+            ? {
+                promotionId: first.promotion_id,
+                name: first.name,
+                kind: "free_side",
+                freeQty: first.free_qty,
+                needsSideSelection: first.needs_side_selection,
+                amountHint: first.amount_hint,
+                code: first.code,
+                candidates: first.candidates,
+              }
+            : null,
         );
-        if (orderIdRef.current !== targetOrderId) return;
-        if (offerResult.success && offerResult.data) {
-          const first = offerResult.data.offers[0];
-          setFreeSideOffer(
-            first && first.free_qty > 0 && first.candidates.length > 0
-              ? {
-                  promotionId: first.promotion_id,
-                  name: first.name,
-                  kind: "free_side",
-                  freeQty: first.free_qty,
-                  needsSideSelection: first.needs_side_selection,
-                  amountHint: first.amount_hint,
-                  code: first.code,
-                  candidates: first.candidates,
-                }
-              : null,
-          );
-        } else {
-          setFreeSideOffer(null);
-        }
       } else {
         setFreeSideOffer(null);
       }
@@ -612,6 +619,10 @@ export function OrderDetailSheet({
               if (updated) {
                 const status =
                   typeof updated.status === "string" ? updated.status : null;
+                const paymentStatus =
+                  typeof updated.payment_status === "string"
+                    ? updated.payment_status
+                    : null;
                 const mergedInto =
                   updated.merged_into_order_id !== null &&
                   updated.merged_into_order_id !== undefined;
@@ -624,6 +635,11 @@ export function OrderDetailSheet({
                   notify.warning(
                     "Đơn đã được gộp sang đơn khác — đóng chi tiết.",
                   );
+                  onCloseRef.current();
+                  return;
+                }
+                if (status === "completed" || paymentStatus === "paid") {
+                  notify.success("Đơn đã hoàn tất thanh toán — đóng chi tiết.");
                   onCloseRef.current();
                   return;
                 }
