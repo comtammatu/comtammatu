@@ -311,22 +311,16 @@ function resolveDisplayTarget(
     callNumber: fallbackNumber,
     callPrefix: "Số",
     referenceNumber: fallbackNumber,
-    targetKey:
-      batch === null
-        ? `order-${String(order.id)}`
-        : `batch-${String(batch.id)}`,
+    targetKey: `order-${String(order.id)}`,
   };
 }
 
 function resolveGroupKey(
   order: PickupOrderRow,
-  batch: PickupKitchenBatchRow | null,
-  tableNumber: number | null,
+  _batch: PickupKitchenBatchRow | null,
+  _tableNumber: number | null,
 ): string {
-  if (tableNumber !== null) return `order-${String(order.id)}`;
-  return batch === null
-    ? `order-${String(order.id)}`
-    : `batch-${String(batch.id)}`;
+  return `order-${String(order.id)}`;
 }
 
 function extractDateBasedOrderSequence(orderNumber: string): string | null {

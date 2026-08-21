@@ -888,3 +888,76 @@ test("buildPickupQueue lets active work win over recent served history for the s
   assert.equal(queue[0]?.status, "preparing");
   assert.equal(queue[0]?.orderNumber, "TC-20260524-018-CN1");
 });
+
+test("buildPickupQueue unifies multiple kitchen batches of a single takeaway order into one queue item", () => {
+  const input: BuildPickupQueueInput = {
+    ...base,
+    tickets: [
+      {
+        id: 50,
+        order_id: 55,
+        order_item_id: 501,
+        kitchen_send_batch_id: 9551,
+        status: "ready",
+        bumped_at: "2026-08-21T03:10:00.000Z",
+        created_at: "2026-08-21T03:00:00.000Z",
+        updated_at: "2026-08-21T03:10:00.000Z",
+      },
+      {
+        id: 51,
+        order_id: 55,
+        order_item_id: 502,
+        kitchen_send_batch_id: 9552,
+        status: "preparing",
+        bumped_at: null,
+        created_at: "2026-08-21T03:05:00.000Z",
+        updated_at: "2026-08-21T03:05:00.000Z",
+      },
+    ],
+    orders: [
+      {
+        id: 55,
+        order_number: "MV-260821-0055-CN1",
+        order_type: "takeaway",
+        table_id: null,
+        status: "preparing",
+        created_at: "2026-08-21T03:00:00.000Z",
+        tables: null,
+      },
+    ],
+    kitchenBatches: [
+      {
+        id: 9551,
+        order_id: 55,
+        kitchen_ticket_number: "#055",
+        send_seq: 1,
+        kind: "initial",
+        created_at: "2026-08-21T03:00:00.000Z",
+      },
+      {
+        id: 9552,
+        order_id: 55,
+        kitchen_ticket_number: "#055-2",
+        send_seq: 2,
+        kind: "append",
+        created_at: "2026-08-21T03:05:00.000Z",
+      },
+    ],
+  };
+
+  const queue = buildPickupQueue(input);
+
+  assert.equal(queue.length, 1);
+  const [item] = queue;
+  assert.equal(item?.orderId, 55);
+  assert.equal(item?.orderNumber, "MV-260821-0055-CN1");
+  assert.equal(item?.targetKey, "order-55");
+  assert.equal(item?.lane, "active");
+  assert.equal(item?.status, "preparing");
+  assert.equal(item?.ticketCount, 2);
+  assert.deepEqual(item?.ticketIds, [50, 51]);
+  assert.deepEqual(item?.readyTicketIds, [50]);
+  assert.equal(item?.referenceNumber, "#055 / #055-2");
+  assert.equal(formatPickupOrderLabel(item!), "Mang về #0055");
+});
+
