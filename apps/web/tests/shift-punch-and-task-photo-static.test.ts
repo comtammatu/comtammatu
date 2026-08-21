@@ -121,6 +121,9 @@ test("floor shift tasks stay compact and waiter cannot close cash", () => {
   const migration = readRepo(
     "supabase/migrations/20260817191830_compact_position_shift_tasks_photo_required.sql",
   );
+  const refinedMigration = readRepo(
+    "supabase/migrations/20260821200000_refine_position_shift_tasks_sop.sql",
+  );
   const docs = readRepo("docs/ref/branch-operations.md");
 
   assert.match(migration, /\('cashier', 'end_of_shift', 'Đếm tiền, chốt ca POS'/);
@@ -142,6 +145,26 @@ test("floor shift tasks stay compact and waiter cannot close cash", () => {
     /'Chấm công'/,
     "Clock-in is a system event, not a checklist row",
   );
+
+  // Refined SOP migration checks
+  assert.match(refinedMigration, /\('waiter', 'start_of_shift', 'Setup sảnh/);
+  assert.match(refinedMigration, /\('cashier', 'start_of_shift', 'Setup & vệ sinh quầy thu ngân/);
+  assert.match(refinedMigration, /\('kitchen_helper', 'start_of_shift', 'Nấu cơm tấm & nước canh/);
+  assert.match(refinedMigration, /\('cleaner', 'start_of_shift', 'Vệ sinh & khử mùi WC/);
+  assert.match(refinedMigration, /\('guard', 'start_of_shift', 'Quét sân trước/);
+  assert.match(refinedMigration, /\('branch_manager', 'start_of_shift', 'Điểm danh ca làm việc/);
+  assert.doesNotMatch(
+    refinedMigration,
+    /'Chấm công'/,
+    "Clock-in is a system event, not a checklist row",
+  );
+  assert.doesNotMatch(
+    refinedMigration,
+    /'Kết ca'/,
+    "Clock-out is a system event, not a checklist row",
+  );
+
   assert.match(docs, /dọn khu phụ trách \(ảnh\)/);
   assert.match(docs, /Không chốt ca\/void/);
 });
+

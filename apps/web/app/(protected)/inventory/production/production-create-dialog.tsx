@@ -53,6 +53,16 @@ function resolveDefaultLocations(
   };
 }
 
+function formatCleanQuantity(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) return "—";
+  const roundedInt = Math.round(value);
+  if (Math.abs(value - roundedInt) < 1e-4) {
+    return formatQty(roundedInt);
+  }
+  const rounded = Math.round(value * 1000) / 1000;
+  return formatQty(rounded);
+}
+
 export function ProductionCreateDialog({
   open,
   onOpenChange,
@@ -105,7 +115,7 @@ export function ProductionCreateDialog({
   const plannedExceedsStock =
     batchRatio != null &&
     maxProductionQuantity != null &&
-    planned > maxProductionQuantity + 1e-9;
+    planned > maxProductionQuantity + 1e-6;
   const showBranchPicker = branches.length > 1 && initialBranchId == null;
 
   useEffect(() => {
@@ -190,18 +200,34 @@ export function ProductionCreateDialog({
   const ingredientRows = useMemo(() => {
     if (!context?.ingredients.length) return [];
     return context.ingredients.map((ingredient) => {
-      const needed =
+      const rawNeeded =
         batchRatio == null ? null : batchRatio * ingredient.recipe_quantity;
-      const onHand = ingredient.max_ingredient_qty;
+      const needed =
+        rawNeeded == null
+          ? null
+          : Math.abs(rawNeeded - Math.round(rawNeeded)) < 1e-6
+            ? Math.round(rawNeeded)
+            : Math.round(rawNeeded * 1000) / 1000;
+      const rawOnHand = ingredient.max_ingredient_qty;
+      const onHand =
+        Math.abs(rawOnHand - Math.round(rawOnHand)) < 1e-6
+          ? Math.round(rawOnHand)
+          : Math.round(rawOnHand * 1000) / 1000;
       const short =
-        needed != null && Number.isFinite(needed) && needed > onHand + 1e-9;
+        needed != null && Number.isFinite(needed) && needed > onHand + 1e-6;
       const missing =
         needed != null && Number.isFinite(needed) && short
-          ? needed - onHand
+          ? Math.round((needed - onHand) * 1000) / 1000
           : 0;
       return { ingredient, needed, onHand, short, missing };
     });
   }, [batchRatio, context]);
+
+  const shortageCount = useMemo(
+    () => ingredientRows.filter((row) => row.short).length,
+    [ingredientRows],
+  );
+  const totalIngredients = ingredientRows.length;
 
   if (!open) return null;
 
@@ -230,8 +256,8 @@ export function ProductionCreateDialog({
     <AppDialog
       open
       onOpenChange={onOpenChange}
-      title="Tạo Lệnh sản xuất"
-      description="Chọn công thức đang dùng và sản lượng. Kho xuất/nhập lấy mặc định của Bếp Trung Tâm."
+      title="Tạo Lệnh sản xuất (Bếp Trung Tâm)"
+      description="Lên kế hoạch sản xuất thành phẩm. Dữ liệu tồn kho được đối soát tự động từ Kho Bếp Trung Tâm."
       contentClassName="sm:max-w-3xl"
       footer={
         <>
@@ -328,7 +354,7 @@ export function ProductionCreateDialog({
             {context && maxProductionQuantity != null ? (
               <p className="text-xs text-muted-foreground">
                 {INVENTORY_VI.productionMaxProducible(
-                  formatQty(maxProductionQuantity),
+                  formatCleanQuantity(maxProductionQuantity),
                   outputUnit,
                 )}
               </p>
@@ -350,11 +376,22 @@ export function ProductionCreateDialog({
 
         {/* Section 2: Nguyên liệu kế hoạch */}
         <div className="flex flex-col gap-2">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h4 className="text-sm font-semibold text-foreground">Nguyên liệu kế hoạch</h4>
-            <span className="text-xs text-muted-foreground">
-              {INVENTORY_VI.productionIngredientsNeedVsStock}
-            </span>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <h4 className="text-sm font-semibold text-foreground">Nguyên liệu kế hoạch</h4>
+              <span className="text-xs text-muted-foreground">· Kho Bếp Trung Tâm</span>
+            </div>
+            {totalIngredients > 0 ? (
+              shortageCount > 0 ? (
+                <Badge variant="warning" className="text-2xs font-normal">
+                  Thiếu {shortageCount}/{totalIngredients} nguyên liệu
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-success text-2xs font-normal">
+                  Đủ tất cả {totalIngredients} nguyên liệu
+                </Badge>
+              )
+            ) : null}
           </div>
 
           {loadingContext ? (
@@ -381,14 +418,14 @@ export function ProductionCreateDialog({
                       <span className="min-w-0 flex-1 truncate font-medium">
                         {ingredient.ingredient_name}
                       </span>
-                      <span className="w-24 shrink-0 text-right tabular-nums text-xs">
-                        {needed == null ? "—" : formatQty(needed)}{" "}
+                      <span className="w-24 shrink-0 text-right tabular-nums text-xs font-mono">
+                        {formatCleanQuantity(needed)}{" "}
                         <span className="text-muted-foreground">
                           {ingredient.unit_name}
                         </span>
                       </span>
-                      <span className="w-24 shrink-0 text-right tabular-nums text-xs">
-                        {formatQty(onHand)}{" "}
+                      <span className="w-24 shrink-0 text-right tabular-nums text-xs font-mono">
+                        {formatCleanQuantity(onHand)}{" "}
                         <span className="text-muted-foreground">
                           {ingredient.unit_name}
                         </span>
@@ -396,7 +433,7 @@ export function ProductionCreateDialog({
                       <span className="w-28 shrink-0 text-right">
                         {short ? (
                           <Badge variant="warning" className="font-mono text-2xs">
-                            Thiếu {formatQty(missing)} {ingredient.unit_name}
+                            Thiếu {formatCleanQuantity(missing)} {ingredient.unit_name}
                           </Badge>
                         ) : (
                           <Badge variant="outline" className="text-success text-2xs">

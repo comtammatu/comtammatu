@@ -56,18 +56,21 @@ không void trực tiếp.
 - KDS mặc định một station “Quầy lên món” khi chi nhánh chưa có station; typography
   theo token Geist (D069).
 
-### Nhiệm vụ vận hành chính theo vị trí
+### Nhiệm vụ vận hành chính theo vị trí (SOP Vận hành Tinh gọn)
 
-| Vị trí | Đầu ca | Cuối ca |
-| --- | --- | --- |
-| Thu ngân | Đếm quỹ lẻ, mở ca POS; setup sảnh; lau sàn chống ruồi | Đếm tiền, chốt ca POS; đếm tồn nhóm Nước; dọn khu phụ trách (ảnh) |
-| Quầy lên món | Bật KDS; setup quầy | Cất thừa; tắt KDS, dọn quầy; dọn khu phụ trách (ảnh) |
-| Quầy nướng | Nhóm than, lấy sườn | Rửa vỉ, vệ sinh lò; dọn khu phụ trách (ảnh) |
-| Phụ bếp | Bật điện; nấu cơm/canh; sơ chế topping | Vệ sinh nồi/tủ/bếp; dọn khu phụ trách (ảnh) |
-| Phục vụ | Setup sảnh; lau sàn chống ruồi | Dọn sảnh, quầy nước; dọn khu phụ trách (ảnh). Không chốt ca/void |
-| Tạp vụ | Vệ sinh WC; chuẩn bị khu rửa | Rửa hết chén dĩa; đổ rác, lau sàn; dọn khu phụ trách (ảnh) |
-| Bảo vệ | Quét sân trước; trông xe | Kéo bạt, dọn khu phụ trách (ảnh) |
-| Quản lý chi nhánh | Điểm danh; kiểm tra sẵn sàng bán | Đối chiếu doanh thu; duyệt kiểm kê / đặt hàng; dọn khu phụ trách (ảnh) |
+Phân định rõ ràng: Hệ thống Web App tự động quản lý Chấm công (`clock-in`), Kết ca (`clock-out`), Mở/Chốt két POS (`opening_cash`/`closing_cash`), trạm KDS và Phiếu kiểm đếm tồn kho. Checklist `position_shift_tasks` chỉ tập trung vào các thao tác vật lý tại cửa hàng và yêu cầu chụp ảnh nghiệm thu cuối ca (`allows_photo`):
+
+| Vị trí | `position_code` | Đầu ca | Cuối ca |
+| --- | --- | --- | --- |
+| Phục vụ | `waiter` | Setup sảnh (bàn ghế, muỗng nĩa, tăm, giấy, buffet); lau sàn sảnh & cửa kính chống bụi, ruồi | Dọn sảnh, quầy buffet, menu; dọn khu phụ trách (ảnh). Không chốt ca/void |
+| Thu ngân | `cashier` | Setup & vệ sinh quầy thu ngân, quầy pha chế; hỗ trợ đón khách đầu ca | Vệ sinh quầy thu ngân, quầy pha chế; xả thùng đá; dọn khu phụ trách (ảnh) |
+| Quầy lên món | `kitchen_counter` / `chef` | Kiểm tra nồi hấp cơm & tủ giữ ấm; setup quầy ra món (dụng cụ, topping, đồ mang về) | Cất nguyên liệu thừa vào tủ lạnh; vệ sinh quầy ra món, nồi hấp; dọn khu phụ trách (ảnh) |
+| Quầy nướng | `grill_counter` | Nhóm than, kiểm tra lò, chuẩn bị vỉ sạch; nướng sườn cây & sườn cốt lết định mức | Rửa sạch vỉ nướng, kẹp gắp; vệ sinh lò nướng, khu nướng; dọn khu phụ trách (ảnh) |
+| Phụ bếp | `kitchen_helper` | Nấu cơm tấm, nước canh; sơ chế topping (bì, chả, trứng, mỡ hành, đồ chua, rau củ) | Vệ sinh tủ cơm, nồi canh, bếp chiên/gas; rửa dụng cụ bếp, vệ sinh sàn; dọn khu phụ trách (ảnh) |
+| Tạp vụ | `cleaner` | Vệ sinh & khử mùi WC; chuẩn bị khu vực bồn rửa chén, phân loại dĩa dơ | Rửa sạch toàn bộ chén dĩa tồn; dọn dẹp WC, đổ rác, lau sàn khu rửa; dọn khu phụ trách (ảnh) |
+| Bảo vệ | `guard` | Quét sân trước, tưới cây, sắp xếp khu vực để xe; hướng dẫn khách vào quán | Kéo bạt chiều; dọn dẹp khu vực trước quán; dọn khu phụ trách (ảnh) |
+| Quản lý chi nhánh | `branch_manager` | Điểm danh ca; kiểm tra sẵn sàng bán (món ăn, vệ sinh, thiết bị) | Đối chiếu doanh thu, kiểm tra ca POS; duyệt kiểm kê tồn & đặt hàng; dọn khu phụ trách (ảnh) |
+
 
 ## Màn hình liên quan
 
