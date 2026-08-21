@@ -141,6 +141,13 @@ export function formatPickupOrderLabel(item: PickupOrderLabelInput): string {
   return `Bàn chưa rõ ${item.orderNumber}`;
 }
 
+interface PickupGroupAccumulator {
+  item: PickupQueueItem;
+  activeSortAt: string | null;
+  readySortAt: string | null;
+  servedSortAt: string | null;
+}
+
 export function buildPickupQueue(
   input: BuildPickupQueueInput,
 ): PickupQueueItem[] {
@@ -153,7 +160,7 @@ export function buildPickupQueue(
       .filter((item) => item.is_priority === true)
       .map((item) => item.id),
   );
-  const groupByKey = new Map<string, PickupQueueItem>();
+  const groupByKey = new Map<string, PickupGroupAccumulator>();
 
   for (const ticket of input.tickets) {
     if (!isPickupTicketStatus(ticket.status)) continue;
@@ -185,58 +192,102 @@ export function buildPickupQueue(
       (ticket.order_item_id !== undefined &&
         priorityOrderItemIds.has(ticket.order_item_id));
 
+    const activeSortAt =
+      ticket.status === "pending" || ticket.status === "preparing"
+        ? (batch?.created_at ?? order.created_at ?? ticket.created_at)
+        : null;
+    const readySortAt =
+      ticket.status === "ready" ? sortAtForTicket(ticket) : null;
+    const servedSortAt =
+      ticket.status === "served" ? sortAtForTicket(ticket) : null;
+
     const existing = groupByKey.get(groupKey);
     if (existing) {
-      existing.isPriority = existing.isPriority || isTicketPriority;
-      existing.status = pickPickupQueueStatus(
-        existing.status,
+      existing.item.isPriority = existing.item.isPriority || isTicketPriority;
+      existing.item.status = pickPickupQueueStatus(
+        existing.item.status,
         ticket.status,
-        existing.isPriority,
+        existing.item.isPriority,
       );
-      existing.lane = laneForTicketStatus(existing.status);
-      existing.ticketCount += 1;
-      existing.ticketIds = mergeNumbers(existing.ticketIds, ticket.id);
+      existing.item.lane = laneForTicketStatus(existing.item.status);
+      existing.item.ticketCount += 1;
+      existing.item.ticketIds = mergeNumbers(existing.item.ticketIds, ticket.id);
       if (ticket.status === "ready") {
-        existing.readyTicketIds = mergeNumbers(
-          existing.readyTicketIds,
+        existing.item.readyTicketIds = mergeNumbers(
+          existing.item.readyTicketIds,
           ticket.id,
         );
       }
-      existing.sortAt = minIso(existing.sortAt, sortAt);
-      existing.referenceNumbers = mergeReferences(
-        existing.referenceNumbers,
+      if (activeSortAt !== null) {
+        existing.activeSortAt = existing.activeSortAt
+          ? minIso(existing.activeSortAt, activeSortAt)
+          : activeSortAt;
+      }
+      if (readySortAt !== null) {
+        existing.readySortAt = existing.readySortAt
+          ? maxIso(existing.readySortAt, readySortAt)
+          : readySortAt;
+      }
+      if (servedSortAt !== null) {
+        existing.servedSortAt = existing.servedSortAt
+          ? maxIso(existing.servedSortAt, servedSortAt)
+          : servedSortAt;
+      }
+      existing.item.referenceNumbers = mergeReferences(
+        existing.item.referenceNumbers,
         displayTarget.referenceNumber,
       );
-      existing.referenceNumber = formatReferences(existing.referenceNumbers);
+      existing.item.referenceNumber = formatReferences(
+        existing.item.referenceNumbers,
+      );
       continue;
     }
 
+    const initialSortAt =
+      activeSortAt ?? readySortAt ?? servedSortAt ?? sortAt;
+
     groupByKey.set(groupKey, {
-      id: groupKey,
-      lane,
-      status: ticket.status,
-      isPriority: isTicketPriority,
-      ticketIds: [ticket.id],
-      readyTicketIds: ticket.status === "ready" ? [ticket.id] : [],
-      orderId: order.id,
-      orderNumber: order.order_number,
-      orderReceivedAt: order.created_at,
-      callNumber: displayTarget.callNumber,
-      callPrefix: displayTarget.callPrefix,
-      referenceNumber: displayTarget.referenceNumber,
-      referenceNumbers: [displayTarget.referenceNumber],
-      orderType: order.order_type,
-      deliveryPlatform: order.delivery_platform ?? null,
-      externalOrderRef: order.external_order_ref ?? null,
-      callLane: getPickupCallLane(order.order_type),
-      targetKey: displayTarget.targetKey,
-      tableNumber,
-      ticketCount: 1,
-      sortAt,
+      item: {
+        id: groupKey,
+        lane,
+        status: ticket.status,
+        isPriority: isTicketPriority,
+        ticketIds: [ticket.id],
+        readyTicketIds: ticket.status === "ready" ? [ticket.id] : [],
+        orderId: order.id,
+        orderNumber: order.order_number,
+        orderReceivedAt: order.created_at,
+        callNumber: displayTarget.callNumber,
+        callPrefix: displayTarget.callPrefix,
+        referenceNumber: displayTarget.referenceNumber,
+        referenceNumbers: [displayTarget.referenceNumber],
+        orderType: order.order_type,
+        deliveryPlatform: order.delivery_platform ?? null,
+        externalOrderRef: order.external_order_ref ?? null,
+        callLane: getPickupCallLane(order.order_type),
+        targetKey: displayTarget.targetKey,
+        tableNumber,
+        ticketCount: 1,
+        sortAt: initialSortAt,
+      },
+      activeSortAt,
+      readySortAt,
+      servedSortAt,
     });
   }
 
-  const items = Array.from(groupByKey.values());
+  const items = Array.from(groupByKey.values()).map(
+    ({ item, activeSortAt, readySortAt, servedSortAt }) => {
+      if (item.lane === "active") {
+        item.sortAt = activeSortAt ?? item.sortAt;
+      } else if (item.lane === "ready") {
+        item.sortAt = readySortAt ?? item.sortAt;
+      } else {
+        item.sortAt = servedSortAt ?? item.sortAt;
+      }
+      return item;
+    },
+  );
   const activeTargetKeys = new Set(
     items
       .filter((item) => item.lane === "active")
@@ -284,6 +335,10 @@ function sortAtForQueue(
 
 function minIso(a: string, b: string): string {
   return new Date(a).getTime() <= new Date(b).getTime() ? a : b;
+}
+
+function maxIso(a: string, b: string): string {
+  return new Date(a).getTime() >= new Date(b).getTime() ? a : b;
 }
 
 function resolveDisplayTarget(

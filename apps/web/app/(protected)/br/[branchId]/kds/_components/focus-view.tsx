@@ -286,8 +286,12 @@ function FocusOrderPanel({
               orderNumber={order.orderNumber}
               orderType={order.orderType}
               tableNumber={order.tableNumber}
+              deliveryPlatform={order.deliveryPlatform}
+              externalOrderRef={order.externalOrderRef}
               orderNote={order.orderNote}
               isPriority={order.isPriority}
+              sendSeq={order.sendSeq}
+              sendKind={order.sendKind}
               elapsedMs={elapsedMs}
               isComplete={isComplete}
               status={overallStatus}

@@ -83,12 +83,12 @@ function compareKdsOrdersForKitchenQueue(a: KdsOrder, b: KdsOrder): number {
   const rankDelta = getKitchenQueueRank(a) - getKitchenQueueRank(b);
   if (rankDelta !== 0) return rankDelta;
 
-  const sequenceDelta = compareKdsOrderTicketSequence(a, b);
-  if (sequenceDelta !== 0) return sequenceDelta;
-
   const timeDelta =
     new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
   if (timeDelta !== 0) return timeDelta;
+
+  const sequenceDelta = compareKdsOrderTicketSequence(a, b);
+  if (sequenceDelta !== 0) return sequenceDelta;
 
   return a.groupKey.localeCompare(b.groupKey);
 }

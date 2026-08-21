@@ -961,3 +961,93 @@ test("buildPickupQueue unifies multiple kitchen batches of a single takeaway ord
   assert.equal(formatPickupOrderLabel(item!), "Mang về #0055");
 });
 
+test("buildPickupQueue sorts active append orders by active batch time behind newer intermediate orders", () => {
+  const input: BuildPickupQueueInput = {
+    ...base,
+    tickets: [
+      // Order 101: initial ticket was served at 10:00
+      {
+        id: 101,
+        order_id: 101,
+        kitchen_send_batch_id: 9101,
+        status: "served",
+        bumped_at: "2026-08-21T03:00:00.000Z",
+        created_at: "2026-08-21T02:50:00.000Z",
+        updated_at: "2026-08-21T03:00:00.000Z",
+      },
+      // Order 101: append ticket added at 10:10 (pending)
+      {
+        id: 103,
+        order_id: 101,
+        kitchen_send_batch_id: 9103,
+        status: "pending",
+        bumped_at: null,
+        created_at: "2026-08-21T03:10:00.000Z",
+        updated_at: "2026-08-21T03:10:00.000Z",
+      },
+      // Order 102: placed at 10:05 (pending)
+      {
+        id: 102,
+        order_id: 102,
+        kitchen_send_batch_id: 9102,
+        status: "pending",
+        bumped_at: null,
+        created_at: "2026-08-21T03:05:00.000Z",
+        updated_at: "2026-08-21T03:05:00.000Z",
+      },
+    ],
+    orders: [
+      {
+        id: 101,
+        order_number: "MV-260821-0101-CN1",
+        order_type: "takeaway",
+        table_id: null,
+        status: "preparing",
+        created_at: "2026-08-21T02:50:00.000Z",
+        tables: null,
+      },
+      {
+        id: 102,
+        order_number: "MV-260821-0102-CN1",
+        order_type: "takeaway",
+        table_id: null,
+        status: "pending",
+        created_at: "2026-08-21T03:05:00.000Z",
+        tables: null,
+      },
+    ],
+    kitchenBatches: [
+      {
+        id: 9101,
+        order_id: 101,
+        kitchen_ticket_number: "#101",
+        send_seq: 1,
+        kind: "initial",
+        created_at: "2026-08-21T02:50:00.000Z",
+      },
+      {
+        id: 9102,
+        order_id: 102,
+        kitchen_ticket_number: "#102",
+        send_seq: 1,
+        kind: "initial",
+        created_at: "2026-08-21T03:05:00.000Z",
+      },
+      {
+        id: 9103,
+        order_id: 101,
+        kitchen_ticket_number: "#101-2",
+        send_seq: 2,
+        kind: "append",
+        created_at: "2026-08-21T03:10:00.000Z",
+      },
+    ],
+  };
+
+  const queue = buildPickupQueue(input);
+  assert.equal(queue.length, 2);
+  // Order 102 (created 03:05) should appear BEFORE Order 101's append (added 03:10)
+  assert.equal(queue[0]?.orderId, 102);
+  assert.equal(queue[1]?.orderId, 101);
+});
+

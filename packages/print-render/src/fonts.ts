@@ -10,12 +10,12 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import {
-  ROBOTO_MONO_BOLD_B64,
-  ROBOTO_MONO_REGULAR_B64,
+  JETBRAINS_MONO_BOLD_B64,
+  JETBRAINS_MONO_REGULAR_B64,
 } from "./fonts-data";
 
-export const FAMILY_REG = "RobotoMono";
-export const FAMILY_BOLD = "RobotoMono-Bold";
+export const FAMILY_REG = "JetBrainsMono";
+export const FAMILY_BOLD = "JetBrainsMono-Bold";
 
 let fontsReady: Promise<void> | null = null;
 
@@ -34,10 +34,14 @@ export const ensureFontsLoaded = (): Promise<void> => {
   mkdirSync(dir, { recursive: true });
   const regular = materializeFont(
     dir,
-    "RobotoMono-Regular.ttf",
-    ROBOTO_MONO_REGULAR_B64,
+    "JetBrainsMono-Regular.ttf",
+    JETBRAINS_MONO_REGULAR_B64,
   );
-  const bold = materializeFont(dir, "RobotoMono-Bold.ttf", ROBOTO_MONO_BOLD_B64);
+  const bold = materializeFont(
+    dir,
+    "JetBrainsMono-Bold.ttf",
+    JETBRAINS_MONO_BOLD_B64,
+  );
   fontsReady = Promise.all([
     registerFont(regular, FAMILY_REG).load(),
     registerFont(bold, FAMILY_BOLD).load(),

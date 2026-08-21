@@ -32,6 +32,8 @@ export type KitchenPayload = {
   slot: number;
   /** >=2 = reprint of the same send batch; renders the IN LẠI LẦN #N banner. */
   reprint_seq?: number | null;
+  delivery_platform?: string | null;
+  external_order_ref?: string | null;
   note?: string | null;
   items: Array<{
     item_name: string;

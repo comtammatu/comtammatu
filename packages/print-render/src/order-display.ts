@@ -52,10 +52,12 @@ function resolveOrderTypeLabel(
       prefix === "TC");
   if (isDineIn && tableLabel) return `Bàn ${tableLabel}`;
   if (isDineIn) return "Tại bàn";
-  if (normalizedOrderType === "takeaway" || normalizedOrderType === "delivery") {
+  if (normalizedOrderType === "delivery" || prefix === "GH") {
+    return "Giao hàng";
+  }
+  if (normalizedOrderType === "takeaway" || prefix === "MV") {
     return "Mang về";
   }
-  if (prefix === "MV" || prefix === "GH") return "Mang về";
   return "Đơn";
 }
 
@@ -77,6 +79,26 @@ export function formatOrderHeaderLabel(input: {
   const cleaned = cleanOrderNumber(input.orderNumber);
   const prefix = cleaned.split("-")[0]?.toUpperCase() ?? "";
   const normalizedOrderType = input.orderType ?? "";
+  const isDelivery = normalizedOrderType === "delivery" || prefix === "GH";
+
+  if (isDelivery) {
+    const platformToken = formatDeliveryPlatformPrintToken(
+      input.deliveryPlatform,
+    );
+    const externalRef = (input.externalOrderRef ?? "").trim();
+    if (externalRef !== "") {
+      return `${platformToken}\n${externalRef}`;
+    }
+    const sequence = extractOrderSequence(cleaned);
+    if (sequence) {
+      return `${platformToken}\n#${sequence}`;
+    }
+    if (cleaned !== "") {
+      return `${platformToken}\n${cleaned}`;
+    }
+    return platformToken;
+  }
+
   const label = resolveOrderTypeLabel(
     cleaned,
     input.orderType,
@@ -84,26 +106,10 @@ export function formatOrderHeaderLabel(input: {
   );
   const sequence = extractOrderSequence(cleaned);
 
-  let header: string;
   if (sequence) {
-    header = `${label} #${sequence}`;
+    return `${label} #${sequence}`;
   } else if (cleaned) {
-    header = `${label} ${cleaned}`;
-  } else {
-    header = label;
+    return `${label} ${cleaned}`;
   }
-
-  const isDelivery = normalizedOrderType === "delivery" || prefix === "GH";
-  if (isDelivery) {
-    const platformToken = formatDeliveryPlatformPrintToken(
-      input.deliveryPlatform,
-    );
-    const externalRef = (input.externalOrderRef ?? "").trim();
-    header =
-      externalRef !== ""
-        ? `${header}\n${platformToken} ${externalRef}`
-        : `${header}\n${platformToken}`;
-  }
-
-  return header;
+  return label;
 }

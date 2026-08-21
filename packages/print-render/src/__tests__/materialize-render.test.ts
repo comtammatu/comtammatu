@@ -159,7 +159,15 @@ test("order display helpers", () => {
       deliveryPlatform: "grab",
       externalOrderRef: "1234",
     }),
-    "Mang về #042\nGRAB 1234",
+    "GRAB\n1234",
+  );
+  assert.equal(
+    formatOrderHeaderLabel({
+      orderNumber: "GH-260525-042-PH",
+      orderType: "delivery",
+      deliveryPlatform: "grab",
+    }),
+    "GRAB\n#042",
   );
 });
 

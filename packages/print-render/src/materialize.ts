@@ -62,6 +62,9 @@ const orderDestination = (payload: LoosePayload): string => {
     const table = rawText(payload, "table_number").trim();
     return table !== "" ? `BÀN ${table}` : "TẠI CHỖ";
   }
+  if (rawText(payload, "order_type") === "delivery") {
+    return "GIAO HÀNG";
+  }
   return "MANG VỀ";
 };
 

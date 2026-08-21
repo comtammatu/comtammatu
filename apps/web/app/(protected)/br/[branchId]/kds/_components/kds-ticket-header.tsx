@@ -50,6 +50,8 @@ interface KdsTicketHeaderProps {
   externalOrderRef?: string | null;
   orderNote: string | null;
   isPriority: boolean;
+  sendSeq?: number | null;
+  sendKind?: string | null;
   elapsedMs: number;
   isComplete: boolean;
   status: string;
@@ -67,6 +69,8 @@ export function KdsTicketHeader({
   externalOrderRef = null,
   orderNote,
   isPriority,
+  sendSeq = null,
+  sendKind = null,
   elapsedMs,
   isComplete,
   status,
@@ -79,6 +83,12 @@ export function KdsTicketHeader({
   const headerBg = getAgeStyle(elapsedMinutes, isComplete).bg;
   const titleSize = density === "compact" ? "compact" : "default";
   const ageSize = density === "compact" ? "compact" : "lg";
+  const isAppend =
+    (sendSeq !== null && sendSeq > 1) || sendKind === "append";
+  const appendLabel =
+    sendSeq !== null && sendSeq > 1
+      ? `+ Thêm món (Đợt ${String(sendSeq)})`
+      : "+ Thêm món";
 
   return (
     <div className={cn("border-b", headerBg, densityClass.shell)}>
@@ -94,11 +104,24 @@ export function KdsTicketHeader({
               externalOrderRef={externalOrderRef}
               size={titleSize}
             />
-            {isPriority ? (
+            {isPriority || isAppend ? (
               <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                <Badge variant="warning" className={densityClass.priority}>
-                  {PRIORITY_LABEL}
-                </Badge>
+                {isPriority ? (
+                  <Badge variant="warning" className={densityClass.priority}>
+                    {PRIORITY_LABEL}
+                  </Badge>
+                ) : null}
+                {isAppend ? (
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "border-warning/20 bg-warning/15 font-semibold",
+                      densityClass.priority,
+                    )}
+                  >
+                    {appendLabel}
+                  </Badge>
+                ) : null}
               </div>
             ) : null}
             <OrderNote
@@ -122,6 +145,17 @@ export function KdsTicketHeader({
               {isPriority ? (
                 <Badge variant="warning" className={densityClass.priority}>
                   {PRIORITY_LABEL}
+                </Badge>
+              ) : null}
+              {isAppend ? (
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "border-warning/20 bg-warning/15 font-semibold",
+                    densityClass.priority,
+                  )}
+                >
+                  {appendLabel}
                 </Badge>
               ) : null}
             </div>

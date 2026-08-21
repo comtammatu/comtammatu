@@ -1,11 +1,11 @@
 /**
  * Bitmap rendering for ESC/POS thermal printers whose firmware does NOT
  * decode CP1258 at any register id (e.g. PDIT PD805KL). Text is rasterized
- * into a 1-bit bitmap via pureimage + Roboto Mono, then sent via the
+ * into a 1-bit bitmap via pureimage + JetBrains Mono, then sent via the
  * `GS v 0` raster command — codepage-agnostic, works on any ESC/POS printer.
  *
  * One GS v 0 block per line. Line height adapts to size (normal/double).
- * Bold uses Roboto Mono Bold variant.
+ * Bold uses JetBrains Mono Bold variant.
  */
 
 import { Bitmap } from "pureimage";
@@ -19,16 +19,16 @@ export const DOTS_WIDTH = 576;
 const BYTES_PER_ROW = DOTS_WIDTH / 8; // 72
 
 // Canvas fills the full 576-dot printable area. 48 chars × 12-dot glyph
-// (Roboto Mono @ 20px) = 576 exact. Small left-edge side-bearing on thin
+// (JetBrains Mono @ 20px) = 576 exact. Small left-edge side-bearing on thin
 // glyphs like `|` may clip ~1 dot but letters print with their full width.
 const MARGIN_LEFT = 0;
 const MARGIN_RIGHT = 0;
 const DRAW_WIDTH = DOTS_WIDTH - MARGIN_LEFT - MARGIN_RIGHT; // 576 dots
 
 // Layout spec:
-//   Normal size: Roboto Mono Regular 20px, ~12 dots/glyph,
+//   Normal size: JetBrains Mono Regular 20px, ~12 dots/glyph,
 //     48 chars/line, 26-dot line height
-//   Double size: Roboto Mono Bold 40px, ~24 dots/glyph,
+//   Double size: JetBrains Mono Bold 40px, ~24 dots/glyph,
 //     24 chars/line (HARD LIMIT), 52-dot line height
 //   Line spacing zero so rasters stack pixel-exact.
 const FONT_SIZE_NORMAL = 20;

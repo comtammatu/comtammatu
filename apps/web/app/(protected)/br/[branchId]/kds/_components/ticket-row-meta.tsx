@@ -36,6 +36,23 @@ export function TicketRowMeta({
   if (layout === "inline") {
     return (
       <span className="inline-flex min-w-0 flex-wrap items-center gap-1 text-sm font-medium leading-snug">
+        {hasNote && (
+          <Badge
+            variant="warning"
+            className="h-auto min-h-6 min-w-0 max-w-full gap-1 rounded-md px-2 py-0.5"
+          >
+            <IconNote aria-hidden className="size-3 shrink-0" />
+            <span className="max-h-16 min-w-0 overflow-y-auto break-words pr-1 text-xs font-semibold leading-tight xl:text-sm">
+              {ITEM_NOTE_PREFIX}: {note}
+            </span>
+          </Badge>
+        )}
+
+        {hasModifiers &&
+          modifiers.map((m, idx) => (
+            <ModifierChip key={`${m.modifier_id}-${idx}`} label={m.name} />
+          ))}
+
         {hasSides &&
           sides.map((s, idx) => (
             <Badge
@@ -49,26 +66,35 @@ export function TicketRowMeta({
               + {formatSideLabel(s)}
             </Badge>
           ))}
-
-        {hasModifiers &&
-          modifiers.map((m, idx) => (
-            <ModifierChip key={`${m.modifier_id}-${idx}`} label={m.name} />
-          ))}
-
-        {hasNote && (
-          <span className="inline-flex min-h-6 min-w-0 max-w-full items-center gap-1 rounded-md bg-warning/15 px-2 py-0.5 text-warning">
-            <IconNote aria-hidden className="size-3 shrink-0 text-warning" />
-            <span className="max-h-16 min-w-0 overflow-y-auto break-words pr-1 text-xs font-semibold leading-tight xl:text-sm">
-              {ITEM_NOTE_PREFIX}: {note}
-            </span>
-          </span>
-        )}
       </span>
     );
   }
 
   return (
     <div className="flex flex-col gap-1 text-sm font-medium leading-snug">
+      {hasNote && (
+        <Badge
+          variant="warning"
+          className="h-auto min-h-6 min-w-0 max-w-full items-start gap-1 rounded-md px-2 py-0.5 text-xs font-medium xl:text-sm"
+        >
+          <IconNote
+            aria-hidden
+            className="mt-0.5 size-3 shrink-0"
+          />
+          <span className="max-h-20 min-w-0 overflow-y-auto break-words pr-1">
+            {ITEM_NOTE_PREFIX}: {note}
+          </span>
+        </Badge>
+      )}
+
+      {hasModifiers && (
+        <div className="flex flex-wrap items-center gap-1">
+          {modifiers.map((m, idx) => (
+            <ModifierChip key={`${m.modifier_id}-${idx}`} label={m.name} />
+          ))}
+        </div>
+      )}
+
       {hasSides && (
         <div className="flex flex-wrap items-center gap-1">
           {sides.map((s, idx) => (
@@ -83,26 +109,6 @@ export function TicketRowMeta({
               + {formatSideLabel(s)}
             </Badge>
           ))}
-        </div>
-      )}
-
-      {hasModifiers && (
-        <div className="flex flex-wrap items-center gap-1">
-          {modifiers.map((m, idx) => (
-            <ModifierChip key={`${m.modifier_id}-${idx}`} label={m.name} />
-          ))}
-        </div>
-      )}
-
-      {hasNote && (
-        <div className="flex items-start gap-1 rounded-md bg-warning/15 px-2 py-0.5 text-xs font-medium text-warning xl:text-sm">
-          <IconNote
-            aria-hidden
-            className="mt-0.5 size-3 shrink-0 text-warning"
-          />
-          <span className="max-h-20 min-w-0 overflow-y-auto break-words pr-1">
-            {ITEM_NOTE_PREFIX}: {note}
-          </span>
         </div>
       )}
     </div>

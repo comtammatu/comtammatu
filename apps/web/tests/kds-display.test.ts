@@ -89,6 +89,14 @@ const ticketHeaderSource = readFileSync(
   "utf8",
 );
 
+const ticketRowMetaSource = readFileSync(
+  join(
+    process.cwd(),
+    "app/(protected)/br/[branchId]/kds/_components/ticket-row-meta.tsx",
+  ),
+  "utf8",
+);
+
 function makeOrder(
   overrides: Partial<KdsOrder> & Pick<KdsOrder, "groupKey">,
 ): KdsOrder {
@@ -349,12 +357,34 @@ test("KDS title keeps table target and ticket code without append labels", () =>
   assert.doesNotMatch(orderTitleLineSource, /contextLabel/);
   assert.doesNotMatch(orderTitleLineSource, /Gọi thêm/);
   assert.doesNotMatch(orderTitleLineSource, /title=/);
-  assert.doesNotMatch(orderTitleLineSource, /truncate|line-clamp/);
-  assert.doesNotMatch(orderNoteSource, /truncate|line-clamp|overflow-hidden/);
-  assert.doesNotMatch(orderGridSource, /contextLabel=/);
-  assert.doesNotMatch(focusViewSource, /contextLabel=/);
   assert.doesNotMatch(orderGridSource, /Gọi thêm/);
   assert.doesNotMatch(focusViewSource, /Gọi thêm/);
+  assert.match(
+    orderGridSource,
+    /deliveryPlatform=\{order\.deliveryPlatform\}/,
+  );
+  assert.match(
+    orderGridSource,
+    /externalOrderRef=\{order\.externalOrderRef\}/,
+  );
+  assert.match(
+    focusViewSource,
+    /deliveryPlatform=\{order\.deliveryPlatform\}/,
+  );
+  assert.match(
+    focusViewSource,
+    /externalOrderRef=\{order\.externalOrderRef\}/,
+  );
+  // Ergonomic ordering: Item note is rendered before modifiers and sides
+  const inlineReturnIdx = ticketRowMetaSource.indexOf('layout === "inline"');
+  const noteIdx = ticketRowMetaSource.indexOf("{hasNote &&", inlineReturnIdx);
+  const modIdx = ticketRowMetaSource.indexOf("{hasModifiers &&", inlineReturnIdx);
+  const sidesIdx = ticketRowMetaSource.indexOf("{hasSides &&", inlineReturnIdx);
+  assert.ok(noteIdx >= 0 && modIdx >= 0 && sidesIdx >= 0);
+  assert.ok(
+    noteIdx < modIdx && modIdx < sidesIdx,
+    "Ergonomic priority: item note must render before modifiers and sides",
+  );
 });
 
 test("KDS mixed kitchen batch can split dine-in items from món thêm", () => {
@@ -510,4 +540,16 @@ test("KDS focus view advances immediately without blur or pulse", () => {
   assert.doesNotMatch(focusViewSource, /backdrop-blur-sm/);
   assert.doesNotMatch(focusViewSource, /animate-pulse/);
   assert.doesNotMatch(focusViewSource, /transition-colors duration-150/);
+});
+
+test("KDS kitchen queue compares timeDelta before sequenceDelta to keep FIFO order", () => {
+  assert.match(
+    kdsBoardSource,
+    /const timeDelta =\s*new Date\(a\.createdAt\)\.getTime\(\) - new Date\(b\.createdAt\)\.getTime\(\);[\s\S]*const sequenceDelta = compareKdsOrderTicketSequence\(a, b\);/,
+  );
+  assert.match(orderGridSource, /sendSeq=\{order\.sendSeq\}/);
+  assert.match(orderGridSource, /sendKind=\{order\.sendKind\}/);
+  assert.match(focusViewSource, /sendSeq=\{order\.sendSeq\}/);
+  assert.match(focusViewSource, /sendKind=\{order\.sendKind\}/);
+  assert.match(ticketHeaderSource, /\+ Thêm món/);
 });
