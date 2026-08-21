@@ -13,7 +13,6 @@ import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import {
-  LayoutGrid as IconLayoutGrid,
   Trash as IconTrash,
   X as IconX,
 } from "lucide-react";
@@ -69,7 +68,7 @@ function CartPaneComponent({
   onSubmitOrder,
   onCustomizeItem,
   onClosePane,
-  onReturnToTables,
+  onReturnToTables: _onReturnToTables,
 }: CartPaneProps) {
   const cart = useCart();
   const activeTable = useActiveTable();
@@ -249,50 +248,32 @@ function CartPaneComponent({
           </div>
         ) : null
       ) : (
-        <div className="shrink-0 border-b border-border/60 px-3 py-3 sm:px-4 sm:py-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className="font-heading text-base font-semibold tracking-tight text-foreground">
-                {messages.pos.desktop.pendingNewTitle}
-              </h2>
-              <Badge variant="outline" className="mt-1 max-w-full truncate">
-                {contextLabel}
+        <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border/60 px-3 sm:px-4">
+          <div className="flex min-w-0 items-center gap-2">
+            <h2 className="font-heading truncate text-base font-semibold tracking-tight text-foreground">
+              {messages.pos.desktop.pendingNewTitle}
+            </h2>
+            {totalQuantity > 0 ? (
+              <Badge
+                variant="secondary"
+                className="shrink-0 text-xs font-semibold tabular-nums"
+              >
+                {totalQuantity}
               </Badge>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              {cart.orderType === "dine_in" &&
-                selectedTableNumber != null && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="touch"
-                    className="min-w-12 px-3 text-sm text-muted-foreground"
-                    onClick={() => {
-                      if (onReturnToTables) {
-                        onReturnToTables();
-                      } else {
-                        activeTable.setTable(null);
-                      }
-                    }}
-                  >
-                    <IconLayoutGrid data-icon="inline-start" />
-                    {messages.pos.desktop.changeTarget}
-                  </Button>
-                )}
-              {cart.items.length > 0 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="touch"
-                  className="min-w-12 shrink-0 px-3 text-sm text-muted-foreground"
-                  onClick={() => void handleClearCart()}
-                >
-                  <IconTrash data-icon="inline-start" />
-                  {messages.pos.pendingDraft.clear}
-                </Button>
-              )}
-            </div>
+            ) : null}
           </div>
+          {cart.items.length > 0 && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="touch"
+              className="min-w-12 shrink-0 px-3 text-sm text-muted-foreground hover:text-destructive"
+              onClick={() => void handleClearCart()}
+            >
+              <IconTrash data-icon="inline-start" />
+              {messages.pos.pendingDraft.clear}
+            </Button>
+          )}
         </div>
       )}
 
@@ -367,7 +348,7 @@ function CartPaneComponent({
         cart.orderType === "delivery" && !deliveryReady ? (
           <div className="min-h-0 flex-1" aria-hidden="true" />
         ) : (
-          <div className="flex min-h-0 flex-1 items-start justify-center px-4 pt-4">
+          <div className="flex min-h-0 flex-1 items-center justify-center p-3 sm:p-4">
             <AppEmptyState
               compact
               symbol="roundPlate"
