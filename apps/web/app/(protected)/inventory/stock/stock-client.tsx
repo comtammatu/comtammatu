@@ -9,6 +9,7 @@ import {
   ArrowRightToLine as IconArrowBarRight,
   ClipboardList as IconClipboardList,
   Pencil as IconPencil,
+  Plus as IconPlus,
   Receipt as IconReceipt,
   Search as IconSearch,
   Trash as IconTrash,
@@ -327,6 +328,10 @@ export function StockClient({
     initialDetailData,
   );
   const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const viewingIngredient =
+    viewingIngredientId != null
+      ? (ingredients.find((item) => item.id === viewingIngredientId) ?? null)
+      : null;
 
   const secondaryOverlayOpen =
     adjustTarget != null ||
@@ -455,6 +460,29 @@ export function StockClient({
   const canReceiveStock = actionPermissions.canReceiveGrn;
   const getStockRowActions = (item: StockIngredient): RowActionItem[] => {
     const rowActions: RowActionItem[] = [];
+    const isLowOrOut = item.status === "low" || item.status === "out";
+
+    if (isLowOrOut && actionPermissions.canManagePurchaseRequest) {
+      rowActions.push({
+        key: "reorder-po",
+        label: "Đặt mua hàng",
+        icon: <IconPlus />,
+        href: branchHref(
+          branchId,
+          `/inventory/purchase-orders?ingredientId=${item.id}&mode=create`,
+        ),
+      });
+    } else if (isLowOrOut && actionPermissions.canCreateStockRequest) {
+      rowActions.push({
+        key: "reorder-request",
+        label: "Xin hàng",
+        icon: <IconPlus />,
+        href: branchHref(
+          branchId,
+          `/inventory/stock-requests/new?ingredientId=${item.id}`,
+        ),
+      });
+    }
 
     if (actionPermissions.canCreateIssue) {
       rowActions.push({
@@ -1132,6 +1160,32 @@ export function StockClient({
         detailData={detailData}
         isLoading={isDetailLoading}
         isTouchLayout={controlSize === "touch"}
+        reorderHref={
+          viewingIngredient != null &&
+          (viewingIngredient.status === "low" || viewingIngredient.status === "out")
+            ? permissions.canManagePurchaseRequest
+              ? branchHref(
+                  branchId,
+                  `/inventory/purchase-orders?ingredientId=${viewingIngredientId}&mode=create`,
+                )
+              : permissions.canCreateStockRequest
+                ? branchHref(
+                    branchId,
+                    `/inventory/stock-requests/new?ingredientId=${viewingIngredientId}`,
+                  )
+                : undefined
+            : undefined
+        }
+        reorderLabel={
+          viewingIngredient != null &&
+          (viewingIngredient.status === "low" || viewingIngredient.status === "out")
+            ? permissions.canManagePurchaseRequest
+              ? "Đặt mua hàng"
+              : permissions.canCreateStockRequest
+                ? "Xin hàng"
+                : undefined
+            : undefined
+        }
         canAdjustStock={permissions.canAdjustException}
         canEditIngredient={permissions.canEditIngredient}
         canSetCompanyWac={

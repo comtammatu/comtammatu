@@ -89,6 +89,7 @@ const ORDER_OVERLAY_KEYS = [
   "poId",
   "demandId",
   "mode",
+  "ingredientId",
   "ordersQ",
   "ordersStatus",
   "ordersSite",
@@ -189,6 +190,29 @@ export function PurchaseOrdersClient({
     },
     [overlay.patchOverlay],
   );
+
+  useEffect(() => {
+    const rawIngId = overlay.get("ingredientId");
+    if (!rawIngId || !createOpen) return;
+    const ingId = Number(rawIngId);
+    if (!Number.isInteger(ingId) || ingId <= 0) return;
+    const ingredient = ingredients.find((item) => item.id === ingId);
+    if (!ingredient) return;
+    const defaultSupplier = pickDefaultPurchaseDemandSupplier(ingId, suppliers);
+    const suggested =
+      ingredient.suggestedOrderQty > 0
+        ? String(ingredient.suggestedOrderQty)
+        : "";
+    setDraftLines([
+      {
+        ...blankRequestLine(),
+        ingredientId: String(ingId),
+        supplierId: defaultSupplier != null ? String(defaultSupplier.id) : "",
+        entryUnitId: String(defaultPurchaseRequestUnit(ingredient)?.id ?? ""),
+        quantity: suggested,
+      },
+    ]);
+  }, [createOpen, ingredients, overlay, suppliers]);
 
   function resetCreate() {
     setBranchId(String(createBranches[0]?.id ?? ""));

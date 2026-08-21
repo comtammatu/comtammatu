@@ -6,6 +6,7 @@ import {
   ArrowUpFromLine as IconArrowUpFromLine,
   Banknote as IconBanknote,
   Pencil as IconPencil,
+  Plus as IconPlus,
   SquarePen as IconSquarePen,
   Truck as IconTruck,
 } from "lucide-react";
@@ -91,6 +92,8 @@ export interface StockDetailDialogProps {
   canAdjustStock?: boolean;
   canEditIngredient?: boolean;
   canSetCompanyWac?: boolean;
+  reorderHref?: string;
+  reorderLabel?: string;
   onAdjustStock?: () => void;
   onEditIngredient?: () => void;
   onSetCompanyWac?: () => void;
@@ -106,6 +109,8 @@ export function StockDetailDialog({
   canAdjustStock = false,
   canEditIngredient = false,
   canSetCompanyWac = false,
+  reorderHref,
+  reorderLabel,
   onAdjustStock,
   onEditIngredient,
   onSetCompanyWac,
@@ -500,6 +505,17 @@ export function StockDetailDialog({
       variant="document"
       footer={
         <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+          {reorderHref && reorderLabel ? (
+            <Button
+              size={actionSize}
+              variant="default"
+              render={<Link href={reorderHref} />}
+            >
+              <IconPlus data-icon="inline-start" />
+              {reorderLabel}
+            </Button>
+          ) : null}
+
           <Button
             type="button"
             variant="outline"
