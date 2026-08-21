@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { INVENTORY_VI, ACTIONS_VI } from "@comtammatu/shared/messages";
 import { Alert, AlertDescription, AlertTitle } from "@comtammatu/ui/components/alert";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Field, FieldLabel } from "@comtammatu/ui/components/field";
 import { Frame } from "@comtammatu/ui/components/frame";
@@ -113,8 +114,14 @@ export function ProductionCreateDialog({
       setPlannedQuantity("");
       setContext(null);
       setContextError(null);
+    } else if (finishedGoods.length > 0 && recipeSpecId == null) {
+      const firstGood = finishedGoods[0];
+      if (firstGood) {
+        setRecipeSpecId(firstGood.recipeSpecId);
+        setPlannedQuantity(String(firstGood.outputQuantity ?? 1));
+      }
     }
-  }, [open]);
+  }, [open, finishedGoods, recipeSpecId]);
 
   useEffect(() => {
     const defaults = resolveDefaultLocations(locations, branchId);
@@ -123,7 +130,7 @@ export function ProductionCreateDialog({
   }, [branchId, locations]);
 
   useEffect(() => {
-    if (!recipeSpecId || !branchId || !sourceLocationId) {
+    if (!recipeSpecId || !branchId) {
       setContext(null);
       setContextError(null);
       return;
@@ -155,12 +162,9 @@ export function ProductionCreateDialog({
     if (
       !branchId ||
       !recipeSpecId ||
-      !sourceLocationId ||
-      !targetLocationId ||
       !Number.isFinite(planned) ||
       planned <= 0 ||
-      !context ||
-      plannedExceedsStock
+      !context
     ) {
       toast.error(INVENTORY_VI.productionCreateValidate);
       return;
@@ -191,7 +195,11 @@ export function ProductionCreateDialog({
       const onHand = ingredient.max_ingredient_qty;
       const short =
         needed != null && Number.isFinite(needed) && needed > onHand + 1e-9;
-      return { ingredient, needed, onHand, short };
+      const missing =
+        needed != null && Number.isFinite(needed) && short
+          ? needed - onHand
+          : 0;
+      return { ingredient, needed, onHand, short, missing };
     });
   }, [batchRatio, context]);
 
@@ -233,7 +241,13 @@ export function ProductionCreateDialog({
           <Button
             type="button"
             onClick={handleCreate}
-            disabled={isPending || !context || plannedExceedsStock}
+            disabled={
+              isPending ||
+              !context ||
+              !recipeSpecId ||
+              !Number.isFinite(planned) ||
+              planned <= 0
+            }
           >
             {isPending ? "Đang tạo…" : "Tạo lệnh nháp"}
           </Button>
@@ -275,7 +289,14 @@ export function ProductionCreateDialog({
                   className="min-w-0"
                   size="field"
                   value={recipeSpecId?.toString() ?? ""}
-                  onValueChange={(value) => setRecipeSpecId(Number(value))}
+                  onValueChange={(value) => {
+                    const nextSpecId = Number(value);
+                    setRecipeSpecId(nextSpecId);
+                    const good = finishedGoods.find((g) => g.recipeSpecId === nextSpecId);
+                    if (good && (!plannedQuantity || Number(plannedQuantity) <= 0)) {
+                      setPlannedQuantity(String(good.outputQuantity ?? 1));
+                    }
+                  }}
                   options={finishedGoods.map((good) => ({
                     value: String(good.recipeSpecId),
                     label: good.name,
@@ -314,10 +335,13 @@ export function ProductionCreateDialog({
             ) : null}
 
             {plannedExceedsStock ? (
-              <Alert variant="destructive">
-                <AlertTitle>{INVENTORY_VI.productionInsufficientStock}</AlertTitle>
-                <AlertDescription>
+              <Alert variant="default">
+                <AlertTitle className="font-semibold text-warning">{INVENTORY_VI.productionInsufficientStock}</AlertTitle>
+                <AlertDescription className="text-xs text-foreground/80">
                   {INVENTORY_VI.productionPlanExceedsStock}
+                  <span className="block mt-0.5 text-muted-foreground text-2xs">
+                    Lệnh vẫn có thể tạo ở trạng thái Nháp để Bếp trưởng lên kế hoạch chuẩn bị nguyên liệu.
+                  </span>
                 </AlertDescription>
               </Alert>
             ) : null}
@@ -343,36 +367,42 @@ export function ProductionCreateDialog({
             <Frame className="overflow-hidden">
               <div className="flex gap-2 border-b bg-muted/30 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 <span className="min-w-0 flex-1">Nguyên liệu</span>
-                <span className="w-28 shrink-0 text-right">{INVENTORY_VI.shortageNeeded}</span>
-                <span className="w-28 shrink-0 text-right">{INVENTORY_VI.shortageOnHand}</span>
+                <span className="w-24 shrink-0 text-right">{INVENTORY_VI.shortageNeeded}</span>
+                <span className="w-24 shrink-0 text-right">{INVENTORY_VI.shortageOnHand}</span>
+                <span className="w-28 shrink-0 text-right">Đối chiếu</span>
               </div>
               <ScrollArea className="h-60">
                 <div className="divide-y">
-                  {ingredientRows.map(({ ingredient, needed, onHand, short }) => (
+                  {ingredientRows.map(({ ingredient, needed, onHand, short, missing }) => (
                     <div
                       key={ingredient.ingredient_id}
-                      className="flex items-baseline gap-2 px-3 py-2 text-sm"
+                      className="flex items-center gap-2 px-3 py-2.5 text-sm"
                     >
                       <span className="min-w-0 flex-1 truncate font-medium">
                         {ingredient.ingredient_name}
                       </span>
-                      <span className="w-28 shrink-0 text-right tabular-nums">
+                      <span className="w-24 shrink-0 text-right tabular-nums text-xs">
                         {needed == null ? "—" : formatQty(needed)}{" "}
                         <span className="text-muted-foreground">
                           {ingredient.unit_name}
                         </span>
                       </span>
-                      <span
-                        className={
-                          short
-                            ? "w-28 shrink-0 text-right tabular-nums text-destructive font-medium"
-                            : "w-28 shrink-0 text-right tabular-nums"
-                        }
-                      >
+                      <span className="w-24 shrink-0 text-right tabular-nums text-xs">
                         {formatQty(onHand)}{" "}
-                        <span className={short ? undefined : "text-muted-foreground"}>
+                        <span className="text-muted-foreground">
                           {ingredient.unit_name}
                         </span>
+                      </span>
+                      <span className="w-28 shrink-0 text-right">
+                        {short ? (
+                          <Badge variant="warning" className="font-mono text-2xs">
+                            Thiếu {formatQty(missing)} {ingredient.unit_name}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-success text-2xs">
+                            Đủ tồn
+                          </Badge>
+                        )}
                       </span>
                     </div>
                   ))}

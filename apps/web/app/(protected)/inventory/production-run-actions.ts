@@ -447,7 +447,7 @@ export interface ProductionRecipeIngredient {
 export async function fetchProductionRecipeContext(
   recipeSpecId: number,
   branchId: number,
-  sourceLocationId?: number,
+  _sourceLocationId?: number,
 ): Promise<
   ActionResult<{
     ingredients: ProductionRecipeIngredient[];
@@ -478,24 +478,26 @@ export async function fetchProductionRecipeContext(
     return { success: false, error: productionCopy.productionRecipeLoadFailed };
   }
 
-  const locationId = sourceLocationId ?? null;
   const ingredientIds = (data as unknown as Array<{ ingredient_id: number }>).map(
     (row) => row.ingredient_id,
   );
-  let stockQuery = supabase
+  const { data: stockData, error: stockError } = await supabase
     .from("stock_levels")
-    .select("ingredient_id, current_quantity")
+    .select("ingredient_id, current_quantity, location_id")
     .eq("tenant_id", claims.tenant_id)
     .eq("branch_id", branchId)
     .in("ingredient_id", ingredientIds);
-  if (locationId != null) stockQuery = stockQuery.eq("location_id", locationId);
-  const { data: stockData, error: stockError } = await stockQuery;
   if (stockError) {
     return { success: false, error: productionCopy.productionStockLoadFailed };
   }
-  const stockByIngredient = new Map(
-    (stockData ?? []).map((row) => [row.ingredient_id, Number(row.current_quantity)]),
-  );
+  const stockByIngredient = new Map<number, number>();
+  for (const row of stockData ?? []) {
+    const qty = Number(row.current_quantity) || 0;
+    stockByIngredient.set(
+      row.ingredient_id,
+      (stockByIngredient.get(row.ingredient_id) ?? 0) + qty,
+    );
+  }
 
   type RecipeRow = {
     ingredient_id: number;

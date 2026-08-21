@@ -54,6 +54,7 @@ const SupplierDialog = dynamic(
   { ssr: false },
 );
 
+import { Avatar, AvatarFallback } from "@comtammatu/ui/components/avatar";
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 export type { SupplierRow } from "./supplier-dialog";
 
@@ -76,19 +77,22 @@ function SupplierAvatar({
 }) {
   const color = avatarColors[colorIndex % avatarColors.length]!;
   return (
-    <div
+    <Avatar
+      size="default"
       className={cn(
-        "flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
+        "size-8 min-h-8 min-w-8 text-xs font-semibold",
         color.bg,
         color.fg,
       )}
     >
-      {name
-        .split(" ")
-        .map((w) => w[0])
-        .slice(0, 2)
-        .join("")}
-    </div>
+      <AvatarFallback className={cn("bg-transparent text-xs font-semibold", color.fg)}>
+        {name
+          .split(" ")
+          .map((w) => w[0])
+          .slice(0, 2)
+          .join("")}
+      </AvatarFallback>
+    </Avatar>
   );
 }
 

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { CheckCircle2 as IconCheckCircle, Circle as IconCircle } from "lucide-react";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
 import { Progress } from "@comtammatu/ui/components/progress";
@@ -14,7 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { cn } from "@comtammatu/ui";
 import { AppDetailFooter } from "@/components/surface";
 import { NumberPadSheet } from "@/components/form/number-pad-sheet";
 import { messages } from "@lib/messages";
@@ -190,18 +190,14 @@ export function StocktakeCountWizard({
                     </div>
                   ) : null}
                 </div>
-                <span
-                  className={cn(
-                    "shrink-0 rounded-md px-3 py-1 font-mono text-sm font-semibold tabular-nums",
-                    counted
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground",
-                  )}
+                <Badge
+                  variant={counted ? "default" : "secondary"}
+                  className="shrink-0 font-mono text-sm font-semibold tabular-nums"
                 >
                   {counted && qty != null
                     ? `${qty} ${unitLabel}`
                     : copy.countTapToEnter}
-                </span>
+                </Badge>
               </InteractiveCard>
               {onUnitChange && unitOptions.length > 1 && unitId != null ? (
                 <Select
