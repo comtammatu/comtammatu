@@ -62,8 +62,16 @@ import {
   type ConfirmedGrnUnitCostTarget,
   type UnpricedConfirmedGrnLine,
 } from "@lib/inventory/grn-unpriced-queue-model";
+import dynamic from "next/dynamic";
 import { GrnUnpricedQueueTable } from "./grn-unpriced-queue";
-import { ConfirmedGrnUnitCostDialog } from "./[id]/views/confirmed-grn-unit-cost-dialog";
+
+const ConfirmedGrnUnitCostDialog = dynamic(
+  () =>
+    import("./[id]/views/confirmed-grn-unit-cost-dialog").then(
+      (mod) => mod.ConfirmedGrnUnitCostDialog,
+    ),
+  { ssr: false },
+);
 
 import {
   OWNER_SHELL_BREAKPOINT,

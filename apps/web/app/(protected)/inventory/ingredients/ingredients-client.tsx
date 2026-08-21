@@ -46,16 +46,22 @@ import {
 } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/status-badge";
 import { formatVND } from "@lib/inventory/format";
+import dynamic from "next/dynamic";
 import {
   CATEGORY_TONE_CLASS,
   ITEM_KIND_LABELS,
   ITEM_KIND_OPTIONS,
 } from "../_lib/constants";
 import { toggleIngredientActive } from "../ingredient-actions";
-import {
-  IngredientDialog,
-  type IngredientSavedDetail,
-} from "./ingredient-dialog";
+import type { IngredientSavedDetail } from "./ingredient-dialog";
+
+const IngredientDialog = dynamic(
+  () =>
+    import("./ingredient-dialog").then(
+      (mod) => mod.IngredientDialog,
+    ),
+  { ssr: false },
+);
 import type {
   CategoryOption,
   IngredientRow,

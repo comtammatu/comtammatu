@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import {
@@ -87,6 +87,9 @@ import {
   fetchIngredients,
   fetchUnitOptions,
 } from "../ingredient-actions";
+import { fetchStockIngredientDetailAction } from "../stock-actions";
+import type { StockIngredientDetailData } from "@lib/inventory/stock-on-hand-detail-model";
+import type { CompanyWacTarget } from "./company-wac-dialog";
 import type {
   CategoryOption,
   IngredientRow,
@@ -140,6 +143,22 @@ const IngredientDialog = dynamic(
   () =>
     import("../ingredients/ingredient-dialog").then(
       (mod) => mod.IngredientDialog,
+    ),
+  { ssr: false },
+);
+
+const StockDetailDialog = dynamic(
+  () =>
+    import("./stock-detail-dialog").then(
+      (mod) => mod.StockDetailDialog,
+    ),
+  { ssr: false },
+);
+
+const CompanyWacDialog = dynamic(
+  () =>
+    import("./company-wac-dialog").then(
+      (mod) => mod.CompanyWacDialog,
     ),
   { ssr: false },
 );
@@ -262,14 +281,6 @@ function QuickActionButton({
   );
 }
 
-import { StockDetailDialog } from "./stock-detail-dialog";
-import {
-  CompanyWacDialog,
-  type CompanyWacTarget,
-} from "./company-wac-dialog";
-import { fetchStockIngredientDetailAction } from "../stock-actions";
-import type { StockIngredientDetailData } from "@lib/inventory/stock-on-hand-detail-model";
-
 export function StockClient({
   ingredients,
   branchId,
@@ -391,15 +402,17 @@ export function StockClient({
     [ingredients],
   );
 
+  const deferredSearchQuery = useDeferredValue(searchQuery);
+
   const filters = {
     categories:
       activeCategory === STOCK_ALL_CATEGORY_VALUE ? [] : [activeCategory],
-    query: searchQuery,
+    query: deferredSearchQuery,
     status: stockFilter,
   } as const;
   const filtered = useMemo(
     () => filterStockOnHandIngredients(ingredients, filters),
-    [ingredients, activeCategory, stockFilter, searchQuery],
+    [ingredients, activeCategory, stockFilter, deferredSearchQuery],
   );
   const filtersActive = hasStockOnHandFilters(filters);
 

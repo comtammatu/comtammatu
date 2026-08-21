@@ -7,10 +7,25 @@ import { AppPageHeader } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import { useDocumentOverlayUrl } from "@lib/navigation/use-document-overlay-url";
+import dynamic from "next/dynamic";
 import { ProductionRunsClient } from "./production-runs-client";
 import { ProductionDocumentDialogHost } from "./production-document-dialog-host";
-import { ProductionCreateDialog } from "./production-create-dialog";
-import { ProductionRecipePanel } from "../production-recipe-panel";
+
+const ProductionCreateDialog = dynamic(
+  () =>
+    import("./production-create-dialog").then(
+      (mod) => mod.ProductionCreateDialog,
+    ),
+  { ssr: false },
+);
+
+const ProductionRecipePanel = dynamic(
+  () =>
+    import("../production-recipe-panel").then(
+      (mod) => mod.ProductionRecipePanel,
+    ),
+  { ssr: false },
+);
 import type { ProductionRunListRow } from "../production-run-actions";
 import type {
   BranchOption,

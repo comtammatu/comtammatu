@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { Search as IconSearch } from "lucide-react";
 import { formatCount, formatQuantity } from "@comtammatu/shared/format";
 import { INVENTORY_STATUS_LABELS_VI } from "@comtammatu/shared/labels";
@@ -71,8 +71,10 @@ export function ProductionRunsClient({ initial }: ProductionRunsClientProps) {
     );
   }, [items]);
 
+  const deferredSearch = useDeferredValue(searchDraft);
+
   const filteredItems = useMemo(() => {
-    const query = search.trim();
+    const query = deferredSearch.trim();
 
     return items.filter((row) => {
       if (statusFilter !== ALL_STATUS_VALUE && row.status !== statusFilter) {
@@ -91,7 +93,7 @@ export function ProductionRunsClient({ initial }: ProductionRunsClientProps) {
         query,
       );
     });
-  }, [items, search, statusFilter]);
+  }, [items, deferredSearch, statusFilter]);
 
   function openProductionDetail(row: ProductionRunListRow) {
     overlay.patchOverlay({ runId: row.id, mode: "view" }, "push");

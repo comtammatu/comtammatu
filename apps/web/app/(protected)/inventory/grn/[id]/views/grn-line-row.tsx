@@ -161,13 +161,68 @@ export function LineRow({
   );
 
   const quantityFields = hasPackLoose && line.packUnit && line.looseUnit ? (
-    <div className="grid min-w-0 grid-cols-2 gap-1.5">
+    showFieldLabels ? (
       <Field
-        id={`received-pack-${idx}`}
-        label={grnCopy.line.acceptedLabel(line.packUnit.label)}
-        showLabel={showFieldLabels}
+        id={`received-pack-loose-${idx}`}
+        label={grnCopy.line.acceptedLabel(
+          `${line.packUnit.label} + ${line.looseUnit.label}`,
+        )}
+        showLabel={true}
       >
-        <InputGroup size="default">
+        <div className="grid min-w-0 grid-cols-2 gap-1.5">
+          <InputGroup size="default">
+            <QuantityInput
+              id={`received-pack-${idx}`}
+              value={
+                showInspectedValues
+                  ? String(packLooseSplit?.packQty ?? 0)
+                  : ""
+              }
+              onValueChange={(value) =>
+                commitPackLoose(
+                  Math.max(0, Number(value || 0)),
+                  packLooseSplit?.looseQty ?? 0,
+                )
+              }
+              maxFractionDigits={3}
+              placeholder="0"
+              className="h-full text-right"
+            />
+            <InputGroupAddon align="inline-end">
+              <InputGroupText className="text-2xs font-medium text-muted-foreground">
+                {line.packUnit.label}
+              </InputGroupText>
+            </InputGroupAddon>
+          </InputGroup>
+          <InputGroup size="default">
+            <QuantityInput
+              id={`received-loose-${idx}`}
+              value={
+                showInspectedValues
+                  ? String(packLooseSplit?.looseQty ?? 0)
+                  : ""
+              }
+              onValueChange={(value) =>
+                commitPackLoose(
+                  packLooseSplit?.packQty ?? 0,
+                  Math.max(0, Number(value || 0)),
+                )
+              }
+              maxFractionDigits={3}
+              placeholder="0"
+              className="h-full text-right"
+            />
+            <InputGroupAddon align="inline-end">
+              <InputGroupText className="text-2xs font-medium text-muted-foreground">
+                {line.looseUnit.label}
+              </InputGroupText>
+            </InputGroupAddon>
+          </InputGroup>
+        </div>
+      </Field>
+    ) : (
+      <div className="grid min-w-0 grid-cols-2 gap-1.5 h-9 items-center">
+        <InputGroup size="default" className="h-full">
           <QuantityInput
             id={`received-pack-${idx}`}
             value={
@@ -182,6 +237,7 @@ export function LineRow({
               )
             }
             maxFractionDigits={3}
+            placeholder="0"
             className="h-full text-right"
           />
           <InputGroupAddon align="inline-end">
@@ -190,13 +246,7 @@ export function LineRow({
             </InputGroupText>
           </InputGroupAddon>
         </InputGroup>
-      </Field>
-      <Field
-        id={`received-loose-${idx}`}
-        label={grnCopy.line.acceptedLabel(line.looseUnit.label)}
-        showLabel={showFieldLabels}
-      >
-        <InputGroup size="default">
+        <InputGroup size="default" className="h-full">
           <QuantityInput
             id={`received-loose-${idx}`}
             value={
@@ -211,6 +261,7 @@ export function LineRow({
               )
             }
             maxFractionDigits={3}
+            placeholder="0"
             className="h-full text-right"
           />
           <InputGroupAddon align="inline-end">
@@ -219,8 +270,8 @@ export function LineRow({
             </InputGroupText>
           </InputGroupAddon>
         </InputGroup>
-      </Field>
-    </div>
+      </div>
+    )
   ) : (
     <div className="flex min-w-0 items-end gap-1.5">
       <div className="min-w-0 flex-1">
@@ -237,6 +288,7 @@ export function LineRow({
                 commitAccepted(Math.max(0, Number(value || 0)))
               }
               maxFractionDigits={3}
+              placeholder="0"
             />
           ) : (
             <InputGroup size="default">
@@ -247,6 +299,7 @@ export function LineRow({
                   commitAccepted(Math.max(0, Number(value || 0)))
                 }
                 maxFractionDigits={3}
+                placeholder="0"
                 className="h-full text-right"
               />
               {line.unit ? (
@@ -322,7 +375,7 @@ export function LineRow({
   );
 
   const rejectionFields = showRejectionFields ? (
-    <div className="flex flex-col gap-3">
+    <div className={cn("flex flex-col", compactLabels ? "min-w-44 max-w-xs gap-2 pt-1 border-t border-border/40 mt-1" : "gap-3")}>
       <Field
         id={`rejected-${idx}`}
         label={grnCopy.line.rejectedLabel(line.unit)}
@@ -343,7 +396,7 @@ export function LineRow({
       </Field>
 
       {line.rejected > 0 ? (
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className={cn("grid gap-2", compactLabels ? "grid-cols-1" : "md:grid-cols-2 gap-3")}>
           <Field
             id={`reason-${idx}`}
             label={grnCopy.line.rejectReasonRequired}
@@ -351,7 +404,7 @@ export function LineRow({
           >
             <Textarea
               id={`reason-${idx}`}
-              rows={2}
+              rows={compactLabels ? 1 : 2}
               value={line.rejectionReason}
               placeholder={grnCopy.line.rejectReasonPlaceholder}
               onChange={(event) =>
@@ -379,11 +432,12 @@ export function LineRow({
   ) : canRecordRejection ? (
     <Button
       type="button"
-      variant="link"
+      variant="ghost"
       size="sm"
-      className="h-auto px-0 text-muted-foreground"
+      className="h-6 px-1.5 text-xs text-muted-foreground hover:text-foreground justify-start"
       onClick={() => setRejectionExpanded(true)}
     >
+      <IconTriangleAlert className="size-3 mr-1" />
       {grnCopy.qcQueue}
     </Button>
   ) : null;

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useDeferredValue, useEffect, useMemo, useState, useTransition } from "react";
+import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   PackageSearch as IconPackageSearch,
@@ -41,13 +42,17 @@ import {
 } from "@/components/row-actions-menu";
 import { StatusBadge } from "@/components/status-badge";
 import { deleteSupplier, fetchSuppliers } from "../procurement-actions";
-import { SupplierDialog } from "./supplier-dialog";
 import type { SupplierRow } from "./supplier-dialog";
 import {
   SupplierItemsClient,
   type SupplierIngredientOption,
   type SupplierItemRow,
 } from "./[id]/items/supplier-items-client";
+
+const SupplierDialog = dynamic(
+  () => import("./supplier-dialog").then((mod) => mod.SupplierDialog),
+  { ssr: false },
+);
 
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 export type { SupplierRow } from "./supplier-dialog";
@@ -201,11 +206,13 @@ export function SuppliersClient({
 
   useEffect(() => setRows(initial), [initial]);
 
+  const deferredSearch = useDeferredValue(search);
+
   const filtered = useMemo(() => {
-    const q = search.trim();
+    const q = deferredSearch.trim();
     if (!q) return rows;
     return rows.filter((s) => matchesSearch([s.name, s.tax_code, s.phone], q));
-  }, [rows, search]);
+  }, [rows, deferredSearch]);
 
   async function reload() {
     const res = await fetchSuppliers();

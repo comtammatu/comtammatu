@@ -420,7 +420,7 @@ export function GRNDetailClient({
       {
         key: "actual",
         header: grnCopy.lineHeaderQty,
-        className: "min-w-52 align-top",
+        className: "min-w-56 align-top",
         render: (line, idx) =>
           canMutateDraft && isDesktopLineEdit ? (
             <LineRow
@@ -487,7 +487,7 @@ export function GRNDetailClient({
       {
         key: "applied",
         header: "Kết quả",
-        className: "align-top",
+        className: "min-w-44 max-w-sm align-top",
         render: (line, idx) => {
           const quantities = calculateGrnQuantities(
             line.actual,

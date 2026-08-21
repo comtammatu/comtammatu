@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import {
   PackagePlus as IconPackagePlus,
@@ -68,7 +69,14 @@ import {
   blankRequestLine,
   type RequestDraftLine,
 } from "../purchase-requests/purchase-request-draft-types";
-import { PurchaseOrderFormDialog } from "./purchase-order-form-dialog";
+
+const PurchaseOrderFormDialog = dynamic(
+  () =>
+    import("./purchase-order-form-dialog").then(
+      (mod) => mod.PurchaseOrderFormDialog,
+    ),
+  { ssr: false },
+);
 
 export type {
   PurchaseOrderLineRow,
@@ -141,6 +149,7 @@ export function PurchaseOrdersClient({
       : (rows.find((row) => row.id === selectedPoId) ?? null);
   const viewOpen = mode === "view" && selectedRow != null;
   const createOpen = canCreate && mode === "create";
+  const deferredSearch = useDeferredValue(search);
   const filteredRows = useMemo(
     () =>
       rows.filter(
@@ -156,10 +165,10 @@ export function PurchaseOrdersClient({
               row.notes ?? "",
               getStatusBadgeMeta("purchase-order", row.status).label,
             ],
-            search,
+            deferredSearch,
           ),
       ),
-    [rows, search, siteFilter, statusFilter],
+    [rows, deferredSearch, siteFilter, statusFilter],
   );
 
   const updateUrl = useCallback(

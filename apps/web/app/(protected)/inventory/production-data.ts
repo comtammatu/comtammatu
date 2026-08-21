@@ -1,12 +1,12 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@comtammatu/database/supabase/server";
 import {
-  extractClaimsFromAccessToken,
   PERMISSION_KEYS,
   type JwtClaims,
   type PermissionKey,
 } from "@comtammatu/shared/auth";
 import { normalizeInventoryLocationNameVi } from "@comtammatu/shared/labels";
+import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasAnyPermissionAny } from "@/_lib/permissions";
 import { messages } from "@lib/messages";
 import { fetchIngredients, fetchUnitOptions } from "./ingredient-actions";
@@ -134,12 +134,7 @@ export async function loadProductionSurfaceData({
   includeRecipes?: boolean;
   routeBranchId?: number;
 } = {}): Promise<ProductionSurfaceData> {
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  const claims = extractClaimsFromAccessToken(session?.access_token);
+  const { supabase, claims } = await loadAuthState();
   if (!claims || !canAccessProductionSurface(claims.user_role)) {
     redirect("/access-denied?reason=insufficient-permission");
   }

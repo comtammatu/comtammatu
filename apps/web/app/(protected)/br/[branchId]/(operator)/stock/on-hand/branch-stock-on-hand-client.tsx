@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ChevronRight as IconChevronRight,
@@ -260,10 +260,11 @@ export function BranchStockOnHandClient({
     () => getStockOnHandCategories(ingredients),
     [ingredients],
   );
-  const filters = { categories, query, status };
+  const deferredQuery = useDeferredValue(query);
+  const filters = { categories, query: deferredQuery, status };
   const filtered = useMemo(
     () => filterStockOnHandIngredients(ingredients, filters),
-    [ingredients, categories, query, status],
+    [ingredients, categories, deferredQuery, status],
   );
   const filtersActive = hasStockOnHandFilters(filters);
   const facetCount =

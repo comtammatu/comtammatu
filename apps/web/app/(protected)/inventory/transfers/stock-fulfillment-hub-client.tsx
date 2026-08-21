@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft as IconArrowLeft,
@@ -194,26 +195,28 @@ export function StockFulfillmentHubClient({
     router.replace(`${pathname}?${params}`, { scroll: false });
   }
 
-  const filtered = rows.filter((row) => {
-    const matchesWork =
-      work === "all" ||
-      (work === "request"
-        ? row.kind === "request"
-        : row.workKinds.includes(work));
-    const matchesState = state === "all" || row.lifecycle === state;
-    const searchValues =
-      row.kind === "request"
-        ? [
-            row.documentNumber,
-            row.requesterSite.name,
-            ...row.sources.flatMap((source) => [
-              SOURCE_LABELS[source.siteKind],
-              ...source.transfers.map((transfer) => transfer.documentNumber),
-            ]),
-          ]
-        : [row.documentNumber, row.fromSite.name, row.toSite.name];
-    return matchesWork && matchesState && matchesSearch(searchValues, search);
-  });
+  const filtered = useMemo(() => {
+    return rows.filter((row) => {
+      const matchesWork =
+        work === "all" ||
+        (work === "request"
+          ? row.kind === "request"
+          : row.workKinds.includes(work));
+      const matchesState = state === "all" || row.lifecycle === state;
+      const searchValues =
+        row.kind === "request"
+          ? [
+              row.documentNumber,
+              row.requesterSite.name,
+              ...row.sources.flatMap((source) => [
+                SOURCE_LABELS[source.siteKind],
+                ...source.transfers.map((transfer) => transfer.documentNumber),
+              ]),
+            ]
+          : [row.documentNumber, row.fromSite.name, row.toSite.name];
+      return matchesWork && matchesState && matchesSearch(searchValues, search);
+    });
+  }, [rows, work, state, search]);
 
   const columns: DataTableColumn<StockFulfillmentRow>[] = [
     {

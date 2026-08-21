@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import {
   Pencil as IconPencil,
@@ -50,12 +51,19 @@ import {
   AppToolbar,
 } from "@/components/surface";
 import { formatVND } from "@lib/inventory/format";
-import { MenuRecipeLineDialog } from "./menu-recipe-line-dialog";
 import type {
   MenuItemOption,
   IngredientOption,
   MenuRecipeLineDraft,
 } from "./menu-recipe-line-dialog";
+
+const MenuRecipeLineDialog = dynamic(
+  () =>
+    import("./menu-recipe-line-dialog").then(
+      (mod) => mod.MenuRecipeLineDialog,
+    ),
+  { ssr: false },
+);
 import {
   formatMenuRecipeBomSummary,
   resolveMenuRecipeListCostState,
@@ -173,8 +181,10 @@ export function MenuRecipesClient({
     [menuRecipes],
   );
 
+  const deferredSearch = useDeferredValue(search);
+
   const filteredMenuRecipes = useMemo(() => {
-    const query = search.trim();
+    const query = deferredSearch.trim();
     return menuRecipes.filter((menuRecipe) => {
       if (
         query &&
@@ -188,7 +198,7 @@ export function MenuRecipesClient({
       }
       return true;
     });
-  }, [menuRecipes, search, coverage, wacMapAvailable]);
+  }, [menuRecipes, deferredSearch, coverage, wacMapAvailable]);
 
   const showNoResults =
     filteredMenuRecipes.length === 0 &&

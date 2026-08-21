@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -280,21 +280,23 @@ export function StocktakeListClient({
     return counts;
   }, [rows]);
 
+  const deferredSearch = useDeferredValue(searchDraft);
+
   const filtered = useMemo(() => {
     let list = rows;
     if (statusFilter !== "all") {
       list = list.filter((r) => r.status === statusFilter);
     }
-    const q = search.trim();
+    const q = deferredSearch.trim();
     if (q) {
       list = list.filter((r) =>
         matchesSearch([stocktakeCode(r), r.branches?.name], q),
       );
     }
     return list;
-  }, [rows, search, statusFilter]);
+  }, [rows, deferredSearch, statusFilter]);
 
-  const isFiltered = Boolean(search) || statusFilter !== "all";
+  const isFiltered = Boolean(searchDraft) || statusFilter !== "all";
 
   const columns: DataTableColumn<StocktakeSessionRow>[] = [
     {
