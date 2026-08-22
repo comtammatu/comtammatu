@@ -420,6 +420,15 @@ export const grnConfirmRpcMappings: readonly RpcErrorMapping[] = [
     errorCode: INVENTORY_ERROR_CODES.INVALID_STATUS,
     userMessage: "Chỉ chốt được phiếu nhập ở trạng thái nháp.",
   },
+  {
+    match: includesAny(
+      "inventory_valuation_insufficient_quantity",
+      "inventory_origin_balances_book_value_check",
+    ),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_STATUS,
+    userMessage:
+      "Tồn kho hoặc giá vốn của nguyên liệu chưa đủ điều kiện hạch toán. Kiểm tra lại số lượng và đơn giá.",
+  },
   privilege,
   notFound,
 ];

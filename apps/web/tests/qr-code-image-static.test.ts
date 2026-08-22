@@ -147,6 +147,7 @@ test("bank app catalog hosts remain allowed by CSP", () => {
     /img-src[^\n]+https:\/\/play-lh\.googleusercontent\.com/,
   );
   assert.match(config, /img-src[^\n]+https:\/\/\*\.mzstatic\.com/);
+  assert.match(config, /img-src[^\n]+https:\/\/api\.vietqr\.io/);
 });
 
 test("MB Bank link receives the exact VietQR payload", () => {

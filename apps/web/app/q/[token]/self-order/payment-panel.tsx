@@ -32,7 +32,7 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { PublicSection } from "@/components/surface";
 import { QrCodeImage } from "@/components/qr-code-image";
 import { SheetFooter } from "@/components/surface/app-sheet";
-import { BankAppDrawer } from "./bank-app-drawer";
+import { BankAppDrawer, BankLogoImage } from "./bank-app-drawer";
 import {
   POPULAR_BANK_APP_IDS,
   STATIC_VIETQR_BANK_APPS,
@@ -148,11 +148,13 @@ function BankAppLauncher({
                 <DropdownMenuItem
                   key={bank.id}
                   size="touch"
+                  className="flex items-center gap-3"
                   onClick={() => {
                     onBankAppHandoff?.();
                     window.location.href = href;
                   }}
                 >
+                  <BankLogoImage src={bank.logoUrl} alt={bank.name} />
                   <span className="font-medium">{bank.name}</span>
                 </DropdownMenuItem>
               );

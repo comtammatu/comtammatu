@@ -35,7 +35,7 @@ interface BankAppDrawerProps {
   onBankAppHandoff?: () => void;
 }
 
-function BankLogoImage({
+export function BankLogoImage({
   src,
   alt,
 }: {
@@ -64,7 +64,7 @@ function BankLogoImage({
       height={32}
       loading="lazy"
       decoding="async"
-      className="size-8 shrink-0 rounded-md bg-background object-contain"
+      className="size-8 shrink-0 rounded-md bg-white p-0.5 object-contain"
       onError={() => setFailed(true)}
     />
   );
