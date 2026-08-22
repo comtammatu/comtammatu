@@ -115,7 +115,16 @@ export function MenuPanel({
         onClick={() => onActiveCategoryChange(ALL_MENU_VALUE)}
       >
         {SELF_ORDER_VI.allCategories}
-        <Badge variant="outline">{allMenuItemCount}</Badge>
+        <Badge
+          variant={isAllMenuActive ? "secondary" : "outline"}
+          className={
+            isAllMenuActive
+              ? "border-primary-foreground/30 bg-primary-foreground/15 text-primary-foreground"
+              : undefined
+          }
+        >
+          {allMenuItemCount}
+        </Badge>
       </Button>
     </div>
   );

@@ -962,11 +962,7 @@ export function SelfOrderClient({
                 >
                   <IconReceipt data-icon="inline-start" />
                   {SELF_ORDER_VI.billTab}
-                  <Badge
-                    variant={
-                      awaiting || paymentPending ? "warning" : "secondary"
-                    }
-                  >
+                  <Badge variant="secondary">
                     {awaiting ? (
                       <>
                         <IconClock className="size-3.5" aria-hidden />

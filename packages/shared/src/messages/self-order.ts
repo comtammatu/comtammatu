@@ -240,6 +240,14 @@ export const SELF_ORDER_VI = {
   buyerTaxLookupFound: "Đã tìm thấy thông tin. Vui lòng kiểm tra lại.",
   buyerTaxLookupNotFound:
     "Không tìm thấy MST. Vui lòng kiểm tra hoặc nhập tay.",
+  buyerTaxCodePlaceholder: "0312345678",
+  paymentAmountLabel: "Số tiền cần thanh toán",
+  paymentCodeLabel: "Nội dung chuyển khoản",
+  bankAccountLabel: "Số tài khoản nhận",
+  bankAccountNameLabel: "Chủ tài khoản",
+  copiedContent: (label: string) => `Đã sao chép ${label}.`,
+  copiedToClipboard: "Đã chép",
+  buyerEmailHint: "Hóa đơn điện tử sẽ được gửi về email này sau khi hoàn tất.",
   buyerTaxLookupUnavailable:
     "Chưa tra cứu được. Bạn vẫn có thể nhập tên và địa chỉ.",
   staffQueueButton: "QR gọi món",
