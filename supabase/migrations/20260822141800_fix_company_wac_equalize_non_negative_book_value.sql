@@ -372,7 +372,7 @@ BEGIN
     FROM public.inventory_value_allocations AS allocation
     WHERE allocation.tenant_id = p_tenant_id
       AND allocation.source_origin_id = p_origin_id
-      AND allocation.allocation_bucket IN ('cost_of_goods_sold', 'waste_loss')
+      AND allocation.allocation_bucket IN ('food_cost', 'waste', 'stocktake_loss', 'transfer_loss')
       AND allocation.valuation_event_id <> p_valuation_event_id
     ORDER BY allocation.id
   LOOP

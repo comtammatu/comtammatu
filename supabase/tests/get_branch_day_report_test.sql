@@ -27,6 +27,10 @@ BEGIN
      OR position('top_items' IN v_definition) = 0
      OR position('side_revenue' IN v_definition) = 0
      OR position('side_item_id' IN v_definition) = 0
+     OR position('modifier_revenue' IN v_definition) = 0
+     OR position('modifier_id' IN v_definition) = 0
+     OR position('modifier_components' IN v_definition) = 0
+     OR position('''modifier''::text' IN v_definition) = 0
      OR position('expense_date' IN v_definition) = 0
      OR position('transfer_in' IN v_definition) = 0
      OR position('subtotal - order_facts.discount_amount' IN v_definition) = 0

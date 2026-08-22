@@ -570,7 +570,9 @@ BEGIN
                THEN 'pending'
                ELSE public.print_jobs.status
              END,
-    updated_at = now()
+    last_error       = NULL,
+    claimed_by_agent = NULL,
+    claimed_at       = NULL
   RETURNING id INTO v_job_id;
 
   RETURN jsonb_build_object(

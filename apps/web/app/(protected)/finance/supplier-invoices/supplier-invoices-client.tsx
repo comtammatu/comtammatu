@@ -11,17 +11,9 @@ import {
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@comtammatu/ui/components/button";
 import { toast } from "@comtammatu/ui/components/sonner";
-import {
-  DataTable,
-} from "@/components/data-table/data-table";
-import {
-  AppListFrame,
-  AppPage,
-  AppPageHeader,
-} from "@/components/surface";
-import {
-  RowActionsContextMenuItems,
-} from "@/components/row-actions-menu";
+import { DataTable } from "@/components/data-table/data-table";
+import { AppListFrame, AppPage, AppPageHeader } from "@/components/surface";
+import { RowActionsContextMenuItems } from "@/components/row-actions-menu";
 import {
   attachSupplierInvoiceVatEvidence,
   acceptSupplierInvoiceDiscrepancy,
@@ -92,11 +84,11 @@ import {
 import { SupplierInvoiceDetailSheet } from "./supplier-invoice-detail-sheet";
 import { SupplierInvoiceDialogs } from "./supplier-invoice-dialogs";
 import { useSupplierInvoiceListUi } from "./supplier-invoice-list-ui";
-
 import {
   OWNER_SHELL_BREAKPOINT,
   useIsMobile,
 } from "@comtammatu/ui/hooks/use-mobile";
+
 export function SupplierInvoicesClient({
   invoices,
   suppliers,
@@ -192,7 +184,15 @@ export function SupplierInvoicesClient({
     filters.overdueOnly,
     filters.vatEvidence,
   ].filter(Boolean).length;
-  const selectedInvoiceId = preselectInvoiceId;
+
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(
+    preselectInvoiceId,
+  );
+
+  useEffect(() => {
+    setSelectedInvoiceId(preselectInvoiceId);
+  }, [preselectInvoiceId]);
+
   const detailOpen =
     selectedInvoiceId != null &&
     (invoiceMode === "view" ||
@@ -212,12 +212,9 @@ export function SupplierInvoicesClient({
   const [acceptDiscrepancyOpen, setAcceptDiscrepancyOpen] = useState(false);
   const [acceptDiscrepancyReason, setAcceptDiscrepancyReason] = useState("");
   const [serviceVerificationOpen, setServiceVerificationOpen] = useState(false);
-  const [serviceVerificationReason, setServiceVerificationReason] =
-    useState("");
+  const [serviceVerificationReason, setServiceVerificationReason] = useState("");
   const [vatUploading, setVatUploading] = useState(false);
-  const [pendingCreateVatFile, setPendingCreateVatFile] = useState<File | null>(
-    null,
-  );
+  const [pendingCreateVatFile, setPendingCreateVatFile] = useState<File | null>(null);
   const paymentIntentKeyRef = useRef<string | null>(null);
   const advanceIntentKeyRef = useRef<string | null>(null);
   const invoiceSaveIntentKeyRef = useRef<string | null>(null);
@@ -316,6 +313,7 @@ export function SupplierInvoicesClient({
 
   const openInvoiceDetail = useCallback(
     (invoiceId: number, history: "push" | "replace" = "push") => {
+      setSelectedInvoiceId(invoiceId);
       updateListParams(
         {
           mode: "view",
@@ -330,6 +328,7 @@ export function SupplierInvoicesClient({
 
   function handleDetailOpenChange(open: boolean) {
     if (!open) {
+      setSelectedInvoiceId(null);
       updateListParams({ mode: null, invoiceId: null, grnId: null });
     }
   }
@@ -338,6 +337,7 @@ export function SupplierInvoicesClient({
     if (!canCreateInvoice) return;
     createdInvoiceIdRef.current = null;
     invoiceSaveIntentKeyRef.current = null;
+    setSelectedInvoiceId(null);
     updateListParams({ mode: "create", invoiceId: null, grnId: null }, "push");
   }
 
@@ -398,25 +398,37 @@ export function SupplierInvoicesClient({
           (group) => group.primaryInvoice.id === selectedInvoiceId,
         )?.primaryInvoice)
       : null) ?? null;
+  const valuationCacheRef = useRef<
+    Map<number, SupplierInvoiceValuationSummary | null>
+  >(new Map());
   const [valuationSummary, setValuationSummary] =
     useState<SupplierInvoiceValuationSummary | null>(null);
   const [valuationSummaryLoading, setValuationSummaryLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    setValuationSummary(null);
     if (
       selectedInvoice == null ||
       selectedInvoice.documentStatus !== "confirmed"
     ) {
+      setValuationSummary(null);
       setValuationSummaryLoading(false);
       return;
     }
+    const cached = valuationCacheRef.current.get(selectedInvoice.id);
+    if (cached !== undefined) {
+      setValuationSummary(cached);
+      setValuationSummaryLoading(false);
+      return;
+    }
+    setValuationSummary(null);
     setValuationSummaryLoading(true);
     void getSupplierInvoiceValuationSummary(selectedInvoice.id).then(
       (result) => {
         if (cancelled) return;
-        setValuationSummary(result.success ? (result.data ?? null) : null);
+        const valData = result.success ? (result.data ?? null) : null;
+        valuationCacheRef.current.set(selectedInvoice.id, valData);
+        setValuationSummary(valData);
         setValuationSummaryLoading(false);
       },
     );
@@ -563,8 +575,6 @@ export function SupplierInvoicesClient({
     }
 
     setRows(nextRows);
-    // Fresh first page — restore keyset state from the paginated result,
-    // mirroring how the SSR initial load wires hasMore/nextCursor.
     setHasMore(more);
     setNextCursor(cursor);
     setAggregateGroups(nextGroups);
@@ -691,21 +701,9 @@ export function SupplierInvoicesClient({
         const quantity = String(line.quantity);
         const lineDiscount = canonicalMoney(line.lineDiscount);
         const unitPrice = canonicalMoney(line.unitPrice);
-        const netLineTotal = calculateSupplierInvoiceNetLineTotal(
-          quantity,
-          line.unitPrice,
-          lineDiscount,
-        );
-        const vatAmount = resolveSupplierInvoiceVatAmount(
-          netLineTotal,
-          line.vatRate as SupplierInvoiceVatRate,
-          line.vatMode,
-          line.vatAmount,
-        );
-        const grossLineTotal = calculateSupplierInvoiceGrossLineTotal(
-          netLineTotal,
-          vatAmount,
-        );
+        const netLineTotal = calculateSupplierInvoiceNetLineTotal(quantity, line.unitPrice, lineDiscount);
+        const vatAmount = resolveSupplierInvoiceVatAmount(netLineTotal, line.vatRate as SupplierInvoiceVatRate, line.vatMode, line.vatAmount);
+        const grossLineTotal = calculateSupplierInvoiceGrossLineTotal(netLineTotal, vatAmount);
         return {
           lineKey: line.key,
           ingredientId: line.ingredientId,
@@ -771,7 +769,16 @@ export function SupplierInvoicesClient({
     } else {
       toast.success(copy.valuation.confirmedToast);
     }
-    setValuationSummary(valuation ?? null);
+    const valData = valuation ?? null;
+    valuationCacheRef.current.set(selectedInvoice.id, valData);
+    setValuationSummary(valData);
+    setRows((prev) =>
+      prev.map((r) =>
+        r.id === selectedInvoice.id
+          ? { ...r, documentStatus: "confirmed", matchingStatus: "matched" }
+          : r,
+      ),
+    );
     await reloadInvoices(selectedInvoice.id);
   }
 
@@ -904,6 +911,13 @@ export function SupplierInvoicesClient({
       if (!attached) return;
 
       toast.success(copy.vatAttachmentUploaded);
+      setRows((prev) =>
+        prev.map((r) =>
+          r.id === selectedInvoice.id
+            ? { ...r, vatInvoiceAttachmentPath: "uploaded" }
+            : r,
+        ),
+      );
       await reloadInvoices(selectedInvoice.id);
     } finally {
       setVatUploading(false);
@@ -1050,6 +1064,7 @@ export function SupplierInvoicesClient({
     getSupplierInvoiceGroupRowActions,
     invoiceGroupColumns,
     listToolbar,
+    kpiStrip,
   } = useSupplierInvoiceListUi({
     copy,
     viewMode,
@@ -1066,6 +1081,8 @@ export function SupplierInvoicesClient({
     allInvoiceGroupsLength: allInvoiceGroups.length,
     totalCount,
     supplierOptions,
+    aggregateGroups,
+    advances,
     replaceListParam,
     updateListParams,
     openInvoiceDetail,
@@ -1131,6 +1148,8 @@ export function SupplierInvoicesClient({
           ) : undefined
         }
       />
+
+      {kpiStrip}
 
       <AppListFrame toolbar={listToolbar}>
         <DataTable

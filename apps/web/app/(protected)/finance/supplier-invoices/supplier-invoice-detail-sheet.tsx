@@ -7,6 +7,7 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@comtammatu/ui/components/alert";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { cn } from "@comtammatu/ui";
 import {
@@ -17,13 +18,6 @@ import {
   ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
 
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
@@ -259,458 +253,410 @@ export function SupplierInvoiceDetailSheet({
     >
       {selectedInvoice ? (
         <div className="flex flex-col gap-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <StatusBadge
-                    domain="inventory"
-                    value={getDisplayMatchStatus(selectedInvoice)}
-                  />
-                  <StatusBadge
-                    domain="inventory"
-                    value={selectedInvoice.paymentStatus}
-                  />
-                </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusBadge
+              domain="inventory"
+              value={getDisplayMatchStatus(selectedInvoice)}
+            />
+            <StatusBadge
+              domain="inventory"
+              value={selectedInvoice.paymentStatus}
+            />
+            {isInvoiceOverdue(selectedInvoice) && selectedOutstandingAmount > 0 ? (
+              <Badge variant="destructive" className="text-xs">
+                {selectedAgingLabel ?? "Quá hạn"}
+              </Badge>
+            ) : null}
+          </div>
 
-                {invoicesInSelectedGroup.length > 1 ? (
-                  <Select
-                    value={String(selectedInvoice.id)}
-                    onValueChange={(value) => onSelectInvoiceInGroup(Number(value))}
-                  >
-                    <SelectTrigger
-                      size={controlSize}
-                      className="w-full"
-                      aria-label={copy.selectInvoiceInGroupAria}
-                    >
-                      <SelectValue placeholder={copy.selectInvoiceInGroup} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {invoicesInSelectedGroup.map((invoice) => (
-                        <SelectItem
-                          key={invoice.id}
-                          value={String(invoice.id)}
-                          size={controlSize === "touch" ? "touch" : "default"}
-                        >
-                          {formatSupplierInvoiceDate(invoice.invoiceDate)}
-                          {invoice.grnCode ? ` · ${invoice.grnCode}` : ""}
-                          {" · "}
-                          {messages.inventory.common.currencyCompact(
-                            formatVND(
-                              getSupplierInvoiceOutstandingAmount(invoice),
-                            ),
-                          )}
-                          {isSupplierInvoiceMissingVatEvidence(invoice) ? (
-                            <span className="text-warning">
-                              {" · "}
-                              {copy.vatAttachmentMissing}
-                            </span>
-                          ) : null}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : null}
+          {invoicesInSelectedGroup.length > 1 ? (
+            <div className="flex flex-col gap-2 p-2 bg-muted/30">
+              <span className="text-xs font-medium text-muted-foreground">
+                {copy.selectInvoiceInGroup} ({invoicesInSelectedGroup.length})
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {invoicesInSelectedGroup.map((invoice) => {
+                  const isSelected = invoice.id === selectedInvoice.id;
+                  const isOverdue = isInvoiceOverdue(invoice);
+                  const isMissingVat = isSupplierInvoiceMissingVatEvidence(invoice);
+                  const outstanding = getSupplierInvoiceOutstandingAmount(invoice);
 
-                <Item variant="outline" size="sm" className="items-start">
-                  <ItemContent className="gap-1">
-                    <ItemDescription className="line-clamp-none">
-                      {copy.outstandingPayable}
-                    </ItemDescription>
-                    <ItemTitle
-                      size="heading"
+                  return (
+                    <Button
+                      key={invoice.id}
+                      type="button"
+                      variant={isSelected ? "secondary" : "outline"}
+                      size="xs"
+                      onClick={() => onSelectInvoiceInGroup(invoice.id)}
                       className={cn(
-                        "line-clamp-none font-mono text-2xl font-semibold tabular-nums tracking-tight",
-                        isInvoiceOverdue(selectedInvoice) &&
-                          selectedOutstandingAmount > 0 &&
-                          "text-destructive",
+                        "gap-1 font-normal",
+                        isSelected && "font-semibold text-primary",
                       )}
                     >
-                      {messages.inventory.common.currencyCompact(
-                        formatVND(selectedOutstandingAmount),
-                      )}
-                    </ItemTitle>
-                    <ItemDescription className="line-clamp-none">
-                      {copy.totalInvoice}{" "}
-                      {messages.inventory.common.currencyCompact(
-                        formatVND(selectedInvoice.amount),
-                      )}
-                      {" · "}
-                      {copy.paidAmount}{" "}
-                      {messages.inventory.common.currencyCompact(
-                        formatVND(selectedInvoice.paidAmount),
-                      )}
-                      {selectedInvoice.creditAppliedAmount > 0
-                        ? ` · ${copy.supplierCredit} ${messages.inventory.common.currencyCompact(
-                            formatVND(selectedInvoice.creditAppliedAmount),
-                          )}`
-                        : null}
-                    </ItemDescription>
-                  </ItemContent>
-                </Item>
+                      <span>{formatSupplierInvoiceDate(invoice.invoiceDate)}</span>
+                      {invoice.grnCode ? (
+                        <span className="font-mono text-xs">({invoice.grnCode})</span>
+                      ) : null}
+                      <span className={cn("font-mono tabular-nums", isOverdue && outstanding > 0 && "text-destructive")}>
+                        {messages.inventory.common.currencyCompact(formatVND(outstanding))}
+                      </span>
+                      {isMissingVat ? (
+                        <span
+                          className="size-1.5 rounded-full bg-warning"
+                          title={copy.vatAttachmentMissing}
+                        />
+                      ) : null}
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
 
-                {parseMoneyToMinorUnits(selectedSupplierAdvanceAmount) > 0n ? (
-                  <Item variant="outline" size="sm" className="items-start">
-                    <ItemContent className="gap-1">
-                      <ItemDescription className="line-clamp-none">
-                        {copy.supplierAdvance}
-                      </ItemDescription>
-                      <ItemTitle
-                        size="heading"
-                        className="line-clamp-none font-mono tabular-nums"
-                      >
-                        {messages.inventory.common.currencyCompact(
-                          formatVND(selectedSupplierAdvanceAmount),
-                        )}
-                      </ItemTitle>
-                      <ItemDescription className="line-clamp-none">
-                        {copy.supplierAdvanceDescription}
-                      </ItemDescription>
-                    </ItemContent>
-                  </Item>
+          {/* Hero Outstanding Amount */}
+          <Item variant="outline" size="sm" className="items-start bg-muted/30">
+            <ItemContent className="gap-1">
+              <ItemDescription className="line-clamp-none">
+                {copy.outstandingPayable}
+              </ItemDescription>
+              <ItemTitle
+                size="heading"
+                className={cn(
+                  "line-clamp-none font-mono text-2xl font-semibold tabular-nums tracking-tight",
+                  isInvoiceOverdue(selectedInvoice) &&
+                    selectedOutstandingAmount > 0 &&
+                    "text-destructive",
+                )}
+              >
+                {messages.inventory.common.currencyCompact(
+                  formatVND(selectedOutstandingAmount),
+                )}
+              </ItemTitle>
+              <ItemDescription className="line-clamp-none">
+                {copy.totalInvoice}{" "}
+                <span className="font-mono tabular-nums font-medium text-foreground">
+                  {messages.inventory.common.currencyCompact(
+                    formatVND(selectedInvoice.amount),
+                  )}
+                </span>
+                {" · "}
+                {copy.paidAmount}{" "}
+                <span className="font-mono tabular-nums text-foreground">
+                  {messages.inventory.common.currencyCompact(
+                    formatVND(selectedInvoice.paidAmount),
+                  )}
+                </span>
+                {selectedInvoice.creditAppliedAmount > 0 ? (
+                  <>
+                    {" · "}
+                    {copy.supplierCredit}{" "}
+                    <span className="font-mono tabular-nums text-foreground">
+                      {messages.inventory.common.currencyCompact(
+                        formatVND(selectedInvoice.creditAppliedAmount),
+                      )}
+                    </span>
+                  </>
                 ) : null}
+              </ItemDescription>
+            </ItemContent>
+          </Item>
 
-                {missingVatAttachment ? (
-                  <Item variant="outline" size="sm" className="items-start">
-                    <ItemContent className="gap-1">
-                      <ItemTitle size="heading" className="line-clamp-none">
-                        {copy.vatAttachmentMissing}
-                      </ItemTitle>
-                      <ItemDescription className="line-clamp-none">
-                        {canShowPayAction
-                          ? copy.paymentBlockedNoVatAttachment
-                          : copy.vatAttachmentHint}
-                      </ItemDescription>
-                    </ItemContent>
-                    {canAttachVatEvidence ? (
-                      <ItemActions>
-                        <Button
-                          variant={uploadIsPrimary ? "default" : "outline"}
-                          size={controlSize}
-                          className="relative"
-                          disabled={vatUploading || isPending}
-                          render={<label />}
-                        >
-                          <input
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp,application/pdf"
-                            className="absolute inset-0 cursor-pointer opacity-0"
-                            disabled={vatUploading || isPending}
-                            onChange={(event) => {
-                              const file = event.target.files?.[0];
-                              event.target.value = "";
-                              if (file) void onVatAttachmentUpload(file);
-                            }}
-                          />
-                          {vatUploading ? (
-                            <Spinner className="size-4" />
-                          ) : (
-                            <IconUpload className="size-4" />
-                          )}
-                          {copy.vatAttachmentUpload}
-                        </Button>
-                      </ItemActions>
-                    ) : null}
-                  </Item>
+          {/* Actionable Warnings & Blockers */}
+          {missingVatAttachment ? (
+            <Item variant="outline" size="sm" className="items-start border-warning/20 bg-warning/10">
+              <ItemContent className="gap-1">
+                <ItemTitle size="heading" className="line-clamp-none text-warning font-medium">
+                  {copy.vatAttachmentMissing}
+                </ItemTitle>
+                <ItemDescription className="line-clamp-none">
+                  {canShowPayAction
+                    ? copy.paymentBlockedNoVatAttachment
+                    : copy.vatAttachmentHint}
+                </ItemDescription>
+              </ItemContent>
+              {canAttachVatEvidence ? (
+                <ItemActions>
+                  <Button
+                    variant={uploadIsPrimary ? "default" : "outline"}
+                    size={controlSize}
+                    className="relative gap-1"
+                    disabled={vatUploading || isPending}
+                    render={<label />}
+                  >
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,application/pdf"
+                      className="absolute inset-0 cursor-pointer opacity-0"
+                      disabled={vatUploading || isPending}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        event.target.value = "";
+                        if (file) void onVatAttachmentUpload(file);
+                      }}
+                    />
+                    {vatUploading ? (
+                      <Spinner className="size-4" />
+                    ) : (
+                      <IconUpload className="size-4" />
+                    )}
+                    {copy.vatAttachmentUpload}
+                  </Button>
+                </ItemActions>
+              ) : null}
+            </Item>
+          ) : null}
+
+          {showMatchProblem ? (
+            selectedInvoice.invoiceKind === "service" ? (
+              <Alert className="border-warning/20 bg-warning/10 text-warning">
+                <IconAlertTriangle />
+                <AlertTitle>{copy.serviceVerificationRequired}</AlertTitle>
+                <AlertDescription className="text-muted-foreground">
+                  {selectedInvoice.matchingNotes ??
+                    copy.serviceVerificationDescription}
+                </AlertDescription>
+              </Alert>
+            ) : selectedMissingMatchingEvidence ? (
+              <Alert className="border-warning/20 bg-warning/10 text-warning">
+                <IconAlertTriangle />
+                <AlertTitle>{copy.missingGrnTitle}</AlertTitle>
+                <AlertDescription className="text-muted-foreground">
+                  {copy.missingGrnDescription}
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <Alert variant="destructive">
+                <IconAlertTriangle />
+                <AlertTitle>
+                  {copy.matchingDifferenceTitle(
+                    formatVND(
+                      selectedInvoice.matchingDifferenceAmount ?? 0,
+                    ),
+                  )}
+                </AlertTitle>
+                <AlertDescription>
+                  {selectedInvoice.matchingNotes ??
+                    copy.matchingDifferenceDescription}
+                </AlertDescription>
+              </Alert>
+            )
+          ) : null}
+
+          {parseMoneyToMinorUnits(selectedSupplierAdvanceAmount) > 0n ? (
+            <Item variant="outline" size="sm" className="items-start border-success/20 bg-success/10">
+              <ItemContent className="gap-1">
+                <ItemDescription className="line-clamp-none text-success">
+                  {copy.supplierAdvance}
+                </ItemDescription>
+                <ItemTitle
+                  size="heading"
+                  className="line-clamp-none font-mono tabular-nums text-foreground font-semibold"
+                >
+                  {messages.inventory.common.currencyCompact(
+                    formatVND(selectedSupplierAdvanceAmount),
+                  )}
+                </ItemTitle>
+                <ItemDescription className="line-clamp-none">
+                  {copy.supplierAdvanceDescription}
+                </ItemDescription>
+              </ItemContent>
+            </Item>
+          ) : null}
+
+          {/* Core Invoice Facts */}
+          <ItemGroup className="grid grid-cols-2 gap-2">
+            <DetailFact
+              label={copy.invoiceKind}
+              value={copy.invoiceKinds[selectedInvoice.invoiceKind]}
+            />
+            <DetailFact
+              label={copy.invoiceDate}
+              value={formatSupplierInvoiceDate(selectedInvoice.invoiceDate)}
+            />
+            <DetailFact
+              label={copy.dueDate}
+              value={formatSupplierInvoiceDate(selectedInvoice.dueDate)}
+              valueClassName={
+                isInvoiceOverdue(selectedInvoice) && selectedOutstandingAmount > 0
+                  ? "text-destructive font-medium"
+                  : undefined
+              }
+            />
+            {vatSummaryLabel ? (
+              <DetailFact
+                label={copy.vat}
+                value={
+                  <span className="flex items-center gap-1">
+                    <span>{vatSummaryLabel}</span>
+                    <span className="font-mono tabular-nums text-xs text-muted-foreground">
+                      ({messages.inventory.common.currencyCompact(
+                        formatVND(selectedInvoice.vatAmount),
+                      )})
+                    </span>
+                  </span>
+                }
+              />
+            ) : null}
+            <DetailFact
+              label={copy.linkedGrn}
+              value={
+                selectedInvoice.grnId != null && selectedInvoice.grnCode ? (
+                  <Link
+                    href={`${grnBasePath}?grnId=${selectedInvoice.grnId}&mode=view`}
+                    className="font-mono text-primary underline-offset-2 hover:underline"
+                  >
+                    {selectedInvoice.grnCode}
+                  </Link>
                 ) : (
-                  <Item variant="outline" size="sm">
-                    <ItemContent>
-                      <ItemTitle size="heading" className="line-clamp-none">
-                        {copy.vatAttachmentReady}
+                  copy.notLinked
+                )
+              }
+            />
+            <DetailFact
+              label={copy.linkedPo}
+              value={
+                selectedInvoice.poCode && selectedInvoice.poId != null ? (
+                  <span className="font-mono">
+                    {selectedInvoice.poCode}
+                  </span>
+                ) : (
+                  copy.notLinked
+                )
+              }
+            />
+            {!missingVatAttachment ? (
+              <DetailFact
+                label={copy.vatAttachmentLabel}
+                value={
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="xs"
+                    className="p-0 text-primary"
+                    onClick={() => void onOpenVatAttachment()}
+                  >
+                    {copy.vatAttachmentOpen}
+                  </Button>
+                }
+              />
+            ) : null}
+            {selectedLastPayment ? (
+              <DetailFact
+                className="col-span-2"
+                label={copy.lastPayment}
+                value={copy.lastPaymentSummary(
+                  formatSupplierInvoiceDate(selectedLastPayment.paymentDate),
+                  getPaymentMethodLabel(
+                    selectedLastPayment.paymentMethod,
+                    copy,
+                  ),
+                  messages.inventory.common.currencyCompact(
+                    formatVND(selectedLastPayment.amount),
+                  ),
+                )}
+              />
+            ) : null}
+            {selectedInvoice.serviceVerificationReason ? (
+              <DetailFact
+                className="col-span-2"
+                label={copy.serviceVerificationReason}
+                value={selectedInvoice.serviceVerificationReason}
+              />
+            ) : null}
+          </ItemGroup>
+
+          {/* Invoice Lines Breakdown */}
+          {selectedInvoice.invoiceLines.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {copy.invoiceLines} ({selectedInvoice.invoiceLines.length})
+              </span>
+              <ItemGroup className="grid gap-2">
+                {selectedInvoice.invoiceLines.map((line) => (
+                  <Item key={line.id} variant="outline" size="sm">
+                    <ItemContent className="gap-1">
+                      <ItemTitle size="heading" className="font-medium">
+                        {line.ingredientName}
                       </ItemTitle>
+                      <ItemDescription className="line-clamp-none text-xs">
+                        {copy.invoiceLineMeta(
+                          String(line.quantity),
+                          line.unitLabel,
+                          messages.inventory.common.currencyCompact(
+                            formatVND(line.unitPrice),
+                          ),
+                          line.lineDiscount > 0
+                            ? messages.inventory.common.currencyCompact(
+                                formatVND(line.lineDiscount),
+                              )
+                            : null,
+                          formatPercent(line.vatRate, 0),
+                        )}
+                      </ItemDescription>
                     </ItemContent>
                     <ItemActions>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size={controlSize}
-                        onClick={() => void onOpenVatAttachment()}
-                      >
-                        {copy.vatAttachmentOpen}
-                      </Button>
+                      <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
+                        {messages.inventory.common.currencyCompact(
+                          formatVND(line.grossLineTotal),
+                        )}
+                      </span>
                     </ItemActions>
                   </Item>
-                )}
+                ))}
+              </ItemGroup>
+            </div>
+          ) : null}
 
-                <ItemGroup className="grid grid-cols-2 gap-2">
+          {/* Valuation & Cost Impact Summary (Focused only on non-zero items) */}
+          {valuationSummaryLoading ? (
+            <Item variant="outline" size="sm">
+              <ItemContent>
+                <ItemTitle size="heading">{copy.valuation.title}</ItemTitle>
+                <ItemDescription>{copy.valuation.loading}</ItemDescription>
+              </ItemContent>
+            </Item>
+          ) : valuationSummary && (valuationSummary.warning || valuationSummary.foodCostVariance !== 0 || valuationSummary.inventoryAdjustment !== 0 || valuationSummary.productionInventoryAdjustment !== 0 || valuationSummary.wasteVariance !== 0) ? (
+            <div className="flex flex-col gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {copy.valuation.title}
+              </span>
+              <ItemGroup className="grid grid-cols-2 gap-2">
+                <DetailFact
+                  label="Trạng thái quyết toán"
+                  value={copy.valuation.status[valuationSummary.status]}
+                  valueClassName={
+                    valuationSummary.warning ? "text-warning" : undefined
+                  }
+                />
+                {valuationSummary.inventoryAdjustment !== 0 ? (
                   <DetailFact
-                    label={copy.invoiceKind}
-                    value={copy.invoiceKinds[selectedInvoice.invoiceKind]}
+                    label={copy.valuation.inventoryAdjustment}
+                    value={formatVND(valuationSummary.inventoryAdjustment)}
                   />
-                  <DetailFact
-                    label={copy.invoiceDate}
-                    value={formatSupplierInvoiceDate(selectedInvoice.invoiceDate)}
-                  />
-                  <DetailFact
-                    label={copy.dueDate}
-                    value={formatSupplierInvoiceDate(selectedInvoice.dueDate)}
-                    valueClassName={
-                      isInvoiceOverdue(selectedInvoice)
-                        ? "text-destructive"
-                        : undefined
-                    }
-                  />
-                  {vatSummaryLabel ? (
-                    <DetailFact
-                      label={copy.vat}
-                      value={
-                        <span className="flex flex-col gap-1">
-                          <span>{vatSummaryLabel}</span>
-                          <span className="font-mono tabular-nums">
-                            {messages.inventory.common.currencyCompact(
-                              formatVND(selectedInvoice.vatAmount),
-                            )}
-                          </span>
-                        </span>
-                      }
-                    />
-                  ) : null}
-                  <DetailFact
-                    label={copy.aging}
-                    value={selectedAgingLabel}
-                    valueClassName={
-                      isInvoiceOverdue(selectedInvoice)
-                        ? "text-destructive"
-                        : undefined
-                    }
-                  />
-                  <DetailFact
-                    label={copy.linkedGrn}
-                    value={selectedInvoice.grnCode ?? copy.notLinked}
-                  />
-                  <DetailFact
-                    label={copy.linkedPo}
-                    value={
-                      selectedInvoice.poCode && selectedInvoice.poId != null ? (
-                        <span className="font-mono">
-                          {selectedInvoice.poCode}
-                        </span>
-                      ) : (
-                        copy.notLinked
-                      )
-                    }
-                  />
-                  <DetailFact
-                    label={copy.matchingExpectedAmount}
-                    value={
-                      selectedInvoice.matchingExpectedAmount != null
-                        ? messages.inventory.common.currencyCompact(
-                            formatVND(selectedInvoice.matchingExpectedAmount),
-                          )
-                        : copy.notAvailable
-                    }
-                  />
-                  <DetailFact
-                    label={copy.matchingReceivedAmount}
-                    value={
-                      selectedInvoice.matchingReceivedAmount != null
-                        ? messages.inventory.common.currencyCompact(
-                            formatVND(selectedInvoice.matchingReceivedAmount),
-                          )
-                        : copy.notAvailable
-                    }
-                  />
-                  {selectedInvoice.matchingDifferenceAmount != null ? (
-                    <DetailFact
-                      label={copy.matchingDifferenceAmount}
-                      value={messages.inventory.common.currencyCompact(
-                        formatVND(selectedInvoice.matchingDifferenceAmount),
-                      )}
-                      valueClassName={
-                        Math.abs(selectedInvoice.matchingDifferenceAmount) > 1
-                          ? "text-destructive"
-                          : undefined
-                      }
-                    />
-                  ) : null}
-                  {selectedInvoice.serviceVerificationReason ? (
-                    <DetailFact
-                      className="col-span-2"
-                      label={copy.serviceVerificationReason}
-                      value={selectedInvoice.serviceVerificationReason}
-                    />
-                  ) : null}
-                  {selectedLastPayment ? (
-                    <DetailFact
-                      className="col-span-2"
-                      label={copy.lastPayment}
-                      value={copy.lastPaymentSummary(
-                        formatSupplierInvoiceDate(selectedLastPayment.paymentDate),
-                        getPaymentMethodLabel(
-                          selectedLastPayment.paymentMethod,
-                          copy,
-                        ),
-                        messages.inventory.common.currencyCompact(
-                          formatVND(selectedLastPayment.amount),
-                        ),
-                      )}
-                    />
-                  ) : null}
-                </ItemGroup>
-
-                {selectedInvoice.invoiceLines.length > 0 ? (
-                  <ItemGroup className="grid gap-2">
-                    {selectedInvoice.invoiceLines.map((line) => (
-                      <Item key={line.id} variant="outline" size="sm">
-                        <ItemContent className="gap-1">
-                          <ItemTitle size="heading">
-                            {line.ingredientName}
-                          </ItemTitle>
-                          <ItemDescription className="line-clamp-none">
-                            {copy.invoiceLineMeta(
-                              String(line.quantity),
-                              line.unitLabel,
-                              messages.inventory.common.currencyCompact(
-                                formatVND(line.unitPrice),
-                              ),
-                              line.lineDiscount > 0
-                                ? messages.inventory.common.currencyCompact(
-                                    formatVND(line.lineDiscount),
-                                  )
-                                : null,
-                              formatPercent(line.vatRate, 0),
-                            )}
-                          </ItemDescription>
-                        </ItemContent>
-                        <ItemActions>
-                          <span className="font-mono font-semibold tabular-nums">
-                            {messages.inventory.common.currencyCompact(
-                              formatVND(line.grossLineTotal),
-                            )}
-                          </span>
-                        </ItemActions>
-                      </Item>
-                    ))}
-                  </ItemGroup>
                 ) : null}
-
-                {selectedInvoice.receiptAllocations.length > 0 ? (
-                  <ItemGroup className="grid gap-2">
-                    {selectedInvoice.receiptAllocations.map((allocation) => (
-                      <Item
-                        key={`${allocation.grnId}:${allocation.poId}`}
-                        variant="outline"
-                        size="sm"
-                      >
-                        <ItemContent className="gap-1">
-                          <ItemTitle size="heading" className="font-mono">
-                            {allocation.grnCode}
-                          </ItemTitle>
-                          <ItemDescription className="line-clamp-none">
-                            {allocation.poCode}
-                          </ItemDescription>
-                        </ItemContent>
-                        <ItemActions>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            render={
-                              <Link
-                                href={`${grnBasePath}?grnId=${allocation.grnId}&mode=view`}
-                              />
-                            }
-                          >
-                            {ACTIONS_VI.view}
-                          </Button>
-                        </ItemActions>
-                      </Item>
-                    ))}
-                  </ItemGroup>
+                {valuationSummary.productionInventoryAdjustment !== 0 ? (
+                  <DetailFact
+                    label={copy.valuation.productionInventoryAdjustment}
+                    value={formatVND(
+                      valuationSummary.productionInventoryAdjustment,
+                    )}
+                  />
                 ) : null}
-
-                {valuationSummaryLoading ? (
-                  <Item variant="outline" size="sm">
-                    <ItemContent>
-                      <ItemTitle size="heading">
-                        {copy.valuation.title}
-                      </ItemTitle>
-                      <ItemDescription>
-                        {copy.valuation.loading}
-                      </ItemDescription>
-                    </ItemContent>
-                  </Item>
-                ) : valuationSummary ? (
-                  <ItemGroup className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    <DetailFact
-                      className="sm:col-span-2"
-                      label={copy.valuation.title}
-                      value={copy.valuation.status[valuationSummary.status]}
-                      valueClassName={
-                        valuationSummary.warning ? "text-warning" : undefined
-                      }
-                    />
-                    <DetailFact
-                      label={copy.valuation.provisionalValue}
-                      value={formatVND(valuationSummary.provisionalValue)}
-                    />
-                    <DetailFact
-                      label={copy.valuation.finalNetValue}
-                      value={formatVND(valuationSummary.finalNetValue)}
-                    />
-                    <DetailFact
-                      label={copy.valuation.inventoryAdjustment}
-                      value={formatVND(valuationSummary.inventoryAdjustment)}
-                    />
-                    <DetailFact
-                      label={copy.valuation.productionInventoryAdjustment}
-                      value={formatVND(
-                        valuationSummary.productionInventoryAdjustment,
-                      )}
-                    />
-                    <DetailFact
-                      label={copy.valuation.foodCostVariance}
-                      value={formatVND(valuationSummary.foodCostVariance)}
-                    />
-                    <DetailFact
-                      label={copy.valuation.wasteVariance}
-                      value={formatVND(valuationSummary.wasteVariance)}
-                    />
-                    <DetailFact
-                      label={copy.valuation.supplierReturnVariance}
-                      value={formatVND(valuationSummary.supplierReturnVariance)}
-                    />
-                    <DetailFact
-                      label={copy.valuation.currentPeriodVariance}
-                      value={formatVND(valuationSummary.currentPeriodVariance)}
-                    />
-                  </ItemGroup>
+                {valuationSummary.foodCostVariance !== 0 ? (
+                  <DetailFact
+                    label={copy.valuation.foodCostVariance}
+                    value={formatVND(valuationSummary.foodCostVariance)}
+                  />
                 ) : null}
-
-                {showMatchProblem ? (
-                  selectedInvoice.invoiceKind === "service" ? (
-                    <Alert className="border-warning/20 bg-warning/10 text-warning">
-                      <IconAlertTriangle />
-                      <AlertTitle>
-                        {copy.serviceVerificationRequired}
-                      </AlertTitle>
-                      <AlertDescription className="text-muted-foreground">
-                        {selectedInvoice.matchingNotes ??
-                          copy.serviceVerificationDescription}
-                      </AlertDescription>
-                    </Alert>
-                  ) : selectedMissingMatchingEvidence ? (
-                    <Alert className="border-warning/20 bg-warning/10 text-warning">
-                      <IconAlertTriangle />
-                      <AlertTitle>{copy.missingGrnTitle}</AlertTitle>
-                      <AlertDescription className="text-muted-foreground">
-                        {copy.missingGrnDescription}
-                      </AlertDescription>
-                    </Alert>
-                  ) : (
-                    <Alert variant="destructive">
-                      <IconAlertTriangle />
-                      <AlertTitle>
-                        {copy.matchingDifferenceTitle(
-                          formatVND(
-                            selectedInvoice.matchingDifferenceAmount ?? 0,
-                          ),
-                        )}
-                      </AlertTitle>
-                      <AlertDescription>
-                        {selectedInvoice.matchingNotes ??
-                          copy.matchingDifferenceDescription}
-                      </AlertDescription>
-                    </Alert>
-                  )
+                {valuationSummary.wasteVariance !== 0 ? (
+                  <DetailFact
+                    label={copy.valuation.wasteVariance}
+                    value={formatVND(valuationSummary.wasteVariance)}
+                  />
                 ) : null}
+              </ItemGroup>
+            </div>
+          ) : null}
         </div>
       ) : (
         <AppEmptyState

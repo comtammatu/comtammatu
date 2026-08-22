@@ -29,6 +29,10 @@ test("close-day is Daily Summary only (ADR 0024)", () => {
     "supabase/migrations/20260820014659_get_branch_day_report_order_facts_from.sql",
   );
 
+  const reportRpcModifiers = read(
+    "supabase/migrations/20260822193600_get_branch_day_report_include_modifiers.sql",
+  );
+
   assert.equal(
     existsSync(
       resolve(
@@ -91,4 +95,7 @@ test("close-day is Daily Summary only (ADR 0024)", () => {
   assert.doesNotMatch(reportRpc, /GRANT.*finance:view/);
   assert.match(reportRpcFrom, /v_paid_orders\s+FROM order_facts/);
   assert.match(reportRpcFrom, /CREATE OR REPLACE FUNCTION public\.get_branch_day_report/);
+  assert.match(reportRpcModifiers, /modifier_components/);
+  assert.match(reportRpcModifiers, /'modifier'::text AS source/);
+  assert.match(reportRpcModifiers, /mod_totals\.modifier_revenue/);
 });

@@ -1110,7 +1110,7 @@ BEGIN
         v_to_balance_id,
         CASE
           WHEN NEW.type = 'transfer_out' THEN 'transfer_holder'
-          WHEN NEW.type = 'production_consumption' THEN 'production_input'
+          WHEN NEW.type = 'production_consumption' THEN 'production_inventory'
           ELSE v_terminal_bucket
         END,
         v_alloc_quantity,
