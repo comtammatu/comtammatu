@@ -50,7 +50,7 @@ test("provisional print is cashier-counter only; waiter role is excluded", () =>
     printActions,
     /if \(!ctx \|\| !canPrintProvisionalBill\(ctx\.claims\.user_role\)\)/,
   );
-  assert.match(billSheet, /canPrintProvisional \? \(/);
+  assert.match(billSheet, /canPrintProvisional/);
   assert.match(billSheet, /messages\.pos\.payment\.printProvisional/);
 });
 

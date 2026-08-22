@@ -82,6 +82,11 @@ function canAccessProcurementBranch(
 
 /* ─── fetchGrnIdsForDropdown ─── */
 
+function relatedOne<T>(value: T | T[] | null | undefined): T | null {
+  if (!value) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
 type GrnDropdownLine = {
   id?: number | null;
   ingredient_id?: number | null;
@@ -93,9 +98,21 @@ type GrnDropdownLine = {
   unit_cost?: number | null;
   total_cost?: number | null;
   supplier_id?: number | null;
-  suppliers?: { id: number; name: string } | null;
-  ingredients?: { id: number; name: string } | null;
-  units?: { id: number; code: string; name: string | null } | null;
+  suppliers?: { id: number; name: string } | { id: number; name: string }[] | null;
+  ingredients?: { id: number; name: string } | { id: number; name: string }[] | null;
+  units?: { id: number; code: string; name: string | null } | { id: number; code: string; name: string | null }[] | null;
+  purchase_order_items?:
+    | {
+        id?: number | null;
+        entry_unit_id?: number | null;
+        units?: { id: number; code: string; name: string | null } | { id: number; code: string; name: string | null }[] | null;
+      }
+    | Array<{
+        id?: number | null;
+        entry_unit_id?: number | null;
+        units?: { id: number; code: string; name: string | null } | { id: number; code: string; name: string | null }[] | null;
+      }>
+    | null;
 };
 
 type GrnDropdownSourcePo = {
@@ -108,7 +125,7 @@ type GrnDropdownRow = {
   grn_number: string | null;
   supplier_id: number | null;
   po_id: number | null;
-  suppliers: { id: number; name: string } | null;
+  suppliers: { id: number; name: string } | { id: number; name: string }[] | null;
   purchase_orders_source?: GrnDropdownSourcePo[] | null;
   grn_items?: GrnDropdownLine[] | null;
 };
@@ -153,6 +170,7 @@ function expandGrnDropdownOptions(
       entry_unit_id: number;
       unit_label: string;
       available_quantity: number;
+      unit_cost?: number | null;
     }>;
   }> = [];
 
@@ -166,8 +184,9 @@ function expandGrnDropdownOptions(
       const headerSupplierId = Number(row.supplier_id);
       if (Number.isSafeInteger(headerSupplierId) && headerSupplierId > 0) {
         supplierIds.push(headerSupplierId);
-        if (row.suppliers?.name) {
-          supplierNameById.set(headerSupplierId, row.suppliers.name);
+        const rowSupplier = relatedOne(row.suppliers);
+        if (rowSupplier?.name) {
+          supplierNameById.set(headerSupplierId, rowSupplier.name);
         }
       }
     } else {
@@ -181,8 +200,9 @@ function expandGrnDropdownOptions(
           continue;
         }
         supplierIds.push(lineSupplierId);
-        if (line.suppliers?.name) {
-          supplierNameById.set(lineSupplierId, line.suppliers.name);
+        const lineSupplier = relatedOne(line.suppliers);
+        if (lineSupplier?.name) {
+          supplierNameById.set(lineSupplierId, lineSupplier.name);
         }
       }
     }
@@ -214,7 +234,36 @@ function expandGrnDropdownOptions(
         const grnItemId = Number(line.id);
         const poItemId = Number(line.purchase_order_item_id);
         const ingredientId = Number(line.ingredient_id);
-        const unitId = Number(line.entry_unit_id);
+        const poItem = relatedOne(line.purchase_order_items);
+        const poUnit = relatedOne(poItem?.units);
+        const grnUnit = relatedOne(line.units);
+        const ingredient = relatedOne(line.ingredients);
+
+        // When a line is linked to a PO item, po_applied_quantity is expressed in
+        // the PO item's entry unit (po_item.entry_unit_id). Fall back to GRN unit.
+        const poUnitId =
+          poItem?.entry_unit_id != null ? Number(poItem.entry_unit_id) : null;
+        const fallbackUnitId =
+          line.entry_unit_id != null ? Number(line.entry_unit_id) : null;
+        const unitId =
+          poUnitId != null && Number.isSafeInteger(poUnitId) && poUnitId > 0
+            ? poUnitId
+            : fallbackUnitId != null &&
+                Number.isSafeInteger(fallbackUnitId) &&
+                fallbackUnitId > 0
+              ? fallbackUnitId
+              : 0;
+
+        const unitLabel =
+          (typeof poUnit?.name === "string" && poUnit.name.trim()) ||
+          (typeof poUnit?.code === "string" && poUnit.code.trim()) ||
+          (typeof grnUnit?.name === "string" && grnUnit.name.trim()) ||
+          (typeof grnUnit?.code === "string" && grnUnit.code.trim()) ||
+          "Đơn vị";
+        const ingredientName =
+          (typeof ingredient?.name === "string" && ingredient.name.trim()) ||
+          "Nguyên liệu";
+
         const accepted = Number(line.po_applied_quantity ?? 0);
         const billed = billedByLine.get(`${row.id}:${poItemId}`) ?? 0;
         const available = Math.max(accepted - billed, 0);
@@ -236,10 +285,9 @@ function expandGrnDropdownOptions(
             grn_item_id: grnItemId,
             purchase_order_item_id: poItemId,
             ingredient_id: ingredientId,
-            ingredient_name: line.ingredients?.name ?? "Nguyên liệu",
+            ingredient_name: ingredientName,
             entry_unit_id: unitId,
-            unit_label:
-              line.units?.name ?? line.units?.code ?? "Đơn vị",
+            unit_label: unitLabel,
             available_quantity: available,
             unit_cost: line.unit_cost != null ? Number(line.unit_cost) : null,
           },
@@ -252,6 +300,7 @@ function expandGrnDropdownOptions(
         continue;
       }
 
+      const rowSupplier = relatedOne(row.suppliers);
       options.push({
         id: row.id,
         grn_number: row.grn_number,
@@ -260,8 +309,8 @@ function expandGrnDropdownOptions(
         suppliers:
           supplierName != null
             ? { id: supplierId, name: supplierName }
-            : row.suppliers?.id === supplierId
-              ? row.suppliers
+            : rowSupplier?.id === supplierId
+              ? rowSupplier
               : null,
         net_accepted_amount: withNetAmount
           ? sumGrnNetAcceptedAmount(
@@ -298,10 +347,12 @@ export async function fetchGrnIdsForDropdown(
     "id, grn_number, supplier_id, po_id, suppliers ( id, name ), purchase_orders_source:purchase_orders!purchase_orders_source_grn_id_fkey ( id, supplier_id )";
   const selectWithoutNet =
     "id, grn_number, supplier_id, po_id, suppliers ( id, name ), purchase_orders_source:purchase_orders!purchase_orders_source_grn_id_fkey ( id, supplier_id )";
+  const poItemSelect =
+    "purchase_order_items:purchase_order_items!grn_items_purchase_order_item_tenant_fkey ( id, entry_unit_id, units!purchase_order_items_entry_unit_id_fkey ( id, code, name ) )";
   const itemSelectWithNet =
-    "grn_id, id, ingredient_id, purchase_order_item_id, po_applied_quantity, entry_unit_id, received_quantity, rejected_quantity, unit_cost, total_cost, supplier_id, suppliers ( id, name ), ingredients ( id, name ), units!grn_items_entry_unit_id_fkey ( id, code, name )";
+    `grn_id, id, ingredient_id, purchase_order_item_id, po_applied_quantity, entry_unit_id, received_quantity, rejected_quantity, unit_cost, total_cost, supplier_id, suppliers ( id, name ), ingredients ( id, name ), units!grn_items_entry_unit_id_fkey ( id, code, name ), ${poItemSelect}`;
   const itemSelectWithoutNet =
-    "grn_id, id, ingredient_id, purchase_order_item_id, po_applied_quantity, entry_unit_id, received_quantity, rejected_quantity, supplier_id, suppliers ( id, name ), ingredients ( id, name ), units!grn_items_entry_unit_id_fkey ( id, code, name )";
+    `grn_id, id, ingredient_id, purchase_order_item_id, po_applied_quantity, entry_unit_id, received_quantity, rejected_quantity, supplier_id, suppliers ( id, name ), ingredients ( id, name ), units!grn_items_entry_unit_id_fkey ( id, code, name ), ${poItemSelect}`;
 
   let query = readClient
     .from("goods_received_notes")

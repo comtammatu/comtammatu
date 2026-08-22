@@ -277,15 +277,19 @@ export function mapSupplierInvoiceRow(
             id: Number(line.id ?? 0),
             ingredientId:
               line.ingredient_id != null ? Number(line.ingredient_id) : null,
-            ingredientName: isRecord(ingredient)
-              ? String(ingredient.name ?? line.description ?? "Dịch vụ")
-              : String(line.description ?? "Dịch vụ"),
+            ingredientName:
+              (isRecord(ingredient) &&
+                typeof ingredient.name === "string" &&
+                ingredient.name.trim()) ||
+              String(line.description ?? "Dịch vụ"),
             description: String(line.description ?? ""),
             quantity: Number(line.quantity ?? 0),
             unitId: line.unit_id != null ? Number(line.unit_id) : null,
-            unitLabel: isRecord(unit)
-              ? String(unit.name ?? unit.code ?? "Đơn vị")
-              : "Đơn vị",
+            unitLabel:
+              (isRecord(unit) &&
+                ((typeof unit.name === "string" && unit.name.trim()) ||
+                  (typeof unit.code === "string" && unit.code.trim()))) ||
+              "Đơn vị",
             unitPrice: Number(line.unit_price ?? 0),
             grossLineTotal: Number(
               line.gross_line_total ??

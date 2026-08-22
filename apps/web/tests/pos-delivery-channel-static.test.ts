@@ -134,6 +134,34 @@ test("POS session list treats delivery as Mang về ops queue with dual identity
     "app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-summary.tsx",
   );
   assert.match(billSummary, /messages\.pos\.receipt\.delivery/);
+  assert.match(billSummary, /DeliveryPlatformMark/);
+  assert.match(billSummary, /external_order_ref/);
+
+  const billSheet = read(
+    "app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx",
+  );
+  assert.match(billSheet, /canPrintProvisional && !isDeliveryOrder/);
+
+  const printActions = read(
+    "app/(protected)/br/[branchId]/pos/print-actions.ts",
+  );
+  assert.match(printActions, /order\.order_type === "delivery"/);
+
+  const deliveryUnblockMigration = read(
+    "../../supabase/migrations/20260822162000_delivery_order_ref_unblock_and_receipt_payload.sql",
+  );
+  assert.match(
+    deliveryUnblockMigration,
+    /DROP INDEX IF EXISTS public\.orders_branch_delivery_ref_active_uidx/,
+  );
+  assert.match(
+    deliveryUnblockMigration,
+    /'delivery_platform',\s*v_order\.delivery_platform/,
+  );
+  assert.match(
+    deliveryUnblockMigration,
+    /'external_order_ref',\s*v_order\.external_order_ref/,
+  );
 
   const appendMessages = read(
     "app/(protected)/br/[branchId]/pos/_lib/messages.ts",

@@ -13,10 +13,14 @@ import {
   BRAND_LOCKUP_NAME,
   BRAND_LOCKUP_TAGLINE,
 } from "@/components/brand";
+import { DeliveryPlatformMark } from "@/components/delivery-platform-mark";
 import { getPosLineItemDisplayName } from "../../types";
 import { POS_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
-import { getPaymentMethodLabelVi } from "@comtammatu/shared/labels";
+import {
+  getDeliveryPlatformLabelVi,
+  getPaymentMethodLabelVi,
+} from "@comtammatu/shared/labels";
 import { METHOD_LABELS } from "./bill-receipt-types";
 import type { OrderData } from "./bill-receipt-types";
 
@@ -89,14 +93,29 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
           <span>{messages.pos.receipt.date}</span>
           <span>{formatVNDateTime(order.created_at)}</span>
         </div>
-        <div className="flex justify-between">
+        <div className="flex items-center justify-between">
           <span>{messages.pos.receipt.orderType}</span>
-          <span>
-            {order.order_type === "dine_in"
-              ? messages.pos.receipt.dineIn
-              : order.order_type === "delivery"
-                ? messages.pos.receipt.delivery
-                : messages.pos.receipt.takeaway}
+          <span className="inline-flex items-center gap-1">
+            {order.order_type === "dine_in" ? (
+              messages.pos.receipt.dineIn
+            ) : order.order_type === "delivery" ? (
+              <>
+                <DeliveryPlatformMark
+                  platform={order.delivery_platform}
+                  size="xs"
+                />
+                <span>
+                  {order.delivery_platform
+                    ? getDeliveryPlatformLabelVi(order.delivery_platform)
+                    : messages.pos.receipt.delivery}
+                  {order.external_order_ref
+                    ? ` · #${order.external_order_ref}`
+                    : ""}
+                </span>
+              </>
+            ) : (
+              messages.pos.receipt.takeaway
+            )}
           </span>
         </div>
         {order.tables && (

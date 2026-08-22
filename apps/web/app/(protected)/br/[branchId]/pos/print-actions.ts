@@ -236,7 +236,7 @@ export async function printProvisionalBill(
 
   const { data: order, error: orderError } = await supabase
     .from("orders")
-    .select("branch_id, total_amount")
+    .select("branch_id, total_amount, order_type")
     .eq("id", parsed.data)
     .eq("tenant_id", claims.tenant_id)
     .maybeSingle();
@@ -244,6 +244,13 @@ export async function printProvisionalBill(
     return {
       success: false,
       error: "Không thể chuẩn bị phiếu tạm tính. Vui lòng thử lại.",
+    };
+  }
+
+  if (order.order_type === "delivery") {
+    return {
+      success: false,
+      error: "Đơn giao hàng không hỗ trợ in tạm tính.",
     };
   }
 

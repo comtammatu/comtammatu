@@ -1617,7 +1617,7 @@ export function BillReceipt({
 
           <div className="sticky bottom-0 -mx-4 -mb-4 flex flex-col gap-2 border-t bg-popover px-4 py-3">
             <div className="flex gap-2">
-              {canPrintProvisional ? (
+              {canPrintProvisional && !isDeliveryOrder ? (
                 <Button
                   type="button"
                   variant="outline"
