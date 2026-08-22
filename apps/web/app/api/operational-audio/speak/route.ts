@@ -12,6 +12,7 @@ import {
   isOperationalTtsConfigured,
   synthesizeOperationalUtterance,
 } from "@lib/operational-tts-gateway";
+import { resolveTtsConfig } from "@lib/operational-tts-config";
 
 export const maxDuration = 15;
 
@@ -19,6 +20,8 @@ const STATION_ROLES: readonly StaffRole[] = Array.from(
   new Set<StaffRole>([
     ...MODULE_ACL.pos.allowedRoles,
     ...MODULE_ACL.kds.allowedRoles,
+    ...MODULE_ACL.branch_settings.allowedRoles,
+    ...MODULE_ACL.settings.allowedRoles,
   ]),
 );
 
@@ -40,6 +43,8 @@ export async function GET(request: Request) {
   const ctx = await getAuthContextWithAnyPermission(STATION_ROLES, [
     PERMISSION_KEYS.POS_USE,
     PERMISSION_KEYS.KDS_USE,
+    PERMISSION_KEYS.SETTINGS_BRANCH,
+    PERMISSION_KEYS.SETTINGS_TENANT,
   ]);
   if (!ctx) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -50,7 +55,15 @@ export async function GET(request: Request) {
   if (!isAllowedOperationalUtterance(text)) return badRequest();
   const isLive = url.searchParams.get("live") === "1";
 
-  const cached = getCachedOperationalUtterance(text);
+  const rawBranchId = url.searchParams.get("branchId");
+  const branchId = rawBranchId ? Number(rawBranchId) : null;
+  const config = await resolveTtsConfig(
+    ctx.supabase as unknown as Parameters<typeof resolveTtsConfig>[0],
+    branchId,
+    ctx.claims.tenant_id,
+  );
+
+  const cached = getCachedOperationalUtterance(text, config);
   if (cached) return audioResponse(cached);
 
   if (!isOperationalTtsConfigured()) {
@@ -80,7 +93,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const bytes = await synthesizeOperationalUtterance(text);
+    const bytes = await synthesizeOperationalUtterance(text, config);
     if (bytes === "rate_limited") {
       return NextResponse.json(
         { error: "rate_limited" },

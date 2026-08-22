@@ -126,6 +126,8 @@ type WorkdayCopy = {
   workflowCheckoutStep: string;
   workflowManagerCheckoutStep: string;
   workflowCheckoutDescription: string;
+  workflowCheckoutBlocked?: (remaining: number) => string;
+  workflowCheckoutBlockedDescription?: (remaining: number) => string;
   viewSchedule: string;
   profileTitle: string;
   checkoutApprovalsTitle: string;
@@ -1103,6 +1105,11 @@ export async function StaffWorkdayPageContent({
       </>
     ) : undefined,
   };
+  const checkoutBlockedByTasks =
+    !state.managerAttendanceOnly &&
+    state.status === "working" &&
+    state.checklist.requiredRemaining > 0;
+
   const checkoutStep: ShiftWorkflowStep = {
     key: "checkout",
     number: state.managerAttendanceOnly ? 2 : 3,
@@ -1116,14 +1123,22 @@ export async function StaffWorkdayPageContent({
         ? copy.descriptionCheckoutPending
         : checkoutActive
           ? copy.workflowCheckoutDescription
-          : copy.workflowWaiting,
+          : checkoutBlockedByTasks
+            ? (copy.workflowCheckoutBlockedDescription?.(
+                state.checklist.requiredRemaining,
+              ) ?? copy.workflowWaiting)
+            : copy.workflowWaiting,
     statusLabel: checkoutDone
       ? copy.shiftDone
       : checkoutPending
         ? copy.checkoutPending
         : checkoutActive
           ? copy.workflowReady
-          : copy.workflowWaiting,
+          : checkoutBlockedByTasks
+            ? (copy.workflowCheckoutBlocked?.(
+                state.checklist.requiredRemaining,
+              ) ?? copy.workflowWaiting)
+            : copy.workflowWaiting,
     statusVariant: checkoutDone
       ? "success"
       : checkoutPending

@@ -67,6 +67,7 @@ export function usePrintJobAlerts({
       playOperationalAlert({
         kind: "pos.print_failed",
         mode: audioModeRef.current,
+        branchId,
       });
       toast.error(`In thất bại — ${getJobTypeLabel(job.job_type)}`, {
         description: "Kiểm tra giấy/máy in rồi bấm In lại.",

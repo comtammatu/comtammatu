@@ -277,11 +277,12 @@ export function PosDesktopProvider({
     if (!audioModeHasVoice(audioMode)) return;
     prefetchOperationalVoiceCatalog({
       surface: "pos",
+      branchId,
       tableLabels: tableVoiceLabels
         ? tableVoiceLabels.split(",")
         : undefined,
     });
-  }, [audioMode, tableVoiceLabels]);
+  }, [audioMode, branchId, tableVoiceLabels]);
   const bumpArchivedToken = useCallback(() => {
     setArchivedToken((t) => t + 1);
   }, []);
@@ -311,11 +312,12 @@ export function PosDesktopProvider({
         kind: "pos.self_order",
         mode: next,
         force: true,
+        branchId,
       });
       writeDevicePref(audioModeKey, next);
       return next;
     });
-  }, [audioModeKey]);
+  }, [audioModeKey, branchId]);
   const soundValue = useMemo<PosSoundContextValue>(
     () => ({ audioMode, toggleSound }),
     [audioMode, toggleSound],

@@ -217,6 +217,10 @@ export default async function FinanceSupplierInvoicesPage({
           unitId: Number(line.entry_unit_id),
           unitLabel: String(line.unit_label ?? "Đơn vị"),
           availableQuantity: Number(line.available_quantity),
+          unitCost:
+            line.unit_cost != null && Number.isFinite(Number(line.unit_cost))
+              ? Number(line.unit_cost)
+              : null,
         })),
       };
     },

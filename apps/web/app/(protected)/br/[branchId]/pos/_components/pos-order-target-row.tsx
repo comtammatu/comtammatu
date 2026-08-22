@@ -2,6 +2,8 @@
 
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Pencil as IconPencil } from "lucide-react";
+import { cn } from "@comtammatu/ui";
 import { messages } from "@lib/messages";
 
 export type OrderTarget =
@@ -15,21 +17,29 @@ export function PosOrderTargetRow({
   appendDraftQuantity,
   onCancel,
   onSwitch,
+  onEditDelivery,
 }: {
   target: OrderTarget;
   appendDraftQuantity: number;
   onCancel: () => void;
   onSwitch: () => void;
+  onEditDelivery?: () => void;
 }) {
   const isExisting = target.kind === "existing-order";
+  const isDelivery = target.kind === "new-delivery";
 
   // Existing-order append: keep one quiet label + cancel. The append pane
   // already owns the "Món thêm chưa gửi" title — repeating warning badges
   // here stacked three contexts across columns.
   return (
-    <div className="hidden h-12 shrink-0 items-center justify-between gap-3 border-b border-border/60 bg-background px-3 md:flex lg:px-4">
+    <div
+      className={cn(
+        "h-11 shrink-0 items-center justify-between gap-2 border-b border-border/60 bg-background px-3 lg:px-4",
+        isDelivery ? "flex" : "hidden md:flex",
+      )}
+    >
       <div className="flex min-w-0 items-center gap-2">
-        <p className="font-heading min-w-0 truncate text-base font-semibold tracking-tight text-foreground">
+        <p className="font-heading min-w-0 truncate text-sm sm:text-base font-semibold tracking-tight text-foreground">
           {target.label}
         </p>
         {isExisting && appendDraftQuantity > 0 ? (
@@ -41,17 +51,32 @@ export function PosOrderTargetRow({
           </Badge>
         ) : null}
       </div>
-      <Button
-        type="button"
-        variant="ghost"
-        size="touch"
-        className="min-w-12 shrink-0 px-3 text-sm text-muted-foreground"
-        onClick={isExisting ? onCancel : onSwitch}
-      >
-        {isExisting
-          ? messages.pos.desktop.cancelTarget
-          : messages.pos.desktop.changeTarget}
-      </Button>
+      <div className="flex items-center gap-1">
+        {isDelivery && onEditDelivery ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="touch"
+            className="h-8 min-w-10 shrink-0 px-2 text-xs sm:text-sm font-medium text-primary hover:text-primary"
+            onClick={onEditDelivery}
+          >
+            <IconPencil data-icon="inline-start" className="size-3.5" />
+            <span>{messages.pos.delivery.editDeliveryInfo}</span>
+          </Button>
+        ) : null}
+        <Button
+          type="button"
+          variant="ghost"
+          size="touch"
+          className="h-8 min-w-10 shrink-0 px-2 text-xs sm:text-sm text-muted-foreground"
+          onClick={isExisting ? onCancel : onSwitch}
+        >
+          {isExisting
+            ? messages.pos.desktop.cancelTarget
+            : messages.pos.desktop.changeTarget}
+        </Button>
+      </div>
     </div>
   );
 }
+

@@ -260,7 +260,7 @@ export function FoodCostClient({
   ];
 
   return (
-    <>
+    <div className="flex flex-col gap-6">
       {/* DASHBOARD_REPORT: non-sticky FilterBar above KPI — never wrap in AppListFrame. */}
       <FilterBar
         params={params}
@@ -395,6 +395,6 @@ export function FoodCostClient({
           )}
         />
       </AppSection>
-    </>
+    </div>
   );
 }

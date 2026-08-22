@@ -13,6 +13,7 @@ export const operator = {
   },
   todayStatus: {
     statusWorking: "Đang làm việc",
+    statusReadyToCheckout: "Sẵn sàng kết ca",
     statusNotStarted: "Chưa chấm công",
     statusCheckoutPending: "Chờ quản lý duyệt",
     statusNotRequired: "Không bắt buộc chấm công",
@@ -21,9 +22,12 @@ export const operator = {
     statusNoBranch: "Thiếu chi nhánh",
     managerAttendanceTitle: "Đang trong ca quản lý",
     clockIn: "Chấm công vào",
+    clockOut: "Yêu cầu kết ca",
     businessDayPrefix: "Ngày kinh doanh",
     tasksRemaining: (count: number) =>
       `${formatCount(count)} việc trong ca`,
+    tasksProgress: (done: number, total: number) =>
+      `${formatCount(done)}/${formatCount(total)} việc`,
   },
   home: {
     stationsTitle: "Trạm",

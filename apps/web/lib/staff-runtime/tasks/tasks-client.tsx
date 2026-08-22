@@ -417,7 +417,12 @@ export function TasksClient({
                         <Button
                           type="button"
                           size="icon"
-                          variant="outline"
+                          variant={item.done ? "outline" : "default"}
+                          className={cn(
+                            item.done
+                              ? "border-success/20 text-success"
+                              : "bg-primary text-primary-foreground",
+                          )}
                           disabled={disabled || isItemPending}
                           aria-label={
                             item.done ? taskCopy.retakePhoto : taskCopy.attachPhoto
@@ -462,9 +467,16 @@ export function TasksClient({
                             {item.title}
                           </span>
                         ) : needsPhoto ? (
-                          <span className="block min-w-0 max-w-full whitespace-normal break-words font-normal text-sm leading-5">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-auto w-full justify-start p-0 text-left font-normal text-sm leading-5 whitespace-normal break-words hover:bg-transparent hover:underline"
+                            disabled={disabled || isItemPending}
+                            onClick={() => setCapturingItemId(item.id)}
+                          >
                             {item.title}
-                          </span>
+                          </Button>
                         ) : (
                           <Label
                             className="block min-w-0 max-w-full cursor-pointer whitespace-normal break-words font-normal text-sm leading-5"
@@ -482,6 +494,11 @@ export function TasksClient({
                       {needsPhoto && !item.done ? (
                         <p className="text-xs text-muted-foreground">
                           {taskCopy.photoRequiredHint}
+                        </p>
+                      ) : null}
+                      {needsPhoto && item.done ? (
+                        <p className="text-2xs text-success">
+                          {taskCopy.photoAttached}
                         </p>
                       ) : null}
                       {isCountTask && !item.done ? (

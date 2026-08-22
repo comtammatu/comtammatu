@@ -235,14 +235,14 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
   );
   assert.match(hooks, /snapshot\.kitchenServed !== true/);
   assert.doesNotMatch(hooks, /fast[\s\S]{0,120}payment_pending/);
-  assert.match(hooks, /fast \? 3_000 : 15_000/);
+  assert.match(hooks, /fast \? 8_000 : 25_000/);
   assert.doesNotMatch(hooks, /realtimeTopic|\.channel\(/);
   const payment = read("app/q/[token]/self-order/payment-panel.tsx");
   assert.match(payment, /Banknote as IconCash/);
   assert.doesNotMatch(payment, /QrCode as IconQrcode/);
   assert.match(payment, /BankAppLauncher/);
-  assert.match(payment, /PROVEN_VIETQR_BANK_APP_ID/);
-  assert.match(payment, /openMbBank/);
+  assert.match(payment, /openBankingApp/);
+  assert.match(payment, /BankAppDrawer/);
   assert.match(payment, /otherBankScanHint/);
   assert.doesNotMatch(payment, /CreditCard/);
   assert.doesNotMatch(payment, /getVietQrBankAppCatalogUrl/);
@@ -443,7 +443,7 @@ test("S5 routes pending QR requests through the table and bill surfaces", () => 
   assert.match(desktop, /kind: "pos\.staff_call"/);
   assert.doesNotMatch(desktop, /playAppSignal\("pos-payment-call"\)/);
   assert.match(desktop, /knownSelfOrderPaymentRequestIdsRef/);
-  assert.match(desktop, /5_000/);
+  assert.match(desktop, /30_000/);
   assert.match(desktop, /pendingSelfOrderRequestByTable\.get/);
   assert.match(desktop, /const selfOrderActionVisible/);
   assert.match(desktop, /sessionAction=\{desktopSelfOrderAction\}/);

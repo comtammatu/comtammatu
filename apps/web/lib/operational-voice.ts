@@ -26,6 +26,12 @@ function isAmountUtterance(text: string): boolean {
   return text.startsWith(RECEIVED_AMOUNT_PREFIX);
 }
 
+function memoryKey(text: string, branchId?: number): string {
+  return branchId && Number.isInteger(branchId) && branchId > 0
+    ? `${branchId}:${text}`
+    : text;
+}
+
 export function cancelOperationalVoice(): void {
   speakGeneration += 1;
   pendingClipAbort?.abort();
@@ -34,38 +40,50 @@ export function cancelOperationalVoice(): void {
   stopCurrentClip = null;
 }
 
-function clipRequest(text: string, live = false): Request {
+function clipRequest(text: string, live = false, branchId?: number): Request {
   const params = new URLSearchParams({ text });
   if (live) params.set("live", "1");
+  if (branchId && Number.isInteger(branchId) && branchId > 0) {
+    params.set("branchId", String(branchId));
+  }
   return new Request(`${SPEAK_PATH}?${params.toString()}`, {
     method: "GET",
     credentials: "include",
   });
 }
 
-function readMemoryClip(text: string): ArrayBuffer | undefined {
+function readMemoryClip(
+  text: string,
+  branchId?: number,
+): ArrayBuffer | undefined {
+  const key = memoryKey(text, branchId);
   if (isAmountUtterance(text)) {
-    const hit = amountClips.get(text);
+    const hit = amountClips.get(key);
     if (!hit) return undefined;
-    amountClips.delete(text);
-    amountClips.set(text, hit);
+    amountClips.delete(key);
+    amountClips.set(key, hit);
     return hit;
   }
-  return catalogClips.get(text);
+  return catalogClips.get(key);
 }
 
-function rememberMemoryClip(text: string, buffer: ArrayBuffer): void {
+function rememberMemoryClip(
+  text: string,
+  buffer: ArrayBuffer,
+  branchId?: number,
+): void {
+  const key = memoryKey(text, branchId);
   if (isAmountUtterance(text)) {
-    amountClips.delete(text);
+    amountClips.delete(key);
     while (amountClips.size >= AMOUNT_MEMORY_LIMIT) {
       const oldest = amountClips.keys().next().value;
       if (typeof oldest !== "string") break;
       amountClips.delete(oldest);
     }
-    amountClips.set(text, buffer);
+    amountClips.set(key, buffer);
     return;
   }
-  catalogClips.set(text, buffer);
+  catalogClips.set(key, buffer);
 }
 
 async function trimAmountCache(cache: Cache): Promise<void> {
@@ -85,29 +103,36 @@ async function trimAmountCache(cache: Cache): Promise<void> {
   }
 }
 
-async function readCachedClip(text: string): Promise<ArrayBuffer | null> {
-  const memory = readMemoryClip(text);
+async function readCachedClip(
+  text: string,
+  branchId?: number,
+): Promise<ArrayBuffer | null> {
+  const memory = readMemoryClip(text, branchId);
   if (memory) return memory;
   if (typeof caches === "undefined") return null;
   try {
     const cache = await caches.open(TTS_CACHE_NAME);
-    const hit = await cache.match(clipRequest(text));
+    const hit = await cache.match(clipRequest(text, false, branchId));
     if (!hit || !hit.ok) return null;
     const buffer = await hit.arrayBuffer();
-    rememberMemoryClip(text, buffer);
+    rememberMemoryClip(text, buffer, branchId);
     return buffer;
   } catch {
     return null;
   }
 }
 
-async function storeClip(text: string, buffer: ArrayBuffer): Promise<void> {
-  rememberMemoryClip(text, buffer);
+async function storeClip(
+  text: string,
+  buffer: ArrayBuffer,
+  branchId?: number,
+): Promise<void> {
+  rememberMemoryClip(text, buffer, branchId);
   if (typeof caches === "undefined") return;
   try {
     const cache = await caches.open(TTS_CACHE_NAME);
     await cache.put(
-      clipRequest(text),
+      clipRequest(text, false, branchId),
       new Response(buffer.slice(0), {
         headers: { "Content-Type": "audio/mpeg" },
       }),
@@ -121,16 +146,17 @@ async function storeClip(text: string, buffer: ArrayBuffer): Promise<void> {
 async function fetchCloudClip(
   text: string,
   signal: AbortSignal,
+  branchId?: number,
 ): Promise<ArrayBuffer | null | "rate_limited"> {
   if (cloudTtsAvailable === false) return null;
-  const cached = await readCachedClip(text);
+  const cached = await readCachedClip(text, branchId);
   if (cached) {
     cloudTtsAvailable = true;
     return cached;
   }
 
   try {
-    const response = await fetch(clipRequest(text, true), {
+    const response = await fetch(clipRequest(text, true, branchId), {
       signal,
       cache: "no-store",
     });
@@ -155,7 +181,7 @@ async function fetchCloudClip(
     const buffer = await response.arrayBuffer();
     if (buffer.byteLength === 0) return null;
     cloudTtsAvailable = true;
-    await storeClip(text, buffer);
+    await storeClip(text, buffer, branchId);
     return buffer;
   } catch {
     return null;
@@ -176,7 +202,10 @@ async function playPrimedVoice(
   }
 }
 
-export function primeOperationalVoice(text: string): { play: () => void } {
+export function primeOperationalVoice(
+  text: string,
+  branchId?: number,
+): { play: () => void } {
   const generation = ++speakGeneration;
   pendingClipAbort?.abort();
   stopCurrentClip?.();
@@ -187,9 +216,11 @@ export function primeOperationalVoice(text: string): { play: () => void } {
   const timeout = window.setTimeout(() => {
     abort.abort();
   }, TTS_FETCH_TIMEOUT_MS);
-  const clipPromise = fetchCloudClip(text, abort.signal).finally(() => {
-    window.clearTimeout(timeout);
-  });
+  const clipPromise = fetchCloudClip(text, abort.signal, branchId).finally(
+    () => {
+      window.clearTimeout(timeout);
+    },
+  );
 
   return {
     play() {
@@ -204,6 +235,7 @@ let prefetchGeneration = 0;
 export function prefetchOperationalVoiceCatalog(options?: {
   tableLabels?: readonly string[] | undefined;
   surface?: "pos" | "kds" | undefined;
+  branchId?: number | undefined;
 }): void {
   if (isCloudTtsUnavailable()) return;
   const generation = ++prefetchGeneration;
@@ -211,8 +243,8 @@ export function prefetchOperationalVoiceCatalog(options?: {
     for (const text of listPrefetchUtterances(options)) {
       if (generation !== prefetchGeneration) return;
       if (isCloudTtsUnavailable()) return;
-      if (!text || readMemoryClip(text)) continue;
-      await readCachedClip(text);
+      if (!text || readMemoryClip(text, options?.branchId)) continue;
+      await readCachedClip(text, options?.branchId);
     }
   })();
 }

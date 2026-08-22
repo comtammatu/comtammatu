@@ -1504,6 +1504,61 @@ export type Database = {
           },
         ]
       }
+      branch_settings: {
+        Row: {
+          branch_id: number
+          created_at: string
+          description: string | null
+          id: number
+          key: string
+          tenant_id: number
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          branch_id: number
+          created_at?: string
+          description?: string | null
+          id?: never
+          key: string
+          tenant_id: number
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          branch_id?: number
+          created_at?: string
+          description?: string | null
+          id?: never
+          key?: string
+          tenant_id?: number
+          updated_at?: string
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_settings_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_settings_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "branch_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branch_trusted_egress_ips: {
         Row: {
           branch_id: number

@@ -32,6 +32,7 @@ interface AppendDraftPaneProps {
   onCancel: () => void;
   onClosePane?: () => void;
   onRemoveItem: (key: string) => void;
+  onUpdateQuantity?: (key: string, delta: number) => void;
   /**
    * Tap on a draft row to edit (variant / modifiers / note / quantity). Mirrors
    * the cart pane so items added without options can still get a note appended
@@ -48,6 +49,7 @@ function AppendDraftPaneComponent({
   onCancel,
   onClosePane,
   onRemoveItem,
+  onUpdateQuantity,
   onEditItem,
 }: AppendDraftPaneProps) {
   const [removingKeys, setRemovingKeys] = useState<Set<string>>(
@@ -136,6 +138,22 @@ function AppendDraftPaneComponent({
                         sides={summary.sides}
                         note={summary.note}
                         isPriority={summary.isPriority}
+                        onIncreaseQuantity={
+                          onUpdateQuantity
+                            ? () => onUpdateQuantity(item.key, 1)
+                            : undefined
+                        }
+                        onDecreaseQuantity={
+                          onUpdateQuantity
+                            ? () => {
+                                if (item.quantity > 1) {
+                                  onUpdateQuantity(item.key, -1);
+                                } else {
+                                  removeItemWithEffect(item.key);
+                                }
+                              }
+                            : undefined
+                        }
                       />
                     </Button>
                   </Item>

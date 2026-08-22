@@ -1276,6 +1276,9 @@ export const finance = {
     grossMargin: "Biên gộp",
     emptyTitle: "Không có dữ liệu giá vốn món",
     emptyDescription: "Đổi khoảng ngày để kiểm tra món đã bán và giá vốn.",
+    varianceCost: "Độ lệch giá vốn",
+    varianceCostHint:
+      "Chênh lệch giữa giá vốn thực tế trừ kho và định mức lý thuyết.",
     loadSalesFailed: "Không thể tải dữ liệu giá vốn món.",
     loadRecipeFailed: "Không thể tải định mức giá vốn món.",
     loadWacFailed: "Không thể tải giá vốn bình quân của nguyên liệu.",

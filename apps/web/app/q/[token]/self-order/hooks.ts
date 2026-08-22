@@ -79,7 +79,7 @@ export function useSnapshotSync(
         (snapshot.order != null && snapshot.kitchenServed !== true));
     const timer = window.setInterval(
       () => void refreshSnapshot(),
-      fast ? 3_000 : 15_000,
+      fast ? 8_000 : 25_000,
     );
     return () => window.clearInterval(timer);
   }, [refreshSnapshot, snapshot]);

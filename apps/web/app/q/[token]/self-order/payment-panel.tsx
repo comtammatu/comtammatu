@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Banknote as IconCash,
+  ChevronDown as IconChevronDown,
   Landmark as IconBank,
   X as IconCancel,
 } from "lucide-react";
@@ -12,6 +13,14 @@ import { formatVNTime } from "@comtammatu/shared/time";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@comtammatu/ui/components/dropdown-menu";
 import {
   Field,
   FieldDescription,
@@ -23,8 +32,10 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { PublicSection } from "@/components/surface";
 import { QrCodeImage } from "@/components/qr-code-image";
 import { SheetFooter } from "@/components/surface/app-sheet";
+import { BankAppDrawer } from "./bank-app-drawer";
 import {
-  PROVEN_VIETQR_BANK_APP_ID,
+  POPULAR_BANK_APP_IDS,
+  STATIC_VIETQR_BANK_APPS,
   buildVietQrBankAppUrl,
   resolveBankAppPlatform,
 } from "@lib/self-order/bank-app-link";
@@ -90,29 +101,86 @@ function BankAppLauncher({
   qrData: string;
   onBankAppHandoff?: () => void;
 }) {
-  const href = buildVietQrBankAppUrl({
-    appId: PROVEN_VIETQR_BANK_APP_ID,
-    accountNo,
-    bankCode,
-    amount,
-    paymentCode,
-    accountName,
-    qrData,
-    platform: resolveBankAppPlatform(navigator),
-  });
-  if (!href) return null;
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const platform = resolveBankAppPlatform(navigator);
+
+  const topBanks = STATIC_VIETQR_BANK_APPS.filter((app) =>
+    POPULAR_BANK_APP_IDS.includes(app.id),
+  );
 
   return (
-    <Button
-      variant="outline"
-      size="touch"
-      className="w-full"
-      render={<a href={href} />}
-      onClick={() => onBankAppHandoff?.()}
-    >
-      <IconBank data-icon="inline-start" />
-      {SELF_ORDER_VI.openMbBank}
-    </Button>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              variant="outline"
+              size="touch"
+              className="w-full justify-between"
+            >
+              <span className="inline-flex items-center gap-2">
+                <IconBank data-icon="inline-start" />
+                {SELF_ORDER_VI.openBankingApp}
+              </span>
+              <IconChevronDown className="size-4 opacity-60" />
+            </Button>
+          }
+        />
+        <DropdownMenuContent
+          align="center"
+          className="w-72 max-w-sm"
+        >
+          <DropdownMenuGroup>
+            {topBanks.map((bank) => {
+              const href = buildVietQrBankAppUrl({
+                appId: bank.id,
+                accountNo,
+                bankCode,
+                amount,
+                paymentCode,
+                accountName,
+                qrData,
+                platform,
+              });
+              if (!href) return null;
+
+              return (
+                <DropdownMenuItem
+                  key={bank.id}
+                  size="touch"
+                  onClick={() => {
+                    onBankAppHandoff?.();
+                    window.location.href = href;
+                  }}
+                >
+                  <span className="font-medium">{bank.name}</span>
+                </DropdownMenuItem>
+              );
+            })}
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            size="touch"
+            onClick={() => setDrawerOpen(true)}
+            className="font-medium text-primary"
+          >
+            {SELF_ORDER_VI.chooseOtherBank}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <BankAppDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        accountNo={accountNo}
+        bankCode={bankCode}
+        amount={amount}
+        paymentCode={paymentCode}
+        accountName={accountName}
+        qrData={qrData}
+        onBankAppHandoff={onBankAppHandoff}
+      />
+    </>
   );
 }
 

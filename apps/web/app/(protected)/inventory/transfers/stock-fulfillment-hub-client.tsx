@@ -503,9 +503,6 @@ export function StockFulfillmentHubClient({
         }}
         title={dialogTitle}
         description={dialogDescription}
-        bodyClassName={
-          selectedTransfer ? "lg:overflow-hidden" : undefined
-        }
       >
         {selectedTransfer ? (
           <TransferDetailClient

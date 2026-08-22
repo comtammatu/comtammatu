@@ -52,8 +52,8 @@ test("public QR surfaces use the shared web QR renderer", () => {
   assert.match(selfOrderPayment, /<BankAppLauncher/);
   assert.doesNotMatch(selfOrderPayment, /onRefreshPayment/);
   assert.match(selfOrderPayment, /BankAppLauncher/);
-  assert.match(selfOrderPayment, /PROVEN_VIETQR_BANK_APP_ID/);
-  assert.match(selfOrderPayment, /openMbBank/);
+  assert.match(selfOrderPayment, /openBankingApp/);
+  assert.match(selfOrderPayment, /BankAppDrawer/);
   assert.match(selfOrderPayment, /otherBankScanHint/);
   assert.match(selfOrderPayment, /resolveBankAppPlatform/);
   assert.doesNotMatch(selfOrderPayment, /getVietQrBankAppCatalogUrl/);

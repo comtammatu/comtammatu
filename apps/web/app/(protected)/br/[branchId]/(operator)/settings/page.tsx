@@ -6,6 +6,7 @@ import {
   Monitor as IconDeviceDesktop,
   Printer as IconPrinter,
   Shield as IconShield,
+  Volume2 as IconVolume2,
 } from "lucide-react";
 import {
   canAccess,
@@ -66,6 +67,7 @@ export default async function BranchSettingsPage({
     pos: IconDeviceDesktop,
     printers: IconPrinter,
     kds: IconChefHat,
+    audio: IconVolume2,
   });
 
   const setupLinks: SettingsTile[] = links

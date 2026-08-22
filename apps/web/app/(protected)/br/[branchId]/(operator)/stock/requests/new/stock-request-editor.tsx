@@ -2,7 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus as IconPlus, Trash as IconTrash } from "lucide-react";
+import {
+  Plus as IconPlus,
+  Sparkles as IconSparkles,
+  Trash as IconTrash,
+} from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Input } from "@comtammatu/ui/components/input";
@@ -189,6 +193,26 @@ export function StockRequestEditor({
     });
   }
 
+  const suggestedItems = ingredients.filter((ing) => ing.suggestedOrderQty > 0);
+
+  function handleAutoFillSuggested() {
+    if (suggestedItems.length === 0) {
+      toast.info(copy.noSuggestedItems);
+      return;
+    }
+    const newLines: DraftLine[] = suggestedItems.map((ing) => {
+      const baseUnit = ing.units.find((u) => u.isBase) ?? ing.units[0];
+      return {
+        key: crypto.randomUUID(),
+        ingredientId: String(ing.id),
+        entryUnitId: baseUnit ? String(baseUnit.id) : "",
+        quantity: String(ing.suggestedOrderQty),
+      };
+    });
+    setLines(newLines);
+    toast.success(copy.autoFillSuccess(newLines.length));
+  }
+
   return (
     <>
       {copyFromRequestId != null ? (
@@ -200,6 +224,20 @@ export function StockRequestEditor({
         title={copy.itemsTitle}
         description={copy.itemsDescription}
       >
+        {suggestedItems.length > 0 ? (
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleAutoFillSuggested}
+              className="h-8 gap-1.5 text-xs font-semibold text-primary"
+            >
+              <IconSparkles className="size-3.5" />
+              {copy.autoFillSuggested} ({suggestedItems.length})
+            </Button>
+          </div>
+        ) : null}
         <div className="flex flex-col gap-3">
           {lines.map((line) => {
             const ingredient = ingredients.find(

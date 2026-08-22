@@ -83,6 +83,7 @@ import {
 } from "@lib/inventory/grn-unpriced-queue-model";
 import { ConfirmedGrnUnitCostDialog } from "./views/confirmed-grn-unit-cost-dialog";
 import { DraftReceivingSiteDialog } from "./views/draft-receiving-site-dialog";
+import { GrnThermalReceiptDialog } from "./views/grn-thermal-receipt-dialog";
 import { discardGrnDraft } from "../../grn-actions";
 
 export type { GrnDetail as GRNDetail } from "@lib/inventory/grn-detail-model";
@@ -676,6 +677,9 @@ export function GRNDetailClient({
                 unit: line.unit,
               }))}
             />
+          ) : null}
+          {!isDraft || hasBookedLines ? (
+            <GrnThermalReceiptDialog grn={grn} lines={lines} />
           ) : null}
           {(!isDraft || hasBookedLines) && canManageSupplierInvoice ? (
             <Button
@@ -1363,8 +1367,9 @@ export function GRNDetailClient({
         <AppPageHeader
           title={grn.code}
           badge={{
-            children:
-              valuationKind === "pending_invoice"
+            children: grn.invoiceId
+              ? `${statusBadge.label} · ${valuationCopy.hasInvoice}`
+              : valuationKind === "pending_invoice"
                 ? `${statusBadge.label} · ${valuationCopy.pendingInvoice}`
                 : statusBadge.label,
             variant: statusBadge.variant,

@@ -140,7 +140,7 @@ test("active cash and VietQR intents recover from snapshot and lock guest writes
   assert.match(hooks, /abortRef\.current\?\.abort\(\)/);
   assert.match(hooks, /generation !== generationRef\.current/);
   assert.match(hooks, /signal: controller\.signal/);
-  assert.match(hooks, /fast \? 3_000 : 15_000/);
+  assert.match(hooks, /fast \? 8_000 : 25_000/);
   assert.doesNotMatch(hooks, /createClient|\.channel\(/);
   assert.match(hooks, /visibilitychange/);
 });

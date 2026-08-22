@@ -241,6 +241,7 @@ function expandGrnDropdownOptions(
             unit_label:
               line.units?.name ?? line.units?.code ?? "Đơn vị",
             available_quantity: available,
+            unit_cost: line.unit_cost != null ? Number(line.unit_cost) : null,
           },
         ];
       });

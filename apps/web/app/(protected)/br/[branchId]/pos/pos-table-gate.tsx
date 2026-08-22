@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useMemo, type ReactNode } from "react";
+import { memo, useMemo, useRef, type ReactNode } from "react";
 import { AppEmptyState, OperationalTile } from "@/components/surface";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -23,6 +23,7 @@ interface PosTableGateProps {
   tables: BranchTable[];
   selectedTableId: number | null;
   onTableSelect: (table: BranchTable) => void;
+  onTableQuickAction?: (table: BranchTable) => void;
   /** Map<table_id, count of active orders on that table> for multi-order indicator */
   orderCountByTable?: Map<number, number>;
   /** Map<table_id, visual state derived from active unpaid orders. */
@@ -50,6 +51,7 @@ interface TableButtonProps {
   hasPendingSelfOrderRequest: boolean;
   hasStaffCall: boolean;
   onTableSelect: (table: BranchTable) => void;
+  onTableQuickAction?: (table: BranchTable) => void;
 }
 
 const TableButton = memo(function TableButton({
@@ -62,11 +64,38 @@ const TableButton = memo(function TableButton({
   hasPendingSelfOrderRequest,
   hasStaffCall,
   onTableSelect,
+  onTableQuickAction,
 }: TableButtonProps) {
-  const handleClick = useCallback(
-    () => onTableSelect(table),
-    [onTableSelect, table],
-  );
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isLongPressActiveRef = useRef(false);
+
+  const handlePointerDown = () => {
+    isLongPressActiveRef.current = false;
+    longPressTimerRef.current = setTimeout(() => {
+      isLongPressActiveRef.current = true;
+      onTableQuickAction?.(table);
+    }, 500);
+  };
+
+  const handlePointerUpOrLeave = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    onTableQuickAction?.(table);
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (isLongPressActiveRef.current) {
+      e.preventDefault();
+      return;
+    }
+    onTableSelect(table);
+  };
   const tileVisualState = getPosTableTileVisualState({
     tableStatus: table.status,
     orderCount,
@@ -124,6 +153,11 @@ const TableButton = memo(function TableButton({
         "w-full min-w-0 flex-col items-stretch justify-start gap-1.5 p-2.5 text-left whitespace-normal hover:shadow-effect-card-hover active:scale-[0.98] transition-transform touch-manipulation select-none chrome-tap sm:gap-3 sm:p-3.5 lg:p-4",
         tileVisualState === "served" && !isSelected && "bg-success/10",
       )}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUpOrLeave}
+      onPointerLeave={handlePointerUpOrLeave}
+      onPointerCancel={handlePointerUpOrLeave}
+      onContextMenu={handleContextMenu}
       onClick={handleClick}
     >
       <div className="flex w-full min-w-0 items-center justify-between gap-1">
@@ -172,6 +206,7 @@ function PosTableGateComponent({
   tables,
   selectedTableId,
   onTableSelect,
+  onTableQuickAction,
   orderCountByTable,
   tableOrderVisualStateByTable,
   tableSeatingTimeByTable,
@@ -252,6 +287,7 @@ function PosTableGateComponent({
                       }
                       hasStaffCall={staffCallTableIds?.has(table.id) ?? false}
                       onTableSelect={onTableSelect}
+                      onTableQuickAction={onTableQuickAction}
                     />
                   ))}
                 </div>

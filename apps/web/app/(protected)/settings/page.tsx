@@ -4,6 +4,7 @@ import {
   Printer as IconPrinter,
   Radar as IconRadar,
   ShieldCheck as IconShieldCheck,
+  Volume2 as IconVolume2,
 } from "lucide-react";
 import { redirect } from "next/navigation";
 import {
@@ -37,7 +38,7 @@ export default async function SettingsPage() {
     >
       {canManageTenantSettings ? (
         <AppSection title={copy.tenantSettingsTitle}>
-          <LinkCardGrid className="lg:grid-cols-2 xl:grid-cols-2">
+          <LinkCardGrid className="lg:grid-cols-3 xl:grid-cols-3">
             <AppLinkCard
               href="/settings/general"
               title={copy.generalTitle}
@@ -51,6 +52,13 @@ export default async function SettingsPage() {
               description={copy.paymentsDescription}
               icon={<IconCreditCard />}
               tone="success"
+              ctaLabel={copy.openSettings}
+            />
+            <AppLinkCard
+              href="/settings/audio"
+              title={copy.audioTitle}
+              description={copy.audioDescription}
+              icon={<IconVolume2 />}
               ctaLabel={copy.openSettings}
             />
           </LinkCardGrid>

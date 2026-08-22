@@ -11,12 +11,12 @@ const kdsRealtimeSource = readFileSync(
   "utf8",
 );
 
-test("KDS fallback poll is fast when Realtime drops a ticket event", () => {
-  assert.match(kdsRealtimeSource, /const POLL_INTERVAL_MS = 3_000;/);
-  assert.match(kdsRealtimeSource, /const POLL_STALE_MS = 3_000;/);
+test("KDS fallback poll cadence is calibrated to 25s safety net", () => {
+  assert.match(kdsRealtimeSource, /const POLL_INTERVAL_MS = 25_000;/);
+  assert.match(kdsRealtimeSource, /const POLL_STALE_MS = 25_000;/);
   assert.match(kdsRealtimeSource, /table: "kds_tickets"/);
   assert.match(kdsRealtimeSource, /window\.setInterval/);
   assert.match(kdsRealtimeSource, /visibilitychange/);
-  assert.doesNotMatch(kdsRealtimeSource, /const POLL_INTERVAL_MS = 12_000;/);
-  assert.doesNotMatch(kdsRealtimeSource, /const POLL_STALE_MS = 12_000;/);
+  assert.doesNotMatch(kdsRealtimeSource, /const POLL_INTERVAL_MS = 3_000;/);
+  assert.doesNotMatch(kdsRealtimeSource, /const POLL_STALE_MS = 3_000;/);
 });

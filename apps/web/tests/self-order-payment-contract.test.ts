@@ -191,8 +191,8 @@ test("Self-Order creates the selected payment from footer CTAs and may send a VA
   assert.match(messages, /issueVatInvoice: "Xuất hoá đơn GTGT"/);
   assert.match(paymentPanel, /<QrCodeImage[\s\S]*saveVietQr/);
   assert.match(paymentPanel, /<BankAppLauncher/);
-  assert.match(paymentPanel, /PROVEN_VIETQR_BANK_APP_ID/);
-  assert.match(paymentPanel, /openMbBank/);
+  assert.match(paymentPanel, /openBankingApp/);
+  assert.match(paymentPanel, /BankAppDrawer/);
   assert.match(paymentPanel, /otherBankScanHint/);
   assert.doesNotMatch(
     paymentPanel,
@@ -333,8 +333,9 @@ test("returning from a bank app restores the live VietQR payment sheet", () => {
   assert.match(client, /setPaymentOpen\(false\)/);
   assert.match(paymentPanel, /onBankAppHandoff\?: \(\) => void/);
   assert.match(paymentPanel, /onBankAppHandoff\?\.\(\)/);
-  assert.match(paymentPanel, /render=\{<a href=\{href\} \/>\}/);
-  assert.doesNotMatch(paymentPanel, /target="_blank"/);
+  const bankDrawer = readWeb("app/q/[token]/self-order/bank-app-drawer.tsx");
+  assert.match(bankDrawer, /render=\{<a href=\{href\} \/>\}/);
+  assert.doesNotMatch(bankDrawer, /target="_blank"/);
   assert.match(paymentPanel, /resolveBankAppPlatform\(navigator\)/);
   assert.match(paymentPanel, /className="size-40 max-w-40"/);
   assert.match(

@@ -43,6 +43,7 @@ import {
   type OrderTarget,
 } from "./_components/pos-order-target-row";
 import { SelfOrderApprovalSheet } from "./_components/self-order-approval-sheet";
+import { TableQuickActionSheet } from "./_components/table-quick-action-sheet";
 import {
   acknowledgeSelfOrderStaffCall,
   fetchSelfOrderPosState,
@@ -414,7 +415,14 @@ export function PosDesktopInner({
   const [allowOccupiedTableId, setAllowOccupiedTableId] = useState<
     number | null
   >(null);
+  const [quickActionTable, setQuickActionTable] = useState<BranchTable | null>(
+    null,
+  );
   const isTouchLayout = useIsMobile(1280);
+
+  const handleTableQuickAction = useCallback((table: BranchTable) => {
+    setQuickActionTable(table);
+  }, []);
 
   const menuItemById = useMemo(() => {
     const map = new Map<number, MenuItem>();
@@ -516,6 +524,7 @@ export function PosDesktopInner({
       playOperationalAlert({
         kind: guestAlert.kind,
         mode: audioMode,
+        branchId,
         slots: { tableLabel: guestAlert.tableLabel },
       });
     }
@@ -530,7 +539,7 @@ export function PosDesktopInner({
     void refreshSelfOrderPosState();
     const timer = window.setInterval(() => {
       void refreshSelfOrderPosState();
-    }, 5_000);
+    }, 30_000);
     function refreshWhenVisible() {
       if (document.visibilityState === "visible") {
         void refreshSelfOrderPosState();
@@ -545,7 +554,7 @@ export function PosDesktopInner({
   }, [refreshSelfOrderPosState]);
 
   // Instant self-order alert: shell's private branch:{id}:ops bus (same channel
-  // as menu sync) fires this loader when self_order_* rows change. The 5s poll
+  // as menu sync) fires this loader when self_order_* rows change. The 30s poll
   // stays as a safety net for a silently dropped socket (the loader is
   // idempotent — tone only plays on genuinely new request ids).
   // Assign in the render body so the bus always calls the latest closure.
@@ -918,6 +927,21 @@ export function PosDesktopInner({
       currentItems.filter((item) => item.key !== key),
     );
   }, []);
+
+  const updateAppendDraftItemQuantity = useCallback(
+    (key: string, delta: number) => {
+      setAppendDraftItems((currentItems) =>
+        currentItems
+          .map((item) =>
+            item.key === key
+              ? { ...item, quantity: item.quantity + delta }
+              : item,
+          )
+          .filter((item) => item.quantity > 0),
+      );
+    },
+    [],
+  );
 
   const handleAppendDraftItemEdit = useCallback(
     (cartItem: CartItem) => {
@@ -1821,6 +1845,7 @@ export function PosDesktopInner({
         onSubmit: handleSubmitAppendDraft,
         onCancel: cancelAppendWorkflow,
         onRemoveItem: removeAppendDraftItem,
+        onUpdateQuantity: updateAppendDraftItemQuantity,
         onEditItem: handleAppendDraftItemEdit,
       },
       onSubmitOrder: handleSubmitOrder,
@@ -1843,6 +1868,7 @@ export function PosDesktopInner({
       handleSubmitAppendDraft,
       cancelAppendWorkflow,
       removeAppendDraftItem,
+      updateAppendDraftItemQuantity,
       handleAppendDraftItemEdit,
       handleSubmitOrder,
       handleCartItemCustomize,
@@ -1923,6 +1949,11 @@ export function PosDesktopInner({
     setActiveTable(null);
   }, [cartItemCount, cartOrderType, setActiveTable]);
 
+  const handleEditDelivery = useCallback(() => {
+    setShowOrders(false);
+    setCartDrawerOpen(true);
+  }, []);
+
   const orderTargetLabel = currentOrderTarget?.label ?? null;
   const orderTargetRow =
     menuContextReady &&
@@ -1933,6 +1964,7 @@ export function PosDesktopInner({
         appendDraftQuantity={appendDraftQuantity}
         onCancel={cancelAppendWorkflow}
         onSwitch={handleSwitchTableMode}
+        onEditDelivery={handleEditDelivery}
       />
     ) : null;
 
@@ -2048,6 +2080,7 @@ export function PosDesktopInner({
                 tables={tables}
                 selectedTableId={selectedTableId}
                 onTableSelect={handleTableSelect}
+                onTableQuickAction={handleTableQuickAction}
                 orderCountByTable={orderCountByTable}
                 tableOrderVisualStateByTable={tableOrderVisualStateByTable}
                 tableSeatingTimeByTable={tableSeatingTimeByTable}
@@ -2281,6 +2314,47 @@ export function PosDesktopInner({
         onAppendOrder={handleAppendOrderFromPicker}
         onCreateNew={handleCreateNewOnOccupied}
         onClose={handleClosePicker}
+      />
+
+      <TableQuickActionSheet
+        table={quickActionTable}
+        open={quickActionTable !== null}
+        onOpenChange={(open) => {
+          if (!open) setQuickActionTable(null);
+        }}
+        activeOrder={
+          quickActionTable
+            ? (orders.find(
+                (o) =>
+                  o.table_id === quickActionTable.id &&
+                  isActiveUnpaidPosOrder(o, ACTIVE_POS_STATUSES),
+              ) ?? null)
+            : null
+        }
+        orderCount={
+          quickActionTable
+            ? (orderCountByTable.get(quickActionTable.id) ?? 0)
+            : 0
+        }
+        onOpenBill={(orderId) => openBill(orderId, "payment")}
+        onOpenDetail={(orderId, orderNumber) =>
+          focusOrderWorkflow(orderId, orderNumber)
+        }
+        onStartAppend={(orderId, orderNumber) => {
+          setCartDrawerOpen(false);
+          startAppendTarget(orderId, orderNumber);
+          setShowOrders(false);
+          toast.message("Chạm món trên thực đơn để gọi thêm");
+        }}
+        onTransferTable={(orderId) => {
+          focusOrderWorkflow(orderId, "");
+        }}
+        onStartNewOrder={(tableId) => {
+          setActiveTable(tableId);
+        }}
+        onPrintProvisional={(orderId) => {
+          openBill(orderId, "receipt");
+        }}
       />
     </>
   );

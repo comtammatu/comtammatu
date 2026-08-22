@@ -7,6 +7,8 @@ export const PAGE_ARCHETYPES = {
   // route. LANDING is the closest archetype (index of sections, no fetch).
   "apps/web/app/(dev)/ds-lab/page.tsx": "LANDING",
   "apps/web/app/(protected)/page.tsx": "LANDING",
+  "apps/web/app/(protected)/settings/(tenant)/audio/page.tsx":
+    "SETTINGS-PANEL",
   "apps/web/app/(protected)/settings/(tenant)/general/page.tsx":
     "SETTINGS-PANEL",
   "apps/web/app/(protected)/settings/(tenant)/payments/page.tsx":
@@ -27,6 +29,8 @@ export const PAGE_ARCHETYPES = {
     "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/profile/payslip/page.tsx":
     "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/settings/audio/page.tsx":
+    "SETTINGS-PANEL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/settings/kds/page.tsx":
     "SETTINGS-PANEL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/settings/network/page.tsx":
@@ -682,6 +686,7 @@ export const CONTROL_SURFACE_COMPOSE = {
   "apps/web/app/(protected)/work/tasks/[id]/page.tsx": "REDIRECT",
   "apps/web/app/(protected)/work/team/page.tsx": "LIST",
   "apps/web/app/(protected)/page.tsx": "DASHBOARD_REPORT",
+  "apps/web/app/(protected)/settings/(tenant)/audio/page.tsx": "DETAIL",
   "apps/web/app/(protected)/settings/(tenant)/general/page.tsx": "DETAIL",
   "apps/web/app/(protected)/settings/(tenant)/payments/page.tsx": "DETAIL",
   "apps/web/app/(protected)/settings/activity/page.tsx": "LIST",

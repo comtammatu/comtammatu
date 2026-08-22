@@ -317,12 +317,18 @@ export function GrnListClient({
               value={row.status}
               label={statusLabels[row.status] ?? grnCopy.unknownStatus}
             />
-            {canManageSupplierInvoice &&
-            resolveGrnValuationDisplay({
-              status: row.status,
-              invoiceId: row.invoiceId,
-            }) === "pending_invoice" ? (
-              <Badge variant="warning">{valuationCopy.pendingInvoice}</Badge>
+            {row.invoiceId ? (
+              <Badge variant="outline" className="text-success text-2xs font-normal">
+                {valuationCopy.hasInvoice}
+              </Badge>
+            ) : canManageSupplierInvoice &&
+              resolveGrnValuationDisplay({
+                status: row.status,
+                invoiceId: row.invoiceId,
+              }) === "pending_invoice" ? (
+              <Badge variant="warning" className="text-2xs font-normal">
+                {valuationCopy.pendingInvoice}
+              </Badge>
             ) : null}
           </div>
           <div className="font-mono text-xs text-muted-foreground">

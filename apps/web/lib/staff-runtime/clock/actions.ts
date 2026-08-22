@@ -473,7 +473,19 @@ export async function attachChecklistTaskPhoto(
 
   if (error) {
     await service.storage.from(ATTENDANCE_PHOTO_BUCKET).remove([photoPath]);
-    return { success: false, error: "Lưu ảnh minh chứng thất bại." };
+    if (error.message?.includes("self_service_not_allowed")) {
+      return {
+        success: false,
+        error: "Tài khoản không thuộc diện thực hiện việc trong ca của nhân viên.",
+      };
+    }
+    if (error.message?.includes("task_photo_not_allowed")) {
+      return {
+        success: false,
+        error: "Ca làm việc đã kết thúc hoặc công việc không cho phép chụp ảnh.",
+      };
+    }
+    return { success: false, error: "Lưu ảnh minh chứng thất bại. Vui lòng thử lại." };
   }
 
   revalidateEmployeeWorkPaths(ctx.branchId);

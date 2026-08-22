@@ -11,6 +11,8 @@ test("operational cloud TTS stays allowlisted, authenticated, and cloud-only", (
   const voice = read("lib/operational-voice.ts");
   const audio = read("lib/operational-audio.ts");
   const gateway = read("lib/operational-tts-gateway.ts");
+  const config = read("lib/operational-tts-config.ts");
+  const sharedTts = read("../../packages/shared/src/settings/tts.ts");
   const provider = read(
     "app/(protected)/br/[branchId]/pos/_providers/pos-desktop-provider.tsx",
   );
@@ -26,7 +28,22 @@ test("operational cloud TTS stays allowlisted, authenticated, and cloud-only", (
   assert.match(route, /bytes === "rate_limited"/);
   assert.match(route, /get\("live"\) === "1"/);
   assert.match(route, /getCachedOperationalUtterance/);
+  assert.match(route, /resolveTtsConfig/);
+  assert.match(route, /branchId/);
   assert.doesNotMatch(route, /openai\.com/);
+
+  assert.match(sharedTts, /ALLOWED_TTS_MODELS/);
+  assert.match(sharedTts, /openai\/tts-1/);
+  assert.match(sharedTts, /fish-audio\/s2\.1-pro/);
+  assert.doesNotMatch(sharedTts, /tts-1-hd/);
+  assert.match(sharedTts, /isAllowedTtsModel/);
+  assert.match(sharedTts, /DEFAULT_TTS_MODEL/);
+  assert.match(sharedTts, /DEFAULT_TTS_VOICE/);
+
+  assert.match(config, /resolveTtsConfig/);
+  assert.match(config, /resolveTtsConfigFromRows/);
+  assert.match(config, /branch_settings/);
+  assert.match(config, /system_settings/);
 
   assert.match(gateway, /from "ai"/);
   assert.match(gateway, /from "@ai-sdk\/gateway"/);
@@ -34,15 +51,12 @@ test("operational cloud TTS stays allowlisted, authenticated, and cloud-only", (
   assert.match(gateway, /GatewayError/);
   assert.match(gateway, /gatewayCoolDownUntil/);
   assert.match(gateway, /"rate_limited"/);
-  assert.match(gateway, /gateway\.speechModel\(TTS_MODEL\)/);
+  assert.match(gateway, /gateway\.speechModel\(effectiveConfig\.model\)/);
   assert.match(gateway, /outputFormat: "mp3"/);
-  assert.match(gateway, /const TTS_MODEL = "openai\/tts-1"/);
   assert.doesNotMatch(gateway, /language:/);
   assert.doesNotMatch(gateway, /instructions:/);
   assert.doesNotMatch(gateway, /ai-gateway\.vercel\.sh/);
   assert.doesNotMatch(gateway, /tts-1-hd/);
-  assert.match(gateway, /const TTS_VOICE = "nova"/);
-  assert.doesNotMatch(gateway, /OPERATIONAL_TTS_VOICE/);
   assert.match(gateway, /server-only/);
   assert.match(gateway, /globalThis\.process\?\.env/);
   assert.match(gateway, /readRuntimeSecret\("AI_GATEWAY_API_KEY"\)/);
@@ -69,7 +83,7 @@ test("operational cloud TTS stays allowlisted, authenticated, and cloud-only", (
   assert.match(route, /maxDuration = 15/);
   assert.doesNotMatch(route, /export const dynamic/);
   assert.match(voice, /params\.set\("live", "1"\)/);
-  assert.match(voice, /clipRequest\(text, true\)/);
+  assert.match(voice, /clipRequest\(text, true, branchId\)/);
   assert.match(voice, /prefetchGeneration/);
   assert.doesNotMatch(voice, /PREFETCH_NETWORK_GAP_MS/);
   assert.doesNotMatch(voice, /PREFETCH_FETCH_TIMEOUT_MS/);
@@ -80,7 +94,7 @@ test("operational cloud TTS stays allowlisted, authenticated, and cloud-only", (
     voice,
     /if \(response\.status === 503\) \{\s*cloudTtsAvailable = false;/,
   );
-  assert.match(audio, /primeOperationalVoice\(text\)/);
+  assert.match(audio, /primeOperationalVoice\(text, branchId\)/);
   assert.match(audio, /prefetchOperationalVoiceCatalog\(/);
   assert.match(provider, /tableVoiceLabels/);
   assert.match(sync, /shouldAnnouncePaymentReceived/);

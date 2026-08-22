@@ -45,6 +45,7 @@ export type GrnOption = {
     unitId: number;
     unitLabel: string;
     availableQuantity: number;
+    unitCost?: number | null;
   }>;
 };
 
@@ -254,11 +255,12 @@ export type SupplierCreditFormValues = z.infer<typeof supplierCreditSchema>;
 
 export function createSupplierInvoiceDefaultValues(
   preselectGrnOptionKey?: string | null,
+  preselectSupplierId?: string | null,
 ): SupplierInvoiceFormValues {
   return {
     invoiceKind: "goods",
     grnId: preselectGrnOptionKey ?? "none",
-    supplierId: "",
+    supplierId: preselectSupplierId ?? "",
     invoiceDate: getVNDateString(),
     invoiceVatRate: 8,
     documentDiscount: "",

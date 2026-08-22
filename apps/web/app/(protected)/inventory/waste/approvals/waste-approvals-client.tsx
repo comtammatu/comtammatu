@@ -8,7 +8,13 @@ import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Check as IconCheck, X as IconX } from "lucide-react";
-import { Item, ItemGroup } from "@comtammatu/ui/components/item";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { WasteTierBadge } from "@/(protected)/inventory/_components/waste-tier-badge";
 import { getIssueBaseQuantity } from "@/(protected)/inventory/_lib/issue-units";
 import { approveWaste } from "@/(protected)/inventory/waste-actions";
@@ -71,18 +77,72 @@ export function WasteApprovalsClient({
       ) : rows.length === 0 ? (
         <AppEmptyState compact title={copy.empty} symbol="riceGrain" />
       ) : (
-        <div className="flex flex-col gap-3">
-          {rows.map((row) => (
-            <WasteApprovalCard
-              key={row.issueId}
-              row={row}
-              onResolved={(id) =>
-                setRows((prev) =>
-                  prev.filter((current) => current.issueId !== id),
-                )
-              }
-            />
-          ))}
+        <div className="flex flex-col gap-4">
+          <ItemGroup className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <Item variant="outline" size="sm">
+              <ItemContent>
+                <ItemDescription className="text-xs">
+                  {copy.totalEstimatedValue}
+                </ItemDescription>
+                <ItemTitle className="font-mono text-base font-semibold text-foreground">
+                  {formatVND(
+                    rows.reduce((sum, r) => sum + (r.monetary?.totalValue ?? 0), 0),
+                  )}
+                </ItemTitle>
+              </ItemContent>
+            </Item>
+            <Item variant="outline" size="sm">
+              <ItemContent>
+                <ItemDescription className="text-xs">
+                  {copy.authorityBreakdown}
+                </ItemDescription>
+                <ItemTitle className="text-sm font-semibold">
+                  {copy.tier1Label}:{" "}
+                  <span className="font-mono font-semibold">
+                    {
+                      rows.filter((r) =>
+                        r.items.some((i) => (i.wasteTier ?? 1) === 1),
+                      ).length
+                    }
+                  </span>{" "}
+                  · {copy.tier2Label}:{" "}
+                  <span className="font-mono font-semibold text-destructive">
+                    {
+                      rows.filter((r) =>
+                        r.items.some((i) => i.wasteTier === 2),
+                      ).length
+                    }
+                  </span>
+                </ItemTitle>
+              </ItemContent>
+            </Item>
+            <Item variant="outline" size="sm">
+              <ItemContent>
+                <ItemDescription className="text-xs">
+                  {copy.totalLines}
+                </ItemDescription>
+                <ItemTitle className="font-mono text-base font-semibold text-foreground">
+                  {copy.lineCount(
+                    rows.reduce((sum, r) => sum + r.items.length, 0),
+                  )}
+                </ItemTitle>
+              </ItemContent>
+            </Item>
+          </ItemGroup>
+
+          <div className="flex flex-col gap-3">
+            {rows.map((row) => (
+              <WasteApprovalCard
+                key={row.issueId}
+                row={row}
+                onResolved={(id) =>
+                  setRows((prev) =>
+                    prev.filter((current) => current.issueId !== id),
+                  )
+                }
+              />
+            ))}
+          </div>
         </div>
       )}
     </AppPage>

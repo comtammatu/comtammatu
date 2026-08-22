@@ -1,6 +1,10 @@
 import Link from "next/link";
-import { Camera as IconCamera } from "lucide-react";
+import {
+  Camera as IconCamera,
+  ListChecks as IconListChecks,
+} from "lucide-react";
 import { formatVNClockTime } from "@comtammatu/shared/time";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { BranchOperatorControlBar } from "@lib/branch-operator/components/branch-operator-page";
 import {
@@ -32,7 +36,12 @@ function getWorkTitle(state: TodayWorkState): string {
     if (blocked) return blocked.title;
     return copy.statusNotStarted;
   }
-  if (status === "working") return copy.statusWorking;
+  if (status === "working") {
+    if (state.checklist.requiredRemaining === 0 && state.checklist.total > 0) {
+      return copy.statusReadyToCheckout;
+    }
+    return copy.statusWorking;
+  }
   if (status === "checkout_pending") return copy.statusCheckoutPending;
   return copy.statusDone;
 }
@@ -67,6 +76,9 @@ export async function BranchTodayStatus({
       ? `${dateLabel} · ${currentShiftName} ${currentShiftRange}`
       : dateLabel;
 
+  const isReadyToCheckout =
+    state.status === "working" && state.checklist.requiredRemaining === 0;
+
   const cta =
     state.status === "working" && state.checklist.remaining > 0 ? (
       <Button
@@ -75,6 +87,7 @@ export async function BranchTodayStatus({
         className="w-full"
         render={<Link href={`/br/${branchId}/shift`} />}
       >
+        <IconListChecks data-icon="inline-start" />
         {copy.tasksRemaining(state.checklist.remaining)}
       </Button>
     ) : state.status === "not_started" && !isClockInBlocked(state) ? (
@@ -96,7 +109,17 @@ export async function BranchTodayStatus({
         aria-atomic="true"
       >
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">{title}</p>
+          <div className="flex items-center gap-2">
+            <p className="truncate text-sm font-semibold">{title}</p>
+            {state.status === "working" && state.checklist.total > 0 ? (
+              <Badge
+                variant={isReadyToCheckout ? "success" : "secondary"}
+                className="shrink-0 text-2xs"
+              >
+                {copy.tasksProgress(state.checklist.done, state.checklist.total)}
+              </Badge>
+            ) : null}
+          </div>
           <p className="truncate text-xs text-muted-foreground">{todayMeta}</p>
         </div>
       </BranchOperatorControlBar>
@@ -104,3 +127,4 @@ export async function BranchTodayStatus({
     </>
   );
 }
+

@@ -9,6 +9,7 @@ export const settings = {
     pos: "POS",
     kds: "Trạm bếp",
     printers: "Máy in",
+    audio: "Âm thanh",
   },
   common: {
     branchLabel: "Chi nhánh:",
@@ -89,6 +90,9 @@ export const settings = {
     posSessionsTitle: "Đối soát ca POS",
     posSessionsDescription:
       "Lịch sử ca, đơn đã bán, doanh thu và chênh lệch quỹ.",
+    audioTitle: "Âm thanh thông báo",
+    audioDescription:
+      "Cấu hình giọng đọc và nhà cung cấp TTS cho POS và Bếp (KDS).",
   },
   activity: {
     title: "Nhật ký hệ thống",
@@ -817,6 +821,11 @@ export const settings = {
     networkSetupTitle: "Cổng mạng POS/KDS",
     networkSetupDescription:
       "Tin cậy wifi quán hoặc tạm mở POS/KDS khi mất mạng cửa hàng.",
+    audioSetupTitle: "Âm thanh",
+    audioSetupDescription:
+      "Cấu hình giọng đọc và nhà cung cấp TTS riêng cho chi nhánh.",
+    audioDescription: (branchName: string) =>
+      `Cấu hình giọng đọc và âm thanh thông báo của ${branchName}.`,
   },
   branchTable: {
     operationPoint: "Chi nhánh",
@@ -989,5 +998,29 @@ export const settings = {
     tax: "Thuế",
     total: "Tổng",
     billNote: "Ghi chú đơn",
+  },
+  audio: {
+    saved: "Đã lưu cài đặt âm thanh",
+    saveFailed: "Không thể lưu cài đặt âm thanh. Vui lòng thử lại.",
+    providerSectionTitle: "Nhà cung cấp giọng đọc (TTS)",
+    providerSectionDescription:
+      "Chọn dịch vụ tổng hợp giọng nói cho thông báo POS và Bếp.",
+    modelLabel: "Nhà cung cấp / Mô hình",
+    modelOpenAi: "OpenAI (tts-1)",
+    modelFishAudio: "Fish Audio (s2.1-pro)",
+    voiceLabel: "Giọng đọc",
+    voiceDefaultFishAudio: "Mặc định (Fish Audio)",
+    customVoiceLabel: "Mã giọng đọc (tùy chọn)",
+    customVoiceHelp:
+      "Để trống để sử dụng giọng đọc mặc định của nhà cung cấp.",
+    previewButton: "Nghe thử",
+    previewPlaying: "Đang phát…",
+    previewSampleText: "Phiếu mới bàn 5",
+    inheritTenantLabel: "Kế thừa thiết lập của chuỗi",
+    inheritTenantHelp:
+      "Sử dụng nhà cung cấp và giọng đọc được cấu hình chung cho toàn chuỗi.",
+    customBranchLabel: "Tùy chỉnh riêng cho chi nhánh này",
+    saveSettings: "Lưu cài đặt",
+    audioSettingsLoadFailed: "Không tải được dữ liệu cài đặt âm thanh.",
   },
 } as const;

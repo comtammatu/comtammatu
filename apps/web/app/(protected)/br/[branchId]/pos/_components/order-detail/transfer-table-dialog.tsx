@@ -1,20 +1,14 @@
 "use client";
 
 import { Button } from "@comtammatu/ui/components/button";
+import { Frame } from "@comtammatu/ui/components/frame";
+import { cn } from "@comtammatu/ui";
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
 } from "@comtammatu/ui/components/field";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
 import { POS_VI } from "@comtammatu/shared/messages";
 import { StationSheet } from "@/components/surface";
 import type { BranchTable } from "../../page";
@@ -102,38 +96,44 @@ export function TransferTableDialog({
           <FieldLabel htmlFor="transfer-table">
             {POS_VI.transferTargetLabel}
           </FieldLabel>
-          <Select value={tableId} onValueChange={onTableIdChange}>
-            <SelectTrigger id="transfer-table" size="touch">
-              <SelectValue placeholder={POS_VI.transferSelectPlaceholder} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                {availableTables.map((table) => {
-                  const isCurrent = table.id === currentTableId;
-                  const orderCount = orderCountByTable?.get(table.id) ?? 0;
-                  const suffix = isCurrent
-                    ? " (hiện tại)"
-                    : orderCount > 0
-                      ? ` — ${orderCount} đơn`
-                      : "";
-                  const tableLabel = `Bàn ${table.number}${suffix}`;
-                  return (
-                    <SelectItem
-                      key={table.id}
-                      value={String(table.id)}
-                      disabled={isCurrent}
-                    >
-                      {tableLabel}
-                    </SelectItem>
-                  );
-                })}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+          <Frame className="grid max-h-56 grid-cols-4 gap-2 overflow-y-auto p-2 sm:grid-cols-6">
+            {availableTables.map((table) => {
+              const isCurrent = table.id === currentTableId;
+              const isSelected = tableId === String(table.id);
+              const orderCount = orderCountByTable?.get(table.id) ?? 0;
+              return (
+                <Button
+                  key={table.id}
+                  type="button"
+                  variant={
+                    isSelected ? "default" : isCurrent ? "ghost" : "outline"
+                  }
+                  size="touch"
+                  disabled={isCurrent}
+                  className={cn(
+                    "flex flex-col items-center justify-center p-1 font-semibold",
+                    isSelected && "ring-2 ring-primary ring-offset-1",
+                  )}
+                  onClick={() => onTableIdChange(String(table.id))}
+                >
+                  <span className="text-base font-semibold tabular-nums">
+                    {table.number}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {isCurrent
+                      ? "Hiện tại"
+                      : orderCount > 0
+                        ? `${orderCount} đơn`
+                        : "Trống"}
+                  </span>
+                </Button>
+              );
+            })}
+          </Frame>
           <FieldDescription>
             {selectedTable
               ? `Sẵn sàng chuyển sang ${targetLabel}.`
-              : "Chọn bàn đích trước khi xác nhận."}
+              : "Chạm bàn đích trên bảng chọn trước khi xác nhận."}
           </FieldDescription>
         </Field>
       </FieldGroup>

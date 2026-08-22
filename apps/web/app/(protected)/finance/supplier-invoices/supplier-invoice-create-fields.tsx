@@ -177,7 +177,11 @@ export function SupplierInvoiceCreateFields({
             quantity: line.availableQuantity,
             unitId: line.unitId,
             unitLabel: line.unitLabel,
-            unitPrice: preserved?.unitPrice ?? "",
+            unitPrice:
+              preserved?.unitPrice ||
+              (line.unitCost != null && line.unitCost > 0
+                ? canonicalMoney(String(line.unitCost))
+                : ""),
             grossLineTotal: preserved?.grossLineTotal ?? "",
             lineDiscount: preserved?.lineDiscount ?? "",
             vatRate,

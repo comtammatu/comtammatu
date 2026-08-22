@@ -132,6 +132,9 @@ export const employee = {
     workflowCheckoutStep: "Kết ca",
     workflowManagerCheckoutStep: "Ra ca",
     workflowCheckoutDescription: "Chốt giờ ra.",
+    workflowCheckoutBlocked: (remaining: number) => `Còn ${remaining} việc bắt buộc`,
+    workflowCheckoutBlockedDescription: (remaining: number) =>
+      `Cần hoàn thành ${remaining} việc bắt buộc trước khi gửi yêu cầu kết ca.`,
     viewSchedule: "Xem lịch ca",
     scheduleTitle: "Lịch làm",
     scheduleDescription: "Ca làm và ngày công",

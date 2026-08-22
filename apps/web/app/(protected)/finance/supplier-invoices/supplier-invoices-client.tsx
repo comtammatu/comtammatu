@@ -231,9 +231,15 @@ export function SupplierInvoicesClient({
       : [];
   const preselectGrnOptionKey =
     matchingGrns.length === 1 ? (matchingGrns[0]?.optionKey ?? null) : null;
+  const preselectSupplierId =
+    matchingGrns.length === 1 ? String(matchingGrns[0]?.supplierId) : null;
   const createDefaultValues = useMemo(
-    () => createSupplierInvoiceDefaultValues(preselectGrnOptionKey),
-    [createOpen, preselectGrnOptionKey],
+    () =>
+      createSupplierInvoiceDefaultValues(
+        preselectGrnOptionKey,
+        preselectSupplierId,
+      ),
+    [createOpen, preselectGrnOptionKey, preselectSupplierId],
   );
 
   useEffect(() => {

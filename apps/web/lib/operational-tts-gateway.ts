@@ -1,10 +1,12 @@
 import "server-only";
 import { generateSpeech } from "ai";
 import { GatewayError, gateway } from "@ai-sdk/gateway";
+import {
+  DEFAULT_TTS_MODEL,
+  DEFAULT_TTS_VOICE,
+  type ResolvedTtsConfig,
+} from "@comtammatu/shared/settings";
 
-// Locked cost choice: cheapest OpenAI speech model on Gateway. Not env-switched.
-const TTS_MODEL = "openai/tts-1";
-const TTS_VOICE = "nova";
 const TTS_TIMEOUT_MS = 8_000;
 const MAX_CATALOG_CLIPS = 200;
 const MAX_AMOUNT_CLIPS = 80;
@@ -30,8 +32,22 @@ function getOperationalTtsToken(): string | null {
   );
 }
 
-export function getCachedOperationalUtterance(text: string): Buffer | null {
-  return clipCache.get(text) ?? null;
+export function buildClipCacheKey(
+  text: string,
+  cfg?: ResolvedTtsConfig,
+): string {
+  const model = cfg?.model ?? DEFAULT_TTS_MODEL;
+  const voice =
+    cfg?.voice ?? (model === DEFAULT_TTS_MODEL ? DEFAULT_TTS_VOICE : "");
+  return `${model}\0${voice}\0${text}`;
+}
+
+export function getCachedOperationalUtterance(
+  text: string,
+  cfg?: ResolvedTtsConfig,
+): Buffer | null {
+  const key = buildClipCacheKey(text, cfg);
+  return clipCache.get(key) ?? null;
 }
 
 export function isOperationalTtsConfigured(): boolean {
@@ -42,13 +58,16 @@ export function isOperationalTtsConfigured(): boolean {
   );
 }
 
-function isAmountUtterance(text: string): boolean {
+function isAmountUtterance(keyOrText: string): boolean {
+  const text = keyOrText.includes("\0")
+    ? (keyOrText.split("\0").at(-1) ?? "")
+    : keyOrText;
   return text.startsWith(RECEIVED_AMOUNT_PREFIX);
 }
 
-function rememberClip(text: string, bytes: Buffer): void {
-  clipCache.delete(text);
-  const amount = isAmountUtterance(text);
+function rememberClip(cacheKey: string, bytes: Buffer): void {
+  clipCache.delete(cacheKey);
+  const amount = isAmountUtterance(cacheKey);
   const limit = amount ? MAX_AMOUNT_CLIPS : MAX_CATALOG_CLIPS;
   let matching = 0;
   for (const key of clipCache.keys()) {
@@ -62,13 +81,19 @@ function rememberClip(text: string, bytes: Buffer): void {
       }
     }
   }
-  clipCache.set(text, bytes);
+  clipCache.set(cacheKey, bytes);
 }
 
 export async function synthesizeOperationalUtterance(
   text: string,
+  cfg?: ResolvedTtsConfig,
 ): Promise<Buffer | null | "rate_limited"> {
-  const cached = clipCache.get(text);
+  const effectiveConfig: ResolvedTtsConfig = cfg ?? {
+    model: DEFAULT_TTS_MODEL,
+    voice: DEFAULT_TTS_VOICE,
+  };
+  const cacheKey = buildClipCacheKey(text, effectiveConfig);
+  const cached = clipCache.get(cacheKey);
   if (cached) return cached;
   if (Date.now() < gatewayCoolDownUntil) return "rate_limited";
 
@@ -76,16 +101,16 @@ export async function synthesizeOperationalUtterance(
 
   try {
     const result = await generateSpeech({
-      model: gateway.speechModel(TTS_MODEL),
+      model: gateway.speechModel(effectiveConfig.model),
       text,
-      voice: TTS_VOICE,
+      ...(effectiveConfig.voice ? { voice: effectiveConfig.voice } : {}),
       outputFormat: "mp3",
       maxRetries: 0,
       abortSignal: AbortSignal.timeout(TTS_TIMEOUT_MS),
     });
     const bytes = Buffer.from(result.audio.uint8Array);
     if (bytes.byteLength === 0) return null;
-    rememberClip(text, bytes);
+    rememberClip(cacheKey, bytes);
     return bytes;
   } catch (error) {
     console.warn(

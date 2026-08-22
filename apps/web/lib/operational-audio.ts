@@ -42,6 +42,7 @@ export interface PlayOperationalAlertInput {
   mode: OperationalAudioMode;
   slots?: OperationalAlertSlots;
   force?: boolean;
+  branchId?: number;
 }
 
 const AUDIO_MODES: readonly OperationalAudioMode[] = [
@@ -128,9 +129,13 @@ function cancelPendingSpeech(): void {
   cancelOperationalVoice();
 }
 
-function scheduleSpeech(text: string, delayMs: number): void {
+function scheduleSpeech(
+  text: string,
+  delayMs: number,
+  branchId?: number,
+): void {
   cancelPendingSpeech();
-  const primed = primeOperationalVoice(text);
+  const primed = primeOperationalVoice(text, branchId);
   if (delayMs === 0) {
     primed.play();
     return;
@@ -142,7 +147,7 @@ function scheduleSpeech(text: string, delayMs: number): void {
 }
 
 export function playOperationalAlert(input: PlayOperationalAlertInput): void {
-  const { kind, mode, slots, force = false } = input;
+  const { kind, mode, slots, force = false, branchId } = input;
   cancelPendingSpeech();
   if (mode === "off") return;
 
@@ -159,6 +164,7 @@ export function playOperationalAlert(input: PlayOperationalAlertInput): void {
   if (force) {
     prefetchOperationalVoiceCatalog({
       surface: kind.startsWith("kds.") ? "kds" : "pos",
+      branchId,
     });
   }
   try {
@@ -166,7 +172,7 @@ export function playOperationalAlert(input: PlayOperationalAlertInput): void {
       ? getAppSignalDurationMs(OPERATIONAL_ALERT_TONES[kind]) +
         VOICE_AFTER_BEEP_GAP_MS
       : 0;
-    scheduleSpeech(buildAlertUtterance(kind, slots), voiceDelayMs);
+    scheduleSpeech(buildAlertUtterance(kind, slots), voiceDelayMs, branchId);
   } catch {
     // Speech unavailable or blocked by the browser; the beep already fired.
   }

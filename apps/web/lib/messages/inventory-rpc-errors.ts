@@ -161,6 +161,12 @@ export const transferReceiveRpcMappings: readonly RpcErrorMapping[] = [
     errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,
     userMessage: "Số lượng nhận không hợp lệ.",
   },
+  {
+    match: includesAny("transfer_valuation", "valuation_quantity"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_STATUS,
+    userMessage:
+      "Lệch số dư giá vốn chuyển kho. Vui lòng tải lại hoặc liên hệ quản trị.",
+  },
   privilege,
   notFound,
 ];

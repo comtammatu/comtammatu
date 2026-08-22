@@ -22,8 +22,8 @@ import type {
   KdsTicket,
 } from "../types";
 
-const POLL_INTERVAL_MS = 3_000;
-const POLL_STALE_MS = 3_000;
+const POLL_INTERVAL_MS = 25_000;
+const POLL_STALE_MS = 25_000;
 const KDS_ORDER_SELECT_WITH_PRIORITY =
   "id, order_number, order_type, table_id, is_priority, note, created_at, delivery_platform, external_order_ref, tables(number)";
 const KDS_ORDER_SELECT_BASE =

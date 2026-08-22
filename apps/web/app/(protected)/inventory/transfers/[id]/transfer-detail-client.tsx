@@ -67,6 +67,7 @@ import {
   OWNER_SHELL_BREAKPOINT,
   useIsMobile,
 } from "@comtammatu/ui/hooks/use-mobile";
+import { TransferThermalReceiptDialog } from "./views/transfer-thermal-receipt-dialog";
 const DocumentStockCorrectionDialog = dynamic(
   () =>
     import("../../_components/document-stock-correction-dialog").then(
@@ -285,6 +286,7 @@ export function TransferDetailClient({
     {
       key: "ingredient",
       header: tTerm("ingredient"),
+      className: "min-w-36",
       render: (item) => (
         <div
           className={cn(
@@ -308,12 +310,13 @@ export function TransferDetailClient({
     {
       key: "qty",
       header: copy.sentQty,
-      className: "text-right font-mono tabular-nums",
+      className: "text-right font-mono tabular-nums whitespace-nowrap",
       render: (item) => item.qty,
     },
     {
       key: "unit",
       header: copy.unit,
+      className: "whitespace-nowrap",
       render: (item) => <Badge variant="secondary">{item.unit}</Badge>,
     },
     ...(transfer.monetary
@@ -321,7 +324,7 @@ export function TransferDetailClient({
           {
             key: "cost",
             header: copy.wacCost,
-            className: "text-right font-mono tabular-nums",
+            className: "text-right font-mono tabular-nums whitespace-nowrap",
             render: (item: TransferLineItem) => {
               const cost = item.monetary?.cost ?? 0;
               const displayCost = computeTransferLineDisplayUnitCost({
@@ -336,7 +339,7 @@ export function TransferDetailClient({
           {
             key: "amount",
             header: copy.lineAmount,
-            className: "text-right font-mono tabular-nums",
+            className: "text-right font-mono tabular-nums whitespace-nowrap",
             render: (item: TransferLineItem) =>
               formatVND(item.monetary?.total ?? 0),
           },
@@ -538,22 +541,23 @@ export function TransferDetailClient({
         </div>
       </Item>
       <div
-        className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start"
+        className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start"
       >
-          <div className="order-2 flex min-w-0 flex-col gap-4 lg:order-1">
-            <AppSection
-              className="min-w-0 overflow-hidden"
-              title={tTerm("ingredientsList")}
-              description={copy.sectionLineCount(transfer.items.length)}
+        <div className="order-2 flex min-w-0 flex-col gap-4 lg:order-1">
+          <AppSection
+            className="min-w-0"
+            title={tTerm("ingredientsList")}
+            description={copy.sectionLineCount(transfer.items.length)}
             headerHint={
               isReceiveMode
                 ? copy.receiveInstructions
                 : copy.receivedReadonlyHint
-              }
-              contentFlush
-              contentClassName="min-w-0"
-            >
-              {lineTable}
+            }
+            contentFlush
+            contentScroll
+            contentClassName="min-w-0"
+          >
+            {lineTable}
           </AppSection>
 
           {isReceiveMode && hasShort ? (
@@ -682,6 +686,9 @@ export function TransferDetailClient({
                     {copy.actions.cancel}
                   </Button>
                 ) : null}
+                {transfer.status !== "draft" ? (
+                  <TransferThermalReceiptDialog transfer={transfer} />
+                ) : null}
                 {transfer.status !== "draft" &&
                 correctionBranches.length > 0 &&
                 transfer.items.length > 0 ? (
@@ -736,6 +743,9 @@ export function TransferDetailClient({
                 >
                   {copy.actions.cancel}
                 </Button>
+              ) : null}
+              {transfer.status !== "draft" ? (
+                <TransferThermalReceiptDialog transfer={transfer} />
               ) : null}
               {transfer.status !== "draft" &&
               correctionBranches.length > 0 &&

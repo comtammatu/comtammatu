@@ -248,11 +248,16 @@ export function KdsBoard({
     setAudioMode((current) => {
       const next = cycleAudioMode(current);
       // Preview doubles as the user gesture that unblocks audio + speech.
-      playOperationalAlert({ kind: "kds.new", mode: next, force: true });
+      playOperationalAlert({
+        kind: "kds.new",
+        mode: next,
+        force: true,
+        branchId,
+      });
       writeDevicePref(audioModeKey, next);
       return next;
     });
-  }, [audioModeKey]);
+  }, [audioModeKey, branchId]);
 
   useEffect(() => {
     const onFullscreenChange = () => {
@@ -355,6 +360,7 @@ export function KdsBoard({
       playOperationalAlert({
         kind: KDS_TONE_TO_ALERT_KIND[nextAlertGroup.tone],
         mode: audioMode,
+        branchId,
         slots: {
           tableLabel: tableNumber === null ? undefined : String(tableNumber),
         },

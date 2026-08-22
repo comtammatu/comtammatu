@@ -3,6 +3,8 @@ import { cn } from "@comtammatu/ui";
 import { formatPortionQuantity } from "@comtammatu/shared/format";
 import { POS_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
+import { Minus as IconMinus, Plus as IconPlus } from "lucide-react";
 
 interface PosLineItemCompactProps {
   quantity: number;
@@ -23,6 +25,8 @@ interface PosLineItemCompactProps {
   optionsClassName?: string;
   discountClassName?: string;
   noteClassName?: string;
+  onIncreaseQuantity?: () => void;
+  onDecreaseQuantity?: () => void;
 }
 
 type LineChangeTone = "quantity" | "content" | null;
@@ -155,6 +159,8 @@ export function PosLineItemCompact({
   optionsClassName,
   discountClassName,
   noteClassName,
+  onIncreaseQuantity,
+  onDecreaseQuantity,
 }: PosLineItemCompactProps) {
   const { tone, quantityDelta } = useLineChangeFeedback({
     quantity,
@@ -178,25 +184,67 @@ export function PosLineItemCompact({
         className,
       )}
     >
-      <div className="flex w-12 shrink-0 flex-col items-stretch gap-1">
-        <Badge
-          variant="outline"
-          className={cn(
-            "justify-center rounded-md px-2 py-1 font-mono text-base font-bold leading-none tabular-nums",
-            quantityClassName,
-          )}
+      {onIncreaseQuantity && onDecreaseQuantity ? (
+        <div
+          className="flex h-10 shrink-0 items-center gap-1"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
         >
-          {formatPortionQuantity(quantity)}
-        </Badge>
-        {quantityDelta !== null ? (
-          <Badge
-            variant={quantityDelta > 0 ? "info" : "destructive"}
-            className="justify-center px-1 py-0 font-mono text-xs font-bold tabular-nums"
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-touch"
+            className="size-8 rounded-md text-muted-foreground hover:bg-background hover:text-foreground active:scale-90 touch-manipulation"
+            aria-label={`Bớt 1 phần ${title}`}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onDecreaseQuantity();
+            }}
           >
-            {quantityDelta > 0 ? `+${String(quantityDelta)}` : quantityDelta}
+            <IconMinus />
+          </Button>
+          <span className="min-w-6 px-0.5 text-center font-mono text-base font-semibold tabular-nums text-foreground">
+            {formatPortionQuantity(quantity)}
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-touch"
+            className="size-8 rounded-md text-muted-foreground hover:bg-background hover:text-foreground active:scale-90 touch-manipulation"
+            aria-label={`Thêm 1 phần ${title}`}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onIncreaseQuantity();
+            }}
+          >
+            <IconPlus />
+          </Button>
+        </div>
+      ) : (
+        <div className="flex w-12 shrink-0 flex-col items-stretch gap-1">
+          <Badge
+            variant="outline"
+            className={cn(
+              "justify-center rounded-md px-2 py-1 font-mono text-base font-bold leading-none tabular-nums",
+              quantityClassName,
+            )}
+          >
+            {formatPortionQuantity(quantity)}
           </Badge>
-        ) : null}
-      </div>
+          {quantityDelta !== null ? (
+            <Badge
+              variant={quantityDelta > 0 ? "info" : "destructive"}
+              className="justify-center px-1 py-0 font-mono text-xs font-bold tabular-nums"
+            >
+              {quantityDelta > 0 ? `+${String(quantityDelta)}` : quantityDelta}
+            </Badge>
+          ) : null}
+        </div>
+      )}
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-1">
           <p

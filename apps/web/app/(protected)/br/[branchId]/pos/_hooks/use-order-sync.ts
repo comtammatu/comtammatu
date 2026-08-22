@@ -11,7 +11,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import type { BranchTable } from "../page";
 import type { SessionOrder } from "../order-history";
 
-const STALE_POLL_MS = 20_000;
+const STALE_POLL_MS = 45_000;
 
 export interface UseOrderSyncArgs {
   branchId: number;
@@ -98,6 +98,7 @@ function getNotificationMetaString(
 function notifyOutOfStock(
   notification: Record<string, unknown>,
   audioMode: OperationalAudioMode,
+  branchId?: number,
 ): void {
   const title = getStringField(notification, "title") ?? "Bếp báo hết món";
   const itemName =
@@ -106,7 +107,11 @@ function notifyOutOfStock(
     "Cần kiểm tra đơn POS";
   const actionUrl = getStringField(notification, "action_url");
 
-  playOperationalAlert({ kind: "pos.out_of_stock", mode: audioMode });
+  playOperationalAlert({
+    kind: "pos.out_of_stock",
+    mode: audioMode,
+    branchId,
+  });
   toast.warning(title, {
     description: itemName,
     action: actionUrl
@@ -124,6 +129,7 @@ function notifyOrderTransition(
   currentOrder: SessionOrder | undefined,
   next: Record<string, unknown>,
   audioMode: OperationalAudioMode,
+  branchId?: number,
 ): void {
   if (!currentOrder) return;
 
@@ -140,6 +146,7 @@ function notifyOrderTransition(
       playOperationalAlert({
         kind: "pos.payment_received",
         mode: audioMode,
+        branchId,
         slots: {
           tableLabel:
             typeof tableNumber === "number" ? String(tableNumber) : undefined,
@@ -519,6 +526,7 @@ export function useOrderSync({
                 currentOrder,
                 updated,
                 audioModeRef.current,
+                branchId,
               );
 
               if (isTerminal) {
@@ -612,7 +620,7 @@ export function useOrderSync({
             if (!notification || notification.kind !== "pos.kds_out_of_stock") {
               return;
             }
-            notifyOutOfStock(notification, audioModeRef.current);
+            notifyOutOfStock(notification, audioModeRef.current, branchId);
           },
         )
         .subscribe((status) => {

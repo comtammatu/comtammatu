@@ -452,6 +452,16 @@ function CartPaneComponent({
                           discount={discountLabel}
                           note={summary.note}
                           isPriority={summary.isPriority}
+                          onIncreaseQuantity={() => {
+                            cart.updateQuantity(item.key, 1);
+                          }}
+                          onDecreaseQuantity={() => {
+                            if (item.quantity > 1) {
+                              cart.updateQuantity(item.key, -1);
+                            } else {
+                              removeItemWithEffect(item.key);
+                            }
+                          }}
                         />
                       </Button>
                     </Item>

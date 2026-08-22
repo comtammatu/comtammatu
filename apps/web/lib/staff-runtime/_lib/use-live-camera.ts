@@ -55,14 +55,27 @@ export function useLiveCamera(facing: LiveCameraFacing) {
         throw new Error("camera_video_not_ready");
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: {
-          facingMode: facing,
-          width: { ideal: 1280 },
-          height: { ideal: 960 },
-        },
-      });
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            facingMode: facing,
+            width: { ideal: 1280 },
+            height: { ideal: 960 },
+          },
+        });
+      } catch {
+        // Fallback for devices/browsers without the requested facing mode (e.g. laptop webcam)
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 960 },
+          },
+        });
+      }
+
       streamRef.current = stream;
       video.srcObject = stream;
       await video.play();

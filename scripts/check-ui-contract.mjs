@@ -474,7 +474,7 @@ function hasDirectAsChildPrimitiveParent(content, start) {
 function hasDirectPrimitiveRenderParent(content, start) {
   const before = content.slice(Math.max(0, start - 1600), start);
   const tail = before.slice(before.lastIndexOf("<"));
-  return /^<(?:Button|InteractiveCard|Item|Badge)\b[\s\S]*\brender=\{\s*$/.test(
+  return /^<(?:Button|InteractiveCard|Item|Badge|DropdownMenuItem)\b[\s\S]*\brender=\{\s*$/.test(
     tail,
   );
 }

@@ -18,6 +18,8 @@ type SettingsLinkCopy = {
   printersSetupDescription: string;
   kdsSetupTitle: string;
   kdsSetupDescription: string;
+  audioSetupTitle?: string;
+  audioSetupDescription?: string;
 };
 
 type SettingsLinkIcons = {
@@ -25,6 +27,7 @@ type SettingsLinkIcons = {
   pos: ElementType;
   printers: ElementType;
   kds: ElementType;
+  audio?: ElementType;
 };
 
 // Module-key gating keeps branch setup separate from daily operations.
@@ -33,7 +36,7 @@ export function buildSettingsLinks(
   copy: SettingsLinkCopy,
   icons: SettingsLinkIcons,
 ): SettingsLink[] {
-  return [
+  const links: SettingsLink[] = [
     {
       moduleKey: "branch_settings",
       href: `/br/${branchId}/settings/tables`,
@@ -63,4 +66,16 @@ export function buildSettingsLinks(
       icon: icons.printers,
     },
   ];
+
+  if (icons.audio && copy.audioSetupTitle && copy.audioSetupDescription) {
+    links.push({
+      moduleKey: "branch_settings",
+      href: `/br/${branchId}/settings/audio`,
+      title: copy.audioSetupTitle,
+      description: copy.audioSetupDescription,
+      icon: icons.audio,
+    });
+  }
+
+  return links;
 }

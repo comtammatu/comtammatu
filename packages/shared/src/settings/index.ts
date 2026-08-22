@@ -38,6 +38,10 @@ export const SYSTEM_SETTING_KEYS = {
   HR_STANDARD_WORKDAYS: "hr_standard_workdays",
   /** Paid leave days allocated from the monthly leave bucket, per month. */
   HR_MONTHLY_LEAVE_DAYS: "hr_monthly_leave_days",
+  /** Tenant default TTS model: "openai/tts-1" | "fish-audio/s2.1-pro". */
+  TTS_MODEL: "tts_model",
+  /** Tenant default TTS voice: "nova" | "alloy" | ... or empty for provider default. */
+  TTS_VOICE: "tts_voice",
 } as const;
 
 export type SystemSettingKey =
@@ -61,4 +65,8 @@ export const SYSTEM_SETTING_DEFAULTS: Record<SystemSettingKey, string> = {
   [SYSTEM_SETTING_KEYS.POS_SPLIT_MERGE_ENABLED]: "true",
   [SYSTEM_SETTING_KEYS.HR_STANDARD_WORKDAYS]: "26",
   [SYSTEM_SETTING_KEYS.HR_MONTHLY_LEAVE_DAYS]: "2",
+  [SYSTEM_SETTING_KEYS.TTS_MODEL]: "openai/tts-1",
+  [SYSTEM_SETTING_KEYS.TTS_VOICE]: "nova",
 };
+
+export * from "./tts";

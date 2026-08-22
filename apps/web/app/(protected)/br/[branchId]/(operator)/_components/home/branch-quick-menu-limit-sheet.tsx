@@ -10,6 +10,7 @@ import {
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
 import { Switch } from "@comtammatu/ui/components/switch";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
@@ -97,17 +98,29 @@ export function BranchQuickMenuLimitSheet({
     };
   }, [open, branchId]);
 
-  const filteredRows = rows.filter((row) => {
-    if (!query.trim()) return true;
-    const needle = normalizeSearch(query).trim();
-    const haystack = normalizeSearch(`${row.item_name} ${row.category_name}`);
-    return haystack.includes(needle);
-  });
+  const [filterTab, setFilterTab] = useState<"all" | "paused" | "limited">(
+    "all",
+  );
 
   const disabledCount = rows.filter((r) => r.is_disabled).length;
   const limitedCount = rows.filter(
     (r) => r.manual_limit_quantity !== null,
   ).length;
+
+  const filteredRows = rows.filter((row) => {
+    if (filterTab === "paused" && !row.is_disabled) return false;
+    if (
+      filterTab === "limited" &&
+      row.manual_limit_quantity === null &&
+      !isAllowanceEnabled(row)
+    ) {
+      return false;
+    }
+    if (!query.trim()) return true;
+    const needle = normalizeSearch(query).trim();
+    const haystack = normalizeSearch(`${row.item_name} ${row.category_name}`);
+    return haystack.includes(needle);
+  });
 
   function applyRowPatch(menuItemId: number, patch: Partial<MenuLimitRow>) {
     setRows((prev) =>
@@ -118,6 +131,8 @@ export function BranchQuickMenuLimitSheet({
   }
 
   function handleToggleDisabled(row: MenuLimitRow, isDisabled: boolean) {
+    applyRowPatch(row.menu_item_id, { is_disabled: isDisabled });
+
     startTransition(async () => {
       const result = await setBranchMenuDailyLimit({
         branchId,
@@ -127,11 +142,11 @@ export function BranchQuickMenuLimitSheet({
       });
 
       if (!result.success) {
+        applyRowPatch(row.menu_item_id, { is_disabled: !isDisabled });
         toast.error(result.error ?? menuCopy.saveLimitFailed);
         return;
       }
 
-      applyRowPatch(row.menu_item_id, { is_disabled: isDisabled });
       toast.success(
         isDisabled
           ? menuCopy.itemPaused(row.item_name)
@@ -238,6 +253,36 @@ export function BranchQuickMenuLimitSheet({
         </InputGroup>
       </div>
 
+      <div className="mb-2 flex flex-wrap gap-1.5 px-0.5">
+        <Button
+          type="button"
+          variant={filterTab === "all" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setFilterTab("all")}
+          className="h-7 text-xs"
+        >
+          {menuCopy.filterAll} ({rows.length})
+        </Button>
+        <Button
+          type="button"
+          variant={filterTab === "paused" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setFilterTab("paused")}
+          className="h-7 text-xs"
+        >
+          {menuCopy.filterPaused} ({disabledCount})
+        </Button>
+        <Button
+          type="button"
+          variant={filterTab === "limited" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setFilterTab("limited")}
+          className="h-7 text-xs"
+        >
+          {menuCopy.filterLimited} ({limitedCount})
+        </Button>
+      </div>
+
       <div>
         {loading ? (
           <div className="flex items-center justify-center py-4">
@@ -264,20 +309,40 @@ export function BranchQuickMenuLimitSheet({
                   className="flex-col items-stretch gap-2 bg-card"
                 >
                   <ItemContent className="min-w-0 gap-1">
-                    <ItemTitle className="flex items-center gap-2 text-sm font-medium">
+                    <ItemTitle className="flex items-center justify-between gap-2 text-sm font-medium">
                       <span className="min-w-0 flex-1 truncate">
                         {row.item_name}
                       </span>
-                      {row.is_disabled ? (
-                        <Badge variant="destructive" className="shrink-0">
-                          {menuCopy.pausedBadge}
-                        </Badge>
-                      ) : null}
-                      {allowanceOn ? (
-                        <Badge variant="secondary" className="shrink-0">
-                          {menuCopy.allowanceBadge}
-                        </Badge>
-                      ) : null}
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        {row.is_disabled ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={isPending}
+                            onClick={() => handleToggleDisabled(row, false)}
+                            className="h-7 text-xs text-success hover:bg-success/10 hover:text-success"
+                          >
+                            {menuCopy.quickResumeItem}
+                          </Button>
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            disabled={isPending}
+                            onClick={() => handleToggleDisabled(row, true)}
+                            className="h-7 text-xs"
+                          >
+                            {menuCopy.quickPauseItem}
+                          </Button>
+                        )}
+                        {allowanceOn ? (
+                          <Badge variant="secondary" className="shrink-0">
+                            {menuCopy.allowanceBadge}
+                          </Badge>
+                        ) : null}
+                      </div>
                     </ItemTitle>
                     <ItemDescription className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
                       <span>{row.category_name}</span>

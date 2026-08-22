@@ -135,6 +135,10 @@ function ApprovalRow({
     onContextMenu: longPress.onContextMenu,
   };
 
+  const checklistTotal = item.checklist.length;
+  const checklistDone = item.checklist.filter((entry) => entry.isDone).length;
+  const hasPhotos = item.checklist.some((entry) => entry.hasPhoto);
+
   return (
     <div className="relative overflow-hidden rounded-md">
       <div
@@ -196,7 +200,21 @@ function ApprovalRow({
               {item.shiftName}
             </ItemDescription>
           </ItemContent>
-          <ItemActions className="shrink-0 self-center">
+          <ItemActions className="shrink-0 self-center flex items-center gap-1.5">
+            {hasPhotos ? (
+              <Badge variant="outline" className="gap-1 text-2xs px-1.5 py-0.5">
+                <IconImage className="size-3 text-primary" />
+                <span>Có ảnh</span>
+              </Badge>
+            ) : null}
+            {checklistTotal > 0 ? (
+              <Badge
+                variant={checklistDone === checklistTotal ? "success" : "secondary"}
+                className="text-2xs px-1.5 py-0.5"
+              >
+                {checklistDone}/{checklistTotal}
+              </Badge>
+            ) : null}
             <IconChevronRight
               className="size-4 text-muted-foreground"
               aria-hidden="true"
