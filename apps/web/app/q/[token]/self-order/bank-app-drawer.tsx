@@ -14,7 +14,6 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
-import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { AppDrawer } from "@/components/surface/app-drawer";
 import {
   STATIC_VIETQR_BANK_APPS,
@@ -129,10 +128,10 @@ export function BankAppDrawer({
       }}
       title={SELF_ORDER_VI.chooseBankAppTitle}
       description={SELF_ORDER_VI.chooseBankAppDescription}
-      contentClassName="max-h-dvh-80"
-      bodyClassName="flex min-h-0 flex-col gap-3 p-0"
+      contentClassName="flex max-h-dvh-85 flex-col overflow-hidden sm:mx-auto sm:max-w-md"
+      bodyClassName="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain p-0"
     >
-      <div className="shrink-0 px-3 pt-1">
+      <div className="sticky top-0 z-10 shrink-0 border-b border-border/40 bg-popover px-3 pt-1 pb-2">
         <InputGroup className="w-full">
           <InputGroupAddon>
             <IconSearch className="size-4 text-muted-foreground" aria-hidden="true" />
@@ -162,7 +161,7 @@ export function BankAppDrawer({
         </InputGroup>
       </div>
 
-      <ScrollArea className="min-h-0 flex-1 overflow-hidden overscroll-contain px-3 pb-3">
+      <div className="flex-1 px-3 py-2">
         {filteredApps.length === 0 ? (
           <div className="py-4 text-center text-sm text-muted-foreground">
             {SELF_ORDER_VI.bankSearchEmpty}
@@ -187,7 +186,7 @@ export function BankAppDrawer({
                   key={app.id}
                   variant="ghost"
                   size="touch"
-                  className="flex h-auto w-full items-center justify-between gap-3 px-2 py-2 text-left"
+                  className="flex h-auto w-full items-center justify-between gap-3 px-2 py-2.5 text-left"
                   render={<a href={href} />}
                   onClick={() => {
                     onBankAppHandoff?.();
@@ -207,13 +206,13 @@ export function BankAppDrawer({
                       ) : null}
                     </div>
                   </div>
-                  <IconChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                  <IconChevronRight className="size-4 shrink-0 text-muted-foreground/60" />
                 </Button>
               );
             })}
           </div>
         )}
-      </ScrollArea>
+      </div>
     </AppDrawer>
   );
 }

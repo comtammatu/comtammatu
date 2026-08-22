@@ -32,7 +32,7 @@ import {
   MAX_CLOCK_PHOTO_BYTES,
   MAX_UPLOAD_SOURCE_BYTES,
   UPLOAD_PHOTO_ACCEPT,
-  UPLOAD_PHOTO_TYPES,
+  isEligiblePhotoFile,
   normalizePhotoFile,
 } from "../_lib/shift-photo";
 import { useLiveCamera } from "../_lib/use-live-camera";
@@ -94,7 +94,7 @@ function TaskPhotoSheet({
   async function handleUpload(file: File | null) {
     if (!file || !item || disabled) return;
     setBusy(true);
-    if (!UPLOAD_PHOTO_TYPES.has(file.type)) {
+    if (!isEligiblePhotoFile(file)) {
       toast.error(messages.employee.clock.uploadUnsupported);
       setBusy(false);
       return;
@@ -136,16 +136,20 @@ function TaskPhotoSheet({
               type="button"
               size="touch-lg"
               className="w-full"
-              disabled={disabled || busy || camera.state !== "ready"}
+              disabled={disabled || busy}
               onClick={() => {
-                void camera.capture(`task-${item.id}.webp`).then((file) => {
-                  if (!file) {
-                    toast.error(taskCopy.photoUploadError);
-                    return;
-                  }
-                  camera.stop();
-                  onCaptured(item.id, file);
-                });
+                if (camera.state === "ready") {
+                  void camera.capture(`task-${item.id}.webp`).then((file) => {
+                    if (!file) {
+                      toast.error(taskCopy.photoUploadError);
+                      return;
+                    }
+                    camera.stop();
+                    onCaptured(item.id, file);
+                  });
+                } else {
+                  fileInputRef.current?.click();
+                }
               }}
             >
               {camera.state === "capturing" || busy ? (

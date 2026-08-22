@@ -1,4 +1,5 @@
 import { CircleAlert as IconAlertCircle } from "lucide-react";
+import { connection } from "next/server";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { KDS_VI } from "@comtammatu/shared/messages";
 import { AppEmptyState } from "@/components/surface";
@@ -34,6 +35,7 @@ export default async function KdsPage({
 }: {
   params: Promise<{ branchId: string }>;
 }) {
+  await connection();
   const { supabase } = await loadAuthState();
 
   const { branchId } = await params;

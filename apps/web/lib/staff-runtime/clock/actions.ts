@@ -13,7 +13,7 @@ import {
 } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
 import { getAuthContext } from "@/_lib/auth";
-import { resolveClockInGate } from "../_lib/default-shift";
+import { resolveClockInGate, resolveDefaultShiftId } from "../_lib/default-shift";
 import { getClockInBlockedMessage } from "../_lib/clock-in-copy";
 import { markCompletedCountDutyChecklistItems } from "../_lib/count-duty";
 import { getEmployeeContext } from "../_lib/staff-runtime-context";
@@ -29,9 +29,44 @@ const ATTENDANCE_PHOTO_SIGNED_URL_TTL_SECONDS = 300;
 const MAX_PHOTO_BYTES = 3_500_000;
 const PHOTO_MIME_TO_EXT = {
   "image/jpeg": "jpg",
+  "image/jpg": "jpg",
   "image/png": "png",
   "image/webp": "webp",
+  "image/heic": "heic",
+  "image/heif": "heif",
 } as const;
+
+function resolvePhotoExtension(photo: File): string {
+  if (photo.type && isSupportedPhotoMime(photo.type)) {
+    return PHOTO_MIME_TO_EXT[photo.type];
+  }
+  const lowerName = photo.name.toLowerCase();
+  if (lowerName.endsWith(".png")) return "png";
+  if (lowerName.endsWith(".webp")) return "webp";
+  if (lowerName.endsWith(".heic")) return "heic";
+  if (lowerName.endsWith(".heif")) return "heif";
+  return "jpg";
+}
+
+function resolvePhotoMimeType(photo: File): string {
+  if (photo.type && isSupportedPhotoMime(photo.type)) {
+    return photo.type;
+  }
+  const ext = resolvePhotoExtension(photo);
+  if (ext === "png") return "image/png";
+  if (ext === "webp") return "image/webp";
+  if (ext === "heic") return "image/heic";
+  if (ext === "heif") return "image/heif";
+  return "image/jpeg";
+}
+
+function isValidPhotoUpload(photo: File): boolean {
+  if (photo.size <= 0 || photo.size > MAX_PHOTO_BYTES) return false;
+  if (!photo.type || photo.type === "application/octet-stream") {
+    return /\.(jpe?g|png|webp|heic|heif)$/i.test(photo.name);
+  }
+  return isSupportedPhotoMime(photo.type) || photo.type.startsWith("image/");
+}
 
 type ClockInResult = {
   attendanceId: number;
@@ -112,7 +147,7 @@ async function resolveAssignedShiftForEmployee(
   const { data: assignmentRows } = (await assignmentsQuery) as {
     data: ShiftAssignmentQueryRow[] | null;
   };
-  const assignments = (assignmentRows ?? [])
+  let assignments = (assignmentRows ?? [])
     .map((row) => {
       const shift = row.shifts;
       if (!shift.is_active || !shift.start_time || !shift.end_time) return null;
@@ -126,8 +161,55 @@ async function resolveAssignedShiftForEmployee(
     })
     .filter((row): row is NonNullable<typeof row> => row !== null);
 
+  let isAutoFloorAssignment = false;
+  if (assignments.length === 0 && ctx.branchId != null) {
+    const { data: activeShifts } = await service
+      .from("shifts")
+      .select("id, name, start_time, end_time")
+      .eq("tenant_id", ctx.claims.tenant_id)
+      .or(`branch_id.is.null,branch_id.eq.${ctx.branchId}`)
+      .eq("is_active", true)
+      .order("start_time");
+
+    if (activeShifts && activeShifts.length > 0) {
+      const defaultShiftId = resolveDefaultShiftId(activeShifts, nowMinutes);
+      const defaultShift = activeShifts.find((s) => s.id === defaultShiftId);
+      if (defaultShift?.start_time && defaultShift?.end_time) {
+        assignments = [
+          {
+            workDate: calendarDate,
+            shiftId: defaultShift.id,
+            shiftName: defaultShift.name ?? null,
+            startTime: defaultShift.start_time,
+            endTime: defaultShift.end_time,
+          },
+        ];
+        isAutoFloorAssignment = true;
+      }
+    }
+  }
+
   const gate = resolveClockInGate(assignments, calendarDate, nowMinutes);
   if (gate.kind === "open") {
+    if (isAutoFloorAssignment && ctx.branchId != null) {
+      await service.from("shift_assignments" as never).upsert(
+        {
+          tenant_id: ctx.claims.tenant_id,
+          employee_id: ctx.employeeId,
+          branch_id: ctx.branchId,
+          work_date: gate.businessDate,
+          shift_id: gate.shiftId,
+          is_shift_leader: false,
+          source: "floor",
+          assigned_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        } as never,
+        {
+          onConflict: "tenant_id,employee_id,work_date,shift_id",
+          ignoreDuplicates: true,
+        },
+      );
+    }
     return {
       ok: true,
       shiftId: gate.shiftId,
@@ -261,11 +343,11 @@ function mapCheckoutError(message: string | undefined): string {
   if (message?.includes("branch_manager_can_only_approve_branch_staff")) {
     return "Quản lý chi nhánh chỉ duyệt kết ca cho nhân viên thuộc chi nhánh.";
   }
-  return "Không thể kết ca. Vui lòng thử lại.";
+  return "Không thể gửi yêu cầu kết ca. Vui lòng thử lại.";
 }
 
 export async function clockInWithPhoto(
-  _prev: ActionResult | null,
+  _prevState: ActionResult<ClockInResult> | null,
   formData: FormData,
 ): Promise<ActionResult<ClockInResult>> {
   const ctx = await getEmployeeContext();
@@ -275,16 +357,16 @@ export async function clockInWithPhoto(
   if (!photo || photo.size <= 0) {
     return { success: false, error: "Cần chụp hoặc chọn ảnh chấm công." };
   }
-  if (!isSupportedPhotoMime(photo.type)) {
+  if (!isValidPhotoUpload(photo)) {
+    if (photo.size > MAX_PHOTO_BYTES) {
+      return {
+        success: false,
+        error: "Ảnh quá lớn. Vui lòng chụp lại hoặc chọn ảnh nhẹ hơn.",
+      };
+    }
     return {
       success: false,
       error: "Ảnh chấm công chỉ nhận JPG, PNG hoặc WebP.",
-    };
-  }
-  if (photo.size > MAX_PHOTO_BYTES) {
-    return {
-      success: false,
-      error: "Ảnh quá lớn. Vui lòng chụp lại hoặc chọn ảnh nhẹ hơn.",
     };
   }
 
@@ -293,8 +375,6 @@ export async function clockInWithPhoto(
   const nowMinutes = getVNMinutesOfDay(now);
   const service = createServiceClient();
 
-  // Attendance is keyed per shift; completed shifts today should not block the
-  // next shift's clock-in.
   const shiftContext = await resolveAssignedShiftForEmployee(
     service,
     ctx,
@@ -323,14 +403,15 @@ export async function clockInWithPhoto(
     return reuseExistingClockIn(existing, ctx.claims.user_role);
   }
 
-  const ext = PHOTO_MIME_TO_EXT[photo.type];
+  const ext = resolvePhotoExtension(photo);
+  const mimeType = resolvePhotoMimeType(photo);
   const photoPath = `${ctx.claims.tenant_id}/${calendarDate}/${ctx.employeeId}/${randomUUID()}.${ext}`;
   const bytes = Buffer.from(await photo.arrayBuffer());
 
   const { error: uploadError } = await service.storage
     .from(ATTENDANCE_PHOTO_BUCKET)
     .upload(photoPath, bytes, {
-      contentType: photo.type,
+      contentType: mimeType,
       upsert: false,
     });
 
@@ -369,32 +450,32 @@ export async function clockInWithPhoto(
       }
     }
 
+    if (rpcError) {
+      console.error("[employee/clock] clock-in rpc failed", {
+        code: rpcError.code,
+      });
+    }
     return {
       success: false,
       error: mapClockInError(rpcError?.message),
     };
   }
 
-  const checkInTime = now.toISOString();
   revalidateEmployeeWorkPaths(ctx.branchId);
+
   return {
     success: true,
     data: {
       attendanceId,
-      checkInTime,
-      // This RPC path is only reached by floor roles (cashier/chef/staff) —
-      // manager-simple attendance returns earlier above. Floor roles clock in
-      // to sell/cook, so land them on the unlocked branch home where the
-      // POS/KDS tiles just became tappable.
+      checkInTime: now.toISOString(),
       nextPath: "home",
     },
   };
 }
 
-export async function toggleChecklistItem(input: {
-  itemId: number;
-  done: boolean;
-}): Promise<ActionResult> {
+export async function toggleChecklistItem(
+  input: unknown,
+): Promise<ActionResult> {
   const parsed = checklistToggleSchema.safeParse(input);
   if (!parsed.success) {
     return {
@@ -406,17 +487,36 @@ export async function toggleChecklistItem(input: {
   const ctx = await getEmployeeContext();
   if (!ctx) return { success: false, error: "Chưa đăng nhập" };
 
-  const { error } = await ctx.supabase.rpc("self_service_toggle_task", {
-    p_item_id: parsed.data.itemId,
-    p_done: parsed.data.done,
-  });
+  const { error } = await ctx.supabase.rpc(
+    "self_service_toggle_task" as never,
+    {
+      p_item_id: parsed.data.itemId,
+      p_done: parsed.data.done,
+    } as never,
+  );
 
   if (error) {
+    if (error.message?.includes("self_service_not_allowed")) {
+      return {
+        success: false,
+        error: "Tài khoản không thuộc diện thực hiện việc trong ca của nhân viên.",
+      };
+    }
+    if (error.message?.includes("task_not_editable")) {
+      return {
+        success: false,
+        error: "Ca làm việc đã kết thúc hoặc không thể sửa việc này.",
+      };
+    }
+    if (error.message?.includes("photo_required")) {
+      return {
+        success: false,
+        error: "Công việc này bắt buộc chụp ảnh minh chứng.",
+      };
+    }
     return {
       success: false,
-      error: error.message?.includes("photo_required")
-        ? "Cần chụp ảnh minh chứng trước khi đánh dấu xong."
-        : "Không thể cập nhật việc trong ca.",
+      error: "Không thể cập nhật việc trong ca. Vui lòng thử lại.",
     };
   }
 
@@ -440,23 +540,24 @@ export async function attachChecklistTaskPhoto(
   if (!photo || photo.size <= 0) {
     return { success: false, error: "Cần chọn ảnh minh chứng." };
   }
-  if (!isSupportedPhotoMime(photo.type)) {
+  if (!isValidPhotoUpload(photo)) {
+    if (photo.size > MAX_PHOTO_BYTES) {
+      return { success: false, error: "Ảnh quá lớn (tối đa 3,5MB)." };
+    }
     return { success: false, error: "Định dạng ảnh không hỗ trợ." };
-  }
-  if (photo.size > MAX_PHOTO_BYTES) {
-    return { success: false, error: "Ảnh quá lớn (tối đa 3,5MB)." };
   }
 
   const service = createServiceClient();
   const calendarDate = getTodayVN();
-  const ext = PHOTO_MIME_TO_EXT[photo.type];
+  const ext = resolvePhotoExtension(photo);
+  const mimeType = resolvePhotoMimeType(photo);
   const photoPath = `${ctx.claims.tenant_id}/${calendarDate}/${ctx.employeeId}/task-${itemId}-${randomUUID()}.${ext}`;
   const bytes = Buffer.from(await photo.arrayBuffer());
 
   const { error: uploadError } = await service.storage
     .from(ATTENDANCE_PHOTO_BUCKET)
     .upload(photoPath, bytes, {
-      contentType: photo.type,
+      contentType: mimeType,
       upsert: false,
     });
   if (uploadError) {

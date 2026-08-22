@@ -128,7 +128,7 @@ function BankAppLauncher({
         />
         <DropdownMenuContent
           align="center"
-          className="w-72 max-w-sm"
+          className="max-h-72 w-72 max-w-sm overflow-y-auto overscroll-contain"
         >
           <DropdownMenuGroup>
             {topBanks.map((bank) => {

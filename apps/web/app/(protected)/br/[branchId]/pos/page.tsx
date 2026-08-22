@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { connection } from "next/server";
 import {
   Monitor as IconDeviceDesktop,
   TriangleAlert as IconAlertTriangle,
@@ -32,6 +33,7 @@ export default async function PosPage({
   params: Promise<{ branchId: string }>;
   searchParams: Promise<{ order?: string; table?: string }>;
 }) {
+  await connection();
   const { branchId } = await params;
   const sp = await searchParams;
 

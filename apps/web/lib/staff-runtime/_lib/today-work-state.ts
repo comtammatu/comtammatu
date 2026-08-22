@@ -9,7 +9,11 @@ import { messages } from "@lib/messages";
 import { requestNow } from "@/_lib/request-now";
 import { isRequiredChecklistItemComplete } from "./checklist-complete";
 import { isShiftCountDutyItem } from "./count-duty";
-import { resolveClockInGate, type ClockInGate } from "./default-shift";
+import {
+  resolveClockInGate,
+  resolveDefaultShiftId,
+  type ClockInGate,
+} from "./default-shift";
 import { getEmployeeContext } from "./staff-runtime-context";
 
 export type TodayWorkStatus =
@@ -295,8 +299,30 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
     })
     .filter((row): row is NonNullable<typeof row> => row !== null);
 
+  let effectiveCandidates = assignmentCandidates;
+  if (
+    assignmentCandidates.length === 0 &&
+    ctx.branchId != null &&
+    activeShifts &&
+    activeShifts.length > 0
+  ) {
+    const defaultShiftId = resolveDefaultShiftId(activeShifts, nowMinutes);
+    const defaultShift = activeShifts.find((s) => s.id === defaultShiftId);
+    if (defaultShift?.start_time && defaultShift?.end_time) {
+      effectiveCandidates = [
+        {
+          workDate: calendarDate,
+          shiftId: defaultShift.id,
+          shiftName: defaultShift.name ?? null,
+          startTime: defaultShift.start_time,
+          endTime: defaultShift.end_time,
+        },
+      ];
+    }
+  }
+
   const clockInGate = resolveClockInGate(
-    assignmentCandidates,
+    effectiveCandidates,
     calendarDate,
     nowMinutes,
   );
@@ -310,6 +336,8 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
       : null;
   const shiftUnassigned =
     clockInGate.kind === "unassigned" &&
+    assignmentCandidates.length === 0 &&
+    effectiveCandidates.length === 0 &&
     isDefaultAttendanceRole(claims.user_role);
   const businessDate = assignedShift?.businessDate ?? calendarDate;
   const records = (candidateRecords ?? []).filter((item) => {
@@ -338,7 +366,7 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
   const displayShiftId =
     currentShiftId ??
     (clockInGate.kind === "too_early" ? clockInGate.shiftId : null);
-  const todayShifts: TodayShiftEntry[] = assignmentCandidates
+  const todayShifts: TodayShiftEntry[] = effectiveCandidates
     .filter(
       (assignment) =>
         assignment.workDate === calendarDate ||

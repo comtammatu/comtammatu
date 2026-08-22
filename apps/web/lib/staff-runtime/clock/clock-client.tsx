@@ -48,7 +48,7 @@ import {
   MAX_CLOCK_PHOTO_BYTES,
   MAX_UPLOAD_SOURCE_BYTES,
   UPLOAD_PHOTO_ACCEPT,
-  UPLOAD_PHOTO_TYPES,
+  isEligiblePhotoFile,
   normalizePhotoFile,
 } from "../_lib/shift-photo";
 import { useLiveCamera } from "../_lib/use-live-camera";
@@ -295,7 +295,7 @@ export function ClockClient({
       setError(null);
       setPhotoState("processing");
 
-      if (!UPLOAD_PHOTO_TYPES.has(file.type)) {
+      if (!isEligiblePhotoFile(file)) {
         setPhotoState("error");
         setError(clockCopy.uploadUnsupported);
         return;
