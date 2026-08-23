@@ -1,4 +1,5 @@
 import { formatQuantity } from "@comtammatu/shared/format";
+import { formatVNDate } from "@comtammatu/shared/time";
 import type { IngredientRow, IngredientUnitRow } from "@lib/inventory/types";
 import { messages } from "@lib/messages";
 import {
@@ -576,6 +577,41 @@ export function formatGrnLineUnitPrice(
   const unitPrice = line.monetary?.unitPrice;
   if (unitPrice == null || !(unitPrice > 0)) return null;
   return unitPrice.toLocaleString("vi-VN");
+}
+
+export function formatGrnLineTotalCost(
+  line: Pick<GrnDetailItem, "actual" | "rejected" | "monetary">,
+): string | null {
+  const acceptedQty = acceptedGrnQuantity(line.actual, line.rejected);
+  const total =
+    line.monetary?.lineTotal ??
+    (line.monetary?.unitPrice ? line.monetary.unitPrice * acceptedQty : 0);
+  if (!(total > 0)) return null;
+  return total.toLocaleString("vi-VN");
+}
+
+export function calculateGrnTotalReceiptValue(
+  lines: readonly Pick<GrnDetailItem, "actual" | "rejected" | "monetary">[],
+): number {
+  return lines.reduce((sum, line) => {
+    const acceptedQty = acceptedGrnQuantity(line.actual, line.rejected);
+    const lineTotal =
+      line.monetary?.lineTotal ??
+      (line.monetary?.unitPrice ? line.monetary.unitPrice * acceptedQty : 0);
+    return sum + lineTotal;
+  }, 0);
+}
+
+export function formatGrnTotalAmount(amount: number): string | null {
+  if (!(amount > 0)) return null;
+  return amount.toLocaleString("vi-VN");
+}
+
+export function formatGrnDate(
+  dateStr: string | null | undefined,
+): string | null {
+  if (!dateStr) return null;
+  return formatVNDate(dateStr);
 }
 
 export function splitGrnAcceptedPackLoose(

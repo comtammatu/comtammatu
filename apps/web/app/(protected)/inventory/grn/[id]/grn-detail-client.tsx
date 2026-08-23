@@ -22,6 +22,7 @@ import {
   Save as IconDeviceFloppy,
   Plus as IconPlus,
   Trash as IconTrash,
+  Zap as IconZap,
 } from "lucide-react";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { getSafeInternalReturnTo } from "@comtammatu/shared/auth";
@@ -57,9 +58,14 @@ import {
   GRN_DETAIL_COPY as grnCopy,
   acceptedGrnQuantity,
   calculateGrnQuantities,
+  calculateGrnTotalReceiptValue,
+  deliveredGrnQuantity,
   formatGrnPersistQty,
   formatGrnPoQty,
+  formatGrnDate,
   formatGrnLineUnitPrice,
+  formatGrnLineTotalCost,
+  formatGrnTotalAmount,
   grnLineQuantityConversion,
   confirmableGrnSuppliers,
   isGrnLineBooked,
@@ -221,6 +227,26 @@ export function GRNDetailClient({
       grnListBasePath,
       onConfirmed: presentation === "dialog" ? closeOwnerDialogUrl : undefined,
     });
+
+  const totalReceiptValue = useMemo(
+    () => calculateGrnTotalReceiptValue(lines),
+    [lines],
+  );
+
+  const handleReceiveAllAsOrdered = useCallback(() => {
+    setLines((prev) =>
+      prev.map((line) => {
+        if (isGrnLineBooked(line)) return line;
+        const ordered = line.poQuantity ?? line.remainingQuantity;
+        return {
+          ...line,
+          actual: deliveredGrnQuantity(ordered, 0),
+          rejected: 0,
+          dirty: true,
+        };
+      }),
+    );
+  }, [setLines]);
 
   const confirmButtons =
     confirmableSuppliers.length === 0 ? (
@@ -632,7 +658,156 @@ export function GRNDetailClient({
     ],
   );
 
-  const confirmedColumns = draftColumns;
+  const confirmedColumns = useMemo<DataTableColumn<EditableLine>[]>(
+    () => [
+      {
+        key: "name",
+        header: grnCopy.lineHeaderName,
+        className: "min-w-48 max-w-72 align-top",
+        render: (line) => (
+          <div className="min-w-0">
+            <p className="min-w-0 truncate font-medium">{line.name}</p>
+            {line.sku ? (
+              <p className="font-mono text-2xs text-muted-foreground">{line.sku}</p>
+            ) : null}
+            {grn.linkedPos.length > 1 && line.supplierName ? (
+              <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                {line.supplierName}
+              </p>
+            ) : null}
+          </div>
+        ),
+      },
+      {
+        key: "ordered",
+        header: grnCopy.lineHeaderOrdered,
+        className: "w-28 min-w-24 text-right align-top",
+        render: (line) => {
+          const orderedQty = line.poQuantity ?? line.remainingQuantity;
+          return (
+            <p className="font-mono font-medium tabular-nums text-muted-foreground">
+              {formatGrnPoQty(orderedQty, line)}
+            </p>
+          );
+        },
+      },
+      {
+        key: "actual",
+        header: grnCopy.lineHeaderQty,
+        className: "w-28 min-w-24 text-right align-top",
+        render: (line) => {
+          const acceptedQty = acceptedGrnQuantity(line.actual, line.rejected);
+          return (
+            <p className="font-mono font-semibold tabular-nums text-foreground">
+              {acceptedQty > 0
+                ? formatGrnPersistQty(acceptedQty, line)
+                : "—"}
+            </p>
+          );
+        },
+      },
+      {
+        key: "unitPrice",
+        header: grnCopy.lineHeaderUnitPrice,
+        className: "w-32 min-w-28 text-right align-top",
+        render: (line) => {
+          const price = formatGrnLineUnitPrice(line);
+          return (
+            <p className="font-mono tabular-nums text-muted-foreground">
+              {price ? `${price} đ` : "—"}
+            </p>
+          );
+        },
+      },
+      {
+        key: "lineTotal",
+        header: grnCopy.lineHeaderLineTotal,
+        className: "w-36 min-w-32 text-right align-top",
+        render: (line) => {
+          const formattedTotal = formatGrnLineTotalCost(line);
+          return (
+            <p className="font-mono font-semibold tabular-nums text-foreground">
+              {formattedTotal ? `${formattedTotal} đ` : "—"}
+            </p>
+          );
+        },
+      },
+      {
+        key: "applied",
+        header: grnCopy.lineHeaderResult,
+        className: "w-32 min-w-28 text-right align-top",
+        render: (line) => {
+          if (line.rejected > 0) {
+            return (
+              <Badge variant="destructive">
+                {grnCopy.line.rejectedShort(line.rejected, line.unit)}
+              </Badge>
+            );
+          }
+          if (line.shortageQuantity > 0) {
+            return (
+              <Badge variant="warning">
+                {grnCopy.line.shortageShortText(
+                  formatGrnPoQty(line.shortageQuantity, line),
+                )}
+              </Badge>
+            );
+          }
+          if (line.excessQuantity > 0) {
+            return (
+              <Badge variant="warning">
+                {grnCopy.line.excessShortText(
+                  formatGrnPersistQty(line.excessQuantity, line),
+                )}
+              </Badge>
+            );
+          }
+          if (line.costPending) {
+            return (
+              <Badge variant="warning">{valuationCopy.pendingInvoice}</Badge>
+            );
+          }
+          return (
+            <span className="inline-flex items-center text-xs font-medium text-success">
+              {grnCopy.fullMatch}
+            </span>
+          );
+        },
+      },
+      {
+        key: "actions",
+        header: (
+          <span className="sr-only">{GRN_CREATE_COPY.lineActionsAria}</span>
+        ),
+        className: "w-24 align-top text-right",
+        render: (line) => {
+          if (canPatchConfirmedUnitCost && isUnpricedConfirmedGrnLine(line)) {
+            return (
+              <div
+                className="flex items-center justify-end"
+                onClick={(event) => event.stopPropagation()}
+                onKeyDown={(event) => event.stopPropagation()}
+              >
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => openConfirmedUnitCostDialog(line)}
+                >
+                  {grnCopy.confirmedUnitCost.confirmAction}
+                </Button>
+              </div>
+            );
+          }
+          return null;
+        },
+      },
+    ],
+    [
+      canPatchConfirmedUnitCost,
+      grn.linkedPos.length,
+      openConfirmedUnitCostDialog,
+    ],
+  );
 
   const footer = (
     <AppDetailFooter
@@ -867,12 +1042,7 @@ export function GRNDetailClient({
   );
 
   const confirmedLinesSection = (
-    <AppSection
-      className="overflow-hidden"
-      title={grnCopy.inspectionItemsTitle}
-      description={grnCopy.finalizedLineCount(lines.length)}
-      contentFlush
-    >
+    <div className="flex flex-col gap-3">
       <DataTable
         columns={confirmedColumns}
         data={lines}
@@ -898,7 +1068,15 @@ export function GRNDetailClient({
           />
         )}
       />
-    </AppSection>
+      {lines.length > 0 && totalReceiptValue > 0 ? (
+        <div className="flex items-center justify-between border-t pt-3 text-xs text-muted-foreground px-1">
+          <span>{grnCopy.totalLinesSummary(lines.length)}</span>
+          <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
+            {grnCopy.totalAmountPrefix(formatGrnTotalAmount(totalReceiptValue) ?? "0")}
+          </span>
+        </div>
+      ) : null}
+    </div>
   );
 
   const exceptionLineCount = lines.filter(
@@ -911,25 +1089,61 @@ export function GRNDetailClient({
     (line) => line.actual > 0 || line.rejected > 0,
   ).length;
 
-  const documentBody = (
-    <div className="flex flex-col gap-6">
-      {nextStepBanner ? (
-        <Alert>
-          <IconInfoCircle className="size-4" />
-          <AlertDescription className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <span>
-              <span className="font-medium">{nextStepBanner.title}. </span>
-              {nextStepBanner.body}
-            </span>
-            {nextStepBanner.action}
-          </AlertDescription>
-        </Alert>
-      ) : null}
+  const confirmedContextStrip = (
+    <Item
+      variant="outline"
+      className="grid grid-cols-2 gap-4 p-4 text-xs sm:grid-cols-4"
+    >
+      <div className="min-w-0">
+        <span className="block font-medium text-muted-foreground">
+          {grnCopy.receivingWarehouseLabel}
+        </span>
+        <p className="mt-1 font-semibold text-foreground truncate">
+          {grn.branchName}{receivingLocationName ? ` · ${receivingLocationName}` : ""}
+        </p>
+      </div>
+      <div className="min-w-0">
+        <span className="block font-medium text-muted-foreground">
+          {grnCopy.receivedDateLabel}
+        </span>
+        <p className="mt-1 font-mono font-semibold text-foreground tabular-nums">
+          {grn.date
+            ? formatGrnDate(grn.date)
+            : grn.expectedReceiveDate
+              ? formatGrnDate(grn.expectedReceiveDate)
+              : "—"}
+        </p>
+      </div>
+      <div className="min-w-0">
+        <span className="block font-medium text-muted-foreground">
+          {grnCopy.supplierInvoiceStatusLabel}
+        </span>
+        <p className="mt-1 font-semibold text-foreground">
+          {grn.invoiceId ? (
+            <span className="text-success">{grnCopy.supplierInvoiceRecorded}</span>
+          ) : canManageSupplierInvoice ? (
+            <span className="text-warning">{grnCopy.supplierInvoiceNotRecorded}</span>
+          ) : (
+            "—"
+          )}
+        </p>
+      </div>
+      <div className="min-w-0">
+        <span className="block font-medium text-muted-foreground">
+          {grnCopy.totalValueLabel}
+        </span>
+        <p className="mt-1 font-mono text-sm font-semibold text-foreground tabular-nums">
+          {totalReceiptValue > 0
+            ? `${formatGrnTotalAmount(totalReceiptValue)} đ`
+            : "—"}
+        </p>
+      </div>
+    </Item>
+  );
 
-      <Item
-        variant="outline"
-        className="grid grid-cols-2 gap-4 p-4 text-xs sm:grid-cols-4"
-      >
+  const draftInspectionStrip = (
+    <Item variant="outline" className="flex flex-col gap-3 p-4 text-xs">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 items-center">
         <div className="min-w-0">
           <span className="block font-medium text-muted-foreground">
             {grnMessages.kpiLines}
@@ -943,7 +1157,7 @@ export function GRNDetailClient({
             {grnMessages.kpiInspected}
           </span>
           <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
-            {inspectedLineCount}
+            {inspectedLineCount} / {lines.length}
           </span>
         </div>
         <div className="min-w-0">
@@ -965,10 +1179,43 @@ export function GRNDetailClient({
             {grnMessages.kpiExpected}
           </span>
           <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
-            {grn.expectedReceiveDate ?? "—"}
+            {grn.expectedReceiveDate ? formatGrnDate(grn.expectedReceiveDate) : "—"}
           </span>
         </div>
-      </Item>
+      </div>
+      {canMutateDraft && lines.length > 0 ? (
+        <div className="flex items-center justify-between border-t pt-3">
+          <span className="text-muted-foreground">{grnCopy.fillAllAsOrderedLabel}</span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleReceiveAllAsOrdered}
+          >
+            <IconZap className="mr-1.5 size-3.5" />
+            {grnCopy.fillAllAsOrderedAction}
+          </Button>
+        </div>
+      ) : null}
+    </Item>
+  );
+
+  const documentBody = (
+    <div className="flex flex-col gap-5">
+      {nextStepBanner ? (
+        <Alert>
+          <IconInfoCircle className="size-4" />
+          <AlertDescription className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              <span className="font-medium">{nextStepBanner.title}. </span>
+              {nextStepBanner.body}
+            </span>
+            {nextStepBanner.action}
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {isDraft ? draftInspectionStrip : confirmedContextStrip}
 
       {presentation === "dialog" ? (
         canChangeLineSet ? (
@@ -990,9 +1237,7 @@ export function GRNDetailClient({
       )}
 
       {isDraft ? (
-        <div className="flex min-w-0 flex-col gap-3">
-          <div className="flex min-w-0 flex-col gap-3">{draftLinesSection}</div>
-        </div>
+        <div className="flex min-w-0 flex-col gap-3">{draftLinesSection}</div>
       ) : (
         confirmedLinesSection
       )}
@@ -1253,68 +1498,77 @@ export function GRNDetailClient({
     }
 
     const dialogFooter = (
-      <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
-        <Button
-          type="button"
-          variant="outline"
-          size="default"
-          onClick={() => void closeDialog()}
-        >
-          {ACTIONS_VI.close}
-        </Button>
-        {dialogOverflowItems.length > 0 ? (
-          <RowActionsMenu items={dialogOverflowItems} />
-        ) : null}
-        {!isDraft && canAdjustStock && lines.length > 0 && !invoiceIsPrimary ? (
-          <DocumentStockCorrectionDialog
-            documentType="grn"
-            documentId={grn.id}
-            documentCode={grn.code}
-            branchOptions={[
-              {
-                id: grn.branchId,
-                name: grn.branchName,
-              },
-            ]}
-            itemOptions={lines.map((line) => ({
-              ingredientId: line.ingredientId,
-              name: line.name,
-              unit: line.unit,
-            }))}
-          />
-        ) : null}
-        {isDraft && canMutateDraft && dirtyLines.length > 0 ? (
+      <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          {!isDraft || hasBookedLines ? (
+            <GrnThermalReceiptDialog grn={grn} lines={lines} />
+          ) : null}
+          {(!isDraft || hasBookedLines) && canManageSupplierInvoice ? (
+            <Button
+              variant={
+                valuationKind === "pending_invoice" ? "default" : "outline"
+              }
+              size="default"
+              render={
+                <Link
+                  href={supplierInvoiceHrefForGrn({
+                    basePath: supplierInvoicesBasePath,
+                    grnId: grn.id,
+                    invoiceId: grn.invoiceId,
+                  })}
+                />
+              }
+            >
+              <IconReceipt className="size-4" />
+              {grn.invoiceId ? grnCopy.viewInvoice : grnCopy.createInvoice}
+            </Button>
+          ) : null}
+          {!isDraft && canAdjustStock && lines.length > 0 ? (
+            <DocumentStockCorrectionDialog
+              documentType="grn"
+              documentId={grn.id}
+              documentCode={grn.code}
+              branchOptions={[
+                {
+                  id: grn.branchId,
+                  name: grn.branchName,
+                },
+              ]}
+              itemOptions={lines.map((line) => ({
+                ingredientId: line.ingredientId,
+                name: line.name,
+                unit: line.unit,
+              }))}
+            />
+          ) : null}
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <Button
             type="button"
+            variant="outline"
             size="default"
-            onClick={handleSave}
-            disabled={isSaving}
+            onClick={() => void closeDialog()}
           >
-            <IconDeviceFloppy className="size-5" />
-            {grnCopy.saveChanges(dirtyLines.length)}
+            {ACTIONS_VI.close}
           </Button>
-        ) : null}
-        {isDraft && !(canMutateDraft && dirtyLines.length > 0)
-          ? confirmButtons
-          : null}
-        {invoiceIsPrimary ? (
-          <Button
-            variant="default"
-            size="default"
-            render={
-              <Link
-                href={supplierInvoiceHrefForGrn({
-                  basePath: supplierInvoicesBasePath,
-                  grnId: grn.id,
-                  invoiceId: grn.invoiceId,
-                })}
-              />
-            }
-          >
-            <IconReceipt className="size-5" />
-            {grn.invoiceId ? grnCopy.viewInvoice : grnCopy.createInvoice}
-          </Button>
-        ) : null}
+          {dialogOverflowItems.length > 0 ? (
+            <RowActionsMenu items={dialogOverflowItems} />
+          ) : null}
+          {isDraft && canMutateDraft && dirtyLines.length > 0 ? (
+            <Button
+              type="button"
+              size="default"
+              onClick={handleSave}
+              disabled={isSaving}
+            >
+              <IconDeviceFloppy className="size-5" />
+              {grnCopy.saveChanges(dirtyLines.length)}
+            </Button>
+          ) : null}
+          {isDraft && !(canMutateDraft && dirtyLines.length > 0)
+            ? confirmButtons
+            : null}
+        </div>
       </div>
     );
 

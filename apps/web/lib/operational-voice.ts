@@ -148,7 +148,6 @@ async function fetchCloudClip(
   signal: AbortSignal,
   branchId?: number,
 ): Promise<ArrayBuffer | null | "rate_limited"> {
-  if (cloudTtsAvailable === false) return null;
   const cached = await readCachedClip(text, branchId);
   if (cached) {
     cloudTtsAvailable = true;

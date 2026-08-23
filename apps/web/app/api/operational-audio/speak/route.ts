@@ -40,16 +40,6 @@ function audioResponse(bytes: Buffer) {
 }
 
 export async function GET(request: Request) {
-  const ctx = await getAuthContextWithAnyPermission(STATION_ROLES, [
-    PERMISSION_KEYS.POS_USE,
-    PERMISSION_KEYS.KDS_USE,
-    PERMISSION_KEYS.SETTINGS_BRANCH,
-    PERMISSION_KEYS.SETTINGS_TENANT,
-  ]);
-  if (!ctx) {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  }
-
   const url = new URL(request.url);
   const text = url.searchParams.get("text")?.trim() ?? "";
   if (!isAllowedOperationalUtterance(text)) return badRequest();
@@ -57,6 +47,21 @@ export async function GET(request: Request) {
 
   const rawBranchId = url.searchParams.get("branchId");
   const branchId = rawBranchId ? Number(rawBranchId) : null;
+
+  const ctx = await getAuthContextWithAnyPermission(
+    STATION_ROLES,
+    [
+      PERMISSION_KEYS.POS_USE,
+      PERMISSION_KEYS.KDS_USE,
+      PERMISSION_KEYS.SETTINGS_BRANCH,
+      PERMISSION_KEYS.SETTINGS_TENANT,
+    ],
+    branchId,
+  );
+  if (!ctx) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+
   const config = await resolveTtsConfig(
     ctx.supabase as unknown as Parameters<typeof resolveTtsConfig>[0],
     branchId,

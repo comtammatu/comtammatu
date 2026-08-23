@@ -60,8 +60,9 @@ tracked `.agents/skills` bundle. Global skill catalogs, plugin caches, and
 per-user plugin state are additive only. Local Claude/Codex adapter files are
 optional and untracked; when present they may enable plugins or MCP servers but
 cannot replace or alter project policy.
-`corepack pnpm agent:start` refreshes CodeGraph when `.codegraph/` exists and
-installs the tracked `pre-push` verify hook.
+`corepack pnpm agent:start` refreshes CodeGraph
+([`colbymchenry/codegraph`](https://github.com/colbymchenry/codegraph)) when
+`.codegraph/` exists and installs the tracked `pre-push` verify hook.
 
 The production guard contract spans the Environment Registry in `database.md`,
 `scripts/guard-prod-db.mjs`, and `scripts/check-guard-sync.mjs`. An optional

@@ -1,6 +1,8 @@
 export const ALLOWED_TTS_MODELS = [
   "openai/tts-1",
   "fish-audio/s2.1-pro",
+  "fish-audio/s2-pro",
+  "fish-audio/s1",
 ] as const;
 
 export type TtsModel = (typeof ALLOWED_TTS_MODELS)[number];

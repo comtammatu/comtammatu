@@ -49,7 +49,7 @@ test("operational cloud TTS stays allowlisted, authenticated, and cloud-only", (
   assert.match(gateway, /from "@ai-sdk\/gateway"/);
   assert.match(gateway, /generateSpeech/);
   assert.match(gateway, /GatewayError/);
-  assert.match(gateway, /gatewayCoolDownUntil/);
+  assert.match(gateway, /gatewayCoolDownByModel/);
   assert.match(gateway, /"rate_limited"/);
   assert.match(gateway, /gateway\.speechModel\(effectiveConfig\.model\)/);
   assert.match(gateway, /outputFormat: "mp3"/);

@@ -289,6 +289,7 @@ export function LineRow({
               }
               maxFractionDigits={3}
               placeholder="0"
+              className="text-right"
             />
           ) : (
             <InputGroup size="default">
@@ -341,6 +342,7 @@ export function LineRow({
                 onChange(patchGrnLineUnitPrice(line, Number(value || 0)))
               }
               placeholder="0"
+              className="text-right"
             />
           ) : (
             <InputGroup size="default">

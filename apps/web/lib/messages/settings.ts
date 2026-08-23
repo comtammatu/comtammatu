@@ -1008,6 +1008,8 @@ export const settings = {
     modelLabel: "Nhà cung cấp / Mô hình",
     modelOpenAi: "OpenAI (tts-1)",
     modelFishAudio: "Fish Audio (s2.1-pro)",
+    modelFishAudioS2Pro: "Fish Audio (s2-pro)",
+    modelFishAudioS1: "Fish Audio (s1)",
     voiceLabel: "Giọng đọc",
     voiceDefaultFishAudio: "Mặc định (Fish Audio)",
     customVoiceLabel: "Mã giọng đọc (tùy chọn)",

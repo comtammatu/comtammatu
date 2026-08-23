@@ -11,10 +11,10 @@ const TTS_TIMEOUT_MS = 8_000;
 const MAX_CATALOG_CLIPS = 200;
 const MAX_AMOUNT_CLIPS = 80;
 const RECEIVED_AMOUNT_PREFIX = "Đã nhận ";
-const GATEWAY_COOLDOWN_MS = 60_000;
+const GATEWAY_COOLDOWN_MS = 15_000;
 
 const clipCache = new Map<string, Buffer>();
-let gatewayCoolDownUntil = 0;
+const gatewayCoolDownByModel = new Map<string, number>();
 
 function readRuntimeSecret(name: string): string | null {
   // Dynamic lookup: Next inlines `process.env.NAME` (and often literal
@@ -95,7 +95,9 @@ export async function synthesizeOperationalUtterance(
   const cacheKey = buildClipCacheKey(text, effectiveConfig);
   const cached = clipCache.get(cacheKey);
   if (cached) return cached;
-  if (Date.now() < gatewayCoolDownUntil) return "rate_limited";
+
+  const modelCooldown = gatewayCoolDownByModel.get(effectiveConfig.model) ?? 0;
+  if (Date.now() < modelCooldown) return "rate_limited";
 
   if (!isOperationalTtsConfigured()) return null;
 
@@ -120,7 +122,10 @@ export async function synthesizeOperationalUtterance(
         : "unknown",
     );
     if (GatewayError.isInstance(error)) {
-      gatewayCoolDownUntil = Date.now() + GATEWAY_COOLDOWN_MS;
+      gatewayCoolDownByModel.set(
+        effectiveConfig.model,
+        Date.now() + GATEWAY_COOLDOWN_MS,
+      );
       return "rate_limited";
     }
     return null;

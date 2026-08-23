@@ -101,6 +101,12 @@ export function TenantAudioForm({
                 <SelectItem value="fish-audio/s2.1-pro">
                   {copy.modelFishAudio}
                 </SelectItem>
+                <SelectItem value="fish-audio/s2-pro">
+                  {copy.modelFishAudioS2Pro}
+                </SelectItem>
+                <SelectItem value="fish-audio/s1">
+                  {copy.modelFishAudioS1}
+                </SelectItem>
               </SelectContent>
             </Select>
           </FieldContent>
