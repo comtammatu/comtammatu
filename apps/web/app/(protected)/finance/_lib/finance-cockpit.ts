@@ -2,7 +2,6 @@ import {
   formatAccountingVND as formatVND,
   formatCount,
 } from "@comtammatu/shared/format";
-import { addMoney, roundToCanonicalMoney } from "@comtammatu/shared/money";
 import { loadAuthState } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
 import { currentUserHasPermissionAny } from "@/_lib/permissions";
@@ -21,15 +20,14 @@ import {
   type PeriodGoodsInKind,
 } from "./finance-goods-in";
 import { calculateFinanceResult } from "./finance-result";
-import { isStartupCapitalCategory } from "./expense-categories";
 import {
   parseFinanceOperatingCockpitRpc,
   type FinanceOperatingCockpitRpc,
 } from "./finance-operating-rpc";
 import {
-  applySalesBranchesFilter,
-  fetchSalesBranchIds,
-} from "./finance-sales-branches";
+  fetchPeriodReadiness,
+  type PeriodReadinessRpc,
+} from "./finance-period-readiness";
 import { fetchCashSummary, type CashSummary } from "./cash-cockpit";
 
 type SupabaseClient = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
@@ -66,6 +64,8 @@ interface FinanceCockpitKpis {
   startupCapitalRecorded: boolean;
   equipment: number;
   equipmentRecorded: boolean;
+  /** Startup-capital RPC failed — the cards must show a load error, not zero. */
+  startupCapitalLoadFailed: boolean;
   goodsIn: number;
   goodsInKind: PeriodGoodsInKind;
   ingredientCost: number;
@@ -102,9 +102,14 @@ export interface FinanceCockpitData {
     | "grossProfit"
     | "costAvailable"
   > | null;
-  exceptions: FinanceException[];
   dashboardSummary: FinanceDashboardSummary | null;
   cash?: CashSummary;
+  /**
+   * Read-only period-close readiness (Sức khoẻ chốt sổ); only fetched for
+   * the sealed `last_month` range, null everywhere else. Never exposes a
+   * close/reopen action.
+   */
+  readiness: PeriodReadinessRpc | null;
 }
 
 interface BranchOption {
@@ -117,73 +122,83 @@ function toNumber(value: number | string | null | undefined): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function summarizeStartupCapital(
-  rows: Array<{ amount: number | string | null; category: string | null }>,
-): StartupCapitalSummary {
-  const capitalRows = rows.filter(
-    (row): row is { amount: number | string | null; category: string } =>
-      row.category != null && isStartupCapitalCategory(row.category),
-  );
-  const equipmentRows = capitalRows.filter((row) => row.category === "capital");
-
+/**
+ * Defensive jsonb parser for get_finance_startup_capital_summary: the
+ * payload may arrive as a JSON string depending on the RPC transport.
+ * Returns null on any unparseable shape so the caller can surface a load
+ * failure instead of a silent zero summary.
+ */
+function parseStartupCapitalSummaryRpc(
+  raw: unknown,
+): StartupCapitalSummary | null {
+  let payload: unknown = raw;
+  if (typeof payload === "string") {
+    try {
+      payload = JSON.parse(payload) as unknown;
+    } catch {
+      return null;
+    }
+  }
+  if (
+    payload == null ||
+    typeof payload !== "object" ||
+    Array.isArray(payload)
+  ) {
+    return null;
+  }
+  const row = payload as Record<string, unknown>;
+  const startupTotal = row.startup_total;
+  const equipmentTotal = row.equipment_total;
+  if (
+    (typeof startupTotal !== "number" && typeof startupTotal !== "string") ||
+    (typeof equipmentTotal !== "number" && typeof equipmentTotal !== "string")
+  ) {
+    return null;
+  }
+  // Validate the numeric form before building the summary: a non-finite
+  // parse (e.g. "12.5.3") must surface as a load failure, never be
+  // coerced into a silent zero total.
+  const parsedStartupTotal = Number(startupTotal);
+  const parsedEquipmentTotal = Number(equipmentTotal);
+  if (
+    !Number.isFinite(parsedStartupTotal) ||
+    !Number.isFinite(parsedEquipmentTotal)
+  ) {
+    return null;
+  }
   return {
-    total: toNumber(
-      addMoney(capitalRows.map((row) => roundToCanonicalMoney(row.amount ?? 0))),
-    ),
-    recorded: capitalRows.length > 0,
-    equipment: toNumber(
-      addMoney(
-        equipmentRows.map((row) => roundToCanonicalMoney(row.amount ?? 0)),
-      ),
-    ),
-    equipmentRecorded: equipmentRows.length > 0,
+    total: parsedStartupTotal,
+    recorded: row.startup_recorded === true,
+    equipment: parsedEquipmentTotal,
+    equipmentRecorded: row.equipment_recorded === true,
   };
 }
 
 async function fetchStartupCapitalSummary({
   supabase,
-  tenantId,
   location,
   branchId,
-  salesBranchIds,
 }: {
   supabase: SupabaseClient;
-  tenantId: number;
   location: FinanceLocation;
   branchId: number | null;
-  salesBranchIds?: number[] | null;
-}): Promise<StartupCapitalSummary> {
-  let query = supabase
-    .from("expenses")
-    .select("amount, category")
-    .eq("tenant_id", tenantId)
-    .in("category", ["capital", "deposit"]);
-
-  if (location === "company") {
-    query = query.is("branch_id", null);
-  } else if (location === "branches") {
-    const branchIds =
-      salesBranchIds ?? (await fetchSalesBranchIds(supabase as never, tenantId));
-    query = applySalesBranchesFilter(query, "branch_id", branchIds);
-  } else if (location === "branch" && branchId != null) {
-    query = query.eq("branch_id", branchId);
-  }
-
-  const { data, error } = await query;
-  if (error) {
-    return {
-      total: 0,
-      recorded: false,
-      equipment: 0,
-      equipmentRecorded: false,
-    };
-  }
-  return summarizeStartupCapital(
-    (data ?? []) as Array<{
-      amount: number | string | null;
-      category: string | null;
-    }>,
+}): Promise<StartupCapitalSummary | null> {
+  // All-time Chi phí ban đầu / Thiết bị truth lives server-side; the RPC
+  // ignores the period by design and never enters the period result.
+  const { data, error } = await supabase.rpc(
+    "get_finance_startup_capital_summary",
+    {
+      p_location: location,
+      ...(location === "branch" && branchId != null
+        ? { p_branch_id: branchId }
+        : {}),
+    },
   );
+  if (error) {
+    console.error("[finance:startup-capital] RPC failed", error.code);
+    return null;
+  }
+  return parseStartupCapitalSummaryRpc(data);
 }
 
 async function fetchOperatingCockpitRpc({
@@ -231,9 +246,7 @@ function buildKpisFromCockpit({
     orderCount > 0 ? costCoverageOrderCount / orderCount : 1;
   const costAvailable =
     orderCount === 0 || costCoverageOrderCount >= orderCount;
-  const inventoryChange = includeInventoryChange
-    ? cockpit.inventoryClosing - cockpit.inventoryOpening
-    : 0;
+  const inventoryChange = includeInventoryChange ? cockpit.inventoryChange : 0;
   const financeResult = calculateFinanceResult({
     netRevenueBeforeVat,
     goodsIn: cockpit.goodsIn,
@@ -257,6 +270,7 @@ function buildKpisFromCockpit({
     startupCapitalRecorded: startupCapital.recorded,
     equipment: startupCapital.equipment,
     equipmentRecorded: startupCapital.equipmentRecorded,
+    startupCapitalLoadFailed: false,
     goodsIn: cockpit.goodsIn,
     goodsInKind: cockpit.goodsInKind,
     ingredientCost,
@@ -283,6 +297,7 @@ function emptyKpis(goodsInKind: PeriodGoodsInKind): FinanceCockpitKpis {
     startupCapitalRecorded: false,
     equipment: 0,
     equipmentRecorded: false,
+    startupCapitalLoadFailed: false,
     goodsIn: 0,
     goodsInKind,
     ingredientCost: 0,
@@ -519,15 +534,23 @@ export async function fetchFinanceCockpit(
 ): Promise<FinanceCockpitData> {
   const { supabase, claims } = await loadAuthState();
   const monetary = await loadInventoryMonetaryAccess(claims.user_role);
-  const includesBranchData = params.location !== "company";
   const canReadRequestedValuation =
     monetary.client != null &&
     (params.branch == null ||
       (await canAccessBranch(supabase, claims, params.branch)));
 
-  const salesBranchIds = includesBranchData
-    ? await fetchSalesBranchIds(supabase as never, claims.tenant_id)
-    : null;
+  // Period-close readiness (get_finance_period_close_readiness) is only
+  // meaningful for a sealed calendar month: exactly the last_month preset.
+  // mtd/today/custom stay quiet so no mid-month noise reaches the landing.
+  const [readinessYearPart, readinessMonthPart] = resolved.end
+    .slice(0, 7)
+    .split("-");
+  const readinessYear = Number(readinessYearPart);
+  const readinessMonth = Number(readinessMonthPart);
+  const readinessEnabled =
+    params.range === "last_month" &&
+    Number.isInteger(readinessYear) &&
+    Number.isInteger(readinessMonth);
 
   // Hub loader: operating cockpit (+ compare) + funds + branches + startup.
   const [
@@ -536,6 +559,7 @@ export async function fetchFinanceCockpit(
     compareCockpit,
     startupCapitalSummary,
     cash,
+    readiness,
   ] = await Promise.all([
     fetchAccessibleBranches(),
     fetchOperatingCockpitRpc({
@@ -556,37 +580,61 @@ export async function fetchFinanceCockpit(
       : Promise.resolve(null),
     fetchStartupCapitalSummary({
       supabase,
-      tenantId: claims.tenant_id,
       location: params.location,
       branchId: params.branch,
-      salesBranchIds,
     }),
     options?.includeCash
       ? fetchCashSummary(supabase)
       : Promise.resolve(undefined),
+    readinessEnabled
+      ? fetchPeriodReadiness({
+          supabase,
+          year: readinessYear,
+          month: readinessMonth,
+          branchId: params.branch,
+        })
+      : Promise.resolve(null),
   ]);
 
   const branches = (
     branchesRes.success ? (branchesRes.data ?? []) : []
   ) as BranchOption[];
   const goodsInKind = periodGoodsInKindForLocation(params.location);
+  // Gate on the server flags: the RPC reports readability and inclusion per
+  // scope (company sums every valued branch), so the client no longer
+  // hard-requires branch data. The branch-access check inside
+  // canReadRequestedValuation still applies only when params.branch is set.
   const canViewInventoryValuation =
     canReadRequestedValuation &&
-    includesBranchData &&
-    (cockpit?.inventoryReadable ?? false);
+    (cockpit?.inventoryReadable ?? false) &&
+    (cockpit?.inventoryChangeIncluded ?? false);
 
+  // A null summary means the RPC failed or returned an unparseable payload:
+  // keep the values at zero/unrecorded but flag the load failure so the
+  // landing renders an error instead of the silent "Chưa ghi nhận" shape.
+  const startupCapitalLoadFailed = startupCapitalSummary == null;
   const kpis = cockpit
-    ? buildKpisFromCockpit({
-        cockpit,
-        startupCapital: startupCapitalSummary,
-        includeInventoryChange: canViewInventoryValuation,
-      })
+    ? {
+        ...buildKpisFromCockpit({
+          cockpit,
+          startupCapital:
+            startupCapitalSummary ?? {
+              total: 0,
+              recorded: false,
+              equipment: 0,
+              equipmentRecorded: false,
+            },
+          includeInventoryChange: canViewInventoryValuation,
+        }),
+        startupCapitalLoadFailed,
+      }
     : {
         ...emptyKpis(goodsInKind),
-        startupCapital: startupCapitalSummary.total,
-        startupCapitalRecorded: startupCapitalSummary.recorded,
-        equipment: startupCapitalSummary.equipment,
-        equipmentRecorded: startupCapitalSummary.equipmentRecorded,
+        startupCapital: startupCapitalSummary?.total ?? 0,
+        startupCapitalRecorded: startupCapitalSummary?.recorded ?? false,
+        equipment: startupCapitalSummary?.equipment ?? 0,
+        equipmentRecorded: startupCapitalSummary?.equipmentRecorded ?? false,
+        startupCapitalLoadFailed,
       };
 
   const compareKpisBuilt =
@@ -629,9 +677,7 @@ export async function fetchFinanceCockpit(
         }
       : null,
     dashboardSummary,
-    exceptions: cockpit
-      ? exceptionsFromCockpit(params, cockpit, kpis)
-      : [],
     ...(cash != null ? { cash } : {}),
+    readiness,
   };
 }

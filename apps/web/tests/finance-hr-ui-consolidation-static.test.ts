@@ -115,7 +115,9 @@ test("Finance landing does not surface VAT cards on the operating hub", () => {
   assert.doesNotMatch(page, /cockpit\.vat\.outputIssued/);
   assert.doesNotMatch(page, /basic\.sections\.vat/);
   assert.match(cockpit, /vat: \{ inputRecorded: null, outputIssued: null \}/);
-  assert.match(cockpit, /\.from\("expenses"\)/);
+  // Startup-capital expenses aggregation moved into the summary RPC; the hub
+  // still adds no VAT source reads (supplier_invoices / tax_invoices).
+  assert.match(cockpit, /get_finance_startup_capital_summary/);
   assert.doesNotMatch(cockpit, /\.from\("supplier_invoices"\)/);
   assert.doesNotMatch(cockpit, /\.from\("tax_invoices"\)/);
 });

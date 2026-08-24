@@ -152,6 +152,9 @@ test("Finance operating expense excludes food-cost and transfer categories", () 
   const operatingCockpitMigration = read(
     "supabase/migrations/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
   );
+  const startupCapitalMigration = read(
+    "supabase/migrations/20260824013553_finance_startup_capital_summary_rpc.sql",
+  );
 
   assert.match(categories, /cogs_manual: "materials"/);
   assert.match(categories, /bank_deposit: "transfer"/);
@@ -160,7 +163,10 @@ test("Finance operating expense excludes food-cost and transfer categories", () 
   assert.match(categories, /isOperatingExpenseCategory/);
   assert.match(categories, /isStartupCapitalCategory/);
   assert.match(cockpit, /get_finance_operating_cockpit/);
-  assert.match(cockpit, /\.in\("category", \["capital", "deposit"\]\)/);
+  // Startup-capital classification truth moved server-side: the cockpit
+  // calls the summary RPC and the RPC keeps the capital+deposit slice.
+  assert.match(cockpit, /get_finance_startup_capital_summary/);
+  assert.match(startupCapitalMigration, /category IN \('capital', 'deposit'\)/);
   assert.match(operatingCockpitMigration, /get_finance_expense_period_summary/);
   assert.doesNotMatch(expenseSummaryMigration, /cogs_manual/);
   assert.doesNotMatch(expenseSummaryMigration, /bank_deposit/);
@@ -449,5 +455,57 @@ test("Finance live copy stays operating-first without two-mode labels", () => {
     financeMessages,
     /khách không lấy hóa đơn|khách hàng không lấy hóa đơn|khách lẻ không yêu cầu MST|trước VAT/,
     "Finance live copy should keep operating labels terse and current",
+  );
+});
+
+test("Finance landing wires period-integrity hints, inventory-change gating and readiness", () => {
+  const page = read("apps/web/app/(protected)/finance/page.tsx");
+  const cockpit = read(
+    "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts",
+  );
+
+  // (a) The operating-result card carries the inventory-aware hint so the
+  // previously dead copy is wired in (dead-copy fix).
+  assert.match(
+    page,
+    /function renderOperatingResultCard\(\)[\s\S]*?operatingResultHint[\s\S]*?operatingResultHintWithoutInventory/,
+    "operating-result card must pass the hint/without-inventory hint pair",
+  );
+
+  // (b) Inventory-change visibility gates on the server flags, not on
+  // includesBranchData, so company scope can show the summed term when
+  // included + readable.
+  assert.match(
+    cockpit,
+    /canReadRequestedValuation &&\s*\(cockpit\?\.inventoryReadable \?\? false\) &&\s*\(cockpit\?\.inventoryChangeIncluded \?\? false\)/,
+    "canViewInventoryValuation must gate on inventoryReadable + inventoryChangeIncluded",
+  );
+  assert.doesNotMatch(
+    cockpit,
+    /canReadRequestedValuation &&\s*includesBranchData &&\s*\(cockpit\?\.inventoryReadable \?\? false\)/,
+    "old three-term inventory-change gate must be gone",
+  );
+  assert.doesNotMatch(cockpit, /includesBranchData/);
+
+  // (c) Readiness RPC is wired in and can only fire for the sealed
+  // last_month range.
+  assert.match(cockpit, /get_finance_period_close_readiness/);
+  assert.match(
+    cockpit,
+    /params\.range === "last_month"/,
+    "readiness fetch must be gated on the last_month preset",
+  );
+
+  // (d) Total asset value never folds startup capital into the sum
+  // (textual guard kept stable around the addMoney block).
+  const assetBlock = page.slice(
+    page.indexOf("const totalAssetValue = addMoney"),
+    page.indexOf("const totalAssetValueDetails"),
+  );
+  assert.ok(assetBlock.length > 0, "totalAssetValue block must be found");
+  assert.doesNotMatch(
+    assetBlock,
+    /startupCapital/,
+    "totalAssetValue must not reference startup capital",
   );
 });

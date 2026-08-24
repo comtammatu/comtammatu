@@ -9,7 +9,16 @@ import {
 } from "@comtammatu/shared/format";
 import { addMoney, roundToCanonicalMoney } from "@comtammatu/shared/money";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Frame } from "@comtammatu/ui/components/frame";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import {
   AppPage,
@@ -20,8 +29,12 @@ import {
 import { messages } from "@lib/messages";
 import { FilterBar } from "./components/filter-bar";
 import { FinancePeriodFormulaShell } from "./components/finance-period-formula-shell";
-import { financeHref, parseFinanceParams, resolveFinanceRange } from "./_lib/finance-params";
-import { fetchFinanceCockpit } from "./_lib/finance-cockpit";
+import { financeHref, parseFinanceParams, resolveFinanceRange, type FinanceParams } from "./_lib/finance-params";
+import {
+  fetchFinanceCockpit,
+  type FinanceException,
+} from "./_lib/finance-cockpit";
+import type { PeriodReadinessRpc } from "./_lib/finance-period-readiness";
 import type { FinanceOverviewSearchParams } from "./_lib/finance-overview-types";
 import { CurrentFundsSection } from "./components/current-funds-section";
 import { Progress } from "@comtammatu/ui/components/progress";
@@ -165,6 +178,54 @@ export default async function FinancePage({
   const showInventoryChange = cockpit.canViewInventoryValuation;
   const goodsInIsTransfer = cockpit.kpis.goodsInKind === "inbound_transfer";
 
+  // Period-close readiness (Sức khoẻ chốt sổ) surfaces as ONE aggregated
+  // read-only exception item on the landing; it never exposes a close or
+  // reopen action, and stays hidden when both counts are zero.
+  function buildReadinessException(
+    readiness: PeriodReadinessRpc | null,
+    scope: FinanceParams,
+  ): FinanceException | null {
+    if (readiness == null) return null;
+    if (readiness.blockerCount <= 0 && readiness.warningCount <= 0) {
+      return null;
+    }
+    const findings = [...readiness.blockers, ...readiness.warnings];
+    // Unknown finding codes are omitted: only registered copy renders.
+    const hint = findings
+      .map(
+        (finding) =>
+          financeCopy.basic.exceptions.readinessCodes[finding.code],
+      )
+      .filter((label): label is string => typeof label === "string")
+      .join(" · ");
+    const blockerCodes = new Set(
+      readiness.blockers.map((finding) => finding.code),
+    );
+    const findingCodes = new Set(findings.map((finding) => finding.code));
+    const href = blockerCodes.has("operating_expense_missing")
+      ? financeHref("/finance/expenses", scope, { state: "pending" })
+      : findingCodes.has("bank_reconciliation_open")
+        ? financeHref("/finance/bank-transactions", scope, {
+            recon: "needs_review",
+          })
+        : undefined;
+    return {
+      label: financeCopy.basic.exceptions.readinessLabel,
+      value: financeCopy.basic.exceptions.readinessValue(
+        formatCount(readiness.blockerCount),
+        formatCount(readiness.warningCount),
+      ),
+      hint,
+      href,
+      tone: readiness.blockerCount > 0 ? "destructive" : "warning",
+    };
+  }
+
+  const readinessException = buildReadinessException(cockpit.readiness, params);
+  // General cockpit exceptions stay on `/` and list queues (finance.md);
+  // the landing surfaces only the period-close readiness item.
+  const attentionExceptions = readinessException ? [readinessException] : [];
+
   function renderGrossProfitCard() {
     const coverageIncomplete = !cockpit.kpis.costAvailable;
     return (
@@ -217,6 +278,11 @@ export default async function FinancePage({
             : operatingResult < 0
               ? "destructive"
               : "success"
+        }
+        hint={
+          showInventoryChange
+            ? financeCopy.basic.kpis.operatingResultHint
+            : financeCopy.basic.kpis.operatingResultHintWithoutInventory
         }
       />
     );
@@ -380,9 +446,13 @@ export default async function FinancePage({
           density="compact"
           label={financeCopy.basic.kpis.equipment}
           value={
-            cockpit.kpis.equipmentRecorded
-              ? formatVND(cockpit.kpis.equipment)
-              : financeCopy.basic.kpis.notRecorded
+            cockpit.kpis.startupCapitalLoadFailed
+              ? // `vatUnavailable` is intentionally reused as the generic
+                // "data load failed" copy for finance KPI cards.
+                financeCopy.basic.kpis.vatUnavailable
+              : cockpit.kpis.equipmentRecorded
+                ? formatVND(cockpit.kpis.equipment)
+                : financeCopy.basic.kpis.notRecorded
           }
           shortValue={
             cockpit.kpis.equipmentRecorded
@@ -574,9 +644,13 @@ export default async function FinancePage({
             density="compact"
             label={financeCopy.basic.kpis.startupCapital}
             value={
-              cockpit.kpis.startupCapitalRecorded
-                ? formatVND(cockpit.kpis.startupCapital)
-                : financeCopy.basic.kpis.notRecorded
+              cockpit.kpis.startupCapitalLoadFailed
+                ? // `vatUnavailable` is intentionally reused as the generic
+                  // "data load failed" copy for finance KPI cards.
+                  financeCopy.basic.kpis.vatUnavailable
+                : cockpit.kpis.startupCapitalRecorded
+                  ? formatVND(cockpit.kpis.startupCapital)
+                  : financeCopy.basic.kpis.notRecorded
             }
             shortValue={
               cockpit.kpis.startupCapitalRecorded
@@ -587,6 +661,43 @@ export default async function FinancePage({
           />
         </KpiRow>
       </AppSection>
+
+      {attentionExceptions.length > 0 ? (
+        <AppSection size="sm" title={powerLiteCopy.exceptionsTitle}>
+          <ItemGroup>
+            {attentionExceptions.map((item, index) => (
+              <Item
+                key={`${item.label}:${index}`}
+                variant="outline"
+                size="sm"
+                render={
+                  item.href != null ? <Link href={item.href} /> : undefined
+                }
+              >
+                <ItemContent className="min-w-0">
+                  <ItemTitle className="line-clamp-none">
+                    {item.label}
+                  </ItemTitle>
+                  {item.hint.length > 0 ? (
+                    <ItemDescription className="line-clamp-none">
+                      {item.hint}
+                    </ItemDescription>
+                  ) : null}
+                </ItemContent>
+                <ItemActions className="ml-auto">
+                  <Badge
+                    variant={
+                      item.tone === "destructive" ? "destructive" : "warning"
+                    }
+                  >
+                    {item.value}
+                  </Badge>
+                </ItemActions>
+              </Item>
+            ))}
+          </ItemGroup>
+        </AppSection>
+      ) : null}
     </AppPage>
   );
 }

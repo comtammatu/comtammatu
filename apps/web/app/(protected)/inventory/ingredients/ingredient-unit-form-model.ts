@@ -48,6 +48,63 @@ const EFFECTIVE_INTEGER_DIGITS = 6;
 const EFFECTIVE_SCALE = 12;
 const FLOATING_POINT_TOLERANCE = 8;
 
+/**
+ * Conversion rows may be typed in either direction (ADR 0045 refinement):
+ * - "direct":  `1 [unit] = N [anchor]` — the stored edge direction.
+ * - "inverse": `1 [anchor] = N [unit]` — stored as the reciprocal factor.
+ * The persisted `anchor_factor` always stays the direct direction.
+ */
+export type FactorInputMode = "direct" | "inverse";
+
+/**
+ * Choose the friendlier display direction for a stored direct factor.
+ * Factors below 1 (small unit anchored to a bigger unit) display as the
+ * inverse count when the reciprocal is exactly representable, so editors
+ * read `1 pack = 100 pieces` instead of `1 piece = 0.01 pack`.
+ */
+export function resolveFactorDisplay(
+  storedFactor: number | string | null,
+): { mode: FactorInputMode; value: string } {
+  if (storedFactor == null || storedFactor === "") {
+    return { mode: "direct", value: "" };
+  }
+  const numeric = Number(storedFactor);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return { mode: "direct", value: String(storedFactor) };
+  }
+  if (numeric < 1) {
+    // Auto-flip only factors that read painfully (leading zeros after the
+    // decimal point, e.g. 0.01 -> "1 pack = 100 pieces"). Factors like 0.5
+    // stay direct because "1 pack = 0.5 kg" is already natural input.
+    const looksPainful = /^0\.0/.test(String(numeric));
+    const reciprocal = 1 / numeric;
+    if (
+      looksPainful &&
+      Number.isInteger(reciprocal) &&
+      isValidAnchorFactor(reciprocal)
+    ) {
+      return { mode: "inverse", value: String(reciprocal) };
+    }
+  }
+  return { mode: "direct", value: String(storedFactor) };
+}
+
+/**
+ * Convert a typed inverse count (`1 anchor = N unit`) into the stored
+ * direct factor. Returns null when the reciprocal is not representable
+ * within the anchor precision, so the caller can surface a dedicated
+ * "swap direction" message instead of a generic precision error.
+ */
+export function inverseFactorToStored(display: string): number | null {
+  const trimmed = display.trim();
+  if (!trimmed) return null;
+  const numeric = Number(trimmed);
+  if (!Number.isFinite(numeric) || numeric <= 0) return null;
+  const reciprocal = 1 / numeric;
+  if (!isValidAnchorFactor(reciprocal)) return null;
+  return reciprocal;
+}
+
 export class IngredientUnitModelError extends Error {
   constructor(message: IngredientUnitModelErrorCode) {
     super(message);

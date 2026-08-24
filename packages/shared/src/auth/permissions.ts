@@ -30,6 +30,7 @@ export const PERMISSION_KEYS = {
   INVENTORY_READ: "inventory:read",
   INVENTORY_VALUATION_READ: "inventory:valuation_read",
   INVENTORY_WRITE: "inventory:write",
+  INVENTORY_CATALOG_WRITE: "inventory:catalog_write",
   INVENTORY_STOCKTAKE_CREATE: "inventory:stocktake_create",
   INVENTORY_STOCKTAKE_COMPLETE: "inventory:stocktake_complete",
   INVENTORY_TRANSFER_CREATE: "inventory:transfer_create",

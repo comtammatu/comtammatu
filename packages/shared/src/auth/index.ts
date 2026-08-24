@@ -37,6 +37,7 @@ export { getInventoryValueVisibility } from "./inventory-value";
 export type { InventoryValueVisibility } from "./inventory-value";
 export {
   INVENTORY_CATALOG_ROLES,
+  INGREDIENT_CATALOG_WRITE_ROLES,
   INVENTORY_CATALOG_VIEW_ROLES,
   INVENTORY_OPS_ROLES,
   PROCUREMENT_ROLES,

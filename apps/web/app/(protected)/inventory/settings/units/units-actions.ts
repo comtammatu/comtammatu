@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { VALIDATION_VI } from "@comtammatu/shared/messages";
-import { INVENTORY_CATALOG_ROLES, INVENTORY_CATALOG_VIEW_ROLES } from "@comtammatu/shared/auth";
+import { INGREDIENT_CATALOG_WRITE_ROLES, INVENTORY_CATALOG_VIEW_ROLES } from "@comtammatu/shared/auth";
 import { withAction } from "@/_lib/with-action";
 import { messages } from "@lib/messages";
 import { getAuthContextWithAnyPermission } from "../../_lib/auth";
@@ -104,33 +104,37 @@ export async function fetchUnits(): Promise<ActionResult<UnitRow[]>> {
 
 export const createUnit = withAction(
   {
-    roles: INVENTORY_CATALOG_ROLES,
+    roles: INGREDIENT_CATALOG_WRITE_ROLES,
     schema: unitCreateSchema,
     anyPermission: UNITS_MASTER_PERMISSIONS,
   },
   async (data, { supabase, claims }) => {
-    const { error } = await supabase.from("units").insert({
-      tenant_id: claims.tenant_id,
-      code: data.code,
-      name: data.code,
-      is_active: data.is_active,
-    });
+    const { data: created, error } = await supabase
+      .from("units")
+      .insert({
+        tenant_id: claims.tenant_id,
+        code: data.code,
+        name: data.code,
+        is_active: data.is_active,
+      })
+      .select("id")
+      .single();
 
-    if (error) {
-      if (error.code === PG_ERR.UNIQUE_VIOLATION) {
+    if (error || created == null) {
+      if (error?.code === PG_ERR.UNIQUE_VIOLATION) {
         return { success: false, error: "Mã đơn vị này đã tồn tại." };
       }
       return { success: false, error: "Không thể tạo đơn vị." };
     }
 
     revalidatePath(UNITS_PATH);
-    return { success: true };
+    return { success: true, data: { id: Number(created.id) } };
   },
 );
 
 export const updateUnit = withAction(
   {
-    roles: INVENTORY_CATALOG_ROLES,
+    roles: INGREDIENT_CATALOG_WRITE_ROLES,
     schema: unitUpdateSchema,
     anyPermission: UNITS_MASTER_PERMISSIONS,
   },
@@ -190,7 +194,7 @@ export const updateUnit = withAction(
 
 export const deleteUnit = withAction(
   {
-    roles: INVENTORY_CATALOG_ROLES,
+    roles: INGREDIENT_CATALOG_WRITE_ROLES,
     schema: unitDeleteSchema,
     anyPermission: UNITS_MASTER_PERMISSIONS,
   },

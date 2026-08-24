@@ -3,7 +3,7 @@ import "server-only";
 import { notFound, redirect } from "next/navigation";
 import {
   getInventoryValueVisibility,
-  INVENTORY_CATALOG_ROLES,
+  INGREDIENT_CATALOG_WRITE_ROLES,
   PERMISSION_KEYS,
 } from "@comtammatu/shared/auth";
 import { normalizeInventoryLocationNameVi } from "@comtammatu/shared/labels";
@@ -198,7 +198,7 @@ export async function loadStockOnHandPageData({
   ]);
 
   const canEditIngredient =
-    INVENTORY_CATALOG_ROLES.includes(claims.user_role) && canManageCatalog;
+    INGREDIENT_CATALOG_WRITE_ROLES.includes(claims.user_role) && canManageCatalog;
   const canSetCompanyWac = claims.user_role === "owner";
 
   // Fail-soft: a denied/failed ingredient catalog read degrades to an empty

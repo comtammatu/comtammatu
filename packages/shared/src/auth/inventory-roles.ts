@@ -1,7 +1,19 @@
 import type { StaffRole } from "./types";
 
-/** CRUD danh mục nguyên liệu + allowlist chi nhánh */
+/**
+ * Menu-recipe (BOM) writes keep the owner-only surface; the constant name
+ * predates ADR 0045 and is still shared by recipe gates.
+ */
 export const INVENTORY_CATALOG_ROLES: readonly StaffRole[] = ["owner"];
+
+/**
+ * Ingredient catalog + units master writers (ADR 0045). Warehouse ops may
+ * add/adjust ingredients and packaging units; RPC gate stays authoritative.
+ */
+export const INGREDIENT_CATALOG_WRITE_ROLES: readonly StaffRole[] = [
+  "owner",
+  "central_supply_ops",
+];
 
 /**
  * Read-only ingredient catalog on `/inventory/ingredients`.

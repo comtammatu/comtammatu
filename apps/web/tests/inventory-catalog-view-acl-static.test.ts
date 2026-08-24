@@ -17,10 +17,10 @@ const nav = readFileSync(
 );
 const stockData = readFileSync("lib/inventory/stock-on-hand-data.ts", "utf8");
 
-test("ingredients page allows catalog view roles and gates CRUD to owner manage", () => {
+test("ingredients page allows catalog view roles and gates CRUD to catalog writers", () => {
   assert.match(page, /INVENTORY_CATALOG_VIEW_ROLES/);
   assert.match(page, /CATALOG_READ_PERMISSIONS/);
-  assert.match(page, /INVENTORY_CATALOG_ROLES/);
+  assert.match(page, /INGREDIENT_CATALOG_WRITE_ROLES/);
   assert.match(page, /CATALOG_MANAGE_PERMISSIONS/);
   assert.match(page, /canManage=\{canManageCatalog\}/);
 });

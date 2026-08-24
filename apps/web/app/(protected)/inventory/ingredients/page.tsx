@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import {
   buildAccessDeniedPath,
-  INVENTORY_CATALOG_ROLES,
+  INGREDIENT_CATALOG_WRITE_ROLES,
   INVENTORY_CATALOG_VIEW_ROLES,
 } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
@@ -36,7 +36,7 @@ export default async function IngredientsPage() {
   }
 
   const canManageCatalog =
-    INVENTORY_CATALOG_ROLES.includes(claims.user_role) &&
+    INGREDIENT_CATALOG_WRITE_ROLES.includes(claims.user_role) &&
     (await currentUserHasAnyPermissionAny(CATALOG_MANAGE_PERMISSIONS));
 
   const [result, unitsResult, categoriesResult] = await Promise.all([

@@ -86,8 +86,11 @@ test("finance overview presents period results, current funds, and inventory in 
   assert.doesNotMatch(page, /basic\.sections\.vat|kpis\.vatInput|kpis\.vatOutput/);
   assert.doesNotMatch(
     page,
-    /grossProfitHint|operatingResultHint|inboundTransferHint|inventoryPurchasesHint|operatingExpenseHint|startupCapitalHint|inventoryChangeHint|vatInputHint|netRevenueHint/,
+    // operatingResultHint is intentionally wired in by the period-integrity
+    // task (dead-copy fix); the without-inventory variant covers the rest.
+    /grossProfitHint|inboundTransferHint|inventoryPurchasesHint|operatingExpenseHint|startupCapitalHint|inventoryChangeHint|vatInputHint|netRevenueHint/,
   );
+  assert.match(page, /operatingResultHint/);
   assert.match(page, /ingredientCostHint/);
   assert.match(page, /inventoryValueHint/);
   assert.match(page, /basic\.sections\.assets/);
@@ -177,7 +180,9 @@ test("finance overview presents period results, current funds, and inventory in 
   assert.doesNotMatch(copy, /netProfit: "Lợi nhuận ròng"/);
   assert.doesNotMatch(cockpit, /const netProfit =/);
   assert.match(cockpit, /get_finance_operating_cockpit/);
-  assert.match(cockpit, /applySalesBranchesFilter\(query, "branch_id", branchIds\)/);
+  // Startup-capital branches scope is resolved server-side by the summary
+  // RPC (branch_kind = 'branch'), not by a client-side branch_id filter.
+  assert.match(cockpit, /get_finance_startup_capital_summary/);
   assert.match(copy, /Đầu kỳ/);
   assert.match(copy, /Không gồm giá vốn món/);
   assert.match(copy, /bankReconciliationLabel: "Giao dịch"/);

@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
+  ArrowLeftRight as IconArrowLeftRight,
   ChevronDown as IconChevronDown,
+  Plus as IconPlus,
   Trash2 as IconTrash,
 } from "lucide-react";
 import {
@@ -26,6 +28,7 @@ import {
   FieldLabel,
   FieldSet,
 } from "@comtammatu/ui/components/field";
+import { Input } from "@comtammatu/ui/components/input";
 import {
   Item,
   ItemActions,
@@ -58,6 +61,7 @@ import {
   fetchIngredientDetail,
   updateIngredient,
 } from "../ingredient-actions";
+import { createUnit } from "../settings/units/units-actions";
 import type {
   CategoryOption,
   IngredientRow,
@@ -72,13 +76,14 @@ import { messages } from "@lib/messages";
 import { cn } from "@comtammatu/ui";
 import {
   buildCatalogUnits,
-  defaultAnchorUnitId,
   deriveEffectiveUnitFactor,
   findDirectDependents,
   IngredientUnitModelError,
+  inverseFactorToStored,
   isValidAnchorFactor,
   readCatalogUnitModel,
   rebaseUnitRelations,
+  resolveFactorDisplay,
   wouldCreateUnitCycle,
 } from "./ingredient-unit-form-model";
 import type {
@@ -158,6 +163,7 @@ const ingredientSchemaBase = z.object({
   base_unit_id: z.string().trim().min(1, { error: copy.units.selectBase }),
   unit_anchor_ids: z.record(z.string(), z.string()),
   unit_factors: z.record(z.string(), z.string()),
+  unit_factor_modes: z.record(z.string(), z.enum(["direct", "inverse"])),
 });
 
 type IngredientFormValues = z.infer<typeof ingredientSchemaBase>;
@@ -176,10 +182,15 @@ function toUnitRelations(
       ]),
     ),
     anchorFactors: Object.fromEntries(
-      Object.entries(values.unit_factors).map(([id, factor]) => [
-        Number(id),
-        factor ? factor : null,
-      ]),
+      Object.entries(values.unit_factors).map(([id, factor]) => {
+        const mode = values.unit_factor_modes[id] ?? "direct";
+        if (!factor) return [Number(id), null];
+        if (mode === "inverse") {
+          const stored = inverseFactorToStored(factor);
+          return [Number(id), stored == null ? factor : stored];
+        }
+        return [Number(id), factor];
+      }),
     ),
     unitOptions,
   };
@@ -338,6 +349,18 @@ function createIngredientSchema(unitOptions: UnitOption[]) {
         message: copy.units.baseMustBeSelected,
       });
     }
+    // Inverse rows whose count has no exact reciprocal cannot be stored;
+    // point the editor at the row with a swap-direction message.
+    for (const [unitId, factor] of Object.entries(data.unit_factors)) {
+      if (!factor || data.unit_factor_modes[unitId] !== "inverse") continue;
+      if (inverseFactorToStored(factor) == null) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["unit_factors", unitId],
+          message: copy.units.inverseNotExact,
+        });
+      }
+    }
     const relations = toUnitRelations(data, unitOptions);
     try {
       buildCatalogUnits(relations);
@@ -396,7 +419,13 @@ function toFormValues(
     unit_factors: Object.fromEntries(
       Object.entries(unitModel.anchorFactors).map(([unitId, factor]) => [
         unitId,
-        factor == null ? "" : String(factor),
+        resolveFactorDisplay(factor).value,
+      ]),
+    ),
+    unit_factor_modes: Object.fromEntries(
+      Object.entries(unitModel.anchorFactors).map(([unitId, factor]) => [
+        unitId,
+        resolveFactorDisplay(factor).mode,
       ]),
     ),
   };
@@ -484,12 +513,16 @@ export function IngredientDialog({
     useState<IngredientRow | null>(ingredient);
   const [unitsLoading, setUnitsLoading] = useState(false);
   const [unitsLoadError, setUnitsLoadError] = useState<string | null>(null);
+  const [wizardStep, setWizardStep] = useState(0);
+  const [createdUnits, setCreatedUnits] = useState<UnitOption[]>([]);
 
   useEffect(() => {
     if (!open) {
       setResolvedIngredient(ingredient);
       setUnitsLoading(false);
       setUnitsLoadError(null);
+      setWizardStep(0);
+      setCreatedUnits([]);
       return;
     }
 
@@ -524,13 +557,44 @@ export function IngredientDialog({
     };
   }, [open, ingredient]);
 
+  const mergedUnitOptions = useMemo(
+    () =>
+      createdUnits.length === 0
+        ? unitOptions
+        : [...unitOptions, ...createdUnits],
+    [unitOptions, createdUnits],
+  );
+
+  const handleCreateUnit = useCallback(
+    async (code: string): Promise<number | null> => {
+      const result = await createUnit({ code, is_active: true });
+      if (!result.success || result.data == null) {
+        toast.error(result.error ?? copy.units.createInlineFailed);
+        return null;
+      }
+      const trimmed = code.trim().toLowerCase();
+      const option: UnitOption = {
+        id: Number(result.data.id),
+        code: trimmed,
+        name: trimmed,
+        dimension: null,
+        is_standard: false,
+        standard_factor: null,
+      };
+      setCreatedUnits((previous) => [...previous, option]);
+      toast.success(copy.units.createInlineSuccess(trimmed));
+      return option.id;
+    },
+    [],
+  );
+
   const defaultValues = useMemo(
-    () => toFormValues(resolvedIngredient, unitOptions),
-    [resolvedIngredient, unitOptions],
+    () => toFormValues(resolvedIngredient, mergedUnitOptions),
+    [resolvedIngredient, mergedUnitOptions],
   );
   const ingredientSchema = useMemo(
-    () => createIngredientSchema(unitOptions),
-    [unitOptions],
+    () => createIngredientSchema(mergedUnitOptions),
+    [mergedUnitOptions],
   );
   const categorySelectOptions = useMemo(
     () => [
@@ -545,7 +609,7 @@ export function IngredientDialog({
 
   async function handleSubmit(values: IngredientFormValues) {
     try {
-      const relations = toUnitRelations(values, unitOptions);
+      const relations = toUnitRelations(values, mergedUnitOptions);
       const units = buildCatalogUnits(relations);
       const categoryId =
         values.category_id && values.category_id !== NO_CATEGORY
@@ -615,13 +679,15 @@ export function IngredientDialog({
         has_active_supplier_link:
           resolvedIngredient?.has_active_supplier_link === true,
         unit: baseUnit
-          ? unitOptions.find((option) => option.id === baseUnit.unit_id)?.name ??
-            ""
+          ? mergedUnitOptions.find((option) => option.id === baseUnit.unit_id)
+              ?.name ?? ""
           : "",
         is_active: resolvedIngredient?.is_active ?? true,
         updated_at: resolvedIngredient?.updated_at ?? null,
         units: units.map((unit, index) => {
-          const option = unitOptions.find((item) => item.id === unit.unit_id);
+          const option = mergedUnitOptions.find(
+            (item) => item.id === unit.unit_id,
+          );
           return {
             id:
               resolvedIngredient?.units?.find(
@@ -654,8 +720,10 @@ export function IngredientDialog({
       if (error instanceof IngredientUnitModelError) {
         return {
           success: false,
-          error: unitRelationIssue(error, toUnitRelations(values, unitOptions))
-            .message,
+          error: unitRelationIssue(
+            error,
+            toUnitRelations(values, mergedUnitOptions),
+          ).message,
         };
       }
       return { success: false, error: dialogCopy.saveFailed };
@@ -712,10 +780,13 @@ export function IngredientDialog({
         <IngredientDialogFields
           form={form}
           categorySelectOptions={categorySelectOptions}
-          unitOptions={unitOptions}
+          unitOptions={mergedUnitOptions}
           focusField={focusField}
           defaultUnitsOpen={!isEdit || (resolvedIngredient?.units?.length ?? 0) > 1}
           referenceIngredient={resolvedIngredient}
+          wizardStep={wizardStep}
+          onWizardStepChange={setWizardStep}
+          onCreateUnit={handleCreateUnit}
         />
       )}
     </FormChrome>
@@ -729,6 +800,9 @@ function IngredientDialogFields({
   focusField,
   defaultUnitsOpen,
   referenceIngredient,
+  wizardStep,
+  onWizardStepChange,
+  onCreateUnit,
 }: {
   form: UseFormReturn<IngredientFormValues>;
   categorySelectOptions: Array<{ value: string; label: string }>;
@@ -736,12 +810,16 @@ function IngredientDialogFields({
   focusField?: "default_fulfill_site_kind";
   defaultUnitsOpen: boolean;
   referenceIngredient: IngredientRow | null;
+  wizardStep: number;
+  onWizardStepChange: (step: number) => void;
+  onCreateUnit: (code: string) => Promise<number | null>;
 }) {
   const itemKind = form.watch("item_kind");
   const unitIds = form.watch("unit_ids");
   const baseUnitId = form.watch("base_unit_id");
   const unitAnchorIds = form.watch("unit_anchor_ids");
   const unitFactors = form.watch("unit_factors");
+  const unitFactorModes = form.watch("unit_factor_modes");
   const [blockedRemovalErrors, setBlockedRemovalErrors] = useState<
     Record<number, string>
   >({});
@@ -754,6 +832,7 @@ function IngredientDialogFields({
 
   useEffect(() => {
     if (!focusField) return;
+    onWizardStepChange(0);
     const frame = window.requestAnimationFrame(() => {
       if (focusField === "default_fulfill_site_kind") {
         document.getElementById("fulfill-from-central-supply")?.focus();
@@ -762,7 +841,7 @@ function IngredientDialogFields({
       form.setFocus(focusField);
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [focusField, form]);
+  }, [focusField, form, onWizardStepChange]);
   const { field: baseField, fieldState: baseFieldState } = useController({
     control: form.control,
     name: "base_unit_id",
@@ -801,13 +880,26 @@ function IngredientDialogFields({
       ),
       anchorFactors: Object.fromEntries(
         selectedUnitIds.map((unitId) => {
+          if (unitId === baseUnit.id) return [unitId, null];
           const factor = unitFactors[String(unitId)];
-          return [unitId, unitId === baseUnit.id ? null : factor || null];
+          if (!factor) return [unitId, null];
+          if (unitFactorModes[String(unitId)] === "inverse") {
+            const stored = inverseFactorToStored(factor);
+            return [unitId, stored == null ? factor : stored];
+          }
+          return [unitId, factor];
         }),
       ),
       unitOptions,
     };
-  }, [baseUnit, selectedUnitIds, unitAnchorIds, unitFactors, unitOptions]);
+  }, [
+    baseUnit,
+    selectedUnitIds,
+    unitAnchorIds,
+    unitFactors,
+    unitFactorModes,
+    unitOptions,
+  ]);
 
   function addUnit(nextValue: string) {
     if (!nextValue || unitIds.includes(nextValue) || unitIds.length >= 20)
@@ -829,22 +921,28 @@ function IngredientDialogFields({
         { ...unitFactors, [nextValue]: "" },
         { shouldDirty: true, shouldValidate: true },
       );
+      form.setValue(
+        "unit_factor_modes",
+        { ...unitFactorModes, [nextValue]: "direct" },
+        { shouldDirty: true },
+      );
     } else {
-      const nextAnchorId = defaultAnchorUnitId({
-        newUnitId: Number(nextValue),
-        selectedUnitIds,
-        baseUnitId: Number(baseUnitId),
-        unitOptions,
-      });
+      // ADR 0045: new conversions default to the standard unit; the
+      // anchor chain stays reachable through the per-row advanced mode.
       form.setValue(
         "unit_anchor_ids",
-        { ...unitAnchorIds, [nextValue]: String(nextAnchorId) },
+        { ...unitAnchorIds, [nextValue]: baseUnitId },
         { shouldDirty: true, shouldValidate: true },
       );
       form.setValue(
         "unit_factors",
         { ...unitFactors, [nextValue]: "" },
         { shouldDirty: true, shouldValidate: true },
+      );
+      form.setValue(
+        "unit_factor_modes",
+        { ...unitFactorModes, [nextValue]: "direct" },
+        { shouldDirty: true },
       );
     }
     form.clearErrors("base_unit_id");
@@ -905,6 +1003,8 @@ function IngredientDialogFields({
       unitAnchorIds;
     const { [String(unitId)]: _removedFactor, ...remainingFactors } =
       unitFactors;
+    const { [String(unitId)]: _removedMode, ...remainingModes } =
+      unitFactorModes;
     form.setValue("unit_anchor_ids", remainingAnchorIds, {
       shouldDirty: true,
       shouldValidate: true,
@@ -913,7 +1013,38 @@ function IngredientDialogFields({
       shouldDirty: true,
       shouldValidate: true,
     });
+    form.setValue("unit_factor_modes", remainingModes, {
+      shouldDirty: true,
+    });
     setBlockedRemovalErrors({});
+  }
+
+  function toggleFactorDirection(unitId: number) {
+    const key = String(unitId);
+    const raw = String(unitFactors[key] ?? "").trim();
+    const currentMode = unitFactorModes[key] ?? "direct";
+    const nextMode = currentMode === "inverse" ? "direct" : "inverse";
+    const numeric = Number(raw);
+    if (raw && Number.isFinite(numeric) && numeric > 0) {
+      const reciprocal = 1 / numeric;
+      if (!isValidAnchorFactor(reciprocal)) {
+        form.setError(`unit_factors.${unitId}`, {
+          type: "manual",
+          message: copy.units.inverseNotExact,
+        });
+        return;
+      }
+      form.setValue(
+        "unit_factors",
+        { ...unitFactors, [key]: String(reciprocal) },
+        { shouldDirty: true, shouldValidate: true },
+      );
+    }
+    form.setValue(
+      "unit_factor_modes",
+      { ...unitFactorModes, [key]: nextMode },
+      { shouldDirty: true },
+    );
   }
 
   async function changeBase(nextBaseId: string): Promise<void> {
@@ -936,7 +1067,13 @@ function IngredientDialogFields({
       const anchorFactors = Object.fromEntries(
         Object.entries(rebased.anchorFactors).map(([unitId, factor]) => [
           unitId,
-          factor == null ? "" : String(factor),
+          resolveFactorDisplay(factor).value,
+        ]),
+      );
+      const anchorFactorModes = Object.fromEntries(
+        Object.entries(rebased.anchorFactors).map(([unitId, factor]) => [
+          unitId,
+          resolveFactorDisplay(factor).mode,
         ]),
       );
       form.setValue("base_unit_id", nextBaseId, {
@@ -948,6 +1085,10 @@ function IngredientDialogFields({
         shouldValidate: false,
       });
       form.setValue("unit_factors", anchorFactors, {
+        shouldDirty: true,
+        shouldValidate: false,
+      });
+      form.setValue("unit_factor_modes", anchorFactorModes, {
         shouldDirty: true,
         shouldValidate: false,
       });
@@ -974,8 +1115,29 @@ function IngredientDialogFields({
     }
   }
 
+  const formErrors = form.formState.errors;
+  const wizardSteps = [
+    copy.wizard.stepInfo,
+    copy.wizard.stepBase,
+    copy.wizard.stepUnits,
+  ];
+  const wizardInvalid = [
+    Boolean(formErrors.name),
+    Boolean(baseFieldState.error),
+    Boolean(
+      formErrors.unit_ids || formErrors.unit_anchor_ids || formErrors.unit_factors,
+    ),
+  ];
+
   return (
     <>
+      <WizardStepHeader
+        steps={wizardSteps}
+        current={wizardStep}
+        invalid={wizardInvalid}
+        onSelect={onWizardStepChange}
+      />
+      <div hidden={wizardStep !== 0}>
       <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
         <TextField
           control={form.control}
@@ -1038,6 +1200,46 @@ function IngredientDialogFields({
             />
           </Field>
         </div>
+        {referenceIngredient?.monetary != null ? (
+          <Field>
+            <FieldLabel>{dialogCopy.referenceCostLabel}</FieldLabel>
+            <output className="text-sm font-mono tabular-nums">
+              {referenceCost
+                ? `${formatVND(referenceCost.value)}${
+                    referenceCost.unit ? `/${referenceCost.unit}` : ""
+                  }`
+                : dialogCopy.referenceCostEmpty}
+            </output>
+            <FieldDescription>{dialogCopy.referenceCostHint}</FieldDescription>
+          </Field>
+        ) : null}
+        <div className="sm:col-span-2">
+          <Field orientation="horizontal">
+            <FieldLabel htmlFor="item-kind-finished-good">
+              {dialogCopy.finishedGoodLabel}
+            </FieldLabel>
+            <Switch
+              id="item-kind-finished-good"
+              checked={itemKind === "finished_good"}
+              onCheckedChange={(checked) => {
+                form.setValue(
+                  "item_kind",
+                  checked ? "finished_good" : "raw_material",
+                );
+                if (checked && !form.getValues("fulfill_from_central_kitchen")) {
+                  form.setValue("fulfill_from_central_kitchen", true, {
+                    shouldDirty: true,
+                  });
+                }
+              }}
+            />
+          </Field>
+          <FieldDescription>{dialogCopy.finishedGoodHint}</FieldDescription>
+        </div>
+      </div>
+      </div>
+
+      <div hidden={wizardStep !== 1} className="flex flex-col gap-2">
         {selectedUnitIds.length === 0 ? (
           <Field>
             <FieldLabel htmlFor="base-unit-select">
@@ -1107,44 +1309,14 @@ function IngredientDialogFields({
           </Field>
         ) : null}
         {referenceIngredient?.monetary != null ? (
-          <Field>
-            <FieldLabel>{dialogCopy.referenceCostLabel}</FieldLabel>
-            <output className="text-sm font-mono tabular-nums">
-              {referenceCost
-                ? `${formatVND(referenceCost.value)}${
-                    referenceCost.unit ? `/${referenceCost.unit}` : ""
-                  }`
-                : dialogCopy.referenceCostEmpty}
-            </output>
-            <FieldDescription>{dialogCopy.referenceCostHint}</FieldDescription>
-          </Field>
+          <FieldDescription role="note">
+            {copy.units.baseChangeRescaleWarning}
+          </FieldDescription>
         ) : null}
-        <div className="sm:col-span-2">
-          <Field orientation="horizontal">
-            <FieldLabel htmlFor="item-kind-finished-good">
-              {dialogCopy.finishedGoodLabel}
-            </FieldLabel>
-            <Switch
-              id="item-kind-finished-good"
-              checked={itemKind === "finished_good"}
-              onCheckedChange={(checked) => {
-                form.setValue(
-                  "item_kind",
-                  checked ? "finished_good" : "raw_material",
-                );
-                if (checked && !form.getValues("fulfill_from_central_kitchen")) {
-                  form.setValue("fulfill_from_central_kitchen", true, {
-                    shouldDirty: true,
-                  });
-                }
-              }}
-            />
-          </Field>
-          <FieldDescription>{dialogCopy.finishedGoodHint}</FieldDescription>
-        </div>
       </div>
 
-      <Collapsible open={unitsOpen} onOpenChange={setUnitsOpen}>
+      <div hidden={wizardStep !== 2}>
+      <Collapsible open={unitsOpen || wizardStep === 2} onOpenChange={setUnitsOpen}>
         <FieldSet data-invalid={Boolean(baseFieldState.error)}>
           <CollapsibleTrigger
             render={
@@ -1223,17 +1395,26 @@ function IngredientDialogFields({
                           anchorUnitId,
                           relations.anchorFactors[unitId] ?? null,
                         )}
+                        baseUnitId={baseUnit.id}
                         baseUnitName={baseUnit.name}
+                        anchorLabel={
+                          unitsById.get(anchorUnitId ?? Number.NaN)?.name ??
+                          baseUnit.name
+                        }
+                        initialAdvanced={
+                          anchorUnitId != null && anchorUnitId !== baseUnit.id
+                        }
                         removalError={blockedRemovalErrors[unitId]}
                         removeDisabled={selectedUnitIds.length === 1}
                         onRemove={() => removeUnit(unitId)}
+                        onToggleDirection={() => toggleFactorDirection(unitId)}
                       />
                     );
                   })}
               </ItemGroup>
             ) : null}
             {availableUnitGroups.length > 0 && unitIds.length < 20 ? (
-              <div className="w-full">
+              <div className="flex w-full flex-col gap-2">
                 <Select value="" onValueChange={addUnit}>
                   <SelectTrigger
                     size={controlSize}
@@ -1249,12 +1430,175 @@ function IngredientDialogFields({
                     />
                   </SelectContent>
                 </Select>
+                <InlineUnitCreator
+                  controlSize={controlSize}
+                  onCreateUnit={onCreateUnit}
+                  onCreated={(unitId) => addUnit(String(unitId))}
+                />
               </div>
-            ) : null}
+            ) : (
+              <InlineUnitCreator
+                controlSize={controlSize}
+                onCreateUnit={onCreateUnit}
+                onCreated={(unitId) => addUnit(String(unitId))}
+              />
+            )}
           </CollapsibleContent>
         </FieldSet>
       </Collapsible>
+      </div>
     </>
+  );
+}
+
+function WizardStepHeader({
+  steps,
+  current,
+  invalid,
+  onSelect,
+}: {
+  steps: readonly string[];
+  current: number;
+  invalid: readonly boolean[];
+  onSelect: (index: number) => void;
+}) {
+  return (
+    <div
+      role="tablist"
+      aria-orientation="horizontal"
+      className="mb-4 flex flex-wrap items-center gap-1 border-b pb-2"
+    >
+      {steps.map((label, index) => (
+        <Button
+          key={label}
+          type="button"
+          role="tab"
+          variant="ghost"
+          size="sm"
+          aria-selected={index === current}
+          aria-label={copy.wizard.stepAria(index + 1, label)}
+          onClick={() => onSelect(index)}
+          className={cn(
+            "gap-1.5",
+            index === current
+              ? "font-semibold text-foreground"
+              : "text-muted-foreground",
+          )}
+        >
+          <span
+            aria-hidden
+            className={cn(
+              "inline-flex size-5 items-center justify-center rounded-full border text-xs",
+              invalid[index]
+                ? "border-destructive text-destructive"
+                : index === current
+                  ? "border-foreground"
+                  : "border-muted-foreground/40",
+            )}
+          >
+            {index + 1}
+          </span>
+          {label}
+        </Button>
+      ))}
+    </div>
+  );
+}
+
+function InlineUnitCreator({
+  controlSize,
+  onCreateUnit,
+  onCreated,
+}: {
+  controlSize: "field" | "touch";
+  onCreateUnit: (code: string) => Promise<number | null>;
+  onCreated: (unitId: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!open) {
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        size={controlSize}
+        className="w-full justify-start"
+        onClick={() => {
+          setError(null);
+          setOpen(true);
+        }}
+      >
+        <IconPlus aria-hidden />
+        {copy.units.createInline}
+      </Button>
+    );
+  }
+
+  async function handleCreate() {
+    const trimmed = code.trim();
+    if (!trimmed || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const unitId = await onCreateUnit(trimmed);
+      if (unitId == null) {
+        setError(copy.units.createInlineFailed);
+        return;
+      }
+      setCode("");
+      setOpen(false);
+      onCreated(unitId);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex w-full flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <Input
+          value={code}
+          onChange={(event) => setCode(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              void handleCreate();
+            }
+          }}
+          placeholder={copy.units.createInlinePlaceholder}
+          aria-label={copy.units.createInline}
+          className="w-full"
+          autoFocus
+        />
+        <Button
+          type="button"
+          size={controlSize}
+          disabled={busy || code.trim().length === 0}
+          onClick={() => void handleCreate()}
+        >
+          {busy ? <Spinner className="size-4" /> : copy.units.createInlineSubmit}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size={controlSize}
+          onClick={() => {
+            setOpen(false);
+            setError(null);
+          }}
+        >
+          {ACTIONS_VI.cancel}
+        </Button>
+      </div>
+      {error ? (
+        <p className="text-xs text-destructive" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </div>
   );
 }
 
@@ -1264,21 +1608,30 @@ function UnitRelationRow({
   anchorOptions,
   effectiveFactor,
   automatic,
+  baseUnitId,
   baseUnitName,
+  anchorLabel,
+  initialAdvanced,
   removalError,
   removeDisabled,
   onRemove,
+  onToggleDirection,
 }: {
   control: Control<IngredientFormValues>;
   unit: UnitOption;
   anchorOptions: Array<{ value: string; label: string }>;
   effectiveFactor: number | null;
   automatic: boolean;
+  baseUnitId: number;
   baseUnitName: string;
+  anchorLabel: string;
+  initialAdvanced: boolean;
   removalError: string | undefined;
   removeDisabled: boolean;
   onRemove: () => void;
+  onToggleDirection: () => void;
 }) {
+  const [advanced, setAdvanced] = useState(initialAdvanced);
   const factorName =
     `unit_factors.${unit.id}` as FieldPath<IngredientFormValues>;
   const factor = useController({ control, name: factorName });
@@ -1286,6 +1639,12 @@ function UnitRelationRow({
     control,
     name: ("unit_anchor_ids." + unit.id) as FieldPath<IngredientFormValues>,
   });
+  const mode = useController({
+    control,
+    name: ("unit_factor_modes." + unit.id) as FieldPath<IngredientFormValues>,
+  });
+  const isInverse = mode.field.value === "inverse";
+  const trailingLabel = isInverse ? unit.name : anchorLabel;
   const controlSize = useFormControlSize("responsive");
   const factorFieldId = `field-unit-factor-${unit.id}`;
   const anchorFieldId = `field-unit-anchor-${unit.id}`;
@@ -1316,7 +1675,7 @@ function UnitRelationRow({
             {unit.name}
           </div>
           <span className="whitespace-nowrap text-sm tabular-nums">
-            1 {unit.name} =
+            1 {isInverse ? anchorLabel : unit.name} =
           </span>
           {automatic ? (
             <output className="w-28 text-center text-sm tabular-nums">
@@ -1341,38 +1700,76 @@ function UnitRelationRow({
               aria-label={copy.units.factorAria(unit.name)}
             />
           )}
-          <Select
-            value={String(anchor.field.value ?? "")}
-            onValueChange={(value) => {
-              anchor.field.onChange(value);
-              anchor.field.onBlur();
-            }}
-          >
-            <SelectTrigger
-              id={anchorFieldId}
-              size={controlSize}
-              className="w-full min-w-36"
-              aria-invalid={Boolean(anchor.fieldState.error)}
-              aria-describedby={anchorErrorId}
-              aria-label={copy.units.anchorAria(unit.name)}
-              onBlur={anchor.field.onBlur}
-              ref={anchor.field.ref}
+          {advanced ? (
+            <Select
+              value={String(anchor.field.value ?? "")}
+              onValueChange={(value) => {
+                anchor.field.onChange(value);
+                anchor.field.onBlur();
+              }}
             >
-              <SelectValue placeholder={copy.units.anchorPlaceholder} />
-            </SelectTrigger>
-            <SelectContent>
-              {anchorOptions.map((option) => (
-                <SelectItem
-                  key={option.value}
-                  value={option.value}
-                  size={controlSize === "touch" ? "touch" : "default"}
-                >
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <ItemActions className="justify-end">
+              <SelectTrigger
+                id={anchorFieldId}
+                size={controlSize}
+                className="w-full min-w-36"
+                aria-invalid={Boolean(anchor.fieldState.error)}
+                aria-describedby={anchorErrorId}
+                aria-label={copy.units.anchorAria(unit.name)}
+                onBlur={anchor.field.onBlur}
+                ref={anchor.field.ref}
+              >
+                <SelectValue placeholder={copy.units.anchorPlaceholder} />
+              </SelectTrigger>
+              <SelectContent>
+                {anchorOptions.map((option) => (
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    size={controlSize === "touch" ? "touch" : "default"}
+                  >
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <span
+              className="truncate text-sm text-muted-foreground"
+              title={trailingLabel}
+              aria-label={copy.units.simpleConversionAria(unit.name)}
+            >
+              {trailingLabel}
+            </span>
+          )}
+          <ItemActions className="justify-end gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size={controlSize === "touch" ? "icon-touch" : "icon-sm"}
+              aria-pressed={isInverse}
+              aria-label={copy.units.toggleDirectionAria(unit.name, anchorLabel)}
+              onClick={() => {
+                mode.field.onBlur();
+                onToggleDirection();
+              }}
+            >
+              <IconArrowLeftRight aria-hidden="true" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size={controlSize === "touch" ? "touch" : "sm"}
+              aria-pressed={advanced}
+              onClick={() => {
+                if (advanced) {
+                  anchor.field.onChange(String(baseUnitId));
+                  anchor.field.onBlur();
+                }
+                setAdvanced((previous) => !previous);
+              }}
+            >
+              {copy.units.advancedConversion}
+            </Button>
             <Button
               type="button"
               variant="ghost"

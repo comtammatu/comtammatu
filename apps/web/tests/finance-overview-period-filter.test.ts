@@ -90,8 +90,20 @@ describe("Finance overview period filter", () => {
       filterBar,
       /locationFilter && params\.location === "branch"/,
     );
-    assert.match(cockpit, /query = query\.is\("branch_id", null\)/);
-    assert.match(cockpit, /fetchSalesBranchIds/);
+    // Startup-capital scoping moved into get_finance_startup_capital_summary:
+    // company stays NULL-branch-only inside the RPC, never a client filter.
+    assert.match(cockpit, /get_finance_startup_capital_summary/);
+    const startupCapitalMigration = readFileSync(
+      new URL(
+        "../../../supabase/migrations/20260824013553_finance_startup_capital_summary_rpc.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    assert.match(
+      startupCapitalMigration,
+      /WHEN 'company' THEN expense\.branch_id IS NULL/,
+    );
     assert.match(cockpit, /get_finance_operating_cockpit/);
     const operatingCockpitMigration = readFileSync(
       new URL(

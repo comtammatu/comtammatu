@@ -103,6 +103,12 @@ export const CATEGORIES_VI = {
 } as const;
 
 export const INGREDIENT_FORM_VI = {
+  wizard: {
+    stepInfo: "Thông tin",
+    stepBase: "Đơn vị chuẩn",
+    stepUnits: "Quy đổi",
+    stepAria: (step: number, label: string) => `Bước ${step}: ${label}`,
+  },
   category: {
     label: "Nhóm nguyên liệu",
     placeholder: "Chọn nhóm",
@@ -143,6 +149,20 @@ export const INGREDIENT_FORM_VI = {
     dimensionMismatch:
       "Các đơn vị chuẩn phải cùng loại đo lường (khối lượng hoặc thể tích)",
     add: "Thêm đơn vị mới",
+    createInline: "Tạo đơn vị mới",
+    createInlinePlaceholder: "Mã đơn vị (vd: thung-24)",
+    createInlineSubmit: "Tạo",
+    createInlineSuccess: (code: string) => `Đã tạo đơn vị "${code}"`,
+    createInlineFailed: "Không tạo được đơn vị mới.",
+    advancedConversion: "Nâng cao",
+    toggleDirectionAria: (unit: string, anchor: string) =>
+      `Đổi hướng nhập quy đổi giữa ${unit} và ${anchor}`,
+    inverseNotExact:
+      "Số này không quy đổi ngược chính xác. Hãy nhập theo hướng còn lại.",
+    simpleConversionAria: (unit: string) =>
+      `Quy đổi ${unit} trực tiếp sang đơn vị chuẩn`,
+    baseChangeRescaleWarning:
+      "Đổi đơn vị chuẩn sẽ quy đổi lại toàn bộ tồn kho và giá vốn của nguyên liệu này.",
     empty: "Chưa có đơn vị nào.",
     maxReached: "Mỗi nguyên liệu có tối đa 20 đơn vị",
     remove: "Bỏ đơn vị",

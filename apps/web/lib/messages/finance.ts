@@ -288,6 +288,25 @@ export const finance = {
       totalAssetValue: "Tổng giá trị",
       currentFundsScope: "Cả quán",
     },
+    exceptions: {
+      readinessLabel: "Sức khoẻ chốt sổ",
+      readinessValue: (blockers: string, warnings: string) =>
+        `${blockers} chặn · ${warnings} cảnh báo`,
+      readinessCodes: {
+        valuation_inactive: "Định giá chưa hoạt động",
+        valuation_not_reconciled: "Đối soát định giá lệch",
+        valuation_reconciliation_unreadable:
+          "Chưa đọc được đối soát định giá",
+        operating_expense_missing: "Thiếu chi vận hành",
+        negative_stock: "Âm kho",
+        food_cost_coverage_incomplete: "Thiếu giá vốn món",
+        expenses_needs_action: "Chi phí chờ xử lý",
+        cash_variance_open: "Lệch tiền mặt",
+        bank_reconciliation_open: "Giao dịch ngân hàng chưa khớp",
+        payment_desync_open: "Thanh toán lệch đơn",
+        unpaid_supplier_invoices: "HĐ đầu vào chưa trả",
+      } as Record<string, string>,
+    },
   },
   nav: {
     groups: {

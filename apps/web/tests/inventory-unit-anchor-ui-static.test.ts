@@ -34,7 +34,10 @@ test("ingredient unit editor owns per-row anchor targets and derived previews", 
   assert.match(dialog, /deriveEffectiveUnitFactor/);
   assert.match(dialog, /wouldCreateUnitCycle/);
   assert.match(dialog, /findDirectDependents/);
-  assert.match(dialog, /defaultAnchorUnitId/);
+  // ADR 0045: new rows pin to the standard unit; the anchor chain stays
+  // reachable through the per-row advanced toggle.
+  assert.match(dialog, /\[nextValue\]: baseUnitId/);
+  assert.match(dialog, /advancedConversion/);
   assert.match(dialog, /SelectGroup/);
 });
 
@@ -106,6 +109,31 @@ test("unit rows keep relation controls and removal visible together", () => {
   assert.match(dialog, /automatic \? \([\s\S]*<output/);
 });
 
+test("simple rows pin the anchor to the standard unit until advanced mode", () => {
+  // The anchor Select renders only in advanced mode; simple mode shows the
+  // standard unit label and keeps the controller mounted underneath.
+  assert.match(dialog, /\{advanced \? \([\s\S]*<Select[\s\S]*anchorOptions\.map/);
+  assert.match(dialog, /copy\.units\.simpleConversionAria\(unit\.name\)/);
+  assert.match(
+    dialog,
+    /anchor\.field\.onChange\(String\(baseUnitId\)\)/,
+  );
+  assert.match(dialog, /initialAdvanced/);
+});
+
+test("conversion rows type in either direction without storing inverses", () => {
+  // Form state carries the per-row input direction; payload normalization
+  // converts inverse counts to the stored direct factor.
+  assert.match(dialog, /unit_factor_modes: z\.record/);
+  assert.match(dialog, /resolveFactorDisplay\(factor\)\.mode/);
+  assert.match(dialog, /inverseFactorToStored\(factor\)/);
+  assert.match(dialog, /copy\.units\.inverseNotExact/);
+  assert.match(dialog, /isInverse \? anchorLabel : unit\.name/);
+  assert.match(dialog, /onToggleDirection/);
+  assert.match(model, /export type FactorInputMode = "direct" \| "inverse"/);
+  assert.match(model, /export function inverseFactorToStored/);
+});
+
 test("blocked removal opens and focuses its first dependent without smooth scrolling", () => {
   assert.match(dialog, /blockedRemovalErrors/);
   assert.match(dialog, /copy\.units\.removeBlocked\(/);
@@ -146,13 +174,15 @@ test("factor precision and tablet touch contracts are explicit", () => {
 
 test("dialog preserves raw factor strings until shared domain validation", () => {
   assert.doesNotMatch(dialog, /factor \? Number\(factor\) : null/);
+  // Direct rows keep the typed string untouched; inverse rows convert
+  // through the shared precision helper instead of ad-hoc Number() casts.
   assert.match(
     dialog,
-    /anchorFactors: Object\.fromEntries\([\s\S]*factor \? factor : null/,
+    /anchorFactors: Object\.fromEntries\([\s\S]*inverseFactorToStored\(factor\)/,
   );
   assert.match(
     dialog,
-    /const relations = toUnitRelations\(values, unitOptions\)/,
+    /const relations = toUnitRelations\(values, mergedUnitOptions\)/,
   );
   assert.match(dialog, /buildCatalogUnits\(relations\)/);
 });

@@ -24,6 +24,9 @@ export interface FinanceOperatingCockpitRpc {
   inventoryOpening: number;
   inventoryClosing: number;
   inventoryReadable: boolean;
+  inventoryChange: number;
+  inventoryChangeIncluded: boolean;
+  valuationActive: boolean;
   exceptions: {
     cashVarianceAbs: number;
     cashVarianceSessions: number;
@@ -130,6 +133,15 @@ export function parseFinanceOperatingCockpitRpc(
   const operatingExpenseTotal = moneyNumber(row.operating_expense_total);
   const inventoryOpening = moneyNumber(row.inventory_opening);
   const inventoryClosing = moneyNumber(row.inventory_closing);
+  const inventoryChangeIncluded = row.inventory_change_included !== false;
+  // New payloads carry the key and must be read strictly; a pre-migration
+  // payload lacks it, so fall back to food_cost.valuation_active, which
+  // reproduces the old RPC semantics (branch scope reported the real
+  // cutover state there; company scope hard-coded false).
+  const valuationActive =
+    "valuation_active" in row
+      ? row.valuation_active === true
+      : foodCost.valuationActive;
   const goodsInKind =
     row.goods_in_kind === "inbound_transfer" ||
     row.goods_in_kind === "inventory_purchase"
@@ -175,6 +187,12 @@ export function parseFinanceOperatingCockpitRpc(
     return null;
   }
 
+  // Backwards-compatible fallback: a pre-migration payload lacks the new
+  // key, so derive the change identity locally during the deploy window.
+  // Opening/closing are proven non-null by the guard above.
+  const inventoryChange =
+    moneyNumber(row.inventory_change) ?? inventoryClosing - inventoryOpening;
+
   return {
     netRevenue,
     subtotalRevenue,
@@ -190,6 +208,9 @@ export function parseFinanceOperatingCockpitRpc(
     inventoryOpening,
     inventoryClosing,
     inventoryReadable: row.inventory_readable === true,
+    inventoryChange,
+    inventoryChangeIncluded,
+    valuationActive,
     exceptions: {
       cashVarianceAbs,
       cashVarianceSessions,

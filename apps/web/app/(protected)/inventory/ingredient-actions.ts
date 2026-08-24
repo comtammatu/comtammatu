@@ -11,7 +11,7 @@ import { VALIDATION_VI } from "@comtammatu/shared/messages";
 import { getVNDateString } from "@comtammatu/shared/time";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import {
-  INVENTORY_CATALOG_ROLES,
+  INGREDIENT_CATALOG_WRITE_ROLES,
   INVENTORY_OPS_ROLES,
   PROCUREMENT_ROLES,
   type StaffRole,
@@ -322,7 +322,8 @@ function saveIngredientCatalog(
 
 // Read gate: procurement roles read for valuation/PO context, inventory ops
 // roles (incl. branch_manager) read for branch stock workflows (on-hand,
-// stock-issues, transfers). Write stays on INVENTORY_CATALOG_ROLES (owner).
+// stock-issues, transfers). Write stays on INGREDIENT_CATALOG_WRITE_ROLES
+// (owner + warehouse ops, ADR 0045); the RPC gate is authoritative.
 // getAuthContext(PROCUREMENT_ROLES)
 const INGREDIENT_READ_ROLES: readonly StaffRole[] = Array.from(
   new Set([...PROCUREMENT_ROLES, ...INVENTORY_OPS_ROLES]),
@@ -666,7 +667,7 @@ export const createIngredient = withAction<
   { id: number }
 >(
   {
-    roles: INVENTORY_CATALOG_ROLES,
+    roles: INGREDIENT_CATALOG_WRITE_ROLES,
     schema: ingredientCreateSchema,
     anyPermission: CATALOG_MANAGE_PERMISSIONS,
   },
@@ -715,7 +716,7 @@ export const quickCreateIngredient = withAction<
   { id: number }
 >(
   {
-    roles: INVENTORY_CATALOG_ROLES,
+    roles: INGREDIENT_CATALOG_WRITE_ROLES,
     schema: quickCreateSchema,
     anyPermission: CATALOG_MANAGE_PERMISSIONS,
   },
@@ -805,7 +806,7 @@ export async function updateIngredient(
   }
 
   const ctx = await getAuthContextWithAnyPermission(
-    INVENTORY_CATALOG_ROLES,
+    INGREDIENT_CATALOG_WRITE_ROLES,
     CATALOG_MANAGE_PERMISSIONS,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -866,7 +867,7 @@ const toggleIngredientIdSchema = z.object({
 
 export const toggleIngredientActive = withAction(
   {
-    roles: INVENTORY_CATALOG_ROLES,
+    roles: INGREDIENT_CATALOG_WRITE_ROLES,
     schema: toggleIngredientIdSchema,
     anyPermission: CATALOG_MANAGE_PERMISSIONS,
   },
@@ -964,7 +965,7 @@ export async function exportIngredients(
   format: "xlsx" | "csv" = "xlsx",
 ): Promise<ExportIngredientsResult> {
   const ctx = await getAuthContextWithAnyPermission(
-    INVENTORY_CATALOG_ROLES,
+    INGREDIENT_CATALOG_WRITE_ROLES,
     CATALOG_MANAGE_PERMISSIONS,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -1147,7 +1148,7 @@ export async function importIngredients(
   formData: FormData,
 ): Promise<ImportIngredientsResult> {
   const ctx = await getAuthContextWithAnyPermission(
-    INVENTORY_CATALOG_ROLES,
+    INGREDIENT_CATALOG_WRITE_ROLES,
     CATALOG_MANAGE_PERMISSIONS,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -1292,7 +1293,7 @@ export async function importIngredients(
 
 export async function downloadIngredientTemplate(): Promise<ActionResult> {
   const ctx = await getAuthContextWithAnyPermission(
-    INVENTORY_CATALOG_ROLES,
+    INGREDIENT_CATALOG_WRITE_ROLES,
     CATALOG_MANAGE_PERMISSIONS,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
