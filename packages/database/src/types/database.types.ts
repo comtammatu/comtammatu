@@ -14059,6 +14059,10 @@ export type Database = {
         }
         Returns: Json
       }
+      get_finance_period_close_readiness: {
+        Args: { p_branch_id?: number; p_month: number; p_year: number }
+        Returns: Json
+      }
       get_finance_reconciliation_attention: {
         Args: { p_end_date: string; p_start_date: string }
         Returns: {
@@ -14069,6 +14073,10 @@ export type Database = {
           unmatched_money_in_count: number
           unmatched_money_out_count: number
         }[]
+      }
+      get_finance_startup_capital_summary: {
+        Args: { p_branch_id?: number; p_location: string }
+        Returns: Json
       }
       get_food_cost: {
         Args: {
