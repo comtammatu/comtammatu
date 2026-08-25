@@ -22,6 +22,19 @@ const shopeeRelaySchema = z.object({
     .optional(),
 });
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, x-shopee-relay-secret, Authorization",
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: CORS_HEADERS,
+  });
+}
+
 function verifyRelaySecret(request: NextRequest): boolean {
   const expectedSecret = process.env.SHOPEE_RELAY_SECRET;
   if (!expectedSecret) {
@@ -47,7 +60,7 @@ export async function POST(request: NextRequest) {
     if (!verifyRelaySecret(request)) {
       return NextResponse.json(
         { success: false, error: "Xác thực không hợp lệ" },
-        { status: 401 },
+        { status: 401, headers: CORS_HEADERS },
       );
     }
 
@@ -57,23 +70,26 @@ export async function POST(request: NextRequest) {
     if (!parsed.success) {
       return NextResponse.json(
         { success: false, error: "Dữ liệu yêu cầu không hợp lệ" },
-        { status: 400 },
+        { status: 400, headers: CORS_HEADERS },
       );
     }
 
     // Handle Ping test from Extension
     if (parsed.data.ping) {
-      return NextResponse.json({
-        success: true,
-        message: "ShopeeFood POS Relay API is online and ready",
-        timestamp: Date.now(),
-      });
+      return NextResponse.json(
+        {
+          success: true,
+          message: "ShopeeFood POS Relay API is online and ready",
+          timestamp: Date.now(),
+        },
+        { headers: CORS_HEADERS },
+      );
     }
 
     if (!parsed.data.order) {
       return NextResponse.json(
         { success: false, error: "Thiếu dữ liệu đơn hàng" },
-        { status: 400 },
+        { status: 400, headers: CORS_HEADERS },
       );
     }
 
@@ -93,7 +109,7 @@ export async function POST(request: NextRequest) {
     if (branchErr || !branch) {
       return NextResponse.json(
         { success: false, error: `Không tìm thấy chi nhánh với mã ${requestedBranchId}` },
-        { status: 404 },
+        { status: 404, headers: CORS_HEADERS },
       );
     }
 
@@ -115,14 +131,17 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (existingOrder) {
-      return NextResponse.json({
-        success: true,
-        idempotent: true,
-        message: "Đơn hàng này đã được nhân viên nhập hoặc hệ thống tiếp nhận trước đó",
-        order_id: existingOrder.id,
-        order_number: existingOrder.order_number,
-        display_id: displayRef,
-      });
+      return NextResponse.json(
+        {
+          success: true,
+          idempotent: true,
+          message: "Đơn hàng này đã được nhân viên nhập hoặc hệ thống tiếp nhận trước đó",
+          order_id: existingOrder.id,
+          order_number: existingOrder.order_number,
+          display_id: displayRef,
+        },
+        { headers: CORS_HEADERS },
+      );
     }
 
     // 4. Query active menu items for this tenant
@@ -136,7 +155,7 @@ export async function POST(request: NextRequest) {
       console.error("[ShopeeFood POS Relay] Menu fetch error:", menuErr.code);
       return NextResponse.json(
         { success: false, error: "Lỗi tải thực đơn chi nhánh" },
-        { status: 500 },
+        { status: 500, headers: CORS_HEADERS },
       );
     }
 
@@ -149,7 +168,7 @@ export async function POST(request: NextRequest) {
     if (!createdBy) {
       return NextResponse.json(
         { success: false, error: "Không tìm thấy hồ sơ nhân viên hợp lệ cho chi nhánh" },
-        { status: 500 },
+        { status: 500, headers: CORS_HEADERS },
       );
     }
 
@@ -175,7 +194,7 @@ export async function POST(request: NextRequest) {
           success: false,
           error: "Không thể tạo đơn hàng trên POS",
         },
-        { status: 500 },
+        { status: 500, headers: CORS_HEADERS },
       );
     }
 
@@ -195,15 +214,18 @@ export async function POST(request: NextRequest) {
         .eq("id", orderId);
     }
 
-    return NextResponse.json({
-      success: true,
-      order_id: orderId,
-      order_number: orderNumber,
-      display_id: displayRef,
-      items_count: transformed.items.length,
-      total_amount: transformed.totalAmount,
-      restaurant_id: restaurantId,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        order_id: orderId,
+        order_number: orderNumber,
+        display_id: displayRef,
+        items_count: transformed.items.length,
+        total_amount: transformed.totalAmount,
+        restaurant_id: restaurantId,
+      },
+      { headers: CORS_HEADERS },
+    );
   } catch (error) {
     console.error("[ShopeeFood POS Relay] Unexpected error:", error);
     return NextResponse.json(
@@ -211,7 +233,7 @@ export async function POST(request: NextRequest) {
         success: false,
         error: "Lỗi hệ thống khi tiếp nhận đơn ShopeeFood",
       },
-      { status: 500 },
+      { status: 500, headers: CORS_HEADERS },
     );
   }
 }

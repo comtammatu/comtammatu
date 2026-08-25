@@ -12,6 +12,19 @@ const querySchema = z.object({
   branch_id: z.coerce.number().int().positive().default(1),
 });
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, x-shopee-relay-secret, Authorization",
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: CORS_HEADERS,
+  });
+}
+
 function verifyRelaySecret(request: NextRequest): boolean {
   const expectedSecret = process.env.SHOPEE_RELAY_SECRET;
   if (!expectedSecret) {
@@ -36,7 +49,7 @@ export async function GET(request: NextRequest) {
     if (!verifyRelaySecret(request)) {
       return NextResponse.json(
         { success: false, error: "Xác thực không hợp lệ" },
-        { status: 401 },
+        { status: 401, headers: CORS_HEADERS },
       );
     }
 
@@ -48,7 +61,7 @@ export async function GET(request: NextRequest) {
     if (!parsed.success) {
       return NextResponse.json(
         { success: false, error: "Mã chi nhánh không hợp lệ" },
-        { status: 400 },
+        { status: 400, headers: CORS_HEADERS },
       );
     }
 
@@ -68,7 +81,7 @@ export async function GET(request: NextRequest) {
       console.error("[ShopeeFood Item Status API] RPC error:", limitsError.code);
       return NextResponse.json(
         { success: false, error: "Lỗi tải hạn mức chi nhánh" },
-        { status: 500 },
+        { status: 500, headers: CORS_HEADERS },
       );
     }
 
@@ -108,12 +121,15 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    return NextResponse.json({
-      success: true,
-      branch_id: branchId,
-      timestamp: Date.now(),
-      items: syncItems,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        branch_id: branchId,
+        timestamp: Date.now(),
+        items: syncItems,
+      },
+      { headers: CORS_HEADERS },
+    );
   } catch (error) {
     console.error("[ShopeeFood Item Status API] Error:", error);
     return NextResponse.json(
@@ -121,7 +137,7 @@ export async function GET(request: NextRequest) {
         success: false,
         error: "Lỗi hệ thống khi truy vấn trạng thái món",
       },
-      { status: 500 },
+      { status: 500, headers: CORS_HEADERS },
     );
   }
 }
