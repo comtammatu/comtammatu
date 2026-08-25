@@ -18,6 +18,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 3500);
   }
 
+  function cleanUrlAndExtractBranch(rawUrl) {
+    let url = rawUrl.trim().replace(/\/+$/, '');
+    // Auto handle cases where user pastes full POS URL e.g. "https://web.comtammatu.com/br/3/pos"
+    const match = url.match(/^(https?:\/\/[^\/]+)(?:\/br\/(\d+)(?:\/.*)?)?$/i);
+    if (match && match[1]) {
+      const origin = match[1];
+      const extractedBranchId = match[2] ? parseInt(match[2], 10) : null;
+      return { origin, extractedBranchId };
+    }
+    return { origin: url, extractedBranchId: null };
+  }
+
   // Load existing settings
   chrome.storage.local.get(['backendUrl', 'branchId', 'relaySecret', 'recentOrders'], (res) => {
     backendUrlInput.value = res.backendUrl || 'http://localhost:3000';
@@ -31,18 +43,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Save settings
   btnSave.addEventListener('click', () => {
-    const backendUrl = backendUrlInput.value.trim().replace(/\/+$/, '');
-    const branchId = parseInt(branchIdInput.value, 10) || 1;
+    const parsed = cleanUrlAndExtractBranch(backendUrlInput.value);
+    const backendUrl = parsed.origin;
+    let branchId = parseInt(branchIdInput.value, 10);
+    if (isNaN(branchId) || branchId <= 0) {
+      branchId = parsed.extractedBranchId || 1;
+    }
+
+    backendUrlInput.value = backendUrl;
+    branchIdInput.value = branchId;
+
     const relaySecret = relaySecretInput.value.trim();
 
     chrome.storage.local.set({ backendUrl, branchId, relaySecret }, () => {
-      showToast('Đã lưu cấu hình thành công!');
+      showToast(`Đã lưu cấu hình (Chi nhánh ${branchId}) thành công!`);
     });
   });
 
   // Ping test
   btnPing.addEventListener('click', async () => {
-    const backendUrl = backendUrlInput.value.trim().replace(/\/+$/, '');
+    const parsed = cleanUrlAndExtractBranch(backendUrlInput.value);
+    const backendUrl = parsed.origin;
     const relaySecret = relaySecretInput.value.trim();
 
     showToast('Đang kiểm tra kết nối...', true);
@@ -66,7 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast(`⚠️ Server phản hồi mã: ${res.status}`, false);
       }
     } catch {
-      showToast('❌ Không thể kết nối tới POS URL', false);
+      showToast(`❌ Không thể kết nối tới ${backendUrl}`, false);
     }
   });
 

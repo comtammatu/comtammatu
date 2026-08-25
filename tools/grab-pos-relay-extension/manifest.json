@@ -7,10 +7,7 @@
     "storage"
   ],
   "host_permissions": [
-    "https://merchant.grab.com/*",
-    "https://api.grab.com/*",
-    "http://localhost:3000/*",
-    "https://*.vercel.app/*"
+    "<all_urls>"
   ],
   "action": {
     "default_popup": "popup.html",
