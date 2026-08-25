@@ -1,0 +1,195 @@
+// content.js - Content script running in partner.shopee.vn / merchant.shopeefood.vn
+(function () {
+  console.log('[ShopeeFood POS Relay] Content script active');
+
+  // Inject injected.js into page context
+  const script = document.createElement('script');
+  script.src = chrome.runtime.getURL('injected.js');
+  script.onload = function () {
+    this.remove();
+  };
+  (document.head || document.documentElement).appendChild(script);
+
+  // Floating Status Indicator on Shopee Partner Web page
+  const badge = document.createElement('div');
+  badge.id = 'comtammatu-shopee-pos-relay-badge';
+  badge.style.cssText = `
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    z-index: 999999;
+    background: #0f172a;
+    color: #f8fafc;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 13px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+  `;
+  badge.innerHTML = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ee4d2d;"></span> <strong>ShopeeFood POS Relay</strong>: Đang trực đơn...`;
+
+  function ensureBadgeAttached() {
+    if (!document.getElementById('comtammatu-shopee-pos-relay-badge')) {
+      if (document.body) {
+        document.body.appendChild(badge);
+      } else {
+        document.addEventListener('DOMContentLoaded', () => {
+          if (document.body && !document.getElementById('comtammatu-shopee-pos-relay-badge')) {
+            document.body.appendChild(badge);
+          }
+        });
+      }
+    }
+  }
+
+  ensureBadgeAttached();
+
+  function updateBadge(message, isSuccess = true) {
+    ensureBadgeAttached();
+    const dotColor = isSuccess ? '#22c55e' : '#ef4444';
+    badge.innerHTML = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${dotColor};"></span> <strong>Shopee POS</strong>: ${message}`;
+    badge.style.borderColor = isSuccess ? '#22c55e' : '#ef4444';
+  }
+
+  function sendCommandToInjected(command, payload) {
+    window.postMessage(
+      {
+        source: 'SHOPEE_POS_RELAY_CONTENT',
+        command: command,
+        payload: payload,
+      },
+      '*'
+    );
+  }
+
+  // Cache to track previous status of items
+  const itemStatusCache = new Map(); // shopeeItemId -> { status, stock }
+
+  // Poll POS Backend for Menu Limits / Item Status changes
+  async function pollPosItemStatus() {
+    chrome.storage.local.get(['backendUrl', 'branchId'], async (res) => {
+      const backendUrl = res.backendUrl || 'http://localhost:3000';
+      const branchId = res.branchId || 1;
+
+      try {
+        const response = await fetch(`${backendUrl}/api/webhooks/shopeefood/item-status?branch_id=${branchId}`);
+        if (!response.ok) return;
+
+        const data = await response.json();
+        if (data.success && Array.isArray(data.items)) {
+          for (const item of data.items) {
+            if (!item.shopee_item_id) continue;
+
+            const shopeeId = item.shopee_item_id;
+            const currentStatus = item.available_status; // 1: Có bán, 2: Hết hàng
+            const currentStock = item.available_to_sell;
+
+            const prev = itemStatusCache.get(shopeeId);
+
+            // 1. If Available Status changed (e.g. Tắt món / Mở bán lại)
+            if (!prev || prev.status !== currentStatus) {
+              console.log(`[Shopee POS Relay] Status change detected for ${item.name}: ${prev?.status} -> ${currentStatus}`);
+              sendCommandToInjected('SET_AVAILABLE_STATUS', {
+                itemId: shopeeId,
+                itemName: item.name,
+                availableStatus: currentStatus,
+              });
+            }
+
+            // 2. If Stock changed and item has finite quota
+            if (typeof currentStock === 'number' && (!prev || prev.stock !== currentStock)) {
+              console.log(`[Shopee POS Relay] Stock change detected for ${item.name}: ${prev?.stock} -> ${currentStock}`);
+              sendCommandToInjected('SET_ITEM_STOCK', {
+                itemId: shopeeId,
+                itemName: item.name,
+                currentStock: currentStock,
+              });
+            }
+
+            itemStatusCache.set(shopeeId, { status: currentStatus, stock: currentStock });
+          }
+        }
+      } catch (err) {
+        // Silently retry next interval
+      }
+    });
+  }
+
+  // Listen to messages from injected.js
+  window.addEventListener('message', async (event) => {
+    if (event.source !== window || event.data?.source !== 'SHOPEE_POS_RELAY_INJECTED') {
+      return;
+    }
+
+    const { type, data } = event.data;
+
+    if (type === 'STORE_INFO' && data?.restaurantName) {
+      updateBadge(`Đã kết nối: ${data.restaurantName}`);
+      chrome.storage.local.set({
+        shopeeRestaurantId: data.restaurantId,
+        shopeeStoreId: data.storeId,
+        shopeeRestaurantName: data.restaurantName,
+      });
+      return;
+    }
+
+    if (type === 'ORDER_DETAIL' && data?.order) {
+      const order = data.order;
+      const displayId = order.displayId || order.orderCode || String(order.orderId || 'SPF-ORDER');
+      console.log(`[Shopee POS Relay] Relaying order ${displayId} to POS backend...`);
+      updateBadge(`Đang chuyển đơn ${displayId} sang KDS...`);
+
+      chrome.storage.local.get(['backendUrl', 'branchId', 'recentOrders'], async (result) => {
+        const backendUrl = result.backendUrl || 'http://localhost:3000';
+        const branchId = result.branchId || 1;
+
+        try {
+          const res = await fetch(`${backendUrl}/api/webhooks/shopeefood/relay`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              order: order,
+              branch_id: branchId,
+              restaurant_id: data.restaurantId || order.restaurantId,
+            }),
+          });
+
+          if (res.ok) {
+            updateBadge(`✅ Đã đẩy ${displayId} vào Bếp & Máy in!`);
+
+            // Save to recent orders
+            const rawItems = order.items || order.dishList || order.orderItems || [];
+            const recent = result.recentOrders || [];
+            recent.unshift({
+              orderId: order.orderId || displayId,
+              displayId: displayId,
+              eater: order.customer?.name || order.buyer?.name || 'Khách Shopee',
+              items: rawItems.map((i) => `${i.quantity}x ${i.name}`).join(', '),
+              total: typeof order.total === 'number' ? `${order.total.toLocaleString('vi-VN')}₫` : String(order.total || order.totalPrice || '0₫'),
+              time: new Date().toLocaleTimeString('vi-VN'),
+            });
+            chrome.storage.local.set({ recentOrders: recent.slice(0, 10), lastSyncTime: Date.now() });
+          } else {
+            const errText = await res.text();
+            console.error('[Shopee POS Relay] Backend rejected order:', errText);
+            updateBadge(`⚠️ Lỗi gửi ${displayId} sang POS: ${res.status}`, false);
+          }
+        } catch (err) {
+          console.error('[Shopee POS Relay] Failed to reach POS backend:', err);
+          updateBadge(`⚠️ Không kết nối được POS (${backendUrl})`, false);
+        }
+      });
+    }
+  });
+
+  // Start polling POS backend for menu limit & availability changes
+  setInterval(pollPosItemStatus, 6000);
+  setTimeout(pollPosItemStatus, 2000);
+})();
