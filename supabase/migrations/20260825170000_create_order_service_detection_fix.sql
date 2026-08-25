@@ -1,10 +1,13 @@
--- Migration: allow service_role to execute create_order and create_order_with_daily_limit_hold
--- Enables webhook relays (GrabFood, ShopeeFood, etc.) to inject delivery orders via createServiceClient().
+-- Migration: fix service-role detection in create_order functions
 --
--- NOTE: this body matches what was applied to production on 2026-08-25. The
--- `current_user IN (...)` clause in v_is_service is always true under
--- SECURITY DEFINER (current_user = function owner) and is removed by the
--- follow-up migration 20260825170000_create_order_service_detection_fix.sql.
+-- 20260825083000 added `OR (current_user IN ('postgres','supabase_admin','service_role'))`
+-- to v_is_service. Under SECURITY DEFINER, current_user is the function OWNER
+-- (postgres), so the clause is always true at runtime: branch-scope and
+-- profile checks were bypassed for every authenticated caller, and an anon
+-- caller passing p_created_by was accepted. This restores JWT-only detection
+-- (auth.role()) and the original created_by guard:
+--   authenticated -> own auth.uid(); service without uid -> p_created_by;
+--   anon -> 28000 regardless of p_created_by.
 
 CREATE OR REPLACE FUNCTION public.create_order(p_tenant_id bigint, p_branch_id bigint, p_created_by uuid, p_items jsonb, p_order_type text DEFAULT 'dine_in'::text, p_table_id bigint DEFAULT NULL::bigint, p_pos_session_id bigint DEFAULT NULL::bigint, p_note text DEFAULT NULL::text, p_idempotency_key uuid DEFAULT NULL::uuid, p_delivery_platform text DEFAULT NULL::text, p_external_order_ref text DEFAULT NULL::text)
  RETURNS jsonb
@@ -13,8 +16,8 @@ CREATE OR REPLACE FUNCTION public.create_order(p_tenant_id bigint, p_branch_id b
  SET search_path TO 'public'
 AS $function$
 DECLARE
-  v_is_service       BOOLEAN := COALESCE(auth.role() = 'service_role', false) OR (current_user IN ('postgres', 'supabase_admin', 'service_role'));
-  v_created_by       UUID := COALESCE(auth.uid(), p_created_by);
+  v_is_service       BOOLEAN := COALESCE(auth.role() = 'service_role', false);
+  v_created_by       UUID;
   v_order_id         BIGINT;
   v_order_number     TEXT;
   v_date_part        TEXT;
@@ -40,8 +43,12 @@ DECLARE
   v_platform         TEXT := NULLIF(lower(btrim(COALESCE(p_delivery_platform, ''))), '');
   v_external_ref     TEXT := NULLIF(btrim(COALESCE(p_external_order_ref, '')), '');
 BEGIN
-  IF v_created_by IS NULL THEN
-    RAISE EXCEPTION 'unauthenticated: created_by is required' USING ERRCODE = '28000';
+  v_created_by := auth.uid();
+  IF v_created_by IS NULL AND NOT v_is_service THEN
+    RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
+  END IF;
+  IF v_is_service AND v_created_by IS NULL THEN
+    v_created_by := p_created_by;
   END IF;
 
   SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'unassigned')
@@ -303,11 +310,14 @@ CREATE OR REPLACE FUNCTION public.create_order_with_daily_limit_hold(p_tenant_id
  SET search_path TO ''
 AS $function$
 DECLARE
-  v_is_service boolean := COALESCE(auth.role() = 'service_role', false) OR (current_user IN ('postgres', 'supabase_admin', 'service_role'));
-  v_uid uuid := COALESCE(auth.uid(), p_created_by);
+  v_is_service boolean := COALESCE(auth.role() = 'service_role', false);
+  v_uid uuid := auth.uid();
   v_result jsonb;
   v_order_id bigint;
 BEGIN
+  IF v_uid IS NULL AND v_is_service THEN
+    v_uid := p_created_by;
+  END IF;
 
   IF p_daily_limit_hold_token IS NOT NULL THEN
     PERFORM set_config(
@@ -350,12 +360,3 @@ BEGIN
   RETURN v_result;
 END;
 $function$;
-
--- Grant execute permissions to authenticated and service_role
-REVOKE ALL ON FUNCTION public.create_order(bigint, bigint, uuid, jsonb, text, bigint, bigint, text, uuid, text, text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_order(bigint, bigint, uuid, jsonb, text, bigint, bigint, text, uuid, text, text) TO authenticated;
-GRANT ALL ON FUNCTION public.create_order(bigint, bigint, uuid, jsonb, text, bigint, bigint, text, uuid, text, text) TO service_role;
-
-REVOKE ALL ON FUNCTION public.create_order_with_daily_limit_hold(bigint, bigint, uuid, jsonb, text, bigint, bigint, text, uuid, uuid, text, text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_order_with_daily_limit_hold(bigint, bigint, uuid, jsonb, text, bigint, bigint, text, uuid, uuid, text, text) TO authenticated;
-GRANT ALL ON FUNCTION public.create_order_with_daily_limit_hold(bigint, bigint, uuid, jsonb, text, bigint, bigint, text, uuid, uuid, text, text) TO service_role;

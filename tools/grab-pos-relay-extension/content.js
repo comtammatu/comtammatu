@@ -167,7 +167,7 @@
     if (type === 'ORDER_DETAIL' && data?.order) {
       const order = data.order;
       console.log(`[Grab POS Relay] Relaying order ${order.displayID} to POS backend...`);
-      updateBadge(`Đang chuyển đơn ${order.displayID} sang KDS...`);
+      updateBadge(`Đang tạo đơn ${order.displayID} trên POS chi nhánh...`);
 
       chrome.storage.local.get(['backendUrl', 'branchId', 'relaySecret', 'recentOrders'], async (result) => {
         const backendUrl = result.backendUrl || 'http://localhost:3000';
@@ -191,7 +191,7 @@
           });
 
           if (res.ok) {
-            updateBadge(`✅ Đã đẩy ${order.displayID} vào Bếp & Máy in!`);
+            updateBadge(`✅ Đã tạo đơn ${order.displayID} trên POS thành công!`);
 
             // Save to recent orders
             const recent = result.recentOrders || [];

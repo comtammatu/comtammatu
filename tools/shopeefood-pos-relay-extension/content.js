@@ -191,7 +191,7 @@
           });
 
           if (res.ok) {
-            updateBadge(`✅ Đã đẩy ${displayId} vào Bếp & Máy in!`);
+            updateBadge(`✅ Đã tạo đơn ${displayId} trên POS thành công!`);
 
             // Save to recent orders
             const rawItems = order.items || order.dishList || order.orderItems || [];

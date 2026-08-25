@@ -193,12 +193,13 @@ export async function POST(request: NextRequest) {
     });
 
     if (rpcError) {
-      console.error("[Grab POS Relay] create_order RPC error:", rpcError);
+      console.error("[Grab POS Relay] create_order RPC error:", rpcError.message, rpcError.details, rpcError.code);
+      // Never expose raw Postgres/Supabase messages to clients; map known causes.
+      const clientMessage = rpcError.message?.includes("channel_price_missing")
+        ? "Thiếu giá kênh Grab cho một số món — đồng bộ giá kênh trong Thực đơn"
+        : "Không thể tạo đơn hàng trên POS";
       return NextResponse.json(
-        {
-          success: false,
-          error: "Không thể tạo đơn hàng trên POS",
-        },
+        { success: false, error: clientMessage },
         { status: 500, headers: CORS_HEADERS },
       );
     }
@@ -206,22 +207,10 @@ export async function POST(request: NextRequest) {
     const orderId = (rpcResult as { order_id?: number })?.order_id;
     const orderNumber = (rpcResult as { order_number?: string })?.order_number || `GH-${grabOrder.displayID}`;
 
-    // 8. Update payment status to paid / platform (payment_method CHECK: cash | vietqr | platform)
-    if (orderId) {
-      const { error: payErr } = await supabase
-        .from("orders")
-        .update({
-          payment_status: "paid",
-          payment_method: "platform",
-          cash_received: transformed.totalAmount,
-          cash_change: 0,
-        })
-        .eq("id", orderId);
-
-      if (payErr) {
-        console.error("[Grab POS Relay] Failed updating payment status:", payErr);
-      }
-    }
+    // 8. Leave payment_status 'unpaid' so the order surfaces in the POS
+    // "Cần xử lý" list (fetchActiveOrders excludes paid orders). The cashier
+    // confirms the platform tender at driver handoff via
+    // confirm_platform_payment — marking paid here hid relayed orders from POS.
 
     return NextResponse.json(
       {

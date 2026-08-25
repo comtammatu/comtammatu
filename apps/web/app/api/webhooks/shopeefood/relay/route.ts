@@ -188,12 +188,13 @@ export async function POST(request: NextRequest) {
     });
 
     if (rpcError) {
-      console.error("[ShopeeFood POS Relay] create_order RPC error:", rpcError.code);
+      console.error("[ShopeeFood POS Relay] create_order RPC error:", rpcError.message, rpcError.details, rpcError.code);
+      // Never expose raw Postgres/Supabase messages to clients; map known causes.
+      const clientMessage = rpcError.message?.includes("channel_price_missing")
+        ? "Thiếu giá kênh Shopee cho một số món — đồng bộ giá kênh trong Thực đơn"
+        : "Không thể tạo đơn hàng trên POS";
       return NextResponse.json(
-        {
-          success: false,
-          error: "Không thể tạo đơn hàng trên POS",
-        },
+        { success: false, error: clientMessage },
         { status: 500, headers: CORS_HEADERS },
       );
     }
@@ -201,18 +202,10 @@ export async function POST(request: NextRequest) {
     const orderId = (rpcResult as { order_id?: number })?.order_id;
     const orderNumber = (rpcResult as { order_number?: string })?.order_number || `GH-${displayRef}`;
 
-    // 8. Update payment status to paid / platform
-    if (orderId) {
-      await supabase
-        .from("orders")
-        .update({
-          payment_status: "paid",
-          payment_method: "platform",
-          cash_received: transformed.totalAmount,
-          cash_change: 0,
-        })
-        .eq("id", orderId);
-    }
+    // 8. Leave payment_status 'unpaid' so the order surfaces in the POS
+    // "Cần xử lý" list (fetchActiveOrders excludes paid orders). The cashier
+    // confirms the platform tender at driver handoff via
+    // confirm_platform_payment — marking paid here hid relayed orders from POS.
 
     return NextResponse.json(
       {

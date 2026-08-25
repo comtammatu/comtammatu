@@ -128,15 +128,29 @@
             if (url.includes('/orders-pagination') && Array.isArray(data.orders)) {
               dispatchOrderEvent('ORDERS_PAGINATION', { url, data, merchantId });
 
-              // Auto fetch details for any newly detected orders
-              for (const order of data.orders) {
-                if (order.orderID && !processedOrderIds.has(order.orderID)) {
-                  processedOrderIds.add(order.orderID);
-                  fetchOrderDetail(order.orderID);
+              const isHistoryOrCancelled =
+                url.includes('PageType=History') ||
+                url.includes('PageType=Cancelled') ||
+                url.includes('PageType=Completed');
+
+              // Only auto fetch and relay active preparation / upcoming orders
+              if (!isHistoryOrCancelled) {
+                for (const order of data.orders) {
+                  const state = String(order.state || '').toUpperCase();
+                  if (state === 'COMPLETED' || state === 'CANCELLED' || state === 'DELIVERED') {
+                    continue;
+                  }
+                  if (order.orderID && !processedOrderIds.has(order.orderID)) {
+                    processedOrderIds.add(order.orderID);
+                    fetchOrderDetail(order.orderID);
+                  }
                 }
               }
             } else if (url.includes('/food/merchant/v3/orders/') && data.order) {
-              dispatchOrderDetailOnce(data.order);
+              const state = String(data.order.state || '').toUpperCase();
+              if (state !== 'COMPLETED' && state !== 'CANCELLED' && state !== 'DELIVERED') {
+                dispatchOrderDetailOnce(data.order);
+              }
             }
           })
           .catch(() => {});
