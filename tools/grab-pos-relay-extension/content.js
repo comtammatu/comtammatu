@@ -96,7 +96,7 @@
         if (data.success && Array.isArray(data.items)) {
           let syncedCount = 0;
           for (const item of data.items) {
-            if (!item.grab_item_id) continue;
+            if (!item.grab_item_id || !item.grab_item_id.startsWith('VNITE')) continue;
 
             const grabId = item.grab_item_id;
             const currentStatus = item.available_status; // 1 or 2

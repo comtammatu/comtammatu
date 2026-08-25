@@ -105,9 +105,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Build reverse map of SHOPEE_MENU_MAPPING: normalizedName -> shopeeItemId
+    // Only map actual Shopee menu items (SPF_ITEM_...), never modifier options (SPF_MOD_...)
     const nameToShopeeId = new Map<string, string>();
     for (const [shopeeId, item] of Object.entries(SHOPEE_MENU_MAPPING) as [string, ShopeeMappingItem][]) {
-      nameToShopeeId.set(normalizeMenuName(item.name), shopeeId);
+      if (shopeeId.startsWith("SPF_ITEM_")) {
+        nameToShopeeId.set(normalizeMenuName(item.name), shopeeId);
+      }
     }
 
     interface MenuLimitRawRow {

@@ -203,6 +203,10 @@
 
   // API Call: Sync Available Status (1: Có bán, 2: Hết hàng hôm nay)
   async function setGrabItemAvailableStatus(itemId, availableStatus) {
+    if (!itemId || !itemId.startsWith('VNITE')) {
+      console.warn(`[Grab POS Relay] Skip status sync for non-item ID: ${itemId}`);
+      return;
+    }
     try {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
@@ -240,6 +244,10 @@
 
   // API Call: Sync Stock / Daily Limit (IMS)
   async function setGrabItemStock(itemId, currentStock) {
+    if (!itemId || !itemId.startsWith('VNITE')) {
+      console.warn(`[Grab POS Relay] Skip stock sync for non-item ID: ${itemId}`);
+      return;
+    }
     try {
       const url = `https://api.grab.com/food/merchant/v1/items/${itemId}/upsert-item-stock`;
       const res = await originalFetch(url, {

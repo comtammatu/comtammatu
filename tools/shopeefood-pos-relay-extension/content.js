@@ -96,7 +96,7 @@
         const data = await response.json();
         if (data.success && Array.isArray(data.items)) {
           for (const item of data.items) {
-            if (!item.shopee_item_id) continue;
+            if (!item.shopee_item_id || !item.shopee_item_id.startsWith('SPF_ITEM_')) continue;
 
             const shopeeId = item.shopee_item_id;
             const currentStatus = item.available_status; // 1: Có bán, 2: Hết hàng

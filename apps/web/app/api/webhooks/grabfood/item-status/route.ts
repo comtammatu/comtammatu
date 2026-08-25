@@ -106,9 +106,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Build reverse map of GRAB_MENU_MAPPING: normalizedName -> grabItemId
+    // Only map actual Grab menu items (VNITE...), never modifier options (VNMOD...)
     const nameToGrabId = new Map<string, string>();
     for (const [grabId, item] of Object.entries(GRAB_MENU_MAPPING) as [string, GrabMappingItem][]) {
-      nameToGrabId.set(normalizeMenuName(item.name), grabId);
+      if (grabId.startsWith("VNITE")) {
+        nameToGrabId.set(normalizeMenuName(item.name), grabId);
+      }
     }
 
     interface MenuLimitRawRow {
