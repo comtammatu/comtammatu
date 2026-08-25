@@ -32,9 +32,25 @@
     transition: all 0.3s ease;
   `;
   badge.innerHTML = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#22c55e;"></span> <strong>Cơm Tấm Má Tư POS Relay</strong>: Đang trực đơn...`;
-  document.body.appendChild(badge);
+
+  function ensureBadgeAttached() {
+    if (!document.getElementById('comtammatu-pos-relay-badge')) {
+      if (document.body) {
+        document.body.appendChild(badge);
+      } else {
+        document.addEventListener('DOMContentLoaded', () => {
+          if (document.body && !document.getElementById('comtammatu-pos-relay-badge')) {
+            document.body.appendChild(badge);
+          }
+        });
+      }
+    }
+  }
+
+  ensureBadgeAttached();
 
   function updateBadge(message, isSuccess = true) {
+    ensureBadgeAttached();
     badge.innerHTML = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${isSuccess ? '#22c55e' : '#ef4444'};"></span> <strong>POS Relay</strong>: ${message}`;
     badge.style.borderColor = isSuccess ? '#22c55e' : '#ef4444';
   }
