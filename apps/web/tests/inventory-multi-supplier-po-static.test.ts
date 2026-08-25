@@ -6,7 +6,7 @@ import { test } from "node:test";
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
-test("ADR 0043 PO lines carry supplier_id and confirm books one NCC on a shared GRN", () => {
+test("ADR 0040 PO lines carry supplier_id and confirm books one NCC on a shared GRN", () => {
   const sql = read(
     "supabase/migrations/20260820122811_po_line_supplier_shared_grn.sql",
   );
@@ -44,7 +44,7 @@ test("ADR 0043 PO lines carry supplier_id and confirm books one NCC on a shared 
   assert.doesNotMatch(wave4, /DROP TABLE/);
 });
 
-test("ADR 0043 UI is ingredient-first and confirms GRN by NCC", () => {
+test("ADR 0040 UI is ingredient-first and confirms GRN by NCC", () => {
   const actions = read(
     "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
   );

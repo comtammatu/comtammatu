@@ -27,7 +27,8 @@
 ## System Name And Authority
 
 The design system is the **Má Tư Design System**. There is no second name, no
-version badge, no theme-product label, and no external design mirror. Any other
+version badge, no theme-product label, and no external design mirror (no
+Stitch / `.stitch/`, no Custom Theme, no Concept 01). Any other
 system name found in code, comments, or docs is drift and must be removed.
 
 Runtime bindings:
@@ -555,6 +556,14 @@ Functional feedback only (loading, enter/exit, focus, state). Prefer
 `transition-all`, page-transition, or list-stagger. Animate only `transform`,
 `opacity`, `filter`, `color`, and named properties. `hover:scale-*` is forbidden
 on ERP surfaces; `active:scale` ≥ `0.97` is allowed on tap targets.
+
+Content enter is optional, one-shot, `motion-safe:`, and uses the short 150ms
+state-feedback tier only — never the overlay duration for card/list/content
+enter. KDS/new-ticket attention fires only on a genuine new event proven by
+event identity; snapshot refresh, reconnect, filter/station/mode change,
+removal, and reorder never replay it. Operational route loading uses shared
+`PageSkeleton` / `PageSpinner`; prefer hard cuts on POS/KDS when motion does
+not clarify a functional state.
 
 | Job | Recipe | Forbidden |
 | --- | --- | --- |

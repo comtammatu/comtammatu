@@ -1,9 +1,9 @@
-# Cơm Tấm Má Tư — Operations and sales software
+# Cơm Tấm Má Tư — F&B Operations System
 
-Software for CTCP Chén Sứ / Cơm Tấm Má Tư: single-tenant, multi-branch.
-Goals: sell correctly, kitchen receives correctly, collect payment correctly,
-print/invoice correctly, stock deducts correctly, and management sees real
-daily operations.
+The F&B Operations System (`Hệ thống Vận hành F&B`) is the single-tenant
+operating system of CTCP Chén Sứ for the multi-branch Cơm Tấm Má Tư chain:
+sales, kitchen, stock, money, invoicing, and people on one operational data
+source. Goals and scope boundary: ADR 0025.
 
 Hierarchy: `Tenant (L0) → Branch (L1)`.
 

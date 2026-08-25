@@ -57,6 +57,10 @@ approved file extensions.
 | `Công việc của tôi` | `Ca của tôi` |
 | Bare `Nay` as home/nav/filter chrome | `Hôm nay` |
 | `Trung tâm quản trị` as page chrome | `Quản trị` |
+| `F&B Operating ERP` / gọi sản phẩm là `ERP` | `Hệ thống Vận hành F&B` (`F&B Operations System`) |
+| `Bộ phần mềm` khi nói về sản phẩm | `Hệ thống` |
+| `POS` khi nói về toàn bộ sản phẩm | `POS` chỉ là module M2 |
+| `Operations and sales software` | `F&B Operations System` |
 | `Điều chuyển nội bộ` / `Giao nhận hàng` as nav short | workspace `Giao nhận`; document `Điều chuyển` |
 
 ### UI chrome short ladder (product vocabulary platform)
@@ -140,6 +144,17 @@ Không dùng `Owner` / `Ops` làm tên nửa sản phẩm. Role ACL `owner` ≠ 
 | `not_this`           | `control_surface`; `station_chrome`; nhãn plane `Quản trị` |
 | `scope`              | cross-module |
 | `source_of_truth`    | D076; `docs/spec/role-route-matrix.md`; `packages/shared/src/auth/types.ts` |
+
+### Sản phẩm
+
+| Trường               | Giá trị |
+| -------------------- | ------- |
+| `canonical_term`     | `restaurant_operations_system` |
+| `label_vi`           | `Hệ thống Vận hành F&B` |
+| `definition`         | Hệ thống nội bộ của Công ty Cổ phần Chén Sứ để vận hành chuỗi Cơm Tấm Má Tư: bán hàng, bếp, kho, tiền, hoá đơn và nhân sự trên một nguồn dữ liệu. |
+| `not_this`           | `ERP`; `bộ phần mềm`; `POS` (POS chỉ là module M2) |
+| `scope`              | toàn repo |
+| `source_of_truth`    | ADR 0025; `docs/ref/business-context.md` |
 
 ### Role `owner`
 
@@ -234,6 +249,7 @@ Nguyên tắc nền:
 | `operational_asset_value` | Tổng giá trị                  | Tổng tiền + tồn kho (nếu có quyền) + thiết bị (`capital`). Không gồm đặt cọc / chi phí ban đầu. Không phải tổng tài sản kế toán. | `addMoney` các hạng mục đang hiện; chưa mở sổ quỹ thì không bịa số.                              | Chi phí ban đầu, TSCĐ, GTGT phải nộp.                                                      | `finance.asset.total_value`.                                |
 | `security_deposit`       | Đặt cọc / ký quỹ              | Tiền đặt cọc/ký quỹ (mặt bằng, điện lực, …) ghi `expenses.category = deposit`. Không phải chi thuê tháng. | Cùng nguồn `startup_capital`, chỉ nhóm `deposit`.                                                | Thuê mặt bằng kỳ, Chi phí vận hành.                                                    | `finance.expense.startup_capital`.                                  |
 | `operating_result`       | Kết quả kinh doanh            | Doanh thu thuần trừ chi phí hàng (ĐC đã nhận hoặc mua NCC) và chi vận hành, cộng biến động tồn kho. Dòng độc lập với lợi nhuận gộp. Ngày CN (`/close-day`) dùng cùng identity trong cửa sổ 04:00; chi VH chỉ dòng đã ghi `expense_date` ngày đó (không phân bổ chi tháng). | `net_sales_before_vat - goods_in - operating_expense + (closing - opening inventory)`.           | Lợi nhuận ròng, dòng tiền, kết quả kê khai thuế, lợi nhuận gộp POS.                    | `finance.operating_result` (kỳ); `finance.operating_result.branch_day` (ngày CN). |
+| `period_close_readiness` | Sức khoẻ chốt sổ              | Check-list đọc-chỉ blocker/warning trước khi chốt sổ tháng: định giá chưa `active`, CN có doanh thu chưa ghi chi vận hành, đối soát định giá lệch, âm kho. `can_close` khi hết blocker; không ghi `is_closed`, không phải chốt sổ pháp lý. | RPC `get_finance_period_close_readiness(year, month, branch_id?)`; read-only, không phải sổ cái. | Chốt sổ kế toán doanh nghiệp; hành động ghi `accounting_periods` (`close_period_soft`/`close_period_hard`). | `finance.period_close.readiness`.                                   |
 | `labor_cost`             | Chi phí nhân công             | Lương, phụ cấp chịu chi phí, bảo hiểm và nghĩa vụ của người sử dụng lao động được ghi nhận cho vận hành.  | Theo payroll/HR contract.                                                                        | Cổ tức, phân phối lợi nhuận, chi cá nhân.                                              | Future/HR-linked finance.                                           |
 | `prime_cost`             | Chi phí chính                 | Chi phí kiểm soát chính trong nhà hàng: giá vốn món + chi phí nhân công.                                   | `food_cost + labor_cost`.                                                                        | Chi phí vận hành tổng, lợi nhuận ròng.                                                 | Chỉ dùng khi cả food cost và labor cost trusted.                    |
 | `net_operating_profit`   | Lợi nhuận vận hành ròng       | Lãi sau khi trừ giá vốn, nhân công, chi phí vận hành, và khoản vận hành khác đã định nghĩa.                | `net_sales_before_vat - food_cost - labor_cost - operating_expense +/- other_operating_items`.   | Lợi nhuận gộp, tiền mặt, lợi nhuận kế toán doanh nghiệp.                               | Không là Finance Basic KPI mặc định.                                |
@@ -487,15 +503,15 @@ Detail: `inventory.md`, `inventory-sop.md`.
 | `purchase_order` | đơn đặt hàng NCC | Một NCC + một kho nhận. PO mới không gắn YCM; phiếu cũ có thể còn trỏ YCM. |
 | `preferred_supplier` | NCC ưu tiên | `supplier_items.is_preferred` — default NCC on the allocate worksheet when a demand line maps to more than one supplier. |
 | `goods_received_note` | phiếu nhập kho | One physical receipt against one PO. |
-| `supplier_invoice` | hóa đơn NCC | Supplier input invoice; AP and VAT only (ADR 0041). Inventory book price is the GRN unit price. |
+| `supplier_invoice` | hóa đơn NCC | Supplier input invoice; AP and VAT only (ADR 0040). Inventory book price is the GRN unit price. |
 | `accounts_payable` | công nợ NCC | Amount still owed after payments/credits. |
-| `po_applied_quantity` / `excess_quantity` / `shortage_quantity` | số lượng tính vào đơn / giữ thêm / còn thiếu | Kept GRN qty applied to the PO line (ADR 0042 raises the PO line when kept > remaining). Excess copy is keep-and-raise PO qty, booked at GRN `Đơn giá`. Shortage is remaining PO qty (next Auto-GRN or `close_purchase_order`). |
+| `po_applied_quantity` / `excess_quantity` / `shortage_quantity` | số lượng tính vào đơn / giữ thêm / còn thiếu | Kept GRN qty applied to the PO line (ADR 0040 raises the PO line when kept > remaining). Excess copy is keep-and-raise PO qty, booked at GRN `Đơn giá`. Shortage is remaining PO qty (next Auto-GRN or `close_purchase_order`). |
 | `supplier_payment` | thanh toán NCC | Payment to a supplier. |
 | `stock_level` / `stock_movement` | tồn kho / biến động tồn kho | On-hand snapshot+WAC / append-only ledger. |
 | `stock_transfer` / `stock_issue` | phiếu điều chuyển / phiếu xuất kho | Inter-site move document (chrome short: Điều chuyển) / internal issue or write-off document. Fulfillment workspace chrome that also covers `stock_request` is `Giao nhận`, not a synonym for this document. |
 | `transfer_source_variance` | thiếu do nơi xuất | ADR 0028 default short-receive class: shipping site owns the shortfall as preparation/shipping variance. |
 | `transfer_transit_loss` / `Nhận thiếu` | nhận thiếu | ADR 0028 exception: in-transit damage, breakage, or loss — operator label `Nhận thiếu`; stored code `transfer_transit_loss`. |
-| waste / stocktake `reason_code` | (see `WASTE_REASON_LABELS_VI`) | ADR 0031 shared causal catalog for waste and stocktake variance; not ownership. |
+| waste / stocktake `reason_code` | (see `WASTE_REASON_LABELS_VI`) | Shared causal catalog for waste and stocktake variance (`docs/ref/inventory.md` §8); not ownership. |
 | `consumption` | tiêu hao | Stock decrease from sale, production, waste, or approved use. |
 | `stocktake` / `inventory_count_slip` | kiểm kê / phiếu đếm tồn | Session that counts on-hand then confirms to adjust stock / shift-assigned staff slip (review only; not a second stocktake). |
 | `base_unit` / `entry_unit_id` / `to_base_factor` | đơn vị chuẩn / đơn vị chứng từ / quy đổi | Ledger unit / document unit / snapshot factor to base. |
@@ -504,7 +520,7 @@ Detail: `inventory.md`, `inventory-sop.md`.
 | `reference_unit_cost` / `movement_unit_cost` / `inventory_value` / `company_wac` / `production_wac` | giá tham chiếu / đơn giá ghi sổ / giá trị tồn / giá vốn / giá vốn mẻ | Catalog hint cost / movement snapshot cost / book value of on-hand / company WAC / FG batch WAC. |
 | `raw_material` / `finished_good` | nguyên liệu / thành phẩm | Hàng mua (PO/GRN/NCC) / hàng Bếp Trung Tâm sản xuất có công thức. |
 | `recipe` / `production_recipe` / `production_order` | định mức món bán / công thức sản xuất / lệnh sản xuất | POS consumption BOM / FG BOM / production run. |
-| `three_way_matching` | đối soát 3 chứng từ | Match PO + GRN + supplier invoice. HĐ một NCC chỉ allocate dòng GRN/PO của NCC đó (ADR 0043). |
+| `three_way_matching` | đối soát 3 chứng từ | Match PO + GRN + supplier invoice. HĐ một NCC chỉ allocate dòng GRN/PO của NCC đó (ADR 0040). |
 
 ### Payments & cash
 

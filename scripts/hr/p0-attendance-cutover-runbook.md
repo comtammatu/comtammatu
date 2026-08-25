@@ -1,4 +1,4 @@
-# ADR 0036 Phase P0 — Attendance cutover runbook
+# ADR 0019 Phase P0 — Attendance cutover runbook
 
 Run **after** Phase B migration + roster/clock-in deploy.
 

@@ -286,7 +286,7 @@ export function calcItemSubtotal(item: CartItem): number {
 }
 
 /**
- * Per-line discount amount in VND. Item discounts are VND-only (ADR 0034).
+ * Per-line discount amount in VND. Item discounts are VND-only (ADR 0013).
  */
 export function calcItemDiscountAmount(item: CartItem): number {
   if (item.discount_type !== "vnd" || item.discount_value === undefined) {

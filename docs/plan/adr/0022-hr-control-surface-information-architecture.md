@@ -6,6 +6,9 @@
 
 **Review tier:** T3 — authorization, sensitive HR data, payroll, multi-surface routing
 
+**Amended by:** ADR 0037 (`/me` plane drops “own tasks”; Work surfaces on
+the `/` attention row).
+
 ## Context
 
 HR surfaces mixed company administration, branch people ops, and personal
@@ -22,7 +25,7 @@ Adopt three presentation planes:
 | --- | --- | --- | --- |
 | Company HR | `/hr/*` | Entire tenant | Employee records, HĐLĐ, accounts/permissions, attendance, roster, payroll, HR setup |
 | Branch people ops | `/br/[branchId]/team` + `/shift/*` | Exact branch in URL | Team board, roster, attendance, checkout/leave approval |
-| Personal self-service | `/me/*` | Authenticated actor only | Own clock, tasks, schedule, leave, profile, payslip |
+| Personal self-service | `/me/*` | Authenticated actor only | Own clock, schedule, leave, profile, payslip (ADR 0037: no own work tasks) |
 
 Company HR deep-nav labels (exact): **`Hồ sơ nhân viên`** (`/hr`),
 **`Chấm công & ca làm`** (`/hr/attendance`), **`Bảng lương`** (`/hr/payroll`),

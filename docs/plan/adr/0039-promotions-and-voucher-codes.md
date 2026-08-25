@@ -7,7 +7,7 @@
 **Review tier:** T3 — money, multi-row RPC, RLS, HĐĐT totals
 
 **Amends:** 2026-08-14 — `free_side` kind, code/auto activation flags, staff
-side selection before money write. Money projection remains ADR 0034.
+side selection before money write. Money projection remains ADR 0013.
 
 **Amends:** 2026-08-18 — `free_item` staff-picked count. `free_item_qty` is an
 optional max; `NULL` = unlimited up to eligible units already on the order.
@@ -16,7 +16,7 @@ Always open the POS picker (no auto-apply).
 **Amends:** 2026-08-19 — Guest Self-Order (`/q/[token]` G6) may apply
 `order_pct` / `order_vnd` / `voucher_face` codes via
 `self_order_apply_promotion_code`. Picker kinds stay staff-owned. Money still
-writes ADR 0034 columns.
+writes ADR 0013 columns.
 
 ## Context
 
@@ -53,7 +53,7 @@ Item-level VND discounts may coexist unless the campaign sets
 | `order_pct` / `order_vnd` | Cashier enters reusable `promo_code` | Order-level `%` or VND |
 | `voucher_face` | Cashier enters unique `voucher_code` | Order-level VND, clamped to payable; code burns atomically |
 | `auto_order` | `evaluate_order_promotions` when eligible and no order-level discount exists | Order-level `%` or VND; a cashier code wins over auto |
-| `bxgy` | Same evaluate RPC | Item-level VND on cheapest qualifying lines (ADR 0034) |
+| `bxgy` | Same evaluate RPC | Item-level VND on cheapest qualifying lines (ADR 0013) |
 | `free_side` | Code and/or auto offer (`allow_code` / `allow_auto`); staff picks N side portions | Item-level VND on parent lines = selected `side.price × units`; do not mutate `sides` JSON |
 | `free_item` | Cashier/waiter reusable `promo_code` (`allow_code` required; `allow_auto` forbidden); staff picks 1..eligible units already on the order (optional campaign max) | Item-level VND on selected lines = `unit_price × units`; do not change qty |
 
@@ -74,7 +74,7 @@ campaign condition (for example a 5-star review).
 
 - Timezone is `Asia/Ho_Chi_Minh` (same as business dates).
 - `payment_code_locked` still blocks amount changes.
-- A campaign that zeros `total_amount` stays ADR 0034 (`not_required`, no Viettel job).
+- A campaign that zeros `total_amount` stays ADR 0013 (`not_required`, no Viettel job).
 - Merge or split while `promotion_id` is set fails closed
   (`merge_promotion_blocked` / `split_promotion_blocked`). Cashier clears first.
 

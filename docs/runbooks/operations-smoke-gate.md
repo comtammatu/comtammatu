@@ -1,8 +1,7 @@
 # Operations Smoke Gate
 
-Runbook này kiểm chứng nhiệm vụ hệ thống đã chốt:
-
-> Bán đúng, bếp nhận đúng, thu tiền đúng, in/hóa đơn đúng, kho trừ đúng, và chủ/quản lý nhìn được tình trạng vận hành thật theo ngày.
+Runbook này kiểm chứng chuỗi kết quả đã chốt trong ADR 0025 §1: bán → bếp →
+thu tiền → in/HĐĐT → trừ kho → quản lý nhìn thấy vận hành thật.
 
 Đây là gate vận hành đầu cuối. Không dùng file này làm source of truth cho business
 rules; khi có lệch, cập nhật canonical docs trước rồi mới cập nhật runbook.

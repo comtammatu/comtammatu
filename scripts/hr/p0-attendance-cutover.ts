@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * ADR 0036 Phase P0 — attendance cutover script (Preview → Production).
+ * ADR 0019 Phase P0 — attendance cutover script (Preview → Production).
  *
  * Deletes:
  * 1. All attendance before 2026-08-01

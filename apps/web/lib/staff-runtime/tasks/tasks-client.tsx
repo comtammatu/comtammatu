@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -23,6 +24,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { AppDialog } from "@/components/form";
 import { AppSheet } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { isRequiredChecklistItemComplete } from "../_lib/checklist-complete";
@@ -38,6 +40,7 @@ import {
 import { useLiveCamera } from "../_lib/use-live-camera";
 import {
   attachChecklistTaskPhoto,
+  getEmployeeTaskPhotoUrl,
   toggleChecklistItem,
 } from "../clock/actions";
 
@@ -334,6 +337,12 @@ export function TasksClient({
               : item,
           ),
         );
+        setPhotoUrls((prev) => {
+          const next = { ...prev };
+          delete next[itemId];
+          return next;
+        });
+        loadPhotoUrl(itemId);
         toast.success(taskCopy.photoAttached);
         scheduleRefresh();
       })
@@ -342,6 +351,43 @@ export function TasksClient({
         toast.error(taskCopy.photoUploadError);
       });
   }
+
+  const [photoUrls, setPhotoUrls] = useState<Record<number, string>>({});
+  const [photoLoadingIds, setPhotoLoadingIds] = useState<Set<number>>(
+    new Set(),
+  );
+  const [photoPreview, setPhotoPreview] = useState<{
+    url: string;
+    title: string;
+  } | null>(null);
+
+  const loadPhotoUrl = useCallback((itemId: number) => {
+    if (photoUrls[itemId] || photoLoadingIds.has(itemId)) return;
+    setPhotoLoadingIds((prev) => new Set(prev).add(itemId));
+    void getEmployeeTaskPhotoUrl({ itemId }).then((res) => {
+      setPhotoLoadingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(itemId);
+        return next;
+      });
+      if (res.success && res.data?.url) {
+        setPhotoUrls((prev) => ({ ...prev, [itemId]: res.data!.url }));
+      }
+    });
+  }, [photoUrls, photoLoadingIds]);
+
+  useEffect(() => {
+    for (const item of localItems) {
+      if (
+        item.allowsPhoto &&
+        item.photoPath &&
+        !photoUrls[item.id] &&
+        !photoLoadingIds.has(item.id)
+      ) {
+        loadPhotoUrl(item.id);
+      }
+    }
+  }, [localItems, photoUrls, photoLoadingIds, loadPhotoUrl]);
 
   const requiredRemaining = localItems.filter(
     (item) => !isRequiredChecklistItemComplete(item),
@@ -500,10 +546,80 @@ export function TasksClient({
                           {taskCopy.photoRequiredHint}
                         </p>
                       ) : null}
-                      {needsPhoto && item.done ? (
-                        <p className="text-2xs text-success">
-                          {taskCopy.photoAttached}
-                        </p>
+                      {needsPhoto && item.done && item.photoPath ? (
+                        <div className="mt-1 flex flex-wrap items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="relative size-12 shrink-0 overflow-hidden p-0"
+                            aria-label={taskCopy.viewPhoto}
+                            onClick={() => {
+                              const url = photoUrls[item.id];
+                              if (url) {
+                                setPhotoPreview({ url, title: item.title });
+                              } else {
+                                loadPhotoUrl(item.id);
+                              }
+                            }}
+                          >
+                            {photoUrls[item.id] ? (
+                              <Image
+                                src={photoUrls[item.id]!}
+                                alt={taskCopy.photoThumbnailAlt(item.title)}
+                                fill
+                                sizes="48px"
+                                className="object-cover"
+                                unoptimized
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                                {photoLoadingIds.has(item.id) ? (
+                                  <Spinner className="size-3.5" />
+                                ) : (
+                                  <IconCamera className="size-4" />
+                                )}
+                              </div>
+                            )}
+                          </Button>
+                          <div className="flex flex-col gap-1">
+                            <span className="text-2xs font-medium text-success">
+                              {taskCopy.photoAttached}
+                            </span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="xs"
+                              className="gap-1 px-1.5 text-xs text-muted-foreground hover:text-foreground"
+                              disabled={disabled || isItemPending}
+                              onClick={() => setCapturingItemId(item.id)}
+                            >
+                              <IconCamera className="size-3" />
+                              {taskCopy.retakePhoto}
+                            </Button>
+                          </div>
+                        </div>
+                      ) : null}
+                      {isCountTask && item.countProgress ? (
+                        <div className="mt-1">
+                          <Badge
+                            variant={item.done ? "success" : "warning"}
+                          >
+                            {item.done
+                              ? taskCopy.countLocationsProgress(
+                                  item.countProgress.done,
+                                  item.countProgress.total,
+                                )
+                              : item.countProgress.done > 0
+                                ? taskCopy.countLocationsProgress(
+                                    item.countProgress.done,
+                                    item.countProgress.total,
+                                  )
+                                : taskCopy.countLocationsPending(
+                                    item.countProgress.total,
+                                  )}
+                          </Badge>
+                        </div>
                       ) : null}
                       {isCountTask && !item.done ? (
                         <Button
@@ -540,6 +656,25 @@ export function TasksClient({
         onClose={() => setCapturingItemId(null)}
         onCaptured={handlePhotoCapture}
       />
+      <AppDialog
+        open={photoPreview !== null}
+        onOpenChange={(open) => {
+          if (!open) setPhotoPreview(null);
+        }}
+        title={photoPreview?.title ?? taskCopy.photoPreviewTitle}
+        description={taskCopy.photoPreviewTitle}
+      >
+        {photoPreview?.url ? (
+          <Image
+            src={photoPreview.url}
+            alt={photoPreview.title}
+            width={800}
+            height={600}
+            className="h-auto max-h-dvh-80 w-full rounded-md object-contain"
+            unoptimized
+          />
+        ) : null}
+      </AppDialog>
     </div>
   );
 }

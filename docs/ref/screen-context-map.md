@@ -200,7 +200,7 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 - **Ưu tiên data:** Tên, loại, trạng thái, mã, món điều kiện / ăn kèm tặng / món tặng.
   **Không:** CRM, loyalty, SKU voucher, xác minh Google review.
 - **POS:** Chiết khấu thủ công = `pos:apply_discount`; tiền vẫn ghi cột discount
-  hiện có (ADR 0034). `free_side` = N phần ăn kèm **/ phần món chính**; auto khi
+  hiện có (ADR 0013). `free_side` = N phần ăn kèm **/ phần món chính**; auto khi
   mỗi dòng chỉ một ăn kèm get, StationSheet khi nhiều lựa chọn get / dòng.
   `free_item` = nhân viên chọn số phần món **đã có trên hoá đơn** / đơn (tối đa
   `free_item_qty` hoặc không giới hạn); chỉ nhập mã; luôn mở StationSheet.

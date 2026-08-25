@@ -32,7 +32,7 @@ export type DiscountType = "pct" | "vnd";
 const DEFAULT_DISCOUNT_MODES: readonly DiscountType[] = ["pct", "vnd"];
 const FALLBACK_DISCOUNT_MODES: readonly DiscountType[] = ["vnd"];
 
-/** Item-level discount is VND-only (ADR 0034). Stable identity for callers. */
+/** Item-level discount is VND-only (ADR 0013). Stable identity for callers. */
 export const ITEM_DISCOUNT_MODES: readonly DiscountType[] = ["vnd"];
 
 export type PromoSideCandidate = {

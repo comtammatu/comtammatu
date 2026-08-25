@@ -32,7 +32,7 @@ test("D099 is the current external purchasing authority", () => {
 
   assert.match(current, /Nhu cầu mua/);
   assert.match(current, /ingredient-first/);
-  assert.match(current, /ADR 0043/);
+  assert.match(current, /ADR 0040/);
   assert.match(current, /One Auto-GRN per PO/);
   assert.match(current, /confirm books one NCC group/);
   assert.match(current, /`HĐ NCC`/);

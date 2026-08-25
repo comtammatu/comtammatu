@@ -103,7 +103,7 @@ test("Branch roster uses week cards without Owner DataTable", () => {
   );
 });
 
-test("ADR 0036 Phase B migration enables multi-shift roster constraints", () => {
+test("ADR 0019 Phase B migration enables multi-shift roster constraints", () => {
   const migration = read(
     "supabase/migrations/20260812220000_hrm_multi_shift_roster_and_clock_in.sql",
   );

@@ -33,7 +33,7 @@
 4. Kho mở GRN, nhập thực nhận và **Đơn giá** net cho dòng NCC đang giao; từ chối
    cần lý do + ảnh. Chốt **theo NCC** (không ghi sổ dòng NCC chưa giao).
 5. Số giữ lại ghi sổ theo Đơn giá dòng và **viết lại SL dòng đơn mua** khi NCC
-   giao dư (ADR 0042). Thiếu → dòng còn lại trên **cùng GRN**. Hết phần còn:
+   giao dư (ADR 0040). Thiếu → dòng còn lại trên **cùng GRN**. Hết phần còn:
    **Đóng phần còn lại** (không hủy dòng đã ghi sổ). HĐ NCC bill ≤ `po_applied`
    của **đúng NCC**.
 

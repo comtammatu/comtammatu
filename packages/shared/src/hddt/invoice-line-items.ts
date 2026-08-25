@@ -176,7 +176,7 @@ function compareCheapFirst(
 }
 
 /**
- * Subtract GROSS VND discount from lines cheapest-first (ADR 0034).
+ * Subtract GROSS VND discount from lines cheapest-first (ADR 0013).
  * Bakes into `amount` / `unitPrice`; never sets `discountAmount`.
  */
 export function bakeGrossDiscountCheapFirst(
@@ -362,7 +362,7 @@ export function resolveServiceChargeVatRate(
 /**
  * POS persists order_items.unit_price as base price plus priced modifiers and
  * sides. HĐĐT line items reverse that aggregation. Does not apply discounts —
- * use `buildHddtProviderLines` for issuance projection (ADR 0034).
+ * use `buildHddtProviderLines` for issuance projection (ADR 0013).
  */
 export function buildInvoiceLineItemsFromOrderItems(
   orderItems: readonly OrderItemForInvoiceLines[],
@@ -423,7 +423,7 @@ export function buildHddtProviderLines(
   return projected;
 }
 
-/** Prefer bakeGrossDiscountCheapFirst / buildHddtProviderLines (ADR 0034). */
+/** Prefer bakeGrossDiscountCheapFirst / buildHddtProviderLines (ADR 0013). */
 export function applyInvoiceLineDiscount(
   lines: readonly InvoiceLineItem[],
   discountAmount: number,

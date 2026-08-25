@@ -1,12 +1,9 @@
 # Cơm Tấm Má Tư
 
-Bộ phần mềm quản lý vận hành và bán hàng cho thương hiệu Cơm Tấm Má Tư
-thuộc Công ty Cổ phần Chén Sứ.
-Single-tenant, multi-branch, đa kho.
-
-Nhiệm vụ hệ thống: bán đúng, bếp nhận đúng, thu tiền đúng, in/hóa đơn đúng,
-kho trừ đúng, và chủ/quản lý nhìn được tình trạng vận hành thật theo ngày.
-Không phải nền tảng nhiều merchant, không phải ERP đa ngành.
+Hệ thống Vận hành F&B (F&B Operations System) — hệ thống nội bộ của Công ty
+Cổ phần Chén Sứ để vận hành chuỗi Cơm Tấm Má Tư: thống nhất bán hàng, bếp,
+kho, tiền, hoá đơn và nhân sự trên một nguồn dữ liệu.
+Định nghĩa và ranh giới phạm vi: ADR 0025.
 
 Mô hình vận hành production: **Tenant → Chi nhánh**.
 

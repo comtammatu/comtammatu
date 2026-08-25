@@ -17,7 +17,7 @@ const fixMigration = readFileSync(
     "supabase/migrations/20260821123047_receipt_invoice_qr_enqueue_after_bind.sql",
   ),
   "utf8",
-);
+).replace(/\r\n/g, "\n");
 const baselineGuard = readFileSync(
   join(root, "supabase/migrations/20260802162900_baseline.sql"),
   "utf8",

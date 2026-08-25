@@ -6,7 +6,7 @@ import { test } from "node:test";
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
-test("ADR 0041 GRN book price migration drops PO estimates and stops invoice reprice", () => {
+test("ADR 0040 GRN book price migration drops PO estimates and stops invoice reprice", () => {
   const sql = read(
     "supabase/migrations/20260818121714_grn_book_unit_price_drop_po_est.sql",
   );
@@ -37,7 +37,7 @@ test("ADR 0041 GRN book price migration drops PO estimates and stops invoice rep
   assert.doesNotMatch(sql, /NEW\.unit_cost := 0/);
 });
 
-test("ADR 0041 auto-GRN drafts stay unpriced until warehouse books unit cost", () => {
+test("ADR 0040 auto-GRN drafts stay unpriced until warehouse books unit cost", () => {
   const sql = read(
     "supabase/migrations/20260818221612_grn_draft_unpriced_until_warehouse_books.sql",
   );
@@ -62,7 +62,7 @@ test("ADR 0041 auto-GRN drafts stay unpriced until warehouse books unit cost", (
   );
 });
 
-test("ADR 0041 SQL proof covers PO drop, GRN unit_cost grants, and AP-only invoice", () => {
+test("ADR 0040 SQL proof covers PO drop, GRN unit_cost grants, and AP-only invoice", () => {
   const proof = read("supabase/tests/grn_book_unit_price_test.sql");
   assert.match(proof, /PO estimate columns must be dropped/);
   assert.match(proof, /warehouse must read\/write grn_items.unit_cost/);

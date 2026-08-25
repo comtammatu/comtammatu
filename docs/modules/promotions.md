@@ -1,7 +1,7 @@
 # Promotions Module
 
 Owner campaign catalog and POS redemption. Money still lands on existing order
-and item discount columns (ADR 0039, ADR 0034).
+and item discount columns (ADR 0039, ADR 0013).
 
 **Owner:** `/promotions` (LIST), `/promotions/new`, `/promotions/[id]`
 (DOC-WORKFLOW, kind-first). Keys `promo:read` / `promo:write` / `promo:issue`.

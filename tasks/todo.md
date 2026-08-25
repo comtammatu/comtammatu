@@ -5,6 +5,61 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Finance period integrity: cockpit identity, startup capital, close readiness
+
+State: verify
+Kind: feature
+Tier: T3
+Lane: finance
+Exit: `/finance` cockpit sums the inventory change for branch and company scope under one RPC identity; startup capital reads from one summary RPC and stays outside the period result; period-close readiness reports blockers and warnings without blocking the owner's manual close; landing surfaces only the readiness item.
+Evidence: Migrations `20260824010533` (cockpit inventory-change identity), `20260824013553` (startup-capital summary RPC), `20260824020445` (period-close readiness RPC); pgTAP tests `finance_cockpit_inventory_change_test.sql`, `finance_startup_capital_summary_test.sql`, `finance_period_close_readiness_test.sql`; static/unit tests `finance-period-readiness.test.ts` and updated finance statics; contract rows in `docs/ref/operational-data-contract.md`; `docs/modules/finance.md`. Hand-bridge RPC entries in `packages/database/src/types/database.types.ts` until types regenerate.
+
+- [ ] Dry-run `node scripts/supabase-production-push.mjs --dry-run`, then owner-authorized apply of `20260824010533`, `20260824013553`, `20260824020445` on Production `enloyfnuerqgaqderbwb`; then `corepack pnpm db:types` to replace the hand-bridge entries
+- [ ] Run the three pgTAP tests against the applied schema
+- [ ] Smoke: `/finance` company scope shows the inventory change term; readiness item appears for last month only; startup-capital card matches `/finance/expenses` capital/deposit rows
+
+Parked owner decision (separate task, not this slice): audit trail for soft-close expense reclassification (`expense.category_reclassify` audit log), and readiness acknowledgment on `close_period_soft` / snapshot write in `auto_close_periods`.
+
+## Warehouse catalog write authority and ingredient unit wizard
+
+State: verify
+Kind: feature
+Tier: T3
+Lane: inventory
+Exit: Warehouse ops (central_supply_ops) adds/adjusts ingredients and units without owner escalation; wizard guides standard unit and conversions with inline unit creation; RPC stays the authoritative gate; menu-recipe surface stays owner-only.
+Evidence: ADR `docs/plan/adr/0045-warehouse-catalog-write-and-ingredient-wizard.md`; migration `20260824015244_ingredient_catalog_warehouse_write_and_unit_cap.sql` (byte-exact RPC recreation + gate and cap diffs verified); static test `warehouse-catalog-write-static.test.ts` green; SQL test `warehouse_catalog_write_authority_test.sql`.
+
+- [ ] Rehearse migration on a verified Preview Branch and run `supabase/tests/warehouse_catalog_write_authority_test.sql`
+- [ ] Owner applies to Production `enloyfnuerqgaqderbwb`; then `corepack pnpm db:types`
+- [ ] Smoke: warehouse account creates an ingredient with two units incl. one inline-created packaging unit
+
+## Restore production_output valuation lineage
+
+State: verify
+Kind: defect
+Tier: T3
+Lane: inventory/valuation
+Exit: `production_output` movements post a `production_output` origin, drain the run holder, and finished-good provisional cost reads batch cost; broken-window rows are reclassified without restating booked value.
+Evidence: ADR `docs/plan/adr/0044-production-output-valuation-lineage.md`; migration `20260824004731_restore_production_output_valuation_lineage.sql` (function body is a byte-exact copy of `20260822143600` plus one inserted branch); `lint:migration-lineage` green (168 forwards); static test `production-output-valuation-lineage-static.test.ts` green.
+
+- [ ] Rehearse migration on a verified Preview Branch and run `supabase/tests/production_output_valuation_lineage_test.sql`
+- [ ] Owner applies to Production `enloyfnuerqgaqderbwb`; then `corepack pnpm db:types`
+- [ ] Confirm no `stocktake_gain` event references a `production_output` movement and no trapped `production_run` holder remains
+
+## Finance period integrity: cockpit inventory change, capital RPC, close readiness
+
+State: verify
+Kind: fix
+Tier: T3
+Lane: finance
+Exit: Period cockpit returns server-computed `inventory_change` (company scope sums valued branches; inactive cutover blanks the term with the without-inventory hint instead of zero); startup capital and equipment read one RPC; `/finance` surfaces read-only `Sức khoẻ chốt sổ` blockers/warnings; soft-close reclassification audit stays parked for owner decision.
+Evidence: ADR-less plan absorbed by owners — contract row `finance.period_close.readiness` in `docs/ref/operational-data-contract.md`; glossary `period_close_readiness`; regression FINANCE-RESULT-IDENTITY; pending migrations `20260824010533`, `20260824013553`, `20260824020445` with pgTAP tests `finance_cockpit_inventory_change_test.sql`, `finance_startup_capital_summary_test.sql`, `finance_period_close_readiness_test.sql`; static tests `finance-period-readiness.test.ts`, `finance-result.test.ts`, `finance-revenue-date-range.test.ts`.
+
+- [ ] Rehearse the three finance migrations on the verified Preview Branch and run their pgTAP files
+- [ ] Owner applies to Production `enloyfnuerqgaqderbwb` (same batch as ADR 0044/0045); then `corepack pnpm db:types`
+- [ ] Smoke: company-scope `Kết quả kinh doanh` shows the inventory term or the explicit without-inventory hint; `Sức khoẻ chốt sổ` names current blockers
+- [ ] Owner decision: parked soft-close reclassification audit (log `expense.category_reclassify` in `audit_logs` when category moves operating ↔ capital/deposit inside a soft-closed period; readiness warning `reclassified_after_soft_close`)
+
 ## QR payment no longer traps Self-Order and POS workflows
 
 State: verify
@@ -653,7 +708,7 @@ State: verify
 Kind: feature
 Tier: T3
 Lane: promotions/pos
-Exit: Owner creates any promo kind via kind-first DOC-WORKFLOW; cashiers/waiters apply codes and complete free-side selection; auto free-side offers appear without code; money lands on existing discount columns (ADR 0034); `corepack pnpm verify` green after Owner Accept of this design.
+Exit: Owner creates any promo kind via kind-first DOC-WORKFLOW; cashiers/waiters apply codes and complete free-side selection; auto free-side offers appear without code; money lands on existing discount columns (ADR 0013); `corepack pnpm verify` green after Owner Accept of this design.
 Evidence: Amended ADR 0039 / module / screen-map; migration `20260814114800_promotion_free_side.sql` applied on Production `enloyfnuerqgaqderbwb`; `corepack pnpm db:types`; Owner form + POS flow; `promotions-static` 4/4; `corepack pnpm verify` green.
 
 - [ ] Live smoke: Owner create free_side (Com suon buy + Bi/Cha/Trung get, N=1, Code+Auto) -> POS code pick side -> auto offer chip pick side.
@@ -765,14 +820,14 @@ Pilot department seed label: **`Van phong`** (product UI keeps the Vietnamese la
 
 - [ ] Smoke Inbox as Owner member and deny path for a user without membership; 7-day pilot watch.
 
-## Work UI compose redesign (ADR 0035)
+## Work UI compose redesign (ADR 0033)
 
 State: verify
 Kind: feature
 Tier: T2
 Lane: work/control-surface
 Exit: Owner adds a Van phong member who then opens `/work`; create CTA + DETAIL StatusBadge + inline toolbar filters pass manual smoke.
-Evidence: ADR 0035 Accepted; W-UI-4..3 app code; Production migration `20260812140000_work_department_membership_admin.sql` applied; `db:types` regenerated; work-module-static green; RPCs verified on Production.
+Evidence: ADR 0033 Accepted; W-UI-4..3 app code; Production migration `20260812140000_work_department_membership_admin.sql` applied; `db:types` regenerated; work-module-static green; RPCs verified on Production.
 
 - [ ] Manual exit: add Van phong member via `/work/team` → that user opens `/work`.
 

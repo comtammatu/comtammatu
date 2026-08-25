@@ -593,6 +593,68 @@ export async function attachChecklistTaskPhoto(
   return { success: true };
 }
 
+const employeeTaskPhotoSchema = z.object({
+  itemId: z.coerce.number().int().positive(),
+});
+
+export async function getEmployeeTaskPhotoUrl(
+  input: unknown,
+): Promise<ActionResult<{ url: string; expires_in: number }>> {
+  const parsed = employeeTaskPhotoSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Dữ liệu không hợp lệ" };
+  }
+
+  const ctx = await getEmployeeContext();
+  if (!ctx) return { success: false, error: "Chưa đăng nhập" };
+
+  const service = createServiceClient();
+  const { data: item, error: itemError } = await service
+    .from("attendance_checklist_items")
+    .select("id, photo_path, allows_photo, attendance_record_id, tenant_id")
+    .eq("id", parsed.data.itemId)
+    .eq("tenant_id", ctx.claims.tenant_id)
+    .maybeSingle();
+
+  if (itemError || !item) {
+    return { success: false, error: "Không tìm thấy việc trong ca." };
+  }
+  if (!item.allows_photo || !item.photo_path) {
+    return { success: false, error: "Việc này chưa có ảnh minh chứng." };
+  }
+
+  const { data: attendance, error: attendanceError } = await service
+    .from("attendance_records")
+    .select("id, employee_id")
+    .eq("id", item.attendance_record_id)
+    .eq("tenant_id", ctx.claims.tenant_id)
+    .maybeSingle();
+
+  if (
+    attendanceError ||
+    !attendance ||
+    attendance.employee_id !== ctx.employeeId
+  ) {
+    return { success: false, error: "Không có quyền xem ảnh của việc này." };
+  }
+
+  const { data: signed, error: signError } = await service.storage
+    .from(ATTENDANCE_PHOTO_BUCKET)
+    .createSignedUrl(item.photo_path, ATTENDANCE_PHOTO_SIGNED_URL_TTL_SECONDS);
+
+  if (signError || !signed?.signedUrl) {
+    return { success: false, error: "Không tạo được đường dẫn xem ảnh." };
+  }
+
+  return {
+    success: true,
+    data: {
+      url: signed.signedUrl,
+      expires_in: ATTENDANCE_PHOTO_SIGNED_URL_TTL_SECONDS,
+    },
+  };
+}
+
 export async function requestCheckoutApproval(
   input: unknown,
 ): Promise<ActionResult<{ requestedAt: string }>> {

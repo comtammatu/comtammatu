@@ -135,6 +135,10 @@ export const employee = {
     workflowCheckoutBlocked: (remaining: number) => `Còn ${remaining} việc bắt buộc`,
     workflowCheckoutBlockedDescription: (remaining: number) =>
       `Cần hoàn thành ${remaining} việc bắt buộc trước khi gửi yêu cầu kết ca.`,
+    workflowCheckoutBlockedListTitle: "Việc bắt buộc cần hoàn thành:",
+    workflowCheckoutActionPhoto: "Chụp ảnh",
+    workflowCheckoutActionCount: "Kiểm kê",
+    workflowCheckoutActionTask: "Làm ngay",
     viewSchedule: "Xem lịch ca",
     scheduleTitle: "Lịch làm",
     scheduleDescription: "Ca làm và ngày công",
@@ -422,6 +426,12 @@ export const employee = {
     attachPhoto: "Chụp ảnh minh chứng",
     retakePhoto: "Chụp lại",
     photoAttached: "Đã kèm ảnh",
+    photoThumbnailAlt: (taskTitle: string) => `Ảnh minh chứng: ${taskTitle}`,
+    viewPhoto: "Xem ảnh",
+    photoPreviewTitle: "Ảnh minh chứng việc trong ca",
+    countLocationsProgress: (done: number, total: number) =>
+      `Đã nộp ${done}/${total} vị trí`,
+    countLocationsPending: (total: number) => `Chưa nộp (${total} vị trí)`,
     photoRequired: "Cần chụp ảnh minh chứng để đánh dấu xong.",
     photoRequiredHint: "Chụp ảnh để hoàn thành việc này.",
     photoCaptureTitle: "Chụp ảnh minh chứng",

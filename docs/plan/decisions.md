@@ -40,7 +40,7 @@ entry.
 **Net effect:** HR reads operations sources; payroll snapshots on close; `pay_basis` from HĐLĐ; both bases use `working_days` (D027 / ADR 0019); HR closes obligations, Finance records payment. Canonical: `docs/ref/payroll-pit.md`, `docs/ref/labor-contracts.md`, ADR 0019.
 
 ## D027: Shift-based attendance
-**Net effect:** Attendance follows assigned shifts (multi-shift per day post ADR 0036); work credit is hour-ratio on frozen window capped at 1.0 per shift; `wage_unit` drives monthly vs daily base gross; Owner does not punch; floor checkout needs Branch Manager approval. Canonical: `docs/spec/database-schema.md`, `docs/ref/payroll-pit.md`, ADR 0019, ADR 0036.
+**Net effect:** Attendance follows assigned shifts (multi-shift per day); work credit is hour-ratio on frozen window capped at 1.0 per shift; `wage_unit` drives monthly vs daily base gross; Owner does not punch; floor checkout needs Branch Manager approval. Canonical: `docs/spec/database-schema.md`, `docs/ref/payroll-pit.md`, ADR 0019.
 
 ## D028: Kết quả vận hành and ingredient control
 **Net effect:** Consumption follows physical counts and the stock ledger; Finance shows Kết quả vận hành / cash flow / fund balances, not Lợi nhuận ròng. Canonical: `docs/ref/operational-data-contract.md`, `docs/modules/finance.md`.
@@ -88,10 +88,10 @@ entry.
 **Net effect:** GRN is Central Supply/Kitchen only; Branch requests stock and receives transfers; no Branch production/GRN. Canonical: `docs/ref/inventory.md` §11.
 
 ## D099: Nhu cầu mua and supplier selection
-**Net effect:** Happy path is warehouse `Tạo đơn` (ingredient-first; NCC on each PO line; ADR 0043). YCM is history-only until Wave 4. One Auto-GRN per PO; confirm books one NCC group on that GRN. PO carries no commercial price; kept GRN qty amends the PO line (ADR 0042); GRN net unit price is book price; `HĐ NCC` is AP/VAT only and matches line NCC. Canonical: `docs/ref/inventory.md`, ADR 0017, ADR 0041, ADR 0042, ADR 0043.
+**Net effect:** Happy path is warehouse `Tạo đơn` (ingredient-first; NCC on each PO line; ADR 0040). YCM is history-only until Wave 4. One Auto-GRN per PO; confirm books one NCC group on that GRN. PO carries no commercial price; kept GRN qty amends the PO line (ADR 0040); GRN net unit price is book price; `HĐ NCC` is AP/VAT only and matches line NCC. Canonical: `docs/ref/inventory.md`, ADR 0017, ADR 0040.
 
 ## D101: Inventory valuation settlement
-**Net effect:** Purchased SKUs share one company WAC across stock-bearing sites (ADR 0040); finished goods are recipe-produced only and keep a production pool. Valuation subledger append-only; never a second quantity. GRN confirm books net unit price into company WAC (ADR 0041). Kept GRN quantity amends the PO line so AP can bill the receipt (ADR 0042). Supplier invoice confirm does not reprice stock. Credit/return paths may still post `legacy_purchase_price_variance`. Canonical: `docs/ref/inventory.md`, ADR 0017, ADR 0040, ADR 0041, ADR 0042.
+**Net effect:** Purchased SKUs share one company WAC across stock-bearing sites (ADR 0040); finished goods are recipe-produced only and keep a production pool. Valuation subledger append-only; never a second quantity. GRN confirm books net unit price into company WAC (ADR 0040). Kept GRN quantity amends the PO line so AP can bill the receipt (ADR 0040). Supplier invoice confirm does not reprice stock. Credit/return paths may still post `legacy_purchase_price_variance`. Canonical: `docs/ref/inventory.md`, ADR 0017, ADR 0040.
 
 ## D103: Food-delivery platform onboarding before adapters
 **Net effect:** Food-delivery adapters ship only after partner approval and a signed contract; until then, onboarding/readiness only. Canonical: `docs/runbooks/food-delivery-platform-onboarding.md`, `docs/ref/branch-operations.md`.

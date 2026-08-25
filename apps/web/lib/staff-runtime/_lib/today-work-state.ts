@@ -42,6 +42,7 @@ export interface TodayChecklistItem {
   sortOrder: number;
   done: boolean;
   completedAt: string | null;
+  countProgress?: { done: number; total: number } | null;
 }
 
 interface TodayAttendance {
@@ -522,6 +523,10 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
           )
           .map((row) => row.location_id),
       );
+      const countProgress = {
+        done: doneCountLocationIds.size,
+        total: countLocationIds.length,
+      };
       const countTaskDone = countLocationIds.every((locationId) =>
         doneCountLocationIds.has(locationId),
       );
@@ -533,6 +538,7 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
               taskKind: "inventory_count",
               done: countTaskDone,
               isRequired: true,
+              countProgress,
             }
           : item,
       );
@@ -551,6 +557,7 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
           sortOrder: Number.MAX_SAFE_INTEGER,
           done: countTaskDone,
           completedAt: null,
+          countProgress,
         });
       }
     } else {

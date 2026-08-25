@@ -22,7 +22,7 @@ Contract vận hành Inventory hiện tại, không phải roadmap. Ý tưởng 
 | Tồn kho `stock_levels`          | `current_quantity`, `avg_unit_cost`; valuation account giữ book value chính xác và chiếu WAC hiện tại sang stock level                                                                                                                                                                                                                                                                                                                                                                | Không chuyển sang FIFO engine                                                                          |
 | Biến động `stock_movements`     | Append-only quantity ledger; valuation events append-only giữ value adjustment và lineage qua receipt, transfer, production, consumption, waste và stocktake                                                                                                                                                                                                                                                                                                                          | Không mở lot-first ledger / batch accounting                                                           |
 | Mô hình site                    | `branches` là site table Production; kinds active: `branch`, `central_supply` (Kho Tổng), `central_kitchen` (Bếp Trung Tâm). Mỗi site active có đúng một active `warehouse`, đồng thời là default receive/issue/consumption; Branch không có stock location Bếp.                                                                                                                                                                                                                      | `production_storage` chỉ dùng tường minh cho production trung tâm; V1 chưa đổi sang `operational_site` |
-| Nhu cầu mua / PO / GRN / NCC    | Kho trung tâm **Tạo đơn** theo NL (NCC trên dòng; một phiếu có thể nhiều NCC, ADR 0043). YCM chỉ đọc lịch sử. Một PO → một GRN nháp. Chốt GRN theo nhóm NCC đang giao. PO không giá. Số giữ viết lại SL dòng PO khi giao dư (ADR 0042). **Đơn giá** net trên dòng GRN. HĐ NCC công nợ + VAT theo NCC của dòng đã `po_applied`. | Không promotion engine, duyệt nhiều cấp, OCR hoặc price-QC tại GRN |
+| Nhu cầu mua / PO / GRN / NCC    | Kho trung tâm **Tạo đơn** theo NL (NCC trên dòng; một phiếu có thể nhiều NCC, ADR 0040). YCM chỉ đọc lịch sử. Một PO → một GRN nháp. Chốt GRN theo nhóm NCC đang giao. PO không giá. Số giữ viết lại SL dòng PO khi giao dư (ADR 0040). **Đơn giá** net trên dòng GRN. HĐ NCC công nợ + VAT theo NCC của dòng đã `po_applied`. | Không promotion engine, duyệt nhiều cấp, OCR hoặc price-QC tại GRN |
 | QC nhận hàng                    | Kho nhập `received_quantity` và `rejected_quantity`; số đạt = thực nhận − từ chối. Có hàng từ chối thì bắt buộc lý do + ảnh. Trạng thái chỉ là giá trị hiển thị được suy ra.                                                                                                                                                                                                                                                                                                          | Không lưu status, tolerance, lot/HSD/nhiệt độ, price variance hoặc auto-approval                       |
 | Luân chuyển nội bộ              | Transfer có chủ đích chỉ đi giữa các warehouse hợp lệ. Tiêu hao, write-off và production không được mô phỏng bằng transfer cùng site.                                                                                                                                                                                                                                                                                                                                                 | Không có target Kho↔Bếp trong cùng branch                                                              |
 | HĐ NCC                          | `supplier_invoices` + đối soát GRN + thanh toán NCC là Finance handoff; thanh toán bắt buộc có file HĐ GTGT đính kèm (ADR 0017)                                                                                                                                                                                                                                                                                                                                                       | Không mở payment proposal engine trong Inventory                                                       |
@@ -255,17 +255,17 @@ tiêu hao thủ công không ghi lại NL đã trừ từ POS.
 ### 5.1 Quy trình
 
 1. Thiết lập **NCC**, điều khoản và `supplier_items`.
-2. Kho Tổng / Bếp TT **Tạo đơn** (kho nhận + NL; NCC trên dòng, ADR 0043). Yêu cầu mua chỉ còn lịch sử đến Wave 4. **Điều chuyển xin hàng** = cấp nội bộ về CN.
+2. Kho Tổng / Bếp TT **Tạo đơn** (kho nhận + NL; NCC trên dòng, ADR 0040). Yêu cầu mua chỉ còn lịch sử đến Wave 4. **Điều chuyển xin hàng** = cấp nội bộ về CN.
 3. Gửi đơn (`approved`) chặn dòng chưa `supplier_items` của **NCC dòng**. PO mới không gắn YCM.
 4. Gửi đơn → đúng một GRN nháp **Chờ nhập hàng** (mọi dòng PO). Làm việc từ danh sách GRN.
-5. Kho nhập thực nhận/từ chối; **chốt theo NCC** đang giao (Đơn giá > 0 trên dòng nhận). Dòng NCC khác chờ trên cùng phiếu. Giao dư → tăng SL dòng PO (ADR 0042). Thiếu → dòng còn trên cùng GRN hoặc `close_purchase_order`.
+5. Kho nhập thực nhận/từ chối; **chốt theo NCC** đang giao (Đơn giá > 0 trên dòng nhận). Dòng NCC khác chờ trên cùng phiếu. Giao dư → tăng SL dòng PO (ADR 0040). Thiếu → dòng còn trên cùng GRN hoặc `close_purchase_order`.
 6. Finance ghi **Hóa đơn NCC** riêng; allocate đúng dòng đã `po_applied` của NCC đó.
 
-**Nguyên tắc nhận hàng theo PO (ADR 0042):** số giữ lại là sự thật.
+**Nguyên tắc nhận hàng theo PO (ADR 0040):** số giữ lại là sự thật.
 `grn_items.po_applied_quantity` hoàn thành PO (đơn vị dòng PO). So sánh
 remaining/áp dụng theo Đơn vị chuẩn. Nếu số giữ > remaining, tăng
 `purchase_order_items.quantity` rồi áp dụng hết số giữ — một `grn_receipt`,
-Đơn giá net trên toàn bộ số vào sổ (ADR 0041), theo đơn vị giá trên dòng
+Đơn giá net trên toàn bộ số vào sổ (ADR 0040), theo đơn vị giá trên dòng
 phiếu nhập. PO không là nguồn giá. Hóa đơn NCC không viết lại WAC.
 Phiếu đã chốt còn Đơn giá 0: Chủ sở hữu xác nhận/gõ trên tab Chờ đơn giá (gợi ý cùng NCC); sau khi giá vào sổ thì kiểm kê mọi kho.
 
@@ -293,7 +293,7 @@ evidence hoặc quyết định review.
 
 ## 6. Phương pháp tính giá xuất kho
 
-**Current:** `company_wac` / NL mua trên mọi location (ADR 0040 / 0041).
+**Current:** `company_wac` / NL mua trên mọi location (ADR 0040).
 Phiếu nhập mang **Đơn giá** net; chốt ghi sổ và cập nhật WAC công ty. Hóa
 đơn NCC không `invoice_reprice` tồn / định mức / giá vốn món. TP: giá mẻ =
 Σ NL vừa trừ — không GRN. SKU chưa có giá ghi sổ thì không nấu/chuyển.
@@ -305,7 +305,7 @@ FIFO/FEFO theo lô = mở rộng sau.
 
 Hàng mua (VAT đầu vào); thanh toán/kê khai: [einvoice-tax.md](einvoice-tax.md) §4.
 Finance handoff — Inventory đóng ngày được khi HĐ chưa về. Xác nhận HĐ chỉ
-công nợ + VAT; không đổi số lượng hay giá trị tồn / giá vốn món (ADR 0041).
+công nợ + VAT; không đổi số lượng hay giá trị tồn / giá vốn món (ADR 0040).
 Payment không đổi giá trị tồn/food cost.
 
 | Bước     | Kiểm tra       | Boundary             |
@@ -329,7 +329,7 @@ Routes: `/inventory/stocktake`, `/inventory/stocktake/[id]`. Pad nhân viên `/m
 
 1. **Tạo:** kho warehouse của site. UI không chọn daily/weekly/monthly/quarterly/spot; phiên mới đếm số đang có, không hiện sổ (`spot`).
 2. **Đếm** (`get_stocktake_lines_blind`): màn đếm là viewport đầu. Số sổ ẩn đến khi đếm đủ dòng.
-3. **Đối soát:** lý do trên dòng lệch, rồi `complete_stocktake` ghi `count_adjustment`.
+3. **Đối soát:** lý do trên dòng lệch, rồi `complete_stocktake` ghi `count_adjustment`. `reason_code` dòng lệch dùng chung catalog nguyên nhân với hao (CHECK enum của waste: `spoiled`, `expired`, `dropped`, …, `other`); hoàn tất kiểm kê có điều chỉnh khác 0 bắt buộc `reason_code`; `variance_reason` giữ làm ghi chú tự do. Nhãn theo `WASTE_REASON_LABELS_VI` (`packages/shared/src/labels/vi.ts`). Ownership thiếu hụt điều chuyển vẫn là `movement_subtype` (`transfer_source_variance` / `transfer_transit_loss`) — không nằm trong catalog nguyên nhân; `reason_code` nguyên nhân cho điều chuyển để ngỏ.
 
 `stocktake_sessions`: `in_progress`|`completed`|`cancelled`, `current_round` 1..4.
 `stocktake_lines.variance = counted_quantity - system_quantity`. ACL: BM trong

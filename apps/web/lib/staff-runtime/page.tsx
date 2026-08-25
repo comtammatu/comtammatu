@@ -7,6 +7,7 @@ import {
   Camera as IconCamera,
   CheckCircle2 as IconDone,
   ClipboardCheck as IconClipboardCheck,
+  ClipboardList as IconCount,
   Clock as IconClock,
   ListChecks as IconListChecks,
   LogOut as IconLogout,
@@ -33,10 +34,12 @@ import { Button } from "@comtammatu/ui/components/button";
 import { Progress } from "@comtammatu/ui/components/progress";
 import {
   Item,
-  ItemContent,
-  ItemTitle,
-  ItemDescription,
   ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemMedia,
+  ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { loadAuthState } from "@/_lib/auth";
 import { BranchOpsRefresh } from "@/_components/branch-ops-refresh";
@@ -69,6 +72,7 @@ import {
   getClockInBlockedMessage,
   isClockInBlocked,
 } from "./_lib/clock-in-copy";
+import { isRequiredChecklistItemComplete } from "./_lib/checklist-complete";
 import { formatDateVN, formatTimeVN } from "./_lib/vn-business-date";
 import { AppEmptyState } from "@/components/surface";
 import { TasksClient } from "./tasks/tasks-client";
@@ -128,6 +132,10 @@ type WorkdayCopy = {
   workflowCheckoutDescription: string;
   workflowCheckoutBlocked?: (remaining: number) => string;
   workflowCheckoutBlockedDescription?: (remaining: number) => string;
+  workflowCheckoutBlockedListTitle?: string;
+  workflowCheckoutActionPhoto?: string;
+  workflowCheckoutActionCount?: string;
+  workflowCheckoutActionTask?: string;
   viewSchedule: string;
   profileTitle: string;
   checkoutApprovalsTitle: string;
@@ -1110,6 +1118,80 @@ export async function StaffWorkdayPageContent({
     state.status === "working" &&
     state.checklist.requiredRemaining > 0;
 
+  const incompleteRequiredItems = checkoutBlockedByTasks
+    ? state.checklist.items.filter(
+        (item) => !isRequiredChecklistItemComplete(item),
+      )
+    : [];
+
+  const checkoutBlockedContent = checkoutBlockedByTasks ? (
+    <div className="flex w-full flex-col gap-2">
+      <p className="text-xs font-medium text-muted-foreground">
+        {copy.workflowCheckoutBlockedListTitle ??
+          "Việc bắt buộc cần hoàn thành:"}
+      </p>
+      <ItemGroup className="gap-1.5">
+        {incompleteRequiredItems.map((item) => {
+          const isCount = item.taskKind === "inventory_count";
+          const isPhoto = item.allowsPhoto && !isCount;
+          return (
+            <Item
+              key={item.id}
+              variant="outline"
+              size="sm"
+              className="items-center bg-card"
+            >
+              <ItemMedia
+                variant="icon"
+                className="rounded-md bg-muted p-1.5 text-muted-foreground"
+              >
+                {isCount ? (
+                  <IconCount />
+                ) : isPhoto ? (
+                  <IconCamera />
+                ) : (
+                  <IconListChecks />
+                )}
+              </ItemMedia>
+              <ItemContent className="min-w-0">
+                <ItemTitle className="truncate text-xs font-medium">
+                  {item.title}
+                </ItemTitle>
+              </ItemContent>
+              <ItemActions>
+                {isCount ? (
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    render={<Link href={routes.tasks} />}
+                  >
+                    <IconCount data-icon="inline-start" />
+                    {copy.workflowCheckoutActionCount ?? "Kiểm kê"}
+                  </Button>
+                ) : (
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    render={<Link href={routes.tasks} />}
+                  >
+                    {isPhoto ? (
+                      <IconCamera data-icon="inline-start" />
+                    ) : (
+                      <IconListChecks data-icon="inline-start" />
+                    )}
+                    {isPhoto
+                      ? (copy.workflowCheckoutActionPhoto ?? "Chụp ảnh")
+                      : (copy.workflowCheckoutActionTask ?? "Làm ngay")}
+                  </Button>
+                )}
+              </ItemActions>
+            </Item>
+          );
+        })}
+      </ItemGroup>
+    </div>
+  ) : undefined;
+
   const checkoutStep: ShiftWorkflowStep = {
     key: "checkout",
     number: state.managerAttendanceOnly ? 2 : 3,
@@ -1145,7 +1227,7 @@ export async function StaffWorkdayPageContent({
         ? "warning"
         : "secondary",
     tone: checkoutDone ? "success" : checkoutPending ? "warning" : "default",
-    content: checkoutAction,
+    content: checkoutAction ?? checkoutBlockedContent,
   };
   const shiftStepItems = state.managerAttendanceOnly
     ? [clockStep, checkoutStep]

@@ -11,7 +11,7 @@ Checklist vận hành và readiness gates.
 
 ## POS / KDS
 
-- [operations-smoke-gate.md](operations-smoke-gate.md): gate vận hành đầu cuối theo mission `bán đúng -> bếp nhận đúng -> thu tiền đúng -> in/HĐĐT đúng -> kho trừ đúng -> quản lý nhìn đúng`
+- [operations-smoke-gate.md](operations-smoke-gate.md): gate vận hành đầu cuối theo chuỗi kết quả ADR 0025 §1
 - [food-delivery-platform-onboarding.md](food-delivery-platform-onboarding.md): quyền API, sandbox và readiness gate cho GrabFood, beFood, ShopeeFood, Green SM Food
 - [hddt-viettel-operations.md](hddt-viettel-operations.md): smoke/reconcile/archive cho Viettel S-invoice
 - [pos-kds/print-agent-rollout.md](pos-kds/print-agent-rollout.md): rollout checklist cho print-agent daemon ESC/POS tại chi nhánh

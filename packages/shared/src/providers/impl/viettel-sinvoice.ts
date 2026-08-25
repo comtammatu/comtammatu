@@ -205,7 +205,7 @@ function chooseLineTax(
 
 /**
  * Choose integer net unit price so qty×net is as close as possible to the
- * post-discount GROSS (ADR 0034, no itemDiscount), preferring a unit that
+ * post-discount GROSS (ADR 0013, no itemDiscount), preferring a unit that
  * lets residual VAT pass validator 44.
  */
 function findNetUnitPriceForGrossTarget(
@@ -500,7 +500,7 @@ export function resolveSinvoiceBuyerInfo(
  * Compute Sinvoice itemInfo + reconciled sums.
  *
  * Template `1/...` wants net unit prices + VAT in `taxAmount`.
- * ADR 0034: caller supplies post-discount GROSS lines; do not send
+ * ADR 0013: caller supplies post-discount GROSS lines; do not send
  * `itemDiscount` / discount rate (always 0).
  *
  * Rounding order matters for Sinvoice strict validators:

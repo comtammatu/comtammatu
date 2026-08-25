@@ -4,9 +4,8 @@
 
 ## Sản phẩm và chủ thể
 
-**Bộ phần mềm quản lý vận hành và bán hàng** cho doanh nghiệp F&B vận hành
-Cơm Tấm Má Tư theo loại hình **công ty cổ phần**, single-tenant,
-multi-branch.
+**Hệ thống Vận hành F&B** (F&B Operations System) của Công ty Cổ phần Chén
+Sứ, vận hành chuỗi Cơm Tấm Má Tư theo loại hình **công ty cổ phần**.
 
 Tên pháp lý, mã số doanh nghiệp/mã số thuế, địa chỉ trụ sở và người đại diện
 theo pháp luật phải lấy từ hồ sơ đăng ký thực tế của `tenant`; không suy từ

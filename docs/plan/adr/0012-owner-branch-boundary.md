@@ -4,6 +4,10 @@
 
 **Decision owner:** Owner, 2026-07-15
 
+**Amended by:** ADR 0037 (office actors land on `/`; `/me` is the personal
+profile plane, not the post-login landing or daily work hub; punch stays at
+`/me/clock` via the `/` command bar).
+
 ## Context
 
 Tenant-wide control and branch operations reused several capability keys, which
@@ -22,8 +26,10 @@ device context instead of the role/scope contract.
   title.
 - Every branch-pinned role enters `/br/[branchId]`, using the branch claim from
   the JWT. Missing or mismatched scope fails closed.
-- Every non-Owner employee uses `/me/*` for personal attendance, workday tasks,
-  schedule/leave, profile, and payslip. Legacy personal routes under
+- Every non-Owner employee uses `/me/*` for personal schedule/leave,
+  profile, and payslip, with punch at `/me/clock` (ADR 0037: `/me` is
+  `Trang cá nhân`; the daily workplace hub for office actors is `/`).
+  Legacy personal routes under
   `/br/[branchId]/shift/*` and `/br/[branchId]/profile/*` redirect to `/me/*`.
 - Owner is explicitly denied the Self plane: no `/me`, no punch, no self-service
   leave, and no discovery or redirect into that route family.

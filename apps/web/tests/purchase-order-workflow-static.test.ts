@@ -300,7 +300,7 @@ test("purchase_order_items entry snapshot columns are granted to authenticated",
   }
 });
 
-test("ADR 0043 line columns are granted to authenticated", () => {
+test("ADR 0040 line columns are granted to authenticated", () => {
   const migration = read(
     "supabase/migrations/20260820133724_grant_po_grn_line_column_access_and_fix_grn_trigger_coalesce.sql",
   );

@@ -29,6 +29,30 @@ generated type, route/link/redirect, and state contract/mutation site. Scope the
 review to the changed boundary. When the same deterministic failure recurs,
 prefer one test or guard at the shared boundary over more prose.
 
+## Automation And AI Autonomy Cap
+
+Operational actions can affect money, tax, labor, inventory, or customer
+records; model confidence is not evidence that an action is correct,
+authorized, or reversible.
+
+1. Business facts, thresholds, routing, deduplication, and state transitions
+   are computed by deterministic application and database code.
+2. An LLM may summarize or explain computed facts. It does not calculate the
+   authoritative number and does not receive unrestricted database or RPC
+   access.
+3. Money, tax, and labor automation is capped at informing an authorized
+   operator. It never auto-acts. Confidence scores cannot promote autonomy.
+4. Any bounded automatic action must be allowlisted, idempotent, reversible,
+   permission-checked, and reviewed as T3.
+5. Agent actions reuse an existing authorized RPC boundary. A new generic
+   agent action API is not permitted.
+6. Notifications use `docs/spec/toast-notification-system.md`; channels without
+   an owned runtime and delivery contract do not belong in the roadmap.
+
+Product workflows remain usable without an LLM. A new automation proposal must
+identify its deterministic source, authority, rollback, deduplication, and
+verification before implementation.
+
 ## Current Task Lifecycle
 
 `tasks/todo.md` holds active outcomes only. Each H2 requires exactly one

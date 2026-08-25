@@ -10,9 +10,9 @@ per-menu-item grain, and add-N-on-top allowance semantics locked same day).
 **Reverses the `no negative stock` clause of D065** at posting time and retires
 the silent-skip behavior of `post_pos_sale_consumption_if_ready`. The D065
 pre-order hard-block for cashiers/floor staff is **kept**; only Branch Manager
-may reopen the sell path for an exhausted **menu item** via a dedicated daily
-sellable-allowance field on the menu-limits plane — **per menu item**, not per
-ingredient (not warehouse replenish).
+or Owner may reopen the sell path for an exhausted **menu item** via a
+dedicated daily sellable-allowance field on the menu-limits plane — **per menu
+item**, not per ingredient (not warehouse replenish).
 
 ## Context
 
@@ -39,11 +39,12 @@ row); still book food cost (never zero silently); still record a durable
 follow-up. Posting is **per ingredient** — one short line never suppresses
 others.
 
-### 2. Pre-order: hard-block by default; Branch Manager may override
+### 2. Pre-order: hard-block by default; Branch Manager or Owner may override
 
 `enforce_branch_stock_availability` keeps the hard block on `order_items`
-insertion for cashiers and floor staff. Branch Manager may reopen the sell path
-by re-enabling the item and/or entering a **supplemental sellable allowance**
+insertion for cashiers and floor staff. Branch Manager or Owner may reopen the
+sell path by re-enabling the item and/or entering a **supplemental sellable
+allowance**
 (`Giới hạn bán`) that the gate and availability RPCs honor. Grain is **per menu
 item**. Semantics: the value **adds N portions on top of** stock-derived
 remaining — not an absolute daily sellable count, and not an “ignore stock”

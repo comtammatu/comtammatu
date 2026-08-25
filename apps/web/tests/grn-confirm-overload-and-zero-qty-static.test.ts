@@ -8,7 +8,7 @@ import {
   INVENTORY_ERROR_CODES,
 } from "../lib/messages/inventory-rpc-errors";
 
-const root = process.cwd().includes("apps/web")
+const root = process.cwd().replaceAll("\\", "/").includes("apps/web")
   ? join(process.cwd(), "../..")
   : process.cwd();
 const read = (path: string) => readFileSync(join(root, path), "utf8");

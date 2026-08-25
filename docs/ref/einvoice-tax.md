@@ -63,7 +63,7 @@ bằng một `invoice_vat_rate`; tổng VAT = tổng đã làm tròn theo dòng/
 VND không thập phân: bóc NET nguyên đồng, VAT = GROSS − NET khi validator
 cho phép, lệch ±1₫ hấp thụ vào dòng khác (tách 1 phần cùng món nếu mọi dòng `qty > 1`); tổng HĐ = `orders.total_amount`.
 
-**Chiết khấu (ADR 0034):** giá POS đã gồm VAT; CK trừ trên GROSS rồi bóc NET.
+**Chiết khấu (ADR 0013):** giá POS đã gồm VAT; CK trừ trên GROSS rồi bóc NET.
 Má Tư nhúng CK vào đơn giá/thành tiền sau giảm — không gửi `itemDiscount` /
 dòng “Chiết khấu” riêng. CK món chỉ VND; CK đơn `%` materialize VND rồi trừ
 món rẻ→đắt; dòng về 0đ omit khỏi payload. `total_amount = 0` →

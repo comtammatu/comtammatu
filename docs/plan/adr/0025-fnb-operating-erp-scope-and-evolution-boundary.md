@@ -1,4 +1,4 @@
-# ADR 0025 — F&B Operating ERP scope and evolution boundary
+# ADR 0025 — F&B Operations System scope and evolution boundary
 
 **Status:** Accepted (2026-08-09)
 
@@ -10,7 +10,10 @@
 catalogs as a target monorepo layout or a delivery backlog.
 
 **Amended by:** ADR 0038 (native Android clients in repository `app`; this
-ADR still forbids splitting `apps/web` and local-first POS).
+ADR still forbids splitting `apps/web` and local-first POS). Naming amendment
+2026-08-24 (Owner): the `F&B Operating ERP` label is retired to stop
+ERP-shaped misreading; the product name is **F&B Operations System**
+(`Hệ thống Vận hành F&B`). Scope and boundaries below are unchanged.
 
 ## Context
 
@@ -33,8 +36,9 @@ and code-placement boundaries in `docs/spec/architecture.md`.
 
 ### 1. Product definition
 
-The product is an **F&B Operating ERP**: it runs the restaurant day, not the
-statutory books. The accepted outcome chain is:
+The product is the **F&B Operations System** (`Hệ thống Vận hành F&B`): it
+runs the restaurant day, not the statutory books. The accepted outcome chain
+is:
 
 sell correctly → kitchen receives correctly → collect correctly →
 print/`HĐĐT` correctly → stock deducts correctly → management sees real
@@ -68,7 +72,7 @@ Sequencing is a durable constraint, not a schedule:
 5. Thicken Control Ops.
 6. HR labor-cost linkage.
 7. CRM / loyalty.
-8. BI / AI, subject to the autonomy cap in ADR 0020.
+8. BI / AI, subject to the autonomy cap in `docs/agent/rules/workflow.md`.
 
 Two ordering invariants win on conflict: operational finance comes **before**
 full CRM, and no ledger-shaped reporting ships **before** costing is reliable.
@@ -96,7 +100,7 @@ Rejected until this ADR is superseded:
   `docs/ref/glossary.md` + `packages/shared/src/labels/**` (vocabulary),
   `docs/ref/screen-context-map.md` (audience/device),
   `docs/modules/finance.md` + D020 (finance boundary),
-  `docs/ref/business-context.md` (business boundary), ADR 0020 (autonomy cap).
+  `docs/ref/business-context.md` (business boundary), `docs/agent/rules/workflow.md` (autonomy cap).
 
 ## Verification
 

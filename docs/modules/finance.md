@@ -30,6 +30,10 @@ Period-result formula (two rows):
   `capital`/`deposit`, capitalized equipment, ingredient COGS, cash↔bank.
 - **`Biến động tồn kho`**: closing minus opening inventory value (when readable).
 - **`Kết quả kinh doanh`**: revenue − goods-in − opex + inventory change. Not derived from GP.
+- The period cockpit RPC returns server-computed `inventory_change` with an
+  `inventory_change_included` flag; company scope sums the inventory change across all valued
+  branches. Valuation column grants remain the fail-closed gate
+  (`inventory_readable=false` → term excluded with explicit hint, never zero).
 
 Incomplete food-cost coverage does not blank gross profit; it warns via
 coverage badge. No recorded operating expense keeps period result unavailable
@@ -298,6 +302,7 @@ not a `TSCĐ` register or carrying-value card.
 ## Current Gaps
 
 - `/finance/expenses` is operating + opening-capital ledger, not a statutory journal. Deductible VAT / equipment value / period close stay blocked (D020).
+- Period-close readiness (`get_finance_period_close_readiness`) is read-only advisory; `close_period_soft`/`close_period_hard` and the `auto_close_periods` cron stay unconditional until an owner-approved follow-up gates them.
 
 ## Source Files
 

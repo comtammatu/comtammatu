@@ -6,9 +6,9 @@
 
 **Review tier:** T2 — control-surface UX, employee self-service routing, attention loaders
 
-**Amends:** ADR 0012 (office landing + `/me` plane), ADR 0022 (personal plane scope), ADR 0033 item 7 (`/me` Work CTA), ADR 0035 §5 (`/me` CTA + operations grid assumption)
+**Amends:** ADR 0012 (office landing + `/me` plane), ADR 0022 (personal plane scope), ADR 0033 item 7 (`/me` Work CTA removal + operations grid assumption)
 
-**Related:** ADR 0033 (Work attention row), ADR 0036 (workday credit — independent)
+**Related:** ADR 0033 (Work attention row), ADR 0019 (workday credit — independent)
 
 **Supersedes proposal:** Early “EmployeeTodayStrip + module grid” mockups; Owner rejected module launcher grid on `/` and Work-only inbox panel.
 
@@ -99,13 +99,13 @@ Refactor `/me/page.tsx`: replace the workday stepper hero with a **profile-first
 
 ### 5. Unchanged
 
-- Work domain, ACL, RPC authority (ADR 0033 core); payroll/workday math (ADR 0036); branch hub compose (exemplar: `branch-today-status.tsx`, `branch-queue-section.tsx`); ADR 0033 §6 — one Work attention row on `/`; `/` does not become a Work shell.
+- Work domain, ACL, RPC authority (ADR 0033 core); payroll/workday math (ADR 0019); branch hub compose (exemplar: `branch-today-status.tsx`, `branch-queue-section.tsx`); ADR 0033 §6 — one Work attention row on `/`; `/` does not become a Work shell.
 
 ## Consequences
 
 - Amends ADR 0012: office actors workplace = `/`; `/me` retains punch route but is not landing or daily hub.
 - Amends ADR 0022: `/me` plane drops “own tasks” (Work on `/`).
-- Amends ADR 0033 §7 and ADR 0035 §5 as above.
+- Amends ADR 0033 §7 as above.
 - `ControlSurfaceOverview` loses module grids; attention queue is primary body.
 - Static tests and i18n baseline updated per phase table below.
 
@@ -124,7 +124,7 @@ Recommended order: **A → B → C → D**. B backend may parallel A.
 
 ## Out of scope
 
-- HRM `/hr/attendance` tab split (ADR 0036); moving schedule/leave/payslip onto `/`; Owner KPI mosaic on `/`; branch bottom-nav / KDS semantics; singleton DETAIL for buckets without addressable DETAIL routes.
+- HRM `/hr/attendance` tab split (ADR 0019); moving schedule/leave/payslip onto `/`; Owner KPI mosaic on `/`; branch bottom-nav / KDS semantics; singleton DETAIL for buckets without addressable DETAIL routes.
 
 ## Owner Accept record (Owner 2026-08-12)
 
@@ -140,4 +140,4 @@ Accept package: queue-first `/`, `AppTodayCommandBar`, `/me` = `Trang cá nhân`
 - `apps/web/app/_components/control-surface-overview.tsx`
 - `apps/web/app/_lib/control-home-attention.ts`
 - `apps/web/app/_components/app-today-command-bar.tsx` (new, Phase A)
-- ADR 0012, ADR 0022, ADR 0033, ADR 0035
+- ADR 0012, ADR 0022, ADR 0033

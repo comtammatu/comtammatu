@@ -184,7 +184,7 @@ code knows:
 ## Work Module Compose (`/work`)
 
 Control Surface **Work** (`/work`) uses LIST at the route census; board, calendar,
-and timeline are **TASK_*** compose recipes inside one `AppListFrame` (ADR 0035).
+and timeline are **TASK_*** compose recipes inside one `AppListFrame` (ADR 0033).
 
 | Constant / component | Role |
 | --- | --- |

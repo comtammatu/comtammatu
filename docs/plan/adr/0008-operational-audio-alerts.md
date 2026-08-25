@@ -1,6 +1,6 @@
 # ADR 0008 — Operational Audio Alerts (Beep + Voice)
 
-**Status:** Accepted (2026-07-09; amended 2026-07-10/11; guest-tone split 2026-08-19; cached cloud TTS 2026-08-19; table-clip cache + spoken paid amount 2026-08-19; POS kitchen-echo silence 2026-08-19)
+**Status:** Accepted (2026-07-09; amended 2026-07-10/11; guest-tone split 2026-08-19; cached cloud TTS 2026-08-19; table-clip cache + spoken paid amount 2026-08-19; POS kitchen-echo silence 2026-08-19; configurable models/voices 2026-08-22)
 
 **Decision drivers:** Kitchen/POS need eyes-free attention during service; current Web Audio beeps are reliable but content-blind; a recorded clip pack ships no voice until someone records it.
 

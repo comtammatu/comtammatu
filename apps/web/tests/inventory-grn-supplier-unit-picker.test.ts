@@ -280,7 +280,7 @@ test("GRN create editor does not seed book price from catalog reference cost", (
   assert.doesNotMatch(source, /priceSetOnPoHint/);
 });
 
-test("GRN warehouse draft requires net unit price (ADR 0041)", () => {
+test("GRN warehouse draft requires net unit price (ADR 0040)", () => {
   const dialog = readRepo(
     "apps/web/app/(protected)/inventory/grn/[id]/views/add-grn-line-dialog.tsx",
   );

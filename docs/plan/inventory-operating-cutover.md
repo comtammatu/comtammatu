@@ -1,8 +1,8 @@
 # Inventory operating cutover
 
 > **Do not implement from this document.** Runtime and money contract:
-> ADR 0040 (company WAC), ADR 0041 (GRN book price; invoice AP/VAT only),
-> ADR 0042 (kept GRN qty is PO truth), and `docs/ref/inventory.md`
+> ADR 0040 (company WAC; GRN book price; invoice AP/VAT only; kept GRN
+> qty is PO truth) and `docs/ref/inventory.md`
 > (plus `docs/ref/screen-context-map.md` §2.5A). This file is a historical
 > discussion log. Wave 1 not Production-applied is a **status fact**, not
 > a license to code from the essay.
@@ -26,17 +26,17 @@ Owner Accept of a named wave is not permission to implement from this essay.
 central sites allowed; pull prefill `central_supply` first)**, OD-5.
 ISS-05, ISS-06, ISS-07, and ISS-09 record the locked forks in place.
 
-**Money authority:** ADR 0041 (GRN books net `Đơn giá`; `HĐ NCC` is AP/VAT only)
-and ADR 0042 (kept GRN qty is PO truth). This file **points** at those ADRs.
+**Money authority:** ADR 0040 (GRN books net `Đơn giá`; `HĐ NCC` is AP/VAT
+only; kept GRN qty is PO truth). This file **points** at that ADR.
 It does not restate formulas.
 
 **Related:** ADR 0040 (company WAC, append-only restatement), ADR 0028
 (transfer shortfall), ADR 0026 (POS post-and-flag), ADR 0029
-(withdrawn), ADR 0017 (AP, as amended by 0041), D093 (no branch PO/GRN).
+(withdrawn), ADR 0017 (AP, as amended by ADR 0040), D093 (no branch PO/GRN).
 Daily-loop sketch (local Cursor plan, not SSOT):
 `inventory_queue-first_84da3fb0.plan.md`. Runtime/contract:
 `docs/ref/inventory.md`, `docs/ref/screen-context-map.md` §2.5A,
-ADR 0040–0042.
+ADR 0040.
 
 ---
 
@@ -44,7 +44,7 @@ ADR 0040–0042.
 
 Historical discussion log of locked forks, waves, and cross-module impact.
 It is not the runtime contract and not an implementation playbook. Agents
-implement from ADR 0040–0042 and `docs/ref/inventory.md`. Each issue names:
+implement from ADR 0040 and `docs/ref/inventory.md`. Each issue names:
 
 - what is wrong or unfinished
 - what Production does today (snapshot 2026-08-19, re-count before apply)
@@ -64,8 +64,8 @@ create path, or let a branch confirm a GRN.
 - Implement UI, RPCs, or migrations from this document.
 - Apply SQL to Production (`enloyfnuerqgaqderbwb`).
 - Add a `Dxxx` compatibility code.
-- Rewrite ADR 0041 / 0042 / 0040 math.
-- Treat this file as SSOT over `docs/ref/inventory.md` or ADR 0040–0042.
+- Rewrite ADR 0040 math.
+- Treat this file as SSOT over `docs/ref/inventory.md` or ADR 0040.
 
 ---
 
@@ -78,7 +78,7 @@ change is not local.
 | --- | --- | --- | --- | --- | --- | --- |
 | Hide YCM create before PO-without-YCM RPC | Accountant cannot allocate **and** warehouse cannot buy | None directly | `procurement:po_create` still Owner+accountant only | Cannot replenish raw | None yet | **Trap.** See ISS-11 |
 | GRN `Đơn giá` / WAC restatement | `Tồn kho` asset, `Định mức/phần`, matching review vs book | `Giá vốn món` via remaining-stock propagate (ADR 0040); POS posting ladder uses company WAC | Owner-only repair | `production_wac` if those SKUs were cooked | Overlay qty-only; value moves with equalize | Never silent `UPDATE stock_levels` |
-| `HĐ NCC` still on GRN chrome | Duplicate AP entry; invoice may look like it reprices stock | Operators confuse AP price with `Giá vốn` | `procurement:invoice_*` vs warehouse GRN keys | None | None | ADR 0041 already forbids invoice reprice |
+| `HĐ NCC` still on GRN chrome | Duplicate AP entry; invoice may look like it reprices stock | Operators confuse AP price with `Giá vốn` | `procurement:invoice_*` vs warehouse GRN keys | None | None | ADR 0040 already forbids invoice reprice |
 | Branch creates DC (retire YCH) | `Chi phí hàng` still `transfer_in` at branch — custody, not a second buy | POS still consumes at Kho CN after receive | Grant `inventory:transfer_create` to BM; strip `inventory:request_*` | Ship / receive own side; **`Giao chi nhánh`** stays DC | Hub door `Yêu cầu hàng` → `Điều chuyển` | Notifications `inventory.stock_request_*` |
 | Catalog `Nguồn hàng` both sites (OD-4) | **No.** Pull routing only; `Chi phí hàng` still `transfer_in` | **No.** POS availability is Kho CN on-hand | Catalog CRUD stays Owner | Inbox / ship from either allowed site | Pull `from` prefill `Kho Tổng`-first when both stocked; operator may pick | YCH RPC, checklist, Wave 3 DC create |
 | Mark SKU `finished_good` | No GRN value; cost is `production_wac` | Menu recipe may still sell the FG | Catalog CRUD stays Owner | Must have production recipe; never PO/GRN/NCC | Receives FG only by DC | ISS-08 |
@@ -111,7 +111,7 @@ BM has `inventory:request_*` and `inventory:transfer_receive`, not
 
 **Target.** Catalog first (NL vs TP, units, NCC mapping). **No YCM, no
 YCH.** Warehouse authors **PO-only** buy (one NCC + one receive site).
-GRN books net `Đơn giá` (ADR 0041). `HĐ NCC` is AP/VAT only (Finance
+GRN books net `Đơn giá` (ADR 0040). `HĐ NCC` is AP/VAT only (Finance
 `/finance/supplier-invoices`). One DC type; **branch creates both ways**.
 Production at `Bếp TT` unchanged. POS `sale_consumption`, `phiếu tiêu hao`,
 `hao hụt`, `kiểm kê` engines stay.
@@ -190,14 +190,14 @@ schema DROP.
 ### ISS-03 — Units: one `Đơn vị chuẩn` + anchors; GRN qty unit ≠ price unit
 
 **Problem.** Pack vs loose vs quote unit, if collapsed into one column,
-books carton price as pack price (ADR 0041 already forbids that). Changing
+books carton price as pack price (ADR 0040 already forbids that). Changing
 base without the convert RPC desynchronizes on-hand, WAC, BOM, and POS.
 
 **Current Production.** One `ingredient_units.is_base` per ingredient
 (`Đơn vị chuẩn`). Other units are anchors (example: `1 thùng = 24 hộp`).
 Ledger qty, WAC, and thresholds are in base. Documents snapshot
 `to_base_factor`. GRN may persist in a loose unit while `Đơn giá` binds to
-`grn_items.unit_cost_unit_id`. Book-value formula lives in **ADR 0041** —
+`grn_items.unit_cost_unit_id`. Book-value formula lives in **ADR 0040** —
 do not copy it here.
 
 **Target.** Keep this graph. Wave 1 PO lines snapshot entry unit + factor;
@@ -205,7 +205,7 @@ no price on PO. Confirm GRN still requires `unit_cost > 0` for accepted
 qty, quoted per `unit_cost_unit_id`.
 
 **Blast radius.** Finance `Định mức/phần` and POS consume convert to base
-through the same factors. ADR 0042 raises PO line qty in **entry** unit
+through the same factors. ADR 0040 raises PO line qty in **entry** unit
 when over-receiving. AP billed qty caps at `po_applied_quantity`. Kitchen
 BOM and LSX snapshots use the same unit rows. A wrong factor at confirm
 moves WAC, production cost, and later food cost.
@@ -221,7 +221,7 @@ historical snapshots stay). Compatibility mirrors `receipt_unit_id` /
 ISS-05 patch must quote last price in the **price unit**, not assume persist
 unit.
 
-**Proof.** Existing ADR 0041 tests: persist 246 loose at 24 000₫/pack
+**Proof.** Existing ADR 0040 tests: persist 246 loose at 24 000₫/pack
 (factor 24) books 246000, not 246 x 24000. Cutover waves must not regress
 that.
 
@@ -247,7 +247,7 @@ complete, POS consume) uses the **line snapshot** written at save/start.
 Catalog wins only when creating a **new** draft line. UI should show when
 live catalog has drifted from the snapshot (warn, do not silently reprice).
 
-**Blast radius.** Same as ISS-03 plus ADR 0042 PO remainder, AP qty, and
+**Blast radius.** Same as ISS-03 plus ADR 0040 PO remainder, AP qty, and
 company WAC. POS `sale_consumption` already snapshots recipe qty; do not
 “fix” POS by re-reading live `yield_factor` at post (ISS-13). Kitchen LSX
 already snapshots BOM at create — keep that.
@@ -262,7 +262,7 @@ migration.
 **Dependencies.** Independent of YCM hide. Should land before ISS-05 price
 patch so restatement math uses the same snapshot the line stored.
 
-**Proof.** Confirm-after-catalog-edit test; no change to ADR 0041 formula,
+**Proof.** Confirm-after-catalog-edit test; no change to ADR 0040 formula,
 only to which factor it reads.
 
 **Do not mix with.** ISS-03 graph redesign. ISS-05 historical `unit_cost`
@@ -274,7 +274,7 @@ patch. Catalog rebase RPC.
 
 **Owner locked 2026-08-19:** OD-1, OD-2.
 
-**Problem.** ADR 0041 already-confirmed provisional: 17 accepted confirmed
+**Problem.** ADR 0040 already-confirmed provisional: 17 accepted confirmed
 GRN lines have `unit_cost = 0`. Overlay shows **company WAC**, which mixed
 those zeros into the average, so overlay ≠ document `Đơn giá`. Four SKUs
 are diluted: `bột năng`, `hộp xôi`, `dầu điều`, `giấm`. A naive “receive again”
@@ -305,7 +305,7 @@ append-only repair; it does not by itself type a missing GRN `Đơn giá`.
 equalize). If `Bếp` already cooked them, `production_wac` and remaining FG
 + `food_cost` allocations propagate. Finance `Tồn kho` asset and
 `Định mức/phần` move. AP invoices already matched on qty are **not**
-repriced (ADR 0041). POS future posts use the new company WAC; historical
+repriced (ADR 0040). POS future posts use the new company WAC; historical
 `sale_consumption` snapshots stay unless the restatement RPC is designed
 to propagate remaining stock only (ADR 0040).
 
@@ -339,7 +339,7 @@ the 4 SKUs matches remaining book / qty (rounding-only site spread);
 `invoice_reprice` still absent.
 
 **Do not mix with.** ISS-06 Owner overwrite of `Giá vốn` (company WAC). ISS-11
-DROP. Re-opening ADR 0041 invoice reprice. Generic
+DROP. Re-opening ADR 0040 invoice reprice. Generic
 `repair_company_wac_valuation` as a substitute for typing `Đơn giá`.
 
 **Repo status (2026-08-19).** RPC `owner_patch_confirmed_grn_unit_cost`,
@@ -370,7 +370,7 @@ not a warehouse-editable field after confirm.
 **Target.** Owner may overwrite **`Giá vốn`** (company WAC) through a
 **named Owner-only RPC with a reason**. That RPC is an append-only
 restatement (same money class as ISS-05 `quantity_delta = 0`). Point at
-ADR 0040 and ADR 0041; **do not duplicate WAC math** in this plan.
+ADR 0040; **do not duplicate WAC math** in this plan.
 
 Rejected / forbidden:
 
@@ -378,14 +378,14 @@ Rejected / forbidden:
 - Silent `UPDATE stock_levels.avg_unit_cost`.
 - Letting warehouse freely edit confirmed GRN `Đơn giá`. The Owner RPC
   is the money path; daily GRN confirm stays the book-price capture
-  (ADR 0041).
+  (ADR 0040).
 
 **Blast radius.** T3 money: company WAC, `production_wac` if those SKUs
 were cooked, `Định mức/phần`, `Giá vốn món` on remaining stock (ADR 0040
 propagate). Finance landing `Tồn kho` keeps reading valuation accounts /
 equalized WAC, not the catalog hint. POS posting ladder stays ADR 0026
 (company WAC → last-known movement → 0 flag). AP invoices already
-matched on qty are not repriced (ADR 0041).
+matched on qty are not repriced (ADR 0040).
 
 **Implementation direction.** Do not reuse `save_ingredient_catalog` as a
 silent money RPC. Named Owner-only SECURITY DEFINER function, grant
@@ -871,7 +871,7 @@ Already locked (do not re-ask unless Owner reopens): no YCM, no YCH;
 PO-only buy; GRN books net `Đơn giá`; `HĐ NCC` AP/VAT only; one DC type,
 branch both ways; INV-9/ADR 0032 deleted; ADR 0029 withdrawn; leftover
 YCM `Sâm 50 set` **close without convert**; two submitted YCH **do not
-convert**; **ADR 0043 (2026-08-20): 1 PO may have many NCC (line `supplier_id`);
+convert**; **ADR 0040 (2026-08-20): 1 PO may have many NCC (line `supplier_id`);
 1 shared GRN; confirm by NCC group** — supersedes “1 PO = 1 NCC”; no re-receive
 for ISS-05; stocktake ≠ price;
 `yield_factor` stays; OD-1 / OD-2 / OD-3 B / **OD-4 both sites + `Kho Tổng`-first prefill** / OD-5 as the table above. No remaining OD-4 UX
@@ -886,7 +886,7 @@ fork. Does not mix with Wave 1.
 - DROP `recipes.yield_factor` with YCM/YCH
 - Silent `UPDATE stock_levels` (qty or WAC)
 - Branch PO or Branch GRN (D093)
-- Changing ADR 0041 / 0042 / 0040 formulas
+- Changing ADR 0040 formulas
 - Multi-level BOM, labor, overhead
 - Revival of daily supplier-return UI or issue type `other`
 - DROP YCM/YCH tables before Wave 5 soak

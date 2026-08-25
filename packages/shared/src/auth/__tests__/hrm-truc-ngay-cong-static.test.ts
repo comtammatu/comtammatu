@@ -266,7 +266,7 @@ test("P2 app no longer references shift assignments except roster clock-in and s
   );
 });
 
-test("ADR 0036 hour-ratio SSOT is exported for payroll and attendance", () => {
+test("ADR 0019 hour-ratio SSOT is exported for payroll and attendance", () => {
   const workdayMath = read("apps/web/lib/staff-runtime/_lib/workday-math.ts");
   const payrollDayMath = read("apps/web/lib/hr/payroll-day-math.ts");
 

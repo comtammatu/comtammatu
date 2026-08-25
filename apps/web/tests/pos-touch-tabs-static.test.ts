@@ -18,7 +18,7 @@ test("POS discount selectors use the canonical touch tab contract", () => {
     /<Tabs(?:List|Trigger)[^>]*className="[^"]*(?:min-)?h-(?:10|11|12|14|16)\b/,
   );
 
-  // ADR 0034: item discount is VND-only — no %/VND Tabs.
+  // ADR 0013: item discount is VND-only — no %/VND Tabs.
   const itemCustomizer = read(
     "../app/(protected)/br/[branchId]/pos/item-customizer.tsx",
   );

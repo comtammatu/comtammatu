@@ -320,7 +320,7 @@ test("per-order HĐĐT payload expands POS modifiers and sides", () => {
   assert.match(
     projectionMigration,
     /'serviceCharge', COALESCE\(v_order\.service_charge, 0\)/,
-    "payment-time draft must preserve service charge for ADR 0034 projection",
+    "payment-time draft must preserve service charge for ADR 0013 projection",
   );
   const snapshotServiceChargeMigration = read(
     "supabase/migrations/20260812113334_hddt_snapshot_service_charge.sql",
@@ -337,7 +337,7 @@ test("per-order HĐĐT payload expands POS modifiers and sides", () => {
   );
   assert.ok(
     createSrc.includes("buildHddtProviderLines("),
-    "prepared provider payload must project discounts via ADR 0034 helper",
+    "prepared provider payload must project discounts via ADR 0013 helper",
   );
   assert.ok(
     !createSrc.includes("applyInvoiceLineDiscount("),
