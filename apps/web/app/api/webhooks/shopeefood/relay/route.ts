@@ -6,6 +6,7 @@ import {
   transformShopeeOrderPayload,
   type ShopeeOrderRaw,
 } from "@lib/shopeefood/mapping";
+import { resolveBranchStaffId } from "@lib/grabfood/mapping";
 
 const shopeeRelaySchema = z.object({
   ping: z.boolean().optional(),
@@ -98,14 +99,15 @@ export async function POST(request: NextRequest) {
       shopeeOrder.orderCode ||
       (shopeeOrder.orderId ? String(shopeeOrder.orderId) : "SPF-UNKNOWN");
 
-    // 3. Check if order was already processed (idempotency by Shopee order ref)
+    // 3. Check if order was already processed or manually entered on POS (deduplication)
     const { data: existingOrder } = await supabase
       .from("orders")
       .select("id, order_number, status, payment_status")
       .eq("tenant_id", branch.tenant_id)
       .eq("branch_id", branch.id)
       .eq("delivery_platform", "shopee")
-      .ilike("external_order_ref", displayRef)
+      .or(`external_order_ref.eq.${displayRef},note.ilike.[ShopeeFood ${displayRef}]%`)
+      .neq("status", "cancelled")
       .limit(1)
       .maybeSingle();
 
@@ -113,7 +115,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         idempotent: true,
-        message: "Đơn hàng này đã được tiếp nhận trước đó",
+        message: "Đơn hàng này đã được nhân viên nhập hoặc hệ thống tiếp nhận trước đó",
         order_id: existingOrder.id,
         order_number: existingOrder.order_number,
         display_id: displayRef,
@@ -138,32 +140,12 @@ export async function POST(request: NextRequest) {
     // 5. Transform Shopee payload to RPC-ready items structure
     const transformed = transformShopeeOrderPayload(shopeeOrder, dbMenuItems ?? []);
 
-    // 6. Find a staff profile to act as created_by (prioritize branch manager/staff)
-    const { data: staffProfile } = await supabase
-      .from("profiles")
-      .select("id, branch_id")
-      .eq("tenant_id", branch.tenant_id)
-      .eq("branch_id", branch.id)
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-
-    let createdBy = staffProfile?.id;
-    if (!createdBy) {
-      const { data: fallbackProfile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("tenant_id", branch.tenant_id)
-        .order("created_at", { ascending: true })
-        .limit(1)
-        .single();
-
-      createdBy = fallbackProfile?.id;
-    }
+    // 6. Find staff profile to act as created_by (prioritize branch_manager -> cashier -> branch staff -> HQ)
+    const createdBy = await resolveBranchStaffId(supabase, branch.tenant_id, branch.id);
 
     if (!createdBy) {
       return NextResponse.json(
-        { success: false, error: "Không tìm thấy hồ sơ nhân viên cho chi nhánh" },
+        { success: false, error: "Không tìm thấy hồ sơ nhân viên hợp lệ cho chi nhánh" },
         { status: 500 },
       );
     }
