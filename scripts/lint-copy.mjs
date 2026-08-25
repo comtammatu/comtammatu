@@ -68,6 +68,12 @@ const FOOD_DELIVERY_VENDOR_SOURCE_PATHS = new Set([
   "docs/runbooks/food-delivery-platform-onboarding.md",
   "docs/plan/decisions.md",
   "docs/ref/einvoice-tax.md",
+  "apps/web/app/api/webhooks/grabfood/relay/route.ts",
+  "apps/web/app/api/webhooks/grabfood/item-status/route.ts",
+  "apps/web/lib/grabfood/mapping.ts",
+  "apps/web/app/api/webhooks/shopeefood/relay/route.ts",
+  "apps/web/app/api/webhooks/shopeefood/item-status/route.ts",
+  "apps/web/lib/shopeefood/mapping.ts",
 ]);
 /** Native bank / wallet deeplink scheme paths (EMV QR handoff literals). */
 const PAYMENT_VENDOR_DEEPLINK_SOURCE_PATHS = new Set([

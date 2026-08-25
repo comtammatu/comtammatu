@@ -61,7 +61,7 @@
       display: flex;
       gap: 6px;
       margin-top: 8px;
-      margin-bottom: 12px;
+      margin-bottom: 8px;
     }
     button {
       flex: 1;
@@ -87,6 +87,17 @@
     .btn-secondary:hover {
       background: #475569;
     }
+    .btn-action {
+      width: 100%;
+      background: #1e293b;
+      color: #38bdf8;
+      border: 1px solid #0284c7;
+      margin-bottom: 12px;
+    }
+    .btn-action:hover {
+      background: #0369a1;
+      color: #ffffff;
+    }
     .recent-header {
       font-size: 11px;
       font-weight: 600;
@@ -108,61 +119,71 @@
       border: 1px solid #334155;
       border-radius: 6px;
       padding: 6px 8px;
+      font-size: 11px;
     }
-    .order-row {
+    .order-top {
       display: flex;
       justify-content: space-between;
       font-weight: 600;
       color: #f1f5f9;
+      margin-bottom: 2px;
     }
-    .order-sub {
-      font-size: 11px;
+    .order-badge {
+      color: #38bdf8;
+    }
+    .order-desc {
       color: #94a3b8;
-      margin-top: 2px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .empty-msg {
-      font-size: 12px;
-      color: #64748b;
+    .empty-state {
       text-align: center;
-      padding: 10px 0;
+      color: #64748b;
+      padding: 12px 0;
+      font-size: 12px;
     }
-    #toast {
+    .toast {
+      display: none;
       margin-top: 6px;
       font-size: 11px;
       text-align: center;
-      display: none;
     }
   </style>
 </head>
 <body>
   <div class="header">
-    <div class="title">Cơm Tấm Má Tư POS</div>
-    <div class="status" id="statusBadge">🟢 Sẵn Sàng</div>
+    <div class="title">Grab POS Relay</div>
+    <div class="status" id="liveStatus">SẴN SÀNG</div>
   </div>
 
   <div class="field">
-    <label for="backendUrl">Địa chỉ máy chủ POS:</label>
-    <input type="text" id="backendUrl" placeholder="http://localhost:3000">
+    <label for="backendUrl">Địa chỉ máy chủ POS</label>
+    <input type="text" id="backendUrl" placeholder="http://localhost:3000 hoặc https://web.comtammatu.com" />
   </div>
 
   <div class="field">
-    <label for="branchId">Chi nhánh (Branch ID):</label>
-    <input type="number" id="branchId" placeholder="1">
+    <label for="branchId">Mã Chi Nhánh (Branch ID)</label>
+    <input type="number" id="branchId" placeholder="1" />
+  </div>
+
+  <div class="field">
+    <label for="relaySecret">Khóa bảo mật Relay Secret (Tùy chọn)</label>
+    <input type="password" id="relaySecret" placeholder="Nhập secret key nếu có" />
   </div>
 
   <div class="btn-group">
-    <button class="btn-primary" id="btnSave">Lưu Cài Đặt</button>
-    <button class="btn-secondary" id="btnPing">Test Kết Nối</button>
+    <button class="btn-secondary" id="btnPing">Kiểm tra kết nối</button>
+    <button class="btn-primary" id="btnSave">Lưu cấu hình</button>
   </div>
 
-  <div id="toast"></div>
+  <button class="btn-action" id="btnSyncMenu">🔄 Đồng bộ toàn bộ Menu sang Grab</button>
 
-  <div class="recent-header">Đơn Grab Mới Nhận</div>
+  <div class="toast" id="toast"></div>
+
+  <div class="recent-header">Đơn hàng Grab gần nhất</div>
   <div class="order-list" id="orderList">
-    <div class="empty-msg">Chưa có đơn hàng nào</div>
+    <div class="empty-state">Chưa có đơn hàng nào</div>
   </div>
 
   <script src="popup.js"></script>
