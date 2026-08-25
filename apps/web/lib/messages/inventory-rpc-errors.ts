@@ -21,6 +21,7 @@ export const INVENTORY_ERROR_CODES = {
   PRODUCTION_TRANSITION_INVALID: "PRODUCTION_TRANSITION_INVALID",
   PRODUCTION_ACTUAL_PAYLOAD_INVALID: "PRODUCTION_ACTUAL_PAYLOAD_INVALID",
   PRODUCTION_LOCATION_SCOPE_INVALID: "PRODUCTION_LOCATION_SCOPE_INVALID",
+  PRODUCTION_OUTPUT_UNIT_NOT_CONFIGURED: "PRODUCTION_OUTPUT_UNIT_NOT_CONFIGURED",
   FORBIDDEN: "inventory.forbidden",
   NOT_FOUND: "inventory.not_found",
   INVALID_STATUS: "inventory.invalid_status",
@@ -766,6 +767,12 @@ export const procurementRpcMappings: readonly RpcErrorMapping[] = [
 /* ─── Production ─── */
 
 export const productionRpcMappings: readonly RpcErrorMapping[] = [
+  {
+    match: includesAny("entry_unit_not_configured"),
+    errorCode: INVENTORY_ERROR_CODES.PRODUCTION_OUTPUT_UNIT_NOT_CONFIGURED,
+    userMessage:
+      "Đơn vị đầu ra của công thức không còn trong thang đơn vị của thành phẩm. Mở công thức sản xuất và lưu lại với đơn vị đầu ra hợp lệ.",
+  },
   {
     match: includesAny("recipe_not_active"),
     errorCode: INVENTORY_ERROR_CODES.PRODUCTION_RECIPE_NOT_ACTIVE,

@@ -186,6 +186,9 @@ function mapCatalogRpcError(
   if (message?.includes("standard_unit_dimension_mismatch")) {
     return "Các đơn vị chuẩn phải cùng loại đo lường (khối lượng hoặc thể tích).";
   }
+  if (message?.includes("ingredient_unit_in_use_by_recipe_spec")) {
+    return "Đơn vị đang là đơn vị đầu ra của công thức sản xuất; không thể xóa khỏi thang đơn vị.";
+  }
   if (
     message?.includes("ingredient_unit_in_use_by_recipe") ||
     message?.includes("ingredient_unit_in_use_by_production_recipe") ||
@@ -1127,6 +1130,9 @@ function mapBulkIngredientImportError(
   }
   if (message?.includes("bulk_import_base_unit_change_forbidden")) {
     return "Không thể đổi đơn vị chuẩn khi nhập dữ liệu; giữ đơn vị hiện tại hoặc tạo nguyên liệu mới.";
+  }
+  if (message?.includes("ingredient_unit_in_use_by_recipe_spec")) {
+    return "Đơn vị đang là đơn vị đầu ra của công thức sản xuất; không thể xóa khi nhập dữ liệu.";
   }
   if (
     message?.includes("ingredient_unit_in_use_by_recipe") ||
