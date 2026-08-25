@@ -129,8 +129,9 @@ function parseRemoteMigrationVersions(output) {
 }
 
 function listRemoteMigrationVersions(projectRoot, url) {
+  const corepackCmd = process.platform === "win32" ? "corepack.cmd" : "corepack";
   const result = spawnSync(
-    "corepack",
+    corepackCmd,
     [
       "pnpm",
       "exec",
@@ -266,9 +267,10 @@ function main() {
   const projectRoot = process.cwd();
   const remoteVersions = listRemoteMigrationVersions(projectRoot, url);
   const workdir = createProductionWorkdir(projectRoot, remoteVersions);
+  const corepackCmd = process.platform === "win32" ? "corepack.cmd" : "corepack";
   try {
     const result = spawnSync(
-      "corepack",
+      corepackCmd,
       [
         "pnpm",
         "exec",
