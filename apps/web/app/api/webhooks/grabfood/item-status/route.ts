@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { timingSafeEqual } from "node:crypto";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
+import { getVNDateString } from "@comtammatu/shared/time";
 import {
   GRAB_MENU_MAPPING,
   normalizeMenuName,
@@ -83,9 +84,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const todayStr = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Asia/Ho_Chi_Minh",
-    }).format(new Date());
+    const todayStr = getVNDateString();
 
     // 3. Fetch menu limits and availability for branch via service-role enabled RPC
     const { data: limitsData, error: limitsError } = await supabase.rpc(
