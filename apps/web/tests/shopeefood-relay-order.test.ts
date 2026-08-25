@@ -58,6 +58,8 @@ const MOCK_DB_ITEMS = [
   { id: 2, name: "Sườn Cọng", base_price: 78000 },
   { id: 3, name: "Sườn Một Gang", base_price: 120000 },
   { id: 4, name: "Canh Khổ Qua", base_price: 30000 },
+  { id: 8, name: "Tóp Mỡ", base_price: 6000 },
+  { id: 29, name: "Dụng Cụ Mang Về", base_price: 3000 },
 ];
 
 test("ShopeeFood mapping: normalizeMenuName normalizes accents and case", () => {
@@ -107,7 +109,12 @@ test("ShopeeFood transformation: transforms real SPF-892 order accurately", () =
   assert.equal(lineItem1?.unit_price, 63000);
   assert.equal(lineItem1?.subtotal, 126000);
   assert.equal(lineItem1?.note, "Miếng sườn nướng cháy cạnh");
-  assert.equal(lineItem1?.modifiers.length, 2);
+  assert.equal(lineItem1?.modifiers.length, 0);
+  assert.equal(lineItem1?.sides.length, 2);
+  assert.deepEqual(lineItem1?.sides, [
+    { side_item_id: 29, name: "Dụng Cụ Mang Về", price: 3000, quantity: 2 },
+    { side_item_id: 8, name: "Tóp Mỡ", price: 6000, quantity: 2 },
+  ]);
 
   const lineItem2 = transformed.items[1];
   assert.equal(lineItem2?.menu_item_id, 4);

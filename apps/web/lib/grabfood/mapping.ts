@@ -45,9 +45,9 @@ export const GRAB_MENU_MAPPING: Record<string, GrabMappingItem> = {
   "VNITE2026082106443494069": { name: "Fanta Cam", defaultPrice: 25000, category: "Nước ngọt" },
 
   // Món thêm
-  "VNMOD20260819110228013409": { name: "Dụng cụ mang về", defaultPrice: 3000 },
-  "VNMOD20260821070648011245": { name: "Tóp mỡ", defaultPrice: 6000 },
-  "VNMOD20260819110649013214": { name: "Cơm thêm", defaultPrice: 6000 },
+  "VNMOD20260819110228013409": { name: "Dụng Cụ Mang Về", defaultPrice: 3000 },
+  "VNMOD20260821070648011245": { name: "Tóp Mỡ", defaultPrice: 6000 },
+  "VNMOD20260819110649013214": { name: "Cơm Tấm Thêm", defaultPrice: 6000 },
   "VNMOD20260819110119013328": { name: "Trứng", defaultPrice: 10000 },
   "VNMOD20260819110119020027": { name: "Chả", defaultPrice: 12000 },
   "VNMOD20260819110119033709": { name: "Bì", defaultPrice: 12000 },
@@ -135,7 +135,7 @@ export interface TransformedOrderForRpc {
     quantity: number;
     unit_price: number;
     modifiers: Array<{ name: string; price: number; modifier_id?: number | null }>;
-    sides: Array<{ name: string; price: number; quantity: number; side_item_id?: number | null }>;
+    sides: Array<{ name: string; price: number; quantity: number; side_item_id: number }>;
     subtotal: number;
     note: string | null;
   }>;
@@ -171,6 +171,45 @@ export function matchMenuItem(
   throw new Error(`Món "${grabItem.name}" (ID: ${grabItem.itemID || "N/A"}) chưa được ánh xạ trong thực đơn quán`);
 }
 
+const SIDE_NAME_ALIASES: Record<string, string> = {
+  "hop, muong, nia": "Dụng Cụ Mang Về",
+  "hop muong nia": "Dụng Cụ Mang Về",
+  "dung cu an uong": "Dụng Cụ Mang Về",
+  "dung cu mang ve": "Dụng Cụ Mang Về",
+  "top mo": "Tóp Mỡ",
+  "com them": "Cơm Tấm Thêm",
+  "trung": "Trứng",
+  "cha": "Chả",
+  "bi": "Bì",
+};
+
+/**
+ * Matches a side option by name against database MenuItems
+ */
+export function matchSideItem(
+  targetName: string,
+  dbItems: Array<{ id: number; name: string; base_price: number }>,
+): { id: number; name: string; base_price: number } | null {
+  const normalizedTarget = normalizeMenuName(targetName);
+  const alias = SIDE_NAME_ALIASES[normalizedTarget];
+  const target = alias ? normalizeMenuName(alias) : normalizedTarget;
+
+  const exact = dbItems.find(
+    (dbi) =>
+      normalizeMenuName(dbi.name) === target ||
+      dbi.name.toLowerCase() === target ||
+      normalizeMenuName(dbi.name) === normalizedTarget,
+  );
+  if (exact) return exact;
+
+  return (
+    dbItems.find((d) => {
+      const norm = normalizeMenuName(d.name);
+      return norm.includes(target) || target.includes(norm);
+    }) || null
+  );
+}
+
 /**
  * Transforms incoming Grab order payload into RPC-ready items structure
  */
@@ -181,7 +220,9 @@ export function transformGrabOrderPayload(
   const items = (grabOrder.itemInfo?.items || []).map((gi) => {
     const matched = matchMenuItem(gi, dbItems);
 
-    const modifiers: Array<{ name: string; price: number }> = [];
+    const sides: Array<{ name: string; price: number; quantity: number; side_item_id: number }> = [];
+    const unmatchedOptions: string[] = [];
+
     if (Array.isArray(gi.modifierGroups)) {
       for (const grp of gi.modifierGroups) {
         if (Array.isArray(grp.modifiers)) {
@@ -190,32 +231,50 @@ export function transformGrabOrderPayload(
             const price = parseInt(rawPrice, 10) || 0;
             const mappedMod = mod.modifierID ? GRAB_MENU_MAPPING[mod.modifierID] : null;
             const name = mappedMod?.name || mod.modifierName || grp.modifierGroupName || "Món thêm";
-            modifiers.push({ name, price });
+
+            const matchedSide = matchSideItem(name, dbItems);
+            if (matchedSide) {
+              sides.push({
+                side_item_id: matchedSide.id,
+                name: matchedSide.name,
+                price: price > 0 ? price : matchedSide.base_price,
+                quantity: mod.quantity || 1,
+              });
+            } else {
+              unmatchedOptions.push(name);
+            }
           }
         }
       }
     }
 
-    const modifierSum = modifiers.reduce((acc, m) => acc + m.price, 0);
-    const unitPrice = matched.base_price + modifierSum;
+    const sidesSum = sides.reduce((acc, s) => acc + s.price * s.quantity, 0);
+    const unitPrice = matched.base_price + sidesSum;
     const subtotal = unitPrice * (gi.quantity || 1);
+
+    const noteParts = [
+      gi.comment?.trim(),
+      unmatchedOptions.length > 0 ? `Tùy chọn: ${unmatchedOptions.join(", ")}` : null,
+    ].filter(Boolean);
 
     return {
       menu_item_id: matched.id,
       item_name: matched.name,
       quantity: gi.quantity || 1,
       unit_price: unitPrice,
-      modifiers: modifiers,
-      sides: [],
-      subtotal: subtotal,
-      note: gi.comment || null,
+      modifiers: [],
+      sides,
+      subtotal,
+      note: noteParts.length > 0 ? noteParts.join(" • ") : null,
     };
   });
 
   const eaterName = grabOrder.eater?.name || "Khách Grab";
   const eaterPhone = grabOrder.eater?.mobileNumber || "";
   const cutleryNote = grabOrder.cutlery === 2 ? " • Lấy muỗng đũa" : "";
-  const customerNote = `[GrabFood ${grabOrder.displayID}] ${eaterName} (${eaterPhone})${cutleryNote}`;
+  const eaterComment = grabOrder.eater?.comment?.trim();
+  const orderCommentNote = eaterComment ? ` • Note: ${eaterComment}` : "";
+  const customerNote = `[GrabFood ${grabOrder.displayID}] ${eaterName} (${eaterPhone})${cutleryNote}${orderCommentNote}`;
 
   const rawSubtotal = grabOrder.fare?.subTotalDisplay?.replace(/[^\d]/g, "") || "0";
   const rawTotal = grabOrder.fare?.totalDisplay?.replace(/[^\d]/g, "") || rawSubtotal;

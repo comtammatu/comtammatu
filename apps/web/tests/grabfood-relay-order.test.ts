@@ -74,6 +74,8 @@ const MOCK_DB_ITEMS = [
   { id: 2, name: "Sườn Cọng", base_price: 78000 },
   { id: 3, name: "Sườn Một Gang", base_price: 120000 },
   { id: 4, name: "Canh Khổ Qua", base_price: 30000 },
+  { id: 8, name: "Tóp Mỡ", base_price: 6000 },
+  { id: 29, name: "Dụng Cụ Mang Về", base_price: 3000 },
 ];
 
 test("GrabFood mapping: normalizeMenuName normalizes accents and case", () => {
@@ -116,7 +118,7 @@ test("GrabFood mapping: matchMenuItem throws explicit error on unknown unmapped 
   );
 });
 
-test("GrabFood transformation: transforms real GF-725 order accurately with platform payment", () => {
+test("GrabFood transformation: transforms real GF-725 order accurately with platform payment and sides mapping", () => {
   const transformed = transformGrabOrderPayload(MOCK_GRAB_ORDER_REAL, MOCK_DB_ITEMS);
 
   assert.equal(transformed.orderId, "001644320651-C8DYVFLKG2VUN2");
@@ -142,10 +144,66 @@ test("GrabFood transformation: transforms real GF-725 order accurately with plat
   assert.equal(lineItem?.subtotal, 63000);
   assert.equal(lineItem?.note, "Hi quán");
 
-  // Modifiers
-  assert.equal(lineItem?.modifiers.length, 2);
-  assert.deepEqual(lineItem?.modifiers, [
-    { name: "Dụng cụ mang về", price: 3000 },
-    { name: "Tóp mỡ", price: 6000 },
+  // Modifiers should be empty (converted to valid sides for RPC safety)
+  assert.equal(lineItem?.modifiers.length, 0);
+
+  // Sides should contain Dụng Cụ Mang Về and Tóp Mỡ
+  assert.equal(lineItem?.sides.length, 2);
+  assert.deepEqual(lineItem?.sides, [
+    { side_item_id: 29, name: "Dụng Cụ Mang Về", price: 3000, quantity: 1 },
+    { side_item_id: 8, name: "Tóp Mỡ", price: 6000, quantity: 1 },
   ]);
+});
+
+test("GrabFood transformation: includes eater comment in customerNote and item note correctly", () => {
+  const orderWithComment: GrabOrderRaw = {
+    ...MOCK_GRAB_ORDER_REAL,
+    eater: {
+      name: "Khách VIP",
+      mobileNumber: "0909999888",
+      comment: "Giao sảnh A giúp mình",
+    },
+  };
+
+  const transformed = transformGrabOrderPayload(orderWithComment, MOCK_DB_ITEMS);
+  assert.ok(transformed.customerNote.includes("[GrabFood GF-725]"));
+  assert.ok(transformed.customerNote.includes("Khách VIP"));
+  assert.ok(transformed.customerNote.includes("0909999888"));
+  assert.ok(transformed.customerNote.includes("Note: Giao sảnh A giúp mình"));
+});
+
+test("GrabFood transformation: supports standalone items (e.g. Bì ordered as a standalone dish)", () => {
+  const dbItemsWithBi = [
+    ...MOCK_DB_ITEMS,
+    { id: 10, name: "Bì", base_price: 12000 },
+  ];
+
+  const orderWithStandaloneBi: GrabOrderRaw = {
+    orderID: "001644320651-STANDALONE",
+    displayID: "GF-726",
+    merchant: { ID: "5-C8DTE75GUGJ3JT" },
+    eater: { name: "Khách Lẻ", mobileNumber: "+84 900 000 000" },
+    itemInfo: {
+      items: [
+        {
+          name: "Bì",
+          itemID: "VNITE20260818044418061788",
+          quantity: 2,
+          fare: { priceDisplay: "24.000", priceFloat: 24000 },
+        },
+      ],
+    },
+    fare: { subTotalDisplay: "24.000", totalDisplay: "24.000" },
+  };
+
+  const transformed = transformGrabOrderPayload(orderWithStandaloneBi, dbItemsWithBi);
+  assert.equal(transformed.items.length, 1);
+  const lineItem = transformed.items[0];
+  assert.equal(lineItem?.menu_item_id, 10);
+  assert.equal(lineItem?.item_name, "Bì");
+  assert.equal(lineItem?.quantity, 2);
+  assert.equal(lineItem?.unit_price, 12000);
+  assert.equal(lineItem?.subtotal, 24000);
+  assert.equal(lineItem?.modifiers.length, 0);
+  assert.equal(lineItem?.sides.length, 0); // Standalone item has no sides
 });
