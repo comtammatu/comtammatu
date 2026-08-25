@@ -3,30 +3,31 @@ import { z } from "zod";
 import { timingSafeEqual } from "node:crypto";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import {
-  transformGrabOrderPayload,
-  type GrabOrderRaw,
-} from "@lib/grabfood/mapping";
+  transformShopeeOrderPayload,
+  type ShopeeOrderRaw,
+} from "@lib/shopeefood/mapping";
 
-const grabRelaySchema = z.object({
+const shopeeRelaySchema = z.object({
   ping: z.boolean().optional(),
   branch_id: z.coerce.number().int().positive().optional(),
-  merchant_id: z.string().optional(),
+  restaurant_id: z.union([z.string(), z.number()]).optional(),
   order: z
     .object({
-      orderID: z.string(),
-      displayID: z.string(),
+      orderId: z.union([z.string(), z.number()]).optional(),
+      orderCode: z.string().optional(),
+      displayId: z.string().optional(),
     })
     .passthrough()
     .optional(),
 });
 
 function verifyRelaySecret(request: NextRequest): boolean {
-  const expectedSecret = process.env.GRAB_RELAY_SECRET;
+  const expectedSecret = process.env.SHOPEE_RELAY_SECRET;
   if (!expectedSecret) {
     // In local development or staging without configured secret, allow requests
     return true;
   }
-  const providedSecret = request.headers.get("x-grab-relay-secret") || "";
+  const providedSecret = request.headers.get("x-shopee-relay-secret") || "";
   if (!providedSecret) return false;
 
   const expectedBuf = Buffer.from(expectedSecret, "utf-8");
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json().catch(() => null);
-    const parsed = grabRelaySchema.safeParse(body);
+    const parsed = shopeeRelaySchema.safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json(
@@ -60,21 +61,21 @@ export async function POST(request: NextRequest) {
     if (parsed.data.ping) {
       return NextResponse.json({
         success: true,
-        message: "GrabFood POS Relay API is online and ready",
+        message: "ShopeeFood POS Relay API is online and ready",
         timestamp: Date.now(),
       });
     }
 
     if (!parsed.data.order) {
       return NextResponse.json(
-        { success: false, error: "Thiếu dữ liệu đơn hàng Grab" },
+        { success: false, error: "Thiếu dữ liệu đơn hàng" },
         { status: 400 },
       );
     }
 
-    const grabOrder = parsed.data.order as unknown as GrabOrderRaw;
+    const shopeeOrder = parsed.data.order as unknown as ShopeeOrderRaw;
     const requestedBranchId = parsed.data.branch_id || 1;
-    const merchantId = parsed.data.merchant_id || grabOrder.merchant?.ID;
+    const restaurantId = parsed.data.restaurant_id || shopeeOrder.restaurantId;
 
     const supabase = createServiceClient();
 
@@ -87,18 +88,25 @@ export async function POST(request: NextRequest) {
 
     if (branchErr || !branch) {
       return NextResponse.json(
-        { success: false, error: "Không tìm thấy chi nhánh" },
+        { success: false, error: `Không tìm thấy chi nhánh với mã ${requestedBranchId}` },
         { status: 404 },
       );
     }
 
-    // 3. Check if order was already processed (deduplication)
+    const displayRef =
+      shopeeOrder.displayId ||
+      shopeeOrder.orderCode ||
+      (shopeeOrder.orderId ? String(shopeeOrder.orderId) : "SPF-UNKNOWN");
+
+    // 3. Check if order was already processed (idempotency by Shopee order ref)
     const { data: existingOrder } = await supabase
       .from("orders")
       .select("id, order_number, status, payment_status")
       .eq("tenant_id", branch.tenant_id)
       .eq("branch_id", branch.id)
-      .ilike("note", `[GrabFood ${grabOrder.displayID}]%`)
+      .eq("delivery_platform", "shopee")
+      .ilike("external_order_ref", displayRef)
+      .limit(1)
       .maybeSingle();
 
     if (existingOrder) {
@@ -108,7 +116,7 @@ export async function POST(request: NextRequest) {
         message: "Đơn hàng này đã được tiếp nhận trước đó",
         order_id: existingOrder.id,
         order_number: existingOrder.order_number,
-        display_id: grabOrder.displayID,
+        display_id: displayRef,
       });
     }
 
@@ -119,26 +127,16 @@ export async function POST(request: NextRequest) {
       .eq("tenant_id", branch.tenant_id)
       .eq("is_active", true);
 
-    if (menuErr || !dbMenuItems) {
-      console.error("[Grab POS Relay] menu query failed:", menuErr);
+    if (menuErr) {
+      console.error("[ShopeeFood POS Relay] Menu fetch error:", menuErr.code);
       return NextResponse.json(
         { success: false, error: "Lỗi tải thực đơn chi nhánh" },
         { status: 500 },
       );
     }
 
-    // 5. Transform Grab payload to RPC-ready items structure
-    let transformed;
-    try {
-      transformed = transformGrabOrderPayload(grabOrder, dbMenuItems);
-    } catch (mappingErr) {
-      const msg = mappingErr instanceof Error ? mappingErr.message : "Lỗi ánh xạ món ăn";
-      console.warn("[Grab POS Relay] mapping error:", msg);
-      return NextResponse.json(
-        { success: false, error: msg },
-        { status: 422 },
-      );
-    }
+    // 5. Transform Shopee payload to RPC-ready items structure
+    const transformed = transformShopeeOrderPayload(shopeeOrder, dbMenuItems ?? []);
 
     // 6. Find a staff profile to act as created_by
     const { data: staffProfile } = await supabase
@@ -160,7 +158,6 @@ export async function POST(request: NextRequest) {
     const createdBy = staffProfile.id;
 
     // 7. Create order via create_order RPC
-    // Note: delivery platform must be 'grab' (allowed: 'grab', 'shopee', 'be', 'green_sm')
     const { data: rpcResult, error: rpcError } = await supabase.rpc("create_order", {
       p_tenant_id: branch.tenant_id,
       p_branch_id: branch.id,
@@ -171,12 +168,12 @@ export async function POST(request: NextRequest) {
       p_pos_session_id: undefined,
       p_note: transformed.customerNote,
       p_idempotency_key: transformed.idempotencyKey,
-      p_delivery_platform: "grab",
-      p_external_order_ref: grabOrder.displayID,
+      p_delivery_platform: "shopee",
+      p_external_order_ref: displayRef,
     });
 
     if (rpcError) {
-      console.error("[Grab POS Relay] create_order RPC error:", rpcError);
+      console.error("[ShopeeFood POS Relay] create_order RPC error:", rpcError.code);
       return NextResponse.json(
         {
           success: false,
@@ -187,11 +184,11 @@ export async function POST(request: NextRequest) {
     }
 
     const orderId = (rpcResult as { order_id?: number })?.order_id;
-    const orderNumber = (rpcResult as { order_number?: string })?.order_number || `GH-${grabOrder.displayID}`;
+    const orderNumber = (rpcResult as { order_number?: string })?.order_number || `GH-${displayRef}`;
 
-    // 8. Update payment status to paid / platform (payment_method CHECK: cash | vietqr | platform)
+    // 8. Update payment status to paid / platform
     if (orderId) {
-      const { error: payErr } = await supabase
+      await supabase
         .from("orders")
         .update({
           payment_status: "paid",
@@ -200,27 +197,23 @@ export async function POST(request: NextRequest) {
           cash_change: 0,
         })
         .eq("id", orderId);
-
-      if (payErr) {
-        console.error("[Grab POS Relay] Failed updating payment status:", payErr);
-      }
     }
 
     return NextResponse.json({
       success: true,
       order_id: orderId,
       order_number: orderNumber,
-      display_id: grabOrder.displayID,
+      display_id: displayRef,
       items_count: transformed.items.length,
       total_amount: transformed.totalAmount,
-      merchant_id: merchantId,
+      restaurant_id: restaurantId,
     });
   } catch (error) {
-    console.error("[Grab POS Relay] Unexpected error:", error);
+    console.error("[ShopeeFood POS Relay] Unexpected error:", error);
     return NextResponse.json(
       {
         success: false,
-        error: "Lỗi hệ thống khi tiếp nhận đơn Grab",
+        error: "Lỗi hệ thống khi tiếp nhận đơn ShopeeFood",
       },
       { status: 500 },
     );

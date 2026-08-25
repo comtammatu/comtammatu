@@ -1,5 +1,5 @@
 -- Migration: allow service_role to execute create_order and create_order_with_daily_limit_hold
--- Enables webhook relays (GrabFood, ShopeeFood, etc.) to inject delivery orders via serviceServiceClient().
+-- Enables webhook relays (GrabFood, ShopeeFood, etc.) to inject delivery orders via createServiceClient().
 
 CREATE OR REPLACE FUNCTION public.create_order(
   p_tenant_id bigint,
