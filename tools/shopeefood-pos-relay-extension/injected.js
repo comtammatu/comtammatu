@@ -7,6 +7,39 @@
   let storeId = '';
   let restaurantName = '';
 
+  // Auth-expiry signaling: consecutive 401/403s on platform API traffic mean
+  // the merchant session died; the badge must say so instead of staying green.
+  let consecutiveAuthFailures = 0;
+  let authExpired = false;
+  const AUTH_FAILURE_THRESHOLD = 2;
+
+  function isPlatformApiUrl(url) {
+    return (
+      typeof url === 'string' &&
+      (url.includes('partner.shopee.vn') ||
+        url.includes('merchant.shopeefood.vn') ||
+        url.includes('gmerchant.deliverynow.vn'))
+    );
+  }
+
+  function noteAuthFailure(status, url) {
+    if (status !== 401 && status !== 403) return;
+    consecutiveAuthFailures += 1;
+    if (!authExpired && consecutiveAuthFailures >= AUTH_FAILURE_THRESHOLD) {
+      authExpired = true;
+      console.warn(`[Shopee POS Relay] Platform API returned ${status}; session appears expired (${url})`);
+      dispatchOrderEvent('AUTH_EXPIRED', { status });
+    }
+  }
+
+  function noteAuthSuccess() {
+    consecutiveAuthFailures = 0;
+    if (authExpired) {
+      authExpired = false;
+      dispatchOrderEvent('AUTH_RECOVERED', {});
+    }
+  }
+
   function dispatchOrderEvent(type, data) {
     window.postMessage(
       {
@@ -190,6 +223,11 @@
 
     const response = await originalFetch.apply(this, args);
 
+    if (isPlatformApiUrl(url)) {
+      if (response.ok) noteAuthSuccess();
+      else noteAuthFailure(response.status, url);
+    }
+
     try {
       if (
         url.includes('/order') ||
@@ -225,8 +263,12 @@
 
   XMLHttpRequest.prototype.send = function (...args) {
     this.addEventListener('load', function () {
+      const url = this._url || '';
+      if (isPlatformApiUrl(url)) {
+        if (this.status >= 200 && this.status < 300) noteAuthSuccess();
+        else noteAuthFailure(this.status, url);
+      }
       try {
-        const url = this._url || '';
         if (
           url.includes('/order') ||
           url.includes('/store') ||

@@ -86,7 +86,12 @@
         const response = await fetch(`${backendUrl}/api/webhooks/shopeefood/item-status?branch_id=${branchId}`, {
           headers,
         });
-        if (!response.ok) return;
+        if (!response.ok) {
+          if (response.status === 401) {
+            updateBadge('⚠️ POS từ chối xác thực (401) — kiểm tra lại Relay Secret', false);
+          }
+          return;
+        }
 
         const data = await response.json();
         if (data.success && Array.isArray(data.items)) {
@@ -135,6 +140,16 @@
     }
 
     const { type, data } = event.data;
+
+    if (type === 'AUTH_EXPIRED') {
+      updateBadge('⚠️ Phiên Shopee hết hạn — mở lại hoặc đăng nhập lại Shopee Partner', false);
+      return;
+    }
+
+    if (type === 'AUTH_RECOVERED') {
+      updateBadge('✅ Đã kết nối lại Shopee — tiếp tục trực đơn');
+      return;
+    }
 
     if (type === 'STORE_INFO' && data?.restaurantName) {
       updateBadge(`Đã kết nối: ${data.restaurantName}`);
@@ -193,7 +208,11 @@
           } else {
             const errText = await res.text();
             console.error('[Shopee POS Relay] Backend rejected order:', errText);
-            updateBadge(`⚠️ Lỗi gửi ${displayId} sang POS: ${res.status}`, false);
+            const errMsg =
+              res.status === 401
+                ? 'POS từ chối xác thực (401) — kiểm tra lại Relay Secret'
+                : `Mã ${res.status}`;
+            updateBadge(`⚠️ Lỗi gửi ${displayId} sang POS: ${errMsg}`, false);
           }
         } catch (err) {
           console.error('[Shopee POS Relay] Failed to reach POS backend:', err);

@@ -85,7 +85,12 @@
         const response = await fetch(`${backendUrl}/api/webhooks/grabfood/item-status?branch_id=${branchId}`, {
           headers,
         });
-        if (!response.ok) return;
+        if (!response.ok) {
+          if (response.status === 401) {
+            updateBadge('⚠️ POS từ chối xác thực (401) — kiểm tra lại Relay Secret', false);
+          }
+          return;
+        }
 
         const data = await response.json();
         if (data.success && Array.isArray(data.items)) {
@@ -149,6 +154,16 @@
 
     const { type, data } = event.data;
 
+    if (type === 'AUTH_EXPIRED') {
+      updateBadge('⚠️ Phiên Grab hết hạn — mở lại hoặc đăng nhập lại Grab Merchant', false);
+      return;
+    }
+
+    if (type === 'AUTH_RECOVERED') {
+      updateBadge('✅ Đã kết nối lại Grab — tiếp tục trực đơn');
+      return;
+    }
+
     if (type === 'ORDER_DETAIL' && data?.order) {
       const order = data.order;
       console.log(`[Grab POS Relay] Relaying order ${order.displayID} to POS backend...`);
@@ -191,7 +206,10 @@
             chrome.storage.local.set({ recentOrders: recent.slice(0, 10), lastSyncTime: Date.now() });
           } else {
             const errJson = await res.json().catch(() => ({}));
-            const errMsg = errJson.error || `Mã ${res.status}`;
+            const errMsg =
+              res.status === 401
+                ? 'POS từ chối xác thực (401) — kiểm tra lại Relay Secret'
+                : errJson.error || `Mã ${res.status}`;
             console.error('[Grab POS Relay] Backend rejected order:', errMsg);
             updateBadge(`⚠️ Lỗi gửi ${order.displayID}: ${errMsg}`, false);
           }
