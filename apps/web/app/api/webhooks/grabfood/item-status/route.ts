@@ -69,12 +69,32 @@ export async function GET(request: NextRequest) {
     const branchId = parsed.data.branch_id;
     const supabase = createServiceClient();
 
-    // 2. Fetch menu limits and availability for branch via RPC
+    // 2. Fetch branch and tenant
+    const { data: branch, error: branchErr } = await supabase
+      .from("branches")
+      .select("id, tenant_id")
+      .eq("id", branchId)
+      .single();
+
+    if (branchErr || !branch) {
+      return NextResponse.json(
+        { success: false, error: "Không tìm thấy chi nhánh" },
+        { status: 404, headers: CORS_HEADERS },
+      );
+    }
+
+    const todayStr = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Ho_Chi_Minh",
+    }).format(new Date());
+
+    // 3. Fetch menu limits and availability for branch via service-role enabled RPC
     const { data: limitsData, error: limitsError } = await supabase.rpc(
-      "list_branch_menu_daily_limits",
+      "branch_menu_limit_availability",
       {
-        p_branch_id: branchId,
-        p_limit_date: undefined,
+        p_tenant_id: branch.tenant_id,
+        p_branch_id: branch.id,
+        p_limit_date: todayStr,
+        p_stock_gate_enabled: true,
       },
     );
 
