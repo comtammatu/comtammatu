@@ -2,8 +2,10 @@
 document.addEventListener('DOMContentLoaded', () => {
   const backendUrlInput = document.getElementById('backendUrl');
   const branchIdInput = document.getElementById('branchId');
+  const relaySecretInput = document.getElementById('relaySecret');
   const btnSave = document.getElementById('btnSave');
   const btnPing = document.getElementById('btnPing');
+  const btnSyncMenu = document.getElementById('btnSyncMenu');
   const toast = document.getElementById('toast');
   const orderList = document.getElementById('orderList');
 
@@ -13,13 +15,25 @@ document.addEventListener('DOMContentLoaded', () => {
     toast.style.display = 'block';
     setTimeout(() => {
       toast.style.display = 'none';
-    }, 3000);
+    }, 3500);
+  }
+
+  function cleanUrlAndExtractBranch(rawUrl) {
+    let url = rawUrl.trim().replace(/\/+$/, '');
+    const match = url.match(/^(https?:\/\/[^\/]+)(?:\/br\/(\d+)(?:\/.*)?)?$/i);
+    if (match && match[1]) {
+      const origin = match[1];
+      const extractedBranchId = match[2] ? parseInt(match[2], 10) : null;
+      return { origin, extractedBranchId };
+    }
+    return { origin: url, extractedBranchId: null };
   }
 
   // Load existing settings
-  chrome.storage.local.get(['backendUrl', 'branchId', 'recentOrders'], (res) => {
+  chrome.storage.local.get(['backendUrl', 'branchId', 'relaySecret', 'recentOrders'], (res) => {
     backendUrlInput.value = res.backendUrl || 'http://localhost:3000';
     branchIdInput.value = res.branchId || '1';
+    relaySecretInput.value = res.relaySecret || '';
 
     if (Array.isArray(res.recentOrders) && res.recentOrders.length > 0) {
       renderOrders(res.recentOrders);
@@ -28,33 +42,75 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Save settings
   btnSave.addEventListener('click', () => {
-    const backendUrl = backendUrlInput.value.trim().replace(/\/+$/, '');
-    const branchId = parseInt(branchIdInput.value, 10) || 1;
+    const parsed = cleanUrlAndExtractBranch(backendUrlInput.value);
+    const backendUrl = parsed.origin;
+    let branchId = parseInt(branchIdInput.value, 10);
+    if (isNaN(branchId) || branchId <= 0) {
+      branchId = parsed.extractedBranchId || 1;
+    }
 
-    chrome.storage.local.set({ backendUrl, branchId }, () => {
-      showToast('Đã lưu cấu hình thành công!');
+    backendUrlInput.value = backendUrl;
+    branchIdInput.value = branchId;
+    const relaySecret = relaySecretInput.value.trim();
+
+    chrome.storage.local.set({ backendUrl, branchId, relaySecret }, () => {
+      showToast(`Đã lưu cấu hình (Chi nhánh ${branchId}) thành công!`);
     });
   });
 
   // Ping test
   btnPing.addEventListener('click', async () => {
-    const backendUrl = backendUrlInput.value.trim().replace(/\/+$/, '');
+    const parsed = cleanUrlAndExtractBranch(backendUrlInput.value);
+    const backendUrl = parsed.origin;
+    const relaySecret = relaySecretInput.value.trim();
+
     showToast('Đang kiểm tra kết nối...', true);
     try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (relaySecret) {
+        headers['x-shopee-relay-secret'] = relaySecret;
+      }
+
       const res = await fetch(`${backendUrl}/api/webhooks/shopeefood/relay`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ ping: true }),
       });
+
       if (res.ok) {
         showToast('✅ Kết nối POS thành công!', true);
+      } else if (res.status === 401) {
+        showToast('❌ Sai Khóa bảo mật Relay Secret (401)', false);
       } else {
-        showToast(`⚠️ Server phản hồi mã lỗi: ${res.status}`, false);
+        showToast(`⚠️ Server phản hồi mã: ${res.status}`, false);
       }
-    } catch (e) {
-      showToast('❌ Không thể kết nối tới POS URL', false);
+    } catch {
+      showToast(`❌ Không thể kết nối tới ${backendUrl}`, false);
     }
   });
+
+  // Full Menu Sync trigger
+  if (btnSyncMenu) {
+    btnSyncMenu.addEventListener('click', async () => {
+      showToast('Đang kích hoạt đồng bộ Menu sang Shopee...', true);
+
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        const currentTab = tabs[0];
+        if (!currentTab || !currentTab.url?.includes('merchant.shopeefood.vn') && !currentTab.url?.includes('shopeefood.vn')) {
+          showToast('⚠️ Vui lòng mở tab ShopeeFood Merchant để đồng bộ!', false);
+          return;
+        }
+
+        chrome.tabs.sendMessage(currentTab.id, { action: 'FORCE_FULL_SYNC' }, (response) => {
+          if (chrome.runtime.lastError) {
+            showToast('⚠️ Không gửi được lệnh sang trang Shopee (vui lòng reload tab)', false);
+          } else if (response?.success) {
+            showToast('✅ Đã kích hoạt đồng bộ Menu thành công!', true);
+          }
+        });
+      });
+    });
+  }
 
   function renderOrders(orders) {
     orderList.innerHTML = '';

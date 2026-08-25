@@ -72,12 +72,20 @@
 
   // Poll POS Backend for Menu Limits / Item Status changes
   async function pollPosItemStatus() {
-    chrome.storage.local.get(['backendUrl', 'branchId'], async (res) => {
+    chrome.storage.local.get(['backendUrl', 'branchId', 'relaySecret'], async (res) => {
       const backendUrl = res.backendUrl || 'http://localhost:3000';
       const branchId = res.branchId || 1;
+      const relaySecret = res.relaySecret || '';
 
       try {
-        const response = await fetch(`${backendUrl}/api/webhooks/shopeefood/item-status?branch_id=${branchId}`);
+        const headers = {};
+        if (relaySecret) {
+          headers['x-shopee-relay-secret'] = relaySecret;
+        }
+
+        const response = await fetch(`${backendUrl}/api/webhooks/shopeefood/item-status?branch_id=${branchId}`, {
+          headers,
+        });
         if (!response.ok) return;
 
         const data = await response.json();
@@ -144,16 +152,22 @@
       console.log(`[Shopee POS Relay] Relaying order ${displayId} to POS backend...`);
       updateBadge(`Đang chuyển đơn ${displayId} sang KDS...`);
 
-      chrome.storage.local.get(['backendUrl', 'branchId', 'recentOrders'], async (result) => {
+      chrome.storage.local.get(['backendUrl', 'branchId', 'relaySecret', 'recentOrders'], async (result) => {
         const backendUrl = result.backendUrl || 'http://localhost:3000';
         const branchId = result.branchId || 1;
+        const relaySecret = result.relaySecret || '';
 
         try {
+          const headers = {
+            'Content-Type': 'application/json',
+          };
+          if (relaySecret) {
+            headers['x-shopee-relay-secret'] = relaySecret;
+          }
+
           const res = await fetch(`${backendUrl}/api/webhooks/shopeefood/relay`, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers,
             body: JSON.stringify({
               order: order,
               branch_id: branchId,

@@ -24,7 +24,10 @@ const grabRelaySchema = z.object({
 function verifyRelaySecret(request: NextRequest): boolean {
   const expectedSecret = process.env.GRAB_RELAY_SECRET;
   if (!expectedSecret) {
-    // In local development or staging without configured secret, allow requests
+    if (process.env.NODE_ENV === "production") {
+      console.error("[Grab POS Relay] GRAB_RELAY_SECRET is not configured in production");
+      return false;
+    }
     return true;
   }
   const providedSecret = request.headers.get("x-grab-relay-secret") || "";
@@ -76,6 +79,7 @@ export async function POST(request: NextRequest) {
     const grabOrder = parsed.data.order as unknown as GrabOrderRaw;
     const requestedBranchId = parsed.data.branch_id || 1;
     const merchantId = parsed.data.merchant_id || grabOrder.merchant?.ID;
+    const sanitizedDisplayId = (grabOrder.displayID || "").replace(/[^A-Za-z0-9_-]/g, "");
 
     const supabase = createServiceClient();
 
@@ -100,8 +104,7 @@ export async function POST(request: NextRequest) {
       .eq("tenant_id", branch.tenant_id)
       .eq("branch_id", branch.id)
       .eq("delivery_platform", "grab")
-      .or(`external_order_ref.eq.${grabOrder.displayID},note.ilike.[GrabFood ${grabOrder.displayID}]%`)
-      .neq("status", "cancelled")
+      .eq("external_order_ref", sanitizedDisplayId || grabOrder.displayID)
       .limit(1)
       .maybeSingle();
 

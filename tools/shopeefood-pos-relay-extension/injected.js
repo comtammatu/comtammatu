@@ -249,8 +249,8 @@
   // API Call: Sync Available Status (1: Có bán, 2: Hết hàng hôm nay)
   async function setShopeeItemAvailableStatus(itemId, availableStatus) {
     try {
-      console.log(`[Shopee POS Relay] Request to set item ${itemId} -> status ${availableStatus}`);
-      dispatchOrderEvent('SYNC_STATUS_RESULT', { itemId, availableStatus, success: true });
+      console.log(`[Shopee POS Relay] Request to set item ${itemId} -> status ${availableStatus} (pending live merchant dish ID mapping)`);
+      dispatchOrderEvent('SYNC_STATUS_RESULT', { itemId, availableStatus, success: false, pendingMapping: true });
     } catch (err) {
       console.error(`[Shopee POS Relay] Failed to update item status for ${itemId}:`, err);
     }
@@ -259,8 +259,8 @@
   // API Call: Sync Stock / Daily Limit
   async function setShopeeItemStock(itemId, currentStock) {
     try {
-      console.log(`[Shopee POS Relay] Request to set item ${itemId} -> stock ${currentStock}`);
-      dispatchOrderEvent('SYNC_STOCK_RESULT', { itemId, currentStock, success: true });
+      console.log(`[Shopee POS Relay] Request to set item ${itemId} -> stock ${currentStock} (pending live merchant dish ID mapping)`);
+      dispatchOrderEvent('SYNC_STOCK_RESULT', { itemId, currentStock, success: false, pendingMapping: true });
     } catch (err) {
       console.error(`[Shopee POS Relay] Failed to update stock for ${itemId}:`, err);
     }

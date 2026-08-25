@@ -15,6 +15,10 @@ const querySchema = z.object({
 function verifyRelaySecret(request: NextRequest): boolean {
   const expectedSecret = process.env.SHOPEE_RELAY_SECRET;
   if (!expectedSecret) {
+    if (process.env.NODE_ENV === "production") {
+      console.error("[Shopee POS Relay] SHOPEE_RELAY_SECRET is not configured in production");
+      return false;
+    }
     return true;
   }
   const providedSecret = request.headers.get("x-shopee-relay-secret") || "";

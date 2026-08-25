@@ -7,15 +7,7 @@
     "storage"
   ],
   "host_permissions": [
-    "https://partner.shopee.vn/*",
-    "https://partner.shopeefood.vn/*",
-    "https://merchant.shopeefood.vn/*",
-    "https://*.foodypos.com/*",
-    "https://*.foody.vn/*",
-    "https://*.deliverynow.vn/*",
-    "https://gmerchant.deliverynow.vn/*",
-    "http://localhost:3000/*",
-    "https://*.vercel.app/*"
+    "<all_urls>"
   ],
   "action": {
     "default_popup": "popup.html",

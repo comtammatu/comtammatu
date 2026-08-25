@@ -153,9 +153,18 @@
     <input type="number" id="branchId" placeholder="1">
   </div>
 
+  <div class="field">
+    <label for="relaySecret">Khóa bảo mật (Relay Secret):</label>
+    <input type="password" id="relaySecret" placeholder="Nhập khóa bảo mật (nếu có)">
+  </div>
+
   <div class="btn-group">
     <button class="btn-primary" id="btnSave">Lưu Cài Đặt</button>
-    <button class="btn-secondary" id="btnPing">Test Kết Nối</button>
+    <button class="btn-secondary" id="btnPing">Kiểm tra kết nối</button>
+  </div>
+
+  <div style="margin-top: 8px;">
+    <button class="btn-primary" id="btnSyncMenu" style="width: 100%; background: #0284c7; padding: 7px; font-size: 11px;">🔄 Đồng bộ toàn bộ Menu sang Shopee</button>
   </div>
 
   <div id="toast"></div>

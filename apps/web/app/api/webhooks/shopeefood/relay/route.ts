@@ -25,7 +25,10 @@ const shopeeRelaySchema = z.object({
 function verifyRelaySecret(request: NextRequest): boolean {
   const expectedSecret = process.env.SHOPEE_RELAY_SECRET;
   if (!expectedSecret) {
-    // In local development or staging without configured secret, allow requests
+    if (process.env.NODE_ENV === "production") {
+      console.error("[Shopee POS Relay] SHOPEE_RELAY_SECRET is not configured in production");
+      return false;
+    }
     return true;
   }
   const providedSecret = request.headers.get("x-shopee-relay-secret") || "";
@@ -98,6 +101,7 @@ export async function POST(request: NextRequest) {
       shopeeOrder.displayId ||
       shopeeOrder.orderCode ||
       (shopeeOrder.orderId ? String(shopeeOrder.orderId) : "SPF-UNKNOWN");
+    const sanitizedDisplayRef = displayRef.replace(/[^A-Za-z0-9_-]/g, "");
 
     // 3. Check if order was already processed or manually entered on POS (deduplication)
     const { data: existingOrder } = await supabase
@@ -106,8 +110,7 @@ export async function POST(request: NextRequest) {
       .eq("tenant_id", branch.tenant_id)
       .eq("branch_id", branch.id)
       .eq("delivery_platform", "shopee")
-      .or(`external_order_ref.eq.${displayRef},note.ilike.[ShopeeFood ${displayRef}]%`)
-      .neq("status", "cancelled")
+      .eq("external_order_ref", sanitizedDisplayRef || displayRef)
       .limit(1)
       .maybeSingle();
 
