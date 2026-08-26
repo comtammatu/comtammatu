@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useController, useFieldArray, useForm, type Control } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { X as IconX } from "lucide-react";
+import { Download as IconDownload, X as IconX } from "lucide-react";
 import { z } from "zod";
 import { ACTIONS_VI, FORM_VI, PROMOTIONS_VI } from "@comtammatu/shared/messages";
 import { formatPercent, formatVND } from "@comtammatu/shared/format";
@@ -64,10 +64,12 @@ import {
   AppSection,
   DocumentFormFrame,
 } from "@/components/surface";
+import { buildSemicolonCsv, downloadSemicolonCsv } from "@/_lib/export-csv";
 import {
   PROMOTION_DOW_LABELS,
   PROMOTION_KINDS,
   PROMOTION_STATUSES,
+  promotionCodeStatusLabel,
   promotionKindLabel,
   promotionStatusLabel,
   type PromotionKind,
@@ -516,6 +518,28 @@ export function PromotionForm({
     });
   }
 
+  function handleExportCsv() {
+    if (codes.length === 0) return;
+    const sanitizedName = (initial.name ?? "voucher")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-");
+    const filename = `voucher-${sanitizedName}-${getVNDateString()}`;
+    const csv = buildSemicolonCsv({
+      signatureLines: [`Chiến dịch: ${initial.name ?? ""}`],
+      header: ["STT", "Mã voucher", "Loại", "Mệnh giá", "Trạng thái"],
+      rows: codes.map((c, idx) => [
+        idx + 1,
+        c.code,
+        c.kind,
+        c.faceValue ?? 0,
+        promotionCodeStatusLabel(c.status),
+      ]),
+    });
+    downloadSemicolonCsv(filename, csv);
+    toast.success(PROMOTIONS_VI.exportSuccess);
+  }
+
   const codeColumns: DataTableColumn<PromotionFormCode>[] = [
     {
       key: "code",
@@ -943,13 +967,26 @@ export function PromotionForm({
                 />
               </FormField>
             </div>
-            <ResponsiveActionButton
-              type="button"
-              onClick={handleIssue}
-              disabled={isPending}
-            >
-              {PROMOTIONS_VI.issueAction}
-            </ResponsiveActionButton>
+            <div className="flex flex-wrap gap-2">
+              <ResponsiveActionButton
+                type="button"
+                onClick={handleIssue}
+                disabled={isPending}
+              >
+                {PROMOTIONS_VI.issueAction}
+              </ResponsiveActionButton>
+              {codes.length > 0 ? (
+                <ResponsiveActionButton
+                  type="button"
+                  variant="outline"
+                  onClick={handleExportCsv}
+                  disabled={isPending}
+                >
+                  <IconDownload data-icon="inline-start" />
+                  {PROMOTIONS_VI.exportCsvAction}
+                </ResponsiveActionButton>
+              ) : null}
+            </div>
             {codes.length === 0 ? (
               <AppEmptyState
                 compact

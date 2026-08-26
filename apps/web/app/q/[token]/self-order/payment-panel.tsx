@@ -19,18 +19,11 @@ import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@comtammatu/ui/components/dropdown-menu";
-import {
   Field,
   FieldDescription,
   FieldLabel,
 } from "@comtammatu/ui/components/field";
+import { Frame } from "@comtammatu/ui/components/frame";
 import { Input } from "@comtammatu/ui/components/input";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Spinner } from "@comtammatu/ui/components/spinner";
@@ -166,8 +159,8 @@ function BankAppLauncher({
 
   return (
     <>
-      <div className="flex flex-col gap-2.5">
-        <div className="flex items-center justify-between px-0.5">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between px-1">
           <span className="text-xs font-semibold text-foreground">
             {SELF_ORDER_VI.quickBankTitle}
           </span>
@@ -175,7 +168,7 @@ function BankAppLauncher({
             type="button"
             variant="ghost"
             size="xs"
-            className="h-auto p-0 text-xs font-medium text-primary hover:bg-transparent hover:text-primary/80"
+            className="h-auto p-0 text-xs font-medium text-primary hover:bg-transparent hover:text-primary"
             onClick={() => setDrawerOpen(true)}
           >
             {SELF_ORDER_VI.allBankApps}
@@ -201,12 +194,12 @@ function BankAppLauncher({
                 key={bank.id}
                 variant="outline"
                 size="touch"
-                className="flex h-auto min-w-[70px] shrink-0 flex-col items-center gap-1.5 rounded-xl border-border/60 bg-card p-2 text-center shadow-2xs transition-colors hover:border-primary/50 hover:bg-muted/40 active:scale-95"
+                className="flex h-auto w-18 shrink-0 flex-col items-center gap-1 bg-card p-2 text-center shadow-2xs transition-colors hover:border-primary hover:bg-muted active:scale-95"
                 render={<a href={href} />}
                 onClick={() => onBankAppHandoff?.()}
               >
                 <BankLogoImage src={bank.logoUrl} alt={bank.name} />
-                <span className="max-w-[62px] truncate text-3xs font-semibold text-foreground">
+                <span className="max-w-16 truncate text-3xs font-semibold text-foreground">
                   {bank.shortName || bank.name}
                 </span>
               </Button>
@@ -388,18 +381,18 @@ export function PaymentPanel({
 
               {hasRecoverableVietQr ? (
                 <div className="flex flex-col gap-3">
-                  <div className="flex flex-col items-center gap-2.5 rounded-xl border border-border/60 bg-card p-4 text-center shadow-xs">
+                  <Frame className="flex flex-col items-center gap-2 bg-card p-4 text-center shadow-xs">
                     <div className="flex w-full items-center justify-between">
                       <div className="flex flex-col items-start text-left">
                         <span className="text-3xs font-medium text-muted-foreground uppercase tracking-wider">
                           {SELF_ORDER_VI.paymentAmountLabel}
                         </span>
-                        <span className="font-mono text-2xl font-bold tracking-tight tabular-nums text-primary">
+                        <span className="font-mono text-2xl font-semibold tracking-tight tabular-nums text-primary">
                           {formatVND(activePaymentRequest.amount)}
                         </span>
                       </div>
                       {expiryLabel ? (
-                        <div className="inline-flex items-center gap-1.5 rounded-full bg-muted/60 px-2.5 py-1 text-2xs text-muted-foreground">
+                        <div className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-2xs text-muted-foreground">
                           <IconClock className="size-3 text-primary shrink-0" aria-hidden />
                           <span>{expiryLabel}</span>
                         </div>
@@ -411,7 +404,7 @@ export function PaymentPanel({
                       )}
                     </div>
 
-                    <div className="my-0.5 rounded-xl border border-border/40 bg-white p-2.5 shadow-xs">
+                    <Frame className="my-1 bg-white p-2.5 shadow-xs">
                       <QrCodeImage
                         value={activePaymentRequest.qrData ?? ""}
                         alt={SELF_ORDER_VI.vietQrPendingTitle}
@@ -421,14 +414,14 @@ export function PaymentPanel({
                         downloadLabel={SELF_ORDER_VI.saveVietQr}
                         downloadName="ma-qr-thanh-toan-ma-tu.png"
                       />
-                    </div>
+                    </Frame>
 
                     <p className="max-w-xs text-xs text-muted-foreground">
                       {SELF_ORDER_VI.otherBankScanHint}
                     </p>
-                  </div>
+                  </Frame>
 
-                  <div className="flex flex-col rounded-xl border border-border/60 bg-card p-2.5 text-xs shadow-xs">
+                  <Frame className="flex flex-col bg-card p-2.5 text-xs shadow-xs">
                     <Button
                       type="button"
                       variant="ghost"
@@ -452,9 +445,9 @@ export function PaymentPanel({
                     </Button>
 
                     {showManualDetails ? (
-                      <div className="flex flex-col gap-2.5 border-t border-border/30 pt-2.5">
+                      <div className="flex flex-col gap-2 border-t border-border pt-2">
                         {activePaymentRequest.paymentCode ? (
-                          <div className="flex flex-col gap-1 rounded-lg border border-primary/20 bg-primary/5 p-2.5">
+                          <Frame className="flex flex-col gap-1 border-primary/20 bg-primary/10 p-2.5">
                             <div className="flex items-center justify-between gap-2">
                               <span className="text-3xs font-medium text-muted-foreground">
                                 {SELF_ORDER_VI.paymentCodeLabel}
@@ -464,17 +457,17 @@ export function PaymentPanel({
                                 label={SELF_ORDER_VI.paymentCodeLabel}
                               />
                             </div>
-                            <span className="break-all font-mono text-sm font-bold tracking-wide text-primary">
+                            <span className="break-all font-mono text-sm font-semibold tracking-wide text-primary">
                               {activePaymentRequest.paymentCode}
                             </span>
                             <span className="text-3xs text-muted-foreground">
                               {SELF_ORDER_VI.paymentMemoNotice}
                             </span>
-                          </div>
+                          </Frame>
                         ) : null}
 
                         {activePaymentRequest.accountNo ? (
-                          <div className="flex items-center justify-between gap-2 border-b border-border/20 pb-2">
+                          <div className="flex items-center justify-between gap-2 border-b border-border pb-2">
                             <div className="flex min-w-0 flex-col">
                               <span className="text-muted-foreground">
                                 {SELF_ORDER_VI.bankAccountLabel}
@@ -491,7 +484,7 @@ export function PaymentPanel({
                         ) : null}
 
                         {activePaymentRequest.accountName ? (
-                          <div className="flex flex-col gap-0.5">
+                          <div className="flex flex-col gap-1">
                             <span className="text-muted-foreground">
                               {SELF_ORDER_VI.bankAccountNameLabel}
                             </span>
@@ -502,11 +495,11 @@ export function PaymentPanel({
                         ) : null}
                       </div>
                     ) : null}
-                  </div>
+                  </Frame>
                 </div>
               ) : activePaymentRequest.method === "cash_call" ? (
-                <div className="flex flex-col items-center gap-2 rounded-xl border border-border/60 bg-card p-5 text-center shadow-xs">
-                  <div className="flex size-12 items-center justify-center rounded-full bg-primary/10">
+                <Frame className="flex flex-col items-center gap-2 bg-card p-4 text-center shadow-xs">
+                  <div className="flex size-12 items-center justify-center rounded-md bg-primary/10">
                     <IconCash className="size-6 text-primary" aria-hidden />
                   </div>
                   <p className="text-sm font-semibold text-foreground">
@@ -515,7 +508,7 @@ export function PaymentPanel({
                   <p className="text-xs text-muted-foreground">
                     {SELF_ORDER_VI.pendingApprovalDescription}
                   </p>
-                </div>
+                </Frame>
               ) : null}
             </div>
           ) : (

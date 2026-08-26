@@ -60,6 +60,8 @@ export const PROMOTIONS_VI = {
   issueCountLabel: "Số mã voucher phát hành",
   issueFaceLabel: "Mệnh giá (VNĐ)",
   issueAction: "Phát hành mã voucher",
+  exportCsvAction: "Xuất danh sách mã (CSV)",
+  exportSuccess: "Đã xuất danh sách mã voucher.",
   voidAction: "Hủy mã",
   voidReasonLabel: "Lý do hủy mã",
   codesTitle: "Mã voucher",

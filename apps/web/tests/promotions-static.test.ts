@@ -340,3 +340,22 @@ test("POS evaluate runs on cart change and before pay", () => {
   assert.match(detail, /evaluateOrderPromotionOffers/);
   assert.match(detail, /canApplyDiscount/);
 });
+
+test("voucher lifecycle hardening migration releases codes on cancel_order and void_order_item", () => {
+  const hardening = readRepo(
+    "supabase/migrations/20260827011500_promotion_voucher_lifecycle_hardening.sql",
+  );
+  assert.match(hardening, /CREATE OR REPLACE FUNCTION public\.cancel_order\(/);
+  assert.match(hardening, /v_order\.promotion_code_id IS NOT NULL/);
+  assert.match(hardening, /status = 'active'/);
+  assert.match(hardening, /redeemed_count = GREATEST\(redeemed_count - 1, 0\)/);
+  assert.match(hardening, /status = 'cleared'/);
+  assert.match(hardening, /CREATE OR REPLACE FUNCTION public\.void_order_item\(/);
+  assert.match(hardening, /v_all_cancelled/);
+
+  const actions = readWeb(
+    "app/(protected)/br/[branchId]/pos/discount-actions.ts",
+  );
+  assert.match(actions, /applyFreeItemSelection/);
+  assert.match(actions, /apply_free_item_selection/);
+});

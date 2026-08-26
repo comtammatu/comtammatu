@@ -880,6 +880,65 @@ export async function applyFreeSideSelection(
   };
 }
 
+export async function applyFreeItemSelection(
+  branchId: number,
+  input: {
+    orderId: number;
+    promotionId: number;
+    code: string;
+    selections: Array<{
+      order_item_id: number;
+      units: number;
+    }>;
+  },
+): Promise<
+  ActionResult<{
+    order_id: number;
+    name: string;
+    total_amount: number;
+    applied_amount: number;
+  }>
+> {
+  const scoped = await posUseForBranch(branchId);
+  if (!scoped.ok) {
+    return { success: false, error: scoped.error, errorCode: scoped.errorCode };
+  }
+  const { data, error } = await scoped.ctx.supabase.rpc(
+    "apply_free_item_selection",
+    {
+      p_order_id: input.orderId,
+      p_promotion_id: input.promotionId,
+      p_code: input.code.trim().toUpperCase(),
+      p_selections: input.selections,
+    },
+  );
+  if (error) {
+    return {
+      success: false,
+      error: mapDiscountRpcError(error.message),
+      errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    };
+  }
+  const result = data as {
+    order_id?: number;
+    name?: string;
+    total_amount?: number;
+    applied_amount?: number;
+  } | null;
+  if (!result) {
+    return { success: false, error: "Không thể áp khuyến mãi tặng món." };
+  }
+  return {
+    success: true,
+    data: {
+      order_id: Number(result.order_id),
+      name: String(result.name ?? ""),
+      total_amount: Number(result.total_amount ?? 0),
+      applied_amount: Number(result.applied_amount ?? 0),
+    },
+  };
+}
+
 export async function evaluateOrderPromotionOffers(
   branchId: number,
   orderId: number,
