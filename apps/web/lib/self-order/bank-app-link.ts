@@ -59,6 +59,16 @@ const BANK_NATIVE_OPEN: Readonly<Record<string, BankNativeOpenTarget>> = {
     androidScheme: "mbbank",
     androidPackage: "com.mbmobile",
   },
+  momo: {
+    iosScheme: "momo",
+    androidScheme: "momo",
+    androidPackage: "com.mservice.momotransfer",
+  },
+  zalopay: {
+    iosScheme: "zalopay",
+    androidScheme: "zalopay",
+    androidPackage: "vn.com.vng.zalopay",
+  },
   vcb: {
     iosScheme: "vietcombankmobile",
     androidScheme: "vietcombankmobile",
@@ -227,6 +237,58 @@ const BANK_NATIVE_OPEN: Readonly<Record<string, BankNativeOpenTarget>> = {
     androidScheme: "wvbs",
     androidPackage: "vn.com.woori.smart",
   },
+  stb: {
+    iosScheme: "sacombankpay",
+    androidScheme: "sacombankpay",
+    androidPackage: "com.vnpay.sacombank",
+    androidPath: "payment",
+  },
+  msb: {
+    iosScheme: "msbmobile",
+    androidScheme: "msbmobile",
+    androidPackage: "com.vnpay.msb",
+    androidPath: "payment",
+  },
+  viettelmoney: {
+    iosScheme: "viettelpay",
+    androidScheme: "viettelpay",
+    androidPackage: "com.viettel.viettelpay",
+  },
+  shopeepay: {
+    iosScheme: "airpay",
+    androidScheme: "airpay",
+    androidPackage: "com.airpay",
+  },
+  vnptmoney: {
+    iosScheme: "vnptpay",
+    androidScheme: "vnptpay",
+    androidPackage: "vn.com.vnpt.money",
+  },
+  kbank: {
+    iosScheme: "kplusvn",
+    androidScheme: "kplusvn",
+    androidPackage: "com.kasikornbank.kplus.vn",
+  },
+  tnex: {
+    iosScheme: "tnex",
+    androidScheme: "tnex",
+    androidPackage: "msb.com.vn.tnex",
+  },
+  bab: {
+    iosScheme: "bacabank",
+    androidScheme: "bacabank",
+    androidPackage: "com.vnpay.bacabank",
+  },
+  pgb: {
+    iosScheme: "pgbank",
+    androidScheme: "pgbank",
+    androidPackage: "com.vnpay.pgbank",
+  },
+  vikki: {
+    iosScheme: "vikki",
+    androidScheme: "vikki",
+    androidPackage: "vn.vikki.app",
+  },
 };
 
 const APP_ID_PATTERN = /^[a-z0-9_-]{1,32}$/i;
@@ -285,6 +347,24 @@ export const STATIC_VIETQR_BANK_APPS: readonly VietQrBankApp[] = [
     logoUrl: "https://api.vietqr.io/img/MB.png",
     autofill: true,
     monthlyInstall: 400_000,
+  },
+  {
+    id: "momo",
+    name: "MoMo",
+    bankName: "Ví điện tử MoMo",
+    shortName: "MoMo",
+    logoUrl: "https://api.vietqr.io/img/MOMO.png",
+    autofill: false,
+    monthlyInstall: 500_000,
+  },
+  {
+    id: "zalopay",
+    name: "ZaloPay",
+    bankName: "Ví điện tử ZaloPay",
+    shortName: "ZaloPay",
+    logoUrl: "https://api.vietqr.io/img/ZALOPAY.png",
+    autofill: true,
+    monthlyInstall: 300_000,
   },
   {
     id: "icb",
@@ -583,15 +663,110 @@ export const STATIC_VIETQR_BANK_APPS: readonly VietQrBankApp[] = [
     autofill: false,
     monthlyInstall: 1_000,
   },
+  {
+    id: "stb",
+    name: "Sacombank Pay",
+    bankName: "Ngân hàng TMCP Sài Gòn Thương Tín (Sacombank)",
+    shortName: "Sacombank",
+    logoUrl: "https://api.vietqr.io/img/STB.png",
+    autofill: true,
+    monthlyInstall: 250_000,
+  },
+  {
+    id: "msb",
+    name: "MSB mBank",
+    bankName: "Ngân hàng TMCP Hàng Hải Việt Nam (MSB)",
+    shortName: "MSB",
+    logoUrl: "https://api.vietqr.io/img/MSB.png",
+    autofill: true,
+    monthlyInstall: 150_000,
+  },
+  {
+    id: "viettelmoney",
+    name: "Viettel Money",
+    bankName: "Ví / Ngân hàng số Viettel Money",
+    shortName: "Viettel Money",
+    logoUrl: "https://api.vietqr.io/img/VIETTELMONEY.png",
+    autofill: true,
+    monthlyInstall: 300_000,
+  },
+  {
+    id: "shopeepay",
+    name: "ShopeePay",
+    bankName: "Ví điện tử ShopeePay",
+    shortName: "ShopeePay",
+    logoUrl: "https://api.vietqr.io/img/SHOPEEPAY.png",
+    autofill: false,
+    monthlyInstall: 200_000,
+  },
+  {
+    id: "vnptmoney",
+    name: "VNPT Money",
+    bankName: "Ví điện tử VNPT Money",
+    shortName: "VNPT Money",
+    logoUrl: "https://api.vietqr.io/img/VNPTMONEY.png",
+    autofill: false,
+    monthlyInstall: 100_000,
+  },
+  {
+    id: "kbank",
+    name: "K PLUS Vietnam",
+    bankName: "Ngân hàng KBank (Kasikornbank)",
+    shortName: "KBank",
+    logoUrl: "https://api.vietqr.io/img/KBANK.png",
+    autofill: false,
+    monthlyInstall: 50_000,
+  },
+  {
+    id: "tnex",
+    name: "TNEX",
+    bankName: "Ngân hàng số TNEX by MSB",
+    shortName: "TNEX",
+    logoUrl: "https://api.vietqr.io/img/MSB.png",
+    autofill: false,
+    monthlyInstall: 80_000,
+  },
+  {
+    id: "bab",
+    name: "Bac A Bank",
+    bankName: "Ngân hàng TMCP Bắc Á (BacABank)",
+    shortName: "BacABank",
+    logoUrl: "https://api.vietqr.io/img/BAB.png",
+    autofill: true,
+    monthlyInstall: 20_000,
+  },
+  {
+    id: "pgb",
+    name: "PGBank",
+    bankName: "Ngân hàng TMCP Thịnh vượng và Phát triển (PGBank)",
+    shortName: "PGBank",
+    logoUrl: "https://api.vietqr.io/img/PGB.png",
+    autofill: true,
+    monthlyInstall: 15_000,
+  },
+  {
+    id: "vikki",
+    name: "Vikki Digital Bank",
+    bankName: "Ngân hàng số Vikki (HDBank)",
+    shortName: "Vikki",
+    logoUrl: "https://api.vietqr.io/img/HDB.png",
+    autofill: false,
+    monthlyInstall: 10_000,
+  },
 ];
 
 export const POPULAR_BANK_APP_IDS: readonly string[] = [
   "mb",
+  "momo",
+  "zalopay",
+  "vcb",
   "icb",
   "bidv",
-  "vcb",
   "tcb",
   "acb",
+  "stb",
+  "vpb",
+  "viettelmoney",
 ];
 
 function readNonNegativeInt(value: unknown): number {
@@ -715,6 +890,20 @@ type BankQrEmvTemplate =
       kind: "zalopay_path";
       scheme: string;
       androidPackage: string;
+    }
+  | {
+      kind: "custom_param";
+      scheme: string;
+      androidPackage: string;
+      path?: string;
+      buildParams: (input: {
+        accountNo: string;
+        bankCode: string;
+        amount: number;
+        paymentCode: string;
+        accountName?: string | null;
+        qrData?: string | null;
+      }) => Record<string, string>;
     };
 
 const BANK_QR_EMV: Readonly<Record<string, BankQrEmvTemplate>> = {
@@ -801,6 +990,26 @@ const BANK_QR_EMV: Readonly<Record<string, BankQrEmvTemplate>> = {
     scheme: "pvcombankapp",
     androidPackage: "com.vsii.pvcombank",
   },
+  stb: {
+    kind: "applink_qrpay",
+    scheme: "sacombankpay",
+    androidPackage: "com.vnpay.sacombank",
+  },
+  msb: {
+    kind: "applink_qrpay",
+    scheme: "msbmobile",
+    androidPackage: "com.vnpay.msb",
+  },
+  bab: {
+    kind: "applink_qrpay",
+    scheme: "bacabank",
+    androidPackage: "com.vnpay.bacabank",
+  },
+  pgb: {
+    kind: "applink_qrpay",
+    scheme: "pgbank",
+    androidPackage: "com.vnpay.pgbank",
+  },
   // Path / query variants (ZaloPay-style or bank-specific hosts).
   acb: {
     kind: "path_query",
@@ -826,6 +1035,23 @@ const BANK_QR_EMV: Readonly<Record<string, BankQrEmvTemplate>> = {
     scheme: "eximbankmobile",
     androidPackage: "com.vnpay.eximbankomnimobile",
   },
+  zalopay: {
+    kind: "zalopay_path",
+    scheme: "zalopay",
+    androidPackage: "vn.com.vng.zalopay",
+  },
+  viettelmoney: {
+    kind: "custom_param",
+    scheme: "viettelpay",
+    androidPackage: "com.viettel.viettelpay",
+    path: "transfer",
+    buildParams: ({ accountNo, bankCode, amount, paymentCode }) => ({
+      toAccount: accountNo,
+      bank: bankCode,
+      amount: String(Math.round(amount)),
+      content: paymentCode,
+    }),
+  },
 };
 
 function buildQueryString(params: Record<string, string>): string {
@@ -834,14 +1060,21 @@ function buildQueryString(params: Record<string, string>): string {
 
 function buildEmvHandoffUrl(
   template: BankQrEmvTemplate,
-  qrData: string,
+  input: {
+    accountNo: string;
+    bankCode: string;
+    amount: number;
+    paymentCode: string;
+    accountName?: string | null;
+    qrData: string;
+  },
   platform: BankAppPlatform,
 ): string {
   switch (template.kind) {
     case "applink_qrpay": {
       const query = buildQueryString({
         targetPage: template.targetPage ?? "QRPay",
-        qrContent: qrData,
+        qrContent: input.qrData,
       });
       if (platform === "android") {
         return `intent://applink?${query}#Intent;scheme=${template.scheme};package=${template.androidPackage};end`;
@@ -851,7 +1084,7 @@ function buildEmvHandoffUrl(
     case "host_path_qrpay": {
       const query = buildQueryString({
         targetPage: "QRPay",
-        qrContent: qrData,
+        qrContent: input.qrData,
       });
       if (platform === "android") {
         return `intent://${template.hostPath}?${query}#Intent;scheme=${template.scheme};package=${template.androidPackage};end`;
@@ -859,7 +1092,7 @@ function buildEmvHandoffUrl(
       return `${template.scheme}://${template.hostPath}?${query}`;
     }
     case "path_query": {
-      const query = buildQueryString({ [template.qrParam]: qrData });
+      const query = buildQueryString({ [template.qrParam]: input.qrData });
       const path = template.path.replace(/^\/+/, "");
       if (platform === "android") {
         return `intent://${path}?${query}#Intent;scheme=${template.scheme};package=${template.androidPackage};end`;
@@ -867,11 +1100,21 @@ function buildEmvHandoffUrl(
       return `${template.scheme}://${path}?${query}`;
     }
     case "zalopay_path": {
-      const encoded = encodeURIComponent(qrData);
+      const encoded = encodeURIComponent(input.qrData);
       if (platform === "android") {
         return `intent://ZaloPay/${encoded}#Intent;scheme=${template.scheme};package=${template.androidPackage};end`;
       }
       return `${template.scheme}://ZaloPay/${encoded}`;
+    }
+    case "custom_param": {
+      const params = template.buildParams(input);
+      const query = buildQueryString(params);
+      const path = (template.path ?? "").replace(/^\/+/, "");
+      const fullPath = path ? `${path}?${query}` : `?${query}`;
+      if (platform === "android") {
+        return `intent://${fullPath}#Intent;scheme=${template.scheme};package=${template.androidPackage};end`;
+      }
+      return `${template.scheme}://${fullPath}`;
     }
   }
 }
@@ -912,8 +1155,21 @@ export function buildVietQrBankAppUrl(input: {
   const qrData = input.qrData?.trim() ?? "";
   const emvTemplate = BANK_QR_EMV[normalizedId];
   if (emvTemplate) {
-    if (!qrData.startsWith("000201")) return null;
-    return buildEmvHandoffUrl(emvTemplate, qrData, platform);
+    if (emvTemplate.kind !== "custom_param" && !qrData.startsWith("000201")) {
+      return null;
+    }
+    return buildEmvHandoffUrl(
+      emvTemplate,
+      {
+        accountNo,
+        bankCode,
+        amount: input.amount,
+        paymentCode,
+        accountName: input.accountName,
+        qrData,
+      },
+      platform,
+    );
   }
 
   const native = BANK_NATIVE_OPEN[normalizedId];

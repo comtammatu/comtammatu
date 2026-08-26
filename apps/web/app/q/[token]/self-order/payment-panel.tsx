@@ -5,9 +5,11 @@ import {
   Banknote as IconCash,
   Check as IconCheck,
   ChevronDown as IconChevronDown,
+  ChevronUp as IconChevronUp,
   Clock as IconClock,
   Copy as IconCopy,
   Landmark as IconBank,
+  ShieldCheck as IconShieldCheck,
   X as IconCancel,
 } from "lucide-react";
 import { ACTIONS_VI, SELF_ORDER_VI } from "@comtammatu/shared/messages";
@@ -164,66 +166,71 @@ function BankAppLauncher({
 
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="default"
-              size="touch-lg"
-              className="w-full justify-between shadow-xs"
-            >
-              <span className="inline-flex items-center gap-2 font-semibold">
-                <IconBank data-icon="inline-start" className="size-5" />
-                {SELF_ORDER_VI.openBankingApp}
-              </span>
-              <IconChevronDown className="size-4 opacity-80" />
-            </Button>
-          }
-        />
-        <DropdownMenuContent
-          align="center"
-          className="max-h-72 w-72 max-w-sm overflow-y-auto overscroll-contain"
-        >
-          <DropdownMenuGroup>
-            {topBanks.map((bank) => {
-              const href = buildVietQrBankAppUrl({
-                appId: bank.id,
-                accountNo,
-                bankCode,
-                amount,
-                paymentCode,
-                accountName,
-                qrData,
-                platform,
-              });
-              if (!href) return null;
-
-              return (
-                <DropdownMenuItem
-                  key={bank.id}
-                  size="touch"
-                  className="flex items-center gap-3"
-                  onClick={() => {
-                    onBankAppHandoff?.();
-                    window.location.href = href;
-                  }}
-                >
-                  <BankLogoImage src={bank.logoUrl} alt={bank.name} />
-                  <span className="font-medium">{bank.name}</span>
-                </DropdownMenuItem>
-              );
-            })}
-          </DropdownMenuGroup>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            size="touch"
+      <div className="flex flex-col gap-2.5">
+        <div className="flex items-center justify-between px-0.5">
+          <span className="text-xs font-semibold text-foreground">
+            {SELF_ORDER_VI.quickBankTitle}
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            className="h-auto p-0 text-xs font-medium text-primary hover:bg-transparent hover:text-primary/80"
             onClick={() => setDrawerOpen(true)}
-            className="font-medium text-primary"
           >
-            {SELF_ORDER_VI.chooseOtherBank}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+            {SELF_ORDER_VI.allBankApps}
+          </Button>
+        </div>
+
+        <div className="flex gap-2 overflow-x-auto pb-1 overscroll-contain no-scrollbar">
+          {topBanks.slice(0, 8).map((bank) => {
+            const href = buildVietQrBankAppUrl({
+              appId: bank.id,
+              accountNo,
+              bankCode,
+              amount,
+              paymentCode,
+              accountName,
+              qrData,
+              platform,
+            });
+            if (!href) return null;
+
+            return (
+              <Button
+                key={bank.id}
+                variant="outline"
+                size="touch"
+                className="flex h-auto min-w-[70px] shrink-0 flex-col items-center gap-1.5 rounded-xl border-border/60 bg-card p-2 text-center shadow-2xs transition-colors hover:border-primary/50 hover:bg-muted/40 active:scale-95"
+                render={<a href={href} />}
+                onClick={() => onBankAppHandoff?.()}
+              >
+                <BankLogoImage src={bank.logoUrl} alt={bank.name} />
+                <span className="max-w-[62px] truncate text-3xs font-semibold text-foreground">
+                  {bank.shortName || bank.name}
+                </span>
+              </Button>
+            );
+          })}
+        </div>
+
+        <Button
+          type="button"
+          variant="default"
+          size="touch-lg"
+          className="w-full justify-between shadow-xs"
+          onClick={() => setDrawerOpen(true)}
+        >
+          <span className="inline-flex items-center gap-2 font-semibold">
+            <IconBank data-icon="inline-start" className="size-5" />
+            {SELF_ORDER_VI.openBankingApp}
+          </span>
+          <span className="inline-flex items-center gap-1 text-xs opacity-90">
+            <span>35+</span>
+            <IconChevronDown className="size-4" />
+          </span>
+        </Button>
+      </div>
 
       <BankAppDrawer
         open={drawerOpen}
@@ -266,6 +273,7 @@ export function PaymentPanel({
   const [buyerAddress, setBuyerAddress] = useState("");
   const [buyerEmail, setBuyerEmail] = useState("");
   const [lookupStatus, setLookupStatus] = useState<LookupStatus>("idle");
+  const [showManualDetails, setShowManualDetails] = useState(false);
   const requestRef = useRef<AbortController | null>(null);
 
   useEffect(
@@ -380,20 +388,30 @@ export function PaymentPanel({
 
               {hasRecoverableVietQr ? (
                 <div className="flex flex-col gap-3">
-                  <div className="flex flex-col items-center gap-1 rounded-md bg-muted/30 px-4 py-3 text-center">
-                    <span className="text-xs font-medium text-muted-foreground">
-                      {SELF_ORDER_VI.paymentAmountLabel}
-                    </span>
-                    <span className="font-mono text-2xl font-bold tracking-tight tabular-nums text-primary">
-                      {formatVND(activePaymentRequest.amount)}
-                    </span>
-                  </div>
+                  <div className="flex flex-col items-center gap-2.5 rounded-xl border border-border/60 bg-card p-4 text-center shadow-xs">
+                    <div className="flex w-full items-center justify-between">
+                      <div className="flex flex-col items-start text-left">
+                        <span className="text-3xs font-medium text-muted-foreground uppercase tracking-wider">
+                          {SELF_ORDER_VI.paymentAmountLabel}
+                        </span>
+                        <span className="font-mono text-2xl font-bold tracking-tight tabular-nums text-primary">
+                          {formatVND(activePaymentRequest.amount)}
+                        </span>
+                      </div>
+                      {expiryLabel ? (
+                        <div className="inline-flex items-center gap-1.5 rounded-full bg-muted/60 px-2.5 py-1 text-2xs text-muted-foreground">
+                          <IconClock className="size-3 text-primary shrink-0" aria-hidden />
+                          <span>{expiryLabel}</span>
+                        </div>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-3xs font-medium text-success">
+                          <IconShieldCheck className="size-3" />
+                          <span>VietQR 24/7</span>
+                        </span>
+                      )}
+                    </div>
 
-                  <div className="flex flex-col items-center gap-2 rounded-md bg-muted/30 p-3 text-center shadow-xs">
-                    <h3 className="font-heading text-sm font-semibold">
-                      {SELF_ORDER_VI.vietQrPendingTitle}
-                    </h3>
-                    <div className="rounded-md bg-white p-2">
+                    <div className="my-0.5 rounded-xl border border-border/40 bg-white p-2.5 shadow-xs">
                       <QrCodeImage
                         value={activePaymentRequest.qrData ?? ""}
                         alt={SELF_ORDER_VI.vietQrPendingTitle}
@@ -404,63 +422,94 @@ export function PaymentPanel({
                         downloadName="ma-qr-thanh-toan-ma-tu.png"
                       />
                     </div>
-                    <p className="text-xs text-muted-foreground">
+
+                    <p className="max-w-xs text-xs text-muted-foreground">
                       {SELF_ORDER_VI.otherBankScanHint}
                     </p>
                   </div>
 
-                  <div className="flex flex-col gap-2 rounded-md bg-muted/30 p-3 text-xs">
-                    {activePaymentRequest.paymentCode ? (
-                      <div className="flex items-center justify-between gap-2 border-b border-border/20 pb-2">
-                        <div className="flex min-w-0 flex-col">
-                          <span className="text-muted-foreground">
-                            {SELF_ORDER_VI.paymentCodeLabel}
-                          </span>
-                          <span className="break-all font-mono text-sm font-semibold text-foreground">
-                            {activePaymentRequest.paymentCode}
-                          </span>
-                        </div>
-                        <CopyButton
-                          text={activePaymentRequest.paymentCode}
-                          label={SELF_ORDER_VI.paymentCodeLabel}
-                        />
-                      </div>
-                    ) : null}
-
-                    {activePaymentRequest.accountNo ? (
-                      <div className="flex items-center justify-between gap-2 border-b border-border/20 pb-2">
-                        <div className="flex min-w-0 flex-col">
-                          <span className="text-muted-foreground">
-                            {SELF_ORDER_VI.bankAccountLabel}
-                          </span>
-                          <span className="font-mono text-sm font-medium text-foreground">
-                            {activePaymentRequest.bankCode} ·{" "}
-                            {activePaymentRequest.accountNo}
-                          </span>
-                        </div>
-                        <CopyButton
-                          text={activePaymentRequest.accountNo}
-                          label={SELF_ORDER_VI.bankAccountLabel}
-                        />
-                      </div>
-                    ) : null}
-
-                    {activePaymentRequest.accountName ? (
-                      <div className="flex flex-col gap-1 pt-1">
-                        <span className="text-muted-foreground">
-                          {SELF_ORDER_VI.bankAccountNameLabel}
+                  <div className="flex flex-col rounded-xl border border-border/60 bg-card p-2.5 text-xs shadow-xs">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="touch"
+                      className="h-auto w-full justify-between p-1.5 text-xs font-medium text-muted-foreground hover:bg-transparent hover:text-foreground"
+                      onClick={() => setShowManualDetails((prev) => !prev)}
+                    >
+                      <span className="inline-flex items-center gap-1.5">
+                        <IconBank className="size-3.5" />
+                        <span>
+                          {showManualDetails
+                            ? SELF_ORDER_VI.hideManualTransferDetails
+                            : SELF_ORDER_VI.manualTransferDetails}
                         </span>
-                        <span className="font-medium text-foreground">
-                          {activePaymentRequest.accountName}
-                        </span>
+                      </span>
+                      {showManualDetails ? (
+                        <IconChevronUp className="size-4" />
+                      ) : (
+                        <IconChevronDown className="size-4" />
+                      )}
+                    </Button>
+
+                    {showManualDetails ? (
+                      <div className="flex flex-col gap-2.5 border-t border-border/30 pt-2.5">
+                        {activePaymentRequest.paymentCode ? (
+                          <div className="flex flex-col gap-1 rounded-lg border border-primary/20 bg-primary/5 p-2.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-3xs font-medium text-muted-foreground">
+                                {SELF_ORDER_VI.paymentCodeLabel}
+                              </span>
+                              <CopyButton
+                                text={activePaymentRequest.paymentCode}
+                                label={SELF_ORDER_VI.paymentCodeLabel}
+                              />
+                            </div>
+                            <span className="break-all font-mono text-sm font-bold tracking-wide text-primary">
+                              {activePaymentRequest.paymentCode}
+                            </span>
+                            <span className="text-3xs text-muted-foreground">
+                              {SELF_ORDER_VI.paymentMemoNotice}
+                            </span>
+                          </div>
+                        ) : null}
+
+                        {activePaymentRequest.accountNo ? (
+                          <div className="flex items-center justify-between gap-2 border-b border-border/20 pb-2">
+                            <div className="flex min-w-0 flex-col">
+                              <span className="text-muted-foreground">
+                                {SELF_ORDER_VI.bankAccountLabel}
+                              </span>
+                              <span className="font-mono text-xs font-semibold text-foreground">
+                                {activePaymentRequest.bankCode} · {activePaymentRequest.accountNo}
+                              </span>
+                            </div>
+                            <CopyButton
+                              text={activePaymentRequest.accountNo}
+                              label={SELF_ORDER_VI.bankAccountLabel}
+                            />
+                          </div>
+                        ) : null}
+
+                        {activePaymentRequest.accountName ? (
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-muted-foreground">
+                              {SELF_ORDER_VI.bankAccountNameLabel}
+                            </span>
+                            <span className="font-medium text-foreground">
+                              {activePaymentRequest.accountName}
+                            </span>
+                          </div>
+                        ) : null}
                       </div>
                     ) : null}
                   </div>
                 </div>
               ) : activePaymentRequest.method === "cash_call" ? (
-                <div className="flex flex-col items-center gap-2 rounded-md bg-muted/30 p-4 text-center">
-                  <IconCash className="size-8 text-primary" aria-hidden />
-                  <p className="text-sm font-medium text-foreground">
+                <div className="flex flex-col items-center gap-2 rounded-xl border border-border/60 bg-card p-5 text-center shadow-xs">
+                  <div className="flex size-12 items-center justify-center rounded-full bg-primary/10">
+                    <IconCash className="size-6 text-primary" aria-hidden />
+                  </div>
+                  <p className="text-sm font-semibold text-foreground">
                     {SELF_ORDER_VI.cashCallOk}
                   </p>
                   <p className="text-xs text-muted-foreground">

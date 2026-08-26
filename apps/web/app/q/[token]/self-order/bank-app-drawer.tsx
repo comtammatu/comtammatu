@@ -167,7 +167,7 @@ export function BankAppDrawer({
             {SELF_ORDER_VI.bankSearchEmpty}
           </div>
         ) : (
-          <div className="flex flex-col divide-y divide-border">
+          <div className="flex flex-col divide-y divide-border/60">
             {filteredApps.map((app) => {
               const href = buildVietQrBankAppUrl({
                 appId: app.id,
@@ -186,7 +186,7 @@ export function BankAppDrawer({
                   key={app.id}
                   variant="ghost"
                   size="touch"
-                  className="flex h-auto w-full items-center justify-between gap-3 px-2 py-2.5 text-left"
+                  className="flex h-auto w-full items-center justify-between gap-3 px-2 py-3 text-left transition-colors hover:bg-muted/50 active:bg-muted"
                   render={<a href={href} />}
                   onClick={() => {
                     onBankAppHandoff?.();
@@ -196,9 +196,16 @@ export function BankAppDrawer({
                   <div className="flex min-w-0 items-center gap-3">
                     <BankLogoImage src={app.logoUrl} alt={app.name} />
                     <div className="flex min-w-0 flex-col">
-                      <span className="truncate text-sm font-medium leading-tight text-foreground">
-                        {app.name}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="truncate text-sm font-semibold leading-tight text-foreground">
+                          {app.name}
+                        </span>
+                        {app.autofill ? (
+                          <span className="inline-flex items-center rounded-full bg-success/10 px-1.5 py-0.5 text-3xs font-medium text-success">
+                            {SELF_ORDER_VI.autofillBadge}
+                          </span>
+                        ) : null}
+                      </div>
                       {app.bankName ? (
                         <span className="truncate text-xs text-muted-foreground">
                           {app.bankName}

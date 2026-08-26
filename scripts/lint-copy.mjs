@@ -81,6 +81,7 @@ const FOOD_DELIVERY_VENDOR_SOURCE_PATHS = new Set([
 /** Native bank / wallet deeplink scheme paths (EMV QR handoff literals). */
 const PAYMENT_VENDOR_DEEPLINK_SOURCE_PATHS = new Set([
   "apps/web/lib/self-order/bank-app-link.ts",
+  "packages/shared/src/messages/self-order.ts",
 ]);
 
 const CHECKS = [

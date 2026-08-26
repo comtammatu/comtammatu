@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import {
+  POPULAR_BANK_APP_IDS,
+  STATIC_VIETQR_BANK_APPS,
   buildVietQrBankAppUrl,
   getVietQrBankAppCatalogUrl,
   parseVietQrBankApps,
@@ -242,6 +244,107 @@ test("native EMV handoffs carry the QR payload for supported bank apps", () => {
   assert.ok(tpb);
   assert.equal(tpb, `hydro://ZaloPay/${encodeURIComponent(qrData)}`);
 
+  // ZaloPay: native scheme and intent carrying EMV QR payload.
+  const zalopayIos = buildVietQrBankAppUrl({
+    appId: "zalopay",
+    accountNo: "0123456789",
+    bankCode: "MB",
+    amount: 50_000,
+    paymentCode: "MATU 123",
+    qrData,
+    platform: "ios",
+  });
+  assert.ok(zalopayIos);
+  assert.equal(
+    zalopayIos,
+    `zalopay://ZaloPay/${encodeURIComponent(qrData)}`,
+  );
+
+  const zalopayAndroid = buildVietQrBankAppUrl({
+    appId: "zalopay",
+    accountNo: "0123456789",
+    bankCode: "MB",
+    amount: 50_000,
+    paymentCode: "MATU 123",
+    qrData,
+    platform: "android",
+  });
+  assert.ok(zalopayAndroid);
+  assert.equal(
+    zalopayAndroid,
+    `intent://ZaloPay/${encodeURIComponent(qrData)}#Intent;scheme=zalopay;package=vn.com.vng.zalopay;end`,
+  );
+
+  // MoMo: opens native scheme or intent.
+  const momoIos = buildVietQrBankAppUrl({
+    appId: "momo",
+    accountNo: "0123456789",
+    bankCode: "MB",
+    amount: 50_000,
+    paymentCode: "MATU 123",
+    platform: "ios",
+  });
+  assert.ok(momoIos);
+  assert.equal(momoIos, "momo://");
+
+  const momoAndroid = buildVietQrBankAppUrl({
+    appId: "momo",
+    accountNo: "0123456789",
+    bankCode: "MB",
+    amount: 50_000,
+    paymentCode: "MATU 123",
+    platform: "android",
+  });
+  assert.ok(momoAndroid);
+  assert.equal(
+    momoAndroid,
+    "intent://#Intent;scheme=momo;package=com.mservice.momotransfer;end",
+  );
+
+  // Sacombank & MSB: QRPay applink templates.
+  const stb = buildVietQrBankAppUrl({
+    appId: "stb",
+    accountNo: "0123456789",
+    bankCode: "STB",
+    amount: 80_000,
+    paymentCode: "MATU 888",
+    qrData,
+    platform: "ios",
+  });
+  assert.ok(stb);
+  assert.match(stb, /^sacombankpay:\/\/applink\?/);
+  assert.equal(new URL(stb).searchParams.get("qrContent"), qrData);
+
+  const msb = buildVietQrBankAppUrl({
+    appId: "msb",
+    accountNo: "0123456789",
+    bankCode: "MSB",
+    amount: 80_000,
+    paymentCode: "MATU 888",
+    qrData,
+    platform: "ios",
+  });
+  assert.ok(msb);
+  assert.match(msb, /^msbmobile:\/\/applink\?/);
+  assert.equal(new URL(msb).searchParams.get("qrContent"), qrData);
+
+  // Viettel Money: custom discrete parameters.
+  const viettelMoneyIos = buildVietQrBankAppUrl({
+    appId: "viettelmoney",
+    accountNo: "0123456789",
+    bankCode: "MB",
+    amount: 150_000,
+    paymentCode: "MATU 999",
+    platform: "ios",
+  });
+  assert.ok(viettelMoneyIos);
+  assert.match(viettelMoneyIos, /^viettelpay:\/\/transfer\?/);
+  const viettelUrl = new URL(viettelMoneyIos);
+  assert.equal(viettelUrl.searchParams.get("toAccount"), "0123456789");
+  assert.equal(viettelUrl.searchParams.get("bank"), "mb");
+  assert.equal(viettelUrl.searchParams.get("amount"), "150000");
+  assert.equal(viettelUrl.searchParams.get("content"), "MATU 999");
+
   // Open-app-only bank (no EMV template): bare native scheme, no QR payload.
   const shb = buildVietQrBankAppUrl({
     appId: "shb",
@@ -324,3 +427,35 @@ test("self-order requires an open POS session before customer writes", () => {
   assert.match(server, /SELF_ORDER_VI\.posSessionClosed/);
   assert.match(staffActions, /SELF_ORDER_VI\.staffPosSessionClosed/);
 });
+
+test("Self-Order includes major banks and wallets in app catalog", () => {
+  assert.ok(POPULAR_BANK_APP_IDS.includes("momo"));
+  assert.ok(POPULAR_BANK_APP_IDS.includes("zalopay"));
+  assert.ok(POPULAR_BANK_APP_IDS.includes("stb"));
+  assert.ok(POPULAR_BANK_APP_IDS.includes("viettelmoney"));
+
+  const momo = STATIC_VIETQR_BANK_APPS.find((app) => app.id === "momo");
+  assert.ok(momo);
+  assert.equal(momo.name, "MoMo");
+  assert.equal(momo.bankName, "Ví điện tử MoMo");
+
+  const zalopay = STATIC_VIETQR_BANK_APPS.find((app) => app.id === "zalopay");
+  assert.ok(zalopay);
+  assert.equal(zalopay.name, "ZaloPay");
+  assert.equal(zalopay.bankName, "Ví điện tử ZaloPay");
+
+  const stb = STATIC_VIETQR_BANK_APPS.find((app) => app.id === "stb");
+  assert.ok(stb);
+  assert.equal(stb.name, "Sacombank Pay");
+
+  const msb = STATIC_VIETQR_BANK_APPS.find((app) => app.id === "msb");
+  assert.ok(msb);
+  assert.equal(msb.name, "MSB mBank");
+
+  const viettelMoney = STATIC_VIETQR_BANK_APPS.find(
+    (app) => app.id === "viettelmoney",
+  );
+  assert.ok(viettelMoney);
+  assert.equal(viettelMoney.name, "Viettel Money");
+});
+
