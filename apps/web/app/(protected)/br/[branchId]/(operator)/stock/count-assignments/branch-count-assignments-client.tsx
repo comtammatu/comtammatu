@@ -39,7 +39,7 @@ import {
 
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { AppEmptyState, AppSheet } from "@/components/surface";
+import { AppBackLink, AppEmptyState, AppSheet } from "@/components/surface";
 import {
   BranchOperatorPage,
   BranchOperatorPanel,
@@ -356,6 +356,7 @@ export function BranchCountAssignmentsClient({
     <BranchOperatorPage
       title={INVENTORY_VI.countAssignTitle}
       description={data.branchName}
+      back={<AppBackLink href={`/br/${data.branchId}/stock`} />}
     >
       {panel}
     </BranchOperatorPage>

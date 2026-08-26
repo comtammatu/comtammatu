@@ -32,7 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { AppEmptyState } from "@/components/surface";
+import { AppBackLink, AppEmptyState } from "@/components/surface";
 import { StatusBadge, getStatusBadgeMeta } from "@/components/status-badge";
 import {
   BranchOperatorPage,
@@ -97,6 +97,7 @@ export function BranchStockIssuesListClient({
     <BranchOperatorPage
       title={INVENTORY_VI.issueSlipsTitle}
       description={branchName}
+      back={<AppBackLink href={stockBasePath} />}
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         {canCreateWaste ? (

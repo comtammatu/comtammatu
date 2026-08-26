@@ -37,10 +37,11 @@ import {
 } from "@comtammatu/ui/components/item";
 
 import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@comtammatu/ui/components/toggle-group";
-import { AppEmptyState, AppSheet } from "@/components/surface";
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@comtammatu/ui/components/tabs";
+import { AppBackLink, AppEmptyState, AppSheet } from "@/components/surface";
 import { MultiSelectCombobox } from "@/components/form/multi-select-combobox";
 import { formatQty } from "@lib/inventory/format";
 import { formatStockUnits } from "@/(protected)/inventory/_lib/stock-unit-format";
@@ -322,6 +323,7 @@ export function BranchStockOnHandClient({
     <BranchOperatorPage
       title={stockCopy.title}
       description={stockCopy.operatorDescription}
+      back={<AppBackLink href={`/br/${branchId}/stock`} />}
     >
       {!coreDataLoadFailed && underThresholdCount > 0 ? (
         <NoteCallout tone="warning" className="min-h-12 items-center">
@@ -446,29 +448,31 @@ export function BranchStockOnHandClient({
                 </div>
               </div>
 
-              <ToggleGroup
-                type="single"
+              <Tabs
                 value={status === "low" ? "in_stock" : status}
                 onValueChange={(next) => {
                   if (next === "in_stock" || next === "out" || next === "all") {
                     setStatus(next);
                   }
                 }}
-                variant="outline"
-                size="touch"
-                className="grid w-full grid-cols-3"
-                aria-label={stockCopy.filters.statusPlaceholder}
+                className="w-full"
               >
-                <ToggleGroupItem value="in_stock">
-                  {stockCopy.filters.inStock}
-                </ToggleGroupItem>
-                <ToggleGroupItem value="out">
-                  {stockCopy.filters.out}
-                </ToggleGroupItem>
-                <ToggleGroupItem value="all">
-                  {stockCopy.filters.all}
-                </ToggleGroupItem>
-              </ToggleGroup>
+                <TabsList
+                  size="touch"
+                  className="grid w-full grid-cols-3"
+                  aria-label={stockCopy.filters.statusPlaceholder}
+                >
+                  <TabsTrigger value="in_stock">
+                    {stockCopy.filters.inStock}
+                  </TabsTrigger>
+                  <TabsTrigger value="out">
+                    {stockCopy.filters.out}
+                  </TabsTrigger>
+                  <TabsTrigger value="all">
+                    {stockCopy.filters.all}
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
             </div>
 
             {filtersActive ? (

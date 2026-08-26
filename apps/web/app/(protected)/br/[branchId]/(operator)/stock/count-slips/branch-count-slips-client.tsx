@@ -35,12 +35,13 @@ import { Label } from "@comtammatu/ui/components/label";
 
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@comtammatu/ui/components/toggle-group";
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@comtammatu/ui/components/tabs";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { AppEmptyState, AppSheet } from "@/components/surface";
+import { AppBackLink, AppEmptyState, AppSheet } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
 import {
   BranchOperatorDetailList,
@@ -79,11 +80,13 @@ function changedLineCount(row: CountSlipRow): number {
 }
 
 export function BranchCountSlipsClient({
+  branchId,
   branchName,
   initialRows,
   loadFailed,
   focusFirstPending,
 }: {
+  branchId: number;
   branchName: string;
   initialRows: CountSlipRow[];
   loadFailed: boolean;
@@ -206,26 +209,29 @@ export function BranchCountSlipsClient({
     <BranchOperatorPage
       title={INVENTORY_VI.countSlipTitle}
       description={branchName}
+      back={<AppBackLink href={`/br/${branchId}/stock`} />}
     >
-      <ToggleGroup
-        type="single"
-        variant="outline"
-        size="touch"
-        className="grid w-full grid-cols-2"
+      <Tabs
         value={view}
         onValueChange={(next) => {
           if (!next) return;
           setView(next as QueueView);
         }}
-        aria-label={INVENTORY_VI.countSlipTitle}
+        className="w-full"
       >
-        <ToggleGroupItem value="pending">
-          {INVENTORY_VI.countSlipPendingBadge(pendingRows.length)}
-        </ToggleGroupItem>
-        <ToggleGroupItem value="history">
-          {INVENTORY_VI.countSlipHistoryTitle}
-        </ToggleGroupItem>
-      </ToggleGroup>
+        <TabsList
+          size="touch"
+          aria-label={INVENTORY_VI.countSlipTitle}
+          className="grid w-full grid-cols-2"
+        >
+          <TabsTrigger value="pending">
+            {INVENTORY_VI.countSlipPendingBadge(pendingRows.length)}
+          </TabsTrigger>
+          <TabsTrigger value="history">
+            {INVENTORY_VI.countSlipHistoryTitle}
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
       <section
         aria-label={
           view === "pending"

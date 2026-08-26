@@ -49,12 +49,12 @@ test("shouldRunCiGatesVerify skips docs-only pushes", () => {
   );
 });
 
-test("runPrePushHook skips verify for docs-only refs and new branches", () => {
+test("runPrePushHook skips verify for docs-only refs, new branches, and deleted branches", () => {
   const logs = [];
   const verifyCalls = [];
   const status = runPrePushHook({
     stdin:
-      "refs/heads/main abc refs/heads/main def\nrefs/heads/feature 111 refs/heads/feature 0000000000000000000000000000000000000000",
+      "refs/heads/main abc refs/heads/main def\nrefs/heads/feature 111 refs/heads/feature 0000000000000000000000000000000000000000\n(delete) 0000000000000000000000000000000000000000 refs/heads/old 6297227e11fb6f0a195809c93970366ba65af054",
     listPaths: () => ["docs/plan/decisions.md"],
     runVerifyCommand: () => {
       verifyCalls.push(true);

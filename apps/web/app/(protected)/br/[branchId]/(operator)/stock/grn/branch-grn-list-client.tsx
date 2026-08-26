@@ -43,7 +43,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { AppEmptyState } from "@/components/surface";
+import { AppBackLink, AppEmptyState } from "@/components/surface";
 import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import { discardGrnDraft } from "@/(protected)/inventory/grn-actions";
 import { PURCHASE_ORDER_CREATE_HREF } from "@lib/inventory/purchase-order-paths";
@@ -320,6 +320,7 @@ export function BranchGrnListClient({
     <BranchOperatorPage
       title={messages.inventory.operatorFlow.grnListTitle}
       description={messages.inventory.operatorFlow.grnListDescription}
+      back={<AppBackLink href={`/br/${branchId}/stock`} />}
     >
       {canCreate ? (
         <Button

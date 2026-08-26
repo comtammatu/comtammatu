@@ -37,7 +37,12 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { StatusBadge } from "@/components/status-badge";
-import { AppEmptyState, AppSheet } from "@/components/surface";
+import { AppBackLink, AppEmptyState, AppSheet } from "@/components/surface";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@comtammatu/ui/components/tabs";
 import { useBranchOpsEvents } from "@/_hooks/use-branch-ops-events";
 import { employee } from "@lib/messages/employee";
 import {
@@ -226,29 +231,30 @@ export function BranchLeaveApprovalsClient({
   }
 
   return (
-    <BranchOperatorPage title={copy.approvalsTitle} description={branchName}>
+    <BranchOperatorPage
+      title={copy.approvalsTitle}
+      description={branchName}
+      back={<AppBackLink href={`/br/${branchId}/team`} />}
+    >
       <div className="flex flex-col gap-3">
-        {view === "pending" ? (
-          <Button
-            type="button"
-            variant="outline"
+        <Tabs
+          value={view}
+          onValueChange={(val) => setView(val as QueueView)}
+          className="w-full"
+        >
+          <TabsList
             size="touch"
-            className="w-full"
-            onClick={() => setView("history")}
+            aria-label={copy.approvalsTitle}
+            className="grid w-full grid-cols-2"
           >
-            {copy.historyAction}
-          </Button>
-        ) : (
-          <Button
-            type="button"
-            variant="outline"
-            size="touch"
-            className="w-full"
-            onClick={() => setView("pending")}
-          >
-            {copy.pendingTab(pendingRows.length)}
-          </Button>
-        )}
+            <TabsTrigger value="pending">
+              {copy.pendingTab(pendingRows.length)}
+            </TabsTrigger>
+            <TabsTrigger value="history">
+              {copy.historyTab(historyRows.length)}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
         <BranchOperatorPanel
           title={
             view === "pending"

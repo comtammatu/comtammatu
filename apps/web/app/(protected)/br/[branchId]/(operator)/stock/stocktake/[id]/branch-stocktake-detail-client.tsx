@@ -23,7 +23,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { AppDetailFooter, AppEmptyState } from "@/components/surface";
+import { AppBackLink, AppDetailFooter, AppEmptyState } from "@/components/surface";
 import { getStatusBadgeMeta } from "@/components/status-badge";
 import {
   BranchOperatorDetailList,
@@ -234,6 +234,7 @@ export function BranchStocktakeDetailClient({
       title={`KK-${session.id}`}
       description={formatVNDateTime(session.startedAt ?? session.createdAt)}
       badge={{ children: statusBadge.label, variant: statusBadge.variant }}
+      back={<AppBackLink href={stocktakeBasePath} />}
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         {session.status === "in_progress" && data.canCancel ? (

@@ -38,11 +38,12 @@ import {
 
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@comtammatu/ui/components/toggle-group";
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@comtammatu/ui/components/tabs";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { AppDetailFooter, AppEmptyState, AppSheet } from "@/components/surface";
+import { AppBackLink, AppDetailFooter, AppEmptyState, AppSheet } from "@/components/surface";
 import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import {
   BranchOperatorDetailList,
@@ -174,13 +175,10 @@ export function BranchConsumptionListClient({
     <BranchOperatorPage
       title={issuesCopy.surface.consumption.eyebrow}
       description={branchName}
+      back={<AppBackLink href={`/br/${branchId}/stock`} />}
     >
       {showRecorded ? (
-        <ToggleGroup
-          type="single"
-          variant="outline"
-          size="touch"
-          className="grid w-full grid-cols-2"
+        <Tabs
           value={view}
           onValueChange={(next) => {
             if (!next) return;
@@ -188,15 +186,21 @@ export function BranchConsumptionListClient({
             setQuery("");
             setStatus("all");
           }}
-          aria-label={issuesCopy.surface.consumption.eyebrow}
+          className="w-full"
         >
-          <ToggleGroupItem value="recorded">
-            {INVENTORY_VI.consumptionTabRecorded}
-          </ToggleGroupItem>
-          <ToggleGroupItem value="manual">
-            {INVENTORY_VI.consumptionTabManual}
-          </ToggleGroupItem>
-        </ToggleGroup>
+          <TabsList
+            size="touch"
+            aria-label={issuesCopy.surface.consumption.eyebrow}
+            className="grid w-full grid-cols-2"
+          >
+            <TabsTrigger value="recorded">
+              {INVENTORY_VI.consumptionTabRecorded}
+            </TabsTrigger>
+            <TabsTrigger value="manual">
+              {INVENTORY_VI.consumptionTabManual}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       ) : null}
       <BranchOperatorPanel
         title={

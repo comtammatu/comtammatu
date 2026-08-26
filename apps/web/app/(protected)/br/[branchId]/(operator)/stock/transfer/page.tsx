@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Plus as IconPlus } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
-import { AppDetailFooter } from "@/components/surface";
+import { AppBackLink, AppDetailFooter } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
 import { loadStockFulfillmentRows } from "@lib/inventory/stock-fulfillment-data";
@@ -95,6 +95,7 @@ export default async function OperatorStockTransferPage({
     <BranchOperatorPage
       title={copy.hubTitle}
       description={copy.centralHubDescription}
+      back={<AppBackLink href={`/br/${branchId}/stock`} />}
       action={
         createAction ? (
           <div className="max-sm:hidden">{createAction}</div>

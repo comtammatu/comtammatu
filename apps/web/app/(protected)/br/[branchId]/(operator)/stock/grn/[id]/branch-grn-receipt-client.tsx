@@ -16,7 +16,7 @@ import {
   ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import { AppDetailFooter, AppEmptyState } from "@/components/surface";
+import { AppBackLink, AppDetailFooter, AppEmptyState } from "@/components/surface";
 import { getStatusBadgeMeta } from "@/components/status-badge";
 import {
   BranchOperatorDetailList,
@@ -46,6 +46,7 @@ export function BranchGrnReceiptClient({
       title={grn.code}
       description={`${grn.supplier} · ${grn.date}`}
       badge={{ children: statusBadge.label, variant: statusBadge.variant }}
+      back={<AppBackLink href={grnListBasePath} />}
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <div className={BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME}>

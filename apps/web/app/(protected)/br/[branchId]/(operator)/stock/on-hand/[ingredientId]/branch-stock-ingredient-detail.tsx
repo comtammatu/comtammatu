@@ -26,7 +26,7 @@ import {
   ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import { AppDetailFooter, AppEmptyState } from "@/components/surface";
+import { AppBackLink, AppDetailFooter, AppEmptyState } from "@/components/surface";
 import {
   BranchOperatorDetailList,
   BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME,
@@ -224,6 +224,7 @@ export function BranchStockIngredientDetail({
       description={[ingredient.sku, ingredient.category, ingredient.unit]
         .filter(Boolean)
         .join(" · ")}
+      back={<AppBackLink href={`${stockBasePath}/on-hand`} />}
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <div className={BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME}>

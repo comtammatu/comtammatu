@@ -5,6 +5,7 @@ import {
   EmployeeMissingProfileEmpty,
   EmployeePage,
 } from "../components/staff-runtime-page";
+import { AppBackLink } from "@/components/surface";
 import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { getVNMonthStartDateString } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
@@ -39,13 +40,21 @@ export async function StaffSchedulePageContent({
 
   if (!ctx) {
     return (
-      <PageShell title={copy.scheduleTitle}>
+      <PageShell
+        title={copy.scheduleTitle}
+        back={
+          plane === "branch" && routeBranchId
+            ? <AppBackLink href={`/br/${routeBranchId}/shift`} />
+            : undefined
+        }
+      >
         <EmployeeMissingProfileEmpty profileHref={profileHref} />
       </PageShell>
     );
   }
 
   const { supabase, claims, employeeId } = ctx;
+  const branchId = routeBranchId ?? ctx.branchId;
 
   const monthStart = getVNMonthStartDateString(await requestNow());
 
@@ -60,7 +69,14 @@ export async function StaffSchedulePageContent({
   ]);
 
   return (
-    <PageShell title={copy.scheduleTitle}>
+    <PageShell
+      title={copy.scheduleTitle}
+      back={
+        plane === "branch" && branchId
+          ? <AppBackLink href={`/br/${branchId}/shift`} />
+          : undefined
+      }
+    >
       <ScheduleClient
         initialData={
           scheduleResult.success

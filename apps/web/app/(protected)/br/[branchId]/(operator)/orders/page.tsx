@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { ORDER_VI } from "@comtammatu/shared/messages";
-import { AppEmptyState } from "@/components/surface";
+import { AppBackLink, AppEmptyState } from "@/components/surface";
 import { fetchOrders } from "@/(protected)/orders/actions";
 import { orders as ORDERS_COPY } from "@lib/messages/orders";
 import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
@@ -44,6 +44,7 @@ export default async function OperatorOrdersPage({
     <BranchOperatorPage
       title={ORDER_VI.long}
       description={ORDERS_COPY.operatorDescription}
+      back={<AppBackLink href={`/br/${branchId}`} />}
     >
       {result.success && result.data ? (
         <OperatorOrdersClient

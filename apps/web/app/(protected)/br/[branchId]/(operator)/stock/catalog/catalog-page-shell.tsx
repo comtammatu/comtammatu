@@ -5,13 +5,15 @@ import { PageSkeleton } from "@/components/page-skeleton";
 
 export function CatalogPageShell({
   title,
+  back,
   children,
 }: {
   title: string;
+  back?: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <BranchOperatorPage title={title}>
+    <BranchOperatorPage title={title} back={back}>
       <Suspense fallback={<PageSkeleton bare />}>{children}</Suspense>
     </BranchOperatorPage>
   );

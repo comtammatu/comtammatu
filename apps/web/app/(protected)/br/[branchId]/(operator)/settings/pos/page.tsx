@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
+import { AppBackLink } from "@/components/surface";
 import {
   BranchOperatorPage,
   BranchOperatorPanel,
@@ -63,6 +64,7 @@ export default async function BranchPosSettingsPage({
     <BranchOperatorPage
       title={title}
       description={`${branchRes.data.name} · ${messages.settings.branch.posSetupDescription}`}
+      back={<AppBackLink href={`/br/${branchId}/settings`} />}
     >
       <BranchOperatorPanel
         title={messages.settings.pos.registrationSectionTitle}

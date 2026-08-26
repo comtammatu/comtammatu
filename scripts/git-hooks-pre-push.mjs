@@ -62,7 +62,7 @@ export function runPrePushHook({
     if (!localRef || !localSha || !remoteRef || !remoteSha) {
       continue;
     }
-    if (/^0+$/.test(remoteSha)) {
+    if (/^0+$/.test(remoteSha) || /^0+$/.test(localSha) || localRef === "(delete)") {
       continue;
     }
 

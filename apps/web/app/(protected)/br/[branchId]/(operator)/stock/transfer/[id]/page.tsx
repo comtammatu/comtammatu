@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { getStatusBadgeMeta } from "@/components/status-badge";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
+import { AppBackLink } from "@/components/surface";
 import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { loadTransferDetailPageData } from "@lib/inventory/transfer-detail-data";
 import { isTransferReceiveWorkspaceStatus } from "@lib/inventory/transfer-detail-model";
@@ -66,6 +67,7 @@ export default async function OperatorTransferDetailPage({
         children: statusBadge.label,
         variant: statusBadge.variant,
       }}
+      back={<AppBackLink href={`/br/${branchId}/stock/transfer`} />}
     >
       <BranchTransferDetailClient
         branchId={branchId}

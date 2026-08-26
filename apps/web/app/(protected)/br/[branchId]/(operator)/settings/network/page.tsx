@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { canManageTenantStrategySettings } from "@comtammatu/shared/auth";
+import { AppBackLink } from "@/components/surface";
 import {
   BranchOperatorPage,
   BranchOperatorPanel,
@@ -39,6 +40,7 @@ export default async function BranchNetworkSettingsPage({
     <BranchOperatorPage
       title={title}
       description={messages.settings.network.description}
+      back={<AppBackLink href={`/br/${branchId}/settings`} />}
     >
       <BranchOperatorPanel>
         <NetworkConfigPanel branch={{ id: branch.id, name: branch.name }} />

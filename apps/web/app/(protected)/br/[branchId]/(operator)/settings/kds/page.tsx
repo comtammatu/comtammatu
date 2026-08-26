@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
+import { AppBackLink } from "@/components/surface";
 import {
   BranchOperatorPage,
   BranchOperatorPanel,
@@ -79,6 +80,7 @@ export default async function BranchKdsSettingsPage({
     <BranchOperatorPage
       title={title}
       description={`${branchRes.data.name} · ${messages.settings.branch.kdsSetupDescription}`}
+      back={<AppBackLink href={`/br/${branchId}/settings`} />}
     >
       <BranchOperatorPanel>
         <StationsClient

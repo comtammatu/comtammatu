@@ -14,6 +14,7 @@ import {
   AvatarImage,
 } from "@comtammatu/ui/components/avatar";
 import { Button } from "@comtammatu/ui/components/button";
+import { AppBackLink } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import {
   BranchOperatorActionBar,
@@ -180,6 +181,7 @@ export async function StaffProfilePageContent({
         title={copy.title}
         description={copy.description}
         badge={{ children: positionLabel, variant: "outline" }}
+        back={<AppBackLink href={`/br/${effectiveBranchId}`} />}
       >
         <BranchOperatorPanel tone="info">
           <div className="flex flex-col gap-4">

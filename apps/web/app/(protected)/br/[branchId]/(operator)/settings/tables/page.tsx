@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
+import { AppBackLink } from "@/components/surface";
 import {
   BranchOperatorPage,
   BranchOperatorPanel,
@@ -61,6 +62,7 @@ export default async function BranchTablesSettingsPage({
       description={messages.settings.branch.tablesDescription(
         branchRes.data.name,
       )}
+      back={<AppBackLink href={`/br/${branchId}/settings`} />}
     >
       <BranchOperatorPanel>
         <TablesClient

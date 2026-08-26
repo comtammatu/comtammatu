@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { AppBackLink } from "@/components/surface";
 import { fetchIngredients } from "@/(protected)/inventory/ingredient-actions";
 import { messages } from "@lib/messages";
 import { parseOperatorBranchId } from "../../../../_lib/parse-branch-id";
@@ -10,13 +11,22 @@ import {
 
 const copy = messages.catalog.thresholds;
 
-export default function OperatorCatalogThresholdsPage({
+export default async function OperatorCatalogThresholdsPage({
   params,
 }: {
   params: Promise<{ branchId: string }>;
 }) {
+  const { branchId: rawBranchId } = await params;
+  const branchId = parseOperatorBranchId(rawBranchId);
   return (
-    <CatalogPageShell title={copy.title}>
+    <CatalogPageShell
+      title={copy.title}
+      back={
+        branchId != null ? (
+          <AppBackLink href={`/br/${branchId}/stock/catalog`} />
+        ) : undefined
+      }
+    >
       <CatalogThresholdsBody params={params} />
     </CatalogPageShell>
   );

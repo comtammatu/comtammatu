@@ -30,8 +30,9 @@ test("Branch attendance owns a fixed-scope touch presenter", () => {
 
   assert.match(client, /BranchOperatorPage/);
   assert.match(client, /<AppSheet[\s\S]*side="bottom"/);
-  assert.match(client, /useBranchOpsEvents\(\{[\s\S]*branchId/);
-  assert.match(client, /setView\("summary"\)/);
+  assert.match(client, /TabsList[\s\S]*?size="touch"/);
+  assert.match(client, /TabsTrigger[\s\S]*?value="clock"/);
+  assert.match(client, /TabsTrigger[\s\S]*?value="summary"/);
   assert.doesNotMatch(client, /ToggleGroup/);
   assert.match(client, /sticky bottom-0/);
   assert.doesNotMatch(

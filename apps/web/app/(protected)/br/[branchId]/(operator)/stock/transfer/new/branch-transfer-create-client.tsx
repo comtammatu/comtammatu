@@ -28,7 +28,7 @@ import {
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Combobox } from "@/components/form/combobox";
 import { NumberPadSheet } from "@/components/form/number-pad-sheet";
-import { AppDetailFooter, AppEmptyState } from "@/components/surface";
+import { AppBackLink, AppDetailFooter, AppEmptyState } from "@/components/surface";
 import {
   BranchOperatorPage,
   BranchOperatorPanel,
@@ -74,6 +74,7 @@ export function BranchTransferCreateClient({
     <BranchOperatorPage
       title={journeyCopy.manualTransferAction}
       description={journeyCopy.manualTransferDescription}
+      back={<AppBackLink href={controller.listHref} />}
     >
       <form
         onSubmit={controller.submit}

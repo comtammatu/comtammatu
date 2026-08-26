@@ -2,9 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@comtammatu/ui/components/toggle-group";
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@comtammatu/ui/components/tabs";
 import { feedbackCopy } from "@lib/messages/feedback";
 
 export function BranchFeedbackTabs({
@@ -19,20 +20,22 @@ export function BranchFeedbackTabs({
   const router = useRouter();
 
   return (
-    <ToggleGroup
-      type="single"
-      variant="outline"
-      size="touch"
-      className="grid w-full grid-cols-2"
+    <Tabs
       value={active}
       onValueChange={(next) => {
         if (!next || next === active) return;
         router.push(next === "qr" ? qrHref : inboxHref);
       }}
-      aria-label={feedbackCopy.pageTitle}
+      className="w-full"
     >
-      <ToggleGroupItem value="inbox">{feedbackCopy.tabInbox}</ToggleGroupItem>
-      <ToggleGroupItem value="qr">{feedbackCopy.tabQr}</ToggleGroupItem>
-    </ToggleGroup>
+      <TabsList
+        size="touch"
+        className="grid w-full grid-cols-2"
+        aria-label={feedbackCopy.pageTitle}
+      >
+        <TabsTrigger value="inbox">{feedbackCopy.tabInbox}</TabsTrigger>
+        <TabsTrigger value="qr">{feedbackCopy.tabQr}</TabsTrigger>
+      </TabsList>
+    </Tabs>
   );
 }

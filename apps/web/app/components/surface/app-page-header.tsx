@@ -51,7 +51,9 @@ export function AppPageHeader({
           className,
         )}
       >
-        {breadcrumb ? <div>{breadcrumb}</div> : null}
+        {breadcrumb ? (
+          <div className="hidden sm:block">{breadcrumb}</div>
+        ) : null}
         <div
           className={cn(
             "flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between",
@@ -60,11 +62,19 @@ export function AppPageHeader({
         >
           <div className="flex min-w-0 flex-col gap-1">
             {eyebrow ? (
-              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <div
+                className={cn(
+                  "text-xs font-medium uppercase tracking-wide text-muted-foreground",
+                  compactOnMobile && "max-sm:hidden",
+                )}
+              >
                 {eyebrow}
               </div>
             ) : null}
             <div className="flex min-w-0 flex-wrap items-center gap-2">
+              {breadcrumb ? (
+                <div className="shrink-0 -ml-1 sm:hidden">{breadcrumb}</div>
+              ) : null}
               <Heading
                 className={cn(
                   "font-heading min-w-0 text-xl font-semibold tracking-tight sm:text-2xl",

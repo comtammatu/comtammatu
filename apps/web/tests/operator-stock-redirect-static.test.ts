@@ -264,7 +264,7 @@ test("operator stock on-hand list forks Branch presentation over the shared load
   assert.match(branchClientSource, /isStockReorderRisk/);
   assert.match(branchClientSource, /filterStockOnHandIngredients/);
   assert.match(branchClientSource, /MultiSelectCombobox/);
-  assert.match(branchClientSource, /ToggleGroup/);
+  assert.match(branchClientSource, /Tabs/);
   assert.match(branchClientSource, /<AppSheet[\s\S]*side="bottom"/);
   assert.match(branchClientSource, /moreStockJobs/);
   assert.match(

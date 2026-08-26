@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { AppBackLink } from "@/components/surface";
 import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
@@ -35,6 +36,7 @@ export default async function CloseDayPage({
     <BranchOperatorPage
       title={messages.settings.branch.closeDayTitle}
       description={context.branch.name}
+      back={<AppBackLink href={`/br/${branchId}`} />}
     >
       <CloseDayClient
         branchId={context.branchId}
