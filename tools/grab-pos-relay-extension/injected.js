@@ -128,14 +128,100 @@
     }
   }
 
+  function isOrderEligibleForRelay(order, url = '') {
+    const urlStr = String(url || '');
+    if (
+      urlStr.includes('PageType=History') ||
+      urlStr.includes('PageType=Cancelled') ||
+      urlStr.includes('PageType=Completed')
+    ) {
+      return false;
+    }
+
+    if (!order) return true; // URL-only check
+
+    const rawState = String(order.orderState || order.state || order.status || '').toUpperCase();
+    const terminalStates = ['COMPLETED', 'CANCELLED', 'DELIVERED', 'FAILED', 'EXPIRED', 'HISTORY'];
+    if (terminalStates.includes(rawState)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  function projectAllowlistedOrder(rawOrder) {
+    if (!rawOrder) return null;
+    return {
+      orderID: String(rawOrder.orderID || ''),
+      displayID: String(rawOrder.displayID || ''),
+      orderState: String(rawOrder.orderState || rawOrder.state || rawOrder.status || ''),
+      merchant: {
+        ID: String(rawOrder.merchant?.ID || merchantId || ''),
+      },
+      itemInfo: {
+        items: Array.isArray(rawOrder.itemInfo?.items)
+          ? rawOrder.itemInfo.items.map((i) => ({
+              itemID: i.itemID ? String(i.itemID) : undefined,
+              name: String(i.name || ''),
+              quantity: Number(i.quantity) || 1,
+              comment: i.comment ? String(i.comment).slice(0, 200) : null,
+              fare: i.fare
+                ? {
+                    priceDisplay: i.fare.priceDisplay,
+                    originalItemPriceDisplay: i.fare.originalItemPriceDisplay,
+                    priceFloat: typeof i.fare.priceFloat === 'number' ? i.fare.priceFloat : undefined,
+                    priceInMin: typeof i.fare.priceInMin === 'number' ? i.fare.priceInMin : undefined,
+                    discountInfo: i.fare.discountInfo,
+                  }
+                : undefined,
+              discountInfo: i.discountInfo,
+              modifierGroups: Array.isArray(i.modifierGroups)
+                ? i.modifierGroups.map((g) => ({
+                    modifierGroupID: g.modifierGroupID,
+                    modifierGroupName: g.modifierGroupName,
+                    modifiers: Array.isArray(g.modifiers)
+                      ? g.modifiers.map((m) => ({
+                          modifierID: m.modifierID,
+                          modifierName: m.modifierName,
+                          priceDisplay: m.priceDisplay,
+                          quantity: typeof m.quantity === 'number' ? m.quantity : 1,
+                        }))
+                      : [],
+                  }))
+                : [],
+            }))
+          : [],
+      },
+      fare: rawOrder.fare
+        ? {
+            subTotalDisplay: rawOrder.fare.subTotalDisplay,
+            totalDisplay: rawOrder.fare.totalDisplay,
+            discountDisplay: rawOrder.fare.discountDisplay,
+            orderLevelDiscounts: Array.isArray(rawOrder.fare.orderLevelDiscounts)
+              ? rawOrder.fare.orderLevelDiscounts
+              : Array.isArray(rawOrder.orderLevelDiscounts)
+              ? rawOrder.orderLevelDiscounts
+              : Array.isArray(rawOrder.promotions)
+              ? rawOrder.promotions
+              : undefined,
+          }
+        : undefined,
+      cutlery: typeof rawOrder.cutlery === 'number' ? rawOrder.cutlery : undefined,
+      paymentMethod: 'platform',
+    };
+  }
+
   function dispatchOrderDetailOnce(order) {
-    const key = order && (order.orderID || order.displayID);
+    if (!isOrderEligibleForRelay(order)) return;
+    const cleanOrder = projectAllowlistedOrder(order);
+    if (!cleanOrder) return;
+    const key = cleanOrder.orderID || cleanOrder.displayID;
     if (key) {
       if (dispatchedOrderIds.has(key)) return;
       dispatchedOrderIds.add(key);
     }
-    console.log(`[Grab POS Relay] Caught order detail: ${order.displayID} (${order.orderID})`);
-    dispatchOrderEvent('ORDER_DETAIL', { order, merchantId });
+    console.log(`[Grab POS Relay] Caught order detail: ${cleanOrder.displayID} (${cleanOrder.orderID})`);
+    dispatchOrderEvent('ORDER_DETAIL', { order: cleanOrder, merchantId });
   }
 
   // Intercept fetch
@@ -171,27 +257,18 @@
             if (url.includes('/orders-pagination') && Array.isArray(data.orders)) {
               dispatchOrderEvent('ORDERS_PAGINATION', { url, data, merchantId });
 
-              const isHistoryOrCancelled =
-                url.includes('PageType=History') ||
-                url.includes('PageType=Cancelled') ||
-                url.includes('PageType=Completed');
-
-              // Only auto fetch and relay active preparation / upcoming orders
-              if (!isHistoryOrCancelled) {
+              if (isOrderEligibleForRelay(null, url)) {
                 for (const order of data.orders) {
-                  const state = String(order.state || '').toUpperCase();
-                  if (state === 'COMPLETED' || state === 'CANCELLED' || state === 'DELIVERED') {
-                    continue;
-                  }
-                  if (order.orderID && !processedOrderIds.has(order.orderID)) {
-                    processedOrderIds.add(order.orderID);
-                    fetchOrderDetail(order.orderID);
+                  if (isOrderEligibleForRelay(order, url)) {
+                    if (order.orderID && !processedOrderIds.has(order.orderID)) {
+                      processedOrderIds.add(order.orderID);
+                      fetchOrderDetail(order.orderID);
+                    }
                   }
                 }
               }
             } else if (url.includes('/food/merchant/v3/orders/') && data.order) {
-              const state = String(data.order.state || '').toUpperCase();
-              if (state !== 'COMPLETED' && state !== 'CANCELLED' && state !== 'DELIVERED') {
+              if (isOrderEligibleForRelay(data.order, url)) {
                 dispatchOrderDetailOnce(data.order);
               }
             }
@@ -259,9 +336,18 @@
   }
 
   // API Call: Sync Available Status (1: Có bán, 2: Hết hàng hôm nay, 3: Không về hàng nữa, 7: Ẩn giấu)
-  async function setGrabItemAvailableStatus(itemId, availableStatus) {
+  async function setGrabItemAvailableStatus(requestId, itemId, availableStatus) {
     if (!itemId || !itemId.startsWith('VNITE')) {
       console.warn(`[Grab POS Relay] Skip status sync for non-item ID: ${itemId}`);
+      dispatchOrderEvent('SYNC_STATUS_RESULT', {
+        requestId,
+        itemId,
+        availableStatus: null,
+        statusStr: null,
+        success: false,
+        status: 0,
+        error: 'Invalid item ID format',
+      });
       return;
     }
     try {
@@ -320,16 +406,42 @@
       else if (capturedAuthHeaders) noteAuthFailure(res.status, url);
 
       console.log(`[Grab POS Relay] Updated status for item ${itemId} -> code: ${statusCode} (${statusStr}) (HTTP ${res.status})`);
-      dispatchOrderEvent('SYNC_STATUS_RESULT', { itemId, availableStatus: statusCode, statusStr, success: res.ok, status: res.status });
+      dispatchOrderEvent('SYNC_STATUS_RESULT', {
+        requestId,
+        itemId,
+        availableStatus: statusCode,
+        statusStr,
+        success: res.ok,
+        status: res.status,
+      });
     } catch (err) {
       console.error(`[Grab POS Relay] Failed to update item status for ${itemId}:`, err);
+      dispatchOrderEvent('SYNC_STATUS_RESULT', {
+        requestId,
+        itemId,
+        availableStatus: null,
+        statusStr: null,
+        success: false,
+        status: 0,
+        error: String(err),
+      });
     }
   }
 
   // API Call: Sync Stock / Daily Limit (IMS)
-  async function setGrabItemStock(itemId, currentStock, maxStock) {
+  async function setGrabItemStock(requestId, itemId, currentStock, maxStock) {
     if (!itemId || !itemId.startsWith('VNITE')) {
       console.warn(`[Grab POS Relay] Skip stock sync for non-item ID: ${itemId}`);
+      dispatchOrderEvent('SYNC_STOCK_RESULT', {
+        requestId,
+        itemId,
+        currentStock,
+        maxStock,
+        enableIms: false,
+        success: false,
+        status: 0,
+        error: 'Invalid item ID format',
+      });
       return;
     }
     try {
@@ -363,9 +475,27 @@
       else if (capturedAuthHeaders) noteAuthFailure(res.status, url);
 
       console.log(`[Grab POS Relay] Updated stock for item ${itemId} -> current: ${stockVal}, max: ${maxStockVal} (IMS: ${enableIms}, HTTP ${res.status})`);
-      dispatchOrderEvent('SYNC_STOCK_RESULT', { itemId, currentStock: stockVal, maxStock: maxStockVal, enableIms, success: res.ok, status: res.status });
+      dispatchOrderEvent('SYNC_STOCK_RESULT', {
+        requestId,
+        itemId,
+        currentStock: stockVal,
+        maxStock: maxStockVal,
+        enableIms,
+        success: res.ok,
+        status: res.status,
+      });
     } catch (err) {
       console.error(`[Grab POS Relay] Failed to update stock for ${itemId}:`, err);
+      dispatchOrderEvent('SYNC_STOCK_RESULT', {
+        requestId,
+        itemId,
+        currentStock,
+        maxStock,
+        enableIms: false,
+        success: false,
+        status: 0,
+        error: String(err),
+      });
     }
   }
 
@@ -404,14 +534,20 @@
           const data = JSON.parse(this.responseText);
           if (url.includes('/orders-pagination') && Array.isArray(data.orders)) {
             dispatchOrderEvent('ORDERS_PAGINATION', { url, data, merchantId });
-            for (const order of data.orders) {
-              if (order.orderID && !processedOrderIds.has(order.orderID)) {
-                processedOrderIds.add(order.orderID);
-                fetchOrderDetail(order.orderID);
+            if (isOrderEligibleForRelay(null, url)) {
+              for (const order of data.orders) {
+                if (isOrderEligibleForRelay(order, url)) {
+                  if (order.orderID && !processedOrderIds.has(order.orderID)) {
+                    processedOrderIds.add(order.orderID);
+                    fetchOrderDetail(order.orderID);
+                  }
+                }
               }
             }
           } else if (url.includes('/food/merchant/v3/orders/') && data.order) {
-            dispatchOrderDetailOnce(data.order);
+            if (isOrderEligibleForRelay(data.order, url)) {
+              dispatchOrderDetailOnce(data.order);
+            }
           }
         } catch (e) {
           // Non-JSON responses carry no orders.
@@ -429,9 +565,9 @@
 
     const { command, payload } = event.data;
     if (command === 'SET_AVAILABLE_STATUS') {
-      setGrabItemAvailableStatus(payload.itemId, payload.availableStatus);
+      setGrabItemAvailableStatus(payload?.requestId, payload?.itemId, payload?.availableStatus);
     } else if (command === 'SET_ITEM_STOCK') {
-      setGrabItemStock(payload.itemId, payload.currentStock, payload.maxStock);
+      setGrabItemStock(payload?.requestId, payload?.itemId, payload?.currentStock, payload?.maxStock);
     }
   });
 

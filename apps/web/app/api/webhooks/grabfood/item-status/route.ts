@@ -6,11 +6,13 @@ import { getVNDateString } from "@comtammatu/shared/time";
 import {
   GRAB_MENU_MAPPING,
   normalizeMenuName,
+  validateGrabMerchantForBranch,
   type GrabMappingItem,
 } from "@lib/grabfood/mapping";
 
 const querySchema = z.object({
   branch_id: z.coerce.number().int().positive().default(1),
+  merchant_id: z.string().max(100).optional(),
 });
 
 const CORS_HEADERS = {
@@ -18,6 +20,22 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, x-grab-relay-secret, Authorization",
 };
+
+// In-memory rate limiting: 120 requests / min per IP
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + 60000 });
+    return true;
+  }
+  if (entry.count >= 120) {
+    return false;
+  }
+  entry.count++;
+  return true;
+}
 
 export async function OPTIONS() {
   return new NextResponse(null, {
@@ -47,7 +65,16 @@ function verifyRelaySecret(request: NextRequest): boolean {
 
 export async function GET(request: NextRequest) {
   try {
-    // 1. Authenticate request
+    // 1. Rate limiting check
+    const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "anonymous";
+    if (!checkRateLimit(clientIp)) {
+      return NextResponse.json(
+        { success: false, error: "Quá nhiều yêu cầu, vui lòng thử lại sau" },
+        { status: 429, headers: CORS_HEADERS },
+      );
+    }
+
+    // 2. Authenticate request
     if (!verifyRelaySecret(request)) {
       return NextResponse.json(
         { success: false, error: "Xác thực không hợp lệ" },
@@ -58,6 +85,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const parsed = querySchema.safeParse({
       branch_id: searchParams.get("branch_id") ?? "1",
+      merchant_id: searchParams.get("merchant_id") ?? undefined,
     });
 
     if (!parsed.success) {
@@ -68,9 +96,10 @@ export async function GET(request: NextRequest) {
     }
 
     const branchId = parsed.data.branch_id;
+    const merchantId = parsed.data.merchant_id;
     const supabase = createServiceClient();
 
-    // 2. Fetch branch and tenant
+    // 3. Fetch branch and tenant
     const { data: branch, error: branchErr } = await supabase
       .from("branches")
       .select("id, tenant_id")
@@ -81,6 +110,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: "Không tìm thấy chi nhánh" },
         { status: 404, headers: CORS_HEADERS },
+      );
+    }
+
+    // 4. Validate merchant ID if provided
+    if (merchantId && !validateGrabMerchantForBranch(branch.id, merchantId)) {
+      return NextResponse.json(
+        { success: false, error: "Mã quán Grab không khớp với chi nhánh được chỉ định" },
+        { status: 403, headers: CORS_HEADERS },
       );
     }
 

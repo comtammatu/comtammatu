@@ -53,6 +53,36 @@ export const GRAB_MENU_MAPPING: Record<string, GrabMappingItem> = {
   "VNMOD20260819110119033709": { name: "Bì", defaultPrice: 12000 },
 };
 
+/**
+ * Trusted server-side branch to Grab Merchant ID mappings.
+ */
+export const GRAB_BRANCH_MERCHANT_MAP: Record<number, string> = {
+  1: "5-C8DTE75GUGJ3JT", // Branch 1: Nguyễn Hữu Thọ
+};
+
+/**
+ * Validates that a Grab merchant ID belongs to the configured branch.
+ */
+export function validateGrabMerchantForBranch(branchId: number, merchantId?: string | null): boolean {
+  if (!merchantId) return false;
+  const cleanMerchantId = merchantId.trim();
+  if (!cleanMerchantId) return false;
+
+  const envMapRaw = process.env.GRAB_BRANCH_MERCHANT_MAPPINGS;
+  if (envMapRaw) {
+    try {
+      const parsed = JSON.parse(envMapRaw) as Record<string, string>;
+      const expected = parsed[String(branchId)];
+      if (expected) return expected === cleanMerchantId;
+    } catch {
+      // Fallback to static mapping
+    }
+  }
+
+  const expectedMerchantId = GRAB_BRANCH_MERCHANT_MAP[branchId];
+  return expectedMerchantId === cleanMerchantId;
+}
+
 /** Normalizes a string for case/accent-insensitive lookup */
 export function normalizeMenuName(name: string): string {
   return name
@@ -77,6 +107,31 @@ export function generateOrderUuid(orderId: string): string {
   ].join("-");
 }
 
+/**
+ * Parses monetary amounts safely, distinguishing legitimate 0 from invalid / missing values.
+ */
+export function parseMonetaryAmount(raw: unknown): number | null {
+  if (typeof raw === "number") {
+    return Number.isFinite(raw) && raw >= 0 ? Math.round(raw) : null;
+  }
+  if (typeof raw === "string") {
+    const cleaned = raw.replace(/[^\d]/g, "");
+    if (cleaned === "") return null;
+    const parsed = parseInt(cleaned, 10);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+  }
+  return null;
+}
+
+export interface GrabItemDiscountInfo {
+  discountType?: string; // e.g. "freeItem"
+  itemDiscountPriceDisplay?: string; // e.g. "10.000"
+  itemDiscountPriceFloat?: number;
+  itemDiscountPriceInMin?: number;
+  discountAmountDisplay?: string;
+  discountAmountFloat?: number;
+}
+
 export interface GrabOrderItemRaw {
   itemID?: string;
   name: string;
@@ -87,7 +142,9 @@ export interface GrabOrderItemRaw {
     originalItemPriceDisplay?: string;
     priceFloat?: number;
     priceInMin?: number;
+    discountInfo?: GrabItemDiscountInfo;
   };
+  discountInfo?: GrabItemDiscountInfo;
   modifierGroups?: Array<{
     modifierGroupID?: string;
     modifierGroupName?: string;
@@ -100,9 +157,21 @@ export interface GrabOrderItemRaw {
   }>;
 }
 
+export interface GrabOrderDiscount {
+  discountType?: string;
+  discountAmountDisplay?: string;
+  discountAmountFloat?: number;
+  description?: string;
+  code?: string;
+  itemID?: string;
+}
+
 export interface GrabOrderRaw {
   orderID: string;
   displayID: string;
+  orderState?: string;
+  state?: string;
+  status?: string;
   merchant?: { ID?: string };
   eater?: {
     name?: string;
@@ -115,7 +184,11 @@ export interface GrabOrderRaw {
   fare?: {
     subTotalDisplay?: string;
     totalDisplay?: string;
+    discountDisplay?: string;
+    orderLevelDiscounts?: GrabOrderDiscount[];
   };
+  orderLevelDiscounts?: GrabOrderDiscount[];
+  promotions?: GrabOrderDiscount[];
   paymentMethod?: string;
   cutlery?: number;
 }
@@ -259,7 +332,16 @@ export function matchSideItem(
 }
 
 /**
- * Transforms incoming Grab order payload into RPC-ready items structure
+ * Transforms incoming Grab order payload into RPC-ready items structure.
+ *
+ * Safety Rules:
+ * 1. Authoritative discounts are derived exclusively from structured Grab promotion fields,
+ *    never from customer comments or item names.
+ * 2. Customer comments are trimmed and length-limited (200 chars) for food preparation only.
+ * 3. Zero totals (0 VND) are preserved and distinguished from missing values.
+ * 4. Deduplicates promotions between item-level discountInfo and orderLevelDiscounts.
+ * 5. Cutlery enum semantics remain an unproven evidence gap; numeric cutlery is not mapped
+ *    into artificial side items.
  */
 export function transformGrabOrderPayload(
   grabOrder: GrabOrderRaw,
@@ -275,8 +357,7 @@ export function transformGrabOrderPayload(
       for (const grp of gi.modifierGroups) {
         if (Array.isArray(grp.modifiers)) {
           for (const mod of grp.modifiers) {
-            const rawPrice = mod.priceDisplay?.replace(/[^\d]/g, "") || "0";
-            const price = parseInt(rawPrice, 10) || 0;
+            const rawPrice = parseMonetaryAmount(mod.priceDisplay) ?? 0;
             const mappedMod = mod.modifierID ? GRAB_MENU_MAPPING[mod.modifierID] : null;
             const name = mappedMod?.name || mod.modifierName || grp.modifierGroupName || "Món thêm";
 
@@ -285,7 +366,7 @@ export function transformGrabOrderPayload(
               sides.push({
                 side_item_id: matchedSide.id,
                 name: matchedSide.name,
-                price: price > 0 ? price : matchedSide.base_price,
+                price: rawPrice > 0 ? rawPrice : matchedSide.base_price,
                 quantity: mod.quantity || 1,
               });
             } else {
@@ -298,51 +379,59 @@ export function transformGrabOrderPayload(
 
     const sidesSum = sides.reduce((acc, s) => acc + s.price * s.quantity, 0);
     const unitPrice = matched.base_price + sidesSum;
-    const subtotal = unitPrice * (gi.quantity || 1);
+    const qty = gi.quantity || 1;
+    const subtotal = unitPrice * qty;
 
-    const rawPriceStr = gi.fare?.priceDisplay?.replace(/[^\d]/g, "") || "";
-    const rawPriceNum = rawPriceStr !== "" ? parseInt(rawPriceStr, 10) : -1;
-    const priceFloat =
-      typeof gi.fare?.priceFloat === "number"
-        ? gi.fare.priceFloat
-        : rawPriceNum >= 0
-        ? rawPriceNum
-        : undefined;
-
-    const isFreeGift =
-      rawPriceStr === "0" ||
-      rawPriceNum === 0 ||
-      priceFloat === 0 ||
-      gi.fare?.priceInMin === 0 ||
-      /tặng|quà\s*tặng|\bfree\b|0\s*đ/i.test(gi.name) ||
-      /tặng|quà\s*tặng|\bfree\b|0\s*đ/i.test(gi.comment || "");
+    // Structured discount handling
+    const discountInfo = gi.discountInfo || gi.fare?.discountInfo;
+    const structuredDiscountType = discountInfo?.discountType;
+    const structuredDiscountAmount =
+      parseMonetaryAmount(discountInfo?.itemDiscountPriceDisplay) ??
+      parseMonetaryAmount(discountInfo?.itemDiscountPriceFloat) ??
+      parseMonetaryAmount(discountInfo?.discountAmountDisplay) ??
+      parseMonetaryAmount(discountInfo?.discountAmountFloat);
 
     let discountType: "pct" | "vnd" | undefined;
     let discountValue: number | undefined;
     let discountNote: string | undefined;
 
-    if (isFreeGift) {
+    if (structuredDiscountType === "freeItem") {
       discountType = "pct";
       discountValue = 100;
       discountNote = "Khuyến mãi tặng kèm Grab (0đ)";
-    } else if (priceFloat !== undefined && priceFloat > 0 && priceFloat < unitPrice) {
-      const itemDiscount = unitPrice - priceFloat;
-      if (itemDiscount > 0) {
+    } else if (structuredDiscountAmount !== null && structuredDiscountAmount > 0) {
+      discountType = "vnd";
+      discountValue = Math.min(subtotal, structuredDiscountAmount);
+      discountNote = "Khuyến mãi món Grab";
+    } else if (qty === 1) {
+      const promotionalPrice =
+        parseMonetaryAmount(gi.fare?.priceDisplay) ??
+        parseMonetaryAmount(gi.fare?.priceFloat);
+
+      if (promotionalPrice === 0) {
+        discountType = "pct";
+        discountValue = 100;
+        discountNote = "Khuyến mãi tặng kèm Grab (0đ)";
+      } else if (promotionalPrice !== null && promotionalPrice > 0 && promotionalPrice < unitPrice) {
         discountType = "vnd";
-        discountValue = itemDiscount;
+        discountValue = unitPrice - promotionalPrice;
         discountNote = "Khuyến mãi giảm giá món Grab";
       }
     }
+    // Note: When quantity > 1 without explicit per-unit discountInfo, priceFloat per-unit
+    // vs line-total semantics are unproven in official Grab contract; fail safe without guessing.
 
+    // Sanitize customer comment: max 200 chars, food prep only
+    const sanitizedComment = gi.comment ? gi.comment.trim().slice(0, 200) : null;
     const noteParts = [
-      gi.comment?.trim(),
+      sanitizedComment,
       unmatchedOptions.length > 0 ? `Tùy chọn: ${unmatchedOptions.join(", ")}` : null,
     ].filter(Boolean);
 
     return {
       menu_item_id: matched.id,
       item_name: matched.name,
-      quantity: gi.quantity || 1,
+      quantity: qty,
       unit_price: unitPrice,
       modifiers: [],
       sides,
@@ -354,18 +443,31 @@ export function transformGrabOrderPayload(
     };
   });
 
-  const rawSubtotal = grabOrder.fare?.subTotalDisplay?.replace(/[^\d]/g, "") || "0";
-  const rawTotal = grabOrder.fare?.totalDisplay?.replace(/[^\d]/g, "") || rawSubtotal;
+  const calculatedItemsSubtotal = items.reduce((acc, i) => acc + i.subtotal, 0);
+  const calculatedItemsDiscount = items.reduce((acc, i) => {
+    if (i.discount_type === "pct" && i.discount_value === 100) return acc + i.subtotal;
+    if (i.discount_type === "vnd" && i.discount_value) return acc + i.discount_value;
+    return acc;
+  }, 0);
+
+  const rawSubtotalParsed = parseMonetaryAmount(grabOrder.fare?.subTotalDisplay);
+  const rawTotalParsed = parseMonetaryAmount(grabOrder.fare?.totalDisplay);
+
+  const subtotal = rawSubtotalParsed !== null ? rawSubtotalParsed : calculatedItemsSubtotal;
+  const totalAmount =
+    rawTotalParsed !== null
+      ? rawTotalParsed
+      : Math.max(0, calculatedItemsSubtotal - calculatedItemsDiscount);
 
   return {
     orderId: grabOrder.orderID,
     idempotencyKey: generateOrderUuid(grabOrder.orderID),
     displayId: grabOrder.displayID,
     merchantId: grabOrder.merchant?.ID,
-    customerNote: null,
+    customerNote: null, // Delivery platform orders do not use order-level notes (kitchen notes belong on item rows)
     paymentMethod: "platform",
-    subtotal: parseInt(rawSubtotal, 10) || items.reduce((acc, i) => acc + i.subtotal, 0),
-    totalAmount: parseInt(rawTotal, 10) || items.reduce((acc, i) => acc + i.subtotal, 0),
+    subtotal,
+    totalAmount,
     items,
   };
 }

@@ -125,12 +125,13 @@ document.addEventListener('DOMContentLoaded', () => {
     orders.forEach((o) => {
       const el = document.createElement('div');
       el.className = 'order-item';
+      const isErr = o.status === 'error';
       el.innerHTML = `
         <div class="order-top">
-          <span class="order-badge">${o.displayID}</span>
+          <span class="order-badge" style="${isErr ? 'background: #ef4444; color: #fff;' : ''}">${o.displayID}</span>
           <span>${o.total}</span>
         </div>
-        <div class="order-desc">${o.items || '1 phần ăn'}</div>
+        <div class="order-desc">${isErr ? `⚠️ ${o.error || 'Lỗi gửi đơn'}` : (o.items || '1 phần ăn')}</div>
       `;
       orderList.appendChild(el);
     });

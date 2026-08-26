@@ -5,21 +5,131 @@ import { createServiceClient } from "@comtammatu/database/supabase/service";
 import {
   transformGrabOrderPayload,
   resolveBranchStaffId,
+  validateGrabMerchantForBranch,
   type GrabOrderRaw,
 } from "@lib/grabfood/mapping";
 
-const grabRelaySchema = z.object({
-  ping: z.boolean().optional(),
-  branch_id: z.coerce.number().int().positive().optional(),
-  merchant_id: z.string().optional(),
-  order: z
-    .object({
-      orderID: z.string(),
-      displayID: z.string(),
-    })
-    .passthrough()
-    .optional(),
-});
+const MAX_PAYLOAD_BYTES = 64 * 1024; // 64 KB limit per D104
+
+// In-memory rate limiting: 60 requests / min per IP
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + 60000 });
+    return true;
+  }
+  if (entry.count >= 60) {
+    return false;
+  }
+  entry.count++;
+  return true;
+}
+
+const grabItemDiscountSchema = z
+  .object({
+    discountType: z.string().max(100).optional(),
+    itemDiscountPriceDisplay: z.string().max(50).optional(),
+    itemDiscountPriceFloat: z.number().nonnegative().optional(),
+    itemDiscountPriceInMin: z.number().nonnegative().optional(),
+    discountAmountDisplay: z.string().max(50).optional(),
+    discountAmountFloat: z.number().nonnegative().optional(),
+  })
+  .strict();
+
+const grabModifierSchema = z
+  .object({
+    modifierID: z.string().max(100).optional(),
+    modifierName: z.string().max(200).optional(),
+    priceDisplay: z.string().max(50).optional(),
+    quantity: z.number().int().positive().optional(),
+  })
+  .strict();
+
+const grabModifierGroupSchema = z
+  .object({
+    modifierGroupID: z.string().max(100).optional(),
+    modifierGroupName: z.string().max(200).optional(),
+    modifiers: z.array(grabModifierSchema).max(50).optional(),
+  })
+  .strict();
+
+const grabOrderItemSchema = z
+  .object({
+    itemID: z.string().max(100).optional(),
+    name: z.string().min(1).max(200),
+    quantity: z.number().int().positive().default(1),
+    comment: z.string().max(500).nullable().optional(),
+    fare: z
+      .object({
+        priceDisplay: z.string().max(50).optional(),
+        originalItemPriceDisplay: z.string().max(50).optional(),
+        priceFloat: z.number().nonnegative().optional(),
+        priceInMin: z.number().nonnegative().optional(),
+        discountInfo: grabItemDiscountSchema.optional(),
+      })
+      .strict()
+      .optional(),
+    discountInfo: grabItemDiscountSchema.optional(),
+    modifierGroups: z.array(grabModifierGroupSchema).max(20).optional(),
+  })
+  .strict();
+
+const grabOrderDiscountSchema = z
+  .object({
+    discountType: z.string().max(100).optional(),
+    discountAmountDisplay: z.string().max(50).optional(),
+    discountAmountFloat: z.number().nonnegative().optional(),
+    description: z.string().max(200).optional(),
+    code: z.string().max(100).optional(),
+    itemID: z.string().max(100).optional(),
+  })
+  .strict();
+
+const grabOrderPayloadSchema = z
+  .object({
+    orderID: z.string().min(1).max(100),
+    displayID: z.string().min(1).max(50),
+    orderState: z.string().max(50).optional(),
+    state: z.string().max(50).optional(),
+    status: z.string().max(50).optional(),
+    merchant: z
+      .object({
+        ID: z.string().max(100).optional(),
+      })
+      .strict()
+      .optional(),
+    itemInfo: z
+      .object({
+        items: z.array(grabOrderItemSchema).min(1).max(100),
+      })
+      .strict()
+      .optional(),
+    fare: z
+      .object({
+        subTotalDisplay: z.string().max(50).optional(),
+        totalDisplay: z.string().max(50).optional(),
+        discountDisplay: z.string().max(50).optional(),
+        orderLevelDiscounts: z.array(grabOrderDiscountSchema).max(20).optional(),
+      })
+      .strict()
+      .optional(),
+    orderLevelDiscounts: z.array(grabOrderDiscountSchema).max(20).optional(),
+    promotions: z.array(grabOrderDiscountSchema).max(20).optional(),
+    paymentMethod: z.string().max(50).optional(),
+    cutlery: z.number().int().optional(),
+  })
+  .strict();
+
+const grabRelaySchema = z
+  .object({
+    ping: z.boolean().optional(),
+    branch_id: z.coerce.number().int().positive().optional(),
+    merchant_id: z.string().max(100).optional(),
+    order: grabOrderPayloadSchema.optional(),
+  })
+  .strict();
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -55,7 +165,16 @@ function verifyRelaySecret(request: NextRequest): boolean {
 
 export async function POST(request: NextRequest) {
   try {
-    // 1. Authenticate webhook request
+    // 1. Rate limiting check
+    const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "anonymous";
+    if (!checkRateLimit(clientIp)) {
+      return NextResponse.json(
+        { success: false, error: "Quá nhiều yêu cầu, vui lòng thử lại sau" },
+        { status: 429, headers: CORS_HEADERS },
+      );
+    }
+
+    // 2. Authenticate webhook request
     if (!verifyRelaySecret(request)) {
       return NextResponse.json(
         { success: false, error: "Xác thực không hợp lệ" },
@@ -63,9 +182,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json().catch(() => null);
-    const parsed = grabRelaySchema.safeParse(body);
+    // 3. Payload size check
+    const rawBody = await request.text().catch(() => "");
+    if (Buffer.byteLength(rawBody, "utf-8") > MAX_PAYLOAD_BYTES) {
+      return NextResponse.json(
+        { success: false, error: "Dung lượng yêu cầu vượt quá giới hạn 64KB" },
+        { status: 413, headers: CORS_HEADERS },
+      );
+    }
 
+    let parsedJson: unknown;
+    try {
+      parsedJson = JSON.parse(rawBody);
+    } catch {
+      return NextResponse.json(
+        { success: false, error: "Dữ liệu JSON không hợp lệ" },
+        { status: 400, headers: CORS_HEADERS },
+      );
+    }
+
+    const parsed = grabRelaySchema.safeParse(parsedJson);
     if (!parsed.success) {
       return NextResponse.json(
         { success: false, error: "Dữ liệu yêu cầu không hợp lệ" },
@@ -97,9 +233,18 @@ export async function POST(request: NextRequest) {
     const merchantId = parsed.data.merchant_id || grabOrder.merchant?.ID;
     const sanitizedDisplayId = (grabOrder.displayID || "").replace(/[^A-Za-z0-9_-]/g, "");
 
+    // 4. Reject completed/cancelled/history orders immediately
+    const rawState = String(grabOrder.orderState || grabOrder.state || grabOrder.status || "").toUpperCase();
+    if (["COMPLETED", "CANCELLED", "DELIVERED", "EXPIRED", "HISTORY", "FAILED"].includes(rawState)) {
+      return NextResponse.json(
+        { success: false, error: "Đơn hàng đã hoàn tất hoặc đã hủy trên Grab, không thể tiếp nhận lại lên POS" },
+        { status: 422, headers: CORS_HEADERS },
+      );
+    }
+
     const supabase = createServiceClient();
 
-    // 2. Find branch and tenant
+    // 5. Find branch and tenant
     const { data: branch, error: branchErr } = await supabase
       .from("branches")
       .select("id, tenant_id, code, name")
@@ -113,7 +258,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 3. Check if order was already processed or manually entered on POS (deduplication)
+    // 6. Cross-branch isolation: Validate that merchantId matches branch
+    if (!validateGrabMerchantForBranch(branch.id, merchantId)) {
+      return NextResponse.json(
+        { success: false, error: "Mã quán Grab không khớp với chi nhánh được chỉ định" },
+        { status: 403, headers: CORS_HEADERS },
+      );
+    }
+
+    // 7. Check if order was already processed or manually entered on POS (deduplication)
     const { data: existingOrder } = await supabase
       .from("orders")
       .select("id, order_number, status, payment_status, external_order_ref")
@@ -138,7 +291,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. Query active menu items for this tenant
+    // 8. Query active menu items for this tenant
     const { data: dbMenuItems, error: menuErr } = await supabase
       .from("menu_items")
       .select("id, name, base_price, category_id")
@@ -153,7 +306,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 5. Transform Grab payload to RPC-ready items structure
+    // 9. Transform Grab payload to RPC-ready items structure
     let transformed;
     try {
       transformed = transformGrabOrderPayload(grabOrder, dbMenuItems);
@@ -166,7 +319,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 6. Find staff profile to act as created_by (prioritize branch_manager -> cashier -> branch staff -> HQ)
+    // 10. Find staff profile to act as created_by (prioritize branch_manager -> cashier -> branch staff -> HQ)
     const createdBy = await resolveBranchStaffId(supabase, branch.tenant_id, branch.id);
 
     if (!createdBy) {
@@ -176,7 +329,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 7. Create order via create_order RPC
+    // 11. Create order via create_order RPC
     // Note: delivery platform must be 'grab' (allowed: 'grab', 'shopee', 'be', 'green_sm')
     const { data: rpcResult, error: rpcError } = await supabase.rpc("create_order", {
       p_tenant_id: branch.tenant_id,
@@ -207,31 +360,29 @@ export async function POST(request: NextRequest) {
     const orderId = (rpcResult as { order_id?: number })?.order_id;
     const orderNumber = (rpcResult as { order_number?: string })?.order_number || `GH-${grabOrder.displayID}`;
 
-    // 8. Apply order-level promotion/voucher if Grab total is lower than database total
-    if (orderId && transformed.totalAmount > 0) {
+    // 12. Verify stored database total amount against accepted authoritative total
+    if (orderId && transformed.totalAmount >= 0) {
       const { data: createdOrder } = await supabase
         .from("orders")
         .select("total_amount")
         .eq("id", orderId)
         .single();
 
-      if (createdOrder && createdOrder.total_amount > transformed.totalAmount) {
-        const orderDiscount = createdOrder.total_amount - transformed.totalAmount;
-        if (orderDiscount > 0) {
-          const { error: discountErr } = await supabase.rpc("apply_order_discount", {
-            p_order_id: orderId,
-            p_type: "vnd",
-            p_value: orderDiscount,
-            p_note: "Khuyến mãi / Voucher Grab",
-          });
-          if (discountErr) {
-            console.warn("[Grab POS Relay] apply_order_discount error:", discountErr.message);
-          }
-        }
+      if (createdOrder && createdOrder.total_amount !== transformed.totalAmount) {
+        console.warn(
+          `[Grab POS Relay] Database total (${createdOrder.total_amount}) does not match authoritative Grab total (${transformed.totalAmount}) for order ${grabOrder.displayID}`,
+        );
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Tổng tiền trên POS không khớp với số tiền thực tế của sàn GrabFood",
+          },
+          { status: 422, headers: CORS_HEADERS },
+        );
       }
     }
 
-    // 9. Leave payment_status 'unpaid' so the order surfaces in the POS
+    // 13. Leave payment_status 'unpaid' so the order surfaces in the POS
     // "Cần xử lý" list (fetchActiveOrders excludes paid orders). The cashier
     // confirms the platform tender at driver handoff via
     // confirm_platform_payment — marking paid here hid relayed orders from POS.

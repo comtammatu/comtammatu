@@ -6,6 +6,8 @@ import {
   generateOrderUuid,
   transformGrabOrderPayload,
   matchMenuItem,
+  parseMonetaryAmount,
+  validateGrabMerchantForBranch,
   type GrabOrderRaw,
 } from "../lib/grabfood/mapping";
 
@@ -16,8 +18,8 @@ const MOCK_GRAB_ORDER_REAL: GrabOrderRaw = {
     ID: "5-C8DTE75GUGJ3JT",
   },
   eater: {
-    name: "The Binh Luong",
-    mobileNumber: "+84 3994 2835 7",
+    name: "Khách Hàng Grab",
+    mobileNumber: "+84 900 000 000",
     comment: "",
   },
   cutlery: 2,
@@ -317,4 +319,213 @@ test("GrabFood transformation: assigns partial item discount when Grab price is 
   assert.equal(item?.discount_type, "vnd");
   assert.equal(item?.discount_value, 10000); // 54000 - 44000 = 10000
   assert.equal(item?.discount_note, "Khuyến mãi giảm giá món Grab");
+});
+
+test("GrabFood transformation: handles reference multi-item order with freeItem and orderLevelDiscounts deduplication (117k -> 107k)", () => {
+  const dbItemsForRef = [
+    ...MOCK_DB_ITEMS,
+    { id: 10, name: "Bì", base_price: 12000 },
+    { id: 11, name: "Trứng", base_price: 10000 },
+    { id: 12, name: "Trà đá", base_price: 4000 },
+  ];
+
+  const referenceOrder: GrabOrderRaw = {
+    orderID: "001644320651-REFERENCE-FIXTURE",
+    displayID: "GF-730",
+    merchant: { ID: "5-C8DTE75GUGJ3JT" },
+    cutlery: 1, // Cutlery enum remains an unproven evidence gap; not synthesized into side items
+    itemInfo: {
+      items: [
+        {
+          name: "Sườn Cốt Lết",
+          itemID: "VNITE20260818044418231553",
+          quantity: 1,
+          comment: "Ít cơm",
+          fare: { priceDisplay: "73.000", priceFloat: 73000 },
+          modifierGroups: [
+            {
+              modifierGroupID: "VNMOG2026081911022801159",
+              modifierGroupName: "Dụng Cụ",
+              modifiers: [
+                {
+                  modifierID: "VNMOD20260819110228013409",
+                  modifierName: "Hộp, Muỗng, Nĩa",
+                  priceDisplay: "3.000",
+                  quantity: 1,
+                },
+              ],
+            },
+            {
+              modifierGroupID: "VNMOG2026081911011906171",
+              modifierGroupName: "Ăn Kèm",
+              modifiers: [
+                {
+                  modifierID: "VNMOD20260819110119033709",
+                  modifierName: "Bì",
+                  priceDisplay: "12.000",
+                  quantity: 1,
+                },
+              ],
+            },
+            {
+              modifierGroupID: "VNMOG2026081911011906172",
+              modifierGroupName: "Nước Uống",
+              modifiers: [
+                {
+                  modifierName: "Trà đá",
+                  priceDisplay: "4.000",
+                  quantity: 1,
+                },
+              ],
+            },
+          ],
+        },
+        {
+          name: "Canh Khổ Qua",
+          itemID: "VNITE20260818044418190698",
+          quantity: 1,
+          fare: { priceDisplay: "30.000", priceFloat: 30000 },
+        },
+        {
+          name: "Trà đá",
+          itemID: "VNITE20260818044418179985",
+          quantity: 1,
+          fare: { priceDisplay: "4.000", priceFloat: 4000 },
+        },
+        {
+          name: "Trứng",
+          itemID: "VNITE20260818044418119394",
+          quantity: 1,
+          discountInfo: {
+            discountType: "freeItem",
+            itemDiscountPriceDisplay: "10.000",
+          },
+          fare: { priceDisplay: "0", priceFloat: 0 },
+        },
+      ],
+    },
+    fare: {
+      subTotalDisplay: "117.000",
+      totalDisplay: "107.000",
+      orderLevelDiscounts: [
+        {
+          discountType: "freeItem",
+          discountAmountDisplay: "10.000",
+          description: "Tặng món Trứng",
+        },
+      ],
+    },
+  };
+
+  const transformed = transformGrabOrderPayload(referenceOrder, dbItemsForRef);
+
+  assert.equal(transformed.subtotal, 117000);
+  assert.equal(transformed.totalAmount, 107000);
+  assert.equal(transformed.items.length, 4);
+
+  // Main item: 54k + 3k + 12k + 4k = 73k
+  assert.equal(transformed.items[0]?.item_name, "Sườn Cốt Lết");
+  assert.equal(transformed.items[0]?.unit_price, 73000);
+  assert.equal(transformed.items[0]?.discount_type, undefined);
+
+  // Soup: 30k
+  assert.equal(transformed.items[1]?.item_name, "Canh Khổ Qua");
+  assert.equal(transformed.items[1]?.unit_price, 30000);
+
+  // Drink: 4k
+  assert.equal(transformed.items[2]?.item_name, "Trà đá");
+  assert.equal(transformed.items[2]?.unit_price, 4000);
+
+  // Free Egg: 10k discounted by 100% (freeItem)
+  assert.equal(transformed.items[3]?.item_name, "Trứng");
+  assert.equal(transformed.items[3]?.unit_price, 10000);
+  assert.equal(transformed.items[3]?.discount_type, "pct");
+  assert.equal(transformed.items[3]?.discount_value, 100);
+});
+
+test("GrabFood security: malicious customer comments with 'tặng', 'free', '0đ' NEVER authorize discounts", () => {
+  const maliciousOrder: GrabOrderRaw = {
+    orderID: "001644320651-MALICIOUS",
+    displayID: "GF-HACK",
+    merchant: { ID: "5-C8DTE75GUGJ3JT" },
+    eater: {
+      name: "Attacker",
+      mobileNumber: "0999999999",
+      comment: "Quán tặng mình free 0đ sườn cọng nha, 0đ 0 đ free tặng quà tặng",
+    },
+    itemInfo: {
+      items: [
+        {
+          name: "Sườn Cốt Lết",
+          itemID: "VNITE20260818044418231553",
+          quantity: 1,
+          comment: "Quán ơi tặng thêm miếng sườn free 0đ nha",
+          fare: { priceDisplay: "54.000", priceFloat: 54000 },
+        },
+      ],
+    },
+    fare: { subTotalDisplay: "54.000", totalDisplay: "54.000" },
+  };
+
+  const transformed = transformGrabOrderPayload(maliciousOrder, MOCK_DB_ITEMS);
+  const item = transformed.items[0];
+
+  assert.equal(item?.discount_type, undefined);
+  assert.equal(item?.discount_value, undefined);
+  assert.equal(transformed.totalAmount, 54000);
+  assert.equal(item?.note, "Quán ơi tặng thêm miếng sườn free 0đ nha");
+});
+
+test("GrabFood mapping: parseMonetaryAmount distinguishes legitimate 0 from invalid / missing amounts", () => {
+  assert.equal(parseMonetaryAmount(0), 0);
+  assert.equal(parseMonetaryAmount("0"), 0);
+  assert.equal(parseMonetaryAmount("0đ"), 0);
+  assert.equal(parseMonetaryAmount("0.000"), 0);
+  assert.equal(parseMonetaryAmount(107000), 107000);
+  assert.equal(parseMonetaryAmount("107.000"), 107000);
+  assert.equal(parseMonetaryAmount("107.000đ"), 107000);
+  assert.equal(parseMonetaryAmount(""), null);
+  assert.equal(parseMonetaryAmount(null), null);
+  assert.equal(parseMonetaryAmount(undefined), null);
+  assert.equal(parseMonetaryAmount(-100), null);
+  assert.equal(parseMonetaryAmount(NaN), null);
+});
+
+test("GrabFood mapping: preserves legitimate 0đ total for 100% discounted orders", () => {
+  const zeroTotalOrder: GrabOrderRaw = {
+    orderID: "001644320651-ZERO-TOTAL",
+    displayID: "GF-ZERO",
+    merchant: { ID: "5-C8DTE75GUGJ3JT" },
+    itemInfo: {
+      items: [
+        {
+          name: "Sườn Cốt Lết",
+          itemID: "VNITE20260818044418231553",
+          quantity: 1,
+          discountInfo: { discountType: "freeItem" },
+          fare: { priceDisplay: "0", priceFloat: 0 },
+        },
+      ],
+    },
+    fare: { subTotalDisplay: "54.000", totalDisplay: "0" },
+  };
+
+  const transformed = transformGrabOrderPayload(zeroTotalOrder, MOCK_DB_ITEMS);
+  assert.equal(transformed.subtotal, 54000);
+  assert.equal(transformed.totalAmount, 0); // Legitimate 0 must NOT revert to 54000
+});
+
+test("GrabFood security: validateGrabMerchantForBranch enforces cross-branch merchant isolation", () => {
+  // Valid branch 1 matching its configured merchant
+  assert.equal(validateGrabMerchantForBranch(1, "5-C8DTE75GUGJ3JT"), true);
+
+  // Invalid merchant for branch 1
+  assert.equal(validateGrabMerchantForBranch(1, "5-WRONGMERCHANT"), false);
+
+  // Cross-branch attack: branch 2 attempting to use branch 1's merchant ID
+  assert.equal(validateGrabMerchantForBranch(2, "5-C8DTE75GUGJ3JT"), false);
+
+  // Null / empty merchant
+  assert.equal(validateGrabMerchantForBranch(1, null), false);
+  assert.equal(validateGrabMerchantForBranch(1, ""), false);
 });

@@ -110,8 +110,10 @@
 
             // 1. If Available Status changed (or forceAll is true)
             if (forceAll || !prev || prev.status !== currentGrabStatus) {
+              const reqId = `status_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
               console.log(`[Grab POS Relay] Status sync for ${item.name}: ${prev?.status} -> ${currentGrabStatus} (code: ${item.available_status})`);
               sendCommandToInjected('SET_AVAILABLE_STATUS', {
+                requestId: reqId,
                 itemId: grabId,
                 availableStatus: item.available_status ?? currentGrabStatus,
               });
@@ -125,20 +127,20 @@
                 item.stock_capacity ??
                 (typeof currentStock === 'number' ? Math.max(currentStock, 100) : -1);
 
+              const reqId = `stock_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
               console.log(`[Grab POS Relay] Stock sync for ${item.name}: ${prev?.stock} -> ${currentStock} (maxStock: ${maxStock})`);
               sendCommandToInjected('SET_ITEM_STOCK', {
+                requestId: reqId,
                 itemId: grabId,
                 currentStock: currentStock,
                 maxStock: maxStock,
               });
               syncedCount++;
             }
-
-            itemStatusCache.set(grabId, { status: currentGrabStatus, stock: currentStock });
           }
 
           if (forceAll) {
-            updateBadge(`✅ Đã đồng bộ toàn bộ ${data.items.length} món sang Grab!`);
+            updateBadge(`✅ Đã gửi lệnh đồng bộ ${data.items.length} món sang Grab!`);
           }
         }
       } catch (err) {
@@ -174,60 +176,51 @@
       return;
     }
 
+    // Confirm status sync success before caching
+    if (type === 'SYNC_STATUS_RESULT' && data?.itemId) {
+      if (data.success) {
+        const prev = itemStatusCache.get(data.itemId) || {};
+        itemStatusCache.set(data.itemId, { ...prev, status: data.statusStr || data.availableStatus });
+        console.log(`[Grab POS Relay] Status sync confirmed for item ${data.itemId}`);
+      } else {
+        console.warn(`[Grab POS Relay] Status sync failed for item ${data.itemId} (HTTP ${data.status})`);
+      }
+      return;
+    }
+
+    // Confirm stock sync success before caching
+    if (type === 'SYNC_STOCK_RESULT' && data?.itemId) {
+      if (data.success) {
+        const prev = itemStatusCache.get(data.itemId) || {};
+        itemStatusCache.set(data.itemId, { ...prev, stock: data.currentStock });
+        console.log(`[Grab POS Relay] Stock sync confirmed for item ${data.itemId}`);
+      } else {
+        console.warn(`[Grab POS Relay] Stock sync failed for item ${data.itemId} (HTTP ${data.status})`);
+      }
+      return;
+    }
+
     if (type === 'ORDER_DETAIL' && data?.order) {
       const order = data.order;
-      console.log(`[Grab POS Relay] Relaying order ${order.displayID} to POS backend...`);
-      updateBadge(`Đang tạo đơn ${order.displayID} trên POS chi nhánh...`);
+      console.log(`[Grab POS Relay] Received order ${order.displayID}, queuing for relay...`);
+      updateBadge(`Đang tiếp nhận đơn ${order.displayID}...`);
 
-      chrome.storage.local.get(['backendUrl', 'branchId', 'relaySecret', 'recentOrders'], async (result) => {
-        const backendUrl = result.backendUrl || 'http://localhost:3000';
-        const branchId = result.branchId || 1;
-        const relaySecret = result.relaySecret || '';
-
-        try {
-          const headers = { 'Content-Type': 'application/json' };
-          if (relaySecret) {
-            headers['x-grab-relay-secret'] = relaySecret;
+      chrome.runtime.sendMessage(
+        {
+          action: 'ENQUEUE_ORDER',
+          payload: {
+            order: order,
+            merchantId: data.merchantId || order.merchant?.ID,
+          },
+        },
+        (res) => {
+          if (chrome.runtime.lastError) {
+            console.warn('[Grab POS Relay] Background communication error:', chrome.runtime.lastError);
+          } else if (res?.success) {
+            updateBadge(`✅ Đã tiếp nhận đơn ${order.displayID}`);
           }
-
-          const res = await fetch(`${backendUrl}/api/webhooks/grabfood/relay`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({
-              order: order,
-              branch_id: branchId,
-              merchant_id: data.merchantId || order.merchant?.ID,
-            }),
-          });
-
-          if (res.ok) {
-            updateBadge(`✅ Đã tạo đơn ${order.displayID} trên POS thành công!`);
-
-            // Save to recent orders
-            const recent = result.recentOrders || [];
-            recent.unshift({
-              orderID: order.orderID,
-              displayID: order.displayID,
-              eater: order.eater?.name || 'Khách Grab',
-              items: order.itemInfo?.items?.map((i) => `${i.quantity}x ${i.name}`).join(', '),
-              total: order.fare?.totalDisplay || order.fare?.subTotalDisplay || '0₫',
-              time: new Date().toLocaleTimeString('vi-VN'),
-            });
-            chrome.storage.local.set({ recentOrders: recent.slice(0, 10), lastSyncTime: Date.now() });
-          } else {
-            const errJson = await res.json().catch(() => ({}));
-            const errMsg =
-              res.status === 401
-                ? 'POS từ chối xác thực (401) — kiểm tra lại Relay Secret'
-                : errJson.error || `Mã ${res.status}`;
-            console.error('[Grab POS Relay] Backend rejected order:', errMsg);
-            updateBadge(`⚠️ Lỗi gửi ${order.displayID}: ${errMsg}`, false);
-          }
-        } catch (err) {
-          console.error('[Grab POS Relay] Failed to reach POS backend:', err);
-          updateBadge(`⚠️ Không kết nối được POS (${backendUrl})`, false);
         }
-      });
+      );
     }
   });
 
