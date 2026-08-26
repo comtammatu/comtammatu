@@ -101,6 +101,17 @@ function retryAfterSeconds(error: unknown): number | undefined {
     : undefined;
 }
 
+function isPrerenderAbortError(error: unknown): boolean {
+  const message =
+    typeof error === "object" && error !== null && "message" in error
+      ? String((error as { message?: unknown }).message ?? "")
+      : "";
+  return (
+    message.includes("During prerendering, fetch() rejects") ||
+    message.includes("prerender is complete")
+  );
+}
+
 function mapSelfOrderError(
   error: unknown,
   context: SelfOrderErrorContext = "default",
@@ -437,7 +448,9 @@ async function loadBranchAvailabilityMap(
     },
   );
   if (gateError) {
-    console.error("[self-order] stock gate lookup failed", gateError);
+    if (!isPrerenderAbortError(gateError)) {
+      console.error("[self-order] stock gate lookup failed", gateError);
+    }
   }
 
   const { data: rows, error } = await client.rpc<AvailabilityRow[]>(
@@ -451,7 +464,9 @@ async function loadBranchAvailabilityMap(
     },
   );
   if (error) {
-    console.error("[self-order] availability lookup failed", error);
+    if (!isPrerenderAbortError(error)) {
+      console.error("[self-order] availability lookup failed", error);
+    }
     return null;
   }
 
@@ -488,7 +503,9 @@ async function withKitchenProgress(
     .select("status")
     .eq("order_id", snapshot.order.id);
   if (error) {
-    console.error("[self-order] kitchen progress failed", error);
+    if (!isPrerenderAbortError(error)) {
+      console.error("[self-order] kitchen progress failed", error);
+    }
     return { ...snapshot, ...fromOrder };
   }
   if (!Array.isArray(data) || data.length === 0) {
@@ -610,10 +627,12 @@ async function normalizeUnavailableSnapshot(
     .eq("self_order_token", token)
     .maybeSingle();
   if (error) {
-    console.error(
-      "[self-order] unavailable token classification failed",
-      error,
-    );
+    if (!isPrerenderAbortError(error)) {
+      console.error(
+        "[self-order] unavailable token classification failed",
+        error,
+      );
+    }
   }
   return {
     ok: false,
@@ -661,7 +680,9 @@ export async function getSelfOrderSnapshot(
     args,
   );
   if (error) {
-    console.error("[self-order] snapshot failed", error);
+    if (!isPrerenderAbortError(error)) {
+      console.error("[self-order] snapshot failed", error);
+    }
     return {
       ok: false,
       status: 500,

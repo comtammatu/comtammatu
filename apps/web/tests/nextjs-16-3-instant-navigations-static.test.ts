@@ -42,6 +42,14 @@ test("root and station layouts opt out of instant validation", () => {
     readWeb("app/(protected)/me/layout.tsx"),
     /export const instant = false/,
   );
+  assert.match(
+    readWeb("app/q/[token]/page.tsx"),
+    /export const instant = false/,
+  );
+  assert.match(
+    readWeb("app/q/invoice/[token]/page.tsx"),
+    /export const instant = false/,
+  );
 });
 
 test("Cổng catalog and on-hand stream behind Suspense with URL prefetch", () => {
