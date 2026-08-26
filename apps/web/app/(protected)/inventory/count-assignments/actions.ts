@@ -62,3 +62,44 @@ export const setCountAssignments = withAction(
     return { success: true };
   },
 );
+
+const setAssignmentsByTemplateSchema = z.object({
+  branchId: z.coerce.number().int().positive(),
+  locationId: z.coerce.number().int().positive(),
+  employeeId: z.coerce.number().int().positive(),
+  templateId: z.coerce.number().int().positive(),
+  shiftId: z.coerce.number().int().positive().nullable().optional(),
+});
+
+export const setCountAssignmentsByTemplate = withAction(
+  {
+    roles: ROLES,
+    schema: setAssignmentsByTemplateSchema,
+    permission: PERMISSION_KEYS.INVENTORY_COUNT_ASSIGN,
+    permissionBranchId: (data) => data.branchId,
+    requireBranchScope: true,
+  },
+  async (data, { supabase }) => {
+    const { error } = await supabase.rpc(
+      "set_inventory_count_assignments_by_template",
+      {
+        p_branch_id: data.branchId,
+        p_location_id: data.locationId,
+        p_employee_id: data.employeeId,
+        p_template_id: data.templateId,
+        ...(data.shiftId == null ? {} : { p_shift_id: data.shiftId }),
+      },
+    );
+    if (error) {
+      console.error("inventory.count_assignments.set_by_template_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, error: mapCountAssignRpcError(error.code) };
+    }
+    revalidatePath("/inventory/count-assignments");
+    revalidatePath(`/br/${data.branchId}/stock/count-assignments`);
+    revalidatePath(`/br/${data.branchId}/team`);
+    return { success: true };
+  },
+);
+

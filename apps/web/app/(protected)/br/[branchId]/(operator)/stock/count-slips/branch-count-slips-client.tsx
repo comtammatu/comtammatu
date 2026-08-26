@@ -170,11 +170,7 @@ export function BranchCountSlipsClient({
         toast.error(result.error ?? INVENTORY_VI.countSlipApproveFailed);
         return;
       }
-      toast.success(
-        result.data.adjustedLines > 0
-          ? INVENTORY_VI.countSlipApprovedAdjusted(result.data.adjustedLines)
-          : INVENTORY_VI.countSlipApproved,
-      );
+      toast.success(INVENTORY_VI.countSlipApproved);
       applyStatus(selected.id, "approved");
       closeReview();
       router.refresh();
@@ -476,6 +472,14 @@ function CountSlipLineItem({ line }: { line: CountSlipLineView }) {
               {formatQty(line.countedQuantity)} {line.countedUnit}
             </span>
           </span>
+          {line.currentLiveQuantity !== null ? (
+            <span className="text-muted-foreground">
+              {INVENTORY_VI.liveStockColon}{" "}
+              <span className="font-mono tabular-nums text-foreground">
+                {formatQty(line.currentLiveQuantity)} {line.systemUnit}
+              </span>
+            </span>
+          ) : null}
         </ItemDescription>
         {line.note ? (
           <ItemDescription className="line-clamp-none break-words italic">

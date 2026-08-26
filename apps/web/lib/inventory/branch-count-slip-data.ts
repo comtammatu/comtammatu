@@ -19,6 +19,8 @@ type CountSlipQueryLine = {
   system_quantity: number | string | null;
   counted_quantity: number | string | null;
   entry_unit_id: number | null;
+  entry_to_base_factor?: number | string | null;
+  counted_base_quantity?: number | string | null;
   note: string | null;
   ingredients: unknown;
   units: unknown;
@@ -142,6 +144,8 @@ export async function loadBranchCountSlipData(
             system_quantity,
             counted_quantity,
             entry_unit_id,
+            entry_to_base_factor,
+            counted_base_quantity,
             note,
             ingredients ( name ),
             units!inventory_count_slip_lines_entry_unit_id_fkey ( code )
@@ -225,6 +229,23 @@ export async function loadBranchCountSlipData(
     }
   }
 
+  const liveStockByCell = new Map<string, number>();
+  if (ingredientIds.length > 0) {
+    const { data: stockRows } = await supabase
+      .from("stock_levels")
+      .select("location_id, ingredient_id, current_quantity")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", routeBranchId)
+      .in("ingredient_id", ingredientIds);
+    for (const row of stockRows ?? []) {
+      const locId = Number(row.location_id);
+      const ingId = Number(row.ingredient_id);
+      if (Number.isFinite(locId) && Number.isFinite(ingId)) {
+        liveStockByCell.set(`${locId}:${ingId}`, Number(row.current_quantity ?? 0));
+      }
+    }
+  }
+
   const rows: CountSlipRow[] = slipRows.map((slip) => {
     const lines = linesBySlipId.get(Number(slip.id)) ?? [];
     return {
@@ -257,8 +278,10 @@ export async function loadBranchCountSlipData(
             ? (unitByIngredient.get(unitKey(ingredientId, entryUnitId)) ?? null)
             : null;
         const baseUnit = baseUnitByIngredient.get(ingredientId) ?? null;
+        const liveStock = liveStockByCell.get(`${slip.location_id}:${ingredientId}`) ?? null;
         return buildCountSlipLineView({
           id: line.id,
+          ingredientId,
           ingredientName:
             embeddedString(line.ingredients, "name") ??
             `#${line.ingredient_id}`,
@@ -266,6 +289,15 @@ export async function loadBranchCountSlipData(
           entryUnitCode: entryUnit?.code ?? embeddedString(line.units, "code"),
           baseUnitCode: baseUnit?.code ?? null,
           toBaseFactor: entryUnit?.toBaseFactor ?? null,
+          entryToBaseFactor:
+            line.entry_to_base_factor != null
+              ? Number(line.entry_to_base_factor)
+              : null,
+          countedBaseQuantity:
+            line.counted_base_quantity != null
+              ? Number(line.counted_base_quantity)
+              : null,
+          currentLiveQuantity: liveStock,
           systemQuantity: Number(line.system_quantity ?? 0),
           countedQuantity: Number(line.counted_quantity ?? 0),
           note: line.note ?? null,

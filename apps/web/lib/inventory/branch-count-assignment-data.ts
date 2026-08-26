@@ -214,6 +214,32 @@ export async function loadBranchCountAssignmentData({
     }
   }
 
+  const templatesResult = await supabase
+    .from("inventory_count_templates")
+    .select(
+      "id, code, name, station_role, is_system, inventory_count_template_items(ingredient_id, sort_order)",
+    )
+    .eq("tenant_id", claims.tenant_id)
+    .or(`branch_id.is.null,branch_id.eq.${routeBranchId}`)
+    .eq("is_active", true)
+    .order("id");
+
+  const templates = (templatesResult.data ?? []).map((t) => ({
+    id: t.id,
+    code: t.code,
+    name: t.name,
+    stationRole: t.station_role,
+    isSystem: t.is_system,
+    ingredientIds: (
+      (t.inventory_count_template_items ?? []) as Array<{
+        ingredient_id: number;
+        sort_order: number;
+      }>
+    )
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((item) => item.ingredient_id),
+  }));
+
   return {
     branchId: routeBranchId,
     branchName,
@@ -223,6 +249,7 @@ export async function loadBranchCountAssignmentData({
     shiftOptions,
     employees,
     ingredients,
+    templates,
     assignmentsByEmployee,
   };
 }

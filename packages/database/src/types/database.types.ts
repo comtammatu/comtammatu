@@ -7956,6 +7956,7 @@ export type Database = {
           entry_unit_id: number | null
           id: number
           ingredient_id: number
+          is_primary: boolean
           menu_item_id: number
           note: string | null
           quantity: number
@@ -7967,6 +7968,7 @@ export type Database = {
           entry_unit_id?: number | null
           id?: never
           ingredient_id: number
+          is_primary?: boolean
           menu_item_id: number
           note?: string | null
           quantity: number
@@ -7978,6 +7980,7 @@ export type Database = {
           entry_unit_id?: number | null
           id?: never
           ingredient_id?: number
+          is_primary?: boolean
           menu_item_id?: number
           note?: string | null
           quantity?: number

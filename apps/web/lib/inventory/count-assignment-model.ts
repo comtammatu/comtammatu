@@ -22,6 +22,15 @@ export type CountAssignmentShift = {
   endTime: string;
 };
 
+export type CountTemplate = {
+  id: number;
+  code: string;
+  name: string;
+  stationRole: string;
+  isSystem: boolean;
+  ingredientIds: number[];
+};
+
 export type BranchCountAssignmentData = {
   branchId: number;
   branchName: string;
@@ -31,5 +40,7 @@ export type BranchCountAssignmentData = {
   shiftOptions: CountAssignmentShift[];
   employees: CountAssignmentEmployee[];
   ingredients: CountAssignmentIngredient[];
+  templates: CountTemplate[];
   assignmentsByEmployee: Record<string, number[]>;
 };
+

@@ -44,7 +44,10 @@ import {
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
-import { setCountAssignments } from "@/(protected)/inventory/count-assignments/actions";
+import {
+  setCountAssignments,
+  setCountAssignmentsByTemplate,
+} from "@/(protected)/inventory/count-assignments/actions";
 import type {
   BranchCountAssignmentData,
   CountAssignmentEmployee,
@@ -162,6 +165,44 @@ export function BranchCountAssignmentsClient({
     });
   }
 
+  const [templateEmployeeSelection, setTemplateEmployeeSelection] = useState<
+    Record<number, number | null>
+  >({});
+
+  function handleAssignTemplate(templateId: number) {
+    const employeeId = templateEmployeeSelection[templateId];
+    if (!employeeId || data.selectedLocationId == null) {
+      toast.error(INVENTORY_VI.countAssignSelectEmployeeRequired);
+      return;
+    }
+    const template = data.templates.find((t) => t.id === templateId);
+    const employee = data.employees.find((e) => e.id === employeeId);
+    startTransition(async () => {
+      const result = await setCountAssignmentsByTemplate({
+        branchId: data.branchId,
+        locationId: data.selectedLocationId as number,
+        employeeId,
+        templateId,
+        shiftId: data.selectedShiftId,
+      });
+      if (!result.success) {
+        toast.error(result.error ?? INVENTORY_VI.countAssignSaveFailed);
+        return;
+      }
+      setSelectionByEmployee((current) => ({
+        ...current,
+        [String(employeeId)]: template?.ingredientIds ?? [],
+      }));
+      toast.success(
+        INVENTORY_VI.countAssignTemplateSuccess(
+          template?.name ?? "",
+          employee?.name ?? "",
+        ),
+      );
+      router.refresh();
+    });
+  }
+
   function replaceScope(locationId: number | null, shiftId: number | null) {
     const params = new URLSearchParams();
     if (locationId != null) params.set("locationId", String(locationId));
@@ -170,7 +211,7 @@ export function BranchCountAssignmentsClient({
   }
 
   const content = (
-    <div className="flex min-w-0 flex-col gap-3">
+    <div className="flex min-w-0 flex-col gap-4">
       <div className="grid gap-2 sm:grid-cols-2">
         {data.locationOptions.length > 0 ? (
           <div className="flex min-w-0 flex-col gap-1.5">
@@ -249,6 +290,103 @@ export function BranchCountAssignmentsClient({
           </div>
         ) : null}
       </div>
+
+      {data.templates.length > 0 && data.selectedLocationId != null ? (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {INVENTORY_VI.countAssignStationTitle}
+            </span>
+            <Badge variant="outline">
+              {INVENTORY_VI.countAssignTemplatesCount(data.templates.length)}
+            </Badge>
+          </div>
+          <ItemGroup className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {data.templates.map((template) => {
+              const selectedEmpId =
+                templateEmployeeSelection[template.id] ?? null;
+              return (
+                <Item
+                  key={template.id}
+                  variant="outline"
+                  className="flex-col items-stretch justify-between gap-3 p-3"
+                >
+                  <ItemContent className="min-w-0 gap-1.5">
+                    <div className="flex items-center justify-between gap-1">
+                      <ItemTitle size="heading">{template.name}</ItemTitle>
+                      <Badge variant="secondary">
+                        {INVENTORY_VI.countAssignItemCount(
+                          template.ingredientIds.length,
+                        )}
+                      </Badge>
+                    </div>
+                    <ItemDescription className="line-clamp-none flex flex-wrap gap-1">
+                      {template.ingredientIds.slice(0, 3).map((id) => (
+                        <Badge
+                          key={id}
+                          variant="outline"
+                          className="max-w-32 truncate text-xs text-muted-foreground"
+                          title={ingredientById.get(id)?.name}
+                        >
+                          {ingredientById.get(id)?.name ?? `#${id}`}
+                        </Badge>
+                      ))}
+                      {template.ingredientIds.length > 3 ? (
+                        <Badge
+                          variant="outline"
+                          className="text-xs text-muted-foreground"
+                        >
+                          +{INVENTORY_VI.countAssignItemCount(
+                            template.ingredientIds.length - 3,
+                          )}
+                        </Badge>
+                      ) : null}
+                    </ItemDescription>
+                  </ItemContent>
+                  <div className="flex items-center gap-2 pt-1">
+                    <Select
+                      value={selectedEmpId ? String(selectedEmpId) : ""}
+                      onValueChange={(val) =>
+                        setTemplateEmployeeSelection((prev) => ({
+                          ...prev,
+                          [template.id]: Number(val),
+                        }))
+                      }
+                    >
+                      <SelectTrigger size="touch" className="w-full flex-1">
+                        <SelectValue
+                          placeholder={
+                            INVENTORY_VI.countAssignSelectEmployeePlaceholder
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {data.employees.map((emp) => (
+                          <SelectItem
+                            key={emp.id}
+                            value={String(emp.id)}
+                            size="touch"
+                          >
+                            {emp.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      size="touch"
+                      disabled={isPending || !selectedEmpId}
+                      onClick={() => handleAssignTemplate(template.id)}
+                    >
+                      {INVENTORY_VI.countAssignAction}
+                    </Button>
+                  </div>
+                </Item>
+              );
+            })}
+          </ItemGroup>
+        </div>
+      ) : null}
 
       {data.selectedLocationId == null ? (
         <AppEmptyState

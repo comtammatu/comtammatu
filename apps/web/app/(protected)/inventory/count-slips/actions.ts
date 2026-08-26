@@ -14,15 +14,14 @@ const approveSlipSchema = z.object({
 
 export type ApproveCountSlipResult = {
   slipId: number;
-  adjustedLines: number;
   alreadyApproved: boolean;
 };
 
 /**
- * Approve a submitted count slip. Wraps `approve_inventory_count_slip` RPC,
- * which posts `count_adjustment` stock movements for non-zero deltas and flips
- * the slip to `approved`. Idempotent: a second call on an approved slip returns
- * `alreadyApproved=true` without re-posting movements.
+ * Confirm a submitted count slip. Wraps `approve_inventory_count_slip` RPC,
+ * which flips the slip status to `approved` for shift handover review.
+ * Decoupled: does not mutate stock ledger balances or post count adjustments.
+ * Idempotent: a second call on an approved slip returns `alreadyApproved=true`.
  */
 export async function approveCountSlip(
   input: z.infer<typeof approveSlipSchema>,
@@ -66,7 +65,6 @@ export async function approveCountSlip(
     success: true,
     data: {
       slipId: parsed.data.slipId,
-      adjustedLines: Number(raw.adjusted_lines ?? 0),
       alreadyApproved: raw.already_approved === true,
     },
   };

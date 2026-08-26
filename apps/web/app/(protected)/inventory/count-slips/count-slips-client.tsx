@@ -499,11 +499,7 @@ function CountSlipReviewDialog({
         toast.error(result.error ?? INVENTORY_VI.countSlipApproveFailed);
         return;
       }
-      toast.success(
-        result.data && result.data.adjustedLines > 0
-          ? INVENTORY_VI.countSlipApprovedAdjusted(result.data.adjustedLines)
-          : INVENTORY_VI.countSlipApproved,
-      );
+      toast.success(INVENTORY_VI.countSlipApproved);
       onStatusChange(activeRow.id, "approved");
       router.refresh();
     });
@@ -549,12 +545,20 @@ function CountSlipReviewDialog({
     },
     {
       key: "system",
-      header: "Hệ thống",
+      header: "Tồn lúc nộp",
       className: "w-40 text-right",
       render: (line) => (
-        <span className="block whitespace-nowrap text-right font-mono tabular-nums">
-          {formatQty(line.systemQuantity)} {line.systemUnit}
-        </span>
+        <div className="whitespace-nowrap text-right font-mono tabular-nums">
+          <div>
+            {formatQty(line.systemQuantity)} {line.systemUnit}
+          </div>
+          {line.currentLiveQuantity !== null ? (
+            <div className="text-xs text-muted-foreground">
+              {INVENTORY_VI.liveStockColon} {formatQty(line.currentLiveQuantity)}{" "}
+              {line.systemUnit}
+            </div>
+          ) : null}
+        </div>
       ),
     },
     {

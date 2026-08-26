@@ -2,6 +2,7 @@ export type CountSlipStatus = "submitted" | "needs_changes" | "approved";
 
 export type CountSlipLineViewInput = {
   id: number;
+  ingredientId: number;
   ingredientName: string;
   systemQuantity: number;
   countedQuantity: number;
@@ -9,13 +10,17 @@ export type CountSlipLineViewInput = {
   entryUnitCode: string | null;
   baseUnitCode: string | null;
   toBaseFactor: number | null;
+  entryToBaseFactor?: number | null;
+  countedBaseQuantity?: number | null;
+  currentLiveQuantity?: number | null;
   note: string | null;
 };
 
 export type CountSlipLineView = {
   id: number;
+  ingredientId: number;
   ingredientName: string;
-  /** Book quantity converted into the employee's entry unit when a factor exists. */
+  /** Book quantity converted into the employee's entry unit when a factor exists (Snapshot). */
   systemQuantity: number;
   systemUnit: string;
   countedQuantity: number;
@@ -23,6 +28,8 @@ export type CountSlipLineView = {
   countedBaseQuantity: number | null;
   variance: number | null;
   varianceUnit: string;
+  /** Live stock on-hand quantity for manager real-time reference. */
+  currentLiveQuantity: number | null;
   note: string | null;
 };
 
@@ -49,8 +56,15 @@ function resolveEntryToBaseFactor(
 ): number | null {
   const sameUnit =
     countedUnit !== "" && baseUnit !== "" && countedUnit === baseUnit;
-  const factor =
-    input.entryUnitId === null || sameUnit ? 1 : input.toBaseFactor;
+  if (input.entryUnitId === null || sameUnit) {
+    return 1;
+  }
+  // Prefer snapshotted conversion factor from the count slip line if available
+  const snapshotFactor = input.entryToBaseFactor;
+  if (snapshotFactor != null && Number.isFinite(snapshotFactor) && snapshotFactor > 0) {
+    return snapshotFactor;
+  }
+  const factor = input.toBaseFactor;
   if (factor === null || !Number.isFinite(factor) || factor <= 0) {
     return null;
   }
@@ -63,31 +77,41 @@ export function buildCountSlipLineView(
   const baseUnit = input.baseUnitCode ?? input.entryUnitCode ?? "";
   const countedUnit = input.entryUnitCode ?? baseUnit;
   const factor = resolveEntryToBaseFactor(input, countedUnit, baseUnit);
+  const liveQty =
+    input.currentLiveQuantity != null && Number.isFinite(input.currentLiveQuantity)
+      ? (factor !== null && factor > 0 ? input.currentLiveQuantity / factor : input.currentLiveQuantity)
+      : null;
+
   if (factor === null) {
     return {
       id: input.id,
+      ingredientId: input.ingredientId,
       ingredientName: input.ingredientName,
       systemQuantity: input.systemQuantity,
       systemUnit: baseUnit,
       countedQuantity: input.countedQuantity,
       countedUnit,
-      countedBaseQuantity: null,
+      countedBaseQuantity: input.countedBaseQuantity ?? null,
       variance: null,
       varianceUnit: baseUnit,
+      currentLiveQuantity: liveQty,
       note: input.note,
     };
   }
 
+  const countedBase = input.countedBaseQuantity ?? input.countedQuantity * factor;
   return {
     id: input.id,
+    ingredientId: input.ingredientId,
     ingredientName: input.ingredientName,
     systemQuantity: input.systemQuantity / factor,
     systemUnit: countedUnit,
     countedQuantity: input.countedQuantity,
     countedUnit,
-    countedBaseQuantity: input.countedQuantity * factor,
+    countedBaseQuantity: countedBase,
     variance: input.countedQuantity - input.systemQuantity / factor,
     varianceUnit: countedUnit,
+    currentLiveQuantity: liveQty,
     note: input.note,
   };
 }
