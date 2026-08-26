@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -3171,7 +3171,9 @@ export type Database = {
       }
       inventory_count_slip_lines: {
         Row: {
+          counted_base_quantity: number | null
           counted_quantity: number
+          entry_to_base_factor: number | null
           entry_unit_id: number | null
           id: number
           ingredient_id: number
@@ -3182,7 +3184,9 @@ export type Database = {
           variance: number | null
         }
         Insert: {
+          counted_base_quantity?: number | null
           counted_quantity: number
+          entry_to_base_factor?: number | null
           entry_unit_id?: number | null
           id?: never
           ingredient_id: number
@@ -3193,7 +3197,9 @@ export type Database = {
           variance?: number | null
         }
         Update: {
+          counted_base_quantity?: number | null
           counted_quantity?: number
+          entry_to_base_factor?: number | null
           entry_unit_id?: number | null
           id?: never
           ingredient_id?: number
@@ -3330,6 +3336,116 @@ export type Database = {
           },
           {
             foreignKeyName: "inventory_count_slips_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_count_template_items: {
+        Row: {
+          created_at: string
+          id: number
+          ingredient_id: number
+          sort_order: number
+          template_id: number
+          tenant_id: number
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          ingredient_id: number
+          sort_order?: number
+          template_id: number
+          tenant_id: number
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          ingredient_id?: number
+          sort_order?: number
+          template_id?: number
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_count_template_items_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_count_template_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_count_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_count_template_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_count_templates: {
+        Row: {
+          branch_id: number | null
+          code: string
+          created_at: string
+          id: number
+          is_active: boolean
+          is_system: boolean
+          name: string
+          station_role: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          branch_id?: number | null
+          code: string
+          created_at?: string
+          id?: never
+          is_active?: boolean
+          is_system?: boolean
+          name: string
+          station_role: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: number | null
+          code?: string
+          created_at?: string
+          id?: never
+          is_active?: boolean
+          is_system?: boolean
+          name?: string
+          station_role?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_count_templates_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_count_templates_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "inventory_count_templates_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -15775,6 +15891,16 @@ export type Database = {
           p_ingredient_ids: number[]
           p_location_id: number
           p_shift_id?: number
+        }
+        Returns: Json
+      }
+      set_inventory_count_assignments_by_template: {
+        Args: {
+          p_branch_id: number
+          p_employee_id: number
+          p_location_id: number
+          p_shift_id?: number
+          p_template_id: number
         }
         Returns: Json
       }
