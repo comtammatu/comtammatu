@@ -27,9 +27,10 @@ test("Branch leave approvals own a fixed-scope touch presenter", () => {
   assert.match(client, /BranchOperatorPage/);
   assert.match(client, /<button[\s\S]*type="button"[\s\S]*setSelectedId/);
   assert.match(client, /<AppSheet[\s\S]*side="bottom"/);
-  assert.match(client, /useBranchOpsEvents\(\{[\s\S]*branchId/);
-  assert.match(client, /copy\.historyAction/);
-  assert.doesNotMatch(client, /TabsList|TabsTrigger|monthlyQuota|annualQuota/);
+  assert.match(client, /TabsList[\s\S]*?size="touch"/);
+  assert.match(client, /TabsTrigger[\s\S]*?value="pending"/);
+  assert.match(client, /TabsTrigger[\s\S]*?value="history"/);
+  assert.doesNotMatch(client, /monthlyQuota|annualQuota/);
   assert.match(client, /lg:grid-cols-2/);
   assert.match(client, /size="touch(?:-lg)?"/);
   assert.match(client, /sticky bottom-0/);

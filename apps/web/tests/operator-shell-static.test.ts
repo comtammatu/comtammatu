@@ -820,7 +820,7 @@ test("operator today shift and profile screens use responsive branch layout", ()
     "apps/web/app/(protected)/br/[branchId]/(operator)/operator-bottom-nav.tsx",
   );
 
-  assert.match(layout, /md:max-w-2xl lg:max-w-5xl xl:max-w-6xl/);
+  assert.match(layout, /md:max-w-2xl lg:max-w-4xl/);
   assert.doesNotMatch(layout, /md:max-w-5xl/);
   assert.doesNotMatch(layout, /\s+mobile\s+contentClassName=/);
   assert.match(bottomNav, /position="static"/);

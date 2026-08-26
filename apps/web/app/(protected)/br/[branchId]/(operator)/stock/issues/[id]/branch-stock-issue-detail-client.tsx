@@ -41,7 +41,7 @@ import {
 
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Combobox, QuantityInput } from "@/components/form";
-import { AppDetailFooter, AppEmptyState, AppSheet } from "@/components/surface";
+import { AppBackLink, AppDetailFooter, AppEmptyState, AppSheet } from "@/components/surface";
 import { getStatusBadgeMeta } from "@/components/status-badge";
 import { PhotoUploadInput } from "@/components/form";
 import {
@@ -338,6 +338,7 @@ function BranchStockIssueLineSheet({
 
 export function BranchStockIssueDetailClient({
   data,
+  stockBasePath,
 }: {
   data: BranchStockIssueDetail;
   stockBasePath: string;
@@ -456,6 +457,7 @@ export function BranchStockIssueDetailClient({
       title={issue.code}
       description={formatVNDateTime(issue.issuedAt)}
       badge={{ children: statusBadge.label, variant: statusBadge.variant }}
+      back={<AppBackLink href={`${stockBasePath}/issues`} />}
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <div className={BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME}>

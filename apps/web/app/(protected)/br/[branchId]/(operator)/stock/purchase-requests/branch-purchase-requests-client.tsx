@@ -51,13 +51,14 @@ import {
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@comtammatu/ui/components/toggle-group";
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@comtammatu/ui/components/tabs";
 import { Combobox } from "@/components/form/combobox";
 import { BusinessDatePicker } from "@/components/form";
 import { NumberPadSheet } from "@/components/form/number-pad-sheet";
-import { AppDetailFooter, AppEmptyState, AppSheet } from "@/components/surface";
+import { AppBackLink, AppDetailFooter, AppEmptyState, AppSheet } from "@/components/surface";
 import {
   BranchOperatorDetailList,
   BranchOperatorPage,
@@ -712,6 +713,7 @@ export function BranchPurchaseRequestsClient({
     <BranchOperatorPage
       title={messages.settings.branch.centralPurchaseRequestsJob}
       description={messages.inventory.po.workspaceDescription}
+      back={<AppBackLink href={`/br/${branchId}/stock`} />}
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <BranchOperatorPanel
@@ -747,24 +749,26 @@ export function BranchPurchaseRequestsClient({
           </InputGroup>
 
           {statusOptions.length <= 5 ? (
-            <ToggleGroup
-              type="single"
+            <Tabs
               value={statusFilter}
               onValueChange={(value) => {
                 if (value) setStatusFilter(value);
               }}
-              variant="outline"
-              size="touch"
-              className="w-full justify-start"
-              aria-label={copy.statusFilterAria}
+              className="w-full"
             >
-              <ToggleGroupItem value="all">{copy.allStatuses}</ToggleGroupItem>
-              {statusOptions.map((status) => (
-                <ToggleGroupItem key={status} value={status}>
-                  {copy.statusLabel(status)}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
+              <TabsList
+                size="touch"
+                className="no-scrollbar flex w-full overflow-x-auto gap-1.5"
+                aria-label={copy.statusFilterAria}
+              >
+                <TabsTrigger value="all">{copy.allStatuses}</TabsTrigger>
+                {statusOptions.map((status) => (
+                  <TabsTrigger key={status} value={status}>
+                    {copy.statusLabel(status)}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
           ) : (
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger

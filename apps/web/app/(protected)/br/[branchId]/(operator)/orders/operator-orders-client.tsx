@@ -17,9 +17,10 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@comtammatu/ui/components/toggle-group";
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@comtammatu/ui/components/tabs";
 import { AppEmptyState } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
 import { OrderDetailSheet } from "@/(protected)/orders/order-detail-sheet";
@@ -113,28 +114,30 @@ export function OperatorOrdersClient({
   return (
     <>
       <VoidRequestQueue branchId={branchId} />
-      <ToggleGroup
-        type="single"
-        variant="outline"
-        size="touch"
-        className="grid w-full grid-cols-2"
+      <Tabs
         value={view}
         onValueChange={onValueChange}
-        aria-label={ORDERS_COPY.operatorTabsAriaLabel}
+        className="w-full"
       >
-        <ToggleGroupItem
-          value="active"
-          aria-label={ORDERS_COPY.operatorActiveAria(inProgressCount)}
+        <TabsList
+          size="touch"
+          aria-label={ORDERS_COPY.operatorTabsAriaLabel}
+          className="grid w-full grid-cols-2"
         >
-          {ORDERS_COPY.operatorActiveTab(inProgressCount)}
-        </ToggleGroupItem>
-        <ToggleGroupItem
-          value="recent"
-          aria-label={ORDERS_COPY.operatorRecentAria}
-        >
-          {ORDERS_COPY.operatorRecentTab}
-        </ToggleGroupItem>
-      </ToggleGroup>
+          <TabsTrigger
+            value="active"
+            aria-label={ORDERS_COPY.operatorActiveAria(inProgressCount)}
+          >
+            {ORDERS_COPY.operatorActiveTab(inProgressCount)}
+          </TabsTrigger>
+          <TabsTrigger
+            value="recent"
+            aria-label={ORDERS_COPY.operatorRecentAria}
+          >
+            {ORDERS_COPY.operatorRecentTab}
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
       {visibleOrders.length === 0 ? (
         <AppEmptyState
           title={ORDERS_COPY.operatorActiveEmptyTitle}

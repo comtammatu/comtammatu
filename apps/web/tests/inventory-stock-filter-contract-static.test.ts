@@ -72,7 +72,7 @@ test("branch stock facets share one model and stay touch-native", () => {
   assert.match(branchStockClientSource, /getStockOnHandCategories/);
   assert.match(branchStockClientSource, /STOCK_ON_HAND_DEFAULT_STATUS/);
   assert.match(branchStockClientSource, /MultiSelectCombobox/);
-  assert.match(branchStockClientSource, /ToggleGroup/);
+  assert.match(branchStockClientSource, /Tabs/);
   assert.match(branchStockClientSource, /grid-cols-3/);
   assert.match(branchStockClientSource, /value="in_stock"/);
   assert.match(branchStockClientSource, /value="out"/);

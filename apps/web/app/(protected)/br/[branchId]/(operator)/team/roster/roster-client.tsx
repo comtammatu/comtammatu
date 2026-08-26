@@ -1,5 +1,6 @@
 "use client";
 
+import { AppBackLink } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import type { RosterWeekData } from "@lib/hr/roster/roster-model";
@@ -26,6 +27,7 @@ export function BranchRosterClient({
     <BranchOperatorPage
       title={copy.title}
       description={`${branchName} · ${copy.description}`}
+      back={<AppBackLink href={`/br/${branchId}/team`} />}
     >
       <BranchRosterWeekClient
         branchId={branchId}

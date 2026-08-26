@@ -26,7 +26,7 @@ import { Textarea } from "@comtammatu/ui/components/textarea";
 import { cn } from "@comtammatu/ui";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { useIsOnline } from "@/components/pwa-runtime";
-import { AppDetailFooter, AppEmptyState } from "@/components/surface";
+import { AppBackLink, AppDetailFooter, AppEmptyState } from "@/components/surface";
 import { NumberPadSheet } from "@/components/form/number-pad-sheet";
 import {
   transferConfirmReceive,
@@ -56,10 +56,12 @@ const receiveSessionStartRequested = new Set<number>();
 function ReceiveChrome({
   transfer,
   documentTitle,
+  backHref,
   children,
 }: {
   transfer: TransferDetail;
   documentTitle: string;
+  backHref?: string;
   children: ReactNode;
 }) {
   const receiveCopy = messages.inventory.transfer.receiveNative;
@@ -67,6 +69,7 @@ function ReceiveChrome({
     <BranchOperatorPage
       title={documentTitle}
       description={receiveCopy.receiveFrom(transfer.fromBranch)}
+      back={backHref ? <AppBackLink href={backHref} /> : undefined}
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         {children}
@@ -251,7 +254,11 @@ export function TransferReceiveClient({
   if (!showReceiveWorkspace) {
     const waitingShip = transfer.status === "confirmed_ship";
     return (
-      <ReceiveChrome transfer={transfer} documentTitle={chromeTitle}>
+      <ReceiveChrome
+        transfer={transfer}
+        documentTitle={chromeTitle}
+        backHref={backHref}
+      >
         <AppEmptyState
           compact
           mode="no-data"
@@ -282,7 +289,11 @@ export function TransferReceiveClient({
   }
 
   return (
-    <ReceiveChrome transfer={transfer} documentTitle={chromeTitle}>
+    <ReceiveChrome
+      transfer={transfer}
+      documentTitle={chromeTitle}
+      backHref={backHref}
+    >
       {canStartReceive && isStarting ? (
         <div className="flex items-center gap-2 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
           <Spinner className="size-3.5" />

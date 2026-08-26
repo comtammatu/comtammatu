@@ -39,6 +39,12 @@ import {
   ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@comtammatu/ui/components/tabs";
+import { AppBackLink, AppEmptyState, AppSheet } from "@/components/surface";
 import { Label } from "@comtammatu/ui/components/label";
 import {
   Select,
@@ -63,7 +69,6 @@ import {
 } from "@/(protected)/hr/checklist-types";
 import { StatusBadge } from "@/components/status-badge";
 import { AppDialog } from "@/components/form";
-import { AppEmptyState, AppSheet } from "@/components/surface";
 import { useBranchOpsEvents } from "@/_hooks/use-branch-ops-events";
 import {
   BranchOperatorPage,
@@ -496,43 +501,41 @@ export function BranchAttendanceClient({
     <BranchOperatorPage
       title={pageCopy.branchAttendanceTitle}
       description={branchName}
+      back={<AppBackLink href={`/br/${branchId}/team`} />}
     >
       <div className="flex flex-col gap-3">
-        {view === "clock" ? (
-          <Button
-            type="button"
-            variant="outline"
+        <Tabs
+          value={view}
+          onValueChange={(val) => setView(val as "clock" | "summary")}
+          className="w-full"
+        >
+          <TabsList
             size="touch"
-            className="w-full"
-            onClick={() => setView("summary")}
+            aria-label={pageCopy.branchAttendanceTitle}
+            className="grid w-full grid-cols-2"
           >
-            {attendanceCopy.summaryView}
-          </Button>
-        ) : (
-          <div className="flex flex-col gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="touch"
-              className="w-full"
-              onClick={() => setView("clock")}
-            >
+            <TabsTrigger value="clock">
               {attendanceCopy.clockView}
-            </Button>
-            <Select value={month} onValueChange={setMonth} disabled={isPending}>
-              <SelectTrigger size="touch" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {monthOptions.map((option) => (
-                  <SelectItem key={option} value={option} size="touch">
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+            </TabsTrigger>
+            <TabsTrigger value="summary">
+              {attendanceCopy.summaryView}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+        {view === "summary" ? (
+          <Select value={month} onValueChange={setMonth} disabled={isPending}>
+            <SelectTrigger size="touch" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {monthOptions.map((option) => (
+                <SelectItem key={option} value={option} size="touch">
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : null}
 
         <BranchOperatorPanel
           title={

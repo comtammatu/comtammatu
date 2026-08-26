@@ -31,28 +31,28 @@ test("operator queue views are URL-synced via searchParams, not local useState v
   }
 });
 
-test("operator orders uses a URL-synced ToggleGroup segmented control, not raw Tabs as a filter", () => {
+test("operator orders uses a URL-synced standard Pattern A Tabs with size touch", () => {
   const source = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/orders/operator-orders-client.tsx",
   );
-  assert.match(source, /ToggleGroup/);
+  assert.match(source, /TabsList[\s\S]*?size="touch"/);
   assert.match(source, /useSearchParams\(\)/);
-  assert.doesNotMatch(source, /from "@comtammatu\/ui\/components\/tabs"/);
+  assert.match(source, /from "@comtammatu\/ui\/components\/tabs"/);
   assert.match(source, /aria-label=\{ORDERS_COPY\.operatorTabsAriaLabel\}/);
 });
 
-test("operator consumption and count-slip queues use URL-synced ToggleGroup, not Tabs", () => {
+test("operator consumption and count-slip queues use standard Pattern A Tabs with size touch", () => {
   for (const file of [
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/consumption/branch-consumption-list-client.tsx",
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-slips/branch-count-slips-client.tsx",
   ]) {
     const source = read(file);
-    assert.match(source, /ToggleGroup/, `${file}: queue filter must be ToggleGroup`);
+    assert.match(source, /TabsList[\s\S]*?size="touch"/, `${file}: queue filter must use TabsList size="touch"`);
     assert.match(source, /useSearchParams\(\)/, `${file}: must read view from searchParams`);
-    assert.doesNotMatch(
+    assert.match(
       source,
       /from "@comtammatu\/ui\/components\/tabs"/,
-      `${file}: must not use Tabs as a queue filter`,
+      `${file}: must use standard Tabs component`,
     );
   }
 });

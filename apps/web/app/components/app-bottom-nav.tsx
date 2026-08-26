@@ -34,6 +34,7 @@ export function AppBottomNav({
   trailing,
   hideOnDesktop = true,
   position = "fixed",
+  wide = false,
 }: {
   items: AppBottomNavItem[];
   ariaLabel: string;
@@ -43,6 +44,7 @@ export function AppBottomNav({
   trailing?: ReactNode;
   hideOnDesktop?: boolean;
   position?: "fixed" | "static";
+  wide?: boolean;
 }) {
   return (
     <nav
@@ -54,7 +56,12 @@ export function AppBottomNav({
       )}
       aria-label={ariaLabel}
     >
-      <div className="no-scrollbar mx-auto flex max-w-lg items-stretch gap-1 overflow-x-auto">
+      <div
+        className={cn(
+          "no-scrollbar mx-auto flex max-w-lg items-stretch gap-1 overflow-x-auto",
+          wide && "md:max-w-2xl lg:max-w-4xl",
+        )}
+      >
         {leading}
         {items.map((item) => {
           const Icon = item.icon;

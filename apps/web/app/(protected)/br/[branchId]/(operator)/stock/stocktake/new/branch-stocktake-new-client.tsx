@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { ClipboardCheck as IconClipboardCheck } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { AppDetailFooter, AppEmptyState } from "@/components/surface";
+import { AppBackLink, AppDetailFooter, AppEmptyState } from "@/components/surface";
 import {
   BranchOperatorPage,
   BranchOperatorPanel,
@@ -66,6 +66,7 @@ export function BranchStocktakeNewClient({
       <BranchOperatorPage
         title={stocktakeCopy.startTitle}
         description={branchName}
+        back={<AppBackLink href={stocktakeBasePath} />}
       >
         <AppEmptyState
           compact
@@ -82,6 +83,7 @@ export function BranchStocktakeNewClient({
     <BranchOperatorPage
       title={stocktakeCopy.startTitle}
       description={stocktakeCopy.startDescription}
+      back={<AppBackLink href={stocktakeBasePath} />}
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <BranchOperatorPanel

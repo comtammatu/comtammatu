@@ -6,6 +6,7 @@ import {
   EmployeeMissingProfileEmpty,
   EmployeePage,
 } from "../components/staff-runtime-page";
+import { AppBackLink } from "@/components/surface";
 import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { LeaveRequestClient } from "./leave-client";
 import { messages } from "@lib/messages";
@@ -29,7 +30,13 @@ export async function EmployeeLeavePageContent({
 
   if (!ctx) {
     return (
-      <Page title={copy.title} description={copy.description}>
+      <Page
+        title={copy.title}
+        description={copy.description}
+        back={
+          plane === "branch" ? <AppBackLink href={returnHref} /> : undefined
+        }
+      >
         <EmployeeMissingProfileEmpty profileHref={profileHref} />
       </Page>
     );
@@ -62,6 +69,9 @@ export async function EmployeeLeavePageContent({
     <Page
       title={copy.title}
       description={copy.description}
+      back={
+        plane === "branch" ? <AppBackLink href={returnHref} /> : undefined
+      }
 
       action={
         plane === "employee" ? (

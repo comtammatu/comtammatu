@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { AppBackLink } from "@/components/surface";
 import { fetchCategories } from "@/(protected)/inventory/settings/categories/categories-actions";
 import { fetchUnits } from "@/(protected)/inventory/settings/units/units-actions";
 import { fetchIngredients } from "@/(protected)/inventory/ingredient-actions";
@@ -10,13 +11,22 @@ import { CatalogPageShell } from "./catalog-page-shell";
 
 const copy = messages.catalog.index;
 
-export default function OperatorCatalogPage({
+export default async function OperatorCatalogPage({
   params,
 }: {
   params: Promise<{ branchId: string }>;
 }) {
+  const { branchId: rawBranchId } = await params;
+  const branchId = parseOperatorBranchId(rawBranchId);
   return (
-    <CatalogPageShell title={copy.title}>
+    <CatalogPageShell
+      title={copy.title}
+      back={
+        branchId != null ? (
+          <AppBackLink href={`/br/${branchId}/stock`} />
+        ) : undefined
+      }
+    >
       <CatalogIndex params={params} />
     </CatalogPageShell>
   );

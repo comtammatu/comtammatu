@@ -37,7 +37,7 @@ test("Branch feedback inbox is a native touch LIST isolated from Owner FeedbackI
   assert.doesNotMatch(list, ownerChrome);
   assert.doesNotMatch(list, /\bfont-bold\b|style=\{\{/);
 
-  assert.match(tabs, /ToggleGroup/);
+  assert.match(tabs, /Tabs/);
   assert.match(tabs, /size="touch"/);
   assert.doesNotMatch(tabs, /AppToolbar|FeedbackSubNav|flex-wrap/);
 

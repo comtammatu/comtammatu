@@ -12,12 +12,12 @@ import { MODULE_LABELS_VI } from "@comtammatu/shared/labels";
 import { formatVNClockTime } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
 import { loadAuthState } from "@/_lib/auth";
-import { messages } from "@lib/messages";
-import { AppEmptyState } from "@/components/surface";
+import { AppBackLink, AppEmptyState } from "@/components/surface";
 import {
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
+import { messages } from "@lib/messages";
 import { EmployeePage, EmployeePanel } from "../components/staff-runtime-page";
 import { formatDateVN, formatTimeVN } from "../_lib/vn-business-date";
 import {
@@ -230,7 +230,11 @@ export async function StaffCheckoutApprovalsPageContent({
     <PageShell
       title={copy.checkoutApprovalsTitle}
       description={copy.checkoutApprovalsDescriptionAll}
-
+      back={
+        plane === "branch" && routeBranchId != null ? (
+          <AppBackLink href={`/br/${routeBranchId}/team`} />
+        ) : undefined
+      }
       action={
         plane === "employee" ? (
           <Button

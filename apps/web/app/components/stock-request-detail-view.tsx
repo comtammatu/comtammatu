@@ -22,6 +22,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import {
+  AppBackLink,
   AppPage,
   AppPageHeader,
   AppSection,
@@ -396,6 +397,7 @@ export function StockRequestDetailView({
         title={copy.detailTitle}
         description={description}
         badge={{ children: statusLabel }}
+        back={<AppBackLink href={`/br/${data.branchId}/stock`} />}
       >
         <BranchRequestDetailContent data={data} actions={actions} />
       </BranchOperatorPage>

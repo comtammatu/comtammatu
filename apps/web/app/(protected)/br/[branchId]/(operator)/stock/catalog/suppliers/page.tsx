@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { AppBackLink } from "@/components/surface";
 import { fetchSuppliers } from "@/(protected)/inventory/procurement-actions";
 import type { SupplierRow } from "@/(protected)/inventory/suppliers/supplier-dialog";
 import { messages } from "@lib/messages";
@@ -8,13 +9,22 @@ import { CatalogSuppliersClient } from "./catalog-suppliers-client";
 
 const copy = messages.catalog.suppliers;
 
-export default function OperatorCatalogSuppliersPage({
+export default async function OperatorCatalogSuppliersPage({
   params,
 }: {
   params: Promise<{ branchId: string }>;
 }) {
+  const { branchId: rawBranchId } = await params;
+  const branchId = parseOperatorBranchId(rawBranchId);
   return (
-    <CatalogPageShell title={copy.title}>
+    <CatalogPageShell
+      title={copy.title}
+      back={
+        branchId != null ? (
+          <AppBackLink href={`/br/${branchId}/stock/catalog`} />
+        ) : undefined
+      }
+    >
       <CatalogSuppliersBody params={params} />
     </CatalogPageShell>
   );

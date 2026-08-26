@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { AppBackLink } from "@/components/surface";
 import {
   fetchCategories,
   type CategoryRow,
@@ -10,13 +11,22 @@ import { CatalogCategoriesClient } from "./catalog-categories-client";
 
 const copy = messages.catalog.categories;
 
-export default function OperatorCatalogCategoriesPage({
+export default async function OperatorCatalogCategoriesPage({
   params,
 }: {
   params: Promise<{ branchId: string }>;
 }) {
+  const { branchId: rawBranchId } = await params;
+  const branchId = parseOperatorBranchId(rawBranchId);
   return (
-    <CatalogPageShell title={copy.title}>
+    <CatalogPageShell
+      title={copy.title}
+      back={
+        branchId != null ? (
+          <AppBackLink href={`/br/${branchId}/stock/catalog`} />
+        ) : undefined
+      }
+    >
       <CatalogCategoriesBody params={params} />
     </CatalogPageShell>
   );

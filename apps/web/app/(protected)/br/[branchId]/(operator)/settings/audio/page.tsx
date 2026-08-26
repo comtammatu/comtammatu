@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
+import { AppBackLink } from "@/components/surface";
 import {
   SYSTEM_SETTING_KEYS,
   DEFAULT_TTS_MODEL,
@@ -97,6 +98,7 @@ export default async function BranchAudioSettingsPage({
     <BranchOperatorPage
       title={copy.audioSetupTitle}
       description={`${branchRes.data.name} · ${copy.audioSetupDescription}`}
+      back={<AppBackLink href={`/br/${branchId}/settings`} />}
     >
       <BranchOperatorPanel
         title={messages.settings.audio.providerSectionTitle}

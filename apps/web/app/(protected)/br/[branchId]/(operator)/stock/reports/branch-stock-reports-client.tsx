@@ -21,7 +21,7 @@ import {
   ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import { AppEmptyState } from "@/components/surface";
+import { AppBackLink, AppEmptyState } from "@/components/surface";
 import {
   BranchOperatorPage,
   BranchOperatorPanel,
@@ -188,7 +188,11 @@ export function BranchStockReportsClient({
       : "default";
 
   return (
-    <BranchOperatorPage title={reportCopy.pageTitle} description={branchName}>
+    <BranchOperatorPage
+      title={reportCopy.pageTitle}
+      description={branchName}
+      back={<AppBackLink href={`/br/${branchId}/stock`} />}
+    >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] lg:items-start">
           <BranchOperatorPanel

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { AppBackLink } from "@/components/surface";
 import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
@@ -32,6 +33,7 @@ export default async function BranchMenuLimitsPage({
     <BranchOperatorPage
       title={messages.settings.branch.menuLimitsTitle}
       description={branch.name}
+      back={<AppBackLink href={`/br/${branchId}`} />}
     >
       <BranchMenuLimitsHost branchId={branchId} />
     </BranchOperatorPage>

@@ -32,7 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { AppEmptyState } from "@/components/surface";
+import { AppBackLink, AppEmptyState } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
 import {
   BranchOperatorPage,
@@ -83,7 +83,11 @@ export function BranchStocktakeListClient({
   ) : null;
 
   return (
-    <BranchOperatorPage title={stocktakeCopy.title} description={branchName}>
+    <BranchOperatorPage
+      title={stocktakeCopy.title}
+      description={branchName}
+      back={<AppBackLink href={`/br/${branchId}/stock`} />}
+    >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         {createAction}
 

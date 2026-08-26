@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { AppBackLink } from "@/components/surface";
 import {
   fetchUnits,
   type UnitRow,
@@ -10,13 +11,22 @@ import { CatalogUnitsClient } from "./catalog-units-client";
 
 const copy = messages.catalog.units;
 
-export default function OperatorCatalogUnitsPage({
+export default async function OperatorCatalogUnitsPage({
   params,
 }: {
   params: Promise<{ branchId: string }>;
 }) {
+  const { branchId: rawBranchId } = await params;
+  const branchId = parseOperatorBranchId(rawBranchId);
   return (
-    <CatalogPageShell title={copy.title}>
+    <CatalogPageShell
+      title={copy.title}
+      back={
+        branchId != null ? (
+          <AppBackLink href={`/br/${branchId}/stock/catalog`} />
+        ) : undefined
+      }
+    >
       <CatalogUnitsBody params={params} />
     </CatalogPageShell>
   );

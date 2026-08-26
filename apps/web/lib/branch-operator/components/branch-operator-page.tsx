@@ -53,6 +53,7 @@ export interface BranchOperatorPageProps {
   title: string;
   description?: string;
   hideHeaderOnMobile?: boolean;
+  back?: ReactNode;
   badge?: {
     children: ReactNode;
     variant?: BadgeProps["variant"];
@@ -66,6 +67,7 @@ export function BranchOperatorPage({
   title,
   description,
   hideHeaderOnMobile = false,
+  back,
   badge,
   action,
   fill = false,
@@ -86,6 +88,7 @@ export function BranchOperatorPage({
         description={description}
         className={hideHeaderOnMobile ? "max-sm:sr-only" : undefined}
         compactOnMobile={hideHeaderOnMobile}
+        breadcrumb={back}
         badge={badge}
         actions={action}
       />

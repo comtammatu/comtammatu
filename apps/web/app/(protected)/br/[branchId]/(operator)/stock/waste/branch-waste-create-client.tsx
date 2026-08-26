@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { AppEmptyState, AppDetailFooter } from "@/components/surface";
+import { AppEmptyState, AppDetailFooter, AppBackLink } from "@/components/surface";
 import {
   BranchOperatorPage,
   BranchOperatorPanel,
@@ -224,7 +224,11 @@ export function BranchWasteCreateClient({
   }
 
   return (
-    <BranchOperatorPage title={copy.title} description={branchName}>
+    <BranchOperatorPage
+      title={copy.title}
+      description={branchName}
+      back={<AppBackLink href={stockBasePath} />}
+    >
       {!canCreateWaste || !context ? (
         <AppEmptyState compact title={unavailable} />
       ) : (

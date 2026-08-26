@@ -25,11 +25,11 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 
+import { SectionLabel } from "@comtammatu/ui/components/section-label";
+import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
-import { SectionLabel } from "@comtammatu/ui/components/section-label";
-import { AppEmptyState, AppSheet } from "@/components/surface";
+import { AppBackLink, AppEmptyState, AppSheet } from "@/components/surface";
 import {
   BranchOperatorPage,
   BranchOperatorPanel,
@@ -49,6 +49,7 @@ function getHighestTier(row: PendingWasteRow): number {
 }
 
 export function BranchWasteApprovalsClient({
+  branchId,
   branchName,
   canApproveWaste,
   loadFailed,
@@ -177,7 +178,11 @@ export function BranchWasteApprovalsClient({
 
   if (loadFailed) {
     return (
-      <BranchOperatorPage title={copy.title} description={branchName}>
+      <BranchOperatorPage
+        title={copy.title}
+        description={branchName}
+        back={<AppBackLink href={`/br/${branchId}/stock`} />}
+      >
         <AppEmptyState
           compact
           mode="no-data"
@@ -194,7 +199,11 @@ export function BranchWasteApprovalsClient({
   }
 
   return (
-    <BranchOperatorPage title={copy.title} description={branchName}>
+    <BranchOperatorPage
+      title={copy.title}
+      description={branchName}
+      back={<AppBackLink href={`/br/${branchId}/stock`} />}
+    >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3 pb-4">
         <BranchOperatorPanel
           title="Phiếu chờ duyệt"

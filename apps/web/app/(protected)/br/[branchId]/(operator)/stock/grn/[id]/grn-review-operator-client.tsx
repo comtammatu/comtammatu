@@ -23,7 +23,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { AppDetailFooter, AppEmptyState } from "@/components/surface";
+import { AppBackLink, AppDetailFooter, AppEmptyState } from "@/components/surface";
 import { getStatusBadgeMeta } from "@/components/status-badge";
 import { OperatorFlowSteps } from "@/(protected)/inventory/_components/operator-flow-steps";
 import type { IngredientRow } from "@lib/inventory/types";
@@ -101,6 +101,7 @@ export function GrnReviewOperatorClient({
       title={grn.code}
       description={`${grn.supplier} · ${grn.date}`}
       badge={{ children: statusBadge.label, variant: statusBadge.variant }}
+      back={<AppBackLink href={grnListBasePath} />}
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <OperatorFlowSteps

@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
+import { AppBackLink } from "@/components/surface";
 import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { loadAuthState } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
@@ -154,6 +155,7 @@ export default async function BranchPosSessionsPage({
       title={messages.settings.pages.posSessionsTitle}
       description={messages.settings.pages.posSessionsDescription}
       fill
+      back={<AppBackLink href={`/br/${branchId}/settings`} />}
     >
       <PosSessionsClient
         branchId={branchId}

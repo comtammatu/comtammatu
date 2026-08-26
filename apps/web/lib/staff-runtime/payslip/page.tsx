@@ -1,3 +1,4 @@
+import { AppBackLink } from "@/components/surface";
 import { getEmployeeContext } from "../_lib/staff-runtime-context";
 import { PayslipClient } from "./payslip-client";
 import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
@@ -59,7 +60,15 @@ export async function StaffPayslipPageContent(props: {
     .limit(12);
 
   return (
-    <PageShell title={copy.title} description={copy.description}>
+    <PageShell
+      title={copy.title}
+      description={copy.description}
+      back={
+        props.plane === "branch" ? (
+          <AppBackLink href={props.profileHref} />
+        ) : undefined
+      }
+    >
       <YearPicker
         selectedYear={year}
         currentYear={currentYear}

@@ -7,7 +7,7 @@ import { formatCount } from "@comtammatu/shared/format";
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { AppDetailFooter } from "@/components/surface";
+import { AppBackLink, AppDetailFooter } from "@/components/surface";
 import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import {
   type BranchStocktakeCountData,
@@ -229,6 +229,11 @@ export function BranchStocktakeCountClient({
     <BranchOperatorPage
       title={countCopy.countMode(data.currentRound)}
       description={`KK-${data.sessionId}`}
+      back={
+        <AppBackLink
+          href={`${stocktakeBasePath}/${data.sessionId}?view=detail`}
+        />
+      }
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <Button

@@ -149,11 +149,13 @@ export function OperatorBottomNav({
   tabs,
   branchKind = "branch",
   badges,
+  wide = true,
 }: {
   branchId: number;
   tabs: readonly ResolvedBranchPrimaryTab[];
   branchKind?: BranchKind;
   badges?: BranchNavBadgeCounts;
+  wide?: boolean;
 }) {
   const pathname = usePathname();
 
@@ -167,6 +169,7 @@ export function OperatorBottomNav({
       ariaLabel={APP_COPY_VI.operatorAriaLabel}
       hideOnDesktop={false}
       position="static"
+      wide={wide}
       items={items.map((item) => ({
         href: item.href,
         label: item.label,

@@ -4,6 +4,7 @@ import {
   ListChecks as IconListChecks,
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
+import { AppBackLink } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import {
@@ -49,7 +50,12 @@ export async function StaffClockPageContent({
 
   if (state.status === "missing_profile") {
     return (
-      <PageShell title={copy.clockTodayTitle}>
+      <PageShell
+        title={copy.clockTodayTitle}
+        back={
+          plane === "branch" ? <AppBackLink href={routes.tasks} /> : undefined
+        }
+      >
         <EmployeeMissingProfileEmpty profileHref={routes.profile} />
       </PageShell>
     );
@@ -58,6 +64,9 @@ export async function StaffClockPageContent({
   return (
     <PageShell
       title={copy.clockTodayTitle}
+      back={
+        plane === "branch" ? <AppBackLink href={routes.tasks} /> : undefined
+      }
 
       action={
         plane === "employee" ? (

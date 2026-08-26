@@ -981,10 +981,15 @@ contract change; route-local chrome outside this list is drift.
 2. **Branch runtime chrome** — the branch-scoped operator layout
    (`apps/web/app/(protected)/br/[branchId]/(operator)/layout.tsx`). Covers the
    branch home, `/br/[branchId]/shift/*`, `/br/[branchId]/team/*`,
-   `/br/[branchId]/stock/*`, and `/br/[branchId]/settings/*`. It uses shared
-   brand components, comfortable `AppPage`, and `AppBottomNav`;
-   `branch_management` is a route family inside this chrome, not a reason to
-   enter `control_surface` chrome.
+   `/br/[branchId]/stock/*`, and `/br/[branchId]/settings/*`. Width scale is
+   single-sourced and touch-first: `max-w-lg` (phone) $\rightarrow$ `md:max-w-2xl`
+   (tablet portrait) $\rightarrow$ `lg:max-w-4xl` (tablet landscape cap) across
+   `AppHeader wide`, `AppPage`, and `AppBottomNav wide`. Desktop sprawl (`xl`/`2xl`)
+   is forbidden. Scrollport is strictly `#main-content`. Top chrome uses inline
+   compact headers ($\le 84\text{px}$ top budget) on small screens. Sub-tabs strictly
+   follow the 48px touch standard (`TabsList size="touch"`: Pattern A fixed grid or
+   Pattern B scrollable pills); `branch_management` is a route family inside this
+   chrome, not a reason to enter `control_surface` chrome.
 3. **station_chrome** — purpose-built, full-screen, single-job surfaces that
    cannot wear the management sidebar: POS, KDS, Runner under
    `/br/[branchId]/*`. Bespoke layout, same tokens, typography, status

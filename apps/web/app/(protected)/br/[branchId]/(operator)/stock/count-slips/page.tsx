@@ -27,6 +27,7 @@ export default async function OperatorCountSlipsPage({
 
   return (
     <BranchCountSlipsClient
+      branchId={branchId}
       branchName={data.branchName}
       initialRows={data.rows}
       loadFailed={data.loadFailed}
