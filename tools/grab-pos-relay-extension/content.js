@@ -110,20 +110,26 @@
 
             // 1. If Available Status changed (or forceAll is true)
             if (forceAll || !prev || prev.status !== currentGrabStatus) {
-              console.log(`[Grab POS Relay] Status sync for ${item.name}: ${prev?.status} -> ${currentGrabStatus}`);
+              console.log(`[Grab POS Relay] Status sync for ${item.name}: ${prev?.status} -> ${currentGrabStatus} (code: ${item.available_status})`);
               sendCommandToInjected('SET_AVAILABLE_STATUS', {
                 itemId: grabId,
-                availableStatus: currentGrabStatus,
+                availableStatus: item.available_status ?? currentGrabStatus,
               });
               syncedCount++;
             }
 
             // 2. If Stock changed
             if (forceAll || !prev || prev.stock !== currentStock) {
-              console.log(`[Grab POS Relay] Stock sync for ${item.name}: ${prev?.stock} -> ${currentStock}`);
+              const maxStock =
+                item.max_stock ??
+                item.stock_capacity ??
+                (typeof currentStock === 'number' ? Math.max(currentStock, 100) : -1);
+
+              console.log(`[Grab POS Relay] Stock sync for ${item.name}: ${prev?.stock} -> ${currentStock} (maxStock: ${maxStock})`);
               sendCommandToInjected('SET_ITEM_STOCK', {
                 itemId: grabId,
                 currentStock: currentStock,
+                maxStock: maxStock,
               });
               syncedCount++;
             }

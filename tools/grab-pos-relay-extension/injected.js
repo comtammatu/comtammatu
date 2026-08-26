@@ -265,16 +265,19 @@
       return;
     }
     try {
+      let statusCode = 1;
       let statusStr = 'AVAILABLE';
       let availableAt = '0001-01-01T00:00:00Z';
 
       // 1: Có bán (AVAILABLE)
       if (availableStatus === 1 || availableStatus === 'AVAILABLE') {
+        statusCode = 1;
         statusStr = 'AVAILABLE';
         availableAt = '0001-01-01T00:00:00Z';
       }
       // 2: Hết hàng hôm nay (UNAVAILABLE_TODAY - tự động mở lại 00:00 sáng mai)
       else if (availableStatus === 2 || availableStatus === 'UNAVAILABLE_TODAY' || availableStatus === 'UNAVAILABLE') {
+        statusCode = 2;
         statusStr = 'UNAVAILABLE_TODAY';
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
@@ -283,11 +286,15 @@
       }
       // 3: Không về hàng nữa (UNAVAILABLE_INDEFINITELY / DISCONTINUED)
       else if (availableStatus === 3 || availableStatus === 'UNAVAILABLE_INDEFINITELY' || availableStatus === 'DISCONTINUED') {
+        statusCode = 3;
         statusStr = 'UNAVAILABLE_INDEFINITELY';
+        availableAt = '0001-01-01T00:00:00Z';
       }
       // 7: Ẩn giấu (HIDDEN)
       else if (availableStatus === 7 || availableStatus === 'HIDDEN' || availableStatus === 'INACTIVE') {
+        statusCode = 7;
         statusStr = 'HIDDEN';
+        availableAt = '0001-01-01T00:00:00Z';
       }
 
       const url = 'https://api.grab.com/food/merchant/v1/items/available-status';
@@ -302,7 +309,7 @@
           items: [
             {
               itemID: itemId,
-              availableStatus: statusStr,
+              availableStatus: statusCode,
               availableAt: availableAt,
             },
           ],
@@ -312,23 +319,28 @@
       if (res.ok) noteAuthSuccess();
       else if (capturedAuthHeaders) noteAuthFailure(res.status, url);
 
-      console.log(`[Grab POS Relay] Updated status for item ${itemId} -> ${statusStr} (HTTP ${res.status})`);
-      dispatchOrderEvent('SYNC_STATUS_RESULT', { itemId, availableStatus: statusStr, success: res.ok, status: res.status });
+      console.log(`[Grab POS Relay] Updated status for item ${itemId} -> code: ${statusCode} (${statusStr}) (HTTP ${res.status})`);
+      dispatchOrderEvent('SYNC_STATUS_RESULT', { itemId, availableStatus: statusCode, statusStr, success: res.ok, status: res.status });
     } catch (err) {
       console.error(`[Grab POS Relay] Failed to update item status for ${itemId}:`, err);
     }
   }
 
   // API Call: Sync Stock / Daily Limit (IMS)
-  async function setGrabItemStock(itemId, currentStock) {
+  async function setGrabItemStock(itemId, currentStock, maxStock) {
     if (!itemId || !itemId.startsWith('VNITE')) {
       console.warn(`[Grab POS Relay] Skip stock sync for non-item ID: ${itemId}`);
       return;
     }
     try {
       const hasFiniteLimit = typeof currentStock === 'number';
-      const stockVal = hasFiniteLimit ? Math.max(0, currentStock) : 0;
       const enableIms = hasFiniteLimit;
+      const stockVal = hasFiniteLimit ? Math.max(0, currentStock) : 0;
+
+      // Grab requires maxStock: -1 for unlimited (IMS disabled), or > 0 when IMS is enabled
+      const maxStockVal = enableIms
+        ? Math.max(typeof maxStock === 'number' && maxStock > 0 ? maxStock : 100, stockVal, 1)
+        : -1;
 
       const url = `https://api.grab.com/food/merchant/v1/items/${itemId}/upsert-item-stock`;
       const res = await originalFetch(url, {
@@ -341,6 +353,7 @@
         body: JSON.stringify({
           enableIms: enableIms,
           currentStock: stockVal,
+          maxStock: maxStockVal,
           enableRestock: false,
           restockSetting: null,
         }),
@@ -349,8 +362,8 @@
       if (res.ok) noteAuthSuccess();
       else if (capturedAuthHeaders) noteAuthFailure(res.status, url);
 
-      console.log(`[Grab POS Relay] Updated stock for item ${itemId} -> ${stockVal} (IMS: ${enableIms}, HTTP ${res.status})`);
-      dispatchOrderEvent('SYNC_STOCK_RESULT', { itemId, currentStock: stockVal, enableIms, success: res.ok, status: res.status });
+      console.log(`[Grab POS Relay] Updated stock for item ${itemId} -> current: ${stockVal}, max: ${maxStockVal} (IMS: ${enableIms}, HTTP ${res.status})`);
+      dispatchOrderEvent('SYNC_STOCK_RESULT', { itemId, currentStock: stockVal, maxStock: maxStockVal, enableIms, success: res.ok, status: res.status });
     } catch (err) {
       console.error(`[Grab POS Relay] Failed to update stock for ${itemId}:`, err);
     }
@@ -418,7 +431,7 @@
     if (command === 'SET_AVAILABLE_STATUS') {
       setGrabItemAvailableStatus(payload.itemId, payload.availableStatus);
     } else if (command === 'SET_ITEM_STOCK') {
-      setGrabItemStock(payload.itemId, payload.currentStock);
+      setGrabItemStock(payload.itemId, payload.currentStock, payload.maxStock);
     }
   });
 

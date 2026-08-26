@@ -152,6 +152,11 @@ export async function GET(request: NextRequest) {
         availableStatus = 1;
       }
 
+      const maxStock =
+        row.stock_capacity ??
+        row.manual_limit_quantity ??
+        (row.available_to_sell != null ? Math.max(row.available_to_sell, 100) : -1);
+
       return {
         menu_item_id: row.menu_item_id,
         name: row.item_name,
@@ -161,6 +166,7 @@ export async function GET(request: NextRequest) {
         available_status: availableStatus,
         grab_status: grabStatus,
         stock_capacity: row.stock_capacity,
+        max_stock: maxStock,
       };
     });
 
