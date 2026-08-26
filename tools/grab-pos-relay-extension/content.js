@@ -1,6 +1,7 @@
 // content.js - Content script running in merchant.grab.com
 (function () {
-  console.log('[Grab POS Relay] Content script active');
+  const extVersion = chrome.runtime.getManifest()?.version || '1.1.0';
+  console.log(`[Grab POS Relay v${extVersion}] Content script active`);
 
   // Inject injected.js into page context
   const script = document.createElement('script');
@@ -15,23 +16,25 @@
   badge.id = 'comtammatu-pos-relay-badge';
   badge.style.cssText = `
     position: fixed;
-    bottom: 16px;
-    right: 16px;
+    bottom: 12px;
+    right: 12px;
     z-index: 999999;
-    background: #0f172a;
+    background: rgba(15, 23, 42, 0.94);
+    backdrop-filter: blur(4px);
     color: #f8fafc;
     border: 1px solid #334155;
-    border-radius: 8px;
-    padding: 8px 14px;
+    border-radius: 6px;
+    padding: 5px 10px;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    font-size: 13px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    font-size: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
     display: flex;
     align-items: center;
-    gap: 8px;
-    transition: all 0.3s ease;
+    gap: 6px;
+    transition: all 0.2s ease;
+    user-select: none;
   `;
-  badge.innerHTML = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#22c55e;"></span> <strong>Cơm Tấm Má Tư POS Relay</strong>: Đang trực đơn...`;
+  badge.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;"></span> <strong>POS Relay</strong> <span style="font-size:11px;color:#94a3b8;">v${extVersion}</span>`;
 
   function ensureBadgeAttached() {
     if (!document.getElementById('comtammatu-pos-relay-badge')) {
@@ -51,7 +54,7 @@
 
   function updateBadge(message, isSuccess = true) {
     ensureBadgeAttached();
-    badge.innerHTML = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${isSuccess ? '#22c55e' : '#ef4444'};"></span> <strong>POS Relay</strong>: ${message}`;
+    badge.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${isSuccess ? '#22c55e' : '#ef4444'};"></span> <strong>POS v${extVersion}</strong>: ${message}`;
     badge.style.borderColor = isSuccess ? '#22c55e' : '#ef4444';
   }
 
@@ -99,23 +102,24 @@
             if (!item.grab_item_id || !item.grab_item_id.startsWith('VNITE')) continue;
 
             const grabId = item.grab_item_id;
-            const currentStatus = item.available_status; // 1 or 2
+            const currentGrabStatus =
+              item.grab_status || (item.available_status === 2 ? 'UNAVAILABLE_TODAY' : 'AVAILABLE');
             const currentStock = item.available_to_sell;
 
             const prev = itemStatusCache.get(grabId);
 
             // 1. If Available Status changed (or forceAll is true)
-            if (forceAll || !prev || prev.status !== currentStatus) {
-              console.log(`[Grab POS Relay] Status sync for ${item.name}: ${prev?.status} -> ${currentStatus}`);
+            if (forceAll || !prev || prev.status !== currentGrabStatus) {
+              console.log(`[Grab POS Relay] Status sync for ${item.name}: ${prev?.status} -> ${currentGrabStatus}`);
               sendCommandToInjected('SET_AVAILABLE_STATUS', {
                 itemId: grabId,
-                availableStatus: currentStatus,
+                availableStatus: currentGrabStatus,
               });
               syncedCount++;
             }
 
-            // 2. If Stock changed and item has finite quota
-            if (typeof currentStock === 'number' && (forceAll || !prev || prev.stock !== currentStock)) {
+            // 2. If Stock changed
+            if (forceAll || !prev || prev.stock !== currentStock) {
               console.log(`[Grab POS Relay] Stock sync for ${item.name}: ${prev?.stock} -> ${currentStock}`);
               sendCommandToInjected('SET_ITEM_STOCK', {
                 itemId: grabId,
@@ -124,7 +128,7 @@
               syncedCount++;
             }
 
-            itemStatusCache.set(grabId, { status: currentStatus, stock: currentStock });
+            itemStatusCache.set(grabId, { status: currentGrabStatus, stock: currentStock });
           }
 
           if (forceAll) {

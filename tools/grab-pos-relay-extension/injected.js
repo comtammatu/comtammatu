@@ -5,6 +5,48 @@
   const processedOrderIds = new Set();
   const dispatchedOrderIds = new Set();
   let merchantId = '5-C8DTE75GUGJ3JT';
+  let lastSuccessfulPollAt = Date.now();
+
+  // 1. Keep-Alive: Override visibilityState so Grab portal never pauses background timers / WebSockets
+  try {
+    Object.defineProperty(document, 'hidden', { get: () => false, configurable: true });
+    Object.defineProperty(document, 'visibilityState', { get: () => 'visible', configurable: true });
+    window.addEventListener('visibilitychange', (e) => e.stopImmediatePropagation(), true);
+  } catch (e) {}
+
+  // 2. Keep-Alive: Silent AudioContext oscillator prevents Chrome from freezing background tab
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (AudioCtx) {
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      gain.gain.value = 0.00001; // Inaudible
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+
+      // AudioContext created before any user gesture starts suspended per autoplay
+      // policy; a suspended context plays nothing, so Chrome does not treat the tab
+      // as active media. Resume on the first gesture.
+      const resumeAudio = () => {
+        if (ctx.state !== 'running') {
+          ctx.resume().catch(() => {});
+        }
+      };
+      window.addEventListener('pointerdown', resumeAudio, { once: false, capture: true });
+      window.addEventListener('keydown', resumeAudio, { once: false, capture: true });
+      resumeAudio();
+    }
+  } catch (e) {}
+
+  // 4. Auto-Recovery: Reload if stuck or disconnected for > 5 minutes
+  setInterval(() => {
+    if (Date.now() - lastSuccessfulPollAt > 5 * 60 * 1000) {
+      console.log('[Grab POS Relay] Inactive for >5m, auto-reloading to restore connection...');
+      window.location.reload();
+    }
+  }, 60000);
 
   // The Grab API requires the portal's bearer token, which the extension cannot
   // obtain itself; it reuses headers observed on the portal's own requests.
@@ -78,6 +120,7 @@
   }
 
   function noteAuthSuccess() {
+    lastSuccessfulPollAt = Date.now();
     consecutiveAuthFailures = 0;
     if (authExpired) {
       authExpired = false;
@@ -215,17 +258,25 @@
     }
   }
 
-  // API Call: Sync Available Status (1: Có bán, 2: Hết hàng hôm nay)
+  // API Call: Sync Available Status ("AVAILABLE", "UNAVAILABLE_TODAY", "UNAVAILABLE_INDEFINITELY")
   async function setGrabItemAvailableStatus(itemId, availableStatus) {
     if (!itemId || !itemId.startsWith('VNITE')) {
       console.warn(`[Grab POS Relay] Skip status sync for non-item ID: ${itemId}`);
       return;
     }
     try {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      tomorrow.setHours(0, 0, 0, 0);
-      const availableAt = availableStatus === 2 ? tomorrow.toISOString() : '0001-01-01T00:00:00Z';
+      let statusStr = 'AVAILABLE';
+      let availableAt = '0001-01-01T00:00:00Z';
+
+      if (availableStatus === 2 || availableStatus === 'UNAVAILABLE_TODAY' || availableStatus === 'UNAVAILABLE') {
+        statusStr = 'UNAVAILABLE_TODAY';
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(0, 0, 0, 0);
+        availableAt = tomorrow.toISOString();
+      } else if (availableStatus === 'UNAVAILABLE_INDEFINITELY') {
+        statusStr = 'UNAVAILABLE_INDEFINITELY';
+      }
 
       const url = 'https://api.grab.com/food/merchant/v1/items/available-status';
       const res = await originalFetch(url, {
@@ -239,7 +290,7 @@
           items: [
             {
               itemID: itemId,
-              availableStatus: availableStatus,
+              availableStatus: statusStr,
               availableAt: availableAt,
             },
           ],
@@ -249,8 +300,8 @@
       if (res.ok) noteAuthSuccess();
       else if (capturedAuthHeaders) noteAuthFailure(res.status, url);
 
-      console.log(`[Grab POS Relay] Updated status for item ${itemId} -> ${availableStatus} (HTTP ${res.status})`);
-      dispatchOrderEvent('SYNC_STATUS_RESULT', { itemId, availableStatus, success: res.ok, status: res.status });
+      console.log(`[Grab POS Relay] Updated status for item ${itemId} -> ${statusStr} (HTTP ${res.status})`);
+      dispatchOrderEvent('SYNC_STATUS_RESULT', { itemId, availableStatus: statusStr, success: res.ok, status: res.status });
     } catch (err) {
       console.error(`[Grab POS Relay] Failed to update item status for ${itemId}:`, err);
     }
@@ -263,6 +314,10 @@
       return;
     }
     try {
+      const hasFiniteLimit = typeof currentStock === 'number';
+      const stockVal = hasFiniteLimit ? Math.max(0, currentStock) : 0;
+      const enableIms = hasFiniteLimit;
+
       const url = `https://api.grab.com/food/merchant/v1/items/${itemId}/upsert-item-stock`;
       const res = await originalFetch(url, {
         method: 'POST',
@@ -272,8 +327,8 @@
           'content-type': 'application/json',
         },
         body: JSON.stringify({
-          enableIms: true,
-          currentStock: currentStock,
+          enableIms: enableIms,
+          currentStock: stockVal,
           enableRestock: false,
           restockSetting: null,
         }),
@@ -282,8 +337,8 @@
       if (res.ok) noteAuthSuccess();
       else if (capturedAuthHeaders) noteAuthFailure(res.status, url);
 
-      console.log(`[Grab POS Relay] Updated stock for item ${itemId} -> ${currentStock} (HTTP ${res.status})`);
-      dispatchOrderEvent('SYNC_STOCK_RESULT', { itemId, currentStock, success: res.ok, status: res.status });
+      console.log(`[Grab POS Relay] Updated stock for item ${itemId} -> ${stockVal} (IMS: ${enableIms}, HTTP ${res.status})`);
+      dispatchOrderEvent('SYNC_STOCK_RESULT', { itemId, currentStock: stockVal, enableIms, success: res.ok, status: res.status });
     } catch (err) {
       console.error(`[Grab POS Relay] Failed to update stock for ${itemId}:`, err);
     }

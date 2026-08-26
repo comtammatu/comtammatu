@@ -131,6 +131,12 @@ export async function GET(request: NextRequest) {
       const grabItemId = nameToGrabId.get(normalized) ?? null;
       
       const isOutOfStock = row.is_disabled || row.available_to_sell === 0;
+      let grabStatus: "AVAILABLE" | "UNAVAILABLE_TODAY" | "UNAVAILABLE_INDEFINITELY" = "AVAILABLE";
+      if (row.is_disabled) {
+        grabStatus = "UNAVAILABLE_INDEFINITELY";
+      } else if (row.available_to_sell === 0) {
+        grabStatus = "UNAVAILABLE_TODAY";
+      }
       const availableStatus = isOutOfStock ? 2 : 1; // 1: Có bán, 2: Hết hàng hôm nay
 
       return {
@@ -140,6 +146,7 @@ export async function GET(request: NextRequest) {
         is_disabled: row.is_disabled,
         available_to_sell: row.available_to_sell,
         available_status: availableStatus,
+        grab_status: grabStatus,
         stock_capacity: row.stock_capacity,
       };
     });

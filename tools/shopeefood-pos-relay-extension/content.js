@@ -1,6 +1,7 @@
 // content.js - Content script running in partner.shopee.vn / merchant.shopeefood.vn
 (function () {
-  console.log('[ShopeeFood POS Relay] Content script active');
+  const extVersion = chrome.runtime.getManifest()?.version || '1.1.0';
+  console.log(`[ShopeeFood POS Relay v${extVersion}] Content script active`);
 
   // Inject injected.js into page context
   const script = document.createElement('script');
@@ -15,23 +16,25 @@
   badge.id = 'comtammatu-shopee-pos-relay-badge';
   badge.style.cssText = `
     position: fixed;
-    bottom: 16px;
-    right: 16px;
+    bottom: 12px;
+    right: 12px;
     z-index: 999999;
-    background: #0f172a;
+    background: rgba(15, 23, 42, 0.94);
+    backdrop-filter: blur(4px);
     color: #f8fafc;
     border: 1px solid #334155;
-    border-radius: 8px;
-    padding: 8px 14px;
+    border-radius: 6px;
+    padding: 5px 10px;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    font-size: 13px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    font-size: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
     display: flex;
     align-items: center;
-    gap: 8px;
-    transition: all 0.3s ease;
+    gap: 6px;
+    transition: all 0.2s ease;
+    user-select: none;
   `;
-  badge.innerHTML = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ee4d2d;"></span> <strong>ShopeeFood POS Relay</strong>: Đang trực đơn...`;
+  badge.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ee4d2d;"></span> <strong>Shopee POS</strong> <span style="font-size:11px;color:#94a3b8;">v${extVersion}</span>`;
 
   function ensureBadgeAttached() {
     if (!document.getElementById('comtammatu-shopee-pos-relay-badge')) {
@@ -52,7 +55,7 @@
   function updateBadge(message, isSuccess = true) {
     ensureBadgeAttached();
     const dotColor = isSuccess ? '#22c55e' : '#ef4444';
-    badge.innerHTML = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${dotColor};"></span> <strong>Shopee POS</strong>: ${message}`;
+    badge.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${dotColor};"></span> <strong>Shopee v${extVersion}</strong>: ${message}`;
     badge.style.borderColor = isSuccess ? '#22c55e' : '#ef4444';
   }
 

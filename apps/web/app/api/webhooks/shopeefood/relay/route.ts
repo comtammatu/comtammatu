@@ -6,12 +6,14 @@ import {
   transformShopeeOrderPayload,
   type ShopeeOrderRaw,
 } from "@lib/shopeefood/mapping";
+import { parseShopeeEscPosStream } from "@lib/shopeefood/escpos-parser";
 import { resolveBranchStaffId } from "@lib/grabfood/mapping";
 
 const shopeeRelaySchema = z.object({
   ping: z.boolean().optional(),
   branch_id: z.coerce.number().int().positive().optional(),
   restaurant_id: z.union([z.string(), z.number()]).optional(),
+  platform: z.enum(["shopee", "grab", "be", "greensm"]).default("shopee").optional(),
   order: z
     .object({
       orderId: z.union([z.string(), z.number()]).optional(),
@@ -20,6 +22,8 @@ const shopeeRelaySchema = z.object({
     })
     .passthrough()
     .optional(),
+  raw_receipt: z.string().max(65536).optional(),
+  raw_bytes_base64: z.string().max(65536).optional(),
 });
 
 const CORS_HEADERS = {
@@ -74,7 +78,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Handle Ping test from Extension
+    // Handle Ping test from Extension or SUNMI Agent
     if (parsed.data.ping) {
       return NextResponse.json(
         {
@@ -86,14 +90,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!parsed.data.order) {
+    let shopeeOrder: ShopeeOrderRaw | undefined;
+
+    if (parsed.data.order) {
+      shopeeOrder = parsed.data.order as unknown as ShopeeOrderRaw;
+    } else if (parsed.data.raw_bytes_base64) {
+      const rawBuf = Buffer.from(parsed.data.raw_bytes_base64, "base64");
+      shopeeOrder = parseShopeeEscPosStream(rawBuf);
+    } else if (parsed.data.raw_receipt) {
+      shopeeOrder = parseShopeeEscPosStream(parsed.data.raw_receipt);
+    }
+
+    if (!shopeeOrder || (!shopeeOrder.items?.length && !shopeeOrder.dishList?.length && !shopeeOrder.orderItems?.length)) {
       return NextResponse.json(
-        { success: false, error: "Thiếu dữ liệu đơn hàng" },
+        { success: false, error: "Thiếu dữ liệu đơn hàng hoặc hóa đơn không có món hợp lệ" },
         { status: 400, headers: CORS_HEADERS },
       );
     }
 
-    const shopeeOrder = parsed.data.order as unknown as ShopeeOrderRaw;
     const requestedBranchId = parsed.data.branch_id || 1;
     const restaurantId = parsed.data.restaurant_id || shopeeOrder.restaurantId;
 
@@ -113,10 +127,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const platform = parsed.data.platform || "shopee";
     const displayRef =
       shopeeOrder.displayId ||
       shopeeOrder.orderCode ||
-      (shopeeOrder.orderId ? String(shopeeOrder.orderId) : "SPF-UNKNOWN");
+      (shopeeOrder.orderId ? String(shopeeOrder.orderId) : "");
+
+    if (!displayRef) {
+      return NextResponse.json(
+        { success: false, error: "Không thể xác định mã đơn hàng từ hóa đơn in" },
+        { status: 400, headers: CORS_HEADERS },
+      );
+    }
+
     const sanitizedDisplayRef = displayRef.replace(/[^A-Za-z0-9_-]/g, "");
 
     // 3. Check if order was already processed or manually entered on POS (deduplication)
@@ -125,7 +148,7 @@ export async function POST(request: NextRequest) {
       .select("id, order_number, status, payment_status")
       .eq("tenant_id", branch.tenant_id)
       .eq("branch_id", branch.id)
-      .eq("delivery_platform", "shopee")
+      .eq("delivery_platform", platform)
       .eq("external_order_ref", sanitizedDisplayRef || displayRef)
       .limit(1)
       .maybeSingle();
@@ -183,7 +206,7 @@ export async function POST(request: NextRequest) {
       p_pos_session_id: undefined,
       p_note: transformed.customerNote,
       p_idempotency_key: transformed.idempotencyKey,
-      p_delivery_platform: "shopee",
+      p_delivery_platform: platform,
       p_external_order_ref: displayRef,
     });
 

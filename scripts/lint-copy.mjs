@@ -66,7 +66,9 @@ const WRONG_ACRONYM_CASING_PATTERN =
 const FOOD_DELIVERY_VENDOR_SOURCE_PATHS = new Set([
   "docs/runbooks/README.md",
   "docs/runbooks/food-delivery-platform-onboarding.md",
+  "docs/runbooks/food-delivery-sunmi-pos-bridge.md",
   "docs/plan/decisions.md",
+  "docs/plan/adr/0046-food-delivery-sunmi-virtual-wifi-printer-bridge.md",
   "docs/ref/einvoice-tax.md",
   "apps/web/app/api/webhooks/grabfood/relay/route.ts",
   "apps/web/app/api/webhooks/grabfood/item-status/route.ts",
@@ -74,6 +76,7 @@ const FOOD_DELIVERY_VENDOR_SOURCE_PATHS = new Set([
   "apps/web/app/api/webhooks/shopeefood/relay/route.ts",
   "apps/web/app/api/webhooks/shopeefood/item-status/route.ts",
   "apps/web/lib/shopeefood/mapping.ts",
+  "apps/web/lib/shopeefood/escpos-parser.ts",
 ]);
 /** Native bank / wallet deeplink scheme paths (EMV QR handoff literals). */
 const PAYMENT_VENDOR_DEEPLINK_SOURCE_PATHS = new Set([

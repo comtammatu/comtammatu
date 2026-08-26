@@ -8,6 +8,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnSyncMenu = document.getElementById('btnSyncMenu');
   const toast = document.getElementById('toast');
   const orderList = document.getElementById('orderList');
+  const extVersionEl = document.getElementById('extVersion');
+
+  try {
+    const manifest = chrome.runtime.getManifest();
+    if (extVersionEl && manifest?.version) {
+      extVersionEl.textContent = `v${manifest.version}`;
+    }
+  } catch (e) {}
 
   function showToast(msg, isSuccess = true) {
     toast.textContent = msg;

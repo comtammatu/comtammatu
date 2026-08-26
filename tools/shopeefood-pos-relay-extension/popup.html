@@ -21,10 +21,24 @@
       padding-bottom: 8px;
       margin-bottom: 12px;
     }
+    .title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
     .title {
       font-weight: 700;
       font-size: 14px;
       color: #ee4d2d;
+    }
+    .version-badge {
+      font-size: 10px;
+      font-weight: 600;
+      color: #94a3b8;
+      background: #1e293b;
+      border: 1px solid #334155;
+      padding: 1px 5px;
+      border-radius: 4px;
     }
     .status {
       font-size: 11px;
@@ -139,7 +153,10 @@
 </head>
 <body>
   <div class="header">
-    <div class="title">ShopeeFood POS Relay</div>
+    <div class="title-wrap">
+      <div class="title">ShopeeFood POS Relay</div>
+      <span class="version-badge" id="extVersion">v1.1.0</span>
+    </div>
     <div class="status" id="statusBadge">🟢 Sẵn Sàng</div>
   </div>
 

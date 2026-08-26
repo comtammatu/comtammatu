@@ -13,6 +13,7 @@ Checklist vận hành và readiness gates.
 
 - [operations-smoke-gate.md](operations-smoke-gate.md): gate vận hành đầu cuối theo chuỗi kết quả ADR 0025 §1
 - [food-delivery-platform-onboarding.md](food-delivery-platform-onboarding.md): quyền API, sandbox và readiness gate cho GrabFood, beFood, ShopeeFood, Green SM Food
+- [food-delivery-sunmi-pos-bridge.md](food-delivery-sunmi-pos-bridge.md): cài đặt và vận hành Virtual WiFi/LAN ESC/POS Printer Bridge trên SUNMI POS V3 (ShopeeFood)
 - [hddt-viettel-operations.md](hddt-viettel-operations.md): smoke/reconcile/archive cho Viettel S-invoice
 - [pos-kds/print-agent-rollout.md](pos-kds/print-agent-rollout.md): rollout checklist cho print-agent daemon ESC/POS tại chi nhánh
 - [pos-kds/realtime-load-testing.md](pos-kds/realtime-load-testing.md): load test realtime POS/KDS

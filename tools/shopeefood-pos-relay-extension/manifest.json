@@ -1,10 +1,11 @@
 {
   "manifest_version": 3,
   "name": "ShopeeFood POS Relay — Cơm Tấm Má Tư",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Tự động bắt đơn hàng từ Shopee Partner (partner.shopee.vn) và đẩy thẳng vào KDS Bếp & Máy in Cơm Tấm Má Tư",
   "permissions": [
-    "storage"
+    "storage",
+    "alarms"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -12,6 +13,9 @@
   "action": {
     "default_popup": "popup.html",
     "default_title": "ShopeeFood POS Relay Status"
+  },
+  "background": {
+    "service_worker": "background.js"
   },
   "content_scripts": [
     {

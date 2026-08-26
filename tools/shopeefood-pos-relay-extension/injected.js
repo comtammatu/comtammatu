@@ -6,6 +6,48 @@
   let restaurantId = '';
   let storeId = '';
   let restaurantName = '';
+  let lastSuccessfulPollAt = Date.now();
+
+  // 1. Keep-Alive: Override visibilityState so ShopeeFood portal never pauses background timers / WebSockets
+  try {
+    Object.defineProperty(document, 'hidden', { get: () => false, configurable: true });
+    Object.defineProperty(document, 'visibilityState', { get: () => 'visible', configurable: true });
+    window.addEventListener('visibilitychange', (e) => e.stopImmediatePropagation(), true);
+  } catch (e) {}
+
+  // 2. Keep-Alive: Silent AudioContext oscillator prevents Chrome from freezing background tab
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (AudioCtx) {
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      gain.gain.value = 0.00001; // Inaudible
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+
+      // AudioContext created before any user gesture starts suspended per autoplay
+      // policy; a suspended context plays nothing, so Chrome does not treat the tab
+      // as active media. Resume on the first gesture.
+      const resumeAudio = () => {
+        if (ctx.state !== 'running') {
+          ctx.resume().catch(() => {});
+        }
+      };
+      window.addEventListener('pointerdown', resumeAudio, { once: false, capture: true });
+      window.addEventListener('keydown', resumeAudio, { once: false, capture: true });
+      resumeAudio();
+    }
+  } catch (e) {}
+
+  // 4. Auto-Recovery: Reload if stuck or disconnected for > 5 minutes
+  setInterval(() => {
+    if (Date.now() - lastSuccessfulPollAt > 5 * 60 * 1000) {
+      console.log('[Shopee POS Relay] Inactive for >5m, auto-reloading to restore connection...');
+      window.location.reload();
+    }
+  }, 60000);
 
   // Auth-expiry signaling: consecutive 401/403s on platform API traffic mean
   // the merchant session died; the badge must say so instead of staying green.
@@ -33,6 +75,7 @@
   }
 
   function noteAuthSuccess() {
+    lastSuccessfulPollAt = Date.now();
     consecutiveAuthFailures = 0;
     if (authExpired) {
       authExpired = false;
