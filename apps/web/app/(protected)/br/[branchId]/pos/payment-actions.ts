@@ -44,6 +44,7 @@ import {
   createPaymentRpcMappings,
 } from "./_lib/payment-messages";
 import { POS_ERROR_CODES } from "./_utils/error-codes";
+import { scheduleDueTaxInvoiceIssueForOrder } from "@lib/tax-invoice-issue-worker";
 
 type PosSupabase = NonNullable<
   Awaited<ReturnType<typeof getAuthContextWithPermission>>
@@ -1057,6 +1058,11 @@ export const confirmCashPayment = withActionPositional(
       };
     }
 
+    scheduleDueTaxInvoiceIssueForOrder({
+      tenantId: claims.tenant_id,
+      orderId,
+    });
+
     return { success: true, data: result };
   },
 );
@@ -1171,6 +1177,11 @@ export const confirmPlatformPayment = withActionPositional(
       };
     }
 
+    scheduleDueTaxInvoiceIssueForOrder({
+      tenantId: claims.tenant_id,
+      orderId,
+    });
+
     return { success: true, data: result };
   },
 );
@@ -1244,6 +1255,11 @@ export async function confirmPlatformPaymentWithInvoice(
       errorCode: POS_ERROR_CODES.RPC_GENERIC,
     };
   }
+
+  scheduleDueTaxInvoiceIssueForOrder({
+    tenantId: claims.tenant_id,
+    orderId,
+  });
 
   return {
     success: true,

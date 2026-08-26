@@ -1,5 +1,6 @@
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { issuePreparedTaxInvoice } from "@lib/hddt-per-order";
+import { after } from "next/server";
 
 type ClaimedTaxInvoiceJob = {
   id: number;
@@ -16,6 +17,29 @@ type IssueJobStatus = "completed" | "blocked" | "reconcile_required";
 
 const MAX_JOBS_PER_RUN = 20;
 const WORKER_CONCURRENCY = 4;
+
+type DueTaxInvoiceIssueJob = {
+  id: number;
+  status: string;
+  available_at: string;
+};
+
+export function dueTaxInvoiceIssueJobId(
+  job: DueTaxInvoiceIssueJob | null,
+  now: Date = new Date(),
+): number | null {
+  if (
+    job?.status !== "queued" ||
+    !Number.isSafeInteger(job.id) ||
+    job.id <= 0
+  ) {
+    return null;
+  }
+  const availableAt = Date.parse(job.available_at);
+  return Number.isFinite(availableAt) && availableAt <= now.getTime()
+    ? job.id
+    : null;
+}
 
 function workerErrorCode(error: unknown): string {
   if (
@@ -251,4 +275,59 @@ export async function runTaxInvoiceIssueWorker(jobId?: number): Promise<{
   );
   if (claimFailed) throw new Error("claim_failed");
   return summary;
+}
+
+async function runDueTaxInvoiceIssueJobForOrder(input: {
+  tenantId: number;
+  orderId: number;
+}): Promise<void> {
+  const service = createServiceClient();
+  const { data, error } = await service
+    .from("tax_invoice_issue_jobs")
+    .select("id, status, available_at")
+    .eq("tenant_id", input.tenantId)
+    .eq("order_id", input.orderId)
+    .eq("operation", "issue")
+    .maybeSingle();
+
+  if (error) {
+    console.error("[tax-invoice-worker] due job lookup failed", {
+      tenantId: input.tenantId,
+      orderId: input.orderId,
+      code: error.code,
+    });
+    return;
+  }
+
+  const jobId = dueTaxInvoiceIssueJobId(data);
+  if (jobId !== null) {
+    await runTaxInvoiceIssueWorker(jobId);
+  }
+}
+
+export function scheduleDueTaxInvoiceIssueForOrder(input: {
+  tenantId: number;
+  orderId: number;
+}): void {
+  if (
+    !Number.isSafeInteger(input.tenantId) ||
+    input.tenantId <= 0 ||
+    !Number.isSafeInteger(input.orderId) ||
+    input.orderId <= 0
+  ) {
+    console.error("[tax-invoice-worker] invalid targeted due job scope");
+    return;
+  }
+
+  after(async () => {
+    try {
+      await runDueTaxInvoiceIssueJobForOrder(input);
+    } catch (error) {
+      console.error("[tax-invoice-worker] targeted due job failed", {
+        tenantId: input.tenantId,
+        orderId: input.orderId,
+        code: workerErrorCode(error),
+      });
+    }
+  });
 }

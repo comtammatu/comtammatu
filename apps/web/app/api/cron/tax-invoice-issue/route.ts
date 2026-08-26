@@ -15,6 +15,8 @@ function timingSafeEquals(a: string, b: string): boolean {
 }
 
 export async function POST(request: Request) {
+  const startedAt = Date.now();
+  const requestId = request.headers.get("x-vercel-id");
   const expected = getCronSecret();
   const provided = request.headers
     .get("authorization")
@@ -31,9 +33,30 @@ export async function POST(request: Request) {
   }
 
   try {
+    console.log(
+      JSON.stringify({
+        level: "info",
+        message: "Tax invoice issue worker started",
+        route: "/api/cron/tax-invoice-issue",
+        requestId,
+        jobId: jobId ?? null,
+      }),
+    );
+    const summary = await runTaxInvoiceIssueWorker(jobId);
+    console.log(
+      JSON.stringify({
+        level: "info",
+        message: "Tax invoice issue worker completed",
+        route: "/api/cron/tax-invoice-issue",
+        requestId,
+        jobId: jobId ?? null,
+        durationMs: Date.now() - startedAt,
+        ...summary,
+      }),
+    );
     return NextResponse.json({
       ok: true,
-      ...(await runTaxInvoiceIssueWorker(jobId)),
+      ...summary,
     });
   } catch (error) {
     const code =

@@ -486,27 +486,27 @@ UI Advisor Gate
 - Responsive: banner button in ItemHeader; touch size via existing Button
 - Verification: SQL ACL/functiondef test, static action/UI tests, `lint:copy`, isolated `corepack pnpm verify`
 
-## Unstick leftover HĐĐT (date drafts + uuid collision)
+## Prevent and recover late-payment HĐĐT date blocks
 
 State: verify
 Kind: fix
 Tier: T3
 Lane: finance/hddt
-Exit: 58 leftover signing invoices rebound to their Viettel originals; 58 misbound orders get new drafts queued with `allowBacklogSubmitDate`; 80 date-blocked drafts requeued the same way; paid `TC-260816-067-NHT` leaves `pending_payment`. New invoices still fail-close when the sale VN day is past. Same-day sales still send `paid_at`. Buyer window is `paid_at` from 22:00 VN, else `min(paid_at + 2h, 23:55 VN)`.
-Evidence: Production applied `20260818101813`, `20260818161136`, `20260818224935` after dry-run matched those files only. 58 leftovers `issued`; 58 stolen cancelled locally; 139 jobs flagged `allowBacklogSubmitDate` (80+58+1); `TC-260816-067-NHT` job queued on payment 482.
+Exit: Late-night cash, platform, and SePay completions kick their due targeted issue job immediately while the durable claim remains the only submission gate. Cron remains the fallback and emits bounded start/completion evidence. Date-blocked drafts with no provider reservation/data are requeued once with `allowBacklogSubmitDate`; signing/submitted and provider-unknown outcomes stay reconcile-only. Earlier 58 UUID-collision and 155 backlog invoices remain reconciled without duplicate Viettel creates.
+Evidence: Production read 2026-08-26: cron completed job at 22:46 VN; all 155 flagged backlog jobs are completed; three blocked cash jobs were paid at 23:56-23:58 VN, stayed draft with null provider_ref/provider_data, and were first claimed after midnight. Targeted HĐĐT tests, web typecheck/lint/build, migration lineage, and full `corepack pnpm verify` are green.
 
-- [ ] Cron issues 80 date leftovers + 58 cloned misbound drafts + `TC-260816-067-NHT`; leftover 58 already `issued` after SQL
+- [ ] Verify targeted immediate-kick behavior, apply `20260826225104`, deploy the web fix, and confirm the three safe drafts issue with no new date-blocked jobs.
 
 UI Advisor Gate
 - Surface: `/finance/invoices`; route family: control finance; plane: `control_surface`; change: copy
 - Context: screen-context-map Finance HĐĐT queue; actor: Owner/Accountant; job: retry same-day drafts, reconcile unknown Viettel
-- Journey: open LIST attention → read error → requeue mismatch/date-blocked drafts or Viettel reconcile; recovery: toast, no second create
+- Journey: complete payment → due job issues immediately; open LIST attention only for provider-unknown reconciliation; recovery: no second create
 - Information order: 1) attention jobs 2) date/error 3) requeue or reconcile; exclude: second Viettel create
 - Pattern: LIST existing; exemplar: `invoice-list.tsx`; data display: attention Item
 - States: queued, blocked, reconcile_required, issued
 - Block: none — existing attention banner copy only
 - Responsive/accessibility: same banner; confirm dialog labelled
-- Verification: SQL helper math, `resolveSinvoiceIssuedAt` tests, static issuer tests, `lint:copy`
+- Verification: targeted due-job tests, SQL recovery predicate, migration lineage, `resolveSinvoiceIssuedAt` tests, static issuer tests, full `corepack pnpm verify`
 
 ## Backfill sale consumption after today's recipe add
 

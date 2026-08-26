@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { Json } from "@comtammatu/database";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
+import { scheduleDueTaxInvoiceIssueForOrder } from "@lib/tax-invoice-issue-worker";
 
 const SEPAY_WEBHOOK_SECRET = process.env.SEPAY_WEBHOOK_SECRET ?? "";
 const SIGNATURE_TOLERANCE_SECONDS = 300;
@@ -738,6 +739,13 @@ export async function POST(request: Request) {
       error_code: "rpc_result_invalid",
     });
     return NextResponse.json({ success: false }, { status: 500 });
+  }
+
+  if (reconciliation.data.status === "matched") {
+    scheduleDueTaxInvoiceIssueForOrder({
+      tenantId: accountScope.tenantId,
+      orderId: reconciliation.data.order_id,
+    });
   }
 
   return sepayAcceptedResponse();

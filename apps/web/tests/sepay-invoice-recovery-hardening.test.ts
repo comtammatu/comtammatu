@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { createInvoiceSchema } from "../lib/hddt-per-order";
+import { dueTaxInvoiceIssueJobId } from "../lib/tax-invoice-issue-worker";
 
 const root = new URL("../../../", import.meta.url);
 
@@ -173,4 +174,76 @@ test("HĐĐT worker failures log bounded diagnostics and preserve recovery state
     /catch \(error\)[\s\S]*\[cron\/tax-invoice-issue\] worker failed"[\s\S]*code: code\.slice\(0, 64\)/,
   );
   assert.doesNotMatch(route, /console\.error\([^;]*error\.message/);
+});
+
+test("due HĐĐT jobs can be kicked immediately after payment without bypassing the claim", () => {
+  const now = new Date("2026-08-26T16:58:50.000Z");
+  assert.equal(
+    dueTaxInvoiceIssueJobId(
+      {
+        id: 3424,
+        status: "queued",
+        available_at: "2026-08-26T16:58:42.000Z",
+      },
+      now,
+    ),
+    3424,
+  );
+  assert.equal(
+    dueTaxInvoiceIssueJobId(
+      {
+        id: 3424,
+        status: "queued",
+        available_at: "2026-08-26T16:59:00.000Z",
+      },
+      now,
+    ),
+    null,
+  );
+  assert.equal(
+    dueTaxInvoiceIssueJobId(
+      {
+        id: 3424,
+        status: "reconcile_required",
+        available_at: "2026-08-26T16:58:42.000Z",
+      },
+      now,
+    ),
+    null,
+  );
+});
+
+test("every payment completion surface schedules the due HĐĐT job and cron is observable", () => {
+  const worker = read("apps/web/lib/tax-invoice-issue-worker.ts");
+  const payments = read(
+    "apps/web/app/(protected)/br/[branchId]/pos/payment-actions.ts",
+  );
+  const webhook = read("apps/web/app/api/webhooks/sepay/route.ts");
+  const route = read("apps/web/app/api/cron/tax-invoice-issue/route.ts");
+  const recovery = read(
+    "supabase/migrations/20260826225104_requeue_unsent_date_blocked_invoices.sql",
+  );
+
+  assert.match(worker, /after\(async \(\) =>/);
+  assert.match(worker, /runTaxInvoiceIssueWorker\(jobId\)/);
+  assert.match(worker, /\.eq\("tenant_id", input\.tenantId\)/);
+  assert.match(worker, /\.eq\("order_id", input\.orderId\)/);
+  assert.equal(
+    payments.match(/scheduleDueTaxInvoiceIssueForOrder\(/g)?.length,
+    3,
+  );
+  assert.match(
+    webhook,
+    /reconciliation\.data\.status === "matched"[\s\S]*scheduleDueTaxInvoiceIssueForOrder/,
+  );
+  assert.match(route, /Tax invoice issue worker started/);
+  assert.match(route, /Tax invoice issue worker completed/);
+  assert.match(recovery, /job\.last_error = 'invoice_issue_date_not_today'/);
+  assert.match(recovery, /invoice\.status = 'draft'/);
+  assert.match(recovery, /invoice\.provider_ref IS NULL/);
+  assert.match(recovery, /invoice\.provider_data IS NULL/);
+  assert.doesNotMatch(
+    recovery,
+    /(?:job|invoice)\.status\s*=\s*'(?:signing|submitted|reconcile_required)'/,
+  );
 });
