@@ -1,6 +1,6 @@
 import { getEmployeeContext } from "../_lib/staff-runtime-context";
 import { ScheduleClient } from "./schedule-client";
-import { fetchMySchedule, type ScheduleMonthData } from "./actions";
+import { loadScheduleMonth, type ScheduleMonthData } from "./data";
 import {
   EmployeeMissingProfileEmpty,
   EmployeePage,
@@ -58,7 +58,7 @@ export async function StaffSchedulePageContent({
   const branchId = routeBranchId ?? ctx.branchId;
 
   const [scheduleResult, employeeResult] = await Promise.all([
-    fetchMySchedule(monthStart),
+    loadScheduleMonth(ctx, monthStart),
     supabase
       .from("employees")
       .select("base_salary")

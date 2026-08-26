@@ -142,14 +142,22 @@ test("Canonical self-service exposes leave requests from /me/schedule", () => {
   const scheduleActions = read(
     "apps/web/lib/staff-runtime/schedule/actions.ts",
   );
+  const scheduleData = read("apps/web/lib/staff-runtime/schedule/data.ts");
   const page = read("apps/web/lib/staff-runtime/leave/page.tsx");
   const client = read("apps/web/lib/staff-runtime/leave/leave-client.tsx");
   const form = read("apps/web/lib/staff-runtime/leave/leave-request-form.tsx");
   const actions = read("apps/web/lib/staff-runtime/leave/actions.ts");
   const messages = read("apps/web/lib/messages/employee.ts");
 
-  for (const expected of ["fetchMySchedule(monthStart)"]) {
-    assert.ok(schedule.includes(expected), `expected schedule ${expected}`);
+  assert.ok(
+    schedule.includes("loadScheduleMonth(ctx, monthStart)"),
+    "expected initial schedule RSC to reuse its authenticated context",
+  );
+  for (const expected of ["getEmployeeContext", "loadScheduleMonth(ctx"]) {
+    assert.ok(
+      scheduleActions.includes(expected),
+      `expected schedule action ${expected}`,
+    );
   }
   assert.match(scheduleRoute, /leaveHref="\/me\/schedule\/leave"/);
   assert.match(
@@ -163,8 +171,8 @@ test("Canonical self-service exposes leave requests from /me/schedule", () => {
     '.eq("tenant_id", claims.tenant_id)',
   ]) {
     assert.ok(
-      scheduleActions.includes(expected),
-      `expected schedule actions ${expected}`,
+      scheduleData.includes(expected),
+      `expected schedule data ${expected}`,
     );
   }
 

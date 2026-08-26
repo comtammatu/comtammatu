@@ -30,13 +30,16 @@ export function isRevokedAuthSessionError(error: unknown): boolean {
  * On revoke → redirect to the signout Route Handler (Set-Cookie + /login).
  * Do NOT put this in `getAuthContext` (GRN/expense false-deny) or proxy
  * (`PROXY-NEVER-CALL-GETUSER`). Incomplete fakes without `getUser` skip.
- * Returns the verified user when Auth provides one so shell callers never need
- * to read the unverified `session.user` cookie payload.
+ * Receives the access token already read by `loadAuthState` so auth-js goes
+ * straight to `/user` without acquiring its session lock and reading cookies
+ * again. Returns the verified user so shell callers never need to read the
+ * unverified `session.user` cookie payload.
  *
  * Spec: regressions.md `ZOMBIE-JWT-AFTER-GLOBAL-SIGNOUT`.
  */
 export async function probeAuthSessionLiveness(
   supabase: ServerSupabase,
+  accessToken: string,
 ) {
   const getUser = supabase.auth?.getUser;
   if (typeof getUser !== "function") return null;
@@ -44,7 +47,7 @@ export async function probeAuthSessionLiveness(
   const {
     data: { user },
     error,
-  } = await getUser.call(supabase.auth);
+  } = await getUser.call(supabase.auth, accessToken);
   if (!error) return user;
   if (!isRevokedAuthSessionError(error)) return null;
 

@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import type { ElementType, ReactNode } from "react";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { ProtectedLink } from "@/_components/protected-link";
 
 /**
  * Shared mobile bottom-nav recipe consumed by Management, Branch runtime, and
@@ -79,7 +79,7 @@ export function AppBottomNav({
                 itemClassName,
               )}
               render={
-                <Link
+                <ProtectedLink
                   href={item.href}
                   aria-current={item.active ? "page" : undefined}
                 />

@@ -38,15 +38,19 @@ test("isRevokedAuthSessionError recognizes Auth session revoke codes", () => {
 });
 
 test("probeAuthSessionLiveness redirects to signout on revoked Auth session", async () => {
+  let receivedToken: string | undefined;
   const supabase = {
     auth: {
-      getUser: async () => ({
-        data: { user: null },
-        error: {
-          name: "AuthSessionMissingError",
-          code: "session_not_found",
-        },
-      }),
+      getUser: async (accessToken?: string) => {
+        receivedToken = accessToken;
+        return {
+          data: { user: null },
+          error: {
+            name: "AuthSessionMissingError",
+            code: "session_not_found",
+          },
+        };
+      },
     },
   };
 
@@ -54,6 +58,7 @@ test("probeAuthSessionLiveness redirects to signout on revoked Auth session", as
     () =>
       probeAuthSessionLiveness(
         supabase as Parameters<typeof probeAuthSessionLiveness>[0],
+        "access-token",
       ),
     (error: unknown) => {
       const text = String(
@@ -72,6 +77,7 @@ test("probeAuthSessionLiveness redirects to signout on revoked Auth session", as
       );
     },
   );
+  assert.equal(receivedToken, "access-token");
 });
 
 test("probeAuthSessionLiveness returns the verified live user", async () => {
@@ -88,6 +94,7 @@ test("probeAuthSessionLiveness returns the verified live user", async () => {
   assert.equal(
     await probeAuthSessionLiveness(
       supabase as Parameters<typeof probeAuthSessionLiveness>[0],
+      "access-token",
     ),
     user,
   );
@@ -98,6 +105,7 @@ test("probeAuthSessionLiveness skips incomplete fakes without getUser", async ()
   assert.equal(
     await probeAuthSessionLiveness(
       supabase as Parameters<typeof probeAuthSessionLiveness>[0],
+      "access-token",
     ),
     null,
   );
@@ -116,6 +124,7 @@ test("probeAuthSessionLiveness preserves non-revoked Auth failures", async () =>
   assert.equal(
     await probeAuthSessionLiveness(
       supabase as Parameters<typeof probeAuthSessionLiveness>[0],
+      "access-token",
     ),
     null,
   );
@@ -148,7 +157,7 @@ test("loadAuthState probes Auth liveness; getAuthContext stays getSession-only",
   assert.match(loadAuthBody, /await supabase\.auth\.getSession\(\)/);
   assert.match(
     loadAuthBody,
-    /const user = await probeAuthSessionLiveness\(supabase\)/,
+    /const user = await probeAuthSessionLiveness\([\s\S]*supabase,[\s\S]*session\.access_token/,
   );
   assert.match(
     loadAuthBody,
@@ -163,6 +172,7 @@ test("auth-session-liveness redirects revoked sessions to cookie-clear signout",
   const source = readWeb("app/_lib/auth-session-liveness.ts");
   assert.match(source, /auth\?\.getUser/);
   assert.match(source, /getUser\.call\(/);
+  assert.match(source, /getUser\.call\(supabase\.auth, accessToken\)/);
   assert.match(source, /AUTH_SESSION_CLEAR_PATH/);
   assert.match(source, /\/api\/auth\/signout/);
   assert.match(source, /redirect\(AUTH_SESSION_CLEAR_PATH\)/);
@@ -213,4 +223,35 @@ test("proxy and middleware still never call getUser", () => {
     /\.getUser\(\)/,
   );
   assert.doesNotMatch(readWeb("app/_lib/auth.ts"), /\.getUser\(\)/);
+});
+
+test("protected navigation does not prefetch one Auth probe per visible target", () => {
+  const protectedLink = readWeb("app/_components/protected-link.tsx");
+  assert.match(protectedLink, /prefetch=\{false\}/);
+  assert.match(protectedLink, /Omit<ComponentProps<typeof Link>, "prefetch">/);
+
+  for (const path of [
+    "app/components/app-shell.tsx",
+    "app/components/app-bottom-nav.tsx",
+    "app/components/surface/app-link-card.tsx",
+    "lib/branch-operator/components/branch-operator-page.tsx",
+    "lib/staff-runtime/components/staff-runtime-page.tsx",
+  ]) {
+    const source = readWeb(path);
+    assert.match(source, /ProtectedLink/);
+    assert.doesNotMatch(source, /from "next\/link"/);
+  }
+});
+
+test("initial schedule RSC reuses its employee context without invoking a Server Action", () => {
+  const page = readWeb("lib/staff-runtime/schedule/page.tsx");
+  const action = readWeb("lib/staff-runtime/schedule/actions.ts");
+  const data = readWeb("lib/staff-runtime/schedule/data.ts");
+
+  assert.match(page, /loadScheduleMonth\(ctx, monthStart\)/);
+  assert.doesNotMatch(page, /fetchMySchedule\(monthStart\)/);
+  assert.match(action, /const ctx = await getEmployeeContext\(\)/);
+  assert.match(action, /return loadScheduleMonth\(ctx, monthStartDate\)/);
+  assert.match(data, /export async function loadScheduleMonth\(/);
+  assert.doesNotMatch(data, /["']use server["']/);
 });

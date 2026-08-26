@@ -1,7 +1,6 @@
 "use client";
 
 import { Fragment, useMemo, type CSSProperties, type ReactNode } from "react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ChevronsUpDown as IconChevronsUpDown,
@@ -63,6 +62,7 @@ import {
 } from "@comtammatu/ui/components/collapsible";
 import { partitionControlSurfacePrimaryNav } from "@/lib/control-surface-nav";
 import { m, messages } from "@lib/messages";
+import { ProtectedLink } from "@/_components/protected-link";
 
 export interface AppShellProps {
   children: ReactNode;
@@ -137,7 +137,7 @@ function AccountMenu({
           {personalHref ? (
             <DropdownMenuItem
               className={cn("text-sm", isTouchLayout ? "min-h-12" : "min-h-10")}
-              render={<Link href={personalHref} />}
+              render={<ProtectedLink href={personalHref} />}
             >
               <IconUserRound />
               {copy.personalPage}
@@ -203,11 +203,14 @@ function PrimaryNavItem({
         tooltip={item.label}
         className="rounded-lg font-medium transition-colors data-active:bg-primary data-active:text-primary-foreground data-active:shadow-sm hover:bg-sidebar-accent"
         render={
-          <Link href={item.href} aria-current={active ? "page" : undefined}>
+          <ProtectedLink
+            href={item.href}
+            aria-current={active ? "page" : undefined}
+          >
             <Icon />
             <span className="min-w-0 flex-1 truncate">{item.label}</span>
             <UnreadBadge count={item.badgeCount} />
-          </Link>
+          </ProtectedLink>
         }
       />
       {subNavGroups.length > 0 ? (
@@ -234,7 +237,7 @@ function PrimaryNavItem({
                       size={isTouchLayout ? "touch" : "md"}
                       className="data-active:bg-primary/10 data-active:font-semibold data-active:text-primary dark:data-active:bg-primary/15 dark:data-active:text-sidebar-foreground"
                       render={
-                        <Link
+                        <ProtectedLink
                           href={subItem.linkHref ?? subItem.href}
                           aria-current={subActive ? "page" : undefined}
                         >
@@ -243,7 +246,7 @@ function PrimaryNavItem({
                             {subItem.label}
                           </span>
                           <UnreadBadge count={subItem.badgeCount} />
-                        </Link>
+                        </ProtectedLink>
                       }
                     />
                   </SidebarMenuSubItem>

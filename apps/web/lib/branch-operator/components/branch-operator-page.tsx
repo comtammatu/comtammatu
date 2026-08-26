@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { ComponentProps, ElementType, ReactNode } from "react";
 import { ChevronRight as IconChevronRight } from "lucide-react";
 import { AppPageHeader, AppSection } from "@/components/surface";
@@ -15,6 +14,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
+import { ProtectedLink } from "@/_components/protected-link";
 
 type BranchOperatorTone =
   "default" | "success" | "warning" | "info" | "destructive";
@@ -589,7 +589,7 @@ function BranchOperatorActionItem({
           : "min-h-14 lg:items-center",
         presentation !== "stations" && size === "sm" && "min-h-12",
       )}
-      render={<Link href={href} />}
+      render={<ProtectedLink href={href} />}
     >
       {Icon ? (
         <ItemMedia

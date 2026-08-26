@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { mergeScheduleAttendanceWithAssignments } from "../lib/staff-runtime/_lib/schedule-month";
-import type { ScheduleAttendance } from "../lib/staff-runtime/schedule/actions";
+import type { ScheduleAttendance } from "../lib/staff-runtime/schedule/data";
 
 test("merge adds rostered shifts that have not been punched", () => {
   const attendance: ScheduleAttendance[] = [

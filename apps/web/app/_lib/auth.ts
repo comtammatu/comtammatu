@@ -222,7 +222,7 @@ export const loadAuthState = cache(async (): Promise<LoadedAuthState> => {
 
   // Far-from-expiry zombie: cookie JWT still valid, Auth session revoked.
   // Redirect (not throw) so recovery clears cookies via Route Handler.
-  const user = await probeAuthSessionLiveness(supabase);
+  const user = await probeAuthSessionLiveness(supabase, session.access_token);
 
   return { supabase, session, claims, user, userId };
 });

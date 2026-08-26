@@ -98,7 +98,7 @@ test("employee leave overlap is counted inside a calendar year", () => {
 
 test("schedule derives monthly leave from tenant policy and annual leave from entitlement", () => {
   const source = readFileSync(
-    new URL("../lib/staff-runtime/schedule/actions.ts", import.meta.url),
+    new URL("../lib/staff-runtime/schedule/data.ts", import.meta.url),
     "utf8",
   );
 

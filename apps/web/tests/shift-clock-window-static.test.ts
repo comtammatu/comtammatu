@@ -50,11 +50,11 @@ test("Kết ca waits for manager; leftover pending auto-closes after 2 hours", (
 });
 
 test("Lịch merges rostered shifts onto calendar days, not a side list", () => {
-  const actions = readWeb("lib/staff-runtime/schedule/actions.ts");
+  const data = readWeb("lib/staff-runtime/schedule/data.ts");
   const client = readWeb("lib/staff-runtime/schedule/schedule-client.tsx");
   const messages = readWeb("lib/messages/employee.ts");
-  assert.match(actions, /from\("shift_assignments"\)/);
-  assert.match(actions, /mergeScheduleAttendanceWithAssignments/);
+  assert.match(data, /from\("shift_assignments"\)/);
+  assert.match(data, /mergeScheduleAttendanceWithAssignments/);
   assert.match(client, /att\.shift_name \?\? copy\.rowShift/);
   assert.doesNotMatch(client, /listUpcomingScheduleShifts/);
   assert.doesNotMatch(client, /upcomingTitle/);

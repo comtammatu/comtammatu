@@ -118,15 +118,13 @@ test("Shift-registration surfaces are deleted and no app code links to them", ()
 });
 
 test("Schedule is the single day-axis: leave ranges render and link to leave request", () => {
-  const actions = read(
-    "apps/web/lib/staff-runtime/schedule/actions.ts",
-  );
+  const data = read("apps/web/lib/staff-runtime/schedule/data.ts");
   for (const expected of [
     'from("leave_requests")',
     '.in("status", ["pending", "approved"])',
     "leaves: ScheduleLeave[]",
   ]) {
-    assert.ok(actions.includes(expected), `expected ${expected}`);
+    assert.ok(data.includes(expected), `expected ${expected}`);
   }
 
   const client = read(
@@ -250,7 +248,7 @@ test("P2 app no longer references shift assignments except roster clock-in and s
   for (const path of [
     "apps/web/lib/staff-runtime/clock/actions.ts",
     "apps/web/lib/staff-runtime/_lib/today-work-state.ts",
-    "apps/web/lib/staff-runtime/schedule/actions.ts",
+    "apps/web/lib/staff-runtime/schedule/data.ts",
     "apps/web/lib/hr/roster/actions.ts",
   ]) {
     assert.ok(

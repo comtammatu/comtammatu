@@ -1,12 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { ArrowRight as IconArrowRight } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import type { SurfaceTone } from "./types";
+import { ProtectedLink } from "@/_components/protected-link";
 
 const TONE_CLASSNAME: Record<SurfaceTone, string> = {
   primary: "bg-primary/10 text-primary",
@@ -113,9 +113,9 @@ export function AppLinkCard({
             {inner}
           </div>
         ) : (
-          <Link href={href} className="block h-full">
+          <ProtectedLink href={href} className="block h-full">
             {inner}
-          </Link>
+          </ProtectedLink>
         )}
       </CardContent>
     </Card>

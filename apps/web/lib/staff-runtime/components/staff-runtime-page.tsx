@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { ComponentProps, ElementType, ReactNode } from "react";
 import {
   ChevronRight as IconChevronRight,
@@ -19,6 +18,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { messages } from "@lib/messages";
+import { ProtectedLink } from "@/_components/protected-link";
 
 type EmployeeTone = "default" | "success" | "warning" | "info" | "destructive";
 
@@ -486,7 +486,7 @@ function EmployeeActionItem({
         "group/employee-action chrome-tap min-h-14 items-start bg-card transition-[background-color,border-color,box-shadow,transform] duration-150 select-none hover:bg-muted/50 hover:shadow-effect-card-hover active:scale-[0.97] sm:items-center",
         size === "sm" && "min-h-12",
       )}
-      render={<Link href={href} />}
+      render={<ProtectedLink href={href} />}
     >
       {Icon ? (
         <ItemMedia
@@ -597,7 +597,7 @@ export function EmployeeMissingProfileEmpty({
         variant="outline"
         size="touch"
         className="w-full sm:w-fit"
-        render={<Link href={profileHref} />}
+        render={<ProtectedLink href={profileHref} />}
       >
         <IconUserCircle data-icon="inline-start" />
         {actionLabel}

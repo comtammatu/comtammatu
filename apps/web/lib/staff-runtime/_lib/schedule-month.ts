@@ -1,4 +1,4 @@
-import type { ScheduleAttendance } from "../schedule/actions";
+import type { ScheduleAttendance } from "../schedule/data";
 
 export interface ScheduleAssignment {
   workDate: string;
@@ -13,7 +13,9 @@ export function mergeScheduleAttendanceWithAssignments(
   assignments: readonly ScheduleAssignment[],
 ): ScheduleAttendance[] {
   const punchedKeys = new Set(
-    attendance.map((row) => `${row.date}:${row.shift_name ?? ""}:${row.start_time ?? ""}`),
+    attendance.map(
+      (row) => `${row.date}:${row.shift_name ?? ""}:${row.start_time ?? ""}`,
+    ),
   );
   const merged = [...attendance];
   for (const assignment of assignments) {
