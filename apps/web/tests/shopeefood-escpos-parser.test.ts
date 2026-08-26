@@ -4,6 +4,7 @@ import {
   extractTextFromEscPos,
   parseShopeeReceiptText,
   parseShopeeEscPosStream,
+  detectDeliveryPlatform,
 } from "../lib/shopeefood/escpos-parser";
 import {
   transformShopeeOrderPayload,
@@ -163,3 +164,16 @@ Tổng: 120.000
   assert.equal(uuid1, uuid2);
   assert.match(uuid1, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
 });
+
+test("ESC/POS platform detection: identifies all 4 platforms accurately from receipt signature", () => {
+  const shopeeSample = "ShopeeFood\nMã đơn: SPF-123\nVí ShopeePay\n1x Cơm sườn 54.000";
+  const grabSample = "GrabFood\nOrder: GF-789\nGrabPay\n1x Sườn Một Gang 120.000";
+  const beSample = "beFood - beMerchant\nMã: BE-456\nThanh toán: bePay\n1x Cơm sườn 54.000";
+  const greenSmSample = "Xanh SM Ngon (Green SM Food)\nĐơn: GSM-999\nVí Xanh SM\n1x Cơm sườn 54.000";
+
+  assert.equal(detectDeliveryPlatform(shopeeSample), "shopee");
+  assert.equal(detectDeliveryPlatform(grabSample), "grab");
+  assert.equal(detectDeliveryPlatform(beSample), "be");
+  assert.equal(detectDeliveryPlatform(greenSmSample), "greensm");
+});
+

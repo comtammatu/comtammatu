@@ -6,14 +6,18 @@ import {
   transformShopeeOrderPayload,
   type ShopeeOrderRaw,
 } from "@lib/shopeefood/mapping";
-import { parseShopeeEscPosStream } from "@lib/shopeefood/escpos-parser";
+import {
+  extractTextFromEscPos,
+  parseShopeeEscPosStream,
+  detectDeliveryPlatform,
+} from "@lib/shopeefood/escpos-parser";
 import { resolveBranchStaffId } from "@lib/grabfood/mapping";
 
 const shopeeRelaySchema = z.object({
   ping: z.boolean().optional(),
   branch_id: z.coerce.number().int().positive().optional(),
   restaurant_id: z.union([z.string(), z.number()]).optional(),
-  platform: z.enum(["shopee", "grab", "be", "greensm"]).default("shopee").optional(),
+  platform: z.enum(["shopee", "grab", "be", "greensm"]).optional(),
   order: z
     .object({
       orderId: z.union([z.string(), z.number()]).optional(),
@@ -40,15 +44,18 @@ export async function OPTIONS() {
 }
 
 function verifyRelaySecret(request: NextRequest): boolean {
-  const expectedSecret = process.env.SHOPEE_RELAY_SECRET;
+  const expectedSecret = process.env.DELIVERY_RELAY_SECRET || process.env.SHOPEE_RELAY_SECRET;
   if (!expectedSecret) {
     if (process.env.NODE_ENV === "production") {
-      console.error("[Shopee POS Relay] SHOPEE_RELAY_SECRET is not configured in production");
+      console.error("[Delivery POS Relay] DELIVERY_RELAY_SECRET / SHOPEE_RELAY_SECRET is not configured in production");
       return false;
     }
     return true;
   }
-  const providedSecret = request.headers.get("x-shopee-relay-secret") || "";
+  const providedSecret =
+    request.headers.get("x-delivery-relay-secret") ||
+    request.headers.get("x-shopee-relay-secret") ||
+    "";
   if (!providedSecret) return false;
 
   const expectedBuf = Buffer.from(expectedSecret, "utf-8");
@@ -92,12 +99,15 @@ export async function POST(request: NextRequest) {
 
     let shopeeOrder: ShopeeOrderRaw | undefined;
 
+    let rawText = "";
     if (parsed.data.order) {
       shopeeOrder = parsed.data.order as unknown as ShopeeOrderRaw;
     } else if (parsed.data.raw_bytes_base64) {
       const rawBuf = Buffer.from(parsed.data.raw_bytes_base64, "base64");
+      rawText = extractTextFromEscPos(rawBuf);
       shopeeOrder = parseShopeeEscPosStream(rawBuf);
     } else if (parsed.data.raw_receipt) {
+      rawText = parsed.data.raw_receipt;
       shopeeOrder = parseShopeeEscPosStream(parsed.data.raw_receipt);
     }
 
@@ -108,6 +118,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const platform = parsed.data.platform || (rawText ? detectDeliveryPlatform(rawText) : "shopee");
     const requestedBranchId = parsed.data.branch_id || 1;
     const restaurantId = parsed.data.restaurant_id || shopeeOrder.restaurantId;
 
@@ -127,7 +138,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const platform = parsed.data.platform || "shopee";
     const displayRef =
       shopeeOrder.displayId ||
       shopeeOrder.orderCode ||

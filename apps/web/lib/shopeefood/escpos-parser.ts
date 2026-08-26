@@ -348,6 +348,47 @@ export function parseShopeeReceiptText(receiptText: string): ShopeeOrderRaw {
 }
 
 /**
+ * Detects which delivery platform emitted the receipt based on header keywords,
+ * order code prefix, and platform payment methods.
+ */
+export function detectDeliveryPlatform(receiptText: string): "shopee" | "grab" | "be" | "greensm" {
+  // 1. Check ShopeeFood signatures
+  if (
+    /\b(?:ShopeeFood|ShopeePay|AirPay|DeliveryNow|Now\.vn)\b/i.test(receiptText) ||
+    /\bSPF[-_]?[0-9A-Z]+\b/i.test(receiptText)
+  ) {
+    return "shopee";
+  }
+
+  // 2. Check GrabFood signatures
+  if (
+    /\b(?:GrabFood|GrabMerchant|GrabPay)\b/i.test(receiptText) ||
+    /\bGF[-_]?[0-9A-Z]+\b/i.test(receiptText) ||
+    /\bA-[0-9A-Z]{6,}\b/i.test(receiptText)
+  ) {
+    return "grab";
+  }
+
+  // 3. Check beFood signatures
+  if (
+    /\b(?:beFood|beMerchant|bePay|Cake by VPBank)\b/i.test(receiptText) ||
+    /\b(?:BE|BF)-[0-9A-Z]+\b/i.test(receiptText)
+  ) {
+    return "be";
+  }
+
+  // 4. Check Green SM signatures
+  if (
+    /\b(?:Green\s*SM|Xanh\s*SM|GSM|XSM)\b/i.test(receiptText) ||
+    /\b(?:GSM|XSM|XANH)-[0-9A-Z]+\b/i.test(receiptText)
+  ) {
+    return "greensm";
+  }
+
+  return "shopee";
+}
+
+/**
  * High-level parser that takes raw ESC/POS binary buffer or UTF-8 text and returns a ShopeeOrderRaw.
  */
 export function parseShopeeEscPosStream(input: Buffer | Uint8Array | string): ShopeeOrderRaw {

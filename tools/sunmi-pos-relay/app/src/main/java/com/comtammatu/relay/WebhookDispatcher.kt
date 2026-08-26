@@ -96,6 +96,7 @@ class WebhookDispatcher(
             connection.doOutput = true
             connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8")
             if (relaySecret.isNotEmpty()) {
+                connection.setRequestProperty("x-delivery-relay-secret", relaySecret)
                 connection.setRequestProperty("x-shopee-relay-secret", relaySecret)
             }
 
