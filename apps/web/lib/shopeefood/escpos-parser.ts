@@ -232,11 +232,19 @@ export function parseShopeeReceiptText(receiptText: string): ShopeeOrderRaw {
     }
 
     // 7. Parse Line Items vs Side Items (Món thêm)
-    // Side item line: Starts with +, -, *, >, or bracketed side prefix
-    const isSideItemLine = /^[+\-*•>]\s*/.test(line) || /^\[(?:món thêm|tùy chọn)\]/i.test(line);
+    // Side item line: Starts with +, -, *, >, or bracketed/prefixed side markers, or known sides under an item
+    const isSideItemLine =
+      /^[+\-*•>]\s*/.test(line) ||
+      /^\[(?:món thêm|tùy chọn)\]/i.test(line) ||
+      /^(?:thêm|món thêm|tùy chọn)[:\s]/i.test(line) ||
+      (currentItem != null && /^(?:cơm thêm|thêm cơm|tóp mỡ|trứng|chả|bì|mỡ hành|hộp|dụng cụ)/i.test(line));
 
     if (isSideItemLine && currentItem) {
-      const cleanSideText = line.replace(/^[+\-*•>]\s*/, "").replace(/^\[[^\]]+\]\s*/, "").trim();
+      const cleanSideText = line
+        .replace(/^[+\-*•>]\s*/, "")
+        .replace(/^\[[^\]]+\]\s*/, "")
+        .replace(/^(?:thêm|món thêm|tùy chọn)[:\s]*/i, "")
+        .trim();
       const sidePriceMatch = cleanSideText.match(/(?:x\s*(\d+)\s*)?[:\s]*([\d.,]+)\s*(?:đ|vnd)?$/i) ||
         cleanSideText.match(/\(([\d.,]+)\s*(?:đ|vnd)?\)/i);
 

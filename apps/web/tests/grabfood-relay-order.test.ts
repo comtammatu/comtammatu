@@ -155,21 +155,86 @@ test("GrabFood transformation: transforms real GF-725 order accurately with plat
   ]);
 });
 
-test("GrabFood transformation: includes eater comment in customerNote and item note correctly", () => {
-  const orderWithComment: GrabOrderRaw = {
+test("GrabFood transformation: filters shipper instructions from customerNote while preserving food preparation notes", () => {
+  const orderWithShipperComment: GrabOrderRaw = {
     ...MOCK_GRAB_ORDER_REAL,
     eater: {
       name: "Khách VIP",
       mobileNumber: "0909999888",
-      comment: "Giao sảnh A giúp mình",
+      comment: "Giao sảnh A giúp mình, tới nơi alo",
     },
   };
 
-  const transformed = transformGrabOrderPayload(orderWithComment, MOCK_DB_ITEMS);
-  assert.ok(transformed.customerNote.includes("[GrabFood GF-725]"));
-  assert.ok(transformed.customerNote.includes("Khách VIP"));
-  assert.ok(transformed.customerNote.includes("0909999888"));
-  assert.ok(transformed.customerNote.includes("Note: Giao sảnh A giúp mình"));
+  const transformedShipper = transformGrabOrderPayload(orderWithShipperComment, MOCK_DB_ITEMS);
+  assert.ok(transformedShipper.customerNote.includes("[GrabFood GF-725]"));
+  assert.ok(transformedShipper.customerNote.includes("Khách VIP"));
+  assert.ok(transformedShipper.customerNote.includes("0909999888"));
+  // Shipper instruction is cleanly omitted from KDS order note
+  assert.ok(!transformedShipper.customerNote.includes("Giao sảnh A"));
+
+  const orderWithKitchenComment: GrabOrderRaw = {
+    ...MOCK_GRAB_ORDER_REAL,
+    eater: {
+      name: "Khách VIP",
+      mobileNumber: "0909999888",
+      comment: "Quán làm nóng và cho thêm nước mắm",
+    },
+  };
+
+  const transformedKitchen = transformGrabOrderPayload(orderWithKitchenComment, MOCK_DB_ITEMS);
+  assert.ok(transformedKitchen.customerNote.includes("Note: Quán làm nóng và cho thêm nước mắm"));
+});
+
+test("GrabFood transformation: accurately maps 'Cơm Thêm' modifier variants into sides", () => {
+  const dbItemsWithComThem = [
+    ...MOCK_DB_ITEMS,
+    { id: 22, name: "Cơm Tấm Thêm", base_price: 6000 },
+  ];
+
+  const orderWithComThem: GrabOrderRaw = {
+    ...MOCK_GRAB_ORDER_REAL,
+    displayID: "GF-168",
+    itemInfo: {
+      items: [
+        {
+          name: "Sườn Cốt Lết",
+          itemID: "VNITE20260818044418231553",
+          quantity: 1,
+          comment: "Không mỡ",
+          fare: { priceDisplay: "60.000", priceFloat: 60000 },
+          modifierGroups: [
+            {
+              modifierGroupID: "VNMOG2026081911064901111",
+              modifierGroupName: "Món thêm",
+              modifiers: [
+                {
+                  modifierID: "VNMOD20260819110649013214",
+                  modifierName: "Cơm Thêm",
+                  priceDisplay: "6.000",
+                  quantity: 1,
+                },
+                {
+                  modifierName: "Thêm cơm",
+                  priceDisplay: "6.000",
+                  quantity: 1,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  };
+
+  const transformed = transformGrabOrderPayload(orderWithComThem, dbItemsWithComThem);
+  const lineItem = transformed.items[0];
+  assert.equal(lineItem?.item_name, "Sườn Cốt Lết");
+  assert.equal(lineItem?.note, "Không mỡ"); // Note only contains item comment, no "Tùy chọn: Cơm Thêm"
+  assert.equal(lineItem?.sides.length, 2);
+  assert.equal(lineItem?.sides[0]?.side_item_id, 22);
+  assert.equal(lineItem?.sides[0]?.name, "Cơm Tấm Thêm");
+  assert.equal(lineItem?.sides[1]?.side_item_id, 22);
+  assert.equal(lineItem?.sides[1]?.name, "Cơm Tấm Thêm");
 });
 
 test("GrabFood transformation: supports standalone items (e.g. Bì ordered as a standalone dish)", () => {
@@ -206,4 +271,41 @@ test("GrabFood transformation: supports standalone items (e.g. Bì ordered as a 
   assert.equal(lineItem?.subtotal, 24000);
   assert.equal(lineItem?.modifiers.length, 0);
   assert.equal(lineItem?.sides.length, 0); // Standalone item has no sides
+});
+
+test("GrabFood transformation: assigns 100% item discount for 0đ free gift items", () => {
+  const orderWithFreeGift: GrabOrderRaw = {
+    orderID: "001644320651-FREEGIFT",
+    displayID: "GF-169",
+    itemInfo: {
+      items: [
+        {
+          name: "Sườn Cốt Lết",
+          itemID: "VNITE20260818044418231553",
+          quantity: 1,
+          fare: { priceDisplay: "63.000", priceFloat: 63000 },
+        },
+        {
+          name: "Canh Khổ Qua",
+          itemID: "VNITE20260818044418190698",
+          quantity: 1,
+          fare: { priceDisplay: "0", priceFloat: 0 },
+        },
+      ],
+    },
+    fare: { subTotalDisplay: "63.000", totalDisplay: "63.000" },
+  };
+
+  const transformed = transformGrabOrderPayload(orderWithFreeGift, MOCK_DB_ITEMS);
+  assert.equal(transformed.items.length, 2);
+  const paidItem = transformed.items[0];
+  const freeItem = transformed.items[1];
+
+  assert.equal(paidItem?.item_name, "Sườn Cốt Lết");
+  assert.equal(paidItem?.discount_type, undefined);
+
+  assert.equal(freeItem?.item_name, "Canh Khổ Qua");
+  assert.equal(freeItem?.discount_type, "pct");
+  assert.equal(freeItem?.discount_value, 100);
+  assert.equal(freeItem?.discount_note, "Khuyến mãi tặng kèm Grab (0đ)");
 });

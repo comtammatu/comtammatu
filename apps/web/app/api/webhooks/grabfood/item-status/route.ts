@@ -130,14 +130,27 @@ export async function GET(request: NextRequest) {
       const normalized = normalizeMenuName(row.item_name);
       const grabItemId = nameToGrabId.get(normalized) ?? null;
       
-      const isOutOfStock = row.is_disabled || row.available_to_sell === 0;
-      let grabStatus: "AVAILABLE" | "UNAVAILABLE_TODAY" | "UNAVAILABLE_INDEFINITELY" = "AVAILABLE";
+      // Grab availableStatus:
+      // 1: Có bán (AVAILABLE)
+      // 2: Hết hàng hôm nay (UNAVAILABLE_TODAY - tự động mở lại ngày mai)
+      // 3: Không về hàng nữa (UNAVAILABLE_INDEFINITELY / DISCONTINUED)
+      // 7: Ẩn giấu (HIDDEN)
+      let grabStatus: "AVAILABLE" | "UNAVAILABLE_TODAY" | "UNAVAILABLE_INDEFINITELY" | "HIDDEN";
+      let availableStatus: 1 | 2 | 3 | 7;
+
       if (row.is_disabled) {
+        // Tắt món tại chi nhánh / không về hàng nữa
         grabStatus = "UNAVAILABLE_INDEFINITELY";
+        availableStatus = 3;
       } else if (row.available_to_sell === 0) {
+        // Hết hàng trong ngày hôm nay
         grabStatus = "UNAVAILABLE_TODAY";
+        availableStatus = 2;
+      } else {
+        // Có bán bình thường
+        grabStatus = "AVAILABLE";
+        availableStatus = 1;
       }
-      const availableStatus = isOutOfStock ? 2 : 1; // 1: Có bán, 2: Hết hàng hôm nay
 
       return {
         menu_item_id: row.menu_item_id,

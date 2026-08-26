@@ -138,6 +138,9 @@ export interface TransformedOrderForRpc {
     sides: Array<{ name: string; price: number; quantity: number; side_item_id: number }>;
     subtotal: number;
     note: string | null;
+    discount_type?: "pct" | "vnd" | null;
+    discount_value?: number | null;
+    discount_note?: string | null;
   }>;
 }
 
@@ -176,12 +179,47 @@ const SIDE_NAME_ALIASES: Record<string, string> = {
   "hop muong nia": "Dụng Cụ Mang Về",
   "dung cu an uong": "Dụng Cụ Mang Về",
   "dung cu mang ve": "Dụng Cụ Mang Về",
+  "muong dua": "Dụng Cụ Mang Về",
   "top mo": "Tóp Mỡ",
+  "mo hanh": "Mỡ Hành",
   "com them": "Cơm Tấm Thêm",
+  "them com": "Cơm Tấm Thêm",
+  "phan com them": "Cơm Tấm Thêm",
+  "com trang them": "Cơm Tấm Thêm",
+  "com tam them": "Cơm Tấm Thêm",
+  "com": "Cơm Tấm Thêm",
+  "extra rice": "Cơm Tấm Thêm",
   "trung": "Trứng",
+  "trung op la": "Trứng",
+  "trung chien": "Trứng",
   "cha": "Chả",
+  "cha trung": "Chả",
   "bi": "Bì",
+  "bi heo": "Bì",
+  "suon them": "Sườn Cốt Lết",
+  "them suon": "Sườn Cốt Lết",
 };
+
+/**
+ * Detects if a note contains delivery driver (shipper) instructions
+ * rather than restaurant kitchen / food preparation requests.
+ */
+export function isShipperInstruction(note: string): boolean {
+  if (!note || !note.trim()) return false;
+  const normalized = normalizeMenuName(note);
+
+  const shipperPatterns = [
+    /\b(?:giao|ship)\s+(?:tan|len|xuong|cho|o|tai|lau|tang|phong|sanh|cong|nha|hem|ngo|chung\s*cu|toa\s*nha|can\s*ho|bao\s*ve|le\s*tan)\b/,
+    /\b(?:giao|ship)\s+(?:den|toi|truoc|sau|dung\s*gio|nhanh)\b/,
+    /\b(?:goi|alo|call|lien\s*he|nhan\s*tin)\s+(?:truoc|khi|so|e|em|minh|cho|toi|den|khach)\b/,
+    /\b(?:de|treo|dat|gui)\s+(?:o|truoc|ngoai|cua|cong|xe|ban|hang\s*rao|bao\s*ve|le\s*tan)\b/,
+    /\b(?:bam\s*chuong|go\s*cua|hem\s*sau|den\s*noi|toi\s*noi|dung\s*dia\s*chi|sanh\s*[a-z0-9])\b/,
+    /\b(?:shipper|tai\s*xe|anh\s*ship|bac\s*tai|tai\s*xe\s*giao)\b/,
+    /\b(?:lay\s*hang\s*tai|gap\s*bao\s*ve|len\s*lau|len\s*tang)\b/,
+  ];
+
+  return shipperPatterns.some((pattern) => pattern.test(normalized));
+}
 
 /**
  * Matches a side option by name against database MenuItems
@@ -194,18 +232,28 @@ export function matchSideItem(
   const alias = SIDE_NAME_ALIASES[normalizedTarget];
   const target = alias ? normalizeMenuName(alias) : normalizedTarget;
 
-  const exact = dbItems.find(
-    (dbi) =>
-      normalizeMenuName(dbi.name) === target ||
+  // 1. Exact match against alias or normalized target
+  const exact = dbItems.find((dbi) => {
+    const dbiNorm = normalizeMenuName(dbi.name);
+    return (
+      dbiNorm === target ||
+      dbiNorm === normalizedTarget ||
       dbi.name.toLowerCase() === target ||
-      normalizeMenuName(dbi.name) === normalizedTarget,
-  );
+      dbi.name.toLowerCase() === normalizedTarget
+    );
+  });
   if (exact) return exact;
 
+  // 2. Substring match (either DB item contains target/normalizedTarget or vice versa)
   return (
     dbItems.find((d) => {
       const norm = normalizeMenuName(d.name);
-      return norm.includes(target) || target.includes(norm);
+      return (
+        norm.includes(target) ||
+        target.includes(norm) ||
+        norm.includes(normalizedTarget) ||
+        normalizedTarget.includes(norm)
+      );
     }) || null
   );
 }
@@ -252,6 +300,23 @@ export function transformGrabOrderPayload(
     const unitPrice = matched.base_price + sidesSum;
     const subtotal = unitPrice * (gi.quantity || 1);
 
+    const rawPriceStr = gi.fare?.priceDisplay?.replace(/[^\d]/g, "") || "";
+    const priceFloat = gi.fare?.priceFloat;
+    const isFreeGift =
+      rawPriceStr === "0" ||
+      priceFloat === 0 ||
+      /tặng|quà\s*tặng|free\b|0đ|0\s*đ/i.test(gi.name);
+
+    let discountType: "pct" | "vnd" | undefined;
+    let discountValue: number | undefined;
+    let discountNote: string | undefined;
+
+    if (isFreeGift) {
+      discountType = "pct";
+      discountValue = 100;
+      discountNote = "Khuyến mãi tặng kèm Grab (0đ)";
+    }
+
     const noteParts = [
       gi.comment?.trim(),
       unmatchedOptions.length > 0 ? `Tùy chọn: ${unmatchedOptions.join(", ")}` : null,
@@ -266,15 +331,20 @@ export function transformGrabOrderPayload(
       sides,
       subtotal,
       note: noteParts.length > 0 ? noteParts.join(" • ") : null,
+      discount_type: discountType,
+      discount_value: discountValue,
+      discount_note: discountNote,
     };
   });
 
   const eaterName = grabOrder.eater?.name || "Khách Grab";
   const eaterPhone = grabOrder.eater?.mobileNumber || "";
-  const cutleryNote = grabOrder.cutlery === 2 ? " • Lấy muỗng đũa" : "";
+  const phoneText = eaterPhone ? ` (${eaterPhone})` : "";
+  const cutleryNote = grabOrder.cutlery === 2 ? " • Lấy muỗng đũa" : grabOrder.cutlery === 1 ? " • Không lấy dụng cụ" : "";
   const eaterComment = grabOrder.eater?.comment?.trim();
-  const orderCommentNote = eaterComment ? ` • Note: ${eaterComment}` : "";
-  const customerNote = `[GrabFood ${grabOrder.displayID}] ${eaterName} (${eaterPhone})${cutleryNote}${orderCommentNote}`;
+  const orderCommentNote =
+    eaterComment && !isShipperInstruction(eaterComment) ? ` • Note: ${eaterComment}` : "";
+  const customerNote = `[GrabFood ${grabOrder.displayID}] ${eaterName}${phoneText}${cutleryNote}${orderCommentNote}`;
 
   const rawSubtotal = grabOrder.fare?.subTotalDisplay?.replace(/[^\d]/g, "") || "0";
   const rawTotal = grabOrder.fare?.totalDisplay?.replace(/[^\d]/g, "") || rawSubtotal;

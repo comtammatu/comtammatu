@@ -100,7 +100,8 @@ Hình thức: ShopeePay
   assert.equal(transformed.items[0]?.sides.length, 2);
   assert.ok(transformed.customerNote.includes("[ShopeeFood SPF-892]"));
   assert.ok(transformed.customerNote.includes("Lấy muỗng đũa"));
-  assert.ok(transformed.customerNote.includes("Giao trước 12h giúp mình"));
+  // Delivery shipper instructions like "Giao trước 12h" are cleanly filtered from KDS customerNote
+  assert.ok(!transformed.customerNote.includes("Giao trước 12h"));
 });
 
 test("ESC/POS parser: parses receipt with 'Không lấy dụng cụ' and cash payment", () => {

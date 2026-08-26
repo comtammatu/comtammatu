@@ -115,3 +115,9 @@ pos-after*.png
 # Supabase live baseline snapshots (local, regenerable via supabase db dump)
 .baseline-artifacts/
 .superpowers/
+
+# Gradle / Android build cache & local SDK props
+.gradle/
+build/
+local.properties
+.cxx/

@@ -258,7 +258,7 @@
     }
   }
 
-  // API Call: Sync Available Status ("AVAILABLE", "UNAVAILABLE_TODAY", "UNAVAILABLE_INDEFINITELY")
+  // API Call: Sync Available Status (1: Có bán, 2: Hết hàng hôm nay, 3: Không về hàng nữa, 7: Ẩn giấu)
   async function setGrabItemAvailableStatus(itemId, availableStatus) {
     if (!itemId || !itemId.startsWith('VNITE')) {
       console.warn(`[Grab POS Relay] Skip status sync for non-item ID: ${itemId}`);
@@ -268,14 +268,26 @@
       let statusStr = 'AVAILABLE';
       let availableAt = '0001-01-01T00:00:00Z';
 
-      if (availableStatus === 2 || availableStatus === 'UNAVAILABLE_TODAY' || availableStatus === 'UNAVAILABLE') {
+      // 1: Có bán (AVAILABLE)
+      if (availableStatus === 1 || availableStatus === 'AVAILABLE') {
+        statusStr = 'AVAILABLE';
+        availableAt = '0001-01-01T00:00:00Z';
+      }
+      // 2: Hết hàng hôm nay (UNAVAILABLE_TODAY - tự động mở lại 00:00 sáng mai)
+      else if (availableStatus === 2 || availableStatus === 'UNAVAILABLE_TODAY' || availableStatus === 'UNAVAILABLE') {
         statusStr = 'UNAVAILABLE_TODAY';
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
         tomorrow.setHours(0, 0, 0, 0);
         availableAt = tomorrow.toISOString();
-      } else if (availableStatus === 'UNAVAILABLE_INDEFINITELY') {
+      }
+      // 3: Không về hàng nữa (UNAVAILABLE_INDEFINITELY / DISCONTINUED)
+      else if (availableStatus === 3 || availableStatus === 'UNAVAILABLE_INDEFINITELY' || availableStatus === 'DISCONTINUED') {
         statusStr = 'UNAVAILABLE_INDEFINITELY';
+      }
+      // 7: Ẩn giấu (HIDDEN)
+      else if (availableStatus === 7 || availableStatus === 'HIDDEN' || availableStatus === 'INACTIVE') {
+        statusStr = 'HIDDEN';
       }
 
       const url = 'https://api.grab.com/food/merchant/v1/items/available-status';
