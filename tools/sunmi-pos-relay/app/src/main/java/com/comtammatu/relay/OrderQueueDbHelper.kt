@@ -8,27 +8,41 @@ import android.util.Base64
 
 /**
  * SQLite Database Helper for offline print receipt queueing and retrying.
- * Guarantees zero order loss during network blips.
+ * Orders stay PENDING until delivered; failed attempts schedule the next retry
+ * via capped exponential backoff so no order is ever abandoned. A row is
+ * atomically claimed (PENDING -> SENDING) before each POST so the initial
+ * dispatch and the retry loop can never send the same order concurrently.
  */
 class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     companion object {
         const val DATABASE_NAME = "sunmi_relay_queue.db"
-        const val DATABASE_VERSION = 1
+        const val DATABASE_VERSION = 3
 
         const val TABLE_ORDERS = "queued_orders"
         const val COLUMN_ID = "id"
         const val COLUMN_RAW_BASE64 = "raw_base64"
         const val COLUMN_BRANCH_ID = "branch_id"
         const val COLUMN_PLATFORM = "platform"
-        const val COLUMN_STATUS = "status" // PENDING, SENT, FAILED
+        const val COLUMN_STATUS = "status" // PENDING, SENDING, SENT
         const val COLUMN_RETRY_COUNT = "retry_count"
         const val COLUMN_CREATED_AT = "created_at"
         const val COLUMN_LAST_ERROR = "last_error"
+        const val COLUMN_NEXT_RETRY_AT = "next_retry_at"
+        const val COLUMN_CLAIMED_AT = "claimed_at"
 
         const val STATUS_PENDING = "PENDING"
+        const val STATUS_SENDING = "SENDING"
         const val STATUS_SENT = "SENT"
-        const val STATUS_FAILED = "FAILED"
+
+        const val RETRY_BASE_DELAY_MS = 15_000L
+        const val RETRY_MAX_DELAY_MS = 15 * 60 * 1000L
+
+        /** Capped exponential backoff: 15s, 30s, 60s ... capped at 15 minutes. */
+        fun nextRetryDelay(retryCount: Int): Long {
+            val shift = retryCount.coerceIn(0, 6)
+            return (RETRY_BASE_DELAY_MS shl shift).coerceAtMost(RETRY_MAX_DELAY_MS)
+        }
     }
 
     override fun onCreate(db: SQLiteDatabase) {
@@ -42,15 +56,21 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_
                 $COLUMN_STATUS TEXT NOT NULL,
                 $COLUMN_RETRY_COUNT INTEGER DEFAULT 0,
                 $COLUMN_CREATED_AT INTEGER NOT NULL,
-                $COLUMN_LAST_ERROR TEXT
+                $COLUMN_LAST_ERROR TEXT,
+                $COLUMN_NEXT_RETRY_AT INTEGER NOT NULL DEFAULT 0,
+                $COLUMN_CLAIMED_AT INTEGER NOT NULL DEFAULT 0
             )
             """.trimIndent()
         )
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        db.execSQL("DROP TABLE IF EXISTS $TABLE_ORDERS")
-        onCreate(db)
+        if (oldVersion < 2) {
+            db.execSQL("ALTER TABLE $TABLE_ORDERS ADD COLUMN $COLUMN_NEXT_RETRY_AT INTEGER NOT NULL DEFAULT 0")
+        }
+        if (oldVersion < 3) {
+            db.execSQL("ALTER TABLE $TABLE_ORDERS ADD COLUMN $COLUMN_CLAIMED_AT INTEGER NOT NULL DEFAULT 0")
+        }
     }
 
     fun enqueueOrder(rawBytes: ByteArray, branchId: Int, platform: String = "shopee"): Long {
@@ -74,12 +94,51 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_
         db.update(TABLE_ORDERS, values, "$COLUMN_ID = ?", arrayOf(orderId.toString()))
     }
 
+    /**
+     * Atomically claims a PENDING order for delivery. Returns false when another
+     * dispatcher path already claimed it, so callers must skip the POST.
+     */
+    fun claimOrder(orderId: Long): Boolean {
+        val db = writableDatabase
+        val values = ContentValues().apply {
+            put(COLUMN_STATUS, STATUS_SENDING)
+            put(COLUMN_CLAIMED_AT, System.currentTimeMillis())
+        }
+        val updated = db.update(
+            TABLE_ORDERS,
+            values,
+            "$COLUMN_ID = ? AND $COLUMN_STATUS = ?",
+            arrayOf(orderId.toString(), STATUS_PENDING)
+        )
+        return updated > 0
+    }
+
+    /**
+     * Reverts SENDING rows whose claim outlived the timeout (e.g. process died
+     * mid-POST) back to PENDING so they are retried instead of stranded.
+     */
+    fun releaseStaleClaims(claimTimeoutMs: Long) {
+        val db = writableDatabase
+        val values = ContentValues().apply {
+            put(COLUMN_STATUS, STATUS_PENDING)
+        }
+        db.update(
+            TABLE_ORDERS,
+            values,
+            "$COLUMN_STATUS = ? AND $COLUMN_CLAIMED_AT < ?",
+            arrayOf(STATUS_SENDING, (System.currentTimeMillis() - claimTimeoutMs).toString())
+        )
+    }
+
     fun markOrderFailed(orderId: Long, retryCount: Int, errorMessage: String?) {
         val db = writableDatabase
         val values = ContentValues().apply {
-            put(COLUMN_STATUS, if (retryCount >= 10) STATUS_FAILED else STATUS_PENDING)
+            // Never abandon an order: stay PENDING and schedule the next attempt
+            // with capped exponential backoff instead of a terminal failure.
+            put(COLUMN_STATUS, STATUS_PENDING)
             put(COLUMN_RETRY_COUNT, retryCount)
             put(COLUMN_LAST_ERROR, errorMessage)
+            put(COLUMN_NEXT_RETRY_AT, System.currentTimeMillis() + nextRetryDelay(retryCount))
         }
         db.update(TABLE_ORDERS, values, "$COLUMN_ID = ?", arrayOf(orderId.toString()))
     }
@@ -99,8 +158,8 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_
         val cursor = db.query(
             TABLE_ORDERS,
             null,
-            "$COLUMN_STATUS = ?",
-            arrayOf(STATUS_PENDING),
+            "$COLUMN_STATUS = ? AND $COLUMN_NEXT_RETRY_AT <= ?",
+            arrayOf(STATUS_PENDING, System.currentTimeMillis().toString()),
             null,
             null,
             "$COLUMN_CREATED_AT ASC",

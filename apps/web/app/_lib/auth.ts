@@ -1,6 +1,9 @@
 import { cache } from "react";
 import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaimsFromAccessToken } from "@comtammatu/shared/auth";
+import {
+  extractClaimsFromAccessToken,
+  extractUserIdFromAccessToken,
+} from "@comtammatu/shared/auth";
 import type {
   JwtClaims,
   PermissionKey,
@@ -41,14 +44,20 @@ export const getAuthContext = cache(async function getAuthContext(
   const {
     data: { session },
   } = await supabase.auth.getSession();
-  if (!session?.access_token || !session.user) return null;
+  if (!session?.access_token) return null;
 
   const claims = extractClaimsFromAccessToken(session.access_token);
   if (!claims) return null;
 
   if (!allowedRoles.includes(claims.user_role)) return null;
 
-  return { supabase, claims, user: session.user };
+  // JWT `sub` equals session.user.id but reading session.user trips the
+  // auth-js insecure-user warning proxy (cookie payload, unverified).
+  // Never read session.user here or downstream — use `userId`.
+  const userId = extractUserIdFromAccessToken(session.access_token);
+  if (!userId) return null;
+
+  return { supabase, claims, userId };
 });
 
 type PermissionLike = PermissionKey | string;
@@ -158,6 +167,8 @@ type LoadedAuthState = {
   session: Session;
   claims: JwtClaims;
   user: User | null;
+  /** Token-derived user id (`sub`) — always present, no Auth roundtrip. */
+  userId: string;
 };
 
 /**
@@ -171,8 +182,11 @@ type LoadedAuthState = {
  * signout instead of serving authenticated UI. That is Auth liveness, not a
  * second ACL gate — `getAuthContext` stays getSession-only (GRN false-deny).
  *
- * Returns the Supabase client and verified Auth user so callers can avoid a
- * second client or reading the unverified `session.user` cookie payload.
+ * Returns the Supabase client, the verified Auth user, and `userId` — the
+ * JWT `sub` that equals `session.user.id` without ever reading the proxied
+ * (unverified) `session.user` cookie payload. Callers must not read
+ * `session.user` either: @supabase/auth-js wraps it in an insecure-user
+ * warning proxy on the server.
  *
  * Wrapped in React `cache()` so repeated calls within ONE RSC render share
  * the same `{supabase, session, claims, user}` snapshot — eliminates duplicate
@@ -199,9 +213,16 @@ export const loadAuthState = cache(async (): Promise<LoadedAuthState> => {
     );
   }
 
+  const userId = extractUserIdFromAccessToken(session.access_token);
+  if (!userId) {
+    throw new Error(
+      "loadAuthState: user id (JWT sub) missing from access token — malformed session cookie.",
+    );
+  }
+
   // Far-from-expiry zombie: cookie JWT still valid, Auth session revoked.
   // Redirect (not throw) so recovery clears cookies via Route Handler.
   const user = await probeAuthSessionLiveness(supabase);
 
-  return { supabase, session, claims, user };
+  return { supabase, session, claims, user, userId };
 });

@@ -25,7 +25,7 @@ mock.module(authModule.href, {
           return { data: null, error: null };
         },
       },
-      user: {},
+      userId: "transfer-denial-user",
     }),
     getAuthContextWithPermission: async () => null,
   },

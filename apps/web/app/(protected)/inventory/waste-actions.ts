@@ -308,7 +308,7 @@ export async function getWasteCapStatus(
     PERMISSION_KEYS.INVENTORY_WRITEOFF,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase, claims, user } = ctx;
+  const { supabase, claims, userId } = ctx;
   if (
     !(await currentUserHasPermission(
       branchId,
@@ -331,7 +331,7 @@ export async function getWasteCapStatus(
     .select("id")
     .eq("branch_id", branchId)
     .eq("issue_type", "writeoff")
-    .eq("created_by", user.id)
+    .eq("created_by", userId)
     .eq("shift_key", shiftKey);
 
   const shiftIssueIds = (shiftRows ?? []).map((r) => r.id);
@@ -407,7 +407,7 @@ export async function getIngredientRollingWaste(
     PERMISSION_KEYS.INVENTORY_WRITEOFF,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase, claims, user } = ctx;
+  const { supabase, claims, userId } = ctx;
   if (
     !(await currentUserHasPermission(
       branchId,
@@ -424,7 +424,7 @@ export async function getIngredientRollingWaste(
     .select("id")
     .eq("branch_id", branchId)
     .eq("issue_type", "writeoff")
-    .eq("created_by", user.id)
+    .eq("created_by", userId)
     .gte("created_at", since);
 
   const issueIds = (issueRows ?? []).map((r) => r.id);

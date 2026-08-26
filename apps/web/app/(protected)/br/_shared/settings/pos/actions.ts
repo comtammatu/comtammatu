@@ -195,7 +195,7 @@ export const setBranchStockOutcomePosting = withActionPositional(
       enabled,
     }),
   },
-  async (data, { supabase, claims, user }): Promise<ActionResult> => {
+  async (data, { supabase, claims, userId }): Promise<ActionResult> => {
     if (!canOperateBranch(claims.branch_id, data.branchId)) {
       return { success: false, error: "Không có quyền thao tác chi nhánh này" };
     }
@@ -211,7 +211,7 @@ export const setBranchStockOutcomePosting = withActionPositional(
       data.branchId,
       INVENTORY_FEATURE_FLAGS.POS_STOCK_OUTCOME_POSTING,
       data.enabled,
-      user.id,
+      userId,
     );
 
     if (error) {

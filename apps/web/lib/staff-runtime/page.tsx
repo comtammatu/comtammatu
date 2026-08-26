@@ -437,7 +437,8 @@ export async function StaffWorkdayPageContent({
     StatusStrip,
     ActionSection,
   } = primitives;
-  const { supabase, claims, session } = authState ?? (await loadAuthState());
+  const { supabase, claims, userId: profileId } =
+    authState ?? (await loadAuthState());
   const { data: canAccessWork } = await supabase.rpc("can_access_workspace");
   const state = await getTodayWorkState();
 
@@ -535,7 +536,7 @@ export async function StaffWorkdayPageContent({
     state.attendance?.shiftId ??
     state.todayShifts.find((shift) => shift.isCurrent)?.shiftId ??
     null;
-  if (session?.user?.id) {
+  if (profileId) {
     const service = createServiceClient();
     const countBranchId = state.attendance?.branchId ?? state.branchId;
     let countAssignmentQuery = service
@@ -545,7 +546,7 @@ export async function StaffWorkdayPageContent({
       )
       .eq("tenant_id", claims.tenant_id)
       .eq("is_active", true)
-      .eq("employees.profile_id", session.user.id);
+      .eq("employees.profile_id", profileId);
     if (countBranchId !== null) {
       countAssignmentQuery = countAssignmentQuery.eq(
         "branch_id",

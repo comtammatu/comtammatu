@@ -146,8 +146,9 @@ export function parseShopeeReceiptText(receiptText: string): ShopeeOrderRaw {
     .map((l) => l.trim())
     .filter((l) => l.length > 0);
 
-  let displayId = "";
-  let orderId = "";
+  let spfCode = "";
+  let labeledCode = "";
+  let bareNumericCode = "";
   let customerName = "Khách ShopeeFood";
   let customerPhone = "";
   let customerNote = "";
@@ -162,24 +163,26 @@ export function parseShopeeReceiptText(receiptText: string): ShopeeOrderRaw {
   for (let idx = 0; idx < lines.length; idx++) {
     const line = lines[idx]!;
 
-    // 1. Order Code / Display ID: SPF-xxx or 260825-xxxx or Mã đơn / Đơn hàng
+    // 1. Order Code / Display ID candidates, collected per line and resolved
+    // after the loop by authority: labeled code > bare numeric code > SPF code.
+    // Bare prose like "đơn hàng" is NOT a code label: "Tổng tiền đơn hàng: 156.000"
+    // or "Đơn hàng từ ShopeeFood" would otherwise capture garbage tokens that
+    // collide across orders and break idempotency.
     const spfMatch = line.match(/\b(SPF[-_]?[0-9A-Z]+)\b/i);
-    if (spfMatch && spfMatch[1]) {
-      displayId = spfMatch[1].toUpperCase().replace("_", "-");
-      if (!orderId) orderId = displayId;
+    if (spfMatch && spfMatch[1] && !spfCode) {
+      spfCode = spfMatch[1].toUpperCase().replace("_", "-");
     }
 
-    const orderIdMatch = line.match(/(?:mã\s*đơn|đơn\s*hàng|order\s*id|mã\s*đặt\s*món)[:\s#]*([A-Z0-9_-]+)/i);
+    const orderIdMatch = line.match(/(?:mã\s*đơn(?:\s*hàng)?|mã\s*đặt\s*món|order\s*id)[:\s#]*([A-Z0-9_-]{5,})/i);
     if (orderIdMatch && orderIdMatch[1]) {
-      const code = orderIdMatch[1].trim();
-      if (!displayId) displayId = code;
-      if (!orderId) orderId = code;
+      labeledCode = orderIdMatch[1].trim();
     }
 
-    const numericDateOrderMatch = line.match(/\b(\d{6}-\d{6,})\b/);
-    if (numericDateOrderMatch && numericDateOrderMatch[1]) {
-      orderId = numericDateOrderMatch[1];
-      if (!displayId) displayId = orderId;
+    if (!bareNumericCode) {
+      const numericDateOrderMatch = line.match(/\b(\d{6}-\d{6,})\b/);
+      if (numericDateOrderMatch && numericDateOrderMatch[1]) {
+        bareNumericCode = numericDateOrderMatch[1];
+      }
     }
 
     // 2. Customer Name & Phone
@@ -323,11 +326,12 @@ export function parseShopeeReceiptText(receiptText: string): ShopeeOrderRaw {
     }
   }
 
-  // Fallback: Do NOT synthesize random IDs to preserve strict idempotency and deduplication
-  if (!displayId && !orderId) {
-    displayId = "";
-    orderId = "";
-  }
+  // Resolve order identity after the full scan: an explicitly labeled code
+  // (Mã đơn / Mã đặt món / Order ID) outranks a bare numeric code, which
+  // outranks the SPF display reference. Do NOT synthesize random IDs so
+  // strict idempotency and deduplication are preserved.
+  const orderId = labeledCode || bareNumericCode || spfCode;
+  const displayId = spfCode || labeledCode || bareNumericCode;
 
   return {
     orderId,

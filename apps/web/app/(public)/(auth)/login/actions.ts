@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import { createClient } from "@comtammatu/database/supabase/server";
 import {
   extractClaimsFromAccessToken,
+  extractUserIdFromAccessToken,
   PERMISSION_KEYS,
   resolvePostLoginRedirect,
 } from "@comtammatu/shared/auth";
@@ -57,7 +58,7 @@ async function redirectAfterAuthenticatedSession(): Promise<LoginState> {
   const claims = extractClaimsFromAccessToken(session.access_token);
   if (!claims) {
     console.error("auth.login.claims_missing", {
-      user_id: session.user.id,
+      user_id: extractUserIdFromAccessToken(session.access_token) ?? "unknown",
       ts: new Date().toISOString(),
     });
     await supabase.auth.signOut();
@@ -162,7 +163,7 @@ export async function login(
     // (proxy reads claims=null → /access-denied?reason=missing-auth-context).
     // Generic copy to user (no enumeration); user_id logged for ops debug.
     console.error("auth.login.claims_missing", {
-      user_id: session.user.id,
+      user_id: extractUserIdFromAccessToken(session.access_token) ?? "unknown",
       ts: new Date().toISOString(),
     });
     await supabase.auth.signOut();

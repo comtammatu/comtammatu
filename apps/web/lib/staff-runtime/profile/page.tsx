@@ -61,7 +61,7 @@ function formatBirthDate(value: string | null): string | null {
 export async function StaffProfilePageContent({
   plane = "employee",
 }: StaffProfilePageContentProps = {}) {
-  const { session, claims, supabase } = await loadAuthState();
+  const { claims, supabase, user, userId: profileId } = await loadAuthState();
   const ctx = await getEmployeeContext();
   const positionCode = claims.position_code;
   const effectiveBranchId = ctx?.branchId ?? claims.branch_id ?? null;
@@ -71,7 +71,7 @@ export async function StaffProfilePageContent({
       supabase
         .from("profiles")
         .select("full_name, phone, avatar_url, birth_date")
-        .eq("id", session.user.id)
+        .eq("id", profileId)
         .eq("tenant_id", claims.tenant_id)
         .maybeSingle(),
       ctx
@@ -84,7 +84,7 @@ export async function StaffProfilePageContent({
         : supabase
             .from("employees")
             .select("employee_code")
-            .eq("profile_id", session.user.id)
+            .eq("profile_id", profileId)
             .eq("tenant_id", claims.tenant_id)
             .maybeSingle(),
       positionCode
@@ -109,16 +109,16 @@ export async function StaffProfilePageContent({
   const employee = employeeResult.data;
   const positionLabel =
     positionResult.data?.label_vi ?? positionCode ?? claims.user_role;
-  const metadataName = session.user.user_metadata?.["full_name"];
+  const metadataName = user?.user_metadata?.["full_name"];
   const displayName =
     profile?.full_name ??
     (typeof metadataName === "string" ? metadataName : null) ??
-    session.user.email ??
+    user?.email ??
     copy.fallbackName;
   const phone = profile?.phone ?? null;
   const birthDate = profile?.birth_date ?? null;
   const avatarUrl = profile?.avatar_url ?? "";
-  const email = session.user.email ?? null;
+  const email = user?.email ?? null;
   const branchName =
     ctx?.branchName ?? branchResult.data?.name ?? copy.noBranch;
   const employeeCode =

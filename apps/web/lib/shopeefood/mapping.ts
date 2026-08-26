@@ -307,10 +307,12 @@ export function transformShopeeOrderPayload(
     };
   });
 
+  // The relay route rejects receipts without an extractable order code before
+  // this transform runs, so no synthesized fallback ID is needed here.
   const displayId =
     shopeeOrder.displayId ||
     shopeeOrder.orderCode ||
-    (shopeeOrder.orderId ? String(shopeeOrder.orderId) : "SPF-NEW");
+    (shopeeOrder.orderId ? String(shopeeOrder.orderId) : "");
   const orderId = shopeeOrder.orderId ? String(shopeeOrder.orderId) : displayId;
 
   const eaterName =

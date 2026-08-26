@@ -165,6 +165,52 @@ Tổng: 120.000
   assert.match(uuid1, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
 });
 
+test("ESC/POS parser: prose lines never masquerade as order codes", () => {
+  // Prose such as "Tổng tiền đơn hàng: 156.000" or "Đơn hàng từ ShopeeFood"
+  // must not be captured as an order code; only explicit code labels (Mã đơn /
+  // Mã đặt món / Order ID), bare numeric codes, or SPF references qualify.
+  const sampleReceipt = `
+Đơn hàng từ ShopeeFood
+Tổng tiền đơn hàng: 156.000
+Mã đơn: SPF-101
+Khách hàng: Phạm Văn Tài
+1x Sườn Cốt Lết                 54.000
+Tổng cộng:                      156.000
+  `;
+
+  const parsed = parseShopeeReceiptText(sampleReceipt);
+
+  assert.equal(parsed.orderId, "SPF-101");
+  assert.equal(parsed.displayId, "SPF-101");
+  assert.equal(parsed.total, 156000);
+});
+
+test("ESC/POS parser: labeled code outranks bare numeric and SPF references", () => {
+  // Real receipt layout: the display code (Mã đơn) precedes the internal code
+  // (Mã đặt món). The last labeled code wins for orderId; SPF stays displayId.
+  const receiptWithLabel = `
+ShopeeFood
+Mã đơn: SPF-205
+Mã đặt món: 260826-1145230
+1x Canh Khổ Qua 30.000
+  `;
+  // A timestamp-like bare numeric token must not displace a labeled code.
+  const receiptBareNumeric = `
+ShopeeFood
+Mã đơn: SPF-206
+Đơn tham chiếu 260826-1145231
+1x Canh Khổ Qua 30.000
+  `;
+
+  const withLabel = parseShopeeReceiptText(receiptWithLabel);
+  assert.equal(withLabel.orderId, "260826-1145230");
+  assert.equal(withLabel.displayId, "SPF-205");
+
+  const bareNumeric = parseShopeeReceiptText(receiptBareNumeric);
+  assert.equal(bareNumeric.orderId, "SPF-206");
+  assert.equal(bareNumeric.displayId, "SPF-206");
+});
+
 test("ESC/POS platform detection: identifies all 4 platforms accurately from receipt signature", () => {
   const shopeeSample = "ShopeeFood\nMã đơn: SPF-123\nVí ShopeePay\n1x Cơm sườn 54.000";
   const grabSample = "GrabFood\nOrder: GF-789\nGrabPay\n1x Sườn Một Gang 120.000";

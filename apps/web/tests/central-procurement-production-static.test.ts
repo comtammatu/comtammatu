@@ -110,16 +110,21 @@ test("VAT evidence RPC authorizes Accountant with a delegated invoice permission
 
 test("getAuthContext uses getSession only (no getUser gate; GRN false-deny)", () => {
   const source = readWeb("app/_lib/auth.ts");
+  // Strip comments so doc mentions of session.user do not fail the
+  // executable-code invariant (mirrors zombie-jwt-rsc-liveness test).
+  const codeOnly = source
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/(^|[^:])\/\/.*$/gm, "$1");
 
   // getUser() maps Auth session_not_found → "Auth session missing!" while the
   // cookie JWT still authorizes PostgREST — GRN/invoice RSC loaders then
   // returned "Không có quyền" though purchase-orders (loadAuthState) worked.
   // Far-from-expiry Auth liveness lives in loadAuthState →
   // probeAuthSessionLiveness (redirect), not here.
-  const getAuthStart = source.indexOf("export const getAuthContext");
-  const getAuthEnd = source.indexOf("type PermissionLike", getAuthStart);
+  const getAuthStart = codeOnly.indexOf("export const getAuthContext");
+  const getAuthEnd = codeOnly.indexOf("type PermissionLike", getAuthStart);
   assert.ok(getAuthStart >= 0 && getAuthEnd > getAuthStart);
-  const getAuthBody = source.slice(getAuthStart, getAuthEnd);
+  const getAuthBody = codeOnly.slice(getAuthStart, getAuthEnd);
 
   assert.match(getAuthBody, /await supabase\.auth\.getSession\(\)/);
   assert.doesNotMatch(getAuthBody, /supabase\.auth\.getUser\(/);
@@ -128,5 +133,7 @@ test("getAuthContext uses getSession only (no getUser gate; GRN false-deny)", ()
     /Promise\.all\(\[\s*supabase\.auth\.getUser/,
   );
   assert.doesNotMatch(getAuthBody, /probeAuthSessionLiveness/);
-  assert.match(getAuthBody, /user:\s*session\.user/);
+  // user id comes from JWT `sub`, never from the proxied `session.user`
+  assert.match(getAuthBody, /extractUserIdFromAccessToken\(/);
+  assert.doesNotMatch(getAuthBody, /session\.user\b/);
 });

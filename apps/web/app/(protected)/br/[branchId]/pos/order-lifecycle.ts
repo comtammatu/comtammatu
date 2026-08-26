@@ -277,7 +277,7 @@ export const submitOrder = withActionPositional(
   },
   async (
     { branchId, cart, posSessionId, idempotencyKey, dailyLimitHoldToken },
-    { supabase, claims, user },
+    { supabase, claims, userId },
   ): Promise<ActionResult<{ order_id: number; order_number: string }>> => {
     // POS branch scope defence in depth keeps a distinct errorCode.
     if (!isPosBranchInScope(claims, branchId)) {
@@ -315,7 +315,7 @@ export const submitOrder = withActionPositional(
         ? await supabase.rpc("create_order_with_daily_limit_hold", {
             p_tenant_id: claims.tenant_id,
             p_branch_id: branchId,
-            p_created_by: user.id,
+            p_created_by: userId,
             p_items: rpcItems,
             p_order_type: cart.order_type,
             p_table_id: cart.table_id ?? undefined,
@@ -328,7 +328,7 @@ export const submitOrder = withActionPositional(
         : await supabase.rpc("create_order", {
             p_tenant_id: claims.tenant_id,
             p_branch_id: branchId,
-            p_created_by: user.id,
+            p_created_by: userId,
             p_items: rpcItems,
             p_order_type: cart.order_type,
             p_table_id: cart.table_id ?? undefined,

@@ -15,6 +15,7 @@ class BootCompletedReceiver : BroadcastReceiver() {
             val branchId = prefs.getInt("branch_id", 1)
             val secret = prefs.getString("secret", "") ?: ""
             val port = prefs.getInt("port", 9100)
+            val lanMode = prefs.getBoolean("lan_mode", false)
 
             val serviceIntent = Intent(context, VirtualWifiPrinterService::class.java).apply {
                 action = VirtualWifiPrinterService.ACTION_START
@@ -22,6 +23,7 @@ class BootCompletedReceiver : BroadcastReceiver() {
                 putExtra(VirtualWifiPrinterService.EXTRA_BRANCH_ID, branchId)
                 putExtra(VirtualWifiPrinterService.EXTRA_SECRET, secret)
                 putExtra(VirtualWifiPrinterService.EXTRA_PORT, port)
+                putExtra(VirtualWifiPrinterService.EXTRA_LAN_MODE, lanMode)
             }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

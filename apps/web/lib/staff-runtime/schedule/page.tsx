@@ -34,6 +34,7 @@ export async function StaffSchedulePageContent({
   plane = "employee",
   routeBranchId,
 }: StaffSchedulePageContentProps) {
+  const monthStart = getVNMonthStartDateString(await requestNow());
   const ctx = await getEmployeeContext();
   const PageShell = plane === "branch" ? BranchOperatorPage : EmployeePage;
 
@@ -46,8 +47,6 @@ export async function StaffSchedulePageContent({
   }
 
   const { supabase, claims, employeeId } = ctx;
-
-  const monthStart = getVNMonthStartDateString(await requestNow());
 
   const [scheduleResult, employeeResult] = await Promise.all([
     fetchMySchedule(monthStart),

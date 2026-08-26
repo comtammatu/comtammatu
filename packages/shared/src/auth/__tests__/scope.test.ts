@@ -4,6 +4,7 @@ import {
   canSubscribeBranchOpsTopic,
   canonicalizeSelfServicePath,
   extractClaimsFromAccessToken,
+  extractUserIdFromAccessToken,
   resolvePostLoginRedirect,
   getSafeInternalReturnTo,
   getDefaultRedirect,
@@ -128,6 +129,45 @@ test("extractClaimsFromAccessToken accepts only canonical, consistent claims", (
       extractClaimsFromAccessToken(tokenWithAppMetadata(appMetadata)),
       null,
     );
+  }
+});
+
+test("extractUserIdFromAccessToken returns the JWT sub without session.user", () => {
+  const encode = (value: unknown) =>
+    Buffer.from(JSON.stringify(value)).toString("base64url");
+  const token = (payload: unknown) =>
+    `${encode({ alg: "none" })}.${encode(payload)}.x`;
+
+  assert.equal(
+    extractUserIdFromAccessToken(token({ sub: "11111111-2222-3333-4444-555555555555" })),
+    "11111111-2222-3333-4444-555555555555",
+  );
+  // sub survives alongside app_metadata (shared payload decode path).
+  assert.equal(
+    extractUserIdFromAccessToken(
+      token({
+        sub: "abc-123",
+        app_metadata: {
+          tenant_id: 1,
+          branch_id: 3,
+          user_role: "cashier",
+          position_code: "cashier",
+        },
+      }),
+    ),
+    "abc-123",
+  );
+
+  for (const bad of [
+    null,
+    undefined,
+    "",
+    "not-a-jwt",
+    token({}),
+    token({ sub: "" }),
+    token({ sub: 42 }),
+  ]) {
+    assert.equal(extractUserIdFromAccessToken(bad), null);
   }
 });
 

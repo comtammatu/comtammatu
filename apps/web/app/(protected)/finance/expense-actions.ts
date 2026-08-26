@@ -198,7 +198,7 @@ export async function createExpense(
   );
   if (!ctx) return { success: false, error: "Không có quyền ghi chi phí." };
 
-  const { supabase, claims, user } = ctx;
+  const { supabase, claims, userId } = ctx;
   const branchId = parsed.data.branchId ?? null;
   const vatBreakdown = toExpenseVatBreakdownPayload(parsed.data.vatBreakdown);
   const amount = expenseGrossFromBreakdown(parsed.data.vatBreakdown);
@@ -249,7 +249,7 @@ export async function createExpense(
       vendor_name: parsed.data.vendorName ?? null,
       note: parsed.data.note ?? null,
       invoice_attachment_url: invoiceAttachmentUrl,
-      created_by: user.id,
+      created_by: userId,
     })
     .select("id")
     .single();

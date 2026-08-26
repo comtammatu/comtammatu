@@ -154,7 +154,7 @@ export async function fetchStockIssues(opts?: {
 
 export const createStockIssueDraft = withAction(
   { roles: ROLES, schema: issueCreateSchema, requireBranchScope: true },
-  async (d, { supabase, claims, user }) => {
+  async (d, { supabase, claims, userId }) => {
     // branch_manager can only create for their own branch
     if (claims.branch_id && claims.branch_id !== d.branchId) {
       return {
@@ -191,7 +191,7 @@ export const createStockIssueDraft = withAction(
         issue_number: issueNumber,
         issue_type: d.issueType,
         notes: d.notes ?? null,
-        created_by: user.id,
+        created_by: userId,
         source_location_id: sourceLocationId,
         target_location_id: null,
       })

@@ -175,7 +175,7 @@ export async function createStaff(
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { claims, supabase, user } = ctx;
+  const { claims, supabase, userId } = ctx;
 
   const siteError = await validatePositionSite(
     supabase,
@@ -198,7 +198,7 @@ export async function createStaff(
       p_branch_id: effectiveBranchId ?? null,
       p_position_code: position_code,
       p_full_name: full_name,
-      p_provisioned_by: user.id,
+      p_provisioned_by: userId,
     } as never,
   );
 

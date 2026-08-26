@@ -39,7 +39,7 @@ function fakeCtx(overrides?: {
         signOut: async () => ({ error: null }),
       },
     } as ActionContext["supabase"],
-    user: {} as ActionContext["user"],
+    userId: "user-1",
     claims: {
       user_role: overrides?.role ?? "owner",
       branch_id: overrides?.branch_id ?? null,

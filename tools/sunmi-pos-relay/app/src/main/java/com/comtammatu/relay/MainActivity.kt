@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
@@ -15,6 +16,7 @@ class MainActivity : Activity() {
     private lateinit var etBranchId: EditText
     private lateinit var etSecret: EditText
     private lateinit var etPort: EditText
+    private lateinit var cbLanMode: CheckBox
     private lateinit var btnToggle: Button
     private lateinit var tvStatus: TextView
 
@@ -63,6 +65,12 @@ class MainActivity : Activity() {
         }
         layout.addView(etPort)
 
+        cbLanMode = CheckBox(this).apply {
+            text = "Nhận lệnh in từ mạng LAN (mặc định: chỉ nhận từ ứng dụng trên cùng máy)"
+            isChecked = getSharedPreferences("bridge_prefs", Context.MODE_PRIVATE).getBoolean("lan_mode", false)
+        }
+        layout.addView(cbLanMode)
+
         btnToggle = Button(this).apply {
             text = "BẮT ĐẦU DỊCH VỤ MÁY IN"
             setOnClickListener { toggleService() }
@@ -84,12 +92,14 @@ class MainActivity : Activity() {
         val branchId = etBranchId.text.toString().toIntOrNull() ?: 1
         val secret = etSecret.text.toString().trim()
         val port = etPort.text.toString().toIntOrNull() ?: 9100
+        val lanMode = cbLanMode.isChecked
 
         prefs.edit()
             .putString("backend_url", url)
             .putInt("branch_id", branchId)
             .putString("secret", secret)
             .putInt("port", port)
+            .putBoolean("lan_mode", lanMode)
             .apply()
 
         val intent = Intent(this, VirtualWifiPrinterService::class.java).apply {
@@ -97,6 +107,7 @@ class MainActivity : Activity() {
             putExtra(VirtualWifiPrinterService.EXTRA_BRANCH_ID, branchId)
             putExtra(VirtualWifiPrinterService.EXTRA_SECRET, secret)
             putExtra(VirtualWifiPrinterService.EXTRA_PORT, port)
+            putExtra(VirtualWifiPrinterService.EXTRA_LAN_MODE, lanMode)
         }
 
         if (!isServiceRunning) {
@@ -108,7 +119,8 @@ class MainActivity : Activity() {
             }
             isServiceRunning = true
             btnToggle.text = "DỪNG DỊCH VỤ"
-            tvStatus.text = "🟢 Đang trực in cổng TCP $port (Shopee Partner: 127.0.0.1:$port)"
+            val listenHost = if (lanMode) "IP LAN của máy" else "127.0.0.1"
+            tvStatus.text = "🟢 Đang trực in cổng TCP $port (Shopee Partner: $listenHost:$port)"
             Toast.makeText(this, "Đã khởi chạy dịch vụ máy in WiFi ảo!", Toast.LENGTH_SHORT).show()
         } else {
             intent.action = VirtualWifiPrinterService.ACTION_STOP

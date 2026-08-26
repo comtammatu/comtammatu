@@ -411,7 +411,7 @@ export async function linkSepayTransactionToPayment(
     return { success: false, error: "Không có quyền đối soát thanh toán." };
   }
 
-  const { supabase, claims, user } = ctx;
+  const { supabase, claims, userId } = ctx;
   const order = await resolveOrderForBankMatch(
     supabase,
     claims.tenant_id,
@@ -459,7 +459,7 @@ export async function linkSepayTransactionToPayment(
     const { data, error } = await createServiceClient().rpc(
       "replay_signed_sepay_payment_evidence",
       {
-        p_actor_id: user.id,
+        p_actor_id: userId,
         p_event_id: parsed.data.eventId,
         p_payment_code: order.data.paymentCode,
         p_payment_id: paymentId,

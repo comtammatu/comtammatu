@@ -56,18 +56,12 @@ function extractClaims(appMetadata: Record<string, unknown>): JwtClaims | null {
 }
 
 /**
- * Decode the `app_metadata` section of a Supabase access-token JWT.
- *
- * `session.user.app_metadata` (supabase-js) reads from the `auth.users` row and
- * DOES NOT include claims injected by the `custom_access_token_hook`. Those
- * hook-added claims (`user_role`, `position_code`) only live inside the JWT.
- * Call this helper on `session.access_token` whenever you need the canonical
- * server-side view of the user's claims.
+ * Decode a JWT payload section (Base64url) to a JSON object.
  *
  * Environment: Node.js or edge runtimes (uses Buffer/atob). Safe in both
  * because we try `Buffer` first, then fall back to `atob`.
  */
-function decodeJwtAppMetadata(
+function decodeJwtPayload(
   accessToken: string | null | undefined,
 ): Record<string, unknown> | null {
   if (!accessToken) return null;
@@ -92,14 +86,31 @@ function decodeJwtAppMetadata(
       return null;
     }
 
-    const payload = JSON.parse(decoded) as { app_metadata?: unknown };
-    if (payload.app_metadata && typeof payload.app_metadata === "object") {
-      return payload.app_metadata as Record<string, unknown>;
-    }
+    const payload = JSON.parse(decoded) as Record<string, unknown>;
+    if (payload && typeof payload === "object") return payload;
     return null;
   } catch {
     return null;
   }
+}
+
+/**
+ * Decode the `app_metadata` section of a Supabase access-token JWT.
+ *
+ * `session.user.app_metadata` (supabase-js) reads from the `auth.users` row and
+ * DOES NOT include claims injected by the `custom_access_token_hook`. Those
+ * hook-added claims (`user_role`, `position_code`) only live inside the JWT.
+ * Call this helper on `session.access_token` whenever you need the canonical
+ * server-side view of the user's claims.
+ */
+function decodeJwtAppMetadata(
+  accessToken: string | null | undefined,
+): Record<string, unknown> | null {
+  const payload = decodeJwtPayload(accessToken);
+  if (payload?.app_metadata && typeof payload.app_metadata === "object") {
+    return payload.app_metadata as Record<string, unknown>;
+  }
+  return null;
 }
 
 /**
@@ -113,6 +124,22 @@ export function extractClaimsFromAccessToken(
   const appMetadata = decodeJwtAppMetadata(accessToken);
   if (!appMetadata) return null;
   return extractClaims(appMetadata);
+}
+
+/**
+ * Extract the user id (JWT `sub`) from a Supabase access token.
+ *
+ * Server-safe replacement for `session.user.id`: `@supabase/auth-js` wraps
+ * the `getSession()` user in an insecure-user warning proxy because the
+ * cookie payload is not authenticated. `sub` from the same token is the id
+ * PostgREST/RLS trusts as `auth.uid()`, so it is equally canonical without
+ * touching the proxied object.
+ */
+export function extractUserIdFromAccessToken(
+  accessToken: string | null | undefined,
+): string | null {
+  const sub = decodeJwtPayload(accessToken)?.sub;
+  return typeof sub === "string" && sub.length > 0 ? sub : null;
 }
 
 /**

@@ -29,6 +29,7 @@ export {
   canSubscribeBranchOpsTopic,
   canonicalizeSelfServicePath,
   extractClaimsFromAccessToken,
+  extractUserIdFromAccessToken,
   getDefaultRedirect,
   getSafeInternalReturnTo,
   resolvePostLoginRedirect,

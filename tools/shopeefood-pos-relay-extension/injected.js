@@ -74,6 +74,14 @@
     }
   }
 
+  // Any platform response (2xx or not) proves the page connection is alive.
+  // Counting only 2xx made quiet/error periods look "stuck" and triggered a
+  // perpetual 5-minute reload loop on the Shopee portal, which does no polling
+  // of its own.
+  function notePlatformActivity() {
+    lastSuccessfulPollAt = Date.now();
+  }
+
   function noteAuthSuccess() {
     lastSuccessfulPollAt = Date.now();
     consecutiveAuthFailures = 0;
@@ -267,6 +275,7 @@
     const response = await originalFetch.apply(this, args);
 
     if (isPlatformApiUrl(url)) {
+      notePlatformActivity();
       if (response.ok) noteAuthSuccess();
       else noteAuthFailure(response.status, url);
     }
@@ -308,6 +317,7 @@
     this.addEventListener('load', function () {
       const url = this._url || '';
       if (isPlatformApiUrl(url)) {
+        notePlatformActivity();
         if (this.status >= 200 && this.status < 300) noteAuthSuccess();
         else noteAuthFailure(this.status, url);
       }

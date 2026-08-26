@@ -138,6 +138,11 @@ test("loadAuthState probes Auth liveness; getAuthContext stays getSession-only",
   assert.match(getAuthBody, /await supabase\.auth\.getSession\(\)/);
   assert.doesNotMatch(getAuthBody, /supabase\.auth\.getUser\(/);
   assert.doesNotMatch(getAuthBody, /probeAuthSessionLiveness/);
+  // User id comes from the JWT `sub`, never the insecure-user warning
+  // proxy around `session.user` (auth-js logs on every property read).
+  assert.match(getAuthBody, /extractUserIdFromAccessToken\(/);
+  assert.doesNotMatch(getAuthBody, /session\.user\b/);
+  assert.match(getAuthBody, /return \{ supabase, claims, userId \}/);
 
   const loadAuthBody = codeOnly.slice(loadAuthStart);
   assert.match(loadAuthBody, /await supabase\.auth\.getSession\(\)/);
@@ -145,7 +150,12 @@ test("loadAuthState probes Auth liveness; getAuthContext stays getSession-only",
     loadAuthBody,
     /const user = await probeAuthSessionLiveness\(supabase\)/,
   );
-  assert.match(loadAuthBody, /return \{ supabase, session, claims, user \}/);
+  assert.match(
+    loadAuthBody,
+    /return \{ supabase, session, claims, user, userId \}/,
+  );
+  assert.match(loadAuthBody, /extractUserIdFromAccessToken\(/);
+  assert.doesNotMatch(loadAuthBody, /session\.user\b/);
   assert.doesNotMatch(loadAuthBody, /supabase\.auth\.getUser\(/);
 });
 

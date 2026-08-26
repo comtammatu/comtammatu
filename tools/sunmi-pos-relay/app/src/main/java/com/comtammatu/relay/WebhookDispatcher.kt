@@ -14,7 +14,8 @@ import kotlin.coroutines.coroutineContext
 
 /**
  * Dispatches captured ESC/POS print streams to Com Tam Ma Tu Cloud POS Webhook.
- * Includes local SQLite offline queueing, exponential backoff, and periodic queue draining.
+ * Includes local SQLite offline queueing with capped exponential backoff retries
+ * (orders stay PENDING until delivered) and periodic queue draining.
  */
 class WebhookDispatcher(
     context: Context,
@@ -25,6 +26,9 @@ class WebhookDispatcher(
     companion object {
         private const val TAG = "WebhookDispatcher"
         private const val TIMEOUT_MS = 10000
+        // Claims older than this are considered abandoned (process died mid-POST)
+        // and are released back to PENDING by the retry loop.
+        private const val CLAIM_TIMEOUT_MS = 120_000L
     }
 
     private val dbHelper = OrderQueueDbHelper(context)
@@ -43,6 +47,10 @@ class WebhookDispatcher(
     suspend fun dispatchRawReceipt(rawBytes: ByteArray, platform: String = "shopee"): Result<String> =
         withContext(Dispatchers.IO) {
             val queuedId = dbHelper.enqueueOrder(rawBytes, branchId, platform)
+            if (!dbHelper.claimOrder(queuedId)) {
+                // Already claimed by the retry loop; let it own the delivery.
+                return@withContext Result.success("claimed_by_retry_loop")
+            }
             val base64Payload = android.util.Base64.encodeToString(rawBytes, android.util.Base64.NO_WRAP)
             val result = executePost(base64Payload, branchId, platform)
 
@@ -58,14 +66,19 @@ class WebhookDispatcher(
         }
 
     /**
-     * Background loop draining pending orders from SQLite with exponential backoff.
+     * Background loop draining due pending orders from SQLite.
+     * Per-order backoff is enforced by next_retry_at in the queue table.
      */
     suspend fun startRetryLoop() = withContext(Dispatchers.IO) {
         while (coroutineContext.isActive) {
             try {
+                dbHelper.releaseStaleClaims(CLAIM_TIMEOUT_MS)
                 val pendingOrders = dbHelper.getPendingOrders(limit = 10)
                 for (order in pendingOrders) {
                     if (!coroutineContext.isActive) break
+                    // Claim atomically so the initial dispatch path and this loop
+                    // can never POST the same order concurrently.
+                    if (!dbHelper.claimOrder(order.id)) continue
                     val result = executePost(order.rawBase64, order.branchId, order.platform)
                     if (result.isSuccess) {
                         dbHelper.markOrderSent(order.id)

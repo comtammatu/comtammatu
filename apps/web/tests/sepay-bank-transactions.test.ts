@@ -699,7 +699,7 @@ test("Owner replay of signed SePay evidence is exact, atomic, and audited", () =
   assert.match(action, /\.in\("status", \["pending", "completed"\]\)/);
   assert.match(action, /createServiceClient\(\)/);
   assert.match(action, /replay_signed_sepay_payment_evidence/);
-  assert.match(action, /p_actor_id: user\.id/);
+  assert.match(action, /p_actor_id: userId/);
 });
 
 test("SePay money-in manual link stays guarded by RPC", () => {

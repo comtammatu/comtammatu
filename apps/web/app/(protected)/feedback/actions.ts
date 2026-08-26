@@ -204,7 +204,7 @@ export const createFeedbackQr = withAction(
         token,
         label: data.label,
         is_active: true,
-        created_by: ctx.user.id,
+        created_by: ctx.userId,
       })
       .select("id, token, branch_id")
       .maybeSingle();

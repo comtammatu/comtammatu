@@ -32,8 +32,8 @@ Food delivery platforms in Vietnam (ShopeeFood / Now, GrabFood, beFood, Green SM
 
 1. **Virtual ESC/POS Network Printer Architecture**:
    - Deploy a lightweight Android background service (`VirtualWifiPrinterService`) on the SUNMI POS V3.
-   - The service opens a TCP `ServerSocket` on raw printer port **9100** (standard JetDirect / ESC/POS protocol).
-   - In the Shopee Partner app (Settings $\rightarrow$ WiFi / LAN Printer), point the printer destination to `127.0.0.1:9100` (or the terminal's LAN IP).
+   - The service opens a TCP `ServerSocket` on raw printer port **9100** (standard JetDirect / ESC/POS protocol). The socket binds to loopback by default because the intake port has no peer authentication; branch-LAN exposure (terminal LAN IP) requires the explicit LAN-mode opt-in in the bridge app. Per-receipt payloads are capped at 256 KB.
+   - In the Shopee Partner app (Settings $\rightarrow$ WiFi / LAN Printer), point the printer destination to `127.0.0.1:9100` (or the terminal's LAN IP when LAN mode is enabled).
 2. **Dual-Relay Processing**:
    - When Shopee Partner triggers an automatic receipt print upon order arrival / acceptance:
      1. The TCP listener captures the full binary ESC/POS stream.

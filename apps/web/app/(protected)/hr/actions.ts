@@ -238,7 +238,7 @@ export async function fetchEmployees(
   const baseCtx = await getAuthContext(HR_EMPLOYEE_VIEW_ROLES);
   if (!baseCtx) return { success: false, error: "Không có quyền" };
 
-  const { claims, user } = baseCtx;
+  const { claims, userId } = baseCtx;
   const isBranchManager = claims.user_role === "branch_manager";
   const canViewEmployeesWithPermission =
     isBranchManager ||
@@ -257,7 +257,7 @@ export async function fetchEmployees(
     const { data: profileBranch } = await baseCtx.supabase
       .from("profiles")
       .select("branch_id")
-      .eq("id", user.id)
+      .eq("id", userId)
       .eq("tenant_id", claims.tenant_id)
       .maybeSingle();
     branchManagerBranchId = profileBranch?.branch_id ?? null;
@@ -330,7 +330,7 @@ export const createEmployeeAccount = withAction(
     schema: createEmployeeAccountSchema,
     permission: PERMISSION_KEYS.HR_MANAGE_EMPLOYEE,
   },
-  async (data, { claims, supabase, user }) => {
+  async (data, { claims, supabase, userId }) => {
     const role = staffRoleFromPositionCode(data.positionCode);
     if (isOwnerPositionCode(data.positionCode)) {
       return {
@@ -434,7 +434,7 @@ export const createEmployeeAccount = withAction(
         p_branch_id: effectiveBranchId ?? null,
         p_position_code: data.positionCode,
         p_full_name: data.fullName,
-        p_provisioned_by: user.id,
+        p_provisioned_by: userId,
       } as never,
     );
 
@@ -485,20 +485,20 @@ export const createEmployeeAccount = withAction(
       };
     }
 
-    const userId = created.user.id;
+    const createdUserId = created.user.id;
 
     if (data.phone) {
       const { error: phoneError } = await service
         .from("profiles")
         .update({ phone: data.phone })
-        .eq("id", userId)
+        .eq("id", createdUserId)
         .eq("tenant_id", claims.tenant_id);
       if (phoneError) {
         console.error(
           "[hr/actions:createEmployeeAccount] Save phone error (cleanup user):",
           phoneError,
         );
-        await service.auth.admin.deleteUser(userId);
+        await service.auth.admin.deleteUser(createdUserId);
         return { success: false, error: "Không thể lưu số điện thoại." };
       }
     }
@@ -507,7 +507,7 @@ export const createEmployeeAccount = withAction(
       .from("employees")
       .insert({
         tenant_id: claims.tenant_id,
-        profile_id: userId,
+        profile_id: createdUserId,
         employee_code: data.employeeCode ?? null,
         start_date: data.startDate ?? null,
         contract_type: data.contractType ?? null,
@@ -1316,7 +1316,7 @@ export const forceCloseStaleAttendance = withAction(
     permission: PERMISSION_KEYS.HR_FORCE_CLOSE_ATTENDANCE,
     permissionBranchId: (data) => data.branchId,
   },
-  async (data, { supabase, claims, user }) => {
+  async (data, { supabase, claims, userId }) => {
     if (
       claims.user_role === "branch_manager" &&
       claims.branch_id !== data.branchId
@@ -1333,7 +1333,7 @@ export const forceCloseStaleAttendance = withAction(
         p_tenant_id: claims.tenant_id,
         p_branch_id: data.branchId as number,
         p_attendance_id: data.attendanceId,
-        p_approved_by: user.id,
+        p_approved_by: userId,
         p_note: data.note,
       },
     );

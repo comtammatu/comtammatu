@@ -345,15 +345,16 @@ export const openPosSession = withActionPositional(
   },
   async (
     { branchId, openingCash, terminalId },
-    { supabase, claims, user },
+    { supabase, claims, userId },
   ): Promise<ActionResult<{ session_id: number }>> => {
     if (!isPosBranchInScope(claims, branchId)) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
     }
 
-    // ctx.user is the JWT-validated user from getAuthContext — no need for a
-    // second getUser() HTTP roundtrip. Saves ~150ms on shift-open perceived
-    // latency (peer to the auth Promise.all in _lib/auth.ts).
+    // ctx.userId is the JWT `sub` validated alongside claims in getAuthContext
+    // — no need for a second getUser() HTTP roundtrip. Saves ~150ms on
+    // shift-open perceived latency (peer to the auth Promise.all in
+    // _lib/auth.ts).
 
     const { data, error } = await supabase
       .from("pos_sessions")
@@ -361,7 +362,7 @@ export const openPosSession = withActionPositional(
         tenant_id: claims.tenant_id,
         branch_id: branchId,
         terminal_id: terminalId ?? null,
-        opened_by: user.id,
+        opened_by: userId,
         opening_cash: openingCash,
       })
       .select("id")

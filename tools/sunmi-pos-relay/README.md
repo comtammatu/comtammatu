@@ -45,9 +45,10 @@ File APK đầu ra sẽ nằm tại: `tools/sunmi-pos-relay/app/build/outputs/ap
    - `Branch ID`: ID chi nhánh (mặc định `1`).
    - `Relay Secret`: Khóa bí mật `SHOPEE_RELAY_SECRET` cấu hình trong `.env`.
    - `Listen Port`: Cổng máy in mạng (mặc định `9100`).
+   - `Chế độ LAN`: Mặc định **tắt** — cổng 9100 chỉ nhận lệnh in từ `127.0.0.1` (ứng dụng trên cùng máy). Chỉ bật khi Shopee Partner chạy trên thiết bị khác trong mạng LAN; khi đó cấu hình Shopee Partner trỏ về IP WiFi của máy SUNMI.
 2. **Trên ứng dụng Shopee Partner**:
    - Vào **Cài đặt** $\rightarrow$ **Cài đặt máy in** $\rightarrow$ **Thêm máy in WiFi / Mạng LAN**.
-   - IP: `127.0.0.1` (hoặc IP WiFi của máy), Cổng: `9100`, Khổ giấy: `58mm` / `80mm`.
+   - IP: `127.0.0.1` (hoặc IP WiFi của máy khi bật Chế độ LAN), Cổng: `9100`, Khổ giấy: `58mm` / `80mm`.
    - Bật **Tự động in khi có đơn mới**.
 
 ---
@@ -56,5 +57,7 @@ File APK đầu ra sẽ nằm tại: `tools/sunmi-pos-relay/app/build/outputs/ap
 
 - Sử dụng **Foreground Service** với Notification ghim cố định `🟢 Cơm Tấm Má Tư Printer Bridge đang trực đơn`.
 - Yêu cầu quyền `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` để không bị Android Doze Mode đóng băng tiến trình mạng khi tắt màn hình.
-- Đăng ký `BootCompletedReceiver` để tự khởi chạy dịch vụ khi bật máy SUNMI V3.
-- Hàng đợi **Offline Queue (SQLite - `OrderQueueDbHelper`)** tự động lưu trữ mọi đơn hàng khi nhận được luồng in và chạy vòng lặp retry ngầm với exponential backoff khi mất kết nối mạng.
+- Đăng ký `BootCompletedReceiver` để tự khởi chạy dịch vụ khi bật máy SUNMI V3 (cấu hình backend được đọc lại từ SharedPreferences khi dịch vụ tự khởi động).
+- Hàng đợi **Offline Queue (SQLite - `OrderQueueDbHelper`)** tự động lưu trữ mọi đơn hàng khi nhận được luồng in và chạy vòng lặp retry ngầm với exponential backoff có trần 15 phút; đơn giữ trạng thái `PENDING` cho tới khi gửi thành công, không bao giờ bị đánh dấu bỏ cuộc.
+- Mỗi đơn được claim nguyên tử (`PENDING → SENDING`) trước khi POST để luồng dispatch ban đầu và vòng lặp retry không gửi trùng song song; claim quá hạn được hoàn về `PENDING`.
+- Luồng in vượt 256 KB bị ngắt kết nối để chống lạm dụng bộ nhớ.

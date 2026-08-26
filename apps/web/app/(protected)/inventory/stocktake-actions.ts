@@ -262,7 +262,7 @@ export async function saveStocktakeDraft(
     PERMISSION_KEYS.INVENTORY_STOCKTAKE_CREATE,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase, user } = ctx;
+  const { supabase, userId } = ctx;
 
   const now = new Date().toISOString();
   const { error } = await supabase.from("stocktake_drafts").upsert(
@@ -275,7 +275,7 @@ export async function saveStocktakeDraft(
         JSON.stringify(parsed.data.draftCounts),
       ) as Record<string, never>,
       last_saved_at: now,
-      saved_by: user.id,
+      saved_by: userId,
     },
     { onConflict: "session_id" },
   );

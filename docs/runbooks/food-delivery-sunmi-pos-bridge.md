@@ -29,6 +29,7 @@ Trên máy SUNMI POS V3 tại quầy thu ngân:
    - **Địa chỉ máy chủ POS**: URL hệ thống (ví dụ: `https://pos.comtammatu.vn` hoặc `http://192.168.1.100:3000` trên mạng LAN).
    - **Mã chi nhánh (Branch ID)**: ID chi nhánh (ví dụ: `1` cho Nguyễn Hữu Thọ).
    - **Mã bảo mật (Relay Secret)**: Khóa bí mật `SHOPEE_RELAY_SECRET` được cấp cho chi nhánh.
+   - **Chế độ LAN**: Mặc định **tắt** (cổng 9100 chỉ nhận lệnh in từ `127.0.0.1` trên cùng máy — an toàn nhất vì Shopee Partner chạy ngay trên máy V3). Chỉ bật khi máy in đơn nằm trên thiết bị khác trong mạng LAN chi nhánh.
 5. Bấm **Bắt đầu Dịch vụ (Start Service)** $\rightarrow$ Màn hình hiển thị: `🟢 Virtual WiFi Printer running on port 9100`.
 
 ### Bước 2: Cấu hình Máy in trên App Shopee Partner
@@ -36,7 +37,7 @@ Trên máy SUNMI POS V3 tại quầy thu ngân:
 2. Vào mục **Cài đặt (Settings)** $\rightarrow$ **Cài đặt máy in (Printer Settings)**.
 3. Chọn **Thêm máy in mới** $\rightarrow$ Chọn loại kết nối: **Máy in Mạng LAN / WiFi (WiFi/LAN Thermal Printer)**.
 4. Nhập thông tin kết nối:
-   - **Địa chỉ IP**: `127.0.0.1` (hoặc IP WiFi cục bộ của máy SUNMI V3).
+   - **Địa chỉ IP**: `127.0.0.1` (chuẩn mặc định). Chỉ dùng IP WiFi cục bộ của máy SUNMI V3 khi đã bật **Chế độ LAN** trong app Bridge.
    - **Cổng (Port)**: `9100`.
    - **Khổ giấy**: `58mm` (hoặc `80mm` tùy dòng máy).
 5. Bấm **In thử (Test Print)**:
@@ -63,7 +64,7 @@ Trên máy SUNMI POS V3 tại quầy thu ngân:
 
 | Sự cố | Nguyên nhân | Cách xử lý |
 | :--- | :--- | :--- |
-| **Shopee Partner báo không kết nối được máy in WiFi** | Dịch vụ Bridge Agent bị tắt hoặc cổng 9100 bị chặn. | 1. Mở app Bridge Agent kiểm tra trạng thái xanh `🟢 Running`.<br>2. Kiểm tra lại IP `127.0.0.1` và Port `9100` trong Shopee Partner.<br>3. Bấm In thử lại. |
+| **Shopee Partner báo không kết nối được máy in WiFi** | Dịch vụ Bridge Agent bị tắt, cổng 9100 bị chặn, hoặc sai chế độ mạng. | 1. Mở app Bridge Agent kiểm tra trạng thái xanh `🟢 Running`.<br>2. Kiểm tra lại IP `127.0.0.1` và Port `9100` trong Shopee Partner.<br>3. Nếu Shopee Partner nằm trên thiết bị khác, bật **Chế độ LAN** trong app Bridge rồi trỏ Shopee Partner về IP WiFi của máy V3.<br>4. Bấm In thử lại. |
 | **Máy V3 in giấy nhưng KDS Bếp không nhận đơn** | Mất kết nối Internet hoặc sai `Relay Secret`. | 1. Kiểm tra kết nối WiFi của máy SUNMI V3.<br>2. Mở app Bridge Agent kiểm tra hàng đợi offline (Offline Queue). Các đơn chưa gửi sẽ tự động gửi lại khi có mạng.<br>3. Kiểm tra mã `Relay Secret` khớp với hệ thống. |
 | **Đơn bị in lại (Reprint) có bị tạo trùng đơn trên POS không?** | Thu ngân bấm in lại bill trên Shopee Partner. | **Không**. Hệ thống đã có cơ chế Idempotency dựa trên mã đơn `SPF-xxx`. Khi nhận lại cùng mã đơn, POS sẽ phản hồi thành công mà không tạo thêm đơn mới. |
 | **Khách hoặc Tài xế hủy đơn sau khi bếp đã làm xong** | Đơn bị hủy ngoài ý muốn. | 1. Giữ nguyên phần ăn đã làm + bill giấy có mã `SPF-xxx`.<br>2. Chụp ảnh rõ nét: Món ăn + Bill giấy.<br>3. Vào Shopee Partner $\rightarrow$ Trung tâm trợ giúp $\rightarrow$ Bồi thường đơn hàng bị hủy trong 24–48h để Shopee hoàn tiền vào Ví Quán.<br>4. Trên POS Cơm Tấm Má Tư: Quản lý thực hiện hủy đơn theo quy trình SOP hủy đơn giao hàng. |

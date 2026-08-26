@@ -96,7 +96,7 @@ export const trustCurrentIp = withAction(
     permission: PERMISSION_KEYS.SETTINGS_BRANCH_NETWORK,
     permissionBranchId: (data) => data.branchId,
   },
-  async (data, { supabase, claims, user }) => {
+  async (data, { supabase, claims, userId }) => {
     if (
       !(await branchBelongsToTenant(supabase, claims.tenant_id, data.branchId))
     ) {
@@ -119,7 +119,7 @@ export const trustCurrentIp = withAction(
         ip_address: ip,
         registered_via: "manual",
         registered_by_agent_id: null,
-        registered_by_user: user.id,
+        registered_by_user: userId,
         last_seen_at: new Date().toISOString(),
         revoked_at: null,
         revoked_by_user: null,
@@ -151,7 +151,7 @@ export const revokeTrustedIp = withAction(
     permission: PERMISSION_KEYS.SETTINGS_BRANCH_NETWORK,
     permissionBranchId: (data) => data.branchId,
   },
-  async (data, { supabase, claims, user }) => {
+  async (data, { supabase, claims, userId }) => {
     if (
       !(await branchBelongsToTenant(supabase, claims.tenant_id, data.branchId))
     ) {
@@ -162,7 +162,7 @@ export const revokeTrustedIp = withAction(
       .from("branch_trusted_egress_ips")
       .update({
         revoked_at: new Date().toISOString(),
-        revoked_by_user: user.id,
+        revoked_by_user: userId,
       })
       .eq("id", data.trustedIpId)
       .eq("branch_id", data.branchId)
@@ -285,7 +285,7 @@ export const activateNetworkGateBypass = withAction(
     permission: PERMISSION_KEYS.SETTINGS_BRANCH_NETWORK,
     permissionBranchId: (data) => data.branchId,
   },
-  async (data, { supabase, claims, user }) => {
+  async (data, { supabase, claims, userId }) => {
     if (
       !(await branchBelongsToTenant(supabase, claims.tenant_id, data.branchId))
     ) {
@@ -367,7 +367,7 @@ export const activateNetworkGateBypass = withAction(
       .from("branch_network_gate_bypasses")
       .update({
         revoked_at: now.toISOString(),
-        revoked_by: user.id,
+        revoked_by: userId,
       })
       .eq("branch_id", data.branchId)
       .eq("tenant_id", claims.tenant_id)
@@ -389,7 +389,7 @@ export const activateNetworkGateBypass = withAction(
         duration_kind: data.durationKind,
         expires_at: expiresAt.toISOString(),
         bound_pos_session_id: boundPosSessionId,
-        activated_by: user.id,
+        activated_by: userId,
         activated_at: now.toISOString(),
         note: data.note?.length ? data.note : null,
       })
@@ -418,7 +418,7 @@ export const revokeNetworkGateBypass = withAction(
     permission: PERMISSION_KEYS.SETTINGS_BRANCH_NETWORK,
     permissionBranchId: (data) => data.branchId,
   },
-  async (data, { supabase, claims, user }) => {
+  async (data, { supabase, claims, userId }) => {
     if (
       !(await branchBelongsToTenant(supabase, claims.tenant_id, data.branchId))
     ) {
@@ -429,7 +429,7 @@ export const revokeNetworkGateBypass = withAction(
       .from("branch_network_gate_bypasses")
       .update({
         revoked_at: new Date().toISOString(),
-        revoked_by: user.id,
+        revoked_by: userId,
       })
       .eq("branch_id", data.branchId)
       .eq("tenant_id", claims.tenant_id)
