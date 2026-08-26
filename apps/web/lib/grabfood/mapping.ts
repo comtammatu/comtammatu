@@ -125,7 +125,7 @@ export interface TransformedOrderForRpc {
   idempotencyKey: string;
   displayId: string;
   merchantId?: string;
-  customerNote: string;
+  customerNote: string | null;
   paymentMethod: "platform";
   subtotal: number;
   totalAmount: number;
@@ -301,11 +301,21 @@ export function transformGrabOrderPayload(
     const subtotal = unitPrice * (gi.quantity || 1);
 
     const rawPriceStr = gi.fare?.priceDisplay?.replace(/[^\d]/g, "") || "";
-    const priceFloat = gi.fare?.priceFloat;
+    const rawPriceNum = rawPriceStr !== "" ? parseInt(rawPriceStr, 10) : -1;
+    const priceFloat =
+      typeof gi.fare?.priceFloat === "number"
+        ? gi.fare.priceFloat
+        : rawPriceNum >= 0
+        ? rawPriceNum
+        : undefined;
+
     const isFreeGift =
       rawPriceStr === "0" ||
+      rawPriceNum === 0 ||
       priceFloat === 0 ||
-      /tặng|quà\s*tặng|free\b|0đ|0\s*đ/i.test(gi.name);
+      gi.fare?.priceInMin === 0 ||
+      /tặng|quà\s*tặng|\bfree\b|0\s*đ/i.test(gi.name) ||
+      /tặng|quà\s*tặng|\bfree\b|0\s*đ/i.test(gi.comment || "");
 
     let discountType: "pct" | "vnd" | undefined;
     let discountValue: number | undefined;
@@ -315,6 +325,13 @@ export function transformGrabOrderPayload(
       discountType = "pct";
       discountValue = 100;
       discountNote = "Khuyến mãi tặng kèm Grab (0đ)";
+    } else if (priceFloat !== undefined && priceFloat > 0 && priceFloat < unitPrice) {
+      const itemDiscount = unitPrice - priceFloat;
+      if (itemDiscount > 0) {
+        discountType = "vnd";
+        discountValue = itemDiscount;
+        discountNote = "Khuyến mãi giảm giá món Grab";
+      }
     }
 
     const noteParts = [
@@ -337,15 +354,6 @@ export function transformGrabOrderPayload(
     };
   });
 
-  const eaterName = grabOrder.eater?.name || "Khách Grab";
-  const eaterPhone = grabOrder.eater?.mobileNumber || "";
-  const phoneText = eaterPhone ? ` (${eaterPhone})` : "";
-  const cutleryNote = grabOrder.cutlery === 2 ? " • Lấy muỗng đũa" : grabOrder.cutlery === 1 ? " • Không lấy dụng cụ" : "";
-  const eaterComment = grabOrder.eater?.comment?.trim();
-  const orderCommentNote =
-    eaterComment && !isShipperInstruction(eaterComment) ? ` • Note: ${eaterComment}` : "";
-  const customerNote = `[GrabFood ${grabOrder.displayID}] ${eaterName}${phoneText}${cutleryNote}${orderCommentNote}`;
-
   const rawSubtotal = grabOrder.fare?.subTotalDisplay?.replace(/[^\d]/g, "") || "0";
   const rawTotal = grabOrder.fare?.totalDisplay?.replace(/[^\d]/g, "") || rawSubtotal;
 
@@ -354,7 +362,7 @@ export function transformGrabOrderPayload(
     idempotencyKey: generateOrderUuid(grabOrder.orderID),
     displayId: grabOrder.displayID,
     merchantId: grabOrder.merchant?.ID,
-    customerNote,
+    customerNote: null,
     paymentMethod: "platform",
     subtotal: parseInt(rawSubtotal, 10) || items.reduce((acc, i) => acc + i.subtotal, 0),
     totalAmount: parseInt(rawTotal, 10) || items.reduce((acc, i) => acc + i.subtotal, 0),

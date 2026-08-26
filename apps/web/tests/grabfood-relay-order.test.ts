@@ -128,11 +128,8 @@ test("GrabFood transformation: transforms real GF-725 order accurately with plat
   assert.equal(transformed.subtotal, 63000);
   assert.equal(transformed.totalAmount, 63000);
 
-  // Customer note
-  assert.ok(transformed.customerNote.includes("[GrabFood GF-725]"));
-  assert.ok(transformed.customerNote.includes("The Binh Luong"));
-  assert.ok(transformed.customerNote.includes("+84 3994 2835 7"));
-  assert.ok(transformed.customerNote.includes("Lấy muỗng đũa"));
+  // Customer note: Grab has no order-level notes (only item notes); orders.note stays null to avoid yellow KDS banner
+  assert.equal(transformed.customerNote, null);
 
   // Items
   assert.equal(transformed.items.length, 1);
@@ -155,8 +152,8 @@ test("GrabFood transformation: transforms real GF-725 order accurately with plat
   ]);
 });
 
-test("GrabFood transformation: filters shipper instructions from customerNote while preserving food preparation notes", () => {
-  const orderWithShipperComment: GrabOrderRaw = {
+test("GrabFood transformation: handles customerNote as null since Grab only has item-level notes", () => {
+  const orderWithComment: GrabOrderRaw = {
     ...MOCK_GRAB_ORDER_REAL,
     eater: {
       name: "Khách VIP",
@@ -165,24 +162,8 @@ test("GrabFood transformation: filters shipper instructions from customerNote wh
     },
   };
 
-  const transformedShipper = transformGrabOrderPayload(orderWithShipperComment, MOCK_DB_ITEMS);
-  assert.ok(transformedShipper.customerNote.includes("[GrabFood GF-725]"));
-  assert.ok(transformedShipper.customerNote.includes("Khách VIP"));
-  assert.ok(transformedShipper.customerNote.includes("0909999888"));
-  // Shipper instruction is cleanly omitted from KDS order note
-  assert.ok(!transformedShipper.customerNote.includes("Giao sảnh A"));
-
-  const orderWithKitchenComment: GrabOrderRaw = {
-    ...MOCK_GRAB_ORDER_REAL,
-    eater: {
-      name: "Khách VIP",
-      mobileNumber: "0909999888",
-      comment: "Quán làm nóng và cho thêm nước mắm",
-    },
-  };
-
-  const transformedKitchen = transformGrabOrderPayload(orderWithKitchenComment, MOCK_DB_ITEMS);
-  assert.ok(transformedKitchen.customerNote.includes("Note: Quán làm nóng và cho thêm nước mắm"));
+  const transformed = transformGrabOrderPayload(orderWithComment, MOCK_DB_ITEMS);
+  assert.equal(transformed.customerNote, null);
 });
 
 test("GrabFood transformation: accurately maps 'Cơm Thêm' modifier variants into sides", () => {
@@ -308,4 +289,32 @@ test("GrabFood transformation: assigns 100% item discount for 0đ free gift item
   assert.equal(freeItem?.discount_type, "pct");
   assert.equal(freeItem?.discount_value, 100);
   assert.equal(freeItem?.discount_note, "Khuyến mãi tặng kèm Grab (0đ)");
+});
+
+test("GrabFood transformation: assigns partial item discount when Grab price is lower than menu base price", () => {
+  const orderWithDiscountedItem: GrabOrderRaw = {
+    orderID: "001644320651-PARTIALDISC",
+    displayID: "GF-170",
+    itemInfo: {
+      items: [
+        {
+          name: "Sườn Cốt Lết",
+          itemID: "VNITE20260818044418231553",
+          quantity: 1,
+          fare: { priceDisplay: "44.000", priceFloat: 44000 },
+        },
+      ],
+    },
+    fare: { subTotalDisplay: "44.000", totalDisplay: "44.000" },
+  };
+
+  const transformed = transformGrabOrderPayload(orderWithDiscountedItem, MOCK_DB_ITEMS);
+  assert.equal(transformed.items.length, 1);
+  const item = transformed.items[0];
+
+  assert.equal(item?.item_name, "Sườn Cốt Lết");
+  assert.equal(item?.unit_price, 54000);
+  assert.equal(item?.discount_type, "vnd");
+  assert.equal(item?.discount_value, 10000); // 54000 - 44000 = 10000
+  assert.equal(item?.discount_note, "Khuyến mãi giảm giá món Grab");
 });

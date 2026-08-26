@@ -98,10 +98,7 @@ Hình thức: ShopeePay
   assert.equal(transformed.items[0]?.menu_item_id, 1);
   assert.equal(transformed.items[0]?.quantity, 2);
   assert.equal(transformed.items[0]?.sides.length, 2);
-  assert.ok(transformed.customerNote.includes("[ShopeeFood SPF-892]"));
-  assert.ok(transformed.customerNote.includes("Lấy muỗng đũa"));
-  // Delivery shipper instructions like "Giao trước 12h" are cleanly filtered from KDS customerNote
-  assert.ok(!transformed.customerNote.includes("Giao trước 12h"));
+  assert.equal(transformed.customerNote, null);
 });
 
 test("ESC/POS parser: parses receipt with 'Không lấy dụng cụ' and cash payment", () => {
@@ -132,7 +129,7 @@ Hình thức: Tiền mặt
   assert.equal(parsed.items?.[0]?.options?.[0]?.name, "Trứng");
 
   const transformed = transformShopeeOrderPayload(parsed, MOCK_DB_ITEMS);
-  assert.ok(transformed.customerNote.includes("Không lấy dụng cụ"));
+  assert.equal(transformed.customerNote, null);
 });
 
 test("ESC/POS parser: reprint deduplication guarantees identical idempotencyKey", () => {

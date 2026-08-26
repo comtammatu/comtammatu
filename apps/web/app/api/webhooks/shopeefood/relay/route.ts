@@ -214,7 +214,7 @@ export async function POST(request: NextRequest) {
       p_order_type: "delivery",
       p_table_id: undefined,
       p_pos_session_id: undefined,
-      p_note: transformed.customerNote,
+      p_note: transformed.customerNote ?? undefined,
       p_idempotency_key: transformed.idempotencyKey,
       p_delivery_platform: platform,
       p_external_order_ref: displayRef,
@@ -235,7 +235,31 @@ export async function POST(request: NextRequest) {
     const orderId = (rpcResult as { order_id?: number })?.order_id;
     const orderNumber = (rpcResult as { order_number?: string })?.order_number || `GH-${displayRef}`;
 
-    // 8. Leave payment_status 'unpaid' so the order surfaces in the POS
+    // 8. Apply order-level promotion/voucher if Shopee total is lower than database total
+    if (orderId && transformed.totalAmount > 0) {
+      const { data: createdOrder } = await supabase
+        .from("orders")
+        .select("total_amount")
+        .eq("id", orderId)
+        .single();
+
+      if (createdOrder && createdOrder.total_amount > transformed.totalAmount) {
+        const orderDiscount = createdOrder.total_amount - transformed.totalAmount;
+        if (orderDiscount > 0) {
+          const { error: discountErr } = await supabase.rpc("apply_order_discount", {
+            p_order_id: orderId,
+            p_type: "vnd",
+            p_value: orderDiscount,
+            p_note: "Khuyến mãi / Voucher ShopeeFood",
+          });
+          if (discountErr) {
+            console.warn("[ShopeeFood POS Relay] apply_order_discount error:", discountErr.message);
+          }
+        }
+      }
+    }
+
+    // 9. Leave payment_status 'unpaid' so the order surfaces in the POS
     // "Cần xử lý" list (fetchActiveOrders excludes paid orders). The cashier
     // confirms the platform tender at driver handoff via
     // confirm_platform_payment — marking paid here hid relayed orders from POS.

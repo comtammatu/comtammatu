@@ -1,10 +1,13 @@
-package com.comtammatu.relay
+﻿package com.comtammatu.relay
 
 import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.util.Base64
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * SQLite Database Helper for offline print receipt queueing and retrying.
@@ -133,8 +136,6 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_
     fun markOrderFailed(orderId: Long, retryCount: Int, errorMessage: String?) {
         val db = writableDatabase
         val values = ContentValues().apply {
-            // Never abandon an order: stay PENDING and schedule the next attempt
-            // with capped exponential backoff instead of a terminal failure.
             put(COLUMN_STATUS, STATUS_PENDING)
             put(COLUMN_RETRY_COUNT, retryCount)
             put(COLUMN_LAST_ERROR, errorMessage)
@@ -187,5 +188,75 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_
         return cursor.use {
             if (it.moveToFirst()) it.getInt(0) else 0
         }
+    }
+
+    fun getQueueSummary(): String {
+        val db = readableDatabase
+        var pending = 0
+        var sending = 0
+        var sent = 0
+        var total = 0
+
+        val countCursor = db.rawQuery("SELECT $COLUMN_STATUS, COUNT(*) FROM $TABLE_ORDERS GROUP BY $COLUMN_STATUS", null)
+        countCursor.use { c ->
+            while (c.moveToNext()) {
+                val status = c.getString(0)
+                val count = c.getInt(1)
+                total += count
+                when (status) {
+                    STATUS_PENDING -> pending = count
+                    STATUS_SENDING -> sending = count
+                    STATUS_SENT -> sent = count
+                }
+            }
+        }
+
+        val timeFmt = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+        val sb = StringBuilder()
+        sb.append("📊 TỔNG KẾT HÀNG ĐỢI OFFLINE (SQLite):\n")
+        sb.append("• Tổng số đơn đã nhận: $total\n")
+        sb.append("• Đã gửi thành công lên POS: $sent\n")
+        sb.append("• Đang chờ gửi / Thử lại: $pending\n")
+        sb.append("• Đang trong tiến trình gửi: $sending\n")
+
+        val recentCursor = db.query(
+            TABLE_ORDERS,
+            null,
+            null,
+            null,
+            null,
+            null,
+            "$COLUMN_ID DESC",
+            "5"
+        )
+        sb.append("\n📋 5 ĐƠN GẦN NHẤT:\n")
+        var hasRows = false
+        recentCursor.use { c ->
+            while (c.moveToNext()) {
+                hasRows = true
+                val id = c.getLong(c.getColumnIndexOrThrow(COLUMN_ID))
+                val platform = c.getString(c.getColumnIndexOrThrow(COLUMN_PLATFORM))
+                val status = c.getString(c.getColumnIndexOrThrow(COLUMN_STATUS))
+                val retries = c.getInt(c.getColumnIndexOrThrow(COLUMN_RETRY_COUNT))
+                val createdAt = c.getLong(c.getColumnIndexOrThrow(COLUMN_CREATED_AT))
+                val lastErr = c.getString(c.getColumnIndexOrThrow(COLUMN_LAST_ERROR))
+
+                val statusIcon = when (status) {
+                    STATUS_SENT -> "🟢 THÀNH CÔNG"
+                    STATUS_SENDING -> "🟡 ĐANG GỬI"
+                    else -> "⏳ CHỜ RETRY (Thử lại: $retries)"
+                }
+                sb.append("#$id [${platform.uppercase()}] $statusIcon lúc ${timeFmt.format(Date(createdAt))}")
+                if (!lastErr.isNullOrEmpty()) {
+                    sb.append(" (Lỗi: $lastErr)")
+                }
+                sb.append("\n")
+            }
+        }
+        if (!hasRows) {
+            sb.append("(Chưa có đơn hàng nào trong hàng đợi)\n")
+        }
+
+        return sb.toString().trimEnd()
     }
 }

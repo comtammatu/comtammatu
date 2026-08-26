@@ -1,4 +1,4 @@
-package com.comtammatu.relay
+﻿package com.comtammatu.relay
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -58,11 +58,13 @@ class VirtualWifiPrinterService : Service() {
         const val MAX_PAYLOAD_BYTES = 256 * 1024
         const val READ_TIMEOUT_MS = 3000
         const val CUT_DRAIN_TIMEOUT_MS = 500
+
+        var isServiceRunning = false
+            private set
     }
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var serverSocket: ServerSocket? = null
-    private var isRunning = false
     private lateinit var sunmiSdk: SunmiSdkManager
     private lateinit var dispatcher: WebhookDispatcher
 
@@ -129,7 +131,7 @@ class VirtualWifiPrinterService : Service() {
     }
 
     private fun startServer(port: Int, lanMode: Boolean) {
-        if (isRunning) return
+        if (isServiceRunning) return
 
         // Bind synchronously so a failed bind never leaves the service in a
         // zombie "running" state. Loopback only by default: the intake port is
@@ -141,31 +143,37 @@ class VirtualWifiPrinterService : Service() {
                 InetAddress.getLoopbackAddress()
             }
             serverSocket = ServerSocket(port, 50, bindAddress)
+            isServiceRunning = true
             Log.i(TAG, "Virtual WiFi Printer Server listening on ${bindAddress.hostAddress}:$port (lanMode=$lanMode)")
+            AppLogger.s("MÁY IN ẢO", "Đang mở cổng TCP $port (${if (lanMode) "0.0.0.0 Mạng LAN" else "127.0.0.1 Cục bộ"}). Sẵn sàng nhận đơn!")
         } catch (e: Exception) {
+            isServiceRunning = false
             Log.e(TAG, "Failed to bind port $port: ${e.message}", e)
+            AppLogger.e("MÁY IN ẢO", "Không mở được cổng TCP $port: ${e.message} (Có thể cổng 9100 đang bị chiếm dụng)")
             startForeground(NOTIFICATION_ID, buildForegroundNotification("⚠️ Không mở được cổng TCP $port: ${e.message}"))
             return
         }
 
-        isRunning = true
         serviceScope.launch {
             try {
-                while (isRunning && serverSocket != null && !serverSocket!!.isClosed) {
+                while (isServiceRunning && serverSocket != null && !serverSocket!!.isClosed) {
                     val clientSocket = serverSocket!!.accept()
                     serviceScope.launch {
                         handleClientConnection(clientSocket)
                     }
                 }
             } catch (e: Exception) {
-                if (isRunning) {
+                if (isServiceRunning) {
                     Log.e(TAG, "ServerSocket error: ${e.message}", e)
+                    AppLogger.e("MÁY IN ẢO", "Lỗi ServerSocket: ${e.message}")
                 }
             }
         }
     }
 
     private fun handleClientConnection(socket: Socket) {
+        val clientAddress = socket.remoteSocketAddress.toString()
+        AppLogger.net("Phát hiện kết nối in từ: $clientAddress")
         try {
             socket.soTimeout = READ_TIMEOUT_MS
             val inputStream: InputStream = socket.getInputStream()
@@ -182,7 +190,8 @@ class VirtualWifiPrinterService : Service() {
                     // Reject oversized streams (slow-loris / abuse) before they
                     // grow the in-memory buffer without bound.
                     if (outputStream.size() > MAX_PAYLOAD_BYTES) {
-                        Log.e(TAG, "Payload exceeded ${MAX_PAYLOAD_BYTES} bytes from ${socket.remoteSocketAddress}; dropping connection")
+                        Log.e(TAG, "Payload exceeded ${MAX_PAYLOAD_BYTES} bytes from $clientAddress; dropping connection")
+                        AppLogger.e("IN ẤN", "Dữ liệu vượt quá giới hạn $MAX_PAYLOAD_BYTES bytes từ $clientAddress")
                         return
                     }
 
@@ -208,18 +217,23 @@ class VirtualWifiPrinterService : Service() {
             }
 
             if (rawBytes.isNotEmpty()) {
-                Log.i(TAG, "Received ${rawBytes.size} bytes from ${socket.remoteSocketAddress}")
+                Log.i(TAG, "Received ${rawBytes.size} bytes from $clientAddress")
+                AppLogger.i("IN ẤN", "Nhận được trọn vẹn luồng in (${rawBytes.size} bytes) từ $clientAddress")
 
                 // 1. Forward raw ESC/POS stream to SUNMI thermal printer for physical receipt
+                AppLogger.print("Chuyển tiếp ${rawBytes.size} bytes sang đầu in nhiệt SUNMI V3...")
                 sunmiSdk.sendRawBytes(rawBytes)
 
                 // 2. Dispatch raw stream to Cloud POS Webhook (with local SQLite queue persistence)
                 serviceScope.launch {
                     dispatcher.dispatchRawReceipt(rawBytes, platform = "shopee")
                 }
+            } else {
+                AppLogger.w("IN ẤN", "Kết nối từ $clientAddress nhưng không nhận được byte dữ liệu nào")
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error handling client connection: ${e.message}", e)
+            AppLogger.e("MẠNG", "Lỗi xử lý kết nối $clientAddress: ${e.message}")
         } finally {
             try {
                 socket.close()
@@ -242,10 +256,11 @@ class VirtualWifiPrinterService : Service() {
     }
 
     private fun stopServer() {
-        isRunning = false
+        isServiceRunning = false
         try {
             serverSocket?.close()
             serverSocket = null
+            AppLogger.w("MÁY IN ẢO", "Đã đóng cổng lắng nghe máy in")
         } catch (e: Exception) {
             Log.e(TAG, "Error closing serverSocket: ${e.message}")
         }

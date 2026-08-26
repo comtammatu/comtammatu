@@ -132,7 +132,7 @@ export interface TransformedOrderForRpc {
   idempotencyKey: string;
   displayId: string;
   restaurantId?: string;
-  customerNote: string;
+  customerNote: string | null;
   paymentMethod: string;
   subtotal: number;
   totalAmount: number;
@@ -350,6 +350,13 @@ export function transformShopeeOrderPayload(
       discountType = "pct";
       discountValue = 100;
       discountNote = "Khuyến mãi tặng kèm ShopeeFood (0đ)";
+    } else if (rawItemPrice > 0 && rawItemPrice < unitPrice) {
+      const itemDiscount = unitPrice - rawItemPrice;
+      if (itemDiscount > 0) {
+        discountType = "vnd";
+        discountValue = itemDiscount;
+        discountNote = "Khuyến mãi giảm giá món ShopeeFood";
+      }
     }
 
     const noteParts = [
@@ -380,28 +387,6 @@ export function transformShopeeOrderPayload(
     (shopeeOrder.orderId ? String(shopeeOrder.orderId) : "");
   const orderId = shopeeOrder.orderId ? String(shopeeOrder.orderId) : displayId;
 
-  const eaterName =
-    shopeeOrder.customer?.name ||
-    shopeeOrder.buyer?.name ||
-    "Khách ShopeeFood";
-  const eaterPhone =
-    shopeeOrder.customer?.phone || shopeeOrder.buyer?.phone || "";
-  const phoneText = eaterPhone ? ` (${eaterPhone})` : "";
-
-  const cutleryFlag = shopeeOrder.needCutlery;
-  const cutleryNote =
-    cutleryFlag === true || cutleryFlag === 1 || cutleryFlag === 2
-      ? " • Lấy muỗng đũa"
-      : cutleryFlag === false || cutleryFlag === 0
-      ? " • Không lấy dụng cụ"
-      : "";
-
-  const extraNote = (shopeeOrder.note || shopeeOrder.customer?.note || "").trim();
-  const extraNoteText =
-    extraNote && !isShipperInstruction(extraNote) ? ` • Note: ${extraNote}` : "";
-
-  const customerNote = `[ShopeeFood ${displayId}] ${eaterName}${phoneText}${cutleryNote}${extraNoteText}`;
-
   const parsedSubtotal = parseNumericPrice(shopeeOrder.subtotal);
   const parsedTotal = parseNumericPrice(
     shopeeOrder.total || shopeeOrder.totalPrice,
@@ -415,7 +400,7 @@ export function transformShopeeOrderPayload(
     restaurantId: shopeeOrder.restaurantId
       ? String(shopeeOrder.restaurantId)
       : undefined,
-    customerNote,
+    customerNote: null,
     paymentMethod: "platform",
     subtotal: parsedSubtotal > 0 ? parsedSubtotal : calculatedItemsTotal,
     totalAmount: parsedTotal > 0 ? parsedTotal : calculatedItemsTotal,

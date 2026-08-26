@@ -92,12 +92,8 @@ test("ShopeeFood transformation: transforms real SPF-892 order accurately", () =
   assert.equal(transformed.subtotal, 156000);
   assert.equal(transformed.totalAmount, 156000);
 
-  // Customer note
-  assert.ok(transformed.customerNote.includes("[ShopeeFood SPF-892]"));
-  assert.ok(transformed.customerNote.includes("Nguyễn Văn Hùng"));
-  assert.ok(transformed.customerNote.includes("0901234567"));
-  assert.ok(transformed.customerNote.includes("Lấy muỗng đũa"));
-  assert.ok(transformed.customerNote.includes("Cho nhiều nước mắm"));
+  // Customer note: Delivery platforms have no order-level notes; stays null to avoid yellow KDS banner
+  assert.equal(transformed.customerNote, null);
 
   // Items
   assert.equal(transformed.items.length, 2);
@@ -152,6 +148,5 @@ test("ShopeeFood transformation: handles deliverynow restaurant metadata", () =>
   assert.equal(transformed.totalAmount, 78000);
   assert.equal(transformed.items.length, 1);
   assert.equal(transformed.items[0]?.item_name, "Sườn Cọng");
-  assert.ok(transformed.customerNote.includes("[ShopeeFood SPF-101]"));
-  assert.ok(transformed.customerNote.includes("Trần Thị Mai"));
+  assert.equal(transformed.customerNote, null);
 });
