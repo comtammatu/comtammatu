@@ -79,6 +79,7 @@ export type MenuRecipeItem = {
   unitLabel: string;
   entryUnitId: number | null;
   note: string | null;
+  isPrimary?: boolean;
   lineCost: number | null;
   costSignals: readonly MenuRecipeCostSignal[];
 };
@@ -219,6 +220,7 @@ export function MenuRecipesClient({
         unitLabel: item.unitLabel,
         entryUnitId: item.entryUnitId,
         note: item.note,
+        isPrimary: item.isPrimary,
       })),
     );
     setDialogOpen(true);

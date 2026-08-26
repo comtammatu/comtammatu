@@ -42,6 +42,7 @@ type MenuItemRow = {
     quantity: number | string | null;
     entry_unit_id: number | string | null;
     note: string | null;
+    is_primary?: boolean | null;
     ingredients: {
       id: number;
       name: string;
@@ -179,6 +180,7 @@ export default async function MenuRecipesPage({
         ),
         entryUnitId,
         note: line.note ?? null,
+        isPrimary: line.is_primary ?? false,
         lineCost:
           unitCost == null || baseQuantity == null
             ? null

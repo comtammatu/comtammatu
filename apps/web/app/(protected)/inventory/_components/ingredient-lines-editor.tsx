@@ -17,6 +17,7 @@ import {
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import { Frame } from "@comtammatu/ui/components/frame";
 import { Input } from "@comtammatu/ui/components/input";
 import {
@@ -87,6 +88,7 @@ export interface IngredientLineRowValue {
   unitLabel: string;
   entry_unit_id?: string;
   note?: string;
+  is_primary?: boolean;
 }
 
 const GRID_TEMPLATE = "grid-cols-1 md:grid-cols-12";
@@ -97,6 +99,7 @@ const EMPTY_ROW: IngredientLineRowValue = {
   unitLabel: "",
   entry_unit_id: "",
   note: "",
+  is_primary: false,
 };
 
 interface IngredientLinesEditorProps<T extends FieldValues> {
@@ -110,6 +113,8 @@ interface IngredientLinesEditorProps<T extends FieldValues> {
   unitEditable?: boolean;
   /** true → render the bulk-add MultiSelectCombobox. */
   bulkAdd?: boolean;
+  /** true → render the is_primary (Nguyên liệu chính) toggle column. */
+  showPrimaryToggle?: boolean;
 }
 
 export function IngredientLinesEditor<T extends FieldValues>({
@@ -121,6 +126,7 @@ export function IngredientLinesEditor<T extends FieldValues>({
   name = "lines" as Path<T> & ArrayPath<T>,
   unitEditable = false,
   bulkAdd = false,
+  showPrimaryToggle = false,
 }: IngredientLinesEditorProps<T>) {
   const { fields, append, remove, replace } = useFieldArray<T, ArrayPath<T>>({
     control,
@@ -160,6 +166,7 @@ export function IngredientLinesEditor<T extends FieldValues>({
         unitLabel: defaultUnit?.label ?? "",
         entry_unit_id: defaultUnit ? String(defaultUnit.unitId) : "",
         note: "",
+        is_primary: false,
       };
     });
     const currentRows =
@@ -172,6 +179,7 @@ export function IngredientLinesEditor<T extends FieldValues>({
         unitLabel: row.unitLabel,
         entry_unit_id: row.entry_unit_id ?? "",
         note: row.note ?? "",
+        is_primary: row.is_primary ?? false,
       }));
     replace([...kept, ...newRows] as never);
   }
@@ -230,10 +238,20 @@ export function IngredientLinesEditor<T extends FieldValues>({
             GRID_TEMPLATE,
           )}
         >
-          <div className="col-span-6">{PRODUCT_VI.rawIngredient}</div>
+          <div className={showPrimaryToggle ? "col-span-5" : "col-span-6"}>
+            {PRODUCT_VI.rawIngredient}
+          </div>
           <div className="col-span-3">{FORM_VI.quantity}</div>
           <div className="col-span-2">{FORM_VI.unit}</div>
-          <div />
+          {showPrimaryToggle ? (
+            <div
+              className="col-span-1 text-center"
+              title={INVENTORY_VI.isPrimaryIngredientHint}
+            >
+              {INVENTORY_VI.primaryBadge}
+            </div>
+          ) : null}
+          <div className={showPrimaryToggle ? "col-span-1" : ""} />
         </div>
 
         <ScrollArea className="h-80">
@@ -250,6 +268,7 @@ export function IngredientLinesEditor<T extends FieldValues>({
                 rowError={lineErrors?.[index]}
                 canRemove={rows.length > 1}
                 unitEditable={unitEditable}
+                showPrimaryToggle={showPrimaryToggle}
                 onRemove={() => remove(index)}
                 onIngredientChange={(value) =>
                   handleIngredientChange(index, value)
@@ -273,6 +292,7 @@ function IngredientLineRow<T extends FieldValues>({
   rowError,
   canRemove,
   unitEditable,
+  showPrimaryToggle,
   onRemove,
   onIngredientChange,
 }: {
@@ -285,6 +305,7 @@ function IngredientLineRow<T extends FieldValues>({
   rowError: FieldErrors<IngredientLineRowValue> | undefined;
   canRemove: boolean;
   unitEditable: boolean;
+  showPrimaryToggle?: boolean;
   onRemove: () => void;
   onIngredientChange: (value: string) => void;
 }) {
@@ -292,6 +313,7 @@ function IngredientLineRow<T extends FieldValues>({
   const quantityName = `${name}.${index}.quantity` as Path<T>;
   const unitLabelName = `${name}.${index}.unitLabel` as Path<T>;
   const entryUnitName = `${name}.${index}.entry_unit_id` as Path<T>;
+  const isPrimaryName = `${name}.${index}.is_primary` as Path<T>;
 
   const selectedIngredientId = useWatch({ control, name: ingredientName }) as
     string | undefined;
@@ -317,7 +339,12 @@ function IngredientLineRow<T extends FieldValues>({
       </div>
 
       <div className={cn("grid items-center gap-2 px-3 py-2", GRID_TEMPLATE)}>
-        <div className="min-w-0 md:col-span-6">
+        <div
+          className={cn(
+            "min-w-0",
+            showPrimaryToggle ? "md:col-span-5" : "md:col-span-6",
+          )}
+        >
           <span className="mb-1 block text-xs font-medium text-muted-foreground md:hidden">
             {PRODUCT_VI.rawIngredient}
           </span>
@@ -445,6 +472,30 @@ function IngredientLineRow<T extends FieldValues>({
             />
           )}
         </div>
+
+        {showPrimaryToggle ? (
+          <div className="min-w-0 md:col-span-1 md:flex md:items-center md:justify-center">
+            <Controller
+              control={control}
+              name={isPrimaryName}
+              render={({ field }) => (
+                <label
+                  className="flex cursor-pointer items-center gap-2 md:justify-center"
+                  title={INVENTORY_VI.isPrimaryIngredientHint}
+                >
+                  <span className="text-xs font-medium text-muted-foreground md:hidden">
+                    {INVENTORY_VI.isPrimaryIngredient}
+                  </span>
+                  <Checkbox
+                    checked={Boolean(field.value)}
+                    onCheckedChange={(checked) => field.onChange(Boolean(checked))}
+                    aria-label={`${INVENTORY_VI.isPrimaryIngredient} ${index + 1}`}
+                  />
+                </label>
+              )}
+            />
+          </div>
+        ) : null}
 
         <Button
           type="button"

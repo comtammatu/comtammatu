@@ -29,6 +29,7 @@ export interface MenuRecipeLineDraft {
   unitLabel: string;
   entryUnitId: number | null;
   note: string | null;
+  isPrimary?: boolean;
 }
 
 /* ─── Schema ─── */
@@ -42,6 +43,7 @@ const menuRecipeLineRowSchema = z.object({
   unitLabel: z.string().optional(),
   entry_unit_id: z.string().min(1, { error: INVENTORY_VI.selectUnit }),
   note: z.string().max(200, { error: INVENTORY_VI.noteMax200 }).optional(),
+  is_primary: z.boolean().optional().default(false),
 });
 
 const menuRecipeSchema = z.object({
@@ -69,6 +71,7 @@ const EMPTY_ROW: MenuRecipeLineRow = {
   unitLabel: "",
   entry_unit_id: "",
   note: "",
+  is_primary: false,
 };
 
 /* ─── Dialog ─── */
@@ -107,6 +110,7 @@ export function MenuRecipeLineDialog({
               unitLabel: l.unitLabel,
               entry_unit_id: l.entryUnitId ? String(l.entryUnitId) : "",
               note: l.note ?? "",
+              is_primary: l.isPrimary ?? false,
             }))
           : [EMPTY_ROW],
     }),
@@ -128,6 +132,7 @@ export function MenuRecipeLineDialog({
       quantity: Number(row.quantity),
       entryUnitId: row.entry_unit_id ? Number(row.entry_unit_id) : null,
       note: row.note?.trim() ? row.note.trim() : null,
+      isPrimary: Boolean(row.is_primary),
     }));
 
     return upsertMenuRecipeLines({
@@ -209,6 +214,7 @@ export function MenuRecipeLineDialog({
                 ingredients={ingredients}
                 bulkAdd
                 unitEditable
+                showPrimaryToggle
               />
 
               {linesRootError && (

@@ -54,13 +54,15 @@ export function formatMenuRecipeBomSummary(
     ingredientName: string;
     qty: number;
     unitLabel: string;
+    isPrimary?: boolean;
   }[],
 ): string {
   return items
     .map((item) => {
       const qty = formatMenuRecipeQuantity(item.qty);
       const unit = item.unitLabel.trim();
-      return [item.ingredientName.trim(), qty, unit]
+      const name = item.ingredientName.trim() + (item.isPrimary ? " (chính)" : "");
+      return [name, qty, unit]
         .filter((part) => part.length > 0)
         .join(" ");
     })

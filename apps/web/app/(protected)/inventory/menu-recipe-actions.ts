@@ -81,6 +81,7 @@ const menuRecipeLineSchema = z.object({
   quantity: inventoryPositiveQuantitySchema,
   entryUnitId: z.coerce.number().int().positive().nullable().optional(),
   note: z.string().optional().nullable(),
+  isPrimary: z.boolean().optional().default(false),
 });
 
 const menuRecipeBatchSchema = z.object({
@@ -122,6 +123,7 @@ export async function fetchMenuRecipes(): Promise<ActionResult> {
     quantity: number;
     entry_unit_id: number | null;
     note: string | null;
+    is_primary: boolean;
   };
   const recipeResult =
     menuItemIds.length === 0
@@ -129,7 +131,7 @@ export async function fetchMenuRecipes(): Promise<ActionResult> {
       : await supabase
           .from("recipes")
           .select(
-            "menu_item_id, ingredient_id, quantity, entry_unit_id, note",
+            "menu_item_id, ingredient_id, quantity, entry_unit_id, note, is_primary",
           )
           .eq("tenant_id", claims.tenant_id)
           .in("menu_item_id", menuItemIds);
@@ -205,6 +207,7 @@ export async function fetchMenuRecipes(): Promise<ActionResult> {
             quantity: menuRecipe.quantity,
             entry_unit_id: menuRecipe.entry_unit_id,
             note: menuRecipe.note,
+            is_primary: menuRecipe.is_primary ?? false,
             ingredients: null,
           };
         }
@@ -213,6 +216,7 @@ export async function fetchMenuRecipes(): Promise<ActionResult> {
           quantity: menuRecipe.quantity,
           entry_unit_id: menuRecipe.entry_unit_id,
           note: menuRecipe.note,
+          is_primary: menuRecipe.is_primary ?? false,
           ingredients: {
             ...ingredient,
             units: unitsByIngredient.get(ingredient.id) ?? [],
@@ -492,6 +496,7 @@ export const upsertMenuRecipeLines = withAction(
       quantity: line.quantity,
       entry_unit_id: line.entryUnitId ?? null,
       note: line.note ?? null,
+      is_primary: line.isPrimary ?? false,
     }));
 
     const { error } = await supabase.rpc("upsert_recipe_lines", {
