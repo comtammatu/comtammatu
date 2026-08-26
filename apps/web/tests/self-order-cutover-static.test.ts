@@ -370,13 +370,10 @@ test("item sheet supports add and cart-edit commit paths", () => {
     itemSheet,
     /className="flex h-full min-h-0 flex-col overflow-hidden"/,
   );
-  assert.match(itemSheet, /h-80 w-full/);
-  assert.match(
-    itemSheet,
-    /sm:aspect-video sm:h-auto sm:max-h-64 md:max-h-48 lg:max-h-56/,
-  );
+  assert.match(itemSheet, /<SheetHeader[\s\S]*SheetTitle[\s\S]*SheetClose/);
+  assert.doesNotMatch(itemSheet, /h-80 w-full/);
+  assert.doesNotMatch(itemSheet, /aspect-video/);
   assert.match(itemSheet, /max-w-2xl/);
-  assert.match(itemSheet, /object-cover object-center/);
   assert.match(itemSheet, /SheetDescription className="sr-only"/);
   assert.doesNotMatch(
     itemSheet,

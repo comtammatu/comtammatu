@@ -67,7 +67,7 @@ Footer: sticky cart button when cart non-empty (in-flow; opens sheet; never subm
 
 Opens only when the item has a guest choice: 2+ variants, any modifier, or any side. Simple items never mount this sheet from the menu.
 
-Full-viewport bottom sheet (`max-w-2xl`). Image: phone `h-80`; `sm+` `aspect-video` with max-height caps. Close on image; title under image; variant · modifiers · sides · note; footer: total · quantity · add/update.
+Full-viewport bottom sheet (`max-w-2xl`). No image banner to optimize vertical space for choices/toppings. Header: title, badges, and close button; variant · modifiers · sides · note; footer: total · quantity · add/update.
 
 ### G3 · Cart sheet
 

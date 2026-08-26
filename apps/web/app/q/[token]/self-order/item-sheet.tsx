@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
 import { Minus as IconMinus, Plus as IconPlus, X as IconX } from "lucide-react";
 import { MENU_VI, SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { formatVND } from "@comtammatu/shared/format";
@@ -28,7 +27,6 @@ import {
   FieldSet,
 } from "@comtammatu/ui/components/field";
 import { Textarea } from "@comtammatu/ui/components/textarea";
-import { BrandSymbol } from "@/components/brand";
 import type {
   SelfOrderCartItem,
   SelfOrderMenuItem,
@@ -47,6 +45,7 @@ import {
   SheetClose,
   SheetContent,
   SheetDescription,
+  SheetHeader,
   SheetTitle,
 } from "@/components/surface/app-sheet";
 
@@ -314,63 +313,42 @@ export function SelfOrderItemSheet({
         className="mx-auto w-full max-w-2xl overflow-hidden p-0"
       >
         <div className="flex h-full min-h-0 flex-col overflow-hidden">
-          <div className="relative h-80 w-full shrink-0 overflow-hidden bg-muted/50 sm:aspect-video sm:h-auto sm:max-h-64 md:max-h-48 lg:max-h-56">
-            {item.image_url ? (
-              <Image
-                src={item.image_url}
-                alt=""
-                fill
-                sizes="(min-width: 1024px) 42rem, (min-width: 640px) 36rem, 100vw"
-                className="object-cover object-center"
-                decoding="async"
-                priority={open}
-              />
-            ) : (
-              <span className="flex size-full items-center justify-center">
-                <BrandSymbol
-                  variant="riceBowl"
-                  size="xl"
-                  decorative
-                  className="opacity-50"
-                />
-              </span>
-            )}
-            {imageBadges.length > 0 ? (
-              <span className="absolute top-3 right-16 left-3 z-10 flex flex-col items-start gap-1">
-                {imageBadges.map((badge) => (
-                  <Badge
-                    key={badge}
-                    variant="default"
-                    className="max-w-full truncate px-2 text-xs"
+          <SheetHeader className="shrink-0 border-border bg-background bg-none pr-3 sm:pr-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <SheetTitle className="text-left font-heading text-xl font-semibold tracking-tight sm:text-2xl">
+                    {title}
+                  </SheetTitle>
+                  {imageBadges.map((badge) => (
+                    <Badge
+                      key={badge}
+                      variant="default"
+                      className="max-w-full truncate px-2 text-xs"
+                    >
+                      {badge}
+                    </Badge>
+                  ))}
+                </div>
+                <SheetDescription className="sr-only">
+                  {SELF_ORDER_VI.customizeDescription}
+                </SheetDescription>
+              </div>
+              <SheetClose
+                render={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-touch"
+                    className="-mt-1 -mr-1 shrink-0 self-start text-muted-foreground"
+                    aria-label={SELF_ORDER_VI.closeCustomizerAria}
                   >
-                    {badge}
-                  </Badge>
-                ))}
-              </span>
-            ) : null}
-            <SheetClose
-              render={
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="icon-touch"
-                  className="absolute top-2 right-2 z-10"
-                  aria-label={SELF_ORDER_VI.closeCustomizerAria}
-                >
-                  <IconX />
-                </Button>
-              }
-            />
-          </div>
-
-          <div className="flex shrink-0 items-center border-b border-border bg-background px-4 py-3">
-            <SheetTitle className="min-w-0 flex-1 text-left font-heading text-2xl font-semibold tracking-tight">
-              {title}
-            </SheetTitle>
-            <SheetDescription className="sr-only">
-              {SELF_ORDER_VI.customizeDescription}
-            </SheetDescription>
-          </div>
+                    <IconX />
+                  </Button>
+                }
+              />
+            </div>
+          </SheetHeader>
 
           <ScrollArea className="min-h-0 flex-1 overflow-hidden overscroll-contain">
             <div className="flex flex-col gap-4 px-4 py-4">
