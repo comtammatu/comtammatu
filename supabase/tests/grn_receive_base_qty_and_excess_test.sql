@@ -450,6 +450,20 @@ BEGIN
   IF v_po_qty IS DISTINCT FROM 10.250 THEN
     RAISE EXCEPTION 'GRN RECEIVE BASE: carton-quoted PO qty expected 10.250 got %', v_po_qty;
   END IF;
+
+  PERFORM pg_catalog.set_config('comtammatu.grn_confirm', 'false', TRUE);
+  BEGIN
+    UPDATE public.purchase_order_items
+    SET quantity = quantity + 1
+    WHERE id = v_po_line
+      AND tenant_id = v_tenant;
+    RAISE EXCEPTION 'GRN RECEIVE BASE: direct linked PO quantity increase must fail';
+  EXCEPTION
+    WHEN check_violation THEN
+      IF SQLERRM <> 'linked_grn_purchase_order_lines_immutable' THEN
+        RAISE;
+      END IF;
+  END;
 END;
 $$;
 

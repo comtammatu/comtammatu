@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 
@@ -8,6 +8,23 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 const MIGRATION =
   "supabase/migrations/20260817122500_grn_receive_base_qty_and_excess.sql";
+
+function latestPoLineImmutabilityDefinition(): string {
+  const migrationDir = resolve(repoRoot, "supabase/migrations");
+  const sql = readdirSync(migrationDir)
+    .filter((file) => file.endsWith(".sql"))
+    .sort()
+    .map((file) => read(`supabase/migrations/${file}`))
+    .join("\n");
+  const definitions = [
+    ...sql.matchAll(
+      /CREATE(?: OR REPLACE)? FUNCTION private\.enforce_retrospective_purchase_order_line_immutability\(\)/g,
+    ),
+  ];
+  const start = definitions.at(-1)?.index ?? -1;
+  assert.ok(start >= 0, "latest PO-line immutability definition not found");
+  return sql.slice(start);
+}
 
 test("GRN confirm compares remaining in base and stocks excess without blocking", () => {
   const sql = read(MIGRATION);
@@ -81,5 +98,19 @@ test("SQL proof covers partial pack+loose, excess amends PO qty, and same-unit o
   assert.match(sql, /excess PO qty expected 10\.250/);
   assert.match(sql, /same-unit po_applied expected 6/);
   assert.match(sql, /po_status.*received|status = 'received'/);
+  assert.match(sql, /direct linked PO quantity increase must fail/);
   assert.doesNotMatch(sql, /grn_over_receipt_not_allowed/);
+});
+
+test("linked PO immutability permits only trusted GRN-confirm quantity increases", () => {
+  const immutability = latestPoLineImmutabilityDefinition();
+
+  assert.match(immutability, /current_setting\('comtammatu\.grn_confirm', TRUE\)/);
+  assert.match(immutability, /NEW\.quantity > OLD\.quantity/);
+  assert.match(
+    immutability,
+    /to_jsonb\(NEW\) - 'quantity'[\s\S]*?to_jsonb\(OLD\) - 'quantity'/,
+  );
+  assert.match(immutability, /v_trusted_rpc IS TRUE/);
+  assert.doesNotMatch(immutability, /IF v_confirming THEN\s+RETURN NEW/);
 });
