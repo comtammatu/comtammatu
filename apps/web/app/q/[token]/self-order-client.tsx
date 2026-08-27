@@ -1042,9 +1042,8 @@ export function SelfOrderClient({
         paymentMethod={activePaymentRequest?.method ?? null}
         canPay={!ambiguous && order !== null}
         order={order}
+        rounds={available.rounds}
         pendingItems={awaiting ? available.request?.items : undefined}
-        kitchenReady={available.kitchenReady}
-        kitchenServed={available.kitchenServed}
         promo={{
           canEdit:
             Boolean(order) &&
@@ -1061,7 +1060,7 @@ export function SelfOrderClient({
         open={paymentOpen && !ambiguous && order != null}
         onOpenChange={setPaymentOpen}
         title={SELF_ORDER_VI.paymentTitle}
-        contentClassName="max-h-dvh-80"
+        contentClassName="max-h-dvh-95"
         bodyClassName="flex min-h-0 flex-col overflow-hidden p-0"
       >
         {order ? (

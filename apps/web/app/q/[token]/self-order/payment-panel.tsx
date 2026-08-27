@@ -372,13 +372,6 @@ export function PaymentPanel({
 
           {activePaymentRequest ? (
             <div className="flex flex-col gap-3" aria-live="polite">
-              {expiryLabel ? (
-                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                  <IconClock className="size-3.5 shrink-0" aria-hidden />
-                  <span>{SELF_ORDER_VI.paymentExpiresAt(expiryLabel)}</span>
-                </div>
-              ) : null}
-
               {hasRecoverableVietQr ? (
                 <div className="flex flex-col gap-3">
                   <Frame className="flex flex-col items-center gap-2 bg-card p-4 text-center shadow-xs">
@@ -420,6 +413,20 @@ export function PaymentPanel({
                       {SELF_ORDER_VI.otherBankScanHint}
                     </p>
                   </Frame>
+
+                  {activePaymentRequest.accountNo &&
+                  activePaymentRequest.bankCode &&
+                  activePaymentRequest.paymentCode ? (
+                    <BankAppLauncher
+                      accountNo={activePaymentRequest.accountNo}
+                      bankCode={activePaymentRequest.bankCode}
+                      accountName={activePaymentRequest.accountName}
+                      amount={activePaymentRequest.amount}
+                      paymentCode={activePaymentRequest.paymentCode}
+                      qrData={activePaymentRequest.qrData ?? ""}
+                      onBankAppHandoff={onBankAppHandoff}
+                    />
+                  ) : null}
 
                   <Frame className="flex flex-col bg-card p-2.5 text-xs shadow-xs">
                     <Button
@@ -649,36 +656,21 @@ export function PaymentPanel({
 
       {hasRecoverableVietQr && activePaymentRequest ? (
         <SheetFooter className="workflow-safe-pb shrink-0 border-border bg-card p-4">
-          <div className="flex flex-col gap-2">
-            {activePaymentRequest.accountNo &&
-            activePaymentRequest.bankCode &&
-            activePaymentRequest.paymentCode ? (
-              <BankAppLauncher
-                accountNo={activePaymentRequest.accountNo}
-                bankCode={activePaymentRequest.bankCode}
-                accountName={activePaymentRequest.accountName}
-                amount={activePaymentRequest.amount}
-                paymentCode={activePaymentRequest.paymentCode}
-                qrData={activePaymentRequest.qrData ?? ""}
-                onBankAppHandoff={onBankAppHandoff}
-              />
-            ) : null}
-            <Button
-              type="button"
-              variant="outline"
-              size="touch"
-              className="w-full text-muted-foreground transition-colors hover:border-destructive/20 hover:bg-destructive/10 hover:text-destructive"
-              disabled={isCancelling}
-              onClick={() => void onCancelVietQr()}
-            >
-              {isCancelling ? (
-                <Spinner className="size-4" />
-              ) : (
-                <IconCancel data-icon="inline-start" />
-              )}
-              {SELF_ORDER_VI.cancelVietQr}
-            </Button>
-          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="touch"
+            className="w-full text-muted-foreground transition-colors hover:border-destructive/20 hover:bg-destructive/10 hover:text-destructive"
+            disabled={isCancelling}
+            onClick={() => void onCancelVietQr()}
+          >
+            {isCancelling ? (
+              <Spinner className="size-4" />
+            ) : (
+              <IconCancel data-icon="inline-start" />
+            )}
+            {SELF_ORDER_VI.cancelVietQr}
+          </Button>
         </SheetFooter>
       ) : activePaymentRequest ? null : (
         <SheetFooter className="workflow-safe-pb shrink-0 border-border bg-card p-4">

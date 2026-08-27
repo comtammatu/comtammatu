@@ -362,6 +362,13 @@ export const SELF_ORDER_VI = {
   stepSent: "Gửi",
   stepCooking: "Chế biến",
   stepServing: "Phục vụ",
+  roundsHistoryTitle: "Lịch sử gọi món",
+  roundsHistoryButton: "Lịch sử",
+  roundSeqLabel: (seq: number) => `Đợt ${seq}`,
+  roundEmptyTitle: "Chưa có đợt gọi món nào",
+  roundEmptyDescription:
+    "Các món đã được gửi sẽ hiển thị theo từng đợt tại đây.",
+  roundPendingTitle: "Đợt đang chờ duyệt",
 } as const;
 
 export type SelfOrderKey = keyof typeof SELF_ORDER_VI;

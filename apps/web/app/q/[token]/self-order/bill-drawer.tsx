@@ -1,13 +1,18 @@
 "use client";
 
-import { X as IconX } from "lucide-react";
+import { useState } from "react";
+import {
+  History as IconHistory,
+  ReceiptText as IconReceipt,
+  X as IconX,
+} from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { ACTIONS_VI, SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import type { PublicSelfOrderAvailableSnapshot } from "@lib/self-order/contracts";
-import { OrderSummary } from "./order-summary";
+import { OrderRoundsList, OrderSummary } from "./order-summary";
 import { SelfOrderPromoPanel } from "./promo-code-panel";
 import {
   Sheet,
@@ -30,8 +35,6 @@ interface BillDrawerProps {
   pendingItems?: NonNullable<
     PublicSelfOrderAvailableSnapshot["request"]
   >["items"];
-  kitchenReady?: boolean;
-  kitchenServed?: boolean;
   promo?: {
     canEdit: boolean;
     isPending: boolean;
@@ -48,11 +51,11 @@ export function BillDrawer({
   paymentMethod = null,
   canPay,
   order,
+  rounds = [],
   pendingItems,
-  kitchenReady = false,
-  kitchenServed = false,
   promo,
 }: BillDrawerProps) {
+  const [viewMode, setViewMode] = useState<"bill" | "history">("bill");
   const itemDiscount = Math.max(0, Number(order?.itemDiscountAmount ?? 0));
   const orderDiscount = Math.max(0, Number(order?.orderDiscountAmount ?? 0));
   const fallbackDiscount = Math.max(0, Number(order?.discountAmount ?? 0));
@@ -61,9 +64,6 @@ export function BillDrawer({
     order?.orderDiscountAmount != null || order?.itemDiscountAmount != null
       ? orderDiscount
       : fallbackDiscount;
-  const orderReady =
-    order?.status === "ready" || order?.status === "served";
-  const orderServed = order?.status === "served";
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -77,8 +77,33 @@ export function BillDrawer({
           <SheetHeader className="shrink-0 border-border bg-background bg-none">
             <div className="flex items-center gap-2">
               <SheetTitle className="flex-1">
-                {SELF_ORDER_VI.billTab}
+                {viewMode === "history"
+                  ? SELF_ORDER_VI.roundsHistoryTitle
+                  : SELF_ORDER_VI.billTab}
               </SheetTitle>
+              <Button
+                type="button"
+                variant={viewMode === "history" ? "secondary" : "outline"}
+                size="xs"
+                className="gap-1.5 text-xs font-medium"
+                onClick={() =>
+                  setViewMode((prev) =>
+                    prev === "history" ? "bill" : "history",
+                  )
+                }
+              >
+                {viewMode === "history" ? (
+                  <>
+                    <IconReceipt className="size-3.5" />
+                    <span>{SELF_ORDER_VI.billTab}</span>
+                  </>
+                ) : (
+                  <>
+                    <IconHistory className="size-3.5" />
+                    <span>{SELF_ORDER_VI.roundsHistoryButton}</span>
+                  </>
+                )}
+              </Button>
               <SheetClose
                 render={
                   <Button
@@ -96,12 +121,17 @@ export function BillDrawer({
           </SheetHeader>
           <ScrollArea className="min-h-0 flex-1 overflow-hidden overscroll-contain">
             <div className="px-3 py-4 sm:px-4">
-              <OrderSummary
-                pendingItems={pendingItems}
-                items={order?.items ?? []}
-                kitchenReady={kitchenReady || orderReady}
-                kitchenServed={kitchenServed || orderServed}
-              />
+              {viewMode === "history" ? (
+                <OrderRoundsList
+                  rounds={rounds}
+                  pendingItems={pendingItems}
+                />
+              ) : (
+                <OrderSummary
+                  pendingItems={pendingItems}
+                  items={order?.items ?? []}
+                />
+              )}
             </div>
           </ScrollArea>
           {order?.totalAmount != null ? (

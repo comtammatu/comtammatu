@@ -116,14 +116,11 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
     /className="flex h-full min-h-0 flex-col overflow-hidden"/,
   );
   assert.doesNotMatch(bill, /SELF_ORDER_VI\.tableLabel/);
-  assert.doesNotMatch(bill, /visibleRounds|RoundItem/);
   assert.match(bill, /pendingItems/);
   assert.match(bill, /<OrderSummary/);
+  assert.match(bill, /OrderRoundsList/);
   const summary = read("app/q/[token]/self-order/order-summary.tsx");
-  assert.doesNotMatch(
-    summary,
-    /SelfOrderRound|RoundItem|roundsTitle|roundsDescription|roundLabel/,
-  );
+  assert.match(summary, /OrderRoundsList/);
   assert.match(summary, /SELF_ORDER_VI\.billItemColumn/);
   assert.match(summary, /SELF_ORDER_VI\.billQuantityColumn/);
   assert.match(summary, /SELF_ORDER_VI\.billUnitPriceColumn/);
@@ -136,8 +133,7 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
   assert.match(summary, /formatVND\(row\.lineTotal\)/);
   assert.doesNotMatch(summary, /\+\{formatVND\(modifier/);
   assert.doesNotMatch(summary, /sideAmt/);
-  assert.match(summary, /buildSelfOrderProgressSteps/);
-  assert.match(summary, /hasKitchenReady/);
+  assert.doesNotMatch(summary, /OrderStatusTracker/);
   assert.match(summary, /import \{ BrandMascot \} from "@\/components\/brand"/);
   assert.match(summary, /<BrandMascot decorative size="sm" \/>/);
   assert.match(summary, /awaitingCalloutTitle/);
