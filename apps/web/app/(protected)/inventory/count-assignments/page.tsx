@@ -164,7 +164,7 @@ async function CountAssignmentsPageContent({
   if (selectedBranchId !== null) {
     const profilesRes = await rosterClient
       .from("profiles")
-      .select("id, full_name, is_active")
+      .select("id, full_name, is_active, position_id, positions(id, code, label_vi)")
       .eq("tenant_id", claims.tenant_id)
       .eq("branch_id", selectedBranchId)
       .or("is_active.is.null,is_active.eq.true")
@@ -207,9 +207,15 @@ async function CountAssignmentsPageContent({
     for (const profile of profilesRes.data ?? []) {
       const row = employeeByProfileId.get(profile.id);
       if (!row) continue;
+      const pos = Array.isArray(profile.positions)
+        ? profile.positions[0]
+        : profile.positions;
       employees.push({
         id: row.id,
         name: profile.full_name ?? "—",
+        positionId: profile.position_id ?? null,
+        positionCode: pos?.code ?? null,
+        positionName: pos?.label_vi ?? null,
       });
     }
   }

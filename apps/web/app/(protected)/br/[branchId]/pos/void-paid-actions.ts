@@ -73,15 +73,16 @@ export async function voidPaidOrder(
 
   const { supabase } = ctx;
 
-  const refundPaidOrderRpc = supabase.rpc as unknown as (
-    fn: "refund_paid_order_with_payout",
-    args: {
-      p_order_id: number;
-      p_reason: string;
-      p_payout_method: RefundPayoutMethod;
-    },
-  ) => ReturnType<typeof supabase.rpc>;
-  const { data, error } = await refundPaidOrderRpc(
+  const { data, error } = await (
+    supabase.rpc as unknown as (
+      fn: "refund_paid_order_with_payout",
+      args: {
+        p_order_id: number;
+        p_reason: string;
+        p_payout_method: RefundPayoutMethod;
+      },
+    ) => Promise<{ data: unknown; error: { code?: string; message?: string } | null }>
+  )(
     "refund_paid_order_with_payout",
     {
       p_order_id: parsed.data.orderId,

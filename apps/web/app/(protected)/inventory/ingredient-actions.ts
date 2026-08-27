@@ -317,7 +317,10 @@ function saveIngredientCatalog(
     supabase.rpc as unknown as (
       fn: "save_ingredient_catalog",
       rpcArgs: SaveCatalogArgs,
-    ) => ReturnType<SupabaseClient<Database>["rpc"]>
+    ) => Promise<{
+      data: number | null;
+      error: { code?: string; message: string } | null;
+    }>
   )("save_ingredient_catalog", args);
 }
 

@@ -13872,6 +13872,13 @@ export type Database = {
         Args: { p_branch_id: number; p_year_month: string }
         Returns: Json
       }
+      delete_inventory_count_template: {
+        Args: {
+          p_branch_id: number
+          p_template_id: number
+        }
+        Returns: Json
+      }
       delete_payroll_adjustment: {
         Args: { p_adjustment_id: number }
         Returns: undefined
@@ -15907,6 +15914,16 @@ export type Database = {
         }
         Returns: Json
       }
+      set_station_count_assignments: {
+        Args: {
+          p_assignments: Json
+          p_branch_id: number
+          p_location_id: number
+          p_shift_id?: number
+          p_template_id: number
+        }
+        Returns: Json
+      }
       set_order_service_charge: {
         Args: { p_amount: number; p_note: string; p_order_id: number }
         Returns: Json
@@ -16280,6 +16297,17 @@ export type Database = {
       }
       upsert_branch_revenue_targets: {
         Args: { p_rows: Json; p_year_month: string }
+        Returns: Json
+      }
+      upsert_inventory_count_template: {
+        Args: {
+          p_branch_id: number
+          p_code: string
+          p_ingredient_ids: number[]
+          p_name: string
+          p_station_role: string
+          p_template_id?: number
+        }
         Returns: Json
       }
       upsert_payroll_adjustment: {

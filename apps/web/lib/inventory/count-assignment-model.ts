@@ -1,6 +1,9 @@
 export type CountAssignmentEmployee = {
   id: number;
   name: string;
+  positionId?: number | null;
+  positionCode?: string | null;
+  positionName?: string | null;
 };
 
 export type CountAssignmentIngredient = {
@@ -31,6 +34,11 @@ export type CountTemplate = {
   ingredientIds: number[];
 };
 
+export type StationAssignmentRow = {
+  employeeId: number;
+  ingredientIds: number[];
+};
+
 export type BranchCountAssignmentData = {
   branchId: number;
   branchName: string;
@@ -43,4 +51,3 @@ export type BranchCountAssignmentData = {
   templates: CountTemplate[];
   assignmentsByEmployee: Record<string, number[]>;
 };
-

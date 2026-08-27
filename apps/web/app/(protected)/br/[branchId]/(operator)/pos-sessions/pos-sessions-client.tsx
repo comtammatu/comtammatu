@@ -849,79 +849,100 @@ function SessionSettlementPanel({
         </div>
       ) : null}
 
-      <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-4">
-        <Metric
-          icon={<IconReceipt className="size-4" />}
-          label={messages.settings.posSessions.totalBills}
-          value={formatCount(summary.billCount)}
-        />
-        <Metric
-          icon={<IconCash className="size-4" />}
-          label={messages.settings.posSessions.paidRevenue}
-          value={formatVND(summary.revenue)}
-        />
-        <Metric
-          icon={<IconToolsKitchen2 className="size-4" />}
-          label={messages.settings.posSessions.servedItems}
-          value={formatCount(summary.servedItems)}
-        />
-        <Metric
-          icon={<IconCash className="size-4" />}
-          label={messages.settings.posSessions.cashVariance}
-          value={
-            session.cash_difference == null
-              ? messages.settings.posSessions.notClosed
-              : formatVND(session.cash_difference)
-          }
-          tone={
-            session.cash_difference == null
-              ? "muted"
-              : session.cash_difference === 0
-                ? "success"
-                : breached
-                  ? "destructive"
-                  : "warning"
-          }
-        />
+      {/* Section 1: Doanh thu & Tổng quan */}
+      <div>
+        <SectionLabel className="mb-2">{messages.settings.posSessions.settlementTitle}</SectionLabel>
+        <div className="grid gap-2 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
+          <Metric
+            icon={<IconReceipt className="size-4" />}
+            label={messages.settings.posSessions.totalBills}
+            value={formatCount(summary.billCount)}
+          />
+          <Metric
+            icon={<IconCash className="size-4" />}
+            label={messages.settings.posSessions.paidRevenue}
+            value={formatVND(summary.revenue)}
+          />
+          <Metric
+            icon={<IconToolsKitchen2 className="size-4" />}
+            label={messages.settings.posSessions.servedItems}
+            value={formatCount(summary.servedItems)}
+          />
+          <Metric
+            icon={<IconCash className="size-4" />}
+            label={messages.settings.posSessions.cashVariance}
+            value={
+              session.cash_difference == null
+                ? messages.settings.posSessions.notClosed
+                : formatVND(session.cash_difference)
+            }
+            tone={
+              session.cash_difference == null
+                ? "muted"
+                : session.cash_difference === 0
+                  ? "success"
+                  : breached
+                    ? "destructive"
+                    : "warning"
+            }
+          />
+        </div>
       </div>
-
-      <div className="grid gap-3 lg:grid-cols-3">
-        <CashLine
-          label={messages.settings.posSessions.openingCash}
-          value={session.opening_cash}
-        />
-        <CashLine
-          label={messages.settings.posSessions.expectedCash}
-          value={session.expected_cash}
-        />
-        <CashLine
-          label={messages.settings.posSessions.countedCash}
-          value={session.closing_cash}
-        />
-      </div>
-      <p className="text-xs text-muted-foreground">
-        {messages.settings.posSessions.cashFormula}
-      </p>
 
       <Separator />
 
-      <div className="grid gap-3 text-sm lg:grid-cols-2 xl:grid-cols-4">
-        <KV
-          label={messages.settings.posSessions.cashCollected}
-          value={formatVND(summary.cashRevenue)}
-        />
-        <KV
-          label={messages.settings.posSessions.bankTransfer}
-          value={formatVND(summary.noncashRevenue)}
-        />
-        <KV
-          label={messages.settings.posSessions.paidOrders}
-          value={formatCount(summary.paidCount)}
-        />
-        <KV
-          label={messages.settings.posSessions.unpaidOrders}
-          value={formatCount(summary.unpaidCount)}
-        />
+      {/* Section 2: Kiểm soát dòng tiền két */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <SectionLabel>{messages.settings.posSessions.cashVariance}</SectionLabel>
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {session.status === "open"
+              ? messages.settings.posSessions.open
+              : messages.settings.posSessions.closed}
+          </span>
+        </div>
+        <div className="grid gap-2 grid-cols-1 sm:grid-cols-3">
+          <CashLine
+            label={messages.settings.posSessions.openingCash}
+            value={session.opening_cash}
+          />
+          <CashLine
+            label={messages.settings.posSessions.expectedCash}
+            value={session.expected_cash}
+          />
+          <CashLine
+            label={messages.settings.posSessions.countedCash}
+            value={session.closing_cash}
+          />
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          {messages.settings.posSessions.cashFormula}
+        </p>
+      </div>
+
+      <Separator />
+
+      {/* Section 3: Doanh thu theo hình thức & Trạng thái đơn */}
+      <div>
+        <SectionLabel className="mb-2">{messages.settings.posSessions.paymentBreakdown}</SectionLabel>
+        <div className="grid gap-2 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 text-sm">
+          <KV
+            label={messages.settings.posSessions.cashCollected}
+            value={formatVND(summary.cashRevenue)}
+          />
+          <KV
+            label={messages.settings.posSessions.bankTransfer}
+            value={formatVND(summary.noncashRevenue)}
+          />
+          <KV
+            label={messages.settings.posSessions.paidOrders}
+            value={formatCount(summary.paidCount)}
+          />
+          <KV
+            label={messages.settings.posSessions.unpaidOrders}
+            value={formatCount(summary.unpaidCount)}
+          />
+        </div>
       </div>
 
       {summary.paymentBreakdown.length > 0 ? (
@@ -931,19 +952,19 @@ function SessionSettlementPanel({
               {messages.settings.posSessions.paymentBreakdown}
             </ItemTitle>
           </ItemHeader>
-          <div className="grid gap-1 text-sm">
+          <div className="grid gap-1.5 text-sm pt-1">
             {summary.paymentBreakdown.map((row) => (
               <div
                 key={row.method}
-                className="flex items-center justify-between"
+                className="flex items-center justify-between py-0.5"
               >
-                <span>
+                <span className="font-medium text-xs sm:text-sm">
                   {messages.settings.posSessions.methodCount(
                     paymentMethodLabel(row.method),
                     row.count,
                   )}
                 </span>
-                <span className="font-medium tabular-nums">
+                <span className="font-mono text-xs sm:text-sm font-semibold tabular-nums">
                   {formatVND(row.amount)}
                 </span>
               </div>
@@ -953,7 +974,7 @@ function SessionSettlementPanel({
       ) : null}
 
       {summary.cancelledCount > 0 ? (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           {messages.settings.posSessions.cancelledOrders(
             summary.cancelledCount,
           )}
@@ -1004,7 +1025,7 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
       description={messages.settings.posSessions.reportDescription}
       contentClassName="gap-4"
     >
-      <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-2 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
         <Metric
           icon={<IconReceipt className="size-4" />}
           label={messages.settings.posSessions.aov}

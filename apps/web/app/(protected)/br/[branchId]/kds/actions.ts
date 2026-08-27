@@ -103,23 +103,19 @@ export async function fetchKdsCompletionHistory(
   }
 
   const { startIso, endIso } = getVNDayUtcRange(parsed.data.date);
-  const historyRpc = ctx.supabase.rpc.bind(
-    ctx.supabase,
-  ) as unknown as KdsHistoryRpc;
-  const { data: eventRows, error: eventError } = await historyRpc(
-    "get_kds_ticket_history",
-    {
-      p_branch_id: parsed.data.branchId,
-      p_from: startIso,
-      p_to: endIso,
-      p_limit: parsed.data.limit + 1,
-      p_before_at: null,
-      p_before_id: null,
-      p_order_id: null,
-      p_event_type:
-        parsed.data.eventType === "all" ? null : parsed.data.eventType,
-    },
-  );
+  const { data: eventRows, error: eventError } = await (
+    ctx.supabase as unknown as { rpc: KdsHistoryRpc }
+  ).rpc("get_kds_ticket_history", {
+    p_branch_id: parsed.data.branchId,
+    p_from: startIso,
+    p_to: endIso,
+    p_limit: parsed.data.limit + 1,
+    p_before_at: null,
+    p_before_id: null,
+    p_order_id: null,
+    p_event_type:
+      parsed.data.eventType === "all" ? null : parsed.data.eventType,
+  });
 
   if (eventError) {
     return {

@@ -296,16 +296,17 @@ export async function refundOrderPayment(
     return { success: false, error: "Đơn đã có khoản hoàn tiền đang xử lý." };
   }
 
-  const createRefundRpc = supabase.rpc as unknown as (
-    fn: "create_refund_with_payout",
-    args: {
-      p_payment_id: number;
-      p_amount: number;
-      p_reason: string;
-      p_payout_method: RefundPayoutMethod;
-    },
-  ) => ReturnType<typeof supabase.rpc>;
-  const { data: createdRaw, error: createError } = await createRefundRpc(
+  const { data: createdRaw, error: createError } = await (
+    supabase.rpc as unknown as (
+      fn: "create_refund_with_payout",
+      args: {
+        p_payment_id: number;
+        p_amount: number;
+        p_reason: string;
+        p_payout_method: RefundPayoutMethod;
+      },
+    ) => Promise<{ data: unknown; error: { code?: string; message?: string } | null }>
+  )(
     "create_refund_with_payout",
     {
       p_payment_id: payment.id,

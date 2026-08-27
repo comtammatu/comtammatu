@@ -637,6 +637,13 @@ export const settings = {
       ]
         .filter(Boolean)
         .join(" · "),
+    closeDayTabAll: "Tất cả",
+    closeDayTabFinance: "Tài chính & Thu",
+    closeDayTabItems: "Món bán chạy",
+    closeDayTabSessions: "Ca POS",
+    closeDayTabOps: "Kho & Đội",
+    closeDayShowAll: (count: number) => `Xem toàn bộ (${count} món)`,
+    closeDayCollapse: "Thu gọn danh sách",
     setupLaneDescription: "",
     commandPosDescription: "",
     commandKdsDescription: "",

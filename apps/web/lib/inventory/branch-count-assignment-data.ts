@@ -4,8 +4,6 @@ import { notFound, redirect } from "next/navigation";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { INVENTORY_OPS_ROLES, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { getAuthContextWithPermission } from "@/(protected)/inventory/_lib/auth";
-import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
-import { parseBranchIdParam } from "@/_lib/branch-context";
 import { resolveDefaultShiftId } from "@lib/staff-runtime/_lib/default-shift";
 import type {
   BranchCountAssignmentData,
@@ -13,6 +11,7 @@ import type {
   CountAssignmentIngredient,
   CountAssignmentLocation,
   CountAssignmentShift,
+  CountTemplate,
 } from "./count-assignment-model";
 
 const ALL_SHIFTS_PARAM = "all";
@@ -30,8 +29,7 @@ function countLocationLabel(
   kind: string | null,
   fallbackName: string | null,
 ) {
-  const suffix =
-    kind === "warehouse" ? "Kho" : (fallbackName ?? "Kho");
+  const suffix = kind === "warehouse" ? "Kho" : (fallbackName ?? "Kho");
   return `${branchName} - ${suffix}`;
 }
 
@@ -49,49 +47,53 @@ export async function loadBranchCountAssignmentData({
     PERMISSION_KEYS.INVENTORY_COUNT_ASSIGN,
     routeBranchId,
   );
-  if (!ctx) redirect("/");
-  const { supabase, claims } = ctx;
-  const scope = await resolveInventoryListScope(supabase, claims, {
-    routeBranchId,
-  });
-  if (scope.outOfScope || scope.selectedBranchId !== routeBranchId) notFound();
+  if (!ctx) {
+    redirect("/");
+  }
 
-  const branchName =
-    scope.allowedBranches.find((branch) => branch.id === routeBranchId)?.name ??
-    `CN #${routeBranchId}`;
-  const requestedLocationId = parseBranchIdParam(locationParam);
-  const rawShiftId = Array.isArray(shiftParam) ? shiftParam[0] : shiftParam;
-  const requestedShiftId = parseBranchIdParam(shiftParam);
-  const requestedAllShifts = rawShiftId === ALL_SHIFTS_PARAM;
+  const { claims, supabase } = ctx;
+
+  const branchResult = await supabase
+    .from("branches")
+    .select("name, is_active")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("id", routeBranchId)
+    .maybeSingle();
+
+  if (branchResult.error) {
+    console.error("inventory.count_assignments.branch_fetch_failed", {
+      code: branchResult.error.code,
+    });
+    throw new Error("inventory.count_assignments.load_failed");
+  }
+  if (!branchResult.data || !branchResult.data.is_active) {
+    notFound();
+  }
+
+  const branchName = branchResult.data.name;
 
   const locationsResult = await supabase
     .from("inventory_locations")
-    .select("id, name, location_kind")
+    .select("id, name, location_kind, is_active")
     .eq("tenant_id", claims.tenant_id)
     .eq("branch_id", routeBranchId)
     .eq("is_active", true)
-    .in("location_kind", ["warehouse"])
-    .order("sort_order", { ascending: true })
-    .order("id", { ascending: true });
+    .order("name");
+
+  if (locationsResult.error) {
+    console.error("inventory.count_assignments.locations_fetch_failed", {
+      code: locationsResult.error.code,
+    });
+    throw new Error("inventory.count_assignments.load_failed");
+  }
+
   const locationOptions: CountAssignmentLocation[] = (
     locationsResult.data ?? []
-  ).map((location) => ({
-    id: location.id,
-    label: countLocationLabel(
-      branchName,
-      location.location_kind ?? null,
-      location.name ?? null,
-    ),
-    kind: location.location_kind ?? null,
+  ).map((loc) => ({
+    id: loc.id,
+    label: countLocationLabel(branchName, loc.location_kind, loc.name),
+    kind: loc.location_kind,
   }));
-  const selectedLocationId =
-    requestedLocationId != null &&
-    locationOptions.some((location) => location.id === requestedLocationId)
-      ? requestedLocationId
-      : (locationOptions.find((location) => location.kind === "warehouse")
-          ?.id ??
-        locationOptions[0]?.id ??
-        null);
 
   const shiftsResult = await supabase
     .from("shifts")
@@ -100,6 +102,14 @@ export async function loadBranchCountAssignmentData({
     .or(`branch_id.is.null,branch_id.eq.${routeBranchId}`)
     .eq("is_active", true)
     .order("start_time");
+
+  if (shiftsResult.error) {
+    console.error("inventory.count_assignments.shifts_fetch_failed", {
+      code: shiftsResult.error.code,
+    });
+    throw new Error("inventory.count_assignments.load_failed");
+  }
+
   const shiftOptions: CountAssignmentShift[] = (shiftsResult.data ?? []).map(
     (shift) => ({
       id: shift.id,
@@ -108,6 +118,7 @@ export async function loadBranchCountAssignmentData({
       endTime: shift.end_time,
     }),
   );
+
   const defaultShiftId = resolveDefaultShiftId(
     shiftOptions.map((shift) => ({
       id: shift.id,
@@ -115,6 +126,28 @@ export async function loadBranchCountAssignmentData({
       end_time: shift.endTime,
     })),
   );
+
+  const rawLocationParam = Array.isArray(locationParam)
+    ? locationParam[0]
+    : locationParam;
+  const rawShiftParam = Array.isArray(shiftParam)
+    ? shiftParam[0]
+    : shiftParam;
+
+  const requestedLocationId = rawLocationParam ? Number(rawLocationParam) : null;
+  const selectedLocationId =
+    requestedLocationId != null &&
+    locationOptions.some((l) => l.id === requestedLocationId)
+      ? requestedLocationId
+      : (locationOptions.find((l) => l.kind === "warehouse")?.id ??
+        locationOptions[0]?.id ??
+        null);
+
+  const requestedAllShifts = rawShiftParam === ALL_SHIFTS_PARAM;
+  const requestedShiftId =
+    rawShiftParam && rawShiftParam !== ALL_SHIFTS_PARAM
+      ? Number(rawShiftParam)
+      : null;
   const selectedShiftId = requestedAllShifts
     ? null
     : requestedShiftId != null &&
@@ -125,7 +158,7 @@ export async function loadBranchCountAssignmentData({
   const rosterClient = createServiceClient();
   const profilesResult = await rosterClient
     .from("profiles")
-    .select("id, full_name, is_active")
+    .select("id, full_name, is_active, position_id, positions(id, code, label_vi)")
     .eq("tenant_id", claims.tenant_id)
     .eq("branch_id", routeBranchId)
     .or("is_active.is.null,is_active.eq.true")
@@ -164,7 +197,16 @@ export async function loadBranchCountAssignmentData({
   for (const profile of profilesResult.data ?? []) {
     const employee = employeeByProfileId.get(profile.id);
     if (!employee) continue;
-    employees.push({ id: employee.id, name: profile.full_name ?? "—" });
+    const pos = Array.isArray(profile.positions)
+      ? profile.positions[0]
+      : profile.positions;
+    employees.push({
+      id: employee.id,
+      name: profile.full_name ?? "—",
+      positionId: profile.position_id ?? null,
+      positionCode: pos?.code ?? null,
+      positionName: pos?.label_vi ?? null,
+    });
   }
 
   const ingredientsResult = await supabase
@@ -180,19 +222,23 @@ export async function loadBranchCountAssignmentData({
     console.error("inventory.count_assignments.ingredients_fetch_failed", {
       code: ingredientsResult.error.code,
     });
-    throw new Error(
-      "Không đọc được danh sách nguyên liệu để phân công đếm tồn.",
-    );
+    throw new Error("Không đọc được danh mục nguyên liệu để phân công đếm tồn.");
   }
+
   const ingredients: CountAssignmentIngredient[] = (
-    (ingredientsResult.data ?? []) as IngredientCountOptionRow[]
-  ).map((ingredient) => ({
-    id: ingredient.id,
-    name: ingredient.name,
-    unit:
-      ingredient.ingredient_units?.find((unit) => unit.is_base)?.units?.code ??
-      "",
-  }));
+    (ingredientsResult.data ?? []) as unknown as IngredientCountOptionRow[]
+  ).map((ingredient) => {
+    const rawUnits = ingredient.ingredient_units;
+    const baseUnit = Array.isArray(rawUnits)
+      ? rawUnits.find((unit) => unit.is_base)
+      : null;
+    const unitCode = baseUnit?.units?.code ?? "";
+    return {
+      id: ingredient.id,
+      name: ingredient.name,
+      unit: unitCode,
+    };
+  });
 
   const assignmentsByEmployee: Record<string, number[]> = {};
   if (selectedLocationId != null) {
@@ -217,15 +263,16 @@ export async function loadBranchCountAssignmentData({
   const templatesResult = await supabase
     .from("inventory_count_templates")
     .select(
-      "id, code, name, station_role, is_system, inventory_count_template_items(ingredient_id, sort_order)",
+      "id, branch_id, code, name, station_role, is_system, inventory_count_template_items(ingredient_id, sort_order)",
     )
     .eq("tenant_id", claims.tenant_id)
     .or(`branch_id.is.null,branch_id.eq.${routeBranchId}`)
     .eq("is_active", true)
     .order("id");
 
-  const templates = (templatesResult.data ?? []).map((t) => ({
+  const rawTemplates = (templatesResult.data ?? []).map((t) => ({
     id: t.id,
+    branchId: t.branch_id,
     code: t.code,
     name: t.name,
     stationRole: t.station_role,
@@ -239,6 +286,28 @@ export async function loadBranchCountAssignmentData({
       .sort((a, b) => a.sort_order - b.sort_order)
       .map((item) => item.ingredient_id),
   }));
+
+  const branchTemplateCodes = new Set(
+    rawTemplates.filter((t) => t.branchId != null).map((t) => t.code),
+  );
+  const templates: CountTemplate[] = rawTemplates
+    .filter((t) => {
+      if (
+        t.branchId == null &&
+        branchTemplateCodes.has(`${t.code}_br${routeBranchId}`)
+      ) {
+        return false;
+      }
+      return true;
+    })
+    .map((t) => ({
+      id: t.id,
+      code: t.code,
+      name: t.name,
+      stationRole: t.stationRole,
+      isSystem: t.isSystem,
+      ingredientIds: t.ingredientIds,
+    }));
 
   return {
     branchId: routeBranchId,

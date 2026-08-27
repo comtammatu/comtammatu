@@ -103,3 +103,119 @@ export const setCountAssignmentsByTemplate = withAction(
   },
 );
 
+const setStationAssignmentsSchema = z.object({
+  branchId: z.coerce.number().int().positive(),
+  locationId: z.coerce.number().int().positive(),
+  templateId: z.coerce.number().int().positive(),
+  shiftId: z.coerce.number().int().positive().nullable().optional(),
+  assignments: z.array(
+    z.object({
+      employeeId: z.coerce.number().int().positive(),
+      ingredientIds: z.array(z.coerce.number().int().positive()),
+    }),
+  ),
+});
+
+export const setStationCountAssignments = withAction(
+  {
+    roles: ROLES,
+    schema: setStationAssignmentsSchema,
+    permission: PERMISSION_KEYS.INVENTORY_COUNT_ASSIGN,
+    permissionBranchId: (data) => data.branchId,
+    requireBranchScope: true,
+  },
+  async (data, { supabase }) => {
+    const { error } = await supabase.rpc("set_station_count_assignments", {
+      p_branch_id: data.branchId,
+      p_location_id: data.locationId,
+      p_template_id: data.templateId,
+      p_assignments: data.assignments,
+      ...(data.shiftId == null ? {} : { p_shift_id: data.shiftId }),
+    });
+    if (error) {
+      console.error("inventory.count_assignments.set_station_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, error: mapCountAssignRpcError(error.code) };
+    }
+    revalidatePath("/inventory/count-assignments");
+    revalidatePath(`/br/${data.branchId}/stock/count-assignments`);
+    revalidatePath(`/br/${data.branchId}/team`);
+    return { success: true };
+  },
+);
+
+const saveCountTemplateSchema = z.object({
+  branchId: z.coerce.number().int().positive(),
+  templateId: z.coerce.number().int().positive().nullable().optional(),
+  code: z.string().trim().max(64).optional(),
+  name: z.string().trim().min(1).max(128),
+  stationRole: z.string().trim().min(1).max(64).default("custom"),
+  ingredientIds: z.array(z.coerce.number().int().positive()),
+});
+
+export const saveCountTemplate = withAction(
+  {
+    roles: ROLES,
+    schema: saveCountTemplateSchema,
+    permission: PERMISSION_KEYS.INVENTORY_COUNT_ASSIGN,
+    permissionBranchId: (data) => data.branchId,
+    requireBranchScope: true,
+  },
+  async (data, { supabase }) => {
+    const { data: res, error } = await supabase.rpc(
+      "upsert_inventory_count_template",
+      {
+        p_branch_id: data.branchId,
+        p_code: data.code ?? "",
+        p_name: data.name,
+        p_station_role: data.stationRole,
+        p_ingredient_ids: data.ingredientIds,
+        ...(data.templateId == null ? {} : { p_template_id: data.templateId }),
+      },
+    );
+    if (error) {
+      console.error("inventory.count_assignments.save_template_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, error: "Không thể lưu mẫu kiểm đếm." };
+    }
+    revalidatePath("/inventory/count-assignments");
+    revalidatePath(`/br/${data.branchId}/stock/count-assignments`);
+    return {
+      success: true,
+      templateId: (res as { template_id?: number } | null)?.template_id,
+    };
+  },
+);
+
+const deleteCountTemplateSchema = z.object({
+  branchId: z.coerce.number().int().positive(),
+  templateId: z.coerce.number().int().positive(),
+});
+
+export const deleteCountTemplate = withAction(
+  {
+    roles: ROLES,
+    schema: deleteCountTemplateSchema,
+    permission: PERMISSION_KEYS.INVENTORY_COUNT_ASSIGN,
+    permissionBranchId: (data) => data.branchId,
+    requireBranchScope: true,
+  },
+  async (data, { supabase }) => {
+    const { error } = await supabase.rpc("delete_inventory_count_template", {
+      p_branch_id: data.branchId,
+      p_template_id: data.templateId,
+    });
+    if (error) {
+      console.error("inventory.count_assignments.delete_template_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, error: "Không thể xóa mẫu kiểm đếm." };
+    }
+    revalidatePath("/inventory/count-assignments");
+    revalidatePath(`/br/${data.branchId}/stock/count-assignments`);
+    return { success: true };
+  },
+);
+

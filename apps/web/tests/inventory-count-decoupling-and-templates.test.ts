@@ -113,7 +113,7 @@ test("migration and actions confirm count slip approval is decoupled from stock 
   assert.match(actions, /alreadyApproved: raw\.already_approved === true/);
 });
 
-test("branch count assignments presents Station Templates", () => {
+test("branch count assignments presents Station Templates and Matrix", () => {
   const client = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-assignments/branch-count-assignments-client.tsx",
   );
@@ -124,9 +124,14 @@ test("branch count assignments presents Station Templates", () => {
     "packages/shared/src/messages/inventory.ts",
   );
 
-  assert.match(client, /setCountAssignmentsByTemplate/);
+  assert.match(client, /setStationCountAssignments/);
+  assert.match(client, /saveCountTemplate/);
+  assert.match(client, /deleteCountTemplate/);
   assert.match(client, /INVENTORY_VI\.countAssignStationTitle/);
   assert.match(messages, /countAssignStationTitle:\s*"Phân công theo Vai trò ca"/);
-  assert.match(actions, /setCountAssignmentsByTemplate/);
-  assert.match(actions, /p_template_id/);
+  assert.match(messages, /countStationAssignAction:\s*"Phân công"/);
+  assert.match(actions, /setStationCountAssignments/);
+  assert.match(actions, /saveCountTemplate/);
+  assert.match(actions, /deleteCountTemplate/);
+  assert.match(actions, /p_assignments/);
 });

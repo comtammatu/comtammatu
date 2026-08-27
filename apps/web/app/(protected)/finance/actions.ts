@@ -951,14 +951,15 @@ export async function fetchOrdersForDay(
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const ordersForDayV2Rpc = ctx.supabase.rpc.bind(ctx.supabase) as unknown as (
-    name: "get_orders_for_day_v2",
-    args: { p_branch_id: number; p_date: string },
-  ) => Promise<{
-    data: unknown[] | null;
-    error: { message: string } | null;
-  }>;
-  const { data, error } = await ordersForDayV2Rpc("get_orders_for_day_v2", {
+  const { data, error } = await (
+    ctx.supabase.rpc as unknown as (
+      name: "get_orders_for_day_v2",
+      args: { p_branch_id: number; p_date: string },
+    ) => Promise<{
+      data: unknown[] | null;
+      error: { message: string } | null;
+    }>
+  )("get_orders_for_day_v2", {
     p_branch_id: parsedBranch.data,
     p_date: parsedDate.data,
   });
