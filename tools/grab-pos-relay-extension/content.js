@@ -1,6 +1,6 @@
 // content.js - Content script running in merchant.grab.com
 (function () {
-  const extVersion = chrome.runtime.getManifest()?.version || '1.1.2';
+  const extVersion = chrome.runtime.getManifest()?.version || '1.1.3';
   console.log(`[Grab POS Relay v${extVersion}] Content script active`);
 
   // Inject injected.js into page context

@@ -444,34 +444,26 @@
     try {
       let statusCode = 1;
       let statusStr = 'AVAILABLE';
-      let availableAt = '0001-01-01T00:00:00Z';
 
       // 1: Có bán (AVAILABLE)
       if (availableStatus === 1 || availableStatus === 'AVAILABLE') {
         statusCode = 1;
         statusStr = 'AVAILABLE';
-        availableAt = '0001-01-01T00:00:00Z';
       }
       // 2: Hết hàng hôm nay (UNAVAILABLE_TODAY - tự động mở lại 00:00 sáng mai)
       else if (availableStatus === 2 || availableStatus === 'UNAVAILABLE_TODAY' || availableStatus === 'UNAVAILABLE') {
         statusCode = 2;
         statusStr = 'UNAVAILABLE_TODAY';
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        tomorrow.setHours(0, 0, 0, 0);
-        availableAt = tomorrow.toISOString();
       }
       // 3: Không về hàng nữa (UNAVAILABLE_INDEFINITELY / DISCONTINUED)
       else if (availableStatus === 3 || availableStatus === 'UNAVAILABLE_INDEFINITELY' || availableStatus === 'DISCONTINUED') {
         statusCode = 3;
         statusStr = 'UNAVAILABLE_INDEFINITELY';
-        availableAt = '0001-01-01T00:00:00Z';
       }
       // 7: Ẩn giấu (HIDDEN)
       else if (availableStatus === 7 || availableStatus === 'HIDDEN' || availableStatus === 'INACTIVE') {
         statusCode = 7;
         statusStr = 'HIDDEN';
-        availableAt = '0001-01-01T00:00:00Z';
       } else {
         dispatchOrderEvent('SYNC_STATUS_RESULT', {
           requestId,
@@ -494,13 +486,8 @@
           'content-type': 'application/json',
         },
         body: JSON.stringify({
-          items: [
-            {
-              itemID: itemId,
-              availableStatus: statusCode,
-              availableAt: availableAt,
-            },
-          ],
+          itemIDs: [itemId],
+          availableStatus: statusCode,
         }),
       });
 

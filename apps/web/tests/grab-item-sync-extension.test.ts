@@ -33,14 +33,21 @@ function loadNormalizeStockPayload(): (currentStock: unknown) => unknown {
 }
 
 test("Grab item status sync matches the portal mutation contract", () => {
-  assert.match(
+  const statusMutation = sourceBlock(
     injectedSource,
+    "async function setGrabItemAvailableStatus",
+    "// API Call: Sync Stock / Daily Limit",
+  );
+
+  assert.match(
+    statusMutation,
     /food\/merchant\/v1\/items\/available-status[\s\S]*?method: 'PUT'/,
   );
-  assert.match(injectedSource, /itemID: itemId/);
-  assert.match(injectedSource, /availableStatus: statusCode/);
-  assert.match(injectedSource, /availableAt: availableAt/);
-  assert.match(injectedSource, /error: 'Invalid available status'/);
+  assert.match(statusMutation, /itemIDs: \[itemId\]/);
+  assert.match(statusMutation, /availableStatus: statusCode/);
+  assert.doesNotMatch(statusMutation, /\bitems:\s*\[/);
+  assert.doesNotMatch(statusMutation, /\bavailableAt:/);
+  assert.match(statusMutation, /error: 'Invalid available status'/);
 });
 
 test("Grab item stock sync matches the portal IMS mutation contract", () => {
