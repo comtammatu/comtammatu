@@ -136,7 +136,7 @@ export function LeaveRequestClient({
               icon={<IconCalendarX />}
             />
           ) : (
-            <ItemGroup>
+            <ItemGroup className="grid gap-2 lg:grid-cols-2">
               {requests.map((request) => {
                 const days = countInclusiveDays(
                   request.start_date,

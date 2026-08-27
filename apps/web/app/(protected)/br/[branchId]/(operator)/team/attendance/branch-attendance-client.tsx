@@ -265,6 +265,7 @@ export function BranchAttendanceClient({
   const employeeIdParam = parseEmployeeIdParam(searchParams.get("employeeId"));
 
   const [records, setRecords] = useState(initialRecords);
+  const [clockShiftFilter, setClockShiftFilter] = useState<string>("all");
   const [monthRecords, setMonthRecords] = useState<BranchAttendanceRecord[]>(
     [],
   );
@@ -291,6 +292,24 @@ export function BranchAttendanceClient({
     () => getVNMonthSequenceBack(6).map(({ date }) => date.slice(0, 7)),
     [],
   );
+
+  const clockShiftGroups = useMemo(() => {
+    const map = new Map<string, { shiftName: string; count: number }>();
+    for (const record of records) {
+      const key = record.shifts?.name ?? "Chưa có ca";
+      const group = map.get(key) ?? { shiftName: key, count: 0 };
+      group.count += 1;
+      map.set(key, group);
+    }
+    return Array.from(map.values());
+  }, [records]);
+
+  const filteredClockRecords = useMemo(() => {
+    if (clockShiftFilter === "all") return records;
+    return records.filter(
+      (record) => (record.shifts?.name ?? "Chưa có ca") === clockShiftFilter,
+    );
+  }, [records, clockShiftFilter]);
 
   const recordById = useMemo(() => {
     const map = new Map<number, BranchAttendanceRecord>();
@@ -537,6 +556,49 @@ export function BranchAttendanceClient({
           </Select>
         ) : null}
 
+        {view === "clock" && clockShiftGroups.length > 1 ? (
+          <div
+            className="no-scrollbar flex touch-pan-x gap-1.5 overflow-x-auto overscroll-x-contain pb-1"
+            role="group"
+            aria-label="Lọc theo ca làm"
+          >
+            <Button
+              type="button"
+              variant={clockShiftFilter === "all" ? "secondary" : "outline"}
+              size="touch"
+              aria-pressed={clockShiftFilter === "all"}
+              className="shrink-0 gap-2 px-3"
+              onClick={() => setClockShiftFilter("all")}
+            >
+              <span className="whitespace-nowrap">Tất cả ca</span>
+              <Badge
+                variant={clockShiftFilter === "all" ? "default" : "outline"}
+              >
+                {records.length}
+              </Badge>
+            </Button>
+            {clockShiftGroups.map((group) => {
+              const active = clockShiftFilter === group.shiftName;
+              return (
+                <Button
+                  key={group.shiftName}
+                  type="button"
+                  variant={active ? "secondary" : "outline"}
+                  size="touch"
+                  aria-pressed={active}
+                  className="shrink-0 gap-2 px-3"
+                  onClick={() => setClockShiftFilter(group.shiftName)}
+                >
+                  <span className="whitespace-nowrap">{group.shiftName}</span>
+                  <Badge variant={active ? "default" : "outline"}>
+                    {group.count}
+                  </Badge>
+                </Button>
+              );
+            })}
+          </div>
+        ) : null}
+
         <BranchOperatorPanel
           title={
             view === "clock"
@@ -550,7 +612,10 @@ export function BranchAttendanceClient({
           }
           icon={IconListChecks}
           badge={{
-            children: view === "clock" ? records.length : summary.length,
+            children:
+              view === "clock"
+                ? filteredClockRecords.length
+                : summary.length,
           }}
           size="sm"
         >
@@ -566,17 +631,25 @@ export function BranchAttendanceClient({
                   {ACTIONS_VI.retry}
                 </Button>
               </AppEmptyState>
-            ) : records.length === 0 ? (
+            ) : filteredClockRecords.length === 0 ? (
               <AppEmptyState
                 compact
-                mode="no-data"
+                mode={records.length === 0 ? "no-data" : "no-results"}
                 icon={<IconListChecks />}
-                title={attendanceCopy.detailEmptyTitle}
-                description={attendanceCopy.detailEmptyDescription}
+                title={
+                  records.length === 0
+                    ? attendanceCopy.detailEmptyTitle
+                    : "Không có chấm công trong ca này"
+                }
+                description={
+                  records.length === 0
+                    ? attendanceCopy.detailEmptyDescription
+                    : "Chọn ca khác hoặc chọn «Tất cả ca» để xem chấm công hôm nay."
+                }
               />
             ) : (
-              <ItemGroup className="grid gap-2">
-                {records.map((record) => {
+              <ItemGroup className="grid gap-2 lg:grid-cols-2">
+                {filteredClockRecords.map((record) => {
                   const progress = attendanceChecklistProgress(record);
                   return (
                     <Item
@@ -637,7 +710,7 @@ export function BranchAttendanceClient({
               description={attendanceCopy.summaryEmptyDescription}
             />
           ) : (
-            <ItemGroup className="grid gap-2">
+            <ItemGroup className="grid gap-2 lg:grid-cols-2">
               {summary.map((row) => (
                 <Item
                   key={row.employee_id}
@@ -693,7 +766,7 @@ export function BranchAttendanceClient({
           .filter(Boolean)
           .join(" · ")}
         side="bottom"
-        contentClassName="flex max-h-dvh-80 flex-col"
+        contentClassName="flex max-h-dvh-80 flex-col sm:mx-auto sm:max-w-2xl"
         headerClassName="text-left"
         bodyClassName="overscroll-contain px-4 pb-2"
         footerClassName="sticky bottom-0 border-t bg-background"

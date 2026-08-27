@@ -598,6 +598,46 @@ export function BranchCountAssignmentsClient({
         ) : null}
       </div>
 
+      {data.shiftOptions.length > 0 ? (
+        <div
+          className="no-scrollbar flex touch-pan-x gap-1.5 overflow-x-auto overscroll-x-contain pb-1"
+          role="group"
+          aria-label={INVENTORY_VI.countAssignShiftLabel}
+        >
+          <Button
+            type="button"
+            variant={data.selectedShiftId == null ? "secondary" : "outline"}
+            size="touch"
+            aria-pressed={data.selectedShiftId == null}
+            className="shrink-0 gap-2 px-3"
+            onClick={() => replaceScope(data.selectedLocationId, null)}
+          >
+            <span className="whitespace-nowrap">
+              {INVENTORY_VI.countAssignAllShifts}
+            </span>
+          </Button>
+          {data.shiftOptions.map((shift) => {
+            const active = data.selectedShiftId === shift.id;
+            return (
+              <Button
+                key={shift.id}
+                type="button"
+                variant={active ? "secondary" : "outline"}
+                size="touch"
+                aria-pressed={active}
+                className="shrink-0 gap-2 px-3"
+                onClick={() => replaceScope(data.selectedLocationId, shift.id)}
+              >
+                <span className="whitespace-nowrap">{shift.name}</span>
+                <span className="text-xs text-muted-foreground">
+                  ({formatVNClockTime(shift.startTime)}-{formatVNClockTime(shift.endTime)})
+                </span>
+              </Button>
+            );
+          })}
+        </div>
+      ) : null}
+
       {/* SECTION 1: Station Role Templates */}
       {data.selectedLocationId != null ? (
         <div className="flex flex-col gap-3">
@@ -1012,7 +1052,7 @@ export function BranchCountAssignmentsClient({
         description={INVENTORY_VI.countStationAssignSheetDescription}
         side="bottom"
         showCloseButton={false}
-        contentClassName="max-h-dvh-95 flex flex-col overflow-hidden bg-background"
+        contentClassName="max-h-dvh-95 flex flex-col overflow-hidden bg-background sm:mx-auto sm:max-w-3xl"
         bodyClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-0"
         footer={
           <>
@@ -1369,7 +1409,7 @@ export function BranchCountAssignmentsClient({
         description={INVENTORY_VI.countTemplateEditorSheetDescription}
         side="bottom"
         showCloseButton={false}
-        contentClassName="max-h-dvh-95 flex flex-col overflow-hidden bg-background"
+        contentClassName="max-h-dvh-95 flex flex-col overflow-hidden bg-background sm:mx-auto sm:max-w-2xl"
         bodyClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-0"
         footer={
           <>
@@ -1515,7 +1555,7 @@ export function BranchCountAssignmentsClient({
 
         {/* Native Smooth Scrollable Ingredient List */}
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4 sm:px-4">
-          <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {templateVisibleIngredients.map((ingredient) => {
               const checked = templateDraftIngredientIds.includes(
                 ingredient.id,
@@ -1580,7 +1620,7 @@ export function BranchCountAssignmentsClient({
         )}
         side="bottom"
         showCloseButton={false}
-        contentClassName="max-h-dvh-95 flex flex-col overflow-hidden bg-background"
+        contentClassName="max-h-dvh-95 flex flex-col overflow-hidden bg-background sm:mx-auto sm:max-w-2xl"
         bodyClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-0"
         footer={
           <>
@@ -1692,7 +1732,7 @@ export function BranchCountAssignmentsClient({
 
         {/* Native Smooth Scrollable Ingredient List */}
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4 sm:px-4">
-          <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {visibleIngredients.length === 0 ? (
               <AppEmptyState
                 compact

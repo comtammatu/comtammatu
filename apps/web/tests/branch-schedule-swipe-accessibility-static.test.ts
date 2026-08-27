@@ -48,7 +48,7 @@ test("checkout approval details keep one scroll body and semantic checklist role
 
   assert.match(
     source,
-    /contentClassName="flex max-h-dvh-80 flex-col overflow-hidden"/,
+    /contentClassName="flex max-h-dvh-80 flex-col overflow-hidden/,
   );
   assert.match(
     source,

@@ -3,7 +3,7 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: existing employee checkout approval surface keeps operational copy inline */
 
 import Image from "next/image";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import {
   CheckCircle2 as IconCheck,
@@ -232,12 +232,35 @@ export function CheckoutApprovalsClient({
   focusAttendanceId,
 }: CheckoutApprovalsClientProps) {
   const [localItems, setLocalItems] = useState(items);
+  const [shiftFilter, setShiftFilter] = useState<string>("all");
   const [pendingId, setPendingId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     setLocalItems(items);
   }, [items]);
+
+  const shiftGroups = useMemo(() => {
+    const map = new Map<
+      string,
+      { shiftName: string; count: number; items: CheckoutApprovalItem[] }
+    >();
+    for (const item of localItems) {
+      const key = item.shiftName || "Chưa có ca";
+      const group = map.get(key) ?? { shiftName: key, count: 0, items: [] };
+      group.count += 1;
+      group.items.push(item);
+      map.set(key, group);
+    }
+    return Array.from(map.values());
+  }, [localItems]);
+
+  const filteredItems = useMemo(() => {
+    if (shiftFilter === "all") return localItems;
+    return localItems.filter(
+      (item) => (item.shiftName || "Chưa có ca") === shiftFilter,
+    );
+  }, [localItems, shiftFilter]);
 
   const [rejectTarget, setRejectTarget] = useState<CheckoutApprovalItem | null>(
     null,
@@ -377,24 +400,74 @@ export function CheckoutApprovalsClient({
         </Alert>
       ) : null}
 
-      <ItemGroup className="gap-2 overflow-hidden sm:overflow-visible">
-        {localItems.map((item) => {
-          const approving = pendingId === item.id && isPending;
-          return (
-            <ApprovalRow
-              key={item.id}
-              item={item}
-              canApprove={canApprove}
-              approving={approving}
-              isPending={isPending}
-              swipe={swipe}
-              onApprove={() => approve(item)}
-              onReject={() => setRejectTarget(item)}
-              onOpenDetails={() => setDetailsTarget(item)}
-            />
-          );
-        })}
-      </ItemGroup>
+      {shiftGroups.length > 1 ? (
+        <div
+          className="no-scrollbar flex touch-pan-x gap-1.5 overflow-x-auto overscroll-x-contain pb-1"
+          role="group"
+          aria-label="Lọc theo ca làm"
+        >
+          <Button
+            type="button"
+            variant={shiftFilter === "all" ? "secondary" : "outline"}
+            size="touch"
+            aria-pressed={shiftFilter === "all"}
+            className="shrink-0 gap-2 px-3"
+            onClick={() => setShiftFilter("all")}
+          >
+            <span className="whitespace-nowrap">Tất cả ca</span>
+            <Badge variant={shiftFilter === "all" ? "default" : "outline"}>
+              {localItems.length}
+            </Badge>
+          </Button>
+          {shiftGroups.map((group) => {
+            const active = shiftFilter === group.shiftName;
+            return (
+              <Button
+                key={group.shiftName}
+                type="button"
+                variant={active ? "secondary" : "outline"}
+                size="touch"
+                aria-pressed={active}
+                className="shrink-0 gap-2 px-3"
+                onClick={() => setShiftFilter(group.shiftName)}
+              >
+                <span className="whitespace-nowrap">{group.shiftName}</span>
+                <Badge variant={active ? "default" : "outline"}>
+                  {group.count}
+                </Badge>
+              </Button>
+            );
+          })}
+        </div>
+      ) : null}
+
+      {filteredItems.length === 0 ? (
+        <AppEmptyState
+          compact
+          mode="no-results"
+          title="Không có yêu cầu trong ca này"
+          description="Chọn ca khác hoặc chọn «Tất cả ca» để xem danh sách chờ duyệt."
+        />
+      ) : (
+        <ItemGroup className="grid gap-2 lg:grid-cols-2 overflow-hidden sm:overflow-visible">
+          {filteredItems.map((item) => {
+            const approving = pendingId === item.id && isPending;
+            return (
+              <ApprovalRow
+                key={item.id}
+                item={item}
+                canApprove={canApprove}
+                approving={approving}
+                isPending={isPending}
+                swipe={swipe}
+                onApprove={() => approve(item)}
+                onReject={() => setRejectTarget(item)}
+                onOpenDetails={() => setDetailsTarget(item)}
+              />
+            );
+          })}
+        </ItemGroup>
+      )}
 
       {/* Details Drawer */}
       <AppDrawer
@@ -408,7 +481,7 @@ export function CheckoutApprovalsClient({
             ? `${detailsTarget.employeeName} · ${detailsTarget.shiftLabel} · ${detailsTarget.checkInLabel}→${detailsTarget.requestedLabel}`
             : undefined
         }
-        contentClassName="flex max-h-dvh-80 flex-col overflow-hidden"
+        contentClassName="flex max-h-dvh-80 flex-col overflow-hidden sm:mx-auto sm:max-w-2xl"
         headerClassName="shrink-0"
         footerClassName="shrink-0 flex-row gap-3 pt-2"
         footer={
@@ -554,6 +627,7 @@ export function CheckoutApprovalsClient({
         }}
         title="Từ chối kết ca"
         description="Nhập lý do từ chối để nhân viên biết và sửa lỗi."
+        contentClassName="sm:mx-auto sm:max-w-xl"
         footerClassName="pt-2"
         footer={
           <Button

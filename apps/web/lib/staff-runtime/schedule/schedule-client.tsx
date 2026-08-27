@@ -690,7 +690,7 @@ export function ScheduleClient({
         </MonthNav>
 
         <StatusStrip
-          className="grid-cols-2"
+          className="grid-cols-2 sm:grid-cols-4"
           items={[
             {
               label: copy.summaryWorkdays,
@@ -777,6 +777,7 @@ export function ScheduleClient({
         }}
         title={selectedDate ? formatDate(selectedDate) : copy.dayDetailTitle}
         description={formatMonthTitle(monthStart)}
+        contentClassName="sm:mx-auto sm:max-w-2xl"
       >
           {selectedDate ? (
             <SelectedDayDetail

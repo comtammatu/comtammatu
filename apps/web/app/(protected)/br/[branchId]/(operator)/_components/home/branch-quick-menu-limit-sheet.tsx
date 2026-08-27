@@ -283,7 +283,7 @@ export function BranchQuickMenuLimitSheet({
         </Button>
       </div>
 
-      <div>
+      <div className="min-h-0 flex-1 overflow-y-auto">
         {loading ? (
           <div className="flex items-center justify-center py-4">
             <Spinner className="size-6 text-muted-foreground" />

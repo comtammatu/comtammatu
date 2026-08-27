@@ -485,7 +485,7 @@ type TeamStripRow = {
 
 function TeamStripRows({ rows }: { rows: TeamStripRow[] }) {
   return (
-    <ItemGroup className="gap-1.5">
+    <ItemGroup className="grid gap-1.5 sm:grid-cols-2">
       {rows.map((row) => {
         const hasPending = row.count != null && row.count > 0;
         return (

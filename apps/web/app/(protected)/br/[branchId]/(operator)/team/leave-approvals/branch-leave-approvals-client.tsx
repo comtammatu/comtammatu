@@ -371,7 +371,7 @@ export function BranchLeaveApprovalsClient({
           ) : undefined
         }
         side="bottom"
-        contentClassName="max-h-dvh-95 bg-background"
+        contentClassName="max-h-dvh-95 bg-background sm:mx-auto sm:max-w-2xl"
         footerClassName="sticky bottom-0 border-t bg-background/95 backdrop-blur"
         footer={
           selected ? (
