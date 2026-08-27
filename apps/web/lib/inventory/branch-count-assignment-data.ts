@@ -7,6 +7,7 @@ import { getAuthContextWithPermission } from "@/(protected)/inventory/_lib/auth"
 import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
 import { parseBranchIdParam } from "@/_lib/branch-context";
 import { resolveDefaultShiftId } from "@lib/staff-runtime/_lib/default-shift";
+import { getVNBusinessDateString } from "@comtammatu/shared/time";
 import type {
   BranchCountAssignmentData,
   CountAssignmentEmployee,
@@ -182,6 +183,30 @@ export async function loadBranchCountAssignmentData({
       employee,
     ]),
   );
+
+  const todayDateStr = getVNBusinessDateString(new Date());
+  const shiftAssignmentsResult = await rosterClient
+    .from("shift_assignments" as never)
+    .select("employee_id, shift_id")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("branch_id", routeBranchId)
+    .eq("work_date", todayDateStr);
+
+  const shiftIdsByEmployeeId = new Map<number, number[]>();
+  if (
+    !shiftAssignmentsResult.error &&
+    Array.isArray(shiftAssignmentsResult.data)
+  ) {
+    for (const sa of shiftAssignmentsResult.data as unknown as {
+      employee_id: number;
+      shift_id: number;
+    }[]) {
+      const current = shiftIdsByEmployeeId.get(sa.employee_id) ?? [];
+      current.push(sa.shift_id);
+      shiftIdsByEmployeeId.set(sa.employee_id, current);
+    }
+  }
+
   const employees: CountAssignmentEmployee[] = [];
   for (const profile of profilesResult.data ?? []) {
     const employee = employeeByProfileId.get(profile.id);
@@ -195,6 +220,7 @@ export async function loadBranchCountAssignmentData({
       positionId: profile.position_id ?? null,
       positionCode: pos?.code ?? null,
       positionName: pos?.label_vi ?? null,
+      scheduledShiftIds: shiftIdsByEmployeeId.get(employee.id) ?? [],
     });
   }
 

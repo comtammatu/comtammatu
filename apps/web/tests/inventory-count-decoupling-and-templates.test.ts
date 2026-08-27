@@ -167,3 +167,24 @@ test("branch and owner count slip review clients provide variance resolution act
     /createStocktakeAction:\s*"Lập phiếu kiểm kê kho"/,
   );
 });
+
+test("isPositionMatchingStationRole accurately maps positions to station roles", async () => {
+  const { isPositionMatchingStationRole } = await import(
+    "../lib/inventory/count-assignment-model"
+  );
+
+  // Drink bar / Cashier / Waiter station
+  assert.equal(isPositionMatchingStationRole("waiter", "cashier_waiter"), true);
+  assert.equal(isPositionMatchingStationRole("cashier", "cashier_waiter"), true);
+  assert.equal(isPositionMatchingStationRole("drink_maker", "cashier_waiter"), true);
+  assert.equal(isPositionMatchingStationRole("grill_counter", "cashier_waiter"), false);
+
+  // Grill station
+  assert.equal(isPositionMatchingStationRole("grill_counter", "grill"), true);
+  assert.equal(isPositionMatchingStationRole("waiter", "grill"), false);
+
+  // Kitchen & Warehouse station
+  assert.equal(isPositionMatchingStationRole("kitchen_counter", "kitchen"), true);
+  assert.equal(isPositionMatchingStationRole("kitchen_helper", "kitchen"), true);
+  assert.equal(isPositionMatchingStationRole("waiter", "kitchen"), false);
+});

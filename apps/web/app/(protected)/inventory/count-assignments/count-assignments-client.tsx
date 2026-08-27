@@ -409,7 +409,31 @@ export function CountAssignmentsClient({
       key: "employee",
       header: "Nhân viên",
       className: "min-w-52",
-      render: (employee) => <div className="font-medium">{employee.name}</div>,
+      render: (employee) => {
+        const isOnShift =
+          selectedShiftId !== null &&
+          Boolean(employee.scheduledShiftIds?.includes(selectedShiftId));
+        return (
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-1.5 font-medium">
+              <span>{employee.name}</span>
+              {isOnShift ? (
+                <Badge
+                  variant="outline"
+                  className="px-1 py-0 text-xs text-primary"
+                >
+                  {INVENTORY_VI.countStationOnDutyBadge}
+                </Badge>
+              ) : null}
+            </div>
+            {employee.positionName ? (
+              <span className="text-xs text-muted-foreground">
+                {employee.positionName}
+              </span>
+            ) : null}
+          </div>
+        );
+      },
     },
     {
       key: "assignments",

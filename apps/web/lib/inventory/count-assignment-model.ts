@@ -4,7 +4,46 @@ export type CountAssignmentEmployee = {
   positionId?: number | null;
   positionCode?: string | null;
   positionName?: string | null;
+  scheduledShiftIds?: number[];
 };
+
+export function isPositionMatchingStationRole(
+  positionCode: string | null | undefined,
+  stationRole: string | null | undefined,
+): boolean {
+  if (!stationRole || stationRole === "all" || stationRole === "custom") {
+    return true;
+  }
+  if (!positionCode) return false;
+
+  const normPos = positionCode.toLowerCase().replace(/[-_]/g, "");
+  const normStation = stationRole.toLowerCase().replace(/[-_]/g, "");
+
+  if (
+    normStation.includes("cashier") ||
+    normStation.includes("waiter") ||
+    normStation.includes("drink")
+  ) {
+    return (
+      normPos.includes("waiter") ||
+      normPos.includes("cashier") ||
+      normPos.includes("service") ||
+      normPos.includes("drink")
+    );
+  }
+  if (normStation.includes("grill")) {
+    return normPos.includes("grill");
+  }
+  if (normStation.includes("kitchen") || normStation.includes("warehouse")) {
+    return (
+      normPos.includes("kitchen") ||
+      normPos.includes("cook") ||
+      normPos.includes("helper") ||
+      normPos.includes("warehouse")
+    );
+  }
+  return normPos.includes(normStation) || normStation.includes(normPos);
+}
 
 export type CountAssignmentIngredient = {
   id: number;

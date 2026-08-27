@@ -472,6 +472,11 @@ export const INVENTORY_VI = {
   countStationAssignSheetDescription:
     "Chỉ định cụ thể người đếm từng món trong trạm để tránh đếm trùng.",
   countStationStaffTitle: "Nhân sự trực trạm",
+  countStationRecommendedStaffTitle: "Nhân sự phù hợp trực ca",
+  countStationOtherStaffTitle: "Nhân sự khác trong chi nhánh",
+  countStationOnDutyBadge: "Trực ca này",
+  countStationAutoAssignedSingle: (name: string) =>
+    `Đã tự động gán toàn bộ món cho ${name}`,
   countStationSelectStaffPlaceholder: "Thêm nhân viên...",
   countStationAssignAllTo: (name: string) => `Giao tất cả cho ${name}`,
   countStationSplitEvenly: "Chia đều món",
