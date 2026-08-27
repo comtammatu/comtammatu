@@ -135,3 +135,35 @@ test("branch count assignments presents Station Templates and Matrix", () => {
   assert.match(actions, /deleteCountTemplate/);
   assert.match(actions, /p_assignments/);
 });
+
+test("branch and owner count slip review clients provide variance resolution actions", () => {
+  const branchClient = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-slips/branch-count-slips-client.tsx",
+  );
+  const ownerClient = read(
+    "apps/web/app/(protected)/inventory/count-slips/count-slips-client.tsx",
+  );
+  const messages = read("packages/shared/src/messages/inventory.ts");
+
+  assert.match(branchClient, /INVENTORY_VI\.varianceActionsTitle/);
+  assert.match(branchClient, /INVENTORY_VI\.createWasteShortageAction/);
+  assert.match(branchClient, /INVENTORY_VI\.createStocktakeAction/);
+  assert.match(branchClient, /INVENTORY_VI\.countSlipHandoverConfirm/);
+
+  assert.match(ownerClient, /INVENTORY_VI\.varianceActionsTitle/);
+  assert.match(ownerClient, /INVENTORY_VI\.createWasteShortageAction/);
+  assert.match(ownerClient, /INVENTORY_VI\.createStocktakeAction/);
+
+  assert.match(
+    messages,
+    /varianceActionsTitle:\s*"Tác vụ xử lý chênh lệch kho"/,
+  );
+  assert.match(
+    messages,
+    /createWasteShortageAction:\s*"Lập phiếu tiêu hao \/ xuất hủy"/,
+  );
+  assert.match(
+    messages,
+    /createStocktakeAction:\s*"Lập phiếu kiểm kê kho"/,
+  );
+});

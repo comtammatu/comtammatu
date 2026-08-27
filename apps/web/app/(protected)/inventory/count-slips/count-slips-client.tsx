@@ -9,6 +9,8 @@ import {
   ClipboardCheck as IconClipboardCheck,
   ClipboardList as IconClipboardList,
   RotateCcw as IconRecount,
+  Trash2 as IconTrash,
+  Zap as IconZap,
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@/components/confirm-dialog";
@@ -21,6 +23,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
+import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import {
   Select,
@@ -712,6 +715,45 @@ function CountSlipReviewDialog({
           />
         </ScrollArea>
       </Frame>
+
+      {variance.changedLineCount > 0 ? (
+        <NoteCallout
+          tone="muted"
+          icon={<IconZap className="size-4 text-primary" />}
+          label={INVENTORY_VI.varianceActionsTitle}
+          className="flex-col items-stretch gap-1.5"
+        >
+          <p className="text-xs text-muted-foreground">
+            {INVENTORY_VI.varianceActionsHint}
+          </p>
+          <div className="flex flex-wrap gap-2 pt-1">
+            {activeRow.lines.some(
+              (l) => l.variance !== null && l.variance < 0,
+            ) ? (
+              <Button
+                type="button"
+                variant="outline"
+                render={
+                  <Link
+                    href={`/inventory/waste/new?sourceSlipId=${activeRow.id}`}
+                  />
+                }
+              >
+                <IconTrash className="size-3.5 text-destructive" />
+                {INVENTORY_VI.createWasteShortageAction}
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              variant="outline"
+              render={<Link href="/inventory/stocktake/new" />}
+            >
+              <IconClipboardCheck className="size-3.5 text-primary" />
+              {INVENTORY_VI.createStocktakeAction}
+            </Button>
+          </div>
+        </NoteCallout>
+      ) : null}
 
       <div className="grid gap-2 text-sm sm:grid-cols-[1fr_auto] sm:items-start">
         <div className="flex min-w-0 flex-col gap-1">

@@ -13,6 +13,8 @@ import {
   ChevronRight as IconChevronRight,
   ClipboardCheck as IconClipboardCheck,
   RotateCcw as IconRecount,
+  Trash2 as IconTrash,
+  Zap as IconZap,
 } from "lucide-react";
 import {
   ACTIONS_VI,
@@ -32,6 +34,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
+import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
@@ -368,7 +371,7 @@ export function BranchCountSlipsClient({
                     ) : (
                       <IconCheck className="size-4" />
                     )}
-                    {ACTIONS_VI.approve}
+                    {INVENTORY_VI.countSlipHandoverConfirm}
                   </Button>
                 </>
               )
@@ -413,6 +416,66 @@ export function BranchCountSlipsClient({
               ]}
             />
 
+            {/* ─── Tác vụ xử lý chênh lệch kho ─── */}
+            {selected.lines.some(
+              (l) => l.variance !== null && l.variance !== 0,
+            ) ? (
+              <NoteCallout
+                tone="muted"
+                icon={<IconZap className="size-4 text-primary" />}
+                label={INVENTORY_VI.varianceActionsTitle}
+                className="flex-col items-stretch gap-1.5"
+              >
+                <p className="text-xs text-muted-foreground">
+                  {INVENTORY_VI.varianceActionsHint}
+                </p>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {selected.lines.some(
+                    (l) => l.variance !== null && l.variance < 0,
+                  ) ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="touch"
+                      onClick={() => {
+                        const shortageLines = selected.lines.filter(
+                          (l) => l.variance !== null && l.variance < 0,
+                        );
+                        const first = shortageLines[0];
+                        const params = new URLSearchParams();
+                        if (first) {
+                          params.set("ingredientId", String(first.ingredientId));
+                          params.set(
+                            "quantity",
+                            String(Math.abs(first.variance ?? 0)),
+                          );
+                          params.set("reason", "spoilage");
+                        }
+                        params.set("sourceSlipId", String(selected.id));
+                        router.push(
+                          `/br/${branchId}/stock/waste?${params.toString()}`,
+                        );
+                      }}
+                    >
+                      <IconTrash className="size-4 text-destructive" />
+                      {INVENTORY_VI.createWasteShortageAction}
+                    </Button>
+                  ) : null}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="touch"
+                    onClick={() => {
+                      router.push(`/br/${branchId}/stock/stocktake/new`);
+                    }}
+                  >
+                    <IconClipboardCheck className="size-4 text-primary" />
+                    {INVENTORY_VI.createStocktakeAction}
+                  </Button>
+                </div>
+              </NoteCallout>
+            ) : null}
+
             <ItemGroup className="gap-2">
               {selected.lines.map((line) => (
                 <CountSlipLineItem key={line.id} line={line} />
@@ -455,11 +518,46 @@ export function BranchCountSlipsClient({
 }
 
 function CountSlipLineItem({ line }: { line: CountSlipLineView }) {
+  const isShortage = line.variance !== null && line.variance < 0;
+  const isSurplus = line.variance !== null && line.variance > 0;
+  const isMatched = line.variance === 0;
+  const soldSinceSubmit =
+    line.systemQuantity !== null &&
+    line.currentLiveQuantity !== null &&
+    line.systemQuantity > line.currentLiveQuantity
+      ? line.systemQuantity - line.currentLiveQuantity
+      : null;
+
   return (
     <Item variant="muted" className="min-h-20 items-start">
-      <ItemContent className="min-w-0 gap-1">
-        <ItemTitle>{line.ingredientName}</ItemTitle>
-        <ItemDescription className="line-clamp-none flex flex-wrap gap-x-3 gap-y-1">
+      <ItemContent className="min-w-0 gap-1.5">
+        <div className="flex items-center justify-between gap-2">
+          <ItemTitle>{line.ingredientName}</ItemTitle>
+          <div className="flex items-center gap-1.5">
+            <span
+              className={`font-mono font-semibold tabular-nums ${varianceClassName(
+                line.variance,
+              )}`}
+            >
+              {formatVariance(line.variance)} {line.varianceUnit}
+            </span>
+            {isShortage ? (
+              <Badge variant="destructive">
+                {INVENTORY_VI.varianceShortageBadge}
+              </Badge>
+            ) : isSurplus ? (
+              <Badge variant="warning">
+                {INVENTORY_VI.varianceSurplusBadge}
+              </Badge>
+            ) : isMatched ? (
+              <Badge variant="outline">
+                {INVENTORY_VI.varianceMatchedBadge}
+              </Badge>
+            ) : null}
+          </div>
+        </div>
+
+        <ItemDescription className="line-clamp-none flex flex-wrap gap-x-3 gap-y-1 text-xs">
           <span>
             {INVENTORY_VI.systemStockColon}{" "}
             <span className="font-mono tabular-nums text-foreground">
@@ -472,31 +570,41 @@ function CountSlipLineItem({ line }: { line: CountSlipLineView }) {
               {formatQty(line.countedQuantity)} {line.countedUnit}
             </span>
           </span>
-          {line.currentLiveQuantity !== null ? (
-            <span className="text-muted-foreground">
-              {INVENTORY_VI.liveStockColon}{" "}
-              <span className="font-mono tabular-nums text-foreground">
-                {formatQty(line.currentLiveQuantity)} {line.systemUnit}
-              </span>
-            </span>
-          ) : null}
         </ItemDescription>
+
+        {soldSinceSubmit !== null || line.currentLiveQuantity !== null ? (
+          <ItemDescription className="line-clamp-none flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+            <span className="font-medium text-foreground/70">
+              ↳ {INVENTORY_VI.referenceColon}
+            </span>
+            {soldSinceSubmit !== null ? (
+              <span>
+                {INVENTORY_VI.soldSinceSubmitColon}{" "}
+                <span className="font-mono tabular-nums text-foreground">
+                  {formatQty(soldSinceSubmit)} {line.systemUnit}
+                </span>
+              </span>
+            ) : null}
+            {soldSinceSubmit !== null && line.currentLiveQuantity !== null ? (
+              <span>·</span>
+            ) : null}
+            {line.currentLiveQuantity !== null ? (
+              <span>
+                {INVENTORY_VI.liveStockColon}{" "}
+                <span className="font-mono tabular-nums text-foreground">
+                  {formatQty(line.currentLiveQuantity)} {line.systemUnit}
+                </span>
+              </span>
+            ) : null}
+          </ItemDescription>
+        ) : null}
+
         {line.note ? (
-          <ItemDescription className="line-clamp-none break-words italic">
-            {line.note}
+          <ItemDescription className="line-clamp-none break-words text-xs italic text-muted-foreground">
+            📝 {line.note}
           </ItemDescription>
         ) : null}
       </ItemContent>
-      <ItemActions className="text-right">
-        <span
-          className={`font-mono font-semibold tabular-nums ${varianceClassName(
-            line.variance,
-          )}`}
-        >
-          {formatVariance(line.variance)} {line.varianceUnit}
-        </span>
-        <Badge variant="outline">{INVENTORY_VI.varianceShort}</Badge>
-      </ItemActions>
     </Item>
   );
 }
