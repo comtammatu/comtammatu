@@ -16,10 +16,16 @@ import java.util.Locale
  * atomically claimed (PENDING -> SENDING) before each POST so the initial
  * dispatch and the retry loop can never send the same order concurrently.
  */
-class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
+class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
+    context,
+    prepareDatabase(context),
+    null,
+    DATABASE_VERSION
+) {
 
     companion object {
-        const val DATABASE_NAME = "sunmi_relay_queue.db"
+        const val DATABASE_NAME = "matu_agent_queue.db"
+        private const val LEGACY_DATABASE_NAME = "sunmi_relay_queue.db"
         const val DATABASE_VERSION = 3
 
         const val TABLE_ORDERS = "queued_orders"
@@ -27,7 +33,7 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_
         const val COLUMN_RAW_BASE64 = "raw_base64"
         const val COLUMN_BRANCH_ID = "branch_id"
         const val COLUMN_PLATFORM = "platform"
-        const val COLUMN_STATUS = "status" // PENDING, SENDING, SENT
+        const val COLUMN_STATUS = "status" // PENDING, SENDING, SENT, UNCLASSIFIED
         const val COLUMN_RETRY_COUNT = "retry_count"
         const val COLUMN_CREATED_AT = "created_at"
         const val COLUMN_LAST_ERROR = "last_error"
@@ -37,6 +43,7 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_
         const val STATUS_PENDING = "PENDING"
         const val STATUS_SENDING = "SENDING"
         const val STATUS_SENT = "SENT"
+        const val STATUS_UNCLASSIFIED = "UNCLASSIFIED"
 
         const val RETRY_BASE_DELAY_MS = 15_000L
         const val RETRY_MAX_DELAY_MS = 15 * 60 * 1000L
@@ -45,6 +52,24 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_
         fun nextRetryDelay(retryCount: Int): Long {
             val shift = retryCount.coerceIn(0, 6)
             return (RETRY_BASE_DELAY_MS shl shift).coerceAtMost(RETRY_MAX_DELAY_MS)
+        }
+
+        private fun prepareDatabase(context: Context): String {
+            val target = context.getDatabasePath(DATABASE_NAME)
+            val legacy = context.getDatabasePath(LEGACY_DATABASE_NAME)
+            if (!target.exists() && legacy.exists()) {
+                target.parentFile?.mkdirs()
+                if (!legacy.renameTo(target)) {
+                    return LEGACY_DATABASE_NAME
+                }
+                listOf("-wal", "-shm", "-journal").forEach { suffix ->
+                    val legacySidecar = context.getDatabasePath(LEGACY_DATABASE_NAME + suffix)
+                    if (legacySidecar.exists()) {
+                        legacySidecar.renameTo(context.getDatabasePath(DATABASE_NAME + suffix))
+                    }
+                }
+            }
+            return DATABASE_NAME
         }
     }
 
@@ -76,15 +101,22 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_
         }
     }
 
-    fun enqueueOrder(rawBytes: ByteArray, branchId: Int, platform: String = "shopee"): Long {
+    fun enqueueReceipt(
+        rawBytes: ByteArray,
+        branchId: Int,
+        platform: String,
+        status: String = STATUS_PENDING,
+        lastError: String? = null
+    ): Long {
         val db = writableDatabase
         val values = ContentValues().apply {
             put(COLUMN_RAW_BASE64, Base64.encodeToString(rawBytes, Base64.NO_WRAP))
             put(COLUMN_BRANCH_ID, branchId)
             put(COLUMN_PLATFORM, platform)
-            put(COLUMN_STATUS, STATUS_PENDING)
+            put(COLUMN_STATUS, status)
             put(COLUMN_RETRY_COUNT, 0)
             put(COLUMN_CREATED_AT, System.currentTimeMillis())
+            put(COLUMN_LAST_ERROR, lastError)
         }
         return db.insert(TABLE_ORDERS, null, values)
     }
@@ -195,6 +227,7 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_
         var pending = 0
         var sending = 0
         var sent = 0
+        var unclassified = 0
         var total = 0
 
         val countCursor = db.rawQuery("SELECT $COLUMN_STATUS, COUNT(*) FROM $TABLE_ORDERS GROUP BY $COLUMN_STATUS", null)
@@ -207,6 +240,7 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_
                     STATUS_PENDING -> pending = count
                     STATUS_SENDING -> sending = count
                     STATUS_SENT -> sent = count
+                    STATUS_UNCLASSIFIED -> unclassified = count
                 }
             }
         }
@@ -218,6 +252,7 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_
         sb.append("• Đã gửi thành công lên POS: $sent\n")
         sb.append("• Đang chờ gửi / Thử lại: $pending\n")
         sb.append("• Đang trong tiến trình gửi: $sending\n")
+        sb.append("• Cần kiểm tra nguồn sàn: $unclassified\n")
 
         val recentCursor = db.query(
             TABLE_ORDERS,
@@ -244,6 +279,7 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_
                 val statusIcon = when (status) {
                     STATUS_SENT -> "🟢 THÀNH CÔNG"
                     STATUS_SENDING -> "🟡 ĐANG GỬI"
+                    STATUS_UNCLASSIFIED -> "🔴 CHƯA RÕ SÀN"
                     else -> "⏳ CHỜ RETRY (Thử lại: $retries)"
                 }
                 sb.append("#$id [${platform.uppercase()}] $statusIcon lúc ${timeFmt.format(Date(createdAt))}")

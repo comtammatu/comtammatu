@@ -7,6 +7,7 @@ import {
   shouldAnnouncePaymentReceived,
   type OperationalAudioMode,
 } from "@lib/operational-audio";
+import { triggerHapticFeedback } from "@lib/haptic-feedback";
 import { toast } from "@comtammatu/ui/components/sonner";
 import type { BranchTable } from "../page";
 import type { SessionOrder } from "../order-history";
@@ -157,10 +158,12 @@ function notifyOrderTransition(
     return;
   }
 
-  // Kitchen owns ticket audio. POS keeps a silent toast so the counter
-  // can see ready/cancel without echoing KDS.
+  // Kitchen bumps order to ready: trigger haptic feedback on mobile/PDA
+  // and show table context toast for staff to run the food to the table.
   if (nextStatus === "ready" && currentOrder.status !== "ready") {
-    toast.success(`Bếp hoàn thành #${orderNumber}`, {
+    triggerHapticFeedback("success");
+    const tableDesc = getOrderContextDescription(currentOrder);
+    toast.success(`Bếp hoàn thành #${orderNumber} (${tableDesc})`, {
       description: "Món đã xong — có thể thanh toán",
     });
     return;

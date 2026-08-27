@@ -221,3 +221,21 @@ test("ESC/POS platform detection: identifies all 4 platforms accurately from rec
   assert.equal(detectDeliveryPlatform(greenSmSample), "greensm");
 });
 
+test("ESC/POS platform detection: recognizes Agent labels and fails closed for unknown receipts", () => {
+  assert.equal(
+    detectDeliveryPlatform("GreenSM Food\nMã đơn: GSM-100\n1x Cơm sườn 54.000"),
+    "greensm",
+  );
+  assert.equal(
+    detectDeliveryPlatform("Be Food\nMã đơn: BE-200\n1x Cơm sườn 54.000"),
+    "be",
+  );
+  assert.equal(
+    detectDeliveryPlatform("Phiếu giao hàng\nMã đơn: 123456\n1x Cơm sườn 54.000"),
+    null,
+  );
+  assert.equal(
+    detectDeliveryPlatform("ShopeeFood\nGreenSM Food\nMã đơn: SPF-GSM-300"),
+    null,
+  );
+});

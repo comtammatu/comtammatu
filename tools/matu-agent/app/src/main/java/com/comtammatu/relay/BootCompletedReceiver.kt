@@ -9,7 +9,7 @@ import android.util.Log
 class BootCompletedReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
-            Log.i("BootCompletedReceiver", "Auto-starting VirtualWifiPrinterService after boot")
+            Log.i("BootCompletedReceiver", "Auto-starting PrintIntakeService after boot")
             val prefs = context.getSharedPreferences("bridge_prefs", Context.MODE_PRIVATE)
             val url = prefs.getString("backend_url", "http://localhost:3000") ?: "http://localhost:3000"
             val branchId = prefs.getInt("branch_id", 1)
@@ -17,13 +17,13 @@ class BootCompletedReceiver : BroadcastReceiver() {
             val port = prefs.getInt("port", 9100)
             val lanMode = prefs.getBoolean("lan_mode", false)
 
-            val serviceIntent = Intent(context, VirtualWifiPrinterService::class.java).apply {
-                action = VirtualWifiPrinterService.ACTION_START
-                putExtra(VirtualWifiPrinterService.EXTRA_BACKEND_URL, url)
-                putExtra(VirtualWifiPrinterService.EXTRA_BRANCH_ID, branchId)
-                putExtra(VirtualWifiPrinterService.EXTRA_SECRET, secret)
-                putExtra(VirtualWifiPrinterService.EXTRA_PORT, port)
-                putExtra(VirtualWifiPrinterService.EXTRA_LAN_MODE, lanMode)
+            val serviceIntent = Intent(context, PrintIntakeService::class.java).apply {
+                action = PrintIntakeService.ACTION_START
+                putExtra(PrintIntakeService.EXTRA_BACKEND_URL, url)
+                putExtra(PrintIntakeService.EXTRA_BRANCH_ID, branchId)
+                putExtra(PrintIntakeService.EXTRA_SECRET, secret)
+                putExtra(PrintIntakeService.EXTRA_PORT, port)
+                putExtra(PrintIntakeService.EXTRA_LAN_MODE, lanMode)
             }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

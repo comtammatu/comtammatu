@@ -54,6 +54,7 @@ import {
   selectPosGuestAlert,
   type PosGuestAlertCandidate,
 } from "@lib/operational-audio";
+import { triggerHapticFeedback } from "@lib/haptic-feedback";
 
 // Lazy-load these modals OFF the cash path, code-splitting their JS out of
 // the initial POS bundle. Trims first-paint JS without affecting payment
@@ -521,6 +522,9 @@ export function PosDesktopInner({
     }
     const guestAlert = selectPosGuestAlert(guestAlerts);
     if (guestAlert) {
+      triggerHapticFeedback(
+        guestAlert.kind === "pos.staff_call" ? "call" : "warning",
+      );
       playOperationalAlert({
         kind: guestAlert.kind,
         mode: audioMode,

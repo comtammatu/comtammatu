@@ -149,11 +149,11 @@ export function parseShopeeReceiptText(receiptText: string): ShopeeOrderRaw {
   let spfCode = "";
   let labeledCode = "";
   let bareNumericCode = "";
-  let customerName = "Khách ShopeeFood";
+  let customerName = "Khách giao hàng";
   let customerPhone = "";
   let customerNote = "";
   let needCutlery: boolean | number = true;
-  let paymentMethod = "ShopeePay";
+  let paymentMethod = "Thanh toán qua sàn";
   let totalAmount = 0;
   let subtotal = 0;
 
@@ -363,41 +363,46 @@ export function parseShopeeReceiptText(receiptText: string): ShopeeOrderRaw {
  * Detects which delivery platform emitted the receipt based on header keywords,
  * order code prefix, and platform payment methods.
  */
-export function detectDeliveryPlatform(receiptText: string): "shopee" | "grab" | "be" | "greensm" {
-  // 1. Check ShopeeFood signatures
-  if (
-    /\b(?:ShopeeFood|ShopeePay|AirPay|DeliveryNow|Now\.vn)\b/i.test(receiptText) ||
-    /\bSPF[-_]?[0-9A-Z]+\b/i.test(receiptText)
-  ) {
-    return "shopee";
-  }
+export type DeliveryPlatform = "shopee" | "grab" | "be" | "greensm";
 
-  // 2. Check GrabFood signatures
-  if (
-    /\b(?:GrabFood|GrabMerchant|GrabPay)\b/i.test(receiptText) ||
-    /\bGF[-_]?[0-9A-Z]+\b/i.test(receiptText) ||
-    /\bA-[0-9A-Z]{6,}\b/i.test(receiptText)
-  ) {
-    return "grab";
-  }
+export function detectDeliveryPlatform(receiptText: string): DeliveryPlatform | null {
+  const signatures: ReadonlyArray<readonly [DeliveryPlatform, readonly RegExp[]]> = [
+    [
+      "shopee",
+      [
+        /\b(?:Shopee\s*Food|ShopeePay|AirPay|DeliveryNow|Now\.vn)\b/i,
+        /\bSPF[-_]?[0-9A-Z]+\b/i,
+      ],
+    ],
+    [
+      "grab",
+      [
+        /\b(?:GrabFood|GrabMerchant|GrabPay)\b/i,
+        /\bGF[-_]?[0-9A-Z]+\b/i,
+        /\bA-[0-9A-Z]{6,}\b/i,
+      ],
+    ],
+    [
+      "be",
+      [
+        /\b(?:be\s*Food|beMerchant|bePay|Cake\s+by\s+VPBank)\b/i,
+        /\b(?:BE|BF)-[0-9A-Z]+\b/i,
+      ],
+    ],
+    [
+      "greensm",
+      [
+        /\b(?:Green\s*SM(?:\s*Food)?|Xanh\s*SM|GSM|XSM)\b/i,
+        /\b(?:GSM|XSM|XANH)-[0-9A-Z]+\b/i,
+      ],
+    ],
+  ];
 
-  // 3. Check beFood signatures
-  if (
-    /\b(?:beFood|beMerchant|bePay|Cake by VPBank)\b/i.test(receiptText) ||
-    /\b(?:BE|BF)-[0-9A-Z]+\b/i.test(receiptText)
-  ) {
-    return "be";
-  }
+  const matches = signatures
+    .filter(([, patterns]) => patterns.some((pattern) => pattern.test(receiptText)))
+    .map(([platform]) => platform);
 
-  // 4. Check Green SM signatures
-  if (
-    /\b(?:Green\s*SM|Xanh\s*SM|GSM|XSM)\b/i.test(receiptText) ||
-    /\b(?:GSM|XSM|XANH)-[0-9A-Z]+\b/i.test(receiptText)
-  ) {
-    return "greensm";
-  }
-
-  return "shopee";
+  return matches.length === 1 ? matches[0]! : null;
 }
 
 /**

@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { connection } from "next/server";
 import {
   Monitor as IconDeviceDesktop,
@@ -24,7 +23,6 @@ import type { SessionOrder } from "./order-history";
 import { SessionGate } from "./session-gate";
 import type { OrderType } from "./types";
 import { PosStatusPanel } from "./pos-status-panel";
-import { PosPageSkeleton } from "./pos-page-skeleton";
 
 export default async function PosPage({
   params,
@@ -57,15 +55,25 @@ export default async function PosPage({
   // Per-branch model (D7): a branch has 0 or 1 open session
   // (DB UNIQUE(branch_id) WHERE status='open').
   //
-  // Session + permission flags are awaited here because they are the access
-  // guard: they decide *which* surface renders (error panel, no-shift panel,
-  // SessionGate, or the desktop). They must resolve before render and cannot
-  // be streamed. The heavier menu/tables/payment fetches feeding the desktop
-  // are deferred into <PosDesktopData> behind the Suspense boundary so the
-  // shell streams first.
-  const [sessionResult, permFlags] = await Promise.all([
+  // All independent queries execute concurrently in a single Promise.all:
+  // session + permissions (access guard), menu, tables, payment methods, VietQR.
+  const [
+    sessionResult,
+    permFlags,
+    menuResult,
+    tablesResult,
+    paymentMethodsResult,
+    vietQrConfigResult,
+  ] = await Promise.all([
     fetchActiveSession(branchIdNum),
     fetchPosPermissionFlags(branchIdNum),
+    fetchMenuForPos(branchIdNum),
+    fetchTablesForBranch(branchIdNum),
+    // Tenant-stable settings seeded in RSC. The admin payment-settings save
+    // must call `revalidatePath('/br/[branchId]/pos', 'page')` +
+    // `updateTag('payment-config')` to bust this cache.
+    fetchPaymentMethodsForPos(branchIdNum),
+    fetchVietQrConfig(branchIdNum),
   ]);
 
   if (!sessionResult.success) {
@@ -138,49 +146,6 @@ export default async function PosPage({
     );
   }
 
-  // Guard passed: an open session exists. The static POS shell (skeleton) can
-  // paint immediately while the heavier desktop data streams in below.
-  return (
-    <Suspense fallback={<PosPageSkeleton />}>
-      <PosDesktopData
-        branchId={branchIdNum}
-        session={session}
-        permFlags={permFlags}
-        initialTableId={initialTableId}
-        initialOpenOrderId={initialOpenOrderId}
-      />
-    </Suspense>
-  );
-}
-
-/** Streamed inside the page's Suspense boundary: runs the menu/tables/payment
- * fetches that feed the heavy desktop surface, so the shell renders without
- * blocking on the slowest of them. Identical queries/props to before — only
- * the timing (streamed) changed. */
-async function PosDesktopData({
-  branchId,
-  session,
-  permFlags,
-  initialTableId,
-  initialOpenOrderId,
-}: {
-  branchId: number;
-  session: ActiveSession;
-  permFlags: Awaited<ReturnType<typeof fetchPosPermissionFlags>>;
-  initialTableId: number | undefined;
-  initialOpenOrderId: number | undefined;
-}) {
-  const [menuResult, tablesResult, paymentMethodsResult, vietQrConfigResult] =
-    await Promise.all([
-      fetchMenuForPos(branchId),
-      fetchTablesForBranch(branchId),
-      // Tenant-stable settings seeded in RSC. The admin payment-settings save
-      // must call `revalidatePath('/br/[branchId]/pos', 'page')` +
-      // `updateTag('payment-config')` to bust this cache.
-      fetchPaymentMethodsForPos(branchId),
-      fetchVietQrConfig(branchId),
-    ]);
-
   // Active orders are NOT seeded from RSC — every Server Action triggers a
   // route revalidation that re-runs page.tsx, and `fetchActiveOrders` was a
   // ~200ms hot-path tax with no real win (provider's realtime channel keeps
@@ -241,7 +206,7 @@ async function PosDesktopData({
 
   return (
     <PosDesktopShell
-      branchId={branchId}
+      branchId={branchIdNum}
       categories={menuResult.data as MenuCategory[]}
       tables={tablesList}
       session={session}

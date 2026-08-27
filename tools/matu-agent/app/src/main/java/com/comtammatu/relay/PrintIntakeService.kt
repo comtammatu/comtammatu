@@ -22,14 +22,12 @@ import java.net.Socket
 import java.net.SocketTimeoutException
 
 /**
- * Virtual WiFi / LAN Network ESC/POS Thermal Printer Service.
- * Listens on TCP port 9100, receives raw ESC/POS bytes from Shopee Partner (or any food delivery app),
- * forwards stream to SunmiSdkManager for physical receipt printing, and dispatches webhook to Cloud POS.
+ * Network ESC/POS intake for food-delivery apps on the same Android device or LAN.
  */
-class VirtualWifiPrinterService : Service() {
+class PrintIntakeService : Service() {
 
     companion object {
-        private const val TAG = "VirtualWifiPrinter"
+        private const val TAG = "PrintIntakeService"
         const val DEFAULT_PORT = 9100
         const val CHANNEL_ID = "comtammatu_pos_bridge_channel"
         const val NOTIFICATION_ID = 1001
@@ -65,13 +63,10 @@ class VirtualWifiPrinterService : Service() {
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var serverSocket: ServerSocket? = null
-    private lateinit var sunmiSdk: SunmiSdkManager
     private lateinit var dispatcher: WebhookDispatcher
 
     override fun onCreate() {
         super.onCreate()
-        sunmiSdk = SunmiSdkManager(this)
-        sunmiSdk.bindService()
         // Seed the dispatcher from saved config so queue draining works even
         // before the first onStartCommand delivers intent extras.
         val saved = configFromPrefs()
@@ -89,7 +84,12 @@ class VirtualWifiPrinterService : Service() {
 
         if (action == ACTION_STOP) {
             stopServer()
-            stopForeground(true)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+            } else {
+                @Suppress("DEPRECATION")
+                stopForeground(true)
+            }
             stopSelf()
             return START_NOT_STICKY
         }
@@ -137,11 +137,7 @@ class VirtualWifiPrinterService : Service() {
         // zombie "running" state. Loopback only by default: the intake port is
         // unauthenticated, so LAN exposure must be explicitly opted into.
         try {
-            val bindAddress = if (lanMode) {
-                InetAddress.getByName("0.0.0.0")
-            } else {
-                InetAddress.getLoopbackAddress()
-            }
+            val bindAddress = InetAddress.getByName(PrinterEndpoint.bindHost(lanMode))
             serverSocket = ServerSocket(port, 50, bindAddress)
             isServiceRunning = true
             Log.i(TAG, "Virtual WiFi Printer Server listening on ${bindAddress.hostAddress}:$port (lanMode=$lanMode)")
@@ -206,27 +202,24 @@ class VirtualWifiPrinterService : Service() {
                 // Inactivity timeout reached, process accumulated payload
             }
 
-            var rawBytes = outputStream.toByteArray()
-
-            // Terminate the receipt at the LAST cut command: cut byte pairs can
-            // legitimately occur inside raster logo or QR data, so the first
-            // occurrence is not a safe terminator.
-            val lastCutIndex = findLastCutIndex(rawBytes)
-            if (lastCutIndex >= 0 && lastCutIndex + 2 <= rawBytes.size) {
-                rawBytes = rawBytes.copyOfRange(0, lastCutIndex + 2)
-            }
+            val rawBytes = outputStream.toByteArray()
 
             if (rawBytes.isNotEmpty()) {
                 Log.i(TAG, "Received ${rawBytes.size} bytes from $clientAddress")
                 AppLogger.i("IN ẤN", "Nhận được trọn vẹn luồng in (${rawBytes.size} bytes) từ $clientAddress")
 
-                // 1. Forward raw ESC/POS stream to SUNMI thermal printer for physical receipt
-                AppLogger.print("Chuyển tiếp ${rawBytes.size} bytes sang đầu in nhiệt SUNMI V3...")
-                sunmiSdk.sendRawBytes(rawBytes)
-
-                // 2. Dispatch raw stream to Cloud POS Webhook (with local SQLite queue persistence)
-                serviceScope.launch {
-                    dispatcher.dispatchRawReceipt(rawBytes, platform = "shopee")
+                val platform = DeliveryPlatformDetector.detect(rawBytes)
+                if (platform == null) {
+                    val queuedId = dispatcher.storeUnclassifiedReceipt(rawBytes)
+                    AppLogger.e(
+                        "PHÂN LOẠI",
+                        "Phiếu #$queuedId chưa xác định rõ ShopeeFood, GreenSM Food hay beFood; đã giữ lại và không gửi lên POS."
+                    )
+                } else {
+                    AppLogger.i("PHÂN LOẠI", "Nhận diện nguồn ${platform.displayName}")
+                    serviceScope.launch {
+                        dispatcher.dispatchRawReceipt(rawBytes, platform)
+                    }
                 }
             } else {
                 AppLogger.w("IN ẤN", "Kết nối từ $clientAddress nhưng không nhận được byte dữ liệu nào")
@@ -269,7 +262,6 @@ class VirtualWifiPrinterService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         stopServer()
-        sunmiSdk.unbindService()
         serviceScope.cancel()
     }
 
@@ -279,7 +271,7 @@ class VirtualWifiPrinterService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Cơm Tấm Má Tư POS Bridge Service",
+                "Má Tư Agent",
                 NotificationManager.IMPORTANCE_LOW
             )
             val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -296,7 +288,7 @@ class VirtualWifiPrinterService : Service() {
         }
 
         return builder
-            .setContentTitle("🟢 Cơm Tấm Má Tư POS Bridge")
+            .setContentTitle("🟢 Má Tư Agent")
             .setContentText(statusText)
             .setSmallIcon(android.R.drawable.ic_menu_agenda)
             .setOngoing(true)

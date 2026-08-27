@@ -20,6 +20,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import java.net.InetSocketAddress
+import java.net.Socket
 
 class MainActivity : Activity() {
 
@@ -34,19 +36,17 @@ class MainActivity : Activity() {
     private lateinit var scrollLogs: ScrollView
 
     private val activityScope = CoroutineScope(Dispatchers.Main + Job())
-    private lateinit var sunmiSdk: SunmiSdkManager
     private lateinit var dbHelper: OrderQueueDbHelper
     private lateinit var dispatcher: WebhookDispatcher
 
     private val logListener = { _: String ->
         updateLogsView()
+        refreshServiceState()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        sunmiSdk = SunmiSdkManager(this)
-        sunmiSdk.bindService()
         dbHelper = OrderQueueDbHelper(this)
 
         val saved = configFromPrefs()
@@ -80,13 +80,13 @@ class MainActivity : Activity() {
         }
 
         val tvTitle = TextView(this).apply {
-            text = "CƠM TẤM MÁ TƯ — POS BRIDGE"
+            text = "MÁ TƯ AGENT"
             textSize = 18f
             setTextColor(Color.WHITE)
             typeface = Typeface.DEFAULT_BOLD
         }
         val tvSubTitle = TextView(this).apply {
-            text = "Virtual ESC/POS Thermal Printer & Food Delivery Relay"
+            text = "Máy in ảo ESC/POS cho ShopeeFood · GreenSM Food · beFood"
             textSize = 12f
             setTextColor(Color.parseColor("#A0AEC0"))
         }
@@ -137,7 +137,7 @@ class MainActivity : Activity() {
         mainLayout.addView(createLabeledSection("Chi Nhánh & Cổng Máy in:", rowIds))
 
         etSecret = EditText(this).apply {
-            hint = "Mã bí mật Relay Secret (SHOPEE_RELAY_SECRET)"
+            hint = "Mã bí mật Delivery Relay"
             setText(saved.secret)
             textSize = 14f
             setPadding(20, 24, 20, 24)
@@ -146,7 +146,7 @@ class MainActivity : Activity() {
         mainLayout.addView(createLabeledSection("Mã bí mật (Relay Secret):", etSecret))
 
         cbLanMode = CheckBox(this).apply {
-            text = "Nhận lệnh in từ mạng LAN (Chỉ bật khi Shopee chạy trên máy khác)"
+            text = "Nhận lệnh in từ mạng LAN (bật khi app sàn chạy trên máy khác)"
             isChecked = saved.lanMode
             textSize = 13f
             setPadding(8, 12, 8, 16)
@@ -155,8 +155,8 @@ class MainActivity : Activity() {
 
         // Main Service Start/Stop Button
         btnToggle = Button(this).apply {
-            text = if (VirtualWifiPrinterService.isServiceRunning) "DỪNG DỊCH VỤ MÁY IN" else "BẮT ĐẦU DỊCH VỤ MÁY IN"
-            setBackgroundColor(if (VirtualWifiPrinterService.isServiceRunning) Color.parseColor("#E53E3E") else Color.parseColor("#2B6CB0"))
+            text = if (PrintIntakeService.isServiceRunning) "DỪNG MÁY IN ẢO" else "BẮT ĐẦU MÁY IN ẢO"
+            setBackgroundColor(if (PrintIntakeService.isServiceRunning) Color.parseColor("#E53E3E") else Color.parseColor("#2B6CB0"))
             setTextColor(Color.WHITE)
             textSize = 15f
             typeface = Typeface.DEFAULT_BOLD
@@ -166,7 +166,7 @@ class MainActivity : Activity() {
         mainLayout.addView(btnToggle)
 
         tvStatus = TextView(this).apply {
-            text = if (VirtualWifiPrinterService.isServiceRunning)
+            text = if (PrintIntakeService.isServiceRunning)
                 "🟢 Đang trực in cổng TCP ${saved.port}"
             else
                 "⚪ Trạng thái: Chưa chạy"
@@ -197,9 +197,9 @@ class MainActivity : Activity() {
             setOnClickListener { testPingPos() }
         }
         val btnTestPrint = Button(this).apply {
-            text = "🖨️ IN THỬ SUNMI"
+            text = "🖨️ KIỂM TRA CỔNG IN"
             textSize = 12f
-            setOnClickListener { testPrintSunmi() }
+            setOnClickListener { testPrintPort() }
         }
         val btnQueue = Button(this).apply {
             text = "📊 XEM HÀNG ĐỢI"
@@ -253,7 +253,7 @@ class MainActivity : Activity() {
         rootScroll.addView(mainLayout)
         setContentView(rootScroll)
 
-        AppLogger.i("GIAO DIỆN", "Khởi động ứng dụng Má Tư POS Bridge")
+        AppLogger.i("GIAO DIỆN", "Khởi động Má Tư Agent")
         updateLogsView()
     }
 
@@ -266,11 +266,6 @@ class MainActivity : Activity() {
     override fun onStop() {
         super.onStop()
         AppLogger.removeListener(logListener)
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        sunmiSdk.unbindService()
     }
 
     private fun createLabeledSection(label: String, view: View): LinearLayout {
@@ -335,33 +330,31 @@ class MainActivity : Activity() {
     private fun toggleService() {
         val config = saveCurrentConfig()
 
-        val intent = Intent(this, VirtualWifiPrinterService::class.java).apply {
-            putExtra(VirtualWifiPrinterService.EXTRA_BACKEND_URL, config.backendUrl)
-            putExtra(VirtualWifiPrinterService.EXTRA_BRANCH_ID, config.branchId)
-            putExtra(VirtualWifiPrinterService.EXTRA_SECRET, config.secret)
-            putExtra(VirtualWifiPrinterService.EXTRA_PORT, config.port)
-            putExtra(VirtualWifiPrinterService.EXTRA_LAN_MODE, config.lanMode)
+        val intent = Intent(this, PrintIntakeService::class.java).apply {
+            putExtra(PrintIntakeService.EXTRA_BACKEND_URL, config.backendUrl)
+            putExtra(PrintIntakeService.EXTRA_BRANCH_ID, config.branchId)
+            putExtra(PrintIntakeService.EXTRA_SECRET, config.secret)
+            putExtra(PrintIntakeService.EXTRA_PORT, config.port)
+            putExtra(PrintIntakeService.EXTRA_LAN_MODE, config.lanMode)
         }
 
-        if (!VirtualWifiPrinterService.isServiceRunning) {
-            intent.action = VirtualWifiPrinterService.ACTION_START
+        if (!PrintIntakeService.isServiceRunning) {
+            intent.action = PrintIntakeService.ACTION_START
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                 startForegroundService(intent)
             } else {
                 startService(intent)
             }
-            btnToggle.text = "DỪNG DỊCH VỤ MÁY IN"
-            btnToggle.setBackgroundColor(Color.parseColor("#E53E3E"))
-            val listenHost = if (config.lanMode) "IP LAN của máy" else "127.0.0.1"
-            tvStatus.text = "🟢 Đang trực in cổng TCP ${config.port} (Shopee: $listenHost:${config.port})"
-            Toast.makeText(this, "Đã khởi chạy dịch vụ máy in WiFi ảo!", Toast.LENGTH_SHORT).show()
+            btnToggle.isEnabled = false
+            tvStatus.text = "🟡 Đang mở cổng TCP ${config.port}..."
+            btnToggle.postDelayed({
+                btnToggle.isEnabled = true
+                refreshServiceState()
+            }, 500)
         } else {
-            intent.action = VirtualWifiPrinterService.ACTION_STOP
+            intent.action = PrintIntakeService.ACTION_STOP
             startService(intent)
-            btnToggle.text = "BẮT ĐẦU DỊCH VỤ MÁY IN"
-            btnToggle.setBackgroundColor(Color.parseColor("#2B6CB0"))
-            tvStatus.text = "⚪ Trạng thái: Đã dừng"
-            Toast.makeText(this, "Đã dừng dịch vụ máy in!", Toast.LENGTH_SHORT).show()
+            btnToggle.postDelayed({ refreshServiceState() }, 200)
         }
     }
 
@@ -378,15 +371,35 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun testPrintSunmi() {
-        sunmiSdk.printTestReceipt { isSuccess, msg ->
-            runOnUiThread {
-                if (isSuccess) {
-                    Toast.makeText(this, "In thử thành công!", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(this, "Lỗi in: $msg", Toast.LENGTH_LONG).show()
+    private fun testPrintPort() {
+        val config = saveCurrentConfig()
+        activityScope.launch(Dispatchers.IO) {
+            val result = runCatching {
+                Socket().use { socket ->
+                    socket.connect(InetSocketAddress("127.0.0.1", config.port), 2000)
                 }
             }
+            runOnUiThread {
+                if (result.isSuccess) {
+                    Toast.makeText(this@MainActivity, "Cổng máy in ảo đang nhận kết nối.", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this@MainActivity, "Không kết nối được cổng in. Xem nhật ký để biết chi tiết.", Toast.LENGTH_LONG).show()
+                    AppLogger.e("KIỂM TRA CỔNG", result.exceptionOrNull()?.localizedMessage ?: "Lỗi không xác định")
+                }
+            }
+        }
+    }
+
+    private fun refreshServiceState() {
+        val port = etPort.text.toString().toIntOrNull() ?: PrintIntakeService.DEFAULT_PORT
+        if (PrintIntakeService.isServiceRunning) {
+            btnToggle.text = "DỪNG MÁY IN ẢO"
+            btnToggle.setBackgroundColor(Color.parseColor("#E53E3E"))
+            tvStatus.text = "🟢 Đang trực in cổng TCP $port"
+        } else {
+            btnToggle.text = "BẮT ĐẦU MÁY IN ẢO"
+            btnToggle.setBackgroundColor(Color.parseColor("#2B6CB0"))
+            tvStatus.text = "⚪ Máy in ảo chưa chạy"
         }
     }
 
@@ -399,7 +412,7 @@ class MainActivity : Activity() {
     private fun updateLogsView() {
         val logs = AppLogger.getAllLogs()
         tvLogs.text = if (logs.isEmpty()) {
-            "--- Nhật ký trống ---\nNhấn 'KIỂM TRA POS' hoặc phát lệnh in từ Shopee để xem log thời gian thực."
+            "--- Nhật ký trống ---\nNhấn 'KIỂM TRA POS' hoặc gửi lệnh in từ app sàn để xem log thời gian thực."
         } else {
             logs.joinToString("\n")
         }

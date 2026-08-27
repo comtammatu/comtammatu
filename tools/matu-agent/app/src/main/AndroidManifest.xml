@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.comtammatu.relay">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- Network & Internet -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -18,7 +17,7 @@
     <application
         android:allowBackup="false"
         android:icon="@drawable/ic_launcher"
-        android:label="Má Tư POS Bridge"
+        android:label="Má Tư Agent"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.DeviceDefault.Light.DarkActionBar"
         android:usesCleartextTraffic="true">
@@ -34,7 +33,7 @@
         </activity>
 
         <service
-            android:name=".VirtualWifiPrinterService"
+            android:name=".PrintIntakeService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync" />

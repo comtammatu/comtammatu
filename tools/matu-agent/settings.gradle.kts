@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "sunmi-pos-relay"
+rootProject.name = "matu-agent"
 include(":app")

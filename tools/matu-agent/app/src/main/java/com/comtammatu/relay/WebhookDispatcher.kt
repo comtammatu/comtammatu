@@ -46,10 +46,10 @@ class WebhookDispatcher(
     /**
      * Enqueues and dispatches an incoming raw ESC/POS receipt payload.
      */
-    suspend fun dispatchRawReceipt(rawBytes: ByteArray, platform: String = "shopee"): Result<String> =
+    suspend fun dispatchRawReceipt(rawBytes: ByteArray, platform: DeliveryPlatform): Result<String> =
         withContext(Dispatchers.IO) {
-            val queuedId = dbHelper.enqueueOrder(rawBytes, branchId, platform)
-            AppLogger.pos("Đã lưu đơn #$queuedId vào hàng đợi offline SQLite ($platform, ${rawBytes.size} bytes)")
+            val queuedId = dbHelper.enqueueReceipt(rawBytes, branchId, platform.wireValue)
+            AppLogger.pos("Đã lưu phiếu #$queuedId vào hàng đợi (${platform.displayName}, ${rawBytes.size} bytes)")
 
             if (!dbHelper.claimOrder(queuedId)) {
                 AppLogger.i("HÀNG ĐỢI", "Đơn #$queuedId đã được vòng lặp retry tiếp nhận")
@@ -58,7 +58,7 @@ class WebhookDispatcher(
 
             AppLogger.pos("Đang chuyển tiếp đơn #$queuedId lên máy chủ POS ($backendUrl)...")
             val base64Payload = android.util.Base64.encodeToString(rawBytes, android.util.Base64.NO_WRAP)
-            val result = executePost(base64Payload, branchId, platform)
+            val result = executePost(base64Payload, branchId, platform.wireValue)
 
             if (result.isSuccess) {
                 dbHelper.markOrderSent(queuedId)
@@ -73,6 +73,14 @@ class WebhookDispatcher(
             }
             result
         }
+
+    fun storeUnclassifiedReceipt(rawBytes: ByteArray): Long = dbHelper.enqueueReceipt(
+        rawBytes = rawBytes,
+        branchId = branchId,
+        platform = "unknown",
+        status = OrderQueueDbHelper.STATUS_UNCLASSIFIED,
+        lastError = "Không nhận diện được duy nhất một nguồn sàn"
+    )
 
     /**
      * Background loop draining due pending orders from SQLite.
@@ -118,7 +126,7 @@ class WebhookDispatcher(
         withContext(Dispatchers.IO) {
             try {
                 val cleanUrl = urlTarget.trimEnd('/')
-                val endpoint = "$cleanUrl/api/webhooks/shopeefood/relay"
+                val endpoint = "$cleanUrl/api/webhooks/delivery/relay"
                 AppLogger.net("Đang kiểm tra kết nối tới: $endpoint...")
 
                 val url = URL(endpoint)
@@ -171,7 +179,7 @@ class WebhookDispatcher(
 
     private fun executePost(base64Payload: String, branch: Int, platform: String): Result<String> {
         return try {
-            val endpoint = "$backendUrl/api/webhooks/shopeefood/relay"
+            val endpoint = "$backendUrl/api/webhooks/delivery/relay"
             val url = URL(endpoint)
             val connection = url.openConnection() as HttpURLConnection
 
