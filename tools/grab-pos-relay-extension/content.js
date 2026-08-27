@@ -70,10 +70,64 @@
   }
 
   // Cache to track previous status of items
-  const itemStatusCache = new Map(); // grabItemId -> { status, stock }
+  const itemStatusCache = new Map(); // grabItemId -> { status, stockSignature }
+  const pendingItemSyncs = new Map(); // operation:itemId -> { requestId, signature, desiredValue }
+  let grabSessionExpired = false;
+  let itemStatusPollInFlight = false;
+  let forceSyncQueued = false;
+
+  function normalizeStockPayload(currentStock, maxStock) {
+    if (!Number.isFinite(currentStock)) {
+      return {
+        currentStock: null,
+        maxStock: -1,
+        signature: 'disabled',
+      };
+    }
+
+    const normalizedCurrentStock = Math.max(0, Math.trunc(currentStock));
+    const normalizedMaxStock = Math.max(
+      Number.isFinite(maxStock) && maxStock > 0 ? Math.trunc(maxStock) : 100,
+      normalizedCurrentStock,
+      1
+    );
+
+    return {
+      currentStock: normalizedCurrentStock,
+      maxStock: normalizedMaxStock,
+      signature: `enabled:${normalizedCurrentStock}:${normalizedMaxStock}`,
+    };
+  }
+
+  function queueItemSync(operation, command, itemId, signature, desiredValue, payload) {
+    const key = `${operation}:${itemId}`;
+    if (pendingItemSyncs.has(key)) return false;
+
+    const requestId = `${operation}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    pendingItemSyncs.set(key, { requestId, signature, desiredValue });
+    sendCommandToInjected(command, { requestId, itemId, ...payload });
+    return true;
+  }
+
+  function finishItemSync(operation, data) {
+    const key = `${operation}:${data.itemId}`;
+    const pending = pendingItemSyncs.get(key);
+    if (pending && data.requestId && pending.requestId !== data.requestId) {
+      return null;
+    }
+    pendingItemSyncs.delete(key);
+    return pending || null;
+  }
 
   // Poll POS Backend for Menu Limits / Item Status changes
   async function pollPosItemStatus(forceAll = false) {
+    if (grabSessionExpired) return;
+    if (itemStatusPollInFlight) {
+      forceSyncQueued = forceSyncQueued || forceAll;
+      return;
+    }
+    itemStatusPollInFlight = true;
+
     chrome.storage.local.get(['backendUrl', 'branchId', 'relaySecret'], async (res) => {
       const backendUrl = res.backendUrl || 'http://localhost:3000';
       const branchId = res.branchId || 1;
@@ -110,41 +164,60 @@
 
             // 1. If Available Status changed (or forceAll is true)
             if (forceAll || !prev || prev.status !== currentGrabStatus) {
-              const reqId = `status_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
               console.log(`[Grab POS Relay] Status sync for ${item.name}: ${prev?.status} -> ${currentGrabStatus} (code: ${item.available_status})`);
-              sendCommandToInjected('SET_AVAILABLE_STATUS', {
-                requestId: reqId,
-                itemId: grabId,
-                availableStatus: item.available_status ?? currentGrabStatus,
-              });
-              syncedCount++;
+              if (
+                queueItemSync(
+                  'status',
+                  'SET_AVAILABLE_STATUS',
+                  grabId,
+                  String(item.available_status ?? currentGrabStatus),
+                  currentGrabStatus,
+                  { availableStatus: item.available_status ?? currentGrabStatus }
+                )
+              ) {
+                syncedCount++;
+              }
             }
 
             // 2. If Stock changed
-            if (forceAll || !prev || prev.stock !== currentStock) {
-              const maxStock =
+            const rawMaxStock =
                 item.max_stock ??
                 item.stock_capacity ??
                 (typeof currentStock === 'number' ? Math.max(currentStock, 100) : -1);
+            const stockPayload = normalizeStockPayload(currentStock, rawMaxStock);
 
-              const reqId = `stock_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-              console.log(`[Grab POS Relay] Stock sync for ${item.name}: ${prev?.stock} -> ${currentStock} (maxStock: ${maxStock})`);
-              sendCommandToInjected('SET_ITEM_STOCK', {
-                requestId: reqId,
-                itemId: grabId,
-                currentStock: currentStock,
-                maxStock: maxStock,
-              });
-              syncedCount++;
+            if (forceAll || !prev || prev.stockSignature !== stockPayload.signature) {
+              console.log(`[Grab POS Relay] Stock sync for ${item.name}: ${prev?.stockSignature} -> ${stockPayload.signature}`);
+              if (
+                queueItemSync(
+                  'stock',
+                  'SET_ITEM_STOCK',
+                  grabId,
+                  stockPayload.signature,
+                  stockPayload.signature,
+                  {
+                    currentStock: stockPayload.currentStock,
+                    maxStock: stockPayload.maxStock,
+                  }
+                )
+              ) {
+                syncedCount++;
+              }
             }
           }
 
           if (forceAll) {
-            updateBadge(`✅ Đã gửi lệnh đồng bộ ${data.items.length} món sang Grab!`);
+            updateBadge(`Đang đồng bộ ${syncedCount} thay đổi sang Grab...`);
           }
         }
       } catch (err) {
         console.warn('[Grab POS Relay] Failed polling item status:', err);
+      } finally {
+        itemStatusPollInFlight = false;
+        if (forceSyncQueued) {
+          forceSyncQueued = false;
+          pollPosItemStatus(true);
+        }
       }
     });
   }
@@ -167,35 +240,50 @@
     const { type, data } = event.data;
 
     if (type === 'AUTH_EXPIRED') {
+      grabSessionExpired = true;
       updateBadge('⚠️ Phiên Grab hết hạn — mở lại hoặc đăng nhập lại Grab Merchant', false);
       return;
     }
 
     if (type === 'AUTH_RECOVERED') {
+      grabSessionExpired = false;
       updateBadge('✅ Đã kết nối lại Grab — tiếp tục trực đơn');
+      pollPosItemStatus(false);
       return;
     }
 
     // Confirm status sync success before caching
     if (type === 'SYNC_STATUS_RESULT' && data?.itemId) {
+      const pending = finishItemSync('status', data);
       if (data.success) {
         const prev = itemStatusCache.get(data.itemId) || {};
-        itemStatusCache.set(data.itemId, { ...prev, status: data.statusStr || data.availableStatus });
+        itemStatusCache.set(data.itemId, {
+          ...prev,
+          status: pending?.desiredValue || data.statusStr || data.availableStatus,
+        });
         console.log(`[Grab POS Relay] Status sync confirmed for item ${data.itemId}`);
       } else {
-        console.warn(`[Grab POS Relay] Status sync failed for item ${data.itemId} (HTTP ${data.status})`);
+        const detail = data.error ? `: ${data.error}` : '';
+        console.warn(`[Grab POS Relay] Status sync failed for item ${data.itemId} (HTTP ${data.status})${detail}`);
+        updateBadge(`⚠️ Grab từ chối trạng thái món (HTTP ${data.status || 0})`, false);
       }
       return;
     }
 
     // Confirm stock sync success before caching
     if (type === 'SYNC_STOCK_RESULT' && data?.itemId) {
+      const pending = finishItemSync('stock', data);
       if (data.success) {
         const prev = itemStatusCache.get(data.itemId) || {};
-        itemStatusCache.set(data.itemId, { ...prev, stock: data.currentStock });
+        itemStatusCache.set(data.itemId, {
+          ...prev,
+          stockSignature: pending?.signature || data.stockSignature,
+        });
         console.log(`[Grab POS Relay] Stock sync confirmed for item ${data.itemId}`);
       } else {
-        console.warn(`[Grab POS Relay] Stock sync failed for item ${data.itemId} (HTTP ${data.status})`);
+        const detail = data.error ? `: ${data.error}` : '';
+        console.warn(`[Grab POS Relay] Stock sync failed for item ${data.itemId} (HTTP ${data.status})${detail}`);
+        updateBadge(`⚠️ Grab từ chối tồn món (HTTP ${data.status || 0})`, false);
       }
       return;
     }

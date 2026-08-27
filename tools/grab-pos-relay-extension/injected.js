@@ -57,6 +57,10 @@
   const AUTH_FAILURE_THRESHOLD = 2;
   const POLL_INTERVAL_MS = 6000;
   const AUTH_RETRY_INTERVAL_MS = 60000;
+  const ITEM_SYNC_GAP_MS = 150;
+  const MAX_MUTATION_ATTEMPTS = 3;
+  const MUTATION_TIMEOUT_MS = 15000;
+  let itemSyncTail = Promise.resolve();
 
   function dispatchOrderEvent(type, data) {
     window.postMessage(
@@ -126,6 +130,67 @@
       authExpired = false;
       dispatchOrderEvent('AUTH_RECOVERED', {});
     }
+  }
+
+  function delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  function enqueueItemSync(operation) {
+    itemSyncTail = itemSyncTail
+      .catch(() => {})
+      .then(async () => {
+        await operation();
+        await delay(ITEM_SYNC_GAP_MS);
+      });
+  }
+
+  function retryDelayMs(response, attempt) {
+    const retryAfter = response.headers.get('retry-after');
+    const retryAfterSeconds = retryAfter ? Number(retryAfter) : NaN;
+    if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds >= 0) {
+      return Math.min(retryAfterSeconds * 1000, 30000);
+    }
+    return Math.min(1000 * 2 ** attempt, 10000);
+  }
+
+  async function responseError(response) {
+    try {
+      const text = (await response.text()).trim();
+      return text ? text.slice(0, 500) : `HTTP ${response.status}`;
+    } catch (error) {
+      return `HTTP ${response.status}`;
+    }
+  }
+
+  async function sendGrabMutation(url, init) {
+    let response = null;
+    for (let attempt = 0; attempt < MAX_MUTATION_ATTEMPTS; attempt += 1) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), MUTATION_TIMEOUT_MS);
+      try {
+        response = await originalFetch(url, { ...init, signal: controller.signal });
+      } catch (error) {
+        if (attempt === MAX_MUTATION_ATTEMPTS - 1) throw error;
+        await delay(Math.min(1000 * 2 ** attempt, 10000));
+        continue;
+      } finally {
+        clearTimeout(timeoutId);
+      }
+      if (response.ok) {
+        noteAuthSuccess();
+        return { response, error: null };
+      }
+
+      noteAuthFailure(response.status, url);
+      const retryable = response.status === 429 || response.status >= 500;
+      if (!retryable || attempt === MAX_MUTATION_ATTEMPTS - 1) {
+        return { response, error: await responseError(response) };
+      }
+      await delay(retryDelayMs(response, attempt));
+    }
+
+    return { response, error: 'Grab request failed' };
   }
 
   function isOrderEligibleForRelay(order, url = '') {
@@ -297,7 +362,7 @@
           console.log(`[Grab POS Relay] Fetched full detail for ${data.order.displayID}`);
           dispatchOrderDetailOnce(data.order);
         }
-      } else if (capturedAuthHeaders) {
+      } else {
         noteAuthFailure(res.status, url);
       }
     } catch (err) {
@@ -325,9 +390,7 @@
             }
           }
         }
-      } else if (capturedAuthHeaders) {
-        // Only count once a session header set exists; earlier 401s just mean
-        // the portal has not made an authenticated request yet.
+      } else {
         noteAuthFailure(res.status, url);
       }
     } catch (err) {
@@ -347,6 +410,18 @@
         success: false,
         status: 0,
         error: 'Invalid item ID format',
+      });
+      return;
+    }
+    if (authExpired) {
+      dispatchOrderEvent('SYNC_STATUS_RESULT', {
+        requestId,
+        itemId,
+        availableStatus: null,
+        statusStr: null,
+        success: false,
+        status: 401,
+        error: 'Grab session expired',
       });
       return;
     }
@@ -381,10 +456,21 @@
         statusCode = 7;
         statusStr = 'HIDDEN';
         availableAt = '0001-01-01T00:00:00Z';
+      } else {
+        dispatchOrderEvent('SYNC_STATUS_RESULT', {
+          requestId,
+          itemId,
+          availableStatus: null,
+          statusStr: null,
+          success: false,
+          status: 0,
+          error: 'Invalid available status',
+        });
+        return;
       }
 
       const url = 'https://api.grab.com/food/merchant/v1/items/available-status';
-      const res = await originalFetch(url, {
+      const { response: res, error } = await sendGrabMutation(url, {
         method: 'PUT',
         credentials: 'include',
         headers: {
@@ -402,9 +488,6 @@
         }),
       });
 
-      if (res.ok) noteAuthSuccess();
-      else if (capturedAuthHeaders) noteAuthFailure(res.status, url);
-
       console.log(`[Grab POS Relay] Updated status for item ${itemId} -> code: ${statusCode} (${statusStr}) (HTTP ${res.status})`);
       dispatchOrderEvent('SYNC_STATUS_RESULT', {
         requestId,
@@ -413,6 +496,7 @@
         statusStr,
         success: res.ok,
         status: res.status,
+        error,
       });
     } catch (err) {
       console.error(`[Grab POS Relay] Failed to update item status for ${itemId}:`, err);
@@ -444,18 +528,34 @@
       });
       return;
     }
+    if (authExpired) {
+      dispatchOrderEvent('SYNC_STOCK_RESULT', {
+        requestId,
+        itemId,
+        currentStock,
+        maxStock,
+        enableIms: false,
+        success: false,
+        status: 401,
+        error: 'Grab session expired',
+      });
+      return;
+    }
     try {
-      const hasFiniteLimit = typeof currentStock === 'number';
+      const hasFiniteLimit = Number.isFinite(currentStock);
       const enableIms = hasFiniteLimit;
-      const stockVal = hasFiniteLimit ? Math.max(0, currentStock) : 0;
+      const stockVal = hasFiniteLimit ? Math.max(0, Math.trunc(currentStock)) : 0;
 
       // Grab requires maxStock: -1 for unlimited (IMS disabled), or > 0 when IMS is enabled
       const maxStockVal = enableIms
-        ? Math.max(typeof maxStock === 'number' && maxStock > 0 ? maxStock : 100, stockVal, 1)
+        ? Math.max(Number.isFinite(maxStock) && maxStock > 0 ? Math.trunc(maxStock) : 100, stockVal, 1)
         : -1;
+      const stockSignature = enableIms
+        ? `enabled:${stockVal}:${maxStockVal}`
+        : 'disabled';
 
       const url = `https://api.grab.com/food/merchant/v1/items/${itemId}/upsert-item-stock`;
-      const res = await originalFetch(url, {
+      const { response: res, error } = await sendGrabMutation(url, {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -471,9 +571,6 @@
         }),
       });
 
-      if (res.ok) noteAuthSuccess();
-      else if (capturedAuthHeaders) noteAuthFailure(res.status, url);
-
       console.log(`[Grab POS Relay] Updated stock for item ${itemId} -> current: ${stockVal}, max: ${maxStockVal} (IMS: ${enableIms}, HTTP ${res.status})`);
       dispatchOrderEvent('SYNC_STOCK_RESULT', {
         requestId,
@@ -481,8 +578,10 @@
         currentStock: stockVal,
         maxStock: maxStockVal,
         enableIms,
+        stockSignature,
         success: res.ok,
         status: res.status,
+        error,
       });
     } catch (err) {
       console.error(`[Grab POS Relay] Failed to update stock for ${itemId}:`, err);
@@ -565,9 +664,13 @@
 
     const { command, payload } = event.data;
     if (command === 'SET_AVAILABLE_STATUS') {
-      setGrabItemAvailableStatus(payload?.requestId, payload?.itemId, payload?.availableStatus);
+      enqueueItemSync(() =>
+        setGrabItemAvailableStatus(payload?.requestId, payload?.itemId, payload?.availableStatus)
+      );
     } else if (command === 'SET_ITEM_STOCK') {
-      setGrabItemStock(payload?.requestId, payload?.itemId, payload?.currentStock, payload?.maxStock);
+      enqueueItemSync(() =>
+        setGrabItemStock(payload?.requestId, payload?.itemId, payload?.currentStock, payload?.maxStock)
+      );
     }
   });
 
