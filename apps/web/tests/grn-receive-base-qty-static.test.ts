@@ -9,21 +9,32 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 const MIGRATION =
   "supabase/migrations/20260817122500_grn_receive_base_qty_and_excess.sql";
 
-function latestPoLineImmutabilityDefinition(): string {
+function latestPoLineImmutabilityDefinition(): {
+  definition: string;
+  migration: string;
+} {
   const migrationDir = resolve(repoRoot, "supabase/migrations");
-  const sql = readdirSync(migrationDir)
+  const migrations = readdirSync(migrationDir)
     .filter((file) => file.endsWith(".sql"))
     .sort()
-    .map((file) => read(`supabase/migrations/${file}`))
-    .join("\n");
-  const definitions = [
-    ...sql.matchAll(
-      /CREATE(?: OR REPLACE)? FUNCTION private\.enforce_retrospective_purchase_order_line_immutability\(\)/g,
-    ),
-  ];
-  const start = definitions.at(-1)?.index ?? -1;
-  assert.ok(start >= 0, "latest PO-line immutability definition not found");
-  return sql.slice(start);
+    .map((file) => ({ file, sql: read(`supabase/migrations/${file}`) }))
+    .filter(({ sql }) =>
+      /CREATE(?: OR REPLACE)? FUNCTION private\.enforce_retrospective_purchase_order_line_immutability\(\)/.test(
+        sql,
+      ),
+    );
+  const latest = migrations.at(-1);
+  assert.ok(latest, "latest PO-line immutability definition not found");
+  const start = latest.sql.search(
+    /CREATE(?: OR REPLACE)? FUNCTION private\.enforce_retrospective_purchase_order_line_immutability\(\)/,
+  );
+  const terminator = "$function$;";
+  const end = latest.sql.indexOf(terminator, start);
+  assert.ok(end >= 0, `PO-line immutability terminator not found in ${latest.file}`);
+  return {
+    definition: latest.sql.slice(start, end + terminator.length),
+    migration: latest.sql,
+  };
 }
 
 test("GRN confirm compares remaining in base and stocks excess without blocking", () => {
@@ -103,7 +114,7 @@ test("SQL proof covers partial pack+loose, excess amends PO qty, and same-unit o
 });
 
 test("linked PO immutability permits only trusted GRN-confirm quantity increases", () => {
-  const immutability = latestPoLineImmutabilityDefinition();
+  const { definition: immutability, migration } = latestPoLineImmutabilityDefinition();
 
   assert.match(immutability, /current_setting\('comtammatu\.grn_confirm', TRUE\)/);
   assert.match(immutability, /NEW\.quantity > OLD\.quantity/);
@@ -112,5 +123,10 @@ test("linked PO immutability permits only trusted GRN-confirm quantity increases
     /to_jsonb\(NEW\) - 'quantity'[\s\S]*?to_jsonb\(OLD\) - 'quantity'/,
   );
   assert.match(immutability, /v_trusted_rpc IS TRUE/);
+  assert.doesNotMatch(immutability, /pg_catalog\.coalesce/i);
+  assert.match(
+    migration,
+    /pg_get_functiondef\([\s\S]*?enforce_retrospective_purchase_order_line_immutability/,
+  );
   assert.doesNotMatch(immutability, /IF v_confirming THEN\s+RETURN NEW/);
 });
