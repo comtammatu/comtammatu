@@ -47,6 +47,7 @@ export {
   PO_CREATE_ROLES,
   PO_REVIEW_ROLES,
   PO_MUTATE_ROLES,
+  INVENTORY_TENANT_READ_ROLES,
   SUPPLIER_RETURN_ROLES,
   isBranchScopedProcurementRole,
   isProcurementBranchInScope,

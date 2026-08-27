@@ -1,5 +1,8 @@
 import { cache } from "react";
-import { TENANT_LEVEL_ROLES, type JwtClaims } from "@comtammatu/shared/auth";
+import {
+  INVENTORY_TENANT_READ_ROLES,
+  type JwtClaims,
+} from "@comtammatu/shared/auth";
 import {
   fetchActiveBranches,
   parseBranchIdParam,
@@ -40,7 +43,7 @@ export const resolveInventoryListScope = cache(
     const branches = await fetchActiveBranches(supabase, claims.tenant_id);
     return resolveListScope(supabase, claims, branches, {
       ...options,
-      tenantWideRoles: TENANT_LEVEL_ROLES,
+      tenantWideRoles: INVENTORY_TENANT_READ_ROLES,
     });
   },
 );
@@ -62,7 +65,7 @@ export const resolveInventoryBranchScope = cache(
       claims,
       branches,
       requestedBranchId,
-      TENANT_LEVEL_ROLES,
+      INVENTORY_TENANT_READ_ROLES,
       options,
     );
   },

@@ -91,7 +91,22 @@ export const PO_REVIEW_ROLES: readonly StaffRole[] = [
   "accountant",
 ] as const;
 
-export const PO_MUTATE_ROLES = PO_REVIEW_ROLES;
+export const PO_MUTATE_ROLES: readonly StaffRole[] = [
+  "owner",
+  "accountant",
+  "central_supply_ops",
+  "central_kitchen_lead",
+] as const;
+
+/**
+ * Roles that can browse inventory across all branches (D058/ADR 0045/Kho Tổng).
+ */
+export const INVENTORY_TENANT_READ_ROLES: readonly StaffRole[] = [
+  "owner",
+  "self_service",
+  "accountant",
+  "central_supply_ops",
+] as const;
 
 /** Residual RPC/role gate; daily supplier-return UI retired (R08). BM stripped. */
 export const SUPPLIER_RETURN_ROLES: readonly StaffRole[] = ["owner"];

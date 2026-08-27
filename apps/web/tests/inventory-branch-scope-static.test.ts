@@ -71,7 +71,7 @@ test("inventory-scope no longer owns a branches query — engine is shared", () 
   assert.match(INVENTORY_SCOPE_SOURCE, /from "@\/_lib\/branch-context"/);
   assert.match(INVENTORY_SCOPE_SOURCE, /fetchActiveBranches/);
   assert.match(INVENTORY_SCOPE_SOURCE, /selectBranchScope/);
-  assert.match(INVENTORY_SCOPE_SOURCE, /TENANT_LEVEL_ROLES/);
+  assert.match(INVENTORY_SCOPE_SOURCE, /INVENTORY_TENANT_READ_ROLES/);
 
   const branchQueries = BRANCH_CONTEXT_SOURCE.match(/\.from\("branches"\)/g);
   assert.equal(branchQueries?.length, 1);
@@ -179,6 +179,26 @@ test("adapter -> owner sees every active branch kind and can select all", async 
   assert.equal(scope.scopeMode, "site");
   assert.equal(scope.selectedBranchId, 1);
   assert.equal(scope.defaultBranchId, 1);
+});
+
+test("adapter -> central_supply_ops sees every active branch kind and defaults to own central site", async () => {
+  const { supabase, filters } = fakeSupabase(BRANCHES, null);
+
+  const scope = await resolveInventoryBranchScope(
+    supabase,
+    claims("central_supply_ops", 10),
+    null,
+  );
+
+  assert.deepEqual(filters, { tenant_id: 1, is_active: true });
+  assert.deepEqual(
+    scope.allowedBranches.map((branch) => branch.id),
+    [1, 2, 10],
+  );
+  assert.equal(scope.canSelectAll, true);
+  assert.equal(scope.scopeMode, "site");
+  assert.equal(scope.selectedBranchId, 10);
+  assert.equal(scope.defaultBranchId, 10);
 });
 
 test("adapter -> requestAll yields scopeMode all with null selection for tenant-wide roles", async () => {
