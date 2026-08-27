@@ -28,6 +28,8 @@ type TodayAttendance = {
   businessDate: string;
   shiftId: number | null;
   shiftName: string | null;
+  shiftStartTime: string | null;
+  shiftEndTime: string | null;
   checkIn: string | null;
   checkOut: string | null;
 };
@@ -126,6 +128,7 @@ export async function TeamMembersContent({ branchId }: { branchId: number }) {
     countAssignmentsResult,
     countSlipsResult,
     leaveResult,
+    shiftsResult,
   ] = await Promise.all([
     readClient
       .from("employees")
@@ -171,6 +174,12 @@ export async function TeamMembersContent({ branchId }: { branchId: number }) {
       .eq("status", "approved")
       .lte("start_date", today)
       .gte("end_date", today),
+    readClient
+      .from("shifts")
+      .select("id, name, start_time, end_time")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("is_active", true)
+      .order("start_time"),
   ]);
 
   if (
@@ -196,6 +205,13 @@ export async function TeamMembersContent({ branchId }: { branchId: number }) {
       />
     );
   }
+
+  const availableShifts = (shiftsResult.data ?? []).map((shift) => ({
+    id: shift.id,
+    name: shift.name,
+    startTime: shift.start_time,
+    endTime: shift.end_time,
+  }));
 
   const attendanceByEmployee = new Map<number, TodayAttendance>();
   for (const record of attendanceResult.data ?? []) {
@@ -225,6 +241,8 @@ export async function TeamMembersContent({ branchId }: { branchId: number }) {
       businessDate: record.date,
       shiftId: record.shift_id,
       shiftName: stringField(shift, "name"),
+      shiftStartTime: typeof startTime === "string" ? startTime : null,
+      shiftEndTime: typeof endTime === "string" ? endTime : null,
       checkIn: record.check_in,
       checkOut: record.check_out,
     });
@@ -268,7 +286,10 @@ export async function TeamMembersContent({ branchId }: { branchId: number }) {
         avatarUrl: profile.avatar_url,
         positionLabel: stringField(position, "label_vi"),
         todayStatus: resolveTodayStatus(attendance, onApprovedLeave),
+        todayShiftId: attendance?.shiftId ?? null,
         todayShiftName: attendance?.shiftName ?? null,
+        todayShiftStartTime: attendance?.shiftStartTime ?? null,
+        todayShiftEndTime: attendance?.shiftEndTime ?? null,
         checkIn: attendance?.checkIn ?? null,
         checkOut: attendance?.checkOut ?? null,
         onApprovedLeave,
@@ -296,6 +317,7 @@ export async function TeamMembersContent({ branchId }: { branchId: number }) {
     <MembersClient
       branchId={branchId}
       employees={employees}
+      availableShifts={availableShifts}
       canManageEmployeeOverrides={canManageEmployeeOverrides}
     />
   );

@@ -8,6 +8,7 @@ import {
   ChevronRight as IconChevronRight,
   ClipboardCheck,
   Clock as IconClock,
+  Search as IconSearch,
   Users as IconUsers,
 } from "lucide-react";
 import { formatCount } from "@comtammatu/shared/format";
@@ -16,6 +17,11 @@ import type { StaffRole } from "@comtammatu/shared/auth";
 
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@comtammatu/ui/components/input-group";
 import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
@@ -29,6 +35,7 @@ import {
 
 
 import { BranchOperatorPanel } from "@lib/branch-operator/components/branch-operator-page";
+import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
 import { TeamMemberTile } from "./_components/team-member-tile";
 import {
@@ -659,14 +666,26 @@ export function TeamBoardClient({
   const [filter, setFilter] = useState<TeamBoardFilter>(() =>
     initialTeamBoardFilter(displayRows, capabilities),
   );
+  const [searchQuery, setSearchQuery] = useState("");
   const [drawerRow, setDrawerRow] = useState<TeamBoardDisplayRow | null>(null);
   const [forceCloseRow, setForceCloseRow] =
     useState<TeamBoardDisplayRow | null>(null);
   const [forceCloseReason, setForceCloseReason] = useState("");
   const [isForceClosing, startForceCloseTransition] = useTransition();
   const router = useRouter();
-  const filteredRows = displayRows.filter((row) =>
-    matchesTeamBoardFilter(row, filter, capabilities),
+  const filteredRows = displayRows.filter(
+    (row) =>
+      matchesTeamBoardFilter(row, filter, capabilities) &&
+      (searchQuery.trim() === "" ||
+        matchesSearch(
+          [
+            row.fullName,
+            row.employeeCode ?? "",
+            row.positionLabel ?? "",
+            row.shift?.shiftName ?? "",
+          ],
+          searchQuery.trim(),
+        )),
   );
   const filteredGroups = groupRowsByShift(filteredRows);
 
@@ -745,6 +764,18 @@ export function TeamBoardClient({
         className="flex flex-col gap-2"
         aria-label={copy.boardSectionTitle}
       >
+        <InputGroup size="touch">
+          <InputGroupAddon>
+            <IconSearch aria-hidden />
+          </InputGroupAddon>
+          <InputGroupInput
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={copy.searchPlaceholder}
+            aria-label={copy.searchAriaLabel}
+          />
+        </InputGroup>
+
         <TeamBoardFilters
           rows={displayRows}
           value={filter}
