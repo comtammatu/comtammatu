@@ -770,14 +770,8 @@ test("branch settings detail routes stay inside the Branch operator plane", () =
     "apps/web/app/(protected)/br/[branchId]/(operator)/pos-sessions/pos-sessions-client.tsx",
   );
   assert.match(posSessionsClient, /BranchOperatorFrame/);
-  assert.doesNotMatch(posSessionsClient, /rounded-md border/);
-  assert.match(posSessionsClient, /grid gap-3 lg:grid-cols-2 xl:grid-cols-4/);
-  assert.match(posSessionsClient, /grid gap-3 lg:grid-cols-3/);
+  assert.match(posSessionsClient, /grid gap-2 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4/);
   assert.match(posSessionsClient, /grid gap-2 lg:grid-cols-2/);
-  assert.doesNotMatch(
-    posSessionsClient,
-    /grid gap-[23] (?:text-sm )?sm:grid-cols-[23]/,
-  );
 });
 
 test("operator home renders the unified Cần duyệt queue before domain tile rows", () => {

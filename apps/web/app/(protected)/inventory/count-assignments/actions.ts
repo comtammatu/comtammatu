@@ -130,7 +130,7 @@ export const setStationCountAssignments = withAction(
       p_location_id: data.locationId,
       p_template_id: data.templateId,
       p_assignments: data.assignments,
-      ...(data.shiftId == null ? {} : { p_shift_id: data.shiftId }),
+      p_shift_id: (data.shiftId ?? null) as unknown as number,
     });
     if (error) {
       console.error("inventory.count_assignments.set_station_failed", {
@@ -171,7 +171,7 @@ export const saveCountTemplate = withAction(
         p_name: data.name,
         p_station_role: data.stationRole,
         p_ingredient_ids: data.ingredientIds,
-        ...(data.templateId == null ? {} : { p_template_id: data.templateId }),
+        p_template_id: (data.templateId ?? null) as unknown as number,
       },
     );
     if (error) {

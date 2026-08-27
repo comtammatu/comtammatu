@@ -88,7 +88,7 @@ export function BranchCountAssignmentsClient({
     Record<string, number[]>
   >(() => seedSelections(data));
 
-  // Single employee drawer state
+  // Single employee sheet state
   const [activeEmployeeId, setActiveEmployeeId] = useState<number | null>(null);
   const [draftIds, setDraftIds] = useState<number[]>([]);
   const [query, setQuery] = useState("");
@@ -405,7 +405,7 @@ export function BranchCountAssignmentsClient({
     });
   }
 
-  // Single Employee Drawer Actions
+  // Single Employee Sheet Actions
   function openEmployee(employee: CountAssignmentEmployee) {
     setActiveEmployeeId(employee.id);
     setDraftIds(selectionByEmployee[String(employee.id)] ?? []);
@@ -768,7 +768,12 @@ export function BranchCountAssignmentsClient({
                   key={employee.id}
                   variant="outline"
                   className="min-h-20 min-w-0 flex-nowrap touch-manipulation"
-                  onClick={() => openEmployee(employee)}
+                  render={
+                    <button
+                      type="button"
+                      onClick={() => openEmployee(employee)}
+                    />
+                  }
                 >
                   <ItemContent className="min-w-0 gap-1 text-left">
                     <div className="flex items-center gap-2">
@@ -1239,7 +1244,7 @@ export function BranchCountAssignmentsClient({
         </ScrollArea>
       </AppSheet>
 
-      {/* ─── 3. Single Employee Checklist Drawer ──────────────────────── */}
+      {/* ─── 3. Single Employee Checklist Sheet ──────────────────────── */}
       <AppSheet
         open={activeEmployeeId != null}
         onOpenChange={(open) => {

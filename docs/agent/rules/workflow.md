@@ -53,6 +53,20 @@ Product workflows remain usable without an LLM. A new automation proposal must
 identify its deterministic source, authority, rollback, deduplication, and
 verification before implementation.
 
+## Reproduction-First Contract
+
+For any bug fix, regression repair, or behavior adjustment:
+
+1. **Reproduce before editing**: Capture verifiable proof of the failure first.
+   - *Backend/Database*: Write a failing unit/integration test (`*.test.ts`) or
+     reproduction SQL script (`*_test.sql`).
+   - *UI/Workflow*: Capture a failing runtime state, console error, or visual
+     defect via browser / DevTools MCP tools or test assertion.
+2. **Never guess**: If a bug report is vague or lacks context, triage and build a
+   minimal reproduction case before modifying implementation files.
+3. **Prove the resolution**: The same test or runtime harness must transition
+   cleanly from RED (failing) to GREEN (passing) after the change.
+
 ## Current Task Lifecycle
 
 `tasks/todo.md` holds active outcomes only. Each H2 requires exactly one
@@ -70,19 +84,47 @@ Allowed states:
 Delete the H2 after Exit passes; Git is shipped-work history. Do not persist
 checked actions, review transcripts, snapshots, or a `done` state.
 
-## Verification
+## Four-Tier Verification Harness
 
-1. Run targeted checks for the changed behavior and inspect the scoped diff.
-2. Before implementation completion, or before any owner-requested commit or
-   push of code outside CI `paths-ignore`, run `corepack pnpm verify` — the same
-   gate as the CI `gates` job. Docs-only diffs may skip verify locally; the
-   tracked `pre-push` hook applies the same skip on push.
-3. Read each command's output. A background completion notice or cached Turbo
-   replay is not fresh proof. After deletions or cross-package source reads in
-   tests, run `corepack pnpm exec turbo run test --force` when verify is green
-   but confidence is low.
-4. Keep written, review-clean, merged, applied to Production, and deployed as
-   separate claims. CI must be green before calling landed work complete.
+Never declare a task complete based on code generation alone. Verification
+proceeds in four progressive tiers:
+
+### Tier 1 — Deterministic Static Gates
+- Strict TypeScript check (`corepack pnpm typecheck`) with zero errors.
+- Monorepo linting (`corepack pnpm lint`), including `lint:ui-contract`,
+  `lint:copy`, dependency boundaries, and security linters.
+
+### Tier 2 — Automated Regression & Unit Tests
+- Targeted test execution covering the modified subsystem (`pnpm test:unit`,
+  `vitest`, or pgTAP).
+- Full suite verification via `corepack pnpm verify` (matches CI `gates`).
+
+### Tier 3 — Runtime & Visual Inspection (UI / Workflow changes)
+When modifying user-facing surfaces or workflow states:
+- Verify all four essential states: **Loading**, **Empty**, **Populated**, and
+  **Error**.
+- Verify overlay and action lifecycles (Dialog/Sheet opening, `confirm()` outside
+  transitions, focus traps, and drawer resets).
+- Verify density and accessibility: Mobile touch targets ($\ge 44\text{px}$),
+  desktop data density, and theme consistency (`.dark` token resolution).
+- Use DevTools MCP / browser automation to inspect network payloads and console
+  logs.
+
+### Tier 4 — Domain Invariant Rubric
+- **Money & Precision**: `numeric(...,2)` for Finance/VAT, whole-VND for POS;
+  zero display-rounding in math formulas.
+- **Auth & RLS**: Server Actions validated with Zod; definer helper bypasses;
+  no raw DB error leakage.
+- **Copy & Localization**: Vietnamese UI copy adhering strictly to
+  `docs/ref/glossary.md` and `corepack pnpm lint:copy`.
+
+Read command outputs carefully. A background completion notice or cached Turbo
+replay is not fresh proof. After deletions or cross-package source reads in
+tests, run `corepack pnpm exec turbo run test --force` when verify is green
+but confidence is low.
+
+Keep written, review-clean, merged, applied to Production, and deployed as
+separate claims. CI must be green before calling landed work complete.
 
 ## Learning Closeout
 

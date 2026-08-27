@@ -62,12 +62,15 @@ use built-in search tools; indexing remains an owner decision.
   code/docs cleanly; Git is the archive, so no tombstones or provenance notes.
 - Do not create another agent wiki, task board, memory store, or rule tree.
   Use the existing owner mapped by `references.md`.
+- Before modifying code for bug fixes, enforce the Reproduction-First contract
+  (`workflow.md`): capture a failing test or verifiable runtime proof first.
 - Before calling implementation complete, or before any owner-requested commit or
   push of code outside CI `paths-ignore`, run `corepack pnpm verify` — the same
   gate as the CI `gates` job (`deps:security`, `deps:audit`, `deps:boundaries`,
-  `typecheck`, `lint`, `build`, `test`). Read command output; Turbo cache replay
-  is not fresh proof after deletions or cross-package test reads (see
-  `docs/agent/rules/workflow.md`). The tracked `pre-push` hook enforces this on push.
+  `typecheck`, `lint`, `build`, `test`) and satisfy the Four-Tier Verification
+  Harness (`workflow.md`). Read command output; Turbo cache replay is not fresh
+  proof after deletions or cross-package test reads. The tracked `pre-push` hook
+  enforces this on push.
 
 ## Communication And Git
 

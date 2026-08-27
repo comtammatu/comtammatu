@@ -22,13 +22,26 @@ tracked `.agents/skills` tree or a parallel agent wiki.
 | --- | --- | --- |
 | App Router, RSC, Server Action | `engineering.md` | The framework boundary is in scope |
 | React/Next performance patterns | `react.md` | A measured render or fetch hotspot exists |
-| Shared component/accessibility | `ui.md` + design-system / archetypes | A reusable component contract changes |
+| Shared component/accessibility | `ui.md` + design-system / archetypes | A reusable component contract changes (use `a11y-debugging` MCP for audits) |
 | Vietnamese product UI copy, hints, bilingual drift | `language.md`, `docs/ref/glossary.md`, `lint:copy` | Writing or reviewing user-facing wording |
 | Supabase, migration, RLS, RPC | `database.md` | Target is verified |
 | Query/index/lock performance | `database.md` | A measured database hypothesis exists |
-| Runtime UI/workflow proof | `ui.md`; Playwright when source cannot prove behavior | Browser proof is required |
+| Runtime UI/workflow proof | `ui.md`; DevTools MCP / Playwright | Interactive browser verification, visual DOM inspection, or network proof is required |
 | Monorepo pipeline/package graph | Root `package.json` + lockfile + turbo | More than one package boundary changes |
 | Registry/preset work | `ui.md` + `packages/ui` | Registry configuration is the actual task |
+
+## The Bug-to-Guard & Skill Codification Pipeline
+
+Never rely on transient session memory or ad-hoc prompt reminders to avoid past
+mistakes. Every discovered defect, hallucination, or unencoded domain edge case
+must be codified into the repository harness:
+
+1. **Mechanical/Deterministic Failures**: Encode as a test assertion (`*.test.ts`,
+   `*_test.sql`) or a static linter guard (`scripts/check-regression-guards.mjs`).
+2. **Named Domain Regressions**: Document the failure pattern, detection command,
+   and root cause in `tasks/regressions.md`.
+3. **Architectural & Novel Patterns**: Stage in `tasks/lessons.md` until promoted
+   to a canonical rule or ADR per ADR 0021.
 
 ## Safety
 
