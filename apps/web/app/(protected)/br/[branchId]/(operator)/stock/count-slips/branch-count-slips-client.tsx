@@ -13,8 +13,6 @@ import {
   ChevronRight as IconChevronRight,
   ClipboardCheck as IconClipboardCheck,
   RotateCcw as IconRecount,
-  Trash2 as IconTrash,
-  Zap as IconZap,
 } from "lucide-react";
 import {
   ACTIONS_VI,
@@ -150,30 +148,84 @@ export function BranchCountSlipsClient({
 
   async function approveSelected() {
     if (!selected) return;
-    const ok = await confirm({
-      title: INVENTORY_VI.countSlipApproveTitle,
-      description: INVENTORY_VI.countSlipApproveDescription,
-      details: [
-        { label: STAFF_VI.long, value: selected.employeeName },
-        { label: INVENTORY_VI.warehouseShort, value: selected.locationName },
-        {
-          label: INVENTORY_VI.lineCountLabel,
-          value: INVENTORY_VI.ingredientCountBadge(selected.lines.length),
-        },
-      ],
-      confirmText: ACTIONS_VI.approve,
-      variant: "destructive",
-    });
-    if (!ok) return;
+    const shortageLines = selected.lines.filter(
+      (l) => l.variance !== null && l.variance < 0,
+    );
+
+    let autoCreateWaste = false;
+
+    if (shortageLines.length > 0) {
+      const shortageSummary =
+        shortageLines
+          .slice(0, 3)
+          .map(
+            (l) =>
+              `${l.ingredientName}: ${formatVariance(l.variance)} ${l.varianceUnit}`,
+          )
+          .join(", ") +
+        (shortageLines.length > 3
+          ? ` (+${shortageLines.length - 3} món khác)`
+          : "");
+
+      const ok = await confirm({
+        title: INVENTORY_VI.countSlipApproveTitle,
+        description: INVENTORY_VI.countSlipShortageDetectedHint,
+        details: [
+          { label: STAFF_VI.long, value: selected.employeeName },
+          { label: INVENTORY_VI.warehouseShort, value: selected.locationName },
+          {
+            label: INVENTORY_VI.countSlipShortageDetectedTitle(
+              shortageLines.length,
+            ),
+            value: shortageSummary,
+          },
+        ],
+        confirmText: INVENTORY_VI.countSlipApproveAndWasteAction,
+        variant: "destructive",
+      });
+      if (!ok) return;
+      autoCreateWaste = true;
+    } else {
+      const ok = await confirm({
+        title: INVENTORY_VI.countSlipApproveTitle,
+        description: INVENTORY_VI.countSlipApproveDescription,
+        details: [
+          { label: STAFF_VI.long, value: selected.employeeName },
+          { label: INVENTORY_VI.warehouseShort, value: selected.locationName },
+          {
+            label: INVENTORY_VI.lineCountLabel,
+            value: INVENTORY_VI.ingredientCountBadge(selected.lines.length),
+          },
+        ],
+        confirmText: ACTIONS_VI.approve,
+      });
+      if (!ok) return;
+    }
+
     setPendingAction("approve");
     startTransition(async () => {
-      const result = await approveCountSlip({ slipId: selected.id });
+      const result = await approveCountSlip({
+        slipId: selected.id,
+        autoCreateWaste,
+      });
       setPendingAction(null);
       if (!result.success || !result.data) {
         toast.error(result.error ?? INVENTORY_VI.countSlipApproveFailed);
         return;
       }
-      toast.success(INVENTORY_VI.countSlipApproved);
+      if (result.data.wasteCreated && result.data.wasteIssueNumber) {
+        toast.success(
+          INVENTORY_VI.countSlipApprovedWithWaste(
+            result.data.wasteIssueNumber,
+            result.data.wasteItemsCount ?? 0,
+          ),
+        );
+      } else if (result.data.wasteError) {
+        toast.success(INVENTORY_VI.countSlipApproved);
+        toast.error(result.data.wasteError);
+      } else {
+        toast.success(INVENTORY_VI.countSlipApproved);
+      }
       applyStatus(selected.id, "approved");
       closeReview();
       router.refresh();
@@ -439,66 +491,6 @@ export function BranchCountSlipsClient({
                 },
               ]}
             />
-
-            {/* ─── Tác vụ xử lý chênh lệch kho ─── */}
-            {selected.lines.some(
-              (l) => l.variance !== null && l.variance !== 0,
-            ) ? (
-              <NoteCallout
-                tone="muted"
-                icon={<IconZap className="size-4 text-primary" />}
-                label={INVENTORY_VI.varianceActionsTitle}
-                className="flex-col items-stretch gap-1.5"
-              >
-                <p className="text-xs text-muted-foreground">
-                  {INVENTORY_VI.varianceActionsHint}
-                </p>
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {selected.lines.some(
-                    (l) => l.variance !== null && l.variance < 0,
-                  ) ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="touch"
-                      onClick={() => {
-                        const shortageLines = selected.lines.filter(
-                          (l) => l.variance !== null && l.variance < 0,
-                        );
-                        const first = shortageLines[0];
-                        const params = new URLSearchParams();
-                        if (first) {
-                          params.set("ingredientId", String(first.ingredientId));
-                          params.set(
-                            "quantity",
-                            String(Math.abs(first.variance ?? 0)),
-                          );
-                          params.set("reason", "spoilage");
-                        }
-                        params.set("sourceSlipId", String(selected.id));
-                        router.push(
-                          `/br/${branchId}/stock/waste?${params.toString()}`,
-                        );
-                      }}
-                    >
-                      <IconTrash className="size-4 text-destructive" />
-                      {INVENTORY_VI.createWasteShortageAction}
-                    </Button>
-                  ) : null}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="touch"
-                    onClick={() => {
-                      router.push(`/br/${branchId}/stock/stocktake/new`);
-                    }}
-                  >
-                    <IconClipboardCheck className="size-4 text-primary" />
-                    {INVENTORY_VI.createStocktakeAction}
-                  </Button>
-                </div>
-              </NoteCallout>
-            ) : null}
 
             <ItemGroup className="gap-2">
               {selected.lines.map((line) => (

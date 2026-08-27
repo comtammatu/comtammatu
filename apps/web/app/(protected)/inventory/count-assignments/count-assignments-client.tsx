@@ -1,4 +1,3 @@
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: inventory management copy */
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
@@ -125,7 +124,11 @@ function AssignmentBadges({
   ingredientMap: Map<number, IngredientOption>;
 }) {
   if (selectedIds.length === 0) {
-    return <span className="text-sm text-muted-foreground">Chưa gán</span>;
+    return (
+      <span className="text-sm text-muted-foreground">
+        {INVENTORY_VI.countStationUnassigned}
+      </span>
+    );
   }
 
   return (
@@ -351,8 +354,10 @@ export function CountAssignmentsClient({
       return;
     }
     const accepted = await confirm({
-      title: "Xóa phân công đếm tồn?",
-      description: `Toàn bộ mặt hàng đang giao cho ${employee.name} sẽ được gỡ.`,
+      title: INVENTORY_VI.countAssignRemoveConfirmTitle,
+      description: INVENTORY_VI.countAssignRemoveConfirmDescription(
+        employee.name,
+      ),
       confirmText: ACTIONS_VI.delete,
       variant: "destructive",
     });
@@ -419,7 +424,7 @@ export function CountAssignmentsClient({
   const columns: DataTableColumn<EmployeeRow>[] = [
     {
       key: "employee",
-      header: "Nhân viên",
+      header: INVENTORY_VI.countAssignTableHeaderStaff,
       className: "min-w-52",
       render: (employee) => {
         const isOnShift =
@@ -449,7 +454,7 @@ export function CountAssignmentsClient({
     },
     {
       key: "assignments",
-      header: "Mặt hàng được giao",
+      header: INVENTORY_VI.countAssignTableHeaderItems,
       className: "min-w-96",
       render: (employee) => (
         <AssignmentBadges
@@ -460,7 +465,7 @@ export function CountAssignmentsClient({
     },
     {
       key: "count",
-      header: "Số lượng",
+      header: INVENTORY_VI.countAssignTableHeaderQuantity,
       className: "w-28 text-right",
       render: (employee) => (
         <span className="block font-mono tabular-nums text-right">
@@ -470,7 +475,7 @@ export function CountAssignmentsClient({
     },
     {
       key: "actions",
-      header: "Thao tác",
+      header: INVENTORY_VI.countAssignTableHeaderActions,
       className: "w-52 text-right",
       render: (employee) => {
         const hasAssignments =
@@ -520,7 +525,10 @@ export function CountAssignmentsClient({
         badge={
           scopeReady
             ? {
-                children: `${assignedEmployeeCount}/${employees.length} đã giao`,
+                children: INVENTORY_VI.countAssignAssignedSummary(
+                  assignedEmployeeCount,
+                  employees.length,
+                ),
               }
             : undefined
         }
@@ -547,10 +555,10 @@ export function CountAssignmentsClient({
                   </InputGroupAddon>
                   <InputGroupInput
                     type="search"
-                    aria-label="Tìm nhân viên…"
+                    aria-label={INVENTORY_VI.staffSearchPlaceholder}
                     value={employeeSearch}
                     onChange={(event) => setEmployeeSearch(event.target.value)}
-                    placeholder="Tìm nhân viên…"
+                    placeholder={INVENTORY_VI.staffSearchPlaceholder}
                     inputMode="search"
                   />
                 </InputGroup>
@@ -592,13 +600,13 @@ export function CountAssignmentsClient({
                           id="count-assignment-shift"
                           size={controlSize}
                           className={inventoryListFilterSelectClassName}
-                          aria-label="Ca đếm tồn"
+                          aria-label={INVENTORY_VI.countAssignShiftLabel}
                         >
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value={ALL_SHIFTS_VALUE}>
-                            Áp dụng mọi ca
+                            {INVENTORY_VI.countAssignAllShifts}
                           </SelectItem>
                           {shiftOptions.map((shift) => (
                             <SelectItem key={shift.id} value={String(shift.id)}>
@@ -632,8 +640,8 @@ export function CountAssignmentsClient({
                     <ItemTitle>{employee.name}</ItemTitle>
                     <ItemDescription>
                       {selectedIds.length > 0
-                        ? `${selectedIds.length} mặt hàng`
-                        : "Chưa gán mặt hàng"}
+                        ? INVENTORY_VI.countAssignItemCount(selectedIds.length)
+                        : INVENTORY_VI.countStationUnassigned}
                     </ItemDescription>
                     <AssignmentBadges
                       selectedIds={selectedIds}
@@ -674,7 +682,9 @@ export function CountAssignmentsClient({
         onOpenChange={(open) => {
           if (!open) closeEditor();
         }}
-        title={`Phân công đếm tồn: ${activeEmployee?.name ?? ""}`}
+        title={INVENTORY_VI.countStationAssignSheetTitle(
+          activeEmployee?.name ?? "",
+        )}
         description={INVENTORY_VI.countAssignEditDescription(
           activeEmployee?.name ?? "",
         )}

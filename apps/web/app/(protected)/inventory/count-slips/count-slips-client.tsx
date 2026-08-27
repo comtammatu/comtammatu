@@ -9,8 +9,6 @@ import {
   ClipboardCheck as IconClipboardCheck,
   ClipboardList as IconClipboardList,
   RotateCcw as IconRecount,
-  Trash2 as IconTrash,
-  Zap as IconZap,
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@/components/confirm-dialog";
@@ -23,7 +21,6 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
-import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import {
   Select,
@@ -474,35 +471,92 @@ function CountSlipReviewDialog({
   const readOnly = activeRow.status !== "submitted";
 
   async function handleApprove() {
-    const accepted = await confirm({
-      title: INVENTORY_VI.countSlipApproveTitle,
-      description: INVENTORY_VI.countSlipApproveDescription,
-      details: [
-        { label: "Mã phiếu", value: activeRow.slipNumber },
-        { label: STAFF_VI.long, value: activeRow.employeeName },
-        {
-          label: INVENTORY_VI.warehouseShort,
-          value: activeRow.locationName,
-        },
-        {
-          label: INVENTORY_VI.lineCountLabel,
-          value: INVENTORY_VI.ingredientCountBadge(activeRow.lines.length),
-        },
-      ],
-      confirmText: ACTIONS_VI.approve,
-      variant: "destructive",
-    });
-    if (!accepted) return;
+    const shortageLines = activeRow.lines.filter(
+      (l) => l.variance !== null && l.variance < 0,
+    );
+
+    let autoCreateWaste = false;
+
+    if (shortageLines.length > 0) {
+      const shortageSummary =
+        shortageLines
+          .slice(0, 3)
+          .map(
+            (l) =>
+              `${l.ingredientName}: ${formatVariance(l.variance)} ${l.varianceUnit}`,
+          )
+          .join(", ") +
+        (shortageLines.length > 3
+          ? ` (+${shortageLines.length - 3} món khác)`
+          : "");
+
+      const accepted = await confirm({
+        title: INVENTORY_VI.countSlipApproveTitle,
+        description: INVENTORY_VI.countSlipShortageDetectedHint,
+        details: [
+          { label: "Mã phiếu", value: activeRow.slipNumber },
+          { label: STAFF_VI.long, value: activeRow.employeeName },
+          {
+            label: INVENTORY_VI.warehouseShort,
+            value: activeRow.locationName,
+          },
+          {
+            label: INVENTORY_VI.countSlipShortageDetectedTitle(
+              shortageLines.length,
+            ),
+            value: shortageSummary,
+          },
+        ],
+        confirmText: INVENTORY_VI.countSlipApproveAndWasteAction,
+        variant: "destructive",
+      });
+      if (!accepted) return;
+      autoCreateWaste = true;
+    } else {
+      const accepted = await confirm({
+        title: INVENTORY_VI.countSlipApproveTitle,
+        description: INVENTORY_VI.countSlipApproveDescription,
+        details: [
+          { label: "Mã phiếu", value: activeRow.slipNumber },
+          { label: STAFF_VI.long, value: activeRow.employeeName },
+          {
+            label: INVENTORY_VI.warehouseShort,
+            value: activeRow.locationName,
+          },
+          {
+            label: INVENTORY_VI.lineCountLabel,
+            value: INVENTORY_VI.ingredientCountBadge(activeRow.lines.length),
+          },
+        ],
+        confirmText: ACTIONS_VI.approve,
+      });
+      if (!accepted) return;
+    }
 
     setPendingAction("approve");
     startTransition(async () => {
-      const result = await approveCountSlip({ slipId: activeRow.id });
+      const result = await approveCountSlip({
+        slipId: activeRow.id,
+        autoCreateWaste,
+      });
       setPendingAction(null);
-      if (!result.success) {
+      if (!result.success || !result.data) {
         toast.error(result.error ?? INVENTORY_VI.countSlipApproveFailed);
         return;
       }
-      toast.success(INVENTORY_VI.countSlipApproved);
+      if (result.data.wasteCreated && result.data.wasteIssueNumber) {
+        toast.success(
+          INVENTORY_VI.countSlipApprovedWithWaste(
+            result.data.wasteIssueNumber,
+            result.data.wasteItemsCount ?? 0,
+          ),
+        );
+      } else if (result.data.wasteError) {
+        toast.success(INVENTORY_VI.countSlipApproved);
+        toast.error(result.data.wasteError);
+      } else {
+        toast.success(INVENTORY_VI.countSlipApproved);
+      }
       onStatusChange(activeRow.id, "approved");
       router.refresh();
     });
@@ -731,45 +785,6 @@ function CountSlipReviewDialog({
           />
         </ScrollArea>
       </Frame>
-
-      {variance.changedLineCount > 0 ? (
-        <NoteCallout
-          tone="muted"
-          icon={<IconZap className="size-4 text-primary" />}
-          label={INVENTORY_VI.varianceActionsTitle}
-          className="flex-col items-stretch gap-1.5"
-        >
-          <p className="text-xs text-muted-foreground">
-            {INVENTORY_VI.varianceActionsHint}
-          </p>
-          <div className="flex flex-wrap gap-2 pt-1">
-            {activeRow.lines.some(
-              (l) => l.variance !== null && l.variance < 0,
-            ) ? (
-              <Button
-                type="button"
-                variant="outline"
-                render={
-                  <Link
-                    href={`/inventory/waste/new?sourceSlipId=${activeRow.id}`}
-                  />
-                }
-              >
-                <IconTrash className="size-3.5 text-destructive" />
-                {INVENTORY_VI.createWasteShortageAction}
-              </Button>
-            ) : null}
-            <Button
-              type="button"
-              variant="outline"
-              render={<Link href="/inventory/stocktake/new" />}
-            >
-              <IconClipboardCheck className="size-3.5 text-primary" />
-              {INVENTORY_VI.createStocktakeAction}
-            </Button>
-          </div>
-        </NoteCallout>
-      ) : null}
 
       <div className="grid gap-2 text-sm sm:grid-cols-[1fr_auto] sm:items-start">
         <div className="flex min-w-0 flex-col gap-1">

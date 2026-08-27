@@ -145,26 +145,16 @@ test("branch and owner count slip review clients provide variance resolution act
   );
   const messages = read("packages/shared/src/messages/inventory.ts");
 
-  assert.match(branchClient, /INVENTORY_VI\.varianceActionsTitle/);
-  assert.match(branchClient, /INVENTORY_VI\.createWasteShortageAction/);
-  assert.match(branchClient, /INVENTORY_VI\.createStocktakeAction/);
+  assert.match(branchClient, /autoCreateWaste/);
+  assert.match(branchClient, /countSlipApprovedWithWaste/);
   assert.match(branchClient, /INVENTORY_VI\.countSlipHandoverConfirm/);
 
-  assert.match(ownerClient, /INVENTORY_VI\.varianceActionsTitle/);
-  assert.match(ownerClient, /INVENTORY_VI\.createWasteShortageAction/);
-  assert.match(ownerClient, /INVENTORY_VI\.createStocktakeAction/);
+  assert.match(ownerClient, /autoCreateWaste/);
+  assert.match(ownerClient, /countSlipApprovedWithWaste/);
 
   assert.match(
     messages,
-    /varianceActionsTitle:\s*"Tác vụ xử lý chênh lệch kho"/,
-  );
-  assert.match(
-    messages,
-    /createWasteShortageAction:\s*"Lập phiếu tiêu hao \/ xuất hủy"/,
-  );
-  assert.match(
-    messages,
-    /createStocktakeAction:\s*"Lập phiếu kiểm kê kho"/,
+    /countSlipApprovedWithWaste/,
   );
 });
 

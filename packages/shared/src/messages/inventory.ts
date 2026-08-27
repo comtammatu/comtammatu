@@ -418,6 +418,15 @@ export const INVENTORY_VI = {
   countSlipLoadFailed: "Không tải được phiếu đếm.",
   countSlipApprovedAdjusted: (_count: number) => "Đã xác nhận phiếu đếm ca.",
   countSlipApproved: "Đã xác nhận phiếu đếm ca.",
+  countSlipApprovedWithWaste: (wasteNumber: string, itemCount: number) =>
+    `Đã duyệt bàn giao ca và tự động lập phiếu xuất hủy #${wasteNumber} (${formatCount(itemCount)} món hao hụt).`,
+  countSlipAutoWasteCheckbox: "Tự động lập Phiếu xuất hủy để trừ kho ngay",
+  countSlipApproveAndWasteAction: "Duyệt & Xuất hủy kho",
+  countSlipApproveOnlyAction: "Chỉ duyệt bàn giao",
+  countSlipShortageDetectedTitle: (count: number) =>
+    `Phát hiện ${formatCount(count)} món hao hụt (thiếu hụt)`,
+  countSlipShortageDetectedHint:
+    "Tự động lập phiếu xuất hủy để trừ kho sổ cái hợp lệ hoặc chỉ duyệt bàn giao nếu hàng đang nấu dở.",
   recountReasonRequired: "Nhập lý do cần đếm lại.",
   recountRequestFailed: "Không gửi được yêu cầu đếm lại.",
   recountRequested: "Đã yêu cầu nhân viên đếm lại.",
@@ -567,6 +576,13 @@ export const INVENTORY_VI = {
   countAssignEditDescription: (name: string) =>
     `${name} kiểm kê các mặt hàng được chọn dưới đây.`,
   countAssignRemoveAction: "Xoá",
+  countAssignRemoveConfirmTitle: "Xóa phân công đếm tồn?",
+  countAssignRemoveConfirmDescription: (name: string) =>
+    `Toàn bộ mặt hàng đang giao cho ${name} sẽ được gỡ.`,
+  countAssignTableHeaderStaff: "Nhân viên",
+  countAssignTableHeaderItems: "Mặt hàng được giao",
+  countAssignTableHeaderQuantity: "Số lượng",
+  countAssignTableHeaderActions: "Thao tác",
   countedQtyHeader: "Số đếm",
   searchIngredientPlaceholder: "Tìm nguyên liệu…",
   enteredCountBadge: (count: number) => `Đã nhập: ${formatCount(count)}`,

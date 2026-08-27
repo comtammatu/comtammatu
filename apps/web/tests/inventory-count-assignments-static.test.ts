@@ -127,12 +127,12 @@ test("count assignment scope defaults to the current shift unless all-shifts is 
   );
   assert.match(
     countAssignmentsClientSource,
-    /id="count-assignment-shift"[\s\S]*aria-label="Ca đếm tồn"/,
+    /id="count-assignment-shift"[\s\S]*aria-label=(?:"Ca đếm tồn"|\{INVENTORY_VI\.countAssignShiftLabel\})/,
     "shift scope picker should be labeled as count assignment scope, not shift setup",
   );
   assert.match(
     countAssignmentsClientSource,
-    /<SelectItem value=\{ALL_SHIFTS_VALUE\}>[\s\S]*Áp dụng mọi ca[\s\S]*<\/SelectItem>/,
+    /<SelectItem value=\{ALL_SHIFTS_VALUE\}>[\s\S]*(?:Áp dụng mọi ca|\{INVENTORY_VI\.countAssignAllShifts\})[\s\S]*<\/SelectItem>/,
     "shift scope picker should still allow an intentional every-shift assignment",
   );
   assert.doesNotMatch(

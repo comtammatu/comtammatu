@@ -10,11 +10,16 @@ import { getAuthContextWithPermission } from "@/(protected)/inventory/_lib/auth"
 
 const approveSlipSchema = z.object({
   slipId: z.coerce.number().int().positive(),
+  autoCreateWaste: z.boolean().optional().default(false),
 });
 
 export type ApproveCountSlipResult = {
   slipId: number;
   alreadyApproved: boolean;
+  wasteCreated?: boolean;
+  wasteIssueNumber?: string;
+  wasteItemsCount?: number;
+  wasteError?: string;
 };
 
 /**
@@ -22,6 +27,9 @@ export type ApproveCountSlipResult = {
  * which flips the slip status to `approved` for shift handover review.
  * Decoupled: does not mutate stock ledger balances or post count adjustments.
  * Idempotent: a second call on an approved slip returns `alreadyApproved=true`.
+ *
+ * When `autoCreateWaste=true`, automatically creates a stock waste entry
+ * for all negative variance (shortage) lines under the manager's review.
  */
 export async function approveCountSlip(
   input: z.infer<typeof approveSlipSchema>,
@@ -42,7 +50,20 @@ export async function approveCountSlip(
   const { supabase, claims } = ctx;
   const { data: slip } = await supabase
     .from("inventory_count_slips")
-    .select("branch_id")
+    .select(`
+      id,
+      slip_number,
+      branch_id,
+      location_id,
+      lines:inventory_count_slip_lines (
+        id,
+        ingredient_id,
+        system_quantity,
+        counted_quantity,
+        entry_unit_id,
+        entry_to_base_factor
+      )
+    `)
     .eq("id", parsed.data.slipId)
     .eq("tenant_id", claims.tenant_id)
     .maybeSingle();
@@ -57,6 +78,83 @@ export async function approveCountSlip(
   }
 
   const raw = (data ?? {}) as Record<string, unknown>;
+
+  let wasteCreated = false;
+  let wasteIssueNumber: string | undefined;
+  let wasteItemsCount: number | undefined;
+  let wasteError: string | undefined;
+
+  if (parsed.data.autoCreateWaste && Array.isArray(slip.lines)) {
+    const shortageLines = slip.lines.filter(
+      (line) =>
+        line.system_quantity != null &&
+        line.counted_quantity != null &&
+        Number(line.counted_quantity) < Number(line.system_quantity),
+    );
+
+    if (shortageLines.length > 0) {
+      const missingUnitIngIds = shortageLines
+        .filter((l) => l.entry_unit_id == null)
+        .map((l) => l.ingredient_id);
+
+      const baseUnitMap = new Map<number, number>();
+      if (missingUnitIngIds.length > 0) {
+        const { data: unitRows } = await supabase
+          .from("ingredient_units")
+          .select("ingredient_id, unit_id")
+          .eq("tenant_id", claims.tenant_id)
+          .eq("is_base", true)
+          .in("ingredient_id", missingUnitIngIds);
+
+        for (const row of unitRows ?? []) {
+          baseUnitMap.set(row.ingredient_id, row.unit_id);
+        }
+      }
+
+      const wasteItems = [];
+      for (const line of shortageLines) {
+        const entryUnitId =
+          line.entry_unit_id ?? baseUnitMap.get(line.ingredient_id);
+        if (entryUnitId != null) {
+          const shortageQty =
+            Number(line.system_quantity) - Number(line.counted_quantity);
+          if (shortageQty > 0) {
+            wasteItems.push({
+              ingredient_id: line.ingredient_id,
+              quantity: shortageQty,
+              entry_unit_id: entryUnitId,
+              reason_code: "spoiled" as const,
+              note: `Hao hụt kiểm đếm giao ca #${slip.slip_number}`,
+            });
+          }
+        }
+      }
+
+      if (wasteItems.length > 0) {
+        // Dynamic import / call createWasteEntry to create the waste record
+        const { createWasteEntry } = await import("../waste-actions");
+        const wasteRes = await createWasteEntry({
+          branchId: slip.branch_id,
+          locationId: slip.location_id,
+          items: wasteItems,
+          sourceType: "manual",
+          sourceRef: {
+            countSlipId: slip.id,
+            countSlipNumber: slip.slip_number,
+          },
+        });
+
+        if (wasteRes.success && wasteRes.data) {
+          wasteCreated = true;
+          wasteIssueNumber = wasteRes.data.issueNumber;
+          wasteItemsCount = wasteItems.length;
+        } else {
+          wasteError = wasteRes.error ?? "Không thể tạo phiếu xuất hủy tự động.";
+        }
+      }
+    }
+  }
+
   revalidatePath("/inventory/count-slips");
   revalidatePath(`/br/${slip.branch_id}/stock/count-slips`);
   revalidatePath(`/br/${slip.branch_id}/team`);
@@ -66,6 +164,10 @@ export async function approveCountSlip(
     data: {
       slipId: parsed.data.slipId,
       alreadyApproved: raw.already_approved === true,
+      wasteCreated,
+      wasteIssueNumber,
+      wasteItemsCount,
+      wasteError,
     },
   };
 }

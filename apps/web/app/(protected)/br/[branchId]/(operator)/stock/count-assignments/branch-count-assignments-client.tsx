@@ -258,7 +258,7 @@ export function BranchCountAssignmentsClient({
         const isOnShift =
           data.selectedShiftId != null &&
           Boolean(emp.scheduledShiftIds?.includes(data.selectedShiftId));
-        return isRoleMatch && isOnShift;
+        return isRoleMatch && (data.selectedShiftId == null || isOnShift);
       });
 
       if (onDutyMatchingStaff.length === 1) {
