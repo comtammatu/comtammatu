@@ -1,4 +1,6 @@
 // background.js - MV3 service worker watchdog & idempotent order relay queue
+importScripts('relay-queue.js');
+
 const RELAY_TAB_URL = 'https://merchant.grab.com/';
 const RELAY_TAB_QUERY = { url: 'https://merchant.grab.com/*' };
 const WATCHDOG_ALARM = 'relay-tab-watchdog';
@@ -43,39 +45,33 @@ async function enqueueOrder(order, merchantId) {
 
   const data = await getStorageData(['grabRelayQueue', 'backendUrl', 'branchId', 'relaySecret', 'recentOrders']);
   const queue = Array.isArray(data.grabRelayQueue) ? data.grabRelayQueue : [];
+  const queueDecision = self.GrabRelayQueue.enqueueOrRevive(queue, order, {
+    merchantId,
+    branchId: data.branchId || 1,
+    backendUrl: data.backendUrl || 'http://localhost:3000',
+    relaySecret: data.relaySecret || '',
+  });
 
-  // Deduplicate against existing active queue item
-  const existingIdx = queue.findIndex((q) => q.orderID === order.orderID);
-  if (existingIdx !== -1) {
+  if (!queueDecision.ok) {
+    return { success: false, error: queueDecision.error || 'Invalid order' };
+  }
+  if (queueDecision.action === 'existing') {
     console.log(`[Grab POS Relay] Order ${order.displayID} is already in relay queue`);
     return { success: true, queued: true };
   }
 
-  const backendUrl = data.backendUrl || 'http://localhost:3000';
-  const branchId = data.branchId || 1;
-  const relaySecret = data.relaySecret || '';
-
-  const queueItem = {
-    orderID: String(order.orderID),
-    displayID: String(order.displayID || order.orderID),
-    order: order,
-    merchantId: String(merchantId || order.merchant?.ID || ''),
-    branchId: branchId,
-    backendUrl: backendUrl,
-    relaySecret: relaySecret,
-    attempts: 0,
-    nextRetryAt: Date.now(),
-    lastError: null,
-    isTerminal: false,
-    createdAt: Date.now(),
-  };
-
-  queue.push(queueItem);
-  await setStorageData({ grabRelayQueue: queue });
+  await setStorageData({ grabRelayQueue: queueDecision.queue });
+  if (queueDecision.action === 'revived') {
+    console.log(`[Grab POS Relay] Reopened terminal order ${order.displayID} with fresh Grab data`);
+  }
 
   // Attempt immediate processing
   processRelayQueue().catch(() => {});
-  return { success: true, queued: true };
+  return {
+    success: true,
+    queued: true,
+    retried: queueDecision.action === 'revived',
+  };
 }
 
 let isProcessingQueue = false;

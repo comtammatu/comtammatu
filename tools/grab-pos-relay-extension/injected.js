@@ -230,8 +230,51 @@
     return true;
   }
 
+  function optionalString(value) {
+    return value == null ? undefined : String(value);
+  }
+
+  function optionalNonnegativeNumber(value) {
+    return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : undefined;
+  }
+
+  function projectDiscountInfo(rawDiscount) {
+    if (!rawDiscount || typeof rawDiscount !== 'object') return undefined;
+    return {
+      discountType: optionalString(rawDiscount.discountType),
+      itemDiscountPriceDisplay: optionalString(rawDiscount.itemDiscountPriceDisplay),
+      itemDiscountPriceFloat: optionalNonnegativeNumber(rawDiscount.itemDiscountPriceFloat),
+      itemDiscountPriceInMin: optionalNonnegativeNumber(rawDiscount.itemDiscountPriceInMin),
+      discountAmountDisplay: optionalString(rawDiscount.discountAmountDisplay),
+      discountAmountFloat: optionalNonnegativeNumber(rawDiscount.discountAmountFloat),
+    };
+  }
+
+  function projectOrderDiscount(rawDiscount) {
+    if (!rawDiscount || typeof rawDiscount !== 'object') return null;
+    return {
+      discountType: optionalString(rawDiscount.discountType),
+      discountAmountDisplay: optionalString(rawDiscount.discountAmountDisplay),
+      discountAmountFloat: optionalNonnegativeNumber(rawDiscount.discountAmountFloat),
+      description: optionalString(rawDiscount.description),
+      code: optionalString(rawDiscount.code),
+      itemID: optionalString(rawDiscount.itemID),
+    };
+  }
+
+  function projectOrderDiscounts(rawDiscounts) {
+    return Array.isArray(rawDiscounts) ? rawDiscounts.map(projectOrderDiscount).filter(Boolean) : undefined;
+  }
+
   function projectAllowlistedOrder(rawOrder) {
     if (!rawOrder) return null;
+    const rawOrderLevelDiscounts = Array.isArray(rawOrder.fare?.orderLevelDiscounts)
+      ? rawOrder.fare.orderLevelDiscounts
+      : Array.isArray(rawOrder.orderLevelDiscounts)
+        ? rawOrder.orderLevelDiscounts
+        : Array.isArray(rawOrder.promotions)
+          ? rawOrder.promotions
+          : undefined;
     return {
       orderID: String(rawOrder.orderID || ''),
       displayID: String(rawOrder.displayID || ''),
@@ -242,30 +285,30 @@
       itemInfo: {
         items: Array.isArray(rawOrder.itemInfo?.items)
           ? rawOrder.itemInfo.items.map((i) => ({
-              itemID: i.itemID ? String(i.itemID) : undefined,
+              itemID: optionalString(i.itemID),
               name: String(i.name || ''),
               quantity: Number(i.quantity) || 1,
               comment: i.comment ? String(i.comment).slice(0, 200) : null,
               fare: i.fare
                 ? {
-                    priceDisplay: i.fare.priceDisplay,
-                    originalItemPriceDisplay: i.fare.originalItemPriceDisplay,
-                    priceFloat: typeof i.fare.priceFloat === 'number' ? i.fare.priceFloat : undefined,
-                    priceInMin: typeof i.fare.priceInMin === 'number' ? i.fare.priceInMin : undefined,
-                    discountInfo: i.fare.discountInfo,
+                    priceDisplay: optionalString(i.fare.priceDisplay),
+                    originalItemPriceDisplay: optionalString(i.fare.originalItemPriceDisplay),
+                    priceFloat: optionalNonnegativeNumber(i.fare.priceFloat),
+                    priceInMin: optionalNonnegativeNumber(i.fare.priceInMin),
+                    discountInfo: projectDiscountInfo(i.fare.discountInfo),
                   }
                 : undefined,
-              discountInfo: i.discountInfo,
+              discountInfo: projectDiscountInfo(i.discountInfo),
               modifierGroups: Array.isArray(i.modifierGroups)
                 ? i.modifierGroups.map((g) => ({
-                    modifierGroupID: g.modifierGroupID,
-                    modifierGroupName: g.modifierGroupName,
+                    modifierGroupID: optionalString(g.modifierGroupID),
+                    modifierGroupName: optionalString(g.modifierGroupName),
                     modifiers: Array.isArray(g.modifiers)
                       ? g.modifiers.map((m) => ({
-                          modifierID: m.modifierID,
-                          modifierName: m.modifierName,
-                          priceDisplay: m.priceDisplay,
-                          quantity: typeof m.quantity === 'number' ? m.quantity : 1,
+                          modifierID: optionalString(m.modifierID),
+                          modifierName: optionalString(m.modifierName),
+                          priceDisplay: optionalString(m.priceDisplay),
+                          quantity: Number.isInteger(m.quantity) && m.quantity > 0 ? m.quantity : 1,
                         }))
                       : [],
                   }))
@@ -275,19 +318,13 @@
       },
       fare: rawOrder.fare
         ? {
-            subTotalDisplay: rawOrder.fare.subTotalDisplay,
-            totalDisplay: rawOrder.fare.totalDisplay,
-            discountDisplay: rawOrder.fare.discountDisplay,
-            orderLevelDiscounts: Array.isArray(rawOrder.fare.orderLevelDiscounts)
-              ? rawOrder.fare.orderLevelDiscounts
-              : Array.isArray(rawOrder.orderLevelDiscounts)
-              ? rawOrder.orderLevelDiscounts
-              : Array.isArray(rawOrder.promotions)
-              ? rawOrder.promotions
-              : undefined,
+            subTotalDisplay: optionalString(rawOrder.fare.subTotalDisplay),
+            totalDisplay: optionalString(rawOrder.fare.totalDisplay),
+            discountDisplay: optionalString(rawOrder.fare.discountDisplay),
+            orderLevelDiscounts: projectOrderDiscounts(rawOrderLevelDiscounts),
           }
         : undefined,
-      cutlery: typeof rawOrder.cutlery === 'number' ? rawOrder.cutlery : undefined,
+      cutlery: Number.isInteger(rawOrder.cutlery) ? rawOrder.cutlery : undefined,
       paymentMethod: 'platform',
     };
   }

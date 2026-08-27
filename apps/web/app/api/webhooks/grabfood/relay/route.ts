@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { z } from "zod";
 import { timingSafeEqual } from "node:crypto";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import {
@@ -8,6 +7,10 @@ import {
   validateGrabMerchantForBranch,
   type GrabOrderRaw,
 } from "@lib/grabfood/mapping";
+import {
+  grabRelaySchema,
+  summarizeGrabRelayValidationIssues,
+} from "@lib/grabfood/relay-schema";
 
 const MAX_PAYLOAD_BYTES = 64 * 1024; // 64 KB limit per D104
 
@@ -27,114 +30,11 @@ function checkRateLimit(ip: string): boolean {
   return true;
 }
 
-const grabItemDiscountSchema = z
-  .object({
-    discountType: z.string().max(100).optional(),
-    itemDiscountPriceDisplay: z.string().max(50).optional(),
-    itemDiscountPriceFloat: z.number().nonnegative().optional(),
-    itemDiscountPriceInMin: z.number().nonnegative().optional(),
-    discountAmountDisplay: z.string().max(50).optional(),
-    discountAmountFloat: z.number().nonnegative().optional(),
-  })
-  .strict();
-
-const grabModifierSchema = z
-  .object({
-    modifierID: z.string().max(100).optional(),
-    modifierName: z.string().max(200).optional(),
-    priceDisplay: z.string().max(50).optional(),
-    quantity: z.number().int().positive().optional(),
-  })
-  .strict();
-
-const grabModifierGroupSchema = z
-  .object({
-    modifierGroupID: z.string().max(100).optional(),
-    modifierGroupName: z.string().max(200).optional(),
-    modifiers: z.array(grabModifierSchema).max(50).optional(),
-  })
-  .strict();
-
-const grabOrderItemSchema = z
-  .object({
-    itemID: z.string().max(100).optional(),
-    name: z.string().min(1).max(200),
-    quantity: z.number().int().positive().default(1),
-    comment: z.string().max(500).nullable().optional(),
-    fare: z
-      .object({
-        priceDisplay: z.string().max(50).optional(),
-        originalItemPriceDisplay: z.string().max(50).optional(),
-        priceFloat: z.number().nonnegative().optional(),
-        priceInMin: z.number().nonnegative().optional(),
-        discountInfo: grabItemDiscountSchema.optional(),
-      })
-      .strict()
-      .optional(),
-    discountInfo: grabItemDiscountSchema.optional(),
-    modifierGroups: z.array(grabModifierGroupSchema).max(20).optional(),
-  })
-  .strict();
-
-const grabOrderDiscountSchema = z
-  .object({
-    discountType: z.string().max(100).optional(),
-    discountAmountDisplay: z.string().max(50).optional(),
-    discountAmountFloat: z.number().nonnegative().optional(),
-    description: z.string().max(200).optional(),
-    code: z.string().max(100).optional(),
-    itemID: z.string().max(100).optional(),
-  })
-  .strict();
-
-const grabOrderPayloadSchema = z
-  .object({
-    orderID: z.string().min(1).max(100),
-    displayID: z.string().min(1).max(50),
-    orderState: z.string().max(50).optional(),
-    state: z.string().max(50).optional(),
-    status: z.string().max(50).optional(),
-    merchant: z
-      .object({
-        ID: z.string().max(100).optional(),
-      })
-      .strict()
-      .optional(),
-    itemInfo: z
-      .object({
-        items: z.array(grabOrderItemSchema).min(1).max(100),
-      })
-      .strict()
-      .optional(),
-    fare: z
-      .object({
-        subTotalDisplay: z.string().max(50).optional(),
-        totalDisplay: z.string().max(50).optional(),
-        discountDisplay: z.string().max(50).optional(),
-        orderLevelDiscounts: z.array(grabOrderDiscountSchema).max(20).optional(),
-      })
-      .strict()
-      .optional(),
-    orderLevelDiscounts: z.array(grabOrderDiscountSchema).max(20).optional(),
-    promotions: z.array(grabOrderDiscountSchema).max(20).optional(),
-    paymentMethod: z.string().max(50).optional(),
-    cutlery: z.number().int().optional(),
-  })
-  .strict();
-
-const grabRelaySchema = z
-  .object({
-    ping: z.boolean().optional(),
-    branch_id: z.coerce.number().int().positive().optional(),
-    merchant_id: z.string().max(100).optional(),
-    order: grabOrderPayloadSchema.optional(),
-  })
-  .strict();
-
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, x-grab-relay-secret, Authorization",
+  "Access-Control-Allow-Headers":
+    "Content-Type, x-grab-relay-secret, Authorization",
 };
 
 export async function OPTIONS() {
@@ -148,7 +48,9 @@ function verifyRelaySecret(request: NextRequest): boolean {
   const expectedSecret = process.env.GRAB_RELAY_SECRET;
   if (!expectedSecret) {
     if (process.env.NODE_ENV === "production") {
-      console.error("[Grab POS Relay] GRAB_RELAY_SECRET is not configured in production");
+      console.error(
+        "[Grab POS Relay] GRAB_RELAY_SECRET is not configured in production",
+      );
       return false;
     }
     return true;
@@ -166,7 +68,9 @@ function verifyRelaySecret(request: NextRequest): boolean {
 export async function POST(request: NextRequest) {
   try {
     // 1. Rate limiting check
-    const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "anonymous";
+    const clientIp =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      "anonymous";
     if (!checkRateLimit(clientIp)) {
       return NextResponse.json(
         { success: false, error: "Quá nhiều yêu cầu, vui lòng thử lại sau" },
@@ -203,6 +107,10 @@ export async function POST(request: NextRequest) {
 
     const parsed = grabRelaySchema.safeParse(parsedJson);
     if (!parsed.success) {
+      console.warn("[Grab POS Relay] invalid relay payload", {
+        requestId: request.headers.get("x-vercel-id")?.slice(0, 128),
+        issues: summarizeGrabRelayValidationIssues(parsed.error),
+      });
       return NextResponse.json(
         { success: false, error: "Dữ liệu yêu cầu không hợp lệ" },
         { status: 400, headers: CORS_HEADERS },
@@ -231,13 +139,31 @@ export async function POST(request: NextRequest) {
     const grabOrder = parsed.data.order as unknown as GrabOrderRaw;
     const requestedBranchId = parsed.data.branch_id || 1;
     const merchantId = parsed.data.merchant_id || grabOrder.merchant?.ID;
-    const sanitizedDisplayId = (grabOrder.displayID || "").replace(/[^A-Za-z0-9_-]/g, "");
+    const sanitizedDisplayId = (grabOrder.displayID || "").replace(
+      /[^A-Za-z0-9_-]/g,
+      "",
+    );
 
     // 4. Reject completed/cancelled/history orders immediately
-    const rawState = String(grabOrder.orderState || grabOrder.state || grabOrder.status || "").toUpperCase();
-    if (["COMPLETED", "CANCELLED", "DELIVERED", "EXPIRED", "HISTORY", "FAILED"].includes(rawState)) {
+    const rawState = String(
+      grabOrder.orderState || grabOrder.state || grabOrder.status || "",
+    ).toUpperCase();
+    if (
+      [
+        "COMPLETED",
+        "CANCELLED",
+        "DELIVERED",
+        "EXPIRED",
+        "HISTORY",
+        "FAILED",
+      ].includes(rawState)
+    ) {
       return NextResponse.json(
-        { success: false, error: "Đơn hàng đã hoàn tất hoặc đã hủy trên Grab, không thể tiếp nhận lại lên POS" },
+        {
+          success: false,
+          error:
+            "Đơn hàng đã hoàn tất hoặc đã hủy trên Grab, không thể tiếp nhận lại lên POS",
+        },
         { status: 422, headers: CORS_HEADERS },
       );
     }
@@ -261,7 +187,10 @@ export async function POST(request: NextRequest) {
     // 6. Cross-branch isolation: Validate that merchantId matches branch
     if (!validateGrabMerchantForBranch(branch.id, merchantId)) {
       return NextResponse.json(
-        { success: false, error: "Mã quán Grab không khớp với chi nhánh được chỉ định" },
+        {
+          success: false,
+          error: "Mã quán Grab không khớp với chi nhánh được chỉ định",
+        },
         { status: 403, headers: CORS_HEADERS },
       );
     }
@@ -282,7 +211,8 @@ export async function POST(request: NextRequest) {
         {
           success: true,
           idempotent: true,
-          message: "Đơn hàng này đã được nhân viên nhập hoặc hệ thống tiếp nhận trước đó",
+          message:
+            "Đơn hàng này đã được nhân viên nhập hoặc hệ thống tiếp nhận trước đó",
           order_id: existingOrder.id,
           order_number: existingOrder.order_number,
           display_id: grabOrder.displayID,
@@ -311,7 +241,8 @@ export async function POST(request: NextRequest) {
     try {
       transformed = transformGrabOrderPayload(grabOrder, dbMenuItems);
     } catch (mappingErr) {
-      const msg = mappingErr instanceof Error ? mappingErr.message : "Lỗi ánh xạ món ăn";
+      const msg =
+        mappingErr instanceof Error ? mappingErr.message : "Lỗi ánh xạ món ăn";
       console.warn("[Grab POS Relay] mapping error:", msg);
       return NextResponse.json(
         { success: false, error: msg },
@@ -320,33 +251,48 @@ export async function POST(request: NextRequest) {
     }
 
     // 10. Find staff profile to act as created_by (prioritize branch_manager -> cashier -> branch staff -> HQ)
-    const createdBy = await resolveBranchStaffId(supabase, branch.tenant_id, branch.id);
+    const createdBy = await resolveBranchStaffId(
+      supabase,
+      branch.tenant_id,
+      branch.id,
+    );
 
     if (!createdBy) {
       return NextResponse.json(
-        { success: false, error: "Không tìm thấy hồ sơ nhân viên hợp lệ cho chi nhánh" },
+        {
+          success: false,
+          error: "Không tìm thấy hồ sơ nhân viên hợp lệ cho chi nhánh",
+        },
         { status: 500, headers: CORS_HEADERS },
       );
     }
 
     // 11. Create order via create_order RPC
     // Note: delivery platform must be 'grab' (allowed: 'grab', 'shopee', 'be', 'green_sm')
-    const { data: rpcResult, error: rpcError } = await supabase.rpc("create_order", {
-      p_tenant_id: branch.tenant_id,
-      p_branch_id: branch.id,
-      p_created_by: createdBy,
-      p_items: transformed.items,
-      p_order_type: "delivery",
-      p_table_id: undefined,
-      p_pos_session_id: undefined,
-      p_note: transformed.customerNote ?? undefined,
-      p_idempotency_key: transformed.idempotencyKey,
-      p_delivery_platform: "grab",
-      p_external_order_ref: grabOrder.displayID,
-    });
+    const { data: rpcResult, error: rpcError } = await supabase.rpc(
+      "create_order",
+      {
+        p_tenant_id: branch.tenant_id,
+        p_branch_id: branch.id,
+        p_created_by: createdBy,
+        p_items: transformed.items,
+        p_order_type: "delivery",
+        p_table_id: undefined,
+        p_pos_session_id: undefined,
+        p_note: transformed.customerNote ?? undefined,
+        p_idempotency_key: transformed.idempotencyKey,
+        p_delivery_platform: "grab",
+        p_external_order_ref: grabOrder.displayID,
+      },
+    );
 
     if (rpcError) {
-      console.error("[Grab POS Relay] create_order RPC error:", rpcError.message, rpcError.details, rpcError.code);
+      console.error(
+        "[Grab POS Relay] create_order RPC error:",
+        rpcError.message,
+        rpcError.details,
+        rpcError.code,
+      );
       // Never expose raw Postgres/Supabase messages to clients; map known causes.
       const clientMessage = rpcError.message?.includes("channel_price_missing")
         ? "Thiếu giá kênh Grab cho một số món — đồng bộ giá kênh trong Thực đơn"
@@ -358,7 +304,9 @@ export async function POST(request: NextRequest) {
     }
 
     const orderId = (rpcResult as { order_id?: number })?.order_id;
-    const orderNumber = (rpcResult as { order_number?: string })?.order_number || `GH-${grabOrder.displayID}`;
+    const orderNumber =
+      (rpcResult as { order_number?: string })?.order_number ||
+      `GH-${grabOrder.displayID}`;
 
     // 12. Verify stored database total amount against accepted authoritative total
     if (orderId && transformed.totalAmount >= 0) {
@@ -368,14 +316,18 @@ export async function POST(request: NextRequest) {
         .eq("id", orderId)
         .single();
 
-      if (createdOrder && createdOrder.total_amount !== transformed.totalAmount) {
+      if (
+        createdOrder &&
+        createdOrder.total_amount !== transformed.totalAmount
+      ) {
         console.warn(
           `[Grab POS Relay] Database total (${createdOrder.total_amount}) does not match authoritative Grab total (${transformed.totalAmount}) for order ${grabOrder.displayID}`,
         );
         return NextResponse.json(
           {
             success: false,
-            error: "Tổng tiền trên POS không khớp với số tiền thực tế của sàn GrabFood",
+            error:
+              "Tổng tiền trên POS không khớp với số tiền thực tế của sàn GrabFood",
           },
           { status: 422, headers: CORS_HEADERS },
         );
