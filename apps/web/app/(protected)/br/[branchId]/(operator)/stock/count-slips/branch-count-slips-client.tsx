@@ -231,6 +231,24 @@ export function BranchCountSlipsClient({
           </TabsTrigger>
         </TabsList>
       </Tabs>
+      {searchParams.get("employeeId") ? (
+        <NoteCallout tone="muted" className="items-center justify-between">
+          <span className="text-xs">{ACTIONS_VI.filter}: {STAFF_VI.long}</span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            onClick={() => {
+              const params = new URLSearchParams(searchParams.toString());
+              params.delete("employeeId");
+              const q = params.toString();
+              router.replace(q ? `${pathname}?${q}` : pathname);
+            }}
+          >
+            {ACTIONS_VI.clearFilter}
+          </Button>
+        </NoteCallout>
+      ) : null}
       <section
         aria-label={
           view === "pending"
@@ -314,18 +332,20 @@ export function BranchCountSlipsClient({
           ) : undefined
         }
         side="bottom"
-        contentClassName="max-h-dvh-95 overflow-hidden bg-background"
+        contentClassName="flex max-h-dvh-95 flex-col overflow-hidden bg-background text-foreground"
         headerClassName="shrink-0"
-        footerClassName="shrink-0 bg-background/95 backdrop-blur"
+        bodyClassName="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain"
+        footerClassName="shrink-0 border-t bg-background/95 backdrop-blur"
         footer={
           selected ? (
             selected.status === "submitted" ? (
               recounting ? (
-                <>
+                <div className="flex w-full gap-2">
                   <Button
                     type="button"
                     variant="outline"
                     size="touch"
+                    className="flex-1"
                     disabled={isPending}
                     onClick={() => {
                       setRecounting(false);
@@ -336,7 +356,8 @@ export function BranchCountSlipsClient({
                   </Button>
                   <Button
                     type="button"
-                    size="touch-lg"
+                    size="touch"
+                    className="flex-1"
                     disabled={isPending || recountNote.trim().length < 3}
                     onClick={requestRecount}
                   >
@@ -347,13 +368,14 @@ export function BranchCountSlipsClient({
                     )}
                     {INVENTORY_VI.sendRecountRequest}
                   </Button>
-                </>
+                </div>
               ) : (
-                <>
+                <div className="flex w-full gap-2">
                   <Button
                     type="button"
                     variant="outline"
                     size="touch"
+                    className="flex-1"
                     disabled={isPending}
                     onClick={() => setRecounting(true)}
                   >
@@ -362,7 +384,8 @@ export function BranchCountSlipsClient({
                   </Button>
                   <Button
                     type="button"
-                    size="touch-lg"
+                    size="touch"
+                    className="flex-1"
                     disabled={isPending}
                     onClick={() => void approveSelected()}
                   >
@@ -373,13 +396,14 @@ export function BranchCountSlipsClient({
                     )}
                     {INVENTORY_VI.countSlipHandoverConfirm}
                   </Button>
-                </>
+                </div>
               )
             ) : (
               <Button
                 type="button"
                 variant="outline"
                 size="touch"
+                className="w-full"
                 onClick={closeReview}
               >
                 {ACTIONS_VI.close}

@@ -598,15 +598,25 @@ function CountSlipReviewDialog({
     },
   ];
 
+  const controlSize = useFormControlSize("responsive");
+
   const footer = readOnly ? (
-    <Button type="button" variant="outline" onClick={onClose}>
+    <Button
+      type="button"
+      variant="outline"
+      size={controlSize === "touch" ? "touch" : "default"}
+      className="w-full sm:w-auto"
+      onClick={onClose}
+    >
       {ACTIONS_VI.close}
     </Button>
   ) : recounting ? (
-    <>
+    <div className="flex w-full gap-2 sm:w-auto">
       <Button
         type="button"
         variant="outline"
+        size={controlSize === "touch" ? "touch" : "default"}
+        className="flex-1 sm:flex-initial"
         disabled={pendingAction !== null}
         onClick={() => {
           setRecounting(false);
@@ -617,6 +627,8 @@ function CountSlipReviewDialog({
       </Button>
       <Button
         type="button"
+        size={controlSize === "touch" ? "touch" : "default"}
+        className="flex-1 sm:flex-initial font-semibold"
         disabled={pendingAction !== null}
         onClick={handleRecount}
       >
@@ -627,12 +639,14 @@ function CountSlipReviewDialog({
         )}
         {INVENTORY_VI.sendRecountRequest}
       </Button>
-    </>
+    </div>
   ) : (
-    <>
+    <div className="flex w-full gap-2 sm:w-auto">
       <Button
         type="button"
         variant="outline"
+        size={controlSize === "touch" ? "touch" : "default"}
+        className="flex-1 sm:flex-initial"
         disabled={pendingAction !== null}
         onClick={() => setRecounting(true)}
       >
@@ -641,6 +655,8 @@ function CountSlipReviewDialog({
       </Button>
       <Button
         type="button"
+        size={controlSize === "touch" ? "touch" : "default"}
+        className="flex-1 sm:flex-initial font-semibold"
         disabled={pendingAction !== null}
         onClick={() => void handleApprove()}
       >
@@ -651,7 +667,7 @@ function CountSlipReviewDialog({
         )}
         {ACTIONS_VI.approve}
       </Button>
-    </>
+    </div>
   );
 
   return (
@@ -674,11 +690,11 @@ function CountSlipReviewDialog({
           {INVENTORY_VI.countDateAt(formatVNDate(activeRow.countDate))}
         </span>
       }
-      contentClassName="max-h-dvh-95 overflow-hidden sm:max-w-5xl"
-      bodyClassName="min-h-0 overflow-hidden"
+      contentClassName="max-h-dvh-95 flex flex-col sm:max-w-5xl"
+      bodyClassName="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain"
       footer={footer}
     >
-      <Frame className="h-96 min-h-0 overflow-hidden">
+      <Frame className="min-h-48 max-h-96 min-h-0 overflow-hidden sm:h-96">
         <ScrollArea className="h-full">
           <DataTable
             columns={lineColumns}

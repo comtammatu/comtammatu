@@ -31,6 +31,7 @@ import {
   AppPageHeader,
   AppSection,
 } from "@/components/surface";
+import { useFormControlSize } from "@/components/form/control-size";
 import { messages } from "@lib/messages";
 import type { PendingWasteRow } from "@lib/inventory/waste-approval-model";
 
@@ -157,6 +158,7 @@ function WasteApprovalCard({
   onResolved: (issueId: number) => void;
 }) {
   const router = useRouter();
+  const controlSize = useFormControlSize("responsive");
   const [note, setNote] = useState("");
   const [rejectOpen, setRejectOpen] = useState(false);
   const [pending, setPending] = useState<"approved" | "rejected" | null>(null);
@@ -325,18 +327,19 @@ function WasteApprovalCard({
       <div className="flex justify-end gap-2">
         <Button
           variant="outline"
-          size="default"
+          size={controlSize}
           onClick={() => setRejectOpen(true)}
           disabled={pending !== null || row.isSelfCreated}
-          className="text-destructive"
+          className="flex-1 text-destructive sm:flex-initial"
         >
           {pending === "rejected" ? <Spinner /> : <IconX className="size-4" />}
           {copy.reject}
         </Button>
         <Button
-          size="default"
+          size={controlSize}
           onClick={() => handleDecision("approved")}
           disabled={pending !== null || row.isSelfCreated}
+          className="flex-1 font-semibold sm:flex-initial"
         >
           {pending === "approved" ? (
             <Spinner />

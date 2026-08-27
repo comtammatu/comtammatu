@@ -283,27 +283,28 @@ export function BranchWasteApprovalsClient({
               : undefined
           }
           side="bottom"
-          showCloseButton={false}
-          contentClassName="max-h-dvh-95 bg-background text-foreground"
-          bodyClassName="overscroll-contain"
+          contentClassName="flex max-h-dvh-95 flex-col overflow-hidden bg-background text-foreground"
+          headerClassName="shrink-0"
+          bodyClassName="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain"
+          footerClassName="shrink-0 border-t bg-background/95 backdrop-blur"
           footer={
             selectedRow ? (
               selectedRow.isSelfCreated ? (
                 <Button
                   type="button"
                   variant="outline"
-                  size="touch-lg"
+                  size="touch"
                   className="w-full"
                   onClick={() => setSelectedIssueId(null)}
                 >
                   {ACTIONS_VI.close}
                 </Button>
               ) : (
-                <div className="flex gap-2">
+                <div className="flex w-full gap-2">
                   <Button
                     type="button"
                     variant="destructive"
-                    size="touch-lg"
+                    size="touch"
                     className="flex-1"
                     onClick={() => setRejectingIssueId(selectedRow.issueId)}
                     disabled={isSubmitting}
@@ -318,8 +319,8 @@ export function BranchWasteApprovalsClient({
                   </Button>
                   <Button
                     type="button"
-                    size="touch-lg"
-                    className="flex-1"
+                    size="touch"
+                    className="flex-1 font-semibold"
                     onClick={() =>
                       void requestDecision(selectedRow, "approved")
                     }
