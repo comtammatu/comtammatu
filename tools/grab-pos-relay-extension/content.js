@@ -1,6 +1,6 @@
 // content.js - Content script running in merchant.grab.com
 (function () {
-  const extVersion = chrome.runtime.getManifest()?.version || '1.1.0';
+  const extVersion = chrome.runtime.getManifest()?.version || '1.1.2';
   console.log(`[Grab POS Relay v${extVersion}] Content script active`);
 
   // Inject injected.js into page context
@@ -76,26 +76,29 @@
   let itemStatusPollInFlight = false;
   let forceSyncQueued = false;
 
-  function normalizeStockPayload(currentStock, maxStock) {
-    if (!Number.isFinite(currentStock)) {
+  function normalizeStockPayload(currentStock) {
+    if (currentStock == null) {
       return {
-        currentStock: null,
-        maxStock: -1,
-        signature: 'disabled',
+        kind: 'not-managed',
       };
     }
 
-    const normalizedCurrentStock = Math.max(0, Math.trunc(currentStock));
-    const normalizedMaxStock = Math.max(
-      Number.isFinite(maxStock) && maxStock > 0 ? Math.trunc(maxStock) : 100,
-      normalizedCurrentStock,
-      1
-    );
+    if (currentStock === 0) {
+      return {
+        kind: 'status-only',
+      };
+    }
+
+    if (!Number.isInteger(currentStock) || currentStock < 1 || currentStock > 9999) {
+      return {
+        kind: 'invalid',
+      };
+    }
 
     return {
-      currentStock: normalizedCurrentStock,
-      maxStock: normalizedMaxStock,
-      signature: `enabled:${normalizedCurrentStock}:${normalizedMaxStock}`,
+      kind: 'stock',
+      currentStock,
+      signature: `enabled:${currentStock}`,
     };
   }
 
@@ -179,12 +182,14 @@
               }
             }
 
-            // 2. If Stock changed
-            const rawMaxStock =
-                item.max_stock ??
-                item.stock_capacity ??
-                (typeof currentStock === 'number' ? Math.max(currentStock, 100) : -1);
-            const stockPayload = normalizeStockPayload(currentStock, rawMaxStock);
+            // 2. Grab stock accepts integers from 1 to 9999. Zero is represented
+            // exclusively by availableStatus 2, which was queued above.
+            const stockPayload = normalizeStockPayload(currentStock);
+            if (stockPayload.kind === 'not-managed' || stockPayload.kind === 'status-only') continue;
+            if (stockPayload.kind === 'invalid') {
+              console.warn(`[Grab POS Relay] Skip invalid stock for ${item.name}: ${currentStock}`);
+              continue;
+            }
 
             if (forceAll || !prev || prev.stockSignature !== stockPayload.signature) {
               console.log(`[Grab POS Relay] Stock sync for ${item.name}: ${prev?.stockSignature} -> ${stockPayload.signature}`);
@@ -197,7 +202,6 @@
                   stockPayload.signature,
                   {
                     currentStock: stockPayload.currentStock,
-                    maxStock: stockPayload.maxStock,
                   }
                 )
               ) {

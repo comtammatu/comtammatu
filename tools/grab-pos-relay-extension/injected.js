@@ -48,11 +48,18 @@
     }
   }, 60000);
 
-  // The Grab API requires the portal's bearer token, which the extension cannot
-  // obtain itself; it reuses headers observed on the portal's own requests.
+  // Grab APIs reuse authentication context observed on the portal's own
+  // requests: bearer auth for order reads and cookie-session CSRF for mutations.
   let capturedAuthHeaders = null;
   let consecutiveAuthFailures = 0;
   let authExpired = false;
+
+  const CAPTURED_HEADER_ALLOWLIST = [
+    'authorization',
+    'x-csrf-token',
+    'x-client-id',
+    'x-grabkit-clientid',
+  ];
 
   const AUTH_FAILURE_THRESHOLD = 2;
   const POLL_INTERVAL_MS = 6000;
@@ -95,21 +102,30 @@
     return obj;
   }
 
-  // Only cache header sets carrying authorization, so a pre-login request
-  // cannot poison the cache with anonymous headers.
+  // Cache only the authentication context used by Grab Portal requests. Merge
+  // cookie-session CSRF headers with bearer auth observed on other API calls.
   function captureAuthHeaders(headers) {
     const obj = headersToObject(headers);
-    if (obj.authorization) {
-      capturedAuthHeaders = obj;
+    const nextHeaders = {};
+    for (const name of CAPTURED_HEADER_ALLOWLIST) {
+      if (obj[name]) nextHeaders[name] = obj[name];
+    }
+    if (nextHeaders.authorization || nextHeaders['x-csrf-token']) {
+      capturedAuthHeaders = {
+        ...(capturedAuthHeaders || {}),
+        ...nextHeaders,
+      };
     }
   }
 
   function buildGrabHeaders() {
     return {
-      ...(capturedAuthHeaders || {}),
       accept: 'application/json',
       requestsource: 'troyPortal',
       merchantid: merchantId,
+      'x-client-id': 'GrabMerchant-Portal',
+      'x-grabkit-clientid': 'grabmerchant-portal',
+      ...(capturedAuthHeaders || {}),
     };
   }
 
@@ -513,18 +529,29 @@
   }
 
   // API Call: Sync Stock / Daily Limit (IMS)
-  async function setGrabItemStock(requestId, itemId, currentStock, maxStock) {
+  async function setGrabItemStock(requestId, itemId, currentStock) {
     if (!itemId || !itemId.startsWith('VNITE')) {
       console.warn(`[Grab POS Relay] Skip stock sync for non-item ID: ${itemId}`);
       dispatchOrderEvent('SYNC_STOCK_RESULT', {
         requestId,
         itemId,
         currentStock,
-        maxStock,
         enableIms: false,
         success: false,
         status: 0,
         error: 'Invalid item ID format',
+      });
+      return;
+    }
+    if (!Number.isInteger(currentStock) || currentStock < 1 || currentStock > 9999) {
+      dispatchOrderEvent('SYNC_STOCK_RESULT', {
+        requestId,
+        itemId,
+        currentStock,
+        enableIms: false,
+        success: false,
+        status: 0,
+        error: 'Stock must be an integer from 1 to 9999',
       });
       return;
     }
@@ -533,7 +560,6 @@
         requestId,
         itemId,
         currentStock,
-        maxStock,
         enableIms: false,
         success: false,
         status: 401,
@@ -542,17 +568,8 @@
       return;
     }
     try {
-      const hasFiniteLimit = Number.isFinite(currentStock);
-      const enableIms = hasFiniteLimit;
-      const stockVal = hasFiniteLimit ? Math.max(0, Math.trunc(currentStock)) : 0;
-
-      // Grab requires maxStock: -1 for unlimited (IMS disabled), or > 0 when IMS is enabled
-      const maxStockVal = enableIms
-        ? Math.max(Number.isFinite(maxStock) && maxStock > 0 ? Math.trunc(maxStock) : 100, stockVal, 1)
-        : -1;
-      const stockSignature = enableIms
-        ? `enabled:${stockVal}:${maxStockVal}`
-        : 'disabled';
+      const stockVal = currentStock;
+      const stockSignature = `enabled:${stockVal}`;
 
       const url = `https://api.grab.com/food/merchant/v1/items/${itemId}/upsert-item-stock`;
       const { response: res, error } = await sendGrabMutation(url, {
@@ -563,21 +580,19 @@
           'content-type': 'application/json',
         },
         body: JSON.stringify({
-          enableIms: enableIms,
+          enableIms: true,
           currentStock: stockVal,
-          maxStock: maxStockVal,
           enableRestock: false,
           restockSetting: null,
         }),
       });
 
-      console.log(`[Grab POS Relay] Updated stock for item ${itemId} -> current: ${stockVal}, max: ${maxStockVal} (IMS: ${enableIms}, HTTP ${res.status})`);
+      console.log(`[Grab POS Relay] Updated stock for item ${itemId} -> current: ${stockVal} (HTTP ${res.status})`);
       dispatchOrderEvent('SYNC_STOCK_RESULT', {
         requestId,
         itemId,
         currentStock: stockVal,
-        maxStock: maxStockVal,
-        enableIms,
+        enableIms: true,
         stockSignature,
         success: res.ok,
         status: res.status,
@@ -589,7 +604,6 @@
         requestId,
         itemId,
         currentStock,
-        maxStock,
         enableIms: false,
         success: false,
         status: 0,
@@ -669,7 +683,7 @@
       );
     } else if (command === 'SET_ITEM_STOCK') {
       enqueueItemSync(() =>
-        setGrabItemStock(payload?.requestId, payload?.itemId, payload?.currentStock, payload?.maxStock)
+        setGrabItemStock(payload?.requestId, payload?.itemId, payload?.currentStock)
       );
     }
   });
