@@ -493,6 +493,18 @@ export const INVENTORY_VI = {
     "Ví dụ: Quầy Nước, Quầy Nướng, Bếp Chính...",
   countTemplateSelectAll: "Chọn tất cả",
   countTemplateDeselectAll: "Bỏ chọn tất cả",
+  countTabAllWithCount: (count: number) => `Tất cả (${formatCount(count)})`,
+  countTabSelectedWithCount: (count: number) =>
+    `Đã chọn (${formatCount(count)})`,
+  countTabUnselectedWithCount: (count: number) =>
+    `Chưa chọn (${formatCount(count)})`,
+  countTabAssignedWithCount: (count: number) =>
+    `Đã giao (${formatCount(count)})`,
+  countTabUnassignedWithCount: (count: number) =>
+    `Chưa giao (${formatCount(count)})`,
+  countBadgeSelected: "Đã chọn",
+  countBadgeUnselected: "Chưa chọn",
+  countBadgeAssignedTo: (name: string) => `Đã giao: ${name}`,
   countTemplateSaveSuccess: "Đã lưu mẫu kiểm đếm.",
   countTemplateDeleteAction: "Xóa mẫu này",
   countTemplateDeleteSuccess: "Đã xóa mẫu kiểm đếm.",

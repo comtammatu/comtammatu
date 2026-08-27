@@ -151,6 +151,12 @@ function mapProductionRecipeImportError(
   ) {
     return "Tệp dữ liệu có dòng công thức bị trùng.";
   }
+  if (message?.includes("recipe_self_reference")) {
+    return "Thành phẩm không thể dùng chính nó làm nguyên liệu.";
+  }
+  if (message?.includes("recipe_circular_dependency")) {
+    return "Công thức có vòng lặp phụ thuộc (thành phẩm không thể chứa thành phẩm phụ thuộc nó).";
+  }
   if (message?.includes("finished_good_not_found")) {
     return "Có thành phẩm không còn hợp lệ.";
   }
@@ -193,6 +199,12 @@ function mapProductionRecipeUpsertError(
   }
   if (code === PG_ERR.INVALID_TEXT_REPRESENTATION) {
     return "Dữ liệu công thức chưa hợp lệ.";
+  }
+  if (message?.includes("recipe_self_reference")) {
+    return "Thành phẩm không thể dùng chính nó làm nguyên liệu.";
+  }
+  if (message?.includes("recipe_circular_dependency")) {
+    return "Công thức có vòng lặp phụ thuộc (thành phẩm không thể chứa thành phẩm phụ thuộc nó).";
   }
   if (message?.includes("finished_good_not_found")) {
     return "Thành phẩm không còn hợp lệ.";
@@ -710,15 +722,13 @@ export async function importProductionRecipes(
     }));
   const ingredientById = new Map(ingredients.map((item) => [item.id, item]));
   const finishedGoodByName = new Map<string, IngredientLookupRow[]>();
-  const rawIngredientByName = new Map<string, IngredientLookupRow[]>();
+  const ingredientByName = new Map<string, IngredientLookupRow[]>();
 
   for (const ingredient of ingredients) {
     if (ingredient.item_kind === "finished_good") {
       addNameLookup(finishedGoodByName, ingredient);
     }
-    if (ingredient.item_kind === "raw_material") {
-      addNameLookup(rawIngredientByName, ingredient);
-    }
+    addNameLookup(ingredientByName, ingredient);
   }
 
   const issues: ImportProductionRecipeIssue[] = [];
@@ -800,7 +810,7 @@ export async function importProductionRecipes(
       ? (ingredientById.get(ingredientId) ?? null)
       : null;
     if (!ingredient && ingredientNameRaw) {
-      const resolved = resolveByName(rawIngredientByName, ingredientNameRaw);
+      const resolved = resolveByName(ingredientByName, ingredientNameRaw);
       if (resolved === "ambiguous") {
         issues.push({
           row: rowNumber,
@@ -811,11 +821,19 @@ export async function importProductionRecipes(
       }
       ingredient = resolved;
     }
-    if (!ingredient || ingredient.item_kind !== "raw_material") {
+    if (!ingredient) {
       issues.push({
         row: rowNumber,
         field: "Nguyên liệu",
         message: "Không tìm thấy nguyên liệu đầu vào hợp lệ trong danh mục.",
+      });
+      return;
+    }
+    if (ingredient.id === finishedGood.id) {
+      issues.push({
+        row: rowNumber,
+        field: "Nguyên liệu",
+        message: "Thành phẩm không thể dùng chính nó làm nguyên liệu.",
       });
       return;
     }

@@ -85,7 +85,6 @@ import {
   badgeVariantFromTone,
   RECIPE_BOM_SHEET_THRESHOLD,
   sortFinishedGoods,
-  sortRawIngredients,
 } from "./production-types";
 import type {
   FinishedGoodOption,
@@ -248,7 +247,6 @@ function RecipeDialogFields({
   unitOptions,
   groupedRecipes,
   recipeLinesEditorIngredients,
-  rawIngredientsOptions,
   onFinishedGoodCreated,
   onRawIngredientCreated,
   pendingFinishedGoodId,
@@ -260,7 +258,6 @@ function RecipeDialogFields({
   unitOptions: UnitOption[];
   groupedRecipes: ProductionRecipeGroup[];
   recipeLinesEditorIngredients: IngredientLineOption[];
-  rawIngredientsOptions: RawIngredientOption[];
   onFinishedGoodCreated: (good: FinishedGoodOption) => void;
   onRawIngredientCreated: (ingredient: RawIngredientOption) => void;
   pendingFinishedGoodId?: string;
@@ -352,6 +349,14 @@ function RecipeDialogFields({
         label: good.name,
       }));
   }, [finishedGoodsOptions, groupedRecipes, pendingFinishedGoodId]);
+
+  const availableLinesEditorIngredients = useMemo(
+    () =>
+      recipeLinesEditorIngredients.filter(
+        (item) => String(item.id) !== selectedFinishedGoodId,
+      ),
+    [recipeLinesEditorIngredients, selectedFinishedGoodId],
+  );
 
   return (
     <>
@@ -466,7 +471,7 @@ function RecipeDialogFields({
             </Button>
           ) : null}
         </div>
-        {!canManageCatalog && rawIngredientsOptions.length === 0 ? (
+        {!canManageCatalog && availableLinesEditorIngredients.length === 0 ? (
           <p className="text-xs text-muted-foreground">
             {INVENTORY_VI.noRawIngredientInCatalog}
           </p>
@@ -478,7 +483,7 @@ function RecipeDialogFields({
         setValue={form.setValue}
         getValues={form.getValues}
         errors={form.formState.errors}
-        ingredients={recipeLinesEditorIngredients}
+        ingredients={availableLinesEditorIngredients}
         unitEditable
         bulkAdd
       />
@@ -517,19 +522,10 @@ export function ProductionRecipePanel({
   const [finishedGoodsOptions, setFinishedGoodsOptions] = useState<
     FinishedGoodOption[]
   >(() => sortFinishedGoods(finishedGoods));
-  const [rawIngredientsOptions, setRawIngredientsOptions] = useState<
-    RawIngredientOption[]
+  const [availableIngredientsOptions, setAvailableIngredientsOptions] = useState<
+    IngredientOption[]
   >(() =>
-    sortRawIngredients(
-      ingredients
-        .filter((ingredient) => ingredient.item_kind === "raw_material")
-        .map((ingredient) => ({
-          id: ingredient.id,
-          name: ingredient.name,
-          unit: ingredient.unit,
-          units: ingredient.units,
-        })),
-    ),
+    [...ingredients].sort((a, b) => a.name.localeCompare(b.name, "vi")),
   );
 
   const [recipeDialogOpen, setRecipeDialogOpen] = useState(false);
@@ -551,17 +547,8 @@ export function ProductionRecipePanel({
   }, [finishedGoods]);
 
   useEffect(() => {
-    setRawIngredientsOptions(
-      sortRawIngredients(
-        ingredients
-          .filter((ingredient) => ingredient.item_kind === "raw_material")
-          .map((ingredient) => ({
-            id: ingredient.id,
-            name: ingredient.name,
-            unit: ingredient.unit,
-            units: ingredient.units,
-          })),
-      ),
+    setAvailableIngredientsOptions(
+      [...ingredients].sort((a, b) => a.name.localeCompare(b.name, "vi")),
     );
   }, [ingredients]);
 
@@ -603,13 +590,13 @@ export function ProductionRecipePanel({
 
   const recipeLinesEditorIngredients = useMemo(
     () =>
-      rawIngredientsOptions.map((item) => ({
+      availableIngredientsOptions.map((item) => ({
         id: item.id,
         name: item.name,
         unitLabel: item.unit,
         units: item.units,
       })),
-    [rawIngredientsOptions],
+    [availableIngredientsOptions],
   );
 
   const filteredRecipes = useMemo(() => {
@@ -684,16 +671,26 @@ export function ProductionRecipePanel({
       }
       return sortFinishedGoods([...prev, good]);
     });
+    setAvailableIngredientsOptions((prev) => {
+      if (prev.some((item) => item.id === good.id)) {
+        return prev;
+      }
+      return [...prev, { ...good, item_kind: "finished_good" }].sort((a, b) =>
+        a.name.localeCompare(b.name, "vi"),
+      );
+    });
     setPendingFinishedGoodId(String(good.id));
     router.refresh();
   }
 
   function handleRawIngredientCreated(ingredient: RawIngredientOption) {
-    setRawIngredientsOptions((prev) => {
+    setAvailableIngredientsOptions((prev) => {
       if (prev.some((item) => item.id === ingredient.id)) {
         return prev;
       }
-      return sortRawIngredients([...prev, ingredient]);
+      return [...prev, { ...ingredient, item_kind: "raw_material" }].sort((a, b) =>
+        a.name.localeCompare(b.name, "vi"),
+      );
     });
     router.refresh();
   }
@@ -995,7 +992,6 @@ export function ProductionRecipePanel({
             unitOptions={unitOptions}
             groupedRecipes={groupedRecipes}
             recipeLinesEditorIngredients={recipeLinesEditorIngredients}
-            rawIngredientsOptions={rawIngredientsOptions}
             onFinishedGoodCreated={handleFinishedGoodCreated}
             onRawIngredientCreated={handleRawIngredientCreated}
             pendingFinishedGoodId={pendingFinishedGoodId}
@@ -1012,7 +1008,6 @@ export function ProductionRecipePanel({
         unitOptions={unitOptions}
         groupedRecipes={groupedRecipes}
         recipeLinesEditorIngredients={recipeLinesEditorIngredients}
-        rawIngredientsOptions={rawIngredientsOptions}
         onFinishedGoodCreated={handleFinishedGoodCreated}
         onRawIngredientCreated={handleRawIngredientCreated}
         onSubmit={(values) =>
@@ -1114,7 +1109,6 @@ function RecipeSheetEditor({
   unitOptions,
   groupedRecipes,
   recipeLinesEditorIngredients,
-  rawIngredientsOptions,
   onFinishedGoodCreated,
   onRawIngredientCreated,
   onSubmit,
@@ -1129,7 +1123,6 @@ function RecipeSheetEditor({
   unitOptions: UnitOption[];
   groupedRecipes: ProductionRecipeGroup[];
   recipeLinesEditorIngredients: IngredientLineOption[];
-  rawIngredientsOptions: RawIngredientOption[];
   onFinishedGoodCreated: (good: FinishedGoodOption) => void;
   onRawIngredientCreated: (ingredient: RawIngredientOption) => void;
   onSubmit: (values: RecipeFormValues) => Promise<ActionResult>;
@@ -1236,7 +1229,6 @@ function RecipeSheetEditor({
             unitOptions={unitOptions}
             groupedRecipes={groupedRecipes}
             recipeLinesEditorIngredients={recipeLinesEditorIngredients}
-            rawIngredientsOptions={rawIngredientsOptions}
             onFinishedGoodCreated={onFinishedGoodCreated}
             onRawIngredientCreated={onRawIngredientCreated}
             pendingFinishedGoodId={String(group.finishedGoodId)}

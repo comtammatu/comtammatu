@@ -28,7 +28,6 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
-import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import {
   Select,
   SelectContent,
@@ -130,7 +129,7 @@ function AssignmentBadges({
   }
 
   return (
-    <div className="flex min-w-0 flex-wrap gap-1.5">
+    <div className="flex min-w-0 flex-wrap gap-1">
       {selectedIds.slice(0, 4).map((id) => (
         <Badge key={id} variant="secondary">
           {ingredientMap.get(id)?.name ?? `#${id}`}
@@ -165,10 +164,13 @@ export function CountAssignmentsClient({
   const [ingredientSearch, setIngredientSearch] = useState("");
   const [employeeSearch, setEmployeeSearch] = useState("");
   const [draftIds, setDraftIds] = useState<number[]>(() =>
-    initialAssignmentId == null
+    initialAssignmentId === null
       ? []
       : (assignmentsByEmployee[String(initialAssignmentId)] ?? []),
   );
+  const [selectionFilter, setSelectionFilter] = useState<
+    "all" | "selected" | "unselected"
+  >("all");
   const [selectionByEmployee, setSelectionByEmployee] = useState<
     Record<string, number[]>
   >(() => seedSelections(employees, assignmentsByEmployee));
@@ -223,12 +225,14 @@ export function CountAssignmentsClient({
     if (activeEmployeeId == null) {
       setDraftIds([]);
       setIngredientSearch("");
+      setSelectionFilter("all");
       return;
     }
     setDraftIds(
       selectionByEmployeeRef.current[String(activeEmployeeId)] ?? [],
     );
     setIngredientSearch("");
+    setSelectionFilter("all");
   }, [activeEmployeeId]);
 
   // Reseed draft when server assignments refresh (location/shift scope) while
@@ -265,15 +269,22 @@ export function CountAssignmentsClient({
   }, [employeeSearch, employees]);
   const visibleIngredients = useMemo(() => {
     const query = ingredientSearch.trim();
-    if (!query) return ingredients;
-    return ingredients.filter((ingredient) =>
-      matchesSearch([ingredient.name, ingredient.unit], query),
-    );
-  }, [ingredientSearch, ingredients]);
+    return ingredients.filter((ingredient) => {
+      const matchSearch =
+        !query || matchesSearch([ingredient.name, ingredient.unit], query);
+      const isSelected = draftIds.includes(ingredient.id);
+      const matchFilter =
+        selectionFilter === "all" ||
+        (selectionFilter === "selected" && isSelected) ||
+        (selectionFilter === "unselected" && !isSelected);
+      return matchSearch && matchFilter;
+    });
+  }, [draftIds, ingredientSearch, ingredients, selectionFilter]);
 
   function openEditor(employee: EmployeeRow) {
     setDraftIds(selectionByEmployee[String(employee.id)] ?? []);
     setIngredientSearch("");
+    setSelectionFilter("all");
     setActiveEmployeeId(employee.id);
     replaceAssignmentId(employee.id);
   }
@@ -282,6 +293,7 @@ export function CountAssignmentsClient({
     if (isPending) return;
     setActiveEmployeeId(null);
     setIngredientSearch("");
+    setSelectionFilter("all");
     replaceAssignmentId(null);
   }
 
@@ -415,7 +427,7 @@ export function CountAssignmentsClient({
           Boolean(employee.scheduledShiftIds?.includes(selectedShiftId));
         return (
           <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-1.5 font-medium">
+            <div className="flex items-center gap-2 font-medium">
               <span>{employee.name}</span>
               {isOnShift ? (
                 <Badge
@@ -612,7 +624,8 @@ export function CountAssignmentsClient({
             emptyTitle={INVENTORY_VI.countAssignNoEmployeesTitle}
             emptyDescription={INVENTORY_VI.countAssignNoEmployeesDescription}
             mobileCardRender={(employee) => {
-              const selectedIds = selectionByEmployee[String(employee.id)] ?? [];
+              const selectedIds =
+                selectionByEmployee[String(employee.id)] ?? [];
               return (
                 <Item variant="outline" className="items-start">
                   <ItemContent className="min-w-0">
@@ -666,7 +679,7 @@ export function CountAssignmentsClient({
           activeEmployee?.name ?? "",
         )}
         contentClassName="max-h-dvh-95 overflow-hidden sm:max-w-3xl"
-        bodyClassName="min-h-0 overflow-hidden"
+        bodyClassName="min-h-0 overflow-hidden flex flex-col gap-3"
         footer={
           <>
             <Button
@@ -684,25 +697,84 @@ export function CountAssignmentsClient({
           </>
         }
       >
-        <InputGroup>
-          <InputGroupAddon>
-            <IconSearch aria-hidden="true" />
-          </InputGroupAddon>
-          <InputGroupInput
-            type="search"
-            aria-label={INVENTORY_VI.countAssignSearchPlaceholder}
-            name="count-assignment-ingredient-search"
-            autoComplete="off"
-            value={ingredientSearch}
-            onChange={(event) => setIngredientSearch(event.target.value)}
-            placeholder={INVENTORY_VI.countAssignSearchPlaceholder}
-            inputMode="search"
-          />
-        </InputGroup>
+        <div className="flex shrink-0 flex-col gap-2">
+          {/* Quick Select & Filter Tabs */}
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-2">
+            <div className="flex flex-wrap gap-1">
+              <Button
+                type="button"
+                variant={selectionFilter === "all" ? "default" : "outline"}
+                size="sm"
+                className="h-8 text-xs font-medium"
+                onClick={() => setSelectionFilter("all")}
+              >
+                {INVENTORY_VI.countTabAllWithCount(ingredients.length)}
+              </Button>
+              <Button
+                type="button"
+                variant={selectionFilter === "selected" ? "default" : "outline"}
+                size="sm"
+                className="h-8 text-xs font-medium"
+                onClick={() => setSelectionFilter("selected")}
+              >
+                {INVENTORY_VI.countTabSelectedWithCount(draftIds.length)}
+              </Button>
+              <Button
+                type="button"
+                variant={
+                  selectionFilter === "unselected" ? "default" : "outline"
+                }
+                size="sm"
+                className="h-8 text-xs font-medium"
+                onClick={() => setSelectionFilter("unselected")}
+              >
+                {INVENTORY_VI.countTabUnselectedWithCount(
+                  ingredients.length - draftIds.length,
+                )}
+              </Button>
+            </div>
+            <div className="flex gap-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={() => setDraftIds(ingredients.map((i) => i.id))}
+              >
+                {INVENTORY_VI.countTemplateSelectAll}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={() => setDraftIds([])}
+              >
+                {INVENTORY_VI.countTemplateDeselectAll}
+              </Button>
+            </div>
+          </div>
+
+          <InputGroup>
+            <InputGroupAddon>
+              <IconSearch aria-hidden="true" />
+            </InputGroupAddon>
+            <InputGroupInput
+              type="search"
+              aria-label={INVENTORY_VI.countAssignSearchPlaceholder}
+              name="count-assignment-ingredient-search"
+              autoComplete="off"
+              value={ingredientSearch}
+              onChange={(event) => setIngredientSearch(event.target.value)}
+              placeholder={INVENTORY_VI.countAssignSearchPlaceholder}
+              inputMode="search"
+            />
+          </InputGroup>
+        </div>
 
         <Frame className="h-96 min-h-0 overflow-hidden">
-          <ScrollArea className="h-full">
-            <div className="grid gap-1 p-2 sm:grid-cols-2">
+          <div className="h-full overflow-y-auto overscroll-contain p-2">
+            <div className="grid gap-2 sm:grid-cols-2">
               {ingredients.length === 0 ? (
                 <p className="col-span-full px-3 py-2 text-sm text-muted-foreground">
                   {INVENTORY_VI.countAssignNoFinishedGoods}
@@ -721,30 +793,51 @@ export function CountAssignmentsClient({
                       render={<Label htmlFor={checkboxId} />}
                       variant="outline"
                       className={cn(
-                        "min-w-0 cursor-pointer items-center gap-3",
+                        "min-w-0 cursor-pointer items-center justify-between gap-2 transition-colors",
                         checked
-                          ? "border-primary/20 bg-primary/10"
-                          : "border-transparent hover:bg-muted",
+                          ? "border-primary bg-accent"
+                          : "hover:bg-muted",
                       )}
                     >
-                      <Checkbox
-                        id={checkboxId}
-                        checked={checked}
-                        onCheckedChange={() => toggleIngredient(ingredient.id)}
-                        disabled={isPending}
-                      />
-                      <span className="min-w-0 flex-1 truncate">
-                        {ingredient.name}
-                      </span>
-                      {ingredient.unit ? (
-                        <Badge variant="outline">{ingredient.unit}</Badge>
-                      ) : null}
+                      <div className="flex min-w-0 items-center gap-2">
+                        <Checkbox
+                          id={checkboxId}
+                          checked={checked}
+                          onCheckedChange={() =>
+                            toggleIngredient(ingredient.id)
+                          }
+                          disabled={isPending}
+                        />
+                        <span className="min-w-0 truncate font-medium">
+                          {ingredient.name}
+                        </span>
+                        {ingredient.unit ? (
+                          <Badge variant="outline" className="text-xs">
+                            {ingredient.unit}
+                          </Badge>
+                        ) : null}
+                      </div>
+                      {checked ? (
+                        <Badge
+                          variant="success"
+                          className="shrink-0 text-xs font-medium"
+                        >
+                          {INVENTORY_VI.countBadgeSelected}
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant="outline"
+                          className="shrink-0 text-xs text-muted-foreground"
+                        >
+                          {INVENTORY_VI.countBadgeUnselected}
+                        </Badge>
+                      )}
                     </Item>
                   );
                 })
               )}
             </div>
-          </ScrollArea>
+          </div>
         </Frame>
       </AppDialog>
     </AppPage>

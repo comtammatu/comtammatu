@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { ACTIONS_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
 import { formatVNClockTime } from "@comtammatu/shared/time";
+import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
@@ -38,7 +39,6 @@ import {
 } from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
 import { NoteCallout } from "@comtammatu/ui/components/note-callout";
-import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import {
   Select,
   SelectContent,
@@ -95,6 +95,9 @@ export function BranchCountAssignmentsClient({
   const [activeEmployeeId, setActiveEmployeeId] = useState<number | null>(null);
   const [draftIds, setDraftIds] = useState<number[]>([]);
   const [query, setQuery] = useState("");
+  const [employeeSelectionFilter, setEmployeeSelectionFilter] = useState<
+    "all" | "selected" | "unselected"
+  >("all");
 
   // Staff roster filtering
   const [staffSearch, setStaffSearch] = useState("");
@@ -109,6 +112,9 @@ export function BranchCountAssignmentsClient({
     Record<number, number | null>
   >({});
   const [stationCandidateEmpId, setStationCandidateEmpId] = useState<string>("");
+  const [stationItemFilter, setStationItemFilter] = useState<
+    "all" | "unassigned" | number
+  >("all");
 
   // Station Template Editor Sheet state
   const [editingTemplate, setEditingTemplate] = useState<
@@ -120,6 +126,9 @@ export function BranchCountAssignmentsClient({
     number[]
   >([]);
   const [templateIngredientQuery, setTemplateIngredientQuery] = useState("");
+  const [templateSelectionFilter, setTemplateSelectionFilter] = useState<
+    "all" | "selected" | "unselected"
+  >("all");
 
   const activeEmployee = data.employees.find(
     (employee) => employee.id === activeEmployeeId,
@@ -143,11 +152,18 @@ export function BranchCountAssignmentsClient({
 
   const visibleIngredients = useMemo(() => {
     const normalized = query.trim();
-    if (!normalized) return data.ingredients;
-    return data.ingredients.filter((ingredient) =>
-      matchesSearch([ingredient.name, ingredient.unit], normalized),
-    );
-  }, [data.ingredients, query]);
+    return data.ingredients.filter((ingredient) => {
+      const matchSearch =
+        !normalized ||
+        matchesSearch([ingredient.name, ingredient.unit], normalized);
+      const isSelected = draftIds.includes(ingredient.id);
+      const matchFilter =
+        employeeSelectionFilter === "all" ||
+        (employeeSelectionFilter === "selected" && isSelected) ||
+        (employeeSelectionFilter === "unselected" && !isSelected);
+      return matchSearch && matchFilter;
+    });
+  }, [data.ingredients, draftIds, employeeSelectionFilter, query]);
 
   const availableRoles = useMemo(() => {
     const roles = new Set<string>();
@@ -210,6 +226,7 @@ export function BranchCountAssignmentsClient({
 
   function openStationAssignment(template: CountTemplate) {
     setActiveStationTemplateId(template.id);
+    setStationItemFilter("all");
     const currentDraft: Record<number, number | null> = {};
     const existingStaff = new Set<number>();
 
@@ -260,6 +277,7 @@ export function BranchCountAssignmentsClient({
     setStationStaffIds([]);
     setStationAssignmentsDraft({});
     setStationCandidateEmpId("");
+    setStationItemFilter("all");
   }
 
   function addStaffToStation(empId: number) {
@@ -361,6 +379,7 @@ export function BranchCountAssignmentsClient({
       setTemplateDraftIngredientIds([...template.ingredientIds]);
     }
     setTemplateIngredientQuery("");
+    setTemplateSelectionFilter("all");
   }
 
   function closeTemplateEditor() {
@@ -369,6 +388,7 @@ export function BranchCountAssignmentsClient({
     setTemplateDraftRole("custom");
     setTemplateDraftIngredientIds([]);
     setTemplateIngredientQuery("");
+    setTemplateSelectionFilter("all");
   }
 
   function toggleTemplateIngredient(ingredientId: number) {
@@ -436,12 +456,14 @@ export function BranchCountAssignmentsClient({
     setActiveEmployeeId(employee.id);
     setDraftIds(selectionByEmployee[String(employee.id)] ?? []);
     setQuery("");
+    setEmployeeSelectionFilter("all");
   }
 
   function closeEditor() {
     setActiveEmployeeId(null);
     setDraftIds([]);
     setQuery("");
+    setEmployeeSelectionFilter("all");
   }
 
   function toggleIngredient(ingredientId: number) {
@@ -802,7 +824,7 @@ export function BranchCountAssignmentsClient({
                   }
                 >
                   <ItemContent className="min-w-0 gap-1 text-left">
-                    <div className="flex flex-wrap items-center gap-1.5">
+                    <div className="flex flex-wrap items-center gap-2">
                       <ItemTitle size="heading">{employee.name}</ItemTitle>
                       {employee.positionName ? (
                         <Badge variant="outline" className="text-xs">
@@ -902,11 +924,33 @@ export function BranchCountAssignmentsClient({
 
   const templateVisibleIngredients = useMemo(() => {
     const normalized = templateIngredientQuery.trim();
-    if (!normalized) return data.ingredients;
-    return data.ingredients.filter((ingredient) =>
-      matchesSearch([ingredient.name, ingredient.unit], normalized),
-    );
-  }, [data.ingredients, templateIngredientQuery]);
+    return data.ingredients.filter((ingredient) => {
+      const matchSearch =
+        !normalized ||
+        matchesSearch([ingredient.name, ingredient.unit], normalized);
+      const isSelected = templateDraftIngredientIds.includes(ingredient.id);
+      const matchFilter =
+        templateSelectionFilter === "all" ||
+        (templateSelectionFilter === "selected" && isSelected) ||
+        (templateSelectionFilter === "unselected" && !isSelected);
+      return matchSearch && matchFilter;
+    });
+  }, [
+    data.ingredients,
+    templateDraftIngredientIds,
+    templateIngredientQuery,
+    templateSelectionFilter,
+  ]);
+
+  const stationVisibleIngredients = useMemo(() => {
+    if (!activeStation) return [];
+    return activeStation.ingredientIds.filter((ingId) => {
+      const assignedEmpId = stationAssignmentsDraft[ingId] ?? null;
+      if (stationItemFilter === "all") return true;
+      if (stationItemFilter === "unassigned") return assignedEmpId === null;
+      return assignedEmpId === stationItemFilter;
+    });
+  }, [activeStation, stationAssignmentsDraft, stationItemFilter]);
 
   const { recommendedStationEmployees, otherStationEmployees } = useMemo(() => {
     if (!activeStation) {
@@ -968,7 +1012,7 @@ export function BranchCountAssignmentsClient({
         description={INVENTORY_VI.countStationAssignSheetDescription}
         side="bottom"
         showCloseButton={false}
-        contentClassName="max-h-dvh-95 overflow-hidden bg-background"
+        contentClassName="max-h-dvh-95 flex flex-col overflow-hidden bg-background"
         bodyClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-0"
         footer={
           <>
@@ -993,7 +1037,7 @@ export function BranchCountAssignmentsClient({
           </>
         }
       >
-        <div className="flex flex-col gap-3 px-3 pb-2 sm:px-4">
+        <div className="flex shrink-0 flex-col gap-2 px-3 pb-2 pt-1 sm:px-4">
           {/* Station Staff Section */}
           <div className="flex flex-col gap-2">
             <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -1002,7 +1046,7 @@ export function BranchCountAssignmentsClient({
 
             {/* Currently Selected Staff Chips */}
             {stationStaffIds.length > 0 ? (
-              <div className="flex flex-wrap items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-2">
                 {stationStaffIds.map((empId) => {
                   const emp = employeeById.get(empId);
                   const isOnShift =
@@ -1014,7 +1058,7 @@ export function BranchCountAssignmentsClient({
                     <Badge
                       key={empId}
                       variant="secondary"
-                      className="flex items-center gap-1.5 py-1 pl-2.5 pr-1 text-sm font-medium"
+                      className="flex items-center gap-2 py-1 pl-2.5 pr-1 text-sm font-medium"
                     >
                       <span>{emp?.name ?? `#${empId}`}</span>
                       {emp?.positionName ? (
@@ -1052,9 +1096,9 @@ export function BranchCountAssignmentsClient({
                 tone="muted"
                 icon={<IconZap className="size-3.5 text-primary" />}
                 label={INVENTORY_VI.countStationRecommendedStaffTitle}
-                className="flex-col items-stretch gap-1.5"
+                className="flex-col items-stretch gap-2"
               >
-                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                <div className="flex flex-wrap gap-2 pt-1">
                   {recommendedStationEmployees.map((emp) => {
                     const isOnShift =
                       data.selectedShiftId != null &&
@@ -1067,7 +1111,7 @@ export function BranchCountAssignmentsClient({
                         type="button"
                         variant="outline"
                         size="touch"
-                        className="h-8 min-h-0 gap-1.5 px-2.5 text-xs font-medium hover:bg-accent"
+                        className="h-8 min-h-0 gap-2 px-2 text-xs font-medium hover:bg-accent"
                         onClick={() => addStaffToStation(emp.id)}
                       >
                         <IconPlus className="size-3 text-primary" />
@@ -1135,7 +1179,7 @@ export function BranchCountAssignmentsClient({
                     type="button"
                     variant="outline"
                     size="touch"
-                    className="text-xs"
+                    className="h-8 text-xs font-medium"
                     onClick={() => assignAllStationItemsTo(empId)}
                   >
                     {INVENTORY_VI.countStationAssignAllTo(emp?.name ?? "")}
@@ -1147,7 +1191,7 @@ export function BranchCountAssignmentsClient({
                   type="button"
                   variant="outline"
                   size="touch"
-                  className="text-xs"
+                  className="h-8 text-xs font-medium"
                   onClick={splitStationItemsEvenly}
                 >
                   <IconSparkles className="size-3.5" />
@@ -1158,35 +1202,113 @@ export function BranchCountAssignmentsClient({
                 type="button"
                 variant="ghost"
                 size="touch"
-                className="text-xs text-destructive"
+                className="h-8 text-xs text-destructive"
                 onClick={clearStationAssignments}
               >
                 {INVENTORY_VI.countStationClearAssignments}
               </Button>
             </div>
           ) : null}
+
+          {/* Item Filter Tabs */}
+          {activeStation && activeStation.ingredientIds.length > 0 ? (
+            <div className="flex flex-wrap gap-1 border-t pt-2">
+              <Button
+                type="button"
+                variant={stationItemFilter === "all" ? "default" : "outline"}
+                size="touch"
+                className="h-8 text-xs font-medium"
+                onClick={() => setStationItemFilter("all")}
+              >
+                {INVENTORY_VI.countTabAllWithCount(
+                  activeStation.ingredientIds.length,
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant={
+                  stationItemFilter === "unassigned" ? "default" : "outline"
+                }
+                size="touch"
+                className="h-8 text-xs font-medium"
+                onClick={() => setStationItemFilter("unassigned")}
+              >
+                {INVENTORY_VI.countTabUnassignedWithCount(
+                  activeStation.ingredientIds.filter(
+                    (id) => (stationAssignmentsDraft[id] ?? null) === null,
+                  ).length,
+                )}
+              </Button>
+              {stationStaffIds.map((empId) => {
+                const emp = employeeById.get(empId);
+                const count = activeStation.ingredientIds.filter(
+                  (id) => stationAssignmentsDraft[id] === empId,
+                ).length;
+                return (
+                  <Button
+                    key={empId}
+                    type="button"
+                    variant={
+                      stationItemFilter === empId ? "default" : "outline"
+                    }
+                    size="touch"
+                    className="h-8 text-xs font-medium"
+                    onClick={() => setStationItemFilter(empId)}
+                  >
+                    {emp?.name ?? `#${empId}`} ({count})
+                  </Button>
+                );
+              })}
+            </div>
+          ) : null}
         </div>
 
-        {/* Station Ingredients Matrix List */}
-        <ScrollArea className="min-h-0 flex-1 px-3 sm:px-4">
-          <div className="flex flex-col gap-2 pb-4 pr-2">
-            {activeStation?.ingredientIds.map((ingId) => {
+        {/* Station Ingredients Matrix List - Direct Native Smooth Scroll */}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4 sm:px-4">
+          <div className="flex flex-col gap-2">
+            {stationVisibleIngredients.map((ingId) => {
               const ing = ingredientById.get(ingId);
               const currentEmpId = stationAssignmentsDraft[ingId] ?? null;
+              const assignedEmp =
+                currentEmpId != null ? employeeById.get(currentEmpId) : null;
 
               return (
                 <Item
                   key={ingId}
                   variant="outline"
-                  className="flex-col items-start gap-2 p-3"
+                  className={cn(
+                    "flex-col items-start gap-2 p-3 transition-colors",
+                    currentEmpId != null
+                      ? "border-primary bg-accent"
+                      : "border-border bg-background",
+                  )}
                 >
-                  <div className="flex w-full items-center justify-between">
-                    <span className="font-medium">{ing?.name ?? `#${ingId}`}</span>
-                    {ing?.unit ? (
-                      <Badge variant="outline" className="text-xs">
-                        {ing.unit}
-                      </Badge>
-                    ) : null}
+                  <div className="flex w-full items-center justify-between gap-2">
+                    <span className="font-medium text-foreground">
+                      {ing?.name ?? `#${ingId}`}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {ing?.unit ? (
+                        <Badge variant="outline" className="text-xs">
+                          {ing.unit}
+                        </Badge>
+                      ) : null}
+                      {assignedEmp ? (
+                        <Badge
+                          variant="success"
+                          className="text-xs font-medium"
+                        >
+                          {INVENTORY_VI.countBadgeAssignedTo(assignedEmp.name)}
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant="outline"
+                          className="text-xs text-muted-foreground"
+                        >
+                          {INVENTORY_VI.countStationUnassigned}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
 
                   {/* Assignee Picker for this specific item */}
@@ -1195,7 +1317,7 @@ export function BranchCountAssignmentsClient({
                       type="button"
                       variant={currentEmpId === null ? "default" : "outline"}
                       size="touch"
-                      className="h-8 text-xs"
+                      className="h-8 text-xs font-medium"
                       onClick={() =>
                         setStationAssignmentsDraft((prev) => ({
                           ...prev,
@@ -1214,7 +1336,7 @@ export function BranchCountAssignmentsClient({
                           type="button"
                           variant={isSelected ? "default" : "outline"}
                           size="touch"
-                          className="h-8 text-xs"
+                          className="h-8 text-xs font-medium"
                           onClick={() =>
                             setStationAssignmentsDraft((prev) => ({
                               ...prev,
@@ -1232,7 +1354,7 @@ export function BranchCountAssignmentsClient({
               );
             })}
           </div>
-        </ScrollArea>
+        </div>
       </AppSheet>
 
       {/* ─── 2. Station Template Editor Sheet ─────────────────────────── */}
@@ -1247,7 +1369,7 @@ export function BranchCountAssignmentsClient({
         description={INVENTORY_VI.countTemplateEditorSheetDescription}
         side="bottom"
         showCloseButton={false}
-        contentClassName="max-h-dvh-95 overflow-hidden bg-background"
+        contentClassName="max-h-dvh-95 flex flex-col overflow-hidden bg-background"
         bodyClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-0"
         footer={
           <>
@@ -1286,9 +1408,12 @@ export function BranchCountAssignmentsClient({
           </>
         }
       >
-        <div className="flex flex-col gap-3 px-3 pb-3 sm:px-4">
+        <div className="flex shrink-0 flex-col gap-2 px-3 pb-2 pt-1 sm:px-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="templateDraftName">
+            <Label
+              htmlFor="templateDraftName"
+              className="text-xs font-semibold"
+            >
               {INVENTORY_VI.countTemplateNameLabel}
             </Label>
             <Input
@@ -1300,12 +1425,51 @@ export function BranchCountAssignmentsClient({
             />
           </div>
 
-          <div className="flex items-center justify-between border-t pt-2">
-            <span className="text-xs font-semibold text-muted-foreground">
-              {INVENTORY_VI.countAssignItemCount(
-                templateDraftIngredientIds.length,
-              )}
-            </span>
+          {/* Quick Select & Filter Tabs */}
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-2">
+            <div className="flex flex-wrap gap-1">
+              <Button
+                type="button"
+                variant={
+                  templateSelectionFilter === "all" ? "default" : "outline"
+                }
+                size="touch"
+                className="h-8 text-xs font-medium"
+                onClick={() => setTemplateSelectionFilter("all")}
+              >
+                {INVENTORY_VI.countTabAllWithCount(data.ingredients.length)}
+              </Button>
+              <Button
+                type="button"
+                variant={
+                  templateSelectionFilter === "selected"
+                    ? "default"
+                    : "outline"
+                }
+                size="touch"
+                className="h-8 text-xs font-medium"
+                onClick={() => setTemplateSelectionFilter("selected")}
+              >
+                {INVENTORY_VI.countTabSelectedWithCount(
+                  templateDraftIngredientIds.length,
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant={
+                  templateSelectionFilter === "unselected"
+                    ? "default"
+                    : "outline"
+                }
+                size="touch"
+                className="h-8 text-xs font-medium"
+                onClick={() => setTemplateSelectionFilter("unselected")}
+              >
+                {INVENTORY_VI.countTabUnselectedWithCount(
+                  data.ingredients.length - templateDraftIngredientIds.length,
+                )}
+              </Button>
+            </div>
             <div className="flex gap-1">
               <Button
                 type="button"
@@ -1332,9 +1496,9 @@ export function BranchCountAssignmentsClient({
             </div>
           </div>
 
-          <InputGroup className="min-h-12">
+          <InputGroup className="min-h-11">
             <InputGroupAddon>
-              <IconSearch />
+              <IconSearch className="size-4" />
             </InputGroupAddon>
             <InputGroupInput
               aria-label={INVENTORY_VI.countAssignSearchPlaceholder}
@@ -1349,8 +1513,9 @@ export function BranchCountAssignmentsClient({
           </InputGroup>
         </div>
 
-        <ScrollArea className="min-h-0 flex-1 px-3 sm:px-4">
-          <div className="flex flex-col gap-2 pb-4 pr-2">
+        {/* Native Smooth Scrollable Ingredient List */}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4 sm:px-4">
+          <div className="flex flex-col gap-2">
             {templateVisibleIngredients.map((ingredient) => {
               const checked = templateDraftIngredientIds.includes(
                 ingredient.id,
@@ -1359,29 +1524,48 @@ export function BranchCountAssignmentsClient({
                 <Item
                   key={ingredient.id}
                   variant={checked ? "muted" : "outline"}
-                  className="min-h-14 cursor-pointer"
+                  className={cn(
+                    "min-h-14 cursor-pointer justify-between transition-colors",
+                    checked
+                      ? "border-primary bg-accent"
+                      : "hover:bg-muted",
+                  )}
                   onClick={() => toggleTemplateIngredient(ingredient.id)}
                 >
-                  <Checkbox
-                    size="touch"
-                    checked={checked}
-                    disabled={isPending}
-                    tabIndex={-1}
-                    aria-hidden="true"
-                  />
-                  <ItemContent className="min-w-0">
-                    <span className="break-words font-medium">
-                      {ingredient.name}
-                    </span>
-                    {ingredient.unit ? (
-                      <ItemDescription>{ingredient.unit}</ItemDescription>
-                    ) : null}
-                  </ItemContent>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Checkbox
+                      size="touch"
+                      checked={checked}
+                      disabled={isPending}
+                      tabIndex={-1}
+                      aria-hidden="true"
+                    />
+                    <ItemContent className="min-w-0">
+                      <span className="break-words font-medium text-foreground">
+                        {ingredient.name}
+                      </span>
+                      {ingredient.unit ? (
+                        <ItemDescription>{ingredient.unit}</ItemDescription>
+                      ) : null}
+                    </ItemContent>
+                  </div>
+                  {checked ? (
+                    <Badge variant="success" className="shrink-0 font-medium">
+                      {INVENTORY_VI.countBadgeSelected}
+                    </Badge>
+                  ) : (
+                    <Badge
+                      variant="outline"
+                      className="shrink-0 text-muted-foreground"
+                    >
+                      {INVENTORY_VI.countBadgeUnselected}
+                    </Badge>
+                  )}
                 </Item>
               );
             })}
           </div>
-        </ScrollArea>
+        </div>
       </AppSheet>
 
       {/* ─── 3. Single Employee Checklist Sheet ──────────────────────── */}
@@ -1396,7 +1580,7 @@ export function BranchCountAssignmentsClient({
         )}
         side="bottom"
         showCloseButton={false}
-        contentClassName="max-h-dvh-95 overflow-hidden bg-background"
+        contentClassName="max-h-dvh-95 flex flex-col overflow-hidden bg-background"
         bodyClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-0"
         footer={
           <>
@@ -1421,14 +1605,50 @@ export function BranchCountAssignmentsClient({
           </>
         }
       >
-        <div className="flex flex-col gap-2 px-3 pb-3 sm:px-4">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground">
-              {INVENTORY_VI.selectedRatio(
-                draftIds.length,
-                data.ingredients.length,
-              )}
-            </span>
+        <div className="flex shrink-0 flex-col gap-2 px-3 pb-2 pt-1 sm:px-4">
+          {/* Quick Select & Filter Tabs */}
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-2">
+            <div className="flex flex-wrap gap-1">
+              <Button
+                type="button"
+                variant={
+                  employeeSelectionFilter === "all" ? "default" : "outline"
+                }
+                size="touch"
+                className="h-8 text-xs font-medium"
+                onClick={() => setEmployeeSelectionFilter("all")}
+              >
+                {INVENTORY_VI.countTabAllWithCount(data.ingredients.length)}
+              </Button>
+              <Button
+                type="button"
+                variant={
+                  employeeSelectionFilter === "selected"
+                    ? "default"
+                    : "outline"
+                }
+                size="touch"
+                className="h-8 text-xs font-medium"
+                onClick={() => setEmployeeSelectionFilter("selected")}
+              >
+                {INVENTORY_VI.countTabSelectedWithCount(draftIds.length)}
+              </Button>
+              <Button
+                type="button"
+                variant={
+                  employeeSelectionFilter === "unselected"
+                    ? "default"
+                    : "outline"
+                }
+                size="touch"
+                className="h-8 text-xs font-medium"
+                onClick={() => setEmployeeSelectionFilter("unselected")}
+              >
+                {INVENTORY_VI.countTabUnselectedWithCount(
+                  data.ingredients.length - draftIds.length,
+                )}
+              </Button>
+            </div>
             <div className="flex gap-1">
               <Button
                 type="button"
@@ -1453,9 +1673,9 @@ export function BranchCountAssignmentsClient({
             </div>
           </div>
 
-          <InputGroup className="min-h-12">
+          <InputGroup className="min-h-11">
             <InputGroupAddon>
-              <IconSearch />
+              <IconSearch className="size-4" />
             </InputGroupAddon>
             <InputGroupInput
               aria-label={INVENTORY_VI.countAssignSearchPlaceholder}
@@ -1470,8 +1690,9 @@ export function BranchCountAssignmentsClient({
           </InputGroup>
         </div>
 
-        <ScrollArea className="min-h-0 flex-1 px-3 sm:px-4">
-          <div className="flex flex-col gap-2 pb-4 pr-2">
+        {/* Native Smooth Scrollable Ingredient List */}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4 sm:px-4">
+          <div className="flex flex-col gap-2">
             {visibleIngredients.length === 0 ? (
               <AppEmptyState
                 compact
@@ -1485,30 +1706,52 @@ export function BranchCountAssignmentsClient({
                   <Item
                     key={ingredient.id}
                     variant={checked ? "muted" : "outline"}
-                    className="min-h-14 cursor-pointer"
+                    className={cn(
+                      "min-h-14 cursor-pointer justify-between transition-colors",
+                      checked
+                        ? "border-primary bg-accent"
+                        : "hover:bg-muted",
+                    )}
                     onClick={() => toggleIngredient(ingredient.id)}
                   >
-                    <Checkbox
-                      size="touch"
-                      checked={checked}
-                      disabled={isPending}
-                      tabIndex={-1}
-                      aria-hidden="true"
-                    />
-                    <ItemContent className="min-w-0">
-                      <span className="break-words font-medium">
-                        {ingredient.name}
-                      </span>
-                      {ingredient.unit ? (
-                        <ItemDescription>{ingredient.unit}</ItemDescription>
-                      ) : null}
-                    </ItemContent>
+                    <div className="flex min-w-0 items-center gap-3">
+                      <Checkbox
+                        size="touch"
+                        checked={checked}
+                        disabled={isPending}
+                        tabIndex={-1}
+                        aria-hidden="true"
+                      />
+                      <ItemContent className="min-w-0">
+                        <span className="break-words font-medium text-foreground">
+                          {ingredient.name}
+                        </span>
+                        {ingredient.unit ? (
+                          <ItemDescription>{ingredient.unit}</ItemDescription>
+                        ) : null}
+                      </ItemContent>
+                    </div>
+                    {checked ? (
+                      <Badge
+                        variant="success"
+                        className="shrink-0 font-medium"
+                      >
+                        {INVENTORY_VI.countBadgeSelected}
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className="shrink-0 text-muted-foreground"
+                      >
+                        {INVENTORY_VI.countBadgeUnselected}
+                      </Badge>
+                    )}
                   </Item>
                 );
               })
             )}
           </div>
-        </ScrollArea>
+        </div>
       </AppSheet>
     </>
   );

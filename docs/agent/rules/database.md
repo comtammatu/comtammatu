@@ -86,14 +86,13 @@ over older task notes, regressions, and memory.
   current task/PR and its purpose must be named in the owner approval. Keep
   historical SQL only in `supabase/migration-archive/`.
 - Create an active file only with `node scripts/supabase-migration-new.mjs
-  <lower_snake_case_name>` from the repository root. It delegates file creation
-  to the Supabase CLI, then normalizes only that new file to its generated
-  14-digit UTC+7 version. Never hand-pick a timestamp, backdate, rename, or
-  reuse one. The name describes one business/schema purpose, uses lower snake
-  case, and contains no environment, person, ticket, or implementation-status
-  label. Before creating it, snapshot `git status --short --
-  supabase/migrations` and stop if another pending migration is outside the
-  task scope or would share the apply batch.
+  <lower_snake_case_name>` from the repository root. It generates only that new
+  file with its validated 14-digit UTC+7 version. Never hand-pick a timestamp,
+  backdate, rename, or reuse one. The name describes one business/schema
+  purpose, uses lower snake case, and contains no environment, person, ticket,
+  or implementation-status label. Before creating it, snapshot `git status
+  --short -- supabase/migrations` and stop if another pending migration is
+  outside the task scope or would share the apply batch.
 - An applied migration is immutable source history. Do not edit, retimestamp,
   delete, or recreate it to make a ledger error disappear. Establish version,
   name, and SQL-content evidence against `supabase_migrations.schema_migrations`;
