@@ -607,6 +607,7 @@ export const hr = {
     weekdaySaturday: "Thứ 7",
     weekdaySunday: "Chủ nhật",
     allWeek: "Cả tuần",
+    selectDayAria: "Chọn ngày xem phân ca",
     dayOff: "Nghỉ",
     saveSchedule: "Lưu lịch cố định",
     saveScheduleSuccess: "Đã lưu lịch làm cố định.",

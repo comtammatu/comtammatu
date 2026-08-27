@@ -1,11 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import {
+  CalendarDays as IconCalendarDays,
   ChevronLeft as IconChevronLeft,
   ChevronRight as IconChevronRight,
   Repeat2 as IconRepeat,
 } from "lucide-react";
 import { STATES_VI } from "@comtammatu/shared/messages";
+import { cn } from "@comtammatu/ui";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Item,
@@ -42,6 +46,8 @@ export function BranchRosterWeekClient({
   canAssign: boolean;
   loadFailed: boolean;
 }) {
+  const [selectedDay, setSelectedDay] = useState<string>("all");
+
   const {
     isPending,
     assignmentMap,
@@ -108,8 +114,14 @@ export function BranchRosterWeekClient({
     );
   }
 
+  const visibleDates =
+    selectedDay === "all"
+      ? weekDates
+      : weekDates.filter((date) => date === selectedDay);
+
   return (
     <div className="flex min-w-0 flex-col gap-3">
+      {/* Week Navigator */}
       <div className="flex items-center gap-2">
         <Button
           type="button"
@@ -137,9 +149,48 @@ export function BranchRosterWeekClient({
         </Button>
       </div>
 
+      {/* Day Filter Bar */}
+      <div
+        className="no-scrollbar flex touch-pan-x gap-1.5 overflow-x-auto overscroll-x-contain pb-1"
+        role="group"
+        aria-label={copy.selectDayAria}
+      >
+        <Button
+          type="button"
+          variant={selectedDay === "all" ? "secondary" : "outline"}
+          size="touch"
+          aria-pressed={selectedDay === "all"}
+          className="shrink-0 gap-1.5 px-3"
+          onClick={() => setSelectedDay("all")}
+        >
+          <IconCalendarDays className="size-4" />
+          <span>{copy.allWeek}</span>
+        </Button>
+        {weekDates.map((date) => {
+          const active = selectedDay === date;
+          return (
+            <Button
+              key={date}
+              type="button"
+              variant={active ? "secondary" : "outline"}
+              size="touch"
+              aria-pressed={active}
+              className="shrink-0 px-3"
+              onClick={() => setSelectedDay(date)}
+            >
+              <span>{formatRosterDayHeader(date)}</span>
+            </Button>
+          );
+        })}
+      </div>
+
       <BranchOperatorPanel
         title={copy.title}
-        description={formatRosterWeekRange(weekStart)}
+        description={
+          selectedDay === "all"
+            ? formatRosterWeekRange(weekStart)
+            : formatRosterDayHeader(selectedDay)
+        }
         badge={{ children: data.employees.length }}
         size="sm"
       >
@@ -151,15 +202,15 @@ export function BranchRosterWeekClient({
             description={copy.emptyEmployeesDescription}
           />
         ) : (
-          <ItemGroup className="grid gap-2">
+          <ItemGroup className="grid gap-3">
             {data.employees.map((employee) => (
               <Item
                 key={employee.employeeId}
                 variant="outline"
-                className="items-start"
+                className="items-start bg-card p-3"
               >
                 <ItemContent className="min-w-0 gap-3">
-                  <div className="flex w-full items-start justify-between gap-2">
+                  <div className="flex w-full flex-wrap items-center justify-between gap-2 border-b pb-2">
                     <div className="min-w-0">
                       <ItemTitle size="heading" className="line-clamp-none">
                         {employee.fullName}
@@ -172,12 +223,33 @@ export function BranchRosterWeekClient({
                     </div>
                     {renderScheduleButton(employee)}
                   </div>
-                  <div className="flex w-full flex-col gap-2">
-                    {weekDates.map((date) => (
-                      <div key={date} className="flex items-center gap-2">
-                        <span className="text-muted-foreground w-24 shrink-0 text-xs">
-                          {formatRosterDayHeader(date)}
-                        </span>
+
+                  <div
+                    className={cn(
+                      "grid w-full gap-2",
+                      selectedDay === "all"
+                        ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-7"
+                        : "grid-cols-1",
+                    )}
+                  >
+                    {visibleDates.map((date) => (
+                      <div
+                        key={date}
+                        className={cn(
+                          "flex flex-col gap-1.5 rounded-md bg-muted/30 p-2.5",
+                          selectedDay !== "all" && "p-3",
+                        )}
+                      >
+                        <div className="flex items-center justify-between border-b pb-1">
+                          <span className="text-xs font-semibold text-foreground">
+                            {formatRosterDayHeader(date)}
+                          </span>
+                          {selectedDay === "all" ? null : (
+                            <Badge variant="outline" className="text-2xs font-normal">
+                              {date}
+                            </Badge>
+                          )}
+                        </div>
                         <div className="min-w-0 flex-1">
                           {renderDayCell(employee, date)}
                         </div>

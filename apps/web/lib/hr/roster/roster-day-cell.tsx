@@ -5,12 +5,11 @@ import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@comtammatu/ui/components/dropdown-menu";
 import { messages } from "@lib/messages";
 import {
   rosterAssignmentKey,
@@ -20,7 +19,6 @@ import {
 import { formatShiftLabel } from "./roster-week-helpers";
 
 const copy = messages.hr.roster;
-const ADD_SHIFT_VALUE = "__add_shift__";
 
 export function RosterDayCell({
   employeeId,
@@ -62,7 +60,7 @@ export function RosterDayCell({
   );
 
   return (
-    <div className="flex min-w-32 flex-col gap-1">
+    <div className="flex min-w-32 flex-col gap-1.5">
       {assignedShiftIds.map((shiftId) => {
         const shift = shifts.find((item) => item.id === shiftId);
         const leaderKey = rosterAssignmentKey(employeeId, workDate, shiftId);
@@ -71,7 +69,13 @@ export function RosterDayCell({
           !dirty && leader != null && leader.assignmentId > 0;
         return (
           <div key={leaderKey} className="flex items-center gap-1">
-            <Badge variant="outline" className="min-w-0 flex-1 justify-start">
+            <Badge
+              variant="outline"
+              className={cn(
+                "min-w-0 flex-1 justify-start font-normal",
+                touch ? "py-1.5 px-2 text-xs" : "py-0.5 text-xs",
+              )}
+            >
               <span className="truncate">
                 {shift
                   ? formatShiftLabel(shift.name, shift.startTime, shift.endTime)
@@ -123,40 +127,33 @@ export function RosterDayCell({
         );
       })}
       {availableShifts.length > 0 ? (
-        <Select
-          value={ADD_SHIFT_VALUE}
-          onValueChange={(value) => {
-            if (value === ADD_SHIFT_VALUE) return;
-            onAddShift(employeeId, workDate, Number(value));
-          }}
-          disabled={isPending}
-        >
-          <SelectTrigger
-            size={touch ? "touch" : "sm"}
-            className="w-full min-w-0"
-          >
-            <SelectValue placeholder={copy.addShift}>
-              <span className="flex items-center gap-1">
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                type="button"
+                variant="outline"
+                size={touch ? "touch" : "sm"}
+                className="w-full min-w-0 justify-center gap-1 text-xs"
+                disabled={isPending}
+              >
                 <IconPlus className="size-3.5" />
-                {copy.addShift}
-              </span>
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ADD_SHIFT_VALUE} disabled size={touch ? "touch" : "default"}>
-              {copy.addShift}
-            </SelectItem>
+                <span>{copy.addShift}</span>
+              </Button>
+            }
+          />
+          <DropdownMenuContent align="start">
             {availableShifts.map((shift) => (
-              <SelectItem
+              <DropdownMenuItem
                 key={`${cellKey}:${shift.id}`}
-                value={String(shift.id)}
                 size={touch ? "touch" : "default"}
+                onClick={() => onAddShift(employeeId, workDate, shift.id)}
               >
                 {formatShiftLabel(shift.name, shift.startTime, shift.endTime)}
-              </SelectItem>
+              </DropdownMenuItem>
             ))}
-          </SelectContent>
-        </Select>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ) : assignedShiftIds.length === 0 ? (
         <span className="text-muted-foreground text-xs">{copy.emptyShift}</span>
       ) : null}
