@@ -414,15 +414,11 @@ function CartPaneComponent({
                           "bg-destructive/10 opacity-0 motion-safe:scale-95",
                       )}
                     >
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="touch"
+                      <div
                         className={cn(
-                          "w-full justify-start py-2 pl-2 text-left whitespace-normal hover:bg-card sm:pl-3",
+                          "w-full cursor-pointer select-none",
                           itemPaddingClass,
                         )}
-                        disabled={isRemoving}
                         onClick={(event) => {
                           if (swipe.consumeSuppression(item.key)) {
                             event.preventDefault();
@@ -463,19 +459,19 @@ function CartPaneComponent({
                             }
                           }}
                         />
-                      </Button>
+                      </div>
                     </Item>
                     <Button
                       variant="ghost"
                       size="icon-touch"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-destructive"
+                      className="absolute right-1 top-2 text-muted-foreground hover:text-destructive"
                       aria-label={messages.pos.pendingDraft.removeItemAria(
                         displayName,
                       )}
                       disabled={isRemoving}
                       onClick={() => removeItemWithEffect(item.key)}
                     >
-                      <IconX />
+                      <IconX className="size-4" />
                     </Button>
                   </div>
                 );
@@ -483,8 +479,8 @@ function CartPaneComponent({
             </div>
           </ScrollArea>
 
-          <div className="flex shrink-0 flex-col gap-3 border-t border-border/60 bg-background px-3 py-3 sm:px-4">
-            <div className="flex flex-col gap-1.5">
+          <div className="flex shrink-0 flex-col gap-2 border-t border-border/60 bg-background px-3 py-3 sm:px-4">
+            <div className="flex flex-col gap-1">
               <Label
                 htmlFor="pos-order-note"
                 className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -504,12 +500,12 @@ function CartPaneComponent({
                 }
                 maxLength={500}
                 rows={1}
-                className="resize-none text-base"
+                className="min-h-8 resize-none text-sm"
                 aria-describedby="pos-order-note-hint"
               />
               <p
                 id="pos-order-note-hint"
-                className="hidden text-xs leading-5 text-muted-foreground sm:block"
+                className="hidden text-xs leading-4 text-muted-foreground sm:block"
               >
                 {cart.orderType === "takeaway"
                   ? messages.pos.pendingDraft.takeawayNoteHint
@@ -517,13 +513,13 @@ function CartPaneComponent({
               </p>
             </div>
 
-            <Frame className="flex flex-col gap-3 p-3">
-              <div className="relative flex flex-col gap-3">
+            <Frame className="flex flex-col gap-2 p-3">
+              <div className="relative flex flex-col gap-2">
                 <div className="flex items-center justify-between gap-3">
                   <SectionLabel>
                     {messages.pos.pendingDraft.subtotal}
                   </SectionLabel>
-                  <p className="ml-auto font-mono text-xl font-bold text-primary tabular-nums">
+                  <p className="ml-auto font-mono text-lg sm:text-xl font-bold text-primary tabular-nums">
                     {formatVND(cart.total)}
                   </p>
                 </div>
@@ -581,14 +577,14 @@ function CartPaneComponent({
                   cart.items.length > 0 &&
                   cart.orderType === "delivery" &&
                   !deliveryReady && (
-                    <p className="text-center text-sm text-muted-foreground">
+                    <p className="text-center text-xs text-muted-foreground">
                       {messages.pos.delivery.submitBlockedHint}
                     </p>
                   )}
                 {!canSubmit &&
                   cart.items.length > 0 &&
                   cart.orderType === "dine_in" && (
-                    <p className="text-center text-sm text-muted-foreground">
+                    <p className="text-center text-xs text-muted-foreground">
                       {messages.pos.pendingDraft.chooseTableHint}
                     </p>
                   )}

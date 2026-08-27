@@ -168,17 +168,16 @@ export function OrderItemRow({ row, onTap }: OrderItemRowProps) {
         variant="outline"
         size="sm"
         className={cn(
-          "w-full min-w-0 max-w-full rounded-none p-0 transition-colors duration-150",
+          "w-full min-w-0 max-w-full rounded-md p-0 transition-colors duration-150 hover:shadow-effect-card-hover",
           getItemStatusToneClass(row.status),
           getRowChangeToneClass(changeTone),
-          cancelled && "border-dashed",
+          cancelled && "border-dashed opacity-60",
         )}
       >
         <Button
           type="button"
           variant="ghost"
-          size="touch"
-          className="w-full min-w-0 max-w-full justify-start whitespace-normal rounded-none px-2 py-2 text-left hover:bg-transparent sm:px-3"
+          className="h-auto w-full min-w-0 max-w-full justify-start whitespace-normal rounded-md px-2.5 py-1.5 text-left hover:bg-transparent sm:px-3"
           aria-label={`${displayName}, ${statusInfo.label}`}
           onClick={() => onTap?.(row.id)}
         >
@@ -207,7 +206,7 @@ export function OrderItemRow({ row, onTap }: OrderItemRowProps) {
             afterTitle={
               <Badge
                 variant={statusInfo.variant}
-                className="h-5 shrink-0 px-1.5 py-0 text-xs font-semibold uppercase tracking-wide"
+                className="h-5 shrink-0 px-1.5 py-0 text-2xs font-semibold uppercase tracking-wide"
               >
                 {statusInfo.label}
               </Badge>

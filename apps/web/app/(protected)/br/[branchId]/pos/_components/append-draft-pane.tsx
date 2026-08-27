@@ -177,15 +177,15 @@ function AppendDraftPaneComponent({
         </ScrollArea>
       )}
 
-      <div className="flex shrink-0 flex-col gap-3 border-t border-border/60 bg-background px-3 py-3 sm:px-4">
+      <div className="flex shrink-0 flex-col gap-2 border-t border-border/60 bg-background px-3 py-3 sm:px-4">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <SectionLabel>{messages.pos.appendDraft.summaryLabel}</SectionLabel>
-            <p className="mt-0.5 text-sm text-muted-foreground">
+            <p className="mt-0.5 text-xs text-muted-foreground">
               {messages.pos.appendDraft.itemCount(quantity)}
             </p>
           </div>
-          <p className="shrink-0 font-mono text-xl font-bold text-primary tabular-nums">
+          <p className="shrink-0 font-mono text-lg sm:text-xl font-bold text-primary tabular-nums">
             {formatVND(total)}
           </p>
         </div>
@@ -193,7 +193,7 @@ function AppendDraftPaneComponent({
           <Button
             type="button"
             size="touch"
-            className="w-full min-w-0"
+            className="w-full min-w-0 font-semibold"
             disabled={!canSubmit}
             onClick={onSubmit}
           >
@@ -208,7 +208,7 @@ function AppendDraftPaneComponent({
             type="button"
             variant="outline"
             size="touch"
-            className="w-full min-w-0"
+            className="w-full min-w-0 font-medium text-muted-foreground"
             disabled={isSubmitting}
             onClick={onCancel}
           >

@@ -111,11 +111,11 @@ export function OrderTotalsSummary({
         </>
       )}
 
-      <Separator className="my-1" />
+      <Separator className="my-1 bg-border/60" />
 
-      <div className={totalClass}>
-        <span>{FORM_VI.totalAmount}</span>
-        <span className="font-mono">{formatVND(totalAmount)}</span>
+      <div className={cn(totalClass, "text-foreground")}>
+        <span className="font-semibold">{FORM_VI.totalAmount}</span>
+        <span className="font-mono text-primary">{formatVND(totalAmount)}</span>
       </div>
     </div>
   );

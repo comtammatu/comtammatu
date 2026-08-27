@@ -116,7 +116,7 @@ export function OrderItemActionsSheet({
       contentClassName="pos-safe-bottom max-h-dvh-80 gap-1 sm:mx-auto sm:max-w-md"
     >
         {item && (
-          <div className="border-b border-border/60 pb-3">
+          <div className="border-b border-border/60 pb-2.5">
             <PosLineItemCompact
               quantity={item.quantity}
               title={displayName}
@@ -144,10 +144,10 @@ export function OrderItemActionsSheet({
               }
               noteClassName={cancelled ? "line-through opacity-60" : undefined}
             />
-            <p className="mt-2 text-xs text-muted-foreground">
-              {POS_VI.statusPrefix}
-              <span className="font-medium text-foreground">{statusLabel}</span>
-            </p>
+            <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
+              <span>{POS_VI.statusPrefix}</span>
+              <span className="font-semibold text-foreground">{statusLabel}</span>
+            </div>
           </div>
         )}
         <div className="flex flex-col gap-2">

@@ -121,25 +121,6 @@ function getLineChangeToneClass(tone: LineChangeTone): string | false {
   return false;
 }
 
-function DetailLine({
-  label,
-  values,
-  className,
-}: {
-  label: string;
-  values: readonly string[];
-  className?: string;
-}) {
-  if (values.length === 0) return null;
-
-  return (
-    <p className={cn("min-w-0 break-words text-sm leading-snug", className)}>
-      <span className="font-semibold text-foreground">{label}: </span>
-      <span>{values.join(", ")}</span>
-    </p>
-  );
-}
-
 export function PosLineItemCompact({
   quantity,
   title,
@@ -175,18 +156,19 @@ export function PosLineItemCompact({
     isPriority,
   });
   const hasStructuredOptions = modifiers.length > 0 || sides.length > 0;
+  const allOptionTags = [...modifiers, ...sides];
 
   return (
     <div
       className={cn(
-        "flex w-full min-w-0 max-w-full gap-3 rounded-md p-1 transition-colors duration-150",
+        "flex w-full min-w-0 max-w-full items-start gap-2 rounded-md p-1 transition-colors duration-150",
         getLineChangeToneClass(tone),
         className,
       )}
     >
       {onIncreaseQuantity && onDecreaseQuantity ? (
         <div
-          className="flex h-10 shrink-0 items-center gap-1"
+          className="flex h-8 shrink-0 items-center gap-1"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -204,9 +186,9 @@ export function PosLineItemCompact({
               onDecreaseQuantity();
             }}
           >
-            <IconMinus />
+            <IconMinus className="size-4" />
           </Button>
-          <span className="min-w-6 px-0.5 text-center font-mono text-base font-semibold tabular-nums text-foreground">
+          <span className="min-w-5 px-0.5 text-center font-mono text-sm font-semibold tabular-nums text-foreground">
             {formatPortionQuantity(quantity)}
           </span>
           <Button
@@ -221,15 +203,15 @@ export function PosLineItemCompact({
               onIncreaseQuantity();
             }}
           >
-            <IconPlus />
+            <IconPlus className="size-4" />
           </Button>
         </div>
       ) : (
-        <div className="flex w-12 shrink-0 flex-col items-stretch gap-1">
+        <div className="flex shrink-0 items-center">
           <Badge
             variant="outline"
             className={cn(
-              "justify-center rounded-md px-2 py-1 font-mono text-base font-bold leading-none tabular-nums",
+              "h-7 min-w-7 justify-center rounded-md px-1.5 font-mono text-sm font-bold leading-none tabular-nums",
               quantityClassName,
             )}
           >
@@ -238,90 +220,95 @@ export function PosLineItemCompact({
           {quantityDelta !== null ? (
             <Badge
               variant={quantityDelta > 0 ? "info" : "destructive"}
-              className="justify-center px-1 py-0 font-mono text-xs font-bold tabular-nums"
+              className="ml-1 h-5 justify-center px-1 py-0 font-mono text-2xs font-bold tabular-nums"
             >
               {quantityDelta > 0 ? `+${String(quantityDelta)}` : quantityDelta}
             </Badge>
           ) : null}
         </div>
       )}
-      <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-1">
-          <p
-            className={cn(
-              "min-w-0 flex-1 break-words text-base font-semibold leading-snug text-foreground",
-              titleClassName,
-            )}
-          >
-            {title}
-          </p>
-          {isPriority ? (
-            <Badge variant="warning" className="shrink-0 text-xs font-semibold">
-              {POS_VI.priorityBadge}
-            </Badge>
-          ) : null}
-          {afterTitle ? <span className="shrink-0">{afterTitle}</span> : null}
-        </div>
-        <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-          {originalTotal ? (
-            <p className="text-sm tabular-nums text-muted-foreground line-through">
-              {originalTotal}
-            </p>
-          ) : null}
-          <p
-            className={cn(
-              "text-base font-bold leading-snug text-primary tabular-nums",
-              totalClassName,
-            )}
-          >
-            {total}
-          </p>
-        </div>
-        <div className="mt-1 flex flex-col gap-1 text-muted-foreground">
-          <DetailLine
-            label={POS_VI.options}
-            values={modifiers}
-            className={optionsClassName}
-          />
-          <DetailLine
-            label={POS_VI.sides}
-            values={sides}
-            className={optionsClassName}
-          />
-          {!hasStructuredOptions && options ? (
-            <p
+
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex min-w-0 items-start justify-between gap-2">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+            <span
               className={cn(
-                "min-w-0 break-words text-sm leading-snug",
-                optionsClassName,
+                "min-w-0 break-words text-sm sm:text-base font-semibold leading-snug text-foreground",
+                titleClassName,
               )}
             >
-              {options}
-            </p>
-          ) : null}
-          {discount ? (
-            <p
-              className={cn(
-                "min-w-0 break-words text-sm font-medium leading-snug text-success",
-                discountClassName,
-              )}
-            >
-              {discount}
-            </p>
-          ) : null}
-          {note ? (
-            <p
-              className={cn(
-                "max-h-20 min-w-0 overflow-y-auto break-words pr-1 text-sm italic leading-snug",
-                noteClassName,
-              )}
-            >
-              <span className="font-semibold not-italic text-foreground">
-                {POS_VI.notePrefix}
+              {title}
+            </span>
+            {isPriority ? (
+              <Badge variant="warning" className="h-5 shrink-0 px-1.5 py-0 text-2xs font-semibold">
+                {POS_VI.priorityBadge}
+              </Badge>
+            ) : null}
+            {afterTitle ? <span className="shrink-0">{afterTitle}</span> : null}
+          </div>
+          <div className="flex shrink-0 items-baseline gap-1 text-right">
+            {originalTotal ? (
+              <span className="font-mono text-xs tabular-nums text-muted-foreground line-through">
+                {originalTotal}
               </span>
-              {note}
-            </p>
-          ) : null}
+            ) : null}
+            <span
+              className={cn(
+                "font-mono text-sm sm:text-base font-bold leading-snug text-primary tabular-nums",
+                totalClassName,
+              )}
+            >
+              {total}
+            </span>
+          </div>
         </div>
+
+        {hasStructuredOptions ? (
+          <div className={cn("mt-0.5 flex flex-wrap items-center gap-1", optionsClassName)}>
+            {allOptionTags.map((opt, index) => (
+              <span
+                key={index}
+                className="inline-flex items-center rounded-md bg-muted/50 px-1.5 py-0.5 text-xs font-normal text-muted-foreground leading-tight"
+              >
+                {opt}
+              </span>
+            ))}
+          </div>
+        ) : options ? (
+          <p
+            className={cn(
+              "mt-0.5 min-w-0 break-words text-xs leading-snug text-muted-foreground",
+              optionsClassName,
+            )}
+          >
+            {options}
+          </p>
+        ) : null}
+
+        {discount ? (
+          <p
+            className={cn(
+              "mt-0.5 min-w-0 break-words font-mono text-xs font-medium leading-snug text-success",
+              discountClassName,
+            )}
+          >
+            {discount}
+          </p>
+        ) : null}
+
+        {note ? (
+          <p
+            className={cn(
+              "mt-0.5 max-h-20 min-w-0 overflow-y-auto break-words pr-1 text-sm italic leading-snug text-muted-foreground",
+              noteClassName,
+            )}
+          >
+            <span className="font-semibold not-italic text-foreground/80">
+              {POS_VI.notePrefix}
+            </span>
+            {note}
+          </p>
+        ) : null}
       </div>
     </div>
   );

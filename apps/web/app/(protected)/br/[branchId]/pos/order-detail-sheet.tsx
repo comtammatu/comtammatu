@@ -1437,10 +1437,11 @@ export function OrderDetailSheet({
         open={orderId !== null}
         onOpenChange={handleOpenChange}
         title={
-          <span className="flex min-w-0 items-center gap-2 text-base">
-            {orderContextLabel && <span>{orderContextLabel}</span>}
-            {orderContextLabel && sheetTitle && (
-              <span className="text-muted-foreground">·</span>
+          <span className="flex min-w-0 items-center gap-2 text-base font-semibold">
+            {orderContextLabel && (
+              <Badge variant="outline" className="shrink-0 text-xs font-semibold">
+                {orderContextLabel}
+              </Badge>
             )}
             <span className="truncate">
               {sheetTitle
@@ -1453,7 +1454,7 @@ export function OrderDetailSheet({
               summaryForCurrentOrder?.is_priority === true) && (
               <Badge
                 variant="warning"
-                className="h-5 shrink-0 px-1.5 py-0 text-xs font-semibold"
+                className="h-5 shrink-0 px-1.5 py-0 text-2xs font-semibold"
               >
                 {messages.pos.orderDetail.priority}
               </Badge>
@@ -1509,7 +1510,7 @@ export function OrderDetailSheet({
           )}
 
           {error && (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 p-4">
               <p className="text-base text-destructive">{error}</p>
               <Button
                 type="button"
@@ -1524,7 +1525,7 @@ export function OrderDetailSheet({
 
           {data && !error && (
             <>
-              <div className="flex items-center justify-between px-3 pt-2 text-xs text-muted-foreground sm:px-4">
+              <div className="flex items-center justify-between border-b border-border/40 px-3 py-2 text-xs text-muted-foreground sm:px-4">
                 {data.profiles?.full_name ? (
                   <p>
                     {messages.pos.orderDetail.orderedByLabel}{" "}
@@ -1548,7 +1549,7 @@ export function OrderDetailSheet({
               </div>
               <ScrollArea className="min-h-0 w-full min-w-0 max-w-full flex-1 overflow-hidden">
                 <ul
-                  className="flex w-full min-w-0 max-w-full flex-col gap-2 overflow-hidden px-3 py-2 sm:px-4"
+                  className="flex w-full min-w-0 max-w-full flex-col gap-1.5 overflow-hidden px-3 py-2 sm:px-4"
                   aria-label={messages.pos.orderDetail.itemListAria}
                 >
                   {data.order_items.map((row) => (
@@ -1596,7 +1597,7 @@ export function OrderDetailSheet({
                 ) : null}
               </ScrollArea>
 
-              <div className="mt-auto flex shrink-0 flex-col gap-2 border-t px-3 py-3 sm:px-4">
+              <div className="mt-auto flex shrink-0 flex-col gap-2 border-t border-border/60 bg-background px-3 py-3 sm:px-4">
                 {canShowDiscount && activeItemCount > 0 ? (
                   <div className="flex items-center gap-2">
                     <Input
@@ -1698,8 +1699,8 @@ export function OrderDetailSheet({
                 {canShowPaymentAction && (
                   <Button
                     type="button"
-                    size="touch"
-                    className="w-full"
+                    size="touch-lg"
+                    className="w-full text-base font-semibold"
                     onClick={() => {
                       onOpenBill(data.id, data);
                       onClose();
@@ -1718,7 +1719,7 @@ export function OrderDetailSheet({
                         type="button"
                         variant="outline"
                         size="touch"
-                        className="flex-1"
+                        className="flex-1 font-semibold"
                         onClick={() => {
                           runAfterPendingPaymentUnlock(() => {
                             onStartAppend(data.id, data.order_number);
