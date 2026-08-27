@@ -260,6 +260,18 @@ export function GRNDetailClient({
         <IconCircleCheck className="size-5" />
         {grnCopy.confirmGrnAction}
       </Button>
+    ) : confirmableSuppliers.length === 1 ? (
+      <Button
+        type="button"
+        size="default"
+        className="sm:min-w-80"
+        disabled={!canConfirm || isConfirming}
+        aria-disabled={!canConfirm || isConfirming}
+        onClick={() => void handleConfirmGrn(confirmableSuppliers[0]!.id)}
+      >
+        <IconCircleCheck className="size-5" />
+        {grnCopy.confirmGrnAction}
+      </Button>
     ) : (
       confirmableSuppliers.map((supplier) => (
         <Button
@@ -404,7 +416,7 @@ export function GRNDetailClient({
         render: (line) => (
           <div className="min-w-0">
             <p className="min-w-0 truncate font-medium">{line.name}</p>
-            {line.supplierName ? (
+            {grn.linkedPos.length > 1 && line.supplierName ? (
               <p className="mt-0.5 truncate text-xs text-muted-foreground">
                 {line.supplierName}
               </p>
@@ -425,12 +437,12 @@ export function GRNDetailClient({
       {
         key: "ordered",
         header: grnCopy.lineHeaderOrdered,
-        className: "w-28 min-w-24 align-top",
+        className: "w-28 min-w-24 text-right align-top",
         render: (line) => {
           const orderedQty = line.poQuantity ?? line.remainingQuantity;
           return (
             <div>
-              <p className="font-mono font-medium tabular-nums">
+              <p className="font-mono font-medium tabular-nums text-muted-foreground">
                 {formatGrnPoQty(orderedQty, line)}
               </p>
               {line.previouslyReceived > 0 ? (

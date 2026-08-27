@@ -221,7 +221,7 @@ export function LineRow({
         </div>
       </Field>
     ) : (
-      <div className="grid min-w-0 grid-cols-2 gap-1.5 h-9 items-center">
+      <div className="grid min-w-0 grid-cols-2 gap-1 h-9 items-center">
         <InputGroup size="default" className="h-full">
           <QuantityInput
             id={`received-pack-${idx}`}
