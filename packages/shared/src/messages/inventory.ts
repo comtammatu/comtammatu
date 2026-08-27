@@ -482,6 +482,24 @@ export const INVENTORY_VI = {
   countStationSplitEvenly: "Chia đều món",
   countStationClearAssignments: "Bỏ phân công",
   countStationUnassigned: "Chưa giao",
+  countViewByStation: (count: number) => `Theo Trạm (${formatCount(count)})`,
+  countViewByStaff: (count: number) => `Theo Nhân viên (${formatCount(count)})`,
+  countStationItemsCount: (count: number) => `${formatCount(count)} mặt hàng trong nhóm`,
+  countStationNoStaffSelected: "Chưa chọn nhân viên",
+  countStationPickStaffHint: "Hãy chọn ít nhất một nhân viên ở trên để giao kiểm kê nhóm này.",
+  countStationAutoAssignTitle: "Tự động giao toàn bộ",
+  countStationAutoAssignBody: (count: number, name: string) =>
+    `Toàn bộ ${formatCount(count)} mặt hàng trong nhóm sẽ được giao cho ${name}.`,
+  countStationDistributeHeader: (count: number) => `Phân bổ cho ${formatCount(count)} nhân viên:`,
+  countStationQuickShortcuts: "Gán nhanh theo nhóm:",
+  countStationSuggestedStaff: "Gợi ý:",
+  countAssignProgressSummary: (
+    assignedStaff: number,
+    totalStaff: number,
+    assignedItems: number,
+    totalItems: number,
+  ) =>
+    `${formatCount(assignedStaff)}/${formatCount(totalStaff)} nhân sự · ${formatCount(assignedItems)}/${formatCount(totalItems)} món`,
   countStationSaveSuccess: "Đã lưu phân công theo trạm.",
   countStationSaveFailed: "Không thể lưu phân công theo trạm.",
   countTemplateEditorSheetTitle: (isEdit: boolean) =>

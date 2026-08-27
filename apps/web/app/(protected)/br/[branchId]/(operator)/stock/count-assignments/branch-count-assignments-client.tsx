@@ -8,6 +8,7 @@ import {
   ChevronRight as IconChevronRight,
   ClipboardCheck as IconClipboardCheck,
   FileText as IconFileText,
+  Layers as IconLayers,
   Pencil as IconPencil,
   Plus as IconPlus,
   Search as IconSearch,
@@ -67,8 +68,9 @@ import {
 } from "@lib/inventory/count-assignment-model";
 import { matchesSearch } from "@lib/search";
 
-const ALL_SHIFTS_VALUE = "all";
 const ALL_ROLES_VALUE = "all";
+
+type ViewMode = "stations" | "staff";
 
 function seedSelections(data: BranchCountAssignmentData) {
   const seeded: Record<string, number[]> = {};
@@ -87,6 +89,7 @@ export function BranchCountAssignmentsClient({
   const router = useRouter();
   const basePath = `/br/${data.branchId}/stock/count-assignments`;
   const [isPending, startTransition] = useTransition();
+  const [viewMode, setViewMode] = useState<ViewMode>("stations");
   const [selectionByEmployee, setSelectionByEmployee] = useState<
     Record<string, number[]>
   >(() => seedSelections(data));
@@ -112,9 +115,6 @@ export function BranchCountAssignmentsClient({
     Record<number, number | null>
   >({});
   const [stationCandidateEmpId, setStationCandidateEmpId] = useState<string>("");
-  const [stationItemFilter, setStationItemFilter] = useState<
-    "all" | "unassigned" | number
-  >("all");
 
   // Station Template Editor Sheet state
   const [editingTemplate, setEditingTemplate] = useState<
@@ -192,6 +192,14 @@ export function BranchCountAssignmentsClient({
     (ids) => ids.length > 0,
   ).length;
 
+  const totalAssignedUniqueItems = useMemo(() => {
+    const set = new Set<number>();
+    for (const ids of Object.values(selectionByEmployee)) {
+      for (const id of ids) set.add(id);
+    }
+    return set.size;
+  }, [selectionByEmployee]);
+
   const orderedEmployees = useMemo(() => {
     return [...filteredEmployees].sort((left, right) => {
       const leftAssigned =
@@ -226,7 +234,6 @@ export function BranchCountAssignmentsClient({
 
   function openStationAssignment(template: CountTemplate) {
     setActiveStationTemplateId(template.id);
-    setStationItemFilter("all");
     const currentDraft: Record<number, number | null> = {};
     const existingStaff = new Set<number>();
 
@@ -277,7 +284,6 @@ export function BranchCountAssignmentsClient({
     setStationStaffIds([]);
     setStationAssignmentsDraft({});
     setStationCandidateEmpId("");
-    setStationItemFilter("all");
   }
 
   function addStaffToStation(empId: number) {
@@ -346,6 +352,24 @@ export function BranchCountAssignmentsClient({
       ),
     }));
 
+    // Optimistically update local selections immediately
+    setSelectionByEmployee((current) => {
+      const next = { ...current };
+      for (const empIdStr of Object.keys(next)) {
+        next[empIdStr] = (next[empIdStr] ?? []).filter(
+          (id) => !activeStation.ingredientIds.includes(id),
+        );
+      }
+      for (const assignment of payloadAssignments) {
+        const key = String(assignment.employeeId);
+        const existing = next[key] ?? [];
+        next[key] = Array.from(
+          new Set([...existing, ...assignment.ingredientIds]),
+        );
+      }
+      return next;
+    });
+
     startTransition(async () => {
       const result = await setStationCountAssignments({
         branchId: data.branchId,
@@ -357,6 +381,7 @@ export function BranchCountAssignmentsClient({
 
       if (!result.success) {
         toast.error(result.error ?? INVENTORY_VI.countStationSaveFailed);
+        setSelectionByEmployee(seedSelections(data));
         return;
       }
 
@@ -474,29 +499,48 @@ export function BranchCountAssignmentsClient({
     );
   }
 
+  function toggleStationShortcut(template: CountTemplate) {
+    const templateIds = template.ingredientIds;
+    const allIncluded = templateIds.length > 0 && templateIds.every((id) => draftIds.includes(id));
+    if (allIncluded) {
+      setDraftIds((current) =>
+        current.filter((id) => !templateIds.includes(id)),
+      );
+    } else {
+      setDraftIds((current) => Array.from(new Set([...current, ...templateIds])));
+    }
+  }
+
   function saveAssignment() {
     if (!activeEmployee || data.selectedLocationId == null) {
       return;
     }
     const nextIds = [...draftIds];
+    const targetEmpId = activeEmployee.id;
+
+    // Optimistically update local selections
+    setSelectionByEmployee((current) => ({
+      ...current,
+      [String(targetEmpId)]: nextIds,
+    }));
+
     startTransition(async () => {
       const result = await setCountAssignments({
         branchId: data.branchId,
         locationId: data.selectedLocationId as number,
-        employeeId: activeEmployee.id,
+        employeeId: targetEmpId,
         shiftId: data.selectedShiftId,
         ingredientIds: nextIds,
       });
       if (!result.success) {
         toast.error(result.error ?? INVENTORY_VI.countAssignSaveFailed);
+        setSelectionByEmployee(seedSelections(data));
         return;
       }
-      setSelectionByEmployee((current) => ({
-        ...current,
-        [String(activeEmployee.id)]: nextIds,
-      }));
       toast.success(
-        INVENTORY_VI.countAssignSaved(activeEmployee.name, nextIds.length),
+        nextIds.length === 0
+          ? INVENTORY_VI.countAssignRemoved(activeEmployee.name)
+          : INVENTORY_VI.countAssignSaved(activeEmployee.name, nextIds.length),
       );
       closeEditor();
       router.refresh();
@@ -516,130 +560,130 @@ export function BranchCountAssignmentsClient({
 
   const content = (
     <div className="flex flex-col gap-4">
-      {/* Scope pickers: Location & Shift */}
-      <div className="grid gap-2 sm:grid-cols-2">
-        <div className="flex min-w-0 flex-col gap-2">
-          <Label htmlFor="branch-count-assignment-location">
-            {INVENTORY_VI.warehouseShort}
-          </Label>
-          <Select
-            value={
-              data.selectedLocationId == null
-                ? ""
-                : String(data.selectedLocationId)
-            }
-            onValueChange={(value) =>
-              replaceScope(Number(value), data.selectedShiftId)
-            }
-          >
-            <SelectTrigger
-              id="branch-count-assignment-location"
-              size="touch"
-              className="w-full"
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {data.locationOptions.map((location) => (
-                <SelectItem
-                  key={location.id}
-                  value={String(location.id)}
-                  size="touch"
-                >
-                  {location.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {data.shiftOptions.length > 0 ? (
-          <div className="flex min-w-0 flex-col gap-2">
-            <Label htmlFor="branch-count-assignment-shift">
-              {INVENTORY_VI.countAssignShiftLabel}
+      {/* Scope selector: Location & Shift */}
+      <div className="flex flex-col gap-3">
+        {data.locationOptions.length > 1 ? (
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <Label htmlFor="branch-count-assignment-location">
+              {INVENTORY_VI.warehouseShort}
             </Label>
             <Select
               value={
-                data.selectedShiftId == null
-                  ? ALL_SHIFTS_VALUE
-                  : String(data.selectedShiftId)
+                data.selectedLocationId == null
+                  ? ""
+                  : String(data.selectedLocationId)
               }
               onValueChange={(value) =>
-                replaceScope(
-                  data.selectedLocationId,
-                  value === ALL_SHIFTS_VALUE ? null : Number(value),
-                )
+                replaceScope(Number(value), data.selectedShiftId)
               }
             >
               <SelectTrigger
-                id="branch-count-assignment-shift"
+                id="branch-count-assignment-location"
                 size="touch"
                 className="w-full"
               >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={ALL_SHIFTS_VALUE} size="touch">
-                  {INVENTORY_VI.countAssignAllShifts}
-                </SelectItem>
-                {data.shiftOptions.map((shift) => (
+                {data.locationOptions.map((location) => (
                   <SelectItem
-                    key={shift.id}
-                    value={String(shift.id)}
+                    key={location.id}
+                    value={String(location.id)}
                     size="touch"
                   >
-                    {shift.name} · {formatVNClockTime(shift.startTime)}-
-                    {formatVNClockTime(shift.endTime)}
+                    {location.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
         ) : null}
-      </div>
 
-      {data.shiftOptions.length > 0 ? (
-        <div
-          className="no-scrollbar flex touch-pan-x gap-1.5 overflow-x-auto overscroll-x-contain pb-1"
-          role="group"
-          aria-label={INVENTORY_VI.countAssignShiftLabel}
-        >
-          <Button
-            type="button"
-            variant={data.selectedShiftId == null ? "secondary" : "outline"}
-            size="touch"
-            aria-pressed={data.selectedShiftId == null}
-            className="shrink-0 gap-2 px-3"
-            onClick={() => replaceScope(data.selectedLocationId, null)}
-          >
-            <span className="whitespace-nowrap">
-              {INVENTORY_VI.countAssignAllShifts}
-            </span>
-          </Button>
-          {data.shiftOptions.map((shift) => {
-            const active = data.selectedShiftId === shift.id;
-            return (
+        {data.shiftOptions.length > 0 ? (
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-semibold text-muted-foreground">
+                {INVENTORY_VI.countAssignShiftLabel}
+              </Label>
+              <span className="text-xs text-muted-foreground">
+                {INVENTORY_VI.countAssignProgressSummary(
+                  assignedEmployeeCount,
+                  data.employees.length,
+                  totalAssignedUniqueItems,
+                  data.ingredients.length,
+                )}
+              </span>
+            </div>
+            <div
+              className="no-scrollbar flex touch-pan-x gap-1.5 overflow-x-auto overscroll-x-contain pb-1"
+              role="group"
+              aria-label={INVENTORY_VI.countAssignShiftLabel}
+            >
               <Button
-                key={shift.id}
                 type="button"
-                variant={active ? "secondary" : "outline"}
+                variant={data.selectedShiftId == null ? "secondary" : "outline"}
                 size="touch"
-                aria-pressed={active}
+                aria-pressed={data.selectedShiftId == null}
                 className="shrink-0 gap-2 px-3"
-                onClick={() => replaceScope(data.selectedLocationId, shift.id)}
+                onClick={() => replaceScope(data.selectedLocationId, null)}
               >
-                <span className="whitespace-nowrap">{shift.name}</span>
-                <span className="text-xs text-muted-foreground">
-                  ({formatVNClockTime(shift.startTime)}-{formatVNClockTime(shift.endTime)})
+                <span className="whitespace-nowrap">
+                  {INVENTORY_VI.countAssignAllShifts}
                 </span>
               </Button>
-            );
-          })}
-        </div>
-      ) : null}
+              {data.shiftOptions.map((shift) => {
+                const active = data.selectedShiftId === shift.id;
+                return (
+                  <Button
+                    key={shift.id}
+                    type="button"
+                    variant={active ? "secondary" : "outline"}
+                    size="touch"
+                    aria-pressed={active}
+                    className="shrink-0 gap-2 px-3"
+                    onClick={() =>
+                      replaceScope(data.selectedLocationId, shift.id)
+                    }
+                  >
+                    <span className="whitespace-nowrap">{shift.name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      ({formatVNClockTime(shift.startTime)}-
+                      {formatVNClockTime(shift.endTime)})
+                    </span>
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
+      </div>
 
-      {/* SECTION 1: Station Role Templates */}
-      {data.selectedLocationId != null ? (
+      {/* View Switcher: Stations vs Staff */}
+      <div className="flex items-center gap-1 rounded-md bg-muted p-1">
+        <Button
+          type="button"
+          variant={viewMode === "stations" ? "default" : "ghost"}
+          size="touch"
+          className="flex-1 gap-2 text-xs font-medium"
+          onClick={() => setViewMode("stations")}
+        >
+          <IconLayers className="size-4" />
+          <span>{INVENTORY_VI.countViewByStation(data.templates.length)}</span>
+        </Button>
+        <Button
+          type="button"
+          variant={viewMode === "staff" ? "default" : "ghost"}
+          size="touch"
+          className="flex-1 gap-2 text-xs font-medium"
+          onClick={() => setViewMode("staff")}
+        >
+          <IconUsers className="size-4" />
+          <span>{INVENTORY_VI.countViewByStaff(data.employees.length)}</span>
+        </Button>
+      </div>
+
+      {/* VIEW 1: Station Role Templates */}
+      {viewMode === "stations" ? (
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -747,22 +791,21 @@ export function BranchCountAssignmentsClient({
                   <div className="flex items-center gap-2 border-t pt-2">
                     <Button
                       type="button"
-                      variant="outline"
-                      size="touch"
-                      className="flex-1"
-                      onClick={() => openTemplateEditor(template)}
-                    >
-                      <IconPencil className="size-3.5" />
-                      {INVENTORY_VI.countStationEditAction}
-                    </Button>
-                    <Button
-                      type="button"
                       size="touch"
                       className="flex-1"
                       onClick={() => openStationAssignment(template)}
                     >
                       <IconUsers className="size-3.5" />
                       {INVENTORY_VI.countStationAssignAction}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="touch"
+                      aria-label={INVENTORY_VI.countStationEditAction}
+                      onClick={() => openTemplateEditor(template)}
+                    >
+                      <IconPencil className="size-3.5" />
                     </Button>
                   </div>
                 </Item>
@@ -772,9 +815,9 @@ export function BranchCountAssignmentsClient({
         </div>
       ) : null}
 
-      {/* SECTION 2: Staff Roster Overview */}
-      <div className="flex flex-col gap-3 pt-2">
-        <div className="flex items-center justify-between">
+      {/* VIEW 2: Staff Roster Overview */}
+      {viewMode === "staff" ? (
+        <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               {INVENTORY_VI.staffRosterTitle}
@@ -783,146 +826,140 @@ export function BranchCountAssignmentsClient({
               {INVENTORY_VI.staffRosterDescription}
             </span>
           </div>
-        </div>
 
-        {/* Role Filter & Search */}
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <InputGroup className="min-h-12 flex-1">
-            <InputGroupAddon>
-              <IconSearch className="size-4" />
-            </InputGroupAddon>
-            <InputGroupInput
-              aria-label={INVENTORY_VI.staffSearchPlaceholder}
-              name="staffSearch"
-              type="search"
-              autoComplete="off"
-              value={staffSearch}
-              onChange={(e) => setStaffSearch(e.target.value)}
-              placeholder={INVENTORY_VI.staffSearchPlaceholder}
-              inputMode="search"
-            />
-          </InputGroup>
+          {/* Role Filter & Search */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <InputGroup className="min-h-12 flex-1">
+              <InputGroupAddon>
+                <IconSearch className="size-4" />
+              </InputGroupAddon>
+              <InputGroupInput
+                aria-label={INVENTORY_VI.staffSearchPlaceholder}
+                name="staffSearch"
+                type="search"
+                autoComplete="off"
+                value={staffSearch}
+                onChange={(e) => setStaffSearch(e.target.value)}
+                placeholder={INVENTORY_VI.staffSearchPlaceholder}
+                inputMode="search"
+              />
+            </InputGroup>
 
-          {availableRoles.length > 0 ? (
-            <div className="flex flex-wrap gap-1">
-              <Button
-                type="button"
-                variant={
-                  selectedRoleFilter === ALL_ROLES_VALUE ? "default" : "outline"
-                }
-                size="touch"
-                onClick={() => setSelectedRoleFilter(ALL_ROLES_VALUE)}
-              >
-                {INVENTORY_VI.roleFilterAll}
-              </Button>
-              {availableRoles.map((role) => (
+            {availableRoles.length > 0 ? (
+              <div className="flex flex-wrap gap-1">
                 <Button
-                  key={role}
                   type="button"
                   variant={
-                    selectedRoleFilter === role ? "default" : "outline"
+                    selectedRoleFilter === ALL_ROLES_VALUE
+                      ? "default"
+                      : "outline"
                   }
                   size="touch"
-                  onClick={() => setSelectedRoleFilter(role)}
+                  onClick={() => setSelectedRoleFilter(ALL_ROLES_VALUE)}
                 >
-                  {role}
+                  {INVENTORY_VI.roleFilterAll}
                 </Button>
-              ))}
-            </div>
-          ) : null}
-        </div>
+                {availableRoles.map((role) => (
+                  <Button
+                    key={role}
+                    type="button"
+                    variant={
+                      selectedRoleFilter === role ? "default" : "outline"
+                    }
+                    size="touch"
+                    onClick={() => setSelectedRoleFilter(role)}
+                  >
+                    {role}
+                  </Button>
+                ))}
+              </div>
+            ) : null}
+          </div>
 
-        {data.selectedLocationId == null ? (
-          <AppEmptyState
-            compact
-            mode="no-data"
-            icon={<IconClipboardCheck />}
-            title={INVENTORY_VI.countAssignNoWarehouseTitle}
-            description={INVENTORY_VI.countAssignNoWarehouseDescription}
-          />
-        ) : orderedEmployees.length === 0 ? (
-          <AppEmptyState
-            compact
-            mode="no-results"
-            title={INVENTORY_VI.noStaffMatches}
-          />
-        ) : (
-          <ItemGroup className="grid gap-2 lg:grid-cols-2">
-            {orderedEmployees.map((employee) => {
-              const selectedIds =
-                selectionByEmployee[String(employee.id)] ?? [];
-              return (
-                <Item
-                  key={employee.id}
-                  variant="outline"
-                  className="min-h-20 min-w-0 flex-nowrap touch-manipulation"
-                  render={
-                    <button
-                      type="button"
-                      onClick={() => openEmployee(employee)}
-                    />
-                  }
-                >
-                  <ItemContent className="min-w-0 gap-1 text-left">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <ItemTitle size="heading">{employee.name}</ItemTitle>
-                      {employee.positionName ? (
-                        <Badge variant="outline" className="text-xs">
-                          {employee.positionName}
-                        </Badge>
-                      ) : null}
-                      {data.selectedShiftId != null &&
-                      employee.scheduledShiftIds?.includes(
-                        data.selectedShiftId,
-                      ) ? (
-                        <Badge
-                          variant="outline"
-                          className="px-1.5 py-0 text-xs text-primary"
-                        >
-                          {INVENTORY_VI.countStationOnDutyBadge}
-                        </Badge>
-                      ) : null}
-                    </div>
-                    <ItemDescription className="line-clamp-none flex flex-wrap gap-1">
-                      {selectedIds.slice(0, 4).map((ingredientId) => {
-                        const ingredientName =
-                          ingredientById.get(ingredientId)?.name ??
-                          `#${ingredientId}`;
-                        return (
-                          <Badge
-                            key={ingredientId}
-                            variant="secondary"
-                            className="min-w-0 max-w-full sm:max-w-48"
-                            aria-label={ingredientName}
-                            title={ingredientName}
-                          >
-                            <span className="min-w-0 truncate">
-                              {ingredientName}
-                            </span>
+          {orderedEmployees.length === 0 ? (
+            <AppEmptyState
+              compact
+              mode="no-results"
+              title={INVENTORY_VI.noStaffMatches}
+            />
+          ) : (
+            <ItemGroup className="grid gap-2 lg:grid-cols-2">
+              {orderedEmployees.map((employee) => {
+                const selectedIds =
+                  selectionByEmployee[String(employee.id)] ?? [];
+                return (
+                  <Item
+                    key={employee.id}
+                    variant="outline"
+                    className="min-h-20 min-w-0 flex-nowrap touch-manipulation"
+                    render={
+                      <button
+                        type="button"
+                        onClick={() => openEmployee(employee)}
+                      />
+                    }
+                  >
+                    <ItemContent className="min-w-0 gap-1 text-left">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <ItemTitle size="heading">{employee.name}</ItemTitle>
+                        {employee.positionName ? (
+                          <Badge variant="outline" className="text-xs">
+                            {employee.positionName}
                           </Badge>
-                        );
-                      })}
-                      {selectedIds.length > 4 ? (
-                        <Badge variant="secondary">
-                          +{selectedIds.length - 4}
-                        </Badge>
-                      ) : null}
-                    </ItemDescription>
-                  </ItemContent>
-                  <ItemActions>
-                    <Badge
-                      variant={selectedIds.length > 0 ? "success" : "outline"}
-                    >
-                      {selectedIds.length}
-                    </Badge>
-                    <IconChevronRight className="size-4 text-muted-foreground" />
-                  </ItemActions>
-                </Item>
-              );
-            })}
-          </ItemGroup>
-        )}
-      </div>
+                        ) : null}
+                        {data.selectedShiftId != null &&
+                        employee.scheduledShiftIds?.includes(
+                          data.selectedShiftId,
+                        ) ? (
+                          <Badge
+                            variant="outline"
+                            className="px-1.5 py-0 text-xs text-primary"
+                          >
+                            {INVENTORY_VI.countStationOnDutyBadge}
+                          </Badge>
+                        ) : null}
+                      </div>
+                      <ItemDescription className="line-clamp-none flex flex-wrap gap-1">
+                        {selectedIds.slice(0, 4).map((ingredientId) => {
+                          const ingredientName =
+                            ingredientById.get(ingredientId)?.name ??
+                            `#${ingredientId}`;
+                          return (
+                            <Badge
+                              key={ingredientId}
+                              variant="secondary"
+                              className="min-w-0 max-w-full sm:max-w-48"
+                              aria-label={ingredientName}
+                              title={ingredientName}
+                            >
+                              <span className="min-w-0 truncate">
+                                {ingredientName}
+                              </span>
+                            </Badge>
+                          );
+                        })}
+                        {selectedIds.length > 4 ? (
+                          <Badge variant="secondary">
+                            +{selectedIds.length - 4}
+                          </Badge>
+                        ) : null}
+                      </ItemDescription>
+                    </ItemContent>
+                    <ItemActions>
+                      <Badge
+                        variant={selectedIds.length > 0 ? "success" : "outline"}
+                      >
+                        {selectedIds.length}
+                      </Badge>
+                      <IconChevronRight className="size-4 text-muted-foreground" />
+                    </ItemActions>
+                  </Item>
+                );
+              })}
+            </ItemGroup>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 
@@ -982,16 +1019,6 @@ export function BranchCountAssignmentsClient({
     templateSelectionFilter,
   ]);
 
-  const stationVisibleIngredients = useMemo(() => {
-    if (!activeStation) return [];
-    return activeStation.ingredientIds.filter((ingId) => {
-      const assignedEmpId = stationAssignmentsDraft[ingId] ?? null;
-      if (stationItemFilter === "all") return true;
-      if (stationItemFilter === "unassigned") return assignedEmpId === null;
-      return assignedEmpId === stationItemFilter;
-    });
-  }, [activeStation, stationAssignmentsDraft, stationItemFilter]);
-
   const { recommendedStationEmployees, otherStationEmployees } = useMemo(() => {
     if (!activeStation) {
       return {
@@ -1049,7 +1076,13 @@ export function BranchCountAssignmentsClient({
             ? INVENTORY_VI.countStationAssignSheetTitle(activeStation.name)
             : ""
         }
-        description={INVENTORY_VI.countStationAssignSheetDescription}
+        description={
+          activeStation
+            ? INVENTORY_VI.countStationItemsCount(
+                activeStation.ingredientIds.length,
+              )
+            : ""
+        }
         side="bottom"
         showCloseButton={false}
         contentClassName="max-h-dvh-95 flex flex-col overflow-hidden bg-background sm:mx-auto sm:max-w-3xl"
@@ -1068,7 +1101,7 @@ export function BranchCountAssignmentsClient({
             <Button
               type="button"
               size="touch-lg"
-              disabled={isPending || !activeStation}
+              disabled={isPending || !activeStation || stationStaffIds.length === 0}
               onClick={saveStationAssignment}
             >
               {isPending ? <Spinner className="size-5" /> : null}
@@ -1077,16 +1110,16 @@ export function BranchCountAssignmentsClient({
           </>
         }
       >
-        <div className="flex shrink-0 flex-col gap-2 px-3 pb-2 pt-1 sm:px-4">
-          {/* Station Staff Section */}
+        <div className="flex shrink-0 flex-col gap-3 px-3 pb-3 pt-2 sm:px-4">
+          {/* Step 1: Staff Selection */}
           <div className="flex flex-col gap-2">
             <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {INVENTORY_VI.countStationStaffTitle} ({stationStaffIds.length})
             </span>
 
-            {/* Currently Selected Staff Chips */}
+            {/* Currently selected staff chips */}
             {stationStaffIds.length > 0 ? (
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-1.5">
                 {stationStaffIds.map((empId) => {
                   const emp = employeeById.get(empId);
                   const isOnShift =
@@ -1098,21 +1131,13 @@ export function BranchCountAssignmentsClient({
                     <Badge
                       key={empId}
                       variant="secondary"
-                      className="flex items-center gap-2 py-1 pl-2.5 pr-1 text-sm font-medium"
+                      className="flex items-center gap-1.5 py-1 pl-2.5 pr-1 text-sm font-medium"
                     >
                       <span>{emp?.name ?? `#${empId}`}</span>
-                      {emp?.positionName ? (
-                        <span className="text-xs text-muted-foreground">
-                          · {emp.positionName}
-                        </span>
-                      ) : null}
                       {isOnShift ? (
-                        <Badge
-                          variant="outline"
-                          className="px-1 py-0 text-xs text-primary"
-                        >
-                          {INVENTORY_VI.countStationOnDutyBadge}
-                        </Badge>
+                        <span className="text-xs text-primary font-semibold">
+                          • {INVENTORY_VI.countStationOnDutyBadge}
+                        </span>
                       ) : null}
                       <Button
                         type="button"
@@ -1130,52 +1155,36 @@ export function BranchCountAssignmentsClient({
               </div>
             ) : null}
 
-            {/* Quick-add Recommended Shift & Role Staff (1-Touch Chips) */}
+            {/* Quick-add recommended staff */}
             {recommendedStationEmployees.length > 0 ? (
-              <NoteCallout
-                tone="muted"
-                icon={<IconZap className="size-3.5 text-primary" />}
-                label={INVENTORY_VI.countStationRecommendedStaffTitle}
-                className="flex-col items-stretch gap-2"
-              >
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {recommendedStationEmployees.map((emp) => {
-                    const isOnShift =
-                      data.selectedShiftId != null &&
-                      Boolean(
-                        emp.scheduledShiftIds?.includes(data.selectedShiftId),
-                      );
-                    return (
-                      <Button
-                        key={emp.id}
-                        type="button"
-                        variant="outline"
-                        size="touch"
-                        className="h-8 min-h-0 gap-2 px-2 text-xs font-medium hover:bg-accent"
-                        onClick={() => addStaffToStation(emp.id)}
-                      >
-                        <IconPlus className="size-3 text-primary" />
-                        <span>{emp.name}</span>
-                        {emp.positionName ? (
-                          <span className="text-xs text-muted-foreground">
-                            ({emp.positionName})
-                          </span>
-                        ) : null}
-                        {isOnShift ? (
-                          <span className="text-xs font-semibold text-primary">
-                            • {INVENTORY_VI.countStationOnDutyBadge}
-                          </span>
-                        ) : null}
-                      </Button>
-                    );
-                  })}
-                </div>
-              </NoteCallout>
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <span className="text-xs text-muted-foreground">
+                  {INVENTORY_VI.countStationSuggestedStaff}
+                </span>
+                {recommendedStationEmployees.map((emp) => (
+                  <Button
+                    key={emp.id}
+                    type="button"
+                    variant="outline"
+                    size="touch"
+                    className="h-8 min-h-0 gap-1.5 px-2 text-xs font-medium"
+                    onClick={() => addStaffToStation(emp.id)}
+                  >
+                    <IconPlus className="size-3 text-primary" />
+                    <span>{emp.name}</span>
+                    {emp.positionName ? (
+                      <span className="text-muted-foreground">
+                        ({emp.positionName})
+                      </span>
+                    ) : null}
+                  </Button>
+                ))}
+              </div>
             ) : null}
 
-            {/* Other Branch Staff Selector */}
+            {/* Other branch staff dropdown */}
             {otherStationEmployees.length > 0 ? (
-              <div className="flex items-center gap-2 pt-0.5">
+              <div className="flex items-center gap-2 pt-1">
                 <Select
                   value={stationCandidateEmpId}
                   onValueChange={(val) => {
@@ -1184,11 +1193,7 @@ export function BranchCountAssignmentsClient({
                 >
                   <SelectTrigger size="touch" className="h-8 min-w-48 text-xs">
                     <SelectValue
-                      placeholder={
-                        recommendedStationEmployees.length > 0
-                          ? INVENTORY_VI.countStationOtherStaffTitle
-                          : INVENTORY_VI.countStationSelectStaffPlaceholder
-                      }
+                      placeholder={INVENTORY_VI.countStationSelectStaffPlaceholder}
                     />
                   </SelectTrigger>
                   <SelectContent>
@@ -1208,25 +1213,39 @@ export function BranchCountAssignmentsClient({
             ) : null}
           </div>
 
-          {/* Quick Action Shortcuts */}
-          {stationStaffIds.length > 0 && activeStation ? (
-            <div className="flex flex-wrap gap-2 border-t pt-2">
-              {stationStaffIds.map((empId) => {
-                const emp = employeeById.get(empId);
-                return (
-                  <Button
-                    key={empId}
-                    type="button"
-                    variant="outline"
-                    size="touch"
-                    className="h-8 text-xs font-medium"
-                    onClick={() => assignAllStationItemsTo(empId)}
-                  >
-                    {INVENTORY_VI.countStationAssignAllTo(emp?.name ?? "")}
-                  </Button>
-                );
-              })}
-              {stationStaffIds.length > 1 ? (
+          {/* Step 2: Distribution summary / helpers */}
+          {stationStaffIds.length === 0 ? (
+            <NoteCallout
+              tone="muted"
+              label={INVENTORY_VI.countStationNoStaffSelected}
+              className="mt-1"
+            >
+              <span className="text-xs text-muted-foreground">
+                {INVENTORY_VI.countStationPickStaffHint}
+              </span>
+            </NoteCallout>
+          ) : stationStaffIds.length === 1 ? (
+            <NoteCallout
+              tone="muted"
+              icon={<IconCheck className="size-4 text-primary" />}
+              label={INVENTORY_VI.countStationAutoAssignTitle}
+              className="mt-1"
+            >
+              <span className="text-xs">
+                {INVENTORY_VI.countStationAutoAssignBody(
+                  activeStation?.ingredientIds.length ?? 0,
+                  employeeById.get(stationStaffIds[0]!)?.name ?? "",
+                )}
+              </span>
+            </NoteCallout>
+          ) : (
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-2">
+              <span className="text-xs font-semibold text-muted-foreground">
+                {INVENTORY_VI.countStationDistributeHeader(
+                  stationStaffIds.length,
+                )}
+              </span>
+              <div className="flex flex-wrap gap-1.5">
                 <Button
                   type="button"
                   variant="outline"
@@ -1234,167 +1253,136 @@ export function BranchCountAssignmentsClient({
                   className="h-8 text-xs font-medium"
                   onClick={splitStationItemsEvenly}
                 >
-                  <IconSparkles className="size-3.5" />
+                  <IconSparkles className="size-3.5 mr-1" />
                   {INVENTORY_VI.countStationSplitEvenly}
                 </Button>
-              ) : null}
-              <Button
-                type="button"
-                variant="ghost"
-                size="touch"
-                className="h-8 text-xs text-destructive"
-                onClick={clearStationAssignments}
-              >
-                {INVENTORY_VI.countStationClearAssignments}
-              </Button>
+                {stationStaffIds.map((empId) => {
+                  const emp = employeeById.get(empId);
+                  return (
+                    <Button
+                      key={empId}
+                      type="button"
+                      variant="outline"
+                      size="touch"
+                      className="h-8 text-xs"
+                      onClick={() => assignAllStationItemsTo(empId)}
+                    >
+                      {INVENTORY_VI.countStationAssignAllTo(emp?.name ?? "")}
+                    </Button>
+                  );
+                })}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="touch"
+                  className="h-8 text-xs text-destructive"
+                  onClick={clearStationAssignments}
+                >
+                  {INVENTORY_VI.countStationClearAssignments}
+                </Button>
+              </div>
             </div>
-          ) : null}
-
-          {/* Item Filter Tabs */}
-          {activeStation && activeStation.ingredientIds.length > 0 ? (
-            <div className="flex flex-wrap gap-1 border-t pt-2">
-              <Button
-                type="button"
-                variant={stationItemFilter === "all" ? "default" : "outline"}
-                size="touch"
-                className="h-8 text-xs font-medium"
-                onClick={() => setStationItemFilter("all")}
-              >
-                {INVENTORY_VI.countTabAllWithCount(
-                  activeStation.ingredientIds.length,
-                )}
-              </Button>
-              <Button
-                type="button"
-                variant={
-                  stationItemFilter === "unassigned" ? "default" : "outline"
-                }
-                size="touch"
-                className="h-8 text-xs font-medium"
-                onClick={() => setStationItemFilter("unassigned")}
-              >
-                {INVENTORY_VI.countTabUnassignedWithCount(
-                  activeStation.ingredientIds.filter(
-                    (id) => (stationAssignmentsDraft[id] ?? null) === null,
-                  ).length,
-                )}
-              </Button>
-              {stationStaffIds.map((empId) => {
-                const emp = employeeById.get(empId);
-                const count = activeStation.ingredientIds.filter(
-                  (id) => stationAssignmentsDraft[id] === empId,
-                ).length;
-                return (
-                  <Button
-                    key={empId}
-                    type="button"
-                    variant={
-                      stationItemFilter === empId ? "default" : "outline"
-                    }
-                    size="touch"
-                    className="h-8 text-xs font-medium"
-                    onClick={() => setStationItemFilter(empId)}
-                  >
-                    {emp?.name ?? `#${empId}`} ({count})
-                  </Button>
-                );
-              })}
-            </div>
-          ) : null}
+          )}
         </div>
 
-        {/* Station Ingredients Matrix List - Direct Native Smooth Scroll */}
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4 sm:px-4">
-          <div className="flex flex-col gap-2">
-            {stationVisibleIngredients.map((ingId) => {
-              const ing = ingredientById.get(ingId);
-              const currentEmpId = stationAssignmentsDraft[ingId] ?? null;
-              const assignedEmp =
-                currentEmpId != null ? employeeById.get(currentEmpId) : null;
+        {/* Station Ingredients List */}
+        {activeStation && activeStation.ingredientIds.length > 0 ? (
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4 sm:px-4">
+            <div className="flex flex-col gap-2">
+              {activeStation.ingredientIds.map((ingId) => {
+                const ing = ingredientById.get(ingId);
+                const currentEmpId = stationAssignmentsDraft[ingId] ?? null;
+                const assignedEmp =
+                  currentEmpId != null ? employeeById.get(currentEmpId) : null;
 
-              return (
-                <Item
-                  key={ingId}
-                  variant="outline"
-                  className={cn(
-                    "flex-col items-start gap-2 p-3 transition-colors",
-                    currentEmpId != null
-                      ? "border-primary bg-accent"
-                      : "border-border bg-background",
-                  )}
-                >
-                  <div className="flex w-full items-center justify-between gap-2">
-                    <span className="font-medium text-foreground">
-                      {ing?.name ?? `#${ingId}`}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      {ing?.unit ? (
-                        <Badge variant="outline" className="text-xs">
-                          {ing.unit}
-                        </Badge>
-                      ) : null}
-                      {assignedEmp ? (
-                        <Badge
-                          variant="success"
-                          className="text-xs font-medium"
-                        >
-                          {INVENTORY_VI.countBadgeAssignedTo(assignedEmp.name)}
-                        </Badge>
-                      ) : (
-                        <Badge
-                          variant="outline"
-                          className="text-xs text-muted-foreground"
-                        >
-                          {INVENTORY_VI.countStationUnassigned}
-                        </Badge>
-                      )}
+                return (
+                  <Item
+                    key={ingId}
+                    variant="outline"
+                    className={cn(
+                      "flex-col items-start gap-2 p-3 transition-colors",
+                      currentEmpId != null
+                        ? "border-primary bg-accent"
+                        : "border-border bg-background",
+                    )}
+                  >
+                    <div className="flex w-full items-center justify-between gap-2">
+                      <span className="font-medium text-foreground">
+                        {ing?.name ?? `#${ingId}`}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {ing?.unit ? (
+                          <Badge variant="outline" className="text-xs">
+                            {ing.unit}
+                          </Badge>
+                        ) : null}
+                        {assignedEmp ? (
+                          <Badge
+                            variant="success"
+                            className="text-xs font-medium"
+                          >
+                            {INVENTORY_VI.countBadgeAssignedTo(assignedEmp.name)}
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className="text-xs text-muted-foreground"
+                          >
+                            {INVENTORY_VI.countStationUnassigned}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Assignee Picker for this specific item */}
-                  <div className="flex flex-wrap gap-1 pt-1">
-                    <Button
-                      type="button"
-                      variant={currentEmpId === null ? "default" : "outline"}
-                      size="touch"
-                      className="h-8 text-xs font-medium"
-                      onClick={() =>
-                        setStationAssignmentsDraft((prev) => ({
-                          ...prev,
-                          [ingId]: null,
-                        }))
-                      }
-                    >
-                      {INVENTORY_VI.countStationUnassigned}
-                    </Button>
-                    {stationStaffIds.map((empId) => {
-                      const emp = employeeById.get(empId);
-                      const isSelected = currentEmpId === empId;
-                      return (
+                    {/* Quick Assignee Pill selection for multi-staff setup */}
+                    {stationStaffIds.length > 1 ? (
+                      <div className="flex flex-wrap gap-1 pt-1">
                         <Button
-                          key={empId}
                           type="button"
-                          variant={isSelected ? "default" : "outline"}
+                          variant={currentEmpId === null ? "default" : "outline"}
                           size="touch"
                           className="h-8 text-xs font-medium"
                           onClick={() =>
                             setStationAssignmentsDraft((prev) => ({
                               ...prev,
-                              [ingId]: empId,
+                              [ingId]: null,
                             }))
                           }
                         >
-                          {isSelected ? <IconCheck className="size-3" /> : null}
-                          {emp?.name ?? `#${empId}`}
+                          {INVENTORY_VI.countStationUnassigned}
                         </Button>
-                      );
-                    })}
-                  </div>
-                </Item>
-              );
-            })}
+                        {stationStaffIds.map((empId) => {
+                          const emp = employeeById.get(empId);
+                          const isSelected = currentEmpId === empId;
+                          return (
+                            <Button
+                              key={empId}
+                              type="button"
+                              variant={isSelected ? "default" : "outline"}
+                              size="touch"
+                              className="h-8 text-xs font-medium"
+                              onClick={() =>
+                                setStationAssignmentsDraft((prev) => ({
+                                  ...prev,
+                                  [ingId]: empId,
+                                }))
+                              }
+                            >
+                              {isSelected ? (
+                                <IconCheck className="size-3 mr-1" />
+                              ) : null}
+                              {emp?.name ?? `#${empId}`}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </Item>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        ) : null}
       </AppSheet>
 
       {/* ─── 2. Station Template Editor Sheet ─────────────────────────── */}
@@ -1589,18 +1577,6 @@ export function BranchCountAssignmentsClient({
                       ) : null}
                     </ItemContent>
                   </div>
-                  {checked ? (
-                    <Badge variant="success" className="shrink-0 font-medium">
-                      {INVENTORY_VI.countBadgeSelected}
-                    </Badge>
-                  ) : (
-                    <Badge
-                      variant="outline"
-                      className="shrink-0 text-muted-foreground"
-                    >
-                      {INVENTORY_VI.countBadgeUnselected}
-                    </Badge>
-                  )}
                 </Item>
               );
             })}
@@ -1646,8 +1622,47 @@ export function BranchCountAssignmentsClient({
         }
       >
         <div className="flex shrink-0 flex-col gap-2 px-3 pb-2 pt-1 sm:px-4">
+          {/* Quick station shortcuts */}
+          {data.templates.length > 0 ? (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-muted-foreground">
+                {INVENTORY_VI.countStationQuickShortcuts}
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {data.templates.map((tpl) => {
+                  const allIncluded = tpl.ingredientIds.length > 0 && tpl.ingredientIds.every((id) =>
+                    draftIds.includes(id),
+                  );
+                  return (
+                    <Button
+                      key={tpl.id}
+                      type="button"
+                      variant={allIncluded ? "secondary" : "outline"}
+                      size="touch"
+                      className="h-8 text-xs gap-1.5 font-medium"
+                      onClick={() => toggleStationShortcut(tpl)}
+                    >
+                      <IconZap
+                        className={cn(
+                          "size-3",
+                          allIncluded
+                            ? "text-primary fill-primary"
+                            : "text-muted-foreground",
+                        )}
+                      />
+                      <span>
+                        {tpl.name} ({tpl.ingredientIds.length})
+                      </span>
+                      {allIncluded ? <IconCheck className="size-3 ml-0.5" /> : null}
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+
           {/* Quick Select & Filter Tabs */}
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-2">
             <div className="flex flex-wrap gap-1">
               <Button
                 type="button"
@@ -1771,21 +1786,6 @@ export function BranchCountAssignmentsClient({
                         ) : null}
                       </ItemContent>
                     </div>
-                    {checked ? (
-                      <Badge
-                        variant="success"
-                        className="shrink-0 font-medium"
-                      >
-                        {INVENTORY_VI.countBadgeSelected}
-                      </Badge>
-                    ) : (
-                      <Badge
-                        variant="outline"
-                        className="shrink-0 text-muted-foreground"
-                      >
-                        {INVENTORY_VI.countBadgeUnselected}
-                      </Badge>
-                    )}
                   </Item>
                 );
               })
