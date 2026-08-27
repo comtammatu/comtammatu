@@ -1456,7 +1456,27 @@ export const inventory = {
       setCompanyWacFinishedGood:
         "Thành phẩm dùng Giá vốn mẻ, không ghi Giá vốn mua.",
       movementTitle: "Lịch sử biến động",
-      movementHint: (count: number) => `${formatCount(count)}/30 gần nhất`,
+      movementHint: (count: number, total?: number) =>
+        total != null && total !== count
+          ? `${formatCount(count)}/${formatCount(total)} biến động`
+          : `${formatCount(count)} biến động`,
+      movementCategories: {
+        all: "Tất cả",
+        consumption: "Tiêu hao",
+        transfer: "Điều chuyển",
+        grn: "Nhập hàng",
+        adjustment: "Kiểm kê & Tồn",
+        waste: "Hủy hỏng",
+      },
+      showMoreMovements: (remaining: number) =>
+        `Xem thêm (${formatCount(remaining)} biến động)`,
+      showLessMovements: "Thu gọn",
+      noMovementCategoryTitle: "Chưa có biến động nhóm này",
+      noMovementCategoryDescription: (categoryName: string) =>
+        `Chưa ghi nhận biến động ${categoryName.toLowerCase()} cho nguyên liệu này.`,
+      clearCategoryFilter: "Xem tất cả",
+      openCategoryModule: (categoryName: string) =>
+        `Mở danh sách ${categoryName}`,
       movementColOperation: "Nghiệp vụ",
       movementColWarehouse: "Kho",
       movementColQuantity: "Số lượng / Phiếu",

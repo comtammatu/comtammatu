@@ -338,7 +338,7 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
   assert.match(detailRouteSource, /loadStockIngredientDetailData/);
   assert.match(detailRouteSource, /routeBranchId: branchId/);
   assert.match(detailRouteSource, /includeValuation: false/);
-  assert.match(detailRouteSource, /movementLimit: 12/);
+  assert.match(detailRouteSource, /movementLimit: (?:12|50)/);
   assert.match(detailRouteSource, /BranchStockIngredientDetail/);
   assert.doesNotMatch(
     detailRouteSource,

@@ -252,7 +252,7 @@ export async function loadStockIngredientDetailData({
 
   if (ingredientResult.error || !ingredientResult.data) notFound();
   const ingredientRow = ingredientResult.data as unknown as IngredientRow;
-  const movementCount = Math.min(Math.max(Math.trunc(movementLimit), 1), 30);
+  const movementCount = Math.min(Math.max(Math.trunc(movementLimit), 1), 100);
   const stockBearingLocationIds = stockBearingLocations.ok
     ? stockBearingLocations.locationIds
     : [];

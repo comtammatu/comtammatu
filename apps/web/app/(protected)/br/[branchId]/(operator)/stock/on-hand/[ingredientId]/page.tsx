@@ -43,7 +43,7 @@ async function OperatorStockIngredientDetailBody({ params }: PageProps) {
     ingredientId,
     routeBranchId: branchId,
     includeValuation: false,
-    movementLimit: 12,
+    movementLimit: 50,
   });
 
   return (

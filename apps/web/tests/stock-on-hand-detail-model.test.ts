@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  categorizeStockMovement,
   computeStockIngredientDetailStatus,
+  countStockMovementsByCategory,
+  filterStockMovements,
   stockDetailListedQuantity,
   stockDetailListedValue,
   stockMovementReferenceHref,
@@ -122,3 +125,87 @@ test("owner stock card header value sums the same visible locations", () => {
     40,
   );
 });
+
+test("categorizeStockMovement maps operation types to domain categories", () => {
+  assert.equal(categorizeStockMovement(makeMovement({ type: "grn_receipt" })), "grn");
+  assert.equal(categorizeStockMovement(makeMovement({ type: "transfer_in" })), "transfer");
+  assert.equal(categorizeStockMovement(makeMovement({ type: "transfer_out" })), "transfer");
+  assert.equal(categorizeStockMovement(makeMovement({ type: "consumption" })), "consumption");
+  assert.equal(
+    categorizeStockMovement(makeMovement({ type: "production_consumption" })),
+    "consumption",
+  );
+  assert.equal(
+    categorizeStockMovement(
+      makeMovement({ type: "consumption", movementSubtype: "writeoff" }),
+    ),
+    "waste",
+  );
+  assert.equal(categorizeStockMovement(makeMovement({ type: "writeoff" })), "waste");
+  assert.equal(
+    categorizeStockMovement(makeMovement({ type: "count_adjustment" })),
+    "adjustment",
+  );
+  assert.equal(
+    categorizeStockMovement(makeMovement({ type: "adjustment" })),
+    "adjustment",
+  );
+  assert.equal(
+    categorizeStockMovement(makeMovement({ type: "production_output" })),
+    "adjustment",
+  );
+});
+
+test("filterStockMovements filters movements by category", () => {
+  const movements: StockIngredientDetailMovement[] = [
+    makeMovement({ id: 1, type: "grn_receipt" }),
+    makeMovement({ id: 2, type: "consumption" }),
+    makeMovement({ id: 3, type: "transfer_in" }),
+    makeMovement({ id: 4, type: "writeoff" }),
+    makeMovement({ id: 5, type: "count_adjustment" }),
+  ];
+
+  assert.equal(filterStockMovements(movements, "all").length, 5);
+  assert.deepEqual(
+    filterStockMovements(movements, "grn").map((m) => m.id),
+    [1],
+  );
+  assert.deepEqual(
+    filterStockMovements(movements, "consumption").map((m) => m.id),
+    [2],
+  );
+  assert.deepEqual(
+    filterStockMovements(movements, "transfer").map((m) => m.id),
+    [3],
+  );
+  assert.deepEqual(
+    filterStockMovements(movements, "waste").map((m) => m.id),
+    [4],
+  );
+  assert.deepEqual(
+    filterStockMovements(movements, "adjustment").map((m) => m.id),
+    [5],
+  );
+});
+
+test("countStockMovementsByCategory accurately counts movements in all categories", () => {
+  const movements: StockIngredientDetailMovement[] = [
+    makeMovement({ id: 1, type: "grn_receipt" }),
+    makeMovement({ id: 2, type: "consumption" }),
+    makeMovement({ id: 3, type: "production_consumption" }),
+    makeMovement({ id: 4, type: "transfer_in" }),
+    makeMovement({ id: 5, type: "transfer_out" }),
+    makeMovement({ id: 6, type: "writeoff" }),
+    makeMovement({ id: 7, type: "count_adjustment" }),
+    makeMovement({ id: 8, type: "adjustment" }),
+  ];
+
+  const counts = countStockMovementsByCategory(movements);
+  assert.equal(counts.all, 8);
+  assert.equal(counts.grn, 1);
+  assert.equal(counts.consumption, 2);
+  assert.equal(counts.transfer, 2);
+  assert.equal(counts.waste, 1);
+  assert.equal(counts.adjustment, 2);
+});
+

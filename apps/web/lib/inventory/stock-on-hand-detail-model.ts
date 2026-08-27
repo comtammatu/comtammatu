@@ -216,3 +216,69 @@ export function stockMovementReferenceHref({
   if (movement.issueId != null) return `/inventory/consumption/${movement.issueId}`;
   return `/inventory/reports?branch=${branchId}`;
 }
+
+export type StockMovementCategoryKey =
+  | "all"
+  | "consumption"
+  | "transfer"
+  | "grn"
+  | "adjustment"
+  | "waste";
+
+export function categorizeStockMovement(
+  movement: StockIngredientDetailMovement,
+): Exclude<StockMovementCategoryKey, "all"> {
+  if (movement.type === "grn_receipt") return "grn";
+  if (movement.type === "transfer_in" || movement.type === "transfer_out") {
+    return "transfer";
+  }
+  if (
+    movement.type === "writeoff" ||
+    (movement.type === "consumption" && movement.movementSubtype === "writeoff")
+  ) {
+    return "waste";
+  }
+  if (
+    movement.type === "consumption" ||
+    movement.type === "production_consumption"
+  ) {
+    return "consumption";
+  }
+  if (
+    movement.type === "count_adjustment" ||
+    movement.type === "adjustment" ||
+    movement.type === "production_output"
+  ) {
+    return "adjustment";
+  }
+  return "adjustment";
+}
+
+export function filterStockMovements(
+  movements: StockIngredientDetailMovement[],
+  category: StockMovementCategoryKey,
+): StockIngredientDetailMovement[] {
+  if (category === "all") return movements;
+  return movements.filter(
+    (movement) => categorizeStockMovement(movement) === category,
+  );
+}
+
+export function countStockMovementsByCategory(
+  movements: StockIngredientDetailMovement[],
+): Record<StockMovementCategoryKey, number> {
+  const counts: Record<StockMovementCategoryKey, number> = {
+    all: movements.length,
+    consumption: 0,
+    transfer: 0,
+    grn: 0,
+    adjustment: 0,
+    waste: 0,
+  };
+  for (const m of movements) {
+    const cat = categorizeStockMovement(m);
+    counts[cat] += 1;
+  }
+  return counts;
+}
+

@@ -1,7 +1,13 @@
+"use client";
+
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft as IconArrowLeft,
+  ChevronDown as IconChevronDown,
+  ChevronUp as IconChevronUp,
   ClipboardList as IconClipboardList,
+  ExternalLink as IconExternalLink,
   MoreHorizontal as IconMore,
   PackageCheck as IconPackageCheck,
   Receipt as IconReceipt,
@@ -34,11 +40,14 @@ import {
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
 import {
+  countStockMovementsByCategory,
+  filterStockMovements,
   stockMovementBadgeVariant,
   stockMovementLabel,
   stockMovementReferenceHref,
   stockMovementReferenceLabel,
   type StockIngredientDetailData,
+  type StockMovementCategoryKey,
 } from "@lib/inventory/stock-on-hand-detail-model";
 import { messages } from "@lib/messages";
 import { PURCHASE_ORDER_CREATE_HREF } from "@lib/inventory/purchase-order-paths";
@@ -138,6 +147,53 @@ function resolvePrimaryActions({
   ];
 }
 
+const MOVEMENT_CATEGORY_KEYS: StockMovementCategoryKey[] = [
+  "all",
+  "consumption",
+  "transfer",
+  "grn",
+  "adjustment",
+  "waste",
+];
+
+function resolveCategoryModuleLink({
+  category,
+  stockBasePath,
+}: {
+  category: StockMovementCategoryKey;
+  stockBasePath: string;
+}): { href: string; label: string } | null {
+  switch (category) {
+    case "consumption":
+      return {
+        href: `${stockBasePath}/consumption`,
+        label: stockCopy.actions.issueStock,
+      };
+    case "transfer":
+      return {
+        href: `${stockBasePath}/transfer`,
+        label: stockCopy.actions.transfer,
+      };
+    case "grn":
+      return {
+        href: `${stockBasePath}/grn`,
+        label: stockCopy.actions.openGrn,
+      };
+    case "adjustment":
+      return {
+        href: `${stockBasePath}/stocktake`,
+        label: stockCopy.actions.stocktake,
+      };
+    case "waste":
+      return {
+        href: `${stockBasePath}/waste`,
+        label: stockCopy.actions.waste,
+      };
+    default:
+      return null;
+  }
+}
+
 export function BranchStockIngredientDetail({
   data,
   stockBasePath,
@@ -149,6 +205,29 @@ export function BranchStockIngredientDetail({
 }) {
   const { ingredient } = data;
   const onHandHref = `${stockBasePath}/on-hand`;
+  const [selectedCategory, setSelectedCategory] =
+    useState<StockMovementCategoryKey>("all");
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const categoryCounts = useMemo(
+    () => countStockMovementsByCategory(data.movements),
+    [data.movements],
+  );
+
+  const filteredMovements = useMemo(
+    () => filterStockMovements(data.movements, selectedCategory),
+    [data.movements, selectedCategory],
+  );
+
+  const INITIAL_VISIBLE_COUNT = 8;
+  const visibleMovements = isExpanded
+    ? filteredMovements
+    : filteredMovements.slice(0, INITIAL_VISIBLE_COUNT);
+  const remainingCount = filteredMovements.length - visibleMovements.length;
+  const categoryModule = resolveCategoryModuleLink({
+    category: selectedCategory,
+    stockBasePath,
+  });
 
   if (data.coreDataLoadFailed) {
     return (
@@ -257,7 +336,10 @@ export function BranchStockIngredientDetail({
 
             <BranchOperatorPanel
               title={detailCopy.movementTitle}
-              headerHint={detailCopy.movementHint(data.movements.length)}
+              headerHint={detailCopy.movementHint(
+                filteredMovements.length,
+                data.movements.length,
+              )}
               icon={IconClipboardList}
               size="sm"
               contentClassName="gap-2"
@@ -271,73 +353,178 @@ export function BranchStockIngredientDetail({
                   description={detailCopy.noMovementDescription}
                 />
               ) : (
-                <ItemGroup className="gap-2" role="list">
-                  {data.movements.map((movement) => {
-                    const signedQty =
-                      movement.quantityChange > 0
-                        ? `+${formatQty(movement.quantityChange)}`
-                        : formatQty(movement.quantityChange);
-                    const referenceLabel =
-                      stockMovementReferenceLabel(movement);
-                    const referenceHref = stockMovementReferenceHref({
-                      movement,
-                      branchId: data.branchId,
-                      branchStockBasePath: stockBasePath,
-                    });
-
-                    return (
-                      <div key={movement.id} role="listitem">
-                        <Item
-                          variant="outline"
-                          className="min-h-16 flex-col items-stretch gap-2 touch-manipulation"
+                <div className="flex min-w-0 flex-col gap-2">
+                  <div
+                    className="flex flex-wrap gap-1.5 pb-1"
+                    role="tablist"
+                    aria-label={detailCopy.movementTitle}
+                  >
+                    {MOVEMENT_CATEGORY_KEYS.map((catKey) => {
+                      const isSelected = selectedCategory === catKey;
+                      const count = categoryCounts[catKey];
+                      return (
+                        <Button
+                          key={catKey}
+                          type="button"
+                          size="xs"
+                          role="tab"
+                          aria-selected={isSelected}
+                          variant={isSelected ? "default" : "outline"}
+                          onClick={() => {
+                            setSelectedCategory(catKey);
+                            setIsExpanded(false);
+                          }}
+                          className="h-7 touch-manipulation rounded-full px-2.5 text-xs font-normal"
                         >
-                          <div className="flex items-start justify-between gap-3">
-                            <ItemContent className="min-w-0 gap-1">
-                              <ItemTitle className="line-clamp-none text-sm font-semibold">
-                                {stockMovementLabel(movement)}
-                              </ItemTitle>
-                              <ItemDescription className="line-clamp-none text-xs">
-                                {formatDateTime(movement.createdAt)}
-                                {movement.locationName
-                                  ? ` · ${movement.locationName}`
-                                  : ""}
-                              </ItemDescription>
-                            </ItemContent>
-                            <Badge
-                              variant={stockMovementBadgeVariant(
-                                movement.quantityChange,
-                              )}
-                              className="shrink-0"
+                          <span>{detailCopy.movementCategories[catKey]}</span>
+                          <Badge
+                            variant={isSelected ? "secondary" : "outline"}
+                            className="ml-1 px-1 py-0 font-mono leading-none"
+                          >
+                            {count}
+                          </Badge>
+                        </Button>
+                      );
+                    })}
+                  </div>
+
+                  {filteredMovements.length === 0 ? (
+                    <AppEmptyState
+                      compact
+                      mode="no-data"
+                      icon={<IconClipboardList />}
+                      title={detailCopy.noMovementCategoryTitle}
+                      description={detailCopy.noMovementCategoryDescription(
+                        detailCopy.movementCategories[selectedCategory],
+                      )}
+                    >
+                      <Button
+                        type="button"
+                        size="touch"
+                        variant="outline"
+                        onClick={() => setSelectedCategory("all")}
+                      >
+                        {detailCopy.clearCategoryFilter}
+                      </Button>
+                    </AppEmptyState>
+                  ) : (
+                    <>
+                      <ItemGroup className="gap-2" role="list">
+                        {visibleMovements.map((movement) => {
+                          const signedQty =
+                            movement.quantityChange > 0
+                              ? `+${formatQty(movement.quantityChange)}`
+                              : formatQty(movement.quantityChange);
+                          const referenceLabel =
+                            stockMovementReferenceLabel(movement);
+                          const referenceHref = stockMovementReferenceHref({
+                            movement,
+                            branchId: data.branchId,
+                            branchStockBasePath: stockBasePath,
+                          });
+
+                          return (
+                            <div key={movement.id} role="listitem">
+                              <Item
+                                variant="outline"
+                                className="min-h-16 flex-col items-stretch gap-2 touch-manipulation"
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <ItemContent className="min-w-0 gap-1">
+                                    <ItemTitle className="line-clamp-none text-sm font-semibold">
+                                      {stockMovementLabel(movement)}
+                                    </ItemTitle>
+                                    <ItemDescription className="line-clamp-none text-xs">
+                                      {formatDateTime(movement.createdAt)}
+                                      {movement.locationName
+                                        ? ` · ${movement.locationName}`
+                                        : ""}
+                                    </ItemDescription>
+                                  </ItemContent>
+                                  <Badge
+                                    variant={stockMovementBadgeVariant(
+                                      movement.quantityChange,
+                                    )}
+                                    className="shrink-0"
+                                  >
+                                    {signedQty} {ingredient.unit}
+                                  </Badge>
+                                </div>
+                                {referenceLabel || movement.reason ? (
+                                  <ItemDescription className="line-clamp-none text-xs">
+                                    {referenceLabel ? (
+                                      <>
+                                        {detailCopy.reference}:{" "}
+                                        {referenceHref ? (
+                                          <Link
+                                            href={referenceHref}
+                                            className="font-medium text-primary hover:underline"
+                                          >
+                                            {referenceLabel}
+                                          </Link>
+                                        ) : (
+                                          referenceLabel
+                                        )}
+                                      </>
+                                    ) : null}
+                                    {referenceLabel && movement.reason
+                                      ? " · "
+                                      : null}
+                                    {movement.reason}
+                                  </ItemDescription>
+                                ) : null}
+                              </Item>
+                            </div>
+                          );
+                        })}
+                      </ItemGroup>
+
+                      {filteredMovements.length > INITIAL_VISIBLE_COUNT ? (
+                        <div className="pt-1">
+                          {!isExpanded ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="touch"
+                              onClick={() => setIsExpanded(true)}
+                              className="w-full text-xs"
                             >
-                              {signedQty} {ingredient.unit}
-                            </Badge>
-                          </div>
-                          {referenceLabel || movement.reason ? (
-                            <ItemDescription className="line-clamp-none text-xs">
-                              {referenceLabel ? (
-                                <>
-                                  {detailCopy.reference}:{" "}
-                                  {referenceHref ? (
-                                    <Link
-                                      href={referenceHref}
-                                      className="font-medium text-primary hover:underline"
-                                    >
-                                      {referenceLabel}
-                                    </Link>
-                                  ) : (
-                                    referenceLabel
-                                  )}
-                                </>
-                              ) : null}
-                              {referenceLabel && movement.reason ? " · " : null}
-                              {movement.reason}
-                            </ItemDescription>
-                          ) : null}
-                        </Item>
-                      </div>
-                    );
-                  })}
-                </ItemGroup>
+                              <IconChevronDown data-icon="inline-start" />
+                              {detailCopy.showMoreMovements(remainingCount)}
+                            </Button>
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="touch"
+                              onClick={() => setIsExpanded(false)}
+                              className="w-full text-xs text-muted-foreground"
+                            >
+                              <IconChevronUp data-icon="inline-start" />
+                              {detailCopy.showLessMovements}
+                            </Button>
+                          )}
+                        </div>
+                      ) : null}
+
+                      {categoryModule ? (
+                        <div className="border-t pt-2 text-center">
+                          <Link
+                            href={categoryModule.href}
+                            className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+                          >
+                            <span>
+                              {detailCopy.openCategoryModule(
+                                categoryModule.label,
+                              )}
+                            </span>
+                            <IconExternalLink className="size-3.5" />
+                          </Link>
+                        </div>
+                      ) : null}
+                    </>
+                  )}
+                </div>
               )}
             </BranchOperatorPanel>
           </div>
