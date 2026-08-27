@@ -34,7 +34,7 @@ export default async function InventorySettingsLayout({
       currentUserHasAnyPermissionAny(UNITS_MASTER_PERMISSIONS),
     ],
   );
-  if (!canOpenSettings) {
+  if (!canOpenSettings && !canManageCatalog && !canManageUnits) {
     redirect(
       buildAccessDeniedPath("insufficient-permission", {
         from: "/inventory/settings",

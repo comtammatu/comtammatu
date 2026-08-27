@@ -4,7 +4,10 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { VALIDATION_VI } from "@comtammatu/shared/messages";
-import { INVENTORY_CATALOG_ROLES, INVENTORY_CATALOG_VIEW_ROLES } from "@comtammatu/shared/auth";
+import {
+  INGREDIENT_CATALOG_WRITE_ROLES,
+  INVENTORY_CATALOG_VIEW_ROLES,
+} from "@comtammatu/shared/auth";
 import { withAction } from "@/_lib/with-action";
 import { messages } from "@lib/messages";
 import { getAuthContextWithAnyPermission } from "../../_lib/auth";
@@ -75,7 +78,7 @@ export async function fetchCategories(): Promise<ActionResult<CategoryRow[]>> {
 
 export const createCategory = withAction(
   {
-    roles: INVENTORY_CATALOG_ROLES,
+    roles: INGREDIENT_CATALOG_WRITE_ROLES,
     schema: categoryCreateSchema,
     anyPermission: CATALOG_MANAGE_PERMISSIONS,
   },
@@ -102,7 +105,7 @@ export const createCategory = withAction(
 
 export const updateCategory = withAction(
   {
-    roles: INVENTORY_CATALOG_ROLES,
+    roles: INGREDIENT_CATALOG_WRITE_ROLES,
     schema: categoryUpdateSchema,
     anyPermission: CATALOG_MANAGE_PERMISSIONS,
   },
@@ -132,7 +135,7 @@ export const updateCategory = withAction(
 
 export const deleteCategory = withAction(
   {
-    roles: INVENTORY_CATALOG_ROLES,
+    roles: INGREDIENT_CATALOG_WRITE_ROLES,
     schema: categoryDeleteSchema,
     anyPermission: CATALOG_MANAGE_PERMISSIONS,
   },

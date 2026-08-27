@@ -24,7 +24,7 @@ export default async function InventorySettingsPage() {
     ],
   );
 
-  if (!canOpenSettings) {
+  if (!canOpenSettings && !canManageCatalog && !canManageUnits) {
     redirect(
       buildAccessDeniedPath("insufficient-permission", {
         from: "/inventory/settings",

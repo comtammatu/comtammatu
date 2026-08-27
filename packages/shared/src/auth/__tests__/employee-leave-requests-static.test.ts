@@ -118,8 +118,8 @@ test("Employee leave permission and generated type mirrors are wired", () => {
   const seededKeys = [...catalogValues.matchAll(/\('([^']+)' *,/g)].map(
     (match) => match[1],
   );
-  assert.equal(seededKeys.length, 111);
-  assert.equal(new Set(seededKeys).size, 111);
+  assert.equal(seededKeys.length, 112);
+  assert.equal(new Set(seededKeys).size, 112);
 
   for (const expected of [
     "leave_requests: {",
