@@ -15,11 +15,11 @@
     "lint": "eslint src/"
   },
   "dependencies": {
-    "@base-ui/react": "1.6.0",
+    "@base-ui/react": "1.7.0",
     "@comtammatu/shared": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "lucide-react": "^1.25.0",
+    "lucide-react": "^1.34.0",
     "@daypicker/react": "^10.0.1",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0",

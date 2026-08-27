@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { test } from "node:test";
+import { pathToFileURL } from "node:url";
 import { toPosixPath } from "./static-source";
 
 function walkFiles(dir: string): string[] {
@@ -145,9 +146,10 @@ test("public guest routes do not import raw Card primitive", () => {
 });
 
 test("PublicSection and Wave E UI blocks stay registered", async () => {
-  const registryModule = await import(
-    "../../../scripts/ui-component-registry.mjs"
-  );
+  const registryUrl = pathToFileURL(
+    resolve(process.cwd(), "../../scripts/ui-component-registry.mjs"),
+  ).href;
+  const registryModule = await import(registryUrl);
   const publicSection = registryModule.findComponentGuidance("PublicSection");
   assert.equal(publicSection[0]?.layer, "app-adapter");
   assert.match(publicSection[0]?.need ?? "", /public/i);

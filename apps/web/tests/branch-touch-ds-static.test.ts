@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { test } from "node:test";
+import { pathToFileURL } from "node:url";
 
 function walkFiles(dir: string): string[] {
   const entries = readdirSync(dir);
@@ -79,9 +80,10 @@ const BRANCH_TOUCH_BLOCKS = [
 ] as const;
 
 test("Branch touch UI blocks stay registered with use/forbidden/exemplar", async () => {
-  const registryModule = await import(
-    "../../../scripts/ui-component-registry.mjs"
-  );
+  const registryUrl = pathToFileURL(
+    resolve(process.cwd(), "../../scripts/ui-component-registry.mjs"),
+  ).href;
+  const registryModule = await import(registryUrl);
 
   for (const name of BRANCH_TOUCH_BLOCKS) {
     const entry = registryModule.findComponentGuidance(name)[0];
@@ -116,9 +118,10 @@ test("Branch touch UI blocks stay registered with use/forbidden/exemplar", async
 });
 
 test("branch-operator domain adapter locks GRN touch exemplar", async () => {
-  const registryModule = await import(
-    "../../../scripts/ui-component-registry.mjs"
-  );
+  const registryUrl = pathToFileURL(
+    resolve(process.cwd(), "../../scripts/ui-component-registry.mjs"),
+  ).href;
+  const registryModule = await import(registryUrl);
   const family = registryModule.findComponentGuidance("branch-operator")[0];
   assert.equal(family?.layer, "domain-adapter");
   assert.match(family?.forbidden ?? "", /AppListFrame|DocumentFormFrame|DataTable/);

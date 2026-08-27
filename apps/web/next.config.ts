@@ -107,8 +107,8 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "4mb",
     },
-    // Per-icon tree-shaking for lucide-react keeps icon imports out of shared chunks.
-    optimizePackageImports: ["lucide-react"],
+    // Tree-shaking package imports keeps component/icon imports out of shared chunks.
+    optimizePackageImports: ["lucide-react", "@base-ui/react", "recharts"],
   },
 };
 

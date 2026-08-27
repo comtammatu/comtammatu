@@ -1177,40 +1177,16 @@ improvisation.
   `KDS`, `GRN`, `WAC`. Do not show `tenant` in product UI. Do not introduce new
   synonyms for business states or workflow objects.
 - Copy source ladder: glossary spelling → `packages/shared/src/labels/vi.ts` →
-  `@comtammatu/shared/messages` → `apps/web/lib/messages/*`. Denylist terms live
-  in the glossary — do not duplicate those tables here.
-- Verb lexicon (reuse, do not synonym): `Lưu` / `Tạo` / `Xác nhận` / `Hủy` /
-  `Xóa {object}` / `Duyệt` / `Từ chối` / `Thanh toán`.
-- Toast formula: success `Đã X`; failure `Không thể X`. Severity and routing
-  stay in `docs/spec/toast-notification-system.md`.
-- Utility copy beats marketing copy. Secondary budget: page / `AppSection`
-  description ≈ one idea, ≤ ~80 characters; KPI or field hint ≤ ~60. Drop the
-  prop when it restates the title. Destructive confirm keeps its risk meaning.
-- Never put SOP, recovery policy, timers, agent notes, or implementation
-  commentary into product UI (`docs/ref/**`). Clamp `AppSection` /
-  `AppPageHeader` descriptions; shorten `FieldDescription`; leave `CardDescription`.
+- Shared error / action / entity messages follow one hierarchy: `@comtammatu/shared/messages` → `apps/web/lib/messages/*`. Denylist terms live in the glossary.
+- Verb lexicon (reuse, do not synonym): `Lưu` / `Tạo` / `Xác nhận` / `Hủy` / `Xóa {object}` / `Duyệt` / `Từ chối` / `Thanh toán`.
+- Toast formula: success `Đã X`; failure `Không thể X`. Severity and routing stay in `docs/spec/toast-notification-system.md`.
+- Utility copy beats marketing copy. Page/section description ≈ one idea, ≤ ~80 chars; field hint ≤ ~60. Drop prop when restating title.
+- Never put SOP, recovery policy, timers, or commentary into UI (`docs/ref/**`). Clamp section/header descriptions; shorten `FieldDescription`.
 
 ## Enforcement
 
-Machine-owned enforcement and discovery live in scripts, not in prose:
+Machine-owned enforcement and discovery live in scripts: `scripts/check-ui-contract.mjs` (guards), `scripts/ui-contract-guard-reporting.mjs` (reporting), `scripts/ui-component-registry.mjs` (registry), `scripts/ui-contract-scope.mjs` (scope roots), `scripts/page-archetypes.mjs` (route archetypes). Run `corepack pnpm lint:ui-contract` and `corepack pnpm audit:ui-components`.
 
-| Script | Owns |
-| --- | --- |
-| `scripts/check-ui-contract.mjs` | blocking guard policy and failures |
-| `scripts/ui-contract-guard-reporting.mjs` | guard classification and dynamic counts |
-| `scripts/ui-component-registry.mjs` | shared-component / adapter / UI block registry |
-| `scripts/ui-contract-scope.mjs` | enforced runtime source roots |
-| `scripts/page-archetypes.mjs` | route → archetype mapping and disposition |
+**Report-only onboarding.** A new runtime root is report-only until measured debt is zero, then joins `UI_RUNTIME_SOURCE_ROOTS`. Report-only never gains allowlist entries.
 
-Run `corepack pnpm lint:ui-contract` and `corepack pnpm audit:ui-components`.
-This contract never persists dated audit results or open-debt snapshots.
-
-**Report-only onboarding.** A new runtime root is report-only until measured
-debt is zero, then it joins `UI_RUNTIME_SOURCE_ROOTS`. Report-only never gains
-allowlist entries. An exception is valid only when a guard measures a real
-outcome and the source documents a reason.
-
-**Before marking a UI task complete:** no fake shared components, no arbitrary
-Tailwind dimensions, no static presentation inline styles, no route-specific
-theme layer, no duplicated workflow state, no new vocabulary drift; POS/KDS
-mobile still exposes the next action; `corepack pnpm verify` passes.
+**Before marking a UI task complete:** no fake shared components, no arbitrary Tailwind dimensions, no static presentation inline styles, no route-specific theme layer, no duplicated workflow state, no vocabulary drift; POS/KDS mobile still exposes next action; `corepack pnpm verify` passes.

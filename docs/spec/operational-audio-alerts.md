@@ -16,12 +16,9 @@ with toast / durable / Telegram (`docs/spec/toast-notification-system.md`).
 
 ## Authority
 
-1. ADR: `docs/plan/adr/0008-operational-audio-alerts.md`
-2. Entrypoint + mode: `apps/web/lib/operational-audio.ts`
-3. Beep: `apps/web/lib/audio-signal.ts`
-4. Voice: `…/operational-voice.ts` + `/api/operational-audio/speak`
-5. KDS taxonomy: `…/kds/_lib/sound-alerts.ts`
-6. Prefs: `apps/web/lib/device-prefs.ts` (+ `scripts/check-client-storage.mjs`)
+1. ADR: `docs/plan/adr/0008-operational-audio-alerts.md` | Entrypoint: `apps/web/lib/operational-audio.ts`
+2. Beep: `apps/web/lib/audio-signal.ts` | Voice: `…/operational-voice.ts` + `/api/operational-audio/speak`
+3. KDS taxonomy: `…/kds/_lib/sound-alerts.ts` | Prefs: `apps/web/lib/device-prefs.ts` (+ `scripts/check-client-storage.mjs`)
 
 ## Core Model
 

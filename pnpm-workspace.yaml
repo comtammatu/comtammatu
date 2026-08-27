@@ -5,7 +5,7 @@ onlyBuiltDependencies:
   - esbuild
   - sharp
 overrides:
-  brace-expansion@<=5.0.7: ">=5.0.8"
+  brace-expansion@<=5.0.7: ">=5.0.9"
   exceljs>unzipper: 0.12.5
   exceljs>uuid: 11.1.1
   nanoid@<3.3.18: 3.3.18

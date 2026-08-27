@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { test } from "node:test";
+import { pathToFileURL } from "node:url";
 
 function walkFiles(dir: string): string[] {
   const entries = readdirSync(dir);
@@ -97,9 +98,10 @@ test("POS station routes do not import control_surface chrome", () => {
 });
 
 test("StationSection is registered as a station_chrome app adapter", async () => {
-  const registryModule = await import(
-    "../../../scripts/ui-component-registry.mjs"
-  );
+  const registryUrl = pathToFileURL(
+    resolve(process.cwd(), "../../scripts/ui-component-registry.mjs"),
+  ).href;
+  const registryModule = await import(registryUrl);
   const guidance = registryModule.findComponentGuidance("StationSection");
   assert.ok(guidance.length > 0, "StationSection must be in APP_ADAPTER_REGISTRY");
   assert.match(
@@ -120,9 +122,10 @@ test("StationSection is registered as a station_chrome app adapter", async () =>
 });
 
 test("pos-board block locks StationSection composition and session-gate exemplar", async () => {
-  const registryModule = await import(
-    "../../../scripts/ui-component-registry.mjs"
-  );
+  const registryUrl = pathToFileURL(
+    resolve(process.cwd(), "../../scripts/ui-component-registry.mjs"),
+  ).href;
+  const registryModule = await import(registryUrl);
   const pos = registryModule.findComponentGuidance("pos-board");
   assert.equal(pos[0]?.layer, "ui-block");
   assert.deepEqual(pos[0]?.planes ?? [], ["station"]);

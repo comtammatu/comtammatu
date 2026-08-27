@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { test } from "node:test";
+import { pathToFileURL } from "node:url";
 
 function walkFiles(dir: string): string[] {
   const entries = readdirSync(dir);
@@ -145,9 +146,10 @@ test("OperationalBoardCard uses named motion tokens, not bare transition", () =>
 });
 
 test("realtime-board, runner-board, and pos-board UI blocks stay registered for station", async () => {
-  const registryModule = await import(
-    "../../../scripts/ui-component-registry.mjs"
-  );
+  const registryUrl = pathToFileURL(
+    resolve(process.cwd(), "../../scripts/ui-component-registry.mjs"),
+  ).href;
+  const registryModule = await import(registryUrl);
   const kds = registryModule.findComponentGuidance("realtime-board");
   const runner = registryModule.findComponentGuidance("runner-board");
   const pos = registryModule.findComponentGuidance("pos-board");

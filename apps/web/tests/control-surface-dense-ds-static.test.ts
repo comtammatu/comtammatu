@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { test } from "node:test";
+import { pathToFileURL } from "node:url";
 
 function walkFiles(dir: string): string[] {
   if (!existsSync(dir)) return [];
@@ -115,9 +116,10 @@ test("representative inventory LIST clients keep AppListFrame + dense AppPage", 
 });
 
 test("management dense UI blocks stay registered for control_surface", async () => {
-  const registryModule = await import(
-    "../../../scripts/ui-component-registry.mjs"
-  );
+  const registryUrl = pathToFileURL(
+    resolve(process.cwd(), "../../scripts/ui-component-registry.mjs"),
+  ).href;
+  const registryModule = await import(registryUrl);
   for (const id of [
     "management-list",
     "management-detail",

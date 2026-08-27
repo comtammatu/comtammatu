@@ -177,19 +177,11 @@ hướng không đặt title như KPI.
 
 **Authority:** ADR 0024 — Daily Summary, không ceremony Chốt ngày. Cutoff 04:00
 **chỉ** cửa sổ ngày KD; **không** tự ghi `is_closed`.
-
-- Window: `[D 04:00 local, (D+1) 04:00)` theo `branches.timezone` (fallback
-  `Asia/Ho_Chi_Minh`), khớp `inventory_shift_key`.
-- Helpers: SQL `branch_business_day_bounds` / `branch_business_date`; TS
-  `getVNBusinessDateString` / `getVNBusinessDayUtcRange` /
-  `VN_BUSINESS_DAY_CUTOFF_HOUR = 4`.
-- `/close-day` = Daily Summary qua `get_branch_day_report` (tổng ngày; gate
-  `settings:branch` hoặc `finance:view`). `get_branch_day_summary` còn cho
-  drift test. `close_branch_day` raise `branch_day_close_retired`.
+- Window: `[D 04:00 local, (D+1) 04:00)` theo `branches.timezone` (fallback `Asia/Ho_Chi_Minh`), khớp `inventory_shift_key`.
+- Helpers: SQL `branch_business_day_bounds` / `branch_business_date`; TS `getVNBusinessDateString` / `getVNBusinessDayUtcRange` / `VN_BUSINESS_DAY_CUTOFF_HOUR = 4`.
+- `/close-day` = Daily Summary qua `get_branch_day_report` (tổng ngày; gate `settings:branch` hoặc `finance:view`). `get_branch_day_summary` còn cho drift test. `close_branch_day` raise `branch_day_close_retired`.
 - `open_session_count`: ca POS `opened_at` trong bounds + `status = 'open'`.
-- Home KPI `get_branch_revenue_target_progress`: cửa sổ 04:00 (ngày KD + MTD
-  đến hết ngày KD hiện tại). Lệch tạm còn: nhiều finance list filter vẫn
-  `getVNDayUtcRange` (00:00–24:00); không align trong PR này.
+- Home KPI `get_branch_revenue_target_progress`: cửa sổ 04:00 (ngày KD + MTD đến hết ngày KD hiện tại). Lệch tạm còn: nhiều finance list filter vẫn `getVNDayUtcRange` (00:00–24:00).
 - Tiền mặt SSOT: chốt `pos_sessions`. Không `carryover_cash` (ADR 0024 rejected).
 
 ## Quy tắc cho Agent

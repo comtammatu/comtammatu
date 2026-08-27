@@ -322,7 +322,7 @@ test("shared primitives use Base UI behavior without Radix", () => {
   assert.match(tooltipSource, /--transform-origin/);
   assert.doesNotMatch(tooltipSource, /radix-ui|--radix-tooltip|asChild/);
   assert.doesNotMatch(globals, /--radix-/);
-  assert.match(uiPackage, /"@base-ui\/react": "1\.6\.0"/);
+  assert.match(uiPackage, /"@base-ui\/react": "1\.7\.0"/);
 });
 
 test("foundations bind typography/motion and gate looping Spinner/Skeleton motion", () => {

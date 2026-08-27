@@ -9,66 +9,24 @@ Finance Basic is the default `/finance` experience (`Tổng quan tài chính`).
 Period-result formula (two rows):
 
 - **`Doanh thu thuần`**: paid-order merchandise value after discount, before VAT.
-- **`Giá vốn món`**: recorded POS ingredient cost for paid orders at sales
-  `Chi nhánh` only (`branch_kind = branch`, `order_id` present). Runtime source is
-  `inventory_value_allocations` (`allocation_bucket = food_cost`) when
-  `inventory_valuation_cutovers.status = active`; otherwise the landing KPI is
-  empty. Excludes manual `phiếu tiêu hao`, `Kho Tổng`, and `Bếp Trung Tâm`.
-  `/finance/food-cost` **`Định mức/phần`** uses the same catalog resolver as
-  `/inventory/menu-recipes` (company WAC, then last-known; missing WAC
-  is empty, not `0đ`; no-recipe is `0đ`). **`Giá thuần/phần`** is net revenue /
-  qty after side split and discount, not `menu_price`. Company WAC is
-  `Giá vốn`, not this column. See `docs/ref/inventory.md` § 3.
-- **`Lợi nhuận gộp`**: net revenue minus recorded food cost. Sales identity only.
-  Incomplete POS coverage still shows the recorded portion with a coverage
-  badge (`N/M` orders, `needs_review`); blank only when valuation cutover is
-  inactive. `/finance/food-cost` gross margin uses recorded food cost over net
-  sales, not theoretical portion cost.
+- **`Giá vốn món`**: recorded POS ingredient cost for paid orders at sales `Chi nhánh` only (`branch_kind = branch`, `order_id` present). Runtime source: `inventory_value_allocations` (`food_cost`) when `inventory_valuation_cutovers.status = active`; otherwise empty. Excludes manual `phiếu tiêu hao`, `Kho Tổng`, `Bếp Trung Tâm`. `/finance/food-cost` **`Định mức/phần`** uses `/inventory/menu-recipes` catalog resolver (company WAC, then last-known; missing WAC is empty; no-recipe is `0đ`). **`Giá thuần/phần`** = net revenue / qty after side split/discount. See `docs/ref/inventory.md` § 3.
+- **`Lợi nhuận gộp`**: net revenue − recorded food cost. Sales identity only. Incomplete POS coverage shows recorded portion + badge (`N/M` orders, `needs_review`); blank only when valuation cutover inactive. Gross margin uses recorded food cost / net sales.
 - **`Chi phí hàng` / `Chi mua hàng`**: inbound `transfer_in` at branch, or confirmed `/finance/supplier-invoices` `subtotal` (ex-VAT) at company. Bank settlement is payment, not a second P&L hit.
-- **`Chi vận hành`**: posted period expense (rent, utilities, payroll,
-  repairs, consumables, marketing, fees/tax, hospitality, other). Excludes
-  `capital`/`deposit`, capitalized equipment, ingredient COGS, cash↔bank.
-- **`Biến động tồn kho`**: closing minus opening inventory value (when readable).
+- **`Chi vận hành`**: posted period expense (rent, utilities, payroll, repairs, consumables, marketing, fees/tax, hospitality, other). Excludes `capital`/`deposit`, capitalized equipment, ingredient COGS, cash↔bank.
+- **`Biến động tồn kho`**: closing − opening inventory value (when readable).
 - **`Kết quả kinh doanh`**: revenue − goods-in − opex + inventory change. Not derived from GP.
-- The period cockpit RPC returns server-computed `inventory_change` with an
-  `inventory_change_included` flag; company scope sums the inventory change across all valued
-  branches. Valuation column grants remain the fail-closed gate
-  (`inventory_readable=false` → term excluded with explicit hint, never zero).
+- Cockpit RPC returns server-computed `inventory_change` with `inventory_change_included` flag; company scope sums across all valued branches. Valuation column grants remain fail-closed gate (`inventory_readable=false` → term excluded with explicit hint, never zero).
 
-Incomplete food-cost coverage does not blank gross profit; it warns via
-coverage badge. No recorded operating expense keeps period result unavailable
-(not zero).
+Incomplete food-cost coverage warns via coverage badge. No recorded operating expense keeps period result unavailable (not zero).
 
-After the period result, **`Tài sản`**: scoped
-`Tiền mặt + Tiền tài khoản = Tổng tiền`; filtered period-end **`Tồn kho`**;
-all-time **`Thiết bị`** (`category = capital`, spend recorded, not a register;
-never `Giá trị thiết bị`); then a separate **`Chi phí ban đầu`** section
-(`capital`+`deposit`, period ignored, branch filter matches opex). `Thiết bị`
-is the capital slice of startup — do not add the two together.
+After period result, **`Tài sản`**: scoped `Tiền mặt + Tiền tài khoản = Tổng tiền`; filtered period-end **`Tồn kho`**; all-time **`Thiết bị`** (`category = capital` spend, not a register; never `Giá trị thiết bị`); then separate **`Chi phí ban đầu`** section (`capital`+`deposit`, period ignored, branch filter matches opex). `Thiết bị` is capital slice of startup — do not add together.
 
 Funds formula:
-
-- **Company `Tiền mặt`**: sum of sales-branch cash books
-  (`branch_kind = branch`). `Kho Tổng` / `Bếp Trung Tâm` have no cash book.
-  Readable only when every active sales branch has a cash opening.
-- **Sales-branch `Tiền mặt`**: that branch's immutable cash opening + completed
-  cash collections − cash refunds, cash expenses, cash supplier payments, cash
-  bank deposits + append-only audited adjustments. POS-session counts/variances
-  are reconciliation evidence only.
-- **Company `Tiền tài khoản`**: one company bank ledger — immutable bank opening
-  + every canonical SePay movement in `bank_transactions` + append-only audited
-  adjustments. Not split by branch. Shown on `/finance` **`Tài sản`** for every
-  location scope (including a single sales branch).
-- **`Tổng tiền`**: scoped cash (company sum of sales-branch books, or one
-  branch book) + company bank. Branch scope still adds the full company bank
-  ledger (not a branch bank book).
-- Period `vietqr_revenue` (orders that landed on the company account) belongs on
-  revenue reports — not on **`Tài sản`**.
-- Period `platform_revenue` is completed `payments.method = platform` GROSS
-  (partner prepaid / platform tender) — sales identity, not cash drawer.
-- Period `delivery_revenue` is completed paid orders with
-  `orders.order_type = delivery` at channel list GROSS. Commission invoices from
-  Foody/partners are AP later (D104), not a net-of-commission rewrite of POS totals.
+- **Company `Tiền mặt`**: sum of sales-branch cash books (`branch_kind = branch`). `Kho Tổng` / `Bếp Trung Tâm` have no cash book. Readable only when every active sales branch has a cash opening.
+- **Sales-branch `Tiền mặt`**: that branch's immutable cash opening + completed cash collections − cash refunds, cash expenses, cash supplier payments, cash bank deposits + append-only audited adjustments. POS-session variances are reconciliation evidence only.
+- **Company `Tiền tài khoản`**: one company bank ledger — immutable bank opening + every canonical SePay movement in `bank_transactions` + append-only audited adjustments. Not split by branch; shown on `/finance` **`Tài sản`** for every location scope.
+- **`Tổng tiền`**: scoped cash (company sum of sales-branch books, or one branch book) + company bank.
+- Period `vietqr_revenue` belongs on revenue reports — not on **`Tài sản`**. `platform_revenue` is completed `platform` GROSS. `delivery_revenue` is completed delivery orders at channel list GROSS. Commission invoices from Foody/partners are AP later (D104).
 
 Show `Chưa mở sổ` until `initialize_finance_funds` (company bank) and
 `initialize_branch_cash_opening` (each sales branch). Openings cannot be
