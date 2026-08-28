@@ -2,7 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { INVENTORY_OPS_ROLES } from "@comtammatu/shared/auth";
+import {
+  INVENTORY_OPS_ROLES,
+  PERMISSION_KEYS,
+} from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
@@ -21,6 +24,7 @@ import {
 } from "./_lib/unit-display";
 import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 import { inventoryPositiveQuantitySchema } from "./_lib/inventory-quantity-schema";
+import { selectIssueSourceLocation } from "./_lib/issue-source-location";
 import {
   insufficientStockFailure,
   mapInventoryRpcFailure,
@@ -30,6 +34,7 @@ import {
   issueConfirmRpcMappings,
   issueLineRpcFallback,
   issueLineRpcMappings,
+  INVENTORY_ERROR_CODES,
 } from "@lib/messages/inventory-rpc-errors";
 
 const ROLES = INVENTORY_OPS_ROLES;
@@ -89,10 +94,20 @@ async function resolveIssueSourceLocation(
   supabase: TenantSupabase,
   tenantId: number,
   branchId: number,
-): Promise<number | null> {
+): Promise<
+  | { ok: true; locationId: number }
+  | {
+      ok: false;
+      reason:
+        | "location_lookup_failed"
+        | "location_not_configured"
+        | "location_ambiguous";
+      code?: string;
+    }
+> {
   const { data, error } = await supabase
     .from("inventory_locations")
-    .select("id")
+    .select("id, is_default_issue, is_default_consumption")
     .eq("tenant_id", tenantId)
     .eq("branch_id", branchId)
     .eq("location_kind", "warehouse")
@@ -100,11 +115,13 @@ async function resolveIssueSourceLocation(
     .order("is_default_issue", { ascending: false })
     .order("is_default_consumption", { ascending: false })
     .order("sort_order", { ascending: true })
-    .order("id", { ascending: true })
-    .limit(2);
+    .order("id", { ascending: true });
 
-  if (error) throw error;
-  return data?.length === 1 ? (data[0]?.id ?? null) : null;
+  if (error) {
+    return { ok: false, reason: "location_lookup_failed", code: error.code };
+  }
+
+  return selectIssueSourceLocation(data ?? []);
 }
 
 export async function fetchStockIssues(opts?: {
@@ -153,13 +170,53 @@ export async function fetchStockIssues(opts?: {
 /* ─── createStockIssueDraft ─── */
 
 export const createStockIssueDraft = withAction(
-  { roles: ROLES, schema: issueCreateSchema, requireBranchScope: true },
+  {
+    roles: ROLES,
+    schema: issueCreateSchema,
+    permission: PERMISSION_KEYS.INVENTORY_WRITE,
+    permissionBranchId: (data) => data.branchId,
+    requireBranchScope: true,
+  },
   async (d, { supabase, claims, userId }) => {
     // branch_manager can only create for their own branch
     if (claims.branch_id && claims.branch_id !== d.branchId) {
       return {
         success: false,
         error: "Không có quyền tạo phiếu xuất cho chi nhánh này.",
+        errorCode: INVENTORY_ERROR_CODES.FORBIDDEN,
+      };
+    }
+
+    const sourceLocation = await resolveIssueSourceLocation(
+      supabase,
+      claims.tenant_id,
+      d.branchId,
+    );
+    if (!sourceLocation.ok) {
+      console.error("inventory.issue.create_failed", {
+        stage: sourceLocation.reason,
+        tenantId: claims.tenant_id,
+        branchId: d.branchId,
+        code: sourceLocation.code,
+      });
+      if (sourceLocation.reason === "location_not_configured") {
+        return {
+          success: false,
+          error: messages.inventory.issues.locationNotConfigured,
+          errorCode: INVENTORY_ERROR_CODES.ISSUE_LOCATION_NOT_CONFIGURED,
+        };
+      }
+      if (sourceLocation.reason === "location_ambiguous") {
+        return {
+          success: false,
+          error: messages.inventory.issues.locationAmbiguous,
+          errorCode: INVENTORY_ERROR_CODES.ISSUE_LOCATION_AMBIGUOUS,
+        };
+      }
+      return {
+        success: false,
+        error: messages.inventory.issues.locationLookupFailed,
+        errorCode: INVENTORY_ERROR_CODES.ISSUE_LOCATION_LOOKUP_FAILED,
       };
     }
 
@@ -169,17 +226,18 @@ export const createStockIssueDraft = withAction(
       "issue",
     );
     if (!allocated.ok) {
-      return { success: false, error: "Không thể tạo mã phiếu xuất." };
+      console.error("inventory.issue.create_failed", {
+        stage: "number_allocation",
+        tenantId: claims.tenant_id,
+        branchId: d.branchId,
+      });
+      return {
+        success: false,
+        error: messages.inventory.issues.createNumberFailed,
+        errorCode: INVENTORY_ERROR_CODES.ISSUE_NUMBER_FAILED,
+      };
     }
     const issueNumber = allocated.code;
-    const sourceLocationId = await resolveIssueSourceLocation(
-      supabase,
-      claims.tenant_id,
-      d.branchId,
-    );
-    if (!sourceLocationId) {
-      return { success: false, error: "Chưa cấu hình vị trí xuất kho." };
-    }
 
     // kitchen_use is not a valid stock-issue reason; sale usage posts as consumption.
     // target_location_id is always NULL for single-site issues.
@@ -192,7 +250,7 @@ export const createStockIssueDraft = withAction(
         issue_type: d.issueType,
         notes: d.notes ?? null,
         created_by: userId,
-        source_location_id: sourceLocationId,
+        source_location_id: sourceLocation.locationId,
         target_location_id: null,
       })
       .select("id, source_location_id, target_location_id")
@@ -200,7 +258,17 @@ export const createStockIssueDraft = withAction(
 
     // RLS returns { data: null, error: null } on blocked writes
     if (error || !data) {
-      return { success: false, error: "Không thể tạo phiếu xuất." };
+      console.error("inventory.issue.create_failed", {
+        stage: "draft_insert",
+        tenantId: claims.tenant_id,
+        branchId: d.branchId,
+        code: error?.code ?? "empty_result",
+      });
+      return {
+        success: false,
+        error: messages.inventory.issues.createFailed,
+        errorCode: INVENTORY_ERROR_CODES.ISSUE_CREATE_FAILED,
+      };
     }
     revalidateStockIssueSurfaces({
       issueId: data.id,

@@ -97,7 +97,7 @@ export function IssuesClient({
   canViewMonetary: boolean;
   branches: IssueBranchOption[];
   defaultBranchId: number | null;
-  /** When true, create CTAs must not invent a default site under scope=all. */
+  /** When true, route-based create CTAs must not invent a site under scope=all. */
   writeRequiresSitePick?: boolean;
   recordedBranchId: number | null;
   recordedEndDate: string;
@@ -422,21 +422,8 @@ export function IssuesClient({
         {INVENTORY_VI.createWasteTitle}
       </Button>
     ) : resolvedView === "manual" &&
-      allowedCreateIssueTypes.length > 0 &&
-      !writeRequiresSitePick ? (
+      allowedCreateIssueTypes.length > 0 ? (
       <Button type="button" size="lg" onClick={() => setCreateOpen(true)}>
-        <IconPlus className="size-4" />
-        {INVENTORY_VI.manualConsumptionCreateAction}
-      </Button>
-    ) : resolvedView === "manual" &&
-      allowedCreateIssueTypes.length > 0 &&
-      writeRequiresSitePick ? (
-      <Button
-        type="button"
-        size="lg"
-        disabled
-        title={messages.controlSurface.scopeControl.pickSite}
-      >
         <IconPlus className="size-4" />
         {INVENTORY_VI.manualConsumptionCreateAction}
       </Button>

@@ -37,13 +37,20 @@ test("list/report SA pass null branch only where RPC documents null=all", () => 
   assert.match(value, /p_branch_id: parsed\.data\.branchId \?\? null/);
 });
 
-test("write-gate CTAs disable create under all-scope", () => {
+test("all-scope writes fail closed unless their form requires a branch", () => {
   const issues = read("app/(protected)/inventory/issues/issues-client.tsx");
+  const issueCreateDialog = read(
+    "app/(protected)/inventory/issues/issue-create-dialog.tsx",
+  );
   const stocktake = read(
     "app/(protected)/inventory/stocktake/stocktake-list-client.tsx",
   );
   const transfers = read("app/(protected)/inventory/transfers/page.tsx");
-  assert.match(issues, /writeRequiresSitePick/);
+  assert.match(issueCreateDialog, /name="branchId"[\s\S]*required/);
+  assert.match(
+    issues,
+    /resolvedView === "manual"\s*&&\s*allowedCreateIssueTypes\.length > 0\s*\? \(/,
+  );
   assert.match(stocktake, /writeRequiresSitePick/);
   assert.match(stocktake, /disabled/);
   assert.match(transfers, /writeRequiresSitePick/);

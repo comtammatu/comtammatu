@@ -16,15 +16,30 @@ const issuesPage = readFileSync(
   ),
   "utf8",
 );
+const issueCreateDialog = readFileSync(
+  new URL(
+    "../app/(protected)/inventory/issues/issue-create-dialog.tsx",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const branchContext = readFileSync(
   new URL("../app/_lib/branch-context.ts", import.meta.url),
   "utf8",
 );
 
-test("scope=all write gate disables create without inventing defaultBranchId", () => {
+test("scope=all manual consumption requires an explicit branch in the create dialog", () => {
   assert.match(issuesPage, /writeRequiresSitePick=\{scope\.scopeMode === "all"\}/);
-  assert.match(issuesClient, /writeRequiresSitePick/);
-  assert.match(issuesClient, /disabled/);
+  assert.match(issueCreateDialog, /name="branchId"/);
+  assert.match(issueCreateDialog, /name="branchId"[\s\S]*required/);
+  assert.match(
+    issuesClient,
+    /resolvedView === "manual"\s*&&\s*allowedCreateIssueTypes\.length > 0\s*\? \(/,
+  );
+  assert.doesNotMatch(
+    issuesClient,
+    /resolvedView === "manual"[\s\S]{0,160}!writeRequiresSitePick/,
+  );
   assert.doesNotMatch(
     issuesClient,
     /createHref && defaultBranchId\s*\n?\s*\? `\$\{createHref\}\?branch=\$\{defaultBranchId\}`/,

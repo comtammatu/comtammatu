@@ -1545,6 +1545,12 @@ export const inventory = {
     },
   },
   issues: {
+    createFailed: "Không thể tạo phiếu tiêu hao.",
+    createNumberFailed: "Không thể tạo mã phiếu tiêu hao.",
+    locationLookupFailed: "Không thể kiểm tra kho xuất của chi nhánh.",
+    locationNotConfigured: "Chi nhánh chưa được cấu hình kho xuất.",
+    locationAmbiguous:
+      "Chi nhánh có nhiều kho xuất; cần chọn một kho mặc định.",
     lineIngredientRequired: "Chọn nguyên liệu cần xuất.",
     lineQuantityRequired: "Nhập số lượng xuất.",
     lineQuantityPositive: "Số lượng xuất phải lớn hơn 0.",

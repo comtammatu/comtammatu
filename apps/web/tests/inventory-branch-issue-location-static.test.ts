@@ -31,11 +31,30 @@ test("branch stock issue drafts resolve the warehouse without a location-kind fa
 
   assert.match(resolverBody, /\.eq\("location_kind", "warehouse"\)/);
   assert.match(resolverBody, /\.order\("is_default_issue"/);
+  assert.match(resolverBody, /is_default_consumption/);
+  assert.match(resolverBody, /selectIssueSourceLocation/);
   assert.doesNotMatch(
     resolverBody,
     /resolveDefaultInventoryLocation/,
     "all active sites must resolve their invariant warehouse directly",
   );
+});
+
+test("stock issue creation authorizes the target branch and returns stable failure codes", () => {
+  assert.match(issueActions, /permission:\s*PERMISSION_KEYS\.INVENTORY_WRITE/);
+  assert.match(
+    issueActions,
+    /permissionBranchId:\s*\(data\)\s*=>\s*data\.branchId/,
+  );
+  assert.match(
+    issueActions,
+    /INVENTORY_ERROR_CODES\.ISSUE_LOCATION_NOT_CONFIGURED/,
+  );
+  assert.match(
+    issueActions,
+    /INVENTORY_ERROR_CODES\.ISSUE_LOCATION_AMBIGUOUS/,
+  );
+  assert.match(issueActions, /inventory\.issue\.create_failed/);
 });
 
 test("cross-site transfer creation resolves remote warehouses without widening RLS", () => {
