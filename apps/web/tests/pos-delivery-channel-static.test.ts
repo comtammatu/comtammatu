@@ -247,3 +247,16 @@ test("delivery sides use channel list price on server and POS customizer", () =>
     /channel_prices: channelPricesByItemId\.get\(item\.id\) \?\? \{\}/,
   );
 });
+
+test("POS delivery payment locks to platform tender without counter collection options", () => {
+  const billSheet = read(
+    "app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx",
+  );
+  assert.match(billSheet, /data-testid="bill-confirm-platform"/);
+  assert.doesNotMatch(billSheet, /deliveryTender/);
+  assert.doesNotMatch(billSheet, /counterCollection/);
+
+  const posMessages = read("lib/messages/pos.ts");
+  assert.doesNotMatch(posMessages, /deliveryTenderTitle/);
+  assert.doesNotMatch(posMessages, /counterCollection/);
+});

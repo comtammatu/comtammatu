@@ -178,9 +178,7 @@ export const pos = {
     printVietQrSuccessOffline:
       "Máy in đang mất kết nối — phiếu VietQR sẽ in khi kết nối lại",
     printVietQrFailed: "Không thể in VietQR.",
-    deliveryTenderTitle: "Hình thức thu",
     platformPrepaid: "Đã thu nền tảng",
-    counterCollection: "Thu tại quán",
     platformPrepaidHint:
       "Khách đã trả qua ứng dụng (Công cụ quản lý). Không vào ngăn kéo tiền mặt.",
     platformConfirmSuccess: "Đã xác nhận thu nền tảng",

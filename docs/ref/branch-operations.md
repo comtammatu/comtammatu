@@ -104,7 +104,7 @@ và dừng; không tạo ticket “để dành soft”.
 | Mục | Trigger |
 | --- | --- |
 | Adapter nền tảng giao đồ ăn | D103: duyệt đối tác + contract kỹ thuật chính thức; readiness theo `docs/runbooks/food-delivery-platform-onboarding.md` — không đoán payload |
-| Giao hàng thủ công trên POS | D104: `order_type = delivery`, giá kênh, tender `platform` / Cash Merchant; KDS/Pickup chung lane Mang về; không mở HTTP adapter |
+| Giao hàng thủ công trên POS | D104: `order_type = delivery`, giá kênh, tender `platform`; KDS/Pickup chung lane Mang về; không mở HTTP adapter |
 | SOP dài ngoài file này dưới `docs/ref/` | Owner yêu cầu tên file/mục cụ thể |
 
 ### Scheduled — follow-up ODC riêng
