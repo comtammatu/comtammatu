@@ -345,8 +345,8 @@ const RECEIPT_LOADING_ORDER: OrderData = {
   cash_change: null,
   tables: { number: 2 },
   branches: {
-    name: "Chi nhánh Nguyễn Hữu Thọ",
-    address: "Đường Nguyễn Hữu Thọ, TP.HCM",
+    name: "Chi nhánh",
+    address: "Địa chỉ chi nhánh",
     phone: null,
   },
   order_items: [

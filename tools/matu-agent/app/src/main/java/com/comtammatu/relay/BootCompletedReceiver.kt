@@ -12,10 +12,15 @@ class BootCompletedReceiver : BroadcastReceiver() {
             Log.i("BootCompletedReceiver", "Auto-starting PrintIntakeService after boot")
             val prefs = context.getSharedPreferences("bridge_prefs", Context.MODE_PRIVATE)
             val url = prefs.getString("backend_url", "http://localhost:3000") ?: "http://localhost:3000"
-            val branchId = prefs.getInt("branch_id", 1)
+            val branchId = prefs.getInt("branch_id", 0)
             val secret = prefs.getString("secret", "") ?: ""
             val port = prefs.getInt("port", 9100)
             val lanMode = prefs.getBoolean("lan_mode", false)
+
+            if (branchId <= 0) {
+                Log.w("BootCompletedReceiver", "Skipping auto-start: branch is not configured")
+                return
+            }
 
             val serviceIntent = Intent(context, PrintIntakeService::class.java).apply {
                 action = PrintIntakeService.ACTION_START

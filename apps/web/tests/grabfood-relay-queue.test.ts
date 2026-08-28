@@ -20,6 +20,7 @@ interface QueueItem {
 
 interface QueueDecision {
   ok: boolean;
+  error?: string;
   action?: "enqueued" | "existing" | "revived";
   queue: QueueItem[];
   item?: QueueItem;
@@ -110,6 +111,19 @@ test("Grab relay queue leaves an active duplicate unchanged", () => {
   assert.equal(duplicate.queue.length, 1);
   assert.equal(duplicate.item?.order.revision, 1);
   assert.equal(duplicate.item?.nextRetryAt, 300);
+});
+
+test("Grab relay queue fails closed when branch configuration is missing", () => {
+  const result = queueApi.enqueueOrRevive(
+    [],
+    { orderID: "grab-order-unscoped", displayID: "GF-UNSCOPED" },
+    { ...settings, branchId: Number.NaN },
+    500,
+  );
+
+  assert.equal(result.ok, false);
+  assert.equal(result.error, "Missing branch configuration");
+  assert.deepEqual(result.queue, []);
 });
 
 test("Grab relay projector does not forward raw discount objects", () => {

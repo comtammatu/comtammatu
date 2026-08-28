@@ -118,7 +118,16 @@ export const grabRelaySchema = z
     merchant_id: z.string().max(100).optional(),
     order: grabOrderPayloadSchema.optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((value, context) => {
+    if (value.ping !== true && value.branch_id === undefined) {
+      context.addIssue({
+        code: "custom",
+        path: ["branch_id"],
+        message: "branch_id is required for order relay",
+      });
+    }
+  });
 
 export function summarizeGrabRelayValidationIssues(error: z.ZodError) {
   return error.issues.slice(0, 20).map((issue) => ({

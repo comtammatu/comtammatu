@@ -5,6 +5,7 @@ import {
   parseShopeeReceiptText,
   parseShopeeEscPosStream,
   detectDeliveryPlatform,
+  toDatabaseDeliveryPlatform,
 } from "../lib/shopeefood/escpos-parser";
 import {
   transformShopeeOrderPayload,
@@ -271,4 +272,9 @@ test("ESC/POS platform detection: recognizes Agent labels and fails closed for u
     detectDeliveryPlatform("ShopeeFood\nGreenSM Food\nMã đơn: SPF-GSM-300"),
     null,
   );
+});
+
+test("delivery platform mapping converts the Agent Green SM wire value for the POS RPC", () => {
+  assert.equal(toDatabaseDeliveryPlatform("greensm"), "green_sm");
+  assert.equal(toDatabaseDeliveryPlatform("shopee"), "shopee");
 });

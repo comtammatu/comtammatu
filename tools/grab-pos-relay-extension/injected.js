@@ -4,7 +4,7 @@
 
   const processedOrderIds = new Set();
   const dispatchedOrderIds = new Set();
-  let merchantId = '5-C8DTE75GUGJ3JT';
+  let merchantId = null;
   let lastSuccessfulPollAt = Date.now();
 
   // 1. Keep-Alive: Override visibilityState so Grab portal never pauses background timers / WebSockets
@@ -426,6 +426,7 @@
   // Active polling loop using native page fetch. Backs off to a slow probe
   // while the Grab session is expired so recovery is detected on its own.
   async function pollOrders() {
+    if (!merchantId) return;
     try {
       const url = `https://api.grab.com/delvplatformapi/merchant/v4/orders-pagination?AutoAcceptGroup=1&merchantID=${merchantId}&PageType=PreparingV2&searchToken=&size=50`;
       const res = await originalFetch(url, {

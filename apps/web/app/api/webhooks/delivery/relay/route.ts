@@ -10,26 +10,37 @@ import {
   extractTextFromEscPos,
   parseShopeeEscPosStream,
   detectDeliveryPlatform,
+  toDatabaseDeliveryPlatform,
 } from "@lib/shopeefood/escpos-parser";
 import { resolveBranchStaffId } from "@lib/grabfood/mapping";
 
-const deliveryRelaySchema = z.object({
-  ping: z.boolean().optional(),
-  branch_id: z.coerce.number().int().positive().optional(),
-  restaurant_id: z.union([z.string(), z.number()]).optional(),
-  platform: z.enum(["shopee", "grab", "be", "greensm"]).optional(),
-  order: z
-    .object({
-      orderId: z.union([z.string(), z.number()]).optional(),
-      orderCode: z.string().optional(),
-      displayId: z.string().optional(),
-    })
-    .passthrough()
-    .optional(),
-  raw_receipt: z.string().max(256 * 1024).optional(),
-  raw_bytes_base64: z.string().max(350_000).optional(),
-  raw_original_bytes_base64: z.string().max(350_000).optional(),
-});
+const deliveryRelaySchema = z
+  .object({
+    ping: z.boolean().optional(),
+    branch_id: z.coerce.number().int().positive().optional(),
+    restaurant_id: z.union([z.string(), z.number()]).optional(),
+    platform: z.enum(["shopee", "grab", "be", "greensm"]).optional(),
+    order: z
+      .object({
+        orderId: z.union([z.string(), z.number()]).optional(),
+        orderCode: z.string().optional(),
+        displayId: z.string().optional(),
+      })
+      .passthrough()
+      .optional(),
+    raw_receipt: z.string().max(256 * 1024).optional(),
+    raw_bytes_base64: z.string().max(350_000).optional(),
+    raw_original_bytes_base64: z.string().max(350_000).optional(),
+  })
+  .superRefine((value, context) => {
+    if (value.ping !== true && value.branch_id === undefined) {
+      context.addIssue({
+        code: "custom",
+        path: ["branch_id"],
+        message: "branch_id is required for order relay",
+      });
+    }
+  });
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -123,6 +134,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (parsed.data.branch_id === undefined) {
+      return NextResponse.json(
+        { success: false, error: "Thiếu mã chi nhánh" },
+        { status: 400, headers: CORS_HEADERS },
+      );
+    }
+
     const detectedPlatform = rawText ? detectDeliveryPlatform(rawText) : null;
     if (rawText && !detectedPlatform) {
       return NextResponse.json(
@@ -139,7 +157,8 @@ export async function POST(request: NextRequest) {
 
     // Structured payloads without a platform only come from the legacy ShopeeFood extension.
     const platform = detectedPlatform ?? parsed.data.platform ?? "shopee";
-    const requestedBranchId = parsed.data.branch_id || 1;
+    const databasePlatform = toDatabaseDeliveryPlatform(platform);
+    const requestedBranchId = parsed.data.branch_id;
     const restaurantId = parsed.data.restaurant_id || shopeeOrder.restaurantId;
 
     const supabase = createServiceClient();
@@ -178,7 +197,7 @@ export async function POST(request: NextRequest) {
       .select("id, order_number, status, payment_status")
       .eq("tenant_id", branch.tenant_id)
       .eq("branch_id", branch.id)
-      .eq("delivery_platform", platform)
+      .eq("delivery_platform", databasePlatform)
       .eq("external_order_ref", sanitizedDisplayRef || displayRef)
       .limit(1)
       .maybeSingle();
@@ -236,7 +255,7 @@ export async function POST(request: NextRequest) {
       p_pos_session_id: undefined,
       p_note: transformed.customerNote ?? undefined,
       p_idempotency_key: transformed.idempotencyKey,
-      p_delivery_platform: platform,
+      p_delivery_platform: databasePlatform,
       p_external_order_ref: displayRef,
     });
 

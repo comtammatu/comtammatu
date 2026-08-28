@@ -6,19 +6,27 @@
 
     <string name="configuration_title">Cấu hình</string>
     <string name="configuration_description">Thiết lập điểm nhận và nơi chuyển tiếp đơn hàng.</string>
+    <string name="platform_configuration_title">Cấu hình từng sàn</string>
+    <string name="platform_configuration_description">Chỉ phiếu từ các sàn đang bật mới được chuyển lên POS.</string>
     <string name="backend_url_label">Địa chỉ máy chủ POS</string>
     <string name="branch_id_label">Mã chi nhánh</string>
     <string name="tcp_port_label">Cổng TCP</string>
     <string name="relay_secret_label">Mã bí mật Delivery Relay</string>
     <string name="relay_secret_hint">Nhập mã bí mật</string>
     <string name="lan_mode_label">Nhận lệnh in từ mạng LAN</string>
-    <string name="lan_mode_description">Chỉ bật khi ứng dụng giao hàng chạy trên thiết bị khác.</string>
+    <string name="lan_mode_description">Tự công bố “Má Tư Agent” cho app hỗ trợ dò máy in mạng; chỉ bật trong mạng chi nhánh tin cậy.</string>
 
     <string name="diagnostics_title">Kiểm tra nhanh</string>
     <string name="diagnostics_description">Xác nhận kết nối trước khi bắt đầu nhận đơn.</string>
     <string name="check_pos_action">Kiểm tra POS</string>
     <string name="check_print_port_action">Kiểm tra cổng in</string>
-    <string name="view_queue_action">Xem trạng thái hàng đợi</string>
+    <string name="view_queue_action">Xem tổng kết hàng đợi</string>
+
+    <string name="orders_title">Đơn hàng</string>
+    <string name="orders_description">Theo dõi đơn đã xuất, đơn đang chờ và mở nội dung OCR của từng phiếu.</string>
+    <string name="waiting_orders_action">Đang chờ</string>
+    <string name="sent_orders_action">Đã xuất</string>
+    <string name="orders_count_summary">%1$d đang chờ  ·  %2$d đã xuất</string>
 
     <string name="logs_title">Nhật ký hoạt động</string>
     <string name="logs_description">Sự kiện mới nhất được tự động cuộn xuống cuối.</string>
@@ -36,4 +44,23 @@
     <string name="status_processing">ĐANG XỬ LÝ</string>
     <string name="status_running">ĐANG CHẠY</string>
     <string name="status_stopped">ĐANG DỪNG</string>
+
+    <string name="copy_ip_action">Sao chép</string>
+    <string name="ip_copied_toast">Đã sao chép địa chỉ kết nối vào bộ nhớ tạm</string>
+    <string name="copy_ocr_action">Sao chép OCR</string>
+    <string name="ocr_copied_toast">Đã sao chép nội dung OCR vào bộ nhớ tạm</string>
+    <string name="copy_logs_action">Sao chép</string>
+    <string name="logs_copied_toast">Đã sao chép toàn bộ nhật ký vào bộ nhớ tạm</string>
+    <string name="run_all_diagnostics_action">Kiểm tra toàn diện</string>
+    <string name="clear_sent_orders_action">Dọn đơn đã xuất</string>
+    <string name="clear_sent_orders_confirm">Bạn có chắc muốn xóa tất cả đơn hàng đã xuất thành công khỏi bộ nhớ cục bộ?</string>
+    <string name="clear_sent_orders_success">Đã dọn dẹp %1$d đơn đã xuất thành công</string>
+    <string name="show_secret_action">Hiện</string>
+    <string name="hide_secret_action">Ẩn</string>
+    <string name="retry_now_action">Gửi lại ngay</string>
+    <string name="close_action">Đóng</string>
+    <string name="order_detail_title">Chi tiết đơn #%1$d</string>
+    <string name="waiting_orders_empty">Không có đơn nào đang chờ xử lý.</string>
+    <string name="sent_orders_empty">Chưa có đơn đã xuất lên POS.</string>
+    <string name="network_ip_label">IP máy này:</string>
 </resources>

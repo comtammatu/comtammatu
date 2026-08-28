@@ -11,7 +11,7 @@ import {
 } from "@lib/grabfood/mapping";
 
 const querySchema = z.object({
-  branch_id: z.coerce.number().int().positive().default(1),
+  branch_id: z.coerce.number().int().positive(),
   merchant_id: z.string().max(100).optional(),
 });
 
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const parsed = querySchema.safeParse({
-      branch_id: searchParams.get("branch_id") ?? "1",
+      branch_id: searchParams.get("branch_id") ?? undefined,
       merchant_id: searchParams.get("merchant_id") ?? undefined,
     });
 

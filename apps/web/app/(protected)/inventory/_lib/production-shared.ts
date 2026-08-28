@@ -137,12 +137,10 @@ export async function requireProductionAccess(
               column: string,
               value: unknown,
             ) => {
-              limit: (count: number) => {
-                maybeSingle: () => PromiseLike<{
-                  data: { id: number } | null;
-                  error: { code?: string; message?: string } | null;
-                }>;
-              };
+              single: () => PromiseLike<{
+                data: { id: number } | null;
+                error: { code?: string; message?: string } | null;
+              }>;
             };
           };
         };
@@ -156,8 +154,7 @@ export async function requireProductionAccess(
     .eq("tenant_id", claims.tenant_id)
     .eq("branch_kind", "central_kitchen")
     .eq("is_active", true)
-    .limit(1)
-    .maybeSingle();
+    .single();
 
   if (error) {
     return {

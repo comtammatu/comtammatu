@@ -44,10 +44,14 @@ async function enqueueOrder(order, merchantId) {
   if (!order || !order.orderID) return { success: false, error: 'Invalid order' };
 
   const data = await getStorageData(['grabRelayQueue', 'backendUrl', 'branchId', 'relaySecret', 'recentOrders']);
+  const branchId = Number(data.branchId);
+  if (!Number.isInteger(branchId) || branchId <= 0) {
+    return { success: false, error: 'Missing branch configuration' };
+  }
   const queue = Array.isArray(data.grabRelayQueue) ? data.grabRelayQueue : [];
   const queueDecision = self.GrabRelayQueue.enqueueOrRevive(queue, order, {
     merchantId,
-    branchId: data.branchId || 1,
+    branchId,
     backendUrl: data.backendUrl || 'http://localhost:3000',
     relaySecret: data.relaySecret || '',
   });

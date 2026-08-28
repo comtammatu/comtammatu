@@ -48,9 +48,12 @@ class PrintIntakeService : Service() {
         const val KEY_SECRET = "secret"
         const val KEY_PORT = "port"
         const val KEY_LAN_MODE = "lan_mode"
+        const val KEY_SHOPEE_ENABLED = "platform_shopee_enabled"
+        const val KEY_GREEN_SM_ENABLED = "platform_green_sm_enabled"
+        const val KEY_BE_ENABLED = "platform_be_enabled"
 
         const val DEFAULT_BACKEND_URL = "http://localhost:3000"
-        const val DEFAULT_BRANCH_ID = 1
+        const val DEFAULT_BRANCH_ID = 0
 
         // Intake hardening: cap per-receipt payload and keep a short drain window
         // after the first cut command so a trailing cut sequence is still captured.
@@ -66,6 +69,7 @@ class PrintIntakeService : Service() {
     private var serverSocket: ServerSocket? = null
     private lateinit var dispatcher: WebhookDispatcher
     private lateinit var receiptTextRecognizer: ReceiptTextRecognizer
+    private lateinit var printerDiscovery: PrinterDiscovery
 
     override fun onCreate() {
         super.onCreate()
@@ -74,11 +78,15 @@ class PrintIntakeService : Service() {
         val saved = configFromPrefs()
         dispatcher = WebhookDispatcher(this, saved.backendUrl, saved.branchId, saved.secret)
         receiptTextRecognizer = ReceiptTextRecognizer()
+        printerDiscovery = PrinterDiscovery(this)
         createNotificationChannel()
 
         // Recover raster-only receipts before entering the normal retry loop.
         serviceScope.launch {
-            dispatcher.recoverUnclassifiedReceipts(receiptTextRecognizer)
+            dispatcher.recoverUnclassifiedReceipts(
+                receiptTextRecognizer,
+                ::isPlatformEnabled
+            )
             dispatcher.startRetryLoop()
         }
     }
@@ -106,6 +114,12 @@ class PrintIntakeService : Service() {
         val secret = intent?.getStringExtra(EXTRA_SECRET) ?: saved.secret
         val port = intent?.getIntExtra(EXTRA_PORT, saved.port) ?: saved.port
         val lanMode = intent?.getBooleanExtra(EXTRA_LAN_MODE, saved.lanMode) ?: saved.lanMode
+
+        if (branchId <= 0) {
+            AppLogger.e("CẤU HÌNH", "Chưa có mã chi nhánh hợp lệ; dịch vụ không được khởi động")
+            stopSelf()
+            return START_NOT_STICKY
+        }
 
         dispatcher.updateConfig(backendUrl, branchId, secret)
 
@@ -144,6 +158,7 @@ class PrintIntakeService : Service() {
             val bindAddress = InetAddress.getByName(PrinterEndpoint.bindHost(lanMode))
             serverSocket = ServerSocket(port, 50, bindAddress)
             isServiceRunning = true
+            if (lanMode) printerDiscovery.register(port)
             Log.i(TAG, "Virtual WiFi Printer Server listening on ${bindAddress.hostAddress}:$port (lanMode=$lanMode)")
             AppLogger.s("MÁY IN ẢO", "Đang mở cổng TCP $port (${if (lanMode) "0.0.0.0 Mạng LAN" else "127.0.0.1 Cục bộ"}). Sẵn sàng nhận đơn!")
         } catch (e: Exception) {
@@ -253,6 +268,17 @@ class PrintIntakeService : Service() {
                             "PHÂN LOẠI",
                             "Phiếu #$queuedId chưa xác định rõ ShopeeFood, GreenSM Food hay beFood; đã giữ lại và không gửi lên POS."
                         )
+                    } else if (!isPlatformEnabled(platform)) {
+                        val queuedId = dispatcher.storeHeldReceipt(
+                            rawBytes,
+                            platform,
+                            receiptText,
+                            "Nguồn ${platform.displayName} đang tắt trong cấu hình"
+                        )
+                        AppLogger.w(
+                            "CẤU HÌNH SÀN",
+                            "Phiếu #$queuedId thuộc ${platform.displayName}; đã giữ lại vì nguồn này đang tắt."
+                        )
                     } else {
                         AppLogger.i("PHÂN LOẠI", "Nhận diện nguồn ${platform.displayName}")
                         dispatcher.dispatchRawReceipt(rawBytes, platform, receiptText)
@@ -273,6 +299,7 @@ class PrintIntakeService : Service() {
 
     private fun stopServer() {
         isServiceRunning = false
+        printerDiscovery.unregister()
         try {
             serverSocket?.close()
             serverSocket = null
@@ -280,6 +307,16 @@ class PrintIntakeService : Service() {
         } catch (e: Exception) {
             Log.e(TAG, "Error closing serverSocket: ${e.message}")
         }
+    }
+
+    private fun isPlatformEnabled(platform: DeliveryPlatform): Boolean {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val key = when (platform) {
+            DeliveryPlatform.SHOPEE_FOOD -> KEY_SHOPEE_ENABLED
+            DeliveryPlatform.GREEN_SM_FOOD -> KEY_GREEN_SM_ENABLED
+            DeliveryPlatform.BE_FOOD -> KEY_BE_ENABLED
+        }
+        return prefs.getBoolean(key, true)
     }
 
     override fun onDestroy() {

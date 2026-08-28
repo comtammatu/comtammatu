@@ -7,7 +7,7 @@
 # Examples:
 #   .\scripts\setup-branch.ps1
 #   .\scripts\setup-branch.ps1 -EnvFile C:\secure\branch.env
-#   .\scripts\setup-branch.ps1 -TenantId 1 -BranchId 3 -AgentId nguyen-huu-tho
+#   .\scripts\setup-branch.ps1 -TenantId <tenant-id> -BranchId <branch-id> -AgentId <agent-id>
 
 param(
   [string]$EnvFile = "",

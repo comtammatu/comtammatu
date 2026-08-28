@@ -11,6 +11,38 @@ const REPO_ROOT = process.cwd();
 // quoted in the rules (which false-positive on doc comments) are hardened here.
 const GUARDS = [
   {
+    rule: "VERIFY-RUNTIME-IDENTITY-GATE",
+    expect: "present",
+    pattern: /lint:runtime-identities/,
+    paths: ["package.json"],
+    reason:
+      "the root lint/verify chain must reject hardcoded branch, tenant, and site database identifiers",
+  },
+  {
+    rule: "VERIFY-OPERATIONAL-TOOLS",
+    expect: "present",
+    pattern: /test:operational-tools/,
+    paths: ["package.json"],
+    reason:
+      "the root test/verify chain must include browser extension syntax and Má Tư Agent tests",
+  },
+  {
+    rule: "VERIFY-OPERATIONAL-TOOLS",
+    expect: "present",
+    pattern: /GradleWrapperMain/,
+    paths: ["scripts/check-operational-tools.mjs"],
+    reason:
+      "operational tool verification must compile and test the Android relay agent",
+  },
+  {
+    rule: "VERIFY-RUNTIME-IDENTITY-GATE",
+    expect: "present",
+    pattern: /scanRuntimeIdentities/,
+    paths: ["scripts/check-runtime-identities.mjs"],
+    reason:
+      "the runtime identity gate must keep repository-wide active-source coverage",
+  },
+  {
     rule: "PROXY-NEVER-CALL-GETUSER",
     expect: "absent",
     pattern: /\.getUser\(\)/,
@@ -150,7 +182,7 @@ function findConfirmInsideStartTransition(relRoots) {
   return hits;
 }
 
-const CODE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs"];
+const CODE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".json"];
 
 function resolveFiles(relPath) {
   const abs = path.join(REPO_ROOT, relPath);

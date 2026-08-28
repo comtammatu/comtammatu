@@ -136,8 +136,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (parsed.data.branch_id === undefined) {
+      return NextResponse.json(
+        { success: false, error: "Thiếu mã chi nhánh" },
+        { status: 400, headers: CORS_HEADERS },
+      );
+    }
+
     const grabOrder = parsed.data.order as unknown as GrabOrderRaw;
-    const requestedBranchId = parsed.data.branch_id || 1;
+    const requestedBranchId = parsed.data.branch_id;
     const merchantId = parsed.data.merchant_id || grabOrder.merchant?.ID;
     const sanitizedDisplayId = (grabOrder.displayID || "").replace(
       /[^A-Za-z0-9_-]/g,

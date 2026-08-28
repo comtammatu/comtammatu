@@ -74,7 +74,7 @@ object RasterReceiptTextNormalizer {
     private val orderCode = Regex("^(?=.*\\d)[A-Z0-9_-]{5,}$", RegexOption.IGNORE_CASE)
     private val numberedItem = Regex("^\\d+[.)]\\s*([\\p{L}].*)$")
     private val detachedPrice = Regex(
-        "^[xX]\\s*(\\d+)\\s+([\\d.,]+)\\s*(?:đ|d|g|vnd)?$",
+        "^(?:[xX]\\s*(\\d+)|(\\d+)\\s*[xX])\\s+([\\d.,]+)\\s*(?:đ|d|g|vnd)?$",
         RegexOption.IGNORE_CASE
     )
     private val bareDetachedPrice = Regex(
@@ -115,7 +115,10 @@ object RasterReceiptTextNormalizer {
                     val detail = lines[cursor]
                     if (
                         numberedItem.matches(detail) ||
-                        detail.startsWith("Tổng món", ignoreCase = true)
+                        Regex(
+                            "^(?:Tổng\\s*món|Tổng\\s*cộng|Tạm\\s*tính|Thành\\s*tiền|Thanh\\s*toán)",
+                            RegexOption.IGNORE_CASE
+                        ).containsMatchIn(detail)
                     ) {
                         break
                     }
@@ -135,8 +138,10 @@ object RasterReceiptTextNormalizer {
                             )
                         }
                         priceMatch != null -> {
-                            quantity = priceMatch.groupValues[1].toIntOrNull() ?: 1
-                            rowPrice = priceMatch.groupValues[2]
+                            quantity = priceMatch.groupValues[1]
+                                .ifBlank { priceMatch.groupValues[2] }
+                                .toIntOrNull() ?: 1
+                            rowPrice = priceMatch.groupValues[3]
                         }
                         barePriceMatch != null -> {
                             rowPrice = barePriceMatch.groupValues[1]

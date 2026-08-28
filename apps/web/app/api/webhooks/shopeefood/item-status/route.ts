@@ -10,7 +10,7 @@ import {
 } from "@lib/shopeefood/mapping";
 
 const querySchema = z.object({
-  branch_id: z.coerce.number().int().positive().default(1),
+  branch_id: z.coerce.number().int().positive(),
 });
 
 const CORS_HEADERS = {
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const parsed = querySchema.safeParse({
-      branch_id: searchParams.get("branch_id") ?? "1",
+      branch_id: searchParams.get("branch_id") ?? undefined,
     });
 
     if (!parsed.success) {

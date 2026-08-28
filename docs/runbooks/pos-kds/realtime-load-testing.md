@@ -22,7 +22,7 @@ Requires `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and either
 `--branch-id` or `E2E_CASHIER_EMAIL` in the loaded env files.
 
 ```bash
-corepack pnpm realtime:load -- --mode listen --surface mixed --branch-id 1 --clients 50 --duration-ms 30000
+corepack pnpm realtime:load -- --mode listen --surface mixed --branch-id <branch-id> --clients 50 --duration-ms 30000
 ```
 
 This opens virtual Realtime subscribers and counts events by table. It does not

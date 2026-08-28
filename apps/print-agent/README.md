@@ -118,10 +118,10 @@ Provision or rotate the token from the repo CLI:
 
 ```bash
 corepack pnpm --filter @comtammatu/print-agent presence:provision -- create \
-  --tenant-id 1 \
-  --branch-id 3 \
-  --agent-id nguyen-huu-tho \
-  --confirm-project-ref enloyfnuerqgaqderbwb
+  --tenant-id <tenant-id> \
+  --branch-id <branch-id> \
+  --agent-id <agent-id> \
+  --confirm-project-ref <project-ref>
 ```
 
 The command generates a raw token, stores only its SHA-256 hash for the exact
@@ -131,7 +131,7 @@ and `status` to inspect token/IP state:
 
 ```bash
 corepack pnpm --filter @comtammatu/print-agent presence:provision -- status \
-  --tenant-id 1 --branch-id 3 --agent-id nguyen-huu-tho
+  --tenant-id <tenant-id> --branch-id <branch-id> --agent-id <agent-id>
 ```
 
 The old global shared-token mode is retired; one leaked branch token must not

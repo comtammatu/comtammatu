@@ -72,6 +72,16 @@ over older task notes, regressions, and memory.
 
 ## Query And Authorization Boundary
 
+- Branch, tenant, and site IDs are opaque database identities, not business
+  constants. A display name such as `Nguyễn Hữu Thọ`, row order, seed order, or
+  a remembered Production value is never evidence for an ID. Resolve scope from
+  trusted claims/validated URL params/explicit operator configuration, or query
+  a stable key and require exactly one row. Missing or ambiguous identity fails
+  closed; do not add numeric fallbacks.
+- Operational scripts must accept an explicit verified identity or perform the
+  same uniqueness-checked lookup. Dated smoke evidence does not belong in an
+  active script with captured Production IDs. Tests for branch-sensitive logic
+  use non-sequential, non-default IDs and include an unscoped failure case.
 - RLS may block a write with `{ data: null, error: null }`; verify the expected
   row/state transition, not only the error field.
 - Service-role code intentionally bypasses RLS and must derive tenant, branch,

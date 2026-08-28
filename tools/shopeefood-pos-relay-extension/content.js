@@ -77,8 +77,13 @@
   async function pollPosItemStatus() {
     chrome.storage.local.get(['backendUrl', 'branchId', 'relaySecret'], async (res) => {
       const backendUrl = res.backendUrl || 'http://localhost:3000';
-      const branchId = res.branchId || 1;
+      const branchId = Number(res.branchId);
       const relaySecret = res.relaySecret || '';
+
+      if (!Number.isInteger(branchId) || branchId <= 0) {
+        updateBadge('⚠️ Chưa cấu hình mã chi nhánh trong tiện ích', false);
+        return;
+      }
 
       try {
         const headers = {};
@@ -172,8 +177,13 @@
 
       chrome.storage.local.get(['backendUrl', 'branchId', 'relaySecret', 'recentOrders'], async (result) => {
         const backendUrl = result.backendUrl || 'http://localhost:3000';
-        const branchId = result.branchId || 1;
+        const branchId = Number(result.branchId);
         const relaySecret = result.relaySecret || '';
+
+        if (!Number.isInteger(branchId) || branchId <= 0) {
+          updateBadge('⚠️ Chưa cấu hình mã chi nhánh trong tiện ích', false);
+          return;
+        }
 
         try {
           const headers = {

@@ -29,4 +29,21 @@
     <color name="console">#182230</color>
     <color name="console_border">#344054</color>
     <color name="console_text">#D1FADF</color>
+    <color name="console_timestamp">#94A3B8</color>
+    <color name="console_tag_pos">#60A5FA</color>
+    <color name="console_tag_print">#38BDF8</color>
+    <color name="console_tag_success">#34D399</color>
+    <color name="console_tag_warning">#FBBF24</color>
+    <color name="console_tag_error">#F87171</color>
+    <color name="console_tag_info">#A7F3D0</color>
+
+    <color name="shopee_orange">#EE4D2D</color>
+    <color name="shopee_surface">#FFF0ED</color>
+    <color name="shopee_border">#FDCAC1</color>
+    <color name="greensm_green">#00A651</color>
+    <color name="greensm_surface">#E6F7ED</color>
+    <color name="greensm_border">#B3E6CA</color>
+    <color name="befood_yellow">#B78103</color>
+    <color name="befood_surface">#FFFBE6</color>
+    <color name="befood_border">#FFE58F</color>
 </resources>

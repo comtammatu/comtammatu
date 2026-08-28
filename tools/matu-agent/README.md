@@ -45,6 +45,19 @@ Configure each delivery app's network printer to use `127.0.0.1:9100` when it ru
 
 The foreground service restarts after boot and retries queued receipts with capped exponential backoff. Legacy queue data is migrated from the previous database filename on first launch.
 
+The app separates operational work into virtual-printer status, waiting/sent
+orders, per-platform enablement, diagnostics, and logs. Selecting an order shows
+its OCR text, retry state, last failure, and the POS response. A pending order can
+be moved to the front of the retry queue from its detail dialog.
+
+When LAN mode is enabled, the Agent advertises `Má Tư Agent` through DNS-SD as a
+raw printer (`_pdl-datastream._tcp`) so compatible delivery apps can discover it.
+Loopback mode is intentionally not advertised because advertising a Wi-Fi
+address while listening only on `127.0.0.1` would expose a printer target that
+cannot be reached. Apps that do not support DNS-SD still require their own
+printer configuration; Android cannot force a third-party merchant app to adopt
+a discovered printer.
+
 ShopeeFood currently renders the receipt as a monochrome ESC/POS raster image.
 The Agent uses the bundled ML Kit Latin text-recognition model on the phone and
 sends the recognized text together with the original ESC/POS bytes. The POS

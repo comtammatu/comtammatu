@@ -132,6 +132,10 @@ walk the **UI Review Checklist** below.
 - Accessibility basics are non-negotiable: keyboard reachability, visible focus,
   labels/names, semantic status not conveyed by color alone, and adequate touch
   targets.
+- **Flex/Grid anti-overflow and sizing boundaries:** Every flex/grid child containing text, badges, or buttons within bounded containers (sidebars `w-72`/`w-80`, drawers, cards, mobile viewports <390px) must carry `min-w-0` and `truncate`/`break-words`. Never rely on default `min-w: auto`.
+- **Button token and sizing invariants:** Never override `size="touch"` (`min-h-12`) with conflicting `h-*`/`min-w-*` classes. Compact buttons inside narrow grid columns (e.g. 4-column filter tabs) must have `min-w-0` and truncate or use responsive scrollable tabs.
+- **Rhythm & padding consistency (Rhythm Contract A):** Prevent compound/nested padding (e.g., nesting `Item` + `Button` + `LineItem` each adding padding). Use standard tokens (`p-3` compact/mobile, `p-4` comfortable; `gap-2` rows, `gap-1.5` chips/tags, `gap-1` tight labels). Never use hardcoded arbitrary padding offsets (e.g. `pr-14`/`pr-20`) to clear floating elements; use in-flow flex columns instead.
+- **Card header badge & price containment:** Badges and price indicators on media/cards must share a single responsive flex header (`flex items-start justify-between gap-1 w-full`) with `max-w-full truncate` on badges, never multiple disconnected absolute overlays that collide.
 - Never put agent notes, SOP, recovery policy, internal timers, or
   implementation commentary into product UI. Copy Contract in
   `design-system.md` owns the budget.

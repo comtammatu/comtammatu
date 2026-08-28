@@ -516,19 +516,36 @@ test("GrabFood mapping: preserves legitimate 0đ total for 100% discounted order
 });
 
 test("GrabFood security: validateGrabMerchantForBranch enforces cross-branch merchant isolation", () => {
-  // Valid branch 3 (Nguyễn Hữu Thọ) matching its configured merchant
-  assert.equal(validateGrabMerchantForBranch(3, "5-C8DTE75GUGJ3JT"), true);
+  const previousMappings = process.env.GRAB_BRANCH_MERCHANT_MAPPINGS;
+  process.env.GRAB_BRANCH_MERCHANT_MAPPINGS = JSON.stringify({
+    37: "merchant-alpha",
+    91: "merchant-beta",
+  });
 
-  // Fallback branch 1
-  assert.equal(validateGrabMerchantForBranch(1, "5-C8DTE75GUGJ3JT"), true);
+  try {
+    assert.equal(validateGrabMerchantForBranch(37, "merchant-alpha"), true);
+    assert.equal(validateGrabMerchantForBranch(91, "merchant-beta"), true);
+    assert.equal(validateGrabMerchantForBranch(37, "merchant-beta"), false);
+    assert.equal(validateGrabMerchantForBranch(52, "merchant-alpha"), false);
+    assert.equal(validateGrabMerchantForBranch(37, null), false);
+    assert.equal(validateGrabMerchantForBranch(37, ""), false);
+  } finally {
+    if (previousMappings === undefined) {
+      delete process.env.GRAB_BRANCH_MERCHANT_MAPPINGS;
+    } else {
+      process.env.GRAB_BRANCH_MERCHANT_MAPPINGS = previousMappings;
+    }
+  }
+});
 
-  // Invalid merchant for branch 3
-  assert.equal(validateGrabMerchantForBranch(3, "5-WRONGMERCHANT"), false);
-
-  // Cross-branch attack: branch 2 attempting to use branch 3's merchant ID
-  assert.equal(validateGrabMerchantForBranch(2, "5-C8DTE75GUGJ3JT"), false);
-
-  // Null / empty merchant
-  assert.equal(validateGrabMerchantForBranch(3, null), false);
-  assert.equal(validateGrabMerchantForBranch(3, ""), false);
+test("GrabFood merchant validation fails closed without explicit branch mapping", () => {
+  const previousMappings = process.env.GRAB_BRANCH_MERCHANT_MAPPINGS;
+  delete process.env.GRAB_BRANCH_MERCHANT_MAPPINGS;
+  try {
+    assert.equal(validateGrabMerchantForBranch(37, "merchant-alpha"), false);
+  } finally {
+    if (previousMappings !== undefined) {
+      process.env.GRAB_BRANCH_MERCHANT_MAPPINGS = previousMappings;
+    }
+  }
 });

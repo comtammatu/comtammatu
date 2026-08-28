@@ -394,6 +394,13 @@ export function parseShopeeReceiptText(receiptText: string): ShopeeOrderRaw {
  * order code prefix, and platform payment methods.
  */
 export type DeliveryPlatform = "shopee" | "grab" | "be" | "greensm";
+export type DatabaseDeliveryPlatform = "shopee" | "grab" | "be" | "green_sm";
+
+export function toDatabaseDeliveryPlatform(
+  platform: DeliveryPlatform,
+): DatabaseDeliveryPlatform {
+  return platform === "greensm" ? "green_sm" : platform;
+}
 
 export function detectDeliveryPlatform(receiptText: string): DeliveryPlatform | null {
   const signatures: ReadonlyArray<readonly [DeliveryPlatform, readonly RegExp[]]> = [

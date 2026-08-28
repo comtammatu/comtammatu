@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function cleanUrlAndExtractBranch(rawUrl) {
     let url = rawUrl.trim().replace(/\/+$/, '');
-    // Auto handle cases where user pastes full POS URL e.g. "https://web.comtammatu.com/br/3/pos"
+    // Auto handle cases where the user pastes a full POS URL containing /br/<branch-id>/pos.
     const match = url.match(/^(https?:\/\/[^\/]+)(?:\/br\/(\d+)(?:\/.*)?)?$/i);
     if (match && match[1]) {
       const origin = match[1];
@@ -38,10 +38,15 @@ document.addEventListener('DOMContentLoaded', () => {
     return { origin: url, extractedBranchId: null };
   }
 
+  function normalizeBranchId(value) {
+    const parsed = Number(value);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+  }
+
   // Load existing settings
   chrome.storage.local.get(['backendUrl', 'branchId', 'relaySecret', 'recentOrders'], (res) => {
     backendUrlInput.value = res.backendUrl || 'http://localhost:3000';
-    branchIdInput.value = res.branchId || '3';
+    branchIdInput.value = normalizeBranchId(res.branchId) ?? '';
     relaySecretInput.value = res.relaySecret || '';
 
     if (Array.isArray(res.recentOrders) && res.recentOrders.length > 0) {
@@ -53,9 +58,10 @@ document.addEventListener('DOMContentLoaded', () => {
   btnSave.addEventListener('click', () => {
     const parsed = cleanUrlAndExtractBranch(backendUrlInput.value);
     const backendUrl = parsed.origin;
-    let branchId = parseInt(branchIdInput.value, 10);
-    if (isNaN(branchId) || branchId <= 0) {
-      branchId = parsed.extractedBranchId || 3;
+    const branchId = normalizeBranchId(branchIdInput.value) ?? parsed.extractedBranchId;
+    if (branchId === null) {
+      showToast('❌ Nhập mã chi nhánh hợp lệ hoặc dán URL POS có /br/{id}', false);
+      return;
     }
 
     backendUrlInput.value = backendUrl;

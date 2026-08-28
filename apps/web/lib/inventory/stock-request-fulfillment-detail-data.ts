@@ -40,15 +40,14 @@ async function loadSourceBranchId(
   isOwner: boolean,
 ): Promise<number | null> {
   if (!isOwner && actorBranchId != null) return actorBranchId;
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("branches")
     .select("id")
     .eq("tenant_id", tenantId)
     .eq("branch_kind", siteKind)
     .eq("is_active", true)
-    .order("id")
-    .limit(1)
-    .maybeSingle();
+    .single();
+  if (error) return null;
   return data?.id ?? null;
 }
 

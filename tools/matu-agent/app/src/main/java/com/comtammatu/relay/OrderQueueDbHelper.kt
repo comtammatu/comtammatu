@@ -1,4 +1,4 @@
-﻿package com.comtammatu.relay
+package com.comtammatu.relay
 
 import android.content.ContentValues
 import android.content.Context
@@ -26,7 +26,7 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
     companion object {
         const val DATABASE_NAME = "matu_agent_queue.db"
         private const val LEGACY_DATABASE_NAME = "sunmi_relay_queue.db"
-        const val DATABASE_VERSION = 4
+        const val DATABASE_VERSION = 5
 
         const val TABLE_ORDERS = "queued_orders"
         const val COLUMN_ID = "id"
@@ -40,6 +40,7 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         const val COLUMN_LAST_ERROR = "last_error"
         const val COLUMN_NEXT_RETRY_AT = "next_retry_at"
         const val COLUMN_CLAIMED_AT = "claimed_at"
+        const val COLUMN_REMOTE_RESPONSE = "remote_response"
 
         const val STATUS_PENDING = "PENDING"
         const val STATUS_SENDING = "SENDING"
@@ -88,7 +89,8 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
                 $COLUMN_CREATED_AT INTEGER NOT NULL,
                 $COLUMN_LAST_ERROR TEXT,
                 $COLUMN_NEXT_RETRY_AT INTEGER NOT NULL DEFAULT 0,
-                $COLUMN_CLAIMED_AT INTEGER NOT NULL DEFAULT 0
+                $COLUMN_CLAIMED_AT INTEGER NOT NULL DEFAULT 0,
+                $COLUMN_REMOTE_RESPONSE TEXT
             )
             """.trimIndent()
         )
@@ -103,6 +105,9 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         }
         if (oldVersion < 4) {
             db.execSQL("ALTER TABLE $TABLE_ORDERS ADD COLUMN $COLUMN_RECEIPT_TEXT TEXT")
+        }
+        if (oldVersion < 5) {
+            db.execSQL("ALTER TABLE $TABLE_ORDERS ADD COLUMN $COLUMN_REMOTE_RESPONSE TEXT")
         }
     }
 
@@ -128,10 +133,12 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         return db.insert(TABLE_ORDERS, null, values)
     }
 
-    fun markOrderSent(orderId: Long) {
+    fun markOrderSent(orderId: Long, remoteResponse: String? = null) {
         val db = writableDatabase
         val values = ContentValues().apply {
             put(COLUMN_STATUS, STATUS_SENT)
+            put(COLUMN_REMOTE_RESPONSE, remoteResponse?.take(8 * 1024))
+            putNull(COLUMN_LAST_ERROR)
         }
         db.update(TABLE_ORDERS, values, "$COLUMN_ID = ?", arrayOf(orderId.toString()))
     }
@@ -190,7 +197,25 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         val platform: String,
         val receiptText: String?,
         val retryCount: Int,
-        val createdAt: Long
+        val createdAt: Long,
+        val status: String,
+        val lastError: String?,
+        val nextRetryAt: Long,
+        val remoteResponse: String?
+    )
+
+    private fun readQueuedOrder(c: android.database.Cursor): QueuedOrder = QueuedOrder(
+        id = c.getLong(c.getColumnIndexOrThrow(COLUMN_ID)),
+        rawBase64 = c.getString(c.getColumnIndexOrThrow(COLUMN_RAW_BASE64)),
+        branchId = c.getInt(c.getColumnIndexOrThrow(COLUMN_BRANCH_ID)),
+        platform = c.getString(c.getColumnIndexOrThrow(COLUMN_PLATFORM)),
+        receiptText = c.getString(c.getColumnIndexOrThrow(COLUMN_RECEIPT_TEXT)),
+        retryCount = c.getInt(c.getColumnIndexOrThrow(COLUMN_RETRY_COUNT)),
+        createdAt = c.getLong(c.getColumnIndexOrThrow(COLUMN_CREATED_AT)),
+        status = c.getString(c.getColumnIndexOrThrow(COLUMN_STATUS)),
+        lastError = c.getString(c.getColumnIndexOrThrow(COLUMN_LAST_ERROR)),
+        nextRetryAt = c.getLong(c.getColumnIndexOrThrow(COLUMN_NEXT_RETRY_AT)),
+        remoteResponse = c.getString(c.getColumnIndexOrThrow(COLUMN_REMOTE_RESPONSE))
     )
 
     fun getPendingOrders(limit: Int = 20): List<QueuedOrder> {
@@ -209,15 +234,7 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
 
         cursor.use { c ->
             while (c.moveToNext()) {
-                val id = c.getLong(c.getColumnIndexOrThrow(COLUMN_ID))
-                val raw = c.getString(c.getColumnIndexOrThrow(COLUMN_RAW_BASE64))
-                val branchId = c.getInt(c.getColumnIndexOrThrow(COLUMN_BRANCH_ID))
-                val platform = c.getString(c.getColumnIndexOrThrow(COLUMN_PLATFORM))
-                val receiptText = c.getString(c.getColumnIndexOrThrow(COLUMN_RECEIPT_TEXT))
-                val retryCount = c.getInt(c.getColumnIndexOrThrow(COLUMN_RETRY_COUNT))
-                val createdAt = c.getLong(c.getColumnIndexOrThrow(COLUMN_CREATED_AT))
-
-                list.add(QueuedOrder(id, raw, branchId, platform, receiptText, retryCount, createdAt))
+                list.add(readQueuedOrder(c))
             }
         }
         return list
@@ -240,15 +257,7 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         cursor.use { c ->
             while (c.moveToNext()) {
                 list.add(
-                    QueuedOrder(
-                        id = c.getLong(c.getColumnIndexOrThrow(COLUMN_ID)),
-                        rawBase64 = c.getString(c.getColumnIndexOrThrow(COLUMN_RAW_BASE64)),
-                        branchId = c.getInt(c.getColumnIndexOrThrow(COLUMN_BRANCH_ID)),
-                        platform = c.getString(c.getColumnIndexOrThrow(COLUMN_PLATFORM)),
-                        receiptText = c.getString(c.getColumnIndexOrThrow(COLUMN_RECEIPT_TEXT)),
-                        retryCount = c.getInt(c.getColumnIndexOrThrow(COLUMN_RETRY_COUNT)),
-                        createdAt = c.getLong(c.getColumnIndexOrThrow(COLUMN_CREATED_AT))
-                    )
+                    readQueuedOrder(c)
                 )
             }
         }
@@ -277,6 +286,66 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         return cursor.use {
             if (it.moveToFirst()) it.getInt(0) else 0
         }
+    }
+
+    fun getWaitingCount(): Int = countByStatuses(
+        listOf(STATUS_PENDING, STATUS_SENDING, STATUS_UNCLASSIFIED)
+    )
+
+    fun getSentCount(): Int = countByStatuses(listOf(STATUS_SENT))
+
+    private fun countByStatuses(statuses: List<String>): Int {
+        val placeholders = statuses.joinToString(",") { "?" }
+        val cursor = readableDatabase.rawQuery(
+            "SELECT COUNT(*) FROM $TABLE_ORDERS WHERE $COLUMN_STATUS IN ($placeholders)",
+            statuses.toTypedArray()
+        )
+        return cursor.use { if (it.moveToFirst()) it.getInt(0) else 0 }
+    }
+
+    fun getOrders(sent: Boolean, limit: Int = 100): List<QueuedOrder> {
+        val statuses = if (sent) {
+            listOf(STATUS_SENT)
+        } else {
+            listOf(STATUS_PENDING, STATUS_SENDING, STATUS_UNCLASSIFIED)
+        }
+        val placeholders = statuses.joinToString(",") { "?" }
+        val cursor = readableDatabase.query(
+            TABLE_ORDERS,
+            null,
+            "$COLUMN_STATUS IN ($placeholders)",
+            statuses.toTypedArray(),
+            null,
+            null,
+            "$COLUMN_CREATED_AT DESC",
+            limit.toString()
+        )
+        return cursor.use { c ->
+            buildList {
+                while (c.moveToNext()) add(readQueuedOrder(c))
+            }
+        }
+    }
+
+    fun retryOrderNow(orderId: Long): Boolean {
+        val values = ContentValues().apply {
+            put(COLUMN_NEXT_RETRY_AT, 0)
+            putNull(COLUMN_LAST_ERROR)
+        }
+        return writableDatabase.update(
+            TABLE_ORDERS,
+            values,
+            "$COLUMN_ID = ? AND $COLUMN_STATUS = ?",
+            arrayOf(orderId.toString(), STATUS_PENDING)
+        ) > 0
+    }
+
+    fun clearSentOrders(): Int {
+        return writableDatabase.delete(
+            TABLE_ORDERS,
+            "$COLUMN_STATUS = ?",
+            arrayOf(STATUS_SENT)
+        )
     }
 
     fun getQueueSummary(): String {

@@ -82,7 +82,7 @@ function usage(): string {
     "  pnpm realtime:load -- --mode synthetic --surface mixed --clients 50 --events-per-client 100",
     "",
     "Live Realtime listener benchmark against dev/test Supabase:",
-    "  pnpm realtime:load -- --mode listen --surface mixed --branch-id 1 --clients 50 --duration-ms 30000",
+    "  pnpm realtime:load -- --mode listen --surface mixed --branch-id <branch-id> --clients 50 --duration-ms 30000",
     "",
     "Live listener with controlled fixture writes (dev/test only):",
     "  REALTIME_LOAD_TARGET=dev pnpm realtime:load -- --mode listen --surface mixed --clients 50 --mutations 20 --allow-writes",
@@ -345,15 +345,6 @@ async function resolveBranchId(
     const context = await getPosTestContext();
     return context.branchId;
   }
-
-  const service = createServiceClient();
-  const { data } = await service
-    .from("branches")
-    .select("id")
-    .order("id")
-    .limit(1)
-    .maybeSingle();
-  if (data?.id) return data.id;
 
   throw new Error(
     "Unable to resolve branch id. Pass --branch-id or set REALTIME_LOAD_BRANCH_ID.",

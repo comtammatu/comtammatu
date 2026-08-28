@@ -60,8 +60,8 @@ type DayGroup = {
 const NOTIFICATION_SKELETON_ITEMS: NotificationItemModel[] = [
   {
     id: 1,
-    tenant_id: 1,
-    target_branch_id: 1,
+    tenant_id: 0,
+    target_branch_id: null,
     target_roles: ["cashier"],
     kind: "pos.order_new",
     severity: "info",
@@ -69,7 +69,7 @@ const NOTIFICATION_SKELETON_ITEMS: NotificationItemModel[] = [
     body: "Bàn 04 vừa tạo đơn mới.",
     entity_type: "order",
     entity_id: 1,
-    action_url: "/br/1/pos",
+    action_url: "/notifications",
     history_url: null,
     audit_url: null,
     meta: {},
@@ -79,8 +79,8 @@ const NOTIFICATION_SKELETON_ITEMS: NotificationItemModel[] = [
   },
   {
     id: 2,
-    tenant_id: 1,
-    target_branch_id: 1,
+    tenant_id: 0,
+    target_branch_id: null,
     target_roles: ["branch_manager"],
     kind: "inventory.stock_low",
     severity: "warning",
@@ -98,7 +98,7 @@ const NOTIFICATION_SKELETON_ITEMS: NotificationItemModel[] = [
   },
   {
     id: 3,
-    tenant_id: 1,
+    tenant_id: 0,
     target_branch_id: null,
     target_roles: ["owner"],
     kind: "workflow.grn_pending",

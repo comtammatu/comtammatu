@@ -21,7 +21,7 @@ Extension tự động bắt đơn hàng từ cổng đối tác Shopee Partner 
 4. Chọn thư mục `tools/shopeefood-pos-relay-extension`.
 5. Bấm vào icon extension trên thanh công cụ:
    - **Địa chỉ máy chủ POS**: Điền URL của POS (ví dụ `http://localhost:3000` hoặc domain Production).
-   - **Chi nhánh (Branch ID)**: Điền ID chi nhánh của quán (mặc định: `3` - Nguyễn Hữu Thọ).
+   - **Chi nhánh (Branch ID)**: Điền ID từ URL POS của đúng chi nhánh. Tiện ích sẽ không gửi đơn nếu chưa cấu hình.
    - Bấm **Lưu Cài Đặt** và **Test Kết Nối**.
 6. Mở tab Shopee Partner: `https://partner.shopee.vn/order/report-restaurant`.
    - Bạn sẽ thấy huy hiệu tròn `🟢 ShopeeFood POS Relay: Đang trực đơn...` ở góc dưới bên phải màn hình.

@@ -10,7 +10,9 @@ export async function GET() {
   const timestamp = new Date().toISOString();
   try {
     const supabase = createServiceClient();
-    const { error } = await supabase.from("tenants").select("id").limit(1);
+    const { error } = await supabase
+      .from("tenants")
+      .select("id", { count: "exact", head: true });
     if (error) {
       console.error(
         "[api/health] db check failed:",

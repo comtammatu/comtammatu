@@ -52,6 +52,11 @@ class WebhookDispatcher(
         receiptText: String? = null
     ): Result<String> =
         withContext(Dispatchers.IO) {
+            if (branchId <= 0) {
+                return@withContext Result.failure(
+                    IllegalStateException("Missing branch configuration")
+                )
+            }
             val queuedId = dbHelper.enqueueReceipt(
                 rawBytes = rawBytes,
                 branchId = branchId,
@@ -70,8 +75,8 @@ class WebhookDispatcher(
             val result = executePost(base64Payload, branchId, platform.wireValue, receiptText)
 
             if (result.isSuccess) {
-                dbHelper.markOrderSent(queuedId)
                 val body = result.getOrNull() ?: ""
+                dbHelper.markOrderSent(queuedId, body)
                 Log.i(TAG, "Order #$queuedId successfully dispatched to POS: $body")
                 AppLogger.s("POS", "Đơn #$queuedId đã gửi thành công lên POS!")
             } else {
@@ -83,16 +88,39 @@ class WebhookDispatcher(
             result
         }
 
-    fun storeUnclassifiedReceipt(rawBytes: ByteArray, receiptText: String? = null): Long = dbHelper.enqueueReceipt(
-        rawBytes = rawBytes,
-        branchId = branchId,
-        platform = "unknown",
-        receiptText = receiptText,
-        status = OrderQueueDbHelper.STATUS_UNCLASSIFIED,
-        lastError = "Không nhận diện được duy nhất một nguồn sàn"
-    )
+    fun storeUnclassifiedReceipt(rawBytes: ByteArray, receiptText: String? = null): Long {
+        check(branchId > 0) { "Missing branch configuration" }
+        return dbHelper.enqueueReceipt(
+            rawBytes = rawBytes,
+            branchId = branchId,
+            platform = "unknown",
+            receiptText = receiptText,
+            status = OrderQueueDbHelper.STATUS_UNCLASSIFIED,
+            lastError = "Không nhận diện được duy nhất một nguồn sàn"
+        )
+    }
 
-    suspend fun recoverUnclassifiedReceipts(recognizer: ReceiptTextRecognizer) =
+    fun storeHeldReceipt(
+        rawBytes: ByteArray,
+        platform: DeliveryPlatform,
+        receiptText: String?,
+        reason: String
+    ): Long {
+        check(branchId > 0) { "Missing branch configuration" }
+        return dbHelper.enqueueReceipt(
+            rawBytes = rawBytes,
+            branchId = branchId,
+            platform = platform.wireValue,
+            receiptText = receiptText,
+            status = OrderQueueDbHelper.STATUS_UNCLASSIFIED,
+            lastError = reason
+        )
+    }
+
+    suspend fun recoverUnclassifiedReceipts(
+        recognizer: ReceiptTextRecognizer,
+        isPlatformEnabled: (DeliveryPlatform) -> Boolean = { true }
+    ) =
         withContext(Dispatchers.IO) {
             for (order in dbHelper.getRecoverableRasterOrders()) {
                 try {
@@ -105,6 +133,7 @@ class WebhookDispatcher(
                     if (
                         receiptText != null &&
                         platform != null &&
+                        isPlatformEnabled(platform) &&
                         dbHelper.reclassifyOrder(order.id, platform.wireValue, receiptText)
                     ) {
                         AppLogger.s(
@@ -145,7 +174,7 @@ class WebhookDispatcher(
                         order.receiptText
                     )
                     if (result.isSuccess) {
-                        dbHelper.markOrderSent(order.id)
+                        dbHelper.markOrderSent(order.id, result.getOrNull())
                         Log.i(TAG, "Queued order #${order.id} sent successfully via retry")
                         AppLogger.s("POS", "Gửi lại thành công đơn #${order.id} lên POS!")
                     } else {
@@ -169,6 +198,11 @@ class WebhookDispatcher(
      */
     suspend fun pingPosServer(urlTarget: String, secret: String, branch: Int): Result<String> =
         withContext(Dispatchers.IO) {
+            if (branch <= 0) {
+                return@withContext Result.failure(
+                    IllegalArgumentException("Missing branch configuration")
+                )
+            }
             try {
                 val cleanUrl = urlTarget.trimEnd('/')
                 val endpoint = "$cleanUrl/api/webhooks/delivery/relay"
@@ -228,6 +262,9 @@ class WebhookDispatcher(
         platform: String,
         receiptText: String?
     ): Result<String> {
+        if (branch <= 0) {
+            return Result.failure(IllegalArgumentException("Missing branch configuration"))
+        }
         return try {
             val endpoint = "$backendUrl/api/webhooks/delivery/relay"
             val url = URL(endpoint)

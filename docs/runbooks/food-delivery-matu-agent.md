@@ -9,6 +9,8 @@ Má Tư Agent biến một máy Android thông thường thành máy in mạng E
 3. Mở Má Tư Agent và nhập URL máy chủ POS, mã chi nhánh, Delivery Relay Secret và cổng `9100`.
 4. Giữ **Chế độ LAN** tắt nếu app sàn nằm cùng máy. Bật chế độ này chỉ khi app sàn nằm trên một thiết bị khác trong cùng mạng tin cậy.
 5. Bấm **Bắt đầu máy in ảo**. Chỉ khi cổng đã bind thành công, trạng thái mới chuyển sang màu xanh.
+6. Trong **Cấu hình từng sàn**, chỉ bật các sàn đang vận hành tại máy này. Phiếu
+   của sàn đã tắt được giữ ở **Đang chờ** để kiểm tra và không chuyển lên POS.
 
 ## Cấu hình app sàn
 
@@ -16,9 +18,15 @@ Trong phần cài đặt máy in mạng/Wi-Fi của từng app sàn:
 
 - Cùng máy Android với Agent: IP `127.0.0.1`, cổng `9100`.
 - Khác máy: bật Chế độ LAN trong Agent, dùng IP Wi-Fi của máy chạy Agent và cổng `9100`.
+- Khi bật Chế độ LAN, Agent tự công bố tên máy in `Má Tư Agent` qua DNS-SD.
+  App sàn có hỗ trợ dò máy in mạng có thể tự hiển thị tên này; app không hỗ trợ
+  DNS-SD vẫn phải nhập IP/cổng theo hướng dẫn của chính app sàn.
 - Bật tự động in đơn mới nếu app sàn hỗ trợ.
 
 Bấm **Kiểm tra cổng in** trong Agent để xác nhận cổng cục bộ đang nhận kết nối. Thao tác này không tạo đơn giả trên POS.
+
+Mục **Đơn hàng** tách **Đang chờ** và **Đã xuất**. Chạm một đơn để xem nội dung
+OCR, lỗi gần nhất và phản hồi POS; đơn đang chờ gửi có thể chọn **Gửi lại ngay**.
 
 ## Nhận diện và chuyển phiếu
 

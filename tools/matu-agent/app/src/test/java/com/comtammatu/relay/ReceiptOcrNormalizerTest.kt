@@ -128,4 +128,24 @@ class ReceiptOcrNormalizerTest {
         assertTrue(normalized.contains("Ghi chú: Tùy chọn: Canh Khổ Qua"))
         assertTrue(normalized.contains("1x Canh Khổ Qua 1"))
     }
+
+    @Test
+    fun `normalizes Green SM raster quantity rows without absorbing receipt totals`() {
+        val normalized = RasterReceiptTextNormalizer.normalize(
+            """
+                XANH SM NGON
+                Mã đơn hàng
+                GSM-829173
+                1. Cơm Sườn Cốt Lết
+                • 1xTrứng
+                2 x 114.000d
+                Tổng cộng 114.000d
+            """.trimIndent()
+        )
+
+        assertTrue(normalized.contains("Mã đơn hàng: GSM-829173"))
+        assertTrue(normalized.contains("2x Sườn Cốt Lết 114.000"))
+        assertTrue(normalized.contains("+ Trứng"))
+        assertTrue(!normalized.contains("Ghi chú: Tổng cộng"))
+    }
 }

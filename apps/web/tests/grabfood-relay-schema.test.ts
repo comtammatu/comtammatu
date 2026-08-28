@@ -78,6 +78,14 @@ test("Grab relay validation rejects malformed core order data", () => {
   assert.equal(grabRelaySchema.safeParse(invalidQuantity).success, false);
 });
 
+test("Grab order envelopes require an explicit branch while ping stays unscoped", () => {
+  const withoutBranch = makeExtensionPayload();
+  delete (withoutBranch as { branch_id?: number }).branch_id;
+
+  assert.equal(grabRelaySchema.safeParse({ ping: true }).success, true);
+  assert.equal(grabRelaySchema.safeParse(withoutBranch).success, false);
+});
+
 test("Grab relay validation diagnostics expose paths and codes without payload values", () => {
   const payload = makeExtensionPayload();
   payload.order.itemInfo.items[0]!.name = "PRIVATE CUSTOMER VALUE".repeat(20);

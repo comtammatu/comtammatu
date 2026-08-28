@@ -46,6 +46,11 @@ use built-in search tools; indexing remains an owner decision.
 - Client components may runtime-import only
   `@comtammatu/database/supabase/client`; database-barrel imports are type-only.
 - Scope belongs in URL params, never `localStorage` or React Context.
+- Database identifiers are opaque. Never infer a branch, tenant, or site ID
+  from its name, list order, seed position, or a familiar Production value.
+  Runtime and operational tooling must derive identity from trusted auth/URL/
+  explicit configuration or a uniqueness-checked database lookup; missing
+  identity fails closed. Branch-sensitive tests use non-default IDs.
 - Multi-row correctness belongs in an atomic Postgres RPC.
 - Before any migration apply, verify the target against `database.md`.
   Production apply requires explicit owner delegation in the current task.

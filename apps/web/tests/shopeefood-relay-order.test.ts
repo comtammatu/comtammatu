@@ -131,8 +131,8 @@ test("ShopeeFood transformation: transforms real SPF-892 order accurately", () =
   assert.equal(lineItem1?.menu_item_id, 1);
   assert.equal(lineItem1?.item_name, "Sườn Cốt Lết");
   assert.equal(lineItem1?.quantity, 2);
-  assert.equal(lineItem1?.unit_price, 63000);
-  assert.equal(lineItem1?.subtotal, 126000);
+  assert.equal(lineItem1?.unit_price, 72000);
+  assert.equal(lineItem1?.subtotal, 144000);
   assert.equal(lineItem1?.note, "Miếng sườn nướng cháy cạnh");
   assert.equal(lineItem1?.modifiers.length, 0);
   assert.equal(lineItem1?.sides.length, 2);
@@ -189,7 +189,7 @@ test("ShopeeFood transformation: keeps the platform total separate from item dis
         {
           name: "Cơm Sườn Cốt Lết",
           quantity: 1,
-          price: 57000,
+          price: 99000,
           options: [{ name: "Dụng cụ ăn uống", price: 3000 }],
         },
       ],
@@ -200,6 +200,11 @@ test("ShopeeFood transformation: keeps the platform total separate from item dis
   );
 
   assert.equal(transformed.totalAmount, 43007);
+  assert.equal(
+    transformed.items[0]?.unit_price,
+    57000,
+    "the relay payload must use the mapped menu price plus mapped sides, never trust OCR price text",
+  );
   assert.equal(transformed.items[0]?.discount_type, undefined);
   assert.equal(transformed.items[0]?.discount_value, undefined);
 });
@@ -271,6 +276,20 @@ test("ShopeeFood transformation: keeps daily soup as a kitchen option note", () 
     transformed.items[0]?.sides.map((side) => side.name),
     ["Dụng Cụ Mang Về"],
   );
+});
+
+test("ShopeeFood transformation: missing OCR price never creates a free-item discount", () => {
+  const transformed = transformShopeeOrderPayload(
+    {
+      orderId: "12345-444444444",
+      items: [{ name: "Cơm Sườn Cốt Lết", quantity: 1 }],
+    },
+    MOCK_DB_ITEMS,
+  );
+
+  assert.equal(transformed.items[0]?.unit_price, 54000);
+  assert.equal(transformed.items[0]?.discount_type, undefined);
+  assert.equal(transformed.items[0]?.discount_value, undefined);
 });
 
 test("ShopeeFood mapping: resolves extra rice to the real POS menu name", () => {

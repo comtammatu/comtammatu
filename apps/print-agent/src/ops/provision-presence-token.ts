@@ -42,10 +42,10 @@ type TrustedIpRow = {
 };
 
 const usage = `Usage:
-  pnpm --filter @comtammatu/print-agent presence:provision -- create --tenant-id 1 --branch-id 1 --agent-id pos-branch-1 --confirm-project-ref <ref>
-  pnpm --filter @comtammatu/print-agent presence:provision -- rotate --tenant-id 1 --branch-id 1 --agent-id pos-branch-1 --confirm-project-ref <ref>
-  pnpm --filter @comtammatu/print-agent presence:provision -- revoke --tenant-id 1 --branch-id 1 --agent-id pos-branch-1 --confirm-project-ref <ref>
-  pnpm --filter @comtammatu/print-agent presence:provision -- status --tenant-id 1 --branch-id 1 --agent-id pos-branch-1
+  pnpm --filter @comtammatu/print-agent presence:provision -- create --tenant-id <tenant-id> --branch-id <branch-id> --agent-id <agent-id> --confirm-project-ref <ref>
+  pnpm --filter @comtammatu/print-agent presence:provision -- rotate --tenant-id <tenant-id> --branch-id <branch-id> --agent-id <agent-id> --confirm-project-ref <ref>
+  pnpm --filter @comtammatu/print-agent presence:provision -- revoke --tenant-id <tenant-id> --branch-id <branch-id> --agent-id <agent-id> --confirm-project-ref <ref>
+  pnpm --filter @comtammatu/print-agent presence:provision -- status --tenant-id <tenant-id> --branch-id <branch-id> --agent-id <agent-id>
 
 Options:
   --tenant-id <number>          Defaults to AGENT_TENANT_ID

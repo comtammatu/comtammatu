@@ -133,8 +133,14 @@
 
     chrome.storage.local.get(['backendUrl', 'branchId', 'relaySecret'], async (res) => {
       const backendUrl = res.backendUrl || 'http://localhost:3000';
-      const branchId = res.branchId || 1;
+      const branchId = Number(res.branchId);
       const relaySecret = res.relaySecret || '';
+
+      if (!Number.isInteger(branchId) || branchId <= 0) {
+        itemStatusPollInFlight = false;
+        updateBadge('⚠️ Chưa cấu hình mã chi nhánh trong tiện ích', false);
+        return;
+      }
 
       try {
         const headers = {};

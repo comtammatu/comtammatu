@@ -84,6 +84,8 @@ test(".env.example matches the current branch.env catalog", () => {
   }
   assert.match(envExample, /invoice QR/);
   assert.match(envExample, /nguyen-huu-tho/);
-  assert.match(envExample, /AGENT_BRANCH_ID=3/);
+  assert.match(envExample, /AGENT_BRANCH_ID=<numeric-branch-id>/);
+  assert.doesNotMatch(envExample, /^#?\s*AGENT_BRANCH_ID=\d+$/m);
+  assert.doesNotMatch(envExample, /^#?\s*AGENT_TENANT_ID=\d+$/m);
   assert.doesNotMatch(envExample, /^AGENT_ID=$/m);
 });

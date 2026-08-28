@@ -78,8 +78,8 @@ WEB_BASE_URL=https://<app-host>
 PRINT_AGENT_PRESENCE_TOKEN=<raw per-agent token>
 ```
 
-Example — Nguyễn Hữu Thọ: `AGENT_TENANT_ID=1`, `AGENT_BRANCH_ID=3`,
-`AGENT_ID=nguyen-huu-tho`.
+Resolve the tenant and branch IDs from the verified target environment before
+provisioning. Never copy IDs from another branch, environment, or this runbook.
 
 > Agent version comes from `apps/print-agent/package.json`; SQL view
 > `v_print_agent_fleet` uses the heartbeat version for fleet status.

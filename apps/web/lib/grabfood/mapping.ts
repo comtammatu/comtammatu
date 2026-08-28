@@ -54,14 +54,6 @@ export const GRAB_MENU_MAPPING: Record<string, GrabMappingItem> = {
 };
 
 /**
- * Trusted server-side branch to Grab Merchant ID mappings.
- */
-export const GRAB_BRANCH_MERCHANT_MAP: Record<number, string> = {
-  3: "5-C8DTE75GUGJ3JT", // Branch 3: Nguyễn Hữu Thọ
-  1: "5-C8DTE75GUGJ3JT", // Fallback compatibility for legacy/seed references
-};
-
-/**
  * Validates that a Grab merchant ID belongs to the configured branch.
  */
 export function validateGrabMerchantForBranch(branchId: number, merchantId?: string | null): boolean {
@@ -70,18 +62,18 @@ export function validateGrabMerchantForBranch(branchId: number, merchantId?: str
   if (!cleanMerchantId) return false;
 
   const envMapRaw = process.env.GRAB_BRANCH_MERCHANT_MAPPINGS;
-  if (envMapRaw) {
-    try {
-      const parsed = JSON.parse(envMapRaw) as Record<string, string>;
-      const expected = parsed[String(branchId)];
-      if (expected) return expected === cleanMerchantId;
-    } catch {
-      // Fallback to static mapping
-    }
-  }
+  if (!envMapRaw) return false;
 
-  const expectedMerchantId = GRAB_BRANCH_MERCHANT_MAP[branchId];
-  return expectedMerchantId === cleanMerchantId;
+  try {
+    const parsed = JSON.parse(envMapRaw) as Record<string, unknown>;
+    const expectedMerchantId = parsed[String(branchId)];
+    return (
+      typeof expectedMerchantId === "string" &&
+      expectedMerchantId.trim() === cleanMerchantId
+    );
+  } catch {
+    return false;
+  }
 }
 
 /** Normalizes a string for case/accent-insensitive lookup */

@@ -29,6 +29,12 @@ generated type, route/link/redirect, and state contract/mutation site. Scope the
 review to the changed boundary. When the same deterministic failure recurs,
 prefer one test or guard at the shared boundary over more prose.
 
+For branch-, tenant-, or site-scoped work, record the identity provenance in
+the review: trusted claim, validated URL/config input, or uniqueness-checked
+database lookup. A label, row order, seed position, or remembered numeric value
+is never provenance. Exercise the boundary with a non-default ID and prove that
+missing or ambiguous scope fails closed.
+
 ## Automation And AI Autonomy Cap
 
 Operational actions can affect money, tax, labor, inventory, or customer
@@ -97,6 +103,9 @@ proceeds in four progressive tiers:
 ### Tier 2 — Automated Regression & Unit Tests
 - Targeted test execution covering the modified subsystem (`pnpm test:unit`,
   `vitest`, or pgTAP).
+- Operational tooling is part of the root suite: browser extension JavaScript
+  syntax plus Má Tư Agent Android compile/unit tests run through
+  `test:operational-tools`; they are not optional side checks.
 - Full suite verification via `corepack pnpm verify` (matches CI `gates`).
 
 ### Tier 3 — Runtime & Visual Inspection (UI / Workflow changes)
@@ -115,6 +124,9 @@ When modifying user-facing surfaces or workflow states:
   zero display-rounding in math formulas.
 - **Auth & RLS**: Server Actions validated with Zod; definer helper bypasses;
   no raw DB error leakage.
+- **Data Identity**: Branch/tenant/site IDs come from trusted runtime evidence,
+  never names, ordering, seed position, or numeric fallbacks; run
+  `lint:runtime-identities` and test a non-default ID plus the unscoped case.
 - **Copy & Localization**: Vietnamese UI copy adhering strictly to
   `docs/ref/glossary.md` and `corepack pnpm lint:copy`.
 

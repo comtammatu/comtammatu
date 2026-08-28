@@ -342,14 +342,13 @@ export function transformShopeeOrderPayload(
           ? opt.groupName
           : undefined) ||
         "Món thêm";
-      const optPrice = parseNumericPrice(opt.price);
       const optQty = typeof opt.quantity === "number" && opt.quantity > 0 ? opt.quantity : 1;
 
       const standaloneItem = matchStandaloneOptionItem(optName, dbItems);
       if (standaloneItem) {
         standaloneOptions.push({
           item: standaloneItem,
-          price: optPrice > 0 ? optPrice : standaloneItem.base_price,
+          price: standaloneItem.base_price,
           quantity: optQty,
         });
         optionNotes.push(standaloneItem.name);
@@ -361,7 +360,7 @@ export function transformShopeeOrderPayload(
         sides.push({
           side_item_id: matchedSide.id,
           name: matchedSide.name,
-          price: optPrice > 0 ? optPrice : matchedSide.base_price,
+          price: matchedSide.base_price,
           quantity: optQty,
         });
       } else {
@@ -370,24 +369,15 @@ export function transformShopeeOrderPayload(
     }
 
     const sidesSum = sides.reduce((acc, s) => acc + s.price * s.quantity, 0);
-    const standaloneOptionsSum = standaloneOptions.reduce(
-      (acc, option) => acc + option.price * option.quantity,
-      0,
-    );
     const rawItemPrice = parseNumericPrice(si.price);
-    const unitPrice =
-      rawItemPrice > 0
-        ? standaloneOptions.length > 0
-          ? Math.max(
-              matched.base_price + sidesSum,
-              rawItemPrice - standaloneOptionsSum,
-            )
-          : rawItemPrice
-        : matched.base_price + sidesSum;
+    // OCR prices are diagnostic evidence only. Item identity and the local
+    // catalog determine this preview value; create_order independently resolves
+    // the authoritative delivery-channel price from the database.
+    const unitPrice = matched.base_price + sidesSum;
     const subtotal = unitPrice * qty;
 
     const isFreeGift =
-      rawItemPrice === 0 ||
+      (si.price !== undefined && rawItemPrice === 0) ||
       /tặng|quà\s*tặng|free\b|0đ|0\s*đ/i.test(si.name);
 
     let discountType: "pct" | "vnd" | undefined;
@@ -398,13 +388,6 @@ export function transformShopeeOrderPayload(
       discountType = "pct";
       discountValue = 100;
       discountNote = "Khuyến mãi tặng kèm ShopeeFood (0đ)";
-    } else if (rawItemPrice > 0 && rawItemPrice < unitPrice) {
-      const itemDiscount = unitPrice - rawItemPrice;
-      if (itemDiscount > 0) {
-        discountType = "vnd";
-        discountValue = itemDiscount;
-        discountNote = "Khuyến mãi giảm giá món ShopeeFood";
-      }
     }
 
     const noteParts = [
