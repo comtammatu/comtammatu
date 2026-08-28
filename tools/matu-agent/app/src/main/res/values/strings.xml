@@ -23,7 +23,7 @@
     <string name="view_queue_action">Xem tổng kết hàng đợi</string>
 
     <string name="orders_title">Đơn hàng</string>
-    <string name="orders_description">Theo dõi đơn đã xuất, đơn đang chờ và mở nội dung OCR của từng phiếu.</string>
+    <string name="orders_description">Đối chiếu mã đơn của sàn với mã phiếu POS; theo dõi đơn chờ và số lần Agent đã chặn trùng.</string>
     <string name="waiting_orders_action">Đang chờ</string>
     <string name="sent_orders_action">Đã xuất</string>
     <string name="orders_count_summary">%1$d đang chờ  ·  %2$d đã xuất</string>
@@ -52,9 +52,9 @@
     <string name="copy_logs_action">Sao chép</string>
     <string name="logs_copied_toast">Đã sao chép toàn bộ nhật ký vào bộ nhớ tạm</string>
     <string name="run_all_diagnostics_action">Kiểm tra toàn diện</string>
-    <string name="clear_sent_orders_action">Dọn đơn đã xuất</string>
-    <string name="clear_sent_orders_confirm">Bạn có chắc muốn xóa tất cả đơn hàng đã xuất thành công khỏi bộ nhớ cục bộ?</string>
-    <string name="clear_sent_orders_success">Đã dọn dẹp %1$d đơn đã xuất thành công</string>
+    <string name="clear_sent_orders_action">Dọn dữ liệu đã xử lý</string>
+    <string name="clear_sent_orders_confirm">Agent sẽ xóa ảnh phiếu, nội dung OCR và dữ liệu chẩn đoán của đơn đã xử lý. Danh sách mã đơn và mã phiếu POS vẫn được giữ để đối chiếu.</string>
+    <string name="clear_sent_orders_success">Đã dọn dữ liệu nặng của %1$d đơn; lịch sử đối chiếu vẫn được giữ</string>
     <string name="show_secret_action">Hiện</string>
     <string name="hide_secret_action">Ẩn</string>
     <string name="retry_now_action">Gửi lại ngay</string>

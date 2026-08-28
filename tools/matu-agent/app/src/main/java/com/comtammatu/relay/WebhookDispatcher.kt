@@ -57,12 +57,21 @@ class WebhookDispatcher(
                     IllegalStateException("Missing branch configuration")
                 )
             }
-            val queuedId = dbHelper.enqueueReceipt(
+            val queued = dbHelper.enqueueReceipt(
                 rawBytes = rawBytes,
                 branchId = branchId,
                 platform = platform.wireValue,
                 receiptText = receiptText
             )
+            val queuedId = queued.orderId
+            if (!queued.inserted) {
+                val sourceLabel = queued.sourceOrderRef?.let { "mã $it" } ?: "dữ liệu phiếu giống nhau"
+                AppLogger.w(
+                    "CHỐNG TRÙNG",
+                    "Đã chặn phiếu trùng ($sourceLabel); giữ bản ghi #$queuedId ở trạng thái ${queued.status}."
+                )
+                return@withContext Result.success("local_duplicate:$queuedId")
+            }
             AppLogger.pos("Đã lưu phiếu #$queuedId vào hàng đợi (${platform.displayName}, ${rawBytes.size} bytes)")
 
             if (!dbHelper.claimOrder(queuedId)) {
@@ -97,7 +106,7 @@ class WebhookDispatcher(
             receiptText = receiptText,
             status = OrderQueueDbHelper.STATUS_UNCLASSIFIED,
             lastError = "Không nhận diện được duy nhất một nguồn sàn"
-        )
+        ).orderId
     }
 
     fun storeHeldReceipt(
@@ -114,7 +123,7 @@ class WebhookDispatcher(
             receiptText = receiptText,
             status = OrderQueueDbHelper.STATUS_UNCLASSIFIED,
             lastError = reason
-        )
+        ).orderId
     }
 
     suspend fun recoverUnclassifiedReceipts(

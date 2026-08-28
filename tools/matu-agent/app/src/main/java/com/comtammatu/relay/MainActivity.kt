@@ -47,6 +47,9 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 class MainActivity : Activity() {
+    companion object {
+        const val ACTION_START_AGENT = "com.comtammatu.relay.action.START_AGENT"
+    }
 
     private lateinit var etBackendUrl: EditText
     private lateinit var etBranchId: EditText
@@ -119,6 +122,19 @@ class MainActivity : Activity() {
         AppLogger.i("GIAO DIỆN", "Khởi động Má Tư Agent")
         updateLogsView()
         refreshServiceState()
+        handleOperationalAction(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleOperationalAction(intent)
+    }
+
+    private fun handleOperationalAction(intent: Intent) {
+        if (intent.action == ACTION_START_AGENT && !PrintIntakeService.isServiceRunning) {
+            btnToggle.post { toggleService() }
+        }
     }
 
     override fun onStart() {
@@ -506,8 +522,8 @@ class MainActivity : Activity() {
             .setTitle(getString(R.string.clear_sent_orders_action))
             .setMessage(getString(R.string.clear_sent_orders_confirm))
             .setPositiveButton("Dọn dẹp") { _, _ ->
-                val deleted = dbHelper.clearSentOrders()
-                Toast.makeText(this, getString(R.string.clear_sent_orders_success, deleted), Toast.LENGTH_SHORT).show()
+                val compacted = dbHelper.compactSentOrders()
+                Toast.makeText(this, getString(R.string.clear_sent_orders_success, compacted), Toast.LENGTH_SHORT).show()
                 refreshServiceState()
             }
             .setNegativeButton("Hủy", null)
@@ -1095,7 +1111,13 @@ class MainActivity : Activity() {
         val labels = orders.map { order ->
             val pName = platformLabel(order.platform)
             val sName = statusLabel(order.status)
-            "#${order.id} · $pName\n$sName · ${timeFormat.format(Date(order.createdAt))}"
+            val sourceRef = order.sourceOrderRef ?: "Phiếu #${order.id}"
+            val mapping = if (sent) {
+                "POS: ${order.posOrderNumber ?: order.posDisplayId ?: "Chưa có mã phiếu"}"
+            } else {
+                sName
+            }
+            "$sourceRef · $pName\n$mapping · ${timeFormat.format(Date(order.createdAt))}"
         }.toTypedArray()
 
         AlertDialog.Builder(this)
@@ -1139,9 +1161,29 @@ class MainActivity : Activity() {
 
         infoCard.addView(infoRow("Trạng thái:", statusLabel(order.status)))
         infoCard.addView(infoRow("Sàn:", platformLabel(order.platform)))
+        infoCard.addView(infoRow("Mã đơn:", order.sourceOrderRef ?: "Chưa đọc được"))
+        if (order.status == OrderQueueDbHelper.STATUS_SENT) {
+            infoCard.addView(infoRow("Mã phiếu POS:", order.posOrderNumber ?: "Chưa có"))
+            order.posDisplayId?.let { infoCard.addView(infoRow("Mã hiển thị:", it)) }
+            order.posOrderId?.let { infoCard.addView(infoRow("ID đơn POS:", it.toString())) }
+            if (order.posOrderId != null || order.posOrderNumber != null) {
+                infoCard.addView(
+                    infoRow(
+                        "Kết quả:",
+                        if (order.idempotent) "Ghép với đơn POS đã có" else "Đã tạo trên POS"
+                    )
+                )
+            }
+            if (order.sentAt > 0) {
+                infoCard.addView(infoRow("Thời gian xuất:", timeFormat.format(Date(order.sentAt))))
+            }
+        }
         infoCard.addView(infoRow("Chi nhánh:", order.branchId.toString()))
         infoCard.addView(infoRow("Thời gian nhận:", timeFormat.format(Date(order.createdAt))))
         infoCard.addView(infoRow("Số lần gửi lại:", order.retryCount.toString()))
+        if (order.duplicateCount > 0) {
+            infoCard.addView(infoRow("Đã chặn trùng:", "${order.duplicateCount} lần"))
+        }
         detailLayout.addView(infoCard)
 
         if (!order.lastError.isNullOrBlank()) {

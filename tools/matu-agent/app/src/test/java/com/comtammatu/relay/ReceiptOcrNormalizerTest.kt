@@ -130,6 +130,22 @@ class ReceiptOcrNormalizerTest {
     }
 
     @Test
+    fun `repairs the duplicated accent OCR error in kumquat tea`() {
+        val normalized = RasterReceiptTextNormalizer.normalize(
+            """
+                ShopeeFood
+                Mã đơn hàng
+                28086-616906507
+                1. Trà Tắấc
+                X1 20.000d
+                Tổng món 1
+            """.trimIndent()
+        )
+
+        assertTrue(normalized.contains("1x Trà Tắc 20.000"))
+    }
+
+    @Test
     fun `normalizes Green SM raster quantity rows without absorbing receipt totals`() {
         val normalized = RasterReceiptTextNormalizer.normalize(
             """

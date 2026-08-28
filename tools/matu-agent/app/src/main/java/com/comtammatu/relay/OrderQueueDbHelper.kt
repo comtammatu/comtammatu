@@ -26,7 +26,7 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
     companion object {
         const val DATABASE_NAME = "matu_agent_queue.db"
         private const val LEGACY_DATABASE_NAME = "sunmi_relay_queue.db"
-        const val DATABASE_VERSION = 5
+        const val DATABASE_VERSION = 6
 
         const val TABLE_ORDERS = "queued_orders"
         const val COLUMN_ID = "id"
@@ -41,6 +41,15 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         const val COLUMN_NEXT_RETRY_AT = "next_retry_at"
         const val COLUMN_CLAIMED_AT = "claimed_at"
         const val COLUMN_REMOTE_RESPONSE = "remote_response"
+        const val COLUMN_SOURCE_ORDER_REF = "source_order_ref"
+        const val COLUMN_RECEIPT_FINGERPRINT = "receipt_fingerprint"
+        const val COLUMN_POS_ORDER_ID = "pos_order_id"
+        const val COLUMN_POS_ORDER_NUMBER = "pos_order_number"
+        const val COLUMN_POS_DISPLAY_ID = "pos_display_id"
+        const val COLUMN_SENT_AT = "sent_at"
+        const val COLUMN_DUPLICATE_COUNT = "duplicate_count"
+        const val COLUMN_LAST_SEEN_AT = "last_seen_at"
+        const val COLUMN_IDEMPOTENT = "idempotent"
 
         const val STATUS_PENDING = "PENDING"
         const val STATUS_SENDING = "SENDING"
@@ -90,10 +99,20 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
                 $COLUMN_LAST_ERROR TEXT,
                 $COLUMN_NEXT_RETRY_AT INTEGER NOT NULL DEFAULT 0,
                 $COLUMN_CLAIMED_AT INTEGER NOT NULL DEFAULT 0,
-                $COLUMN_REMOTE_RESPONSE TEXT
+                $COLUMN_REMOTE_RESPONSE TEXT,
+                $COLUMN_SOURCE_ORDER_REF TEXT,
+                $COLUMN_RECEIPT_FINGERPRINT TEXT,
+                $COLUMN_POS_ORDER_ID INTEGER,
+                $COLUMN_POS_ORDER_NUMBER TEXT,
+                $COLUMN_POS_DISPLAY_ID TEXT,
+                $COLUMN_SENT_AT INTEGER NOT NULL DEFAULT 0,
+                $COLUMN_DUPLICATE_COUNT INTEGER NOT NULL DEFAULT 0,
+                $COLUMN_LAST_SEEN_AT INTEGER NOT NULL DEFAULT 0,
+                $COLUMN_IDEMPOTENT INTEGER NOT NULL DEFAULT 0
             )
             """.trimIndent()
         )
+        createIdentityIndexes(db)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -109,6 +128,139 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         if (oldVersion < 5) {
             db.execSQL("ALTER TABLE $TABLE_ORDERS ADD COLUMN $COLUMN_REMOTE_RESPONSE TEXT")
         }
+        if (oldVersion < 6) {
+            db.execSQL("ALTER TABLE $TABLE_ORDERS ADD COLUMN $COLUMN_SOURCE_ORDER_REF TEXT")
+            db.execSQL("ALTER TABLE $TABLE_ORDERS ADD COLUMN $COLUMN_RECEIPT_FINGERPRINT TEXT")
+            db.execSQL("ALTER TABLE $TABLE_ORDERS ADD COLUMN $COLUMN_POS_ORDER_ID INTEGER")
+            db.execSQL("ALTER TABLE $TABLE_ORDERS ADD COLUMN $COLUMN_POS_ORDER_NUMBER TEXT")
+            db.execSQL("ALTER TABLE $TABLE_ORDERS ADD COLUMN $COLUMN_POS_DISPLAY_ID TEXT")
+            db.execSQL("ALTER TABLE $TABLE_ORDERS ADD COLUMN $COLUMN_SENT_AT INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE $TABLE_ORDERS ADD COLUMN $COLUMN_DUPLICATE_COUNT INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE $TABLE_ORDERS ADD COLUMN $COLUMN_LAST_SEEN_AT INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE $TABLE_ORDERS ADD COLUMN $COLUMN_IDEMPOTENT INTEGER NOT NULL DEFAULT 0")
+            migrateOrderIdentities(db)
+            migrateSentMappings(db)
+            collapseLegacyDuplicates(db)
+            createIdentityIndexes(db)
+        }
+    }
+
+    private fun createIdentityIndexes(db: SQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_queued_orders_source_identity
+            ON $TABLE_ORDERS ($COLUMN_BRANCH_ID, $COLUMN_PLATFORM, $COLUMN_SOURCE_ORDER_REF)
+            WHERE $COLUMN_SOURCE_ORDER_REF IS NOT NULL AND $COLUMN_SOURCE_ORDER_REF <> ''
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_queued_orders_payload_identity
+            ON $TABLE_ORDERS ($COLUMN_BRANCH_ID, $COLUMN_PLATFORM, $COLUMN_RECEIPT_FINGERPRINT)
+            WHERE $COLUMN_RECEIPT_FINGERPRINT IS NOT NULL AND $COLUMN_RECEIPT_FINGERPRINT <> ''
+            """.trimIndent()
+        )
+    }
+
+    private fun migrateSentMappings(db: SQLiteDatabase) {
+        val cursor = db.query(
+            TABLE_ORDERS,
+            arrayOf(COLUMN_ID, COLUMN_REMOTE_RESPONSE, COLUMN_RECEIPT_TEXT, COLUMN_CREATED_AT),
+            "$COLUMN_STATUS = ?",
+            arrayOf(STATUS_SENT),
+            null,
+            null,
+            null
+        )
+        cursor.use { rows ->
+            while (rows.moveToNext()) {
+                val orderId = rows.getLong(rows.getColumnIndexOrThrow(COLUMN_ID))
+                val mapping = RelayResponseParser.parse(
+                    rows.getString(rows.getColumnIndexOrThrow(COLUMN_REMOTE_RESPONSE))
+                )
+                val receiptText = rows.getString(rows.getColumnIndexOrThrow(COLUMN_RECEIPT_TEXT))
+                val createdAt = rows.getLong(rows.getColumnIndexOrThrow(COLUMN_CREATED_AT))
+                val values = sentMappingValues(mapping, createdAt).apply {
+                    put(COLUMN_SOURCE_ORDER_REF, OrderIdentity.extractSourceOrderRef(receiptText))
+                    put(COLUMN_RAW_BASE64, "")
+                    putNull(COLUMN_RECEIPT_TEXT)
+                    putNull(COLUMN_REMOTE_RESPONSE)
+                }
+                db.update(TABLE_ORDERS, values, "$COLUMN_ID = ?", arrayOf(orderId.toString()))
+            }
+        }
+    }
+
+    private fun migrateOrderIdentities(db: SQLiteDatabase) {
+        val cursor = db.query(
+            TABLE_ORDERS,
+            arrayOf(COLUMN_ID, COLUMN_RAW_BASE64, COLUMN_RECEIPT_TEXT),
+            null,
+            null,
+            null,
+            null,
+            null
+        )
+        cursor.use { rows ->
+            while (rows.moveToNext()) {
+                val orderId = rows.getLong(rows.getColumnIndexOrThrow(COLUMN_ID))
+                val rawBase64 = rows.getString(rows.getColumnIndexOrThrow(COLUMN_RAW_BASE64))
+                val receiptText = rows.getString(rows.getColumnIndexOrThrow(COLUMN_RECEIPT_TEXT))
+                val fingerprint = try {
+                    OrderIdentity.fingerprint(Base64.decode(rawBase64, Base64.DEFAULT))
+                } catch (_: Exception) {
+                    null
+                }
+                val values = ContentValues().apply {
+                    put(COLUMN_SOURCE_ORDER_REF, OrderIdentity.extractSourceOrderRef(receiptText))
+                    put(COLUMN_RECEIPT_FINGERPRINT, fingerprint)
+                }
+                db.update(TABLE_ORDERS, values, "$COLUMN_ID = ?", arrayOf(orderId.toString()))
+            }
+        }
+    }
+
+    private fun collapseLegacyDuplicates(db: SQLiteDatabase) {
+        val cursor = db.query(
+            TABLE_ORDERS,
+            arrayOf(
+                COLUMN_ID,
+                COLUMN_BRANCH_ID,
+                COLUMN_PLATFORM,
+                COLUMN_SOURCE_ORDER_REF,
+                COLUMN_RECEIPT_FINGERPRINT
+            ),
+            null,
+            null,
+            null,
+            null,
+            "CASE $COLUMN_STATUS WHEN '$STATUS_SENT' THEN 0 WHEN '$STATUS_SENDING' THEN 1 " +
+                "WHEN '$STATUS_PENDING' THEN 2 ELSE 3 END, $COLUMN_ID ASC"
+        )
+        val keeperByIdentity = mutableMapOf<String, Long>()
+        cursor.use { rows ->
+            while (rows.moveToNext()) {
+                val orderId = rows.getLong(rows.getColumnIndexOrThrow(COLUMN_ID))
+                val branchId = rows.getInt(rows.getColumnIndexOrThrow(COLUMN_BRANCH_ID))
+                val platform = rows.getString(rows.getColumnIndexOrThrow(COLUMN_PLATFORM))
+                val sourceRef = rows.getString(rows.getColumnIndexOrThrow(COLUMN_SOURCE_ORDER_REF))
+                val fingerprint = rows.getString(rows.getColumnIndexOrThrow(COLUMN_RECEIPT_FINGERPRINT))
+                val prefix = "$branchId\u0000$platform\u0000"
+                val keys = buildList {
+                    sourceRef?.takeIf(String::isNotBlank)?.let { add(prefix + "source:" + it) }
+                    fingerprint?.takeIf(String::isNotBlank)?.let { add(prefix + "payload:" + it) }
+                }
+                val keeperId = keys.firstNotNullOfOrNull(keeperByIdentity::get)
+                if (keeperId == null) {
+                    keys.forEach { keeperByIdentity[it] = orderId }
+                } else {
+                    db.delete(TABLE_ORDERS, "$COLUMN_ID = ?", arrayOf(orderId.toString()))
+                    keys.forEach { key ->
+                        if (!keeperByIdentity.containsKey(key)) keeperByIdentity[key] = keeperId
+                    }
+                }
+            }
+        }
     }
 
     fun enqueueReceipt(
@@ -118,29 +270,118 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         receiptText: String? = null,
         status: String = STATUS_PENDING,
         lastError: String? = null
-    ): Long {
+    ): EnqueueResult {
         val db = writableDatabase
-        val values = ContentValues().apply {
-            put(COLUMN_RAW_BASE64, Base64.encodeToString(rawBytes, Base64.NO_WRAP))
-            put(COLUMN_RECEIPT_TEXT, receiptText)
-            put(COLUMN_BRANCH_ID, branchId)
-            put(COLUMN_PLATFORM, platform)
-            put(COLUMN_STATUS, status)
-            put(COLUMN_RETRY_COUNT, 0)
-            put(COLUMN_CREATED_AT, System.currentTimeMillis())
-            put(COLUMN_LAST_ERROR, lastError)
+        val sourceOrderRef = OrderIdentity.extractSourceOrderRef(receiptText)
+        val fingerprint = OrderIdentity.fingerprint(rawBytes)
+        val now = System.currentTimeMillis()
+        db.beginTransaction()
+        try {
+            val existing = findExistingOrder(db, branchId, platform, sourceOrderRef, fingerprint)
+            if (existing != null) {
+                val duplicateValues = ContentValues().apply {
+                    put(COLUMN_DUPLICATE_COUNT, existing.duplicateCount + 1)
+                    put(COLUMN_LAST_SEEN_AT, now)
+                }
+                db.update(
+                    TABLE_ORDERS,
+                    duplicateValues,
+                    "$COLUMN_ID = ?",
+                    arrayOf(existing.id.toString())
+                )
+                db.setTransactionSuccessful()
+                return EnqueueResult(existing.id, inserted = false, existing.status, sourceOrderRef)
+            }
+
+            val values = ContentValues().apply {
+                put(COLUMN_RAW_BASE64, Base64.encodeToString(rawBytes, Base64.NO_WRAP))
+                put(COLUMN_RECEIPT_TEXT, receiptText)
+                put(COLUMN_BRANCH_ID, branchId)
+                put(COLUMN_PLATFORM, platform)
+                put(COLUMN_STATUS, status)
+                put(COLUMN_RETRY_COUNT, 0)
+                put(COLUMN_CREATED_AT, now)
+                put(COLUMN_LAST_ERROR, lastError)
+                put(COLUMN_SOURCE_ORDER_REF, sourceOrderRef)
+                put(COLUMN_RECEIPT_FINGERPRINT, fingerprint)
+                put(COLUMN_LAST_SEEN_AT, now)
+            }
+            val orderId = db.insertOrThrow(TABLE_ORDERS, null, values)
+            db.setTransactionSuccessful()
+            return EnqueueResult(orderId, inserted = true, status, sourceOrderRef)
+        } finally {
+            db.endTransaction()
         }
-        return db.insert(TABLE_ORDERS, null, values)
     }
 
     fun markOrderSent(orderId: Long, remoteResponse: String? = null) {
         val db = writableDatabase
-        val values = ContentValues().apply {
+        val mapping = RelayResponseParser.parse(remoteResponse)
+        val values = sentMappingValues(mapping, System.currentTimeMillis()).apply {
             put(COLUMN_STATUS, STATUS_SENT)
-            put(COLUMN_REMOTE_RESPONSE, remoteResponse?.take(8 * 1024))
+            put(COLUMN_RAW_BASE64, "")
+            putNull(COLUMN_RECEIPT_TEXT)
+            if (mapping.orderId == null && mapping.orderNumber == null) {
+                put(COLUMN_REMOTE_RESPONSE, remoteResponse?.take(2 * 1024))
+            } else {
+                putNull(COLUMN_REMOTE_RESPONSE)
+            }
             putNull(COLUMN_LAST_ERROR)
         }
         db.update(TABLE_ORDERS, values, "$COLUMN_ID = ?", arrayOf(orderId.toString()))
+    }
+
+    private fun sentMappingValues(mapping: PosOrderMapping, sentAt: Long): ContentValues =
+        ContentValues().apply {
+            mapping.orderId?.let { put(COLUMN_POS_ORDER_ID, it) }
+            mapping.orderNumber?.let { put(COLUMN_POS_ORDER_NUMBER, it) }
+            mapping.displayId?.let { put(COLUMN_POS_DISPLAY_ID, it) }
+            put(COLUMN_SENT_AT, sentAt)
+            put(COLUMN_IDEMPOTENT, if (mapping.idempotent) 1 else 0)
+        }
+
+    private data class ExistingOrder(
+        val id: Long,
+        val status: String,
+        val duplicateCount: Int
+    )
+
+    private fun findExistingOrder(
+        db: SQLiteDatabase,
+        branchId: Int,
+        platform: String,
+        sourceOrderRef: String?,
+        fingerprint: String,
+        excludingOrderId: Long? = null
+    ): ExistingOrder? {
+        val identityClause = if (sourceOrderRef == null) {
+            "$COLUMN_RECEIPT_FINGERPRINT = ?"
+        } else {
+            "($COLUMN_SOURCE_ORDER_REF = ? OR $COLUMN_RECEIPT_FINGERPRINT = ?)"
+        }
+        val args = mutableListOf(branchId.toString(), platform)
+        if (sourceOrderRef != null) args.add(sourceOrderRef)
+        args.add(fingerprint)
+        val exclusion = if (excludingOrderId == null) "" else " AND $COLUMN_ID <> ?"
+        if (excludingOrderId != null) args.add(excludingOrderId.toString())
+        val cursor = db.query(
+            TABLE_ORDERS,
+            arrayOf(COLUMN_ID, COLUMN_STATUS, COLUMN_DUPLICATE_COUNT),
+            "$COLUMN_BRANCH_ID = ? AND $COLUMN_PLATFORM = ? AND $identityClause$exclusion",
+            args.toTypedArray(),
+            null,
+            null,
+            "$COLUMN_ID DESC",
+            "1"
+        )
+        return cursor.use { row ->
+            if (!row.moveToFirst()) return@use null
+            ExistingOrder(
+                id = row.getLong(row.getColumnIndexOrThrow(COLUMN_ID)),
+                status = row.getString(row.getColumnIndexOrThrow(COLUMN_STATUS)),
+                duplicateCount = row.getInt(row.getColumnIndexOrThrow(COLUMN_DUPLICATE_COUNT))
+            )
+        }
     }
 
     /**
@@ -190,6 +431,13 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         db.update(TABLE_ORDERS, values, "$COLUMN_ID = ?", arrayOf(orderId.toString()))
     }
 
+    data class EnqueueResult(
+        val orderId: Long,
+        val inserted: Boolean,
+        val status: String,
+        val sourceOrderRef: String?
+    )
+
     data class QueuedOrder(
         val id: Long,
         val rawBase64: String,
@@ -201,7 +449,15 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         val status: String,
         val lastError: String?,
         val nextRetryAt: Long,
-        val remoteResponse: String?
+        val remoteResponse: String?,
+        val sourceOrderRef: String?,
+        val posOrderId: Long?,
+        val posOrderNumber: String?,
+        val posDisplayId: String?,
+        val sentAt: Long,
+        val duplicateCount: Int,
+        val lastSeenAt: Long,
+        val idempotent: Boolean
     )
 
     private fun readQueuedOrder(c: android.database.Cursor): QueuedOrder = QueuedOrder(
@@ -215,7 +471,17 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         status = c.getString(c.getColumnIndexOrThrow(COLUMN_STATUS)),
         lastError = c.getString(c.getColumnIndexOrThrow(COLUMN_LAST_ERROR)),
         nextRetryAt = c.getLong(c.getColumnIndexOrThrow(COLUMN_NEXT_RETRY_AT)),
-        remoteResponse = c.getString(c.getColumnIndexOrThrow(COLUMN_REMOTE_RESPONSE))
+        remoteResponse = c.getString(c.getColumnIndexOrThrow(COLUMN_REMOTE_RESPONSE)),
+        sourceOrderRef = c.getString(c.getColumnIndexOrThrow(COLUMN_SOURCE_ORDER_REF)),
+        posOrderId = c.getColumnIndexOrThrow(COLUMN_POS_ORDER_ID).let { index ->
+            if (c.isNull(index)) null else c.getLong(index)
+        },
+        posOrderNumber = c.getString(c.getColumnIndexOrThrow(COLUMN_POS_ORDER_NUMBER)),
+        posDisplayId = c.getString(c.getColumnIndexOrThrow(COLUMN_POS_DISPLAY_ID)),
+        sentAt = c.getLong(c.getColumnIndexOrThrow(COLUMN_SENT_AT)),
+        duplicateCount = c.getInt(c.getColumnIndexOrThrow(COLUMN_DUPLICATE_COUNT)),
+        lastSeenAt = c.getLong(c.getColumnIndexOrThrow(COLUMN_LAST_SEEN_AT)),
+        idempotent = c.getInt(c.getColumnIndexOrThrow(COLUMN_IDEMPOTENT)) == 1
     )
 
     fun getPendingOrders(limit: Int = 20): List<QueuedOrder> {
@@ -246,7 +512,7 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         val cursor = db.query(
             TABLE_ORDERS,
             null,
-            "$COLUMN_STATUS = ? OR ($COLUMN_STATUS = ? AND $COLUMN_RECEIPT_TEXT IS NOT NULL)",
+            "($COLUMN_STATUS = ? OR $COLUMN_STATUS = ?) AND $COLUMN_RECEIPT_TEXT IS NULL AND $COLUMN_RAW_BASE64 <> ''",
             arrayOf(STATUS_UNCLASSIFIED, STATUS_PENDING),
             null,
             null,
@@ -268,6 +534,7 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         val values = ContentValues().apply {
             put(COLUMN_PLATFORM, platform)
             put(COLUMN_RECEIPT_TEXT, receiptText)
+            put(COLUMN_SOURCE_ORDER_REF, OrderIdentity.extractSourceOrderRef(receiptText))
             put(COLUMN_STATUS, STATUS_PENDING)
             putNull(COLUMN_LAST_ERROR)
             put(COLUMN_NEXT_RETRY_AT, 0)
@@ -340,12 +607,44 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         ) > 0
     }
 
-    fun clearSentOrders(): Int {
-        return writableDatabase.delete(
+    /** Removes diagnostic payloads while preserving the lightweight order-to-POS mapping. */
+    fun compactSentOrders(): Int {
+        val db = writableDatabase
+        val cursor = db.query(
             TABLE_ORDERS,
-            "$COLUMN_STATUS = ?",
-            arrayOf(STATUS_SENT)
+            arrayOf(COLUMN_ID, COLUMN_REMOTE_RESPONSE),
+            "$COLUMN_STATUS = ? AND ($COLUMN_RAW_BASE64 <> '' OR $COLUMN_RECEIPT_TEXT IS NOT NULL OR $COLUMN_REMOTE_RESPONSE IS NOT NULL)",
+            arrayOf(STATUS_SENT),
+            null,
+            null,
+            null
         )
+        val rows = cursor.use { result ->
+            buildList {
+                while (result.moveToNext()) {
+                    add(
+                        result.getLong(result.getColumnIndexOrThrow(COLUMN_ID)) to
+                            result.getString(result.getColumnIndexOrThrow(COLUMN_REMOTE_RESPONSE))
+                    )
+                }
+            }
+        }
+        db.beginTransaction()
+        try {
+            for ((orderId, remoteResponse) in rows) {
+                val mapping = RelayResponseParser.parse(remoteResponse)
+                val values = sentMappingValues(mapping, System.currentTimeMillis()).apply {
+                    put(COLUMN_RAW_BASE64, "")
+                    putNull(COLUMN_RECEIPT_TEXT)
+                    putNull(COLUMN_REMOTE_RESPONSE)
+                }
+                db.update(TABLE_ORDERS, values, "$COLUMN_ID = ?", arrayOf(orderId.toString()))
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+        return rows.size
     }
 
     fun getQueueSummary(): String {

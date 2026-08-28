@@ -61,7 +61,8 @@ object RasterReceiptTextNormalizer {
         "com tam bi" to "Cơm Tấm Bì",
         "trung" to "Trứng",
         "cha" to "Chả",
-        "top mo" to "Tóp Mỡ"
+        "top mo" to "Tóp Mỡ",
+        "tra taac" to "Trà Tắc"
     )
     private val standaloneSoupAliases = mapOf(
         "canh kho qua" to "Canh Khổ Qua",
