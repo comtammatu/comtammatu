@@ -884,9 +884,9 @@ export function BranchPurchaseRequestsClient({
         }
         side="bottom"
         showCloseButton={false}
-        contentClassName="flex max-h-dvh-95 flex-col overflow-hidden bg-background text-foreground"
+        contentClassName="flex max-h-dvh-95 flex-col overflow-hidden text-foreground"
         headerClassName="shrink-0 [&_h2]:font-mono [&_h2]:text-lg"
-        footerClassName="z-10 shrink-0 border-t bg-background/95 backdrop-blur"
+        footerClassName="z-10 shrink-0 border-t"
         footer={
           selected ? (
             <>
@@ -1100,9 +1100,9 @@ export function BranchPurchaseRequestsClient({
         }
         side="bottom"
         showCloseButton={false}
-        contentClassName="flex max-h-dvh-95 flex-col overflow-hidden bg-background text-foreground"
+        contentClassName="flex max-h-dvh-95 flex-col overflow-hidden text-foreground"
         headerClassName="shrink-0"
-        footerClassName="z-10 shrink-0 border-t bg-background/95 backdrop-blur"
+        footerClassName="z-10 shrink-0 border-t"
         footer={
           <>
             <Button
@@ -1330,9 +1330,9 @@ export function BranchPurchaseRequestsClient({
         }
         side="bottom"
         showCloseButton={false}
-        contentClassName="flex max-h-dvh-95 flex-col overflow-hidden bg-background text-foreground"
+        contentClassName="flex max-h-dvh-95 flex-col overflow-hidden text-foreground"
         headerClassName="shrink-0"
-        footerClassName="z-10 shrink-0 border-t bg-background/95 backdrop-blur"
+        footerClassName="z-10 shrink-0 border-t"
         footer={
           <>
             <Button

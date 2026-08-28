@@ -1597,7 +1597,7 @@ export function OrderDetailSheet({
                 ) : null}
               </ScrollArea>
 
-              <div className="mt-auto flex shrink-0 flex-col gap-2 border-t border-border/60 bg-background px-3 py-3 sm:px-4">
+              <div className="mt-auto flex shrink-0 flex-col gap-2 border-t border-border/60 bg-popover px-3 py-3 sm:px-4">
                 {canShowDiscount && activeItemCount > 0 ? (
                   <div className="flex items-center gap-2">
                     <Input

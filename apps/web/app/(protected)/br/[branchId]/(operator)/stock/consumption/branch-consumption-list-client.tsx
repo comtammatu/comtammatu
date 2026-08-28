@@ -409,7 +409,7 @@ export function BranchConsumptionListClient({
         }
         side="bottom"
         showCloseButton={false}
-        contentClassName="max-h-dvh-95 bg-background"
+        contentClassName="max-h-dvh-95"
         headerClassName="[&_h2]:font-mono"
         footer={
           <Button

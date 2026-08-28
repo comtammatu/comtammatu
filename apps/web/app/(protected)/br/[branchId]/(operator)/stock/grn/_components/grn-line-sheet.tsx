@@ -152,7 +152,7 @@ export function BranchGrnCreateLineSheet({
         }
         side="bottom"
         showCloseButton={false}
-        contentClassName="h-auto max-h-dvh-95 gap-1 bg-background text-foreground"
+        contentClassName="h-auto max-h-dvh-95 gap-1"
         footer={
           edit ? (
             <>
@@ -400,7 +400,7 @@ export function BranchGrnReviewLineSheet({
         }
         side="bottom"
         showCloseButton={false}
-        contentClassName="h-auto max-h-dvh-95 gap-1 bg-background text-foreground"
+        contentClassName="h-auto max-h-dvh-95 gap-1"
         footer={
           line ? (
             <div className="flex items-center gap-2">
@@ -806,7 +806,7 @@ export function BranchGrnAddLineSheet({
         title={GRN_DETAIL_COPY.addDialog.title}
         side="bottom"
         showCloseButton={false}
-        contentClassName="h-auto max-h-dvh-95 gap-1 bg-background text-foreground"
+        contentClassName="h-auto max-h-dvh-95 gap-1"
         footer={
           <>
             <Button

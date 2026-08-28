@@ -65,18 +65,10 @@ import {
 import { Frame } from "@comtammatu/ui/components/frame";
 
 function itemStatusToneClass(status: string): string {
-  switch (status) {
-    case "pending":
-    case "preparing":
-      return "border-warning/20 bg-warning/10";
-    case "ready":
-    case "served":
-      return "border-success/20 bg-success/10";
-    case "cancelled":
-      return "border-destructive/20 bg-destructive/10 border-dashed";
-    default:
-      return "bg-card";
+  if (status === "cancelled") {
+    return "border-destructive/20 border-dashed bg-card opacity-60";
   }
+  return "bg-card";
 }
 
 function formatModifier(m: OrderItemModifier): string {

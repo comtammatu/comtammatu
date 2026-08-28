@@ -160,13 +160,7 @@ export function OperatorOrdersClient({
                 key={order.id}
                 variant="outline"
                 size="sm"
-                className={`chrome-tap min-h-14 bg-card text-left ${
-                  waitInfo.alertLevel === "critical"
-                    ? "border-destructive/20 bg-destructive/10"
-                    : waitInfo.alertLevel === "warning"
-                      ? "border-warning/20 bg-warning/10"
-                      : ""
-                }`}
+                className="chrome-tap min-h-14 bg-card text-left"
                 render={
                   <button
                     type="button"

@@ -1,7 +1,4 @@
-export function getItemRowStatusClass(status: string): string | false {
-  if (status === "ready") {
-    return "bg-success/10";
-  }
+export function getItemRowStatusClass(_status: string): string | false {
   return false;
 }
 

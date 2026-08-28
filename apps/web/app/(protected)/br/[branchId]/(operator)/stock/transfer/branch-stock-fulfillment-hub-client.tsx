@@ -399,7 +399,7 @@ export function BranchStockFulfillmentHubClient({
         side="bottom"
         contentClassName="flex max-h-dvh-80 flex-col"
         headerClassName="text-left"
-        footerClassName="border-t bg-background"
+        footerClassName="border-t"
         footer={
           <Button
             type="button"

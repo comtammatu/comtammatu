@@ -283,10 +283,10 @@ export function BranchWasteApprovalsClient({
               : undefined
           }
           side="bottom"
-          contentClassName="flex max-h-dvh-95 flex-col overflow-hidden bg-background text-foreground"
+          contentClassName="flex max-h-dvh-95 flex-col overflow-hidden text-foreground"
           headerClassName="shrink-0"
           bodyClassName="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain"
-          footerClassName="shrink-0 border-t bg-background/95 backdrop-blur"
+          footerClassName="shrink-0 border-t"
           footer={
             selectedRow ? (
               selectedRow.isSelfCreated ? (

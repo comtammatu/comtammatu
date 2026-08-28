@@ -43,18 +43,10 @@ interface OrderItemRowProps {
 type RowChangeTone = "content" | "quantity" | "status" | "removed" | null;
 
 function getItemStatusToneClass(status: string): string {
-  switch (status) {
-    case "pending":
-    case "preparing":
-      return "border-warning/20 bg-warning/10";
-    case "ready":
-    case "served":
-      return "border-success/20 bg-success/10";
-    case "cancelled":
-      return "border-destructive/20 bg-destructive/10";
-    default:
-      return "bg-card";
+  if (status === "cancelled") {
+    return "border-destructive/20 bg-card";
   }
+  return "bg-card";
 }
 
 function useOrderItemChangeTone(row: OrderItemRowData): RowChangeTone {

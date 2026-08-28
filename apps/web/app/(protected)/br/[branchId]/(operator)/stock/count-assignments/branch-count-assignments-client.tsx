@@ -1075,7 +1075,7 @@ export function BranchCountAssignmentsClient({
         }
         side="bottom"
         showCloseButton={false}
-        contentClassName="max-h-dvh-95 flex flex-col overflow-hidden bg-background sm:mx-auto sm:max-w-3xl"
+        contentClassName="max-h-dvh-95 flex flex-col overflow-hidden sm:mx-auto sm:max-w-3xl"
         bodyClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-0"
         footer={
           <div className="flex w-full items-center justify-end gap-2">
@@ -1312,7 +1312,7 @@ export function BranchCountAssignmentsClient({
                       "flex-col items-start gap-2 p-3 transition-colors",
                       currentEmpId != null
                         ? "border-primary bg-accent"
-                        : "border-border bg-background",
+                        : "border-border bg-card",
                     )}
                   >
                     <div className="flex w-full items-center justify-between gap-2">
@@ -1406,7 +1406,7 @@ export function BranchCountAssignmentsClient({
         description={INVENTORY_VI.countTemplateEditorSheetDescription}
         side="bottom"
         showCloseButton={false}
-        contentClassName="max-h-dvh-95 flex flex-col overflow-hidden bg-background sm:mx-auto sm:max-w-2xl"
+        contentClassName="max-h-dvh-95 flex flex-col overflow-hidden sm:mx-auto sm:max-w-2xl"
         bodyClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-0"
         footer={
           <div className="flex w-full items-center justify-end gap-2">
@@ -1608,7 +1608,7 @@ export function BranchCountAssignmentsClient({
         )}
         side="bottom"
         showCloseButton={false}
-        contentClassName="max-h-dvh-95 flex flex-col overflow-hidden bg-background sm:mx-auto sm:max-w-2xl"
+        contentClassName="max-h-dvh-95 flex flex-col overflow-hidden sm:mx-auto sm:max-w-2xl"
         bodyClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-0"
         footer={
           <div className="flex w-full items-center justify-end gap-2">

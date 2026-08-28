@@ -313,8 +313,8 @@ export function BranchEmployeeTasksSheet({
                 }`
         }
         side="bottom"
-        contentClassName="max-h-dvh-95 bg-background"
-        footerClassName="sticky bottom-0 border-t bg-background/95 backdrop-blur"
+        contentClassName="max-h-dvh-95"
+        footerClassName="sticky bottom-0 border-t"
         footer={
           loadError || isLoading ? (
             <Button

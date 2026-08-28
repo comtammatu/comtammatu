@@ -207,7 +207,7 @@ function BranchStockIssueLineSheet({
       title={line ? ACTIONS_VI.edit : issuesCopy.addLineTitle}
       description={line ? line.ingredientName : issuesCopy.addLineTitle}
       side="bottom"
-      contentClassName="max-h-dvh-95 bg-background text-foreground"
+      contentClassName="max-h-dvh-95"
       footer={
         <div className="flex gap-2">
           <Button

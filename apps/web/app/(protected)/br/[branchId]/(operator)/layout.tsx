@@ -116,7 +116,7 @@ export default async function OperatorLayout({
           disabledPathPrefixes={[`/br/${context.branchId}/team/leave-approvals`]}
         />
       ) : null}
-      <div className="chrome-safe-pt flex h-dvh w-full flex-col overflow-hidden touch-manipulation bg-muted/30">
+      <div className="chrome-safe-pt flex h-dvh w-full flex-col overflow-hidden touch-manipulation bg-background">
         <AppHeader
           title={
             <>

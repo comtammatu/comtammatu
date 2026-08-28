@@ -10,7 +10,6 @@ import {
   CircleX as IconCircleX,
   ClipboardCheck as IconClipboardCheck,
 } from "lucide-react";
-import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@/components/confirm-dialog";
@@ -49,12 +48,6 @@ import {
 
 const stocktakeCopy = messages.inventory.stocktake;
 
-const toneClassName = {
-  default: "",
-  success: "border-success/20 bg-success/10",
-  warning: "border-warning/20 bg-warning/10",
-  destructive: "border-destructive/20 bg-destructive/10",
-} as const;
 
 export function BranchStocktakeDetailClient({
   data,
@@ -149,10 +142,7 @@ export function BranchStocktakeDetailClient({
             <div key={line.id} role="listitem">
               <Item
                 variant="outline"
-                className={cn(
-                  "min-h-16 flex-col items-stretch gap-2 touch-manipulation",
-                  toneClassName[tone],
-                )}
+                className="min-h-16 flex-col items-stretch gap-2 bg-card touch-manipulation"
               >
                 <div className="flex min-w-0 items-start justify-between gap-3">
                   <ItemContent className="min-w-0 gap-1">

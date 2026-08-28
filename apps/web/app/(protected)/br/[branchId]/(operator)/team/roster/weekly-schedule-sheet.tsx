@@ -156,8 +156,8 @@ export function WeeklyScheduleSheet({
       title={employee ? copy.scheduleTitle(employee.fullName) : copy.schedule}
       description={copy.scheduleDescription}
       side="bottom"
-      contentClassName="max-h-dvh-95 bg-background"
-      footerClassName="sticky bottom-0 border-t bg-background/95 backdrop-blur"
+      contentClassName="max-h-dvh-95"
+      footerClassName="sticky bottom-0 border-t"
       footer={
         <div className="flex w-full gap-2">
           <Button

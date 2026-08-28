@@ -769,7 +769,7 @@ export function BranchAttendanceClient({
         contentClassName="flex max-h-dvh-80 flex-col sm:mx-auto sm:max-w-2xl"
         headerClassName="text-left"
         bodyClassName="overscroll-contain px-4 pb-2"
-        footerClassName="sticky bottom-0 border-t bg-background"
+        footerClassName="sticky bottom-0 border-t"
         footer={
           <Button
             type="button"
@@ -871,7 +871,7 @@ export function BranchAttendanceClient({
         side="bottom"
         contentClassName="flex max-h-dvh-80 flex-col"
         headerClassName="text-left"
-        footerClassName="sticky bottom-0 border-t bg-background"
+        footerClassName="sticky bottom-0 border-t"
         footer={
           checklistOpen ? (
             <Button
@@ -1001,7 +1001,7 @@ export function BranchAttendanceClient({
         side="bottom"
         contentClassName="flex max-h-dvh-80 flex-col"
         headerClassName="text-left"
-        footerClassName="sticky bottom-0 border-t bg-background"
+        footerClassName="sticky bottom-0 border-t"
         footer={
           <>
             <Button
