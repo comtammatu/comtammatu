@@ -1,5 +1,5 @@
--- Static contract checks for Owner void/edit RPC auth + waiter separation.
--- Runtime role probes belong on a Preview Branch after apply.
+-- Contract checks for Owner branch bypass and waiter item-only mutation scope.
+-- Runtime role probes belong on a verified Preview Branch after apply.
 
 \set ON_ERROR_STOP on
 BEGIN;
@@ -14,46 +14,48 @@ BEGIN
   IF position(
     'v_prof_role NOT IN (''owner'', ''branch_manager'', ''cashier'')'
     IN v_def
-  ) = 0 THEN
-    RAISE EXCEPTION 'TEST FAILED: cancel_order allows owner';
+  ) = 0 OR position('''branch_staff''' IN v_def) > 0 THEN
+    RAISE EXCEPTION 'TEST FAILED: cancel_order keeps waiter out';
+  END IF;
+  IF position('branch scope required' IN v_def) = 0 THEN
+    RAISE EXCEPTION 'TEST FAILED: cancel_order Owner null-branch bypass present';
   END IF;
 
   v_def := pg_get_functiondef('public.void_order_item(bigint,text)'::regprocedure);
   IF position(
-    'v_prof_role NOT IN (''owner'', ''branch_manager'', ''cashier'')'
+    'v_prof_role NOT IN (''owner'', ''branch_manager'', ''cashier'', ''branch_staff'')'
     IN v_def
   ) = 0 THEN
-    RAISE EXCEPTION 'TEST FAILED: void_order_item allows owner';
+    RAISE EXCEPTION 'TEST FAILED: void_order_item admits branch_staff/waiter';
+  END IF;
+  IF position('public.has_permission(v_order.branch_id, ''pos:void_order'')' IN v_def) = 0 THEN
+    RAISE EXCEPTION 'TEST FAILED: void_order_item keeps permission gate';
   END IF;
 
   v_def := pg_get_functiondef(
     'public.reduce_order_item_quantity(bigint,integer,text)'::regprocedure
   );
   IF position(
-    'v_prof_role NOT IN (''owner'', ''branch_manager'', ''cashier'')'
+    'v_prof_role NOT IN (''owner'', ''branch_manager'', ''cashier'', ''branch_staff'')'
     IN v_def
   ) = 0 THEN
-    RAISE EXCEPTION 'TEST FAILED: reduce_order_item_quantity allows owner';
+    RAISE EXCEPTION 'TEST FAILED: reduce_order_item_quantity admits branch_staff/waiter';
+  END IF;
+  IF position('public.has_permission(v_order.branch_id, ''pos:void_order'')' IN v_def) = 0 THEN
+    RAISE EXCEPTION 'TEST FAILED: reduce_order_item_quantity keeps permission gate';
   END IF;
 
   v_def := pg_get_functiondef(
     'public.edit_pending_order_item(bigint,bigint,text,numeric,jsonb,jsonb,text,integer)'::regprocedure
   );
   IF position(
-    'v_prof_role NOT IN (''owner'', ''branch_manager'', ''cashier'')'
+    'v_prof_role NOT IN (''owner'', ''branch_manager'', ''cashier'', ''branch_staff'')'
     IN v_def
   ) = 0 THEN
-    RAISE EXCEPTION 'TEST FAILED: edit_pending_order_item allows owner';
+    RAISE EXCEPTION 'TEST FAILED: edit_pending_order_item admits branch_staff/waiter';
   END IF;
-
-  v_def := pg_get_functiondef('public.cancel_order(bigint,text)'::regprocedure);
-  IF position('branch scope required' IN v_def) = 0 THEN
-    RAISE EXCEPTION 'TEST FAILED: cancel_order Owner null-branch bypass present';
-  END IF;
-
-  v_def := pg_get_functiondef('public.void_order_item(bigint,text)'::regprocedure);
-  IF position('''branch_staff''' IN v_def) > 0 THEN
-    RAISE EXCEPTION 'TEST FAILED: void_order_item does not admit branch_staff/waiter';
+  IF position('public.has_permission(v_order.branch_id, ''pos:void_order'')' IN v_def) = 0 THEN
+    RAISE EXCEPTION 'TEST FAILED: edit_pending_order_item keeps permission gate';
   END IF;
 
   SELECT permission_keys
@@ -71,11 +73,11 @@ BEGIN
        'pos:send_kitchen',
        'pos:print',
        'pos:reprint_receipt',
-       'pos:confirm_payment'
-     ]::text[]
-     OR v_waiter_keys @> ARRAY['pos:void_order']::text[] THEN
+       'pos:confirm_payment',
+       'pos:void_order'
+     ]::text[] THEN
     RAISE EXCEPTION
-      'TEST FAILED: waiter near-cashier POS grants missing or still has void, got %',
+      'TEST FAILED: waiter item-mutation POS grants missing, got %',
       v_waiter_keys;
   END IF;
 

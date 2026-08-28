@@ -138,6 +138,10 @@ test("operator stock receive merges into the native transfer queue and keeps nat
   assert.match(receiveClient, /<AppDetailFooter[\s\S]*\bsticky\b/);
   assert.match(
     receiveClient,
+    /<AppDetailFooter[\s\S]*className="bg-transparent px-0 shadow-none"[\s\S]*slotLayout="direct"/,
+  );
+  assert.match(
+    receiveClient,
     /<AppDetailFooter[\s\S]*size="touch"[\s\S]*ACTIONS_VI\.back/,
   );
   assert.match(

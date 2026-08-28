@@ -85,6 +85,8 @@ test("GrabFood mapping: normalizeMenuName normalizes accents and case", () => {
   assert.equal(normalizeMenuName("Trà đá"), "tra da");
   assert.equal(normalizeMenuName("Cơm Tấm Chả"), "com tam cha");
   assert.equal(GRAB_MENU_MAPPING["VNITE20260818044418231553"]?.name, "Sườn Cốt Lết");
+  assert.equal(GRAB_MENU_MAPPING["VNITE20260818044418041272"]?.name, "Cơm Thêm");
+  assert.equal(GRAB_MENU_MAPPING["VNMOD20260819110649013214"]?.name, "Cơm Thêm");
 });
 
 test("GrabFood mapping: generateOrderUuid creates deterministic valid UUID", () => {
@@ -171,12 +173,12 @@ test("GrabFood transformation: handles customerNote as null since Grab only has 
 test("GrabFood transformation: accurately maps 'Cơm Thêm' modifier variants into sides", () => {
   const dbItemsWithComThem = [
     ...MOCK_DB_ITEMS,
-    { id: 22, name: "Cơm Tấm Thêm", base_price: 6000 },
+    { id: 22, name: "Cơm Thêm", base_price: 6000 },
   ];
 
   const orderWithComThem: GrabOrderRaw = {
     ...MOCK_GRAB_ORDER_REAL,
-    displayID: "GF-168",
+    displayID: "GF-553",
     itemInfo: {
       items: [
         {
@@ -215,9 +217,11 @@ test("GrabFood transformation: accurately maps 'Cơm Thêm' modifier variants in
   assert.equal(lineItem?.note, "Không mỡ"); // Note only contains item comment, no "Tùy chọn: Cơm Thêm"
   assert.equal(lineItem?.sides.length, 2);
   assert.equal(lineItem?.sides[0]?.side_item_id, 22);
-  assert.equal(lineItem?.sides[0]?.name, "Cơm Tấm Thêm");
+  assert.equal(lineItem?.sides[0]?.name, "Cơm Thêm");
+  assert.equal(lineItem?.sides[0]?.price, 6000);
   assert.equal(lineItem?.sides[1]?.side_item_id, 22);
-  assert.equal(lineItem?.sides[1]?.name, "Cơm Tấm Thêm");
+  assert.equal(lineItem?.sides[1]?.name, "Cơm Thêm");
+  assert.equal(lineItem?.sides[1]?.price, 6000);
 });
 
 test("GrabFood transformation: supports standalone items (e.g. Bì ordered as a standalone dish)", () => {
@@ -441,6 +445,102 @@ test("GrabFood transformation: handles reference multi-item order with freeItem 
   assert.equal(transformed.items[3]?.unit_price, 10000);
   assert.equal(transformed.items[3]?.discount_type, "pct");
   assert.equal(transformed.items[3]?.discount_value, 100);
+});
+
+test("GrabFood transformation: applies GF-553 array-shaped free-item promotion to the egg line", () => {
+  const gf553Order = {
+    orderID: "00113971352-REDACTED",
+    displayID: "GF-553",
+    merchant: { ID: "merchant-redacted" },
+    itemInfo: {
+      items: [
+        {
+          name: "Trà Tắc",
+          itemID: "VNITE20260818044418148750",
+          quantity: 1,
+          fare: { priceDisplay: "25.000", priceFloat: 25000 },
+          modifierGroups: [],
+          discountInfo: null,
+        },
+        {
+          name: "Sườn Cọng",
+          itemID: "VNITE20260818044418223602",
+          quantity: 1,
+          fare: { priceDisplay: "87.000", priceFloat: 87000 },
+          modifierGroups: [
+            {
+              modifierGroupName: "Ăn kèm",
+              modifiers: [
+                {
+                  modifierID: "VNMOD20260819110649013214",
+                  modifierName: "Cơm thêm",
+                  priceDisplay: "6.000",
+                  quantity: 1,
+                },
+              ],
+            },
+            {
+              modifierGroupName: "Dụng Cụ Ăn Uống",
+              modifiers: [
+                {
+                  modifierID: "VNMOD20260819110228013409",
+                  modifierName: "Hộp, Muỗng, Nĩa",
+                  priceDisplay: "3.000",
+                  quantity: 1,
+                },
+              ],
+            },
+          ],
+          discountInfo: null,
+        },
+        {
+          name: "Trứng",
+          itemID: "VNITE20260818044418119394",
+          quantity: 1,
+          fare: {
+            priceDisplay: "10.000",
+            originalItemPriceDisplay: "10.000",
+            priceFloat: 10000,
+          },
+          modifierGroups: [],
+          discountInfo: [
+            {
+              discountName: "Tặng món theo điều kiện",
+              discountType: "freeItem",
+              itemDiscountPriceDisplay: "10.000",
+            },
+          ],
+        },
+      ],
+    },
+    fare: {
+      subTotalDisplay: "122.000",
+      totalDisplay: "112.000",
+      orderLevelDiscounts: [
+        {
+          discountType: "freeItem",
+          discountAmountDisplay: "10.000",
+          description: "Tặng món theo điều kiện",
+        },
+      ],
+    },
+  } as unknown as GrabOrderRaw;
+  const transformed = transformGrabOrderPayload(gf553Order, [
+    { id: 2, name: "Sườn Cọng", base_price: 78000 },
+    { id: 11, name: "Trứng", base_price: 10000 },
+    { id: 12, name: "Trà Tắc", base_price: 25000 },
+    { id: 22, name: "Cơm Thêm", base_price: 6000 },
+    { id: 29, name: "Dụng Cụ Mang Về", base_price: 3000 },
+  ]);
+
+  assert.equal(transformed.subtotal, 122000);
+  assert.equal(transformed.totalAmount, 112000);
+  assert.equal(transformed.items.length, 3);
+  assert.equal(transformed.items[2]?.item_name, "Trứng");
+  assert.equal(transformed.items[2]?.unit_price, 10000);
+  assert.equal(transformed.items[2]?.discount_type, "pct");
+  assert.equal(transformed.items[2]?.discount_value, 100);
+  assert.equal(transformed.items[2]?.discount_note, "Tặng món theo điều kiện");
 });
 
 test("GrabFood security: malicious customer comments with 'tặng', 'free', '0đ' NEVER authorize discounts", () => {

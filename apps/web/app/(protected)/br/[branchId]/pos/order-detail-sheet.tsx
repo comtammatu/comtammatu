@@ -293,6 +293,8 @@ export interface OrderDetailSheetProps {
   initialOrder?: OrderDetailData | null;
   /** canManageOrders hint matching `initialOrder` — mirrors fetchOrderDetail's result.canManageOrders. */
   initialCanManage?: boolean;
+  /** Whole-order cancellation hint; waiter item authority stays excluded. */
+  initialCanCancelOrder?: boolean;
   /**
    * Lightweight summary from the orders LIST tap. Renders header (số đơn,
    * bàn / mang về) instantly while items fetch streams in. Distinct from
@@ -347,6 +349,7 @@ export function OrderDetailSheet({
   refreshToken,
   initialOrder,
   initialCanManage,
+  initialCanCancelOrder,
   initialSummary,
   onClose,
   onOpenBill,
@@ -378,6 +381,7 @@ export function OrderDetailSheet({
     }>;
   } | null>(null);
   const [canManage, setCanManage] = useState(false);
+  const [canCancelOrder, setCanCancelOrder] = useState(false);
   const [canVoidPaid, setCanVoidPaid] = useState(false);
   const [canApplyDiscount, setCanApplyDiscount] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -458,6 +462,7 @@ export function OrderDetailSheet({
       }
       setData(order);
       setCanManage(result.data.canManageOrders);
+      setCanCancelOrder(result.data.canCancelOrder);
       setCanVoidPaid(result.data.canVoidPaidOrder);
       setCanApplyDiscount(result.data.canApplyDiscount);
       setError(null);
@@ -518,10 +523,12 @@ export function OrderDetailSheet({
   // very `load()` we just avoided.
   const initialOrderRef = useRef(initialOrder);
   const initialCanManageRef = useRef(initialCanManage);
+  const initialCanCancelOrderRef = useRef(initialCanCancelOrder);
   useEffect(() => {
     initialOrderRef.current = initialOrder;
     initialCanManageRef.current = initialCanManage;
-  }, [initialOrder, initialCanManage]);
+    initialCanCancelOrderRef.current = initialCanCancelOrder;
+  }, [initialOrder, initialCanManage, initialCanCancelOrder]);
 
   // Mount / orderId-change effect: seed from parent-provided payload
   // when it matches (no fetch), else call `load()`. `refreshToken` has
@@ -537,6 +544,7 @@ export function OrderDetailSheet({
     if (seed != null && seed.id === orderId) {
       setData(seed);
       setCanManage(Boolean(initialCanManageRef.current));
+      setCanCancelOrder(Boolean(initialCanCancelOrderRef.current));
       // canVoidPaidOrder not available in seed — fresh fetch will populate it
       setCanVoidPaid(false);
       setError(null);
@@ -1344,7 +1352,7 @@ export function OrderDetailSheet({
   const canAppendItems =
     data != null && canOfferPosOrderAppend(data, ACTIVE_POS_STATUSES);
   const canShowCancel =
-    canManage &&
+    canCancelOrder &&
     data &&
     !["completed", "cancelled"].includes(data.status);
   const canShowVoidPaid =

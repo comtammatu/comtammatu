@@ -10,6 +10,7 @@ const optionalProviderMoney = optionalProviderValue(z.number().nonnegative());
 
 const grabItemDiscountSchema = z
   .object({
+    discountName: optionalProviderString(200),
     discountType: optionalProviderString(100),
     itemDiscountPriceDisplay: optionalProviderString(50),
     itemDiscountPriceFloat: optionalProviderMoney,
@@ -18,6 +19,14 @@ const grabItemDiscountSchema = z
     discountAmountFloat: optionalProviderMoney,
   })
   .strip();
+
+const grabItemDiscountsSchema = z.preprocess(
+  (value) => {
+    if (value == null) return undefined;
+    return Array.isArray(value) ? value : [value];
+  },
+  z.array(grabItemDiscountSchema).max(20).optional(),
+);
 
 const grabModifierSchema = z
   .object({
@@ -49,11 +58,11 @@ const grabOrderItemSchema = z
           originalItemPriceDisplay: optionalProviderString(50),
           priceFloat: optionalProviderMoney,
           priceInMin: optionalProviderMoney,
-          discountInfo: optionalProviderValue(grabItemDiscountSchema),
+          discountInfo: grabItemDiscountsSchema,
         })
         .strip(),
     ),
-    discountInfo: optionalProviderValue(grabItemDiscountSchema),
+    discountInfo: grabItemDiscountsSchema,
     modifierGroups: optionalProviderValue(
       z.array(grabModifierGroupSchema).max(20),
     ),

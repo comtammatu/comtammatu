@@ -238,9 +238,10 @@
     return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : undefined;
   }
 
-  function projectDiscountInfo(rawDiscount) {
-    if (!rawDiscount || typeof rawDiscount !== 'object') return undefined;
+  function projectDiscountInfoEntry(rawDiscount) {
+    if (!rawDiscount || typeof rawDiscount !== 'object' || Array.isArray(rawDiscount)) return null;
     return {
+      discountName: optionalString(rawDiscount.discountName),
       discountType: optionalString(rawDiscount.discountType),
       itemDiscountPriceDisplay: optionalString(rawDiscount.itemDiscountPriceDisplay),
       itemDiscountPriceFloat: optionalNonnegativeNumber(rawDiscount.itemDiscountPriceFloat),
@@ -248,6 +249,12 @@
       discountAmountDisplay: optionalString(rawDiscount.discountAmountDisplay),
       discountAmountFloat: optionalNonnegativeNumber(rawDiscount.discountAmountFloat),
     };
+  }
+
+  function projectDiscountInfo(rawDiscount) {
+    const discounts = Array.isArray(rawDiscount) ? rawDiscount : [rawDiscount];
+    const projected = discounts.map(projectDiscountInfoEntry).filter(Boolean);
+    return projected.length > 0 ? projected : undefined;
   }
 
   function projectOrderDiscount(rawDiscount) {

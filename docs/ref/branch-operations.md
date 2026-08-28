@@ -29,8 +29,8 @@ D009, D012, D019, D052, D069, D076, D093, D103, D104.
 | Tạp vụ | `cleaner` | `branch_staff` |
 
 Không seed alias `server`. Thu ngân và phục vụ không gộp quyền tiền:
-Phục vụ (near-cashier) được POS order/thu/in; không mở két, không chốt ca,
-không void trực tiếp.
+Phục vụ (near-cashier) được POS order/thu/in và sửa, giảm số lượng hoặc hủy từng
+món; không mở két, không chốt ca, không hủy cả đơn.
 
 ## Trưởng ca và void sau thanh toán
 
@@ -62,7 +62,7 @@ Phân định rõ ràng: Hệ thống Web App tự động quản lý Chấm cô
 
 | Vị trí | `position_code` | Đầu ca | Cuối ca |
 | --- | --- | --- | --- |
-| Phục vụ | `waiter` | Setup sảnh (bàn ghế, muỗng nĩa, tăm, giấy, buffet); lau sàn sảnh & cửa kính chống bụi, ruồi | Dọn sảnh, quầy buffet, menu; dọn khu phụ trách (ảnh). Không chốt ca/void |
+| Phục vụ | `waiter` | Setup sảnh (bàn ghế, muỗng nĩa, tăm, giấy, buffet); lau sàn sảnh & cửa kính chống bụi, ruồi | Dọn sảnh, quầy buffet, menu; dọn khu phụ trách (ảnh). Được sửa/hủy từng món; không hủy cả đơn hoặc chốt ca |
 | Thu ngân | `cashier` | Setup & vệ sinh quầy thu ngân, quầy pha chế; hỗ trợ đón khách đầu ca | Vệ sinh quầy thu ngân, quầy pha chế; xả thùng đá; dọn khu phụ trách (ảnh) |
 | Quầy lên món | `kitchen_counter` / `chef` | Kiểm tra nồi hấp cơm & tủ giữ ấm; setup quầy ra món (dụng cụ, topping, đồ mang về) | Cất nguyên liệu thừa vào tủ lạnh; vệ sinh quầy ra món, nồi hấp; dọn khu phụ trách (ảnh) |
 | Quầy nướng | `grill_counter` | Nhóm than, kiểm tra lò, chuẩn bị vỉ sạch; nướng sườn cây & sườn cốt lết định mức | Rửa sạch vỉ nướng, kẹp gắp; vệ sinh lò nướng, khu nướng; dọn khu phụ trách (ảnh) |

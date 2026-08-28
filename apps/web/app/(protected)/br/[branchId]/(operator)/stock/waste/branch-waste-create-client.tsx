@@ -330,6 +330,8 @@ export function BranchWasteCreateClient({
 
           <AppDetailFooter
             sticky
+            className="bg-transparent px-0 shadow-none"
+            slotLayout="direct"
             leading={
               <Button
                 type="button"

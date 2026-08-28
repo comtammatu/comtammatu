@@ -87,11 +87,12 @@ test("Branch roster uses week cards without Owner DataTable", () => {
   assert.match(rosterClient, /BranchRosterWeekClient/);
   assert.doesNotMatch(rosterClient, /(?<!Branch)RosterWeekClient|DataTable/);
   assert.match(branchWeek, /ItemGroup/);
-  assert.match(branchWeek, /RosterDayCell/);
+  assert.match(branchWeek, /assignSheetShiftId/);
   assert.match(branchWeek, /useRosterWeekEditor/);
   assert.match(branchWeek, /sticky bottom-0/);
   assert.match(branchWeek, /from "\.\/weekly-schedule-sheet"/);
   assert.match(branchWeek, /WeeklyScheduleSheet/);
+  assert.doesNotMatch(branchWeek, /RosterDayCell/);
   assert.doesNotMatch(branchWeek, /WeeklyScheduleDialog/);
   assert.doesNotMatch(
     branchWeek,
@@ -101,6 +102,47 @@ test("Branch roster uses week cards without Owner DataTable", () => {
     branchWeek,
     /DataTable|from "@lib\/hr\/roster\/roster-week-client"/,
   );
+});
+
+test("Branch roster is day-first and exposes adjacent people operations", () => {
+  const rosterClient = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/team/roster/roster-client.tsx",
+  );
+  const branchWeek = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/team/roster/branch-roster-week-client.tsx",
+  );
+
+  assert.match(branchWeek, /getVNDateString/);
+  assert.match(branchWeek, /assignSheetShiftId/);
+  assert.match(branchWeek, /schedulePickerOpen/);
+  assert.doesNotMatch(
+    branchWeek,
+    /RosterViewMode|viewMode|selectedDay === "all"/,
+  );
+  assert.match(rosterClient, /team\/attendance/);
+  assert.match(rosterClient, /team\/checkout-approvals/);
+});
+
+test("Branch roster protects unsaved work and reports load failures", () => {
+  const rosterClient = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/team/roster/roster-client.tsx",
+  );
+  const branchWeek = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/team/roster/branch-roster-week-client.tsx",
+  );
+  const editor = read("apps/web/lib/hr/roster/use-roster-week-editor.ts");
+  const actions = read("apps/web/lib/hr/roster/actions.ts");
+
+  assert.match(rosterClient, /unsavedExitTitle/);
+  assert.match(branchWeek, /beforeunload/);
+  assert.match(branchWeek, /document\.addEventListener\("click"/);
+  assert.match(branchWeek, /window\.addEventListener\("popstate"/);
+  assert.match(branchWeek, /history\.pushState/);
+  assert.match(branchWeek, /confirmDiscardChanges/);
+  assert.match(branchWeek, /copyPreviousWeekTitle/);
+  assert.match(branchWeek, /copyRequiresSaved/);
+  assert.match(editor, /discardChanges/);
+  assert.match(actions, /throw new Error\("roster_week_load_failed"\)/);
 });
 
 test("ADR 0019 Phase B migration enables multi-shift roster constraints", () => {

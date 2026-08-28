@@ -21,6 +21,7 @@ export interface UseOrderDetailSurfaceReturn {
   orderDetailSeed: {
     order: OrderDetailData;
     canManage: boolean;
+    canCancelOrder: boolean;
   } | null;
   detailRefreshTick: number;
   /** Open OrderDetailSheet for an order via the list-row tap path. */
@@ -40,6 +41,7 @@ export interface UseOrderDetailSurfaceReturn {
     value: {
       order: OrderDetailData;
       canManage: boolean;
+      canCancelOrder: boolean;
     } | null,
   ) => void;
 }
@@ -81,6 +83,7 @@ export function useOrderDetailSurface(
   const [orderDetailSeed, setOrderDetailSeed] = useState<{
     order: OrderDetailData;
     canManage: boolean;
+    canCancelOrder: boolean;
   } | null>(null);
   const [detailRefreshTick, setDetailRefreshTick] = useState(0);
 

@@ -19,7 +19,7 @@ export const GRAB_MENU_MAPPING: Record<string, GrabMappingItem> = {
   "VNITE20260818044418050935": { name: "Cơm Tấm Bì", defaultPrice: 30000, category: "Món khác" },
   "VNITE20260818044418079946": { name: "Cơm Tấm Chả", defaultPrice: 30000, category: "Món khác" },
   "VNITE20260818044418097874": { name: "Cơm Tấm Trứng", defaultPrice: 30000, category: "Món khác" },
-  "VNITE20260818044418041272": { name: "Cơm Tấm Thêm", defaultPrice: 6000, category: "Món khác" },
+  "VNITE20260818044418041272": { name: "Cơm Thêm", defaultPrice: 6000, category: "Món khác" },
 
   // Món Ăn Kèm (Sides)
   "VNITE20260818044418086205": { name: "Tóp Mỡ", defaultPrice: 6000, category: "Ăn kèm" },
@@ -47,7 +47,7 @@ export const GRAB_MENU_MAPPING: Record<string, GrabMappingItem> = {
   // Món thêm
   "VNMOD20260819110228013409": { name: "Dụng Cụ Mang Về", defaultPrice: 3000 },
   "VNMOD20260821070648011245": { name: "Tóp Mỡ", defaultPrice: 6000 },
-  "VNMOD20260819110649013214": { name: "Cơm Tấm Thêm", defaultPrice: 6000 },
+  "VNMOD20260819110649013214": { name: "Cơm Thêm", defaultPrice: 6000 },
   "VNMOD20260819110119013328": { name: "Trứng", defaultPrice: 10000 },
   "VNMOD20260819110119020027": { name: "Chả", defaultPrice: 12000 },
   "VNMOD20260819110119033709": { name: "Bì", defaultPrice: 12000 },
@@ -117,6 +117,7 @@ export function parseMonetaryAmount(raw: unknown): number | null {
 }
 
 export interface GrabItemDiscountInfo {
+  discountName?: string;
   discountType?: string; // e.g. "freeItem"
   itemDiscountPriceDisplay?: string; // e.g. "10.000"
   itemDiscountPriceFloat?: number;
@@ -124,6 +125,10 @@ export interface GrabItemDiscountInfo {
   discountAmountDisplay?: string;
   discountAmountFloat?: number;
 }
+
+type GrabItemDiscountInput =
+  | GrabItemDiscountInfo
+  | GrabItemDiscountInfo[];
 
 export interface GrabOrderItemRaw {
   itemID?: string;
@@ -135,9 +140,9 @@ export interface GrabOrderItemRaw {
     originalItemPriceDisplay?: string;
     priceFloat?: number;
     priceInMin?: number;
-    discountInfo?: GrabItemDiscountInfo;
+    discountInfo?: GrabItemDiscountInput;
   };
-  discountInfo?: GrabItemDiscountInfo;
+  discountInfo?: GrabItemDiscountInput | null;
   modifierGroups?: Array<{
     modifierGroupID?: string;
     modifierGroupName?: string;
@@ -148,6 +153,38 @@ export interface GrabOrderItemRaw {
       quantity?: number;
     }>;
   }>;
+}
+
+function normalizeItemDiscounts(
+  value: GrabItemDiscountInput | null | undefined,
+): GrabItemDiscountInfo[] {
+  const discounts = Array.isArray(value) ? value : value ? [value] : [];
+  const seen = new Set<string>();
+
+  return discounts.filter((discount) => {
+    const key = JSON.stringify([
+      discount.discountName ?? null,
+      discount.discountType ?? null,
+      discount.itemDiscountPriceDisplay ?? null,
+      discount.itemDiscountPriceFloat ?? null,
+      discount.itemDiscountPriceInMin ?? null,
+      discount.discountAmountDisplay ?? null,
+      discount.discountAmountFloat ?? null,
+    ]);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function parseItemDiscountAmount(discount: GrabItemDiscountInfo): number | null {
+  return (
+    parseMonetaryAmount(discount.itemDiscountPriceDisplay) ??
+    parseMonetaryAmount(discount.itemDiscountPriceFloat) ??
+    parseMonetaryAmount(discount.itemDiscountPriceInMin) ??
+    parseMonetaryAmount(discount.discountAmountDisplay) ??
+    parseMonetaryAmount(discount.discountAmountFloat)
+  );
 }
 
 export interface GrabOrderDiscount {
@@ -248,13 +285,13 @@ const SIDE_NAME_ALIASES: Record<string, string> = {
   "muong dua": "Dụng Cụ Mang Về",
   "top mo": "Tóp Mỡ",
   "mo hanh": "Mỡ Hành",
-  "com them": "Cơm Tấm Thêm",
-  "them com": "Cơm Tấm Thêm",
-  "phan com them": "Cơm Tấm Thêm",
-  "com trang them": "Cơm Tấm Thêm",
-  "com tam them": "Cơm Tấm Thêm",
-  "com": "Cơm Tấm Thêm",
-  "extra rice": "Cơm Tấm Thêm",
+  "com them": "Cơm Thêm",
+  "them com": "Cơm Thêm",
+  "phan com them": "Cơm Thêm",
+  "com trang them": "Cơm Thêm",
+  "com tam them": "Cơm Thêm",
+  "com": "Cơm Thêm",
+  "extra rice": "Cơm Thêm",
   "trung": "Trứng",
   "trung op la": "Trứng",
   "trung chien": "Trứng",
@@ -376,22 +413,30 @@ export function transformGrabOrderPayload(
     const subtotal = unitPrice * qty;
 
     // Structured discount handling
-    const discountInfo = gi.discountInfo || gi.fare?.discountInfo;
-    const structuredDiscountType = discountInfo?.discountType;
+    const itemDiscounts = normalizeItemDiscounts(gi.discountInfo);
+    const fareDiscounts = normalizeItemDiscounts(gi.fare?.discountInfo);
+    const discountInfos = itemDiscounts.length > 0 ? itemDiscounts : fareDiscounts;
+    const freeItemDiscount = discountInfos.find(
+      (discount) => discount.discountType?.toLowerCase() === "freeitem",
+    );
+    const structuredDiscountAmounts = discountInfos
+      .map(parseItemDiscountAmount)
+      .filter((amount): amount is number => amount !== null && amount > 0);
     const structuredDiscountAmount =
-      parseMonetaryAmount(discountInfo?.itemDiscountPriceDisplay) ??
-      parseMonetaryAmount(discountInfo?.itemDiscountPriceFloat) ??
-      parseMonetaryAmount(discountInfo?.discountAmountDisplay) ??
-      parseMonetaryAmount(discountInfo?.discountAmountFloat);
+      structuredDiscountAmounts.length > 0
+        ? structuredDiscountAmounts.reduce((sum, amount) => sum + amount, 0)
+        : null;
 
     let discountType: "pct" | "vnd" | undefined;
     let discountValue: number | undefined;
     let discountNote: string | undefined;
 
-    if (structuredDiscountType === "freeItem") {
+    if (freeItemDiscount) {
       discountType = "pct";
       discountValue = 100;
-      discountNote = "Khuyến mãi tặng kèm Grab (0đ)";
+      discountNote =
+        freeItemDiscount.discountName?.trim() ||
+        "Khuyến mãi tặng kèm Grab (0đ)";
     } else if (structuredDiscountAmount !== null && structuredDiscountAmount > 0) {
       discountType = "vnd";
       discountValue = Math.min(subtotal, structuredDiscountAmount);

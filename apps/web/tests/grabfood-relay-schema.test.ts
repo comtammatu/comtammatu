@@ -55,7 +55,35 @@ test("Grab relay validation tolerates unknown provider metadata and nullable opt
   const item = result.data.order?.itemInfo?.items[0];
   assert.equal(item?.fare?.originalItemPriceDisplay, undefined);
   assert.equal(result.data.order?.fare?.discountDisplay, undefined);
-  assert.equal("campaignName" in (item?.fare?.discountInfo ?? {}), false);
+  assert.equal(Array.isArray(item?.fare?.discountInfo), true);
+  assert.equal("campaignName" in (item?.fare?.discountInfo?.[0] ?? {}), false);
+});
+
+test("Grab relay validation canonicalizes array-shaped free-item promotions", () => {
+  const payload = makeExtensionPayload();
+  const item = payload.order.itemInfo.items[0] as {
+    discountInfo?: unknown;
+  };
+  item.discountInfo = [
+    {
+      discountName: "Tặng món theo điều kiện",
+      discountType: "freeItem",
+      itemDiscountPriceDisplay: "10.000",
+      providerPrivateField: "must-not-leak",
+    },
+  ];
+
+  const result = grabRelaySchema.safeParse(payload);
+
+  assert.equal(result.success, true);
+  if (!result.success) return;
+  assert.deepEqual(result.data.order?.itemInfo.items[0]?.discountInfo, [
+    {
+      discountName: "Tặng món theo điều kiện",
+      discountType: "freeItem",
+      itemDiscountPriceDisplay: "10.000",
+    },
+  ]);
 });
 
 test("Grab relay validation keeps the internal envelope strict", () => {

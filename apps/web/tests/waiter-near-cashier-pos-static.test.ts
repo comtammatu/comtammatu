@@ -7,34 +7,25 @@ function readRepo(path: string): string {
   return readFileSync(join(process.cwd(), "../..", path), "utf8");
 }
 
-const migration = readRepo(
+const baseMigration = readRepo(
   "supabase/migrations/20260808092216_waiter_near_cashier_pos_grants.sql",
 );
+const itemMutationMigration = readRepo(
+  "supabase/migrations/20260828203623_allow_waiter_pos_item_edit_and_void.sql",
+);
 
-test("waiter template grants near-cashier POS keys without void/cashbox/close", () => {
-  assert.match(migration, /position_code = 'waiter'/);
-  for (const key of [
-    "pos:use",
-    "orders:read",
-    "orders:write",
-    "pos:send_kitchen",
-    "pos:print",
-    "pos:reprint_receipt",
-    "pos:confirm_payment",
-    "hr:request_leave",
-  ]) {
-    assert.match(migration, new RegExp(`'${key}'`));
-  }
-  assert.doesNotMatch(migration, /'pos:void_order'/);
-  assert.doesNotMatch(migration, /'pos:open_cashbox'/);
-  assert.doesNotMatch(migration, /'pos:close_shift'/);
-  assert.match(migration, /sync_missing_permissions_from_template/);
+test("waiter template adds item edit/void while keeping cashbox and close excluded", () => {
+  assert.match(itemMutationMigration, /position_code = 'waiter'/);
+  assert.match(itemMutationMigration, /'pos:void_order'/);
+  assert.doesNotMatch(itemMutationMigration, /'pos:open_cashbox'/);
+  assert.doesNotMatch(itemMutationMigration, /'pos:close_shift'/);
+  assert.match(itemMutationMigration, /sync_missing_permissions_from_template/);
 });
 
-test("merge/split/status RPCs admit branch_staff; void migration keeps them out", () => {
+test("merge/split/status and item mutation RPCs admit branch_staff", () => {
   for (const name of ["merge_orders", "split_order", "update_pos_order_status"]) {
     const body =
-      migration.match(
+      baseMigration.match(
         new RegExp(
           `CREATE OR REPLACE FUNCTION public\\.${name}\\([\\s\\S]*?\\n\\$\\$;`,
         ),
@@ -47,12 +38,11 @@ test("merge/split/status RPCs admit branch_staff; void migration keeps them out"
     );
   }
 
-  const voidMigration = readRepo(
-    "supabase/migrations/20260808091257_pos_owner_void_rpc_branch_scope.sql",
-  );
-  assert.doesNotMatch(
-    voidMigration,
-    /'branch_staff'/,
-    "void/edit RPCs must not admit waiter/branch_staff",
-  );
+  for (const name of [
+    "void_order_item",
+    "reduce_order_item_quantity",
+    "edit_pending_order_item",
+  ]) {
+    assert.match(itemMutationMigration, new RegExp(`proname = '${name}'`));
+  }
 });

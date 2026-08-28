@@ -64,44 +64,52 @@ export function canManagePosMenuLimits(role: StaffRole): boolean {
   );
 }
 
-/**
- * POS operators allowed to void / cancel / reduce order flows. Mirrors
- * `MODULE_ACL.pos.allowedRoles` — kept as a named alias so refactoring the
- * role list in one place does not silently re-scope void/cancel beyond the
- * original intent.
- */
-const POS_VOID_ROLES: readonly StaffRole[] = MODULE_ACL.pos.allowedRoles;
+/** Item-level edits preserve the POS role surface; the permission grant and
+ * RPC state/branch checks remain authoritative. */
+const POS_ITEM_MUTATION_ROLES: readonly StaffRole[] =
+  MODULE_ACL.pos.allowedRoles;
+
+/** Whole-order cancellation remains a counter/manager operation. */
+const POS_ORDER_CANCEL_ROLES: readonly StaffRole[] = [
+  "owner",
+  "branch_manager",
+  "cashier",
+];
+
+export function isPosOrderCancelRole(role: StaffRole): boolean {
+  return POS_ORDER_CANCEL_ROLES.includes(role);
+}
 
 /**
- * `customAuth` resolver for POS void / cancel / reduce actions. Composite
- * gate: role ∈ POS_VOID_ROLES AND grant `pos:void_order`. Returns `null` on
- * either role mismatch or missing permission grant — wrapper translates
- * that to a `Không có quyền` ActionResult upstream, then the void
- * RPC's own server-side gate provides defense-in-depth (per the
- * POS-KDS-RPC-SERVER-SIDE-ROLE-GATE regression note).
+ * Item-level mutation gate. Waiter (`branch_staff`) may edit a pending item,
+ * reduce its quantity, or void it when granted `pos:void_order`.
  *
- * Used by `voidOrderItem`, `reduceOrderItemQuantity`, `cancelOrder`, and
- * `editPendingOrderItem`.
- *
- * Signature: receives parsed schema input when available. Branch-aware
- * actions probe their branch-scoped grant before the handler runs; ID-only
- * paths still rely on handler/RPC branch checks.
+ * ID-only paths still rely on the RPC to resolve and enforce branch scope.
  */
-export async function posVoidAuth(
+export async function posItemMutationAuth(
   input?: unknown,
 ): Promise<ActionContext | null> {
   return resolvePosPermission(
-    POS_VOID_ROLES,
+    POS_ITEM_MUTATION_ROLES,
+    PERMISSION_KEYS.POS_VOID_ORDER,
+    input,
+  );
+}
+
+/** Whole-order cancellation gate; waiter item authority does not widen it. */
+export async function posOrderCancelAuth(
+  input?: unknown,
+): Promise<ActionContext | null> {
+  return resolvePosPermission(
+    POS_ORDER_CANCEL_ROLES,
     PERMISSION_KEYS.POS_VOID_ORDER,
     input,
   );
 }
 
 /** POS operators allowed to run day-to-day order lifecycle actions
- * (priority flags, table transfer, item served, cart submit). Same role list
- * as `POS_VOID_ROLES` today, but kept as a separate named alias so a
- * future split (e.g. removing chef from non-kitchen lifecycle actions)
- * can land without re-scoping void.
+ * (priority flags, table transfer, item served, cart submit). Kept separate
+ * from item mutation authority so either policy can change independently.
  */
 const POS_USE_ROLES: readonly StaffRole[] = MODULE_ACL.pos.allowedRoles;
 
@@ -110,8 +118,7 @@ const POS_USE_ROLES: readonly StaffRole[] = MODULE_ACL.pos.allowedRoles;
  * role ∈ POS_USE_ROLES AND grant `pos:use`. Used by
  * `setOrderPriority` / `setOrderItemPriority` /
  * `transferOrderTable` / `markOrderItemServed`
- * and any other lifecycle action that does NOT destroy revenue
- * (those keep `posVoidAuth`).
+ * and any other lifecycle action that does NOT destroy revenue.
  */
 export async function posUseAuth(
   input?: unknown,

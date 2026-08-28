@@ -556,7 +556,7 @@ export async function loadRosterWeekForPage(
 ): Promise<RosterWeekData> {
   const payload = await loadRosterWeekData(tenantId, branchId, weekStart);
   if ("error" in payload) {
-    return { employees: [], shifts: [], assignments: [], weeklySchedules: [] };
+    throw new Error("roster_week_load_failed");
   }
   return payload;
 }

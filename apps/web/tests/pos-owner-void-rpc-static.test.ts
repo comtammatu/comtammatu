@@ -8,59 +8,81 @@ function readRepo(path: string): string {
 }
 
 const migration = readRepo(
-  "supabase/migrations/20260808091257_pos_owner_void_rpc_branch_scope.sql",
+  "supabase/migrations/20260828203623_allow_waiter_pos_item_edit_and_void.sql",
 );
 
-const VOID_RPCS = [
-  "cancel_order",
+const ITEM_MUTATION_RPCS = [
   "void_order_item",
   "reduce_order_item_quantity",
   "edit_pending_order_item",
 ] as const;
 
-test("POS void/edit RPCs admit Owner and keep waiter/branch_staff out of the role allowlist", () => {
-  for (const name of VOID_RPCS) {
-    const body =
-      migration.match(
-        new RegExp(
-          `CREATE OR REPLACE FUNCTION public\\.${name}\\([\\s\\S]*?\\n\\$\\$;`,
-        ),
-      )?.[0] ?? "";
-    assert.notEqual(body.length, 0, `${name} must be redefined in migration`);
+test("waiter item mutation migration admits branch_staff without widening whole-order cancel", () => {
+  for (const name of ITEM_MUTATION_RPCS) {
     assert.match(
-      body,
-      /v_prof_role NOT IN \('owner', 'branch_manager', 'cashier'\)/,
-      `${name} must allow Owner alongside BM/cashier`,
-    );
-    assert.doesNotMatch(
-      body,
-      /'branch_staff'/,
-      `${name} must not treat waiter/branch_staff as a void/edit role`,
-    );
-    assert.doesNotMatch(
-      body,
-      /'waiter'/,
-      `${name} must not hardcode waiter as a StaffRole`,
-    );
-    assert.match(
-      body,
-      /IF v_prof_role <> 'owner' THEN[\s\S]*?branch scope required[\s\S]*?branch mismatch/,
-      `${name} must bypass null-branch Owner checks`,
-    );
-    assert.match(
-      body,
-      /public\.has_permission\([^,]+,\s*'pos:void_order'\)/,
-      `${name} must keep the permission gate`,
+      migration,
+      new RegExp(`proname = '${name}'`),
+      `${name} must be patched by the forward migration`,
     );
   }
+
+  assert.match(
+    migration,
+    /v_prof_role NOT IN \(''owner'', ''branch_manager'', ''cashier'', ''branch_staff''\)/,
+  );
+  assert.match(migration, /position_code = 'waiter'/);
+  assert.match(migration, /'pos:void_order'/);
+  assert.match(migration, /sync_missing_permissions_from_template/);
+  assert.doesNotMatch(
+    migration,
+    /proname = 'cancel_order'/,
+    "whole-order cancellation must keep its tighter role boundary",
+  );
 });
 
-test("MODULE ACL admits branch_staff on POS while void RPCs stay cashier/BM/owner", () => {
-  const acl = readRepo("packages/shared/src/auth/module-acl.ts");
-  const posBlock =
-    acl.match(/pos:\s*\{[\s\S]*?allowedRoles:\s*\[([\s\S]*?)\]/)?.[1] ?? "";
-  assert.match(posBlock, /"owner"/);
-  assert.match(posBlock, /"cashier"/);
-  assert.match(posBlock, /"branch_manager"/);
-  assert.match(posBlock, /"branch_staff"/);
+test("Server Actions split waiter item mutations from whole-order cancellation", () => {
+  const auth = readRepo(
+    "apps/web/app/(protected)/br/[branchId]/pos/_lib/auth.ts",
+  );
+  const actions = readRepo(
+    "apps/web/app/(protected)/br/[branchId]/pos/order-void-actions.ts",
+  );
+  const reads = readRepo(
+    "apps/web/app/(protected)/br/[branchId]/pos/order-reads.ts",
+  );
+  const detail = readRepo(
+    "apps/web/app/(protected)/br/[branchId]/pos/order-detail-sheet.tsx",
+  );
+
+  assert.match(auth, /export async function posItemMutationAuth/);
+  assert.match(auth, /export async function posOrderCancelAuth/);
+  assert.match(auth, /export function isPosOrderCancelRole/);
+  assert.match(
+    auth,
+    /POS_ORDER_CANCEL_ROLES[^=]*=\s*\[\s*"owner",\s*"branch_manager",\s*"cashier",?\s*\]/,
+  );
+
+  for (const action of [
+    "voidOrderItem",
+    "reduceOrderItemQuantity",
+    "editPendingOrderItem",
+  ]) {
+    assert.match(
+      actions,
+      new RegExp(
+        `export const ${action} = withActionPositional\\([\\s\\S]*?customAuth: posItemMutationAuth`,
+      ),
+      `${action} must use the waiter-capable item mutation gate`,
+    );
+  }
+
+  assert.match(
+    actions,
+    /export const cancelOrder = withActionPositional\([\s\S]*?customAuth: posOrderCancelAuth/,
+  );
+  assert.match(
+    reads,
+    /canCancelOrder:\s*canManageOrders\s*&&\s*isPosOrderCancelRole\(claims\.user_role\)/,
+  );
+  assert.match(detail, /const canShowCancel =\s*canCancelOrder\s*&&/);
 });

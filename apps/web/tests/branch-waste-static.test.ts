@@ -43,6 +43,10 @@ test("Branch waste is a native touch document workflow with an isolated Owner su
   assert.match(client, /WasteLineSheet/);
   assert.match(client, /ItemGroup/);
   assert.match(client, /AppDetailFooter/);
+  assert.match(
+    client,
+    /<AppDetailFooter[\s\S]*className="bg-transparent px-0 shadow-none"[\s\S]*slotLayout="direct"/,
+  );
   assert.match(client, /createWasteEntry/);
   assert.match(client, /const cancelHref = stockBasePath/);
   assert.match(client, /href=\{cancelHref\}/);

@@ -10,6 +10,8 @@ export type AppDetailFooterProps = {
   sticky?: boolean;
   mobileReverse?: boolean;
   stacked?: boolean;
+  /** Omit automatic action-group wrappers when the caller already owns grouping. */
+  slotLayout?: "grouped" | "direct";
 };
 
 export function AppDetailFooter({
@@ -19,6 +21,7 @@ export function AppDetailFooter({
   sticky = false,
   mobileReverse = false,
   stacked = false,
+  slotLayout = "grouped",
 }: AppDetailFooterProps) {
   const hasLeading = leading != null;
   const hasTrailing = trailing != null;
@@ -55,25 +58,33 @@ export function AppDetailFooter({
       )}
     >
       {hasLeading ? (
-        <div
-          className={cn(
-            "flex min-w-0 flex-col gap-2",
-            !stacked && "sm:flex-row sm:items-center",
-          )}
-        >
-          {leading}
-        </div>
+        slotLayout === "direct" ? (
+          leading
+        ) : (
+          <div
+            className={cn(
+              "flex min-w-0 flex-col gap-2",
+              !stacked && "sm:flex-row sm:items-center",
+            )}
+          >
+            {leading}
+          </div>
+        )
       ) : null}
       {hasTrailing ? (
-        <div
-          className={cn(
-            "flex min-w-0 flex-col gap-2",
-            !stacked && "sm:flex-row sm:items-center sm:justify-end",
-            !hasLeading && "w-full",
-          )}
-        >
-          {trailing}
-        </div>
+        slotLayout === "direct" ? (
+          trailing
+        ) : (
+          <div
+            className={cn(
+              "flex min-w-0 flex-col gap-2",
+              !stacked && "sm:flex-row sm:items-center sm:justify-end",
+              !hasLeading && "w-full",
+            )}
+          >
+            {trailing}
+          </div>
+        )
       ) : null}
     </footer>
   );

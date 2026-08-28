@@ -11,7 +11,11 @@ import { messages } from "@lib/messages";
 import { getAuthContextWithPermission, probePermission } from "../../_lib/auth";
 import { withActionPositional } from "@/_lib/with-action";
 import type { CartItem } from "./types";
-import { isPosBranchInScope, posUseAuth } from "./_lib/auth";
+import {
+  isPosBranchInScope,
+  isPosOrderCancelRole,
+  posUseAuth,
+} from "./_lib/auth";
 
 /* ─── Constants ─── */
 
@@ -259,6 +263,7 @@ export async function fetchActiveOrderForTable(
   ActionResult<{
     order: Record<string, unknown>;
     canManageOrders: boolean;
+    canCancelOrder: boolean;
   } | null>
 > {
   const parsed = activeTableOrderSchema.safeParse({ branchId, tableId });
@@ -372,6 +377,8 @@ export async function fetchActiveOrderForTable(
     data: {
       order: data,
       canManageOrders,
+      canCancelOrder:
+        canManageOrders && isPosOrderCancelRole(claims.user_role),
     },
   };
 }
@@ -500,6 +507,7 @@ export const fetchOrderDetail = withActionPositional(
     ActionResult<{
       order: Record<string, unknown>;
       canManageOrders: boolean;
+      canCancelOrder: boolean;
       canVoidPaidOrder: boolean;
       canApplyDiscount: boolean;
     }>
@@ -619,6 +627,8 @@ export const fetchOrderDetail = withActionPositional(
       data: {
         order: order as unknown as Record<string, unknown>,
         canManageOrders,
+        canCancelOrder:
+          canManageOrders && isPosOrderCancelRole(claims.user_role),
         canVoidPaidOrder,
         canApplyDiscount,
       },

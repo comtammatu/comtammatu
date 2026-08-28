@@ -1896,14 +1896,13 @@ export const inventory = {
     cancelSuccess: "Đã hủy phiếu điều chuyển.",
     receiveNative: {
       receiveProgress: (done: number, total: number) =>
-        `${formatCount(done)}/${formatCount(total)} dòng`,
+        `${formatCount(done)}/${formatCount(total)} dòng đã nhập`,
       receiveSent: (qty: string, unit: string) => `Gửi ${qty} ${unit}`,
-      receiveNextLine: "Dòng kế →",
+      receiveReviewHint: "Chạm từng dòng nếu số nhận khác số gửi.",
       receiveTapToEnter: "Nhập",
       receiveConfirmAll: "Xác nhận nhận hàng",
-      receiveConfirmAllAsSent: "Nhận đủ theo phiếu",
       receiveDefaultRemainingHint: (n: number) =>
-        `${formatCount(n)} dòng sẽ nhận bằng số gửi`,
+        `${formatCount(n)} dòng chưa nhập sẽ dùng số lượng đã gửi`,
       receiveExceedsSent: "Số nhận vượt quá số gửi.",
       receiveInvalidQty: "Nhập số lượng hợp lệ.",
       receiveFailed: "Không thể xác nhận nhận hàng.",

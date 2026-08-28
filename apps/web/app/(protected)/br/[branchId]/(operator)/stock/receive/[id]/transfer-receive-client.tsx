@@ -19,7 +19,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
 import { Item, ItemGroup } from "@comtammatu/ui/components/item";
-import { SectionLabel } from "@comtammatu/ui/components/section-label";
+import { Progress } from "@comtammatu/ui/components/progress";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
@@ -131,11 +131,6 @@ export function TransferReceiveClient({
     () => items.find((item) => item.ingredientId === sheetId) ?? null,
     [items, sheetId],
   );
-  const nextItem = useMemo(
-    () => items.find((item) => !confirmed.has(item.ingredientId)) ?? null,
-    [items, confirmed],
-  );
-
   function startReceiveSession({ force = false }: { force?: boolean } = {}) {
     if (!canStartReceive) return;
     if (!isOnline) {
@@ -189,10 +184,6 @@ export function TransferReceiveClient({
     const id = sheetItem.ingredientId;
     setValues((current) => ({ ...current, [id]: value }));
     setConfirmed((current) => new Set(current).add(id));
-  }
-
-  function handleConfirmAllAsSent() {
-    setConfirmed(() => new Set(items.map((item) => item.ingredientId)));
   }
 
   function handleConfirm() {
@@ -324,59 +315,23 @@ export function TransferReceiveClient({
 
       <BranchOperatorPanel size="sm" contentClassName="gap-2">
         <div className="flex items-center gap-2">
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-            <div
-              className="h-full rounded-full bg-primary transition-[width]"
-              style={{ width: `${Math.round(progress * 100)}%` }}
-            />
-          </div>
+          <Progress
+            value={progress * 100}
+            className="h-1.5 flex-1"
+            aria-label={receiveCopy.receiveProgress(confirmed.size, total)}
+          />
           <span className="text-xs font-medium text-muted-foreground tabular-nums">
             {receiveCopy.receiveProgress(confirmed.size, total)}
           </span>
         </div>
-
-        {remaining > 0 ? (
-          <Button
-            type="button"
-            size="touch"
-            variant="outline"
-            className="w-full"
-            disabled={confirmBlocked}
-            onClick={handleConfirmAllAsSent}
-          >
-            {receiveCopy.receiveConfirmAllAsSent}
-          </Button>
-        ) : null}
-
-        {nextItem ? (
-          <InteractiveCard
-            padding="compact"
-            minHeight="tap"
-            render={
-              <button
-                type="button"
-                className="w-full flex-col items-start justify-center text-left"
-                onClick={() => setSheetId(nextItem.ingredientId)}
-              />
-            }
-          >
-            <SectionLabel>{receiveCopy.receiveNextLine}</SectionLabel>
-            <span className="flex min-w-0 items-center gap-2">
-              <span className="min-w-0 flex-1 truncate text-sm font-semibold">
-                {nextItem.name}
-              </span>
-              <span className="shrink-0 text-xs text-muted-foreground">
-                {receiveCopy.receiveSent(String(nextItem.qty), nextItem.unit)}
-              </span>
-            </span>
-          </InteractiveCard>
-        ) : null}
+        <p className="text-xs text-muted-foreground">
+          {receiveCopy.receiveReviewHint}
+        </p>
       </BranchOperatorPanel>
 
       <ItemGroup className="gap-2">
         {items.map((item) => {
           const isConfirmed = confirmed.has(item.ingredientId);
-          const isNext = nextItem?.ingredientId === item.ingredientId;
           const value = values[item.ingredientId] ?? item.qty;
           const isShortage = isConfirmed && value < item.qty;
           return (
@@ -410,9 +365,7 @@ export function TransferReceiveClient({
                     "shrink-0 rounded-md px-3 py-1 font-mono text-sm font-semibold tabular-nums",
                     isConfirmed
                       ? "bg-primary/10 text-primary"
-                      : isNext
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground",
+                      : "text-muted-foreground",
                   )}
                 >
                   {isConfirmed ? value : receiveCopy.receiveTapToEnter}
@@ -499,6 +452,8 @@ export function TransferReceiveClient({
 
       <AppDetailFooter
         sticky
+        className="bg-transparent px-0 shadow-none"
+        slotLayout="direct"
         leading={
           <Button
             variant="outline"

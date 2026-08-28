@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { MouseEventHandler, ReactNode } from "react";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { cn } from "@comtammatu/ui";
@@ -133,6 +133,7 @@ export type AppBackLinkProps = {
   href: string;
   children?: ReactNode;
   className?: string;
+  onClick?: MouseEventHandler<HTMLAnchorElement>;
   "aria-label"?: string;
 };
 

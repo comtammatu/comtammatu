@@ -10,7 +10,7 @@ import {
   voidItemSchema,
 } from "./_lib/schemas";
 import type { EditPendingOrderItemInput } from "./_lib/schemas";
-import { posVoidAuth } from "./_lib/auth";
+import { posItemMutationAuth, posOrderCancelAuth } from "./_lib/auth";
 import { evaluateOrderPromotionsQuiet } from "@lib/promotions/evaluate-order";
 import {
   cancelRpcFallback,
@@ -45,7 +45,7 @@ export const voidOrderItem = withActionPositional(
       reason,
     }),
     schema: voidItemSchema,
-    customAuth: posVoidAuth,
+    customAuth: posItemMutationAuth,
     afterSuccess: enqueueCancelTicketPrintHook,
   },
   async (
@@ -119,7 +119,7 @@ export const reduceOrderItemQuantity = withActionPositional(
       reason,
     }),
     schema: reduceItemSchema,
-    customAuth: posVoidAuth,
+    customAuth: posItemMutationAuth,
     afterSuccess: enqueuePartialCancelTicketPrintHook,
   },
   async (
@@ -206,7 +206,7 @@ export const editPendingOrderItem = withActionPositional(
       input: Omit<EditPendingOrderItemInput, "orderItemId">,
     ) => ({ orderItemId, ...input }),
     schema: editPendingItemSchema,
-    customAuth: posVoidAuth,
+    customAuth: posItemMutationAuth,
   },
   async (
     parsedData,
@@ -353,7 +353,7 @@ export const cancelOrder = withActionPositional(
   {
     argsToInput: (orderId: number, reason: string) => ({ orderId, reason }),
     schema: cancelOrderSchema,
-    customAuth: posVoidAuth,
+    customAuth: posOrderCancelAuth,
   },
   async (
     { orderId, reason },

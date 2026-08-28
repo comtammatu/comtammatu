@@ -165,6 +165,12 @@ export function useRosterWeekEditor({
     });
   }
 
+  function discardChanges() {
+    setAssignmentMap(buildAssignmentMap(data.assignments));
+    setLeaderMap(buildLeaderMap(data.assignments));
+    setDirty(false);
+  }
+
   function handleSave() {
     startTransition(async () => {
       const assignments = Array.from(assignmentMap.entries()).flatMap(
@@ -276,6 +282,7 @@ export function useRosterWeekEditor({
     handleSave,
     handleCopyPreviousWeek,
     handleLeaderToggle,
+    discardChanges,
     refreshRoster,
   };
 }

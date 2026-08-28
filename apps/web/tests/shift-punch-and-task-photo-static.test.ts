@@ -165,6 +165,9 @@ test("floor shift tasks stay compact and waiter cannot close cash", () => {
   );
 
   assert.match(docs, /dọn khu phụ trách \(ảnh\)/);
-  assert.match(docs, /Không chốt ca\/void/);
+  assert.match(
+    docs,
+    /Được sửa\/hủy từng món; không hủy cả đơn hoặc chốt ca/,
+  );
 });
 

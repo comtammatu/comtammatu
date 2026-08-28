@@ -307,3 +307,37 @@ test("ShopeeFood mapping: resolves extra rice to the real POS menu name", () => 
   assert.equal(transformed.items[0]?.menu_item_id, 9);
   assert.equal(transformed.items[0]?.item_name, "Cơm Thêm");
 });
+
+test("ShopeeFood transformation: maps the extra-rice option to a priced POS side", () => {
+  const transformed = transformShopeeOrderPayload(
+    {
+      orderId: "25086-553553553",
+      items: [
+        {
+          itemId: "SPF_ITEM_SUON_COT_LET",
+          name: "Sườn Cốt Lết",
+          quantity: 1,
+          price: 60000,
+          options: [
+            {
+              groupName: "Tùy chọn",
+              optionId: "SPF_MOD_COM_THEM",
+              name: "Cơm thêm",
+              price: 6000,
+            },
+          ],
+        },
+      ],
+    },
+    [
+      ...MOCK_DB_ITEMS,
+      { id: 9, name: "Cơm Thêm", base_price: 6000 },
+    ],
+  );
+
+  assert.equal(transformed.items[0]?.note, null);
+  assert.deepEqual(transformed.items[0]?.sides, [
+    { side_item_id: 9, name: "Cơm Thêm", price: 6000, quantity: 1 },
+  ]);
+  assert.equal(transformed.items[0]?.unit_price, 60000);
+});

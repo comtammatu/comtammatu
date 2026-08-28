@@ -546,10 +546,10 @@ export const hr = {
     },
   },
   roster: {
-    title: "Phân ca theo tuần",
+    title: "Phân ca theo ngày",
     backToTeamAria: "Quay lại đội",
     description:
-      "Gán ca làm cho từng nhân viên theo ngày. Nhân viên chỉ chấm công khi đã được phân ca.",
+      "Chọn ngày, xếp người vào từng ca và gán trưởng ca. Nhân viên chỉ chấm công khi đã được phân ca.",
     officeSiteLabel: "Văn phòng",
     siteListTitle: "Chọn địa điểm để phân ca",
     siteListDescription:
@@ -561,6 +561,10 @@ export const hr = {
     previousWeek: "Tuần trước",
     nextWeek: "Tuần sau",
     copyPreviousWeek: "Sao chép tuần trước",
+    copyPreviousWeekTitle: "Thay phân ca tuần này bằng tuần trước?",
+    copyPreviousWeekDescription: (sourceWeek: string, targetWeek: string) =>
+      `Toàn bộ phân ca ${targetWeek} sẽ được thay bằng dữ liệu từ ${sourceWeek}.`,
+    copyRequiresSaved: "Hãy lưu hoặc bỏ thay đổi hiện tại trước khi sao chép.",
     save: "Lưu phân ca",
     saveSuccess: "Đã lưu phân ca tuần này.",
     copySuccess: "Đã sao chép phân ca từ tuần trước.",
@@ -575,6 +579,9 @@ export const hr = {
     emptyEmployeesTitle: "Chưa có nhân viên",
     emptyEmployeesDescription:
       "Không có nhân viên đang hoạt động tại địa điểm này.",
+    emptyShiftsTitle: "Chưa có ca làm",
+    emptyShiftsDescription:
+      "Tạo ca làm trước khi phân công nhân viên cho ngày này.",
     columnEmployee: "Nhân viên",
     markShiftLeader: "Gán trưởng ca",
     unmarkShiftLeader: "Bỏ trưởng ca",
@@ -583,8 +590,13 @@ export const hr = {
     shiftLeaderClearedSuccess: "Đã bỏ trưởng ca.",
     shiftLeaderFailed: "Không thể cập nhật trưởng ca.",
     addShift: "Thêm ca",
-    removeShift: "Xóa ca",
+    removeShift: "Bỏ nhân viên khỏi ca",
+    saveBeforeLeader: "Lưu phân ca trước khi gán trưởng ca.",
     schedule: "Lịch cố định",
+    schedulePickerTitle: "Chọn nhân viên đặt lịch cố định",
+    schedulePickerDescription:
+      "Lịch cố định tạo phân ca lặp theo thứ; phân ca riêng từng ngày vẫn là ngoại lệ ưu tiên.",
+    openSchedule: "Mở lịch",
     scheduleDays: (count: number) =>
       `Lịch cố định · ${formatCount(count)} ngày`,
     scheduleTitle: (name: string) => `Lịch làm cố định · ${name}`,
@@ -634,6 +646,26 @@ export const hr = {
     assignToShift: "Thêm vào ca",
     shiftLeaderShort: "Trưởng ca",
     noLeaderAssigned: "Chưa có trưởng ca",
+    attendanceAction: "Chấm công",
+    checkoutApprovalsAction: "Duyệt kết ca",
+    addPeopleToShift: "Thêm người vào ca",
+    addEmployee: "Thêm",
+    assignSheetTitle: (shiftName: string) => `Thêm người · ${shiftName}`,
+    assignSheetDescription: (dayLabel: string) =>
+      `Chọn nhân viên cho ${dayLabel}. Một người có thể làm nhiều ca trong ngày.`,
+    alreadyAssignedTo: (shiftNames: string) => `Đã có ca: ${shiftNames}`,
+    noAssignmentCandidatesTitle: "Không còn nhân viên phù hợp",
+    noAssignmentCandidatesDescription:
+      "Mọi nhân viên đang hiển thị đã có trong ca này hoặc không khớp từ khóa.",
+    dayStaffingSummary: (assigned: number, total: number, unassigned: number) =>
+      `${formatCount(assigned)}/${formatCount(total)} người đã xếp · ${formatCount(unassigned)} người chưa xếp`,
+    unsavedChanges: "Có thay đổi chưa lưu",
+    unsavedExitTitle: "Bỏ các thay đổi chưa lưu?",
+    unsavedExitDescription:
+      "Phân ca vừa chỉnh sẽ không được giữ lại nếu bạn tiếp tục.",
+    discardChanges: "Bỏ thay đổi",
+    continueEditing: "Tiếp tục chỉnh",
+    savedState: "Phân ca đã được lưu",
     dayCoverage: (shiftsCount: number, leaderCount: number) =>
       `${formatCount(shiftsCount)} người · ⭐ ${formatCount(leaderCount)} trưởng ca`,
     searchAriaLabel: "Tìm nhân viên phân ca",
@@ -646,6 +678,6 @@ export const hr = {
     noStaffInShift: "Chưa có nhân viên nào được gán vào ca này.",
     allStaffAssignedInDay: "Tất cả nhân viên đã được phân ca trong ngày này.",
     noStaffFoundTitle: "Không tìm thấy nhân viên",
-    noStaffFoundDescription: "Đổi từ khóa hoặc bộ lọc chức danh để xem lại.",
+    noStaffFoundDescription: "Đổi từ khóa tìm kiếm để xem lại.",
   },
 } as const;

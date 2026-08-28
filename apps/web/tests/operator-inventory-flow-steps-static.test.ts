@@ -59,11 +59,23 @@ test("transfer receive keeps the phone first viewport on line receiving", () => 
   const source = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/[id]/transfer-receive-client.tsx",
   );
+  const messages = read("apps/web/lib/messages/inventory.ts");
 
   assert.doesNotMatch(source, /OperatorFlowSteps/);
+  assert.match(source, /@comtammatu\/ui\/components\/progress/);
   assert.match(source, /receiveProgress/);
-  assert.match(source, /receiveNextLine/);
+  assert.match(source, /receiveReviewHint/);
   assert.match(source, /receiveTapToEnter/);
+  assert.doesNotMatch(
+    source,
+    /receiveNextLine|receiveConfirmAllAsSent|handleConfirmAllAsSent/,
+  );
+  assert.match(
+    messages,
+    /receiveReviewHint: "Chạm từng dòng nếu số nhận khác số gửi\."/,
+  );
+  assert.match(messages, /dòng chưa nhập sẽ dùng số lượng đã gửi/);
+  assert.doesNotMatch(messages, /Dòng kế|Nhận đủ theo phiếu/);
 });
 
 test("stocktake count uses NumberPadSheet and a single sticky submit", () => {

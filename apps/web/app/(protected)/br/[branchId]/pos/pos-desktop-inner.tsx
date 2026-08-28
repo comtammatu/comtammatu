@@ -1105,6 +1105,7 @@ export function PosDesktopInner({
             setOrderDetailSeed({
               order,
               canManage: result.data.canManageOrders,
+              canCancelOrder: result.data.canCancelOrder,
             });
             focusOrderWorkflow(order.id, order.order_number);
             void refreshOperational();
@@ -2223,6 +2224,7 @@ export function PosDesktopInner({
         refreshToken={detailRefreshTick}
         initialOrder={orderDetailSeed?.order ?? null}
         initialCanManage={orderDetailSeed?.canManage ?? false}
+        initialCanCancelOrder={orderDetailSeed?.canCancelOrder ?? false}
         initialSummary={orderDetailSummary}
         onCreateOrderOnTable={handleCreateOrderOnTable}
         onClose={closeOrderDetail}

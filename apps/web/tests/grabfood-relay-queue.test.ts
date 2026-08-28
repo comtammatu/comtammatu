@@ -3,6 +3,12 @@ import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import { test } from "node:test";
 
+interface ProjectedDiscountInfo {
+  discountName?: string;
+  discountType?: string;
+  itemDiscountPriceDisplay?: string;
+}
+
 interface QueueItem {
   orderID: string;
   displayID: string;
@@ -144,4 +150,44 @@ test("Grab relay projector does not forward raw discount objects", () => {
     /orderLevelDiscounts: projectOrderDiscounts\(rawOrderLevelDiscounts\)/,
   );
   assert.doesNotMatch(projectorSource, /discountInfo: i\.discountInfo/);
+});
+
+test("Grab relay projector preserves array-shaped item promotions", () => {
+  const projectorSource = readFileSync(
+    new URL(
+      "../../../tools/grab-pos-relay-extension/injected.js",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const start = projectorSource.indexOf("function optionalString");
+  const end = projectorSource.indexOf("function projectOrderDiscount", start);
+  assert.notEqual(start, -1);
+  assert.notEqual(end, -1);
+
+  const projectDiscountInfo = Function(
+    `"use strict"; ${projectorSource.slice(start, end)}; return projectDiscountInfo;`,
+  )() as (value: unknown) => ProjectedDiscountInfo[] | undefined;
+
+  assert.deepEqual(
+    projectDiscountInfo([
+      {
+        discountName: "Tặng món theo điều kiện",
+        discountType: "freeItem",
+        itemDiscountPriceDisplay: "10.000",
+        providerPrivateField: "must-not-leak",
+      },
+    ]),
+    [
+      {
+        discountName: "Tặng món theo điều kiện",
+        discountType: "freeItem",
+        itemDiscountPriceDisplay: "10.000",
+        itemDiscountPriceFloat: undefined,
+        itemDiscountPriceInMin: undefined,
+        discountAmountDisplay: undefined,
+        discountAmountFloat: undefined,
+      },
+    ],
+  );
 });
