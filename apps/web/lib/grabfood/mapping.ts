@@ -57,7 +57,8 @@ export const GRAB_MENU_MAPPING: Record<string, GrabMappingItem> = {
  * Trusted server-side branch to Grab Merchant ID mappings.
  */
 export const GRAB_BRANCH_MERCHANT_MAP: Record<number, string> = {
-  1: "5-C8DTE75GUGJ3JT", // Branch 1: Nguyễn Hữu Thọ
+  3: "5-C8DTE75GUGJ3JT", // Branch 3: Nguyễn Hữu Thọ
+  1: "5-C8DTE75GUGJ3JT", // Fallback compatibility for legacy/seed references
 };
 
 /**

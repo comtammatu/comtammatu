@@ -516,16 +516,19 @@ test("GrabFood mapping: preserves legitimate 0đ total for 100% discounted order
 });
 
 test("GrabFood security: validateGrabMerchantForBranch enforces cross-branch merchant isolation", () => {
-  // Valid branch 1 matching its configured merchant
+  // Valid branch 3 (Nguyễn Hữu Thọ) matching its configured merchant
+  assert.equal(validateGrabMerchantForBranch(3, "5-C8DTE75GUGJ3JT"), true);
+
+  // Fallback branch 1
   assert.equal(validateGrabMerchantForBranch(1, "5-C8DTE75GUGJ3JT"), true);
 
-  // Invalid merchant for branch 1
-  assert.equal(validateGrabMerchantForBranch(1, "5-WRONGMERCHANT"), false);
+  // Invalid merchant for branch 3
+  assert.equal(validateGrabMerchantForBranch(3, "5-WRONGMERCHANT"), false);
 
-  // Cross-branch attack: branch 2 attempting to use branch 1's merchant ID
+  // Cross-branch attack: branch 2 attempting to use branch 3's merchant ID
   assert.equal(validateGrabMerchantForBranch(2, "5-C8DTE75GUGJ3JT"), false);
 
   // Null / empty merchant
-  assert.equal(validateGrabMerchantForBranch(1, null), false);
-  assert.equal(validateGrabMerchantForBranch(1, ""), false);
+  assert.equal(validateGrabMerchantForBranch(3, null), false);
+  assert.equal(validateGrabMerchantForBranch(3, ""), false);
 });

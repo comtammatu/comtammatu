@@ -36,5 +36,5 @@ Tiện ích mở rộng Chrome/Edge giúp **tự động bắt đơn hàng từ 
 ## ⚙️ Cấu Hình (Tùy Chọn)
 * Bấm vào biểu tượng Tiện ích trên thanh công cụ Chrome:
   * **Địa chỉ máy chủ POS:** Mặc định `http://localhost:3000` (hoặc domain Production).
-  * **Chi nhánh (Branch ID):** Nhập ID chi nhánh của quán (mặc định là `1`).
+  * **Chi nhánh (Branch ID):** Nhập ID chi nhánh của quán (mặc định là `3` - Nguyễn Hữu Thọ).
   * Xem danh sách các đơn Grab vừa nhận gần nhất.

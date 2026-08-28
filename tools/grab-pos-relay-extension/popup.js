@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Load existing settings
   chrome.storage.local.get(['backendUrl', 'branchId', 'relaySecret', 'recentOrders'], (res) => {
     backendUrlInput.value = res.backendUrl || 'http://localhost:3000';
-    branchIdInput.value = res.branchId || '1';
+    branchIdInput.value = res.branchId || '3';
     relaySecretInput.value = res.relaySecret || '';
 
     if (Array.isArray(res.recentOrders) && res.recentOrders.length > 0) {
@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const backendUrl = parsed.origin;
     let branchId = parseInt(branchIdInput.value, 10);
     if (isNaN(branchId) || branchId <= 0) {
-      branchId = parsed.extractedBranchId || 1;
+      branchId = parsed.extractedBranchId || 3;
     }
 
     backendUrlInput.value = backendUrl;
