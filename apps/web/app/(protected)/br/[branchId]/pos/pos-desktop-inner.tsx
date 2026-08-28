@@ -22,6 +22,7 @@ import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@comtammatu/ui/components/toggle-group";
+import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
@@ -2019,7 +2020,12 @@ export function PosDesktopInner({
       type="button"
       variant="outline"
       size="touch"
-      className="w-full max-w-80"
+      className={cn(
+        "w-full min-w-0 justify-between gap-2 text-sm font-semibold transition-colors",
+        selfOrderPosState.requests.length > 0
+          ? "border-warning text-foreground shadow-2xs"
+          : "text-muted-foreground hover:text-foreground",
+      )}
       onClick={handleOpenSelfOrderApproval}
       aria-label={
         selfOrderSyncFailed && selfOrderPosState.requests.length === 0
@@ -2027,14 +2033,22 @@ export function PosDesktopInner({
           : undefined
       }
     >
-      <IconBell data-icon="inline-start" />
-      <span>
-        {selfOrderSyncFailed && selfOrderPosState.requests.length === 0
-          ? messages.pos.selfOrderSync.failed
-          : SELF_ORDER_VI.staffApprove}
-      </span>
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <IconBell
+          data-icon="inline-start"
+          className={cn(
+            "size-4 shrink-0",
+            selfOrderPosState.requests.length > 0 && "text-warning",
+          )}
+        />
+        <span className="truncate">
+          {selfOrderSyncFailed && selfOrderPosState.requests.length === 0
+            ? messages.pos.selfOrderSync.failed
+            : SELF_ORDER_VI.staffApprove}
+        </span>
+      </div>
       {selfOrderPosState.requests.length > 0 ? (
-        <Badge variant="warning">
+        <Badge variant="warning" className="shrink-0 font-mono font-semibold tabular-nums">
           {formatCount(selfOrderPosState.requests.length)}
         </Badge>
       ) : null}

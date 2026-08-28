@@ -2,6 +2,10 @@
 
 import { z } from "zod";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import {
+  getVNBusinessDateString,
+  getVNBusinessDayUtcRange,
+} from "@comtammatu/shared/time";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { messages } from "@lib/messages";
 import { getAuthContextWithPermission, probePermission } from "../../_lib/auth";
@@ -174,6 +178,10 @@ export async function fetchArchivedOrders(
 
   if (sessionId !== undefined && sessionId !== null) {
     query = query.eq("pos_session_id", sessionId);
+  } else {
+    const businessDay = getVNBusinessDateString();
+    const { startIso, endIso } = getVNBusinessDayUtcRange(businessDay);
+    query = query.gte("created_at", startIso).lt("created_at", endIso);
   }
 
   if (typeof q === "string" && q.length > 0) {

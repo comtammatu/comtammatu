@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Badge } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
 import { createClient } from "@comtammatu/database/supabase/client";
 import { POS_VI } from "@comtammatu/shared/messages";
 import { formatVNDateTime } from "@comtammatu/shared/time";
@@ -10,18 +9,15 @@ import {
   Printer as IconPrinter,
   PrinterX as IconPrinterOff,
 } from "lucide-react";
+import {
+  PrinterStatusSheet,
+  type AgentStatus,
+} from "./_components/printer-status-sheet";
 
 interface PrinterStatusIndicatorProps {
   branchId: number;
   settingsHref?: string;
 }
-
-type AgentStatus = {
-  agentId: string | null;
-  lastSeenAt: string | null;
-  isOnline: boolean;
-  hasAgent: boolean;
-};
 
 const OFFLINE_THRESHOLD_MS = 60_000;
 const POLL_INTERVAL_MS = 30_000;
@@ -52,6 +48,7 @@ export function PrinterStatusIndicator({
   branchId,
   settingsHref,
 }: PrinterStatusIndicatorProps) {
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [status, setStatus] = useState<AgentStatus>({
     agentId: null,
     lastSeenAt: null,
@@ -122,66 +119,58 @@ export function PrinterStatusIndicator({
   // A failed job outranks the heartbeat tone: agent online + dead printer
   // looked healthy before — the count is the actual paper-out-of-tray truth.
   const offlineTitle = `Dịch vụ in ${status.agentId ?? ""} mất kết nối lần cuối ${formatVNDateTime(status.lastSeenAt)}`;
-  const badge =
-    failedCount > 0 ? (
-      <Badge
-        variant="outline"
-        className="gap-1 border-destructive/20 text-destructive"
-        title={FAILED_BADGE_COPY.title(failedCount)}
-      >
-        <IconPrinterOff />
-        <span className="hidden sm:inline">
-          {FAILED_BADGE_COPY.long(failedCount)}
-        </span>
-        <span className="sm:hidden">
-          {FAILED_BADGE_COPY.short(failedCount)}
-        </span>
-      </Badge>
-    ) : !status.hasAgent ? (
-      <Badge
-        variant="outline"
-        className="gap-1 text-muted-foreground"
-        title={POS_VI.printerNoneTitle}
-      >
-        <IconPrinter />
-        <span className="hidden sm:inline">
-          {POS_VI.printerUnregisteredLong}
-        </span>
-        <span className="sm:hidden">{POS_VI.printerNoneShort}</span>
-      </Badge>
-    ) : status.isOnline ? (
-      <Badge
-        variant="outline"
-        className="gap-1 border-success/20 text-success"
-        title={`Dịch vụ in ${status.agentId ?? ""} — đang kết nối`}
-      >
-        <IconPrinter />
-        <span className="hidden sm:inline">{POS_VI.printerOnlineLong}</span>
-        <span className="sm:hidden">{POS_VI.printerOnlineShort}</span>
-      </Badge>
-    ) : (
-      <Badge
-        variant="outline"
-        className="gap-1 border-destructive/20 text-destructive"
-        title={offlineTitle}
-      >
-        <IconPrinterOff />
-        <span className="hidden sm:inline">{POS_VI.printerOfflineLong}</span>
-        <span className="sm:hidden">{POS_VI.printerOfflineShort}</span>
-      </Badge>
-    );
 
-  if (settingsHref) {
-    return (
-      <Link
-        href={settingsHref}
-        className="inline-flex hover:opacity-80"
-        title={POS_VI.printerConfigTitle}
+  return (
+    <>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-touch"
+        className="relative shrink-0"
+        onClick={() => setSheetOpen(true)}
+        aria-label={
+          failedCount > 0
+            ? FAILED_BADGE_COPY.title(failedCount)
+            : !status.hasAgent
+              ? POS_VI.printerNoneTitle
+              : status.isOnline
+                ? `Máy in đang kết nối (${status.agentId ?? "Dịch vụ in"})`
+                : offlineTitle
+        }
+        title={
+          failedCount > 0
+            ? FAILED_BADGE_COPY.title(failedCount)
+            : !status.hasAgent
+              ? POS_VI.printerNoneTitle
+              : status.isOnline
+                ? `Máy in đang kết nối (${status.agentId ?? "Dịch vụ in"})`
+                : offlineTitle
+        }
       >
-        {badge}
-      </Link>
-    );
-  }
+        {failedCount > 0 ? (
+          <>
+            <IconPrinterOff className="size-5 text-destructive" />
+            <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 font-mono text-2xs font-semibold text-destructive-foreground tabular-nums">
+              {failedCount > 9 ? "9+" : failedCount}
+            </span>
+          </>
+        ) : !status.hasAgent ? (
+          <IconPrinter className="size-5 text-muted-foreground" />
+        ) : status.isOnline ? (
+          <IconPrinter className="size-5 text-success" />
+        ) : (
+          <IconPrinterOff className="size-5 text-destructive" />
+        )}
+      </Button>
 
-  return badge;
+      <PrinterStatusSheet
+        branchId={branchId}
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        status={status}
+        onRefresh={() => void fetchStatus()}
+        settingsHref={settingsHref ?? `/br/${branchId}/settings/printers`}
+      />
+    </>
+  );
 }

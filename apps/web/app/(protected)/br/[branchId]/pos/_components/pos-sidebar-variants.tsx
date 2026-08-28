@@ -67,7 +67,7 @@ function SplitSidebarComponent({
       <div className="hidden h-full min-h-0 w-80 shrink-0 flex-col border-l border-border/60 bg-background xl:flex 2xl:w-96">
         {sessionTopBar}
         {sessionAction ? (
-          <div className="flex shrink-0 justify-end px-3 py-2">
+          <div className="flex shrink-0 border-b border-border/60 bg-background px-3 py-2">
             {sessionAction}
           </div>
         ) : null}
@@ -106,7 +106,7 @@ function SplitSidebarComponent({
         <div className="flex h-full min-h-0 w-72 shrink-0 flex-col border-l border-border/60 2xl:w-80">
           {sessionTopBar}
           {sessionAction ? (
-            <div className="flex shrink-0 justify-end px-3 py-2">
+            <div className="flex shrink-0 border-b border-border/60 bg-background px-3 py-2">
               {sessionAction}
             </div>
           ) : null}
