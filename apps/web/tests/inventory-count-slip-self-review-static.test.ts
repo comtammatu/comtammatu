@@ -53,7 +53,7 @@ test("count slip action rejects self-review before calling the database RPC", ()
   assert.equal(selfReviewChecks.length, 2);
   assert.ok(
     (selfReviewChecks[1]?.index ?? Number.POSITIVE_INFINITY) <
-      action.indexOf('supabase.rpc("request_inventory_count_recount"'),
+      action.indexOf('supabase.rpc("request_inventory_count_line_recount"'),
     "self-review preflight must run before the recount RPC",
   );
 

@@ -420,6 +420,8 @@ export const INVENTORY_VI = {
   countSlipApproved: "Đã xác nhận phiếu đếm ca.",
   countSlipApprovedWithWaste: (wasteNumber: string, itemCount: number) =>
     `Đã duyệt bàn giao ca và tự động lập phiếu xuất hủy #${wasteNumber} (${formatCount(itemCount)} món hao hụt).`,
+  countSlipApprovedWithWastePending: (wasteNumber: string) =>
+    `Đã duyệt bàn giao ca và lập phiếu xuất hủy #${wasteNumber}; phiếu đang chờ duyệt trước khi trừ kho.`,
   countSlipAutoWasteCheckbox: "Tự động lập Phiếu xuất hủy để trừ kho ngay",
   countSlipApproveAndWasteAction: "Duyệt & Xuất hủy kho",
   countSlipApproveOnlyAction: "Chỉ duyệt bàn giao",
@@ -427,9 +429,30 @@ export const INVENTORY_VI = {
     `Phát hiện ${formatCount(count)} món hao hụt (thiếu hụt)`,
   countSlipShortageDetectedHint:
     "Tự động lập phiếu xuất hủy để trừ kho sổ cái hợp lệ hoặc chỉ duyệt bàn giao nếu hàng đang nấu dở.",
+  countSlipWasteEvidenceTitle: "Ảnh bằng chứng hàng thiếu",
+  countSlipWasteEvidenceHint:
+    "Thêm một ảnh cho từng mặt hàng thiếu. Hệ thống chỉ duyệt bàn giao khi phiếu xuất hủy được tạo thành công.",
+  countSlipWasteEvidenceLine: (ingredientName: string) =>
+    `${ingredientName} (bắt buộc)`,
+  countSlipWasteEvidenceRequired:
+    "Thêm ảnh bằng chứng cho từng mặt hàng thiếu trước khi duyệt và xuất hủy.",
+  countSlipRecoverWasteAction: "Hoàn tất xuất hủy",
+  countSlipRecoverWasteTitle: "Hoàn tất xuất hủy từ phiếu đếm?",
+  countSlipRecoverWasteHint:
+    "Phiếu đếm đã duyệt nhưng chưa có phiếu xuất hủy. Thêm ảnh để hoàn tất và cập nhật tồn kho.",
   recountReasonRequired: "Nhập lý do cần đếm lại.",
   recountRequestFailed: "Không gửi được yêu cầu đếm lại.",
   recountRequested: "Đã yêu cầu nhân viên đếm lại.",
+  recountConfirmTitle: "Xác nhận yêu cầu đếm lại",
+  recountConfirmDescription: (count: number) =>
+    `Nhân viên sẽ chỉ sửa ${formatCount(count)} nguyên liệu đã chọn.`,
+  recountSelectVariance: "Chọn tất cả dòng lệch",
+  recountClearSelection: "Bỏ chọn",
+  recountSelectionCount: (count: number) =>
+    `${formatCount(count)} nguyên liệu sẽ đếm lại`,
+  recountRequiredBadge: "Cần đếm lại",
+  recountAcceptedBadge: "Đã chấp nhận",
+  recountCompletedRound: (round: number) => `Đã đếm lại lần ${round}`,
   countDateAt: (date: string) => `Ngày đếm ${date}`,
   countDateLabel: "Ngày đếm",
   submittedAtLabel: "Thời điểm gửi",

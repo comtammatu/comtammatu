@@ -13,6 +13,8 @@ export type CountSlipLineViewInput = {
   entryToBaseFactor?: number | null;
   countedBaseQuantity?: number | null;
   currentLiveQuantity?: number | null;
+  recountRequired?: boolean;
+  lastRecountRound?: number;
   note: string | null;
 };
 
@@ -30,12 +32,16 @@ export type CountSlipLineView = {
   varianceUnit: string;
   /** Live stock on-hand quantity for manager real-time reference. */
   currentLiveQuantity: number | null;
+  recountRequired: boolean;
+  lastRecountRound: number;
   note: string | null;
 };
 
 export type CountSlipRow = {
   id: number;
   slipNumber: string;
+  branchId: number;
+  locationId: number;
   branchName: string;
   locationName: string;
   employeeName: string;
@@ -46,6 +52,9 @@ export type CountSlipRow = {
   reviewNote: string | null;
   submittedAt: string | null;
   reviewedAt: string | null;
+  recountRound: number;
+  lastResubmittedRound: number;
+  wasteIssueNumber: string | null;
   lines: CountSlipLineView[];
 };
 
@@ -95,6 +104,8 @@ export function buildCountSlipLineView(
       variance: null,
       varianceUnit: baseUnit,
       currentLiveQuantity: liveQty,
+      recountRequired: input.recountRequired === true,
+      lastRecountRound: input.lastRecountRound ?? 0,
       note: input.note,
     };
   }
@@ -112,6 +123,8 @@ export function buildCountSlipLineView(
     variance: input.countedQuantity - input.systemQuantity / factor,
     varianceUnit: countedUnit,
     currentLiveQuantity: liveQty,
+    recountRequired: input.recountRequired === true,
+    lastRecountRound: input.lastRecountRound ?? 0,
     note: input.note,
   };
 }

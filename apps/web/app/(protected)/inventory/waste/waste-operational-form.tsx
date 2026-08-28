@@ -139,7 +139,7 @@ export function WasteOperationalForm({
         toast.error(`Số lượng ${ingredient.name} vượt tồn hiện tại.`);
         return;
       }
-      if (evidenceRequired && line.photoUrls.length === 0) {
+      if (line.photoUrls.length === 0) {
         toast.error("Thêm ảnh bằng chứng cho các dòng cần kiểm tra.");
         return;
       }
@@ -349,7 +349,7 @@ export function WasteOperationalForm({
                 </Field>
                 <Field className="md:col-span-2">
                   <FieldLabel>
-                    {copy.evidenceLabel(evidenceRequired)}
+                    {copy.evidenceLabel(true)}
                   </FieldLabel>
                   <WastePhotoUpload
                     tenantId={context.tenantId}

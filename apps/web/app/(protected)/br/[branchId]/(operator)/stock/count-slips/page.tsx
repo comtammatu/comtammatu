@@ -27,6 +27,7 @@ export default async function OperatorCountSlipsPage({
 
   return (
     <BranchCountSlipsClient
+      tenantId={data.tenantId}
       branchId={branchId}
       branchName={data.branchName}
       initialRows={data.rows}

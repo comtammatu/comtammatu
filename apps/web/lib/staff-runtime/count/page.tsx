@@ -37,6 +37,9 @@ export interface CountUnitChoice {
 export interface CountAssignment {
   ingredientId: number;
   ingredientName: string;
+  lineId?: number;
+  recountRequired?: boolean;
+  lastRecountRound?: number;
   // All active counting units for this ingredient, base first.
   countUnits: CountUnitChoice[];
 }
@@ -54,6 +57,7 @@ export interface CountSlipHeader {
   locationId: number;
   status: CountSlipStatus;
   reviewNote: string | null;
+  recountRound: number;
 }
 
 interface AssignmentUnitRow {
@@ -84,13 +88,20 @@ interface SlipRow {
   id: number;
   location_id: number;
   status: string;
+  review_note?: string | null;
+  recount_round?: number;
 }
 
 interface SlipLineRow {
+  line_id: number;
   ingredient_id: number;
+  ingredient_name: string;
   counted_quantity: number;
   entry_unit_id: number | null;
   note: string | null;
+  recount_required: boolean;
+  last_recount_round: number;
+  recount_round: number;
 }
 
 function assignmentCellKey(row: {
@@ -98,6 +109,12 @@ function assignmentCellKey(row: {
   ingredient_id: number;
 }) {
   return `${row.location_id}:${row.ingredient_id}`;
+}
+
+function parsePositiveId(value: string | undefined): number | null {
+  if (typeof value !== "string" || !/^\d+$/.test(value)) return null;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
 async function resolveCurrentCountShiftId(
@@ -145,7 +162,7 @@ async function resolveCurrentCountShiftId(
 }
 
 interface EmployeeCountSurfaceProps {
-  searchParams: Promise<{ location?: string }>;
+  searchParams: Promise<{ location?: string; slip?: string }>;
   routeBranchId?: number;
   baseHref?: string;
   profileHref: string;
@@ -200,6 +217,8 @@ async function buildEmployeeCountSurface({
   }
 
   const countReadClient = createServiceClient();
+  const params = await searchParams;
+  const requestedSlipId = parsePositiveId(params.slip);
   const today = getVNDateString();
   const currentShiftId =
     shiftIdOverride !== undefined
@@ -247,7 +266,7 @@ async function buildEmployeeCountSurface({
       row.shift_id !== null || !shiftSpecificCells.has(assignmentCellKey(row)),
   );
 
-  if (assignmentRows.length === 0) {
+  if (assignmentRows.length === 0 && requestedSlipId === null) {
     return {
       branchId,
       branchName,
@@ -267,17 +286,22 @@ async function buildEmployeeCountSurface({
     ...new Set(assignmentRows.map((row) => row.location_id)),
   ];
 
-  const { data: locationData } = await countReadClient
-    .from("inventory_locations")
-    .select("id, name")
-    .eq("tenant_id", claims.tenant_id)
-    .in("id", locationIds);
+  const locationData =
+    locationIds.length === 0
+      ? []
+      : (
+          await countReadClient
+            .from("inventory_locations")
+            .select("id, name")
+            .eq("tenant_id", claims.tenant_id)
+            .in("id", locationIds)
+        ).data ?? [];
 
   const locationNameById = new Map(
-    ((locationData ?? []) as LocationRow[]).map((row) => [row.id, row.name]),
+    (locationData as LocationRow[]).map((row) => [row.id, row.name]),
   );
 
-  const groups: CountLocationGroup[] = locationIds
+  let groups: CountLocationGroup[] = locationIds
     .map((locationId) => ({
       locationId,
       locationName:
@@ -307,15 +331,15 @@ async function buildEmployeeCountSurface({
     }))
     .sort((a, b) => a.locationName.localeCompare(b.locationName, "vi"));
 
-  const { location: locationParam } = await searchParams;
+  const { location: locationParam } = params;
   const parsedLocation = Number(locationParam);
-  const selectedLocationId =
+  let selectedLocationId =
     groups.find((group) => group.locationId === parsedLocation)?.locationId ??
     (groups.length === 1 ? groups[0]!.locationId : null);
 
   let slipQuery = supabase
     .from("inventory_count_slips")
-    .select("id, location_id, status")
+    .select("id, location_id, status, review_note, recount_round")
     .eq("tenant_id", claims.tenant_id)
     .eq("employee_id", employeeId)
     .eq("branch_id", branchId)
@@ -326,7 +350,24 @@ async function buildEmployeeCountSurface({
       : slipQuery.eq("shift_id", currentShiftId);
   const { data: slipData } = await slipQuery;
 
-  const slipRows = (slipData ?? []) as SlipRow[];
+  const slipRows = (slipData ?? []) as unknown as SlipRow[];
+  if (requestedSlipId !== null && !slipRows.some((row) => row.id === requestedSlipId)) {
+    const { data: requestedSlip } = await supabase
+      .from("inventory_count_slips")
+      .select("id, location_id, status, review_note, recount_round")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("employee_id", employeeId)
+      .eq("branch_id", branchId)
+      .eq("id", requestedSlipId)
+      .eq("status", "needs_changes")
+      .maybeSingle();
+    if (requestedSlip) slipRows.push(requestedSlip as unknown as SlipRow);
+  }
+  const requestedSlip =
+    requestedSlipId === null
+      ? null
+      : slipRows.find((row) => row.id === requestedSlipId) ?? null;
+  if (requestedSlip) selectedLocationId = requestedSlip.location_id;
   const slipByLocation = new Map<number, CountSlipHeader>(
     slipRows
       .filter(
@@ -341,13 +382,14 @@ async function buildEmployeeCountSurface({
           id: row.id,
           locationId: row.location_id,
           status: row.status,
-          reviewNote: null,
+          reviewNote: row.review_note ?? null,
+          recountRound: Number(row.recount_round ?? 0),
         },
       ]),
   );
 
   // review_note is read separately so the column list stays explicit.
-  if (slipRows.length > 0) {
+  if (slipRows.length > 0 && requestedSlip === null) {
     let reviewQuery = supabase
       .from("inventory_count_slips")
       .select("id, review_note")
@@ -374,27 +416,93 @@ async function buildEmployeeCountSurface({
   // the employee's previously counted values via the blind RPC (no system qty).
   let prefill: Record<
     number,
-    { quantity: string; entryUnitId: number | null; note: string }
+    {
+      lineId?: number;
+      quantity: string;
+      entryUnitId: number | null;
+      note: string;
+      recountRequired?: boolean;
+      lastRecountRound?: number;
+    }
   > = {};
   const selectedSlip =
     selectedLocationId !== null
       ? (slipByLocation.get(selectedLocationId) ?? null)
       : null;
   if (selectedSlip && selectedSlip.status === "needs_changes") {
-    const { data: slipLines } = await supabase.rpc("get_my_count_slip", {
-      p_slip_id: selectedSlip.id,
-    });
+    const { data: slipLines } = await supabase.rpc(
+      "get_my_count_slip_recount",
+      { p_slip_id: selectedSlip.id },
+    );
     const lineRows = (slipLines ?? []) as SlipLineRow[];
     prefill = Object.fromEntries(
       lineRows.map((line) => [
         line.ingredient_id,
         {
+          lineId: line.line_id,
           quantity: String(line.counted_quantity),
           entryUnitId: line.entry_unit_id,
           note: line.note ?? "",
+          recountRequired: line.recount_required,
+          lastRecountRound: line.last_recount_round,
         },
       ]),
     );
+
+    const recountIngredientIds = lineRows.map((line) => line.ingredient_id);
+    const { data: recountUnitRows } = await countReadClient
+      .from("ingredient_units")
+      .select(
+        "ingredient_id, unit_id, is_base, sort_order, to_base_factor, units!ingredient_units_unit_tenant_fkey(code, name)",
+      )
+      .eq("tenant_id", claims.tenant_id)
+      .eq("is_active", true)
+      .in("ingredient_id", recountIngredientIds);
+    const unitsByIngredient = new Map<number, CountUnitChoice[]>();
+    for (const unit of (recountUnitRows ?? []) as unknown as Array<
+      AssignmentUnitRow & { ingredient_id: number }
+    >) {
+      const current = unitsByIngredient.get(unit.ingredient_id) ?? [];
+      const code = unit.units?.code ?? "";
+      if (code) {
+        current.push({
+          unitId: unit.unit_id,
+          code,
+          label: unit.units?.name ?? code,
+          isBase: unit.is_base,
+          toBaseFactor:
+            unit.to_base_factor == null ? null : Number(unit.to_base_factor),
+        });
+        unitsByIngredient.set(unit.ingredient_id, current);
+      }
+    }
+    for (const units of unitsByIngredient.values()) {
+      units.sort((a, b) => Number(b.isBase) - Number(a.isBase));
+    }
+    const locationName =
+      locationNameById.get(selectedSlip.locationId) ??
+      (
+        await countReadClient
+          .from("inventory_locations")
+          .select("name")
+          .eq("tenant_id", claims.tenant_id)
+          .eq("id", selectedSlip.locationId)
+          .maybeSingle()
+      ).data?.name ?? copy.locationFallback(selectedSlip.locationId);
+    groups = [
+      {
+        locationId: selectedSlip.locationId,
+        locationName,
+        assignments: lineRows.map((line) => ({
+          ingredientId: line.ingredient_id,
+          ingredientName: line.ingredient_name,
+          lineId: line.line_id,
+          recountRequired: line.recount_required,
+          lastRecountRound: line.last_recount_round,
+          countUnits: unitsByIngredient.get(line.ingredient_id) ?? [],
+        })),
+      },
+    ];
   }
 
   return {

@@ -11,6 +11,7 @@ import {
   RotateCcw as IconRecount,
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
+import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import { confirm } from "@/components/confirm-dialog";
 import { Frame } from "@comtammatu/ui/components/frame";
 import {
@@ -60,6 +61,10 @@ import type {
 import { formatQty } from "@lib/inventory/format";
 import { inventoryListFilterSelectClassName } from "../_components/inventory-list-filters";
 import { approveCountSlip, requestCountRecount } from "./actions";
+import {
+  CountSlipWasteEvidence,
+  type CountSlipWastePhotoUrls,
+} from "@/components/inventory/count-slip-waste-evidence";
 
 type QueueView = "pending" | "history" | "all";
 
@@ -145,9 +150,11 @@ function renderSlipMobileRow(row: CountSlipRow, onOpen: () => void) {
 }
 
 export function CountSlipsClient({
+  tenantId,
   initial,
   initialSlipId = null,
 }: {
+  tenantId: number;
   initial: CountSlipRow[];
   initialSlipId?: number | null;
 }) {
@@ -434,6 +441,7 @@ export function CountSlipsClient({
       </AppListFrame>
 
       <CountSlipReviewDialog
+        tenantId={tenantId}
         row={selectedRow}
         onClose={closeSlip}
         onStatusChange={applyStatus}
@@ -443,10 +451,12 @@ export function CountSlipsClient({
 }
 
 function CountSlipReviewDialog({
+  tenantId,
   row,
   onClose,
   onStatusChange,
 }: {
+  tenantId: number;
   row: CountSlipRow | null;
   onClose: () => void;
   onStatusChange: (slipId: number, status: CountSlipStatus) => void;
@@ -454,6 +464,11 @@ function CountSlipReviewDialog({
   const router = useRouter();
   const [recounting, setRecounting] = useState(false);
   const [note, setNote] = useState("");
+  const [selectedRecountLineIds, setSelectedRecountLineIds] = useState<number[]>(
+    [],
+  );
+  const [wastePhotoUrls, setWastePhotoUrls] =
+    useState<CountSlipWastePhotoUrls>({});
   const [pendingAction, setPendingAction] = useState<
     "approve" | "recount" | null
   >(null);
@@ -462,6 +477,12 @@ function CountSlipReviewDialog({
   useEffect(() => {
     setRecounting(false);
     setNote("");
+    setSelectedRecountLineIds(
+      row?.lines
+        .filter((line) => line.variance !== null && line.variance !== 0)
+        .map((line) => line.id) ?? [],
+    );
+    setWastePhotoUrls({});
     setPendingAction(null);
   }, [row?.id]);
 
@@ -469,15 +490,25 @@ function CountSlipReviewDialog({
   const activeRow = row;
   const variance = summarizeVariance(activeRow);
   const readOnly = activeRow.status !== "submitted";
+  const shortageLines = activeRow.lines.filter(
+    (line) => line.variance !== null && line.variance < 0,
+  );
+  const wasteEvidenceComplete = shortageLines.every(
+    (line) => (wastePhotoUrls[line.id]?.length ?? 0) > 0,
+  );
+  const needsWasteRecovery =
+    activeRow.status === "approved" &&
+    shortageLines.length > 0 &&
+    activeRow.wasteIssueNumber === null;
 
   async function handleApprove() {
-    const shortageLines = activeRow.lines.filter(
-      (l) => l.variance !== null && l.variance < 0,
-    );
-
     let autoCreateWaste = false;
 
     if (shortageLines.length > 0) {
+      if (!wasteEvidenceComplete) {
+        toast.error(INVENTORY_VI.countSlipWasteEvidenceRequired);
+        return;
+      }
       const shortageSummary =
         shortageLines
           .slice(0, 3)
@@ -491,8 +522,12 @@ function CountSlipReviewDialog({
           : "");
 
       const accepted = await confirm({
-        title: INVENTORY_VI.countSlipApproveTitle,
-        description: INVENTORY_VI.countSlipShortageDetectedHint,
+        title: needsWasteRecovery
+          ? INVENTORY_VI.countSlipRecoverWasteTitle
+          : INVENTORY_VI.countSlipApproveTitle,
+        description: needsWasteRecovery
+          ? INVENTORY_VI.countSlipRecoverWasteHint
+          : INVENTORY_VI.countSlipShortageDetectedHint,
         details: [
           { label: "Mã phiếu", value: activeRow.slipNumber },
           { label: STAFF_VI.long, value: activeRow.employeeName },
@@ -507,7 +542,9 @@ function CountSlipReviewDialog({
             value: shortageSummary,
           },
         ],
-        confirmText: INVENTORY_VI.countSlipApproveAndWasteAction,
+        confirmText: needsWasteRecovery
+          ? INVENTORY_VI.countSlipRecoverWasteAction
+          : INVENTORY_VI.countSlipApproveAndWasteAction,
         variant: "destructive",
       });
       if (!accepted) return;
@@ -538,6 +575,7 @@ function CountSlipReviewDialog({
       const result = await approveCountSlip({
         slipId: activeRow.id,
         autoCreateWaste,
+        wastePhotoUrls,
       });
       setPendingAction(null);
       if (!result.success || !result.data) {
@@ -546,14 +584,15 @@ function CountSlipReviewDialog({
       }
       if (result.data.wasteCreated && result.data.wasteIssueNumber) {
         toast.success(
-          INVENTORY_VI.countSlipApprovedWithWaste(
-            result.data.wasteIssueNumber,
-            result.data.wasteItemsCount ?? 0,
-          ),
+          result.data.requiresApproval
+            ? INVENTORY_VI.countSlipApprovedWithWastePending(
+                result.data.wasteIssueNumber,
+              )
+            : INVENTORY_VI.countSlipApprovedWithWaste(
+                result.data.wasteIssueNumber,
+                result.data.wasteItemsCount ?? 0,
+              ),
         );
-      } else if (result.data.wasteError) {
-        toast.success(INVENTORY_VI.countSlipApproved);
-        toast.error(result.data.wasteError);
       } else {
         toast.success(INVENTORY_VI.countSlipApproved);
       }
@@ -562,15 +601,33 @@ function CountSlipReviewDialog({
     });
   }
 
-  function handleRecount() {
+  async function handleRecount() {
+    if (selectedRecountLineIds.length === 0) {
+      toast.error("Chọn ít nhất một nguyên liệu cần đếm lại.");
+      return;
+    }
     if (note.trim().length < 3) {
       toast.error(INVENTORY_VI.recountReasonRequired);
       return;
     }
+    const accepted = await confirm({
+      title: INVENTORY_VI.recountConfirmTitle,
+      description: INVENTORY_VI.recountConfirmDescription(
+        selectedRecountLineIds.length,
+      ),
+      details: [
+        { label: "Mã phiếu", value: activeRow.slipNumber },
+        { label: "Số nguyên liệu", value: String(selectedRecountLineIds.length) },
+        { label: "Lý do", value: note.trim() },
+      ],
+      confirmText: INVENTORY_VI.sendRecountRequest,
+    });
+    if (!accepted) return;
     setPendingAction("recount");
     startTransition(async () => {
       const result = await requestCountRecount({
         slipId: activeRow.id,
+        lineIds: selectedRecountLineIds,
         note,
       });
       setPendingAction(null);
@@ -585,6 +642,28 @@ function CountSlipReviewDialog({
   }
 
   const lineColumns: DataTableColumn<CountSlipLine>[] = [
+    ...(recounting
+      ? [
+          {
+            key: "recount",
+            header: "Đếm lại",
+            className: "w-24",
+            render: (line: CountSlipLine) => (
+              <Checkbox
+                checked={selectedRecountLineIds.includes(line.id)}
+                onCheckedChange={(checked) =>
+                  setSelectedRecountLineIds((current) =>
+                    checked
+                      ? [...new Set([...current, line.id])]
+                      : current.filter((id) => id !== line.id),
+                  )
+                }
+                aria-label={`Chọn ${line.ingredientName} để đếm lại`}
+              />
+            ),
+          } satisfies DataTableColumn<CountSlipLine>,
+        ]
+      : []),
     {
       key: "ingredient",
       header: "Nguyên liệu",
@@ -595,6 +674,11 @@ function CountSlipReviewDialog({
           {line.note ? (
             <div className="max-w-md break-words text-xs italic text-muted-foreground">
               {line.note}
+            </div>
+          ) : null}
+          {line.lastRecountRound > 0 ? (
+            <div className="text-xs font-medium text-info">
+              {INVENTORY_VI.recountCompletedRound(line.lastRecountRound)}
             </div>
           ) : null}
         </div>
@@ -654,7 +738,34 @@ function CountSlipReviewDialog({
 
   const controlSize = useFormControlSize("responsive");
 
-  const footer = readOnly ? (
+  const footer = needsWasteRecovery ? (
+    <div className="flex w-full gap-2 sm:w-auto">
+      <Button
+        type="button"
+        variant="outline"
+        size={controlSize === "touch" ? "touch" : "default"}
+        className="flex-1 sm:flex-initial"
+        disabled={pendingAction !== null}
+        onClick={onClose}
+      >
+        {ACTIONS_VI.close}
+      </Button>
+      <Button
+        type="button"
+        size={controlSize === "touch" ? "touch" : "default"}
+        className="flex-1 font-semibold sm:flex-initial"
+        disabled={pendingAction !== null || !wasteEvidenceComplete}
+        onClick={() => void handleApprove()}
+      >
+        {pendingAction === "approve" ? (
+          <Spinner data-icon="inline-start" />
+        ) : (
+          <IconCheck aria-hidden="true" />
+        )}
+        {INVENTORY_VI.countSlipRecoverWasteAction}
+      </Button>
+    </div>
+  ) : readOnly ? (
     <Button
       type="button"
       variant="outline"
@@ -675,6 +786,7 @@ function CountSlipReviewDialog({
         onClick={() => {
           setRecounting(false);
           setNote("");
+          setSelectedRecountLineIds([]);
         }}
       >
         {ACTIONS_VI.cancel}
@@ -683,8 +795,8 @@ function CountSlipReviewDialog({
         type="button"
         size={controlSize === "touch" ? "touch" : "default"}
         className="flex-1 sm:flex-initial font-semibold"
-        disabled={pendingAction !== null}
-        onClick={handleRecount}
+        disabled={pendingAction !== null || selectedRecountLineIds.length === 0}
+        onClick={() => void handleRecount()}
       >
         {pendingAction === "recount" ? (
           <Spinner data-icon="inline-start" />
@@ -702,7 +814,14 @@ function CountSlipReviewDialog({
         size={controlSize === "touch" ? "touch" : "default"}
         className="flex-1 sm:flex-initial"
         disabled={pendingAction !== null}
-        onClick={() => setRecounting(true)}
+        onClick={() => {
+          setSelectedRecountLineIds(
+            activeRow.lines
+              .filter((line) => line.variance !== null && line.variance !== 0)
+              .map((line) => line.id),
+          );
+          setRecounting(true);
+        }}
       >
         <IconRecount aria-hidden="true" />
         {INVENTORY_VI.requestRecount}
@@ -711,7 +830,10 @@ function CountSlipReviewDialog({
         type="button"
         size={controlSize === "touch" ? "touch" : "default"}
         className="flex-1 sm:flex-initial font-semibold"
-        disabled={pendingAction !== null}
+        disabled={
+          pendingAction !== null ||
+          (shortageLines.length > 0 && !wasteEvidenceComplete)
+        }
         onClick={() => void handleApprove()}
       >
         {pendingAction === "approve" ? (
@@ -770,6 +892,19 @@ function CountSlipReviewDialog({
                   </ItemDescription>
                 </ItemContent>
                 <ItemActions>
+                  {recounting ? (
+                    <Checkbox
+                      checked={selectedRecountLineIds.includes(line.id)}
+                      onCheckedChange={(checked) =>
+                        setSelectedRecountLineIds((current) =>
+                          checked
+                            ? [...new Set([...current, line.id])]
+                            : current.filter((id) => id !== line.id),
+                        )
+                      }
+                      aria-label={`Chọn ${line.ingredientName} để đếm lại`}
+                    />
+                  ) : null}
                   <span
                     className={cn(
                       "font-mono font-semibold tabular-nums",
@@ -785,6 +920,24 @@ function CountSlipReviewDialog({
           />
         </ScrollArea>
       </Frame>
+
+      {(!readOnly && !recounting) || needsWasteRecovery ? (
+        <CountSlipWasteEvidence
+          tenantId={tenantId}
+          branchId={activeRow.branchId}
+          slipId={activeRow.id}
+          lines={shortageLines}
+          values={wastePhotoUrls}
+          disabled={pendingAction !== null}
+          touch={controlSize === "touch"}
+          onChange={(lineId, url) =>
+            setWastePhotoUrls((current) => ({
+              ...current,
+              [lineId]: url ? [url] : [],
+            }))
+          }
+        />
+      ) : null}
 
       <div className="grid gap-2 text-sm sm:grid-cols-[1fr_auto] sm:items-start">
         <div className="flex min-w-0 flex-col gap-1">
@@ -816,6 +969,39 @@ function CountSlipReviewDialog({
 
       {!readOnly && recounting ? (
         <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={pendingAction !== null}
+              onClick={() =>
+                setSelectedRecountLineIds(
+                  activeRow.lines
+                    .filter(
+                      (line) => line.variance !== null && line.variance !== 0,
+                    )
+                    .map((line) => line.id),
+                )
+              }
+            >
+              {INVENTORY_VI.recountSelectVariance}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={pendingAction !== null}
+              onClick={() => setSelectedRecountLineIds([])}
+            >
+              {INVENTORY_VI.recountClearSelection}
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              {INVENTORY_VI.recountSelectionCount(
+                selectedRecountLineIds.length,
+              )}
+            </span>
+          </div>
           <Label htmlFor="count-slip-recount-note">
             {INVENTORY_VI.recountReasonLabel}
           </Label>

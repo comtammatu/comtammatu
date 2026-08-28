@@ -206,7 +206,9 @@ export const wasteCreateRpcMappings: readonly RpcErrorMapping[] = [
     userMessage: "Số lượng vượt tồn hiện tại.",
   },
   {
-    match: (_msg, code) => code === "42501",
+    match: (msg, code) =>
+      code === "22023" &&
+      includesAny("waste photo required", "waste_photo_required")(msg),
     errorCode: INVENTORY_ERROR_CODES.WASTE_EVIDENCE_REQUIRED,
     userMessage: "Cần ảnh bằng chứng trước khi ghi nhận hao hụt.",
   },
@@ -220,6 +222,7 @@ export const wasteCreateRpcMappings: readonly RpcErrorMapping[] = [
     errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,
     userMessage: "Đơn vị không thuộc nguyên liệu.",
   },
+  privilege,
 ];
 
 export const wasteCreateRpcFallback: RpcErrorFallback = {

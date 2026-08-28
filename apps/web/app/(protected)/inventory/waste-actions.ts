@@ -56,7 +56,10 @@ const wasteItemSchema = z.object({
   entry_unit_id: z.coerce.number().int().positive().nullable().optional(),
   reason_code: z.enum(WASTE_REASON_CODES),
   note: z.string().max(500).optional(),
-  photo_urls: z.array(z.string().url()).max(10).optional(),
+  photo_urls: z
+    .array(z.string().url())
+    .min(1, "Thêm ảnh bằng chứng cho từng dòng xuất hủy.")
+    .max(10),
 });
 
 const createWasteSchema = z.object({
@@ -78,7 +81,8 @@ export type CreateWasteResult = {
 /**
  * Create a waste entry (writeoff). Wraps `create_waste_entry` RPC.
  * Enforces: inventory:writeoff perm, shift_key auto-computed,
- * tier computed per-line (0/1/2), photo required for tier >= 1.
+ * tier computed per-line (0/1/2), with one image required for every manual
+ * writeoff line regardless of its approval tier.
  *
  * Returns `requiresApproval=true` when any line triggers tier-2 gate:
  * parent stock_issue stays in draft/pending until `approveWaste()` called.

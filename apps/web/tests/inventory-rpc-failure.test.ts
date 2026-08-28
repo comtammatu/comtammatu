@@ -13,6 +13,8 @@ import {
   INVENTORY_ERROR_CODES,
   transferShipRpcFallback,
   transferShipRpcMappings,
+  wasteCreateRpcFallback,
+  wasteCreateRpcMappings,
 } from "../lib/messages/inventory-rpc-errors";
 
 const repoRoot = resolve(process.cwd(), "../..");
@@ -65,6 +67,41 @@ describe("mapInventoryRpcFailure", () => {
     assert.equal(result.success, false);
     assert.equal(result.errorCode, INVENTORY_ERROR_CODES.INVALID_STATUS);
     assert.equal(result.meta, undefined);
+  });
+
+  test("maps the waste tier photo sentinel without treating permission errors as evidence", () => {
+    const evidence = mapInventoryRpcFailure(
+      {
+        message:
+          "waste photo required for tier >= 1 (reason=spoiled, value=128902.40, qty_ratio=1.0000)",
+        code: "22023",
+      },
+      wasteCreateRpcMappings,
+      wasteCreateRpcFallback,
+    );
+    assert.equal(
+      evidence.errorCode,
+      INVENTORY_ERROR_CODES.WASTE_EVIDENCE_REQUIRED,
+    );
+
+    const forbidden = mapInventoryRpcFailure(
+      { message: "forbidden", code: "42501" },
+      wasteCreateRpcMappings,
+      wasteCreateRpcFallback,
+    );
+    assert.equal(forbidden.errorCode, INVENTORY_ERROR_CODES.FORBIDDEN);
+  });
+
+  test("maps the manual writeoff photo sentinel", () => {
+    const evidence = mapInventoryRpcFailure(
+      { message: "waste_photo_required", code: "22023" },
+      wasteCreateRpcMappings,
+      wasteCreateRpcFallback,
+    );
+    assert.equal(
+      evidence.errorCode,
+      INVENTORY_ERROR_CODES.WASTE_EVIDENCE_REQUIRED,
+    );
   });
 });
 

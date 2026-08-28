@@ -9,6 +9,7 @@ import {
   type CountSlipStatus,
 } from "@lib/inventory/count-slip-model";
 import { resolveCountSlipReviewerEmployeeId } from "@lib/inventory/count-slip-reviewer";
+import { loadCountSlipWasteIssueNumbers } from "@lib/inventory/count-slip-waste-links";
 
 export const instant = false;
 
@@ -62,6 +63,8 @@ interface CountSlipQueryLine {
   entry_unit_id: number | null;
   entry_to_base_factor?: number | string | null;
   counted_base_quantity?: number | string | null;
+  recount_required?: boolean;
+  last_recount_round?: number;
   note: string | null;
   ingredients: unknown;
   units: unknown;
@@ -140,6 +143,27 @@ export async function CountSlipsPageContent({
   const slipIds = slipRows
     .map((slip) => Number(slip.id))
     .filter((id) => Number.isFinite(id));
+  const recountRoundBySlipId = new Map<
+    number,
+    { recountRound: number; lastResubmittedRound: number }
+  >();
+  if (slipIds.length > 0) {
+    const { data: recountRows } = await supabase
+      .from("inventory_count_slips")
+      .select("id, recount_round, last_resubmitted_round")
+      .eq("tenant_id", claims.tenant_id)
+      .in("id", slipIds);
+    for (const row of (recountRows ?? []) as unknown as Array<{
+      id: number;
+      recount_round: number;
+      last_resubmitted_round: number;
+    }>) {
+      recountRoundBySlipId.set(Number(row.id), {
+        recountRound: Number(row.recount_round ?? 0),
+        lastResubmittedRound: Number(row.last_resubmitted_round ?? 0),
+      });
+    }
+  }
   const lineResult =
     slipIds.length === 0
       ? { data: [] as Array<CountSlipQueryLine & { slip_id: number }>, error: null }
@@ -155,6 +179,8 @@ export async function CountSlipsPageContent({
             entry_unit_id,
             entry_to_base_factor,
             counted_base_quantity,
+            recount_required,
+            last_recount_round,
             note,
             ingredients ( name ),
             units!inventory_count_slip_lines_entry_unit_id_fkey ( code )
@@ -209,6 +235,11 @@ export async function CountSlipsPageContent({
   }
 
   const allLines = [...linesBySlipId.values()].flat();
+  const wasteIssueNumberBySlipId = await loadCountSlipWasteIssueNumbers(
+    supabase,
+    claims.tenant_id,
+    slipIds,
+  );
   const ingredientIds = [
     ...new Set(
       allLines
@@ -274,6 +305,8 @@ export async function CountSlipsPageContent({
     const lines = linesBySlipId.get(Number(slip.id)) ?? [];
     return {
       id: slip.id,
+      branchId: Number(slip.branch_id),
+      locationId: Number(slip.location_id),
       slipNumber:
         typeof slip.slip_number === "string" && slip.slip_number.trim()
           ? slip.slip_number
@@ -292,6 +325,11 @@ export async function CountSlipsPageContent({
       reviewNote: slip.review_note ?? null,
       submittedAt: slip.submitted_at ?? null,
       reviewedAt: slip.reviewed_at ?? null,
+      recountRound:
+        recountRoundBySlipId.get(Number(slip.id))?.recountRound ?? 0,
+      lastResubmittedRound:
+        recountRoundBySlipId.get(Number(slip.id))?.lastResubmittedRound ?? 0,
+      wasteIssueNumber: wasteIssueNumberBySlipId.get(Number(slip.id)) ?? null,
       lines: lines.map((line) => {
         const ingredient = embeddedName(line.ingredients);
         const ingredientId = Number(line.ingredient_id);
@@ -320,6 +358,8 @@ export async function CountSlipsPageContent({
               ? Number(line.counted_base_quantity)
               : null,
           currentLiveQuantity: liveStock,
+          recountRequired: line.recount_required === true,
+          lastRecountRound: Number(line.last_recount_round ?? 0),
           systemQuantity: Number(line.system_quantity ?? 0),
           countedQuantity: Number(line.counted_quantity ?? 0),
           note: line.note ?? null,
@@ -334,7 +374,11 @@ export async function CountSlipsPageContent({
       : null;
 
   return (
-    <CountSlipsClient initial={rows} initialSlipId={resolvedSlipId} />
+    <CountSlipsClient
+      tenantId={claims.tenant_id}
+      initial={rows}
+      initialSlipId={resolvedSlipId}
+    />
   );
 }
 

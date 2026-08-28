@@ -82,7 +82,6 @@ export function WasteLineSheet({
   line,
   context,
   stockHint,
-  evidenceRequired,
   isShortage,
   onClose,
   onPatch,
@@ -92,7 +91,6 @@ export function WasteLineSheet({
   line: WasteLineState | null;
   context: WasteFormContext;
   stockHint: string;
-  evidenceRequired: boolean;
   isShortage: boolean;
   onClose: () => void;
   onPatch: (patch: Partial<WasteLineState>) => void;
@@ -241,7 +239,7 @@ export function WasteLineSheet({
               </Select>
             </Field>
             <Field>
-              <FieldLabel>{copy.evidenceLabel(evidenceRequired)}</FieldLabel>
+              <FieldLabel>{copy.evidenceLabel(true)}</FieldLabel>
               <PhotoUploadInput
                 tenantId={context.tenantId}
                 folder={`branches/${context.branch.id}/waste/${line.uid}`}

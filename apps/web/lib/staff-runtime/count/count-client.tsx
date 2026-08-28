@@ -17,7 +17,7 @@ import { Send as IconSend, Warehouse as IconWarehouse } from "lucide-react";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { parseVietnameseNumericInput } from "@comtammatu/shared/format";
-import { FORM_VI } from "@comtammatu/shared/messages";
+import { FORM_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
 import {
   Item,
   ItemContent,
@@ -127,14 +127,24 @@ interface CountSlipClientProps {
   slipByLocation: Record<number, CountSlipHeader>;
   prefill: Record<
     number,
-    { quantity: string; entryUnitId: number | null; note: string }
+    {
+      lineId?: number;
+      quantity: string;
+      entryUnitId: number | null;
+      note: string;
+      recountRequired?: boolean;
+      lastRecountRound?: number;
+    }
   >;
 }
 
 interface DraftLine {
+  lineId?: number;
   quantity: string;
   note: string;
   entryUnitId: number | null;
+  recountRequired: boolean;
+  lastRecountRound: number;
 }
 
 function parseDraftQuantity(value: string): number | null {
@@ -234,23 +244,33 @@ export function CountSlipClient({
       return;
     }
     const next: Record<number, DraftLine> = {};
-    const seedRows: Array<[number, string, number | null, string]> = [];
+    const seedRows: Array<
+      [number, number | undefined, string, number | null, string, boolean, number]
+    > = [];
     for (const assignment of activeGroup.assignments) {
       const prior = prefill[assignment.ingredientId];
       const line = {
+        lineId: prior?.lineId ?? assignment.lineId,
         quantity: prior?.quantity ?? "",
         note: prior?.note ?? "",
         entryUnitId:
           prior?.entryUnitId ??
           getDefaultCountUnitChoice(assignment.countUnits)?.unitId ??
           null,
+        recountRequired:
+          prior?.recountRequired ?? assignment.recountRequired ?? false,
+        lastRecountRound:
+          prior?.lastRecountRound ?? assignment.lastRecountRound ?? 0,
       };
       next[assignment.ingredientId] = line;
       seedRows.push([
         assignment.ingredientId,
+        line.lineId,
         line.quantity,
         line.entryUnitId,
         line.note,
+        line.recountRequired,
+        line.lastRecountRound,
       ]);
     }
     const nextSeedKey = JSON.stringify([activeGroup.locationId, seedRows]);
@@ -308,9 +328,12 @@ export function CountSlipClient({
     setDraft((current) => ({
       ...current,
       [ingredientId]: {
+        lineId: current[ingredientId]?.lineId,
         quantity: current[ingredientId]?.quantity ?? "",
         note: current[ingredientId]?.note ?? "",
         entryUnitId: current[ingredientId]?.entryUnitId ?? null,
+        recountRequired: current[ingredientId]?.recountRequired ?? false,
+        lastRecountRound: current[ingredientId]?.lastRecountRound ?? 0,
         ...patch,
       },
     }));
@@ -319,12 +342,19 @@ export function CountSlipClient({
   function submit() {
     if (!activeGroup || selectedLocationId === null) return;
 
-    const lines = activeGroup.assignments.map((assignment) => {
+    const assignmentsToSubmit =
+      slip?.status === "needs_changes"
+        ? activeGroup.assignments.filter(
+            (assignment) => draft[assignment.ingredientId]?.recountRequired,
+          )
+        : activeGroup.assignments;
+    const lines = assignmentsToSubmit.map((assignment) => {
       const entry = draft[assignment.ingredientId];
       const parsed = parseVietnameseNumericInput(entry?.quantity ?? "", {
         maxFractionDigits: 3,
       });
       return {
+        lineId: entry?.lineId,
         ingredientId: assignment.ingredientId,
         countedQuantity: parsed.state === "valid" ? parsed.value : Number.NaN,
         entryUnitId: entry?.entryUnitId ?? null,
@@ -340,7 +370,11 @@ export function CountSlipClient({
         line.countedQuantity < 0,
     );
     if (invalid) {
-      toast.error("Nhập số đếm cho tất cả nguyên liệu được giao.");
+      toast.error(
+        slip?.status === "needs_changes"
+          ? "Nhập số đếm cho tất cả nguyên liệu cần đếm lại."
+          : "Nhập số đếm cho tất cả nguyên liệu được giao.",
+      );
       return;
     }
 
@@ -349,7 +383,11 @@ export function CountSlipClient({
         branchId,
         locationId: selectedLocationId,
         shiftId,
+        ...(slip?.status === "needs_changes"
+          ? { slipId: slip.id, recountRound: slip.recountRound }
+          : {}),
         lines: lines.map((line) => ({
+          lineId: line.lineId,
           ingredientId: line.ingredientId,
           countedQuantity: line.countedQuantity,
           entryUnitId: line.entryUnitId,
@@ -362,7 +400,11 @@ export function CountSlipClient({
         return;
       }
 
-      toast.success("Đã gửi phiếu kiểm kê — chờ duyệt.");
+      toast.success(
+        slip?.status === "needs_changes"
+          ? `Đã gửi lại các nguyên liệu cần đếm lần ${slip.recountRound}.`
+          : "Đã gửi phiếu kiểm kê — chờ duyệt.",
+      );
       router.refresh();
     });
   }
@@ -439,7 +481,10 @@ export function CountSlipClient({
               items={[
                 {
                   label: "Nguyên liệu",
-                  value: `${activeGroup.assignments.length} mục`,
+                  value:
+                    slip?.status === "needs_changes"
+                      ? `${activeGroup.assignments.filter((assignment) => draft[assignment.ingredientId]?.recountRequired).length} mục cần đếm lại`
+                      : `${activeGroup.assignments.length} mục`,
                 },
               ]}
             />
@@ -473,6 +518,10 @@ export function CountSlipClient({
                   entryUnitId: entry?.entryUnitId ?? null,
                   units: assignment.countUnits,
                 });
+                const canEdit =
+                  !locked &&
+                  (slip?.status !== "needs_changes" ||
+                    entry?.recountRequired === true);
                 return (
                   <Item
                     key={assignment.ingredientId}
@@ -481,7 +530,7 @@ export function CountSlipClient({
                     render={
                       <button
                         type="button"
-                        disabled={locked || isPending}
+                        disabled={!canEdit || isPending}
                         onClick={() =>
                           openIngredientSheet(assignment.ingredientId)
                         }
@@ -499,12 +548,30 @@ export function CountSlipClient({
                         {summary ?? countCopy.tapToEnter}
                       </ItemDescription>
                     </ItemContent>
-                    <Badge
-                      className="shrink-0"
-                      variant={summary ? "success" : "secondary"}
-                    >
-                      {summary ? countCopy.entered : countCopy.notCounted}
-                    </Badge>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      {slip?.status === "needs_changes" ? (
+                        <Badge
+                          variant={
+                            entry?.recountRequired ? "warning" : "outline"
+                          }
+                        >
+                          {entry?.recountRequired
+                            ? INVENTORY_VI.recountRequiredBadge
+                            : INVENTORY_VI.recountAcceptedBadge}
+                        </Badge>
+                      ) : (
+                        <Badge variant={summary ? "success" : "secondary"}>
+                          {summary ? countCopy.entered : countCopy.notCounted}
+                        </Badge>
+                      )}
+                      {(entry?.lastRecountRound ?? 0) > 0 ? (
+                        <span className="text-xs text-muted-foreground">
+                          {INVENTORY_VI.recountCompletedRound(
+                            entry?.lastRecountRound ?? 0,
+                          )}
+                        </span>
+                      ) : null}
+                    </div>
                   </Item>
                 );
               })}

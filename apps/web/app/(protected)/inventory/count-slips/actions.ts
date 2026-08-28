@@ -12,6 +12,13 @@ import { resolveCountSlipReviewerEmployeeId } from "@lib/inventory/count-slip-re
 const approveSlipSchema = z.object({
   slipId: z.coerce.number().int().positive(),
   autoCreateWaste: z.boolean().optional().default(false),
+  wastePhotoUrls: z
+    .record(
+      z.string().regex(/^\d+$/),
+      z.array(z.string().url()).min(1).max(10),
+    )
+    .optional()
+    .default({}),
 });
 
 const SELF_REVIEW_ERROR = "Không thể tự duyệt phiếu của mình.";
@@ -22,17 +29,13 @@ export type ApproveCountSlipResult = {
   wasteCreated?: boolean;
   wasteIssueNumber?: string;
   wasteItemsCount?: number;
-  wasteError?: string;
+  requiresApproval?: boolean;
 };
 
 /**
- * Confirm a submitted count slip. Wraps `approve_inventory_count_slip` RPC,
- * which flips the slip status to `approved` for shift handover review.
- * Decoupled: does not mutate stock ledger balances or post count adjustments.
- * Idempotent: a second call on an approved slip returns `alreadyApproved=true`.
- *
- * When `autoCreateWaste=true`, automatically creates a stock waste entry
- * for all negative variance (shortage) lines under the manager's review.
+ * Confirm a submitted count slip. A handover-only approval stays decoupled
+ * from stock. `autoCreateWaste` uses one atomic RPC so the count approval and
+ * its photo-backed shortage writeoff either both commit or both roll back.
  */
 export async function approveCountSlip(
   input: z.infer<typeof approveSlipSchema>,
@@ -55,18 +58,8 @@ export async function approveCountSlip(
     .from("inventory_count_slips")
     .select(`
       id,
-      slip_number,
       branch_id,
-      location_id,
-      employee_id,
-      lines:inventory_count_slip_lines (
-        id,
-        ingredient_id,
-        system_quantity,
-        counted_quantity,
-        entry_unit_id,
-        entry_to_base_factor
-      )
+      employee_id
     `)
     .eq("id", parsed.data.slipId)
     .eq("tenant_id", claims.tenant_id)
@@ -81,91 +74,20 @@ export async function approveCountSlip(
     return { success: false, error: SELF_REVIEW_ERROR };
   }
 
-  const { data, error } = await supabase.rpc("approve_inventory_count_slip", {
-    p_slip_id: parsed.data.slipId,
-  });
+  const { data, error } = parsed.data.autoCreateWaste
+    ? await supabase.rpc("approve_inventory_count_slip_with_waste", {
+        p_slip_id: parsed.data.slipId,
+        p_photo_urls: parsed.data.wastePhotoUrls,
+      })
+    : await supabase.rpc("approve_inventory_count_slip", {
+        p_slip_id: parsed.data.slipId,
+      });
 
   if (error) {
     return { success: false, error: mapCountSlipError(error) };
   }
 
   const raw = (data ?? {}) as Record<string, unknown>;
-
-  let wasteCreated = false;
-  let wasteIssueNumber: string | undefined;
-  let wasteItemsCount: number | undefined;
-  let wasteError: string | undefined;
-
-  if (parsed.data.autoCreateWaste && Array.isArray(slip.lines)) {
-    const shortageLines = slip.lines.filter(
-      (line) =>
-        line.system_quantity != null &&
-        line.counted_quantity != null &&
-        Number(line.counted_quantity) < Number(line.system_quantity),
-    );
-
-    if (shortageLines.length > 0) {
-      const missingUnitIngIds = shortageLines
-        .filter((l) => l.entry_unit_id == null)
-        .map((l) => l.ingredient_id);
-
-      const baseUnitMap = new Map<number, number>();
-      if (missingUnitIngIds.length > 0) {
-        const { data: unitRows } = await supabase
-          .from("ingredient_units")
-          .select("ingredient_id, unit_id")
-          .eq("tenant_id", claims.tenant_id)
-          .eq("is_base", true)
-          .in("ingredient_id", missingUnitIngIds);
-
-        for (const row of unitRows ?? []) {
-          baseUnitMap.set(row.ingredient_id, row.unit_id);
-        }
-      }
-
-      const wasteItems = [];
-      for (const line of shortageLines) {
-        const entryUnitId =
-          line.entry_unit_id ?? baseUnitMap.get(line.ingredient_id);
-        if (entryUnitId != null) {
-          const shortageQty =
-            Number(line.system_quantity) - Number(line.counted_quantity);
-          if (shortageQty > 0) {
-            wasteItems.push({
-              ingredient_id: line.ingredient_id,
-              quantity: shortageQty,
-              entry_unit_id: entryUnitId,
-              reason_code: "spoiled" as const,
-              note: `Hao hụt kiểm đếm giao ca #${slip.slip_number}`,
-            });
-          }
-        }
-      }
-
-      if (wasteItems.length > 0) {
-        // Dynamic import / call createWasteEntry to create the waste record
-        const { createWasteEntry } = await import("../waste-actions");
-        const wasteRes = await createWasteEntry({
-          branchId: slip.branch_id,
-          locationId: slip.location_id,
-          items: wasteItems,
-          sourceType: "manual",
-          sourceRef: {
-            countSlipId: slip.id,
-            countSlipNumber: slip.slip_number,
-          },
-        });
-
-        if (wasteRes.success && wasteRes.data) {
-          wasteCreated = true;
-          wasteIssueNumber = wasteRes.data.issueNumber;
-          wasteItemsCount = wasteItems.length;
-        } else {
-          wasteError = wasteRes.error ?? "Không thể tạo phiếu xuất hủy tự động.";
-        }
-      }
-    }
-  }
 
   revalidatePath("/inventory/count-slips");
   revalidatePath(`/br/${slip.branch_id}/stock/count-slips`);
@@ -176,23 +98,44 @@ export async function approveCountSlip(
     data: {
       slipId: parsed.data.slipId,
       alreadyApproved: raw.already_approved === true,
-      wasteCreated,
-      wasteIssueNumber,
-      wasteItemsCount,
-      wasteError,
+      wasteCreated: raw.waste_created === true,
+      wasteIssueNumber:
+        typeof raw.waste_issue_number === "string"
+          ? raw.waste_issue_number
+          : undefined,
+      wasteItemsCount:
+        typeof raw.waste_items_count === "number"
+          ? raw.waste_items_count
+          : undefined,
+      requiresApproval: raw.requires_approval === true,
     },
   };
 }
 
 const requestRecountSchema = z.object({
   slipId: z.coerce.number().int().positive(),
-  note: z.string().trim().min(3).max(1000),
+  lineIds: z
+    .array(z.coerce.number().int().positive())
+    .min(1, "Chọn ít nhất một nguyên liệu cần đếm lại."),
+  note: z
+    .string()
+    .trim()
+    .min(3, "Nhập lý do đếm lại từ 3 ký tự.")
+    .max(1000, "Lý do đếm lại tối đa 1000 ký tự."),
+}).superRefine((data, ctx) => {
+  if (new Set(data.lineIds).size !== data.lineIds.length) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["lineIds"],
+      message: "Mỗi nguyên liệu chỉ được chọn một lần.",
+    });
+  }
 });
 
 /**
  * Send a submitted count slip back for recount. Wraps
- * `request_inventory_count_recount` RPC, which sets status `needs_changes` and
- * notifies the submitting employee with the manager's note.
+ * `request_inventory_count_line_recount` RPC, which locks the original count
+ * snapshot and opens only the selected lines for the employee.
  */
 export async function requestCountRecount(
   input: z.infer<typeof requestRecountSchema>,
@@ -227,9 +170,10 @@ export async function requestCountRecount(
     return { success: false, error: SELF_REVIEW_ERROR };
   }
 
-  const { error } = await supabase.rpc("request_inventory_count_recount", {
+  const { error } = await supabase.rpc("request_inventory_count_line_recount", {
     p_slip_id: parsed.data.slipId,
     p_note: parsed.data.note,
+    p_line_ids: parsed.data.lineIds,
   });
 
   if (error) {
@@ -247,6 +191,21 @@ export async function requestCountRecount(
  * Postgres `error.message` to the UI.
  */
 function mapCountSlipError(error: { code?: string; message?: string }): string {
+  if (error.message?.includes("count_slip_waste_photo_required")) {
+    return "Thêm ảnh bằng chứng cho từng mặt hàng thiếu trước khi xuất hủy.";
+  }
+  if (error.message?.includes("recount_lines_outstanding")) {
+    return "Phiếu vẫn còn nguyên liệu phải đếm lại.";
+  }
+  if (
+    error.message?.includes("recount_lines_required") ||
+    error.message?.includes("recount_line_ids_duplicate")
+  ) {
+    return "Chọn ít nhất một nguyên liệu cần đếm lại.";
+  }
+  if (error.message?.includes("recount_line_scope_mismatch")) {
+    return "Danh sách nguyên liệu không thuộc phiếu này.";
+  }
   switch (error.code) {
     case "42501":
       return error.message?.includes("cannot_review_own_slip")

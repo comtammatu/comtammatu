@@ -176,7 +176,7 @@ export function BranchWasteCreateClient({
         toast.error(copy.quantityExceedsStock(ingredient.name));
         return;
       }
-      if (evidenceRequired && line.photoUrls.length === 0) {
+      if (line.photoUrls.length === 0) {
         toast.error(copy.evidenceRequiredToast);
         return;
       }
@@ -318,7 +318,7 @@ export function BranchWasteCreateClient({
                       <WasteTierBadge
                         compact
                         tier={tier.tier}
-                        photoRequired={tier.photoRequired || evidenceRequired}
+                        photoRequired
                         approvalRequired={tier.approvalRequired}
                       />
                     </ItemActions>
@@ -356,7 +356,6 @@ export function BranchWasteCreateClient({
             line={editingLine}
             context={context}
             stockHint={editingStockHint}
-            evidenceRequired={evidenceRequired}
             isShortage={
               shortageIngredientId != null &&
               editingLine?.ingredientId === shortageIngredientId

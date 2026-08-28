@@ -22,6 +22,7 @@ import {
 import { formatVNDate, formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import { confirm } from "@/components/confirm-dialog";
 import {
   Item,
@@ -52,6 +53,10 @@ import {
   approveCountSlip,
   requestCountRecount,
 } from "@/(protected)/inventory/count-slips/actions";
+import {
+  CountSlipWasteEvidence,
+  type CountSlipWastePhotoUrls,
+} from "@/components/inventory/count-slip-waste-evidence";
 import { formatQty } from "@lib/inventory/format";
 import type {
   CountSlipLineView,
@@ -81,12 +86,14 @@ function changedLineCount(row: CountSlipRow): number {
 }
 
 export function BranchCountSlipsClient({
+  tenantId,
   branchId,
   branchName,
   initialRows,
   loadFailed,
   focusFirstPending,
 }: {
+  tenantId: number;
   branchId: number;
   branchName: string;
   initialRows: CountSlipRow[];
@@ -116,6 +123,11 @@ export function BranchCountSlipsClient({
   );
   const [recounting, setRecounting] = useState(false);
   const [recountNote, setRecountNote] = useState("");
+  const [selectedRecountLineIds, setSelectedRecountLineIds] = useState<number[]>(
+    [],
+  );
+  const [wastePhotoUrls, setWastePhotoUrls] =
+    useState<CountSlipWastePhotoUrls>({});
   const [pendingAction, setPendingAction] = useState<
     "approve" | "recount" | null
   >(null);
@@ -130,13 +142,34 @@ export function BranchCountSlipsClient({
   );
   const visibleRows = view === "pending" ? pendingRows : historyRows;
   const selected = rows.find((row) => row.id === selectedId) ?? null;
+  const selectedShortageLines =
+    selected?.lines.filter(
+      (line) => line.variance !== null && line.variance < 0,
+    ) ?? [];
+  const wasteEvidenceComplete = selectedShortageLines.every(
+    (line) => (wastePhotoUrls[line.id]?.length ?? 0) > 0,
+  );
+  const needsWasteRecovery =
+    selected?.status === "approved" &&
+    selectedShortageLines.length > 0 &&
+    selected.wasteIssueNumber === null;
 
   useEffect(() => setRows(initialRows), [initialRows]);
+  useEffect(() => {
+    setWastePhotoUrls({});
+    setSelectedRecountLineIds(
+      selected?.lines
+        .filter((line) => line.variance !== null && line.variance !== 0)
+        .map((line) => line.id) ?? [],
+    );
+  }, [selected]);
 
   function closeReview() {
     setSelectedId(null);
     setRecounting(false);
     setRecountNote("");
+    setSelectedRecountLineIds([]);
+    setWastePhotoUrls({});
     setPendingAction(null);
   }
 
@@ -148,13 +181,15 @@ export function BranchCountSlipsClient({
 
   async function approveSelected() {
     if (!selected) return;
-    const shortageLines = selected.lines.filter(
-      (l) => l.variance !== null && l.variance < 0,
-    );
+    const shortageLines = selectedShortageLines;
 
     let autoCreateWaste = false;
 
     if (shortageLines.length > 0) {
+      if (!wasteEvidenceComplete) {
+        toast.error(INVENTORY_VI.countSlipWasteEvidenceRequired);
+        return;
+      }
       const shortageSummary =
         shortageLines
           .slice(0, 3)
@@ -168,8 +203,12 @@ export function BranchCountSlipsClient({
           : "");
 
       const ok = await confirm({
-        title: INVENTORY_VI.countSlipApproveTitle,
-        description: INVENTORY_VI.countSlipShortageDetectedHint,
+        title: needsWasteRecovery
+          ? INVENTORY_VI.countSlipRecoverWasteTitle
+          : INVENTORY_VI.countSlipApproveTitle,
+        description: needsWasteRecovery
+          ? INVENTORY_VI.countSlipRecoverWasteHint
+          : INVENTORY_VI.countSlipShortageDetectedHint,
         details: [
           { label: STAFF_VI.long, value: selected.employeeName },
           { label: INVENTORY_VI.warehouseShort, value: selected.locationName },
@@ -180,7 +219,9 @@ export function BranchCountSlipsClient({
             value: shortageSummary,
           },
         ],
-        confirmText: INVENTORY_VI.countSlipApproveAndWasteAction,
+        confirmText: needsWasteRecovery
+          ? INVENTORY_VI.countSlipRecoverWasteAction
+          : INVENTORY_VI.countSlipApproveAndWasteAction,
         variant: "destructive",
       });
       if (!ok) return;
@@ -207,6 +248,7 @@ export function BranchCountSlipsClient({
       const result = await approveCountSlip({
         slipId: selected.id,
         autoCreateWaste,
+        wastePhotoUrls,
       });
       setPendingAction(null);
       if (!result.success || !result.data) {
@@ -215,14 +257,15 @@ export function BranchCountSlipsClient({
       }
       if (result.data.wasteCreated && result.data.wasteIssueNumber) {
         toast.success(
-          INVENTORY_VI.countSlipApprovedWithWaste(
-            result.data.wasteIssueNumber,
-            result.data.wasteItemsCount ?? 0,
-          ),
+          result.data.requiresApproval
+            ? INVENTORY_VI.countSlipApprovedWithWastePending(
+                result.data.wasteIssueNumber,
+              )
+            : INVENTORY_VI.countSlipApprovedWithWaste(
+                result.data.wasteIssueNumber,
+                result.data.wasteItemsCount ?? 0,
+              ),
         );
-      } else if (result.data.wasteError) {
-        toast.success(INVENTORY_VI.countSlipApproved);
-        toast.error(result.data.wasteError);
       } else {
         toast.success(INVENTORY_VI.countSlipApproved);
       }
@@ -232,16 +275,37 @@ export function BranchCountSlipsClient({
     });
   }
 
-  function requestRecount() {
+  async function requestRecount() {
     if (!selected) return;
+    if (selectedRecountLineIds.length === 0) {
+      toast.error("Chọn ít nhất một nguyên liệu cần đếm lại.");
+      return;
+    }
     if (recountNote.trim().length < 3) {
       toast.error(INVENTORY_VI.recountReasonRequired);
       return;
     }
+    const accepted = await confirm({
+      title: INVENTORY_VI.recountConfirmTitle,
+      description: INVENTORY_VI.recountConfirmDescription(
+        selectedRecountLineIds.length,
+      ),
+      details: [
+        { label: STAFF_VI.long, value: selected.employeeName },
+        {
+          label: INVENTORY_VI.lineCountLabel,
+          value: String(selectedRecountLineIds.length),
+        },
+        { label: "Lý do", value: recountNote.trim() },
+      ],
+      confirmText: INVENTORY_VI.sendRecountRequest,
+    });
+    if (!accepted) return;
     setPendingAction("recount");
     startTransition(async () => {
       const result = await requestCountRecount({
         slipId: selected.id,
+        lineIds: selectedRecountLineIds,
         note: recountNote,
       });
       setPendingAction(null);
@@ -402,6 +466,7 @@ export function BranchCountSlipsClient({
                     onClick={() => {
                       setRecounting(false);
                       setRecountNote("");
+                      setSelectedRecountLineIds([]);
                     }}
                   >
                     {ACTIONS_VI.cancel}
@@ -410,8 +475,12 @@ export function BranchCountSlipsClient({
                     type="button"
                     size="touch"
                     className="flex-1"
-                    disabled={isPending || recountNote.trim().length < 3}
-                    onClick={requestRecount}
+                    disabled={
+                      isPending ||
+                      recountNote.trim().length < 3 ||
+                      selectedRecountLineIds.length === 0
+                    }
+                    onClick={() => void requestRecount()}
                   >
                     {pendingAction === "recount" ? (
                       <Spinner className="size-5" />
@@ -429,7 +498,17 @@ export function BranchCountSlipsClient({
                     size="touch"
                     className="flex-1"
                     disabled={isPending}
-                    onClick={() => setRecounting(true)}
+                    onClick={() => {
+                      setSelectedRecountLineIds(
+                        selected.lines
+                          .filter(
+                            (line) =>
+                              line.variance !== null && line.variance !== 0,
+                          )
+                          .map((line) => line.id),
+                      );
+                      setRecounting(true);
+                    }}
                   >
                     <IconRecount className="size-4" />
                     {INVENTORY_VI.requestRecount}
@@ -438,7 +517,11 @@ export function BranchCountSlipsClient({
                     type="button"
                     size="touch"
                     className="flex-1"
-                    disabled={isPending}
+                    disabled={
+                      isPending ||
+                      (selectedShortageLines.length > 0 &&
+                        !wasteEvidenceComplete)
+                    }
                     onClick={() => void approveSelected()}
                   >
                     {pendingAction === "approve" ? (
@@ -450,6 +533,33 @@ export function BranchCountSlipsClient({
                   </Button>
                 </div>
               )
+            ) : needsWasteRecovery ? (
+              <div className="flex w-full gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="touch"
+                  className="flex-1"
+                  disabled={isPending}
+                  onClick={closeReview}
+                >
+                  {ACTIONS_VI.close}
+                </Button>
+                <Button
+                  type="button"
+                  size="touch"
+                  className="flex-1"
+                  disabled={isPending || !wasteEvidenceComplete}
+                  onClick={() => void approveSelected()}
+                >
+                  {pendingAction === "approve" ? (
+                    <Spinner className="size-5" />
+                  ) : (
+                    <IconCheck className="size-4" />
+                  )}
+                  {INVENTORY_VI.countSlipRecoverWasteAction}
+                </Button>
+              </div>
             ) : (
               <Button
                 type="button"
@@ -494,9 +604,40 @@ export function BranchCountSlipsClient({
 
             <ItemGroup className="gap-2">
               {selected.lines.map((line) => (
-                <CountSlipLineItem key={line.id} line={line} />
+                <CountSlipLineItem
+                  key={line.id}
+                  line={line}
+                  selecting={recounting}
+                  selected={selectedRecountLineIds.includes(line.id)}
+                  onSelectedChange={(checked) =>
+                    setSelectedRecountLineIds((current) =>
+                      checked
+                        ? [...new Set([...current, line.id])]
+                        : current.filter((id) => id !== line.id),
+                    )
+                  }
+                />
               ))}
             </ItemGroup>
+
+            {!recounting &&
+            (selected.status === "submitted" || needsWasteRecovery) ? (
+              <CountSlipWasteEvidence
+                tenantId={tenantId}
+                branchId={branchId}
+                slipId={selected.id}
+                lines={selectedShortageLines}
+                values={wastePhotoUrls}
+                disabled={isPending}
+                touch
+                onChange={(lineId, url) =>
+                  setWastePhotoUrls((current) => ({
+                    ...current,
+                    [lineId]: url ? [url] : [],
+                  }))
+                }
+              />
+            ) : null}
 
             {selected.note ? (
               <p className="break-words text-sm italic text-muted-foreground">
@@ -511,6 +652,40 @@ export function BranchCountSlipsClient({
 
             {recounting ? (
               <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="touch"
+                    disabled={isPending}
+                    onClick={() =>
+                      setSelectedRecountLineIds(
+                        selected.lines
+                          .filter(
+                            (line) =>
+                              line.variance !== null && line.variance !== 0,
+                          )
+                          .map((line) => line.id),
+                      )
+                    }
+                  >
+                    {INVENTORY_VI.recountSelectVariance}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="touch"
+                    disabled={isPending}
+                    onClick={() => setSelectedRecountLineIds([])}
+                  >
+                    {INVENTORY_VI.recountClearSelection}
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
+                    {INVENTORY_VI.recountSelectionCount(
+                      selectedRecountLineIds.length,
+                    )}
+                  </span>
+                </div>
                 <Label htmlFor="branch-count-slip-recount-note">
                   {INVENTORY_VI.recountReasonLabel}
                 </Label>
@@ -533,7 +708,17 @@ export function BranchCountSlipsClient({
   );
 }
 
-function CountSlipLineItem({ line }: { line: CountSlipLineView }) {
+function CountSlipLineItem({
+  line,
+  selecting,
+  selected,
+  onSelectedChange,
+}: {
+  line: CountSlipLineView;
+  selecting: boolean;
+  selected: boolean;
+  onSelectedChange: (checked: boolean) => void;
+}) {
   const isShortage = line.variance !== null && line.variance < 0;
   const isSurplus = line.variance !== null && line.variance > 0;
   const isMatched = line.variance === 0;
@@ -548,7 +733,16 @@ function CountSlipLineItem({ line }: { line: CountSlipLineView }) {
     <Item variant="muted" className="min-h-20 items-start">
       <ItemContent className="min-w-0 gap-1.5">
         <div className="flex items-center justify-between gap-2">
-          <ItemTitle>{line.ingredientName}</ItemTitle>
+          <div className="flex min-w-0 items-center gap-2">
+            {selecting ? (
+              <Checkbox
+                checked={selected}
+                onCheckedChange={onSelectedChange}
+                aria-label={`Chọn ${line.ingredientName} để đếm lại`}
+              />
+            ) : null}
+            <ItemTitle>{line.ingredientName}</ItemTitle>
+          </div>
           <div className="flex items-center gap-1.5">
             <span
               className={`font-mono font-semibold tabular-nums ${varianceClassName(
@@ -618,6 +812,11 @@ function CountSlipLineItem({ line }: { line: CountSlipLineView }) {
         {line.note ? (
           <ItemDescription className="line-clamp-none break-words text-xs italic text-muted-foreground">
             📝 {line.note}
+          </ItemDescription>
+        ) : null}
+        {line.lastRecountRound > 0 ? (
+          <ItemDescription className="line-clamp-none text-xs font-medium text-info">
+            {INVENTORY_VI.recountCompletedRound(line.lastRecountRound)}
           </ItemDescription>
         ) : null}
       </ItemContent>

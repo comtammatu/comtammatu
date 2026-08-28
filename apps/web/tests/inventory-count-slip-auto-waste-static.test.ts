@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 
@@ -9,10 +9,14 @@ function readRepoFile(path: string) {
   return readFileSync(join(repoRoot, path), "utf8");
 }
 
-test("approveCountSlip supports autoCreateWaste and links to waste creation", () => {
+test("approveCountSlip keeps count approval and auto waste in one database transaction", () => {
   const actionsSource = readRepoFile(
     "apps/web/app/(protected)/inventory/count-slips/actions.ts",
   );
+  const migrationSource = readdirSync(join(repoRoot, "supabase/migrations"))
+    .filter((name) => name.endsWith(".sql"))
+    .map((name) => readRepoFile(`supabase/migrations/${name}`))
+    .join("\n");
 
   assert.match(
     actionsSource,
@@ -21,18 +25,23 @@ test("approveCountSlip supports autoCreateWaste and links to waste creation", ()
   );
   assert.match(
     actionsSource,
+    /wastePhotoUrls/,
+    "approveCountSlip must accept per-line shortage evidence",
+  );
+  assert.match(
+    actionsSource,
+    /approve_inventory_count_slip_with_waste/,
+    "approveCountSlip must use the atomic approval + waste RPC",
+  );
+  assert.doesNotMatch(
+    actionsSource,
     /createWasteEntry/,
-    "approveCountSlip must integrate with createWasteEntry",
+    "approveCountSlip must not commit approval and waste through separate RPCs",
   );
   assert.match(
-    actionsSource,
-    /wasteCreated/,
-    "approveCountSlip result must report wasteCreated",
-  );
-  assert.match(
-    actionsSource,
-    /wasteIssueNumber/,
-    "approveCountSlip result must report wasteIssueNumber",
+    migrationSource,
+    /CREATE OR REPLACE FUNCTION public\.approve_inventory_count_slip_with_waste/,
+    "the database must own the atomic approval + waste boundary",
   );
 });
 
@@ -42,6 +51,9 @@ test("branch and desktop review clients provide seamless 1-touch auto waste on a
   );
   const desktopClientSource = readRepoFile(
     "apps/web/app/(protected)/inventory/count-slips/count-slips-client.tsx",
+  );
+  const evidenceSource = readRepoFile(
+    "apps/web/app/components/inventory/count-slip-waste-evidence.tsx",
   );
 
   // Bulky callout removed
@@ -59,8 +71,8 @@ test("branch and desktop review clients provide seamless 1-touch auto waste on a
   // 1-touch auto waste confirmation wired
   assert.match(
     branchClientSource,
-    /autoCreateWaste/,
-    "branch client must pass autoCreateWaste when shortages are approved",
+    /CountSlipWasteEvidence/,
+    "branch client must render shortage evidence before auto waste",
   );
   assert.match(
     branchClientSource,
@@ -69,12 +81,17 @@ test("branch and desktop review clients provide seamless 1-touch auto waste on a
   );
   assert.match(
     desktopClientSource,
-    /autoCreateWaste/,
-    "desktop client must pass autoCreateWaste when shortages are approved",
+    /CountSlipWasteEvidence/,
+    "desktop client must render shortage evidence before auto waste",
   );
   assert.match(
     desktopClientSource,
     /countSlipApprovedWithWaste/,
     "desktop client must toast waste creation success",
+  );
+  assert.match(
+    evidenceSource,
+    /PhotoUploadInput/,
+    "the shared shortage evidence surface must collect a photo per line",
   );
 });

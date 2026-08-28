@@ -3177,7 +3177,9 @@ export type Database = {
           entry_unit_id: number | null
           id: number
           ingredient_id: number
+          last_recount_round: number
           note: string | null
+          recount_required: boolean
           slip_id: number
           system_quantity: number
           tenant_id: number
@@ -3190,7 +3192,9 @@ export type Database = {
           entry_unit_id?: number | null
           id?: never
           ingredient_id: number
+          last_recount_round?: number
           note?: string | null
+          recount_required?: boolean
           slip_id: number
           system_quantity: number
           tenant_id: number
@@ -3203,7 +3207,9 @@ export type Database = {
           entry_unit_id?: number | null
           id?: never
           ingredient_id?: number
+          last_recount_round?: number
           note?: string | null
+          recount_required?: boolean
           slip_id?: number
           system_quantity?: number
           tenant_id?: number
@@ -3247,8 +3253,10 @@ export type Database = {
           created_at: string
           employee_id: number
           id: number
+          last_resubmitted_round: number
           location_id: number
           note: string | null
+          recount_round: number
           review_note: string | null
           reviewed_at: string | null
           reviewed_by: string | null
@@ -3266,8 +3274,10 @@ export type Database = {
           created_at?: string
           employee_id: number
           id?: never
+          last_resubmitted_round?: number
           location_id: number
           note?: string | null
+          recount_round?: number
           review_note?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -3285,8 +3295,10 @@ export type Database = {
           created_at?: string
           employee_id?: number
           id?: never
+          last_resubmitted_round?: number
           location_id?: number
           note?: string | null
+          recount_round?: number
           review_note?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -13182,6 +13194,10 @@ export type Database = {
         Args: { p_slip_id: number }
         Returns: Json
       }
+      approve_inventory_count_slip_with_waste: {
+        Args: { p_photo_urls?: Json; p_slip_id: number }
+        Returns: Json
+      }
       approve_leave_request: {
         Args: { p_request_id: number }
         Returns: undefined
@@ -14333,6 +14349,20 @@ export type Database = {
           note: string
         }[]
       }
+      get_my_count_slip_recount: {
+        Args: { p_slip_id: number }
+        Returns: {
+          counted_quantity: number
+          entry_unit_id: number
+          ingredient_id: number
+          ingredient_name: string
+          last_recount_round: number
+          line_id: number
+          note: string
+          recount_required: boolean
+          recount_round: number
+        }[]
+      }
       get_operating_cash_movement_for_period: {
         Args: { p_branch_id?: number; p_end_date: string; p_start_date: string }
         Returns: Json
@@ -15438,6 +15468,10 @@ export type Database = {
         Args: { p_effective_at: string; p_reason: string }
         Returns: Json
       }
+      request_inventory_count_line_recount: {
+        Args: { p_line_ids: number[]; p_note: string; p_slip_id: number }
+        Returns: Json
+      }
       request_inventory_count_recount: {
         Args: { p_note?: string; p_slip_id: number }
         Returns: undefined
@@ -15534,6 +15568,10 @@ export type Database = {
           p_reason: string
           p_rows: Json
         }
+        Returns: Json
+      }
+      resubmit_inventory_count_slip_lines: {
+        Args: { p_lines: Json; p_recount_round: number; p_slip_id: number }
         Returns: Json
       }
       retry_print_job: { Args: { p_job_id: number }; Returns: boolean }

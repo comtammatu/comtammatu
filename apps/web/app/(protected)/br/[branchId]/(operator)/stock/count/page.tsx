@@ -3,7 +3,7 @@ import { StaffCountPageContent } from "@lib/staff-runtime/count/page";
 
 interface PageProps {
   params: Promise<{ branchId: string }>;
-  searchParams: Promise<{ location?: string }>;
+  searchParams: Promise<{ location?: string; slip?: string }>;
 }
 
 export default async function OperatorStockCountPage({
