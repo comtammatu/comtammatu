@@ -242,10 +242,9 @@ tầng, labor/overhead, production variance engine.
 Append-only. `type` như §1b. Liên kết: `order_id`, `grn_id`, `transfer_id`,
 `unit_cost` (đơn giá ghi sổ snapshot theo Đơn vị chuẩn; không gọi WAC trên lịch sử).
 
-POS: Sale Runtime ghi `consumption/sale_consumption` tại Kho CN khi đơn `paid` +
-`completed` (KDS chờ `first_ready_at`; không KDS chờ dispatch phiếu bếp).
-Gọi lại sau khi thêm định mức chỉ trừ NL chưa có dòng `sale_consumption` của đơn
-đó. `pos_stock_outcome_posting` = switch Owner-only tắt trừ/rào tồn theo CN. Báo cáo
+POS: Sale Runtime ghi `consumption/sale_consumption` tại Kho CN ngay khi KDS bấm hoàn thành món
+(`first_ready_at`, trừ tồn tức thì tại thời điểm bếp xuất món, không chờ thanh toán hay hoàn tất đơn; không KDS chờ dispatch phiếu bếp hoặc thanh toán).
+Cơ chế vi sai (delta posting) tự động trừ theo từng vé/món hoàn thành và trừ bù nếu thêm định mức mới. `pos_stock_outcome_posting` = switch Owner-only tắt trừ/rào tồn theo CN. Báo cáo
 tiêu hao thủ công không ghi lại NL đã trừ từ POS.
 
 ---
