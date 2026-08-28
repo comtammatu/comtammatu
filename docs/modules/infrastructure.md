@@ -34,7 +34,7 @@ Supabase Production `enloyfnuerqgaqderbwb`. Registry and agent rights:
 | `baseline-replay` | PR touches `supabase/` (or dispatch) | Fresh Local Docker baseline replay |
 | `e2e-smoke` | PR touches apps/packages/scripts/supabase (or dispatch) | Isolated Supabase + Playwright smoke |
 
-Overview: [`.github/README.md`](../../.github/README.md).
+Overview: [`.github/CI.md`](../../.github/CI.md).
 
 ### Vercel
 
