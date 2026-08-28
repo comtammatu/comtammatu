@@ -28,6 +28,7 @@ const deliveryRelaySchema = z.object({
     .optional(),
   raw_receipt: z.string().max(256 * 1024).optional(),
   raw_bytes_base64: z.string().max(350_000).optional(),
+  raw_original_bytes_base64: z.string().max(350_000).optional(),
 });
 
 const CORS_HEADERS = {
@@ -103,13 +104,16 @@ export async function POST(request: NextRequest) {
     let rawText = "";
     if (parsed.data.order) {
       shopeeOrder = parsed.data.order as unknown as ShopeeOrderRaw;
+    } else if (parsed.data.raw_receipt) {
+      // Má Tư Agent supplies on-device OCR text alongside the original raster
+      // bytes. Prefer the text for parsing while retaining the bytes in transit
+      // for diagnostics and backwards compatibility.
+      rawText = parsed.data.raw_receipt;
+      shopeeOrder = parseShopeeEscPosStream(parsed.data.raw_receipt);
     } else if (parsed.data.raw_bytes_base64) {
       const rawBuf = Buffer.from(parsed.data.raw_bytes_base64, "base64");
       rawText = extractTextFromEscPos(rawBuf);
       shopeeOrder = parseShopeeEscPosStream(rawBuf);
-    } else if (parsed.data.raw_receipt) {
-      rawText = parsed.data.raw_receipt;
-      shopeeOrder = parseShopeeEscPosStream(parsed.data.raw_receipt);
     }
 
     if (!shopeeOrder || (!shopeeOrder.items?.length && !shopeeOrder.dishList?.length && !shopeeOrder.orderItems?.length)) {
@@ -251,29 +255,9 @@ export async function POST(request: NextRequest) {
     const orderId = (rpcResult as { order_id?: number })?.order_id;
     const orderNumber = (rpcResult as { order_number?: string })?.order_number || `GH-${displayRef}`;
 
-    // 8. Apply an order-level promotion when the platform total is lower.
-    if (orderId && transformed.totalAmount > 0) {
-      const { data: createdOrder } = await supabase
-        .from("orders")
-        .select("total_amount")
-        .eq("id", orderId)
-        .single();
-
-      if (createdOrder && createdOrder.total_amount > transformed.totalAmount) {
-        const orderDiscount = createdOrder.total_amount - transformed.totalAmount;
-        if (orderDiscount > 0) {
-          const { error: discountErr } = await supabase.rpc("apply_order_discount", {
-            p_order_id: orderId,
-            p_type: "vnd",
-            p_value: orderDiscount,
-            p_note: `Khuyến mãi / Voucher ${platformDisplayName(platform)}`,
-          });
-          if (discountErr) {
-            console.warn("[Delivery POS Relay] apply_order_discount error:", discountErr.message);
-          }
-        }
-      }
-    }
+    // 8. Keep the POS gross total computed from the restaurant's active menu
+    // and option prices. The receipt's lower platform total is settlement after
+    // marketplace commission, not a customer discount on the POS order.
 
     // 9. Leave payment_status 'unpaid' so the order surfaces in the POS
     // "Cần xử lý" list (fetchActiveOrders excludes paid orders). The cashier
@@ -302,14 +286,4 @@ export async function POST(request: NextRequest) {
       { status: 500, headers: CORS_HEADERS },
     );
   }
-}
-
-function platformDisplayName(platform: "shopee" | "grab" | "be" | "greensm"): string {
-  const displayNames = {
-    shopee: "ShopeeFood",
-    grab: "GrabFood",
-    be: "beFood",
-    greensm: "GreenSM Food",
-  } as const;
-  return displayNames[platform];
 }

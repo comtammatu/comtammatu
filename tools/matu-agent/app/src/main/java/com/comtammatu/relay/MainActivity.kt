@@ -1,27 +1,34 @@
-﻿package com.comtammatu.relay
+package com.comtammatu.relay
 
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.StateListDrawable
+import android.os.Build
 import android.os.Bundle
+import android.text.InputType
+import android.text.method.PasswordTransformationMethod
 import android.view.Gravity
 import android.view.View
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
-import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.net.InetSocketAddress
 import java.net.Socket
+import kotlin.math.roundToInt
 
 class MainActivity : Activity() {
 
@@ -31,11 +38,15 @@ class MainActivity : Activity() {
     private lateinit var etPort: EditText
     private lateinit var cbLanMode: CheckBox
     private lateinit var btnToggle: Button
+    private lateinit var tvStatusTitle: TextView
     private lateinit var tvStatus: TextView
+    private lateinit var tvStatusBadge: TextView
+    private lateinit var tvEndpoint: TextView
+    private lateinit var statusDot: View
     private lateinit var tvLogs: TextView
     private lateinit var scrollLogs: ScrollView
 
-    private val activityScope = CoroutineScope(Dispatchers.Main + Job())
+    private val activityScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private lateinit var dbHelper: OrderQueueDbHelper
     private lateinit var dispatcher: WebhookDispatcher
 
@@ -47,220 +58,49 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        window.statusBarColor = color(R.color.surface)
+        window.navigationBarColor = color(R.color.surface)
+        setLightStatusBar()
+
         dbHelper = OrderQueueDbHelper(this)
 
         val saved = configFromPrefs()
         dispatcher = WebhookDispatcher(this, saved.backendUrl, saved.branchId, saved.secret)
 
-        // Main root vertical scroll view
         val rootScroll = ScrollView(this).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.MATCH_PARENT
-            )
             isFillViewport = true
+            clipToPadding = false
+            setBackgroundColor(color(R.color.canvas))
         }
 
         val mainLayout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(32, 36, 32, 36)
-            setBackgroundColor(Color.parseColor("#F8F9FA"))
+            setPadding(dp(20), dp(20), dp(20), dp(32))
         }
 
-        // Header Title Banner
-        val headerCard = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(24, 20, 24, 20)
-            setBackgroundColor(Color.parseColor("#1B2A4A"))
-            val params = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, 0, 0, 24) }
-            layoutParams = params
-        }
-
-        val tvTitle = TextView(this).apply {
-            text = "MÁ TƯ AGENT"
-            textSize = 18f
-            setTextColor(Color.WHITE)
-            typeface = Typeface.DEFAULT_BOLD
-        }
-        val tvSubTitle = TextView(this).apply {
-            text = "Máy in ảo ESC/POS cho ShopeeFood · GreenSM Food · beFood"
-            textSize = 12f
-            setTextColor(Color.parseColor("#A0AEC0"))
-        }
-        headerCard.addView(tvTitle)
-        headerCard.addView(tvSubTitle)
-        mainLayout.addView(headerCard)
-
-        // Form Fields
-        etBackendUrl = EditText(this).apply {
-            hint = "Địa chỉ máy chủ POS (ví dụ: https://pos.comtammatu.vn)"
-            setText(saved.backendUrl)
-            textSize = 14f
-            setPadding(20, 24, 20, 24)
-            setBackgroundColor(Color.WHITE)
-        }
-        mainLayout.addView(createLabeledSection("Địa chỉ Máy chủ POS (Backend URL):", etBackendUrl))
-
-        val rowIds = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            weightSum = 2f
-        }
-
-        etBranchId = EditText(this).apply {
-            hint = "Mã Chi Nhánh (1)"
-            inputType = android.text.InputType.TYPE_CLASS_NUMBER
-            setText(saved.branchId.toString())
-            textSize = 14f
-            setPadding(20, 24, 20, 24)
-            setBackgroundColor(Color.WHITE)
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                setMargins(0, 0, 12, 0)
-            }
-        }
-
-        etPort = EditText(this).apply {
-            hint = "Cổng TCP (9100)"
-            inputType = android.text.InputType.TYPE_CLASS_NUMBER
-            setText(saved.port.toString())
-            textSize = 14f
-            setPadding(20, 24, 20, 24)
-            setBackgroundColor(Color.WHITE)
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                setMargins(12, 0, 0, 0)
-            }
-        }
-        rowIds.addView(etBranchId)
-        rowIds.addView(etPort)
-        mainLayout.addView(createLabeledSection("Chi Nhánh & Cổng Máy in:", rowIds))
-
-        etSecret = EditText(this).apply {
-            hint = "Mã bí mật Delivery Relay"
-            setText(saved.secret)
-            textSize = 14f
-            setPadding(20, 24, 20, 24)
-            setBackgroundColor(Color.WHITE)
-        }
-        mainLayout.addView(createLabeledSection("Mã bí mật (Relay Secret):", etSecret))
-
-        cbLanMode = CheckBox(this).apply {
-            text = "Nhận lệnh in từ mạng LAN (bật khi app sàn chạy trên máy khác)"
-            isChecked = saved.lanMode
-            textSize = 13f
-            setPadding(8, 12, 8, 16)
-        }
-        mainLayout.addView(cbLanMode)
-
-        // Main Service Start/Stop Button
-        btnToggle = Button(this).apply {
-            text = if (PrintIntakeService.isServiceRunning) "DỪNG MÁY IN ẢO" else "BẮT ĐẦU MÁY IN ẢO"
-            setBackgroundColor(if (PrintIntakeService.isServiceRunning) Color.parseColor("#E53E3E") else Color.parseColor("#2B6CB0"))
-            setTextColor(Color.WHITE)
-            textSize = 15f
-            typeface = Typeface.DEFAULT_BOLD
-            setPadding(0, 28, 0, 28)
-            setOnClickListener { toggleService() }
-        }
-        mainLayout.addView(btnToggle)
-
-        tvStatus = TextView(this).apply {
-            text = if (PrintIntakeService.isServiceRunning)
-                "🟢 Đang trực in cổng TCP ${saved.port}"
-            else
-                "⚪ Trạng thái: Chưa chạy"
-            textSize = 13f
-            setTextColor(Color.parseColor("#4A5568"))
-            setPadding(4, 12, 4, 16)
-            gravity = Gravity.CENTER_HORIZONTAL
-        }
-        mainLayout.addView(tvStatus)
-
-        // Diagnostic Buttons Row
-        val btnScroll = HorizontalScrollView(this).apply {
-            val params = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, 8, 0, 16) }
-            layoutParams = params
-            isHorizontalScrollBarEnabled = false
-        }
-
-        val btnRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-        }
-
-        val btnPing = Button(this).apply {
-            text = "⚡ KIỂM TRA POS"
-            textSize = 12f
-            setOnClickListener { testPingPos() }
-        }
-        val btnTestPrint = Button(this).apply {
-            text = "🖨️ KIỂM TRA CỔNG IN"
-            textSize = 12f
-            setOnClickListener { testPrintPort() }
-        }
-        val btnQueue = Button(this).apply {
-            text = "📊 XEM HÀNG ĐỢI"
-            textSize = 12f
-            setOnClickListener { viewQueue() }
-        }
-        val btnClear = Button(this).apply {
-            text = "🗑️ XÓA LOG"
-            textSize = 12f
-            setOnClickListener { AppLogger.clear() }
-        }
-
-        btnRow.addView(btnPing)
-        btnRow.addView(btnTestPrint)
-        btnRow.addView(btnQueue)
-        btnRow.addView(btnClear)
-        btnScroll.addView(btnRow)
-        mainLayout.addView(btnScroll)
-
-        // Log Console Header
-        val tvLogHeader = TextView(this).apply {
-            text = "NHẬT KÝ HOẠT ĐỘNG THỜI GIAN THỰC (LIVE LOG):"
-            textSize = 12f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.parseColor("#2D3748"))
-            setPadding(4, 8, 4, 8)
-        }
-        mainLayout.addView(tvLogHeader)
-
-        // Log Console Box
-        scrollLogs = ScrollView(this).apply {
-            val params = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                550
-            )
-            layoutParams = params
-            setBackgroundColor(Color.parseColor("#1A202C"))
-            setPadding(16, 16, 16, 16)
-        }
-
-        tvLogs = TextView(this).apply {
-            text = "Đang tải nhật ký..."
-            textSize = 11.5f
-            setTextColor(Color.parseColor("#68D391")) // Terminal Green
-            typeface = Typeface.MONOSPACE
-            setLineSpacing(4f, 1.1f)
-        }
-        scrollLogs.addView(tvLogs)
-        mainLayout.addView(scrollLogs)
+        mainLayout.addView(createAppHeader())
+        mainLayout.addView(space(20))
+        mainLayout.addView(createServicePanel(saved))
+        mainLayout.addView(space(24))
+        mainLayout.addView(createConfigurationSection(saved))
+        mainLayout.addView(space(24))
+        mainLayout.addView(createDiagnosticsSection())
+        mainLayout.addView(space(24))
+        mainLayout.addView(createLogSection())
 
         rootScroll.addView(mainLayout)
         setContentView(rootScroll)
 
         AppLogger.i("GIAO DIỆN", "Khởi động Má Tư Agent")
         updateLogsView()
+        refreshServiceState()
     }
 
     override fun onStart() {
         super.onStart()
         AppLogger.addListener(logListener)
         updateLogsView()
+        refreshServiceState()
     }
 
     override fun onStop() {
@@ -268,24 +108,461 @@ class MainActivity : Activity() {
         AppLogger.removeListener(logListener)
     }
 
-    private fun createLabeledSection(label: String, view: View): LinearLayout {
-        return LinearLayout(this).apply {
+    override fun onDestroy() {
+        activityScope.cancel()
+        dbHelper.close()
+        super.onDestroy()
+    }
+
+    private fun createAppHeader(): View {
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+
+        val monogram = TextView(this).apply {
+            text = getString(R.string.brand_monogram)
+            textSize = 14f
+            gravity = Gravity.CENTER
+            setTextColor(Color.WHITE)
+            typeface = Typeface.DEFAULT_BOLD
+            background = roundedBackground(color(R.color.primary), color(R.color.primary), 12)
+            layoutParams = LinearLayout.LayoutParams(dp(44), dp(44))
+        }
+
+        val titleGroup = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            val params = LinearLayout.LayoutParams(
+            setPadding(dp(12), 0, 0, 0)
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        titleGroup.addView(TextView(this).apply {
+            text = getString(R.string.app_name)
+            textSize = 20f
+            setTextColor(color(R.color.ink))
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        })
+        titleGroup.addView(TextView(this).apply {
+            text = getString(R.string.brand_subtitle)
+            textSize = 13f
+            setTextColor(color(R.color.ink_muted))
+            setPadding(0, dp(2), 0, 0)
+        })
+
+        header.addView(monogram)
+        header.addView(titleGroup)
+        return header
+    }
+
+    private fun createServicePanel(saved: SavedConfig): View {
+        val panel = panel()
+
+        val statusRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+
+        statusDot = View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(10), dp(10)).apply {
+                marginEnd = dp(10)
+            }
+        }
+        tvStatusTitle = TextView(this).apply {
+            textSize = 16f
+            setTextColor(color(R.color.ink))
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        tvStatusBadge = TextView(this).apply {
+            textSize = 12f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            gravity = Gravity.CENTER
+            setPadding(dp(10), dp(6), dp(10), dp(6))
+        }
+
+        statusRow.addView(statusDot)
+        statusRow.addView(tvStatusTitle)
+        statusRow.addView(tvStatusBadge)
+
+        tvStatus = TextView(this).apply {
+            textSize = 13f
+            setTextColor(color(R.color.ink_muted))
+            setPadding(0, dp(10), 0, 0)
+            setLineSpacing(dp(2).toFloat(), 1f)
+        }
+
+        tvEndpoint = TextView(this).apply {
+            text = endpointSummary(saved.port, saved.branchId, saved.lanMode)
+            textSize = 12.5f
+            setTextColor(color(R.color.ink_secondary))
+            typeface = Typeface.MONOSPACE
+            setPadding(dp(12), dp(10), dp(12), dp(10))
+            background = roundedBackground(
+                color(R.color.surface_muted),
+                color(R.color.border),
+                10
+            )
+        }
+
+        btnToggle = Button(this).apply {
+            isAllCaps = false
+            textSize = 14f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            minHeight = dp(52)
+            setPadding(dp(18), dp(12), dp(18), dp(12))
+            setOnClickListener { toggleService() }
+            layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, 0, 0, 16) }
-            layoutParams = params
+            )
+        }
 
-            val tv = TextView(this@MainActivity).apply {
+        panel.addView(statusRow)
+        panel.addView(tvStatus)
+        panel.addView(space(14))
+        panel.addView(tvEndpoint)
+        panel.addView(space(16))
+        panel.addView(btnToggle)
+        return panel
+    }
+
+    private fun createConfigurationSection(saved: SavedConfig): View {
+        val section = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        section.addView(sectionHeading(
+            getString(R.string.configuration_title),
+            getString(R.string.configuration_description)
+        ))
+        section.addView(space(10))
+
+        val panel = panel()
+
+        etBackendUrl = editText(
+            hint = "https://pos.comtammatu.vn",
+            value = saved.backendUrl,
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
+        )
+        panel.addView(field(getString(R.string.backend_url_label), etBackendUrl))
+        panel.addView(space(16))
+
+        val branchAndPort = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            weightSum = 2f
+        }
+        etBranchId = editText(
+            hint = "1",
+            value = saved.branchId.toString(),
+            inputType = InputType.TYPE_CLASS_NUMBER
+        )
+        etPort = editText(
+            hint = "9100",
+            value = saved.port.toString(),
+            inputType = InputType.TYPE_CLASS_NUMBER
+        )
+        val branchField = field(getString(R.string.branch_id_label), etBranchId).apply {
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                marginEnd = dp(6)
+            }
+        }
+        val portField = field(getString(R.string.tcp_port_label), etPort).apply {
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                marginStart = dp(6)
+            }
+        }
+        branchAndPort.addView(branchField)
+        branchAndPort.addView(portField)
+        panel.addView(branchAndPort)
+        panel.addView(space(16))
+
+        etSecret = editText(
+            hint = getString(R.string.relay_secret_hint),
+            value = saved.secret,
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+        ).apply {
+            transformationMethod = PasswordTransformationMethod.getInstance()
+        }
+        panel.addView(field(getString(R.string.relay_secret_label), etSecret))
+        panel.addView(space(16))
+
+        cbLanMode = CheckBox(this).apply {
+            text = getString(R.string.lan_mode_label)
+            isChecked = saved.lanMode
+            textSize = 14f
+            setTextColor(color(R.color.ink))
+            minHeight = dp(52)
+            setPadding(dp(10), dp(8), dp(10), dp(8))
+            buttonTintList = ColorStateList(
+                arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+                intArrayOf(color(R.color.primary), color(R.color.ink_muted))
+            )
+            background = roundedBackground(
+                color(R.color.surface_muted),
+                color(R.color.border),
+                10
+            )
+        }
+        panel.addView(cbLanMode)
+        panel.addView(TextView(this).apply {
+            text = getString(R.string.lan_mode_description)
+            textSize = 12f
+            setTextColor(color(R.color.ink_muted))
+            setPadding(dp(12), dp(8), dp(8), 0)
+        })
+
+        section.addView(panel)
+        return section
+    }
+
+    private fun createDiagnosticsSection(): View {
+        val section = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        section.addView(sectionHeading(
+            getString(R.string.diagnostics_title),
+            getString(R.string.diagnostics_description)
+        ))
+        section.addView(space(10))
+
+        val panel = panel()
+        val firstRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            weightSum = 2f
+        }
+        firstRow.addView(secondaryButton(getString(R.string.check_pos_action)) { testPingPos() }.apply {
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                marginEnd = dp(6)
+            }
+        })
+        firstRow.addView(secondaryButton(getString(R.string.check_print_port_action)) { testPrintPort() }.apply {
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                marginStart = dp(6)
+            }
+        })
+
+        val queueButton = secondaryButton(getString(R.string.view_queue_action)) { viewQueue() }.apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        panel.addView(firstRow)
+        panel.addView(space(12))
+        panel.addView(queueButton)
+        section.addView(panel)
+        return section
+    }
+
+    private fun createLogSection(): View {
+        val section = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val headingRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val heading = sectionHeading(
+            getString(R.string.logs_title),
+            getString(R.string.logs_description)
+        ).apply {
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        val clearButton = secondaryButton(getString(R.string.clear_logs_action)) { AppLogger.clear() }.apply {
+            minHeight = dp(48)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { marginStart = dp(12) }
+        }
+        headingRow.addView(heading)
+        headingRow.addView(clearButton)
+        section.addView(headingRow)
+        section.addView(space(10))
+
+        scrollLogs = ScrollView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(320)
+            )
+            isFillViewport = true
+            setPadding(dp(16), dp(16), dp(16), dp(16))
+            background = roundedBackground(
+                color(R.color.console),
+                color(R.color.console_border),
+                14
+            )
+        }
+
+        tvLogs = TextView(this).apply {
+            text = getString(R.string.logs_loading)
+            textSize = 12f
+            setTextColor(color(R.color.console_text))
+            typeface = Typeface.MONOSPACE
+            setLineSpacing(dp(4).toFloat(), 1.08f)
+            setTextIsSelectable(true)
+        }
+        scrollLogs.addView(tvLogs)
+        section.addView(scrollLogs)
+        return section
+    }
+
+    private fun sectionHeading(title: String, description: String): View {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(TextView(this@MainActivity).apply {
+                text = title
+                textSize = 16f
+                setTextColor(color(R.color.ink))
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            })
+            addView(TextView(this@MainActivity).apply {
+                text = description
+                textSize = 12.5f
+                setTextColor(color(R.color.ink_muted))
+                setPadding(0, dp(3), 0, 0)
+            })
+        }
+    }
+
+    private fun panel(): LinearLayout {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(16), dp(16), dp(16))
+            background = roundedBackground(color(R.color.surface), color(R.color.border), 16)
+        }
+    }
+
+    private fun field(label: String, input: View): LinearLayout {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(TextView(this@MainActivity).apply {
                 text = label
                 textSize = 12.5f
-                typeface = Typeface.DEFAULT_BOLD
-                setTextColor(Color.parseColor("#4A5568"))
-                setPadding(0, 0, 0, 6)
-            }
-            addView(tv)
-            addView(view)
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                setTextColor(color(R.color.ink_secondary))
+                setPadding(dp(2), 0, dp(2), dp(7))
+            })
+            addView(input)
+        }
+    }
+
+    private fun editText(hint: String, value: String, inputType: Int): EditText {
+        return EditText(this).apply {
+            this.hint = hint
+            setText(value)
+            this.inputType = inputType
+            textSize = 14f
+            setTextColor(color(R.color.ink))
+            setHintTextColor(color(R.color.ink_muted))
+            setSingleLine(true)
+            minHeight = dp(52)
+            setPadding(dp(14), dp(12), dp(14), dp(12))
+            background = fieldBackground()
+        }
+    }
+
+    private fun secondaryButton(label: String, onClick: () -> Unit): Button {
+        return Button(this).apply {
+            text = label
+            isAllCaps = false
+            textSize = 13f
+            minHeight = dp(52)
+            setPadding(dp(12), dp(10), dp(12), dp(10))
+            setTextColor(color(R.color.ink))
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            background = buttonBackground(
+                normal = color(R.color.surface),
+                pressed = color(R.color.surface_muted),
+                stroke = color(R.color.input_border)
+            )
+            setOnClickListener { onClick() }
+        }
+    }
+
+    private fun stylePrimaryButton(button: Button, destructive: Boolean) {
+        val normal = color(if (destructive) R.color.destructive else R.color.primary)
+        val pressed = color(if (destructive) R.color.destructive_pressed else R.color.primary_pressed)
+        button.setTextColor(ColorStateList(
+            arrayOf(intArrayOf(-android.R.attr.state_enabled), intArrayOf()),
+            intArrayOf(color(R.color.ink_muted), Color.WHITE)
+        ))
+        button.background = buttonBackground(normal, pressed, normal)
+    }
+
+    private fun buttonBackground(normal: Int, pressed: Int, stroke: Int): StateListDrawable {
+        return StateListDrawable().apply {
+            addState(
+                intArrayOf(-android.R.attr.state_enabled),
+                roundedBackground(
+                    color(R.color.neutral_surface),
+                    color(R.color.neutral_border),
+                    10
+                )
+            )
+            addState(
+                intArrayOf(android.R.attr.state_pressed),
+                roundedBackground(pressed, stroke, 10)
+            )
+            addState(intArrayOf(), roundedBackground(normal, stroke, 10))
+        }
+    }
+
+    private fun fieldBackground(): StateListDrawable {
+        return StateListDrawable().apply {
+            addState(
+                intArrayOf(android.R.attr.state_focused),
+                GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    setColor(color(R.color.surface))
+                    setStroke(dp(2), color(R.color.primary))
+                    cornerRadius = dp(10).toFloat()
+                }
+            )
+            addState(
+                intArrayOf(),
+                roundedBackground(color(R.color.surface), color(R.color.input_border), 10)
+            )
+        }
+    }
+
+    private fun roundedBackground(fillColor: Int, strokeColor: Int, radius: Int): GradientDrawable {
+        return GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            setColor(fillColor)
+            setStroke(dp(1), strokeColor)
+            cornerRadius = dp(radius).toFloat()
+        }
+    }
+
+    private fun circleBackground(fillColor: Int): GradientDrawable {
+        return GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(fillColor)
+        }
+    }
+
+    private fun space(height: Int): View {
+        return View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(1, dp(height))
+        }
+    }
+
+    private fun endpointSummary(port: Int, branchId: Int, lanMode: Boolean): String {
+        val host = if (lanMode) "0.0.0.0" else "127.0.0.1"
+        return "$host:$port  ·  Chi nhánh $branchId"
+    }
+
+    private fun color(resourceId: Int): Int {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            getColor(resourceId)
+        } else {
+            @Suppress("DEPRECATION")
+            resources.getColor(resourceId)
+        }
+    }
+
+    private fun dp(value: Int): Int {
+        return (value * resources.displayMetrics.density).roundToInt()
+    }
+
+    @Suppress("DEPRECATION")
+    private fun setLightStatusBar() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
         }
     }
 
@@ -340,13 +617,22 @@ class MainActivity : Activity() {
 
         if (!PrintIntakeService.isServiceRunning) {
             intent.action = PrintIntakeService.ACTION_START
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 startForegroundService(intent)
             } else {
                 startService(intent)
             }
             btnToggle.isEnabled = false
-            tvStatus.text = "🟡 Đang mở cổng TCP ${config.port}..."
+            tvStatusTitle.text = getString(R.string.service_starting_title)
+            tvStatus.text = getString(R.string.service_starting_description, config.port)
+            tvStatusBadge.text = getString(R.string.status_processing)
+            tvStatusBadge.setTextColor(color(R.color.warning_text))
+            tvStatusBadge.background = roundedBackground(
+                color(R.color.warning_surface),
+                color(R.color.warning_border),
+                50
+            )
+            statusDot.background = circleBackground(color(R.color.warning))
             btnToggle.postDelayed({
                 btnToggle.isEnabled = true
                 refreshServiceState()
@@ -361,12 +647,12 @@ class MainActivity : Activity() {
     private fun testPingPos() {
         val config = saveCurrentConfig()
         activityScope.launch {
-            Toast.makeText(this@MainActivity, "Đang kiểm tra kết nối POS...", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this@MainActivity, "Đang kiểm tra kết nối POS…", Toast.LENGTH_SHORT).show()
             val result = dispatcher.pingPosServer(config.backendUrl, config.secret, config.branchId)
             if (result.isSuccess) {
-                Toast.makeText(this@MainActivity, "Kết nối POS thành công!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@MainActivity, "Đã kết nối POS", Toast.LENGTH_SHORT).show()
             } else {
-                Toast.makeText(this@MainActivity, "Kết nối thất bại! Xem chi tiết trong log", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@MainActivity, "Không thể kết nối POS. Xem nhật ký để biết chi tiết.", Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -381,9 +667,9 @@ class MainActivity : Activity() {
             }
             runOnUiThread {
                 if (result.isSuccess) {
-                    Toast.makeText(this@MainActivity, "Cổng máy in ảo đang nhận kết nối.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, "Cổng máy in ảo đang nhận kết nối", Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(this@MainActivity, "Không kết nối được cổng in. Xem nhật ký để biết chi tiết.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@MainActivity, "Không thể kết nối cổng in. Xem nhật ký để biết chi tiết.", Toast.LENGTH_LONG).show()
                     AppLogger.e("KIỂM TRA CỔNG", result.exceptionOrNull()?.localizedMessage ?: "Lỗi không xác định")
                 }
             }
@@ -392,27 +678,49 @@ class MainActivity : Activity() {
 
     private fun refreshServiceState() {
         val port = etPort.text.toString().toIntOrNull() ?: PrintIntakeService.DEFAULT_PORT
+        val branchId = etBranchId.text.toString().toIntOrNull() ?: 1
+        val lanMode = cbLanMode.isChecked
+        tvEndpoint.text = endpointSummary(port, branchId, lanMode)
+
         if (PrintIntakeService.isServiceRunning) {
-            btnToggle.text = "DỪNG MÁY IN ẢO"
-            btnToggle.setBackgroundColor(Color.parseColor("#E53E3E"))
-            tvStatus.text = "🟢 Đang trực in cổng TCP $port"
+            btnToggle.text = getString(R.string.stop_service_action)
+            stylePrimaryButton(btnToggle, destructive = true)
+            tvStatusTitle.text = getString(R.string.service_running_title)
+            tvStatus.text = getString(R.string.service_running_description)
+            tvStatusBadge.text = getString(R.string.status_running)
+            tvStatusBadge.setTextColor(color(R.color.success_text))
+            tvStatusBadge.background = roundedBackground(
+                color(R.color.success_surface),
+                color(R.color.success_border),
+                50
+            )
+            statusDot.background = circleBackground(color(R.color.success))
         } else {
-            btnToggle.text = "BẮT ĐẦU MÁY IN ẢO"
-            btnToggle.setBackgroundColor(Color.parseColor("#2B6CB0"))
-            tvStatus.text = "⚪ Máy in ảo chưa chạy"
+            btnToggle.text = getString(R.string.start_service_action)
+            stylePrimaryButton(btnToggle, destructive = false)
+            tvStatusTitle.text = getString(R.string.service_stopped_title)
+            tvStatus.text = getString(R.string.service_stopped_description)
+            tvStatusBadge.text = getString(R.string.status_stopped)
+            tvStatusBadge.setTextColor(color(R.color.neutral_text))
+            tvStatusBadge.background = roundedBackground(
+                color(R.color.neutral_surface),
+                color(R.color.neutral_border),
+                50
+            )
+            statusDot.background = circleBackground(color(R.color.ink_muted))
         }
     }
 
     private fun viewQueue() {
         val summary = dbHelper.getQueueSummary()
         AppLogger.i("HÀNG ĐỢI", "\n$summary")
-        Toast.makeText(this, "Đã cập nhật trạng thái hàng đợi trong Log", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Đã cập nhật trạng thái hàng đợi trong nhật ký", Toast.LENGTH_SHORT).show()
     }
 
     private fun updateLogsView() {
         val logs = AppLogger.getAllLogs()
         tvLogs.text = if (logs.isEmpty()) {
-            "--- Nhật ký trống ---\nNhấn 'KIỂM TRA POS' hoặc gửi lệnh in từ app sàn để xem log thời gian thực."
+            "--- Nhật ký trống ---\nKiểm tra POS hoặc gửi lệnh in để xem sự kiện tại đây."
         } else {
             logs.joinToString("\n")
         }

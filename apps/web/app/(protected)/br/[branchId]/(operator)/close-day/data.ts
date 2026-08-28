@@ -5,6 +5,7 @@ import {
   getVNBusinessDayUtcRange,
 } from "@comtammatu/shared/time";
 import type { loadAuthState } from "@/_lib/auth";
+import { resolveCountSlipReviewerEmployeeId } from "@lib/inventory/count-slip-reviewer";
 
 type ServerClient = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
 
@@ -106,6 +107,7 @@ function embeddedRecord(value: unknown): Record<string, unknown> | null {
 export async function fetchCloseDayData(
   supabase: ServerClient,
   claims: JwtClaims,
+  userId: string,
   branchId: number,
   branchName: string,
   requestedDate?: string,
@@ -113,6 +115,19 @@ export async function fetchCloseDayData(
   const todayBusinessDate = getVNBusinessDateString();
   const businessDate = resolveCloseDayBusinessDate(requestedDate);
   const { startIso, endIso } = getVNBusinessDayUtcRange(businessDate);
+  const reviewerEmployeeId = await resolveCountSlipReviewerEmployeeId(
+    claims.tenant_id,
+    userId,
+  );
+  let countSlipsQuery = supabase
+    .from("inventory_count_slips")
+    .select("id", { count: "exact", head: true })
+    .eq("tenant_id", claims.tenant_id)
+    .eq("branch_id", branchId)
+    .eq("status", "submitted");
+  if (reviewerEmployeeId !== null) {
+    countSlipsQuery = countSlipsQuery.neq("employee_id", reviewerEmployeeId);
+  }
   const [
     reportRes,
     sessionsRes,
@@ -161,12 +176,7 @@ export async function fetchCloseDayData(
       .eq("branch_id", branchId)
       .eq("issue_type", "writeoff")
       .eq("approval_status", "pending"),
-    supabase
-      .from("inventory_count_slips")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", claims.tenant_id)
-      .eq("branch_id", branchId)
-      .eq("status", "submitted"),
+    countSlipsQuery,
     supabase.rpc("get_checkout_review_queue", {
       p_branch_id: branchId,
       p_include_rows: false,

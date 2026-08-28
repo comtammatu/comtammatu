@@ -199,7 +199,11 @@ single form → thin DETAIL; `/me` LANDING hub is the personal account plane
   variant="document"` · D1 task `FormDialog` (no URL).
 - Forbidden: sticky `AppToolbar` above a `KpiRow` / KPI mosaic; create CTA only
   on `AppSection.action`; twin `md:hidden` / `sm:hidden` list trees; inventing a
-  second filter chrome outside the frame toolbar.
+  second filter chrome outside the frame toolbar; mixing different height tiers
+  in the same toolbar/action row (e.g. `h-10` next to `h-7`/`h-6`).
+- Height & alignment parity: all controls in the same row/toolbar MUST share the
+  same height tier (`h-8` desktop list toolbar, `h-10` form row, `min-h-12` touch)
+  and align vertically with `items-center`.
 
 Census: every control_surface `page.tsx` declares `composeShape` in
 `scripts/page-archetypes.mjs` (`CONTROL_SURFACE_COMPOSE`). CI enforces LIST

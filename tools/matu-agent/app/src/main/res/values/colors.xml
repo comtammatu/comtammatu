@@ -1,6 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="primary">#BF4C18</color>
-    <color name="primary_dark">#993910</color>
-    <color name="accent">#4CAF50</color>
+    <color name="primary_pressed">#963812</color>
+
+    <color name="canvas">#F6F4EF</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="surface_muted">#F1F2F0</color>
+    <color name="border">#D7D9D5</color>
+    <color name="input_border">#AEB3AE</color>
+    <color name="ink">#172033</color>
+    <color name="ink_secondary">#3F4858</color>
+    <color name="ink_muted">#667085</color>
+
+    <color name="success">#26834A</color>
+    <color name="success_text">#176638</color>
+    <color name="success_surface">#E8F5EC</color>
+    <color name="success_border">#A9D8B8</color>
+    <color name="warning">#B36B00</color>
+    <color name="warning_text">#845000</color>
+    <color name="warning_surface">#FFF3D9</color>
+    <color name="warning_border">#E7C57F</color>
+    <color name="destructive">#C4383A</color>
+    <color name="destructive_pressed">#99282B</color>
+    <color name="neutral_text">#4C5563</color>
+    <color name="neutral_surface">#ECEEEC</color>
+    <color name="neutral_border">#C9CDC9</color>
+
+    <color name="console">#182230</color>
+    <color name="console_border">#344054</color>
+    <color name="console_text">#D1FADF</color>
 </resources>

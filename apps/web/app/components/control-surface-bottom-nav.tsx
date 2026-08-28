@@ -68,7 +68,7 @@ export function ControlSurfaceBottomNav({
           aria-expanded={openMobile}
           className={cn(BOTTOM_NAV_ITEM_CLASS, "min-w-14")}
         >
-          <IconLayoutGrid data-icon="inline-start" aria-hidden="true" />
+          <IconLayoutGrid data-icon="inline-start" aria-hidden="true" className="size-4 shrink-0" />
           <span>{copy.modules}</span>
         </Button>
       }

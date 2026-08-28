@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Fragment, type ComponentProps, type ReactNode } from "react";
 import { Ellipsis as IconDots } from "lucide-react";
+import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   DropdownMenu,
@@ -65,10 +66,10 @@ export function RowActionsMenu({
           <Button
             variant="ghost"
             size={triggerSize}
-            className={triggerClassName}
+            className={cn("flex items-center justify-center", triggerClassName)}
           >
             <IconDots
-              className="size-4"
+              className="size-4 shrink-0"
               data-icon={triggerLabel ? "inline-start" : undefined}
             />
             {triggerLabel ? (

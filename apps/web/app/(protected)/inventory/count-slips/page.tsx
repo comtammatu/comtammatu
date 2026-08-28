@@ -8,6 +8,7 @@ import {
   type CountSlipRow,
   type CountSlipStatus,
 } from "@lib/inventory/count-slip-model";
+import { resolveCountSlipReviewerEmployeeId } from "@lib/inventory/count-slip-reviewer";
 
 export const instant = false;
 
@@ -86,11 +87,15 @@ export async function CountSlipsPageContent({
     PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
   );
   if (!ctx) redirect("/");
-  const { supabase, claims } = ctx;
+  const { supabase, claims, userId } = ctx;
+  const reviewerEmployeeId = await resolveCountSlipReviewerEmployeeId(
+    claims.tenant_id,
+    userId,
+  );
 
   // RLS limits these rows to branches where the manager holds
   // `inventory:count_approve`; the employee-facing RLS hides system quantity.
-  const { data: slips, error: slipsError } = await supabase
+  let slipsQuery = supabase
     .from("inventory_count_slips")
     .select(
       `
@@ -116,8 +121,14 @@ export async function CountSlipsPageContent({
     `,
     )
     .eq("tenant_id", claims.tenant_id)
-    .in("status", REVIEW_STATES)
-    .order("submitted_at", { ascending: false });
+    .in("status", REVIEW_STATES);
+  if (reviewerEmployeeId !== null) {
+    slipsQuery = slipsQuery.neq("employee_id", reviewerEmployeeId);
+  }
+  const { data: slips, error: slipsError } = await slipsQuery.order(
+    "submitted_at",
+    { ascending: false },
+  );
   if (slipsError) {
     console.error("inventory.count_slips.fetch_failed", {
       code: slipsError.code,

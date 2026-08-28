@@ -11,8 +11,8 @@ android {
         applicationId = "com.comtammatu.relay"
         minSdk = 21
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 8
+        versionName = "1.0.7"
     }
 
     buildTypes {
@@ -39,5 +39,6 @@ android {
 dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    implementation("com.google.mlkit:text-recognition:16.0.1")
     testImplementation("junit:junit:4.13.2")
 }

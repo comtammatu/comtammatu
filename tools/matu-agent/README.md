@@ -14,13 +14,14 @@ The Agent does not depend on SUNMI hardware or forward data to a built-in printe
 
 ```text
 Delivery app -> 127.0.0.1:9100 -> PrintIntakeService
+  -> ESC/POS text extraction or bundled on-device OCR for raster receipts
   -> deterministic platform detection
   -> local SQLite queue
   -> /api/webhooks/delivery/relay
   -> POS / KDS
 ```
 
-Receipts with no unique platform signature are retained locally as `UNCLASSIFIED` and are not sent to the POS. This prevents an unknown receipt from being silently recorded under the wrong platform.
+Receipts with no unique platform signature are retained locally as `UNCLASSIFIED` and are not sent to the POS. This prevents an unknown receipt from being silently recorded under the wrong platform. On startup, the Agent retries OCR for retained raster receipts and moves successfully classified rows into the normal delivery queue.
 
 ## Build
 
@@ -43,3 +44,13 @@ The debug APK is written to `tools/matu-agent/app/build/outputs/apk/debug/app-de
 Configure each delivery app's network printer to use `127.0.0.1:9100` when it runs on the same Android device. Use the Agent device's Wi-Fi IP only when LAN mode is intentionally enabled.
 
 The foreground service restarts after boot and retries queued receipts with capped exponential backoff. Legacy queue data is migrated from the previous database filename on first launch.
+
+ShopeeFood currently renders the receipt as a monochrome ESC/POS raster image.
+The Agent uses the bundled ML Kit Latin text-recognition model on the phone and
+sends the recognized text together with the original ESC/POS bytes. The POS
+parses the recognized text; the original bytes remain available for diagnosis.
+
+The virtual printer answers ESC/POS `DLE EOT`, `GS r`, and `GS a` status requests
+as a healthy online printer. Status-only connections are not queued as receipts,
+and receipt-boundary detection skips binary image and QR payloads before
+recognizing paper-cut commands.

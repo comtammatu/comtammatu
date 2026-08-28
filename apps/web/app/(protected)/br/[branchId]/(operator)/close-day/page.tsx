@@ -20,13 +20,14 @@ export default async function CloseDayPage({
   const branchId = parseOperatorBranchId(rawBranchId);
   if (branchId == null) notFound();
 
-  const { supabase, claims } = await loadAuthState();
+  const { supabase, claims, userId } = await loadAuthState();
   const context = await resolveBranchContext(supabase, claims, branchId);
   if (!context) notFound();
 
   const data = await fetchCloseDayData(
     supabase,
     claims,
+    userId,
     context.branchId,
     context.branch.name,
     requestedDate,

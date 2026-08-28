@@ -209,6 +209,39 @@ Mã đơn: SPF-206
   assert.equal(bareNumeric.displayId, "SPF-206");
 });
 
+test("ESC/POS parser: parses OCR text from ShopeeFood raster receipts", () => {
+  const ocrReceipt = `
+ShopeeFood
+Cơm Tấm Má Tư
+Mã đơn hàng
+12345-987654321
+Khách hàng K***
+Món Tổng tiền Giá
+1. Cơm Sườn Cốt Lết
+• 1xCanh theo ngày
+• 1xDụng cụ ăn uống
+x2 114.000đ
+cắt sườn giúp em
+Tổng món 2
+Tổng tiền món (giá gốc) 114.000đ
+Chiết khấu -20.000đ
+Tổng tiền 94.000đ
+  `;
+
+  const parsed = parseShopeeReceiptText(ocrReceipt);
+
+  assert.equal(parsed.orderId, "12345-987654321");
+  assert.equal(parsed.displayId, "12345-987654321");
+  assert.equal(parsed.items?.length, 1);
+  assert.equal(parsed.items?.[0]?.name, "Cơm Sườn Cốt Lết");
+  assert.equal(parsed.items?.[0]?.quantity, 2);
+  assert.equal(parsed.items?.[0]?.price, 57000);
+  assert.equal(parsed.items?.[0]?.options?.length, 2);
+  assert.equal(parsed.items?.[0]?.options?.[0]?.name, "Canh theo ngày");
+  assert.equal(parsed.items?.[0]?.options?.[1]?.name, "Dụng cụ ăn uống");
+  assert.equal(parsed.total, 94000);
+});
+
 test("ESC/POS platform detection: identifies all 4 platforms accurately from receipt signature", () => {
   const shopeeSample = "ShopeeFood\nMã đơn: SPF-123\nVí ShopeePay\n1x Cơm sườn 54.000";
   const grabSample = "GrabFood\nOrder: GF-789\nGrabPay\n1x Sườn Một Gang 120.000";

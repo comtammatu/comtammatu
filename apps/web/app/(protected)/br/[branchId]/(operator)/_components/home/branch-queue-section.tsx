@@ -104,7 +104,7 @@ export async function BranchQueueSection({
   branchId: number;
   branchKind: string | null;
 }) {
-  const { supabase, claims } = await loadAuthState();
+  const { supabase, claims, userId } = await loadAuthState();
   const isFloorRole =
     claims.user_role === "cashier" ||
     claims.user_role === "chef" ||
@@ -113,6 +113,7 @@ export async function BranchQueueSection({
   const queueCounts = await fetchBranchQueueCounts(
     supabase,
     claims,
+    userId,
     branchId,
     branchKind,
   );

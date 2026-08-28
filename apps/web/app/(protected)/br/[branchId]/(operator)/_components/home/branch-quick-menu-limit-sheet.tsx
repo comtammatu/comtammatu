@@ -221,18 +221,6 @@ export function BranchQuickMenuLimitSheet({
         <span className="flex items-center gap-2 text-base">
           <ShieldAlert className="size-5 text-warning" />
           {messages.settings.branch.menuLimitsTitle}
-          <span className="ml-auto flex shrink-0 flex-wrap justify-end gap-1">
-            {disabledCount > 0 ? (
-              <Badge variant="destructive">
-                {menuCopy.disabledCount(disabledCount)}
-              </Badge>
-            ) : null}
-            {limitedCount > 0 ? (
-              <Badge variant="secondary">
-                {menuCopy.limitedCount(limitedCount)}
-              </Badge>
-            ) : null}
-          </span>
         </span>
       }
       description={menuCopy.drawerDescription}
@@ -300,6 +288,9 @@ export function BranchQuickMenuLimitSheet({
               const draftQty = draftQtyById[row.menu_item_id] ?? "";
               const available = row.available_to_sell ?? menuCopy.unlimited;
               const allowanceOn = isAllowanceEnabled(row);
+              const limitInputId = `menu-limit-${row.menu_item_id}`;
+              const limitHintId = `${limitInputId}-hint`;
+              const allowanceHintId = `${limitInputId}-allowance-hint`;
 
               return (
                 <Item
@@ -315,28 +306,10 @@ export function BranchQuickMenuLimitSheet({
                       </span>
                       <div className="flex shrink-0 items-center gap-1.5">
                         {row.is_disabled ? (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={isPending}
-                            onClick={() => handleToggleDisabled(row, false)}
-                            className="h-7 text-xs text-success hover:bg-success/10 hover:text-success"
-                          >
-                            {menuCopy.quickResumeItem}
-                          </Button>
-                        ) : (
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            disabled={isPending}
-                            onClick={() => handleToggleDisabled(row, true)}
-                            className="h-7 text-xs"
-                          >
-                            {menuCopy.quickPauseItem}
-                          </Button>
-                        )}
+                          <Badge variant="destructive" className="shrink-0">
+                            {menuCopy.pausedBadge}
+                          </Badge>
+                        ) : null}
                         {allowanceOn ? (
                           <Badge variant="secondary" className="shrink-0">
                             {menuCopy.allowanceBadge}
@@ -367,12 +340,24 @@ export function BranchQuickMenuLimitSheet({
                     </ItemDescription>
                   </ItemContent>
 
-                  <div className="flex flex-col gap-2 border-t pt-2">
-                    <label className="flex min-w-0 flex-col gap-1">
-                      <span className="text-xs text-muted-foreground">
-                        {menuCopy.manualLimitShortLabel}
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-2 border-t pt-2">
+                    <label
+                      htmlFor={limitInputId}
+                      className="col-span-2 grid min-w-0 grid-cols-2 items-center gap-3"
+                    >
+                      <span className="flex min-w-0 flex-col gap-1">
+                        <span className="text-xs text-muted-foreground">
+                          {menuCopy.manualLimitShortLabel}
+                        </span>
+                        <span
+                          id={limitHintId}
+                          className="text-xs leading-relaxed text-muted-foreground"
+                        >
+                          {menuCopy.manualLimitOptionalHint}
+                        </span>
                       </span>
                       <QuantityInput
+                        id={limitInputId}
                         maxFractionDigits={0}
                         max={9999}
                         placeholder={menuCopy.manualLimitPlaceholder}
@@ -399,12 +384,16 @@ export function BranchQuickMenuLimitSheet({
                         aria-label={menuCopy.manualLimitInputAria(
                           row.item_name,
                         )}
+                        aria-describedby={limitHintId}
                         className="min-h-12"
                       />
                     </label>
-                    <div className="flex min-h-12 items-center justify-between gap-3">
-                      <span className="text-xs text-muted-foreground">
+                    <div className="flex min-h-12 items-center justify-between gap-2">
+                      <span className="min-w-0 text-xs text-muted-foreground">
                         {menuCopy.stockAllowanceLabel}
+                        <span id={allowanceHintId} className="sr-only">
+                          {menuCopy.stockAllowanceHint}
+                        </span>
                       </span>
                       <Switch
                         size="touch"
@@ -414,10 +403,11 @@ export function BranchQuickMenuLimitSheet({
                           handleToggleAllowance(row, checked)
                         }
                         aria-label={menuCopy.stockAllowanceAria(row.item_name)}
+                        aria-describedby={allowanceHintId}
                       />
                     </div>
-                    <div className="flex min-h-12 items-center justify-between gap-3">
-                      <span className="text-xs text-muted-foreground">
+                    <div className="flex min-h-12 items-center justify-between gap-2">
+                      <span className="min-w-0 text-xs text-muted-foreground">
                         {menuCopy.sellingSwitchLabel}
                       </span>
                       <Switch

@@ -46,9 +46,18 @@ class WebhookDispatcher(
     /**
      * Enqueues and dispatches an incoming raw ESC/POS receipt payload.
      */
-    suspend fun dispatchRawReceipt(rawBytes: ByteArray, platform: DeliveryPlatform): Result<String> =
+    suspend fun dispatchRawReceipt(
+        rawBytes: ByteArray,
+        platform: DeliveryPlatform,
+        receiptText: String? = null
+    ): Result<String> =
         withContext(Dispatchers.IO) {
-            val queuedId = dbHelper.enqueueReceipt(rawBytes, branchId, platform.wireValue)
+            val queuedId = dbHelper.enqueueReceipt(
+                rawBytes = rawBytes,
+                branchId = branchId,
+                platform = platform.wireValue,
+                receiptText = receiptText
+            )
             AppLogger.pos("Đã lưu phiếu #$queuedId vào hàng đợi (${platform.displayName}, ${rawBytes.size} bytes)")
 
             if (!dbHelper.claimOrder(queuedId)) {
@@ -58,7 +67,7 @@ class WebhookDispatcher(
 
             AppLogger.pos("Đang chuyển tiếp đơn #$queuedId lên máy chủ POS ($backendUrl)...")
             val base64Payload = android.util.Base64.encodeToString(rawBytes, android.util.Base64.NO_WRAP)
-            val result = executePost(base64Payload, branchId, platform.wireValue)
+            val result = executePost(base64Payload, branchId, platform.wireValue, receiptText)
 
             if (result.isSuccess) {
                 dbHelper.markOrderSent(queuedId)
@@ -74,13 +83,44 @@ class WebhookDispatcher(
             result
         }
 
-    fun storeUnclassifiedReceipt(rawBytes: ByteArray): Long = dbHelper.enqueueReceipt(
+    fun storeUnclassifiedReceipt(rawBytes: ByteArray, receiptText: String? = null): Long = dbHelper.enqueueReceipt(
         rawBytes = rawBytes,
         branchId = branchId,
         platform = "unknown",
+        receiptText = receiptText,
         status = OrderQueueDbHelper.STATUS_UNCLASSIFIED,
         lastError = "Không nhận diện được duy nhất một nguồn sàn"
     )
+
+    suspend fun recoverUnclassifiedReceipts(recognizer: ReceiptTextRecognizer) =
+        withContext(Dispatchers.IO) {
+            for (order in dbHelper.getRecoverableRasterOrders()) {
+                try {
+                    val rawBytes = android.util.Base64.decode(
+                        order.rawBase64,
+                        android.util.Base64.DEFAULT
+                    )
+                    val receiptText = recognizer.recognize(rawBytes) ?: order.receiptText
+                    val platform = receiptText?.let(DeliveryPlatformDetector::detect)
+                    if (
+                        receiptText != null &&
+                        platform != null &&
+                        dbHelper.reclassifyOrder(order.id, platform.wireValue, receiptText)
+                    ) {
+                        AppLogger.s(
+                            "PHÂN LOẠI",
+                            "Đã đọc lại phiếu #${order.id} bằng OCR và nhận diện ${platform.displayName}; chuyển sang hàng đợi gửi POS."
+                        )
+                    }
+                } catch (error: Exception) {
+                    Log.w(TAG, "Could not recover unclassified order #${order.id}", error)
+                    AppLogger.w(
+                        "OCR",
+                        "Chưa thể đọc lại phiếu #${order.id}; phiếu vẫn được giữ an toàn để thử lại sau."
+                    )
+                }
+            }
+        }
 
     /**
      * Background loop draining due pending orders from SQLite.
@@ -98,7 +138,12 @@ class WebhookDispatcher(
                     if (!coroutineContext.isActive) break
                     if (!dbHelper.claimOrder(order.id)) continue
                     AppLogger.i("RETRY", "Đang thử gửi lại đơn #${order.id} (Lần ${order.retryCount + 1})...")
-                    val result = executePost(order.rawBase64, order.branchId, order.platform)
+                    val result = executePost(
+                        order.rawBase64,
+                        order.branchId,
+                        order.platform,
+                        order.receiptText
+                    )
                     if (result.isSuccess) {
                         dbHelper.markOrderSent(order.id)
                         Log.i(TAG, "Queued order #${order.id} sent successfully via retry")
@@ -177,7 +222,12 @@ class WebhookDispatcher(
             }
         }
 
-    private fun executePost(base64Payload: String, branch: Int, platform: String): Result<String> {
+    private fun executePost(
+        base64Payload: String,
+        branch: Int,
+        platform: String,
+        receiptText: String?
+    ): Result<String> {
         return try {
             val endpoint = "$backendUrl/api/webhooks/delivery/relay"
             val url = URL(endpoint)
@@ -196,7 +246,22 @@ class WebhookDispatcher(
             val json = JSONObject().apply {
                 put("branch_id", branch)
                 put("platform", platform)
-                put("raw_bytes_base64", base64Payload)
+                if (!receiptText.isNullOrBlank()) {
+                    // Older relay deployments parse raw_bytes_base64 before
+                    // raw_receipt. Send OCR text in that established field and
+                    // carry the original raster separately for compatibility.
+                    put(
+                        "raw_bytes_base64",
+                        android.util.Base64.encodeToString(
+                            receiptText.toByteArray(Charsets.UTF_8),
+                            android.util.Base64.NO_WRAP
+                        )
+                    )
+                    put("raw_receipt", receiptText)
+                    put("raw_original_bytes_base64", base64Payload)
+                } else {
+                    put("raw_bytes_base64", base64Payload)
+                }
             }
 
             val writer = OutputStreamWriter(connection.outputStream, "UTF-8")

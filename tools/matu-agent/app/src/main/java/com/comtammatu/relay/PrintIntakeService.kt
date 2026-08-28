@@ -16,6 +16,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
+import java.io.OutputStream
 import java.net.InetAddress
 import java.net.ServerSocket
 import java.net.Socket
@@ -64,6 +65,7 @@ class PrintIntakeService : Service() {
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var serverSocket: ServerSocket? = null
     private lateinit var dispatcher: WebhookDispatcher
+    private lateinit var receiptTextRecognizer: ReceiptTextRecognizer
 
     override fun onCreate() {
         super.onCreate()
@@ -71,10 +73,12 @@ class PrintIntakeService : Service() {
         // before the first onStartCommand delivers intent extras.
         val saved = configFromPrefs()
         dispatcher = WebhookDispatcher(this, saved.backendUrl, saved.branchId, saved.secret)
+        receiptTextRecognizer = ReceiptTextRecognizer()
         createNotificationChannel()
 
-        // Start background SQLite queue draining loop
+        // Recover raster-only receipts before entering the normal retry loop.
         serviceScope.launch {
+            dispatcher.recoverUnclassifiedReceipts(receiptTextRecognizer)
             dispatcher.startRetryLoop()
         }
     }
@@ -173,8 +177,10 @@ class PrintIntakeService : Service() {
         try {
             socket.soTimeout = READ_TIMEOUT_MS
             val inputStream: InputStream = socket.getInputStream()
+            val clientOutput: OutputStream = socket.getOutputStream()
             val buffer = ByteArray(2048)
             val outputStream = ByteArrayOutputStream()
+            val statusResponder = EscPosStatusResponder()
             var drainingAfterCut = false
 
             try {
@@ -182,6 +188,16 @@ class PrintIntakeService : Service() {
                     val bytesRead = inputStream.read(buffer)
                     if (bytesRead == -1) break
                     outputStream.write(buffer, 0, bytesRead)
+
+                    val statusResponses = statusResponder.responsesFor(buffer.copyOf(bytesRead))
+                    if (statusResponses.isNotEmpty()) {
+                        clientOutput.write(statusResponses)
+                        clientOutput.flush()
+                        AppLogger.i(
+                            "IN ẤN",
+                            "Đã phản hồi ${statusResponses.size} truy vấn trạng thái ESC/POS"
+                        )
+                    }
 
                     // Reject oversized streams (slow-loris / abuse) before they
                     // grow the in-memory buffer without bound.
@@ -193,7 +209,10 @@ class PrintIntakeService : Service() {
 
                     // Once a cut command appears, keep a short drain window open so
                     // a trailing cut sequence (double-cut printers) is captured too.
-                    if (!drainingAfterCut && findLastCutIndex(outputStream.toByteArray()) >= 0) {
+                    if (
+                        !drainingAfterCut &&
+                        EscPosReceiptBoundary.hasCutCommand(outputStream.toByteArray())
+                    ) {
                         drainingAfterCut = true
                         socket.soTimeout = CUT_DRAIN_TIMEOUT_MS
                     }
@@ -204,21 +223,39 @@ class PrintIntakeService : Service() {
 
             val rawBytes = outputStream.toByteArray()
 
-            if (rawBytes.isNotEmpty()) {
+            if (EscPosStatusResponder.isStatusOnly(rawBytes)) {
+                AppLogger.i("IN ẤN", "Kiểm tra trạng thái máy in thành công")
+            } else if (rawBytes.isNotEmpty()) {
                 Log.i(TAG, "Received ${rawBytes.size} bytes from $clientAddress")
                 AppLogger.i("IN ẤN", "Nhận được trọn vẹn luồng in (${rawBytes.size} bytes) từ $clientAddress")
 
-                val platform = DeliveryPlatformDetector.detect(rawBytes)
-                if (platform == null) {
-                    val queuedId = dispatcher.storeUnclassifiedReceipt(rawBytes)
-                    AppLogger.e(
-                        "PHÂN LOẠI",
-                        "Phiếu #$queuedId chưa xác định rõ ShopeeFood, GreenSM Food hay beFood; đã giữ lại và không gửi lên POS."
-                    )
-                } else {
-                    AppLogger.i("PHÂN LOẠI", "Nhận diện nguồn ${platform.displayName}")
-                    serviceScope.launch {
-                        dispatcher.dispatchRawReceipt(rawBytes, platform)
+                serviceScope.launch {
+                    var receiptText: String? = null
+                    var platform = DeliveryPlatformDetector.detect(rawBytes)
+
+                    if (platform == null && EscPosRasterDecoder.decodeLargest(rawBytes) != null) {
+                        AppLogger.i("OCR", "Phiếu là ảnh; đang đọc chữ trực tiếp trên thiết bị...")
+                        try {
+                            receiptText = receiptTextRecognizer.recognize(rawBytes)
+                            platform = receiptText?.let(DeliveryPlatformDetector::detect)
+                            if (receiptText != null) {
+                                AppLogger.s("OCR", "Đã đọc xong nội dung phiếu in bằng OCR")
+                            }
+                        } catch (error: Exception) {
+                            Log.w(TAG, "On-device receipt OCR failed", error)
+                            AppLogger.e("OCR", "Không đọc được chữ trên phiếu ảnh: ${error.localizedMessage ?: "lỗi OCR"}")
+                        }
+                    }
+
+                    if (platform == null) {
+                        val queuedId = dispatcher.storeUnclassifiedReceipt(rawBytes, receiptText)
+                        AppLogger.e(
+                            "PHÂN LOẠI",
+                            "Phiếu #$queuedId chưa xác định rõ ShopeeFood, GreenSM Food hay beFood; đã giữ lại và không gửi lên POS."
+                        )
+                    } else {
+                        AppLogger.i("PHÂN LOẠI", "Nhận diện nguồn ${platform.displayName}")
+                        dispatcher.dispatchRawReceipt(rawBytes, platform, receiptText)
                     }
                 }
             } else {
@@ -232,20 +269,6 @@ class PrintIntakeService : Service() {
                 socket.close()
             } catch (_: Exception) {}
         }
-    }
-
-    private fun findLastCutIndex(bytes: ByteArray): Int {
-        if (bytes.size < 2) return -1
-        var lastIndex = -1
-        for (i in 0 until bytes.size - 1) {
-            val b1 = bytes[i].toInt() and 0xFF
-            val b2 = bytes[i + 1].toInt() and 0xFF
-            // ESC/POS Cut paper command sequence: GS V (0x1D 0x56) or ESC i / ESC m (0x1B 0x69 / 0x1B 0x6D)
-            if ((b1 == 0x1D && b2 == 0x56) || (b1 == 0x1B && (b2 == 0x69 || b2 == 0x6D))) {
-                lastIndex = i
-            }
-        }
-        return lastIndex
     }
 
     private fun stopServer() {
@@ -263,6 +286,7 @@ class PrintIntakeService : Service() {
         super.onDestroy()
         stopServer()
         serviceScope.cancel()
+        receiptTextRecognizer.close()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null

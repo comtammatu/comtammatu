@@ -356,7 +356,7 @@ interface ActiveOrdersListProps {
   ) => void;
 }
 
-export type ActiveOrderFilterTab = "all" | "cooking" | "takeaway" | "dining";
+export type ActiveOrderFilterTab = "all" | "cooking" | "dineIn" | "takeaway";
 
 /**
  * Sidebar list of orders the cashier still needs to act on (kitchen flow
@@ -387,13 +387,14 @@ function ActiveOrdersListComponent({
 
   const tabCounts = useMemo(() => {
     let cooking = 0;
+    let dineIn = 0;
     let takeaway = 0;
-    let dining = 0;
     for (const order of allActiveOrders) {
       if (KITCHEN_WAITING_STATUSES.has(order.status)) {
         cooking += 1;
-      } else if (order.order_type === "dine_in") {
-        dining += 1;
+      }
+      if (order.order_type === "dine_in") {
+        dineIn += 1;
       }
       if (order.order_type === "takeaway" || order.order_type === "delivery") {
         takeaway += 1;
@@ -402,8 +403,8 @@ function ActiveOrdersListComponent({
     return {
       all: allActiveOrders.length,
       cooking,
+      dineIn,
       takeaway,
-      dining,
     };
   }, [allActiveOrders]);
 
@@ -413,16 +414,14 @@ function ActiveOrdersListComponent({
         return allActiveOrders.filter((order) =>
           KITCHEN_WAITING_STATUSES.has(order.status),
         );
+      case "dineIn":
+        return allActiveOrders.filter(
+          (order) => order.order_type === "dine_in",
+        );
       case "takeaway":
         return allActiveOrders.filter(
           (order) =>
             order.order_type === "takeaway" || order.order_type === "delivery",
-        );
-      case "dining":
-        return allActiveOrders.filter(
-          (order) =>
-            order.order_type === "dine_in" &&
-            !KITCHEN_WAITING_STATUSES.has(order.status),
         );
       case "all":
       default:
@@ -491,6 +490,22 @@ function ActiveOrdersListComponent({
           </Button>
           <Button
             type="button"
+            variant={activeTab === "dineIn" ? "default" : "ghost"}
+            size="sm"
+            data-testid="pos-order-tab-dinein"
+            className={cn(
+              "h-8 px-1 text-xs font-medium",
+              activeTab === "dineIn"
+                ? "bg-background font-semibold text-foreground shadow-2xs hover:bg-background"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+            onClick={() => setActiveTab("dineIn")}
+          >
+            <span>{messages.pos.orderHistory.tabs.dineIn}</span>
+            <span className="tabular-nums opacity-75">({tabCounts.dineIn})</span>
+          </Button>
+          <Button
+            type="button"
             variant={activeTab === "takeaway" ? "default" : "ghost"}
             size="sm"
             data-testid="pos-order-tab-takeaway"
@@ -504,22 +519,6 @@ function ActiveOrdersListComponent({
           >
             <span>{messages.pos.orderHistory.tabs.takeaway}</span>
             <span className="tabular-nums opacity-75">({tabCounts.takeaway})</span>
-          </Button>
-          <Button
-            type="button"
-            variant={activeTab === "dining" ? "default" : "ghost"}
-            size="sm"
-            data-testid="pos-order-tab-dining"
-            className={cn(
-              "h-8 px-1 text-xs font-medium",
-              activeTab === "dining"
-                ? "bg-background font-semibold text-foreground shadow-2xs hover:bg-background"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-            onClick={() => setActiveTab("dining")}
-          >
-            <span>{messages.pos.orderHistory.tabs.dining}</span>
-            <span className="tabular-nums opacity-75">({tabCounts.dining})</span>
           </Button>
         </div>
       </div>

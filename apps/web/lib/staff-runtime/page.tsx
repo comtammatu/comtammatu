@@ -45,6 +45,7 @@ import { loadAuthState } from "@/_lib/auth";
 import { BranchOpsRefresh } from "@/_components/branch-ops-refresh";
 import { NotificationPopupControl } from "@/_components/notification-popup-control";
 import { messages } from "@lib/messages";
+import { resolveCountSlipReviewerEmployeeId } from "@lib/inventory/count-slip-reviewer";
 import { workCopy } from "@lib/messages/work";
 import {
   EmployeeActionSection,
@@ -518,12 +519,23 @@ export async function StaffWorkdayPageContent({
           });
 
     if (countPermissionResult.data === true) {
-      const countCountResult = await service
+      const reviewerEmployeeId = await resolveCountSlipReviewerEmployeeId(
+        claims.tenant_id,
+        profileId,
+      );
+      let countCountQuery = service
         .from("inventory_count_slips")
         .select("id", { count: "exact", head: true })
         .eq("tenant_id", claims.tenant_id)
         .eq("branch_id", branchIdFilter)
         .eq("status", "submitted");
+      if (reviewerEmployeeId !== null) {
+        countCountQuery = countCountQuery.neq(
+          "employee_id",
+          reviewerEmployeeId,
+        );
+      }
+      const countCountResult = await countCountQuery;
       pendingCountSlips = countCountResult.count ?? 0;
     }
   }

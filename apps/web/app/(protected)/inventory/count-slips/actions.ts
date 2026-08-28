@@ -5,6 +5,7 @@ import { z } from "zod";
 import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "@/(protected)/inventory/_lib/auth";
+import { resolveCountSlipReviewerEmployeeId } from "@lib/inventory/count-slip-reviewer";
 
 /* ─── Count slip review (manager queue) ─── */
 
@@ -12,6 +13,8 @@ const approveSlipSchema = z.object({
   slipId: z.coerce.number().int().positive(),
   autoCreateWaste: z.boolean().optional().default(false),
 });
+
+const SELF_REVIEW_ERROR = "Không thể tự duyệt phiếu của mình.";
 
 export type ApproveCountSlipResult = {
   slipId: number;
@@ -47,7 +50,7 @@ export async function approveCountSlip(
     PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
   );
   if (!ctx) return { success: false, error: "Không có quyền duyệt phiếu đếm" };
-  const { supabase, claims } = ctx;
+  const { supabase, claims, userId } = ctx;
   const { data: slip } = await supabase
     .from("inventory_count_slips")
     .select(`
@@ -55,6 +58,7 @@ export async function approveCountSlip(
       slip_number,
       branch_id,
       location_id,
+      employee_id,
       lines:inventory_count_slip_lines (
         id,
         ingredient_id,
@@ -68,6 +72,14 @@ export async function approveCountSlip(
     .eq("tenant_id", claims.tenant_id)
     .maybeSingle();
   if (!slip) return { success: false, error: "Không tìm thấy phiếu đếm." };
+
+  const reviewerEmployeeId = await resolveCountSlipReviewerEmployeeId(
+    claims.tenant_id,
+    userId,
+  );
+  if (slip.employee_id === reviewerEmployeeId) {
+    return { success: false, error: SELF_REVIEW_ERROR };
+  }
 
   const { data, error } = await supabase.rpc("approve_inventory_count_slip", {
     p_slip_id: parsed.data.slipId,
@@ -198,14 +210,22 @@ export async function requestCountRecount(
     PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
   );
   if (!ctx) return { success: false, error: "Không có quyền duyệt phiếu đếm" };
-  const { supabase, claims } = ctx;
+  const { supabase, claims, userId } = ctx;
   const { data: slip } = await supabase
     .from("inventory_count_slips")
-    .select("branch_id")
+    .select("branch_id, employee_id")
     .eq("id", parsed.data.slipId)
     .eq("tenant_id", claims.tenant_id)
     .maybeSingle();
   if (!slip) return { success: false, error: "Không tìm thấy phiếu đếm." };
+
+  const reviewerEmployeeId = await resolveCountSlipReviewerEmployeeId(
+    claims.tenant_id,
+    userId,
+  );
+  if (slip.employee_id === reviewerEmployeeId) {
+    return { success: false, error: SELF_REVIEW_ERROR };
+  }
 
   const { error } = await supabase.rpc("request_inventory_count_recount", {
     p_slip_id: parsed.data.slipId,
@@ -230,7 +250,7 @@ function mapCountSlipError(error: { code?: string; message?: string }): string {
   switch (error.code) {
     case "42501":
       return error.message?.includes("cannot_review_own_slip")
-        ? "Không thể tự duyệt phiếu của mình."
+        ? SELF_REVIEW_ERROR
         : "Không có quyền duyệt phiếu đếm.";
     case "22023":
       return "Phiếu không còn ở trạng thái chờ duyệt.";

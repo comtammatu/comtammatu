@@ -107,8 +107,8 @@ function AccountMenu({
             aria-label={isMobile ? copy.personalPage : undefined}
             className={
               isMobile
-                ? "shrink-0 rounded-full p-0"
-                : "w-full justify-start gap-2 rounded-md bg-sidebar-accent px-2.5 text-left text-sidebar-foreground ring-1 ring-sidebar-border/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                ? "flex size-10 shrink-0 items-center justify-center rounded-full p-0 ring-1 ring-border/50 hover:ring-border"
+                : "flex w-full items-center justify-start gap-2 rounded-lg bg-sidebar-accent/80 px-2.5 py-2 text-left text-sidebar-foreground ring-1 ring-sidebar-border/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             }
           />
         }
@@ -120,10 +120,10 @@ function AccountMenu({
         </Avatar>
         {isMobile ? null : (
           <>
-            <span className="min-w-0 flex-1 truncate text-sm font-medium">
+            <span className="min-w-0 flex-1 truncate text-xs font-medium">
               {user.name}
             </span>
-            <IconChevronsUpDown className="ml-auto text-sidebar-foreground/60" />
+            <IconChevronsUpDown className="ml-auto size-4 shrink-0 text-sidebar-foreground/60" />
           </>
         )}
       </DropdownMenuTrigger>
@@ -136,10 +136,10 @@ function AccountMenu({
         <DropdownMenuGroup>
           {personalHref ? (
             <DropdownMenuItem
-              className={cn("text-sm", isTouchLayout ? "min-h-12" : "min-h-10")}
+              className={cn("text-sm flex items-center gap-2", isTouchLayout ? "min-h-12" : "min-h-10")}
               render={<ProtectedLink href={personalHref} />}
             >
-              <IconUserRound />
+              <IconUserRound className="size-4 shrink-0" />
               {copy.personalPage}
             </DropdownMenuItem>
           ) : null}
@@ -154,12 +154,12 @@ function AccountMenu({
               nativeButton
               variant="destructive"
               className={cn(
-                "w-full text-sm",
+                "w-full text-sm flex items-center gap-2",
                 isTouchLayout ? "min-h-12" : "min-h-10",
               )}
-              render={<Button type="submit" variant="ghost" />}
+              render={<Button type="submit" variant="ghost" className="w-full justify-start" />}
             >
-              <IconLogout />
+              <IconLogout className="size-4 shrink-0" />
               {copy.signOut}
             </DropdownMenuItem>
           </form>
@@ -206,22 +206,23 @@ function PrimaryNavItem({
           <ProtectedLink
             href={item.href}
             aria-current={active ? "page" : undefined}
+            className="flex items-center gap-2 w-full min-w-0"
           >
             <Icon />
-            <span className="min-w-0 flex-1 truncate">{item.label}</span>
+            <span className="min-w-0 flex-1 truncate text-xs font-medium">{item.label}</span>
             <UnreadBadge count={item.badgeCount} />
           </ProtectedLink>
         }
       />
       {subNavGroups.length > 0 ? (
-        <SidebarMenuSub className="mx-4 my-1 gap-1 border-l-2 border-primary/20 px-2 py-1">
+        <SidebarMenuSub className="mx-3 my-1 flex flex-col gap-1 border-l-2 border-primary/20 pl-2 pr-0 py-1">
           {subNavGroups.map((group) => (
             <Fragment key={group.title}>
               {subNavGroups.length > 1 ? (
                 <SidebarMenuSubItem>
                   <SectionLabel
                     density="dense"
-                    className="px-2 py-1 text-sidebar-foreground/70"
+                    className="px-2 py-1 text-sidebar-foreground/60 font-semibold"
                   >
                     {group.title}
                   </SectionLabel>
@@ -235,14 +236,15 @@ function PrimaryNavItem({
                     <SidebarMenuSubButton
                       isActive={subActive}
                       size={isTouchLayout ? "touch" : "md"}
-                      className="data-active:bg-primary/10 data-active:font-semibold data-active:text-primary dark:data-active:bg-primary/15 dark:data-active:text-sidebar-foreground"
+                      className="rounded-md data-active:bg-primary/10 data-active:font-semibold data-active:text-primary dark:data-active:bg-primary/15 dark:data-active:text-sidebar-foreground"
                       render={
                         <ProtectedLink
                           href={subItem.linkHref ?? subItem.href}
                           aria-current={subActive ? "page" : undefined}
+                          className="flex items-center gap-2 w-full min-w-0"
                         >
                           <SubIcon />
-                          <span className="min-w-0 flex-1 truncate">
+                          <span className="min-w-0 flex-1 truncate text-xs">
                             {subItem.label}
                           </span>
                           <UnreadBadge count={subItem.badgeCount} />
@@ -267,7 +269,7 @@ function UnreadBadge({ count = 0 }: { count?: number }) {
       <Badge
         aria-hidden
         variant="secondary"
-        className="ml-auto min-w-5 justify-center rounded-full px-1.5 tabular-nums"
+        className="ml-auto min-w-5 h-5 flex items-center justify-center rounded-full px-1.5 text-3xs font-semibold tabular-nums"
       >
         {count > 99 ? "99+" : count}
       </Badge>
@@ -342,21 +344,21 @@ export function AppShell({
     >
       <Sidebar variant="inset" collapsible="offcanvas">
         <SidebarHeader className="border-b border-sidebar-border px-3 py-3">
-          <div className="flex items-center gap-3 rounded-md bg-sidebar-accent p-2 ring-1 ring-sidebar-border/70">
+          <div className="flex items-center gap-2 rounded-md bg-sidebar-accent p-2 ring-1 ring-sidebar-border/70">
             <BrandLogoBox tone="sidebar" className="bg-sidebar">
               <BrandMark variant="seal" decorative className="size-full" />
             </BrandLogoBox>
             <div className="min-w-0 flex-1">
-              <p className="truncate font-heading text-sm font-semibold leading-tight">
+              <p className="truncate font-heading text-xs font-semibold leading-tight text-sidebar-foreground">
                 {copy.brandShortName}
               </p>
-              <p className="mt-0.5 truncate text-xs text-sidebar-foreground/70">
+              <p className="mt-0.5 truncate text-sidebar-foreground/70 text-xs">
                 {controlSurfaceCopy.dashboard.title}
               </p>
             </div>
           </div>
           {sidebarHeaderAccessory ? (
-            <div className="mt-2">{sidebarHeaderAccessory}</div>
+            <div className="mt-2 w-full">{sidebarHeaderAccessory}</div>
           ) : null}
         </SidebarHeader>
 
@@ -390,10 +392,10 @@ export function AppShell({
                             />
                           }
                         >
-                          <span className="min-w-0 flex-1 truncate">
+                          <span className="min-w-0 flex-1 truncate text-xs">
                             {controlSurfaceCopy.nav.catalog}
                           </span>
-                          <IconChevronDown className="ml-auto size-4 text-sidebar-foreground/60" />
+                          <IconChevronDown className="ml-auto size-4 shrink-0 text-sidebar-foreground/60" />
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                           <SidebarMenu className="mt-1 gap-1">
@@ -425,7 +427,7 @@ export function AppShell({
           </SidebarGroup>
         </SidebarContent>
 
-        <SidebarFooter className="border-t border-sidebar-border px-2 py-2">
+        <SidebarFooter className="border-t border-sidebar-border px-2 py-2 flex flex-col gap-2">
           <NotificationBell
             variant="sidebar"
             unreadCount={notificationSummary.unreadCount}

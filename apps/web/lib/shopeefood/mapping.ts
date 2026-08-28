@@ -19,7 +19,7 @@ export const SHOPEE_MENU_MAPPING: Record<string, ShopeeMappingItem> = {
   "SPF_ITEM_COM_BI": { name: "Cơm Tấm Bì", defaultPrice: 30000, category: "Món khác" },
   "SPF_ITEM_COM_CHA": { name: "Cơm Tấm Chả", defaultPrice: 30000, category: "Món khác" },
   "SPF_ITEM_COM_TRUNG": { name: "Cơm Tấm Trứng", defaultPrice: 30000, category: "Món khác" },
-  "SPF_ITEM_COM_THEM": { name: "Cơm Tấm Thêm", defaultPrice: 6000, category: "Món khác" },
+  "SPF_ITEM_COM_THEM": { name: "Cơm Thêm", defaultPrice: 6000, category: "Món khác" },
 
   // Món Ăn Kèm (Sides)
   "SPF_ITEM_TOP_MO": { name: "Tóp Mỡ", defaultPrice: 6000, category: "Ăn kèm" },
@@ -47,7 +47,7 @@ export const SHOPEE_MENU_MAPPING: Record<string, ShopeeMappingItem> = {
   // Món thêm
   "SPF_MOD_DUNG_CU": { name: "Dụng Cụ Mang Về", defaultPrice: 3000 },
   "SPF_MOD_TOP_MO": { name: "Tóp Mỡ", defaultPrice: 6000 },
-  "SPF_MOD_COM_THEM": { name: "Cơm Tấm Thêm", defaultPrice: 6000 },
+  "SPF_MOD_COM_THEM": { name: "Cơm Thêm", defaultPrice: 6000 },
   "SPF_MOD_TRUNG": { name: "Trứng", defaultPrice: 10000 },
   "SPF_MOD_CHA": { name: "Chả", defaultPrice: 12000 },
   "SPF_MOD_BI": { name: "Bì", defaultPrice: 12000 },
@@ -62,6 +62,18 @@ export function normalizeMenuName(name: string): string {
     .replace(/đ/g, "d")
     .trim();
 }
+
+const ITEM_NAME_ALIASES: Record<string, string> = {
+  "com suon cot let": "Sườn Cốt Lết",
+  "com suon cong": "Sườn Cọng",
+  "com suon mot gang": "Sườn Một Gang",
+  "com them": "Cơm Thêm",
+};
+
+const STANDALONE_OPTION_ALIASES: Record<string, string> = {
+  "canh kho qua": "Canh Khổ Qua",
+  "canh chua tom": "Canh Chua Tôm",
+};
 
 /**
  * Generates a deterministic UUID from Shopee's orderId for idempotency key
@@ -161,7 +173,10 @@ export function matchMenuItem(
   // 1. Direct ID lookup in mapping
   const idStr = shopeeItem.itemId != null ? String(shopeeItem.itemId) : "";
   const mapped = idStr ? SHOPEE_MENU_MAPPING[idStr] : null;
-  const targetName = mapped?.name || shopeeItem.name;
+  const targetName =
+    mapped?.name ||
+    ITEM_NAME_ALIASES[normalizeMenuName(shopeeItem.name)] ||
+    shopeeItem.name;
   const normalizedTarget = normalizeMenuName(targetName);
 
   // 2. Lookup in DB items by exact or normalized name
@@ -175,17 +190,9 @@ export function matchMenuItem(
     return matchedDb;
   }
 
-  // 3. Fallback to first available db item or fallback mock
-  const fallback = dbItems[0] || {
-    id: 1,
-    name: targetName,
-    base_price: mapped?.defaultPrice || 54000,
-  };
-  return {
-    id: fallback.id,
-    name: targetName,
-    base_price: fallback.base_price,
-  };
+  throw new Error(
+    `Món "${shopeeItem.name}" (ID: ${idStr || "N/A"}) chưa được ánh xạ trong thực đơn quán`,
+  );
 }
 
 const SIDE_NAME_ALIASES: Record<string, string> = {
@@ -196,13 +203,13 @@ const SIDE_NAME_ALIASES: Record<string, string> = {
   "muong dua": "Dụng Cụ Mang Về",
   "top mo": "Tóp Mỡ",
   "mo hanh": "Mỡ Hành",
-  "com them": "Cơm Tấm Thêm",
-  "them com": "Cơm Tấm Thêm",
-  "phan com them": "Cơm Tấm Thêm",
-  "com trang them": "Cơm Tấm Thêm",
-  "com tam them": "Cơm Tấm Thêm",
-  "com": "Cơm Tấm Thêm",
-  "extra rice": "Cơm Tấm Thêm",
+  "com them": "Cơm Thêm",
+  "them com": "Cơm Thêm",
+  "phan com them": "Cơm Thêm",
+  "com trang them": "Cơm Thêm",
+  "com tam them": "Cơm Thêm",
+  "com": "Cơm Thêm",
+  "extra rice": "Cơm Thêm",
   "trung": "Trứng",
   "trung op la": "Trứng",
   "trung chien": "Trứng",
@@ -281,6 +288,20 @@ function parseNumericPrice(value: number | string | undefined): number {
   return 0;
 }
 
+function matchStandaloneOptionItem(
+  optionName: string,
+  dbItems: Array<{ id: number; name: string; base_price: number }>,
+): { id: number; name: string; base_price: number } | null {
+  const canonicalName = STANDALONE_OPTION_ALIASES[normalizeMenuName(optionName)];
+  if (!canonicalName) return null;
+  const normalizedCanonical = normalizeMenuName(canonicalName);
+  return (
+    dbItems.find(
+      (item) => normalizeMenuName(item.name) === normalizedCanonical,
+    ) ?? null
+  );
+}
+
 /**
  * Transforms incoming ShopeeFood order payload into RPC-ready items structure
  */
@@ -291,11 +312,17 @@ export function transformShopeeOrderPayload(
   const rawItems =
     shopeeOrder.items || shopeeOrder.dishList || shopeeOrder.orderItems || [];
 
-  const items = rawItems.map((si) => {
+  const items = rawItems.flatMap((si): TransformedOrderForRpc["items"] => {
     const matched = matchMenuItem(si, dbItems);
+    const qty = si.quantity || 1;
 
     const sides: Array<{ name: string; price: number; quantity: number; side_item_id: number }> = [];
-    const unmatchedOptions: string[] = [];
+    const optionNotes: string[] = [];
+    const standaloneOptions: Array<{
+      item: { id: number; name: string; base_price: number };
+      price: number;
+      quantity: number;
+    }> = [];
 
     // Parse options or modifiers (Shopee Partner web structure)
     const optionsList = si.options || si.modifiers || [];
@@ -318,6 +345,17 @@ export function transformShopeeOrderPayload(
       const optPrice = parseNumericPrice(opt.price);
       const optQty = typeof opt.quantity === "number" && opt.quantity > 0 ? opt.quantity : 1;
 
+      const standaloneItem = matchStandaloneOptionItem(optName, dbItems);
+      if (standaloneItem) {
+        standaloneOptions.push({
+          item: standaloneItem,
+          price: optPrice > 0 ? optPrice : standaloneItem.base_price,
+          quantity: optQty,
+        });
+        optionNotes.push(standaloneItem.name);
+        continue;
+      }
+
       const matchedSide = matchSideItem(optName, dbItems);
       if (matchedSide) {
         sides.push({
@@ -327,15 +365,25 @@ export function transformShopeeOrderPayload(
           quantity: optQty,
         });
       } else {
-        unmatchedOptions.push(optName);
+        optionNotes.push(optName);
       }
     }
 
     const sidesSum = sides.reduce((acc, s) => acc + s.price * s.quantity, 0);
+    const standaloneOptionsSum = standaloneOptions.reduce(
+      (acc, option) => acc + option.price * option.quantity,
+      0,
+    );
     const rawItemPrice = parseNumericPrice(si.price);
     const unitPrice =
-      rawItemPrice > 0 ? rawItemPrice : matched.base_price + sidesSum;
-    const qty = si.quantity || 1;
+      rawItemPrice > 0
+        ? standaloneOptions.length > 0
+          ? Math.max(
+              matched.base_price + sidesSum,
+              rawItemPrice - standaloneOptionsSum,
+            )
+          : rawItemPrice
+        : matched.base_price + sidesSum;
     const subtotal = unitPrice * qty;
 
     const isFreeGift =
@@ -361,10 +409,10 @@ export function transformShopeeOrderPayload(
 
     const noteParts = [
       si.note?.trim(),
-      unmatchedOptions.length > 0 ? `Tùy chọn: ${unmatchedOptions.join(", ")}` : null,
+      optionNotes.length > 0 ? `Tùy chọn: ${optionNotes.join(", ")}` : null,
     ].filter(Boolean);
 
-    return {
+    const mainItem: TransformedOrderForRpc["items"][number] = {
       menu_item_id: matched.id,
       item_name: matched.name,
       quantity: qty,
@@ -377,6 +425,24 @@ export function transformShopeeOrderPayload(
       discount_value: discountValue,
       discount_note: discountNote,
     };
+
+    const promotedItems = standaloneOptions.map(
+      ({ item, price, quantity }): TransformedOrderForRpc["items"][number] => {
+        const promotedQuantity = qty * quantity;
+        return {
+          menu_item_id: item.id,
+          item_name: item.name,
+          quantity: promotedQuantity,
+          unit_price: price,
+          modifiers: [],
+          sides: [],
+          subtotal: price * promotedQuantity,
+          note: null,
+        };
+      },
+    );
+
+    return [mainItem, ...promotedItems];
   });
 
   // The relay route rejects receipts without an extractable order code before

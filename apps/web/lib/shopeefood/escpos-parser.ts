@@ -178,8 +178,23 @@ export function parseShopeeReceiptText(receiptText: string): ShopeeOrderRaw {
       labeledCode = orderIdMatch[1].trim();
     }
 
+    // Shopee's raster layout puts the order label and value on separate rows.
+    // OCR preserves that visual line break, so accept the immediately following
+    // identifier while still requiring a digit to avoid capturing prose.
+    if (
+      /^(?:mã\s*đơn(?:\s*hàng)?|mã\s*đặt\s*món|order\s*id)\s*:?[\s#]*$/i.test(line)
+    ) {
+      const nextLine = lines[idx + 1];
+      if (
+        nextLine &&
+        /^(?=.*\d)[A-Z0-9_-]{5,}$/i.test(nextLine)
+      ) {
+        labeledCode = nextLine;
+      }
+    }
+
     if (!bareNumericCode) {
-      const numericDateOrderMatch = line.match(/\b(\d{6}-\d{6,})\b/);
+      const numericDateOrderMatch = line.match(/\b(\d{4,6}-\d{6,})\b/);
       if (numericDateOrderMatch && numericDateOrderMatch[1]) {
         bareNumericCode = numericDateOrderMatch[1];
       }
@@ -245,21 +260,23 @@ export function parseShopeeReceiptText(receiptText: string): ShopeeOrderRaw {
         .replace(/^\[[^\]]+\]\s*/, "")
         .replace(/^(?:thêm|món thêm|tùy chọn)[:\s]*/i, "")
         .trim();
+      const sideQuantityPrefix = cleanSideText.match(/^(\d+)\s*[xX]\s*(.+)$/);
       const sidePriceMatch = cleanSideText.match(/(?:x\s*(\d+)\s*)?[:\s]*([\d.,]+)\s*(?:đ|vnd)?$/i) ||
         cleanSideText.match(/\(([\d.,]+)\s*(?:đ|vnd)?\)/i);
 
-      let sideName = cleanSideText;
+      let sideName = sideQuantityPrefix?.[2]?.trim() || cleanSideText;
       let sidePrice = 0;
-      let sideQty = 1;
+      let sideQty = parseInt(sideQuantityPrefix?.[1] || "1", 10) || 1;
 
       if (sidePriceMatch) {
         if (sidePriceMatch[1] && !sidePriceMatch[2]) {
           sidePrice = parsePriceNumber(sidePriceMatch[1]);
-          sideName = cleanSideText.replace(/\([^)]+\)/, "").trim();
+          sideName = sideName.replace(/\([^)]+\)/, "").trim();
         } else if (sidePriceMatch[2]) {
-          sideQty = parseInt(sidePriceMatch[1] || "1", 10) || 1;
+          sideQty =
+            parseInt(sidePriceMatch[1] || sideQuantityPrefix?.[1] || "1", 10) || 1;
           sidePrice = parsePriceNumber(sidePriceMatch[2]);
-          sideName = cleanSideText.replace(sidePriceMatch[0], "").trim();
+          sideName = sideName.replace(sidePriceMatch[0], "").trim();
         }
       }
 
@@ -276,6 +293,19 @@ export function parseShopeeReceiptText(receiptText: string): ShopeeOrderRaw {
     const itemNoteMatch = line.match(/^(?:ghi\s*chú|note|lưu\s*ý)[:\s]+(.+)/i);
     if (itemNoteMatch && itemNoteMatch[1] && currentItem) {
       currentItem.note = itemNoteMatch[1].trim();
+      continue;
+    }
+
+    // Raster receipts render the quantity and row total in a separate right-
+    // aligned row after the numbered item name (for example "x2 114.000đ").
+    const detachedItemPrice = line.match(
+      /^[xX]\s*(\d+)\s+([\d.,]+)\s*(?:đ|vnd)?$/i,
+    );
+    if (detachedItemPrice && currentItem) {
+      const quantity = parseInt(detachedItemPrice[1] || "1", 10) || 1;
+      const rowTotal = parsePriceNumber(detachedItemPrice[2]);
+      currentItem.quantity = quantity;
+      currentItem.price = rowTotal > 0 ? Math.round(rowTotal / quantity) : 0;
       continue;
     }
 

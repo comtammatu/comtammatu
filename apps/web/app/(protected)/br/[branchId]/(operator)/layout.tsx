@@ -68,7 +68,7 @@ export default async function OperatorLayout({
   const branchId = parseOperatorBranchId(rawBranchId);
   if (branchId == null) notFound();
 
-  const { supabase, claims } = await loadAuthState();
+  const { supabase, claims, userId } = await loadAuthState();
   const context = await resolveBranchContext(supabase, claims, branchId);
   if (!context) notFound();
 
@@ -89,6 +89,7 @@ export default async function OperatorLayout({
           await fetchBranchQueueCounts(
             supabase,
             claims,
+            userId,
             context.branchId,
             branchKind,
           ).catch((error: unknown) => {

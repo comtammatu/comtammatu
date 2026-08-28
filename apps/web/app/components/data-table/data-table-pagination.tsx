@@ -49,7 +49,7 @@ export function DataTablePagination({
           disabled={currentPage <= 1}
           aria-label={ACTIONS_VI.prevPage}
         >
-          <IconChevronLeft className="size-4" />
+          <IconChevronLeft className="size-4 shrink-0" />
         </Button>
         <span className="text-sm font-medium tabular-nums">
           {currentPage}/{totalPages}
@@ -61,7 +61,7 @@ export function DataTablePagination({
           disabled={currentPage >= totalPages}
           aria-label={ACTIONS_VI.nextPage}
         >
-          <IconChevronRight className="size-4" />
+          <IconChevronRight className="size-4 shrink-0" />
         </Button>
       </div>
     </div>

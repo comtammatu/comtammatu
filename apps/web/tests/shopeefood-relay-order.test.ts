@@ -58,6 +58,8 @@ const MOCK_DB_ITEMS = [
   { id: 2, name: "Sườn Cọng", base_price: 78000 },
   { id: 3, name: "Sườn Một Gang", base_price: 120000 },
   { id: 4, name: "Canh Khổ Qua", base_price: 30000 },
+  { id: 5, name: "Canh Chua Tôm", base_price: 30000 },
+  { id: 7, name: "Trứng", base_price: 10000 },
   { id: 8, name: "Tóp Mỡ", base_price: 6000 },
   { id: 29, name: "Dụng Cụ Mang Về", base_price: 3000 },
 ];
@@ -80,6 +82,33 @@ test("ShopeeFood mapping: matchMenuItem finds exact ID in DB items", () => {
   assert.equal(matched.id, 1);
   assert.equal(matched.name, "Sườn Cốt Lết");
   assert.equal(matched.base_price, 54000);
+});
+
+test("ShopeeFood mapping: matches receipt meal aliases without falling back to the first menu item", () => {
+  const matched = matchMenuItem(
+    {
+      name: "Cơm Sườn Cốt Lết",
+      quantity: 1,
+    },
+    [
+      { id: 99, name: "Món Không Liên Quan", base_price: 10000 },
+      ...MOCK_DB_ITEMS,
+    ],
+  );
+
+  assert.equal(matched.id, 1);
+  assert.equal(matched.name, "Sườn Cốt Lết");
+});
+
+test("ShopeeFood mapping: rejects unknown items instead of silently choosing another menu item", () => {
+  assert.throws(
+    () =>
+      matchMenuItem(
+        { name: "Món Chưa Ánh Xạ", quantity: 1 },
+        MOCK_DB_ITEMS,
+      ),
+    /chưa được ánh xạ trong thực đơn quán/i,
+  );
 });
 
 test("ShopeeFood transformation: transforms real SPF-892 order accurately", () => {
@@ -149,4 +178,113 @@ test("ShopeeFood transformation: handles deliverynow restaurant metadata", () =>
   assert.equal(transformed.items.length, 1);
   assert.equal(transformed.items[0]?.item_name, "Sườn Cọng");
   assert.equal(transformed.customerNote, null);
+});
+
+test("ShopeeFood transformation: keeps the platform total separate from item discounts", () => {
+  const transformed = transformShopeeOrderPayload(
+    {
+      orderId: "12345-987654321",
+      displayId: "12345-987654321",
+      items: [
+        {
+          name: "Cơm Sườn Cốt Lết",
+          quantity: 1,
+          price: 57000,
+          options: [{ name: "Dụng cụ ăn uống", price: 3000 }],
+        },
+      ],
+      subtotal: 57000,
+      total: 43007,
+    },
+    MOCK_DB_ITEMS,
+  );
+
+  assert.equal(transformed.totalAmount, 43007);
+  assert.equal(transformed.items[0]?.discount_type, undefined);
+  assert.equal(transformed.items[0]?.discount_value, undefined);
+});
+
+test("ShopeeFood transformation: promotes explicit soup options to standalone POS items", () => {
+  const transformed = transformShopeeOrderPayload(
+    {
+      orderId: "12345-111111111",
+      items: [
+        {
+          name: "Cơm Sườn Cốt Lết",
+          quantity: 1,
+          price: 97000,
+          options: [
+            { name: "Trứng", price: 10000 },
+            { name: "Canh Chua Tôm", price: 30000 },
+            { name: "Dụng cụ ăn uống", price: 3000 },
+          ],
+        },
+      ],
+      subtotal: 97000,
+      total: 73000,
+    },
+    MOCK_DB_ITEMS,
+  );
+
+  assert.equal(transformed.items.length, 2);
+  assert.equal(transformed.items[0]?.item_name, "Sườn Cốt Lết");
+  assert.equal(transformed.items[0]?.unit_price, 67000);
+  assert.deepEqual(
+    transformed.items[0]?.sides.map((side) => side.name),
+    ["Trứng", "Dụng Cụ Mang Về"],
+  );
+  assert.match(transformed.items[0]?.note ?? "", /Tùy chọn: Canh Chua Tôm/);
+  assert.deepEqual(transformed.items[1], {
+    menu_item_id: 5,
+    item_name: "Canh Chua Tôm",
+    quantity: 1,
+    unit_price: 30000,
+    modifiers: [],
+    sides: [],
+    subtotal: 30000,
+    note: null,
+  });
+});
+
+test("ShopeeFood transformation: keeps daily soup as a kitchen option note", () => {
+  const transformed = transformShopeeOrderPayload(
+    {
+      orderId: "12345-222222222",
+      items: [
+        {
+          name: "Cơm Sườn Cốt Lết",
+          quantity: 1,
+          price: 57000,
+          options: [
+            { name: "Canh theo ngày" },
+            { name: "Dụng cụ ăn uống", price: 3000 },
+          ],
+        },
+      ],
+    },
+    MOCK_DB_ITEMS,
+  );
+
+  assert.equal(transformed.items.length, 1);
+  assert.equal(transformed.items[0]?.note, "Tùy chọn: Canh theo ngày");
+  assert.deepEqual(
+    transformed.items[0]?.sides.map((side) => side.name),
+    ["Dụng Cụ Mang Về"],
+  );
+});
+
+test("ShopeeFood mapping: resolves extra rice to the real POS menu name", () => {
+  const transformed = transformShopeeOrderPayload(
+    {
+      orderId: "12345-333333333",
+      items: [{ name: "Cơm thêm", quantity: 1, price: 6000 }],
+    },
+    [
+      ...MOCK_DB_ITEMS,
+      { id: 9, name: "Cơm Thêm", base_price: 6000 },
+    ],
+  );
+
+  assert.equal(transformed.items[0]?.menu_item_id, 9);
+  assert.equal(transformed.items[0]?.item_name, "Cơm Thêm");
 });

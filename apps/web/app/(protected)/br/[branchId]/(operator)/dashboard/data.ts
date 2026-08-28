@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { PERMISSION_KEYS, type JwtClaims } from "@comtammatu/shared/auth";
 import type { loadAuthState } from "@/_lib/auth";
+import { resolveCountSlipReviewerEmployeeId } from "@lib/inventory/count-slip-reviewer";
 import { STOCK_FULFILLMENT_RECEIVE_READY_STATUSES } from "@lib/inventory/stock-fulfillment-hub-model";
 import { requestNow } from "@/_lib/request-now";
 
@@ -32,11 +33,16 @@ export const fetchBranchQueueCounts = cache(
   async function fetchBranchQueueCounts(
     supabase: ServerClient,
     claims: JwtClaims,
+    userId: string,
     branchId: number,
     branchKind?: string | null,
   ): Promise<BranchQueueCounts> {
     const isStoreBranch = branchKind === "branch";
     const nowIso = (await requestNow()).toISOString();
+    const reviewerEmployeeIdPromise = resolveCountSlipReviewerEmployeeId(
+      claims.tenant_id,
+      userId,
+    );
     const canSeeVoids =
       isStoreBranch &&
       (claims.user_role === "owner" ||
@@ -88,6 +94,16 @@ export const fetchBranchQueueCounts = cache(
           })
         : Promise.resolve({ data: false as boolean | null }),
     ]);
+    const reviewerEmployeeId = await reviewerEmployeeIdPromise;
+    let countSlipsQuery = supabase
+      .from("inventory_count_slips")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", branchId)
+      .eq("status", "submitted");
+    if (reviewerEmployeeId !== null) {
+      countSlipsQuery = countSlipsQuery.neq("employee_id", reviewerEmployeeId);
+    }
     const [
       checkoutRes,
       leaveRes,
@@ -110,14 +126,7 @@ export const fetchBranchQueueCounts = cache(
             p_include_rows: false,
           })
         : Promise.resolve(null),
-      countPermission.data === true
-        ? supabase
-            .from("inventory_count_slips")
-            .select("id", { count: "exact", head: true })
-            .eq("tenant_id", claims.tenant_id)
-            .eq("branch_id", branchId)
-            .eq("status", "submitted")
-        : Promise.resolve(null),
+      countPermission.data === true ? countSlipsQuery : Promise.resolve(null),
       wastePermission.data === true
         ? supabase
             .from("stock_issues")

@@ -1,4 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Má Tư POS Bridge</string>
+    <string name="app_name">Má Tư Agent</string>
+    <string name="brand_monogram" translatable="false">MT</string>
+    <string name="brand_subtitle">Cầu nối máy in ESC/POS</string>
+
+    <string name="configuration_title">Cấu hình</string>
+    <string name="configuration_description">Thiết lập điểm nhận và nơi chuyển tiếp đơn hàng.</string>
+    <string name="backend_url_label">Địa chỉ máy chủ POS</string>
+    <string name="branch_id_label">Mã chi nhánh</string>
+    <string name="tcp_port_label">Cổng TCP</string>
+    <string name="relay_secret_label">Mã bí mật Delivery Relay</string>
+    <string name="relay_secret_hint">Nhập mã bí mật</string>
+    <string name="lan_mode_label">Nhận lệnh in từ mạng LAN</string>
+    <string name="lan_mode_description">Chỉ bật khi ứng dụng giao hàng chạy trên thiết bị khác.</string>
+
+    <string name="diagnostics_title">Kiểm tra nhanh</string>
+    <string name="diagnostics_description">Xác nhận kết nối trước khi bắt đầu nhận đơn.</string>
+    <string name="check_pos_action">Kiểm tra POS</string>
+    <string name="check_print_port_action">Kiểm tra cổng in</string>
+    <string name="view_queue_action">Xem trạng thái hàng đợi</string>
+
+    <string name="logs_title">Nhật ký hoạt động</string>
+    <string name="logs_description">Sự kiện mới nhất được tự động cuộn xuống cuối.</string>
+    <string name="clear_logs_action">Xóa nhật ký</string>
+    <string name="logs_loading">Đang tải nhật ký…</string>
+
+    <string name="start_service_action">Bắt đầu máy in ảo</string>
+    <string name="stop_service_action">Dừng máy in ảo</string>
+    <string name="service_starting_title">Đang khởi động</string>
+    <string name="service_starting_description">Đang mở cổng TCP %1$d…</string>
+    <string name="service_running_title">Máy in ảo đang hoạt động</string>
+    <string name="service_running_description">Đang nhận lệnh in và chuyển tiếp đơn hàng.</string>
+    <string name="service_stopped_title">Máy in ảo đang dừng</string>
+    <string name="service_stopped_description">Bật dịch vụ để bắt đầu nhận lệnh in.</string>
+    <string name="status_processing">ĐANG XỬ LÝ</string>
+    <string name="status_running">ĐANG CHẠY</string>
+    <string name="status_stopped">ĐANG DỪNG</string>
 </resources>

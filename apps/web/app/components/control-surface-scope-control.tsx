@@ -144,9 +144,9 @@ export function ControlSurfaceScopeControl({
       <SelectTrigger
         size={isTouchLayout ? "touch" : "default"}
         aria-label={copy.ariaLabel}
-        className="h-9 min-w-0 w-full justify-start overflow-hidden bg-sidebar-accent/40 px-2 py-1.5 text-left text-sm font-medium text-sidebar-foreground shadow-none hover:bg-sidebar-accent/60 focus-visible:ring-sidebar-ring [&>svg:last-child]:ml-auto [&_[data-slot=select-value]]:min-w-0 [&_[data-slot=select-value]]:flex-1 [&_[data-slot=select-value]]:truncate"
+        className="flex h-9 min-w-0 w-full items-center justify-start gap-2 overflow-hidden bg-sidebar-accent/40 px-2.5 py-1.5 text-left text-sm font-medium text-sidebar-foreground shadow-none hover:bg-sidebar-accent/60 focus-visible:ring-sidebar-ring [&>svg:last-child]:ml-auto [&_[data-slot=select-value]]:min-w-0 [&_[data-slot=select-value]]:flex-1 [&_[data-slot=select-value]]:truncate"
       >
-        <IconBuildingStore className="size-4 shrink-0" />
+        <IconBuildingStore className="size-4 shrink-0 text-sidebar-foreground/70" />
         <SelectValue placeholder={copy.label}>
           <span className="block min-w-0 truncate">{displayLabel}</span>
         </SelectValue>

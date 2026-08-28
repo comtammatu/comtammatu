@@ -153,7 +153,7 @@ export function AppBackLink({
       variant="ghost"
       size={children == null ? "icon-touch" : "touch"}
       className={cn(
-        "justify-center gap-1 px-2 text-muted-foreground hover:underline",
+        "flex items-center justify-center gap-1.5 px-2 text-muted-foreground hover:underline",
         className,
       )}
       render={
@@ -166,7 +166,7 @@ export function AppBackLink({
         />
       }
     >
-      <IconArrowLeft className="size-4" aria-hidden="true" />
+      <IconArrowLeft className="size-4 shrink-0" aria-hidden="true" />
       {children != null ? (
         <>
           {" "}

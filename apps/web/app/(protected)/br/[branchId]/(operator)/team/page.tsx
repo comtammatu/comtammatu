@@ -82,7 +82,7 @@ export default async function TeamBoardPage({
     ? (requestedTab as TeamWorkspaceTabValue)
     : "board";
 
-  const { supabase, claims } = await loadAuthState();
+  const { supabase, claims, userId } = await loadAuthState();
   const context = await resolveBranchContext(supabase, claims, branchId);
   if (!context) notFound();
 
@@ -144,6 +144,7 @@ export default async function TeamBoardPage({
       ? fetchBranchQueueCounts(
           supabase,
           claims,
+          userId,
           context.branchId,
           context.branch.branch_kind,
         )

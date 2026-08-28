@@ -10,6 +10,7 @@ import {
   type CountSlipRow,
   type CountSlipStatus,
 } from "./count-slip-model";
+import { resolveCountSlipReviewerEmployeeId } from "./count-slip-reviewer";
 
 const REVIEW_STATES = ["submitted", "needs_changes", "approved"] as const;
 
@@ -85,7 +86,11 @@ export async function loadBranchCountSlipData(
     routeBranchId,
   );
   if (!ctx) redirect("/");
-  const { supabase, claims } = ctx;
+  const { supabase, claims, userId } = ctx;
+  const reviewerEmployeeId = await resolveCountSlipReviewerEmployeeId(
+    claims.tenant_id,
+    userId,
+  );
   const scope = await resolveInventoryListScope(supabase, claims, {
     routeBranchId,
   });
@@ -121,6 +126,9 @@ export async function loadBranchCountSlipData(
     .eq("tenant_id", claims.tenant_id)
     .eq("branch_id", routeBranchId)
     .in("status", REVIEW_STATES);
+  if (reviewerEmployeeId !== null) {
+    slipsQuery = slipsQuery.neq("employee_id", reviewerEmployeeId);
+  }
   if (focusEmployeeId !== undefined) {
     slipsQuery = slipsQuery.eq("employee_id", focusEmployeeId);
   }

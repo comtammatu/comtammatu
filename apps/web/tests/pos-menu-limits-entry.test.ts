@@ -47,6 +47,7 @@ const managerHostSource = readSource(
 const managerPageSource = readSource(
   "app/(protected)/br/[branchId]/(operator)/menu-limits/page.tsx",
 );
+const posMessagesSource = readSource("lib/messages/pos.ts");
 
 test("POS header reuses the shared menu-limits drawer for manager and owner", () => {
   assert.match(sessionActionsSource, /canManageMenuLimits: canManagePosMenuLimits\(role\)/);
@@ -167,4 +168,31 @@ test("branch menu-limit rows keep scan facts inline and edit the cap plus extra-
   assert.doesNotMatch(managerDrawerSource, /stockAllowanceQuantity/);
   assert.doesNotMatch(managerDrawerSource, /pendingDemandCount/);
   assert.doesNotMatch(managerDrawerSource, /activeHoldDemandCount/);
+});
+
+test("branch menu-limit inputs explain the daily cap to first-time operators", () => {
+  assert.match(posMessagesSource, /manualLimitShortLabel: "Trần bán hôm nay"/);
+  assert.match(
+    posMessagesSource,
+    /manualLimitOptionalHint:\s*"Tổng suất cả ngày, gồm cả đã bán\. Để trống nếu không đặt trần\."/,
+  );
+  assert.match(posMessagesSource, /manualLimitPlaceholder: "Không đặt trần"/);
+  assert.match(managerDrawerSource, /aria-describedby=\{limitHintId\}/);
+  assert.match(managerDrawerSource, /aria-describedby=\{allowanceHintId\}/);
+  assert.match(managerDrawerSource, /manualLimitOptionalHint/);
+  assert.match(managerDrawerSource, /stockAllowanceHint/);
+});
+
+test("branch menu-limit rows keep one compact control path per setting", () => {
+  assert.match(
+    managerDrawerSource,
+    /className="grid grid-cols-2 gap-x-3 gap-y-2 border-t pt-2"/,
+  );
+  assert.match(
+    managerDrawerSource,
+    /className="col-span-2 grid min-w-0 grid-cols-2 items-center gap-3"/,
+  );
+  assert.match(managerDrawerSource, /menuCopy\.pausedBadge/);
+  assert.doesNotMatch(managerDrawerSource, /menuCopy\.quickPauseItem/);
+  assert.doesNotMatch(managerDrawerSource, /menuCopy\.quickResumeItem/);
 });

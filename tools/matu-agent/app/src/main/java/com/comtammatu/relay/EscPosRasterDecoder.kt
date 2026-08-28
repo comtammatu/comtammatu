@@ -1,0 +1,79 @@
+package com.comtammatu.relay
+
+data class EscPosRaster(
+    val width: Int,
+    val height: Int,
+    val blackPixels: ByteArray
+)
+
+/** Decodes the largest GS v 0 monochrome raster in an ESC/POS stream. */
+object EscPosRasterDecoder {
+    private const val GS = 0x1D
+    private const val RASTER_BIT_IMAGE = 0x76
+    private const val RASTER_MODE_PREFIX = 0x30
+    private const val HEADER_BYTES = 8
+    private const val MAX_PIXELS = 4_000_000
+
+    fun decodeLargest(bytes: ByteArray): EscPosRaster? {
+        var offset = 0
+        var largest: EscPosRaster? = null
+
+        while (offset + HEADER_BYTES <= bytes.size) {
+            if (
+                unsigned(bytes[offset]) != GS ||
+                unsigned(bytes[offset + 1]) != RASTER_BIT_IMAGE ||
+                unsigned(bytes[offset + 2]) != RASTER_MODE_PREFIX
+            ) {
+                offset += 1
+                continue
+            }
+
+            val widthBytes = unsigned(bytes[offset + 4]) +
+                unsigned(bytes[offset + 5]) * 256
+            val height = unsigned(bytes[offset + 6]) +
+                unsigned(bytes[offset + 7]) * 256
+            val width = widthBytes * 8
+            val pixelCount = width.toLong() * height
+            val payloadBytes = widthBytes.toLong() * height
+            val payloadStart = offset + HEADER_BYTES
+            val payloadEnd = payloadStart.toLong() + payloadBytes
+
+            if (
+                widthBytes <= 0 ||
+                height <= 0 ||
+                pixelCount > MAX_PIXELS ||
+                payloadEnd > bytes.size
+            ) {
+                offset += 1
+                continue
+            }
+
+            val blackPixels = ByteArray(pixelCount.toInt())
+            for (row in 0 until height) {
+                for (byteColumn in 0 until widthBytes) {
+                    val packed = unsigned(bytes[payloadStart + row * widthBytes + byteColumn])
+                    val pixelOffset = row * width + byteColumn * 8
+                    for (bit in 0 until 8) {
+                        if (packed and (0x80 shr bit) != 0) {
+                            blackPixels[pixelOffset + bit] = 1
+                        }
+                    }
+                }
+            }
+
+            val candidate = EscPosRaster(width, height, blackPixels)
+            if (
+                largest == null ||
+                candidate.width.toLong() * candidate.height >
+                largest.width.toLong() * largest.height
+            ) {
+                largest = candidate
+            }
+            offset = payloadEnd.toInt()
+        }
+
+        return largest
+    }
+
+    private fun unsigned(value: Byte): Int = value.toInt() and 0xFF
+}
