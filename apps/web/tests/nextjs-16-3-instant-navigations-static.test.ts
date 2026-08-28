@@ -74,3 +74,21 @@ test("Cổng catalog and on-hand stream behind Suspense with URL prefetch", () =
   assert.match(onHandDetail, /<Suspense fallback=\{<PageSkeleton bare \/>\}>/);
   assert.match(onHandClient, /prefetch=\{true\}/);
 });
+
+test("Branch Ops warms its bounded primary tab set and shows pending feedback", () => {
+  const protectedLink = readWeb("app/_components/protected-link.tsx");
+  const pendingIndicator = readWeb(
+    "app/_components/protected-link-pending-indicator.tsx",
+  );
+  const bottomNav = readWeb("app/components/app-bottom-nav.tsx");
+  const operatorNav = readWeb(
+    "app/(protected)/br/[branchId]/(operator)/operator-bottom-nav.tsx",
+  );
+
+  assert.match(protectedLink, /prefetchMode === "route"/);
+  assert.match(protectedLink, /prefetch=\{true\}/);
+  assert.match(pendingIndicator, /useLinkStatus\(\)/);
+  assert.match(bottomNav, /prefetchItems && !item\.active/);
+  assert.match(bottomNav, /<ProtectedLinkPendingIndicator \/>/);
+  assert.match(operatorNav, /<AppBottomNav[\s\S]*prefetchItems/);
+});

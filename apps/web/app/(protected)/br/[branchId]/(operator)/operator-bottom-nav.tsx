@@ -170,6 +170,7 @@ export function OperatorBottomNav({
       hideOnDesktop={false}
       position="static"
       wide={wide}
+      prefetchItems
       items={items.map((item) => ({
         href: item.href,
         label: item.label,

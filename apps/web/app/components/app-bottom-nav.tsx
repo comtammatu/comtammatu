@@ -5,6 +5,7 @@ import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { ProtectedLink } from "@/_components/protected-link";
+import { ProtectedLinkPendingIndicator } from "@/_components/protected-link-pending-indicator";
 
 /**
  * Shared mobile bottom-nav recipe consumed by Management, Branch runtime, and
@@ -35,6 +36,7 @@ export function AppBottomNav({
   hideOnDesktop = true,
   position = "fixed",
   wide = false,
+  prefetchItems = false,
 }: {
   items: AppBottomNavItem[];
   ariaLabel: string;
@@ -45,6 +47,8 @@ export function AppBottomNav({
   hideOnDesktop?: boolean;
   position?: "fixed" | "static";
   wide?: boolean;
+  /** Fully warm this small, high-frequency nav after it becomes visible. */
+  prefetchItems?: boolean;
 }) {
   return (
     <nav
@@ -82,6 +86,9 @@ export function AppBottomNav({
                 <ProtectedLink
                   href={item.href}
                   aria-current={item.active ? "page" : undefined}
+                  prefetchMode={
+                    prefetchItems && !item.active ? "route" : "none"
+                  }
                 />
               }
             >
@@ -104,6 +111,7 @@ export function AppBottomNav({
               {hasBadge && item.badgeLabel ? (
                 <span className="sr-only">{item.badgeLabel}</span>
               ) : null}
+              <ProtectedLinkPendingIndicator />
             </Button>
           );
         })}
