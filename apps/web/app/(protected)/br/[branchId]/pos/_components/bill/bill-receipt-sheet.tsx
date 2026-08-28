@@ -57,6 +57,7 @@ import {
 import { cancelSelfOrderPaymentRequest } from "../../self-order-actions";
 import { printProvisionalBill, printReceipt } from "../../print-actions";
 import { useIsOnline } from "../pwa/online-status-provider";
+import { DeliveryPlatformMark } from "@/components/delivery-platform-mark";
 import { BillReceiptSummary } from "./bill-receipt-summary";
 import { OrderTotalsSummary } from "../order-totals-summary";
 import type {
@@ -130,8 +131,6 @@ const METHOD_META: Record<
   cash: { label: PAYMENT_METHOD_LABELS_VI.cash, icon: IconCash },
   vietqr: { label: PAYMENT_METHOD_LABELS_VI.vietqr, icon: IconQrcode },
 };
-
-type DeliveryTender = "platform" | PaymentMethod;
 
 const REMOTE_PAYMENT_COPY = {
   accountLabel: "STK:",
@@ -433,7 +432,6 @@ export function BillReceipt({
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>(
     canConfirmCash ? "cash" : "vietqr",
   );
-  const [deliveryTender, setDeliveryTender] = useState<DeliveryTender>("platform");
   const [cashInput, setCashInput] = useState("");
   const [pendingExtras, setPendingExtras] = useState<PendingExtras | null>(
     null,
@@ -468,7 +466,7 @@ export function BillReceipt({
   // the verified SePay webhook.
   const canConfirmPaid =
     isOnline &&
-    (isDeliveryOrder && deliveryTender === "platform"
+    (isDeliveryOrder
       ? canConfirmCash
       : selectedMethod === "cash" && cashReceived >= totalAmount);
 
@@ -479,7 +477,7 @@ export function BillReceipt({
     ? null
     : !isOnline
       ? "Mất kết nối — không thể thanh toán khi mất mạng"
-      : isDeliveryOrder && deliveryTender === "platform"
+      : isDeliveryOrder
         ? "Không có quyền xác nhận thu nền tảng"
         : selectedMethod === "cash"
           ? "Khách chưa thanh toán đủ tổng đơn"
@@ -505,7 +503,6 @@ export function BillReceipt({
       setOrder(null);
       setError(null);
       setSelectedMethod(canConfirmCash ? "cash" : "vietqr");
-      setDeliveryTender("platform");
       setCashInput("");
       setPendingExtras(null);
       setMethodPending(false);
@@ -902,7 +899,7 @@ export function BillReceipt({
     if (!order || orderId === null || !canConfirmPaid) return;
 
     startActionTransition(async () => {
-      if (isDeliveryOrder && deliveryTender === "platform") {
+      if (isDeliveryOrder) {
         const result = await confirmPlatformPaymentWithInvoice(branchId, orderId);
         if (!result.success) {
           toast.error(
@@ -989,7 +986,6 @@ export function BillReceipt({
     [
       branchId,
       cashReceived,
-      deliveryTender,
       isDeliveryOrder,
       isOnline,
       onClose,
@@ -1305,14 +1301,14 @@ export function BillReceipt({
           ) : null}
         </div>
         {selectedMethod === "cash" &&
-        (!isDeliveryOrder || deliveryTender !== "platform") &&
+        !isDeliveryOrder &&
         disabledReason ? (
           <p className="text-sm text-muted-foreground">{disabledReason}</p>
         ) : null}
-        {isDeliveryOrder && deliveryTender === "platform" && disabledReason ? (
+        {isDeliveryOrder && disabledReason ? (
           <p className="text-sm text-muted-foreground">{disabledReason}</p>
         ) : null}
-        {isDeliveryOrder && deliveryTender === "platform" ? (
+        {isDeliveryOrder ? (
           <Button
             data-testid="bill-confirm-platform"
             type="button"
@@ -1435,277 +1431,251 @@ export function BillReceipt({
                   </Alert>
                 ) : null}
                 {isDeliveryOrder ? (
-                  <>
-                    <p className="text-sm font-medium text-foreground">
-                      {messages.pos.payment.deliveryTenderTitle}
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="touch-lg"
-                        aria-pressed={deliveryTender === "platform"}
-                        className={cn(
-                          "flex-col gap-2",
-                          deliveryTender === "platform" &&
-                            "border-foreground bg-muted text-foreground hover:bg-muted",
-                        )}
-                        onClick={() => setDeliveryTender("platform")}
-                        disabled={actionPending || methodPending}
-                      >
+                  <div className="flex flex-col gap-3 rounded-md bg-muted/30 p-4">
+                    <div className="flex items-center gap-2">
+                      {order?.delivery_platform ? (
+                        <DeliveryPlatformMark
+                          platform={order.delivery_platform}
+                          className="size-6"
+                        />
+                      ) : null}
+                      <span className="text-base font-semibold text-foreground">
                         {messages.pos.payment.platformPrepaid}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="touch-lg"
-                        aria-pressed={deliveryTender !== "platform"}
-                        className={cn(
-                          "flex-col gap-2",
-                          deliveryTender !== "platform" &&
-                            "border-foreground bg-muted text-foreground hover:bg-muted",
-                        )}
-                        onClick={() => setDeliveryTender("cash")}
-                        disabled={actionPending || methodPending}
-                      >
-                        {messages.pos.payment.counterCollection}
-                      </Button>
+                      </span>
                     </div>
-                    {deliveryTender === "platform" ? (
-                      <p className="text-sm text-muted-foreground">
-                        {messages.pos.payment.platformPrepaidHint}
-                      </p>
-                    ) : null}
-                  </>
-                ) : null}
-                {(!isDeliveryOrder || deliveryTender !== "platform") && (
-                <div
-                  className="grid grid-cols-2 gap-2"
-                  role="group"
-                  aria-label={messages.pos.payment.methodsTitle}
-                >
-                  {methods.map((method) => {
-                    const meta = METHOD_META[method] ?? {
-                      label: method,
-                      icon: IconCreditCard,
-                    };
-                    const Icon = meta.icon;
-                    const isSelected = selectedMethod === method;
-                    return (
-                      <Button
-                        key={method}
-                        data-testid={`bill-pay-${method}`}
-                        type="button"
-                        variant="outline"
-                        size="touch-lg"
-                        aria-pressed={isSelected}
-                        className={cn(
-                          "flex-col gap-2",
-                          isSelected &&
-                            "border-foreground bg-muted text-foreground hover:bg-muted",
-                        )}
-                        onClick={() => handleSelectMethod(method)}
-                        disabled={actionPending || methodPending}
-                      >
-                        <Icon data-icon="inline-start" />
-                        {meta.label}
-                      </Button>
-                    );
-                  })}
-                </div>
-                )}
-
-                {pendingOfflineMethod !== null && (
-                  <p className="text-sm text-muted-foreground">
-                    {messages.pos.payment.offlineWillSelect}{" "}
-                    <span className="font-medium text-foreground">
-                      {METHOD_META[pendingOfflineMethod].label}
-                    </span>{" "}
-                    {messages.pos.payment.offlineWhenOnline}
-                  </p>
-                )}
-
-                {selectedMethod === "cash" &&
-                (!isDeliveryOrder || deliveryTender !== "platform") ? (
-                  <div className="flex flex-col gap-3 rounded-md bg-muted/30 p-3">
-                    {order && hasPaymentBreakdown ? (
-                      <OrderTotalsSummary
-                        variant="compact"
-                        subtotal={order.subtotal}
-                        serviceCharge={order.service_charge}
-                        discountAmount={order.discount_amount}
-                        orderDiscountAmount={order.order_discount_amount}
-                        itemDiscountAmount={order.item_discount_amount}
-                        discountType={order.discount_type}
-                        discountValue={order.discount_value}
-                        discountNote={order.discount_note}
-                        totalAmount={order.total_amount}
-                      />
-                    ) : null}
-
-                    <InputGroup className="h-10">
-                      <InputGroupAddon>
-                        {messages.pos.payment.cashReceived}
-                      </InputGroupAddon>
-                      <WholeVndInput
-                        id="cash-received"
-                        data-testid="bill-cash-received"
-                        data-slot="input-group-control"
-                        value={cashInput}
-                        onValueChange={setCashInput}
-                        onFocus={(event) => event.currentTarget.select()}
-                        disabled={actionPending}
-                        className="text-right text-lg font-mono font-semibold tabular-nums"
-                      />
-                    </InputGroup>
-
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        type="button"
-                        variant={cashReceived === totalAmount ? "default" : "outline"}
-                        size="touch"
-                        className={cn(
-                          "min-w-32 flex-1 font-semibold",
-                          cashReceived === totalAmount
-                            ? "bg-primary text-primary-foreground"
-                            : "border-primary/20 text-primary hover:bg-primary/10",
-                        )}
-                        onClick={() => setCashInput(String(totalAmount))}
-                        disabled={actionPending}
-                      >
-                        <span className="min-w-0 truncate">
-                          {messages.pos.payment.exactCash(formatVND(totalAmount))}
-                        </span>
-                        <Kbd className="ml-1 hidden shrink-0 [@media(hover:hover)]:inline-flex border-current/20 bg-current/10 text-inherit text-3xs">
-                          F9
-                        </Kbd>
-                      </Button>
-                      {cashSuggestions
-                        .filter((amount) => amount !== totalAmount)
-                        .map((amount) => (
+                    <p className="text-sm text-muted-foreground">
+                      {messages.pos.payment.platformPrepaidHint}
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div
+                      className="grid grid-cols-2 gap-2"
+                      role="group"
+                      aria-label={messages.pos.payment.methodsTitle}
+                    >
+                      {methods.map((method) => {
+                        const meta = METHOD_META[method] ?? {
+                          label: method,
+                          icon: IconCreditCard,
+                        };
+                        const Icon = meta.icon;
+                        const isSelected = selectedMethod === method;
+                        return (
                           <Button
-                            key={amount}
+                            key={method}
+                            data-testid={`bill-pay-${method}`}
                             type="button"
                             variant="outline"
-                            size="touch"
-                            className="min-w-28 flex-1"
-                            onClick={() => setCashInput(String(amount))}
-                            disabled={actionPending}
+                            size="touch-lg"
+                            aria-pressed={isSelected}
+                            className={cn(
+                              "flex-col gap-2",
+                              isSelected &&
+                                "border-foreground bg-muted text-foreground hover:bg-muted",
+                            )}
+                            onClick={() => handleSelectMethod(method)}
+                            disabled={actionPending || methodPending}
                           >
-                            {formatVND(amount)}
+                            <Icon data-icon="inline-start" />
+                            {meta.label}
                           </Button>
-                        ))}
+                        );
+                      })}
                     </div>
 
-                    <div className="flex items-center justify-between gap-3 rounded-md bg-muted/50 p-3">
-                      <span className="text-sm font-medium">
-                        {messages.pos.payment.cashChange}
-                      </span>
-                      <span
-                        className={
-                          cashReceived < totalAmount
-                            ? "text-lg font-mono font-bold tabular-nums text-destructive"
-                            : "text-lg font-mono font-bold tabular-nums"
-                        }
-                      >
-                        {cashReceived < totalAmount
-                          ? messages.pos.payment.cashShort(
-                              formatVND(totalAmount - cashReceived),
-                            )
-                          : formatVND(cashChange)}
-                      </span>
-                    </div>
-                  </div>
-                ) : !isDeliveryOrder || deliveryTender !== "platform" ? (
-                  <div className="flex flex-col gap-3 rounded-md bg-muted/30 p-3">
-                    {methodPending ? (
-                      <AppBoneyardSkeleton
-                        name="pos-bill-receipt-qr"
-                        loading
-                        fixture={<PaymentQrLoadingFixture />}
-                        fallback={<PaymentQrPendingPreview />}
-                        snapshotConfig={{ excludeSelectors: ["svg"] }}
-                      >
-                        <PaymentQrLoadingFixture />
-                      </AppBoneyardSkeleton>
-                    ) : (
-                      <>
-                        {remoteQrValue ? (
-                          <PaymentQrCode
-                            value={remoteQrValue}
-                            className="max-h-40 max-w-40"
-                            alt={`QR ${
-                              METHOD_META[selectedMethod]?.label ??
-                              REMOTE_PAYMENT_COPY.qrAltFallback
-                            }`}
+                    {pendingOfflineMethod !== null && (
+                      <p className="text-sm text-muted-foreground">
+                        {messages.pos.payment.offlineWillSelect}{" "}
+                        <span className="font-medium text-foreground">
+                          {METHOD_META[pendingOfflineMethod].label}
+                        </span>{" "}
+                        {messages.pos.payment.offlineWhenOnline}
+                      </p>
+                    )}
+
+                    {selectedMethod === "cash" ? (
+                      <div className="flex flex-col gap-3 rounded-md bg-muted/30 p-3">
+                        {order && hasPaymentBreakdown ? (
+                          <OrderTotalsSummary
+                            variant="compact"
+                            subtotal={order.subtotal}
+                            serviceCharge={order.service_charge}
+                            discountAmount={order.discount_amount}
+                            orderDiscountAmount={order.order_discount_amount}
+                            itemDiscountAmount={order.item_discount_amount}
+                            discountType={order.discount_type}
+                            discountValue={order.discount_value}
+                            discountNote={order.discount_note}
+                            totalAmount={order.total_amount}
                           />
-                        ) : (
-                          <div className="flex flex-col items-center gap-3">
-                            <PaymentQrPlaceholder Icon={MethodIcon} />
-                            {remotePaymentNeedsRetry ? null : (
-                              <Button
-                                type="button"
-                                size="touch"
-                                onClick={() =>
-                                  handleSelectMethod(selectedMethod)
-                                }
-                                disabled={actionPending || methodPending}
-                              >
-                                <IconQrcode data-icon="inline-start" />
-                                {REMOTE_PAYMENT_COPY.createQr}
-                              </Button>
+                        ) : null}
+
+                        <InputGroup className="h-10">
+                          <InputGroupAddon>
+                            {messages.pos.payment.cashReceived}
+                          </InputGroupAddon>
+                          <WholeVndInput
+                            id="cash-received"
+                            data-testid="bill-cash-received"
+                            data-slot="input-group-control"
+                            value={cashInput}
+                            onValueChange={setCashInput}
+                            onFocus={(event) => event.currentTarget.select()}
+                            disabled={actionPending}
+                            className="text-right text-lg font-mono font-semibold tabular-nums"
+                          />
+                        </InputGroup>
+
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            variant={cashReceived === totalAmount ? "default" : "outline"}
+                            size="touch"
+                            className={cn(
+                              "min-w-32 flex-1 font-semibold",
+                              cashReceived === totalAmount
+                                ? "bg-primary text-primary-foreground"
+                                : "border-primary/20 text-primary hover:bg-primary/10",
                             )}
-                          </div>
-                        )}
-                        {remotePaymentNeedsRetry ? (
-                          <Alert variant="destructive">
-                            <IconAlertTriangle />
-                            <AlertTitle>
-                              {REMOTE_PAYMENT_COPY.qrCreateFailedTitle}
-                            </AlertTitle>
-                            <AlertDescription>
-                              {remotePaymentError}
-                            </AlertDescription>
-                            <div className="col-start-2 mt-2">
+                            onClick={() => setCashInput(String(totalAmount))}
+                            disabled={actionPending}
+                          >
+                            <span className="min-w-0 truncate">
+                              {messages.pos.payment.exactCash(formatVND(totalAmount))}
+                            </span>
+                            <Kbd className="ml-1 hidden shrink-0 [@media(hover:hover)]:inline-flex border-current/20 bg-current/10 text-inherit text-3xs">
+                              F9
+                            </Kbd>
+                          </Button>
+                          {cashSuggestions
+                            .filter((amount) => amount !== totalAmount)
+                            .map((amount) => (
                               <Button
+                                key={amount}
                                 type="button"
                                 variant="outline"
                                 size="touch"
-                                className="w-full sm:w-auto"
-                                onClick={() =>
-                                  handleSelectMethod(selectedMethod)
-                                }
-                                disabled={actionPending || methodPending}
+                                className="min-w-28 flex-1"
+                                onClick={() => setCashInput(String(amount))}
+                                disabled={actionPending}
                               >
-                                <IconQrcode data-icon="inline-start" />
-                                {REMOTE_PAYMENT_COPY.retryCreate}
+                                {formatVND(amount)}
                               </Button>
-                            </div>
-                          </Alert>
-                        ) : null}
-                        <RemotePaymentDetails
-                          pendingExtras={pendingExtras}
-                          isCreating={methodPending}
-                        />
-                        {pendingExtras?.payment_id &&
-                        !selfOrderPaymentRequestId ? (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="touch"
-                            className="self-start text-destructive hover:bg-destructive/10 hover:text-destructive"
-                            onClick={() => void handleCancelPendingPayment()}
-                            disabled={actionPending || methodPending}
-                            title={messages.pos.payment.cancelPendingTitle}
+                            ))}
+                        </div>
+
+                        <div className="flex items-center justify-between gap-3 rounded-md bg-muted/50 p-3">
+                          <span className="text-sm font-medium">
+                            {messages.pos.payment.cashChange}
+                          </span>
+                          <span
+                            className={
+                              cashReceived < totalAmount
+                                ? "text-lg font-mono font-bold tabular-nums text-destructive"
+                                : "text-lg font-mono font-bold tabular-nums"
+                            }
                           >
-                            <IconAlertTriangle data-icon="inline-start" />
-                            {messages.pos.payment.cancelPending}
-                          </Button>
-                        ) : null}
-                      </>
+                            {cashReceived < totalAmount
+                              ? messages.pos.payment.cashShort(
+                                  formatVND(totalAmount - cashReceived),
+                                )
+                              : formatVND(cashChange)}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-3 rounded-md bg-muted/30 p-3">
+                        {methodPending ? (
+                          <AppBoneyardSkeleton
+                            name="pos-bill-receipt-qr"
+                            loading
+                            fixture={<PaymentQrLoadingFixture />}
+                            fallback={<PaymentQrPendingPreview />}
+                            snapshotConfig={{ excludeSelectors: ["svg"] }}
+                          >
+                            <PaymentQrLoadingFixture />
+                          </AppBoneyardSkeleton>
+                        ) : (
+                          <>
+                            {remoteQrValue ? (
+                              <PaymentQrCode
+                                value={remoteQrValue}
+                                className="max-h-40 max-w-40"
+                                alt={`QR ${
+                                  METHOD_META[selectedMethod]?.label ??
+                                  REMOTE_PAYMENT_COPY.qrAltFallback
+                                }`}
+                              />
+                            ) : (
+                              <div className="flex flex-col items-center gap-3">
+                                <PaymentQrPlaceholder Icon={MethodIcon} />
+                                {remotePaymentNeedsRetry ? null : (
+                                  <Button
+                                    type="button"
+                                    size="touch"
+                                    onClick={() =>
+                                      handleSelectMethod(selectedMethod)
+                                    }
+                                    disabled={actionPending || methodPending}
+                                  >
+                                    <IconQrcode data-icon="inline-start" />
+                                    {REMOTE_PAYMENT_COPY.createQr}
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                            {remotePaymentNeedsRetry ? (
+                              <Alert variant="destructive">
+                                <IconAlertTriangle />
+                                <AlertTitle>
+                                  {REMOTE_PAYMENT_COPY.qrCreateFailedTitle}
+                                </AlertTitle>
+                                <AlertDescription>
+                                  {remotePaymentError}
+                                </AlertDescription>
+                                <div className="col-start-2 mt-2">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    disabled={actionPending || methodPending}
+                                    size="touch"
+                                    className="w-full sm:w-auto"
+                                    onClick={() =>
+                                      handleSelectMethod(selectedMethod)
+                                    }
+                                  >
+                                    <IconQrcode data-icon="inline-start" />
+                                    {REMOTE_PAYMENT_COPY.retryCreate}
+                                  </Button>
+                                </div>
+                              </Alert>
+                            ) : null}
+                            <RemotePaymentDetails
+                              pendingExtras={pendingExtras}
+                              isCreating={methodPending}
+                            />
+                            {pendingExtras?.payment_id &&
+                            !selfOrderPaymentRequestId ? (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="touch"
+                                className="self-start text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                onClick={() => void handleCancelPendingPayment()}
+                                disabled={actionPending || methodPending}
+                                title={messages.pos.payment.cancelPendingTitle}
+                              >
+                                <IconAlertTriangle data-icon="inline-start" />
+                                {messages.pos.payment.cancelPending}
+                              </Button>
+                            ) : null}
+                          </>
+                        )}
+                      </div>
                     )}
-                  </div>
-                ) : null}
+                  </>
+                )}
               </>
             </StationSection>
           </div>

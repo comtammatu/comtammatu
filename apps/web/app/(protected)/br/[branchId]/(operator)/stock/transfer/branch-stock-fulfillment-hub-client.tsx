@@ -240,7 +240,7 @@ export function BranchStockFulfillmentHubClient({
           {receiveFocus ? (
             <Button
               type="button"
-              variant="secondary"
+              variant="outline"
               size="touch"
               className="min-w-0 flex-1 justify-between"
               onClick={clearReceiveFocus}

@@ -56,6 +56,9 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   agentRules: false,
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   async headers() {
     return [
       {

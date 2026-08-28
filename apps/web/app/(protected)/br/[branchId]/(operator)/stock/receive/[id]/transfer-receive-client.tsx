@@ -32,7 +32,10 @@ import {
   transferConfirmReceive,
   transferReceive,
 } from "@/(protected)/inventory/transfer-actions";
-import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
+import {
+  BranchOperatorPage,
+  BranchOperatorPanel,
+} from "@lib/branch-operator/components/branch-operator-page";
 import {
   isTransferReceiveReady,
   isTransferReceiveStartable,
@@ -319,7 +322,7 @@ export function TransferReceiveClient({
         </Alert>
       ) : null}
 
-      <div className="rounded-md bg-muted/50 p-2.5">
+      <BranchOperatorPanel size="sm" contentClassName="gap-2">
         <div className="flex items-center gap-2">
           <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
             <div
@@ -336,8 +339,8 @@ export function TransferReceiveClient({
           <Button
             type="button"
             size="touch"
-            variant="secondary"
-            className="mt-2 w-full"
+            variant="outline"
+            className="w-full"
             disabled={confirmBlocked}
             onClick={handleConfirmAllAsSent}
           >
@@ -349,7 +352,6 @@ export function TransferReceiveClient({
           <InteractiveCard
             padding="compact"
             minHeight="tap"
-            className="mt-2"
             render={
               <button
                 type="button"
@@ -369,7 +371,7 @@ export function TransferReceiveClient({
             </span>
           </InteractiveCard>
         ) : null}
-      </div>
+      </BranchOperatorPanel>
 
       <ItemGroup className="gap-2">
         {items.map((item) => {
@@ -517,7 +519,6 @@ export function TransferReceiveClient({
             <Button
               type="button"
               size="touch-lg"
-              variant={remaining > 0 ? "outline" : "default"}
               disabled={confirmBlocked}
               onClick={handleConfirm}
             >

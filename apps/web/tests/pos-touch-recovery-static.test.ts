@@ -42,7 +42,7 @@ test("POS payment recovery controls stay touch-sized and responsive", () => {
   );
   assert.match(
     source,
-    /size="touch"\s+className="w-full sm:w-auto"\s+onClick=\{\(\) =>\s+handleSelectMethod\(selectedMethod\)\s+\}[\s\S]{0,220}\{REMOTE_PAYMENT_COPY\.retryCreate\}/,
+    /size="touch"\s+className="w-full sm:w-auto"\s+onClick=\{\(\) =>\s+handleSelectMethod\(selectedMethod\)\s+\}[\s\S]{0,300}\{REMOTE_PAYMENT_COPY\.retryCreate\}/,
   );
   assert.match(
     source,

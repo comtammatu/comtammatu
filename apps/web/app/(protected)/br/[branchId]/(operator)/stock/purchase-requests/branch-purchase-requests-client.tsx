@@ -1127,7 +1127,7 @@ export function BranchPurchaseRequestsClient({
               <>
                 <Button
                   type="button"
-                  variant="secondary"
+                  variant="outline"
                   size="touch"
                   disabled={isPending}
                   onClick={() => saveRequest(false)}
@@ -1363,7 +1363,7 @@ export function BranchPurchaseRequestsClient({
             </Button>
             <Button
               type="button"
-              variant="secondary"
+              variant="outline"
               size="touch"
               disabled={isPending}
               onClick={() => saveAllocations(false)}
