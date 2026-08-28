@@ -56,8 +56,8 @@ export function PosOrderTargetRow({
           <Button
             type="button"
             variant="ghost"
-            size="touch"
-            className="h-8 min-w-10 shrink-0 px-2 text-xs sm:text-sm font-medium text-primary hover:text-primary"
+            size="sm"
+            className="shrink-0 px-2 text-xs font-medium text-primary hover:text-primary sm:text-sm"
             onClick={onEditDelivery}
           >
             <IconPencil data-icon="inline-start" className="size-3.5" />
@@ -67,8 +67,8 @@ export function PosOrderTargetRow({
         <Button
           type="button"
           variant="ghost"
-          size="touch"
-          className="h-8 min-w-10 shrink-0 px-2 text-xs sm:text-sm text-muted-foreground"
+          size="sm"
+          className="shrink-0 px-2 text-xs text-muted-foreground sm:text-sm"
           onClick={isExisting ? onCancel : onSwitch}
         >
           {isExisting

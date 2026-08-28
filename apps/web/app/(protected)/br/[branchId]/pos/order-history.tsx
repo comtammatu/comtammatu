@@ -462,15 +462,15 @@ function ActiveOrdersListComponent({
             size="sm"
             data-testid="pos-order-tab-all"
             className={cn(
-              "h-8 px-1 text-xs font-medium",
+              "h-8 min-w-0 gap-1 px-1 text-xs font-medium",
               activeTab === "all"
                 ? "bg-background font-semibold text-foreground shadow-2xs hover:bg-background"
                 : "text-muted-foreground hover:text-foreground",
             )}
             onClick={() => setActiveTab("all")}
           >
-            <span>{messages.pos.orderHistory.tabs.all}</span>
-            <span className="tabular-nums opacity-75">({tabCounts.all})</span>
+            <span className="truncate">{messages.pos.orderHistory.tabs.all}</span>
+            <span className="shrink-0 tabular-nums opacity-75">({tabCounts.all})</span>
           </Button>
           <Button
             type="button"
@@ -478,15 +478,15 @@ function ActiveOrdersListComponent({
             size="sm"
             data-testid="pos-order-tab-cooking"
             className={cn(
-              "h-8 px-1 text-xs font-medium",
+              "h-8 min-w-0 gap-1 px-1 text-xs font-medium",
               activeTab === "cooking"
                 ? "bg-background font-semibold text-foreground shadow-2xs hover:bg-background"
                 : "text-muted-foreground hover:text-foreground",
             )}
             onClick={() => setActiveTab("cooking")}
           >
-            <span>{messages.pos.orderHistory.tabs.cooking}</span>
-            <span className="tabular-nums opacity-75">({tabCounts.cooking})</span>
+            <span className="truncate">{messages.pos.orderHistory.tabs.cooking}</span>
+            <span className="shrink-0 tabular-nums opacity-75">({tabCounts.cooking})</span>
           </Button>
           <Button
             type="button"
@@ -494,15 +494,15 @@ function ActiveOrdersListComponent({
             size="sm"
             data-testid="pos-order-tab-dinein"
             className={cn(
-              "h-8 px-1 text-xs font-medium",
+              "h-8 min-w-0 gap-1 px-1 text-xs font-medium",
               activeTab === "dineIn"
                 ? "bg-background font-semibold text-foreground shadow-2xs hover:bg-background"
                 : "text-muted-foreground hover:text-foreground",
             )}
             onClick={() => setActiveTab("dineIn")}
           >
-            <span>{messages.pos.orderHistory.tabs.dineIn}</span>
-            <span className="tabular-nums opacity-75">({tabCounts.dineIn})</span>
+            <span className="truncate">{messages.pos.orderHistory.tabs.dineIn}</span>
+            <span className="shrink-0 tabular-nums opacity-75">({tabCounts.dineIn})</span>
           </Button>
           <Button
             type="button"
@@ -510,15 +510,15 @@ function ActiveOrdersListComponent({
             size="sm"
             data-testid="pos-order-tab-takeaway"
             className={cn(
-              "h-8 px-1 text-xs font-medium",
+              "h-8 min-w-0 gap-1 px-1 text-xs font-medium",
               activeTab === "takeaway"
                 ? "bg-background font-semibold text-foreground shadow-2xs hover:bg-background"
                 : "text-muted-foreground hover:text-foreground",
             )}
             onClick={() => setActiveTab("takeaway")}
           >
-            <span>{messages.pos.orderHistory.tabs.takeaway}</span>
-            <span className="tabular-nums opacity-75">({tabCounts.takeaway})</span>
+            <span className="truncate">{messages.pos.orderHistory.tabs.takeaway}</span>
+            <span className="shrink-0 tabular-nums opacity-75">({tabCounts.takeaway})</span>
           </Button>
         </div>
       </div>

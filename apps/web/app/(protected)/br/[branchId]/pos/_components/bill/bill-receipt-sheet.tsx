@@ -1473,7 +1473,7 @@ export function BillReceipt({
                         variant={cashReceived === totalAmount ? "default" : "outline"}
                         size="touch"
                         className={cn(
-                          "col-span-2 font-semibold sm:col-span-1",
+                          "col-span-2 min-w-0 font-semibold sm:col-span-1",
                           cashReceived === totalAmount
                             ? "bg-primary text-primary-foreground"
                             : "border-primary/20 text-primary hover:bg-primary/10",
@@ -1481,8 +1481,10 @@ export function BillReceipt({
                         onClick={() => setCashInput(String(totalAmount))}
                         disabled={actionPending}
                       >
-                        {messages.pos.payment.exactCash(formatVND(totalAmount))}
-                        <Kbd className="hidden [@media(hover:hover)]:inline-flex border-current/20 bg-current/10 text-inherit text-3xs">
+                        <span className="min-w-0 truncate">
+                          {messages.pos.payment.exactCash(formatVND(totalAmount))}
+                        </span>
+                        <Kbd className="ml-1 hidden shrink-0 [@media(hover:hover)]:inline-flex border-current/20 bg-current/10 text-inherit text-3xs">
                           F9
                         </Kbd>
                       </Button>

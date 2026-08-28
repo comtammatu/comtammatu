@@ -122,7 +122,7 @@ function AppendDraftPaneComponent({
                     <Button
                       type="button"
                       variant="ghost"
-                      className="h-auto w-full min-w-0 justify-start px-3 py-2 pr-[2.75rem] text-left font-normal whitespace-normal hover:bg-transparent sm:pr-[3.5rem]"
+                      className="h-auto w-full min-w-0 justify-start px-2.5 py-2 pr-4 text-left font-normal whitespace-normal hover:bg-transparent"
                       aria-label={messages.pos.appendDraft.editItemAria(
                         displayName,
                       )}
@@ -138,6 +138,7 @@ function AppendDraftPaneComponent({
                         sides={summary.sides}
                         note={summary.note}
                         isPriority={summary.isPriority}
+                        className="p-0"
                         onIncreaseQuantity={
                           onUpdateQuantity
                             ? () => onUpdateQuantity(item.key, 1)

@@ -187,46 +187,48 @@ const MenuItemButton = memo(function MenuItemButton({
       {/* Bottom-up black gradient keeps the white item name readable on bright photos. */}
       <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/90 via-black/55 to-transparent" />
 
-      {/* Badges — top left: In-cart quantity badge + remaining quota/block reason */}
-      <div className="absolute left-1.5 top-1.5 z-10 flex max-w-xs flex-col items-start gap-1 sm:left-2 sm:top-2 md:left-3 md:top-3">
-        {inCartQuantity > 0 ? (
-          <Badge
-            variant="default"
-            className="border border-primary-foreground/30 bg-primary px-1.5 py-0.5 text-xs font-semibold tabular-nums text-primary-foreground sm:text-sm"
-          >
-            {inCartQuantity}
-          </Badge>
-        ) : null}
-        {status.reasonLabel !== null ? (
-          <Badge
-            variant="destructive"
-            className="truncate text-xs font-semibold"
-          >
-            {status.reasonLabel}
-          </Badge>
-        ) : channelBlocked ? (
-          <Badge variant="destructive" className="truncate text-xs font-semibold">
-            {messages.pos.menu.soldOut}
-          </Badge>
-        ) : status.remainingLabel !== null ? (
-          <Badge
-            variant="secondary"
-            className="truncate text-xs font-semibold"
-          >
-            {status.remainingLabel}
-          </Badge>
-        ) : null}
-      </div>
+      {/* Top Header — Left: In-cart count + reason/quota badges, Right: Price */}
+      <div className="absolute inset-x-1.5 top-1.5 z-10 flex items-start justify-between gap-1 sm:inset-x-2 sm:top-2 md:inset-x-3 md:top-3">
+        <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
+          {inCartQuantity > 0 ? (
+            <Badge
+              variant="default"
+              className="border border-primary-foreground/30 bg-primary px-1.5 py-0.5 text-xs font-semibold tabular-nums text-primary-foreground sm:text-sm"
+            >
+              {inCartQuantity}
+            </Badge>
+          ) : null}
+          {status.reasonLabel !== null ? (
+            <Badge
+              variant="destructive"
+              className="max-w-full truncate text-xs font-semibold"
+            >
+              {status.reasonLabel}
+            </Badge>
+          ) : channelBlocked ? (
+            <Badge variant="destructive" className="max-w-full truncate text-xs font-semibold">
+              {messages.pos.menu.soldOut}
+            </Badge>
+          ) : status.remainingLabel !== null ? (
+            <Badge
+              variant="secondary"
+              className="max-w-full truncate text-xs font-semibold"
+            >
+              {status.remainingLabel}
+            </Badge>
+          ) : null}
+        </div>
 
-      {/* Price — top right, primary badge. */}
-      <span
-        className={cn(
-          "absolute right-1.5 top-1.5 z-10 inline-flex items-center rounded bg-primary px-1.5 py-0.5 text-xs font-semibold tabular-nums text-primary-foreground sm:right-2 sm:top-2 sm:px-2 sm:py-1 sm:text-sm md:right-3 md:top-3 md:text-base",
-          sparseMenu && "md:text-lg",
-        )}
-      >
-        {formatVND(displayPrice)}
-      </span>
+        {/* Price — top right, primary badge. */}
+        <span
+          className={cn(
+            "shrink-0 inline-flex items-center rounded bg-primary px-1.5 py-0.5 font-mono text-xs font-semibold tabular-nums text-primary-foreground sm:px-2 sm:py-1 sm:text-sm md:text-base",
+            sparseMenu && "md:text-lg",
+          )}
+        >
+          {formatVND(displayPrice)}
+        </span>
+      </div>
 
       {/* Item name — overlaid at the photo bottom; white text + drop shadow for contrast. */}
       <span

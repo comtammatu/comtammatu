@@ -382,14 +382,14 @@ function CartPaneComponent({
                 const displayName = getPosLineItemDisplayName(item);
                 const summary = getPosLineItemSummary(item);
                 const itemPaddingClass = isDeleteRevealed
-                  ? "pr-20 sm:pr-14"
-                  : "pr-14";
+                  ? "pr-4"
+                  : "pr-4";
 
                 return (
                   <div
                     key={item.key}
                     className={cn(
-                      "relative overflow-hidden",
+                      "relative overflow-hidden rounded-md",
                       justAddedKeys.has(item.key) && getCartLineEnterClass(),
                     )}
                   >
@@ -409,7 +409,7 @@ function CartPaneComponent({
                     <Item
                       variant="outline"
                       className={cn(
-                        "relative touch-pan-y rounded-none bg-card p-0 text-left transition-[background-color,opacity,transform] duration-150 ease-out hover:shadow-effect-card-hover",
+                        "relative touch-pan-y rounded-md bg-card p-0 text-left transition-[background-color,opacity,transform] duration-150 ease-out hover:shadow-effect-card-hover",
                         isRemoving &&
                           "bg-destructive/10 opacity-0 motion-safe:scale-95",
                       )}

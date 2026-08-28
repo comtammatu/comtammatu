@@ -177,7 +177,7 @@ export function OrderItemRow({ row, onTap }: OrderItemRowProps) {
         <Button
           type="button"
           variant="ghost"
-          className="h-auto w-full min-w-0 max-w-full justify-start whitespace-normal rounded-md px-2.5 py-1.5 text-left hover:bg-transparent sm:px-3"
+          className="h-auto w-full min-w-0 max-w-full justify-start whitespace-normal rounded-md px-2.5 py-2 text-left hover:bg-transparent sm:px-3"
           aria-label={`${displayName}, ${statusInfo.label}`}
           onClick={() => onTap?.(row.id)}
         >
@@ -194,6 +194,7 @@ export function OrderItemRow({ row, onTap }: OrderItemRowProps) {
             discount={discountLine}
             note={summary.note}
             isPriority={summary.isPriority}
+            className="p-0"
             quantityClassName={cancelled ? "opacity-50" : undefined}
             titleClassName={cancelled ? "line-through opacity-60" : undefined}
             totalClassName={

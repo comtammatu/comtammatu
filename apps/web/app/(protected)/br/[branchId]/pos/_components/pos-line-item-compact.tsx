@@ -178,7 +178,7 @@ export function PosLineItemCompact({
             type="button"
             variant="outline"
             size="icon-touch"
-            className="size-8 rounded-md text-muted-foreground hover:bg-background hover:text-foreground active:scale-90 touch-manipulation"
+            className="size-8 shrink-0 rounded-md text-muted-foreground hover:bg-background hover:text-foreground active:scale-90 touch-manipulation"
             aria-label={`Bớt 1 phần ${title}`}
             onClick={(e) => {
               e.preventDefault();
@@ -188,14 +188,14 @@ export function PosLineItemCompact({
           >
             <IconMinus className="size-4" />
           </Button>
-          <span className="min-w-5 px-0.5 text-center font-mono text-sm font-semibold tabular-nums text-foreground">
+          <span className="min-w-5 shrink-0 px-0.5 text-center font-mono text-sm font-semibold tabular-nums text-foreground">
             {formatPortionQuantity(quantity)}
           </span>
           <Button
             type="button"
             variant="outline"
             size="icon-touch"
-            className="size-8 rounded-md text-muted-foreground hover:bg-background hover:text-foreground active:scale-90 touch-manipulation"
+            className="size-8 shrink-0 rounded-md text-muted-foreground hover:bg-background hover:text-foreground active:scale-90 touch-manipulation"
             aria-label={`Thêm 1 phần ${title}`}
             onClick={(e) => {
               e.preventDefault();
@@ -233,7 +233,7 @@ export function PosLineItemCompact({
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
             <span
               className={cn(
-                "min-w-0 break-words text-sm sm:text-base font-semibold leading-snug text-foreground",
+                "min-w-0 break-words text-sm font-semibold leading-snug text-foreground sm:text-base",
                 titleClassName,
               )}
             >
@@ -254,7 +254,7 @@ export function PosLineItemCompact({
             ) : null}
             <span
               className={cn(
-                "font-mono text-sm sm:text-base font-bold leading-snug text-primary tabular-nums",
+                "font-mono text-sm font-bold leading-snug text-primary tabular-nums sm:text-base",
                 totalClassName,
               )}
             >
@@ -268,7 +268,7 @@ export function PosLineItemCompact({
             {allOptionTags.map((opt, index) => (
               <span
                 key={index}
-                className="inline-flex items-center rounded-md bg-muted/50 px-1.5 py-0.5 text-xs font-normal text-muted-foreground leading-tight"
+                className="inline-flex max-w-full items-center truncate rounded-md bg-muted/50 px-1.5 py-0.5 text-xs font-normal leading-tight text-muted-foreground"
               >
                 {opt}
               </span>

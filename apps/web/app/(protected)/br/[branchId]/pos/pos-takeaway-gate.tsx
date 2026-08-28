@@ -105,7 +105,7 @@ function ServiceOrderTile({
                 formatVND(order.total_amount),
               )
       }
-      className="w-full min-w-0 flex-col items-stretch justify-start gap-1.5 p-2.5 text-left whitespace-normal hover:shadow-effect-card-hover active:scale-[0.98] transition-transform touch-manipulation select-none chrome-tap sm:gap-3 sm:p-3.5 lg:p-4"
+      className="w-full min-w-0 flex-col items-stretch justify-start gap-1.5 p-3 text-left whitespace-normal hover:shadow-effect-card-hover active:scale-[0.98] transition-transform touch-manipulation select-none chrome-tap sm:gap-3 sm:p-3.5 lg:p-4"
       onClick={() => onViewDetail(order.id, order.order_number, order)}
     >
       <div className="flex w-full min-w-0 items-center justify-between gap-1">
