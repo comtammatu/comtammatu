@@ -235,7 +235,7 @@ test("POS takeaway mode uses a context grid before entering the new-order menu",
   );
   assert.match(
     sidebarVariantsSource,
-    /flex h-full min-h-0 w-72 shrink-0 flex-col 2xl:w-80/,
+    /flex h-full min-h-0 w-80 shrink-0 flex-col 2xl:w-88/,
   );
   assert.match(sidebarVariantsSource, /const sessionTopBar = \(/);
   assert.doesNotMatch(

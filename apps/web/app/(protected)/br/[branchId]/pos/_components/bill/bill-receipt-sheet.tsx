@@ -1227,6 +1227,137 @@ export function BillReceipt({
       Number(order.order_discount_amount) > 0 ||
       Number(order.item_discount_amount) > 0 ||
       Number(order.subtotal) !== Number(order.total_amount));
+  const sheetFooter =
+    isReadOnlyOrder && order ? (
+      <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        {canConvertCashToVietQr ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="touch"
+            data-testid="pos-receipt-convert-vietqr"
+            onClick={handleConvertCashToVietQr}
+            disabled={printPending}
+          >
+            {printPending ? (
+              <Spinner data-icon="inline-start" />
+            ) : (
+              <IconQrcode data-icon="inline-start" />
+            )}
+            {messages.pos.archivedOrders.convertCashToVietQr}
+          </Button>
+        ) : null}
+        <Button
+          type="button"
+          variant="outline"
+          size="touch"
+          onClick={
+            showVietQrPrint ? handlePrintVietQr : handleReprintReceipt
+          }
+          disabled={printPending}
+        >
+          {printPending ? (
+            <Spinner data-icon="inline-start" />
+          ) : (
+            <IconPrinter data-icon="inline-start" />
+          )}
+          {showVietQrPrint
+            ? messages.pos.archivedOrders.printVietQr
+            : messages.pos.payment.reprint}
+        </Button>
+        <Button type="button" size="touch-lg" onClick={onClose}>
+          {ACTIONS_VI.close}
+        </Button>
+      </div>
+    ) : order && !error && !isReceiptIntent ? (
+      <div className="flex w-full flex-col gap-2">
+        <div className="flex gap-2">
+          {canPrintProvisional && !isDeliveryOrder ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              className="flex-1"
+              onClick={() => void handlePrintProvisional()}
+              disabled={
+                isPending || methodPending || actionPending || printPending
+              }
+            >
+              {printPending ? (
+                <Spinner data-icon="inline-start" />
+              ) : (
+                <IconReceipt data-icon="inline-start" />
+              )}
+              {messages.pos.payment.printProvisional}
+            </Button>
+          ) : null}
+          {!isWaitingForVietQr ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              className="flex-1"
+              onClick={onClose}
+              disabled={actionPending}
+            >
+              {ACTIONS_VI.cancel}
+            </Button>
+          ) : null}
+        </div>
+        {selectedMethod === "cash" &&
+        (!isDeliveryOrder || deliveryTender !== "platform") &&
+        disabledReason ? (
+          <p className="text-sm text-muted-foreground">{disabledReason}</p>
+        ) : null}
+        {isDeliveryOrder && deliveryTender === "platform" && disabledReason ? (
+          <p className="text-sm text-muted-foreground">{disabledReason}</p>
+        ) : null}
+        {isDeliveryOrder && deliveryTender === "platform" ? (
+          <Button
+            data-testid="bill-confirm-platform"
+            type="button"
+            size="touch-lg"
+            className="w-full"
+            onClick={() => void handleConfirmPaid()}
+            disabled={
+              isPending || methodPending || actionPending || !canConfirmPaid
+            }
+            title={disabledReason ?? undefined}
+          >
+            {actionPending ? <Spinner data-icon="inline-start" /> : null}
+            {messages.pos.payment.platformPrepaid}
+          </Button>
+        ) : selectedMethod === "cash" ? (
+          <Button
+            data-testid="bill-confirm-cash"
+            type="button"
+            size="touch-lg"
+            className="w-full"
+            onClick={() => void handleConfirmPaid()}
+            disabled={
+              isPending || methodPending || actionPending || !canConfirmPaid
+            }
+            title={disabledReason ?? undefined}
+          >
+            {actionPending ? <Spinner data-icon="inline-start" /> : null}
+            {messages.pos.payment.paidConfirm}
+            <Kbd className="hidden [@media(hover:hover)]:inline-flex border-current/20 bg-current/10 text-inherit text-3xs ml-2">
+              Enter
+            </Kbd>
+          </Button>
+        ) : isWaitingForVietQr ? (
+          <Button
+            type="button"
+            size="touch-lg"
+            className="w-full"
+            onClick={onClose}
+            disabled={actionPending}
+          >
+            {SELF_ORDER_VI.paymentReconcileAction}
+          </Button>
+        ) : null}
+      </div>
+    ) : null;
 
   return (
     <StationSheet
@@ -1236,6 +1367,7 @@ export function BillReceipt({
       description={<span className="sr-only">{dialogDescription}</span>}
       side="bottom"
       size="lg"
+      footer={sheetFooter}
     >
       {!order && !error ? (
         isReceiptIntent ? (
@@ -1266,48 +1398,8 @@ export function BillReceipt({
       ) : error ? (
         <p className="text-base text-destructive">{error}</p>
       ) : isReadOnlyOrder && order ? (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 pb-2">
           <BillReceiptSummary order={order} />
-          <div className="sticky bottom-0 -mx-4 -mb-4 flex flex-col-reverse gap-2 border-t bg-popover px-4 py-3 sm:flex-row sm:justify-end">
-            {canConvertCashToVietQr ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="touch"
-                data-testid="pos-receipt-convert-vietqr"
-                onClick={handleConvertCashToVietQr}
-                disabled={printPending}
-              >
-                {printPending ? (
-                  <Spinner data-icon="inline-start" />
-                ) : (
-                  <IconQrcode data-icon="inline-start" />
-                )}
-                {messages.pos.archivedOrders.convertCashToVietQr}
-              </Button>
-            ) : null}
-            <Button
-              type="button"
-              variant="outline"
-              size="touch"
-              onClick={
-                showVietQrPrint ? handlePrintVietQr : handleReprintReceipt
-              }
-              disabled={printPending}
-            >
-              {printPending ? (
-                <Spinner data-icon="inline-start" />
-              ) : (
-                <IconPrinter data-icon="inline-start" />
-              )}
-              {showVietQrPrint
-                ? messages.pos.archivedOrders.printVietQr
-                : messages.pos.payment.reprint}
-            </Button>
-            <Button type="button" size="touch-lg" onClick={onClose}>
-              {ACTIONS_VI.close}
-            </Button>
-          </div>
         </div>
       ) : (
         <>
@@ -1467,13 +1559,13 @@ export function BillReceipt({
                       />
                     </InputGroup>
 
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    <div className="flex flex-wrap gap-2">
                       <Button
                         type="button"
                         variant={cashReceived === totalAmount ? "default" : "outline"}
                         size="touch"
                         className={cn(
-                          "col-span-2 min-w-0 font-semibold sm:col-span-1",
+                          "min-w-32 flex-1 font-semibold",
                           cashReceived === totalAmount
                             ? "bg-primary text-primary-foreground"
                             : "border-primary/20 text-primary hover:bg-primary/10",
@@ -1496,6 +1588,7 @@ export function BillReceipt({
                             type="button"
                             variant="outline"
                             size="touch"
+                            className="min-w-28 flex-1"
                             onClick={() => setCashInput(String(amount))}
                             disabled={actionPending}
                           >
@@ -1615,94 +1708,6 @@ export function BillReceipt({
                 ) : null}
               </>
             </StationSection>
-          </div>
-
-          <div className="sticky bottom-0 -mx-4 -mb-4 flex flex-col gap-2 border-t bg-popover px-4 py-3">
-            <div className="flex gap-2">
-              {canPrintProvisional && !isDeliveryOrder ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="touch"
-                  className="flex-1"
-                  onClick={() => void handlePrintProvisional()}
-                  disabled={
-                    isPending || methodPending || actionPending || printPending
-                  }
-                >
-                  {printPending ? (
-                    <Spinner data-icon="inline-start" />
-                  ) : (
-                    <IconReceipt data-icon="inline-start" />
-                  )}
-                  {messages.pos.payment.printProvisional}
-                </Button>
-              ) : null}
-              {!isWaitingForVietQr ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="touch"
-                  className="flex-1"
-                  onClick={onClose}
-                  disabled={actionPending}
-                >
-                  {ACTIONS_VI.cancel}
-                </Button>
-              ) : null}
-            </div>
-            {selectedMethod === "cash" &&
-            (!isDeliveryOrder || deliveryTender !== "platform") &&
-            disabledReason ? (
-              <p className="text-sm text-muted-foreground">{disabledReason}</p>
-            ) : null}
-            {isDeliveryOrder && deliveryTender === "platform" && disabledReason ? (
-              <p className="text-sm text-muted-foreground">{disabledReason}</p>
-            ) : null}
-            {isDeliveryOrder && deliveryTender === "platform" ? (
-              <Button
-                data-testid="bill-confirm-platform"
-                type="button"
-                size="touch-lg"
-                className="w-full"
-                onClick={() => void handleConfirmPaid()}
-                disabled={
-                  isPending || methodPending || actionPending || !canConfirmPaid
-                }
-                title={disabledReason ?? undefined}
-              >
-                {actionPending ? <Spinner data-icon="inline-start" /> : null}
-                {messages.pos.payment.platformPrepaid}
-              </Button>
-            ) : selectedMethod === "cash" ? (
-              <Button
-                data-testid="bill-confirm-cash"
-                type="button"
-                size="touch-lg"
-                className="w-full"
-                onClick={() => void handleConfirmPaid()}
-                disabled={
-                  isPending || methodPending || actionPending || !canConfirmPaid
-                }
-                title={disabledReason ?? undefined}
-              >
-                {actionPending ? <Spinner data-icon="inline-start" /> : null}
-                {messages.pos.payment.paidConfirm}
-                <Kbd className="hidden [@media(hover:hover)]:inline-flex border-current/20 bg-current/10 text-inherit text-3xs ml-2">
-                  Enter
-                </Kbd>
-              </Button>
-            ) : isWaitingForVietQr ? (
-              <Button
-                type="button"
-                size="touch-lg"
-                className="w-full"
-                onClick={onClose}
-                disabled={actionPending}
-              >
-                {SELF_ORDER_VI.paymentReconcileAction}
-              </Button>
-            ) : null}
           </div>
         </>
       )}

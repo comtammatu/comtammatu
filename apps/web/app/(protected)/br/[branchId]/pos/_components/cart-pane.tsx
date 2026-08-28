@@ -383,7 +383,7 @@ function CartPaneComponent({
                 const summary = getPosLineItemSummary(item);
                 const itemPaddingClass = isDeleteRevealed
                   ? "pr-4"
-                  : "pr-4";
+                  : "pr-8 sm:pr-9";
 
                 return (
                   <div
@@ -464,12 +464,15 @@ function CartPaneComponent({
                     <Button
                       variant="ghost"
                       size="icon-touch"
-                      className="absolute right-1 top-2 text-muted-foreground hover:text-destructive"
+                      className="absolute right-0.5 top-0.5 size-8 text-muted-foreground hover:bg-muted hover:text-destructive"
                       aria-label={messages.pos.pendingDraft.removeItemAria(
                         displayName,
                       )}
                       disabled={isRemoving}
-                      onClick={() => removeItemWithEffect(item.key)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeItemWithEffect(item.key);
+                      }}
                     >
                       <IconX className="size-4" />
                     </Button>

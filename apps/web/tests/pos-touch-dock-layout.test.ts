@@ -41,7 +41,7 @@ test("POS desktop approval action stays in the sidebar flow", () => {
   // Dual-pane: session chrome lives only above the order-list column.
   assert.match(
     sidebar,
-    /border-l border-border\/60 2xl:w-80">\s*\{sessionTopBar\}/,
+    /border-l border-border\/60 2xl:w-88">\s*\{sessionTopBar\}/,
   );
   assert.doesNotMatch(
     sidebar,

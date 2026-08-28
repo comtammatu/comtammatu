@@ -82,7 +82,7 @@ function SplitSidebarComponent({
   return (
     <div className="hidden h-full min-h-0 shrink-0 flex-col border-l border-border/60 bg-background xl:flex">
       <div className="flex min-h-0 flex-1">
-        <div className="flex h-full min-h-0 w-72 shrink-0 flex-col 2xl:w-80">
+        <div className="flex h-full min-h-0 w-80 shrink-0 flex-col 2xl:w-88">
           {appendDraft.target != null ? (
             <AppendDraftPane
               targetLabel={appendDraft.target.targetLabel}
@@ -103,7 +103,7 @@ function SplitSidebarComponent({
             />
           )}
         </div>
-        <div className="flex h-full min-h-0 w-72 shrink-0 flex-col border-l border-border/60 2xl:w-80">
+        <div className="flex h-full min-h-0 w-80 shrink-0 flex-col border-l border-border/60 2xl:w-88">
           {sessionTopBar}
           {sessionAction ? (
             <div className="flex shrink-0 border-b border-border/60 bg-background px-3 py-2">

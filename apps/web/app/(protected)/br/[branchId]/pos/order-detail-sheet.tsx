@@ -1561,7 +1561,7 @@ export function OrderDetailSheet({
                   ))}
                 </ul>
                 {data.note ? (
-                  <div className="mx-3 my-2 flex flex-col gap-1 sm:mx-4">
+                  <div className="mx-3 my-2 mb-4 flex flex-col gap-1 sm:mx-4">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                         {messages.pos.orderDetail.noteLabel}
@@ -1582,7 +1582,7 @@ export function OrderDetailSheet({
                     <NoteCallout tone="muted">{data.note}</NoteCallout>
                   </div>
                 ) : canEditNote ? (
-                  <div className="mx-3 my-2 sm:mx-4">
+                  <div className="mx-3 my-2 mb-4 sm:mx-4">
                     <Button
                       type="button"
                       variant="outline"
@@ -1594,7 +1594,9 @@ export function OrderDetailSheet({
                       <span>{messages.pos.orderDetail.addNote}</span>
                     </Button>
                   </div>
-                ) : null}
+                ) : (
+                  <div className="h-4" />
+                )}
               </ScrollArea>
 
               <div className="mt-auto flex shrink-0 flex-col gap-2 border-t border-border/60 bg-popover px-3 py-3 sm:px-4">
@@ -1623,8 +1625,8 @@ export function OrderDetailSheet({
                       readOnly={hasPromotion}
                       placeholder={PROMOTIONS_VI.inlinePromoPlaceholder}
                       className={cn(
-                        "font-mono",
-                        hasPromotion && "bg-muted text-foreground select-none",
+                        "placeholder:font-sans placeholder:tracking-normal font-mono tracking-wider",
+                        hasPromotion && "bg-muted text-foreground select-none font-sans tracking-normal",
                       )}
                       autoComplete="off"
                       autoCorrect="off"

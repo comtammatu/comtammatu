@@ -168,7 +168,7 @@ export function PosLineItemCompact({
     >
       {onIncreaseQuantity && onDecreaseQuantity ? (
         <div
-          className="flex h-8 shrink-0 items-center gap-1"
+          className="flex h-7 shrink-0 items-center gap-1 self-start pt-0.5"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -188,7 +188,7 @@ export function PosLineItemCompact({
           >
             <IconMinus className="size-4" />
           </Button>
-          <span className="min-w-5 shrink-0 px-0.5 text-center font-mono text-sm font-semibold tabular-nums text-foreground">
+          <span className="min-w-4 shrink-0 px-0.5 text-center font-mono text-sm font-semibold tabular-nums text-foreground">
             {formatPortionQuantity(quantity)}
           </span>
           <Button
