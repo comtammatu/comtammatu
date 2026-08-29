@@ -13,7 +13,7 @@ import {
 } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
 import { getAuthContext } from "@/_lib/auth";
-import { resolveClockInGate, resolveDefaultShiftId } from "../_lib/default-shift";
+import { resolveClockInGate } from "../_lib/default-shift";
 import { getClockInBlockedMessage } from "../_lib/clock-in-copy";
 import { markCompletedCountDutyChecklistItems } from "../_lib/count-duty";
 import { getEmployeeContext } from "../_lib/staff-runtime-context";
@@ -147,7 +147,7 @@ async function resolveAssignedShiftForEmployee(
   const { data: assignmentRows } = (await assignmentsQuery) as {
     data: ShiftAssignmentQueryRow[] | null;
   };
-  let assignments = (assignmentRows ?? [])
+  const assignments = (assignmentRows ?? [])
     .map((row) => {
       const shift = row.shifts;
       if (!shift.is_active || !shift.start_time || !shift.end_time) return null;
@@ -161,55 +161,8 @@ async function resolveAssignedShiftForEmployee(
     })
     .filter((row): row is NonNullable<typeof row> => row !== null);
 
-  let isAutoFloorAssignment = false;
-  if (assignments.length === 0 && ctx.branchId != null) {
-    const { data: activeShifts } = await service
-      .from("shifts")
-      .select("id, name, start_time, end_time")
-      .eq("tenant_id", ctx.claims.tenant_id)
-      .or(`branch_id.is.null,branch_id.eq.${ctx.branchId}`)
-      .eq("is_active", true)
-      .order("start_time");
-
-    if (activeShifts && activeShifts.length > 0) {
-      const defaultShiftId = resolveDefaultShiftId(activeShifts, nowMinutes);
-      const defaultShift = activeShifts.find((s) => s.id === defaultShiftId);
-      if (defaultShift?.start_time && defaultShift?.end_time) {
-        assignments = [
-          {
-            workDate: calendarDate,
-            shiftId: defaultShift.id,
-            shiftName: defaultShift.name ?? null,
-            startTime: defaultShift.start_time,
-            endTime: defaultShift.end_time,
-          },
-        ];
-        isAutoFloorAssignment = true;
-      }
-    }
-  }
-
   const gate = resolveClockInGate(assignments, calendarDate, nowMinutes);
   if (gate.kind === "open") {
-    if (isAutoFloorAssignment && ctx.branchId != null) {
-      await service.from("shift_assignments" as never).upsert(
-        {
-          tenant_id: ctx.claims.tenant_id,
-          employee_id: ctx.employeeId,
-          branch_id: ctx.branchId,
-          work_date: gate.businessDate,
-          shift_id: gate.shiftId,
-          is_shift_leader: false,
-          source: "floor",
-          assigned_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        } as never,
-        {
-          onConflict: "tenant_id,employee_id,work_date,shift_id",
-          ignoreDuplicates: true,
-        },
-      );
-    }
     return {
       ok: true,
       shiftId: gate.shiftId,

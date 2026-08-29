@@ -321,11 +321,9 @@ function distanceToShiftWindow(
 }
 
 /**
- * Mặc định mỗi ngày đều có ca làm: nhân viên không cần được phân ca trước.
- * Khi chấm công vào mà không có phân ca, gắn bản ghi vào ca đang diễn ra của
- * chi nhánh theo giờ VN; nếu đang ở khoảng trống giữa hai ca thì chọn ca gần
- * khung giờ hiện tại nhất (sắp bắt đầu hoặc vừa kết thúc). Tie-break theo giờ
- * bắt đầu rồi id để kết quả ổn định. Trả về null khi chi nhánh chưa khai báo ca.
+ * Select the nearest branch shift for non-roster display contexts.
+ * Attendance clock-in must resolve persisted assignments with
+ * `resolveClockInGate` and must never call this fallback.
  */
 export function resolveDefaultShiftId(
   shifts: readonly BranchShiftWindow[],

@@ -186,6 +186,21 @@ test("standardize shifts migration defines 3 operations shifts and 2 guard shift
   assert.match(migration, /ILIKE '%gãy%'/);
 });
 
+test("guard shift repair maps legacy assignments and restores recurring schedules", () => {
+  const migration = read(
+    "supabase/migrations/20260829201214_repair_guard_shift_assignments.sql",
+  );
+
+  assert.match(migration, /WHEN 'Bảo vệ Ca sáng' THEN 'Ca Bảo vệ Ngày'/);
+  assert.match(migration, /WHEN 'Bảo vệ Ca chiều' THEN 'Ca Bảo vệ Đêm'/);
+  assert.match(migration, /guard_shift_repair_assignment_conflict/);
+  assert.match(migration, /guard_shift_repair_ambiguous_weekly_pattern/);
+  assert.match(migration, /INSERT INTO public\.employee_weekly_schedules/);
+  assert.match(migration, /UPDATE public\.shift_assignments assignment/);
+  assert.match(migration, /UPDATE public\.attendance_records attendance/);
+  assert.match(migration, /guard_shift_repair_incomplete/);
+});
+
 test("branch roster exposes shift group filter and guard candidate categorization", () => {
   const branchWeek = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/team/roster/branch-roster-week-client.tsx",
@@ -203,4 +218,3 @@ test("branch roster exposes shift group filter and guard candidate categorizatio
   assert.match(cell, /operationsShifts/);
   assert.match(cell, /guardShifts/);
 });
-
