@@ -377,6 +377,9 @@ export const WASTE_REASON_LABELS_VI = {
   customer_return: "Khách trả",
   kds_cancel_mid_cook: "KDS hủy giữa nấu",
   kds_cancel_after_cook: "KDS hủy sau nấu",
+  discrepancy: "Lệch sổ / Sai số đếm",
+  loss: "Thất thoát / Không rõ",
+  damaged: "Hư hỏng vật lý",
   other: "Khác",
 } as const;
 

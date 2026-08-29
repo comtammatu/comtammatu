@@ -50,6 +50,16 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'COUNT SLIP WASTE: stock_issues_source_type_check does not allow count_slip_auto_waste';
   END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conrelid = 'public.stock_issue_items'::regclass
+      AND conname = 'stock_issue_items_reason_code_check'
+      AND pg_get_constraintdef(oid) LIKE '%discrepancy%'
+  ) THEN
+    RAISE EXCEPTION 'COUNT SLIP WASTE: stock_issue_items_reason_code_check does not allow discrepancy';
+  END IF;
 END;
 $$;
 

@@ -125,3 +125,32 @@ test("stock_issues_source_type_check allows count_slip_auto_waste and UI display
   );
 });
 
+test("stock_issue_items_reason_code_check and shared labels support count slip shortage reason codes", () => {
+  const migrationSource = readdirSync(join(repoRoot, "supabase/migrations"))
+    .filter((name) => name.endsWith(".sql"))
+    .map((name) => readRepoFile(`supabase/migrations/${name}`))
+    .join("\n");
+  const labelsSource = readRepoFile("packages/shared/src/labels/vi.ts");
+  const actionsSource = readRepoFile(
+    "apps/web/app/(protected)/inventory/waste-actions.ts",
+  );
+
+  for (const reason of ["discrepancy", "loss", "damaged"]) {
+    assert.match(
+      migrationSource,
+      new RegExp(`'${reason}'::text`),
+      `migrations must allow reason_code '${reason}' in stock_issue_items_reason_code_check`,
+    );
+    assert.match(
+      labelsSource,
+      new RegExp(`${reason}:`),
+      `WASTE_REASON_LABELS_VI must include reason '${reason}'`,
+    );
+    assert.match(
+      actionsSource,
+      new RegExp(`"${reason}"`),
+      `WASTE_REASON_CODES must include reason '${reason}'`,
+    );
+  }
+});
+

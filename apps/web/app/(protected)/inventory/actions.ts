@@ -34,6 +34,9 @@ const stocktakeLineUpdateSchema = z.object({
       "customer_return",
       "kds_cancel_mid_cook",
       "kds_cancel_after_cook",
+      "discrepancy",
+      "loss",
+      "damaged",
       "other",
     ])
     .nullable()

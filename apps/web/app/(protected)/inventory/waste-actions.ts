@@ -37,6 +37,9 @@ const WASTE_REASON_CODES = [
   "customer_return",
   "kds_cancel_mid_cook",
   "kds_cancel_after_cook",
+  "discrepancy",
+  "loss",
+  "damaged",
   "other",
 ] as const;
 
@@ -46,6 +49,7 @@ const WASTE_SOURCE_TYPES = [
   "kds_cancel_before_cook",
   "kds_cancel_mid_cook",
   "kds_cancel_after_cook",
+  "count_slip_auto_waste",
 ] as const;
 
 const wasteItemSchema = z.object({
