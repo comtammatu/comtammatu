@@ -48,8 +48,11 @@ test("role binding action returns structured aal2_required for step-up", () => {
   const client = read(
     "apps/web/app/(protected)/hr/staff/[id]/permissions/role-bindings-client.tsx",
   );
+  const errorCodes = read(
+    "apps/web/app/(protected)/hr/staff/[id]/permissions/role-binding-error-codes.ts",
+  );
 
-  assert.match(actions, /AAL2_REQUIRED:\s*"aal2_required"/);
+  assert.match(errorCodes, /AAL2_REQUIRED:\s*"aal2_required"/);
   assert.match(actions, /errorCode/);
   assert.match(client, /ROLE_BINDING_ERROR_CODES\.AAL2_REQUIRED/);
   assert.match(client, /MfaStepUpDialog/);

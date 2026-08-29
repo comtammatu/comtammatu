@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import ts from "typescript";
 
 const REPO_ROOT = process.cwd();
 
@@ -221,6 +222,133 @@ function countMatches(relPath, pattern) {
   return total;
 }
 
+function hasModifier(node, kind) {
+  return node.modifiers?.some((modifier) => modifier.kind === kind) ?? false;
+}
+
+function findInvalidUseServerExports(relRoots) {
+  const configPath = path.join(REPO_ROOT, "apps/web/tsconfig.json");
+  const config = ts.readConfigFile(configPath, ts.sys.readFile);
+  if (config.error) {
+    throw new Error(
+      ts.flattenDiagnosticMessageText(config.error.messageText, "\n"),
+    );
+  }
+  const parsedConfig = ts.parseJsonConfigFileContent(
+    config.config,
+    ts.sys,
+    path.dirname(configPath),
+  );
+  const program = ts.createProgram({
+    rootNames: parsedConfig.fileNames,
+    options: parsedConfig.options,
+  });
+  const checker = program.getTypeChecker();
+  const isFunctionReturningPromise = (node) => {
+    const signatures = checker.getTypeAtLocation(node).getCallSignatures();
+    return (
+      signatures.length > 0 &&
+      signatures.every(
+        (signature) =>
+          checker.getPromisedTypeOfPromise(
+            checker.getReturnTypeOfSignature(signature),
+          ) !== undefined,
+      )
+    );
+  };
+  const hits = [];
+  for (const relRoot of relRoots) {
+    for (const file of resolveFiles(relRoot)) {
+      if (!/\.[cm]?[jt]sx?$/.test(file)) continue;
+      const source = program.getSourceFile(file);
+      if (!source) continue;
+      const directive = source.statements[0];
+      if (
+        !directive ||
+        !ts.isExpressionStatement(directive) ||
+        !ts.isStringLiteral(directive.expression) ||
+        directive.expression.text !== "use server"
+      ) {
+        continue;
+      }
+
+      for (const statement of source.statements.slice(1)) {
+        if (ts.isExportAssignment(statement)) {
+          if (!isFunctionReturningPromise(statement.expression)) {
+            hits.push({ file, node: statement, label: "default export" });
+          }
+          continue;
+        }
+        if (ts.isExportDeclaration(statement)) {
+          if (statement.isTypeOnly) continue;
+          if (!statement.exportClause) {
+            hits.push({ file, node: statement, label: "re-export" });
+            continue;
+          }
+          if (ts.isNamedExports(statement.exportClause)) {
+            for (const element of statement.exportClause.elements) {
+              if (!element.isTypeOnly && !isFunctionReturningPromise(element)) {
+                hits.push({
+                  file,
+                  node: element,
+                  label: element.name.text,
+                });
+              }
+            }
+          }
+          continue;
+        }
+        if (!hasModifier(statement, ts.SyntaxKind.ExportKeyword)) continue;
+        if (hasModifier(statement, ts.SyntaxKind.DeclareKeyword)) continue;
+        if (ts.isFunctionDeclaration(statement)) {
+          if (!isFunctionReturningPromise(statement)) {
+            hits.push({
+              file,
+              node: statement,
+              label: statement.name?.text ?? "default function",
+            });
+          }
+          continue;
+        }
+        if (ts.isVariableStatement(statement)) {
+          for (const declaration of statement.declarationList.declarations) {
+            if (
+              !declaration.initializer ||
+              !isFunctionReturningPromise(declaration.initializer)
+            ) {
+              hits.push({
+                file,
+                node: declaration,
+                label: declaration.name.getText(source),
+              });
+            }
+          }
+          continue;
+        }
+        if (
+          ts.isClassDeclaration(statement) ||
+          ts.isEnumDeclaration(statement) ||
+          ts.isModuleDeclaration(statement)
+        ) {
+          hits.push({
+            file,
+            node: statement,
+            label: statement.name?.getText(source) ?? "runtime export",
+          });
+        }
+      }
+    }
+  }
+
+  return hits.map(({ file, node, label }) => {
+    const source = node.getSourceFile();
+    const { line } = source.getLineAndCharacterOfPosition(
+      node.getStart(source),
+    );
+    return `${path.relative(REPO_ROOT, file)}:${line + 1} (${label})`;
+  });
+}
+
 const failures = [];
 for (const guard of GUARDS) {
   const count = guard.paths.reduce(
@@ -249,6 +377,16 @@ if (confirmInTransitionHits.length > 0) {
   );
 }
 
+const invalidUseServerExports = findInvalidUseServerExports([
+  "apps/web/app",
+  "apps/web/lib",
+]);
+if (invalidUseServerExports.length > 0) {
+  failures.push(
+    `[USE-SERVER-ASYNC-EXPORTS-ONLY] non-async runtime export(s) at ${invalidUseServerExports.join(", ")} — a module-level \"use server\" file may export only async functions`,
+  );
+}
+
 if (failures.length > 0) {
   console.error("Regression guard check failed:");
   for (const failure of failures) console.error(`- ${failure}`);
@@ -261,7 +399,8 @@ if (failures.length > 0) {
 const ruleCount = new Set([
   ...GUARDS.map((guard) => guard.rule),
   "CONFIRM-OUTSIDE-STARTTRANSITION",
+  "USE-SERVER-ASYNC-EXPORTS-ONLY",
 ]).size;
 console.log(
-  `Regression guards: ${GUARDS.length} pattern guards + 1 structural guard over ${ruleCount} rules; checks passed.`,
+  `Regression guards: ${GUARDS.length} pattern guards + 2 structural guards over ${ruleCount} rules; checks passed.`,
 );

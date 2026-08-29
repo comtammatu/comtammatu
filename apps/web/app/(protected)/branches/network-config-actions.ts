@@ -179,7 +179,7 @@ export const revokeTrustedIp = withAction(
   },
 );
 
-export const NETWORK_GATE_BYPASS_DURATION_KINDS = [
+const NETWORK_GATE_BYPASS_DURATION_KINDS = [
   "1h",
   "2h",
   "4h",

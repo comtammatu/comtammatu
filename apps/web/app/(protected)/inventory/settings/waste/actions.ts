@@ -12,7 +12,7 @@ import {
 } from "@comtammatu/shared/settings";
 import { getAuthContextWithPermission } from "@/(protected)/inventory/_lib/auth";
 
-export const wasteTierFormSchema = z
+const wasteTierFormSchema = z
   .object({
     tierEnabled: z.boolean().default(DEFAULT_WASTE_TIER_SETTINGS.tierEnabled),
     tier1Threshold: z.coerce

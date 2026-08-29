@@ -22,10 +22,8 @@ import { AppDialog, FormDialog, SelectField } from "@/components/form";
 import { AppSection } from "@/components/surface";
 import { getVerifiedTotpFactorId } from "@lib/auth/mfa";
 import { MfaStepUpDialog } from "@lib/auth/mfa-step-up-dialog";
-import {
-  ROLE_BINDING_ERROR_CODES,
-  setRoleBindingAction,
-} from "./actions";
+import { setRoleBindingAction } from "./actions";
+import { ROLE_BINDING_ERROR_CODES } from "./role-binding-error-codes";
 
 export type AccessRole = {
   code: string;
