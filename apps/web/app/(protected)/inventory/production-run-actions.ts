@@ -108,6 +108,8 @@ export interface ProductionRunLineRow {
   entry_unit_id: number;
   entry_unit_name: string;
   entry_unit_to_base_factor: number;
+  unit_cost?: number | null;
+  line_cost?: number | null;
 }
 
 export interface ProductionRunRow {
@@ -132,7 +134,9 @@ export interface ProductionRunRow {
   completed_at: string | null;
   created_at: string;
   started_at: string | null;
-    lines: ProductionRunLineRow[];
+  lines: ProductionRunLineRow[];
+  total_cost?: number | null;
+  unit_cost?: number | null;
 }
 
 export type ProductionRunListRow = Omit<ProductionRunRow, "lines">;
@@ -304,6 +308,104 @@ export async function fetchProductionRunById(
   ) {
     return { success: false, error: "Không có quyền" };
   }
+
+  // Calculate actual or estimated costs
+  if (run.status === "completed") {
+    const { data: movements } = await supabase
+      .from("stock_movements")
+      .select("ingredient_id, type, quantity_change, unit_cost, entry_quantity, entry_to_base_factor")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("production_run_id", id);
+
+    const consumptionMap = new Map<number, { unit_cost: number; quantity_change: number }>();
+    let outputUnitCost: number | null = null;
+
+    for (const mov of movements ?? []) {
+      if (mov.type === "production_consumption" && mov.ingredient_id != null) {
+        consumptionMap.set(mov.ingredient_id, {
+          unit_cost: Number(mov.unit_cost ?? 0),
+          quantity_change: Number(mov.quantity_change ?? 0),
+        });
+      } else if (mov.type === "production_output" && mov.ingredient_id === run.finished_good_id) {
+        outputUnitCost = mov.unit_cost != null ? Number(mov.unit_cost) : null;
+      }
+    }
+
+    let totalCost = 0;
+    run.lines = run.lines.map((line) => {
+      const mov = consumptionMap.get(line.ingredient_id);
+      const unitCost = mov ? mov.unit_cost : 0;
+      const lineCost = mov
+        ? Math.abs(mov.quantity_change) * unitCost
+        : (line.actual_quantity ?? line.planned_quantity) * line.entry_unit_to_base_factor * unitCost;
+      totalCost += lineCost;
+      return {
+        ...line,
+        unit_cost: unitCost,
+        line_cost: lineCost,
+      };
+    });
+
+    run.total_cost = totalCost;
+    const outputQty = run.actual_quantity ?? run.planned_quantity;
+    if (outputUnitCost != null && (run.entry_unit_to_base_factor ?? 1) > 0) {
+      run.unit_cost = outputUnitCost * (run.entry_unit_to_base_factor ?? 1);
+    } else if (outputQty > 0) {
+      run.unit_cost = totalCost / outputQty;
+    }
+  } else {
+    // Draft or in_progress: query current stock_levels and ingredients for estimated costs
+    const ingredientIds = run.lines.map((l) => l.ingredient_id);
+    if (ingredientIds.length > 0) {
+      const [stockRes, ingRes] = await Promise.all([
+        supabase
+          .from("stock_levels")
+          .select("ingredient_id, avg_unit_cost")
+          .eq("tenant_id", claims.tenant_id)
+          .eq("branch_id", run.branch_id)
+          .in("ingredient_id", ingredientIds),
+        supabase
+          .from("ingredients")
+          .select("id, unit_cost")
+          .eq("tenant_id", claims.tenant_id)
+          .in("id", ingredientIds),
+      ]);
+
+      const costMap = new Map<number, number>();
+      for (const ing of ingRes.data ?? []) {
+        if (ing.unit_cost != null) costMap.set(ing.id, Number(ing.unit_cost));
+      }
+      for (const stock of stockRes.data ?? []) {
+        if (stock.avg_unit_cost != null && Number(stock.avg_unit_cost) > 0) {
+          costMap.set(stock.ingredient_id, Number(stock.avg_unit_cost));
+        }
+      }
+
+      let totalCost = 0;
+      run.lines = run.lines.map((line) => {
+        const unitCost = costMap.get(line.ingredient_id) ?? 0;
+        const qty =
+          run.status === "in_progress" && line.actual_quantity != null
+            ? line.actual_quantity
+            : line.planned_quantity;
+        const lineCost = qty * line.entry_unit_to_base_factor * unitCost;
+        totalCost += lineCost;
+        return {
+          ...line,
+          unit_cost: unitCost,
+          line_cost: lineCost,
+        };
+      });
+
+      run.total_cost = totalCost;
+      const outputQty =
+        run.status === "in_progress" && run.actual_quantity != null
+          ? run.actual_quantity
+          : run.planned_quantity;
+      run.unit_cost = outputQty > 0 ? totalCost / outputQty : 0;
+    }
+  }
+
   return { success: true, data: run };
 }
 

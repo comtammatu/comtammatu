@@ -61,10 +61,12 @@ export function SmartReorderSheet({
   branchId,
   branchName,
   items,
+  trigger,
 }: {
   branchId: number;
   branchName?: string | null;
   items: ReorderSuggestionItem[];
+  trigger?: React.ReactNode;
 }) {
   const controlSize = useFormControlSize();
   const menuItemSize = controlSize === "touch" ? "touch" : "default";
@@ -213,20 +215,30 @@ export function SmartReorderSheet({
 
   return (
     <>
-      <Button
-        variant="default"
-        size="sm"
-        className="gap-1.5"
-        onClick={() => setOpen(true)}
-      >
-        <IconSparkles className="size-4" />
-        <span>{INVENTORY_VI.smartReorderOpenBtn}</span>
-        {items.filter((i) => i.isBelowMin).length > 0 && (
-          <Badge variant="destructive" className="ml-1 px-1.5 h-4 text-2xs">
-            {items.filter((i) => i.isBelowMin).length}
-          </Badge>
-        )}
-      </Button>
+      {trigger !== undefined ? (
+        <span
+          onClick={() => setOpen(true)}
+          role="presentation"
+          className="inline-flex cursor-pointer"
+        >
+          {trigger}
+        </span>
+      ) : (
+        <Button
+          variant="default"
+          size="sm"
+          className="gap-1.5"
+          onClick={() => setOpen(true)}
+        >
+          <IconSparkles className="size-4" />
+          <span>{INVENTORY_VI.smartReorderOpenBtn}</span>
+          {items.filter((i) => i.isBelowMin).length > 0 && (
+            <Badge variant="destructive" className="ml-1 px-1.5 h-4 text-2xs">
+              {items.filter((i) => i.isBelowMin).length}
+            </Badge>
+          )}
+        </Button>
+      )}
 
       <AppDialog
         open={open}

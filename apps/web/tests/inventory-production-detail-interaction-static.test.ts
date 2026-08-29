@@ -19,3 +19,11 @@ test("production detail confirms cancellation and keeps state-specific actions",
   assert.match(source, /\/inventory\/transfers\/new\?branch=/);
   assert.doesNotMatch(source, /<ScrollArea className="h-72">/);
 });
+
+test("production detail displays batch cost and line cost breakdown", () => {
+  assert.match(source, /Giá vốn mẻ \(Thực tế\)/);
+  assert.match(source, /Giá vốn mẻ \(Dự kiến\)/);
+  assert.match(source, /run\.total_cost/);
+  assert.match(source, /line\.unit_cost/);
+  assert.match(source, /line\.line_cost/);
+});

@@ -15,9 +15,11 @@ import {
   Trash as IconTrash,
   Truck as IconTruck,
   ChevronDown as IconChevronDown,
+  Sparkles as IconSparkles,
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Item } from "@comtammatu/ui/components/item";
 import {
   Select,
   SelectContent,
@@ -1008,6 +1010,12 @@ export function StockClient({
     </InteractiveCard>
   );
 
+  const totalCount = ingredients.length;
+  const inStockCount = ingredients.filter((i) => i.status === "normal").length;
+  const lowStockCount = ingredients.filter((i) => i.status === "low").length;
+  const outOfStockCount = ingredients.filter((i) => i.status === "out").length;
+  const shortageCount = reorderSuggestions.filter((i) => i.isBelowMin).length;
+
   const content = (
     <>
       <AppPageHeader
@@ -1043,6 +1051,17 @@ export function StockClient({
             <SmartReorderSheet
               branchId={branchId}
               items={reorderSuggestions}
+              trigger={
+                <Button variant="outline" size="field" className="gap-1.5">
+                  <IconSparkles className="size-4 text-primary" />
+                  <span>{INVENTORY_VI.smartReorderOpenBtn}</span>
+                  {shortageCount > 0 ? (
+                    <Badge variant="destructive" className="ml-1 px-1.5 h-4 text-xs">
+                      {shortageCount}
+                    </Badge>
+                  ) : null}
+                </Button>
+              }
             />
             {desktopSecondaryActionsDropdown}
             {primaryRequestAction}
@@ -1050,24 +1069,137 @@ export function StockClient({
         }
       />
 
-      {reorderSuggestions.filter((i) => i.isBelowMin).length > 0 ? (
-        <Frame className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-destructive bg-muted">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Item
+          variant="outline"
+          onClick={() => setStockFilter("all")}
+          className={cn(
+            "flex flex-col justify-between p-3 text-left cursor-pointer",
+            stockFilter === "all"
+              ? "border-primary ring-1 ring-primary shadow-xs"
+              : "border-border",
+          )}
+        >
+          <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <span>{stockCopy.metrics.totalItems}</span>
+            <span className="size-2 rounded-full bg-muted-foreground" />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="font-mono text-2xl font-semibold tabular-nums text-foreground">
+              {formatQty(totalCount)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {stockCopy.metrics.totalItemsUnit}
+            </span>
+          </div>
+        </Item>
+
+        <Item
+          variant="outline"
+          onClick={() =>
+            setStockFilter((cur) => (cur === "in_stock" ? "all" : "in_stock"))
+          }
+          className={cn(
+            "flex flex-col justify-between p-3 text-left cursor-pointer",
+            stockFilter === "in_stock"
+              ? "border-success ring-1 ring-success shadow-xs"
+              : "border-border",
+          )}
+        >
+          <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <span>{stockCopy.metrics.inStock}</span>
+            <span className="size-2 rounded-full bg-success" />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="font-mono text-2xl font-semibold tabular-nums text-success">
+              {formatQty(inStockCount)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {stockCopy.metrics.inStockHint}
+            </span>
+          </div>
+        </Item>
+
+        <Item
+          variant="outline"
+          onClick={() =>
+            setStockFilter((cur) => (cur === "low" ? "all" : "low"))
+          }
+          className={cn(
+            "flex flex-col justify-between p-3 text-left cursor-pointer",
+            stockFilter === "low"
+              ? "border-warning ring-1 ring-warning shadow-xs"
+              : "border-border",
+          )}
+        >
+          <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <span>{stockCopy.metrics.lowStock}</span>
+            <span className="size-2 rounded-full bg-warning" />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="font-mono text-2xl font-semibold tabular-nums text-warning">
+              {formatQty(lowStockCount)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {stockCopy.metrics.lowStockHint}
+            </span>
+          </div>
+        </Item>
+
+        <Item
+          variant="outline"
+          onClick={() =>
+            setStockFilter((cur) => (cur === "out" ? "all" : "out"))
+          }
+          className={cn(
+            "flex flex-col justify-between p-3 text-left cursor-pointer",
+            stockFilter === "out"
+              ? "border-destructive ring-1 ring-destructive shadow-xs"
+              : "border-border",
+          )}
+        >
+          <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <span>{stockCopy.metrics.outOfStock}</span>
+            <span className="size-2 rounded-full bg-destructive" />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="font-mono text-2xl font-semibold tabular-nums text-destructive">
+              {formatQty(outOfStockCount)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {stockCopy.metrics.outOfStockHint}
+            </span>
+          </div>
+        </Item>
+      </div>
+
+      {shortageCount > 0 ? (
+        <Frame className="flex flex-col justify-between gap-3 border-warning bg-muted p-3.5 sm:flex-row sm:items-center">
           <div className="flex items-center gap-3">
-            <IconAlertTriangle className="size-5 text-destructive shrink-0" />
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-warning">
+              <IconAlertTriangle className="size-5" />
+            </span>
             <div>
-              <div className="font-semibold text-sm text-destructive">
+              <div className="text-sm font-semibold text-foreground">
                 {INVENTORY_VI.smartReorderBannerTitle}
               </div>
               <div className="text-xs text-muted-foreground">
-                {INVENTORY_VI.smartReorderBannerDesc(
-                  reorderSuggestions.filter((i) => i.isBelowMin).length,
-                )}
+                {INVENTORY_VI.smartReorderBannerDesc(shortageCount)}
               </div>
             </div>
           </div>
           <SmartReorderSheet
             branchId={branchId}
             items={reorderSuggestions}
+            trigger={
+              <Button variant="default" size="sm" className="gap-1.5 shrink-0">
+                <IconSparkles className="size-4" />
+                <span>{INVENTORY_VI.smartReorderOpenBtn}</span>
+                <Badge variant="destructive" className="ml-1 px-1.5 h-4 text-xs">
+                  {shortageCount}
+                </Badge>
+              </Button>
+            }
           />
         </Frame>
       ) : null}

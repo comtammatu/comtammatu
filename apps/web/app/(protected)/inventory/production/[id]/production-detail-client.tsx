@@ -17,7 +17,12 @@ import {
   DescriptionList,
 } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
-import { formatDateTime, formatQty, formatSmartQuantityUnit } from "@lib/inventory/format";
+import {
+  formatDateTime,
+  formatQty,
+  formatSmartQuantityUnit,
+  formatVND,
+} from "@lib/inventory/format";
 import { formatPercent } from "@comtammatu/shared/format";
 import { messages } from "@lib/messages";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
@@ -192,7 +197,7 @@ export function ProductionDetailClient({
     <div className="flex flex-col gap-5">
       <Item
         variant="outline"
-        className="grid shrink-0 grid-cols-2 gap-4 p-4 text-xs sm:grid-cols-3 lg:grid-cols-5"
+        className="grid shrink-0 grid-cols-2 gap-4 p-4 text-xs sm:grid-cols-3 lg:grid-cols-6"
       >
         <div className="min-w-0">
           <span className="block font-medium text-muted-foreground">
@@ -234,6 +239,22 @@ export function ProductionDetailClient({
             {run.finished_good_name}
           </span>
         </div>
+        <div className="min-w-0">
+          <span className="block font-medium text-muted-foreground truncate">
+            {run.status === "completed" ? "Giá vốn mẻ (Thực tế)" : "Giá vốn mẻ (Dự kiến)"}
+          </span>
+          <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+            {run.total_cost != null && run.total_cost > 0 ? formatVND(run.total_cost) : "—"}
+          </span>
+          {run.unit_cost != null && run.unit_cost > 0 ? (
+            <span
+              className="block text-xs text-muted-foreground font-mono truncate"
+              title={`Giá vốn: ${formatVND(run.unit_cost)} / ${run.entry_unit_name ?? "ĐV"}`}
+            >
+              {formatVND(run.unit_cost)} / {run.entry_unit_name ?? "ĐV"}
+            </span>
+          ) : null}
+        </div>
       </Item>
 
       <AppSection title="Thông tin lệnh" size="sm">
@@ -266,9 +287,11 @@ export function ProductionDetailClient({
         <Frame className="border-0 rounded-none overflow-hidden">
           <div className="flex gap-2 border-b bg-muted/30 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             <span className="min-w-0 flex-1">Nguyên liệu</span>
-            <span className="w-28 shrink-0 text-right">Kế hoạch</span>
-            <span className="w-32 shrink-0 text-right">Thực tế</span>
-            <span className="w-28 shrink-0 text-right">Chênh lệch</span>
+            <span className="w-24 shrink-0 text-right">Kế hoạch</span>
+            <span className="w-28 shrink-0 text-right">Thực tế</span>
+            <span className="w-24 shrink-0 text-right">Chênh lệch</span>
+            <span className="w-24 shrink-0 text-right">Đơn giá</span>
+            <span className="w-28 shrink-0 text-right">Thành tiền</span>
           </div>
           <div className="divide-y">
             {run.lines.map((line) => {
@@ -297,10 +320,10 @@ export function ProductionDetailClient({
                   <span className="min-w-0 flex-1 font-medium text-foreground">
                     {line.ingredient_name}
                   </span>
-                  <span className="w-28 shrink-0 text-left sm:text-right tabular-nums text-muted-foreground text-xs sm:text-sm font-mono">
+                  <span className="w-24 shrink-0 text-left sm:text-right tabular-nums text-muted-foreground text-xs sm:text-sm font-mono">
                     {plannedSmartLine.formattedQty} {plannedSmartLine.displayUnit}
                   </span>
-                  <div className="w-32 shrink-0 flex items-center justify-start sm:justify-end gap-1.5">
+                  <div className="w-28 shrink-0 flex items-center justify-start sm:justify-end gap-1.5">
                     {run.status === "in_progress" ? (
                       <div className="flex w-full items-center gap-1.5">
                         <QuantityInput
@@ -328,7 +351,7 @@ export function ProductionDetailClient({
                       </span>
                     )}
                   </div>
-                  <div className="w-28 shrink-0 flex items-center justify-start sm:justify-end">
+                  <div className="w-24 shrink-0 flex items-center justify-start sm:justify-end">
                     {diff == null ? (
                       <span className="text-xs text-muted-foreground font-mono">—</span>
                     ) : Math.abs(diff) < 1e-4 ? (
@@ -349,9 +372,25 @@ export function ProductionDetailClient({
                       </span>
                     )}
                   </div>
+                  <div className="w-24 shrink-0 text-left sm:text-right font-mono text-xs tabular-nums text-muted-foreground">
+                    {line.unit_cost != null && line.unit_cost > 0
+                      ? formatVND(line.unit_cost)
+                      : "—"}
+                  </div>
+                  <div className="w-28 shrink-0 text-left sm:text-right font-mono text-xs font-medium tabular-nums text-foreground">
+                    {line.line_cost != null && line.line_cost > 0
+                      ? formatVND(line.line_cost)
+                      : "—"}
+                  </div>
                 </div>
               );
             })}
+          </div>
+          <div className="flex items-center justify-between border-t bg-muted/30 px-3 py-2.5 text-xs font-semibold text-foreground">
+            <span>Tổng giá trị nguyên liệu {run.status === "completed" ? "(Thực tế)" : "(Dự kiến)"}</span>
+            <span className="font-mono text-sm tabular-nums font-semibold text-foreground">
+              {run.total_cost != null && run.total_cost > 0 ? formatVND(run.total_cost) : "—"}
+            </span>
           </div>
         </Frame>
       </AppSection>

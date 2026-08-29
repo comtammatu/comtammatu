@@ -59,6 +59,21 @@ const INVENTORY_SETTINGS_PERMISSIONS = [
 
 const copy = messages.inventory.home;
 
+function getLaneDescription(href: string): string {
+  if (href.includes("/stocktake")) return copy.laneDescriptions.stocktake;
+  if (href.includes("/stock")) return copy.laneDescriptions.stock;
+  if (href.includes("/purchase-orders")) return copy.laneDescriptions.purchaseOrders;
+  if (href.includes("/grn")) return copy.laneDescriptions.receipts;
+  if (href.includes("/consumption")) return copy.laneDescriptions.consumption;
+  if (href.includes("/transfers")) return copy.laneDescriptions.transfers;
+  if (href.includes("/production")) return copy.laneDescriptions.production;
+  if (href.includes("/settings")) return copy.laneDescriptions.settings;
+  if (href.includes("/suppliers")) return copy.laneDescriptions.suppliers;
+  if (href.includes("/ingredients")) return copy.laneDescriptions.ingredients;
+  if (href.includes("/menu-recipes")) return copy.laneDescriptions.menuRecipes;
+  return copy.laneHint;
+}
+
 async function resolveInventoryHomeFlags(
   role: StaffRole,
   auth: Awaited<ReturnType<typeof loadAuthState>>,
@@ -266,7 +281,7 @@ export default async function InventoryPage({
                       key={item.href}
                       href={item.linkHref ?? item.href}
                       title={item.label}
-                      description={copy.laneHint}
+                      description={getLaneDescription(item.href)}
                       icon={<Icon aria-hidden="true" />}
                     />
                   );
