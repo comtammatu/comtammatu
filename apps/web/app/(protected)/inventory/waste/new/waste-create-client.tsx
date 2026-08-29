@@ -24,7 +24,11 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
       <WasteOperationalForm
         context={context}
         cancelHref={`/inventory/consumption?view=waste&branch=${context.branch.id}`}
-        onCreated={(issueId) => router.push(`/inventory/issues/${issueId}`)}
+        onCreated={(issueId) =>
+          router.push(
+            `/inventory/consumption?view=waste&branch=${context.branch.id}&issueId=${issueId}&mode=view`,
+          )
+        }
       />
     </DocumentFormFrame>
   );

@@ -78,3 +78,36 @@ test("document Dialog overlay avoids backdrop-blur paint cost", () => {
   const dialog = read("packages/ui/src/components/dialog.tsx");
   assert.doesNotMatch(dialog, /supports-backdrop-filter:backdrop-blur/);
 });
+
+test("Stock issues client opens detail overlays via document overlay URL", () => {
+  const issuesClient = read(
+    "apps/web/app/(protected)/inventory/issues/issues-client.tsx",
+  );
+  assert.match(issuesClient, /useDocumentOverlayUrl/);
+  assert.match(issuesClient, /<IssueDocumentDialogHost/);
+  assert.match(
+    issuesClient,
+    /issueOverlay\.patchOverlay\(\{\s*issueId:\s*item\.id,\s*mode:\s*"view"\s*\},\s*"push"\)/,
+  );
+});
+
+test("Stock issues detail routes are REDIRECT-SHIMs to list overlay", () => {
+  const consumptionDetail = read(
+    "apps/web/app/(protected)/inventory/consumption/[id]/page.tsx",
+  );
+  const issueDetail = read(
+    "apps/web/app/(protected)/inventory/issues/[id]/page.tsx",
+  );
+  assert.match(
+    consumptionDetail,
+    /redirect\(`\/inventory\/consumption\?\$\{qs\.toString\(\)\}`\)/,
+  );
+  assert.match(
+    issueDetail,
+    /redirect\(`\/inventory\/consumption\?\$\{qs\.toString\(\)\}`\)/,
+  );
+  assert.doesNotMatch(
+    consumptionDetail + issueDetail,
+    /IssueDetailPageContent/,
+  );
+});

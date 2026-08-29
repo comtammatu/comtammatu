@@ -68,6 +68,10 @@ import {
   RecordedConsumptionSheet,
   useRecordedConsumptionOverlay,
 } from "./recorded-consumption-sheet";
+import { useDocumentOverlayUrl } from "@lib/navigation/use-document-overlay-url";
+import { IssueDocumentDialogHost } from "./issue-document-dialog-host";
+
+const ISSUE_OVERLAY_KEYS = ["issueId", "mode"] as const;
 
 export type { IssueBranchOption, IssueRow, RecordedConsumptionRow } from "./issue-list-types";
 
@@ -128,6 +132,7 @@ export function IssuesClient({
   const [createOpen, setCreateOpen] = useState(false);
   const [openActionRowId, setOpenActionRowId] = useState<number | null>(null);
   const recordedOverlay = useRecordedConsumptionOverlay();
+  const issueOverlay = useDocumentOverlayUrl(ISSUE_OVERLAY_KEYS);
   const controlSize = useFormControlSize("responsive");
   const compactActionSize = "sm";
 
@@ -169,20 +174,18 @@ export function IssuesClient({
               ? "waste"
               : "manual";
 
-  const issueDetailHref = (item: IssueRow) => `${detailBasePath}/${item.id}`;
+  const openIssueDetail = (item: IssueRow) => {
+    issueOverlay.patchOverlay({ issueId: item.id, mode: "view" }, "push");
+  };
 
   const getIssueRowActions = (item: IssueRow): RowActionItem[] => [
     {
       key: "view",
       label: ACTIONS_VI.viewDetails,
       icon: <IconArrowBarRight />,
-      href: issueDetailHref(item),
+      onSelect: () => openIssueDetail(item),
     },
   ];
-
-  const openIssueDetail = (item: IssueRow) => {
-    router.push(issueDetailHref(item));
-  };
 
   const openRecordedOrderDetail = (item: RecordedConsumptionRow) => {
     recordedOverlay.patchOverlay({ recordedOrderId: item.orderId }, "push");
@@ -274,7 +277,7 @@ export function IssuesClient({
 
     if (res.success && res.data) {
       const newId = (res.data as { id: number }).id;
-      router.push(`${detailBasePath}/${newId}`);
+      issueOverlay.patchOverlay({ issueId: newId, mode: "edit" }, "push");
     }
 
     return res;
@@ -435,6 +438,7 @@ export function IssuesClient({
         getIssueRowActions,
         openActionRowId,
         setOpenActionRowId,
+        onOpen: openIssueDetail,
       }),
     [detailBasePath, openActionRowId],
   );
@@ -668,6 +672,8 @@ export function IssuesClient({
         orders={recordedConsumptions}
         canViewMonetary={canViewMonetary}
       />
+
+      <IssueDocumentDialogHost basePath={listBasePath} />
 
       <IssueCreateDialog
         open={createOpen}

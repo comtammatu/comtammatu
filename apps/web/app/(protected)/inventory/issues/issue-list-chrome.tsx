@@ -286,24 +286,36 @@ export function buildIssueColumns({
   getIssueRowActions,
   openActionRowId,
   setOpenActionRowId,
+  onOpen,
 }: {
   detailBasePath: string;
   getIssueRowActions: (item: IssueRow) => RowActionItem[];
   openActionRowId: number | null;
   setOpenActionRowId: (id: number | null) => void;
+  onOpen?: (item: IssueRow) => void;
 }): DataTableColumn<IssueRow>[] {
   return [
     {
       key: "code",
       header: INVENTORY_VI.issueCode,
-      render: (item) => (
-        <Link
-          href={`${detailBasePath}/${item.id}`}
-          className="font-mono text-primary hover:underline"
-        >
-          {item.code}
-        </Link>
-      ),
+      render: (item) =>
+        onOpen ? (
+          <Button
+            type="button"
+            variant="link"
+            className="h-auto p-0 font-mono font-medium"
+            onClick={() => onOpen(item)}
+          >
+            {item.code}
+          </Button>
+        ) : (
+          <Link
+            href={`${detailBasePath}/${item.id}`}
+            className="font-mono text-primary hover:underline"
+          >
+            {item.code}
+          </Link>
+        ),
     },
     {
       key: "type",

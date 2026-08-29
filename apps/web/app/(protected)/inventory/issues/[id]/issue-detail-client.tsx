@@ -42,6 +42,7 @@ import {
   Combobox,
   QuantityInput,
   FormDialog,
+  AppDialog,
 } from "@/components/form";
 import {
   DataTable,
@@ -211,6 +212,8 @@ export function IssueDetailClient({
   canAdjustStock,
   auditLogs = [],
   listBasePath = "/inventory/consumption",
+  presentation = "page",
+  onCloseDialog,
 }: {
   issueId: number;
   tenantId: number;
@@ -221,6 +224,8 @@ export function IssueDetailClient({
   canAdjustStock: boolean;
   auditLogs?: AuditLogRow[];
   listBasePath?: string;
+  presentation?: "page" | "dialog";
+  onCloseDialog?: () => void;
 }) {
   const router = useRouter();
   const [issue, setIssue] = useState(initialIssue);
@@ -667,7 +672,7 @@ export function IssueDetailClient({
         </div>
       </div>
 
-      {isEditable ? (
+      {presentation !== "dialog" && isEditable ? (
         <AppDetailFooter
           sticky={isTouchLayout}
           leading={
@@ -698,7 +703,7 @@ export function IssueDetailClient({
             </>
           }
         />
-      ) : isAwaitingApproval ? (
+      ) : presentation !== "dialog" && isAwaitingApproval ? (
         <AppDetailFooter
           sticky
           trailing={
@@ -727,7 +732,7 @@ export function IssueDetailClient({
         },
       ]}
       defaultValue="document"
-      stickyList
+      stickyList={presentation !== "dialog"}
     >
       <TabsContent value="document" className="mt-4">
         {isTouchLayout ? <div className="min-w-0">{pageLayout}</div> : pageLayout}
@@ -739,6 +744,121 @@ export function IssueDetailClient({
       </TabsContent>
     </AppPageTabs>
   );
+
+  const dialogFooter = (
+    <div className="flex w-full flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        {canAdjustStock && !isDraft && lines.length > 0 ? (
+          <DocumentStockCorrectionDialog
+            documentType="issue"
+            documentId={issue.id}
+            documentCode={issue.issue_number}
+            branchOptions={[
+              {
+                id: issue.branch_id,
+                name: issueBranchName,
+              },
+            ]}
+            itemOptions={lines.map((line) => ({
+              ingredientId: line.ingredient_id,
+              name: line.ingredients?.name ?? `#${line.ingredient_id}`,
+              unit: line.unit ?? line.ingredients?.unit ?? "",
+            }))}
+          />
+        ) : null}
+      </div>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="default"
+          onClick={() => onCloseDialog?.()}
+        >
+          {ACTIONS_VI.close}
+        </Button>
+        {isEditable ? (
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              size="default"
+              onClick={handleCancelIssue}
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-60"
+              disabled={isPending}
+            >
+              <IconX className="size-4" />
+              {ISSUES_VI.cancelIssueAction}
+            </Button>
+            <Badge variant="secondary">{ISSUES_VI.draftAutoSaved}</Badge>
+            <Button
+              type="button"
+              size="default"
+              onClick={handleConfirmIssue}
+              disabled={isPending || lines.length === 0}
+            >
+              <IconCircleCheck className="size-4" />
+              {surface.confirmAction}
+            </Button>
+          </>
+        ) : isAwaitingApproval ? (
+          <Button
+            size="default"
+            variant="outline"
+            render={<Link href="/inventory/waste/approvals" />}
+          >
+            <IconClock className="size-4" />
+            {ISSUES_VI.pendingApprovalQueueAction}
+          </Button>
+        ) : null}
+      </div>
+    </div>
+  );
+
+  if (presentation === "dialog") {
+    return (
+      <>
+        <AppDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) onCloseDialog?.();
+          }}
+          variant="document"
+          title={
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-mono">{issue.issue_number}</span>
+              <StatusBadge
+                domain="inventory"
+                value={statusValue}
+                label={statusLabel}
+              />
+            </div>
+          }
+          description={ISSUES_VI.headerMeta(
+            surface.label,
+            issueBranchName,
+            issue.issued_at ? formatDateTime(issue.issued_at) : "—",
+          )}
+          footer={dialogFooter}
+        >
+          {tabs}
+        </AppDialog>
+        <AddIssueLineDialog
+          ingredients={ingredients}
+          initialLine={editingLine}
+          isOpen={addDialogOpen}
+          issueId={issueId}
+          canViewMonetary={canViewMonetary}
+          tenantId={tenantId}
+          showConsumptionPhoto={issue.issue_type === "consumption"}
+          onOpenChange={(open) => {
+            setAddDialogOpen(open);
+            if (!open) setEditingLine(null);
+          }}
+          onSaved={reload}
+        />
+      </>
+    );
+  }
 
   return (
     <AppPage width="xwide" density="compact">

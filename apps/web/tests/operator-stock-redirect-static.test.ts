@@ -656,7 +656,7 @@ test("operator stock branch-native extensions keep issue and report actions in t
   assert.match(issuesClient, /detailBasePath = listBasePath/);
   assert.match(
     issuesClient,
-    /router\.push\(`\$\{detailBasePath\}\/\$\{newId\}`\)/,
+    /issueOverlay\.patchOverlay\(\{\s*issueId:\s*newId,\s*mode:\s*"edit"\s*\},\s*"push"\)/,
   );
   assert.doesNotMatch(issuesClient, /router\.push\(`\/inventory\/consumption/);
   assert.match(issueDetailClient, /listBasePath = "\/inventory\/consumption"/);
