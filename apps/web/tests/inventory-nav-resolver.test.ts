@@ -279,6 +279,7 @@ test("inventory settings sub-pages stay internal routes, not sidebar items", () 
     "/inventory/settings/categories",
     "/inventory/settings/units",
     "/inventory/settings/thresholds",
+    "/inventory/settings/waste",
   ]) {
     assert.equal(
       visible.has(href),

@@ -78,6 +78,10 @@ const VI_DICTIONARY = {
       short: "Nhóm NL",
       long: "Nhóm nguyên liệu",
     },
+    "/inventory/settings/waste": {
+      short: "Hao hụt",
+      long: "Hao hụt & Phân cấp",
+    },
   },
 
   // ------------------------------------------------------------------

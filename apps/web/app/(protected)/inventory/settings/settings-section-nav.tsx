@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  AlertTriangle as IconAlertTriangle,
   ChartBar as IconChartBar,
   FileText as IconFileText,
   Package as IconPackage,
@@ -14,6 +15,7 @@ const SETTINGS_SECTION_ICONS = {
   categories: IconFileText,
   units: IconPackage,
   thresholds: IconChartBar,
+  waste: IconAlertTriangle,
 } as const;
 
 export type SettingsSectionNavIcon = keyof typeof SETTINGS_SECTION_ICONS;

@@ -1774,6 +1774,40 @@ export const inventory = {
     units: {
       loadFailed: "Không thể tải danh sách đơn vị.",
     },
+    waste: {
+      title: "Hao hụt & Phân cấp",
+      eyebrow: "Cấu hình rủi ro hao hụt",
+      hint: "Tùy chỉnh các mốc giá trị, tỷ lệ tồn kho và điều kiện duyệt khi xuất hủy nguyên liệu.",
+      tierEnabledLabel: "Bật phân cấp kiểm soát hao hụt",
+      tierEnabledDescription:
+        "Khi tắt, mọi phiếu hao hụt đều được ghi giảm kho ngay lập tức, không yêu cầu ảnh bằng chứng hoặc quản lý duyệt.",
+      streamlinedModeLabel: "Chế độ tinh gọn",
+      streamlinedModeHint:
+        "Cơ chế phân cấp rủi ro đang tắt. Mọi thao tác xuất hủy hao hụt sẽ được ghi nhận và trừ tồn kho ngay lập tức, không yêu cầu ảnh chụp hay chờ duyệt.",
+      rulesSectionTitle: "Ngưỡng giá trị & Điều kiện kiểm soát",
+      rulesSectionDescription:
+        "Thiết lập các mốc giá trị kích hoạt yêu cầu ảnh hoặc quản lý duyệt.",
+      tier1Label: "Ngưỡng chụp ảnh bắt buộc (đ)",
+      tier1Description:
+        "Dòng hao hụt có giá trị vượt mức này sẽ bắt buộc đính kèm ảnh chụp bằng chứng.",
+      tier2Label: "Ngưỡng quản lý duyệt (đ)",
+      tier2Description:
+        "Dòng hao hụt có giá trị vượt mức này sẽ cần quản lý xác nhận trước khi trừ tồn kho.",
+      shiftCapLabel: "Trần hao hụt trong một ca (đ)",
+      shiftCapDescription:
+        "Tổng giá trị hao hụt tích lũy trong một ca vượt mức này sẽ yêu cầu duyệt quản lý.",
+      qtyRatioLabel: "Tỷ lệ hao hụt / Tồn kho (%)",
+      qtyRatioDescription:
+        "Tỷ lệ số lượng hao hụt so với tồn hiện tại vượt mức này sẽ yêu cầu chụp ảnh (nhập 0% để tắt).",
+      enforceReasonLabel: "Bắt buộc ảnh theo lý do rủi ro",
+      enforceReasonDescription:
+        "Yêu cầu ảnh chụp đối với các lý do vận hành thông thường (rơi vỡ, không đạt chất lượng...).",
+      saveAction: "Lưu cấu hình",
+      saveSuccess: "Đã cập nhật cấu hình hao hụt thành công.",
+      saveFailed: "Không thể lưu cấu hình hao hụt.",
+      loadFailed: "Không thể tải cấu hình hao hụt.",
+      nothingToSave: "Không có thay đổi để lưu.",
+    },
   },
   transfer: {
     created: "Tạo chuyển kho {code} thành công",

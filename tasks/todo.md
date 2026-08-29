@@ -7,15 +7,15 @@
 
 ## GreenSM and beFood auto-detect Má Tư Agent as a SUNMI printer
 
-State: verify
+State: doing
 Kind: feature
-Tier: T2
+Tier: T3
 Lane: delivery/print-agent
-Exit: Current GreenSM Merchant and beMerchant builds bind to a companion using the legacy SUNMI PrinterX package/action on an ordinary Android device; printer calls are grouped per source app, persisted, and forwarded through the main Agent's loopback intake so classification, quarantine, deduplication, and POS order history remain authoritative.
-Evidence: verified public APK manifests for `com.gsm.merchant.app` and `xyz.be.merchant` both query `woyou.aidlservice.jiuiv5` and bundle `com.sunmi.printerx`; `sunmi-compat` contract/buffer tests; merged-manifest inspection; `docs/runbooks/food-delivery-matu-agent.md`.
+Exit: Current GreenSM Merchant and beMerchant builds bind to a companion using the legacy SUNMI PrinterX package/action on an ordinary Android device; the companion resolves each caller UID to exactly one allowlisted package, rejects Shopee/Grab/unknown callers before buffering bytes, and forwards accepted jobs through the main Agent's loopback intake so classification, quarantine, deduplication, and POS order history remain authoritative.
+Evidence: verified public APK manifests for `com.gsm.merchant.app` and `xyz.be.merchant` both query `woyou.aidlservice.jiuiv5` and bundle `com.sunmi.printerx`; Redmi incident proof at 19:16–19:18 linked Shopee launch and direct loopback print streams to three full-ID/manual-short-ID duplicate POS orders; `sunmi-compat` caller-policy/contract/buffer tests; legacy Shopee date/item deduplication tests; merged-manifest inspection; `docs/runbooks/food-delivery-matu-agent.md`.
 
-- [ ] Install both debug APKs on the Redmi Note 13 and confirm GreenSM and beFood bind without Bluetooth or printer-IP setup
-- [ ] Print one test receipt from each app and confirm one corresponding Agent queue row and no duplicate POS order
+- [ ] Deploy the relay short-reference containment, then restart the main Agent and confirm historical Shopee receipts resolve idempotently or stay quarantined without a duplicate POS order
+- [ ] Print one test receipt from GreenSM and beFood; confirm one corresponding Agent queue row and no duplicate POS order
 
 ## Finance period integrity: cockpit identity, startup capital, close readiness
 

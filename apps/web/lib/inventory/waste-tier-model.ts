@@ -1,3 +1,8 @@
+import {
+  DEFAULT_WASTE_TIER_SETTINGS,
+  type WasteTierSettings,
+} from "@comtammatu/shared/settings";
+
 export const WASTE_ALWAYS_TIER_2_REASONS = [
   "found_missing",
   "theft_suspected",
@@ -11,10 +16,6 @@ export const WASTE_RISKY_REASONS = [
   "theft_suspected",
 ] as const;
 
-const TIER_1_VALUE = 150_000;
-const TIER_2_VALUE = 500_000;
-const SHIFT_CAP = 1_500_000;
-
 export type WasteTierPreviewInput = {
   value: number;
   baseQuantity: number;
@@ -25,6 +26,7 @@ export type WasteTierPreviewInput = {
   branchCap: number;
   rollingSum: number | null;
   pendingIngredientValue: number;
+  settings?: Partial<WasteTierSettings>;
 };
 
 export type WasteTierPreview = {
@@ -51,20 +53,39 @@ export function previewWasteTier({
   branchCap,
   rollingSum,
   pendingIngredientValue,
+  settings,
 }: WasteTierPreviewInput): WasteTierPreview {
+  const config: WasteTierSettings = {
+    ...DEFAULT_WASTE_TIER_SETTINGS,
+    ...settings,
+  };
+
+  if (!config.tierEnabled) {
+    return {
+      tier: 0,
+      photoRequired: false,
+      approvalRequired: false,
+    };
+  }
+
   const quantityRatio =
     availableQuantity > 0 ? baseQuantity / availableQuantity : 0;
   const projectedRollingSum =
     rollingSum === null ? null : rollingSum + pendingIngredientValue;
+
   const photoRequired =
-    value >= TIER_1_VALUE ||
-    quantityRatio >= 0.5 ||
-    (projectedRollingSum !== null && projectedRollingSum >= TIER_1_VALUE) ||
-    isRiskyWasteReason(reasonCode);
-  const approvalRequired =
-    value >= TIER_2_VALUE ||
+    value >= config.tier1Threshold ||
+    (config.qtyRatioThreshold > 0 &&
+      quantityRatio >= config.qtyRatioThreshold) ||
+    (projectedRollingSum !== null &&
+      projectedRollingSum >= config.tier1Threshold) ||
     isAlwaysTier2WasteReason(reasonCode) ||
-    projectedShiftSum >= SHIFT_CAP ||
+    (config.enforceReasonRules && isRiskyWasteReason(reasonCode));
+
+  const approvalRequired =
+    value >= config.tier2Threshold ||
+    isAlwaysTier2WasteReason(reasonCode) ||
+    projectedShiftSum >= config.shiftCap ||
     projectedBranchSum > branchCap;
 
   return {
@@ -77,11 +98,21 @@ export function previewWasteTier({
 /** Reason-only floor preview. Value/WAC gates stay server-side. */
 export function previewWasteLineTierFromReason(
   reasonCode: string,
+  settings?: Partial<WasteTierSettings>,
 ): WasteTierPreview {
+  const config: WasteTierSettings = {
+    ...DEFAULT_WASTE_TIER_SETTINGS,
+    ...settings,
+  };
+
+  if (!config.tierEnabled) {
+    return { tier: 0, photoRequired: false, approvalRequired: false };
+  }
+
   if (isAlwaysTier2WasteReason(reasonCode)) {
     return { tier: 2, photoRequired: true, approvalRequired: true };
   }
-  if (isRiskyWasteReason(reasonCode)) {
+  if (config.enforceReasonRules && isRiskyWasteReason(reasonCode)) {
     return { tier: 1, photoRequired: true, approvalRequired: false };
   }
   return { tier: 0, photoRequired: false, approvalRequired: false };

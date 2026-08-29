@@ -42,6 +42,18 @@ export const SYSTEM_SETTING_KEYS = {
   TTS_MODEL: "tts_model",
   /** Tenant default TTS voice: "nova" | "alloy" | ... or empty for provider default. */
   TTS_VOICE: "tts_voice",
+  /** "true" | "false" — enables waste tier risk classification and approval gates. */
+  INVENTORY_WASTE_TIER_ENABLED: "inventory_waste_tier_enabled",
+  /** VND value threshold for Tier 1 photo requirement (e.g. "500000"). */
+  INVENTORY_WASTE_TIER1_THRESHOLD: "inventory_waste_tier1_threshold",
+  /** VND value threshold for Tier 2 approval requirement (e.g. "2000000"). */
+  INVENTORY_WASTE_TIER2_THRESHOLD: "inventory_waste_tier2_threshold",
+  /** VND shift cap threshold for Tier 2 approval (e.g. "5000000"). */
+  INVENTORY_WASTE_SHIFT_CAP: "inventory_waste_shift_cap",
+  /** Ratio of on-hand quantity threshold for Tier 1 photo (0..1, e.g. "0.8"). */
+  INVENTORY_WASTE_QTY_RATIO_THRESHOLD: "inventory_waste_qty_ratio_threshold",
+  /** "true" | "false" — whether to enforce strict photo requirement on risky reason codes. */
+  INVENTORY_WASTE_ENFORCE_REASON_RULES: "inventory_waste_enforce_reason_rules",
 } as const;
 
 export type SystemSettingKey =
@@ -67,6 +79,13 @@ export const SYSTEM_SETTING_DEFAULTS: Record<SystemSettingKey, string> = {
   [SYSTEM_SETTING_KEYS.HR_MONTHLY_LEAVE_DAYS]: "2",
   [SYSTEM_SETTING_KEYS.TTS_MODEL]: "openai/tts-1",
   [SYSTEM_SETTING_KEYS.TTS_VOICE]: "nova",
+  [SYSTEM_SETTING_KEYS.INVENTORY_WASTE_TIER_ENABLED]: "true",
+  [SYSTEM_SETTING_KEYS.INVENTORY_WASTE_TIER1_THRESHOLD]: "500000",
+  [SYSTEM_SETTING_KEYS.INVENTORY_WASTE_TIER2_THRESHOLD]: "2000000",
+  [SYSTEM_SETTING_KEYS.INVENTORY_WASTE_SHIFT_CAP]: "5000000",
+  [SYSTEM_SETTING_KEYS.INVENTORY_WASTE_QTY_RATIO_THRESHOLD]: "0.8",
+  [SYSTEM_SETTING_KEYS.INVENTORY_WASTE_ENFORCE_REASON_RULES]: "false",
 };
 
 export * from "./tts";
+export * from "./waste";

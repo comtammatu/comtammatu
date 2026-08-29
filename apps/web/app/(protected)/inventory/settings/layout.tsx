@@ -68,6 +68,14 @@ export default async function InventorySettingsLayout({
     });
   }
 
+  if (canOpenSettings || canManageCatalog) {
+    sectionItems.push({
+      href: "/inventory/settings/waste",
+      label: tRoute("/inventory/settings/waste", "tab"),
+      icon: "waste",
+    });
+  }
+
   return (
     <AppPage width="xwide" density="compact">
       <SettingsSectionNav items={sectionItems} />

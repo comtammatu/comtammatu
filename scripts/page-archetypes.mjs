@@ -206,6 +206,8 @@ export const PAGE_ARCHETYPES = {
     "SETTINGS-PANEL",
   "apps/web/app/(protected)/inventory/settings/units/page.tsx":
     "SETTINGS-PANEL",
+  "apps/web/app/(protected)/inventory/settings/waste/page.tsx":
+    "SETTINGS-PANEL",
   "apps/web/app/(protected)/inventory/stock/[ingredientId]/page.tsx":
     "REDIRECT-SHIM",
   "apps/web/app/(protected)/inventory/stock/page.tsx": "LIST",
@@ -403,6 +405,11 @@ const PAGE_DISPOSITION_OVERRIDES = {
   },
   "apps/web/app/(protected)/inventory/settings/thresholds/page.tsx": {
     status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/settings/waste/page.tsx": {
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
@@ -653,6 +660,7 @@ export const CONTROL_SURFACE_COMPOSE = {
   "apps/web/app/(protected)/inventory/settings/page.tsx": "REDIRECT",
   "apps/web/app/(protected)/inventory/settings/thresholds/page.tsx": "DETAIL",
   "apps/web/app/(protected)/inventory/settings/units/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/inventory/settings/waste/page.tsx": "DETAIL",
   "apps/web/app/(protected)/inventory/stock-requests/[id]/page.tsx": "DETAIL",
   "apps/web/app/(protected)/inventory/stock-requests/new/page.tsx": "DOC",
   "apps/web/app/(protected)/inventory/stock-requests/page.tsx": "REDIRECT",
