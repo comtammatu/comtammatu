@@ -55,7 +55,9 @@ import {
 } from "@/(protected)/inventory/count-slips/actions";
 import {
   CountSlipWasteEvidence,
+  isShortagePhotoRequired,
   type CountSlipWastePhotoUrls,
+  type CountSlipWasteReasons,
 } from "@/components/inventory/count-slip-waste-evidence";
 import { formatQty } from "@lib/inventory/format";
 import type {
@@ -128,6 +130,7 @@ export function BranchCountSlipsClient({
   );
   const [wastePhotoUrls, setWastePhotoUrls] =
     useState<CountSlipWastePhotoUrls>({});
+  const [wasteReasons, setWasteReasons] = useState<CountSlipWasteReasons>({});
   const [pendingAction, setPendingAction] = useState<
     "approve" | "recount" | null
   >(null);
@@ -147,7 +150,9 @@ export function BranchCountSlipsClient({
       (line) => line.variance !== null && line.variance < 0,
     ) ?? [];
   const wasteEvidenceComplete = selectedShortageLines.every(
-    (line) => (wastePhotoUrls[line.id]?.length ?? 0) > 0,
+    (line) =>
+      !isShortagePhotoRequired(wasteReasons[line.id]) ||
+      (wastePhotoUrls[line.id]?.length ?? 0) > 0,
   );
   const needsWasteRecovery =
     selected?.status === "approved" &&
@@ -157,6 +162,13 @@ export function BranchCountSlipsClient({
   useEffect(() => setRows(initialRows), [initialRows]);
   useEffect(() => {
     setWastePhotoUrls({});
+    setWasteReasons(
+      Object.fromEntries(
+        (selected?.lines.filter((line) => line.variance !== null && line.variance < 0) ?? []).map(
+          (line) => [line.id, "discrepancy"],
+        ),
+      ),
+    );
     setSelectedRecountLineIds(
       selected?.lines
         .filter((line) => line.variance !== null && line.variance !== 0)
@@ -249,6 +261,8 @@ export function BranchCountSlipsClient({
         slipId: selected.id,
         autoCreateWaste,
         wastePhotoUrls,
+        wasteReasons,
+        allowSelfReview: true,
       });
       setPendingAction(null);
       if (!result.success || !result.data) {
@@ -628,12 +642,19 @@ export function BranchCountSlipsClient({
                 slipId={selected.id}
                 lines={selectedShortageLines}
                 values={wastePhotoUrls}
+                reasons={wasteReasons}
                 disabled={isPending}
                 touch
                 onChange={(lineId, url) =>
                   setWastePhotoUrls((current) => ({
                     ...current,
                     [lineId]: url ? [url] : [],
+                  }))
+                }
+                onReasonChange={(lineId, reason) =>
+                  setWasteReasons((current) => ({
+                    ...current,
+                    [lineId]: reason,
                   }))
                 }
               />
@@ -722,6 +743,10 @@ function CountSlipLineItem({
   const isShortage = line.variance !== null && line.variance < 0;
   const isSurplus = line.variance !== null && line.variance > 0;
   const isMatched = line.variance === 0;
+  const isMatchedAfterSales =
+    !isMatched &&
+    line.currentLiveQuantity !== null &&
+    line.countedQuantity === line.currentLiveQuantity;
   const soldSinceSubmit =
     line.systemQuantity !== null &&
     line.currentLiveQuantity !== null &&
@@ -751,7 +776,11 @@ function CountSlipLineItem({
             >
               {formatVariance(line.variance)} {line.varianceUnit}
             </span>
-            {isShortage ? (
+            {isMatchedAfterSales ? (
+              <Badge variant="success">
+                {INVENTORY_VI.matchedAfterSales}
+              </Badge>
+            ) : isShortage ? (
               <Badge variant="destructive">
                 {INVENTORY_VI.varianceShortageBadge}
               </Badge>

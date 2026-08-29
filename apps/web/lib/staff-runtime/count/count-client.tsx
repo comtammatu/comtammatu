@@ -16,7 +16,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Send as IconSend, Warehouse as IconWarehouse } from "lucide-react";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { parseVietnameseNumericInput } from "@comtammatu/shared/format";
+import { Progress } from "@comtammatu/ui/components/progress";
+import { formatPercent, parseVietnameseNumericInput } from "@comtammatu/shared/format";
 import { FORM_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
 import {
   Item,
@@ -32,7 +33,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-
 import { toast } from "@comtammatu/ui/components/sonner";
 import { formatQty } from "@lib/inventory/format";
 import { messages } from "@lib/messages";
@@ -224,6 +224,7 @@ export function CountSlipClient({
   const slipMeta = slip ? getStatusBadgeMeta("count-slip", slip.status) : null;
   const locked = slip?.status === "submitted" || slip?.status === "approved";
 
+  const [activeFilter, setActiveFilter] = useState<"all" | "uncounted" | "counted">("all");
   const [draft, setDraft] = useState<Record<number, DraftLine>>({});
   const [selectedIngredientId, setSelectedIngredientId] = useState<
     number | null
@@ -234,6 +235,25 @@ export function CountSlipClient({
       (assignment) => assignment.ingredientId === selectedIngredientId,
     ) ?? null;
   const countCopy = messages.employee.count;
+
+  const assignmentsToConsider = activeGroup?.assignments ?? [];
+  const countedItems = assignmentsToConsider.filter((assignment) => {
+    const entry = draft[assignment.ingredientId];
+    return parseDraftQuantity(entry?.quantity ?? "") !== null;
+  });
+  const uncountedCount = assignmentsToConsider.length - countedItems.length;
+  const progressPercent =
+    assignmentsToConsider.length > 0
+      ? Math.round((countedItems.length / assignmentsToConsider.length) * 100)
+      : 0;
+
+  const visibleAssignments = assignmentsToConsider.filter((assignment) => {
+    const isCounted =
+      parseDraftQuantity(draft[assignment.ingredientId]?.quantity ?? "") !== null;
+    if (activeFilter === "uncounted") return !isCounted;
+    if (activeFilter === "counted") return isCounted;
+    return true;
+  });
 
   useEffect(() => {
     if (!activeGroup) {
@@ -373,7 +393,7 @@ export function CountSlipClient({
       toast.error(
         slip?.status === "needs_changes"
           ? "Nhập số đếm cho tất cả nguyên liệu cần đếm lại."
-          : "Nhập số đếm cho tất cả nguyên liệu được giao.",
+          : `Còn ${uncountedCount} món chưa đếm. Vui lòng nhập số đếm cho tất cả món.`,
       );
       return;
     }
@@ -427,6 +447,44 @@ export function CountSlipClient({
   const selectedQuantity = selectedEntry
     ? parseDraftQuantity(selectedEntry.quantity)
     : null;
+
+  const baseUnit = selectedAssignment
+    ? getBaseCountUnit(selectedAssignment.countUnits)
+    : null;
+  const isMultiUnit = (selectedAssignment?.countUnits.length ?? 0) > 1;
+  const toBase = selectedUnit?.toBaseFactor ?? 1;
+  const isNonBase =
+    selectedUnit &&
+    baseUnit &&
+    selectedUnit.unitId !== baseUnit.unitId &&
+    toBase > 1;
+
+  const conversionHint = selectedAssignment ? (
+    <div className="flex flex-col gap-1 text-left">
+      {isNonBase ? (
+        <span className="font-medium text-foreground">
+          1 {selectedUnit.code} = {formatQty(toBase)} {baseUnit.code}
+          {selectedQuantity !== null && selectedQuantity > 0 ? (
+            <span className="text-muted-foreground">
+              {" "}
+              (Quy đổi: ≈ {formatQty(selectedQuantity * toBase)} {baseUnit.code})
+            </span>
+          ) : null}
+        </span>
+      ) : null}
+      {isMultiUnit ? (
+        <span className="text-xs text-muted-foreground">
+          Bấm nút đơn vị để đổi sang{" "}
+          {
+            getNextCountUnit(
+              selectedAssignment.countUnits,
+              selectedUnit?.unitId ?? null,
+            )?.code
+          }
+        </span>
+      ) : null}
+    </div>
+  ) : null;
 
   return (
     <>
@@ -486,8 +544,55 @@ export function CountSlipClient({
                       ? `${activeGroup.assignments.filter((assignment) => draft[assignment.ingredientId]?.recountRequired).length} mục cần đếm lại`
                       : `${activeGroup.assignments.length} mục`,
                 },
+                {
+                  label: "Đã đếm",
+                  value: `${countedItems.length} / ${assignmentsToConsider.length}`,
+                  mono: true,
+                },
               ]}
             />
+
+            {assignmentsToConsider.length > 0 ? (
+              <Frame className="flex flex-col gap-2 p-3 bg-card">
+                <div className="flex items-center justify-between text-xs font-medium">
+                  <span className="text-muted-foreground">Tiến độ đếm:</span>
+                  <span className="font-mono tabular-nums">
+                    {countedItems.length}/{assignmentsToConsider.length} món (
+                    {formatPercent(progressPercent, 0)})
+                  </span>
+                </div>
+                <Progress value={progressPercent} className="h-1.5" />
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={activeFilter === "all" ? "default" : "outline"}
+                    className="h-7 px-2 text-xs"
+                    onClick={() => setActiveFilter("all")}
+                  >
+                    Tất cả ({assignmentsToConsider.length})
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={activeFilter === "uncounted" ? "default" : "outline"}
+                    className="h-7 px-2 text-xs"
+                    onClick={() => setActiveFilter("uncounted")}
+                  >
+                    Chưa đếm ({uncountedCount})
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={activeFilter === "counted" ? "default" : "outline"}
+                    className="h-7 px-2 text-xs"
+                    onClick={() => setActiveFilter("counted")}
+                  >
+                    Đã đếm ({countedItems.length})
+                  </Button>
+                </div>
+              </Frame>
+            ) : null}
 
             {slip?.status === "needs_changes" && slip.reviewNote ? (
               <Frame
@@ -511,71 +616,78 @@ export function CountSlipClient({
             ) : null}
 
             <ItemGroup className="gap-2">
-              {activeGroup.assignments.map((assignment) => {
-                const entry = draft[assignment.ingredientId];
-                const summary = buildDraftSummary({
-                  quantity: entry?.quantity ?? "",
-                  entryUnitId: entry?.entryUnitId ?? null,
-                  units: assignment.countUnits,
-                });
-                const canEdit =
-                  !locked &&
-                  (slip?.status !== "needs_changes" ||
-                    entry?.recountRequired === true);
-                return (
-                  <Item
-                    key={assignment.ingredientId}
-                    variant="outline"
-                    className="min-w-0 items-start gap-2 bg-card text-left hover:bg-muted/50"
-                    render={
-                      <button
-                        type="button"
-                        disabled={!canEdit || isPending}
-                        onClick={() =>
-                          openIngredientSheet(assignment.ingredientId)
-                        }
-                      />
-                    }
-                  >
-                    <ItemContent className="min-w-0 gap-1">
-                      <ItemTitle
-                        size="heading"
-                        className="block w-full min-w-0 max-w-full whitespace-normal break-words line-clamp-2"
-                      >
-                        {assignment.ingredientName}
-                      </ItemTitle>
-                      <ItemDescription className="min-w-0 max-w-full whitespace-normal break-words line-clamp-2 text-xs">
-                        {summary ?? countCopy.tapToEnter}
-                      </ItemDescription>
-                    </ItemContent>
-                    <div className="flex shrink-0 flex-col items-end gap-1">
-                      {slip?.status === "needs_changes" ? (
-                        <Badge
-                          variant={
-                            entry?.recountRequired ? "warning" : "outline"
+              {visibleAssignments.length === 0 ? (
+                <div className="py-4 text-center text-xs text-muted-foreground">
+                  Không có mặt hàng nào trong danh sách lọc này.
+                </div>
+              ) : (
+                visibleAssignments.map((assignment) => {
+                  const entry = draft[assignment.ingredientId];
+                  const summary = buildDraftSummary({
+                    quantity: entry?.quantity ?? "",
+                    entryUnitId: entry?.entryUnitId ?? null,
+                    units: assignment.countUnits,
+                  });
+                  const canEdit =
+                    !locked &&
+                    (slip?.status !== "needs_changes" ||
+                      entry?.recountRequired === true);
+                  return (
+                    <Item
+                      key={assignment.ingredientId}
+                      variant="outline"
+                      className="min-w-0 items-start gap-2 bg-card text-left hover:bg-muted/50"
+                      render={
+                        <button
+                          type="button"
+                          disabled={!canEdit || isPending}
+                          onClick={() =>
+                            openIngredientSheet(assignment.ingredientId)
                           }
+                        />
+                      }
+                    >
+                      <ItemContent className="min-w-0 gap-1">
+                        <ItemTitle
+                          size="heading"
+                          className="block w-full min-w-0 max-w-full whitespace-normal break-words line-clamp-2"
                         >
-                          {entry?.recountRequired
-                            ? INVENTORY_VI.recountRequiredBadge
-                            : INVENTORY_VI.recountAcceptedBadge}
-                        </Badge>
-                      ) : (
-                        <Badge variant={summary ? "success" : "secondary"}>
-                          {summary ? countCopy.entered : countCopy.notCounted}
-                        </Badge>
-                      )}
-                      {(entry?.lastRecountRound ?? 0) > 0 ? (
-                        <span className="text-xs text-muted-foreground">
-                          {INVENTORY_VI.recountCompletedRound(
-                            entry?.lastRecountRound ?? 0,
-                          )}
-                        </span>
-                      ) : null}
-                    </div>
-                  </Item>
-                );
-              })}
+                          {assignment.ingredientName}
+                        </ItemTitle>
+                        <ItemDescription className="min-w-0 max-w-full whitespace-normal break-words line-clamp-2 text-xs">
+                          {summary ?? countCopy.tapToEnter}
+                        </ItemDescription>
+                      </ItemContent>
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        {slip?.status === "needs_changes" ? (
+                          <Badge
+                            variant={
+                              entry?.recountRequired ? "warning" : "outline"
+                            }
+                          >
+                            {entry?.recountRequired
+                              ? INVENTORY_VI.recountRequiredBadge
+                              : INVENTORY_VI.recountAcceptedBadge}
+                          </Badge>
+                        ) : (
+                          <Badge variant={summary ? "success" : "secondary"}>
+                            {summary ? countCopy.entered : countCopy.notCounted}
+                          </Badge>
+                        )}
+                        {(entry?.lastRecountRound ?? 0) > 0 ? (
+                          <span className="text-xs text-muted-foreground">
+                            {INVENTORY_VI.recountCompletedRound(
+                              entry?.lastRecountRound ?? 0,
+                            )}
+                          </span>
+                        ) : null}
+                      </div>
+                    </Item>
+                  );
+                })
+              )}
             </ItemGroup>
+
             <NumberPadSheet
               open={selectedAssignment !== null}
               onOpenChange={(open) => {
@@ -584,6 +696,7 @@ export function CountSlipClient({
                 }
               }}
               title={selectedAssignment?.ingredientName ?? ""}
+              hint={conversionHint}
               suffix={selectedUnit?.code || selectedUnit?.label}
               onSuffixClick={
                 (selectedAssignment?.countUnits.length ?? 0) > 1

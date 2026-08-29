@@ -12,10 +12,18 @@ import { resolveCountSlipReviewerEmployeeId } from "@lib/inventory/count-slip-re
 const approveSlipSchema = z.object({
   slipId: z.coerce.number().int().positive(),
   autoCreateWaste: z.boolean().optional().default(false),
+  allowSelfReview: z.boolean().optional().default(false),
   wastePhotoUrls: z
     .record(
       z.string().regex(/^\d+$/),
-      z.array(z.string().url()).min(1).max(10),
+      z.array(z.string().url()).max(10),
+    )
+    .optional()
+    .default({}),
+  wasteReasons: z
+    .record(
+      z.string().regex(/^\d+$/),
+      z.string().trim().min(1).max(50),
     )
     .optional()
     .default({}),
@@ -30,12 +38,13 @@ export type ApproveCountSlipResult = {
   wasteIssueNumber?: string;
   wasteItemsCount?: number;
   requiresApproval?: boolean;
+  isSelfApproved?: boolean;
 };
 
 /**
  * Confirm a submitted count slip. A handover-only approval stays decoupled
  * from stock. `autoCreateWaste` uses one atomic RPC so the count approval and
- * its photo-backed shortage writeoff either both commit or both roll back.
+ * its shortage writeoff either both commit or both roll back.
  */
 export async function approveCountSlip(
   input: z.infer<typeof approveSlipSchema>,
@@ -70,7 +79,7 @@ export async function approveCountSlip(
     claims.tenant_id,
     userId,
   );
-  if (slip.employee_id === reviewerEmployeeId) {
+  if (slip.employee_id === reviewerEmployeeId && !parsed.data.allowSelfReview) {
     return { success: false, error: SELF_REVIEW_ERROR };
   }
 
@@ -78,9 +87,12 @@ export async function approveCountSlip(
     ? await supabase.rpc("approve_inventory_count_slip_with_waste", {
         p_slip_id: parsed.data.slipId,
         p_photo_urls: parsed.data.wastePhotoUrls,
+        p_reasons: parsed.data.wasteReasons,
+        p_allow_self_review: parsed.data.allowSelfReview,
       })
     : await supabase.rpc("approve_inventory_count_slip", {
         p_slip_id: parsed.data.slipId,
+        p_allow_self_review: parsed.data.allowSelfReview,
       });
 
   if (error) {
@@ -108,6 +120,7 @@ export async function approveCountSlip(
           ? raw.waste_items_count
           : undefined,
       requiresApproval: raw.requires_approval === true,
+      isSelfApproved: raw.is_self_approved === true,
     },
   };
 }

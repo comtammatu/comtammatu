@@ -19,11 +19,14 @@ import {
   Zap as IconZap,
 } from "lucide-react";
 import { ACTIONS_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
+import { formatPercent } from "@comtammatu/shared/format";
 import { formatVNClockTime } from "@comtammatu/shared/time";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
+import { Frame } from "@comtammatu/ui/components/frame";
+import { Progress } from "@comtammatu/ui/components/progress";
 import { Input } from "@comtammatu/ui/components/input";
 import {
   InputGroup,
@@ -220,6 +223,151 @@ export function BranchCountAssignmentsClient({
       );
     });
   }, [data.selectedShiftId, filteredEmployees, selectionByEmployee]);
+
+  const unassignedIngredients = useMemo(() => {
+    const assignedSet = new Set<number>();
+    for (const ids of Object.values(selectionByEmployee)) {
+      for (const id of ids) assignedSet.add(id);
+    }
+    return data.ingredients.filter((ing) => !assignedSet.has(ing.id));
+  }, [data.ingredients, selectionByEmployee]);
+
+  const [unassignedSheetOpen, setUnassignedSheetOpen] = useState(false);
+  const [unassignedTargetEmpId, setUnassignedTargetEmpId] = useState<string>("");
+
+  function applyDutyRosterAssignments() {
+    if (data.selectedLocationId == null) {
+      toast.error("Vui lòng chọn kho kiểm kê.");
+      return;
+    }
+
+    const onDutyEmployees = data.employees.filter((emp) => {
+      if (data.selectedShiftId == null) return true;
+      return Boolean(emp.scheduledShiftIds?.includes(data.selectedShiftId));
+    });
+
+    if (onDutyEmployees.length === 0) {
+      toast.error(INVENTORY_VI.countAssignQuickRosterNoStaff);
+      return;
+    }
+
+    const nextSelections: Record<string, number[]> = {};
+    for (const emp of data.employees) {
+      nextSelections[String(emp.id)] = [];
+    }
+
+    const coveredIngredientIds = new Set<number>();
+    const participatingStaffIds = new Set<number>();
+
+    for (const template of data.templates) {
+      const matchingStaff = onDutyEmployees.filter((emp) =>
+        isPositionMatchingStationRole(emp.positionCode, template.stationRole),
+      );
+      const targetStaff = matchingStaff[0] ?? onDutyEmployees[0];
+      if (targetStaff) {
+        const empKey = String(targetStaff.id);
+        const existing = nextSelections[empKey] ?? [];
+        const newIds = template.ingredientIds.filter(
+          (id) => !existing.includes(id),
+        );
+        nextSelections[empKey] = [...existing, ...newIds];
+        template.ingredientIds.forEach((id) => coveredIngredientIds.add(id));
+        participatingStaffIds.add(targetStaff.id);
+      }
+    }
+
+    const remaining = data.ingredients.filter(
+      (ing) => !coveredIngredientIds.has(ing.id),
+    );
+    if (remaining.length > 0 && onDutyEmployees[0]) {
+      const primaryKey = String(onDutyEmployees[0].id);
+      const existing = nextSelections[primaryKey] ?? [];
+      const newIds = remaining
+        .map((ing) => ing.id)
+        .filter((id) => !existing.includes(id));
+      nextSelections[primaryKey] = [...existing, ...newIds];
+      remaining.forEach((ing) => coveredIngredientIds.add(ing.id));
+      participatingStaffIds.add(onDutyEmployees[0].id);
+    }
+
+    setSelectionByEmployee(nextSelections);
+
+    startTransition(async () => {
+      const updatePromises = data.employees.map(async (emp) => {
+        const nextIds = nextSelections[String(emp.id)] ?? [];
+        const prevIds = data.assignmentsByEmployee[String(emp.id)] ?? [];
+        if (
+          nextIds.length === prevIds.length &&
+          nextIds.every((id) => prevIds.includes(id))
+        ) {
+          return { success: true };
+        }
+        return setCountAssignments({
+          branchId: data.branchId,
+          locationId: data.selectedLocationId as number,
+          shiftId: data.selectedShiftId,
+          employeeId: emp.id,
+          ingredientIds: nextIds,
+        });
+      });
+
+      const results = await Promise.all(updatePromises);
+      const failed = results.find((r) => !r.success);
+      if (failed) {
+        toast.error(failed.error ?? INVENTORY_VI.countAssignSaveFailed);
+        setSelectionByEmployee(seedSelections(data));
+        return;
+      }
+
+      toast.success(
+        INVENTORY_VI.countAssignQuickRosterSuccess(
+          coveredIngredientIds.size,
+          participatingStaffIds.size,
+        ),
+      );
+      router.refresh();
+    });
+  }
+
+  function assignAllUnassignedToStaff(targetEmpId: number) {
+    if (data.selectedLocationId == null || unassignedIngredients.length === 0)
+      return;
+    const targetEmployee = employeeById.get(targetEmpId);
+    if (!targetEmployee) return;
+
+    const unassignedIds = unassignedIngredients.map((i) => i.id);
+    const empKey = String(targetEmpId);
+    const existing = selectionByEmployee[empKey] ?? [];
+    const nextIds = Array.from(new Set([...existing, ...unassignedIds]));
+
+    setSelectionByEmployee((prev) => ({
+      ...prev,
+      [empKey]: nextIds,
+    }));
+
+    startTransition(async () => {
+      const result = await setCountAssignments({
+        branchId: data.branchId,
+        locationId: data.selectedLocationId as number,
+        shiftId: data.selectedShiftId,
+        employeeId: targetEmpId,
+        ingredientIds: nextIds,
+      });
+
+      if (!result.success) {
+        toast.error(result.error ?? INVENTORY_VI.countAssignSaveFailed);
+        setSelectionByEmployee(seedSelections(data));
+        return;
+      }
+
+      toast.success(
+        `Đã giao thêm ${unassignedIds.length} món cho ${targetEmployee.name}.`,
+      );
+      setUnassignedSheetOpen(false);
+      setUnassignedTargetEmpId("");
+      router.refresh();
+    });
+  }
 
   useEffect(() => {
     setSelectionByEmployee(seedSelections(data));
@@ -657,6 +805,85 @@ export function BranchCountAssignmentsClient({
           </div>
         ) : null}
       </div>
+
+      {/* Coverage Tracker Banner */}
+      <Frame className="flex flex-col gap-2 p-3 bg-card">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold">
+                {INVENTORY_VI.countAssignCoverageBadge(
+                  totalAssignedUniqueItems,
+                  data.ingredients.length,
+                )}
+              </span>
+              <Badge
+                variant={
+                  totalAssignedUniqueItems === data.ingredients.length
+                    ? "default"
+                    : "outline"
+                }
+              >
+                {formatPercent(
+                  data.ingredients.length > 0
+                    ? Math.round(
+                        (totalAssignedUniqueItems / data.ingredients.length) *
+                          100,
+                      )
+                    : 0,
+                  0,
+                )}
+              </Badge>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {unassignedIngredients.length === 0
+                ? "Tất cả nguyên liệu trong kho đã được phân công đếm."
+                : `Còn ${unassignedIngredients.length} món chưa có người đếm tồn.`}
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {unassignedIngredients.length > 0 ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="touch"
+                className="text-xs"
+                onClick={() => setUnassignedSheetOpen(true)}
+              >
+                <IconClipboardCheck className="size-4" />
+                {INVENTORY_VI.countAssignUnassignedFilter(
+                  unassignedIngredients.length,
+                )}
+              </Button>
+            ) : null}
+
+            <Button
+              type="button"
+              variant="default"
+              size="touch"
+              disabled={isPending || data.templates.length === 0}
+              className="gap-1.5 text-xs"
+              onClick={applyDutyRosterAssignments}
+            >
+              <IconZap className="size-4" />
+              {INVENTORY_VI.countAssignQuickRosterAction}
+            </Button>
+          </div>
+        </div>
+
+        {/* Progress Bar */}
+        <Progress
+          value={
+            data.ingredients.length > 0
+              ? Math.round(
+                  (totalAssignedUniqueItems / data.ingredients.length) * 100,
+                )
+              : 0
+          }
+          className="h-1.5"
+        />
+      </Frame>
 
       {/* View Switcher: Stations vs Staff */}
       <div className="flex items-center gap-1 rounded-md bg-muted p-1">
@@ -1804,6 +2031,97 @@ export function BranchCountAssignmentsClient({
                 );
               })
             )}
+          </div>
+        </div>
+      </AppSheet>
+
+      {/* Unassigned Items Sheet */}
+      <AppSheet
+        open={unassignedSheetOpen}
+        onOpenChange={setUnassignedSheetOpen}
+        title={INVENTORY_VI.countAssignUnassignedTitle}
+        description={INVENTORY_VI.countAssignUnassignedDesc(
+          unassignedIngredients.length,
+        )}
+        size="lg"
+      >
+        <div className="flex flex-col gap-4 p-4">
+          <Frame className="flex flex-col gap-2 p-3 bg-muted">
+            <Label className="text-xs font-semibold">
+              {INVENTORY_VI.countAssignUnassignedPrompt(
+                unassignedIngredients.length,
+              )}
+            </Label>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="flex-1">
+                <Select
+                  value={unassignedTargetEmpId}
+                  onValueChange={setUnassignedTargetEmpId}
+                >
+                  <SelectTrigger size="touch" className="w-full">
+                    <SelectValue
+                      placeholder={
+                        INVENTORY_VI.countAssignSelectReceiverPlaceholder
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {data.employees.map((emp) => {
+                      const isOnDuty =
+                        data.selectedShiftId != null &&
+                        Boolean(
+                          emp.scheduledShiftIds?.includes(data.selectedShiftId),
+                        );
+                      return (
+                        <SelectItem
+                          key={emp.id}
+                          value={String(emp.id)}
+                          size="touch"
+                        >
+                          {emp.name}{" "}
+                          {emp.positionName ? `(${emp.positionName})` : ""}{" "}
+                          {isOnDuty
+                            ? ` ${INVENTORY_VI.countAssignOnDutyDot}`
+                            : ""}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                type="button"
+                variant="default"
+                size="touch"
+                disabled={!unassignedTargetEmpId || isPending}
+                onClick={() =>
+                  assignAllUnassignedToStaff(Number(unassignedTargetEmpId))
+                }
+              >
+                <IconZap className="size-4" />
+                {INVENTORY_VI.countAssignUnassignedAction}
+              </Button>
+            </div>
+          </Frame>
+
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-medium text-muted-foreground">
+              {INVENTORY_VI.countAssignUnassignedListLabel}
+            </span>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {unassignedIngredients.map((ing) => (
+                <Item key={ing.id} variant="outline" className="min-h-12 p-2.5">
+                  <ItemContent className="min-w-0">
+                    <span className="font-medium text-foreground">
+                      {ing.name}
+                    </span>
+                    {ing.unit ? (
+                      <ItemDescription>{ing.unit}</ItemDescription>
+                    ) : null}
+                  </ItemContent>
+                </Item>
+              ))}
+            </div>
           </div>
         </div>
       </AppSheet>

@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -3253,6 +3253,7 @@ export type Database = {
           created_at: string
           employee_id: number
           id: number
+          is_self_approved: boolean
           last_resubmitted_round: number
           location_id: number
           note: string | null
@@ -3274,6 +3275,7 @@ export type Database = {
           created_at?: string
           employee_id: number
           id?: never
+          is_self_approved?: boolean
           last_resubmitted_round?: number
           location_id: number
           note?: string | null
@@ -3295,6 +3297,7 @@ export type Database = {
           created_at?: string
           employee_id?: number
           id?: never
+          is_self_approved?: boolean
           last_resubmitted_round?: number
           location_id?: number
           note?: string | null
@@ -13191,11 +13194,16 @@ export type Database = {
         }[]
       }
       approve_inventory_count_slip: {
-        Args: { p_slip_id: number }
+        Args: { p_allow_self_review?: boolean; p_slip_id: number }
         Returns: Json
       }
       approve_inventory_count_slip_with_waste: {
-        Args: { p_photo_urls?: Json; p_slip_id: number }
+        Args: {
+          p_allow_self_review?: boolean
+          p_photo_urls?: Json
+          p_reasons?: Json
+          p_slip_id: number
+        }
         Returns: Json
       }
       approve_leave_request: {

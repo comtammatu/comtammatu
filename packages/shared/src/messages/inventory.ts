@@ -563,7 +563,46 @@ export const INVENTORY_VI = {
   staffSearchPlaceholder: "Tìm theo tên hoặc vai trò...",
   roleFilterAll: "Tất cả",
   noStaffMatches: "Không tìm thấy nhân viên phù hợp.",
-  countAssignSelectEmployeeRequired: "Vui lòng chọn nhân viên cho nhóm kiểm đếm.",
+  countAssignQuickRosterAction: "Áp dụng theo Ca trực",
+  countAssignQuickRosterSuccess: (items: number, staff: number) =>
+    `Đã phân công ${formatCount(items)} món cho ${formatCount(staff)} nhân sự trực ca`,
+  countAssignQuickRosterNoStaff:
+    "Chưa có nhân sự nào có lịch trực trong ca này.",
+  countAssignQuickRosterConfirm: (shiftName: string) =>
+    `Tự động phân công các nhóm mẫu cho nhân viên trực ca ${shiftName}?`,
+  countAssignUnassignedFilter: (count: number) =>
+    `Chưa phân công (${formatCount(count)})`,
+  countAssignUnassignedTitle: "Nguyên liệu chưa phân công",
+  countAssignUnassignedDesc: (count: number) =>
+    `Có ${formatCount(count)} nguyên liệu trong kho chưa được phân công cho nhân viên nào trong ca này.`,
+  countAssignUnassignedAction: "Giao tất cả cho nhân sự này",
+  countAssignUnassignedPrompt: (count: number) =>
+    `Giao nhanh toàn bộ ${formatCount(count)} món này cho:`,
+  countAssignSelectReceiverPlaceholder: "Chọn nhân viên tiếp nhận...",
+  countAssignOnDutyDot: "• Đang trực ca",
+  countAssignUnassignedListLabel:
+    "Danh sách nguyên liệu chưa có người kiểm kê:",
+  countAssignAllFilter: (count: number) => `Tất cả (${formatCount(count)})`,
+  countAssignUnassignedOnly: "Chỉ hiện món chưa giao",
+  countAssignAssignRemainingAction: "Gán các món chưa giao",
+  countAssignCoverageBadge: (assigned: number, total: number) =>
+    `Đã giao ${formatCount(assigned)}/${formatCount(total)} món`,
+  shortageReasonSpoiled: "Hư hỏng / Hết hạn (cần ảnh)",
+  shortageReasonLoss: "Thất thoát / Không rõ",
+  shortageReasonDiscrepancy: "Lệch sổ / Sai số đếm",
+  shortageReasonLabel: "Lý do thiếu hụt",
+  shortageEvidencePhotoLabel: "Ảnh bằng chứng hư hỏng/hết hạn:",
+  shortagePhotoNotRequired: "✓ Không bắt buộc ảnh cho lý do này",
+  shortagePhotoAttached: "Đã đính kèm ảnh",
+  liveSalesDeltaColon: "Bán sau khi nộp:",
+  matchedAfterSales: "Khớp sau bán hàng",
+  actualVarianceColon: "Lệch thực tế:",
+  selfReviewConfirmTitle: "Xác nhận tự duyệt phiếu đếm?",
+  selfReviewConfirmHint:
+    "Hệ thống sẽ ghi nhận lịch sử bạn là người tự kiểm đếm và tự duyệt phiếu này.",
+  selfReviewedBadge: "Tự duyệt",
+  countAssignSelectEmployeeRequired:
+    "Vui lòng chọn nhân viên cho nhóm kiểm đếm.",
   countAssignTemplateSuccess: (templateName: string, employeeName: string) =>
     `Đã gán nhóm "${templateName}" cho ${employeeName}.`,
   countAssignShiftLabel: "Ca đếm tồn",

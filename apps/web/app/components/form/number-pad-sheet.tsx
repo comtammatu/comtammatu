@@ -24,6 +24,7 @@ type NumberPadSheetProps = {
   open: boolean;
   onOpenChange: (next: boolean) => void;
   title: string;
+  hint?: React.ReactNode;
   initialValue?: number | null;
   suffix?: string;
   onSuffixClick?: () => void;
@@ -38,6 +39,7 @@ export function NumberPadSheet({
   open,
   onOpenChange,
   title,
+  hint,
   initialValue,
   suffix,
   onSuffixClick,
@@ -109,6 +111,11 @@ export function NumberPadSheet({
               )
             ) : null}
           </div>
+          {hint ? (
+            <div className="pt-1 text-xs text-muted-foreground">
+              {hint}
+            </div>
+          ) : null}
         </SheetHeader>
         <NumberPadGrid
           onKey={handleTap}

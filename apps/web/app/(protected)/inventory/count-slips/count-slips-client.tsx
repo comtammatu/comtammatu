@@ -10,6 +10,7 @@ import {
   ClipboardList as IconClipboardList,
   RotateCcw as IconRecount,
 } from "lucide-react";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import { confirm } from "@/components/confirm-dialog";
@@ -63,7 +64,9 @@ import { inventoryListFilterSelectClassName } from "../_components/inventory-lis
 import { approveCountSlip, requestCountRecount } from "./actions";
 import {
   CountSlipWasteEvidence,
+  isShortagePhotoRequired,
   type CountSlipWastePhotoUrls,
+  type CountSlipWasteReasons,
 } from "@/components/inventory/count-slip-waste-evidence";
 
 type QueueView = "pending" | "history" | "all";
@@ -469,6 +472,7 @@ function CountSlipReviewDialog({
   );
   const [wastePhotoUrls, setWastePhotoUrls] =
     useState<CountSlipWastePhotoUrls>({});
+  const [wasteReasons, setWasteReasons] = useState<CountSlipWasteReasons>({});
   const [pendingAction, setPendingAction] = useState<
     "approve" | "recount" | null
   >(null);
@@ -483,6 +487,13 @@ function CountSlipReviewDialog({
         .map((line) => line.id) ?? [],
     );
     setWastePhotoUrls({});
+    setWasteReasons(
+      Object.fromEntries(
+        (row?.lines.filter((line) => line.variance !== null && line.variance < 0) ?? []).map(
+          (line) => [line.id, "discrepancy"],
+        ),
+      ),
+    );
     setPendingAction(null);
   }, [row?.id]);
 
@@ -494,7 +505,9 @@ function CountSlipReviewDialog({
     (line) => line.variance !== null && line.variance < 0,
   );
   const wasteEvidenceComplete = shortageLines.every(
-    (line) => (wastePhotoUrls[line.id]?.length ?? 0) > 0,
+    (line) =>
+      !isShortagePhotoRequired(wasteReasons[line.id]) ||
+      (wastePhotoUrls[line.id]?.length ?? 0) > 0,
   );
   const needsWasteRecovery =
     activeRow.status === "approved" &&
@@ -576,6 +589,8 @@ function CountSlipReviewDialog({
         slipId: activeRow.id,
         autoCreateWaste,
         wastePhotoUrls,
+        wasteReasons,
+        allowSelfReview: true,
       });
       setPendingAction(null);
       if (!result.success || !result.data) {
@@ -721,18 +736,33 @@ function CountSlipReviewDialog({
     {
       key: "variance",
       header: "Chênh lệch",
-      className: "w-40 text-right",
-      render: (line) => (
-        <span
-          className={cn(
-            "block whitespace-nowrap text-right font-mono tabular-nums",
-            varianceClassName(line.variance),
-          )}
-        >
-          {formatVariance(line.variance)}
-          {line.variance !== null ? ` ${line.varianceUnit}` : ""}
-        </span>
-      ),
+      className: "w-44 text-right",
+      render: (line) => {
+        const isMatchedAfterSales =
+          line.variance !== null &&
+          line.variance !== 0 &&
+          line.currentLiveQuantity !== null &&
+          line.countedQuantity === line.currentLiveQuantity;
+
+        return (
+          <div className="flex flex-col items-end gap-1">
+            <span
+              className={cn(
+                "block whitespace-nowrap text-right font-mono tabular-nums",
+                varianceClassName(line.variance),
+              )}
+            >
+              {formatVariance(line.variance)}
+              {line.variance !== null ? ` ${line.varianceUnit}` : ""}
+            </span>
+            {isMatchedAfterSales ? (
+              <Badge variant="success">
+                {INVENTORY_VI.matchedAfterSales}
+              </Badge>
+            ) : null}
+          </div>
+        );
+      },
     },
   ];
 
@@ -928,12 +958,19 @@ function CountSlipReviewDialog({
           slipId={activeRow.id}
           lines={shortageLines}
           values={wastePhotoUrls}
+          reasons={wasteReasons}
           disabled={pendingAction !== null}
           touch={controlSize === "touch"}
           onChange={(lineId, url) =>
             setWastePhotoUrls((current) => ({
               ...current,
               [lineId]: url ? [url] : [],
+            }))
+          }
+          onReasonChange={(lineId, reason) =>
+            setWasteReasons((current) => ({
+              ...current,
+              [lineId]: reason,
             }))
           }
         />

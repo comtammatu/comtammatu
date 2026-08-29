@@ -263,6 +263,13 @@ export function CountAssignmentsClient({
   const assignedEmployeeCount = Object.values(selectionByEmployee).filter(
     (ids) => ids.length > 0,
   ).length;
+  const totalAssignedUniqueItems = useMemo(() => {
+    const set = new Set<number>();
+    for (const ids of Object.values(selectionByEmployee)) {
+      for (const id of ids) set.add(id);
+    }
+    return set.size;
+  }, [selectionByEmployee]);
   const visibleEmployees = useMemo(() => {
     const query = employeeSearch.trim();
     if (!query) return employees;
@@ -525,10 +532,13 @@ export function CountAssignmentsClient({
         badge={
           scopeReady
             ? {
-                children: INVENTORY_VI.countAssignAssignedSummary(
+                children: `${INVENTORY_VI.countAssignAssignedSummary(
                   assignedEmployeeCount,
                   employees.length,
-                ),
+                )} • ${INVENTORY_VI.countAssignCoverageBadge(
+                  totalAssignedUniqueItems,
+                  ingredients.length,
+                )}`,
               }
             : undefined
         }
