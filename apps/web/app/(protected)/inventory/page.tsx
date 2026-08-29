@@ -110,7 +110,8 @@ async function resolveInventoryHomeFlags(
         : denied,
   ]);
 
-  const showCatalogManagement = isOwner && canManageCatalog;
+  const showCatalogManagement =
+    (isOwner || role === "central_supply_ops") && canManageCatalog;
 
   return {
     showProcurement: isOwner || hasProcurementRead,

@@ -83,7 +83,8 @@ export function parseGrnListStatus(
 
 /** Warehouse GRN chrome never offers HĐ NCC; Owner/accountant keep Finance handoff. */
 export function canShowGrnInvoiceChrome(role: string | null | undefined): boolean {
-  return role != null && !isBranchScopedProcurementRole(role);
+  if (!role || isBranchScopedProcurementRole(role)) return false;
+  return role === "owner" || role === "accountant";
 }
 
 export function defaultGrnDateField(

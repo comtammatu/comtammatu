@@ -52,6 +52,10 @@ type TenantStockLevelRow = {
   avg_unit_cost: number | null;
 };
 
+type ValuationAccountRow = {
+  book_value: number | null;
+};
+
 type StockIngredientRow = {
   id: number;
   name: string;
@@ -133,6 +137,15 @@ export async function loadStockOnHandPageData({
   const stockReadClient = monetaryAccess.valuation
     ? (monetaryAccess.client ?? supabase)
     : supabase;
+  const { data: valuationCutover, error: valuationCutoverError } =
+    includeValuation && monetaryAccess.valuation
+      ? await stockReadClient
+          .from("inventory_valuation_cutovers")
+          .select("status")
+          .eq("tenant_id", claims.tenant_id)
+          .maybeSingle()
+      : { data: null, error: null };
+  const valuationActive = valuationCutover?.status === "active";
   const stockBearingLocations = await fetchStockBearingLocationIds({
     supabase: stockReadClient,
     tenantId: claims.tenant_id,
@@ -332,9 +345,28 @@ export async function loadStockOnHandPageData({
         locationBreakdown,
       };
     });
-  const branchValue =
-    includeValuation && canViewBranch
-      ? ingredients.reduce(
+  let branchValue: number | null = null;
+  let branchValuationLoadFailed = false;
+  if (includeValuation && canViewBranch) {
+    if (valuationActive) {
+      const { data: branchAccounts, error: branchAccountsError } =
+        stockBearingLocationIds.length > 0
+          ? await stockReadClient
+              .from("inventory_valuation_accounts")
+              .select("book_value")
+              .eq("tenant_id", claims.tenant_id)
+              .eq("branch_id", branchId)
+              .in("location_id", stockBearingLocationIds)
+          : { data: [], error: null };
+      branchValuationLoadFailed = branchAccountsError != null;
+      if (!branchValuationLoadFailed) {
+        branchValue = ((branchAccounts ?? []) as ValuationAccountRow[]).reduce(
+          (sum, row) => sum + Number(row.book_value ?? 0),
+          0,
+        );
+      }
+    } else if (valuationCutoverError == null) {
+      branchValue = ingredients.reduce(
         (sum, ingredient) =>
           sum +
           inventoryLineValue(
@@ -342,8 +374,9 @@ export async function loadStockOnHandPageData({
             ingredient.monetary?.averageUnitCost ?? null,
           ),
         0,
-      )
-      : null;
+      );
+    }
+  }
 
   let totalValue: number | null = null;
   let tenantStockBearingLoadFailed = false;
@@ -357,23 +390,38 @@ export async function loadStockOnHandPageData({
     } else {
       const tenantStockBearingLocationIds =
         tenantStockBearingLocations.locationIds;
-      const { data: tenantRows } =
+      const { data: tenantRows, error: tenantValueError } =
         tenantStockBearingLocationIds.length > 0
-          ? await (monetaryAccess.client ?? supabase)
-              .from("stock_levels")
-              .select("current_quantity, avg_unit_cost")
-              .eq("tenant_id", claims.tenant_id)
-              .in("location_id", tenantStockBearingLocationIds)
-          : { data: [] };
-      totalValue = ((tenantRows ?? []) as TenantStockLevelRow[]).reduce(
-        (sum, row) =>
-          sum +
-          inventoryLineValue(
-            row.current_quantity,
-            row.avg_unit_cost,
-          ),
-        0,
-      );
+          ? valuationActive
+            ? await (monetaryAccess.client ?? supabase)
+                .from("inventory_valuation_accounts")
+                .select("book_value")
+                .eq("tenant_id", claims.tenant_id)
+                .in("location_id", tenantStockBearingLocationIds)
+            : await (monetaryAccess.client ?? supabase)
+                .from("stock_levels")
+                .select("current_quantity, avg_unit_cost")
+                .eq("tenant_id", claims.tenant_id)
+                .in("location_id", tenantStockBearingLocationIds)
+          : { data: [], error: null };
+      if (tenantValueError != null || valuationCutoverError != null) {
+        tenantStockBearingLoadFailed = true;
+      } else {
+        totalValue = valuationActive
+          ? ((tenantRows ?? []) as ValuationAccountRow[]).reduce(
+              (sum, row) => sum + Number(row.book_value ?? 0),
+              0,
+            )
+          : ((tenantRows ?? []) as TenantStockLevelRow[]).reduce(
+              (sum, row) =>
+                sum +
+                inventoryLineValue(
+                  row.current_quantity,
+                  row.avg_unit_cost,
+                ),
+              0,
+            );
+      }
     }
   }
 
@@ -398,6 +446,8 @@ export async function loadStockOnHandPageData({
     branchValue,
     coreDataLoadFailed:
       !stockBearingLocations.ok ||
+      valuationCutoverError != null ||
+      branchValuationLoadFailed ||
       tenantStockBearingLoadFailed ||
       !ingredientsResult.success ||
       stockResult.error != null,

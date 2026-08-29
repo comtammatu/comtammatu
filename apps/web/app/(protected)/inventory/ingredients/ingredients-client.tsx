@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
+  Banknote as IconBanknote,
   ChevronDown as IconChevronDown,
   Eye as IconEye,
   EyeOff as IconEyeOff,
@@ -54,6 +55,13 @@ import {
 } from "../_lib/constants";
 import { toggleIngredientActive } from "../ingredient-actions";
 import type { IngredientSavedDetail } from "./ingredient-dialog";
+import type { CompanyWacTarget } from "../stock/company-wac-dialog";
+
+const CompanyWacDialog = dynamic(
+  () =>
+    import("../stock/company-wac-dialog").then((mod) => mod.CompanyWacDialog),
+  { ssr: false },
+);
 
 const IngredientDialog = dynamic(
   () =>
@@ -367,11 +375,13 @@ export function IngredientsClient({
   unitOptions,
   categoryOptions,
   canManage = false,
+  canSetCompanyWac = false,
 }: {
   initial: IngredientRow[];
   unitOptions: UnitOption[];
   categoryOptions: CategoryOption[];
   canManage?: boolean;
+  canSetCompanyWac?: boolean;
 }) {
   const [rows, setRows] = useState(initial);
   const [searchDraft, setSearchDraft] = useState("");
@@ -382,6 +392,7 @@ export function IngredientsClient({
   const [focusField, setFocusField] = useState<
     "default_fulfill_site_kind" | undefined
   >(undefined);
+  const [wacTarget, setWacTarget] = useState<CompanyWacTarget | null>(null);
   const [isPending, startTransition] = useTransition();
   const [openActionRowId, setOpenActionRowId] = useState<number | null>(null);
   const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
@@ -390,6 +401,19 @@ export function IngredientsClient({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const deepLinkHandledRef = useRef(false);
+
+  const openCompanyWac = useCallback((item: IngredientRow) => {
+    const currentCost =
+      item.monetary?.unitCost != null && Number(item.monetary.unitCost) > 0
+        ? Number(item.monetary.unitCost)
+        : null;
+    setWacTarget({
+      ingredientId: item.id,
+      name: item.name,
+      units: item.units ?? [],
+      currentWac: currentCost,
+    });
+  }, []);
 
   const filters = useMemo(
     () => parseIngredientsListFilters(searchParams),
@@ -598,6 +622,14 @@ export function IngredientsClient({
         label: ingredientListCopy.linkSupplierAction,
         icon: <IconLink />,
         onSelect: () => linkSupplier(item),
+      });
+    }
+    if (canSetCompanyWac && item.item_kind === "raw_material") {
+      items.push({
+        key: "set-wac",
+        label: messages.inventory.stock.actions.setCompanyWac,
+        icon: <IconBanknote />,
+        onSelect: () => openCompanyWac(item),
       });
     }
     items.push({
@@ -997,6 +1029,19 @@ export function IngredientsClient({
           categoryOptions={categoryOptions}
           focusField={focusField}
           onSaved={handleSaved}
+          onSetCompanyWac={canSetCompanyWac ? openCompanyWac : undefined}
+        />
+      ) : null}
+
+      {canSetCompanyWac ? (
+        <CompanyWacDialog
+          target={wacTarget}
+          onClose={() => setWacTarget(null)}
+          onSaved={() => {
+            startTransition(() => {
+              router.refresh();
+            });
+          }}
         />
       ) : null}
     </AppPage>

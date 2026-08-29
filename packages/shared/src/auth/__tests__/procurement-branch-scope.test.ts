@@ -14,9 +14,15 @@ test("branch_manager is NOT a branch-scoped procurement role (D093)", () => {
   assert.equal(isBranchScopedProcurementRole("branch_manager"), false);
 });
 
-test("central_supply_ops is branch-scoped for own-site GRN writes", () => {
-  assert.equal(isBranchScopedProcurementRole("central_supply_ops"), true);
-  assert.equal(isProcurementBranchInScope("central_supply_ops", 1, 2), false);
+test("central_kitchen_lead is branch-scoped for own-site GRN writes", () => {
+  assert.equal(isBranchScopedProcurementRole("central_kitchen_lead"), true);
+  assert.equal(isProcurementBranchInScope("central_kitchen_lead", 1, 2), false);
+  assert.equal(isProcurementBranchInScope("central_kitchen_lead", 1, 1), true);
+});
+
+test("central_supply_ops is tenant-wide — not branch-scoped for GRN writes", () => {
+  assert.equal(isBranchScopedProcurementRole("central_supply_ops"), false);
+  assert.equal(isProcurementBranchInScope("central_supply_ops", 1, 2), true);
   assert.equal(isProcurementBranchInScope("central_supply_ops", 1, 1), true);
 });
 

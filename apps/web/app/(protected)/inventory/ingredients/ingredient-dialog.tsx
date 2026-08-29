@@ -440,6 +440,7 @@ interface IngredientDialogProps {
   /** When set, focus this field after the dialog opens (edit readiness flow). */
   focusField?: "default_fulfill_site_kind";
   onSaved: (detail: IngredientSavedDetail) => void | Promise<void>;
+  onSetCompanyWac?: (ingredient: IngredientRow) => void;
   chrome?: "dialog" | "sheet";
 }
 
@@ -506,6 +507,7 @@ export function IngredientDialog({
   categoryOptions,
   focusField,
   onSaved,
+  onSetCompanyWac,
   chrome = "dialog",
 }: IngredientDialogProps) {
   const isEdit = ingredient !== null;
@@ -787,6 +789,7 @@ export function IngredientDialog({
           wizardStep={wizardStep}
           onWizardStepChange={setWizardStep}
           onCreateUnit={handleCreateUnit}
+          onSetCompanyWac={onSetCompanyWac}
         />
       )}
     </FormChrome>
@@ -803,6 +806,7 @@ function IngredientDialogFields({
   wizardStep,
   onWizardStepChange,
   onCreateUnit,
+  onSetCompanyWac,
 }: {
   form: UseFormReturn<IngredientFormValues>;
   categorySelectOptions: Array<{ value: string; label: string }>;
@@ -813,6 +817,7 @@ function IngredientDialogFields({
   wizardStep: number;
   onWizardStepChange: (step: number) => void;
   onCreateUnit: (code: string) => Promise<number | null>;
+  onSetCompanyWac?: (ingredient: IngredientRow) => void;
 }) {
   const itemKind = form.watch("item_kind");
   const unitIds = form.watch("unit_ids");
@@ -1201,8 +1206,20 @@ function IngredientDialogFields({
           </Field>
         </div>
         {referenceIngredient?.monetary != null ? (
-          <Field>
-            <FieldLabel>{dialogCopy.referenceCostLabel}</FieldLabel>
+          <Field className="sm:col-span-2">
+            <div className="flex items-center justify-between gap-2">
+              <FieldLabel>{dialogCopy.referenceCostLabel}</FieldLabel>
+              {onSetCompanyWac && referenceIngredient.item_kind === "raw_material" ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onSetCompanyWac(referenceIngredient)}
+                >
+                  {messages.inventory.stock.actions.setCompanyWac}
+                </Button>
+              ) : null}
+            </div>
             <output className="text-sm font-mono tabular-nums">
               {referenceCost
                 ? `${formatVND(referenceCost.value)}${
@@ -1235,6 +1252,16 @@ function IngredientDialogFields({
             />
           </Field>
           <FieldDescription>{dialogCopy.finishedGoodHint}</FieldDescription>
+        </div>
+        <div className="sm:col-span-2 flex justify-end pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => onWizardStepChange(1)}
+          >
+            {copy.wizard.stepBase} →
+          </Button>
         </div>
       </div>
       </div>
@@ -1313,6 +1340,24 @@ function IngredientDialogFields({
             {copy.units.baseChangeRescaleWarning}
           </FieldDescription>
         ) : null}
+        <div className="flex justify-between pt-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => onWizardStepChange(0)}
+          >
+            ← {copy.wizard.stepInfo}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => onWizardStepChange(2)}
+          >
+            {copy.wizard.stepUnits} →
+          </Button>
+        </div>
       </div>
 
       <div hidden={wizardStep !== 2}>
@@ -1446,6 +1491,16 @@ function IngredientDialogFields({
           </CollapsibleContent>
         </FieldSet>
       </Collapsible>
+      <div className="flex justify-start pt-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => onWizardStepChange(1)}
+        >
+          ← {copy.wizard.stepBase}
+        </Button>
+      </div>
       </div>
     </>
   );

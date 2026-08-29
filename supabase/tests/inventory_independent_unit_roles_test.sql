@@ -329,6 +329,75 @@ BEGIN
     RAISE EXCEPTION 'INDEPENDENT UNIT ROLES: draft document factor was not refreshed';
   END IF;
 
+  -- A base swap must preserve the conversion graph already stored for both
+  -- units. An inverted client payload used to pass through and atomically
+  -- multiply quantity/WAC by the wrong scale across every valuation table.
+  v_rejected := FALSE;
+  BEGIN
+    PERFORM public.save_ingredient_catalog(
+      v_ingredient,
+      '__independent_unit_roles_' || v_suffix,
+      NULL,
+      NULL,
+      'raw_material',
+      'ambient',
+      5,
+      NULL,
+      NULL,
+      NULL,
+      jsonb_build_array(
+        jsonb_build_object(
+          'unit_id', v_receipt_unit,
+          'to_base_factor', 1,
+          'is_base', TRUE,
+          'anchor_unit_id', NULL,
+          'anchor_factor', NULL,
+          'sort_order', 0
+        ),
+        jsonb_build_object(
+          'unit_id', v_issue_unit,
+          'to_base_factor', 10,
+          'is_base', FALSE,
+          'anchor_unit_id', v_receipt_unit,
+          'anchor_factor', 10,
+          'sort_order', 1
+        ),
+        jsonb_build_object(
+          'unit_id', v_production_unit,
+          'to_base_factor', 20,
+          'is_base', FALSE,
+          'anchor_unit_id', v_receipt_unit,
+          'anchor_factor', 20,
+          'sort_order', 2
+        )
+      ),
+      NULL,
+      v_receipt_unit,
+      v_issue_unit,
+      v_production_unit
+    );
+  EXCEPTION WHEN check_violation THEN
+    IF SQLERRM = 'unit_rebase_ratio_changed' THEN
+      v_rejected := TRUE;
+    ELSE
+      RAISE;
+    END IF;
+  END;
+  IF NOT v_rejected THEN
+    RAISE EXCEPTION 'INDEPENDENT UNIT ROLES: inverted base bridge accepted';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.stock_levels AS stock
+    WHERE stock.tenant_id = v_tenant
+      AND stock.ingredient_id = v_ingredient
+      AND stock.current_quantity = 10
+      AND stock.avg_unit_cost = 200
+      AND stock.current_quantity * stock.avg_unit_cost = 2000
+  ) THEN
+    RAISE EXCEPTION 'INDEPENDENT UNIT ROLES: rejected bridge partially mutated stock';
+  END IF;
+
   v_rejected := FALSE;
   BEGIN
     PERFORM public.save_ingredient_catalog(

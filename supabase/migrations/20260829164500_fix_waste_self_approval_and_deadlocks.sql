@@ -1,6 +1,7 @@
 -- Migration: fix_waste_self_approval_and_deadlocks
 -- Allow Owner and break-glass roles to self-approve waste issues when necessary.
--- Recover legacy count_slip_auto_waste issues that were stuck in pending approval.
+-- Recovery of legacy count-slip waste is intentionally deferred until after
+-- the unit-rebase incident repair in 20260829190058.
 
 CREATE OR REPLACE FUNCTION public.approve_waste(
   p_issue_id bigint,
@@ -111,34 +112,3 @@ $$;
 REVOKE ALL ON FUNCTION public.approve_waste(bigint, text, text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.approve_waste(bigint, text, text) TO authenticated;
 GRANT ALL ON FUNCTION public.approve_waste(bigint, text, text) TO service_role;
-
--- Recover legacy count_slip_auto_waste writeoffs stuck in pending for already approved count slips
-DO $$
-DECLARE
-  v_row record;
-BEGIN
-  FOR v_row IN
-    SELECT si.id, si.branch_id, si.tenant_id
-    FROM public.stock_issues si
-    JOIN public.inventory_count_slips cs
-      ON (si.source_ref ->> 'count_slip_id')::bigint = cs.id
-      OR (si.source_ref ->> 'countSlipId')::bigint = cs.id
-    WHERE si.issue_type = 'writeoff'
-      AND si.status = 'draft'
-      AND si.approval_status = 'pending'
-      AND si.source_type = 'count_slip_auto_waste'
-      AND cs.status = 'approved'
-  LOOP
-    UPDATE public.stock_issues
-    SET approval_status = 'approved',
-        approved_at = now(),
-        notes = coalesce(notes, '') || E'\n[auto-recovered count slip waste]'
-    WHERE id = v_row.id;
-
-    BEGIN
-      PERFORM public._post_writeoff_movements(v_row.id);
-    EXCEPTION WHEN OTHERS THEN
-      NULL;
-    END;
-  END LOOP;
-END $$;

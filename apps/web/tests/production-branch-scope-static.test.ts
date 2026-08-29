@@ -47,8 +47,10 @@ test("branch-scoped production targets are wired to the actor site", () => {
   assert.match(productionDataSource, /branch\.branch_kind === "central_kitchen"/);
 });
 
-test("central supply operator cannot open production", () => {
-  assert.equal(canAccessProductionSurface("central_supply_ops"), false);
+test("central supply operator can open production across central kitchen sites", () => {
+  assert.equal(canAccessProductionSurface("central_supply_ops"), true);
+  assert.equal(isProductionBranchScopedRole("central_supply_ops"), false);
+  assert.equal(productionTargetAllowed("central_supply_ops", 1, 2), true);
 });
 
 test("central_kitchen_lead (branch_id=X) is REJECTED creating a production order for a foreign branch Y≠X", () => {
@@ -64,9 +66,10 @@ test("owner is tenant-wide for production — not branch-scoped", () => {
   assert.equal(productionTargetAllowed("owner", 1, 999), true);
 });
 
-test("only owner and central kitchen lead manage production recipes", () => {
+test("owner, central kitchen lead, and central supply ops manage production recipes", () => {
   assert.equal(canManageProductionRecipes("owner"), true);
   assert.equal(canManageProductionRecipes("central_kitchen_lead"), true);
+  assert.equal(canManageProductionRecipes("central_supply_ops"), true);
   assert.equal(canManageProductionRecipes("branch_manager"), false);
 });
 

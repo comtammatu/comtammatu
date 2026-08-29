@@ -42,7 +42,10 @@ test("inventory tenant read includes central_supply_ops", () => {
   );
 });
 
-test("supplier-return residual gate excludes branch_manager (R08)", () => {
-  assert.deepEqual([...SUPPLIER_RETURN_ROLES], ["owner"]);
+test("supplier-return gate includes central_supply_ops and excludes branch_manager (R08)", () => {
+  assert.deepEqual([...SUPPLIER_RETURN_ROLES], [
+    "owner",
+    "central_supply_ops",
+  ]);
   assert.equal(SUPPLIER_RETURN_ROLES.includes("branch_manager"), false);
 });

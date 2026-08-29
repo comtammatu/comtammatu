@@ -183,6 +183,9 @@ function mapCatalogRpcError(
   code: string | undefined,
   message: string | undefined,
 ): string {
+  if (message?.includes("unit_rebase_ratio_changed")) {
+    return "Đổi đơn vị chuẩn phải giữ nguyên tỷ lệ quy đổi hiện có. Hãy lưu tỷ lệ trước, rồi đổi đơn vị chuẩn.";
+  }
   if (message?.includes("standard_unit_dimension_mismatch")) {
     return "Các đơn vị chuẩn phải cùng loại đo lường (khối lượng hoặc thể tích).";
   }
@@ -394,34 +397,46 @@ export async function fetchIngredients(
     ? (monetary.client ?? supabase)
     : supabase;
 
-  const [ingredientsResult, supplierLinksResult, baseUnitsResult] =
-    await Promise.all([
-      getIngredientsCached(
-        readClient,
-        claims.tenant_id,
-        safeLimit,
-        updatedSince,
-        monetary.purchasePrice,
-        includeUnits,
-      ),
-      // Match YCM gate: active supplier_items on an active supplier.
-      supabase
-        .from("supplier_items")
-        .select("ingredient_id, suppliers!inner(id)")
-        .eq("tenant_id", claims.tenant_id)
-        .eq("is_active", true)
-        .eq("suppliers.is_active", true),
-      includeUnits
-        ? Promise.resolve({ data: null, error: null })
-        : supabase
-            .from("ingredient_units")
-            .select(
-              "ingredient_id, units!ingredient_units_unit_tenant_fkey(code, name)",
-            )
-            .eq("tenant_id", claims.tenant_id)
-            .eq("is_base", true)
-            .eq("is_active", true),
-    ]);
+  const [
+    ingredientsResult,
+    supplierLinksResult,
+    baseUnitsResult,
+    stockLevelsResult,
+  ] = await Promise.all([
+    getIngredientsCached(
+      readClient,
+      claims.tenant_id,
+      safeLimit,
+      updatedSince,
+      monetary.purchasePrice,
+      includeUnits,
+    ),
+    // Match YCM gate: active supplier_items on an active supplier.
+    supabase
+      .from("supplier_items")
+      .select("ingredient_id, suppliers!inner(id)")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("is_active", true)
+      .eq("suppliers.is_active", true),
+    includeUnits
+      ? Promise.resolve({ data: null, error: null })
+      : supabase
+          .from("ingredient_units")
+          .select(
+            "ingredient_id, units!ingredient_units_unit_tenant_fkey(code, name)",
+          )
+          .eq("tenant_id", claims.tenant_id)
+          .eq("is_base", true)
+          .eq("is_active", true),
+    monetary.purchasePrice
+      ? supabase
+          .from("stock_levels")
+          .select("ingredient_id, avg_unit_cost")
+          .eq("tenant_id", claims.tenant_id)
+          .not("avg_unit_cost", "is", null)
+          .gt("avg_unit_cost", 0)
+      : Promise.resolve({ data: null, error: null }),
+  ]);
 
   const { data, error } = ingredientsResult;
 
@@ -442,6 +457,15 @@ export async function fetchIngredients(
   const linkedIngredientIds = new Set<number>();
   for (const link of supplierLinksResult.data ?? []) {
     linkedIngredientIds.add(Number(link.ingredient_id));
+  }
+
+  const wacByIngredientId = new Map<number, number>();
+  for (const sl of stockLevelsResult.data ?? []) {
+    const ingId = Number(sl.ingredient_id);
+    const cost = Number(sl.avg_unit_cost);
+    if (!wacByIngredientId.has(ingId) && Number.isFinite(cost) && cost > 0) {
+      wacByIngredientId.set(ingId, cost);
+    }
   }
 
   const baseUnitByIngredientId = new Map<number, string>();
@@ -487,13 +511,20 @@ export async function fetchIngredients(
       unit_cost,
       ...rest
     } = row;
+    const ingredientId = Number(rest.id);
+    const stockWac = wacByIngredientId.get(ingredientId);
     const unitCost =
-      monetary.purchasePrice && unit_cost != null ? Number(unit_cost) : null;
+      monetary.purchasePrice
+        ? stockWac != null
+          ? stockWac
+          : unit_cost != null && Number(unit_cost) > 0
+            ? Number(unit_cost)
+            : null
+        : null;
     const units = includeUnits
       ? mapIngredientUnitRows(ingredient_units)
       : undefined;
     const baseUnit = units?.find((unit) => unit.is_base);
-    const ingredientId = Number(rest.id);
 
     return {
       id: ingredientId,
@@ -541,7 +572,7 @@ export async function fetchIngredientDetail(
     ? (monetary.client ?? supabase)
     : supabase;
 
-  const [ingredientResult, supplierLinkResult] = await Promise.all([
+  const [ingredientResult, supplierLinkResult, stockLevelResult] = await Promise.all([
     monetary.purchasePrice
       ? readClient
           .from("ingredients")
@@ -567,6 +598,16 @@ export async function fetchIngredientDetail(
       .eq("is_active", true)
       .eq("suppliers.is_active", true)
       .limit(1),
+    monetary.purchasePrice
+      ? supabase
+          .from("stock_levels")
+          .select("avg_unit_cost")
+          .eq("tenant_id", claims.tenant_id)
+          .eq("ingredient_id", parsedId.data)
+          .not("avg_unit_cost", "is", null)
+          .gt("avg_unit_cost", 0)
+          .limit(1)
+      : Promise.resolve({ data: null, error: null }),
   ]);
 
   if (ingredientResult.error || supplierLinkResult.error) {
@@ -605,8 +646,18 @@ export async function fetchIngredientDetail(
     unit_cost,
     ...rest
   } = row;
+  const stockWac =
+    stockLevelResult.data?.[0]?.avg_unit_cost != null
+      ? Number(stockLevelResult.data[0].avg_unit_cost)
+      : null;
   const unitCost =
-    monetary.purchasePrice && unit_cost != null ? Number(unit_cost) : null;
+    monetary.purchasePrice
+      ? stockWac != null && Number.isFinite(stockWac) && stockWac > 0
+        ? stockWac
+        : unit_cost != null && Number(unit_cost) > 0
+          ? Number(unit_cost)
+          : null
+      : null;
   const units = mapIngredientUnitRows(ingredient_units);
   const baseUnit = units.find((unit) => unit.is_base);
 

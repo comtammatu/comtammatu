@@ -38,6 +38,7 @@ export default async function IngredientsPage() {
   const canManageCatalog =
     INGREDIENT_CATALOG_WRITE_ROLES.includes(claims.user_role) &&
     (await currentUserHasAnyPermissionAny(CATALOG_MANAGE_PERMISSIONS));
+  const canSetCompanyWac = claims.user_role === "owner";
 
   const [result, unitsResult, categoriesResult] = await Promise.all([
     fetchIngredients(2000, undefined, { includeUnits: false }),
@@ -58,6 +59,7 @@ export default async function IngredientsPage() {
       unitOptions={unitOptions}
       categoryOptions={categoryOptions}
       canManage={canManageCatalog}
+      canSetCompanyWac={canSetCompanyWac}
     />
   );
 }

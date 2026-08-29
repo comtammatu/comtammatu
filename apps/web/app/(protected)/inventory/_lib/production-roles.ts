@@ -3,11 +3,13 @@ import type { StaffRole } from "@comtammatu/shared/auth";
 export const PRODUCTION_OPERATOR_ROLES = [
   "owner",
   "central_kitchen_lead",
+  "central_supply_ops",
 ] as const satisfies readonly StaffRole[];
 
 export const PRODUCTION_RECIPE_MANAGER_ROLES = [
   "owner",
   "central_kitchen_lead",
+  "central_supply_ops",
 ] as const satisfies readonly StaffRole[];
 
 const PRODUCTION_BRANCH_SCOPED_ROLES = [
