@@ -18,6 +18,9 @@
 
     <string name="diagnostics_title">Kiểm tra nhanh</string>
     <string name="diagnostics_description">Xác nhận kết nối trước khi bắt đầu nhận đơn.</string>
+    <string name="sunmi_compat_ready">GreenSM / beFood: đã sẵn sàng tự nhận Má Tư Agent</string>
+    <string name="sunmi_compat_missing">GreenSM / beFood: chưa cài APK hỗ trợ tự nhận máy in</string>
+    <string name="sunmi_compat_port_warning">GreenSM / beFood: đã cài hỗ trợ; cần dùng cổng TCP 9100</string>
     <string name="check_pos_action">Kiểm tra POS</string>
     <string name="check_print_port_action">Kiểm tra cổng in</string>
     <string name="view_queue_action">Xem tổng kết hàng đợi</string>

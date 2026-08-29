@@ -49,6 +49,7 @@ import kotlin.math.roundToInt
 class MainActivity : Activity() {
     companion object {
         const val ACTION_START_AGENT = "com.comtammatu.relay.action.START_AGENT"
+        private const val SUNMI_COMPAT_PACKAGE = "woyou.aidlservice.jiuiv5"
     }
 
     private lateinit var etBackendUrl: EditText
@@ -539,6 +540,28 @@ class MainActivity : Activity() {
         section.addView(space(10))
 
         val panel = panel()
+        val compatInstalled = isPackageInstalled(SUNMI_COMPAT_PACKAGE)
+        val configuredPort = etPort.text.toString().toIntOrNull() ?: PrintIntakeService.DEFAULT_PORT
+        val compatStatus = TextView(this).apply {
+            text = getString(
+                when {
+                    !compatInstalled -> R.string.sunmi_compat_missing
+                    configuredPort != PrintIntakeService.DEFAULT_PORT -> R.string.sunmi_compat_port_warning
+                    else -> R.string.sunmi_compat_ready
+                }
+            )
+            textSize = 12.5f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            setTextColor(
+                color(if (compatInstalled && configuredPort == PrintIntakeService.DEFAULT_PORT) R.color.success_text else R.color.warning_text)
+            )
+            background = roundedBackground(
+                color(if (compatInstalled && configuredPort == PrintIntakeService.DEFAULT_PORT) R.color.success_surface else R.color.warning_surface),
+                color(if (compatInstalled && configuredPort == PrintIntakeService.DEFAULT_PORT) R.color.success_border else R.color.warning_border),
+                10
+            )
+            setPadding(dp(12), dp(10), dp(12), dp(10))
+        }
         val firstRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             weightSum = 2f
@@ -569,11 +592,28 @@ class MainActivity : Activity() {
             }
         })
 
+        panel.addView(compatStatus)
+        panel.addView(space(10))
         panel.addView(firstRow)
         panel.addView(space(10))
         panel.addView(secondRow)
         section.addView(panel)
         return section
+    }
+
+    private fun isPackageInstalled(packageName: String): Boolean = try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            packageManager.getPackageInfo(
+                packageName,
+                android.content.pm.PackageManager.PackageInfoFlags.of(0)
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            packageManager.getPackageInfo(packageName, 0)
+        }
+        true
+    } catch (_: android.content.pm.PackageManager.NameNotFoundException) {
+        false
     }
 
     private fun createLogSection(): View {

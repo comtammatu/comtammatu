@@ -15,3 +15,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "matu-agent"
 include(":app")
+include(":sunmi-compat")

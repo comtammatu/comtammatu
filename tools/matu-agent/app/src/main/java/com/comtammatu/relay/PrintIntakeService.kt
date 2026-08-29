@@ -4,8 +4,10 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
@@ -61,6 +63,9 @@ class PrintIntakeService : Service() {
         const val READ_TIMEOUT_MS = 3000
         const val CUT_DRAIN_TIMEOUT_MS = 500
 
+        private const val SUNMI_COMPAT_PACKAGE = "woyou.aidlservice.jiuiv5"
+        private const val SUNMI_COMPAT_ACTION = "woyou.aidlservice.jiuiv5.IWoyouService"
+
         var isServiceRunning = false
             private set
     }
@@ -70,6 +75,16 @@ class PrintIntakeService : Service() {
     private lateinit var dispatcher: WebhookDispatcher
     private lateinit var receiptTextRecognizer: ReceiptTextRecognizer
     private lateinit var printerDiscovery: PrinterDiscovery
+    private var sunmiCompatBindingActive = false
+    private val sunmiCompatConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            AppLogger.s("MÁY IN ẢO", "Dịch vụ tự nhận máy in GreenSM / beFood đã sẵn sàng")
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            AppLogger.w("MÁY IN ẢO", "Dịch vụ tự nhận máy in GreenSM / beFood đã ngắt")
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -159,6 +174,7 @@ class PrintIntakeService : Service() {
             serverSocket = ServerSocket(port, 50, bindAddress)
             isServiceRunning = true
             if (lanMode) printerDiscovery.register(port)
+            bindSunmiCompat()
             Log.i(TAG, "Virtual WiFi Printer Server listening on ${bindAddress.hostAddress}:$port (lanMode=$lanMode)")
             AppLogger.s("MÁY IN ẢO", "Đang mở cổng TCP $port (${if (lanMode) "0.0.0.0 Mạng LAN" else "127.0.0.1 Cục bộ"}). Sẵn sàng nhận đơn!")
         } catch (e: Exception) {
@@ -300,12 +316,35 @@ class PrintIntakeService : Service() {
     private fun stopServer() {
         isServiceRunning = false
         printerDiscovery.unregister()
+        unbindSunmiCompat()
         try {
             serverSocket?.close()
             serverSocket = null
             AppLogger.w("MÁY IN ẢO", "Đã đóng cổng lắng nghe máy in")
         } catch (e: Exception) {
             Log.e(TAG, "Error closing serverSocket: ${e.message}")
+        }
+    }
+
+    private fun bindSunmiCompat() {
+        if (sunmiCompatBindingActive) return
+        val intent = Intent(SUNMI_COMPAT_ACTION).setPackage(SUNMI_COMPAT_PACKAGE)
+        sunmiCompatBindingActive = try {
+            bindService(intent, sunmiCompatConnection, Context.BIND_AUTO_CREATE)
+        } catch (error: Exception) {
+            Log.w(TAG, "Could not bind the optional SUNMI compatibility service", error)
+            false
+        }
+    }
+
+    private fun unbindSunmiCompat() {
+        if (!sunmiCompatBindingActive) return
+        try {
+            unbindService(sunmiCompatConnection)
+        } catch (error: IllegalArgumentException) {
+            Log.w(TAG, "SUNMI compatibility service was already unbound", error)
+        } finally {
+            sunmiCompatBindingActive = false
         }
     }
 

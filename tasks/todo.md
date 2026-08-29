@@ -5,6 +5,18 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## GreenSM and beFood auto-detect Má Tư Agent as a SUNMI printer
+
+State: verify
+Kind: feature
+Tier: T2
+Lane: delivery/print-agent
+Exit: Current GreenSM Merchant and beMerchant builds bind to a companion using the legacy SUNMI PrinterX package/action on an ordinary Android device; printer calls are grouped per source app, persisted, and forwarded through the main Agent's loopback intake so classification, quarantine, deduplication, and POS order history remain authoritative.
+Evidence: verified public APK manifests for `com.gsm.merchant.app` and `xyz.be.merchant` both query `woyou.aidlservice.jiuiv5` and bundle `com.sunmi.printerx`; `sunmi-compat` contract/buffer tests; merged-manifest inspection; `docs/runbooks/food-delivery-matu-agent.md`.
+
+- [ ] Install both debug APKs on the Redmi Note 13 and confirm GreenSM and beFood bind without Bluetooth or printer-IP setup
+- [ ] Print one test receipt from each app and confirm one corresponding Agent queue row and no duplicate POS order
+
 ## Finance period integrity: cockpit identity, startup capital, close readiness
 
 State: verify
