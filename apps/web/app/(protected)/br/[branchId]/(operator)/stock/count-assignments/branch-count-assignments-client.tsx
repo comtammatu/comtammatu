@@ -108,6 +108,9 @@ export function BranchCountAssignmentsClient({
   // Staff roster filtering
   const [staffSearch, setStaffSearch] = useState("");
   const [selectedRoleFilter, setSelectedRoleFilter] = useState(ALL_ROLES_VALUE);
+  const [staffStatusFilter, setStaffStatusFilter] = useState<
+    "all" | "onDuty" | "assigned" | "unassigned"
+  >("all");
 
   // Station Matrix Assignment Sheet state
   const [activeStationTemplateId, setActiveStationTemplateId] = useState<
@@ -178,6 +181,19 @@ export function BranchCountAssignmentsClient({
     return Array.from(roles);
   }, [data.employees]);
 
+  const onDutyEmployeesCount = useMemo(() => {
+    if (data.selectedShiftId == null) return data.employees.length;
+    return data.employees.filter((emp) =>
+      Boolean(emp.scheduledShiftIds?.includes(data.selectedShiftId!)),
+    ).length;
+  }, [data.employees, data.selectedShiftId]);
+
+  const assignedEmployeeCount = useMemo(
+    () =>
+      Object.values(selectionByEmployee).filter((ids) => ids.length > 0).length,
+    [selectionByEmployee],
+  );
+
   const filteredEmployees = useMemo(() => {
     const searchNormalized = staffSearch.trim();
     return data.employees.filter((emp) => {
@@ -187,13 +203,31 @@ export function BranchCountAssignmentsClient({
       const matchSearch =
         !searchNormalized ||
         matchesSearch([emp.name, emp.positionName ?? ""], searchNormalized);
-      return matchRole && matchSearch;
-    });
-  }, [data.employees, selectedRoleFilter, staffSearch]);
+      const isAssigned =
+        (selectionByEmployee[String(emp.id)]?.length ?? 0) > 0;
+      const isOnDuty =
+        data.selectedShiftId != null &&
+        Boolean(emp.scheduledShiftIds?.includes(data.selectedShiftId));
 
-  const assignedEmployeeCount = Object.values(selectionByEmployee).filter(
-    (ids) => ids.length > 0,
-  ).length;
+      let matchStatus = true;
+      if (staffStatusFilter === "onDuty") {
+        matchStatus = isOnDuty;
+      } else if (staffStatusFilter === "assigned") {
+        matchStatus = isAssigned;
+      } else if (staffStatusFilter === "unassigned") {
+        matchStatus = !isAssigned;
+      }
+
+      return matchRole && matchSearch && matchStatus;
+    });
+  }, [
+    data.employees,
+    data.selectedShiftId,
+    selectedRoleFilter,
+    selectionByEmployee,
+    staffSearch,
+    staffStatusFilter,
+  ]);
 
   const totalAssignedUniqueItems = useMemo(() => {
     const set = new Set<number>();
@@ -1054,9 +1088,55 @@ export function BranchCountAssignmentsClient({
             </span>
           </div>
 
+          {/* Status filter tabs */}
+          <div className="flex flex-wrap gap-1">
+            <Button
+              type="button"
+              variant={staffStatusFilter === "all" ? "default" : "outline"}
+              size="touch"
+              className="h-8 text-xs font-medium"
+              onClick={() => setStaffStatusFilter("all")}
+            >
+              {INVENTORY_VI.countTabAllWithCount(data.employees.length)}
+            </Button>
+            {data.selectedShiftId != null ? (
+              <Button
+                type="button"
+                variant={staffStatusFilter === "onDuty" ? "default" : "outline"}
+                size="touch"
+                className="h-8 text-xs font-medium"
+                onClick={() => setStaffStatusFilter("onDuty")}
+              >
+                {INVENTORY_VI.countTabOnDutyWithCount(onDutyEmployeesCount)}
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              variant={staffStatusFilter === "assigned" ? "default" : "outline"}
+              size="touch"
+              className="h-8 text-xs font-medium"
+              onClick={() => setStaffStatusFilter("assigned")}
+            >
+              {INVENTORY_VI.countTabAssignedWithCount(assignedEmployeeCount)}
+            </Button>
+            <Button
+              type="button"
+              variant={
+                staffStatusFilter === "unassigned" ? "default" : "outline"
+              }
+              size="touch"
+              className="h-8 text-xs font-medium"
+              onClick={() => setStaffStatusFilter("unassigned")}
+            >
+              {INVENTORY_VI.countTabUnassignedWithCount(
+                data.employees.length - assignedEmployeeCount,
+              )}
+            </Button>
+          </div>
+
           {/* Role Filter & Search */}
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <InputGroup className="min-h-12 flex-1">
+            <InputGroup className="min-h-11 flex-1">
               <InputGroupAddon>
                 <IconSearch className="size-4" />
               </InputGroupAddon>
@@ -1073,7 +1153,7 @@ export function BranchCountAssignmentsClient({
             </InputGroup>
 
             {availableRoles.length > 0 ? (
-              <div className="w-full sm:w-64">
+              <div className="w-full sm:w-60">
                 <Select
                   value={selectedRoleFilter}
                   onValueChange={setSelectedRoleFilter}
@@ -1125,7 +1205,7 @@ export function BranchCountAssignmentsClient({
                     }
                   >
                     <ItemContent className="min-w-0 gap-1 text-left">
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
                         <ItemTitle size="heading">{employee.name}</ItemTitle>
                         {employee.positionName ? (
                           <Badge variant="outline" className="text-xs">
@@ -1144,30 +1224,29 @@ export function BranchCountAssignmentsClient({
                           </Badge>
                         ) : null}
                       </div>
-                      <ItemDescription className="line-clamp-none flex flex-wrap gap-1">
-                        {selectedIds.slice(0, 4).map((ingredientId) => {
-                          const ingredientName =
-                            ingredientById.get(ingredientId)?.name ??
-                            `#${ingredientId}`;
-                          return (
-                            <Badge
-                              key={ingredientId}
-                              variant="secondary"
-                              className="min-w-0 max-w-full sm:max-w-48"
-                              aria-label={ingredientName}
-                              title={ingredientName}
-                            >
-                              <span className="min-w-0 truncate">
-                                {ingredientName}
-                              </span>
-                            </Badge>
-                          );
-                        })}
-                        {selectedIds.length > 4 ? (
-                          <Badge variant="secondary">
-                            +{selectedIds.length - 4}
-                          </Badge>
-                        ) : null}
+                      <ItemDescription className="line-clamp-1 text-xs text-muted-foreground">
+                        {selectedIds.length > 0 ? (
+                          <span>
+                            <strong className="font-semibold text-foreground">
+                              {INVENTORY_VI.countAssignItemCount(
+                                selectedIds.length,
+                              )}
+                              :
+                            </strong>{" "}
+                            {selectedIds
+                              .slice(0, 3)
+                              .map(
+                                (id) =>
+                                  ingredientById.get(id)?.name ?? `#${id}`,
+                              )
+                              .join(", ")}
+                            {selectedIds.length > 3
+                              ? ` (+${selectedIds.length - 3})`
+                              : ""}
+                          </span>
+                        ) : (
+                          <span>{INVENTORY_VI.countStationUnassigned}</span>
+                        )}
                       </ItemDescription>
                     </ItemContent>
                     <ItemActions>

@@ -174,6 +174,9 @@ export function CountAssignmentsClient({
   const [selectionFilter, setSelectionFilter] = useState<
     "all" | "selected" | "unselected"
   >("all");
+  const [staffStatusFilter, setStaffStatusFilter] = useState<
+    "all" | "onDuty" | "assigned" | "unassigned"
+  >("all");
   const [selectionByEmployee, setSelectionByEmployee] = useState<
     Record<string, number[]>
   >(() => seedSelections(employees, assignmentsByEmployee));
@@ -260,9 +263,17 @@ export function CountAssignmentsClient({
   const showShiftPicker = scopeReady && shiftOptions.length > 0;
   const shiftSelectValue =
     selectedShiftId === null ? ALL_SHIFTS_VALUE : String(selectedShiftId);
-  const assignedEmployeeCount = Object.values(selectionByEmployee).filter(
-    (ids) => ids.length > 0,
-  ).length;
+  const assignedEmployeeCount = useMemo(
+    () =>
+      Object.values(selectionByEmployee).filter((ids) => ids.length > 0).length,
+    [selectionByEmployee],
+  );
+  const onDutyEmployeesCount = useMemo(() => {
+    if (selectedShiftId == null) return employees.length;
+    return employees.filter((emp) =>
+      Boolean(emp.scheduledShiftIds?.includes(selectedShiftId)),
+    ).length;
+  }, [employees, selectedShiftId]);
   const totalAssignedUniqueItems = useMemo(() => {
     const set = new Set<number>();
     for (const ids of Object.values(selectionByEmployee)) {
@@ -272,11 +283,27 @@ export function CountAssignmentsClient({
   }, [selectionByEmployee]);
   const visibleEmployees = useMemo(() => {
     const query = employeeSearch.trim();
-    if (!query) return employees;
-    return employees.filter((employee) =>
-      matchesSearch([employee.name], query),
-    );
-  }, [employeeSearch, employees]);
+    return employees.filter((employee) => {
+      const matchSearch =
+        !query || matchesSearch([employee.name, employee.positionName ?? ""], query);
+      const isAssigned =
+        (selectionByEmployee[String(employee.id)] ?? []).length > 0;
+      const isOnDuty =
+        selectedShiftId !== null &&
+        Boolean(employee.scheduledShiftIds?.includes(selectedShiftId));
+
+      let matchStatus = true;
+      if (staffStatusFilter === "onDuty") {
+        matchStatus = isOnDuty;
+      } else if (staffStatusFilter === "assigned") {
+        matchStatus = isAssigned;
+      } else if (staffStatusFilter === "unassigned") {
+        matchStatus = !isAssigned;
+      }
+
+      return matchSearch && matchStatus;
+    });
+  }, [employeeSearch, employees, selectedShiftId, selectionByEmployee, staffStatusFilter]);
   const visibleIngredients = useMemo(() => {
     const query = ingredientSearch.trim();
     return ingredients.filter((ingredient) => {
@@ -556,82 +583,134 @@ export function CountAssignmentsClient({
       ) : (
         <AppListFrame
           toolbar={
-            <AppToolbar
-              variant="inline"
-              search={
-                <InputGroup size={controlSize} className="min-w-0 flex-1">
-                  <InputGroupAddon>
-                    <IconSearch aria-hidden="true" />
-                  </InputGroupAddon>
-                  <InputGroupInput
-                    type="search"
-                    aria-label={INVENTORY_VI.staffSearchPlaceholder}
-                    value={employeeSearch}
-                    onChange={(event) => setEmployeeSearch(event.target.value)}
-                    placeholder={INVENTORY_VI.staffSearchPlaceholder}
-                    inputMode="search"
-                  />
-                </InputGroup>
-              }
-              filters={
-                showLocationPicker || showShiftPicker ? (
-                  <>
-                    {showLocationPicker ? (
-                      <Select
-                        value={String(selectedLocationId)}
-                        onValueChange={changeLocationScope}
-                      >
-                        <SelectTrigger
-                          id="count-assignment-location"
-                          size={controlSize}
-                          className={inventoryListFilterSelectClassName}
-                          aria-label={INVENTORY_VI.warehouseShort}
+            <div className="flex flex-col gap-2">
+              <AppToolbar
+                variant="inline"
+                search={
+                  <InputGroup size={controlSize} className="min-w-0 flex-1">
+                    <InputGroupAddon>
+                      <IconSearch aria-hidden="true" />
+                    </InputGroupAddon>
+                    <InputGroupInput
+                      type="search"
+                      aria-label={INVENTORY_VI.staffSearchPlaceholder}
+                      value={employeeSearch}
+                      onChange={(event) => setEmployeeSearch(event.target.value)}
+                      placeholder={INVENTORY_VI.staffSearchPlaceholder}
+                      inputMode="search"
+                    />
+                  </InputGroup>
+                }
+                filters={
+                  showLocationPicker || showShiftPicker ? (
+                    <>
+                      {showLocationPicker ? (
+                        <Select
+                          value={String(selectedLocationId)}
+                          onValueChange={changeLocationScope}
                         >
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {locationOptions.map((location) => (
-                            <SelectItem
-                              key={location.id}
-                              value={String(location.id)}
-                            >
-                              {location.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : null}
-                    {showShiftPicker ? (
-                      <Select
-                        value={shiftSelectValue}
-                        onValueChange={changeShiftScope}
-                      >
-                        <SelectTrigger
-                          id="count-assignment-shift"
-                          size={controlSize}
-                          className={inventoryListFilterSelectClassName}
-                          aria-label={INVENTORY_VI.countAssignShiftLabel}
+                          <SelectTrigger
+                            id="count-assignment-location"
+                            size={controlSize}
+                            className={inventoryListFilterSelectClassName}
+                            aria-label={INVENTORY_VI.warehouseShort}
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {locationOptions.map((location) => (
+                              <SelectItem
+                                key={location.id}
+                                value={String(location.id)}
+                              >
+                                {location.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : null}
+                      {showShiftPicker ? (
+                        <Select
+                          value={shiftSelectValue}
+                          onValueChange={changeShiftScope}
                         >
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value={ALL_SHIFTS_VALUE}>
-                            {INVENTORY_VI.countAssignAllShifts}
-                          </SelectItem>
-                          {shiftOptions.map((shift) => (
-                            <SelectItem key={shift.id} value={String(shift.id)}>
-                              {shift.name} ·{" "}
-                              {formatVNClockTime(shift.startTime)}-
-                              {formatVNClockTime(shift.endTime)}
+                          <SelectTrigger
+                            id="count-assignment-shift"
+                            size={controlSize}
+                            className={inventoryListFilterSelectClassName}
+                            aria-label={INVENTORY_VI.countAssignShiftLabel}
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={ALL_SHIFTS_VALUE}>
+                              {INVENTORY_VI.countAssignAllShifts}
                             </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : null}
-                  </>
-                ) : undefined
-              }
-            />
+                            {shiftOptions.map((shift) => (
+                              <SelectItem key={shift.id} value={String(shift.id)}>
+                                {shift.name} ·{" "}
+                                {formatVNClockTime(shift.startTime)}-
+                                {formatVNClockTime(shift.endTime)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : null}
+                    </>
+                  ) : undefined
+                }
+              />
+              <div className="flex flex-wrap gap-1 px-1 pb-1">
+                <Button
+                  type="button"
+                  variant={staffStatusFilter === "all" ? "default" : "outline"}
+                  size="sm"
+                  className="h-8 text-xs font-medium"
+                  onClick={() => setStaffStatusFilter("all")}
+                >
+                  {INVENTORY_VI.countTabAllWithCount(employees.length)}
+                </Button>
+                {selectedShiftId != null ? (
+                  <Button
+                    type="button"
+                    variant={
+                      staffStatusFilter === "onDuty" ? "default" : "outline"
+                    }
+                    size="sm"
+                    className="h-8 text-xs font-medium"
+                    onClick={() => setStaffStatusFilter("onDuty")}
+                  >
+                    {INVENTORY_VI.countTabOnDutyWithCount(onDutyEmployeesCount)}
+                  </Button>
+                ) : null}
+                <Button
+                  type="button"
+                  variant={
+                    staffStatusFilter === "assigned" ? "default" : "outline"
+                  }
+                  size="sm"
+                  className="h-8 text-xs font-medium"
+                  onClick={() => setStaffStatusFilter("assigned")}
+                >
+                  {INVENTORY_VI.countTabAssignedWithCount(
+                    assignedEmployeeCount,
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant={
+                    staffStatusFilter === "unassigned" ? "default" : "outline"
+                  }
+                  size="sm"
+                  className="h-8 text-xs font-medium"
+                  onClick={() => setStaffStatusFilter("unassigned")}
+                >
+                  {INVENTORY_VI.countTabUnassignedWithCount(
+                    employees.length - assignedEmployeeCount,
+                  )}
+                </Button>
+              </div>
+            </div>
           }
         >
           <DataTable

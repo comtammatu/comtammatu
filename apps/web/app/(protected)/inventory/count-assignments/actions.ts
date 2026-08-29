@@ -129,7 +129,10 @@ export const setStationCountAssignments = withAction(
       p_branch_id: data.branchId,
       p_location_id: data.locationId,
       p_template_id: data.templateId,
-      p_assignments: data.assignments,
+      p_assignments: data.assignments.map((assignment) => ({
+        employee_id: assignment.employeeId,
+        ingredient_ids: assignment.ingredientIds,
+      })),
       p_shift_id: (data.shiftId ?? null) as unknown as number,
     });
     if (error) {

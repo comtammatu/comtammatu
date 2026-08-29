@@ -432,6 +432,14 @@ export const INVENTORY_VI = {
   countSlipWasteEvidenceTitle: "Ảnh bằng chứng hàng thiếu",
   countSlipWasteEvidenceHint:
     "Thêm một ảnh cho từng mặt hàng thiếu. Hệ thống chỉ duyệt bàn giao khi phiếu xuất hủy được tạo thành công.",
+  countSlipWasteEvidenceShortageCount: (count: number) =>
+    `(${formatCount(count)} mặt hàng lệch thiếu)`,
+  countSlipWasteEvidenceCustomizeAction: "Tùy chỉnh lý do & ảnh",
+  countSlipWasteEvidenceCollapseAction: "Thu gọn chi tiết",
+  countSlipWasteEvidenceApplyAllLabel: "Áp dụng tất cả:",
+  countSlipWasteEvidenceDefaultSummary:
+    "Mặc định: Toàn bộ lệch thiếu được ghi nhận là Chênh lệch kiểm đếm ca (tự động xuất hao hụt, không cần ảnh).",
+  countSlipWasteEvidenceHasPhotoRequired: "(Có mặt hàng yêu cầu đính kèm ảnh)",
   countSlipWasteEvidenceLine: (ingredientName: string) =>
     `${ingredientName} (bắt buộc)`,
   countSlipWasteEvidenceRequired:
@@ -552,6 +560,8 @@ export const INVENTORY_VI = {
     `Đã giao (${formatCount(count)})`,
   countTabUnassignedWithCount: (count: number) =>
     `Chưa giao (${formatCount(count)})`,
+  countTabOnDutyWithCount: (count: number) =>
+    `Trực ca (${formatCount(count)})`,
   countBadgeSelected: "Đã chọn",
   countBadgeUnselected: "Chưa chọn",
   countBadgeAssignedTo: (name: string) => `Đã giao: ${name}`,
@@ -730,14 +740,21 @@ export const INVENTORY_VI = {
   branchThresholdsDescription:
     "Cài đặt định mức an toàn tối thiểu và lượng đặt khuyến nghị riêng cho từng kho / chi nhánh.",
   branchThresholdsSaveSuccess: "Đã lưu định mức tồn kho thành công",
+  branchThresholdsSaveFailed: "Không thể lưu định mức. Vui lòng thử lại.",
   branchThresholdsCustomizedBadge: "Định mức riêng",
   branchThresholdsGlobalBadge: "Mặc định chuỗi",
   branchThresholdsItemCount: (count: number) => `${formatCount(count)} mặt hàng`,
+  branchThresholdsSearchPlaceholder: "Tìm tên, mã hoặc nhóm nguyên liệu",
+  branchThresholdsAllCategories: "Tất cả nhóm",
+  branchThresholdsAllSources: "Mọi nguồn định mức",
+  branchThresholdsFilterResult: (visible: number, total: number) =>
+    `Hiển thị ${formatCount(visible)} / ${formatCount(total)} mặt hàng`,
   colMinStockLevel: "Tồn tối thiểu",
   colReorderQuantity: "Lượng đặt chuẩn",
   colEffectiveMin: "Định mức áp dụng",
   autoPlaceholder: "Tự động",
   uncategorized: "Chưa phân nhóm",
+  missingInventoryUnit: "Chưa cấu hình đơn vị",
   unitPrefix: (unit: string) => ` • ĐV: ${unit}`,
   smartReorderTitle: "Gợi ý Đặt hàng Thông minh",
   smartReorderDescription:
@@ -747,11 +764,21 @@ export const INVENTORY_VI = {
     `Có ${formatCount(count)} nguyên liệu đang dưới định mức an toàn cần nhập bù đắp.`,
   smartReorderOpenBtn: "Xem gợi ý đặt hàng",
   smartReorderSelectAll: "Chọn tất cả",
+  smartReorderSelectResults: "Chọn kết quả",
   smartReorderSelectedCount: (selected: number, total: number) =>
     `Đã chọn ${selected} / ${total} mặt hàng`,
+  smartReorderSearchPlaceholder: "Tìm tên, mã hoặc nhóm nguyên liệu",
+  smartReorderStatusAll: "Mọi trạng thái tồn",
+  smartReorderStatusBelow: "Dưới định mức",
+  smartReorderStatusSafe: "Đang an toàn",
+  smartReorderChannelAll: "Mọi nguồn cung",
+  smartReorderNoResults: "Không có mặt hàng phù hợp bộ lọc.",
+  smartReorderMissingUnitHint:
+    "Cần cấu hình đơn vị nhập trước khi tạo đề xuất.",
   smartReorderCreateDraftsBtn: (count: number) =>
     `Tạo ${formatCount(count)} đơn đề xuất`,
   smartReorderCreatedSuccess: "Đã tạo đơn thành công",
+  smartReorderCreateFailed: "Không thể tạo đề xuất. Vui lòng thử lại.",
   smartReorderChannelSupplier: "Mua ngoài (Nhà cung cấp)",
   smartReorderChannelKitchen: "Bếp Trung Tâm (CK)",
   smartReorderChannelSupply: "Kho Tổng (CS)",

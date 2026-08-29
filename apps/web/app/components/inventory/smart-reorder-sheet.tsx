@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import {
   Sparkles as IconSparkles,
   Check as IconCheck,
@@ -8,16 +8,54 @@ import {
   Truck as IconTruck,
   ChefHat as IconChefHat,
   AlertTriangle as IconAlert,
+  Search as IconSearch,
 } from "lucide-react";
 import { formatQuantity } from "@comtammatu/shared/format";
 import { ACTIONS_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import { AppDialog } from "@/components/form";
+import { useFormControlSize } from "@/components/form/control-size";
 import { Frame } from "@comtammatu/ui/components/frame";
-import { Input } from "@comtammatu/ui/components/input";
-import type { ReorderSuggestionItem, SupplyChannel } from "@lib/inventory/smart-reorder-data";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@comtammatu/ui/components/input-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
+import { toast } from "@comtammatu/ui/components/sonner";
+import type {
+  ReorderSuggestionItem,
+  SupplyChannel,
+} from "@lib/inventory/smart-reorder-data";
 import { createReorderDraftDemandsAction } from "@/(protected)/inventory/stock-actions";
+
+type ReorderStatusFilter = "all" | "below" | "safe";
+type SupplyChannelFilter = "all" | SupplyChannel;
+type ReorderItemWithUnit = ReorderSuggestionItem & { baseUnitId: number };
+
+function getUnitLabel(item: ReorderSuggestionItem): string | null {
+  return item.baseUnitCode?.trim() || item.baseUnitName?.trim() || null;
+}
+
+function hasEntryUnit(
+  item: ReorderSuggestionItem,
+): item is ReorderItemWithUnit {
+  return item.baseUnitId != null;
+}
+
+function hasConfiguredUnit(
+  item: ReorderSuggestionItem,
+): item is ReorderItemWithUnit {
+  return hasEntryUnit(item) && getUnitLabel(item) != null;
+}
 
 export function SmartReorderSheet({
   branchId,
@@ -28,9 +66,20 @@ export function SmartReorderSheet({
   branchName?: string | null;
   items: ReorderSuggestionItem[];
 }) {
+  const controlSize = useFormControlSize();
+  const menuItemSize = controlSize === "touch" ? "touch" : "default";
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [reorderStatusFilter, setReorderStatusFilter] =
+    useState<ReorderStatusFilter>("below");
+  const [supplyChannelFilter, setSupplyChannelFilter] =
+    useState<SupplyChannelFilter>("all");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(
-    new Set(items.filter((i) => i.isBelowMin).map((i) => i.ingredientId)),
+    new Set(
+      items
+        .filter((item) => item.isBelowMin && hasConfiguredUnit(item))
+        .map((item) => item.ingredientId),
+    ),
   );
   const [quantities, setQuantities] = useState<Map<number, number>>(
     new Map(items.map((i) => [i.ingredientId, i.suggestedReorderQty || 1])),
@@ -41,7 +90,40 @@ export function SmartReorderSheet({
     trCount: number;
   } | null>(null);
 
+  const filteredItems = useMemo(() => {
+    const query = search.toLocaleLowerCase("vi").trim();
+    return items.filter((item) => {
+      const matchesQuery =
+        query === "" ||
+        item.ingredientName.toLocaleLowerCase("vi").includes(query) ||
+        item.sku?.toLocaleLowerCase("vi").includes(query) ||
+        item.categoryName?.toLocaleLowerCase("vi").includes(query);
+      const matchesStatus =
+        reorderStatusFilter === "all" ||
+        (reorderStatusFilter === "below" && item.isBelowMin) ||
+        (reorderStatusFilter === "safe" && !item.isBelowMin);
+      const matchesChannel =
+        supplyChannelFilter === "all" ||
+        item.supplyChannel === supplyChannelFilter;
+
+      return matchesQuery && matchesStatus && matchesChannel;
+    });
+  }, [items, reorderStatusFilter, search, supplyChannelFilter]);
+
+  const visibleSelectableIds = filteredItems
+    .filter(hasConfiguredUnit)
+    .map((item) => item.ingredientId);
+  const allVisibleSelected =
+    visibleSelectableIds.length > 0 &&
+    visibleSelectableIds.every((id) => selectedIds.has(id));
+  const hasActiveFilters =
+    search.trim() !== "" ||
+    reorderStatusFilter !== "below" ||
+    supplyChannelFilter !== "all";
+
   const toggleSelect = (id: number) => {
+    const item = items.find((candidate) => candidate.ingredientId === id);
+    if (!item || !hasConfiguredUnit(item)) return;
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -51,11 +133,15 @@ export function SmartReorderSheet({
   };
 
   const handleSelectAll = () => {
-    if (selectedIds.size === items.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(items.map((i) => i.ingredientId)));
-    }
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (allVisibleSelected) {
+        for (const id of visibleSelectableIds) next.delete(id);
+      } else {
+        for (const id of visibleSelectableIds) next.add(id);
+      }
+      return next;
+    });
   };
 
   const handleQtyChange = (id: number, val: string) => {
@@ -64,17 +150,23 @@ export function SmartReorderSheet({
   };
 
   const handleCreateDrafts = () => {
-    const selectedItems = items.filter((i) => selectedIds.has(i.ingredientId));
+    const selectedItems = items.filter(
+      (item): item is ReorderItemWithUnit =>
+        selectedIds.has(item.ingredientId) && hasConfiguredUnit(item),
+    );
     if (selectedItems.length === 0) return;
 
     startTransition(async () => {
       const res = await createReorderDraftDemandsAction({
         branchId,
-        items: selectedItems.map((i) => ({
-          ingredientId: i.ingredientId,
-          quantity: quantities.get(i.ingredientId) ?? i.suggestedReorderQty ?? 1,
-          entryUnitId: i.baseUnitId ?? 1,
-          supplyChannel: i.supplyChannel,
+        items: selectedItems.map((item) => ({
+          ingredientId: item.ingredientId,
+          quantity: Math.max(
+            1,
+            quantities.get(item.ingredientId) ?? item.suggestedReorderQty,
+          ),
+          entryUnitId: item.baseUnitId,
+          supplyChannel: item.supplyChannel,
         })),
       });
 
@@ -87,6 +179,8 @@ export function SmartReorderSheet({
           setSuccessResult(null);
           setOpen(false);
         }, 1500);
+      } else {
+        toast.error(INVENTORY_VI.smartReorderCreateFailed);
       }
     });
   };
@@ -146,17 +240,27 @@ export function SmartReorderSheet({
         description={`${branchName ? `${branchName} — ` : ""}${INVENTORY_VI.smartReorderDescription}`}
         contentClassName="max-w-3xl"
         footer={
-          <div className="flex w-full items-center justify-between">
+          <div className="flex w-full flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between">
             <span className="text-xs text-muted-foreground">
-              {INVENTORY_VI.branchThresholdsItemCount(selectedIds.size)}
+              {INVENTORY_VI.smartReorderSelectedCount(
+                selectedIds.size,
+                items.filter(hasConfiguredUnit).length,
+              )}
             </span>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={() => setOpen(false)}>
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+              <Button
+                variant="outline"
+                size={controlSize}
+                onClick={() => setOpen(false)}
+              >
                 {ACTIONS_VI.cancel}
               </Button>
               <Button
+                size={controlSize}
                 onClick={handleCreateDrafts}
-                disabled={selectedIds.size === 0 || isPending || successResult !== null}
+                disabled={
+                  selectedIds.size === 0 || isPending || successResult !== null
+                }
               >
                 {successResult ? (
                   <>
@@ -173,99 +277,231 @@ export function SmartReorderSheet({
           </div>
         }
       >
-        <div className="flex flex-col gap-3 max-h-96 overflow-y-auto">
-          {/* Action bar */}
-          <div className="flex items-center justify-between py-1">
+        <div className="flex max-h-dvh-70 flex-col gap-4 overflow-y-auto">
+          <div className="flex flex-col gap-2">
+            <InputGroup size={controlSize}>
+              <InputGroupAddon>
+                <IconSearch className="size-4 text-muted-foreground" />
+              </InputGroupAddon>
+              <InputGroupInput
+                type="search"
+                inputMode="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={INVENTORY_VI.smartReorderSearchPlaceholder}
+              />
+            </InputGroup>
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <Select
+                value={reorderStatusFilter}
+                onValueChange={(value) =>
+                  setReorderStatusFilter(value as ReorderStatusFilter)
+                }
+              >
+                <SelectTrigger
+                  size={controlSize}
+                  className="w-full min-w-0 sm:flex-1"
+                  aria-label={INVENTORY_VI.smartReorderStatusAll}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" size={menuItemSize}>
+                    {INVENTORY_VI.smartReorderStatusAll}
+                  </SelectItem>
+                  <SelectItem value="below" size={menuItemSize}>
+                    {INVENTORY_VI.smartReorderStatusBelow}
+                  </SelectItem>
+                  <SelectItem value="safe" size={menuItemSize}>
+                    {INVENTORY_VI.smartReorderStatusSafe}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={supplyChannelFilter}
+                onValueChange={(value) =>
+                  setSupplyChannelFilter(value as SupplyChannelFilter)
+                }
+              >
+                <SelectTrigger
+                  size={controlSize}
+                  className="w-full min-w-0 sm:flex-1"
+                  aria-label={INVENTORY_VI.smartReorderChannelAll}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" size={menuItemSize}>
+                    {INVENTORY_VI.smartReorderChannelAll}
+                  </SelectItem>
+                  <SelectItem value="supplier_po" size={menuItemSize}>
+                    {INVENTORY_VI.smartReorderChannelSupplier}
+                  </SelectItem>
+                  <SelectItem
+                    value="internal_transfer_kitchen"
+                    size={menuItemSize}
+                  >
+                    {INVENTORY_VI.smartReorderChannelKitchen}
+                  </SelectItem>
+                  <SelectItem
+                    value="internal_transfer_supply"
+                    size={menuItemSize}
+                  >
+                    {INVENTORY_VI.smartReorderChannelSupply}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+
+              {hasActiveFilters ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size={controlSize}
+                  onClick={() => {
+                    setSearch("");
+                    setReorderStatusFilter("below");
+                    setSupplyChannelFilter("all");
+                  }}
+                >
+                  {ACTIONS_VI.clearFilters}
+                </Button>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <Button
+              type="button"
               variant="outline"
-              size="sm"
+              size={controlSize}
               onClick={handleSelectAll}
-              className="text-xs"
+              disabled={visibleSelectableIds.length === 0}
+              className="sm:w-auto"
             >
-              {selectedIds.size === items.length
+              {allVisibleSelected
                 ? ACTIONS_VI.deselectAll
-                : INVENTORY_VI.smartReorderSelectAll}
+                : INVENTORY_VI.smartReorderSelectResults}
             </Button>
             <span className="text-xs text-muted-foreground tabular-nums">
-              {INVENTORY_VI.smartReorderSelectedCount(selectedIds.size, items.length)}
+              {INVENTORY_VI.branchThresholdsFilterResult(
+                filteredItems.length,
+                items.length,
+              )}
             </span>
           </div>
 
-          {/* List */}
           <div className="flex flex-col gap-2">
-            {items.map((item) => {
+            {filteredItems.map((item) => {
               const isSelected = selectedIds.has(item.ingredientId);
-              const qty = quantities.get(item.ingredientId) ?? item.suggestedReorderQty ?? 1;
+              const qty =
+                quantities.get(item.ingredientId) ??
+                item.suggestedReorderQty ??
+                1;
+              const unitLabel = getUnitLabel(item);
+              const canCreateDemand = hasConfiguredUnit(item);
 
               return (
                 <Frame
                   key={item.ingredientId}
-                  className={`p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer transition-colors ${
+                  className={`flex min-w-0 flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between ${
                     isSelected ? "border-primary bg-muted" : ""
                   }`}
-                  onClick={() => toggleSelect(item.ingredientId)}
                 >
-                  <div className="flex items-start gap-3 min-w-0 flex-1">
-                    <input
-                      type="checkbox"
+                  <div className="flex min-w-0 flex-1 items-start gap-2">
+                    <Checkbox
+                      size={controlSize === "touch" ? "touch" : "default"}
                       checked={isSelected}
-                      onChange={() => toggleSelect(item.ingredientId)}
-                      className="mt-1 size-4 rounded border-border"
-                      onClick={(e) => e.stopPropagation()}
+                      disabled={!canCreateDemand}
+                      onCheckedChange={() => toggleSelect(item.ingredientId)}
+                      aria-label={`${INVENTORY_VI.smartReorderSelectResults}: ${item.ingredientName}`}
                     />
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-semibold text-sm truncate">
+                      <div className="flex min-w-0 flex-wrap items-center gap-2">
+                        <span className="min-w-0 truncate text-sm font-semibold">
                           {item.ingredientName}
                         </span>
                         {item.isBelowMin && (
-                          <Badge variant="destructive" className="gap-1 text-2xs">
+                          <Badge
+                            variant="destructive"
+                            className="gap-1 text-2xs"
+                          >
                             <IconAlert className="size-3" />
                             <span>{INVENTORY_VI.underThresholdBadge}</span>
                           </Badge>
                         )}
                         {getChannelBadge(item.supplyChannel)}
+                        {!canCreateDemand ? (
+                          <Badge variant="outline">
+                            {INVENTORY_VI.missingInventoryUnit}
+                          </Badge>
+                        ) : null}
                       </div>
-                      <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                        <span>
+                          {item.categoryName ?? INVENTORY_VI.uncategorized}
+                        </span>
+                        <span>{item.sku ?? "—"}</span>
                         <span>
                           {INVENTORY_VI.currentOnHandLabel}{" "}
                           <strong className="text-foreground font-semibold">
-                            {formatQuantity(item.currentOnHand)} {item.baseUnitCode || "đv"}
+                            {formatQuantity(item.currentOnHand)}
+                            {unitLabel ? ` ${unitLabel}` : ""}
                           </strong>
                         </span>
                         <span>
                           {INVENTORY_VI.minStockLabel}{" "}
                           <strong className="text-foreground font-semibold">
-                            {formatQuantity(item.minStockLevel)} {item.baseUnitCode || "đv"}
+                            {formatQuantity(item.minStockLevel)}
+                            {unitLabel ? ` ${unitLabel}` : ""}
                           </strong>
                         </span>
                       </div>
+                      {!canCreateDemand ? (
+                        <p className="mt-1 text-xs text-warning-foreground">
+                          {INVENTORY_VI.smartReorderMissingUnitHint}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
 
-                  <div
-                    className="flex items-center gap-2 shrink-0 sm:self-center"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <label className="text-2xs text-muted-foreground">{INVENTORY_VI.suggestedQtyLabel}</label>
-                    <Input
-                      type="number"
-                      min={1}
-                      value={qty}
-                      onChange={(e) => handleQtyChange(item.ingredientId, e.target.value)}
-                      className="h-8 w-24 text-xs tabular-nums font-semibold"
-                    />
-                    <span className="text-xs text-muted-foreground w-8">
-                      {item.baseUnitCode || "đv"}
-                    </span>
+                  <div className="flex shrink-0 items-center gap-2 sm:w-56">
+                    <label
+                      htmlFor={`reorder-quantity-${item.ingredientId}`}
+                      className="text-xs text-muted-foreground"
+                    >
+                      {INVENTORY_VI.suggestedQtyLabel}
+                    </label>
+                    <InputGroup size={controlSize} className="flex-1">
+                      <InputGroupInput
+                        id={`reorder-quantity-${item.ingredientId}`}
+                        type="number"
+                        min={1}
+                        value={qty}
+                        disabled={!canCreateDemand}
+                        onChange={(event) =>
+                          handleQtyChange(item.ingredientId, event.target.value)
+                        }
+                        className="min-w-0 text-right text-sm font-semibold tabular-nums"
+                      />
+                      <InputGroupAddon
+                        align="inline-end"
+                        className="max-w-16 truncate"
+                      >
+                        {unitLabel ?? INVENTORY_VI.missingInventoryUnit}
+                      </InputGroupAddon>
+                    </InputGroup>
                   </div>
                 </Frame>
               );
             })}
 
-            {items.length === 0 && (
+            {filteredItems.length === 0 && (
               <div className="p-3 text-center text-sm text-muted-foreground">
-                {INVENTORY_VI.smartReorderAllSafe}
+                {items.length === 0
+                  ? INVENTORY_VI.smartReorderAllSafe
+                  : INVENTORY_VI.smartReorderNoResults}
               </div>
             )}
           </div>

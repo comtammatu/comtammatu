@@ -341,6 +341,7 @@ function BranchStockIssueLineSheet({
 export function BranchStockIssueDetailClient({
   data,
   stockBasePath,
+  listBasePath,
 }: {
   data: BranchStockIssueDetail;
   stockBasePath: string;
@@ -467,7 +468,7 @@ export function BranchStockIssueDetailClient({
       title={issue.code}
       description={formatVNDateTime(issue.issuedAt)}
       badge={{ children: statusLabel, variant: statusBadge.variant }}
-      back={<AppBackLink href={`${stockBasePath}/issues`} />}
+      back={<AppBackLink href={listBasePath ?? `${stockBasePath}/issues`} />}
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <div className={BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME}>
