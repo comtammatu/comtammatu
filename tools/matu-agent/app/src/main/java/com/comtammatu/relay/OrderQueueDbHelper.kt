@@ -26,7 +26,7 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
     companion object {
         const val DATABASE_NAME = "matu_agent_queue.db"
         private const val LEGACY_DATABASE_NAME = "sunmi_relay_queue.db"
-        const val DATABASE_VERSION = 6
+        const val DATABASE_VERSION = 7
 
         const val TABLE_ORDERS = "queued_orders"
         const val COLUMN_ID = "id"
@@ -34,7 +34,7 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         const val COLUMN_RECEIPT_TEXT = "receipt_text"
         const val COLUMN_BRANCH_ID = "branch_id"
         const val COLUMN_PLATFORM = "platform"
-        const val COLUMN_STATUS = "status" // PENDING, SENDING, SENT, UNCLASSIFIED
+        const val COLUMN_STATUS = "status" // PENDING, SENDING, SENT, UNCLASSIFIED, DISMISSED
         const val COLUMN_RETRY_COUNT = "retry_count"
         const val COLUMN_CREATED_AT = "created_at"
         const val COLUMN_LAST_ERROR = "last_error"
@@ -50,11 +50,14 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         const val COLUMN_DUPLICATE_COUNT = "duplicate_count"
         const val COLUMN_LAST_SEEN_AT = "last_seen_at"
         const val COLUMN_IDEMPOTENT = "idempotent"
+        const val COLUMN_RESOLVED_AT = "resolved_at"
+        const val COLUMN_RESOLUTION_NOTE = "resolution_note"
 
         const val STATUS_PENDING = "PENDING"
         const val STATUS_SENDING = "SENDING"
         const val STATUS_SENT = "SENT"
         const val STATUS_UNCLASSIFIED = "UNCLASSIFIED"
+        const val STATUS_DISMISSED = "DISMISSED"
 
         const val RETRY_BASE_DELAY_MS = 15_000L
         const val RETRY_MAX_DELAY_MS = 15 * 60 * 1000L
@@ -108,7 +111,9 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
                 $COLUMN_SENT_AT INTEGER NOT NULL DEFAULT 0,
                 $COLUMN_DUPLICATE_COUNT INTEGER NOT NULL DEFAULT 0,
                 $COLUMN_LAST_SEEN_AT INTEGER NOT NULL DEFAULT 0,
-                $COLUMN_IDEMPOTENT INTEGER NOT NULL DEFAULT 0
+                $COLUMN_IDEMPOTENT INTEGER NOT NULL DEFAULT 0,
+                $COLUMN_RESOLVED_AT INTEGER NOT NULL DEFAULT 0,
+                $COLUMN_RESOLUTION_NOTE TEXT
             )
             """.trimIndent()
         )
@@ -142,6 +147,10 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
             migrateSentMappings(db)
             collapseLegacyDuplicates(db)
             createIdentityIndexes(db)
+        }
+        if (oldVersion < 7) {
+            db.execSQL("ALTER TABLE $TABLE_ORDERS ADD COLUMN $COLUMN_RESOLVED_AT INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE $TABLE_ORDERS ADD COLUMN $COLUMN_RESOLUTION_NOTE TEXT")
         }
     }
 
@@ -457,7 +466,9 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         val sentAt: Long,
         val duplicateCount: Int,
         val lastSeenAt: Long,
-        val idempotent: Boolean
+        val idempotent: Boolean,
+        val resolvedAt: Long,
+        val resolutionNote: String?
     )
 
     private fun readQueuedOrder(c: android.database.Cursor): QueuedOrder = QueuedOrder(
@@ -481,7 +492,9 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         sentAt = c.getLong(c.getColumnIndexOrThrow(COLUMN_SENT_AT)),
         duplicateCount = c.getInt(c.getColumnIndexOrThrow(COLUMN_DUPLICATE_COUNT)),
         lastSeenAt = c.getLong(c.getColumnIndexOrThrow(COLUMN_LAST_SEEN_AT)),
-        idempotent = c.getInt(c.getColumnIndexOrThrow(COLUMN_IDEMPOTENT)) == 1
+        idempotent = c.getInt(c.getColumnIndexOrThrow(COLUMN_IDEMPOTENT)) == 1,
+        resolvedAt = c.getLong(c.getColumnIndexOrThrow(COLUMN_RESOLVED_AT)),
+        resolutionNote = c.getString(c.getColumnIndexOrThrow(COLUMN_RESOLUTION_NOTE))
     )
 
     fun getPendingOrders(limit: Int = 20): List<QueuedOrder> {
@@ -555,11 +568,9 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         }
     }
 
-    fun getWaitingCount(): Int = countByStatuses(
-        listOf(STATUS_PENDING, STATUS_SENDING, STATUS_UNCLASSIFIED)
-    )
+    fun getWaitingCount(): Int = countByStatuses(QueueLifecycle.waitingStatuses)
 
-    fun getSentCount(): Int = countByStatuses(listOf(STATUS_SENT))
+    fun getResolvedCount(): Int = countByStatuses(QueueLifecycle.resolvedStatuses)
 
     private fun countByStatuses(statuses: List<String>): Int {
         val placeholders = statuses.joinToString(",") { "?" }
@@ -570,12 +581,8 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         return cursor.use { if (it.moveToFirst()) it.getInt(0) else 0 }
     }
 
-    fun getOrders(sent: Boolean, limit: Int = 100): List<QueuedOrder> {
-        val statuses = if (sent) {
-            listOf(STATUS_SENT)
-        } else {
-            listOf(STATUS_PENDING, STATUS_SENDING, STATUS_UNCLASSIFIED)
-        }
+    fun getOrders(resolved: Boolean, limit: Int = 100): List<QueuedOrder> {
+        val statuses = if (resolved) QueueLifecycle.resolvedStatuses else QueueLifecycle.waitingStatuses
         val placeholders = statuses.joinToString(",") { "?" }
         val cursor = readableDatabase.query(
             TABLE_ORDERS,
@@ -607,14 +614,37 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         ) > 0
     }
 
-    /** Removes diagnostic payloads while preserving the lightweight order-to-POS mapping. */
-    fun compactSentOrders(): Int {
+    /**
+     * Removes a manually handled receipt from the active queue while retaining
+     * its source identity so a later reprint is still rejected as a duplicate.
+     */
+    fun dismissWaitingOrder(orderId: Long, resolutionNote: String): Boolean {
+        val dismissibleStatuses = QueueLifecycle.dismissibleStatuses
+        val placeholders = dismissibleStatuses.joinToString(",") { "?" }
+        val values = ContentValues().apply {
+            put(COLUMN_STATUS, STATUS_DISMISSED)
+            put(COLUMN_RESOLVED_AT, System.currentTimeMillis())
+            put(COLUMN_RESOLUTION_NOTE, resolutionNote.take(500))
+            put(COLUMN_NEXT_RETRY_AT, 0)
+            put(COLUMN_CLAIMED_AT, 0)
+            putNull(COLUMN_LAST_ERROR)
+        }
+        return writableDatabase.update(
+            TABLE_ORDERS,
+            values,
+            "$COLUMN_ID = ? AND $COLUMN_STATUS IN ($placeholders)",
+            (listOf(orderId.toString()) + dismissibleStatuses).toTypedArray()
+        ) > 0
+    }
+
+    /** Removes diagnostic payloads while preserving deduplication and POS mappings. */
+    fun compactResolvedOrders(): Int {
         val db = writableDatabase
         val cursor = db.query(
             TABLE_ORDERS,
-            arrayOf(COLUMN_ID, COLUMN_REMOTE_RESPONSE),
-            "$COLUMN_STATUS = ? AND ($COLUMN_RAW_BASE64 <> '' OR $COLUMN_RECEIPT_TEXT IS NOT NULL OR $COLUMN_REMOTE_RESPONSE IS NOT NULL)",
-            arrayOf(STATUS_SENT),
+            arrayOf(COLUMN_ID, COLUMN_STATUS, COLUMN_REMOTE_RESPONSE),
+            "$COLUMN_STATUS IN (?, ?) AND ($COLUMN_RAW_BASE64 <> '' OR $COLUMN_RECEIPT_TEXT IS NOT NULL OR $COLUMN_REMOTE_RESPONSE IS NOT NULL)",
+            QueueLifecycle.resolvedStatuses.toTypedArray(),
             null,
             null,
             null
@@ -622,18 +652,22 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         val rows = cursor.use { result ->
             buildList {
                 while (result.moveToNext()) {
-                    add(
-                        result.getLong(result.getColumnIndexOrThrow(COLUMN_ID)) to
-                            result.getString(result.getColumnIndexOrThrow(COLUMN_REMOTE_RESPONSE))
-                    )
+                    add(Triple(
+                        result.getLong(result.getColumnIndexOrThrow(COLUMN_ID)),
+                        result.getString(result.getColumnIndexOrThrow(COLUMN_STATUS)),
+                        result.getString(result.getColumnIndexOrThrow(COLUMN_REMOTE_RESPONSE))
+                    ))
                 }
             }
         }
         db.beginTransaction()
         try {
-            for ((orderId, remoteResponse) in rows) {
-                val mapping = RelayResponseParser.parse(remoteResponse)
-                val values = sentMappingValues(mapping, System.currentTimeMillis()).apply {
+            for ((orderId, status, remoteResponse) in rows) {
+                val values = if (status == STATUS_SENT) {
+                    sentMappingValues(RelayResponseParser.parse(remoteResponse), System.currentTimeMillis())
+                } else {
+                    ContentValues()
+                }.apply {
                     put(COLUMN_RAW_BASE64, "")
                     putNull(COLUMN_RECEIPT_TEXT)
                     putNull(COLUMN_REMOTE_RESPONSE)
@@ -652,6 +686,7 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         var pending = 0
         var sending = 0
         var sent = 0
+        var dismissed = 0
         var unclassified = 0
         var total = 0
 
@@ -665,6 +700,7 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
                     STATUS_PENDING -> pending = count
                     STATUS_SENDING -> sending = count
                     STATUS_SENT -> sent = count
+                    STATUS_DISMISSED -> dismissed = count
                     STATUS_UNCLASSIFIED -> unclassified = count
                 }
             }
@@ -672,9 +708,10 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
 
         val timeFmt = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
         val sb = StringBuilder()
-        sb.append("📊 TỔNG KẾT HÀNG ĐỢI OFFLINE (SQLite):\n")
+        sb.append("📊 SỔ ĐỐI CHIẾU ĐƠN TRÊN MÁY:\n")
         sb.append("• Tổng số đơn đã nhận: $total\n")
-        sb.append("• Đã gửi thành công lên POS: $sent\n")
+        sb.append("• Đã xuất lên POS: $sent\n")
+        sb.append("• Thu ngân đã nhập tay: $dismissed\n")
         sb.append("• Đang chờ gửi / Thử lại: $pending\n")
         sb.append("• Đang trong tiến trình gửi: $sending\n")
         sb.append("• Cần kiểm tra nguồn sàn: $unclassified\n")
@@ -703,13 +740,14 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
 
                 val statusIcon = when (status) {
                     STATUS_SENT -> "🟢 THÀNH CÔNG"
+                    STATUS_DISMISSED -> "⚪ ĐÃ NHẬP TAY"
                     STATUS_SENDING -> "🟡 ĐANG GỬI"
                     STATUS_UNCLASSIFIED -> "🔴 CHƯA RÕ SÀN"
                     else -> "⏳ CHỜ RETRY (Thử lại: $retries)"
                 }
                 sb.append("#$id [${platform.uppercase()}] $statusIcon lúc ${timeFmt.format(Date(createdAt))}")
-                if (!lastErr.isNullOrEmpty()) {
-                    sb.append(" (Lỗi: $lastErr)")
+                OperatorErrorFormatter.format(lastErr)?.let { operatorError ->
+                    sb.append(" (Lỗi: $operatorError)")
                 }
                 sb.append("\n")
             }

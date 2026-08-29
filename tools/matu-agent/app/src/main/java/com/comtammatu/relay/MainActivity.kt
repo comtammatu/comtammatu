@@ -49,7 +49,6 @@ import kotlin.math.roundToInt
 class MainActivity : Activity() {
     companion object {
         const val ACTION_START_AGENT = "com.comtammatu.relay.action.START_AGENT"
-        private const val SUNMI_COMPAT_PACKAGE = "woyou.aidlservice.jiuiv5"
     }
 
     private lateinit var etBackendUrl: EditText
@@ -60,8 +59,6 @@ class MainActivity : Activity() {
     private lateinit var etPort: EditText
     private lateinit var cbLanMode: CheckBox
     private lateinit var cbShopeeEnabled: CheckBox
-    private lateinit var cbGreenSmEnabled: CheckBox
-    private lateinit var cbBeEnabled: CheckBox
     private lateinit var btnToggle: Button
     private lateinit var tvStatusTitle: TextView
     private lateinit var tvStatus: TextView
@@ -107,9 +104,9 @@ class MainActivity : Activity() {
 
         mainLayout.addView(createAppHeader())
         mainLayout.addView(space(20))
-        mainLayout.addView(createServicePanel(saved))
-        mainLayout.addView(space(24))
         mainLayout.addView(createOrderManagementSection())
+        mainLayout.addView(space(24))
+        mainLayout.addView(createServicePanel(saved))
         mainLayout.addView(space(24))
         mainLayout.addView(createConfigurationSection(saved))
         mainLayout.addView(space(24))
@@ -124,6 +121,7 @@ class MainActivity : Activity() {
         updateLogsView()
         refreshServiceState()
         handleOperationalAction(intent)
+        rootScroll.post { rootScroll.scrollTo(0, 0) }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -421,14 +419,32 @@ class MainActivity : Activity() {
         ))
         panel.addView(space(8))
 
-        cbShopeeEnabled = platformCard("ShopeeFood", R.color.shopee_orange, R.color.shopee_surface, R.color.shopee_border, saved.shopeeEnabled)
-        cbGreenSmEnabled = platformCard("Green SM Food", R.color.greensm_green, R.color.greensm_surface, R.color.greensm_border, saved.greenSmEnabled)
-        cbBeEnabled = platformCard("beFood", R.color.befood_yellow, R.color.befood_surface, R.color.befood_border, saved.beEnabled)
+        cbShopeeEnabled = platformCard(
+            "ShopeeFood · máy in mạng",
+            R.color.shopee_orange,
+            R.color.shopee_surface,
+            R.color.shopee_border,
+            saved.shopeeEnabled
+        )
         panel.addView(cbShopeeEnabled)
         panel.addView(space(8))
-        panel.addView(cbGreenSmEnabled)
+        panel.addView(sourceStatusCard(
+            platformName = "Green SM Food",
+            status = getString(R.string.source_not_supported_status),
+            description = getString(R.string.greensm_not_supported_description),
+            colorRes = R.color.greensm_green,
+            surfaceRes = R.color.greensm_surface,
+            borderRes = R.color.greensm_border
+        ))
         panel.addView(space(8))
-        panel.addView(cbBeEnabled)
+        panel.addView(sourceStatusCard(
+            platformName = "beFood",
+            status = getString(R.string.source_not_supported_status),
+            description = getString(R.string.befood_not_supported_description),
+            colorRes = R.color.befood_yellow,
+            surfaceRes = R.color.befood_surface,
+            borderRes = R.color.befood_border
+        ))
 
         section.addView(panel)
         return section
@@ -481,22 +497,22 @@ class MainActivity : Activity() {
             weightSum = 2f
         }
         actions.addView(secondaryButton(getString(R.string.waiting_orders_action)) {
-            showOrderList(sent = false)
+            showOrderList(resolved = false)
         }.apply {
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
                 marginEnd = dp(6)
             }
         })
-        actions.addView(secondaryButton(getString(R.string.sent_orders_action)) {
-            showOrderList(sent = true)
+        actions.addView(secondaryButton(getString(R.string.resolved_orders_action)) {
+            showOrderList(resolved = true)
         }.apply {
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
                 marginStart = dp(6)
             }
         })
 
-        val btnClearSent = secondaryButton(getString(R.string.clear_sent_orders_action)) {
-            promptClearSentOrders()
+        val btnClearSent = secondaryButton(getString(R.string.clear_resolved_orders_action)) {
+            promptClearResolvedOrders()
         }.apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -513,18 +529,18 @@ class MainActivity : Activity() {
         return section
     }
 
-    private fun promptClearSentOrders() {
-        val sentCount = dbHelper.getSentCount()
-        if (sentCount == 0) {
-            Toast.makeText(this, "Không có đơn đã xuất để dọn dẹp", Toast.LENGTH_SHORT).show()
+    private fun promptClearResolvedOrders() {
+        val resolvedCount = dbHelper.getResolvedCount()
+        if (resolvedCount == 0) {
+            Toast.makeText(this, "Không có đơn đã xử lý để dọn dẹp", Toast.LENGTH_SHORT).show()
             return
         }
         AlertDialog.Builder(this)
-            .setTitle(getString(R.string.clear_sent_orders_action))
-            .setMessage(getString(R.string.clear_sent_orders_confirm))
+            .setTitle(getString(R.string.clear_resolved_orders_action))
+            .setMessage(getString(R.string.clear_resolved_orders_confirm))
             .setPositiveButton("Dọn dẹp") { _, _ ->
-                val compacted = dbHelper.compactSentOrders()
-                Toast.makeText(this, getString(R.string.clear_sent_orders_success, compacted), Toast.LENGTH_SHORT).show()
+                val compacted = dbHelper.compactResolvedOrders()
+                Toast.makeText(this, getString(R.string.clear_resolved_orders_success, compacted), Toast.LENGTH_SHORT).show()
                 refreshServiceState()
             }
             .setNegativeButton("Hủy", null)
@@ -540,28 +556,6 @@ class MainActivity : Activity() {
         section.addView(space(10))
 
         val panel = panel()
-        val compatInstalled = isPackageInstalled(SUNMI_COMPAT_PACKAGE)
-        val configuredPort = etPort.text.toString().toIntOrNull() ?: PrintIntakeService.DEFAULT_PORT
-        val compatStatus = TextView(this).apply {
-            text = getString(
-                when {
-                    !compatInstalled -> R.string.sunmi_compat_missing
-                    configuredPort != PrintIntakeService.DEFAULT_PORT -> R.string.sunmi_compat_port_warning
-                    else -> R.string.sunmi_compat_ready
-                }
-            )
-            textSize = 12.5f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            setTextColor(
-                color(if (compatInstalled && configuredPort == PrintIntakeService.DEFAULT_PORT) R.color.success_text else R.color.warning_text)
-            )
-            background = roundedBackground(
-                color(if (compatInstalled && configuredPort == PrintIntakeService.DEFAULT_PORT) R.color.success_surface else R.color.warning_surface),
-                color(if (compatInstalled && configuredPort == PrintIntakeService.DEFAULT_PORT) R.color.success_border else R.color.warning_border),
-                10
-            )
-            setPadding(dp(12), dp(10), dp(12), dp(10))
-        }
         val firstRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             weightSum = 2f
@@ -592,28 +586,11 @@ class MainActivity : Activity() {
             }
         })
 
-        panel.addView(compatStatus)
-        panel.addView(space(10))
         panel.addView(firstRow)
         panel.addView(space(10))
         panel.addView(secondRow)
         section.addView(panel)
         return section
-    }
-
-    private fun isPackageInstalled(packageName: String): Boolean = try {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            packageManager.getPackageInfo(
-                packageName,
-                android.content.pm.PackageManager.PackageInfoFlags.of(0)
-            )
-        } else {
-            @Suppress("DEPRECATION")
-            packageManager.getPackageInfo(packageName, 0)
-        }
-        true
-    } catch (_: android.content.pm.PackageManager.NameNotFoundException) {
-        false
     }
 
     private fun createLogSection(): View {
@@ -760,6 +737,52 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun sourceStatusCard(
+        platformName: String,
+        status: String,
+        description: String,
+        colorRes: Int,
+        surfaceRes: Int,
+        borderRes: Int
+    ): LinearLayout {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            minimumHeight = dp(72)
+            setPadding(dp(14), dp(11), dp(14), dp(11))
+            background = roundedBackground(color(surfaceRes), color(borderRes), 10)
+
+            addView(LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                addView(View(this@MainActivity).apply {
+                    layoutParams = LinearLayout.LayoutParams(dp(8), dp(8)).apply {
+                        marginEnd = dp(9)
+                    }
+                    background = circleBackground(color(colorRes))
+                })
+                addView(TextView(this@MainActivity).apply {
+                    text = platformName
+                    textSize = 14f
+                    typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                    setTextColor(color(R.color.ink))
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                })
+                addView(TextView(this@MainActivity).apply {
+                    text = status
+                    textSize = 11.5f
+                    typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                    setTextColor(color(R.color.warning_text))
+                })
+            })
+            addView(TextView(this@MainActivity).apply {
+                text = description
+                textSize = 12f
+                setTextColor(color(R.color.ink_muted))
+                setPadding(dp(17), dp(4), 0, 0)
+            })
+        }
+    }
+
     private fun secondaryButton(label: String, onClick: () -> Unit): Button {
         return Button(this).apply {
             text = label
@@ -875,7 +898,7 @@ class MainActivity : Activity() {
     private fun endpointSummary(port: Int, branchId: Int, lanMode: Boolean): String {
         val rawEndpoint = getRawEndpoint(port, lanMode)
         val branchLabel = if (branchId > 0) "Chi nhánh $branchId" else "Chưa cấu hình chi nhánh"
-        return "$rawEndpoint  ·  $branchLabel"
+        return "$rawEndpoint\n$branchLabel"
     }
 
     private fun copyToClipboard(label: String, text: String, toastMessage: String) {
@@ -911,9 +934,7 @@ class MainActivity : Activity() {
         val secret: String,
         val port: Int,
         val lanMode: Boolean,
-        val shopeeEnabled: Boolean,
-        val greenSmEnabled: Boolean,
-        val beEnabled: Boolean
+        val shopeeEnabled: Boolean
     )
 
     private fun configFromPrefs(): SavedConfig {
@@ -924,9 +945,7 @@ class MainActivity : Activity() {
             secret = prefs.getString("secret", "") ?: "",
             port = prefs.getInt("port", 9100),
             lanMode = prefs.getBoolean("lan_mode", false),
-            shopeeEnabled = prefs.getBoolean(PrintIntakeService.KEY_SHOPEE_ENABLED, true),
-            greenSmEnabled = prefs.getBoolean(PrintIntakeService.KEY_GREEN_SM_ENABLED, true),
-            beEnabled = prefs.getBoolean(PrintIntakeService.KEY_BE_ENABLED, true)
+            shopeeEnabled = prefs.getBoolean(PrintIntakeService.KEY_SHOPEE_ENABLED, true)
         )
     }
 
@@ -937,8 +956,6 @@ class MainActivity : Activity() {
         val port = etPort.text.toString().toIntOrNull() ?: 9100
         val lanMode = cbLanMode.isChecked
         val shopeeEnabled = cbShopeeEnabled.isChecked
-        val greenSmEnabled = cbGreenSmEnabled.isChecked
-        val beEnabled = cbBeEnabled.isChecked
 
         getSharedPreferences("bridge_prefs", Context.MODE_PRIVATE).edit()
             .putString("backend_url", url)
@@ -947,8 +964,6 @@ class MainActivity : Activity() {
             .putInt("port", port)
             .putBoolean("lan_mode", lanMode)
             .putBoolean(PrintIntakeService.KEY_SHOPEE_ENABLED, shopeeEnabled)
-            .putBoolean(PrintIntakeService.KEY_GREEN_SM_ENABLED, greenSmEnabled)
-            .putBoolean(PrintIntakeService.KEY_BE_ENABLED, beEnabled)
             .apply()
 
         dispatcher.updateConfig(url, branchId, secret)
@@ -958,9 +973,7 @@ class MainActivity : Activity() {
             secret,
             port,
             lanMode,
-            shopeeEnabled,
-            greenSmEnabled,
-            beEnabled
+            shopeeEnabled
         )
     }
 
@@ -971,8 +984,8 @@ class MainActivity : Activity() {
             Toast.makeText(this, "Nhập mã chi nhánh hợp lệ trước khi khởi động", Toast.LENGTH_LONG).show()
             return
         }
-        if (!config.shopeeEnabled && !config.greenSmEnabled && !config.beEnabled) {
-            Toast.makeText(this, "Bật ít nhất một sàn trước khi khởi động", Toast.LENGTH_LONG).show()
+        if (!config.shopeeEnabled) {
+            Toast.makeText(this, "Bật nguồn ShopeeFood trước khi khởi động", Toast.LENGTH_LONG).show()
             return
         }
 
@@ -985,6 +998,10 @@ class MainActivity : Activity() {
         }
 
         if (!PrintIntakeService.isServiceRunning) {
+            getSharedPreferences(PrintIntakeService.PREFS_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean(PrintIntakeService.KEY_AGENT_ENABLED, true)
+                .apply()
             intent.action = PrintIntakeService.ACTION_START
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 startForegroundService(intent)
@@ -1007,6 +1024,10 @@ class MainActivity : Activity() {
                 refreshServiceState()
             }, 500)
         } else {
+            getSharedPreferences(PrintIntakeService.PREFS_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean(PrintIntakeService.KEY_AGENT_ENABLED, false)
+                .apply()
             intent.action = PrintIntakeService.ACTION_STOP
             startService(intent)
             btnToggle.postDelayed({ refreshServiceState() }, 200)
@@ -1042,7 +1063,7 @@ class MainActivity : Activity() {
             }
             runOnUiThread {
                 if (result.isSuccess) {
-                    Toast.makeText(this@MainActivity, "Cổng máy in ảo đang nhận kết nối", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, "Cổng nhận phiếu đang nhận kết nối", Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(this@MainActivity, "Không thể kết nối cổng in. Xem nhật ký để biết chi tiết.", Toast.LENGTH_LONG).show()
                     AppLogger.e("KIỂM TRA CỔNG", result.exceptionOrNull()?.localizedMessage ?: "Lỗi không xác định")
@@ -1077,9 +1098,9 @@ class MainActivity : Activity() {
                 }
             }
             if (portResult.isSuccess) {
-                AppLogger.s("CHẨN ĐOÁN", "2. Cổng máy in ảo (${config.port}): Đang lắng nghe kết nối")
+                AppLogger.s("CHẨN ĐOÁN", "2. Cổng nhận phiếu (${config.port}): Đang lắng nghe kết nối")
             } else {
-                AppLogger.w("CHẨN ĐOÁN", "2. Cổng máy in ảo (${config.port}): Không thể kết nối (dịch vụ có thể đang dừng)")
+                AppLogger.w("CHẨN ĐOÁN", "2. Cổng nhận phiếu (${config.port}): Không thể kết nối (Agent có thể đang dừng)")
             }
 
             val summary = dbHelper.getQueueSummary()
@@ -1096,10 +1117,10 @@ class MainActivity : Activity() {
         tvEndpoint.text = endpointSummary(port, branchId, lanMode)
 
         val waitingCount = dbHelper.getWaitingCount()
-        val sentCount = dbHelper.getSentCount()
+        val resolvedCount = dbHelper.getResolvedCount()
 
-        tvWaitingKpi.text = "⏳ Đang chờ: $waitingCount"
-        tvSentKpi.text = "🟢 Đã xuất: $sentCount"
+        tvWaitingKpi.text = "Đang chờ · $waitingCount"
+        tvSentKpi.text = "Đã xử lý · $resolvedCount"
 
         if (PrintIntakeService.isServiceRunning) {
             btnToggle.text = getString(R.string.stop_service_action)
@@ -1136,12 +1157,12 @@ class MainActivity : Activity() {
         Toast.makeText(this, "Đã cập nhật trạng thái hàng đợi trong nhật ký", Toast.LENGTH_SHORT).show()
     }
 
-    private fun showOrderList(sent: Boolean) {
-        val orders = dbHelper.getOrders(sent)
+    private fun showOrderList(resolved: Boolean) {
+        val orders = dbHelper.getOrders(resolved)
         if (orders.isEmpty()) {
             AlertDialog.Builder(this)
-                .setTitle(if (sent) getString(R.string.sent_orders_action) else getString(R.string.waiting_orders_action))
-                .setMessage(if (sent) getString(R.string.sent_orders_empty) else getString(R.string.waiting_orders_empty))
+                .setTitle(if (resolved) getString(R.string.resolved_orders_action) else getString(R.string.waiting_orders_action))
+                .setMessage(if (resolved) getString(R.string.resolved_orders_empty) else getString(R.string.waiting_orders_empty))
                 .setPositiveButton(getString(R.string.close_action), null)
                 .show()
             return
@@ -1151,9 +1172,18 @@ class MainActivity : Activity() {
         val labels = orders.map { order ->
             val pName = platformLabel(order.platform)
             val sName = statusLabel(order.status)
-            val sourceRef = order.sourceOrderRef ?: "Phiếu #${order.id}"
-            val mapping = if (sent) {
-                "POS: ${order.posOrderNumber ?: order.posDisplayId ?: "Chưa có mã phiếu"}"
+            val sourceRef = OrderIdentity.displaySourceOrderRef(order.platform, order.sourceOrderRef)
+                ?: "Phiếu #${order.id}"
+            val mapping = if (resolved) {
+                if (order.status == OrderQueueDbHelper.STATUS_DISMISSED) {
+                    "Thu ngân đã nhập tay"
+                } else {
+                    val posRef = OrderIdentity.displaySourceOrderRef(
+                        order.platform,
+                        order.posDisplayId ?: order.posOrderNumber
+                    ) ?: "Chưa có mã phiếu"
+                    "POS: $posRef"
+                }
             } else {
                 sName
             }
@@ -1161,7 +1191,7 @@ class MainActivity : Activity() {
         }.toTypedArray()
 
         AlertDialog.Builder(this)
-            .setTitle(if (sent) getString(R.string.sent_orders_action) else getString(R.string.waiting_orders_action))
+            .setTitle(if (resolved) getString(R.string.resolved_orders_action) else getString(R.string.waiting_orders_action))
             .setItems(labels) { _, index -> orders.getOrNull(index)?.let(::showOrderDetail) }
             .setNegativeButton(getString(R.string.close_action), null)
             .show()
@@ -1195,27 +1225,42 @@ class MainActivity : Activity() {
                     textSize = 13f
                     setTextColor(color(R.color.ink))
                     typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                    layoutParams = LinearLayout.LayoutParams(
+                        0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        1f
+                    )
                 })
             }
         }
 
         infoCard.addView(infoRow("Trạng thái:", statusLabel(order.status)))
         infoCard.addView(infoRow("Sàn:", platformLabel(order.platform)))
-        infoCard.addView(infoRow("Mã đơn:", order.sourceOrderRef ?: "Chưa đọc được"))
+        infoCard.addView(infoRow(
+            "Mã đơn sàn:",
+            OrderIdentity.displaySourceOrderRef(order.platform, order.sourceOrderRef) ?: "Chưa đọc được"
+        ))
         if (order.status == OrderQueueDbHelper.STATUS_SENT) {
-            infoCard.addView(infoRow("Mã phiếu POS:", order.posOrderNumber ?: "Chưa có"))
-            order.posDisplayId?.let { infoCard.addView(infoRow("Mã hiển thị:", it)) }
-            order.posOrderId?.let { infoCard.addView(infoRow("ID đơn POS:", it.toString())) }
+            val posRef = OrderIdentity.displaySourceOrderRef(
+                order.platform,
+                order.posDisplayId ?: order.posOrderNumber
+            ) ?: "Chưa có"
+            infoCard.addView(infoRow("Mã phiếu POS:", posRef))
             if (order.posOrderId != null || order.posOrderNumber != null) {
                 infoCard.addView(
                     infoRow(
                         "Kết quả:",
-                        if (order.idempotent) "Ghép với đơn POS đã có" else "Đã tạo trên POS"
+                        if (order.idempotent) "Đã đối chiếu với phiếu POS có sẵn" else "Đã tạo trên POS"
                     )
                 )
             }
             if (order.sentAt > 0) {
                 infoCard.addView(infoRow("Thời gian xuất:", timeFormat.format(Date(order.sentAt))))
+            }
+        } else if (order.status == OrderQueueDbHelper.STATUS_DISMISSED) {
+            infoCard.addView(infoRow("Cách xử lý:", order.resolutionNote ?: "Thu ngân đã nhập tay"))
+            if (order.resolvedAt > 0) {
+                infoCard.addView(infoRow("Thời gian xử lý:", timeFormat.format(Date(order.resolvedAt))))
             }
         }
         infoCard.addView(infoRow("Chi nhánh:", order.branchId.toString()))
@@ -1226,7 +1271,8 @@ class MainActivity : Activity() {
         }
         detailLayout.addView(infoCard)
 
-        if (!order.lastError.isNullOrBlank()) {
+        val operatorError = OperatorErrorFormatter.format(order.lastError)
+        if (operatorError != null) {
             detailLayout.addView(space(12))
             val errorBox = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
@@ -1239,36 +1285,13 @@ class MainActivity : Activity() {
                     setTextColor(color(R.color.warning_text))
                 })
                 addView(TextView(this@MainActivity).apply {
-                    text = order.lastError
+                    text = operatorError
                     textSize = 12.5f
                     setTextColor(color(R.color.ink))
                     setPadding(0, dp(4), 0, 0)
                 })
             }
             detailLayout.addView(errorBox)
-        }
-
-        if (!order.remoteResponse.isNullOrBlank()) {
-            detailLayout.addView(space(12))
-            val responseBox = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(dp(12), dp(10), dp(12), dp(10))
-                background = roundedBackground(color(R.color.success_surface), color(R.color.success_border), 10)
-                addView(TextView(this@MainActivity).apply {
-                    text = "Phản hồi POS:"
-                    textSize = 12f
-                    typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-                    setTextColor(color(R.color.success_text))
-                })
-                addView(TextView(this@MainActivity).apply {
-                    text = order.remoteResponse
-                    textSize = 12f
-                    typeface = Typeface.MONOSPACE
-                    setTextColor(color(R.color.ink))
-                    setPadding(0, dp(4), 0, 0)
-                })
-            }
-            detailLayout.addView(responseBox)
         }
 
         detailLayout.addView(space(14))
@@ -1324,7 +1347,7 @@ class MainActivity : Activity() {
             .setView(rootScroll)
             .setNegativeButton(getString(R.string.close_action), null)
 
-        if (order.status == OrderQueueDbHelper.STATUS_PENDING || order.status == OrderQueueDbHelper.STATUS_UNCLASSIFIED) {
+        if (order.status == OrderQueueDbHelper.STATUS_PENDING) {
             builder.setPositiveButton(getString(R.string.retry_now_action)) { _, _ ->
                 if (dbHelper.retryOrderNow(order.id)) {
                     Toast.makeText(this, "Đã đưa đơn #${order.id} lên đầu hàng chờ", Toast.LENGTH_SHORT).show()
@@ -1332,13 +1355,35 @@ class MainActivity : Activity() {
                 }
             }
         }
+        if (QueueLifecycle.canDismiss(order.status)) {
+            builder.setNeutralButton(getString(R.string.mark_manual_entry_action)) { _, _ ->
+                promptDismissWaitingOrder(order)
+            }
+        }
         builder.show()
+    }
+
+    private fun promptDismissWaitingOrder(order: OrderQueueDbHelper.QueuedOrder) {
+        val sourceRef = OrderIdentity.displaySourceOrderRef(order.platform, order.sourceOrderRef)
+            ?: "phiếu #${order.id}"
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.mark_manual_entry_action))
+            .setMessage(getString(R.string.mark_manual_entry_confirm, sourceRef))
+            .setPositiveButton(getString(R.string.mark_manual_entry_action)) { _, _ ->
+                if (dbHelper.dismissWaitingOrder(order.id, QueueLifecycle.MANUAL_ENTRY_RESOLUTION)) {
+                    Toast.makeText(this, getString(R.string.mark_manual_entry_success, sourceRef), Toast.LENGTH_SHORT).show()
+                    refreshServiceState()
+                }
+            }
+            .setNegativeButton("Hủy", null)
+            .show()
     }
 
     private fun statusLabel(status: String): String = when (status) {
         OrderQueueDbHelper.STATUS_SENT -> "Đã xuất lên POS"
         OrderQueueDbHelper.STATUS_SENDING -> "Đang gửi"
         OrderQueueDbHelper.STATUS_UNCLASSIFIED -> "Cần kiểm tra"
+        OrderQueueDbHelper.STATUS_DISMISSED -> "Thu ngân đã nhập tay"
         else -> "Đang chờ"
     }
 
@@ -1400,7 +1445,7 @@ class MainActivity : Activity() {
 
         tvLogs.text = ssb
         scrollLogs.post {
-            scrollLogs.fullScroll(ScrollView.FOCUS_DOWN)
+            scrollLogs.scrollTo(0, (tvLogs.height - scrollLogs.height).coerceAtLeast(0))
         }
     }
 }

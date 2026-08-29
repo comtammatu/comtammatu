@@ -4,10 +4,8 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.ServiceConnection
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
@@ -50,9 +48,8 @@ class PrintIntakeService : Service() {
         const val KEY_SECRET = "secret"
         const val KEY_PORT = "port"
         const val KEY_LAN_MODE = "lan_mode"
+        const val KEY_AGENT_ENABLED = "agent_enabled"
         const val KEY_SHOPEE_ENABLED = "platform_shopee_enabled"
-        const val KEY_GREEN_SM_ENABLED = "platform_green_sm_enabled"
-        const val KEY_BE_ENABLED = "platform_be_enabled"
 
         const val DEFAULT_BACKEND_URL = "http://localhost:3000"
         const val DEFAULT_BRANCH_ID = 0
@@ -63,9 +60,6 @@ class PrintIntakeService : Service() {
         const val READ_TIMEOUT_MS = 3000
         const val CUT_DRAIN_TIMEOUT_MS = 500
 
-        private const val SUNMI_COMPAT_PACKAGE = "woyou.aidlservice.jiuiv5"
-        private const val SUNMI_COMPAT_ACTION = "woyou.aidlservice.jiuiv5.IWoyouService"
-
         var isServiceRunning = false
             private set
     }
@@ -75,16 +69,6 @@ class PrintIntakeService : Service() {
     private lateinit var dispatcher: WebhookDispatcher
     private lateinit var receiptTextRecognizer: ReceiptTextRecognizer
     private lateinit var printerDiscovery: PrinterDiscovery
-    private var sunmiCompatBindingActive = false
-    private val sunmiCompatConnection = object : ServiceConnection {
-        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-            AppLogger.s("MÁY IN ẢO", "Dịch vụ tự nhận máy in GreenSM / beFood đã sẵn sàng")
-        }
-
-        override fun onServiceDisconnected(name: ComponentName?) {
-            AppLogger.w("MÁY IN ẢO", "Dịch vụ tự nhận máy in GreenSM / beFood đã ngắt")
-        }
-    }
 
     override fun onCreate() {
         super.onCreate()
@@ -110,6 +94,10 @@ class PrintIntakeService : Service() {
         val action = intent?.action ?: ACTION_START
 
         if (action == ACTION_STOP) {
+            getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean(KEY_AGENT_ENABLED, false)
+                .apply()
             stopServer()
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 stopForeground(STOP_FOREGROUND_REMOVE)
@@ -124,6 +112,12 @@ class PrintIntakeService : Service() {
         // START_STICKY restarts deliver a null intent; fall back to the config
         // saved by MainActivity so queued orders keep reaching the real backend.
         val saved = configFromPrefs()
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        if (!prefs.getBoolean(KEY_AGENT_ENABLED, false)) {
+            AppLogger.i("TRẠNG THÁI", "Agent đang tắt; bỏ qua yêu cầu khởi động lại nền")
+            stopSelf()
+            return START_NOT_STICKY
+        }
         val backendUrl = intent?.getStringExtra(EXTRA_BACKEND_URL) ?: saved.backendUrl
         val branchId = intent?.getIntExtra(EXTRA_BRANCH_ID, saved.branchId) ?: saved.branchId
         val secret = intent?.getStringExtra(EXTRA_SECRET) ?: saved.secret
@@ -174,13 +168,12 @@ class PrintIntakeService : Service() {
             serverSocket = ServerSocket(port, 50, bindAddress)
             isServiceRunning = true
             if (lanMode) printerDiscovery.register(port)
-            bindSunmiCompat()
-            Log.i(TAG, "Virtual WiFi Printer Server listening on ${bindAddress.hostAddress}:$port (lanMode=$lanMode)")
-            AppLogger.s("MÁY IN ẢO", "Đang mở cổng TCP $port (${if (lanMode) "0.0.0.0 Mạng LAN" else "127.0.0.1 Cục bộ"}). Sẵn sàng nhận đơn!")
+            Log.i(TAG, "Print intake server listening on ${bindAddress.hostAddress}:$port (lanMode=$lanMode)")
+            AppLogger.s("NHẬN PHIẾU", "Đang mở cổng TCP $port (${if (lanMode) "0.0.0.0 Mạng LAN" else "127.0.0.1 Cục bộ"}). Sẵn sàng nhận đơn!")
         } catch (e: Exception) {
             isServiceRunning = false
             Log.e(TAG, "Failed to bind port $port: ${e.message}", e)
-            AppLogger.e("MÁY IN ẢO", "Không mở được cổng TCP $port: ${e.message} (Có thể cổng 9100 đang bị chiếm dụng)")
+            AppLogger.e("NHẬN PHIẾU", "Không mở được cổng TCP $port: ${e.message} (Có thể cổng 9100 đang bị chiếm dụng)")
             startForeground(NOTIFICATION_ID, buildForegroundNotification("⚠️ Không mở được cổng TCP $port: ${e.message}"))
             return
         }
@@ -196,7 +189,7 @@ class PrintIntakeService : Service() {
             } catch (e: Exception) {
                 if (isServiceRunning) {
                     Log.e(TAG, "ServerSocket error: ${e.message}", e)
-                    AppLogger.e("MÁY IN ẢO", "Lỗi ServerSocket: ${e.message}")
+                    AppLogger.e("NHẬN PHIẾU", "Lỗi cổng nhận phiếu: ${e.message}")
                 }
             }
         }
@@ -282,18 +275,23 @@ class PrintIntakeService : Service() {
                         val queuedId = dispatcher.storeUnclassifiedReceipt(rawBytes, receiptText)
                         AppLogger.e(
                             "PHÂN LOẠI",
-                            "Phiếu #$queuedId chưa xác định rõ ShopeeFood, GreenSM Food hay beFood; đã giữ lại và không gửi lên POS."
+                            "Phiếu #$queuedId chưa xác định được nguồn hỗ trợ; đã giữ lại và không gửi lên POS."
                         )
                     } else if (!isPlatformEnabled(platform)) {
+                        val reason = when (platform) {
+                            DeliveryPlatform.SHOPEE_FOOD -> "Nguồn ShopeeFood đang tắt trong cấu hình"
+                            DeliveryPlatform.GREEN_SM_FOOD -> "Green SM Food chưa hỗ trợ gửi trực tiếp tới Agent trên Redmi"
+                            DeliveryPlatform.BE_FOOD -> "beFood chưa hỗ trợ gửi trực tiếp tới Agent trên Redmi"
+                        }
                         val queuedId = dispatcher.storeHeldReceipt(
                             rawBytes,
                             platform,
                             receiptText,
-                            "Nguồn ${platform.displayName} đang tắt trong cấu hình"
+                            reason
                         )
                         AppLogger.w(
-                            "CẤU HÌNH SÀN",
-                            "Phiếu #$queuedId thuộc ${platform.displayName}; đã giữ lại vì nguồn này đang tắt."
+                            "NGUỒN PHIẾU",
+                            "Phiếu #$queuedId thuộc ${platform.displayName}; đã giữ lại vì nguồn này chưa được bật."
                         )
                     } else {
                         AppLogger.i("PHÂN LOẠI", "Nhận diện nguồn ${platform.displayName}")
@@ -316,46 +314,22 @@ class PrintIntakeService : Service() {
     private fun stopServer() {
         isServiceRunning = false
         printerDiscovery.unregister()
-        unbindSunmiCompat()
         try {
             serverSocket?.close()
             serverSocket = null
-            AppLogger.w("MÁY IN ẢO", "Đã đóng cổng lắng nghe máy in")
+            AppLogger.w("NHẬN PHIẾU", "Đã đóng cổng nhận phiếu")
         } catch (e: Exception) {
             Log.e(TAG, "Error closing serverSocket: ${e.message}")
         }
     }
 
-    private fun bindSunmiCompat() {
-        if (sunmiCompatBindingActive) return
-        val intent = Intent(SUNMI_COMPAT_ACTION).setPackage(SUNMI_COMPAT_PACKAGE)
-        sunmiCompatBindingActive = try {
-            bindService(intent, sunmiCompatConnection, Context.BIND_AUTO_CREATE)
-        } catch (error: Exception) {
-            Log.w(TAG, "Could not bind the optional SUNMI compatibility service", error)
-            false
-        }
-    }
-
-    private fun unbindSunmiCompat() {
-        if (!sunmiCompatBindingActive) return
-        try {
-            unbindService(sunmiCompatConnection)
-        } catch (error: IllegalArgumentException) {
-            Log.w(TAG, "SUNMI compatibility service was already unbound", error)
-        } finally {
-            sunmiCompatBindingActive = false
-        }
-    }
-
     private fun isPlatformEnabled(platform: DeliveryPlatform): Boolean {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val key = when (platform) {
-            DeliveryPlatform.SHOPEE_FOOD -> KEY_SHOPEE_ENABLED
-            DeliveryPlatform.GREEN_SM_FOOD -> KEY_GREEN_SM_ENABLED
-            DeliveryPlatform.BE_FOOD -> KEY_BE_ENABLED
+        return when (platform) {
+            DeliveryPlatform.SHOPEE_FOOD -> prefs.getBoolean(KEY_SHOPEE_ENABLED, true)
+            DeliveryPlatform.GREEN_SM_FOOD,
+            DeliveryPlatform.BE_FOOD -> false
         }
-        return prefs.getBoolean(key, true)
     }
 
     override fun onDestroy() {

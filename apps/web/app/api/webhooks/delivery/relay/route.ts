@@ -12,6 +12,10 @@ import {
   detectDeliveryPlatform,
   toDatabaseDeliveryPlatform,
 } from "@lib/shopeefood/escpos-parser";
+import {
+  classifyLegacyOrderCandidates,
+  deriveShopeeLegacyLookup,
+} from "@lib/shopeefood/legacy-order-dedup";
 import { resolveBranchStaffId } from "@lib/grabfood/mapping";
 
 const deliveryRelaySchema = z
@@ -190,9 +194,14 @@ export async function POST(request: NextRequest) {
     }
 
     const sanitizedDisplayRef = displayRef.replace(/[^A-Za-z0-9_-]/g, "");
+    const legacyLookup =
+      databasePlatform === "shopee"
+        ? deriveShopeeLegacyLookup(sanitizedDisplayRef || displayRef)
+        : null;
+    const posDisplayRef = legacyLookup?.shortRef ?? displayRef;
 
     // 3. Check if order was already processed or manually entered on POS (deduplication)
-    const { data: existingOrder } = await supabase
+    const { data: existingOrder, error: existingOrderError } = await supabase
       .from("orders")
       .select("id, order_number, status, payment_status")
       .eq("tenant_id", branch.tenant_id)
@@ -202,6 +211,17 @@ export async function POST(request: NextRequest) {
       .limit(1)
       .maybeSingle();
 
+    if (existingOrderError) {
+      console.error(
+        "[Delivery POS Relay] Exact duplicate lookup error:",
+        existingOrderError.code,
+      );
+      return NextResponse.json(
+        { success: false, error: "Không thể kiểm tra đơn hàng đã tiếp nhận" },
+        { status: 500, headers: CORS_HEADERS },
+      );
+    }
+
     if (existingOrder) {
       return NextResponse.json(
         {
@@ -210,7 +230,7 @@ export async function POST(request: NextRequest) {
           message: "Đơn hàng này đã được nhân viên nhập hoặc hệ thống tiếp nhận trước đó",
           order_id: existingOrder.id,
           order_number: existingOrder.order_number,
-          display_id: displayRef,
+          display_id: posDisplayRef,
         },
         { headers: CORS_HEADERS },
       );
@@ -234,6 +254,87 @@ export async function POST(request: NextRequest) {
     // 5. Transform the normalized delivery payload to RPC-ready items.
     const transformed = transformShopeeOrderPayload(shopeeOrder, dbMenuItems ?? []);
 
+    // Manual Shopee orders historically stored only the last four digits. A
+    // unique same-day item match is required before treating that short ref as
+    // idempotent; every collision stays quarantined instead of creating a copy.
+    if (legacyLookup) {
+      const { data: legacyOrders, error: legacyOrdersError } = await supabase
+        .from("orders")
+        .select("id, order_number")
+        .eq("tenant_id", branch.tenant_id)
+        .eq("branch_id", branch.id)
+        .eq("delivery_platform", databasePlatform)
+        .eq("external_order_ref", legacyLookup.shortRef)
+        .gte("created_at", legacyLookup.startIso)
+        .lt("created_at", legacyLookup.endIso)
+        .limit(3);
+
+      if (legacyOrdersError) {
+        console.error(
+          "[Delivery POS Relay] Legacy duplicate lookup error:",
+          legacyOrdersError.code,
+        );
+        return NextResponse.json(
+          { success: false, error: "Không thể đối chiếu đơn nhập tay trước đó" },
+          { status: 500, headers: CORS_HEADERS },
+        );
+      }
+
+      if (legacyOrders.length > 0) {
+        const legacyOrderIds = legacyOrders.map((order) => order.id);
+        const { data: legacyItems, error: legacyItemsError } = await supabase
+          .from("order_items")
+          .select("order_id, menu_item_id, item_name, quantity")
+          .eq("tenant_id", branch.tenant_id)
+          .in("order_id", legacyOrderIds);
+
+        if (legacyItemsError) {
+          console.error(
+            "[Delivery POS Relay] Legacy duplicate item lookup error:",
+            legacyItemsError.code,
+          );
+          return NextResponse.json(
+            { success: false, error: "Không thể đối chiếu món của đơn nhập tay" },
+            { status: 500, headers: CORS_HEADERS },
+          );
+        }
+
+        const classification = classifyLegacyOrderCandidates(
+          transformed.items,
+          legacyOrders.map((order) => ({
+            orderId: order.id,
+            items: legacyItems.filter((item) => item.order_id === order.id),
+          })),
+        );
+
+        if (classification.status === "matched") {
+          const matchedOrder = legacyOrders.find(
+            (order) => order.id === classification.orderId,
+          );
+          return NextResponse.json(
+            {
+              success: true,
+              idempotent: true,
+              message: "Đơn hàng này đã được nhân viên nhập trước đó",
+              order_id: matchedOrder?.id,
+              order_number: matchedOrder?.order_number,
+              display_id: posDisplayRef,
+            },
+            { headers: CORS_HEADERS },
+          );
+        }
+
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "Mã đơn rút gọn đã tồn tại nhưng chưa thể xác nhận trùng khớp; đơn được giữ chờ để kiểm tra",
+          },
+          { status: 409, headers: CORS_HEADERS },
+        );
+      }
+    }
+
     // 6. Find staff profile to act as created_by (prioritize branch_manager -> cashier -> branch staff -> HQ)
     const createdBy = await resolveBranchStaffId(supabase, branch.tenant_id, branch.id);
 
@@ -256,7 +357,7 @@ export async function POST(request: NextRequest) {
       p_note: transformed.customerNote ?? undefined,
       p_idempotency_key: transformed.idempotencyKey,
       p_delivery_platform: databasePlatform,
-      p_external_order_ref: displayRef,
+      p_external_order_ref: posDisplayRef,
     });
 
     if (rpcError) {
@@ -272,7 +373,7 @@ export async function POST(request: NextRequest) {
     }
 
     const orderId = (rpcResult as { order_id?: number })?.order_id;
-    const orderNumber = (rpcResult as { order_number?: string })?.order_number || `GH-${displayRef}`;
+    const orderNumber = (rpcResult as { order_number?: string })?.order_number || `GH-${posDisplayRef}`;
 
     // 8. Keep the POS gross total computed from the restaurant's active menu
     // and option prices. The receipt's lower platform total is settlement after
@@ -288,7 +389,7 @@ export async function POST(request: NextRequest) {
         success: true,
         order_id: orderId,
         order_number: orderNumber,
-        display_id: displayRef,
+        display_id: posDisplayRef,
         items_count: transformed.items.length,
         total_amount: transformed.totalAmount,
         restaurant_id: restaurantId,

@@ -9,6 +9,45 @@ const EXTENSION_ROOTS = [
   "tools/shopeefood-pos-relay-extension",
 ];
 const MATU_AGENT_ROOT = path.join(REPO_ROOT, "tools", "matu-agent");
+const MATU_AGENT_SETTINGS = path.join(MATU_AGENT_ROOT, "settings.gradle.kts");
+const MATU_AGENT_COMPANION_BUILD = path.join(
+  MATU_AGENT_ROOT,
+  "sunmi-compat",
+  "build.gradle.kts",
+);
+const MATU_AGENT_QUEUE_SOURCE = path.join(
+  MATU_AGENT_ROOT,
+  "app",
+  "src",
+  "main",
+  "java",
+  "com",
+  "comtammatu",
+  "relay",
+  "OrderQueueDbHelper.kt",
+);
+const MATU_AGENT_ACTIVITY_SOURCE = path.join(
+  MATU_AGENT_ROOT,
+  "app",
+  "src",
+  "main",
+  "java",
+  "com",
+  "comtammatu",
+  "relay",
+  "MainActivity.kt",
+);
+const MATU_AGENT_BOOT_SOURCE = path.join(
+  MATU_AGENT_ROOT,
+  "app",
+  "src",
+  "main",
+  "java",
+  "com",
+  "comtammatu",
+  "relay",
+  "BootCompletedReceiver.kt",
+);
 const GRADLE_WRAPPER_JAR = path.join(
   MATU_AGENT_ROOT,
   "gradle",
@@ -58,6 +97,40 @@ for (const file of extensionJavaScriptFiles()) {
 
 if (!fs.existsSync(GRADLE_WRAPPER_JAR)) {
   fail("Missing Má Tư Agent Gradle wrapper JAR");
+}
+
+const matuAgentSettings = fs.readFileSync(MATU_AGENT_SETTINGS, "utf8");
+if (matuAgentSettings.includes('include(":sunmi-compat")')) {
+  fail(
+    "Má Tư Agent must build exactly one APK; remove the SUNMI compatibility application module",
+  );
+}
+if (fs.existsSync(MATU_AGENT_COMPANION_BUILD)) {
+  fail("Má Tư Agent must not ship a separate SUNMI compatibility APK");
+}
+
+const queueSource = fs.readFileSync(MATU_AGENT_QUEUE_SOURCE, "utf8");
+const dismissStart = queueSource.indexOf("fun dismissWaitingOrder(");
+const dismissEnd = queueSource.indexOf("fun compactResolvedOrders(", dismissStart);
+const dismissImplementation = queueSource.slice(dismissStart, dismissEnd);
+if (
+  dismissStart < 0 ||
+  dismissEnd < 0 ||
+  !dismissImplementation.includes("COLUMN_STATUS, STATUS_DISMISSED") ||
+  dismissImplementation.includes(".delete(")
+) {
+  fail(
+    "Manual-entry resolution must retain the queue identity row in DISMISSED state",
+  );
+}
+
+const activitySource = fs.readFileSync(MATU_AGENT_ACTIVITY_SOURCE, "utf8");
+const bootSource = fs.readFileSync(MATU_AGENT_BOOT_SOURCE, "utf8");
+if (activitySource.includes("scrollLogs.fullScroll(")) {
+  fail("Má Tư Agent log scrolling must not steal focus from the queue-first home viewport");
+}
+if (!bootSource.includes("KEY_AGENT_ENABLED")) {
+  fail("Má Tư Agent boot recovery must respect the operator's persisted stopped state");
 }
 
 const gradle = spawnSync(

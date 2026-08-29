@@ -29,6 +29,18 @@ object OrderIdentity {
         return null
     }
 
+    fun displaySourceOrderRef(platform: String, sourceOrderRef: String?): String? {
+        if (sourceOrderRef.isNullOrBlank()) return null
+        if (platform != DeliveryPlatform.SHOPEE_FOOD.wireValue) return sourceOrderRef
+
+        val numericSuffix = sourceOrderRef.substringAfterLast('-', missingDelimiterValue = "")
+        return if (numericSuffix.length >= 4 && numericSuffix.all(Char::isDigit)) {
+            numericSuffix.takeLast(4)
+        } else {
+            sourceOrderRef
+        }
+    }
+
     fun fingerprint(rawBytes: ByteArray): String = MessageDigest
         .getInstance("SHA-256")
         .digest(rawBytes)

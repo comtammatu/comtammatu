@@ -17,6 +17,11 @@ class BootCompletedReceiver : BroadcastReceiver() {
             val port = prefs.getInt("port", 9100)
             val lanMode = prefs.getBoolean("lan_mode", false)
 
+            if (!prefs.getBoolean(PrintIntakeService.KEY_AGENT_ENABLED, false)) {
+                Log.i("BootCompletedReceiver", "Skipping auto-start: Agent was stopped by the operator")
+                return
+            }
+
             if (branchId <= 0) {
                 Log.w("BootCompletedReceiver", "Skipping auto-start: branch is not configured")
                 return

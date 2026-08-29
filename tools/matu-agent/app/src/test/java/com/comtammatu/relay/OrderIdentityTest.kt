@@ -34,6 +34,24 @@ class OrderIdentityTest {
     }
 
     @Test
+    fun `keeps the full Shopee reference as identity but displays the final four digits`() {
+        val sourceRef = OrderIdentity.extractSourceOrderRef(
+            "ShopeeFood\nMã đơn hàng: 29086-503463626"
+        )
+
+        assertEquals("29086-503463626", sourceRef)
+        assertEquals("3626", OrderIdentity.displaySourceOrderRef("shopee", sourceRef))
+    }
+
+    @Test
+    fun `does not shorten non-Shopee references`() {
+        assertEquals(
+            "GSM-829173",
+            OrderIdentity.displaySourceOrderRef("greensm", "GSM-829173")
+        )
+    }
+
+    @Test
     fun `fingerprint is stable for the same bytes and distinct for different bytes`() {
         val first = OrderIdentity.fingerprint("receipt-a".toByteArray())
 
