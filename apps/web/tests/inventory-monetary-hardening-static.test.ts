@@ -61,6 +61,42 @@ test("inventory monetary reads fail closed at the current runtime boundary", () 
   assert.match(financePage, /cockpit\.canViewInventoryValuation \?/);
 });
 
+test("ingredient WAC reads use the permission-gated service client", () => {
+  const ingredientActions = read(
+    "apps/web/app/(protected)/inventory/ingredient-actions.ts",
+  );
+  const listStart = ingredientActions.indexOf(
+    "export async function fetchIngredients(",
+  );
+  const detailStart = ingredientActions.indexOf(
+    "export async function fetchIngredientDetail(",
+  );
+  const optionStart = ingredientActions.indexOf(
+    "export async function fetchUnitOptions(",
+  );
+
+  assert.ok(
+    listStart >= 0 && detailStart > listStart && optionStart > detailStart,
+  );
+
+  const listSource = ingredientActions.slice(listStart, detailStart);
+  const detailSource = ingredientActions.slice(detailStart, optionStart);
+
+  for (const source of [listSource, detailSource]) {
+    assert.match(
+      source,
+      /monetary\.purchasePrice\s*\?\s*readClient\s*\.from\("stock_levels"\)/,
+    );
+    assert.doesNotMatch(
+      source,
+      /monetary\.purchasePrice\s*\?\s*supabase\s*\.from\("stock_levels"\)/,
+    );
+  }
+
+  assert.match(listSource, /stockLevelsResult\.error/);
+  assert.match(detailSource, /stockLevelResult\.error/);
+});
+
 test("stock on hand exposes only WAC and inventory value", () => {
   const stockData = read("apps/web/lib/inventory/stock-on-hand-data.ts");
   const stockModel = read("apps/web/lib/inventory/stock-on-hand-model.ts");

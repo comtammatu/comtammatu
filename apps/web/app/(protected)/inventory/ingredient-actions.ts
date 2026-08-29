@@ -429,7 +429,7 @@ export async function fetchIngredients(
           .eq("is_base", true)
           .eq("is_active", true),
     monetary.purchasePrice
-      ? supabase
+      ? readClient
           .from("stock_levels")
           .select("ingredient_id, avg_unit_cost")
           .eq("tenant_id", claims.tenant_id)
@@ -447,7 +447,11 @@ export async function fetchIngredients(
     };
   }
 
-  if (supplierLinksResult.error || baseUnitsResult.error) {
+  if (
+    supplierLinksResult.error ||
+    baseUnitsResult.error ||
+    stockLevelsResult.error
+  ) {
     return {
       success: false,
       error: messages.inventory.ingredients.list.loadFailed,
@@ -599,7 +603,7 @@ export async function fetchIngredientDetail(
       .eq("suppliers.is_active", true)
       .limit(1),
     monetary.purchasePrice
-      ? supabase
+      ? readClient
           .from("stock_levels")
           .select("avg_unit_cost")
           .eq("tenant_id", claims.tenant_id)
@@ -610,7 +614,11 @@ export async function fetchIngredientDetail(
       : Promise.resolve({ data: null, error: null }),
   ]);
 
-  if (ingredientResult.error || supplierLinkResult.error) {
+  if (
+    ingredientResult.error ||
+    supplierLinkResult.error ||
+    stockLevelResult.error
+  ) {
     return {
       success: false,
       error: messages.inventory.ingredients.list.loadFailed,
