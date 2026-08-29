@@ -11,7 +11,9 @@ import {
   ShoppingCart as IconShoppingCart,
 } from "lucide-react";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { formatCount } from "@comtammatu/shared/format";
 import { formatVNDate, getVNDateString } from "@comtammatu/shared/time";
+import { cn } from "@comtammatu/ui/lib/utils";
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
@@ -504,10 +506,159 @@ export function PurchaseOrdersClient({
     },
   ];
 
+  const poTotalCount = rows.length;
+  const poOpenCount = rows.filter(
+    (r) =>
+      r.status === "draft" || r.status === "sent" || r.status === "approved",
+  ).length;
+  const poPartialCount = rows.filter(
+    (r) => r.status === "partially_received",
+  ).length;
+  const poCompletedCount = rows.filter((r) => r.status === "completed").length;
+
   const list = (
-    <AppListFrame
-      toolbar={
-        <AppToolbar
+    <div className="flex flex-col gap-3">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Item
+          variant="outline"
+          onClick={() =>
+            overlay.patchOverlay(
+              { ordersStatus: null, ordersPage: null },
+              "replace",
+            )
+          }
+          className={cn(
+            "flex flex-col justify-between p-3 text-left cursor-pointer",
+            statusFilter === "all"
+              ? "border-primary ring-1 ring-primary shadow-xs"
+              : "border-border",
+          )}
+        >
+          <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <span>{copy.metrics.total}</span>
+            <span className="size-2 rounded-full bg-muted-foreground" />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="font-mono text-2xl font-semibold tabular-nums text-foreground">
+              {formatCount(poTotalCount)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {copy.metrics.ordersUnit}
+            </span>
+          </div>
+        </Item>
+
+        <Item
+          variant="outline"
+          onClick={() =>
+            overlay.patchOverlay(
+              {
+                ordersStatus:
+                  statusFilter === "sent" ||
+                  statusFilter === "approved" ||
+                  statusFilter === "draft"
+                    ? null
+                    : "sent",
+                ordersPage: null,
+              },
+              "replace",
+            )
+          }
+          className={cn(
+            "flex flex-col justify-between p-3 text-left cursor-pointer",
+            statusFilter === "sent" ||
+              statusFilter === "approved" ||
+              statusFilter === "draft"
+              ? "border-warning ring-1 ring-warning shadow-xs"
+              : "border-border",
+          )}
+        >
+          <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <span>{copy.metrics.open}</span>
+            <span className="size-2 rounded-full bg-warning" />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="font-mono text-2xl font-semibold tabular-nums text-warning">
+              {formatCount(poOpenCount)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {copy.metrics.openHint}
+            </span>
+          </div>
+        </Item>
+
+        <Item
+          variant="outline"
+          onClick={() =>
+            overlay.patchOverlay(
+              {
+                ordersStatus:
+                  statusFilter === "partially_received"
+                    ? null
+                    : "partially_received",
+                ordersPage: null,
+              },
+              "replace",
+            )
+          }
+          className={cn(
+            "flex flex-col justify-between p-3 text-left cursor-pointer",
+            statusFilter === "partially_received"
+              ? "border-primary ring-1 ring-primary shadow-xs"
+              : "border-border",
+          )}
+        >
+          <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <span>{copy.metrics.partiallyReceived}</span>
+            <span className="size-2 rounded-full bg-primary" />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="font-mono text-2xl font-semibold tabular-nums text-primary">
+              {formatCount(poPartialCount)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {copy.metrics.partiallyReceivedHint}
+            </span>
+          </div>
+        </Item>
+
+        <Item
+          variant="outline"
+          onClick={() =>
+            overlay.patchOverlay(
+              {
+                ordersStatus:
+                  statusFilter === "completed" ? null : "completed",
+                ordersPage: null,
+              },
+              "replace",
+            )
+          }
+          className={cn(
+            "flex flex-col justify-between p-3 text-left cursor-pointer",
+            statusFilter === "completed"
+              ? "border-success ring-1 ring-success shadow-xs"
+              : "border-border",
+          )}
+        >
+          <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <span>{copy.metrics.completed}</span>
+            <span className="size-2 rounded-full bg-success" />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="font-mono text-2xl font-semibold tabular-nums text-success">
+              {formatCount(poCompletedCount)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {copy.metrics.completedHint}
+            </span>
+          </div>
+        </Item>
+      </div>
+
+      <AppListFrame
+        toolbar={
+          <AppToolbar
           variant="inline"
           search={
             <InputGroup
@@ -646,7 +797,8 @@ export function PurchaseOrdersClient({
           </InteractiveCard>
         )}
       />
-    </AppListFrame>
+      </AppListFrame>
+    </div>
   );
 
   return (

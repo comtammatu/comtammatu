@@ -10,7 +10,9 @@ import {
   Search as IconSearch,
 } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
+import { formatCount } from "@comtammatu/shared/format";
 import { formatVNDate } from "@comtammatu/shared/time";
+import { cn } from "@comtammatu/ui/lib/utils";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@/components/confirm-dialog";
@@ -23,6 +25,7 @@ import {
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
 import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
+import { Item } from "@comtammatu/ui/components/item";
 import {
   Select,
   SelectContent,
@@ -354,6 +357,117 @@ export function StocktakeListClient({
         title={messages.inventory.stocktake.title}
         actions={stocktakeAction}
       />
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Item
+          variant="outline"
+          onClick={() => replaceListFilters({ status: "all" })}
+          className={cn(
+            "flex flex-col justify-between p-3 text-left cursor-pointer",
+            statusFilter === "all"
+              ? "border-primary ring-1 ring-primary shadow-xs"
+              : "border-border",
+          )}
+        >
+          <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <span>{messages.inventory.stocktake.metrics.total}</span>
+            <span className="size-2 rounded-full bg-muted-foreground" />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="font-mono text-2xl font-semibold tabular-nums text-foreground">
+              {formatCount(rows.length)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {messages.inventory.stocktake.metrics.sessionsUnit}
+            </span>
+          </div>
+        </Item>
+
+        <Item
+          variant="outline"
+          onClick={() =>
+            replaceListFilters({
+              status: statusFilter === "in_progress" ? "all" : "in_progress",
+            })
+          }
+          className={cn(
+            "flex flex-col justify-between p-3 text-left cursor-pointer",
+            statusFilter === "in_progress"
+              ? "border-warning ring-1 ring-warning shadow-xs"
+              : "border-border",
+          )}
+        >
+          <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <span>{messages.inventory.stocktake.metrics.inProgress}</span>
+            <span className="size-2 rounded-full bg-warning" />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="font-mono text-2xl font-semibold tabular-nums text-warning">
+              {formatCount(statusCounts["in_progress"] ?? 0)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {messages.inventory.stocktake.metrics.inProgressHint}
+            </span>
+          </div>
+        </Item>
+
+        <Item
+          variant="outline"
+          onClick={() =>
+            replaceListFilters({
+              status: statusFilter === "completed" ? "all" : "completed",
+            })
+          }
+          className={cn(
+            "flex flex-col justify-between p-3 text-left cursor-pointer",
+            statusFilter === "completed"
+              ? "border-success ring-1 ring-success shadow-xs"
+              : "border-border",
+          )}
+        >
+          <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <span>{messages.inventory.stocktake.metrics.completed}</span>
+            <span className="size-2 rounded-full bg-success" />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="font-mono text-2xl font-semibold tabular-nums text-success">
+              {formatCount(statusCounts["completed"] ?? 0)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {messages.inventory.stocktake.metrics.completedHint}
+            </span>
+          </div>
+        </Item>
+
+        <Item
+          variant="outline"
+          onClick={() =>
+            replaceListFilters({
+              status: statusFilter === "cancelled" ? "all" : "cancelled",
+            })
+          }
+          className={cn(
+            "flex flex-col justify-between p-3 text-left cursor-pointer",
+            statusFilter === "cancelled"
+              ? "border-destructive ring-1 ring-destructive shadow-xs"
+              : "border-border",
+          )}
+        >
+          <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <span>{messages.inventory.stocktake.metrics.cancelled}</span>
+            <span className="size-2 rounded-full bg-destructive" />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="font-mono text-2xl font-semibold tabular-nums text-destructive">
+              {formatCount(statusCounts["cancelled"] ?? 0)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {messages.inventory.stocktake.metrics.sessionsUnit}
+            </span>
+          </div>
+        </Item>
+      </div>
+
       <AppListFrame
         toolbar={
           <AppToolbar

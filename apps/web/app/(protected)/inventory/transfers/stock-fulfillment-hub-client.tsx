@@ -8,8 +8,10 @@ import {
   ArrowRight as IconArrowRight,
   Search as IconSearch,
 } from "lucide-react";
+import { formatCount } from "@comtammatu/shared/format";
 import { formatVNDate } from "@comtammatu/shared/time";
 import { FORM_VI } from "@comtammatu/shared/messages";
+import { cn } from "@comtammatu/ui/lib/utils";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -398,8 +400,126 @@ export function StockFulfillmentHubClient({
     />
   );
 
+  const hubTotal = rows.length;
+  const hubActive = rows.filter((r) => r.lifecycle === "active").length;
+  const hubCompleted = rows.filter((r) => r.lifecycle === "completed").length;
+  const hubCancelled = rows.filter((r) => r.lifecycle === "cancelled").length;
+
   return (
     <>
+      <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Item
+          variant="outline"
+          onClick={() => replaceParam("state", "all", "all")}
+          className={cn(
+            "flex flex-col justify-between p-3 text-left cursor-pointer",
+            state === "all"
+              ? "border-primary ring-1 ring-primary shadow-xs"
+              : "border-border",
+          )}
+        >
+          <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <span>{copy.metrics.total}</span>
+            <span className="size-2 rounded-full bg-muted-foreground" />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="font-mono text-2xl font-semibold tabular-nums text-foreground">
+              {formatCount(hubTotal)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {copy.metrics.transfersUnit}
+            </span>
+          </div>
+        </Item>
+
+        <Item
+          variant="outline"
+          onClick={() =>
+            replaceParam("state", state === "active" ? "all" : "active", "all")
+          }
+          className={cn(
+            "flex flex-col justify-between p-3 text-left cursor-pointer",
+            state === "active"
+              ? "border-warning ring-1 ring-warning shadow-xs"
+              : "border-border",
+          )}
+        >
+          <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <span>{copy.metrics.active}</span>
+            <span className="size-2 rounded-full bg-warning" />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="font-mono text-2xl font-semibold tabular-nums text-warning">
+              {formatCount(hubActive)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {copy.metrics.activeHint}
+            </span>
+          </div>
+        </Item>
+
+        <Item
+          variant="outline"
+          onClick={() =>
+            replaceParam(
+              "state",
+              state === "completed" ? "all" : "completed",
+              "all",
+            )
+          }
+          className={cn(
+            "flex flex-col justify-between p-3 text-left cursor-pointer",
+            state === "completed"
+              ? "border-success ring-1 ring-success shadow-xs"
+              : "border-border",
+          )}
+        >
+          <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <span>{copy.metrics.completed}</span>
+            <span className="size-2 rounded-full bg-success" />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="font-mono text-2xl font-semibold tabular-nums text-success">
+              {formatCount(hubCompleted)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {copy.metrics.completedHint}
+            </span>
+          </div>
+        </Item>
+
+        <Item
+          variant="outline"
+          onClick={() =>
+            replaceParam(
+              "state",
+              state === "cancelled" ? "all" : "cancelled",
+              "all",
+            )
+          }
+          className={cn(
+            "flex flex-col justify-between p-3 text-left cursor-pointer",
+            state === "cancelled"
+              ? "border-destructive ring-1 ring-destructive shadow-xs"
+              : "border-border",
+          )}
+        >
+          <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <span>{copy.metrics.cancelled}</span>
+            <span className="size-2 rounded-full bg-destructive" />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="font-mono text-2xl font-semibold tabular-nums text-destructive">
+              {formatCount(hubCancelled)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {copy.metrics.transfersUnit}
+            </span>
+          </div>
+        </Item>
+      </div>
+
       <AppListFrame toolbar={toolbar}>
         <DataTable
           columns={columns}
@@ -495,7 +615,8 @@ export function StockFulfillmentHubClient({
           }}
         />
       </AppListFrame>
-      <AppDialog
+    </div>
+    <AppDialog
         variant="document"
         open={dialogOpen}
         onOpenChange={(open) => {

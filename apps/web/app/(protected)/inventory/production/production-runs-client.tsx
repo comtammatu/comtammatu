@@ -11,8 +11,11 @@ import {
   PRODUCT_VI,
 } from "@comtammatu/shared/messages";
 import { formatVNDate } from "@comtammatu/shared/time";
+import { cn } from "@comtammatu/ui/lib/utils";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
+import { Item } from "@comtammatu/ui/components/item";
+import { messages } from "@lib/messages";
 import {
   InputGroup,
   InputGroupAddon,
@@ -196,35 +199,156 @@ export function ProductionRunsClient({ initial }: ProductionRunsClientProps) {
     />
   );
 
+  const totalRuns = items.length;
+  const inProgressRuns = items.filter((r) => r.status === "in_progress").length;
+  const completedRuns = items.filter((r) => r.status === "completed").length;
+  const draftRuns = items.filter((r) => r.status === "draft").length;
+  const prodCopy = messages.inventory.productionRuns;
+
   return (
-    <AppListFrame toolbar={toolbar}>
-      <DataTable
-        data={filteredItems}
-        columns={columns}
-        pageSize={50}
-        getRowKey={(row) => row.id.toString()}
-        emptyTitle={
-          search || statusFilter !== ALL_STATUS_VALUE
-            ? INVENTORY_VI.productionOrdersNoResultsTitle
-            : INVENTORY_VI.productionOrdersEmptyTitle
-        }
-        emptyDescription={
-          search || statusFilter !== ALL_STATUS_VALUE
-            ? INVENTORY_VI.productionOrdersNoResultsDescription
-            : INVENTORY_VI.productionOrdersEmptyDescription
-        }
-        emptyMode={
-          search || statusFilter !== ALL_STATUS_VALUE ? "no-results" : "no-data"
-        }
-        onRowClick={openProductionDetail}
-        getRowAriaLabel={(row) =>
-          `${INVENTORY_VI.productionNumber} ${row.production_number}`
-        }
-        mobileCardRender={(row) => (
-          <ProductionRunCard row={row} onOpen={() => openProductionDetail(row)} />
-        )}
-      />
-    </AppListFrame>
+    <div className="flex flex-col gap-3">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Item
+          variant="outline"
+          onClick={() => filters.patchOverlay({ status: null }, "replace")}
+          className={cn(
+            "flex flex-col justify-between p-3 text-left cursor-pointer",
+            statusFilter === ALL_STATUS_VALUE
+              ? "border-primary ring-1 ring-primary shadow-xs"
+              : "border-border",
+          )}
+        >
+          <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <span>{prodCopy.metrics.total}</span>
+            <span className="size-2 rounded-full bg-muted-foreground" />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="font-mono text-2xl font-semibold tabular-nums text-foreground">
+              {formatCount(totalRuns)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {prodCopy.metrics.runsUnit}
+            </span>
+          </div>
+        </Item>
+
+        <Item
+          variant="outline"
+          onClick={() =>
+            filters.patchOverlay(
+              { status: statusFilter === "in_progress" ? null : "in_progress" },
+              "replace",
+            )
+          }
+          className={cn(
+            "flex flex-col justify-between p-3 text-left cursor-pointer",
+            statusFilter === "in_progress"
+              ? "border-warning ring-1 ring-warning shadow-xs"
+              : "border-border",
+          )}
+        >
+          <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <span>{prodCopy.metrics.inProgress}</span>
+            <span className="size-2 rounded-full bg-warning" />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="font-mono text-2xl font-semibold tabular-nums text-warning">
+              {formatCount(inProgressRuns)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {prodCopy.metrics.inProgressHint}
+            </span>
+          </div>
+        </Item>
+
+        <Item
+          variant="outline"
+          onClick={() =>
+            filters.patchOverlay(
+              { status: statusFilter === "completed" ? null : "completed" },
+              "replace",
+            )
+          }
+          className={cn(
+            "flex flex-col justify-between p-3 text-left cursor-pointer",
+            statusFilter === "completed"
+              ? "border-success ring-1 ring-success shadow-xs"
+              : "border-border",
+          )}
+        >
+          <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <span>{prodCopy.metrics.completed}</span>
+            <span className="size-2 rounded-full bg-success" />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="font-mono text-2xl font-semibold tabular-nums text-success">
+              {formatCount(completedRuns)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {prodCopy.metrics.completedHint}
+            </span>
+          </div>
+        </Item>
+
+        <Item
+          variant="outline"
+          onClick={() =>
+            filters.patchOverlay(
+              { status: statusFilter === "draft" ? null : "draft" },
+              "replace",
+            )
+          }
+          className={cn(
+            "flex flex-col justify-between p-3 text-left cursor-pointer",
+            statusFilter === "draft"
+              ? "border-primary ring-1 ring-primary shadow-xs"
+              : "border-border",
+          )}
+        >
+          <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <span>{prodCopy.metrics.draft}</span>
+            <span className="size-2 rounded-full bg-primary" />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="font-mono text-2xl font-semibold tabular-nums text-primary">
+              {formatCount(draftRuns)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {prodCopy.metrics.draftHint}
+            </span>
+          </div>
+        </Item>
+      </div>
+
+      <AppListFrame toolbar={toolbar}>
+        <DataTable
+          data={filteredItems}
+          columns={columns}
+          pageSize={50}
+          getRowKey={(row) => row.id.toString()}
+          emptyTitle={
+            search || statusFilter !== ALL_STATUS_VALUE
+              ? INVENTORY_VI.productionOrdersNoResultsTitle
+              : INVENTORY_VI.productionOrdersEmptyTitle
+          }
+          emptyDescription={
+            search || statusFilter !== ALL_STATUS_VALUE
+              ? INVENTORY_VI.productionOrdersNoResultsDescription
+              : INVENTORY_VI.productionOrdersEmptyDescription
+          }
+          emptyMode={
+            search || statusFilter !== ALL_STATUS_VALUE ? "no-results" : "no-data"
+          }
+          onRowClick={openProductionDetail}
+          getRowAriaLabel={(row) =>
+            `${INVENTORY_VI.productionNumber} ${row.production_number}`
+          }
+          mobileCardRender={(row) => (
+            <ProductionRunCard row={row} onOpen={() => openProductionDetail(row)} />
+          )}
+        />
+      </AppListFrame>
+    </div>
   );
 }
 

@@ -11,7 +11,9 @@ import {
   Trash as IconTrash,
 } from "lucide-react";
 import { formatVNDate, formatVNDateTime } from "@comtammatu/shared/time";
+import { formatCount } from "@comtammatu/shared/format";
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
+import { cn } from "@comtammatu/ui/lib/utils";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -20,6 +22,7 @@ import {
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
 import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
+import { Item } from "@comtammatu/ui/components/item";
 import {
   Tabs,
   TabsList,
@@ -593,6 +596,164 @@ export function GrnListClient({
             )
           }
         />
+
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Item
+            variant="outline"
+            onClick={() =>
+              navigate({
+                status: "all",
+                page: null,
+                dateField: null,
+              })
+            }
+            className={cn(
+              "flex flex-col justify-between p-3 text-left cursor-pointer",
+              filters.status === "all"
+                ? "border-primary ring-1 ring-primary shadow-xs"
+                : "border-border",
+            )}
+          >
+            <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <span>{grnCopy.metrics.total}</span>
+              <span className="size-2 rounded-full bg-muted-foreground" />
+            </div>
+            <div className="mt-2 flex items-baseline justify-between">
+              <span className="font-mono text-2xl font-semibold tabular-nums text-foreground">
+                {formatCount(isUnpricedQueue ? unpricedTotal : total)}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {grnCopy.metrics.grnUnit}
+              </span>
+            </div>
+          </Item>
+
+          <Item
+            variant="outline"
+            onClick={() =>
+              navigate({
+                status: filters.status === "draft" ? "all" : "draft",
+                page: null,
+                dateField: null,
+              })
+            }
+            className={cn(
+              "flex flex-col justify-between p-3 text-left cursor-pointer",
+              filters.status === "draft"
+                ? "border-warning ring-1 ring-warning shadow-xs"
+                : "border-border",
+            )}
+          >
+            <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <span>{grnCopy.metrics.draft}</span>
+              <span className="size-2 rounded-full bg-warning" />
+            </div>
+            <div className="mt-2 flex items-baseline justify-between">
+              <span className="font-mono text-2xl font-semibold tabular-nums text-warning">
+                {formatCount(rows.filter((r) => r.status === "draft").length)}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {grnCopy.metrics.draftHint}
+              </span>
+            </div>
+          </Item>
+
+          <Item
+            variant="outline"
+            onClick={() =>
+              navigate({
+                status: filters.status === "confirmed" ? "all" : "confirmed",
+                page: null,
+                dateField: null,
+              })
+            }
+            className={cn(
+              "flex flex-col justify-between p-3 text-left cursor-pointer",
+              filters.status === "confirmed"
+                ? "border-success ring-1 ring-success shadow-xs"
+                : "border-border",
+            )}
+          >
+            <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <span>{grnCopy.metrics.confirmed}</span>
+              <span className="size-2 rounded-full bg-success" />
+            </div>
+            <div className="mt-2 flex items-baseline justify-between">
+              <span className="font-mono text-2xl font-semibold tabular-nums text-success">
+                {formatCount(rows.filter((r) => r.status === "confirmed").length)}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {grnCopy.metrics.confirmedHint}
+              </span>
+            </div>
+          </Item>
+
+          {canPatchConfirmedUnitCost ? (
+            <Item
+              variant="outline"
+              onClick={() =>
+                navigate({
+                  status:
+                    filters.status === OWNER_UNPRICED_GRN_STATUS
+                      ? "all"
+                      : OWNER_UNPRICED_GRN_STATUS,
+                  page: null,
+                  dateField: null,
+                })
+              }
+              className={cn(
+                "flex flex-col justify-between p-3 text-left cursor-pointer",
+                filters.status === OWNER_UNPRICED_GRN_STATUS
+                  ? "border-primary ring-1 ring-primary shadow-xs"
+                  : "border-border",
+              )}
+            >
+              <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <span>{grnCopy.metrics.unpriced}</span>
+                <span className="size-2 rounded-full bg-primary" />
+              </div>
+              <div className="mt-2 flex items-baseline justify-between">
+                <span className="font-mono text-2xl font-semibold tabular-nums text-primary">
+                  {formatCount(unpricedTotal)}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {grnCopy.metrics.unpricedHint}
+                </span>
+              </div>
+            </Item>
+          ) : (
+            <Item
+              variant="outline"
+              onClick={() =>
+                navigate({
+                  status: filters.status === "cancelled" ? "all" : "cancelled",
+                  page: null,
+                  dateField: null,
+                })
+              }
+              className={cn(
+                "flex flex-col justify-between p-3 text-left cursor-pointer",
+                filters.status === "cancelled"
+                  ? "border-destructive ring-1 ring-destructive shadow-xs"
+                  : "border-border",
+              )}
+            >
+              <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <span>{grnCopy.metrics.cancelled}</span>
+                <span className="size-2 rounded-full bg-destructive" />
+              </div>
+              <div className="mt-2 flex items-baseline justify-between">
+                <span className="font-mono text-2xl font-semibold tabular-nums text-destructive">
+                  {formatCount(rows.filter((r) => r.status === "cancelled").length)}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {grnCopy.metrics.grnUnit}
+                </span>
+              </div>
+            </Item>
+          )}
+        </div>
+
         <AppListFrame toolbar={loadFailed ? undefined : toolbar}>
           {table}
         </AppListFrame>
