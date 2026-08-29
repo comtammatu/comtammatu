@@ -1574,6 +1574,7 @@ export const inventory = {
       },
     },
     hrmConsumptionSource: "Nhân sự - Tiêu hao bếp trong ngày",
+    countSlipAutoWasteSource: "Kiểm đếm giao ca",
     manualSource: "Thủ công",
     listLoadFailed: "Không thể tải danh sách phiếu xuất.",
     lineWacLoadFailed: "Không thể tải giá vốn bình quân cho dòng phiếu xuất.",

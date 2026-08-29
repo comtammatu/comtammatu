@@ -1197,6 +1197,71 @@ export type Database = {
           },
         ]
       }
+      branch_ingredient_thresholds: {
+        Row: {
+          branch_id: number
+          created_at: string
+          id: number
+          ingredient_id: number
+          is_active: boolean
+          min_stock_level: number
+          reorder_quantity: number | null
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          branch_id: number
+          created_at?: string
+          id?: never
+          ingredient_id: number
+          is_active?: boolean
+          min_stock_level?: number
+          reorder_quantity?: number | null
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: number
+          created_at?: string
+          id?: never
+          ingredient_id?: number
+          is_active?: boolean
+          min_stock_level?: number
+          reorder_quantity?: number | null
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_ingredient_thresholds_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_ingredient_thresholds_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "branch_ingredient_thresholds_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_ingredient_thresholds_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branch_menu_item_daily_holds: {
         Row: {
           branch_id: number
@@ -14129,6 +14194,14 @@ export type Database = {
           year_month: string
         }[]
       }
+      get_branch_smart_reorder_suggestions: {
+        Args: { p_branch_id: number }
+        Returns: Json
+      }
+      get_branch_stock_thresholds: {
+        Args: { p_branch_id: number }
+        Returns: Json
+      }
       get_cash_ledger_movement_since: {
         Args: { p_branch_id?: number; p_since: string }
         Returns: Json
@@ -16340,6 +16413,10 @@ export type Database = {
       }
       upsert_branch_revenue_targets: {
         Args: { p_rows: Json; p_year_month: string }
+        Returns: Json
+      }
+      upsert_branch_stock_thresholds: {
+        Args: { p_branch_id: number; p_thresholds: Json }
         Returns: Json
       }
       upsert_inventory_count_template: {

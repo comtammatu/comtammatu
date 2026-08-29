@@ -18,6 +18,7 @@ import {
 } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
 import { formatDateTime, formatQty, formatSmartQuantityUnit } from "@lib/inventory/format";
+import { formatPercent } from "@comtammatu/shared/format";
 import { messages } from "@lib/messages";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import {
@@ -265,13 +266,29 @@ export function ProductionDetailClient({
         <Frame className="border-0 rounded-none overflow-hidden">
           <div className="flex gap-2 border-b bg-muted/30 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             <span className="min-w-0 flex-1">Nguyên liệu</span>
-            <span className="w-36 shrink-0 text-right">Kế hoạch</span>
-            <span className="w-36 shrink-0 text-right">Thực tế</span>
+            <span className="w-28 shrink-0 text-right">Kế hoạch</span>
+            <span className="w-32 shrink-0 text-right">Thực tế</span>
+            <span className="w-28 shrink-0 text-right">Chênh lệch</span>
           </div>
           <div className="divide-y">
             {run.lines.map((line) => {
               const plannedSmartLine = formatSmartQuantityUnit(line.planned_quantity, line.entry_unit_name);
               const actualSmartLine = formatSmartQuantityUnit(line.actual_quantity, line.entry_unit_name);
+              const planned = Number(line.planned_quantity);
+              const currentActual =
+                run.status === "in_progress"
+                  ? Number(actualIngredients[line.ingredient_id])
+                  : line.actual_quantity;
+              const hasActual =
+                currentActual != null &&
+                Number.isFinite(currentActual) &&
+                run.status !== "draft";
+              const diff = hasActual ? Number(currentActual) - planned : null;
+              const diffPercent =
+                diff != null && planned > 0
+                  ? (diff / planned) * 100
+                  : null;
+
               return (
                 <div
                   key={line.ingredient_id}
@@ -280,10 +297,10 @@ export function ProductionDetailClient({
                   <span className="min-w-0 flex-1 font-medium text-foreground">
                     {line.ingredient_name}
                   </span>
-                  <span className="w-36 shrink-0 text-left sm:text-right tabular-nums text-muted-foreground text-xs sm:text-sm font-mono">
+                  <span className="w-28 shrink-0 text-left sm:text-right tabular-nums text-muted-foreground text-xs sm:text-sm font-mono">
                     {plannedSmartLine.formattedQty} {plannedSmartLine.displayUnit}
                   </span>
-                  <div className="w-36 shrink-0 flex items-center justify-start sm:justify-end gap-1.5">
+                  <div className="w-32 shrink-0 flex items-center justify-start sm:justify-end gap-1.5">
                     {run.status === "in_progress" ? (
                       <div className="flex w-full items-center gap-1.5">
                         <QuantityInput
@@ -308,6 +325,27 @@ export function ProductionDetailClient({
                         {line.actual_quantity == null
                           ? "—"
                           : `${actualSmartLine.formattedQty} ${actualSmartLine.displayUnit}`}
+                      </span>
+                    )}
+                  </div>
+                  <div className="w-28 shrink-0 flex items-center justify-start sm:justify-end">
+                    {diff == null ? (
+                      <span className="text-xs text-muted-foreground font-mono">—</span>
+                    ) : Math.abs(diff) < 1e-4 ? (
+                      <span className="text-xs text-muted-foreground font-mono">±0%</span>
+                    ) : diff > 0 ? (
+                      <span
+                        className="text-xs font-semibold text-destructive font-mono"
+                        title={`Vượt định mức ${formatQty(diff)} ${line.entry_unit_name}`}
+                      >
+                        +{diffPercent != null ? formatPercent(diffPercent, 1) : ""}
+                      </span>
+                    ) : (
+                      <span
+                        className="text-xs font-semibold text-success font-mono"
+                        title={`Tiết kiệm ${formatQty(Math.abs(diff))} ${line.entry_unit_name}`}
+                      >
+                        {diffPercent != null ? formatPercent(diffPercent, 1) : ""}
                       </span>
                     )}
                   </div>
@@ -357,7 +395,13 @@ export function ProductionDetailClient({
           action={
             <Button
               render={
-                <Link href={`/inventory/transfers/new?branch=${run.branch_id}`} />
+                <Link
+                  href={
+                    `/inventory/transfers/new?branch=${run.branch_id}&direction=outbound&ingredientId=${run.finished_good_id}` +
+                    (run.actual_quantity != null ? `&quantity=${run.actual_quantity}` : "") +
+                    (run.entry_unit_id != null ? `&entryUnitId=${run.entry_unit_id}` : "")
+                  }
+                />
               }
             >
               {detailCopy.shipToBranchAction}

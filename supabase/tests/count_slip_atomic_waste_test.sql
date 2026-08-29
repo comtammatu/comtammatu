@@ -40,6 +40,16 @@ BEGIN
     RAISE EXCEPTION
       'COUNT SLIP WASTE: manual writeoff photo boundary is missing or over-broad';
   END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conrelid = 'public.stock_issues'::regclass
+      AND conname = 'stock_issues_source_type_check'
+      AND pg_get_constraintdef(oid) LIKE '%count_slip_auto_waste%'
+  ) THEN
+    RAISE EXCEPTION 'COUNT SLIP WASTE: stock_issues_source_type_check does not allow count_slip_auto_waste';
+  END IF;
 END;
 $$;
 

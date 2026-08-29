@@ -186,6 +186,13 @@ function getIssueSourceLabel(issue: IssueRecord) {
       : ISSUES_VI.hrmConsumptionSource;
   }
 
+  if (
+    issue.source_type === "count_slip_auto_waste" ||
+    ref?.source === "count_slip_auto_waste"
+  ) {
+    return ISSUES_VI.countSlipAutoWasteSource;
+  }
+
   return issue.source_type === "manual" || !issue.source_type
     ? ISSUES_VI.manualSource
     : issue.source_type;

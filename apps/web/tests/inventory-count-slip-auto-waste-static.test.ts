@@ -95,3 +95,33 @@ test("branch and desktop review clients provide seamless 1-touch auto waste on a
     "the shared shortage evidence surface must collect a photo per line",
   );
 });
+
+test("stock_issues_source_type_check allows count_slip_auto_waste and UI displays proper Vietnamese source label", () => {
+  const migrationSource = readdirSync(join(repoRoot, "supabase/migrations"))
+    .filter((name) => name.endsWith(".sql"))
+    .map((name) => readRepoFile(`supabase/migrations/${name}`))
+    .join("\n");
+  const issueDetailSource = readRepoFile(
+    "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx",
+  );
+  const messagesSource = readRepoFile(
+    "apps/web/lib/messages/inventory.ts",
+  );
+
+  assert.match(
+    migrationSource,
+    /'count_slip_auto_waste'/,
+    "migrations must permit 'count_slip_auto_waste' in stock_issues_source_type_check",
+  );
+  assert.match(
+    issueDetailSource,
+    /count_slip_auto_waste/,
+    "issue detail client must handle count_slip_auto_waste source type",
+  );
+  assert.match(
+    messagesSource,
+    /countSlipAutoWasteSource:\s*"Kiểm đếm giao ca"/,
+    "messages catalog must include countSlipAutoWasteSource label",
+  );
+});
+
