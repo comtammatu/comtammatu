@@ -30,6 +30,7 @@ export type PendingWasteRow = {
   createdBy: string;
   createdByName: string;
   isSelfCreated: boolean;
+  canBypassSelfApproval: boolean;
   monetary: { totalValue: number } | null;
   notes: string | null;
   items: PendingWasteItem[];

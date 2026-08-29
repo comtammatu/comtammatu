@@ -3,10 +3,12 @@
 
 import { useEffect, useState, useTransition } from "react";
 import type { TransitionStartFunction } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   CircleCheck as IconCircleCheck,
   CirclePlus as IconCirclePlus,
+  Clock as IconClock,
   FileText as IconFileText,
   Pencil as IconPencil,
   Trash as IconTrash,
@@ -632,6 +634,23 @@ export function BranchStockIssueDetailClient({
               >
                 <IconCircleCheck data-icon="inline-start" />
                 {surface.confirmAction}
+              </Button>
+            }
+          />
+        ) : isAwaitingApproval ? (
+          <AppDetailFooter
+            sticky
+            trailing={
+              <Button
+                size="touch-lg"
+                variant="outline"
+                className="w-full sm:w-auto"
+                render={
+                  <Link href={`/br/${issue.branchId}/stock/waste-approvals`} />
+                }
+              >
+                <IconClock className="size-4" data-icon="inline-start" />
+                {issuesCopy.pendingApprovalQueueAction}
               </Button>
             }
           />

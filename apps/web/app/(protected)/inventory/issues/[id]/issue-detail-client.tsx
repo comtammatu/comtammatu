@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import {
   CircleCheck as IconCircleCheck,
   CirclePlus as IconCirclePlus,
+  Clock as IconClock,
   Pencil as IconPencil,
   Trash as IconTrash,
   X as IconX,
@@ -694,6 +696,20 @@ export function IssueDetailClient({
                 {surface.confirmAction}
               </Button>
             </>
+          }
+        />
+      ) : isAwaitingApproval ? (
+        <AppDetailFooter
+          sticky
+          trailing={
+            <Button
+              size={isTouchLayout ? "touch-lg" : "default"}
+              variant="outline"
+              render={<Link href="/inventory/waste/approvals" />}
+            >
+              <IconClock className="size-5" />
+              {ISSUES_VI.pendingApprovalQueueAction}
+            </Button>
           }
         />
       ) : null}

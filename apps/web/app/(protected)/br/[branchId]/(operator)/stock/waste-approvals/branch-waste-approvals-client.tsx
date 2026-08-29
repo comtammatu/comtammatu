@@ -105,7 +105,7 @@ export function BranchWasteApprovalsClient({
     row: PendingWasteRow,
     decision: "approved" | "rejected",
   ) {
-    if (row.isSelfCreated) {
+    if (row.isSelfCreated && !row.canBypassSelfApproval) {
       toast.error("Không thể tự duyệt phiếu của mình (4-eye principle)");
       return;
     }
@@ -253,7 +253,9 @@ export function BranchWasteApprovalsClient({
                       </ItemDescription>
                       {row.isSelfCreated ? (
                         <Badge variant="outline" className="w-fit text-xs">
-                          {copy.selfCreatedBadge}
+                          {row.canBypassSelfApproval
+                            ? "Tự tạo (Được duyệt)"
+                            : copy.selfCreatedBadge}
                         </Badge>
                       ) : null}
                     </ItemContent>
@@ -289,7 +291,8 @@ export function BranchWasteApprovalsClient({
           footerClassName="shrink-0 border-t"
           footer={
             selectedRow ? (
-              selectedRow.isSelfCreated ? (
+              selectedRow.isSelfCreated &&
+              !selectedRow.canBypassSelfApproval ? (
                 <Button
                   type="button"
                   variant="outline"

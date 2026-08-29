@@ -206,7 +206,7 @@ function BranchStockDoors({ basePath }: { basePath: string }) {
     },
     {
       key: "waste",
-      href: `${basePath}/stock/waste`,
+      href: `${basePath}/stock/issues`,
       icon: Trash2,
       title: stockCopy.branchDoorWaste,
       meta: stockCopy.branchDoorWasteMeta,

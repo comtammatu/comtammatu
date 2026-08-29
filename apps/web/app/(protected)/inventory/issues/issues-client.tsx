@@ -169,10 +169,7 @@ export function IssuesClient({
               ? "waste"
               : "manual";
 
-  const issueDetailHref = (item: IssueRow) =>
-    item.type === "writeoff"
-      ? `/inventory/issues/${item.id}`
-      : `${detailBasePath}/${item.id}`;
+  const issueDetailHref = (item: IssueRow) => `${detailBasePath}/${item.id}`;
 
   const getIssueRowActions = (item: IssueRow): RowActionItem[] => [
     {

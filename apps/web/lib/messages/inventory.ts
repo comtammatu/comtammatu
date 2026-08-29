@@ -1620,6 +1620,7 @@ export const inventory = {
     sectionLineCount: (count: number) => `${formatCount(count)} dòng`,
     draftAutoSaveHint: "Phiếu nháp tự lưu khi thêm, sửa hoặc xóa dòng.",
     pendingApprovalStatus: "Chờ duyệt",
+    pendingApprovalQueueAction: "Hàng chờ duyệt hao hụt",
     pendingApprovalReadOnlyHint:
       "Phiếu hao hụt đang chờ người khác duyệt; không thể chỉnh sửa hoặc xác nhận tại đây.",
     pendingApprovalActionHint:

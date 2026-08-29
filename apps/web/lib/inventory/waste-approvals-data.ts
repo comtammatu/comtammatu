@@ -49,6 +49,13 @@ export async function loadWasteApprovalsData({
       routeBranchId ?? null,
       PERMISSION_KEYS.INVENTORY_WASTE_APPROVE,
     ));
+  const isOwner = claims.user_role === "owner";
+  const canBypassSelfApproval =
+    isOwner ||
+    (await currentUserHasPermission(
+      null,
+      PERMISSION_KEYS.ACCOUNTING_PERIOD_REOPEN,
+    ));
   const monetaryAccess = await loadInventoryMonetaryAccess(claims.user_role);
   const itemReadClient = monetaryAccess.valuation
     ? (monetaryAccess.client ?? supabase)
@@ -296,6 +303,7 @@ export async function loadWasteApprovalsData({
       createdBy: creatorId,
       createdByName: creatorMap.get(creatorId) ?? STAFF_VI.long,
       isSelfCreated: creatorId === currentUserId,
+      canBypassSelfApproval,
       monetary: monetaryAccess.valuation ? { totalValue } : null,
       notes: issue.notes ?? null,
       items: mappedItems,

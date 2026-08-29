@@ -166,7 +166,7 @@ function WasteApprovalCard({
   const copy = messages.inventory.waste.approvals;
 
   function handleDecision(decision: "approved" | "rejected") {
-    if (row.isSelfCreated) {
+    if (row.isSelfCreated && !row.canBypassSelfApproval) {
       toast.error(toastSelfApproveForbidden);
       return;
     }
@@ -219,7 +219,9 @@ function WasteApprovalCard({
           {row.createdByName}
           {row.isSelfCreated ? (
             <Badge className="ml-2 border border-warning/20 bg-warning/15 text-xs text-warning">
-              {copy.selfCreatedBadge}
+              {row.canBypassSelfApproval
+                ? "Tự tạo (Được duyệt)"
+                : copy.selfCreatedBadge}
             </Badge>
           ) : null}
           {" • "}
@@ -329,7 +331,10 @@ function WasteApprovalCard({
           variant="outline"
           size={controlSize}
           onClick={() => setRejectOpen(true)}
-          disabled={pending !== null || row.isSelfCreated}
+          disabled={
+            pending !== null ||
+            (row.isSelfCreated && !row.canBypassSelfApproval)
+          }
           className="flex-1 text-destructive sm:flex-initial"
         >
           {pending === "rejected" ? <Spinner /> : <IconX className="size-4" />}
@@ -338,7 +343,10 @@ function WasteApprovalCard({
         <Button
           size={controlSize}
           onClick={() => handleDecision("approved")}
-          disabled={pending !== null || row.isSelfCreated}
+          disabled={
+            pending !== null ||
+            (row.isSelfCreated && !row.canBypassSelfApproval)
+          }
           className="flex-1 font-semibold sm:flex-initial"
         >
           {pending === "approved" ? (
