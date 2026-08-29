@@ -309,6 +309,12 @@ export const issueLineRpcFallback: RpcErrorFallback = {
 
 export const issueConfirmRpcMappings: readonly RpcErrorMapping[] = [
   {
+    match: includesAny("writeoff_pending_approval"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_STATUS,
+    userMessage:
+      "Phiếu hao hụt đang chờ duyệt. Hãy xử lý tại hàng chờ duyệt hao hụt.",
+  },
+  {
     match: includesAny("insufficient_stock"),
     errorCode: INVENTORY_ERROR_CODES.INSUFFICIENT_STOCK,
     userMessage: "Tồn kho không đủ để xuất. Kiểm tra lại số lượng.",

@@ -35,6 +35,7 @@ export async function IssueDetailPageContent({
       issue_number: string;
       issue_type: string;
       status: string;
+      approval_status: string;
       notes: string | null;
       issued_at: string;
       branch_id: number;

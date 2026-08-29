@@ -1619,6 +1619,11 @@ export const inventory = {
     kpiDate: "Ngày",
     sectionLineCount: (count: number) => `${formatCount(count)} dòng`,
     draftAutoSaveHint: "Phiếu nháp tự lưu khi thêm, sửa hoặc xóa dòng.",
+    pendingApprovalStatus: "Chờ duyệt",
+    pendingApprovalReadOnlyHint:
+      "Phiếu hao hụt đang chờ người khác duyệt; không thể chỉnh sửa hoặc xác nhận tại đây.",
+    pendingApprovalActionHint:
+      "Phiếu hao hụt đang chờ duyệt. Hãy xử lý tại hàng chờ duyệt hao hụt.",
     finalizedReadOnlyHint: "Phiếu đã chốt, dữ liệu chỉ còn ở chế độ xem.",
     addLinePrefixed: (term: string) => `Thêm ${term}`,
     emptyLinesDraftTitle: "Chưa có dòng nguyên liệu",

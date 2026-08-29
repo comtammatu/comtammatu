@@ -34,6 +34,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { AppBackLink, AppEmptyState } from "@/components/surface";
 import { StatusBadge, getStatusBadgeMeta } from "@/components/status-badge";
+import { messages } from "@lib/messages";
 import {
   BranchOperatorPage,
   BranchOperatorPanel,
@@ -200,7 +201,18 @@ export function BranchStockIssuesListClient({
                         </ItemTitle>
                         <StatusBadge
                           domain="inventory"
-                          value={issue.status}
+                          value={
+                            issue.type === "writeoff" &&
+                            issue.approvalStatus === "pending"
+                              ? "pending"
+                              : issue.status
+                          }
+                          label={
+                            issue.type === "writeoff" &&
+                            issue.approvalStatus === "pending"
+                              ? messages.inventory.issues.pendingApprovalStatus
+                              : undefined
+                          }
                           size="sm"
                         />
                       </div>

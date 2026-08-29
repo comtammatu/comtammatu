@@ -141,7 +141,7 @@ export async function fetchStockIssues(opts?: {
   let query = supabase
     .from("stock_issues")
     .select(
-      "id, issue_number, issue_type, status, notes, issued_at, branch_id, source_location_id, target_location_id, source_type, source_ref, branches ( id, name, branch_kind )",
+      "id, issue_number, issue_type, status, approval_status, notes, issued_at, branch_id, source_location_id, target_location_id, source_type, source_ref, branches ( id, name, branch_kind )",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("issued_at", { ascending: false })
@@ -300,7 +300,7 @@ export async function fetchStockIssueDetail(
   let issueQuery = supabase
     .from("stock_issues")
     .select(
-      "id, issue_number, issue_type, status, notes, issued_at, branch_id, source_location_id, target_location_id, source_type, source_ref, branches ( id, name, branch_kind )",
+      "id, issue_number, issue_type, status, approval_status, notes, issued_at, branch_id, source_location_id, target_location_id, source_type, source_ref, branches ( id, name, branch_kind )",
     )
     .eq("id", id.data)
     .eq("tenant_id", claims.tenant_id);
@@ -554,11 +554,21 @@ export async function confirmStockIssue(
   const { supabase, claims } = ctx;
   const { data: issue } = await supabase
     .from("stock_issues")
-    .select("branch_id, issue_type")
+    .select("branch_id, issue_type, approval_status")
     .eq("id", id.data)
     .eq("tenant_id", claims.tenant_id)
     .maybeSingle();
   if (!issue) return { success: false, error: "Không tìm thấy phiếu xuất." };
+  if (
+    issue.issue_type === "writeoff" &&
+    issue.approval_status === "pending"
+  ) {
+    return {
+      success: false,
+      error: messages.inventory.issues.pendingApprovalActionHint,
+      errorCode: INVENTORY_ERROR_CODES.INVALID_STATUS,
+    };
+  }
 
   const { data, error } = await supabase.rpc("confirm_stock_issue", {
     p_issue_id: id.data,

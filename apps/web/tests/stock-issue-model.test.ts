@@ -16,6 +16,7 @@ function makeIssue(patch: Partial<BranchStockIssue> = {}): BranchStockIssue {
     code: "HH-001",
     type: "writeoff",
     status: "draft",
+    approvalStatus: "not_required",
     issuedAt: "2026-07-10T03:00:00.000Z",
     notes: null,
     branchId: 2,
@@ -104,6 +105,19 @@ test("Branch issue confirmation requires authority, a draft, and lines", () => {
   assert.equal(
     canConfirmBranchStockIssue({
       issue: makeIssue({ status: "confirmed" }),
+      lines: [makeLine()],
+      canManage: true,
+    }),
+    false,
+  );
+});
+
+test("Pending writeoff approval cannot use the generic issue confirmation", () => {
+  const pendingApprovalIssue = makeIssue({ approvalStatus: "pending" });
+
+  assert.equal(
+    canConfirmBranchStockIssue({
+      issue: pendingApprovalIssue,
       lines: [makeLine()],
       canManage: true,
     }),

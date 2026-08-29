@@ -102,6 +102,7 @@ type IssueRecord = {
   issue_number: string;
   issue_type: string;
   status: string;
+  approval_status: string;
   notes: string | null;
   issued_at: string;
   branch_id: number;
@@ -227,11 +228,18 @@ export function IssueDetailClient({
   const [editingLine, setEditingLine] = useState<IssueLine | null>(null);
   const isTouchLayout = useIsMobile(1024);
   const isDraft = issue.status === "draft";
+  const isAwaitingApproval =
+    issue.issue_type === "writeoff" && issue.approval_status === "pending";
+  const isEditable = isDraft && !isAwaitingApproval;
   const surface = getIssueSurface(
     issue.issue_type,
     issue.branches?.branch_kind ?? null,
   );
-  const statusBadge = getStatusBadgeMeta("inventory", issue.status);
+  const statusValue = isAwaitingApproval ? "pending" : issue.status;
+  const statusBadge = getStatusBadgeMeta("inventory", statusValue);
+  const statusLabel = isAwaitingApproval
+    ? ISSUES_VI.pendingApprovalStatus
+    : statusBadge.label;
   const issueBranchName =
     issue.branches?.name ?? ISSUES_VI.branchRef(issue.branch_id);
   const lineAmount = useCallback(
@@ -427,7 +435,7 @@ export function IssueDetailClient({
       header: "",
       className: "text-center",
       render: (line) =>
-        isDraft ? (
+        isEditable ? (
           <div className="flex justify-center gap-1">
             <Button
               type="button"
@@ -513,12 +521,14 @@ export function IssueDetailClient({
             title={tTerm("ingredientsList")}
             description={ISSUES_VI.sectionLineCount(lines.length)}
             headerHint={
-              isDraft
-                ? ISSUES_VI.draftAutoSaveHint
-                : ISSUES_VI.finalizedReadOnlyHint
+              isAwaitingApproval
+                ? ISSUES_VI.pendingApprovalReadOnlyHint
+                : isDraft
+                  ? ISSUES_VI.draftAutoSaveHint
+                  : ISSUES_VI.finalizedReadOnlyHint
             }
             action={
-              isDraft ? (
+              isEditable ? (
                 <Button
                   onClick={() => {
                     setEditingLine(null);
@@ -558,12 +568,12 @@ export function IssueDetailClient({
               <AppEmptyState
                 mode="no-data"
                 title={
-                  isDraft
+                  isEditable
                     ? ISSUES_VI.emptyLinesDraftTitle
                     : ISSUES_VI.emptyLinesTitle(surface.label)
                 }
                 description={
-                  isDraft
+                  isEditable
                     ? ISSUES_VI.emptyLinesDraftDescription(
                         surface.confirmAction.toLowerCase(),
                       )
@@ -579,7 +589,7 @@ export function IssueDetailClient({
                 mobileCardRender={(item) => (
                   <IssueLineMobileCard
                     item={item}
-                    isDraft={isDraft}
+                    isDraft={isEditable}
                     isPending={isPending}
                     amount={lineAmount(item)}
                     canViewMonetary={canViewMonetary}
@@ -655,7 +665,7 @@ export function IssueDetailClient({
         </div>
       </div>
 
-      {isDraft ? (
+      {isEditable ? (
         <AppDetailFooter
           sticky={isTouchLayout}
           leading={
@@ -723,8 +733,8 @@ export function IssueDetailClient({
             <span className="font-mono">{issue.issue_number}</span>
             <StatusBadge
               domain="inventory"
-              value={issue.status}
-              label={statusBadge.label}
+              value={statusValue}
+              label={statusLabel}
             />
           </div>
         }

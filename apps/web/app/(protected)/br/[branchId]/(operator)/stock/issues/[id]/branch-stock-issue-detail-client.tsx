@@ -353,9 +353,17 @@ export function BranchStockIssueDetailClient({
     null,
   );
   const surface = issueSurface(issue.type);
-  const statusBadge = getStatusBadgeMeta("inventory", issue.status);
   const isDraft = issue.status === "draft";
-  const canEdit = isDraft && data.canManage;
+  const isAwaitingApproval =
+    issue.type === "writeoff" && issue.approvalStatus === "pending";
+  const statusBadge = getStatusBadgeMeta(
+    "inventory",
+    isAwaitingApproval ? "pending" : issue.status,
+  );
+  const statusLabel = isAwaitingApproval
+    ? issuesCopy.pendingApprovalStatus
+    : statusBadge.label;
+  const canEdit = isDraft && !isAwaitingApproval && data.canManage;
   const canConfirm = canConfirmBranchStockIssue({
     issue,
     lines,
@@ -456,7 +464,7 @@ export function BranchStockIssueDetailClient({
     <BranchOperatorPage
       title={issue.code}
       description={formatVNDateTime(issue.issuedAt)}
-      badge={{ children: statusBadge.label, variant: statusBadge.variant }}
+      badge={{ children: statusLabel, variant: statusBadge.variant }}
       back={<AppBackLink href={`${stockBasePath}/issues`} />}
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
@@ -464,9 +472,11 @@ export function BranchStockIssueDetailClient({
           <BranchOperatorPanel
             title={issuesCopy.linesTab}
             description={
-              isDraft
-                ? issuesCopy.draftAutoSaveHint
-                : issuesCopy.finalizedReadOnlyHint
+              isAwaitingApproval
+                ? issuesCopy.pendingApprovalReadOnlyHint
+                : isDraft
+                  ? issuesCopy.draftAutoSaveHint
+                  : issuesCopy.finalizedReadOnlyHint
             }
             icon={IconFileText}
             size="sm"
@@ -565,7 +575,7 @@ export function BranchStockIssueDetailClient({
           <BranchOperatorPanel title={issuesCopy.overviewTab} size="sm">
             <BranchOperatorStatusStrip
               items={[
-                { label: FORM_VI.status, value: statusBadge.label },
+                { label: FORM_VI.status, value: statusLabel },
                 {
                   label: issuesCopy.businessKindLabel,
                   value: issueTypeLabel(issue.type),

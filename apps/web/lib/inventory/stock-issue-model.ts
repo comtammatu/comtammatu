@@ -11,6 +11,7 @@ export type BranchStockIssue = {
   code: string;
   type: BranchStockIssueType;
   status: BranchStockIssueStatus;
+  approvalStatus: string;
   issuedAt: string;
   notes: string | null;
   branchId: number;
@@ -96,5 +97,10 @@ export function canConfirmBranchStockIssue({
   lines,
   canManage,
 }: Pick<BranchStockIssueDetail, "issue" | "lines" | "canManage">) {
-  return canManage && issue.status === "draft" && lines.length > 0;
+  return (
+    canManage &&
+    issue.status === "draft" &&
+    !(issue.type === "writeoff" && issue.approvalStatus === "pending") &&
+    lines.length > 0
+  );
 }

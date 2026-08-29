@@ -104,7 +104,7 @@ test("Issue DETAIL leads with KPI strip and StatusBadge title", () => {
   );
   assert.match(
     client,
-    /StatusBadge[\s\S]*domain="inventory"[\s\S]*value=\{issue\.status\}/,
+    /StatusBadge[\s\S]*domain="inventory"[\s\S]*value=\{statusValue\}/,
     "issue detail: code + StatusBadge title",
   );
   assert.match(
