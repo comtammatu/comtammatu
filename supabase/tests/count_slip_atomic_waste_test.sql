@@ -60,6 +60,10 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'COUNT SLIP WASTE: stock_issue_items_reason_code_check does not allow discrepancy';
   END IF;
+
+  IF v_definition NOT LIKE '%approval_status = ''approved''%' THEN
+    RAISE EXCEPTION 'COUNT SLIP WASTE: count slip auto-waste is not automatically approved';
+  END IF;
 END;
 $$;
 

@@ -30,6 +30,7 @@ type ConsumptionIssueRow = {
   issue_number: string | null;
   issue_type: string;
   status: string;
+  approval_status?: string | null;
   notes: string | null;
   issued_at: string;
   branch_id: number;
@@ -87,6 +88,7 @@ function mapManualIssue(row: ConsumptionIssueRow): BranchStockIssue | null {
     code: row.issue_number ?? `PXK-${row.id}`,
     type: row.issue_type,
     status: toBranchStockIssueStatus(row.status),
+    approvalStatus: row.approval_status ?? "not_required",
     issuedAt: row.issued_at,
     notes: row.notes,
     branchId: row.branch_id,

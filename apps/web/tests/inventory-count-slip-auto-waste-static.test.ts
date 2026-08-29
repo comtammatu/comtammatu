@@ -154,3 +154,21 @@ test("stock_issue_items_reason_code_check and shared labels support count slip s
   }
 });
 
+test("approve_inventory_count_slip_with_waste auto-approves and confirms shortage waste", () => {
+  const migrationSource = readdirSync(join(repoRoot, "supabase/migrations"))
+    .filter((name) => name.endsWith(".sql"))
+    .map((name) => readRepoFile(`supabase/migrations/${name}`))
+    .join("\n");
+
+  assert.match(
+    migrationSource,
+    /approval_status\s*=\s*'approved'/,
+    "count slip waste approval must directly approve the generated waste issue",
+  );
+  assert.match(
+    migrationSource,
+    /execute_post_writeoff_movements/,
+    "count slip waste approval must post writeoff stock movements immediately",
+  );
+});
+
