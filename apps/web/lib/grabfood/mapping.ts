@@ -230,8 +230,11 @@ export interface TransformedOrderForRpc {
   merchantId?: string;
   customerNote: string | null;
   paymentMethod: "platform";
-  subtotal: number;
-  totalAmount: number;
+  grossItemTotal: number;
+  itemDiscountTotal: number;
+  freeItemDiscountTotal: number;
+  posTotalAmount: number;
+  customerPayableAmount: number | null;
   items: Array<{
     menu_item_id: number;
     item_name: string;
@@ -241,7 +244,7 @@ export interface TransformedOrderForRpc {
     sides: Array<{ name: string; price: number; quantity: number; side_item_id: number }>;
     subtotal: number;
     note: string | null;
-    discount_type?: "pct" | "vnd" | null;
+    discount_type?: "vnd" | null;
     discount_value?: number | null;
     discount_note?: string | null;
   }>;
@@ -377,6 +380,7 @@ export function transformGrabOrderPayload(
   grabOrder: GrabOrderRaw,
   dbItems: Array<{ id: number; name: string; base_price: number }>,
 ): TransformedOrderForRpc {
+  let freeItemDiscountTotal = 0;
   const items = (grabOrder.itemInfo?.items || []).map((gi) => {
     const matched = matchMenuItem(gi, dbItems);
 
@@ -427,13 +431,17 @@ export function transformGrabOrderPayload(
         ? structuredDiscountAmounts.reduce((sum, amount) => sum + amount, 0)
         : null;
 
-    let discountType: "pct" | "vnd" | undefined;
+    let discountType: "vnd" | undefined;
     let discountValue: number | undefined;
     let discountNote: string | undefined;
 
     if (freeItemDiscount) {
-      discountType = "pct";
-      discountValue = 100;
+      discountType = "vnd";
+      discountValue = Math.min(
+        subtotal,
+        structuredDiscountAmount ?? subtotal,
+      );
+      freeItemDiscountTotal += discountValue;
       discountNote =
         freeItemDiscount.discountName?.trim() ||
         "Khuyến mãi tặng kèm Grab (0đ)";
@@ -447,8 +455,9 @@ export function transformGrabOrderPayload(
         parseMonetaryAmount(gi.fare?.priceFloat);
 
       if (promotionalPrice === 0) {
-        discountType = "pct";
-        discountValue = 100;
+        discountType = "vnd";
+        discountValue = subtotal;
+        freeItemDiscountTotal += discountValue;
         discountNote = "Khuyến mãi tặng kèm Grab (0đ)";
       } else if (promotionalPrice !== null && promotionalPrice > 0 && promotionalPrice < unitPrice) {
         discountType = "vnd";
@@ -483,19 +492,17 @@ export function transformGrabOrderPayload(
 
   const calculatedItemsSubtotal = items.reduce((acc, i) => acc + i.subtotal, 0);
   const calculatedItemsDiscount = items.reduce((acc, i) => {
-    if (i.discount_type === "pct" && i.discount_value === 100) return acc + i.subtotal;
     if (i.discount_type === "vnd" && i.discount_value) return acc + i.discount_value;
     return acc;
   }, 0);
 
-  const rawSubtotalParsed = parseMonetaryAmount(grabOrder.fare?.subTotalDisplay);
-  const rawTotalParsed = parseMonetaryAmount(grabOrder.fare?.totalDisplay);
-
-  const subtotal = rawSubtotalParsed !== null ? rawSubtotalParsed : calculatedItemsSubtotal;
-  const totalAmount =
-    rawTotalParsed !== null
-      ? rawTotalParsed
-      : Math.max(0, calculatedItemsSubtotal - calculatedItemsDiscount);
+  const customerPayableAmount = parseMonetaryAmount(
+    grabOrder.fare?.totalDisplay,
+  );
+  const posTotalAmount = Math.max(
+    0,
+    calculatedItemsSubtotal - calculatedItemsDiscount,
+  );
 
   return {
     orderId: grabOrder.orderID,
@@ -504,10 +511,28 @@ export function transformGrabOrderPayload(
     merchantId: grabOrder.merchant?.ID,
     customerNote: null, // Delivery platform orders do not use order-level notes (kitchen notes belong on item rows)
     paymentMethod: "platform",
-    subtotal,
-    totalAmount,
+    grossItemTotal: calculatedItemsSubtotal,
+    itemDiscountTotal: calculatedItemsDiscount,
+    freeItemDiscountTotal,
+    posTotalAmount,
+    customerPayableAmount,
     items,
   };
+}
+
+export function getGrabOrderLevelFreeItemDiscountTotal(
+  grabOrder: GrabOrderRaw,
+): number {
+  const discounts =
+    grabOrder.fare?.orderLevelDiscounts ??
+    grabOrder.orderLevelDiscounts ??
+    grabOrder.promotions ??
+    [];
+
+  return discounts.reduce((total, discount) => {
+    if (discount.discountType?.toLowerCase() !== "freeitem") return total;
+    return total + (parseMonetaryAmount(discount.discountAmountDisplay) ?? 0);
+  }, 0);
 }
 
 export { resolveBranchStaffId } from "../delivery/staff";

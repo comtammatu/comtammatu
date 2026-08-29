@@ -191,3 +191,27 @@ test("Grab relay projector preserves array-shaped item promotions", () => {
     ],
   );
 });
+
+test("Grab relay worker identifies its contract version and displays the stored POS total", () => {
+  const backgroundSource = readFileSync(
+    new URL(
+      "../../../tools/grab-pos-relay-extension/background.js",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const manifest = JSON.parse(
+    readFileSync(
+      new URL(
+        "../../../tools/grab-pos-relay-extension/manifest.json",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  ) as { version?: string };
+
+  assert.equal(manifest.version, "1.1.8");
+  assert.match(backgroundSource, /relay_version: RELAY_VERSION/);
+  assert.match(backgroundSource, /responseJson\.total_amount/);
+  assert.match(backgroundSource, /res\.status === 426/);
+});

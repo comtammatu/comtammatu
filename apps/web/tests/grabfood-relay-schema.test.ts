@@ -2,11 +2,14 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   grabRelaySchema,
+  isGrabRelayVersionSupported,
+  MIN_GRAB_RELAY_VERSION,
   summarizeGrabRelayValidationIssues,
 } from "../lib/grabfood/relay-schema";
 
 function makeExtensionPayload() {
   return {
+    relay_version: MIN_GRAB_RELAY_VERSION,
     branch_id: 3,
     merchant_id: "5-C8DTE75GUGJ3JT",
     order: {
@@ -112,6 +115,14 @@ test("Grab order envelopes require an explicit branch while ping stays unscoped"
 
   assert.equal(grabRelaySchema.safeParse({ ping: true }).success, true);
   assert.equal(grabRelaySchema.safeParse(withoutBranch).success, false);
+});
+
+test("Grab relay versions fail closed below the item-discount contract", () => {
+  assert.equal(isGrabRelayVersionSupported(undefined), false);
+  assert.equal(isGrabRelayVersionSupported("1.1.7"), false);
+  assert.equal(isGrabRelayVersionSupported(MIN_GRAB_RELAY_VERSION), true);
+  assert.equal(isGrabRelayVersionSupported("1.2.0"), true);
+  assert.equal(isGrabRelayVersionSupported("invalid"), false);
 });
 
 test("Grab relay validation diagnostics expose paths and codes without payload values", () => {

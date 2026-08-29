@@ -5,6 +5,11 @@ const RELAY_TAB_URL = 'https://merchant.grab.com/';
 const RELAY_TAB_QUERY = { url: 'https://merchant.grab.com/*' };
 const WATCHDOG_ALARM = 'relay-tab-watchdog';
 const QUEUE_ALARM = 'relay-queue-worker';
+const RELAY_VERSION = chrome.runtime.getManifest().version;
+
+function formatVndAmount(value) {
+  return `${Math.round(value).toLocaleString('vi-VN')}₫`;
+}
 
 async function ensureRelayTab() {
   try {
@@ -122,8 +127,11 @@ async function processRelayQueue() {
             order: item.order,
             branch_id: item.branchId,
             merchant_id: item.merchantId,
+            relay_version: RELAY_VERSION,
           }),
         });
+
+        const responseJson = await res.json().catch(() => ({}));
 
         if (res.ok) {
           console.log(`[Grab POS Relay] Successfully delivered order ${item.displayID} to POS backend`);
@@ -133,7 +141,9 @@ async function processRelayQueue() {
             orderID: item.orderID,
             displayID: item.displayID,
             items: item.order.itemInfo?.items?.map((i) => `${i.quantity}x ${i.name}`).join(', ') || '1 phần ăn',
-            total: item.order.fare?.totalDisplay || item.order.fare?.subTotalDisplay || '0₫',
+            total: Number.isFinite(responseJson.total_amount)
+              ? formatVndAmount(responseJson.total_amount)
+              : item.order.fare?.subTotalDisplay || '0₫',
             time: new Date().toLocaleTimeString('vi-VN'),
             status: 'synced',
           });
@@ -143,12 +153,11 @@ async function processRelayQueue() {
         }
 
         // Handle error responses
-        const errJson = await res.json().catch(() => ({}));
-        const errMsg = errJson.error || `HTTP ${res.status}`;
+        const errMsg = responseJson.error || `HTTP ${res.status}`;
         item.lastError = errMsg;
 
-        // Terminal errors: 400 Bad Request, 401 Auth, 403 Forbidden, 422 Unprocessable (unmapped item / total mismatch)
-        if (res.status === 400 || res.status === 401 || res.status === 403 || res.status === 422) {
+        // Terminal errors require operator action or corrected provider data.
+        if (res.status === 400 || res.status === 401 || res.status === 403 || res.status === 422 || res.status === 426) {
           console.error(`[Grab POS Relay] Terminal error for order ${item.displayID}: ${errMsg}`);
           item.isTerminal = true;
 
@@ -156,7 +165,7 @@ async function processRelayQueue() {
             orderID: item.orderID,
             displayID: item.displayID,
             items: item.order.itemInfo?.items?.map((i) => `${i.quantity}x ${i.name}`).join(', ') || '1 phần ăn',
-            total: item.order.fare?.totalDisplay || item.order.fare?.subTotalDisplay || '0₫',
+            total: item.order.fare?.subTotalDisplay || '0₫',
             time: new Date().toLocaleTimeString('vi-VN'),
             status: 'error',
             error: errMsg,

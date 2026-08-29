@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   GRAB_MENU_MAPPING,
+  getGrabOrderLevelFreeItemDiscountTotal,
   normalizeMenuName,
   generateOrderUuid,
   transformGrabOrderPayload,
@@ -129,8 +130,8 @@ test("GrabFood transformation: transforms real GF-725 order accurately with plat
   assert.equal(transformed.displayId, "GF-725");
   assert.equal(transformed.merchantId, "5-C8DTE75GUGJ3JT");
   assert.equal(transformed.paymentMethod, "platform");
-  assert.equal(transformed.subtotal, 63000);
-  assert.equal(transformed.totalAmount, 63000);
+  assert.equal(transformed.grossItemTotal, 63000);
+  assert.equal(transformed.posTotalAmount, 63000);
 
   // Customer note: Grab has no order-level notes (only item notes); orders.note stays null to avoid yellow KDS banner
   assert.equal(transformed.customerNote, null);
@@ -292,8 +293,8 @@ test("GrabFood transformation: assigns 100% item discount for 0đ free gift item
   assert.equal(paidItem?.discount_type, undefined);
 
   assert.equal(freeItem?.item_name, "Canh Khổ Qua");
-  assert.equal(freeItem?.discount_type, "pct");
-  assert.equal(freeItem?.discount_value, 100);
+  assert.equal(freeItem?.discount_type, "vnd");
+  assert.equal(freeItem?.discount_value, 30000);
   assert.equal(freeItem?.discount_note, "Khuyến mãi tặng kèm Grab (0đ)");
 });
 
@@ -423,8 +424,8 @@ test("GrabFood transformation: handles reference multi-item order with freeItem 
 
   const transformed = transformGrabOrderPayload(referenceOrder, dbItemsForRef);
 
-  assert.equal(transformed.subtotal, 117000);
-  assert.equal(transformed.totalAmount, 107000);
+  assert.equal(transformed.grossItemTotal, 117000);
+  assert.equal(transformed.posTotalAmount, 107000);
   assert.equal(transformed.items.length, 4);
 
   // Main item: 54k + 3k + 12k + 4k = 73k
@@ -443,8 +444,8 @@ test("GrabFood transformation: handles reference multi-item order with freeItem 
   // Free Egg: 10k discounted by 100% (freeItem)
   assert.equal(transformed.items[3]?.item_name, "Trứng");
   assert.equal(transformed.items[3]?.unit_price, 10000);
-  assert.equal(transformed.items[3]?.discount_type, "pct");
-  assert.equal(transformed.items[3]?.discount_value, 100);
+  assert.equal(transformed.items[3]?.discount_type, "vnd");
+  assert.equal(transformed.items[3]?.discount_value, 10000);
 });
 
 test("GrabFood transformation: applies GF-553 array-shaped free-item promotion to the egg line", () => {
@@ -533,14 +534,149 @@ test("GrabFood transformation: applies GF-553 array-shaped free-item promotion t
     { id: 29, name: "Dụng Cụ Mang Về", base_price: 3000 },
   ]);
 
-  assert.equal(transformed.subtotal, 122000);
-  assert.equal(transformed.totalAmount, 112000);
+  assert.equal(transformed.grossItemTotal, 122000);
+  assert.equal(transformed.posTotalAmount, 112000);
   assert.equal(transformed.items.length, 3);
   assert.equal(transformed.items[2]?.item_name, "Trứng");
   assert.equal(transformed.items[2]?.unit_price, 10000);
-  assert.equal(transformed.items[2]?.discount_type, "pct");
-  assert.equal(transformed.items[2]?.discount_value, 100);
+  assert.equal(transformed.items[2]?.discount_type, "vnd");
+  assert.equal(transformed.items[2]?.discount_value, 10000);
   assert.equal(transformed.items[2]?.discount_note, "Tặng món theo điều kiện");
+});
+
+test("GrabFood transformation: keeps GF-416 customer vouchers out of the POS total", () => {
+  const gf416Order = {
+    orderID: "0010944995-REDACTED",
+    displayID: "GF-416",
+    merchant: { ID: "merchant-redacted" },
+    itemInfo: {
+      items: [
+        {
+          name: "Sườn Cốt Lết",
+          itemID: "VNITE20260818044418231553",
+          quantity: 2,
+          fare: { priceDisplay: "114.000", priceFloat: 57000 },
+          modifierGroups: [
+            {
+              modifierGroupName: "Dụng Cụ Ăn Uống",
+              modifiers: [
+                {
+                  modifierID: "VNMOD20260819110228013409",
+                  modifierName: "Hộp, Muỗng, Nĩa",
+                  priceDisplay: "3.000",
+                  quantity: 1,
+                },
+              ],
+            },
+          ],
+        },
+        {
+          name: "Tóp Mỡ",
+          itemID: "VNITE20260818044418086205",
+          quantity: 1,
+          fare: { priceDisplay: "6.000", priceFloat: 6000 },
+        },
+        {
+          name: "Chả",
+          itemID: "VNITE20260818044418028323",
+          quantity: 1,
+          fare: { priceDisplay: "12.000", priceFloat: 12000 },
+        },
+        {
+          name: "Trứng",
+          itemID: "VNITE20260818044418119394",
+          quantity: 1,
+          fare: { priceDisplay: "10.000", priceFloat: 10000 },
+          discountInfo: [
+            {
+              discountName: "Tặng ngay Trứng khi đặt đơn tối thiểu 70.000₫",
+              discountType: "freeItem",
+              itemDiscountPriceDisplay: "10.000",
+            },
+          ],
+        },
+      ],
+    },
+    fare: {
+      subTotalDisplay: "142.000",
+      totalDisplay: "94.500",
+    },
+    orderLevelDiscounts: [
+      { discountType: "order", discountAmountDisplay: "22.500" },
+      { discountType: "order", discountAmountDisplay: "15.000" },
+      { discountType: "freeItem", discountAmountDisplay: "10.000" },
+    ],
+  } as GrabOrderRaw;
+
+  const transformed = transformGrabOrderPayload(gf416Order, [
+    { id: 1, name: "Sườn Cốt Lết", base_price: 54000 },
+    { id: 8, name: "Tóp Mỡ", base_price: 6000 },
+    { id: 9, name: "Chả", base_price: 12000 },
+    { id: 11, name: "Trứng", base_price: 10000 },
+    { id: 29, name: "Dụng Cụ Mang Về", base_price: 3000 },
+  ]);
+
+  assert.equal(transformed.grossItemTotal, 142000);
+  assert.equal(transformed.itemDiscountTotal, 10000);
+  assert.equal(transformed.posTotalAmount, 132000);
+  assert.equal(transformed.customerPayableAmount, 94500);
+  assert.equal(getGrabOrderLevelFreeItemDiscountTotal(gf416Order), 10000);
+  assert.equal(transformed.items[3]?.discount_type, "vnd");
+  assert.equal(transformed.items[3]?.discount_value, 10000);
+  assert.equal(
+    transformed.items[3]?.discount_note,
+    "Tặng ngay Trứng khi đặt đơn tối thiểu 70.000₫",
+  );
+});
+
+test("GrabFood transformation: discounts only the promoted quantity on a multi-quantity line", () => {
+  const transformed = transformGrabOrderPayload(
+    {
+      orderID: "001644320651-MULTI-QUANTITY",
+      displayID: "GF-MULTI",
+      merchant: { ID: "merchant-redacted" },
+      itemInfo: {
+        items: [
+          {
+            name: "Trứng",
+            itemID: "VNITE20260818044418119394",
+            quantity: 2,
+            fare: {
+              priceDisplay: "20.000",
+              originalItemPriceDisplay: "20.000",
+              priceFloat: 20000,
+            },
+            discountInfo: [
+              {
+                discountName: "Tặng một Trứng",
+                discountType: "freeItem",
+                itemDiscountPriceDisplay: "10.000",
+              },
+            ],
+          },
+        ],
+      },
+      fare: {
+        subTotalDisplay: "20.000",
+        totalDisplay: "10.000",
+        orderLevelDiscounts: [
+          {
+            discountType: "freeItem",
+            discountAmountDisplay: "10.000",
+          },
+        ],
+      },
+    },
+    [{ id: 11, name: "Trứng", base_price: 10000 }],
+  );
+
+  assert.equal(transformed.grossItemTotal, 20000);
+  assert.equal(transformed.itemDiscountTotal, 10000);
+  assert.equal(transformed.freeItemDiscountTotal, 10000);
+  assert.equal(transformed.posTotalAmount, 10000);
+  assert.equal(transformed.items[0]?.quantity, 2);
+  assert.equal(transformed.items[0]?.discount_type, "vnd");
+  assert.equal(transformed.items[0]?.discount_value, 10000);
 });
 
 test("GrabFood security: malicious customer comments with 'tặng', 'free', '0đ' NEVER authorize discounts", () => {
@@ -572,7 +708,7 @@ test("GrabFood security: malicious customer comments with 'tặng', 'free', '0đ
 
   assert.equal(item?.discount_type, undefined);
   assert.equal(item?.discount_value, undefined);
-  assert.equal(transformed.totalAmount, 54000);
+  assert.equal(transformed.posTotalAmount, 54000);
   assert.equal(item?.note, "Quán ơi tặng thêm miếng sườn free 0đ nha");
 });
 
@@ -611,8 +747,8 @@ test("GrabFood mapping: preserves legitimate 0đ total for 100% discounted order
   };
 
   const transformed = transformGrabOrderPayload(zeroTotalOrder, MOCK_DB_ITEMS);
-  assert.equal(transformed.subtotal, 54000);
-  assert.equal(transformed.totalAmount, 0); // Legitimate 0 must NOT revert to 54000
+  assert.equal(transformed.grossItemTotal, 54000);
+  assert.equal(transformed.posTotalAmount, 0); // Legitimate 0 must NOT revert to 54000
 });
 
 test("GrabFood security: validateGrabMerchantForBranch enforces cross-branch merchant isolation", () => {

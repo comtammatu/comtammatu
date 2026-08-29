@@ -1,5 +1,39 @@
 import { z } from "zod";
 
+export const MIN_GRAB_RELAY_VERSION = "1.1.8";
+
+function parseRelayVersion(value: string): [number, number, number] | null {
+  const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(value.trim());
+  if (!match) return null;
+
+  const parts = match.slice(1).map(Number);
+  const major = parts[0];
+  const minor = parts[1];
+  const patch = parts[2];
+  if (major === undefined || minor === undefined || patch === undefined) {
+    return null;
+  }
+  return [major, minor, patch];
+}
+
+export function isGrabRelayVersionSupported(
+  value: string | undefined,
+): boolean {
+  if (!value) return false;
+  const current = parseRelayVersion(value);
+  const minimum = parseRelayVersion(MIN_GRAB_RELAY_VERSION);
+  if (!current || !minimum) return false;
+
+  for (let index = 0; index < current.length; index += 1) {
+    const currentPart = current[index];
+    const minimumPart = minimum[index];
+    if (currentPart === undefined || minimumPart === undefined) return false;
+    if (currentPart > minimumPart) return true;
+    if (currentPart < minimumPart) return false;
+  }
+  return true;
+}
+
 function optionalProviderValue<T extends z.ZodType>(schema: T) {
   return schema.nullish().transform((value) => value ?? undefined);
 }
@@ -123,6 +157,7 @@ const grabOrderPayloadSchema = z
 export const grabRelaySchema = z
   .object({
     ping: z.boolean().optional(),
+    relay_version: optionalProviderString(20),
     branch_id: z.coerce.number().int().positive().optional(),
     merchant_id: z.string().max(100).optional(),
     order: grabOrderPayloadSchema.optional(),

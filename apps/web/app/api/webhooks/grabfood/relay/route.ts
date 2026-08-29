@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import {
+  getGrabOrderLevelFreeItemDiscountTotal,
   transformGrabOrderPayload,
   resolveBranchStaffId,
   validateGrabMerchantForBranch,
@@ -9,6 +10,8 @@ import {
 } from "@lib/grabfood/mapping";
 import {
   grabRelaySchema,
+  isGrabRelayVersionSupported,
+  MIN_GRAB_RELAY_VERSION,
   summarizeGrabRelayValidationIssues,
 } from "@lib/grabfood/relay-schema";
 
@@ -143,6 +146,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!isGrabRelayVersionSupported(parsed.data.relay_version)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Tiện ích Grab POS Relay đã cũ — cập nhật lên phiên bản ${MIN_GRAB_RELAY_VERSION}`,
+        },
+        { status: 426, headers: CORS_HEADERS },
+      );
+    }
+
     const grabOrder = parsed.data.order as unknown as GrabOrderRaw;
     const requestedBranchId = parsed.data.branch_id;
     const merchantId = parsed.data.merchant_id || grabOrder.merchant?.ID;
@@ -257,6 +270,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const orderLevelFreeItemTotal =
+      getGrabOrderLevelFreeItemDiscountTotal(grabOrder);
+    if (orderLevelFreeItemTotal > transformed.freeItemDiscountTotal) {
+      console.warn("[Grab POS Relay] incomplete free-item evidence", {
+        displayId: grabOrder.displayID,
+        relayVersion: parsed.data.relay_version,
+        orderLevelFreeItemTotal,
+        mappedFreeItemTotal: transformed.freeItemDiscountTotal,
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Thiếu chi tiết khuyến mãi món từ Grab — cập nhật tiện ích rồi tải lại trang",
+        },
+        { status: 422, headers: CORS_HEADERS },
+      );
+    }
+
     // 10. Find staff profile to act as created_by (prioritize branch_manager -> cashier -> branch staff -> HQ)
     const createdBy = await resolveBranchStaffId(
       supabase,
@@ -315,29 +347,36 @@ export async function POST(request: NextRequest) {
       (rpcResult as { order_number?: string })?.order_number ||
       `GH-${grabOrder.displayID}`;
 
-    // 12. Verify stored database total amount against accepted authoritative total
-    if (orderId && transformed.totalAmount >= 0) {
-      const { data: createdOrder } = await supabase
+    // 12. A successful create_order call has already committed the order. Any
+    // best-effort read below is diagnostic only and must not turn that commit
+    // into a negative acknowledgement that causes a misleading retry.
+    let storedTotalAmount = transformed.posTotalAmount;
+    if (orderId) {
+      const { data: createdOrder, error: createdOrderError } = await supabase
         .from("orders")
-        .select("total_amount")
+        .select("total_amount, item_discount_amount")
         .eq("id", orderId)
         .single();
 
-      if (
-        createdOrder &&
-        createdOrder.total_amount !== transformed.totalAmount
-      ) {
-        console.warn(
-          `[Grab POS Relay] Database total (${createdOrder.total_amount}) does not match authoritative Grab total (${transformed.totalAmount}) for order ${grabOrder.displayID}`,
-        );
-        return NextResponse.json(
-          {
-            success: false,
-            error:
-              "Tổng tiền trên POS không khớp với số tiền thực tế của sàn GrabFood",
-          },
-          { status: 422, headers: CORS_HEADERS },
-        );
+      if (createdOrderError) {
+        console.warn("[Grab POS Relay] post-create total read failed", {
+          displayId: grabOrder.displayID,
+          code: createdOrderError.code,
+        });
+      } else if (createdOrder) {
+        storedTotalAmount = createdOrder.total_amount;
+        if (
+          createdOrder.total_amount !== transformed.posTotalAmount ||
+          createdOrder.item_discount_amount !== transformed.itemDiscountTotal
+        ) {
+          console.warn("[Grab POS Relay] stored POS totals differ from mapped item totals", {
+            displayId: grabOrder.displayID,
+            storedTotalAmount: createdOrder.total_amount,
+            mappedPosTotalAmount: transformed.posTotalAmount,
+            storedItemDiscountTotal: createdOrder.item_discount_amount,
+            mappedItemDiscountTotal: transformed.itemDiscountTotal,
+          });
+        }
       }
     }
 
@@ -353,7 +392,8 @@ export async function POST(request: NextRequest) {
         order_number: orderNumber,
         display_id: grabOrder.displayID,
         items_count: transformed.items.length,
-        total_amount: transformed.totalAmount,
+        total_amount: storedTotalAmount,
+        customer_payable_amount: transformed.customerPayableAmount,
         merchant_id: merchantId,
       },
       { headers: CORS_HEADERS },
