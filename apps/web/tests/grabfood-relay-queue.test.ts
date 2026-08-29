@@ -210,7 +210,7 @@ test("Grab relay worker identifies its contract version and displays the stored 
     ),
   ) as { version?: string };
 
-  assert.equal(manifest.version, "1.1.8");
+  assert.equal(manifest.version, "1.1.9");
   assert.match(backgroundSource, /relay_version: RELAY_VERSION/);
   assert.match(backgroundSource, /responseJson\.total_amount/);
   assert.match(backgroundSource, /res\.status === 426/);

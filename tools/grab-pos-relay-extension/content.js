@@ -1,6 +1,6 @@
 // content.js - Content script running in merchant.grab.com
 (function () {
-  const extVersion = chrome.runtime.getManifest()?.version || '1.1.7';
+  const extVersion = chrome.runtime.getManifest()?.version || '1.1.9';
   console.log(`[Grab POS Relay v${extVersion}] Content script active`);
 
   // Inject injected.js into page context
@@ -69,12 +69,35 @@
     );
   }
 
+  const VIETNAM_BUSINESS_DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+
+  function getVietnamBusinessDateKey(value = new Date()) {
+    const parts = VIETNAM_BUSINESS_DATE_FORMATTER.formatToParts(value);
+    const datePart = (type) => parts.find((part) => part.type === type)?.value;
+    return `${datePart('year')}-${datePart('month')}-${datePart('day')}`;
+  }
+
   // Cache item and modifier state independently. Only item entries carry stock.
   const itemStatusCache = new Map(); // entity:id -> { status, stockSignature? }
   const pendingItemSyncs = new Map(); // operation:itemId -> { requestId, signature, desiredValue }
   let grabSessionExpired = false;
   let itemStatusPollInFlight = false;
   let forceSyncQueued = false;
+  let itemStatusBusinessDateKey = getVietnamBusinessDateKey();
+
+  function refreshItemStatusBusinessDate() {
+    const nextBusinessDateKey = getVietnamBusinessDateKey();
+    if (nextBusinessDateKey === itemStatusBusinessDateKey) return false;
+
+    itemStatusBusinessDateKey = nextBusinessDateKey;
+    itemStatusCache.clear();
+    return true;
+  }
 
   function normalizeStockPayload(currentStock) {
     if (currentStock == null) {
@@ -130,6 +153,9 @@
   // Poll POS Backend for Menu Limits / Item Status changes
   async function pollPosItemStatus(forceAll = false) {
     if (grabSessionExpired) return;
+    if (refreshItemStatusBusinessDate()) {
+      forceAll = true;
+    }
     if (itemStatusPollInFlight) {
       forceSyncQueued = forceSyncQueued || forceAll;
       return;

@@ -51,6 +51,17 @@ function loadNormalizeGrabIds(): (
   )() as (value: unknown, fallback: unknown, prefix: string) => string[];
 }
 
+function loadGetVietnamBusinessDateKey(): (value: Date) => string {
+  const functionSource = sourceBlock(
+    contentSource,
+    "const VIETNAM_BUSINESS_DATE_FORMATTER",
+    "// Cache item and modifier state independently",
+  );
+  return Function(
+    `"use strict"; ${functionSource}; return getVietnamBusinessDateKey;`,
+  )() as (value: Date) => string;
+}
+
 test("Grab item status sync matches the portal mutation contract", () => {
   const statusMutation = sourceBlock(
     injectedSource,
@@ -146,6 +157,28 @@ test("Grab relay allowlists, deduplicates, and backfills availability target IDs
   assert.deepEqual(
     normalizeGrabIds(undefined, "VNITE20260818044418061788", "VNITE"),
     ["VNITE20260818044418061788"],
+  );
+});
+
+test("Grab stock status forces a full resend at the Vietnam business-date rollover", () => {
+  const getVietnamBusinessDateKey = loadGetVietnamBusinessDateKey();
+  const pollSource = sourceBlock(
+    contentSource,
+    "async function pollPosItemStatus",
+    "// Listen to messages from popup",
+  );
+
+  assert.equal(
+    getVietnamBusinessDateKey(new Date("2026-08-29T16:59:59.999Z")),
+    "2026-08-29",
+  );
+  assert.equal(
+    getVietnamBusinessDateKey(new Date("2026-08-29T17:00:00.000Z")),
+    "2026-08-30",
+  );
+  assert.match(
+    pollSource,
+    /if \(refreshItemStatusBusinessDate\(\)\) \{\s*forceAll = true;/,
   );
 });
 
