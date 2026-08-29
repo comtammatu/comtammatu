@@ -6,7 +6,11 @@ import {
   INVENTORY_FEATURE_FLAGS,
   isFeatureEnabledForBranch,
 } from "@/(protected)/inventory/_lib/feature-flags";
-import { parseBranchIdParam } from "@/(protected)/inventory/_lib/inventory-scope";
+import {
+  parseBranchIdParam,
+  resolveInventoryListScope,
+} from "@/(protected)/inventory/_lib/inventory-scope";
+import { getBranchSiteDisplayName } from "@/(protected)/inventory/_lib/branch-site-labels";
 import { getWasteCapStatus } from "@/(protected)/inventory/waste-actions";
 import { AppPage, AppPageHeader, AppEmptyState } from "@/components/surface";
 import type { WasteFormContext } from "@lib/inventory/waste-create-model";
@@ -20,7 +24,7 @@ import { WasteCreateClient } from "./waste-create-client";
 export const instant = false;
 
 interface WasteNewPageContentProps {
-  searchParams?: Promise<{ branch?: string }>;
+  searchParams?: Promise<{ branch?: string | string[] }>;
 }
 
 function renderWasteUnavailable({
@@ -44,22 +48,42 @@ export async function WasteNewPageContent({
   searchParams,
 }: WasteNewPageContentProps) {
   const params = searchParams ? await searchParams : {};
-  const branchId = parseBranchIdParam(params.branch);
+  const explicitBranchId = parseBranchIdParam(params.branch);
 
   const ctx = await getAuthContextWithPermission(
     STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_WRITEOFF,
-    branchId,
+    explicitBranchId,
   );
   if (!ctx) redirect("/");
   const { supabase, claims } = ctx;
 
-  if (branchId === null) {
+  const scope = await resolveInventoryListScope(supabase, claims, {
+    queryBranch: params.branch,
+  });
+
+  const branchId =
+    explicitBranchId ??
+    scope.selectedBranchId ??
+    scope.defaultBranchId ??
+    scope.allowedBranches[0]?.id ??
+    null;
+
+  if (
+    branchId === null ||
+    scope.outOfScope ||
+    scope.allowedBranches.length === 0
+  ) {
     return renderWasteUnavailable({
       title: INVENTORY_VI.branchRequiredTitle,
       description: INVENTORY_VI.branchRequiredWasteHint,
     });
   }
+
+  if (explicitBranchId === null) {
+    redirect(`/inventory/waste/new?branch=${branchId}`);
+  }
+
   const fallbackHref = `/inventory/consumption?view=waste&branch=${branchId}`;
 
   const flagEnabled = await isFeatureEnabledForBranch(
@@ -129,6 +153,10 @@ export async function WasteNewPageContent({
       name: branchRes.data.name,
       kind: branchRes.data.branch_kind ?? "branch",
     },
+    branches: scope.allowedBranches.map((b) => ({
+      id: b.id,
+      name: getBranchSiteDisplayName(b),
+    })),
     locations: (locationsRes.data ?? []).map((l) => ({
       id: l.id,
       name: l.name,
@@ -173,7 +201,7 @@ export async function WasteNewPageContent({
 export default async function WasteNewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ branch?: string }>;
+  searchParams: Promise<{ branch?: string | string[] }>;
 }) {
   return <WasteNewPageContent searchParams={searchParams} />;
 }

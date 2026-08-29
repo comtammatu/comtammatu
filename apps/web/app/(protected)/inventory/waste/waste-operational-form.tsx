@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Plus as IconPlus, Trash2 as IconTrash } from "lucide-react";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
@@ -52,7 +53,9 @@ export function WasteOperationalForm({
   cancelHref: string;
   onCreated: (issueId: number) => void;
 }) {
+  const router = useRouter();
   const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+  const showBranchPicker = (context.branches?.length ?? 0) > 1;
 
   const copy = messages.inventory.waste.operational;
   const nextLineId = useRef(1);
@@ -195,6 +198,33 @@ export function WasteOperationalForm({
     <div className="flex flex-col gap-4">
       {context.capStatus.requiresReview || evidenceRequired ? (
         <NoteCallout tone="warning">{copy.priceReviewHint}</NoteCallout>
+      ) : null}
+
+      {showBranchPicker ? (
+        <Field>
+          <FieldLabel>{copy.branchLabel}</FieldLabel>
+          <Select
+            value={String(context.branch.id)}
+            onValueChange={(value) => {
+              router.push(`/inventory/waste/new?branch=${value}`);
+            }}
+          >
+            <SelectTrigger size={isTouchLayout ? "touch" : "default"}>
+              <SelectValue placeholder={copy.branchPlaceholder} />
+            </SelectTrigger>
+            <SelectContent>
+              {context.branches?.map((branch) => (
+                <SelectItem
+                  key={branch.id}
+                  value={String(branch.id)}
+                  size={isTouchLayout ? "touch" : "default"}
+                >
+                  {branch.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
       ) : null}
 
       {showLocationPicker ? (

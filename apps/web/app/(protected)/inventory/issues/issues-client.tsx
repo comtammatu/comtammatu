@@ -38,7 +38,6 @@ import {
   INVENTORY_VI,
   PRODUCT_VI,
 } from "@comtammatu/shared/messages";
-import { messages } from "@lib/messages";
 import { IssueCreateDialog } from "./issue-create-dialog";
 import {
   buildIssuesExportCsv,
@@ -79,7 +78,7 @@ export function IssuesClient({
   canViewMonetary,
   branches,
   defaultBranchId,
-  writeRequiresSitePick = false,
+  writeRequiresSitePick: _writeRequiresSitePick = false,
   recordedBranchId: initialRecordedBranchId,
   recordedEndDate: initialRecordedEndDate,
   recordedIsLimited,
@@ -406,18 +405,11 @@ export function IssuesClient({
   const resolvedCreateHref =
     createHref && defaultBranchId != null
       ? `${createHref}?branch=${defaultBranchId}`
-      : writeRequiresSitePick
-        ? undefined
-        : createHref;
+      : createHref;
 
   const issueActions =
     resolvedView === "waste" && resolvedCreateHref ? (
       <Button size="lg" render={<Link href={resolvedCreateHref} />}>
-        <IconPlus className="size-4" />
-        {INVENTORY_VI.createWasteTitle}
-      </Button>
-    ) : resolvedView === "waste" && writeRequiresSitePick ? (
-      <Button size="lg" type="button" disabled title={messages.controlSurface.scopeControl.pickSite}>
         <IconPlus className="size-4" />
         {INVENTORY_VI.createWasteTitle}
       </Button>

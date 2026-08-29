@@ -2465,6 +2465,8 @@ export const inventory = {
         "Ghi số lượng thực tế; hệ thống tự tính giá trị nội bộ.",
       priceReviewHint:
         "Cần Kế toán kiểm tra giá. Nhân viên vận hành chỉ cần hoàn tất số lượng, lý do và ảnh bằng chứng khi hệ thống yêu cầu.",
+      branchLabel: "Chi nhánh",
+      branchPlaceholder: "Chọn chi nhánh",
       locationLabel: "Vị trí xuất kho",
       locationPlaceholder: "Chọn vị trí kho",
       noLocationAvailable: "Chi nhánh chưa có kho đang hoạt động.",

@@ -22,6 +22,7 @@ export type WasteFormContext = {
     shiftKey: string;
     requiresReview: boolean;
   };
+  branches?: Array<{ id: number; name: string }>;
 };
 
 export type WasteLineState = {
