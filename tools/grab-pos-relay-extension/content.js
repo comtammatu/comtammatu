@@ -1,6 +1,6 @@
 // content.js - Content script running in merchant.grab.com
 (function () {
-  const extVersion = chrome.runtime.getManifest()?.version || '1.1.6';
+  const extVersion = chrome.runtime.getManifest()?.version || '1.1.7';
   console.log(`[Grab POS Relay v${extVersion}] Content script active`);
 
   // Inject injected.js into page context
@@ -171,24 +171,39 @@
             const grabModifierIds = normalizeGrabIds(item.grab_modifier_ids, null, 'VNMOD');
             if (grabItemIds.length === 0 && grabModifierIds.length === 0) continue;
 
-            const currentGrabStatus =
-              item.grab_status || (item.available_status === 2 ? 'UNAVAILABLE_TODAY' : 'AVAILABLE');
+            const itemAvailableStatus = item.item_available_status ?? item.available_status;
+            const itemGrabStatus =
+              item.item_grab_status ||
+              item.grab_status ||
+              (itemAvailableStatus === 3
+                ? 'UNAVAILABLE_INDEFINITELY'
+                : itemAvailableStatus === 7
+                  ? 'HIDDEN'
+                  : itemAvailableStatus === 2
+                    ? 'UNAVAILABLE_TODAY'
+                    : 'AVAILABLE');
+            const modifierAvailableStatus =
+              item.modifier_available_status ??
+              (item.is_disabled || item.available_to_sell === 0 ? 2 : 1);
+            const modifierGrabStatus =
+              item.modifier_grab_status ||
+              (modifierAvailableStatus === 2 ? 'UNAVAILABLE_TODAY' : 'AVAILABLE');
             const currentStock = item.available_to_sell;
 
             for (const grabId of grabItemIds) {
               const cacheKey = `item:${grabId}`;
               const prev = itemStatusCache.get(cacheKey);
 
-              if (forceAll || !prev || prev.status !== currentGrabStatus) {
-                console.log(`[Grab POS Relay] Item status sync for ${item.name}: ${prev?.status} -> ${currentGrabStatus} (code: ${item.available_status})`);
+              if (forceAll || !prev || prev.status !== itemGrabStatus) {
+                console.log(`[Grab POS Relay] Item status sync for ${item.name}: ${prev?.status} -> ${itemGrabStatus} (code: ${itemAvailableStatus})`);
                 if (
                   queueItemSync(
                     'status',
                     'SET_AVAILABLE_STATUS',
                     grabId,
-                    String(item.available_status ?? currentGrabStatus),
-                    currentGrabStatus,
-                    { availableStatus: item.available_status ?? currentGrabStatus }
+                    String(itemAvailableStatus ?? itemGrabStatus),
+                    itemGrabStatus,
+                    { availableStatus: itemAvailableStatus ?? itemGrabStatus }
                   )
                 ) {
                   syncedCount++;
@@ -200,16 +215,16 @@
               const cacheKey = `modifier:${grabId}`;
               const prev = itemStatusCache.get(cacheKey);
 
-              if (forceAll || !prev || prev.status !== currentGrabStatus) {
-                console.log(`[Grab POS Relay] Modifier status sync for ${item.name}: ${prev?.status} -> ${currentGrabStatus} (code: ${item.available_status})`);
+              if (forceAll || !prev || prev.status !== modifierGrabStatus) {
+                console.log(`[Grab POS Relay] Modifier status sync for ${item.name}: ${prev?.status} -> ${modifierGrabStatus} (code: ${modifierAvailableStatus})`);
                 if (
                   queueItemSync(
                     'modifier-status',
                     'SET_MODIFIER_AVAILABLE_STATUS',
                     grabId,
-                    String(item.available_status ?? currentGrabStatus),
-                    currentGrabStatus,
-                    { availableStatus: item.available_status ?? currentGrabStatus }
+                    String(modifierAvailableStatus),
+                    modifierGrabStatus,
+                    { availableStatus: modifierAvailableStatus }
                   )
                 ) {
                   syncedCount++;

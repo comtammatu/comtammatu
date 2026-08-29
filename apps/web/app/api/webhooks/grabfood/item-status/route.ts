@@ -170,6 +170,15 @@ export async function GET(request: NextRequest) {
       manual_limit_quantity: number | null;
     }
 
+    type GrabItemStatus =
+      | "AVAILABLE"
+      | "UNAVAILABLE_TODAY"
+      | "UNAVAILABLE_INDEFINITELY"
+      | "HIDDEN";
+    type GrabItemAvailableStatus = 1 | 2 | 3 | 7;
+    type GrabModifierStatus = "AVAILABLE" | "UNAVAILABLE_TODAY";
+    type GrabModifierAvailableStatus = 1 | 2;
+
     const rows = (limitsData ?? []) as MenuLimitRawRow[];
 
     const syncItems = rows.map((row) => {
@@ -179,21 +188,35 @@ export async function GET(request: NextRequest) {
         modifierIds: [],
       };
 
-      // Grab availableStatus:
+      // Grab item availableStatus:
       // 1: Có bán (AVAILABLE)
       // 2: Hết hàng hôm nay (UNAVAILABLE_TODAY - tự động mở lại ngày mai)
-      let grabStatus: "AVAILABLE" | "UNAVAILABLE_TODAY";
-      let availableStatus: 1 | 2;
+      // 3: Không về hàng nữa (UNAVAILABLE_INDEFINITELY / DISCONTINUED)
+      // 7: Ẩn giấu (HIDDEN). No current POS availability field infers this.
+      let itemGrabStatus: GrabItemStatus;
+      let itemAvailableStatus: GrabItemAvailableStatus;
 
-      if (row.is_disabled || row.available_to_sell === 0) {
-        // This source row is scoped to today's branch limit. Status 2 lets
-        // Grab restore availability next day even if the relay is offline.
-        grabStatus = "UNAVAILABLE_TODAY";
-        availableStatus = 2;
+      if (row.is_disabled) {
+        itemGrabStatus = "UNAVAILABLE_INDEFINITELY";
+        itemAvailableStatus = 3;
+      } else if (row.available_to_sell === 0) {
+        itemGrabStatus = "UNAVAILABLE_TODAY";
+        itemAvailableStatus = 2;
       } else {
-        // Có bán bình thường
-        grabStatus = "AVAILABLE";
-        availableStatus = 1;
+        itemGrabStatus = "AVAILABLE";
+        itemAvailableStatus = 1;
+      }
+
+      // The observed modifier endpoint currently proves only statuses 1 and 2.
+      // Keep this contract separate so it cannot narrow the item endpoint.
+      let modifierGrabStatus: GrabModifierStatus;
+      let modifierAvailableStatus: GrabModifierAvailableStatus;
+      if (row.is_disabled || row.available_to_sell === 0) {
+        modifierGrabStatus = "UNAVAILABLE_TODAY";
+        modifierAvailableStatus = 2;
+      } else {
+        modifierGrabStatus = "AVAILABLE";
+        modifierAvailableStatus = 1;
       }
 
       const maxStock =
@@ -210,8 +233,13 @@ export async function GET(request: NextRequest) {
         grab_modifier_ids: grabIds.modifierIds,
         is_disabled: row.is_disabled,
         available_to_sell: row.available_to_sell,
-        available_status: availableStatus,
-        grab_status: grabStatus,
+        // Legacy item fields remain during the extension rollout.
+        available_status: itemAvailableStatus,
+        grab_status: itemGrabStatus,
+        item_available_status: itemAvailableStatus,
+        item_grab_status: itemGrabStatus,
+        modifier_available_status: modifierAvailableStatus,
+        modifier_grab_status: modifierGrabStatus,
         stock_capacity: row.stock_capacity,
         max_stock: maxStock,
       };

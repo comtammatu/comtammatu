@@ -87,15 +87,27 @@ test("Grab modifier status sync matches the observed portal mutation contract", 
   assert.doesNotMatch(modifierMutation, /currentStock|enableIms|maxStock/);
 });
 
-test("Grab status backend exposes item and modifier targets from one POS item", () => {
+test("Grab status backend keeps item and modifier availability contracts distinct", () => {
   assert.match(itemStatusRouteSource, /grab_item_ids:/);
   assert.match(itemStatusRouteSource, /grab_modifier_ids:/);
   assert.match(itemStatusRouteSource, /grabId\.startsWith\("VNMOD"\)/);
   assert.match(
     itemStatusRouteSource,
-    /row\.is_disabled\s*\|\|\s*row\.available_to_sell === 0[\s\S]*?availableStatus = 2/,
+    /if \(row\.is_disabled\)[\s\S]*?itemAvailableStatus = 3/,
   );
-  assert.doesNotMatch(itemStatusRouteSource, /availableStatus = 3/);
+  assert.match(
+    itemStatusRouteSource,
+    /else if \(row\.available_to_sell === 0\)[\s\S]*?itemAvailableStatus = 2/,
+  );
+  assert.match(
+    itemStatusRouteSource,
+    /row\.is_disabled\s*\|\|\s*row\.available_to_sell === 0[\s\S]*?modifierAvailableStatus = 2/,
+  );
+  assert.match(itemStatusRouteSource, /item_available_status: itemAvailableStatus/);
+  assert.match(
+    itemStatusRouteSource,
+    /modifier_available_status: modifierAvailableStatus/,
+  );
 });
 
 test("Grab relay queues modifier availability separately from item stock", () => {
@@ -106,6 +118,12 @@ test("Grab relay queues modifier availability separately from item stock", () =>
   assert.doesNotMatch(
     contentSource,
     /SET_ITEM_STOCK[\s\S]{0,300}grab_modifier_ids/,
+  );
+  assert.match(contentSource, /item\.item_available_status \?\? item\.available_status/);
+  assert.match(contentSource, /item\.modifier_available_status/);
+  assert.match(
+    contentSource,
+    /'SET_MODIFIER_AVAILABLE_STATUS'[\s\S]*?availableStatus: modifierAvailableStatus/,
   );
 });
 
