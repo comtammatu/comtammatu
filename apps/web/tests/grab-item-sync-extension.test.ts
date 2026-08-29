@@ -12,6 +12,10 @@ const injectedSource = readFileSync(
   `${repositoryRoot}/tools/grab-pos-relay-extension/injected.js`,
   "utf8",
 );
+const itemStatusRouteSource = readFileSync(
+  `${repositoryRoot}/apps/web/app/api/webhooks/grabfood/item-status/route.ts`,
+  "utf8",
+);
 
 function sourceBlock(source: string, start: string, end: string): string {
   const startIndex = source.indexOf(start);
@@ -32,6 +36,21 @@ function loadNormalizeStockPayload(): (currentStock: unknown) => unknown {
   )() as (currentStock: unknown) => unknown;
 }
 
+function loadNormalizeGrabIds(): (
+  value: unknown,
+  fallback: unknown,
+  prefix: string,
+) => string[] {
+  const functionSource = sourceBlock(
+    contentSource,
+    "function normalizeGrabIds",
+    "// Poll POS Backend",
+  );
+  return Function(
+    `"use strict"; ${functionSource}; return normalizeGrabIds;`,
+  )() as (value: unknown, fallback: unknown, prefix: string) => string[];
+}
+
 test("Grab item status sync matches the portal mutation contract", () => {
   const statusMutation = sourceBlock(
     injectedSource,
@@ -48,6 +67,68 @@ test("Grab item status sync matches the portal mutation contract", () => {
   assert.doesNotMatch(statusMutation, /\bitems:\s*\[/);
   assert.doesNotMatch(statusMutation, /\bavailableAt:/);
   assert.match(statusMutation, /error: 'Invalid available status'/);
+});
+
+test("Grab modifier status sync matches the observed portal mutation contract", () => {
+  const modifierMutation = sourceBlock(
+    injectedSource,
+    "async function setGrabModifierAvailableStatus",
+    "// API Call: Sync Stock / Daily Limit",
+  );
+
+  assert.match(modifierMutation, /itemId\.startsWith\('VNMOD'\)/);
+  assert.match(
+    modifierMutation,
+    /food\/merchant\/v2\/modifiers\/available[\s\S]*?method: 'PUT'/,
+  );
+  assert.match(modifierMutation, /modifierIDs: \[itemId\]/);
+  assert.match(modifierMutation, /availableStatus: statusCode/);
+  assert.match(modifierMutation, /SYNC_MODIFIER_STATUS_RESULT/);
+  assert.doesNotMatch(modifierMutation, /currentStock|enableIms|maxStock/);
+});
+
+test("Grab status backend exposes item and modifier targets from one POS item", () => {
+  assert.match(itemStatusRouteSource, /grab_item_ids:/);
+  assert.match(itemStatusRouteSource, /grab_modifier_ids:/);
+  assert.match(itemStatusRouteSource, /grabId\.startsWith\("VNMOD"\)/);
+  assert.match(
+    itemStatusRouteSource,
+    /row\.is_disabled\s*\|\|\s*row\.available_to_sell === 0[\s\S]*?availableStatus = 2/,
+  );
+  assert.doesNotMatch(itemStatusRouteSource, /availableStatus = 3/);
+});
+
+test("Grab relay queues modifier availability separately from item stock", () => {
+  assert.match(contentSource, /item\.grab_modifier_ids/);
+  assert.match(contentSource, /SET_MODIFIER_AVAILABLE_STATUS/);
+  assert.match(contentSource, /SYNC_MODIFIER_STATUS_RESULT/);
+  assert.match(contentSource, /modifier-status/);
+  assert.doesNotMatch(
+    contentSource,
+    /SET_ITEM_STOCK[\s\S]{0,300}grab_modifier_ids/,
+  );
+});
+
+test("Grab relay allowlists, deduplicates, and backfills availability target IDs", () => {
+  const normalizeGrabIds = loadNormalizeGrabIds();
+
+  assert.deepEqual(
+    normalizeGrabIds(
+      [
+        "VNMOD20260819110119033709",
+        "VNITE20260818044418061788",
+        "VNMOD20260819110119033709",
+        "invalid",
+      ],
+      null,
+      "VNMOD",
+    ),
+    ["VNMOD20260819110119033709"],
+  );
+  assert.deepEqual(
+    normalizeGrabIds(undefined, "VNITE20260818044418061788", "VNITE"),
+    ["VNITE20260818044418061788"],
+  );
 });
 
 test("Grab item stock sync matches the portal IMS mutation contract", () => {

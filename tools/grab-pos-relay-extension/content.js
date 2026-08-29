@@ -1,6 +1,6 @@
 // content.js - Content script running in merchant.grab.com
 (function () {
-  const extVersion = chrome.runtime.getManifest()?.version || '1.1.4';
+  const extVersion = chrome.runtime.getManifest()?.version || '1.1.6';
   console.log(`[Grab POS Relay v${extVersion}] Content script active`);
 
   // Inject injected.js into page context
@@ -69,8 +69,8 @@
     );
   }
 
-  // Cache to track previous status of items
-  const itemStatusCache = new Map(); // grabItemId -> { status, stockSignature }
+  // Cache item and modifier state independently. Only item entries carry stock.
+  const itemStatusCache = new Map(); // entity:id -> { status, stockSignature? }
   const pendingItemSyncs = new Map(); // operation:itemId -> { requestId, signature, desiredValue }
   let grabSessionExpired = false;
   let itemStatusPollInFlight = false;
@@ -122,6 +122,11 @@
     return pending || null;
   }
 
+  function normalizeGrabIds(value, fallback, prefix) {
+    const candidates = Array.isArray(value) ? value : fallback ? [fallback] : [];
+    return [...new Set(candidates.filter((id) => typeof id === 'string' && id.startsWith(prefix)))];
+  }
+
   // Poll POS Backend for Menu Limits / Item Status changes
   async function pollPosItemStatus(forceAll = false) {
     if (grabSessionExpired) return;
@@ -162,34 +167,58 @@
         if (data.success && Array.isArray(data.items)) {
           let syncedCount = 0;
           for (const item of data.items) {
-            if (!item.grab_item_id || !item.grab_item_id.startsWith('VNITE')) continue;
+            const grabItemIds = normalizeGrabIds(item.grab_item_ids, item.grab_item_id, 'VNITE');
+            const grabModifierIds = normalizeGrabIds(item.grab_modifier_ids, null, 'VNMOD');
+            if (grabItemIds.length === 0 && grabModifierIds.length === 0) continue;
 
-            const grabId = item.grab_item_id;
             const currentGrabStatus =
               item.grab_status || (item.available_status === 2 ? 'UNAVAILABLE_TODAY' : 'AVAILABLE');
             const currentStock = item.available_to_sell;
 
-            const prev = itemStatusCache.get(grabId);
+            for (const grabId of grabItemIds) {
+              const cacheKey = `item:${grabId}`;
+              const prev = itemStatusCache.get(cacheKey);
 
-            // 1. If Available Status changed (or forceAll is true)
-            if (forceAll || !prev || prev.status !== currentGrabStatus) {
-              console.log(`[Grab POS Relay] Status sync for ${item.name}: ${prev?.status} -> ${currentGrabStatus} (code: ${item.available_status})`);
-              if (
-                queueItemSync(
-                  'status',
-                  'SET_AVAILABLE_STATUS',
-                  grabId,
-                  String(item.available_status ?? currentGrabStatus),
-                  currentGrabStatus,
-                  { availableStatus: item.available_status ?? currentGrabStatus }
-                )
-              ) {
-                syncedCount++;
+              if (forceAll || !prev || prev.status !== currentGrabStatus) {
+                console.log(`[Grab POS Relay] Item status sync for ${item.name}: ${prev?.status} -> ${currentGrabStatus} (code: ${item.available_status})`);
+                if (
+                  queueItemSync(
+                    'status',
+                    'SET_AVAILABLE_STATUS',
+                    grabId,
+                    String(item.available_status ?? currentGrabStatus),
+                    currentGrabStatus,
+                    { availableStatus: item.available_status ?? currentGrabStatus }
+                  )
+                ) {
+                  syncedCount++;
+                }
               }
             }
 
-            // 2. Grab stock accepts integers from 1 to 9999. Zero is represented
-            // exclusively by availableStatus 2, which was queued above.
+            for (const grabId of grabModifierIds) {
+              const cacheKey = `modifier:${grabId}`;
+              const prev = itemStatusCache.get(cacheKey);
+
+              if (forceAll || !prev || prev.status !== currentGrabStatus) {
+                console.log(`[Grab POS Relay] Modifier status sync for ${item.name}: ${prev?.status} -> ${currentGrabStatus} (code: ${item.available_status})`);
+                if (
+                  queueItemSync(
+                    'modifier-status',
+                    'SET_MODIFIER_AVAILABLE_STATUS',
+                    grabId,
+                    String(item.available_status ?? currentGrabStatus),
+                    currentGrabStatus,
+                    { availableStatus: item.available_status ?? currentGrabStatus }
+                  )
+                ) {
+                  syncedCount++;
+                }
+              }
+            }
+
+            // Modifier availability is binary. Numeric stock is sent only to
+            // standalone Grab items through the IMS endpoint.
             const stockPayload = normalizeStockPayload(currentStock);
             if (stockPayload.kind === 'not-managed' || stockPayload.kind === 'status-only') continue;
             if (stockPayload.kind === 'invalid') {
@@ -197,21 +226,25 @@
               continue;
             }
 
-            if (forceAll || !prev || prev.stockSignature !== stockPayload.signature) {
-              console.log(`[Grab POS Relay] Stock sync for ${item.name}: ${prev?.stockSignature} -> ${stockPayload.signature}`);
-              if (
-                queueItemSync(
-                  'stock',
-                  'SET_ITEM_STOCK',
-                  grabId,
-                  stockPayload.signature,
-                  stockPayload.signature,
-                  {
-                    currentStock: stockPayload.currentStock,
-                  }
-                )
-              ) {
-                syncedCount++;
+            for (const grabId of grabItemIds) {
+              const cacheKey = `item:${grabId}`;
+              const prev = itemStatusCache.get(cacheKey);
+              if (forceAll || !prev || prev.stockSignature !== stockPayload.signature) {
+                console.log(`[Grab POS Relay] Stock sync for ${item.name}: ${prev?.stockSignature} -> ${stockPayload.signature}`);
+                if (
+                  queueItemSync(
+                    'stock',
+                    'SET_ITEM_STOCK',
+                    grabId,
+                    stockPayload.signature,
+                    stockPayload.signature,
+                    {
+                      currentStock: stockPayload.currentStock,
+                    }
+                  )
+                ) {
+                  syncedCount++;
+                }
               }
             }
           }
@@ -266,8 +299,9 @@
     if (type === 'SYNC_STATUS_RESULT' && data?.itemId) {
       const pending = finishItemSync('status', data);
       if (data.success) {
-        const prev = itemStatusCache.get(data.itemId) || {};
-        itemStatusCache.set(data.itemId, {
+        const cacheKey = `item:${data.itemId}`;
+        const prev = itemStatusCache.get(cacheKey) || {};
+        itemStatusCache.set(cacheKey, {
           ...prev,
           status: pending?.desiredValue || data.statusStr || data.availableStatus,
         });
@@ -280,12 +314,31 @@
       return;
     }
 
+    if (type === 'SYNC_MODIFIER_STATUS_RESULT' && data?.itemId) {
+      const pending = finishItemSync('modifier-status', data);
+      if (data.success) {
+        const cacheKey = `modifier:${data.itemId}`;
+        const prev = itemStatusCache.get(cacheKey) || {};
+        itemStatusCache.set(cacheKey, {
+          ...prev,
+          status: pending?.desiredValue || data.statusStr || data.availableStatus,
+        });
+        console.log(`[Grab POS Relay] Status sync confirmed for modifier ${data.itemId}`);
+      } else {
+        const detail = data.error ? `: ${data.error}` : '';
+        console.warn(`[Grab POS Relay] Modifier status sync failed for ${data.itemId} (HTTP ${data.status})${detail}`);
+        updateBadge(`⚠️ Grab từ chối trạng thái món kèm (HTTP ${data.status || 0})`, false);
+      }
+      return;
+    }
+
     // Confirm stock sync success before caching
     if (type === 'SYNC_STOCK_RESULT' && data?.itemId) {
       const pending = finishItemSync('stock', data);
       if (data.success) {
-        const prev = itemStatusCache.get(data.itemId) || {};
-        itemStatusCache.set(data.itemId, {
+        const cacheKey = `item:${data.itemId}`;
+        const prev = itemStatusCache.get(cacheKey) || {};
+        itemStatusCache.set(cacheKey, {
           ...prev,
           stockSignature: pending?.signature || data.stockSignature,
         });

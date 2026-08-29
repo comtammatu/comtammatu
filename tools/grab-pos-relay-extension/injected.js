@@ -560,6 +560,98 @@
     }
   }
 
+  // API Call: Sync Modifier Available Status (1: Có bán, 2: Hết hàng hôm nay)
+  async function setGrabModifierAvailableStatus(requestId, itemId, availableStatus) {
+    if (!itemId || !itemId.startsWith('VNMOD')) {
+      console.warn(`[Grab POS Relay] Skip modifier status sync for invalid ID: ${itemId}`);
+      dispatchOrderEvent('SYNC_MODIFIER_STATUS_RESULT', {
+        requestId,
+        itemId,
+        availableStatus: null,
+        statusStr: null,
+        success: false,
+        status: 0,
+        error: 'Invalid modifier ID format',
+      });
+      return;
+    }
+    if (authExpired) {
+      dispatchOrderEvent('SYNC_MODIFIER_STATUS_RESULT', {
+        requestId,
+        itemId,
+        availableStatus: null,
+        statusStr: null,
+        success: false,
+        status: 401,
+        error: 'Grab session expired',
+      });
+      return;
+    }
+
+    let statusCode;
+    let statusStr;
+    if (availableStatus === 1 || availableStatus === 'AVAILABLE') {
+      statusCode = 1;
+      statusStr = 'AVAILABLE';
+    } else if (
+      availableStatus === 2 ||
+      availableStatus === 'UNAVAILABLE_TODAY' ||
+      availableStatus === 'UNAVAILABLE'
+    ) {
+      statusCode = 2;
+      statusStr = 'UNAVAILABLE_TODAY';
+    } else {
+      dispatchOrderEvent('SYNC_MODIFIER_STATUS_RESULT', {
+        requestId,
+        itemId,
+        availableStatus: null,
+        statusStr: null,
+        success: false,
+        status: 0,
+        error: 'Invalid modifier available status',
+      });
+      return;
+    }
+
+    try {
+      const url = 'https://api.grab.com/food/merchant/v2/modifiers/available';
+      const { response: res, error } = await sendGrabMutation(url, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          ...buildGrabHeaders(),
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          availableStatus: statusCode,
+          modifierIDs: [itemId],
+        }),
+      });
+
+      console.log(`[Grab POS Relay] Updated modifier ${itemId} -> code: ${statusCode} (${statusStr}) (HTTP ${res.status})`);
+      dispatchOrderEvent('SYNC_MODIFIER_STATUS_RESULT', {
+        requestId,
+        itemId,
+        availableStatus: statusCode,
+        statusStr,
+        success: res.ok,
+        status: res.status,
+        error,
+      });
+    } catch (err) {
+      console.error(`[Grab POS Relay] Failed to update modifier status for ${itemId}:`, err);
+      dispatchOrderEvent('SYNC_MODIFIER_STATUS_RESULT', {
+        requestId,
+        itemId,
+        availableStatus: null,
+        statusStr: null,
+        success: false,
+        status: 0,
+        error: String(err),
+      });
+    }
+  }
+
   // API Call: Sync Stock / Daily Limit (IMS)
   async function setGrabItemStock(requestId, itemId, currentStock) {
     if (!itemId || !itemId.startsWith('VNITE')) {
@@ -712,6 +804,10 @@
     if (command === 'SET_AVAILABLE_STATUS') {
       enqueueItemSync(() =>
         setGrabItemAvailableStatus(payload?.requestId, payload?.itemId, payload?.availableStatus)
+      );
+    } else if (command === 'SET_MODIFIER_AVAILABLE_STATUS') {
+      enqueueItemSync(() =>
+        setGrabModifierAvailableStatus(payload?.requestId, payload?.itemId, payload?.availableStatus)
       );
     } else if (command === 'SET_ITEM_STOCK') {
       enqueueItemSync(() =>

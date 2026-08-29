@@ -142,13 +142,22 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Build reverse map of GRAB_MENU_MAPPING: normalizedName -> grabItemId
-    // Only map actual Grab menu items (VNITE...), never modifier options (VNMOD...)
-    const nameToGrabId = new Map<string, string>();
+    // One POS menu item can own both a standalone Grab item and one or more
+    // modifier options. Availability follows the same canonical POS item;
+    // numeric stock remains item-only at the extension boundary.
+    const nameToGrabIds = new Map<
+      string,
+      { itemIds: string[]; modifierIds: string[] }
+    >();
     for (const [grabId, item] of Object.entries(GRAB_MENU_MAPPING) as [string, GrabMappingItem][]) {
-      if (grabId.startsWith("VNITE")) {
-        nameToGrabId.set(normalizeMenuName(item.name), grabId);
-      }
+      const normalized = normalizeMenuName(item.name);
+      const ids = nameToGrabIds.get(normalized) ?? {
+        itemIds: [],
+        modifierIds: [],
+      };
+      if (grabId.startsWith("VNITE")) ids.itemIds.push(grabId);
+      if (grabId.startsWith("VNMOD")) ids.modifierIds.push(grabId);
+      nameToGrabIds.set(normalized, ids);
     }
 
     interface MenuLimitRawRow {
@@ -165,22 +174,20 @@ export async function GET(request: NextRequest) {
 
     const syncItems = rows.map((row) => {
       const normalized = normalizeMenuName(row.item_name);
-      const grabItemId = nameToGrabId.get(normalized) ?? null;
-      
+      const grabIds = nameToGrabIds.get(normalized) ?? {
+        itemIds: [],
+        modifierIds: [],
+      };
+
       // Grab availableStatus:
       // 1: Có bán (AVAILABLE)
       // 2: Hết hàng hôm nay (UNAVAILABLE_TODAY - tự động mở lại ngày mai)
-      // 3: Không về hàng nữa (UNAVAILABLE_INDEFINITELY / DISCONTINUED)
-      // 7: Ẩn giấu (HIDDEN)
-      let grabStatus: "AVAILABLE" | "UNAVAILABLE_TODAY" | "UNAVAILABLE_INDEFINITELY" | "HIDDEN";
-      let availableStatus: 1 | 2 | 3 | 7;
+      let grabStatus: "AVAILABLE" | "UNAVAILABLE_TODAY";
+      let availableStatus: 1 | 2;
 
-      if (row.is_disabled) {
-        // Tắt món tại chi nhánh / không về hàng nữa
-        grabStatus = "UNAVAILABLE_INDEFINITELY";
-        availableStatus = 3;
-      } else if (row.available_to_sell === 0) {
-        // Hết hàng trong ngày hôm nay
+      if (row.is_disabled || row.available_to_sell === 0) {
+        // This source row is scoped to today's branch limit. Status 2 lets
+        // Grab restore availability next day even if the relay is offline.
         grabStatus = "UNAVAILABLE_TODAY";
         availableStatus = 2;
       } else {
@@ -197,7 +204,10 @@ export async function GET(request: NextRequest) {
       return {
         menu_item_id: row.menu_item_id,
         name: row.item_name,
-        grab_item_id: grabItemId,
+        // Keep the singular field during the extension rollout.
+        grab_item_id: grabIds.itemIds[0] ?? null,
+        grab_item_ids: grabIds.itemIds,
+        grab_modifier_ids: grabIds.modifierIds,
         is_disabled: row.is_disabled,
         available_to_sell: row.available_to_sell,
         available_status: availableStatus,
