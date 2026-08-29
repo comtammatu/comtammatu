@@ -97,7 +97,13 @@ import type {
   UnitOption,
 } from "@lib/inventory/types";
 
-import { ACTIONS_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, FORM_VI, INVENTORY_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
+import { Frame } from "@comtammatu/ui/components/frame";
+import { BranchStockThresholdsDialog } from "@/components/inventory/branch-stock-thresholds-dialog";
+import { SmartReorderSheet } from "@/components/inventory/smart-reorder-sheet";
+import type { BranchStockThresholdRow } from "@lib/inventory/branch-thresholds-data";
+import type { ReorderSuggestionItem } from "@lib/inventory/smart-reorder-data";
+import { AlertTriangle as IconAlertTriangle } from "lucide-react";
 
 const stockCopy = messages.inventory.stock;
 const inventoryCommon = messages.inventory.common;
@@ -292,6 +298,8 @@ export function StockClient({
   permissions,
   initialIngredientId = null,
   initialDetailData = null,
+  branchThresholds = [],
+  reorderSuggestions = [],
 }: {
   ingredients: StockIngredient[];
   branchId: number;
@@ -302,6 +310,8 @@ export function StockClient({
   permissions: StockActionPermissions;
   initialIngredientId?: number | null;
   initialDetailData?: StockIngredientDetailData | null;
+  branchThresholds?: BranchStockThresholdRow[];
+  reorderSuggestions?: ReorderSuggestionItem[];
 }) {
   const router = useRouter();
   const canViewMonetary = branchValue != null;
@@ -1026,11 +1036,41 @@ export function StockClient({
         }
         actions={
           <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
+            <BranchStockThresholdsDialog
+              branchId={branchId}
+              initialRows={branchThresholds}
+            />
+            <SmartReorderSheet
+              branchId={branchId}
+              items={reorderSuggestions}
+            />
             {desktopSecondaryActionsDropdown}
             {primaryRequestAction}
           </div>
         }
       />
+
+      {reorderSuggestions.filter((i) => i.isBelowMin).length > 0 ? (
+        <Frame className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-destructive bg-muted">
+          <div className="flex items-center gap-3">
+            <IconAlertTriangle className="size-5 text-destructive shrink-0" />
+            <div>
+              <div className="font-semibold text-sm text-destructive">
+                {INVENTORY_VI.smartReorderBannerTitle}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {INVENTORY_VI.smartReorderBannerDesc(
+                  reorderSuggestions.filter((i) => i.isBelowMin).length,
+                )}
+              </div>
+            </div>
+          </div>
+          <SmartReorderSheet
+            branchId={branchId}
+            items={reorderSuggestions}
+          />
+        </Frame>
+      ) : null}
 
       <AppListFrame
         toolbar={

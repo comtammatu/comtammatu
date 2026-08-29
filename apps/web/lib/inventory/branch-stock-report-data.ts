@@ -26,7 +26,8 @@ export async function loadBranchStockReportData(routeBranchId: number) {
 
   const periodStart = getVNMonthStartDateString();
   const periodEnd = getVNDateString();
-  const [varianceResult, movementResult] = await Promise.all([
+  const { loadWasteAnalyticsData } = await import("./waste-analytics-data");
+  const [varianceResult, movementResult, wasteResult] = await Promise.all([
     fetchConsumptionVariance({
       startDate: periodStart,
       endDate: periodEnd,
@@ -36,6 +37,11 @@ export async function loadBranchStockReportData(routeBranchId: number) {
       startDate: periodStart,
       endDate: periodEnd,
       branchId: routeBranchId,
+    }),
+    loadWasteAnalyticsData({
+      branchId: routeBranchId,
+      startDate: periodStart,
+      endDate: periodEnd,
     }),
   ]);
   const branch = scope.allowedBranches.find(
@@ -51,6 +57,7 @@ export async function loadBranchStockReportData(routeBranchId: number) {
     periodEnd,
     varianceLoadFailed: !varianceResult.success,
     movementLoadFailed: !movementResult.success,
+    wasteAnalytics: wasteResult.data,
     varianceExceptions:
       varianceResult.success && varianceResult.data
         ? getBranchStockVarianceExceptions(varianceResult.data)

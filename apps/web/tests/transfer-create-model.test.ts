@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   buildTransferLinesPayload,
   clampTransferLineForSource,
+  createPrefilledTransferDraftLine,
   getTransferOutboundDestinationOptions,
   getTransferSelectableIngredients,
   getTransferSourceLocationOptions,
@@ -276,3 +277,27 @@ test("changing source clamps the selected active unit to available stock", () =>
     },
   );
 });
+
+test("createPrefilledTransferDraftLine initializes draft line with requested quantity and unit", () => {
+  const prefilled = createPrefilledTransferDraftLine({
+    ingredient,
+    key: "prefill-100",
+    quantity: 15,
+    entryUnitId: 2,
+  });
+
+  assert.equal(prefilled.key, "prefill-100");
+  assert.equal(prefilled.ingredientId, 100);
+  assert.equal(prefilled.quantity, "15");
+  assert.equal(prefilled.unit, "Bao");
+  assert.equal(prefilled.entryUnitId, "2");
+
+  const defaultPrefilled = createPrefilledTransferDraftLine({
+    ingredient,
+    key: "prefill-default",
+  });
+  assert.equal(defaultPrefilled.quantity, "");
+  assert.equal(defaultPrefilled.unit, "kg");
+  assert.equal(defaultPrefilled.entryUnitId, "1");
+});
+

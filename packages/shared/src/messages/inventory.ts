@@ -722,10 +722,69 @@ export const INVENTORY_VI = {
   // central kitchen or at a branch, not central-kitchen-only.
   productionSiteRequired:
     "Chỉ Bếp Trung Tâm hoặc chi nhánh mới được phép tạo lệnh sản xuất.",
-  productionSiteCheckFailed: "Không thể kiểm tra quyền truy cập điểm sản xuất.",
   productionSiteMigrationRequired:
-    "Hệ thống chưa sẵn sàng cho loại điểm vận hành này. Vui lòng liên hệ quản trị.",
+    "Hệ thống đang nâng cấp cấu hình điểm sản xuất.",
+  productionSiteCheckFailed: "Không thể kiểm tra quyền truy cập điểm sản xuất.",
   productionSiteNoneConfigured: "Chưa có điểm sản xuất đang hoạt động.",
+  branchThresholdsTitle: "Định mức tồn an toàn theo kho",
+  branchThresholdsDescription:
+    "Cài đặt định mức an toàn tối thiểu và lượng đặt khuyến nghị riêng cho từng kho / chi nhánh.",
+  branchThresholdsSaveSuccess: "Đã lưu định mức tồn kho thành công",
+  branchThresholdsCustomizedBadge: "Định mức riêng",
+  branchThresholdsGlobalBadge: "Mặc định chuỗi",
+  branchThresholdsItemCount: (count: number) => `${formatCount(count)} mặt hàng`,
+  colMinStockLevel: "Tồn tối thiểu",
+  colReorderQuantity: "Lượng đặt chuẩn",
+  colEffectiveMin: "Định mức áp dụng",
+  autoPlaceholder: "Tự động",
+  uncategorized: "Chưa phân nhóm",
+  unitPrefix: (unit: string) => ` • ĐV: ${unit}`,
+  smartReorderTitle: "Gợi ý Đặt hàng Thông minh",
+  smartReorderDescription:
+    "Tự động phát hiện các mặt hàng dưới định mức an toàn và tạo đơn mua/điều chuyển hàng loạt.",
+  smartReorderBannerTitle: "Cảnh báo thiếu hụt nguyên vật liệu",
+  smartReorderBannerDesc: (count: number) =>
+    `Có ${formatCount(count)} nguyên liệu đang dưới định mức an toàn cần nhập bù đắp.`,
+  smartReorderOpenBtn: "Xem gợi ý đặt hàng",
+  smartReorderSelectAll: "Chọn tất cả",
+  smartReorderSelectedCount: (selected: number, total: number) =>
+    `Đã chọn ${selected} / ${total} mặt hàng`,
+  smartReorderCreateDraftsBtn: (count: number) =>
+    `Tạo ${formatCount(count)} đơn đề xuất`,
+  smartReorderCreatedSuccess: "Đã tạo đơn thành công",
+  smartReorderChannelSupplier: "Mua ngoài (Nhà cung cấp)",
+  smartReorderChannelKitchen: "Bếp Trung Tâm (CK)",
+  smartReorderChannelSupply: "Kho Tổng (CS)",
+  smartReorderAllSafe: "Tất cả nguyên vật liệu đều đang ở mức tồn an toàn.",
+  underThresholdBadge: "Dưới định mức",
+  currentOnHandLabel: "Tồn hiện tại:",
+  minStockLabel: "Định mức an toàn:",
+  suggestedQtyLabel: "Đề xuất:",
+  wasteAnalyticsTitle: "Báo cáo Phân tích Hao hụt",
+  wasteAnalyticsDescription:
+    "Phân tích nguyên nhân hao hụt, ca trực và các mặt hàng tổn thất nhiều nhất",
+  wasteAnalyticsReasonLoss: "Thất thoát / Không rõ",
+  wasteAnalyticsReasonSpoiled: "Hư hỏng / Hết hạn",
+  wasteAnalyticsReasonDiscrepancy: "Lệch sổ / Sai số đếm",
+  wasteAnalyticsReasonOther: "Khác",
+  wasteAnalyticsTopLossTitle: "Nguyên liệu hao hụt nhiều nhất",
+  wasteAnalyticsSelfReviewRate: "Tỷ lệ tự duyệt kiểm toán",
+  wasteAnalyticsTotalLossValue: "Tổng giá trị hao hụt trong kỳ",
+  wasteAnalyticsShiftBreakdown: "Phân bổ hao hụt theo ca trực",
+  wasteAnalyticsNoData: "Chưa có dữ liệu hao hụt trong kỳ này.",
+  wasteAnalyticsInReportPeriod: "Trong kỳ báo cáo",
+  wasteAnalyticsIssueCountTitle: "Số phiếu xuất hủy",
+  wasteAnalyticsIssueCountSubtitle: "Gồm hủy hàng & chênh lệch đếm",
+  wasteAnalyticsSelfApprovedSlips: (approved: number, total: number) =>
+    `${approved} / ${total} phiếu tự duyệt`,
+  wasteAnalyticsItemCountTitle: "Mặt hàng phát sinh hao hụt",
+  wasteAnalyticsItemCountSubtitle: "Nguyên liệu có ghi nhận hao hụt",
+  wasteAnalyticsReasonBreakdown: "Phân bổ nguyên nhân hao hụt",
+  wasteAnalyticsByCost: "Theo chi phí",
+  wasteAnalyticsByShift: "Theo ca làm việc",
+  wasteAnalyticsShiftSlips: (count: number) => `${formatCount(count)} phiếu xuất hủy`,
+  wasteAnalyticsNoShiftData: "Chưa có dữ liệu ca trực",
+  wasteAnalyticsRankByCost: "Xếp hạng theo chi phí tổn thất",
 } as const;
 
 export type InventoryKey = keyof typeof INVENTORY_VI;

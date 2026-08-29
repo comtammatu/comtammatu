@@ -78,8 +78,11 @@ export async function ReportsPageContent() {
   const startDate = getVNMonthStartDateString();
   const endDate = getVNDateString();
   const trendStartDate = getVNMonthSequenceBack(12).at(-1)?.date ?? startDate;
+  const { loadWasteAnalyticsData } = await import(
+    "@lib/inventory/waste-analytics-data"
+  );
 
-  const [apRes, varRes, movementRes, foodCostRes] = await Promise.all([
+  const [apRes, varRes, movementRes, foodCostRes, wasteRes] = await Promise.all([
     showSupplierPayables ? fetchApAging() : Promise.resolve(null),
     fetchConsumptionVariance({ startDate, endDate }),
     fetchStockMovementReport({ startDate, endDate }),
@@ -87,6 +90,7 @@ export async function ReportsPageContent() {
       startDate: trendStartDate,
       endDate,
     }),
+    loadWasteAnalyticsData({ startDate, endDate }),
   ]);
   if (
     !varRes.success ||
@@ -253,6 +257,7 @@ export async function ReportsPageContent() {
       foodCostTrend={foodCostTrend}
       foodCostTrendAvailable={foodCostTrendAvailable}
       foodCostTrendDeltaPct={foodCostTrendDeltaPct}
+      wasteAnalytics={wasteRes.data}
     />
   );
 }

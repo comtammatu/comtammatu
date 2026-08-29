@@ -19,6 +19,7 @@ import {
   buildTransferLinesPayload,
   clampTransferLineForSource,
   createAllAvailableTransferLines,
+  createPrefilledTransferDraftLine,
   createTransferDraftLine,
   getDefaultTransferSourceLocation,
   getTransferSelectableIngredients,
@@ -39,6 +40,12 @@ import { preferPullFromSite } from "./fulfill-site";
 
 export type TransferCreateDirection = "pull" | "outbound";
 
+export interface TransferPrefillLine {
+  ingredientId: number;
+  quantity?: number;
+  entryUnitId?: number;
+}
+
 interface UseTransferCreateControllerOptions {
   branches: BranchForTransfer[];
   ingredients: TransferIngredientOption[];
@@ -48,6 +55,7 @@ interface UseTransferCreateControllerOptions {
   loadFailed: boolean;
   basePath: string;
   initialDirection?: TransferCreateDirection;
+  initialPrefillLine?: TransferPrefillLine;
 }
 
 export function useTransferCreateController({
@@ -59,6 +67,7 @@ export function useTransferCreateController({
   loadFailed,
   basePath,
   initialDirection,
+  initialPrefillLine,
 }: UseTransferCreateControllerOptions) {
   const router = useRouter();
   const policy = useMemo(
@@ -76,7 +85,21 @@ export function useTransferCreateController({
   const [outboundToBranchId, setOutboundToBranchIdState] = useState("");
   const [pullFromBranchId, setPullFromBranchIdState] = useState("");
   const [outboundSourceLocationId, setOutboundSourceLocationId] = useState("");
-  const [draftLines, setDraftLines] = useState<TransferDraftLine[]>([]);
+  const [draftLines, setDraftLines] = useState<TransferDraftLine[]>(() => {
+    if (!initialPrefillLine?.ingredientId) return [];
+    const ingredient = ingredients.find(
+      (item) => item.id === initialPrefillLine.ingredientId,
+    );
+    if (!ingredient) return [];
+    return [
+      createPrefilledTransferDraftLine({
+        ingredient,
+        key: `prefill-${ingredient.id}`,
+        quantity: initialPrefillLine.quantity,
+        entryUnitId: initialPrefillLine.entryUnitId,
+      }),
+    ];
+  });
   const [pickerIngredientId, setPickerIngredientId] = useState("");
   const [isPending, startTransition] = useTransition();
   const isPull = direction === "pull" && policy.canCreatePull;

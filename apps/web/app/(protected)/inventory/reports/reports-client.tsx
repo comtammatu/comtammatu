@@ -27,6 +27,10 @@ import {
 } from "../_lib/ui";
 import { messages } from "@lib/messages";
 
+import { WasteAnalyticsCockpit } from "@/components/inventory/waste-analytics-cockpit";
+import type { WasteAnalyticsSummary } from "@lib/inventory/waste-analytics-data";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
+
 export type ApAgingItem = { range: string; amount: number };
 export type VarianceItem = {
   name: string;
@@ -49,6 +53,7 @@ export type ReportsProps = {
   foodCostTrend: { label: string; value: number }[];
   foodCostTrendAvailable: boolean;
   foodCostTrendDeltaPct: number | null;
+  wasteAnalytics: WasteAnalyticsSummary | null;
 };
 
 export function ReportsClient({
@@ -59,6 +64,7 @@ export function ReportsClient({
   foodCostTrend,
   foodCostTrendAvailable,
   foodCostTrendDeltaPct,
+  wasteAnalytics,
 }: ReportsProps) {
   const maxAP = Math.max(...apAging.map((a) => a.amount), 1);
   const trendLabel =
@@ -297,6 +303,15 @@ export function ReportsClient({
           )}
         </AppSection>
       </div>
+
+      {/* Waste Analytics Cockpit */}
+      <AppSection
+        title={INVENTORY_VI.wasteAnalyticsTitle}
+        icon={<IconChartBar />}
+        contentClassName="flex flex-col gap-4"
+      >
+        <WasteAnalyticsCockpit data={wasteAnalytics} />
+      </AppSection>
 
       {/* Report catalog */}
       <h2 className="font-heading text-base font-semibold tracking-tight">

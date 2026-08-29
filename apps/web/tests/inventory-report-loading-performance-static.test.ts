@@ -14,7 +14,7 @@ test("owner inventory report starts its independent report loaders together", ()
 
   assert.match(
     page,
-    /const \[apRes, varRes, movementRes, foodCostRes\] = await Promise\.all\(\[[\s\S]*fetchApAging\(\)[\s\S]*fetchConsumptionVariance\([\s\S]*fetchStockMovementReport\([\s\S]*fetchFoodCost\(/,
+    /const \[apRes, varRes, movementRes, foodCostRes[\s\S]*?\] = await Promise\.all\(\[[\s\S]*fetchApAging\(\)[\s\S]*fetchConsumptionVariance\([\s\S]*fetchStockMovementReport\([\s\S]*fetchFoodCost\(/,
   );
 });
 

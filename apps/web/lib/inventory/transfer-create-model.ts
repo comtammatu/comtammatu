@@ -336,6 +336,34 @@ export function createTransferDraftLine(
   };
 }
 
+export function createPrefilledTransferDraftLine({
+  ingredient,
+  key,
+  quantity,
+  entryUnitId,
+}: {
+  ingredient: TransferIngredientOption;
+  key: string;
+  quantity?: number | string | null;
+  entryUnitId?: number | string | null;
+}): TransferDraftLine {
+  const units = getIssueUnitOptions(ingredient);
+  const matchedUnit = entryUnitId
+    ? units.find((unit) => String(unit.unitId) === String(entryUnitId))
+    : undefined;
+  const defaultUnit = matchedUnit ?? getDefaultIssueUnit(ingredient);
+  const formattedQuantity =
+    quantity != null && Number(quantity) > 0 ? String(quantity) : "";
+  return {
+    key,
+    ingredientId: ingredient.id,
+    name: ingredient.name,
+    quantity: formattedQuantity,
+    unit: defaultUnit?.label ?? getTransferWarehouseUnit(ingredient),
+    entryUnitId: defaultUnit ? String(defaultUnit.unitId) : "",
+  };
+}
+
 export function getTransferLineIssueUnit(
   line: TransferDraftLine,
   ingredients: TransferIngredientOption[],

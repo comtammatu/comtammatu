@@ -160,6 +160,10 @@ function BranchMovementItem({
   );
 }
 
+import { WasteAnalyticsCockpit } from "@/components/inventory/waste-analytics-cockpit";
+import type { WasteAnalyticsSummary } from "@lib/inventory/waste-analytics-data";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
+
 export function BranchStockReportsClient({
   branchId,
   branchName,
@@ -167,6 +171,7 @@ export function BranchStockReportsClient({
   periodEnd,
   varianceLoadFailed,
   movementLoadFailed,
+  wasteAnalytics,
   varianceExceptions,
   movementHighlights,
 }: {
@@ -176,6 +181,7 @@ export function BranchStockReportsClient({
   periodEnd: string;
   varianceLoadFailed: boolean;
   movementLoadFailed: boolean;
+  wasteAnalytics?: WasteAnalyticsSummary | null;
   varianceExceptions: BranchStockVariance[];
   movementHighlights: BranchStockMovement[];
 }) {
@@ -286,6 +292,18 @@ export function BranchStockReportsClient({
             )}
           </BranchOperatorPanel>
         </div>
+
+        {/* Branch Waste Analytics Cockpit */}
+        <BranchOperatorPanel
+          title={INVENTORY_VI.wasteAnalyticsTitle}
+          description={INVENTORY_VI.wasteAnalyticsDescription}
+          headerHint={periodLabel}
+          icon={IconChartBar}
+          size="sm"
+          contentClassName="gap-3"
+        >
+          <WasteAnalyticsCockpit data={wasteAnalytics ?? null} branchName={branchName} />
+        </BranchOperatorPanel>
       </div>
     </BranchOperatorPage>
   );

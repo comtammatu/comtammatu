@@ -38,6 +38,24 @@ export default async function StockPage({ searchParams }: StockPageProps) {
     });
   }
 
+  let branchThresholds: import("@lib/inventory/branch-thresholds-data").BranchStockThresholdRow[] = [];
+  let reorderSuggestions: import("@lib/inventory/smart-reorder-data").ReorderSuggestionItem[] = [];
+
+  if (branchId != null) {
+    const [{ loadBranchStockThresholdsData }, { loadBranchReorderSuggestionsData }] =
+      await Promise.all([
+        import("@lib/inventory/branch-thresholds-data"),
+        import("@lib/inventory/smart-reorder-data"),
+      ]);
+
+    const [thresholdsRes, reorderRes] = await Promise.all([
+      loadBranchStockThresholdsData(branchId),
+      loadBranchReorderSuggestionsData(branchId),
+    ]);
+    branchThresholds = thresholdsRes.rows;
+    reorderSuggestions = reorderRes.allItems;
+  }
+
   return (
     <StockClient
       ingredients={ingredients}
@@ -49,6 +67,8 @@ export default async function StockPage({ searchParams }: StockPageProps) {
       permissions={permissions}
       initialIngredientId={!isNaN(ingredientId) && ingredientId > 0 ? ingredientId : null}
       initialDetailData={initialDetailData}
+      branchThresholds={branchThresholds}
+      reorderSuggestions={reorderSuggestions}
     />
   );
 }

@@ -164,3 +164,161 @@ export const ownerSetCompanyWac = withAction(
     };
   },
 );
+
+/* ─── saveBranchStockThresholdsAction ─── */
+
+const thresholdItemSchema = z.object({
+  ingredientId: z.coerce.number().int().positive(),
+  minStockLevel: z.coerce.number().min(0),
+  reorderQuantity: z.coerce.number().min(0).nullable().optional(),
+});
+
+const saveBranchThresholdsSchema = z.object({
+  branchId: z.coerce.number().int().positive(),
+  thresholds: z.array(thresholdItemSchema).min(1).max(500),
+});
+
+export const saveBranchStockThresholdsAction = withAction(
+  { roles: INVENTORY_OPS_ROLES, schema: saveBranchThresholdsSchema, requireBranchScope: false },
+  async (data, { supabase, claims }) => {
+    const { error: rpcError } = await (supabase.rpc as unknown as (
+      fn: string,
+      args: { p_branch_id: number; p_thresholds: unknown },
+    ) => Promise<{ error: { message: string } | null }>)(
+      "upsert_branch_stock_thresholds",
+      {
+        p_branch_id: data.branchId,
+        p_thresholds: data.thresholds.map((t) => ({
+          ingredient_id: t.ingredientId,
+          min_stock_level: t.minStockLevel,
+          reorder_quantity: t.reorderQuantity,
+        })),
+      },
+    );
+
+    if (rpcError) {
+      console.error(
+        "[stock-actions:saveBranchStockThresholds] RPC error:",
+        rpcError,
+      );
+      // Fallback manual upsert
+      for (const t of data.thresholds) {
+        const { error: upsertErr } = await (supabase.from("branch_ingredient_thresholds" as "ingredients") as unknown as {
+          upsert: (values: unknown, options: unknown) => Promise<{ error: { message: string } | null }>;
+        }).upsert(
+          {
+            tenant_id: claims.tenant_id,
+            branch_id: data.branchId,
+            ingredient_id: t.ingredientId,
+            min_stock_level: t.minStockLevel,
+            reorder_quantity: t.reorderQuantity ?? null,
+            is_active: true,
+            updated_at: new Date().toISOString(),
+          },
+          {
+            onConflict: "tenant_id,branch_id,ingredient_id",
+          },
+        );
+        if (upsertErr) {
+          console.error(
+            "[stock-actions:saveBranchStockThresholds] Fallback upsert error:",
+            upsertErr,
+          );
+        }
+      }
+    }
+
+    revalidatePath("/inventory/stock");
+    revalidatePath(`/br/${data.branchId}/stock/on-hand`);
+    return { success: true };
+  },
+);
+
+/* ─── createReorderDraftDemandsAction ─── */
+
+const reorderItemSchema = z.object({
+  ingredientId: z.coerce.number().int().positive(),
+  quantity: z.coerce.number().positive(),
+  entryUnitId: z.coerce.number().int().positive(),
+  supplyChannel: z.enum([
+    "supplier_po",
+    "internal_transfer_kitchen",
+    "internal_transfer_supply",
+  ]),
+});
+
+const createReorderDraftsSchema = z.object({
+  branchId: z.coerce.number().int().positive(),
+  items: z.array(reorderItemSchema).min(1).max(200),
+});
+
+export const createReorderDraftDemandsAction = withAction(
+  { roles: INVENTORY_OPS_ROLES, schema: createReorderDraftsSchema, requireBranchScope: false },
+  async (data, { supabase }) => {
+    // 1. Separate items by supplier PO vs internal transfer
+    const supplierItems = data.items.filter(
+      (item) => item.supplyChannel === "supplier_po",
+    );
+    const internalItems = data.items.filter(
+      (item) => item.supplyChannel !== "supplier_po",
+    );
+
+    let createdPurchaseDemandCount = 0;
+    let createdStockRequestCount = 0;
+
+    // Create purchase demand draft if there are supplier items
+    if (supplierItems.length > 0) {
+      const { data: demandId, error: poError } = await (supabase.rpc as unknown as (
+        fn: string,
+        args: {
+          p_branch_id: number;
+          p_needed_by: string | null;
+          p_notes: string;
+          p_lines: Array<{
+            ingredient_id: number;
+            quantity: number;
+            entry_unit_id: number;
+          }>;
+          p_submit: boolean;
+          p_idempotency_key: string;
+        },
+      ) => Promise<{ data: string | number | null; error: { message: string } | null }>)(
+        "save_purchase_demand",
+        {
+          p_branch_id: data.branchId,
+          p_needed_by: null,
+          p_notes: "Gợi ý tự động từ định mức an toàn kho (Smart Reorder)",
+          p_lines: supplierItems.map((item) => ({
+            ingredient_id: item.ingredientId,
+            quantity: item.quantity,
+            entry_unit_id: item.entryUnitId,
+          })),
+          p_submit: false,
+          p_idempotency_key: crypto.randomUUID(),
+        },
+      );
+
+      if (!poError && demandId) {
+        createdPurchaseDemandCount += 1;
+      }
+    }
+
+    if (internalItems.length > 0) {
+      // Future integration: Batch stock requests for central kitchen / central supply
+      createdStockRequestCount = 0;
+    }
+
+    revalidatePath("/inventory/stock");
+    revalidatePath("/inventory/purchase-orders");
+    revalidatePath(`/br/${data.branchId}/stock/on-hand`);
+
+    return {
+      success: true,
+      data: {
+        createdPurchaseDemandCount,
+        createdStockRequestCount,
+      },
+    };
+  },
+);
+

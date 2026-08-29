@@ -40,23 +40,29 @@ import type { TransferCreatePageData } from "@lib/inventory/transfer-create-data
 import { TransferCreateRouteFields } from "@lib/inventory/transfer-create-route-fields";
 import { getTransferWarehouseUnit } from "@lib/inventory/transfer-create-model";
 import { useTransferCreateController } from "@lib/inventory/use-transfer-create-controller";
-import type { TransferCreateDirection } from "@lib/inventory/use-transfer-create-controller";
+import type {
+  TransferCreateDirection,
+  TransferPrefillLine,
+} from "@lib/inventory/use-transfer-create-controller";
 import { messages } from "@lib/messages";
 
 interface CreateTransferFormProps extends TransferCreatePageData {
   basePath?: string;
   initialDirection?: TransferCreateDirection;
+  initialPrefillLine?: TransferPrefillLine;
 }
 
 export function CreateTransferForm({
   basePath = "/inventory/transfers",
   initialDirection,
+  initialPrefillLine,
   ...data
 }: CreateTransferFormProps) {
   const controller = useTransferCreateController({
     ...data,
     basePath,
     initialDirection,
+    initialPrefillLine,
   });
   const copy = messages.inventory.transfer;
   const isTouchLayout = useIsMobile(1024);
