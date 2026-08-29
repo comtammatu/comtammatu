@@ -62,3 +62,18 @@ export function rosterAssignmentKey(
 export function rosterDayKey(employeeId: number, workDate: string): string {
   return rosterCellKey(employeeId, workDate);
 }
+
+export type ShiftGroup = "all" | "operations" | "guard";
+
+export function isGuardShiftName(name: string): boolean {
+  return /bảo vệ|guard/i.test(name);
+}
+
+export function isGuardPosition(positionLabel: string | null | undefined): boolean {
+  return positionLabel != null && /bảo vệ|guard/i.test(positionLabel);
+}
+
+export function getShiftGroup(shift: RosterShift): "operations" | "guard" {
+  return isGuardShiftName(shift.name) ? "guard" : "operations";
+}
+

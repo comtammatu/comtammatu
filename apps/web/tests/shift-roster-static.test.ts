@@ -171,3 +171,36 @@ test("recurring materialize conflict target includes shift_id", () => {
     /ON CONFLICT \(tenant_id, employee_id, work_date, shift_id\)/,
   );
 });
+
+test("standardize shifts migration defines 3 operations shifts and 2 guard shifts", () => {
+  const migration = read(
+    "supabase/migrations/20260829140000_standardize_branch_shifts_catalog.sql",
+  );
+
+  assert.match(migration, /'Ca Sáng', '06:00:00', '14:00:00'/);
+  assert.match(migration, /'Ca Chiều', '14:00:00', '22:00:00'/);
+  assert.match(migration, /'Ca Tối', '22:00:00', '02:00:00'/);
+  assert.match(migration, /'Ca Bảo vệ Ngày', '06:00:00', '18:00:00'/);
+  assert.match(migration, /'Ca Bảo vệ Đêm', '18:00:00', '06:00:00'/);
+  assert.match(migration, /is_active = false/);
+  assert.match(migration, /ILIKE '%gãy%'/);
+});
+
+test("branch roster exposes shift group filter and guard candidate categorization", () => {
+  const branchWeek = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/team/roster/branch-roster-week-client.tsx",
+  );
+  const model = read("apps/web/lib/hr/roster/roster-model.ts");
+  const cell = read("apps/web/lib/hr/roster/roster-day-cell.tsx");
+
+  assert.match(branchWeek, /shiftGroupFilter/);
+  assert.match(branchWeek, /setShiftGroupFilter/);
+  assert.match(branchWeek, /displayShifts/);
+  assert.match(branchWeek, /isGuardShiftName/);
+  assert.match(branchWeek, /guardStaffCategory/);
+  assert.match(model, /getShiftGroup/);
+  assert.match(model, /isGuardPosition/);
+  assert.match(cell, /operationsShifts/);
+  assert.match(cell, /guardShifts/);
+});
+

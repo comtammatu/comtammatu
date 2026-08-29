@@ -8,15 +8,19 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@comtammatu/ui/components/dropdown-menu";
 import { messages } from "@lib/messages";
 import {
+  isGuardShiftName,
   rosterAssignmentKey,
   rosterCellKey,
   type RosterShift,
 } from "./roster-model";
 import { formatShiftLabel } from "./roster-week-helpers";
+
 
 const copy = messages.hr.roster;
 
@@ -57,6 +61,12 @@ export function RosterDayCell({
   const cellKey = rosterCellKey(employeeId, workDate);
   const availableShifts = shifts.filter(
     (shift) => !assignedShiftIds.includes(shift.id),
+  );
+  const operationsShifts = availableShifts.filter(
+    (shift) => !isGuardShiftName(shift.name),
+  );
+  const guardShifts = availableShifts.filter((shift) =>
+    isGuardShiftName(shift.name),
   );
 
   return (
@@ -143,15 +153,41 @@ export function RosterDayCell({
             }
           />
           <DropdownMenuContent align="start">
-            {availableShifts.map((shift) => (
-              <DropdownMenuItem
-                key={`${cellKey}:${shift.id}`}
-                size={touch ? "touch" : "default"}
-                onClick={() => onAddShift(employeeId, workDate, shift.id)}
-              >
-                {formatShiftLabel(shift.name, shift.startTime, shift.endTime)}
-              </DropdownMenuItem>
-            ))}
+            {operationsShifts.length > 0 ? (
+              <>
+                <DropdownMenuLabel className="text-muted-foreground px-2 py-1 text-2xs font-semibold">
+                  {copy.shiftGroupOperationsHeader}
+                </DropdownMenuLabel>
+                {operationsShifts.map((shift) => (
+                  <DropdownMenuItem
+                    key={`${cellKey}:${shift.id}`}
+                    size={touch ? "touch" : "default"}
+                    onClick={() => onAddShift(employeeId, workDate, shift.id)}
+                  >
+                    {formatShiftLabel(shift.name, shift.startTime, shift.endTime)}
+                  </DropdownMenuItem>
+                ))}
+              </>
+            ) : null}
+            {operationsShifts.length > 0 && guardShifts.length > 0 ? (
+              <DropdownMenuSeparator />
+            ) : null}
+            {guardShifts.length > 0 ? (
+              <>
+                <DropdownMenuLabel className="text-muted-foreground px-2 py-1 text-2xs font-semibold">
+                  {copy.shiftGroupGuardHeader}
+                </DropdownMenuLabel>
+                {guardShifts.map((shift) => (
+                  <DropdownMenuItem
+                    key={`${cellKey}:${shift.id}`}
+                    size={touch ? "touch" : "default"}
+                    onClick={() => onAddShift(employeeId, workDate, shift.id)}
+                  >
+                    {formatShiftLabel(shift.name, shift.startTime, shift.endTime)}
+                  </DropdownMenuItem>
+                ))}
+              </>
+            ) : null}
           </DropdownMenuContent>
         </DropdownMenu>
       ) : assignedShiftIds.length === 0 ? (
@@ -159,4 +195,5 @@ export function RosterDayCell({
       ) : null}
     </div>
   );
+
 }

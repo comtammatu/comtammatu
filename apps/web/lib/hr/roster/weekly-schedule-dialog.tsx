@@ -43,9 +43,10 @@ export function WeeklyScheduleDialog({
   onSaved: () => void;
 }) {
   const shiftOptions = useMemo(
-    () => weeklyScheduleShiftOptions(shifts),
-    [shifts],
+    () => weeklyScheduleShiftOptions(shifts, employee),
+    [shifts, employee],
   );
+
   const dayOptions = useMemo(
     () => [{ value: WEEKLY_SCHEDULE_OFF, label: copy.dayOff }, ...shiftOptions],
     [shiftOptions],

@@ -679,5 +679,14 @@ export const hr = {
     allStaffAssignedInDay: "Tất cả nhân viên đã được phân ca trong ngày này.",
     noStaffFoundTitle: "Không tìm thấy nhân viên",
     noStaffFoundDescription: "Đổi từ khóa tìm kiếm để xem lại.",
+    shiftGroupAll: "Tất cả ca",
+    shiftGroupOperations: "Ca vận hành",
+    shiftGroupGuard: "Ca bảo vệ",
+    shiftGroupOperationsHeader: "Ca vận hành (Sảnh & Bếp)",
+    shiftGroupGuardHeader: "Ca bảo vệ (An ninh)",
+    guardStaffCategory: "Nhân viên bảo vệ",
+    operationsStaffCategory: "Nhân viên vận hành",
   },
 } as const;
+
+

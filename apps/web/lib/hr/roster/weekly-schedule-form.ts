@@ -2,6 +2,8 @@ import { z } from "zod";
 import { getVNDateString } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
 import {
+  isGuardPosition,
+  isGuardShiftName,
   ROSTER_WEEKDAY_KEYS,
   type EmployeeWeeklySchedule,
   type RosterEmployee,
@@ -49,18 +51,40 @@ export const weeklyScheduleFormSchema = z
 
 export type WeeklyScheduleFormValues = z.infer<typeof weeklyScheduleFormSchema>;
 
-export function weeklyScheduleShiftOptions(shifts: RosterShift[]) {
-  return shifts.map((shift) => ({
+export function weeklyScheduleShiftOptions(
+  shifts: RosterShift[],
+  employee?: RosterEmployee | null,
+) {
+  const isGuard = isGuardPosition(employee?.positionLabel);
+  const sorted = [...shifts].sort((a, b) => {
+    const aGuard = isGuardShiftName(a.name);
+    const bGuard = isGuardShiftName(b.name);
+    if (isGuard) {
+      if (aGuard !== bGuard) return aGuard ? -1 : 1;
+    } else {
+      if (aGuard !== bGuard) return aGuard ? 1 : -1;
+    }
+    return a.startTime.localeCompare(b.startTime);
+  });
+
+  return sorted.map((shift) => ({
     value: String(shift.id),
     label: `${shift.name} (${shift.startTime.slice(0, 5)}–${shift.endTime.slice(0, 5)})`,
   }));
 }
+
 
 export function weeklyScheduleDefaults(
   employee: RosterEmployee | null,
   shifts: RosterShift[],
   schedule: EmployeeWeeklySchedule | null,
 ): WeeklyScheduleFormValues {
+  const isGuard = isGuardPosition(employee?.positionLabel);
+  const preferredDefaultShift =
+    (isGuard
+      ? shifts.find((s) => isGuardShiftName(s.name))
+      : shifts.find((s) => !isGuardShiftName(s.name))) ?? shifts[0];
+
   const firstAssignedShift = schedule
     ? ROSTER_WEEKDAY_KEYS.map((day) => schedule.shiftsByDay[day]).find(
         (shiftId) => shiftId != null,
@@ -69,7 +93,9 @@ export function weeklyScheduleDefaults(
   return {
     effectiveFrom:
       schedule?.effectiveFrom ?? employee?.startDate ?? getVNDateString(),
-    presetShift: String(firstAssignedShift ?? shifts[0]?.id ?? ""),
+    presetShift: String(
+      firstAssignedShift ?? preferredDefaultShift?.id ?? "",
+    ),
     ...Object.fromEntries(
       ROSTER_WEEKDAY_KEYS.map((day) => [
         day,
@@ -78,6 +104,7 @@ export function weeklyScheduleDefaults(
     ),
   } as WeeklyScheduleFormValues;
 }
+
 
 export function weeklyScheduleDaysPayload(values: WeeklyScheduleFormValues) {
   return ROSTER_WEEKDAY_KEYS.flatMap((day, index) =>

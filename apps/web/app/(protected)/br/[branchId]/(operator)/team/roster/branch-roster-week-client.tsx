@@ -39,10 +39,14 @@ import { BranchOperatorPanel } from "@lib/branch-operator/components/branch-oper
 import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
 import {
+  getShiftGroup,
+  isGuardPosition,
+  isGuardShiftName,
   rosterAssignmentKey,
   type RosterEmployee,
   type RosterShift,
   type RosterWeekData,
+  type ShiftGroup,
 } from "@lib/hr/roster/roster-model";
 import { useRosterWeekEditor } from "@lib/hr/roster/use-roster-week-editor";
 import {
@@ -81,6 +85,7 @@ export function BranchRosterWeekClient({
   const router = useRouter();
   const today = getVNDateString();
   const [selectedDay, setSelectedDay] = useState("");
+  const [shiftGroupFilter, setShiftGroupFilter] = useState<ShiftGroup>("all");
   const [assignSheetShiftId, setAssignSheetShiftId] = useState<number | null>(
     null,
   );
@@ -88,6 +93,7 @@ export function BranchRosterWeekClient({
   const [assignmentSearch, setAssignmentSearch] = useState("");
   const [scheduleSearch, setScheduleSearch] = useState("");
   const activeDayButtonRef = useRef<HTMLButtonElement>(null);
+
 
   const {
     isPending,
@@ -249,30 +255,53 @@ export function BranchRosterWeekClient({
 
   const assignmentCandidates = useMemo(() => {
     if (assignSheetShiftId == null) return [];
+    const isGuard = assignSheetShift
+      ? isGuardShiftName(assignSheetShift.name)
+      : false;
     const query = assignmentSearch.trim();
-    return data.employees.filter((employee) => {
-      const assignedShiftIds =
-        assignmentMap.get(`${employee.employeeId}:${activeDay}`) ?? [];
-      if (assignedShiftIds.includes(assignSheetShiftId)) return false;
-      return (
-        !query ||
-        matchesSearch(
-          [
-            employee.fullName,
-            employee.employeeCode ?? "",
-            employee.positionLabel ?? "",
-          ],
-          query,
-        )
-      );
-    });
+    return data.employees
+      .filter((employee) => {
+        const assignedShiftIds =
+          assignmentMap.get(`${employee.employeeId}:${activeDay}`) ?? [];
+        if (assignedShiftIds.includes(assignSheetShiftId)) return false;
+        return (
+          !query ||
+          matchesSearch(
+            [
+              employee.fullName,
+              employee.employeeCode ?? "",
+              employee.positionLabel ?? "",
+            ],
+            query,
+          )
+        );
+      })
+      .sort((a, b) => {
+        const aIsGuard = isGuardPosition(a.positionLabel);
+        const bIsGuard = isGuardPosition(b.positionLabel);
+        if (isGuard) {
+          if (aIsGuard !== bIsGuard) return aIsGuard ? -1 : 1;
+        } else {
+          if (aIsGuard !== bIsGuard) return aIsGuard ? 1 : -1;
+        }
+        return a.fullName.localeCompare(b.fullName, "vi");
+      });
   }, [
     activeDay,
+    assignSheetShift,
     assignSheetShiftId,
     assignmentMap,
     assignmentSearch,
     data.employees,
   ]);
+
+  const displayShifts = useMemo(() => {
+    if (shiftGroupFilter === "all") return data.shifts;
+    return data.shifts.filter(
+      (shift) => getShiftGroup(shift) === shiftGroupFilter,
+    );
+  }, [data.shifts, shiftGroupFilter]);
+
 
   const scheduleEmployees = useMemo(() => {
     const query = scheduleSearch.trim();
@@ -464,7 +493,42 @@ export function BranchRosterWeekClient({
             {copy.saveBeforeLeader}
           </p>
         ) : null}
-        {data.shifts.length === 0 ? (
+
+        {data.shifts.length > 0 ? (
+          <div className="mb-3 flex flex-wrap items-center gap-1.5 border-b pb-3">
+            <Button
+              type="button"
+              variant={shiftGroupFilter === "all" ? "secondary" : "outline"}
+              size="touch"
+              className="h-8 px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm"
+              onClick={() => setShiftGroupFilter("all")}
+            >
+              {copy.shiftGroupAll} ({data.shifts.length})
+            </Button>
+            <Button
+              type="button"
+              variant={shiftGroupFilter === "operations" ? "secondary" : "outline"}
+              size="touch"
+              className="h-8 px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm"
+              onClick={() => setShiftGroupFilter("operations")}
+            >
+              {copy.shiftGroupOperations} (
+              {data.shifts.filter((s) => !isGuardShiftName(s.name)).length})
+            </Button>
+            <Button
+              type="button"
+              variant={shiftGroupFilter === "guard" ? "secondary" : "outline"}
+              size="touch"
+              className="h-8 px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm"
+              onClick={() => setShiftGroupFilter("guard")}
+            >
+              {copy.shiftGroupGuard} (
+              {data.shifts.filter((s) => isGuardShiftName(s.name)).length})
+            </Button>
+          </div>
+        ) : null}
+
+        {displayShifts.length === 0 ? (
           <AppEmptyState
             compact
             mode="no-data"
@@ -473,7 +537,7 @@ export function BranchRosterWeekClient({
           />
         ) : (
           <div className="flex flex-col gap-4">
-            {data.shifts.map((shift) => {
+            {displayShifts.map((shift) => {
               const assignedEmployees = assignedEmployeesFor(shift);
               const hasLeader = assignedEmployees.some(
                 (employee) =>
@@ -492,9 +556,16 @@ export function BranchRosterWeekClient({
                     <div className="flex min-w-0 items-start gap-2">
                       <IconClock className="mt-0.5 size-4 shrink-0 text-primary" />
                       <div className="min-w-0">
-                        <h3 className="font-heading truncate text-sm font-semibold">
-                          {shift.name}
-                        </h3>
+                        <div className="flex items-center gap-1.5">
+                          <h3 className="font-heading truncate text-sm font-semibold">
+                            {shift.name}
+                          </h3>
+                          {isGuardShiftName(shift.name) ? (
+                            <Badge variant="outline" className="px-1.5 py-0 text-2xs">
+                              {copy.guardStaffCategory}
+                            </Badge>
+                          ) : null}
+                        </div>
                         <p className="text-muted-foreground text-xs">
                           {shift.startTime}–{shift.endTime}
                         </p>
@@ -511,119 +582,140 @@ export function BranchRosterWeekClient({
                   </div>
 
                   {assignedEmployees.length === 0 ? (
-                    <p className="text-muted-foreground py-2 text-sm">
-                      {copy.noStaffInShift}
-                    </p>
+                    <Item variant="outline" className="items-center justify-between p-2.5">
+                      <ItemContent className="min-w-0">
+                        <ItemDescription className="truncate text-xs">
+                          {copy.noStaffInShift}
+                        </ItemDescription>
+                      </ItemContent>
+                      <ItemActions>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="touch"
+                          className="h-8 text-xs"
+                          onClick={() => {
+                            setAssignmentSearch("");
+                            setAssignSheetShiftId(shift.id);
+                          }}
+                          disabled={isPending}
+                        >
+                          <IconUserPlus className="size-3.5" />
+                          {copy.addPeopleToShift}
+                        </Button>
+                      </ItemActions>
+                    </Item>
                   ) : (
-                    <ItemGroup className="gap-2">
-                      {assignedEmployees.map((employee) => {
-                        const leaderKey = rosterAssignmentKey(
-                          employee.employeeId,
-                          activeDay,
-                          shift.id,
-                        );
-                        const leader = leaderMap.get(leaderKey);
-                        const canToggleLeader =
-                          !dirty && leader != null && leader.assignmentId > 0;
+                    <>
+                      <ItemGroup className="gap-2">
+                        {assignedEmployees.map((employee) => {
+                          const leaderKey = rosterAssignmentKey(
+                            employee.employeeId,
+                            activeDay,
+                            shift.id,
+                          );
+                          const leader = leaderMap.get(leaderKey);
+                          const canToggleLeader =
+                            !dirty && leader != null && leader.assignmentId > 0;
 
-                        return (
-                          <Item
-                            key={employee.employeeId}
-                            variant="outline"
-                            className="items-center justify-between p-2.5"
-                          >
-                            <ItemContent className="min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <ItemTitle className="truncate text-sm font-medium">
-                                  {employee.fullName}
-                                </ItemTitle>
-                                {leader?.isLeader ? (
-                                  <Badge
-                                    variant="warning"
-                                    className="px-1.5 py-0 text-2xs"
-                                  >
-                                    {copy.shiftLeaderBadge}
-                                  </Badge>
-                                ) : null}
-                              </div>
-                              <ItemDescription className="truncate text-xs">
-                                {employeeMeta(employee)}
-                              </ItemDescription>
-                            </ItemContent>
-                            <ItemActions className="gap-1">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon-touch"
-                                disabled={isPending || !canToggleLeader}
-                                title={
-                                  dirty
-                                    ? copy.saveBeforeLeader
-                                    : leader?.isLeader
+                          return (
+                            <Item
+                              key={employee.employeeId}
+                              variant="outline"
+                              className="items-center justify-between p-2.5"
+                            >
+                              <ItemContent className="min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <ItemTitle className="truncate text-sm font-medium">
+                                    {employee.fullName}
+                                  </ItemTitle>
+                                  {leader?.isLeader ? (
+                                    <Badge
+                                      variant="warning"
+                                      className="px-1.5 py-0 text-2xs"
+                                    >
+                                      {copy.shiftLeaderBadge}
+                                    </Badge>
+                                  ) : null}
+                                </div>
+                                <ItemDescription className="truncate text-xs">
+                                  {employeeMeta(employee)}
+                                </ItemDescription>
+                              </ItemContent>
+                              <ItemActions className="gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon-touch"
+                                  disabled={isPending || !canToggleLeader}
+                                  title={
+                                    dirty
+                                      ? copy.saveBeforeLeader
+                                      : leader?.isLeader
+                                        ? copy.unmarkShiftLeader
+                                        : copy.markShiftLeader
+                                  }
+                                  aria-label={
+                                    leader?.isLeader
                                       ? copy.unmarkShiftLeader
                                       : copy.markShiftLeader
-                                }
-                                aria-label={
-                                  leader?.isLeader
-                                    ? copy.unmarkShiftLeader
-                                    : copy.markShiftLeader
-                                }
-                                onClick={() =>
-                                  handleLeaderToggle(
-                                    employee.employeeId,
-                                    activeDay,
-                                    shift.id,
-                                    !leader?.isLeader,
-                                  )
-                                }
-                              >
-                                <IconStar
-                                  className={cn(
-                                    "size-4",
-                                    leader?.isLeader
-                                      ? "fill-current text-warning"
-                                      : "text-muted-foreground",
-                                  )}
-                                />
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon-touch"
-                                disabled={isPending}
-                                aria-label={copy.removeShift}
-                                title={copy.removeShift}
-                                onClick={() =>
-                                  handleRemoveShift(
-                                    employee.employeeId,
-                                    activeDay,
-                                    shift.id,
-                                  )
-                                }
-                              >
-                                <IconUserMinus className="size-4" />
-                              </Button>
-                            </ItemActions>
-                          </Item>
-                        );
-                      })}
-                    </ItemGroup>
+                                  }
+                                  onClick={() =>
+                                    handleLeaderToggle(
+                                      employee.employeeId,
+                                      activeDay,
+                                      shift.id,
+                                      !leader?.isLeader,
+                                    )
+                                  }
+                                >
+                                  <IconStar
+                                    className={cn(
+                                      "size-4",
+                                      leader?.isLeader
+                                        ? "fill-current text-warning"
+                                        : "text-muted-foreground",
+                                    )}
+                                  />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon-touch"
+                                  disabled={isPending}
+                                  aria-label={copy.removeShift}
+                                  title={copy.removeShift}
+                                  onClick={() =>
+                                    handleRemoveShift(
+                                      employee.employeeId,
+                                      activeDay,
+                                      shift.id,
+                                    )
+                                  }
+                                >
+                                  <IconUserMinus className="size-4" />
+                                </Button>
+                              </ItemActions>
+                            </Item>
+                          );
+                        })}
+                      </ItemGroup>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="touch"
+                        className="w-full"
+                        onClick={() => {
+                          setAssignmentSearch("");
+                          setAssignSheetShiftId(shift.id);
+                        }}
+                        disabled={isPending}
+                      >
+                        <IconUserPlus className="size-4" />
+                        {copy.addPeopleToShift}
+                      </Button>
+                    </>
                   )}
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="touch"
-                    className="w-full"
-                    onClick={() => {
-                      setAssignmentSearch("");
-                      setAssignSheetShiftId(shift.id);
-                    }}
-                    disabled={isPending}
-                  >
-                    <IconUserPlus className="size-4" />
-                    {copy.addPeopleToShift}
-                  </Button>
                 </section>
               );
             })}
@@ -728,9 +820,16 @@ export function BranchRosterWeekClient({
                     className="items-center justify-between p-2.5"
                   >
                     <ItemContent className="min-w-0">
-                      <ItemTitle className="truncate text-sm font-medium">
-                        {employee.fullName}
-                      </ItemTitle>
+                      <div className="flex items-center gap-1.5">
+                        <ItemTitle className="truncate text-sm font-medium">
+                          {employee.fullName}
+                        </ItemTitle>
+                        {isGuardPosition(employee.positionLabel) ? (
+                          <Badge variant="outline" className="px-1.5 py-0 text-2xs">
+                            {copy.guardStaffCategory}
+                          </Badge>
+                        ) : null}
+                      </div>
                       <ItemDescription className="truncate text-xs">
                         {currentShiftLabels.length > 0
                           ? copy.alreadyAssignedTo(

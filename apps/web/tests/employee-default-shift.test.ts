@@ -296,3 +296,62 @@ test("gap between today's shifts points at the next shift, not unassigned", () =
   assert.equal(gate.shiftName, "Ca chiều");
   assert.equal(gate.clockInFromMinutes, 14 * 60);
 });
+
+const CANONICAL_SHIFTS: BranchShiftWindow[] = [
+  { id: 101, start_time: "06:00:00", end_time: "14:00:00" }, // Ca Sáng
+  { id: 102, start_time: "14:00:00", end_time: "22:00:00" }, // Ca Chiều
+  { id: 103, start_time: "22:00:00", end_time: "02:00:00" }, // Ca Tối (overnight)
+  { id: 104, start_time: "06:00:00", end_time: "18:00:00" }, // Ca Bảo vệ Ngày
+  { id: 105, start_time: "18:00:00", end_time: "06:00:00" }, // Ca Bảo vệ Đêm (overnight)
+];
+
+test("canonical 3 operations shifts resolve correctly across day and overnight", () => {
+  const opShifts = CANONICAL_SHIFTS.slice(0, 3);
+  assert.equal(resolveDefaultShiftId(opShifts, minutes("08:00")), 101);
+  assert.equal(resolveDefaultShiftId(opShifts, minutes("16:00")), 102);
+  assert.equal(resolveDefaultShiftId(opShifts, minutes("23:00")), 103);
+  assert.equal(resolveDefaultShiftId(opShifts, minutes("01:00")), 103);
+
+  // Ca Tối at 01:00 on 2026-08-30 belongs to 2026-08-29 work date
+  assert.equal(
+    resolveShiftBusinessDate(CANONICAL_SHIFTS[2]!, minutes("01:00"), "2026-08-30"),
+    "2026-08-29",
+  );
+});
+
+test("canonical 2 guard shifts (12H) resolve correctly and preserve overnight work date", () => {
+  const guardDay = CANONICAL_SHIFTS[3]!;
+  const guardNight = CANONICAL_SHIFTS[4]!;
+
+  assert.equal(
+    resolveShiftBusinessDate(guardDay, minutes("10:00"), "2026-08-29"),
+    "2026-08-29",
+  );
+  assert.equal(
+    resolveShiftBusinessDate(guardNight, minutes("20:00"), "2026-08-29"),
+    "2026-08-29",
+  );
+  assert.equal(
+    resolveShiftBusinessDate(guardNight, minutes("04:00"), "2026-08-30"),
+    "2026-08-29",
+  );
+
+  // Clock-in gate 60 minutes before 18:00 opens at 17:00
+  const guardAssignment = {
+    workDate: "2026-08-29",
+    shiftId: 105,
+    shiftName: "Ca Bảo vệ Đêm",
+    startTime: "18:00:00",
+    endTime: "06:00:00",
+  };
+  const earlyGate = resolveClockInGate([guardAssignment], "2026-08-29", minutes("16:50"));
+  assert.equal(earlyGate.kind, "too_early");
+
+  const openGate = resolveClockInGate([guardAssignment], "2026-08-29", minutes("17:15"));
+  assert.equal(openGate.kind, "open");
+  if (openGate.kind === "open") {
+    assert.equal(openGate.shiftId, 105);
+    assert.equal(openGate.businessDate, "2026-08-29");
+  }
+});
+
