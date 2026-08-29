@@ -250,13 +250,20 @@ export interface TransformedOrderForRpc {
   }>;
 }
 
+export interface GrabMenuItemPrice {
+  id: number;
+  name: string;
+  base_price: number;
+  channel_price?: number | null;
+}
+
 /**
  * Matches an item from Grab to a database MenuItem
  */
 export function matchMenuItem(
   grabItem: GrabOrderItemRaw,
-  dbItems: Array<{ id: number; name: string; base_price: number }>,
-): { id: number; name: string; base_price: number } {
+  dbItems: GrabMenuItemPrice[],
+): GrabMenuItemPrice {
   // 1. Direct ID lookup in mapping
   const mapped = grabItem.itemID ? GRAB_MENU_MAPPING[grabItem.itemID] : null;
   const targetName = mapped?.name || grabItem.name;
@@ -332,8 +339,8 @@ export function isShipperInstruction(note: string): boolean {
  */
 export function matchSideItem(
   targetName: string,
-  dbItems: Array<{ id: number; name: string; base_price: number }>,
-): { id: number; name: string; base_price: number } | null {
+  dbItems: GrabMenuItemPrice[],
+): GrabMenuItemPrice | null {
   const normalizedTarget = normalizeMenuName(targetName);
   const alias = SIDE_NAME_ALIASES[normalizedTarget];
   const target = alias ? normalizeMenuName(alias) : normalizedTarget;
@@ -378,7 +385,7 @@ export function matchSideItem(
  */
 export function transformGrabOrderPayload(
   grabOrder: GrabOrderRaw,
-  dbItems: Array<{ id: number; name: string; base_price: number }>,
+  dbItems: GrabMenuItemPrice[],
 ): TransformedOrderForRpc {
   let freeItemDiscountTotal = 0;
   const items = (grabOrder.itemInfo?.items || []).map((gi) => {
@@ -400,7 +407,9 @@ export function transformGrabOrderPayload(
               sides.push({
                 side_item_id: matchedSide.id,
                 name: matchedSide.name,
-                price: rawPrice > 0 ? rawPrice : matchedSide.base_price,
+                price:
+                  matchedSide.channel_price ??
+                  (rawPrice > 0 ? rawPrice : matchedSide.base_price),
                 quantity: mod.quantity || 1,
               });
             } else {
@@ -412,7 +421,7 @@ export function transformGrabOrderPayload(
     }
 
     const sidesSum = sides.reduce((acc, s) => acc + s.price * s.quantity, 0);
-    const unitPrice = matched.base_price + sidesSum;
+    const unitPrice = (matched.channel_price ?? matched.base_price) + sidesSum;
     const qty = gi.quantity || 1;
     const subtotal = unitPrice * qty;
 

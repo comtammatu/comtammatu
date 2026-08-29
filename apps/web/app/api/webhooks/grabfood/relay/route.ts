@@ -248,18 +248,35 @@ export async function POST(request: NextRequest) {
       .eq("tenant_id", branch.tenant_id)
       .eq("is_active", true);
 
-    if (menuErr || !dbMenuItems) {
-      console.error("[Grab POS Relay] menu query failed:", menuErr);
+    const { data: grabChannelPrices, error: channelPriceErr } = await supabase
+      .from("menu_item_channel_prices")
+      .select("menu_item_id, unit_price")
+      .eq("tenant_id", branch.tenant_id)
+      .eq("delivery_platform", "grab");
+
+    if (menuErr || channelPriceErr || !dbMenuItems) {
+      console.error("[Grab POS Relay] menu pricing query failed", {
+        menuCode: menuErr?.code,
+        channelPriceCode: channelPriceErr?.code,
+      });
       return NextResponse.json(
         { success: false, error: "Lỗi tải thực đơn chi nhánh" },
         { status: 500, headers: CORS_HEADERS },
       );
     }
 
+    const grabPriceByMenuItemId = new Map(
+      (grabChannelPrices ?? []).map((row) => [row.menu_item_id, row.unit_price]),
+    );
+    const pricedDbMenuItems = dbMenuItems.map((item) => ({
+      ...item,
+      channel_price: grabPriceByMenuItemId.get(item.id) ?? null,
+    }));
+
     // 9. Transform Grab payload to RPC-ready items structure
     let transformed;
     try {
-      transformed = transformGrabOrderPayload(grabOrder, dbMenuItems);
+      transformed = transformGrabOrderPayload(grabOrder, pricedDbMenuItems);
     } catch (mappingErr) {
       const msg =
         mappingErr instanceof Error ? mappingErr.message : "Lỗi ánh xạ món ăn";

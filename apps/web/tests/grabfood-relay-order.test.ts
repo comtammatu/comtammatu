@@ -174,7 +174,12 @@ test("GrabFood transformation: handles customerNote as null since Grab only has 
 test("GrabFood transformation: accurately maps 'Cơm Thêm' modifier variants into sides", () => {
   const dbItemsWithComThem = [
     ...MOCK_DB_ITEMS,
-    { id: 22, name: "Cơm Thêm", base_price: 6000 },
+    {
+      id: 22,
+      name: "Cơm Thêm",
+      base_price: 5000,
+      channel_price: 7000,
+    },
   ];
 
   const orderWithComThem: GrabOrderRaw = {
@@ -219,10 +224,11 @@ test("GrabFood transformation: accurately maps 'Cơm Thêm' modifier variants in
   assert.equal(lineItem?.sides.length, 2);
   assert.equal(lineItem?.sides[0]?.side_item_id, 22);
   assert.equal(lineItem?.sides[0]?.name, "Cơm Thêm");
-  assert.equal(lineItem?.sides[0]?.price, 6000);
+  assert.equal(lineItem?.sides[0]?.price, 7000);
   assert.equal(lineItem?.sides[1]?.side_item_id, 22);
   assert.equal(lineItem?.sides[1]?.name, "Cơm Thêm");
-  assert.equal(lineItem?.sides[1]?.price, 6000);
+  assert.equal(lineItem?.sides[1]?.price, 7000);
+  assert.equal(lineItem?.unit_price, 68000);
 });
 
 test("GrabFood transformation: supports standalone items (e.g. Bì ordered as a standalone dish)", () => {
@@ -676,6 +682,60 @@ test("GrabFood transformation: discounts only the promoted quantity on a multi-q
   assert.equal(transformed.posTotalAmount, 10000);
   assert.equal(transformed.items[0]?.quantity, 2);
   assert.equal(transformed.items[0]?.discount_type, "vnd");
+  assert.equal(transformed.items[0]?.discount_value, 10000);
+});
+
+test("GrabFood transformation: uses the Grab channel price for GF-809 free-item evidence", () => {
+  const grabPricedEgg = {
+    id: 11,
+    name: "Trứng",
+    base_price: 8000,
+    channel_price: 10000,
+  };
+  const transformed = transformGrabOrderPayload(
+    {
+      orderID: "001644320651-GF809",
+      displayID: "GF-809",
+      merchant: { ID: "merchant-redacted" },
+      itemInfo: {
+        items: [
+          {
+            name: "Trứng",
+            itemID: "VNITE20260818044418119394",
+            quantity: 1,
+            fare: {
+              priceDisplay: "10.000",
+              originalItemPriceDisplay: "10.000",
+              priceFloat: 10000,
+            },
+            discountInfo: [
+              {
+                discountName: "Tặng Trứng",
+                discountType: "freeItem",
+                itemDiscountPriceDisplay: "10.000",
+              },
+            ],
+          },
+        ],
+      },
+      fare: {
+        subTotalDisplay: "10.000",
+        totalDisplay: "0",
+        orderLevelDiscounts: [
+          {
+            discountType: "freeItem",
+            discountAmountDisplay: "10.000",
+          },
+        ],
+      },
+    },
+    [grabPricedEgg],
+  );
+
+  assert.equal(transformed.grossItemTotal, 10000);
+  assert.equal(transformed.freeItemDiscountTotal, 10000);
+  assert.equal(transformed.posTotalAmount, 0);
+  assert.equal(transformed.items[0]?.unit_price, 10000);
   assert.equal(transformed.items[0]?.discount_value, 10000);
 });
 

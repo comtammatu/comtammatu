@@ -29,6 +29,16 @@ test("Grab relay rejects incomplete free-item evidence before creating the order
   assert.match(routeSource.slice(evidenceGuard, createCall), /status:\s*422/);
 });
 
+test("Grab relay maps promotions against the configured Grab channel price", () => {
+  assert.match(routeSource, /\.from\("menu_item_channel_prices"\)/);
+  assert.match(routeSource, /\.eq\("delivery_platform", "grab"\)/);
+  assert.match(routeSource, /channel_price: grabPriceByMenuItemId\.get\(item\.id\)/);
+  assert.match(
+    routeSource,
+    /transformGrabOrderPayload\(grabOrder, pricedDbMenuItems\)/,
+  );
+});
+
 test("Grab relay never returns a negative acknowledgement after create_order commits", () => {
   const createCall = routeSource.indexOf('supabase.rpc(\n      "create_order"');
   const successResponse = routeSource.indexOf(
