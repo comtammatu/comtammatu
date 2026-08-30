@@ -113,12 +113,16 @@ export function RevenueDrillTabs({
       key: "time",
       header: "Giờ",
       className: "font-mono tabular-nums",
+      sortable: true,
+      sortValue: (row) => row.paid_at,
       render: (row) => formatVNTime(row.paid_at),
     },
     {
       key: "order",
       header: "Mã đơn",
       className: "font-mono text-xs",
+      sortable: true,
+      sortValue: (row) => row.order_number,
       render: (row) => (
         <Link
           href={`/orders?orderId=${String(row.order_id)}`}
@@ -131,18 +135,24 @@ export function RevenueDrillTabs({
     {
       key: "type",
       header: "Loại",
+      sortable: true,
+      sortValue: (row) => row.order_type,
       render: (row) => formatOrderTypeCell(row),
     },
     {
       key: "branch",
       header: "Chi nhánh",
       className: "text-sm text-muted-foreground",
+      sortable: true,
+      sortValue: (row) => row.branch_name ?? "",
       render: (row) => row.branch_name?.replace(/^Chi nhánh\s+/, "") ?? "—",
     },
     {
       key: "items",
       header: "Số lượng",
       className: "text-right font-mono text-xs tabular-nums",
+      sortable: true,
+      sortValue: (row) => Number(row.item_count),
       render: (row) => {
         const sideQuantity =
           row.side_dish_quantity + row.included_side_quantity;
@@ -237,6 +247,8 @@ export function RevenueDrillTabs({
       key: "discount",
       header: "Giảm",
       className: "text-right font-mono tabular-nums text-muted-foreground",
+      sortable: true,
+      sortValue: (row) => Number(row.discount_amount),
       render: (row) =>
         Number(row.discount_amount) > 0 ? formatVND(row.discount_amount) : "—",
     },
@@ -244,6 +256,8 @@ export function RevenueDrillTabs({
       key: "total",
       header: copy.kpis.totalCollected,
       className: "text-right font-mono tabular-nums font-medium",
+      sortable: true,
+      sortValue: (row) => Number(row.total_amount),
       render: (row) => (
         <span
           className={

@@ -177,24 +177,32 @@ export function FoodCostClient({
       key: "item",
       header: PRODUCT_VI.posItem,
       className: "min-w-40",
+      sortable: true,
+      sortValue: (row) => row.item_name ?? "",
       render: (row) => row.item_name ?? dash,
     },
     {
       key: "quantity_sold",
       header: foodCopy.quantitySold,
       className: COUNT_COL,
+      sortable: true,
+      sortValue: (row) => Number(row.quantity_sold ?? 0),
       render: (row) => formatCount(Number(row.quantity_sold ?? 0)),
     },
     {
       key: "revenue",
       header: foodCopy.revenueCurrency,
       className: MONEY_COL,
+      sortable: true,
+      sortValue: (row) => Number(row.revenue ?? 0),
       render: (row) => formatCostAmount(row.revenue ?? 0),
     },
     {
       key: "food_cost",
       header: foodCopy.foodCostCurrency,
       className: MONEY_COL,
+      sortable: true,
+      sortValue: (row) => Number(row.ingredient_cost ?? 0),
       render: (row) => (
         <RecipeCostCell
           total={row.ingredient_cost}
@@ -206,6 +214,8 @@ export function FoodCostClient({
       key: "gross_profit",
       header: foodCopy.grossProfitCurrency,
       className: MONEY_COL,
+      sortable: true,
+      sortValue: (row) => Number(row.gross_profit ?? 0),
       render: (row) => (
         <MarginCell
           profit={row.gross_profit}
@@ -320,6 +330,9 @@ export function FoodCostClient({
           getRowKey={(row) =>
             String(row.menu_item_id ?? row.item_name ?? "item")
           }
+          defaultSortKey="revenue"
+          defaultSortDirection="desc"
+          pageSize={50}
           emptyMode="no-results"
           emptyTitle={foodCopy.emptyTitle}
           desktopFooterRows={rows.length > 0 ? footerRows : undefined}

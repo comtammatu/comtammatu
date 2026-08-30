@@ -308,12 +308,16 @@ export function RevenueTargetsClient({
       {
         key: "branch",
         header: copy.branch,
+        sortable: true,
+        sortValue: (row) => row.branchName,
         render: (row) => row.branchName,
       },
       {
         key: "prior",
         header: copy.priorMonth,
         className: "text-right",
+        sortable: true,
+        sortValue: (row) => Number(row.priorMonthNetRevenue ?? 0),
         render: (row) => (
           <span className="font-mono tabular-nums">
             {formatVND(row.priorMonthNetRevenue)}
@@ -324,6 +328,8 @@ export function RevenueTargetsClient({
         key: "current",
         header: copy.currentMonth,
         className: "text-right",
+        sortable: true,
+        sortValue: (row) => Number(row.currentNetRevenue ?? 0),
         render: (row) => (
           <span className="font-mono tabular-nums">
             {row.currentNetRevenue == null
@@ -336,6 +342,8 @@ export function RevenueTargetsClient({
         key: "target",
         header: copy.target,
         className: "text-right",
+        sortable: true,
+        sortValue: (row) => Number(row.targetAmount ?? 0),
         render: (row) => {
           const preview =
             row.targetAmount == null

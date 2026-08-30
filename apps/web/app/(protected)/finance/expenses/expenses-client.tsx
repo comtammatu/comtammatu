@@ -518,41 +518,44 @@ export function ExpensesClient({
       key: "date",
       header: copy.table.date,
       className: "w-28 font-mono tabular-nums",
+      sortable: true,
+      sortValue: (row) => row.expense_date,
       render: (row) => formatVNBusinessDate(row.expense_date),
     },
     {
       key: "category",
       header: copy.table.category,
+      sortable: true,
+      sortValue: (row) => row.category,
       render: (row) => categoryCell(row.category),
     },
     {
       key: "branch",
       header: copy.table.branch,
       className: "text-muted-foreground",
+      sortable: true,
+      sortValue: (row) => row.branch_id ?? -1,
       render: (row) => branchLabel(row.branch_id),
     },
     {
       key: "method",
       header: copy.table.method,
+      sortable: true,
+      sortValue: (row) => row.payment_method,
       render: (row) => methodLabel(row),
     },
     {
       key: "amount",
       header: moneyLabels.totalInclVat,
       className: "text-right",
-      render: (row) => (
-        <FinanceAmountCell amount={row.amount} basis="inclVat" />
-      ),
+      sortable: true,
+      sortValue: (row) => Number(row.amount),
+      render: (row) => <FinanceAmountCell amount={row.amount} basis="inclVat" />,
     },
     {
       key: "paymentState",
       header: copy.table.paymentState,
-      render: (row) => (
-        <StatusBadge
-          domain="expense-payment"
-          value={classifyExpensePaymentState(row)}
-        />
-      ),
+      render: (row) => <StatusBadge domain="expense-payment" value={classifyExpensePaymentState(row)} />,
     },
     {
       key: "detail",
@@ -561,28 +564,19 @@ export function ExpensesClient({
       render: (row) => expenseDetail(row) || "—",
     },
     ...(canManageExpenses
-      ? [
-          {
-            key: "actions",
-            header: "",
-            className: "w-12",
-            render: (row: ExpenseRow) => {
-              const items = getExpenseRowActions(row);
-              return items.length > 0 ? (
-                <div
-                  onClick={(event) => event.stopPropagation()}
-                  onKeyDown={(event) => event.stopPropagation()}
-                >
-                  <RowActionsMenu
-                    items={items}
-                    label={copy.table.actions}
-                    triggerSize="icon-sm"
-                  />
-                </div>
-              ) : null;
-            },
-          } satisfies DataTableColumn<ExpenseRow>,
-        ]
+      ? [{
+          key: "actions",
+          header: "",
+          className: "w-12",
+          render: (row: ExpenseRow) => {
+            const items = getExpenseRowActions(row);
+            return items.length > 0 ? (
+              <div onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
+                <RowActionsMenu items={items} label={copy.table.actions} triggerSize="icon-sm" />
+              </div>
+            ) : null;
+          },
+        } satisfies DataTableColumn<ExpenseRow>]
       : []),
   ];
 
@@ -772,86 +766,39 @@ export function ExpensesClient({
             editingExpense &&
             (editingPaymentState === "unpaid" ||
               editingPaymentState === "transfer_needs_match")
-              ? ({
-                  formId,
-                  isPending,
-                  requestClose,
-                  submitLabel,
-                  actionSize,
-                  cancelLabel,
-                }) => (
+              ? ({ formId, isPending, requestClose, submitLabel, actionSize, cancelLabel }) => (
                   <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size={actionSize}
-                      onClick={requestClose}
-                      disabled={isPending || isMutating}
-                    >
+                    <Button type="button" variant="outline" size={actionSize} onClick={requestClose} disabled={isPending || isMutating}>
                       {cancelLabel}
                     </Button>
                     {editingPaymentState === "unpaid" ? (
                       <>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size={actionSize}
-                          disabled={isPending || isMutating}
-                          onClick={() => void onPayCash(editingExpense)}
-                        >
+                        <Button type="button" variant="outline" size={actionSize} disabled={isPending || isMutating} onClick={() => void onPayCash(editingExpense)}>
                           {isMutating ? <Spinner /> : null}
                           <IconBanknote data-icon="inline-start" />
                           {copy.actions.cash}
                         </Button>
-                        <Button
-                          type="button"
-                          size={actionSize}
-                          disabled={isPending || isMutating}
-                          onClick={() => void onPayTransfer(editingExpense)}
-                        >
+                        <Button type="button" size={actionSize} disabled={isPending || isMutating} onClick={() => void onPayTransfer(editingExpense)}>
                           {isMutating ? <Spinner /> : null}
                           <IconLandmark data-icon="inline-start" />
                           {copy.actions.transfer}
                         </Button>
                       </>
                     ) : null}
-                    {editingPaymentState === "transfer_needs_match" &&
-                    editingExpense.transfer_content ? (
+                    {editingPaymentState === "transfer_needs_match" && editingExpense.transfer_content ? (
                       <>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size={actionSize}
-                          disabled={isPending || isMutating}
-                          onClick={() =>
-                            void copyTransferContent(
-                              editingExpense.transfer_content!,
-                            )
-                          }
-                        >
+                        <Button type="button" variant="outline" size={actionSize} disabled={isPending || isMutating} onClick={() => void copyTransferContent(editingExpense.transfer_content!)}>
                           <IconCopy data-icon="inline-start" />
                           {copy.transferInstruction.copy}
                         </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size={actionSize}
-                          disabled={isPending || isMutating}
-                          onClick={() => void onCancelTransfer(editingExpense)}
-                        >
+                        <Button type="button" variant="outline" size={actionSize} disabled={isPending || isMutating} onClick={() => void onCancelTransfer(editingExpense)}>
                           {isMutating ? <Spinner /> : null}
                           <IconRotateCcw data-icon="inline-start" />
                           {copy.actions.cancelTransfer}
                         </Button>
                       </>
                     ) : null}
-                    <Button
-                      type="submit"
-                      form={formId}
-                      variant="outline"
-                      size={actionSize}
-                      disabled={isPending || isMutating}
-                    >
+                    <Button type="submit" form={formId} variant="outline" size={actionSize} disabled={isPending || isMutating}>
                       {isPending ? <Spinner /> : null}
                       {submitLabel}
                     </Button>

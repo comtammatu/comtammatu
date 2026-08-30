@@ -235,8 +235,35 @@ export default async function FinancePage({
   // the landing surfaces only the period-close readiness item.
   const attentionExceptions = readinessException ? [readinessException] : [];
 
+  const netRevenueValue = Number(cockpit.kpis.netRevenueBeforeVat);
+  const hasNetRevenue = Number.isFinite(netRevenueValue) && netRevenueValue > 0;
+
+  const grossProfitMarginPct =
+    hasNetRevenue && grossProfit != null
+      ? (Number(grossProfit) / netRevenueValue) * 100
+      : null;
+
+  const operatingResultMarginPct =
+    hasNetRevenue && operatingResult != null
+      ? (Number(operatingResult) / netRevenueValue) * 100
+      : null;
+
+  const ingredientCostPct =
+    hasNetRevenue && cockpit.kpis.ingredientCost != null
+      ? (Number(cockpit.kpis.ingredientCost) / netRevenueValue) * 100
+      : null;
+
   function renderGrossProfitCard() {
     const coverageIncomplete = !cockpit.kpis.costAvailable;
+    const marginLabel =
+      grossProfitMarginPct != null
+        ? `Biên gộp ${formatPercent(grossProfitMarginPct)}`
+        : undefined;
+    const hint = coverageIncomplete
+      ? [marginLabel, financeCopy.basic.kpis.grossProfitMissingHint]
+          .filter(Boolean)
+          .join(" · ")
+      : marginLabel;
     return (
       <KpiCard
         density="compact"
@@ -249,11 +276,7 @@ export default async function FinancePage({
         shortValue={
           grossProfit == null ? undefined : formatCompactVND(grossProfit)
         }
-        hint={
-          coverageIncomplete
-            ? financeCopy.basic.kpis.grossProfitMissingHint
-            : undefined
-        }
+        hint={hint}
         tone={
           grossProfit == null || coverageIncomplete
             ? "warning"
@@ -267,6 +290,14 @@ export default async function FinancePage({
   }
 
   function renderOperatingResultCard() {
+    const marginLabel =
+      operatingResultMarginPct != null
+        ? `Biên ròng ${formatPercent(operatingResultMarginPct)}`
+        : undefined;
+    const baseHint = showInventoryChange
+      ? financeCopy.basic.kpis.operatingResultHint
+      : financeCopy.basic.kpis.operatingResultHintWithoutInventory;
+    const hint = [marginLabel, baseHint].filter(Boolean).join(" · ");
     return (
       <KpiCard
         density="compact"
@@ -288,11 +319,7 @@ export default async function FinancePage({
               ? "destructive"
               : "success"
         }
-        hint={
-          showInventoryChange
-            ? financeCopy.basic.kpis.operatingResultHint
-            : financeCopy.basic.kpis.operatingResultHintWithoutInventory
-        }
+        hint={hint}
       />
     );
   }
@@ -340,10 +367,17 @@ export default async function FinancePage({
           }
           hint={
             cockpit.kpis.costAvailable
-              ? financeCopy.basic.kpis.ingredientCostHint(
-                  formatCount(cockpit.kpis.costCoverageOrderCount),
-                  formatCount(cockpit.kpis.orderCount),
-                )
+              ? [
+                  ingredientCostPct != null
+                    ? `${formatPercent(ingredientCostPct)} DT`
+                    : null,
+                  financeCopy.basic.kpis.ingredientCostHint(
+                    formatCount(cockpit.kpis.costCoverageOrderCount),
+                    formatCount(cockpit.kpis.orderCount),
+                  ),
+                ]
+                  .filter(Boolean)
+                  .join(" · ")
               : financeCopy.basic.kpis.missingCost(
                   formatCount(
                     Math.max(
@@ -502,6 +536,18 @@ export default async function FinancePage({
     );
   }
 
+  const goodsInPct =
+    hasNetRevenue && cockpit.kpis.goodsIn != null
+      ? (Number(cockpit.kpis.goodsIn) / netRevenueValue) * 100
+      : null;
+
+  const operatingExpensePct =
+    hasNetRevenue &&
+    cockpit.kpis.operatingExpenseRecorded &&
+    cockpit.kpis.operatingExpense != null
+      ? (Number(cockpit.kpis.operatingExpense) / netRevenueValue) * 100
+      : null;
+
   const periodResultDetails = (
     <KpiRow
       density="compact"
@@ -546,6 +592,11 @@ export default async function FinancePage({
             }
             value={formatVND(cockpit.kpis.goodsIn)}
             shortValue={formatCompactVND(cockpit.kpis.goodsIn)}
+            hint={
+              goodsInPct != null
+                ? `${formatPercent(goodsInPct)} DT`
+                : undefined
+            }
             tone="neutral"
             href={
               goodsInIsTransfer
@@ -564,6 +615,11 @@ export default async function FinancePage({
             shortValue={
               cockpit.kpis.operatingExpenseRecorded
                 ? formatCompactVND(cockpit.kpis.operatingExpense)
+                : undefined
+            }
+            hint={
+              operatingExpensePct != null
+                ? `${formatPercent(operatingExpensePct)} DT`
                 : undefined
             }
             tone={
@@ -621,56 +677,7 @@ export default async function FinancePage({
         hide={["granularity", "compare"]}
       />
 
-      <AppSection size="sm" title={financeCopy.basic.sections.grossProfit}>
-        <FinancePeriodFormulaShell
-          summary={renderGrossProfitCard()}
-          details={grossProfitDetails}
-        />
-      </AppSection>
-
-      <AppSection size="sm" title={financeCopy.basic.sections.periodResult}>
-        <FinancePeriodFormulaShell
-          summary={renderOperatingResultCard()}
-          details={periodResultDetails}
-        />
-      </AppSection>
-
-      <CurrentFundsSection
-        cash={cash}
-        location={params.location}
-        selectedBranchId={params.branch}
-        title={financeCopy.basic.sections.assets}
-      >
-        <FinancePeriodFormulaShell
-          summary={renderTotalAssetValueCard()}
-          details={totalAssetValueDetails}
-        />
-      </CurrentFundsSection>
-
-      <AppSection size="sm" title={financeCopy.basic.sections.startupCapital}>
-        <KpiRow density="compact" className="grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
-          <KpiCard
-            density="compact"
-            label={financeCopy.basic.kpis.startupCapital}
-            value={
-              cockpit.kpis.startupCapitalLoadFailed
-                ? // `vatUnavailable` is intentionally reused as the generic
-                  // "data load failed" copy for finance KPI cards.
-                  financeCopy.basic.kpis.vatUnavailable
-                : cockpit.kpis.startupCapitalRecorded
-                  ? formatVND(cockpit.kpis.startupCapital)
-                  : financeCopy.basic.kpis.notRecorded
-            }
-            shortValue={
-              cockpit.kpis.startupCapitalRecorded
-                ? formatCompactVND(cockpit.kpis.startupCapital)
-                : undefined
-            }
-            href={financeHref("/finance/expenses", params)}
-          />
-        </KpiRow>
-      </AppSection>
-
+      {/* Radar Cảnh Báo: đưa lên ngay sau FilterBar để đập vào mắt chủ sở hữu trong 5 giây đầu */}
       {attentionExceptions.length > 0 ? (
         <AppSection size="sm" title={powerLiteCopy.exceptionsTitle}>
           <ItemGroup>
@@ -707,6 +714,60 @@ export default async function FinancePage({
           </ItemGroup>
         </AppSection>
       ) : null}
+
+      {/* LỢI NHUẬN GỘP & GIÁ VỐN MÓN: Hiệu quả kinh doanh món ăn */}
+      <AppSection size="sm" title={financeCopy.basic.sections.grossProfit}>
+        <FinancePeriodFormulaShell
+          summary={renderGrossProfitCard()}
+          details={grossProfitDetails}
+        />
+      </AppSection>
+
+      {/* KẾT QUẢ KINH DOANH (HERO): Tiền lời/lỗ thực nhận sau khi trừ mọi chi phí */}
+      <AppSection size="sm" title={financeCopy.basic.sections.periodResult}>
+        <FinancePeriodFormulaShell
+          summary={renderOperatingResultCard()}
+          details={periodResultDetails}
+        />
+      </AppSection>
+
+      {/* TÀI SẢN & KÉT TIỀN: Tiền mặt két chi nhánh + Tiền tài khoản công ty */}
+      <CurrentFundsSection
+        cash={cash}
+        location={params.location}
+        selectedBranchId={params.branch}
+        title={financeCopy.basic.sections.assets}
+      >
+        <FinancePeriodFormulaShell
+          summary={renderTotalAssetValueCard()}
+          details={totalAssetValueDetails}
+        />
+      </CurrentFundsSection>
+
+      {/* CHI PHÍ BAN ĐẦU: Thi công, tài sản, đặt cọc ban đầu */}
+      <AppSection size="sm" title={financeCopy.basic.sections.startupCapital}>
+        <KpiRow density="compact" className="grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
+          <KpiCard
+            density="compact"
+            label={financeCopy.basic.kpis.startupCapital}
+            value={
+              cockpit.kpis.startupCapitalLoadFailed
+                ? // `vatUnavailable` is intentionally reused as the generic
+                  // "data load failed" copy for finance KPI cards.
+                  financeCopy.basic.kpis.vatUnavailable
+                : cockpit.kpis.startupCapitalRecorded
+                  ? formatVND(cockpit.kpis.startupCapital)
+                  : financeCopy.basic.kpis.notRecorded
+            }
+            shortValue={
+              cockpit.kpis.startupCapitalRecorded
+                ? formatCompactVND(cockpit.kpis.startupCapital)
+                : undefined
+            }
+            href={financeHref("/finance/expenses", params)}
+          />
+        </KpiRow>
+      </AppSection>
     </AppPage>
   );
 }

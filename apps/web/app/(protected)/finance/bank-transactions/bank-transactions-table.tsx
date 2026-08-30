@@ -635,12 +635,22 @@ export function BankTransactionsTable({
       key: "date",
       header: copy.table.date,
       className: "w-28 text-right font-mono tabular-nums",
+      sortable: true,
+      sortValue: (row) =>
+        row.kind === "bank"
+          ? row.tx.transactionDate
+          : row.payment.paidAt,
       render: (row) => <DateCell row={row} />,
     },
     {
       key: "amount",
       header: copy.table.amount,
       className: "w-32 text-right",
+      sortable: true,
+      sortValue: (row) =>
+        row.kind === "bank"
+          ? Number(row.tx.amount || 0)
+          : Number(row.payment.amount || 0),
       render: (row) =>
         row.kind === "bank" ? (
           <AmountCell tx={row.tx} />
@@ -680,6 +690,7 @@ export function BankTransactionsTable({
     <DataTable
       columns={columns}
       data={filteredRows}
+      pageSize={50}
       getRowKey={(row) =>
         row.kind === "bank"
           ? `bank-${String(

@@ -582,17 +582,23 @@ export function InvoiceList({
       key: "invoice_number",
       header: FINANCE_VI.invoiceNumberCol,
       className: "font-mono text-sm",
+      sortable: true,
+      sortValue: (inv) => inv.invoice_number ?? "",
       render: (inv) => inv.invoice_number ?? "—",
     },
     {
       key: "order",
       header: ORDER_VI.long,
       className: "text-sm text-muted-foreground",
+      sortable: true,
+      sortValue: (inv) => inv.orders?.order_number ?? inv.id,
       render: (inv) => inv.orders?.order_number ?? `#${inv.id}`,
     },
     {
       key: "buyer",
       header: FINANCE_VI.buyer,
+      sortable: true,
+      sortValue: (inv) => inv.buyer_name ?? "",
       render: (inv) =>
         inv.buyer_name ? (
           <div>
@@ -611,6 +617,8 @@ export function InvoiceList({
       key: "total",
       header: FORM_VI.value,
       className: "text-right",
+      sortable: true,
+      sortValue: (inv) => Number(inv.total_amount ?? 0),
       render: (inv) => (
         <span className="font-mono text-sm tabular-nums">
           {formatVND(inv.total_amount)}
@@ -620,12 +628,16 @@ export function InvoiceList({
     {
       key: "status",
       header: FORM_VI.status,
+      sortable: true,
+      sortValue: (inv) => inv.status,
       render: (inv) => <StatusBadge domain="tax-invoice" value={inv.status} />,
     },
     {
       key: "time",
       header: FINANCE_VI.timeCol,
       className: "text-sm text-muted-foreground",
+      sortable: true,
+      sortValue: (inv) => inv.issued_at ?? inv.created_at,
       render: (inv) => formatDate(inv.issued_at ?? inv.created_at),
     },
     {
@@ -758,6 +770,9 @@ export function InvoiceList({
           columns={columns}
           data={invoices}
           getRowKey={(inv) => inv.id}
+          defaultSortKey="time"
+          defaultSortDirection="desc"
+          pageSize={50}
           emptyTitle={FINANCE_VI.emptyNoInvoices}
           emptyIcon={<IconReceipt />}
           mobileCardRender={(inv) => (

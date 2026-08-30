@@ -354,6 +354,8 @@ export function useSupplierInvoiceListUi({
       key: "group",
       header: viewMode === "supplier" ? copy.supplierGroup : copy.poGroup,
       className: "min-w-56",
+      sortable: true,
+      sortValue: (group) => group.title,
       render: (group) => (
         <div className="flex min-w-0 flex-col gap-1">
           <p className="truncate font-medium text-foreground">{group.title}</p>
@@ -388,6 +390,8 @@ export function useSupplierInvoiceListUi({
             key: "invoiceCount",
             header: copy.relatedInvoicesHeader,
             className: "min-w-32",
+            sortable: true,
+            sortValue: (group: SupplierInvoiceGroup) => group.invoiceCount,
             render: (group: SupplierInvoiceGroup) => (
               <span className="text-xs text-muted-foreground">
                 {copy.invoiceGroupSummary(group.invoiceCount)}
@@ -400,6 +404,8 @@ export function useSupplierInvoiceListUi({
       key: "total",
       header: copy.totalInvoice,
       className: "min-w-36 text-right",
+      sortable: true,
+      sortValue: (group) => Number(group.totalAmount),
       render: (group) => (
         <span className="font-mono text-sm tabular-nums text-muted-foreground">
           {messages.inventory.common.currencyCompact(
@@ -412,6 +418,8 @@ export function useSupplierInvoiceListUi({
       key: "paid",
       header: copy.paidAmount,
       className: "min-w-36 text-right",
+      sortable: true,
+      sortValue: (group) => Number(group.paidAmount),
       render: (group) => (
         <div className="flex flex-col items-end text-right">
           <span className="font-mono text-sm tabular-nums text-foreground">
@@ -433,6 +441,8 @@ export function useSupplierInvoiceListUi({
       key: "outstanding",
       header: copy.outstandingPayable,
       className: "min-w-36 text-right",
+      sortable: true,
+      sortValue: (group) => Number(group.outstandingAmount),
       render: (group) => (
         <span
           className={cn(

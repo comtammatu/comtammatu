@@ -11,9 +11,8 @@ import {
   calculateVatAmount,
 } from "@comtammatu/shared/money";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Item,
-} from "@comtammatu/ui/components/item";
+import { Item } from "@comtammatu/ui/components/item";
+import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import {
   BusinessDateField,
   PhotoUploadInput,
@@ -87,6 +86,17 @@ export function ExpenseFormFields({
 
   return (
     <>
+      {!readOnly ? (
+        <NoteCallout
+          tone="muted"
+          label={copy.form.noteCalloutTitle}
+        >
+          <span className="text-xs text-muted-foreground">
+            {copy.form.noteCalloutDescription}
+          </span>
+        </NoteCallout>
+      ) : null}
+
       <Item variant="outline" className="grid gap-4 md:grid-cols-2">
         <BusinessDateField
           control={form.control}
