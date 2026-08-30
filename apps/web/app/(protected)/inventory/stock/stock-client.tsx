@@ -383,8 +383,7 @@ export function StockClient({
     window.history.pushState(null, "", url.toString());
   };
 
-  const openEditIngredientFromDetail = async () => {
-    if (viewingIngredientId == null) return;
+  const openEditIngredient = async (ingredientId: number) => {
     const [ingredientsResult, unitsResult, categoriesResult] =
       await Promise.all([
         fetchIngredients(),
@@ -399,9 +398,9 @@ export function StockClient({
       toast.error(messages.inventory.ingredients.list.loadFailed);
       return;
     }
-    const ingredient = (ingredientsResult.data as IngredientRow[] | undefined)?.find(
-      (row) => row.id === viewingIngredientId,
-    );
+    const ingredient = (
+      ingredientsResult.data as IngredientRow[] | undefined
+    )?.find((row) => row.id === ingredientId);
     if (!ingredient) {
       toast.error(messages.inventory.ingredients.list.loadFailed);
       return;
@@ -411,6 +410,11 @@ export function StockClient({
       unitOptions: unitsResult.data ?? [],
       categoryOptions: categoriesResult.data ?? [],
     });
+  };
+
+  const openEditIngredientFromDetail = () => {
+    if (viewingIngredientId == null) return;
+    void openEditIngredient(viewingIngredientId);
   };
 
   const { categories, hasUncategorized } = useMemo(
@@ -524,6 +528,15 @@ export function StockClient({
         icon: <IconTrash />,
         destructive: true,
         href: actionHrefs.waste,
+      });
+    }
+
+    if (actionPermissions.canEditIngredient) {
+      rowActions.push({
+        key: "edit-ingredient",
+        label: stockCopy.actions.edit,
+        icon: <IconPencil />,
+        onSelect: () => void openEditIngredient(item.id),
       });
     }
 
@@ -814,6 +827,7 @@ export function StockClient({
     actionPermissions.canCreateIssue ||
     actionPermissions.canCreateTransfer ||
     Boolean(actionPermissions.canCreateStocktake && actionHrefs.stocktake) ||
+    actionPermissions.canEditIngredient ||
     actionPermissions.canAdjustException;
 
   const renderStockMobileCard = (item: StockIngredient) => (
@@ -934,6 +948,17 @@ export function StockClient({
 
       {hasItemActions ? (
         <div className="grid grid-cols-2 gap-2 border-t pt-2">
+          {actionPermissions.canEditIngredient ? (
+            <Button
+              type="button"
+              size={controlSize === "touch" ? "touch" : "default"}
+              variant="outline"
+              onClick={() => void openEditIngredient(item.id)}
+            >
+              <IconPencil />
+              {stockCopy.actions.edit}
+            </Button>
+          ) : null}
           {actionPermissions.canCreateIssue ? (
             <Button
               type="button"

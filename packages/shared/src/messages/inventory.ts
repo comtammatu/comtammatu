@@ -409,6 +409,17 @@ export const INVENTORY_VI = {
   countSlipEmptyDescription:
     "Khi nhân viên gửi phiếu đếm tồn, phiếu sẽ xuất hiện tại đây.",
   countSlipHistoryTitle: "Đã xử lý gần đây",
+  countSlipSearchPlaceholder: "Tìm theo mã phiếu, tên nhân viên, kho, ca...",
+  countSlipNotFoundTitle: "Không tìm thấy phiếu đếm phù hợp",
+  countSlipNotFoundDesc: "Thử tìm với từ khóa khác hoặc xóa bộ lọc tìm kiếm.",
+  countSlipPendingCard: "Chờ duyệt",
+  countSlipDiscrepancyCard: "Có chênh lệch",
+  countSlipApprovedCard: "Đã duyệt",
+  countSlipTotalCard: "Tổng phiếu",
+  countSlipTotalCountLines: "Tổng món đếm",
+  countSlipMatchedLines: "Khớp chuẩn",
+  countSlipShortageLines: "Hao hụt",
+  countSlipSurplusLines: "Dôi dư",
   countSlipApproveTitle: "Xác nhận phiếu đếm ca?",
   countSlipApproveDescription:
     "Xác nhận đối soát số lượng đếm bàn giao ca. Phiếu đếm không làm thay đổi tồn kho sổ cái.",

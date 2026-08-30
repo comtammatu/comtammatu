@@ -4,7 +4,10 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContextWithPermission } from "@/(protected)/inventory/_lib/auth";
+import {
+  getAuthContext,
+  probePermission,
+} from "@/(protected)/inventory/_lib/auth";
 import { resolveCountSlipReviewerEmployeeId } from "@lib/inventory/count-slip-reviewer";
 
 /* ─── Count slip review (manager queue) ─── */
@@ -67,11 +70,14 @@ export async function approveCountSlip(
     };
   }
 
-  const ctx = await getAuthContextWithPermission(
-    STAFF_ROLES,
-    PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
-  );
+  const ctx = await getAuthContext(STAFF_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền duyệt phiếu đếm" };
+  if (
+    ctx.claims.user_role !== "owner" &&
+    !(await probePermission(ctx, PERMISSION_KEYS.INVENTORY_COUNT_APPROVE))
+  ) {
+    return { success: false, error: "Không có quyền duyệt phiếu đếm" };
+  }
   const { supabase, claims, userId } = ctx;
   const { data: slip } = await supabase
     .from("inventory_count_slips")
@@ -99,15 +105,14 @@ export async function approveCountSlip(
   const { data, error } = useAtomicAdjustment
     ? await supabase.rpc("approve_inventory_count_slip_with_waste", {
         p_slip_id: parsed.data.slipId,
-        p_photo_urls: parsed.data.wastePhotoUrls,
-        p_reasons: parsed.data.wasteReasons,
-        p_allow_self_review: parsed.data.allowSelfReview,
+        p_create_waste: parsed.data.autoCreateWaste,
         p_adjust_surplus: parsed.data.autoAdjustSurplus,
+        p_waste_photo_urls: parsed.data.wastePhotoUrls,
+        p_waste_reasons: parsed.data.wasteReasons,
         p_surplus_reasons: parsed.data.surplusReasons,
       })
     : await supabase.rpc("approve_inventory_count_slip", {
         p_slip_id: parsed.data.slipId,
-        p_allow_self_review: parsed.data.allowSelfReview,
       });
 
   if (error) {
@@ -145,30 +150,17 @@ export async function approveCountSlip(
   };
 }
 
+/* ─── Recount request ─── */
+
 const requestRecountSchema = z.object({
   slipId: z.coerce.number().int().positive(),
-  lineIds: z
-    .array(z.coerce.number().int().positive())
-    .min(1, "Chọn ít nhất một nguyên liệu cần đếm lại."),
-  note: z
-    .string()
-    .trim()
-    .min(3, "Nhập lý do đếm lại từ 3 ký tự.")
-    .max(1000, "Lý do đếm lại tối đa 1000 ký tự."),
-}).superRefine((data, ctx) => {
-  if (new Set(data.lineIds).size !== data.lineIds.length) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["lineIds"],
-      message: "Mỗi nguyên liệu chỉ được chọn một lần.",
-    });
-  }
+  lineIds: z.array(z.coerce.number().int().positive()).min(1),
+  note: z.string().trim().min(3).max(1000),
 });
 
 /**
- * Send a submitted count slip back for recount. Wraps
- * `request_inventory_count_line_recount` RPC, which locks the original count
- * snapshot and opens only the selected lines for the employee.
+ * Return a count slip to the employee for recount on specified lines.
+ * Sets status to 'needs_changes' and records the manager's review note.
  */
 export async function requestCountRecount(
   input: z.infer<typeof requestRecountSchema>,
@@ -181,11 +173,14 @@ export async function requestCountRecount(
     };
   }
 
-  const ctx = await getAuthContextWithPermission(
-    STAFF_ROLES,
-    PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
-  );
+  const ctx = await getAuthContext(STAFF_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền duyệt phiếu đếm" };
+  if (
+    ctx.claims.user_role !== "owner" &&
+    !(await probePermission(ctx, PERMISSION_KEYS.INVENTORY_COUNT_APPROVE))
+  ) {
+    return { success: false, error: "Không có quyền duyệt phiếu đếm" };
+  }
   const { supabase, claims, userId } = ctx;
   const { data: slip } = await supabase
     .from("inventory_count_slips")

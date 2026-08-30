@@ -1,7 +1,10 @@
 import { redirect } from "next/navigation";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
-import { getAuthContextWithPermission } from "@/(protected)/inventory/_lib/auth";
+import {
+  getAuthContext,
+  probePermission,
+} from "@/(protected)/inventory/_lib/auth";
 import { CountSlipsClient } from "./count-slips-client";
 import {
   buildCountSlipLineView,
@@ -86,11 +89,14 @@ export async function CountSlipsPageContent({
 }: {
   initialSlipId?: number | null;
 } = {}) {
-  const ctx = await getAuthContextWithPermission(
-    STAFF_ROLES,
-    PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
-  );
+  const ctx = await getAuthContext(STAFF_ROLES);
   if (!ctx) redirect("/");
+  if (
+    ctx.claims.user_role !== "owner" &&
+    !(await probePermission(ctx, PERMISSION_KEYS.INVENTORY_COUNT_APPROVE))
+  ) {
+    redirect("/");
+  }
   const { supabase, claims, userId } = ctx;
   const reviewerEmployeeId = await resolveCountSlipReviewerEmployeeId(
     claims.tenant_id,

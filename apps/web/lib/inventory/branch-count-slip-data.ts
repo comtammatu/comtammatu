@@ -3,7 +3,10 @@ import "server-only";
 import { notFound, redirect } from "next/navigation";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
-import { getAuthContextWithPermission } from "@/(protected)/inventory/_lib/auth";
+import {
+  getAuthContext,
+  probePermission,
+} from "@/(protected)/inventory/_lib/auth";
 import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
 import {
   buildCountSlipLineView,
@@ -85,12 +88,18 @@ export async function loadBranchCountSlipData(
   routeBranchId: number,
   focusEmployeeId?: number,
 ): Promise<BranchCountSlipData> {
-  const ctx = await getAuthContextWithPermission(
-    STAFF_ROLES,
-    PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
-    routeBranchId,
-  );
+  const ctx = await getAuthContext(STAFF_ROLES);
   if (!ctx) redirect("/");
+  if (
+    ctx.claims.user_role !== "owner" &&
+    !(await probePermission(
+      ctx,
+      PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
+      routeBranchId,
+    ))
+  ) {
+    redirect("/");
+  }
   const { supabase, claims, userId } = ctx;
   const reviewerEmployeeId = await resolveCountSlipReviewerEmployeeId(
     claims.tenant_id,
