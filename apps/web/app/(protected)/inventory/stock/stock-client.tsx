@@ -117,7 +117,7 @@ function stockWacLabel(
 ): string {
   const kind = resolveStockValuationDisplay({ quantity, unitCost });
   if (kind === "valued" && unitCost != null) {
-    return `${inventoryCommon.currencyCompact(formatVND(unitCost))}/${unitLabel}`;
+    return `${inventoryCommon.currencyCompact(formatVND(Math.round(unitCost)))}/${unitLabel}`;
   }
   if (kind === "pending") return valuationCopy.pendingWac;
   return inventoryCommon.noValue;
@@ -129,7 +129,7 @@ function stockValueLabel(
   value: number | null,
 ): string {
   const kind = resolveStockValuationDisplay({ quantity, unitCost });
-  if (kind === "valued" && value != null) return formatVND(value);
+  if (kind === "valued" && value != null) return formatVND(Math.round(value));
   if (kind === "pending") return valuationCopy.pendingWac;
   return inventoryCommon.noValue;
 }
@@ -982,6 +982,8 @@ export function StockClient({
   const outOfStockCount = ingredients.filter((i) => i.status === "out").length;
   const shortageCount = reorderSuggestions.filter((i) => i.isBelowMin).length;
 
+  const hasValuation = visibleTotalValue != null || totalValue != null;
+
   const underThresholdButton = (
     <Item
       variant="outline"
@@ -996,11 +998,11 @@ export function StockClient({
           : "border-border",
       )}
     >
-      <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      <div className="flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         <span>{stockCopy.metrics.lowStock}</span>
         <span className="size-2 rounded-full bg-warning" />
       </div>
-      <div className="mt-2 flex items-baseline justify-between">
+      <div className="mt-2 flex items-baseline justify-between gap-2">
         <span className="font-mono text-2xl font-semibold tabular-nums text-warning">
           {formatQty(lowStockCount)}
         </span>
@@ -1015,48 +1017,26 @@ export function StockClient({
     <>
       <AppPageHeader
         title={stockCopy.title}
-        meta={
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-            {visibleTotalValue != null ? (
-              <span className="inline-flex items-center gap-1.5 rounded-md bg-muted px-2 py-0.5 font-medium text-muted-foreground">
-                <span>{stockCopy.metrics.selectedWarehouse}:</span>
-                <span className="font-mono font-semibold tabular-nums text-foreground">
-                  {inventoryCommon.currencyCompact(
-                    formatVND(visibleTotalValue),
-                  )}
-                </span>
-              </span>
-            ) : null}
-            {totalValue != null ? (
-              <span className="inline-flex items-center gap-1.5 rounded-md bg-muted px-2 py-0.5 font-medium text-muted-foreground">
-                <span>{stockCopy.metrics.wholeSystem}:</span>
-                <span className="font-mono font-semibold tabular-nums text-foreground">
-                  {inventoryCommon.currencyCompact(formatVND(totalValue))}
-                </span>
-              </span>
-            ) : null}
-          </div>
-        }
         actions={
           <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
-            <BranchStockThresholdsDialog
-              branchId={branchId}
-              initialRows={branchThresholds}
-            />
             <SmartReorderSheet
               branchId={branchId}
               items={reorderSuggestions}
               trigger={
-                <Button variant="outline" size="field" className="gap-1.5">
-                  <IconSparkles className="size-4 text-primary" />
+                <Button variant="default" size="field" className="gap-1.5 font-medium shadow-xs">
+                  <IconSparkles className="size-4" />
                   <span>{INVENTORY_VI.smartReorderOpenBtn}</span>
                   {shortageCount > 0 ? (
-                    <Badge variant="destructive" className="ml-1 px-1.5 h-4 text-xs">
+                    <Badge variant="secondary" className="ml-1 h-4 px-1.5 font-mono text-xs font-semibold bg-background text-foreground">
                       {shortageCount}
                     </Badge>
                   ) : null}
                 </Button>
               }
+            />
+            <BranchStockThresholdsDialog
+              branchId={branchId}
+              initialRows={branchThresholds}
             />
             <StockOnHandPrintDialog
               branchId={branchId}
@@ -1070,7 +1050,38 @@ export function StockClient({
         }
       />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div
+        className={cn(
+          "grid gap-3",
+          hasValuation
+            ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-5"
+            : "grid-cols-2 lg:grid-cols-4",
+        )}
+      >
+        {hasValuation ? (
+          <Item
+            variant="outline"
+            className="flex flex-col justify-between p-3 text-left border-border bg-card"
+          >
+            <div className="flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <span>{stockCopy.metrics.selectedWarehouse}</span>
+              <IconReceipt className="size-3.5 text-muted-foreground" />
+            </div>
+            <div className="mt-2 flex flex-col gap-1">
+              <span className="font-mono text-2xl font-semibold tabular-nums text-foreground">
+                {visibleTotalValue != null
+                  ? formatVND(Math.round(visibleTotalValue))
+                  : "—"}
+              </span>
+              {totalValue != null ? (
+                <span className="text-xs text-muted-foreground font-mono tabular-nums truncate">
+                  {stockCopy.metrics.wholeSystem}: {formatVND(Math.round(totalValue))}
+                </span>
+              ) : null}
+            </div>
+          </Item>
+        ) : null}
+
         <Item
           variant="outline"
           onClick={() => setStockFilter("all")}
@@ -1081,11 +1092,11 @@ export function StockClient({
               : "border-border",
           )}
         >
-          <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <div className="flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             <span>{stockCopy.metrics.totalItems}</span>
             <span className="size-2 rounded-full bg-muted-foreground" />
           </div>
-          <div className="mt-2 flex items-baseline justify-between">
+          <div className="mt-2 flex items-baseline justify-between gap-2">
             <span className="font-mono text-2xl font-semibold tabular-nums text-foreground">
               {formatQty(totalCount)}
             </span>
@@ -1107,11 +1118,11 @@ export function StockClient({
               : "border-border",
           )}
         >
-          <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <div className="flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             <span>{stockCopy.metrics.inStock}</span>
             <span className="size-2 rounded-full bg-success" />
           </div>
-          <div className="mt-2 flex items-baseline justify-between">
+          <div className="mt-2 flex items-baseline justify-between gap-2">
             <span className="font-mono text-2xl font-semibold tabular-nums text-success">
               {formatQty(inStockCount)}
             </span>
@@ -1135,11 +1146,11 @@ export function StockClient({
               : "border-border",
           )}
         >
-          <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <div className="flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             <span>{stockCopy.metrics.outOfStock}</span>
             <span className="size-2 rounded-full bg-destructive" />
           </div>
-          <div className="mt-2 flex items-baseline justify-between">
+          <div className="mt-2 flex items-baseline justify-between gap-2">
             <span className="font-mono text-2xl font-semibold tabular-nums text-destructive">
               {formatQty(outOfStockCount)}
             </span>
