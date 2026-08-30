@@ -1,3 +1,5 @@
+import type { QuantityUnitFormatRow } from "./quantity-unit-format";
+
 export type CountSlipStatus = "submitted" | "needs_changes" | "approved";
 
 export type CountSlipLineViewInput = {
@@ -13,6 +15,7 @@ export type CountSlipLineViewInput = {
   entryToBaseFactor?: number | null;
   countedBaseQuantity?: number | null;
   currentLiveQuantity?: number | null;
+  displayUnits?: QuantityUnitFormatRow[];
   recountRequired?: boolean;
   lastRecountRound?: number;
   note: string | null;
@@ -24,14 +27,18 @@ export type CountSlipLineView = {
   ingredientName: string;
   /** Book quantity converted into the employee's entry unit when a factor exists (Snapshot). */
   systemQuantity: number;
+  systemBaseQuantity: number;
   systemUnit: string;
   countedQuantity: number;
   countedUnit: string;
   countedBaseQuantity: number | null;
   variance: number | null;
+  varianceBaseQuantity: number | null;
   varianceUnit: string;
   /** Live stock on-hand quantity for manager real-time reference. */
   currentLiveQuantity: number | null;
+  currentLiveBaseQuantity: number | null;
+  displayUnits: QuantityUnitFormatRow[];
   recountRequired: boolean;
   lastRecountRound: number;
   note: string | null;
@@ -90,20 +97,44 @@ export function buildCountSlipLineView(
     input.currentLiveQuantity != null && Number.isFinite(input.currentLiveQuantity)
       ? (factor !== null && factor > 0 ? input.currentLiveQuantity / factor : input.currentLiveQuantity)
       : null;
+  const currentLiveBaseQuantity =
+    input.currentLiveQuantity != null && Number.isFinite(input.currentLiveQuantity)
+      ? input.currentLiveQuantity
+      : null;
+  const displayUnits =
+    input.displayUnits != null && input.displayUnits.length > 0
+      ? input.displayUnits
+      : baseUnit
+        ? [
+            {
+              unit_code: baseUnit,
+              to_base_factor: 1,
+              is_base: true,
+              is_active: true,
+              sort_order: 0,
+            },
+          ]
+        : [];
 
   if (factor === null) {
+    const countedBase = input.countedBaseQuantity ?? null;
     return {
       id: input.id,
       ingredientId: input.ingredientId,
       ingredientName: input.ingredientName,
       systemQuantity: input.systemQuantity,
+      systemBaseQuantity: input.systemQuantity,
       systemUnit: baseUnit,
       countedQuantity: input.countedQuantity,
       countedUnit,
-      countedBaseQuantity: input.countedBaseQuantity ?? null,
+      countedBaseQuantity: countedBase,
       variance: null,
+      varianceBaseQuantity:
+        countedBase === null ? null : countedBase - input.systemQuantity,
       varianceUnit: baseUnit,
       currentLiveQuantity: liveQty,
+      currentLiveBaseQuantity,
+      displayUnits,
       recountRequired: input.recountRequired === true,
       lastRecountRound: input.lastRecountRound ?? 0,
       note: input.note,
@@ -116,13 +147,17 @@ export function buildCountSlipLineView(
     ingredientId: input.ingredientId,
     ingredientName: input.ingredientName,
     systemQuantity: input.systemQuantity / factor,
+    systemBaseQuantity: input.systemQuantity,
     systemUnit: countedUnit,
     countedQuantity: input.countedQuantity,
     countedUnit,
     countedBaseQuantity: countedBase,
     variance: input.countedQuantity - input.systemQuantity / factor,
+    varianceBaseQuantity: countedBase - input.systemQuantity,
     varianceUnit: countedUnit,
     currentLiveQuantity: liveQty,
+    currentLiveBaseQuantity,
+    displayUnits,
     recountRequired: input.recountRequired === true,
     lastRecountRound: input.lastRecountRound ?? 0,
     note: input.note,

@@ -3,6 +3,58 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { buildCountSlipLineView } from "../lib/inventory/count-slip-model";
+import { formatQuantityInLargestUnits } from "../lib/inventory/quantity-unit-format";
+
+const viNumber = (value: number): string =>
+  new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 3 }).format(value);
+
+test("count slip review promotes base quantities into the largest convertible units", () => {
+  const units = [
+    {
+      unit_code: "ml",
+      to_base_factor: 1,
+      is_base: true,
+      is_active: true,
+      sort_order: 0,
+    },
+    {
+      unit_code: "lít",
+      to_base_factor: 1000,
+      is_base: false,
+      is_active: true,
+      sort_order: 1,
+    },
+  ];
+
+  assert.equal(formatQuantityInLargestUnits(5320, units, viNumber), "5 lít 320 ml");
+  assert.equal(formatQuantityInLargestUnits(3, units, viNumber), "3 ml");
+  assert.equal(
+    formatQuantityInLargestUnits(-5317, units, viNumber),
+    "−5 lít 317 ml",
+  );
+
+  const line = buildCountSlipLineView({
+    id: 109,
+    ingredientId: 77,
+    ingredientName: "Nước mắm Má Tư",
+    systemQuantity: 5320,
+    countedQuantity: 3,
+    countedBaseQuantity: 3,
+    currentLiveQuantity: 4960,
+    entryUnitId: 1,
+    entryUnitCode: "ml",
+    baseUnitCode: "ml",
+    toBaseFactor: 1,
+    displayUnits: units,
+    note: null,
+  });
+
+  assert.equal(line.systemBaseQuantity, 5320);
+  assert.equal(line.countedBaseQuantity, 3);
+  assert.equal(line.varianceBaseQuantity, -5317);
+  assert.equal(line.currentLiveBaseQuantity, 4960);
+  assert.deepEqual(line.displayUnits, units);
+});
 
 test("count slip review compares book and counted qty in the employee unit", () => {
   const line = buildCountSlipLineView({

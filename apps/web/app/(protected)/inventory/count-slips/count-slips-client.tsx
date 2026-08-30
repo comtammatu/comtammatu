@@ -60,6 +60,7 @@ import type {
   CountSlipStatus,
 } from "@lib/inventory/count-slip-model";
 import { formatQty } from "@lib/inventory/format";
+import { formatQuantityInLargestUnits } from "@lib/inventory/quantity-unit-format";
 import { inventoryListFilterSelectClassName } from "../_components/inventory-list-filters";
 import { approveCountSlip, requestCountRecount } from "./actions";
 import {
@@ -81,6 +82,25 @@ function formatVariance(value: number | null): string {
   if (value > 0) return `+${formatted}`;
   if (value < 0) return `−${formatted}`;
   return formatted;
+}
+
+function formatLineBaseQuantity(
+  line: CountSlipLine,
+  quantity: number,
+): string {
+  return formatQuantityInLargestUnits(quantity, line.displayUnits, formatQty);
+}
+
+function formatLineCountedQuantity(line: CountSlipLine): string {
+  return line.countedBaseQuantity === null
+    ? `${formatQty(line.countedQuantity)} ${line.countedUnit}`.trim()
+    : formatLineBaseQuantity(line, line.countedBaseQuantity);
+}
+
+function formatLineVariance(line: CountSlipLine): string {
+  if (line.varianceBaseQuantity === null) return "—";
+  const formatted = formatLineBaseQuantity(line, line.varianceBaseQuantity);
+  return line.varianceBaseQuantity > 0 ? `+${formatted}` : formatted;
 }
 
 function varianceClassName(value: number | null): string {
@@ -830,12 +850,12 @@ function CountSlipReviewDialog({
       render: (line) => (
         <div className="whitespace-nowrap text-right font-mono tabular-nums">
           <div>
-            {formatQty(line.systemQuantity)} {line.systemUnit}
+            {formatLineBaseQuantity(line, line.systemBaseQuantity)}
           </div>
-          {line.currentLiveQuantity !== null ? (
+          {line.currentLiveBaseQuantity !== null ? (
             <div className="text-xs text-muted-foreground">
-              {INVENTORY_VI.liveStockColon} {formatQty(line.currentLiveQuantity)}{" "}
-              {line.systemUnit}
+              {INVENTORY_VI.liveStockColon}{" "}
+              {formatLineBaseQuantity(line, line.currentLiveBaseQuantity)}
             </div>
           ) : null}
         </div>
@@ -847,13 +867,7 @@ function CountSlipReviewDialog({
       className: "w-40 text-right",
       render: (line) => (
         <div className="whitespace-nowrap text-right font-mono tabular-nums">
-          {formatQty(line.countedQuantity)} {line.countedUnit}
-          {line.countedBaseQuantity !== null &&
-          line.countedUnit !== line.systemUnit ? (
-            <div className="text-xs text-muted-foreground">
-              {formatQty(line.countedBaseQuantity)} {line.systemUnit}
-            </div>
-          ) : null}
+          {formatLineCountedQuantity(line)}
         </div>
       ),
     },
@@ -876,8 +890,7 @@ function CountSlipReviewDialog({
                 varianceClassName(line.variance),
               )}
             >
-              {formatVariance(line.variance)}
-              {line.variance !== null ? ` ${line.varianceUnit}` : ""}
+              {formatLineVariance(line)}
             </span>
             {isMatchedAfterSales ? (
               <Badge variant="success">
@@ -1038,11 +1051,11 @@ function CountSlipReviewDialog({
                     {line.ingredientName}
                   </ItemTitle>
                   <ItemDescription>
-                    Hệ thống: {formatQty(line.systemQuantity)} {line.systemUnit}
+                    Hệ thống:{" "}
+                    {formatLineBaseQuantity(line, line.systemBaseQuantity)}
                   </ItemDescription>
                   <ItemDescription>
-                    Thực đếm: {formatQty(line.countedQuantity)}{" "}
-                    {line.countedUnit}
+                    Thực đếm: {formatLineCountedQuantity(line)}
                   </ItemDescription>
                 </ItemContent>
                 <ItemActions>
@@ -1065,8 +1078,7 @@ function CountSlipReviewDialog({
                       varianceClassName(line.variance),
                     )}
                   >
-                    {formatVariance(line.variance)}
-                    {line.variance !== null ? ` ${line.varianceUnit}` : ""}
+                    {formatLineVariance(line)}
                   </span>
                 </ItemActions>
               </Item>

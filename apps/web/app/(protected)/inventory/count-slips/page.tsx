@@ -10,6 +10,7 @@ import {
 } from "@lib/inventory/count-slip-model";
 import { resolveCountSlipReviewerEmployeeId } from "@lib/inventory/count-slip-reviewer";
 import { loadCountSlipWasteIssueNumbers } from "@lib/inventory/count-slip-waste-links";
+import type { QuantityUnitFormatRow } from "@lib/inventory/quantity-unit-format";
 
 export const instant = false;
 
@@ -249,12 +250,13 @@ export async function CountSlipsPageContent({
   ];
   const unitByIngredient = new Map<string, UnitMeta>();
   const baseUnitByIngredient = new Map<number, UnitMeta>();
+  const displayUnitsByIngredient = new Map<number, QuantityUnitFormatRow[]>();
 
   if (ingredientIds.length > 0) {
     const { data: unitRows, error: unitRowsError } = await supabase
       .from("ingredient_units")
       .select(
-        "ingredient_id, unit_id, to_base_factor, is_base, units!ingredient_units_unit_tenant_fkey(code)",
+        "ingredient_id, unit_id, to_base_factor, is_base, sort_order, units!ingredient_units_unit_tenant_fkey(code)",
       )
       .eq("tenant_id", claims.tenant_id)
       .eq("is_active", true)
@@ -281,6 +283,17 @@ export async function CountSlipsPageContent({
       };
       unitByIngredient.set(unitKey(ingredientId, unitId), meta);
       if (meta.isBase) baseUnitByIngredient.set(ingredientId, meta);
+      if (meta.toBaseFactor !== null && meta.toBaseFactor > 0) {
+        const displayUnits = displayUnitsByIngredient.get(ingredientId) ?? [];
+        displayUnits.push({
+          unit_code: code,
+          to_base_factor: meta.toBaseFactor,
+          is_base: meta.isBase,
+          is_active: true,
+          sort_order: Number(row.sort_order ?? 0),
+        });
+        displayUnitsByIngredient.set(ingredientId, displayUnits);
+      }
     }
   }
 
@@ -358,6 +371,7 @@ export async function CountSlipsPageContent({
               ? Number(line.counted_base_quantity)
               : null,
           currentLiveQuantity: liveStock,
+          displayUnits: displayUnitsByIngredient.get(ingredientId) ?? [],
           recountRequired: line.recount_required === true,
           lastRecountRound: Number(line.last_recount_round ?? 0),
           systemQuantity: Number(line.system_quantity ?? 0),

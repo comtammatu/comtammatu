@@ -1,8 +1,7 @@
 import type { IngredientUnitRow } from "@lib/inventory/types";
+import { formatQuantityUnitBreakdown } from "@lib/inventory/quantity-unit-format";
 
 const QUANTITY_EPSILON = 5e-6;
-/** Compact stock line shows at most two unit tiers (e.g. "1 thùng + 6 lon"). */
-const MAX_COMPACT_UNITS = 2;
 
 function snapNearInteger(value: number): number {
   const integer = Math.round(value);
@@ -16,10 +15,6 @@ function wholeCount(qtyBase: number, factor: number): number {
     return Math.floor(raw + QUANTITY_EPSILON);
   }
   return Math.ceil(raw - QUANTITY_EPSILON);
-}
-
-function isNearInteger(value: number): boolean {
-  return Math.abs(value - Math.round(value)) <= QUANTITY_EPSILON;
 }
 
 function usableUnits(
@@ -132,89 +127,5 @@ export function formatStockUnits(
   units: IngredientUnitRow[] | undefined,
   formatNumber: (n: number) => string,
 ): { big: string | null; base: string } {
-  const usable = usableUnits(units);
-
-  const displayRow = resolveStockDisplayUnit(usable);
-  const displayCode = displayRow?.unit_code ?? "";
-  const displayFactor = Number(displayRow?.to_base_factor ?? 1);
-  const displayQty = toStockDisplayQuantity(qtyBase, displayRow);
-  const base = `${formatNumber(displayQty)} ${displayCode}`.trim();
-
-  if (
-    usable.length <= 1 ||
-    !Number.isFinite(qtyBase) ||
-    Math.abs(qtyBase) <= QUANTITY_EPSILON
-  ) {
-    return { big: null, base };
-  }
-
-  const ladder = unitLadder(usable);
-  let remaining = snapNearInteger(qtyBase);
-  const parts: Array<{ qty: number; code: string; factor: number }> = [];
-
-  // Largest unit with at least one whole pack.
-  for (const unit of ladder) {
-    const factor = Number(unit.to_base_factor);
-    const whole = wholeCount(remaining, factor);
-    if (Math.abs(whole) < 1) continue;
-    parts.push({ qty: whole, code: unit.unit_code, factor });
-    remaining = snapNearInteger(remaining - whole * factor);
-    break;
-  }
-
-  // Second tier: prefer an exact whole smaller pack; otherwise ledger unit.
-  if (
-    parts.length < MAX_COMPACT_UNITS &&
-    Math.abs(remaining) > QUANTITY_EPSILON
-  ) {
-    const firstFactor = parts[0]?.factor ?? Number.POSITIVE_INFINITY;
-    const smaller = ladder.filter(
-      (unit) => Number(unit.to_base_factor) < firstFactor,
-    );
-
-    let placed = false;
-    for (const unit of smaller) {
-      const factor = Number(unit.to_base_factor);
-      const asUnit = snapNearInteger(remaining / factor);
-      if (Math.abs(asUnit) < 1 || !isNearInteger(asUnit)) continue;
-      const leftover = snapNearInteger(remaining - asUnit * factor);
-      if (Math.abs(leftover) > QUANTITY_EPSILON) continue;
-      parts.push({ qty: asUnit, code: unit.unit_code, factor });
-      remaining = 0;
-      placed = true;
-      break;
-    }
-
-    if (!placed && Math.abs(remaining) > QUANTITY_EPSILON) {
-      const remDisplay = toStockDisplayQuantity(remaining, displayRow);
-      if (Math.abs(remDisplay) > QUANTITY_EPSILON) {
-        parts.push({
-          qty: remDisplay,
-          code: displayCode,
-          factor: displayFactor,
-        });
-      }
-    }
-  }
-
-  const displayParts = parts.slice(0, MAX_COMPACT_UNITS);
-  if (displayParts.length === 0) {
-    return { big: null, base };
-  }
-
-  const onlyLedgerUnit =
-    displayParts.length === 1 &&
-    displayParts[0]!.code === displayCode &&
-    Math.abs(displayParts[0]!.qty - displayQty) <= QUANTITY_EPSILON;
-
-  if (onlyLedgerUnit) {
-    return { big: null, base };
-  }
-
-  return {
-    big: displayParts
-      .map((part) => `${formatNumber(part.qty)} ${part.code}`.trim())
-      .join(" + "),
-    base,
-  };
+  return formatQuantityUnitBreakdown(qtyBase, units, formatNumber);
 }

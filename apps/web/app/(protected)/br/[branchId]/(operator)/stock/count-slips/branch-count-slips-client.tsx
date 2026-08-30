@@ -64,6 +64,7 @@ import {
   type CountSlipSurplusReasons,
 } from "@/components/inventory/count-slip-surplus-evidence";
 import { formatQty } from "@lib/inventory/format";
+import { formatQuantityInLargestUnits } from "@lib/inventory/quantity-unit-format";
 import type {
   CountSlipLineView,
   CountSlipRow,
@@ -78,6 +79,25 @@ function formatVariance(value: number | null): string {
   if (value > 0) return `+${formatted}`;
   if (value < 0) return `−${formatted}`;
   return formatted;
+}
+
+function formatLineBaseQuantity(
+  line: CountSlipLineView,
+  quantity: number,
+): string {
+  return formatQuantityInLargestUnits(quantity, line.displayUnits, formatQty);
+}
+
+function formatLineCountedQuantity(line: CountSlipLineView): string {
+  return line.countedBaseQuantity === null
+    ? `${formatQty(line.countedQuantity)} ${line.countedUnit}`.trim()
+    : formatLineBaseQuantity(line, line.countedBaseQuantity);
+}
+
+function formatLineVariance(line: CountSlipLineView): string {
+  if (line.varianceBaseQuantity === null) return "—";
+  const formatted = formatLineBaseQuantity(line, line.varianceBaseQuantity);
+  return line.varianceBaseQuantity > 0 ? `+${formatted}` : formatted;
 }
 
 function varianceClassName(value: number | null): string {
@@ -878,10 +898,9 @@ function CountSlipLineItem({
     line.currentLiveQuantity !== null &&
     line.countedQuantity === line.currentLiveQuantity;
   const soldSinceSubmit =
-    line.systemQuantity !== null &&
-    line.currentLiveQuantity !== null &&
-    line.systemQuantity > line.currentLiveQuantity
-      ? line.systemQuantity - line.currentLiveQuantity
+    line.currentLiveBaseQuantity !== null &&
+    line.systemBaseQuantity > line.currentLiveBaseQuantity
+      ? line.systemBaseQuantity - line.currentLiveBaseQuantity
       : null;
 
   return (
@@ -904,7 +923,7 @@ function CountSlipLineItem({
                 line.variance,
               )}`}
             >
-              {formatVariance(line.variance)} {line.varianceUnit}
+              {formatLineVariance(line)}
             </span>
             {isMatchedAfterSales ? (
               <Badge variant="success">
@@ -930,18 +949,18 @@ function CountSlipLineItem({
           <span>
             {INVENTORY_VI.systemStockColon}{" "}
             <span className="font-mono tabular-nums text-foreground">
-              {formatQty(line.systemQuantity)} {line.systemUnit}
+              {formatLineBaseQuantity(line, line.systemBaseQuantity)}
             </span>
           </span>
           <span>
             {INVENTORY_VI.countedColon}{" "}
             <span className="font-mono tabular-nums text-foreground">
-              {formatQty(line.countedQuantity)} {line.countedUnit}
+              {formatLineCountedQuantity(line)}
             </span>
           </span>
         </ItemDescription>
 
-        {soldSinceSubmit !== null || line.currentLiveQuantity !== null ? (
+        {soldSinceSubmit !== null || line.currentLiveBaseQuantity !== null ? (
           <ItemDescription className="line-clamp-none flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
             <span className="font-medium text-foreground/70">
               ↳ {INVENTORY_VI.referenceColon}
@@ -950,18 +969,18 @@ function CountSlipLineItem({
               <span>
                 {INVENTORY_VI.soldSinceSubmitColon}{" "}
                 <span className="font-mono tabular-nums text-foreground">
-                  {formatQty(soldSinceSubmit)} {line.systemUnit}
+                  {formatLineBaseQuantity(line, soldSinceSubmit)}
                 </span>
               </span>
             ) : null}
-            {soldSinceSubmit !== null && line.currentLiveQuantity !== null ? (
+            {soldSinceSubmit !== null && line.currentLiveBaseQuantity !== null ? (
               <span>·</span>
             ) : null}
-            {line.currentLiveQuantity !== null ? (
+            {line.currentLiveBaseQuantity !== null ? (
               <span>
                 {INVENTORY_VI.liveStockColon}{" "}
                 <span className="font-mono tabular-nums text-foreground">
-                  {formatQty(line.currentLiveQuantity)} {line.systemUnit}
+                  {formatLineBaseQuantity(line, line.currentLiveBaseQuantity)}
                 </span>
               </span>
             ) : null}
