@@ -298,6 +298,8 @@ export function buildIssueColumns({
     {
       key: "code",
       header: INVENTORY_VI.issueCode,
+      sortable: true,
+      sortValue: (item) => item.code,
       render: (item) =>
         onOpen ? (
           <Button
@@ -320,16 +322,22 @@ export function buildIssueColumns({
     {
       key: "type",
       header: INVENTORY_VI.issueTypeLabel,
+      sortable: true,
+      sortValue: (item) => item.type,
       render: (item) => issueTypeLabel(item.type, item.branchKind),
     },
     {
       key: "branchName",
       header: BRANCH_VI.long,
+      sortable: true,
+      sortValue: (item) => item.branchName,
       render: (item) => item.branchName,
     },
     {
       key: "date",
       header: INVENTORY_VI.createdDate,
+      sortable: true,
+      sortValue: (item) => item.date,
       render: (item) => (
         <span className="font-mono tabular-nums text-muted-foreground">
           {item.date}
@@ -339,6 +347,8 @@ export function buildIssueColumns({
     {
       key: "status",
       header: FORM_VI.status,
+      sortable: true,
+      sortValue: (item) => item.status,
       render: (item) => (
         <StatusBadge domain="inventory" value={item.status} size="sm" />
       ),
@@ -377,6 +387,8 @@ export function buildRecordedConsumptionColumns(
     {
       key: "recordedAt",
       header: INVENTORY_VI.recordedAtLabel,
+      sortable: true,
+      sortValue: (item) => item.recordedAtIso,
       render: (item) => (
         <span className="font-mono tabular-nums text-muted-foreground">
           {item.recordedAtLabel}
@@ -386,6 +398,8 @@ export function buildRecordedConsumptionColumns(
     {
       key: "orderNumber",
       header: INVENTORY_VI.recordedOrderLabel,
+      sortable: true,
+      sortValue: (item) => item.orderNumber,
       render: (item) => (
         <span className="font-mono font-medium">{item.orderNumber}</span>
       ),
@@ -393,16 +407,22 @@ export function buildRecordedConsumptionColumns(
     {
       key: "branchName",
       header: BRANCH_VI.long,
+      sortable: true,
+      sortValue: (item) => item.branchName,
       render: (item) => item.branchName,
     },
     {
       key: "locationName",
       header: INVENTORY_VI.deductLocationLabel,
+      sortable: true,
+      sortValue: (item) => item.locationName,
       render: (item) => item.locationName,
     },
     {
       key: "ingredientCount",
       header: INVENTORY_VI.recordedIngredientLinesLabel,
+      sortable: true,
+      sortValue: (item) => item.ingredientCount,
       render: (item) =>
         INVENTORY_VI.ingredientCountBadge(item.ingredientCount),
     },
@@ -412,6 +432,8 @@ export function buildRecordedConsumptionColumns(
             key: "totalCost",
             header: FORM_VI.amount,
             className: "text-right",
+            sortable: true,
+            sortValue: (item: RecordedConsumptionRow) => item.totalCostValue,
             render: (item: RecordedConsumptionRow) => (
               <span className="font-mono font-medium tabular-nums">
                 {item.totalCostLabel ?? "—"}
@@ -424,6 +446,8 @@ export function buildRecordedConsumptionColumns(
       key: "sourceLabel",
       header: INVENTORY_VI.sourceLabel,
       className: "min-w-44",
+      sortable: true,
+      sortValue: (item) => item.sourceLabel ?? "",
       render: (item) => item.sourceLabel,
     },
   ];

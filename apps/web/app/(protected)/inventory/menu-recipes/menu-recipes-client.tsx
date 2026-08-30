@@ -318,6 +318,9 @@ export function MenuRecipesClient({
             key: "stockCapacity",
             header: INVENTORY_VI.menuRecipeColStockCapacity,
             className: "font-mono",
+            sortable: true,
+            sortValue: (menuRecipe: MenuRecipeRow) =>
+              stockCapacityByMenuItemId[String(menuRecipe.menuItemId)] ?? -1,
             render: (menuRecipe: MenuRecipeRow) => {
               const capacity =
                 stockCapacityByMenuItemId[String(menuRecipe.menuItemId)];

@@ -108,12 +108,16 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
     {
       key: "branch",
       header: BRANCH_VI.long,
+      sortable: true,
+      sortValue: (row) => row.branchName,
       render: (row) => <span className="font-medium">{row.branchName}</span>,
     },
     {
       key: "value",
       header: messages.inventory.value.inventoryValue,
       className: "text-right",
+      sortable: true,
+      sortValue: (row) => row.totalValue,
       render: (row) => (
         <span className="font-mono tabular-nums">
           {formatVND(row.totalValue)}

@@ -899,6 +899,9 @@ export function IngredientsClient({
       key: "readiness",
       header: ingredientListCopy.colReadiness,
       className: "min-w-44",
+      sortable: true,
+      sortValue: (item) =>
+        resolveCatalogReadiness(toReadinessInput(item)).gaps.length,
       render: (item) => (
         <ReadinessCell
           item={item}
@@ -916,6 +919,9 @@ export function IngredientsClient({
             key: "unit_cost",
             header: ingredientListCopy.colReferenceCost,
             className: "min-w-36 text-right",
+            sortable: true,
+            sortValue: (item: IngredientRow) =>
+              getDisplayReferenceCost(item)?.value ?? -1,
             render: (item: IngredientRow) => {
               const referenceCost = getDisplayReferenceCost(item);
               return (

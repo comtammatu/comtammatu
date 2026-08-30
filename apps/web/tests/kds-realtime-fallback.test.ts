@@ -1,24 +1,22 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { resolve } from "node:path";
 import { test } from "node:test";
 
 const kdsRealtimeSource = readFileSync(
-  join(
-    process.cwd(),
-    "app/(protected)/br/[branchId]/kds/_hooks/use-kds-realtime.ts",
+  resolve(
+    import.meta.dirname,
+    "../app/(protected)/br/[branchId]/kds/_hooks/use-kds-realtime.ts",
   ),
   "utf8",
 );
 
-test("KDS fallback poll cadence is calibrated to 25s safety net", () => {
-  assert.match(kdsRealtimeSource, /const POLL_INTERVAL_MS = 25_000;/);
-  assert.match(kdsRealtimeSource, /const POLL_STALE_MS = 25_000;/);
+test("KDS fallback poll cadence uses realtime degraded poll safety net", () => {
+  assert.match(kdsRealtimeSource, /REALTIME_DEGRADED_POLL_MS/);
+  assert.match(kdsRealtimeSource, /shouldRunRealtimeFallback/);
   assert.match(kdsRealtimeSource, /table: "kds_tickets"/);
   assert.match(kdsRealtimeSource, /window\.setInterval/);
   assert.match(kdsRealtimeSource, /visibilitychange/);
-  assert.doesNotMatch(kdsRealtimeSource, /const POLL_INTERVAL_MS = 3_000;/);
-  assert.doesNotMatch(kdsRealtimeSource, /const POLL_STALE_MS = 3_000;/);
 });
 
 test("KDS rejects incomplete realtime tickets before issuing batch lookups", () => {

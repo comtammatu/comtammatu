@@ -372,6 +372,9 @@ export function GrnListClient({
     {
       key: "result",
       header: "Kết quả",
+      sortable: true,
+      sortValue: (row) =>
+        row.completedLineCount / Math.max(row.lineCount, 1),
       render: (row) => (
         <div className="flex flex-col gap-1">
           <div>

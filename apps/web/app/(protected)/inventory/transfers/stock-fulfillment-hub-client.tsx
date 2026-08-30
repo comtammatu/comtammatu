@@ -279,6 +279,8 @@ export function StockFulfillmentHubClient({
     {
       key: "current_work",
       header: "Việc hiện tại",
+      sortable: true,
+      sortValue: (row) => row.currentWork[0] ?? "",
       render: (row) =>
         row.currentWork.length === 0 ? (
           "Theo dõi"
