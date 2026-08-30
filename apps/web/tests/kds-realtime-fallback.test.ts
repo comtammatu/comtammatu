@@ -20,3 +20,19 @@ test("KDS fallback poll cadence is calibrated to 25s safety net", () => {
   assert.doesNotMatch(kdsRealtimeSource, /const POLL_INTERVAL_MS = 3_000;/);
   assert.doesNotMatch(kdsRealtimeSource, /const POLL_STALE_MS = 3_000;/);
 });
+
+test("KDS rejects incomplete realtime tickets before issuing batch lookups", () => {
+  assert.match(
+    kdsRealtimeSource,
+    /parseKdsRealtimeTicket\(payload\.new\)/,
+  );
+  assert.match(
+    kdsRealtimeSource,
+    /if \(!(?:newTicket|updated)\) \{\s*scheduleBoardSnapshotRefreshRef\.current\(\);\s*return;/,
+  );
+  assert.doesNotMatch(kdsRealtimeSource, /batchId !== null/);
+  assert.match(
+    kdsRealtimeSource,
+    /makeKeyedRealtimeBatcher\(fetchKitchenBatchInfoBatch/,
+  );
+});
