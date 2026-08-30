@@ -374,20 +374,25 @@ test("Pickup page follows the KDS order-list vocabulary", () => {
   assert.doesNotMatch(pickupPageSource, /aria-label=\{`Pickup/);
 });
 
-test("Pickup public board uses polling, not raw Realtime changes", () => {
-  assert.match(pickupPageSource, /<PickupRealtimeRefresh \/>/);
+test("Pickup public board uses realtime invalidation with degraded polling", () => {
+  assert.match(
+    pickupPageSource,
+    /<PickupRealtimeRefresh branchId=\{branchIdNum\} \/>/,
+  );
   assert.match(pickupRealtimeRefreshSource, /"use client";/);
-  // Polling keeps deterministic max staleness on an always-visible kiosk even if
-  // the realtime socket drops silently; the board is a derived "now serving" view
-  // that needs a full queue rebuild per change. 6s halves the per-shift refresh
-  // count vs 3s while staying inside customer-readable staleness.
-  assert.match(pickupRealtimeRefreshSource, /const POLL_INTERVAL_MS = 6_000;/);
+  assert.match(
+    pickupRealtimeRefreshSource,
+    /const PICKUP_DEGRADED_POLL_MS = 6_000;/,
+  );
   assert.match(pickupRealtimeRefreshSource, /router\.refresh\(\)/);
   assert.match(pickupRealtimeRefreshSource, /window\.setInterval/);
   assert.match(pickupRealtimeRefreshSource, /visibilitychange/);
-  assert.doesNotMatch(pickupRealtimeRefreshSource, /useRealtimeChannel/);
-  assert.doesNotMatch(pickupRealtimeRefreshSource, /postgres_changes/);
-  assert.doesNotMatch(pickupRealtimeRefreshSource, /\.channel\(/);
+  assert.match(pickupRealtimeRefreshSource, /`pickup:\$\{branchId\}`/);
+  assert.match(pickupRealtimeRefreshSource, /private: false/);
+  assert.match(pickupRealtimeRefreshSource, /"broadcast"/);
+  assert.match(pickupRealtimeRefreshSource, /event: "invalidate"/);
+  assert.doesNotMatch(pickupRealtimeRefreshSource, /"postgres_changes"/);
+  assert.match(pickupRealtimeRefreshSource, /shouldRunRealtimeFallback/);
 });
 
 test("Pickup polling loads active tickets once per refresh", () => {

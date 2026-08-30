@@ -3,6 +3,12 @@
 import { useEffect, useRef } from "react";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
 import {
+  REALTIME_DEGRADED_POLL_MS,
+  realtimeHealthFromStatus,
+  shouldRunRealtimeFallback,
+  type RealtimeChannelHealth,
+} from "@/_utils/realtime-health";
+import {
   playOperationalAlert,
   shouldAnnouncePaymentReceived,
   type OperationalAudioMode,
@@ -11,8 +17,6 @@ import { triggerHapticFeedback } from "@lib/haptic-feedback";
 import { toast } from "@comtammatu/ui/components/sonner";
 import type { BranchTable } from "../page";
 import type { SessionOrder } from "../order-history";
-
-const STALE_POLL_MS = 45_000;
 
 export interface UseOrderSyncArgs {
   branchId: number;
@@ -151,7 +155,8 @@ function notifyOrderTransition(
         slots: {
           tableLabel:
             typeof tableNumber === "number" ? String(tableNumber) : undefined,
-          amountVnd: coerceMoney(next.total_amount) ?? currentOrder.total_amount,
+          amountVnd:
+            coerceMoney(next.total_amount) ?? currentOrder.total_amount,
         },
       });
     }
@@ -238,7 +243,8 @@ function applyOrderUpdate(
   if (deliveryPlatform !== undefined) next.delivery_platform = deliveryPlatform;
 
   const externalOrderRef = coerceNullableString(payload.external_order_ref);
-  if (externalOrderRef !== undefined) next.external_order_ref = externalOrderRef;
+  if (externalOrderRef !== undefined)
+    next.external_order_ref = externalOrderRef;
 
   const subtotal = coerceMoney(payload.subtotal);
   if (subtotal !== null) next.subtotal = subtotal;
@@ -438,6 +444,7 @@ export function useOrderSync({
   const onArchivedInvalidateRef = useRef(onArchivedInvalidate);
   const audioModeRef = useRef(audioMode);
   const lastSyncRef = useRef<number>(Date.now());
+  const channelHealthRef = useRef<RealtimeChannelHealth>("connecting");
   const initialSubscribeSeenRef = useRef(false);
 
   useEffect(() => {
@@ -462,6 +469,7 @@ export function useOrderSync({
 
   useRealtimeChannel(
     (supabase) => {
+      channelHealthRef.current = "connecting";
       const branchFilter = `branch_id=eq.${String(branchId)}`;
       return supabase
         .channel(`pos-branch-${String(branchId)}`)
@@ -627,6 +635,8 @@ export function useOrderSync({
           },
         )
         .subscribe((status) => {
+          const health = realtimeHealthFromStatus(status);
+          if (health !== null) channelHealthRef.current = health;
           if (status !== "SUBSCRIBED") return;
           // The FIRST SUBSCRIBED is the initial mount subscription. When
           // the caller has already seeded state (e.g. from RSC prefetch),
@@ -646,16 +656,24 @@ export function useOrderSync({
   useEffect(() => {
     const intervalId = window.setInterval(() => {
       if (document.visibilityState === "hidden") return;
-      if (Date.now() - lastSyncRef.current < STALE_POLL_MS) return;
+      if (
+        !shouldRunRealtimeFallback(
+          channelHealthRef.current,
+          Date.now() - lastSyncRef.current,
+        )
+      ) {
+        return;
+      }
+      lastSyncRef.current = Date.now();
       refreshAllRef.current();
-    }, STALE_POLL_MS);
+    }, REALTIME_DEGRADED_POLL_MS);
     return () => {
       window.clearInterval(intervalId);
     };
   }, []);
 
   // Resume catch-up: when the tab becomes visible after being hidden,
-  // fire one immediate refresh instead of waiting up to STALE_POLL_MS.
+  // fire one immediate refresh instead of waiting for the fallback tick.
   // Mobile Safari kills WebSockets after ~30s background, so realtime
   // events fired while hidden may not replay on reconnect — this is the
   // only safe path to catch a VietQR webhook that committed during the

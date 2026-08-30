@@ -9,6 +9,12 @@ import {
   makeRealtimeCoalescer,
 } from "@/_utils/realtime-scheduler";
 import {
+  REALTIME_DEGRADED_POLL_MS,
+  realtimeHealthFromStatus,
+  shouldRunRealtimeFallback,
+  type RealtimeChannelHealth,
+} from "@/_utils/realtime-health";
+import {
   dedupeRowsById,
   fetchChunkedRows,
   fetchPagedRows,
@@ -28,8 +34,6 @@ import type {
   KdsTicket,
 } from "../types";
 
-const POLL_INTERVAL_MS = 25_000;
-const POLL_STALE_MS = 25_000;
 const KDS_ORDER_SELECT_WITH_PRIORITY =
   "id, order_number, order_type, table_id, is_priority, note, created_at, delivery_platform, external_order_ref, tables(number)";
 const KDS_ORDER_SELECT_BASE =
@@ -376,6 +380,7 @@ export function useKdsRealtime({
   const ordersRef = useRef(orders);
   const kitchenBatchesRef = useRef(kitchenBatches);
   const lastSnapshotSyncRef = useRef(Date.now());
+  const channelHealthRef = useRef<RealtimeChannelHealth>("connecting");
   const initialSubscribeSeenRef = useRef(false);
   const seededRef = useRef(seeded);
   // Buffer of ticket ids delivered by realtime INSERT events only. Filled in
@@ -622,146 +627,159 @@ export function useKdsRealtime({
   ]);
 
   useRealtimeChannel(
-    (supabase) =>
-      supabase
-        .channel(`kds-tickets-${String(branchId)}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "kds_tickets",
-            filter: `branch_id=eq.${String(branchId)}`,
-            select: [...KDS_REALTIME_TICKET_COLUMNS],
-          },
-          (payload) => {
-            if (payload.eventType === "INSERT") {
-              const newTicket = parseKdsRealtimeTicket(payload.new);
-              if (!newTicket) {
-                scheduleBoardSnapshotRefreshRef.current();
-                return;
-              }
-              if (!isVisibleKdsTicket(newTicket)) return;
-              // Provable new-ticket source: only realtime INSERT records the id
-              // here. UPDATE / DELETE / snapshot refresh below never do.
-              insertedTicketIdsRef.current.push(newTicket.id);
-              setTickets((prev) => {
-                if (prev.some((t) => t.id === newTicket.id)) return prev;
-                return [...prev, newTicket];
-              });
-              syncOrderItemStatusFromTicketRef.current(newTicket);
-              lastSnapshotSyncRef.current = Date.now();
+    (supabase) => {
+      channelHealthRef.current = "connecting";
+      return (
+        supabase
+          .channel(`kds-tickets-${String(branchId)}`)
+          .on(
+            "postgres_changes",
+            {
+              event: "*",
+              schema: "public",
+              table: "kds_tickets",
+              filter: `branch_id=eq.${String(branchId)}`,
+              select: [...KDS_REALTIME_TICKET_COLUMNS],
+            },
+            (payload) => {
+              if (payload.eventType === "INSERT") {
+                const newTicket = parseKdsRealtimeTicket(payload.new);
+                if (!newTicket) {
+                  scheduleBoardSnapshotRefreshRef.current();
+                  return;
+                }
+                if (!isVisibleKdsTicket(newTicket)) return;
+                // Provable new-ticket source: only realtime INSERT records the id
+                // here. UPDATE / DELETE / snapshot refresh below never do.
+                insertedTicketIdsRef.current.push(newTicket.id);
+                setTickets((prev) => {
+                  if (prev.some((t) => t.id === newTicket.id)) return prev;
+                  return [...prev, newTicket];
+                });
+                syncOrderItemStatusFromTicketRef.current(newTicket);
+                lastSnapshotSyncRef.current = Date.now();
 
-              const orderId = newTicket.order_id;
+                const orderId = newTicket.order_id;
+                scheduleOrderInfoRefreshRef.current(orderId);
+                const batchId = newTicket.kitchen_send_batch_id;
+                if (
+                  typeof batchId === "number" &&
+                  !kitchenBatchesRef.current.has(batchId)
+                ) {
+                  scheduleKitchenBatchInfoRefreshRef.current(batchId);
+                }
+              } else if (payload.eventType === "UPDATE") {
+                const updated = parseKdsRealtimeTicket(payload.new);
+                if (!updated) {
+                  scheduleBoardSnapshotRefreshRef.current();
+                  return;
+                }
+                setTickets((prev) =>
+                  isVisibleKdsTicket(updated)
+                    ? prev.map((t) => (t.id === updated.id ? updated : t))
+                    : prev.filter((t) => t.id !== updated.id),
+                );
+                syncOrderItemStatusFromTicketRef.current(updated);
+                scheduleOrderInfoRefreshRef.current(updated.order_id);
+                lastSnapshotSyncRef.current = Date.now();
+                const batchId = updated.kitchen_send_batch_id;
+                if (
+                  typeof batchId === "number" &&
+                  !kitchenBatchesRef.current.has(batchId)
+                ) {
+                  scheduleKitchenBatchInfoRefreshRef.current(batchId);
+                }
+              } else if (payload.eventType === "DELETE") {
+                const deletedTicketId = parseKdsRealtimeTicketId(payload.old);
+                if (deletedTicketId === null) {
+                  scheduleBoardSnapshotRefreshRef.current();
+                  return;
+                }
+                setTickets((prev) =>
+                  prev.filter((ticket) => ticket.id !== deletedTicketId),
+                );
+                lastSnapshotSyncRef.current = Date.now();
+              }
+            },
+          )
+          // KDS-TRANSFER-TABLE-SYNC: orders UPDATE filtered to this branch.
+          // We only re-fetch when table_id actually changed and we have the
+          // order cached — most order UPDATEs (status, totals, payment) are
+          // no-ops for KDS rendering. orders is in supabase_realtime with
+          // REPLICA IDENTITY FULL (migration 20260425024802) so payload.old
+          // carries the prior table_id.
+          .on(
+            "postgres_changes",
+            {
+              event: "UPDATE",
+              schema: "public",
+              table: "orders",
+              filter: `branch_id=eq.${String(branchId)}`,
+            },
+            (payload) => {
+              const oldRow = payload.old as {
+                id?: number;
+                table_id?: number | null;
+                note?: string | null;
+              };
+              const newRow = payload.new as {
+                id?: number;
+                table_id?: number | null;
+                note?: string | null;
+              };
+              const orderId = newRow.id;
+              if (orderId === undefined) return;
+              if (!ordersRef.current.has(orderId)) return;
+              if (
+                oldRow.table_id === newRow.table_id &&
+                oldRow.note === newRow.note &&
+                (payload.old as { is_priority?: boolean }).is_priority ===
+                  (payload.new as { is_priority?: boolean }).is_priority
+              ) {
+                return;
+              }
               scheduleOrderInfoRefreshRef.current(orderId);
-              const batchId = newTicket.kitchen_send_batch_id;
-              if (
-                typeof batchId === "number" &&
-                !kitchenBatchesRef.current.has(batchId)
-              ) {
-                scheduleKitchenBatchInfoRefreshRef.current(batchId);
-              }
-            } else if (payload.eventType === "UPDATE") {
-              const updated = parseKdsRealtimeTicket(payload.new);
-              if (!updated) {
+            },
+          )
+          .subscribe((status) => {
+            const health = realtimeHealthFromStatus(status);
+            if (health !== null) channelHealthRef.current = health;
+            if (status !== "SUBSCRIBED") return;
+            // Skip the FIRST SUBSCRIBED — board state is already seeded from
+            // RSC props (initialTickets/initialOrders/initialOrderItems).
+            // When seeded is false (cold-load shell rendered first, snapshot
+            // fetched on the client), the first SUBSCRIBED must fetch instead of
+            // skip so the empty shell hydrates. Every SUBSCRIBED after that is a
+            // genuine reconnect: refetch a fresh snapshot so we don't carry stale
+            // state from events that fired during the disconnect window.
+            if (!initialSubscribeSeenRef.current) {
+              initialSubscribeSeenRef.current = true;
+              if (!seededRef.current) {
                 scheduleBoardSnapshotRefreshRef.current();
-                return;
               }
-              setTickets((prev) =>
-                isVisibleKdsTicket(updated)
-                  ? prev.map((t) => (t.id === updated.id ? updated : t))
-                  : prev.filter((t) => t.id !== updated.id),
-              );
-              syncOrderItemStatusFromTicketRef.current(updated);
-              scheduleOrderInfoRefreshRef.current(updated.order_id);
-              lastSnapshotSyncRef.current = Date.now();
-              const batchId = updated.kitchen_send_batch_id;
-              if (
-                typeof batchId === "number" &&
-                !kitchenBatchesRef.current.has(batchId)
-              ) {
-                scheduleKitchenBatchInfoRefreshRef.current(batchId);
-              }
-            } else if (payload.eventType === "DELETE") {
-              const deletedTicketId = parseKdsRealtimeTicketId(payload.old);
-              if (deletedTicketId === null) {
-                scheduleBoardSnapshotRefreshRef.current();
-                return;
-              }
-              setTickets((prev) =>
-                prev.filter((ticket) => ticket.id !== deletedTicketId),
-              );
-              lastSnapshotSyncRef.current = Date.now();
-            }
-          },
-        )
-        // KDS-TRANSFER-TABLE-SYNC: orders UPDATE filtered to this branch.
-        // We only re-fetch when table_id actually changed and we have the
-        // order cached — most order UPDATEs (status, totals, payment) are
-        // no-ops for KDS rendering. orders is in supabase_realtime with
-        // REPLICA IDENTITY FULL (migration 20260425024802) so payload.old
-        // carries the prior table_id.
-        .on(
-          "postgres_changes",
-          {
-            event: "UPDATE",
-            schema: "public",
-            table: "orders",
-            filter: `branch_id=eq.${String(branchId)}`,
-          },
-          (payload) => {
-            const oldRow = payload.old as {
-              id?: number;
-              table_id?: number | null;
-              note?: string | null;
-            };
-            const newRow = payload.new as {
-              id?: number;
-              table_id?: number | null;
-              note?: string | null;
-            };
-            const orderId = newRow.id;
-            if (orderId === undefined) return;
-            if (!ordersRef.current.has(orderId)) return;
-            if (
-              oldRow.table_id === newRow.table_id &&
-              oldRow.note === newRow.note &&
-              (payload.old as { is_priority?: boolean }).is_priority ===
-                (payload.new as { is_priority?: boolean }).is_priority
-            ) {
               return;
             }
-            scheduleOrderInfoRefreshRef.current(orderId);
-          },
-        )
-        .subscribe((status) => {
-          if (status !== "SUBSCRIBED") return;
-          // Skip the FIRST SUBSCRIBED — board state is already seeded from
-          // RSC props (initialTickets/initialOrders/initialOrderItems).
-          // When seeded is false (cold-load shell rendered first, snapshot
-          // fetched on the client), the first SUBSCRIBED must fetch instead of
-          // skip so the empty shell hydrates. Every SUBSCRIBED after that is a
-          // genuine reconnect: refetch a fresh snapshot so we don't carry stale
-          // state from events that fired during the disconnect window.
-          if (!initialSubscribeSeenRef.current) {
-            initialSubscribeSeenRef.current = true;
-            if (!seededRef.current) {
-              scheduleBoardSnapshotRefreshRef.current();
-            }
-            return;
-          }
-          scheduleBoardSnapshotRefreshRef.current();
-        }),
+            scheduleBoardSnapshotRefreshRef.current();
+          })
+      );
+    },
     [branchId],
   );
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
       if (document.visibilityState === "hidden") return;
-      const staleMs = Date.now() - lastSnapshotSyncRef.current;
-      if (staleMs < POLL_STALE_MS) return;
+      if (
+        !shouldRunRealtimeFallback(
+          channelHealthRef.current,
+          Date.now() - lastSnapshotSyncRef.current,
+        )
+      ) {
+        return;
+      }
+      lastSnapshotSyncRef.current = Date.now();
       scheduleBoardSnapshotRefreshRef.current();
-    }, POLL_INTERVAL_MS);
+    }, REALTIME_DEGRADED_POLL_MS);
 
     return () => {
       window.clearInterval(intervalId);
@@ -784,12 +802,13 @@ export function useKdsRealtime({
     };
   }, []);
 
-  const consumeRealtimeInsertedTicketIds = useCallback((): readonly number[] => {
-    const ids = insertedTicketIdsRef.current;
-    if (ids.length === 0) return EMPTY_INSERTED_TICKET_IDS;
-    insertedTicketIdsRef.current = [];
-    return ids;
-  }, []);
+  const consumeRealtimeInsertedTicketIds =
+    useCallback((): readonly number[] => {
+      const ids = insertedTicketIdsRef.current;
+      if (ids.length === 0) return EMPTY_INSERTED_TICKET_IDS;
+      insertedTicketIdsRef.current = [];
+      return ids;
+    }, []);
 
   return {
     tickets,

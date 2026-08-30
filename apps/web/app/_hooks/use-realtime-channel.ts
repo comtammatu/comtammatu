@@ -7,7 +7,7 @@ import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 type RealtimeChannelClient = Pick<SupabaseClient, "realtime" | "removeChannel">;
 type RealtimeInternals = { _remove: (channel: RealtimeChannel) => void };
 
-function evictRealtimeChannel(
+export function evictRealtimeChannel(
   supabase: RealtimeChannelClient,
   channel: RealtimeChannel,
 ): void {
@@ -29,7 +29,11 @@ export function stopRealtimeAuthorizationRejoin(
   channel: RealtimeChannel,
   error?: Error,
 ): boolean {
-  if (!/unauthorized|permission|denied/i.test(realtimeErrorText(error))) {
+  if (
+    !/unauthorized|permission|denied|private.?only|only allows private/i.test(
+      realtimeErrorText(error),
+    )
+  ) {
     return false;
   }
   evictRealtimeChannel(supabase, channel);

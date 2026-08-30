@@ -34,18 +34,17 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
-import { RadioGroup, RadioGroupItem } from "@comtammatu/ui/components/radio-group";
+import {
+  RadioGroup,
+  RadioGroupItem,
+} from "@comtammatu/ui/components/radio-group";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { StatusBadge } from "@/components/status-badge";
 import { AppBackLink, AppEmptyState, AppSheet } from "@/components/surface";
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-} from "@comtammatu/ui/components/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { useBranchOpsEvents } from "@/_hooks/use-branch-ops-events";
 import { employee } from "@lib/messages/employee";
 import {
@@ -65,7 +64,6 @@ import {
   fetchLeaveShiftConflicts,
   rejectLeaveRequest,
 } from "@/(protected)/hr/leave-request-actions";
-
 
 type QueueView = "pending" | "history";
 type PendingAction = "approve" | "reject" | null;
@@ -135,7 +133,6 @@ export function BranchLeaveApprovalsClient({
     [pathname, router, searchParams],
   );
 
-
   const pendingRows = useMemo(
     () => rows.filter((request) => request.status === "pending"),
     [rows],
@@ -164,6 +161,7 @@ export function BranchLeaveApprovalsClient({
   useBranchOpsEvents({
     branchId,
     enabled: canApprove,
+    filter: { tables: ["leave_requests"] },
     onEvent: reload,
   });
 
@@ -199,9 +197,7 @@ export function BranchLeaveApprovalsClient({
       setConflictShifts(conflictData.shifts);
       setAvailableSubstitutes(conflictData.availableEmployees);
       setSubstitutionMode(
-        conflictData.availableEmployees.length > 0
-          ? "substitute"
-          : "unassign",
+        conflictData.availableEmployees.length > 0 ? "substitute" : "unassign",
       );
       setSelectedSubstituteId(
         conflictData.availableEmployees[0]?.employeeId
@@ -212,7 +208,6 @@ export function BranchLeaveApprovalsClient({
       setPendingAction(null);
       return;
     }
-
 
     const ok = await confirm({
       title: copy.approveAria,
@@ -290,7 +285,6 @@ export function BranchLeaveApprovalsClient({
       reload();
     });
   }
-
 
   function rejectSelected() {
     if (!selected) return;
@@ -584,7 +578,6 @@ export function BranchLeaveApprovalsClient({
               </p>
             </div>
 
-
             {selected.rejected_reason ? (
               <div className="rounded-md bg-destructive/10 p-3">
                 <p className="text-xs font-medium text-destructive">
@@ -651,7 +644,6 @@ export function BranchLeaveApprovalsClient({
               size="touch"
               className="flex-1"
               disabled={
-
                 isPending ||
                 (substitutionMode === "substitute" && !selectedSubstituteId)
               }
@@ -742,7 +734,6 @@ export function BranchLeaveApprovalsClient({
                                   {copy.selectedBadge}
                                 </Badge>
                               ) : null}
-
                             </Item>
                           );
                         })}
@@ -751,7 +742,6 @@ export function BranchLeaveApprovalsClient({
                   </div>
                 </div>
               ) : null}
-
 
               <div className="flex items-center gap-2">
                 <RadioGroupItem

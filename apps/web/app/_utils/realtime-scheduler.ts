@@ -24,6 +24,7 @@ interface RealtimeSchedulerMetricsRegistry {
 
 interface RealtimeSchedulerOptions {
   metricName?: string;
+  minIntervalMs?: number;
 }
 
 type MetricsGlobal = typeof globalThis & {
@@ -126,14 +127,21 @@ export function makeRealtimeCoalescer(
   let timer: ReturnType<typeof setTimeout> | null = null;
   let inflight: Promise<void> | null = null;
   let pending = false;
+  let lastRunStartedAt: number | null = null;
   const metricName = options.metricName;
+  const minIntervalMs = Math.max(0, options.minIntervalMs ?? 0);
 
   const schedule = (): void => {
     if (timer !== null) return;
     recordMetric(metricName, (metric) => {
       metric.scheduledCount += 1;
     });
-    timer = setTimeout(run, delayMs);
+    const now = metricNow();
+    const rateLimitDelay =
+      lastRunStartedAt === null
+        ? 0
+        : Math.max(0, minIntervalMs - (now - lastRunStartedAt));
+    timer = setTimeout(run, Math.max(delayMs, rateLimitDelay));
   };
 
   const run = (): void => {
@@ -147,6 +155,7 @@ export function makeRealtimeCoalescer(
     }
 
     const startedAt = metricNow();
+    lastRunStartedAt = startedAt;
     recordMetric(metricName, (metric) => {
       metric.lastRunAtMs = startedAt;
       metric.runCount += 1;

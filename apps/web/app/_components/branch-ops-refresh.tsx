@@ -1,27 +1,30 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { createBranchOpsChannel } from "@/_hooks/use-branch-ops-events";
-import { useRealtimeRefresh } from "@/_hooks/use-realtime-refresh";
+import { useBranchOpsEvents } from "@/_hooks/use-branch-ops-events";
+import type { BranchOpsEventFilter } from "@/_hooks/branch-ops-runtime";
+import { useCoalescedRouterRefresh } from "@/_hooks/use-realtime-refresh";
 
 export function BranchOpsRefresh({
   branchId,
   disabledPathPrefixes = [],
+  filter,
 }: {
   branchId: number;
   disabledPathPrefixes?: readonly string[];
+  filter?: BranchOpsEventFilter;
 }) {
   const pathname = usePathname();
   const enabled = disabledPathPrefixes.every(
     (prefix) => pathname !== prefix && !pathname?.startsWith(`${prefix}/`),
   );
 
-  useRealtimeRefresh({
-    deps: [branchId],
+  const scheduleRefresh = useCoalescedRouterRefresh(enabled);
+  useBranchOpsEvents({
+    branchId,
     enabled,
-    pollMs: false,
-    setupChannel: (supabase, scheduleRefresh, token) =>
-      createBranchOpsChannel(supabase, branchId, scheduleRefresh, token),
+    filter,
+    onEvent: scheduleRefresh,
   });
 
   return null;

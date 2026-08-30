@@ -21,6 +21,11 @@ const branchOpsChannel = readFileSync(
   "utf8",
 );
 
+const branchOpsRuntime = readFileSync(
+  new URL("../app/_hooks/branch-ops-runtime.ts", import.meta.url),
+  "utf8",
+);
+
 const operatorLayout = readFileSync(
   new URL(
     "../app/(protected)/br/[branchId]/(operator)/layout.tsx",
@@ -30,8 +35,8 @@ const operatorLayout = readFileSync(
 );
 
 const operatorChildPages = [
-    "../app/(protected)/br/[branchId]/(operator)/team/checkout-approvals/page.tsx",
-    "../app/(protected)/br/[branchId]/(operator)/team/leave-approvals/page.tsx",
+  "../app/(protected)/br/[branchId]/(operator)/team/checkout-approvals/page.tsx",
+  "../app/(protected)/br/[branchId]/(operator)/team/leave-approvals/page.tsx",
   "../app/(protected)/br/[branchId]/(operator)/shift/page.tsx",
   "../app/(protected)/br/[branchId]/(operator)/stock/count-assignments/page.tsx",
   "../app/(protected)/br/[branchId]/(operator)/stock/count-slips/page.tsx",
@@ -51,6 +56,19 @@ const branchLeaveApprovals = readFileSync(
     "../app/(protected)/br/[branchId]/(operator)/team/leave-approvals/branch-leave-approvals-client.tsx",
     import.meta.url,
   ),
+  "utf8",
+);
+
+const branchAttendance = readFileSync(
+  new URL(
+    "../app/(protected)/br/[branchId]/(operator)/team/attendance/branch-attendance-client.tsx",
+    import.meta.url,
+  ),
+  "utf8",
+);
+
+const hrLeaveRequests = readFileSync(
+  new URL("../app/(protected)/hr/leave-requests-table.tsx", import.meta.url),
   "utf8",
 );
 
@@ -123,10 +141,19 @@ const posMenuMigration = readFileSync(
 );
 
 test("client subscribes to the branch:{id}:ops private broadcast, event 'ops'", () => {
-  assert.match(branchOpsChannel, /`branch:\$\{String\(branchId\)\}:ops`/);
-  assert.match(branchOpsChannel, /private:\s*true/);
-  assert.match(branchOpsChannel, /"broadcast",\s*\{\s*event:\s*"ops"\s*\}/);
-  assert.match(branchOpsRefresh, /pollMs:\s*false/);
+  assert.match(branchOpsRuntime, /`branch:\$\{String\(branchId\)\}:ops`/);
+  assert.match(branchOpsRuntime, /private:\s*true/);
+  assert.match(branchOpsRuntime, /"broadcast",\s*\{\s*event:\s*"ops"\s*\}/);
+  assert.match(branchOpsRefresh, /useCoalescedRouterRefresh/);
+});
+
+test("branch ops consumers share one runtime and filter invalidations by table", () => {
+  assert.match(branchOpsChannel, /subscribeBranchOps/);
+  assert.doesNotMatch(branchOpsChannel, /useRealtimeChannel/);
+  assert.match(branchOpsChannel, /filter\?:\s*BranchOpsEventFilter/);
+  assert.match(branchOpsRuntime, /new Map<number, BranchOpsEntry>/);
+  assert.match(branchOpsRuntime, /auth\.onAuthStateChange/);
+  assert.match(branchOpsRuntime, /matchesBranchOpsFilter/);
 });
 
 test("operator layout owns the branch ops subscriber without child duplicates", () => {
@@ -155,14 +182,14 @@ test("operator layout owns the branch ops subscriber without child duplicates", 
 });
 
 test("branch ops client gates subscribe on JWT mirror of can_read_branch_ops", () => {
-  assert.match(branchOpsChannel, /canSubscribeBranchOpsTopic/);
-  assert.match(branchOpsChannel, /extractClaimsFromAccessToken/);
+  assert.match(branchOpsRuntime, /canSubscribeBranchOpsTopic/);
+  assert.match(branchOpsRuntime, /extractClaimsFromAccessToken/);
   assert.match(
-    branchOpsChannel,
+    branchOpsRuntime,
     /createBranchOpsChannel\([\s\S]*token:\s*string \| null/,
   );
   assert.match(posMenuClient, /canSubscribeBranchOpsTopic/);
-  assert.match(branchOpsRefresh, /createBranchOpsChannel\([\s\S]*token\)/);
+  assert.match(branchOpsRefresh, /useBranchOpsEvents\(\{[\s\S]*branchId/);
 });
 
 test("useRealtimeChannel skips setup when access token is null", () => {
@@ -176,9 +203,15 @@ test("useRealtimeChannel skips setup when access token is null", () => {
 test("operator leave approvals owns its realtime subscriber without layout duplication", () => {
   assert.match(
     operatorLayout,
-    /disabledPathPrefixes=\{\[\s*`\/br\/\$\{context\.branchId\}\/team\/leave-approvals`,?\s*\]\}/,
+    /disabledPathPrefixes=\{\[[\s\S]*team\/attendance[\s\S]*team\/leave-approvals[\s\S]*\]\}/,
   );
   assert.match(branchLeaveApprovals, /useBranchOpsEvents\(\{/);
+});
+
+test("targeted branch ops consumers ignore unrelated table broadcasts", () => {
+  assert.match(branchAttendance, /tables:\s*\["attendance_records"\]/);
+  assert.match(branchLeaveApprovals, /tables:\s*\["leave_requests"\]/);
+  assert.match(hrLeaveRequests, /tables:\s*\["leave_requests"\]/);
 });
 
 test("DB trigger broadcasts to the matching topic/event on a private channel", () => {
@@ -253,12 +286,23 @@ test("authorization rejection stops rejoin while transport errors stay retryable
     stopRealtimeAuthorizationRejoin(
       supabase,
       channel,
+      new Error("PrivateOnly: this project only allows private channels"),
+    ),
+    true,
+  );
+  assert.equal(removed, 3);
+  assert.equal(evicted, 3);
+
+  assert.equal(
+    stopRealtimeAuthorizationRejoin(
+      supabase,
+      channel,
       new Error("connection lost"),
     ),
     false,
   );
-  assert.equal(removed, 2);
-  assert.equal(evicted, 2);
+  assert.equal(removed, 3);
+  assert.equal(evicted, 3);
 });
 
 test("branch ops topics require an active profile and active assigned branch", () => {

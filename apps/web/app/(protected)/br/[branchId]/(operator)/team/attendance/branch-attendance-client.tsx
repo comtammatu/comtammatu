@@ -39,11 +39,7 @@ import {
   ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-} from "@comtammatu/ui/components/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { AppBackLink, AppEmptyState, AppSheet } from "@/components/surface";
 import { Label } from "@comtammatu/ui/components/label";
 import {
@@ -445,6 +441,7 @@ export function BranchAttendanceClient({
   useBranchOpsEvents({
     branchId,
     enabled: canView && view === "clock",
+    filter: { tables: ["attendance_records"] },
     onEvent: reloadClock,
   });
 
@@ -533,9 +530,7 @@ export function BranchAttendanceClient({
             aria-label={pageCopy.branchAttendanceTitle}
             className="grid w-full grid-cols-2"
           >
-            <TabsTrigger value="clock">
-              {attendanceCopy.clockView}
-            </TabsTrigger>
+            <TabsTrigger value="clock">{attendanceCopy.clockView}</TabsTrigger>
             <TabsTrigger value="summary">
               {attendanceCopy.summaryView}
             </TabsTrigger>
@@ -613,9 +608,7 @@ export function BranchAttendanceClient({
           icon={IconListChecks}
           badge={{
             children:
-              view === "clock"
-                ? filteredClockRecords.length
-                : summary.length,
+              view === "clock" ? filteredClockRecords.length : summary.length,
           }}
           size="sm"
         >

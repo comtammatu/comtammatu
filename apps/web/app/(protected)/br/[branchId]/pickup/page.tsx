@@ -78,8 +78,8 @@ type PickupBranchRow = {
 
 /**
  * Branch identity (name/kind/active flag) rarely changes but this kiosk
- * screen polls via `PickupRealtimeRefresh` (3s `router.refresh()`), so an
- * uncached lookup re-queries `branches` every poll for hours per shift.
+ * refreshes its derived queue from Realtime events and safety polling, so an
+ * uncached lookup would re-query `branches` throughout an hours-long shift.
  * Tag `"branches-list"` busts via the same tag `branches/actions.ts`
  * mutations already call. 5-minute TTL is a safety net for any mutation
  * path that forgets to call the tag.
@@ -394,16 +394,14 @@ export default async function PickupPage({
   const orderItemIdByTicketId = new Map(
     tickets.map((ticket) => [ticket.id, ticket.order_item_id]),
   );
-  const rows = queue
-    .filter(isPickupGuestBoardVisible)
-    .map((item, index) =>
-      toPickupListRow({
-        item,
-        index,
-        orderItemIdByTicketId,
-        quantityByOrderItemId,
-      }),
-    );
+  const rows = queue.filter(isPickupGuestBoardVisible).map((item, index) =>
+    toPickupListRow({
+      item,
+      index,
+      orderItemIdByTicketId,
+      quantityByOrderItemId,
+    }),
+  );
   let idleState: PickupIdleState | null = null;
 
   if (rows.length === 0) {
@@ -426,7 +424,7 @@ export default async function PickupPage({
 
   return (
     <>
-      <PickupRealtimeRefresh />
+      <PickupRealtimeRefresh branchId={branchIdNum} />
 
       <section
         aria-label={`${PICKUP_COPY.eyebrow} ${branch.name}`}

@@ -1,64 +1,38 @@
 "use client";
 
-import { useCallback } from "react";
-import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
+import { useEffect, useRef } from "react";
 import {
-  canSubscribeBranchOpsTopic,
-  extractClaimsFromAccessToken,
-} from "@comtammatu/shared/auth";
-import {
-  stopRealtimeAuthorizationRejoin,
-  useRealtimeChannel,
-} from "@/_hooks/use-realtime-channel";
+  subscribeBranchOps,
+  type BranchOpsEventFilter,
+} from "./branch-ops-runtime";
 
-export function createBranchOpsChannel(
-  supabase: SupabaseClient,
-  branchId: number,
-  onEvent: () => void,
-  token: string | null,
-): RealtimeChannel | null {
-  const claims = extractClaimsFromAccessToken(token);
-  if (!claims || !canSubscribeBranchOpsTopic(claims, branchId)) {
-    return null;
-  }
-
-  let initialSubscribe = true;
-  const channel = supabase.channel(`branch:${String(branchId)}:ops`, {
-    config: { broadcast: { self: false }, private: true },
-  });
-  channel.on("broadcast", { event: "ops" }, () => onEvent());
-  channel.subscribe((status, err) => {
-    if (status === "CHANNEL_ERROR") {
-      stopRealtimeAuthorizationRejoin(supabase, channel, err);
-      return;
-    }
-    if (status === "SUBSCRIBED") {
-      if (initialSubscribe) {
-        initialSubscribe = false;
-        return;
-      }
-      onEvent();
-    }
-  });
-  return channel;
-}
+export { createBranchOpsChannel } from "./branch-ops-runtime";
 
 export function useBranchOpsEvents({
   branchId,
   enabled = true,
+  filter,
   onEvent,
 }: {
   branchId: number | null;
   enabled?: boolean;
+  filter?: BranchOpsEventFilter;
   onEvent: () => void;
 }) {
-  const setupChannel = useCallback(
-    (supabase: SupabaseClient, token: string | null) => {
-      if (!enabled || branchId === null) return null;
-      return createBranchOpsChannel(supabase, branchId, onEvent, token);
-    },
-    [branchId, enabled, onEvent],
-  );
+  const onEventRef = useRef(onEvent);
+  onEventRef.current = onEvent;
+  const domainsKey = filter?.domains?.join("\u0000") ?? "";
+  const tablesKey = filter?.tables?.join("\u0000") ?? "";
 
-  useRealtimeChannel(setupChannel, [setupChannel]);
+  useEffect(() => {
+    if (!enabled || branchId === null) return;
+    return subscribeBranchOps({
+      branchId,
+      filter: {
+        domains: domainsKey ? domainsKey.split("\u0000") : undefined,
+        tables: tablesKey ? tablesKey.split("\u0000") : undefined,
+      },
+      onInvalidate: () => onEventRef.current(),
+    });
+  }, [branchId, domainsKey, enabled, tablesKey]);
 }

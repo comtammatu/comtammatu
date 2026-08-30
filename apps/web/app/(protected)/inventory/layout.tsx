@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { canSubscribeBranchOpsTopic } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import { BranchOpsRefresh } from "@/(protected)/br/[branchId]/(operator)/branch-ops-refresh";
+import { INVENTORY_BRANCH_OPS_TABLES } from "@/_hooks/branch-ops-runtime";
 import { resolveInventoryBranchScope } from "./_lib/inventory-scope";
 
 export default async function InventoryLayout({
@@ -16,7 +17,10 @@ export default async function InventoryLayout({
     <>
       {scope.selectedBranchId &&
       canSubscribeBranchOpsTopic(claims, scope.selectedBranchId) ? (
-        <BranchOpsRefresh branchId={scope.selectedBranchId} />
+        <BranchOpsRefresh
+          branchId={scope.selectedBranchId}
+          filter={{ tables: INVENTORY_BRANCH_OPS_TABLES }}
+        />
       ) : null}
       {children}
     </>

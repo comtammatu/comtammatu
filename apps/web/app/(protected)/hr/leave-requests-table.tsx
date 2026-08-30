@@ -61,10 +61,7 @@ import {
   rejectLeaveRequest,
 } from "./leave-request-actions";
 import type { BranchOption } from "./_types";
-import {
-  getHrScopeBranchId,
-  type HrBranchScope,
-} from "@/lib/hr-scope";
+import { getHrScopeBranchId, type HrBranchScope } from "@/lib/hr-scope";
 
 interface LeaveRequestsTableProps {
   branches: BranchOption[];
@@ -179,6 +176,7 @@ export function LeaveRequestsTable({
   useBranchOpsEvents({
     branchId: eventBranchId,
     enabled: eventBranchId !== null,
+    filter: { tables: ["leave_requests"] },
     onEvent: reloadSelectedBranch,
   });
 
@@ -196,9 +194,7 @@ export function LeaveRequestsTable({
       if (historyStatus !== "all" && request.status !== historyStatus) {
         return false;
       }
-      return (
-        request.start_date <= endDate && request.end_date >= startDate
-      );
+      return request.start_date <= endDate && request.end_date >= startDate;
     });
   }, [historyMonth, historyStatus, requests]);
   const historyMonthOptions = getVNMonthSequenceBack(6).map(({ date }) =>
@@ -451,10 +447,7 @@ export function LeaveRequestsTable({
         mobileBreakpoint={1024}
         rowClassName={() => (isPending ? "opacity-60" : undefined)}
         mobileCardRender={(request) =>
-          renderLeaveMobileCard(
-            request,
-            renderPendingActions(request, true),
-          )
+          renderLeaveMobileCard(request, renderPendingActions(request, true))
         }
       />
     );

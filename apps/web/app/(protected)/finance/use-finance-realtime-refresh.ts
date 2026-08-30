@@ -70,6 +70,8 @@ export function useFinanceRealtimeRefresh({
     (
       supabase: SupabaseClient,
       scheduleRefresh: () => void,
+      _token: string | null,
+      reportStatus: (status: string) => void,
     ): RealtimeChannel => {
       let initialSubscribe = true;
       const filter =
@@ -103,6 +105,7 @@ export function useFinanceRealtimeRefresh({
           () => scopedRefresh("sepay"),
         )
         .subscribe((status: string) => {
+          reportStatus(status);
           if (status === "SUBSCRIBED") {
             if (initialSubscribe) {
               initialSubscribe = false;

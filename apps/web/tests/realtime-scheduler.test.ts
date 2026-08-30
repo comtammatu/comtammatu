@@ -65,6 +65,35 @@ test("makeRealtimeCoalescer preserves trailing run while request is in flight", 
   assert.equal(metric?.runCount, 2);
 });
 
+test("makeRealtimeCoalescer caps untrusted trigger bursts by minimum interval", async () => {
+  resetRealtimeMetrics();
+  let runs = 0;
+  const schedule = makeRealtimeCoalescer(
+    async () => {
+      runs += 1;
+    },
+    5,
+    { metricName: "test.rate-limit", minIntervalMs: 80 },
+  );
+
+  schedule();
+  await wait(20);
+  assert.equal(runs, 1);
+
+  schedule();
+  schedule();
+  schedule();
+  await wait(30);
+  assert.equal(runs, 1);
+
+  await wait(60);
+  assert.equal(runs, 2);
+  const metric = getRealtimeMetricsSnapshot()["test.rate-limit"];
+  assert.equal(metric?.triggerCount, 4);
+  assert.equal(metric?.scheduledCount, 2);
+  assert.equal(metric?.runCount, 2);
+});
+
 test("makeKeyedRealtimeBatcher deduplicates keys within a burst", async () => {
   resetRealtimeMetrics();
   const batches: number[][] = [];

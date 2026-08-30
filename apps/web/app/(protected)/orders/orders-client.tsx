@@ -2,9 +2,22 @@
 
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: existing orders review surface keeps operational copy inline */
 
-import { useState, useTransition, useMemo, useEffect, useRef, useCallback } from "react";
-import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
+import {
+  useState,
+  useTransition,
+  useMemo,
+  useEffect,
+  useRef,
+  useCallback,
+} from "react";
+import {
+  useParams,
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
+import { useCoalescedRouterRefresh } from "@/_hooks/use-realtime-refresh";
 import { extractClaimsFromAccessToken } from "@comtammatu/shared/auth";
 import {
   getControlSurfaceScopeBranchId,
@@ -52,11 +65,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import {
-  AppListFrame,
-  AppSection,
-  AppToolbar,
-} from "@/components/surface";
+import { AppListFrame, AppSection, AppToolbar } from "@/components/surface";
 import { useFormControlSize } from "@/components/form/control-size";
 
 type AlertFilter = "all" | "warning" | "critical";
@@ -209,6 +218,7 @@ export function OrdersClient({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const params = useParams();
+  const scheduleRealtimeRefresh = useCoalescedRouterRefresh();
   const [orders, setOrders] = useState<OrderRow[]>(initialOrders);
   const [summary, setSummary] = useState<OrdersSummary>(initialSummary);
   const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(
@@ -226,9 +236,7 @@ export function OrdersClient({
     () => searchParams.get("dateFrom") ?? "",
   );
   const [dateTo, setDateTo] = useState(() => searchParams.get("dateTo") ?? "");
-  const [status, setStatus] = useState(
-    () => searchParams.get("status") ?? "",
-  );
+  const [status, setStatus] = useState(() => searchParams.get("status") ?? "");
   const [branchId, setBranchId] = useState(() => {
     const id = getControlSurfaceScopeBranchId(
       resolveScopeFromSearchParams(searchParams, { fallback: "all" }),
@@ -316,7 +324,8 @@ export function OrdersClient({
     const checkDelayAlerts = () => {
       const nowMs = Date.now();
       for (const order of orders) {
-        if (order.status === "completed" || order.status === "cancelled") continue;
+        if (order.status === "completed" || order.status === "cancelled")
+          continue;
         if (order.kds_completed_at) continue;
         const info = computeOrderWaitInfo(
           order.created_at,
@@ -329,7 +338,10 @@ export function OrdersClient({
           if (!notifiedRef.current.has(warnKey)) {
             notifiedRef.current.add(warnKey);
             toast.warning(
-              ORDERS_PAGE_COPY.warningToast(order.order_number, info.waitMinutes),
+              ORDERS_PAGE_COPY.warningToast(
+                order.order_number,
+                info.waitMinutes,
+              ),
             );
           }
         }
@@ -371,11 +383,7 @@ export function OrdersClient({
             table: "orders",
             filter: realtimeFilter,
           },
-          () => {
-            startTransition(() => {
-              router.refresh();
-            });
-          },
+          () => scheduleRealtimeRefresh(),
         )
         .subscribe((subscriptionStatus) => {
           if (subscriptionStatus !== "SUBSCRIBED") return;
@@ -383,28 +391,24 @@ export function OrdersClient({
             initialSubscribeSeenRef.current = true;
             return;
           }
-          startTransition(() => {
-            router.refresh();
-          });
+          scheduleRealtimeRefresh();
         });
     },
-    [currentBranchId, router],
+    [currentBranchId, scheduleRealtimeRefresh],
   );
 
   // Tab visibility reconnect backstop
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === "visible") {
-        startTransition(() => {
-          router.refresh();
-        });
+        scheduleRealtimeRefresh();
       }
     };
     document.addEventListener("visibilitychange", handleVisibility);
     return () => {
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [router]);
+  }, [scheduleRealtimeRefresh]);
 
   function handleFilter() {
     replaceSearchParams((nextParams) => {
@@ -432,14 +436,23 @@ export function OrdersClient({
     });
   }
 
-  const hasFilters = !!(dateFrom || dateTo || status || branchId || alertFilter !== "all");
+  const hasFilters = !!(
+    dateFrom ||
+    dateTo ||
+    status ||
+    branchId ||
+    alertFilter !== "all"
+  );
 
   const { delayStats, displayOrders } = useMemo(() => {
     let warningCount = 0;
     let criticalCount = 0;
 
     const filtered = orders.filter((order) => {
-      const info = computeOrderWaitInfo(order.created_at, order.kds_completed_at);
+      const info = computeOrderWaitInfo(
+        order.created_at,
+        order.kds_completed_at,
+      );
       if (info.alertLevel === "warning") warningCount++;
       if (info.alertLevel === "critical") criticalCount++;
 
@@ -487,7 +500,12 @@ export function OrdersClient({
                     className="w-full sm:w-36"
                   />
                 </div>
-                <Select value={status || "all"} onValueChange={(value) => setStatus(value === "all" ? "" : value)}>
+                <Select
+                  value={status || "all"}
+                  onValueChange={(value) =>
+                    setStatus(value === "all" ? "" : value)
+                  }
+                >
                   <SelectTrigger
                     id="status-filter"
                     size={controlSize}

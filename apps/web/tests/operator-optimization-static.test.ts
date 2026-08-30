@@ -47,8 +47,16 @@ test("operator consumption and count-slip queues use standard Pattern A Tabs wit
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-slips/branch-count-slips-client.tsx",
   ]) {
     const source = read(file);
-    assert.match(source, /TabsList[\s\S]*?size="touch"/, `${file}: queue filter must use TabsList size="touch"`);
-    assert.match(source, /useSearchParams\(\)/, `${file}: must read view from searchParams`);
+    assert.match(
+      source,
+      /TabsList[\s\S]*?size="touch"/,
+      `${file}: queue filter must use TabsList size="touch"`,
+    );
+    assert.match(
+      source,
+      /useSearchParams\(\)/,
+      `${file}: must read view from searchParams`,
+    );
     assert.match(
       source,
       /from "@comtammatu\/ui\/components\/tabs"/,
@@ -70,7 +78,10 @@ test("operator stock hub groups tiles into ordered workflow sections", () => {
   assert.match(source, /stockFlowLookupTitle/);
   assert.match(source, /stockJobOnHand/);
   assert.match(source, /mobileColumns=\{2\}/);
-  assert.match(source, /presentation=\{section\.primary \? "stations" : "plain"\}/);
+  assert.match(
+    source,
+    /presentation=\{section\.primary \? "stations" : "plain"\}/,
+  );
   assert.doesNotMatch(source, /AppPageTabs/);
   assert.doesNotMatch(source, /paramKey="group"/);
   assert.doesNotMatch(source, /STOCK_PRIMARY_SUFFIXES/);
@@ -142,7 +153,10 @@ test("operator dashboard is a redirect shim into Hôm nay", () => {
     "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx",
   );
   assert.match(source, /redirect\(`\/br\/\$\{branchId\}`\)/);
-  assert.doesNotMatch(source, /Suspense|BranchCockpitSection|fetchBranchDayStatus/);
+  assert.doesNotMatch(
+    source,
+    /Suspense|BranchCockpitSection|fetchBranchDayStatus/,
+  );
 });
 
 test("POS menu sync coalesces event bursts before refetching the full menu", () => {
@@ -159,13 +173,15 @@ test("AppPageTabs exposes an accessible name for the tablist", () => {
   assert.match(source, /aria-label=\{ariaLabel\}/);
 });
 
-test("Pickup board halves its poll cadence to 6s while keeping deterministic staleness", () => {
+test("Pickup board uses realtime invalidation with a 6s degraded fallback", () => {
   const source = read(
     "apps/web/app/(protected)/br/[branchId]/pickup/pickup-realtime-refresh.tsx",
   );
-  // Still polling (derived "now serving" view needs a full rebuild per change and
-  // must stay fresh on an always-visible kiosk even if the socket drops).
-  assert.match(source, /const POLL_INTERVAL_MS = 6_000;/);
+  assert.match(source, /const PICKUP_DEGRADED_POLL_MS = 6_000;/);
+  assert.match(source, /`pickup:\$\{branchId\}`/);
+  assert.match(source, /private: false/);
+  assert.match(source, /event: "invalidate"/);
+  assert.match(source, /shouldRunRealtimeFallback/);
   assert.match(source, /window\.setInterval/);
   assert.match(source, /router\.refresh\(\)/);
 });

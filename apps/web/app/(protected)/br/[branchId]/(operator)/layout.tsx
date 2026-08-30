@@ -38,6 +38,7 @@ import { OperatorBottomNav } from "./operator-bottom-nav";
 import { OperatorNotificationBell } from "./operator-notification-bell";
 import { OperatorPwaToolbar } from "./operator-pwa-toolbar";
 import { ThemeMenuItem } from "@/components/theme-toggle";
+import { OPERATOR_BRANCH_OPS_TABLES } from "@/_hooks/branch-ops-runtime";
 
 export const instant = false;
 
@@ -113,7 +114,11 @@ export default async function OperatorLayout({
       {canSubscribeBranchOpsTopic(claims, context.branchId) ? (
         <BranchOpsRefresh
           branchId={context.branchId}
-          disabledPathPrefixes={[`/br/${context.branchId}/team/leave-approvals`]}
+          disabledPathPrefixes={[
+            `/br/${context.branchId}/team/attendance`,
+            `/br/${context.branchId}/team/leave-approvals`,
+          ]}
+          filter={{ tables: OPERATOR_BRANCH_OPS_TABLES }}
         />
       ) : null}
       <div className="chrome-safe-pt flex h-dvh w-full flex-col overflow-hidden touch-manipulation bg-background">
@@ -126,11 +131,7 @@ export default async function OperatorLayout({
           }
           subtitle={ROLE_LABEL_VI[claims.user_role]}
           subtitleHiddenOnMobile
-          homeHref={
-            branchKind === "branch"
-              ? `/br/${context.branchId}`
-              : "/"
-          }
+          homeHref={branchKind === "branch" ? `/br/${context.branchId}` : "/"}
           homeAriaLabel={
             branchKind === "branch"
               ? APP_COPY_VI.branchHome
