@@ -1,6 +1,6 @@
 // content.js - Content script running in merchant.grab.com
 (function () {
-  const extVersion = chrome.runtime.getManifest()?.version || '1.1.9';
+  const extVersion = chrome.runtime.getManifest()?.version || '1.1.11';
   console.log(`[Grab POS Relay v${extVersion}] Content script active`);
 
   // Inject injected.js into page context
@@ -82,21 +82,168 @@
     return `${datePart('year')}-${datePart('month')}-${datePart('day')}`;
   }
 
+  const ITEM_SYNC_STATE_STORAGE_KEY = 'grabItemSyncStateV1';
+  const ITEM_STATUS_POLL_INTERVAL_MS = 30 * 1000;
+  const INITIAL_ITEM_STATUS_POLL_DELAY_MS = 2 * 1000;
+  const STOCK_FLUSH_DELAY_MS = 5 * 60 * 1000;
+  const STOCK_RETRY_DELAY_MS = 30 * 1000;
+  const LOW_STOCK_IMMEDIATE_THRESHOLD = 3;
+
   // Cache item and modifier state independently. Only item entries carry stock.
   const itemStatusCache = new Map(); // entity:id -> { status, stockSignature? }
-  const pendingItemSyncs = new Map(); // operation:itemId -> { requestId, signature, desiredValue }
+  const pendingStockUpdates = new Map(); // itemId -> { currentStock, signature, dueAt }
+  const pendingItemSyncs = new Map(); // operation:itemId -> { requestId, signature, desiredValue, scopeKey }
   let grabSessionExpired = false;
   let itemStatusPollInFlight = false;
   let forceSyncQueued = false;
   let itemStatusBusinessDateKey = getVietnamBusinessDateKey();
+  let itemSyncScopeKey = null;
+  let pendingStockFlushTimer = null;
+  let itemSyncPersistTail = Promise.resolve();
+
+  function getStoredValues(keys) {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(keys, (result) => resolve(result || {}));
+    });
+  }
+
+  function setStoredValues(values) {
+    return new Promise((resolve, reject) => {
+      chrome.storage.local.set(values, () => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+          return;
+        }
+        resolve();
+      });
+    });
+  }
+
+  function isConfirmedState(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+    const validStatus = value.status === undefined || typeof value.status === 'string';
+    const validStock = value.stockSignature === undefined || typeof value.stockSignature === 'string';
+    return validStatus && validStock;
+  }
+
+  function isPendingStockState(value) {
+    return (
+      value &&
+      typeof value === 'object' &&
+      !Array.isArray(value) &&
+      Number.isInteger(value.currentStock) &&
+      value.currentStock >= 1 &&
+      value.currentStock <= 9999 &&
+      value.signature === `enabled:${value.currentStock}` &&
+      Number.isFinite(value.dueAt)
+    );
+  }
+
+  async function hydrateItemSyncState() {
+    try {
+      const storedValues = await getStoredValues([ITEM_SYNC_STATE_STORAGE_KEY]);
+      const storedState = storedValues[ITEM_SYNC_STATE_STORAGE_KEY];
+      if (!storedState || typeof storedState !== 'object' || Array.isArray(storedState)) return;
+
+      itemSyncScopeKey = typeof storedState.scopeKey === 'string' ? storedState.scopeKey : null;
+      if (typeof storedState.businessDateKey === 'string') {
+        itemStatusBusinessDateKey = storedState.businessDateKey;
+      }
+
+      if (storedState.confirmed && typeof storedState.confirmed === 'object') {
+        for (const [cacheKey, value] of Object.entries(storedState.confirmed)) {
+          if (/^(item:VNITE|modifier:VNMOD)/.test(cacheKey) && isConfirmedState(value)) {
+            itemStatusCache.set(cacheKey, value);
+          }
+        }
+      }
+
+      if (storedState.pendingStock && typeof storedState.pendingStock === 'object') {
+        for (const [itemId, value] of Object.entries(storedState.pendingStock)) {
+          if (itemId.startsWith('VNITE') && isPendingStockState(value)) {
+            pendingStockUpdates.set(itemId, value);
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('[Grab POS Relay] Failed hydrating item sync state:', error);
+    }
+  }
+
+  function persistItemSyncState() {
+    const confirmed = Object.fromEntries(itemStatusCache);
+    const pendingStock = Object.fromEntries(pendingStockUpdates);
+    const storedState = {
+      scopeKey: itemSyncScopeKey,
+      businessDateKey: itemStatusBusinessDateKey,
+      confirmed,
+      pendingStock,
+    };
+
+    itemSyncPersistTail = itemSyncPersistTail
+      .then(() => setStoredValues({ [ITEM_SYNC_STATE_STORAGE_KEY]: storedState }))
+      .catch((error) => {
+        console.warn('[Grab POS Relay] Failed persisting item sync state:', error);
+      });
+    return itemSyncPersistTail;
+  }
+
+  function clearPendingStockFlushTimer() {
+    if (pendingStockFlushTimer !== null) {
+      clearTimeout(pendingStockFlushTimer);
+      pendingStockFlushTimer = null;
+    }
+  }
+
+  async function ensureItemSyncScope(backendUrl, branchId) {
+    const normalizedBackendUrl = backendUrl.replace(/\/+$/, '');
+    const nextScopeKey = `${normalizedBackendUrl}|branch:${branchId}`;
+    if (nextScopeKey === itemSyncScopeKey) return;
+
+    itemSyncScopeKey = nextScopeKey;
+    itemStatusBusinessDateKey = getVietnamBusinessDateKey();
+    itemStatusCache.clear();
+    pendingStockUpdates.clear();
+    pendingItemSyncs.clear();
+    clearPendingStockFlushTimer();
+    await persistItemSyncState();
+  }
 
   function refreshItemStatusBusinessDate() {
     const nextBusinessDateKey = getVietnamBusinessDateKey();
     if (nextBusinessDateKey === itemStatusBusinessDateKey) return false;
 
     itemStatusBusinessDateKey = nextBusinessDateKey;
-    itemStatusCache.clear();
+    for (const [cacheKey, value] of itemStatusCache) {
+      if (value.status !== 'UNAVAILABLE_TODAY') continue;
+
+      const nextValue = { ...value };
+      delete nextValue.status;
+      if (Object.keys(nextValue).length === 0) {
+        itemStatusCache.delete(cacheKey);
+      } else {
+        itemStatusCache.set(cacheKey, nextValue);
+      }
+    }
+    persistItemSyncState();
     return true;
+  }
+
+  function shouldSyncAvailabilityStatus(currentStatus, previousStatus, forceAll, reconcileTodayStatuses) {
+    return (
+      forceAll ||
+      previousStatus !== currentStatus ||
+      (reconcileTodayStatuses && currentStatus === 'UNAVAILABLE_TODAY')
+    );
+  }
+
+  function shouldFlushStockImmediately(currentStock, previousStockSignature, forceAll, statusChanged) {
+    return (
+      forceAll ||
+      previousStockSignature === undefined ||
+      statusChanged ||
+      currentStock <= LOW_STOCK_IMMEDIATE_THRESHOLD
+    );
   }
 
   function normalizeStockPayload(currentStock) {
@@ -130,7 +277,12 @@
     if (pendingItemSyncs.has(key)) return false;
 
     const requestId = `${operation}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    pendingItemSyncs.set(key, { requestId, signature, desiredValue });
+    pendingItemSyncs.set(key, {
+      requestId,
+      signature,
+      desiredValue,
+      scopeKey: itemSyncScopeKey,
+    });
     sendCommandToInjected(command, { requestId, itemId, ...payload });
     return true;
   }
@@ -138,178 +290,284 @@
   function finishItemSync(operation, data) {
     const key = `${operation}:${data.itemId}`;
     const pending = pendingItemSyncs.get(key);
-    if (pending && data.requestId && pending.requestId !== data.requestId) {
+    if (
+      !pending ||
+      pending.scopeKey !== itemSyncScopeKey ||
+      (data.requestId && pending.requestId !== data.requestId)
+    ) {
       return null;
     }
     pendingItemSyncs.delete(key);
     return pending || null;
   }
 
+  const itemSyncStateReady = hydrateItemSyncState();
+
   function normalizeGrabIds(value, fallback, prefix) {
     const candidates = Array.isArray(value) ? value : fallback ? [fallback] : [];
     return [...new Set(candidates.filter((id) => typeof id === 'string' && id.startsWith(prefix)))];
   }
 
+  function schedulePendingStockFlush() {
+    clearPendingStockFlushTimer();
+    if (grabSessionExpired || pendingStockUpdates.size === 0) return;
+
+    const nextDueAt = Math.min(...Array.from(pendingStockUpdates.values(), (entry) => entry.dueAt));
+    const delay = Math.max(0, nextDueAt - Date.now());
+    pendingStockFlushTimer = setTimeout(flushPendingStockUpdates, delay);
+  }
+
+  function getPendingStockUpdate(existing, stockPayload, immediate, now) {
+    return {
+      currentStock: stockPayload.currentStock,
+      signature: stockPayload.signature,
+      dueAt: immediate ? now : existing?.dueAt ?? now + STOCK_FLUSH_DELAY_MS,
+    };
+  }
+
+  function stageStockUpdate(itemId, stockPayload, immediate) {
+    const existing = pendingStockUpdates.get(itemId);
+    const nextStockUpdate = getPendingStockUpdate(existing, stockPayload, immediate, Date.now());
+
+    if (
+      existing &&
+      existing.signature === nextStockUpdate.signature &&
+      existing.currentStock === nextStockUpdate.currentStock &&
+      existing.dueAt === nextStockUpdate.dueAt
+    ) {
+      return false;
+    }
+
+    pendingStockUpdates.set(itemId, nextStockUpdate);
+    persistItemSyncState();
+    schedulePendingStockFlush();
+    return true;
+  }
+
+  function clearPendingStockUpdate(itemId) {
+    if (!pendingStockUpdates.delete(itemId)) return false;
+    persistItemSyncState();
+    schedulePendingStockFlush();
+    return true;
+  }
+
+  function flushPendingStockUpdates() {
+    pendingStockFlushTimer = null;
+    if (grabSessionExpired) return;
+
+    const now = Date.now();
+    let changed = false;
+    for (const [itemId, pendingStock] of pendingStockUpdates) {
+      if (pendingStock.dueAt > now) continue;
+
+      queueItemSync(
+        'stock',
+        'SET_ITEM_STOCK',
+        itemId,
+        pendingStock.signature,
+        pendingStock.signature,
+        { currentStock: pendingStock.currentStock }
+      );
+      pendingStockUpdates.set(itemId, {
+        ...pendingStock,
+        dueAt: now + STOCK_RETRY_DELAY_MS,
+      });
+      changed = true;
+    }
+
+    if (changed) persistItemSyncState();
+    schedulePendingStockFlush();
+  }
+
   // Poll POS Backend for Menu Limits / Item Status changes
   async function pollPosItemStatus(forceAll = false) {
+    await itemSyncStateReady;
     if (grabSessionExpired) return;
-    if (refreshItemStatusBusinessDate()) {
-      forceAll = true;
-    }
     if (itemStatusPollInFlight) {
       forceSyncQueued = forceSyncQueued || forceAll;
       return;
     }
     itemStatusPollInFlight = true;
 
-    chrome.storage.local.get(['backendUrl', 'branchId', 'relaySecret'], async (res) => {
+    try {
+      const res = await getStoredValues(['backendUrl', 'branchId', 'relaySecret']);
       const backendUrl = res.backendUrl || 'http://localhost:3000';
       const branchId = Number(res.branchId);
       const relaySecret = res.relaySecret || '';
 
       if (!Number.isInteger(branchId) || branchId <= 0) {
-        itemStatusPollInFlight = false;
         updateBadge('⚠️ Chưa cấu hình mã chi nhánh trong tiện ích', false);
         return;
       }
 
-      try {
-        const headers = {};
-        if (relaySecret) {
-          headers['x-grab-relay-secret'] = relaySecret;
-        }
+      await ensureItemSyncScope(backendUrl, branchId);
+      const reconcileTodayStatuses = refreshItemStatusBusinessDate();
 
-        const response = await fetch(`${backendUrl}/api/webhooks/grabfood/item-status?branch_id=${branchId}`, {
-          headers,
-        });
-        if (!response.ok) {
-          if (response.status === 401) {
-            updateBadge('⚠️ POS từ chối xác thực (401) — kiểm tra lại Relay Secret', false);
+      const headers = {};
+      if (relaySecret) {
+        headers['x-grab-relay-secret'] = relaySecret;
+      }
+
+      const response = await fetch(`${backendUrl}/api/webhooks/grabfood/item-status?branch_id=${branchId}`, {
+        headers,
+      });
+      if (!response.ok) {
+        if (response.status === 401) {
+          updateBadge('⚠️ POS từ chối xác thực (401) — kiểm tra lại Relay Secret', false);
+        }
+        return;
+      }
+
+      const data = await response.json();
+      if (data.success && Array.isArray(data.items)) {
+        let syncedCount = 0;
+        const seenGrabItemIds = new Set();
+        for (const item of data.items) {
+          const grabItemIds = normalizeGrabIds(item.grab_item_ids, item.grab_item_id, 'VNITE');
+          const grabModifierIds = normalizeGrabIds(item.grab_modifier_ids, null, 'VNMOD');
+          if (grabItemIds.length === 0 && grabModifierIds.length === 0) continue;
+          for (const grabId of grabItemIds) seenGrabItemIds.add(grabId);
+
+          const itemAvailableStatus = item.item_available_status ?? item.available_status;
+          const itemGrabStatus =
+            item.item_grab_status ||
+            item.grab_status ||
+            (itemAvailableStatus === 3
+              ? 'UNAVAILABLE_INDEFINITELY'
+              : itemAvailableStatus === 7
+                ? 'HIDDEN'
+                : itemAvailableStatus === 2
+                  ? 'UNAVAILABLE_TODAY'
+                  : 'AVAILABLE');
+          const modifierAvailableStatus =
+            item.modifier_available_status ??
+            (item.is_disabled || item.available_to_sell === 0 ? 2 : 1);
+          const modifierGrabStatus =
+            item.modifier_grab_status ||
+            (modifierAvailableStatus === 2 ? 'UNAVAILABLE_TODAY' : 'AVAILABLE');
+          const currentStock = item.available_to_sell;
+
+          for (const grabId of grabItemIds) {
+            const cacheKey = `item:${grabId}`;
+            const prev = itemStatusCache.get(cacheKey);
+
+            if (
+              shouldSyncAvailabilityStatus(
+                itemGrabStatus,
+                prev?.status,
+                forceAll,
+                reconcileTodayStatuses
+              )
+            ) {
+              console.log(`[Grab POS Relay] Item status sync for ${item.name}: ${prev?.status} -> ${itemGrabStatus} (code: ${itemAvailableStatus})`);
+              if (
+                queueItemSync(
+                  'status',
+                  'SET_AVAILABLE_STATUS',
+                  grabId,
+                  String(itemAvailableStatus ?? itemGrabStatus),
+                  itemGrabStatus,
+                  { availableStatus: itemAvailableStatus ?? itemGrabStatus }
+                )
+              ) {
+                syncedCount++;
+              }
+            }
           }
-          return;
-        }
 
-        const data = await response.json();
-        if (data.success && Array.isArray(data.items)) {
-          let syncedCount = 0;
-          for (const item of data.items) {
-            const grabItemIds = normalizeGrabIds(item.grab_item_ids, item.grab_item_id, 'VNITE');
-            const grabModifierIds = normalizeGrabIds(item.grab_modifier_ids, null, 'VNMOD');
-            if (grabItemIds.length === 0 && grabModifierIds.length === 0) continue;
+          for (const grabId of grabModifierIds) {
+            const cacheKey = `modifier:${grabId}`;
+            const prev = itemStatusCache.get(cacheKey);
 
-            const itemAvailableStatus = item.item_available_status ?? item.available_status;
-            const itemGrabStatus =
-              item.item_grab_status ||
-              item.grab_status ||
-              (itemAvailableStatus === 3
-                ? 'UNAVAILABLE_INDEFINITELY'
-                : itemAvailableStatus === 7
-                  ? 'HIDDEN'
-                  : itemAvailableStatus === 2
-                    ? 'UNAVAILABLE_TODAY'
-                    : 'AVAILABLE');
-            const modifierAvailableStatus =
-              item.modifier_available_status ??
-              (item.is_disabled || item.available_to_sell === 0 ? 2 : 1);
-            const modifierGrabStatus =
-              item.modifier_grab_status ||
-              (modifierAvailableStatus === 2 ? 'UNAVAILABLE_TODAY' : 'AVAILABLE');
-            const currentStock = item.available_to_sell;
-
-            for (const grabId of grabItemIds) {
-              const cacheKey = `item:${grabId}`;
-              const prev = itemStatusCache.get(cacheKey);
-
-              if (forceAll || !prev || prev.status !== itemGrabStatus) {
-                console.log(`[Grab POS Relay] Item status sync for ${item.name}: ${prev?.status} -> ${itemGrabStatus} (code: ${itemAvailableStatus})`);
-                if (
-                  queueItemSync(
-                    'status',
-                    'SET_AVAILABLE_STATUS',
-                    grabId,
-                    String(itemAvailableStatus ?? itemGrabStatus),
-                    itemGrabStatus,
-                    { availableStatus: itemAvailableStatus ?? itemGrabStatus }
-                  )
-                ) {
-                  syncedCount++;
-                }
+            if (
+              shouldSyncAvailabilityStatus(
+                modifierGrabStatus,
+                prev?.status,
+                forceAll,
+                reconcileTodayStatuses
+              )
+            ) {
+              console.log(`[Grab POS Relay] Modifier status sync for ${item.name}: ${prev?.status} -> ${modifierGrabStatus} (code: ${modifierAvailableStatus})`);
+              if (
+                queueItemSync(
+                  'modifier-status',
+                  'SET_MODIFIER_AVAILABLE_STATUS',
+                  grabId,
+                  String(modifierAvailableStatus),
+                  modifierGrabStatus,
+                  { availableStatus: modifierAvailableStatus }
+                )
+              ) {
+                syncedCount++;
               }
             }
+          }
 
-            for (const grabId of grabModifierIds) {
-              const cacheKey = `modifier:${grabId}`;
-              const prev = itemStatusCache.get(cacheKey);
+          // Modifier availability is binary. Numeric stock is sent only to
+          // standalone Grab items through the IMS endpoint.
+          const stockPayload = normalizeStockPayload(currentStock);
+          if (stockPayload.kind === 'not-managed' || stockPayload.kind === 'status-only') {
+            for (const grabId of grabItemIds) clearPendingStockUpdate(grabId);
+            continue;
+          }
+          if (stockPayload.kind === 'invalid') {
+            for (const grabId of grabItemIds) clearPendingStockUpdate(grabId);
+            console.warn(`[Grab POS Relay] Skip invalid stock for ${item.name}: ${currentStock}`);
+            continue;
+          }
 
-              if (forceAll || !prev || prev.status !== modifierGrabStatus) {
-                console.log(`[Grab POS Relay] Modifier status sync for ${item.name}: ${prev?.status} -> ${modifierGrabStatus} (code: ${modifierAvailableStatus})`);
-                if (
-                  queueItemSync(
-                    'modifier-status',
-                    'SET_MODIFIER_AVAILABLE_STATUS',
-                    grabId,
-                    String(modifierAvailableStatus),
-                    modifierGrabStatus,
-                    { availableStatus: modifierAvailableStatus }
-                  )
-                ) {
-                  syncedCount++;
-                }
+          for (const grabId of grabItemIds) {
+            const cacheKey = `item:${grabId}`;
+            const prev = itemStatusCache.get(cacheKey);
+            const statusChanged = prev?.status !== undefined && prev.status !== itemGrabStatus;
+            const stockChanged = !prev || prev.stockSignature !== stockPayload.signature;
+            const inFlightStock = pendingItemSyncs.get(`stock:${grabId}`);
+
+            if (!forceAll && !stockChanged && !statusChanged) {
+              if (inFlightStock && inFlightStock.signature !== stockPayload.signature) {
+                stageStockUpdate(grabId, stockPayload, true);
+              } else {
+                clearPendingStockUpdate(grabId);
               }
-            }
-
-            // Modifier availability is binary. Numeric stock is sent only to
-            // standalone Grab items through the IMS endpoint.
-            const stockPayload = normalizeStockPayload(currentStock);
-            if (stockPayload.kind === 'not-managed' || stockPayload.kind === 'status-only') continue;
-            if (stockPayload.kind === 'invalid') {
-              console.warn(`[Grab POS Relay] Skip invalid stock for ${item.name}: ${currentStock}`);
               continue;
             }
 
-            for (const grabId of grabItemIds) {
-              const cacheKey = `item:${grabId}`;
-              const prev = itemStatusCache.get(cacheKey);
-              if (forceAll || !prev || prev.stockSignature !== stockPayload.signature) {
-                console.log(`[Grab POS Relay] Stock sync for ${item.name}: ${prev?.stockSignature} -> ${stockPayload.signature}`);
-                if (
-                  queueItemSync(
-                    'stock',
-                    'SET_ITEM_STOCK',
-                    grabId,
-                    stockPayload.signature,
-                    stockPayload.signature,
-                    {
-                      currentStock: stockPayload.currentStock,
-                    }
-                  )
-                ) {
-                  syncedCount++;
-                }
-              }
+            console.log(`[Grab POS Relay] Stock sync staged for ${item.name}: ${prev?.stockSignature} -> ${stockPayload.signature}`);
+            const immediate = shouldFlushStockImmediately(
+              stockPayload.currentStock,
+              prev?.stockSignature,
+              forceAll,
+              statusChanged
+            );
+            if (stageStockUpdate(grabId, stockPayload, immediate)) {
+              syncedCount++;
             }
           }
-
-          if (forceAll) {
-            updateBadge(`Đang đồng bộ ${syncedCount} thay đổi sang Grab...`);
-          }
         }
-      } catch (err) {
-        console.warn('[Grab POS Relay] Failed polling item status:', err);
-      } finally {
-        itemStatusPollInFlight = false;
-        if (forceSyncQueued) {
-          forceSyncQueued = false;
-          pollPosItemStatus(true);
+
+        for (const itemId of pendingStockUpdates.keys()) {
+          if (!seenGrabItemIds.has(itemId)) clearPendingStockUpdate(itemId);
+        }
+        schedulePendingStockFlush();
+
+        if (forceAll) {
+          updateBadge(`Đang đồng bộ ${syncedCount} thay đổi sang Grab...`);
         }
       }
-    });
+    } catch (err) {
+      console.warn('[Grab POS Relay] Failed polling item status:', err);
+    } finally {
+      itemStatusPollInFlight = false;
+      if (forceSyncQueued) {
+        forceSyncQueued = false;
+        pollPosItemStatus(true);
+      }
+    }
   }
 
   // Listen to messages from popup
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'FORCE_FULL_SYNC') {
-      itemStatusCache.clear();
       pollPosItemStatus(true);
       sendResponse({ success: true });
     }
@@ -339,6 +597,7 @@
     // Confirm status sync success before caching
     if (type === 'SYNC_STATUS_RESULT' && data?.itemId) {
       const pending = finishItemSync('status', data);
+      if (!pending) return;
       if (data.success) {
         const cacheKey = `item:${data.itemId}`;
         const prev = itemStatusCache.get(cacheKey) || {};
@@ -346,6 +605,7 @@
           ...prev,
           status: pending?.desiredValue || data.statusStr || data.availableStatus,
         });
+        persistItemSyncState();
         console.log(`[Grab POS Relay] Status sync confirmed for item ${data.itemId}`);
       } else {
         const detail = data.error ? `: ${data.error}` : '';
@@ -357,6 +617,7 @@
 
     if (type === 'SYNC_MODIFIER_STATUS_RESULT' && data?.itemId) {
       const pending = finishItemSync('modifier-status', data);
+      if (!pending) return;
       if (data.success) {
         const cacheKey = `modifier:${data.itemId}`;
         const prev = itemStatusCache.get(cacheKey) || {};
@@ -364,6 +625,7 @@
           ...prev,
           status: pending?.desiredValue || data.statusStr || data.availableStatus,
         });
+        persistItemSyncState();
         console.log(`[Grab POS Relay] Status sync confirmed for modifier ${data.itemId}`);
       } else {
         const detail = data.error ? `: ${data.error}` : '';
@@ -376,15 +638,32 @@
     // Confirm stock sync success before caching
     if (type === 'SYNC_STOCK_RESULT' && data?.itemId) {
       const pending = finishItemSync('stock', data);
+      if (!pending) return;
       if (data.success) {
         const cacheKey = `item:${data.itemId}`;
         const prev = itemStatusCache.get(cacheKey) || {};
+        const confirmedSignature = pending.signature || data.stockSignature;
         itemStatusCache.set(cacheKey, {
           ...prev,
           stockSignature: pending?.signature || data.stockSignature,
         });
+        const queuedStock = pendingStockUpdates.get(data.itemId);
+        if (queuedStock?.signature === confirmedSignature) {
+          pendingStockUpdates.delete(data.itemId);
+        }
+        persistItemSyncState();
+        schedulePendingStockFlush();
         console.log(`[Grab POS Relay] Stock sync confirmed for item ${data.itemId}`);
       } else {
+        const queuedStock = pendingStockUpdates.get(data.itemId);
+        if (queuedStock) {
+          pendingStockUpdates.set(data.itemId, {
+            ...queuedStock,
+            dueAt: Date.now() + STOCK_RETRY_DELAY_MS,
+          });
+          persistItemSyncState();
+          schedulePendingStockFlush();
+        }
         const detail = data.error ? `: ${data.error}` : '';
         console.warn(`[Grab POS Relay] Stock sync failed for item ${data.itemId} (HTTP ${data.status})${detail}`);
         updateBadge(`⚠️ Grab từ chối tồn món (HTTP ${data.status || 0})`, false);
@@ -417,6 +696,6 @@
   });
 
   // Start polling POS backend for menu limit & availability changes
-  setInterval(() => pollPosItemStatus(false), 6000);
-  setTimeout(() => pollPosItemStatus(false), 2000);
+  setInterval(() => pollPosItemStatus(false), ITEM_STATUS_POLL_INTERVAL_MS);
+  setTimeout(() => pollPosItemStatus(false), INITIAL_ITEM_STATUS_POLL_DELAY_MS);
 })();

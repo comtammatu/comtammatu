@@ -62,6 +62,69 @@ function loadGetVietnamBusinessDateKey(): (value: Date) => string {
   )() as (value: Date) => string;
 }
 
+function loadShouldSyncAvailabilityStatus(): (
+  currentStatus: string,
+  previousStatus: string | undefined,
+  forceAll: boolean,
+  reconcileTodayStatuses: boolean,
+) => boolean {
+  const functionSource = sourceBlock(
+    contentSource,
+    "function shouldSyncAvailabilityStatus",
+    "function shouldFlushStockImmediately",
+  );
+  return Function(
+    `"use strict"; ${functionSource}; return shouldSyncAvailabilityStatus;`,
+  )() as (
+    currentStatus: string,
+    previousStatus: string | undefined,
+    forceAll: boolean,
+    reconcileTodayStatuses: boolean,
+  ) => boolean;
+}
+
+function loadShouldFlushStockImmediately(): (
+  currentStock: number,
+  previousStockSignature: string | undefined,
+  forceAll: boolean,
+  statusChanged: boolean,
+) => boolean {
+  const functionSource = sourceBlock(
+    contentSource,
+    "function shouldFlushStockImmediately",
+    "function normalizeStockPayload",
+  );
+  return Function(
+    `"use strict"; const LOW_STOCK_IMMEDIATE_THRESHOLD = 3; ${functionSource}; return shouldFlushStockImmediately;`,
+  )() as (
+    currentStock: number,
+    previousStockSignature: string | undefined,
+    forceAll: boolean,
+    statusChanged: boolean,
+  ) => boolean;
+}
+
+function loadGetPendingStockUpdate(): (
+  existing: { currentStock: number; signature: string; dueAt: number } | undefined,
+  stockPayload: { currentStock: number; signature: string },
+  immediate: boolean,
+  now: number,
+) => { currentStock: number; signature: string; dueAt: number } {
+  const functionSource = sourceBlock(
+    contentSource,
+    "function getPendingStockUpdate",
+    "function stageStockUpdate",
+  );
+  return Function(
+    `"use strict"; const STOCK_FLUSH_DELAY_MS = 5 * 60 * 1000; ${functionSource}; return getPendingStockUpdate;`,
+  )() as (
+    existing: { currentStock: number; signature: string; dueAt: number } | undefined,
+    stockPayload: { currentStock: number; signature: string },
+    immediate: boolean,
+    now: number,
+  ) => { currentStock: number; signature: string; dueAt: number };
+}
+
 test("Grab item status sync matches the portal mutation contract", () => {
   const statusMutation = sourceBlock(
     injectedSource,
@@ -160,8 +223,9 @@ test("Grab relay allowlists, deduplicates, and backfills availability target IDs
   );
 });
 
-test("Grab stock status forces a full resend at the Vietnam business-date rollover", () => {
+test("Grab day rollover reconciles today's availability without resending all stock", () => {
   const getVietnamBusinessDateKey = loadGetVietnamBusinessDateKey();
+  const shouldSyncAvailabilityStatus = loadShouldSyncAvailabilityStatus();
   const pollSource = sourceBlock(
     contentSource,
     "async function pollPosItemStatus",
@@ -176,9 +240,104 @@ test("Grab stock status forces a full resend at the Vietnam business-date rollov
     getVietnamBusinessDateKey(new Date("2026-08-29T17:00:00.000Z")),
     "2026-08-30",
   );
+  assert.equal(
+    shouldSyncAvailabilityStatus(
+      "UNAVAILABLE_TODAY",
+      "UNAVAILABLE_TODAY",
+      false,
+      true,
+    ),
+    true,
+  );
+  assert.equal(
+    shouldSyncAvailabilityStatus("AVAILABLE", "AVAILABLE", false, true),
+    false,
+  );
+  assert.doesNotMatch(pollSource, /forceAll = true/);
+  assert.match(pollSource, /reconcileTodayStatuses/);
+  assert.doesNotMatch(pollSource, /refreshItemStatusBusinessDate[\s\S]{0,120}itemStatusCache\.clear/);
+});
+
+test("Grab relay persists confirmed and queued item sync state by backend and branch", () => {
+  assert.match(contentSource, /const ITEM_SYNC_STATE_STORAGE_KEY = 'grabItemSyncStateV1'/);
+  assert.match(contentSource, /function hydrateItemSyncState/);
+  assert.match(contentSource, /function persistItemSyncState/);
+  assert.match(contentSource, /function ensureItemSyncScope/);
+  assert.match(contentSource, /scopeKey: itemSyncScopeKey/);
+  assert.match(contentSource, /pendingStockUpdates/);
+
+  const manualSyncSource = sourceBlock(
+    contentSource,
+    "// Listen to messages from popup",
+    "// Listen to messages from injected.js",
+  );
+  assert.match(manualSyncSource, /pollPosItemStatus\(true\)/);
+  assert.doesNotMatch(manualSyncSource, /itemStatusCache\.clear/);
+});
+
+test("Grab relay coalesces normal stock changes for five minutes", () => {
+  const getPendingStockUpdate = loadGetPendingStockUpdate();
+
+  assert.match(contentSource, /const STOCK_FLUSH_DELAY_MS = 5 \* 60 \* 1000/);
+  assert.match(contentSource, /const ITEM_STATUS_POLL_INTERVAL_MS = 30 \* 1000/);
+  assert.match(contentSource, /const pendingStockUpdates = new Map\(\)/);
+  assert.match(contentSource, /function stageStockUpdate/);
+  assert.match(contentSource, /function schedulePendingStockFlush/);
+  assert.match(contentSource, /setTimeout\(flushPendingStockUpdates/);
   assert.match(
-    pollSource,
-    /if \(refreshItemStatusBusinessDate\(\)\) \{\s*forceAll = true;/,
+    contentSource,
+    /setInterval\(\(\) => pollPosItemStatus\(false\), ITEM_STATUS_POLL_INTERVAL_MS\)/,
+  );
+  assert.doesNotMatch(contentSource, /pollPosItemStatus\(false\), 6000/);
+
+  assert.deepEqual(
+    getPendingStockUpdate(
+      { currentStock: 10, signature: "enabled:10", dueAt: 400_000 },
+      { currentStock: 9, signature: "enabled:9" },
+      false,
+      200_000,
+    ),
+    { currentStock: 9, signature: "enabled:9", dueAt: 400_000 },
+  );
+  assert.deepEqual(
+    getPendingStockUpdate(
+      { currentStock: 9, signature: "enabled:9", dueAt: 400_000 },
+      { currentStock: 3, signature: "enabled:3" },
+      true,
+      250_000,
+    ),
+    { currentStock: 3, signature: "enabled:3", dueAt: 250_000 },
+  );
+  assert.deepEqual(
+    getPendingStockUpdate(
+      undefined,
+      { currentStock: 8, signature: "enabled:8" },
+      false,
+      100_000,
+    ),
+    { currentStock: 8, signature: "enabled:8", dueAt: 400_000 },
+  );
+});
+
+test("Grab relay sends first, low-stock, and availability-transition stock immediately", () => {
+  const shouldFlushStockImmediately = loadShouldFlushStockImmediately();
+
+  assert.equal(shouldFlushStockImmediately(20, undefined, false, false), true);
+  assert.equal(
+    shouldFlushStockImmediately(20, "enabled:21", true, false),
+    true,
+  );
+  assert.equal(
+    shouldFlushStockImmediately(20, "enabled:21", false, true),
+    true,
+  );
+  assert.equal(
+    shouldFlushStockImmediately(3, "enabled:4", false, false),
+    true,
+  );
+  assert.equal(
+    shouldFlushStockImmediately(4, "enabled:5", false, false),
+    false,
   );
 });
 
