@@ -43,6 +43,7 @@ import {
 } from "@comtammatu/ui/components/tabs";
 import { AppBackLink, AppEmptyState, AppSheet } from "@/components/surface";
 import { MultiSelectCombobox } from "@/components/form/multi-select-combobox";
+import { StockOnHandPrintDialog } from "@/components/inventory/stock-on-hand-print-dialog";
 import { formatQty } from "@lib/inventory/format";
 import { formatStockUnits } from "@/(protected)/inventory/_lib/stock-unit-format";
 import { ITEM_KIND_LABELS } from "@/(protected)/inventory/_lib/constants";
@@ -433,6 +434,12 @@ export function BranchStockOnHandClient({
                       ) : null}
                     </span>
                   </Button>
+                  <StockOnHandPrintDialog
+                    branchId={branchId}
+                    ingredients={filtered}
+                    buttonSize="touch"
+                    buttonVariant="outline"
+                  />
                   {secondaryJobs.length > 0 ? (
                     <Button
                       type="button"

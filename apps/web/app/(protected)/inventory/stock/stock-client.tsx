@@ -102,6 +102,7 @@ import type {
 import { ACTIONS_VI, FORM_VI, INVENTORY_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 import { BranchStockThresholdsDialog } from "@/components/inventory/branch-stock-thresholds-dialog";
 import { SmartReorderSheet } from "@/components/inventory/smart-reorder-sheet";
+import { StockOnHandPrintDialog } from "@/components/inventory/stock-on-hand-print-dialog";
 import type { BranchStockThresholdRow } from "@lib/inventory/branch-thresholds-data";
 import type { ReorderSuggestionItem } from "@lib/inventory/smart-reorder-data";
 
@@ -1056,6 +1057,12 @@ export function StockClient({
                   ) : null}
                 </Button>
               }
+            />
+            <StockOnHandPrintDialog
+              branchId={branchId}
+              ingredients={filtered}
+              buttonSize="field"
+              buttonVariant="outline"
             />
             {desktopSecondaryActionsDropdown}
             {primaryRequestAction}
