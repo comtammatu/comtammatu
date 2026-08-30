@@ -339,10 +339,14 @@
   html {
     @apply font-sans;
     font-size: 17px;
+    -webkit-text-size-adjust: 100%;
+    touch-action: manipulation;
   }
 
   body {
     @apply bg-background text-foreground;
+    touch-action: manipulation;
+    overflow-x: hidden;
   }
 
   button:not(:disabled),
@@ -364,6 +368,13 @@
       user-select: none;
       -webkit-user-select: none;
       -webkit-touch-callout: none;
+    }
+
+    /* Prevent iOS Safari from auto-zooming into inputs on focus when font-size < 16px */
+    input,
+    select,
+    textarea {
+      font-size: 16px !important;
     }
   }
 }
@@ -669,14 +680,40 @@
   :root {
     color-scheme: light;
   }
+  @page {
+    size: A4 portrait;
+    margin: 12mm 15mm;
+  }
   #pos-receipt,
-  #pos-receipt * {
+  #pos-receipt *,
+  .stocktake-print-sheet,
+  .stocktake-print-sheet *,
+  .stocktake-a4-sheet,
+  .stocktake-a4-sheet *,
+  .stocktake-thermal-sheet,
+  .stocktake-thermal-sheet *,
+  .grn-thermal-receipt,
+  .grn-thermal-receipt *,
+  .transfer-thermal-receipt,
+  .transfer-thermal-receipt * {
     color: black !important;
     background: white !important;
     border-color: black !important;
     -webkit-line-clamp: unset !important;
     overflow: visible !important;
     max-width: none !important;
+    box-shadow: none !important;
+  }
+  .stocktake-a4-sheet thead {
+    display: table-header-group;
+  }
+  .stocktake-a4-sheet tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .stocktake-print-avoid-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 }
 

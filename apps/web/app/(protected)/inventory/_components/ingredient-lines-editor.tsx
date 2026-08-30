@@ -368,7 +368,6 @@ function IngredientLineRow<T extends FieldValues>({
                 aria-label={`${PRODUCT_VI.rawIngredient} ${index + 1}`}
                 aria-invalid={!!rowError?.ingredient_id}
                 triggerClassName={cn(
-                  "h-9",
                   rowError?.ingredient_id && "border-destructive",
                 )}
               />
@@ -395,7 +394,6 @@ function IngredientLineRow<T extends FieldValues>({
                 maxFractionDigits={3}
                 aria-invalid={!!rowError?.quantity}
                 className={cn(
-                  "h-9",
                   rowError?.quantity && "border-destructive",
                 )}
               />
@@ -429,7 +427,6 @@ function IngredientLineRow<T extends FieldValues>({
                 >
                   <SelectTrigger
                     className={cn(
-                      "h-9",
                       (rowError?.unitLabel || rowError?.entry_unit_id) &&
                         "border-destructive",
                     )}

@@ -144,18 +144,24 @@ export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
       key: "name",
       header: copy.cols.name,
       className: "font-medium",
+      sortable: true,
+      sortValue: (row) => row.name,
       render: (row) => row.name,
     },
     {
       key: "sort_order",
       header: copy.cols.sortOrder,
-      className: "w-24 text-right tabular-nums",
+      className: "w-24 text-right font-mono tabular-nums",
+      sortable: true,
+      sortValue: (row) => row.sort_order,
       render: (row) => row.sort_order,
     },
     {
       key: "status",
       header: copy.cols.status,
       className: "w-32 text-center",
+      sortable: true,
+      sortValue: (row) => (row.is_active ? "1" : "0"),
       render: (row) => (
         <Badge variant={row.is_active ? "success" : "secondary"}>
           {row.is_active ? copy.status.active : copy.status.inactive}

@@ -21,7 +21,9 @@ import {
   formatVNBusinessDate,
   formatVNDateTime,
 } from "@comtammatu/shared/time";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+
 import { confirm } from "@/components/confirm-dialog";
 import {
   Item,
@@ -32,8 +34,9 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
-
+import { RadioGroup, RadioGroupItem } from "@comtammatu/ui/components/radio-group";
 import { Spinner } from "@comtammatu/ui/components/spinner";
+
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { StatusBadge } from "@/components/status-badge";
@@ -59,8 +62,10 @@ import { messages } from "@lib/messages";
 import {
   approveLeaveRequest,
   fetchLeaveRequests,
+  fetchLeaveShiftConflicts,
   rejectLeaveRequest,
 } from "@/(protected)/hr/leave-request-actions";
+
 
 type QueueView = "pending" | "history";
 type PendingAction = "approve" | "reject" | null;
@@ -71,7 +76,6 @@ function formatDateRange(startDate: string, endDate: string): string {
   if (startDate === endDate) return formatVNBusinessDate(startDate);
   return `${formatVNBusinessDate(startDate)} - ${formatVNBusinessDate(endDate)}`;
 }
-
 export function BranchLeaveApprovalsClient({
   branchId,
   branchName,
@@ -86,6 +90,29 @@ export function BranchLeaveApprovalsClient({
   loadFailed: boolean;
 }) {
   const [rows, setRows] = useState(initialRows);
+  const [conflictShifts, setConflictShifts] = useState<
+    {
+      id: number;
+      workDate: string;
+      shiftId: number;
+      shiftName: string;
+      startTime: string;
+      endTime: string;
+    }[]
+  >([]);
+  const [availableSubstitutes, setAvailableSubstitutes] = useState<
+    {
+      employeeId: number;
+      employeeCode: string | null;
+      fullName: string;
+      positionLabel: string | null;
+    }[]
+  >([]);
+  const [substitutionMode, setSubstitutionMode] = useState<
+    "substitute" | "unassign" | "keep"
+  >("substitute");
+  const [selectedSubstituteId, setSelectedSubstituteId] = useState<string>("");
+  const [conflictSheetOpen, setConflictSheetOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [rejecting, setRejecting] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
@@ -107,6 +134,7 @@ export function BranchLeaveApprovalsClient({
     },
     [pathname, router, searchParams],
   );
+
 
   const pendingRows = useMemo(
     () => rows.filter((request) => request.status === "pending"),
@@ -144,6 +172,7 @@ export function BranchLeaveApprovalsClient({
     setRejecting(false);
     setRejectReason("");
     setPendingAction(null);
+    setConflictSheetOpen(false);
   }
 
   async function approveSelected() {
@@ -152,6 +181,39 @@ export function BranchLeaveApprovalsClient({
       selected,
       copy.fallbackEmployee,
     );
+
+    setPendingAction("approve");
+    const conflictResult = await fetchLeaveShiftConflicts({
+      employeeId: selected.employees?.id ?? 0,
+      startDate: selected.start_date,
+      endDate: selected.end_date,
+      branchId,
+    });
+
+    if (
+      conflictResult.success &&
+      conflictResult.data &&
+      conflictResult.data.shifts.length > 0
+    ) {
+      const conflictData = conflictResult.data;
+      setConflictShifts(conflictData.shifts);
+      setAvailableSubstitutes(conflictData.availableEmployees);
+      setSubstitutionMode(
+        conflictData.availableEmployees.length > 0
+          ? "substitute"
+          : "unassign",
+      );
+      setSelectedSubstituteId(
+        conflictData.availableEmployees[0]?.employeeId
+          ? String(conflictData.availableEmployees[0].employeeId)
+          : "",
+      );
+      setConflictSheetOpen(true);
+      setPendingAction(null);
+      return;
+    }
+
+
     const ok = await confirm({
       title: copy.approveAria,
       description: `${employeeName} · ${formatDateRange(
@@ -160,9 +222,11 @@ export function BranchLeaveApprovalsClient({
       )}`,
       confirmText: ACTIONS_VI.approve,
     });
-    if (!ok) return;
+    if (!ok) {
+      setPendingAction(null);
+      return;
+    }
 
-    setPendingAction("approve");
     startTransition(async () => {
       const result = await approveLeaveRequest({
         requestId: selected.id,
@@ -170,10 +234,10 @@ export function BranchLeaveApprovalsClient({
       });
       setPendingAction(null);
       if (!result.success) {
-        toast.error(result.error ?? "Không thể duyệt yêu cầu nghỉ");
+        toast.error(result.error ?? copy.approveFailed);
         return;
       }
-      toast.success("Đã duyệt yêu cầu nghỉ");
+      toast.success(copy.approveSuccess);
       setRows((current) =>
         current.map((request) =>
           request.id === selected.id
@@ -185,6 +249,48 @@ export function BranchLeaveApprovalsClient({
       reload();
     });
   }
+
+  function confirmApprovalWithSubstitution() {
+    if (!selected) return;
+    setPendingAction("approve");
+    startTransition(async () => {
+      const result = await approveLeaveRequest({
+        requestId: selected.id,
+        branchId,
+        replacementEmployeeId:
+          substitutionMode === "substitute" && selectedSubstituteId
+            ? Number(selectedSubstituteId)
+            : null,
+        unassignShifts: substitutionMode === "unassign",
+        employeeId: selected.employees?.id,
+        startDate: selected.start_date,
+        endDate: selected.end_date,
+      });
+      setPendingAction(null);
+      setConflictSheetOpen(false);
+      if (!result.success) {
+        toast.error(result.error ?? copy.approveFailed);
+        return;
+      }
+      if (substitutionMode === "substitute" && selectedSubstituteId) {
+        toast.success(copy.approveSuccessWithSubstitution);
+      } else if (substitutionMode === "unassign") {
+        toast.success(copy.approveSuccessWithUnassign);
+      } else {
+        toast.success(copy.approveSuccess);
+      }
+      setRows((current) =>
+        current.map((request) =>
+          request.id === selected.id
+            ? { ...request, status: "approved" }
+            : request,
+        ),
+      );
+      closeReview();
+      reload();
+    });
+  }
+
 
   function rejectSelected() {
     if (!selected) return;
@@ -198,10 +304,10 @@ export function BranchLeaveApprovalsClient({
       });
       setPendingAction(null);
       if (!result.success) {
-        toast.error(result.error ?? "Không thể từ chối yêu cầu nghỉ");
+        toast.error(result.error ?? copy.rejectFailed);
         return;
       }
-      toast.success("Đã từ chối yêu cầu nghỉ");
+      toast.success(copy.rejectSuccess);
       setRows((current) =>
         current.map((request) =>
           request.id === selected.id
@@ -213,6 +319,7 @@ export function BranchLeaveApprovalsClient({
             : request,
         ),
       );
+
       closeReview();
       reload();
     });
@@ -462,7 +569,7 @@ export function BranchLeaveApprovalsClient({
                   )} ${copy.dayUnit}`,
                 },
                 {
-                  label: "Gửi lúc",
+                  label: copy.submittedAt,
                   value: formatVNDateTime(selected.created_at),
                 },
               ]}
@@ -473,9 +580,10 @@ export function BranchLeaveApprovalsClient({
                 {copy.table.reason}
               </p>
               <p className="mt-1 break-words text-sm leading-6">
-                {selected.reason ?? "Không có lý do"}
+                {selected.reason ?? copy.noReason}
               </p>
             </div>
+
 
             {selected.rejected_reason ? (
               <div className="rounded-md bg-destructive/10 p-3">
@@ -507,6 +615,170 @@ export function BranchLeaveApprovalsClient({
             ) : null}
           </div>
         ) : null}
+      </AppSheet>
+
+      <AppSheet
+        open={conflictSheetOpen}
+        onOpenChange={setConflictSheetOpen}
+        title={copy.leaveShiftConflictTitle}
+        description={
+          selected
+            ? copy.leaveShiftConflictDescription(
+                getLeaveRequestEmployeeName(selected, copy.fallbackEmployee),
+                conflictShifts.map((s) => s.shiftName).join(", "),
+                formatDateRange(selected.start_date, selected.end_date),
+              )
+            : ""
+        }
+        side="bottom"
+        contentClassName="max-h-dvh-95"
+        footerClassName="sticky bottom-0 border-t"
+        footer={
+          <div className="flex w-full gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              className="flex-1"
+              disabled={isPending}
+              onClick={() => setConflictSheetOpen(false)}
+            >
+              {ACTIONS_VI.cancel}
+            </Button>
+            <Button
+              type="button"
+              variant="default"
+              size="touch"
+              className="flex-1"
+              disabled={
+
+                isPending ||
+                (substitutionMode === "substitute" && !selectedSubstituteId)
+              }
+              onClick={confirmApprovalWithSubstitution}
+            >
+              {isPending ? (
+                <Spinner className="size-4" />
+              ) : (
+                <IconCheck className="size-4" />
+              )}
+              {copy.approveAndApply}
+            </Button>
+          </div>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <p className="text-muted-foreground text-xs font-medium">
+              {copy.conflictShiftsHeader}
+            </p>
+            <ItemGroup className="gap-1.5">
+              {conflictShifts.map((shift) => (
+                <Item key={shift.id} variant="outline" className="p-2.5">
+                  <ItemContent className="min-w-0">
+                    <ItemTitle className="text-xs font-semibold">
+                      {shift.shiftName} ({shift.startTime.slice(0, 5)}–
+                      {shift.endTime.slice(0, 5)})
+                    </ItemTitle>
+                    <ItemDescription className="text-2xs">
+                      {formatVNBusinessDate(shift.workDate)}
+                    </ItemDescription>
+                  </ItemContent>
+                </Item>
+              ))}
+            </ItemGroup>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <RadioGroup
+              value={substitutionMode}
+              onValueChange={(val) =>
+                setSubstitutionMode(val as "substitute" | "unassign" | "keep")
+              }
+            >
+              {availableSubstitutes.length > 0 ? (
+                <div className="flex items-start gap-2">
+                  <RadioGroupItem
+                    value="substitute"
+                    id="mode-substitute"
+                    size="touch"
+                    className="mt-0.5"
+                  />
+                  <div className="flex flex-1 flex-col gap-1.5">
+                    <Label
+                      htmlFor="mode-substitute"
+                      className="cursor-pointer text-sm font-medium"
+                    >
+                      {copy.substitutionSelectLabel}
+                    </Label>
+                    {substitutionMode === "substitute" ? (
+                      <div className="flex max-h-48 flex-col gap-1 overflow-y-auto pt-1">
+                        {availableSubstitutes.map((emp) => {
+                          const active =
+                            selectedSubstituteId === String(emp.employeeId);
+                          return (
+                            <Item
+                              key={emp.employeeId}
+                              variant="outline"
+                              className={
+                                active
+                                  ? "border-primary bg-primary/10 p-2"
+                                  : "cursor-pointer p-2 opacity-80 hover:opacity-100"
+                              }
+                              onClick={() =>
+                                setSelectedSubstituteId(String(emp.employeeId))
+                              }
+                            >
+                              <ItemContent className="min-w-0">
+                                <ItemTitle className="text-xs font-medium">
+                                  {emp.fullName}
+                                </ItemTitle>
+                                <ItemDescription className="text-2xs">
+                                  {emp.positionLabel || "—"}
+                                </ItemDescription>
+                              </ItemContent>
+                              {active ? (
+                                <Badge variant="default" className="text-2xs">
+                                  {copy.selectedBadge}
+                                </Badge>
+                              ) : null}
+
+                            </Item>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+
+
+              <div className="flex items-center gap-2">
+                <RadioGroupItem
+                  value="unassign"
+                  id="mode-unassign"
+                  size="touch"
+                />
+                <Label
+                  htmlFor="mode-unassign"
+                  className="cursor-pointer text-sm font-normal"
+                >
+                  {copy.unassignOption}
+                </Label>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="keep" id="mode-keep" size="touch" />
+                <Label
+                  htmlFor="mode-keep"
+                  className="cursor-pointer text-sm font-normal"
+                >
+                  {copy.keepShiftOption}
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+        </div>
       </AppSheet>
     </BranchOperatorPage>
   );

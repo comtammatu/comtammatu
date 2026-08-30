@@ -224,6 +224,8 @@ export function StockFulfillmentHubClient({
     {
       key: "journey",
       header: "Phiếu",
+      sortable: true,
+      sortValue: (row) => row.documentNumber,
       render: (row) => {
         const linkedTransfers = linkedTransferNumbers(row);
         return (
@@ -292,6 +294,8 @@ export function StockFulfillmentHubClient({
     {
       key: "needed_at",
       header: "Cần trước",
+      sortable: true,
+      sortValue: (row) => (row.kind === "request" ? row.neededAt ?? "" : ""),
       render: (row) =>
         row.kind === "request" && row.neededAt
           ? formatVNDate(row.neededAt)

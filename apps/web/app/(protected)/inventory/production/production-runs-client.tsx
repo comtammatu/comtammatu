@@ -3,7 +3,6 @@
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { Search as IconSearch } from "lucide-react";
 import { formatCount, formatQuantity } from "@comtammatu/shared/format";
-import { INVENTORY_STATUS_LABELS_VI } from "@comtammatu/shared/labels";
 import {
   BRANCH_VI,
   FORM_VI,
@@ -21,27 +20,19 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
+
 import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
+import { StatusBadge } from "@/components/status-badge";
 import { AppListFrame, AppToolbar } from "@/components/surface";
 import { matchesSearch } from "@lib/search";
 import { useDocumentOverlayUrl } from "@lib/navigation/use-document-overlay-url";
-import { inventoryListFilterSelectClassName } from "../_components/inventory-list-filters";
 import type { ProductionRunListRow } from "../production-run-actions";
 import { PRODUCTION_OVERLAY_KEYS } from "./production-document-dialog-host";
 
 const ALL_STATUS_VALUE = "_all";
-const STATUS_LABELS: Record<string, string> = INVENTORY_STATUS_LABELS_VI;
 
 interface ProductionRunsClientProps {
   initial: ProductionRunListRow[];
@@ -67,12 +58,6 @@ export function ProductionRunsClient({ initial }: ProductionRunsClientProps) {
     }, 250);
     return () => window.clearTimeout(timer);
   }, [filters, search, searchDraft]);
-
-  const statusOptions = useMemo(() => {
-    return Array.from(new Set(items.map((item) => item.status))).sort((a, b) =>
-      statusLabel(a).localeCompare(statusLabel(b), "vi"),
-    );
-  }, [items]);
 
   const deferredSearch = useDeferredValue(searchDraft);
 
@@ -107,6 +92,8 @@ export function ProductionRunsClient({ initial }: ProductionRunsClientProps) {
       {
         key: "production_number",
         header: INVENTORY_VI.productionNumber,
+        sortable: true,
+        sortValue: (row) => row.production_number,
         render: (row) => (
           <span className="font-mono font-medium">{row.production_number}</span>
         ),
@@ -114,22 +101,30 @@ export function ProductionRunsClient({ initial }: ProductionRunsClientProps) {
       {
         key: "created_at",
         header: INVENTORY_VI.createdDate,
+        sortable: true,
+        sortValue: (row) => row.created_at,
         render: (row) => formatVNDate(row.created_at),
       },
       {
         key: "branch",
         header: BRANCH_VI.long,
+        sortable: true,
+        sortValue: (row) => row.branch_name,
         render: (row) => row.branch_name,
       },
       {
         key: "finished_good",
         header: PRODUCT_VI.finishedGood,
+        sortable: true,
+        sortValue: (row) => row.finished_good_name,
         render: (row) => row.finished_good_name,
       },
       {
         key: "planned_quantity",
         header: FORM_VI.quantity,
         className: "font-mono",
+        sortable: true,
+        sortValue: (row) => row.planned_quantity,
         render: (row) => {
           const unit = row.entry_unit_name || "";
           return `${formatQuantity(row.planned_quantity)} ${unit}`;
@@ -138,6 +133,8 @@ export function ProductionRunsClient({ initial }: ProductionRunsClientProps) {
       {
         key: "status",
         header: FORM_VI.status,
+        sortable: true,
+        sortValue: (row) => row.status,
         render: (row) => (
           <StatusBadge domain="inventory" value={row.status} size="sm" />
         ),
@@ -161,35 +158,6 @@ export function ProductionRunsClient({ initial }: ProductionRunsClientProps) {
             placeholder={INVENTORY_VI.productionOrdersSearchPlaceholder}
           />
         </InputGroup>
-      }
-      filters={
-        <Select
-          value={statusFilter}
-          onValueChange={(value) =>
-            filters.patchOverlay(
-              { status: value === ALL_STATUS_VALUE ? null : value },
-              "replace",
-            )
-          }
-        >
-          <SelectTrigger
-            size="field"
-            className={inventoryListFilterSelectClassName}
-            aria-label={FORM_VI.status}
-          >
-            <SelectValue placeholder={FORM_VI.status} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL_STATUS_VALUE}>
-              {INVENTORY_VI.allStatusesOption}
-            </SelectItem>
-            {statusOptions.map((status) => (
-              <SelectItem key={status} value={status}>
-                {statusLabel(status)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       }
       reset={
         <Badge variant="secondary">
@@ -350,10 +318,6 @@ export function ProductionRunsClient({ initial }: ProductionRunsClientProps) {
       </AppListFrame>
     </div>
   );
-}
-
-function statusLabel(status: string) {
-  return STATUS_LABELS[status] ?? getStatusBadgeMeta("inventory", status).label;
 }
 
 function ProductionRunCard({

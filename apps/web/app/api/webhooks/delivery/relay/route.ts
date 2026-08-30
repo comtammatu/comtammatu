@@ -17,6 +17,7 @@ import {
   deriveShopeeLegacyLookup,
 } from "@lib/shopeefood/legacy-order-dedup";
 import { resolveBranchStaffId } from "@lib/grabfood/mapping";
+import { mapRelayCreateOrderRpcError } from "@lib/delivery/create-order-rpc-error";
 
 const deliveryRelaySchema = z
   .object({
@@ -363,12 +364,13 @@ export async function POST(request: NextRequest) {
     if (rpcError) {
       console.error("[Delivery POS Relay] create_order RPC error:", rpcError.message, rpcError.details, rpcError.code);
       // Never expose raw Postgres/Supabase messages to clients; map known causes.
-      const clientMessage = rpcError.message?.includes("channel_price_missing")
-        ? "Thiếu giá kênh cho một số món — đồng bộ giá kênh trong Thực đơn"
-        : "Không thể tạo đơn hàng trên POS";
+      const failure = mapRelayCreateOrderRpcError(
+        rpcError,
+        "Thiếu giá kênh cho một số món — đồng bộ giá kênh trong Thực đơn",
+      );
       return NextResponse.json(
-        { success: false, error: clientMessage },
-        { status: 500, headers: CORS_HEADERS },
+        { success: false, error: failure.message, code: failure.code },
+        { status: failure.status, headers: CORS_HEADERS },
       );
     }
 

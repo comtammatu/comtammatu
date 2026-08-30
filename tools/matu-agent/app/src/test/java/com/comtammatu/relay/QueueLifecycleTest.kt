@@ -14,8 +14,15 @@ class QueueLifecycleTest {
     @Test
     fun `only unclaimed waiting receipts can be marked as manually entered`() {
         assertTrue(QueueLifecycle.canDismiss(OrderQueueDbHelper.STATUS_PENDING))
+        assertTrue(QueueLifecycle.canDismiss(OrderQueueDbHelper.STATUS_BLOCKED))
         assertTrue(QueueLifecycle.canDismiss(OrderQueueDbHelper.STATUS_UNCLASSIFIED))
         assertFalse(QueueLifecycle.canDismiss(OrderQueueDbHelper.STATUS_SENDING))
         assertFalse(QueueLifecycle.canDismiss(OrderQueueDbHelper.STATUS_SENT))
+    }
+
+    @Test
+    fun `blocked receipt stays visible but is not resolved`() {
+        assertTrue(OrderQueueDbHelper.STATUS_BLOCKED in QueueLifecycle.waitingStatuses)
+        assertFalse(OrderQueueDbHelper.STATUS_BLOCKED in QueueLifecycle.resolvedStatuses)
     }
 }

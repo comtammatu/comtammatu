@@ -19,7 +19,6 @@ test("waste form exposes photo upload for DB-enforced photo gates", () => {
   assert.match(client, /setEvidenceRequired\(true\)/);
   assert.doesNotMatch(client, /previewWasteTier|unit_cost|total_cost/);
 });
-
 test("waste writeoff RPCs target the current stock_issue_items unit contract", () => {
   const migration = read(
     "supabase/migration-archive/20260709131500_fix_waste_writeoff_rpc_unit_drop.sql",
@@ -41,4 +40,12 @@ test("waste writeoff RPCs target the current stock_issue_items unit contract", (
   assert.match(migration, /entry_unit_required/);
   assert.match(action, /item\.entry_unit_id == null/);
   assert.match(client, /!ingredient \|\| !unit \|\| !line\.reasonCode/);
+});
+test("office waste creation page does not gate behind obsolete feature flags", () => {
+  const page = read("apps/web/app/(protected)/inventory/waste/new/page.tsx");
+  const flags = read("apps/web/app/(protected)/inventory/_lib/feature-flags.ts");
+
+  assert.doesNotMatch(page, /S11_WASTE_TIER|isFeatureEnabledForBranch/);
+  assert.match(page, /<WasteCreateClient/);
+  assert.doesNotMatch(flags, /S11_WASTE_TIER|inv_s11_waste_tier/);
 });

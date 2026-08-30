@@ -1990,17 +1990,26 @@ export function PosDesktopInner({
               orderTargetLabel ? ` · ${orderTargetLabel}` : ""
             }`.trim()
           : showOrders
-            ? (
-              <span className="flex items-center gap-2">
-                <span>{messages.pos.orderHistory.sessionOrders}</span>
-                <Badge
-                  variant={orders.length > 0 ? "secondary" : "outline"}
-                  className="h-5 min-w-5 px-1.5 text-xs font-semibold tabular-nums"
-                >
-                  {orders.length}
-                </Badge>
-              </span>
-            )
+            ? (() => {
+                const count = isServiceGateActive
+                  ? orders.filter((o) => o.order_type === "dine_in").length
+                  : orders.length;
+                return (
+                  <span className="flex items-center gap-2">
+                    <span>
+                      {isServiceGateActive
+                        ? messages.pos.orderHistory.dineInSessionOrders
+                        : messages.pos.orderHistory.sessionOrders}
+                    </span>
+                    <Badge
+                      variant={count > 0 ? "secondary" : "outline"}
+                      className="h-5 min-w-5 px-1.5 text-xs font-semibold tabular-nums"
+                    >
+                      {count}
+                    </Badge>
+                  </span>
+                );
+              })()
             : orderTargetLabel
               ? `${messages.pos.desktop.pendingNewTitle} · ${orderTargetLabel}`
               : messages.pos.desktop.pendingNewTitle

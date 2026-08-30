@@ -24,6 +24,7 @@ import {
   productionRpcFallback,
   productionRpcMappings,
 } from "@lib/messages/inventory-rpc-errors";
+import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 
 const PRODUCTION_ORDER_PERMISSIONS = [
   PERMISSION_KEYS.INVENTORY_PRODUCTION_CREATE,
@@ -309,26 +310,52 @@ export async function fetchProductionRunById(
     return { success: false, error: "Không có quyền" };
   }
 
-  // Calculate actual or estimated costs
+  const monetaryAccess = await loadInventoryMonetaryAccess(claims.user_role);
+  if (!monetaryAccess.valuation || !monetaryAccess.client) {
+    return { success: true, data: run };
+  }
+
+  // Cost columns are intentionally unavailable to the authenticated role.
+  // The service client is permission-gated above and every read stays scoped.
   if (run.status === "completed") {
-    const { data: movements } = await supabase
+    const { data: movements, error: movementError } = await monetaryAccess.client
       .from("stock_movements")
       .select("ingredient_id, type, quantity_change, unit_cost, entry_quantity, entry_to_base_factor")
       .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", run.branch_id)
       .eq("production_run_id", id);
+
+    if (movementError) {
+      console.error("inventory.production.run_cost_movements_failed", {
+        code: movementError.code,
+        productionRunId: id,
+      });
+      return { success: true, data: run };
+    }
 
     const consumptionMap = new Map<number, { unit_cost: number; quantity_change: number }>();
     let outputUnitCost: number | null = null;
 
     for (const mov of movements ?? []) {
-      if (mov.type === "production_consumption" && mov.ingredient_id != null) {
+      if (
+        mov.type === "production_consumption" &&
+        mov.ingredient_id != null &&
+        mov.unit_cost != null
+      ) {
         consumptionMap.set(mov.ingredient_id, {
-          unit_cost: Number(mov.unit_cost ?? 0),
+          unit_cost: Number(mov.unit_cost),
           quantity_change: Number(mov.quantity_change ?? 0),
         });
       } else if (mov.type === "production_output" && mov.ingredient_id === run.finished_good_id) {
         outputUnitCost = mov.unit_cost != null ? Number(mov.unit_cost) : null;
       }
+    }
+
+    if (run.lines.some((line) => !consumptionMap.has(line.ingredient_id))) {
+      console.warn("inventory.production.run_cost_movements_incomplete", {
+        productionRunId: id,
+      });
+      return { success: true, data: run };
     }
 
     let totalCost = 0;
@@ -354,22 +381,33 @@ export async function fetchProductionRunById(
       run.unit_cost = totalCost / outputQty;
     }
   } else {
-    // Draft or in_progress: query current stock_levels and ingredients for estimated costs
+    // Draft or in_progress: estimate from branch valuation, then ingredient fallback.
     const ingredientIds = run.lines.map((l) => l.ingredient_id);
     if (ingredientIds.length > 0) {
       const [stockRes, ingRes] = await Promise.all([
-        supabase
+        monetaryAccess.client
           .from("stock_levels")
           .select("ingredient_id, avg_unit_cost")
           .eq("tenant_id", claims.tenant_id)
           .eq("branch_id", run.branch_id)
           .in("ingredient_id", ingredientIds),
-        supabase
+        monetaryAccess.client
           .from("ingredients")
           .select("id, unit_cost")
           .eq("tenant_id", claims.tenant_id)
           .in("id", ingredientIds),
       ]);
+
+      const stockError = stockRes.error;
+      const ingredientError = ingRes.error;
+      if (stockError || ingredientError) {
+        console.error("inventory.production.run_cost_estimate_failed", {
+          stockCode: stockError?.code,
+          ingredientCode: ingredientError?.code,
+          productionRunId: id,
+        });
+        return { success: true, data: run };
+      }
 
       const costMap = new Map<number, number>();
       for (const ing of ingRes.data ?? []) {
@@ -379,6 +417,13 @@ export async function fetchProductionRunById(
         if (stock.avg_unit_cost != null && Number(stock.avg_unit_cost) > 0) {
           costMap.set(stock.ingredient_id, Number(stock.avg_unit_cost));
         }
+      }
+
+      if (run.lines.some((line) => !costMap.has(line.ingredient_id))) {
+        console.warn("inventory.production.run_cost_estimate_incomplete", {
+          productionRunId: id,
+        });
+        return { success: true, data: run };
       }
 
       let totalCost = 0;

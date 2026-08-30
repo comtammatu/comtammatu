@@ -59,6 +59,10 @@ import {
   type CountSlipWastePhotoUrls,
   type CountSlipWasteReasons,
 } from "@/components/inventory/count-slip-waste-evidence";
+import {
+  CountSlipSurplusEvidence,
+  type CountSlipSurplusReasons,
+} from "@/components/inventory/count-slip-surplus-evidence";
 import { formatQty } from "@lib/inventory/format";
 import type {
   CountSlipLineView,
@@ -131,6 +135,8 @@ export function BranchCountSlipsClient({
   const [wastePhotoUrls, setWastePhotoUrls] =
     useState<CountSlipWastePhotoUrls>({});
   const [wasteReasons, setWasteReasons] = useState<CountSlipWasteReasons>({});
+  const [surplusReasons, setSurplusReasons] =
+    useState<CountSlipSurplusReasons>({});
   const [pendingAction, setPendingAction] = useState<
     "approve" | "recount" | null
   >(null);
@@ -149,6 +155,10 @@ export function BranchCountSlipsClient({
     selected?.lines.filter(
       (line) => line.variance !== null && line.variance < 0,
     ) ?? [];
+  const selectedSurplusLines =
+    selected?.lines.filter(
+      (line) => line.variance !== null && line.variance > 0,
+    ) ?? [];
   const wasteEvidenceComplete = selectedShortageLines.every(
     (line) =>
       !isShortagePhotoRequired(wasteReasons[line.id]) ||
@@ -165,6 +175,13 @@ export function BranchCountSlipsClient({
     setWasteReasons(
       Object.fromEntries(
         (selected?.lines.filter((line) => line.variance !== null && line.variance < 0) ?? []).map(
+          (line) => [line.id, "discrepancy"],
+        ),
+      ),
+    );
+    setSurplusReasons(
+      Object.fromEntries(
+        (selected?.lines.filter((line) => line.variance !== null && line.variance > 0) ?? []).map(
           (line) => [line.id, "discrepancy"],
         ),
       ),
@@ -194,33 +211,49 @@ export function BranchCountSlipsClient({
   async function approveSelected() {
     if (!selected) return;
     const shortageLines = selectedShortageLines;
+    const surplusLines = selectedSurplusLines;
 
     let autoCreateWaste = false;
+    let autoAdjustSurplus = false;
 
-    if (shortageLines.length > 0) {
+    const hasShortage = shortageLines.length > 0;
+    const hasSurplus = surplusLines.length > 0;
+
+    if (hasShortage) {
       if (!wasteEvidenceComplete) {
         toast.error(INVENTORY_VI.countSlipWasteEvidenceRequired);
         return;
       }
-      const shortageSummary =
-        shortageLines
-          .slice(0, 3)
-          .map(
-            (l) =>
-              `${l.ingredientName}: ${formatVariance(l.variance)} ${l.varianceUnit}`,
-          )
-          .join(", ") +
-        (shortageLines.length > 3
-          ? ` (+${shortageLines.length - 3} món khác)`
-          : "");
+    }
 
+    const shortageSummary =
+      shortageLines
+        .slice(0, 3)
+        .map(
+          (l) =>
+            `${l.ingredientName}: ${formatVariance(l.variance)} ${l.varianceUnit}`,
+        )
+        .join(", ") +
+      (shortageLines.length > 3
+        ? ` (+${shortageLines.length - 3} món khác)`
+        : "");
+
+    const surplusSummary =
+      surplusLines
+        .slice(0, 3)
+        .map(
+          (l) =>
+            `${l.ingredientName}: +${formatVariance(l.variance)} ${l.varianceUnit}`,
+        )
+        .join(", ") +
+      (surplusLines.length > 3
+        ? ` (+${surplusLines.length - 3} món khác)`
+        : "");
+
+    if (needsWasteRecovery) {
       const ok = await confirm({
-        title: needsWasteRecovery
-          ? INVENTORY_VI.countSlipRecoverWasteTitle
-          : INVENTORY_VI.countSlipApproveTitle,
-        description: needsWasteRecovery
-          ? INVENTORY_VI.countSlipRecoverWasteHint
-          : INVENTORY_VI.countSlipShortageDetectedHint,
+        title: INVENTORY_VI.countSlipRecoverWasteTitle,
+        description: INVENTORY_VI.countSlipRecoverWasteHint,
         details: [
           { label: STAFF_VI.long, value: selected.employeeName },
           { label: INVENTORY_VI.warehouseShort, value: selected.locationName },
@@ -231,13 +264,73 @@ export function BranchCountSlipsClient({
             value: shortageSummary,
           },
         ],
-        confirmText: needsWasteRecovery
-          ? INVENTORY_VI.countSlipRecoverWasteAction
-          : INVENTORY_VI.countSlipApproveAndWasteAction,
+        confirmText: INVENTORY_VI.countSlipRecoverWasteAction,
         variant: "destructive",
       });
       if (!ok) return;
       autoCreateWaste = true;
+    } else if (hasShortage && hasSurplus) {
+      const ok = await confirm({
+        title: INVENTORY_VI.countSlipApproveTitle,
+        description: `${INVENTORY_VI.countSlipShortageDetectedHint} ${INVENTORY_VI.countSlipSurplusDetectedHint}`,
+        details: [
+          { label: STAFF_VI.long, value: selected.employeeName },
+          { label: INVENTORY_VI.warehouseShort, value: selected.locationName },
+          {
+            label: INVENTORY_VI.countSlipShortageDetectedTitle(
+              shortageLines.length,
+            ),
+            value: shortageSummary,
+          },
+          {
+            label: INVENTORY_VI.countSlipSurplusDetectedTitle(
+              surplusLines.length,
+            ),
+            value: surplusSummary,
+          },
+        ],
+        confirmText: INVENTORY_VI.countSlipApproveWasteAndSurplusAction,
+      });
+      if (!ok) return;
+      autoCreateWaste = true;
+      autoAdjustSurplus = true;
+    } else if (hasShortage) {
+      const ok = await confirm({
+        title: INVENTORY_VI.countSlipApproveTitle,
+        description: INVENTORY_VI.countSlipShortageDetectedHint,
+        details: [
+          { label: STAFF_VI.long, value: selected.employeeName },
+          { label: INVENTORY_VI.warehouseShort, value: selected.locationName },
+          {
+            label: INVENTORY_VI.countSlipShortageDetectedTitle(
+              shortageLines.length,
+            ),
+            value: shortageSummary,
+          },
+        ],
+        confirmText: INVENTORY_VI.countSlipApproveAndWasteAction,
+        variant: "destructive",
+      });
+      if (!ok) return;
+      autoCreateWaste = true;
+    } else if (hasSurplus) {
+      const ok = await confirm({
+        title: INVENTORY_VI.countSlipApproveTitle,
+        description: INVENTORY_VI.countSlipSurplusDetectedHint,
+        details: [
+          { label: STAFF_VI.long, value: selected.employeeName },
+          { label: INVENTORY_VI.warehouseShort, value: selected.locationName },
+          {
+            label: INVENTORY_VI.countSlipSurplusDetectedTitle(
+              surplusLines.length,
+            ),
+            value: surplusSummary,
+          },
+        ],
+        confirmText: INVENTORY_VI.countSlipApproveAndAdjustAction,
+      });
+      if (!ok) return;
+      autoAdjustSurplus = true;
     } else {
       const ok = await confirm({
         title: INVENTORY_VI.countSlipApproveTitle,
@@ -260,8 +353,10 @@ export function BranchCountSlipsClient({
       const result = await approveCountSlip({
         slipId: selected.id,
         autoCreateWaste,
+        autoAdjustSurplus,
         wastePhotoUrls,
         wasteReasons,
+        surplusReasons,
         allowSelfReview: true,
       });
       setPendingAction(null);
@@ -269,7 +364,19 @@ export function BranchCountSlipsClient({
         toast.error(result.error ?? INVENTORY_VI.countSlipApproveFailed);
         return;
       }
-      if (result.data.wasteCreated && result.data.wasteIssueNumber) {
+      if (
+        result.data.wasteCreated &&
+        result.data.wasteIssueNumber &&
+        result.data.surplusAdjusted
+      ) {
+        toast.success(
+          INVENTORY_VI.countSlipApprovedWithWasteAndSurplus(
+            result.data.wasteIssueNumber,
+            result.data.wasteItemsCount ?? 0,
+            result.data.surplusLinesCount ?? 0,
+          ),
+        );
+      } else if (result.data.wasteCreated && result.data.wasteIssueNumber) {
         toast.success(
           result.data.requiresApproval
             ? INVENTORY_VI.countSlipApprovedWithWastePending(
@@ -279,6 +386,12 @@ export function BranchCountSlipsClient({
                 result.data.wasteIssueNumber,
                 result.data.wasteItemsCount ?? 0,
               ),
+        );
+      } else if (result.data.surplusAdjusted) {
+        toast.success(
+          INVENTORY_VI.countSlipApprovedWithSurplus(
+            result.data.surplusLinesCount ?? 0,
+          ),
         );
       } else {
         toast.success(INVENTORY_VI.countSlipApproved);
@@ -653,6 +766,23 @@ export function BranchCountSlipsClient({
                 }
                 onReasonChange={(lineId, reason) =>
                   setWasteReasons((current) => ({
+                    ...current,
+                    [lineId]: reason,
+                  }))
+                }
+              />
+            ) : null}
+
+            {!recounting &&
+            selected.status === "submitted" &&
+            selectedSurplusLines.length > 0 ? (
+              <CountSlipSurplusEvidence
+                lines={selectedSurplusLines}
+                reasons={surplusReasons}
+                disabled={isPending}
+                touch
+                onReasonChange={(lineId, reason) =>
+                  setSurplusReasons((current) => ({
                     ...current,
                     [lineId]: reason,
                   }))

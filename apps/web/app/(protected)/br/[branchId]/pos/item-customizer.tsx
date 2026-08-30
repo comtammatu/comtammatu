@@ -23,6 +23,7 @@ import type { MenuItem, MenuVariant } from "./pos-menu-types";
 import { resolvePosMenuListPrice } from "./_lib/delivery-channel";
 import { QuickReasonChips } from "./_components/quick-reason-chips";
 import {
+  DISCOUNT_VND_PRESETS,
   ITEM_DISCOUNT_PRESETS,
   ITEM_NOTE_PRESETS,
 } from "./_components/quick-reason-presets";
@@ -616,6 +617,33 @@ export function ItemCustomizer({
                   </div>
                   {discountEnabled && (
                     <div className="flex flex-col gap-3">
+                      <div className="no-scrollbar flex flex-nowrap gap-1.5 overflow-x-auto overscroll-x-contain touch-pan-x">
+                        {DISCOUNT_VND_PRESETS.filter(
+                          (preset) => preset <= (totalPrice || preset),
+                        ).map((preset) => {
+                          const isSelected =
+                            discountValueText.trim() === String(preset);
+                          return (
+                            <Button
+                              key={preset}
+                              type="button"
+                              size="touch"
+                              variant={isSelected ? "default" : "outline"}
+                              className={cn(
+                                "h-9 shrink-0 px-3 text-xs font-semibold tabular-nums",
+                                isSelected && "shadow-2xs",
+                              )}
+                              onClick={() =>
+                                setDiscountValueText(
+                                  isSelected ? "" : String(preset),
+                                )
+                              }
+                            >
+                              {formatVND(preset)}
+                            </Button>
+                          );
+                        })}
+                      </div>
                       <FormattedNumberInput
                         id="item-discount-value"
                         controlSize="touch"

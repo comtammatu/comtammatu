@@ -50,7 +50,7 @@ const menuGridSource = read(
 const orderDetailTouchSources = [
   ["split-order-sheet.tsx", 2],
   ["service-charge-sheet.tsx", 3],
-  ["discount-sheet.tsx", 7],
+  ["discount-sheet.tsx", 9],
   ["merge-orders-sheet.tsx", 4],
   ["transfer-table-dialog.tsx", 3],
 ] as const;
@@ -216,7 +216,7 @@ test("POS takeaway mode uses a context grid before entering the new-order menu",
     /orders\.filter\(\(order\) => order\.order_type === "dine_in"\)/,
   );
   assert.match(
-    orderListPaneSource,
+    posDesktopSource,
     /messages\.pos\.orderHistory\.dineInSessionOrders/,
   );
   assert.match(

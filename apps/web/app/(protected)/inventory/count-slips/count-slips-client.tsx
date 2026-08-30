@@ -68,6 +68,10 @@ import {
   type CountSlipWastePhotoUrls,
   type CountSlipWasteReasons,
 } from "@/components/inventory/count-slip-waste-evidence";
+import {
+  CountSlipSurplusEvidence,
+  type CountSlipSurplusReasons,
+} from "@/components/inventory/count-slip-surplus-evidence";
 
 type QueueView = "pending" | "history" | "all";
 
@@ -473,6 +477,9 @@ function CountSlipReviewDialog({
   const [wastePhotoUrls, setWastePhotoUrls] =
     useState<CountSlipWastePhotoUrls>({});
   const [wasteReasons, setWasteReasons] = useState<CountSlipWasteReasons>({});
+  const [surplusReasons, setSurplusReasons] = useState<CountSlipSurplusReasons>(
+    {},
+  );
   const [pendingAction, setPendingAction] = useState<
     "approve" | "recount" | null
   >(null);
@@ -494,6 +501,13 @@ function CountSlipReviewDialog({
         ),
       ),
     );
+    setSurplusReasons(
+      Object.fromEntries(
+        (row?.lines.filter((line) => line.variance !== null && line.variance > 0) ?? []).map(
+          (line) => [line.id, "discrepancy"],
+        ),
+      ),
+    );
     setPendingAction(null);
   }, [row?.id]);
 
@@ -503,6 +517,9 @@ function CountSlipReviewDialog({
   const readOnly = activeRow.status !== "submitted";
   const shortageLines = activeRow.lines.filter(
     (line) => line.variance !== null && line.variance < 0,
+  );
+  const surplusLines = activeRow.lines.filter(
+    (line) => line.variance !== null && line.variance > 0,
   );
   const wasteEvidenceComplete = shortageLines.every(
     (line) =>
@@ -516,31 +533,46 @@ function CountSlipReviewDialog({
 
   async function handleApprove() {
     let autoCreateWaste = false;
+    let autoAdjustSurplus = false;
 
-    if (shortageLines.length > 0) {
+    const hasShortage = shortageLines.length > 0;
+    const hasSurplus = surplusLines.length > 0;
+
+    if (hasShortage) {
       if (!wasteEvidenceComplete) {
         toast.error(INVENTORY_VI.countSlipWasteEvidenceRequired);
         return;
       }
-      const shortageSummary =
-        shortageLines
-          .slice(0, 3)
-          .map(
-            (l) =>
-              `${l.ingredientName}: ${formatVariance(l.variance)} ${l.varianceUnit}`,
-          )
-          .join(", ") +
-        (shortageLines.length > 3
-          ? ` (+${shortageLines.length - 3} món khác)`
-          : "");
+    }
 
+    const shortageSummary =
+      shortageLines
+        .slice(0, 3)
+        .map(
+          (l) =>
+            `${l.ingredientName}: ${formatVariance(l.variance)} ${l.varianceUnit}`,
+        )
+        .join(", ") +
+      (shortageLines.length > 3
+        ? ` (+${shortageLines.length - 3} món khác)`
+        : "");
+
+    const surplusSummary =
+      surplusLines
+        .slice(0, 3)
+        .map(
+          (l) =>
+            `${l.ingredientName}: +${formatVariance(l.variance)} ${l.varianceUnit}`,
+        )
+        .join(", ") +
+      (surplusLines.length > 3
+        ? ` (+${surplusLines.length - 3} món khác)`
+        : "");
+
+    if (needsWasteRecovery) {
       const accepted = await confirm({
-        title: needsWasteRecovery
-          ? INVENTORY_VI.countSlipRecoverWasteTitle
-          : INVENTORY_VI.countSlipApproveTitle,
-        description: needsWasteRecovery
-          ? INVENTORY_VI.countSlipRecoverWasteHint
-          : INVENTORY_VI.countSlipShortageDetectedHint,
+        title: INVENTORY_VI.countSlipRecoverWasteTitle,
+        description: INVENTORY_VI.countSlipRecoverWasteHint,
         details: [
           { label: "Mã phiếu", value: activeRow.slipNumber },
           { label: STAFF_VI.long, value: activeRow.employeeName },
@@ -555,13 +587,85 @@ function CountSlipReviewDialog({
             value: shortageSummary,
           },
         ],
-        confirmText: needsWasteRecovery
-          ? INVENTORY_VI.countSlipRecoverWasteAction
-          : INVENTORY_VI.countSlipApproveAndWasteAction,
+        confirmText: INVENTORY_VI.countSlipRecoverWasteAction,
         variant: "destructive",
       });
       if (!accepted) return;
       autoCreateWaste = true;
+    } else if (hasShortage && hasSurplus) {
+      const accepted = await confirm({
+        title: INVENTORY_VI.countSlipApproveTitle,
+        description: `${INVENTORY_VI.countSlipShortageDetectedHint} ${INVENTORY_VI.countSlipSurplusDetectedHint}`,
+        details: [
+          { label: "Mã phiếu", value: activeRow.slipNumber },
+          { label: STAFF_VI.long, value: activeRow.employeeName },
+          {
+            label: INVENTORY_VI.warehouseShort,
+            value: activeRow.locationName,
+          },
+          {
+            label: INVENTORY_VI.countSlipShortageDetectedTitle(
+              shortageLines.length,
+            ),
+            value: shortageSummary,
+          },
+          {
+            label: INVENTORY_VI.countSlipSurplusDetectedTitle(
+              surplusLines.length,
+            ),
+            value: surplusSummary,
+          },
+        ],
+        confirmText: INVENTORY_VI.countSlipApproveWasteAndSurplusAction,
+      });
+      if (!accepted) return;
+      autoCreateWaste = true;
+      autoAdjustSurplus = true;
+    } else if (hasShortage) {
+      const accepted = await confirm({
+        title: INVENTORY_VI.countSlipApproveTitle,
+        description: INVENTORY_VI.countSlipShortageDetectedHint,
+        details: [
+          { label: "Mã phiếu", value: activeRow.slipNumber },
+          { label: STAFF_VI.long, value: activeRow.employeeName },
+          {
+            label: INVENTORY_VI.warehouseShort,
+            value: activeRow.locationName,
+          },
+          {
+            label: INVENTORY_VI.countSlipShortageDetectedTitle(
+              shortageLines.length,
+            ),
+            value: shortageSummary,
+          },
+        ],
+        confirmText: INVENTORY_VI.countSlipApproveAndWasteAction,
+        variant: "destructive",
+      });
+      if (!accepted) return;
+      autoCreateWaste = true;
+    } else if (hasSurplus) {
+      const accepted = await confirm({
+        title: INVENTORY_VI.countSlipApproveTitle,
+        description: INVENTORY_VI.countSlipSurplusDetectedHint,
+        details: [
+          { label: "Mã phiếu", value: activeRow.slipNumber },
+          { label: STAFF_VI.long, value: activeRow.employeeName },
+          {
+            label: INVENTORY_VI.warehouseShort,
+            value: activeRow.locationName,
+          },
+          {
+            label: INVENTORY_VI.countSlipSurplusDetectedTitle(
+              surplusLines.length,
+            ),
+            value: surplusSummary,
+          },
+        ],
+        confirmText: INVENTORY_VI.countSlipApproveAndAdjustAction,
+      });
+      if (!accepted) return;
+      autoAdjustSurplus = true;
     } else {
       const accepted = await confirm({
         title: INVENTORY_VI.countSlipApproveTitle,
@@ -588,8 +692,10 @@ function CountSlipReviewDialog({
       const result = await approveCountSlip({
         slipId: activeRow.id,
         autoCreateWaste,
+        autoAdjustSurplus,
         wastePhotoUrls,
         wasteReasons,
+        surplusReasons,
         allowSelfReview: true,
       });
       setPendingAction(null);
@@ -597,7 +703,19 @@ function CountSlipReviewDialog({
         toast.error(result.error ?? INVENTORY_VI.countSlipApproveFailed);
         return;
       }
-      if (result.data.wasteCreated && result.data.wasteIssueNumber) {
+      if (
+        result.data.wasteCreated &&
+        result.data.wasteIssueNumber &&
+        result.data.surplusAdjusted
+      ) {
+        toast.success(
+          INVENTORY_VI.countSlipApprovedWithWasteAndSurplus(
+            result.data.wasteIssueNumber,
+            result.data.wasteItemsCount ?? 0,
+            result.data.surplusLinesCount ?? 0,
+          ),
+        );
+      } else if (result.data.wasteCreated && result.data.wasteIssueNumber) {
         toast.success(
           result.data.requiresApproval
             ? INVENTORY_VI.countSlipApprovedWithWastePending(
@@ -607,6 +725,12 @@ function CountSlipReviewDialog({
                 result.data.wasteIssueNumber,
                 result.data.wasteItemsCount ?? 0,
               ),
+        );
+      } else if (result.data.surplusAdjusted) {
+        toast.success(
+          INVENTORY_VI.countSlipApprovedWithSurplus(
+            result.data.surplusLinesCount ?? 0,
+          ),
         );
       } else {
         toast.success(INVENTORY_VI.countSlipApproved);
@@ -969,6 +1093,21 @@ function CountSlipReviewDialog({
           }
           onReasonChange={(lineId, reason) =>
             setWasteReasons((current) => ({
+              ...current,
+              [lineId]: reason,
+            }))
+          }
+        />
+      ) : null}
+
+      {!readOnly && !recounting && surplusLines.length > 0 ? (
+        <CountSlipSurplusEvidence
+          lines={surplusLines}
+          reasons={surplusReasons}
+          disabled={pendingAction !== null}
+          touch={controlSize === "touch"}
+          onReasonChange={(lineId, reason) =>
+            setSurplusReasons((current: CountSlipSurplusReasons) => ({
               ...current,
               [lineId]: reason,
             }))

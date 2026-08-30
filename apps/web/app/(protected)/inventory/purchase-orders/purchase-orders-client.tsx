@@ -460,6 +460,8 @@ export function PurchaseOrdersClient({
     {
       key: "code",
       header: copy.codeColumn,
+      sortable: true,
+      sortValue: (row) => row.code,
       render: (row) => (
         <span className="font-mono font-medium">{row.code}</span>
       ),
@@ -467,6 +469,8 @@ export function PurchaseOrdersClient({
     {
       key: "supplier",
       header: copy.supplierRequired,
+      sortable: true,
+      sortValue: (row) => row.supplierName ?? "",
       render: (row) =>
         row.supplierIds.length > 1 ? (
           <Badge variant="secondary">{copy.multiSupplierBadge}</Badge>
@@ -474,10 +478,18 @@ export function PurchaseOrdersClient({
           row.supplierName
         ),
     },
-    { key: "branch", header: copy.warehouse, render: (row) => row.branchName },
+    {
+      key: "branch",
+      header: copy.warehouse,
+      sortable: true,
+      sortValue: (row) => row.branchName ?? "",
+      render: (row) => row.branchName,
+    },
     {
       key: "status",
       header: copy.statusColumn,
+      sortable: true,
+      sortValue: (row) => row.status,
       render: (row) => (
         <StatusBadge domain="purchase-order" value={row.status} />
       ),
@@ -485,6 +497,8 @@ export function PurchaseOrdersClient({
     {
       key: "needed",
       header: copy.expectedDeliveryDate,
+      sortable: true,
+      sortValue: (row) => row.expectedDeliveryDate ?? "",
       render: (row) =>
         row.expectedDeliveryDate
           ? formatVNDate(row.expectedDeliveryDate)

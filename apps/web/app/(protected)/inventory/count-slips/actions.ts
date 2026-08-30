@@ -12,6 +12,7 @@ import { resolveCountSlipReviewerEmployeeId } from "@lib/inventory/count-slip-re
 const approveSlipSchema = z.object({
   slipId: z.coerce.number().int().positive(),
   autoCreateWaste: z.boolean().optional().default(false),
+  autoAdjustSurplus: z.boolean().optional().default(false),
   allowSelfReview: z.boolean().optional().default(false),
   wastePhotoUrls: z
     .record(
@@ -21,6 +22,13 @@ const approveSlipSchema = z.object({
     .optional()
     .default({}),
   wasteReasons: z
+    .record(
+      z.string().regex(/^\d+$/),
+      z.string().trim().min(1).max(50),
+    )
+    .optional()
+    .default({}),
+  surplusReasons: z
     .record(
       z.string().regex(/^\d+$/),
       z.string().trim().min(1).max(50),
@@ -37,14 +45,16 @@ export type ApproveCountSlipResult = {
   wasteCreated?: boolean;
   wasteIssueNumber?: string;
   wasteItemsCount?: number;
+  surplusAdjusted?: boolean;
+  surplusLinesCount?: number;
   requiresApproval?: boolean;
   isSelfApproved?: boolean;
 };
 
 /**
  * Confirm a submitted count slip. A handover-only approval stays decoupled
- * from stock. `autoCreateWaste` uses one atomic RPC so the count approval and
- * its shortage writeoff either both commit or both roll back.
+ * from stock. `autoCreateWaste` and `autoAdjustSurplus` use one atomic RPC so the count approval,
+ * its shortage writeoff, and surplus adjustments either all commit or all roll back.
  */
 export async function approveCountSlip(
   input: z.infer<typeof approveSlipSchema>,
@@ -83,12 +93,17 @@ export async function approveCountSlip(
     return { success: false, error: SELF_REVIEW_ERROR };
   }
 
-  const { data, error } = parsed.data.autoCreateWaste
+  const useAtomicAdjustment =
+    parsed.data.autoCreateWaste || parsed.data.autoAdjustSurplus;
+
+  const { data, error } = useAtomicAdjustment
     ? await supabase.rpc("approve_inventory_count_slip_with_waste", {
         p_slip_id: parsed.data.slipId,
         p_photo_urls: parsed.data.wastePhotoUrls,
         p_reasons: parsed.data.wasteReasons,
         p_allow_self_review: parsed.data.allowSelfReview,
+        p_adjust_surplus: parsed.data.autoAdjustSurplus,
+        p_surplus_reasons: parsed.data.surplusReasons,
       })
     : await supabase.rpc("approve_inventory_count_slip", {
         p_slip_id: parsed.data.slipId,
@@ -118,6 +133,11 @@ export async function approveCountSlip(
       wasteItemsCount:
         typeof raw.waste_items_count === "number"
           ? raw.waste_items_count
+          : undefined,
+      surplusAdjusted: raw.surplus_adjusted === true,
+      surplusLinesCount:
+        typeof raw.surplus_lines_count === "number"
+          ? raw.surplus_lines_count
           : undefined,
       requiresApproval: raw.requires_approval === true,
       isSelfApproved: raw.is_self_approved === true,

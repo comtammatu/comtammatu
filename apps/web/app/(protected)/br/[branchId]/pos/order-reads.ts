@@ -141,7 +141,7 @@ const fetchArchivedOrdersSchema = z.object({
  * so the newest archived transition appears first, not the newest order number.
  *
  * Default scope = `pos_session_id` (current session). Setting `sessionId`
- * to null widens the scope to the whole branch (cap is the cursor itself
+ * to null widens the scope to the whole branch today (cap is the cursor itself
  * — user only fetches as far as they scroll).
  */
 export async function fetchArchivedOrders(
@@ -176,24 +176,18 @@ export async function fetchArchivedOrders(
     .select(ORDER_LIST_SELECT)
     .eq("branch_id", parsed.data.branchId)
     .eq("tenant_id", claims.tenant_id)
-    // Archived = paid OR cancelled. The `or()` form (PostgREST) avoids a
-    // separate query for cancelled-without-payment edge.
-    .or("payment_status.eq.paid,status.eq.cancelled");
+    // Archived = paid OR completed OR cancelled.
+    .or("payment_status.eq.paid,status.eq.completed,status.eq.cancelled");
 
   if (sessionId !== undefined && sessionId !== null) {
     query = query.eq("pos_session_id", sessionId);
   } else {
     const businessDay = getVNBusinessDateString();
     const { startIso, endIso } = getVNBusinessDayUtcRange(businessDay);
-    query = query.gte("created_at", startIso).lt("created_at", endIso);
+    query = query.gte("updated_at", startIso).lt("updated_at", endIso);
   }
 
   if (typeof q === "string" && q.length > 0) {
-    // ILIKE substring match on order_number OR payment_code. Cashiers usually
-    // cite the last digits of the order; reverse lookup from a VietQR transfer
-    // memo uses payment_code (prefix + space + suffix). Strip PostgREST
-    // reserved chars so the or-list cannot be injected. Quote the pattern so
-    // spaces inside payment codes stay inside one filter value.
     const safeQ = q.replace(/[(),."]/g, "");
     if (safeQ.length > 0) {
       const pattern = `%${safeQ}%`;
@@ -206,10 +200,6 @@ export async function fetchArchivedOrders(
   if (cursor !== undefined && cursor !== null) {
     // Keyset: rows STRICTLY after the cursor under (updated_at desc, id desc).
     // i.e. (updated_at, id) < (cursor.archivedAt, cursor.id) lexicographically.
-    // PostgREST cannot express composite "<" directly, so we OR two
-    // disjoint half-spaces:
-    //   updated_at < cursor.archivedAt
-    //   OR (updated_at = cursor.archivedAt AND id < cursor.id)
     query = query.or(
       `updated_at.lt.${cursor.archivedAt},and(updated_at.eq.${cursor.archivedAt},id.lt.${String(cursor.id)})`,
     );
@@ -245,7 +235,6 @@ const activeTableOrderSchema = z.object({
   branchId: branchIdSchema,
   tableId: z.coerce.number().int().positive({ error: "Bàn không hợp lệ" }),
 });
-
 /**
  * Look up the active order for a table AND return its full detail in a
  * single round-trip. Previously this returned only {id, order_number};

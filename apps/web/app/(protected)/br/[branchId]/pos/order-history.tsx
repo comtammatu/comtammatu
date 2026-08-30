@@ -455,17 +455,17 @@ function ActiveOrdersListComponent({
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background">
       <div className="shrink-0 border-b border-border/60 p-2">
-        <div className="flex gap-1 overflow-x-auto rounded-md bg-muted p-0.5 text-xs font-medium no-scrollbar">
+        <div className="flex gap-1 overflow-x-auto rounded-lg bg-muted p-1 text-xs font-medium no-scrollbar">
           <Button
             type="button"
             variant={activeTab === "all" ? "default" : "ghost"}
             size="sm"
             data-testid="pos-order-tab-all"
             className={cn(
-              "h-8 flex-1 shrink-0 min-w-0 gap-1 px-2 text-xs font-medium whitespace-nowrap",
+              "min-h-9 flex-1 shrink-0 min-w-0 gap-1 rounded-md px-2 text-xs font-semibold whitespace-nowrap transition-colors",
               activeTab === "all"
-                ? "bg-background font-semibold text-foreground shadow-2xs hover:bg-background"
-                : "text-muted-foreground hover:text-foreground",
+                ? "bg-background text-foreground shadow-2xs hover:bg-background"
+                : "text-muted-foreground hover:bg-background/50 hover:text-foreground",
             )}
             onClick={() => setActiveTab("all")}
           >
@@ -478,10 +478,10 @@ function ActiveOrdersListComponent({
             size="sm"
             data-testid="pos-order-tab-cooking"
             className={cn(
-              "h-8 flex-1 shrink-0 min-w-0 gap-1 px-2 text-xs font-medium whitespace-nowrap",
+              "min-h-9 flex-1 shrink-0 min-w-0 gap-1 rounded-md px-2 text-xs font-semibold whitespace-nowrap transition-colors",
               activeTab === "cooking"
-                ? "bg-background font-semibold text-foreground shadow-2xs hover:bg-background"
-                : "text-muted-foreground hover:text-foreground",
+                ? "bg-background text-foreground shadow-2xs hover:bg-background"
+                : "text-muted-foreground hover:bg-background/50 hover:text-foreground",
             )}
             onClick={() => setActiveTab("cooking")}
           >
@@ -494,10 +494,10 @@ function ActiveOrdersListComponent({
             size="sm"
             data-testid="pos-order-tab-dinein"
             className={cn(
-              "h-8 flex-1 shrink-0 min-w-0 gap-1 px-2 text-xs font-medium whitespace-nowrap",
+              "min-h-9 flex-1 shrink-0 min-w-0 gap-1 rounded-md px-2 text-xs font-semibold whitespace-nowrap transition-colors",
               activeTab === "dineIn"
-                ? "bg-background font-semibold text-foreground shadow-2xs hover:bg-background"
-                : "text-muted-foreground hover:text-foreground",
+                ? "bg-background text-foreground shadow-2xs hover:bg-background"
+                : "text-muted-foreground hover:bg-background/50 hover:text-foreground",
             )}
             onClick={() => setActiveTab("dineIn")}
           >
@@ -510,10 +510,10 @@ function ActiveOrdersListComponent({
             size="sm"
             data-testid="pos-order-tab-takeaway"
             className={cn(
-              "h-8 flex-1 shrink-0 min-w-0 gap-1 px-2 text-xs font-medium whitespace-nowrap",
+              "min-h-9 flex-1 shrink-0 min-w-0 gap-1 rounded-md px-2 text-xs font-semibold whitespace-nowrap transition-colors",
               activeTab === "takeaway"
-                ? "bg-background font-semibold text-foreground shadow-2xs hover:bg-background"
-                : "text-muted-foreground hover:text-foreground",
+                ? "bg-background text-foreground shadow-2xs hover:bg-background"
+                : "text-muted-foreground hover:bg-background/50 hover:text-foreground",
             )}
             onClick={() => setActiveTab("takeaway")}
           >

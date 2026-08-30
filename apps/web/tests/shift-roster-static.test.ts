@@ -25,7 +25,6 @@ test("shift roster resolves before generic branch shift module", () => {
   assert.ok(shiftGate > rosterGate, "roster must resolve before generic shift");
   assert.match(resolution, /return "branch_shift_roster"/);
 });
-
 test("branch roster route uses leave-approvals auth gating pattern", () => {
   const page = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/team/roster/page.tsx",
@@ -217,4 +216,44 @@ test("branch roster exposes shift group filter and guard candidate categorizatio
   assert.match(model, /isGuardPosition/);
   assert.match(cell, /operationsShifts/);
   assert.match(cell, /guardShifts/);
+});
+
+test("branch roster exposes shift coverage alerts and needed role prioritization", () => {
+  const branchWeek = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/team/roster/branch-roster-week-client.tsx",
+  );
+  const model = read("apps/web/lib/hr/roster/roster-model.ts");
+  const hrMessages = read("apps/web/lib/messages/hr.ts");
+
+  assert.match(branchWeek, /getShiftCoverageAlerts/);
+  assert.match(branchWeek, /matchesCoverageNeed/);
+  assert.match(branchWeek, /assignSheetCoverageAlerts/);
+  assert.match(branchWeek, /neededRoleBadge/);
+  assert.match(model, /isCashierPosition/);
+  assert.match(model, /isKitchenPosition/);
+  assert.match(model, /isWaiterPosition/);
+  assert.match(model, /getShiftCoverageAlerts/);
+  assert.match(model, /matchesCoverageNeed/);
+  assert.match(hrMessages, /missingCashierAlert/);
+  assert.match(hrMessages, /missingKitchenAlert/);
+  assert.match(hrMessages, /missingWaiterAlert/);
+  assert.match(hrMessages, /missingGuardAlert/);
+});
+
+test("leave approvals client supports shift conflict detection and substitution", () => {
+  const leaveClient = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/team/leave-approvals/branch-leave-approvals-client.tsx",
+  );
+  const leaveActions = read("apps/web/app/(protected)/hr/leave-request-actions.ts");
+  const hrMessages = read("apps/web/lib/messages/hr.ts");
+
+  assert.match(leaveActions, /fetchLeaveShiftConflicts/);
+  assert.match(leaveActions, /replacementEmployeeId/);
+  assert.match(leaveActions, /unassignShifts/);
+  assert.match(leaveClient, /fetchLeaveShiftConflicts/);
+  assert.match(leaveClient, /conflictSheetOpen/);
+  assert.match(leaveClient, /substitutionMode/);
+  assert.match(leaveClient, /confirmApprovalWithSubstitution/);
+  assert.match(hrMessages, /leaveShiftConflictTitle/);
+  assert.match(hrMessages, /substitutionSelectLabel/);
 });

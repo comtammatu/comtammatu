@@ -22,6 +22,16 @@ class OperatorErrorFormatterTest {
     }
 
     @Test
+    fun `explains disabled daily-limit item without promising automatic retry`() {
+        assertEquals(
+            "Có món đang bị tắt bán trong ngày. Xác nhận lại với bếp, bật bán rồi chọn “Gửi lại ngay”, hoặc nhập tay và đánh dấu đã xử lý.",
+            OperatorErrorFormatter.format(
+                "HTTP 422: {\"code\":\"daily_limit_item_disabled\",\"error\":\"Có món đã bị tắt bán trong ngày\"}"
+            )
+        )
+    }
+
+    @Test
     fun `keeps an empty error absent`() {
         assertNull(OperatorErrorFormatter.format(null))
     }

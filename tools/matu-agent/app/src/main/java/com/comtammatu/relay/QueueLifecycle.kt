@@ -7,6 +7,7 @@ object QueueLifecycle {
     val waitingStatuses = listOf(
         OrderQueueDbHelper.STATUS_PENDING,
         OrderQueueDbHelper.STATUS_SENDING,
+        OrderQueueDbHelper.STATUS_BLOCKED,
         OrderQueueDbHelper.STATUS_UNCLASSIFIED
     )
 
@@ -17,6 +18,7 @@ object QueueLifecycle {
 
     val dismissibleStatuses = listOf(
         OrderQueueDbHelper.STATUS_PENDING,
+        OrderQueueDbHelper.STATUS_BLOCKED,
         OrderQueueDbHelper.STATUS_UNCLASSIFIED
     )
 

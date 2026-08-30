@@ -316,6 +316,8 @@ export function SuppliersClient({
       key: "name",
       header: suppliersCopy.nameColumn,
       className: "min-w-64",
+      sortable: true,
+      sortValue: (s) => s.name,
       render: (s, i) => (
         <div className="flex items-center gap-3">
           <SupplierAvatar name={s.name} colorIndex={i} />
@@ -327,6 +329,8 @@ export function SuppliersClient({
       key: "tax_code",
       header: suppliersCopy.taxCodeColumn,
       className: "w-44",
+      sortable: true,
+      sortValue: (s) => s.tax_code ?? "",
       render: (s) => (
         <span className="font-mono text-sm text-muted-foreground">
           {s.tax_code ?? "—"}
@@ -337,6 +341,8 @@ export function SuppliersClient({
       key: "ingredients",
       header: suppliersCopy.items.ingredient,
       className: "w-32",
+      sortable: true,
+      sortValue: (s) => s.ingredient_count ?? 0,
       render: (s) => (
         <span
           className={cn(

@@ -23,7 +23,7 @@ const paginationSource = readFileSync(
 
 test("adapter slices only when totalCount does not signal server paging", () => {
   assert.match(source, /pageSize != null && totalCount == null/);
-  assert.match(source, /data\.slice\(pageOffset, pageOffset \+/);
+  assert.match(source, /\.slice\(pageOffset, pageOffset \+/);
 });
 
 test("both render planes map the sliced page, never the full array", () => {

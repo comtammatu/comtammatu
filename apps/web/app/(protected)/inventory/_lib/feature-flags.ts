@@ -6,7 +6,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * The database baseline owns the persisted branch feature-flag contract.
  */
 export const INVENTORY_FEATURE_FLAGS = {
-  S11_WASTE_TIER: "inv_s11_waste_tier",
   POS_STOCK_OUTCOME_POSTING: "pos_stock_outcome_posting",
 } as const;
 

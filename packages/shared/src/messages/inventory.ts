@@ -420,15 +420,30 @@ export const INVENTORY_VI = {
   countSlipApproved: "Đã xác nhận phiếu đếm ca.",
   countSlipApprovedWithWaste: (wasteNumber: string, itemCount: number) =>
     `Đã duyệt bàn giao ca và tự động lập phiếu xuất hủy #${wasteNumber} (${formatCount(itemCount)} món hao hụt).`,
+  countSlipApprovedWithSurplus: (count: number) =>
+    `Đã duyệt bàn giao ca và điều chỉnh tăng tồn ${formatCount(count)} nguyên liệu thừa.`,
+  countSlipApprovedWithWasteAndSurplus: (wasteNumber: string, wasteCount: number, surplusCount: number) =>
+    `Đã duyệt bàn giao ca, lập phiếu xuất hủy #${wasteNumber} (${formatCount(wasteCount)} món) và điều chỉnh tăng ${formatCount(surplusCount)} nguyên liệu thừa.`,
   countSlipApprovedWithWastePending: (wasteNumber: string) =>
     `Đã duyệt bàn giao ca và lập phiếu xuất hủy #${wasteNumber}; phiếu đang chờ duyệt trước khi trừ kho.`,
   countSlipAutoWasteCheckbox: "Tự động lập Phiếu xuất hủy để trừ kho ngay",
   countSlipApproveAndWasteAction: "Duyệt & Xuất hủy kho",
+  countSlipApproveAndAdjustAction: "Duyệt & Tăng tồn kho",
+  countSlipApproveWasteAndSurplusAction: "Duyệt, Xuất hủy & Tăng tồn",
   countSlipApproveOnlyAction: "Chỉ duyệt bàn giao",
   countSlipShortageDetectedTitle: (count: number) =>
     `Phát hiện ${formatCount(count)} món hao hụt (thiếu hụt)`,
   countSlipShortageDetectedHint:
     "Tự động lập phiếu xuất hủy để trừ kho sổ cái hợp lệ hoặc chỉ duyệt bàn giao nếu hàng đang nấu dở.",
+  countSlipSurplusDetectedTitle: (count: number) =>
+    `Phát hiện ${formatCount(count)} món thừa tồn (lệch dương)`,
+  countSlipSurplusDetectedHint:
+    "Tự động điều chỉnh tăng tồn kho sổ cái tương ứng với số lượng thực đếm hoặc chỉ duyệt bàn giao.",
+  countSlipSurplusEvidenceTitle: "Lý do điều chỉnh hàng thừa",
+  countSlipSurplusEvidenceHint:
+    "Chọn nguyên nhân phát sinh thừa kiểm đếm để ghi nhận tăng tồn kho sổ cái.",
+  countSlipSurplusEvidenceCount: (count: number) =>
+    `(${formatCount(count)} mặt hàng lệch thừa)`,
   countSlipWasteEvidenceTitle: "Ảnh bằng chứng hàng thiếu",
   countSlipWasteEvidenceHint:
     "Thêm một ảnh cho từng mặt hàng thiếu. Hệ thống chỉ duyệt bàn giao khi phiếu xuất hủy được tạo thành công.",
@@ -601,6 +616,10 @@ export const INVENTORY_VI = {
   shortageReasonLoss: "Thất thoát / Không rõ",
   shortageReasonDiscrepancy: "Lệch sổ / Sai số đếm",
   shortageReasonLabel: "Lý do thiếu hụt",
+  surplusReasonDiscrepancy: "Lệch sổ / Sai số đếm",
+  surplusReasonFoundMissing: "Tìm thấy hàng thất lạc",
+  surplusReasonOther: "Khác",
+  surplusReasonLabel: "Lý do thừa tồn",
   shortageEvidencePhotoLabel: "Ảnh bằng chứng hư hỏng/hết hạn:",
   shortagePhotoNotRequired: "✓ Không bắt buộc ảnh cho lý do này",
   shortagePhotoAttached: "Đã đính kèm ảnh",

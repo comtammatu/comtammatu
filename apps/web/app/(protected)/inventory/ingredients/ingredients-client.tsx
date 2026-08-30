@@ -847,6 +847,8 @@ export function IngredientsClient({
       key: "name",
       header: PRODUCT_VI.rawIngredient,
       className: "min-w-56",
+      sortable: true,
+      sortValue: (item) => item.name,
       render: (item) => (
         <div className="flex min-w-0 flex-col gap-1">
           <div className="flex min-w-0 items-center gap-2">
@@ -867,6 +869,8 @@ export function IngredientsClient({
       key: "base_unit",
       header: ingredientListCopy.colBaseUnit,
       className: "min-w-28",
+      sortable: true,
+      sortValue: (item) => baseUnitLabel(item),
       render: (item) => (
         <span className="text-sm tabular-nums">{baseUnitLabel(item)}</span>
       ),
@@ -875,6 +879,8 @@ export function IngredientsClient({
       key: "classification",
       header: messages.inventory.stock.table.kind,
       className: "min-w-40",
+      sortable: true,
+      sortValue: (item) => categoryLabel(item) ?? "",
       render: (item) => {
         const category = categoryLabel(item);
         return (

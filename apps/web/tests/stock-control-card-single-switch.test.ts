@@ -53,4 +53,6 @@ test("feature-flags registry: gate flag key removed", () => {
   assert.doesNotMatch(source, /pos_stock_availability_gate/);
   assert.doesNotMatch(source, /INVENTORY_STOCKTAKE_REDESIGNED/);
   assert.doesNotMatch(source, /inv_stocktake_redesigned/);
+  assert.doesNotMatch(source, /S11_WASTE_TIER/);
+  assert.doesNotMatch(source, /inv_s11_waste_tier/);
 });

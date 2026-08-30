@@ -14,6 +14,7 @@ import {
   MIN_GRAB_RELAY_VERSION,
   summarizeGrabRelayValidationIssues,
 } from "@lib/grabfood/relay-schema";
+import { mapRelayCreateOrderRpcError } from "@lib/delivery/create-order-rpc-error";
 
 const MAX_PAYLOAD_BYTES = 64 * 1024; // 64 KB limit per D104
 
@@ -350,12 +351,13 @@ export async function POST(request: NextRequest) {
         rpcError.code,
       );
       // Never expose raw Postgres/Supabase messages to clients; map known causes.
-      const clientMessage = rpcError.message?.includes("channel_price_missing")
-        ? "Thiếu giá kênh Grab cho một số món — đồng bộ giá kênh trong Thực đơn"
-        : "Không thể tạo đơn hàng trên POS";
+      const failure = mapRelayCreateOrderRpcError(
+        rpcError,
+        "Thiếu giá kênh Grab cho một số món — đồng bộ giá kênh trong Thực đơn",
+      );
       return NextResponse.json(
-        { success: false, error: clientMessage },
-        { status: 500, headers: CORS_HEADERS },
+        { success: false, error: failure.message, code: failure.code },
+        { status: failure.status, headers: CORS_HEADERS },
       );
     }
 

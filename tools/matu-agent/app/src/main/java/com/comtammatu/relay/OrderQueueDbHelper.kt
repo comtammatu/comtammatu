@@ -34,7 +34,7 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         const val COLUMN_RECEIPT_TEXT = "receipt_text"
         const val COLUMN_BRANCH_ID = "branch_id"
         const val COLUMN_PLATFORM = "platform"
-        const val COLUMN_STATUS = "status" // PENDING, SENDING, SENT, UNCLASSIFIED, DISMISSED
+        const val COLUMN_STATUS = "status" // PENDING, SENDING, BLOCKED, SENT, UNCLASSIFIED, DISMISSED
         const val COLUMN_RETRY_COUNT = "retry_count"
         const val COLUMN_CREATED_AT = "created_at"
         const val COLUMN_LAST_ERROR = "last_error"
@@ -55,6 +55,7 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
 
         const val STATUS_PENDING = "PENDING"
         const val STATUS_SENDING = "SENDING"
+        const val STATUS_BLOCKED = "BLOCKED"
         const val STATUS_SENT = "SENT"
         const val STATUS_UNCLASSIFIED = "UNCLASSIFIED"
         const val STATUS_DISMISSED = "DISMISSED"
@@ -440,6 +441,21 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         db.update(TABLE_ORDERS, values, "$COLUMN_ID = ?", arrayOf(orderId.toString()))
     }
 
+    fun markOrderBlocked(orderId: Long, errorMessage: String?) {
+        val values = ContentValues().apply {
+            put(COLUMN_STATUS, STATUS_BLOCKED)
+            put(COLUMN_LAST_ERROR, errorMessage)
+            put(COLUMN_NEXT_RETRY_AT, 0)
+            put(COLUMN_CLAIMED_AT, 0)
+        }
+        writableDatabase.update(
+            TABLE_ORDERS,
+            values,
+            "$COLUMN_ID = ?",
+            arrayOf(orderId.toString())
+        )
+    }
+
     data class EnqueueResult(
         val orderId: Long,
         val inserted: Boolean,
@@ -603,14 +619,16 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
 
     fun retryOrderNow(orderId: Long): Boolean {
         val values = ContentValues().apply {
+            put(COLUMN_STATUS, STATUS_PENDING)
             put(COLUMN_NEXT_RETRY_AT, 0)
+            put(COLUMN_CLAIMED_AT, 0)
             putNull(COLUMN_LAST_ERROR)
         }
         return writableDatabase.update(
             TABLE_ORDERS,
             values,
-            "$COLUMN_ID = ? AND $COLUMN_STATUS = ?",
-            arrayOf(orderId.toString(), STATUS_PENDING)
+            "$COLUMN_ID = ? AND $COLUMN_STATUS IN (?, ?)",
+            arrayOf(orderId.toString(), STATUS_PENDING, STATUS_BLOCKED)
         ) > 0
     }
 
@@ -688,6 +706,7 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         var sent = 0
         var dismissed = 0
         var unclassified = 0
+        var blocked = 0
         var total = 0
 
         val countCursor = db.rawQuery("SELECT $COLUMN_STATUS, COUNT(*) FROM $TABLE_ORDERS GROUP BY $COLUMN_STATUS", null)
@@ -702,6 +721,7 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
                     STATUS_SENT -> sent = count
                     STATUS_DISMISSED -> dismissed = count
                     STATUS_UNCLASSIFIED -> unclassified = count
+                    STATUS_BLOCKED -> blocked = count
                 }
             }
         }
@@ -715,6 +735,7 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         sb.append("• Đang chờ gửi / Thử lại: $pending\n")
         sb.append("• Đang trong tiến trình gửi: $sending\n")
         sb.append("• Cần kiểm tra nguồn sàn: $unclassified\n")
+        sb.append("• Cần xử lý thủ công: $blocked\n")
 
         val recentCursor = db.query(
             TABLE_ORDERS,
@@ -743,6 +764,7 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
                     STATUS_DISMISSED -> "⚪ ĐÃ NHẬP TAY"
                     STATUS_SENDING -> "🟡 ĐANG GỬI"
                     STATUS_UNCLASSIFIED -> "🔴 CHƯA RÕ SÀN"
+                    STATUS_BLOCKED -> "🔴 CẦN XỬ LÝ"
                     else -> "⏳ CHỜ RETRY (Thử lại: $retries)"
                 }
                 sb.append("#$id [${platform.uppercase()}] $statusIcon lúc ${timeFmt.format(Date(createdAt))}")

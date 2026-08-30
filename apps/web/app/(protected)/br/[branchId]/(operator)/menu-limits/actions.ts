@@ -276,7 +276,7 @@ export async function setBranchMenuStockAllowance(
   if (error) {
     const msg = String(error.message ?? "").toLowerCase();
     if (msg.includes("forbidden") || msg.includes("scope mismatch")) {
-      return { success: false, error: "Không có quyền chỉnh cho phép bán thêm." };
+      return { success: false, error: "Không có quyền chỉnh bán vượt tồn." };
     }
     if (msg.includes("not found")) {
       return { success: false, error: "Không tìm thấy món hoặc chi nhánh." };

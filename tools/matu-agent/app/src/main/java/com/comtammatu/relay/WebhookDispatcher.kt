@@ -89,10 +89,17 @@ class WebhookDispatcher(
                 Log.i(TAG, "Order #$queuedId successfully dispatched to POS: $body")
                 AppLogger.s("POS", "Đơn #$queuedId đã gửi thành công lên POS!")
             } else {
-                val errorMsg = result.exceptionOrNull()?.message ?: "Lỗi không xác định"
-                dbHelper.markOrderFailed(queuedId, 1, errorMsg)
-                Log.w(TAG, "Order #$queuedId failed initial dispatch, queued for retry: $errorMsg")
-                AppLogger.e("POS", "Gửi đơn #$queuedId thất bại: $errorMsg (Đã xếp hàng chờ retry tự động)")
+                val failure = result.exceptionOrNull()
+                val errorMsg = failure?.message ?: "Lỗi không xác định"
+                if (failure is RelayTerminalException) {
+                    dbHelper.markOrderBlocked(queuedId, errorMsg)
+                    Log.w(TAG, "Order #$queuedId needs operator action: $errorMsg")
+                    AppLogger.e("POS", "Đơn #$queuedId cần xử lý thủ công: $errorMsg")
+                } else {
+                    dbHelper.markOrderFailed(queuedId, 1, errorMsg)
+                    Log.w(TAG, "Order #$queuedId failed initial dispatch, queued for retry: $errorMsg")
+                    AppLogger.e("POS", "Gửi đơn #$queuedId thất bại: $errorMsg (Đã xếp hàng chờ retry tự động)")
+                }
             }
             result
         }
@@ -187,10 +194,17 @@ class WebhookDispatcher(
                         Log.i(TAG, "Queued order #${order.id} sent successfully via retry")
                         AppLogger.s("POS", "Gửi lại thành công đơn #${order.id} lên POS!")
                     } else {
-                        val errorMsg = result.exceptionOrNull()?.message
-                        dbHelper.markOrderFailed(order.id, order.retryCount + 1, errorMsg)
-                        Log.w(TAG, "Queued order #${order.id} retry failed (attempt ${order.retryCount + 1}): $errorMsg")
-                        AppLogger.e("RETRY", "Thử lại đơn #${order.id} thất bại: $errorMsg")
+                        val failure = result.exceptionOrNull()
+                        val errorMsg = failure?.message
+                        if (failure is RelayTerminalException) {
+                            dbHelper.markOrderBlocked(order.id, errorMsg)
+                            Log.w(TAG, "Queued order #${order.id} needs operator action: $errorMsg")
+                            AppLogger.e("RETRY", "Đơn #${order.id} cần xử lý thủ công: $errorMsg")
+                        } else {
+                            dbHelper.markOrderFailed(order.id, order.retryCount + 1, errorMsg)
+                            Log.w(TAG, "Queued order #${order.id} retry failed (attempt ${order.retryCount + 1}): $errorMsg")
+                            AppLogger.e("RETRY", "Thử lại đơn #${order.id} thất bại: $errorMsg")
+                        }
                     }
                     delay(1000)
                 }
@@ -324,8 +338,13 @@ class WebhookDispatcher(
 
             if (responseCode in 200..299) {
                 Result.success(responseBody)
-            } else if (responseCode == 401) {
-                Result.failure(Exception("HTTP 401: Sai Relay Secret"))
+            } else if (RelayHttpPolicy.isTerminalFailure(responseCode)) {
+                val message = if (responseCode == 401) {
+                    "HTTP 401: Sai Relay Secret"
+                } else {
+                    "HTTP $responseCode: $responseBody"
+                }
+                Result.failure(RelayTerminalException(responseCode, message))
             } else {
                 Result.failure(Exception("HTTP $responseCode: $responseBody"))
             }

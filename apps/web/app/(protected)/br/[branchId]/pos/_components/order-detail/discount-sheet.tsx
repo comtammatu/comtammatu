@@ -26,6 +26,13 @@ import { Minus as IconMinus, Plus as IconPlus } from "lucide-react";
 import { ACTIONS_VI, FORM_VI, POS_VI, PROMOTIONS_VI } from "@comtammatu/shared/messages";
 import { StationSheet } from "@/components/surface";
 import { Input } from "@comtammatu/ui/components/input";
+import { cn } from "@comtammatu/ui";
+import { QuickReasonChips } from "../quick-reason-chips";
+import {
+  DISCOUNT_PCT_PRESETS,
+  DISCOUNT_VND_PRESETS,
+  ITEM_DISCOUNT_PRESETS,
+} from "../quick-reason-presets";
 
 export type DiscountType = "pct" | "vnd";
 
@@ -764,6 +771,51 @@ export function DiscountSheet({
                     ? POS_VI.discountPctLabel
                     : POS_VI.discountVndLabel}
                 </FieldLabel>
+                <div className="no-scrollbar flex flex-nowrap gap-1.5 overflow-x-auto overscroll-x-contain touch-pan-x pb-1">
+                  {type === "pct"
+                    ? DISCOUNT_PCT_PRESETS.map((preset) => {
+                        const isSelected = numericValue === preset;
+                        return (
+                          <Button
+                            key={preset}
+                            type="button"
+                            size="touch"
+                            variant={isSelected ? "default" : "outline"}
+                            className={cn(
+                              "h-9 shrink-0 px-3 text-xs font-semibold tabular-nums",
+                              isSelected && "shadow-2xs",
+                            )}
+                            onClick={() =>
+                              setValueText(isSelected ? "" : String(preset))
+                            }
+                          >
+                            {formatPercent(preset)}
+                          </Button>
+                        );
+                      })
+                    : DISCOUNT_VND_PRESETS.filter(
+                        (preset) => preset <= (subtotal || preset),
+                      ).map((preset) => {
+                        const isSelected = numericValue === preset;
+                        return (
+                          <Button
+                            key={preset}
+                            type="button"
+                            size="touch"
+                            variant={isSelected ? "default" : "outline"}
+                            className={cn(
+                              "h-9 shrink-0 px-3 text-xs font-semibold tabular-nums",
+                              isSelected && "shadow-2xs",
+                            )}
+                            onClick={() =>
+                              setValueText(isSelected ? "" : String(preset))
+                            }
+                          >
+                            {formatVND(preset)}
+                          </Button>
+                        );
+                      })}
+                </div>
                 <FormattedNumberInput
                   id="discount-value"
                   maxFractionDigits={type === "pct" ? 2 : 0}
@@ -781,6 +833,13 @@ export function DiscountSheet({
                 <FieldLabel htmlFor="discount-note-manual">
                   {POS_VI.discountReasonLabel}
                 </FieldLabel>
+                <QuickReasonChips
+                  presets={ITEM_DISCOUNT_PRESETS}
+                  value={note}
+                  onChange={setNote}
+                  ariaLabel={POS_VI.discountReasonLabel}
+                  className="mb-1.5"
+                />
                 <Textarea
                   id="discount-note-manual"
                   value={note}

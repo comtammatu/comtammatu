@@ -39,6 +39,12 @@ export const ITEM_DISCOUNT_PRESETS = [
   "Đền khiếu nại",
 ] as const;
 
+export const DISCOUNT_PCT_PRESETS = [5, 10, 15, 20, 50] as const;
+
+export const DISCOUNT_VND_PRESETS = [
+  5000, 10000, 20000, 50000, 100000,
+] as const;
+
 export const CANCEL_ORDER_PRESETS = [
   "Khách rời quán",
   "Khách đổi ý",

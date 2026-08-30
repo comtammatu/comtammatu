@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { test } from "node:test";
 
-const repoRoot = resolve(process.cwd(), "../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+
+const repoRoot = join(import.meta.dirname, "../../..");
+const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
+
 
 test("Branch leave approvals own a fixed-scope touch presenter", () => {
   const route = read(

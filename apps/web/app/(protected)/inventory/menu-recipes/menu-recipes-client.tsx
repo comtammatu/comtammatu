@@ -248,6 +248,8 @@ export function MenuRecipesClient({
     {
       key: "name",
       header: INVENTORY_VI.menuRecipeColMenuItem,
+      sortable: true,
+      sortValue: (menuRecipe) => menuRecipe.name,
       render: (menuRecipe) => (
         <div className="min-w-0">
           <span>{menuRecipe.name}</span>
@@ -262,6 +264,8 @@ export function MenuRecipesClient({
     {
       key: "category",
       header: INVENTORY_VI.menuRecipeColCategory,
+      sortable: true,
+      sortValue: (menuRecipe) => menuRecipe.category ?? "",
       render: (menuRecipe) =>
         menuRecipe.category ? (
           <Badge variant="success">{menuRecipe.category}</Badge>
@@ -272,6 +276,8 @@ export function MenuRecipesClient({
     {
       key: "ingredients",
       header: INVENTORY_VI.menuRecipeColIngredientCount,
+      sortable: true,
+      sortValue: (menuRecipe) => menuRecipe.items.length,
       render: (menuRecipe) =>
         menuRecipe.items.length === 0 ? (
           <span className="text-muted-foreground">
@@ -284,6 +290,8 @@ export function MenuRecipesClient({
     {
       key: "cost",
       header: INVENTORY_VI.menuRecipeColUnitCost,
+      sortable: true,
+      sortValue: (menuRecipe) => menuRecipe.estimatedCost ?? 0,
       render: (menuRecipe) => {
         const state = resolveMenuRecipeListCostState({
           itemCount: menuRecipe.items.length,

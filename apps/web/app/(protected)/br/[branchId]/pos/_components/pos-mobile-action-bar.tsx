@@ -57,16 +57,16 @@ const SELF_ORDER_BUTTON_CLASS =
   "pointer-events-auto self-end rounded-lg bg-card/95 ring-1 ring-border/80 backdrop-blur-md transition-transform active:scale-[0.98]";
 
 const ACTION_PRIMARY_BUTTON_CLASS =
-  "min-w-0 flex-1 px-2 text-sm font-bold tracking-wide transition-transform active:scale-[0.98] sm:min-w-14 sm:px-4 sm:text-base";
+  "min-w-0 flex-1 px-2 text-sm font-bold tracking-wide transition-transform sm:min-w-14 sm:px-4 sm:text-base";
 
 const ACTION_SECONDARY_BUTTON_CLASS =
-  "min-w-0 flex-1 border border-border bg-secondary px-2 text-sm font-bold text-secondary-foreground transition-transform active:scale-[0.98] sm:min-w-14 sm:px-4 sm:text-base";
+  "min-w-0 flex-1 border border-border bg-secondary px-2 text-sm font-bold text-secondary-foreground transition-transform sm:min-w-14 sm:px-4 sm:text-base";
 
 const ACTION_CANCEL_BUTTON_CLASS =
-  "w-12 min-w-12 shrink-0 border border-border px-0 text-sm font-semibold text-muted-foreground transition-transform active:scale-[0.98] sm:w-auto sm:min-w-14 sm:px-3 sm:text-base";
+  "size-14 shrink-0 border border-border px-0 text-sm font-semibold text-muted-foreground transition-colors sm:w-auto sm:min-w-14 sm:px-3 sm:text-base";
 
 const SESSION_ORDERS_BUTTON_CLASS =
-  "min-w-14 rounded-lg bg-card/95 px-4 text-sm font-bold ring-1 ring-border/80 backdrop-blur-md transition-transform active:scale-[0.98] sm:text-base";
+  "min-w-14 rounded-lg bg-card/95 px-4 text-sm font-bold ring-1 ring-border/80 backdrop-blur-md transition-colors hover:bg-muted sm:text-base";
 
 function PosMobileActionBarComponent({
   isTouchLayout,

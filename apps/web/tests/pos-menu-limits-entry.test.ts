@@ -174,7 +174,7 @@ test("branch menu-limit inputs explain the daily cap to first-time operators", (
   assert.match(posMessagesSource, /manualLimitShortLabel: "Trần bán hôm nay"/);
   assert.match(
     posMessagesSource,
-    /manualLimitOptionalHint:\s*"Tổng suất cả ngày, gồm cả đã bán\. Để trống nếu không đặt trần\."/,
+    /manualLimitOptionalHint:\s*"Tổng suất trong ngày \(để trống = không giới hạn\)\."/,
   );
   assert.match(posMessagesSource, /manualLimitPlaceholder: "Không đặt trần"/);
   assert.match(managerDrawerSource, /aria-describedby=\{limitHintId\}/);

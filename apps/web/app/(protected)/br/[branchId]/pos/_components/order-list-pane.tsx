@@ -5,7 +5,6 @@ import { Button } from "@comtammatu/ui/components/button";
 import {
   ChevronRight as IconChevronRight,
   Clock as IconClock,
-  X as IconX,
 } from "lucide-react";
 import { ActiveOrdersList, type SessionOrder } from "../order-history";
 import type { SelfOrderPaymentCallKind } from "../self-order-actions";
@@ -35,7 +34,7 @@ interface OrderListPaneProps {
 function OrderListPaneComponent({
   onViewBill,
   onViewDetail,
-  onClosePane,
+  onClosePane: _onClosePane,
   hideTakeawayOrders = false,
   onOpenArchivedSheet,
   paymentCallByOrderId,
@@ -45,30 +44,8 @@ function OrderListPaneComponent({
     ? orders.filter((order) => order.order_type === "dine_in")
     : orders;
 
-  const isMobileDrawer = onClosePane != null;
-
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-      {isMobileDrawer ? (
-        <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border/60 px-3">
-          <p className="text-base font-semibold">
-            {hideTakeawayOrders
-              ? messages.pos.orderHistory.dineInSessionOrders
-              : messages.pos.orderHistory.sessionOrders}
-          </p>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-touch"
-            className="text-muted-foreground"
-            aria-label={messages.pos.orderHistory.closeListAria}
-            onClick={onClosePane}
-          >
-            <IconX />
-          </Button>
-        </div>
-      ) : null}
-
       <ActiveOrdersList
         orders={displayedOrders}
         paymentCallByOrderId={paymentCallByOrderId}

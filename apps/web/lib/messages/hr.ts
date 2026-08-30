@@ -368,6 +368,32 @@ export const hr = {
     approvalsNoAccessTitle: "Không có quyền duyệt nghỉ phép",
     approvalsNoAccessDescription:
       "Chỉ tài khoản quản lý có quyền nhân sự mới duyệt yêu cầu nghỉ phép.",
+    leaveShiftConflictTitle: "Xử lý ca làm việc trong ngày nghỉ",
+    conflictShiftsHeader: "Các ca làm việc trong ngày nghỉ:",
+    leaveShiftConflictDescription: (
+      employeeName: string,
+      shiftNames: string,
+      dateLabel: string,
+    ) =>
+      `${employeeName} đang có ${shiftNames} ngày ${dateLabel}. Bạn muốn xử lý ca làm này thế nào?`,
+    substitutionSelectLabel: "Gán người làm thay ca",
+    substitutionSelectPlaceholder: "Chọn nhân viên thay ca...",
+    unassignOption: "Chỉ gỡ khỏi ca (để trống tìm người sau)",
+    keepShiftOption: "Giữ nguyên phân ca",
+    approveAndApply: "Duyệt đơn & Áp dụng",
+
+    approveSuccess: "Đã duyệt yêu cầu nghỉ.",
+    approveFailed: "Không thể duyệt yêu cầu nghỉ.",
+    rejectSuccess: "Đã từ chối yêu cầu nghỉ.",
+    rejectFailed: "Không thể từ chối yêu cầu nghỉ.",
+    noReason: "Không có lý do",
+    submittedAt: "Gửi lúc",
+    approveSuccessWithSubstitution: "Đã duyệt nghỉ phép và gán người thay ca.",
+
+    approveSuccessWithUnassign: "Đã duyệt nghỉ phép và gỡ ca làm.",
+    conflictShiftsLoadFailed: "Không thể tải danh sách ca trùng.",
+    selectedBadge: "Đã chọn",
+
   },
   payroll: {
     eyebrow: "Nhân sự",
@@ -686,7 +712,10 @@ export const hr = {
     shiftGroupGuardHeader: "Ca bảo vệ (An ninh)",
     guardStaffCategory: "Nhân viên bảo vệ",
     operationsStaffCategory: "Nhân viên vận hành",
+    missingCashierAlert: "Thiếu thu ngân",
+    missingKitchenAlert: "Thiếu bếp/nướng",
+    missingWaiterAlert: "Thiếu phục vụ",
+    missingGuardAlert: "Thiếu bảo vệ",
+    neededRoleBadge: "Đang thiếu vị trí này",
   },
 } as const;
-
-

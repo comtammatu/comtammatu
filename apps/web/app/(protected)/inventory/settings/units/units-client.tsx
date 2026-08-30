@@ -214,6 +214,8 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
       key: "code",
       header: copy.cols.code,
       className: "font-mono font-medium",
+      sortable: true,
+      sortValue: (row) => row.code,
       render: (row) => row.code,
     },
     {

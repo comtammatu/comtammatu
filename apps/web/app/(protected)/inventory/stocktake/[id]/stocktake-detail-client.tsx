@@ -35,6 +35,7 @@ import {
 import { AuditHistoryList } from "@/components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
 import { WasteReasonDropdown } from "../../_components/waste-reason-dropdown";
+import { StocktakePrintDialog } from "@/components/inventory/stocktake-print-dialog";
 import { WASTE_REASON_LABELS_VI } from "@comtammatu/shared/labels";
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import {
@@ -251,29 +252,65 @@ export function StocktakeDetailClient({
   const allCounted = lines.length > 0 && countedCount === lines.length;
   const countHref = `${routeBase}/${session.id}/count?branch=${session.branch_id}`;
 
-  const stocktakeActions =
-    session.status === "in_progress" ? (
-      <>
-        <Button
-          variant="outline"
-          onClick={handleCancel}
-          disabled={isPending}
-        >
-          <IconBan className="mr-2 size-4" />
-          {stocktakeDetailCopy.cancelAction}
-        </Button>
-        <Button variant="outline" render={<Link href={countHref} />}>
-          {stocktakeDetailCopy.continueCounting}
-        </Button>
-        <Button
-          onClick={handleComplete}
-          disabled={isPending || !allCounted}
-        >
-          <IconCircleCheck className="mr-2 size-4" />
-          {stocktakeDetailCopy.completeAction}
-        </Button>
-      </>
-    ) : null;
+  const printLines = useMemo(
+    () =>
+      lines.map((l) => ({
+        id: l.id,
+        ingredientId: l.ingredient_id,
+        ingredientName: l.ingredients?.name ?? `#${l.ingredient_id}`,
+        unit: l.ingredients?.unit ?? "",
+        category: l.ingredients?.category ?? null,
+        systemQuantity: l.system_quantity,
+        countedQuantity: l.counted_quantity,
+        variance: l.variance,
+        varianceReason: l.variance_reason,
+        reasonCode: l.reason_code,
+      })),
+    [lines],
+  );
+
+  const printSession = useMemo(
+    () => ({
+      id: session.id,
+      sessionNumber: session.session_number,
+      branchId: session.branch_id,
+      startedAt: session.started_at,
+      completedAt: session.completed_at,
+      createdAt: session.created_at,
+      createdByName: session.created_by_name,
+      status: session.status,
+      notes: session.notes,
+    }),
+    [session],
+  );
+
+  const stocktakeActions = (
+    <div className="flex flex-wrap items-center gap-2">
+      <StocktakePrintDialog session={printSession} lines={printLines} />
+      {session.status === "in_progress" ? (
+        <>
+          <Button
+            variant="outline"
+            onClick={handleCancel}
+            disabled={isPending}
+          >
+            <IconBan className="mr-2 size-4" />
+            {stocktakeDetailCopy.cancelAction}
+          </Button>
+          <Button variant="outline" render={<Link href={countHref} />}>
+            {stocktakeDetailCopy.continueCounting}
+          </Button>
+          <Button
+            onClick={handleComplete}
+            disabled={isPending || !allCounted}
+          >
+            <IconCircleCheck className="mr-2 size-4" />
+            {stocktakeDetailCopy.completeAction}
+          </Button>
+        </>
+      ) : null}
+    </div>
+  );
 
   const summarySection = (
     <AppSection title={summarySectionTitle} size="sm">

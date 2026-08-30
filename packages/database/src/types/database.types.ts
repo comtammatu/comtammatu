@@ -13264,10 +13264,12 @@ export type Database = {
       }
       approve_inventory_count_slip_with_waste: {
         Args: {
+          p_adjust_surplus?: boolean
           p_allow_self_review?: boolean
           p_photo_urls?: Json
           p_reasons?: Json
           p_slip_id: number
+          p_surplus_reasons?: Json
         }
         Returns: Json
       }

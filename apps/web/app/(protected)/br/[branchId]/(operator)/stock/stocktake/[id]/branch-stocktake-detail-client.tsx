@@ -45,6 +45,7 @@ import {
   cancelStocktake,
   completeStocktake,
 } from "@/(protected)/inventory/actions";
+import { StocktakePrintDialog } from "@/components/inventory/stocktake-print-dialog";
 
 const stocktakeCopy = messages.inventory.stocktake;
 
@@ -219,6 +220,30 @@ export function BranchStocktakeDetailClient({
       </>
     );
 
+  const printLines = lines.map((line) => ({
+    id: line.id,
+    ingredientId: line.ingredientId,
+    ingredientName: line.ingredientName,
+    unit: line.unit,
+    systemQuantity: line.systemQuantity,
+    countedQuantity: line.countedQuantity,
+    variance: line.variance,
+    varianceReason: line.varianceReason,
+  }));
+
+  const printSession = {
+    id: session.id,
+    sessionNumber: session.sessionNumber,
+    branchId: session.branchId,
+    startedAt: session.startedAt,
+    completedAt: session.completedAt,
+    createdAt: session.createdAt,
+    createdByName: session.createdByName,
+    status: session.status,
+    notes: session.notes,
+    currentRound: session.currentRound,
+  };
+
   return (
     <BranchOperatorPage
       title={`KK-${session.id}`}
@@ -227,15 +252,28 @@ export function BranchStocktakeDetailClient({
       back={<AppBackLink href={stocktakeBasePath} />}
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        {session.status === "in_progress" && data.canCancel ? (
-          <Button
-            size="touch"
-            className="w-full"
-            render={<Link href={`${stocktakeBasePath}/${session.id}/count`} />}
-          >
-            Tiếp tục đếm
-          </Button>
-        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          {session.status === "in_progress" && data.canCancel ? (
+            <Button
+              size="touch"
+              className="min-w-36 flex-1"
+              render={<Link href={`${stocktakeBasePath}/${session.id}/count`} />}
+            >
+              Tiếp tục đếm
+            </Button>
+          ) : null}
+          <StocktakePrintDialog
+            session={printSession}
+            lines={printLines}
+            buttonSize="touch"
+            buttonVariant="outline"
+            className={
+              session.status === "in_progress" && data.canCancel
+                ? "min-w-36 flex-1"
+                : "w-full"
+            }
+          />
+        </div>
 
         <div className={BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME}>
           <div className="flex min-w-0 flex-col gap-3">

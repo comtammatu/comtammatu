@@ -156,6 +156,8 @@ export function ThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
     {
       key: "ingredient",
       header: copy.cols.ingredient,
+      sortable: true,
+      sortValue: (row) => row.name,
       render: (row) => (
         <div>
           <div className="font-medium">{row.name}</div>
@@ -169,6 +171,8 @@ export function ThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
       key: "unit",
       header: copy.cols.unit,
       className: "w-28 text-xs text-muted-foreground",
+      sortable: true,
+      sortValue: (row) => row.unit,
       render: (row) => row.unit,
     },
     {

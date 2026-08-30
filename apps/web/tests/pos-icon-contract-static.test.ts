@@ -141,10 +141,6 @@ test("POS session chrome and sheets lock icon-touch plus touch search fields", (
     join(posDir, "pos-session-header.tsx"),
     "utf8",
   );
-  const orderListPane = readFileSync(
-    join(posDir, "_components/order-list-pane.tsx"),
-    "utf8",
-  );
   const cartPane = readFileSync(
     join(posDir, "_components/cart-pane.tsx"),
     "utf8",
@@ -170,8 +166,6 @@ test("POS session chrome and sheets lock icon-touch plus touch search fields", (
   assert.match(sessionHeader, /Ellipsis as IconEllipsis/);
   assert.match(sessionHeader, /size="icon-touch"/);
   assert.equal(sessionHeader.match(/size="icon-touch"/g)?.length, 3);
-  assert.match(orderListPane, /size="icon-touch"/);
-  assert.equal(orderListPane.match(/size="icon-touch"/g)?.length, 1);
   assert.match(cartPane, /Trash as IconTrash/);
   assert.equal(cartPane.match(/size="icon-touch"/g)?.length, 2);
   assert.match(itemCustomizer, /Minus as IconMinus/);

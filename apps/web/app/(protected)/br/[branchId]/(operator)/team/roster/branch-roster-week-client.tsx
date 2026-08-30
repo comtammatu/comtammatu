@@ -39,15 +39,19 @@ import { BranchOperatorPanel } from "@lib/branch-operator/components/branch-oper
 import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
 import {
+  getShiftCoverageAlerts,
   getShiftGroup,
   isGuardPosition,
   isGuardShiftName,
+  matchesCoverageNeed,
   rosterAssignmentKey,
   type RosterEmployee,
   type RosterShift,
   type RosterWeekData,
+  type ShiftCoverageAlert,
   type ShiftGroup,
 } from "@lib/hr/roster/roster-model";
+
 import { useRosterWeekEditor } from "@lib/hr/roster/use-roster-week-editor";
 import {
   formatRosterDayHeader,
@@ -64,6 +68,20 @@ function employeeMeta(employee: RosterEmployee): string {
       .join(" · ") || "—"
   );
 }
+
+function getCoverageAlertLabel(alert: ShiftCoverageAlert): string {
+  switch (alert) {
+    case "missing_cashier":
+      return copy.missingCashierAlert;
+    case "missing_kitchen":
+      return copy.missingKitchenAlert;
+    case "missing_waiter":
+      return copy.missingWaiterAlert;
+    case "missing_guard":
+      return copy.missingGuardAlert;
+  }
+}
+
 
 export function BranchRosterWeekClient({
   branchId,
@@ -253,6 +271,12 @@ export function BranchRosterWeekClient({
     };
   }, [dirty, router]);
 
+  const assignSheetCoverageAlerts = useMemo(() => {
+    if (!assignSheetShift) return [];
+    const assigned = assignedEmployeesFor(assignSheetShift);
+    return getShiftCoverageAlerts(assignSheetShift, assigned);
+  }, [assignSheetShift, assignedEmployeesFor]);
+
   const assignmentCandidates = useMemo(() => {
     if (assignSheetShiftId == null) return [];
     const isGuard = assignSheetShift
@@ -277,6 +301,16 @@ export function BranchRosterWeekClient({
         );
       })
       .sort((a, b) => {
+        const aNeeded = matchesCoverageNeed(
+          a.positionLabel,
+          assignSheetCoverageAlerts,
+        );
+        const bNeeded = matchesCoverageNeed(
+          b.positionLabel,
+          assignSheetCoverageAlerts,
+        );
+        if (aNeeded !== bNeeded) return aNeeded ? -1 : 1;
+
         const aIsGuard = isGuardPosition(a.positionLabel);
         const bIsGuard = isGuardPosition(b.positionLabel);
         if (isGuard) {
@@ -288,12 +322,14 @@ export function BranchRosterWeekClient({
       });
   }, [
     activeDay,
+    assignSheetCoverageAlerts,
     assignSheetShift,
     assignSheetShiftId,
     assignmentMap,
     assignmentSearch,
     data.employees,
   ]);
+
 
   const displayShifts = useMemo(() => {
     if (shiftGroupFilter === "all") return data.shifts;
@@ -539,6 +575,10 @@ export function BranchRosterWeekClient({
           <div className="flex flex-col gap-4">
             {displayShifts.map((shift) => {
               const assignedEmployees = assignedEmployeesFor(shift);
+              const coverageAlerts = getShiftCoverageAlerts(
+                shift,
+                assignedEmployees,
+              );
               const hasLeader = assignedEmployees.some(
                 (employee) =>
                   leaderMap.get(
@@ -578,8 +618,14 @@ export function BranchRosterWeekClient({
                       {assignedEmployees.length > 0 && !hasLeader ? (
                         <Badge variant="warning">{copy.noLeaderAssigned}</Badge>
                       ) : null}
+                      {coverageAlerts.map((alert) => (
+                        <Badge key={alert} variant="warning">
+                          {getCoverageAlertLabel(alert)}
+                        </Badge>
+                      ))}
                     </div>
                   </div>
+
 
                   {assignedEmployees.length === 0 ? (
                     <Item variant="outline" className="items-center justify-between p-2.5">
@@ -813,6 +859,11 @@ export function BranchRosterWeekClient({
                   )
                   .filter((label): label is string => Boolean(label));
 
+                const matchesNeed = matchesCoverageNeed(
+                  employee.positionLabel,
+                  assignSheetCoverageAlerts,
+                );
+
                 return (
                   <Item
                     key={employee.employeeId}
@@ -824,7 +875,11 @@ export function BranchRosterWeekClient({
                         <ItemTitle className="truncate text-sm font-medium">
                           {employee.fullName}
                         </ItemTitle>
-                        {isGuardPosition(employee.positionLabel) ? (
+                        {matchesNeed ? (
+                          <Badge variant="warning" className="px-1.5 py-0 text-2xs">
+                            {copy.neededRoleBadge}
+                          </Badge>
+                        ) : isGuardPosition(employee.positionLabel) ? (
                           <Badge variant="outline" className="px-1.5 py-0 text-2xs">
                             {copy.guardStaffCategory}
                           </Badge>

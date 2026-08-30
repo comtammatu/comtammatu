@@ -1347,7 +1347,10 @@ class MainActivity : Activity() {
             .setView(rootScroll)
             .setNegativeButton(getString(R.string.close_action), null)
 
-        if (order.status == OrderQueueDbHelper.STATUS_PENDING) {
+        if (
+            order.status == OrderQueueDbHelper.STATUS_PENDING ||
+            order.status == OrderQueueDbHelper.STATUS_BLOCKED
+        ) {
             builder.setPositiveButton(getString(R.string.retry_now_action)) { _, _ ->
                 if (dbHelper.retryOrderNow(order.id)) {
                     Toast.makeText(this, "Đã đưa đơn #${order.id} lên đầu hàng chờ", Toast.LENGTH_SHORT).show()
@@ -1382,6 +1385,7 @@ class MainActivity : Activity() {
     private fun statusLabel(status: String): String = when (status) {
         OrderQueueDbHelper.STATUS_SENT -> "Đã xuất lên POS"
         OrderQueueDbHelper.STATUS_SENDING -> "Đang gửi"
+        OrderQueueDbHelper.STATUS_BLOCKED -> "Cần xử lý"
         OrderQueueDbHelper.STATUS_UNCLASSIFIED -> "Cần kiểm tra"
         OrderQueueDbHelper.STATUS_DISMISSED -> "Thu ngân đã nhập tay"
         else -> "Đang chờ"

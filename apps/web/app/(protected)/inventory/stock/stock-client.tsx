@@ -100,12 +100,10 @@ import type {
 } from "@lib/inventory/types";
 
 import { ACTIONS_VI, FORM_VI, INVENTORY_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
-import { Frame } from "@comtammatu/ui/components/frame";
 import { BranchStockThresholdsDialog } from "@/components/inventory/branch-stock-thresholds-dialog";
 import { SmartReorderSheet } from "@/components/inventory/smart-reorder-sheet";
 import type { BranchStockThresholdRow } from "@lib/inventory/branch-thresholds-data";
 import type { ReorderSuggestionItem } from "@lib/inventory/smart-reorder-data";
-import { AlertTriangle as IconAlertTriangle } from "lucide-react";
 
 const stockCopy = messages.inventory.stock;
 const inventoryCommon = messages.inventory.common;
@@ -184,7 +182,7 @@ type EditIngredientTarget = {
   categoryOptions: CategoryOption[];
 };
 
-const stockFilterOptions: { value: StockFilter; label: string }[] = [
+const _stockFilterOptions: { value: StockFilter; label: string }[] = [
   { value: "all", label: stockCopy.filters.allStatuses },
   { value: "in_stock", label: stockCopy.filters.inStock },
   { value: "low", label: stockCopy.filters.low },
@@ -296,7 +294,7 @@ export function StockClient({
   branchValue,
   coreDataLoadFailed,
   totalValue,
-  summary,
+  summary: _summary,
   permissions,
   initialIngredientId = null,
   initialDetailData = null,
@@ -554,6 +552,8 @@ export function StockClient({
       key: "ingredient",
       header: PRODUCT_VI.rawIngredient,
       className: "min-w-48 w-full",
+      sortable: true,
+      sortValue: (item) => item.name,
       render: (item) => (
         <div className="flex flex-col gap-1">
           <p>{item.name}</p>
@@ -567,18 +567,24 @@ export function StockClient({
       key: "status",
       header: stockCopy.table.status,
       className: "w-28 whitespace-nowrap",
+      sortable: true,
+      sortValue: (item) => item.status,
       render: (item) => <StockItemStatus item={item} />,
     },
     {
       key: "category",
       header: stockCopy.table.categoryKind,
       className: "w-36 whitespace-nowrap",
+      sortable: true,
+      sortValue: (item) => item.category ?? "",
       render: (item) => <StockCategoryKindCell item={item} />,
     },
     {
       key: "stock",
       header: stockCopy.table.stock,
       className: "w-28 whitespace-nowrap text-right",
+      sortable: true,
+      sortValue: (item) => item.qty,
       render: (item) => (
         <div className="flex flex-col items-end gap-1">
           <StockQtyCell
@@ -598,6 +604,9 @@ export function StockClient({
             key: "wac",
             header: stockCopy.table.wac,
             className: "w-40 whitespace-nowrap text-right",
+            sortable: true,
+            sortValue: (item: StockIngredient) =>
+              item.monetary?.averageUnitCost ?? 0,
             render: (item: StockIngredient) => {
               const costUnit = resolveStockCompactUnit(item.qty, item.units);
               const displayWac = toStockDisplayUnitCost(
@@ -626,6 +635,8 @@ export function StockClient({
             key: "value",
             header: stockCopy.table.stockValue,
             className: "w-36 whitespace-nowrap text-right",
+            sortable: true,
+            sortValue: (item: StockIngredient) => stockValue(item) ?? 0,
             render: (item: StockIngredient) => {
               const value = stockValue(item);
               const kind = resolveStockValuationDisplay({
@@ -677,28 +688,6 @@ export function StockClient({
     },
   ];
 
-  const underThresholdButton = (
-    <Button
-      type="button"
-      variant={stockFilter === "low" ? "secondary" : "outline"}
-      size={controlSize}
-      className={
-        controlSize === "touch" ? undefined : inventoryListFilterSelectClassName
-      }
-      aria-pressed={stockFilter === "low"}
-      onClick={() =>
-        setStockFilter((current) => (current === "low" ? "all" : "low"))
-      }
-    >
-      {stockCopy.metrics.underThreshold}
-      <Badge
-        variant={summary.underThresholdCount > 0 ? "warning" : "secondary"}
-      >
-        {summary.underThresholdCount}
-      </Badge>
-    </Button>
-  );
-
   const searchControl = (
     <InputGroup
       size={controlSize}
@@ -748,29 +737,6 @@ export function StockClient({
           ) : null}
         </SelectContent>
       </Select>
-
-      <Select
-        value={stockFilter}
-        onValueChange={(v) => setStockFilter(v as StockFilter)}
-      >
-        <SelectTrigger
-          size={controlSize}
-          className={
-            controlSize === "touch"
-              ? "w-full"
-              : inventoryListFilterSelectClassName
-          }
-        >
-          <SelectValue placeholder={stockCopy.filters.statusPlaceholder} />
-        </SelectTrigger>
-        <SelectContent>
-          {stockFilterOptions.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>
-              {opt.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
     </div>
   );
 
@@ -779,7 +745,6 @@ export function StockClient({
       href={actionHrefs.request}
       icon={IconReceipt}
       label={stockCopy.actions.receiveGrn}
-      primary
       size={controlSize}
       className={controlSize === "touch" ? "w-full sm:w-auto" : undefined}
     />
@@ -1016,15 +981,44 @@ export function StockClient({
   const outOfStockCount = ingredients.filter((i) => i.status === "out").length;
   const shortageCount = reorderSuggestions.filter((i) => i.isBelowMin).length;
 
+  const underThresholdButton = (
+    <Item
+      variant="outline"
+      aria-pressed={stockFilter === "low"}
+      onClick={() =>
+        setStockFilter((cur) => (cur === "low" ? "all" : "low"))
+      }
+      className={cn(
+        "flex flex-col justify-between p-3 text-left cursor-pointer",
+        stockFilter === "low"
+          ? "border-warning ring-1 ring-warning shadow-xs"
+          : "border-border",
+      )}
+    >
+      <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <span>{stockCopy.metrics.lowStock}</span>
+        <span className="size-2 rounded-full bg-warning" />
+      </div>
+      <div className="mt-2 flex items-baseline justify-between">
+        <span className="font-mono text-2xl font-semibold tabular-nums text-warning">
+          {formatQty(lowStockCount)}
+        </span>
+        <span className="text-xs text-muted-foreground">
+          {stockCopy.metrics.lowStockHint}
+        </span>
+      </div>
+    </Item>
+  );
+
   const content = (
     <>
       <AppPageHeader
         title={stockCopy.title}
         meta={
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
             {visibleTotalValue != null ? (
-              <span className="inline-flex items-center gap-1.5">
-                <span>{stockCopy.metrics.selectedWarehouse}</span>
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-muted px-2 py-0.5 font-medium text-muted-foreground">
+                <span>{stockCopy.metrics.selectedWarehouse}:</span>
                 <span className="font-mono font-semibold tabular-nums text-foreground">
                   {inventoryCommon.currencyCompact(
                     formatVND(visibleTotalValue),
@@ -1033,8 +1027,8 @@ export function StockClient({
               </span>
             ) : null}
             {totalValue != null ? (
-              <span className="inline-flex items-center gap-1.5">
-                <span>{stockCopy.metrics.wholeSystem}</span>
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-muted px-2 py-0.5 font-medium text-muted-foreground">
+                <span>{stockCopy.metrics.wholeSystem}:</span>
                 <span className="font-mono font-semibold tabular-nums text-foreground">
                   {inventoryCommon.currencyCompact(formatVND(totalValue))}
                 </span>
@@ -1120,31 +1114,7 @@ export function StockClient({
           </div>
         </Item>
 
-        <Item
-          variant="outline"
-          onClick={() =>
-            setStockFilter((cur) => (cur === "low" ? "all" : "low"))
-          }
-          className={cn(
-            "flex flex-col justify-between p-3 text-left cursor-pointer",
-            stockFilter === "low"
-              ? "border-warning ring-1 ring-warning shadow-xs"
-              : "border-border",
-          )}
-        >
-          <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            <span>{stockCopy.metrics.lowStock}</span>
-            <span className="size-2 rounded-full bg-warning" />
-          </div>
-          <div className="mt-2 flex items-baseline justify-between">
-            <span className="font-mono text-2xl font-semibold tabular-nums text-warning">
-              {formatQty(lowStockCount)}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              {stockCopy.metrics.lowStockHint}
-            </span>
-          </div>
-        </Item>
+        {underThresholdButton}
 
         <Item
           variant="outline"
@@ -1173,37 +1143,6 @@ export function StockClient({
         </Item>
       </div>
 
-      {shortageCount > 0 ? (
-        <Frame className="flex flex-col justify-between gap-3 border-warning bg-muted p-3.5 sm:flex-row sm:items-center">
-          <div className="flex items-center gap-3">
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-warning">
-              <IconAlertTriangle className="size-5" />
-            </span>
-            <div>
-              <div className="text-sm font-semibold text-foreground">
-                {INVENTORY_VI.smartReorderBannerTitle}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {INVENTORY_VI.smartReorderBannerDesc(shortageCount)}
-              </div>
-            </div>
-          </div>
-          <SmartReorderSheet
-            branchId={branchId}
-            items={reorderSuggestions}
-            trigger={
-              <Button variant="default" size="sm" className="gap-1.5 shrink-0">
-                <IconSparkles className="size-4" />
-                <span>{INVENTORY_VI.smartReorderOpenBtn}</span>
-                <Badge variant="destructive" className="ml-1 px-1.5 h-4 text-xs">
-                  {shortageCount}
-                </Badge>
-              </Button>
-            }
-          />
-        </Frame>
-      ) : null}
-
       <AppListFrame
         toolbar={
           <AppToolbar
@@ -1212,7 +1151,6 @@ export function StockClient({
             filters={
               <>
                 {filterControls}
-                {underThresholdButton}
               </>
             }
             actions={

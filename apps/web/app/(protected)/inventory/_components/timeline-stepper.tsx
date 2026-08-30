@@ -29,7 +29,7 @@ export function TimelineStepper({
                 className={cn(
                   "flex size-10 items-center justify-center rounded-full text-xs font-semibold ring-1 ring-border/60 transition-colors",
                   step.completed
-                    ? "bg-success text-white"
+                    ? "bg-success text-success-foreground"
                     : step.active
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted text-muted-foreground",

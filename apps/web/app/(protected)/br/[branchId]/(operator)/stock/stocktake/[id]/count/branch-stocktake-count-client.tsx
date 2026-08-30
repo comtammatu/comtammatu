@@ -26,6 +26,7 @@ import {
   useStocktakeDraftSaver,
 } from "@/(protected)/inventory/_components/stocktake-draft-saver";
 import { ZoneLockIndicator } from "@/(protected)/inventory/_components/zone-lock-indicator";
+import { StocktakePrintDialog } from "@/components/inventory/stocktake-print-dialog";
 import { BranchStocktakeCountList } from "./branch-stocktake-count-list";
 import { submitCountRound } from "@/(protected)/inventory/stocktake-actions";
 
@@ -225,6 +226,36 @@ export function BranchStocktakeCountClient({
     </div>
   );
 
+  const printLines = useMemo(
+    () =>
+      currentRoundLines.map((line) => ({
+        id: line.lineId,
+        ingredientId: line.ingredientId,
+        ingredientName: line.ingredientName,
+        unit: line.unit,
+        countedQuantity:
+          counts[String(line.ingredientId)]?.qty ?? line.countedQuantity,
+      })),
+    [counts, currentRoundLines],
+  );
+
+  const printSession = useMemo(
+    () => ({
+      id: data.sessionId,
+      sessionNumber: data.sessionNumber,
+      branchId: data.branchId,
+      status: data.status,
+      currentRound: data.currentRound,
+    }),
+    [
+      data.branchId,
+      data.currentRound,
+      data.sessionId,
+      data.sessionNumber,
+      data.status,
+    ],
+  );
+
   return (
     <BranchOperatorPage
       title={countCopy.countMode(data.currentRound)}
@@ -236,16 +267,28 @@ export function BranchStocktakeCountClient({
       }
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <Button
-          variant="outline"
-          size="touch"
-          className="w-full"
-          render={
-            <Link href={`${stocktakeBasePath}/${data.sessionId}?view=detail`} />
-          }
-        >
-          {countCopy.openReview}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="touch"
+            className="min-w-36 flex-1"
+            render={
+              <Link
+                href={`${stocktakeBasePath}/${data.sessionId}?view=detail`}
+              />
+            }
+          >
+            {countCopy.openReview}
+          </Button>
+          <StocktakePrintDialog
+            session={printSession}
+            lines={printLines}
+            unitOptionsByIngredient={data.unitOptionsByIngredient}
+            buttonSize="touch"
+            buttonVariant="outline"
+            className="min-w-36 flex-1"
+          />
+        </div>
 
         <BranchStocktakeCountList
           lines={currentRoundLines}
