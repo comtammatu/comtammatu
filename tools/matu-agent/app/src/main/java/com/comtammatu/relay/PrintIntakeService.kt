@@ -1,18 +1,18 @@
 ﻿package com.comtammatu.relay
 
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.Service
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
@@ -30,8 +30,6 @@ class PrintIntakeService : Service() {
     companion object {
         private const val TAG = "PrintIntakeService"
         const val DEFAULT_PORT = 9100
-        const val CHANNEL_ID = "comtammatu_pos_bridge_channel"
-        const val NOTIFICATION_ID = 1001
 
         const val ACTION_START = "ACTION_START"
         const val ACTION_STOP = "ACTION_STOP"
@@ -69,6 +67,7 @@ class PrintIntakeService : Service() {
     private lateinit var dispatcher: WebhookDispatcher
     private lateinit var receiptTextRecognizer: ReceiptTextRecognizer
     private lateinit var printerDiscovery: PrinterDiscovery
+    private var runtimeWakeLock: PowerManager.WakeLock? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -78,7 +77,7 @@ class PrintIntakeService : Service() {
         dispatcher = WebhookDispatcher(this, saved.backendUrl, saved.branchId, saved.secret)
         receiptTextRecognizer = ReceiptTextRecognizer()
         printerDiscovery = PrinterDiscovery(this)
-        createNotificationChannel()
+        AgentNotifications.ensureChannels(this)
 
         // Recover raster-only receipts before entering the normal retry loop.
         serviceScope.launch {
@@ -132,7 +131,13 @@ class PrintIntakeService : Service() {
 
         dispatcher.updateConfig(backendUrl, branchId, secret)
 
-        startForeground(NOTIFICATION_ID, buildForegroundNotification("Đang trực in cổng TCP $port (Pending: ${dispatcher.getPendingCount()})"))
+        startForeground(
+            AgentNotifications.SERVICE_NOTIFICATION_ID,
+            AgentNotifications.buildServiceNotification(
+                this,
+                "Đang nhận phiếu tại cổng TCP $port · ${dispatcher.getPendingCount()} đang chờ"
+            )
+        )
         startServer(port, lanMode)
 
         return START_STICKY
@@ -167,6 +172,7 @@ class PrintIntakeService : Service() {
             val bindAddress = InetAddress.getByName(PrinterEndpoint.bindHost(lanMode))
             serverSocket = ServerSocket(port, 50, bindAddress)
             isServiceRunning = true
+            acquireRuntimeWakeLock()
             if (lanMode) printerDiscovery.register(port)
             Log.i(TAG, "Print intake server listening on ${bindAddress.hostAddress}:$port (lanMode=$lanMode)")
             AppLogger.s("NHẬN PHIẾU", "Đang mở cổng TCP $port (${if (lanMode) "0.0.0.0 Mạng LAN" else "127.0.0.1 Cục bộ"}). Sẵn sàng nhận đơn!")
@@ -174,7 +180,13 @@ class PrintIntakeService : Service() {
             isServiceRunning = false
             Log.e(TAG, "Failed to bind port $port: ${e.message}", e)
             AppLogger.e("NHẬN PHIẾU", "Không mở được cổng TCP $port: ${e.message} (Có thể cổng 9100 đang bị chiếm dụng)")
-            startForeground(NOTIFICATION_ID, buildForegroundNotification("⚠️ Không mở được cổng TCP $port: ${e.message}"))
+            startForeground(
+                AgentNotifications.SERVICE_NOTIFICATION_ID,
+                AgentNotifications.buildServiceNotification(
+                    this,
+                    "Không mở được cổng TCP $port; mở Agent để kiểm tra"
+                )
+            )
             return
         }
 
@@ -190,9 +202,25 @@ class PrintIntakeService : Service() {
                 if (isServiceRunning) {
                     Log.e(TAG, "ServerSocket error: ${e.message}", e)
                     AppLogger.e("NHẬN PHIẾU", "Lỗi cổng nhận phiếu: ${e.message}")
+                    restartServerAfterFailure()
                 }
             }
         }
+    }
+
+    private suspend fun restartServerAfterFailure() {
+        isServiceRunning = false
+        printerDiscovery.unregister()
+        runCatching { serverSocket?.close() }
+        serverSocket = null
+        releaseRuntimeWakeLock()
+        delay(2_000)
+
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        if (!prefs.getBoolean(KEY_AGENT_ENABLED, false)) return
+        val saved = configFromPrefs()
+        AppLogger.w("CHẠY NỀN", "Đang tự mở lại cổng nhận phiếu sau lỗi nền")
+        startServer(saved.port, saved.lanMode)
     }
 
     private fun handleClientConnection(socket: Socket) {
@@ -295,7 +323,18 @@ class PrintIntakeService : Service() {
                         )
                     } else {
                         AppLogger.i("PHÂN LOẠI", "Nhận diện nguồn ${platform.displayName}")
-                        dispatcher.dispatchRawReceipt(rawBytes, platform, receiptText)
+                        dispatcher.dispatchRawReceipt(
+                            rawBytes,
+                            platform,
+                            receiptText
+                        ) { queueId, sourceOrderRef ->
+                            AgentNotifications.showIncomingOrder(
+                                this@PrintIntakeService,
+                                platform,
+                                sourceOrderRef,
+                                queueId
+                            )
+                        }
                     }
                 }
             } else {
@@ -314,6 +353,7 @@ class PrintIntakeService : Service() {
     private fun stopServer() {
         isServiceRunning = false
         printerDiscovery.unregister()
+        releaseRuntimeWakeLock()
         try {
             serverSocket?.close()
             serverSocket = null
@@ -339,33 +379,36 @@ class PrintIntakeService : Service() {
         receiptTextRecognizer.close()
     }
 
-    override fun onBind(intent: Intent?): IBinder? = null
-
-    private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Má Tư Agent",
-                NotificationManager.IMPORTANCE_LOW
-            )
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            manager.createNotificationChannel(channel)
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        if (
+            getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getBoolean(KEY_AGENT_ENABLED, false)
+        ) {
+            AppLogger.i("CHẠY NỀN", "Giao diện đã đóng; Agent vẫn tiếp tục nhận đơn")
         }
+        super.onTaskRemoved(rootIntent)
     }
 
-    private fun buildForegroundNotification(statusText: String): Notification {
-        val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Notification.Builder(this, CHANNEL_ID)
-        } else {
-            @Suppress("DEPRECATION")
-            Notification.Builder(this)
-        }
+    override fun onBind(intent: Intent?): IBinder? = null
 
-        return builder
-            .setContentTitle("🟢 Má Tư Agent")
-            .setContentText(statusText)
-            .setSmallIcon(android.R.drawable.ic_menu_agenda)
-            .setOngoing(true)
-            .build()
+    @SuppressLint("WakelockTimeout")
+    private fun acquireRuntimeWakeLock() {
+        if (runtimeWakeLock?.isHeld == true) return
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        runtimeWakeLock = powerManager.newWakeLock(
+            PowerManager.PARTIAL_WAKE_LOCK,
+            "$packageName:OrderIntake"
+        ).apply {
+            setReferenceCounted(false)
+            acquire()
+        }
+        AppLogger.i("CHẠY NỀN", "Đã giữ tiến trình nhận đơn khi màn hình tắt")
+    }
+
+    private fun releaseRuntimeWakeLock() {
+        runtimeWakeLock?.let { lock ->
+            if (lock.isHeld) lock.release()
+        }
+        runtimeWakeLock = null
     }
 }

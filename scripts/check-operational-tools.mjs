@@ -37,6 +37,17 @@ const MATU_AGENT_ACTIVITY_SOURCE = path.join(
   "relay",
   "MainActivity.kt",
 );
+const MATU_AGENT_RECEIPT_INSPECTOR_SOURCE = path.join(
+  MATU_AGENT_ROOT,
+  "app",
+  "src",
+  "main",
+  "java",
+  "com",
+  "comtammatu",
+  "relay",
+  "ReceiptDataInspector.kt",
+);
 const MATU_AGENT_BOOT_SOURCE = path.join(
   MATU_AGENT_ROOT,
   "app",
@@ -47,6 +58,35 @@ const MATU_AGENT_BOOT_SOURCE = path.join(
   "comtammatu",
   "relay",
   "BootCompletedReceiver.kt",
+);
+const MATU_AGENT_SERVICE_SOURCE = path.join(
+  MATU_AGENT_ROOT,
+  "app",
+  "src",
+  "main",
+  "java",
+  "com",
+  "comtammatu",
+  "relay",
+  "PrintIntakeService.kt",
+);
+const MATU_AGENT_NOTIFICATION_SOURCE = path.join(
+  MATU_AGENT_ROOT,
+  "app",
+  "src",
+  "main",
+  "java",
+  "com",
+  "comtammatu",
+  "relay",
+  "AgentNotifications.kt",
+);
+const MATU_AGENT_MANIFEST = path.join(
+  MATU_AGENT_ROOT,
+  "app",
+  "src",
+  "main",
+  "AndroidManifest.xml",
 );
 const GRADLE_WRAPPER_JAR = path.join(
   MATU_AGENT_ROOT,
@@ -126,11 +166,45 @@ if (
 
 const activitySource = fs.readFileSync(MATU_AGENT_ACTIVITY_SOURCE, "utf8");
 const bootSource = fs.readFileSync(MATU_AGENT_BOOT_SOURCE, "utf8");
+const serviceSource = fs.readFileSync(MATU_AGENT_SERVICE_SOURCE, "utf8");
+const manifestSource = fs.readFileSync(MATU_AGENT_MANIFEST, "utf8");
 if (activitySource.includes("scrollLogs.fullScroll(")) {
   fail("Má Tư Agent log scrolling must not steal focus from the queue-first home viewport");
 }
 if (!bootSource.includes("KEY_AGENT_ENABLED")) {
   fail("Má Tư Agent boot recovery must respect the operator's persisted stopped state");
+}
+if (
+  !manifestSource.includes("android.permission.POST_NOTIFICATIONS") ||
+  !manifestSource.includes('android:foregroundServiceType="specialUse"') ||
+  !manifestSource.includes("android.intent.action.MY_PACKAGE_REPLACED") ||
+  !bootSource.includes("Intent.ACTION_MY_PACKAGE_REPLACED")
+) {
+  fail("Má Tư Agent must recover after boot and APK replacement with an Android 15-safe foreground service");
+}
+if (
+  !fs.existsSync(MATU_AGENT_NOTIFICATION_SOURCE) ||
+  !serviceSource.includes("PowerManager.PARTIAL_WAKE_LOCK") ||
+  !serviceSource.includes("AgentNotifications.showIncomingOrder") ||
+  !serviceSource.includes("restartServerAfterFailure()")
+) {
+  fail("Má Tư Agent must hold its intake runtime awake and surface each new order through a dedicated alert channel");
+}
+if (
+  !activitySource.includes("ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS") ||
+  !activitySource.includes("AutoStartManagementActivity") ||
+  !activitySource.includes("POST_NOTIFICATIONS")
+) {
+  fail("Má Tư Agent must guide Redmi operators through autostart, battery, and notification permissions");
+}
+if (
+  !fs.existsSync(MATU_AGENT_RECEIPT_INSPECTOR_SOURCE) ||
+  !activitySource.includes("BottomNavigationView") ||
+  !activitySource.includes("NavigationRailView") ||
+  !activitySource.includes("TabLayout") ||
+  !activitySource.includes("BottomSheetDialog")
+) {
+  fail("Má Tư Agent must use adaptive Material navigation and separate bitmap, text, and OCR receipt inspection");
 }
 
 const gradle = spawnSync(

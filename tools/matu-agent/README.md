@@ -48,14 +48,27 @@ Keep TCP port `9100` for apps that support a raw network-printer target. The mai
 
 Configure ShopeeFood to use `127.0.0.1:9100` when it runs on the same Android device. Use the Agent device's Wi-Fi IP only when LAN mode is intentionally enabled. Green SM Merchant on Redmi currently requires its own Bluetooth printer path; installing Má Tư Agent does not change that application decision.
 
-The foreground service restarts after boot and retries queued receipts with capped exponential backoff. Legacy queue data is migrated from the previous database filename on first launch.
+Agent 1.6.0 uses one long-running `specialUse` foreground service for the cashier-enabled local order-intake socket. When the operator leaves Agent enabled, it restarts after device boot or APK replacement, keeps a partial wake lock while the socket is live, self-recovers an unexpected socket failure, and retries queued receipts with capped exponential backoff. Android 13+ notification permission is required before the UI starts intake. A separate high-importance `Đơn mới` channel produces sound, vibration, and a heads-up card; the low-importance ongoing notification remains the visible proof that the background service is active.
 
-The app uses a queue-first operational ledger: waiting receipts, resolved history,
-source-to-POS reference mapping, Agent status, configuration, diagnostics, and
-logs. A pending order can be retried. When the cashier already entered an order
-manually, marking it as manually entered removes it from the active queue while
-retaining the source identity and fingerprint for duplicate protection. Cleanup
-removes heavy receipt/OCR payloads but retains the reconciliation mapping.
+On Xiaomi/Redmi, the operator must also allow Autostart, set the app battery policy to No restrictions, and enable floating notifications for the `Đơn mới` channel. The `Chạy nền trên Redmi` panel opens those settings and can send a test alert. Android deliberately allows the user or device owner to force-stop an app; no ordinary APK can bypass a force-stop. Reopening Agent and tapping `Bật nhận đơn` clears that stopped state. Legacy queue data is migrated from the previous database filename on first launch.
+
+The Material 3 application shell has four primary destinations: Overview,
+Receipts, Device, and Logs. Compact phones use a bottom navigation bar; expanded
+Android layouts use a navigation rail. Receipts separate Waiting and History,
+while Device separates Connection, Background, and Tests so safety-critical
+controls do not compete with diagnostic details.
+
+Receipt detail exposes the captured data as three independent layers: the
+decoded ESC/POS raster bitmap, printable text extracted directly from the raw
+stream, and normalized OCR text. The layer summary reports raw byte count,
+bitmap dimensions, and the character counts for text and OCR without substituting
+one source for another. Missing layers use explicit empty states.
+
+The ledger retains source-to-POS reference mapping. A pending order can be
+retried. When the cashier already entered an order manually, marking it as
+manually entered removes it from the active queue while retaining the source
+identity and fingerprint for duplicate protection. Cleanup removes heavy
+receipt/OCR payloads but retains the reconciliation mapping.
 
 When LAN mode is enabled, the Agent advertises `Má Tư Agent` through DNS-SD as a
 raw printer (`_pdl-datastream._tcp`) so compatible delivery apps can discover it.

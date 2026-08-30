@@ -49,7 +49,8 @@ class WebhookDispatcher(
     suspend fun dispatchRawReceipt(
         rawBytes: ByteArray,
         platform: DeliveryPlatform,
-        receiptText: String? = null
+        receiptText: String? = null,
+        onNewReceipt: (queueId: Long, sourceOrderRef: String?) -> Unit = { _, _ -> }
     ): Result<String> =
         withContext(Dispatchers.IO) {
             if (branchId <= 0) {
@@ -73,6 +74,7 @@ class WebhookDispatcher(
                 return@withContext Result.success("local_duplicate:$queuedId")
             }
             AppLogger.pos("Đã lưu phiếu #$queuedId vào hàng đợi (${platform.displayName}, ${rawBytes.size} bytes)")
+            onNewReceipt(queuedId, queued.sourceOrderRef)
 
             if (!dbHelper.claimOrder(queuedId)) {
                 AppLogger.i("HÀNG ĐỢI", "Đơn #$queuedId đã được vòng lặp retry tiếp nhận")

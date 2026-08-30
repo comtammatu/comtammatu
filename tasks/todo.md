@@ -7,27 +7,28 @@
 
 ## Consolidate Má Tư Agent into one supported Android application
 
-State: verify
+State: doing
 Kind: feature
 Tier: T3
 Lane: delivery/print-agent
 Exit: The project builds and distributes exactly one Má Tư Agent APK; Redmi UI reports only verified direct intake capabilities and does not claim Green SM/beFood auto-discovery. A cashier can resolve a waiting receipt as manually entered without deleting its source identity or fingerprint, so later reprints remain deduplicated. Resolved history preserves the source-to-POS mapping; cleanup removes only heavy diagnostic payloads. Shopee full references remain the source identity while operator/POS surfaces display the final four digits.
-Evidence: Redmi Green SM Merchant 1.0.30 runtime log showed `initPrinter` → `Printer finded` followed by Bluetooth scanning on Xiaomi/Redmi hardware; the app's `hasInternalPrinter`/manufacturer gate makes the companion ineffective. Agent 1.4.0 (`versionCode=12`) is installed on Redmi serial `6ded1ffa`; the companion package is absent, the service remains stopped after launch, and the preserved ledger reports 0 waiting / 7 resolved with Shopee source and POS references rendered as four digits. `check-operational-tools` enforces the single-APK and retained-DISMISSED-row contracts; Agent queue lifecycle, short-reference, error-copy, OCR, platform, protocol, and relay response unit tests; targeted delivery dedup tests (17/17); full `corepack pnpm verify`; `docs/runbooks/food-delivery-matu-agent.md`.
+Evidence: Redmi Green SM Merchant 1.0.30 runtime log showed `initPrinter` → `Printer finded` followed by Bluetooth scanning on Xiaomi/Redmi hardware; the app's `hasInternalPrinter`/manufacturer gate makes the companion ineffective. Agent 1.4.0 (`versionCode=12`) is installed on Redmi serial `6ded1ffa`; the companion package is absent, the service remains stopped after launch, and the preserved ledger reports 0 waiting / 7 resolved with Shopee source and POS references rendered as four digits. Agent 1.6.0 (`versionCode=14`) builds one Material 3 APK with adaptive bottom-bar/navigation-rail destinations and independent bitmap/text/OCR receipt inspection. `check-operational-tools` enforces the single-APK, retained-DISMISSED-row, Material navigation, and data-layer contracts; Agent queue lifecycle, short-reference, error-copy, OCR, receipt-layer, platform, protocol, and relay response unit tests; targeted delivery dedup tests (17/17); Agent `test`/`assembleDebug`/`lintDebug`; full `corepack pnpm verify`; `docs/runbooks/food-delivery-matu-agent.md`.
 
 - [ ] Deploy the relay short-reference containment, then restart the main Agent and confirm historical Shopee receipts resolve idempotently or stay quarantined without a duplicate POS order
 - [ ] After relay deployment, submit one known handled Shopee receipt and verify manual-entry/cleanup retention on a quarantined test row without creating a duplicate POS order
+- [ ] Install Agent 1.6.0 on Redmi, inspect the Material 3 shell and bitmap/text/OCR receipt detail at primary font scale, enable HyperOS Autostart / No restrictions / floating `Đơn mới` alerts, then verify service survival after screen-off, recent-task dismissal, APK replacement, and a device reboot
 - [ ] Validate a supported beFood transport independently before enabling beFood intake on Redmi
 
 UI Advisor Gate
-- Surface: native Android Agent home; route family: operational tool; plane: `station_chrome`; change: flow + visual + copy
-- Context: Redmi Note 13 at the cashier station; actor: cashier/branch operator; job: identify a stuck receipt, reconcile it with POS, and take one safe action
-- Journey: queue-first ledger → receipt detail → retry or mark manually entered → resolved history; recovery keeps the duplicate identity
-- Information order: waiting/resolved ledger → Agent state → source capability → configuration → diagnostics/logs; exclude unsupported auto-discovery claims
-- Archetype: `LANDING` (queue-first operational home)
+- Surface: native Android Agent shell; route family: operational tool; plane: `station_chrome`; change: flow + visual + copy
+- Context: Redmi Note 13 at the cashier station; actor: cashier/branch operator; job: confirm Agent health, identify a stuck receipt, inspect its captured layers, reconcile it with POS, and take one safe action
+- Journey: live overview → waiting/history ledger → bitmap/text/OCR receipt detail → retry or mark manually entered; device/background/diagnostic controls and logs remain secondary destinations
+- Information order: Agent state and next action → queue attention → receipt ledger and POS mapping → captured bitmap/text/OCR evidence → device/background/diagnostics → logs; exclude unsupported auto-discovery claims
+- Archetype: overview `BOARD`; receipts and logs `LIST`; device `SETTINGS-PANEL`
 - Block: none — the native Android tool is outside the web UI block registry
-- Exemplar: `apps/web/app/(protected)/br/[branchId]/(operator)/_components/home/branch-queue-list.tsx`
-- States: stopped/running, empty/populated waiting, resolved, invalid receipt, network error, manually entered
-- Verification: Agent unit/build gates, operational static guard, Redmi runtime and primary viewport inspection, then `corepack pnpm verify`
+- Exemplars: `apps/web/app/(protected)/br/[branchId]/kds/kds-board.tsx` for status/attention priority; `apps/web/app/(protected)/settings/printers/jobs/page.tsx` for receipt history and diagnostic disclosure
+- States: stopped/starting/running, empty/populated waiting and history, bitmap/text/OCR present or unavailable, resolved, invalid receipt, network error, manually entered, light/dark theme, enlarged font
+- Verification: Agent unit/build/lint gates, receipt-layer unit tests, operational static guard, Redmi runtime and primary viewport inspection, then `corepack pnpm verify`
 
 ## Finance period integrity: cockpit identity, startup capital, close readiness
 

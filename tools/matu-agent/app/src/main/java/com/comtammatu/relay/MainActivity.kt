@@ -1,35 +1,63 @@
 package com.comtammatu.relay
 
-import android.app.Activity
-import android.app.AlertDialog
+import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.res.ColorStateList
+import android.content.res.Configuration
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Rect
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.Settings
 import android.text.InputType
 import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.method.PasswordTransformationMethod
 import android.text.style.ForegroundColorSpan
+import android.util.Base64
 import android.view.Gravity
+import android.view.Menu
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
-import android.widget.CheckBox
+import android.widget.CompoundButton
 import android.widget.EditText
+import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.checkbox.MaterialCheckBox
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.materialswitch.MaterialSwitch
+import com.google.android.material.navigationrail.NavigationRailView
+import com.google.android.material.tabs.TabLayout
+import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -46,9 +74,15 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
 
-class MainActivity : Activity() {
+class MainActivity : AppCompatActivity() {
     companion object {
         const val ACTION_START_AGENT = "com.comtammatu.relay.action.START_AGENT"
+        private const val NOTIFICATION_PERMISSION_REQUEST = 401
+        private const val STATE_DESTINATION = "selected_destination"
+        private const val DESTINATION_OVERVIEW = 100
+        private const val DESTINATION_RECEIPTS = 101
+        private const val DESTINATION_DEVICE = 102
+        private const val DESTINATION_LOGS = 103
     }
 
     private lateinit var etBackendUrl: EditText
@@ -57,8 +91,8 @@ class MainActivity : Activity() {
     private lateinit var btnToggleSecret: Button
     private var isSecretVisible = false
     private lateinit var etPort: EditText
-    private lateinit var cbLanMode: CheckBox
-    private lateinit var cbShopeeEnabled: CheckBox
+    private lateinit var cbLanMode: CompoundButton
+    private lateinit var cbShopeeEnabled: CompoundButton
     private lateinit var btnToggle: Button
     private lateinit var tvStatusTitle: TextView
     private lateinit var tvStatus: TextView
@@ -69,10 +103,21 @@ class MainActivity : Activity() {
     private lateinit var statusDot: View
     private lateinit var tvLogs: TextView
     private lateinit var scrollLogs: ScrollView
+    private lateinit var toolbar: MaterialToolbar
+    private lateinit var screenContainer: FrameLayout
+    private lateinit var orderTabs: TabLayout
+    private lateinit var orderListContainer: LinearLayout
+    private lateinit var clearResolvedButton: Button
+    private val destinationViews = mutableMapOf<Int, View>()
+    private var currentDestination = DESTINATION_OVERVIEW
+    private var showingResolvedOrders = false
+    private var navigationBar: BottomNavigationView? = null
+    private var navigationRail: NavigationRailView? = null
 
     private val activityScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private lateinit var dbHelper: OrderQueueDbHelper
     private lateinit var dispatcher: WebhookDispatcher
+    private var startAfterNotificationPermission = false
 
     private val logListener = { _: String ->
         updateLogsView()
@@ -82,46 +127,49 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        window.statusBarColor = color(R.color.surface)
-        window.navigationBarColor = color(R.color.surface)
-        setLightStatusBar()
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.TRANSPARENT
+        val isNight = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK ==
+            Configuration.UI_MODE_NIGHT_YES
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = !isNight
+            isAppearanceLightNavigationBars = !isNight
+        }
+        AgentNotifications.ensureChannels(this)
 
         dbHelper = OrderQueueDbHelper(this)
 
         val saved = configFromPrefs()
         dispatcher = WebhookDispatcher(this, saved.backendUrl, saved.branchId, saved.secret)
 
-        val rootScroll = ScrollView(this).apply {
-            isFillViewport = true
-            clipToPadding = false
-            setBackgroundColor(color(R.color.canvas))
-        }
+        setContentView(createAdaptiveAppShell(saved))
+        currentDestination = savedInstanceState?.getInt(
+            STATE_DESTINATION,
+            DESTINATION_OVERVIEW
+        ) ?: DESTINATION_OVERVIEW
+        selectDestination(currentDestination)
 
-        val mainLayout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(20), dp(20), dp(32))
-        }
-
-        mainLayout.addView(createAppHeader())
-        mainLayout.addView(space(20))
-        mainLayout.addView(createOrderManagementSection())
-        mainLayout.addView(space(24))
-        mainLayout.addView(createServicePanel(saved))
-        mainLayout.addView(space(24))
-        mainLayout.addView(createConfigurationSection(saved))
-        mainLayout.addView(space(24))
-        mainLayout.addView(createDiagnosticsSection())
-        mainLayout.addView(space(24))
-        mainLayout.addView(createLogSection())
-
-        rootScroll.addView(mainLayout)
-        setContentView(rootScroll)
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (currentDestination != DESTINATION_OVERVIEW) {
+                    selectDestination(DESTINATION_OVERVIEW)
+                } else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
 
         AppLogger.i("GIAO DIỆN", "Khởi động Má Tư Agent")
         updateLogsView()
         refreshServiceState()
         handleOperationalAction(intent)
-        rootScroll.post { rootScroll.scrollTo(0, 0) }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putInt(STATE_DESTINATION, currentDestination)
+        super.onSaveInstanceState(outState)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -170,43 +218,330 @@ class MainActivity : Activity() {
         return super.dispatchTouchEvent(ev)
     }
 
-    private fun createAppHeader(): View {
-        val header = LinearLayout(this).apply {
+    private fun createAdaptiveAppShell(saved: SavedConfig): View {
+        destinationViews.clear()
+        destinationViews[DESTINATION_OVERVIEW] = createOverviewDestination(saved)
+        destinationViews[DESTINATION_RECEIPTS] = createReceiptsDestination()
+        destinationViews[DESTINATION_DEVICE] = createDeviceDestination(saved)
+        destinationViews[DESTINATION_LOGS] = createLogsDestination()
+
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(color(R.color.canvas))
+        }
+
+        toolbar = MaterialToolbar(this).apply {
+            title = getString(R.string.app_name)
+            subtitle = getString(R.string.brand_subtitle)
+            setTitleTextColor(color(R.color.ink))
+            setSubtitleTextColor(color(R.color.ink_muted))
+            setBackgroundColor(color(R.color.surface))
+            contentInsetStartWithNavigation = dimen(R.dimen.space_page)
+            setContentInsetsRelative(dimen(R.dimen.space_page), dimen(R.dimen.space_section))
+            minimumHeight = dp(64)
+        }
+        val toolbarTopPadding = toolbar.paddingTop
+        ViewCompat.setOnApplyWindowInsetsListener(toolbar) { view, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.statusBars())
+            view.setPadding(view.paddingLeft, toolbarTopPadding + bars.top, view.paddingRight, view.paddingBottom)
+            insets
+        }
+        root.addView(toolbar, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ))
+
+        screenContainer = FrameLayout(this).apply {
+            setBackgroundColor(color(R.color.canvas))
+        }
+
+        val isExpanded = resources.configuration.smallestScreenWidthDp >= 600
+        if (isExpanded) {
+            val body = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+            }
+            navigationRail = NavigationRailView(this).apply {
+                setBackgroundColor(color(R.color.surface_container))
+                menuGravity = Gravity.CENTER
+                addNavigationItems(menu)
+                setOnItemSelectedListener { item ->
+                    selectDestination(item.itemId)
+                    true
+                }
+            }
+            navigationRail?.let { rail ->
+                val bottomPadding = rail.paddingBottom
+                ViewCompat.setOnApplyWindowInsetsListener(rail) { view, insets ->
+                    val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+                    view.setPadding(view.paddingLeft, view.paddingTop, view.paddingRight, bottomPadding + bars.bottom)
+                    insets
+                }
+                body.addView(rail, LinearLayout.LayoutParams(dp(88), LinearLayout.LayoutParams.MATCH_PARENT))
+            }
+            body.addView(screenContainer, LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                1f
+            ))
+            root.addView(body, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f
+            ))
+        } else {
+            root.addView(screenContainer, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f
+            ))
+            navigationBar = BottomNavigationView(this).apply {
+                setBackgroundColor(color(R.color.surface_container))
+                labelVisibilityMode = com.google.android.material.navigation.NavigationBarView.LABEL_VISIBILITY_LABELED
+                addNavigationItems(menu)
+                setOnItemSelectedListener { item ->
+                    selectDestination(item.itemId)
+                    true
+                }
+            }
+            navigationBar?.let { bar ->
+                val bottomPadding = bar.paddingBottom
+                ViewCompat.setOnApplyWindowInsetsListener(bar) { view, insets ->
+                    val bars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
+                    view.setPadding(view.paddingLeft, view.paddingTop, view.paddingRight, bottomPadding + bars.bottom)
+                    insets
+                }
+                root.addView(bar, LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ))
+            }
+        }
+        return root
+    }
+
+    private fun addNavigationItems(menu: Menu) {
+        menu.add(Menu.NONE, DESTINATION_OVERVIEW, 0, getString(R.string.nav_overview))
+            .setIcon(R.drawable.ic_nav_home)
+        menu.add(Menu.NONE, DESTINATION_RECEIPTS, 1, getString(R.string.nav_receipts))
+            .setIcon(R.drawable.ic_nav_receipts)
+        menu.add(Menu.NONE, DESTINATION_DEVICE, 2, getString(R.string.nav_device))
+            .setIcon(R.drawable.ic_nav_device)
+        menu.add(Menu.NONE, DESTINATION_LOGS, 3, getString(R.string.nav_logs))
+            .setIcon(R.drawable.ic_nav_logs)
+    }
+
+    private fun selectDestination(destination: Int) {
+        val next = destinationViews[destination] ?: destinationViews.getValue(DESTINATION_OVERVIEW)
+        currentDestination = if (destinationViews.containsKey(destination)) destination else DESTINATION_OVERVIEW
+        screenContainer.removeAllViews()
+        (next.parent as? android.view.ViewGroup)?.removeView(next)
+        screenContainer.addView(next, FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT
+        ))
+
+        when (currentDestination) {
+            DESTINATION_RECEIPTS -> {
+                toolbar.title = getString(R.string.orders_title)
+                toolbar.subtitle = getString(R.string.receipt_layers_subtitle)
+                renderOrderList()
+            }
+            DESTINATION_DEVICE -> {
+                toolbar.title = getString(R.string.nav_device)
+                toolbar.subtitle = getString(R.string.device_subtitle)
+            }
+            DESTINATION_LOGS -> {
+                toolbar.title = getString(R.string.logs_title)
+                toolbar.subtitle = getString(R.string.logs_nav_subtitle)
+                updateLogsView()
+            }
+            else -> {
+                toolbar.title = getString(R.string.app_name)
+                toolbar.subtitle = getString(R.string.brand_subtitle)
+            }
+        }
+        if (navigationBar?.selectedItemId != currentDestination) {
+            navigationBar?.selectedItemId = currentDestination
+        }
+        if (navigationRail?.selectedItemId != currentDestination) {
+            navigationRail?.selectedItemId = currentDestination
+        }
+    }
+
+    private fun destinationScroll(content: LinearLayout.() -> Unit): ScrollView {
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(
+                dimen(R.dimen.space_page),
+                dimen(R.dimen.space_page),
+                dimen(R.dimen.space_page),
+                dimen(R.dimen.space_group)
+            )
+            content()
+        }
+        return ScrollView(this).apply {
+            isFillViewport = true
+            clipToPadding = false
+            setBackgroundColor(color(R.color.canvas))
+            addView(layout)
+        }
+    }
+
+    private fun createOverviewDestination(saved: SavedConfig): View = destinationScroll {
+        addView(createServicePanel(saved))
+        addView(spaceResource(R.dimen.space_group))
+        addView(createHomeQueueSummary())
+    }
+
+    private fun createReceiptsDestination(): View = destinationScroll {
+        addView(createOrderManagementSection())
+    }
+
+    private fun createDeviceDestination(saved: SavedConfig): View {
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(color(R.color.canvas))
+        }
+        val tabs = TabLayout(this).apply {
+            setBackgroundColor(color(R.color.surface))
+            addTab(newTab().setText(R.string.device_tab_connection))
+            addTab(newTab().setText(R.string.device_tab_background))
+            addTab(newTab().setText(R.string.device_tab_diagnostics))
+        }
+        val content = FrameLayout(this)
+        val pages = listOf(
+            destinationScroll { addView(createConfigurationSection(saved)) },
+            destinationScroll { addView(createBackgroundReliabilitySection()) },
+            destinationScroll { addView(createDiagnosticsSection()) }
+        )
+        fun showPage(position: Int) {
+            content.removeAllViews()
+            val page = pages.getOrElse(position) { pages.first() }
+            (page.parent as? android.view.ViewGroup)?.removeView(page)
+            content.addView(page, FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            ))
+        }
+        tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab) = showPage(tab.position)
+            override fun onTabUnselected(tab: TabLayout.Tab) = Unit
+            override fun onTabReselected(tab: TabLayout.Tab) = Unit
+        })
+        root.addView(tabs, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ))
+        root.addView(content, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            0,
+            1f
+        ))
+        showPage(0)
+        return root
+    }
+
+    private fun createLogsDestination(): View = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(
+            dimen(R.dimen.space_page),
+            dimen(R.dimen.space_page),
+            dimen(R.dimen.space_page),
+            dimen(R.dimen.space_group)
+        )
+        setBackgroundColor(color(R.color.canvas))
+        addView(createLogSection(), LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            0,
+            1f
+        ))
+    }
+
+    private fun createHomeQueueSummary(): View {
+        val section = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        section.addView(sectionHeading(
+            getString(R.string.home_attention_title),
+            getString(R.string.home_attention_description)
+        ))
+        section.addView(space(10))
+        val body = panel()
+        body.addView(queueLinkRow(
+            title = getString(R.string.waiting_orders_action),
+            description = getString(R.string.waiting_orders_home_description),
+            toneColor = color(R.color.warning_text),
+            onClick = {
+                showingResolvedOrders = false
+                selectDestination(DESTINATION_RECEIPTS)
+                orderTabs.getTabAt(0)?.select()
+            }
+        ).let { (row, count) ->
+            tvWaitingKpi = count
+            row
+        })
+        body.addView(divider())
+        body.addView(queueLinkRow(
+            title = getString(R.string.resolved_orders_action),
+            description = getString(R.string.resolved_orders_home_description),
+            toneColor = color(R.color.success_text),
+            onClick = {
+                showingResolvedOrders = true
+                selectDestination(DESTINATION_RECEIPTS)
+                orderTabs.getTabAt(1)?.select()
+            }
+        ).let { (row, count) ->
+            tvSentKpi = count
+            row
+        })
+        section.addView(body)
+        return section
+    }
+
+    private fun queueLinkRow(
+        title: String,
+        description: String,
+        toneColor: Int,
+        onClick: () -> Unit
+    ): Pair<LinearLayout, TextView> {
+        val count = TextView(this).apply {
+            text = "0"
+            textSize = 18f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            setTextColor(toneColor)
+            gravity = Gravity.CENTER
+            minWidth = dp(44)
+        }
+        val row = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
+            minimumHeight = dp(72)
+            isClickable = true
+            isFocusable = true
+            setPadding(dp(4), dp(8), dp(4), dp(8))
+            setOnClickListener { onClick() }
+            addView(LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                addView(TextView(this@MainActivity).apply {
+                    text = title
+                    textSize = 15f
+                    typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                    setTextColor(color(R.color.ink))
+                })
+                addView(TextView(this@MainActivity).apply {
+                    text = description
+                    textSize = 12.5f
+                    setTextColor(color(R.color.ink_muted))
+                    setPadding(0, dp(3), dp(8), 0)
+                })
+            })
+            addView(count)
         }
+        return row to count
+    }
 
-        val monogram = TextView(this).apply {
-            text = getString(R.string.brand_monogram)
-            textSize = 14f
-            gravity = Gravity.CENTER
-            setTextColor(Color.WHITE)
-            typeface = Typeface.DEFAULT_BOLD
-            background = roundedBackground(color(R.color.primary), color(R.color.primary), 12)
-            layoutParams = LinearLayout.LayoutParams(dp(44), dp(44))
-        }
-
-        val titleGroup = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(12), 0, 0, 0)
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        }
-        titleGroup.addView(TextView(this).apply {
-            text = getString(R.string.app_name)
-            textSize = 20f
-            setTextColor(color(R.color.ink))
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        })
-        titleGroup.addView(TextView(this).apply {
-            text = getString(R.string.brand_subtitle)
-            textSize = 13f
-            setTextColor(color(R.color.ink_muted))
-            setPadding(0, dp(2), 0, 0)
-        })
-
-        header.addView(monogram)
-        header.addView(titleGroup)
-        return header
+    private fun divider(): View = View(this).apply {
+        setBackgroundColor(color(R.color.border))
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1))
     }
 
     private fun createServicePanel(saved: SavedConfig): View {
@@ -283,7 +618,7 @@ class MainActivity : Activity() {
         endpointContainer.addView(tvEndpoint)
         endpointContainer.addView(btnCopyEndpoint)
 
-        btnToggle = Button(this).apply {
+        btnToggle = MaterialButton(this).apply {
             isAllCaps = false
             textSize = 14f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
@@ -303,6 +638,61 @@ class MainActivity : Activity() {
         panel.addView(space(16))
         panel.addView(btnToggle)
         return panel
+    }
+
+    private fun createBackgroundReliabilitySection(): View {
+        val section = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        section.addView(sectionHeading(
+            getString(R.string.background_run_title),
+            getString(R.string.background_run_description)
+        ))
+        section.addView(space(10))
+
+        val panel = panel()
+        panel.addView(TextView(this).apply {
+            text = getString(R.string.background_run_steps)
+            textSize = 13f
+            setTextColor(color(R.color.ink_secondary))
+            setLineSpacing(dp(3).toFloat(), 1f)
+        })
+        panel.addView(space(14))
+        panel.addView(secondaryButton(getString(R.string.open_redmi_autostart_action)) {
+            openRedmiAutoStartSettings()
+        }.apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        })
+        panel.addView(space(8))
+        panel.addView(secondaryButton(getString(R.string.allow_background_power_action)) {
+            openBackgroundPowerSettings()
+        }.apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        })
+        panel.addView(space(8))
+        panel.addView(secondaryButton(getString(R.string.configure_order_alerts_action)) {
+            openIncomingOrderNotificationSettings()
+        }.apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        })
+        panel.addView(space(8))
+        panel.addView(secondaryButton(getString(R.string.test_order_alert_action)) {
+            testIncomingOrderAlert()
+        }.apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        })
+        section.addView(panel)
+        return section
     }
 
     private fun createConfigurationSection(saved: SavedConfig): View {
@@ -388,17 +778,13 @@ class MainActivity : Activity() {
         panel.addView(field(getString(R.string.relay_secret_label), secretRow))
         panel.addView(space(16))
 
-        cbLanMode = CheckBox(this).apply {
+        cbLanMode = MaterialSwitch(this).apply {
             text = getString(R.string.lan_mode_label)
             isChecked = saved.lanMode
             textSize = 14f
             setTextColor(color(R.color.ink))
             minHeight = dp(52)
             setPadding(dp(10), dp(8), dp(10), dp(8))
-            buttonTintList = ColorStateList(
-                arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
-                intArrayOf(color(R.color.primary), color(R.color.ink_muted))
-            )
             background = roundedBackground(
                 color(R.color.surface_muted),
                 color(R.color.border),
@@ -453,80 +839,155 @@ class MainActivity : Activity() {
     private fun createOrderManagementSection(): View {
         val section = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         section.addView(sectionHeading(
-            getString(R.string.orders_title),
+            getString(R.string.receipts_received_title),
             getString(R.string.orders_description)
         ))
-        section.addView(space(10))
+        section.addView(space(12))
 
-        val ordersPanel = panel()
-
-        val kpiRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            weightSum = 2f
+        orderTabs = TabLayout(this).apply {
+            addTab(newTab().setText(getString(R.string.waiting_orders_action)))
+            addTab(newTab().setText(getString(R.string.resolved_orders_action)))
+            addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+                override fun onTabSelected(tab: TabLayout.Tab) {
+                    showingResolvedOrders = tab.position == 1
+                    renderOrderList()
+                }
+                override fun onTabUnselected(tab: TabLayout.Tab) = Unit
+                override fun onTabReselected(tab: TabLayout.Tab) = Unit
+            })
         }
+        section.addView(orderTabs, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ))
+        section.addView(space(12))
 
-        tvWaitingKpi = TextView(this).apply {
-            textSize = 13f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            setTextColor(color(R.color.warning_text))
-            background = roundedBackground(color(R.color.warning_surface), color(R.color.warning_border), 10)
-            setPadding(dp(12), dp(10), dp(12), dp(10))
-            gravity = Gravity.CENTER
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                marginEnd = dp(6)
-            }
+        orderListContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
         }
+        section.addView(orderListContainer)
 
-        tvSentKpi = TextView(this).apply {
-            textSize = 13f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            setTextColor(color(R.color.success_text))
-            background = roundedBackground(color(R.color.success_surface), color(R.color.success_border), 10)
-            setPadding(dp(12), dp(10), dp(12), dp(10))
-            gravity = Gravity.CENTER
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                marginStart = dp(6)
-            }
-        }
-
-        kpiRow.addView(tvWaitingKpi)
-        kpiRow.addView(tvSentKpi)
-
-        val actions = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            weightSum = 2f
-        }
-        actions.addView(secondaryButton(getString(R.string.waiting_orders_action)) {
-            showOrderList(resolved = false)
-        }.apply {
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                marginEnd = dp(6)
-            }
-        })
-        actions.addView(secondaryButton(getString(R.string.resolved_orders_action)) {
-            showOrderList(resolved = true)
-        }.apply {
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                marginStart = dp(6)
-            }
-        })
-
-        val btnClearSent = secondaryButton(getString(R.string.clear_resolved_orders_action)) {
+        clearResolvedButton = secondaryButton(getString(R.string.clear_resolved_orders_action)) {
             promptClearResolvedOrders()
         }.apply {
+            visibility = View.GONE
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            )
+            ).apply { topMargin = dp(16) }
+        }
+        section.addView(clearResolvedButton)
+        renderOrderList()
+        return section
+    }
+
+    private fun renderOrderList() {
+        if (!::orderListContainer.isInitialized) return
+        val waitingCount = dbHelper.getWaitingCount()
+        val resolvedCount = dbHelper.getResolvedCount()
+        orderTabs.getTabAt(0)?.text = getString(R.string.order_tab_with_count, getString(R.string.waiting_orders_action), waitingCount)
+        orderTabs.getTabAt(1)?.text = getString(R.string.order_tab_with_count, getString(R.string.resolved_orders_action), resolvedCount)
+
+        orderListContainer.removeAllViews()
+        clearResolvedButton.visibility = if (showingResolvedOrders && resolvedCount > 0) View.VISIBLE else View.GONE
+        val orders = dbHelper.getOrders(showingResolvedOrders)
+        if (orders.isEmpty()) {
+            orderListContainer.addView(TextView(this).apply {
+                text = if (showingResolvedOrders) {
+                    getString(R.string.resolved_orders_empty)
+                } else {
+                    getString(R.string.waiting_orders_empty)
+                }
+                textSize = 14f
+                gravity = Gravity.CENTER
+                setTextColor(color(R.color.ink_muted))
+                setPadding(dp(20), dp(40), dp(20), dp(40))
+                background = roundedBackground(color(R.color.surface_muted), color(R.color.border), 16)
+            })
+            return
         }
 
-        ordersPanel.addView(kpiRow)
-        ordersPanel.addView(space(12))
-        ordersPanel.addView(actions)
-        ordersPanel.addView(space(10))
-        ordersPanel.addView(btnClearSent)
-        section.addView(ordersPanel)
-        return section
+        orders.forEachIndexed { index, order ->
+            if (index > 0) orderListContainer.addView(space(8))
+            orderListContainer.addView(createOrderRow(order))
+        }
+    }
+
+    private fun createOrderRow(order: OrderQueueDbHelper.QueuedOrder): View {
+        val timeFormat = SimpleDateFormat("dd/MM · HH:mm", Locale.getDefault())
+        val sourceRef = OrderIdentity.displaySourceOrderRef(order.platform, order.sourceOrderRef)
+            ?: getString(R.string.receipt_internal_ref, order.id)
+        val status = statusLabel(order.status)
+        val statusTone = when (order.status) {
+            OrderQueueDbHelper.STATUS_SENT, OrderQueueDbHelper.STATUS_DISMISSED -> color(R.color.success_text)
+            OrderQueueDbHelper.STATUS_BLOCKED, OrderQueueDbHelper.STATUS_UNCLASSIFIED -> color(R.color.warning_text)
+            else -> color(R.color.ink_secondary)
+        }
+        val statusSurface = when (order.status) {
+            OrderQueueDbHelper.STATUS_SENT, OrderQueueDbHelper.STATUS_DISMISSED -> color(R.color.success_surface)
+            OrderQueueDbHelper.STATUS_BLOCKED, OrderQueueDbHelper.STATUS_UNCLASSIFIED -> color(R.color.warning_surface)
+            else -> color(R.color.surface_muted)
+        }
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            minimumHeight = dp(84)
+            setPadding(dp(16), dp(14), dp(16), dp(14))
+            background = roundedBackground(color(R.color.surface), color(R.color.border), 14)
+            isClickable = true
+            isFocusable = true
+            contentDescription = "$sourceRef, ${platformLabel(order.platform)}, $status"
+            setOnClickListener { showOrderDetail(order) }
+        }
+        row.addView(LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            addView(TextView(this@MainActivity).apply {
+                text = sourceRef
+                textSize = 16f
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                setTextColor(color(R.color.ink))
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            })
+            addView(TextView(this@MainActivity).apply {
+                text = status
+                textSize = 11.5f
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                setTextColor(statusTone)
+                setPadding(dp(10), dp(5), dp(10), dp(5))
+                background = roundedBackground(statusSurface, statusSurface, 50)
+            })
+        })
+        val mapping = when {
+            order.status == OrderQueueDbHelper.STATUS_DISMISSED -> getString(R.string.manual_entry_short)
+            showingResolvedOrders -> {
+                val posRef = OrderIdentity.displaySourceOrderRef(
+                    order.platform,
+                    order.posDisplayId ?: order.posOrderNumber
+                ) ?: getString(R.string.pos_ref_missing)
+                getString(R.string.pos_mapping_short, posRef)
+            }
+            else -> status
+        }
+        row.addView(TextView(this).apply {
+            text = getString(
+                R.string.order_row_metadata,
+                platformLabel(order.platform),
+                mapping,
+                timeFormat.format(Date(order.createdAt))
+            )
+            textSize = 12.5f
+            setTextColor(color(R.color.ink_muted))
+            setPadding(0, dp(6), 0, 0)
+        })
+        if (order.duplicateCount > 0) {
+            row.addView(TextView(this).apply {
+                text = getString(R.string.duplicate_blocked_short, order.duplicateCount)
+                textSize = 12f
+                setTextColor(color(R.color.warning_text))
+                setPadding(0, dp(5), 0, 0)
+            })
+        }
+        return row
     }
 
     private fun promptClearResolvedOrders() {
@@ -535,7 +996,7 @@ class MainActivity : Activity() {
             Toast.makeText(this, "Không có đơn đã xử lý để dọn dẹp", Toast.LENGTH_SHORT).show()
             return
         }
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle(getString(R.string.clear_resolved_orders_action))
             .setMessage(getString(R.string.clear_resolved_orders_confirm))
             .setPositiveButton("Dọn dẹp") { _, _ ->
@@ -556,95 +1017,59 @@ class MainActivity : Activity() {
         section.addView(space(10))
 
         val panel = panel()
-        val firstRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            weightSum = 2f
-        }
-        firstRow.addView(secondaryButton(getString(R.string.check_pos_action)) { testPingPos() }.apply {
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                marginEnd = dp(6)
-            }
-        })
-        firstRow.addView(secondaryButton(getString(R.string.check_print_port_action)) { testPrintPort() }.apply {
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                marginStart = dp(6)
-            }
-        })
-
-        val secondRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            weightSum = 2f
-        }
-        secondRow.addView(secondaryButton(getString(R.string.view_queue_action)) { viewQueueSummary() }.apply {
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                marginEnd = dp(6)
-            }
-        })
-        secondRow.addView(secondaryButton(getString(R.string.run_all_diagnostics_action)) { testRunAllDiagnostics() }.apply {
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                marginStart = dp(6)
-            }
-        })
-
-        panel.addView(firstRow)
-        panel.addView(space(10))
-        panel.addView(secondRow)
+        panel.addView(secondaryButton(getString(R.string.check_pos_action)) { testPingPos() })
+        panel.addView(space(8))
+        panel.addView(secondaryButton(getString(R.string.check_print_port_action)) { testPrintPort() })
+        panel.addView(space(8))
+        panel.addView(secondaryButton(getString(R.string.view_queue_action)) { viewQueueSummary() })
+        panel.addView(space(8))
+        panel.addView(secondaryButton(getString(R.string.run_all_diagnostics_action)) { testRunAllDiagnostics() })
         section.addView(panel)
         return section
     }
 
     private fun createLogSection(): View {
         val section = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        val headingRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        val heading = sectionHeading(
+        section.addView(sectionHeading(
             getString(R.string.logs_title),
             getString(R.string.logs_description)
-        ).apply {
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        }
+        ))
+        section.addView(space(10))
 
         val btnCopyLogs = secondaryButton(getString(R.string.copy_logs_action)) {
             val logs = AppLogger.getAllLogs()
             val text = if (logs.isEmpty()) "Nhật ký trống" else logs.joinToString("\n")
             copyToClipboard("Logs", text, getString(R.string.logs_copied_toast))
         }.apply {
-            minHeight = dp(44)
-            textSize = 12f
-            setPadding(dp(10), dp(6), dp(10), dp(6))
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { marginStart = dp(8) }
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                marginEnd = dimen(R.dimen.space_tight)
+            }
         }
 
         val clearButton = secondaryButton(getString(R.string.clear_logs_action)) {
             AppLogger.clear()
         }.apply {
-            minHeight = dp(44)
-            textSize = 12f
-            setPadding(dp(10), dp(6), dp(10), dp(6))
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { marginStart = dp(6) }
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                marginStart = dimen(R.dimen.space_tight)
+            }
         }
 
-        headingRow.addView(heading)
-        headingRow.addView(btnCopyLogs)
-        headingRow.addView(clearButton)
-        section.addView(headingRow)
+        section.addView(LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            addView(btnCopyLogs)
+            addView(clearButton)
+        })
         section.addView(space(10))
 
         scrollLogs = ScrollView(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(320)
+                0,
+                1f
             )
             isFillViewport = true
-            setPadding(dp(16), dp(16), dp(16), dp(16))
+            val sectionSpace = dimen(R.dimen.space_section)
+            setPadding(sectionSpace, sectionSpace, sectionSpace, sectionSpace)
             background = roundedBackground(
                 color(R.color.console),
                 color(R.color.console_border),
@@ -657,7 +1082,7 @@ class MainActivity : Activity() {
             textSize = 12f
             setTextColor(color(R.color.console_text))
             typeface = Typeface.MONOSPACE
-            setLineSpacing(dp(4).toFloat(), 1.08f)
+            setLineSpacing(dimen(R.dimen.space_tight).toFloat(), 1.08f)
             setTextIsSelectable(true)
         }
         scrollLogs.addView(tvLogs)
@@ -686,8 +1111,13 @@ class MainActivity : Activity() {
     private fun panel(): LinearLayout {
         return LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(16), dp(16), dp(16))
-            background = roundedBackground(color(R.color.surface), color(R.color.border), 16)
+            val sectionSpace = dimen(R.dimen.space_section)
+            setPadding(sectionSpace, sectionSpace, sectionSpace, sectionSpace)
+            background = roundedBackgroundPx(
+                color(R.color.surface),
+                color(R.color.border),
+                dimen(R.dimen.radius_card).toFloat()
+            )
         }
     }
 
@@ -706,7 +1136,7 @@ class MainActivity : Activity() {
     }
 
     private fun editText(hint: String, value: String, inputType: Int): EditText {
-        return EditText(this).apply {
+        return TextInputEditText(this).apply {
             this.hint = hint
             setText(value)
             this.inputType = inputType
@@ -720,15 +1150,20 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun platformCard(platformName: String, colorRes: Int, surfaceRes: Int, borderRes: Int, checked: Boolean): CheckBox {
-        return CheckBox(this).apply {
+    private fun platformCard(platformName: String, colorRes: Int, surfaceRes: Int, borderRes: Int, checked: Boolean): CompoundButton {
+        return MaterialCheckBox(this).apply {
             text = platformName
             isChecked = checked
             textSize = 14f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             setTextColor(color(R.color.ink))
-            minHeight = dp(50)
-            setPadding(dp(12), dp(8), dp(12), dp(8))
+            minHeight = dimen(R.dimen.touch_target)
+            setPadding(
+                dimen(R.dimen.space_content),
+                dimen(R.dimen.space_small),
+                dimen(R.dimen.space_content),
+                dimen(R.dimen.space_small)
+            )
             buttonTintList = ColorStateList(
                 arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
                 intArrayOf(color(colorRes), color(R.color.ink_muted))
@@ -784,19 +1219,30 @@ class MainActivity : Activity() {
     }
 
     private fun secondaryButton(label: String, onClick: () -> Unit): Button {
-        return Button(this).apply {
+        return MaterialButton(
+            this,
+            null,
+            com.google.android.material.R.attr.materialButtonOutlinedStyle
+        ).apply {
             text = label
             isAllCaps = false
             textSize = 13f
-            minHeight = dp(52)
-            setPadding(dp(12), dp(10), dp(12), dp(10))
+            minHeight = dimen(R.dimen.touch_target)
+            setPadding(
+                dimen(R.dimen.space_content),
+                dimen(R.dimen.space_small),
+                dimen(R.dimen.space_content),
+                dimen(R.dimen.space_small)
+            )
             setTextColor(color(R.color.ink))
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            background = buttonBackground(
-                normal = color(R.color.surface),
-                pressed = color(R.color.surface_muted),
-                stroke = color(R.color.input_border)
-            )
+            insetTop = 0
+            insetBottom = 0
+            cornerRadius = dimen(R.dimen.radius_control)
+            strokeWidth = dp(1)
+            strokeColor = ColorStateList.valueOf(color(R.color.input_border))
+            backgroundTintList = ColorStateList.valueOf(color(R.color.surface))
+            rippleColor = ColorStateList.valueOf(color(R.color.surface_container_high))
             setOnClickListener { onClick() }
         }
     }
@@ -806,9 +1252,18 @@ class MainActivity : Activity() {
         val pressed = color(if (destructive) R.color.destructive_pressed else R.color.primary_pressed)
         button.setTextColor(ColorStateList(
             arrayOf(intArrayOf(-android.R.attr.state_enabled), intArrayOf()),
-            intArrayOf(color(R.color.ink_muted), Color.WHITE)
+            intArrayOf(color(R.color.ink_muted), color(R.color.on_primary))
         ))
-        button.background = buttonBackground(normal, pressed, normal)
+        if (button is MaterialButton) {
+            button.insetTop = 0
+            button.insetBottom = 0
+            button.cornerRadius = dimen(R.dimen.radius_control)
+            button.strokeWidth = 0
+            button.backgroundTintList = ColorStateList.valueOf(normal)
+            button.rippleColor = ColorStateList.valueOf(pressed)
+        } else {
+            button.background = buttonBackground(normal, pressed, normal)
+        }
     }
 
     private fun buttonBackground(normal: Int, pressed: Int, stroke: Int): StateListDrawable {
@@ -848,11 +1303,19 @@ class MainActivity : Activity() {
     }
 
     private fun roundedBackground(fillColor: Int, strokeColor: Int, radius: Int): GradientDrawable {
+        return roundedBackgroundPx(fillColor, strokeColor, dp(radius).toFloat())
+    }
+
+    private fun roundedBackgroundPx(
+        fillColor: Int,
+        strokeColor: Int,
+        radiusPx: Float
+    ): GradientDrawable {
         return GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             setColor(fillColor)
             setStroke(dp(1), strokeColor)
-            cornerRadius = dp(radius).toFloat()
+            cornerRadius = radiusPx
         }
     }
 
@@ -868,6 +1331,14 @@ class MainActivity : Activity() {
             layoutParams = LinearLayout.LayoutParams(1, dp(height))
         }
     }
+
+    private fun spaceResource(resourceId: Int): View {
+        return View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(1, dimen(resourceId))
+        }
+    }
+
+    private fun dimen(resourceId: Int): Int = resources.getDimensionPixelSize(resourceId)
 
     private fun getLocalIpAddress(): String? {
         return try {
@@ -919,13 +1390,6 @@ class MainActivity : Activity() {
 
     private fun dp(value: Int): Int {
         return (value * resources.displayMetrics.density).roundToInt()
-    }
-
-    @Suppress("DEPRECATION")
-    private fun setLightStatusBar() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-        }
     }
 
     private data class SavedConfig(
@@ -988,6 +1452,18 @@ class MainActivity : Activity() {
             Toast.makeText(this, "Bật nguồn ShopeeFood trước khi khởi động", Toast.LENGTH_LONG).show()
             return
         }
+        if (
+            !PrintIntakeService.isServiceRunning &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            startAfterNotificationPermission = true
+            requestPermissions(
+                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                NOTIFICATION_PERMISSION_REQUEST
+            )
+            return
+        }
 
         val intent = Intent(this, PrintIntakeService::class.java).apply {
             putExtra(PrintIntakeService.EXTRA_BACKEND_URL, config.backendUrl)
@@ -1032,6 +1508,104 @@ class MainActivity : Activity() {
             startService(intent)
             btnToggle.postDelayed({ refreshServiceState() }, 200)
         }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode != NOTIFICATION_PERMISSION_REQUEST) return
+
+        val granted = grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED
+        val shouldStart = startAfterNotificationPermission
+        startAfterNotificationPermission = false
+        if (granted) {
+            if (shouldStart) toggleService()
+        } else {
+            Toast.makeText(
+                this,
+                getString(R.string.notification_permission_required),
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    private fun openRedmiAutoStartSettings() {
+        val redmiIntent = Intent().apply {
+            component = ComponentName(
+                "com.miui.securitycenter",
+                "com.miui.permcenter.autostart.AutoStartManagementActivity"
+            )
+            putExtra("package_name", packageName)
+        }
+        if (runCatching { startActivity(redmiIntent) }.isFailure) {
+            openAppDetails()
+        }
+    }
+
+    private fun openBackgroundPowerSettings() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+            if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
+                val requestIntent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                if (runCatching { startActivity(requestIntent) }.isSuccess) return
+            }
+        }
+        openAppDetails()
+    }
+
+    private fun openIncomingOrderNotificationSettings() {
+        AgentNotifications.ensureChannels(this)
+        if (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            startAfterNotificationPermission = false
+            requestPermissions(
+                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                NOTIFICATION_PERMISSION_REQUEST
+            )
+            return
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channelIntent = Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).apply {
+                putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                putExtra(
+                    Settings.EXTRA_CHANNEL_ID,
+                    AgentNotifications.INCOMING_ORDER_CHANNEL_ID
+                )
+            }
+            if (runCatching { startActivity(channelIntent) }.isSuccess) return
+        }
+        openAppDetails()
+    }
+
+    private fun testIncomingOrderAlert() {
+        if (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            startAfterNotificationPermission = false
+            requestPermissions(
+                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                NOTIFICATION_PERMISSION_REQUEST
+            )
+            return
+        }
+        AgentNotifications.showTestAlert(this)
+        Toast.makeText(this, getString(R.string.test_order_alert_sent), Toast.LENGTH_SHORT).show()
+    }
+
+    private fun openAppDetails() {
+        startActivity(
+            Intent(
+                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.parse("package:$packageName")
+            )
+        )
     }
 
     private fun testPingPos() {
@@ -1119,8 +1693,9 @@ class MainActivity : Activity() {
         val waitingCount = dbHelper.getWaitingCount()
         val resolvedCount = dbHelper.getResolvedCount()
 
-        tvWaitingKpi.text = "Đang chờ · $waitingCount"
-        tvSentKpi.text = "Đã xử lý · $resolvedCount"
+        tvWaitingKpi.text = waitingCount.toString()
+        tvSentKpi.text = resolvedCount.toString()
+        renderOrderList()
 
         if (PrintIntakeService.isServiceRunning) {
             btnToggle.text = getString(R.string.stop_service_action)
@@ -1157,51 +1732,43 @@ class MainActivity : Activity() {
         Toast.makeText(this, "Đã cập nhật trạng thái hàng đợi trong nhật ký", Toast.LENGTH_SHORT).show()
     }
 
-    private fun showOrderList(resolved: Boolean) {
-        val orders = dbHelper.getOrders(resolved)
-        if (orders.isEmpty()) {
-            AlertDialog.Builder(this)
-                .setTitle(if (resolved) getString(R.string.resolved_orders_action) else getString(R.string.waiting_orders_action))
-                .setMessage(if (resolved) getString(R.string.resolved_orders_empty) else getString(R.string.waiting_orders_empty))
-                .setPositiveButton(getString(R.string.close_action), null)
-                .show()
-            return
-        }
-
-        val timeFormat = SimpleDateFormat("dd/MM HH:mm", Locale.getDefault())
-        val labels = orders.map { order ->
-            val pName = platformLabel(order.platform)
-            val sName = statusLabel(order.status)
-            val sourceRef = OrderIdentity.displaySourceOrderRef(order.platform, order.sourceOrderRef)
-                ?: "Phiếu #${order.id}"
-            val mapping = if (resolved) {
-                if (order.status == OrderQueueDbHelper.STATUS_DISMISSED) {
-                    "Thu ngân đã nhập tay"
-                } else {
-                    val posRef = OrderIdentity.displaySourceOrderRef(
-                        order.platform,
-                        order.posDisplayId ?: order.posOrderNumber
-                    ) ?: "Chưa có mã phiếu"
-                    "POS: $posRef"
-                }
-            } else {
-                sName
-            }
-            "$sourceRef · $pName\n$mapping · ${timeFormat.format(Date(order.createdAt))}"
-        }.toTypedArray()
-
-        AlertDialog.Builder(this)
-            .setTitle(if (resolved) getString(R.string.resolved_orders_action) else getString(R.string.waiting_orders_action))
-            .setItems(labels) { _, index -> orders.getOrNull(index)?.let(::showOrderDetail) }
-            .setNegativeButton(getString(R.string.close_action), null)
-            .show()
-    }
-
     private fun showOrderDetail(order: OrderQueueDbHelper.QueuedOrder) {
         val timeFormat = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault())
+        val rawBytes = runCatching { Base64.decode(order.rawBase64, Base64.DEFAULT) }
+            .getOrDefault(byteArrayOf())
+        val layers = ReceiptDataInspector.inspect(rawBytes, order.receiptText)
+        val sourceRef = OrderIdentity.displaySourceOrderRef(order.platform, order.sourceOrderRef)
+            ?: getString(R.string.receipt_internal_ref, order.id)
+        var previewBitmap: Bitmap? = null
+
+        val dialog = BottomSheetDialog(this)
+        val sheetRoot = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(color(R.color.surface))
+        }
+        ViewCompat.setOnApplyWindowInsetsListener(sheetRoot) { view, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.setPadding(0, bars.top, 0, bars.bottom)
+            insets
+        }
+        val sheetToolbar = MaterialToolbar(this).apply {
+            title = sourceRef
+            subtitle = "${platformLabel(order.platform)} · ${statusLabel(order.status)}"
+            navigationIcon = ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_close)
+            navigationIcon?.setTint(color(R.color.ink))
+            setNavigationContentDescription(R.string.close_action)
+            setNavigationOnClickListener { dialog.dismiss() }
+            setTitleTextColor(color(R.color.ink))
+            setSubtitleTextColor(color(R.color.ink_muted))
+        }
+        sheetRoot.addView(sheetToolbar, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ))
+
         val detailLayout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(12), dp(20), dp(16))
+            setPadding(dp(20), dp(8), dp(20), dp(24))
         }
 
         val infoCard = LinearLayout(this).apply {
@@ -1212,62 +1779,75 @@ class MainActivity : Activity() {
 
         fun infoRow(label: String, value: String): LinearLayout {
             return LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                setPadding(0, dp(3), 0, dp(3))
+                orientation = LinearLayout.VERTICAL
+                setPadding(0, dp(4), 0, dp(6))
                 addView(TextView(this@MainActivity).apply {
                     text = label
-                    textSize = 13f
+                    textSize = 12f
                     setTextColor(color(R.color.ink_muted))
-                    layoutParams = LinearLayout.LayoutParams(dp(110), LinearLayout.LayoutParams.WRAP_CONTENT)
                 })
                 addView(TextView(this@MainActivity).apply {
                     text = value
-                    textSize = 13f
+                    textSize = 13.5f
                     setTextColor(color(R.color.ink))
                     typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-                    layoutParams = LinearLayout.LayoutParams(
-                        0,
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        1f
-                    )
+                    setPadding(0, dp(2), 0, 0)
                 })
             }
         }
 
-        infoCard.addView(infoRow("Trạng thái:", statusLabel(order.status)))
-        infoCard.addView(infoRow("Sàn:", platformLabel(order.platform)))
+        infoCard.addView(infoRow(getString(R.string.receipt_status_label), statusLabel(order.status)))
+        infoCard.addView(infoRow(getString(R.string.receipt_source_label), platformLabel(order.platform)))
         infoCard.addView(infoRow(
-            "Mã đơn sàn:",
-            OrderIdentity.displaySourceOrderRef(order.platform, order.sourceOrderRef) ?: "Chưa đọc được"
+            getString(R.string.source_order_ref_label),
+            OrderIdentity.displaySourceOrderRef(order.platform, order.sourceOrderRef)
+                ?: getString(R.string.source_order_ref_missing)
         ))
         if (order.status == OrderQueueDbHelper.STATUS_SENT) {
             val posRef = OrderIdentity.displaySourceOrderRef(
                 order.platform,
                 order.posDisplayId ?: order.posOrderNumber
-            ) ?: "Chưa có"
-            infoCard.addView(infoRow("Mã phiếu POS:", posRef))
+            ) ?: getString(R.string.pos_ref_missing_short)
+            infoCard.addView(infoRow(getString(R.string.pos_receipt_ref_label), posRef))
             if (order.posOrderId != null || order.posOrderNumber != null) {
                 infoCard.addView(
                     infoRow(
-                        "Kết quả:",
-                        if (order.idempotent) "Đã đối chiếu với phiếu POS có sẵn" else "Đã tạo trên POS"
+                        getString(R.string.reconciliation_result_label),
+                        getString(
+                            if (order.idempotent) R.string.reconciled_existing_pos
+                            else R.string.created_on_pos
+                        )
                     )
                 )
             }
             if (order.sentAt > 0) {
-                infoCard.addView(infoRow("Thời gian xuất:", timeFormat.format(Date(order.sentAt))))
+                infoCard.addView(infoRow(
+                    getString(R.string.sent_time_label),
+                    timeFormat.format(Date(order.sentAt))
+                ))
             }
         } else if (order.status == OrderQueueDbHelper.STATUS_DISMISSED) {
-            infoCard.addView(infoRow("Cách xử lý:", order.resolutionNote ?: "Thu ngân đã nhập tay"))
+            infoCard.addView(infoRow(
+                getString(R.string.resolution_label),
+                order.resolutionNote ?: getString(R.string.manual_entry_resolution)
+            ))
             if (order.resolvedAt > 0) {
-                infoCard.addView(infoRow("Thời gian xử lý:", timeFormat.format(Date(order.resolvedAt))))
+                infoCard.addView(infoRow(
+                    getString(R.string.resolved_time_label),
+                    timeFormat.format(Date(order.resolvedAt))
+                ))
             }
         }
-        infoCard.addView(infoRow("Chi nhánh:", order.branchId.toString()))
-        infoCard.addView(infoRow("Thời gian nhận:", timeFormat.format(Date(order.createdAt))))
-        infoCard.addView(infoRow("Số lần gửi lại:", order.retryCount.toString()))
+        infoCard.addView(infoRow(
+            getString(R.string.received_time_label),
+            timeFormat.format(Date(order.createdAt))
+        ))
+        infoCard.addView(infoRow(getString(R.string.retry_count_label), order.retryCount.toString()))
         if (order.duplicateCount > 0) {
-            infoCard.addView(infoRow("Đã chặn trùng:", "${order.duplicateCount} lần"))
+            infoCard.addView(infoRow(
+                getString(R.string.duplicate_count_label),
+                getString(R.string.duplicate_count_value, order.duplicateCount)
+            ))
         }
         detailLayout.addView(infoCard)
 
@@ -1279,7 +1859,7 @@ class MainActivity : Activity() {
                 setPadding(dp(12), dp(10), dp(12), dp(10))
                 background = roundedBackground(color(R.color.warning_surface), color(R.color.warning_border), 10)
                 addView(TextView(this@MainActivity).apply {
-                    text = "Lỗi gần nhất:"
+                    text = getString(R.string.latest_error_title)
                     textSize = 12f
                     typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
                     setTextColor(color(R.color.warning_text))
@@ -1294,82 +1874,291 @@ class MainActivity : Activity() {
             detailLayout.addView(errorBox)
         }
 
-        detailLayout.addView(space(14))
-        val ocrHeader = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        ocrHeader.addView(TextView(this).apply {
-            text = "Nội dung OCR phiếu:"
-            textSize = 13f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            setTextColor(color(R.color.ink))
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        detailLayout.addView(space(20))
+        detailLayout.addView(sectionHeading(
+            getString(R.string.receipt_data_title),
+            getString(R.string.receipt_data_description)
+        ))
+        detailLayout.addView(space(10))
+        detailLayout.addView(LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(14), dp(12), dp(14), dp(12))
+            background = roundedBackground(color(R.color.surface_muted), color(R.color.border), 12)
+            addView(infoRow(getString(R.string.raw_data_label), formatByteCount(layers.rawByteCount)))
+            addView(infoRow(getString(R.string.bitmap_data_label), layers.bitmapLabel))
+            addView(infoRow(
+                getString(R.string.text_data_label),
+                getString(R.string.character_count, layers.textCharacterCount)
+            ))
+            addView(infoRow(
+                getString(R.string.ocr_data_label),
+                getString(R.string.character_count, layers.ocrCharacterCount)
+            ))
         })
+        detailLayout.addView(space(16))
 
-        val ocrContent = order.receiptText?.ifBlank { "Không có nội dung OCR" } ?: "Không có nội dung OCR"
-        val btnCopyOcr = secondaryButton(getString(R.string.copy_ocr_action)) {
-            copyToClipboard("OCR Text", ocrContent, getString(R.string.ocr_copied_toast))
-        }.apply {
-            minHeight = dp(38)
-            textSize = 12f
-            setPadding(dp(8), dp(4), dp(8), dp(4))
+        val dataTabs = TabLayout(this).apply {
+            addTab(newTab().setText(R.string.receipt_bitmap_tab))
+            addTab(newTab().setText(R.string.receipt_text_tab))
+            addTab(newTab().setText(R.string.receipt_ocr_tab))
         }
-        ocrHeader.addView(btnCopyOcr)
-        detailLayout.addView(ocrHeader)
-        detailLayout.addView(space(6))
+        detailLayout.addView(dataTabs)
+        detailLayout.addView(space(10))
+        val dataContent = FrameLayout(this).apply {
+            minimumHeight = dp(220)
+        }
+        detailLayout.addView(dataContent, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ))
 
-        val ocrScrollView = ScrollView(this).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(160)
-            )
-            isFillViewport = true
-            setPadding(dp(12), dp(10), dp(12), dp(10))
-            background = roundedBackground(color(R.color.console), color(R.color.console_border), 10)
+        fun renderLayer(position: Int) {
+            dataContent.removeAllViews()
+            val layer = when (position) {
+                0 -> {
+                    val raster = layers.raster
+                    if (raster == null) {
+                        receiptLayerEmpty(
+                            getString(R.string.bitmap_empty_title),
+                            getString(R.string.bitmap_empty_description)
+                        )
+                    } else {
+                        if (previewBitmap == null || previewBitmap?.isRecycled == true) {
+                            previewBitmap = raster.toPreviewBitmap()
+                        }
+                        LinearLayout(this).apply {
+                            orientation = LinearLayout.VERTICAL
+                            addView(TextView(this@MainActivity).apply {
+                                text = getString(R.string.bitmap_preview_description, raster.width, raster.height)
+                                textSize = 12.5f
+                                setTextColor(color(R.color.ink_muted))
+                                setPadding(dp(2), 0, dp(2), dp(10))
+                            })
+                            addView(ImageView(this@MainActivity).apply {
+                                setImageBitmap(previewBitmap)
+                                adjustViewBounds = true
+                                scaleType = ImageView.ScaleType.FIT_CENTER
+                                setBackgroundColor(Color.WHITE)
+                                setPadding(dp(8), dp(8), dp(8), dp(8))
+                                contentDescription = getString(R.string.bitmap_preview_content_description)
+                            }, LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.MATCH_PARENT,
+                                LinearLayout.LayoutParams.WRAP_CONTENT
+                            ))
+                        }
+                    }
+                }
+                1 -> receiptTextLayer(
+                    title = getString(R.string.receipt_text_layer_title),
+                    description = getString(R.string.receipt_text_layer_description),
+                    content = layers.printableText,
+                    emptyTitle = getString(R.string.text_empty_title),
+                    emptyDescription = getString(R.string.text_empty_description),
+                    clipboardLabel = "Receipt text",
+                    copiedMessage = getString(R.string.text_copied_toast)
+                )
+                else -> receiptTextLayer(
+                    title = getString(R.string.receipt_ocr_layer_title),
+                    description = getString(R.string.receipt_ocr_layer_description),
+                    content = layers.ocrText,
+                    emptyTitle = getString(R.string.ocr_empty_title),
+                    emptyDescription = getString(R.string.ocr_empty_description),
+                    clipboardLabel = "OCR Text",
+                    copiedMessage = getString(R.string.ocr_copied_toast)
+                )
+            }
+            dataContent.addView(layer, FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            ))
         }
-        val tvOcr = TextView(this).apply {
-            text = ocrContent
-            textSize = 11.5f
-            typeface = Typeface.MONOSPACE
-            setTextColor(color(R.color.console_text))
-            setTextIsSelectable(true)
-        }
-        ocrScrollView.addView(tvOcr)
-        detailLayout.addView(ocrScrollView)
+        dataTabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab) = renderLayer(tab.position)
+            override fun onTabUnselected(tab: TabLayout.Tab) = Unit
+            override fun onTabReselected(tab: TabLayout.Tab) = Unit
+        })
+        renderLayer(0)
 
         val rootScroll = ScrollView(this).apply {
+            isFillViewport = true
             addView(detailLayout)
         }
+        sheetRoot.addView(rootScroll, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            0,
+            1f
+        ))
 
-        val builder = AlertDialog.Builder(this)
-            .setTitle(getString(R.string.order_detail_title, order.id))
-            .setView(rootScroll)
-            .setNegativeButton(getString(R.string.close_action), null)
-
+        val actions = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.END or Gravity.CENTER_VERTICAL
+            setPadding(dp(20), dp(10), dp(20), dp(16))
+            setBackgroundColor(color(R.color.surface))
+        }
+        if (QueueLifecycle.canDismiss(order.status)) {
+            actions.addView(secondaryButton(getString(R.string.mark_manual_entry_action)) {
+                dialog.dismiss()
+                promptDismissWaitingOrder(order)
+            }.apply {
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    marginEnd = dp(8)
+                }
+            })
+        }
         if (
             order.status == OrderQueueDbHelper.STATUS_PENDING ||
             order.status == OrderQueueDbHelper.STATUS_BLOCKED
         ) {
-            builder.setPositiveButton(getString(R.string.retry_now_action)) { _, _ ->
-                if (dbHelper.retryOrderNow(order.id)) {
-                    Toast.makeText(this, "Đã đưa đơn #${order.id} lên đầu hàng chờ", Toast.LENGTH_SHORT).show()
-                    refreshServiceState()
+            actions.addView(MaterialButton(this).apply {
+                text = getString(R.string.retry_now_action)
+                isAllCaps = false
+                minHeight = dp(52)
+                setOnClickListener {
+                    dialog.dismiss()
+                    if (dbHelper.retryOrderNow(order.id)) {
+                        Toast.makeText(this@MainActivity, "Đã đưa phiếu $sourceRef lên đầu hàng chờ", Toast.LENGTH_SHORT).show()
+                        refreshServiceState()
+                    }
                 }
-            }
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            })
         }
-        if (QueueLifecycle.canDismiss(order.status)) {
-            builder.setNeutralButton(getString(R.string.mark_manual_entry_action)) { _, _ ->
-                promptDismissWaitingOrder(order)
-            }
+        if (actions.childCount > 0) {
+            sheetRoot.addView(actions, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ))
         }
-        builder.show()
+
+        dialog.setContentView(
+            sheetRoot,
+            ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+        dialog.setOnDismissListener {
+            previewBitmap?.takeIf { !it.isRecycled }?.recycle()
+            previewBitmap = null
+        }
+        dialog.setOnShowListener {
+            dialog.findViewById<FrameLayout>(com.google.android.material.R.id.design_bottom_sheet)
+                ?.let { bottomSheet ->
+                    bottomSheet.layoutParams = bottomSheet.layoutParams.apply {
+                        height = ViewGroup.LayoutParams.MATCH_PARENT
+                    }
+                    bottomSheet.requestLayout()
+                }
+            dialog.behavior.apply {
+                state = BottomSheetBehavior.STATE_EXPANDED
+                skipCollapsed = true
+                isDraggable = true
+            }
+            ViewCompat.requestApplyInsets(sheetRoot)
+        }
+        dialog.show()
+    }
+
+    private fun receiptTextLayer(
+        title: String,
+        description: String,
+        content: String?,
+        emptyTitle: String,
+        emptyDescription: String,
+        clipboardLabel: String,
+        copiedMessage: String
+    ): View {
+        if (content.isNullOrBlank()) return receiptLayerEmpty(emptyTitle, emptyDescription)
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                addView(LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.VERTICAL
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                    addView(TextView(this@MainActivity).apply {
+                        text = title
+                        textSize = 14f
+                        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                        setTextColor(color(R.color.ink))
+                    })
+                    addView(TextView(this@MainActivity).apply {
+                        text = description
+                        textSize = 12f
+                        setTextColor(color(R.color.ink_muted))
+                        setPadding(0, dp(3), dp(8), 0)
+                    })
+                })
+                addView(secondaryButton(getString(R.string.copy_action)) {
+                    copyToClipboard(clipboardLabel, content, copiedMessage)
+                }.apply {
+                    minHeight = dp(48)
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    )
+                })
+            })
+            addView(space(10))
+            addView(ScrollView(this@MainActivity).apply {
+                isFillViewport = true
+                setPadding(dp(14), dp(12), dp(14), dp(12))
+                background = roundedBackground(color(R.color.console), color(R.color.console_border), 12)
+                addView(TextView(this@MainActivity).apply {
+                    text = content
+                    textSize = 12f
+                    typeface = Typeface.MONOSPACE
+                    setTextColor(color(R.color.console_text))
+                    setTextIsSelectable(true)
+                    setLineSpacing(dp(3).toFloat(), 1.05f)
+                })
+            }, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(260)
+            ))
+        }
+    }
+
+    private fun receiptLayerEmpty(title: String, description: String): View =
+        LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            minimumHeight = dp(220)
+            setPadding(dp(24), dp(32), dp(24), dp(32))
+            background = roundedBackground(color(R.color.surface_muted), color(R.color.border), 16)
+            addView(TextView(this@MainActivity).apply {
+                text = title
+                textSize = 15f
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                setTextColor(color(R.color.ink))
+                gravity = Gravity.CENTER
+            })
+            addView(TextView(this@MainActivity).apply {
+                text = description
+                textSize = 12.5f
+                setTextColor(color(R.color.ink_muted))
+                gravity = Gravity.CENTER
+                setPadding(0, dp(6), 0, 0)
+            })
+        }
+
+    private fun EscPosRaster.toPreviewBitmap(): Bitmap {
+        val pixels = IntArray(blackPixels.size) { index ->
+            if (blackPixels[index].toInt() == 1) Color.BLACK else Color.WHITE
+        }
+        return Bitmap.createBitmap(pixels, width, height, Bitmap.Config.ARGB_8888)
+    }
+
+    private fun formatByteCount(byteCount: Int): String = when {
+        byteCount < 1024 -> "$byteCount B"
+        else -> String.format(Locale.getDefault(), "%.1f KB", byteCount / 1024.0)
     }
 
     private fun promptDismissWaitingOrder(order: OrderQueueDbHelper.QueuedOrder) {
         val sourceRef = OrderIdentity.displaySourceOrderRef(order.platform, order.sourceOrderRef)
             ?: "phiếu #${order.id}"
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle(getString(R.string.mark_manual_entry_action))
             .setMessage(getString(R.string.mark_manual_entry_confirm, sourceRef))
             .setPositiveButton(getString(R.string.mark_manual_entry_action)) { _, _ ->
@@ -1401,7 +2190,7 @@ class MainActivity : Activity() {
     private fun updateLogsView() {
         val logs = AppLogger.getAllLogs()
         if (logs.isEmpty()) {
-            tvLogs.text = "--- Nhật ký trống ---\nKiểm tra POS hoặc gửi lệnh in để xem sự kiện tại đây."
+            tvLogs.text = getString(R.string.logs_empty_state)
             return
         }
 

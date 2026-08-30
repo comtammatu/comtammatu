@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primary">#FFB691</color>
+    <color name="primary_pressed">#E8956D</color>
+    <color name="on_primary">#622000</color>
+    <color name="primary_container">#893000</color>
+    <color name="on_primary_container">#FFDBCA</color>
+    <color name="secondary">#E6BEAC</color>
+    <color name="on_secondary">#432A20</color>
+
+    <color name="canvas">#131312</color>
+    <color name="surface">#1C1B1A</color>
+    <color name="surface_muted">#242321</color>
+    <color name="surface_container">#211F1E</color>
+    <color name="surface_container_high">#2B2927</color>
+    <color name="border">#4D4743</color>
+    <color name="input_border">#9F8D84</color>
+    <color name="ink">#EAE1DC</color>
+    <color name="ink_secondary">#D6C3BA</color>
+    <color name="ink_muted">#B5A49C</color>
+
+    <color name="success">#6DD58C</color>
+    <color name="success_text">#8CE7A5</color>
+    <color name="success_surface">#12391F</color>
+    <color name="success_border">#356B46</color>
+    <color name="warning">#F2B84B</color>
+    <color name="warning_text">#FFD089</color>
+    <color name="warning_surface">#3E2D08</color>
+    <color name="warning_border">#70551B</color>
+    <color name="destructive">#FFB4AB</color>
+    <color name="destructive_pressed">#E38A83</color>
+    <color name="error_container">#93000A</color>
+    <color name="error_container_text">#FFDAD6</color>
+    <color name="neutral_text">#CFC4BE</color>
+    <color name="neutral_surface">#302E2C</color>
+    <color name="neutral_border">#55504D</color>
+
+    <color name="console">#0C121B</color>
+    <color name="console_border">#354052</color>
+    <color name="console_text">#D1FADF</color>
+    <color name="console_timestamp">#AAB6C8</color>
+    <color name="console_tag_pos">#7CB8FF</color>
+    <color name="console_tag_print">#67D3FF</color>
+    <color name="console_tag_success">#5BE1A7</color>
+    <color name="console_tag_warning">#FFD166</color>
+    <color name="console_tag_error">#FF9B9B</color>
+    <color name="console_tag_info">#B7F7DD</color>
+
+    <color name="shopee_orange">#FF8A70</color>
+    <color name="shopee_surface">#42201A</color>
+    <color name="shopee_border">#764138</color>
+    <color name="greensm_green">#61D68B</color>
+    <color name="greensm_surface">#153922</color>
+    <color name="greensm_border">#376B48</color>
+    <color name="befood_yellow">#E8C45D</color>
+    <color name="befood_surface">#3C3211</color>
+    <color name="befood_border">#6D5C24</color>
+</resources>

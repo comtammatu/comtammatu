@@ -3,6 +3,16 @@
     <string name="app_name">Má Tư Agent</string>
     <string name="brand_monogram" translatable="false">MT</string>
     <string name="brand_subtitle">Trạm nhận đơn từ máy in mạng</string>
+    <string name="nav_overview">Tổng quan</string>
+    <string name="nav_receipts">Phiếu</string>
+    <string name="nav_device">Thiết bị</string>
+    <string name="nav_logs">Nhật ký</string>
+    <string name="receipt_layers_subtitle">Đối chiếu ảnh gốc, văn bản và OCR</string>
+    <string name="device_subtitle">Kết nối, quyền chạy nền và kiểm tra</string>
+    <string name="logs_nav_subtitle">Sự kiện vận hành theo thời gian thực</string>
+    <string name="device_tab_connection">Kết nối</string>
+    <string name="device_tab_background">Chạy nền</string>
+    <string name="device_tab_diagnostics">Kiểm tra</string>
 
     <string name="configuration_title">Cấu hình</string>
     <string name="configuration_description">Thiết lập điểm nhận và nơi chuyển tiếp đơn hàng.</string>
@@ -27,14 +37,28 @@
 
     <string name="orders_title">Sổ đối chiếu đơn</string>
     <string name="orders_description">Theo dõi hàng chờ và đối chiếu mã đơn sàn với mã phiếu POS.</string>
+    <string name="receipts_received_title">Phiếu đã nhận</string>
     <string name="waiting_orders_action">Đang chờ</string>
     <string name="resolved_orders_action">Lịch sử</string>
     <string name="orders_count_summary">%1$d đang chờ  ·  %2$d đã xuất</string>
+    <string name="order_tab_with_count">%1$s (%2$d)</string>
+    <string name="receipt_internal_ref">Phiếu #%1$d</string>
+    <string name="manual_entry_short">Đã nhập tay</string>
+    <string name="pos_ref_missing">Chưa có mã phiếu</string>
+    <string name="pos_mapping_short">POS: %1$s</string>
+    <string name="duplicate_blocked_short">Đã chặn trùng %1$d lần</string>
+    <string name="order_row_metadata">%1$s · %2$s · %3$s</string>
+
+    <string name="home_attention_title">Việc cần xử lý</string>
+    <string name="home_attention_description">Mở thẳng nhóm phiếu cần đối chiếu, không cần tìm trong một trang dài.</string>
+    <string name="waiting_orders_home_description">Phiếu chưa gửi xong hoặc cần thu ngân kiểm tra.</string>
+    <string name="resolved_orders_home_description">Mã đơn sàn đã đối chiếu với phiếu POS hoặc nhập tay.</string>
 
     <string name="logs_title">Nhật ký hoạt động</string>
     <string name="logs_description">Sự kiện mới nhất được tự động cuộn xuống cuối.</string>
     <string name="clear_logs_action">Xóa nhật ký</string>
     <string name="logs_loading">Đang tải nhật ký…</string>
+    <string name="logs_empty_state">— Nhật ký trống —\nKiểm tra POS hoặc gửi lệnh in để xem sự kiện tại đây.</string>
 
     <string name="start_service_action">Bật nhận đơn</string>
     <string name="stop_service_action">Dừng nhận đơn</string>
@@ -48,10 +72,22 @@
     <string name="status_running">ĐANG CHẠY</string>
     <string name="status_stopped">ĐANG DỪNG</string>
 
+    <string name="background_run_title">Chạy nền trên Redmi</string>
+    <string name="background_run_description">Hoàn tất ba quyền để Agent tự chạy lại và báo đơn khi ứng dụng khác đang mở.</string>
+    <string name="background_run_steps">1. Cho phép Tự khởi động.\n2. Đặt tiết kiệm pin thành Không hạn chế.\n3. Bật âm thanh, rung và thông báo nổi cho kênh Đơn mới.</string>
+    <string name="open_redmi_autostart_action">1. Bật tự khởi động Redmi</string>
+    <string name="allow_background_power_action">2. Cho phép chạy nền liên tục</string>
+    <string name="configure_order_alerts_action">3. Bật thông báo nổi đơn mới</string>
+    <string name="test_order_alert_action">Gửi thử cảnh báo nổi</string>
+    <string name="test_order_alert_sent">Đã gửi cảnh báo thử; kiểm tra âm thanh, rung và thẻ nổi trên màn hình.</string>
+    <string name="notification_permission_required">Cần cho phép thông báo để Agent hiện cảnh báo đơn mới và hoạt động nền rõ ràng.</string>
+
     <string name="copy_ip_action">Sao chép</string>
     <string name="ip_copied_toast">Đã sao chép địa chỉ kết nối vào bộ nhớ tạm</string>
     <string name="copy_ocr_action">Sao chép OCR</string>
     <string name="ocr_copied_toast">Đã sao chép nội dung OCR vào bộ nhớ tạm</string>
+    <string name="copy_action">Sao chép</string>
+    <string name="text_copied_toast">Đã sao chép lớp văn bản vào bộ nhớ tạm</string>
     <string name="copy_logs_action">Sao chép</string>
     <string name="logs_copied_toast">Đã sao chép toàn bộ nhật ký vào bộ nhớ tạm</string>
     <string name="run_all_diagnostics_action">Kiểm tra toàn diện</string>
@@ -66,6 +102,46 @@
     <string name="mark_manual_entry_success">Đã loại đơn %1$s khỏi hàng chờ và giữ dấu chống trùng</string>
     <string name="close_action">Đóng</string>
     <string name="order_detail_title">Chi tiết đơn #%1$d</string>
+    <string name="receipt_data_title">Dữ liệu phiếu</string>
+    <string name="receipt_data_description">Mỗi lớp được giữ riêng để biết lỗi nằm ở ảnh in, văn bản gốc hay kết quả nhận dạng.</string>
+    <string name="receipt_status_label">Trạng thái</string>
+    <string name="receipt_source_label">Nguồn phiếu</string>
+    <string name="source_order_ref_label">Mã đơn sàn</string>
+    <string name="source_order_ref_missing">Chưa đọc được</string>
+    <string name="pos_receipt_ref_label">Mã phiếu POS</string>
+    <string name="pos_ref_missing_short">Chưa có</string>
+    <string name="reconciliation_result_label">Kết quả</string>
+    <string name="reconciled_existing_pos">Đã đối chiếu với phiếu POS có sẵn</string>
+    <string name="created_on_pos">Đã tạo trên POS</string>
+    <string name="sent_time_label">Thời gian xuất</string>
+    <string name="resolution_label">Cách xử lý</string>
+    <string name="manual_entry_resolution">Thu ngân đã nhập tay</string>
+    <string name="resolved_time_label">Thời gian xử lý</string>
+    <string name="received_time_label">Thời gian nhận</string>
+    <string name="retry_count_label">Số lần gửi lại</string>
+    <string name="duplicate_count_label">Đã chặn trùng</string>
+    <string name="duplicate_count_value">%1$d lần</string>
+    <string name="latest_error_title">Lỗi gần nhất</string>
+    <string name="raw_data_label">Dữ liệu gốc</string>
+    <string name="bitmap_data_label">Ảnh bitmap</string>
+    <string name="text_data_label">Văn bản</string>
+    <string name="ocr_data_label">OCR</string>
+    <string name="character_count">%1$d ký tự</string>
+    <string name="receipt_bitmap_tab">Ảnh gốc</string>
+    <string name="receipt_text_tab">Văn bản</string>
+    <string name="receipt_ocr_tab">OCR</string>
+    <string name="bitmap_preview_description">Ảnh đơn sắc được bóc từ luồng ESC/POS · %1$d × %2$d px</string>
+    <string name="bitmap_preview_content_description">Bản xem trước ảnh bitmap của phiếu in</string>
+    <string name="bitmap_empty_title">Không có ảnh bitmap</string>
+    <string name="bitmap_empty_description">Phiếu này có thể được ứng dụng sàn gửi dưới dạng văn bản hoặc dữ liệu ảnh đã được dọn sau khi xử lý.</string>
+    <string name="receipt_text_layer_title">Văn bản trong luồng in</string>
+    <string name="receipt_text_layer_description">Ký tự đọc trực tiếp từ ESC/POS, chưa qua nhận dạng hình ảnh.</string>
+    <string name="text_empty_title">Không có lớp văn bản</string>
+    <string name="text_empty_description">Phiếu được in hoàn toàn bằng ảnh hoặc dữ liệu văn bản không đủ rõ để hiển thị.</string>
+    <string name="receipt_ocr_layer_title">OCR đã chuẩn hóa</string>
+    <string name="receipt_ocr_layer_description">Văn bản ML Kit đọc từ bitmap và sắp lại theo bố cục phiếu.</string>
+    <string name="ocr_empty_title">Không có kết quả OCR</string>
+    <string name="ocr_empty_description">Phiếu văn bản không cần OCR, OCR chưa chạy được hoặc dữ liệu nặng đã được dọn.</string>
     <string name="waiting_orders_empty">Không có đơn nào đang chờ xử lý.</string>
     <string name="resolved_orders_empty">Chưa có đơn đã xử lý.</string>
     <string name="network_ip_label">IP máy này:</string>
