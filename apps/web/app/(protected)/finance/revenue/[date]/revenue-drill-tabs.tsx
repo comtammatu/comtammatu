@@ -361,6 +361,7 @@ export function RevenueDrillTabs({
             columns={orderColumns}
             data={orders}
             pageSize={50}
+            mobileBreakpoint={1024}
             getRowKey={(row) => row.order_id}
             emptyTitle={copy.noPaidOrders}
             mobileCardRender={(row) => (

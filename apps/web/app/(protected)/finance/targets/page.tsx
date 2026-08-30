@@ -1,4 +1,5 @@
-import { AppPage } from "@/components/surface";
+import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
+import { messages } from "@lib/messages";
 import {
   currentVnMonthStart,
   monthStartFromIsoDate,
@@ -41,16 +42,25 @@ export default async function FinanceRevenueTargetsPage({
     };
   });
 
+  if (!result.success) {
+    return (
+      <AppPage width="xwide" density="compact">
+        <AppPageHeader title={messages.finance.revenueTargets.page.title} />
+        <AppEmptyState
+          mode="error"
+          title={messages.finance.revenueTargets.page.title}
+          description={result.error ?? undefined}
+        />
+      </AppPage>
+    );
+  }
+
   return (
     <AppPage width="xwide" density="compact">
-      {!result.success ? (
-        <p className="text-sm text-destructive">{result.error}</p>
-      ) : (
-        <RevenueTargetsClient
-          yearMonth={yearMonth}
-          initialRows={rowsWithProgress}
-        />
-      )}
+      <RevenueTargetsClient
+        yearMonth={yearMonth}
+        initialRows={rowsWithProgress}
+      />
     </AppPage>
   );
 }

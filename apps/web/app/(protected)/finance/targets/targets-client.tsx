@@ -531,7 +531,12 @@ export function RevenueTargetsClient({
         }
         contentClassName="sm:max-w-3xl"
         footer={
-          <Button type="button" onClick={onSave} disabled={pending}>
+          <Button
+            type="button"
+            size={isTouchLayout ? "touch" : "default"}
+            onClick={onSave}
+            disabled={pending}
+          >
             {pending ? copy.saving : copy.editor.save}
           </Button>
         }
@@ -657,7 +662,7 @@ export function RevenueTargetsClient({
                     <Button
                       type="button"
                       variant="outline"
-                      size="sm"
+                      size={isTouchLayout ? "touch" : "sm"}
                       onClick={() =>
                         removeRewardTier(editingRow.branchId, tier.id)
                       }
@@ -673,6 +678,7 @@ export function RevenueTargetsClient({
               <Button
                 type="button"
                 variant="outline"
+                size={isTouchLayout ? "touch" : "default"}
                 onClick={() => addRewardTier(editingRow.branchId)}
                 disabled={pending || editingRow.tierDrafts.length >= 10}
               >

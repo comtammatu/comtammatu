@@ -15,9 +15,11 @@ const copy = messages.finance.bankTransactions;
 export function AutoMatchTransferTokenButton({
   transactions,
   enabled,
+  size = "sm",
 }: {
   transactions: SepayBankTransaction[];
   enabled: boolean;
+  size?: "sm" | "touch";
 }) {
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
@@ -38,7 +40,7 @@ export function AutoMatchTransferTokenButton({
     <Button
       type="button"
       variant="outline"
-      size="sm"
+      size={size}
       disabled={pending || candidateIds.length === 0}
       onClick={() => {
         if (candidateIds.length === 0) {

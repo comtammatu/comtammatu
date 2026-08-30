@@ -91,7 +91,22 @@ export default async function RevenueDrillPage({
 
   if (branchId == null) {
     const branchesRes = await fetchAccessibleBranches();
-    const branches = (branchesRes.success ? (branchesRes.data ?? []) : []) as {
+    if (!branchesRes.success) {
+      return (
+        <AppPage width="xwide" density="compact">
+          <AppPageHeader
+            title={copy.selectBranchTitle(date)}
+            breadcrumb={<BackToRevenue />}
+          />
+          <AppEmptyState
+            mode="error"
+            title={copy.selectBranchTitle(date)}
+            description={branchesRes.error ?? undefined}
+          />
+        </AppPage>
+      );
+    }
+    const branches = (branchesRes.data ?? []) as {
       id: number;
       name: string;
     }[];
@@ -142,9 +157,28 @@ export default async function RevenueDrillPage({
   const branchName =
     branches.find((b) => b.id === branchId)?.name ??
     messages.finance.common.branchFallback(branchId);
-  const orders = (
-    ordersRes.success ? (ordersRes.data ?? []) : []
-  ) as OrderRow[];
+
+  if (!branchesRes.success || !ordersRes.success) {
+    return (
+      <AppPage width="xwide" density="compact">
+        <AppPageHeader
+          title={copy.detailTitle(branchName, date)}
+          breadcrumb={<BackToRevenue />}
+        />
+        <AppEmptyState
+          mode="error"
+          title={copy.detailTitle(branchName, date)}
+          description={
+            (!ordersRes.success ? ordersRes.error : undefined) ??
+            (!branchesRes.success ? branchesRes.error : undefined) ??
+            undefined
+          }
+        />
+      </AppPage>
+    );
+  }
+
+  const orders = (ordersRes.data ?? []) as OrderRow[];
 
   const hours = summarizeByHour(orders);
   const totalOrders = orders.length;

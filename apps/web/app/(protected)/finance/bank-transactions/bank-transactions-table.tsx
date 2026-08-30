@@ -764,6 +764,7 @@ export function BankTransactionsTable({
               <AutoMatchTransferTokenButton
                 transactions={transactions}
                 enabled={canLinkPayments}
+                size={controlSize === "touch" ? "touch" : "sm"}
               />
               <span className="text-xs text-muted-foreground">
                 {copy.queueCount(formatCount(openQueueCount))}

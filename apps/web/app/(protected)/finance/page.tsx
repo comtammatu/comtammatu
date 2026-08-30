@@ -161,6 +161,15 @@ export default async function FinancePage({
             />
           </div>
         );
+      } else if (canManageTargets) {
+        targetHint = (
+          <Link
+            href="/finance/targets"
+            className="text-primary underline-offset-2 hover:underline"
+          >
+            {messages.finance.revenueTargets.progress.noTarget}
+          </Link>
+        );
       }
       netRevenueHref = financeHref("/finance/revenue", {
         ...params,
