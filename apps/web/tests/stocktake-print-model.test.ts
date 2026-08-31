@@ -1,21 +1,19 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type {
-  StocktakePrintLine,
-  StocktakePrintSession,
-  StocktakeCountUnitOption,
+import {
+  type StocktakePrintLine,
+  type StocktakePrintSession,
+  type StocktakeCountUnitOption,
+  formatPackSpecification,
+  getIngredientUnits,
+  toQuantityUnitFormatRows,
+  formatConversionHint,
 } from "../app/components/inventory/stocktake-print-dialog";
-
-function formatConversionHint(
-  units: StocktakeCountUnitOption[],
-  baseUnit: string,
-): string {
-  const nonBaseUnits = units.filter((u) => !u.isBase && u.toBaseFactor > 1);
-  if (nonBaseUnits.length === 0) return "—";
-  return nonBaseUnits
-    .map((u) => `1 ${u.label} = ${u.toBaseFactor} ${baseUnit}`)
-    .join(", ");
-}
+import {
+  formatQuantityInLargestUnits,
+  formatQuantityUnitBreakdown,
+} from "../lib/inventory/quantity-unit-format";
+import { formatQty } from "../lib/inventory/format";
 
 function calculateSummary(lines: StocktakePrintLine[]) {
   const matched = lines.filter(
@@ -80,6 +78,61 @@ test("stocktake count unit conversion hint renders non-base package units cleanl
     formatConversionHint(multiUnits, "lon"),
     "1 Lốc = 6 lon, 1 Thùng = 24 lon",
   );
+});
+
+test("getIngredientUnits returns all stocking units sorted by factor descending", () => {
+  const unitOptions: Record<number, StocktakeCountUnitOption[]> = {
+    10: [
+      { unitId: 1, code: "lon", label: "lon", isBase: true, toBaseFactor: 1 },
+      { unitId: 2, code: "loc", label: "Lốc", isBase: false, toBaseFactor: 6 },
+      { unitId: 3, code: "thung", label: "Thùng", isBase: false, toBaseFactor: 24 },
+    ],
+  };
+
+  const units = getIngredientUnits(10, "lon", unitOptions);
+  assert.equal(units.length, 3);
+  assert.equal(units[0]?.label, "Thùng");
+  assert.equal(units[1]?.label, "Lốc");
+  assert.equal(units[2]?.label, "lon");
+
+  const fallback = getIngredientUnits(99, "kg", unitOptions);
+  assert.equal(fallback.length, 1);
+  assert.equal(fallback[0]?.label, "kg");
+  assert.equal(fallback[0]?.isBase, true);
+});
+
+test("formatPackSpecification displays all active package units and base unit fallback", () => {
+  const multiUnits: StocktakeCountUnitOption[] = [
+    { unitId: 1, code: "lon", label: "lon", isBase: true, toBaseFactor: 1 },
+    { unitId: 2, code: "loc", label: "Lốc", isBase: false, toBaseFactor: 6 },
+    { unitId: 3, code: "thung", label: "Thùng", isBase: false, toBaseFactor: 24 },
+  ];
+  assert.equal(
+    formatPackSpecification(multiUnits, "lon"),
+    "1 Lốc = 6 lon, 1 Thùng = 24 lon",
+  );
+
+  const singleUnit: StocktakeCountUnitOption[] = [
+    { unitId: 1, code: "kg", label: "kg", isBase: true, toBaseFactor: 1 },
+  ];
+  assert.equal(formatPackSpecification(singleUnit, "kg"), "kg");
+});
+
+test("multi-unit reconciliation quantity breakdown formats cleanly", () => {
+  const units: StocktakeCountUnitOption[] = [
+    { unitId: 1, code: "lon", label: "lon", isBase: true, toBaseFactor: 1 },
+    { unitId: 2, code: "loc", label: "Lốc", isBase: false, toBaseFactor: 6 },
+    { unitId: 3, code: "thung", label: "Thùng", isBase: false, toBaseFactor: 24 },
+  ];
+  const fmtUnits = toQuantityUnitFormatRows(units, "lon");
+
+  // 125 lon = 5 Thùng (120) + 0 Lốc + 5 lon
+  const { big, base } = formatQuantityUnitBreakdown(125, fmtUnits, formatQty);
+  assert.equal(big, "5 Thùng + 5 lon");
+  assert.equal(base, "125 lon");
+
+  const inLargest = formatQuantityInLargestUnits(125, fmtUnits, formatQty);
+  assert.equal(inLargest, "5 Thùng 5 lon");
 });
 
 test("stocktake print summary correctly counts matched vs variance lines", () => {

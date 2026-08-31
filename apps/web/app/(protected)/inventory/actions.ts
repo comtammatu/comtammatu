@@ -164,7 +164,7 @@ export async function fetchStocktakeDetail(
 
   const { data: lines, error: linesError } = await supabase
     .from("stocktake_lines")
-    .select("*, ingredients(id, name, category, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code)))")
+    .select("*, ingredients(id, name, category, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, to_base_factor, is_base, sort_order, is_active, units!ingredient_units_unit_tenant_fkey(code, name)))")
     .eq("session_id", parsedId.data)
     .eq("tenant_id", claims.tenant_id)
     .order("ingredients(name)");
@@ -175,20 +175,43 @@ export async function fetchStocktakeDetail(
   }
 
   const normalizedLines = (lines ?? []).map((line) => {
-    const ingredient = line.ingredients as {
+    const rawIng = line.ingredients as unknown as {
       id: number;
       name: string;
       category: string | null;
+      ingredient_units?: Array<{
+        unit_id: number;
+        to_base_factor: number;
+        is_base: boolean;
+        sort_order: number;
+        is_active: boolean;
+        units: { code: string | null; name: string | null } | null;
+      }>;
     } | null;
     const unit = getEmbeddedIngredientBaseUnitDisplayName(line.ingredients) ?? "";
+    const units = (rawIng?.ingredient_units ?? [])
+      .filter((u) => u.is_active && (u.units?.code ?? "") !== "")
+      .sort((a, b) => {
+        if (a.is_base !== b.is_base) return a.is_base ? -1 : 1;
+        return a.sort_order - b.sort_order;
+      })
+      .map((u) => ({
+        unitId: u.unit_id,
+        code: u.units?.code ?? "",
+        label: u.units?.name ?? u.units?.code ?? "",
+        isBase: u.is_base,
+        toBaseFactor: Number(u.to_base_factor ?? 0),
+      }));
+
     return {
       ...line,
-      ingredients: ingredient
+      ingredients: rawIng
         ? {
-            id: ingredient.id,
-            name: ingredient.name,
-            category: ingredient.category,
+            id: rawIng.id,
+            name: rawIng.name,
+            category: rawIng.category,
             unit,
+            units,
           }
         : null,
     };
@@ -200,6 +223,16 @@ export async function fetchStocktakeDetail(
     createdByIds,
   );
 
+  const unitOptionsByIngredient: Record<
+    number,
+    { unitId: number; code: string; label: string; isBase: boolean; toBaseFactor: number }[]
+  > = {};
+  for (const line of normalizedLines) {
+    if (line.ingredients?.id && line.ingredients.units) {
+      unitOptionsByIngredient[line.ingredients.id] = line.ingredients.units;
+    }
+  }
+
   return {
     success: true,
     data: {
@@ -210,6 +243,7 @@ export async function fetchStocktakeDetail(
           : STAFF_VI.long,
       },
       lines: normalizedLines,
+      unitOptionsByIngredient,
     },
   };
 }

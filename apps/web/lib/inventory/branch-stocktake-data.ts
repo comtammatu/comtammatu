@@ -278,6 +278,40 @@ export async function loadBranchStocktakeDetailData(
     }));
   }
 
+  const ingredientIds = [...new Set(lines.map((l) => l.ingredientId))];
+  const unitOptionsByIngredient: Record<number, BranchStocktakeCountUnit[]> = {};
+
+  if (ingredientIds.length > 0) {
+    const { data: unitRows } = await supabase
+      .from("ingredients")
+      .select(
+        "id, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, to_base_factor, is_base, sort_order, is_active, units!ingredient_units_unit_tenant_fkey(code, name))",
+      )
+      .eq("tenant_id", claims.tenant_id)
+      .in("id", ingredientIds);
+
+    for (const row of (unitRows ?? []) as unknown as UnitRow[]) {
+      unitOptionsByIngredient[row.id] = (row.ingredient_units ?? [])
+        .filter((unit) => (unit.units?.code ?? "") !== "")
+        .sort((left, right) => {
+          if (left.is_base !== right.is_base) return left.is_base ? -1 : 1;
+          return left.sort_order - right.sort_order;
+        })
+        .map((unit) => ({
+          unitId: unit.unit_id,
+          code: unit.units?.code ?? "",
+          label: unit.units?.name ?? unit.units?.code ?? "",
+          isBase: unit.is_base,
+          toBaseFactor: Number(unit.to_base_factor ?? 0),
+        }));
+    }
+  }
+
+  const linesWithUnits = lines.map((l) => ({
+    ...l,
+    units: unitOptionsByIngredient[l.ingredientId] ?? [],
+  }));
+
   const names = await resolveProfileDisplayNames(supabase, [
     session.created_by,
   ]);
@@ -297,9 +331,10 @@ export async function loadBranchStocktakeDetailData(
       blindMode: session.blind_mode === true,
       currentRound: Number(session.current_round ?? 1),
     },
-    lines,
+    lines: linesWithUnits,
     canCancel,
     canComplete,
+    unitOptionsByIngredient,
   };
 }
 

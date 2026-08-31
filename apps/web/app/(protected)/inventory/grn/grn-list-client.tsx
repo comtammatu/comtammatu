@@ -439,26 +439,26 @@ export function GrnListClient({
       }
       filters={
         isUnpricedQueue ? undefined : (
-        <>
-          <BusinessDatePicker
-            aria-label={`${dateRangeScopeLabel} · ${grnCopy.dateFrom}`}
-            value={dateFrom}
-            onValueChange={(value) => {
-              setDateFrom(value);
-              navigate({ dateFrom: value || null, page: null });
-            }}
-            className="w-36"
-          />
-          <BusinessDatePicker
-            aria-label={`${dateRangeScopeLabel} · ${grnCopy.dateTo}`}
-            value={dateTo}
-            onValueChange={(value) => {
-              setDateTo(value);
-              navigate({ dateTo: value || null, page: null });
-            }}
-            className="w-36"
-          />
-        </>
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center [&>*]:w-full sm:[&>*]:w-36">
+            <BusinessDatePicker
+              aria-label={`${dateRangeScopeLabel} · ${grnCopy.dateFrom}`}
+              value={dateFrom}
+              onValueChange={(value) => {
+                setDateFrom(value);
+                navigate({ dateFrom: value || null, page: null });
+              }}
+              className="w-36"
+            />
+            <BusinessDatePicker
+              aria-label={`${dateRangeScopeLabel} · ${grnCopy.dateTo}`}
+              value={dateTo}
+              onValueChange={(value) => {
+                setDateTo(value);
+                navigate({ dateTo: value || null, page: null });
+              }}
+              className="w-36"
+            />
+          </div>
         )
       }
       reset={

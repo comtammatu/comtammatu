@@ -35,7 +35,10 @@ import {
 import { AuditHistoryList } from "@/components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
 import { WasteReasonDropdown } from "../../_components/waste-reason-dropdown";
-import { StocktakePrintDialog } from "@/components/inventory/stocktake-print-dialog";
+import {
+  StocktakePrintDialog,
+  type StocktakeCountUnitOption,
+} from "@/components/inventory/stocktake-print-dialog";
 import { WASTE_REASON_LABELS_VI } from "@comtammatu/shared/labels";
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import {
@@ -44,6 +47,11 @@ import {
   fetchStocktakeDetail,
   updateStocktakeLine,
 } from "../../actions";
+
+import {
+  formatMultiUnitBreakdown,
+  type CountUnitItem,
+} from "@lib/inventory/multiunit-count";
 
 /* ─── Types ─── */
 
@@ -91,20 +99,24 @@ interface StocktakeLine {
     name: string;
     unit: string;
     category: string | null;
+    units?: CountUnitItem[];
   } | null;
 }
+
 
 type WasteReason = keyof typeof WASTE_REASON_LABELS_VI;
 
 export function StocktakeDetailClient({
   session: initialSession,
   lines: initialLines,
+  unitOptionsByIngredient: initialUnitOptionsByIngredient = {},
   routeBase = "/inventory/stocktake",
   reportsBasePath = "/inventory/reports",
   auditLogs = [],
 }: {
   session: StocktakeSession;
   lines: StocktakeLine[];
+  unitOptionsByIngredient?: Record<number, StocktakeCountUnitOption[]>;
   routeBase?: string;
   inventoryBasePath?: string;
   reportsBasePath?: string;
@@ -113,6 +125,9 @@ export function StocktakeDetailClient({
   const [isPending, startTransition] = useTransition();
   const [session, setSession] = useState<StocktakeSession>(initialSession);
   const [lines, setLines] = useState<StocktakeLine[]>(initialLines);
+  const [unitOptionsByIngredient, setUnitOptionsByIngredient] = useState<
+    Record<number, StocktakeCountUnitOption[]>
+  >(initialUnitOptionsByIngredient);
 
   const statusBadge = getStatusBadgeMeta("inventory", session.status);
   const statusLabel = statusBadge.label;
@@ -144,9 +159,13 @@ export function StocktakeDetailClient({
         const d = res.data as {
           session: StocktakeSession;
           lines: StocktakeLine[];
+          unitOptionsByIngredient?: Record<number, StocktakeCountUnitOption[]>;
         };
         setSession(d.session);
         setLines(d.lines);
+        if (d.unitOptionsByIngredient) {
+          setUnitOptionsByIngredient(d.unitOptionsByIngredient);
+        }
       }
     });
   }, [session.id, startTransition]);
@@ -286,7 +305,11 @@ export function StocktakeDetailClient({
 
   const stocktakeActions = (
     <div className="flex flex-wrap items-center gap-2">
-      <StocktakePrintDialog session={printSession} lines={printLines} />
+      <StocktakePrintDialog
+        session={printSession}
+        lines={printLines}
+        unitOptionsByIngredient={unitOptionsByIngredient}
+      />
       {session.status === "in_progress" ? (
         <>
           <Button
@@ -544,7 +567,10 @@ function CountingPhase({
       header: tTerm("systemQuantity"),
       render: (line) => (
         <span className="font-mono tabular-nums text-sm">
-          {line.system_quantity}
+          {formatMultiUnitBreakdown(line.system_quantity, line.ingredients?.units, {
+            fallbackUnit: line.ingredients?.unit,
+            showBaseSecondary: true,
+          })}
         </span>
       ),
     },
@@ -552,8 +578,13 @@ function CountingPhase({
       key: "counted",
       header: tTerm("countedQuantity"),
       render: (line) => (
-        <span className="font-mono tabular-nums text-sm">
-          {line.counted_quantity ?? "—"}
+        <span className="font-mono tabular-nums text-sm font-semibold">
+          {line.counted_quantity == null
+            ? "—"
+            : formatMultiUnitBreakdown(line.counted_quantity, line.ingredients?.units, {
+                fallbackUnit: line.ingredients?.unit,
+                showBaseSecondary: true,
+              })}
         </span>
       ),
     },
@@ -571,11 +602,16 @@ function CountingPhase({
             className={cn(
               "font-mono tabular-nums text-sm",
               variance != null && variance !== 0
-                ? "text-warning"
+                ? "text-warning font-semibold"
                 : "text-muted-foreground",
             )}
           >
-            {variance == null ? "—" : variance}
+            {variance == null
+              ? "—"
+              : formatMultiUnitBreakdown(variance, line.ingredients?.units, {
+                  fallbackUnit: line.ingredients?.unit,
+                  signed: true,
+                })}
           </span>
         );
       },
@@ -689,7 +725,10 @@ function ResultsPhase({
       header: stocktakeDetailCopy.results.systemQty,
       render: (line) => (
         <span className="text-sm font-mono tabular-nums">
-          {line.system_quantity}
+          {formatMultiUnitBreakdown(line.system_quantity, line.ingredients?.units, {
+            fallbackUnit: line.ingredients?.unit,
+            showBaseSecondary: true,
+          })}
         </span>
       ),
     },
@@ -697,8 +736,13 @@ function ResultsPhase({
       key: "counted",
       header: stocktakeDetailCopy.results.countedQty,
       render: (line) => (
-        <span className="text-sm font-mono tabular-nums">
-          {line.counted_quantity ?? inventoryCommon.noValue}
+        <span className="text-sm font-mono tabular-nums font-semibold">
+          {line.counted_quantity == null
+            ? inventoryCommon.noValue
+            : formatMultiUnitBreakdown(line.counted_quantity, line.ingredients?.units, {
+                fallbackUnit: line.ingredients?.unit,
+                showBaseSecondary: true,
+              })}
         </span>
       ),
     },
@@ -719,8 +763,10 @@ function ResultsPhase({
               getVarianceColor(line),
             )}
           >
-            {variance > 0 && "+"}
-            {variance}
+            {formatMultiUnitBreakdown(variance, line.ingredients?.units, {
+              fallbackUnit: line.ingredients?.unit,
+              signed: true,
+            })}
           </span>
         );
       },
@@ -740,6 +786,7 @@ function ResultsPhase({
       ),
     },
   ];
+
 
   const legend = (
     <div className="flex flex-wrap items-center gap-2 text-xs">

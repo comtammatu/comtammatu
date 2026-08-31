@@ -7,27 +7,19 @@ import {
 } from "lucide-react";
 import { Progress } from "@comtammatu/ui/components/progress";
 import { Item, ItemGroup } from "@comtammatu/ui/components/item";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
 import { cn } from "@comtammatu/ui";
-import { NumberPadSheet } from "@/components/form/number-pad-sheet";
+import { MultiUnitNumberPadSheet } from "@/components/form/multi-unit-number-pad-sheet";
 import { messages } from "@lib/messages";
 import type {
   BranchStocktakeCountLine,
   BranchStocktakeCountUnit,
   DraftCounts,
 } from "@lib/inventory/stocktake-model";
-
 import {
-  resolvePackLooseUnits,
-  splitToPackLoose,
-  formatPackLooseQuantity,
-} from "@lib/inventory/unit-options";
+  normalizeCountUnitLadder,
+  normalizeEnteredUnitValues,
+  formatMultiUnitBreakdown,
+} from "@lib/inventory/multiunit-count";
 
 interface BranchStocktakeCountListProps {
   lines: BranchStocktakeCountLine[];
@@ -47,24 +39,6 @@ function isCounted(entry: DraftCounts[string] | undefined): boolean {
   return typeof entry?.qty === "number" && Number.isFinite(entry.qty);
 }
 
-function resolveUnitId(
-  ingredientId: number,
-  unitOptions: BranchStocktakeCountUnit[],
-  unitByIngredient?: Record<number, number>,
-): number | null {
-  return (
-    unitByIngredient?.[ingredientId] ??
-    unitOptions.reduce<BranchStocktakeCountUnit | null>(
-      (best, option) =>
-        best == null || option.toBaseFactor > best.toBaseFactor ? option : best,
-      null,
-    )?.unitId ??
-    unitOptions.find((option) => option.isBase)?.unitId ??
-    unitOptions[0]?.unitId ??
-    null
-  );
-}
-
 export function BranchStocktakeCountList({
   lines,
   counts,
@@ -73,9 +47,7 @@ export function BranchStocktakeCountList({
   currentRound,
   unitLabelByIngredient,
   unitPreviewByIngredient,
-  unitOptionsByIngredient,
-  unitByIngredient,
-  onUnitChange,
+  unitOptionsByIngredient = {},
   chrome,
 }: BranchStocktakeCountListProps) {
   const copy = messages.inventory.stocktake.countNative;
@@ -99,14 +71,36 @@ export function BranchStocktakeCountList({
       : (lines.find((line) => line.ingredientId === sheetIngredientId) ?? null);
   const sheetEntry =
     sheetLine != null ? counts[String(sheetLine.ingredientId)] : undefined;
-  const sheetUnitLabel =
-    sheetLine != null
-      ? (unitLabelByIngredient[sheetLine.ingredientId] ?? sheetLine.unit)
-      : undefined;
+  const sheetLadder = sheetLine
+    ? normalizeCountUnitLadder(
+        unitOptionsByIngredient[sheetLine.ingredientId] ?? [
+          {
+            unitId: 0,
+            code: sheetLine.unit,
+            label: sheetLine.unit,
+            isBase: true,
+            toBaseFactor: 1,
+          },
+        ],
+      )
+    : [];
 
-  function handleSheetConfirm(value: number) {
+  function handleSheetConfirm(unitValues: Record<number, number>) {
     if (sheetLine == null || !editable) return;
-    onCountChange(sheetLine.ingredientId, value);
+    const ladder = normalizeCountUnitLadder(
+      unitOptionsByIngredient[sheetLine.ingredientId] ?? [
+        {
+          unitId: 0,
+          code: sheetLine.unit,
+          label: sheetLine.unit,
+          isBase: true,
+          toBaseFactor: 1,
+        },
+      ],
+    );
+    const { totalBaseQty } = normalizeEnteredUnitValues(unitValues, ladder);
+    onCountChange(sheetLine.ingredientId, totalBaseQty > 0 ? totalBaseQty : null);
+    setSheetIngredientId(null);
   }
 
   return (
@@ -137,37 +131,24 @@ export function BranchStocktakeCountList({
         {lines.map((line) => {
           const counted = isCounted(counts[String(line.ingredientId)]);
           const qty = counts[String(line.ingredientId)]?.qty;
-          const unitOptions =
-            unitOptionsByIngredient?.[line.ingredientId] ?? [];
-          const packLoose = resolvePackLooseUnits(unitOptions);
-          const unitId = resolveUnitId(
-            line.ingredientId,
-            unitOptions,
-            unitByIngredient,
+          const rawOptions = unitOptionsByIngredient[line.ingredientId] ?? [];
+          const ladder = normalizeCountUnitLadder(
+            rawOptions.length > 0
+              ? rawOptions
+              : [
+                  {
+                    unitId: 0,
+                    code: line.unit,
+                    label: line.unit,
+                    isBase: true,
+                    toBaseFactor: 1,
+                  },
+                ],
           );
-          const selectedUnit =
-            unitOptions.find((opt) => opt.unitId === unitId) ?? unitOptions[0];
-          const unitLabel =
-            unitLabelByIngredient[line.ingredientId] ?? line.unit;
 
-          const selectedToBase = selectedUnit?.toBaseFactor ?? 1;
-          const looseToBase = packLoose?.looseUnit.toBaseFactor ?? 1;
-          const totalLoose =
-            qty != null && packLoose
-              ? Math.round(((qty * selectedToBase) / looseToBase) * 1000) / 1000
-              : 0;
-          const { packQty, looseQty } = packLoose
-            ? splitToPackLoose(totalLoose, packLoose.packFactor)
-            : { packQty: 0, looseQty: 0 };
-
-          const dualPreview =
-            counted && packLoose && packQty > 0
-              ? `${formatPackLooseQuantity(
-                  packQty,
-                  packLoose.packUnit.label,
-                  looseQty,
-                  packLoose.looseUnit.label,
-                )} (${qty} ${unitLabel})`
+          const multiUnitPreview =
+            counted && qty != null
+              ? formatMultiUnitBreakdown(qty, ladder, { showBaseSecondary: true })
               : null;
 
           return (
@@ -179,7 +160,7 @@ export function BranchStocktakeCountList({
                     type="button"
                     disabled={!editable}
                     onClick={() => setSheetIngredientId(line.ingredientId)}
-                    className="flex w-full items-center gap-3 text-left"
+                    className="flex w-full items-center gap-3 text-left touch-manipulation"
                   />
                 }
               >
@@ -189,14 +170,22 @@ export function BranchStocktakeCountList({
                   <IconCircle className="size-5 shrink-0 text-muted-foreground" />
                 )}
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium">
+                  <div className="truncate text-sm font-semibold">
                     {line.ingredientName}
                   </div>
-                  {unitPreviewByIngredient[line.ingredientId] ? (
+                  {multiUnitPreview ? (
+                    <div className="truncate font-mono text-xs font-semibold text-primary">
+                      {multiUnitPreview}
+                    </div>
+                  ) : unitPreviewByIngredient[line.ingredientId] ? (
                     <div className="truncate text-xs text-muted-foreground">
                       {unitPreviewByIngredient[line.ingredientId]}
                     </div>
-                  ) : null}
+                  ) : (
+                    <div className="truncate text-xs text-muted-foreground">
+                      {ladder.map((u) => u.label || u.code).join(" · ")}
+                    </div>
+                  )}
                 </div>
                 <span
                   className={cn(
@@ -207,60 +196,27 @@ export function BranchStocktakeCountList({
                   )}
                 >
                   {counted && qty != null
-                    ? dualPreview || `${qty} ${unitLabel}`
+                    ? multiUnitPreview || `${qty} ${unitLabelByIngredient[line.ingredientId] ?? line.unit}`
                     : copy.countTapToEnter}
                 </span>
               </Item>
-              {onUnitChange && unitOptions.length > 1 && unitId != null ? (
-                <Select
-                  value={String(unitId)}
-                  onValueChange={(value) =>
-                    onUnitChange(line.ingredientId, Number(value))
-                  }
-                  disabled={!editable}
-                >
-                  <SelectTrigger
-                    aria-label={copy.countUnitAria}
-                    size="touch"
-                    className="w-full"
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {unitOptions.map((option) => (
-                      <SelectItem
-                        key={option.unitId}
-                        value={String(option.unitId)}
-                        size="touch"
-                      >
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : null}
             </div>
           );
         })}
       </ItemGroup>
 
-      <NumberPadSheet
-        open={sheetLine != null}
-        onOpenChange={(next) => {
-          if (!next) setSheetIngredientId(null);
-        }}
-        title={
-          sheetLine
-            ? `${sheetLine.ingredientName}${sheetUnitLabel ? ` · ${sheetUnitLabel}` : ""}`
-            : ""
-        }
-        suffix={sheetUnitLabel}
-        initialValue={
-          sheetLine != null && isCounted(sheetEntry) ? sheetEntry?.qty : null
-        }
-        onConfirm={handleSheetConfirm}
-        allowDecimal
-      />
+      {sheetLine ? (
+        <MultiUnitNumberPadSheet
+          open={sheetLine != null}
+          onOpenChange={(next) => {
+            if (!next) setSheetIngredientId(null);
+          }}
+          title={sheetLine.ingredientName}
+          units={sheetLadder}
+          initialBaseQty={sheetEntry?.qty ?? null}
+          onConfirm={handleSheetConfirm}
+        />
+      ) : null}
     </div>
   );
 }

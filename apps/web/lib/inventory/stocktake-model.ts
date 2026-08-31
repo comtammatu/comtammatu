@@ -31,6 +31,7 @@ export type BranchStocktakeLine = {
   needsRecount: boolean;
   systemQuantity: number | null;
   variance: number | null;
+  units?: BranchStocktakeCountUnit[];
 };
 
 export type BranchStocktakeDetail = {
@@ -41,7 +42,9 @@ export type BranchStocktakeDetail = {
   lines: BranchStocktakeLine[];
   canCancel: boolean;
   canComplete: boolean;
+  unitOptionsByIngredient?: Record<number, BranchStocktakeCountUnit[]>;
 };
+
 
 export type BranchStocktakeCountUnit = {
   unitId: number;

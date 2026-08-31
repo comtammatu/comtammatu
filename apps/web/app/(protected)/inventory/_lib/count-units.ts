@@ -39,8 +39,18 @@ export function getDefaultCountUnit(
 }
 
 export {
+  normalizeCountUnitLadder,
+  combineMultiUnitQuantities,
+  decomposeBaseQuantityToUnits,
+  normalizeEnteredUnitValues,
+  formatMultiUnitBreakdown,
+  type CountUnitItem,
+} from "@lib/inventory/multiunit-count";
+
+export {
   resolvePackLooseUnits as resolveCountPackLooseUnits,
   combinePackLooseQuantity as combineCountPackLooseQuantity,
   splitToPackLoose as splitCountToPackLoose,
   formatPackLooseQuantity as formatCountPackLooseQuantity,
 } from "@lib/inventory/unit-options";
+

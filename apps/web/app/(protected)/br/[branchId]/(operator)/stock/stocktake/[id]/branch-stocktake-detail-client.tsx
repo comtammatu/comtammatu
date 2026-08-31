@@ -40,14 +40,15 @@ import {
 } from "@lib/inventory/stocktake-model";
 import { messages } from "@lib/messages";
 import { formatVNDateTime } from "@comtammatu/shared/time";
-import { formatQty } from "@lib/inventory/format";
 import {
   cancelStocktake,
   completeStocktake,
 } from "@/(protected)/inventory/actions";
 import { StocktakePrintDialog } from "@/components/inventory/stocktake-print-dialog";
+import { formatMultiUnitBreakdown } from "@lib/inventory/multiunit-count";
 
 const stocktakeCopy = messages.inventory.stocktake;
+
 
 
 export function BranchStocktakeDetailClient({
@@ -151,9 +152,8 @@ export function BranchStocktakeDetailClient({
                       {line.ingredientName}
                     </ItemTitle>
                     <ItemDescription className="line-clamp-none text-xs">
-                      Hệ thống {formatQty(line.systemQuantity ?? 0)} {line.unit}{" "}
-                      · thực đếm {formatQty(line.countedQuantity ?? 0)}{" "}
-                      {line.unit}
+                      Hệ thống {formatMultiUnitBreakdown(line.systemQuantity, line.units, { fallbackUnit: line.unit, showBaseSecondary: true })}{" "}
+                      · thực đếm {formatMultiUnitBreakdown(line.countedQuantity, line.units, { fallbackUnit: line.unit, showBaseSecondary: true })}
                     </ItemDescription>
                   </ItemContent>
                   <Badge
@@ -168,8 +168,7 @@ export function BranchStocktakeDetailClient({
                     }
                     className="shrink-0 font-mono tabular-nums"
                   >
-                    {variance > 0 ? "+" : ""}
-                    {formatQty(variance)}
+                    {formatMultiUnitBreakdown(variance, line.units, { fallbackUnit: line.unit, signed: true })}
                   </Badge>
                 </div>
                 {line.varianceReason ? (
@@ -203,7 +202,7 @@ export function BranchStocktakeDetailClient({
                   <ItemDescription className="line-clamp-none text-xs">
                     {line.countedQuantity === null
                       ? "Chưa đếm"
-                      : `Đã đếm ${formatQty(line.countedQuantity)} ${line.unit}`}
+                      : `Đã đếm ${formatMultiUnitBreakdown(line.countedQuantity, line.units, { fallbackUnit: line.unit, showBaseSecondary: true })}`}
                   </ItemDescription>
                 </ItemContent>
                 <ItemActions className="self-center">
@@ -265,6 +264,7 @@ export function BranchStocktakeDetailClient({
           <StocktakePrintDialog
             session={printSession}
             lines={printLines}
+            unitOptionsByIngredient={data.unitOptionsByIngredient}
             buttonSize="touch"
             buttonVariant="outline"
             className={

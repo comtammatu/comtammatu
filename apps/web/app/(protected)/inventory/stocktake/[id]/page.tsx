@@ -33,7 +33,11 @@ export async function StocktakeDetailPageContent({
     notFound();
   }
 
-  const { session: stocktakeSession, lines } = result.data as {
+  const {
+    session: stocktakeSession,
+    lines,
+    unitOptionsByIngredient = {},
+  } = result.data as {
     session: {
       id: number;
       branch_id: number;
@@ -63,6 +67,7 @@ export async function StocktakeDetailPageContent({
         category: string | null;
       } | null;
     }>;
+    unitOptionsByIngredient?: Record<number, import("@/components/inventory/stocktake-print-dialog").StocktakeCountUnitOption[]>;
   };
   const sp = searchParams ? await searchParams : {};
   const requestedBranchId = routeBranchId ?? parseBranchIdParam(sp.branch);
@@ -94,6 +99,7 @@ export async function StocktakeDetailPageContent({
     <StocktakeDetailClient
       session={stocktakeSession}
       lines={lines}
+      unitOptionsByIngredient={unitOptionsByIngredient}
       routeBase={routeBase}
       reportsBasePath={reportsBasePath}
       auditLogs={auditLogs}

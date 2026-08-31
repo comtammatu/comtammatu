@@ -171,11 +171,13 @@ export function BranchStocktakeCountClient({
     const payload = currentRoundLines.flatMap((line) => {
       const entry = counts[String(line.ingredientId)];
       if (typeof entry?.qty !== "number") return [];
+      const options = data.unitOptionsByIngredient[line.ingredientId] ?? [];
+      const baseUnit = options.find((opt) => opt.isBase) ?? options[0];
       return [
         {
           ingredient_id: line.ingredientId,
           counted_quantity: entry.qty,
-          entry_unit_id: unitByIngredient[line.ingredientId] ?? null,
+          entry_unit_id: baseUnit?.unitId ?? null,
         },
       ];
     });

@@ -160,7 +160,7 @@ export function ProductionRunsClient({ initial }: ProductionRunsClientProps) {
         </InputGroup>
       }
       reset={
-        <Badge variant="secondary">
+        <Badge variant="secondary" className="shrink-0 whitespace-nowrap text-xs">
           {`${formatCount(filteredItems.length)} / ${formatCount(items.length)} ${INVENTORY_VI.productionOrdersMetricLabel}`}
         </Badge>
       }

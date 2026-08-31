@@ -170,11 +170,17 @@ export function StocktakeCountClient({
   function submit() {
     const payload = Object.entries(counts)
       .filter(([, v]) => typeof v?.qty === "number")
-      .map(([ingredientId, v]) => ({
-        ingredient_id: Number(ingredientId),
-        counted_quantity: v.qty,
-        entry_unit_id: unitByIngredient[Number(ingredientId)] ?? null,
-      }));
+      .map(([ingredientId, v]) => {
+        const id = Number(ingredientId);
+        const options = unitOptionsByIngredient[id] ?? [];
+        const baseUnit = options.find((opt) => opt.isBase) ?? options[0];
+        return {
+          ingredient_id: id,
+          counted_quantity: v.qty,
+          entry_unit_id: baseUnit?.unitId ?? null,
+        };
+      });
+
 
     if (payload.length === 0) {
       toast.error(toastNoCountsInput);

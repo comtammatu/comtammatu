@@ -951,7 +951,7 @@ export function StockClient({
           {actionPermissions.canEditIngredient ? (
             <Button
               type="button"
-              size={controlSize === "touch" ? "touch" : "default"}
+              size={controlSize === "touch" ? "default" : "sm"}
               variant="outline"
               onClick={() => void openEditIngredient(item.id)}
             >
@@ -962,7 +962,7 @@ export function StockClient({
           {actionPermissions.canCreateIssue ? (
             <Button
               type="button"
-              size={controlSize === "touch" ? "touch" : "default"}
+              size={controlSize === "touch" ? "default" : "sm"}
               variant="outline"
               onClick={() =>
                 setQuickIssueTarget({
@@ -976,7 +976,7 @@ export function StockClient({
           ) : null}
           {actionPermissions.canCreateStocktake && actionHrefs.stocktake ? (
             <Button
-              size={controlSize === "touch" ? "touch" : "default"}
+              size={controlSize === "touch" ? "default" : "sm"}
               variant="outline"
               render={<Link href={actionHrefs.stocktake} />}
             >
@@ -986,9 +986,8 @@ export function StockClient({
           {actionPermissions.canAdjustException ? (
             <Button
               type="button"
-              size={controlSize === "touch" ? "touch" : "default"}
+              size={controlSize === "touch" ? "default" : "sm"}
               variant="destructive"
-              className="col-span-2"
               onClick={() => setAdjustTarget(item)}
               aria-label={stockCopy.actions.adjustExceptionAria(item.name)}
             >
@@ -1043,12 +1042,12 @@ export function StockClient({
       <AppPageHeader
         title={stockCopy.title}
         actions={
-          <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
+          <div className="flex w-full flex-wrap items-center justify-start gap-1.5 sm:w-auto sm:justify-end sm:gap-2">
             <SmartReorderSheet
               branchId={branchId}
               items={reorderSuggestions}
               trigger={
-                <Button variant="default" size="field" className="gap-1.5 font-medium shadow-xs">
+                <Button variant="default" size="field" className="w-full gap-1.5 font-medium shadow-xs sm:w-auto">
                   <IconSparkles className="size-4" />
                   <span>{INVENTORY_VI.smartReorderOpenBtn}</span>
                   {shortageCount > 0 ? (
@@ -1079,14 +1078,14 @@ export function StockClient({
         className={cn(
           "grid gap-3",
           hasValuation
-            ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-5"
+            ? "grid-cols-2 lg:grid-cols-5"
             : "grid-cols-2 lg:grid-cols-4",
         )}
       >
         {hasValuation ? (
           <Item
             variant="outline"
-            className="flex flex-col justify-between p-3 text-left border-border bg-card"
+            className="col-span-2 flex flex-col justify-between p-3 text-left border-border bg-card lg:col-span-1"
           >
             <div className="flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               <span>{stockCopy.metrics.selectedWarehouse}</span>

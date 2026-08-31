@@ -12,6 +12,11 @@ import { formatVNDateTime, getVNDateString } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
 import { printDocumentElement } from "@lib/printing/print-document";
 import { formatQty } from "@lib/inventory/format";
+import {
+  formatQuantityInLargestUnits,
+  formatQuantityUnitBreakdown,
+  type QuantityUnitFormatRow,
+} from "@lib/inventory/quantity-unit-format";
 
 const copy = messages.inventory.stocktakePrint;
 
@@ -65,6 +70,78 @@ interface StocktakePrintDialogProps {
 
 function getSessionCode(session: StocktakePrintSession): string {
   return session.sessionNumber?.trim() || `KK-${session.id}`;
+}
+
+export function toQuantityUnitFormatRows(
+  units: StocktakeCountUnitOption[] | undefined,
+  baseUnitCode: string,
+): QuantityUnitFormatRow[] {
+  const active = (units ?? []).filter(
+    (u) => (u.code || u.label) && Number(u.toBaseFactor) > 0,
+  );
+  if (active.length === 0) {
+    return [
+      {
+        unit_code: baseUnitCode,
+        to_base_factor: 1,
+        is_base: true,
+        is_active: true,
+        sort_order: 0,
+      },
+    ];
+  }
+  return active.map((u, idx) => ({
+    unit_code: u.label?.trim() || u.code,
+    to_base_factor: u.toBaseFactor,
+    is_base: u.isBase,
+    is_active: true,
+    sort_order: idx,
+  }));
+}
+
+export function getIngredientUnits(
+  ingredientId: number,
+  baseUnitCode: string,
+  unitOptionsByIngredient: Record<number, StocktakeCountUnitOption[]>,
+): StocktakeCountUnitOption[] {
+  const options = unitOptionsByIngredient[ingredientId] ?? [];
+  if (options.length === 0) {
+    return [
+      {
+        unitId: 0,
+        code: baseUnitCode,
+        label: baseUnitCode,
+        isBase: true,
+        toBaseFactor: 1,
+      },
+    ];
+  }
+  return [...options].sort((a, b) => {
+    if (a.isBase !== b.isBase) return a.isBase ? 1 : -1;
+    return b.toBaseFactor - a.toBaseFactor;
+  });
+}
+
+export function formatPackSpecification(
+  units: StocktakeCountUnitOption[],
+  baseUnitCode: string,
+): string {
+  const nonBaseUnits = units.filter((u) => !u.isBase && u.toBaseFactor > 1);
+  if (nonBaseUnits.length === 0) return baseUnitCode || "—";
+  return nonBaseUnits
+    .map((u) => `1 ${u.label} = ${formatQty(u.toBaseFactor)} ${baseUnitCode}`)
+    .join(", ");
+}
+
+export function formatConversionHint(
+  units: StocktakeCountUnitOption[],
+  baseUnitCode: string,
+): string {
+  const nonBaseUnits = units.filter((u) => !u.isBase && u.toBaseFactor > 1);
+  if (nonBaseUnits.length === 0) return "—";
+  return nonBaseUnits
+    .map((u) => `1 ${u.label} = ${formatQty(u.toBaseFactor)} ${baseUnitCode}`)
+    .join(", ");
 }
 
 export function StocktakePrintDialog({
@@ -313,43 +390,33 @@ function A4DocumentView({
       {
         key: "pack",
         header: copy.colPackUnit,
-        className: "w-36 text-xs text-muted-foreground",
+        className: "w-44 text-xs text-muted-foreground",
         render: (line) => {
           const units = unitOptionsByIngredient[line.ingredientId] ?? [];
-          const nonBaseUnits = units.filter(
-            (u) => !u.isBase && u.toBaseFactor > 1,
-          );
-          return nonBaseUnits.length > 0
-            ? nonBaseUnits
-                .map((u) => `1 ${u.label} = ${u.toBaseFactor} ${line.unit}`)
-                .join(", ")
-            : "—";
+          return formatPackSpecification(units, line.unit);
         },
       },
       {
         key: "counted",
         header: copy.countedManualHeader(copy.colCountedQty),
-        className: "w-48",
+        className: "w-52",
         render: (line) => {
-          const units = unitOptionsByIngredient[line.ingredientId] ?? [];
-          const nonBaseUnits = units.filter(
-            (u) => !u.isBase && u.toBaseFactor > 1,
+          const units = getIngredientUnits(
+            line.ingredientId,
+            line.unit,
+            unitOptionsByIngredient,
           );
           return (
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between border-b border-dotted border-border pb-1 text-xs">
-                <span className="text-muted-foreground">
-                  {copy.quantityEntryLabel}
-                </span>
-                <span className="text-muted-foreground">
-                  {copy.countUnitEntry(
-                    nonBaseUnits.map((u) => u.label).join(" / ") || line.unit,
-                  )}
-                </span>
-              </div>
-              <div className="text-right text-xs text-muted-foreground">
-                = ............ {line.unit}
-              </div>
+            <div className="flex flex-col gap-1 text-xs">
+              {units.map((u) => (
+                <div
+                  key={u.unitId || u.code}
+                  className="flex items-center justify-between border-b border-dotted border-border/80 pb-0.5"
+                >
+                  <span className="font-mono text-muted-foreground">[ ........... ]</span>
+                  <span className="font-medium text-foreground">{u.label}</span>
+                </div>
+              ))}
             </div>
           );
         },
@@ -396,20 +463,66 @@ function A4DocumentView({
       {
         key: "system",
         header: copy.colSystemQty,
-        className: "w-24 text-right font-mono tabular-nums",
-        render: (line) => formatQty(line.systemQuantity ?? 0),
+        className: "w-28 text-right font-mono text-xs tabular-nums",
+        render: (line) => {
+          const units = unitOptionsByIngredient[line.ingredientId] ?? [];
+          const fmtUnits = toQuantityUnitFormatRows(units, line.unit);
+          const systemQty = line.systemQuantity ?? 0;
+          const { big, base } = formatQuantityUnitBreakdown(
+            systemQty,
+            fmtUnits,
+            formatQty,
+          );
+          if (big) {
+            return (
+              <div className="flex flex-col items-end">
+                <span className="font-semibold text-foreground">{big}</span>
+                <span className="text-3xs text-muted-foreground">({base})</span>
+              </div>
+            );
+          }
+          return (
+            <span>
+              {formatQty(systemQty)} {line.unit}
+            </span>
+          );
+        },
       },
       {
         key: "actual",
         header: copy.colActualQty,
-        className: "w-24 text-right font-mono font-semibold tabular-nums",
-        render: (line) =>
-          line.countedQuantity != null ? formatQty(line.countedQuantity) : "—",
+        className: "w-28 text-right font-mono text-xs font-semibold tabular-nums",
+        render: (line) => {
+          if (line.countedQuantity == null) return "—";
+          const units = unitOptionsByIngredient[line.ingredientId] ?? [];
+          const fmtUnits = toQuantityUnitFormatRows(units, line.unit);
+          const countedQty = line.countedQuantity;
+          const { big, base } = formatQuantityUnitBreakdown(
+            countedQty,
+            fmtUnits,
+            formatQty,
+          );
+          if (big) {
+            return (
+              <div className="flex flex-col items-end">
+                <span className="font-semibold text-foreground">{big}</span>
+                <span className="text-3xs text-muted-foreground font-normal">
+                  ({base})
+                </span>
+              </div>
+            );
+          }
+          return (
+            <span>
+              {formatQty(countedQty)} {line.unit}
+            </span>
+          );
+        },
       },
       {
         key: "variance",
         header: copy.colVariance,
-        className: "w-24 text-right font-mono font-semibold tabular-nums",
+        className: "w-28 text-right font-mono text-xs font-semibold tabular-nums",
         render: (line) => {
           const variance =
             line.variance ??
@@ -417,9 +530,20 @@ function A4DocumentView({
               ? line.countedQuantity - (line.systemQuantity ?? 0)
               : null);
           if (variance == null) return "—";
+          if (variance === 0) {
+            return <span className="text-muted-foreground">0 {line.unit}</span>;
+          }
+          const units = unitOptionsByIngredient[line.ingredientId] ?? [];
+          const fmtUnits = toQuantityUnitFormatRows(units, line.unit);
+          const formatted = formatQuantityInLargestUnits(
+            variance,
+            fmtUnits,
+            formatQty,
+          );
+          const sign = variance > 0 ? "+" : "";
           return (
-            <span>
-              {variance > 0 ? `+${formatQty(variance)}` : formatQty(variance)}
+            <span className={variance < 0 ? "text-destructive" : ""}>
+              {`${sign}${formatted}`}
             </span>
           );
         },
@@ -450,7 +574,7 @@ function A4DocumentView({
         },
       },
     ],
-    [],
+    [unitOptionsByIngredient],
   );
 
   return (
@@ -684,22 +808,35 @@ function ThermalDocumentView({
       {/* Items List */}
       <div className="flex flex-col gap-2">
         {lines.map((item, idx) => {
-          const units = unitOptionsByIngredient[item.ingredientId] ?? [];
-          const nonBaseUnits = units.filter(
-            (u) => !u.isBase && u.toBaseFactor > 1,
+          const packUnits = unitOptionsByIngredient[item.ingredientId] ?? [];
+          const units = getIngredientUnits(
+            item.ingredientId,
+            item.unit,
+            unitOptionsByIngredient,
           );
-          const conversionHint =
-            nonBaseUnits.length > 0
-              ? nonBaseUnits
-                  .map((u) => `1 ${u.label}=${u.toBaseFactor}${item.unit}`)
-                  .join(", ")
-              : null;
+          const conversionHint = formatPackSpecification(packUnits, item.unit);
+          const fmtUnits = toQuantityUnitFormatRows(packUnits, item.unit);
 
           const systemQty = item.systemQuantity ?? 0;
           const countedQty = item.countedQuantity;
           const variance =
             item.variance ??
             (countedQty != null ? countedQty - systemQty : null);
+
+          const systemFormatted = formatQuantityInLargestUnits(
+            systemQty,
+            fmtUnits,
+            formatQty,
+          );
+          const countedFormatted =
+            countedQty != null
+              ? formatQuantityInLargestUnits(countedQty, fmtUnits, formatQty)
+              : null;
+          const varianceFormatted =
+            variance != null
+              ? (variance > 0 ? "+" : "") +
+                formatQuantityInLargestUnits(variance, fmtUnits, formatQty)
+              : null;
 
           return (
             <div key={item.id ?? idx} className="text-2xs">
@@ -708,37 +845,44 @@ function ThermalDocumentView({
                   {idx + 1}. {item.ingredientName}
                 </span>
                 <span className="shrink-0 text-right">
-                  {isCountSheet ? (
-                    <span className="text-3xs">[.......] {item.unit}</span>
-                  ) : variance != null ? (
+                  {!isCountSheet && varianceFormatted != null ? (
                     <span className="font-mono tabular-nums">
-                      {variance > 0
-                        ? `+${formatQty(variance)}`
-                        : formatQty(variance)}{" "}
-                      {item.unit}
+                      {varianceFormatted}
                     </span>
-                  ) : (
-                    "—"
-                  )}
+                  ) : null}
                 </span>
               </div>
-              {conversionHint ? (
+              {conversionHint && conversionHint !== item.unit ? (
                 <p className="text-3xs text-muted-foreground">
                   ({conversionHint})
                 </p>
               ) : null}
-              {!isCountSheet && countedQty != null ? (
+              {isCountSheet ? (
+                <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-3xs font-mono">
+                  {units.map((u) => (
+                    <span
+                      key={u.unitId || u.code}
+                      className="inline-flex items-center gap-1"
+                    >
+                      <span>[.....]</span>
+                      <span className="font-medium text-foreground">
+                        {u.label}
+                      </span>
+                    </span>
+                  ))}
+                </div>
+              ) : countedQty != null ? (
                 <div className="flex justify-between text-3xs text-muted-foreground">
                   <span>
                     {copy.thermalSystemQuantity(
-                      formatQty(systemQty),
-                      item.unit,
+                      systemFormatted,
+                      "",
                     )}
                   </span>
                   <span>
                     {copy.thermalCountedQuantity(
-                      formatQty(countedQty),
-                      item.unit,
+                      countedFormatted ?? "",
+                      "",
                     )}
                   </span>
                 </div>

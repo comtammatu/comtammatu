@@ -547,12 +547,11 @@ export function TransferDetailClient({
           <AppSection
             className="min-w-0"
             title={tTerm("ingredientsList")}
-            description={copy.sectionLineCount(transfer.items.length)}
-            headerHint={
+            description={`${copy.sectionLineCount(transfer.items.length)} · ${
               isReceiveMode
                 ? copy.receiveInstructions
                 : copy.receivedReadonlyHint
-            }
+            }`}
             contentFlush
             contentScroll
             contentClassName="min-w-0"
@@ -674,7 +673,7 @@ export function TransferDetailClient({
           <AppDetailFooter
             sticky
             leading={
-              <>
+              <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
                 {transfer.status === "draft" ? (
                   <Button
                     type="button"
@@ -705,7 +704,7 @@ export function TransferDetailClient({
                     }))}
                   />
                 ) : null}
-              </>
+              </div>
             }
             trailing={
               <Button
@@ -732,7 +731,7 @@ export function TransferDetailClient({
         <AppDetailFooter
           sticky={false}
           leading={
-            <>
+            <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
               {transfer.status === "draft" ? (
                 <Button
                   type="button"
@@ -763,7 +762,7 @@ export function TransferDetailClient({
                   }))}
                 />
               ) : null}
-            </>
+            </div>
           }
           trailing={
             <Button
