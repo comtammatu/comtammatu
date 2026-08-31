@@ -65,6 +65,7 @@ import { PhotoUploadInput } from "@/components/form";
 import { AuditHistoryList } from "@/components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
 import { DocumentStockCorrectionDialog } from "../../_components/document-stock-correction-dialog";
+import { IssueA4PrintDialog } from "./issue-a4-print-dialog";
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import { formatDateTime, formatQty, formatVND } from "@lib/inventory/format";
 import { applyInventoryActionError } from "@lib/inventory/apply-inventory-action-error";
@@ -748,6 +749,18 @@ export function IssueDetailClient({
   const dialogFooter = (
     <div className="flex w-full flex-wrap items-center justify-between gap-2">
       <div className="flex flex-wrap items-center gap-2">
+        {!isDraft ? (
+          <IssueA4PrintDialog
+            issueNumber={issue.issue_number}
+            issueTypeLabel={surface.label}
+            statusLabel={statusLabel}
+            branchName={issueBranchName}
+            issuedAt={issue.issued_at}
+            notes={issue.notes}
+            lines={lines}
+            canViewMonetary={canViewMonetary}
+          />
+        ) : null}
         {canAdjustStock && !isDraft && lines.length > 0 ? (
           <DocumentStockCorrectionDialog
             documentType="issue"
@@ -879,6 +892,19 @@ export function IssueDetailClient({
           issueBranchName,
           issue.issued_at ? formatDateTime(issue.issued_at) : "—",
         )}
+        actions={!isDraft ? (
+          <IssueA4PrintDialog
+            issueNumber={issue.issue_number}
+            issueTypeLabel={surface.label}
+            statusLabel={statusLabel}
+            branchName={issueBranchName}
+            issuedAt={issue.issued_at}
+            notes={issue.notes}
+            lines={lines}
+            canViewMonetary={canViewMonetary}
+            buttonSize={isTouchLayout ? "touch" : "default"}
+          />
+        ) : undefined}
         breadcrumb={
           <AppBackLink href={listBasePath}>
             {tRoute("/inventory/consumption")}

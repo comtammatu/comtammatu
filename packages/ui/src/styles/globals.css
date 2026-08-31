@@ -717,10 +717,8 @@
   .stocktake-a4-sheet *,
   .stocktake-thermal-sheet,
   .stocktake-thermal-sheet *,
-  .grn-thermal-receipt,
-  .grn-thermal-receipt *,
-  .transfer-thermal-receipt,
-  .transfer-thermal-receipt * {
+  .inventory-a4-sheet,
+  .inventory-a4-sheet * {
     color: black !important;
     background: white !important;
     border-color: black !important;
@@ -728,6 +726,22 @@
     overflow: visible !important;
     max-width: none !important;
     box-shadow: none !important;
+  }
+  .inventory-a4-sheet {
+    width: 100% !important;
+    padding: 0 !important;
+    font-size: 10pt;
+  }
+  .inventory-a4-sheet thead {
+    display: table-header-group;
+  }
+  .inventory-a4-sheet tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .inventory-a4-avoid-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
   .stocktake-a4-sheet thead {
     display: table-header-group;
@@ -742,9 +756,7 @@
   }
   #pos-receipt,
   .stock-thermal-sheet,
-  .stocktake-thermal-sheet,
-  .grn-thermal-receipt,
-  .transfer-thermal-receipt {
+  .stocktake-thermal-sheet {
     page: thermal-receipt;
     width: 72mm !important;
     max-width: 72mm !important;

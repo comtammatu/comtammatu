@@ -67,7 +67,7 @@ import {
   OWNER_SHELL_BREAKPOINT,
   useIsMobile,
 } from "@comtammatu/ui/hooks/use-mobile";
-import { TransferThermalReceiptDialog } from "./views/transfer-thermal-receipt-dialog";
+import { TransferA4PrintDialog } from "./views/transfer-a4-print-dialog";
 const DocumentStockCorrectionDialog = dynamic(
   () =>
     import("../../_components/document-stock-correction-dialog").then(
@@ -687,7 +687,7 @@ export function TransferDetailClient({
                   </Button>
                 ) : null}
                 {transfer.status !== "draft" ? (
-                  <TransferThermalReceiptDialog transfer={transfer} />
+                  <TransferA4PrintDialog transfer={transfer} />
                 ) : null}
                 {transfer.status !== "draft" &&
                 correctionBranches.length > 0 &&
@@ -745,7 +745,7 @@ export function TransferDetailClient({
                 </Button>
               ) : null}
               {transfer.status !== "draft" ? (
-                <TransferThermalReceiptDialog transfer={transfer} />
+                <TransferA4PrintDialog transfer={transfer} />
               ) : null}
               {transfer.status !== "draft" &&
               correctionBranches.length > 0 &&
