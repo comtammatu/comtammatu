@@ -10,6 +10,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { AppBackLink, AppDetailFooter } from "@/components/surface";
 import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import {
+  buildInitialStocktakeCounts,
   type BranchStocktakeCountData,
   type BranchStocktakeCountUnit,
 } from "@lib/inventory/stocktake-model";
@@ -70,16 +71,10 @@ export function BranchStocktakeCountClient({
   const stocktakeBasePath = `/br/${data.branchId}/stock/stocktake`;
   const [lines] = useState(data.lines);
   const [counts, setCounts] = useState<DraftCounts>(() =>
-    Object.fromEntries(
-      data.lines
-        .filter(
-          (line) =>
-            line.roundNo === data.currentRound && line.countedQuantity !== null,
-        )
-        .map((line) => [
-          String(line.ingredientId),
-          { qty: line.countedQuantity ?? 0, savedAt: line.countedAt ?? "" },
-        ]),
+    buildInitialStocktakeCounts(
+      data.lines,
+      data.currentRound,
+      data.initialDraftCounts,
     ),
   );
   const [unitByIngredient, setUnitByIngredient] = useState<
@@ -109,6 +104,7 @@ export function BranchStocktakeCountClient({
     flush,
   } = useStocktakeDraftSaver({
     sessionId: data.sessionId,
+    roundNo: data.currentRound,
     counts,
     enabled: editable,
   });
@@ -207,10 +203,7 @@ export function BranchStocktakeCountClient({
   const remaining = currentRoundLines.length - countedLines;
   const safetyChrome = (
     <div className="flex flex-wrap items-center gap-2">
-      <StocktakeDraftSaverBadge
-        status={saveStatus}
-        lastSavedAt={lastSavedAt}
-      />
+      <StocktakeDraftSaverBadge status={saveStatus} lastSavedAt={lastSavedAt} />
     </div>
   );
 

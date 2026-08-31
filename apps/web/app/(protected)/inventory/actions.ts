@@ -5,44 +5,15 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import { INVENTORY_OPS_ROLES } from "@comtammatu/shared/auth";
 import { messages } from "@lib/messages";
 import { getAuthContext } from "./_lib/auth";
-import { withAction } from "@/_lib/with-action";
 import { resolveProfileDisplayNames } from "@/_lib/profile-display-names";
 import { STAFF_VI } from "@comtammatu/shared/messages";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
 import { getEmbeddedIngredientBaseUnitDisplayName } from "./_lib/unit-display";
-import { inventoryNonnegativeQuantitySchema } from "./_lib/inventory-quantity-schema";
 
 
 /* ─── Stocktake Schemas ─── */
 
 const stocktakeSessionIdSchema = z.coerce.number().int().positive();
-const stocktakeLineUpdateSchema = z.object({
-  lineId: z.coerce.number().int().positive(),
-  countedQuantity: inventoryNonnegativeQuantitySchema,
-  varianceReason: z.string().optional(),
-  reasonCode: z
-    .enum([
-      "spoiled",
-      "expired",
-      "dropped",
-      "overcook",
-      "burned",
-      "contaminated",
-      "quality_fail",
-      "found_missing",
-      "theft_suspected",
-      "customer_return",
-      "kds_cancel_mid_cook",
-      "kds_cancel_after_cook",
-      "discrepancy",
-      "loss",
-      "damaged",
-      "other",
-    ])
-    .nullable()
-    .optional(),
-});
-
 /* ─── fetchStocktakeSessions ─── */
 
 export async function fetchStocktakeSessions(
@@ -248,78 +219,6 @@ export async function fetchStocktakeDetail(
   };
 }
 
-/* ─── updateStocktakeLine ─── */
-
-export const updateStocktakeLine = withAction(
-  {
-    roles: INVENTORY_OPS_ROLES,
-    schema: stocktakeLineUpdateSchema,
-    requireBranchScope: true,
-  },
-  async (data, { supabase, claims }) => {
-    // Fetch the line to get session_id
-    const { data: line, error: lineError } = await supabase
-      .from("stocktake_lines")
-      .select("session_id")
-      .eq("id", data.lineId)
-      .eq("tenant_id", claims.tenant_id)
-      .single();
-
-    if (lineError || !line) {
-      if (lineError) {
-        console.error("[inventory/actions:updateStocktakeLine] Fetch line error:", lineError);
-      }
-      return { success: false, error: "Không thể cập nhật dòng kiểm kê." };
-    }
-
-    // Fetch session to verify status
-    const { data: session, error: sessionError } = await supabase
-      .from("stocktake_sessions")
-      .select("status, branch_id")
-      .eq("id", line.session_id)
-      .eq("tenant_id", claims.tenant_id)
-      .single();
-
-    if (sessionError || !session) {
-      if (sessionError) {
-        console.error("[inventory/actions:updateStocktakeLine] Fetch session error:", sessionError);
-      }
-      return { success: false, error: "Không thể cập nhật dòng kiểm kê." };
-    }
-
-    if (session.status !== "in_progress") {
-      return {
-        success: false,
-        error: "Phiên kiểm kê đã hoàn tất hoặc đã hủy.",
-      };
-    }
-
-    if (
-      claims.user_role === "branch_manager" &&
-      claims.branch_id !== session.branch_id
-    ) {
-      return { success: false, error: "Không có quyền truy cập chi nhánh này" };
-    }
-
-    const { error: updateError } = await supabase
-      .from("stocktake_lines")
-      .update({
-        counted_quantity: data.countedQuantity,
-        variance_reason: data.varianceReason ?? null,
-        reason_code: data.reasonCode ?? null,
-      })
-      .eq("id", data.lineId)
-      .eq("tenant_id", claims.tenant_id);
-
-    if (updateError) {
-      console.error("[inventory/actions:updateStocktakeLine] Update stocktake line error:", updateError);
-      return { success: false, error: "Không thể cập nhật dòng kiểm kê." };
-    }
-
-    return { success: true };
-  },
-);
-
 /* ─── completeStocktake ─── */
 
 export async function completeStocktake(
@@ -384,13 +283,6 @@ export async function completeStocktake(
       return {
         success: false,
         error: "Phiên kiểm kê không ở trạng thái đang thực hiện.",
-      };
-    }
-    if (msg.includes("stocktake_reason_code_required")) {
-      return {
-        success: false,
-        error:
-          "Chọn mã lý do cho mọi dòng có chênh lệch trước khi chốt.",
       };
     }
     if (msg.includes("session_not_found")) {

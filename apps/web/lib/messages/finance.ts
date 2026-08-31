@@ -779,6 +779,7 @@ export const finance = {
       webhookError: "Lỗi đồng bộ",
     },
     queueCount: (count: string) => `${count} cần xử lý`,
+    openStatusAction: (status: string) => `Mở xử lý trạng thái ${status}`,
     autoMatchTokenAction: "Khớp CHI / NỘP",
     autoMatchTokenPending: "Đang khớp",
     autoMatchTokenSuccess: (

@@ -237,14 +237,16 @@ export async function submitCountRound(
 
 const saveDraftSchema = z.object({
   sessionId: z.coerce.number().int().positive(),
+  roundNo: z.coerce.number().int().min(1).max(4),
   draftCounts: z.record(z.string(), z.unknown()),
 });
 
 /**
  * Auto-save counter's in-progress counts to `stocktake_drafts`.
- * Debounced 30s from client. Cleared on session finalize (CASCADE).
+ * Debounced 30s from client. A round envelope prevents an old round's draft
+ * from being restored into a later recount round.
  *
- * Stored shape: `{ [ingredient_id]: { qty: number, note?: string, savedAt: ISO } }`.
+ * Stored shape: `{ roundNo, counts: { [ingredient_id]: { qty, savedAt } } }`.
  */
 export async function saveStocktakeDraft(
   input: z.infer<typeof saveDraftSchema>,
@@ -272,7 +274,10 @@ export async function saveStocktakeDraft(
       // is functionally equivalent but not assignable. JSON.parse/stringify
       // round-trip keeps the runtime value identical and satisfies the type.
       draft_counts: JSON.parse(
-        JSON.stringify(parsed.data.draftCounts),
+        JSON.stringify({
+          roundNo: parsed.data.roundNo,
+          counts: parsed.data.draftCounts,
+        }),
       ) as Record<string, never>,
       last_saved_at: now,
       saved_by: userId,

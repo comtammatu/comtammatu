@@ -26,6 +26,7 @@ import {
   pickDefaultCountUnit,
   type CountUnitOption,
 } from "../../../_lib/count-units";
+import { buildInitialStocktakeCounts } from "@lib/inventory/stocktake-model";
 
 const toastNoCountsInput = "Chưa nhập số đếm nào";
 const toastSubmitRoundFailed = "Không thể gửi kết quả đếm";
@@ -67,6 +68,7 @@ interface Props {
   blindMode: boolean;
   currentRound: 1 | 2 | 3 | 4;
   initialLines: StocktakeLineBlind[];
+  initialDraftCounts: DraftCounts;
   unitOptionsByIngredient: Record<number, CountUnitOption[]>;
   routeBase?: string;
 }
@@ -77,13 +79,16 @@ export function StocktakeCountClient({
   status,
   currentRound,
   initialLines,
+  initialDraftCounts,
   unitOptionsByIngredient,
   routeBase = "/inventory/stocktake",
 }: Props) {
   const router = useRouter();
   const stocktakeCopy = messages.inventory.stocktake;
   const [lines] = useState<StocktakeLineBlind[]>(initialLines);
-  const [counts, setCounts] = useState<DraftCounts>({});
+  const [counts, setCounts] = useState<DraftCounts>(() =>
+    buildInitialStocktakeCounts(initialLines, currentRound, initialDraftCounts),
+  );
   const [unitByIngredient, setUnitByIngredient] = useState<
     Record<number, number>
   >(() => {
@@ -106,6 +111,7 @@ export function StocktakeCountClient({
     flush,
   } = useStocktakeDraftSaver({
     sessionId,
+    roundNo: currentRound,
     counts,
     enabled: editable,
   });
@@ -176,7 +182,6 @@ export function StocktakeCountClient({
         };
       });
 
-
     if (payload.length === 0) {
       toast.error(toastNoCountsInput);
       return;
@@ -201,10 +206,7 @@ export function StocktakeCountClient({
 
   const safetyChrome = (
     <div className="flex flex-wrap items-center gap-3">
-      <StocktakeDraftSaverBadge
-        status={saveStatus}
-        lastSavedAt={lastSavedAt}
-      />
+      <StocktakeDraftSaverBadge status={saveStatus} lastSavedAt={lastSavedAt} />
     </div>
   );
 

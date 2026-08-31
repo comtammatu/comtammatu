@@ -18,6 +18,7 @@ type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 interface UseStocktakeDraftSaverOptions {
   sessionId: number;
+  roundNo: number;
   counts: DraftCounts;
   /** Debounce window in ms. Default 30 000 (spec §Q2). */
   debounceMs?: number;
@@ -37,6 +38,7 @@ interface UseStocktakeDraftSaverOptions {
  */
 export function useStocktakeDraftSaver({
   sessionId,
+  roundNo,
   counts,
   debounceMs = 30_000,
   enabled = true,
@@ -62,6 +64,7 @@ export function useStocktakeDraftSaver({
       try {
         const res = await saveStocktakeDraft({
           sessionId,
+          roundNo,
           draftCounts: counts,
         });
         if (res.success && res.data) {
@@ -81,7 +84,7 @@ export function useStocktakeDraftSaver({
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [counts, debounceMs, enabled, sessionId]);
+  }, [counts, debounceMs, enabled, roundNo, sessionId]);
 
   /** Force-flush (e.g. before manual submit). */
   async function flush() {
@@ -93,7 +96,11 @@ export function useStocktakeDraftSaver({
     inflight.current = true;
     setStatus("saving");
     try {
-      const res = await saveStocktakeDraft({ sessionId, draftCounts: counts });
+      const res = await saveStocktakeDraft({
+        sessionId,
+        roundNo,
+        draftCounts: counts,
+      });
       if (res.success && res.data) {
         lastSerialized.current = JSON.stringify(counts);
         setLastSavedAt(res.data.lastSavedAt);

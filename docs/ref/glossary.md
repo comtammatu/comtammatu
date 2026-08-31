@@ -511,7 +511,7 @@ Detail: `inventory.md`, `inventory-sop.md`.
 | `stock_transfer` / `stock_issue` | phiếu điều chuyển / phiếu xuất kho | Inter-site move document (chrome short: Điều chuyển) / internal issue or write-off document. Fulfillment workspace chrome that also covers `stock_request` is `Giao nhận`, not a synonym for this document. |
 | `transfer_source_variance` | thiếu do nơi xuất | ADR 0028 default short-receive class: shipping site owns the shortfall as preparation/shipping variance. |
 | `transfer_transit_loss` / `Nhận thiếu` | nhận thiếu | ADR 0028 exception: in-transit damage, breakage, or loss — operator label `Nhận thiếu`; stored code `transfer_transit_loss`. |
-| waste / stocktake `reason_code` | (see `WASTE_REASON_LABELS_VI`) | Shared causal catalog for waste and stocktake variance (`docs/ref/inventory.md` §8); not ownership. |
+| waste / stocktake `reason_code` | (see `WASTE_REASON_LABELS_VI`) | Required causal catalog for waste; optional historical metadata for stocktake variance and never a stocktake completion gate (`docs/ref/inventory.md` §8). |
 | `consumption` | tiêu hao | Stock decrease from sale, production, waste, or approved use. |
 | `stocktake` / `inventory_count_slip` | kiểm kê / phiếu đếm tồn | Session that counts on-hand then confirms to adjust stock / shift-assigned staff slip (review only; not a second stocktake). |
 | `base_unit` / `entry_unit_id` / `to_base_factor` | đơn vị chuẩn / đơn vị chứng từ / quy đổi | Ledger unit / document unit / snapshot factor to base. |

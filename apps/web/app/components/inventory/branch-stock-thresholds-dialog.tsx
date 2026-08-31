@@ -26,6 +26,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
 import type { BranchStockThresholdRow } from "@lib/inventory/branch-thresholds-data";
+import { selectDirtyBranchThresholds } from "@lib/inventory/branch-stock-threshold-model";
 import { saveBranchStockThresholdsAction } from "@/(protected)/inventory/stock-actions";
 
 type ThresholdSourceFilter = "all" | "custom" | "global";
@@ -53,6 +54,9 @@ export function BranchStockThresholdsDialog({
   const [thresholdSourceFilter, setThresholdSourceFilter] =
     useState<ThresholdSourceFilter>("all");
   const [rows, setRows] = useState(initialRows);
+  const [dirtyIngredientIds, setDirtyIngredientIds] = useState<Set<number>>(
+    () => new Set(),
+  );
   const [isPending, startTransition] = useTransition();
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -95,6 +99,7 @@ export function BranchStockThresholdsDialog({
 
   const handleMinStockChange = (ingredientId: number, val: string) => {
     const num = val === "" ? 0 : Number(val);
+    setDirtyIngredientIds((previous) => new Set(previous).add(ingredientId));
     setRows((prev) =>
       prev.map((r) =>
         r.ingredientId === ingredientId
@@ -111,6 +116,7 @@ export function BranchStockThresholdsDialog({
 
   const handleReorderQtyChange = (ingredientId: number, val: string) => {
     const num = val === "" ? null : Number(val);
+    setDirtyIngredientIds((previous) => new Set(previous).add(ingredientId));
     setRows((prev) =>
       prev.map((r) =>
         r.ingredientId === ingredientId
@@ -125,10 +131,13 @@ export function BranchStockThresholdsDialog({
   };
 
   const handleSave = () => {
+    const changedRows = selectDirtyBranchThresholds(rows, dirtyIngredientIds);
+    if (changedRows.length === 0) return;
+
     startTransition(async () => {
       const res = await saveBranchStockThresholdsAction({
         branchId,
-        thresholds: rows.map((r) => ({
+        thresholds: changedRows.map((r) => ({
           ingredientId: r.ingredientId,
           minStockLevel: r.effectiveMinStock,
           reorderQuantity: r.reorderQuantity,
@@ -136,6 +145,7 @@ export function BranchStockThresholdsDialog({
       });
 
       if (res.success) {
+        setDirtyIngredientIds(new Set());
         setSavedSuccess(true);
         setTimeout(() => {
           setSavedSuccess(false);
@@ -184,7 +194,9 @@ export function BranchStockThresholdsDialog({
               <Button
                 size={controlSize}
                 onClick={handleSave}
-                disabled={isPending || savedSuccess}
+                disabled={
+                  isPending || savedSuccess || dirtyIngredientIds.size === 0
+                }
               >
                 {savedSuccess ? (
                   <>

@@ -2527,7 +2527,6 @@ export const inventory = {
       cancelledTitle: "Phiên kiểm kê đã bị hủy",
       cancelledDescription:
         "Dữ liệu đếm không còn hiệu lực; phiên không thể chỉnh sửa.",
-      updateFailed: "Không thể cập nhật",
       completeFailed: "Không thể hoàn tất kiểm kê.",
       completeOk: "Đã hoàn tất kiểm kê",
       cancelFailed: "Không thể hủy phiên kiểm kê.",
@@ -2545,11 +2544,6 @@ export const inventory = {
       emptyCountDescription: "Kho chưa có dòng tồn nào cần kiểm kê.",
       saved: "Đã lưu",
       countedQtyPlaceholder: "SL thực đếm",
-      reasonPlaceholder: "Ghi chú thêm (tùy chọn)",
-      varianceReason: "Lý do chênh lệch",
-      optionalReasonPlaceholder: "Ghi chú thêm (tùy chọn)",
-      reasonCodeRequired:
-        "Chọn mã lý do cho mọi dòng có chênh lệch trước khi chốt.",
       results: {
         legendTitle: "Chênh lệch:",
         good: "<1% (tốt)",

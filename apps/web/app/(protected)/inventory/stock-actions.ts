@@ -25,7 +25,11 @@ const adjustSchema = z.object({
 });
 
 export const adjustStock = withAction(
-  { roles: INVENTORY_OPS_ROLES, schema: adjustSchema, requireBranchScope: true },
+  {
+    roles: INVENTORY_OPS_ROLES,
+    schema: adjustSchema,
+    requireBranchScope: true,
+  },
   async (data, { supabase, claims }) => {
     if (
       claims.user_role === "branch_manager" &&
@@ -93,11 +97,14 @@ const fetchDetailSchema = z.object({
 });
 
 export const fetchStockIngredientDetailAction = withAction(
-  { roles: INVENTORY_OPS_ROLES, schema: fetchDetailSchema, requireBranchScope: false },
+  {
+    roles: INVENTORY_OPS_ROLES,
+    schema: fetchDetailSchema,
+    requireBranchScope: false,
+  },
   async (data) => {
-    const { loadStockIngredientDetailData } = await import(
-      "@lib/inventory/stock-on-hand-detail-data"
-    );
+    const { loadStockIngredientDetailData } =
+      await import("@lib/inventory/stock-on-hand-detail-data");
     const detailData = await loadStockIngredientDetailData({
       ingredientId: data.ingredientId,
       queryBranch: data.branchId ? String(data.branchId) : undefined,
@@ -179,53 +186,64 @@ const saveBranchThresholdsSchema = z.object({
 });
 
 export const saveBranchStockThresholdsAction = withAction(
-  { roles: INVENTORY_OPS_ROLES, schema: saveBranchThresholdsSchema, requireBranchScope: false },
+  {
+    roles: INVENTORY_OPS_ROLES,
+    schema: saveBranchThresholdsSchema,
+    requireBranchScope: true,
+  },
   async (data, { supabase, claims }) => {
-    const { error: rpcError } = await (supabase.rpc as unknown as (
-      fn: string,
-      args: { p_branch_id: number; p_thresholds: unknown },
-    ) => Promise<{ error: { message: string } | null }>)(
-      "upsert_branch_stock_thresholds",
-      {
-        p_branch_id: data.branchId,
-        p_thresholds: data.thresholds.map((t) => ({
-          ingredient_id: t.ingredientId,
-          min_stock_level: t.minStockLevel,
-          reorder_quantity: t.reorderQuantity,
-        })),
-      },
-    );
+    if (
+      claims.user_role === "branch_manager" &&
+      claims.branch_id !== data.branchId
+    ) {
+      return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+    }
+
+    const ingredientIds = [
+      ...new Set(data.thresholds.map((threshold) => threshold.ingredientId)),
+    ];
+    const [branchResult, ingredientsResult] = await Promise.all([
+      supabase
+        .from("branches")
+        .select("id")
+        .eq("tenant_id", claims.tenant_id)
+        .eq("id", data.branchId)
+        .maybeSingle(),
+      supabase
+        .from("ingredients")
+        .select("id")
+        .eq("tenant_id", claims.tenant_id)
+        .in("id", ingredientIds),
+    ]);
+    if (
+      branchResult.error ||
+      branchResult.data == null ||
+      ingredientsResult.error ||
+      (ingredientsResult.data ?? []).length !== ingredientIds.length
+    ) {
+      return { success: false, error: "Không thể lưu định mức tồn kho." };
+    }
+
+    const { error: rpcError } = await (
+      supabase.rpc as unknown as (
+        fn: string,
+        args: { p_branch_id: number; p_thresholds: unknown },
+      ) => Promise<{ error: { message: string } | null }>
+    )("upsert_branch_stock_thresholds", {
+      p_branch_id: data.branchId,
+      p_thresholds: data.thresholds.map((t) => ({
+        ingredient_id: t.ingredientId,
+        min_stock_level: t.minStockLevel,
+        reorder_quantity: t.reorderQuantity,
+      })),
+    });
 
     if (rpcError) {
       console.error(
         "[stock-actions:saveBranchStockThresholds] RPC error:",
         rpcError,
       );
-      // Fallback manual upsert
-      for (const t of data.thresholds) {
-        const { error: upsertErr } = await (supabase.from("branch_ingredient_thresholds" as "ingredients") as unknown as {
-          upsert: (values: unknown, options: unknown) => Promise<{ error: { message: string } | null }>;
-        }).upsert(
-          {
-            tenant_id: claims.tenant_id,
-            branch_id: data.branchId,
-            ingredient_id: t.ingredientId,
-            min_stock_level: t.minStockLevel,
-            reorder_quantity: t.reorderQuantity ?? null,
-            is_active: true,
-            updated_at: new Date().toISOString(),
-          },
-          {
-            onConflict: "tenant_id,branch_id,ingredient_id",
-          },
-        );
-        if (upsertErr) {
-          console.error(
-            "[stock-actions:saveBranchStockThresholds] Fallback upsert error:",
-            upsertErr,
-          );
-        }
-      }
+      return { success: false, error: "Không thể lưu định mức tồn kho." };
     }
 
     revalidatePath("/inventory/stock");
@@ -253,7 +271,11 @@ const createReorderDraftsSchema = z.object({
 });
 
 export const createReorderDraftDemandsAction = withAction(
-  { roles: INVENTORY_OPS_ROLES, schema: createReorderDraftsSchema, requireBranchScope: false },
+  {
+    roles: INVENTORY_OPS_ROLES,
+    schema: createReorderDraftsSchema,
+    requireBranchScope: false,
+  },
   async (data, { supabase }) => {
     // 1. Separate items by supplier PO vs internal transfer
     const supplierItems = data.items.filter(
@@ -268,35 +290,37 @@ export const createReorderDraftDemandsAction = withAction(
 
     // Create purchase demand draft if there are supplier items
     if (supplierItems.length > 0) {
-      const { data: demandId, error: poError } = await (supabase.rpc as unknown as (
-        fn: string,
-        args: {
-          p_branch_id: number;
-          p_needed_by: string | null;
-          p_notes: string;
-          p_lines: Array<{
-            ingredient_id: number;
-            quantity: number;
-            entry_unit_id: number;
-          }>;
-          p_submit: boolean;
-          p_idempotency_key: string;
-        },
-      ) => Promise<{ data: string | number | null; error: { message: string } | null }>)(
-        "save_purchase_demand",
-        {
-          p_branch_id: data.branchId,
-          p_needed_by: null,
-          p_notes: "Gợi ý tự động từ định mức an toàn kho (Smart Reorder)",
-          p_lines: supplierItems.map((item) => ({
-            ingredient_id: item.ingredientId,
-            quantity: item.quantity,
-            entry_unit_id: item.entryUnitId,
-          })),
-          p_submit: false,
-          p_idempotency_key: crypto.randomUUID(),
-        },
-      );
+      const { data: demandId, error: poError } = await (
+        supabase.rpc as unknown as (
+          fn: string,
+          args: {
+            p_branch_id: number;
+            p_needed_by: string | null;
+            p_notes: string;
+            p_lines: Array<{
+              ingredient_id: number;
+              quantity: number;
+              entry_unit_id: number;
+            }>;
+            p_submit: boolean;
+            p_idempotency_key: string;
+          },
+        ) => Promise<{
+          data: string | number | null;
+          error: { message: string } | null;
+        }>
+      )("save_purchase_demand", {
+        p_branch_id: data.branchId,
+        p_needed_by: null,
+        p_notes: "Gợi ý tự động từ định mức an toàn kho (Smart Reorder)",
+        p_lines: supplierItems.map((item) => ({
+          ingredient_id: item.ingredientId,
+          quantity: item.quantity,
+          entry_unit_id: item.entryUnitId,
+        })),
+        p_submit: false,
+        p_idempotency_key: crypto.randomUUID(),
+      });
 
       if (!poError && demandId) {
         createdPurchaseDemandCount += 1;
@@ -321,4 +345,3 @@ export const createReorderDraftDemandsAction = withAction(
     };
   },
 );
-

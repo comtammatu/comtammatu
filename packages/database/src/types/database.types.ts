@@ -10230,54 +10230,6 @@ export type Database = {
           },
         ]
       }
-      stocktake_zone_locks: {
-        Row: {
-          acquired_at: string
-          expires_at: string
-          id: number
-          last_heartbeat_at: string
-          locked_by: string
-          session_id: number
-          tenant_id: number
-          zone_id: string
-        }
-        Insert: {
-          acquired_at?: string
-          expires_at: string
-          id?: never
-          last_heartbeat_at?: string
-          locked_by: string
-          session_id: number
-          tenant_id: number
-          zone_id: string
-        }
-        Update: {
-          acquired_at?: string
-          expires_at?: string
-          id?: never
-          last_heartbeat_at?: string
-          locked_by?: string
-          session_id?: number
-          tenant_id?: number
-          zone_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "stocktake_zone_locks_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "stocktake_sessions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stocktake_zone_locks_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       summary_run_queue: {
         Row: {
           attempt_count: number
@@ -13116,14 +13068,6 @@ export type Database = {
         Args: { p_invoice_id: number; p_reason: string }
         Returns: Json
       }
-      acquire_zone_lock: {
-        Args: {
-          p_session_id: number
-          p_ttl_seconds?: number
-          p_zone_id: string
-        }
-        Returns: Json
-      }
       activate_inventory_valuation_cutover: {
         Args: { p_idempotency_key: string }
         Returns: Json
@@ -14744,14 +14688,6 @@ export type Database = {
       }
       has_permission_any: { Args: { p_key: string }; Returns: boolean }
       has_position: { Args: { p_code: string }; Returns: boolean }
-      heartbeat_zone_lock: {
-        Args: {
-          p_session_id: number
-          p_ttl_seconds?: number
-          p_zone_id: string
-        }
-        Returns: string
-      }
       import_sepay_bank_transactions: { Args: { p_rows: Json }; Returns: Json }
       initialize_branch_cash_opening: {
         Args: {
@@ -15526,10 +15462,6 @@ export type Database = {
         Returns: Json
       }
       release_table: { Args: { p_table_id: number }; Returns: undefined }
-      release_zone_lock: {
-        Args: { p_session_id: number; p_zone_id: string }
-        Returns: boolean
-      }
       reopen_period: {
         Args: { p_month: number; p_tenant_id: number; p_year: number }
         Returns: undefined

@@ -26,6 +26,7 @@ import type {
   BranchStocktakeSession,
   BranchStocktakeStatus,
 } from "./stocktake-model";
+import { parseStocktakeDraftCounts } from "./stocktake-model";
 
 type SessionListRow = {
   id: number;
@@ -279,7 +280,8 @@ export async function loadBranchStocktakeDetailData(
   }
 
   const ingredientIds = [...new Set(lines.map((l) => l.ingredientId))];
-  const unitOptionsByIngredient: Record<number, BranchStocktakeCountUnit[]> = {};
+  const unitOptionsByIngredient: Record<number, BranchStocktakeCountUnit[]> =
+    {};
 
   if (ingredientIds.length > 0) {
     const { data: unitRows } = await supabase
@@ -364,6 +366,15 @@ export async function loadBranchStocktakeCountData(
   const lines = linesResult.data as BranchStocktakeCountLine[];
   const currentRound =
     lines.reduce((max, line) => Math.max(max, line.roundNo), 1) || 1;
+  const { data: draftRow } = await supabase
+    .from("stocktake_drafts")
+    .select("draft_counts")
+    .eq("session_id", stocktakeId)
+    .maybeSingle();
+  const initialDraftCounts = parseStocktakeDraftCounts(
+    draftRow?.draft_counts,
+    currentRound,
+  );
   const ingredientIds = [...new Set(lines.map((line) => line.ingredientId))];
   const unitOptionsByIngredient: Record<number, BranchStocktakeCountUnit[]> =
     {};
@@ -402,6 +413,7 @@ export async function loadBranchStocktakeCountData(
     blindMode: sessionRow.blind_mode === true,
     currentRound: Math.min(4, currentRound) as 1 | 2 | 3 | 4,
     lines,
+    initialDraftCounts,
     unitOptionsByIngredient,
   };
 }

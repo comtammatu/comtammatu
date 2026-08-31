@@ -81,3 +81,13 @@ test("the bank transactions UI offers cash deposit beside payment reconciliation
   assert.match(table, /MatchPaymentSheet/);
   assert.match(table, /salesBranches=\{salesBranches\}/);
 });
+
+test("bank reconciliation status actions keep one Base UI trigger layer", () => {
+  assert.match(table, /function ReconciliationStatusControl/);
+  assert.match(table, /<Button[\s\S]*?variant="ghost"[\s\S]*?>/);
+  assert.match(table, /<Badge variant=\{variant\}/);
+  assert.doesNotMatch(
+    table,
+    /<Badge[\s\S]{0,240}render=\{<button type="button" \/>\}/,
+  );
+});

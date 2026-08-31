@@ -3,11 +3,13 @@ import "server-only";
 import { notFound } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
+import {
+  buildBranchMinimumMap,
+  resolveEffectiveMinimum,
+} from "./branch-stock-threshold-model";
 
 export type SupplyChannel =
-  | "supplier_po"
-  | "internal_transfer_kitchen"
-  | "internal_transfer_supply";
+  "supplier_po" | "internal_transfer_kitchen" | "internal_transfer_supply";
 
 export type ReorderSuggestionItem = {
   ingredientId: number;
@@ -39,6 +41,20 @@ type RpcReorderItem = {
   is_below_min?: boolean | null;
 };
 
+type BaseUnitRow = {
+  ingredient_id: number;
+  unit_id: number;
+  units:
+    | { code: string | null; name: string | null }
+    | { code: string | null; name: string | null }[]
+    | null;
+};
+
+function relatedOne<T>(value: T | T[] | null | undefined): T | null {
+  if (!value) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
 export async function loadBranchReorderSuggestionsData(routeBranchId: number) {
   const { supabase, claims } = await loadAuthState();
   const scope = await resolveInventoryListScope(supabase, claims, {
@@ -46,35 +62,62 @@ export async function loadBranchReorderSuggestionsData(routeBranchId: number) {
   });
   if (scope.outOfScope || scope.selectedBranchId !== routeBranchId) notFound();
 
-  const { data: rpcData, error: rpcError } = await (supabase.rpc as unknown as (
-    fn: string,
-    args: { p_branch_id: number },
-  ) => Promise<{ data: RpcReorderItem[] | null; error: { message: string } | null }>)(
-    "get_branch_smart_reorder_suggestions",
-    { p_branch_id: routeBranchId },
+  const baseUnitsResult = await supabase
+    .from("ingredient_units")
+    .select(
+      "ingredient_id, unit_id, units!ingredient_units_unit_tenant_fkey(code, name)",
+    )
+    .eq("tenant_id", claims.tenant_id)
+    .eq("is_active", true)
+    .eq("is_base", true);
+  const baseUnits = new Map(
+    ((baseUnitsResult.data ?? []) as unknown as BaseUnitRow[]).map((row) => {
+      const unit = relatedOne(row.units);
+      return [
+        row.ingredient_id,
+        {
+          id: row.unit_id,
+          code: unit?.code ?? null,
+          name: unit?.name ?? null,
+        },
+      ] as const;
+    }),
   );
 
+  const { data: rpcData, error: rpcError } = await (
+    supabase.rpc as unknown as (
+      fn: string,
+      args: { p_branch_id: number },
+    ) => Promise<{
+      data: RpcReorderItem[] | null;
+      error: { message: string } | null;
+    }>
+  )("get_branch_smart_reorder_suggestions", { p_branch_id: routeBranchId });
+
   if (!rpcError && Array.isArray(rpcData)) {
-    const items: ReorderSuggestionItem[] = rpcData.map((item) => ({
-      ingredientId: Number(item.ingredient_id),
-      ingredientName: String(item.ingredient_name ?? ""),
-      sku: item.sku ? String(item.sku) : null,
-      categoryName: item.category_name ? String(item.category_name) : null,
-      baseUnitId: item.base_unit_id ? Number(item.base_unit_id) : null,
-      baseUnitCode: item.base_unit_code ? String(item.base_unit_code) : null,
-      baseUnitName: item.base_unit_name ? String(item.base_unit_name) : null,
-      currentOnHand: Number(item.current_on_hand ?? 0),
-      minStockLevel: Number(item.min_stock_level ?? 0),
-      suggestedReorderQty: Number(item.suggested_reorder_qty ?? 0),
-      supplyChannel: (item.supply_channel ?? "supplier_po") as SupplyChannel,
-      isBelowMin: Boolean(item.is_below_min),
-    }));
+    const items: ReorderSuggestionItem[] = rpcData.map((item) => {
+      const baseUnit = baseUnits.get(Number(item.ingredient_id));
+      return {
+        ingredientId: Number(item.ingredient_id),
+        ingredientName: String(item.ingredient_name ?? ""),
+        sku: item.sku ? String(item.sku) : null,
+        categoryName: item.category_name ? String(item.category_name) : null,
+        baseUnitId: baseUnit?.id ?? null,
+        baseUnitCode: baseUnit?.code ?? null,
+        baseUnitName: baseUnit?.name ?? null,
+        currentOnHand: Number(item.current_on_hand ?? 0),
+        minStockLevel: Number(item.min_stock_level ?? 0),
+        suggestedReorderQty: Number(item.suggested_reorder_qty ?? 0),
+        supplyChannel: (item.supply_channel ?? "supplier_po") as SupplyChannel,
+        isBelowMin: Boolean(item.is_below_min),
+      };
+    });
 
     const belowMinItems = items.filter((item) => item.isBelowMin);
 
     return {
       branchId: routeBranchId,
-      loadFailed: false,
+      loadFailed: baseUnitsResult.error != null,
       allItems: items,
       belowMinItems,
       belowMinCount: belowMinItems.length,
@@ -95,8 +138,7 @@ export async function loadBranchReorderSuggestionsData(routeBranchId: number) {
         min_stock_level,
         fulfill_from_central_kitchen,
         fulfill_from_central_supply,
-        category:ingredient_categories(name),
-        receipt_unit:units!ingredients_receipt_unit_id_fkey(id, code, name)
+        category:ingredient_categories(name)
       ),
       location:inventory_locations!inner(branch_id)
     `,
@@ -113,6 +155,33 @@ export async function loadBranchReorderSuggestionsData(routeBranchId: number) {
     };
   }
 
+  const { data: thresholdRows, error: thresholdError } = await supabase
+    .from("branch_ingredient_thresholds")
+    .select("ingredient_id, min_stock_level, reorder_quantity")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("branch_id", routeBranchId)
+    .eq("is_active", true);
+  if (thresholdError) {
+    return {
+      branchId: routeBranchId,
+      loadFailed: true,
+      allItems: [] as ReorderSuggestionItem[],
+      belowMinItems: [] as ReorderSuggestionItem[],
+      belowMinCount: 0,
+    };
+  }
+  const branchThresholds = new Map(
+    (thresholdRows ?? []).map((row) => [
+      row.ingredient_id,
+      {
+        minStock: Number(row.min_stock_level),
+        reorderQuantity:
+          row.reorder_quantity == null ? null : Number(row.reorder_quantity),
+      },
+    ]),
+  );
+  const branchMinimums = buildBranchMinimumMap(thresholdRows ?? []);
+
   type IngredientRecord = {
     id?: number;
     name?: string;
@@ -121,11 +190,13 @@ export async function loadBranchReorderSuggestionsData(routeBranchId: number) {
     fulfill_from_central_kitchen?: boolean | null;
     fulfill_from_central_supply?: boolean | null;
     category?: { name?: string } | null;
-    receipt_unit?: { id?: number; code?: string; name?: string } | null;
   };
 
   // Aggregate quantities per ingredient
-  const map = new Map<number, { onHand: number; ing: IngredientRecord | null }>();
+  const map = new Map<
+    number,
+    { onHand: number; ing: IngredientRecord | null }
+  >();
   for (const row of stockLevels) {
     const ingId = row.ingredient_id;
     const existing = map.get(ingId) ?? {
@@ -138,10 +209,16 @@ export async function loadBranchReorderSuggestionsData(routeBranchId: number) {
 
   const items: ReorderSuggestionItem[] = Array.from(map.entries()).map(
     ([ingId, data]) => {
-      const minStock = Number(data.ing?.min_stock_level ?? 0);
+      const branchThreshold = branchThresholds.get(ingId);
+      const minStock = resolveEffectiveMinimum(
+        data.ing?.min_stock_level,
+        branchMinimums,
+        ingId,
+      );
       const isBelowMin = minStock > 0 && data.onHand <= minStock;
       const suggestedReorderQty = isBelowMin
-        ? Math.max(0, minStock * 2 - data.onHand)
+        ? (branchThreshold?.reorderQuantity ??
+          Math.max(0, minStock * 2 - data.onHand))
         : 0;
       let supplyChannel: SupplyChannel = "supplier_po";
       if (data.ing?.fulfill_from_central_kitchen) {
@@ -150,14 +227,15 @@ export async function loadBranchReorderSuggestionsData(routeBranchId: number) {
         supplyChannel = "internal_transfer_supply";
       }
 
+      const baseUnit = baseUnits.get(ingId);
       return {
         ingredientId: ingId,
         ingredientName: data.ing?.name ?? `Nguyên liệu #${ingId}`,
         sku: data.ing?.sku ?? null,
         categoryName: data.ing?.category?.name ?? null,
-        baseUnitId: data.ing?.receipt_unit?.id ?? null,
-        baseUnitCode: data.ing?.receipt_unit?.code ?? null,
-        baseUnitName: data.ing?.receipt_unit?.name ?? null,
+        baseUnitId: baseUnit?.id ?? null,
+        baseUnitCode: baseUnit?.code ?? null,
+        baseUnitName: baseUnit?.name ?? null,
         currentOnHand: data.onHand,
         minStockLevel: minStock,
         suggestedReorderQty,
@@ -171,7 +249,7 @@ export async function loadBranchReorderSuggestionsData(routeBranchId: number) {
 
   return {
     branchId: routeBranchId,
-    loadFailed: false,
+    loadFailed: baseUnitsResult.error != null,
     allItems: items,
     belowMinItems,
     belowMinCount: belowMinItems.length,

@@ -3,6 +3,7 @@ import { createClient } from "@comtammatu/database/supabase/server";
 import { parseBranchIdParam } from "../../../_lib/inventory-scope";
 import { getStocktakeLinesBlind } from "../../../stocktake-actions";
 import type { CountUnitOption } from "../../../_lib/count-units";
+import { parseStocktakeDraftCounts } from "@lib/inventory/stocktake-model";
 import { StocktakeCountClient } from "./count-client";
 
 export const instant = false;
@@ -49,6 +50,15 @@ async function StocktakeCountPageContent({
   const currentRound =
     linesRes.data.reduce((max, l) => (l.roundNo > max ? l.roundNo : max), 1) ||
     1;
+  const { data: draftRow } = await supabase
+    .from("stocktake_drafts")
+    .select("draft_counts")
+    .eq("session_id", sessionId)
+    .maybeSingle();
+  const initialDraftCounts = parseStocktakeDraftCounts(
+    draftRow?.draft_counts,
+    currentRound,
+  );
 
   // The blind line RPC returns only a unit string, so fetch the active units
   // per ingredient separately to build the counting-unit dropdowns.
@@ -91,6 +101,7 @@ async function StocktakeCountPageContent({
       blindMode={Boolean(sessionRow.blind_mode)}
       currentRound={Math.min(4, currentRound) as 1 | 2 | 3 | 4}
       initialLines={linesRes.data}
+      initialDraftCounts={initialDraftCounts}
       unitOptionsByIngredient={unitOptionsByIngredient}
       routeBase={routeBase}
     />

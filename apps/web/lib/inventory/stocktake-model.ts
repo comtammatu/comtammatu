@@ -45,7 +45,6 @@ export type BranchStocktakeDetail = {
   unitOptionsByIngredient?: Record<number, BranchStocktakeCountUnit[]>;
 };
 
-
 export type BranchStocktakeCountUnit = {
   unitId: number;
   code: string;
@@ -73,6 +72,76 @@ export type DraftCounts = Record<
   { qty: number; note?: string; savedAt?: string }
 >;
 
+type StocktakeCountSeedLine = {
+  ingredientId: number;
+  roundNo: number;
+  countedQuantity: number | null;
+  countedAt?: string | null;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function normalizeDraftCounts(value: unknown): DraftCounts {
+  if (!isRecord(value)) return {};
+
+  const counts: DraftCounts = {};
+  for (const [ingredientId, entry] of Object.entries(value)) {
+    if (!/^\d+$/.test(ingredientId) || !isRecord(entry)) continue;
+    const qty = entry.qty;
+    if (typeof qty !== "number" || !Number.isFinite(qty) || qty < 0) continue;
+
+    counts[ingredientId] = {
+      qty,
+      ...(typeof entry.note === "string" ? { note: entry.note } : {}),
+      ...(typeof entry.savedAt === "string" ? { savedAt: entry.savedAt } : {}),
+    };
+  }
+  return counts;
+}
+
+export function parseStocktakeDraftCounts(
+  value: unknown,
+  currentRound: number,
+): DraftCounts {
+  if (!isRecord(value)) return {};
+
+  if ("roundNo" in value || "counts" in value) {
+    if (value.roundNo !== currentRound) return {};
+    return normalizeDraftCounts(value.counts);
+  }
+
+  // Drafts written before round metadata was added can only belong to round 1.
+  return currentRound === 1 ? normalizeDraftCounts(value) : {};
+}
+
+export function buildInitialStocktakeCounts(
+  lines: StocktakeCountSeedLine[],
+  currentRound: number,
+  draftCounts: DraftCounts,
+): DraftCounts {
+  const currentLines = lines.filter((line) => line.roundNo === currentRound);
+  const allowedIngredientIds = new Set(
+    currentLines.map((line) => String(line.ingredientId)),
+  );
+  const counts: DraftCounts = {};
+
+  for (const [ingredientId, entry] of Object.entries(draftCounts)) {
+    if (allowedIngredientIds.has(ingredientId)) counts[ingredientId] = entry;
+  }
+
+  for (const line of currentLines) {
+    if (line.countedQuantity === null) continue;
+    counts[String(line.ingredientId)] = {
+      qty: line.countedQuantity,
+      ...(line.countedAt ? { savedAt: line.countedAt } : {}),
+    };
+  }
+
+  return counts;
+}
+
 export type BranchStocktakeCountData = {
   sessionId: number;
   sessionNumber: string;
@@ -81,6 +150,7 @@ export type BranchStocktakeCountData = {
   blindMode: boolean;
   currentRound: 1 | 2 | 3 | 4;
   lines: BranchStocktakeCountLine[];
+  initialDraftCounts: DraftCounts;
   unitOptionsByIngredient: Record<number, BranchStocktakeCountUnit[]>;
 };
 

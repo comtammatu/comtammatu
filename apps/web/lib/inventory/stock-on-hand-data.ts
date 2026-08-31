@@ -30,6 +30,10 @@ import {
 } from "./stock-on-hand-model";
 import { loadInventoryMonetaryAccess } from "./monetary-access";
 import { resolveStockDisplayUnit } from "@/(protected)/inventory/_lib/stock-unit-format";
+import {
+  buildBranchMinimumMap,
+  resolveEffectiveMinimum,
+} from "./branch-stock-threshold-model";
 
 type StockLevelLocationRow = {
   id: number;
@@ -169,6 +173,7 @@ export async function loadStockOnHandPageData({
   const [
     ingredientsResult,
     stockResult,
+    thresholdResult,
     canCreateStockRequest,
     canReceiveGrn,
     canManagePurchaseRequest,
@@ -182,12 +187,21 @@ export async function loadStockOnHandPageData({
     fetchIngredients(),
     stockBearingLocations.ok && stockBearingLocationIds.length > 0
       ? stockLevelQuery
-        .eq("tenant_id", claims.tenant_id)
-        .eq("branch_id", branchId)
-        .in("location_id", stockBearingLocationIds)
-        .order("ingredient_id")
+          .eq("tenant_id", claims.tenant_id)
+          .eq("branch_id", branchId)
+          .in("location_id", stockBearingLocationIds)
+          .order("ingredient_id")
       : Promise.resolve({ data: [], error: null }),
-    currentUserHasPermission(branchId, PERMISSION_KEYS.INVENTORY_REQUEST_CREATE),
+    supabase
+      .from("branch_ingredient_thresholds")
+      .select("ingredient_id, min_stock_level")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", branchId)
+      .eq("is_active", true),
+    currentUserHasPermission(
+      branchId,
+      PERMISSION_KEYS.INVENTORY_REQUEST_CREATE,
+    ),
     currentUserHasPermission(branchId, PERMISSION_KEYS.PROCUREMENT_GRN_CREATE),
     currentUserHasPermission(
       branchId,
@@ -211,17 +225,20 @@ export async function loadStockOnHandPageData({
   ]);
 
   const canEditIngredient =
-    INGREDIENT_CATALOG_WRITE_ROLES.includes(claims.user_role) && canManageCatalog;
+    INGREDIENT_CATALOG_WRITE_ROLES.includes(claims.user_role) &&
+    canManageCatalog;
   const canSetCompanyWac = claims.user_role === "owner";
 
   // Fail-soft: a denied/failed ingredient catalog read degrades to an empty
   // list + coreDataLoadFailed flag instead of crashing the whole page. Stock
   // levels, permissions and summary stay usable. Matches catalog/page.tsx.
   // inventory.stock.ingredients_load_failed
-  const dbIngredients = (
-    ingredientsResult.success ? ingredientsResult.data ?? [] : []
-  ) as StockIngredientRow[];
+  let dbIngredients: StockIngredientRow[] = [];
+  if (ingredientsResult.success) {
+    dbIngredients = (ingredientsResult.data ?? []) as StockIngredientRow[];
+  }
   const stockRows = (stockResult.data ?? []) as StockLevelRow[];
+  const branchMinimums = buildBranchMinimumMap(thresholdResult.data ?? []);
   const stockMap = new Map<
     number,
     {
@@ -267,8 +284,8 @@ export async function loadStockOnHandPageData({
     const weightedCost =
       totalQuantity > 0
         ? (previous.currentQuantity * (previous.avgUnitCost ?? 0) +
-          row.current_quantity * (row.avg_unit_cost ?? 0)) /
-        totalQuantity
+            row.current_quantity * (row.avg_unit_cost ?? 0)) /
+          totalQuantity
         : (row.avg_unit_cost ?? previous.avgUnitCost);
     const latestCount =
       previous.lastCountedAt && row.last_counted_at
@@ -313,7 +330,11 @@ export async function loadStockOnHandPageData({
       const stock = stockMap.get(row.id);
       const qty = stock?.currentQuantity ?? 0;
       const averageUnitCost = stock?.avgUnitCost ?? null;
-      const min = row.min_stock_level ?? 0;
+      const min = resolveEffectiveMinimum(
+        row.min_stock_level,
+        branchMinimums,
+        row.id,
+      );
       const max = row.max_stock_level ?? 0;
       const reorder = row.reorder_point ?? 0;
       const locationBreakdown = locationMap.get(row.id) ?? [];
@@ -415,10 +436,7 @@ export async function loadStockOnHandPageData({
           : ((tenantRows ?? []) as TenantStockLevelRow[]).reduce(
               (sum, row) =>
                 sum +
-                inventoryLineValue(
-                  row.current_quantity,
-                  row.avg_unit_cost,
-                ),
+                inventoryLineValue(row.current_quantity, row.avg_unit_cost),
               0,
             );
       }
@@ -450,7 +468,8 @@ export async function loadStockOnHandPageData({
       branchValuationLoadFailed ||
       tenantStockBearingLoadFailed ||
       !ingredientsResult.success ||
-      stockResult.error != null,
+      stockResult.error != null ||
+      thresholdResult.error != null,
     ingredients,
     permissions,
     summary,

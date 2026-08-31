@@ -19,6 +19,10 @@ import {
   resolveStockDisplayUnit,
   toStockDisplayUnitCost,
 } from "@/(protected)/inventory/_lib/stock-unit-format";
+import {
+  buildBranchMinimumMap,
+  resolveEffectiveMinimum,
+} from "./branch-stock-threshold-model";
 
 type UnitRef = { code: string; name: string | null };
 
@@ -106,7 +110,10 @@ function ingredientSelect(): string {
     .join(", ");
 }
 
-function stockLevelSelect(includeValuation: boolean, withBranch = false): string {
+function stockLevelSelect(
+  includeValuation: boolean,
+  withBranch = false,
+): string {
   const locationJoin = withBranch
     ? "inventory_locations ( name, code, location_kind, branches!inventory_locations_branch_id_fkey ( name, branch_kind ) )"
     : "inventory_locations ( name, code, location_kind )";
@@ -207,6 +214,7 @@ export async function loadStockIngredientDetailData({
     stockBearingLocations,
     tenantStockBearingLocations,
     ingredientResult,
+    thresholdResult,
     canCreateStockRequest,
     canReceiveGrn,
     canManagePurchaseRequest,
@@ -232,7 +240,17 @@ export async function loadStockIngredientDetailData({
       .eq("tenant_id", claims.tenant_id)
       .eq("id", ingredientId)
       .maybeSingle(),
-    currentUserHasPermission(branchId, PERMISSION_KEYS.INVENTORY_REQUEST_CREATE),
+    supabase
+      .from("branch_ingredient_thresholds")
+      .select("ingredient_id, min_stock_level")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", branchId)
+      .eq("ingredient_id", ingredientId)
+      .eq("is_active", true),
+    currentUserHasPermission(
+      branchId,
+      PERMISSION_KEYS.INVENTORY_REQUEST_CREATE,
+    ),
     currentUserHasPermission(branchId, PERMISSION_KEYS.PROCUREMENT_GRN_CREATE),
     currentUserHasPermission(
       branchId,
@@ -307,12 +325,10 @@ export async function loadStockIngredientDetailData({
     },
   );
   const standardUnit = resolveStockDisplayUnit(units);
-  const unit =
-    standardUnit?.unit_name?.trim() ||
-    standardUnit?.unit_code ||
-    "";
+  const unit = standardUnit?.unit_name?.trim() || standardUnit?.unit_code || "";
   const stockRows = (stockResult.data ?? []) as unknown as StockLevelRow[];
-  const systemStockRows = (systemStockResult.data ?? []) as unknown as StockLevelRow[];
+  const systemStockRows = (systemStockResult.data ??
+    []) as unknown as StockLevelRow[];
   const movementRows = (movementResult.data ?? []) as unknown as MovementRow[];
   const locations = mapStockLevelRows(stockRows, canReadValuation, false);
   const systemLocations = isOwner
@@ -327,9 +343,7 @@ export async function loadStockIngredientDetailData({
       type: row.type,
       movementSubtype: row.movement_subtype,
       quantityChange: Number(row.quantity_change ?? 0),
-      monetary: canReadValuation
-        ? { unitCost: row.unit_cost ?? null }
-        : null,
+      monetary: canReadValuation ? { unitCost: row.unit_cost ?? null } : null,
       reason: row.reason,
       createdAt: row.created_at,
       grnId: row.grn_id,
@@ -373,7 +387,12 @@ export async function loadStockIngredientDetailData({
           totalValue,
           wac: toStockDisplayUnitCost(ledgerWac, standardUnit) ?? ledgerWac,
         };
-  const min = Number(ingredientRow.min_stock_level ?? 0);
+  const branchMinimums = buildBranchMinimumMap(thresholdResult.data ?? []);
+  const min = resolveEffectiveMinimum(
+    ingredientRow.min_stock_level,
+    branchMinimums,
+    ingredientId,
+  );
   const max = Number(ingredientRow.max_stock_level ?? 0);
   const reorder = Number(ingredientRow.reorder_point ?? 0);
 
@@ -383,6 +402,7 @@ export async function loadStockIngredientDetailData({
       !stockBearingLocations.ok ||
       stockResult.error != null ||
       movementResult.error != null ||
+      thresholdResult.error != null ||
       (isOwner &&
         (!tenantStockBearingLocations.ok || systemStockResult.error != null)),
     ingredient: {

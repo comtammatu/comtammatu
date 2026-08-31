@@ -327,8 +327,8 @@ nhiều cấp, AP liên pháp nhân.
 Routes: `/inventory/stocktake`, `/inventory/stocktake/[id]`. Pad nhân viên `/me` là **Đếm tồn** (phiếu được giao, không phiên Kiểm kê thứ hai): chọn đơn vị đếm (mặc định Đơn vị chuẩn); duyệt tồn sổ / thực đếm / lệch cùng đơn vị đó; sổ theo Đơn vị chuẩn.
 
 1. **Tạo:** kho warehouse của site. UI không chọn daily/weekly/monthly/quarterly/spot; phiên mới đếm số đang có, không hiện sổ (`spot`).
-2. **Đếm** (`get_stocktake_lines_blind`): màn đếm là viewport đầu. Số sổ ẩn đến khi đếm đủ dòng.
-3. **Đối soát:** lý do trên dòng lệch, rồi `complete_stocktake` ghi `count_adjustment`. `reason_code` dòng lệch dùng chung catalog nguyên nhân với hao (CHECK enum của waste: `spoiled`, `expired`, `dropped`, …, `other`); hoàn tất kiểm kê có điều chỉnh khác 0 bắt buộc `reason_code`; `variance_reason` giữ làm ghi chú tự do. Nhãn theo `WASTE_REASON_LABELS_VI` (`packages/shared/src/labels/vi.ts`). Ownership thiếu hụt điều chuyển vẫn là `movement_subtype` (`transfer_source_variance` / `transfer_transit_loss`) — không nằm trong catalog nguyên nhân; `reason_code` nguyên nhân cho điều chuyển để ngỏ.
+2. **Đếm** (`get_stocktake_lines_blind`): màn đếm là viewport đầu. Số sổ ẩn đến khi đếm đủ dòng. Bản nháp tự lưu theo đúng vòng đếm và được khôi phục khi mở lại; bản nháp không thay thế kết quả đã gửi.
+3. **Chốt kết quả:** `complete_stocktake` lấy số thực đếm làm căn cứ, tính chênh lệch và ghi `count_adjustment`; không yêu cầu người kiểm kê giải thích nguyên nhân chênh lệch. `reason_code` và `variance_reason` cũ được giữ làm dữ liệu lịch sử tùy chọn, không phải điều kiện hoàn tất phiếu. Ownership thiếu hụt điều chuyển vẫn là `movement_subtype` (`transfer_source_variance` / `transfer_transit_loss`) — không nằm trong catalog nguyên nhân.
 
 `stocktake_sessions`: `in_progress`|`completed`|`cancelled`, `current_round` 1..4.
 `stocktake_lines.variance = counted_quantity - system_quantity`. ACL: BM trong

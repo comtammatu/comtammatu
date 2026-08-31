@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowDownLeft as IconMoneyIn,
   ArrowUpRight as IconMoneyOut,
+  ChevronRight as IconChevronRight,
 } from "lucide-react";
 import {
   formatAccountingVND as formatVND,
@@ -17,6 +18,7 @@ import {
   formatVNTimeSeconds,
 } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
 import {
   Select,
   SelectContent,
@@ -45,10 +47,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import {
-  AppListFrame,
-  AppSheet,
-} from "@/components/surface";
+import { AppListFrame, AppSheet } from "@/components/surface";
 import { messages } from "@lib/messages";
 import {
   SEPAY_BANK_WEBHOOK_REVIEW_VALUES,
@@ -64,9 +63,7 @@ import {
   type SepayReconciliationState,
   type SepayUnmatchedMoneyInReason,
 } from "../_lib/sepay-bank-transaction-model";
-import {
-  reviewMissingBankWebhookPayment,
-} from "../bank-webhook-review-actions";
+import { reviewMissingBankWebhookPayment } from "../bank-webhook-review-actions";
 import type { ExpenseMatchOption } from "../expense-actions";
 import type { FinanceParams } from "../_lib/finance-params";
 import {
@@ -209,28 +206,35 @@ function reviewStatusLabel(
   return copy.missingWebhookTable.reviewStatusLabels[status];
 }
 
-function StatusBadgeButton({
+function ReconciliationStatusControl({
   label,
   variant,
   clickable,
+  touch,
 }: {
   label: string;
   variant: "success" | "warning" | "destructive" | "secondary";
   clickable: boolean;
+  touch: boolean;
 }) {
   if (!clickable) {
     return <Badge variant={variant}>{label}</Badge>;
   }
 
   return (
-    <Badge
-      variant={variant}
-      render={<button type="button" />}
-      className="cursor-pointer hover:opacity-90"
+    <Button
+      type="button"
+      variant="ghost"
+      size={touch ? "touch" : "sm"}
+      className="max-w-full"
+      aria-label={copy.openStatusAction(label)}
       aria-haspopup="dialog"
     >
-      {label}
-    </Badge>
+      <Badge variant={variant} className="min-w-0 max-w-full">
+        <span className="truncate">{label}</span>
+      </Badge>
+      <IconChevronRight data-icon="inline-end" aria-hidden />
+    </Button>
   );
 }
 
@@ -246,10 +250,11 @@ function MissingWebhookStatusCell({
   const variant =
     status === "resolved" || status === "ignored" ? "secondary" : "warning";
   const badge = (
-    <StatusBadgeButton
+    <ReconciliationStatusControl
       label={reviewStatusLabel(status)}
       variant={variant}
       clickable
+      touch={touch}
     />
   );
 
@@ -262,7 +267,8 @@ function MissingWebhookStatusCell({
     >
       <div className="flex flex-col gap-3 py-2">
         <p className="text-xs text-muted-foreground">
-          {copy.missingWebhookTable.payment} {formatPaymentId(payment.paymentId)}
+          {copy.missingWebhookTable.payment}{" "}
+          {formatPaymentId(payment.paymentId)}
         </p>
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-medium text-foreground">
@@ -319,8 +325,7 @@ function BankRowStatus({
 }) {
   const state = classifySepayReconciliationState(tx);
   const meta = reconciliationStateBadgeMeta(state);
-  const moneyInMatchable =
-    canLinkPayments && canManuallyLinkSepayPayment(tx);
+  const moneyInMatchable = canLinkPayments && canManuallyLinkSepayPayment(tx);
   const moneyOutMatchable = canOpenMoneyOutMatch(tx, expenseOptions);
   const clickable = moneyInMatchable || moneyOutMatchable;
   const hasPaymentConflictDetail =
@@ -342,10 +347,11 @@ function BankRowStatus({
   }
 
   const statusBadge = (
-    <StatusBadgeButton
+    <ReconciliationStatusControl
       label={meta.label}
       variant={meta.variant}
       clickable={clickable}
+      touch={touch}
     />
   );
   const badge =
@@ -657,9 +663,7 @@ export function BankTransactionsTable({
       className: "w-36 text-right font-mono tabular-nums",
       sortable: true,
       sortValue: (row) =>
-        row.kind === "bank"
-          ? row.tx.transactionDate
-          : row.payment.paidAt,
+        row.kind === "bank" ? row.tx.transactionDate : row.payment.paidAt,
       render: (row) => <DateCell row={row} />,
     },
     {
@@ -687,7 +691,7 @@ export function BankTransactionsTable({
     {
       key: "status",
       header: copy.table.status,
-      className: "w-36",
+      className: "w-44",
       render: (row) =>
         row.kind === "bank" ? (
           <BankRowStatus
@@ -791,15 +795,7 @@ export function BankTransactionsTable({
           basePath="/finance/bank-transactions"
           hide={["branch", "granularity", "compare"]}
           trailing={
-            <>
-              <AutoMatchTransferTokenButton
-                transactions={transactions}
-                enabled={canLinkPayments}
-                size={controlSize === "touch" ? "touch" : "sm"}
-              />
-              <span className="text-xs text-muted-foreground">
-                {copy.queueCount(formatCount(openQueueCount))}
-              </span>
+            <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
               <Select
                 value={filter}
                 disabled={isFilterPending}
@@ -822,7 +818,15 @@ export function BankTransactionsTable({
                   ))}
                 </SelectContent>
               </Select>
-            </>
+              <Badge variant="secondary" aria-live="polite">
+                {copy.queueCount(formatCount(openQueueCount))}
+              </Badge>
+              <AutoMatchTransferTokenButton
+                transactions={transactions}
+                enabled={canLinkPayments}
+                size={controlSize === "touch" ? "touch" : "sm"}
+              />
+            </div>
           }
         />
       }
