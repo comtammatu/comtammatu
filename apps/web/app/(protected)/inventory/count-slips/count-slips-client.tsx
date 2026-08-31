@@ -829,15 +829,20 @@ function CountSlipReviewDialog({
       className: "min-w-56",
       render: (line) => (
         <div>
-          <div className="font-medium">{line.ingredientName}</div>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="font-medium">{line.ingredientName}</span>
+            {line.lastRecountRound > 0 ? (
+              <Badge
+                variant="outline"
+                className="border-info/20 text-info text-2xs py-0 px-1 font-normal"
+              >
+                {INVENTORY_VI.recountRoundBadge(line.lastRecountRound)}
+              </Badge>
+            ) : null}
+          </div>
           {line.note ? (
             <div className="max-w-md break-words text-xs italic text-muted-foreground">
-              {line.note}
-            </div>
-          ) : null}
-          {line.lastRecountRound > 0 ? (
-            <div className="text-xs font-medium text-info">
-              {INVENTORY_VI.recountCompletedRound(line.lastRecountRound)}
+              📝 {line.note}
             </div>
           ) : null}
         </div>
@@ -845,25 +850,30 @@ function CountSlipReviewDialog({
     },
     {
       key: "system",
-      header: "Tồn lúc nộp",
+      header: INVENTORY_VI.systemStockLabel,
       className: "w-40 text-right",
-      render: (line) => (
-        <div className="whitespace-nowrap text-right font-mono tabular-nums">
-          <div>
-            {formatLineBaseQuantity(line, line.systemBaseQuantity)}
-          </div>
-          {line.currentLiveBaseQuantity !== null ? (
-            <div className="text-xs text-muted-foreground">
-              {INVENTORY_VI.liveStockColon}{" "}
-              {formatLineBaseQuantity(line, line.currentLiveBaseQuantity)}
+      render: (line) => {
+        const hasLiveDelta =
+          line.currentLiveBaseQuantity !== null &&
+          Math.abs(line.currentLiveBaseQuantity - line.systemBaseQuantity) > 0.0001;
+
+        return (
+          <div className="whitespace-nowrap text-right font-mono tabular-nums">
+            <div>
+              {formatLineBaseQuantity(line, line.systemBaseQuantity)}
             </div>
-          ) : null}
-        </div>
-      ),
+            {hasLiveDelta ? (
+              <div className="text-2xs text-muted-foreground">
+                (live: {formatLineBaseQuantity(line, line.currentLiveBaseQuantity!)})
+              </div>
+            ) : null}
+          </div>
+        );
+      },
     },
     {
       key: "counted",
-      header: "Thực đếm",
+      header: INVENTORY_VI.countedLabel,
       className: "w-40 text-right",
       render: (line) => (
         <div className="whitespace-nowrap text-right font-mono tabular-nums">
@@ -873,7 +883,7 @@ function CountSlipReviewDialog({
     },
     {
       key: "variance",
-      header: "Chênh lệch",
+      header: INVENTORY_VI.varianceLabel,
       className: "w-44 text-right",
       render: (line) => {
         const isMatchedAfterSales =

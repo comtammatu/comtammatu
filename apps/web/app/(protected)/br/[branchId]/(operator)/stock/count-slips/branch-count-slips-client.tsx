@@ -14,18 +14,23 @@ import {
   ChevronRight as IconChevronRight,
   ClipboardCheck as IconClipboardCheck,
   RotateCcw as IconRecount,
+  Search as IconSearch,
 } from "lucide-react";
 import {
   ACTIONS_VI,
   INVENTORY_VI,
   STAFF_VI,
 } from "@comtammatu/shared/messages";
-import { formatVNDate, formatVNDateTime } from "@comtammatu/shared/time";
+import { formatVNDate } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import { confirm } from "@/components/confirm-dialog";
-import { Input } from "@comtammatu/ui/components/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@comtammatu/ui/components/input-group";
 import {
   Item,
   ItemActions,
@@ -48,10 +53,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { AppBackLink, AppEmptyState, AppSheet } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
-import {
-  BranchOperatorDetailList,
-  BranchOperatorPage,
-} from "@lib/branch-operator/components/branch-operator-page";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import {
   approveCountSlip,
   requestCountRecount,
@@ -541,76 +543,75 @@ export function BranchCountSlipsClient({
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Item
           variant="outline"
-          onClick={() => setView("pending")}
           className={cn(
-            "flex flex-col justify-between p-3 text-left cursor-pointer",
+            "flex items-center gap-2 p-2 text-left cursor-pointer transition-colors",
             view === "pending"
-              ? "border-warning ring-1 ring-warning shadow-xs"
-              : "border-border",
+              ? "border-warning ring-1 ring-warning bg-warning/10"
+              : "border-border bg-card hover:bg-muted/30",
           )}
+          render={<button type="button" onClick={() => setView("pending")} />}
         >
-          <div className="flex items-center justify-between gap-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            <span>{INVENTORY_VI.countSlipPendingCard}</span>
-            <span className="size-2 rounded-full bg-warning" />
-          </div>
-          <span className="mt-1 font-mono text-2xl font-semibold tabular-nums text-warning">
+          <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-warning font-mono text-xs font-semibold text-warning-foreground">
             {pendingRows.length}
           </span>
+          <span className="text-xs font-medium text-foreground truncate">
+            {INVENTORY_VI.countSlipPendingCard}
+          </span>
         </Item>
 
         <Item
           variant="outline"
-          className="flex flex-col justify-between p-3 text-left border-border"
+          className="flex items-center gap-2 p-2 text-left border-border bg-card"
         >
-          <div className="flex items-center justify-between gap-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            <span>{INVENTORY_VI.countSlipDiscrepancyCard}</span>
-            <span className="size-2 rounded-full bg-destructive" />
-          </div>
-          <span className="mt-1 font-mono text-2xl font-semibold tabular-nums text-destructive">
+          <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-destructive font-mono text-xs font-semibold text-destructive-foreground">
             {discrepancyCount}
           </span>
-        </Item>
-
-        <Item
-          variant="outline"
-          onClick={() => setView("history")}
-          className={cn(
-            "flex flex-col justify-between p-3 text-left cursor-pointer",
-            view === "history"
-              ? "border-success ring-1 ring-success shadow-xs"
-              : "border-border",
-          )}
-        >
-          <div className="flex items-center justify-between gap-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            <span>{INVENTORY_VI.countSlipApprovedCard}</span>
-            <span className="size-2 rounded-full bg-success" />
-          </div>
-          <span className="mt-1 font-mono text-2xl font-semibold tabular-nums text-success">
-            {approvedCount}
+          <span className="text-xs font-medium text-foreground truncate">
+            {INVENTORY_VI.countSlipDiscrepancyCard}
           </span>
         </Item>
 
         <Item
           variant="outline"
-          className="flex flex-col justify-between p-3 text-left border-border"
+          className={cn(
+            "flex items-center gap-2 p-2 text-left cursor-pointer transition-colors",
+            view === "history"
+              ? "border-success ring-1 ring-success bg-success/10"
+              : "border-border bg-card hover:bg-muted/30",
+          )}
+          render={<button type="button" onClick={() => setView("history")} />}
         >
-          <div className="flex items-center justify-between gap-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            <span>{INVENTORY_VI.countSlipTotalCard}</span>
-            <span className="size-2 rounded-full bg-muted-foreground" />
-          </div>
-          <span className="mt-1 font-mono text-2xl font-semibold tabular-nums text-foreground">
+          <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-success font-mono text-xs font-semibold text-success-foreground">
+            {approvedCount}
+          </span>
+          <span className="text-xs font-medium text-foreground truncate">
+            {INVENTORY_VI.countSlipApprovedCard}
+          </span>
+        </Item>
+
+        <Item
+          variant="outline"
+          className="flex items-center gap-2 p-2 text-left border-border bg-card"
+        >
+          <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted font-mono text-xs font-semibold text-foreground">
             {rows.length}
+          </span>
+          <span className="text-xs font-medium text-foreground truncate">
+            {INVENTORY_VI.countSlipTotalCard}
           </span>
         </Item>
       </div>
 
-      <div className="w-full">
-        <Input
+      <InputGroup size="field" className="w-full bg-card">
+        <InputGroupAddon align="inline-start">
+          <IconSearch className="size-4 text-muted-foreground" />
+        </InputGroupAddon>
+        <InputGroupInput
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder={INVENTORY_VI.countSlipSearchPlaceholder}
         />
-      </div>
+      </InputGroup>
 
       {searchParams.get("employeeId") ? (
         <NoteCallout tone="muted" className="items-center justify-between">
@@ -673,42 +674,40 @@ export function BranchCountSlipsClient({
                 <Item
                   key={row.id}
                   variant="outline"
-                  className="min-h-20 min-w-0 flex-nowrap p-3 touch-manipulation cursor-pointer"
+                  className="min-h-16 min-w-0 flex-nowrap p-3 touch-manipulation cursor-pointer bg-card hover:bg-muted/30 transition-colors"
                   render={
                     <button type="button" onClick={() => setSelectedId(row.id)} />
                   }
                 >
                   <ItemContent className="min-w-0 gap-1.5 text-left">
                     <div className="flex min-w-0 items-center justify-between gap-2">
-                      <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
-                        {row.slipNumber}
-                      </span>
+                      <ItemTitle size="heading" className="truncate font-semibold text-sm">
+                        {row.employeeName}
+                      </ItemTitle>
                       <StatusBadge
                         domain="count-slip"
                         value={row.status}
                         size="sm"
                       />
                     </div>
-                    <ItemTitle size="heading" className="truncate font-semibold">
-                      {row.employeeName}
-                    </ItemTitle>
                     <ItemDescription className="line-clamp-none flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
-                      <span>{row.locationName}</span>
+                      <span className="font-mono">{row.slipNumber}</span>
+                      <span>· {row.locationName}</span>
                       {row.shiftName ? <span>· {row.shiftName}</span> : null}
                       <span>· {formatVNDate(row.countDate)}</span>
                     </ItemDescription>
-                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                      <span className="text-xs text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                      <Badge variant="outline" className="text-2xs font-normal">
                         {INVENTORY_VI.grnDraftLineCount(row.lines.length)}
-                      </span>
+                      </Badge>
                       {diffCount > 0 ? (
-                        <span className="font-mono text-xs font-semibold tabular-nums text-warning">
+                        <Badge variant="warning" className="text-2xs font-normal">
                           {INVENTORY_VI.varianceLineCount(diffCount)}
-                        </span>
+                        </Badge>
                       ) : (
-                        <span className="font-mono text-xs font-semibold tabular-nums text-success">
+                        <Badge variant="success" className="text-2xs font-normal">
                           {INVENTORY_VI.varianceMatchedBadge}
-                        </span>
+                        </Badge>
                       )}
                     </div>
                   </ItemContent>
@@ -879,58 +878,52 @@ export function BranchCountSlipsClient({
       >
         {selected ? (
           <div className="flex min-h-0 flex-1 flex-col gap-3">
-            <ItemGroup className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <Item variant="outline" className="flex-col items-start justify-between p-2.5 min-w-0">
-                <span className="text-xs text-muted-foreground uppercase font-medium">{INVENTORY_VI.countSlipTotalCountLines}</span>
-                <span className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <Item
+                variant="outline"
+                className="flex items-center gap-2 p-2 text-left border-border bg-card"
+              >
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted font-mono text-xs font-semibold text-foreground">
                   {selected.lines.length}
                 </span>
+                <span className="text-xs font-medium text-foreground truncate">
+                  {INVENTORY_VI.countSlipTotalCountLines}
+                </span>
               </Item>
-              <Item variant="outline" className="flex-col items-start justify-between p-2.5 min-w-0">
-                <span className="text-xs text-success uppercase font-medium">{INVENTORY_VI.countSlipMatchedLines}</span>
-                <span className="mt-1 font-mono text-xl font-semibold tabular-nums text-success">
+              <Item
+                variant="outline"
+                className="flex items-center gap-2 p-2 text-left border-border bg-card"
+              >
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-success/15 font-mono text-xs font-semibold text-success">
                   {selectedMatchedLines.length}
                 </span>
+                <span className="text-xs font-medium text-success truncate">
+                  {INVENTORY_VI.countSlipMatchedLines}
+                </span>
               </Item>
-              <Item variant="outline" className="flex-col items-start justify-between p-2.5 min-w-0">
-                <span className="text-xs text-destructive uppercase font-medium">{INVENTORY_VI.countSlipShortageLines}</span>
-                <span className="mt-1 font-mono text-xl font-semibold tabular-nums text-destructive">
+              <Item
+                variant="outline"
+                className="flex items-center gap-2 p-2 text-left border-border bg-card"
+              >
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-destructive/15 font-mono text-xs font-semibold text-destructive">
                   {selectedShortageLines.length}
                 </span>
-              </Item>
-              <Item variant="outline" className="flex-col items-start justify-between p-2.5 min-w-0">
-                <span className="text-xs text-warning uppercase font-medium">{INVENTORY_VI.countSlipSurplusLines}</span>
-                <span className="mt-1 font-mono text-xl font-semibold tabular-nums text-warning">
-                  {selectedSurplusLines.length}
+                <span className="text-xs font-medium text-destructive truncate">
+                  {INVENTORY_VI.countSlipShortageLines}
                 </span>
               </Item>
-            </ItemGroup>
-
-            <BranchOperatorDetailList
-              columns={2}
-              rows={[
-                {
-                  label: INVENTORY_VI.countDateLabel,
-                  value: formatVNDate(selected.countDate),
-                },
-                {
-                  label: INVENTORY_VI.lineCountLabel,
-                  value: selected.lines.length,
-                },
-                {
-                  label: INVENTORY_VI.submittedAtLabel,
-                  value: selected.submittedAt
-                    ? formatVNDateTime(selected.submittedAt)
-                    : "—",
-                },
-                {
-                  label: INVENTORY_VI.varianceShort,
-                  value: INVENTORY_VI.varianceLineCount(
-                    changedLineCount(selected),
-                  ),
-                },
-              ]}
-            />
+              <Item
+                variant="outline"
+                className="flex items-center gap-2 p-2 text-left border-border bg-card"
+              >
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-warning/15 font-mono text-xs font-semibold text-warning">
+                  {selectedSurplusLines.length}
+                </span>
+                <span className="text-xs font-medium text-warning truncate">
+                  {INVENTORY_VI.countSlipSurplusLines}
+                </span>
+              </Item>
+            </div>
 
             <ItemGroup className="gap-2">
               {selected.lines.map((line) => (
@@ -1090,12 +1083,15 @@ function CountSlipLineItem({
     line.systemBaseQuantity > line.currentLiveBaseQuantity
       ? line.systemBaseQuantity - line.currentLiveBaseQuantity
       : null;
+  const hasLiveDelta =
+    line.currentLiveBaseQuantity !== null &&
+    Math.abs(line.currentLiveBaseQuantity - line.systemBaseQuantity) > 0.0001;
 
   return (
-    <Item variant="outline" className="min-h-20 items-start p-3 bg-card">
-      <ItemContent className="min-w-0 gap-2">
+    <Item variant="outline" className="min-h-16 items-start p-2.5 bg-card">
+      <ItemContent className="min-w-0 gap-1.5">
         <div className="flex items-center justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-2">
+          <div className="flex min-w-0 items-center gap-1.5 flex-wrap">
             {selecting ? (
               <Checkbox
                 checked={selected}
@@ -1103,7 +1099,17 @@ function CountSlipLineItem({
                 aria-label={`Chọn ${line.ingredientName} để đếm lại`}
               />
             ) : null}
-            <ItemTitle className="font-semibold text-foreground">{line.ingredientName}</ItemTitle>
+            <ItemTitle className="font-semibold text-sm text-foreground truncate">
+              {line.ingredientName}
+            </ItemTitle>
+            {line.lastRecountRound > 0 ? (
+              <Badge
+                variant="outline"
+                className="border-info/20 text-info text-2xs py-0 px-1 font-normal"
+              >
+                {INVENTORY_VI.recountRoundBadge(line.lastRecountRound)}
+              </Badge>
+            ) : null}
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
             {isMatchedAfterSales ? (
@@ -1126,24 +1132,35 @@ function CountSlipLineItem({
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 p-2 text-center text-xs bg-muted/30">
-          <div className="flex flex-col">
-            <span className="text-muted-foreground">{INVENTORY_VI.systemStockColon}</span>
-            <span className="font-mono font-medium tabular-nums text-foreground mt-0.5">
+        <div className="grid grid-cols-3 gap-1.5 p-1.5 text-center text-xs bg-muted/30">
+          <div className="flex flex-col min-w-0">
+            <span className="text-2xs uppercase tracking-wider text-muted-foreground">
+              {INVENTORY_VI.systemStockLabel}
+            </span>
+            <span className="font-mono font-medium tabular-nums text-foreground mt-0.5 truncate">
               {formatLineBaseQuantity(line, line.systemBaseQuantity)}
             </span>
+            {hasLiveDelta ? (
+              <span className="text-2xs text-muted-foreground truncate">
+                (live: {formatLineBaseQuantity(line, line.currentLiveBaseQuantity!)})
+              </span>
+            ) : null}
           </div>
-          <div className="flex flex-col">
-            <span className="text-muted-foreground">{INVENTORY_VI.countedColon}</span>
-            <span className="font-mono font-semibold tabular-nums text-foreground mt-0.5">
+          <div className="flex flex-col min-w-0">
+            <span className="text-2xs uppercase tracking-wider text-muted-foreground">
+              {INVENTORY_VI.countedLabel}
+            </span>
+            <span className="font-mono font-semibold tabular-nums text-foreground mt-0.5 truncate">
               {formatLineCountedQuantity(line)}
             </span>
           </div>
-          <div className="flex flex-col">
-            <span className="text-muted-foreground">{INVENTORY_VI.varianceShort}</span>
+          <div className="flex flex-col min-w-0">
+            <span className="text-2xs uppercase tracking-wider text-muted-foreground">
+              {INVENTORY_VI.varianceLabel}
+            </span>
             <span
               className={cn(
-                "font-mono font-semibold tabular-nums mt-0.5",
+                "font-mono font-semibold tabular-nums mt-0.5 truncate",
                 varianceClassName(line.variance),
               )}
             >
@@ -1152,42 +1169,19 @@ function CountSlipLineItem({
           </div>
         </div>
 
-        {soldSinceSubmit !== null || line.currentLiveBaseQuantity !== null ? (
-          <ItemDescription className="line-clamp-none flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
-            <span className="font-medium text-foreground/70">
-              ↳ {INVENTORY_VI.referenceColon}
+        {soldSinceSubmit !== null && soldSinceSubmit > 0 ? (
+          <div className="text-2xs text-muted-foreground truncate">
+            {INVENTORY_VI.soldSinceSubmitColon}{" "}
+            <span className="font-mono tabular-nums text-foreground">
+              {formatLineBaseQuantity(line, soldSinceSubmit)}
             </span>
-            {soldSinceSubmit !== null ? (
-              <span>
-                {INVENTORY_VI.soldSinceSubmitColon}{" "}
-                <span className="font-mono tabular-nums text-foreground">
-                  {formatLineBaseQuantity(line, soldSinceSubmit)}
-                </span>
-              </span>
-            ) : null}
-            {soldSinceSubmit !== null && line.currentLiveBaseQuantity !== null ? (
-              <span>·</span>
-            ) : null}
-            {line.currentLiveBaseQuantity !== null ? (
-              <span>
-                {INVENTORY_VI.liveStockColon}{" "}
-                <span className="font-mono tabular-nums text-foreground">
-                  {formatLineBaseQuantity(line, line.currentLiveBaseQuantity)}
-                </span>
-              </span>
-            ) : null}
-          </ItemDescription>
+          </div>
         ) : null}
 
         {line.note ? (
-          <ItemDescription className="line-clamp-none break-words text-xs italic text-muted-foreground">
+          <div className="break-words text-2xs italic text-muted-foreground">
             📝 {line.note}
-          </ItemDescription>
-        ) : null}
-        {line.lastRecountRound > 0 ? (
-          <ItemDescription className="line-clamp-none text-xs font-medium text-info">
-            {INVENTORY_VI.recountCompletedRound(line.lastRecountRound)}
-          </ItemDescription>
+          </div>
         ) : null}
       </ItemContent>
     </Item>
