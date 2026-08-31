@@ -232,7 +232,10 @@ export async function loadExpenseMatchOptions(
       "id, branch_id, expense_date, category, amount, subtotal, vat_amount, vat_breakdown, payment_method, paid_at, transfer_content, vendor_name, note, invoice_attachment_url, created_at",
     )
     .eq("tenant_id", claims.tenant_id)
-    .in("category", [...EXPENSE_CATEGORIES_BY_GROUP.operating])
+    .in("category", [
+      ...EXPENSE_CATEGORIES_BY_GROUP.operating,
+      ...EXPENSE_CATEGORIES_BY_GROUP.startup,
+    ])
     .or(
       "payment_method.eq.unpaid,payment_method.eq.transfer,transfer_content.not.is.null",
     )
@@ -256,7 +259,10 @@ export async function loadExpenseMatchOptions(
         "id, branch_id, expense_date, category, amount, subtotal, vat_amount, vat_breakdown, payment_method, paid_at, transfer_content, vendor_name, note, invoice_attachment_url, created_at",
       )
       .eq("tenant_id", claims.tenant_id)
-      .in("category", [...EXPENSE_CATEGORIES_BY_GROUP.operating])
+      .in("category", [
+        ...EXPENSE_CATEGORIES_BY_GROUP.operating,
+        ...EXPENSE_CATEGORIES_BY_GROUP.startup,
+      ])
       .in("id", requestedExpenseIds);
 
     if (includedResult.error) {

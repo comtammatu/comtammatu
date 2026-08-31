@@ -213,7 +213,10 @@ export function isExpenseVisibleForBankMatch(
   }
 
   if (expense.payment_method === "unpaid") {
-    return eventId != null && expense.paid_at == null;
+    return (
+      (eventId != null || bankTransactionId != null) &&
+      expense.paid_at == null
+    );
   }
   if (expense.payment_method === "transfer") return expense.paid_at != null;
   return false;

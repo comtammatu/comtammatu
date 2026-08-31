@@ -147,6 +147,8 @@ export const pos = {
     cashShort: (amount: string) => `Thiếu ${amount}`,
     printProvisional: "In tạm tính",
     paidConfirm: "Đã thanh toán",
+    paymentReconcileToast:
+      "Đã chuyển đơn sang Chờ đối soát. Kế toán hoặc quản lý có thể khớp giao dịch tại mục Tài chính khi có biến động số dư.",
     cancelPending: "Hủy phiên chờ",
     cancelPendingTitle: "Chỉ hủy khi khách chưa trả qua mã này",
     cancelPendingConfirmTitle: "Hủy mã thanh toán đang chờ?",

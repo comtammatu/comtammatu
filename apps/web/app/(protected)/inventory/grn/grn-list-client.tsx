@@ -123,6 +123,7 @@ export function GrnListClient({
   loadFailed: boolean;
 }) {
   const router = useRouter();
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
   const overlay = useDocumentOverlayUrl(GRN_OVERLAY_KEYS);
   const [pending, startTransition] = useTransition();
   const [query, setQuery] = useState(filters.query);
@@ -489,17 +490,21 @@ export function GrnListClient({
         })
       }
     >
-      <TabsList aria-label={grnCopy.statusTabsAria}>
-        <TabsTrigger value="draft">{statusLabels.draft}</TabsTrigger>
-        <TabsTrigger value="confirmed">{statusLabels.confirmed}</TabsTrigger>
+      <TabsList
+        size={isTouchLayout ? "touch" : "default"}
+        aria-label={grnCopy.statusTabsAria}
+        className="flex w-max min-w-full sm:w-fit items-center justify-start flex-nowrap shrink-0"
+      >
+        <TabsTrigger value="draft" className="flex-none px-2.5">{statusLabels.draft}</TabsTrigger>
+        <TabsTrigger value="confirmed" className="flex-none px-2.5">{statusLabels.confirmed}</TabsTrigger>
         {canPatchConfirmedUnitCost ? (
-          <TabsTrigger value={OWNER_UNPRICED_GRN_STATUS}>
+          <TabsTrigger value={OWNER_UNPRICED_GRN_STATUS} className="flex-none px-2.5">
             {grnCopy.confirmedUnitCost.tab}
             {unpricedTotal > 0 ? ` (${unpricedTotal})` : ""}
           </TabsTrigger>
         ) : null}
-        <TabsTrigger value="cancelled">{statusLabels.cancelled}</TabsTrigger>
-        <TabsTrigger value="all">{grnCopy.allStatuses}</TabsTrigger>
+        <TabsTrigger value="cancelled" className="flex-none px-2.5">{statusLabels.cancelled}</TabsTrigger>
+        <TabsTrigger value="all" className="flex-none px-2.5">{grnCopy.allStatuses}</TabsTrigger>
       </TabsList>
     </Tabs>
   );

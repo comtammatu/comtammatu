@@ -156,6 +156,19 @@ test("bank matching shows only canonical candidates and the current evidence", (
       null,
       20,
     ),
+    true,
+  );
+  assert.equal(
+    isExpenseVisibleForBankMatch(
+      {
+        ...base,
+        payment_method: "unpaid",
+        paid_at: null,
+        matchedBankTransactionIds: [999],
+      },
+      null,
+      20,
+    ),
     false,
   );
   assert.equal(

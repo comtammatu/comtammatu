@@ -241,6 +241,7 @@ function MissingWebhookStatusCell({
   payment: SepayMissingBankWebhookPayment;
   touch: boolean;
 }) {
+  const [open, setOpen] = React.useState(false);
   const status = payment.bankWebhookReviewStatus ?? REVIEW_PENDING_VALUE;
   const variant =
     status === "resolved" || status === "ignored" ? "secondary" : "warning";
@@ -254,10 +255,26 @@ function MissingWebhookStatusCell({
 
   return (
     <AppSheet
+      open={open}
+      onOpenChange={setOpen}
       title={copy.missingWebhookTable.reviewStatus}
       trigger={badge}
     >
-      <ReviewStatusSelect payment={payment} touch={touch} />
+      <div className="flex flex-col gap-3 py-2">
+        <p className="text-xs text-muted-foreground">
+          {copy.missingWebhookTable.payment} {formatPaymentId(payment.paymentId)}
+        </p>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-medium text-foreground">
+            {copy.missingWebhookTable.reviewStatus}
+          </label>
+          <ReviewStatusSelect
+            payment={payment}
+            touch={touch}
+            onSuccess={() => setOpen(false)}
+          />
+        </div>
+      </div>
     </AppSheet>
   );
 }
@@ -483,9 +500,11 @@ function RowContentCell({ row }: { row: BankReconciliationRow }) {
 function ReviewStatusSelect({
   payment,
   touch,
+  onSuccess,
 }: {
   payment: SepayMissingBankWebhookPayment;
   touch: boolean;
+  onSuccess?: () => void;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = React.useTransition();
@@ -507,16 +526,17 @@ function ReviewStatusSelect({
       }
 
       toast.success(table.reviewStatusSuccess);
+      onSuccess?.();
       router.refresh();
     });
   };
 
   return (
     <Select value={value} onValueChange={handleChange} disabled={isPending}>
-      <SelectTrigger size={touch ? "touch" : "sm"} className="w-36">
+      <SelectTrigger size={touch ? "touch" : "sm"} className="w-full">
         <SelectValue placeholder={table.reviewStatusPlaceholder} />
       </SelectTrigger>
-      <SelectContent align="end">
+      <SelectContent align="start">
         <SelectItem
           value={REVIEW_PENDING_VALUE}
           size={touch ? "touch" : "default"}
@@ -634,7 +654,7 @@ export function BankTransactionsTable({
     {
       key: "date",
       header: copy.table.date,
-      className: "w-28 text-right font-mono tabular-nums",
+      className: "w-36 text-right font-mono tabular-nums",
       sortable: true,
       sortValue: (row) =>
         row.kind === "bank"

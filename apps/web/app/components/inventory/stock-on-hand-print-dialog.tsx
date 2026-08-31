@@ -11,6 +11,11 @@ import { AppDialog } from "@/components/form";
 import { formatVNDateTime, getVNDateString } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
 import { formatQty } from "@lib/inventory/format";
+import {
+  formatQuantityInLargestUnits,
+  formatQuantityUnitBreakdown,
+  type QuantityUnitFormatRow,
+} from "@lib/inventory/quantity-unit-format";
 import type { StockIngredient } from "@lib/inventory/stock-on-hand-model";
 import type { IngredientUnitRow } from "@lib/inventory/types";
 import { printDocumentElement } from "@lib/printing/print-document";
@@ -29,19 +34,108 @@ export interface StockOnHandPrintDialogProps {
   defaultPaper?: "a4" | "thermal";
 }
 
+export function toStockQuantityUnitFormatRows(
+  units: IngredientUnitRow[] | undefined,
+  baseUnit: string,
+): QuantityUnitFormatRow[] {
+  if (!units || units.length === 0) {
+    return [
+      {
+        unit_code: baseUnit,
+        to_base_factor: 1,
+        is_base: true,
+        is_active: true,
+        sort_order: 1,
+      },
+    ];
+  }
+  const hasBase = units.some((u) => u.is_base || u.to_base_factor === 1);
+  const rows: QuantityUnitFormatRow[] = units.map((u, idx) => ({
+    unit_code: u.unit_code,
+    to_base_factor: u.to_base_factor,
+    is_base: u.is_base,
+    is_active: u.is_active !== false,
+    sort_order: u.sort_order ?? idx + 1,
+  }));
+  if (!hasBase) {
+    rows.push({
+      unit_code: baseUnit,
+      to_base_factor: 1,
+      is_base: true,
+      is_active: true,
+      sort_order: 999,
+    });
+  }
+  return rows;
+}
+
+export function getStockIngredientUnits(
+  item: StockIngredient,
+): {
+  unit_code: string;
+  unit_name: string;
+  to_base_factor: number;
+  is_base: boolean;
+}[] {
+  const units = (item.units ?? []).filter((u) => u.is_active !== false);
+  if (units.length === 0) {
+    return [
+      {
+        unit_code: item.unit,
+        unit_name: item.unit,
+        to_base_factor: 1,
+        is_base: true,
+      },
+    ];
+  }
+  const hasBase = units.some((u) => u.is_base || u.to_base_factor === 1);
+  const list = [...units];
+  if (!hasBase) {
+    list.push({
+      id: 0,
+      unit_id: 0,
+      unit_code: item.unit,
+      unit_name: item.unit,
+      to_base_factor: 1,
+      is_base: true,
+      is_active: true,
+      sort_order: 999,
+    });
+  }
+  return list
+    .sort((a, b) => b.to_base_factor - a.to_base_factor)
+    .map((u) => ({
+      unit_code: u.unit_code,
+      unit_name: u.unit_name || u.unit_code,
+      to_base_factor: u.to_base_factor,
+      is_base: u.is_base,
+    }));
+}
+
 export function formatStockConversionHint(
   units: IngredientUnitRow[] | undefined,
   baseUnit: string,
 ): string {
   if (!units || units.length === 0) return "—";
-  const nonBaseUnits = units.filter((u) => !u.is_base && u.to_base_factor > 1);
+  const nonBaseUnits = units.filter(
+    (u) => !u.is_base && u.to_base_factor > 1 && u.is_active !== false,
+  );
   if (nonBaseUnits.length === 0) return "—";
   return nonBaseUnits
+    .sort((a, b) => b.to_base_factor - a.to_base_factor)
     .map(
       (u) =>
-        `1 ${u.unit_name || u.unit_code} = ${u.to_base_factor} ${baseUnit}`,
+        `1 ${u.unit_name || u.unit_code} = ${formatQty(u.to_base_factor)} ${baseUnit}`,
     )
     .join(", ");
+}
+
+export function formatStockPackSpecification(
+  units: IngredientUnitRow[] | undefined,
+  baseUnit: string,
+): string {
+  const hint = formatStockConversionHint(units, baseUnit);
+  return hint === "—" ? baseUnit : hint;
 }
 
 export function StockOnHandPrintDialog({
@@ -267,33 +361,26 @@ function StockA4DocumentView({
       {
         key: "pack",
         header: copy.colPackUnit,
-        className: "w-36 text-xs text-muted-foreground",
-        render: (item) => formatStockConversionHint(item.units, item.unit),
+        className: "w-44 text-xs text-muted-foreground",
+        render: (item) => formatStockPackSpecification(item.units, item.unit),
       },
       {
         key: "counted",
         header: copy.countedManualHeader(copy.colCountedQty),
-        className: "w-48",
+        className: "w-52",
         render: (item) => {
-          const nonBaseUnits = (item.units ?? []).filter(
-            (u) => !u.is_base && u.to_base_factor > 1,
-          );
-          const unitLabels = nonBaseUnits
-            .map((u) => u.unit_name || u.unit_code)
-            .join(" / ");
+          const units = getStockIngredientUnits(item);
           return (
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between border-b border-dotted border-border pb-1 text-xs">
-                <span className="text-muted-foreground">
-                  {copy.quantityEntryLabel}
-                </span>
-                <span className="text-muted-foreground">
-                  {copy.countUnitEntry(unitLabels || item.unit)}
-                </span>
-              </div>
-              <div className="text-right text-xs text-muted-foreground">
-                = ............ {item.unit}
-              </div>
+            <div className="flex flex-col gap-1 text-xs">
+              {units.map((u) => (
+                <div
+                  key={u.unit_code}
+                  className="flex items-center justify-between border-b border-dotted border-border/80 pb-0.5"
+                >
+                  <span className="font-mono text-muted-foreground">[ ........... ]</span>
+                  <span className="font-medium text-foreground">{u.unit_name || u.unit_code}</span>
+                </div>
+              ))}
             </div>
           );
         },
@@ -346,14 +433,45 @@ function StockA4DocumentView({
       {
         key: "system",
         header: copy.colSystemQty,
-        className: "w-28 text-right font-mono font-semibold tabular-nums",
-        render: (item) => `${formatQty(item.qty)} ${item.unit}`,
+        className: "w-36 text-right font-mono text-xs tabular-nums",
+        render: (item) => {
+          const units = toStockQuantityUnitFormatRows(item.units, item.unit);
+          const { big, base } = formatQuantityUnitBreakdown(
+            item.qty,
+            units,
+            formatQty,
+          );
+          if (big) {
+            return (
+              <div className="flex flex-col items-end">
+                <span className="font-semibold text-foreground">{big}</span>
+                <span className="text-3xs text-muted-foreground">({base})</span>
+              </div>
+            );
+          }
+          return <span className="font-semibold text-foreground">{base}</span>;
+        },
       },
       {
         key: "counted",
         header: copy.countedManualHeader(copy.colCountedQty),
-        className: "w-36 text-center text-xs text-muted-foreground",
-        render: (item) => `............ ${item.unit}`,
+        className: "w-52",
+        render: (item) => {
+          const units = getStockIngredientUnits(item);
+          return (
+            <div className="flex flex-col gap-1 text-xs">
+              {units.map((u) => (
+                <div
+                  key={u.unit_code}
+                  className="flex items-center justify-between border-b border-dotted border-border/80 pb-0.5"
+                >
+                  <span className="font-mono text-muted-foreground">[ ........... ]</span>
+                  <span className="font-medium text-foreground">{u.unit_name || u.unit_code}</span>
+                </div>
+              ))}
+            </div>
+          );
+        },
       },
       {
         key: "notes",
@@ -552,10 +670,9 @@ function StockThermalDocumentView({
       {/* Items List */}
       <div className="flex flex-col gap-2">
         {ingredients.map((item, idx) => {
-          const conversionHint = formatStockConversionHint(
-            item.units,
-            item.unit,
-          );
+          const units = getStockIngredientUnits(item);
+          const fmtUnits = toStockQuantityUnitFormatRows(item.units, item.unit);
+          const packSpec = formatStockPackSpecification(item.units, item.unit);
 
           return (
             <div key={item.id ?? idx} className="text-2xs">
@@ -564,28 +681,45 @@ function StockThermalDocumentView({
                   {idx + 1}. {item.name}
                 </span>
                 <span className="shrink-0 text-right">
-                  {isCountSheet ? (
-                    <span className="text-3xs">[.......] {item.unit}</span>
-                  ) : (
+                  {!isCountSheet ? (
                     <span className="font-mono tabular-nums">
                       {copy.thermalSystemQuantity(
-                        formatQty(item.qty),
-                        item.unit,
+                        formatQuantityInLargestUnits(
+                          item.qty,
+                          fmtUnits,
+                          formatQty,
+                        ),
+                        "",
                       )}
                     </span>
-                  )}
+                  ) : null}
                 </span>
               </div>
-              {conversionHint !== "—" ? (
+              {packSpec !== item.unit ? (
                 <p className="text-3xs text-muted-foreground">
-                  ({conversionHint})
+                  ({packSpec})
                 </p>
               ) : null}
-              {!isCountSheet ? (
-                <div className="text-right text-3xs text-muted-foreground">
-                  {copy.thermalActualLabel(item.unit)}
+              {isCountSheet ? (
+                <div className="mt-1 flex flex-wrap justify-end gap-1 text-3xs text-muted-foreground">
+                  {units.map((u) => (
+                    <span key={u.unit_code}>
+                      [.....] {u.unit_name || u.unit_code}
+                    </span>
+                  ))}
                 </div>
-              ) : null}
+              ) : (
+                <div className="mt-1 flex flex-wrap justify-end gap-1 text-right text-3xs text-muted-foreground">
+                  <span className="font-medium text-foreground">
+                    {copy.thermalActualPrefix}
+                  </span>
+                  {units.map((u) => (
+                    <span key={u.unit_code}>
+                      [.....] {u.unit_name || u.unit_code}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           );
         })}

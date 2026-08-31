@@ -19,7 +19,10 @@ import {
   roundToCanonicalMoney,
 } from "@comtammatu/shared/money";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContextWithPermission } from "@/_lib/auth";
+import {
+  getAuthContextWithAnyPermission,
+  getAuthContextWithPermission,
+} from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
 import { logAudit } from "@/_lib/audit";
 import type { SepayRefundMatchOption } from "./_lib/sepay-bank-transaction-model";
@@ -1005,10 +1008,10 @@ export async function searchSepayRefundOptions(input: {
     };
   }
 
-  const ctx = await getAuthContextWithPermission(
-    FINANCE_ROLES,
+  const ctx = await getAuthContextWithAnyPermission(FINANCE_ROLES, [
+    PERMISSION_KEYS.FINANCE_VIEW,
     PERMISSION_KEYS.ORDERS_REFUND_APPROVE,
-  );
+  ]);
   if (!ctx) {
     return { success: false, error: "Không có quyền xem khoản hoàn tiền." };
   }

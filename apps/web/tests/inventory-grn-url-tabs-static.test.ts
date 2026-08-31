@@ -23,7 +23,7 @@ test("GRN is a direct route and /inventory/operations is gone", () => {
 
   assert.match(grnListClientSource, /<AppListFrame/);
   assert.doesNotMatch(grnListClientSource, /AppPageTabs|TabsContent/);
-  assert.match(grnListClientSource, /<TabsList aria-label=\{grnCopy\.statusTabsAria\}/);
+  assert.match(grnListClientSource, /<TabsList[\s\S]*?aria-label=\{grnCopy\.statusTabsAria\}/);
 });
 
 test("GRN status uses header tabs on the compact operational list", () => {

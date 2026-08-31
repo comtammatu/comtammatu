@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { formatStockConversionHint } from "../app/components/inventory/stock-on-hand-print-dialog";
+import {
+  formatStockConversionHint,
+  formatStockPackSpecification,
+  getStockIngredientUnits,
+  toStockQuantityUnitFormatRows,
+} from "../app/components/inventory/stock-on-hand-print-dialog";
 import type { StockIngredient } from "../lib/inventory/stock-on-hand-model";
 import type { IngredientUnitRow } from "../lib/inventory/types";
 
@@ -106,4 +111,70 @@ test("stock on-hand print counts status categories accurately", () => {
   assert.equal(lowStock, 1);
   assert.equal(outOfStock, 1);
   assert.equal(sampleIngredients.length, 3);
+});
+
+test("stock on-hand multi-unit helpers handle units ladder and pack specification", () => {
+  const multiUnits: IngredientUnitRow[] = [
+    {
+      id: 1,
+      unit_id: 1,
+      unit_code: "lon",
+      unit_name: "Lon",
+      is_base: true,
+      to_base_factor: 1,
+      is_active: true,
+      sort_order: 0,
+    },
+    {
+      id: 2,
+      unit_id: 2,
+      unit_code: "thung",
+      unit_name: "Thùng",
+      is_base: false,
+      to_base_factor: 24,
+      is_active: true,
+      sort_order: 2,
+    },
+    {
+      id: 3,
+      unit_id: 3,
+      unit_code: "loc",
+      unit_name: "Lốc",
+      is_base: false,
+      to_base_factor: 6,
+      is_active: true,
+      sort_order: 1,
+    },
+  ];
+
+  const ingredient: StockIngredient = {
+    id: 10,
+    name: "Coca Cola",
+    sku: "NL-010",
+    unit: "lon",
+    category: "Đồ uống",
+    itemKind: "raw_material",
+    qty: 76,
+    monetary: { averageUnitCost: 10000 },
+    min: 10,
+    max: 100,
+    reorder: 20,
+    status: "normal",
+    lastCount: "2026-08-30",
+    temp: null,
+    units: multiUnits,
+  };
+
+  const units = getStockIngredientUnits(ingredient);
+  assert.equal(units.length, 3);
+  assert.equal(units[0]?.unit_code, "thung");
+  assert.equal(units[1]?.unit_code, "loc");
+  assert.equal(units[2]?.unit_code, "lon");
+
+  const packSpec = formatStockPackSpecification(multiUnits, "lon");
+  assert.equal(packSpec, "1 Thùng = 24 lon, 1 Lốc = 6 lon");
+
+  const fmtRows = toStockQuantityUnitFormatRows(multiUnits, "lon");
+  assert.equal(fmtRows.length, 3);
+  assert.equal(fmtRows.find((r) => r.is_base)?.unit_code, "lon");
 });

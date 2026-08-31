@@ -997,6 +997,12 @@ export function BillReceipt({
     ],
   );
 
+  const handleWaitingForVietQrClose = useCallback(() => {
+    toast.info(messages.pos.payment.paymentReconcileToast);
+    void onOrderUpdated?.();
+    onClose();
+  }, [onClose, onOrderUpdated]);
+
   useEffect(() => {
     if (orderId === null || !order || order.payment_status === "paid") return;
 
@@ -1346,7 +1352,7 @@ export function BillReceipt({
             type="button"
             size="touch-lg"
             className="w-full"
-            onClick={onClose}
+            onClick={handleWaitingForVietQrClose}
             disabled={actionPending}
           >
             {SELF_ORDER_VI.paymentReconcileAction}

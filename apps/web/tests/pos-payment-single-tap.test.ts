@@ -43,7 +43,7 @@ test("POS closes a pending VietQR sheet as waiting without confirming payment", 
   );
   assert.match(
     billReceiptSource,
-    /isWaitingForVietQr \? \(\s*<Button[\s\S]*?onClick=\{onClose\}[\s\S]*?SELF_ORDER_VI\.paymentReconcileAction/,
+    /isWaitingForVietQr \? \(\s*<Button[\s\S]*?onClick=\{handleWaitingForVietQrClose\}[\s\S]*?SELF_ORDER_VI\.paymentReconcileAction/,
   );
   assert.match(
     billReceiptSource,

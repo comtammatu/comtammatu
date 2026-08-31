@@ -25,6 +25,7 @@ import {
   type SepayWebhookRow,
 } from "../app/(protected)/finance/_lib/sepay-bank-transaction-model";
 import { fetchSepayDataApiRows } from "../app/(protected)/finance/_lib/sepay-bank-transactions";
+import { isExpenseVisibleForBankMatch } from "../app/(protected)/finance/_lib/expense-categories";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
@@ -1131,3 +1132,96 @@ test("SePay bank webhook review parser ignores malformed provider data", () => {
     { status: null, reviewedAt: null, reviewedBy: null },
   );
 });
+
+test("isExpenseVisibleForBankMatch allows unpaid expenses for bank transactions", () => {
+  const unpaidOperatingExpense = {
+    category: "rent",
+    payment_method: "unpaid",
+    paid_at: null,
+    matchedEventIds: [],
+    matchedBankTransactionIds: [],
+  };
+
+  // When eventId is null but bankTransactionId is provided (canonical bank transaction)
+  assert.equal(
+    isExpenseVisibleForBankMatch(unpaidOperatingExpense, null, 101),
+    true,
+  );
+
+  // When eventId is provided (legacy webhook)
+  assert.equal(
+    isExpenseVisibleForBankMatch(unpaidOperatingExpense, 202, null),
+    true,
+  );
+
+  // When already matched to this bank transaction
+  assert.equal(
+    isExpenseVisibleForBankMatch(
+      {
+        ...unpaidOperatingExpense,
+        matchedBankTransactionIds: [101],
+      },
+      null,
+      101,
+    ),
+    true,
+  );
+
+  // When already matched to another bank transaction
+  assert.equal(
+    isExpenseVisibleForBankMatch(
+      {
+        ...unpaidOperatingExpense,
+        matchedBankTransactionIds: [999],
+      },
+      null,
+      101,
+    ),
+    false,
+  );
+
+  // When startup category (capital / deposit) is used
+  const unpaidStartupExpense = {
+    category: "capital",
+    payment_method: "unpaid",
+    paid_at: null,
+    matchedEventIds: [],
+    matchedBankTransactionIds: [],
+  };
+  assert.equal(
+    isExpenseVisibleForBankMatch(unpaidStartupExpense, null, 101),
+    true,
+  );
+});
+
+test("loadExpenseMatchOptions includes startup expense categories", () => {
+  const source = read(
+    "apps/web/app/(protected)/finance/_lib/expense-match-options.ts",
+  );
+  assert.match(source, /EXPENSE_CATEGORIES_BY_GROUP\.startup/);
+});
+
+test("searchSepayRefundOptions uses FINANCE_VIEW permission key", () => {
+  const actions = read(
+    "apps/web/app/(protected)/finance/expense-actions.ts",
+  );
+  assert.match(
+    actions,
+    /searchSepayRefundOptions[\s\S]*PERMISSION_KEYS\.FINANCE_VIEW/,
+  );
+});
+
+test("bank reconciliation migration supports unpaid expenses and accountant replay", () => {
+  const migration = read(
+    "supabase/migrations/20260831210000_fix_bank_reconciliation_unpaid_and_accountant_replay.sql",
+  );
+  assert.match(
+    migration,
+    /expense\.payment_method IN \('transfer', 'unpaid'\)/,
+  );
+  assert.match(
+    migration,
+    /position\.code IN \('owner', 'accountant'\)/,
+  );
+});
+

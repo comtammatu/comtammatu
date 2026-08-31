@@ -303,7 +303,7 @@ test("inventory settings sub-pages stay internal routes, not sidebar items", () 
   assert.doesNotMatch(settingsLayoutSource, /settings\/expiry|icon: "expiry"/);
   assert.match(settingsSectionNavSource, /SETTINGS_SECTION_ICONS/);
   assert.doesNotMatch(settingsSectionNavSource, /Hourglass|expiry/);
-  assert.match(settingsSectionNavSource, /<AppToolbar className="flex-wrap">/);
+  assert.match(settingsSectionNavSource, /<TabsList/);
   assert.match(settingsSectionNavSource, /usePathname/);
   assert.match(
     settingsThresholdsSource,
