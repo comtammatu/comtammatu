@@ -261,7 +261,7 @@ export. Detail and edit steps open a bottom `Sheet` with a sticky
 | `/stock/grn/[id]` | DETAIL | Draft owns a touch receiving list and line sheet; confirmed slips are read-only. Post-confirm correction stays on control_surface `/inventory/grn?grnId=&mode=view`. |
 | `/stock/stocktake` | LIST | `loadBranchStocktakeListData`; manager sessions, distinct from `/stock/count` slips. |
 | `/stock/stocktake/new` | DOC-WORKFLOW | Mode + location only, then open the session and enter count. |
-| `/stock/stocktake/[id]/count` | DOC-WORKFLOW | Number pad entry with unit choice, autosave draft, zone lock, round submit. Blind payload carries no system quantity. |
+| `/stock/stocktake/[id]/count` | DOC-WORKFLOW | Number pad entry with unit choice, autosave draft, and round submit. Blind payload carries no system quantity. |
 | `/stock/stocktake/[id]` | DETAIL | Active review takes blind counts and status actions; completed result uses `ItemGroup` system/count/variance. |
 | `/stock/issues` | LIST | `writeoff` slips only. New shrinkage goes through `/stock/waste`. |
 | `/stock/issues/[id]` | DETAIL | Draft line add/edit/delete in a `Sheet`; quantity capped by stock, reason required. |

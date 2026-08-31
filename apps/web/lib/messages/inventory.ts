@@ -2477,7 +2477,6 @@ export const inventory = {
     chooseBranchPlaceholder: "Chọn chi nhánh...",
     creatingClassic: "Đang tạo...",
     createClassic: "Tạo phiên",
-    zoneLockLost: "Mất quyền nhập khu vực — ngừng nhập số đếm",
     countNative: {
       countMode: (_round: number) => "Đếm tồn",
       countRatio: (done: number, total: number) =>

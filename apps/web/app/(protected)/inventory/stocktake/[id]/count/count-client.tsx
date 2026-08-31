@@ -15,7 +15,6 @@ import {
   useStocktakeDraftSaver,
   type DraftCounts,
 } from "../../../_components/stocktake-draft-saver";
-import { ZoneLockIndicator } from "../../../_components/zone-lock-indicator";
 import { formatQty } from "@lib/inventory/format";
 import { messages } from "@lib/messages";
 import { applyInventoryActionError } from "@lib/inventory/apply-inventory-action-error";
@@ -97,12 +96,9 @@ export function StocktakeCountClient({
     }
     return next;
   });
-  const [lockState, setLockState] = useState<
-    "idle" | "acquiring" | "held" | "blocked" | "lost" | "error"
-  >("idle");
   const [pending, startTransition] = useTransition();
   const canCount = status === "in_progress";
-  const editable = canCount && lockState === "held";
+  const editable = canCount;
 
   const {
     status: saveStatus,
@@ -114,7 +110,6 @@ export function StocktakeCountClient({
     enabled: editable,
   });
 
-  const zoneId = `session-${sessionId}`;
   const detailHref = `${routeBase}/${sessionId}?branch=${branchId}&view=detail`;
 
   const currentRoundLines = useMemo(
@@ -205,24 +200,12 @@ export function StocktakeCountClient({
   }
 
   const safetyChrome = (
-    <>
-      <div className="flex flex-wrap items-center gap-3">
-        <StocktakeDraftSaverBadge
-          status={saveStatus}
-          lastSavedAt={lastSavedAt}
-        />
-      </div>
-      {canCount ? (
-        <ZoneLockIndicator
-          sessionId={sessionId}
-          zoneId={zoneId}
-          onStateChange={setLockState}
-          onLost={() => {
-            toast.error(stocktakeCopy.zoneLockLost);
-          }}
-        />
-      ) : null}
-    </>
+    <div className="flex flex-wrap items-center gap-3">
+      <StocktakeDraftSaverBadge
+        status={saveStatus}
+        lastSavedAt={lastSavedAt}
+      />
+    </div>
   );
 
   return (

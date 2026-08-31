@@ -62,7 +62,6 @@ const OPERATIONAL_DELETE_TABLES = [
   "inventory_count_slip_lines",
   "inventory_count_slips",
   "inventory_count_assignments",
-  "stocktake_zone_locks",
   "stocktake_conflicts",
   "stocktake_lines",
   "stocktake_sessions",

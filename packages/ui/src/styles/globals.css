@@ -36,7 +36,7 @@
 
 /* The whole @theme surface: color roles, radius tiers, type scale, fonts, and
  * animation registrations. Status hues (success / warning / info) exist because
- * POS/Inventory toasts, alerts, badges, and zone locks need distinct
+ * POS/Inventory toasts, alerts, and badges need distinct
  * operational states; tier hues (elite / note) cover the Trust / Variance /
  * Waste grade ladders that success–destructive cannot express. */
 @theme inline {

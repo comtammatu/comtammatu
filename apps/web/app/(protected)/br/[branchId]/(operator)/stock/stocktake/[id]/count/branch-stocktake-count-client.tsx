@@ -25,7 +25,6 @@ import {
   type DraftCounts,
   useStocktakeDraftSaver,
 } from "@/(protected)/inventory/_components/stocktake-draft-saver";
-import { ZoneLockIndicator } from "@/(protected)/inventory/_components/zone-lock-indicator";
 import { StocktakePrintDialog } from "@/components/inventory/stocktake-print-dialog";
 import { BranchStocktakeCountList } from "./branch-stocktake-count-list";
 import { submitCountRound } from "@/(protected)/inventory/stocktake-actions";
@@ -95,15 +94,12 @@ export function BranchStocktakeCountClient({
     }
     return next;
   });
-  const [lockState, setLockState] = useState<
-    "idle" | "acquiring" | "held" | "blocked" | "lost" | "error"
-  >("idle");
   const [isPending, startTransition] = useTransition();
   const currentRoundLines = useMemo(
     () => lines.filter((line) => line.roundNo === data.currentRound),
     [data.currentRound, lines],
   );
-  const editable = data.status === "in_progress" && lockState === "held";
+  const editable = data.status === "in_progress";
   const countedLines = currentRoundLines.filter(
     (line) => typeof counts[String(line.ingredientId)]?.qty === "number",
   ).length;
@@ -210,21 +206,11 @@ export function BranchStocktakeCountClient({
   const countCopy = stocktakeCopy.countNative;
   const remaining = currentRoundLines.length - countedLines;
   const safetyChrome = (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <StocktakeDraftSaverBadge
-          status={saveStatus}
-          lastSavedAt={lastSavedAt}
-        />
-      </div>
-      {data.status === "in_progress" ? (
-        <ZoneLockIndicator
-          sessionId={data.sessionId}
-          zoneId={`session-${data.sessionId}`}
-          onStateChange={setLockState}
-          onLost={() => toast.error(stocktakeCopy.zoneLockLost)}
-        />
-      ) : null}
+    <div className="flex flex-wrap items-center gap-2">
+      <StocktakeDraftSaverBadge
+        status={saveStatus}
+        lastSavedAt={lastSavedAt}
+      />
     </div>
   );
 

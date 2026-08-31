@@ -988,7 +988,7 @@ test("operator stocktake routes keep session stocktake native to Branch", () => 
   assert.match(branchCountClient, /<BranchStocktakeCountList/);
   assert.match(branchCountClient, /onUnitChange=\{onUnitChange\}/);
   assert.match(branchCountClient, /useStocktakeDraftSaver/);
-  assert.match(branchCountClient, /ZoneLockIndicator/);
+  assert.doesNotMatch(branchCountClient, /ZoneLockIndicator|lockState|zoneId/);
   assert.doesNotMatch(branchCountClient, /DocumentFormFrame|DataTable/);
   assert.doesNotMatch(branchCountClient, /Đếm mù|Round R|Đếm kiểm kê/);
   assert.match(branchCountClient, /countCopy\.countMode/);
