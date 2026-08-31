@@ -7,7 +7,11 @@ import { AppDialog } from "@/components/form";
 import { formatVND, formatQuantity } from "@comtammatu/shared/format";
 import { formatVNDateTime, getVNDateString } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
-import type { GrnDetail, EditableGrnLine } from "@lib/inventory/grn-detail-model";
+import type {
+  GrnDetail,
+  EditableGrnLine,
+} from "@lib/inventory/grn-detail-model";
+import { printDocumentElement } from "@lib/printing/print-document";
 
 const copy = messages.inventory.thermalReceipt;
 
@@ -16,7 +20,10 @@ interface GrnThermalReceiptDialogProps {
   lines?: EditableGrnLine[];
 }
 
-export function GrnThermalReceiptDialog({ grn, lines }: GrnThermalReceiptDialogProps) {
+export function GrnThermalReceiptDialog({
+  grn,
+  lines,
+}: GrnThermalReceiptDialogProps) {
   const [open, setOpen] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -29,7 +36,7 @@ export function GrnThermalReceiptDialog({ grn, lines }: GrnThermalReceiptDialogP
   }, 0);
 
   const handlePrint = () => {
-    window.print();
+    printDocumentElement(printRef.current);
   };
 
   return (
@@ -58,11 +65,7 @@ export function GrnThermalReceiptDialog({ grn, lines }: GrnThermalReceiptDialogP
             >
               {copy.close}
             </Button>
-            <Button
-              type="button"
-              variant="default"
-              onClick={handlePrint}
-            >
+            <Button type="button" variant="default" onClick={handlePrint}>
               <IconPrinter className="size-4" />
               {copy.printNow}
             </Button>
@@ -79,7 +82,9 @@ export function GrnThermalReceiptDialog({ grn, lines }: GrnThermalReceiptDialogP
               <p className="text-sm font-semibold tracking-wider">
                 {copy.brandTitle}
               </p>
-              <p className="text-2xs text-muted-foreground">{copy.brandSlogan}</p>
+              <p className="text-2xs text-muted-foreground">
+                {copy.brandSlogan}
+              </p>
               <p className="mt-2 text-xs font-semibold">
                 {copy.grnReceiptHeader}
               </p>
@@ -91,17 +96,25 @@ export function GrnThermalReceiptDialog({ grn, lines }: GrnThermalReceiptDialogP
             {/* Meta */}
             <div className="flex flex-col gap-1 text-2xs">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">{copy.grnReceivingBranch}</span>
+                <span className="text-muted-foreground">
+                  {copy.grnReceivingBranch}
+                </span>
                 <span className="font-semibold">{grn.branchName}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">{copy.grnSupplier}</span>
-                <span className="max-w-44 truncate font-semibold">{grn.supplier}</span>
+                <span className="text-muted-foreground">
+                  {copy.grnSupplier}
+                </span>
+                <span className="max-w-44 truncate font-semibold">
+                  {grn.supplier}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{copy.grnTime}</span>
                 <span>
-                  {grn.date ? formatVNDateTime(grn.date) : formatVNDateTime(getVNDateString())}
+                  {grn.date
+                    ? formatVNDateTime(grn.date)
+                    : formatVNDateTime(getVNDateString())}
                 </span>
               </div>
               {grn.poCode ? (
@@ -151,7 +164,9 @@ export function GrnThermalReceiptDialog({ grn, lines }: GrnThermalReceiptDialogP
             <div className="flex flex-col gap-1 text-2xs">
               <div className="flex justify-between">
                 <span>{copy.grnTotalItemsLabel}</span>
-                <span className="font-semibold">{copy.grnTotalLines(activeItems.length)}</span>
+                <span className="font-semibold">
+                  {copy.grnTotalLines(activeItems.length)}
+                </span>
               </div>
               {totalAcceptedAmount > 0 ? (
                 <div className="flex justify-between text-xs font-semibold">

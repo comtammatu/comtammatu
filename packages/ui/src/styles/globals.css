@@ -667,7 +667,11 @@
   border-color: var(--border);
 }
 
-/* Print mode for the POS bill receipt — force black ink on white paper
+.app-print-portal {
+  display: none;
+}
+
+/* Print mode for document templates and the POS bill receipt — force black ink on white paper
  * regardless of host theme. Without this, night mode prints white text on a
  * black background = unreadable receipt + ribbon-burning ink waste on thermal
  * printers. Also neutralize any inherited line-clamp / overflow:hidden /
@@ -684,8 +688,29 @@
     size: A4 portrait;
     margin: 12mm 15mm;
   }
+  @page thermal-receipt {
+    size: auto;
+    margin: 4mm;
+  }
+  body:has(> .app-print-portal) > :not(.app-print-portal) {
+    display: none !important;
+  }
+  body:has(> .app-print-portal) {
+    background: white !important;
+  }
+  body > .app-print-portal {
+    display: block !important;
+    color: black !important;
+    background: white !important;
+  }
+  .app-print-document,
+  .app-print-document *,
   #pos-receipt,
   #pos-receipt *,
+  .stock-print-sheet,
+  .stock-print-sheet *,
+  .stock-thermal-sheet,
+  .stock-thermal-sheet *,
   .stocktake-print-sheet,
   .stocktake-print-sheet *,
   .stocktake-a4-sheet,
@@ -714,6 +739,16 @@
   .stocktake-print-avoid-break {
     break-inside: avoid;
     page-break-inside: avoid;
+  }
+  #pos-receipt,
+  .stock-thermal-sheet,
+  .stocktake-thermal-sheet,
+  .grn-thermal-receipt,
+  .transfer-thermal-receipt {
+    page: thermal-receipt;
+    width: 72mm !important;
+    max-width: 72mm !important;
+    margin-inline: auto !important;
   }
 }
 

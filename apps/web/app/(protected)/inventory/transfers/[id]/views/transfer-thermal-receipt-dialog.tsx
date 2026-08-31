@@ -8,6 +8,7 @@ import { formatVND, formatQuantity } from "@comtammatu/shared/format";
 import { formatVNDateTime, getVNDateString } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
 import type { TransferDetail } from "@lib/inventory/transfer-detail-model";
+import { printDocumentElement } from "@lib/printing/print-document";
 
 const copy = messages.inventory.thermalReceipt;
 
@@ -26,7 +27,7 @@ export function TransferThermalReceiptDialog({
   }, 0);
 
   const handlePrint = () => {
-    window.print();
+    printDocumentElement(printRef.current);
   };
 
   return (
@@ -55,11 +56,7 @@ export function TransferThermalReceiptDialog({
             >
               {copy.close}
             </Button>
-            <Button
-              type="button"
-              variant="default"
-              onClick={handlePrint}
-            >
+            <Button type="button" variant="default" onClick={handlePrint}>
               <IconPrinter className="size-4" />
               {copy.printNow}
             </Button>
@@ -76,7 +73,9 @@ export function TransferThermalReceiptDialog({
               <p className="text-sm font-semibold tracking-wider">
                 {copy.brandTitle}
               </p>
-              <p className="text-2xs text-muted-foreground">{copy.brandSlogan}</p>
+              <p className="text-2xs text-muted-foreground">
+                {copy.brandSlogan}
+              </p>
               <p className="mt-2 text-xs font-semibold">
                 {copy.transferReceiptHeader}
               </p>
@@ -88,15 +87,21 @@ export function TransferThermalReceiptDialog({
             {/* Meta */}
             <div className="flex flex-col gap-1 text-2xs">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">{copy.transferFromBranch}</span>
+                <span className="text-muted-foreground">
+                  {copy.transferFromBranch}
+                </span>
                 <span className="font-semibold">{transfer.fromBranch}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">{copy.transferToBranch}</span>
+                <span className="text-muted-foreground">
+                  {copy.transferToBranch}
+                </span>
                 <span className="font-semibold">{transfer.toBranch}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">{copy.transferTime}</span>
+                <span className="text-muted-foreground">
+                  {copy.transferTime}
+                </span>
                 <span>
                   {transfer.date
                     ? formatVNDateTime(transfer.date)
@@ -105,7 +110,9 @@ export function TransferThermalReceiptDialog({
               </div>
               {transfer.stockRequestNumber ? (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">{copy.transferStockRequest}</span>
+                  <span className="text-muted-foreground">
+                    {copy.transferStockRequest}
+                  </span>
                   <span>{transfer.stockRequestNumber}</span>
                 </div>
               ) : null}
@@ -128,7 +135,12 @@ export function TransferThermalReceiptDialog({
                       {formatQuantity(item.qty)} {item.unit}
                     </span>
                     {item.received !== null ? (
-                      <span>{copy.transferReceived(formatQuantity(item.received), item.unit)}</span>
+                      <span>
+                        {copy.transferReceived(
+                          formatQuantity(item.received),
+                          item.unit,
+                        )}
+                      </span>
                     ) : null}
                   </div>
                 </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Printer as IconPrinter } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -10,6 +10,7 @@ import {
 import { AppDialog } from "@/components/form";
 import { formatVNDateTime, getVNDateString } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
+import { printDocumentElement } from "@lib/printing/print-document";
 import { formatQty } from "@lib/inventory/format";
 
 const copy = messages.inventory.stocktakePrint;
@@ -78,6 +79,7 @@ export function StocktakePrintDialog({
   defaultPaper = "a4",
 }: StocktakePrintDialogProps) {
   const [open, setOpen] = useState(false);
+  const printRef = useRef<HTMLDivElement>(null);
   const initialMode =
     defaultMode ??
     (session.status === "completed" ? "reconciliation" : "count_sheet");
@@ -118,7 +120,7 @@ export function StocktakePrintDialog({
   );
 
   const handlePrint = () => {
-    window.print();
+    printDocumentElement(printRef.current);
   };
 
   return (
@@ -209,33 +211,35 @@ export function StocktakePrintDialog({
 
           {/* Document Preview Container */}
           <div className="max-h-96 overflow-y-auto p-4">
-            {paper === "a4" ? (
-              <A4DocumentView
-                session={session}
-                sessionCode={sessionCode}
-                branchDisplayName={branchDisplayName}
-                lines={lines}
-                unitOptionsByIngredient={unitOptionsByIngredient}
-                mode={mode}
-                currentRound={currentRound}
-                printTimeStr={printTimeStr}
-                matchedCount={matchedCount}
-                varianceCount={varianceLines.length}
-              />
-            ) : (
-              <ThermalDocumentView
-                session={session}
-                sessionCode={sessionCode}
-                branchDisplayName={branchDisplayName}
-                lines={lines}
-                unitOptionsByIngredient={unitOptionsByIngredient}
-                mode={mode}
-                currentRound={currentRound}
-                printTimeStr={printTimeStr}
-                matchedCount={matchedCount}
-                varianceCount={varianceLines.length}
-              />
-            )}
+            <div ref={printRef}>
+              {paper === "a4" ? (
+                <A4DocumentView
+                  session={session}
+                  sessionCode={sessionCode}
+                  branchDisplayName={branchDisplayName}
+                  lines={lines}
+                  unitOptionsByIngredient={unitOptionsByIngredient}
+                  mode={mode}
+                  currentRound={currentRound}
+                  printTimeStr={printTimeStr}
+                  matchedCount={matchedCount}
+                  varianceCount={varianceLines.length}
+                />
+              ) : (
+                <ThermalDocumentView
+                  session={session}
+                  sessionCode={sessionCode}
+                  branchDisplayName={branchDisplayName}
+                  lines={lines}
+                  unitOptionsByIngredient={unitOptionsByIngredient}
+                  mode={mode}
+                  currentRound={currentRound}
+                  printTimeStr={printTimeStr}
+                  matchedCount={matchedCount}
+                  varianceCount={varianceLines.length}
+                />
+              )}
+            </div>
           </div>
         </div>
       </AppDialog>
@@ -272,9 +276,7 @@ function A4DocumentView({
   const formCode = isCountSheet
     ? copy.formCodeCountSheet
     : copy.formCodeReconciliation;
-  const title = isCountSheet
-    ? copy.countSheetTitle
-    : copy.reconciliationTitle;
+  const title = isCountSheet ? copy.countSheetTitle : copy.reconciliationTitle;
   const subtitle = isCountSheet
     ? copy.countSheetSubtitle(currentRound)
     : copy.reconciliationSubtitle;
@@ -417,9 +419,7 @@ function A4DocumentView({
           if (variance == null) return "—";
           return (
             <span>
-              {variance > 0
-                ? `+${formatQty(variance)}`
-                : formatQty(variance)}
+              {variance > 0 ? `+${formatQty(variance)}` : formatQty(variance)}
             </span>
           );
         },
@@ -461,12 +461,16 @@ function A4DocumentView({
       {/* Header Organization & Meta */}
       <div className="flex items-start justify-between border-b border-border pb-3 text-xs leading-relaxed">
         <div>
-          <p className="font-semibold uppercase tracking-wider">{copy.companyName}</p>
+          <p className="font-semibold uppercase tracking-wider">
+            {copy.companyName}
+          </p>
           <p className="font-semibold text-foreground">
             {copy.brandTitle} — {copy.brandSlogan}
           </p>
           <p className="mt-1">
-            <span className="font-medium text-muted-foreground">{copy.branchLabel}</span>{" "}
+            <span className="font-medium text-muted-foreground">
+              {copy.branchLabel}
+            </span>{" "}
             <span className="font-semibold">{branchDisplayName}</span>
           </p>
         </div>
@@ -521,7 +525,8 @@ function A4DocumentView({
         </div>
         {session.notes ? (
           <div className="col-span-2 border-t border-border pt-1 text-muted-foreground">
-            <span className="font-medium">{copy.notesLabel}</span> {session.notes}
+            <span className="font-medium">{copy.notesLabel}</span>{" "}
+            {session.notes}
           </div>
         ) : null}
       </div>
@@ -554,24 +559,36 @@ function A4DocumentView({
       <div className="stocktake-signatures stocktake-print-avoid-break mt-8 pt-4">
         <div className="grid grid-cols-3 gap-4 text-center text-xs">
           <div>
-            <p className="font-semibold uppercase tracking-wider">{copy.signCounter}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">{copy.signHint}</p>
+            <p className="font-semibold uppercase tracking-wider">
+              {copy.signCounter}
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {copy.signHint}
+            </p>
             <div className="h-16" />
             <p className="border-t border-dotted border-border pt-1 text-xs text-muted-foreground">
               {copy.signHint}
             </p>
           </div>
           <div>
-            <p className="font-semibold uppercase tracking-wider">{copy.signHeadChef}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">{copy.signHint}</p>
+            <p className="font-semibold uppercase tracking-wider">
+              {copy.signHeadChef}
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {copy.signHint}
+            </p>
             <div className="h-16" />
             <p className="border-t border-dotted border-border pt-1 text-xs text-muted-foreground">
               {copy.signHint}
             </p>
           </div>
           <div>
-            <p className="font-semibold uppercase tracking-wider">{copy.signManager}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">{copy.signHint}</p>
+            <p className="font-semibold uppercase tracking-wider">
+              {copy.signManager}
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {copy.signHint}
+            </p>
             <div className="h-16" />
             <p className="border-t border-dotted border-border pt-1 text-xs text-muted-foreground">
               {copy.signHint}
@@ -622,7 +639,9 @@ function ThermalDocumentView({
     >
       {/* Header */}
       <div className="text-center">
-        <p className="text-sm font-semibold tracking-wider">{copy.companyName}</p>
+        <p className="text-sm font-semibold tracking-wider">
+          {copy.companyName}
+        </p>
         <p className="text-xs font-semibold">{copy.brandTitle}</p>
         <p className="text-xs text-muted-foreground">{copy.brandSlogan}</p>
         <div className="my-1.5 border-b border-dashed border-border" />
@@ -637,11 +656,15 @@ function ThermalDocumentView({
       {/* Meta */}
       <div className="flex flex-col gap-1 text-xs">
         <div className="flex justify-between">
-          <span className="text-muted-foreground">{copy.thermalWarehouseLabel}</span>
+          <span className="text-muted-foreground">
+            {copy.thermalWarehouseLabel}
+          </span>
           <span className="font-semibold">{branchDisplayName}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-muted-foreground">{copy.thermalRoundLabel}</span>
+          <span className="text-muted-foreground">
+            {copy.thermalRoundLabel}
+          </span>
           <span>{copy.roundValue(currentRound)}</span>
         </div>
         <div className="flex justify-between">
@@ -707,10 +730,16 @@ function ThermalDocumentView({
               {!isCountSheet && countedQty != null ? (
                 <div className="flex justify-between text-3xs text-muted-foreground">
                   <span>
-                    {copy.thermalSystemQuantity(formatQty(systemQty), item.unit)}
+                    {copy.thermalSystemQuantity(
+                      formatQty(systemQty),
+                      item.unit,
+                    )}
                   </span>
                   <span>
-                    {copy.thermalCountedQuantity(formatQty(countedQty), item.unit)}
+                    {copy.thermalCountedQuantity(
+                      formatQty(countedQty),
+                      item.unit,
+                    )}
                   </span>
                 </div>
               ) : null}

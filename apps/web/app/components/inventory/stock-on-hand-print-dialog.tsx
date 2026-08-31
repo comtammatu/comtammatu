@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Printer as IconPrinter } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -13,6 +13,7 @@ import { messages } from "@lib/messages";
 import { formatQty } from "@lib/inventory/format";
 import type { StockIngredient } from "@lib/inventory/stock-on-hand-model";
 import type { IngredientUnitRow } from "@lib/inventory/types";
+import { printDocumentElement } from "@lib/printing/print-document";
 
 const copy = messages.inventory.stockOnHandPrint;
 
@@ -36,7 +37,10 @@ export function formatStockConversionHint(
   const nonBaseUnits = units.filter((u) => !u.is_base && u.to_base_factor > 1);
   if (nonBaseUnits.length === 0) return "—";
   return nonBaseUnits
-    .map((u) => `1 ${u.unit_name || u.unit_code} = ${u.to_base_factor} ${baseUnit}`)
+    .map(
+      (u) =>
+        `1 ${u.unit_name || u.unit_code} = ${u.to_base_factor} ${baseUnit}`,
+    )
     .join(", ");
 }
 
@@ -52,13 +56,13 @@ export function StockOnHandPrintDialog({
   defaultPaper = "a4",
 }: StockOnHandPrintDialogProps) {
   const [open, setOpen] = useState(false);
+  const printRef = useRef<HTMLDivElement>(null);
   const [mode, setMode] = useState<"count_sheet" | "reconciliation">(
     defaultMode,
   );
   const [paper, setPaper] = useState<"a4" | "thermal">(defaultPaper);
 
-  const branchDisplayName =
-    branchName || copy.branchFallback(branchId);
+  const branchDisplayName = branchName || copy.branchFallback(branchId);
   const nowIso = getVNDateString();
   const printTimeStr = formatVNDateTime(nowIso);
 
@@ -76,7 +80,7 @@ export function StockOnHandPrintDialog({
   );
 
   const handlePrint = () => {
-    window.print();
+    printDocumentElement(printRef.current);
   };
 
   return (
@@ -167,27 +171,29 @@ export function StockOnHandPrintDialog({
 
           {/* Document Preview Container */}
           <div className="max-h-96 overflow-y-auto p-4">
-            {paper === "a4" ? (
-              <StockA4DocumentView
-                branchDisplayName={branchDisplayName}
-                ingredients={ingredients}
-                mode={mode}
-                printTimeStr={printTimeStr}
-                inStockCount={inStockCount}
-                lowStockCount={lowStockCount}
-                outOfStockCount={outOfStockCount}
-              />
-            ) : (
-              <StockThermalDocumentView
-                branchDisplayName={branchDisplayName}
-                ingredients={ingredients}
-                mode={mode}
-                printTimeStr={printTimeStr}
-                inStockCount={inStockCount}
-                lowStockCount={lowStockCount}
-                outOfStockCount={outOfStockCount}
-              />
-            )}
+            <div ref={printRef}>
+              {paper === "a4" ? (
+                <StockA4DocumentView
+                  branchDisplayName={branchDisplayName}
+                  ingredients={ingredients}
+                  mode={mode}
+                  printTimeStr={printTimeStr}
+                  inStockCount={inStockCount}
+                  lowStockCount={lowStockCount}
+                  outOfStockCount={outOfStockCount}
+                />
+              ) : (
+                <StockThermalDocumentView
+                  branchDisplayName={branchDisplayName}
+                  ingredients={ingredients}
+                  mode={mode}
+                  printTimeStr={printTimeStr}
+                  inStockCount={inStockCount}
+                  lowStockCount={lowStockCount}
+                  outOfStockCount={outOfStockCount}
+                />
+              )}
+            </div>
           </div>
         </div>
       </AppDialog>
@@ -218,9 +224,7 @@ function StockA4DocumentView({
   const formCode = isCountSheet
     ? copy.formCodeCountSheet
     : copy.formCodeReconciliation;
-  const title = isCountSheet
-    ? copy.countSheetTitle
-    : copy.reconciliationTitle;
+  const title = isCountSheet ? copy.countSheetTitle : copy.reconciliationTitle;
   const subtitle = isCountSheet
     ? copy.countSheetSubtitle
     : copy.reconciliationSubtitle;
@@ -369,12 +373,16 @@ function StockA4DocumentView({
       {/* Header */}
       <div className="flex items-start justify-between border-b border-border pb-3 text-xs leading-relaxed">
         <div>
-          <p className="font-semibold uppercase tracking-wider">{copy.companyName}</p>
+          <p className="font-semibold uppercase tracking-wider">
+            {copy.companyName}
+          </p>
           <p className="font-semibold text-foreground">
             {copy.brandTitle} — {copy.brandSlogan}
           </p>
           <p className="mt-1">
-            <span className="font-medium text-muted-foreground">{copy.branchLabel}</span>{" "}
+            <span className="font-medium text-muted-foreground">
+              {copy.branchLabel}
+            </span>{" "}
             <span className="font-semibold">{branchDisplayName}</span>
           </p>
         </div>
@@ -443,24 +451,36 @@ function StockA4DocumentView({
       <div className="mt-8 pt-4">
         <div className="grid grid-cols-3 gap-4 text-center text-xs">
           <div>
-            <p className="font-semibold uppercase tracking-wider">{copy.signCreator}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">{copy.signHint}</p>
+            <p className="font-semibold uppercase tracking-wider">
+              {copy.signCreator}
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {copy.signHint}
+            </p>
             <div className="h-16" />
             <p className="border-t border-dotted border-border pt-1 text-xs text-muted-foreground">
               {copy.signHint}
             </p>
           </div>
           <div>
-            <p className="font-semibold uppercase tracking-wider">{copy.signHeadChef}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">{copy.signHint}</p>
+            <p className="font-semibold uppercase tracking-wider">
+              {copy.signHeadChef}
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {copy.signHint}
+            </p>
             <div className="h-16" />
             <p className="border-t border-dotted border-border pt-1 text-xs text-muted-foreground">
               {copy.signHint}
             </p>
           </div>
           <div>
-            <p className="font-semibold uppercase tracking-wider">{copy.signManager}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">{copy.signHint}</p>
+            <p className="font-semibold uppercase tracking-wider">
+              {copy.signManager}
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {copy.signHint}
+            </p>
             <div className="h-16" />
             <p className="border-t border-dotted border-border pt-1 text-xs text-muted-foreground">
               {copy.signHint}
@@ -500,7 +520,9 @@ function StockThermalDocumentView({
     >
       {/* Header */}
       <div className="text-center">
-        <p className="text-sm font-semibold tracking-wider">{copy.companyName}</p>
+        <p className="text-sm font-semibold tracking-wider">
+          {copy.companyName}
+        </p>
         <p className="text-xs font-semibold">{copy.brandTitle}</p>
         <p className="text-xs text-muted-foreground">{copy.brandSlogan}</p>
         <div className="my-1.5 border-b border-dashed border-border" />
@@ -514,7 +536,9 @@ function StockThermalDocumentView({
       {/* Meta */}
       <div className="flex flex-col gap-1 text-xs">
         <div className="flex justify-between">
-          <span className="text-muted-foreground">{copy.thermalWarehouseLabel}</span>
+          <span className="text-muted-foreground">
+            {copy.thermalWarehouseLabel}
+          </span>
           <span className="font-semibold">{branchDisplayName}</span>
         </div>
         <div className="flex justify-between">
@@ -528,7 +552,10 @@ function StockThermalDocumentView({
       {/* Items List */}
       <div className="flex flex-col gap-2">
         {ingredients.map((item, idx) => {
-          const conversionHint = formatStockConversionHint(item.units, item.unit);
+          const conversionHint = formatStockConversionHint(
+            item.units,
+            item.unit,
+          );
 
           return (
             <div key={item.id ?? idx} className="text-2xs">
@@ -541,7 +568,10 @@ function StockThermalDocumentView({
                     <span className="text-3xs">[.......] {item.unit}</span>
                   ) : (
                     <span className="font-mono tabular-nums">
-                      {copy.thermalSystemQuantity(formatQty(item.qty), item.unit)}
+                      {copy.thermalSystemQuantity(
+                        formatQty(item.qty),
+                        item.unit,
+                      )}
                     </span>
                   )}
                 </span>
@@ -569,7 +599,11 @@ function StockThermalDocumentView({
           <span>{copy.totalItems(ingredients.length)}</span>
           {!isCountSheet ? (
             <span className="font-semibold">
-              {copy.thermalSummary(inStockCount, lowStockCount, outOfStockCount)}
+              {copy.thermalSummary(
+                inStockCount,
+                lowStockCount,
+                outOfStockCount,
+              )}
             </span>
           ) : null}
         </div>
