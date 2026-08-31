@@ -2423,6 +2423,11 @@ export const inventory = {
     },
   },
   stocktake: {
+    tabs: {
+      sessions: "Phiên kiểm kê",
+      slips: "Phiếu đếm tồn",
+      assignments: "Phân công đếm",
+    },
     metrics: {
       total: "Tổng phiên kiểm kê",
       inProgress: "Đang kiểm đếm",
@@ -2485,6 +2490,9 @@ export const inventory = {
         `Gửi kết quả (còn ${formatCount(n)} mục)`,
       countSubmitAll: "Gửi kết quả",
       countInvalidQty: "Nhập số lượng hợp lệ.",
+      countDoneBadge: (done: number, total: number) =>
+        `${formatCount(done)}/${formatCount(total)} đã đếm`,
+      inputPlaceholder: "Nhập số...",
       openReview: "Đối soát",
       saving: "Đang lưu",
     },

@@ -60,6 +60,7 @@ import type {
   CountAssignmentShift,
 } from "@lib/inventory/count-assignment-model";
 import { inventoryListFilterSelectClassName } from "../_components/inventory-list-filters";
+import { StocktakeNavTabs } from "../_components/stocktake-nav-tabs";
 import { setCountAssignments } from "./actions";
 
 type EmployeeRow = CountAssignmentEmployee;
@@ -570,6 +571,8 @@ export function CountAssignmentsClient({
             : undefined
         }
       />
+
+      <StocktakeNavTabs currentTab="assignments" branchId={selectedBranchId} />
 
       {!scopeReady ? (
         <AppListFrame>

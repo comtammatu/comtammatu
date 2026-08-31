@@ -50,27 +50,30 @@ export function AppPageTabs({
     : items[0]?.value;
   if (!initial) return null;
   const list = (
-    <TabsList
-      size={isTouchLayout ? "touch" : "default"}
-      aria-label={ariaLabel}
-    >
-      {items.map((item) => (
-        <TabsTrigger
-          key={item.value}
-          value={item.value}
-          disabled={item.disabled}
-          className="flex-none px-2.5"
-        >
-          <span>{item.label}</span>
-          {typeof item.count === "number" ? (
-            <Badge variant="outline" className="ml-1.5 font-mono">
-              {formatCount(item.count)}
-            </Badge>
-          ) : null}
-          {item.badge}
-        </TabsTrigger>
-      ))}
-    </TabsList>
+    <div className="w-full min-w-0 max-w-full overflow-x-auto no-scrollbar py-0.5 scroll-smooth">
+      <TabsList
+        size={isTouchLayout ? "touch" : "default"}
+        aria-label={ariaLabel}
+        className="flex w-max min-w-full sm:w-fit items-center justify-start flex-nowrap shrink-0"
+      >
+        {items.map((item) => (
+          <TabsTrigger
+            key={item.value}
+            value={item.value}
+            disabled={item.disabled}
+            className="flex-none px-2.5"
+          >
+            <span className="truncate">{item.label}</span>
+            {typeof item.count === "number" ? (
+              <Badge variant="outline" className="ml-1.5 font-mono">
+                {formatCount(item.count)}
+              </Badge>
+            ) : null}
+            {item.badge}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </div>
   );
   return (
     <UrlTabs

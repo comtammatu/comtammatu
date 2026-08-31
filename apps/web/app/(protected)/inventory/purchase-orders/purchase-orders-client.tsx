@@ -702,7 +702,7 @@ export function PurchaseOrdersClient({
             </InputGroup>
           }
           filters={
-            <>
+            <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
               <Select
                 value={statusFilter}
                 onValueChange={(value) => {
@@ -717,6 +717,7 @@ export function PurchaseOrdersClient({
               >
                 <SelectTrigger
                   size={controlSize}
+                  className={cn("w-full sm:w-44", branches.length <= 1 && "col-span-2")}
                   aria-label={copy.statusFilterAria}
                 >
                   <SelectValue placeholder={copy.statusFilterPlaceholder} />
@@ -745,6 +746,7 @@ export function PurchaseOrdersClient({
                 >
                   <SelectTrigger
                     size={controlSize}
+                    className="w-full sm:w-44"
                     aria-label={copy.warehouseFilterAria}
                   >
                     <SelectValue placeholder={copy.warehouseFilterPlaceholder} />
@@ -759,7 +761,7 @@ export function PurchaseOrdersClient({
                   </SelectContent>
                 </Select>
               ) : null}
-            </>
+            </div>
           }
           actions={
             canCreate ? (

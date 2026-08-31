@@ -77,7 +77,7 @@ export function AppPageHeader({
               ) : null}
               <Heading
                 className={cn(
-                  "font-heading min-w-0 text-xl font-semibold tracking-tight sm:text-2xl",
+                  "font-heading min-w-0 text-lg font-semibold tracking-tight sm:text-2xl",
                   compactOnMobile && "max-sm:text-base",
                   titleClassName,
                 )}
@@ -93,7 +93,7 @@ export function AppPageHeader({
             {description ? (
               <div
                 className={cn(
-                  "max-w-3xl text-sm leading-6 text-muted-foreground",
+                  "max-w-3xl text-xs sm:text-sm leading-5 sm:leading-6 text-muted-foreground",
                   "max-sm:line-clamp-2 max-sm:break-words",
                   compactOnMobile && "max-sm:hidden",
                 )}
@@ -115,7 +115,7 @@ export function AppPageHeader({
           {actions ? (
             <div
               className={cn(
-                "flex shrink-0 flex-wrap items-center gap-2",
+                "flex shrink-0 flex-wrap items-center gap-1.5 sm:gap-2",
                 compactOnMobile && "max-sm:hidden",
               )}
             >

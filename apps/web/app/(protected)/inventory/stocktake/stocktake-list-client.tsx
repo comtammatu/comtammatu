@@ -57,6 +57,7 @@ import { ACTIONS_VI, BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
 import {
   inventoryListFilterSelectClassName,
 } from "../_components/inventory-list-filters";
+import { StocktakeNavTabs } from "../_components/stocktake-nav-tabs";
 
 export interface StocktakeSessionRow {
   id: number;
@@ -365,6 +366,8 @@ export function StocktakeListClient({
         title={messages.inventory.stocktake.title}
         actions={stocktakeAction}
       />
+
+      <StocktakeNavTabs currentTab="sessions" branchId={userBranchId} />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Item

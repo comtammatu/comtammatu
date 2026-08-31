@@ -1,13 +1,25 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Input } from "@comtammatu/ui/components/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
 import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { Check as IconCheck, X as IconX } from "lucide-react";
+import {
+  Check as IconCheck,
+  Search as IconSearch,
+  X as IconX,
+} from "lucide-react";
 import {
   Item,
   ItemContent,
@@ -25,6 +37,7 @@ import {
 } from "@comtammatu/shared/format";
 import { getWasteReasonLabelVi } from "@comtammatu/shared/labels";
 import { formatVNDateTime } from "@comtammatu/shared/time";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import {
   AppEmptyState,
   AppPage,
@@ -55,14 +68,37 @@ export function WasteApprovalsClient({
   loadFailed,
 }: Props) {
   const [rows, setRows] = useState(initial);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [tierFilter, setTierFilter] = useState<string>("all");
   const copy = messages.inventory.waste.approvals;
 
   useEffect(() => {
     setRows(initial);
   }, [initial]);
 
+  const filteredRows = useMemo(() => {
+    return rows.filter((row) => {
+      const matchesSearch =
+        searchTerm.trim() === "" ||
+        row.issueNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        row.createdByName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        row.branchName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        row.items.some((item) =>
+          item.ingredientName.toLowerCase().includes(searchTerm.toLowerCase()),
+        );
+
+      const matchesTier =
+        tierFilter === "all" ||
+        (tierFilter === "tier1" &&
+          row.items.some((i) => (i.wasteTier ?? 1) === 1)) ||
+        (tierFilter === "tier2" && row.items.some((i) => i.wasteTier === 2));
+
+      return matchesSearch && matchesTier;
+    });
+  }, [rows, searchTerm, tierFilter]);
+
   return (
-    <AppPage width="xwide">
+    <AppPage width="xwide" density="compact">
       <AppPageHeader
         title={copy.title}
         meta={branchFilter !== null ? `CN #${branchFilter}` : undefined}
@@ -80,7 +116,7 @@ export function WasteApprovalsClient({
       ) : (
         <div className="flex flex-col gap-4">
           <ItemGroup className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <Item variant="outline" size="sm">
+            <Item variant="outline" size="sm" className="bg-card">
               <ItemContent>
                 <ItemDescription className="text-xs">
                   {copy.totalEstimatedValue}
@@ -92,7 +128,7 @@ export function WasteApprovalsClient({
                 </ItemTitle>
               </ItemContent>
             </Item>
-            <Item variant="outline" size="sm">
+            <Item variant="outline" size="sm" className="bg-card">
               <ItemContent>
                 <ItemDescription className="text-xs">
                   {copy.authorityBreakdown}
@@ -117,7 +153,7 @@ export function WasteApprovalsClient({
                 </ItemTitle>
               </ItemContent>
             </Item>
-            <Item variant="outline" size="sm">
+            <Item variant="outline" size="sm" className="bg-card">
               <ItemContent>
                 <ItemDescription className="text-xs">
                   {copy.totalLines}
@@ -131,18 +167,51 @@ export function WasteApprovalsClient({
             </Item>
           </ItemGroup>
 
-          <div className="flex flex-col gap-3">
-            {rows.map((row) => (
-              <WasteApprovalCard
-                key={row.issueId}
-                row={row}
-                onResolved={(id) =>
-                  setRows((prev) =>
-                    prev.filter((current) => current.issueId !== id),
-                  )
-                }
+          <Item variant="outline" size="sm" className="flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative flex-1">
+              <IconSearch className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder={INVENTORY_VI.wasteApprovalSearchPlaceholder}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="h-8 ps-8 text-sm"
               />
-            ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <Select value={tierFilter} onValueChange={setTierFilter}>
+                <SelectTrigger className="h-8 w-40 text-xs">
+                  <SelectValue placeholder={INVENTORY_VI.wasteApprovalTierFilterPlaceholder} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{INVENTORY_VI.wasteApprovalTierAll}</SelectItem>
+                  <SelectItem value="tier1">{INVENTORY_VI.wasteApprovalTier1}</SelectItem>
+                  <SelectItem value="tier2">{INVENTORY_VI.wasteApprovalTier2}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </Item>
+
+          <div className="flex flex-col gap-3">
+            {filteredRows.length === 0 ? (
+              <AppEmptyState
+                compact
+                title={INVENTORY_VI.wasteApprovalEmptyTitle}
+                description={INVENTORY_VI.wasteApprovalEmptyDescription}
+              />
+            ) : (
+              filteredRows.map((row) => (
+                <WasteApprovalCard
+                  key={row.issueId}
+                  row={row}
+                  onResolved={(id) =>
+                    setRows((prev) =>
+                      prev.filter((current) => current.issueId !== id),
+                    )
+                  }
+                />
+              ))
+            )}
           </div>
         </div>
       )}

@@ -147,6 +147,15 @@ export const INVENTORY_VI = {
   grnDraftContinue: "Tiếp tục",
   featureInDevelopmentTitle: "Tính năng đang phát triển",
   createWasteTitle: "Tạo phiếu hao hụt",
+  wasteApprovalsTitle: "Duyệt hao hụt",
+  wasteApprovalSearchPlaceholder: "Tìm theo mã phiếu, nguyên liệu, người tạo...",
+  wasteApprovalTierFilterPlaceholder: "Lọc theo cấp duyệt",
+  wasteApprovalTierAll: "Tất cả cấp duyệt",
+  wasteApprovalTier1: "Cấp 1 (Cửa hàng)",
+  wasteApprovalTier2: "Cấp 2 (Quản lý)",
+  wasteApprovalEmptyTitle: "Không tìm thấy phiếu hao hụt",
+  wasteApprovalEmptyDescription:
+    "Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc cấp duyệt.",
   wasteFeatureDisabledTitle: "Chưa bật ghi nhận hao hụt",
   wasteFeatureDisabledBranchHint:
     "Chi nhánh chưa bật ghi nhận hao hụt. Báo quản lý.",
@@ -500,6 +509,7 @@ export const INVENTORY_VI = {
   liveStockColon: "Tồn hiện tại:",
   createWasteFromShortage: "Lập phiếu hao hụt",
   createStocktakeFromSlip: "Lập phiếu kiểm kê",
+  stocktakeSessionTitle: "Phiên kiểm kê",
   varianceActionsTitle: "Tác vụ xử lý chênh lệch kho",
   varianceActionsHint:
     "Tự động điền các món lệch vào phiếu để trừ kho hoặc cân đối sổ cái hợp lệ.",

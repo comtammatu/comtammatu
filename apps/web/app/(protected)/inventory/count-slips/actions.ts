@@ -105,14 +105,15 @@ export async function approveCountSlip(
   const { data, error } = useAtomicAdjustment
     ? await supabase.rpc("approve_inventory_count_slip_with_waste", {
         p_slip_id: parsed.data.slipId,
-        p_create_waste: parsed.data.autoCreateWaste,
+        p_photo_urls: parsed.data.wastePhotoUrls,
+        p_reasons: parsed.data.wasteReasons,
+        p_allow_self_review: parsed.data.allowSelfReview,
         p_adjust_surplus: parsed.data.autoAdjustSurplus,
-        p_waste_photo_urls: parsed.data.wastePhotoUrls,
-        p_waste_reasons: parsed.data.wasteReasons,
         p_surplus_reasons: parsed.data.surplusReasons,
       })
     : await supabase.rpc("approve_inventory_count_slip", {
         p_slip_id: parsed.data.slipId,
+        p_allow_self_review: parsed.data.allowSelfReview,
       });
 
   if (error) {

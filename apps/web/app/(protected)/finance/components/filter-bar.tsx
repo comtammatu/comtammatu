@@ -263,7 +263,7 @@ export function FilterBar({
         className,
       )}
     >
-      <div className="flex flex-wrap items-center gap-2 lg:flex-nowrap">
+      <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center lg:flex-nowrap">
         {showBranch && locationFilter ? (
           <Select
             value={locationValue}
@@ -359,7 +359,7 @@ export function FilterBar({
             placeholder={PERIOD_PICKER_LABEL[calendarPeriod]}
             max={today.start}
             disabled={isPending}
-            className={financeFilterPeriodPickerClassName}
+            className={cn("col-span-2 sm:col-span-1", financeFilterPeriodPickerClassName)}
             onSelectionChange={handlePeriodSelectionChange}
           />
         ) : null}
@@ -460,7 +460,9 @@ export function FilterBar({
           </Select>
         ) : null}
 
-        {trailing}
+        {trailing ? (
+          <div className="col-span-2 sm:col-span-1 flex items-center">{trailing}</div>
+        ) : null}
       </div>
     </AppToolbar>
   );

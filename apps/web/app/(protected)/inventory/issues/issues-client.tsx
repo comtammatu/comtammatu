@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowRightToLine as IconArrowBarRight,
+  ClipboardCheck as IconClipboardCheck,
   FileDown as IconFileDownload,
   Plus as IconPlus,
 } from "lucide-react";
@@ -408,11 +409,31 @@ export function IssuesClient({
       : createHref;
 
   const issueActions =
-    resolvedView === "waste" && resolvedCreateHref ? (
-      <Button size="lg" render={<Link href={resolvedCreateHref} />}>
-        <IconPlus className="size-4" />
-        {INVENTORY_VI.createWasteTitle}
-      </Button>
+    resolvedView === "waste" ? (
+      <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="lg"
+          render={
+            <Link
+              href={
+                defaultBranchId != null
+                  ? `/inventory/waste/approvals?branch=${defaultBranchId}`
+                  : "/inventory/waste/approvals"
+              }
+            />
+          }
+        >
+          <IconClipboardCheck className="size-4" />
+          {INVENTORY_VI.wasteApprovalsTitle}
+        </Button>
+        {resolvedCreateHref ? (
+          <Button size="lg" render={<Link href={resolvedCreateHref} />}>
+            <IconPlus className="size-4" />
+            {INVENTORY_VI.createWasteTitle}
+          </Button>
+        ) : null}
+      </div>
     ) : resolvedView === "manual" &&
       allowedCreateIssueTypes.length > 0 ? (
       <Button type="button" size="lg" onClick={() => setCreateOpen(true)}>

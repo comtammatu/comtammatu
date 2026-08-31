@@ -200,68 +200,72 @@ export function WasteOperationalForm({
         <NoteCallout tone="warning">{copy.priceReviewHint}</NoteCallout>
       ) : null}
 
-      {showBranchPicker ? (
-        <Field>
-          <FieldLabel>{copy.branchLabel}</FieldLabel>
-          <Select
-            value={String(context.branch.id)}
-            onValueChange={(value) => {
-              router.push(`/inventory/waste/new?branch=${value}`);
-            }}
-          >
-            <SelectTrigger size={isTouchLayout ? "touch" : "default"}>
-              <SelectValue placeholder={copy.branchPlaceholder} />
-            </SelectTrigger>
-            <SelectContent>
-              {context.branches?.map((branch) => (
-                <SelectItem
-                  key={branch.id}
-                  value={String(branch.id)}
-                  size={isTouchLayout ? "touch" : "default"}
-                >
-                  {branch.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
-      ) : null}
+      {(showBranchPicker || showLocationPicker) ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {showBranchPicker ? (
+            <Field>
+              <FieldLabel>{copy.branchLabel}</FieldLabel>
+              <Select
+                value={String(context.branch.id)}
+                onValueChange={(value) => {
+                  router.push(`/inventory/waste/new?branch=${value}`);
+                }}
+              >
+                <SelectTrigger size={isTouchLayout ? "touch" : "default"}>
+                  <SelectValue placeholder={copy.branchPlaceholder} />
+                </SelectTrigger>
+                <SelectContent>
+                  {context.branches?.map((branch) => (
+                    <SelectItem
+                      key={branch.id}
+                      value={String(branch.id)}
+                      size={isTouchLayout ? "touch" : "default"}
+                    >
+                      {branch.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          ) : null}
 
-      {showLocationPicker ? (
-        <Field>
-          <FieldLabel>{copy.locationLabel}</FieldLabel>
-          <Select
-            value={locationId == null ? "" : String(locationId)}
-            onValueChange={(value) => setLocationId(Number(value))}
-          >
-            <SelectTrigger size={isTouchLayout ? "touch" : "default"}>
-              <SelectValue placeholder={copy.locationPlaceholder} />
-            </SelectTrigger>
-            <SelectContent>
-              {context.locations.map((location) => (
-                <SelectItem
-                  key={location.id}
-                  value={String(location.id)}
-                  size={isTouchLayout ? "touch" : "default"}
-                >
-                  {location.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
+          {showLocationPicker ? (
+            <Field>
+              <FieldLabel>{copy.locationLabel}</FieldLabel>
+              <Select
+                value={locationId == null ? "" : String(locationId)}
+                onValueChange={(value) => setLocationId(Number(value))}
+              >
+                <SelectTrigger size={isTouchLayout ? "touch" : "default"}>
+                  <SelectValue placeholder={copy.locationPlaceholder} />
+                </SelectTrigger>
+                <SelectContent>
+                  {context.locations.map((location) => (
+                    <SelectItem
+                      key={location.id}
+                      value={String(location.id)}
+                      size={isTouchLayout ? "touch" : "default"}
+                    >
+                      {location.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          ) : null}
+        </div>
       ) : null}
 
       <AppSection
         title={copy.linesTitle}
         action={
-          <Button type="button" variant="outline" onClick={addLine}>
+          <Button type="button" variant="outline" size="sm" onClick={addLine}>
             <IconPlus className="size-4" />
             {copy.addLine}
           </Button>
         }
       >
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
           {lines.map((line, index) => {
             const ingredient =
               line.ingredientId == null
@@ -281,7 +285,7 @@ export function WasteOperationalForm({
                 key={line.uid}
                 variant="outline"
                 className={cn(
-                  "grid gap-3 md:grid-cols-2",
+                  "flex flex-col gap-3 p-3.5",
                   shortageIngredientId != null &&
                     line.ingredientId === shortageIngredientId &&
                     "border-destructive",
@@ -293,116 +297,136 @@ export function WasteOperationalForm({
                     : undefined
                 }
               >
-                <Field>
-                  <FieldLabel>{copy.ingredientLabel(index + 1)}</FieldLabel>
-                  <Combobox
-                    value={
-                      line.ingredientId == null ? "" : String(line.ingredientId)
-                    }
-                    onValueChange={(value) => selectIngredient(line.uid, value)}
-                    options={context.ingredients.map((item) => ({
-                      value: String(item.id),
-                      label: item.name,
-                    }))}
-                    size={isTouchLayout ? "touch" : "default"}
-                  />
-                </Field>
-                <Field>
-                  <FieldLabel>{copy.unitLabel}</FieldLabel>
-                  <Select
-                    value={line.entryUnitId}
-                    onValueChange={(value) => {
-                      const selected = ingredient?.issueUnits.find(
-                        (item) => String(item.unitId) === value,
-                      );
-                      patchLine(line.uid, {
-                        entryUnitId: value,
-                        unit: selected?.label ?? "",
-                      });
-                    }}
-                  >
-                    <SelectTrigger size={isTouchLayout ? "touch" : "default"}>
-                      <SelectValue placeholder={copy.unitPlaceholder} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(ingredient?.issueUnits ?? []).map((item) => (
-                        <SelectItem
-                          key={item.unitId}
-                          value={String(item.unitId)}
-                          size={isTouchLayout ? "touch" : "default"}
-                        >
-                          {item.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </Field>
-                <Field>
-                  <FieldLabel>
-                    {copy.quantityLabel}
-                    {ingredient && unit
-                      ? copy.stockHint(formatQty(maxEntryQuantity), unit.label)
-                      : ""}
-                  </FieldLabel>
-                  <QuantityInput
-                    value={line.quantity}
-                    maxFractionDigits={3}
-                    className={cn(
-                      "h-12",
-                      shortageIngredientId != null &&
-                        line.ingredientId === shortageIngredientId &&
-                        "border-destructive",
-                    )}
-                    aria-invalid={
-                      shortageIngredientId != null &&
-                      line.ingredientId === shortageIngredientId
-                    }
-                    onValueChange={(value) =>
-                      patchLine(line.uid, { quantity: value })
-                    }
-                  />
-                  {shortageIngredientId != null &&
-                  line.ingredientId === shortageIngredientId ? (
-                    <p className="text-xs text-destructive">
-                      {copy.lineShortageHint}
-                    </p>
+                <div className="flex items-center justify-between border-b border-border/60 pb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="flex size-5 items-center justify-center rounded-full bg-muted font-mono text-xs font-semibold text-muted-foreground">
+                      {index + 1}
+                    </span>
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      {ingredient ? ingredient.name : copy.ingredientLabel(index + 1)}
+                    </span>
+                  </div>
+                  {lines.length > 1 ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs text-destructive hover:bg-destructive/10"
+                      onClick={() => removeLine(line.uid)}
+                    >
+                      <IconTrash className="size-3.5" />
+                      {copy.removeLine}
+                    </Button>
                   ) : null}
-                </Field>
-                <Field>
-                  <FieldLabel>{copy.reasonLabel}</FieldLabel>
-                  <WasteReasonDropdown
-                    value={line.reasonCode as never}
-                    onChange={(value) =>
-                      patchLine(line.uid, { reasonCode: value })
-                    }
-                  />
-                </Field>
-                <Field className="md:col-span-2">
-                  <FieldLabel>
-                    {copy.evidenceLabel(true)}
-                  </FieldLabel>
-                  <WastePhotoUpload
-                    tenantId={context.tenantId}
-                    branchId={context.branch.id}
-                    issueId={line.uid}
-                    value={line.photoUrls[0] ?? null}
-                    onChange={(url) =>
-                      patchLine(line.uid, {
-                        photoUrls: url ? [url] : [],
-                      })
-                    }
-                    previewSize={isTouchLayout ? "touch" : "default"}
-                  />
-                </Field>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="justify-self-start text-destructive"
-                  onClick={() => removeLine(line.uid)}
-                >
-                  <IconTrash className="size-4" />
-                  {copy.removeLine}
-                </Button>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <Field>
+                    <FieldLabel>{copy.ingredientLabel(index + 1)}</FieldLabel>
+                    <Combobox
+                      value={
+                        line.ingredientId == null ? "" : String(line.ingredientId)
+                      }
+                      onValueChange={(value) => selectIngredient(line.uid, value)}
+                      options={context.ingredients.map((item) => ({
+                        value: String(item.id),
+                        label: item.name,
+                      }))}
+                      size={isTouchLayout ? "touch" : "default"}
+                    />
+                  </Field>
+
+                  <Field>
+                    <FieldLabel>{copy.unitLabel}</FieldLabel>
+                    <Select
+                      value={line.entryUnitId}
+                      onValueChange={(value) => {
+                        const selected = ingredient?.issueUnits.find(
+                          (item) => String(item.unitId) === value,
+                        );
+                        patchLine(line.uid, {
+                          entryUnitId: value,
+                          unit: selected?.label ?? "",
+                        });
+                      }}
+                    >
+                      <SelectTrigger size={isTouchLayout ? "touch" : "default"}>
+                        <SelectValue placeholder={copy.unitPlaceholder} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(ingredient?.issueUnits ?? []).map((item) => (
+                          <SelectItem
+                            key={item.unitId}
+                            value={String(item.unitId)}
+                            size={isTouchLayout ? "touch" : "default"}
+                          >
+                            {item.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+
+                  <Field>
+                    <FieldLabel>
+                      {copy.quantityLabel}
+                      {ingredient && unit
+                        ? copy.stockHint(formatQty(maxEntryQuantity), unit.label)
+                        : ""}
+                    </FieldLabel>
+                    <QuantityInput
+                      value={line.quantity}
+                      maxFractionDigits={3}
+                      className={cn(
+                        isTouchLayout ? "h-12" : "h-10",
+                        shortageIngredientId != null &&
+                          line.ingredientId === shortageIngredientId &&
+                          "border-destructive",
+                      )}
+                      aria-invalid={
+                        shortageIngredientId != null &&
+                        line.ingredientId === shortageIngredientId
+                      }
+                      onValueChange={(value) =>
+                        patchLine(line.uid, { quantity: value })
+                      }
+                    />
+                    {shortageIngredientId != null &&
+                    line.ingredientId === shortageIngredientId ? (
+                      <p className="text-xs text-destructive">
+                        {copy.lineShortageHint}
+                      </p>
+                    ) : null}
+                  </Field>
+
+                  <Field>
+                    <FieldLabel>{copy.reasonLabel}</FieldLabel>
+                    <WasteReasonDropdown
+                      value={line.reasonCode as never}
+                      onChange={(value) =>
+                        patchLine(line.uid, { reasonCode: value })
+                      }
+                    />
+                  </Field>
+                </div>
+
+                <div className="border-t border-border/40 pt-2">
+                  <Field>
+                    <FieldLabel>{copy.evidenceLabel(true)}</FieldLabel>
+                    <WastePhotoUpload
+                      tenantId={context.tenantId}
+                      branchId={context.branch.id}
+                      issueId={line.uid}
+                      value={line.photoUrls[0] ?? null}
+                      onChange={(url) =>
+                        patchLine(line.uid, {
+                          photoUrls: url ? [url] : [],
+                        })
+                      }
+                      previewSize={isTouchLayout ? "touch" : "default"}
+                    />
+                  </Field>
+                </div>
               </Item>
             );
           })}

@@ -477,8 +477,8 @@ export function OrdersClient({
           <AppToolbar
             variant="inline"
             filters={
-              <>
-                <div className="flex w-full flex-col gap-1.5 sm:w-36 sm:flex-none">
+              <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-end">
+                <div className="flex w-full flex-col gap-1 sm:w-36 sm:flex-none">
                   <Label htmlFor="date-from" className="text-xs">
                     {FORM_VI.fromDate}
                   </Label>
@@ -489,7 +489,7 @@ export function OrdersClient({
                     className="w-full sm:w-36"
                   />
                 </div>
-                <div className="flex w-full flex-col gap-1.5 sm:w-36 sm:flex-none">
+                <div className="flex w-full flex-col gap-1 sm:w-36 sm:flex-none">
                   <Label htmlFor="date-to" className="text-xs">
                     {FORM_VI.toDate}
                   </Label>
@@ -572,7 +572,7 @@ export function OrdersClient({
                     <SelectTrigger
                       id="branch-filter"
                       size={controlSize}
-                      className="w-full sm:w-44"
+                      className="col-span-2 w-full sm:w-44"
                       aria-label={BRANCH_VI.long}
                     >
                       <SelectValue placeholder={BRANCH_VI.selectAll} />
@@ -596,7 +596,7 @@ export function OrdersClient({
                     </SelectContent>
                   </Select>
                 ) : null}
-              </>
+              </div>
             }
             actions={
               <>

@@ -97,7 +97,7 @@ export function PermissionAuditFilters({
     <AppToolbar
       variant="inline"
       filters={
-        <>
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-end">
           <div className="grid gap-1.5">
             <Label htmlFor={actionFilterId} className="text-xs">
               {copy.action}
@@ -112,7 +112,7 @@ export function PermissionAuditFilters({
               <SelectTrigger
                 id={actionFilterId}
                 size={controlSize}
-                className="min-w-40"
+                className="w-full sm:min-w-40"
               >
                 <SelectValue />
               </SelectTrigger>
@@ -143,7 +143,7 @@ export function PermissionAuditFilters({
               <SelectTrigger
                 id={targetFilterId}
                 size={controlSize}
-                className="min-w-48"
+                className="w-full sm:min-w-48"
               >
                 <SelectValue />
               </SelectTrigger>
@@ -172,7 +172,7 @@ export function PermissionAuditFilters({
               id={sinceFilterId}
               value={draftSince}
               onValueChange={setDraftSince}
-              className="min-w-40"
+              className="w-full sm:min-w-40"
             />
           </div>
 
@@ -187,11 +187,11 @@ export function PermissionAuditFilters({
               onChange={(e) => setDraftQ(e.target.value)}
               placeholder={copy.searchPlaceholder}
               controlSize={controlSize}
-              className="min-w-48"
+              className="w-full sm:min-w-48"
             />
           </div>
 
-          <div className="flex flex-wrap items-end gap-2">
+          <div className="col-span-2 flex flex-wrap items-end gap-2 sm:col-span-1">
             <Button
               size={actionSize}
               onClick={() =>
@@ -206,7 +206,7 @@ export function PermissionAuditFilters({
             </Button>
             {trailing}
           </div>
-        </>
+        </div>
       }
       reset={
         hasActive ? (

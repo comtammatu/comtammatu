@@ -37,3 +37,10 @@ export function getDefaultCountUnit(
 ): CountUnitOption | null {
   return pickDefaultCountUnit(getCountUnitOptions(ingredient));
 }
+
+export {
+  resolvePackLooseUnits as resolveCountPackLooseUnits,
+  combinePackLooseQuantity as combineCountPackLooseQuantity,
+  splitToPackLoose as splitCountToPackLoose,
+  formatPackLooseQuantity as formatCountPackLooseQuantity,
+} from "@lib/inventory/unit-options";

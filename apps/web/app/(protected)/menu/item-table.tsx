@@ -257,7 +257,7 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
               </InputGroup>
             }
             filters={
-              <>
+              <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
                 <Select
                   value={filterValues.category}
                   onValueChange={(value) =>
@@ -269,7 +269,7 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
                 >
                   <SelectTrigger
                     size={controlSize}
-                    className="min-w-36"
+                    className="w-full sm:min-w-36"
                     aria-label={FORM_VI.category}
                   >
                     <SelectValue placeholder={MENU_VI.allCategories} />
@@ -297,7 +297,7 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
                 >
                   <SelectTrigger
                     size={controlSize}
-                    className="min-w-36"
+                    className="w-full sm:min-w-36"
                     aria-label={FORM_VI.status}
                   >
                     <SelectValue placeholder={MENU_VI.allStatuses} />
@@ -323,7 +323,7 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
                 >
                   <SelectTrigger
                     size={controlSize}
-                    className="min-w-36"
+                    className="col-span-2 w-full sm:col-span-1 sm:min-w-36"
                     aria-label={MENU_VI.sortBy}
                   >
                     <SelectValue placeholder={MENU_VI.menuOrder} />
@@ -343,7 +343,7 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
                     </SelectItem>
                   </SelectContent>
                 </Select>
-              </>
+              </div>
             }
           />
         }

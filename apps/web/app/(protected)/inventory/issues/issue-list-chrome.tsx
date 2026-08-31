@@ -243,14 +243,14 @@ export function RecordedConsumptionFilterBar({
             value={recordedStartDate}
             onValueChange={onRecordedStartDateChange}
             aria-label={FORM_VI.fromDate}
-            className="w-52 shrink-0"
+            className="w-full sm:w-52 shrink-0"
           />
           <BusinessDatePicker
             id="recorded-end-date"
             value={recordedEndDate}
             onValueChange={onRecordedEndDateChange}
             aria-label={FORM_VI.toDate}
-            className="w-52 shrink-0"
+            className="w-full sm:w-52 shrink-0"
           />
         </>
       }

@@ -191,6 +191,31 @@ function buildDraftSummary({
       ? getDefaultCountUnitChoice(units)
       : (units.find((item) => item.unitId === entryUnitId) ??
         getDefaultCountUnitChoice(units));
+
+  const packUnit = units.find(
+    (u) => !u.isBase && u.toBaseFactor != null && u.toBaseFactor > 1,
+  );
+  const looseUnit = units.find((u) => u.isBase) ?? units[0];
+  if (
+    packUnit &&
+    looseUnit &&
+    packUnit.toBaseFactor != null &&
+    looseUnit.toBaseFactor != null &&
+    packUnit.toBaseFactor > looseUnit.toBaseFactor &&
+    looseUnit.toBaseFactor > 0
+  ) {
+    const packFactor = packUnit.toBaseFactor / looseUnit.toBaseFactor;
+    const selectedFactor = unit?.toBaseFactor ?? 1;
+    const totalLoose = (quantityValue * selectedFactor) / looseUnit.toBaseFactor;
+    const safeTotal = Math.max(0, totalLoose);
+    const packQty = Math.floor((safeTotal + 1e-9) / packFactor);
+    const looseQty = Math.round((safeTotal - packQty * packFactor) * 1000) / 1000;
+    if (packQty > 0) {
+      const dualText = `${packQty} ${packUnit.code}${looseQty > 0 ? ` + ${looseQty} ${looseUnit.code}` : ""}`;
+      return `${dualText} (${formatCountQuantity(quantityValue)} ${unit?.code ?? ""})`;
+    }
+  }
+
   return `${formatCountQuantity(quantityValue)}${unit?.code ? ` ${unit.code}` : ""}`;
 }
 

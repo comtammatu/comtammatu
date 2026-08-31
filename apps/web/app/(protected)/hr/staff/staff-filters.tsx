@@ -96,7 +96,7 @@ export function StaffFilters({ positionOptions }: StaffFiltersProps) {
         </InputGroup>
       }
       filters={
-        <>
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
           <Select
             value={searchParams.get("position") ?? "all"}
             onValueChange={(v) => updateFilter("position", v)}
@@ -104,7 +104,7 @@ export function StaffFilters({ positionOptions }: StaffFiltersProps) {
           >
             <SelectTrigger
               size={controlSize}
-              className="w-45"
+              className="w-full sm:w-45"
               aria-label={HR_VI.allRoles}
             >
               <SelectValue placeholder={HR_VI.allRoles} />
@@ -126,7 +126,7 @@ export function StaffFilters({ positionOptions }: StaffFiltersProps) {
           >
             <SelectTrigger
               size={controlSize}
-              className="w-40"
+              className="w-full sm:w-40"
               aria-label={HR_VI.allStatuses}
             >
               <SelectValue placeholder={HR_VI.allStatuses} />
@@ -141,7 +141,7 @@ export function StaffFilters({ positionOptions }: StaffFiltersProps) {
               </SelectItem>
             </SelectContent>
           </Select>
-        </>
+        </div>
       }
       reset={
         hasActiveFilters ? (

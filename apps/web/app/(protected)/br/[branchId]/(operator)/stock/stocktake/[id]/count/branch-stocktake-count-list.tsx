@@ -23,6 +23,12 @@ import type {
   DraftCounts,
 } from "@lib/inventory/stocktake-model";
 
+import {
+  resolvePackLooseUnits,
+  splitToPackLoose,
+  formatPackLooseQuantity,
+} from "@lib/inventory/unit-options";
+
 interface BranchStocktakeCountListProps {
   lines: BranchStocktakeCountLine[];
   counts: DraftCounts;
@@ -133,13 +139,37 @@ export function BranchStocktakeCountList({
           const qty = counts[String(line.ingredientId)]?.qty;
           const unitOptions =
             unitOptionsByIngredient?.[line.ingredientId] ?? [];
+          const packLoose = resolvePackLooseUnits(unitOptions);
           const unitId = resolveUnitId(
             line.ingredientId,
             unitOptions,
             unitByIngredient,
           );
+          const selectedUnit =
+            unitOptions.find((opt) => opt.unitId === unitId) ?? unitOptions[0];
           const unitLabel =
             unitLabelByIngredient[line.ingredientId] ?? line.unit;
+
+          const selectedToBase = selectedUnit?.toBaseFactor ?? 1;
+          const looseToBase = packLoose?.looseUnit.toBaseFactor ?? 1;
+          const totalLoose =
+            qty != null && packLoose
+              ? Math.round(((qty * selectedToBase) / looseToBase) * 1000) / 1000
+              : 0;
+          const { packQty, looseQty } = packLoose
+            ? splitToPackLoose(totalLoose, packLoose.packFactor)
+            : { packQty: 0, looseQty: 0 };
+
+          const dualPreview =
+            counted && packLoose && packQty > 0
+              ? `${formatPackLooseQuantity(
+                  packQty,
+                  packLoose.packUnit.label,
+                  looseQty,
+                  packLoose.looseUnit.label,
+                )} (${qty} ${unitLabel})`
+              : null;
+
           return (
             <div key={line.ingredientId} className="flex flex-col gap-2">
               <Item
@@ -177,7 +207,7 @@ export function BranchStocktakeCountList({
                   )}
                 >
                   {counted && qty != null
-                    ? `${qty} ${unitLabel}`
+                    ? dualPreview || `${qty} ${unitLabel}`
                     : copy.countTapToEnter}
                 </span>
               </Item>

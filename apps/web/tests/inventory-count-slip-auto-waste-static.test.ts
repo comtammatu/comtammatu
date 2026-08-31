@@ -33,6 +33,21 @@ test("approveCountSlip keeps count approval and auto waste in one database trans
     /approve_inventory_count_slip_with_waste/,
     "approveCountSlip must use the atomic approval + waste RPC",
   );
+  assert.match(
+    actionsSource,
+    /p_photo_urls:\s*parsed\.data\.wastePhotoUrls/,
+    "approveCountSlip must pass p_photo_urls to approve_inventory_count_slip_with_waste",
+  );
+  assert.match(
+    actionsSource,
+    /p_reasons:\s*parsed\.data\.wasteReasons/,
+    "approveCountSlip must pass p_reasons to approve_inventory_count_slip_with_waste",
+  );
+  assert.match(
+    actionsSource,
+    /p_allow_self_review:\s*parsed\.data\.allowSelfReview/,
+    "approveCountSlip must pass p_allow_self_review to approval RPCs",
+  );
   assert.doesNotMatch(
     actionsSource,
     /createWasteEntry/,

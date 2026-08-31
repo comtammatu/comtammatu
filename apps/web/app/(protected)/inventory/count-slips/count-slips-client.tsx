@@ -62,6 +62,7 @@ import type {
 import { formatQty } from "@lib/inventory/format";
 import { formatQuantityInLargestUnits } from "@lib/inventory/quantity-unit-format";
 import { inventoryListFilterSelectClassName } from "../_components/inventory-list-filters";
+import { StocktakeNavTabs } from "../_components/stocktake-nav-tabs";
 import { approveCountSlip, requestCountRecount } from "./actions";
 import {
   CountSlipWasteEvidence,
@@ -418,6 +419,8 @@ export function CountSlipsClient({
           variant: pending.length > 0 ? "warning" : "secondary",
         }}
       />
+
+      <StocktakeNavTabs currentTab="slips" />
 
       <AppListFrame
         toolbar={
