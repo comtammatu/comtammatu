@@ -3,7 +3,6 @@ import { formatQty } from "@lib/inventory/format";
 import {
   shouldShowStockLocationBreakdown,
   stockLocationLabel,
-  visibleStockLocationRows,
   type StockLocationBreakdown,
 } from "@lib/inventory/stock-on-hand-model";
 
@@ -21,13 +20,13 @@ export function StockLocationBreakdownLine({
   return (
     <span
       className={cn(
-        "block text-xs font-normal leading-snug text-muted-foreground",
+        "block text-xs font-normal leading-snug text-muted-foreground tabular-nums",
         className,
       )}
     >
-      {visibleStockLocationRows(rows)
+      {rows
         .map((row) => `${stockLocationLabel(row)}: ${formatQty(row.qty)}`)
-        .join(" | ")}
+        .join(" · ")}
     </span>
   );
 }

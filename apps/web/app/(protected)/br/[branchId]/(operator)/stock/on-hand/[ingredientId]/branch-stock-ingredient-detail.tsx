@@ -332,6 +332,45 @@ export function BranchStockIngredientDetail({
                   danger={atRisk}
                 />
               </div>
+
+              {data.locations && data.locations.length > 1 ? (
+                <div className="mt-3 flex flex-col gap-2 border-t pt-3">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    {detailCopy.locationTitle}
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {data.locations.map((loc) => {
+                      const locUnits = formatStockUnits(
+                        loc.qty,
+                        data.ingredient.units,
+                        formatQty,
+                      );
+                      const locLabel =
+                        loc.locationKind === "kitchen"
+                          ? stockCopy.filters.locationKitchen
+                          : loc.locationKind === "warehouse"
+                            ? stockCopy.filters.locationWarehouse
+                            : loc.name;
+
+                      return (
+                        <Item
+                          key={loc.locationId}
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center justify-between p-2 text-xs"
+                        >
+                          <span className="font-medium text-foreground">
+                            {locLabel}
+                          </span>
+                          <span className="font-mono font-semibold tabular-nums text-foreground">
+                            {locUnits.big ?? locUnits.base}
+                          </span>
+                        </Item>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
             </BranchOperatorPanel>
 
             <BranchOperatorPanel
@@ -422,6 +461,15 @@ export function BranchStockIngredientDetail({
                             branchId: data.branchId,
                             branchStockBasePath: stockBasePath,
                           });
+                          const rawLoc = movement.locationName;
+                          const locDisplay =
+                            rawLoc === "kitchen" ||
+                            movement.locationCode === "kitchen"
+                              ? stockCopy.filters.locationKitchen
+                              : rawLoc === "warehouse" ||
+                                  movement.locationCode === "warehouse"
+                                ? stockCopy.filters.locationWarehouse
+                                : rawLoc;
 
                           return (
                             <div key={movement.id} role="listitem">
@@ -436,9 +484,7 @@ export function BranchStockIngredientDetail({
                                     </ItemTitle>
                                     <ItemDescription className="line-clamp-none text-xs">
                                       {formatDateTime(movement.createdAt)}
-                                      {movement.locationName
-                                        ? ` · ${movement.locationName}`
-                                        : ""}
+                                      {locDisplay ? ` · ${locDisplay}` : ""}
                                     </ItemDescription>
                                   </ItemContent>
                                   <Badge

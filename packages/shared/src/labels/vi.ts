@@ -136,6 +136,9 @@ const INVENTORY_SITE_KIND_LABELS_VI: Record<SiteKind, string> = {
 
 const LEGACY_INVENTORY_LOCATION_NAMES_VI: Record<string, string> = {
   "Kho CN": "Kho chi nhánh",
+  "Bếp CN": "Bếp chi nhánh",
+  warehouse: "Kho",
+  kitchen: "Bếp",
 };
 
 export const ACTIVE_STATE_LABELS_VI = {
@@ -312,9 +315,12 @@ export function getInventoryLocationKindLabelVi({
   fallbackName?: string | null;
   length?: InventoryLocationLabelLength;
 }): string {
-  if (siteKind === "branch") {
+  if (siteKind === "branch" || !siteKind) {
     if (locationKind === "warehouse") {
       return length === "short" ? "Kho" : "Kho chi nhánh";
+    }
+    if (locationKind === "kitchen") {
+      return length === "short" ? "Bếp" : "Bếp chi nhánh";
     }
   }
 
@@ -324,9 +330,16 @@ export function getInventoryLocationKindLabelVi({
 
   if (siteKind === "central_kitchen") {
     if (locationKind === "production_storage") return "Kho sản xuất";
-    if (locationKind === "warehouse") {
+    if (locationKind === "warehouse" || locationKind === "kitchen") {
       return "Bếp Trung Tâm";
     }
+  }
+
+  if (locationKind === "kitchen") {
+    return length === "short" ? "Bếp" : "Bếp chi nhánh";
+  }
+  if (locationKind === "warehouse") {
+    return length === "short" ? "Kho" : "Kho chi nhánh";
   }
 
   return normalizeInventoryLocationNameVi(fallbackName);

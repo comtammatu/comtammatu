@@ -55,6 +55,9 @@ export function NewStocktakeSessionClient({
 }: Props) {
   const router = useRouter();
   const [branchId, setBranchId] = useState<number | null>(defaultBranchId);
+  const [selectedLocationId, setSelectedLocationId] = useState<number | null>(
+    null,
+  );
   const [pending, startTransition] = useTransition();
   const copy = messages.inventory.stocktake;
 
@@ -66,13 +69,18 @@ export function NewStocktakeSessionClient({
     () => (branchId ? locations.filter((l) => l.branchId === branchId) : []),
     [branchId, locations],
   );
-  const selectedWarehouse = useMemo(
-    () =>
+  const selectedWarehouse = useMemo(() => {
+    if (selectedLocationId != null) {
+      const match = branchLocations.find((l) => l.id === selectedLocationId);
+      if (match) return match;
+    }
+    return (
       branchLocations.find((location) => location.kind === "warehouse") ??
       branchLocations[0] ??
-      null,
-    [branchLocations],
-  );
+      null
+    );
+  }, [branchLocations, selectedLocationId]);
+
   function submit() {
     if (!branchId) {
       toast.error(copy.selectBranchFirst);
@@ -103,7 +111,7 @@ export function NewStocktakeSessionClient({
       type="button"
       className="w-full"
       onClick={submit}
-      disabled={pending || !branchId}
+      disabled={pending || !branchId || !selectedWarehouse}
     >
       {pending ? copy.creating : copy.startCounting}
     </Button>
@@ -135,7 +143,10 @@ export function NewStocktakeSessionClient({
         >
           <Select
             value={branchId ? String(branchId) : ""}
-            onValueChange={(v) => setBranchId(Number(v))}
+            onValueChange={(v) => {
+              setBranchId(Number(v));
+              setSelectedLocationId(null);
+            }}
           >
             <SelectTrigger
               id="stocktake-branch"
@@ -154,12 +165,53 @@ export function NewStocktakeSessionClient({
             </SelectContent>
           </Select>
         </FormField>
-        <p className="text-sm">
-          <span className="text-muted-foreground">
-            {messages.inventory.stock.filters.locationWarehouse}:{" "}
-          </span>
-          <span className="font-medium">{selectedWarehouse?.name ?? "—"}</span>
-        </p>
+        {branchLocations.length > 1 ? (
+          <FormField
+            controlId="stocktake-location"
+            label={copy.locationLabel}
+            required
+          >
+            <Select
+              value={selectedWarehouse ? String(selectedWarehouse.id) : ""}
+              onValueChange={(v) => setSelectedLocationId(Number(v))}
+            >
+              <SelectTrigger
+                id="stocktake-location"
+                size="field"
+                className="w-full"
+                aria-required
+              >
+                <SelectValue placeholder={copy.selectLocationPlaceholder} />
+              </SelectTrigger>
+              <SelectContent>
+                {branchLocations.map((loc) => (
+                  <SelectItem key={loc.id} value={String(loc.id)}>
+                    {loc.kind === "kitchen"
+                      ? messages.inventory.stock.filters.locationKitchen
+                      : loc.kind === "warehouse"
+                        ? messages.inventory.stock.filters.locationWarehouse
+                        : loc.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormField>
+        ) : (
+          <p className="text-sm">
+            <span className="text-muted-foreground">
+              {copy.locationLabel}:{" "}
+            </span>
+            <span className="font-medium">
+              {selectedWarehouse
+                ? selectedWarehouse.kind === "kitchen"
+                  ? messages.inventory.stock.filters.locationKitchen
+                  : selectedWarehouse.kind === "warehouse"
+                    ? messages.inventory.stock.filters.locationWarehouse
+                    : selectedWarehouse.name
+                : "—"}
+            </span>
+          </p>
+        )}
       </AppSection>
     </DocumentFormFrame>
   );

@@ -24,6 +24,21 @@ test("inventory location labels separate the site from its warehouse", () => {
     }),
     "Nguyễn Hữu Thọ · Kho",
   );
+  assert.equal(
+    getInventoryLocationKindLabelVi({
+      siteKind: "branch",
+      locationKind: "kitchen",
+    }),
+    "Bếp chi nhánh",
+  );
+  assert.equal(
+    formatInventoryLocationLabelVi({
+      branchName: "Nguyễn Hữu Thọ",
+      siteKind: "branch",
+      locationKind: "kitchen",
+    }),
+    "Nguyễn Hữu Thọ · Bếp",
+  );
 });
 
 test("central sites retain canonical warehouse and production labels", () => {

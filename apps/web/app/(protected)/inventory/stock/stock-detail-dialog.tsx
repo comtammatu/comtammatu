@@ -11,7 +11,10 @@ import {
   Truck as IconTruck,
 } from "lucide-react";
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
-import { formatInventoryLocationLabelVi } from "@comtammatu/shared/labels";
+import {
+  formatInventoryLocationLabelVi,
+  getInventoryLocationKindLabelVi,
+} from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Collapsible,
@@ -210,19 +213,29 @@ export function StockDetailDialog({
     </span>
   ) : undefined;
 
+  const branchLocations = detailData?.locations ?? [];
+  const displayLocations =
+    detailData?.systemLocations != null ? systemLocations : branchLocations;
+  const isMultiLocation =
+    displayLocations.length > 1 || detailData?.systemLocations != null;
+
   const locationQtyRows =
-    detailData?.systemLocations == null || !ingredient ? null : (
+    !ingredient || !isMultiLocation ? null : (
       <div className="flex flex-col gap-2">
         <div className="flex flex-col gap-1">
           <h4 className="text-sm font-medium">
-            {detailCopy.systemLocationTitle}
+            {detailData?.systemLocations != null
+              ? detailCopy.systemLocationTitle
+              : detailCopy.locationTitle}
           </h4>
           <p className="text-xs text-muted-foreground">
-            {detailCopy.systemLocationDescription}
+            {detailData?.systemLocations != null
+              ? detailCopy.systemLocationDescription
+              : detailCopy.locationDescription}
           </p>
         </div>
 
-        {systemLocations.length === 0 ? (
+        {displayLocations.length === 0 ? (
           <Item
             variant="outline"
             className="p-4 text-center text-xs text-muted-foreground"
@@ -231,12 +244,20 @@ export function StockDetailDialog({
           </Item>
         ) : (
           <div className="flex flex-col gap-2">
-            {systemLocations.map((location) => {
+            {displayLocations.map((location) => {
               const locationStockUnits = formatStockUnits(
                 location.qty,
                 ingredient.units,
                 formatQty,
               );
+              const label =
+                detailData?.systemLocations != null
+                  ? stockDetailLocationLabel(location)
+                  : getInventoryLocationKindLabelVi({
+                      siteKind: "branch",
+                      locationKind: location.locationKind,
+                      fallbackName: location.name,
+                    });
 
               return (
                 <Item
@@ -245,9 +266,7 @@ export function StockDetailDialog({
                   className="flex items-center justify-between p-3 text-xs"
                 >
                   <div className="min-w-0">
-                    <p className="font-medium text-foreground">
-                      {stockDetailLocationLabel(location)}
-                    </p>
+                    <p className="font-medium text-foreground">{label}</p>
                   </div>
                   <div className="min-w-0 text-right">
                     <p className="text-muted-foreground">{FORM_VI.quantity}</p>
@@ -309,9 +328,9 @@ export function StockDetailDialog({
         </div>
       </Item>
 
-      {systemLocations.length > 0 ? (
+      {displayLocations.length > 0 ? (
         <div className="flex flex-col gap-2">
-          {systemLocations.map((location) => {
+          {displayLocations.map((location) => {
             const locationKind =
               location.monetary == null
                 ? null
@@ -324,6 +343,14 @@ export function StockDetailDialog({
               location.monetary?.avgUnitCost != null
                 ? location.qty * location.monetary.avgUnitCost
                 : null;
+            const label =
+              detailData?.systemLocations != null
+                ? stockDetailLocationLabel(location)
+                : getInventoryLocationKindLabelVi({
+                    siteKind: "branch",
+                    locationKind: location.locationKind,
+                    fallbackName: location.name,
+                  });
 
             return (
               <Item
@@ -332,7 +359,7 @@ export function StockDetailDialog({
                 className="flex items-center justify-between p-3 text-xs"
               >
                 <p className="min-w-0 font-medium text-foreground">
-                  {stockDetailLocationLabel(location)}
+                  {label}
                 </p>
                 <p className="font-mono font-semibold tabular-nums text-foreground">
                   {valuationLabel(
@@ -401,12 +428,19 @@ export function StockDetailDialog({
                   movement,
                   branchId: detailData.branchId,
                 });
+                const rawLocName = movement.locationName;
                 const locationDisplay =
-                  movement.locationName === "main_warehouse" ||
+                  rawLocName === "main_warehouse" ||
                   movement.locationCode === "main_warehouse"
                     ? messages.inventory.ingredients.dialog
                         .defaultFulfillSiteKindCentralSupply
-                    : movement.locationName || inventoryCommon.noValue;
+                    : rawLocName === "kitchen" ||
+                        movement.locationCode === "kitchen"
+                      ? messages.inventory.stock.filters.locationKitchen
+                      : rawLocName === "warehouse" ||
+                          movement.locationCode === "warehouse"
+                        ? messages.inventory.stock.filters.locationWarehouse
+                        : rawLocName || inventoryCommon.noValue;
                 const isInbound = movement.quantityChange > 0;
                 const isOutbound = movement.quantityChange < 0;
                 const DirectionIcon = isInbound

@@ -1455,6 +1455,8 @@ export const inventory = {
     },
     metrics: {
       selectedWarehouse: "Giá trị tồn kho · Kho đang xem",
+      selectedKitchen: "Giá trị tồn kho · Bếp đang xem",
+      selectedTotal: "Giá trị tồn kho · Tổng chi nhánh",
       wholeSystem: "Giá trị tồn kho · Toàn hệ thống",
       underThreshold: "Dưới ngưỡng",
       pending: "Chờ xử lý",
@@ -2505,6 +2507,8 @@ export const inventory = {
     startLoadFailed: "Không thể tải dữ liệu để bắt đầu kiểm kê.",
     warehouseRequired: "Chi nhánh chưa có kho để kiểm kê.",
     location: "Vị trí kho",
+    locationLabel: "Vị trí kiểm kê",
+    selectLocationPlaceholder: "Chọn vị trí kiểm kê",
     creating: "Đang tạo…",
     startCounting: "Bắt đầu đếm",
     createClassicFailed: "Không thể tạo phiên kiểm kê.",

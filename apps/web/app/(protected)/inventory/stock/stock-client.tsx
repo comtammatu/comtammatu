@@ -79,6 +79,7 @@ import {
   toStockDisplayUnitCost,
 } from "../_lib/stock-unit-format";
 import { CATEGORY_TONE_CLASS, ITEM_KIND_LABELS } from "../_lib/constants";
+import { StockLocationBreakdownLine } from "./stock-location-breakdown";
 import type { AdjustStockDialogProps } from "./adjust-stock-dialog";
 import type { QuickStockIssueDialogProps } from "./quick-stock-issue-dialog";
 import { inventoryListFilterSelectClassName } from "../_components/inventory-list-filters";
@@ -194,19 +195,34 @@ const _stockFilterOptions: { value: StockFilter; label: string }[] = [
 function StockQtyCell({
   item,
   className,
+  showBreakdown = false,
 }: {
   item: StockIngredient;
   className?: string;
+  showBreakdown?: boolean;
 }) {
   const { big, base } = formatStockUnits(item.qty, item.units, formatQty);
-  if (big === null) {
-    return <span className={className}>{base}</span>;
-  }
   return (
-    <span className={cn("flex flex-col leading-tight", className)}>
-      <span>{big}</span>
-      <span className="text-xs font-normal text-muted-foreground">{base}</span>
-    </span>
+    <div className="flex flex-col items-end gap-1">
+      <span className={cn("flex flex-col items-end leading-tight", className)}>
+        {big === null ? (
+          <span>{base}</span>
+        ) : (
+          <>
+            <span>{big}</span>
+            <span className="text-xs font-normal text-muted-foreground">
+              {base}
+            </span>
+          </>
+        )}
+      </span>
+      {showBreakdown && item.locationBreakdown ? (
+        <StockLocationBreakdownLine
+          rows={item.locationBreakdown}
+          className="text-right"
+        />
+      ) : null}
+    </div>
   );
 }
 
@@ -611,20 +627,19 @@ export function StockClient({
     {
       key: "stock",
       header: stockCopy.table.stock,
-      className: "w-28 whitespace-nowrap text-right",
+      className: "w-36 whitespace-nowrap text-right",
       sortable: true,
       sortValue: (item) => item.qty,
       render: (item) => (
-        <div className="flex flex-col items-end gap-1">
-          <StockQtyCell
-            item={item}
-            className={cn(
-              "font-mono tabular-nums",
-              (item.status === "low" || item.status === "out") &&
-                "text-destructive",
-            )}
-          />
-        </div>
+        <StockQtyCell
+          item={item}
+          showBreakdown={selectedLocation === "total"}
+          className={cn(
+            "font-mono tabular-nums",
+            (item.status === "low" || item.status === "out") &&
+              "text-destructive",
+          )}
+        />
       ),
     },
     ...(canViewMonetary
@@ -759,7 +774,9 @@ export function StockClient({
               <SelectItem key={location.id} value={String(location.id)}>
                 {location.kind === "kitchen"
                   ? stockCopy.filters.locationKitchen
-                  : location.name}
+                  : location.kind === "warehouse"
+                    ? stockCopy.filters.locationWarehouse
+                    : location.name}
               </SelectItem>
             ))}
             <SelectItem value="total">
@@ -908,6 +925,7 @@ export function StockClient({
           </p>
           <StockQtyCell
             item={item}
+            showBreakdown={selectedLocation === "total"}
             className={cn(
               "font-semibold tabular-nums",
               (item.status === "low" || item.status === "out") &&
@@ -1049,6 +1067,23 @@ export function StockClient({
   const shortageCount = reorderSuggestions.filter((i) => i.isBelowMin).length;
 
   const hasValuation = visibleTotalValue != null || totalValue != null;
+  const selectedLocationObj = locations.find(
+    (l) => String(l.id) === selectedLocation,
+  );
+  const valuationMetricTitle =
+    selectedLocation === "total"
+      ? stockCopy.metrics.selectedTotal
+      : selectedLocationObj?.kind === "kitchen"
+        ? stockCopy.metrics.selectedKitchen
+        : stockCopy.metrics.selectedWarehouse;
+  const visibleLocationValue = useMemo(() => {
+    if (visibleTotalValue == null) return null;
+    if (selectedLocation === "total") return visibleTotalValue;
+    return ingredients.reduce((sum, item) => {
+      const val = stockValue(item);
+      return sum + (val ?? 0);
+    }, 0);
+  }, [visibleTotalValue, selectedLocation, ingredients]);
 
   const underThresholdButton = (
     <Item
@@ -1135,13 +1170,13 @@ export function StockClient({
             className="col-span-2 flex flex-col justify-between p-3 text-left border-border bg-card lg:col-span-1"
           >
             <div className="flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              <span>{stockCopy.metrics.selectedWarehouse}</span>
+              <span>{valuationMetricTitle}</span>
               <IconReceipt className="size-3.5 text-muted-foreground" />
             </div>
             <div className="mt-2 flex flex-col gap-1">
               <span className="font-mono text-2xl font-semibold tabular-nums text-foreground">
-                {visibleTotalValue != null
-                  ? formatVND(Math.round(visibleTotalValue))
+                {visibleLocationValue != null
+                  ? formatVND(Math.round(visibleLocationValue))
                   : "—"}
               </span>
               {totalValue != null ? (

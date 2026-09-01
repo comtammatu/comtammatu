@@ -107,9 +107,11 @@ function StockQuantity({ item }: { item: StockIngredient }) {
 function StockTouchRow({
   branchId,
   item,
+  showBreakdown = false,
 }: {
   branchId: number;
   item: StockIngredient;
+  showBreakdown?: boolean;
 }) {
   return (
     <Item
@@ -134,6 +136,18 @@ function StockTouchRow({
             .filter(Boolean)
             .join(" · ")}
         </ItemDescription>
+        {showBreakdown &&
+        item.locationBreakdown &&
+        item.locationBreakdown.length > 1 ? (
+          <p className="font-mono text-xs text-muted-foreground tabular-nums">
+            {item.locationBreakdown
+              .map(
+                (loc) =>
+                  `${loc.locationKind === "kitchen" ? stockCopy.filters.locationKitchen : stockCopy.filters.locationWarehouse}: ${formatQty(loc.qty)}`,
+              )
+              .join(" · ")}
+          </p>
+        ) : null}
       </ItemContent>
 
       <ItemActions className="shrink-0 justify-end">
@@ -350,7 +364,9 @@ export function BranchStockOnHandClient({
               >
                 {location.kind === "kitchen"
                   ? stockCopy.filters.locationKitchen
-                  : location.name}
+                  : location.kind === "warehouse"
+                    ? stockCopy.filters.locationWarehouse
+                    : location.name}
               </TabsTrigger>
             ))}
             <TabsTrigger value="total" className="flex-1">
@@ -560,6 +576,7 @@ export function BranchStockOnHandClient({
                     key={item.id}
                     branchId={branchId}
                     item={item}
+                    showBreakdown={selectedLocation === "total"}
                   />
                 ))}
               </div>
