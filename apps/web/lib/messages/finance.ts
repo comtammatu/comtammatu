@@ -196,7 +196,8 @@ export const finance = {
         `${transactions} sao kê · ${transactionAmount}; ${payments} VietQR · ${paymentAmount}`,
       operatingExpenseLabel: "Chi vận hành",
       operatingExpenseRecorded: "Đã ghi nhận chi phí vận hành trong kỳ",
-      operatingExpenseMissing: "Chưa ghi chi phí vận hành trong kỳ.",
+      operatingExpenseMissing:
+        "Không có dòng chi vận hành trong kỳ; tổng đang tính là 0đ.",
       missingCostLabel: "Thiếu giá vốn món",
       missingCostHint: "Có đơn chưa ghi giá vốn. Số đang hiện phần đã ghi.",
       missingCostCoverageHint: (covered: string, total: string) =>
@@ -256,6 +257,8 @@ export const finance = {
       operatingExpense: "Chi vận hành",
       operatingExpenseHint:
         "Thuê, điện, lương trong kỳ. Không gồm vốn mở quán. Chưa gồm thuế GTGT.",
+      operatingExpenseZeroHint:
+        "Không có dòng chi trong kỳ; 0đ vẫn được tính vào kết quả.",
       startupCapital: "Chi phí ban đầu",
       startupCapitalHint:
         "Thi công, máy, xe, nội thất, thiết bị/TSCĐ, đặt cọc. Toàn bộ vốn đã bỏ ra, không theo kỳ. Đã gồm GTGT. Không trừ vào kết quả tháng.",
@@ -263,6 +266,11 @@ export const finance = {
       inventoryChange: "Biến động tồn kho",
       inventoryChangeHint:
         "Tồn cuối kỳ trừ tồn đầu kỳ. Hàng còn lại, không phải lãi.",
+      inventoryBreakdownLabels: {
+        branch: "Chi nhánh",
+        central_supply: "Kho Tổng",
+        central_kitchen: "Bếp trung tâm",
+      },
       operatingResult: "Kết quả kinh doanh",
       operatingResultHint:
         "Doanh thu trừ chi phí hàng và chi vận hành, cộng biến động tồn. Không lấy từ lợi nhuận gộp.",
@@ -295,9 +303,8 @@ export const finance = {
       readinessCodes: {
         valuation_inactive: "Định giá chưa hoạt động",
         valuation_not_reconciled: "Đối soát định giá lệch",
-        valuation_reconciliation_unreadable:
-          "Chưa đọc được đối soát định giá",
-        operating_expense_missing: "Thiếu chi vận hành",
+        valuation_reconciliation_unreadable: "Chưa đọc được đối soát định giá",
+        operating_expense_missing: "Chưa có dòng chi vận hành",
         negative_stock: "Âm kho",
         food_cost_coverage_incomplete: "Thiếu giá vốn món",
         expenses_needs_action: "Chi phí chờ xử lý",
@@ -330,7 +337,8 @@ export const finance = {
   revenueTargets: {
     page: {
       title: "Chỉ tiêu tháng",
-      description: "Một chỉ tiêu mỗi tháng theo chi nhánh. Theo doanh thu thuần.",
+      description:
+        "Một chỉ tiêu mỗi tháng theo chi nhánh. Theo doanh thu thuần.",
       detailExplanation:
         "Doanh thu thuần sau giảm giá, chưa gồm GTGT. Chỉ tiêu theo từng chi nhánh trong tháng.",
     },
@@ -467,7 +475,8 @@ export const finance = {
       date: "Ngày phát sinh",
       branch: "Nơi chi",
       branchTenantLevel: "Công ty",
-      cashBranchRequired: "Chi bằng tiền mặt bắt buộc phải chọn chi nhánh bán hàng để trừ đúng két tiền.",
+      cashBranchRequired:
+        "Chi bằng tiền mặt bắt buộc phải chọn chi nhánh bán hàng để trừ đúng két tiền.",
       category: "Khoản chi",
       categoryPlaceholder: "Chọn khoản chi",
       paymentSection: "Ghi nhận thanh toán",
@@ -786,8 +795,7 @@ export const finance = {
       matched: string,
       skipped: string,
       needsReview: string,
-    ) =>
-      `Đã khớp ${matched}; bỏ qua ${skipped}; cần xem lại ${needsReview}.`,
+    ) => `Đã khớp ${matched}; bỏ qua ${skipped}; cần xem lại ${needsReview}.`,
     autoMatchTokenError: "Không thể khớp theo mã chuyển khoản.",
     autoMatchTokenEmpty: "Không có giao dịch chưa khớp để thử.",
     queueEmptyTitle: "Không còn việc cần xử lý",

@@ -388,7 +388,7 @@ BEGIN
 END;
 $$;
 
-SELECT plan(21);
+SELECT plan(24);
 
 -- (a) Branch scope while the cutover is active: the identity must hold as
 -- numbers, the seeded values must actually differ, and the term is included.
@@ -455,6 +455,31 @@ SELECT ok(
 SELECT ok(
   current_setting('test.fcic_all_active')::jsonb ? 'operating_expense_recorded',
   'all scope: operating_expense_recorded key present'
+);
+
+SELECT ok(
+  current_setting('test.fcic_all_active')::jsonb -> 'inventory_breakdown'
+    @> '[{"location_kind": "branch"}]'::jsonb,
+  'all scope: inventory breakdown identifies the sales-branch group'
+);
+
+SELECT is(
+  (
+    SELECT SUM((entry ->> 'change')::numeric)
+    FROM jsonb_array_elements(
+      current_setting('test.fcic_all_active')::jsonb -> 'inventory_breakdown'
+    ) AS entry
+  ),
+  (current_setting('test.fcic_all_active')::jsonb ->> 'inventory_change')::numeric,
+  'all scope: grouped inventory changes reconcile to the displayed total'
+);
+
+SELECT is(
+  jsonb_array_length(
+    current_setting('test.fcic_b1_active')::jsonb -> 'inventory_breakdown'
+  ),
+  0,
+  'branch scope: inventory breakdown stays empty'
 );
 
 -- (c) Once the cutover is inactive the term is excluded and blanked out.

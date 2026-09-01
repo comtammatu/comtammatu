@@ -31,7 +31,12 @@ import {
 import { messages } from "@lib/messages";
 import { FilterBar } from "./components/filter-bar";
 import { FinancePeriodFormulaShell } from "./components/finance-period-formula-shell";
-import { financeHref, parseFinanceParams, resolveFinanceRange, type FinanceParams } from "./_lib/finance-params";
+import {
+  financeHref,
+  parseFinanceParams,
+  resolveFinanceRange,
+  type FinanceParams,
+} from "./_lib/finance-params";
 import {
   fetchFinanceCockpit,
   type FinanceException,
@@ -204,16 +209,12 @@ export default async function FinancePage({
     // Unknown finding codes are omitted: only registered copy renders.
     const hint = findings
       .map(
-        (finding) =>
-          financeCopy.basic.exceptions.readinessCodes[finding.code],
+        (finding) => financeCopy.basic.exceptions.readinessCodes[finding.code],
       )
       .filter((label): label is string => typeof label === "string")
       .join(" · ");
-    const blockerCodes = new Set(
-      readiness.blockers.map((finding) => finding.code),
-    );
     const findingCodes = new Set(findings.map((finding) => finding.code));
-    const href = blockerCodes.has("operating_expense_missing")
+    const href = findingCodes.has("operating_expense_missing")
       ? financeHref("/finance/expenses", scope, { state: "pending" })
       : findingCodes.has("bank_reconciliation_open")
         ? financeHref("/finance/bank-transactions", scope, {
@@ -398,9 +399,7 @@ export default async function FinancePage({
       <div className="grid min-w-0 gap-2 xl:contents">
         <span className={formulaOperatorClass}>
           <span aria-hidden>=</span>
-          <span className="sr-only">
-            {financeCopy.basic.operators.equals}
-          </span>
+          <span className="sr-only">{financeCopy.basic.operators.equals}</span>
         </span>
         {renderGrossProfitCard()}
       </div>
@@ -453,9 +452,7 @@ export default async function FinancePage({
               ? formatVND(totalOnHand)
               : messages.finance.cash.verifying
           }
-          shortValue={
-            fundsReady ? formatCompactVND(totalOnHand) : undefined
-          }
+          shortValue={fundsReady ? formatCompactVND(totalOnHand) : undefined}
           tone={fundsReady ? "primary" : "warning"}
         />
       </div>
@@ -464,9 +461,7 @@ export default async function FinancePage({
         <div className="grid min-w-0 gap-2 xl:contents">
           <span className={formulaOperatorClass}>
             <span aria-hidden>+</span>
-            <span className="sr-only">
-              {financeCopy.basic.operators.add}
-            </span>
+            <span className="sr-only">{financeCopy.basic.operators.add}</span>
           </span>
           <KpiCard
             density="compact"
@@ -483,9 +478,7 @@ export default async function FinancePage({
       <div className="grid min-w-0 gap-2 xl:contents">
         <span className={formulaOperatorClass}>
           <span aria-hidden>+</span>
-          <span className="sr-only">
-            {financeCopy.basic.operators.add}
-          </span>
+          <span className="sr-only">{financeCopy.basic.operators.add}</span>
         </span>
         <KpiCard
           density="compact"
@@ -511,9 +504,7 @@ export default async function FinancePage({
       <div className="grid min-w-0 gap-2 xl:contents">
         <span className={formulaOperatorClass}>
           <span aria-hidden>=</span>
-          <span className="sr-only">
-            {financeCopy.basic.operators.equals}
-          </span>
+          <span className="sr-only">{financeCopy.basic.operators.equals}</span>
         </span>
         {renderTotalAssetValueCard()}
       </div>
@@ -530,9 +521,7 @@ export default async function FinancePage({
             ? formatVND(totalAssetValue)
             : messages.finance.cash.verifying
         }
-        shortValue={
-          fundsReady ? formatCompactVND(totalAssetValue) : undefined
-        }
+        shortValue={fundsReady ? formatCompactVND(totalAssetValue) : undefined}
         tone={fundsReady ? "primary" : "warning"}
       />
     );
@@ -544,11 +533,19 @@ export default async function FinancePage({
       : null;
 
   const operatingExpensePct =
-    hasNetRevenue &&
-    cockpit.kpis.operatingExpenseRecorded &&
-    cockpit.kpis.operatingExpense != null
+    hasNetRevenue && cockpit.kpis.operatingExpense != null
       ? (Number(cockpit.kpis.operatingExpense) / netRevenueValue) * 100
       : null;
+
+  const inventoryBreakdownHint =
+    params.location === "all" && cockpit.inventoryBreakdown.length > 0
+      ? cockpit.inventoryBreakdown
+          .map((item) => {
+            const value = formatCompactVND(item.change);
+            return `${financeCopy.basic.kpis.inventoryBreakdownLabels[item.locationKind]} ${item.change > 0 ? "+" : ""}${value}`;
+          })
+          .join(" · ")
+      : undefined;
 
   const periodResultDetails = (
     <KpiRow
@@ -595,9 +592,7 @@ export default async function FinancePage({
             value={formatVND(cockpit.kpis.goodsIn)}
             shortValue={formatCompactVND(cockpit.kpis.goodsIn)}
             hint={
-              goodsInPct != null
-                ? `${formatPercent(goodsInPct)} DT`
-                : undefined
+              goodsInPct != null ? `${formatPercent(goodsInPct)} DT` : undefined
             }
             tone="neutral"
             href={
@@ -609,28 +604,18 @@ export default async function FinancePage({
           <KpiCard
             density="compact"
             label={financeCopy.basic.kpis.operatingExpense}
-            value={
-              cockpit.kpis.operatingExpenseRecorded
-                ? formatVND(cockpit.kpis.operatingExpense)
-                : financeCopy.basic.kpis.notRecorded
-            }
-            shortValue={
-              cockpit.kpis.operatingExpenseRecorded
-                ? formatCompactVND(cockpit.kpis.operatingExpense)
-                : undefined
-            }
+            value={formatVND(cockpit.kpis.operatingExpense)}
+            shortValue={formatCompactVND(cockpit.kpis.operatingExpense)}
             hint={
-              operatingExpensePct != null
-                ? `${formatPercent(operatingExpensePct)} DT`
-                : undefined
+              !cockpit.kpis.operatingExpenseRecorded
+                ? financeCopy.basic.kpis.operatingExpenseZeroHint
+                : operatingExpensePct != null
+                  ? `${formatPercent(operatingExpensePct)} DT`
+                  : undefined
             }
-            tone={
-              cockpit.kpis.operatingExpenseRecorded ? "neutral" : "warning"
-            }
+            tone={cockpit.kpis.operatingExpenseRecorded ? "neutral" : "warning"}
             href={financeHref("/finance/expenses", params, {
-              state: cockpit.kpis.operatingExpenseRecorded
-                ? null
-                : "pending",
+              state: cockpit.kpis.operatingExpenseRecorded ? null : "pending",
             })}
           />
         </Frame>
@@ -640,15 +625,14 @@ export default async function FinancePage({
         <div className="grid min-w-0 gap-2 xl:contents">
           <span className={formulaOperatorClass}>
             <span aria-hidden>+</span>
-            <span className="sr-only">
-              {financeCopy.basic.operators.add}
-            </span>
+            <span className="sr-only">{financeCopy.basic.operators.add}</span>
           </span>
           <KpiCard
             density="compact"
             label={financeCopy.basic.kpis.inventoryChange}
             value={formatVND(inventoryChange)}
             shortValue={formatCompactVND(inventoryChange)}
+            hint={inventoryBreakdownHint}
             tone="neutral"
           />
         </div>
@@ -657,9 +641,7 @@ export default async function FinancePage({
       <div className="grid min-w-0 gap-2 xl:contents">
         <span className={formulaOperatorClass}>
           <span aria-hidden>=</span>
-          <span className="sr-only">
-            {financeCopy.basic.operators.equals}
-          </span>
+          <span className="sr-only">{financeCopy.basic.operators.equals}</span>
         </span>
         {renderOperatingResultCard()}
       </div>
@@ -757,7 +739,10 @@ export default async function FinancePage({
 
       {/* CHI PHÍ BAN ĐẦU: Thi công, tài sản, đặt cọc ban đầu */}
       <AppSection size="sm" title={financeCopy.basic.sections.startupCapital}>
-        <KpiRow density="compact" className="grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
+        <KpiRow
+          density="compact"
+          className="grid-cols-1 sm:grid-cols-2 xl:grid-cols-3"
+        >
           <KpiCard
             density="compact"
             label={financeCopy.basic.kpis.startupCapital}

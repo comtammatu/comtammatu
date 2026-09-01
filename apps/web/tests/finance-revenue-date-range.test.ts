@@ -190,6 +190,32 @@ test("Finance operating expense excludes food-cost and transfer categories", () 
   assert.doesNotMatch(dataContract, /category='bank_deposit'/);
 });
 
+test("Finance treats 0đ operating expense as numeric and explains All-scope inventory", () => {
+  const page = read("apps/web/app/(protected)/finance/page.tsx");
+  const result = read(
+    "apps/web/app/(protected)/finance/_lib/finance-result.ts",
+  );
+  const messages = read("apps/web/lib/messages/finance.ts");
+  const migration = read(
+    "supabase/migrations/20260901091614_finance_zero_opex_inventory_breakdown.sql",
+  );
+
+  assert.match(
+    page,
+    /value=\{formatVND\(cockpit\.kpis\.operatingExpense\)\}/,
+    "the period formula must render 0đ instead of replacing it with a missing label",
+  );
+  assert.doesNotMatch(
+    result,
+    /operatingResult:\s*operatingExpenseRecorded\s*\?/,
+    "expense-row presence must not gate the period result",
+  );
+  assert.match(messages, /0đ vẫn được tính vào kết quả/);
+  assert.match(page, /inventoryBreakdownHint/);
+  assert.match(migration, /'inventory_breakdown', v_breakdown/);
+  assert.match(migration, /'severity', 'warning'/);
+});
+
 test("Finance revenue money-collected fields use payment amount", () => {
   const migration = read(
     "supabase/migration-archive/20260709050743_finance_revenue_payment_amount_contract.sql",
@@ -257,7 +283,10 @@ test("Finance food-cost page shows actual cost coverage before estimate rows", (
   assert.match(page, /calculateGrossProfitIdentity/);
   assert.match(page, /actualFoodCost=\{actualSummary\.total\}/);
   assert.match(page, /grossMarginPct=\{grossMarginPct\}/);
-  assert.doesNotMatch(page, /operatingConsumption=\{actualSummary\.operatingConsumption\}/);
+  assert.doesNotMatch(
+    page,
+    /operatingConsumption=\{actualSummary\.operatingConsumption\}/,
+  );
   assert.doesNotMatch(page, /coveredOrderCount=/);
   assert.match(client, /label=\{foodCopy\.actualFoodCost\}/);
   assert.match(client, /label=\{foodCopy\.grossMargin\}/);
@@ -308,9 +337,7 @@ test("Product UI copy bans recurring EN loanwords in Hint/Description dictionari
     "apps/web/lib/messages/control-surface.ts",
   );
   const operatorMessages = read("apps/web/lib/messages/operator.ts");
-  const hrForm = read(
-    "apps/web/app/(protected)/hr/employee-form-dialog.tsx",
-  );
+  const hrForm = read("apps/web/app/(protected)/hr/employee-form-dialog.tsx");
 
   assert.match(
     inventoryMessages,
@@ -400,10 +427,7 @@ test("Finance cockpit branch filter also scopes supplier payable risk", () => {
   assert.match(cockpit, /get_finance_operating_cockpit/);
   assert.match(migration, /unpaid_ap_count/);
   assert.match(migration, /unpaid_ap_amount/);
-  assert.match(
-    migration,
-    /goods_received_notes|supplier_invoices/,
-  );
+  assert.match(migration, /goods_received_notes|supplier_invoices/);
 });
 
 test("Finance top-items side-item fanout avoids PL/pgSQL output-column ambiguity", () => {
