@@ -84,6 +84,8 @@ test("the bank transactions UI offers cash deposit beside payment reconciliation
 
 test("bank reconciliation status actions keep one Base UI trigger layer", () => {
   assert.match(table, /function ReconciliationStatusControl/);
+  assert.match(table, /\.\.\.triggerProps/);
+  assert.match(table, /<Button\s+\{\.\.\.triggerProps\}/);
   assert.match(table, /<Button[\s\S]*?variant="ghost"[\s\S]*?>/);
   assert.match(table, /<Badge variant=\{variant\}/);
   assert.doesNotMatch(

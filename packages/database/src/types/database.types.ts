@@ -13221,6 +13221,14 @@ export type Database = {
         Args: { p_request_id: number }
         Returns: undefined
       }
+      approve_leave_request_with_roster: {
+        Args: {
+          p_replacement_employee_id?: number
+          p_request_id: number
+          p_shift_resolution?: string
+        }
+        Returns: Json
+      }
       approve_waste: {
         Args: { p_decision: string; p_issue_id: number; p_note?: string }
         Returns: undefined

@@ -182,17 +182,17 @@ export function BranchLeaveApprovalsClient({
 
     setPendingAction("approve");
     const conflictResult = await fetchLeaveShiftConflicts({
-      employeeId: selected.employees?.id ?? 0,
-      startDate: selected.start_date,
-      endDate: selected.end_date,
+      requestId: selected.id,
       branchId,
     });
 
-    if (
-      conflictResult.success &&
-      conflictResult.data &&
-      conflictResult.data.shifts.length > 0
-    ) {
+    if (!conflictResult.success) {
+      toast.error(conflictResult.error ?? copy.conflictShiftsLoadFailed);
+      setPendingAction(null);
+      return;
+    }
+
+    if (conflictResult.data && conflictResult.data.shifts.length > 0) {
       const conflictData = conflictResult.data;
       setConflictShifts(conflictData.shifts);
       setAvailableSubstitutes(conflictData.availableEmployees);
@@ -226,6 +226,7 @@ export function BranchLeaveApprovalsClient({
       const result = await approveLeaveRequest({
         requestId: selected.id,
         branchId,
+        shiftResolution: "keep",
       });
       setPendingAction(null);
       if (!result.success) {
@@ -252,14 +253,16 @@ export function BranchLeaveApprovalsClient({
       const result = await approveLeaveRequest({
         requestId: selected.id,
         branchId,
+        shiftResolution:
+          substitutionMode === "substitute"
+            ? "substitute"
+            : substitutionMode === "unassign"
+              ? "unassign"
+              : "keep",
         replacementEmployeeId:
           substitutionMode === "substitute" && selectedSubstituteId
             ? Number(selectedSubstituteId)
             : null,
-        unassignShifts: substitutionMode === "unassign",
-        employeeId: selected.employees?.id,
-        startDate: selected.start_date,
-        endDate: selected.end_date,
       });
       setPendingAction(null);
       setConflictSheetOpen(false);

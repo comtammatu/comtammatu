@@ -206,6 +206,7 @@ export function LeaveRequestsTable({
       const result = await approveLeaveRequest({
         requestId: request.id,
         branchId: request.branch_id,
+        shiftResolution: "keep",
       });
       if (!result.success) {
         toast.error(result.error ?? "Không thể duyệt yêu cầu nghỉ");

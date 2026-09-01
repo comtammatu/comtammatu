@@ -248,7 +248,7 @@ test("HR attendance route exposes branch-scoped leave approvals", () => {
   for (const expected of [
     "PERMISSION_KEYS.HR_APPROVE_LEAVE_REQUEST",
     "permissionBranchId: (data) => data.branchId",
-    '"approve_leave_request"',
+    '"approve_leave_request_with_roster"',
     '"reject_leave_request"',
     "requireBranchScope: true",
     "Không thể tự duyệt yêu cầu của mình.",

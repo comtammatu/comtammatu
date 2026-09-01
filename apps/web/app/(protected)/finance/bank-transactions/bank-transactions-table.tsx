@@ -206,23 +206,30 @@ function reviewStatusLabel(
   return copy.missingWebhookTable.reviewStatusLabels[status];
 }
 
+type ReconciliationStatusControlProps = {
+  label: string;
+  variant: "success" | "warning" | "destructive" | "secondary";
+  clickable: boolean;
+  touch: boolean;
+} & Omit<
+  React.ComponentProps<typeof Button>,
+  "children" | "size" | "variant"
+>;
+
 function ReconciliationStatusControl({
   label,
   variant,
   clickable,
   touch,
-}: {
-  label: string;
-  variant: "success" | "warning" | "destructive" | "secondary";
-  clickable: boolean;
-  touch: boolean;
-}) {
+  ...triggerProps
+}: ReconciliationStatusControlProps) {
   if (!clickable) {
     return <Badge variant={variant}>{label}</Badge>;
   }
 
   return (
     <Button
+      {...triggerProps}
       type="button"
       variant="ghost"
       size={touch ? "touch" : "sm"}

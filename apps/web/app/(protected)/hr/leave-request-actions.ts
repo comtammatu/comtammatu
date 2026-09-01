@@ -12,7 +12,6 @@ const fetchSchema = z.object({
   branchId: z.number().int().positive().nullable(),
 });
 
-
 export const fetchLeaveRequests = withAction(
   {
     roles: REVIEW_ROLES,
@@ -31,12 +30,9 @@ export const fetchLeaveRequests = withAction(
 );
 
 const conflictSchema = z.object({
-  employeeId: z.number().int().positive(),
-  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  requestId: z.number().int().positive(),
   branchId: z.number().int().positive().nullable(),
 });
-
 
 export const fetchLeaveShiftConflicts = withAction(
   {
@@ -47,7 +43,26 @@ export const fetchLeaveShiftConflicts = withAction(
     requireBranchScope: true,
   },
   async (data, { supabase, claims }) => {
-    const { data: assignments, error: assignmentsError } = await supabase
+    const { data: request, error: requestError } = await supabase
+      .from("leave_requests")
+      .select("employee_id, start_date, end_date, branch_id")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("id", data.requestId)
+      .eq("status", "pending")
+      .maybeSingle();
+
+    if (requestError || !request || request.branch_id !== data.branchId) {
+      console.error(
+        "[leave-request-actions:fetchLeaveShiftConflicts] request error:",
+        requestError,
+      );
+      return {
+        success: false,
+        error: messages.hr.leave.conflictShiftsLoadFailed,
+      };
+    }
+
+    let assignmentsQuery = supabase
       .from("shift_assignments")
       .select(
         `
@@ -58,11 +73,18 @@ export const fetchLeaveShiftConflicts = withAction(
       `,
       )
       .eq("tenant_id", claims.tenant_id)
-      .eq("employee_id", data.employeeId)
-      .gte("work_date", data.startDate)
-      .lte("work_date", data.endDate)
+      .eq("employee_id", request.employee_id)
+      .gte("work_date", request.start_date)
+      .lte("work_date", request.end_date)
       .not("shift_id", "is", null);
 
+    assignmentsQuery =
+      request.branch_id == null
+        ? assignmentsQuery.is("branch_id", null)
+        : assignmentsQuery.eq("branch_id", request.branch_id);
+
+    const { data: assignments, error: assignmentsError } =
+      await assignmentsQuery;
 
     if (assignmentsError) {
       console.error(
@@ -75,12 +97,18 @@ export const fetchLeaveShiftConflicts = withAction(
       };
     }
 
-    const assignedShifts = ((assignments ?? []) as unknown as Array<{
-      id: number;
-      work_date: string;
-      shift_id: number;
-      shifts: { name?: string | null; start_time?: string | null; end_time?: string | null } | null;
-    }>).map((row) => ({
+    const assignedShifts = (
+      (assignments ?? []) as unknown as Array<{
+        id: number;
+        work_date: string;
+        shift_id: number;
+        shifts: {
+          name?: string | null;
+          start_time?: string | null;
+          end_time?: string | null;
+        } | null;
+      }>
+    ).map((row) => ({
       id: row.id,
       workDate: row.work_date,
       shiftId: row.shift_id,
@@ -111,19 +139,47 @@ export const fetchLeaveShiftConflicts = withAction(
       )
       .eq("tenant_id", claims.tenant_id)
       .eq("is_active", true)
-      .neq("id", data.employeeId);
+      .neq("id", request.employee_id);
 
-    if (data.branchId != null) {
-      empQuery = empQuery.eq("profiles.branch_id", data.branchId);
+    empQuery =
+      request.branch_id == null
+        ? empQuery.is("profiles.branch_id", null)
+        : empQuery.eq("profiles.branch_id", request.branch_id);
+
+    const { data: employeesData, error: employeesError } = await empQuery;
+    if (employeesError) {
+      console.error(
+        "[leave-request-actions:fetchLeaveShiftConflicts] employees error:",
+        employeesError,
+      );
+      return {
+        success: false,
+        error: messages.hr.leave.conflictShiftsLoadFailed,
+      };
     }
 
-    const { data: employeesData } = await empQuery;
-
-    const availableEmployees = ((employeesData ?? []) as unknown as Array<{
-      id: number;
-      employee_code: string;
-      profiles: { full_name?: string | null; positions?: { label_vi?: string | null } | Array<{ label_vi?: string | null }> | null } | Array<{ full_name?: string | null; positions?: { label_vi?: string | null } | Array<{ label_vi?: string | null }> | null }> | null;
-    }>).map((emp) => {
+    const availableEmployees = (
+      (employeesData ?? []) as unknown as Array<{
+        id: number;
+        employee_code: string;
+        profiles:
+          | {
+              full_name?: string | null;
+              positions?:
+                | { label_vi?: string | null }
+                | Array<{ label_vi?: string | null }>
+                | null;
+            }
+          | Array<{
+              full_name?: string | null;
+              positions?:
+                | { label_vi?: string | null }
+                | Array<{ label_vi?: string | null }>
+                | null;
+            }>
+          | null;
+      }>
+    ).map((emp) => {
       const profile = Array.isArray(emp.profiles)
         ? emp.profiles[0]
         : emp.profiles;
@@ -149,15 +205,31 @@ export const fetchLeaveShiftConflicts = withAction(
 );
 
 const requestIdSchema = z.object({
-
   requestId: z.number().int().positive(),
   branchId: z.number().int().positive().nullable(),
-  replacementEmployeeId: z.number().int().positive().optional().nullable(),
-  unassignShifts: z.boolean().optional(),
-  employeeId: z.number().int().positive().optional(),
-  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });
+
+const approveRequestSchema = requestIdSchema
+  .extend({
+    shiftResolution: z.enum(["keep", "unassign", "substitute"]).default("keep"),
+    replacementEmployeeId: z.number().int().positive().optional().nullable(),
+  })
+  .superRefine((data, context) => {
+    if (data.shiftResolution === "substitute" && !data.replacementEmployeeId) {
+      context.addIssue({
+        code: "custom",
+        path: ["replacementEmployeeId"],
+        message: messages.hr.leave.replacementRequired,
+      });
+    }
+    if (data.shiftResolution !== "substitute" && data.replacementEmployeeId) {
+      context.addIssue({
+        code: "custom",
+        path: ["replacementEmployeeId"],
+        message: messages.hr.leave.replacementResolutionMismatch,
+      });
+    }
+  });
 
 function revalidateLeavePaths(branchId: number | null) {
   revalidatePath("/hr");
@@ -172,101 +244,81 @@ function revalidateLeavePaths(branchId: number | null) {
 export const approveLeaveRequest = withAction(
   {
     roles: REVIEW_ROLES,
-    schema: requestIdSchema,
+    schema: approveRequestSchema,
     permission: PERMISSION_KEYS.HR_APPROVE_LEAVE_REQUEST,
     permissionBranchId: (data) => data.branchId,
     requireBranchScope: true,
   },
-  async (data, { supabase, claims }) => {
-    const { error } = await supabase.rpc("approve_leave_request", {
-      p_request_id: data.requestId,
-    });
+  async (data, { supabase }) => {
+    const { error } = await supabase.rpc(
+      "approve_leave_request_with_roster",
+      {
+        p_request_id: data.requestId,
+        p_shift_resolution: data.shiftResolution,
+        p_replacement_employee_id:
+          data.shiftResolution === "substitute"
+            ? (data.replacementEmployeeId ?? undefined)
+            : undefined,
+      },
+    );
 
     if (error) {
       console.error(
-        "[hr/leave-request-actions:approveLeaveRequest] RPC approve_leave_request error:",
+        "[hr/leave-request-actions:approveLeaveRequest] RPC approve_leave_request_with_roster error:",
         error,
       );
-      if (error.message.includes("cannot review own request")) {
+      const normalized = error.message.toLowerCase();
+      if (
+        normalized.includes("cannot_review_own_leave") ||
+        normalized.includes("cannot review own request")
+      ) {
         return {
           success: false,
           error: "Không thể tự duyệt yêu cầu của mình.",
         };
       }
-      if (error.message.includes("not pending")) {
+      if (
+        normalized.includes("leave_request_not_pending") ||
+        normalized.includes("not pending")
+      ) {
         return {
           success: false,
           error: "Yêu cầu không còn ở trạng thái chờ duyệt.",
         };
       }
-      if (error.message.includes("annual leave quota exceeded")) {
+      if (normalized.includes("leave_roster_attendance_exists")) {
         return {
           success: false,
-          error: "Không đủ phép năm còn lại để duyệt nghỉ có lương.",
+          error: messages.hr.leave.attendanceShiftLocked,
         };
       }
-      if (error.message.includes("missing permission")) {
+      if (normalized.includes("leave_replacement_employee_invalid")) {
         return {
           success: false,
-          error: "Không có quyền duyệt nghỉ cho chi nhánh này.",
+          error: messages.hr.leave.replacementInvalid,
         };
       }
-      if (error.message.includes("not found")) {
+      if (
+        normalized.includes("leave_review_requires_owner") ||
+        normalized.includes("leave_review_wrong_branch") ||
+        normalized.includes("leave_shift_resolution_forbidden") ||
+        normalized.includes("missing permission")
+      ) {
+        return {
+          success: false,
+          error: messages.hr.leave.approveOrRosterForbidden,
+        };
+      }
+      if (normalized.includes("not found")) {
         return { success: false, error: "Không tìm thấy yêu cầu." };
       }
       return { success: false, error: "Không thể duyệt yêu cầu nghỉ." };
     }
 
-    if (data.employeeId && data.startDate && data.endDate) {
-      if (data.replacementEmployeeId) {
-        const { data: assignments } = await supabase
-          .from("shift_assignments")
-          .select("id, work_date, shift_id, branch_id")
-          .eq("tenant_id", claims.tenant_id)
-          .eq("employee_id", data.employeeId)
-          .gte("work_date", data.startDate)
-          .lte("work_date", data.endDate)
-          .not("shift_id", "is", null);
-
-        if (assignments && assignments.length > 0) {
-          await supabase
-            .from("shift_assignments")
-            .delete()
-            .eq("tenant_id", claims.tenant_id)
-            .eq("employee_id", data.employeeId)
-            .gte("work_date", data.startDate)
-            .lte("work_date", data.endDate);
-
-          const newRows = assignments.map((a) => ({
-            tenant_id: claims.tenant_id,
-            branch_id: a.branch_id ?? data.branchId,
-            employee_id: data.replacementEmployeeId!,
-            work_date: a.work_date,
-            shift_id: a.shift_id,
-            source: "manual",
-          }));
-
-          await supabase.from("shift_assignments").upsert(newRows, {
-            onConflict: "tenant_id, employee_id, work_date, shift_id",
-          });
-        }
-      } else if (data.unassignShifts) {
-        await supabase
-          .from("shift_assignments")
-          .delete()
-          .eq("tenant_id", claims.tenant_id)
-          .eq("employee_id", data.employeeId)
-          .gte("work_date", data.startDate)
-          .lte("work_date", data.endDate);
-      }
-    }
-
-
     revalidateLeavePaths(data.branchId);
     return { success: true };
   },
 );
-
 
 const rejectSchema = requestIdSchema.extend({
   reason: z.string().max(500).optional(),

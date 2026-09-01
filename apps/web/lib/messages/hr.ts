@@ -119,7 +119,8 @@ export const hr = {
     },
     attendanceTitle: "Chấm công",
     branchAttendanceTitle: "Bảng chấm công",
-    attendanceDescription: "Vào/ra ca hôm nay, hàng đợi duyệt và bảng công tháng.",
+    attendanceDescription:
+      "Vào/ra ca hôm nay, hàng đợi duyệt và bảng công tháng.",
     checkoutApprovalsAction: "Duyệt kết ca",
     checkoutApprovalsHint:
       "Kết ca của Kế toán và địa điểm trung tâm chờ Chủ sở hữu duyệt.",
@@ -392,8 +393,15 @@ export const hr = {
 
     approveSuccessWithUnassign: "Đã duyệt nghỉ phép và gỡ ca làm.",
     conflictShiftsLoadFailed: "Không thể tải danh sách ca trùng.",
+    replacementRequired: "Vui lòng chọn nhân viên thay ca.",
+    replacementResolutionMismatch: "Lựa chọn xử lý ca không hợp lệ.",
+    attendanceShiftLocked:
+      "Không thể chuyển hoặc hủy ca đã có chấm công. Hãy giữ nguyên ca khi duyệt nghỉ.",
+    replacementInvalid:
+      "Nhân viên thay thế không còn phù hợp với chi nhánh này.",
+    approveOrRosterForbidden:
+      "Không có quyền duyệt nghỉ hoặc thay đổi ca tại chi nhánh này.",
     selectedBadge: "Đã chọn",
-
   },
   payroll: {
     eyebrow: "Nhân sự",

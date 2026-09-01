@@ -50,10 +50,7 @@ test("owner attendance exposes roster tab with shared week client", () => {
 test("roster week grid renders through the design-system DataTable", () => {
   const weekClient = read("apps/web/lib/hr/roster/roster-week-client.tsx");
 
-  assert.match(
-    weekClient,
-    /from "@\/components\/data-table\/data-table"/,
-  );
+  assert.match(weekClient, /from "@\/components\/data-table\/data-table"/);
   assert.match(weekClient, /<DataTable/);
   assert.match(weekClient, /mobileCardRender/);
   assert.doesNotMatch(weekClient, /<table/);
@@ -152,11 +149,11 @@ test("ADR 0019 Phase B migration enables multi-shift roster constraints", () => 
   assert.match(migration, /shift_assignments_one_per_employee_day/);
   assert.match(migration, /NULLS NOT DISTINCT/);
   assert.match(migration, /shift_assignments_one_day_off_per_day/);
-  assert.match(migration, /desired\.shift_id IS NOT DISTINCT FROM assignment\.shift_id/);
-  assert.doesNotMatch(
+  assert.match(
     migration,
-    /OR sa\.work_date = v_vn_date/,
+    /desired\.shift_id IS NOT DISTINCT FROM assignment\.shift_id/,
   );
+  assert.doesNotMatch(migration, /OR sa\.work_date = v_vn_date/);
   assert.match(migration, /multiple_shift_candidates/);
   assert.match(migration, /scheduled_start_at, scheduled_end_at/);
 });
@@ -244,12 +241,19 @@ test("leave approvals client supports shift conflict detection and substitution"
   const leaveClient = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/team/leave-approvals/branch-leave-approvals-client.tsx",
   );
-  const leaveActions = read("apps/web/app/(protected)/hr/leave-request-actions.ts");
+  const leaveActions = read(
+    "apps/web/app/(protected)/hr/leave-request-actions.ts",
+  );
   const hrMessages = read("apps/web/lib/messages/hr.ts");
 
   assert.match(leaveActions, /fetchLeaveShiftConflicts/);
   assert.match(leaveActions, /replacementEmployeeId/);
-  assert.match(leaveActions, /unassignShifts/);
+  assert.match(leaveActions, /shiftResolution/);
+  assert.match(leaveActions, /approve_leave_request_with_roster/);
+  assert.doesNotMatch(
+    leaveActions,
+    /\.from\("shift_assignments"\)[\s\S]*\.(?:insert|upsert|update|delete)\(/,
+  );
   assert.match(leaveClient, /fetchLeaveShiftConflicts/);
   assert.match(leaveClient, /conflictSheetOpen/);
   assert.match(leaveClient, /substitutionMode/);
