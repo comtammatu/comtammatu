@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { formatPercent, formatVND } from "@comtammatu/shared/format";
+import { calculateHddtTotal } from "@comtammatu/shared/hddt";
 import { Button } from "@comtammatu/ui/components/button";
 import { Frame } from "@comtammatu/ui/components/frame";
 import {
@@ -31,11 +32,11 @@ interface DiscountSheetProps {
   subtotalLabel?: string;
   totalLabel?: string;
   clearLabel?: string;
-  /** Subtotal trước giảm — dùng để live preview + clamp UI. */
+  /** Subtotal before discount, used for the live preview and UI clamp. */
   subtotal: number;
-  /** Phụ phí trên đơn — cộng vào total preview. */
+  /** Non-revenue holiday surcharge included only in the payment total. */
   serviceCharge: number;
-  /** Discount hiện tại trên đơn (để pre-fill khi mở edit). */
+  /** Current order discount, used to pre-fill edit mode. */
   current: {
     type: DiscountType | null;
     value: number | null;
@@ -120,6 +121,7 @@ export function DiscountSheet({
     0,
     subtotal + serviceCharge - previewDiscountAmount,
   );
+  const hddtTotal = calculateHddtTotal(previewTotal, serviceCharge);
 
   const noteTrimLen = note.trim().length;
   const noteValid = noteTrimLen >= 3;
@@ -144,10 +146,7 @@ export function DiscountSheet({
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && handleClose()}>
-      <SheetContent
-        side="right"
-        size="md"
-      >
+      <SheetContent side="right" size="md">
         <SheetHeader>
           <SheetTitle>{title}</SheetTitle>
         </SheetHeader>
@@ -220,12 +219,6 @@ export function DiscountSheet({
               <span>{subtotalLabel}</span>
               <span className="tabular-nums">{formatVND(subtotal)}</span>
             </div>
-            {serviceCharge > 0 && (
-              <div className="flex justify-between text-muted-foreground">
-                <span>{POS_VI.serviceChargeTitle}</span>
-                <span className="tabular-nums">{formatVND(serviceCharge)}</span>
-              </div>
-            )}
             <div className="flex justify-between text-muted-foreground">
               <span>
                 {POS_VI.discountReduceLabel}
@@ -239,6 +232,20 @@ export function DiscountSheet({
                   : "—"}
               </span>
             </div>
+            {serviceCharge > 0 && (
+              <>
+                <div className="mt-1 flex justify-between border-t border-border/60 pt-1 font-semibold">
+                  <span>{POS_VI.hddtTotal}</span>
+                  <span className="tabular-nums">{formatVND(hddtTotal)}</span>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>{POS_VI.serviceChargeTitle}</span>
+                  <span className="tabular-nums">
+                    {formatVND(serviceCharge)}
+                  </span>
+                </div>
+              </>
+            )}
             <div className="mt-1 flex justify-between border-t border-border/60 pt-1 font-semibold">
               <span>{totalLabel}</span>
               <span className="tabular-nums">{formatVND(previewTotal)}</span>

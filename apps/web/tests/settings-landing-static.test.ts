@@ -22,6 +22,7 @@ test("Owner settings uses a permission-scoped landing instead of redirecting to 
   assert.match(landing, /<AppSection/);
   assert.match(landing, /<LinkCardGrid>/);
   assert.match(landing, /href="\/settings\/general"/);
+  assert.match(landing, /href="\/settings\/holiday-surcharges"/);
   assert.match(landing, /href="\/settings\/payments"/);
   assert.match(landing, /href="\/settings\/printers"/);
   assert.match(frame, /showSettingsHomeLink/);
@@ -29,5 +30,9 @@ test("Owner settings uses a permission-scoped landing instead of redirecting to 
   assert.match(
     archetypes,
     /"apps\/web\/app\/\(protected\)\/settings\/page\.tsx": "LANDING"/,
+  );
+  assert.match(
+    archetypes,
+    /"apps\/web\/app\/\(protected\)\/settings\/\(tenant\)\/holiday-surcharges\/page\.tsx":\s*"SETTINGS-PANEL"/,
   );
 });

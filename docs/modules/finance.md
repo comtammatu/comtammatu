@@ -100,11 +100,18 @@ period-result cards:
 
 1. **Net revenue**
    - `Doanh thu thuần` is `subtotal_revenue - discount_amount` for paid orders
-     and excludes VAT.
+     and excludes VAT and the non-revenue holiday surcharge stored in
+     `orders.service_charge`.
    - Keep the internal adapter field `netRevenueBeforeVat` only as a legacy code
      identifier; UI and operating documentation use the precise label above.
    - `totalCollected` remains available in the revenue detail and is labeled
-     `Tổng tiền đã thu`; it is not a landing formula card.
+     `Tổng tiền đã thu`; it includes the full completed payment, including any
+     holiday surcharge, and is not a landing formula card.
+   - Holiday surcharge schedules are owner-managed by Vietnam-time interval and
+     tenant or branch scope. Branch-specific schedules win. Percentage policies
+     use the post-discount HĐĐT total as their base; fixed policies add one VND
+     amount per order. Each order snapshots its selected policy so later policy
+     edits do not rewrite historical payments or revenue.
    - Top món uses the same `resolved.start→end` window as every other KPI; side
      items in `order_items.sides` are counted as their own món and their revenue
      is subtracted from the parent món line to avoid double-counting.
@@ -190,11 +197,11 @@ the bank-reconciliation workflow; changing the payment method never rewrites a
 The current application authorization model exposes Finance to `owner`; there
 is no canonical `accountant` staff role. Therefore:
 
-| Actor          | Current system access                                                                                                                                    | Must review or act on                                                                                                                                                                                                                                |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Owner          | Tenant-wide `/finance`; owner-only bank import/reconciliation, payment-method correction, one-time fund initialization, append-only fund adjustments, and monthly revenue targets | Daily landing metrics and formulas; current cash/bank opening and adjustments; exact POS cash variances; unmatched SePay movements; VietQR payments missing bank evidence; operating expenses; AP; HĐĐT; inventory opening/closing evidence; exports; `/finance/targets` |
-| Branch Manager | Branch POS-session workflow only; no tenant-wide Finance, bank import/reconciliation, opening-balance, fund-adjustment, or payment-correction authority  | Resolve an exact subordinate shift shortage as `staff_repaid` or record its variance outcome as `accepted_adjustment`, subject to branch permission and audit; neither action changes tenant-wide book funds. May **read** MTD Doanh thu thuần, monthly target progress, and the complete ordered reward-tier milestones for the assigned branch only on Branch home (`finance.revenue.monthly_target_progress`); cannot edit targets or open `/finance` |
-| Accountant     | No authenticated Finance role or write authority in the current model                                                                                    | Receive Owner-controlled revenue/payment exports, canonical SePay evidence, expense/AP evidence, HĐĐT evidence, and inventory opening/closing evidence; report discrepancies back to the Owner                                                       |
+| Actor          | Current system access                                                                                                                                                             | Must review or act on                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Owner          | Tenant-wide `/finance`; owner-only bank import/reconciliation, payment-method correction, one-time fund initialization, append-only fund adjustments, and monthly revenue targets | Daily landing metrics and formulas; current cash/bank opening and adjustments; exact POS cash variances; unmatched SePay movements; VietQR payments missing bank evidence; operating expenses; AP; HĐĐT; inventory opening/closing evidence; exports; `/finance/targets`                                                                                                                                                                                 |
+| Branch Manager | Branch POS-session workflow only; no tenant-wide Finance, bank import/reconciliation, opening-balance, fund-adjustment, or payment-correction authority                           | Resolve an exact subordinate shift shortage as `staff_repaid` or record its variance outcome as `accepted_adjustment`, subject to branch permission and audit; neither action changes tenant-wide book funds. May **read** MTD Doanh thu thuần, monthly target progress, and the complete ordered reward-tier milestones for the assigned branch only on Branch home (`finance.revenue.monthly_target_progress`); cannot edit targets or open `/finance` |
+| Accountant     | No authenticated Finance role or write authority in the current model                                                                                                             | Receive Owner-controlled revenue/payment exports, canonical SePay evidence, expense/AP evidence, HĐĐT evidence, and inventory opening/closing evidence; report discrepancies back to the Owner                                                                                                                                                                                                                                                           |
 
 The system must not silently map `office` or another position to Finance
 access. A separate authenticated accountant workspace requires an explicit

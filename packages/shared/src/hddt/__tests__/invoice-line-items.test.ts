@@ -4,6 +4,13 @@ import {
   applyInvoiceLineDiscount,
   buildInvoiceLineItemsFromOrderItems,
 } from "../invoice-line-items";
+import { calculateHddtTotal } from "../invoice-totals";
+
+test("excludes the non-revenue holiday surcharge from the HĐĐT total", () => {
+  assert.equal(calculateHddtTotal(120_000, 20_000), 100_000);
+  assert.equal(calculateHddtTotal(100_000, 0), 100_000);
+  assert.equal(calculateHddtTotal(10_000, 20_000), 0);
+});
 
 test("expands paid modifiers into separate HĐĐT lines", () => {
   const lines = buildInvoiceLineItemsFromOrderItems([

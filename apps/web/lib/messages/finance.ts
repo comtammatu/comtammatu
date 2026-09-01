@@ -55,7 +55,7 @@ export const finance = {
       lookup: "Tra đơn",
       lookupFailed: "Không thể tra đơn",
       changeOrder: "Tra đơn khác",
-      totalLabel: "Tổng tiền",
+      totalLabel: "Tổng HĐĐT",
       timeLabel: "Thời điểm đơn",
       submit: "Xuất hóa đơn",
       success: (num: string) => `Đã xuất HĐĐT ${num}`,

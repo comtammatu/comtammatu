@@ -18,7 +18,7 @@ test("manual-issue dialog reuses createTaxInvoice — no second money path", () 
   );
   assert.ok(
     !/status:\s*"issued"/.test(dialog) &&
-      !dialog.includes("from(\"tax_invoices\")"),
+      !dialog.includes('from("tax_invoices")'),
     "dialog must not write invoice rows itself — issuance stays server-side in createTaxInvoice",
   );
 });
@@ -42,6 +42,11 @@ test("resolveOrderForManualInvoice is branch-scoped and read-only", () => {
   assert.ok(
     /resolveOrderForManualInvoice[\s\S]*?canAccessBranch\(/.test(actions),
     "resolver must apply branch-scope read control before returning order details",
+  );
+  assert.match(
+    actions,
+    /resolveOrderForManualInvoice[\s\S]*service_charge[\s\S]*calculateHddtTotal\([\s\S]*order\.total_amount[\s\S]*order\.service_charge/,
+    "manual HĐĐT preview must exclude the non-revenue holiday surcharge",
   );
 });
 

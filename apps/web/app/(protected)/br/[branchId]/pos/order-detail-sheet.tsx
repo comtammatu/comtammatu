@@ -976,10 +976,10 @@ export function OrderDetailSheet({
         note: input.note,
       });
       if (r.success) {
-        notify.success("Đã cập nhật phụ phí");
+        notify.success("Đã cập nhật phụ thu ngày lễ");
         setShowServiceCharge(false);
       } else {
-        notify.error(r.error ?? "Không thể cập nhật phụ phí.");
+        notify.error(r.error ?? "Không thể cập nhật phụ thu ngày lễ.");
       }
     });
   };
@@ -993,10 +993,10 @@ export function OrderDetailSheet({
         note: reason,
       });
       if (r.success) {
-        notify.success("Đã bỏ phụ phí");
+        notify.success("Đã bỏ phụ thu ngày lễ");
         setShowServiceCharge(false);
       } else {
-        notify.error(r.error ?? "Không thể bỏ phụ phí.");
+        notify.error(r.error ?? "Không thể bỏ phụ thu ngày lễ.");
       }
     });
   };

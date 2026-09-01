@@ -1,14 +1,17 @@
 // POS terminal Vietnamese copy (extracted from br/[branchId]/pos JSX).
 export const POS_VI = {
-  serviceChargeTitle: "Phụ phí",
-  serviceChargeAmountLabel: "Số tiền phụ phí",
+  serviceChargeTitle: "Phụ thu ngày lễ",
+  serviceChargeAmountLabel: "Số tiền phụ thu ngày lễ",
   serviceChargeAmountPlaceholder: "Vd: 10000",
   serviceChargeHint:
-    "Dùng cho phí ship, đóng gói hoặc phụ phí khác trước khi thanh toán.",
-  serviceChargeNotePlaceholder: "Vd: phí ship nội bộ, hộp mang về...",
-  newTotal: "Tổng mới",
-  clearServiceChargeReasonTitle: "Nhập lý do bỏ phụ phí (tối thiểu 3 ký tự).",
-  clearServiceCharge: "Bỏ phụ phí",
+    "Khoản thu hộ ngoài doanh thu, hiển thị riêng và không đưa vào HĐĐT.",
+  serviceChargeNotePlaceholder: "Vd: phụ thu lễ Quốc khánh...",
+  hddtTotal: "Tổng HĐĐT",
+  paymentTotal: "Tổng thanh toán",
+  newTotal: "Tổng thanh toán mới",
+  clearServiceChargeReasonTitle:
+    "Nhập lý do bỏ phụ thu ngày lễ (tối thiểu 3 ký tự).",
+  clearServiceCharge: "Bỏ phụ thu ngày lễ",
   apply: "Áp dụng",
   reduceQtyTitleFallback: "Giảm số lượng?",
   reduceQtyNewLabel: "Số lượng mới",

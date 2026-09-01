@@ -315,22 +315,32 @@ test("per-order HĐĐT payload expands POS modifiers and sides", () => {
     ),
     "provider item payload must apply only the remaining order-level discount after item discounts",
   );
+  assert.match(
+    replaceSrc,
+    /calculateHddtTotal\([\s\S]*Number\(order\.total_amount\)[\s\S]*Number\(order\.service_charge\)/,
+    "replacement HĐĐT must exclude the non-revenue holiday surcharge",
+  );
 });
 
 test("per-order HKD HĐĐT never carries VAT", () => {
   const createSrc = read("apps/web/lib/hddt-per-order.ts");
   const migration = read(
-    "supabase/migrations/20260725160907_add_customer_invoice_qr_flow.sql",
+    "supabase/migrations/20260830132712_exclude_holiday_surcharge_from_hddt.sql",
   );
 
   assert.match(
     migration,
-    /'subtotal', v_order\.total_amount,[\s\S]*'vatRate', 0,[\s\S]*'vatAmount', 0/,
-    "HKD HĐĐT subtotal must be the paid total, not a reverse VAT split",
+    /v_hddt_total := GREATEST\([\s\S]*v_order\.total_amount[\s\S]*- COALESCE\(v_order\.service_charge, 0\)/,
+    "HKD HĐĐT total must exclude the non-revenue holiday surcharge",
   );
   assert.match(
     migration,
-    /v_order\.total_amount,[\s\S]*0,[\s\S]*0,[\s\S]*v_order\.total_amount,[\s\S]*'viettel'/,
+    /'subtotal', v_hddt_total,[\s\S]*'vatRate', 0,[\s\S]*'vatAmount', 0,[\s\S]*'totalAmount', v_hddt_total/,
+    "HKD HĐĐT snapshot must use the surcharge-free total without reverse VAT",
+  );
+  assert.match(
+    migration,
+    /v_hddt_total,[\s\S]*0,[\s\S]*0,[\s\S]*v_hddt_total,[\s\S]*'viettel'/,
     "HKD HĐĐT must not carry VAT rate or VAT amount",
   );
   assert.ok(
@@ -340,6 +350,26 @@ test("per-order HKD HĐĐT never carries VAT", () => {
       !createSrc.includes("status, vat_rate"),
     "per-order HĐĐT must not derive VAT from tax profiles or order_items",
   );
+});
+
+test("holiday surcharge backfill touches retryable draft HĐĐT only", () => {
+  const migration = read(
+    "supabase/migrations/20260830132712_exclude_holiday_surcharge_from_hddt.sql",
+  );
+  const backfill = migration.slice(
+    migration.indexOf("WITH canonical AS"),
+    migration.indexOf("COMMIT;"),
+  );
+
+  assert.match(backfill, /job\.status IN \('queued', 'blocked'\)/);
+  assert.match(backfill, /invoice\.status = 'draft'/);
+  assert.match(backfill, /invoice\.invoice_number IS NULL/);
+  assert.doesNotMatch(backfill, /job\.status\s+IN\s*\([^)]*processing/i);
+  assert.doesNotMatch(
+    backfill,
+    /job\.status\s+IN\s*\([^)]*reconcile_required/i,
+  );
+  assert.doesNotMatch(backfill, /invoice\.status\s+IN\s*\([^)]*issued/i);
 });
 
 test("POS item-level discount migration and actions exist", () => {

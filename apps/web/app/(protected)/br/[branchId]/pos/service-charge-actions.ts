@@ -23,13 +23,13 @@ const orderIdSchema = z.coerce
 const serviceChargeInputSchema = z.object({
   orderId: orderIdSchema,
   amount: z.coerce
-    .number({ error: "Số tiền phụ phí không hợp lệ" })
-    .min(0, { error: "Phụ phí không được âm" })
-    .max(50000000, { error: "Phụ phí vượt ngưỡng hợp lệ" }),
+    .number({ error: "Số tiền phụ thu ngày lễ không hợp lệ" })
+    .min(0, { error: "Phụ thu ngày lễ không được âm" })
+    .max(50000000, { error: "Phụ thu ngày lễ vượt ngưỡng hợp lệ" }),
   note: z
     .string()
     .trim()
-    .min(3, { error: "Ghi chú phụ phí tối thiểu 3 ký tự" })
+    .min(3, { error: "Ghi chú phụ thu ngày lễ tối thiểu 3 ký tự" })
     .max(200, { error: "Ghi chú quá dài (max 200 ký tự)" }),
 });
 
@@ -46,22 +46,22 @@ function mapServiceChargeRpcError(message: string): string | null {
     return "Không tìm thấy đơn hàng.";
   }
   if (msg.includes("service_charge_invalid_amount")) {
-    return "Số tiền phụ phí không hợp lệ.";
+    return "Số tiền phụ thu ngày lễ không hợp lệ.";
   }
   if (msg.includes("service_charge_amount_too_large")) {
-    return "Phụ phí vượt ngưỡng hợp lệ. Vui lòng kiểm tra lại.";
+    return "Phụ thu ngày lễ vượt ngưỡng hợp lệ. Vui lòng kiểm tra lại.";
   }
   if (msg.includes("service_charge_note_required")) {
-    return "Ghi chú phụ phí tối thiểu 3 ký tự.";
+    return "Ghi chú phụ thu ngày lễ tối thiểu 3 ký tự.";
   }
   if (msg.includes("service_charge_payment_pending")) {
-    return "Đơn đang có thanh toán chờ xử lý. Vui lòng hoàn tất thanh toán trước khi sửa phụ phí.";
+    return "Đơn đang có thanh toán chờ xử lý. Vui lòng hoàn tất thanh toán trước khi sửa phụ thu ngày lễ.";
   }
   if (msg.includes("payment_code_locked")) {
     return "Đơn đã phát hành QR/chuyển khoản, không thể đổi số tiền. Vui lòng hoàn tất thanh toán hoặc xử lý lại đơn.";
   }
   if (msg.includes("order already paid")) {
-    return "Đơn đã thanh toán, không thể sửa phụ phí.";
+    return "Đơn đã thanh toán, không thể sửa phụ thu ngày lễ.";
   }
   if (msg.includes("order terminal")) {
     return "Đơn đã hủy hoặc hoàn tất.";
@@ -156,7 +156,7 @@ export async function setOrderServiceCharge(
     );
     return {
       success: false,
-      error: "Không thể cập nhật phụ phí. Vui lòng thử lại.",
+      error: "Không thể cập nhật phụ thu ngày lễ. Vui lòng thử lại.",
       errorCode: POS_ERROR_CODES.RPC_GENERIC,
     };
   }
@@ -170,7 +170,7 @@ export async function setOrderServiceCharge(
   if (!result) {
     return {
       success: false,
-      error: "Không thể cập nhật phụ phí. Vui lòng thử lại.",
+      error: "Không thể cập nhật phụ thu ngày lễ. Vui lòng thử lại.",
       errorCode: POS_ERROR_CODES.RPC_GENERIC,
     };
   }

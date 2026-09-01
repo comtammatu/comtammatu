@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { ArrowLeft as IconArrowLeft, X as IconX } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
+import { calculateHddtTotal } from "@comtammatu/shared/hddt";
 import { ACTIONS_VI, SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -45,6 +46,9 @@ export function BillDrawer({
   children,
 }: BillDrawerProps) {
   const paymentView = view === "payment" && order !== null;
+  const hddtTotal = order
+    ? calculateHddtTotal(order.totalAmount, order.serviceCharge)
+    : 0;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -112,14 +116,6 @@ export function BillDrawer({
               </div>
               <div className="flex items-center justify-between gap-3">
                 <span className="text-muted-foreground">
-                  {SELF_ORDER_VI.serviceCharge}
-                </span>
-                <span className="font-mono tabular-nums">
-                  {formatVND(order.serviceCharge)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-muted-foreground">
                   {SELF_ORDER_VI.discount}
                 </span>
                 <span className="font-mono tabular-nums">
@@ -127,6 +123,24 @@ export function BillDrawer({
                   {formatVND(order.discountAmount)}
                 </span>
               </div>
+              {order.serviceCharge > 0 ? (
+                <>
+                  <div className="mt-1 flex items-center justify-between gap-3 border-t pt-2 font-semibold">
+                    <span>{SELF_ORDER_VI.invoiceTotal}</span>
+                    <span className="font-mono tabular-nums">
+                      {formatVND(hddtTotal)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground">
+                      {SELF_ORDER_VI.serviceCharge}
+                    </span>
+                    <span className="font-mono tabular-nums">
+                      {formatVND(order.serviceCharge)}
+                    </span>
+                  </div>
+                </>
+              ) : null}
               <div className="mt-1 flex items-center justify-between gap-3 border-t pt-2 font-semibold">
                 <span>{SELF_ORDER_VI.totalAmount}</span>
                 <span className="font-mono tabular-nums text-primary">

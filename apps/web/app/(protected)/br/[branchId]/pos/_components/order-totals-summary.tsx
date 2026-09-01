@@ -1,6 +1,7 @@
 "use client";
 
 import { formatPercent, formatVND } from "@comtammatu/shared/format";
+import { calculateHddtTotal } from "@comtammatu/shared/hddt";
 import { FORM_VI, POS_VI } from "@comtammatu/shared/messages";
 import { Separator } from "@comtammatu/ui/components/separator";
 import { cn } from "@comtammatu/ui";
@@ -15,19 +16,14 @@ export interface OrderTotalsSummaryProps {
   discountValue: number | null;
   discountNote: string | null;
   totalAmount: number;
-  /** Compact = bỏ Separator + giảm font, dùng trong cart footer chật chỗ. */
+  /** Compact mode removes separators and reduces type size for tight footers. */
   variant?: "default" | "compact";
   className?: string;
 }
 
 /**
- * Hiển thị breakdown tiền của 1 đơn (tạm tính → phí dịch vụ → chiết khấu →
- * tổng cộng). Dùng chung cho order-detail-sheet (footer trước nút thanh toán)
- * và bill-receipt-sheet (cả cash + QR card) để cashier/phục vụ thấy được
- * khoản chiết khấu đã áp và lý do, tránh hiểu nhầm "Tổng tạm tính" = total.
- *
- * Giữ đồng bộ format với BillReceiptSummary (in giấy) — số liệu trên màn
- * hình và trên hoá đơn phải khớp 1-1 để cashier không phải đối chiếu thủ công.
+ * Shared order total breakdown for the order detail and payment surfaces.
+ * Keep its amount order aligned with BillReceiptSummary and printed bills.
  */
 export function OrderTotalsSummary({
   subtotal,
@@ -58,7 +54,9 @@ export function OrderTotalsSummary({
     0,
     Number(
       orderDiscountAmount ??
-        (hasSplitDiscountSource ? discountAmount - itemDiscount : discountAmount),
+        (hasSplitDiscountSource
+          ? discountAmount - itemDiscount
+          : discountAmount),
     ),
   );
   const fallbackDiscount = Math.max(0, Number(discountAmount ?? 0));
@@ -66,6 +64,7 @@ export function OrderTotalsSummary({
   const visibleOrderDiscount = hasSplitDiscountSource
     ? orderDiscount
     : fallbackDiscount;
+  const hddtTotal = calculateHddtTotal(totalAmount, serviceCharge);
 
   return (
     <div className={cn("flex flex-col gap-1", className)}>
@@ -73,13 +72,6 @@ export function OrderTotalsSummary({
         <span>{FORM_VI.subtotal}</span>
         <span className="font-mono tabular-nums">{formatVND(subtotal)}</span>
       </div>
-
-      {serviceCharge > 0 && (
-        <div className={cn(lineClass, "text-muted-foreground")}>
-          <span>{POS_VI.serviceChargeTitle}</span>
-          <span className="font-mono tabular-nums">{formatVND(serviceCharge)}</span>
-        </div>
-      )}
 
       {visibleItemDiscount > 0 && (
         <div className={cn(lineClass, "text-success")}>
@@ -94,7 +86,9 @@ export function OrderTotalsSummary({
         <>
           <div className={cn(lineClass, "text-success")}>
             <span>
-              {visibleItemDiscount > 0 ? POS_VI.orderDiscountLabel : POS_VI.discountTitle}
+              {visibleItemDiscount > 0
+                ? POS_VI.orderDiscountLabel
+                : POS_VI.discountTitle}
               {discountType === "pct" && discountValue != null
                 ? ` (${formatPercent(discountValue)})`
                 : ""}
@@ -105,7 +99,8 @@ export function OrderTotalsSummary({
           </div>
           {discountNote && (
             <div className="text-xs italic text-muted-foreground">
-              {POS_VI.reasonPrefix}{discountNote}
+              {POS_VI.reasonPrefix}
+              {discountNote}
             </div>
           )}
         </>
@@ -113,8 +108,28 @@ export function OrderTotalsSummary({
 
       <Separator className="my-1" />
 
+      {serviceCharge > 0 && (
+        <>
+          <div className={cn(lineClass, "font-semibold")}>
+            <span>{POS_VI.hddtTotal}</span>
+            <span className="font-mono tabular-nums">
+              {formatVND(hddtTotal)}
+            </span>
+          </div>
+          <div className={cn(lineClass, "text-muted-foreground")}>
+            <span>{POS_VI.serviceChargeTitle}</span>
+            <span className="font-mono tabular-nums">
+              {formatVND(serviceCharge)}
+            </span>
+          </div>
+          <Separator className="my-1" />
+        </>
+      )}
+
       <div className={totalClass}>
-        <span>{FORM_VI.totalAmount}</span>
+        <span>
+          {serviceCharge > 0 ? POS_VI.paymentTotal : FORM_VI.totalAmount}
+        </span>
         <span className="font-mono">{formatVND(totalAmount)}</span>
       </div>
     </div>

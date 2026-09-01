@@ -195,8 +195,9 @@ test("bills show VAT rates only when present and after adjustments", () => {
       PrintPayload,
       { kind: "receipt" | "provisional_bill" }
     >;
-    const withoutVat = renderDocumentToOps(buildFallbackDocument(payload))
-      .flatMap((op) => (op.kind === "line" ? [op.text] : []));
+    const withoutVat = renderDocumentToOps(
+      buildFallbackDocument(payload),
+    ).flatMap((op) => (op.kind === "line" ? [op.text] : []));
     assert.ok(
       !withoutVat.some((line) => line.trimStart().startsWith("VAT")),
       `${kind} must hide VAT without a tax breakdown`,
@@ -221,8 +222,9 @@ test("bills show VAT rates only when present and after adjustments", () => {
     const vat10Index = withVat.findIndex((line) =>
       line.startsWith("VAT 10% (đã gồm)"),
     );
-    const totalIndex = withVat.findIndex((line) =>
-      line.includes("TỔNG CỘNG"),
+    const totalIndex = withVat.findIndex(
+      (line) =>
+        line.includes("TỔNG CỘNG") || line.includes("TỔNG THANH TOÁN"),
     );
 
     assert.ok(
@@ -234,12 +236,46 @@ test("bills show VAT rates only when present and after adjustments", () => {
   }
 });
 
+test("bills show the non-revenue holiday surcharge below the HĐĐT total", () => {
+  for (const kind of ["receipt", "provisional_bill"] as const) {
+    const payload = SAMPLE_PAYLOADS[kind] as Extract<
+      PrintPayload,
+      { kind: "receipt" | "provisional_bill" }
+    >;
+    const lines = renderDocumentToOps(
+      buildFallbackDocument({
+        ...payload,
+        service_charge: 20_000,
+        total_amount: 150_000,
+      }),
+    ).flatMap((op) => (op.kind === "line" ? [op.text] : []));
+    const invoiceTotalIndex = lines.findIndex((line) =>
+      line.includes("TỔNG HĐĐT"),
+    );
+    const surchargeIndex = lines.findIndex((line) =>
+      line.includes("Phụ thu ngày lễ"),
+    );
+    const paymentTotalIndex = lines.findIndex((line) =>
+      line.includes("TỔNG THANH TOÁN"),
+    );
+
+    assert.ok(
+      invoiceTotalIndex >= 0 &&
+        invoiceTotalIndex < surchargeIndex &&
+        surchargeIndex < paymentTotalIndex,
+      `${kind} must render invoice total, holiday surcharge, then payment total`,
+    );
+    assert.ok(lines[invoiceTotalIndex]?.includes("130.000đ"));
+    assert.ok(lines[surchargeIndex]?.includes("20.000đ"));
+    assert.ok(lines[paymentTotalIndex]?.includes("150.000đ"));
+  }
+});
+
 test("receipt appends a customer invoice QR without bank-account rows", () => {
   const document = materializeDocument("receipt", {
     ...SAMPLE_PAYLOADS.receipt,
-    payment_qr: (
-      SAMPLE_PAYLOADS.provisional_bill as { payment_qr: unknown }
-    ).payment_qr,
+    payment_qr: (SAMPLE_PAYLOADS.provisional_bill as { payment_qr: unknown })
+      .payment_qr,
     invoice_qr: {
       type: "invoice",
       content: "https://pos.matu.vn/q/invoice/abc123",
@@ -352,8 +388,10 @@ test("receipt render keeps compact item table with category total rows", () => {
     "drink total should use a separate full-width row",
   );
   assert.ok(
-    lines.some((line) => line.includes("Phí dịch vụ") && line.includes("0đ")),
-    "service fee must stay visible when zero",
+    lines.some(
+      (line) => line.includes("Phụ thu ngày lễ") && line.includes("0đ"),
+    ),
+    "holiday surcharge must stay visible when zero",
   );
   assert.ok(
     lines.some((line) => line.includes("Chiết khấu") && line.includes("0đ")),
@@ -410,9 +448,8 @@ test("receipt render wraps long branch address", () => {
 test("receipt ignores payment QR data", () => {
   const blocks = blocksOf({
     ...SAMPLE_PAYLOADS.receipt,
-    payment_qr: (
-      SAMPLE_PAYLOADS.provisional_bill as { payment_qr: unknown }
-    ).payment_qr,
+    payment_qr: (SAMPLE_PAYLOADS.provisional_bill as { payment_qr: unknown })
+      .payment_qr,
   } as PrintPayload);
   assert.ok(!blocks.some((b) => b.type === "paymentQr"));
 });
@@ -459,8 +496,10 @@ test("provisional bill fallback", () => {
     "provisional bill should add drink subtotal",
   );
   assert.ok(
-    lines.some((line) => line.includes("Phí dịch vụ") && line.includes("0đ")),
-    "service fee must stay visible when zero",
+    lines.some(
+      (line) => line.includes("Phụ thu ngày lễ") && line.includes("0đ"),
+    ),
+    "holiday surcharge must stay visible when zero",
   );
   assert.ok(
     lines.some((line) => line.includes("Chiết khấu") && line.includes("0đ")),

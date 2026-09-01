@@ -11,10 +11,10 @@
 
 Finance có hai loại chứng từ khác nhau:
 
-| Bề mặt | Ý nghĩa | Nguồn sự thật |
-| --- | --- | --- |
-| `/finance/invoices` | HĐĐT đầu ra của đơn bán hàng | `tax_invoices` + Viettel S-invoice |
-| `/finance/supplier-invoices` | Hóa đơn/chứng từ đầu vào và công nợ nhà cung cấp | `supplier_invoices` liên kết GRN |
+| Bề mặt                       | Ý nghĩa                                          | Nguồn sự thật                      |
+| ---------------------------- | ------------------------------------------------ | ---------------------------------- |
+| `/finance/invoices`          | HĐĐT đầu ra của đơn bán hàng                     | `tax_invoices` + Viettel S-invoice |
+| `/finance/supplier-invoices` | Hóa đơn/chứng từ đầu vào và công nợ nhà cung cấp | `supplier_invoices` liên kết GRN   |
 
 `supplier-invoices` không phải doanh thu, không phải HĐĐT bán cho khách và
 không tự động trở thành chi vận hành. Nó là hồ sơ phải trả/đối chiếu đầu vào;
@@ -41,9 +41,9 @@ hình doanh nghiệp nộp GTGT theo phương pháp khấu trừ.
 
 Với HKD kê khai theo tỷ lệ trên doanh thu:
 
-| Ngành | GTGT | TNCN | Ghi chú |
-| --- | ---: | ---: | --- |
-| Dịch vụ ăn uống | 3% | 1,5% | Mức GTGT hiệu dụng 2,4% chỉ áp dụng trong thời gian chính sách giảm 20% của tỷ lệ 3% còn hiệu lực |
+| Ngành           | GTGT | TNCN | Ghi chú                                                                                           |
+| --------------- | ---: | ---: | ------------------------------------------------------------------------------------------------- |
+| Dịch vụ ăn uống |   3% | 1,5% | Mức GTGT hiệu dụng 2,4% chỉ áp dụng trong thời gian chính sách giảm 20% của tỷ lệ 3% còn hiệu lực |
 
 Mẫu hóa đơn bán hàng từ máy tính tiền `2/...` dùng giá bán đã gồm thuế và
 không hiển thị một dòng VAT riêng như hóa đơn GTGT mẫu `1/...`.
@@ -63,7 +63,8 @@ khấu trừ với CQT. Không suy diễn cấu hình này từ việc schema c�
 
 ```text
 Payment thành công
-  → chụp bất biến order, các dòng hàng, tổng tiền và paid_at
+  → chụp bất biến order, các dòng hàng, tổng HĐĐT không gồm phụ thu ngày lễ,
+    tổng thanh toán và paid_at
   → tạo một tax_invoices draft với người mua "Bán cho người tiêu dùng"
   → in QR bổ sung thông tin người mua trên Hóa đơn thanh toán
   → khách xác nhận thông tin hoặc đến paid_at + 2 giờ
@@ -138,7 +139,18 @@ không thay thế HĐĐT pháp lý và cổng Production ở trên vẫn bắt b
   đơn giá món chính.
 - Chiết khấu cấp đơn phải được phân bổ xuống từng dòng, không vượt thành tiền
   dòng.
-- Tổng HĐĐT phải bằng số tiền khách thực trả sau chiết khấu.
+- `orders.service_charge` là phụ thu ngày lễ không phải doanh thu: không tạo
+  dòng hàng, không cộng vào tổng HĐĐT và không gửi provider. Hóa đơn thanh toán
+  tại quầy vẫn hiển thị khoản này dưới tổng HĐĐT và cộng vào tổng thanh toán.
+- Tổng HĐĐT phải bằng `orders.total_amount - orders.service_charge`, không âm.
+- Owner lập lịch tại `/settings/holiday-surcharges` theo giờ Việt Nam, cho toàn
+  hệ thống hoặc một chi nhánh. Chính sách chi nhánh được ưu tiên; cùng một phạm
+  vi không được có hai lịch đang bật chồng thời gian. Phụ thu `%` tính trên tổng
+  HĐĐT sau giảm giá; phụ thu cố định tính theo VND trên mỗi đơn.
+- Khi tạo đơn, hệ thống chụp tên, loại và giá trị chính sách vào order. Sửa lịch
+  sau đó không đổi đơn cũ; đơn chưa thanh toán tiếp tục tính lại phụ thu `%` khi
+  món hoặc giảm giá thay đổi. Ghi đè thủ công chuyển nguồn sang `manual`; đặt
+  `0đ` chuyển sang `waived` và đều phải có lý do audit.
 - Mẫu `2/...` gửi giá gross và không gửi `taxPercentage`/`taxAmount` cho
   từng dòng.
 
@@ -151,15 +163,15 @@ issued → cancelled
 issued → replaced
 ```
 
-| Trạng thái | Ý nghĩa |
-| --- | --- |
-| `draft` | Chưa gửi provider; chỉ được bổ sung thông tin người mua trước hạn |
-| `signing` | Đang gửi/ký tại provider |
-| `submitted` | Provider đã nhận nhưng chưa trả đủ số/mã |
-| `issued` | Đã phát hành thành công |
-| `cancelled` | Đã hủy |
-| `replaced` | Đã được thay thế |
-| `not_required` | Giá trị tương thích dữ liệu cũ; không tạo mới |
+| Trạng thái     | Ý nghĩa                                                           |
+| -------------- | ----------------------------------------------------------------- |
+| `draft`        | Chưa gửi provider; chỉ được bổ sung thông tin người mua trước hạn |
+| `signing`      | Đang gửi/ký tại provider                                          |
+| `submitted`    | Provider đã nhận nhưng chưa trả đủ số/mã                          |
+| `issued`       | Đã phát hành thành công                                           |
+| `cancelled`    | Đã hủy                                                            |
+| `replaced`     | Đã được thay thế                                                  |
+| `not_required` | Giá trị tương thích dữ liệu cũ; không tạo mới                     |
 
 Các chuyển trạng thái nghiệp vụ phải đi qua RPC
 `transition_tax_invoice_state`; không UPDATE trực tiếp từ client.
@@ -215,14 +227,14 @@ hiển thị nó như mặc định của HKD nếu chưa có quyết định k�
 
 ### 4.3 Contract Dữ Liệu Chính
 
-| Nhóm field | Ý nghĩa |
-| --- | --- |
-| `supplier_id`, `grn_id`, `po_id` | Liên kết nghiệp vụ mua/nhận hàng |
-| `invoice_number`, `invoice_date` | Định danh chứng từ |
-| `subtotal`, `vat_rate`, `vat_amount`, `total_amount` | Số tiền trên chứng từ |
-| `matching_status`, `matching_notes` | Kết quả đối chiếu |
-| `payment_status`, `payment_method`, `paid_at` | Tình trạng phải trả |
-| `declared_period`, `is_vat_deductible` | Phân loại cho kế toán |
+| Nhóm field                                           | Ý nghĩa                          |
+| ---------------------------------------------------- | -------------------------------- |
+| `supplier_id`, `grn_id`, `po_id`                     | Liên kết nghiệp vụ mua/nhận hàng |
+| `invoice_number`, `invoice_date`                     | Định danh chứng từ               |
+| `subtotal`, `vat_rate`, `vat_amount`, `total_amount` | Số tiền trên chứng từ            |
+| `matching_status`, `matching_notes`                  | Kết quả đối chiếu                |
+| `payment_status`, `payment_method`, `paid_at`        | Tình trạng phải trả              |
+| `declared_period`, `is_vat_deductible`               | Phân loại cho kế toán            |
 
 Unique key `(invoice_number, supplier_id, tenant_id)` chặn nhập trùng theo nhà
 cung cấp.
@@ -268,12 +280,12 @@ phát hành. `provider_ref` phải được giữ ổn định qua các lần th
 
 Các lỗi cấu hình phổ biến:
 
-| Tình huống | Kiểm tra |
-| --- | --- |
-| Sai MST người bán | `COMPANY_TAX_CODE` và tài khoản Viettel |
+| Tình huống                 | Kiểm tra                                            |
+| -------------------------- | --------------------------------------------------- |
+| Sai MST người bán          | `COMPANY_TAX_CODE` và tài khoản Viettel             |
 | Mẫu/ký hiệu chưa hoạt động | `SINVOICE_TEMPLATE_CODE`, `SINVOICE_INVOICE_SERIES` |
-| Duplicate transaction | Tra `provider_ref` trước khi thử lại |
-| Rate limit/maintenance | Chờ provider ổn định, không tạo định danh mới |
+| Duplicate transaction      | Tra `provider_ref` trước khi thử lại                |
+| Rate limit/maintenance     | Chờ provider ổn định, không tạo định danh mới       |
 
 ## 6. Báo Cáo Và Quyền
 
@@ -287,11 +299,11 @@ Các lỗi cấu hình phổ biến:
 
 ### 6.2 Quyền
 
-| Hành động | Permission |
-| --- | --- |
-| Xem HĐĐT và dữ liệu Finance | `finance:view` |
-| Phát hành theo đơn | `orders:write` và authority của payment/order |
-| Hủy hoặc thay thế | `settings:tenant` |
+| Hành động                   | Permission                                    |
+| --------------------------- | --------------------------------------------- |
+| Xem HĐĐT và dữ liệu Finance | `finance:view`                                |
+| Phát hành theo đơn          | `orders:write` và authority của payment/order |
+| Hủy hoặc thay thế           | `settings:tenant`                             |
 
 Route admission không thay thế permission, branch scope, PBAC hoặc RLS.
 

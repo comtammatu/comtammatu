@@ -34,6 +34,7 @@ import { resolveSalesTaxProfile } from "@comtammatu/shared/tax";
 import {
   applyInvoiceLineDiscount,
   buildInvoiceLineItemsFromOrderItems,
+  calculateHddtTotal,
 } from "@comtammatu/shared/hddt";
 import { ensureInvoiceProviderRegistered } from "@lib/invoice-provider-init";
 import { estimateAnnualRevenue } from "@lib/estimate-annual-revenue";
@@ -99,7 +100,7 @@ export async function replaceTaxInvoice(
       `
       id, tenant_id, branch_id, order_id, status, invoice_kind,
       invoice_number, issued_at, provider_ref,
-      orders!inner ( id, total_amount, discount_amount, order_discount_amount,
+      orders!inner ( id, total_amount, service_charge, discount_amount, order_discount_amount,
         order_items ( item_name, variant_name, quantity, unit_price, subtotal, discount_amount, modifiers, sides, status, vat_rate )
       )
     `,
@@ -155,7 +156,10 @@ export async function replaceTaxInvoice(
     };
   }
 
-  const orderTotal = Number(order.total_amount);
+  const orderTotal = calculateHddtTotal(
+    Number(order.total_amount),
+    Number(order.service_charge),
+  );
   const itemGrossSum = activeItems.reduce((s, i) => s + Number(i.subtotal), 0);
 
   let subtotal: number;
@@ -281,7 +285,9 @@ export async function replaceTaxInvoice(
     rpc: (
       name: string,
       args: Record<string, unknown>,
-    ) => Promise<{ error: { code?: string | null; message?: string | null } | null }>;
+    ) => Promise<{
+      error: { code?: string | null; message?: string | null } | null;
+    }>;
   };
   const { error: prepareErr } = await rpc.rpc(
     "prepare_tax_invoice_provider_submission",

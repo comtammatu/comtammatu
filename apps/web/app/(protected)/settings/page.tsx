@@ -1,5 +1,6 @@
 import {
   Building2 as IconBuilding2,
+  CalendarDays as IconCalendarDays,
   CreditCard as IconCreditCard,
   Printer as IconPrinter,
 } from "lucide-react";
@@ -51,6 +52,13 @@ export default async function SettingsPage() {
               description={copy.paymentsDescription}
               icon={<IconCreditCard />}
               tone="success"
+            />
+            <AppLinkCard
+              href="/settings/holiday-surcharges"
+              title={copy.holidaySurchargesTitle}
+              description={copy.holidaySurchargesDescription}
+              icon={<IconCalendarDays />}
+              tone="warning"
             />
           </LinkCardGrid>
         </AppSection>

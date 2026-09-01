@@ -245,12 +245,30 @@ test("Finance treats missing food cost as zero for KPI calculation", () => {
   assert.match(cockpit, /const orderIds = new Set<number>\(\)/);
   assert.match(cockpit, /orderIds\.add\(row\.order_id\)/);
   assert.match(cockpit, /const costAvailable = true;/);
-  assert.doesNotMatch(cockpit, /orderCount === 0 \|\| costCoverageOrderCount >= orderCount/);
-  assert.match(financeMessages, /ingredientCostHint: "Đơn thiếu giá vốn được tính 0"/);
+  assert.doesNotMatch(
+    cockpit,
+    /orderCount === 0 \|\| costCoverageOrderCount >= orderCount/,
+  );
+  assert.match(
+    financeMessages,
+    /ingredientCostHint: "Đơn thiếu giá vốn được tính 0"/,
+  );
   assert.match(page, /basic\.kpis\.grossProfit/);
   assert.match(page, /basic\.kpis\.operatingResult/);
   assert.doesNotMatch(page, /basic\.kpis\.moneyCollected/);
   assert.match(financeMessages, /netRevenue: "Doanh thu thuần"/);
+});
+
+test("Finance daily drill excludes the holiday surcharge from net revenue", () => {
+  const drill = read(
+    "apps/web/app/(protected)/finance/revenue/[date]/revenue-drill-tabs.tsx",
+  );
+
+  assert.match(
+    drill,
+    /const netRevenue = orders\.reduce\([\s\S]*order\.subtotal[\s\S]*order\.discount_amount/,
+  );
+  assert.doesNotMatch(drill, /const netRevenue = totalRevenue - totalTax/);
 });
 
 test("Finance cockpit branch filter also scopes supplier payable risk", () => {

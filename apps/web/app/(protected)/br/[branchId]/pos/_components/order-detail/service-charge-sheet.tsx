@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { formatVND } from "@comtammatu/shared/format";
+import { calculateHddtTotal } from "@comtammatu/shared/hddt";
 import { ACTIONS_VI, FORM_VI, POS_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import { Frame } from "@comtammatu/ui/components/frame";
@@ -69,6 +70,7 @@ export function ServiceChargeSheet({
     0,
     subtotal + taxAmount + numericAmount - discountAmount,
   );
+  const hddtTotal = calculateHddtTotal(previewTotal, numericAmount);
 
   const noteTrimLen = note.trim().length;
   const noteValid = noteTrimLen >= 3;
@@ -92,10 +94,7 @@ export function ServiceChargeSheet({
 
   return (
     <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && handleClose()}>
-      <SheetContent
-        side="right"
-        size="md"
-      >
+      <SheetContent side="right" size="md">
         <SheetHeader>
           <SheetTitle>{POS_VI.serviceChargeTitle}</SheetTitle>
         </SheetHeader>
@@ -145,10 +144,6 @@ export function ServiceChargeSheet({
                 <span className="tabular-nums">{formatVND(taxAmount)}</span>
               </div>
             )}
-            <div className="flex justify-between text-muted-foreground">
-              <span>{POS_VI.serviceChargeTitle}</span>
-              <span className="tabular-nums">{formatVND(numericAmount)}</span>
-            </div>
             {discountAmount > 0 && (
               <div className="flex justify-between text-success">
                 <span>{POS_VI.discountTitle}</span>
@@ -157,6 +152,14 @@ export function ServiceChargeSheet({
                 </span>
               </div>
             )}
+            <div className="mt-1 flex justify-between border-t border-border/60 pt-1 font-semibold">
+              <span>{POS_VI.hddtTotal}</span>
+              <span className="tabular-nums">{formatVND(hddtTotal)}</span>
+            </div>
+            <div className="flex justify-between text-muted-foreground">
+              <span>{POS_VI.serviceChargeTitle}</span>
+              <span className="tabular-nums">{formatVND(numericAmount)}</span>
+            </div>
             <div className="mt-1 flex justify-between border-t border-border/60 pt-1 font-semibold">
               <span>{POS_VI.newTotal}</span>
               <span className="tabular-nums">{formatVND(previewTotal)}</span>

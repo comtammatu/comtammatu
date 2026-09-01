@@ -197,7 +197,11 @@ test("finance subroutes share the compact surface and operational vocabulary", (
 
   assert.doesNotMatch(revenue, /csvHeaders\.colVat|periodTable\.colVat/);
   assert.match(revenue, /hint=\{revCopy\.kpi\.totalCollectedHint\}/);
-  assert.match(drill, /const netRevenue = totalRevenue - totalTax/);
+  assert.match(drill, /const netRevenue = orders\.reduce/);
+  assert.match(
+    drill,
+    /Number\(order\.subtotal\) - Number\(order\.discount_amount\)/,
+  );
   assert.match(drill, /label=\{copy\.kpis\.netRevenue\}/);
   assert.match(drill, /label=\{copy\.kpis\.totalCollected\}/);
   for (const term of [

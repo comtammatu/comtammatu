@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import { calculateHddtTotal } from "@comtammatu/shared/hddt";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getInvoiceProvider } from "@comtammatu/shared/providers";
 import { ensureInvoiceProviderRegistered } from "@lib/invoice-provider-init";
@@ -307,7 +308,7 @@ export async function resolveOrderForManualInvoice(
   const { data: order, error: orderErr } = await supabase
     .from("orders")
     .select(
-      "id, order_number, branch_id, payment_status, total_amount, created_at, order_items(status)",
+      "id, order_number, branch_id, payment_status, total_amount, service_charge, created_at, order_items(status)",
     )
     .eq("tenant_id", claims.tenant_id)
     .eq("branch_id", parsed.data.branchId)
@@ -370,7 +371,10 @@ export async function resolveOrderForManualInvoice(
       orderId: order.id,
       orderNumber: order.order_number,
       branchId: order.branch_id,
-      totalAmount: Number(order.total_amount),
+      totalAmount: calculateHddtTotal(
+        Number(order.total_amount),
+        Number(order.service_charge),
+      ),
       createdAt: order.created_at,
       paymentStatus: order.payment_status,
       existingInvoiceStatus: existingInvoice?.status ?? null,

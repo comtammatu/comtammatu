@@ -153,8 +153,6 @@ export default async function RevenueDrillPage({
     (s, o) => s + Number(o.discount_amount),
     0,
   );
-  const totalTax = orders.reduce((s, o) => s + Number(o.tax_amount), 0);
-
   return (
     <AppPage width="xwide" density="compact">
       <AppPageHeader
@@ -174,7 +172,6 @@ export default async function RevenueDrillPage({
         totalOrders={totalOrders}
         totalRevenue={totalRevenue}
         totalDiscount={totalDiscount}
-        totalTax={totalTax}
       />
     </AppPage>
   );

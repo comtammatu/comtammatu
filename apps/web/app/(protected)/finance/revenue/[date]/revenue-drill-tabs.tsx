@@ -44,7 +44,6 @@ interface RevenueDrillTabsProps {
   totalOrders: number;
   totalRevenue: number;
   totalDiscount: number;
-  totalTax: number;
 }
 
 function formatHourBucket(hour: number): string {
@@ -88,7 +87,6 @@ export function RevenueDrillTabs({
   totalOrders,
   totalRevenue,
   totalDiscount,
-  totalTax,
 }: RevenueDrillTabsProps) {
   const orderColumns: DataTableColumn<OrderRow>[] = [
     {
@@ -266,7 +264,11 @@ export function RevenueDrillTabs({
       ],
     },
   ];
-  const netRevenue = totalRevenue - totalTax;
+  const netRevenue = orders.reduce(
+    (sum, order) =>
+      sum + Math.max(0, Number(order.subtotal) - Number(order.discount_amount)),
+    0,
+  );
 
   return (
     <AppPageTabs

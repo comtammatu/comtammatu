@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
 import { cn } from "@comtammatu/ui";
 import { formatVND } from "@comtammatu/shared/format";
+import { calculateHddtTotal } from "@comtammatu/shared/hddt";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Item } from "@comtammatu/ui/components/item";
@@ -335,6 +336,10 @@ export function OrderDetailContent({ order }: { order: OrderRow }) {
   const hasDiscount = order.discount_amount > 0;
   const hasTax = order.tax_amount > 0;
   const hasServiceCharge = order.service_charge > 0;
+  const hddtTotal = calculateHddtTotal(
+    order.total_amount,
+    order.service_charge,
+  );
   const printedJobCount =
     operationalTrace?.print_jobs.filter((job) => job.status === "printed")
       .length ?? 0;
@@ -542,8 +547,7 @@ export function OrderDetailContent({ order }: { order: OrderRow }) {
                   kitchenQuantity !== item.quantity;
                 const missingKitchenRecord =
                   !isCancelled &&
-                  (order.status === "served" ||
-                    order.status === "completed") &&
+                  (order.status === "served" || order.status === "completed") &&
                   kitchenEvidence?.state !== "history_incomplete" &&
                   kitchenEvidence?.state !== "completed";
                 const modifierLine =
@@ -805,17 +809,27 @@ export function OrderDetailContent({ order }: { order: OrderRow }) {
               </div>
             )}
             {hasServiceCharge && (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">
-                  {ORDERS_VI.surchargeLabel}
-                </span>
-                <span className="font-mono">
-                  {formatVND(order.service_charge)}
-                </span>
-              </div>
+              <>
+                <div className="flex justify-between border-t pt-2 font-semibold">
+                  <span>{ORDERS_VI.invoiceTotalLabel}</span>
+                  <span className="font-mono">{formatVND(hddtTotal)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">
+                    {ORDERS_VI.surchargeLabel}
+                  </span>
+                  <span className="font-mono">
+                    {formatVND(order.service_charge)}
+                  </span>
+                </div>
+              </>
             )}
             <div className="flex justify-between border-t pt-2 font-semibold">
-              <span>{FORM_VI.totalAmount}</span>
+              <span>
+                {hasServiceCharge
+                  ? ORDERS_VI.paymentTotalLabel
+                  : FORM_VI.totalAmount}
+              </span>
               <span className="font-mono">{formatVND(order.total_amount)}</span>
             </div>
           </Frame>

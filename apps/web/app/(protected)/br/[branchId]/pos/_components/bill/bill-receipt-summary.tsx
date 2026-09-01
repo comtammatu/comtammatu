@@ -1,6 +1,7 @@
 "use client";
 
 import { formatPercent, formatVND } from "@comtammatu/shared/format";
+import { calculateHddtTotal } from "@comtammatu/shared/hddt";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Separator } from "@comtammatu/ui/components/separator";
 import {
@@ -29,6 +30,10 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
   const orderDiscountAmount = Math.max(
     0,
     Number(order.order_discount_amount ?? order.discount_amount ?? 0),
+  );
+  const hddtTotal = calculateHddtTotal(
+    order.total_amount,
+    order.service_charge,
   );
   const paymentLabel =
     order.status === "cancelled"
@@ -222,14 +227,6 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
             </span>
           </div>
         )}
-        {order.service_charge > 0 && (
-          <div className="flex justify-between">
-            <span>{messages.pos.receipt.serviceCharge}</span>
-            <span className="font-mono tabular-nums">
-              {formatVND(order.service_charge)}
-            </span>
-          </div>
-        )}
         {itemDiscountAmount > 0 && (
           <div className="flex justify-between">
             <span>{POS_VI.itemDiscountLabel}</span>
@@ -259,6 +256,23 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
           </div>
         )}
         <Separator className="my-1" />
+        {order.service_charge > 0 && (
+          <>
+            <div className="flex justify-between font-semibold">
+              <span>{messages.pos.receipt.invoiceTotal}</span>
+              <span className="font-mono tabular-nums">
+                {formatVND(hddtTotal)}
+              </span>
+            </div>
+            <div className="flex justify-between text-muted-foreground">
+              <span>{messages.pos.receipt.serviceCharge}</span>
+              <span className="font-mono tabular-nums">
+                {formatVND(order.service_charge)}
+              </span>
+            </div>
+            <Separator className="my-1" />
+          </>
+        )}
         <div className="flex justify-between text-sm font-bold">
           <span>{messages.pos.receipt.total}</span>
           <span className="font-mono tabular-nums">

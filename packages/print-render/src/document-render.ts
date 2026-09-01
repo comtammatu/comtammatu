@@ -30,6 +30,7 @@ import {
 import type { BillBase, PrintPayload } from "./payloads";
 import { buildFallbackDocument } from "./fallback-document";
 import { formatPercent } from "@comtammatu/shared/format";
+import { calculateHddtTotal } from "@comtammatu/shared/hddt";
 import { datetime, fmtMoney } from "./format";
 import { sideTotalQuantity } from "./quantity";
 import {
@@ -166,7 +167,10 @@ function receiptLineTotals(item: ReceiptItem): {
   };
 }
 
-function categoryTotal(items: ReceiptItem[], category: "food" | "drink"): number {
+function categoryTotal(
+  items: ReceiptItem[],
+  category: "food" | "drink",
+): number {
   return items
     .filter((item) => lineCategory(item) === category)
     .reduce((sum, item) => sum + receiptLineTotals(item).lineAmount, 0);
@@ -213,12 +217,7 @@ function renderReceiptItem(
       modChunks.forEach((chunk, i) => {
         out.push(
           ops.line(
-            receiptRow(
-              "",
-              chunk,
-              i === 0 ? qty : "",
-              i === 0 ? modAmt : "",
-            ),
+            receiptRow("", chunk, i === 0 ? qty : "", i === 0 ? modAmt : ""),
           ),
         );
       });
@@ -285,7 +284,10 @@ function renderItemsTable(p: BillBase, groupByCategory = false): RenderOp[] {
     if (drinkItems.length > 0) {
       out.push(
         ops.line(
-          pair48("Tổng nước uống", fmtMoney(categoryTotal(drinkItems, "drink"))),
+          pair48(
+            "Tổng nước uống",
+            fmtMoney(categoryTotal(drinkItems, "drink")),
+          ),
           { bold: true },
         ),
       );
@@ -302,6 +304,9 @@ function renderItemsTable(p: BillBase, groupByCategory = false): RenderOp[] {
 
 function renderTotals(p: BillBase, alwaysShowAdjustments = false): RenderOp[] {
   const out: RenderOp[] = [];
+  const serviceCharge = p.service_charge ?? 0;
+  const showHolidaySurcharge = alwaysShowAdjustments || serviceCharge > 0;
+  const hddtTotal = calculateHddtTotal(p.total_amount, serviceCharge);
   out.push(divider("="));
   out.push(
     ops.line(pair24("Tạm tính", fmtMoney(p.subtotal)), {
@@ -309,10 +314,6 @@ function renderTotals(p: BillBase, alwaysShowAdjustments = false): RenderOp[] {
       double: true,
     }),
   );
-  if (alwaysShowAdjustments || (p.service_charge ?? 0) > 0) {
-    const label = alwaysShowAdjustments ? "Phí dịch vụ" : "Phụ phí";
-    out.push(ops.line(pair48(label, fmtMoney(p.service_charge))));
-  }
   if (alwaysShowAdjustments || (p.discount_amount ?? 0) > 0) {
     const discountAmount = p.discount_amount ?? 0;
     let discountLabel = "Giảm giá";
@@ -347,11 +348,27 @@ function renderTotals(p: BillBase, alwaysShowAdjustments = false): RenderOp[] {
     );
   }
   out.push(divider("="));
+  if (showHolidaySurcharge) {
+    out.push(
+      ops.line(pair24("TỔNG HĐĐT", fmtMoney(hddtTotal)), {
+        bold: true,
+        double: true,
+      }),
+    );
+    out.push(ops.line(pair48("Phụ thu ngày lễ", fmtMoney(serviceCharge))));
+    out.push(divider("="));
+  }
   out.push(
-    ops.line(pair24("TỔNG CỘNG", fmtMoney(p.total_amount)), {
-      bold: true,
-      double: true,
-    }),
+    ops.line(
+      pair24(
+        showHolidaySurcharge ? "TỔNG THANH TOÁN" : "TỔNG CỘNG",
+        fmtMoney(p.total_amount),
+      ),
+      {
+        bold: true,
+        double: true,
+      },
+    ),
   );
   out.push(divider("="));
   return out;
@@ -497,7 +514,10 @@ function renderDocumentItemsTable(
 ): RenderOp[] {
   const items = normalizeReceiptItems(block.items);
   if (items.length === 0) return [];
-  return renderItemsTable(billBaseForDocument({ items }), block.group_by_category);
+  return renderItemsTable(
+    billBaseForDocument({ items }),
+    block.group_by_category,
+  );
 }
 
 function renderDocumentTotals(block: PrintDocumentTotalsBlock): RenderOp[] {
@@ -574,7 +594,9 @@ function renderDocumentPaymentQr(
     }),
   );
   if (q.header_label)
-    out.push(ops.line(`Ngân hàng: ${clampText(q.header_label)}`, { align: "center" }));
+    out.push(
+      ops.line(`Ngân hàng: ${clampText(q.header_label)}`, { align: "center" }),
+    );
   if (q.account_no)
     out.push(ops.line(`STK: ${clampText(q.account_no)}`, { align: "center" }));
   if (q.account_name) {

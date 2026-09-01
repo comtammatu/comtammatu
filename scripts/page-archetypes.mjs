@@ -6,6 +6,8 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/page.tsx": "LANDING",
   "apps/web/app/(protected)/settings/(tenant)/general/page.tsx":
     "SETTINGS-PANEL",
+  "apps/web/app/(protected)/settings/(tenant)/holiday-surcharges/page.tsx":
+    "SETTINGS-PANEL",
   "apps/web/app/(protected)/settings/(tenant)/payments/page.tsx":
     "SETTINGS-PANEL",
   "apps/web/app/(protected)/settings/page.tsx": "LANDING",

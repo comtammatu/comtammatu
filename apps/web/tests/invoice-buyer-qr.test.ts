@@ -8,8 +8,8 @@ const readRepo = (path: string) => readFileSync(join(root, path), "utf8");
 const migration = readRepo(
   "supabase/migrations/20260725160907_add_customer_invoice_qr_flow.sql",
 );
-const buyerHeaderMigration = readRepo(
-  "supabase/migrations/20260801120500_expose_invoice_total_to_buyer_page.sql",
+const holidaySurchargeMigration = readRepo(
+  "supabase/migrations/20260830132712_exclude_holiday_surcharge_from_hddt.sql",
 );
 const worker = readRepo("apps/web/lib/tax-invoice-issue-worker.ts");
 
@@ -185,12 +185,30 @@ test("POS and Self-Order defer buyer details to the receipt QR", () => {
   assert.match(page, /formatVND\(request\.totalAmount\)/);
   assert.match(page, /export const dynamic = "force-dynamic"/);
   assert.match(buyerServer, /totalAmount: z\.coerce\.number\(\)/);
-  assert.match(buyerHeaderMigration, /'totalAmount', v_order\.total_amount/);
+  assert.match(
+    holidaySurchargeMigration,
+    /'totalAmount', GREATEST\([\s\S]*v_order\.total_amount[\s\S]*- COALESCE\(v_order\.service_charge, 0\)/,
+  );
   assert.doesNotMatch(form, /invoiceBuyer\.lookupAction/);
   assert.match(form, /onBlur=\{\(\) => void handleLookup\(\)\}/);
   assert.doesNotMatch(form, /invoiceBuyer\.optional/);
   assert.match(
     migration,
     /COALESCE\(v_buyer_payload->>'buyerEmail', ''\) = ''/,
+  );
+});
+
+test("holiday surcharge backfill only rewrites safe draft issue jobs", () => {
+  assert.match(
+    holidaySurchargeMigration,
+    /WITH canonical AS \([\s\S]*WHERE job\.status IN \('queued', 'blocked'\)[\s\S]*UPDATE public\.tax_invoice_issue_jobs job/,
+  );
+  assert.match(
+    holidaySurchargeMigration,
+    /WHERE invoice\.id = job\.tax_invoice_id[\s\S]*invoice\.status = 'draft'[\s\S]*invoice\.invoice_number IS NULL[\s\S]*job\.status IN \('queued', 'blocked'\)/,
+  );
+  assert.doesNotMatch(
+    holidaySurchargeMigration,
+    /WHERE job\.status IN \('queued', 'blocked', (?:'processing'|'reconcile_required')/,
   );
 });

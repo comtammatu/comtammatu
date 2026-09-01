@@ -2206,6 +2206,90 @@ export type Database = {
           },
         ]
       }
+      holiday_surcharge_policies: {
+        Row: {
+          branch_id: number | null
+          calculation_type: string
+          created_at: string
+          created_by: string
+          ends_at: string
+          id: number
+          is_active: boolean
+          name: string
+          starts_at: string
+          tenant_id: number
+          updated_at: string
+          updated_by: string
+          value: number
+        }
+        Insert: {
+          branch_id?: number | null
+          calculation_type: string
+          created_at?: string
+          created_by: string
+          ends_at: string
+          id?: number
+          is_active?: boolean
+          name: string
+          starts_at: string
+          tenant_id: number
+          updated_at?: string
+          updated_by: string
+          value: number
+        }
+        Update: {
+          branch_id?: number | null
+          calculation_type?: string
+          created_at?: string
+          created_by?: string
+          ends_at?: string
+          id?: number
+          is_active?: boolean
+          name?: string
+          starts_at?: string
+          tenant_id?: number
+          updated_at?: string
+          updated_by?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "holiday_surcharge_policies_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "holiday_surcharge_policies_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "holiday_surcharge_policies_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "holiday_surcharge_policies_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "holiday_surcharge_policies_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ingredient_abc_class: {
         Row: {
           branch_id: number
@@ -4022,6 +4106,11 @@ export type Database = {
           discount_note: string | null
           discount_type: string | null
           discount_value: number | null
+          holiday_surcharge_calculation_type: string | null
+          holiday_surcharge_policy_id: number | null
+          holiday_surcharge_policy_name: string | null
+          holiday_surcharge_source: string
+          holiday_surcharge_value: number | null
           id: number
           idempotency_key: string | null
           is_priority: boolean
@@ -4061,6 +4150,11 @@ export type Database = {
           discount_note?: string | null
           discount_type?: string | null
           discount_value?: number | null
+          holiday_surcharge_calculation_type?: string | null
+          holiday_surcharge_policy_id?: number | null
+          holiday_surcharge_policy_name?: string | null
+          holiday_surcharge_source?: string
+          holiday_surcharge_value?: number | null
           id?: never
           idempotency_key?: string | null
           is_priority?: boolean
@@ -4100,6 +4194,11 @@ export type Database = {
           discount_note?: string | null
           discount_type?: string | null
           discount_value?: number | null
+          holiday_surcharge_calculation_type?: string | null
+          holiday_surcharge_policy_id?: number | null
+          holiday_surcharge_policy_name?: string | null
+          holiday_surcharge_source?: string
+          holiday_surcharge_value?: number | null
           id?: never
           idempotency_key?: string | null
           is_priority?: boolean
@@ -4149,6 +4248,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_holiday_surcharge_policy_id_fkey"
+            columns: ["holiday_surcharge_policy_id"]
+            isOneToOne: false
+            referencedRelation: "holiday_surcharge_policies"
             referencedColumns: ["id"]
           },
           {
@@ -10620,6 +10726,7 @@ export type Database = {
           sample_n: number
         }[]
       }
+      get_holiday_surcharge_policies: { Args: never; Returns: Json }
       get_ingredient_abc_class: {
         Args: { p_branch_id: number; p_ingredient_id: number }
         Returns: string
@@ -11819,6 +11926,10 @@ export type Database = {
         }
         Returns: Json
       }
+      set_holiday_surcharge_policy_active: {
+        Args: { p_is_active: boolean; p_policy_id: number }
+        Returns: Json
+      }
       set_inventory_count_assignments: {
         Args: {
           p_branch_id: number
@@ -12054,6 +12165,19 @@ export type Database = {
       }
       upsert_branch_revenue_targets: {
         Args: { p_rows: Json; p_year_month: string }
+        Returns: Json
+      }
+      upsert_holiday_surcharge_policy: {
+        Args: {
+          p_branch_id: number
+          p_calculation_type: string
+          p_ends_at: string
+          p_is_active: boolean
+          p_name: string
+          p_policy_id: number
+          p_starts_at: string
+          p_value: number
+        }
         Returns: Json
       }
       upsert_ingredient_catalog: {
