@@ -9,6 +9,14 @@ export interface FoodCostRecordedRpc {
   coverageComplete: boolean;
 }
 
+export interface FinanceInventoryBreakdownRpc {
+  locationKind: "branch" | "central_supply" | "central_kitchen";
+  siteCount: number;
+  openingValue: number;
+  closingValue: number;
+  change: number;
+}
+
 export interface FinanceOperatingCockpitRpc {
   netRevenue: number;
   subtotalRevenue: number;
@@ -26,6 +34,7 @@ export interface FinanceOperatingCockpitRpc {
   inventoryReadable: boolean;
   inventoryChange: number;
   inventoryChangeIncluded: boolean;
+  inventoryBreakdown: FinanceInventoryBreakdownRpc[];
   valuationActive: boolean;
   exceptions: {
     cashVarianceAbs: number;
@@ -53,7 +62,11 @@ function asRecord(value: unknown): Record<string, unknown> | null {
       return null;
     }
   }
-  if (payload == null || typeof payload !== "object" || Array.isArray(payload)) {
+  if (
+    payload == null ||
+    typeof payload !== "object" ||
+    Array.isArray(payload)
+  ) {
     return null;
   }
   return payload as Record<string, unknown>;
@@ -82,6 +95,43 @@ function optionalId(value: unknown): number | null {
   if (value == null) return null;
   const count = wholeCount(value);
   return count != null && count > 0 ? count : null;
+}
+
+function parseInventoryBreakdown(
+  raw: unknown,
+): FinanceInventoryBreakdownRpc[] | null {
+  if (raw === undefined) return [];
+  if (!Array.isArray(raw)) return null;
+
+  const breakdown: FinanceInventoryBreakdownRpc[] = [];
+  for (const entry of raw) {
+    const row = asRecord(entry);
+    if (!row) return null;
+    const locationKind = row.location_kind;
+    const siteCount = wholeCount(row.site_count);
+    const openingValue = moneyNumber(row.opening_value);
+    const closingValue = moneyNumber(row.closing_value);
+    const change = moneyNumber(row.change);
+    if (
+      (locationKind !== "branch" &&
+        locationKind !== "central_supply" &&
+        locationKind !== "central_kitchen") ||
+      siteCount == null ||
+      openingValue == null ||
+      closingValue == null ||
+      change == null
+    ) {
+      return null;
+    }
+    breakdown.push({
+      locationKind,
+      siteCount,
+      openingValue,
+      closingValue,
+      change,
+    });
+  }
+  return breakdown;
 }
 
 export function parseFoodCostRecordedRpc(
@@ -133,6 +183,7 @@ export function parseFinanceOperatingCockpitRpc(
   const operatingExpenseTotal = moneyNumber(row.operating_expense_total);
   const inventoryOpening = moneyNumber(row.inventory_opening);
   const inventoryClosing = moneyNumber(row.inventory_closing);
+  const inventoryBreakdown = parseInventoryBreakdown(row.inventory_breakdown);
   const inventoryChangeIncluded = row.inventory_change_included !== false;
   // New payloads carry the key and must be read strictly; a pre-migration
   // payload lacks it, so fall back to food_cost.valuation_active, which
@@ -172,6 +223,7 @@ export function parseFinanceOperatingCockpitRpc(
     operatingExpenseTotal == null ||
     inventoryOpening == null ||
     inventoryClosing == null ||
+    inventoryBreakdown == null ||
     cashVarianceAbs == null ||
     cashVarianceSessions == null ||
     unpaidApCount == null ||
@@ -210,6 +262,7 @@ export function parseFinanceOperatingCockpitRpc(
     inventoryReadable: row.inventory_readable === true,
     inventoryChange,
     inventoryChangeIncluded,
+    inventoryBreakdown,
     valuationActive,
     exceptions: {
       cashVarianceAbs,

@@ -2,9 +2,9 @@
 -- get_finance_period_close_readiness is the read-only close-readiness health
 -- check (Chốt sổ Sức khoẻ tài chính). It reports blockers and warnings for a
 -- month without ever touching accounting_periods: a clean branch month closes
--- (can_close), revenue without operating expenses, an inactive valuation
--- cutover, and negative stock each raise their blocker, and invalid months
--- are rejected.
+-- (can_close), revenue without operating expenses raises an advisory, while
+-- an inactive valuation cutover and negative stock each raise their blocker;
+-- invalid months are rejected.
 
 \set ON_ERROR_STOP on
 
@@ -294,29 +294,30 @@ SELECT ok(
   'clean month: valuation_active is true while the cutover is active'
 );
 
--- (b) Revenue without operating expenses: the branch id rides in the blocker.
+-- (b) Revenue without operating expenses: 0đ remains valid and the branch id
+-- rides in an advisory warning.
 SELECT ok(
-  NOT (current_setting('test.fpcr_no_opex')::jsonb ->> 'can_close')::boolean,
-  'missing opex: can_close is false'
+  (current_setting('test.fpcr_no_opex')::jsonb ->> 'can_close')::boolean,
+  'missing opex: can_close remains true'
 );
 
 SELECT ok(
-  current_setting('test.fpcr_no_opex')::jsonb -> 'blockers'
+  current_setting('test.fpcr_no_opex')::jsonb -> 'warnings'
     @> '[{"code": "operating_expense_missing"}]'::jsonb,
-  'missing opex: blockers carry operating_expense_missing'
+  'missing opex: warnings carry operating_expense_missing'
 );
 
 SELECT ok(
   EXISTS (
     SELECT 1
     FROM jsonb_array_elements(
-      current_setting('test.fpcr_no_opex')::jsonb -> 'blockers'
-    ) AS blocker
-    WHERE blocker ->> 'code' = 'operating_expense_missing'
-      AND blocker -> 'branches'
+      current_setting('test.fpcr_no_opex')::jsonb -> 'warnings'
+    ) AS warning
+    WHERE warning ->> 'code' = 'operating_expense_missing'
+      AND warning -> 'branches'
         @> to_jsonb(current_setting('test.fpcr_branch2')::bigint)
   ),
-  'missing opex: the blocker names the revenue branch without opex'
+  'missing opex: the warning names the revenue branch without opex'
 );
 
 -- (c) Inactive cutover: valuation_inactive blocks the close.

@@ -7,7 +7,10 @@ import { canAccessBranch } from "@/_lib/branch-scope";
 import { currentUserHasPermissionAny } from "@/_lib/permissions";
 import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 import { messages } from "@lib/messages";
-import { fetchAccessibleBranches, type FinanceDashboardSummary } from "../actions";
+import {
+  fetchAccessibleBranches,
+  type FinanceDashboardSummary,
+} from "../actions";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type {
   FinanceLocation,
@@ -22,6 +25,7 @@ import {
 import { calculateFinanceResult } from "./finance-result";
 import {
   parseFinanceOperatingCockpitRpc,
+  type FinanceInventoryBreakdownRpc,
   type FinanceOperatingCockpitRpc,
 } from "./finance-operating-rpc";
 import {
@@ -90,6 +94,7 @@ export interface FinanceException {
 export interface FinanceCockpitData {
   branches: BranchOption[];
   canViewInventoryValuation: boolean;
+  inventoryBreakdown: FinanceInventoryBreakdownRpc[];
   vat: FinanceVatSummary;
   kpis: FinanceCockpitKpis;
   compareKpis: Pick<
@@ -499,7 +504,9 @@ export async function fetchFinanceAttentionExceptions(
   resolved: ResolvedFinanceRange,
 ): Promise<FinanceException[]> {
   const { supabase } = await loadAuthState();
-  const canView = await currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_VIEW);
+  const canView = await currentUserHasPermissionAny(
+    PERMISSION_KEYS.FINANCE_VIEW,
+  );
   if (!canView) return [];
 
   const cockpit = await fetchOperatingCockpitRpc({
@@ -617,13 +624,12 @@ export async function fetchFinanceCockpit(
     ? {
         ...buildKpisFromCockpit({
           cockpit,
-          startupCapital:
-            startupCapitalSummary ?? {
-              total: 0,
-              recorded: false,
-              equipment: 0,
-              equipmentRecorded: false,
-            },
+          startupCapital: startupCapitalSummary ?? {
+            total: 0,
+            recorded: false,
+            equipment: 0,
+            equipmentRecorded: false,
+          },
           includeInventoryChange: canViewInventoryValuation,
         }),
         startupCapitalLoadFailed,
@@ -663,6 +669,7 @@ export async function fetchFinanceCockpit(
   return {
     branches,
     canViewInventoryValuation,
+    inventoryBreakdown: cockpit?.inventoryBreakdown ?? [],
     vat: { inputRecorded: null, outputIssued: null },
     kpis,
     compareKpis: compareKpisBuilt

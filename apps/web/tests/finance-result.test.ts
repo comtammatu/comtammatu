@@ -56,19 +56,18 @@ test("finance result uses goods-in plus inventory change, not POS COGS", () => {
   assert.equal(missingPosCoverage.grossMargin, 70);
   assert.equal(missingPosCoverage.operatingResult, 200_000);
 
-  assert.equal(
-    calculateFinanceResult({
-      netRevenueBeforeVat: 600_000,
-      goodsIn: 200_000,
-      ingredientCost: 180_000,
-      operatingExpense: 250_000,
-      inventoryChange: 50_000,
-      costAvailable: false,
-      operatingExpenseRecorded: true,
-      costReadable: false,
-    }).grossProfit,
-    null,
-  );
+  const unreadableValuation = calculateFinanceResult({
+    netRevenueBeforeVat: 600_000,
+    goodsIn: 200_000,
+    ingredientCost: 180_000,
+    operatingExpense: 250_000,
+    inventoryChange: 50_000,
+    costAvailable: false,
+    operatingExpenseRecorded: true,
+    costReadable: false,
+  });
+  assert.equal(unreadableValuation.grossProfit, null);
+  assert.equal(unreadableValuation.operatingResult, null);
 
   assert.equal(
     calculateFinanceResult({
@@ -80,7 +79,7 @@ test("finance result uses goods-in plus inventory change, not POS COGS", () => {
       costAvailable: true,
       operatingExpenseRecorded: false,
     }).operatingResult,
-    null,
+    450_000,
   );
 
   const withLowFoodCost = calculateFinanceResult({
@@ -101,7 +100,10 @@ test("finance result uses goods-in plus inventory change, not POS COGS", () => {
     costAvailable: true,
     operatingExpenseRecorded: true,
   });
-  assert.equal(withLowFoodCost.operatingResult, withHighFoodCost.operatingResult);
+  assert.equal(
+    withLowFoodCost.operatingResult,
+    withHighFoodCost.operatingResult,
+  );
   assert.notEqual(withLowFoodCost.grossProfit, withHighFoodCost.grossProfit);
 });
 
@@ -193,6 +195,7 @@ test("cockpit parser derives inventory change from pre-migration payloads", () =
     (oldShape?.inventoryClosing ?? 0) - (oldShape?.inventoryOpening ?? 0),
   );
   assert.equal(oldShape?.inventoryChangeIncluded, true);
+  assert.deepEqual(oldShape?.inventoryBreakdown, []);
   // Old-shape payload has no top-level valuation_active key, so the parser
   // must fall back to the nested food_cost.valuation_active value.
   assert.equal(
@@ -223,10 +226,28 @@ test("cockpit parser derives inventory change from pre-migration payloads", () =
     ...oldShapePayload,
     inventory_change: "7.50",
     inventory_change_included: false,
+    inventory_breakdown: [
+      {
+        location_kind: "branch",
+        site_count: 2,
+        opening_value: "100.00",
+        closing_value: "107.50",
+        change: "7.50",
+      },
+    ],
     valuation_active: false,
   });
   assert.notEqual(newShape, null);
   assert.equal(newShape?.inventoryChange, 7.5);
   assert.equal(newShape?.inventoryChangeIncluded, false);
+  assert.deepEqual(newShape?.inventoryBreakdown, [
+    {
+      locationKind: "branch",
+      siteCount: 2,
+      openingValue: 100,
+      closingValue: 107.5,
+      change: 7.5,
+    },
+  ]);
   assert.equal(newShape?.valuationActive, false);
 });

@@ -6,6 +6,7 @@ export interface FinanceResultInput {
   inventoryChange: number;
   /** Coverage-complete flag for UI tone/badge — does not blank GP. */
   costAvailable: boolean;
+  /** Advisory evidence flag only. A numeric 0 remains a valid expense total. */
   operatingExpenseRecorded: boolean;
   /** False when inventory valuation cutover is inactive — blanks GP. */
   costReadable?: boolean;
@@ -60,7 +61,6 @@ export function calculateFinanceResult({
   operatingExpense,
   inventoryChange,
   costAvailable: _costAvailable,
-  operatingExpenseRecorded,
   costReadable = true,
 }: FinanceResultInput): FinanceResult {
   const { grossProfit, grossMargin } = calculateGrossProfitIdentity({
@@ -73,7 +73,7 @@ export function calculateFinanceResult({
     grossProfit,
     grossMargin,
     inventoryChange,
-    operatingResult: operatingExpenseRecorded
+    operatingResult: costReadable
       ? netRevenueBeforeVat - goodsIn - operatingExpense + inventoryChange
       : null,
   };
