@@ -163,7 +163,7 @@ test("app authority keeps inter-site warehouse routing, split stock visibility, 
   assert.doesNotMatch(inventoryMessages, /tạo phiếu nhập trước/);
   assert.doesNotMatch(transferModel, /branch_kitchen|["']kitchen["']/);
   assert.match(stockData, /location\.location_kind === "kitchen"/);
-  assert.match(stockData, /location\.default_consumption/);
+  assert.match(stockData, /location\.is_default_consumption/);
   assert.doesNotMatch(inventoryMessages, /^\s*kitchen:\s*"Tiêu hao"/m);
   assert.doesNotMatch(
     settingsMessages,

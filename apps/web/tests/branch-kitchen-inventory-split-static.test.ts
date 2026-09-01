@@ -3,7 +3,10 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 
-const repoRoot = resolve(process.cwd(), "../..");
+const repoRoot = resolve(
+  process.cwd(),
+  existsSync(resolve(process.cwd(), "supabase/migrations")) ? "." : "../..",
+);
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 function splitMigration(): string {

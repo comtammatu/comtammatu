@@ -94,6 +94,9 @@ DECLARE
   v_request_id bigint;
   v_item_id bigint;
   v_transfer_id bigint;
+  v_account_id bigint;
+  v_value_only_origin_id bigint;
+  v_quantity_origin_id bigint;
   v_result jsonb;
   v_rejected boolean;
 BEGIN
@@ -365,9 +368,89 @@ BEGIN
   );
   v_transfer_id := (v_result ->> 'transfer_id')::bigint;
 
+  SELECT account.id
+  INTO v_account_id
+  FROM private.ensure_inventory_valuation_account(
+    v_tenant,
+    v_source,
+    v_source_location,
+    v_ingredient
+  ) AS account;
+
+  v_value_only_origin_id := private.create_inventory_cost_origin(
+    v_tenant,
+    v_ingredient,
+    'opening',
+    v_transfer_id,
+    NULL,
+    0,
+    1.85,
+    now(),
+    'provisional'
+  );
+  v_quantity_origin_id := private.create_inventory_cost_origin(
+    v_tenant,
+    v_ingredient,
+    'stocktake_found',
+    v_transfer_id,
+    NULL,
+    5,
+    98.15,
+    now(),
+    'provisional'
+  );
+
+  UPDATE public.inventory_valuation_accounts
+  SET quantity = 5,
+      book_value = 100
+  WHERE id = v_account_id;
+
+  INSERT INTO public.inventory_origin_balances (
+    tenant_id,
+    origin_id,
+    holder_kind,
+    valuation_account_id,
+    quantity,
+    book_value
+  )
+  VALUES
+    (
+      v_tenant,
+      v_value_only_origin_id,
+      'stock_pool',
+      v_account_id,
+      0,
+      1.85
+    ),
+    (
+      v_tenant,
+      v_quantity_origin_id,
+      'stock_pool',
+      v_account_id,
+      5,
+      98.15
+    );
+
   IF public.stock_transfer_confirm_ship(v_transfer_id) ->> 'status'
      <> 'in_transit' THEN
     RAISE EXCEPTION 'STOCK FULFILLMENT: ship did not enter transit';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.inventory_origin_balances AS balance
+    JOIN public.stock_transfer_items AS item
+      ON item.id = balance.holder_id
+     AND item.tenant_id = balance.tenant_id
+    WHERE balance.tenant_id = v_tenant
+      AND balance.origin_id = v_value_only_origin_id
+      AND balance.holder_kind = 'transfer_item'
+      AND item.transfer_id = v_transfer_id
+      AND balance.quantity = 0
+      AND balance.book_value = 1.85
+  ) THEN
+    RAISE EXCEPTION
+      'STOCK FULFILLMENT: value-only origin did not enter transfer holder';
   END IF;
 
   PERFORM public.stock_transfer_confirm_receive(v_transfer_id);

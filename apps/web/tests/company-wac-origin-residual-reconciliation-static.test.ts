@@ -8,6 +8,9 @@ const migrationsDir = resolve(root, "supabase/migrations");
 const migrationName = readdirSync(migrationsDir).find((name) =>
   name.endsWith("_company_wac_origin_residual_reconciliation.sql"),
 );
+const valueOnlyAllocationMigrationName = readdirSync(migrationsDir).find((name) =>
+  name.endsWith("_inventory_origin_value_only_allocation.sql"),
+);
 
 test("company WAC keeps account and origin value ledgers reconciled", () => {
   assert.ok(migrationName, "expected the company WAC reconciliation migration");
@@ -31,4 +34,25 @@ test("company WAC keeps account and origin value ledgers reconciled", () => {
   assert.match(migration, /'repair', 'company_wac_origin_residual'/);
   assert.match(migration, /inventory_origin_reconciliation_postcondition_failed/);
   assert.doesNotMatch(migration, /Nguyễn Hữu Thọ|branch_id\s*=\s*\d+/);
+});
+
+test("valuation allocation carries value-only origins through inventory holders", () => {
+  assert.ok(
+    valueOnlyAllocationMigrationName,
+    "expected the value-only origin allocation migration",
+  );
+  const migration = readFileSync(
+    resolve(migrationsDir, valueOnlyAllocationMigrationName),
+    "utf8",
+  );
+
+  assert.match(migration, /^BEGIN;/m);
+  assert.match(migration, /^COMMIT;/m);
+  assert.match(migration, /balance\.quantity > 0 OR balance\.book_value > 0/);
+  assert.match(migration, /ORDER BY \(balance\.quantity > 0\), balance\.origin_id/);
+  assert.match(migration, /ORDER BY \(balance\.quantity > 0\), balance\.id/);
+  assert.match(migration, /inventory_origin_allocation_incomplete/);
+  assert.match(migration, /v_match_count <> 7/);
+  assert.match(migration, /Value-only origins remain in transfer and production lineage/);
+  assert.doesNotMatch(migration, /branch_id\s*=\s*\d+|valuation_account_id\s*=\s*996/);
 });

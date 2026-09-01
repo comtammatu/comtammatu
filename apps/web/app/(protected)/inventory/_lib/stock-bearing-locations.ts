@@ -4,7 +4,7 @@ type LocationRow = {
   id: number;
   name: string | null;
   location_kind: string | null;
-  default_consumption: boolean | null;
+  is_default_consumption: boolean | null;
   branches:
     | { branch_kind?: string | null }
     | Array<{ branch_kind?: string | null }>
@@ -47,7 +47,7 @@ export async function fetchStockBearingLocationIds({
   let query = supabase
     .from("inventory_locations")
     .select(
-      "id, name, location_kind, default_consumption, branches!inventory_locations_branch_id_fkey!inner ( branch_kind )",
+      "id, name, location_kind, is_default_consumption, branches!inventory_locations_branch_id_fkey!inner ( branch_kind )",
     )
     .eq("tenant_id", tenantId)
     .eq("is_active", true);

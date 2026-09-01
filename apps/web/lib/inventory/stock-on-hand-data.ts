@@ -183,7 +183,7 @@ export async function loadStockOnHandPageData({
     : [];
   const defaultLocationId = stockBearingLocations.ok
     ? (stockBearingLocations.locations.find(
-        (location) => location.default_consumption,
+        (location) => location.is_default_consumption,
       )?.id ??
       stockBearingLocations.locations.find(
         (location) => location.location_kind === "warehouse",
