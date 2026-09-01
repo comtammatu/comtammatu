@@ -22,7 +22,7 @@ test("Branch stock reports use a native per-unit touch presentation", () => {
     "apps/web/app/(protected)/inventory/reports/reports-client.tsx",
   );
 
-  assert.match(route, /loadBranchStockReportData\(branchId\)/);
+  assert.match(route, /loadBranchStockReportData\(branchId, locationId\)/);
   assert.match(route, /<BranchStockReportsClient/);
   assert.doesNotMatch(route, /ReportsPageContent|embedded|DataTable/);
 
@@ -31,6 +31,8 @@ test("Branch stock reports use a native per-unit touch presentation", () => {
   assert.match(client, /ItemGroup/);
   assert.match(client, /formatQuantity/);
   assert.match(client, /\/stock\/on-hand\//);
+  assert.match(client, /branchLocationScope/);
+  assert.match(client, /branchIntraTransferIn/);
   assert.doesNotMatch(
     client,
     /import\s+\{\s*ReportsClient|<ReportsClient\b|ReportsProps|DataTable|AppPage|\bformatVND\b|embedded/,
@@ -40,6 +42,7 @@ test("Branch stock reports use a native per-unit touch presentation", () => {
   assert.match(data, /resolveInventoryListScope/);
   assert.match(data, /fetchConsumptionVariance/);
   assert.match(data, /fetchStockMovementReport/);
+  assert.match(data, /requestedLocationId/);
   assert.doesNotMatch(data, /fetchApAging|fetchFoodCost/);
   assert.match(model, /getBranchStockVarianceExceptions/);
   assert.match(model, /getBranchStockMovementHighlights/);

@@ -15,6 +15,7 @@ export type BranchStockThresholdRow = {
   globalMinStock: number;
   branchMinStock: number | null;
   effectiveMinStock: number;
+  targetStockLevel: number;
   reorderQuantity: number | null;
   isCustomized: boolean;
   fulfillFromCentralKitchen: boolean;
@@ -33,6 +34,7 @@ type RpcThresholdRow = {
   global_min_stock?: number | null;
   branch_min_stock?: number | null;
   effective_min_stock?: number | null;
+  target_stock_level?: number | null;
   reorder_quantity?: number | null;
   is_customized?: boolean | null;
   fulfill_from_central_kitchen?: boolean | null;
@@ -116,6 +118,9 @@ export async function loadBranchStockThresholdsData(routeBranchId: number) {
             ? Number(item.branch_min_stock)
             : null,
         effectiveMinStock: Number(item.effective_min_stock ?? 0),
+        targetStockLevel: Number(
+          item.target_stock_level ?? item.effective_min_stock ?? 0,
+        ),
         reorderQuantity:
           item.reorder_quantity !== null && item.reorder_quantity !== undefined
             ? Number(item.reorder_quantity)
@@ -200,6 +205,11 @@ export async function loadBranchStockThresholdsData(routeBranchId: number) {
       branchMinStock: branchThreshold?.minStock ?? null,
       effectiveMinStock:
         branchThreshold?.minStock ?? Number(ing.min_stock_level ?? 0),
+      targetStockLevel:
+        branchThreshold?.reorderQuantity != null
+          ? (branchThreshold.minStock ?? Number(ing.min_stock_level ?? 0)) +
+            branchThreshold.reorderQuantity
+          : Number(ing.min_stock_level ?? 0) * 2,
       reorderQuantity: branchThreshold?.reorderQuantity ?? null,
       isCustomized: branchThreshold != null,
       fulfillFromCentralKitchen: Boolean(ing.fulfill_from_central_kitchen),

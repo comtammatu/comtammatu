@@ -118,7 +118,7 @@ export const INGREDIENT_FORM_VI = {
   units: {
     baseUnit: "Đơn vị chuẩn",
     baseUnitDescription:
-      "Tồn kho và giá vốn ghi theo đơn vị này. Chọn nhỏ nhất hay dùng (ml, g, cái).",
+      "Đơn vị nhỏ nhất dùng để trừ tồn và tính giá vốn.",
     unitPending: "…",
     sectionLabel: "Đơn vị và quy đổi",
     sectionToggle: "Đơn vị quy đổi",

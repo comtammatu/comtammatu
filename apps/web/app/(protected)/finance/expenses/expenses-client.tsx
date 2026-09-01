@@ -21,8 +21,6 @@ import {
   ItemActions,
   ItemContent,
   ItemDescription,
-  ItemFooter,
-  ItemHeader,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { confirm } from "@/components/confirm-dialog";
@@ -572,7 +570,7 @@ export function ExpensesClient({
             const items = getExpenseRowActions(row);
             return items.length > 0 ? (
               <div onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
-                <RowActionsMenu items={items} label={copy.table.actions} triggerSize="icon-sm" />
+                <RowActionsMenu items={items} label={copy.table.actions} triggerSize={isTouchLayout ? "icon-touch" : "icon"} />
               </div>
             ) : null;
           },
@@ -616,6 +614,10 @@ export function ExpensesClient({
         operatingCount={summary.operatingCount}
         startupTotal={summary.startupTotal}
         startupCount={summary.startupCount}
+        needsActionTotal={summary.needsActionTotal}
+        needsActionCount={summary.needsActionCount}
+        isNeedsActionActive={showOnlyNeedsAction}
+        onToggleNeedsAction={toggleNeedsActionFilter}
       />
 
       <AppListFrame
@@ -674,59 +676,52 @@ export function ExpensesClient({
             return (
               <Item
                 variant="outline"
-                role="button"
-                tabIndex={0}
-                aria-label={copy.form.openAria(categoryLabel(row.category))}
                 className={cn(
-                  "cursor-pointer",
+                  "min-h-16 flex-nowrap p-3 touch-manipulation cursor-pointer bg-card hover:bg-muted/30 transition-colors",
                   expenseNeedsAction(row) && "border-l-2 border-l-warning",
                 )}
-                onClick={() => openExpenseDocument(row)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    openExpenseDocument(row);
-                  }
-                }}
+                render={<button type="button" onClick={() => openExpenseDocument(row)} />}
+                aria-label={copy.form.openAria(categoryLabel(row.category))}
               >
-                <ItemHeader>
-                  <ItemContent>
-                    <ItemTitle>{categoryLabel(row.category)}</ItemTitle>
-                    <ItemDescription>
-                      {expenseCategoryBucketLabel(row.category)} ·{" "}
-                      {formatVNBusinessDate(row.expense_date)} ·{" "}
-                      {branchLabel(row.branch_id)} · {methodLabel(row)}
-                    </ItemDescription>
-                  </ItemContent>
-                  <div className="flex shrink-0 items-center gap-2">
+                <ItemContent className="min-w-0 gap-1.5 text-left">
+                  <div className="flex min-w-0 items-center justify-between gap-2">
+                    <ItemTitle size="heading" className="truncate font-semibold text-sm">
+                      {categoryLabel(row.category)}
+                    </ItemTitle>
                     <StatusBadge
                       domain="expense-payment"
                       value={classifyExpensePaymentState(row)}
+                      size="sm"
                     />
-                    {canManageExpenses && actionItems.length > 0 ? (
-                      <ItemActions
-                        onClick={(event) => event.stopPropagation()}
-                        onKeyDown={(event) => event.stopPropagation()}
-                      >
-                        <RowActionsMenu
-                          items={actionItems}
-                          label={copy.table.actions}
-                          triggerSize={isTouchLayout ? "icon-touch" : "icon"}
-                        />
-                      </ItemActions>
-                    ) : null}
                   </div>
-                </ItemHeader>
-                <ItemFooter className="items-end gap-2">
-                  <ItemDescription className="min-w-0 flex-1">
-                    {detail || "—"}
+                  <ItemDescription className="line-clamp-none flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                    <span>{expenseCategoryBucketLabel(row.category)}</span>
+                    <span>· {formatVNBusinessDate(row.expense_date)}</span>
+                    <span>· {branchLabel(row.branch_id)}</span>
+                    <span>· {methodLabel(row)}</span>
                   </ItemDescription>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <span className="shrink-0 whitespace-nowrap font-mono text-sm font-semibold tabular-nums">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+                    <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+                      {detail || "—"}
+                    </span>
+                    <span className="font-mono text-sm font-semibold tabular-nums text-foreground shrink-0">
                       {formatAccountingVND(row.amount)}
                     </span>
                   </div>
-                </ItemFooter>
+                </ItemContent>
+                {canManageExpenses && actionItems.length > 0 ? (
+                  <ItemActions
+                    className="shrink-0 self-center"
+                    onClick={(event) => event.stopPropagation()}
+                    onKeyDown={(event) => event.stopPropagation()}
+                  >
+                    <RowActionsMenu
+                      items={actionItems}
+                      label={copy.table.actions}
+                      triggerSize={isTouchLayout ? "icon-touch" : "icon"}
+                    />
+                  </ItemActions>
+                ) : null}
               </Item>
             );
           }}

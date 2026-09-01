@@ -330,6 +330,140 @@ const transferCreateSchema = z.object({
     .min(1, { error: messages.inventory.transfer.emptyIngredientsDescription }),
 });
 
+const intraSiteTransferSchema = z.object({
+  branchId: z.coerce.number().int().positive(),
+  fromLocationId: z.coerce.number().int().positive(),
+  toLocationId: z.coerce.number().int().positive(),
+  notes: z.string().trim().max(500).optional(),
+  idempotencyKey: z.string().uuid(),
+  lines: z
+    .array(transferLineInputSchema)
+    .min(1, { error: messages.inventory.transfer.emptyIngredientsDescription }),
+});
+
+const intraSiteReverseSchema = z.object({
+  transferId: z.coerce.number().int().positive(),
+  notes: z.string().trim().max(500).optional(),
+  idempotencyKey: z.string().uuid(),
+  lines: z.array(transferLineInputSchema).min(1),
+});
+
+function intraSiteTransferError(error: unknown): string {
+  const message =
+    typeof error === "object" && error !== null && "message" in error
+      ? String(error.message).toLowerCase()
+      : "";
+  if (message.includes("insufficient_stock")) {
+    return "Tồn tại nơi xuất không còn đủ. Hãy tải lại và kiểm tra số lượng.";
+  }
+  if (message.includes("reverse_exceeds_remaining")) {
+    return "Số lượng đảo vượt phần còn lại của phiếu gốc.";
+  }
+  if (message.includes("fully_reversed")) {
+    return "Phiếu này đã được đảo hết.";
+  }
+  if (message.includes("idempotency_conflict")) {
+    return "Yêu cầu trùng mã nhưng khác nội dung. Hãy thử lại.";
+  }
+  if (message.includes("forbidden"))
+    return "Không có quyền thao tác phiếu này.";
+  if (message.includes("warehouse_kitchen_pair")) {
+    return "Điều chuyển nội bộ chỉ dùng đúng cặp Kho và Bếp của chi nhánh.";
+  }
+  return "Không thể hoàn tất điều chuyển nội bộ.";
+}
+
+export async function commitIntraSiteTransfer(
+  input: z.input<typeof intraSiteTransferSchema>,
+): Promise<ActionResult> {
+  const parsed = intraSiteTransferSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ.",
+    };
+  }
+  const ctx = await getAuthContext(ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+  const { supabase, claims } = ctx;
+  if (
+    claims.user_role !== "owner" &&
+    (claims.user_role !== "branch_manager" ||
+      claims.branch_id !== parsed.data.branchId)
+  ) {
+    return { success: false, error: "Không có quyền thao tác chi nhánh này." };
+  }
+
+  const { data, error } = await supabase.rpc(
+    "commit_intra_site_transfer" as never,
+    {
+      p_branch_id: parsed.data.branchId,
+      p_from_location_id: parsed.data.fromLocationId,
+      p_to_location_id: parsed.data.toLocationId,
+      p_lines: parsed.data.lines.map((line) => ({
+        ingredientId: line.ingredientId,
+        quantity: line.quantity,
+        entryUnitId: line.entryUnitId ?? null,
+      })),
+      p_notes: parsed.data.notes ?? null,
+      p_idempotency_key: parsed.data.idempotencyKey,
+    } as never,
+  );
+  if (error) {
+    console.error("inventory.transfer.intra_site_commit_failed", { error });
+    return { success: false, error: intraSiteTransferError(error) };
+  }
+  const result = data as unknown as { id?: number } | null;
+  if (!result?.id) {
+    return { success: false, error: "Không thể tạo phiếu điều chuyển nội bộ." };
+  }
+
+  revalidatePath("/inventory/transfers");
+  revalidatePath(`/inventory/transfers/${result.id}`);
+  revalidatePath(`/br/${parsed.data.branchId}/stock`);
+  revalidatePath(`/br/${parsed.data.branchId}/stock/on-hand`);
+  return { success: true, data: { id: result.id } };
+}
+
+export async function reverseIntraSiteTransfer(
+  input: z.input<typeof intraSiteReverseSchema>,
+): Promise<ActionResult> {
+  const parsed = intraSiteReverseSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ.",
+    };
+  }
+  const ctx = await getAuthContext(ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+  const { supabase } = ctx;
+  const { data, error } = await supabase.rpc(
+    "reverse_intra_site_transfer" as never,
+    {
+      p_transfer_id: parsed.data.transferId,
+      p_lines: parsed.data.lines.map((line) => ({
+        ingredientId: line.ingredientId,
+        quantity: line.quantity,
+        entryUnitId: line.entryUnitId ?? null,
+      })),
+      p_notes: parsed.data.notes ?? null,
+      p_idempotency_key: parsed.data.idempotencyKey,
+    } as never,
+  );
+  if (error) {
+    console.error("inventory.transfer.intra_site_reverse_failed", { error });
+    return { success: false, error: intraSiteTransferError(error) };
+  }
+  const result = data as unknown as { id?: number } | null;
+  if (!result?.id) return { success: false, error: "Không thể đảo phiếu." };
+
+  revalidatePath("/inventory/transfers");
+  revalidatePath(`/inventory/transfers/${parsed.data.transferId}`);
+  revalidatePath(`/inventory/transfers/${result.id}`);
+  return { success: true, data: { id: result.id } };
+}
+
 export async function createStockTransfer(
   input: z.infer<typeof transferCreateSchema>,
 ): Promise<ActionResult> {
@@ -363,7 +497,8 @@ export async function createStockTransfer(
   ) {
     return {
       success: false,
-      error: "Bạn chỉ được tạo phiếu xuất từ điểm vận hành của mình, hoặc xin hàng về kho của mình.",
+      error:
+        "Bạn chỉ được tạo phiếu xuất từ điểm vận hành của mình, hoặc xin hàng về kho của mình.",
     };
   }
 
@@ -638,9 +773,7 @@ export async function transferConfirmReceive(
   revalidatePath("/inventory/transfers");
   revalidatePath(`/inventory/transfers/${id.data}`);
   revalidatePath(`/br/${authz.transfer.to_branch_id}/stock`);
-  revalidatePath(
-    `/br/${authz.transfer.to_branch_id}/stock/receive/${id.data}`,
-  );
+  revalidatePath(`/br/${authz.transfer.to_branch_id}/stock/receive/${id.data}`);
   return { success: true };
 }
 

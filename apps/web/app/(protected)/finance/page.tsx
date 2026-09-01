@@ -9,8 +9,10 @@ import {
 } from "@comtammatu/shared/format";
 import { addMoney, roundToCanonicalMoney } from "@comtammatu/shared/money";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { ChevronRight as IconChevronRight } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Frame } from "@comtammatu/ui/components/frame";
+import { cn } from "@comtammatu/ui/lib/utils";
 import {
   Item,
   ItemActions,
@@ -686,21 +688,27 @@ export default async function FinancePage({
                 key={`${item.label}:${index}`}
                 variant="outline"
                 size="sm"
+                className={cn(
+                  "border-l-4 transition-colors",
+                  item.tone === "destructive"
+                    ? "border-l-destructive bg-destructive/10 border-destructive/20 hover:bg-destructive/15"
+                    : "border-l-warning bg-warning/10 border-warning/20 hover:bg-warning/15",
+                )}
                 render={
                   item.href != null ? <Link href={item.href} /> : undefined
                 }
               >
                 <ItemContent className="min-w-0">
-                  <ItemTitle className="line-clamp-none">
+                  <ItemTitle className="line-clamp-none font-semibold text-foreground">
                     {item.label}
                   </ItemTitle>
                   {item.hint.length > 0 ? (
-                    <ItemDescription className="line-clamp-none">
+                    <ItemDescription className="line-clamp-none text-muted-foreground">
                       {item.hint}
                     </ItemDescription>
                   ) : null}
                 </ItemContent>
-                <ItemActions className="ml-auto">
+                <ItemActions className="ml-auto flex items-center gap-2">
                   <Badge
                     variant={
                       item.tone === "destructive" ? "destructive" : "warning"
@@ -708,6 +716,9 @@ export default async function FinancePage({
                   >
                     {item.value}
                   </Badge>
+                  {item.href != null ? (
+                    <IconChevronRight className="size-4 text-muted-foreground shrink-0" />
+                  ) : null}
                 </ItemActions>
               </Item>
             ))}

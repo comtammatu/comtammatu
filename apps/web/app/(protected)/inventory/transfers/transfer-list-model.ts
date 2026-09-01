@@ -4,6 +4,7 @@ export interface TransferListRow {
   id: number;
   transfer_number: string;
   status: string;
+  transferScope: "inter_site" | "intra_site";
   notes: string | null;
   vehicle_info: string | null;
   shipped_at: string | null;
@@ -15,6 +16,13 @@ export interface TransferListRow {
   from_branch_name: string;
   to_branch_name: string;
 }
+
+export type TransferScopeFilter = "all" | "inter_site" | "intra_site";
+
+export const TRANSFER_SCOPE_LABELS = {
+  inter_site: "Liên điểm",
+  intra_site: "Nội bộ Kho ↔ Bếp",
+} as const;
 
 export type TransferTab = "receive" | "dispatch" | "history";
 

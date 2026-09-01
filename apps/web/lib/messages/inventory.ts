@@ -16,8 +16,7 @@ export const inventory = {
     pendingInvoice: "Chờ đơn giá",
     hasInvoice: "Đã có hóa đơn",
     settled: "Đã định giá",
-    hintReceivedAwaitingInvoice:
-      "Chờ đơn giá trên phiếu nhập.",
+    hintReceivedAwaitingInvoice: "Chờ đơn giá trên phiếu nhập.",
   },
   shell: {
     brandName: "Cơm Tấm Má Tư",
@@ -39,10 +38,12 @@ export const inventory = {
       stock: "Tồn kho thực tế, ngưỡng cảnh báo an toàn và giá vốn bình quân",
       stocktake: "Mở phiên kiểm kê, phân công đếm và đối soát chênh lệch",
       purchaseOrders: "Tạo đơn mua gửi nhà cung cấp và theo dõi tiến độ",
-      receipts: "Kiểm nhận hàng thực tế từ nhà cung cấp, chốt số lượng và đơn giá",
+      receipts:
+        "Kiểm nhận hàng thực tế từ nhà cung cấp, chốt số lượng và đơn giá",
       consumption: "Ghi nhận tiêu hao bếp, xuất dùng nội bộ và hao hụt",
       transfers: "Điều chuyển giữa Kho Tổng, Bếp Trung Tâm và Chi nhánh",
-      production: "Lệnh sản xuất theo công thức mẻ, xuất nguyên liệu và nhập thành phẩm",
+      production:
+        "Lệnh sản xuất theo công thức mẻ, xuất nguyên liệu và nhập thành phẩm",
       settings: "Thiết lập đơn vị tính, danh mục và ngưỡng tồn chi nhánh",
       suppliers: "Quản lý danh sách nhà cung cấp và bảng giá nguyên liệu",
       ingredients: "Danh mục nguyên vật liệu, đơn vị chuẩn, quy đổi và giá vốn",
@@ -109,7 +110,8 @@ export const inventory = {
       { label: "Gửi yêu cầu" },
     ],
     kitchenDispatchTitle: "Xuất thành phẩm",
-    kitchenDispatchDescription: "Chọn chi nhánh nhận, thêm thành phẩm, tạo phiếu.",
+    kitchenDispatchDescription:
+      "Chọn chi nhánh nhận, thêm thành phẩm, tạo phiếu.",
     kitchenDispatchSteps: [
       { label: "Chọn chi nhánh" },
       { label: "Thêm thành phẩm" },
@@ -188,8 +190,7 @@ export const inventory = {
     stockJobCountAssignments: "Phân công nhóm nguyên liệu cho nhân viên đếm.",
     stockJobCountSlips: "Duyệt hoặc yêu cầu đếm lại phiếu đã nộp.",
     stockJobWaste: "Tạo phiếu hao hụt kèm lý do và bằng chứng.",
-    stockJobConsumption:
-      "Xem sổ tiêu hao và phiếu ghi tay cần kiểm tra.",
+    stockJobConsumption: "Xem sổ tiêu hao và phiếu ghi tay cần kiểm tra.",
     stockJobCatalog: "Tra cứu nguyên liệu, đơn vị và danh mục kho.",
     stockJobPurchaseRequests: "Xem lịch sử yêu cầu mua của kho trung tâm.",
     branchDoorOnHand: "Kho hàng",
@@ -427,13 +428,11 @@ export const inventory = {
       namePlaceholder: "Ví dụ: Sườn cốt lết",
       skuLabel: "Mã hàng",
       referenceCostLabel: "Giá tham chiếu",
-      referenceCostHint:
-        "Gợi ý catalog theo Đơn vị chuẩn. Không phải Giá vốn tồn — giá sổ đến từ Đơn giá phiếu nhập.",
-      referenceCostEmpty: "Chưa có gợi ý catalog. Giá vốn xem ở Tồn kho.",
+      referenceCostHint: "Giá tham khảo theo đơn vị chuẩn.",
+      referenceCostEmpty: "Chưa có gợi ý catalog.",
       itemKindLabel: "Loại hàng",
       finishedGoodLabel: "Là thành phẩm",
-      finishedGoodHint:
-        "Bật khi hàng do Bếp Trung Tâm nấu và có công thức sản xuất. Không mua từ nhà cung cấp. Nguồn hàng thường là Bếp Trung Tâm.",
+      finishedGoodHint: "Món do Bếp Trung Tâm sản xuất theo công thức.",
       minStockLabel: "Tồn tối thiểu",
       maxStockLabel: "Tồn tối đa",
       reorderPointLabel: "Điểm đặt hàng",
@@ -442,7 +441,7 @@ export const inventory = {
         "Đã lưu nhưng chưa tải lại được danh sách nguyên liệu.",
       defaultFulfillSiteKindLabel: "Nguồn hàng",
       defaultFulfillSiteKindHint:
-        "Tick Kho Tổng và/hoặc Bếp Trung Tâm — nơi chi nhánh xin hàng. Có thể chọn cả hai. Không phải nơi đang chứa tồn, không phải đơn vị đo.",
+        "Nơi chi nhánh yêu cầu cấp hàng (Kho Tổng / Bếp Trung Tâm).",
       defaultFulfillSiteKindNone: "Không gán",
       defaultFulfillSiteKindCentralSupply: "Kho Tổng",
       defaultFulfillSiteKindCentralKitchen: "Bếp Trung Tâm",
@@ -659,6 +658,15 @@ export const inventory = {
       branchHubDescription:
         "Theo dõi phiếu điều chuyển và xác nhận khi hàng về chi nhánh.",
       hubSearchPlaceholder: "Tìm mã phiếu hoặc điểm vận hành",
+      hubTransferScopeAria: "Loại phiếu điều chuyển",
+      hubTransferScopePlaceholder: "Loại phiếu",
+      hubTransferScopeAll: "Tất cả loại phiếu",
+      hubTransferScopeInterSite: "Liên điểm",
+      hubTransferScopeIntraSite: "Nội bộ Kho ↔ Bếp",
+      hubFromSiteLabel: "Nơi xuất",
+      hubFromSiteAll: "Tất cả nơi xuất",
+      hubToSiteLabel: "Nơi nhận",
+      hubToSiteAll: "Tất cả nơi nhận",
       hubWorkKindAria: "Phân loại",
       hubWorkKindPlaceholder: "Phân loại",
       hubWorkRequest: "Yêu cầu",
@@ -717,8 +725,7 @@ export const inventory = {
   },
   purchaseRequests: {
     title: "Nhu cầu mua",
-    description:
-      "Lịch sử nhu cầu mua. Đơn mới tạo bằng Tạo đơn trên Đơn mua.",
+    description: "Lịch sử nhu cầu mua. Đơn mới tạo bằng Tạo đơn trên Đơn mua.",
     createAction: "Tạo nhu cầu mua",
     createTitle: "Tạo nhu cầu mua",
     createSuccess: "Đã lưu nhu cầu mua.",
@@ -851,7 +858,8 @@ export const inventory = {
     branchWacLoadFailed: "Không thể tải giá vốn bình quân của chi nhánh.",
     capacityLoadFailed: "Không thể tải phần bán được.",
     saveFailed: "Không thể lưu định mức món bán.",
-    outputUnitRequired: "Định mức phải dùng đơn vị đang hoạt động của nguyên liệu.",
+    outputUnitRequired:
+      "Định mức phải dùng đơn vị đang hoạt động của nguyên liệu.",
     entryUnitRequired:
       "Định mức phải chọn một đơn vị đang cấu hình trên nguyên liệu.",
     menuItemsLoadFailed: "Không thể tải món.",
@@ -1056,7 +1064,8 @@ export const inventory = {
     lineHeaderStatus: "Trạng thái",
     fullMatch: "Đủ 100%",
     totalAmountPrefix: (amount: string) => `Tổng cộng: ${amount} đ`,
-    totalLinesSummary: (count: number) => `Tổng số ${formatCount(count)} mặt hàng`,
+    totalLinesSummary: (count: number) =>
+      `Tổng số ${formatCount(count)} mặt hàng`,
     receivingWarehouseLabel: "Kho nhận",
     receivedDateLabel: "Ngày nhận kho",
     supplierInvoiceStatusLabel: "Hóa đơn NCC",
@@ -1391,6 +1400,9 @@ export const inventory = {
       noCategory: "Chưa phân loại",
       statusPlaceholder: "Trạng thái",
       locationWarehouse: "Kho",
+      locationKitchen: "Bếp",
+      locationTotal: "Tổng",
+      locationFilterLabel: "Vị trí tồn kho",
       searchPlaceholder: "Tìm nhanh: tên hoặc mã hàng",
       controlsTitle: "Tóm tắt & bộ lọc",
       operatorTasksTitle: "Việc kho hôm nay",
@@ -1508,9 +1520,8 @@ export const inventory = {
       tabMovements: "Biến động",
       setCompanyWacTitle: "Ghi Giá vốn",
       setCompanyWacDescription: (name: string, unit: string) =>
-        `Nhập Giá vốn mới của ${name} theo Đơn vị chuẩn (${unit}). Không đổi số lượng tồn. Không sửa Đơn giá phiếu nhập.`,
-      setCompanyWacHint:
-        "Giá vốn theo Đơn vị chuẩn, không theo thùng hay lốc. Giá tham chiếu trên danh mục không phải Giá vốn.",
+        `Cập nhật giá vốn bình quân cho ${name} (${unit}).`,
+      setCompanyWacHint: "",
       setCompanyWacCurrent: (amount: string, unit: string) =>
         `Giá vốn hiện tại: ${amount} / ${unit}`,
       setCompanyWacReasonLabel: "Lý do ghi Giá vốn",
@@ -1728,6 +1739,9 @@ export const inventory = {
     inbound: "Nhập kho",
     transferIn: "Chuyển vào",
     transferOut: "Chuyển ra",
+    intraTransfer: "Cấp nội bộ",
+    intraTransferIn: "Cấp nội bộ vào",
+    intraTransferOut: "Cấp nội bộ ra",
     consumption: "Tiêu hao",
     productionConsumption: "Tiêu hao sản xuất",
     outboundConsumption: "Xuất / tiêu hao",
@@ -1767,6 +1781,10 @@ export const inventory = {
     branchGrnReceipt: "Nhập kho",
     branchTransferIn: "Nhận chuyển",
     branchTransferOut: "Xuất chuyển",
+    branchIntraTransferIn: "Cấp nội bộ vào",
+    branchIntraTransferOut: "Cấp nội bộ ra",
+    branchLocationScope: "Phạm vi vị trí tồn kho",
+    branchLocationTotal: "Tổng",
     branchConsumption: "Tiêu hao",
     branchProductionConsumption: "Dùng sản xuất",
     branchProductionOutput: "Sản xuất ra",
@@ -1841,31 +1859,24 @@ export const inventory = {
     waste: {
       title: "Hao hụt & Phân cấp",
       eyebrow: "Cấu hình rủi ro hao hụt",
-      hint: "Tùy chỉnh các mốc giá trị, tỷ lệ tồn kho và điều kiện duyệt khi xuất hủy nguyên liệu.",
+      hint: "Thiết lập ngưỡng giá trị và điều kiện duyệt khi xuất hủy.",
       tierEnabledLabel: "Bật phân cấp kiểm soát hao hụt",
-      tierEnabledDescription:
-        "Khi tắt, mọi phiếu hao hụt đều được ghi giảm kho ngay lập tức, không yêu cầu ảnh bằng chứng hoặc quản lý duyệt.",
+      tierEnabledDescription: "Tắt để bỏ yêu cầu ảnh và duyệt khi xuất hủy.",
       streamlinedModeLabel: "Chế độ tinh gọn",
       streamlinedModeHint:
-        "Cơ chế phân cấp rủi ro đang tắt. Mọi thao tác xuất hủy hao hụt sẽ được ghi nhận và trừ tồn kho ngay lập tức, không yêu cầu ảnh chụp hay chờ duyệt.",
+        "Hao hụt được trừ kho trực tiếp, không yêu cầu ảnh hoặc duyệt.",
       rulesSectionTitle: "Ngưỡng giá trị & Điều kiện kiểm soát",
-      rulesSectionDescription:
-        "Thiết lập các mốc giá trị kích hoạt yêu cầu ảnh hoặc quản lý duyệt.",
+      rulesSectionDescription: "Mốc giá trị yêu cầu ảnh hoặc duyệt.",
       tier1Label: "Ngưỡng chụp ảnh bắt buộc (đ)",
-      tier1Description:
-        "Dòng hao hụt có giá trị vượt mức này sẽ bắt buộc đính kèm ảnh chụp bằng chứng.",
+      tier1Description: "Giá trị hao hụt vượt mức này bắt buộc chụp ảnh.",
       tier2Label: "Ngưỡng quản lý duyệt (đ)",
-      tier2Description:
-        "Dòng hao hụt có giá trị vượt mức này sẽ cần quản lý xác nhận trước khi trừ tồn kho.",
+      tier2Description: "Giá trị hao hụt vượt mức này cần quản lý duyệt.",
       shiftCapLabel: "Trần hao hụt trong một ca (đ)",
-      shiftCapDescription:
-        "Tổng giá trị hao hụt tích lũy trong một ca vượt mức này sẽ yêu cầu duyệt quản lý.",
+      shiftCapDescription: "Tổng hao hụt trong ca vượt mức này cần duyệt.",
       qtyRatioLabel: "Tỷ lệ hao hụt / Tồn kho (%)",
-      qtyRatioDescription:
-        "Tỷ lệ số lượng hao hụt so với tồn hiện tại vượt mức này sẽ yêu cầu chụp ảnh (nhập 0% để tắt).",
-      enforceReasonLabel: "Bắt buộc ảnh theo lý do rủi ro",
-      enforceReasonDescription:
-        "Yêu cầu ảnh chụp đối với các lý do vận hành thông thường (rơi vỡ, không đạt chất lượng...).",
+      qtyRatioDescription: "Tỷ lệ hao hụt so với tồn cần chụp ảnh (0% để tắt).",
+      enforceReasonLabel: "Bắt buộc ảnh theo lý do",
+      enforceReasonDescription: "Bắt buộc chụp ảnh khi rơi vỡ hoặc hỏng.",
       saveAction: "Lưu cấu hình",
       saveSuccess: "Đã cập nhật cấu hình hao hụt thành công.",
       saveFailed: "Không thể lưu cấu hình hao hụt.",
@@ -2669,7 +2680,8 @@ export const inventory = {
     brandSlogan: "Thịt tươi 100%",
     footerSystem: "In từ hệ thống Cơm Tấm Má Tư",
     grnTitle: "Mẫu in phiếu nhập kho 80mm",
-    grnDescription: (code: string) => `Xem trước bản in nhiệt 80mm cho phiếu nhập ${code}.`,
+    grnDescription: (code: string) =>
+      `Xem trước bản in nhiệt 80mm cho phiếu nhập ${code}.`,
     grnReceiptHeader: "Phiếu nhập kho",
     grnReceivingBranch: "Kho nhận:",
     grnSupplier: "Nhà CC:",
@@ -2677,7 +2689,8 @@ export const inventory = {
     grnPo: "Đơn hàng:",
     grnColItem: "Tên nguyên liệu",
     grnColQty: "Số lượng / Đơn vị",
-    grnRejected: (qty: string, unit: string, reason: string) => `Từ chối: ${qty} ${unit} (${reason})`,
+    grnRejected: (qty: string, unit: string, reason: string) =>
+      `Từ chối: ${qty} ${unit} (${reason})`,
     grnDefaultRejectReason: "Lỗi kiểm phẩm",
     grnTotalLines: (count: number) => `${count} dòng`,
     grnTotalItemsLabel: "Tổng số mặt hàng:",
@@ -2687,7 +2700,8 @@ export const inventory = {
     signHint: "(Ký & ghi họ tên)",
     signSimpleHint: "(Ký tên)",
     transferTitle: "Mẫu in phiếu điều chuyển 80mm",
-    transferDescription: (code: string) => `Xem trước bản in nhiệt 80mm cho phiếu điều chuyển ${code}.`,
+    transferDescription: (code: string) =>
+      `Xem trước bản in nhiệt 80mm cho phiếu điều chuyển ${code}.`,
     transferReceiptHeader: "Phiếu xuất điều chuyển",
     transferFromBranch: "Kho xuất:",
     transferToBranch: "Kho nhận:",
@@ -2710,7 +2724,8 @@ export const inventory = {
     printNow: "In ngay",
     close: "Đóng",
     previewTitle: "Phiếu in kiểm kê tồn kho",
-    previewDescription: (code: string) => `Xem trước và in biểu mẫu kiểm kê cho phiên ${code}.`,
+    previewDescription: (code: string) =>
+      `Xem trước và in biểu mẫu kiểm kê cho phiên ${code}.`,
     branchFallback: (branchId: number | undefined) =>
       `Chi nhánh #${branchId ?? ""}`,
     formLabel: "Biểu mẫu:",

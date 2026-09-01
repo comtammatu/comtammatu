@@ -175,10 +175,10 @@ export const hr = {
     leavePolicy: {
       standardWorkdaysLabel: "Ngày công chuẩn",
       standardWorkdaysDescription:
-        "Số ngày dùng làm mẫu số khi tính lương tháng.",
+        "Số ngày công chuẩn trong tháng để tính lương.",
       monthlyLeaveDaysLabel: "Phép tháng",
       monthlyLeaveDaysDescription:
-        "Mỗi tháng, số ngày nghỉ có lương được phân bổ trước từ hạn mức này.",
+        "Số ngày nghỉ phép có lương tối đa mỗi tháng.",
       allocationHint: "Ví dụ: nghỉ 3 ngày = 2 phép tháng + 1 phép năm.",
       usingDefaults: "Đang dùng mặc định — chưa lưu",
       persisted: "Đã lưu thành chính sách",
@@ -635,12 +635,12 @@ export const hr = {
       `Lịch cố định · ${formatCount(count)} ngày`,
     scheduleTitle: (name: string) => `Lịch làm cố định · ${name}`,
     scheduleDescription:
-      "Chọn ca lặp theo thứ. Phân ca riêng từng ngày vẫn được ưu tiên như ngoại lệ.",
+      "Chọn ca làm việc lặp lại theo thứ trong tuần.",
     effectiveFrom: "Áp dụng từ ngày",
     employeeStartDate: (date: string) =>
-      `Ngày bắt đầu làm trong hồ sơ: ${date}.`,
+      `Ngày bắt đầu làm việc: ${date}.`,
     missingEmployeeStartDate:
-      "Hồ sơ chưa có ngày bắt đầu; ngày áp dụng này sẽ là mốc sinh lịch.",
+      "Hồ sơ chưa có ngày bắt đầu làm việc.",
     presetShift: "Ca dùng để chọn nhanh",
     selectShift: "Chọn ca",
     mondayToFriday: "Thứ 2–Thứ 6",

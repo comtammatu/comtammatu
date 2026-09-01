@@ -21,7 +21,6 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import {
-  AppEmptyState,
   AppListFrame,
   AppToolbar,
 } from "@/components/surface";
@@ -256,6 +255,7 @@ export function QrManagement({
           onOpenChange={(open) =>
             setOpenActionRowId(open ? item.id : null)
           }
+          triggerSize={controlSize === "touch" ? "icon-touch" : "icon"}
         />
       ),
     },
@@ -296,64 +296,67 @@ export function QrManagement({
         ) : undefined
       }
     >
-      {items.length === 0 ? (
-        <AppEmptyState mode="no-data" description={feedbackCopy.qrEmpty} />
-      ) : (
-        <DataTable
-          columns={columns}
-          data={items}
-          getRowKey={(row) => row.id}
-          emptyTitle={feedbackCopy.qrEmpty}
-          mobileBreakpoint={forceTouch ? Number.POSITIVE_INFINITY : undefined}
-          renderRowContextMenu={
-            forceTouch
-              ? undefined
-              : (row) => (
-                  <RowActionsContextMenuItems items={getRowActions(row)} />
-                )
-          }
-          mobileCardRender={(item) => {
-            const url = resolveUrl(item);
-            const actions = getRowActions(item);
-            return (
-              <Item variant="outline" className="items-start gap-3">
-                <QrCodeImage
-                  value={url}
-                  alt={item.label}
-                  className="size-24 shrink-0"
-                />
-                <ItemContent className="gap-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <ItemTitle>{item.label}</ItemTitle>
-                    <Badge variant={item.isActive ? "default" : "secondary"}>
-                      {item.isActive
-                        ? feedbackCopy.statusActive
-                        : feedbackCopy.statusInactive}
-                    </Badge>
-                  </div>
-                  {!lockBranch ? (
-                    <ItemDescription>{item.branchName}</ItemDescription>
-                  ) : null}
-                  <ItemDescription>
-                    {item.tableNumber != null
-                      ? feedbackCopy.tableLabel.replace(
-                          "{number}",
-                          String(item.tableNumber),
-                        )
-                      : feedbackCopy.qrBranchWide}
+      <DataTable
+        className="[&_table]:table-fixed"
+        columns={columns}
+        data={items}
+        getRowKey={(row) => row.id}
+        emptyTitle={feedbackCopy.qrEmpty}
+        emptyMode="no-data"
+        mobileBreakpoint={forceTouch ? Number.POSITIVE_INFINITY : undefined}
+        renderRowContextMenu={
+          forceTouch
+            ? undefined
+            : (row) => (
+                <RowActionsContextMenuItems items={getRowActions(row)} />
+              )
+        }
+        mobileCardRender={(item) => {
+          const url = resolveUrl(item);
+          const actions = getRowActions(item);
+          return (
+            <Item variant="outline" className="w-full items-start gap-3 text-left">
+              <QrCodeImage
+                value={url}
+                alt={item.label}
+                className="size-24 shrink-0"
+              />
+              <ItemContent className="min-w-0 gap-2 text-left">
+                <div className="flex flex-wrap items-center gap-2">
+                  <ItemTitle className="font-semibold">{item.label}</ItemTitle>
+                  <Badge variant={item.isActive ? "default" : "secondary"}>
+                    {item.isActive
+                      ? feedbackCopy.statusActive
+                      : feedbackCopy.statusInactive}
+                  </Badge>
+                </div>
+                {!lockBranch ? (
+                  <ItemDescription className="text-xs text-muted-foreground">
+                    {item.branchName}
                   </ItemDescription>
-                  <ItemDescription className="break-all font-mono text-xs">
-                    {url}
-                  </ItemDescription>
-                  <ItemActions className="justify-start">
-                    <RowActionsMenu items={actions} />
-                  </ItemActions>
-                </ItemContent>
-              </Item>
-            );
-          }}
-        />
-      )}
+                ) : null}
+                <ItemDescription className="text-xs text-muted-foreground">
+                  {item.tableNumber != null
+                    ? feedbackCopy.tableLabel.replace(
+                        "{number}",
+                        String(item.tableNumber),
+                      )
+                    : feedbackCopy.qrBranchWide}
+                </ItemDescription>
+                <ItemDescription className="break-all font-mono text-xs text-muted-foreground">
+                  {url}
+                </ItemDescription>
+                <ItemActions className="justify-start pt-1">
+                  <RowActionsMenu
+                    items={actions}
+                    triggerSize={controlSize === "touch" ? "icon-touch" : "icon"}
+                  />
+                </ItemActions>
+              </ItemContent>
+            </Item>
+          );
+        }}
+      />
     </AppListFrame>
   );
 }

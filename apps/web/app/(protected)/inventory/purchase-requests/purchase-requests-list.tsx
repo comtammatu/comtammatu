@@ -20,7 +20,13 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
-import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemHeader,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import {
   Select,
   SelectContent,
@@ -197,18 +203,26 @@ export function PurchaseRequestsList({
     {
       key: "actions",
       header: "",
-      className: "w-12",
+      className: "w-12 text-right",
       render: (row) => (
         <div
           className="flex justify-end"
           onClick={(event) => event.stopPropagation()}
           onKeyDown={(event) => event.stopPropagation()}
         >
-          <RowActionsMenu items={rowActions(row)} label={row.code} />
+          <RowActionsMenu
+            items={rowActions(row)}
+            label={row.code}
+            triggerSize={controlSize === "touch" ? "icon-touch" : "icon"}
+          />
         </div>
       ),
     },
   ];
+
+  const hasActiveFilters = Boolean(
+    search.trim() || statusFilter !== "all" || siteFilter !== "all",
+  );
 
   return (
     <AppListFrame
@@ -282,6 +296,7 @@ export function PurchaseRequestsList({
       }
     >
       <DataTable
+        className="[&_table]:table-fixed"
         columns={columns}
         data={filtered}
         getRowKey={(row) => row.id}
@@ -289,31 +304,42 @@ export function PurchaseRequestsList({
         currentPage={currentPage}
         onPageChange={onPageChange}
         onRowClick={(row) => onOpenView(row.id)}
-        emptyTitle={copy.emptyTitle}
-        emptyDescription={copy.emptyDescription}
-        emptyIcon={
-          <IconClipboardList className="size-8 text-muted-foreground" />
+        emptyTitle={
+          hasActiveFilters
+            ? "Không tìm thấy yêu cầu mua hàng phù hợp"
+            : copy.emptyTitle
         }
+        emptyDescription={
+          hasActiveFilters
+            ? "Thử thay đổi từ khóa tìm kiếm hoặc điều chỉnh bộ lọc."
+            : copy.emptyDescription
+        }
+        emptyMode={hasActiveFilters ? "no-results" : "no-data"}
+        emptyIcon={<IconClipboardList />}
         mobileCardRender={(row) => (
-          <InteractiveCard
-            minHeight="mobile"
-            padding="default"
-            className="w-full flex-col items-stretch gap-2 text-left"
-            render={<button type="button" />}
-            onClick={() => onOpenView(row.id)}
+          <Item
+            variant="outline"
+            className="w-full text-left"
+            render={<button type="button" onClick={() => onOpenView(row.id)} />}
           >
-            <span className="flex items-center justify-between gap-2">
-              <span className="font-mono font-semibold">{row.code}</span>
-              <Badge variant={purchaseRequestStatusVariant(row.status)}>
-                {copy.statusLabel(row.status)}
-              </Badge>
-            </span>
-            <span className="text-sm">{row.branchName}</span>
-            <span className="text-xs text-muted-foreground">
-              {copy.lineCount(row.lineCount)} ·{" "}
-              {copy.orderedProgress(row.orderedLineCount, row.lineCount)}
-            </span>
-          </InteractiveCard>
+            <ItemHeader>
+              <div className="flex min-w-0 items-center gap-2">
+                <ItemTitle className="font-mono font-semibold">{row.code}</ItemTitle>
+                <Badge variant={purchaseRequestStatusVariant(row.status)}>
+                  {copy.statusLabel(row.status)}
+                </Badge>
+              </div>
+            </ItemHeader>
+            <ItemContent className="min-w-0 text-left">
+              <ItemDescription className="truncate font-medium text-foreground">
+                {row.branchName}
+              </ItemDescription>
+              <ItemDescription className="text-xs text-muted-foreground">
+                {copy.lineCount(row.lineCount)} ·{" "}
+                {copy.orderedProgress(row.orderedLineCount, row.lineCount)}
+              </ItemDescription>
+            </ItemContent>
+          </Item>
         )}
       />
     </AppListFrame>

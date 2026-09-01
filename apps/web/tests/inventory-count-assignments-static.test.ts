@@ -162,16 +162,16 @@ test("count assignment scope defaults to the current shift unless all-shifts is 
   );
 });
 
-test("count assignment location picker is warehouse-only (D091)", () => {
+test("count assignments use kitchen after split and warehouse before split", () => {
   assert.match(
     countAssignmentsPageSource,
-    /\.in\("location_kind", \["warehouse"\]\)/,
-    "count assignments should load the branch warehouse only",
-  );
-  assert.doesNotMatch(
-    countAssignmentsPageSource,
     /\.in\("location_kind", \["warehouse", "kitchen"\]\)/,
-    "count assignments must not offer retired branch kitchen locations",
+    "count assignments should resolve both legacy warehouse and split kitchen topology",
+  );
+  assert.match(
+    countAssignmentsPageSource,
+    /hasKitchen && l\.location_kind !== "kitchen"/,
+    "employee count assignments should only offer the kitchen after split",
   );
   assert.match(
     countAssignmentsPageSource,
@@ -195,8 +195,8 @@ test("count assignment location picker is warehouse-only (D091)", () => {
   );
   assert.match(
     countAssignmentsPageSource,
-    /locations\.find\(\(l\) => l\.kind === "warehouse"\)\?\.id/,
-    "count assignments should default branch counting to Kho when no locationId is provided",
+    /locations\.find\(\(l\) => l\.kind === "kitchen"\)\?\.id \?\?\s*locations\.find\(\(l\) => l\.kind === "warehouse"\)\?\.id/,
+    "count assignments should prefer Bếp and retain Kho as the legacy fallback",
   );
 });
 

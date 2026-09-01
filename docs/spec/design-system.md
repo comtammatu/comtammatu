@@ -33,17 +33,17 @@ system name found in code, comments, or docs is drift and must be removed.
 
 Runtime bindings:
 
-| Concern | Owner |
-| --- | --- |
-| Token values, utilities, keyframes | `packages/ui/src/styles/globals.css` (**the only CSS entry**) |
-| Headless behavior, a11y, focus, layering | Base UI (`@base-ui/react`) |
-| Styled shared components | `packages/ui/src/components/*` |
-| App adapters (plane-specific roles) | `apps/web/app/components/*` and approved domain adapter families |
-| Workflow composition | `docs/spec/page-archetypes.md` + target route |
-| Implementation guide, adapter map | `docs/modules/ui.md` |
-| Agent workflow | `docs/agent/rules/ui.md` |
-| Product copy | `docs/ref/glossary.md`, `packages/shared/src/labels/vi.ts`, `@comtammatu/shared/messages` |
-| Proof | guards, focused tests, browser evidence |
+| Concern                                  | Owner                                                                                     |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Token values, utilities, keyframes       | `packages/ui/src/styles/globals.css` (**the only CSS entry**)                             |
+| Headless behavior, a11y, focus, layering | Base UI (`@base-ui/react`)                                                                |
+| Styled shared components                 | `packages/ui/src/components/*`                                                            |
+| App adapters (plane-specific roles)      | `apps/web/app/components/*` and approved domain adapter families                          |
+| Workflow composition                     | `docs/spec/page-archetypes.md` + target route                                             |
+| Implementation guide, adapter map        | `docs/modules/ui.md`                                                                      |
+| Agent workflow                           | `docs/agent/rules/ui.md`                                                                  |
+| Product copy                             | `docs/ref/glossary.md`, `packages/shared/src/labels/vi.ts`, `@comtammatu/shared/messages` |
+| Proof                                    | guards, focused tests, browser evidence                                                   |
 
 Má Tư DS runtime = single CSS entry `packages/ui/src/styles/globals.css` +
 shared component source: `packages/ui/src/components/*` + app adapters under
@@ -64,15 +64,15 @@ Guideline → Base UI primitive → packages/ui Component → App adapter
           → UI Block recipe → Page archetype → Screen
 ```
 
-| Layer | Owner | Job |
-| --- | --- | --- |
-| Guideline | this file + `docs/ref/screen-context-map.md` | visual language, actor, job, information boundary |
-| Base UI primitive | `@base-ui/react` | headless behavior, semantics, focus, keyboard, layering |
-| Component | `packages/ui/src/components/*` | one styled, reusable Má Tư unit |
-| App adapter | `apps/web/app/components/*`, approved domain families | translate components into a plane-specific semantic role |
-| UI Block recipe | `UI_BLOCK_REGISTRY` in `scripts/ui-component-registry.mjs` | name a proven composition; metadata only |
-| Page archetype | `docs/spec/page-archetypes.md` | route-level workflow recipe and state model |
-| Screen | target route | bind real data, authority, copy, actions, recovery to one URL |
+| Layer             | Owner                                                      | Job                                                           |
+| ----------------- | ---------------------------------------------------------- | ------------------------------------------------------------- |
+| Guideline         | this file + `docs/ref/screen-context-map.md`               | visual language, actor, job, information boundary             |
+| Base UI primitive | `@base-ui/react`                                           | headless behavior, semantics, focus, keyboard, layering       |
+| Component         | `packages/ui/src/components/*`                             | one styled, reusable Má Tư unit                               |
+| App adapter       | `apps/web/app/components/*`, approved domain families      | translate components into a plane-specific semantic role      |
+| UI Block recipe   | `UI_BLOCK_REGISTRY` in `scripts/ui-component-registry.mjs` | name a proven composition; metadata only                      |
+| Page archetype    | `docs/spec/page-archetypes.md`                             | route-level workflow recipe and state model                   |
+| Screen            | target route                                               | bind real data, authority, copy, actions, recovery to one URL |
 
 Delivery flow:
 
@@ -107,28 +107,28 @@ per-module ramp.
 
 **Adapter prefixes.** Product Dual Thesis drives the prefix:
 
-| Prefix | Plane | Examples |
-| --- | --- | --- |
-| `App*` | `Quản lý hệ thống` (`control_surface`) | `AppPage`, `AppSection`, `AppToolbar`, `AppListFrame` |
-| `BranchOperator*` | `Vận hành bán hàng` (`branch_surface`) | `BranchOperatorPage`, `BranchOperatorPanel` |
-| `Station*` | `station_chrome` (POS / KDS / Runner) | `StationSection` |
-| `Employee*` | Employee/staff-runtime half | `EmployeePage`, `EmployeePanel` |
-| `Public*` | Guest / system-gate sections | `PublicSection` |
-| (none) | Shared primitives in `packages/ui` | `Button`, `Card`, `Frame` |
+| Prefix            | Plane                                  | Examples                                              |
+| ----------------- | -------------------------------------- | ----------------------------------------------------- |
+| `App*`            | `Quản lý hệ thống` (`control_surface`) | `AppPage`, `AppSection`, `AppToolbar`, `AppListFrame` |
+| `BranchOperator*` | `Vận hành bán hàng` (`branch_surface`) | `BranchOperatorPage`, `BranchOperatorPanel`           |
+| `Station*`        | `station_chrome` (POS / KDS / Runner)  | `StationSection`                                      |
+| `Employee*`       | Employee/staff-runtime half            | `EmployeePage`, `EmployeePanel`                       |
+| `Public*`         | Guest / system-gate sections           | `PublicSection`                                       |
+| (none)            | Shared primitives in `packages/ui`     | `Button`, `Card`, `Frame`                             |
 
 `AppPage` and `AppEmptyState` remain chrome-less adapters allowed on public
 and system-gate surfaces; card sections on those planes use `PublicSection`.
 
 **Suffixes** carry one job each:
 
-| Suffix | Job |
-| --- | --- |
-| `Shell` | Owns navigation chrome only (sidebar / header / bottom-nav) |
-| `Page` | Route content rhythm (width, padding, scroll) — not chrome |
-| `Section` | Card-backed region — `AppSection` on `control_surface`, `StationSection` on `station_chrome`, `PublicSection` on public/system-gate |
-| `Panel` | Same job inside `BranchOperator*` / `Employee*` families |
-| `Toolbar` / `Footer` / `Grid` / `Row` | Slots, not page roots |
-| `Client` / `Presenter` | Route-local binding; promote to adapter before registry |
+| Suffix                                | Job                                                                                                                                 |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `Shell`                               | Owns navigation chrome only (sidebar / header / bottom-nav)                                                                         |
+| `Page`                                | Route content rhythm (width, padding, scroll) — not chrome                                                                          |
+| `Section`                             | Card-backed region — `AppSection` on `control_surface`, `StationSection` on `station_chrome`, `PublicSection` on public/system-gate |
+| `Panel`                               | Same job inside `BranchOperator*` / `Employee*` families                                                                            |
+| `Toolbar` / `Footer` / `Grid` / `Row` | Slots, not page roots                                                                                                               |
+| `Client` / `Presenter`                | Route-local binding; promote to adapter before registry                                                                             |
 
 **Frame law.** `Frame` is the inset primitive in
 `packages/ui/src/components/frame.tsx` — a layout-free bordered box
@@ -160,10 +160,10 @@ or dismiss manager living beside it.
 **Exceptions (closed list).** Each one exists because Base UI ships no
 equivalent primitive, not because hand-rolling was convenient:
 
-| Component | Reason |
-| --- | --- |
-| `sonner.tsx` | Base UI has no toast primitive; Sonner owns toast behavior. Guest/preset CSS stays an app concern. |
-| `calendar.tsx` | DayPicker is a third-party domain widget, not a headless gap. |
+| Component      | Reason                                                                                             |
+| -------------- | -------------------------------------------------------------------------------------------------- |
+| `sonner.tsx`   | Base UI has no toast primitive; Sonner owns toast behavior. Guest/preset CSS stays an app concern. |
+| `calendar.tsx` | DayPicker is a third-party domain widget, not a headless gap.                                      |
 
 `slider.tsx` uses the Base UI Slider. A primitive with zero runtime consumers is
 drift, not coverage: `resizable.tsx`, `tag-input.tsx`, `stat.tsx`,
@@ -286,11 +286,11 @@ props or app adapters when the pattern is reusable.
 
 ### Tint Opacity Scale
 
-| Step | Opacity | Role |
-| --- | --- | --- |
-| `fill` | `/10` | Default status-surface tint (`bg-warning/10`) |
-| `fill-strong` | `/15` | Callout / emphasis surface |
-| `hairline-border` | `/20` | Hairline border or ring on a tint |
+| Step              | Opacity | Role                                          |
+| ----------------- | ------- | --------------------------------------------- |
+| `fill`            | `/10`   | Default status-surface tint (`bg-warning/10`) |
+| `fill-strong`     | `/15`   | Callout / emphasis surface                    |
+| `hairline-border` | `/20`   | Hairline border or ring on a tint             |
 
 Applies to `(bg|border|ring|text|fill|stroke)-(warning|success|destructive|info|primary|accent|secondary)`.
 Neutral muted fills prefer `/30` or `/50`. Solid status backgrounds start from
@@ -330,17 +330,17 @@ against `tasks/regressions.md`.
 Terracotta (`primary`) is the **action** color, not a status color. Dual Thesis
 halves share this map; density and chrome may differ, hues must not.
 
-| Role | Token | Use | Forbidden |
-| --- | --- | --- | --- |
-| Primary CTA | `primary` | Exactly one solid primary control per view state | Status badges, large fills, decorative chrome |
-| Safe secondary | `secondary` / `outline` / `ghost` | Cancel, back, extra actions | Destructive work |
-| Destructive | `destructive` | Delete, void, reject, refund | Brand chrome, primary CTA |
-| Done | `success` | Ready, approved, paid, printed | In-progress / waiting-on-person |
-| Needs a person | `warning` | Pending review, risk, match needed | Hard-blocked failure |
-| In flight | `info` | Sent, in transit, processing | Body text (must stay distinct from `foreground`) |
-| Neutral | `secondary` / `outline` | Draft, history, metadata | Work that needs action now |
-| Focus / trim | `ring` / `accent` | Focus ring, rice-yellow trim | Workflow meaning |
-| Series | `chart-1` … `chart-5` | Charts only | Status on a row |
+| Role           | Token                             | Use                                              | Forbidden                                        |
+| -------------- | --------------------------------- | ------------------------------------------------ | ------------------------------------------------ |
+| Primary CTA    | `primary`                         | Exactly one solid primary control per view state | Status badges, large fills, decorative chrome    |
+| Safe secondary | `secondary` / `outline` / `ghost` | Cancel, back, extra actions                      | Destructive work                                 |
+| Destructive    | `destructive`                     | Delete, void, reject, refund                     | Brand chrome, primary CTA                        |
+| Done           | `success`                         | Ready, approved, paid, printed                   | In-progress / waiting-on-person                  |
+| Needs a person | `warning`                         | Pending review, risk, match needed               | Hard-blocked failure                             |
+| In flight      | `info`                            | Sent, in transit, processing                     | Body text (must stay distinct from `foreground`) |
+| Neutral        | `secondary` / `outline`           | Draft, history, metadata                         | Work that needs action now                       |
+| Focus / trim   | `ring` / `accent`                 | Focus ring, rice-yellow trim                     | Workflow meaning                                 |
+| Series         | `chart-1` … `chart-5`             | Charts only                                      | Status on a row                                  |
 
 Dosage: status uses tint `/10` or `/15` plus token ink — never a solid
 `primary` fill. `Badge variant="default"` is metadata or a CTA chip, not
@@ -354,20 +354,20 @@ One token set for both halves. Non-text UI (borders, cards, focus rings) meets
 **WCAG 1.4.11** (≥3:1 against the adjacent background); text stays AA (≥4.5:1
 for body).
 
-| Pair (light) | Target |
-| --- | --- |
-| `foreground` / `background` | ≥4.5:1 |
-| `muted-foreground` / `background` and `/muted` | ≥4.5:1 |
-| `border` / `input` vs `background` | ≥3:1 |
-| `ring` / `background` | ≥3:1 |
-| `card` / `background` | Visible hierarchy — prefer a border when `ΔL` is small |
-| `destructive` / `background` | Distinct hue from `primary` (~25 vs ~33); ≥4.5:1 for destructive text |
-| `info` / `background` | Distinct from `foreground`; ≥4.5:1 for info text |
+| Pair (light)                                   | Target                                                                |
+| ---------------------------------------------- | --------------------------------------------------------------------- |
+| `foreground` / `background`                    | ≥4.5:1                                                                |
+| `muted-foreground` / `background` and `/muted` | ≥4.5:1                                                                |
+| `border` / `input` vs `background`             | ≥3:1                                                                  |
+| `ring` / `background`                          | ≥3:1                                                                  |
+| `card` / `background`                          | Visible hierarchy — prefer a border when `ΔL` is small                |
+| `destructive` / `background`                   | Distinct hue from `primary` (~25 vs ~33); ≥4.5:1 for destructive text |
+| `info` / `background`                          | Distinct from `foreground`; ≥4.5:1 for info text                      |
 
-| Pair (night `.dark`) | Target |
-| --- | --- |
+| Pair (night `.dark`)                           | Target                                                   |
+| ---------------------------------------------- | -------------------------------------------------------- |
 | `card` / `popover` / `sidebar` vs `background` | Clear lift; raise card L before adding decorative shadow |
-| Borders (alpha on cream) | Readable hairlines; strengthen alpha if cards merge |
+| Borders (alpha on cream)                       | Readable hairlines; strengthen alpha if cards merge      |
 
 Prefer contrast fixes over spacing-only "fixes", and re-check rendered
 screenshots after any token tune.
@@ -378,11 +378,11 @@ screenshots after any token tune.
 package (self-hosted, full Vietnamese coverage, offline). `globals.css` maps
 those variables into Tailwind utilities.
 
-| Purpose | Utility / variable | Font |
-| --- | --- | --- |
-| Body / content | `font-sans` / `--font-sans` | Geist |
-| Headings / titles | `font-heading` / `--font-heading` | Geist |
-| Operational data | `font-mono` / `--font-mono` | Geist Mono |
+| Purpose           | Utility / variable                | Font       |
+| ----------------- | --------------------------------- | ---------- |
+| Body / content    | `font-sans` / `--font-sans`       | Geist      |
+| Headings / titles | `font-heading` / `--font-heading` | Geist      |
+| Operational data  | `font-mono` / `--font-mono`       | Geist Mono |
 
 - `globals.css` binds `--font-sans` and `--font-heading` to `--font-geist-sans`,
   and `--font-mono` to `--font-geist-mono`. App code consumes only the three
@@ -409,19 +409,19 @@ use which. A module that needs to deviate updates this contract, not one page.
 
 ### A. Spacing
 
-| Slot | Value | Source |
-| --- | --- | --- |
-| Page outer padding | `p-4` default, `p-3` compact | `AppPage` |
-| Card inner | `p-4` default, `p-3` at `size="sm"` | `Card` |
-| LIST flush card | `py-0` (untitled) / `pb-0` (titled); edges `rounded-t-lg` / `rounded-b-lg` | `AppListFrame` (Card stays `overflow-visible` for sticky bleed / Select) |
-| Item-row LIST inset | `px-3 py-3` + `gap-2` between rows | Dual Thesis: table/grid stays flush; Item cards inset under toolbar (`DataTable` mobile stack, or bare `ItemGroup` with the same pad) |
-| Toolbar inner | `px-3 py-2` inline; Card `size="sm"` pad otherwise | `AppToolbar` |
-| Table column header height | `h-8` | `TableHead` |
-| DataTable pagination | `px-3 py-2` | `DataTablePagination` |
-| Section vertical gap | `gap-4` default, `gap-3` compact | `AppPage` |
-| Within-section gap | `gap-2` | Inline rows, form fields |
-| Compact chip gap | `gap-1.5` | Filter chips, badge clusters |
-| Tight icon-label gap | `gap-1` | Icon + 1–2 word label |
+| Slot                       | Value                                                                      | Source                                                                                                                                |
+| -------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Page outer padding         | `p-4` default, `p-3` compact                                               | `AppPage`                                                                                                                             |
+| Card inner                 | `p-4` default, `p-3` at `size="sm"`                                        | `Card`                                                                                                                                |
+| LIST flush card            | `py-0` (untitled) / `pb-0` (titled); edges `rounded-t-lg` / `rounded-b-lg` | `AppListFrame` (Card stays `overflow-visible` for sticky bleed / Select)                                                              |
+| Item-row LIST inset        | `px-3 py-3` + `gap-2` between rows                                         | Dual Thesis: table/grid stays flush; Item cards inset under toolbar (`DataTable` mobile stack, or bare `ItemGroup` with the same pad) |
+| Toolbar inner              | `px-3 py-2` inline; Card `size="sm"` pad otherwise                         | `AppToolbar`                                                                                                                          |
+| Table column header height | `h-8`                                                                      | `TableHead`                                                                                                                           |
+| DataTable pagination       | `px-3 py-2`                                                                | `DataTablePagination`                                                                                                                 |
+| Section vertical gap       | `gap-4` default, `gap-3` compact                                           | `AppPage`                                                                                                                             |
+| Within-section gap         | `gap-2`                                                                    | Inline rows, form fields                                                                                                              |
+| Compact chip gap           | `gap-1.5`                                                                  | Filter chips, badge clusters                                                                                                          |
+| Tight icon-label gap       | `gap-1`                                                                    | Icon + 1–2 word label                                                                                                                 |
 
 These are default recipes, not a static allowlist. Use the smallest named token
 that preserves hierarchy, touch targets, and scanability. `AppPage` owns outer
@@ -438,18 +438,18 @@ card padding with route-local utility strings.
 
 ### B. Heading Scale (locked per role)
 
-| Role | Class | Source |
-| --- | --- | --- |
-| Page H1 | `font-heading text-xl sm:text-2xl font-semibold tracking-tight` | `AppPageHeader` |
-| Section title | `font-heading text-base font-semibold` | `CardTitle` |
-| Sub-section / list head | `font-heading text-sm font-semibold` | `Item` title slot |
-| Page-header eyebrow | `text-xs font-medium uppercase tracking-wide` | `AppPageHeader.eyebrow` |
-| Panel / field / section label | `text-xs font-medium uppercase tracking-wide text-muted-foreground` | `SectionLabel` (`density="dense"` → `text-2xs … tracking-wider`) |
-| Table column header | `text-xs font-medium uppercase tracking-wider text-muted-foreground` | `TableHead` |
-| KDS kitchen item-name | `text-lg font-semibold leading-6 xl:text-xl xl:leading-6` | KDS ticket |
-| Numeric input echo | `text-3xl font-semibold tabular-nums` | Number pad, scale display |
-| Runner board header / row / footer / empty secondary | `text-runner-header` / `text-runner-board` / `text-runner-footer` / `text-runner-empty-secondary` + `font-semibold` | Height-responsive display tokens |
-| Display call target | `font-mono text-6xl sm:text-7xl lg:text-8xl font-semibold tabular-nums` | Customer-facing pickup / queue display only |
+| Role                                                 | Class                                                                                                               | Source                                                           |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Page H1                                              | `font-heading text-xl sm:text-2xl font-semibold tracking-tight`                                                     | `AppPageHeader`                                                  |
+| Section title                                        | `font-heading text-base font-semibold`                                                                              | `CardTitle`                                                      |
+| Sub-section / list head                              | `font-heading text-sm font-semibold`                                                                                | `Item` title slot                                                |
+| Page-header eyebrow                                  | `text-xs font-medium uppercase tracking-wide`                                                                       | `AppPageHeader.eyebrow`                                          |
+| Panel / field / section label                        | `text-xs font-medium uppercase tracking-wide text-muted-foreground`                                                 | `SectionLabel` (`density="dense"` → `text-2xs … tracking-wider`) |
+| Table column header                                  | `text-xs font-medium uppercase tracking-wider text-muted-foreground`                                                | `TableHead`                                                      |
+| KDS kitchen item-name                                | `text-lg font-semibold leading-6 xl:text-xl xl:leading-6`                                                           | KDS ticket                                                       |
+| Numeric input echo                                   | `text-3xl font-semibold tabular-nums`                                                                               | Number pad, scale display                                        |
+| Runner board header / row / footer / empty secondary | `text-runner-header` / `text-runner-board` / `text-runner-footer` / `text-runner-empty-secondary` + `font-semibold` | Height-responsive display tokens                                 |
+| Display call target                                  | `font-mono text-6xl sm:text-7xl lg:text-8xl font-semibold tabular-nums`                                             | Customer-facing pickup / queue display only                      |
 
 - `text-4xl` / `text-5xl` are not allowed in app surfaces (marketing/login splash
   only). `text-3xl` is reserved for the numeric-echo role and must pair with
@@ -474,15 +474,15 @@ card padding with route-local utility strings.
 
 ### C. Icon Size by Role
 
-| Slot | Class |
-| --- | --- |
-| Inline badge / chip glyph | `size-3` |
-| Button `size="sm"` glyph | `size-3.5` |
-| Default (button, link, input affix) | `size-4` |
-| Section / card title glyph | `size-5` |
-| Page-header eyebrow glyph | `size-6` |
-| Empty-state media | `size-8`–`size-12` via `EmptyMedia variant="icon"` |
-| Image / document thumbnail | `size-12`–`size-16` with `object-cover` |
+| Slot                                | Class                                              |
+| ----------------------------------- | -------------------------------------------------- |
+| Inline badge / chip glyph           | `size-3`                                           |
+| Button `size="sm"` glyph            | `size-3.5`                                         |
+| Default (button, link, input affix) | `size-4`                                           |
+| Section / card title glyph          | `size-5`                                           |
+| Page-header eyebrow glyph           | `size-6`                                           |
+| Empty-state media                   | `size-8`–`size-12` via `EmptyMedia variant="icon"` |
+| Image / document thumbnail          | `size-12`–`size-16` with `object-cover`            |
 
 `size-7`, `size-9`, `size-11` are not allowed. `size-14` / `size-16` live only
 in `EmptyMedia`, brand lockup, splash imagery, or thumbnails. Hero glyphs
@@ -493,15 +493,15 @@ a card.
 
 `Button` is the single source of truth for button height.
 
-| Variant | Min height | When |
-| --- | --- | --- |
-| `xs` / `sm` | `h-6` / `h-7` | Inline metadata actions; compact toolbars, dialog footers |
-| `default` / `lg` | `h-8` / `h-9` | Standard CTA; primary CTA, page-header action |
-| `field` | `h-10` | Composite form trigger only (`form/*` date/combobox/multi-select) |
-| `touch` / `touch-lg` | `min-h-12` / `min-h-14` | Mobile touch button; hero CTA / mobile action bar (WCAG 2.5.5) |
-| `icon-xs` … `icon-lg` | `size-6` … `size-9` | Icon-only tiers |
-| `icon-touch` | `size-12` | Icon-only 48px touch target |
-| `tile` | `min-h-32`→`min-h-44` | Oversized selectable tile (POS table-gate) |
+| Variant               | Min height              | When                                                              |
+| --------------------- | ----------------------- | ----------------------------------------------------------------- |
+| `xs` / `sm`           | `h-6` / `h-7`           | Inline metadata actions; compact toolbars, dialog footers         |
+| `default` / `lg`      | `h-8` / `h-9`           | Standard CTA; primary CTA, page-header action                     |
+| `field`               | `h-10`                  | Composite form trigger only (`form/*` date/combobox/multi-select) |
+| `touch` / `touch-lg`  | `min-h-12` / `min-h-14` | Mobile touch button; hero CTA / mobile action bar (WCAG 2.5.5)    |
+| `icon-xs` … `icon-lg` | `size-6` … `size-9`     | Icon-only tiers                                                   |
+| `icon-touch`          | `size-12`               | Icon-only 48px touch target                                       |
+| `tile`                | `min-h-32`→`min-h-44`   | Oversized selectable tile (POS table-gate)                        |
 
 Fixed heights `h-10`, `h-11`, `h-12`, `h-14`, `h-16` must not be applied to a
 `<button>`, `<Link>`, or `<Button>` acting as a button; `min-h-12` / `min-h-14`
@@ -513,12 +513,12 @@ primitive and consumed through `size=` — this is how `tile`, `icon-touch`, the
 
 Form controls follow their own table:
 
-| Control role | Below `lg` | `lg`+ | Source |
-| --- | --- | --- | --- |
-| Bare text / number `Input` | `h-7` | `h-7` | `Input` primitive |
-| Responsive form text / number field | `min-h-12` | `h-10` | `form/text-field`, `form/number-field` |
-| Responsive select / combobox field and its popup inputs | `min-h-12` | `h-10` | `form/select-field`, `form/combobox-field`, `Combobox` |
-| Fixed-density multi-select / date-picker trigger | `h-10` | `h-10` | `form/multi-select-combobox`, `form/business-date-field` |
+| Control role                                            | Below `lg` | `lg`+  | Source                                                   |
+| ------------------------------------------------------- | ---------- | ------ | -------------------------------------------------------- |
+| Bare text / number `Input`                              | `h-7`      | `h-7`  | `Input` primitive                                        |
+| Responsive form text / number field                     | `min-h-12` | `h-10` | `form/text-field`, `form/number-field`                   |
+| Responsive select / combobox field and its popup inputs | `min-h-12` | `h-10` | `form/select-field`, `form/combobox-field`, `Combobox`   |
+| Fixed-density multi-select / date-picker trigger        | `h-10`     | `h-10` | `form/multi-select-combobox`, `form/business-date-field` |
 
 RHF wrappers default to `controlSize="responsive"` (touch below the 1024px
 `OWNER_SHELL_BREAKPOINT` cutover, field above). A touch Combobox propagates
@@ -536,12 +536,12 @@ staff-runtime) and mobile-only chrome (bottom nav, PWA toolbar, number pad).
 
 ### E. Radius Scale (4 tiers, 4 tokens)
 
-| Tier | Token | Roles |
-| --- | --- | --- |
-| Control | `rounded-md` | Input, button, badge, chip, icon box, inset block, callout/Alert |
-| Card / page container | `rounded-lg` | Card, Sheet, Dialog, Drawer outer; page containers |
-| Pill | `rounded-full` | Avatar, pill badge, truly round icon container |
-| Reset | `rounded-none` | Explicit reset only (table cell internals, edge-bleed media) |
+| Tier                  | Token          | Roles                                                            |
+| --------------------- | -------------- | ---------------------------------------------------------------- |
+| Control               | `rounded-md`   | Input, button, badge, chip, icon box, inset block, callout/Alert |
+| Card / page container | `rounded-lg`   | Card, Sheet, Dialog, Drawer outer; page containers               |
+| Pill                  | `rounded-full` | Avatar, pill badge, truly round icon container                   |
+| Reset                 | `rounded-none` | Explicit reset only (table cell internals, edge-bleed media)     |
 
 ### F. Density Modes
 
@@ -565,35 +565,35 @@ removal, and reorder never replay it. Operational route loading uses shared
 `PageSkeleton` / `PageSpinner`; prefer hard cuts on POS/KDS when motion does
 not clarify a functional state.
 
-| Job | Recipe | Forbidden |
-| --- | --- | --- |
-| Press | `active:scale` ≥ `0.97`, `--motion-fast` | `hover:scale-*` |
-| Control color / border | `--motion-base`, `--ease-move` | `transition-all` |
-| Dialog / menu enter | Base UI `data-[starting-style]`, `--motion-overlay` | `animate-in` keyframes on overlays |
-| Sheet / Drawer | `--motion-drawer`, translate on the opening edge | Slide on POS/KDS ticket rows |
-| New cart / KDS ticket | one-shot `motion-safe:fade-in` at `duration-150` | List stagger, slide-in |
-| Live attention | `motion-safe:animate-pulse` + tint ring on station hot path | Pulse on management LIST |
-| Spinner / skeleton | `--motion-spinner` / pulse, always `motion-safe:` | Fake KDS tickets |
-| Cotlet mascot | `animate-cotlet-*` on pickup idle only | Mascot on POS / KDS / management |
+| Job                    | Recipe                                                      | Forbidden                          |
+| ---------------------- | ----------------------------------------------------------- | ---------------------------------- |
+| Press                  | `active:scale` ≥ `0.97`, `--motion-fast`                    | `hover:scale-*`                    |
+| Control color / border | `--motion-base`, `--ease-move`                              | `transition-all`                   |
+| Dialog / menu enter    | Base UI `data-[starting-style]`, `--motion-overlay`         | `animate-in` keyframes on overlays |
+| Sheet / Drawer         | `--motion-drawer`, translate on the opening edge            | Slide on POS/KDS ticket rows       |
+| New cart / KDS ticket  | one-shot `motion-safe:fade-in` at `duration-150`            | List stagger, slide-in             |
+| Live attention         | `motion-safe:animate-pulse` + tint ring on station hot path | Pulse on management LIST           |
+| Spinner / skeleton     | `--motion-spinner` / pulse, always `motion-safe:`           | Fake KDS tickets                   |
+| Cotlet mascot          | `animate-cotlet-*` on pickup idle only                      | Mascot on POS / KDS / management   |
 
 ## Elevation / Shadow
 
 The system is **border-first**: a resting surface separates through `--border`;
 elevation communicates a real layering relationship.
 
-| Rung | Utility | Role |
-| --- | --- | --- |
-| Rest | border | Resting data surfaces |
-| Glass/chrome rest | `shadow-effect-card-resting` | Floating translucent chrome only (login glass, `AppBottomNav`) |
-| Hover | `shadow-effect-card-hover` | Interactive card adapters on hover |
-| Overlay | `shadow-effect-popover` | `popover`, `dropdown-menu`, `select` |
-| Modal | `shadow-effect-dialog` | `dialog` content |
-| Sheet / Drawer | `shadow-effect-drawer` | `sheet` content, `drawer` panel |
-| Tooltip | `shadow-effect-tooltip` | `tooltip` content |
-| Toast | `--effect-toast` on `.cn-toast` | Sonner (applied in `globals.css`, no utility class) |
-| Sticky CTA | `shadow-lg` | CTAs inside a genuinely sticky/fixed action bar |
-| Ceiling | `shadow-xl` / `shadow-2xl` | Only fixed surfaces over scrolling content (POS mobile action bar, KDS focus card, chart tooltip) |
-| Overlay scrim | `bg-effect-scrim` / `drawer-scrim` | Dialog/Sheet backdrop; Drawer backdrop (scrim + blur) |
+| Rung              | Utility                            | Role                                                                                              |
+| ----------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Rest              | border                             | Resting data surfaces                                                                             |
+| Glass/chrome rest | `shadow-effect-card-resting`       | Floating translucent chrome only (login glass, `AppBottomNav`)                                    |
+| Hover             | `shadow-effect-card-hover`         | Interactive card adapters on hover                                                                |
+| Overlay           | `shadow-effect-popover`            | `popover`, `dropdown-menu`, `select`                                                              |
+| Modal             | `shadow-effect-dialog`             | `dialog` content                                                                                  |
+| Sheet / Drawer    | `shadow-effect-drawer`             | `sheet` content, `drawer` panel                                                                   |
+| Tooltip           | `shadow-effect-tooltip`            | `tooltip` content                                                                                 |
+| Toast             | `--effect-toast` on `.cn-toast`    | Sonner (applied in `globals.css`, no utility class)                                               |
+| Sticky CTA        | `shadow-lg`                        | CTAs inside a genuinely sticky/fixed action bar                                                   |
+| Ceiling           | `shadow-xl` / `shadow-2xl`         | Only fixed surfaces over scrolling content (POS mobile action bar, KDS focus card, chart tooltip) |
+| Overlay scrim     | `bg-effect-scrim` / `drawer-scrim` | Dialog/Sheet backdrop; Drawer backdrop (scrim + blur)                                             |
 
 `pos-text-overlay` and `drop-shadow-*` image filters are legibility effects, not
 elevation rungs, and must never be reused as surface shadows. Avoid elevation
@@ -617,31 +617,31 @@ bordered box whose caller owns layout. Other card jobs use `AppSection`,
 
 ### Default component routing
 
-| Need | Use |
-| --- | --- |
-| command/action | `Button`, `Toggle`, `ToggleGroup` |
-| business state label | `StatusBadge`; `Badge` for generic metadata |
-| framed section/panel | `AppSection` / `StationSection` / `PublicSection` by plane (`BranchOperatorPanel` on operator) |
-| navigation card | `AppLinkCard` |
-| selectable card-shaped row | `InteractiveCard` with a semantic render target |
-| disclosure | `Collapsible` |
-| searchable responsive data | `DataTable`; raw `Table` only inside an approved adapter |
-| segmented view | `Tabs` |
-| standard app form field | helpers from `@/components/form` |
-| short detail or list-first document | Overlay chooser (plane-specific) |
-| simple destructive confirmation | shared `confirm()`; `ReasonConfirmDialog` when a reason is required |
-| overlay (form / D1 / station / touch) | Overlay chooser below |
-| empty / no result / error | `AppEmptyState`, `TableEmptyStateRow`, `ErrorPanel`, `NotFoundPanel` |
-| loading | `PageSkeleton`, `PageSpinner`, or the approved route wrapper |
-| list row | `Item`, `ItemGroup` |
-| search/filter shell | `InputGroup`, `Combobox` helpers |
-| section/panel/field eyebrow | `SectionLabel` |
-| route context | `Sidebar`, `Breadcrumb`, `Separator` |
-| keyboard hint | `Kbd`, `KbdGroup` |
-| transient feedback | `Sonner` |
-| table navigation | `DataTablePagination` |
-| filter/action row | `AppToolbar` or `DataTable` toolbar slots |
-| metric block | `KpiCard` (numeric/stat values only) |
+| Need                                  | Use                                                                                            |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| command/action                        | `Button`, `Toggle`, `ToggleGroup`                                                              |
+| business state label                  | `StatusBadge`; `Badge` for generic metadata                                                    |
+| framed section/panel                  | `AppSection` / `StationSection` / `PublicSection` by plane (`BranchOperatorPanel` on operator) |
+| navigation card                       | `AppLinkCard`                                                                                  |
+| selectable card-shaped row            | `InteractiveCard` with a semantic render target                                                |
+| disclosure                            | `Collapsible`                                                                                  |
+| searchable responsive data            | `DataTable`; raw `Table` only inside an approved adapter                                       |
+| segmented view                        | `Tabs`                                                                                         |
+| standard app form field               | helpers from `@/components/form`                                                               |
+| short detail or list-first document   | Overlay chooser (plane-specific)                                                               |
+| simple destructive confirmation       | shared `confirm()`; `ReasonConfirmDialog` when a reason is required                            |
+| overlay (form / D1 / station / touch) | Overlay chooser below                                                                          |
+| empty / no result / error             | `AppEmptyState`, `TableEmptyStateRow`, `ErrorPanel`, `NotFoundPanel`                           |
+| loading                               | `PageSkeleton`, `PageSpinner`, or the approved route wrapper                                   |
+| list row                              | `Item`, `ItemGroup`                                                                            |
+| search/filter shell                   | `InputGroup`, `Combobox` helpers                                                               |
+| section/panel/field eyebrow           | `SectionLabel`                                                                                 |
+| route context                         | `Sidebar`, `Breadcrumb`, `Separator`                                                           |
+| keyboard hint                         | `Kbd`, `KbdGroup`                                                                              |
+| transient feedback                    | `Sonner`                                                                                       |
+| table navigation                      | `DataTablePagination`                                                                          |
+| filter/action row                     | `AppToolbar` or `DataTable` toolbar slots                                                      |
+| metric block                          | `KpiCard` (numeric/stat values only)                                                           |
 
 Toast and durable notification behavior is specified in
 `docs/spec/toast-notification-system.md`.
@@ -650,12 +650,12 @@ Toast and durable notification behavior is specified in
 
 `calendar.tsx` is adapter-only internals. DayPicker is never a month heatmap.
 
-| Job | Use | Forbidden |
-| --- | --- | --- |
-| Form field (RHF) | `BusinessDateField` | `type="date"`, raw `Calendar` |
-| Filter / URL date | `BusinessDatePicker` | Native date input, cloned Popover+Calendar |
-| Week / month / year period chrome | Compose `BusinessDatePicker` / `BusinessWeekPicker` + period buttons | Duplicate `dateToBusinessDate` helpers |
-| Attendance / Work / roster month board | Named display adapter (`AttendanceMonthGrid`, `WorkMonthGrid`, `RosterWeek`) | DayPicker as a heatmap |
+| Job                                    | Use                                                                          | Forbidden                                  |
+| -------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------ |
+| Form field (RHF)                       | `BusinessDateField`                                                          | `type="date"`, raw `Calendar`              |
+| Filter / URL date                      | `BusinessDatePicker`                                                         | Native date input, cloned Popover+Calendar |
+| Week / month / year period chrome      | Compose `BusinessDatePicker` / `BusinessWeekPicker` + period buttons         | Duplicate `dateToBusinessDate` helpers     |
+| Attendance / Work / roster month board | Named display adapter (`AttendanceMonthGrid`, `WorkMonthGrid`, `RosterWeek`) | DayPicker as a heatmap                     |
 
 Display `dd/mm/yyyy` via `formatVNBusinessDate`. No `type="date"` exception.
 
@@ -664,14 +664,14 @@ Display `dd/mm/yyyy` via `formatVNBusinessDate`. No `type="date"` exception.
 `Button` is a command. Size comes from named variants or
 `ResponsiveActionButton` — never `className` height patches.
 
-| Job | Use | Forbidden |
-| --- | --- | --- |
-| Command / submit / cancel | `Button` with `size=` | Native `<button>` outside closed exceptions |
-| Owner LIST/DETAIL CTA | `ResponsiveActionButton` | `size="touch"` / `icon-touch` / `touch-lg` literals on `control_surface` |
-| Form field density | `useFormControlSize` | Hand-patched `h-10` / `min-h-12` on `Button` |
-| On/off chip or segmented choice | `Toggle` / `ToggleGroup` | `Button` as a chip |
-| Month-board day cell | Inside the board adapter | Page-level `Button` grid |
-| Selectable tile | `InteractiveCard` or Branch tile adapter | Raw `<button>` tile |
+| Job                             | Use                                      | Forbidden                                                                |
+| ------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------ |
+| Command / submit / cancel       | `Button` with `size=`                    | Native `<button>` outside closed exceptions                              |
+| Owner LIST/DETAIL CTA           | `ResponsiveActionButton`                 | `size="touch"` / `icon-touch` / `touch-lg` literals on `control_surface` |
+| Form field density              | `useFormControlSize`                     | Hand-patched `h-10` / `min-h-12` on `Button`                             |
+| On/off chip or segmented choice | `Toggle` / `ToggleGroup`                 | `Button` as a chip                                                       |
+| Month-board day cell            | Inside the board adapter                 | Page-level `Button` grid                                                 |
+| Selectable tile                 | `InteractiveCard` or Branch tile adapter | Raw `<button>` tile                                                      |
 
 Native `<button>` only in closed chrome (`global-error`, `sidebar` via
 `Button render={<button>}`). One-off `*Button` wrappers must wrap
@@ -681,12 +681,12 @@ Native `<button>` only in closed chrome (`global-error`, `sidebar` via
 
 Job by plane. Same tokens; chrome/density only. Dual-plane forms share schema/action in `lib`; Owner `FormDialog`; Branch `FormSheet`.
 
-| Job | Branch | Owner | Station |
-| --- | --- | --- | --- |
-| Short create/edit | `AppSheet` bottom, touch | `FormDialog` | `StationSheet` |
-| D1 beside LIST | `AppSheet` | `AppSheet` or `AppDialog variant="document"` | `StationSheet` |
-| Long workspace | DETAIL (D2) | DETAIL (D2) | not a sheet-as-page |
-| Picker | `Popover` / `Select` / `Combobox` | same | same |
+| Job               | Branch                            | Owner                                        | Station             |
+| ----------------- | --------------------------------- | -------------------------------------------- | ------------------- |
+| Short create/edit | `AppSheet` bottom, touch          | `FormDialog`                                 | `StationSheet`      |
+| D1 beside LIST    | `AppSheet`                        | `AppSheet` or `AppDialog variant="document"` | `StationSheet`      |
+| Long workspace    | DETAIL (D2)                       | DETAIL (D2)                                  | not a sheet-as-page |
+| Picker            | `Popover` / `Select` / `Combobox` | same                                         | same                |
 
 Forbidden: raw `Dialog`/`Sheet`/`Drawer` in a route; `FormDialog`/`DataTable` on Branch; `AppSheet`/`AppDialog`/`AppSection` on station; hardcoded `size="touch"` on `control_surface`. `sheet.tsx`/`drawer.tsx` adapter-only.
 
@@ -697,21 +697,22 @@ Forbidden: raw `Dialog`/`Sheet`/`Drawer` in a route; `FormDialog`/`DataTable` on
 responsive data-table adapter. They are one system — no `DataTableV2`,
 `DesktopTable`, `MobileTable`, or module-specific table wrapper.
 
-| Layer | Owner | Direct route use |
-| --- | --- | --- |
-| `Table`, `TableHeader`, `TableBody`, `TableFooter`, `TableRow`, `TableHead`, `TableCell` | `packages/ui/src/components/table.tsx` | No, except a documented document/line-sheet adapter |
-| `DataTable` | `apps/web/app/components/data-table/data-table.tsx` | Yes |
-| `DataTablePagination` | `data-table-pagination.tsx` | No |
-| `TableEmptyStateRow` | `table-empty-state-row.tsx` | No |
-| `AppToolbar` | `surface.tsx` | Yes, as the sibling before `DataTable` |
+| Layer                                                                                    | Owner                                               | Direct route use                                    |
+| ---------------------------------------------------------------------------------------- | --------------------------------------------------- | --------------------------------------------------- |
+| `Table`, `TableHeader`, `TableBody`, `TableFooter`, `TableRow`, `TableHead`, `TableCell` | `packages/ui/src/components/table.tsx`              | No, except a documented document/line-sheet adapter |
+| `DataTable`                                                                              | `apps/web/app/components/data-table/data-table.tsx` | Yes                                                 |
+| `DataTablePagination`                                                                    | `data-table-pagination.tsx`                         | No                                                  |
+| `TableEmptyStateRow`                                                                     | `table-empty-state-row.tsx`                         | No                                                  |
+| `AppToolbar`                                                                             | `surface.tsx`                                       | Yes, as the sibling before `DataTable`              |
 
 Responsive list surfaces use `DataTable`: `mobileCardRender` for the phone card
 list, `Table` for desktop, `AppEmptyState` / `TableEmptyStateRow` for empty
 states, shared pagination. Hand-maintained twin JSX trees (`md:hidden` card list
-+ `hidden md:block` table) duplicate state and drift. Mobile and desktop expose
-the same fields, status colors, and actions for the same row; `mobileBreakpoint`
-changes presentation only, never authority, scope, sorting, or actions.
-`hideOnMobile` is not a supported column contract.
+
+- `hidden md:block` table) duplicate state and drift. Mobile and desktop expose
+  the same fields, status colors, and actions for the same row; `mobileBreakpoint`
+  changes presentation only, never authority, scope, sorting, or actions.
+  `hideOnMobile` is not a supported column contract.
 
 `DataTable` has composition recipes, not a runtime `variant` prop: management
 LIST (`AppToolbar` → `DataTable` with `mobileCardRender`), document lines
@@ -758,13 +759,13 @@ ancestor clips. The contract is single-sourced in
 `packages/ui/src/lib/floating-layer.ts` for `Select`, `Popover`,
 `DropdownMenu`, and `Combobox`:
 
-| Rule | Contract |
-| --- | --- |
-| Position method | `FLOATING_POSITION_METHOD` (`"fixed"`) |
+| Rule               | Contract                                                             |
+| ------------------ | -------------------------------------------------------------------- |
+| Position method    | `FLOATING_POSITION_METHOD` (`"fixed"`)                               |
 | Collision boundary | `floatingCollisionBoundary()` (`document.documentElement`, SSR-safe) |
-| Portal | Content renders inside the primitive's `Portal` |
-| Stacking | Positioner owns `isolate z-50`; callers do not raise `z-index` |
-| Elevation | `shadow-effect-popover` |
+| Portal             | Content renders inside the primitive's `Portal`                      |
+| Stacking           | Positioner owns `isolate z-50`; callers do not raise `z-index`       |
+| Elevation          | `shadow-effect-popover`                                              |
 
 `clipping-ancestors` is not an accepted boundary — a `Card` or toolbar with
 `overflow-hidden` would force the panel to flip over its own trigger. Fixing an
@@ -796,11 +797,11 @@ items, setup tasks, and narrative states are not KPI surfaces.
 
 ### Numeric / money cells
 
-| Cell role | Required classes |
-| --- | --- |
-| Money / quantity / price / rate | `text-right font-mono tabular-nums` |
+| Cell role                       | Required classes                              |
+| ------------------------------- | --------------------------------------------- |
+| Money / quantity / price / rate | `text-right font-mono tabular-nums`           |
 | ID / code / order / receipt no. | `font-mono tabular-nums` (left align allowed) |
-| Right-aligned non-numeric label | `text-right` (no `tabular-nums`) |
+| Right-aligned non-numeric label | `text-right` (no `tabular-nums`)              |
 
 Money renders through `formatVND` (`@comtammatu/shared/format`) on
 POS/menu/receipt surfaces and `formatAccountingVND` on Finance/VAT/HĐĐT
@@ -864,11 +865,12 @@ supplier documents, and exceptions before analytics. Keep terms aligned with
 `docs/ref/glossary.md`. Dense tables are expected, but row actions and
 destructive actions stay visually separated. Route IA stays anchored to three
 operator flows: `nhập hàng` (GRN → PO approval → confirm → Finance/AP handoff, ADR
-0018), `kiểm soát tồn` (one-warehouse stock, stocktake, count review, waste and
+0018), `kiểm soát tồn` (location stock, stocktake, count review, waste and
 reporting), and `sản xuất`/`tiêu hao`. Branch receiving stays supplier-first — no
 direct PO creation, PO-first receiving, supplier return, price-QC, lot/expiry,
-production order DETAIL, or same-branch warehouse-to-kitchen transfer in daily
-UI. Complex Inventory forms use RHF + Zod + app form helpers. Entity audit
+or production order DETAIL. A same-branch warehouse-to-kitchen transfer is a Manager/Owner
+daily document, distinct from employee counting. Complex Inventory forms use
+RHF + Zod + app form helpers. Entity audit
 history is an inline `Lịch sử` tab filtered by `audit_logs.entity_type` /
 `entity_id`. Hide permanently unauthorized actions; show disabled controls with
 explanatory copy only for temporary operational blockers.
@@ -912,13 +914,13 @@ Visible recipes: `/ds-lab` (dev-only). Implementation map + gold paths:
   `density="compact"` (and usually `width="xwide"` on LIST/REPORT); do not invent
   `*-dense` / `*-tight` utility families (§ Rhythm F).
 
-| `AppPage` width | Use |
-| --- | --- |
-| `narrow` | Staff / public task, single-column form |
-| `default` | Standard DETAIL |
-| `wide` | Comfortable management DETAIL |
-| `xwide` | LIST / REPORT on `control_surface` |
-| `full` | Station boards, edge-to-edge |
+| `AppPage` width | Use                                     |
+| --------------- | --------------------------------------- |
+| `narrow`        | Staff / public task, single-column form |
+| `default`       | Standard DETAIL                         |
+| `wide`          | Comfortable management DETAIL           |
+| `xwide`         | LIST / REPORT on `control_surface`      |
+| `full`          | Station boards, edge-to-edge            |
 
 Sticky stack: at most **two** sticky bands (shell chrome + one filter/footer
 band). `AppPageHeader` is not sticky. Do not stack KPI mosaics under a second
@@ -929,23 +931,23 @@ sticky filter.
 One workflow keeps one ordered slot stack. Desktop may densify; it must not
 reorder or duplicate slots.
 
-| Slot | Owner | Rule |
-| --- | --- | --- |
-| Shell nav | Approved chrome family | Sidebar / header / bottom-nav from nav-config — not route-local |
-| Page header | `AppPageHeader` | One H1; no module-name eyebrow on `control_surface` |
-| Sticky filters | `AppListFrame` toolbar / `AppToolbar sticky` / `AppStickyFilterChrome` | Stick inside shell scrollport only; never above KPI mosaics |
-| Body regions | Section / Panel / board cards | Plane-correct prefix; one primary action per state |
-| Sticky / docked footer | `AppDetailFooter` / `DocumentFormFrame` / `AppPage footer` | Primary stage action lives here on DETAIL/DOC — not in the header |
+| Slot                   | Owner                                                                  | Rule                                                              |
+| ---------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Shell nav              | Approved chrome family                                                 | Sidebar / header / bottom-nav from nav-config — not route-local   |
+| Page header            | `AppPageHeader`                                                        | One H1; no module-name eyebrow on `control_surface`               |
+| Sticky filters         | `AppListFrame` toolbar / `AppToolbar sticky` / `AppStickyFilterChrome` | Stick inside shell scrollport only; never above KPI mosaics       |
+| Body regions           | Section / Panel / board cards                                          | Plane-correct prefix; one primary action per state                |
+| Sticky / docked footer | `AppDetailFooter` / `DocumentFormFrame` / `AppPage footer`             | Primary stage action lives here on DETAIL/DOC — not in the header |
 
 ### Density by plane
 
-| Plane | Density default | Section / list chrome |
-| --- | --- | --- |
-| `control_surface` | Compact + `xwide` on management LIST/REPORT | `AppSection` / `AppListFrame` + `DataTable` |
-| `branch` (operator) | Touch-first comfortable | `BranchOperator*` panels; no `AppListFrame` / `DataTable` on touch queues |
-| `station_chrome` | Board density; full-screen | `StationSection` + `Frame` / `OperationalBoardCard` — no `AppSection` / `AppListFrame` |
-| `public` / system-gate | Comfortable, chrome-less | `PublicSection`; `AppPage` / `AppEmptyState` allowed |
-| `staff` | Narrow task portal | `EmployeePage` / `EmployeePanel` |
+| Plane                  | Density default                             | Section / list chrome                                                                  |
+| ---------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `control_surface`      | Compact + `xwide` on management LIST/REPORT | `AppSection` / `AppListFrame` + `DataTable`                                            |
+| `branch` (operator)    | Touch-first comfortable                     | `BranchOperator*` panels; no `AppListFrame` / `DataTable` on touch queues              |
+| `station_chrome`       | Board density; full-screen                  | `StationSection` + `Frame` / `OperationalBoardCard` — no `AppSection` / `AppListFrame` |
+| `public` / system-gate | Comfortable, chrome-less                    | `PublicSection`; `AppPage` / `AppEmptyState` allowed                                   |
+| `staff`                | Narrow task portal                          | `EmployeePage` / `EmployeePanel`                                                       |
 
 Cross-links: Dual Thesis (§ Product Dual Thesis) · chrome families
 (§ Structural Governance A) · archetypes (`page-archetypes.md`) · UI blocks
@@ -1180,7 +1182,14 @@ improvisation.
 - Shared error / action / entity messages follow one hierarchy: `@comtammatu/shared/messages` → `apps/web/lib/messages/*`. Denylist terms live in the glossary.
 - Verb lexicon (reuse, do not synonym): `Lưu` / `Tạo` / `Xác nhận` / `Hủy` / `Xóa {object}` / `Duyệt` / `Từ chối` / `Thanh toán`.
 - Toast formula: success `Đã X`; failure `Không thể X`. Severity and routing stay in `docs/spec/toast-notification-system.md`.
-- Utility copy beats marketing copy. Page/section description ≈ one idea, ≤ ~80 chars; field hint ≤ ~60. Drop prop when restating title.
+- **Default is NONE for hints/descriptions:** If a field label, dialog header, or card title is self-explanatory, omit `description`, `hint`, and `FieldDescription` entirely. Never fill description props merely to occupy component slots.
+- **Zero code / system jargon in UI:** Never expose internal database concepts, triggers, webhook/sync mechanisms, backend flow details, or negative developer disclaimers ("Không phải là...", "Dữ liệu lưu vào bảng...") to operators. UI copy is operator-first and speaks only in concise restaurant business terms.
+- **Copy budget & component roles:**
+  - Field hint (`FieldDescription`) ≤ ~60 chars: reserved for required input format or operational unit of measure only.
+  - Card/Section/Dialog description ≤ ~80 chars: exactly one concise operational idea.
+  - Page header description: reserve for top-level operational hubs; omit on standard list/detail pages.
+  - Concrete input examples belong in `placeholder="Ví dụ: ..."`, not descriptive prose.
+  - Validation scenarios belong in inline `FieldError`, not preemptive multi-sentence warning hints.
 - Never put SOP, recovery policy, timers, or commentary into UI (`docs/ref/**`). Clamp section/header descriptions; shorten `FieldDescription`.
 
 ## Enforcement

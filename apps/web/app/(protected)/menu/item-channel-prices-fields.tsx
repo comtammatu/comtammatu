@@ -230,7 +230,6 @@ export function ItemChannelPricesFields({
         <TabsContent value="same" className="mt-3 flex flex-col gap-3">
           <Field>
             <FieldLabel>{MENU_VI.channelPricesApplyAllLabel}</FieldLabel>
-            <FieldDescription>{MENU_VI.channelPriceSameHint}</FieldDescription>
             <div className="mt-1 flex flex-col gap-2">
               <WholeVndInput
                 value={sharedPrice}

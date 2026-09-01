@@ -78,20 +78,21 @@ export async function ReportsPageContent() {
   const startDate = getVNMonthStartDateString();
   const endDate = getVNDateString();
   const trendStartDate = getVNMonthSequenceBack(12).at(-1)?.date ?? startDate;
-  const { loadWasteAnalyticsData } = await import(
-    "@lib/inventory/waste-analytics-data"
-  );
+  const { loadWasteAnalyticsData } =
+    await import("@lib/inventory/waste-analytics-data");
 
-  const [apRes, varRes, movementRes, foodCostRes, wasteRes] = await Promise.all([
-    showSupplierPayables ? fetchApAging() : Promise.resolve(null),
-    fetchConsumptionVariance({ startDate, endDate }),
-    fetchStockMovementReport({ startDate, endDate }),
-    fetchFoodCost({
-      startDate: trendStartDate,
-      endDate,
-    }),
-    loadWasteAnalyticsData({ startDate, endDate }),
-  ]);
+  const [apRes, varRes, movementRes, foodCostRes, wasteRes] = await Promise.all(
+    [
+      showSupplierPayables ? fetchApAging() : Promise.resolve(null),
+      fetchConsumptionVariance({ startDate, endDate }),
+      fetchStockMovementReport({ startDate, endDate }),
+      fetchFoodCost({
+        startDate: trendStartDate,
+        endDate,
+      }),
+      loadWasteAnalyticsData({ startDate, endDate }),
+    ],
+  );
   if (
     !varRes.success ||
     !movementRes.success ||
@@ -152,6 +153,8 @@ export async function ReportsPageContent() {
           grn_receipt: number;
           transfer_in: number;
           transfer_out: number;
+          intra_transfer_in: number;
+          intra_transfer_out: number;
           consumption: number;
           production_consumption: number;
           production_output: number;
@@ -164,6 +167,8 @@ export async function ReportsPageContent() {
       acc.grnReceipt += Number(row.grn_receipt ?? 0);
       acc.transferIn += Number(row.transfer_in ?? 0);
       acc.transferOut += Math.abs(Number(row.transfer_out ?? 0));
+      acc.intraTransferIn += Number(row.intra_transfer_in ?? 0);
+      acc.intraTransferOut += Math.abs(Number(row.intra_transfer_out ?? 0));
       acc.consumption += Math.abs(Number(row.consumption ?? 0));
       acc.productionConsumption += Math.abs(
         Number(row.production_consumption ?? 0),
@@ -176,6 +181,8 @@ export async function ReportsPageContent() {
       grnReceipt: 0,
       transferIn: 0,
       transferOut: 0,
+      intraTransferIn: 0,
+      intraTransferOut: 0,
       consumption: 0,
       productionConsumption: 0,
       productionOutput: 0,
@@ -201,6 +208,21 @@ export async function ReportsPageContent() {
           label: messages.inventory.reports.transferIn,
           value: movementTotals.transferIn,
           color: "success",
+        },
+      ],
+    },
+    {
+      label: messages.inventory.reports.intraTransfer,
+      values: [
+        {
+          label: messages.inventory.reports.intraTransferIn,
+          value: movementTotals.intraTransferIn,
+          color: "success",
+        },
+        {
+          label: messages.inventory.reports.intraTransferOut,
+          value: movementTotals.intraTransferOut,
+          color: "danger",
         },
       ],
     },

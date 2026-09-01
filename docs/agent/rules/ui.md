@@ -144,6 +144,9 @@ walk the **UI Review Checklist** below.
 
 - Use operator language from shared dictionaries/glossary; one concept keeps one
   name across surfaces.
+- **Default is NONE for hints/descriptions:** If title/label is clear, omit `description` / `hint` / `FieldDescription`. Never duplicate label text in hint.
+- **Zero code / system jargon:** Never expose backend mechanics, database concepts, triggers, sync flows, or developer disclaimers in product UI copy. UI copy speaks in clean restaurant operator vocabulary only.
+- **Copy budget:** Field hint ≤ ~60 chars (format/unit only); Card/Dialog description ≤ ~80 chars (1 single operational thought). Concrete examples belong in `placeholder`, error states in inline `FieldError`.
 - Render explicit loading, empty, error, permission-denied, and recovery states
   appropriate to the workflow.
 - Never expose raw database errors, SQLSTATE, secrets, or internal identifiers as
@@ -204,7 +207,9 @@ When the diff touches station routes or shared station adapters:
 
 - [ ] Vietnamese product copy follows glossary / shared dictionaries; one
       concept keeps one name
-- [ ] No agent notes, SOP, recovery policy, or implementation commentary in product UI
+- [ ] No agent notes, SOP, recovery policy, internal timers, or implementation commentary in product UI
+- [ ] Default is NONE for hints/descriptions: no redundant hint restating the label, no code/system jargon
+- [ ] Copy budget respected: field hint ≤ 60 chars, section/card/dialog description ≤ 80 chars
 - [ ] Loading / empty / error / permission / recovery states are explicit where
       the workflow requires them
 - [ ] No raw Supabase/Postgres/`SQLSTATE` text, secrets, or internal ids as

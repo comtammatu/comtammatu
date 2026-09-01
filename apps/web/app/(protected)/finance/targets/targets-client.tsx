@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { FORM_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
-import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
 import { Item } from "@comtammatu/ui/components/item";
 import {
   Field,
@@ -469,25 +468,16 @@ export function RevenueTargetsClient({
               <RowActionsContextMenuItems items={rowActions(row)} />
             )}
             mobileCardRender={(row) => (
-              <InteractiveCard
-                minHeight="mobile"
-                padding="default"
-                role="button"
-                tabIndex={0}
-                className="cursor-pointer touch-manipulation justify-between"
-                onClick={() => openEditor(row.branchId)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    openEditor(row.branchId);
-                  }
-                }}
+              <Item
+                variant="outline"
+                className="min-h-16 flex-nowrap p-3 touch-manipulation cursor-pointer bg-card hover:bg-muted/30 transition-colors border-border justify-between"
+                render={<button type="button" onClick={() => openEditor(row.branchId)} />}
               >
-                <div className="flex min-w-0 flex-1 flex-col gap-1">
-                  <p className="truncate text-sm font-medium">
+                <div className="flex min-w-0 flex-1 flex-col gap-1 text-left">
+                  <p className="truncate text-sm font-semibold">
                     {row.branchName}
                   </p>
-                  <p className="font-mono text-sm tabular-nums">
+                  <p className="font-mono text-sm font-semibold tabular-nums text-foreground">
                     {row.targetAmount == null
                       ? copy.progress.noTarget
                       : formatVND(row.targetAmount)}
@@ -519,7 +509,7 @@ export function RevenueTargetsClient({
                     triggerSize={isTouchLayout ? "icon-touch" : "icon"}
                   />
                 </div>
-              </InteractiveCard>
+              </Item>
             )}
           />
         )}
@@ -537,6 +527,7 @@ export function RevenueTargetsClient({
               : copy.editor.editTitle(editingRow.branchName)
             : copy.editor.editTitle("")
         }
+        description={copy.editor.description}
         contentClassName="sm:max-w-3xl"
         footer={
           <Button
@@ -670,7 +661,7 @@ export function RevenueTargetsClient({
                     <Button
                       type="button"
                       variant="outline"
-                      size={isTouchLayout ? "touch" : "sm"}
+                      size={isTouchLayout ? "touch" : "default"}
                       onClick={() =>
                         removeRewardTier(editingRow.branchId, tier.id)
                       }

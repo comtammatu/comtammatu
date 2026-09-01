@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Field, FieldDescription, FieldLabel } from "@comtammatu/ui/components/field";
+import { Field, FieldLabel } from "@comtammatu/ui/components/field";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { formatVND } from "@comtammatu/shared/format";
@@ -127,7 +127,6 @@ export function CompanyWacDialog({
           onValueChange={setUnitCost}
           placeholder="0"
         />
-        <FieldDescription>{copy.setCompanyWacHint}</FieldDescription>
       </Field>
     </ReasonConfirmDialog>
   );

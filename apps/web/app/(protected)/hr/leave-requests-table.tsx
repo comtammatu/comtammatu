@@ -22,6 +22,7 @@ import {
   getVNMonthString,
 } from "@comtammatu/shared/time";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Select,
@@ -37,6 +38,7 @@ import {
   ItemActions,
   ItemContent,
   ItemDescription,
+  ItemHeader,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { messages } from "@lib/messages";
@@ -327,38 +329,45 @@ export function LeaveRequestsTable({
     actions?: React.ReactNode,
   ) {
     return (
-      <Item variant="outline" className={isPending ? "opacity-60" : ""}>
-        <ItemContent>
-          <ItemTitle size="heading" className="line-clamp-none">
+      <Item
+        variant="outline"
+        className={cn("w-full text-left", isPending && "opacity-60")}
+      >
+        <ItemHeader>
+          <ItemTitle className="font-semibold">
             {getEmployeeName(request)}
           </ItemTitle>
-          <ItemDescription className="line-clamp-none text-sm leading-6">
+          {request.status !== "pending" ? (
+            renderHistoryStatus(request)
+          ) : (
+            <span className="text-xs font-medium text-warning">
+              {copy.status.pending}
+            </span>
+          )}
+        </ItemHeader>
+        <ItemContent className="min-w-0 text-left">
+          <ItemDescription className="text-xs text-muted-foreground">
             {formatDateRange(request.start_date, request.end_date)} ·{" "}
             {copy.types[request.leave_type]}
           </ItemDescription>
           {request.reason ? (
-            <p className="mt-2 text-sm text-muted-foreground">
+            <p className="text-xs text-muted-foreground line-clamp-2">
               {request.reason}
             </p>
           ) : null}
-          {request.status !== "pending" ? (
-            <div className="mt-2">{renderHistoryStatus(request)}</div>
-          ) : null}
           {request.leave_type === "annual" ? (
-            <div className="mt-2 flex flex-col gap-1 text-xs text-muted-foreground">
-              <p>
+            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+              <span>
                 {copy.table.monthlyQuota}: {renderMonthlyBalance(request)}
-              </p>
-              <p>
+              </span>
+              <span>
                 {copy.table.annualQuota}: {renderAnnualBalance(request)}
-              </p>
+              </span>
             </div>
           ) : null}
         </ItemContent>
         {actions ? (
-          <ItemActions className="basis-full justify-end">
-            {actions}
-          </ItemActions>
+          <ItemActions className="basis-full justify-end">{actions}</ItemActions>
         ) : null}
       </Item>
     );
@@ -429,29 +438,23 @@ export function LeaveRequestsTable({
     );
   }
 
-  const pendingBody =
-    pendingRows.length === 0 && !isPending ? (
-      <AppEmptyState
-        title={copy.emptyPendingTitle}
-        description={copy.emptyPendingDescription}
-        icon={<IconCalendarX />}
-      />
-    ) : pendingRows.length === 0 ? (
-      <div className="flex items-center justify-center py-4">
-        <Spinner />
-      </div>
-    ) : (
-      <DataTable
-        columns={pendingColumns}
-        data={pendingRows}
-        getRowKey={(request) => request.id}
-        mobileBreakpoint={1024}
-        rowClassName={() => (isPending ? "opacity-60" : undefined)}
-        mobileCardRender={(request) =>
-          renderLeaveMobileCard(request, renderPendingActions(request, true))
-        }
-      />
-    );
+  const pendingBody = (
+    <DataTable
+      className="[&_table]:table-fixed"
+      columns={pendingColumns}
+      data={pendingRows}
+      getRowKey={(request) => request.id}
+      mobileBreakpoint={1024}
+      emptyTitle={copy.emptyPendingTitle}
+      emptyDescription={copy.emptyPendingDescription}
+      emptyMode="no-data"
+      emptyIcon={<IconCalendarX />}
+      rowClassName={() => (isPending ? "opacity-60" : undefined)}
+      mobileCardRender={(request) =>
+        renderLeaveMobileCard(request, renderPendingActions(request, true))
+      }
+    />
+  );
 
   return (
     <>
@@ -550,23 +553,20 @@ export function LeaveRequestsTable({
             </>
           }
         />
-        {historyRows.length === 0 ? (
-          <AppEmptyState
-            title={copy.emptyHistoryTitle}
-            description={copy.emptyHistoryDescription}
-            icon={<IconCalendarX />}
-          />
-        ) : (
-          <DataTable
-            columns={historyColumns}
-            data={historyRows}
-            pageSize={25}
-            getRowKey={(request) => request.id}
-            mobileBreakpoint={1024}
-            rowClassName={() => (isPending ? "opacity-60" : undefined)}
-            mobileCardRender={(request) => renderLeaveMobileCard(request)}
-          />
-        )}
+        <DataTable
+          className="[&_table]:table-fixed"
+          columns={historyColumns}
+          data={historyRows}
+          pageSize={25}
+          getRowKey={(request) => request.id}
+          mobileBreakpoint={1024}
+          emptyTitle={copy.emptyHistoryTitle}
+          emptyDescription={copy.emptyHistoryDescription}
+          emptyMode={historyStatus !== "all" ? "no-results" : "no-data"}
+          emptyIcon={<IconCalendarX />}
+          rowClassName={() => (isPending ? "opacity-60" : undefined)}
+          mobileCardRender={(request) => renderLeaveMobileCard(request)}
+        />
       </AppDialog>
 
       <FormDialog

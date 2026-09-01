@@ -418,7 +418,7 @@ export const settings = {
     accountName: "Chủ tài khoản",
     memoSectionTitle: "Nội dung chuyển khoản POS",
     memoSectionDescription:
-      "Tiền tố cố định; hệ thống tự thêm 12 ký tự đối soát.",
+      "Tiền tố cố định trong nội dung chuyển khoản VietQR.",
     codePrefix: "Tiền tố nội dung",
     codePrefixHelp: "Chỉ chữ, số và khoảng trắng.",
     codePreviewLabel: "Ví dụ nội dung",
@@ -447,7 +447,7 @@ export const settings = {
   pos: {
     registrationSectionTitle: "Đăng ký POS",
     registrationIntro:
-      "Cần ít nhất một đăng ký POS đang hoạt động để mở ca bán hàng. Không gắn với thiết bị vật lý.",
+      "Thiết lập trạm POS để mở ca bán hàng.",
     openPosUi: "Vào POS",
     addTerminal: "Thêm đăng ký POS",
     emptyForBranch: "Chưa có đăng ký POS nào",
@@ -1021,13 +1021,13 @@ export const settings = {
     voiceDefaultFishAudio: "Mặc định (Fish Audio)",
     customVoiceLabel: "Mã giọng đọc (tùy chọn)",
     customVoiceHelp:
-      "Để trống để sử dụng giọng đọc mặc định của nhà cung cấp.",
+      "Để trống để dùng giọng mặc định.",
     previewButton: "Nghe thử",
     previewPlaying: "Đang phát…",
     previewSampleText: "Phiếu mới bàn 5",
     inheritTenantLabel: "Kế thừa thiết lập của chuỗi",
     inheritTenantHelp:
-      "Sử dụng nhà cung cấp và giọng đọc được cấu hình chung cho toàn chuỗi.",
+      "Dùng cấu hình âm thanh chung của chuỗi.",
     customBranchLabel: "Tùy chỉnh riêng cho chi nhánh này",
     saveSettings: "Lưu cài đặt",
     audioSettingsLoadFailed: "Không tải được dữ liệu cài đặt âm thanh.",

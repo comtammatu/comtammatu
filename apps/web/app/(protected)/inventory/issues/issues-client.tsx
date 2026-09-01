@@ -556,6 +556,7 @@ export function IssuesClient({
     ),
     children: (
       <DataTable
+        className="[&_table]:table-fixed"
         columns={issueColumns}
         data={data}
         pageSize={50}
@@ -640,6 +641,7 @@ export function IssuesClient({
               }
             >
               <DataTable
+                className="[&_table]:table-fixed"
                 columns={recordedConsumptionColumns}
                 data={visibleRecordedConsumptions}
                 pageSize={50}

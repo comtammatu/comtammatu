@@ -245,6 +245,18 @@ const UI_ONLY_CHECKS = [
     pattern: /["'`]File (?:SePay|HĐ|có|trống|rỗng|vượt|dữ liệu|quá lớn)/g,
     replacement: '"Tệp …"',
   },
+  {
+    pattern: /\b(?:CSDL|cơ sở dữ liệu)\b/gi,
+    replacement: "không dùng thuật ngữ CSDL trong UI người dùng",
+  },
+  {
+    pattern: /\bbản ghi\b/gi,
+    replacement: "dùng “mục”, “dòng”, “chứng từ” hoặc bỏ",
+  },
+  {
+    pattern: /\bkhóa ngoại\b/gi,
+    replacement: "không dùng thuật ngữ kỹ thuật trong UI người dùng",
+  },
 ];
 
 function isUiCopyPath(relPath) {

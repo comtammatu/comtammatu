@@ -230,7 +230,7 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
     {
       key: "actions",
       header: "",
-      className: "w-12",
+      className: "w-12 text-right",
       render: (item) => renderActions(item),
     },
   ];
@@ -349,6 +349,7 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
         }
       >
         <DataTable
+          className="[&_table]:table-fixed"
           columns={columns}
           data={visibleItems}
           pageSize={25}
@@ -362,11 +363,11 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
           }
           rowClassName={() => (isPending ? "opacity-60" : undefined)}
           mobileCardRender={(item) => (
-            <Item variant="outline">
+            <Item variant="outline" className="w-full text-left">
               <ItemMedia variant="image">{renderImage(item)}</ItemMedia>
-              <ItemContent>
+              <ItemContent className="min-w-0 text-left">
                 <ItemTitle>{item.name}</ItemTitle>
-                <ItemDescription>
+                <ItemDescription className="text-xs text-muted-foreground">
                   {item.category_name} ·{" "}
                   {MENU_VI.vatInclusivePriceSummary(
                     formatVND(item.base_price),
@@ -374,7 +375,9 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
                   )}
                 </ItemDescription>
                 {item.description ? (
-                  <ItemDescription>{item.description}</ItemDescription>
+                  <ItemDescription className="text-xs text-muted-foreground line-clamp-2">
+                    {item.description}
+                  </ItemDescription>
                 ) : null}
               </ItemContent>
               <ItemFooter>

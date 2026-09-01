@@ -989,7 +989,7 @@ export function OrderDetailContent({ order }: { order: OrderRow }) {
                             )}
                             {isLegacySnapshot && (
                               <p className="text-warning">
-                                Bản ghi cũ; diễn biến trước đó có thể chưa được
+                                Dữ liệu cũ; diễn biến trước đó có thể chưa được
                                 lưu đầy đủ.
                               </p>
                             )}

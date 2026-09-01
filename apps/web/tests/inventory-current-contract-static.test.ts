@@ -38,13 +38,17 @@ test("D099 is the current external purchasing authority", () => {
   assert.match(current, /`HĐ NCC`/);
 });
 
-test("Inventory references expose one warehouse and physical rejection QC only", () => {
+test("Inventory references expose branch warehouse-kitchen split and physical rejection QC only", () => {
   const inventory = read("docs/ref/inventory.md");
   const sop = read("docs/ref/inventory-sop.md");
   const glossary = read("docs/ref/glossary.md");
   const notifications = read("docs/spec/toast-notification-system.md");
 
-  assert.match(inventory, /Mỗi site active có đúng một active `warehouse`/);
+  assert.match(
+    inventory,
+    /Chi nhánh chưa tách dùng một `warehouse`; chi nhánh đã tách có một `warehouse`[^\n]*một `kitchen`/,
+  );
+  assert.match(inventory, /Site trung tâm vẫn dùng đúng một `warehouse`/);
   assert.match(inventory, /received_quantity - rejected_quantity/);
   assert.match(sop, /lý do \+ ảnh/);
   assert.match(sop, /\*\*Tạo đơn\*\* theo nguyên liệu/);
@@ -53,7 +57,7 @@ test("Inventory references expose one warehouse and physical rejection QC only",
   assert.match(inventory, /HĐ NCC công nợ \+ VAT/);
 
   for (const source of [inventory, sop, glossary]) {
-    assert.doesNotMatch(source, /branch_kitchen|po_unit_price/);
+    assert.doesNotMatch(source, /po_unit_price/);
   }
   assert.doesNotMatch(inventory, /Price Variance|receiving_temperature/);
   assert.doesNotMatch(
@@ -112,7 +116,7 @@ test("generated database types match the final D091 catalog", () => {
   assert.doesNotMatch(generated, /\bcreate_grn_from_approved_po\b/);
 });
 
-test("app authority uses PO approval to GRN and omits retired QC permissions", () => {
+test("app authority keeps inter-site warehouse routing, split stock visibility, and omits retired QC permissions", () => {
   const permissions = read("packages/shared/src/auth/permissions.ts");
   const fixture = read("apps/web/tests/fixtures/supabase-e2e/tenant.sql");
   const roleMatrix = read("docs/spec/role-route-matrix.md");
@@ -158,7 +162,8 @@ test("app authority uses PO approval to GRN and omits retired QC permissions", (
   assert.doesNotMatch(purchaseOrderClient, /unit_price|unitPrice/);
   assert.doesNotMatch(inventoryMessages, /tạo phiếu nhập trước/);
   assert.doesNotMatch(transferModel, /branch_kitchen|["']kitchen["']/);
-  assert.doesNotMatch(stockData, /\bkitchen\b/);
+  assert.match(stockData, /location\.location_kind === "kitchen"/);
+  assert.match(stockData, /location\.default_consumption/);
   assert.doesNotMatch(inventoryMessages, /^\s*kitchen:\s*"Tiêu hao"/m);
   assert.doesNotMatch(
     settingsMessages,

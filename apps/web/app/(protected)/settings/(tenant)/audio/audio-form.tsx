@@ -77,7 +77,6 @@ export function TenantAudioForm({
     <div className="flex flex-col gap-6 max-w-2xl">
       <SettingsFormSection
         title={copy.modelLabel}
-        description={copy.customVoiceHelp}
       >
         {/* Model selection */}
         <Field>

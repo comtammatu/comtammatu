@@ -22,6 +22,10 @@ export function ExpenseListKpis({
   operatingCount: number;
   startupTotal: string;
   startupCount: number;
+  needsActionTotal?: string;
+  needsActionCount?: number;
+  isNeedsActionActive?: boolean;
+  onToggleNeedsAction?: () => void;
 }) {
   return (
     <KpiRow

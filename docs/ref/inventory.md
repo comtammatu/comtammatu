@@ -16,19 +16,19 @@ Contract vận hành Inventory hiện tại, không phải roadmap. Ý tưởng 
 
 ## Current Contract
 
-| Nội dung                        | Current contract                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Boundary                                                                                               |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Nguyên liệu `ingredients`       | Master: hàng mua (`raw_material`) phục vụ PO/GRN/NCC; thành phẩm (`finished_good`) chỉ SKU Bếp TT sản xuất có công thức                                                                                                                                                                                                                                                                                                | Không mở item master ERP nhiều lớp                                                                     |
-| Tồn kho `stock_levels`          | `current_quantity`, `avg_unit_cost`; valuation account giữ book value chính xác và chiếu WAC hiện tại sang stock level                                                                                                                                                                                                                                                                                                                                                                | Không chuyển sang FIFO engine                                                                          |
-| Biến động `stock_movements`     | Append-only quantity ledger; valuation events append-only giữ value adjustment và lineage qua receipt, transfer, production, consumption, waste và stocktake                                                                                                                                                                                                                                                                                                                          | Không mở lot-first ledger / batch accounting                                                           |
-| Mô hình site                    | `branches` là site table Production; kinds active: `branch`, `central_supply` (Kho Tổng), `central_kitchen` (Bếp Trung Tâm). Mỗi site active có đúng một active `warehouse`, đồng thời là default receive/issue/consumption; Branch không có stock location Bếp.                                                                                                                                                                                                                      | `production_storage` chỉ dùng tường minh cho production trung tâm; V1 chưa đổi sang `operational_site` |
-| Nhu cầu mua / PO / GRN / NCC    | Kho trung tâm **Tạo đơn** theo NL (NCC trên dòng; một phiếu có thể nhiều NCC, ADR 0040). YCM chỉ đọc lịch sử. Một PO → một GRN nháp. Chốt GRN theo nhóm NCC đang giao. PO không giá. Số giữ viết lại SL dòng PO khi giao dư (ADR 0040). **Đơn giá** net trên dòng GRN. HĐ NCC công nợ + VAT theo NCC của dòng đã `po_applied`. | Không promotion engine, duyệt nhiều cấp, OCR hoặc price-QC tại GRN |
-| QC nhận hàng                    | Kho nhập `received_quantity` và `rejected_quantity`; số đạt = thực nhận − từ chối. Có hàng từ chối thì bắt buộc lý do + ảnh. Trạng thái chỉ là giá trị hiển thị được suy ra.                                                                                                                                                                                                                                                                                                          | Không lưu status, tolerance, lot/HSD/nhiệt độ, price variance hoặc auto-approval                       |
-| Luân chuyển nội bộ              | Transfer có chủ đích chỉ đi giữa các warehouse hợp lệ. Tiêu hao, write-off và production không được mô phỏng bằng transfer cùng site.                                                                                                                                                                                                                                                                                                                                                 | Không có target Kho↔Bếp trong cùng branch                                                              |
-| HĐ NCC                          | `supplier_invoices` + đối soát GRN + thanh toán NCC là Finance handoff; thanh toán bắt buộc có file HĐ GTGT đính kèm (ADR 0017)                                                                                                                                                                                                                                                                                                                                                       | Không mở payment proposal engine trong Inventory                                                       |
-| Định mức món bán (`recipes`)    | Menu recipe theo món bán + RPC tiêu hao theo order                                                                                                                                                                                                                                                                                                                                                                                                                                    | Không mở multi-level BOM                                                                               |
-| Thành phẩm + production landing | `finished_good` chỉ SKU có công thức sản xuất; `production_recipes`, `production_runs`; branch dùng warehouse duy nhất, production trung tâm chỉ dùng `production_storage` khi workflow chọn tường minh                                                                                                                                                                                                               | Không thực hiện central-production cutover trong lát D091                                              |
-| Hao hụt / sự cố                 | Waste/write-off + approvals và issue log; supplier return không còn daily surface                                                                                                                                                                                                                                                                                                                                                                                                     | Không mở claim/insurance workflow                                                                      |
+| Nội dung                        | Current contract                                                                                                                                                                                                                                                                                                               | Boundary                                                                                               |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| Nguyên liệu `ingredients`       | Master: hàng mua (`raw_material`) phục vụ PO/GRN/NCC; thành phẩm (`finished_good`) chỉ SKU Bếp TT sản xuất có công thức                                                                                                                                                                                                        | Không mở item master ERP nhiều lớp                                                                     |
+| Tồn kho `stock_levels`          | `current_quantity`, `avg_unit_cost`; valuation account giữ book value chính xác và chiếu WAC hiện tại sang stock level                                                                                                                                                                                                         | Không chuyển sang FIFO engine                                                                          |
+| Biến động `stock_movements`     | Append-only quantity ledger; valuation events append-only giữ value adjustment và lineage qua receipt, transfer, production, consumption, waste và stocktake                                                                                                                                                                   | Không mở lot-first ledger / batch accounting                                                           |
+| Mô hình site                    | `branches` là site table Production; kinds active: `branch`, `central_supply` (Kho Tổng), `central_kitchen` (Bếp Trung Tâm). Chi nhánh chưa tách dùng một `warehouse`; chi nhánh đã tách có một `warehouse` mặc định nhận/cấp và một `kitchen` mặc định tiêu hao. Site trung tâm vẫn dùng đúng một `warehouse`.                     | `production_storage` chỉ dùng tường minh cho production trung tâm; không mở location hierarchy khác Kho/Bếp tại chi nhánh |
+| Nhu cầu mua / PO / GRN / NCC    | Kho trung tâm **Tạo đơn** theo NL (NCC trên dòng; một phiếu có thể nhiều NCC, ADR 0040). YCM chỉ đọc lịch sử. Một PO → một GRN nháp. Chốt GRN theo nhóm NCC đang giao. PO không giá. Số giữ viết lại SL dòng PO khi giao dư (ADR 0040). **Đơn giá** net trên dòng GRN. HĐ NCC công nợ + VAT theo NCC của dòng đã `po_applied`. | Không promotion engine, duyệt nhiều cấp, OCR hoặc price-QC tại GRN                                     |
+| QC nhận hàng                    | Kho nhập `received_quantity` và `rejected_quantity`; số đạt = thực nhận − từ chối. Có hàng từ chối thì bắt buộc lý do + ảnh. Trạng thái chỉ là giá trị hiển thị được suy ra.                                                                                                                                                   | Không lưu status, tolerance, lot/HSD/nhiệt độ, price variance hoặc auto-approval                       |
+| Luân chuyển nội bộ              | ĐC liên điểm đi giữa hai warehouse khác site; ĐC nội bộ đi đúng cặp Kho↔Bếp cùng chi nhánh và hoàn tất nguyên tử. Tiêu hao, write-off và production không được mô phỏng bằng transfer.                                                                                                                                         | Không có location hierarchy ngoài Kho/Bếp tại chi nhánh                                                |
+| HĐ NCC                          | `supplier_invoices` + đối soát GRN + thanh toán NCC là Finance handoff; thanh toán bắt buộc có file HĐ GTGT đính kèm (ADR 0017)                                                                                                                                                                                                | Không mở payment proposal engine trong Inventory                                                       |
+| Định mức món bán (`recipes`)    | Menu recipe theo món bán + RPC tiêu hao theo order                                                                                                                                                                                                                                                                             | Không mở multi-level BOM                                                                               |
+| Thành phẩm + production landing | `finished_good` chỉ SKU có công thức sản xuất; `production_recipes`, `production_runs`; chi nhánh đã tách dùng Kho để nhận/cấp và Bếp để tiêu hao, production trung tâm chỉ dùng `production_storage` khi workflow chọn tường minh                                                                                             | Không thực hiện central-production cutover trong lát D091                                              |
+| Hao hụt / sự cố                 | Waste/write-off + approvals và issue log; supplier return không còn daily surface                                                                                                                                                                                                                                              | Không mở claim/insurance workflow                                                                      |
 
 ## Scope Boundary
 
@@ -48,16 +48,17 @@ Những thứ dưới đây không thuộc Inventory current contract dù có xu
 
 **Nguyên tắc vận hành:**
 
-- **Chi nhánh (`branch_kind = 'branch'`):** tồn vận hành tại **Kho CN**
-  (`location_kind = 'warehouse'`). Không có location tồn kho Bếp. Chi nhánh xin
-  cấp hàng nội bộ bằng **Điều chuyển** (xin hàng / giao đi); không tạo Yêu cầu mua, PO hoặc GRN.
+- **Chi nhánh (`branch_kind = 'branch'`):** trước kích hoạt vẫn dùng một **Kho
+  CN**. Sau kích hoạt có **Kho** (`warehouse`) nhận/cấp và **Bếp** (`kitchen`)
+  tiêu hao. POS/KDS và phiếu đếm nhân viên dùng Bếp; kiểm kê Kho là việc riêng
+  của Quản lý/Owner. Chi nhánh không tạo Yêu cầu mua, PO hoặc GRN.
 - **Kho Tổng (`central_supply`) và Bếp Trung Tâm (`central_kitchen`):** cùng happy
   path **Tạo đơn** (không YCM) → PO theo NCC → GRN theo lần giao.
   Yêu cầu mua chỉ còn lịch sử. Mỗi site active có đúng một `warehouse`.
   `production_storage` chỉ hợp lệ khi production trung tâm chọn tường minh,
   không làm fallback cho site/branch thiếu warehouse.
 - **Tiêu hao chi nhánh:** nguyên liệu đã dùng để tạo doanh thu hoặc tiêu hao
-  vận hành đã ghi nhận tại Kho CN bằng `stock_movements.type = 'consumption'`,
+  vận hành ghi tại location snapshot của đơn (Bếp sau kích hoạt) bằng `stock_movements.type = 'consumption'`,
   `movement_subtype = 'sale_consumption'`.
 
 ```
@@ -66,35 +67,36 @@ Kho trung tâm → Tạo đơn → PO theo NCC → GRN theo lần giao → `*/wa
 Site ── [production_run hiện hành] → trừ nguyên liệu, cộng thành phẩm
   (branch: warehouse; trung tâm: warehouse hoặc production_storage đã chọn)
 
-Kho CN → [phiếu tiêu hao] → `stock_movements.consumption` / `sale_consumption`
-Kho CN → [phiếu hao hụt HH / waste] → `writeoff` (không vào giá vốn món)
+Kho CN → [ĐC nội bộ] → Bếp CN → `stock_movements.consumption` / `sale_consumption`
+Bếp/Kho CN → [phiếu hao hụt HH / waste] → `writeoff` (không vào giá vốn món)
 ```
 
 ### 1b. Luân chuyển nội bộ
 
-`stock_transfers` chỉ chuyển tồn giữa hai warehouse hợp lệ. Không có target
-stock location Bếp trong cùng branch. Phiếu tiêu hao (`sale_consumption`) tại
-warehouse mới là luồng giảm tồn gắn giá vốn món.
+`stock_transfers.transfer_scope = inter_site` chỉ chuyển giữa hai warehouse khác
+site và giữ lifecycle giao/nhận. `intra_site` chuyển đúng cặp Kho↔Bếp cùng chi
+nhánh, hoàn tất ngay và post hai đầu ledger trong một transaction. Phiếu đã hoàn
+tất không sửa/xóa/hủy; sai thì dùng **Đảo phiếu** toàn phần hoặc một phần.
 
 ### Các loại phiếu kho
 
-| Loại phiếu                    | Mô tả                                            | `stock_movements.type`                                |
-| ----------------------------- | ------------------------------------------------ | ----------------------------------------------------- |
-| **Nhập từ NCC (GRN)**         | Chỉ Kho Tổng / Bếp TT (không GRN tại chi nhánh)  | `grn_receipt`                                         |
-| **Xuất luân chuyển**          | Trừ kho gửi (`from_branch_id`) khi xác nhận xuất | `transfer_out`                                        |
-| **Nhận luân chuyển**          | Cộng kho nhận (`to_branch_id`) khi hoàn tất nhận | `transfer_in`                                         |
-| **Tiêu hao bán hàng thực tế** | POS recipe hoặc phiếu tiêu hao đã xác nhận       | `consumption` + `movement_subtype = sale_consumption` |
-| **Tiêu hao sản xuất**         | Trừ nguyên liệu tại site khi confirm production  | `production_consumption`                              |
-| **Nhập thành phẩm**           | Cộng tồn thành phẩm tại site                     | `production_output`                                   |
-| **Hao hụt / hủy hỏng**        | Phiếu HH qua luồng waste                         | `consumption` + `movement_subtype = writeoff`         |
-| **Điều chỉnh / kiểm kê**      | Thủ công / sau đếm                               | `adjustment` / `count_adjustment`                     |
+| Loại phiếu                    | Mô tả                                                   | `stock_movements.type`                                |
+| ----------------------------- | ------------------------------------------------------- | ----------------------------------------------------- |
+| **Nhập từ NCC (GRN)**         | Chỉ Kho Tổng / Bếp TT (không GRN tại chi nhánh)         | `grn_receipt`                                         |
+| **Xuất luân chuyển**          | Liên điểm: trừ khi ship; nội bộ: trừ ngay khi xác nhận  | `transfer_out`                                        |
+| **Nhận luân chuyển**          | Liên điểm: cộng khi nhận; nội bộ: cộng cùng transaction | `transfer_in`                                         |
+| **Tiêu hao bán hàng thực tế** | POS recipe hoặc phiếu tiêu hao đã xác nhận              | `consumption` + `movement_subtype = sale_consumption` |
+| **Tiêu hao sản xuất**         | Trừ nguyên liệu tại site khi confirm production         | `production_consumption`                              |
+| **Nhập thành phẩm**           | Cộng tồn thành phẩm tại site                            | `production_output`                                   |
+| **Hao hụt / hủy hỏng**        | Phiếu HH qua luồng waste                                | `consumption` + `movement_subtype = writeoff`         |
+| **Điều chỉnh / kiểm kê**      | Thủ công / sau đếm                                      | `adjustment` / `count_adjustment`                     |
 
 **Contract chứng từ thủ công (không còn `other`):**
 
-| Việc vận hành | Surface tạo | `stock_issues.issue_type` | Finance |
-| --- | --- | --- | --- |
-| Tiêu hao | `/stock/consumption` (Branch) hoặc `/inventory/consumption` (Owner; tab Đã ghi nhận / Phiếu tiêu hao) | `consumption` | Tiêu hao vận hành — không vào Giá vốn món |
-| Hao hụt | `/stock/waste` (Branch) hoặc `/inventory/waste/new` (Owner); Owner lịch sử trên tab Hao hụt của `/inventory/consumption?view=waste` (`/inventory/issues` redirect vào tab này) | `writeoff` | Waste — không vào giá vốn món |
+| Việc vận hành | Surface tạo                                                                                                                                                                    | `stock_issues.issue_type` | Finance                                   |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------- | ----------------------------------------- |
+| Tiêu hao      | `/stock/consumption` (Branch) hoặc `/inventory/consumption` (Owner; tab Đã ghi nhận / Phiếu tiêu hao)                                                                          | `consumption`             | Tiêu hao vận hành — không vào Giá vốn món |
+| Hao hụt       | `/stock/waste` (Branch) hoặc `/inventory/waste/new` (Owner); Owner lịch sử trên tab Hao hụt của `/inventory/consumption?view=waste` (`/inventory/issues` redirect vào tab này) | `writeoff`                | Waste — không vào giá vốn món             |
 
 Không có loại `other` / “Xuất khác”. UI: **phiếu tiêu hao** hoặc **hao hụt**.
 Giá vốn lý thuyết `/finance/food-cost` = `fetchFoodCost` (định mức catalog × SL). Lãi gộp / Giá vốn món = chỉ POS `sale_consumption` tại `branch_kind=branch` (có `order_id`) khi cutover `active`. Không gồm phiếu tay, Kho Tổng, Bếp TT, writeoff/waste. Gửi hàng giữa site = điều chuyển.
@@ -105,18 +107,18 @@ Format `{PREFIX}-{DDMMYYYY}-{####}` (`Asia/Ho_Chi_Minh`, pad 4), atomic qua
 `next_inventory_doc_number` / `tenant_inventory_doc_counters` (tenant + loại +
 năm; không reset theo ngày). PO dùng `next_po_display_id`. Phiếu cũ giữ mã lịch sử.
 
-| Loại              | Prefix | Cột                                                         |
-| ----------------- | ------ | ----------------------------------------------------------- |
-| Đơn mua hàng NCC  | `PO`   | `purchase_orders.display_id`                                |
-| Phiếu nhập        | `GRN`  | `goods_received_notes.grn_number`                           |
-| Điều chuyển       | `DC`   | `stock_transfers.transfer_number`                           |
-| Xuất kho thủ công | `PXK`  | `stock_issues.issue_number`                                 |
-| Hao hụt           | `HH`   | `stock_issues.issue_number`                                 |
-| Lệnh sản xuất     | `LSX`  | `production_runs.production_number`                         |
-| Kiểm kê           | `KK`   | `stocktake_sessions.session_number`                         |
-| Phiếu đếm         | `PD`   | `inventory_count_slips.slip_number`                         |
-| Yêu cầu hàng / mua | `YC` / `YCM` | lịch sử `stock_requests` / `purchase_requests` |
-| Tiêu hao HRM      | `THB`  | `stock_issues.issue_number` = `THB-{report_id}` (không đổi) |
+| Loại               | Prefix       | Cột                                                         |
+| ------------------ | ------------ | ----------------------------------------------------------- |
+| Đơn mua hàng NCC   | `PO`         | `purchase_orders.display_id`                                |
+| Phiếu nhập         | `GRN`        | `goods_received_notes.grn_number`                           |
+| Điều chuyển        | `DC`         | `stock_transfers.transfer_number`                           |
+| Xuất kho thủ công  | `PXK`        | `stock_issues.issue_number`                                 |
+| Hao hụt            | `HH`         | `stock_issues.issue_number`                                 |
+| Lệnh sản xuất      | `LSX`        | `production_runs.production_number`                         |
+| Kiểm kê            | `KK`         | `stocktake_sessions.session_number`                         |
+| Phiếu đếm          | `PD`         | `inventory_count_slips.slip_number`                         |
+| Yêu cầu hàng / mua | `YC` / `YCM` | lịch sử `stock_requests` / `purchase_requests`              |
+| Tiêu hao HRM       | `THB`        | `stock_issues.issue_number` = `THB-{report_id}` (không đổi) |
 
 Prefix là identifier; UI dùng nhãn Việt. `YC`/`YCM` freeze ghi trước DROP; không chuyển phiếu đã thành PO/DC (trùng tồn).
 
@@ -198,16 +200,16 @@ Master theo tenant. `unit_cost` trên `ingredients` không phải nguồn giá k
 > `/inventory/menu-recipes`). Không gọi `Recipe` trần trong source.
 > `ProductionRecipe`/“Công thức sản xuất” = BOM thành phẩm
 > (`production_recipes`, tab Công thức `/inventory/production`).
-Định mức theo `menu_item`; xuất kho khi đơn `completed`. `entry_unit_id` →
-Đơn vị chuẩn qua `to_base_factor` / `inv_to_base_for_tenant` (không Yield).
-Ba đường số: POS `post_pos_sale_consumption_if_ready` ghi sổ theo WAC công ty
-(thang ADR 0026/0040: company WAC → last-known movement → 0);
-catalog + Finance **Định mức/phần** cùng `company_wac` (không hai giá Kho gốc / CN).
-`Giá vốn món` = POS `sale_consumption` tại CN khi cutover `active`. Không bịa
-gram. Gửi hàng Bếp/Kho Tổng → CN = điều chuyển, không phiếu tiêu hao.
-Món Nước trừ 1 `Ly nhựa trơn PP 95 - 650ml` / phần (Cam Ép, Nước Sâm, Rau Má,
-Trà Đá, Trà Tắc, Coca, Fanta, Sprite). Nước suối / khăn lạnh / dụng cụ mang về
-không trừ ly.
+> Định mức theo `menu_item`; xuất kho khi đơn `completed`. `entry_unit_id` →
+> Đơn vị chuẩn qua `to_base_factor` / `inv_to_base_for_tenant` (không Yield).
+> Ba đường số: POS `post_pos_sale_consumption_if_ready` ghi sổ theo WAC công ty
+> (thang ADR 0026/0040: company WAC → last-known movement → 0);
+> catalog + Finance **Định mức/phần** cùng `company_wac` (không hai giá Kho gốc / CN).
+> `Giá vốn món` = POS `sale_consumption` tại CN khi cutover `active`. Không bịa
+> gram. Gửi hàng Bếp/Kho Tổng → CN = điều chuyển, không phiếu tiêu hao.
+> Món Nước trừ 1 `Ly nhựa trơn PP 95 - 650ml` / phần (Cam Ép, Nước Sâm, Rau Má,
+> Trà Đá, Trà Tắc, Coca, Fanta, Sprite). Nước suối / khăn lạnh / dụng cụ mang về
+> không trừ ly.
 
 ### 3b. Công thức sản xuất & mẻ sản xuất (`production_runs`)
 
@@ -273,6 +275,7 @@ gửi. HĐ phân bổ theo SL `po_applied` của đúng NCC; không vượt. Kh�
 lịch sử GRN. `vat_amount` chỉ AP.
 
 ### 5.2 QC vật lý trên GRN
+
 **`branch_id` trên GRN là inventory site nhận hàng.** GRN nhận vào active
 warehouse duy nhất của site.
 
@@ -307,10 +310,10 @@ Finance handoff — Inventory đóng ngày được khi HĐ chưa về. Xác nh�
 công nợ + VAT; không đổi số lượng hay giá trị tồn / giá vốn món (ADR 0040).
 Payment không đổi giá trị tồn/food cost.
 
-| Bước     | Kiểm tra       | Boundary             |
-| -------- | -------------- | -------------------- |
+| Bước     | Kiểm tra       | Boundary                                    |
+| -------- | -------------- | ------------------------------------------- |
 | GRN ↔ HĐ | SL HĐ / SL GRN | HĐ không > `po_applied` (= số giữ sau chốt) |
-| GRN ↔ HĐ | Đơn giá        | Lệch cần review rõ   |
+| GRN ↔ HĐ | Đơn giá        | Lệch cần review rõ                          |
 
 `matching_status`: `pending` | `matched` | `discrepancy` | `approved`.
 
@@ -326,7 +329,7 @@ nhiều cấp, AP liên pháp nhân.
 
 Routes: `/inventory/stocktake`, `/inventory/stocktake/[id]`. Pad nhân viên `/me` là **Đếm tồn** (phiếu được giao, không phiên Kiểm kê thứ hai): chọn đơn vị đếm (mặc định Đơn vị chuẩn); duyệt tồn sổ / thực đếm / lệch cùng đơn vị đó; sổ theo Đơn vị chuẩn.
 
-1. **Tạo:** kho warehouse của site. UI không chọn daily/weekly/monthly/quarterly/spot; phiên mới đếm số đang có, không hiện sổ (`spot`).
+1. **Tạo:** chọn location tường minh. Nhân viên đếm hằng ngày tại Bếp; Quản lý/Owner kiểm kê Kho hoặc Bếp riêng. UI không chọn daily/weekly/monthly/quarterly/spot; phiên mới đếm số đang có, không hiện sổ (`spot`).
 2. **Đếm** (`get_stocktake_lines_blind`): màn đếm là viewport đầu. Số sổ ẩn đến khi đếm đủ dòng. Bản nháp tự lưu theo đúng vòng đếm và được khôi phục khi mở lại; bản nháp không thay thế kết quả đã gửi.
 3. **Chốt kết quả:** `complete_stocktake` lấy số thực đếm làm căn cứ, tính chênh lệch và ghi `count_adjustment`; không yêu cầu người kiểm kê giải thích nguyên nhân chênh lệch. `reason_code` và `variance_reason` cũ được giữ làm dữ liệu lịch sử tùy chọn, không phải điều kiện hoàn tất phiếu. Ownership thiếu hụt điều chuyển vẫn là `movement_subtype` (`transfer_source_variance` / `transfer_transit_loss`) — không nằm trong catalog nguyên nhân.
 
@@ -338,9 +341,10 @@ phạm vi; owner mọi CN.
 
 ## 9. Cảnh báo tồn kho
 
-So sánh `current_quantity` với `ingredients.min_stock_level` (CN active). UI chỉ
-**Tồn tối thiểu** (`reorder_point`/`max_stock_level` = cột cũ, ghi `NULL`).
-Strip `/inventory/stock`; `suggested_order_qty = max(0, min_stock_level - current_quantity)`.
+So sánh `current_quantity` với ngưỡng theo location. `min_stock_level` là mức
+cảnh báo, `target_stock_level` là mức cấp lên. Gợi ý cấp Bếp = nhỏ hơn giữa
+`target-current` và tồn Kho khả dụng. Notification tồn thấp có `location_id`,
+dedup theo chi nhánh + location + nguyên liệu và mở đúng tab Kho/Bếp.
 Không sổ lô/FIFO/FEFO/HSD/route `/inventory/expiry`. GRN: thực nhận/từ chối và
 **Đơn giá** ghi sổ (chưa VAT).
 
@@ -375,15 +379,15 @@ Tóm tắt vai (D093):
 
 Permission keys (D093):
 
-| Key | Ai |
-| --- | --- |
-| `inventory:request_create/submit/cancel` | owner, branch_manager |
-| `inventory:request_fulfill` | owner, central_supply_ops, central_kitchen_lead |
+| Key                                           | Ai                                                     |
+| --------------------------------------------- | ------------------------------------------------------ |
+| `inventory:request_create/submit/cancel`      | owner, branch_manager                                  |
+| `inventory:request_fulfill`                   | owner, central_supply_ops, central_kitchen_lead        |
 | `inventory:transfer_create` / `transfer_ship` | owner, central ops; BM own-site create + outbound ship |
-| `procurement:grn_*` | central sites (+ owner); không BM |
-| `procurement:read` / `supplier_manage` | owner, accountant (read), central ops; không BM |
-| `supplier_return:*` | không BM; daily UI retired |
-| `inventory:production_*` | central_kitchen (+ owner); không BM |
+| `procurement:grn_*`                           | central sites (+ owner); không BM                      |
+| `procurement:read` / `supplier_manage`        | owner, accountant (read), central ops; không BM        |
+| `supplier_return:*`                           | không BM; daily UI retired                             |
+| `inventory:production_*`                      | central_kitchen (+ owner); không BM                    |
 
 ---
 

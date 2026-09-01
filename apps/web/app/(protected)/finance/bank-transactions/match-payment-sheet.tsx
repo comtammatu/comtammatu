@@ -8,7 +8,6 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Field,
-  FieldDescription,
   FieldLabel,
 } from "@comtammatu/ui/components/field";
 import {
@@ -300,9 +299,6 @@ export function MatchPaymentSheet({
                     className="font-mono"
                   />
                 </InputGroup>
-                <FieldDescription id="bank-match-order-help">
-                  {table.linkInputHelp}
-                </FieldDescription>
               </Field>
               <Button
                 type="submit"

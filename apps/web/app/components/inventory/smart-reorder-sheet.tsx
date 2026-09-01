@@ -189,6 +189,13 @@ export function SmartReorderSheet({
 
   const getChannelBadge = (channel: SupplyChannel) => {
     switch (channel) {
+      case "intra_site_transfer":
+        return (
+          <Badge variant="success" className="gap-1">
+            <IconChefHat className="size-3" />
+            <span>{INVENTORY_VI.smartReorderChannelIntraSite}</span>
+          </Badge>
+        );
       case "internal_transfer_kitchen":
         return (
           <Badge variant="info" className="gap-1">
@@ -350,6 +357,9 @@ export function SmartReorderSheet({
                   </SelectItem>
                   <SelectItem value="supplier_po" size={menuItemSize}>
                     {INVENTORY_VI.smartReorderChannelSupplier}
+                  </SelectItem>
+                  <SelectItem value="intra_site_transfer" size={menuItemSize}>
+                    {INVENTORY_VI.smartReorderChannelIntraSite}
                   </SelectItem>
                   <SelectItem
                     value="internal_transfer_kitchen"

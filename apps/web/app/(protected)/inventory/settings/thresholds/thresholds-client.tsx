@@ -200,7 +200,7 @@ export function ThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
           <span className="text-xs text-muted-foreground">{copy.hint}</span>
           <Button
             type="button"
-            size="sm"
+            size={isTouchLayout ? "touch" : "default"}
             variant="outline"
             disabled={selected.size === 0}
             onClick={() => setBulkOpen(true)}
@@ -211,6 +211,7 @@ export function ThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
       }
     >
       <DataTable
+        className="[&_table]:table-fixed"
         columns={columns}
         data={editable}
         getRowKey={(row) => row.id}

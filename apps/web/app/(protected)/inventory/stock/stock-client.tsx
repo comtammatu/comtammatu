@@ -51,9 +51,11 @@ import {
   getStockOnHandCategories,
   hasStockOnHandFilters,
   isPristineStockOnHand,
+  projectStockIngredientsForLocation,
   type StockActionPermissions,
   type StockFilter,
   type StockIngredient,
+  type StockLocationOption,
   type StockWorkSummary,
 } from "@lib/inventory/stock-on-hand-model";
 import {
@@ -99,7 +101,12 @@ import type {
   UnitOption,
 } from "@lib/inventory/types";
 
-import { ACTIONS_VI, FORM_VI, INVENTORY_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
+import {
+  ACTIONS_VI,
+  FORM_VI,
+  INVENTORY_VI,
+  PRODUCT_VI,
+} from "@comtammatu/shared/messages";
 import { BranchStockThresholdsDialog } from "@/components/inventory/branch-stock-thresholds-dialog";
 import { SmartReorderSheet } from "@/components/inventory/smart-reorder-sheet";
 import { StockOnHandPrintDialog } from "@/components/inventory/stock-on-hand-print-dialog";
@@ -156,18 +163,12 @@ const IngredientDialog = dynamic(
 );
 
 const StockDetailDialog = dynamic(
-  () =>
-    import("./stock-detail-dialog").then(
-      (mod) => mod.StockDetailDialog,
-    ),
+  () => import("./stock-detail-dialog").then((mod) => mod.StockDetailDialog),
   { ssr: false },
 );
 
 const CompanyWacDialog = dynamic(
-  () =>
-    import("./company-wac-dialog").then(
-      (mod) => mod.CompanyWacDialog,
-    ),
+  () => import("./company-wac-dialog").then((mod) => mod.CompanyWacDialog),
   { ssr: false },
 );
 
@@ -290,7 +291,9 @@ function QuickActionButton({
 }
 
 export function StockClient({
-  ingredients,
+  ingredients: allIngredients,
+  locations,
+  defaultLocationId,
   branchId,
   branchValue,
   coreDataLoadFailed,
@@ -303,6 +306,8 @@ export function StockClient({
   reorderSuggestions = [],
 }: {
   ingredients: StockIngredient[];
+  locations: StockLocationOption[];
+  defaultLocationId: number | null;
   branchId: number;
   branchValue: number | null;
   coreDataLoadFailed: boolean;
@@ -322,6 +327,17 @@ export function StockClient({
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [stockFilter, setStockFilter] = useState<StockFilter>("all");
+  const [selectedLocation, setSelectedLocation] = useState(
+    defaultLocationId == null ? "total" : String(defaultLocationId),
+  );
+  const ingredients = useMemo(
+    () =>
+      projectStockIngredientsForLocation(
+        allIngredients,
+        selectedLocation === "total" ? null : Number(selectedLocation),
+      ),
+    [allIngredients, selectedLocation],
+  );
   const [adjustTarget, setAdjustTarget] = useState<StockIngredient | null>(
     null,
   );
@@ -335,9 +351,8 @@ export function StockClient({
   const [viewingIngredientId, setViewingIngredientId] = useState<number | null>(
     initialIngredientId,
   );
-  const [detailData, setDetailData] = useState<StockIngredientDetailData | null>(
-    initialDetailData,
-  );
+  const [detailData, setDetailData] =
+    useState<StockIngredientDetailData | null>(initialDetailData);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const viewingIngredient =
     viewingIngredientId != null
@@ -726,6 +741,33 @@ export function StockClient({
 
   const filterControls = (
     <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+      {locations.length > 1 ? (
+        <Select value={selectedLocation} onValueChange={setSelectedLocation}>
+          <SelectTrigger
+            size={controlSize}
+            className={
+              controlSize === "touch"
+                ? "w-full"
+                : inventoryListFilterSelectClassName
+            }
+            aria-label={stockCopy.filters.locationFilterLabel}
+          >
+            <SelectValue placeholder={stockCopy.filters.locationFilterLabel} />
+          </SelectTrigger>
+          <SelectContent>
+            {locations.map((location) => (
+              <SelectItem key={location.id} value={String(location.id)}>
+                {location.kind === "kitchen"
+                  ? stockCopy.filters.locationKitchen
+                  : location.name}
+              </SelectItem>
+            ))}
+            <SelectItem value="total">
+              {stockCopy.filters.locationTotal}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      ) : null}
       <Select value={activeCategory} onValueChange={setActiveCategory}>
         <SelectTrigger
           size={controlSize}
@@ -1012,9 +1054,7 @@ export function StockClient({
     <Item
       variant="outline"
       aria-pressed={stockFilter === "low"}
-      onClick={() =>
-        setStockFilter((cur) => (cur === "low" ? "all" : "low"))
-      }
+      onClick={() => setStockFilter((cur) => (cur === "low" ? "all" : "low"))}
       className={cn(
         "flex flex-col justify-between p-3 text-left cursor-pointer",
         stockFilter === "low"
@@ -1047,11 +1087,18 @@ export function StockClient({
               branchId={branchId}
               items={reorderSuggestions}
               trigger={
-                <Button variant="default" size="field" className="w-full gap-1.5 font-medium shadow-xs sm:w-auto">
+                <Button
+                  variant="default"
+                  size="field"
+                  className="w-full gap-1.5 font-medium shadow-xs sm:w-auto"
+                >
                   <IconSparkles className="size-4" />
                   <span>{INVENTORY_VI.smartReorderOpenBtn}</span>
                   {shortageCount > 0 ? (
-                    <Badge variant="secondary" className="ml-1 h-4 px-1.5 font-mono text-xs font-semibold bg-background text-foreground">
+                    <Badge
+                      variant="secondary"
+                      className="ml-1 h-4 px-1.5 font-mono text-xs font-semibold bg-background text-foreground"
+                    >
                       {shortageCount}
                     </Badge>
                   ) : null}
@@ -1099,7 +1146,8 @@ export function StockClient({
               </span>
               {totalValue != null ? (
                 <span className="text-xs text-muted-foreground font-mono tabular-nums truncate">
-                  {stockCopy.metrics.wholeSystem}: {formatVND(Math.round(totalValue))}
+                  {stockCopy.metrics.wholeSystem}:{" "}
+                  {formatVND(Math.round(totalValue))}
                 </span>
               ) : null}
             </div>
@@ -1190,11 +1238,7 @@ export function StockClient({
           <AppToolbar
             variant="inline"
             search={searchControl}
-            filters={
-              <>
-                {filterControls}
-              </>
-            }
+            filters={<>{filterControls}</>}
             actions={
               isFirstLoadEmpty ? undefined : (
                 <Badge variant="outline">
@@ -1314,7 +1358,8 @@ export function StockClient({
         isTouchLayout={controlSize === "touch"}
         reorderHref={
           viewingIngredient != null &&
-          (viewingIngredient.status === "low" || viewingIngredient.status === "out")
+          (viewingIngredient.status === "low" ||
+            viewingIngredient.status === "out")
             ? permissions.canManagePurchaseRequest
               ? branchHref(
                   branchId,
@@ -1330,7 +1375,8 @@ export function StockClient({
         }
         reorderLabel={
           viewingIngredient != null &&
-          (viewingIngredient.status === "low" || viewingIngredient.status === "out")
+          (viewingIngredient.status === "low" ||
+            viewingIngredient.status === "out")
             ? permissions.canManagePurchaseRequest
               ? "Đặt mua hàng"
               : permissions.canCreateStockRequest

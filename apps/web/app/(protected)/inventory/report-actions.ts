@@ -17,6 +17,7 @@ const stockMovementReportSchema = z.object({
   startDate: z.string().min(1, { error: "Ngày bắt đầu không hợp lệ" }),
   endDate: z.string().min(1, { error: "Ngày kết thúc không hợp lệ" }),
   branchId: z.coerce.number().int().positive().optional(),
+  locationId: z.coerce.number().int().positive().optional(),
 });
 
 /* ─── Types ─── */
@@ -29,6 +30,8 @@ export interface MovementReportRow {
   grn_receipt: number;
   transfer_in: number;
   transfer_out: number;
+  intra_transfer_in: number;
+  intra_transfer_out: number;
   consumption: number;
   production_consumption: number;
   production_output: number;
@@ -76,7 +79,7 @@ export async function fetchStockMovementReport(
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
-  const { startDate, endDate, branchId } = parsed.data;
+  const { startDate, endDate, branchId, locationId } = parsed.data;
 
   // branch_manager is clamped to their own branch regardless of input.
   const effectiveBranchId =
@@ -84,22 +87,30 @@ export async function fetchStockMovementReport(
       ? claims.branch_id
       : branchId;
 
-  const { data, error } = await supabase.rpc("get_stock_movement_report", {
-    p_start_date: startDate,
-    p_end_date: endDate,
-    p_branch_id: effectiveBranchId ?? undefined,
-  });
+  const { data, error } = await supabase.rpc(
+    "get_stock_movement_report" as never,
+    {
+      p_start_date: startDate,
+      p_end_date: endDate,
+      p_branch_id: effectiveBranchId ?? null,
+      p_location_id: locationId ?? null,
+    } as never,
+  );
 
   if (error) return { success: false, error: "Không tải được biến động kho." };
 
-  const rows: MovementReportRow[] = (data ?? []).map((row) => ({
-    ingredient_id: row.ingredient_id,
-    ingredient_name: row.ingredient_name,
-    unit: row.unit,
+  const rows: MovementReportRow[] = (
+    (data ?? []) as unknown as Array<Record<string, unknown>>
+  ).map((row) => ({
+    ingredient_id: Number(row.ingredient_id),
+    ingredient_name: String(row.ingredient_name ?? ""),
+    unit: String(row.unit ?? ""),
     opening: Number(row.opening),
     grn_receipt: Number(row.grn_receipt),
     transfer_in: Number(row.transfer_in),
     transfer_out: Number(row.transfer_out),
+    intra_transfer_in: Number(row.intra_transfer_in),
+    intra_transfer_out: Number(row.intra_transfer_out),
     consumption: Number(row.consumption),
     production_consumption: Number(row.production_consumption),
     production_output: Number(row.production_output),

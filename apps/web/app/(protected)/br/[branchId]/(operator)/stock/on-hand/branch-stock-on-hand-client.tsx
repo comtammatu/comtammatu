@@ -36,11 +36,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-} from "@comtammatu/ui/components/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { AppBackLink, AppEmptyState, AppSheet } from "@/components/surface";
 import { MultiSelectCombobox } from "@/components/form/multi-select-combobox";
 import { StockOnHandPrintDialog } from "@/components/inventory/stock-on-hand-print-dialog";
@@ -60,9 +56,11 @@ import {
   isPristineStockOnHand,
   isStockReorderRisk,
   normalizeStockOnHandCategories,
+  projectStockIngredientsForLocation,
   type StockActionPermissions,
   type StockFilter,
   type StockIngredient,
+  type StockLocationOption,
 } from "@lib/inventory/stock-on-hand-model";
 import { messages } from "@lib/messages";
 import { PURCHASE_ORDER_CREATE_HREF } from "@lib/inventory/purchase-order-paths";
@@ -235,6 +233,8 @@ interface BranchStockOnHandClientProps {
   permissions: StockActionPermissions;
   coreDataLoadFailed: boolean;
   ingredients: StockIngredient[];
+  locations: StockLocationOption[];
+  defaultLocationId: number | null;
   underThresholdCount: number;
   secondaryJobs: StockSecondaryJob[];
 }
@@ -244,7 +244,9 @@ export function BranchStockOnHandClient({
   branchKind,
   permissions,
   coreDataLoadFailed,
-  ingredients,
+  ingredients: allIngredients,
+  locations,
+  defaultLocationId,
   underThresholdCount,
   secondaryJobs,
 }: BranchStockOnHandClientProps) {
@@ -256,6 +258,17 @@ export function BranchStockOnHandClient({
   );
   const [filterOpen, setFilterOpen] = useState(false);
   const [moreJobsOpen, setMoreJobsOpen] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState(
+    defaultLocationId == null ? "total" : String(defaultLocationId),
+  );
+  const ingredients = useMemo(
+    () =>
+      projectStockIngredientsForLocation(
+        allIngredients,
+        selectedLocation === "total" ? null : Number(selectedLocation),
+      ),
+    [allIngredients, selectedLocation],
+  );
   const [draftCategories, setDraftCategories] = useState<string[]>([]);
 
   const { categories: categoryOptions, hasUncategorized } = useMemo(
@@ -326,6 +339,26 @@ export function BranchStockOnHandClient({
       description={stockCopy.operatorDescription}
       back={<AppBackLink href={`/br/${branchId}/stock`} />}
     >
+      {locations.length > 1 ? (
+        <Tabs value={selectedLocation} onValueChange={setSelectedLocation}>
+          <TabsList className="flex w-full">
+            {locations.map((location) => (
+              <TabsTrigger
+                key={location.id}
+                value={String(location.id)}
+                className="flex-1"
+              >
+                {location.kind === "kitchen"
+                  ? stockCopy.filters.locationKitchen
+                  : location.name}
+              </TabsTrigger>
+            ))}
+            <TabsTrigger value="total" className="flex-1">
+              {stockCopy.filters.locationTotal}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      ) : null}
       {!coreDataLoadFailed && underThresholdCount > 0 ? (
         <NoteCallout tone="warning" className="min-h-12 items-center">
           <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
@@ -472,12 +505,8 @@ export function BranchStockOnHandClient({
                   <TabsTrigger value="in_stock">
                     {stockCopy.filters.inStock}
                   </TabsTrigger>
-                  <TabsTrigger value="out">
-                    {stockCopy.filters.out}
-                  </TabsTrigger>
-                  <TabsTrigger value="all">
-                    {stockCopy.filters.all}
-                  </TabsTrigger>
+                  <TabsTrigger value="out">{stockCopy.filters.out}</TabsTrigger>
+                  <TabsTrigger value="all">{stockCopy.filters.all}</TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>

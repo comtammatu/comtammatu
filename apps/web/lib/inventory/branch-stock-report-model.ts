@@ -32,6 +32,8 @@ export type BranchStockMovementSource = {
   grn_receipt: number;
   transfer_in: number;
   transfer_out: number;
+  intra_transfer_in: number;
+  intra_transfer_out: number;
   consumption: number;
   production_consumption: number;
   production_output: number;
@@ -47,6 +49,8 @@ export type BranchStockMovement = {
   grnReceipt: number;
   transferIn: number;
   transferOut: number;
+  intraTransferIn: number;
+  intraTransferOut: number;
   consumption: number;
   productionConsumption: number;
   productionOutput: number;
@@ -97,6 +101,8 @@ export function toBranchStockMovement(
     grnReceipt: toFiniteNumber(row.grn_receipt),
     transferIn: toFiniteNumber(row.transfer_in),
     transferOut: toFiniteNumber(row.transfer_out),
+    intraTransferIn: toFiniteNumber(row.intra_transfer_in),
+    intraTransferOut: toFiniteNumber(row.intra_transfer_out),
     consumption: toFiniteNumber(row.consumption),
     productionConsumption: toFiniteNumber(row.production_consumption),
     productionOutput: toFiniteNumber(row.production_output),
@@ -130,6 +136,8 @@ export function getBranchStockMovementActivityScore(
     movement.grnReceipt,
     movement.transferIn,
     movement.transferOut,
+    movement.intraTransferIn,
+    movement.intraTransferOut,
     movement.consumption,
     movement.productionConsumption,
     movement.productionOutput,

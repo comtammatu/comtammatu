@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Field,
-  FieldDescription,
   FieldGroup,
   FieldLabel,
 } from "@comtammatu/ui/components/field";
@@ -134,9 +133,6 @@ export function EditOrderNoteDialog({
               ariaLabel={messages.pos.orderDetail.orderNoteDialogTitle}
             />
           </div>
-          <FieldDescription className="pt-2">
-            {messages.pos.orderDetail.orderNoteSyncHint}
-          </FieldDescription>
         </Field>
       </FieldGroup>
     </StationSheet>

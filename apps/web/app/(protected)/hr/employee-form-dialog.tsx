@@ -410,7 +410,6 @@ export function EmployeeFormDialog({
                     value: option.value,
                     label: option.label,
                   }))}
-                  description={messages.hr.payBasis.fieldDescription}
                 />
                 <SelectField
                   control={form.control}
@@ -420,7 +419,6 @@ export function EmployeeFormDialog({
                     value: option.value,
                     label: option.label,
                   }))}
-                  description={messages.hr.wageUnit.fieldDescription}
                 />
                 {form.watch("wage_unit") === "daily" ? (
                   <MoneyVndField
@@ -428,7 +426,6 @@ export function EmployeeFormDialog({
                     name="daily_rate"
                     label="Lương ngày (VND)"
                     placeholder="500.000"
-                    description="Đơn giá mỗi ngày công + phép có lương"
                   />
                 ) : (
                   <MoneyVndField
@@ -436,7 +433,6 @@ export function EmployeeFormDialog({
                     name="base_salary"
                     label="Lương tháng (VND)"
                     placeholder="12.000.000"
-                    description="Lương gộp/tháng — dùng để tính lương"
                   />
                 )}
                 <MoneyVndField
@@ -729,7 +725,6 @@ export function EmployeeFormDialog({
                     value: option.value,
                     label: option.label,
                   }))}
-                  description={messages.hr.payBasis.fieldDescription}
                 />
                 <SelectField
                   control={form.control}
@@ -739,7 +734,6 @@ export function EmployeeFormDialog({
                     value: option.value,
                     label: option.label,
                   }))}
-                  description={messages.hr.wageUnit.fieldDescription}
                 />
                 {form.watch("wage_unit") === "daily" ? (
                   <MoneyVndField
@@ -747,7 +741,6 @@ export function EmployeeFormDialog({
                     name="daily_rate"
                     label="Lương ngày (VND)"
                     placeholder="500.000"
-                    description="Đơn giá mỗi ngày công + phép có lương"
                   />
                 ) : (
                   <MoneyVndField
@@ -755,7 +748,6 @@ export function EmployeeFormDialog({
                     name="base_salary"
                     label="Lương tháng (VND)"
                     placeholder="12.000.000"
-                    description="Lương gộp/tháng — dùng để tính lương"
                   />
                 )}
                 <MoneyVndField

@@ -783,6 +783,7 @@ export const INVENTORY_VI = {
   branchThresholdsFilterResult: (visible: number, total: number) =>
     `Hiển thị ${formatCount(visible)} / ${formatCount(total)} mặt hàng`,
   colMinStockLevel: "Tồn tối thiểu",
+  colTargetStockLevel: "Mức cấp lên",
   colReorderQuantity: "Lượng đặt chuẩn",
   colEffectiveMin: "Định mức áp dụng",
   autoPlaceholder: "Tự động",
@@ -813,6 +814,7 @@ export const INVENTORY_VI = {
   smartReorderCreatedSuccess: "Đã tạo đơn thành công",
   smartReorderCreateFailed: "Không thể tạo đề xuất. Vui lòng thử lại.",
   smartReorderChannelSupplier: "Mua ngoài (Nhà cung cấp)",
+  smartReorderChannelIntraSite: "Cấp từ Kho xuống Bếp",
   smartReorderChannelKitchen: "Bếp Trung Tâm (CK)",
   smartReorderChannelSupply: "Kho Tổng (CS)",
   smartReorderAllSafe: "Tất cả nguyên vật liệu đều đang ở mức tồn an toàn.",

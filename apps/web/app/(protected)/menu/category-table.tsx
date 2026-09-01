@@ -146,7 +146,7 @@ export function CategoryTable({ categories }: CategoryTableProps) {
     {
       key: "actions",
       header: "",
-      className: "w-12",
+      className: "w-12 text-right",
       render: (cat) => renderActions(cat),
     },
   ];
@@ -155,19 +155,21 @@ export function CategoryTable({ categories }: CategoryTableProps) {
     <>
       <AppListFrame>
         <DataTable
+          className="[&_table]:table-fixed"
           columns={columns}
           data={categories}
           getRowKey={(cat) => cat.id}
           emptyTitle="Chưa có danh mục nào"
+          emptyMode="no-data"
           emptyIcon={
             <IconFolderOpen className="size-8 text-muted-foreground" />
           }
           rowClassName={() => (isPending ? "opacity-60" : undefined)}
           mobileCardRender={(cat) => (
-            <Item variant="outline">
-              <ItemContent>
+            <Item variant="outline" className="w-full text-left">
+              <ItemContent className="min-w-0 text-left">
                 <ItemTitle>{cat.name}</ItemTitle>
-                <ItemDescription>
+                <ItemDescription className="text-xs text-muted-foreground">
                   {getCategoryTypeLabelVi(cat.type)} · Thứ tự{" "}
                   {cat.sort_order}
                 </ItemDescription>

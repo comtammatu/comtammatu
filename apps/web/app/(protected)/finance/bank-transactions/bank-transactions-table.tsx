@@ -753,15 +753,18 @@ export function BankTransactionsTable({
         <Item
           variant="outline"
           className={cn(
+            "p-3 bg-card border-border gap-2",
             bankRowNeedsHighlight(row) && "border-l-2 border-l-warning",
           )}
         >
           <ItemHeader>
             <ItemContent className="min-w-0">
-              <ItemTitle className="line-clamp-2">
+              <ItemTitle className="line-clamp-2 text-sm font-semibold">
                 {rowPrimaryLabel(row)}
               </ItemTitle>
-              <ItemDescription>{rowSecondaryLabel(row)}</ItemDescription>
+              <ItemDescription className="text-xs text-muted-foreground">
+                {rowSecondaryLabel(row)}
+              </ItemDescription>
             </ItemContent>
             {row.kind === "bank" ? (
               <AmountCell tx={row.tx} />
@@ -769,7 +772,7 @@ export function BankTransactionsTable({
               <PaymentAmountCell payment={row.payment} />
             )}
           </ItemHeader>
-          <ItemFooter className="items-center justify-between gap-2">
+          <ItemFooter className="items-center justify-between gap-2 pt-1 border-t border-border/50">
             {row.kind === "bank" ? (
               <BankRowStatus
                 tx={row.tx}
@@ -825,13 +828,13 @@ export function BankTransactionsTable({
                   ))}
                 </SelectContent>
               </Select>
-              <Badge variant="secondary" aria-live="polite">
+              <Badge variant="secondary" aria-live="polite" className="h-9 px-2.5 flex items-center">
                 {copy.queueCount(formatCount(openQueueCount))}
               </Badge>
               <AutoMatchTransferTokenButton
                 transactions={transactions}
                 enabled={canLinkPayments}
-                size={controlSize === "touch" ? "touch" : "sm"}
+                size={controlSize}
               />
             </div>
           }

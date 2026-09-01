@@ -114,7 +114,6 @@ export function BranchAudioForm({
       {!inherit ? (
         <SettingsFormSection
           title={copy.customBranchLabel}
-          description={copy.customVoiceHelp}
         >
           {/* Model selection */}
           <Field>

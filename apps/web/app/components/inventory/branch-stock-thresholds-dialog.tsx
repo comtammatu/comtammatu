@@ -114,15 +114,15 @@ export function BranchStockThresholdsDialog({
     );
   };
 
-  const handleReorderQtyChange = (ingredientId: number, val: string) => {
-    const num = val === "" ? null : Number(val);
+  const handleTargetStockChange = (ingredientId: number, val: string) => {
+    const num = val === "" ? 0 : Number(val);
     setDirtyIngredientIds((previous) => new Set(previous).add(ingredientId));
     setRows((prev) =>
       prev.map((r) =>
         r.ingredientId === ingredientId
           ? {
               ...r,
-              reorderQuantity: num,
+              targetStockLevel: num,
               isCustomized: true,
             }
           : r,
@@ -140,6 +140,7 @@ export function BranchStockThresholdsDialog({
         thresholds: changedRows.map((r) => ({
           ingredientId: r.ingredientId,
           minStockLevel: r.effectiveMinStock,
+          targetStockLevel: r.targetStockLevel,
           reorderQuantity: r.reorderQuantity,
         })),
       });
@@ -364,16 +365,16 @@ export function BranchStockThresholdsDialog({
                     </label>
 
                     <label className="flex min-w-0 flex-col gap-1 text-xs text-muted-foreground">
-                      <span>{INVENTORY_VI.colReorderQuantity}</span>
+                      <span>{INVENTORY_VI.colTargetStockLevel}</span>
                       <InputGroup size={controlSize}>
                         <InputGroupInput
                           type="number"
                           min={0}
-                          value={row.reorderQuantity ?? ""}
+                          value={row.targetStockLevel}
                           disabled={!unitLabel}
                           placeholder={INVENTORY_VI.autoPlaceholder}
                           onChange={(event) =>
-                            handleReorderQtyChange(
+                            handleTargetStockChange(
                               row.ingredientId,
                               event.target.value,
                             )

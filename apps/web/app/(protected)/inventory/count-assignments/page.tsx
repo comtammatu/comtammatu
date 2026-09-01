@@ -39,8 +39,7 @@ type IngredientCountOptionRow = {
   id: number;
   name: string;
   ingredient_units?:
-    | { is_base: boolean; units: { code: string } | null }[]
-    | null;
+    { is_base: boolean; units: { code: string } | null }[] | null;
 };
 
 function countLocationLabel(
@@ -48,8 +47,7 @@ function countLocationLabel(
   kind: string | null,
   fallbackName: string | null,
 ) {
-  const suffix =
-    kind === "warehouse" ? "Kho" : (fallbackName ?? "Kho");
+  const suffix = kind === "warehouse" ? "Kho" : (fallbackName ?? "Kho");
   return `${branchName} - ${suffix}`;
 }
 
@@ -86,11 +84,11 @@ async function CountAssignmentsPageContent({
   if (selectedBranchId !== null) {
     const locationsRes = await supabase
       .from("inventory_locations")
-      .select("id, name, location_kind")
+      .select("id, name, location_kind, is_default_consumption")
       .eq("tenant_id", claims.tenant_id)
       .eq("branch_id", selectedBranchId)
       .eq("is_active", true)
-      .in("location_kind", ["warehouse"])
+      .in("location_kind", ["warehouse", "kitchen"])
       .order("sort_order", { ascending: true })
       .order("id", { ascending: true });
     if (locationsRes.error) {
@@ -99,7 +97,12 @@ async function CountAssignmentsPageContent({
       });
       throw new Error("inventory.count_assignments.load_failed");
     }
-    for (const l of locationsRes.data ?? []) {
+    const rows = locationsRes.data ?? [];
+    const hasKitchen = rows.some(
+      (location) => location.location_kind === "kitchen",
+    );
+    for (const l of rows) {
+      if (hasKitchen && l.location_kind !== "kitchen") continue;
       locations.push({
         id: l.id,
         label: countLocationLabel(
@@ -116,7 +119,8 @@ async function CountAssignmentsPageContent({
     requestedLocationId != null &&
     locations.some((l) => l.id === requestedLocationId)
       ? requestedLocationId
-      : (locations.find((l) => l.kind === "warehouse")?.id ??
+      : (locations.find((l) => l.kind === "kitchen")?.id ??
+        locations.find((l) => l.kind === "warehouse")?.id ??
         locations[0]?.id ??
         null);
 
@@ -165,7 +169,9 @@ async function CountAssignmentsPageContent({
   if (selectedBranchId !== null) {
     const profilesRes = await rosterClient
       .from("profiles")
-      .select("id, full_name, is_active, position_id, positions(id, code, label_vi)")
+      .select(
+        "id, full_name, is_active, position_id, positions(id, code, label_vi)",
+      )
       .eq("tenant_id", claims.tenant_id)
       .eq("branch_id", selectedBranchId)
       .or("is_active.is.null,is_active.eq.true")

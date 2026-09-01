@@ -93,6 +93,14 @@ function getMovementMetrics(movement: BranchStockMovement) {
     { label: reportCopy.branchGrnReceipt, value: movement.grnReceipt },
     { label: reportCopy.branchTransferIn, value: movement.transferIn },
     { label: reportCopy.branchTransferOut, value: movement.transferOut },
+    {
+      label: reportCopy.branchIntraTransferIn,
+      value: movement.intraTransferIn,
+    },
+    {
+      label: reportCopy.branchIntraTransferOut,
+      value: movement.intraTransferOut,
+    },
     { label: reportCopy.branchConsumption, value: movement.consumption },
     {
       label: reportCopy.branchProductionConsumption,
@@ -169,6 +177,8 @@ export function BranchStockReportsClient({
   branchName,
   periodStart,
   periodEnd,
+  locations,
+  selectedLocationId,
   varianceLoadFailed,
   movementLoadFailed,
   wasteAnalytics,
@@ -179,6 +189,12 @@ export function BranchStockReportsClient({
   branchName: string;
   periodStart: string;
   periodEnd: string;
+  locations: Array<{
+    id: number;
+    name: string;
+    kind: "warehouse" | "kitchen";
+  }>;
+  selectedLocationId: number | null;
   varianceLoadFailed: boolean;
   movementLoadFailed: boolean;
   wasteAnalytics?: WasteAnalyticsSummary | null;
@@ -187,6 +203,9 @@ export function BranchStockReportsClient({
 }) {
   const router = useRouter();
   const periodLabel = `${formatVNDate(periodStart)} - ${formatVNDate(periodEnd)}`;
+  const selectedLocation = locations.find(
+    (location) => location.id === selectedLocationId,
+  );
   const varianceTone = varianceExceptions.some((row) => row.flag === "critical")
     ? "destructive"
     : varianceExceptions.length > 0
@@ -200,6 +219,34 @@ export function BranchStockReportsClient({
       back={<AppBackLink href={`/br/${branchId}/stock`} />}
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
+        <div
+          className="flex flex-wrap gap-2"
+          aria-label={reportCopy.branchLocationScope}
+        >
+          <Button
+            size="touch"
+            variant={selectedLocationId == null ? "secondary" : "outline"}
+            render={<Link href={`/br/${branchId}/stock/reports`} />}
+          >
+            {reportCopy.branchLocationTotal}
+          </Button>
+          {locations.map((location) => (
+            <Button
+              key={location.id}
+              size="touch"
+              variant={
+                selectedLocationId === location.id ? "secondary" : "outline"
+              }
+              render={
+                <Link
+                  href={`/br/${branchId}/stock/reports?location=${location.id}`}
+                />
+              }
+            >
+              {location.name}
+            </Button>
+          ))}
+        </div>
         <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] lg:items-start">
           <BranchOperatorPanel
             title={reportCopy.branchVarianceTitle}
@@ -250,7 +297,7 @@ export function BranchStockReportsClient({
           <BranchOperatorPanel
             title={reportCopy.branchMovementTitle}
             description={reportCopy.branchMovementDescription}
-            headerHint={reportCopy.currentMonthSnapshot}
+            headerHint={`${reportCopy.currentMonthSnapshot} · ${selectedLocation?.name ?? reportCopy.branchLocationTotal}`}
             icon={IconChartBar}
             size="sm"
             contentClassName="gap-3"
@@ -302,7 +349,10 @@ export function BranchStockReportsClient({
           size="sm"
           contentClassName="gap-3"
         >
-          <WasteAnalyticsCockpit data={wasteAnalytics ?? null} branchName={branchName} />
+          <WasteAnalyticsCockpit
+            data={wasteAnalytics ?? null}
+            branchName={branchName}
+          />
         </BranchOperatorPanel>
       </div>
     </BranchOperatorPage>

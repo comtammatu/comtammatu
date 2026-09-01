@@ -60,6 +60,12 @@ type ValuationAccountRow = {
   book_value: number | null;
 };
 
+type LocationThresholdRow = {
+  ingredient_id: number;
+  location_id?: number | null;
+  min_stock_level: number | null;
+};
+
 type StockIngredientRow = {
   id: number;
   name: string;
@@ -158,6 +164,32 @@ export async function loadStockOnHandPageData({
   const stockBearingLocationIds = stockBearingLocations.ok
     ? stockBearingLocations.locationIds
     : [];
+  const locations = stockBearingLocations.ok
+    ? stockBearingLocations.locations
+        .map((location) => ({
+          id: location.id,
+          name:
+            normalizeInventoryLocationNameVi(location.name) ||
+            (location.location_kind === "kitchen" ? "Bếp" : "Kho"),
+          kind: location.location_kind ?? "unknown",
+        }))
+        .sort((left, right) => {
+          if (left.kind === right.kind)
+            return left.name.localeCompare(right.name, "vi");
+          if (left.kind === "kitchen") return -1;
+          if (right.kind === "kitchen") return 1;
+          return 0;
+        })
+    : [];
+  const defaultLocationId = stockBearingLocations.ok
+    ? (stockBearingLocations.locations.find(
+        (location) => location.default_consumption,
+      )?.id ??
+      stockBearingLocations.locations.find(
+        (location) => location.location_kind === "warehouse",
+      )?.id ??
+      null)
+    : null;
   const stockLevelQuery = monetaryAccess.valuation
     ? stockReadClient
         .from("stock_levels")
@@ -194,7 +226,7 @@ export async function loadStockOnHandPageData({
       : Promise.resolve({ data: [], error: null }),
     supabase
       .from("branch_ingredient_thresholds")
-      .select("ingredient_id, min_stock_level")
+      .select("*")
       .eq("tenant_id", claims.tenant_id)
       .eq("branch_id", branchId)
       .eq("is_active", true),
@@ -238,7 +270,28 @@ export async function loadStockOnHandPageData({
     dbIngredients = (ingredientsResult.data ?? []) as StockIngredientRow[];
   }
   const stockRows = (stockResult.data ?? []) as StockLevelRow[];
-  const branchMinimums = buildBranchMinimumMap(thresholdResult.data ?? []);
+  const thresholdRows = (thresholdResult.data ??
+    []) as unknown as LocationThresholdRow[];
+  const defaultThresholdRows = thresholdRows.filter(
+    (row) => row.location_id == null || row.location_id === defaultLocationId,
+  );
+  const branchMinimums = buildBranchMinimumMap(
+    defaultThresholdRows.map((row) => ({
+      ingredient_id: row.ingredient_id,
+      min_stock_level: Number(row.min_stock_level ?? 0),
+    })),
+  );
+  const locationMinimumsByIngredient = new Map<
+    number,
+    Record<number, number>
+  >();
+  for (const threshold of thresholdRows) {
+    if (threshold.location_id == null) continue;
+    const minimums =
+      locationMinimumsByIngredient.get(threshold.ingredient_id) ?? {};
+    minimums[threshold.location_id] = Number(threshold.min_stock_level ?? 0);
+    locationMinimumsByIngredient.set(threshold.ingredient_id, minimums);
+  }
   const stockMap = new Map<
     number,
     {
@@ -358,6 +411,7 @@ export async function loadStockOnHandPageData({
             }
           : null,
         min,
+        locationMinimums: locationMinimumsByIngredient.get(row.id),
         max,
         reorder,
         status: computeStockStatus(qty, min),
@@ -471,6 +525,8 @@ export async function loadStockOnHandPageData({
       stockResult.error != null ||
       thresholdResult.error != null,
     ingredients,
+    locations,
+    defaultLocationId,
     permissions,
     summary,
     totalValue,

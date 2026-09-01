@@ -13,6 +13,10 @@ import { fetchStockTransferDetail } from "@/(protected)/inventory/transfer-actio
 import { computeTransferLineTotal } from "@/(protected)/inventory/transfers/[id]/line-view-model";
 import type { TransferDetail } from "./transfer-detail-model";
 import { formatInventoryLocationLabelVi } from "@comtammatu/shared/labels";
+import {
+  loadIntraSiteTransferData,
+  type IntraSiteTransferData,
+} from "./intra-site-transfer-data";
 
 interface LoadTransferDetailPageDataOptions {
   transferId: number;
@@ -61,6 +65,7 @@ export interface TransferDetailPageData {
   userBranchId: number | null;
   correctionBranches: Array<{ id: number; name: string }>;
   auditLogs: AuditLogRow[];
+  intraSiteData: IntraSiteTransferData | null;
 }
 
 export async function loadTransferDetailPageData({
@@ -100,6 +105,8 @@ export async function loadTransferDetailPageData({
       id: number;
       transfer_number: string;
       status: string;
+      transfer_scope: "inter_site" | "intra_site" | null;
+      reverses_transfer_id: number | null;
       stock_request_id: number | null;
       from_branch_id: number;
       to_branch_id: number;
@@ -128,6 +135,31 @@ export async function loadTransferDetailPageData({
       } | null;
     }>;
   };
+
+  const transferScope = detail.transfer.transfer_scope ?? "inter_site";
+  const remainingByIngredient = new Map<number, number>();
+  if (transferScope === "intra_site") {
+    const { data: remaining, error: remainingError } = await supabase.rpc(
+      "get_intra_site_transfer_remaining" as never,
+      { p_transfer_id: detail.transfer.id } as never,
+    );
+    if (remainingError) {
+      console.error("inventory.transfer.remaining_failed", {
+        transferId: detail.transfer.id,
+        error: remainingError,
+      });
+    } else {
+      for (const row of (remaining ?? []) as unknown as Array<{
+        ingredient_id: number;
+        remaining_quantity: number;
+      }>) {
+        remainingByIngredient.set(
+          Number(row.ingredient_id),
+          Number(row.remaining_quantity),
+        );
+      }
+    }
+  }
 
   const { data: locations } = await supabase
     .from("inventory_locations")
@@ -161,6 +193,7 @@ export async function loadTransferDetailPageData({
 
     return {
       ingredientId: line.ingredient_id ?? ingredient?.id ?? 0,
+      entryUnitId: line.entry_unit_id ?? null,
       name: ingredient?.name ?? "—",
       sku: "",
       qty: quantity,
@@ -170,6 +203,10 @@ export async function loadTransferDetailPageData({
       monetary: cost == null || total == null ? null : { cost, total },
       received:
         line.quantity_received != null ? Number(line.quantity_received) : null,
+      reversibleQty:
+        transferScope === "intra_site"
+          ? (remainingByIngredient.get(Number(line.ingredient_id)) ?? 0)
+          : 0,
     };
   });
   const canReadMonetary = items.some((item) => item.monetary != null);
@@ -197,10 +234,14 @@ export async function loadTransferDetailPageData({
     id: detail.transfer.id ?? transferId,
     code: detail.transfer.transfer_number ?? "",
     status: detail.transfer.status ?? "draft",
+    transferScope,
+    reversesTransferId: detail.transfer.reverses_transfer_id ?? null,
     stockRequestId,
     stockRequestNumber,
     fromBranchId: detail.transfer.from_branch_id,
     toBranchId: detail.transfer.to_branch_id,
+    fromLocationId: detail.transfer.from_location_id,
+    toLocationId: detail.transfer.to_location_id,
     fromBranch:
       detail.transfer.from_branch_name ??
       `Chi nhánh #${detail.transfer.from_branch_id}`,
@@ -231,7 +272,7 @@ export async function loadTransferDetailPageData({
   };
 
   let correctionBranches: Array<{ id: number; name: string }> = [];
-  if (includeCorrections) {
+  if (includeCorrections && transferScope === "inter_site") {
     const [canAdjustFrom, canAdjustTo] = await Promise.all([
       currentUserHasPermission(
         detail.transfer.from_branch_id,
@@ -264,11 +305,25 @@ export async function loadTransferDetailPageData({
     );
   }
 
+  const intraSiteData =
+    transferScope === "inter_site" &&
+    transfer.status === "received" &&
+    (claims.user_role === "owner" ||
+      (claims.user_role === "branch_manager" &&
+        claims.branch_id === transfer.toBranchId))
+      ? await loadIntraSiteTransferData({
+          supabase,
+          tenantId: claims.tenant_id,
+          branchId: transfer.toBranchId,
+        })
+      : null;
+
   return {
     transfer,
     userRole: claims.user_role,
     userBranchId: scopedBranchId,
     correctionBranches,
     auditLogs,
+    intraSiteData,
   };
 }

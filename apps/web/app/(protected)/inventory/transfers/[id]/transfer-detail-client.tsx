@@ -68,6 +68,11 @@ import {
   useIsMobile,
 } from "@comtammatu/ui/hooks/use-mobile";
 import { TransferA4PrintDialog } from "./views/transfer-a4-print-dialog";
+import {
+  IntraSiteTransferDialog,
+  ReverseIntraSiteTransferDialog,
+} from "@/components/inventory/intra-site-transfer-dialog";
+import type { IntraSiteTransferData } from "@lib/inventory/intra-site-transfer-data";
 const DocumentStockCorrectionDialog = dynamic(
   () =>
     import("../../_components/document-stock-correction-dialog").then(
@@ -99,6 +104,7 @@ export function TransferDetailClient({
   embedded = false,
   embeddedHeader = true,
   listHref,
+  intraSiteData = null,
 }: {
   transfer: TransferDetail;
   userRole: StaffRole;
@@ -108,12 +114,20 @@ export function TransferDetailClient({
   embedded?: boolean;
   embeddedHeader?: boolean;
   listHref?: string;
+  intraSiteData?: IntraSiteTransferData | null;
 }) {
   const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
 
   const router = useRouter();
   const isOnline = useIsOnline();
   const copy = messages.inventory.transfer;
+  const isIntraSite = transfer.transferScope === "intra_site";
+  const canReverse =
+    isIntraSite &&
+    transfer.status === "received" &&
+    (userRole === "owner" ||
+      (userRole === "branch_manager" &&
+        userBranchId === transfer.fromBranchId));
   const statusBadge = getStatusBadgeMeta("inventory", transfer.status);
   const [isPending, startTransition] = useTransition();
   const [receiveQty, setReceiveQty] = useState<Record<number, string>>(() => {
@@ -241,7 +255,8 @@ export function TransferDetailClient({
           applied.lineTarget == null
             ? null
             : transfer.items.find(
-                (item) => item.ingredientId === applied.lineTarget?.ingredientId,
+                (item) =>
+                  item.ingredientId === applied.lineTarget?.ingredientId,
               );
         setShortageIngredientId(applied.lineTarget?.ingredientId ?? null);
         toast.error(
@@ -401,9 +416,7 @@ export function TransferDetailClient({
             className="flex-col items-stretch gap-2 p-3 text-sm"
           >
             <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">
-                {copy.totalValue}
-              </span>
+              <span className="text-muted-foreground">{copy.totalValue}</span>
               <span className="font-mono font-semibold tabular-nums text-primary">
                 {messages.inventory.common.currencyCompact(
                   formatVND(transfer.monetary.total),
@@ -540,9 +553,7 @@ export function TransferDetailClient({
           </span>
         </div>
       </Item>
-      <div
-        className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start"
-      >
+      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
         <div className="order-2 flex min-w-0 flex-col gap-4 lg:order-1">
           <AppSection
             className="min-w-0"
@@ -570,9 +581,7 @@ export function TransferDetailClient({
                   type="button"
                   size="sm"
                   variant={
-                    shortfallClass === "source_variance"
-                      ? "default"
-                      : "outline"
+                    shortfallClass === "source_variance" ? "default" : "outline"
                   }
                   onClick={() => setShortfallClass("source_variance")}
                 >
@@ -651,7 +660,7 @@ export function TransferDetailClient({
             />
           </AppSection>
 
-          {embedded ? null : (
+          {embedded || isIntraSite ? null : (
             <AppSection>
               <TimelineStepper steps={transferSteps} orientation="vertical" />
             </AppSection>
@@ -689,6 +698,7 @@ export function TransferDetailClient({
                   <TransferA4PrintDialog transfer={transfer} />
                 ) : null}
                 {transfer.status !== "draft" &&
+                !isIntraSite &&
                 correctionBranches.length > 0 &&
                 transfer.items.length > 0 ? (
                   <DocumentStockCorrectionDialog
@@ -704,26 +714,48 @@ export function TransferDetailClient({
                     }))}
                   />
                 ) : null}
+                {canReverse ? (
+                  <ReverseIntraSiteTransferDialog
+                    transfer={transfer}
+                    triggerSize={isTouchLayout ? "touch" : "default"}
+                  />
+                ) : null}
+                {intraSiteData ? (
+                  <IntraSiteTransferDialog
+                    data={intraSiteData}
+                    triggerSize={isTouchLayout ? "touch" : "default"}
+                    detailBasePath="/inventory/transfers"
+                    triggerLabel="Cấp xuống Bếp"
+                    initialQuantities={Object.fromEntries(
+                      transfer.items.map((item) => [
+                        item.ingredientId,
+                        item.received ?? item.qty,
+                      ]),
+                    )}
+                  />
+                ) : null}
               </div>
             }
             trailing={
-              <Button
-                type="button"
-                disabled={
-                  isPending ||
-                  !isOnline ||
-                  !actionConfig?.enabled ||
-                  (isReceiveMode &&
-                    actionConfig?.kind === "receive" &&
-                    !noteOk)
-                }
-                size={isTouchLayout ? "touch" : "default"}
-                className="px-4 font-semibold"
-                onClick={handlePrimaryAction}
-              >
-                <IconCircleCheck className="size-5" />
-                {actionLabel}
-              </Button>
+              actionConfig ? (
+                <Button
+                  type="button"
+                  disabled={
+                    isPending ||
+                    !isOnline ||
+                    !actionConfig.enabled ||
+                    (isReceiveMode &&
+                      actionConfig.kind === "receive" &&
+                      !noteOk)
+                  }
+                  size={isTouchLayout ? "touch" : "default"}
+                  className="px-4 font-semibold"
+                  onClick={handlePrimaryAction}
+                >
+                  <IconCircleCheck className="size-5" />
+                  {actionLabel}
+                </Button>
+              ) : undefined
             }
           />
         </AppDialogFooter>
@@ -747,6 +779,7 @@ export function TransferDetailClient({
                 <TransferA4PrintDialog transfer={transfer} />
               ) : null}
               {transfer.status !== "draft" &&
+              !isIntraSite &&
               correctionBranches.length > 0 &&
               transfer.items.length > 0 ? (
                 <DocumentStockCorrectionDialog
@@ -762,24 +795,42 @@ export function TransferDetailClient({
                   }))}
                 />
               ) : null}
+              {canReverse ? (
+                <ReverseIntraSiteTransferDialog transfer={transfer} />
+              ) : null}
+              {intraSiteData ? (
+                <IntraSiteTransferDialog
+                  data={intraSiteData}
+                  detailBasePath="/inventory/transfers"
+                  triggerLabel="Cấp xuống Bếp"
+                  initialQuantities={Object.fromEntries(
+                    transfer.items.map((item) => [
+                      item.ingredientId,
+                      item.received ?? item.qty,
+                    ]),
+                  )}
+                />
+              ) : null}
             </div>
           }
           trailing={
-            <Button
-              type="button"
-              disabled={
-                isPending ||
-                !isOnline ||
-                !actionConfig?.enabled ||
-                (isReceiveMode && actionConfig?.kind === "receive" && !noteOk)
-              }
-              size="default"
-              className="px-4 font-semibold"
-              onClick={handlePrimaryAction}
-            >
-              <IconCircleCheck className="size-5" />
-              {actionLabel}
-            </Button>
+            actionConfig ? (
+              <Button
+                type="button"
+                disabled={
+                  isPending ||
+                  !isOnline ||
+                  !actionConfig.enabled ||
+                  (isReceiveMode && actionConfig.kind === "receive" && !noteOk)
+                }
+                size="default"
+                className="px-4 font-semibold"
+                onClick={handlePrimaryAction}
+              >
+                <IconCircleCheck className="size-5" />
+                {actionLabel}
+              </Button>
+            ) : undefined
           }
         />
       )}
@@ -860,6 +911,9 @@ export function TransferDetailClient({
           <Badge variant={statusBadge.variant} className="shrink-0">
             {statusBadge.label}
           </Badge>
+          <Badge variant="secondary" className="shrink-0">
+            {isIntraSite ? "Nội bộ Kho ↔ Bếp" : "Liên điểm"}
+          </Badge>
         </div>
         {embeddedLayout}
       </div>
@@ -873,6 +927,9 @@ export function TransferDetailClient({
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-mono">{transfer.code}</span>
             <StatusBadge domain="inventory" value={transfer.status} />
+            <Badge variant="secondary">
+              {isIntraSite ? "Nội bộ Kho ↔ Bếp" : "Liên điểm"}
+            </Badge>
           </div>
         }
         meta={copy.routeMeta(

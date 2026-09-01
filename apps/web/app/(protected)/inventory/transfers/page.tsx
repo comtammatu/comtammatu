@@ -9,8 +9,10 @@ import { resolveInventoryListScope } from "../_lib/inventory-scope";
 import { loadStockFulfillmentRows } from "@lib/inventory/stock-fulfillment-data";
 import { loadStockRequestFulfillmentDetail } from "@lib/inventory/stock-request-fulfillment-detail-data";
 import { loadTransferDetailPageData } from "@lib/inventory/transfer-detail-data";
+import { loadIntraSiteTransferData } from "@lib/inventory/intra-site-transfer-data";
 import { messages } from "@lib/messages";
 import { StockFulfillmentHubClient } from "./stock-fulfillment-hub-client";
+import { IntraSiteTransferDialog } from "@/components/inventory/intra-site-transfer-dialog";
 
 const copy = messages.inventory.stockRequests.journey;
 
@@ -78,6 +80,16 @@ export default async function TransfersPage({
           queryBranch: params.branch,
         })
       : Promise.resolve(null);
+  const intraSiteDataPromise =
+    claims.user_role === "owner" &&
+    branchId != null &&
+    scopeSiteKind === "branch"
+      ? loadIntraSiteTransferData({
+          supabase,
+          tenantId: claims.tenant_id,
+          branchId,
+        })
+      : Promise.resolve(null);
   let rows;
   try {
     rows = await loadStockFulfillmentRows({
@@ -92,9 +104,10 @@ export default async function TransfersPage({
   } catch {
     throw new Error("inventory.transfers.load_failed");
   }
-  const [selectedRequest, selectedTransfer] = await Promise.all([
+  const [selectedRequest, selectedTransfer, intraSiteData] = await Promise.all([
     selectedRequestPromise,
     selectedTransferPromise,
+    intraSiteDataPromise,
   ]);
   const canCreateManualTransfer =
     claims.user_role === "owner" ||
@@ -136,12 +149,14 @@ export default async function TransfersPage({
         actions={
           canCreateManualTransfer ? (
             <div className="flex flex-wrap gap-2">
+              {intraSiteData ? (
+                <IntraSiteTransferDialog
+                  data={intraSiteData}
+                  detailBasePath="/inventory/transfers"
+                />
+              ) : null}
               {writeRequiresSitePick ? (
-                <Button
-                  type="button"
-                  disabled
-                  title={sitePickTitle}
-                >
+                <Button type="button" disabled title={sitePickTitle}>
                   <IconPlus data-icon="inline-start" />
                   {copy.manualTransferAction}
                 </Button>

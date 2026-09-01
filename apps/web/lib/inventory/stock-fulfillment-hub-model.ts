@@ -6,15 +6,9 @@ import {
 } from "./stock-journey-model";
 
 export type StockFulfillmentWorkFilter =
-  | "all"
-  | "request"
-  | "dispatch"
-  | "receive";
+  "all" | "request" | "dispatch" | "receive";
 export type StockFulfillmentStateFilter =
-  | "active"
-  | "completed"
-  | "cancelled"
-  | "all";
+  "active" | "completed" | "cancelled" | "all";
 
 export const STOCK_FULFILLMENT_SOURCE_LABELS = {
   central_supply: "Kho Tổng",
@@ -56,6 +50,7 @@ export function stockFulfillmentProgressLines(
   row: StockFulfillmentRow,
 ): string[] {
   if (row.kind === "manual_transfer") {
+    if (row.transferScope === "intra_site") return ["Đã hoàn tất"];
     if (row.status === "draft") return ["Chuẩn bị hàng"];
     if (
       ["confirmed_ship", "in_transit", "confirmed_receive"].includes(row.status)

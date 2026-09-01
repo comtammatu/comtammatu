@@ -53,6 +53,7 @@ import { TransferDetailClient } from "./[id]/transfer-detail-client";
 
 type WorkFilter = "all" | "request" | "dispatch" | "receive";
 type StateFilter = "active" | "completed" | "cancelled" | "all";
+type ScopeFilter = "all" | "inter_site" | "intra_site";
 
 const SOURCE_LABELS = {
   central_supply: "Kho Tổng",
@@ -82,6 +83,7 @@ function linkedTransferNumbers(row: StockFulfillmentRow): string[] {
 
 function progressLines(row: StockFulfillmentRow): string[] {
   if (row.kind === "manual_transfer") {
+    if (row.transferScope === "intra_site") return ["Đã hoàn tất"];
     if (row.status === "draft") return ["Chuẩn bị hàng"];
     if (
       ["confirmed_ship", "in_transit", "confirmed_receive"].includes(row.status)
@@ -172,6 +174,11 @@ export function StockFulfillmentHubClient({
       ? rawState
       : "all";
   const search = searchParams.get("q") ?? "";
+  const rawScope = searchParams.get("scope");
+  const scope: ScopeFilter =
+    rawScope === "inter_site" || rawScope === "intra_site" ? rawScope : "all";
+  const fromSite = searchParams.get("from") ?? "all";
+  const toSite = searchParams.get("to") ?? "all";
   const currentPage = Math.max(Number(searchParams.get("page")) || 1, 1);
 
   function replaceParam(key: string, value: string, defaultValue: string) {
@@ -205,6 +212,16 @@ export function StockFulfillmentHubClient({
           ? row.kind === "request"
           : row.workKinds.includes(work));
       const matchesState = state === "all" || row.lifecycle === state;
+      const matchesScope =
+        scope === "all" ||
+        (row.kind === "manual_transfer" && row.transferScope === scope);
+      const matchesFrom =
+        fromSite === "all" ||
+        (row.kind === "manual_transfer" &&
+          String(row.fromSite.id) === fromSite);
+      const matchesTo =
+        toSite === "all" ||
+        (row.kind === "manual_transfer" && String(row.toSite.id) === toSite);
       const searchValues =
         row.kind === "request"
           ? [
@@ -216,9 +233,32 @@ export function StockFulfillmentHubClient({
               ]),
             ]
           : [row.documentNumber, row.fromSite.name, row.toSite.name];
-      return matchesWork && matchesState && matchesSearch(searchValues, search);
+      return (
+        matchesWork &&
+        matchesState &&
+        matchesScope &&
+        matchesFrom &&
+        matchesTo &&
+        matchesSearch(searchValues, search)
+      );
     });
-  }, [rows, work, state, search]);
+  }, [rows, work, state, scope, fromSite, toSite, search]);
+
+  const transferSites = useMemo(
+    () =>
+      [
+        ...new Map(
+          rows.flatMap((row) =>
+            row.kind === "manual_transfer"
+              ? [row.fromSite, row.toSite].map(
+                  (site) => [site.id, site] as const,
+                )
+              : [],
+          ),
+        ).values(),
+      ].sort((left, right) => left.name.localeCompare(right.name, "vi")),
+    [rows],
+  );
 
   const columns: DataTableColumn<StockFulfillmentRow>[] = [
     {
@@ -234,6 +274,13 @@ export function StockFulfillmentHubClient({
               <Badge variant="outline">
                 {row.kind === "request" ? "YCH" : "DC"}
               </Badge>
+              {row.kind === "manual_transfer" ? (
+                <Badge variant="secondary">
+                  {row.transferScope === "intra_site"
+                    ? "Nội bộ Kho ↔ Bếp"
+                    : "Liên điểm"}
+                </Badge>
+              ) : null}
               <span className="font-mono font-medium tabular-nums">
                 {row.documentNumber}
               </span>
@@ -297,7 +344,7 @@ export function StockFulfillmentHubClient({
       key: "needed_at",
       header: "Cần trước",
       sortable: true,
-      sortValue: (row) => (row.kind === "request" ? row.neededAt ?? "" : ""),
+      sortValue: (row) => (row.kind === "request" ? (row.neededAt ?? "") : ""),
       render: (row) =>
         row.kind === "request" && row.neededAt
           ? formatVNDate(row.neededAt)
@@ -366,6 +413,67 @@ export function StockFulfillmentHubClient({
       filters={
         <>
           <Select
+            value={scope}
+            onValueChange={(value) => replaceParam("scope", value, "all")}
+          >
+            <SelectTrigger
+              size="field"
+              className={inventoryListFilterSelectClassName}
+              aria-label={copy.hubTransferScopeAria}
+            >
+              <SelectValue placeholder={copy.hubTransferScopePlaceholder} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{copy.hubTransferScopeAll}</SelectItem>
+              <SelectItem value="inter_site">
+                {copy.hubTransferScopeInterSite}
+              </SelectItem>
+              <SelectItem value="intra_site">
+                {copy.hubTransferScopeIntraSite}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
+            value={fromSite}
+            onValueChange={(value) => replaceParam("from", value, "all")}
+          >
+            <SelectTrigger
+              size="field"
+              className={inventoryListFilterSelectClassName}
+              aria-label={copy.hubFromSiteLabel}
+            >
+              <SelectValue placeholder={copy.hubFromSiteLabel} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{copy.hubFromSiteAll}</SelectItem>
+              {transferSites.map((site) => (
+                <SelectItem key={site.id} value={String(site.id)}>
+                  {site.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={toSite}
+            onValueChange={(value) => replaceParam("to", value, "all")}
+          >
+            <SelectTrigger
+              size="field"
+              className={inventoryListFilterSelectClassName}
+              aria-label={copy.hubToSiteLabel}
+            >
+              <SelectValue placeholder={copy.hubToSiteLabel} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{copy.hubToSiteAll}</SelectItem>
+              {transferSites.map((site) => (
+                <SelectItem key={site.id} value={String(site.id)}>
+                  {site.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
             value={work}
             onValueChange={(value) => replaceParam("work", value, "all")}
           >
@@ -397,8 +505,12 @@ export function StockFulfillmentHubClient({
             <SelectContent>
               <SelectItem value="all">{inventoryCommon.all}</SelectItem>
               <SelectItem value="active">{copy.active}</SelectItem>
-              <SelectItem value="completed">{copy.hubStateCompleted}</SelectItem>
-              <SelectItem value="cancelled">{copy.hubStateCancelled}</SelectItem>
+              <SelectItem value="completed">
+                {copy.hubStateCompleted}
+              </SelectItem>
+              <SelectItem value="cancelled">
+                {copy.hubStateCancelled}
+              </SelectItem>
             </SelectContent>
           </Select>
         </>
@@ -415,214 +527,218 @@ export function StockFulfillmentHubClient({
     <>
       <div className="flex flex-col gap-3">
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Item
-          variant="outline"
-          onClick={() => replaceParam("state", "all", "all")}
-          className={cn(
-            "flex flex-col justify-between p-3 text-left cursor-pointer",
-            state === "all"
-              ? "border-primary ring-1 ring-primary shadow-xs"
-              : "border-border",
-          )}
-        >
-          <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            <span>{copy.metrics.total}</span>
-            <span className="size-2 rounded-full bg-muted-foreground" />
-          </div>
-          <div className="mt-2 flex items-baseline justify-between">
-            <span className="font-mono text-2xl font-semibold tabular-nums text-foreground">
-              {formatCount(hubTotal)}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              {copy.metrics.transfersUnit}
-            </span>
-          </div>
-        </Item>
+          <Item
+            variant="outline"
+            onClick={() => replaceParam("state", "all", "all")}
+            className={cn(
+              "flex flex-col justify-between p-3 text-left cursor-pointer",
+              state === "all"
+                ? "border-primary ring-1 ring-primary shadow-xs"
+                : "border-border",
+            )}
+          >
+            <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <span>{copy.metrics.total}</span>
+              <span className="size-2 rounded-full bg-muted-foreground" />
+            </div>
+            <div className="mt-2 flex items-baseline justify-between">
+              <span className="font-mono text-2xl font-semibold tabular-nums text-foreground">
+                {formatCount(hubTotal)}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {copy.metrics.transfersUnit}
+              </span>
+            </div>
+          </Item>
 
-        <Item
-          variant="outline"
-          onClick={() =>
-            replaceParam("state", state === "active" ? "all" : "active", "all")
-          }
-          className={cn(
-            "flex flex-col justify-between p-3 text-left cursor-pointer",
-            state === "active"
-              ? "border-warning ring-1 ring-warning shadow-xs"
-              : "border-border",
-          )}
-        >
-          <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            <span>{copy.metrics.active}</span>
-            <span className="size-2 rounded-full bg-warning" />
-          </div>
-          <div className="mt-2 flex items-baseline justify-between">
-            <span className="font-mono text-2xl font-semibold tabular-nums text-warning">
-              {formatCount(hubActive)}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              {copy.metrics.activeHint}
-            </span>
-          </div>
-        </Item>
+          <Item
+            variant="outline"
+            onClick={() =>
+              replaceParam(
+                "state",
+                state === "active" ? "all" : "active",
+                "all",
+              )
+            }
+            className={cn(
+              "flex flex-col justify-between p-3 text-left cursor-pointer",
+              state === "active"
+                ? "border-warning ring-1 ring-warning shadow-xs"
+                : "border-border",
+            )}
+          >
+            <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <span>{copy.metrics.active}</span>
+              <span className="size-2 rounded-full bg-warning" />
+            </div>
+            <div className="mt-2 flex items-baseline justify-between">
+              <span className="font-mono text-2xl font-semibold tabular-nums text-warning">
+                {formatCount(hubActive)}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {copy.metrics.activeHint}
+              </span>
+            </div>
+          </Item>
 
-        <Item
-          variant="outline"
-          onClick={() =>
-            replaceParam(
-              "state",
-              state === "completed" ? "all" : "completed",
-              "all",
-            )
-          }
-          className={cn(
-            "flex flex-col justify-between p-3 text-left cursor-pointer",
-            state === "completed"
-              ? "border-success ring-1 ring-success shadow-xs"
-              : "border-border",
-          )}
-        >
-          <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            <span>{copy.metrics.completed}</span>
-            <span className="size-2 rounded-full bg-success" />
-          </div>
-          <div className="mt-2 flex items-baseline justify-between">
-            <span className="font-mono text-2xl font-semibold tabular-nums text-success">
-              {formatCount(hubCompleted)}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              {copy.metrics.completedHint}
-            </span>
-          </div>
-        </Item>
+          <Item
+            variant="outline"
+            onClick={() =>
+              replaceParam(
+                "state",
+                state === "completed" ? "all" : "completed",
+                "all",
+              )
+            }
+            className={cn(
+              "flex flex-col justify-between p-3 text-left cursor-pointer",
+              state === "completed"
+                ? "border-success ring-1 ring-success shadow-xs"
+                : "border-border",
+            )}
+          >
+            <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <span>{copy.metrics.completed}</span>
+              <span className="size-2 rounded-full bg-success" />
+            </div>
+            <div className="mt-2 flex items-baseline justify-between">
+              <span className="font-mono text-2xl font-semibold tabular-nums text-success">
+                {formatCount(hubCompleted)}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {copy.metrics.completedHint}
+              </span>
+            </div>
+          </Item>
 
-        <Item
-          variant="outline"
-          onClick={() =>
-            replaceParam(
-              "state",
-              state === "cancelled" ? "all" : "cancelled",
-              "all",
-            )
-          }
-          className={cn(
-            "flex flex-col justify-between p-3 text-left cursor-pointer",
-            state === "cancelled"
-              ? "border-destructive ring-1 ring-destructive shadow-xs"
-              : "border-border",
-          )}
-        >
-          <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            <span>{copy.metrics.cancelled}</span>
-            <span className="size-2 rounded-full bg-destructive" />
-          </div>
-          <div className="mt-2 flex items-baseline justify-between">
-            <span className="font-mono text-2xl font-semibold tabular-nums text-destructive">
-              {formatCount(hubCancelled)}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              {copy.metrics.transfersUnit}
-            </span>
-          </div>
-        </Item>
-      </div>
+          <Item
+            variant="outline"
+            onClick={() =>
+              replaceParam(
+                "state",
+                state === "cancelled" ? "all" : "cancelled",
+                "all",
+              )
+            }
+            className={cn(
+              "flex flex-col justify-between p-3 text-left cursor-pointer",
+              state === "cancelled"
+                ? "border-destructive ring-1 ring-destructive shadow-xs"
+                : "border-border",
+            )}
+          >
+            <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <span>{copy.metrics.cancelled}</span>
+              <span className="size-2 rounded-full bg-destructive" />
+            </div>
+            <div className="mt-2 flex items-baseline justify-between">
+              <span className="font-mono text-2xl font-semibold tabular-nums text-destructive">
+                {formatCount(hubCancelled)}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {copy.metrics.transfersUnit}
+              </span>
+            </div>
+          </Item>
+        </div>
 
-      <AppListFrame toolbar={toolbar}>
-        <DataTable
-          columns={columns}
-          data={filtered}
-          getRowKey={(row) =>
-            row.kind === "request"
-              ? `request-${row.requestId}`
-              : `transfer-${row.transferId}`
-          }
-          pageSize={50}
-          currentPage={currentPage}
-          onPageChange={(page) =>
-            replaceParam("page", page <= 1 ? "" : String(page), "")
-          }
-          onRowClick={(row) =>
-            router.push(
-              rowHref(
+        <AppListFrame toolbar={toolbar}>
+          <DataTable
+            columns={columns}
+            data={filtered}
+            getRowKey={(row) =>
+              row.kind === "request"
+                ? `request-${row.requestId}`
+                : `transfer-${row.transferId}`
+            }
+            pageSize={50}
+            currentPage={currentPage}
+            onPageChange={(page) =>
+              replaceParam("page", page <= 1 ? "" : String(page), "")
+            }
+            onRowClick={(row) =>
+              router.push(
+                rowHref(
+                  row,
+                  mode,
+                  branchId,
+                  pathname,
+                  new URLSearchParams(searchParams.toString()),
+                ),
+                { scroll: false },
+              )
+            }
+            getRowAriaLabel={(row) =>
+              `${row.kind === "request" ? "Yêu cầu hàng" : "Điều chuyển"} ${row.documentNumber}`
+            }
+            emptyTitle="Không có hành trình phù hợp"
+            emptyDescription={
+              mode === "branch"
+                ? "Tạo điều chuyển khi điểm vận hành cần bổ sung nguyên liệu."
+                : "Thử thay đổi phân loại, trạng thái hoặc từ khóa tìm kiếm."
+            }
+            emptyMode={
+              search || work !== "all" || state !== "all"
+                ? "no-results"
+                : "no-data"
+            }
+            mobileCardRender={(row) => {
+              const linkedTransfers = linkedTransferNumbers(row);
+              const href = rowHref(
                 row,
                 mode,
                 branchId,
                 pathname,
                 new URLSearchParams(searchParams.toString()),
-              ),
-              { scroll: false },
-            )
-          }
-          getRowAriaLabel={(row) =>
-            `${row.kind === "request" ? "Yêu cầu hàng" : "Điều chuyển"} ${row.documentNumber}`
-          }
-          emptyTitle="Không có hành trình phù hợp"
-          emptyDescription={
-            mode === "branch"
-              ? "Tạo điều chuyển khi điểm vận hành cần bổ sung nguyên liệu."
-              : "Thử thay đổi phân loại, trạng thái hoặc từ khóa tìm kiếm."
-          }
-          emptyMode={
-            search || work !== "all" || state !== "all"
-              ? "no-results"
-              : "no-data"
-          }
-          mobileCardRender={(row) => {
-            const linkedTransfers = linkedTransferNumbers(row);
-            const href = rowHref(
-              row,
-              mode,
-              branchId,
-              pathname,
-              new URLSearchParams(searchParams.toString()),
-            );
-            return (
-              <Item
-                variant="outline"
-                className="min-h-16"
-                render={<Link href={href} scroll={false} />}
-              >
-                <ItemContent>
-                  <ItemTitle className="flex flex-wrap items-center gap-2 line-clamp-none">
-                    <Badge variant="outline">
-                      {row.kind === "request" ? "YCH" : "DC"}
-                    </Badge>
-                    <span className="font-mono tabular-nums">
-                      {row.documentNumber}
-                    </span>
-                  </ItemTitle>
-                  <ItemDescription className="line-clamp-none">
-                    {rowTitle(row)}
-                  </ItemDescription>
-                  <ItemDescription className="line-clamp-none">
-                    {progressLines(row).join(" · ")}
-                  </ItemDescription>
-                  {linkedTransfers.length > 0 ? (
-                    <ItemDescription className="line-clamp-none font-mono tabular-nums">
-                      {copy.linkedTransferLabel}: {linkedTransfers.join(", ")}
+              );
+              return (
+                <Item
+                  variant="outline"
+                  className="min-h-16"
+                  render={<Link href={href} scroll={false} />}
+                >
+                  <ItemContent>
+                    <ItemTitle className="flex flex-wrap items-center gap-2 line-clamp-none">
+                      <Badge variant="outline">
+                        {row.kind === "request" ? "YCH" : "DC"}
+                      </Badge>
+                      <span className="font-mono tabular-nums">
+                        {row.documentNumber}
+                      </span>
+                    </ItemTitle>
+                    <ItemDescription className="line-clamp-none">
+                      {rowTitle(row)}
                     </ItemDescription>
-                  ) : null}
-                  <ItemDescription className="flex items-center gap-2">
-                    <Badge
-                      variant={
-                        row.lifecycle === "cancelled"
-                          ? "destructive"
-                          : row.lifecycle === "completed"
-                            ? "success"
-                            : "warning"
-                      }
-                    >
-                      {LIFECYCLE_LABELS[row.lifecycle]}
-                    </Badge>
-                  </ItemDescription>
-                </ItemContent>
-                <IconArrowRight className="size-4 text-muted-foreground" />
-              </Item>
-            );
-          }}
-        />
-      </AppListFrame>
-    </div>
-    <AppDialog
+                    <ItemDescription className="line-clamp-none">
+                      {progressLines(row).join(" · ")}
+                    </ItemDescription>
+                    {linkedTransfers.length > 0 ? (
+                      <ItemDescription className="line-clamp-none font-mono tabular-nums">
+                        {copy.linkedTransferLabel}: {linkedTransfers.join(", ")}
+                      </ItemDescription>
+                    ) : null}
+                    <ItemDescription className="flex items-center gap-2">
+                      <Badge
+                        variant={
+                          row.lifecycle === "cancelled"
+                            ? "destructive"
+                            : row.lifecycle === "completed"
+                              ? "success"
+                              : "warning"
+                        }
+                      >
+                        {LIFECYCLE_LABELS[row.lifecycle]}
+                      </Badge>
+                    </ItemDescription>
+                  </ItemContent>
+                  <IconArrowRight className="size-4 text-muted-foreground" />
+                </Item>
+              );
+            }}
+          />
+        </AppListFrame>
+      </div>
+      <AppDialog
         variant="document"
         open={dialogOpen}
         onOpenChange={(open) => {
@@ -681,9 +797,7 @@ export function StockFulfillmentHubClient({
                     branchId: selectedRequest.data.branchId,
                     requestId: selectedRequest.data.id,
                     pathname,
-                    searchParams: new URLSearchParams(
-                      searchParams.toString(),
-                    ),
+                    searchParams: new URLSearchParams(searchParams.toString()),
                   })}
                 />
               ) : null

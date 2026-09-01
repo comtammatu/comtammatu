@@ -48,7 +48,8 @@ export async function NewStocktakeSessionPageContent({
       .filter(
         (location) =>
           allowedBranchIds.has(location.branch_id as number) &&
-          location.location_kind === "warehouse",
+          (location.location_kind === "warehouse" ||
+            location.location_kind === "kitchen"),
       )
       .map((l) => ({
         id: l.id as number,

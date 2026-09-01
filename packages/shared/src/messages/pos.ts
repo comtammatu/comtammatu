@@ -138,9 +138,9 @@ export const POS_VI = {
   discountTitle: "Giảm giá",
   reasonPrefix: "Lý do: ",
   discountNoteHint: (trimLen: number) =>
-    `Tối thiểu 3 ký tự (${trimLen}/3). Lý do được lưu vào nhật ký.`,
+    `Tối thiểu 3 ký tự (${trimLen}/3).`,
   serviceChargeNoteHint: (trimLen: number) =>
-    `Tối thiểu 3 ký tự. (${trimLen}/3)`,
+    `Tối thiểu 3 ký tự (${trimLen}/3).`,
 } as const;
 
 export type PosKey = keyof typeof POS_VI;

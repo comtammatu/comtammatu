@@ -11,7 +11,6 @@ import {
 import { BRANCH_VI } from "@comtammatu/shared/messages";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import {
-  AppEmptyState,
   AppListFrame,
   AppToolbar,
 } from "@/components/surface";
@@ -24,6 +23,7 @@ import {
   Item,
   ItemContent,
   ItemDescription,
+  ItemHeader,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import type { FeedbackInboxRow } from "../actions";
@@ -169,58 +169,60 @@ export function FeedbackInbox({
         ) : undefined
       }
     >
-      {items.length === 0 ? (
-        <AppEmptyState mode="no-data" description={feedbackCopy.inboxEmpty} />
-      ) : (
-        <DataTable
-          columns={columns}
-          data={items}
-          getRowKey={(row) => row.id}
-          pageSize={FEEDBACK_PAGE_SIZE}
-          currentPage={page}
-          totalCount={total}
-          onPageChange={(nextPage) => pushParams({ page: String(nextPage) })}
-          emptyTitle={feedbackCopy.inboxEmpty}
-          mobileBreakpoint={forceTouch ? Number.POSITIVE_INFINITY : undefined}
-          mobileCardRender={(item) => (
-            <Item variant="outline">
-              <ItemContent className="gap-1">
-                <ItemTitle>
-                  {feedbackCopy.rating}: {item.rating}
-                </ItemTitle>
-                <ItemDescription>
-                  {formatVNDateTime(item.createdAt)}
-                  {showBranchFilter ? ` · ${item.branchName}` : ""}
+      <DataTable
+        className="[&_table]:table-fixed"
+        columns={columns}
+        data={items}
+        getRowKey={(row) => row.id}
+        pageSize={FEEDBACK_PAGE_SIZE}
+        currentPage={page}
+        totalCount={total}
+        onPageChange={(nextPage) => pushParams({ page: String(nextPage) })}
+        emptyTitle={feedbackCopy.inboxEmpty}
+        emptyMode="no-data"
+        mobileBreakpoint={forceTouch ? Number.POSITIVE_INFINITY : undefined}
+        mobileCardRender={(item) => (
+          <Item variant="outline" className="w-full text-left">
+            <ItemHeader>
+              <ItemTitle>
+                {feedbackCopy.rating}: {item.rating}
+              </ItemTitle>
+              <span className="text-xs text-muted-foreground">
+                {formatVNDateTime(item.createdAt)}
+                {showBranchFilter ? ` · ${item.branchName}` : ""}
+              </span>
+            </ItemHeader>
+            <ItemContent className="min-w-0 text-left">
+              {item.orderNumber || item.tableNumber ? (
+                <ItemDescription className="truncate font-medium text-foreground">
+                  {[
+                    item.orderNumber
+                      ? `${feedbackCopy.orderNumber} ${item.orderNumber}`
+                      : null,
+                    item.tableNumber
+                      ? feedbackCopy.tableLabel.replace(
+                          "{number}",
+                          item.tableNumber,
+                        )
+                      : null,
+                    item.orderCreatedAt
+                      ? formatVNDateTime(item.orderCreatedAt)
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </ItemDescription>
-                {item.orderNumber || item.tableNumber ? (
-                  <ItemDescription>
-                    {[
-                      item.orderNumber
-                        ? `${feedbackCopy.orderNumber} ${item.orderNumber}`
-                        : null,
-                      item.tableNumber
-                        ? feedbackCopy.tableLabel.replace(
-                            "{number}",
-                            item.tableNumber,
-                          )
-                        : null,
-                      item.orderCreatedAt
-                        ? formatVNDateTime(item.orderCreatedAt)
-                        : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </ItemDescription>
-                ) : null}
-                <ItemDescription className="line-clamp-3">
-                  {item.comment ?? "—"}
-                </ItemDescription>
-                <ItemDescription>QR: {item.qrLabel}</ItemDescription>
-              </ItemContent>
-            </Item>
-          )}
-        />
-      )}
+              ) : null}
+              <ItemDescription className="text-xs text-muted-foreground line-clamp-3">
+                {item.comment ?? "—"}
+              </ItemDescription>
+              <ItemDescription className="text-xs text-muted-foreground">
+                QR: {item.qrLabel}
+              </ItemDescription>
+            </ItemContent>
+          </Item>
+        )}
+      />
     </AppListFrame>
   );
 }

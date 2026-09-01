@@ -20,6 +20,7 @@ import {
   ItemActions,
   ItemContent,
   ItemDescription,
+  ItemHeader,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
@@ -135,45 +136,49 @@ function summarizeVariance(row: CountSlipRow) {
 function renderSlipMobileRow(row: CountSlipRow, onOpen: () => void) {
   const variance = summarizeVariance(row);
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      className="h-auto w-full justify-stretch p-0 text-left"
-      aria-label={`Xem phiếu đếm ${row.slipNumber} của ${row.employeeName}`}
-      onClick={onOpen}
+    <Item
+      variant="outline"
+      className="w-full text-left"
+      render={
+        <button
+          type="button"
+          aria-label={`Xem phiếu đếm ${row.slipNumber} của ${row.employeeName}`}
+          onClick={onOpen}
+        />
+      }
     >
-      <Item variant="outline" className="items-start">
-        <ItemContent className="min-w-0">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <ItemTitle className="min-w-0 truncate font-mono tabular-nums">
-              {row.slipNumber}
-            </ItemTitle>
-            <StatusBadge domain="count-slip" value={row.status} />
-          </div>
-          <ItemDescription className="truncate">{row.employeeName}</ItemDescription>
-          <ItemDescription className="break-words">
-            {row.branchName} · {row.locationName}
-            {row.shiftName ? ` · ${row.shiftName}` : ""}
-          </ItemDescription>
-          <ItemDescription>
-            {INVENTORY_VI.countDateAt(formatVNDate(row.countDate))} ·{" "}
-            {INVENTORY_VI.grnDraftLineCount(row.lines.length)}
-          </ItemDescription>
-        </ItemContent>
-        <ItemActions>
-          <span
-            className={cn(
-              "font-mono text-sm font-semibold tabular-nums",
-              varianceClassName(variance.total),
-            )}
-          >
-            {variance.showTotal
-              ? `${formatVariance(variance.total)} ${variance.unit}`
-              : INVENTORY_VI.varianceLineCount(variance.changedLineCount)}
-          </span>
-        </ItemActions>
-      </Item>
-    </Button>
+      <ItemHeader>
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <ItemTitle className="min-w-0 truncate font-mono font-semibold tabular-nums">
+            {row.slipNumber}
+          </ItemTitle>
+          <StatusBadge domain="count-slip" value={row.status} />
+        </div>
+        <span
+          className={cn(
+            "font-mono text-sm font-semibold tabular-nums",
+            varianceClassName(variance.total),
+          )}
+        >
+          {variance.showTotal
+            ? `${formatVariance(variance.total)} ${variance.unit}`
+            : INVENTORY_VI.varianceLineCount(variance.changedLineCount)}
+        </span>
+      </ItemHeader>
+      <ItemContent className="min-w-0 text-left">
+        <ItemDescription className="truncate font-medium text-foreground">
+          {row.employeeName}
+        </ItemDescription>
+        <ItemDescription className="break-words">
+          {row.branchName} · {row.locationName}
+          {row.shiftName ? ` · ${row.shiftName}` : ""}
+        </ItemDescription>
+        <ItemDescription className="text-xs text-muted-foreground">
+          {INVENTORY_VI.countDateAt(formatVNDate(row.countDate))} ·{" "}
+          {INVENTORY_VI.grnDraftLineCount(row.lines.length)}
+        </ItemDescription>
+      </ItemContent>
+    </Item>
   );
 }
 
@@ -453,6 +458,7 @@ export function CountSlipsClient({
         }
       >
         <DataTable
+          className="[&_table]:table-fixed"
           columns={columns}
           data={visibleRows}
           pageSize={50}
@@ -463,6 +469,7 @@ export function CountSlipsClient({
           }
           emptyTitle={emptyTitle}
           emptyDescription={emptyDescription}
+          emptyMode={queueView !== "all" ? "no-results" : "no-data"}
           emptyIcon={<IconClipboardCheck />}
           mobileCardRender={(row) =>
             renderSlipMobileRow(row, () => openSlip(row.id))

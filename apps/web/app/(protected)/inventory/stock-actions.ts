@@ -174,11 +174,16 @@ export const ownerSetCompanyWac = withAction(
 
 /* ─── saveBranchStockThresholdsAction ─── */
 
-const thresholdItemSchema = z.object({
-  ingredientId: z.coerce.number().int().positive(),
-  minStockLevel: z.coerce.number().min(0),
-  reorderQuantity: z.coerce.number().min(0).nullable().optional(),
-});
+const thresholdItemSchema = z
+  .object({
+    ingredientId: z.coerce.number().int().positive(),
+    minStockLevel: z.coerce.number().min(0),
+    targetStockLevel: z.coerce.number().min(0),
+    reorderQuantity: z.coerce.number().min(0).nullable().optional(),
+  })
+  .refine((item) => item.targetStockLevel >= item.minStockLevel, {
+    message: "Mức cấp lên phải lớn hơn hoặc bằng mức cảnh báo.",
+  });
 
 const saveBranchThresholdsSchema = z.object({
   branchId: z.coerce.number().int().positive(),
@@ -234,6 +239,7 @@ export const saveBranchStockThresholdsAction = withAction(
       p_thresholds: data.thresholds.map((t) => ({
         ingredient_id: t.ingredientId,
         min_stock_level: t.minStockLevel,
+        target_stock_level: t.targetStockLevel,
         reorder_quantity: t.reorderQuantity,
       })),
     });
@@ -262,6 +268,7 @@ const reorderItemSchema = z.object({
     "supplier_po",
     "internal_transfer_kitchen",
     "internal_transfer_supply",
+    "intra_site_transfer",
   ]),
 });
 
@@ -281,8 +288,13 @@ export const createReorderDraftDemandsAction = withAction(
     const supplierItems = data.items.filter(
       (item) => item.supplyChannel === "supplier_po",
     );
+    const intraSiteItems = data.items.filter(
+      (item) => item.supplyChannel === "intra_site_transfer",
+    );
     const internalItems = data.items.filter(
-      (item) => item.supplyChannel !== "supplier_po",
+      (item) =>
+        item.supplyChannel !== "supplier_po" &&
+        item.supplyChannel !== "intra_site_transfer",
     );
 
     let createdPurchaseDemandCount = 0;
@@ -330,6 +342,51 @@ export const createReorderDraftDemandsAction = withAction(
     if (internalItems.length > 0) {
       // Future integration: Batch stock requests for central kitchen / central supply
       createdStockRequestCount = 0;
+    }
+
+    if (intraSiteItems.length > 0) {
+      const { data: rawLocations, error: locationError } = await supabase
+        .from("inventory_locations")
+        .select("id, location_kind")
+        .eq("branch_id", data.branchId)
+        .eq("is_active", true)
+        .in("location_kind", ["warehouse", "kitchen"]);
+      const locations = (rawLocations ?? []) as unknown as Array<{
+        id: number;
+        location_kind: string;
+      }>;
+      const warehouseId = locations.find(
+        (location) => location.location_kind === "warehouse",
+      )?.id;
+      const kitchenId = locations.find(
+        (location) => location.location_kind === "kitchen",
+      )?.id;
+      if (locationError || warehouseId == null || kitchenId == null) {
+        return { success: false, error: "Không tìm thấy Kho và Bếp." };
+      }
+
+      const { data: transfer, error: transferError } = await supabase.rpc(
+        "commit_intra_site_transfer" as never,
+        {
+          p_branch_id: data.branchId,
+          p_from_location_id: warehouseId,
+          p_to_location_id: kitchenId,
+          p_lines: intraSiteItems.map((item) => ({
+            ingredientId: item.ingredientId,
+            quantity: item.quantity,
+            entryUnitId: item.entryUnitId,
+          })),
+          p_notes: "Cấp bù Bếp theo ngưỡng tồn kho",
+          p_idempotency_key: crypto.randomUUID(),
+        } as never,
+      );
+      if (transferError || transfer == null) {
+        console.error("inventory.smart_reorder.intra_site_failed", {
+          error: transferError,
+        });
+        return { success: false, error: "Không thể cấp bù từ Kho xuống Bếp." };
+      }
+      createdStockRequestCount += 1;
     }
 
     revalidatePath("/inventory/stock");

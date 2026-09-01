@@ -33,6 +33,7 @@ type TransferRecord = {
   id: number;
   transfer_number: string;
   status: string;
+  transfer_scope: "inter_site" | "intra_site" | null;
   stock_request_id: number | null;
   from_branch_id: number;
   to_branch_id: number;
@@ -73,7 +74,7 @@ export async function loadStockFulfillmentRows({
   let transfersQuery = supabase
     .from("stock_transfers")
     .select(
-      "id, transfer_number, status, stock_request_id, from_branch_id, to_branch_id, created_at",
+      "id, transfer_number, status, transfer_scope, stock_request_id, from_branch_id, to_branch_id, created_at",
     )
     .eq("tenant_id", tenantId);
   if (branchId != null) {
@@ -137,7 +138,7 @@ export async function loadStockFulfillmentRows({
       : await supabase
           .from("stock_transfers")
           .select(
-            "id, transfer_number, status, stock_request_id, from_branch_id, to_branch_id, created_at",
+            "id, transfer_number, status, transfer_scope, stock_request_id, from_branch_id, to_branch_id, created_at",
           )
           .eq("tenant_id", tenantId)
           .in("stock_request_id", requestIds)
@@ -223,6 +224,7 @@ export async function loadStockFulfillmentRows({
       id: transfer.id,
       transferNumber: transfer.transfer_number,
       status: transfer.status,
+      transferScope: transfer.transfer_scope ?? "inter_site",
       stockRequestId: transfer.stock_request_id,
       fromSite: site(transfer.from_branch_id),
       toSite: site(transfer.to_branch_id),

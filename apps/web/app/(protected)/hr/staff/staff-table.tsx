@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { cn } from "@comtammatu/ui";
 import { StatusBadge } from "@/components/status-badge";
 import { messages } from "@lib/messages";
 import { toggleStaffActive } from "./actions";
@@ -290,7 +291,7 @@ export function StaffTable({
     {
       key: "actions",
       header: <span className="sr-only">{staffCopy.actions}</span>,
-      className: "w-12",
+      className: "w-12 text-right",
       render: (member) => (
         <StaffActionsMenu
           member={member}
@@ -306,6 +307,7 @@ export function StaffTable({
   return (
     <>
       <DataTable
+        className={cn("[&_table]:table-fixed", isPending && "opacity-60")}
         columns={columns}
         data={staff}
         pageSize={25}
@@ -317,7 +319,6 @@ export function StaffTable({
         }
         emptyMode={hasActiveFilters ? "no-results" : "no-data"}
         emptyIcon={<IconUsers />}
-        className={isPending ? "opacity-60" : undefined}
         mobileCardRender={(member) => (
           <Item
             variant="outline"

@@ -9,7 +9,10 @@ import {
 } from "./branch-stock-threshold-model";
 
 export type SupplyChannel =
-  "supplier_po" | "internal_transfer_kitchen" | "internal_transfer_supply";
+  | "supplier_po"
+  | "internal_transfer_kitchen"
+  | "internal_transfer_supply"
+  | "intra_site_transfer";
 
 export type ReorderSuggestionItem = {
   ingredientId: number;

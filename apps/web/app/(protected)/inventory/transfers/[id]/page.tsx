@@ -26,6 +26,7 @@ export default async function TransferDetailPage({
       userBranchId={data.userBranchId}
       correctionBranches={data.correctionBranches}
       auditLogs={data.auditLogs}
+      intraSiteData={data.intraSiteData}
       listHref={listHref}
     />
   );

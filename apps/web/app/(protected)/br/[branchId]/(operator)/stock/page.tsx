@@ -29,12 +29,14 @@ import {
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
 import { loadStockFulfillmentRows } from "@lib/inventory/stock-fulfillment-data";
+import { loadIntraSiteTransferData } from "@lib/inventory/intra-site-transfer-data";
 import type { StockFulfillmentSiteKind } from "@lib/inventory/stock-fulfillment-projection";
 import { branchTransferCreateHref } from "@lib/inventory/transfer-paths";
 import { messages } from "@lib/messages";
 import { parseOperatorBranchId } from "../../_lib/parse-branch-id";
 import { resolveOperatorTileIcon } from "../operator-tile-icons";
 import { BranchStockFulfillmentHubClient } from "./transfer/branch-stock-fulfillment-hub-client";
+import { IntraSiteTransferDialog } from "@/components/inventory/intra-site-transfer-dialog";
 
 interface OperatorStockLink {
   key: string;
@@ -318,19 +320,28 @@ export default async function OperatorStockPage({
   const stockRoot = `${basePath}/stock`;
 
   if (branchKind === "branch") {
-    const rows = await loadStockFulfillmentRows({
-      supabase,
-      tenantId: claims.tenant_id,
-      mode: "branch",
-      branchId: context.branchId,
-      scopeSiteKind: "branch" as StockFulfillmentSiteKind,
-      seeAllSources: claims.user_role === "owner",
-    }).catch((error: unknown) => {
-      console.error("inventory.stock_landing.work_load_failed", error);
-      return [];
-    });
+    const [rows, intraSiteData] = await Promise.all([
+      loadStockFulfillmentRows({
+        supabase,
+        tenantId: claims.tenant_id,
+        mode: "branch",
+        branchId: context.branchId,
+        scopeSiteKind: "branch" as StockFulfillmentSiteKind,
+        seeAllSources: claims.user_role === "owner",
+      }).catch((error: unknown) => {
+        console.error("inventory.stock_landing.work_load_failed", error);
+        return [];
+      }),
+      claims.user_role === "owner" || claims.user_role === "branch_manager"
+        ? loadIntraSiteTransferData({
+            supabase,
+            tenantId: claims.tenant_id,
+            branchId: context.branchId,
+          })
+        : Promise.resolve(null),
+    ]);
 
-    const createAction = (
+    const requestAction = (
       <Button
         size="touch"
         render={
@@ -341,12 +352,25 @@ export default async function OperatorStockPage({
         {journeyCopy.requestAction}
       </Button>
     );
+    const intraSiteAction = intraSiteData ? (
+      <IntraSiteTransferDialog
+        data={intraSiteData}
+        triggerSize="touch"
+        detailBasePath={`${basePath}/stock/transfer`}
+      />
+    ) : null;
+    const createActions = (
+      <div className="flex flex-wrap gap-2">
+        {intraSiteAction}
+        {requestAction}
+      </div>
+    );
 
     return (
       <BranchOperatorPage
         title={journeyCopy.hubTitle}
         description={journeyCopy.branchHubDescription}
-        action={<div className="max-sm:hidden">{createAction}</div>}
+        action={<div className="max-sm:hidden">{createActions}</div>}
       >
         <div className="flex min-w-0 flex-col gap-4">
           <BranchStockDoors basePath={basePath} />
@@ -357,7 +381,12 @@ export default async function OperatorStockPage({
             branchId={context.branchId}
           />
         </div>
-        <AppDetailFooter sticky className="sm:hidden" trailing={createAction} />
+        <AppDetailFooter
+          sticky
+          className="sm:hidden"
+          leading={intraSiteAction ?? undefined}
+          trailing={requestAction}
+        />
       </BranchOperatorPage>
     );
   }

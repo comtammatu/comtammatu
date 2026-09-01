@@ -239,11 +239,14 @@ test("fulfill copy shows quantity with unit, on-hand, and shortage alerts", () =
   assert.doesNotMatch(fulfillBlock, /`SL \$\{quantity\}/);
 });
 
-test("embedded transfer dialog drops timeline and history chrome", () => {
+test("embedded and intra-site transfer details drop inter-site timeline chrome", () => {
   const transfer = read(
     "apps/web/app/(protected)/inventory/transfers/[id]/transfer-detail-client.tsx",
   );
-  assert.match(transfer, /embedded \? null : \([\s\S]*TimelineStepper/);
+  assert.match(
+    transfer,
+    /embedded \|\| isIntraSite \? null : \([\s\S]*TimelineStepper/,
+  );
   assert.match(transfer, /const embeddedLayout = pageLayout/);
   assert.doesNotMatch(
     transfer,

@@ -15,9 +15,10 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { confirm } from "@/components/confirm-dialog";
 import {
   Item,
-  ItemActions,
   ItemContent,
   ItemDescription,
+  ItemFooter,
+  ItemHeader,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Field, FieldLabel } from "@comtammatu/ui/components/field";
@@ -170,8 +171,8 @@ export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
     },
     {
       key: "actions",
-      header: FORM_VI.action,
-      className: "w-14",
+      header: "",
+      className: "w-12 text-right",
       render: (row) => {
         const items = getCategoryRowActions(row);
         return (
@@ -182,7 +183,7 @@ export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
             <RowActionsMenu
               items={items}
               label={FORM_VI.action}
-              triggerSize="icon-sm"
+              triggerSize={isTouchLayout ? "icon-touch" : "icon"}
             />
           </div>
         );
@@ -195,7 +196,10 @@ export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
       <AppPageHeader
         title={copy.page.title}
         actions={
-          <Button size="lg" onClick={openCreate}>
+          <Button
+            size={isTouchLayout ? "touch" : "default"}
+            onClick={openCreate}
+          >
             <IconPlus data-icon="inline-start" />
             {copy.add}
           </Button>
@@ -204,6 +208,7 @@ export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
 
       <AppListFrame>
         <DataTable
+          className="[&_table]:table-fixed"
           columns={columns}
           data={rows}
           getRowKey={(row) => row.id}
@@ -214,19 +219,23 @@ export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
           emptyTitle={copy.empty}
           emptyMode="no-data"
           mobileCardRender={(row) => (
-            <Item variant="outline" onClick={() => openEdit(row)}>
-              <ItemContent className="min-w-0">
-                <ItemTitle size="heading">{row.name}</ItemTitle>
-                <ItemDescription className="text-sm leading-6">
+            <Item
+              variant="outline"
+              className="w-full text-left"
+              render={<button type="button" onClick={() => openEdit(row)} />}
+            >
+              <ItemHeader>
+                <ItemTitle>{row.name}</ItemTitle>
+                <Badge variant={row.is_active ? "success" : "secondary"}>
+                  {row.is_active ? copy.status.active : copy.status.inactive}
+                </Badge>
+              </ItemHeader>
+              <ItemContent className="min-w-0 text-left">
+                <ItemDescription className="text-xs text-muted-foreground">
                   {copy.cols.sortOrder}: {row.sort_order}
                 </ItemDescription>
-                <div>
-                  <Badge variant={row.is_active ? "success" : "secondary"}>
-                    {row.is_active ? copy.status.active : copy.status.inactive}
-                  </Badge>
-                </div>
               </ItemContent>
-              <ItemActions className="self-center">
+              <ItemFooter className="justify-end">
                 <div onClick={(event) => event.stopPropagation()}>
                   <RowActionsMenu
                     items={getCategoryRowActions(row)}
@@ -234,7 +243,7 @@ export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
                     triggerSize={isTouchLayout ? "icon-touch" : "icon"}
                   />
                 </div>
-              </ItemActions>
+              </ItemFooter>
             </Item>
           )}
         />

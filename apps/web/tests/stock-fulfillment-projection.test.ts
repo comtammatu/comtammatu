@@ -39,6 +39,7 @@ const transfers: StockFulfillmentTransferRecord[] = [
     id: 201,
     transferNumber: "DC-201",
     status: "draft",
+    transferScope: "inter_site",
     stockRequestId: 10,
     fromSite: supply,
     toSite: branch,
@@ -49,6 +50,7 @@ const transfers: StockFulfillmentTransferRecord[] = [
     id: 202,
     transferNumber: "DC-202",
     status: "in_transit",
+    transferScope: "inter_site",
     stockRequestId: 10,
     fromSite: kitchen,
     toSite: branch,
@@ -59,6 +61,7 @@ const transfers: StockFulfillmentTransferRecord[] = [
     id: 203,
     transferNumber: "DC-203",
     status: "draft",
+    transferScope: "inter_site",
     stockRequestId: null,
     fromSite: supply,
     toSite: kitchen,
@@ -193,6 +196,7 @@ test("branch mode emits inbound receive-ready manual DCs only", () => {
     id: 204,
     transferNumber: "DC-204",
     status: "in_transit",
+    transferScope: "inter_site",
     stockRequestId: null,
     fromSite: supply,
     toSite: branch,
@@ -203,6 +207,7 @@ test("branch mode emits inbound receive-ready manual DCs only", () => {
     id: 205,
     transferNumber: "DC-205",
     status: "draft",
+    transferScope: "inter_site",
     stockRequestId: null,
     fromSite: supply,
     toSite: branch,
@@ -227,4 +232,44 @@ test("branch mode emits inbound receive-ready manual DCs only", () => {
     [204],
   );
   assert.deepEqual(rows[0]?.workKinds, ["receive"]);
+});
+
+test("branch mode keeps completed intra-site documents as local history", () => {
+  const intraSite: StockFulfillmentTransferRecord = {
+    id: 206,
+    transferNumber: "DC-206",
+    status: "received",
+    transferScope: "intra_site",
+    stockRequestId: null,
+    fromSite: branch,
+    toSite: branch,
+    createdAt: "2026-07-30T10:06:00Z",
+    lines: [{ quantity: 3, quantityReceived: 3 }],
+  };
+  const rows = projectStockFulfillmentRows({
+    requests: [],
+    items: [],
+    transfers: [intraSite],
+    viewer: {
+      mode: "branch",
+      branchId: branch.id,
+      scopeSiteKind: "branch",
+    },
+  });
+
+  assert.equal(rows.length, 1);
+  assert.deepEqual(rows[0], {
+    kind: "manual_transfer",
+    transferId: 206,
+    documentNumber: "DC-206",
+    fromSite: branch,
+    toSite: branch,
+    createdAt: "2026-07-30T10:06:00Z",
+    status: "received",
+    transferScope: "intra_site",
+    lifecycle: "completed",
+    workKinds: [],
+    currentWork: [],
+    lineCount: 1,
+  });
 });

@@ -11,7 +11,13 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
-import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemHeader,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import {
   Select,
   SelectContent,
@@ -465,43 +471,39 @@ export function IssueRowCard({
   const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
 
   return (
-    <InteractiveCard
-      minHeight="mobile"
-      padding="default"
-      className="cursor-pointer"
-      role="button"
-      tabIndex={0}
-      onClick={() => onOpen(item)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onOpen(item);
-        }
-      }}
+    <Item
+      variant="outline"
+      className="w-full text-left"
+      render={<button type="button" onClick={() => onOpen(item)} />}
     >
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-sm font-semibold">{item.code}</span>
-          <StatusBadge domain="inventory" value={item.status} size="sm" />
+      <ItemHeader>
+        <div className="flex min-w-0 items-center gap-2">
+          <ItemTitle className="font-mono font-semibold">{item.code}</ItemTitle>
+          <StatusBadge domain="inventory" value={item.status} />
         </div>
-        <p className="truncate text-xs text-muted-foreground">
+      </ItemHeader>
+      <ItemContent className="min-w-0 text-left">
+        <ItemDescription className="truncate font-medium text-foreground">
           {item.branchName}
-        </p>
-        <p className="text-xs text-muted-foreground">
+        </ItemDescription>
+        <ItemDescription className="text-xs text-muted-foreground">
           {issueTypeLabel(item.type, item.branchKind)} &middot; {item.date}
-        </p>
-      </div>
-      <div
-        onClick={(event) => event.stopPropagation()}
-        onKeyDown={(event) => event.stopPropagation()}
-      >
-        <RowActionsMenu
-          items={actions}
-          label={`${ACTIONS_VI.viewDetails} ${item.code}`}
-          triggerSize={isTouchLayout ? "icon-touch" : "icon"}
-        />
-      </div>
-    </InteractiveCard>
+        </ItemDescription>
+      </ItemContent>
+      {actions.length > 0 ? (
+        <div
+          className="flex justify-end pt-1"
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          <RowActionsMenu
+            items={actions}
+            label={`${ACTIONS_VI.viewDetails} ${item.code}`}
+            triggerSize={isTouchLayout ? "icon-touch" : "icon"}
+          />
+        </div>
+      ) : null}
+    </Item>
   );
 }
 
@@ -515,40 +517,33 @@ export function RecordedConsumptionCard({
   onOpen: (item: RecordedConsumptionRow) => void;
 }) {
   return (
-    <InteractiveCard
-      minHeight="tap"
-      padding="compact"
-      className="cursor-pointer"
-      role="button"
-      tabIndex={0}
-      onClick={() => onOpen(item)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onOpen(item);
-        }
-      }}
+    <Item
+      variant="outline"
+      className="w-full text-left"
+      render={<button type="button" onClick={() => onOpen(item)} />}
     >
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <div className="flex min-w-0 items-center justify-between gap-2">
-          <span className="truncate font-mono text-sm font-semibold">
-            {item.orderNumber}
+      <ItemHeader>
+        <ItemTitle className="truncate font-mono font-semibold">
+          {item.orderNumber}
+        </ItemTitle>
+        {canViewMonetary ? (
+          <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-foreground">
+            {item.totalCostLabel ?? "—"}
           </span>
-          {canViewMonetary ? (
-            <span className="shrink-0 font-mono text-sm font-semibold">
-              {item.totalCostLabel ?? "—"}
-            </span>
-          ) : null}
-        </div>
-        <p className="text-xs text-muted-foreground">
+        ) : null}
+      </ItemHeader>
+      <ItemContent className="min-w-0 text-left">
+        <ItemDescription className="text-xs text-muted-foreground">
           {item.branchName} · {item.locationName}
-        </p>
-        <p className="text-xs text-muted-foreground">
+        </ItemDescription>
+        <ItemDescription className="text-xs text-muted-foreground">
           {INVENTORY_VI.ingredientCountBadge(item.ingredientCount)} ·{" "}
           {item.recordedAtLabel}
-        </p>
-        <p className="text-xs text-muted-foreground">{item.sourceLabel}</p>
-      </div>
-    </InteractiveCard>
+        </ItemDescription>
+        <ItemDescription className="text-xs text-muted-foreground">
+          {item.sourceLabel}
+        </ItemDescription>
+      </ItemContent>
+    </Item>
   );
 }

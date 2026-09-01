@@ -5,7 +5,6 @@ import { Frame } from "@comtammatu/ui/components/frame";
 import { cn } from "@comtammatu/ui";
 import {
   Field,
-  FieldDescription,
   FieldGroup,
   FieldLabel,
 } from "@comtammatu/ui/components/field";
@@ -51,9 +50,6 @@ export function TransferTableDialog({
     selectedTable != null && selectedTable.id !== currentTableId && !isPending;
   const currentTableLabel =
     currentTableNumber != null ? `bàn ${currentTableNumber}` : "bàn hiện tại";
-  const targetLabel = selectedTable
-    ? `bàn ${selectedTable.number}`
-    : "bàn trống";
   const dialogTitle = `${POS_VI.transferTable}${orderNumber ? ` · ${orderNumber}` : ""} · từ ${currentTableLabel}`;
 
   const handleOpenChange = (nextOpen: boolean) => {
@@ -130,11 +126,6 @@ export function TransferTableDialog({
               );
             })}
           </Frame>
-          <FieldDescription>
-            {selectedTable
-              ? `Sẵn sàng chuyển sang ${targetLabel}.`
-              : "Chạm bàn đích trên bảng chọn trước khi xác nhận."}
-          </FieldDescription>
         </Field>
       </FieldGroup>
     </StationSheet>

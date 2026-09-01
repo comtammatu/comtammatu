@@ -828,11 +828,10 @@ export const finance = {
       openConflictOrder: "Mở đơn",
       linkTitle: "Khớp đơn",
       linkDescription:
-        "Nhập mã đơn trên phiếu. Đơn VietQR đang chờ đối soát sẽ hiện ra để xác nhận.",
+        "Nhập mã đơn in trên phiếu để đối soát với giao dịch.",
       linkInputLabel: "Mã đơn",
       linkInputPlaceholder: "Ví dụ: TC-260817-001",
-      linkInputHelp:
-        "Mã in trên phiếu bán, không phải nội dung chuyển khoản. Tìm xong chọn đúng đơn rồi khớp.",
+      linkInputHelp: "",
       linkAction: "Khớp",
       linkSearchAction: "Tìm đơn",
       linkSearchPending: "Đang tìm…",

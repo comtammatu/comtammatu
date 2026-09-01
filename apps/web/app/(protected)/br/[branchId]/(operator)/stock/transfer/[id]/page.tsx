@@ -40,7 +40,11 @@ export default async function OperatorTransferDetailPage({
   });
 
   // Store branch: DC detail is central-only. Route to YCH / receive / stock.
-  if (context.branch.branch_kind === "branch") {
+  if (
+    context.branch.branch_kind === "branch" &&
+    data.transfer.transferScope === "inter_site" &&
+    data.transfer.status !== "received"
+  ) {
     if (data.transfer.stockRequestId != null) {
       redirect(
         `/br/${branchId}/stock/requests/${data.transfer.stockRequestId}`,
@@ -74,6 +78,7 @@ export default async function OperatorTransferDetailPage({
         transfer={data.transfer}
         userRole={data.userRole}
         userBranchId={data.userBranchId}
+        intraSiteData={data.intraSiteData}
       />
     </BranchOperatorPage>
   );

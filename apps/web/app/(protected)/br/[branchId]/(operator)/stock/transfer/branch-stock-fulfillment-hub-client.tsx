@@ -33,10 +33,7 @@ import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@comtammatu/ui/components/toggle-group";
-import {
-  AppEmptyState,
-  AppSheet,
-} from "@/components/surface";
+import { AppEmptyState, AppSheet } from "@/components/surface";
 import { matchesSearch } from "@lib/search";
 import type { StockFulfillmentRow } from "@lib/inventory/stock-fulfillment-data";
 import {
@@ -89,9 +86,7 @@ export function BranchStockFulfillmentHubClient({
       ? rawWork === "receive"
         ? "receive"
         : "all"
-      : rawWork === "request" ||
-          rawWork === "dispatch" ||
-          rawWork === "receive"
+      : rawWork === "request" || rawWork === "dispatch" || rawWork === "receive"
         ? rawWork
         : "all";
   const stateDefault: StockFulfillmentStateFilter =
@@ -153,9 +148,9 @@ export function BranchStockFulfillmentHubClient({
   }, [mode, rows, search, state, resolvedWork]);
 
   const hasFilters =
-    (mode === "branch"
+    mode === "branch"
       ? receiveFocus || state !== stateDefault || search.length > 0
-      : resolvedWork !== "all" || state !== stateDefault || search.length > 0);
+      : resolvedWork !== "all" || state !== stateDefault || search.length > 0;
 
   function clearAllFilters() {
     const params = new URLSearchParams(searchParams.toString());
@@ -349,18 +344,25 @@ export function BranchStockFulfillmentHubClient({
                       size="heading"
                       className="flex flex-wrap items-center gap-2"
                     >
-                    <Badge variant="outline">
-                      {row.kind === "request" ? "YCH" : "DC"}
-                    </Badge>
-                    <span className="font-mono tabular-nums">
-                      {row.documentNumber}
-                    </span>
-                  </ItemTitle>
-                  {mode === "central" || row.kind === "manual_transfer" ? (
-                    <ItemDescription className="line-clamp-none">
-                      {stockFulfillmentRowTitle(row)}
-                    </ItemDescription>
-                  ) : null}
+                      <Badge variant="outline">
+                        {row.kind === "request" ? "YCH" : "DC"}
+                      </Badge>
+                      {row.kind === "manual_transfer" ? (
+                        <Badge variant="secondary">
+                          {row.transferScope === "intra_site"
+                            ? "Nội bộ Kho ↔ Bếp"
+                            : "Liên điểm"}
+                        </Badge>
+                      ) : null}
+                      <span className="font-mono tabular-nums">
+                        {row.documentNumber}
+                      </span>
+                    </ItemTitle>
+                    {mode === "central" || row.kind === "manual_transfer" ? (
+                      <ItemDescription className="line-clamp-none">
+                        {stockFulfillmentRowTitle(row)}
+                      </ItemDescription>
+                    ) : null}
                     <ItemDescription className="line-clamp-2">
                       {progressLines.join(" · ")}
                     </ItemDescription>

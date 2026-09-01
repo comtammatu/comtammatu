@@ -4,11 +4,15 @@ export interface TransferDetail {
   id: number;
   code: string;
   status: string;
+  transferScope: "inter_site" | "intra_site";
+  reversesTransferId: number | null;
   /** Parent YCH when this DC fulfills a stock request. */
   stockRequestId: number | null;
   stockRequestNumber: string | null;
   fromBranchId: number;
   toBranchId: number;
+  fromLocationId: number;
+  toLocationId: number;
   fromBranch: string;
   toBranch: string;
   fromLocation: string;
@@ -23,6 +27,7 @@ export interface TransferDetail {
   } | null;
   items: Array<{
     ingredientId: number;
+    entryUnitId: number | null;
     name: string;
     sku: string;
     qty: number;
@@ -32,6 +37,8 @@ export interface TransferDetail {
     toBaseFactor: number | null;
     monetary: { cost: number; total: number } | null;
     received: number | null;
+    /** Entry-unit quantity that has not yet been reversed. */
+    reversibleQty: number;
   }>;
 }
 
@@ -70,6 +77,8 @@ export function getTransferActionConfig({
   userRole: StaffRole;
   userBranchId: number | null;
 }): TransferActionConfig | null {
+  if (transfer.transferScope === "intra_site") return null;
+
   const isIntraBranch = transfer.fromBranchId === transfer.toBranchId;
 
   if (transfer.status === "draft") {

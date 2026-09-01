@@ -17,7 +17,10 @@ import {
   getBranchStockVarianceExceptions,
 } from "./branch-stock-report-model";
 
-export async function loadBranchStockReportData(routeBranchId: number) {
+export async function loadBranchStockReportData(
+  routeBranchId: number,
+  requestedLocationId: number | null = null,
+) {
   const { supabase, claims } = await loadAuthState();
   const scope = await resolveInventoryListScope(supabase, claims, {
     routeBranchId,
@@ -26,6 +29,27 @@ export async function loadBranchStockReportData(routeBranchId: number) {
 
   const periodStart = getVNMonthStartDateString();
   const periodEnd = getVNDateString();
+  const { data: rawLocations, error: locationsError } = await supabase
+    .from("inventory_locations")
+    .select("id, name, location_kind")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("branch_id", routeBranchId)
+    .eq("is_active", true)
+    .in("location_kind", ["warehouse", "kitchen"])
+    .order("sort_order")
+    .order("id");
+  if (locationsError) throw new Error("inventory.reports.locations_failed");
+  const locations = (rawLocations ?? []).map((location) => ({
+    id: Number(location.id),
+    name: String(location.name),
+    kind: String(location.location_kind) as "warehouse" | "kitchen",
+  }));
+  if (
+    requestedLocationId != null &&
+    !locations.some((location) => location.id === requestedLocationId)
+  ) {
+    notFound();
+  }
   const { loadWasteAnalyticsData } = await import("./waste-analytics-data");
   const [varianceResult, movementResult, wasteResult] = await Promise.all([
     fetchConsumptionVariance({
@@ -37,6 +61,7 @@ export async function loadBranchStockReportData(routeBranchId: number) {
       startDate: periodStart,
       endDate: periodEnd,
       branchId: routeBranchId,
+      locationId: requestedLocationId ?? undefined,
     }),
     loadWasteAnalyticsData({
       branchId: routeBranchId,
@@ -55,6 +80,8 @@ export async function loadBranchStockReportData(routeBranchId: number) {
       : `CN #${routeBranchId}`,
     periodStart,
     periodEnd,
+    locations,
+    selectedLocationId: requestedLocationId,
     varianceLoadFailed: !varianceResult.success,
     movementLoadFailed: !movementResult.success,
     wasteAnalytics: wasteResult.data,

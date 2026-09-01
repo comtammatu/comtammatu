@@ -50,6 +50,8 @@ const movementRows: BranchStockMovementSource[] = [
     grn_receipt: 8,
     transfer_in: 0,
     transfer_out: -1,
+    intra_transfer_in: 2,
+    intra_transfer_out: -2,
     consumption: -3,
     production_consumption: 0,
     production_output: 0,
@@ -64,6 +66,8 @@ const movementRows: BranchStockMovementSource[] = [
     grn_receipt: 0,
     transfer_in: 0,
     transfer_out: 0,
+    intra_transfer_in: 0,
+    intra_transfer_out: 0,
     consumption: -2,
     production_consumption: 0,
     production_output: 0,
@@ -78,6 +82,8 @@ const movementRows: BranchStockMovementSource[] = [
     grn_receipt: 0,
     transfer_in: 0,
     transfer_out: 0,
+    intra_transfer_in: 0,
+    intra_transfer_out: 0,
     consumption: 0,
     production_consumption: 0,
     production_output: 0,
@@ -135,5 +141,7 @@ test("Branch report ranks movement per ingredient without cross-unit aggregation
       },
     ],
   );
-  assert.equal(getBranchStockMovementActivityScore(highlights[0]!), 12);
+  assert.equal(getBranchStockMovementActivityScore(highlights[0]!), 16);
+  assert.equal(highlights[0]?.intraTransferIn, 2);
+  assert.equal(highlights[0]?.intraTransferOut, -2);
 });

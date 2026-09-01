@@ -36,6 +36,11 @@ import {
   transferMarkInTransit,
 } from "@/(protected)/inventory/transfer-actions";
 import { messages } from "@lib/messages";
+import {
+  IntraSiteTransferDialog,
+  ReverseIntraSiteTransferDialog,
+} from "@/components/inventory/intra-site-transfer-dialog";
+import type { IntraSiteTransferData } from "@lib/inventory/intra-site-transfer-data";
 
 interface BranchTransferDetailClientProps {
   branchId: number;
@@ -43,6 +48,7 @@ interface BranchTransferDetailClientProps {
   userRole: StaffRole;
   userBranchId: number | null;
   receiveHref?: string;
+  intraSiteData?: IntraSiteTransferData | null;
 }
 
 function getActionLabel(kind: TransferActionKind): string {
@@ -59,6 +65,7 @@ export function BranchTransferDetailClient({
   userRole,
   userBranchId,
   receiveHref: receiveHrefOverride,
+  intraSiteData = null,
 }: BranchTransferDetailClientProps) {
   const router = useRouter();
   const isOnline = useIsOnline();
@@ -71,6 +78,11 @@ export function BranchTransferDetailClient({
     [transfer, userBranchId, userRole],
   );
   const actionLabel = actionConfig ? getActionLabel(actionConfig.kind) : null;
+  const canReverse =
+    transfer.transferScope === "intra_site" &&
+    transfer.status === "received" &&
+    (userRole === "owner" ||
+      (userRole === "branch_manager" && userBranchId === branchId));
 
   function handlePrimaryAction() {
     if (
@@ -213,8 +225,32 @@ export function BranchTransferDetailClient({
         </BranchOperatorPanel>
       </div>
 
-      {primaryAction ? (
-        <AppDetailFooter sticky trailing={primaryAction} />
+      {primaryAction || canReverse || intraSiteData ? (
+        <AppDetailFooter
+          sticky
+          leading={
+            canReverse ? (
+              <ReverseIntraSiteTransferDialog
+                transfer={transfer}
+                triggerSize="touch-lg"
+              />
+            ) : intraSiteData ? (
+              <IntraSiteTransferDialog
+                data={intraSiteData}
+                triggerSize="touch-lg"
+                detailBasePath={`/br/${branchId}/stock/transfer`}
+                triggerLabel="Cấp xuống Bếp"
+                initialQuantities={Object.fromEntries(
+                  transfer.items.map((item) => [
+                    item.ingredientId,
+                    item.received ?? item.qty,
+                  ]),
+                )}
+              />
+            ) : undefined
+          }
+          trailing={primaryAction ?? undefined}
+        />
       ) : null}
     </div>
   );

@@ -625,7 +625,10 @@ test("operator stock branch-native extensions keep issue and report actions in t
   assert.match(branchStockIssueData, /INVENTORY_WRITEOFF/);
   assert.match(stockIssueModel, /canConfirmBranchStockIssue/);
   assert.doesNotMatch(stockIssueModel, /canCreateOther|"other"/);
-  assert.match(reportsRoute, /loadBranchStockReportData\(branchId\)/);
+  assert.match(
+    reportsRoute,
+    /loadBranchStockReportData\(branchId, locationId\)/,
+  );
   assert.match(reportsRoute, /<BranchStockReportsClient/);
   assert.doesNotMatch(reportsRoute, /ReportsPageContent|embedded|DataTable/);
   assert.match(branchReportsClient, /BranchOperatorPage/);

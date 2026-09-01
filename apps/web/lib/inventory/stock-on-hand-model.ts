@@ -21,6 +21,12 @@ export type StockLocationBreakdown = {
   lastCountedAt: string | null;
 };
 
+export type StockLocationOption = {
+  id: number;
+  name: string;
+  kind: string;
+};
+
 export type StockIngredient = {
   id: number;
   name: string;
@@ -34,6 +40,7 @@ export type StockIngredient = {
     averageUnitCost: number | null;
   } | null;
   min: number;
+  locationMinimums?: Record<number, number>;
   max: number;
   reorder: number;
   status: StockStatus;
@@ -68,9 +75,36 @@ export interface StockOnHandPageData {
   branchValue: number | null;
   coreDataLoadFailed: boolean;
   ingredients: StockIngredient[];
+  locations: StockLocationOption[];
+  defaultLocationId: number | null;
   permissions: StockActionPermissions;
   summary: StockWorkSummary;
   totalValue: number | null;
+}
+
+export function projectStockIngredientsForLocation(
+  ingredients: StockIngredient[],
+  locationId: number | null,
+): StockIngredient[] {
+  if (locationId == null) return ingredients;
+  return ingredients.map((ingredient) => {
+    const location = ingredient.locationBreakdown?.find(
+      (row) => row.locationId === locationId,
+    );
+    const qty = location?.qty ?? 0;
+    const min = ingredient.locationMinimums?.[locationId] ?? ingredient.min;
+    return {
+      ...ingredient,
+      qty,
+      monetary:
+        ingredient.monetary == null
+          ? null
+          : { averageUnitCost: location?.monetary?.avgUnitCost ?? null },
+      min,
+      status: computeStockStatus(qty, min),
+      lastCount: location?.lastCountedAt ?? ingredient.lastCount,
+    };
+  });
 }
 
 export interface StockOnHandFilters {

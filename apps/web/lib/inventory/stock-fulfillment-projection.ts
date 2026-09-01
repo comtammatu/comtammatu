@@ -6,6 +6,7 @@ import {
 
 export type StockFulfillmentWorkKind = "request" | "dispatch" | "receive";
 export type StockFulfillmentLifecycle = "active" | "completed" | "cancelled";
+export type StockTransferScope = "inter_site" | "intra_site";
 export type StockFulfillmentSiteKind =
   "branch" | "central_supply" | "central_kitchen";
 
@@ -55,6 +56,7 @@ export type StockFulfillmentJourneyRow =
       toSite: Site;
       createdAt: string;
       status: string;
+      transferScope: StockTransferScope;
       lifecycle: StockFulfillmentLifecycle;
       workKinds: Array<"dispatch" | "receive">;
       currentWork: string[];
@@ -82,6 +84,7 @@ export type StockFulfillmentTransferRecord = {
   id: number;
   transferNumber: string;
   status: string;
+  transferScope: StockTransferScope;
   stockRequestId: number | null;
   fromSite: Site;
   toSite: Site;
@@ -297,16 +300,20 @@ export function projectStockFulfillmentRows({
     },
   );
 
-  // Central: all orphan DCs. Branch: only inbound receive-ready DCs (push /
-  // FG handoff) — not draft/dispatch chrome or outbound from the store.
+  // Central: all orphan DCs. Branch: inbound receive-ready inter-site DCs and
+  // every local warehouse/kitchen document for immutable operating history.
   const manualTransferRows = transfers.flatMap<StockFulfillmentJourneyRow>(
     (transfer) => {
       if (transfer.stockRequestId != null) return [];
       const workKinds = transferWorkKinds(transfer, viewer);
       if (viewer.mode === "branch") {
         if (viewer.branchId == null) return [];
-        if (transfer.toSite.id !== viewer.branchId) return [];
-        if (!workKinds.includes("receive")) return [];
+        if (transfer.transferScope === "intra_site") {
+          if (transfer.fromSite.id !== viewer.branchId) return [];
+        } else {
+          if (transfer.toSite.id !== viewer.branchId) return [];
+          if (!workKinds.includes("receive")) return [];
+        }
       }
       return [
         {
@@ -317,6 +324,7 @@ export function projectStockFulfillmentRows({
           toSite: transfer.toSite,
           createdAt: transfer.createdAt,
           status: transfer.status,
+          transferScope: transfer.transferScope,
           lifecycle:
             transfer.status === "cancelled"
               ? "cancelled"

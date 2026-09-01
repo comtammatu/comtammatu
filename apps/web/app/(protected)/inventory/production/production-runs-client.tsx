@@ -12,8 +12,13 @@ import {
 import { formatVNDate } from "@comtammatu/shared/time";
 import { cn } from "@comtammatu/ui/lib/utils";
 import { Badge } from "@comtammatu/ui/components/badge";
-import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
-import { Item } from "@comtammatu/ui/components/item";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemHeader,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { messages } from "@lib/messages";
 import {
   InputGroup,
@@ -290,6 +295,7 @@ export function ProductionRunsClient({ initial }: ProductionRunsClientProps) {
 
       <AppListFrame toolbar={toolbar}>
         <DataTable
+          className="[&_table]:table-fixed"
           data={filteredItems}
           columns={columns}
           pageSize={50}
@@ -330,21 +336,31 @@ function ProductionRunCard({
   const unit = row.entry_unit_name ?? "";
 
   return (
-    <InteractiveCard minHeight="mobile" padding="default" onClick={onOpen}>
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <div className="flex min-w-0 items-start justify-between gap-2">
-          <p className="truncate font-mono text-sm font-semibold">
+    <Item
+      variant="outline"
+      className="w-full text-left"
+      render={<button type="button" onClick={onOpen} />}
+    >
+      <ItemHeader>
+        <div className="flex min-w-0 items-center gap-2">
+          <ItemTitle className="font-mono font-semibold">
             {row.production_number}
-          </p>
-          <StatusBadge domain="inventory" value={row.status} size="sm" />
+          </ItemTitle>
+          <StatusBadge domain="inventory" value={row.status} />
         </div>
-        <p className="truncate text-sm font-medium">{row.finished_good_name}</p>
-        <p className="text-xs text-muted-foreground">
+      </ItemHeader>
+      <ItemContent className="min-w-0 text-left">
+        <ItemDescription className="truncate font-medium text-foreground">
+          {row.finished_good_name}
+        </ItemDescription>
+        <ItemDescription className="text-xs text-muted-foreground">
           {formatVNDate(row.created_at)} · {formatQuantity(row.planned_quantity)}{" "}
           {unit}
-        </p>
-        <p className="truncate text-xs text-muted-foreground">{row.branch_name}</p>
-      </div>
-    </InteractiveCard>
+        </ItemDescription>
+        <ItemDescription className="truncate text-xs text-muted-foreground">
+          {row.branch_name}
+        </ItemDescription>
+      </ItemContent>
+    </Item>
   );
 }

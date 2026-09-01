@@ -67,7 +67,10 @@ test("Branch stock landing is four doors then fulfillment list", () => {
   assert.match(landing, /branchDoorOnHand/);
   assert.match(landing, /branchDoorWaste/);
   assert.match(landing, /grid grid-cols-2/);
-  assert.match(landing, /AppDetailFooter sticky className="sm:hidden"/);
+  assert.match(
+    landing,
+    /<AppDetailFooter\s+sticky\s+className="sm:hidden"/,
+  );
   assert.doesNotMatch(landing, /pb-20/);
   assert.match(landing, /min-w-0 flex-nowrap/);
   assert.doesNotMatch(landing, /line-clamp-none text-sm/);

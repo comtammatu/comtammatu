@@ -36,9 +36,10 @@ import { Button } from "@comtammatu/ui/components/button";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
   Item,
-  ItemActions,
   ItemContent,
   ItemDescription,
+  ItemFooter,
+  ItemHeader,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import type {
@@ -272,6 +273,13 @@ export function EmployeeTable({
     search,
     showInactive,
   ]);
+
+  const hasActiveFilters = Boolean(
+    search.trim() ||
+      positionFilter !== ALL_FILTER_VALUE ||
+      salaryFilter !== ALL_FILTER_VALUE ||
+      contractTypeFilter !== ALL_FILTER_VALUE,
+  );
 
   function renderStatus(employee: EmployeeRow) {
     return (
@@ -623,19 +631,33 @@ export function EmployeeTable({
         }
       >
         <DataTable
+          className="[&_table]:table-fixed"
           columns={columns}
           data={filteredEmployees}
           pageSize={25}
           getRowKey={(employee) => employee.id}
-          emptyTitle={messages.hr.client.employeeEmpty}
+          emptyTitle={
+            hasActiveFilters
+              ? "Không tìm thấy nhân viên phù hợp"
+              : messages.hr.client.employeeEmpty
+          }
+          emptyDescription={
+            hasActiveFilters
+              ? "Thử thay đổi từ khóa tìm kiếm hoặc điều chỉnh bộ lọc."
+              : undefined
+          }
+          emptyMode={hasActiveFilters ? "no-results" : "no-data"}
           emptyIcon={<IconUsers />}
           mobileCardRender={(employee, index) => (
-            <Item variant="outline">
-              <ItemContent>
-                <ItemTitle size="heading" className="line-clamp-none">
+            <Item variant="outline" className="w-full text-left">
+              <ItemHeader>
+                <ItemTitle className="truncate font-mono font-semibold">
                   #{index + 1} · {employee.profiles?.full_name ?? "—"}
                 </ItemTitle>
-                <ItemDescription className="line-clamp-none text-sm leading-6">
+                {renderStatus(employee)}
+              </ItemHeader>
+              <ItemContent className="min-w-0 text-left">
+                <ItemDescription className="truncate text-xs text-muted-foreground">
                   {[
                     employee.employee_code,
                     positionLabel(employee),
@@ -645,25 +667,24 @@ export function EmployeeTable({
                     .filter(Boolean)
                     .join(" · ")}
                 </ItemDescription>
-                <div className="flex flex-wrap gap-2">
-                  {canManage ? (
-                    <Badge variant="outline">
-                      {renderContractType(employee)}
-                    </Badge>
-                  ) : null}
-                </div>
+                {canManage ? (
+                  <Badge variant="outline">
+                    {renderContractType(employee)}
+                  </Badge>
+                ) : null}
                 {canManage ? (
                   <ItemDescription className="font-mono tabular-nums">
                     {messages.hr.client.salary}: {renderSalary(employee)}
                   </ItemDescription>
                 ) : null}
               </ItemContent>
-              <ItemActions className="flex flex-col items-end gap-2">
-                {renderStatus(employee)}
-                {canManage || canAssignShift || canManageTasks
-                  ? renderRowMenu(employee, true)
-                  : null}
-              </ItemActions>
+              {canManage || canAssignShift || canManageTasks ? (
+                <ItemFooter className="justify-end">
+                  <div onClick={(e) => e.stopPropagation()}>
+                    {renderRowMenu(employee, true)}
+                  </div>
+                </ItemFooter>
+              ) : null}
             </Item>
           )}
           renderRowContextMenu={(employee) => {

@@ -1394,7 +1394,7 @@ export const correctAttendanceRecord = withAction(
             : message.includes("time_invalid")
               ? "Giờ ra phải sau giờ vào."
               : message.includes("not_found")
-                ? "Không tìm thấy bản ghi chấm công."
+                ? "Không tìm thấy dữ liệu chấm công."
                 : "Không thể hiệu chỉnh bảng công. Vui lòng thử lại.",
       };
     }

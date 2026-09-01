@@ -18,6 +18,7 @@ import {
 
 interface PageProps {
   params: Promise<{ branchId: string }>;
+  searchParams: Promise<{ location?: string | string[] }>;
 }
 
 /** Bottom-nav primary jobs — keep out of on-hand “Thêm chức năng” sheet. */
@@ -60,8 +61,7 @@ function resolveSecondaryJobs({
 
   const jobs: StockSecondaryJob[] = [];
   for (const tile of stockGroup?.tiles ?? []) {
-    const href =
-      tile.href === stockRoot ? `${stockRoot}/on-hand` : tile.href;
+    const href = tile.href === stockRoot ? `${stockRoot}/on-hand` : tile.href;
     if (exclude.some((suffix) => href.endsWith(suffix))) continue;
     jobs.push({
       key: `${tile.moduleKey}-${href}`,
@@ -85,16 +85,20 @@ function resolveSecondaryJobs({
   return jobs;
 }
 
-export default function OperatorStockOnHandPage({ params }: PageProps) {
+export default function OperatorStockOnHandPage({
+  params,
+  searchParams,
+}: PageProps) {
   return (
     <Suspense fallback={<PageSkeleton bare />}>
-      <OperatorStockOnHandBody params={params} />
+      <OperatorStockOnHandBody params={params} searchParams={searchParams} />
     </Suspense>
   );
 }
 
-async function OperatorStockOnHandBody({ params }: PageProps) {
+async function OperatorStockOnHandBody({ params, searchParams }: PageProps) {
   const { branchId: rawBranchId } = await params;
+  const { location: rawLocation } = await searchParams;
   const branchId = parseOperatorBranchId(rawBranchId);
   if (branchId == null) notFound();
 
@@ -107,6 +111,16 @@ async function OperatorStockOnHandBody({ params }: PageProps) {
     routeBranchId: branchId,
     includeValuation: false,
   });
+  const locationValue = Array.isArray(rawLocation)
+    ? rawLocation[0]
+    : rawLocation;
+  const requestedLocationId =
+    locationValue == null ? null : Number(locationValue);
+  const initialLocationId = data.locations.some(
+    (location) => location.id === requestedLocationId,
+  )
+    ? requestedLocationId
+    : data.defaultLocationId;
 
   return (
     <BranchStockOnHandClient
@@ -115,6 +129,8 @@ async function OperatorStockOnHandBody({ params }: PageProps) {
       permissions={data.permissions}
       coreDataLoadFailed={data.coreDataLoadFailed}
       ingredients={data.ingredients}
+      locations={data.locations}
+      defaultLocationId={initialLocationId}
       underThresholdCount={data.summary.underThresholdCount}
       secondaryJobs={resolveSecondaryJobs({
         role: claims.user_role,

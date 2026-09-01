@@ -14,7 +14,14 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@/components/confirm-dialog";
 
-import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
+import { cn } from "@comtammatu/ui";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemHeader,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { ShiftFormDialog } from "./shift-form-dialog";
 import { deactivateShift } from "./actions";
 import type { ShiftRow } from "./_types";
@@ -23,7 +30,6 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { useLongPress } from "@lib/hooks/use-long-press";
 
 import { FORM_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
@@ -54,29 +60,24 @@ function MobileShiftCard({
   isPending: boolean;
   onOpenDrawer: (shift: ShiftRow) => void;
 }) {
-  const longPress = useLongPress({
-    onLongPress: () => onOpenDrawer(shift),
-    onClick: () => onOpenDrawer(shift),
-  });
-
   return (
-    <InteractiveCard
-      minHeight="mobile"
-      className={`h-auto touch-pan-y select-none cursor-pointer ${isPending ? "opacity-60" : ""}`}
-      {...longPress}
+    <Item
+      variant="outline"
+      className={cn("w-full text-left touch-pan-y", isPending && "opacity-60")}
+      render={<button type="button" onClick={() => onOpenDrawer(shift)} />}
     >
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5 pointer-events-none">
-        <div className="flex items-center justify-between gap-2">
-          <p className="truncate text-sm font-semibold">{shift.name}</p>
-          <StatusBadge
-            domain="active-state"
-            value={shift.is_active ? "active" : "inactive"}
-          />
-        </div>
-        <p className="text-xs text-muted-foreground font-mono">
+      <ItemHeader>
+        <ItemTitle className="font-semibold">{shift.name}</ItemTitle>
+        <StatusBadge
+          domain="active-state"
+          value={shift.is_active ? "active" : "inactive"}
+        />
+      </ItemHeader>
+      <ItemContent className="min-w-0 text-left">
+        <ItemDescription className="font-mono text-xs text-muted-foreground">
           {shift.start_time} – {shift.end_time}
-        </p>
-        <div className="flex items-center gap-2">
+        </ItemDescription>
+        <div className="flex items-center gap-2 pt-1">
           <span className="text-xs text-muted-foreground">
             {formatShiftDuration(shift.start_time, shift.end_time)}
           </span>
@@ -86,8 +87,8 @@ function MobileShiftCard({
             <Badge variant="warning">Kiểm tra giờ</Badge>
           ) : null}
         </div>
-      </div>
-    </InteractiveCard>
+      </ItemContent>
+    </Item>
   );
 }
 
@@ -138,7 +139,7 @@ export function ShiftsTable({
         <Button
           type="button"
           variant="ghost"
-          size="icon-sm"
+          size="icon"
           onClick={() => {
             setEditingShift(shift);
             setAddOpen(true);
@@ -150,7 +151,7 @@ export function ShiftsTable({
         <Button
           type="button"
           variant="ghost"
-          size="icon-sm"
+          size="icon"
           disabled={!shift.is_active || isDeactivating}
           onClick={() => void handleDeactivateShift(shift)}
           aria-label="Ngưng dùng ca"
@@ -212,8 +213,8 @@ export function ShiftsTable({
   if (canManage) {
     columns.push({
       key: "actions",
-      header: "Thao tác",
-      className: "text-right",
+      header: "",
+      className: "w-24 text-right",
       render: renderShiftActions,
     });
   }
@@ -227,7 +228,7 @@ export function ShiftsTable({
             : shiftsCopy.shiftsSummary(shifts.length)}
         </p>
         {canManage ? (
-          <Button onClick={() => setAddOpen(true)}>
+          <Button size="default" onClick={() => setAddOpen(true)}>
             <IconPlus data-icon="inline-start" />
             Thêm ca
           </Button>
@@ -235,10 +236,12 @@ export function ShiftsTable({
       </div>
 
       <DataTable
+        className="[&_table]:table-fixed"
         columns={columns}
         data={shifts}
         getRowKey={(shift) => shift.id}
         emptyTitle={shiftsCopy.shiftsEmptyTitle}
+        emptyMode="no-data"
         emptyIcon={<IconCalendarClock />}
         rowClassName={() => (isPending ? "opacity-60" : undefined)}
         mobileCardRender={(shift) => (

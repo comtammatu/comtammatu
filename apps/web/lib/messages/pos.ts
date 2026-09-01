@@ -420,8 +420,8 @@ export const pos = {
     noTerminalTitle: "Chưa có máy POS",
     noTerminalDescription:
       "Liên hệ quản lý để thiết lập máy POS trước khi mở ca.",
-    openingCashLabel: "Tiền đầu ca (VND)",
-    openingCashDescription: "Ghi số tiền mặt đầu ca để đối soát khi đóng ca.",
+    openingCashLabel: "Tiền mặt đầu ca",
+    openingCashDescription: "Tiền mặt trong két khi bắt đầu ca.",
     opening: "Đang mở ca...",
     open: "Mở ca POS",
     openSuccess: "Mở ca thành công",

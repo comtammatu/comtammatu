@@ -1,12 +1,13 @@
-# SOP Inventory — Một warehouse mỗi site
+# SOP Inventory — Kho và Bếp chi nhánh
 
 > Áp dụng sau **D093**. Business contract và phân vai: [inventory.md](inventory.md)
 > §11. Route/action authority: runtime auth + permission/RLS/RPC.
 
 ## 1. Boundary
 
-- Site active: `branch`, `central_supply`, `central_kitchen`. Mỗi site một
-  warehouse active (default receive/issue/consumption).
+- Site active: `branch`, `central_supply`, `central_kitchen`. Trung tâm giữ một
+  warehouse. Chi nhánh chưa tách giữ một Kho; chi nhánh đã tách có Kho nhận/cấp
+  và Bếp tiêu hao.
 - **Mua NCC:** chỉ Kho Tổng / Bếp TT — **Tạo đơn** theo nguyên liệu (NCC trên
   từng dòng; một phiếu có thể nhiều NCC) → **một GRN** chung. Mỗi lần NCC giao,
   chốt đúng dòng của NCC đó. Yêu cầu mua chỉ còn lịch sử.
@@ -50,6 +51,19 @@ Contract: [inventory.md](inventory.md) §2.1 — Đơn vị chuẩn và các đ�
 
 ## 3. Điều chuyển chi nhánh (xin hàng và giao đi)
 
+Có hai loại phiếu dùng chung mã `DC-YYYY-####`:
+
+- **Liên điểm:** khác site, từ warehouse đến warehouse; đi qua nháp → xuất →
+  đang chuyển → kiểm nhận → đã nhận. Hàng từ trung tâm/chi nhánh khác luôn vào
+  Kho chi nhánh.
+- **Nội bộ Kho ↔ Bếp:** cùng chi nhánh, xác nhận một lần và hoàn tất ngay. Kho
+  cấp Bếp hoặc Bếp hoàn Kho; thiếu một dòng thì toàn phiếu không ghi sổ.
+
+Phiếu nội bộ đã hoàn tất không sửa dòng, xóa, hủy hoặc dùng Điều chỉnh tồn một
+đầu. Chọn **Đảo phiếu**, nhập toàn bộ hoặc phần còn lại; hệ thống tạo phiếu nội
+bộ chiều ngược lại. Muốn gửi hàng đang ở Bếp sang site khác, phải hoàn Bếp → Kho
+trước rồi lập phiếu liên điểm từ Kho.
+
 1. QL CN tạo phiếu **Điều chuyển** nháp trên `/br/.../stock/transfer/new`
    (`Xin hàng` hoặc `Giao đi`). Không trừ tồn lúc tạo.
 2. Xin hàng: chọn Nguồn (Kho Tổng / Bếp TT). Catalog tick Nguồn hàng; thiếu
@@ -86,7 +100,7 @@ Nhân viên được giao trong ca dùng **Đếm tồn** (phiếu đếm). Phi�
 
 Thu ngân chi nhánh được gán đếm tồn nước theo ca (sáng/chiều/tối). Tạm thời chỉ Coca, Sprite, Fanta cam, Fanta xá xị, Nước suối (chưa sâm/rau má). Việc cuối ca có **Đếm tồn nước**. Cửa nhân viên: tab **Ca** → phiếu đếm; QL xem/duyệt tại **Đội** / `/stock/count-slips`. Nhân viên chọn đơn vị đếm (mặc định Đơn vị chuẩn). Phiếu và màn duyệt đối chiếu tồn sổ / thực đếm / lệch cùng đơn vị đó.
 
-1. QL tạo phiên kiểm kê (một kho / site).
+1. Nhân viên đếm hằng ngày tại Bếp. QL/Owner tạo phiên kiểm kê Kho hoặc Bếp bằng location tường minh.
 2. Đếm theo Đơn vị đang dùng; hệ thống quy về Đơn vị chuẩn.
 3. RPC hoàn tất mới post `count_adjustment`.
 

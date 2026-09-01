@@ -16,9 +16,10 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { confirm } from "@/components/confirm-dialog";
 import {
   Item,
-  ItemActions,
   ItemContent,
   ItemDescription,
+  ItemFooter,
+  ItemHeader,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Field, FieldLabel } from "@comtammatu/ui/components/field";
@@ -226,8 +227,8 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
     },
     {
       key: "actions",
-      header: FORM_VI.action,
-      className: "w-14",
+      header: "",
+      className: "w-12 text-right",
       render: (row) => {
         const items = getUnitRowActions(row);
         return (
@@ -238,7 +239,7 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
             <RowActionsMenu
               items={items}
               label={FORM_VI.action}
-              triggerSize="icon-sm"
+              triggerSize={isTouchLayout ? "icon-touch" : "icon"}
             />
           </div>
         );
@@ -313,7 +314,10 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
                     onCheckedChange={setShowInactive}
                   />
                 </Field>
-                <Button size="lg" onClick={openCreate}>
+                <Button
+                  size={isTouchLayout ? "touch" : "default"}
+                  onClick={openCreate}
+                >
                   <IconPlus data-icon="inline-start" />
                   {copy.add}
                 </Button>
@@ -323,6 +327,7 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
         }
       >
         <DataTable
+          className="[&_table]:table-fixed"
           columns={columns}
           data={packagingRows}
           getRowKey={(row) => row.id}
@@ -337,19 +342,29 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
           mobileCardRender={(row) => (
             <Item
               variant="outline"
-              onClick={() => {
-                if (!row.inUse) openEdit(row);
-              }}
+              className="w-full text-left"
+              render={
+                <button
+                  type="button"
+                  disabled={row.inUse}
+                  onClick={() => {
+                    if (!row.inUse) openEdit(row);
+                  }}
+                />
+              }
             >
-              <ItemContent className="min-w-0">
-                <ItemTitle size="heading" className="font-mono">
+              <ItemHeader>
+                <ItemTitle className="font-mono font-semibold">
                   {row.code}
                 </ItemTitle>
-                <ItemDescription className="text-sm leading-6">
-                  <StatusBadges row={row} />
+                <StatusBadges row={row} />
+              </ItemHeader>
+              <ItemContent className="min-w-0 text-left">
+                <ItemDescription className="truncate text-xs text-muted-foreground">
+                  {row.name}
                 </ItemDescription>
               </ItemContent>
-              <ItemActions className="self-center">
+              <ItemFooter className="justify-end">
                 <div onClick={(event) => event.stopPropagation()}>
                   <RowActionsMenu
                     items={getUnitRowActions(row)}
@@ -357,7 +372,7 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
                     triggerSize={isTouchLayout ? "icon-touch" : "icon"}
                   />
                 </div>
-              </ItemActions>
+              </ItemFooter>
             </Item>
           )}
         />

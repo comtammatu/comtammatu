@@ -11,10 +11,14 @@ function makeTransfer(patch: Partial<TransferDetail> = {}): TransferDetail {
     id: 1,
     code: "TRF-001",
     status: "draft",
+    transferScope: "inter_site",
+    reversesTransferId: null,
     stockRequestId: null,
     stockRequestNumber: null,
     fromBranchId: 10,
     toBranchId: 20,
+    fromLocationId: 100,
+    toLocationId: 200,
     fromBranch: "Kho A",
     toBranch: "Kho B",
     fromLocation: "Kho A",
@@ -47,6 +51,25 @@ test("intra-branch transfer drafts expose no mutation", () => {
     }),
     { kind: "confirm_ship", enabled: false },
   );
+});
+
+test("intra-site documents never expose the inter-site shipping lifecycle", () => {
+  for (const status of [
+    "draft",
+    "confirmed_ship",
+    "in_transit",
+    "confirmed_receive",
+    "received",
+  ]) {
+    assert.equal(
+      getTransferActionConfig({
+        transfer: makeTransfer({ transferScope: "intra_site", status }),
+        userRole: "owner",
+        userBranchId: 10,
+      }),
+      null,
+    );
+  }
 });
 
 test("non-branch-manager roles (e.g. owner) can advance transfers regardless of branch", () => {
