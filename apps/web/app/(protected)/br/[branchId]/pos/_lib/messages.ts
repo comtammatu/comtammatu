@@ -566,10 +566,10 @@ export const editRpcMappings: readonly RpcErrorMapping[] = [
       "Đơn đã phát hành QR/chuyển khoản, không thể đổi số tiền. Vui lòng hoàn tất thanh toán hoặc xử lý lại đơn.",
   },
   {
-    match: includesAny("not editable", "preparing", "ready"),
-    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    match: includesAny("item not editable"),
+    errorCode: POS_ERROR_CODES.ITEM_NOT_EDITABLE,
     userMessage:
-      "Chỉ sửa được món khi chưa được làm. Hãy hủy món + thêm món mới.",
+      "Món đã được bếp xử lý. Hãy kiểm tra lại đơn trước khi thao tác tiếp.",
   },
   {
     match: includesAny("order terminal"),

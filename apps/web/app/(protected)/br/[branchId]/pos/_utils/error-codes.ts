@@ -12,6 +12,7 @@
  *   - AUTH_*:  Authn/authz failures. Non-retryable until re-login.
  *   - SCOPE_*: Branch / session / scope mismatches. Non-retryable.
  *   - CART_*:  Cart-state errors. Non-retryable (user must fix cart).
+ *   - ITEM_*:  Persisted order-item state conflicts. Non-retryable.
  *   - DB_*:    Database-side failures. Some are retryable (lock contention).
  *   - RPC_*:   Generic RPC failure not otherwise classified. Retryable.
  *
@@ -38,6 +39,8 @@ export const POS_ERROR_CODES = {
 
   CART_EMPTY: "CART_EMPTY",
   CART_STALE_MENU_OPTION: "CART_STALE_MENU_OPTION",
+
+  ITEM_NOT_EDITABLE: "ITEM_NOT_EDITABLE",
 
   DAILY_LIMIT_EXCEEDED: "DAILY_LIMIT_EXCEEDED",
   DAILY_LIMIT_ITEM_DISABLED: "DAILY_LIMIT_ITEM_DISABLED",

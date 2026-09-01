@@ -1567,6 +1567,12 @@ export function PosDesktopInner({
             // reopens the order detail sheet from the pre-customize
             // snapshot so cashier sees the freshly-edited order.
             closeCustomizerAndMaybeReopenDetail();
+          } else if (
+            r.errorCode === POS_ERROR_CODES.ITEM_NOT_EDITABLE
+          ) {
+            toast.error(r.error ?? "Không thể sửa món.");
+            void refreshOperational();
+            closeCustomizerAndMaybeReopenDetail();
           } else {
             toast.error(r.error ?? "Không thể sửa món.");
           }
