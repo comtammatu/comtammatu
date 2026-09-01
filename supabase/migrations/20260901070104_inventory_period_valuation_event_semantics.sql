@@ -6,6 +6,8 @@
 -- correction across the stock pools that still hold that source. Terminal
 -- allocations restate food cost or loss buckets and are not inventory again.
 
+BEGIN;
+
 CREATE OR REPLACE FUNCTION public.get_inventory_valuation_period_value(
   p_start_date date,
   p_end_date date,
@@ -459,3 +461,5 @@ BEGIN
   END IF;
 END;
 $$;
+
+COMMIT;
