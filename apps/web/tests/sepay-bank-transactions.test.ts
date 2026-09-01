@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -29,6 +29,28 @@ import { isExpenseVisibleForBankMatch } from "../app/(protected)/finance/_lib/ex
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
+
+function readActiveMigrationChain(): string {
+  const migrationsDir = join(repoRoot, "supabase/migrations");
+  return readdirSync(migrationsDir)
+    .filter((name) => /^\d{14}_.+\.sql$/.test(name))
+    .sort()
+    .map((name) => read(`supabase/migrations/${name}`))
+    .join("\n");
+}
+
+function extractLatestSqlFunction(source: string, functionName: string): string {
+  const markers = [
+    `CREATE OR REPLACE FUNCTION public.${functionName}(`,
+    `CREATE FUNCTION public.${functionName}(`,
+  ];
+  const start = Math.max(...markers.map((marker) => source.lastIndexOf(marker)));
+  assert.notEqual(start, -1, `Missing SQL function ${functionName}`);
+
+  const end = source.indexOf("\n$$;", start);
+  assert.notEqual(end, -1, `Unterminated SQL function ${functionName}`);
+  return source.slice(start, end + 4);
+}
 
 test("bank reconciliation index alignment is replay-safe", () => {
   const baseline = read(
@@ -671,30 +693,46 @@ test("signed SePay server failures can be replayed but client failures stay bloc
 });
 
 test("Owner replay of signed SePay evidence is exact, atomic, and audited", () => {
-  const migration = read(
-    "supabase/migration-archive/20260721174543_replay_signed_sepay_payment_evidence.sql",
+  const replayFunction = extractLatestSqlFunction(
+    readActiveMigrationChain(),
+    "replay_signed_sepay_payment_evidence",
   );
   const action = read(
     "apps/web/app/(protected)/finance/bank-webhook-review-actions.ts",
   );
 
   assert.match(
-    migration,
+    replayFunction,
     /CREATE OR REPLACE FUNCTION public\.replay_signed_sepay_payment_evidence/,
   );
-  assert.match(migration, /auth\.role\(\) IS DISTINCT FROM 'service_role'/);
-  assert.match(migration, /v_event\.signature_valid/);
-  assert.match(migration, /v_event\.http_status, 0\) >= 500/);
-  assert.match(migration, /payment\.status = 'pending'/);
-  assert.match(migration, /v_amount <> v_payment\.amount/);
+  assert.match(replayFunction, /auth\.role\(\) IS DISTINCT FROM 'service_role'/);
+  assert.match(replayFunction, /v_event\.signature_valid/);
+  assert.match(replayFunction, /v_event\.http_status, 0\) >= 500/);
   assert.match(
-    migration,
-    /reconcile_sepay_order_evidence\(v_event\.id, v_payment_code\)/,
+    replayFunction,
+    /payment\.status = 'pending'|v_payment\.status <> 'pending'/,
   );
-  assert.match(migration, /INSERT INTO public\.audit_logs/);
-  assert.match(migration, /TO service_role/);
+  assert.match(
+    replayFunction,
+    /v_amount <> v_payment\.amount|v_payment\.amount <> v_amount/,
+  );
+  assert.match(replayFunction, /position\.code IN \('owner', 'accountant'\)/);
+  assert.match(
+    replayFunction,
+    /processing_status = 'received'[\s\S]*reconcile_sepay_order_evidence/,
+  );
+  assert.match(
+    replayFunction,
+    /reconcile_sepay_order_evidence\(\s*v_event\.id,\s*v_payment_code\s*\)/,
+  );
+  assert.doesNotMatch(replayFunction, /confirm_vietqr_payment/);
+  assert.match(
+    replayFunction,
+    /INSERT INTO public\.audit_logs[\s\S]*p_actor_id/,
+  );
+  assert.doesNotMatch(replayFunction, /public\.log_audit/);
   assert.doesNotMatch(
-    migration,
+    replayFunction,
     /GRANT EXECUTE[\s\S]*replay_signed_sepay_payment_evidence[\s\S]*TO authenticated/,
   );
   assert.match(action, /\.in\("status", \["pending", "completed"\]\)/);
