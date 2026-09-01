@@ -7,6 +7,7 @@ import { createHash } from "node:crypto";
 
 export interface GrabMappingItem {
   name: string;
+  variantName?: string;
   defaultPrice: number;
   category?: string;
 }
@@ -38,7 +39,12 @@ export const GRAB_MENU_MAPPING: Record<string, GrabMappingItem> = {
   "VNITE20260818044418156935": { name: "Nước Sâm", defaultPrice: 25000, category: "Nước mát" },
   "VNITE20260818044418185196": { name: "Nước Cam Ép", defaultPrice: 25000, category: "Nước mát" },
   "VNITE20260818044418148750": { name: "Trà Tắc", defaultPrice: 25000, category: "Nước mát" },
-  "VNITE20260818044418122792": { name: "Rau Má Sữa", defaultPrice: 25000, category: "Nước mát" },
+  "VNITE20260818044418122792": {
+    name: "Rau Má",
+    variantName: "Rau Má Sữa",
+    defaultPrice: 25000,
+    category: "Nước mát",
+  },
   "VNITE20260818044418019423": { name: "Coca", defaultPrice: 25000, category: "Nước ngọt" },
   "VNITE20260818044418031815": { name: "Sprite", defaultPrice: 25000, category: "Nước ngọt" },
   "VNITE20260818044418101606": { name: "Fanta Xá Xị", defaultPrice: 25000, category: "Nước ngọt" },
@@ -238,6 +244,8 @@ export interface TransformedOrderForRpc {
   items: Array<{
     menu_item_id: number;
     item_name: string;
+    variant_id?: number;
+    variant_name?: string;
     quantity: number;
     unit_price: number;
     modifiers: Array<{ name: string; price: number; modifier_id?: number | null }>;
@@ -255,7 +263,16 @@ export interface GrabMenuItemPrice {
   name: string;
   base_price: number;
   channel_price?: number | null;
+  variants?: Array<{
+    id: number;
+    name: string;
+    price_adjustment: number;
+  }>;
 }
+
+type MatchedGrabMenuItem = GrabMenuItemPrice & {
+  variant?: NonNullable<GrabMenuItemPrice["variants"]>[number];
+};
 
 /**
  * Matches an item from Grab to a database MenuItem
@@ -263,22 +280,52 @@ export interface GrabMenuItemPrice {
 export function matchMenuItem(
   grabItem: GrabOrderItemRaw,
   dbItems: GrabMenuItemPrice[],
-): GrabMenuItemPrice {
+): MatchedGrabMenuItem {
   // 1. Direct ID lookup in mapping
   const mapped = grabItem.itemID ? GRAB_MENU_MAPPING[grabItem.itemID] : null;
   const targetName = mapped?.name || grabItem.name;
   const normalizedTarget = normalizeMenuName(targetName);
 
-  // 2. Lookup in DB items by exact or normalized name
-  const matchedDb = dbItems.find(
+  // 2. Resolve a canonical menu item name, requiring a unique tenant match.
+  const itemMatches = dbItems.filter(
     (dbi) => normalizeMenuName(dbi.name) === normalizedTarget || dbi.name.toLowerCase() === targetName.toLowerCase(),
   );
 
-  if (matchedDb) {
+  if (itemMatches.length === 1) {
+    const matchedDb = itemMatches[0];
+    if (!matchedDb) {
+      throw new Error(`Món "${grabItem.name}" (ID: ${grabItem.itemID || "N/A"}) chưa được ánh xạ trong thực đơn quán`);
+    }
+
+    if (mapped?.variantName) {
+      const normalizedVariant = normalizeMenuName(mapped.variantName);
+      const variantMatches = (matchedDb.variants ?? []).filter(
+        (variant) => normalizeMenuName(variant.name) === normalizedVariant,
+      );
+      const variant = variantMatches.length === 1 ? variantMatches[0] : null;
+      if (variant) return { ...matchedDb, variant };
+      throw new Error(`Món "${grabItem.name}" (ID: ${grabItem.itemID || "N/A"}) chưa được ánh xạ trong thực đơn quán`);
+    }
+
+    if ((matchedDb.variants?.length ?? 0) > 0) {
+      throw new Error(`Món "${grabItem.name}" (ID: ${grabItem.itemID || "N/A"}) chưa được ánh xạ trong thực đơn quán`);
+    }
+
     return matchedDb;
   }
 
-  // 3. Fallback to mapped default if found, otherwise throw explicit unmapped error
+  // 3. A provider item name may identify a POS variant instead of its parent.
+  const variantMatches = dbItems.flatMap((item) =>
+    (item.variants ?? [])
+      .filter((variant) => normalizeMenuName(variant.name) === normalizedTarget)
+      .map((variant) => ({ item, variant })),
+  );
+  const matchedVariant = variantMatches.length === 1 ? variantMatches[0] : null;
+  if (matchedVariant) {
+    return { ...matchedVariant.item, variant: matchedVariant.variant };
+  }
+
+  // 4. Preserve the legacy mapped-name fallback for non-variant items.
   if (mapped) {
     const fallbackDb = dbItems.find((d) => normalizeMenuName(d.name).includes(normalizeMenuName(mapped.name)));
     if (fallbackDb) return fallbackDb;
@@ -421,7 +468,10 @@ export function transformGrabOrderPayload(
     }
 
     const sidesSum = sides.reduce((acc, s) => acc + s.price * s.quantity, 0);
-    const unitPrice = (matched.channel_price ?? matched.base_price) + sidesSum;
+    const unitPrice =
+      (matched.channel_price ?? matched.base_price) +
+      (matched.variant?.price_adjustment ?? 0) +
+      sidesSum;
     const qty = gi.quantity || 1;
     const subtotal = unitPrice * qty;
 
@@ -487,6 +537,12 @@ export function transformGrabOrderPayload(
     return {
       menu_item_id: matched.id,
       item_name: matched.name,
+      ...(matched.variant
+        ? {
+            variant_id: matched.variant.id,
+            variant_name: matched.variant.name,
+          }
+        : {}),
       quantity: qty,
       unit_price: unitPrice,
       modifiers: [],

@@ -110,6 +110,41 @@ test("GrabFood mapping: matchMenuItem finds exact ID in DB items", () => {
   assert.equal(matched.base_price, 54000);
 });
 
+test("GrabFood mapping: resolves Rau Má Sữa as a variant of Rau Má", () => {
+  const catalog = [
+    {
+      id: 920,
+      name: "Rau Má",
+      base_price: 20000,
+      channel_price: 25000,
+      variants: [
+        { id: 2701, name: "Rau Má Sữa", price_adjustment: 0 },
+        { id: 2801, name: "Rau Má Đường", price_adjustment: 0 },
+      ],
+    },
+  ];
+  const transformed = transformGrabOrderPayload(
+    {
+      orderID: "test-grab-rau-ma-sua",
+      displayID: "GF-TEST",
+      itemInfo: {
+        items: [
+          {
+            itemID: "VNITE20260818044418122792",
+            name: "Rau Má Sữa",
+            quantity: 1,
+          },
+        ],
+      },
+    },
+    catalog,
+  );
+
+  assert.equal(transformed.items[0]?.menu_item_id, 920);
+  assert.equal(transformed.items[0]?.variant_id, 2701);
+  assert.equal(transformed.items[0]?.variant_name, "Rau Má Sữa");
+});
+
 test("GrabFood mapping: matchMenuItem throws explicit error on unknown unmapped item", () => {
   const unmappedGrabItem = {
     itemID: "VNITE99999999999999999999",

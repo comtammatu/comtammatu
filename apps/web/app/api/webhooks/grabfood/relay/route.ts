@@ -255,10 +255,17 @@ export async function POST(request: NextRequest) {
       .eq("tenant_id", branch.tenant_id)
       .eq("delivery_platform", "grab");
 
-    if (menuErr || channelPriceErr || !dbMenuItems) {
+    const { data: dbMenuVariants, error: variantsErr } = await supabase
+      .from("menu_item_variants")
+      .select("id, item_id, name, price_adjustment")
+      .eq("tenant_id", branch.tenant_id)
+      .eq("is_active", true);
+
+    if (menuErr || channelPriceErr || variantsErr || !dbMenuItems) {
       console.error("[Grab POS Relay] menu pricing query failed", {
         menuCode: menuErr?.code,
         channelPriceCode: channelPriceErr?.code,
+        variantCode: variantsErr?.code,
       });
       return NextResponse.json(
         { success: false, error: "Lỗi tải thực đơn chi nhánh" },
@@ -272,6 +279,9 @@ export async function POST(request: NextRequest) {
     const pricedDbMenuItems = dbMenuItems.map((item) => ({
       ...item,
       channel_price: grabPriceByMenuItemId.get(item.id) ?? null,
+      variants: (dbMenuVariants ?? [])
+        .filter((variant) => variant.item_id === item.id)
+        .map(({ id, name, price_adjustment }) => ({ id, name, price_adjustment })),
     }));
 
     // 9. Transform Grab payload to RPC-ready items structure

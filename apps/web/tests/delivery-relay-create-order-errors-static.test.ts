@@ -33,6 +33,7 @@ test("relay routes return mapped create-order failures", () => {
 test("delivery relay quarantines unmapped menu items as operator-actionable failures", () => {
   assert.match(deliveryRoute, /UnmappedDeliveryMenuItemError/);
   assert.match(deliveryRoute, /\.from\("menu_item_variants"\)/);
+  assert.match(grabRoute, /\.from\("menu_item_variants"\)/);
   assert.match(deliveryRoute, /code:\s*"menu_item_unmapped"/);
   assert.match(deliveryRoute, /status:\s*422/);
 });
