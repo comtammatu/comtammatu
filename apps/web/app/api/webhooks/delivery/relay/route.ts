@@ -4,6 +4,7 @@ import { timingSafeEqual } from "node:crypto";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import {
   transformShopeeOrderPayload,
+  UnmappedDeliveryMenuItemError,
   type ShopeeOrderRaw,
 } from "@lib/shopeefood/mapping";
 import {
@@ -252,8 +253,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const { data: dbMenuVariants, error: variantsErr } = await supabase
+      .from("menu_item_variants")
+      .select("id, item_id, name, price_adjustment")
+      .eq("tenant_id", branch.tenant_id)
+      .eq("is_active", true);
+
+    if (variantsErr) {
+      console.error("[Delivery POS Relay] Menu variant fetch error:", variantsErr.code);
+      return NextResponse.json(
+        { success: false, error: "Lỗi tải biến thể thực đơn chi nhánh" },
+        { status: 500, headers: CORS_HEADERS },
+      );
+    }
+
+    const menuItemsWithVariants = (dbMenuItems ?? []).map((item) => ({
+      ...item,
+      variants: (dbMenuVariants ?? [])
+        .filter((variant) => variant.item_id === item.id)
+        .map(({ id, name, price_adjustment }) => ({ id, name, price_adjustment })),
+    }));
+
     // 5. Transform the normalized delivery payload to RPC-ready items.
-    const transformed = transformShopeeOrderPayload(shopeeOrder, dbMenuItems ?? []);
+    const transformed = transformShopeeOrderPayload(shopeeOrder, menuItemsWithVariants);
 
     // Manual Shopee orders historically stored only the last four digits. A
     // unique same-day item match is required before treating that short ref as
@@ -399,6 +421,18 @@ export async function POST(request: NextRequest) {
       { headers: CORS_HEADERS },
     );
   } catch (error) {
+    if (error instanceof UnmappedDeliveryMenuItemError) {
+      console.warn("[Delivery POS Relay] Unmapped menu item:", error.message);
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.message,
+          code: "menu_item_unmapped",
+        },
+        { status: 422, headers: CORS_HEADERS },
+      );
+    }
+
     console.error("[Delivery POS Relay] Unexpected error:", error);
     return NextResponse.json(
       {

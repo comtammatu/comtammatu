@@ -100,6 +100,87 @@ test("ShopeeFood mapping: matches receipt meal aliases without falling back to t
   assert.equal(matched.name, "Sườn Cốt Lết");
 });
 
+test("ShopeeFood mapping: resolves Rau Má Đường and Rau Má Sữa as variants of one item", () => {
+  const catalog = [
+    { id: 99, name: "Món Không Liên Quan", base_price: 10000 },
+    {
+      id: 910,
+      name: "Rau Má",
+      base_price: 20000,
+      variants: [
+        { id: 1701, name: "Rau Má Sữa", price_adjustment: 0 },
+        { id: 1801, name: "Rau Má Đường", price_adjustment: 0 },
+      ],
+    },
+  ];
+  const sugarPennywort = matchMenuItem(
+    {
+      name: "Rau Má Đường",
+      quantity: 1,
+    },
+    catalog,
+  );
+  const milkPennywort = matchMenuItem(
+    {
+      itemId: "SPF_ITEM_RAU_MA",
+      name: "Rau Má Sữa",
+      quantity: 1,
+    },
+    catalog,
+  );
+
+  assert.equal(sugarPennywort.id, 910);
+  assert.equal(sugarPennywort.name, "Rau Má");
+  assert.equal(sugarPennywort.base_price, 20000);
+  assert.equal(sugarPennywort.variant?.id, 1801);
+  assert.equal(sugarPennywort.variant?.name, "Rau Má Đường");
+  assert.equal(milkPennywort.id, 910);
+  assert.equal(milkPennywort.name, "Rau Má");
+  assert.equal(milkPennywort.base_price, 20000);
+  assert.equal(milkPennywort.variant?.id, 1701);
+  assert.equal(milkPennywort.variant?.name, "Rau Má Sữa");
+
+  const transformed = transformShopeeOrderPayload(
+    {
+      orderId: "test-rau-ma-variants",
+      items: [
+        { name: "Rau Má Đường", quantity: 1 },
+        {
+          itemId: "SPF_ITEM_RAU_MA",
+          name: "Rau Má Sữa",
+          quantity: 1,
+        },
+      ],
+    },
+    catalog,
+  );
+
+  assert.deepEqual(
+    transformed.items.map((item) => ({
+      menu_item_id: item.menu_item_id,
+      variant_id: item.variant_id,
+      variant_name: item.variant_name,
+    })),
+    [
+      { menu_item_id: 910, variant_id: 1801, variant_name: "Rau Má Đường" },
+      { menu_item_id: 910, variant_id: 1701, variant_name: "Rau Má Sữa" },
+    ],
+  );
+
+  assert.throws(
+    () =>
+      matchMenuItem(
+        {
+          itemId: "SPF_ITEM_RAU_MA",
+          name: "Rau Má Sữa",
+          quantity: 1,
+        },
+        catalog.map((item) => ({ ...item, variants: [] })),
+      ),
+    /chưa được ánh xạ trong thực đơn quán/i,
+  );
+});
+
 test("ShopeeFood mapping: rejects unknown items instead of silently choosing another menu item", () => {
   assert.throws(
     () =>

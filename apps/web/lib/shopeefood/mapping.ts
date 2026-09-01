@@ -7,8 +7,35 @@ import { createHash } from "node:crypto";
 
 export interface ShopeeMappingItem {
   name: string;
+  variantName?: string;
   defaultPrice: number;
   category?: string;
+}
+
+export interface DeliveryMenuVariant {
+  id: number;
+  name: string;
+  price_adjustment: number;
+}
+
+export interface DeliveryMenuItem {
+  id: number;
+  name: string;
+  base_price: number;
+  variants?: DeliveryMenuVariant[];
+}
+
+export type MatchedDeliveryMenuItem = DeliveryMenuItem & {
+  variant?: DeliveryMenuVariant;
+};
+
+export class UnmappedDeliveryMenuItemError extends Error {
+  constructor(itemName: string, externalItemId: string) {
+    super(
+      `Món "${itemName}" (ID: ${externalItemId || "N/A"}) chưa được ánh xạ trong thực đơn quán`,
+    );
+    this.name = "UnmappedDeliveryMenuItemError";
+  }
 }
 
 export const SHOPEE_MENU_MAPPING: Record<string, ShopeeMappingItem> = {
@@ -38,7 +65,12 @@ export const SHOPEE_MENU_MAPPING: Record<string, ShopeeMappingItem> = {
   "SPF_ITEM_NUOC_SAM": { name: "Nước Sâm", defaultPrice: 25000, category: "Nước mát" },
   "SPF_ITEM_NUOC_CAM": { name: "Nước Cam Ép", defaultPrice: 25000, category: "Nước mát" },
   "SPF_ITEM_TRA_TAC": { name: "Trà Tắc", defaultPrice: 25000, category: "Nước mát" },
-  "SPF_ITEM_RAU_MA": { name: "Rau Má Sữa", defaultPrice: 25000, category: "Nước mát" },
+  "SPF_ITEM_RAU_MA": {
+    name: "Rau Má",
+    variantName: "Rau Má Sữa",
+    defaultPrice: 25000,
+    category: "Nước mát",
+  },
   "SPF_ITEM_COCA": { name: "Coca", defaultPrice: 25000, category: "Nước ngọt" },
   "SPF_ITEM_SPRITE": { name: "Sprite", defaultPrice: 25000, category: "Nước ngọt" },
   "SPF_ITEM_FANTA_XA_XI": { name: "Fanta Xá Xị", defaultPrice: 25000, category: "Nước ngọt" },
@@ -151,6 +183,8 @@ export interface TransformedOrderForRpc {
   items: Array<{
     menu_item_id: number;
     item_name: string;
+    variant_id?: number;
+    variant_name?: string;
     quantity: number;
     unit_price: number;
     modifiers: Array<{ name: string; price: number; modifier_id?: number | null }>;
@@ -168,8 +202,8 @@ export interface TransformedOrderForRpc {
  */
 export function matchMenuItem(
   shopeeItem: ShopeeOrderItemRaw,
-  dbItems: Array<{ id: number; name: string; base_price: number }>,
-): { id: number; name: string; base_price: number } {
+  dbItems: DeliveryMenuItem[],
+): MatchedDeliveryMenuItem {
   // 1. Direct ID lookup in mapping
   const idStr = shopeeItem.itemId != null ? String(shopeeItem.itemId) : "";
   const mapped = idStr ? SHOPEE_MENU_MAPPING[idStr] : null;
@@ -179,20 +213,52 @@ export function matchMenuItem(
     shopeeItem.name;
   const normalizedTarget = normalizeMenuName(targetName);
 
-  // 2. Lookup in DB items by exact or normalized name
-  const matchedDb = dbItems.find(
+  // 2. Resolve a canonical menu item name, requiring a unique tenant match.
+  const itemMatches = dbItems.filter(
     (dbi) =>
       normalizeMenuName(dbi.name) === normalizedTarget ||
       dbi.name.toLowerCase() === targetName.toLowerCase(),
   );
 
-  if (matchedDb) {
+  if (itemMatches.length === 1) {
+    const matchedDb = itemMatches[0];
+    if (!matchedDb) {
+      throw new UnmappedDeliveryMenuItemError(shopeeItem.name, idStr);
+    }
+
+    if (mapped?.variantName) {
+      const normalizedVariant = normalizeMenuName(mapped.variantName);
+      const variantMatches = (matchedDb.variants ?? []).filter(
+        (variant) => normalizeMenuName(variant.name) === normalizedVariant,
+      );
+      if (variantMatches.length === 1) {
+        return { ...matchedDb, variant: variantMatches[0] };
+      }
+      throw new UnmappedDeliveryMenuItemError(shopeeItem.name, idStr);
+    }
+
+    if ((matchedDb.variants?.length ?? 0) > 0) {
+      throw new UnmappedDeliveryMenuItemError(shopeeItem.name, idStr);
+    }
+
     return matchedDb;
   }
 
-  throw new Error(
-    `Món "${shopeeItem.name}" (ID: ${idStr || "N/A"}) chưa được ánh xạ trong thực đơn quán`,
+  // 3. Receipt text may identify a POS variant instead of its parent item.
+  const variantMatches = dbItems.flatMap((item) =>
+    (item.variants ?? [])
+      .filter((variant) => normalizeMenuName(variant.name) === normalizedTarget)
+      .map((variant) => ({ item, variant })),
   );
+
+  if (variantMatches.length === 1) {
+    const matched = variantMatches[0];
+    if (matched) {
+      return { ...matched.item, variant: matched.variant };
+    }
+  }
+
+  throw new UnmappedDeliveryMenuItemError(shopeeItem.name, idStr);
 }
 
 const SIDE_NAME_ALIASES: Record<string, string> = {
@@ -307,7 +373,7 @@ function matchStandaloneOptionItem(
  */
 export function transformShopeeOrderPayload(
   shopeeOrder: ShopeeOrderRaw,
-  dbItems: Array<{ id: number; name: string; base_price: number }>,
+  dbItems: DeliveryMenuItem[],
 ): TransformedOrderForRpc {
   const rawItems =
     shopeeOrder.items || shopeeOrder.dishList || shopeeOrder.orderItems || [];
@@ -373,7 +439,8 @@ export function transformShopeeOrderPayload(
     // OCR prices are diagnostic evidence only. Item identity and the local
     // catalog determine this preview value; create_order independently resolves
     // the authoritative delivery-channel price from the database.
-    const unitPrice = matched.base_price + sidesSum;
+    const unitPrice =
+      matched.base_price + (matched.variant?.price_adjustment ?? 0) + sidesSum;
     const subtotal = unitPrice * qty;
 
     const isFreeGift =
@@ -398,6 +465,12 @@ export function transformShopeeOrderPayload(
     const mainItem: TransformedOrderForRpc["items"][number] = {
       menu_item_id: matched.id,
       item_name: matched.name,
+      ...(matched.variant
+        ? {
+            variant_id: matched.variant.id,
+            variant_name: matched.variant.name,
+          }
+        : {}),
       quantity: qty,
       unit_price: unitPrice,
       modifiers: [],

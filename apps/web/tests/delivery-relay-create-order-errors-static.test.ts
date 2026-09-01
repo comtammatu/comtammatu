@@ -30,6 +30,13 @@ test("relay routes return mapped create-order failures", () => {
   assert.match(deliveryRoute, /mapRelayCreateOrderRpcError/);
 });
 
+test("delivery relay quarantines unmapped menu items as operator-actionable failures", () => {
+  assert.match(deliveryRoute, /UnmappedDeliveryMenuItemError/);
+  assert.match(deliveryRoute, /\.from\("menu_item_variants"\)/);
+  assert.match(deliveryRoute, /code:\s*"menu_item_unmapped"/);
+  assert.match(deliveryRoute, /status:\s*422/);
+});
+
 test("Má Tư Agent blocks terminal relay failures instead of auto-retrying", () => {
   assert.match(dispatcher, /RelayTerminalException/);
   assert.match(dispatcher, /markOrderBlocked/);
