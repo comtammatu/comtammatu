@@ -147,10 +147,11 @@ BEGIN
 
   -- Branch 1: opening value 1000000 before the period, +250000 inside it.
   INSERT INTO public.inventory_valuation_events (
-    tenant_id, ingredient_id, event_type, quantity_delta, value_delta,
+    tenant_id, ingredient_id, event_type, to_account_id,
+    quantity_delta, value_delta,
     effective_at, posting_year, posting_month, idempotency_key
   ) VALUES (
-    v_tenant, v_ingredient, 'opening', 0, 1000000,
+    v_tenant, v_ingredient, 'opening', v_account1, 0, 1000000,
     v_open_ts,
     extract(YEAR FROM v_open_ts AT TIME ZONE 'Asia/Ho_Chi_Minh')::integer,
     extract(MONTH FROM v_open_ts AT TIME ZONE 'Asia/Ho_Chi_Minh')::integer,
@@ -164,10 +165,11 @@ BEGIN
   ) VALUES (v_tenant, v_event, v_origin1, v_balance1, 'inventory', 10, 1000000);
 
   INSERT INTO public.inventory_valuation_events (
-    tenant_id, ingredient_id, event_type, quantity_delta, value_delta,
+    tenant_id, ingredient_id, event_type, to_account_id,
+    quantity_delta, value_delta,
     effective_at, posting_year, posting_month, idempotency_key
   ) VALUES (
-    v_tenant, v_ingredient, 'receipt', 0, 250000,
+    v_tenant, v_ingredient, 'receipt', v_account1, 0, 250000,
     v_period_ts,
     extract(YEAR FROM v_period_ts AT TIME ZONE 'Asia/Ho_Chi_Minh')::integer,
     extract(MONTH FROM v_period_ts AT TIME ZONE 'Asia/Ho_Chi_Minh')::integer,
@@ -180,14 +182,85 @@ BEGIN
     allocation_bucket, allocated_quantity, allocated_value
   ) VALUES (v_tenant, v_event, v_origin1, v_balance1, 'inventory', 10, 250000);
 
-  -- Branch 2: opening value 700000 before the period, -150000 inside it
-  -- (a withdrawal from the branch pool), so its change is negative and the
-  -- two branches stay distinguishable in the company-wide sum.
+  -- One production event can carry multiple lineage allocations. The account
+  -- movement is authoritative and must be counted once even when historical
+  -- lineage rows duplicate the event value.
+  INSERT INTO public.inventory_valuation_events (
+    tenant_id, ingredient_id, event_type, to_account_id,
+    quantity_delta, value_delta,
+    effective_at, posting_year, posting_month, idempotency_key
+  ) VALUES (
+    v_tenant, v_ingredient, 'production_output', v_account1, 0, 300000,
+    v_period_ts,
+    extract(YEAR FROM v_period_ts AT TIME ZONE 'Asia/Ho_Chi_Minh')::integer,
+    extract(MONTH FROM v_period_ts AT TIME ZONE 'Asia/Ho_Chi_Minh')::integer,
+    pg_catalog.gen_random_uuid()
+  )
+  RETURNING id INTO v_event;
+
+  INSERT INTO public.inventory_value_allocations (
+    tenant_id, valuation_event_id, source_origin_id, to_balance_id,
+    allocation_bucket, allocated_quantity, allocated_value
+  ) VALUES
+    (v_tenant, v_event, v_origin1, v_balance1, 'production_inventory', 10, 300000),
+    (v_tenant, v_event, v_origin1, v_balance1, 'production_inventory', 10, 300000);
+
+  -- Reprice propagation splits the correction between stock still held and
+  -- terminal food cost. Only the current-stock allocation changes inventory.
   INSERT INTO public.inventory_valuation_events (
     tenant_id, ingredient_id, event_type, quantity_delta, value_delta,
     effective_at, posting_year, posting_month, idempotency_key
   ) VALUES (
-    v_tenant, v_ingredient, 'opening', 0, 700000,
+    v_tenant, v_ingredient, 'provisional_reprice', 0, 250000,
+    v_period_ts,
+    extract(YEAR FROM v_period_ts AT TIME ZONE 'Asia/Ho_Chi_Minh')::integer,
+    extract(MONTH FROM v_period_ts AT TIME ZONE 'Asia/Ho_Chi_Minh')::integer,
+    pg_catalog.gen_random_uuid()
+  )
+  RETURNING id INTO v_event;
+
+  INSERT INTO public.inventory_value_allocations (
+    tenant_id, valuation_event_id, source_origin_id,
+    from_balance_id, to_balance_id, allocation_bucket,
+    allocated_quantity, allocated_value
+  ) VALUES
+    (v_tenant, v_event, v_origin1, NULL, v_balance1, 'inventory', 10, 50000),
+    (v_tenant, v_event, v_origin1, v_balance1, NULL, 'food_cost', 10, 200000);
+
+  -- Company-WAC uses the same account on both event sides. Its signed event
+  -- delta must not be turned into a fabricated positive to-side allocation.
+  INSERT INTO public.inventory_valuation_events (
+    tenant_id, ingredient_id, event_type,
+    from_account_id, to_account_id,
+    quantity_delta, value_delta,
+    effective_at, posting_year, posting_month, idempotency_key
+  ) VALUES (
+    v_tenant, v_ingredient, 'company_wac_equalize',
+    v_account1, v_account1, 0, -25000,
+    v_period_ts,
+    extract(YEAR FROM v_period_ts AT TIME ZONE 'Asia/Ho_Chi_Minh')::integer,
+    extract(MONTH FROM v_period_ts AT TIME ZONE 'Asia/Ho_Chi_Minh')::integer,
+    pg_catalog.gen_random_uuid()
+  )
+  RETURNING id INTO v_event;
+
+  INSERT INTO public.inventory_value_allocations (
+    tenant_id, valuation_event_id, source_origin_id, from_balance_id,
+    allocation_bucket, allocated_quantity, allocated_value
+  ) VALUES (
+    v_tenant, v_event, v_origin1, v_balance1,
+    'inventory', 0, 25000
+  );
+
+  -- Branch 2: opening value 700000 before the period, -150000 inside it
+  -- (a withdrawal from the branch pool), so its change is negative and the
+  -- two branches stay distinguishable in the company-wide sum.
+  INSERT INTO public.inventory_valuation_events (
+    tenant_id, ingredient_id, event_type, to_account_id,
+    quantity_delta, value_delta,
+    effective_at, posting_year, posting_month, idempotency_key
+  ) VALUES (
+    v_tenant, v_ingredient, 'opening', v_account2, 0, 700000,
     v_open_ts,
     extract(YEAR FROM v_open_ts AT TIME ZONE 'Asia/Ho_Chi_Minh')::integer,
     extract(MONTH FROM v_open_ts AT TIME ZONE 'Asia/Ho_Chi_Minh')::integer,
@@ -201,10 +274,11 @@ BEGIN
   ) VALUES (v_tenant, v_event, v_origin2, v_balance2, 'inventory', 10, 700000);
 
   INSERT INTO public.inventory_valuation_events (
-    tenant_id, ingredient_id, event_type, quantity_delta, value_delta,
+    tenant_id, ingredient_id, event_type, from_account_id,
+    quantity_delta, value_delta,
     effective_at, posting_year, posting_month, idempotency_key
   ) VALUES (
-    v_tenant, v_ingredient, 'issue', 0, -150000,
+    v_tenant, v_ingredient, 'issue', v_account2, 0, -150000,
     v_period_ts,
     extract(YEAR FROM v_period_ts AT TIME ZONE 'Asia/Ho_Chi_Minh')::integer,
     extract(MONTH FROM v_period_ts AT TIME ZONE 'Asia/Ho_Chi_Minh')::integer,
@@ -212,10 +286,12 @@ BEGIN
   )
   RETURNING id INTO v_event;
 
+  -- The event account is authoritative. The allocation insert intentionally
+  -- omits from_balance_id so the lineage completion trigger must fill it.
   INSERT INTO public.inventory_value_allocations (
-    tenant_id, valuation_event_id, source_origin_id, from_balance_id,
+    tenant_id, valuation_event_id, source_origin_id,
     allocation_bucket, allocated_quantity, allocated_value
-  ) VALUES (v_tenant, v_event, v_origin2, v_balance2, 'food_cost', 10, 150000);
+  ) VALUES (v_tenant, v_event, v_origin2, 'food_cost', 10, 150000);
 
   INSERT INTO public.inventory_valuation_cutovers (
     tenant_id, status, cutoff_at, activated_at
@@ -253,28 +329,51 @@ BEGIN
   v_payload := public.get_finance_operating_cockpit('all', v_start, v_end);
   PERFORM set_config('test.fcic_all_active', v_payload::text, TRUE);
 
-  -- Tenant-wide expected change recomputed from the seeded fixtures only,
-  -- mirroring get_inventory_valuation_period_value's allocation impact
-  -- semantics (to-balance adds, from-balance subtracts). The recomputed
-  -- total must equal the sum of the two fixture branch changes before the
-  -- RPC's all-scope figure is compared against that sum.
-  SELECT COALESCE(SUM(
-    CASE
-      WHEN allocation.to_balance_id IS NOT NULL THEN allocation.allocated_value
-      WHEN allocation.from_balance_id IS NOT NULL THEN -allocation.allocated_value
-      ELSE 0
-    END
-  ), 0)
+  -- Recompute the hybrid report contract: ordinary account events contribute
+  -- once, while reprices contribute only allocations still held in stock.
+  WITH direct_impacts AS (
+    SELECT event.value_delta AS value_impact
+    FROM public.inventory_valuation_events AS event
+    WHERE event.tenant_id = v_tenant
+      AND coalesce(event.to_account_id, event.from_account_id)
+        IN (v_account1, v_account2)
+      AND event.event_type NOT IN (
+        'invoice_reprice',
+        'credit_reprice',
+        'provisional_reprice'
+      )
+      AND event.effective_at
+        >= v_start::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh'
+      AND event.effective_at
+        < (v_end + 1)::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh'
+  ), reprice_impacts AS (
+    SELECT allocation.allocated_value AS value_impact
+    FROM public.inventory_value_allocations AS allocation
+    JOIN public.inventory_valuation_events AS event
+      ON event.id = allocation.valuation_event_id
+     AND event.tenant_id = allocation.tenant_id
+    JOIN public.inventory_origin_balances AS to_balance
+      ON to_balance.id = allocation.to_balance_id
+     AND to_balance.tenant_id = allocation.tenant_id
+    WHERE allocation.tenant_id = v_tenant
+      AND to_balance.valuation_account_id IN (v_account1, v_account2)
+      AND event.event_type IN (
+        'invoice_reprice',
+        'credit_reprice',
+        'provisional_reprice'
+      )
+      AND event.effective_at
+        >= v_start::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh'
+      AND event.effective_at
+        < (v_end + 1)::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh'
+  )
+  SELECT coalesce(sum(impact.value_impact), 0)
   INTO v_all_change
-  FROM public.inventory_value_allocations allocation
-  JOIN public.inventory_valuation_events event
-    ON event.id = allocation.valuation_event_id
-   AND event.tenant_id = allocation.tenant_id
-  WHERE allocation.tenant_id = v_tenant
-    AND (allocation.to_balance_id IN (v_balance1, v_balance2)
-         OR allocation.from_balance_id IN (v_balance1, v_balance2))
-    AND event.effective_at >= v_start::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh'
-    AND event.effective_at < (v_end + 1)::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh';
+  FROM (
+    SELECT * FROM direct_impacts
+    UNION ALL
+    SELECT * FROM reprice_impacts
+  ) AS impact;
   PERFORM set_config('test.fcic_all_expected', v_all_change::text, TRUE);
 
   UPDATE public.inventory_valuation_cutovers
@@ -302,8 +401,8 @@ SELECT is(
 
 SELECT is(
   (current_setting('test.fcic_b1_active')::jsonb ->> 'inventory_change')::numeric,
-  250000::numeric,
-  'branch 1: seeded period produces a non-zero change'
+  575000::numeric,
+  'branch 1: direct events and held reprice produce the expected change'
 );
 
 SELECT ok(

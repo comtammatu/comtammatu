@@ -11,7 +11,9 @@ DECLARE
   v_actor uuid;
   v_entry_unit bigint;
   v_origin_id bigint;
+  v_other_origin_id bigint;
   v_account_id bigint;
+  v_other_account_id bigint;
   v_balance_id bigint;
   v_movement_id bigint;
   v_unit numeric;
@@ -24,6 +26,14 @@ DECLARE
   v_loc_b bigint;
   v_branch_a bigint;
   v_branch_b bigint;
+  v_fg_origin_a bigint;
+  v_fg_origin_b bigint;
+  v_fg_account_a bigint;
+  v_fg_account_b bigint;
+  v_fg_origin_value numeric(20,2);
+  v_fg_account_value numeric(20,2);
+  v_fg_equalize_value numeric(20,2);
+  v_fg_allocated_value numeric(20,2);
 BEGIN
   SELECT pg_catalog.pg_get_constraintdef(constraint_row.oid)
   INTO v_constraint
@@ -224,6 +234,13 @@ BEGIN
   DO UPDATE SET quantity = 10, book_value = 1000000
   RETURNING id INTO v_account_id;
 
+  UPDATE public.inventory_origin_balances
+  SET quantity = 0,
+      book_value = 0
+  WHERE tenant_id = v_stock.tenant_id
+    AND valuation_account_id = v_account_id
+    AND holder_kind = 'stock_pool';
+
   INSERT INTO public.inventory_origin_balances (
     tenant_id,
     origin_id,
@@ -323,6 +340,70 @@ BEGIN
       100000
     )
     ON CONFLICT (tenant_id, branch_id, location_id, ingredient_id)
+    DO UPDATE SET quantity = 5, book_value = 100000
+    RETURNING id INTO v_other_account_id;
+
+    UPDATE public.inventory_origin_balances
+    SET quantity = 0,
+        book_value = 0
+    WHERE tenant_id = v_other.tenant_id
+      AND valuation_account_id = v_other_account_id
+      AND holder_kind = 'stock_pool';
+
+    INSERT INTO public.inventory_cost_origins (
+      tenant_id,
+      ingredient_id,
+      source_kind,
+      source_id,
+      original_quantity,
+      provisional_value,
+      finalized_quantity,
+      finalized_value,
+      cost_status,
+      effective_at
+    )
+    VALUES (
+      v_other.tenant_id,
+      v_other.ingredient_id,
+      'opening',
+      -1000000000 - v_other.id,
+      5,
+      100000,
+      5,
+      100000,
+      'finalized',
+      pg_catalog.now()
+    )
+    ON CONFLICT (tenant_id, source_kind, source_id)
+    DO UPDATE SET
+      original_quantity = 5,
+      provisional_value = 100000,
+      finalized_quantity = 5,
+      finalized_value = 100000,
+      cost_status = 'finalized'
+    RETURNING id INTO v_other_origin_id;
+
+    INSERT INTO public.inventory_origin_balances (
+      tenant_id,
+      origin_id,
+      holder_kind,
+      valuation_account_id,
+      quantity,
+      book_value
+    )
+    VALUES (
+      v_other.tenant_id,
+      v_other_origin_id,
+      'stock_pool',
+      v_other_account_id,
+      5,
+      100000
+    )
+    ON CONFLICT (
+      tenant_id,
+      origin_id,
+      valuation_account_id
+    ) WHERE holder_kind = 'stock_pool'
     DO UPDATE SET quantity = 5, book_value = 100000;
 
     PERFORM private.project_company_wac(
@@ -408,7 +489,8 @@ BEGIN
     10000,
     'finalized',
     pg_catalog.now() + interval '2 days'
-  );
+  )
+  RETURNING id INTO v_fg_origin_a;
 
   INSERT INTO public.inventory_cost_origins (
     tenant_id,
@@ -433,7 +515,8 @@ BEGIN
     282946,
     'finalized',
     pg_catalog.now()
-  );
+  )
+  RETURNING id INTO v_fg_origin_b;
 
   v_unit := private.ingredient_provisional_unit_cost(
     v_stock.tenant_id,
@@ -487,11 +570,75 @@ BEGIN
   INSERT INTO public.inventory_valuation_accounts (
     tenant_id, branch_id, location_id, ingredient_id, quantity, book_value
   )
+  VALUES (v_stock.tenant_id, v_branch_a, v_loc_a, v_fg_id, 10, 1414730)
+  RETURNING id INTO v_fg_account_a;
+
+  INSERT INTO public.inventory_valuation_accounts (
+    tenant_id, branch_id, location_id, ingredient_id, quantity, book_value
+  )
+  VALUES (v_stock.tenant_id, v_branch_b, v_loc_b, v_fg_id, 5, 69125)
+  RETURNING id INTO v_fg_account_b;
+
+  -- The zero-value balance reproduces the negative-WAC clamp that previously
+  -- left account value lower than the sum of its source-origin balances.
+  INSERT INTO public.inventory_origin_balances (
+    tenant_id, origin_id, holder_kind, valuation_account_id,
+    quantity, book_value
+  )
   VALUES
-    (v_stock.tenant_id, v_branch_a, v_loc_a, v_fg_id, 10, 1414730),
-    (v_stock.tenant_id, v_branch_b, v_loc_b, v_fg_id, 5, 69125);
+    (
+      v_stock.tenant_id, v_fg_origin_a, 'stock_pool',
+      v_fg_account_a, 4, 0
+    ),
+    (
+      v_stock.tenant_id, v_fg_origin_b, 'stock_pool',
+      v_fg_account_a, 6, 1414730
+    ),
+    (
+      v_stock.tenant_id, v_fg_origin_a, 'stock_pool',
+      v_fg_account_b, 5, 69125
+    );
 
   PERFORM private.project_company_wac(v_stock.tenant_id, v_fg_id);
+
+  SELECT account.book_value, coalesce(sum(balance.book_value), 0)
+  INTO v_fg_account_value, v_fg_origin_value
+  FROM public.inventory_valuation_accounts AS account
+  LEFT JOIN public.inventory_origin_balances AS balance
+    ON balance.tenant_id = account.tenant_id
+   AND balance.valuation_account_id = account.id
+   AND balance.holder_kind = 'stock_pool'
+  WHERE account.id = v_fg_account_a
+  GROUP BY account.book_value;
+
+  IF v_fg_account_value IS DISTINCT FROM v_fg_origin_value THEN
+    RAISE EXCEPTION
+      'COMPANY WAC: account/origin value diverged after clamp % vs %',
+      v_fg_account_value,
+      v_fg_origin_value;
+  END IF;
+
+  SELECT
+    event.value_delta,
+    (
+      SELECT coalesce(sum(allocation.allocated_value), 0)
+      FROM public.inventory_value_allocations AS allocation
+      WHERE allocation.tenant_id = event.tenant_id
+        AND allocation.valuation_event_id = event.id
+    )
+  INTO v_fg_equalize_value, v_fg_allocated_value
+  FROM public.inventory_valuation_events AS event
+  WHERE event.from_account_id = v_fg_account_a
+    AND event.event_type = 'company_wac_equalize'
+  ORDER BY event.id DESC
+  LIMIT 1;
+
+  IF abs(v_fg_equalize_value) IS DISTINCT FROM v_fg_allocated_value THEN
+    RAISE EXCEPTION
+      'COMPANY WAC: allocation audit does not match actual delta % vs %',
+      abs(v_fg_equalize_value),
+      v_fg_allocated_value;
+  END IF;
 
   SELECT stock.avg_unit_cost
   INTO v_wac_a

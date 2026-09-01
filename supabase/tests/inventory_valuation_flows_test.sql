@@ -12,10 +12,17 @@ DECLARE
   v_balance_id bigint;
   v_first_movement bigint;
   v_second_movement bigint;
+  v_stocktake_movement bigint;
+  v_first_reprice_event bigint;
+  v_second_reprice_event bigint;
   v_quantity numeric;
   v_book_value numeric;
   v_event_value numeric;
   v_allocated_value numeric;
+  v_terminal_bucket text;
+  v_movement_unit_cost numeric;
+  v_reconciliation_value numeric;
+  v_rounding_value numeric;
 BEGIN
   SELECT stock.*
   INTO v_stock
@@ -184,8 +191,8 @@ BEGIN
       v_book_value;
   END IF;
 
-  SELECT event.value_delta
-  INTO v_event_value
+  SELECT event.value_delta, event.terminal_bucket
+  INTO v_event_value, v_terminal_bucket
   FROM public.inventory_valuation_events AS event
   WHERE event.stock_movement_id = v_first_movement;
   SELECT pg_catalog.sum(allocation.allocated_value)
@@ -195,10 +202,109 @@ BEGIN
     ON event.id = allocation.valuation_event_id
   WHERE event.stock_movement_id = v_first_movement
     AND allocation.allocation_bucket = 'food_cost';
-  IF v_event_value <> -4000000 OR v_allocated_value <> 4000000 THEN
+  IF v_event_value <> -4000000
+     OR v_terminal_bucket <> 'food_cost'
+     OR v_allocated_value <> 4000000 THEN
     RAISE EXCEPTION
-      'VALUATION FLOW: issue value/allocation mismatch % / %',
+      'VALUATION FLOW: issue value/bucket/allocation mismatch % / % / %',
       v_event_value,
+      v_terminal_bucket,
+      v_allocated_value;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.inventory_value_allocations AS allocation
+    JOIN public.inventory_valuation_events AS event
+      ON event.id = allocation.valuation_event_id
+     AND event.tenant_id = allocation.tenant_id
+    WHERE event.stock_movement_id = v_first_movement
+      AND allocation.allocation_bucket = 'food_cost'
+      AND allocation.from_balance_id IS DISTINCT FROM v_balance_id
+  ) THEN
+    RAISE EXCEPTION 'VALUATION FLOW: sale allocation source balance missing';
+  END IF;
+
+  INSERT INTO public.inventory_valuation_events (
+    tenant_id,
+    ingredient_id,
+    event_type,
+    quantity_delta,
+    value_delta,
+    effective_at,
+    posting_year,
+    posting_month,
+    idempotency_key,
+    created_by
+  )
+  VALUES (
+    v_stock.tenant_id,
+    v_stock.ingredient_id,
+    'provisional_reprice',
+    0,
+    100000,
+    pg_catalog.now(),
+    extract(YEAR FROM pg_catalog.now())::integer,
+    extract(MONTH FROM pg_catalog.now())::integer,
+    pg_catalog.md5('__valuation_flow_reprice_first__')::uuid,
+    v_actor
+  )
+  RETURNING id INTO v_first_reprice_event;
+
+  PERFORM private.propagate_inventory_origin_reprice(
+    v_stock.tenant_id,
+    v_first_reprice_event,
+    v_origin_id,
+    100000
+  );
+
+  INSERT INTO public.inventory_valuation_events (
+    tenant_id,
+    ingredient_id,
+    event_type,
+    quantity_delta,
+    value_delta,
+    effective_at,
+    posting_year,
+    posting_month,
+    idempotency_key,
+    created_by
+  )
+  VALUES (
+    v_stock.tenant_id,
+    v_stock.ingredient_id,
+    'provisional_reprice',
+    0,
+    100000,
+    pg_catalog.now(),
+    extract(YEAR FROM pg_catalog.now())::integer,
+    extract(MONTH FROM pg_catalog.now())::integer,
+    pg_catalog.md5('__valuation_flow_reprice_second__')::uuid,
+    v_actor
+  )
+  RETURNING id INTO v_second_reprice_event;
+
+  PERFORM private.propagate_inventory_origin_reprice(
+    v_stock.tenant_id,
+    v_second_reprice_event,
+    v_origin_id,
+    100000
+  );
+
+  SELECT
+    pg_catalog.sum(allocation.allocated_quantity),
+    pg_catalog.sum(allocation.allocated_value)
+  INTO v_quantity, v_allocated_value
+  FROM public.inventory_value_allocations AS allocation
+  WHERE allocation.tenant_id = v_stock.tenant_id
+    AND allocation.valuation_event_id = v_second_reprice_event
+    AND allocation.allocation_bucket = 'food_cost'
+    AND allocation.from_balance_id = v_balance_id;
+
+  IF v_quantity <> 40 OR v_allocated_value <> 40000 THEN
+    RAISE EXCEPTION
+      'VALUATION FLOW: repeated reprice duplicated terminal allocation % / %',
+      v_quantity,
       v_allocated_value;
   END IF;
 
@@ -250,6 +356,136 @@ BEGIN
   IF v_quantity <> 0 OR v_book_value <> 0 THEN
     RAISE EXCEPTION
       'VALUATION FLOW: origin full depletion left residual % / %',
+      v_quantity,
+      v_book_value;
+  END IF;
+
+  UPDATE public.inventory_origin_balances
+  SET book_value = 100
+  WHERE id = v_balance_id;
+
+  PERFORM private.reconcile_inventory_valuation_account_to_stock(
+    v_stock.tenant_id,
+    v_stock.branch_id,
+    v_stock.location_id,
+    v_stock.ingredient_id,
+    pg_catalog.now(),
+    NULL,
+    '__valuation_flow_value_only__',
+    v_actor
+  );
+
+  SELECT account.book_value
+  INTO v_book_value
+  FROM public.inventory_valuation_accounts AS account
+  WHERE account.id = v_account_id;
+
+  SELECT event.value_delta
+  INTO v_rounding_value
+  FROM public.inventory_valuation_events AS event
+  WHERE event.tenant_id = v_stock.tenant_id
+    AND event.event_type = 'rounding'
+    AND event.metadata->>'idempotency_seed' = '__valuation_flow_value_only__';
+
+  IF v_book_value <> 100 OR v_rounding_value <> 100 THEN
+    RAISE EXCEPTION
+      'VALUATION FLOW: account/origin value repair expected 100 / 100, got % / %',
+      v_book_value,
+      v_rounding_value;
+  END IF;
+
+  -- Reproduce the production defect: stock quantity and valuation quantity
+  -- already disagree before a full-count adjustment. The completed count must
+  -- make the valuation account follow physical stock instead of preserving the
+  -- old gap.
+  UPDATE public.inventory_valuation_accounts
+  SET quantity = 12,
+      book_value = 1200000
+  WHERE id = v_account_id;
+  UPDATE public.inventory_origin_balances
+  SET quantity = 12,
+      book_value = 1200000
+  WHERE id = v_balance_id;
+
+  -- A positive stocktake adjustment without an explicit unit cost must use
+  -- the authoritative provisional/company WAC instead of creating zero-value
+  -- on-hand inventory.
+  INSERT INTO public.stock_movements (
+    tenant_id,
+    branch_id,
+    location_id,
+    ingredient_id,
+    type,
+    quantity_change,
+    entry_unit_id,
+    entry_quantity,
+    reason,
+    created_by
+  )
+  VALUES (
+    v_stock.tenant_id,
+    v_stock.branch_id,
+    v_stock.location_id,
+    v_stock.ingredient_id,
+    'count_adjustment',
+    5,
+    v_entry_unit,
+    5,
+    '__valuation_flow_stocktake_gain__',
+    v_actor
+  )
+  RETURNING id, unit_cost
+  INTO v_stocktake_movement, v_movement_unit_cost;
+
+  SELECT event.value_delta
+  INTO v_event_value
+  FROM public.inventory_valuation_events AS event
+  WHERE event.stock_movement_id = v_stocktake_movement
+    AND event.event_type = 'stocktake_gain';
+
+  IF v_movement_unit_cost <> 100000 OR v_event_value <> 500000 THEN
+    RAISE EXCEPTION
+      'VALUATION FLOW: stocktake gain expected unit/value 100000 / 500000, got % / %',
+      v_movement_unit_cost,
+      v_event_value;
+  END IF;
+
+  SELECT account.quantity, account.book_value
+  INTO v_quantity, v_book_value
+  FROM public.inventory_valuation_accounts AS account
+  WHERE account.id = v_account_id;
+
+  IF v_quantity <> 5 OR v_book_value <> 500000 THEN
+    RAISE EXCEPTION
+      'VALUATION FLOW: stocktake reconciliation expected 5 / 500000, got % / %',
+      v_quantity,
+      v_book_value;
+  END IF;
+
+  SELECT event.value_delta
+  INTO v_reconciliation_value
+  FROM public.inventory_valuation_events AS event
+  WHERE event.stock_movement_id = v_stocktake_movement
+    AND event.event_type = 'stocktake_reconciliation';
+
+  IF v_reconciliation_value <> -1200000 THEN
+    RAISE EXCEPTION
+      'VALUATION FLOW: stocktake reconciliation expected -1200000, got %',
+      v_reconciliation_value;
+  END IF;
+
+  SELECT
+    pg_catalog.sum(balance.quantity),
+    pg_catalog.sum(balance.book_value)
+  INTO v_quantity, v_book_value
+  FROM public.inventory_origin_balances AS balance
+  WHERE balance.tenant_id = v_stock.tenant_id
+    AND balance.valuation_account_id = v_account_id
+    AND balance.holder_kind = 'stock_pool';
+
+  IF v_quantity <> 5 OR v_book_value <> 500000 THEN
+    RAISE EXCEPTION
+      'VALUATION FLOW: reconciled origins expected 5 / 500000, got % / %',
       v_quantity,
       v_book_value;
   END IF;
