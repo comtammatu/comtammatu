@@ -141,19 +141,19 @@ by direct URL or as a redirect target.
 | `finance` | `/finance` | Chủ sở hữu | Owner nav |
 | `branches` | `/branches` | Chủ sở hữu | Owner nav |
 | `settings` | `/settings` | Chủ sở hữu | Owner nav |
-| `pos` | `/br/*/pos` | Chủ sở hữu, Thu ngân, Quản lý chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
-| `kds` | `/br/*/kds` | Chủ sở hữu, Bếp, Quản lý chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
-| `runner` | `/br/*/runner` | Chủ sở hữu, Thu ngân, Bếp, Quản lý chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
-| `branch_home` | `/br/*` | Chủ sở hữu, Quản lý chi nhánh, Thu ngân, Bếp, Nhân sự chi nhánh | Operator tile (my_shift) |
+| `pos` | `/br/*/pos` | Chủ sở hữu, Thu ngân, Quản lý chi nhánh | Branch operation nav |
+| `kds` | `/br/*/kds` | Chủ sở hữu, Bếp, Quản lý chi nhánh | Branch operation nav |
+| `runner` | `/br/*/runner` | Chủ sở hữu, Thu ngân, Bếp, Quản lý chi nhánh | Branch operation nav |
+| `branch_home` | `/br/*` | Chủ sở hữu, Quản lý chi nhánh, Thu ngân, Bếp, Nhân sự chi nhánh | (not advertised in nav — direct URL / redirect target only) |
 | `branch_dashboard` | `/br/*/dashboard` | Chủ sở hữu, Quản lý chi nhánh | Branch management nav |
 | `branch_settings` | `/br/*/settings` | Chủ sở hữu, Quản lý chi nhánh | Branch management nav |
-| `branch_menu_limits` | `/br/*/menu-limits` | Chủ sở hữu, Quản lý chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
+| `branch_menu_limits` | `/br/*/menu-limits` | Chủ sở hữu, Quản lý chi nhánh | Branch operation nav |
 | `branch_pos_sessions` | `/br/*/pos-sessions` | Chủ sở hữu, Quản lý chi nhánh | Branch operation nav |
-| `branch_team` | `/br/*/team` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (my_shift) |
-| `branch_stock` | `/br/*/stock` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (approvals); Operator tile (stock) |
-| `branch_orders` | `/br/*/orders` | Chủ sở hữu, Quản lý chi nhánh, Thu ngân | Operator tile (sales_kitchen) |
-| `employee_checkout_approvals` | `/br/*/shift/checkout-approvals` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (approvals) |
-| `employee_leave_approvals` | `/br/*/shift/leave-approvals` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (approvals) |
+| `branch_team` | `/br/*/team` | Chủ sở hữu, Quản lý chi nhánh | (not advertised in nav — direct URL / redirect target only) |
+| `branch_stock` | `/br/*/stock` | Chủ sở hữu, Quản lý chi nhánh | (not advertised in nav — direct URL / redirect target only) |
+| `branch_orders` | `/br/*/orders` | Chủ sở hữu, Quản lý chi nhánh, Thu ngân | (not advertised in nav — direct URL / redirect target only) |
+| `employee_checkout_approvals` | `/br/*/shift/checkout-approvals` | Chủ sở hữu, Quản lý chi nhánh | (not advertised in nav — direct URL / redirect target only) |
+| `employee_leave_approvals` | `/br/*/shift/leave-approvals` | Chủ sở hữu, Quản lý chi nhánh | (not advertised in nav — direct URL / redirect target only) |
 | `notifications` | `/notifications` | Chủ sở hữu, Quản lý chi nhánh, Thu ngân, Bếp, Nhân sự chi nhánh | (not advertised in nav — direct URL / redirect target only) |
 
 ## Route Family Contracts (generated)

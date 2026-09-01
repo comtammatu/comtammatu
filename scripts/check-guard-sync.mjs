@@ -293,7 +293,7 @@ if (!fs.existsSync(typegenPath)) {
       `${TYPEGEN_PATH}: typegen must bind only to registered Production without .env.local or stored-link fallback`,
     );
   }
-  const rejectedTarget = spawnSync("node", [typegenPath], {
+  const rejectedTarget = spawnSync(process.execPath, [typegenPath], {
     cwd: REPO_ROOT,
     env: { ...process.env, SUPABASE_PROJECT_ID: "abcdefghijklmnopqrst" },
     encoding: "utf8",
@@ -301,7 +301,7 @@ if (!fs.existsSync(typegenPath)) {
   if (rejectedTarget.status === 0) {
     fail(`${TYPEGEN_PATH}: must reject any non-Production type source`);
   }
-  const missingTarget = spawnSync("node", [typegenPath], {
+  const missingTarget = spawnSync(process.execPath, [typegenPath], {
     cwd: REPO_ROOT,
     env: { ...process.env, SUPABASE_PROJECT_ID: "" },
     encoding: "utf8",
@@ -318,7 +318,7 @@ if (!fs.existsSync(e2eBringupPath)) {
   const e2eSource = fs.readFileSync(e2eBringupPath, "utf8");
   if (
     !e2eSource.includes('process.env["GITHUB_ACTIONS"] !== "true"') ||
-    !e2eSource.includes("appendFileSync(\n    GITHUB_ENV") ||
+    !/appendFileSync\(\s*GITHUB_ENV/.test(e2eSource) ||
     e2eSource.includes('resolve(REPO, ".env.local")') ||
     e2eSource.includes('resolve(REPO, "apps/web/.env.local")')
   ) {
@@ -326,7 +326,7 @@ if (!fs.existsSync(e2eBringupPath)) {
       `${E2E_BRINGUP_PATH}: must be GitHub-CI-only and never write repository .env.local files`,
     );
   }
-  const rejectedWorkstation = spawnSync("node", [e2eBringupPath], {
+  const rejectedWorkstation = spawnSync(process.execPath, [e2eBringupPath], {
     cwd: REPO_ROOT,
     env: { ...process.env, CI: "", GITHUB_ACTIONS: "", GITHUB_ENV: "" },
     encoding: "utf8",
@@ -401,6 +401,12 @@ process.stdout.write(JSON.stringify(branch));
 `,
   { mode: 0o700 },
 );
+if (process.platform === "win32") {
+  fs.writeFileSync(
+    path.join(previewFixtureDir, "supabase.cmd"),
+    `@echo off\r\n"${process.execPath}" "%~dp0supabase" %*\r\n`,
+  );
+}
 const FIXTURES = [
   ["block: supabase db push", 2, bash("supabase db push")],
   ["block: actual supabase link", 2, bash("supabase link")],
@@ -2114,7 +2120,7 @@ for (const name of [
 
 for (const [desc, want, payload, fixtureEnv = {}] of FIXTURES) {
   const input = typeof payload === "string" ? payload : JSON.stringify(payload);
-  const run = spawnSync("node", [path.join(REPO_ROOT, HOOK_PATH)], {
+  const run = spawnSync(process.execPath, [path.join(REPO_ROOT, HOOK_PATH)], {
     input,
     encoding: "utf8",
     env: { ...hookBaseEnv, ...fixtureEnv },

@@ -21,7 +21,7 @@
     "lint:i18n": "I18N_BASELINE_DISABLE=1 corepack pnpm --filter @comtammatu/web exec eslint .",
     "lint:i18n:baseline": "node scripts/update-i18n-baseline.mjs",
     "lint:i18n:no-grow": "node scripts/check-i18n-baseline-monotonic.mjs",
-    "lint:migration-lineage": "node scripts/check-migration-lineage.mjs",
+    "lint:migration-lineage": "node scripts/check-migration-lineage.mjs --self-test && node scripts/check-migration-lineage.mjs",
     "lint:preview-env": "node scripts/check-preview-supabase-env.mjs --self-test && node scripts/check-preview-supabase-env.mjs",
     "lint:regression-guards": "node scripts/check-regression-guards.mjs",
     "lint:review-tier": "node scripts/check-review-tier.mjs --self-test && node scripts/check-review-tier.mjs",

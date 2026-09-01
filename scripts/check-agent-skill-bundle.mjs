@@ -47,10 +47,20 @@ function collectFiles(root, relative = "") {
     });
 }
 
+function normalizeTextLineEndings(contents) {
+  if (contents.includes(0)) return contents;
+
+  const decoded = contents.toString("utf8");
+  if (!Buffer.from(decoded, "utf8").equals(contents)) return contents;
+
+  return Buffer.from(decoded.replaceAll("\r\n", "\n"), "utf8");
+}
+
 function hashTree(root) {
   const hash = createHash("sha256");
   for (const file of collectFiles(root)) {
-    hash.update(file).update("\0").update(readFileSync(join(root, file)));
+    const contents = readFileSync(join(root, file));
+    hash.update(file).update("\0").update(normalizeTextLineEndings(contents));
   }
   return hash.digest("hex");
 }
@@ -131,6 +141,19 @@ function runSelfTest() {
     const manifest = buildManifest(fixtureRoot);
     assert.deepEqual(validateSkillBundle(fixtureRoot, manifest), []);
 
+    writeFixtureSkill(fixtureRoot, "ai-elements", "# ai-elements\r\n");
+    assert.deepEqual(validateSkillBundle(fixtureRoot, manifest), []);
+
+    const binaryFixture = join(fixtureRoot, "ai-elements", "fixture.bin");
+    writeFileSync(binaryFixture, Buffer.from([0, 13, 10, 255]));
+    const binaryManifest = buildManifest(fixtureRoot);
+    writeFileSync(binaryFixture, Buffer.from([0, 10, 10, 255]));
+    assert.match(
+      validateSkillBundle(fixtureRoot, binaryManifest).join("\n"),
+      /ai-elements hash drifted/,
+    );
+    rmSync(binaryFixture);
+
     rmSync(join(fixtureRoot, "shadcn", "SKILL.md"));
     assert.match(
       validateSkillBundle(fixtureRoot, manifest).join("\n"),
@@ -152,7 +175,7 @@ function runSelfTest() {
     rmSync(fixtureRoot, { recursive: true, force: true });
   }
 
-  console.log("[agent-skills] self-test passed (4 cases)");
+  console.log("[agent-skills] self-test passed (6 cases)");
 }
 
 if (process.argv.includes("--self-test")) {

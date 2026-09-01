@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
@@ -27,6 +28,31 @@ function readManifest() {
   }
 }
 
+function hashSql(contents) {
+  const normalized = Buffer.from(
+    contents.toString("utf8").replaceAll("\r\n", "\n"),
+    "utf8",
+  );
+  return createHash("sha256").update(normalized).digest("hex");
+}
+
+function runSelfTest() {
+  assert.equal(
+    hashSql(Buffer.from("select 1;\n", "utf8")),
+    hashSql(Buffer.from("select 1;\r\n", "utf8")),
+  );
+  assert.notEqual(
+    hashSql(Buffer.from("select 1;\n", "utf8")),
+    hashSql(Buffer.from("select 2;\n", "utf8")),
+  );
+  console.log("[migration-lineage] self-test passed (2 cases)");
+}
+
+if (process.argv.includes("--self-test")) {
+  runSelfTest();
+  process.exit(0);
+}
+
 const manifest = readManifest();
 const {
   baselineFile,
@@ -49,7 +75,7 @@ if (!existsSync(baselineFile ?? "")) {
   fail(`${String(baselineFile)} does not exist`);
 } else {
   const baselineSql = readFileSync(baselineFile);
-  const actualHash = createHash("sha256").update(baselineSql).digest("hex");
+  const actualHash = hashSql(baselineSql);
   if (actualHash !== baselineSha256) {
     fail(
       `${baselineFile}: hash drifted; only the re-baseline workflow may update the baseline and manifest together`,

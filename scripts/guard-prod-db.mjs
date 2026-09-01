@@ -107,6 +107,7 @@ function trustedPreviewBranch(candidate) {
       {
         encoding: "utf8",
         stdio: ["ignore", "pipe", "ignore"],
+        shell: process.platform === "win32",
         timeout: 10_000,
         maxBuffer: 64 * 1024,
       },
