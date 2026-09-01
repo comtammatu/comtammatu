@@ -70,6 +70,8 @@ test("POS, count assignment, threshold, and report contracts are location-aware"
   const sql = splitMigration();
 
   assert.match(sql, /v_order\.stock_consumption_location_id/);
+  assert.match(sql, /LIMIT 1;\$old_location\$, E'\\r\\n', E'\\n'\)/);
+  assert.match(sql, /pg_get_functiondef\([\s\S]*E'\\r\\n',[\s\S]*E'\\n'/);
   assert.match(sql, /post_pos_sale_consumption_if_ready/);
   assert.match(sql, /E'\s*AND sm\.location_id = v_location_id\\n'/);
   assert.match(sql, /prior movements across all locations/);
@@ -83,6 +85,11 @@ test("POS, count assignment, threshold, and report contracts are location-aware"
     /get_branch_smart_reorder_suggestions\([\s\S]*p_location_id bigint/,
   );
   assert.match(sql, /transfer_scope\s*=\s*'inter_site'/);
+  assert.match(
+    sql,
+    /private\.get_finance_operating_cockpit_without_inventory_breakdown/,
+  );
+  assert.match(sql, /finance_goods_in_scope_patch_failed/);
   assert.match(
     sql,
     /public\.kds_tickets[\s\S]*'pending', 'preparing', 'ready'/,
@@ -113,10 +120,12 @@ test("transfer UI exposes scope and reversal instead of one-sided correction", (
   const listModel = read(
     "apps/web/app/(protected)/inventory/transfers/transfer-list-model.ts",
   );
+  const inventoryMessages = read("apps/web/lib/messages/inventory.ts");
 
   assert.match(actions, /commitIntraSiteTransfer/);
   assert.match(actions, /reverseIntraSiteTransfer/);
-  assert.match(dialog, /Đảo phiếu/);
+  assert.match(dialog, /copy\.reverse\.trigger/);
+  assert.match(inventoryMessages, /trigger: "Đảo phiếu"/);
   assert.match(detail, /transferScope/);
   assert.match(listModel, /transferScope/);
   assert.match(listModel, /Nội bộ Kho ↔ Bếp/);

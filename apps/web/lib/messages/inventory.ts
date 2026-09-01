@@ -2010,6 +2010,48 @@ export const inventory = {
     cancelReasonPlaceholder: "Nhập lý do để lưu vết",
     cancelBack: "Quay lại",
     cancelSuccess: "Đã hủy phiếu điều chuyển.",
+    intraSite: {
+      defaultTrigger: "Cấp Kho ↔ Bếp",
+      quantityExceedsSource: (ingredient: string) =>
+        `Số lượng ${ingredient} vượt tồn tại nơi xuất.`,
+      lineRequired: "Nhập số lượng cần chuyển cho ít nhất một mặt hàng.",
+      commitFailed: "Không thể hoàn tất điều chuyển nội bộ.",
+      commitSuccess: "Đã hoàn tất điều chuyển nội bộ.",
+      title: "Điều chuyển nội bộ Kho ↔ Bếp",
+      description:
+        "Kiểm tra số lượng rồi xác nhận một lần. Phiếu hoàn tất ngay.",
+      close: "Đóng",
+      confirm: "Xác nhận điều chuyển",
+      warehouseToKitchen: "Kho → Bếp",
+      kitchenToWarehouse: "Bếp → Kho",
+      transferAll: "Chuyển toàn bộ tồn",
+      emptySourceTitle: "Nơi xuất chưa có tồn",
+      emptySourceDescription:
+        "Chọn chiều ngược lại hoặc nhập hàng vào Kho trước.",
+      availableQuantity: (quantity: number, unit: string) =>
+        `Có ${quantity} ${unit}`,
+      quantityAria: (ingredient: string) => `Số lượng ${ingredient}`,
+      notesPlaceholder: "Ghi chú (không bắt buộc)",
+      notesAria: "Ghi chú điều chuyển nội bộ",
+      reverse: {
+        quantityExceedsRemaining: (ingredient: string) =>
+          `Số lượng ${ingredient} vượt phần còn được đảo.`,
+        lineRequired: "Chọn ít nhất một dòng cần đảo.",
+        failed: "Không thể đảo phiếu.",
+        success: "Đã tạo phiếu đảo.",
+        trigger: "Đảo phiếu",
+        title: (code: string) => `Đảo phiếu ${code}`,
+        description:
+          "Phiếu đảo đi theo chiều ngược lại và không được vượt phần còn lại.",
+        submit: "Tạo phiếu đảo",
+        remainingQuantity: (quantity: number, unit: string) =>
+          `Còn được đảo ${quantity} ${unit}`,
+        quantityAria: (ingredient: string) =>
+          `Số lượng đảo ${ingredient}`,
+        notesPlaceholder: "Lý do đảo phiếu",
+        notesAria: "Lý do đảo phiếu",
+      },
+    },
     receiveNative: {
       receiveProgress: (done: number, total: number) =>
         `${formatCount(done)}/${formatCount(total)} dòng đã nhập`,

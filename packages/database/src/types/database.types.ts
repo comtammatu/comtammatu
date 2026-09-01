@@ -1204,8 +1204,10 @@ export type Database = {
           id: number
           ingredient_id: number
           is_active: boolean
+          location_id: number
           min_stock_level: number
           reorder_quantity: number | null
+          target_stock_level: number
           tenant_id: number
           updated_at: string
         }
@@ -1215,8 +1217,10 @@ export type Database = {
           id?: never
           ingredient_id: number
           is_active?: boolean
+          location_id: number
           min_stock_level?: number
           reorder_quantity?: number | null
+          target_stock_level: number
           tenant_id: number
           updated_at?: string
         }
@@ -1226,8 +1230,10 @@ export type Database = {
           id?: never
           ingredient_id?: number
           is_active?: boolean
+          location_id?: number
           min_stock_level?: number
           reorder_quantity?: number | null
+          target_stock_level?: number
           tenant_id?: number
           updated_at?: string
         }
@@ -1254,6 +1260,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "branch_ingredient_thresholds_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_locations"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "branch_ingredient_thresholds_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -1277,6 +1290,7 @@ export type Database = {
           quantity: number
           released_at: string | null
           source: string
+          stock_consumption_location_id: number
           tenant_id: number
           updated_at: string
         }
@@ -1294,6 +1308,7 @@ export type Database = {
           quantity: number
           released_at?: string | null
           source?: string
+          stock_consumption_location_id: number
           tenant_id: number
           updated_at?: string
         }
@@ -1311,10 +1326,18 @@ export type Database = {
           quantity?: number
           released_at?: string | null
           source?: string
+          stock_consumption_location_id?: number
           tenant_id?: number
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "branch_menu_holds_stock_consumption_location_id_fkey"
+            columns: ["stock_consumption_location_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_locations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "branch_menu_item_daily_holds_branch_id_fkey"
             columns: ["branch_id"]
@@ -5316,6 +5339,7 @@ export type Database = {
           service_charge: number
           split_from_order_id: number | null
           status: string
+          stock_consumption_location_id: number
           subtotal: number
           table_id: number | null
           tax_amount: number
@@ -5359,6 +5383,7 @@ export type Database = {
           service_charge?: number
           split_from_order_id?: number | null
           status?: string
+          stock_consumption_location_id: number
           subtotal?: number
           table_id?: number | null
           tax_amount?: number
@@ -5402,6 +5427,7 @@ export type Database = {
           service_charge?: number
           split_from_order_id?: number | null
           status?: string
+          stock_consumption_location_id?: number
           subtotal?: number
           table_id?: number | null
           tax_amount?: number
@@ -5471,6 +5497,13 @@ export type Database = {
             columns: ["split_from_order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_stock_consumption_location_id_fkey"
+            columns: ["stock_consumption_location_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_locations"
             referencedColumns: ["id"]
           },
           {
@@ -9778,9 +9811,11 @@ export type Database = {
           from_branch_id: number
           from_location_id: number | null
           id: number
+          idempotency_key: string | null
           notes: string | null
           receive_started_at: string | null
           received_at: string | null
+          reverses_transfer_id: number | null
           shipped_at: string | null
           status: string
           status_reason: string | null
@@ -9789,6 +9824,7 @@ export type Database = {
           to_branch_id: number
           to_location_id: number | null
           transfer_number: string
+          transfer_scope: string
           updated_at: string
           vehicle_info: string | null
         }
@@ -9799,9 +9835,11 @@ export type Database = {
           from_branch_id: number
           from_location_id?: number | null
           id?: never
+          idempotency_key?: string | null
           notes?: string | null
           receive_started_at?: string | null
           received_at?: string | null
+          reverses_transfer_id?: number | null
           shipped_at?: string | null
           status?: string
           status_reason?: string | null
@@ -9810,6 +9848,7 @@ export type Database = {
           to_branch_id: number
           to_location_id?: number | null
           transfer_number: string
+          transfer_scope?: string
           updated_at?: string
           vehicle_info?: string | null
         }
@@ -9820,9 +9859,11 @@ export type Database = {
           from_branch_id?: number
           from_location_id?: number | null
           id?: never
+          idempotency_key?: string | null
           notes?: string | null
           receive_started_at?: string | null
           received_at?: string | null
+          reverses_transfer_id?: number | null
           shipped_at?: string | null
           status?: string
           status_reason?: string | null
@@ -9831,6 +9872,7 @@ export type Database = {
           to_branch_id?: number
           to_location_id?: number | null
           transfer_number?: string
+          transfer_scope?: string
           updated_at?: string
           vehicle_info?: string | null
         }
@@ -9869,6 +9911,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "stock_requests"
             referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "stock_transfers_reverses_transfer_id_fkey"
+            columns: ["reverses_transfer_id"]
+            isOneToOne: false
+            referencedRelation: "stock_transfers"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "stock_transfers_tenant_id_fkey"
@@ -13486,6 +13535,17 @@ export type Database = {
         Args: { p_reason: string; p_request_id: number }
         Returns: Json
       }
+      commit_intra_site_transfer: {
+        Args: {
+          p_branch_id: number
+          p_from_location_id: number
+          p_idempotency_key: string
+          p_lines: Json
+          p_notes: string
+          p_to_location_id: number
+        }
+        Returns: Json
+      }
       complete_kds_tickets: {
         Args: { p_branch_id: number; p_ticket_ids: number[] }
         Returns: Json
@@ -13524,14 +13584,24 @@ export type Database = {
         Args: { p_subtotal: number; p_type: string; p_value: number }
         Returns: number
       }
-      compute_menu_item_stock_capacity: {
-        Args: {
-          p_branch_id: number
-          p_menu_item_id: number
-          p_tenant_id: number
-        }
-        Returns: number
-      }
+      compute_menu_item_stock_capacity:
+        | {
+            Args: {
+              p_branch_id: number
+              p_menu_item_id: number
+              p_tenant_id: number
+            }
+            Returns: number
+          }
+        | {
+            Args: {
+              p_branch_id: number
+              p_location_id: number
+              p_menu_item_id: number
+              p_tenant_id: number
+            }
+            Returns: number
+          }
       confirm_cash_payment: {
         Args: { p_cash_received: number; p_order_id: number }
         Returns: Json
@@ -13649,6 +13719,18 @@ export type Database = {
         }
         Returns: Json
       }
+      create_inventory_document_correction_legacy: {
+        Args: {
+          p_branch_id: number
+          p_document_id: number
+          p_document_type: string
+          p_idempotency_key: string
+          p_ingredient_id: number
+          p_quantity_change: number
+          p_reason: string
+        }
+        Returns: Json
+      }
       create_order: {
         Args: {
           p_branch_id: number
@@ -13743,6 +13825,10 @@ export type Database = {
           p_transfer_number: string
           p_vehicle_info?: string
         }
+        Returns: Json
+      }
+      create_stocktake_session: {
+        Args: { p_branch_id: number; p_location_id?: number }
         Returns: Json
       }
       create_supplier_credit_allocated: {
@@ -14148,14 +14234,18 @@ export type Database = {
           year_month: string
         }[]
       }
-      get_branch_smart_reorder_suggestions: {
-        Args: { p_branch_id: number }
-        Returns: Json
-      }
-      get_branch_stock_thresholds: {
-        Args: { p_branch_id: number }
-        Returns: Json
-      }
+      get_branch_smart_reorder_suggestions:
+        | { Args: { p_branch_id: number }; Returns: Json }
+        | {
+            Args: { p_branch_id: number; p_location_id: number }
+            Returns: Json
+          }
+      get_branch_stock_thresholds:
+        | { Args: { p_branch_id: number }; Returns: Json }
+        | {
+            Args: { p_branch_id: number; p_location_id: number }
+            Returns: Json
+          }
       get_cash_ledger_movement_since: {
         Args: { p_branch_id?: number; p_since: string }
         Returns: Json
@@ -14274,6 +14364,16 @@ export type Database = {
       get_ingredient_abc_class: {
         Args: { p_branch_id: number; p_ingredient_id: number }
         Returns: string
+      }
+      get_intra_site_transfer_remaining: {
+        Args: { p_transfer_id: number }
+        Returns: {
+          entry_unit_id: number
+          ingredient_id: number
+          original_quantity: number
+          remaining_quantity: number
+          reversed_quantity: number
+        }[]
       }
       get_inventory_alerts: {
         Args: {
@@ -14563,23 +14663,52 @@ export type Database = {
           vietqr_revenue: number
         }[]
       }
-      get_stock_movement_report: {
-        Args: { p_branch_id?: number; p_end_date: string; p_start_date: string }
-        Returns: {
-          adjustment: number
-          closing: number
-          consumption: number
-          grn_receipt: number
-          ingredient_id: number
-          ingredient_name: string
-          opening: number
-          production_consumption: number
-          production_output: number
-          transfer_in: number
-          transfer_out: number
-          unit: string
-        }[]
-      }
+      get_stock_movement_report:
+        | {
+            Args: {
+              p_branch_id?: number
+              p_end_date: string
+              p_start_date: string
+            }
+            Returns: {
+              adjustment: number
+              closing: number
+              consumption: number
+              grn_receipt: number
+              ingredient_id: number
+              ingredient_name: string
+              opening: number
+              production_consumption: number
+              production_output: number
+              transfer_in: number
+              transfer_out: number
+              unit: string
+            }[]
+          }
+        | {
+            Args: {
+              p_branch_id: number
+              p_end_date: string
+              p_location_id: number
+              p_start_date: string
+            }
+            Returns: {
+              adjustment: number
+              closing: number
+              consumption: number
+              grn_receipt: number
+              ingredient_id: number
+              ingredient_name: string
+              intra_transfer_in: number
+              intra_transfer_out: number
+              opening: number
+              production_consumption: number
+              production_output: number
+              transfer_in: number
+              transfer_out: number
+              unit: string
+            }[]
+          }
       get_stocktake_lines_blind: {
         Args: { p_session_id: number }
         Returns: {
@@ -15047,6 +15176,10 @@ export type Database = {
       }
       post_pos_sale_refund_restore: {
         Args: { p_actor_id?: string; p_order_id: number }
+        Returns: Json
+      }
+      prepare_branch_kitchen_split: {
+        Args: { p_branch_id: number }
         Returns: Json
       }
       prepare_inventory_valuation_cutover: {
@@ -15598,6 +15731,15 @@ export type Database = {
         Returns: Json
       }
       retry_print_job: { Args: { p_job_id: number }; Returns: boolean }
+      reverse_intra_site_transfer: {
+        Args: {
+          p_idempotency_key: string
+          p_lines: Json
+          p_notes: string
+          p_transfer_id: number
+        }
+        Returns: Json
+      }
       reverse_payment_and_post: { Args: { p_refund_id: number }; Returns: Json }
       review_completed_vietqr_bank_webhook: {
         Args: { p_payment_id: number; p_status: string }
@@ -15934,6 +16076,14 @@ export type Database = {
       set_branch_kind: {
         Args: { p_branch_id: number; p_kind?: string }
         Returns: undefined
+      }
+      set_branch_kitchen_split: {
+        Args: {
+          p_branch_id: number
+          p_enabled: boolean
+          p_idempotency_key: string
+        }
+        Returns: Json
       }
       set_branch_menu_daily_limit: {
         Args: {
@@ -16357,10 +16507,16 @@ export type Database = {
         Args: { p_rows: Json; p_year_month: string }
         Returns: Json
       }
-      upsert_branch_stock_thresholds: {
-        Args: { p_branch_id: number; p_thresholds: Json }
-        Returns: Json
-      }
+      upsert_branch_stock_thresholds:
+        | {
+            Args: {
+              p_branch_id: number
+              p_location_id: number
+              p_thresholds: Json
+            }
+            Returns: Json
+          }
+        | { Args: { p_branch_id: number; p_thresholds: Json }; Returns: Json }
       upsert_inventory_count_template: {
         Args: {
           p_branch_id: number

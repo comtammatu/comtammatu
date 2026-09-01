@@ -16,6 +16,7 @@ export interface CashierContext {
   email: string;
   tenantId: number;
   branchId: number;
+  stockConsumptionLocationId: number;
 }
 
 let cachedContext: CashierContext | null = null;
@@ -51,11 +52,27 @@ export async function getCashierContext(): Promise<CashierContext> {
     throw new Error(`Cashier ${email} chưa được phân chi nhánh`);
   }
 
+  const { data: consumptionLocation, error: locationError } = await supabase
+    .from("inventory_locations")
+    .select("id")
+    .eq("tenant_id", profile.tenant_id)
+    .eq("branch_id", profile.branch_id)
+    .eq("is_active", true)
+    .eq("is_default_consumption", true)
+    .in("location_kind", ["warehouse", "kitchen"])
+    .single();
+  if (locationError || !consumptionLocation) {
+    throw new Error(
+      `Không tìm thấy điểm trừ tồn cho cashier ${email}: ${locationError?.message}`,
+    );
+  }
+
   cachedContext = {
     userId: profile.id,
     email,
     tenantId: profile.tenant_id,
     branchId: profile.branch_id,
+    stockConsumptionLocationId: consumptionLocation.id,
   };
   return cachedContext;
 }
@@ -234,6 +251,7 @@ export async function ensureOccupiedTableWithOrder(
     .insert({
       tenant_id: ctx.tenantId,
       branch_id: ctx.branchId,
+      stock_consumption_location_id: ctx.stockConsumptionLocationId,
       table_id: targetTable.id,
       order_number: orderNumber,
       order_type: "dine_in",
@@ -350,6 +368,7 @@ export async function ensureSecondOrderSameTable(
     .insert({
       tenant_id: ctx.tenantId,
       branch_id: ctx.branchId,
+      stock_consumption_location_id: ctx.stockConsumptionLocationId,
       table_id: tableId,
       order_number: `GUIDE2-${String(Date.now())}`,
       order_type: "dine_in",

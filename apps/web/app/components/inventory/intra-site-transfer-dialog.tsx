@@ -1,4 +1,3 @@
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: inventory document UI */
 "use client";
 
 import {
@@ -29,12 +28,14 @@ import { AppDialog } from "@/components/form";
 import { AppEmptyState } from "@/components/surface";
 import type { IntraSiteTransferData } from "@lib/inventory/intra-site-transfer-data";
 import type { TransferDetail } from "@lib/inventory/transfer-detail-model";
+import { messages } from "@lib/messages";
 import {
   commitIntraSiteTransfer,
   reverseIntraSiteTransfer,
 } from "@/(protected)/inventory/transfer-actions";
 
 type Direction = "warehouse_to_kitchen" | "kitchen_to_warehouse";
+const copy = messages.inventory.transfer.intraSite;
 
 function positiveQuantity(value: string | undefined): number | null {
   const quantity = Number(value ?? "");
@@ -46,7 +47,7 @@ export function IntraSiteTransferDialog({
   triggerSize = "default",
   detailBasePath,
   initialQuantities = {},
-  triggerLabel = "Cấp Kho ↔ Bếp",
+  triggerLabel = copy.defaultTrigger,
 }: {
   data: IntraSiteTransferData;
   triggerSize?: ComponentProps<typeof Button>["size"];
@@ -129,11 +130,11 @@ export function IntraSiteTransferDialog({
       ];
     });
     if (invalidIngredient) {
-      toast.error(`Số lượng ${invalidIngredient} vượt tồn tại nơi xuất.`);
+      toast.error(copy.quantityExceedsSource(invalidIngredient));
       return;
     }
     if (lines.length === 0) {
-      toast.error("Nhập số lượng cần chuyển cho ít nhất một mặt hàng.");
+      toast.error(copy.lineRequired);
       return;
     }
     idempotencyKey.current ??= crypto.randomUUID();
@@ -148,11 +149,11 @@ export function IntraSiteTransferDialog({
         idempotencyKey: idempotencyKey.current!,
       });
       if (!result.success) {
-        toast.error(result.error ?? "Không thể hoàn tất điều chuyển nội bộ.");
+        toast.error(result.error ?? copy.commitFailed);
         return;
       }
       const transferId = (result.data as { id?: number } | undefined)?.id;
-      toast.success("Đã hoàn tất điều chuyển nội bộ.");
+      toast.success(copy.commitSuccess);
       setOpen(false);
       setQuantities({});
       setNotes("");
@@ -180,8 +181,8 @@ export function IntraSiteTransferDialog({
         variant="document"
         open={open}
         onOpenChange={setOpen}
-        title="Điều chuyển nội bộ Kho ↔ Bếp"
-        description="Kiểm tra số lượng rồi xác nhận một lần. Phiếu hoàn tất ngay."
+        title={copy.title}
+        description={copy.description}
         footer={
           <div className="flex w-full items-center justify-end gap-2">
             <Button
@@ -190,10 +191,10 @@ export function IntraSiteTransferDialog({
               onClick={() => setOpen(false)}
               disabled={isPending}
             >
-              Đóng
+              {copy.close}
             </Button>
             <Button type="button" onClick={submit} disabled={isPending}>
-              Xác nhận điều chuyển
+              {copy.confirm}
             </Button>
           </div>
         }
@@ -207,7 +208,7 @@ export function IntraSiteTransferDialog({
               }
               onClick={() => changeDirection("warehouse_to_kitchen")}
             >
-              Kho → Bếp
+              {copy.warehouseToKitchen}
             </Button>
             <Button
               type="button"
@@ -216,7 +217,7 @@ export function IntraSiteTransferDialog({
               }
               onClick={() => changeDirection("kitchen_to_warehouse")}
             >
-              Bếp → Kho
+              {copy.kitchenToWarehouse}
             </Button>
           </div>
           <div className="flex items-center justify-between gap-3 text-sm">
@@ -230,14 +231,14 @@ export function IntraSiteTransferDialog({
               onClick={fillAll}
               disabled={availableIngredients.length === 0}
             >
-              Chuyển toàn bộ tồn
+              {copy.transferAll}
             </Button>
           </div>
           {availableIngredients.length === 0 ? (
             <AppEmptyState
               compact
-              title="Nơi xuất chưa có tồn"
-              description="Chọn chiều ngược lại hoặc nhập hàng vào Kho trước."
+              title={copy.emptySourceTitle}
+              description={copy.emptySourceDescription}
             />
           ) : (
             <ScrollArea className="h-80">
@@ -247,8 +248,10 @@ export function IntraSiteTransferDialog({
                     <ItemContent>
                       <ItemTitle>{ingredient.name}</ItemTitle>
                       <ItemDescription>
-                        Có {availableQuantity(ingredient.ingredientId)}{" "}
-                        {ingredient.unit}
+                        {copy.availableQuantity(
+                          availableQuantity(ingredient.ingredientId),
+                          ingredient.unit,
+                        )}
                       </ItemDescription>
                     </ItemContent>
                     <ItemActions className="w-40">
@@ -263,7 +266,7 @@ export function IntraSiteTransferDialog({
                         }}
                         maxFractionDigits={3}
                         placeholder="0"
-                        aria-label={`Số lượng ${ingredient.name}`}
+                        aria-label={copy.quantityAria(ingredient.name)}
                       />
                     </ItemActions>
                   </Item>
@@ -276,8 +279,8 @@ export function IntraSiteTransferDialog({
             onChange={(event) => setNotes(event.target.value)}
             rows={3}
             maxLength={500}
-            placeholder="Ghi chú (không bắt buộc)"
-            aria-label="Ghi chú điều chuyển nội bộ"
+            placeholder={copy.notesPlaceholder}
+            aria-label={copy.notesAria}
           />
         </div>
       </AppDialog>
@@ -325,11 +328,11 @@ export function ReverseIntraSiteTransferDialog({
       ];
     });
     if (invalidIngredient) {
-      toast.error(`Số lượng ${invalidIngredient} vượt phần còn được đảo.`);
+      toast.error(copy.reverse.quantityExceedsRemaining(invalidIngredient));
       return;
     }
     if (lines.length === 0) {
-      toast.error("Chọn ít nhất một dòng cần đảo.");
+      toast.error(copy.reverse.lineRequired);
       return;
     }
     idempotencyKey.current ??= crypto.randomUUID();
@@ -341,10 +344,10 @@ export function ReverseIntraSiteTransferDialog({
         idempotencyKey: idempotencyKey.current!,
       });
       if (!result.success) {
-        toast.error(result.error ?? "Không thể đảo phiếu.");
+        toast.error(result.error ?? copy.reverse.failed);
         return;
       }
-      toast.success("Đã tạo phiếu đảo.");
+      toast.success(copy.reverse.success);
       setOpen(false);
       idempotencyKey.current = null;
       router.refresh();
@@ -364,13 +367,13 @@ export function ReverseIntraSiteTransferDialog({
         disabled={!hasRemaining}
       >
         <IconRotateCcw data-icon="inline-start" />
-        Đảo phiếu
+        {copy.reverse.trigger}
       </Button>
       <AppDialog
         open={open}
         onOpenChange={setOpen}
-        title={`Đảo phiếu ${transfer.code}`}
-        description="Phiếu đảo đi theo chiều ngược lại và không được vượt phần còn lại."
+        title={copy.reverse.title(transfer.code)}
+        description={copy.reverse.description}
         footer={
           <div className="flex justify-end gap-2">
             <Button
@@ -378,10 +381,10 @@ export function ReverseIntraSiteTransferDialog({
               variant="outline"
               onClick={() => setOpen(false)}
             >
-              Đóng
+              {copy.close}
             </Button>
             <Button type="button" onClick={submit} disabled={isPending}>
-              Tạo phiếu đảo
+              {copy.reverse.submit}
             </Button>
           </div>
         }
@@ -394,7 +397,7 @@ export function ReverseIntraSiteTransferDialog({
                 <ItemContent>
                   <ItemTitle>{item.name}</ItemTitle>
                   <ItemDescription>
-                    Còn được đảo {remaining} {item.unit}
+                    {copy.reverse.remainingQuantity(remaining, item.unit)}
                   </ItemDescription>
                 </ItemContent>
                 <ItemActions className="w-40">
@@ -409,7 +412,7 @@ export function ReverseIntraSiteTransferDialog({
                     }}
                     maxFractionDigits={3}
                     disabled={remaining <= 0}
-                    aria-label={`Số lượng đảo ${item.name}`}
+                    aria-label={copy.reverse.quantityAria(item.name)}
                   />
                 </ItemActions>
               </Item>
@@ -420,8 +423,8 @@ export function ReverseIntraSiteTransferDialog({
             onChange={(event) => setNotes(event.target.value)}
             rows={3}
             maxLength={500}
-            placeholder="Lý do đảo phiếu"
-            aria-label="Lý do đảo phiếu"
+            placeholder={copy.reverse.notesPlaceholder}
+            aria-label={copy.reverse.notesAria}
           />
         </div>
       </AppDialog>

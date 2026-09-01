@@ -3217,12 +3217,30 @@ GRANT EXECUTE ON FUNCTION public.get_stock_movement_report(
 -- visible in the inventory ledger but is excluded from Finance goods-in.
 DO $finance_goods_in_scope$
 DECLARE
+  v_target regprocedure;
   v_definition text;
   v_before text;
 BEGIN
-  v_definition := pg_get_functiondef(
-    'public.get_finance_operating_cockpit(text,date,date,bigint)'::regprocedure
+  v_target := to_regprocedure(
+    'public.get_finance_operating_cockpit(text,date,date,bigint)'
   );
+  IF v_target IS NULL THEN
+    RAISE EXCEPTION 'finance_goods_in_scope_patch_failed';
+  END IF;
+  v_definition := pg_get_functiondef(v_target);
+
+  -- A later Finance migration may already have wrapped the original cockpit
+  -- and moved its goods-in query into this private helper.
+  IF position('AND event.event_type = ''transfer_in''' IN v_definition) = 0 THEN
+    v_target := to_regprocedure(
+      'private.get_finance_operating_cockpit_without_inventory_breakdown(text,date,date,bigint)'
+    );
+    IF v_target IS NULL THEN
+      RAISE EXCEPTION 'finance_goods_in_scope_patch_failed';
+    END IF;
+    v_definition := pg_get_functiondef(v_target);
+  END IF;
+
   v_before := v_definition;
   v_definition := replace(
     v_definition,
@@ -3354,7 +3372,7 @@ DO $pos_consumption_location_patch$
 DECLARE
   v_definition text;
   v_before text;
-  v_location_block text := $location_block$
+  v_location_block text := replace($location_block$
   v_location_id := v_order.stock_consumption_location_id;
 
   SELECT il.is_default_consumption
@@ -3364,11 +3382,14 @@ DECLARE
     AND il.branch_id = v_order.branch_id
     AND il.tenant_id = v_order.tenant_id
     AND il.location_kind IN ('warehouse', 'kitchen')
-    AND il.is_active = TRUE;
-  $location_block$;
+    AND il.is_active = TRUE;$location_block$, E'\r\n', E'\n');
 BEGIN
-  v_definition := pg_get_functiondef(
-    'public.post_pos_sale_consumption_if_ready(bigint,uuid)'::regprocedure
+  v_definition := replace(
+    pg_get_functiondef(
+      'public.post_pos_sale_consumption_if_ready(bigint,uuid)'::regprocedure
+    ),
+    E'\r\n',
+    E'\n'
   );
   v_before := v_definition;
   v_definition := replace(
@@ -3379,7 +3400,7 @@ BEGIN
   );
   v_definition := replace(
     v_definition,
-    $old_location$
+    replace($old_location$
   SELECT il.id, il.is_default_consumption
   INTO v_location_id, v_location_is_default
   FROM public.inventory_locations il
@@ -3388,8 +3409,7 @@ BEGIN
     AND il.location_kind = 'warehouse'
     AND il.is_active = TRUE
   ORDER BY il.is_default_consumption DESC, il.sort_order NULLS LAST, il.id
-  LIMIT 1;
-    $old_location$,
+  LIMIT 1;$old_location$, E'\r\n', E'\n'),
     v_location_block
   );
   v_definition := replace(
@@ -3404,15 +3424,13 @@ BEGIN
   );
   v_definition := replace(
     v_definition,
-    $old_shortfall_meta$
+    replace($old_shortfall_meta$
         'order_id', p_order_id,
-        'short_ingredient_ids', to_jsonb(v_short),
-    $old_shortfall_meta$,
-    $new_shortfall_meta$
+        'short_ingredient_ids', to_jsonb(v_short),$old_shortfall_meta$, E'\r\n', E'\n'),
+    replace($new_shortfall_meta$
         'order_id', p_order_id,
         'location_id', v_location_id,
-        'short_ingredient_ids', to_jsonb(v_short),
-    $new_shortfall_meta$
+        'short_ingredient_ids', to_jsonb(v_short),$new_shortfall_meta$, E'\r\n', E'\n')
   );
   IF v_definition = v_before
      OR position('v_order.stock_consumption_location_id' IN v_definition) = 0
@@ -3422,8 +3440,12 @@ BEGIN
   END IF;
   EXECUTE v_definition;
 
-  v_definition := pg_get_functiondef(
-    'public.post_pos_cancelled_ready_waste(bigint,uuid,text)'::regprocedure
+  v_definition := replace(
+    pg_get_functiondef(
+      'public.post_pos_cancelled_ready_waste(bigint,uuid,text)'::regprocedure
+    ),
+    E'\r\n',
+    E'\n'
   );
   v_before := v_definition;
   v_definition := replace(
@@ -3434,7 +3456,7 @@ BEGIN
   );
   v_definition := replace(
     v_definition,
-    $old_location$
+    replace($old_location$
   SELECT il.id, il.is_default_consumption
   INTO v_location_id, v_location_is_default
   FROM public.inventory_locations il
@@ -3443,8 +3465,7 @@ BEGIN
     AND il.location_kind = 'warehouse'
     AND il.is_active = TRUE
   ORDER BY il.is_default_consumption DESC, il.sort_order NULLS LAST, il.id
-  LIMIT 1;
-    $old_location$,
+  LIMIT 1;$old_location$, E'\r\n', E'\n'),
     v_location_block
   );
   IF v_definition = v_before
@@ -3460,29 +3481,31 @@ DECLARE
   v_definition text;
   v_before text;
 BEGIN
-  v_definition := pg_get_functiondef(
-    'public.enforce_branch_stock_availability()'::regprocedure
+  v_definition := replace(
+    pg_get_functiondef(
+      'public.enforce_branch_stock_availability()'::regprocedure
+    ),
+    E'\r\n',
+    E'\n'
   );
   v_before := v_definition;
   v_definition := replace(
     v_definition,
-    $old_order_select$
+    replace($old_order_select$
   SELECT o.tenant_id,
          o.branch_id,
          (o.created_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date
-  INTO v_tenant_id, v_branch_id, v_order_date
-    $old_order_select$,
-    $new_order_select$
+  INTO v_tenant_id, v_branch_id, v_order_date$old_order_select$, E'\r\n', E'\n'),
+    replace($new_order_select$
   SELECT o.tenant_id,
          o.branch_id,
          (o.created_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date,
          o.stock_consumption_location_id
-  INTO v_tenant_id, v_branch_id, v_order_date, v_location_id
-    $new_order_select$
+  INTO v_tenant_id, v_branch_id, v_order_date, v_location_id$new_order_select$, E'\r\n', E'\n')
   );
   v_definition := replace(
     v_definition,
-    $old_preorder_location$
+    replace($old_preorder_location$
   SELECT il.id
   INTO v_location_id
   FROM public.inventory_locations il
@@ -3491,15 +3514,14 @@ BEGIN
     AND il.location_kind = 'warehouse'
     AND il.is_active = TRUE
   ORDER BY il.is_default_consumption DESC, il.sort_order NULLS LAST, il.id
-  LIMIT 1;
-    $old_preorder_location$,
+  LIMIT 1;$old_preorder_location$, E'\r\n', E'\n'),
     ''
   );
   v_definition := replace(
     v_definition,
     'AND o.branch_id = v_branch_id',
-    'AND o.branch_id = v_branch_id
-        AND o.stock_consumption_location_id = v_location_id'
+    replace('AND o.branch_id = v_branch_id
+        AND o.stock_consumption_location_id = v_location_id', E'\r\n', E'\n')
   );
   IF v_definition = v_before
      OR position('o.stock_consumption_location_id' IN v_definition) = 0
@@ -3515,14 +3537,18 @@ DECLARE
   v_definition text;
   v_before text;
 BEGIN
-  v_definition := pg_get_functiondef(
-    'public.branch_menu_limit_availability(bigint,bigint,date,boolean,uuid[])'::regprocedure
+  v_definition := replace(
+    pg_get_functiondef(
+      'public.branch_menu_limit_availability(bigint,bigint,date,boolean,uuid[])'::regprocedure
+    ),
+    E'\r\n',
+    E'\n'
   );
   v_before := v_definition;
   v_definition := replace(
     v_definition,
     'WITH order_line_demand AS (',
-    'WITH scope_location AS (
+    replace('WITH scope_location AS (
     SELECT location.id
     FROM public.inventory_locations AS location
     WHERE location.tenant_id = p_tenant_id
@@ -3533,30 +3559,28 @@ BEGIN
     ORDER BY location.id
     LIMIT 1
   ),
-  order_line_demand AS ('
+  order_line_demand AS (', E'\r\n', E'\n')
   );
   v_definition := replace(
     v_definition,
     'AND o.branch_id = p_branch_id',
-    'AND o.branch_id = p_branch_id
-      AND o.stock_consumption_location_id = (SELECT id FROM scope_location)'
+    replace('AND o.branch_id = p_branch_id
+      AND o.stock_consumption_location_id = (SELECT id FROM scope_location)', E'\r\n', E'\n')
   );
   v_definition := replace(
     v_definition,
     'AND h.branch_id = p_branch_id',
-    'AND h.branch_id = p_branch_id
-      AND h.stock_consumption_location_id = (SELECT id FROM scope_location)'
+    replace('AND h.branch_id = p_branch_id
+      AND h.stock_consumption_location_id = (SELECT id FROM scope_location)', E'\r\n', E'\n')
   );
   v_definition := replace(
     v_definition,
-    $old_branch_stock$
+    replace($old_branch_stock$
       AND il.location_kind = 'warehouse'
-      AND il.is_active = TRUE
-    $old_branch_stock$,
-    $new_branch_stock$
+      AND il.is_active = TRUE$old_branch_stock$, E'\r\n', E'\n'),
+    replace($new_branch_stock$
       AND sl.location_id = (SELECT id FROM scope_location)
-      AND il.is_active = TRUE
-    $new_branch_stock$
+      AND il.is_active = TRUE$new_branch_stock$, E'\r\n', E'\n')
   );
   IF v_definition = v_before
      OR position('stock_consumption_location_id' IN v_definition) = 0

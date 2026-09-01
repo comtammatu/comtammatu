@@ -24,6 +24,7 @@ export interface TestStaffProfile {
 interface PosTestContext {
   tenantId: number;
   branchId: number;
+  stockConsumptionLocationId: number;
   cashier: TestStaffProfile;
   posSessionId: number;
   /** Nullable: pos_sessions.terminal_id is audit metadata (D7); a pre-opened session may have no terminal. */
@@ -460,15 +461,26 @@ async function ensureTerminalAndSession(
 async function resolvePosTestContext(): Promise<PosTestContext> {
   const supabase = createServiceClient();
   const cashier = await resolveCashierProfile(supabase);
-  const [{ terminalId, posSessionId }, tableId, menuItem] = await Promise.all([
+  const [
+    { terminalId, posSessionId },
+    tableId,
+    menuItem,
+    stockConsumptionLocationId,
+  ] = await Promise.all([
     ensureTerminalAndSession(supabase, cashier),
     ensureTable(supabase, cashier.tenantId, cashier.branchId),
     ensureMenuItem(supabase, cashier.tenantId),
+    resolveStockConsumptionLocationId(
+      supabase,
+      cashier.tenantId,
+      cashier.branchId,
+    ),
   ]);
 
   return {
     tenantId: cashier.tenantId,
     branchId: cashier.branchId,
+    stockConsumptionLocationId,
     cashier,
     posSessionId,
     terminalId,
@@ -477,6 +489,30 @@ async function resolvePosTestContext(): Promise<PosTestContext> {
     menuItemName: menuItem.name,
     unitPrice: menuItem.basePrice,
   };
+}
+
+async function resolveStockConsumptionLocationId(
+  supabase: ServiceClient,
+  tenantId: number,
+  branchId: number,
+): Promise<number> {
+  const { data: location, error } = await supabase
+    .from("inventory_locations")
+    .select("id")
+    .eq("tenant_id", tenantId)
+    .eq("branch_id", branchId)
+    .eq("is_active", true)
+    .eq("is_default_consumption", true)
+    .in("location_kind", ["warehouse", "kitchen"])
+    .single();
+
+  if (error || !location) {
+    throw new Error(
+      `Failed to resolve E2E stock consumption location: ${error?.message}`,
+    );
+  }
+
+  return location.id;
 }
 
 async function ensureKdsStation(
@@ -532,6 +568,7 @@ export async function createTestOrder(): Promise<TestOrder> {
     .insert({
       tenant_id: context.tenantId,
       branch_id: context.branchId,
+      stock_consumption_location_id: context.stockConsumptionLocationId,
       table_id: context.tableId,
       order_number: orderNumber,
       order_type: "dine_in",
@@ -671,6 +708,7 @@ export async function createKdsTestTicket(
     .insert({
       tenant_id: context.tenantId,
       branch_id: context.branchId,
+      stock_consumption_location_id: context.stockConsumptionLocationId,
       order_number: orderNumber,
       order_type: "takeaway",
       status: "confirmed",
@@ -798,6 +836,7 @@ export async function createKdsTestOrderWithTickets(
     .insert({
       tenant_id: context.tenantId,
       branch_id: context.branchId,
+      stock_consumption_location_id: context.stockConsumptionLocationId,
       table_id: context.tableId,
       order_number: orderNumber,
       order_type: "dine_in",

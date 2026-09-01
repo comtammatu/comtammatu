@@ -134,6 +134,7 @@ test.describe("Daily limit — realtime + enforcement", () => {
       .insert({
         tenant_id: ctx.tenantId,
         branch_id: ctx.branchId,
+        stock_consumption_location_id: ctx.stockConsumptionLocationId,
         order_number: `LIMIT-E2E-${Date.now()}`,
         order_type: "takeaway",
         status: "confirmed",
