@@ -419,32 +419,30 @@ export function BranchStockOnHandClient({
         </div>
       ) : null}
       {!coreDataLoadFailed && underThresholdCount > 0 ? (
-        <NoteCallout tone="warning" className="min-h-12 items-center">
-          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-foreground">
-                {attentionTitle(branchKind)}
-              </p>
-              <p className="truncate text-xs font-normal text-muted-foreground">
-                {stockCopy.attention.description(underThresholdCount)}
-              </p>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <Badge variant="warning">{underThresholdCount}</Badge>
-              {primaryAttentionCta ? (
-                <Button
-                  size="touch"
-                  className="shrink-0"
-                  render={<Link href={primaryAttentionCta.href} />}
-                >
-                  {(() => {
-                    const Icon = primaryAttentionCta.icon;
-                    return <Icon />;
-                  })()}
+        <NoteCallout tone="warning" className="min-h-12 items-center py-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <p className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+              {attentionTitle(branchKind)}
+            </p>
+            <Badge variant="warning" className="shrink-0">
+              {underThresholdCount}
+            </Badge>
+            {primaryAttentionCta ? (
+              <Button
+                size="touch"
+                className="shrink-0 px-3"
+                aria-label={primaryAttentionCta.label}
+                render={<Link href={primaryAttentionCta.href} />}
+              >
+                {(() => {
+                  const Icon = primaryAttentionCta.icon;
+                  return <Icon />;
+                })()}
+                <span className="hidden sm:inline">
                   {primaryAttentionCta.label}
-                </Button>
-              ) : null}
-            </div>
+                </span>
+              </Button>
+            ) : null}
           </div>
         </NoteCallout>
       ) : null}
@@ -459,7 +457,7 @@ export function BranchStockOnHandClient({
           ),
           variant: "secondary",
         }}
-        contentClassName="gap-3"
+        contentClassName="gap-2"
       >
         {coreDataLoadFailed ? (
           <AppEmptyState
@@ -496,7 +494,7 @@ export function BranchStockOnHandClient({
         ) : (
           <>
             <div className="flex min-w-0 flex-col gap-2">
-              <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
+              <div className="flex min-w-0 gap-2">
                 <InputGroup className="min-h-12 min-w-0 flex-1">
                   <InputGroupAddon>
                     <IconSearch />
@@ -510,21 +508,22 @@ export function BranchStockOnHandClient({
                   />
                 </InputGroup>
 
-                <div className="flex min-w-0 gap-2">
+                <div className="flex shrink-0 gap-2">
                   <Button
                     type="button"
                     variant="outline"
                     size="touch"
-                    className="min-w-0 flex-1 justify-between sm:w-auto sm:min-w-32"
+                    className="shrink-0 px-3"
+                    aria-label={ACTIONS_VI.filter}
                     onClick={openFilterSheet}
                   >
-                    <span className="inline-flex items-center gap-2">
-                      <IconFilter />
+                    <IconFilter />
+                    <span className="hidden sm:inline">
                       {ACTIONS_VI.filter}
-                      {facetCount > 0 ? (
-                        <Badge variant="secondary">{facetCount}</Badge>
-                      ) : null}
                     </span>
+                    {facetCount > 0 ? (
+                      <Badge variant="secondary">{facetCount}</Badge>
+                    ) : null}
                   </Button>
                   <StockOnHandPrintDialog
                     branchId={branchId}

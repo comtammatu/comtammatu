@@ -750,24 +750,26 @@ export function BranchCountSlipsClient({
         }
         description={
           selected ? (
-            <span className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-              <span>{selected.locationName}</span>
-              {selected.shiftName ? <span>· {selected.shiftName}</span> : null}
-              <span>
-                {INVENTORY_VI.submittedAtSuffix(
+            <span className="line-clamp-2 break-words text-xs text-muted-foreground">
+              {[
+                selected.slipNumber,
+                selected.locationName,
+                selected.shiftName,
+                INVENTORY_VI.submittedAtSuffix(
                   selected.submittedAt
                     ? formatVNDateTime(selected.submittedAt)
                     : formatVNDate(selected.countDate),
-                )}
-              </span>
-              <span className="font-mono tabular-nums">· {selected.slipNumber}</span>
+                ),
+              ]
+                .filter(Boolean)
+                .join(" · ")}
             </span>
           ) : undefined
         }
         side="bottom"
         contentClassName="flex max-h-dvh-95 flex-col overflow-hidden text-foreground"
         headerClassName="shrink-0"
-        bodyClassName="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain"
+        bodyClassName="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain"
         footerClassName="shrink-0 border-t"
         footer={
           selected ? (
@@ -1001,7 +1003,7 @@ export function BranchCountSlipsClient({
                   reasons={wasteReasons}
                   disabled={isPending}
                   touch
-                  defaultExpanded
+                  compact
                   onChange={(lineId, url) =>
                     setWastePhotoUrls((current) => ({
                       ...current,
@@ -1026,7 +1028,7 @@ export function BranchCountSlipsClient({
                   reasons={surplusReasons}
                   disabled={isPending}
                   touch
-                  defaultExpanded
+                  compact
                   onReasonChange={(lineId, reason) =>
                     setSurplusReasons((current) => ({
                       ...current,

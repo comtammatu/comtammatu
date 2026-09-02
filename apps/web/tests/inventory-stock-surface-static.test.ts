@@ -23,3 +23,17 @@ test("stock surfaces do not expose a location filter when topology owns one ware
     /locationFilterOptions|locationFilterControl/,
   );
 });
+
+test("branch stock keeps mobile attention and tools on compact rows", () => {
+  const branchStockClient = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/branch-stock-on-hand-client.tsx",
+  );
+
+  assert.doesNotMatch(branchStockClient, /stockCopy\.attention\.description/);
+  assert.match(branchStockClient, /aria-label=\{ACTIONS_VI\.filter\}/);
+  assert.match(branchStockClient, /className="hidden sm:inline"/);
+  assert.match(
+    branchStockClient,
+    /<InputGroup className="min-h-12 min-w-0 flex-1">[\s\S]*?<div className="flex shrink-0 gap-2">/,
+  );
+});

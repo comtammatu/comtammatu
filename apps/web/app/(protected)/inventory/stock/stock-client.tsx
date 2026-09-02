@@ -1115,7 +1115,7 @@ export function StockClient({
         />
       }
       className={cn(
-        "flex flex-col justify-between p-3 text-left cursor-pointer",
+        "min-w-0 overflow-hidden flex flex-col justify-between p-3 text-left cursor-pointer",
         stockFilter === "low"
           ? "border-warning ring-1 ring-warning shadow-xs"
           : "border-border",
@@ -1140,8 +1140,9 @@ export function StockClient({
     <>
       <AppPageHeader
         title={stockCopy.title}
+        className="max-xl:[&>div]:flex-col max-xl:[&>div]:items-stretch"
         actions={
-          <div className="flex w-full flex-wrap items-center justify-start gap-1.5 sm:w-auto sm:justify-end sm:gap-2">
+          <div className="flex min-w-0 w-full flex-wrap items-center justify-start gap-1.5 xl:w-auto xl:justify-end xl:gap-2">
             {selectedLocationObj ? (
               <SmartReorderSheet
                 branchId={branchId}
@@ -1194,27 +1195,27 @@ export function StockClient({
         className={cn(
           "grid gap-3",
           hasValuation
-            ? "grid-cols-2 lg:grid-cols-5"
-            : "grid-cols-2 lg:grid-cols-4",
+            ? "grid-cols-2 xl:grid-cols-5"
+            : "grid-cols-2 xl:grid-cols-4",
         )}
       >
         {hasValuation ? (
           <Item
             variant="outline"
-            className="col-span-2 flex flex-col justify-between p-3 text-left border-border bg-card lg:col-span-1"
+            className="col-span-2 min-w-0 overflow-hidden flex flex-col justify-between p-3 text-left border-border bg-card xl:col-span-1"
           >
-            <div className="flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              <span>{valuationMetricTitle}</span>
-              <IconReceipt className="size-3.5 text-muted-foreground" />
+            <div className="flex min-w-0 items-start justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <span className="min-w-0 break-words">{valuationMetricTitle}</span>
+              <IconReceipt className="size-3.5 shrink-0 text-muted-foreground" />
             </div>
-            <div className="mt-2 flex flex-col gap-1">
-              <span className="font-mono text-2xl font-semibold tabular-nums text-foreground">
+            <div className="mt-2 flex min-w-0 flex-col gap-1">
+              <span className="min-w-0 break-words font-mono text-2xl font-semibold tabular-nums text-foreground">
                 {visibleLocationValue != null
                   ? formatVND(Math.round(visibleLocationValue))
                   : "—"}
               </span>
               {totalValue != null ? (
-                <span className="text-xs text-muted-foreground font-mono tabular-nums truncate">
+                <span className="block min-w-0 max-w-full break-words text-xs text-muted-foreground font-mono tabular-nums">
                   {stockCopy.metrics.wholeSystem}:{" "}
                   {formatVND(Math.round(totalValue))}
                 </span>
@@ -1233,7 +1234,7 @@ export function StockClient({
             />
           }
           className={cn(
-            "flex flex-col justify-between p-3 text-left cursor-pointer",
+            "min-w-0 overflow-hidden flex flex-col justify-between p-3 text-left cursor-pointer",
             stockFilter === "all"
               ? "border-primary ring-1 ring-primary shadow-xs"
               : "border-border",
@@ -1267,7 +1268,7 @@ export function StockClient({
             />
           }
           className={cn(
-            "flex flex-col justify-between p-3 text-left cursor-pointer",
+            "min-w-0 overflow-hidden flex flex-col justify-between p-3 text-left cursor-pointer",
             stockFilter === "in_stock"
               ? "border-success ring-1 ring-success shadow-xs"
               : "border-border",
@@ -1301,7 +1302,7 @@ export function StockClient({
             />
           }
           className={cn(
-            "flex flex-col justify-between p-3 text-left cursor-pointer",
+            "min-w-0 overflow-hidden flex flex-col justify-between p-3 text-left cursor-pointer",
             stockFilter === "out"
               ? "border-destructive ring-1 ring-destructive shadow-xs"
               : "border-border",

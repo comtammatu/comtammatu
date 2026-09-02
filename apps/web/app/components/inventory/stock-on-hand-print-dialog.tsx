@@ -181,7 +181,7 @@ export function StockOnHandPrintDialog({
     <>
       <Button
         variant={buttonVariant}
-        size={buttonSize === "field" ? "default" : buttonSize}
+        size={buttonSize}
         type="button"
         className={className}
         onClick={() => setOpen(true)}

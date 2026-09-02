@@ -174,9 +174,27 @@ test("branch count slip review keeps the mobile approval sheet compact and actio
   assert.match(branchClient, /showMatchedLines/);
   assert.match(branchClient, /countSlipCompactSummary/);
   assert.match(branchClient, /countSlipContinueReview/);
-  assert.match(branchClient, /defaultExpanded/);
+  assert.match(
+    branchClient,
+    /<CountSlipWasteEvidence[\s\S]*?\scompact\s[\s\S]*?\/>/,
+  );
+  assert.match(
+    branchClient,
+    /<CountSlipSurplusEvidence[\s\S]*?\scompact\s[\s\S]*?\/>/,
+  );
+  assert.doesNotMatch(
+    branchClient,
+    /<CountSlipWasteEvidence[\s\S]*?\sdefaultExpanded\s[\s\S]*?\/>/,
+  );
+  assert.doesNotMatch(
+    branchClient,
+    /<CountSlipSurplusEvidence[\s\S]*?\sdefaultExpanded\s[\s\S]*?\/>/,
+  );
   assert.doesNotMatch(branchClient, /\(live:/);
   assert.doesNotMatch(branchClient, /matchedAfterSales|soldSinceSubmit/);
+  assert.match(wasteEvidence, /compact\?: boolean/);
+  assert.match(wasteEvidence, /compact \? null/);
+  assert.match(surplusEvidence, /compact\?: boolean/);
   assert.match(wasteEvidence, /defaultExpanded/);
   assert.match(surplusEvidence, /defaultExpanded/);
   assert.match(messages, /systemStockLabel:\s*"Tồn lúc gửi"/);

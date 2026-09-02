@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp, SlidersHorizontal } from "lucide-react";
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
+import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import { FieldLabel } from "@comtammatu/ui/components/field";
 import { Frame } from "@comtammatu/ui/components/frame";
@@ -29,6 +30,7 @@ export function CountSlipSurplusEvidence({
   reasons = {},
   disabled,
   touch,
+  compact = false,
   defaultExpanded = false,
   onReasonChange,
 }: {
@@ -36,6 +38,7 @@ export function CountSlipSurplusEvidence({
   reasons?: CountSlipSurplusReasons;
   disabled: boolean;
   touch: boolean;
+  compact?: boolean;
   defaultExpanded?: boolean;
   onReasonChange?: (lineId: number, reason: string) => void;
 }) {
@@ -52,25 +55,58 @@ export function CountSlipSurplusEvidence({
   return (
     <NoteCallout
       tone="muted"
-      label={INVENTORY_VI.countSlipSurplusEvidenceTitle}
-      className="flex-col items-stretch gap-3"
+      label={compact ? undefined : INVENTORY_VI.countSlipSurplusEvidenceTitle}
+      className={cn("flex-col items-stretch", compact ? "gap-2 p-2" : "gap-3")}
     >
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs text-muted-foreground">
-          {INVENTORY_VI.countSlipSurplusEvidenceHint}{" "}
-          {INVENTORY_VI.countSlipSurplusEvidenceCount(lines.length)}
-        </p>
+      <div
+        className={cn(
+          "flex min-w-0 justify-between gap-2",
+          compact ? "items-center" : "flex-col sm:flex-row sm:items-center",
+        )}
+      >
+        <div className="min-w-0">
+          {compact ? (
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="truncate text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {INVENTORY_VI.countSlipSurplusEvidenceTitle}
+              </span>
+              <span
+                className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground"
+                aria-label={INVENTORY_VI.countSlipSurplusEvidenceCount(
+                  lines.length,
+                )}
+              >
+                {lines.length}
+              </span>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              {INVENTORY_VI.countSlipSurplusEvidenceHint}{" "}
+              {INVENTORY_VI.countSlipSurplusEvidenceCount(lines.length)}
+            </p>
+          )}
+        </div>
         <Button
           type="button"
           variant="outline"
-          size="sm"
-          className="h-8 w-fit gap-1 text-xs self-start sm:self-auto"
+          size={compact ? "icon-touch" : "sm"}
+          className={cn(
+            "shrink-0 self-start text-xs sm:self-auto",
+            compact ? "" : "h-8 w-fit gap-1",
+          )}
+          aria-label={
+            expanded
+              ? INVENTORY_VI.countSlipWasteEvidenceCollapseAction
+              : INVENTORY_VI.countSlipWasteEvidenceCustomizeAction
+          }
           onClick={() => setExpanded((prev) => !prev)}
         >
-          <SlidersHorizontal className="size-3.5" />
-          {expanded
-            ? INVENTORY_VI.countSlipWasteEvidenceCollapseAction
-            : INVENTORY_VI.countSlipWasteEvidenceCustomizeAction}
+          {compact ? null : <SlidersHorizontal className="size-3.5" />}
+          {compact
+            ? null
+            : expanded
+              ? INVENTORY_VI.countSlipWasteEvidenceCollapseAction
+              : INVENTORY_VI.countSlipWasteEvidenceCustomizeAction}
           {expanded ? (
             <ChevronUp className="size-3.5" />
           ) : (
@@ -82,8 +118,15 @@ export function CountSlipSurplusEvidence({
       {expanded ? (
         <>
           {onReasonChange ? (
-            <div className="flex flex-wrap items-center gap-2 rounded-md bg-muted p-2 text-xs">
-              <span className="text-muted-foreground">
+            <div
+              className={cn(
+                "flex items-center gap-2 rounded-md bg-muted p-2 text-xs",
+                touch
+                  ? "no-scrollbar touch-pan-x overflow-x-auto overscroll-x-contain"
+                  : "flex-wrap",
+              )}
+            >
+              <span className="shrink-0 text-muted-foreground">
                 {INVENTORY_VI.countSlipWasteEvidenceApplyAllLabel}
               </span>
               {SURPLUS_REASONS.map((r) => (
@@ -91,8 +134,11 @@ export function CountSlipSurplusEvidence({
                   key={r.value}
                   type="button"
                   variant="outline"
-                  size="sm"
-                  className="h-7 px-2 text-xs"
+                  size={touch ? "touch" : "sm"}
+                  className={cn(
+                    "shrink-0 text-xs",
+                    touch ? "px-3" : "h-7 px-2",
+                  )}
                   disabled={disabled}
                   onClick={() => applyReasonToAll(r.value)}
                 >
@@ -102,14 +148,17 @@ export function CountSlipSurplusEvidence({
             </div>
           ) : null}
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-2 sm:grid-cols-2">
             {lines.map((line) => {
               const currentReason = reasons[line.id] ?? "discrepancy";
 
               return (
                 <Frame
                   key={line.id}
-                  className="min-w-0 flex flex-col gap-2 p-3 bg-card"
+                  className={cn(
+                    "min-w-0 flex flex-col gap-2 bg-card",
+                    compact ? "p-2" : "p-3",
+                  )}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <FieldLabel className="text-xs font-semibold">
