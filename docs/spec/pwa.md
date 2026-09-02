@@ -131,20 +131,50 @@ an iPhone/iPad splash matrix for `Gọi số`.
 - KDS + pickup: Screen Wake Lock when visible (fail soft)
 - No second Workbox; do not cache Next HTML incorrectly
 
-## Follow-on implementation
+## Runtime and recovery boundary
 
-In the tree: Phase 1, Phase 2 (H2/H20 + H7/H8 `/me`), Phase 3 icons,
-cancelled H10, Wake Lock on KDS/pickup.
+`PwaRuntimeProvider` is the shared browser boundary for online state,
+standalone/install state, and service-worker update discovery. It is mounted
+once by each installable surface layout. It does not own business-data
+reconciliation and must not become an offline transaction store.
 
-Remaining later: optional station `themeColor` vs ForceLightMode (H11);
-H12 screenshots; Phase 5 HyperOS ops runbook (H1). Not this contract's
-blockers.
+Current data-recovery ownership is intentionally split by surface:
+
+- Branch operator pages share one private branch-operations channel and
+  coalesce matching invalidations before refetching.
+- POS and KDS own their direct operational subscriptions. Both perform a
+  catch-up refresh after reconnect and when the page becomes visible; KDS
+  reconciles from an authoritative snapshot.
+- Pickup treats Realtime as an invalidation signal, refreshes the server view
+  after reconnect/resume, and keeps its existing six-second degraded fallback.
+- Healthy channels retain a low-frequency safety refresh. Hidden pages do not
+  run fallback polling.
+
+`SUBSCRIBED` proves transport availability, not data convergence. A surface is
+operationally recovered only after its server refresh succeeds. Do not add a
+global lifecycle state machine, shorten global polling, introduce tab leader
+election, or queue offline mutations without a captured failing case and a
+surface-specific acceptance test.
+
+## Remaining operational proof
+
+Install/cache implementation is complete. The active gap is real-device proof
+on branch Android/HyperOS hardware and iOS Home Screen for the supported phone
+surfaces. Use `docs/runbooks/pos-kds/pwa-device-operations.md`; record observed
+recovery time rather than assigning an unmeasured SLA. Any failed scenario
+enters implementation through the Reproduction-First contract.
+
+Optional station `themeColor` refinement and store screenshots remain visual
+polish, not reliability blockers. Repeated HyperOS process kills are an ADR
+0038 native-Android trigger, not a reason to weaken the cloud-first contract.
 
 ## Pointers
 
 - ADR 0038: `docs/plan/adr/0038-native-android-apps-and-pwa-coexistence.md`
 - Cloud-first / D012: `docs/spec/architecture.md`, `docs/plan/decisions.md`
 - Foreground notifications: `docs/spec/toast-notification-system.md`
+- Device operations: `docs/runbooks/pos-kds/pwa-device-operations.md`
+- Realtime load harness: `docs/runbooks/pos-kds/realtime-load-testing.md`
 - Verification: `apps/web/tests/pwa-manifest.test.ts`; regressions
   `PWA-SW-NETWORKONLY-MUTATIONS`, `PWA-SELF-ORDER-NAV-NETWORKONLY`,
   `PWA-OFFLINE-GATE-CASH-ONLY` in `tasks/regressions.md`

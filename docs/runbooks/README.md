@@ -17,6 +17,7 @@ Checklist vận hành và readiness gates.
 - [hddt-viettel-operations.md](hddt-viettel-operations.md): smoke/reconcile/archive cho Viettel S-invoice
 - [pos-kds/print-agent-rollout.md](pos-kds/print-agent-rollout.md): rollout checklist cho print-agent daemon ESC/POS tại chi nhánh
 - [pos-kds/realtime-load-testing.md](pos-kds/realtime-load-testing.md): load test realtime POS/KDS
+- [pos-kds/pwa-device-operations.md](pos-kds/pwa-device-operations.md): cài đặt, kiểm thử resume và khôi phục PWA trên Android/HyperOS và iOS
 
 ## Finance
 

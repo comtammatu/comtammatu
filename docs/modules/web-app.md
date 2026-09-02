@@ -132,6 +132,10 @@ Installable identities, service-worker cache, and OS/browser support:
 `scope: "/"` on purpose (OQ-3). Do not install the owner root app as the
 branch station.
 
+Implementation: `app/components/pwa-runtime.tsx` owns shared browser state; `app/_hooks/use-realtime-channel.ts` and `app/_utils/realtime-health.ts` own transport lifecycle.
+Surface reconciliation stays in POS `use-order-sync.ts`, KDS `use-kds-realtime.ts`, Pickup `pickup-realtime-refresh.tsx`, and the shared operator `branch-ops-runtime.ts`.
+The service worker never owns mutation retries or operational truth. Run `docs/runbooks/pos-kds/pwa-device-operations.md` before changing Realtime behavior.
+
 ## Design Rationale
 
 - **Proxy = sole auth gate** — layout/page reads invariant, no second gate

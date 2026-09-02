@@ -30,6 +30,19 @@ UI Advisor Gate
 - States: stopped/starting/running, empty/populated waiting and history, bitmap/text/OCR present or unavailable, resolved, invalid receipt, network error, manually entered, light/dark theme, enlarged font
 - Verification: Agent unit/build/lint gates, receipt-layer unit tests, operational static guard, Redmi runtime and primary viewport inspection, then `corepack pnpm verify`
 
+## Prove PWA recovery on branch devices
+
+State: ready
+Kind: verification
+Tier: T2
+Lane: web/pwa
+Exit: Android/HyperOS canary proves the existing POS, KDS, and Pickup runtimes converge after network loss, resume, process kill, and service-worker update; iOS `/me` recovers after resume. Any runtime change is backed by a captured RED case, and repeated OS kills are evaluated through ADR 0038.
+Evidence: `docs/spec/pwa.md`; `docs/runbooks/pos-kds/pwa-device-operations.md`; `apps/web/tests/pwa-manifest.test.ts`, `pwa-runtime.test.ts`, `realtime-health.test.ts`, `kds-realtime-fallback.test.ts`, and `branch-ops-runtime.test.ts`; real-device canary record pending.
+
+- [ ] Add a direct regression test for same-topic cleanup and auth rejoin against pinned Supabase 2.112.4 before changing the current `_remove` workaround
+- [ ] Run the runbook matrix on Android/HyperOS and iOS, recording recovery time, stale-data outcome, refetch count, and duplicate channel/socket evidence
+- [ ] Capture any failed scenario as RED proof and fix only that boundary; otherwise close with device evidence and no runtime rewrite
+
 ## Finance period integrity: inventory change, startup capital, close readiness
 
 State: verify
