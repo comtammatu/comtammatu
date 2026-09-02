@@ -65,9 +65,7 @@ test("central site location defaults and seed migration exists", () => {
 });
 
 test("supplier payment action maps vat_invoice_attachment_required", () => {
-  const action = readWeb(
-    "app/(protected)/finance/supplier-invoice-actions.ts",
-  );
+  const action = readWeb("app/(protected)/finance/supplier-invoice-actions.ts");
   const client = readSupplierInvoiceModules();
 
   assert.match(action, /vat_invoice_attachment_required/);
@@ -79,7 +77,7 @@ test("supplier payment action maps vat_invoice_attachment_required", () => {
   );
   assert.match(
     action,
-    /Vui lòng đính kèm ít nhất 1 file HĐ GTGT trước khi ghi nhận thanh toán/,
+    /messages\.inventory\.supplierInvoices\.paymentBlockedNoVatAttachment/,
   );
   assert.match(client, /vatInvoiceAttachmentPath/);
   assert.match(client, /paymentBlockedNoVatAttachment/);

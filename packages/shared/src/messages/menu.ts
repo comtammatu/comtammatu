@@ -102,11 +102,12 @@ export const MENU_VI = {
   channelPricesApplyAllLabel: "Đơn giá cho tất cả sàn (VND)",
   channelPricesApplyAllAction: "Lưu cùng giá cho cả 4 sàn",
   channelPricesApplyAllEmpty: "Nhập số tiền trước khi áp dụng tất cả sàn",
-  channelPricesMarkupLabel: "Markup từ giá quán (%)",
-  channelPricesMarkupAll: "Áp markup tất cả sàn",
-  channelPricesMarkupOne: (platform: string) => `Áp markup ${platform}`,
-  channelPricesMarkupFailed: "Không áp được markup giá kênh",
-  channelPricesMarkupSaved: "Đã áp markup giá kênh",
+  channelPricesMarkupLabel: "Tỷ lệ tăng giá (%)",
+  channelPricesMarkupAll: "Áp tỷ lệ tăng giá cho tất cả sàn",
+  channelPricesMarkupOne: (platform: string) =>
+    `Áp tỷ lệ tăng giá cho ${platform}`,
+  channelPricesMarkupFailed: "Không áp dụng được tỷ lệ tăng giá",
+  channelPricesMarkupSaved: "Đã áp dụng tỷ lệ tăng giá",
 } as const;
 
 export type MenuKey = keyof typeof MENU_VI;

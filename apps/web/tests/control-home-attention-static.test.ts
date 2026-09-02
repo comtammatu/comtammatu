@@ -27,6 +27,21 @@ test("Control home page loads ACL-gated attention and a queue-only overview", ()
   assert.doesNotMatch(overview, /KpiCard|KpiRow/);
   assert.doesNotMatch(overview, /operationsModules|ModuleLinks/);
   assert.doesNotMatch(overview, /operationsTitle|foundationTitle|shortcutsTitle/);
+  assert.doesNotMatch(
+    overview,
+    /AppPageHeader title=\{copy\.title\} description=\{copy\.description\}/,
+    "the page heading must not repeat the queue explanation",
+  );
+  assert.doesNotMatch(
+    overview,
+    /<AppSection[\s\S]*?description=\{copy\.description\}/,
+    "the self-explanatory attention section must not repeat page copy",
+  );
+  assert.match(
+    overview,
+    /item\.documentTitle \? \([\s\S]*?<ItemDescription>\{item\.label\}<\/ItemDescription>/,
+    "document rows must keep the reason for attention visible",
+  );
 });
 
 test("Control home attention covers finance inventory HR ops buckets", () => {

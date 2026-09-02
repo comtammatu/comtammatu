@@ -43,6 +43,8 @@ import {
 } from "lucide-react";
 import { AppBoneyardSkeleton } from "@/_components/boneyard-skeleton";
 import { WholeVndInput } from "@/components/form";
+import { QrCodeImage as PaymentQrCode } from "@/components/qr-code-image";
+import { useIsOnline } from "@/components/pwa-runtime";
 import { messages } from "@lib/messages";
 import { fetchOrderForBill } from "../../actions";
 import type { SessionOrder } from "../../order-history";
@@ -56,7 +58,6 @@ import {
 } from "../../payment-actions";
 import { cancelSelfOrderPaymentRequest } from "../../self-order-actions";
 import { printProvisionalBill, printReceipt } from "../../print-actions";
-import { useIsOnline } from "../pwa/online-status-provider";
 import { DeliveryPlatformMark } from "@/components/delivery-platform-mark";
 import { BillReceiptSummary } from "./bill-receipt-summary";
 import { OrderTotalsSummary } from "../order-totals-summary";
@@ -65,7 +66,6 @@ import type {
   OrderData,
   PendingExtras,
 } from "./bill-receipt-types";
-import { PaymentQrCode } from "./payment-qr-code";
 import {
   canConvertPosCashToVietQr,
   canPrintPosVietQrPayment,

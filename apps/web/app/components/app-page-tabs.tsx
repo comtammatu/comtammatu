@@ -50,22 +50,25 @@ export function AppPageTabs({
     : items[0]?.value;
   if (!initial) return null;
   const list = (
-    <div className="w-full min-w-0 max-w-full overflow-x-auto no-scrollbar py-0.5 scroll-smooth">
+    <div
+      data-slot="app-page-tabs-list"
+      className="w-full min-w-0 max-w-full py-0.5"
+    >
       <TabsList
         size={isTouchLayout ? "touch" : "default"}
+        layout="scroll"
         aria-label={ariaLabel}
-        className="flex w-max min-w-full sm:w-fit items-center justify-start flex-nowrap shrink-0"
+        className="lg:w-fit"
       >
         {items.map((item) => (
           <TabsTrigger
             key={item.value}
             value={item.value}
             disabled={item.disabled}
-            className="flex-none px-2.5"
           >
             <span className="truncate">{item.label}</span>
             {typeof item.count === "number" ? (
-              <Badge variant="outline" className="ml-1.5 font-mono">
+              <Badge variant="outline" className="ml-1.5 shrink-0 font-mono">
                 {formatCount(item.count)}
               </Badge>
             ) : null}

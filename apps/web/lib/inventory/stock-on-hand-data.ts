@@ -6,7 +6,10 @@ import {
   INGREDIENT_CATALOG_WRITE_ROLES,
   PERMISSION_KEYS,
 } from "@comtammatu/shared/auth";
-import { normalizeInventoryLocationNameVi } from "@comtammatu/shared/labels";
+import {
+  normalizeInventoryLocationNameVi,
+  UNKNOWN_LABEL_VI,
+} from "@comtammatu/shared/labels";
 import { loadAuthState } from "@/_lib/auth";
 import {
   currentUserHasAnyPermissionAny,
@@ -311,7 +314,7 @@ export async function loadStockOnHandPageData({
       name:
         normalizeInventoryLocationNameVi(location?.name) ||
         location?.code ||
-        `#${row.location_id}`,
+        UNKNOWN_LABEL_VI,
       code: location?.code ?? "",
       locationKind: location?.location_kind ?? "unknown",
       qty: row.current_quantity,

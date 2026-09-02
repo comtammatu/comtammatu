@@ -1,7 +1,13 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: inventory count review management copy */
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -42,6 +48,7 @@ import {
   STAFF_VI,
 } from "@comtammatu/shared/messages";
 import { formatVNDate, formatVNDateTime } from "@comtammatu/shared/time";
+import { withControlSurfaceBranchScope } from "@/lib/control-surface-scope";
 import {
   DataTable,
   type DataTableColumn,
@@ -86,10 +93,7 @@ function formatVariance(value: number | null): string {
   return formatted;
 }
 
-function formatLineBaseQuantity(
-  line: CountSlipLine,
-  quantity: number,
-): string {
+function formatLineBaseQuantity(line: CountSlipLine, quantity: number): string {
   return formatQuantityInLargestUnits(quantity, line.displayUnits, formatQty);
 }
 
@@ -184,10 +188,12 @@ function renderSlipMobileRow(row: CountSlipRow, onOpen: () => void) {
 
 export function CountSlipsClient({
   tenantId,
+  branchId,
   initial,
   initialSlipId = null,
 }: {
   tenantId: number;
+  branchId: number;
   initial: CountSlipRow[];
   initialSlipId?: number | null;
 }) {
@@ -413,7 +419,15 @@ export function CountSlipsClient({
           <Button
             variant="outline"
             size={controlSize === "touch" ? "touch" : "lg"}
-            render={<Link href="/inventory/count-assignments" />}
+            render={
+              <Link
+                href={withControlSurfaceBranchScope(
+                  "/inventory/count-assignments",
+                  String(branchId) as `${number}`,
+                  { prefixes: ["/inventory"] },
+                )}
+              />
+            }
           >
             <IconClipboardList aria-hidden="true" />
             {INVENTORY_VI.countAssignTitle}
@@ -425,7 +439,7 @@ export function CountSlipsClient({
         }}
       />
 
-      <StocktakeNavTabs currentTab="slips" />
+      <StocktakeNavTabs currentTab="slips" branchId={branchId} />
 
       <AppListFrame
         toolbar={
@@ -501,11 +515,12 @@ function CountSlipReviewDialog({
   const router = useRouter();
   const [recounting, setRecounting] = useState(false);
   const [note, setNote] = useState("");
-  const [selectedRecountLineIds, setSelectedRecountLineIds] = useState<number[]>(
-    [],
+  const [selectedRecountLineIds, setSelectedRecountLineIds] = useState<
+    number[]
+  >([]);
+  const [wastePhotoUrls, setWastePhotoUrls] = useState<CountSlipWastePhotoUrls>(
+    {},
   );
-  const [wastePhotoUrls, setWastePhotoUrls] =
-    useState<CountSlipWastePhotoUrls>({});
   const [wasteReasons, setWasteReasons] = useState<CountSlipWasteReasons>({});
   const [surplusReasons, setSurplusReasons] = useState<CountSlipSurplusReasons>(
     {},
@@ -526,16 +541,20 @@ function CountSlipReviewDialog({
     setWastePhotoUrls({});
     setWasteReasons(
       Object.fromEntries(
-        (row?.lines.filter((line) => line.variance !== null && line.variance < 0) ?? []).map(
-          (line) => [line.id, "discrepancy"],
-        ),
+        (
+          row?.lines.filter(
+            (line) => line.variance !== null && line.variance < 0,
+          ) ?? []
+        ).map((line) => [line.id, "discrepancy"]),
       ),
     );
     setSurplusReasons(
       Object.fromEntries(
-        (row?.lines.filter((line) => line.variance !== null && line.variance > 0) ?? []).map(
-          (line) => [line.id, "discrepancy"],
-        ),
+        (
+          row?.lines.filter(
+            (line) => line.variance !== null && line.variance > 0,
+          ) ?? []
+        ).map((line) => [line.id, "discrepancy"]),
       ),
     );
     setPendingAction(null);
@@ -786,7 +805,10 @@ function CountSlipReviewDialog({
       ),
       details: [
         { label: "Mã phiếu", value: activeRow.slipNumber },
-        { label: "Số nguyên liệu", value: String(selectedRecountLineIds.length) },
+        {
+          label: "Số nguyên liệu",
+          value: String(selectedRecountLineIds.length),
+        },
         { label: "Lý do", value: note.trim() },
       ],
       confirmText: INVENTORY_VI.sendRecountRequest,
@@ -865,16 +887,16 @@ function CountSlipReviewDialog({
       render: (line) => {
         const hasLiveDelta =
           line.currentLiveBaseQuantity !== null &&
-          Math.abs(line.currentLiveBaseQuantity - line.systemBaseQuantity) > 0.0001;
+          Math.abs(line.currentLiveBaseQuantity - line.systemBaseQuantity) >
+            0.0001;
 
         return (
           <div className="whitespace-nowrap text-right font-mono tabular-nums">
-            <div>
-              {formatLineBaseQuantity(line, line.systemBaseQuantity)}
-            </div>
+            <div>{formatLineBaseQuantity(line, line.systemBaseQuantity)}</div>
             {hasLiveDelta ? (
               <div className="text-2xs text-muted-foreground">
-                (live: {formatLineBaseQuantity(line, line.currentLiveBaseQuantity!)})
+                {INVENTORY_VI.liveStockColon}{" "}
+                {formatLineBaseQuantity(line, line.currentLiveBaseQuantity!)}
               </div>
             ) : null}
           </div>
@@ -895,31 +917,18 @@ function CountSlipReviewDialog({
       key: "variance",
       header: INVENTORY_VI.varianceLabel,
       className: "w-44 text-right",
-      render: (line) => {
-        const isMatchedAfterSales =
-          line.variance !== null &&
-          line.variance !== 0 &&
-          line.currentLiveQuantity !== null &&
-          line.countedQuantity === line.currentLiveQuantity;
-
-        return (
-          <div className="flex flex-col items-end gap-1">
-            <span
-              className={cn(
-                "block whitespace-nowrap text-right font-mono tabular-nums",
-                varianceClassName(line.variance),
-              )}
-            >
-              {formatLineVariance(line)}
-            </span>
-            {isMatchedAfterSales ? (
-              <Badge variant="success">
-                {INVENTORY_VI.matchedAfterSales}
-              </Badge>
-            ) : null}
-          </div>
-        );
-      },
+      render: (line) => (
+        <div className="flex flex-col items-end gap-1">
+          <span
+            className={cn(
+              "block whitespace-nowrap text-right font-mono tabular-nums",
+              varianceClassName(line.variance),
+            )}
+          >
+            {formatLineVariance(line)}
+          </span>
+        </div>
+      ),
     },
   ];
 

@@ -7,6 +7,7 @@ const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 test("control_surface routes share one persistent protected shell", () => {
+  const appShell = read("apps/web/app/components/app-shell.tsx");
   const shell = read("apps/web/app/components/control-surface-shell.tsx");
   const nav = read("apps/web/app/lib/control-surface-nav.ts");
   const protectedLayout = read("apps/web/app/(protected)/layout.tsx");
@@ -53,6 +54,12 @@ test("control_surface routes share one persistent protected shell", () => {
   assert.doesNotMatch(branchesLayout, /ControlSurfaceShell/);
   assert.doesNotMatch(feedbackLayout, /ControlSurfaceShell/);
   assert.doesNotMatch(inventoryLayout, /\bInventoryShell\b/);
+  assert.match(appShell, /APP_COPY_VI\.ownerSurface/);
+  assert.doesNotMatch(
+    appShell,
+    /controlSurfaceCopy\.dashboard\.title/,
+    "shell identity must describe the control surface, not repeat the current page title",
+  );
 
   for (const removed of [
     "apps/web/app/components/owner-module-shell.tsx",

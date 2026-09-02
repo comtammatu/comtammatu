@@ -62,6 +62,7 @@ function buildCountUnitPreview({
 
 interface Props {
   sessionId: number;
+  sessionNumber: string;
   branchId: number;
   status: string;
   /** RPC flag; pad never shows book qty regardless of this value. */
@@ -75,6 +76,7 @@ interface Props {
 
 export function StocktakeCountClient({
   sessionId,
+  sessionNumber,
   branchId,
   status,
   currentRound,
@@ -220,7 +222,7 @@ export function StocktakeCountClient({
             </AppBackLink>
           }
           title={stocktakeCopy.countNative.countMode(currentRound)}
-          meta={`KK-${sessionId}`}
+          meta={sessionNumber}
         />
       }
       scroll

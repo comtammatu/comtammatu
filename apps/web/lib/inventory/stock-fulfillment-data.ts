@@ -1,5 +1,6 @@
 import "server-only";
 
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import type { TenantSupabase } from "@lib/inventory/types";
 import {
   projectStockFulfillmentRows,
@@ -181,7 +182,7 @@ export async function loadStockFulfillmentRows({
     const branch = branchById.get(id);
     return {
       id,
-      name: branch?.name ?? `Điểm #${id}`,
+      name: branch?.name ?? UNKNOWN_LABEL_VI,
       kind: branch?.branch_kind ?? ("branch" as const),
     };
   };

@@ -14,11 +14,13 @@ DECLARE
   v_warehouse_position bigint;
   v_waiter_position bigint;
   v_supply_branch bigint;
+  v_supply_location bigint;
   v_sales_branch bigint;
   v_owner_profile uuid;
   v_created bigint;
   v_forbidden boolean;
   v_payload jsonb;
+  v_threshold_result jsonb;
   v_suffix text := pg_catalog.substr(pg_catalog.gen_random_uuid()::text, 1, 8);
 BEGIN
   SELECT profile.tenant_id
@@ -59,6 +61,19 @@ BEGIN
   INSERT INTO public.branches (tenant_id, name, code, branch_kind, is_active)
   VALUES (v_tenant, '__wcat_supply_' || v_suffix, NULL, 'central_supply', TRUE)
   RETURNING id INTO v_supply_branch;
+
+  SELECT location.id
+  INTO v_supply_location
+  FROM public.inventory_locations AS location
+  WHERE location.tenant_id = v_tenant
+    AND location.branch_id = v_supply_branch
+    AND location.location_kind = 'warehouse'
+    AND location.is_active
+  ORDER BY location.id
+  LIMIT 1;
+  IF v_supply_location IS NULL THEN
+    RAISE EXCEPTION 'WAREHOUSE CATALOG: central supply location is required';
+  END IF;
 
   SELECT branch.id
   INTO v_sales_branch
@@ -158,6 +173,83 @@ BEGIN
     RAISE EXCEPTION 'WAREHOUSE CATALOG: warehouse position was rejected';
   END IF;
 
+  v_threshold_result := public.update_ingredient_thresholds_bulk(
+    jsonb_build_array(jsonb_build_object(
+      'id', v_created,
+      'min_stock_level', 7,
+      'max_stock_level', NULL,
+      'reorder_point', NULL
+    ))
+  );
+  IF COALESCE((v_threshold_result ->> 'updated')::integer, 0) <> 1 THEN
+    RAISE EXCEPTION 'WAREHOUSE CATALOG: threshold update was rejected';
+  END IF;
+
+  v_threshold_result := public.upsert_branch_stock_thresholds(
+    v_supply_branch,
+    v_supply_location,
+    jsonb_build_array(jsonb_build_object(
+      'ingredient_id', v_created,
+      'min_stock_level', 3,
+      'target_stock_level', 9,
+      'reorder_quantity', 6
+    ))
+  );
+  IF COALESCE((v_threshold_result ->> 'updated_count')::integer, 0) <> 1 THEN
+    RAISE EXCEPTION 'WAREHOUSE CATALOG: location threshold update was rejected';
+  END IF;
+
+  v_forbidden := FALSE;
+  BEGIN
+    PERFORM public.upsert_branch_stock_thresholds(
+      v_supply_branch,
+      v_supply_location,
+      jsonb_build_array(jsonb_build_object(
+        'ingredient_id', v_created,
+        'min_stock_level', 3,
+        'target_stock_level', 9,
+        'reorder_quantity', 'NaN'
+      ))
+    );
+  EXCEPTION
+    WHEN OTHERS THEN
+      IF SQLERRM = 'threshold_item_invalid' THEN
+        v_forbidden := TRUE;
+      ELSE
+        RAISE;
+      END IF;
+  END;
+  IF NOT v_forbidden THEN
+    RAISE EXCEPTION 'WAREHOUSE CATALOG: non-finite location reorder quantity was accepted';
+  END IF;
+
+  v_forbidden := FALSE;
+  BEGIN
+    PERFORM public.upsert_branch_stock_thresholds(
+      v_supply_branch,
+      v_supply_location,
+      (
+        SELECT jsonb_agg(jsonb_build_object(
+          'ingredient_id', v_created,
+          'min_stock_level', 3,
+          'target_stock_level', 9,
+          'reorder_quantity', 6
+        ))
+        FROM generate_series(1, 501)
+      )
+    );
+  EXCEPTION
+    WHEN OTHERS THEN
+      IF SQLERRM = 'threshold_payload_size_invalid' THEN
+        v_forbidden := TRUE;
+      ELSE
+        RAISE;
+      END IF;
+  END;
+  IF NOT v_forbidden THEN
+    RAISE EXCEPTION 'WAREHOUSE CATALOG: oversized location threshold payload was accepted';
+  END IF;
+
   -- (b) Unrelated position stays forbidden.
   PERFORM set_config('request.jwt.claim.sub', v_waiter_user::text, TRUE);
   PERFORM set_config('request.jwt.claim.role', 'authenticated', TRUE);
@@ -200,6 +292,52 @@ BEGIN
   END;
   IF NOT v_forbidden THEN
     RAISE EXCEPTION 'WAREHOUSE CATALOG: unrelated position was not rejected';
+  END IF;
+
+  v_forbidden := FALSE;
+  BEGIN
+    PERFORM public.update_ingredient_thresholds_bulk(
+      jsonb_build_array(jsonb_build_object(
+        'id', v_created,
+        'min_stock_level', 8,
+        'max_stock_level', NULL,
+        'reorder_point', NULL
+      ))
+    );
+  EXCEPTION
+    WHEN OTHERS THEN
+      IF SQLERRM = 'forbidden' THEN
+        v_forbidden := TRUE;
+      ELSE
+        RAISE;
+      END IF;
+  END;
+  IF NOT v_forbidden THEN
+    RAISE EXCEPTION 'WAREHOUSE CATALOG: unrelated threshold writer was not rejected';
+  END IF;
+
+  v_forbidden := FALSE;
+  BEGIN
+    PERFORM public.upsert_branch_stock_thresholds(
+      v_supply_branch,
+      v_supply_location,
+      jsonb_build_array(jsonb_build_object(
+        'ingredient_id', v_created,
+        'min_stock_level', 4,
+        'target_stock_level', 10,
+        'reorder_quantity', 6
+      ))
+    );
+  EXCEPTION
+    WHEN OTHERS THEN
+      IF SQLERRM = 'forbidden_threshold_write' THEN
+        v_forbidden := TRUE;
+      ELSE
+        RAISE;
+      END IF;
+  END;
+  IF NOT v_forbidden THEN
+    RAISE EXCEPTION 'WAREHOUSE CATALOG: unrelated location threshold writer was not rejected';
   END IF;
 END;
 $$;

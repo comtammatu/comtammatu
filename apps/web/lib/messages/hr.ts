@@ -6,6 +6,37 @@ import {
 } from "@comtammatu/shared/labels";
 
 export const hr = {
+  accessControl: {
+    roleRequired: "Chọn vai trò hệ thống.",
+    reauthenticateRequired: "Cần xác thực lại trước khi thay đổi quyền.",
+    invalidRole: "Vai trò không hợp lệ.",
+    branchRequired: "Chọn chi nhánh cho vai trò này.",
+    revokeFailed: "Không thể thu hồi vai trò.",
+    revoked: "Đã thu hồi vai trò hệ thống.",
+    sectionTitle: "Vai trò và phạm vi truy cập",
+    sectionDescription:
+      "Vai trò truy cập được gán riêng theo phạm vi công việc.",
+    addRole: "Gán vai trò",
+    roleHeader: "Vai trò hệ thống",
+    scopeHeader: "Phạm vi",
+    tenantScope: "Toàn công ty",
+    branchFallback: "Chi nhánh",
+    statusHeader: "Trạng thái",
+    active: "Đang hiệu lực",
+    revokeAria: "Thu hồi vai trò",
+    emptyTitle: "Chưa có vai trò hệ thống",
+    emptyDescription: "Chưa được gán vai trò truy cập.",
+    formTitle: "Gán vai trò hệ thống",
+    formDescription: "Xác thực lại trước khi thay đổi quyền truy cập.",
+    assigned: "Đã gán vai trò hệ thống.",
+    branchScopeHint: "Theo chi nhánh",
+    tenantScopeHint: "Toàn công ty",
+    branchLabel: "Chi nhánh",
+    revokeTitle: "Thu hồi vai trò hệ thống?",
+    revokeDescription: "Quyền tương ứng sẽ mất hiệu lực ngay sau khi xác nhận.",
+    cancel: "Hủy",
+    revoke: "Thu hồi",
+  },
   workspace: {
     eyebrow: "Nhân sự",
     ownerTitle: "Hồ sơ nhân viên",
@@ -136,17 +167,14 @@ export const hr = {
       leavePolicy: {
         title: "Ngày công & nghỉ phép",
         description: "",
-        hint: "Chính sách",
       },
       shifts: {
         title: "Khung ca làm",
         description: "",
-        hint: "Khung ca",
       },
       positionTasks: {
         title: "Việc trong ca",
         description: "",
-        hint: "Mẫu việc",
       },
     },
     onboardSteps: {

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { BranchWasteApprovalsClient } from "./branch-waste-approvals-client";
 import { loadBranchWasteApprovalsData } from "@lib/inventory/waste-approvals-data";
 
@@ -17,7 +18,7 @@ export default async function OperatorWasteApprovalsPage({
   return (
     <BranchWasteApprovalsClient
       branchId={branchId}
-      branchName={data.branchName ?? `CN #${branchId}`}
+      branchName={data.branchName ?? UNKNOWN_LABEL_VI}
       canApproveWaste={data.canApproveWaste}
       loadFailed={data.loadFailed}
       initial={data.rows}

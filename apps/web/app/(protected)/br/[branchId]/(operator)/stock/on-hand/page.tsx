@@ -116,11 +116,41 @@ async function OperatorStockOnHandBody({ params, searchParams }: PageProps) {
     : rawLocation;
   const requestedLocationId =
     locationValue == null ? null : Number(locationValue);
-  const initialLocationId = data.locations.some(
-    (location) => location.id === requestedLocationId,
-  )
-    ? requestedLocationId
-    : data.defaultLocationId;
+  const initialLocationId =
+    locationValue === "total"
+      ? null
+      : data.locations.some((location) => location.id === requestedLocationId)
+        ? requestedLocationId
+        : data.defaultLocationId;
+  let branchThresholds: import("@lib/inventory/branch-thresholds-data").BranchStockThresholdRow[] =
+    [];
+  let intraSiteTransferData: import("@lib/inventory/intra-site-transfer-data").IntraSiteTransferData | null =
+    null;
+
+  if (claims.user_role === "branch_manager") {
+    const thresholdPromise =
+      initialLocationId == null
+        ? Promise.resolve(null)
+        : import("@lib/inventory/branch-thresholds-data").then(
+            ({ loadBranchStockThresholdsData }) =>
+              loadBranchStockThresholdsData(data.branchId, initialLocationId),
+          );
+    const transferPromise = import(
+      "@lib/inventory/intra-site-transfer-data"
+    ).then(({ loadIntraSiteTransferData }) =>
+      loadIntraSiteTransferData({
+        supabase,
+        tenantId: claims.tenant_id,
+        branchId: data.branchId,
+      }),
+    );
+    const [thresholdsResult, transferResult] = await Promise.all([
+      thresholdPromise,
+      transferPromise,
+    ]);
+    branchThresholds = thresholdsResult?.rows ?? [];
+    intraSiteTransferData = transferResult;
+  }
 
   return (
     <BranchStockOnHandClient
@@ -131,7 +161,8 @@ async function OperatorStockOnHandBody({ params, searchParams }: PageProps) {
       ingredients={data.ingredients}
       locations={data.locations}
       defaultLocationId={initialLocationId}
-      underThresholdCount={data.summary.underThresholdCount}
+      branchThresholds={branchThresholds}
+      intraSiteTransferData={intraSiteTransferData}
       secondaryJobs={resolveSecondaryJobs({
         role: claims.user_role,
         branchId: data.branchId,

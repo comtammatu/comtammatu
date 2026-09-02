@@ -9,10 +9,7 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@comtammatu/ui/components/alert";
-import {
-  Avatar,
-  AvatarFallback,
-} from "@comtammatu/ui/components/avatar";
+import { Avatar, AvatarFallback } from "@comtammatu/ui/components/avatar";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
@@ -36,7 +33,10 @@ import {
 } from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
 import { Progress } from "@comtammatu/ui/components/progress";
-import { RadioGroup, RadioGroupItem } from "@comtammatu/ui/components/radio-group";
+import {
+  RadioGroup,
+  RadioGroupItem,
+} from "@comtammatu/ui/components/radio-group";
 import {
   Select,
   SelectContent,
@@ -233,8 +233,7 @@ const UX_FAMILY_RECIPES = [
     success: "Duyệt / hoàn thành việc ca",
     recovery: "Quay lại tuyến sở hữu",
     density: "Touch comfortable; no DataTable on phone queues",
-    exemplar:
-      "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
+    exemplar: "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
   },
   {
     family: "control_surface LIST",
@@ -242,15 +241,16 @@ const UX_FAMILY_RECIPES = [
     success: "Mở record / chốt phiếu",
     recovery: "Retry / confirm; empty + filter reset",
     density: "compact + xwide; AppListFrame → DataTable",
-    exemplar:
-      "apps/web/app/(protected)/inventory/grn/grn-list-client.tsx",
+    exemplar: "apps/web/app/(protected)/inventory/grn/grn-list-client.tsx",
   },
 ] as const;
 
 function Swatch({ name, swatch }: { name: string; swatch: string }) {
   return (
     <div className="flex flex-col gap-1">
-      <div className={cn("h-10 w-full rounded-sm border border-border", swatch)} />
+      <div
+        className={cn("h-10 w-full rounded-sm border border-border", swatch)}
+      />
       <span className="font-mono text-3xs text-muted-foreground">{name}</span>
     </div>
   );
@@ -301,7 +301,9 @@ export function DesignLabClient() {
               {FG_ROLES.map((role) => (
                 <Item key={role.name} size="xs" variant="outline">
                   <ItemContent>
-                    <ItemTitle className={role.className}>{role.name}</ItemTitle>
+                    <ItemTitle className={role.className}>
+                      {role.name}
+                    </ItemTitle>
                   </ItemContent>
                 </Item>
               ))}
@@ -335,7 +337,9 @@ export function DesignLabClient() {
               <span className="w-24 shrink-0 font-mono text-3xs text-muted-foreground">
                 font-mono
               </span>
-              <span className="font-mono text-sm tabular-nums">1.250.000 ₫</span>
+              <span className="font-mono text-sm tabular-nums">
+                1.250.000 ₫
+              </span>
             </div>
             <div className="flex items-baseline gap-3">
               <span className="w-24 shrink-0 font-mono text-3xs text-muted-foreground">
@@ -360,7 +364,9 @@ export function DesignLabClient() {
                   <span className="w-12 shrink-0 font-mono text-3xs text-muted-foreground">
                     {step.name}
                   </span>
-                  <div className={cn("h-2 rounded-sm bg-primary", step.className)} />
+                  <div
+                    className={cn("h-2 rounded-sm bg-primary", step.className)}
+                  />
                 </div>
               ))}
             </div>
@@ -402,12 +408,16 @@ export function DesignLabClient() {
 
             <div className="grid gap-3 sm:grid-cols-3">
               <Field>
-                <FieldLabel htmlFor="ds-lab-input-default">Input · default</FieldLabel>
+                <FieldLabel htmlFor="ds-lab-input-default">
+                  Input · default
+                </FieldLabel>
                 <Input id="ds-lab-input-default" placeholder="h-7" />
                 <FieldDescription>Default control height.</FieldDescription>
               </Field>
               <Field>
-                <FieldLabel htmlFor="ds-lab-input-field">Input · field</FieldLabel>
+                <FieldLabel htmlFor="ds-lab-input-field">
+                  Input · field
+                </FieldLabel>
                 <Input
                   id="ds-lab-input-field"
                   controlSize="field"
@@ -415,7 +425,9 @@ export function DesignLabClient() {
                 />
               </Field>
               <Field>
-                <FieldLabel htmlFor="ds-lab-input-touch">Input · touch</FieldLabel>
+                <FieldLabel htmlFor="ds-lab-input-touch">
+                  Input · touch
+                </FieldLabel>
                 <Input
                   id="ds-lab-input-touch"
                   controlSize="touch"
@@ -428,7 +440,11 @@ export function DesignLabClient() {
               <Field>
                 <FieldLabel htmlFor="ds-lab-select">Select</FieldLabel>
                 <Select value={selectValue} onValueChange={setSelectValue}>
-                  <SelectTrigger id="ds-lab-select" size="field" className="w-full">
+                  <SelectTrigger
+                    id="ds-lab-select"
+                    size="field"
+                    className="w-full"
+                  >
                     <SelectValue placeholder="Warehouse" />
                   </SelectTrigger>
                   <SelectContent>
@@ -515,21 +531,38 @@ export function DesignLabClient() {
               </Avatar>
             </div>
 
-            <Tabs defaultValue="one">
-              <TabsList>
-                <TabsTrigger value="one">Tab one</TabsTrigger>
-                <TabsTrigger value="two">Tab two</TabsTrigger>
-                <TabsTrigger value="three" disabled>
-                  Disabled
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="one">
-                <Caption>TabsContent · panel one</Caption>
-              </TabsContent>
-              <TabsContent value="two">
-                <Caption>TabsContent · panel two</Caption>
-              </TabsContent>
-            </Tabs>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Tabs defaultValue="active">
+                <Caption>Pattern A · equal touch tabs</Caption>
+                <TabsList size="touch" layout="equal">
+                  <TabsTrigger value="active">Active</TabsTrigger>
+                  <TabsTrigger value="history">History</TabsTrigger>
+                </TabsList>
+                <TabsContent value="active" className="mt-0">
+                  <Caption>Equal-width workspace switcher</Caption>
+                </TabsContent>
+                <TabsContent value="history" className="mt-0">
+                  <Caption>History workspace</Caption>
+                </TabsContent>
+              </Tabs>
+
+              <Tabs defaultValue="all">
+                <Caption>Pattern B · scroll touch tabs</Caption>
+                <TabsList size="touch" layout="scroll">
+                  <TabsTrigger value="all">All</TabsTrigger>
+                  <TabsTrigger value="pending">Pending</TabsTrigger>
+                  <TabsTrigger value="approved">Approved</TabsTrigger>
+                  <TabsTrigger value="rejected">Rejected</TabsTrigger>
+                  <TabsTrigger value="archived">Archived</TabsTrigger>
+                </TabsList>
+                <TabsContent value="all" className="mt-0">
+                  <Caption>Scrollable status filter</Caption>
+                </TabsContent>
+                <TabsContent value="pending" className="mt-0">
+                  <Caption>Pending filter</Caption>
+                </TabsContent>
+              </Tabs>
+            </div>
 
             <Separator />
 
@@ -558,7 +591,9 @@ export function DesignLabClient() {
             </Alert>
 
             <div className="flex flex-col gap-2">
-              <Caption>Focus ring · Tab to the button (focus-visible:ring)</Caption>
+              <Caption>
+                Focus ring · Tab to the button (focus-visible:ring)
+              </Caption>
               <Button variant="outline" className="w-fit">
                 Focus me
               </Button>
@@ -658,7 +693,9 @@ export function DesignLabClient() {
                       </span>
                       <span>{row.name}</span>
                     </ItemTitle>
-                    <ItemDescription>Central warehouse · synced today</ItemDescription>
+                    <ItemDescription>
+                      Central warehouse · synced today
+                    </ItemDescription>
                   </ItemContent>
                   <ItemActions>
                     <Badge variant={row.tone}>{row.qty}</Badge>
@@ -795,9 +832,9 @@ export function DesignLabClient() {
           <div className="flex flex-col gap-4">
             <Caption>
               Shell chrome: control_surface mounts AppShell
-              (apps/web/app/components/app-shell.tsx) — not mounted here (heavy).
-              Branch / station / public / staff each use their approved chrome
-              family.
+              (apps/web/app/components/app-shell.tsx) — not mounted here
+              (heavy). Branch / station / public / staff each use their approved
+              chrome family.
             </Caption>
 
             <div className="grid gap-3 sm:grid-cols-2">
@@ -837,8 +874,8 @@ export function DesignLabClient() {
                 description="Guest / system-gate card region — AppPage stays chrome-less."
               >
                 <p className="text-sm text-muted-foreground">
-                  Login, access-denied, and token workflows use PublicSection for
-                  framed sections.
+                  Login, access-denied, and token workflows use PublicSection
+                  for framed sections.
                 </p>
               </PublicSection>
               <EmployeePanel
@@ -925,9 +962,7 @@ export function DesignLabClient() {
                   >
                     <ItemContent className="gap-2">
                       <ItemTitle size="heading">{recipe.family}</ItemTitle>
-                      <ItemDescription>
-                        Entry: {recipe.entry}
-                      </ItemDescription>
+                      <ItemDescription>Entry: {recipe.entry}</ItemDescription>
                       <ItemDescription>
                         Success: {recipe.success}
                       </ItemDescription>
@@ -965,8 +1000,8 @@ export function DesignLabClient() {
             <Caption>
               App surfaces author duration-150 / 300 (== --motion-base /
               --motion-progress). Primitives consume finer rungs via
-              duration-[var(--motion-*)]. Global prefers-reduced-motion
-              backstop in globals.css zone 4.
+              duration-[var(--motion-*)]. Global prefers-reduced-motion backstop
+              in globals.css zone 4.
             </Caption>
 
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -1009,8 +1044,8 @@ export function DesignLabClient() {
                   </Item>
                 </div>
                 <Caption>
-                  Button: transition-[bg,border,color,shadow,filter,transform]
-                  + active:scale. Item [a]:hover:bg-muted.
+                  Button: transition-[bg,border,color,shadow,filter,transform] +
+                  active:scale. Item [a]:hover:bg-muted.
                 </Caption>
               </div>
 
@@ -1059,17 +1094,18 @@ export function DesignLabClient() {
                 <ItemContent>
                   <ItemTitle>Fade + slide-in-from-bottom</ItemTitle>
                   <ItemDescription>
-                    Dialog/Sheet open-close use transition-[opacity,transform] with
-                    data-[starting-style]/ending-style] (Base UI). This Item demo
-                    still uses motion-safe:animate-in for one-shot remount enter.
+                    Dialog/Sheet open-close use transition-[opacity,transform]
+                    with data-[starting-style]/ending-style] (Base UI). This
+                    Item demo still uses motion-safe:animate-in for one-shot
+                    remount enter.
                   </ItemDescription>
                 </ItemContent>
               </Item>
               <Caption>
-                Deferred / token gap: no dedicated page-transition or list-stagger
-                utilities yet — do not invent; promote a recipe into globals.css
-                only after reuse. Mascot sprite loops stay brand-only
-                (motion-safe:animate-cotlet-*).
+                Deferred / token gap: no dedicated page-transition or
+                list-stagger utilities yet — do not invent; promote a recipe
+                into globals.css only after reuse. Mascot sprite loops stay
+                brand-only (motion-safe:animate-cotlet-*).
               </Caption>
             </div>
 
@@ -1087,7 +1123,11 @@ export function DesignLabClient() {
           description="Skeleton, empty, error, and disabled — same tokens / status vocabulary across planes."
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <Item variant="outline" size="sm" className="flex-col items-stretch">
+            <Item
+              variant="outline"
+              size="sm"
+              className="flex-col items-stretch"
+            >
               <ItemContent>
                 <ItemTitle>Skeleton · busy</ItemTitle>
                 <div aria-busy="true" className="mt-2 flex flex-col gap-2">
@@ -1096,7 +1136,11 @@ export function DesignLabClient() {
                 </div>
               </ItemContent>
             </Item>
-            <Item variant="outline" size="sm" className="flex-col items-stretch">
+            <Item
+              variant="outline"
+              size="sm"
+              className="flex-col items-stretch"
+            >
               <ItemContent>
                 <ItemTitle>Empty · no-results</ItemTitle>
                 <div className="mt-2">
@@ -1104,7 +1148,11 @@ export function DesignLabClient() {
                 </div>
               </ItemContent>
             </Item>
-            <Item variant="outline" size="sm" className="flex-col items-stretch">
+            <Item
+              variant="outline"
+              size="sm"
+              className="flex-col items-stretch"
+            >
               <ItemContent>
                 <ItemTitle>Error · destructive</ItemTitle>
                 <div className="mt-2">
@@ -1112,13 +1160,18 @@ export function DesignLabClient() {
                     <IconCircleAlert />
                     <AlertTitle>Request failed</AlertTitle>
                     <AlertDescription>
-                      Use Alert destructive — do not invent a parallel error card.
+                      Use Alert destructive — do not invent a parallel error
+                      card.
                     </AlertDescription>
                   </Alert>
                 </div>
               </ItemContent>
             </Item>
-            <Item variant="outline" size="sm" className="flex-col items-stretch">
+            <Item
+              variant="outline"
+              size="sm"
+              className="flex-col items-stretch"
+            >
               <ItemContent>
                 <ItemTitle>Disabled controls</ItemTitle>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -1157,7 +1210,11 @@ export function DesignLabClient() {
               </Frame>
               <Frame className={WORK_MONTH_CELL}>
                 <span className="text-xs font-semibold tabular-nums">12</span>
-                <Button variant="secondary" size="xs" className={WORK_TASK_CHIP}>
+                <Button
+                  variant="secondary"
+                  size="xs"
+                  className={WORK_TASK_CHIP}
+                >
                   Due task chip
                 </Button>
               </Frame>

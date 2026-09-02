@@ -57,11 +57,7 @@ import {
   getPaymentMethodLabelVi,
 } from "@comtammatu/shared/labels";
 import { StatusBadge } from "@/components/status-badge";
-import {
-  AppEmptyState,
-  AppSheet,
-  DescriptionList,
-} from "@/components/surface";
+import { AppEmptyState, AppSheet, DescriptionList } from "@/components/surface";
 import { Frame } from "@comtammatu/ui/components/frame";
 
 function itemStatusToneClass(status: string): string {
@@ -99,46 +95,10 @@ const PRINT_JOB_LABELS: Record<string, string> = {
   shift_close_report: "Báo cáo chốt ca",
 };
 
-const VERDICT_COPY: Record<
+const operationalVerdictCopy: Record<
   OrderOperationalVerdict,
   { title: string; description: string }
-> = {
-  cancelled: {
-    title: "Đơn đã hủy",
-    description:
-      "Xem danh sách món và lịch sử thao tác bên dưới để biết phần nào đã được hủy.",
-  },
-  in_progress: {
-    title: "Đơn đang được xử lý",
-    description:
-      "Các con số bên dưới là trạng thái hệ thống ghi nhận tại thời điểm hiện tại.",
-  },
-  payment_needs_review: {
-    title: "Thanh toán cần kiểm tra",
-    description:
-      "Có khoản VietQR chưa khớp với giao dịch ngân hàng. Xem phần thanh toán và các thay đổi trên đơn.",
-  },
-  print_needs_review: {
-    title: "Có phiếu chưa in thành công",
-    description:
-      "Kiểm tra máy in hoặc lịch sử phiếu. Lượt in không xác nhận món đã được làm hay phục vụ.",
-  },
-  kitchen_needs_review: {
-    title: "Món và bếp chưa khớp",
-    description:
-      "Có món trong đơn chưa có đủ ghi nhận bếp làm xong. Xem các dòng có nhãn Chưa khớp.",
-  },
-  history_incomplete: {
-    title: "Chưa đủ dữ liệu để kết luận",
-    description:
-      "Đơn này thuộc giai đoạn hệ thống chưa lưu đầy đủ phân loại món hoặc lịch sử bếp. Cần đối chiếu phiếu giấy hoặc xác nhận ca; không dùng số ước tính để khẳng định bếp đã làm hay giao đủ.",
-  },
-  recorded: {
-    title: "Chưa thấy lỗi rõ ràng",
-    description:
-      "Các kiểm tra tự động chưa phát hiện chặng bị thiếu. Vẫn cần đối chiếu thực tế nếu có phản ánh từ ca vận hành.",
-  },
-};
+> = ORDERS_COPY.operationalVerdict;
 
 function formatSnapshotOptions(value: unknown): string | null {
   if (!Array.isArray(value)) return null;
@@ -458,9 +418,9 @@ export function OrderDetailContent({ order }: { order: OrderRow }) {
                     ? "muted"
                     : "warning"
                 }
-                label={VERDICT_COPY[operationalVerdict].title}
+                label={operationalVerdictCopy[operationalVerdict].title}
               >
-                {VERDICT_COPY[operationalVerdict].description}
+                {operationalVerdictCopy[operationalVerdict].description}
               </NoteCallout>
               <Frame className="p-3">
                 <DescriptionList
@@ -564,8 +524,7 @@ export function OrderDetailContent({ order }: { order: OrderRow }) {
                   kitchenQuantity !== item.quantity;
                 const missingKitchenRecord =
                   !isCancelled &&
-                  (order.status === "served" ||
-                    order.status === "completed") &&
+                  (order.status === "served" || order.status === "completed") &&
                   kitchenEvidence?.state !== "history_incomplete" &&
                   kitchenEvidence?.state !== "completed";
                 const modifierLine =
@@ -909,7 +868,7 @@ export function OrderDetailContent({ order }: { order: OrderRow }) {
                         href={`/br/${String(operationalTrace.branch_id)}/pos-sessions?session=${String(operationalTrace.pos_session_id)}`}
                         className="font-medium underline-offset-4 hover:underline"
                       >
-                        ca POS #{String(operationalTrace.pos_session_id)}
+                        {ORDERS_COPY.relatedPosSession}
                       </Link>
                       .
                     </p>

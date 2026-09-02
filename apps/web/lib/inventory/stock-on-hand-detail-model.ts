@@ -170,7 +170,7 @@ export function stockMovementBadgeVariant(
 export function stockMovementReferenceLabel(
   movement: StockIngredientDetailMovement,
 ): string | null {
-  if (movement.grnId != null) return `Phiếu nhập #${movement.grnId}`;
+  if (movement.grnId != null) return stockCopy.movement.grnRef;
   if (movement.transferId != null) {
     return stockCopy.movement.transferRef(movement.transferId);
   }
@@ -213,17 +213,13 @@ export function stockMovementReferenceHref({
   if (movement.transferId != null) {
     return `/inventory/transfers?transferId=${movement.transferId}&mode=view`;
   }
-  if (movement.issueId != null) return `/inventory/consumption/${movement.issueId}`;
+  if (movement.issueId != null)
+    return `/inventory/consumption/${movement.issueId}`;
   return `/inventory/reports?branch=${branchId}`;
 }
 
 export type StockMovementCategoryKey =
-  | "all"
-  | "consumption"
-  | "transfer"
-  | "grn"
-  | "adjustment"
-  | "waste";
+  "all" | "consumption" | "transfer" | "grn" | "adjustment" | "waste";
 
 export function categorizeStockMovement(
   movement: StockIngredientDetailMovement,
@@ -281,4 +277,3 @@ export function countStockMovementsByCategory(
   }
   return counts;
 }
-

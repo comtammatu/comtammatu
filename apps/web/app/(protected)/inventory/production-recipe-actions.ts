@@ -673,7 +673,7 @@ export async function importProductionRecipes(
 
   const file = formData.get("file");
   if (!(file instanceof File)) {
-    return { success: false, error: "Thiếu file dữ liệu" };
+    return { success: false, error: "Thiếu tệp dữ liệu" };
   }
 
   let parsed;
@@ -682,7 +682,7 @@ export async function importProductionRecipes(
       maxRowsPerSheet: MAX_ROWS_PER_SHEET,
     });
   } catch {
-    return { success: false, error: "Không đọc được file công thức sản xuất." };
+    return { success: false, error: "Không đọc được tệp công thức sản xuất." };
   }
 
   const sheet = parsed.sheets[0];

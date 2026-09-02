@@ -34,7 +34,7 @@ test("inventory quantity inputs allow three fraction digits", () => {
   );
   assert.match(
     productionDetail,
-    /QuantityInput[\s\S]*aria-label="Số lượng thực tế"[\s\S]*maxFractionDigits=\{3\}/,
+    /QuantityInput[\s\S]*maxFractionDigits=\{3\}[\s\S]*aria-label=\{detailCopy\.actualQuantityAria/,
   );
 
   const productionNew = read(

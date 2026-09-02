@@ -6,7 +6,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui/lib/utils";
 import { messages } from "@lib/messages";
-import { formatVNDateTime } from "@/_lib/format-datetime";
+import { formatVNDateTime } from "@comtammatu/shared/time";
 
 const exportCopy = messages.finance.exportToolbar;
 

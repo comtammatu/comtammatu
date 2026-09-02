@@ -5,6 +5,7 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import { revalidatePath } from "next/cache";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { getAuthContextWithPermission } from "@/_lib/auth";
+import { messages } from "@lib/messages";
 import { ROLE_BINDING_ERROR_CODES } from "./role-binding-error-codes";
 
 const OWNER_STAFF_ROLES = MODULE_ACL.staff.allowedRoles;
@@ -75,7 +76,7 @@ function classifyBindingError(message: string): string | undefined {
 
 function mapBindingError(message: string): string {
   if (message.includes("aal2_required")) {
-    return "Cần xác thực AAL2 trước khi thay đổi phân quyền.";
+    return messages.hr.accessControl.reauthenticateRequired;
   }
   if (message.includes("self_security_revoke_forbidden")) {
     return "Không thể tự thu hồi quyền bảo mật của chính mình.";

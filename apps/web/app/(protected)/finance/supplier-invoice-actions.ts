@@ -155,7 +155,10 @@ const invoiceSchema = z
       if (
         !moneyEquals(
           line.grossLineTotal,
-          calculateSupplierInvoiceGrossLineTotal(line.lineTotal, line.vatAmount),
+          calculateSupplierInvoiceGrossLineTotal(
+            line.lineTotal,
+            line.vatAmount,
+          ),
         )
       ) {
         ctx.addIssue({
@@ -282,7 +285,7 @@ const attachVatEvidenceSchema = z.object({
     .min(1)
     .max(500)
     .refine((value) => !value.includes("..") && !/\s/.test(value), {
-      error: "Đường dẫn file HĐ GTGT không hợp lệ.",
+      error: messages.inventory.supplierInvoices.vatAttachmentInvalidPath,
     }),
 });
 
@@ -452,7 +455,9 @@ export const createSupplierInvoice = withAction(
       if (
         error.message?.includes("supplier_invoice_over_allocation") ||
         error.message?.includes("supplier_invoice_allocation_overbilled") ||
-        error.message?.includes("supplier_invoice_allocation_grn_item_missing") ||
+        error.message?.includes(
+          "supplier_invoice_allocation_grn_item_missing",
+        ) ||
         error.message?.includes(
           "supplier_invoice_allocation_ingredient_mismatch",
         ) ||
@@ -667,7 +672,7 @@ export const recordSupplierPayment = withAction(
         return {
           success: false,
           error:
-            "Vui lòng đính kèm ít nhất 1 file HĐ GTGT trước khi ghi nhận thanh toán.",
+            messages.inventory.supplierInvoices.paymentBlockedNoVatAttachment,
         };
       }
       if (message.includes("invalid_payment_method")) {

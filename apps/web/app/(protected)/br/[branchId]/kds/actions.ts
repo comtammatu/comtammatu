@@ -4,7 +4,7 @@ import { z } from "zod";
 import { MODULE_ACL } from "@comtammatu/shared/auth";
 import { KDS_VI } from "@comtammatu/shared/messages";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getVNDateString, getVNDayUtcRange } from "@/_lib/format-datetime";
+import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import { getAuthContext } from "../../_lib/auth";
 import {
   buildKdsOperationalHistory,

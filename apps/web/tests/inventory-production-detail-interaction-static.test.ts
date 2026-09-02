@@ -21,8 +21,8 @@ test("production detail confirms cancellation and keeps state-specific actions",
 });
 
 test("production detail displays batch cost and line cost breakdown", () => {
-  assert.match(source, /Giá vốn mẻ \(Thực tế\)/);
-  assert.match(source, /Giá vốn mẻ \(Dự kiến\)/);
+  assert.match(source, /detailCopy\.actualBatchCost/);
+  assert.match(source, /detailCopy\.plannedBatchCost/);
   assert.match(source, /run\.total_cost/);
   assert.match(source, /line\.unit_cost/);
   assert.match(source, /line\.line_cost/);

@@ -14,7 +14,7 @@ const source = readFileSync(
 
 test("POS session history stays immediately reachable on touch layouts", () => {
   assert.match(source, /const isTouchLayout = useIsMobile\(1280\)/);
-  assert.match(source, /const isInsightRailLayout = !useIsMobile\(1536\)/);
+  assert.doesNotMatch(source, /isInsightRailLayout|useIsMobile\(1536\)/);
   assert.match(source, /open=\{sessionHistoryOpen\}/);
   assert.match(source, /onClick=\{\(\) => setSessionHistoryOpen\(true\)\}/);
   assert.match(source, /onClick=\{onSessionSelect\}/);
@@ -50,7 +50,11 @@ test("POS session workspace keeps context visible while each desktop pane scroll
     source,
     /value="bills"[\s\S]*?overflow-y-auto overscroll-contain/,
   );
-  assert.match(source, /isInsightRailLayout \? \(/);
+  assert.match(
+    source,
+    /lg:grid-cols-\[minmax\(18rem,22rem\)_minmax\(0,1fr\)\]/,
+  );
+  assert.doesNotMatch(source, /2xl:(grid-cols|flex)/);
   assert.match(source, /const sessionContext = selectedSession \? \(/);
   assert.match(
     source,
@@ -67,9 +71,10 @@ test("POS session workspace keeps context visible while each desktop pane scroll
   assert.match(source, /<ItemContent>\s*<div className="flex min-w-0 items-center justify-between gap-2">/);
 });
 
-test("POS session workspace keeps one touch scroll region and one mid-width insight drawer", () => {
+test("POS session workspace keeps one touch scroll region and one desktop insight drawer", () => {
   assert.equal((source.match(/<TabsContent/g) ?? []).length, 3);
   assert.match(source, /<AppDrawer[\s\S]*open=\{insightsOpen\}/);
+  assert.match(source, /selectedSession && !isTouchLayout \? \(/);
   assert.match(source, /contentClassName="flex h-full flex-col overflow-hidden"/);
   assert.match(source, /posSessions\.billsTab/);
   assert.doesNotMatch(source, /settlementOpen|reportOpen/);

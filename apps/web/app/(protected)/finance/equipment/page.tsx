@@ -1,9 +1,8 @@
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { getVNDateString } from "@comtammatu/shared/time";
-import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
+import { AppPage } from "@/components/surface";
 import { currentUserHasPermissionAny } from "@/_lib/permissions";
 import { loadAuthState } from "@/_lib/auth";
-import { messages } from "@lib/messages";
 import { fetchAccessibleBranches } from "../actions";
 import {
   fetchEquipmentExpenses,
@@ -13,8 +12,6 @@ import {
 import { parseFinanceParams } from "../_lib/finance-params";
 import { ExpensesClient } from "../expenses/expenses-client";
 import { parseExpenseListState } from "../expenses/expense-list-state";
-
-const copy = messages.finance.equipment;
 
 export default async function EquipmentPage({
   searchParams,
@@ -58,16 +55,7 @@ export default async function EquipmentPage({
   ]);
 
   if (!branchesRes.success || !expensesRes.success || !startupRes.success) {
-    return (
-      <AppPage width="xwide" density="compact">
-        <AppPageHeader title={copy.page.title} />
-        <AppEmptyState
-          mode="error"
-          title={copy.loadErrorTitle}
-          description={copy.loadErrorDescription}
-        />
-      </AppPage>
-    );
+    throw new Error("Failed to load finance equipment page data.");
   }
 
   const branches = (branchesRes.data ?? []) as {

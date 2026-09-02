@@ -527,8 +527,8 @@ export function BranchAttendanceClient({
         >
           <TabsList
             size="touch"
+            layout="equal"
             aria-label={pageCopy.branchAttendanceTitle}
-            className="grid w-full grid-cols-2"
           >
             <TabsTrigger value="clock">{attendanceCopy.clockView}</TabsTrigger>
             <TabsTrigger value="summary">

@@ -2,10 +2,11 @@ import "server-only";
 
 import { notFound } from "next/navigation";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { currentUserHasPermission } from "@/_lib/permissions";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveProfileDisplayNames } from "@/_lib/profile-display-names";
-import { STAFF_VI } from "@comtammatu/shared/messages";
+import { INVENTORY_VI, STAFF_VI } from "@comtammatu/shared/messages";
 import {
   resolveInventoryBranchScope,
   resolveInventoryListScope,
@@ -88,7 +89,7 @@ type StocktakeSessionRow = {
 function toSessionNumber(
   row: Pick<StocktakeSessionRow, "id" | "session_number">,
 ): string {
-  return row.session_number?.trim() || `KK-${row.id}`;
+  return row.session_number?.trim() || INVENTORY_VI.documentNumberPending;
 }
 
 type UnitRow = {
@@ -155,9 +156,7 @@ export async function loadBranchStocktakeListData(routeBranchId: number) {
 
   return {
     branchId: routeBranchId,
-    branchName: branch
-      ? getBranchSiteDisplayName(branch)
-      : `CN #${routeBranchId}`,
+    branchName: branch ? getBranchSiteDisplayName(branch) : UNKNOWN_LABEL_VI,
     canManage,
     sessions: sessions.map((row) =>
       toBranchStocktakeSession(
@@ -202,9 +201,7 @@ export async function loadBranchStocktakeStartData(routeBranchId: number) {
 
   return {
     branchId: routeBranchId,
-    branchName: branch
-      ? getBranchSiteDisplayName(branch)
-      : `CN #${routeBranchId}`,
+    branchName: branch ? getBranchSiteDisplayName(branch) : UNKNOWN_LABEL_VI,
     canManage,
     locations,
   };
@@ -267,7 +264,7 @@ export async function loadBranchStocktakeDetailData(
     lines = raw.lines.map((line) => ({
       id: line.id,
       ingredientId: line.ingredient_id,
-      ingredientName: line.ingredients?.name ?? `#${line.ingredient_id}`,
+      ingredientName: line.ingredients?.name ?? UNKNOWN_LABEL_VI,
       unit: line.ingredients?.unit ?? "",
       countedQuantity:
         line.counted_quantity === null ? null : Number(line.counted_quantity),

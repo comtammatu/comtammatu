@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: baseline inline Vietnamese copy in menu import dialog */
-
 import { useState, useTransition } from "react";
 import {
   Download as IconDownload,
@@ -20,6 +18,7 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { FileImportDialog } from "@/components/form";
 import { downloadCsv, downloadXlsx } from "@/_lib/download-file";
+import { messages } from "@lib/messages";
 import {
   downloadMenuTemplate,
   exportMenu,
@@ -110,6 +109,8 @@ export function MenuImportExportMenu() {
   );
 }
 
+const copy = messages.catalog.menuImport;
+
 function MenuImportDialog({
   open,
   onOpenChange,
@@ -122,39 +123,35 @@ function MenuImportDialog({
       open={open}
       onOpenChange={onOpenChange}
       title={MENU_VI.importDialogTitle}
-      description={
-        <>
-          File .xlsx gồm 2 trang tính: <strong>Danh muc</strong> và{" "}
-          <strong>Mon an</strong>. Tên trùng sẽ được cập nhật.
-        </>
-      }
+      description={copy.description}
       inputId="menu-import-file"
       chooseFileLabel={INVENTORY_VI.chooseFileLabel}
-      selectedFileLabel={(fileName) => `Đã chọn: ${fileName}`}
+      selectedFileLabel={copy.selectedFile}
       selectFileError={INVENTORY_VI.selectFile}
       resultTitle={INVENTORY_VI.importResultHeading}
-      submitLabel="Nhập dữ liệu"
+      submitLabel={copy.submit}
       closeLabel={ACTIONS_VI.close}
       importAction={importMenu}
       successMessage={() => MENU_VI.importSuccess}
       renderSummary={(summary) => (
         <ul className="flex flex-col gap-1">
           <li>
-            Danh mục: +{summary.categoriesInserted} tạo mới,{" "}
-            {summary.categoriesUpdated} cập nhật
+            {copy.categoriesSummary(
+              summary.categoriesInserted,
+              summary.categoriesUpdated,
+            )}
           </li>
           <li>
-            Món ăn: +{summary.itemsInserted} tạo mới, {summary.itemsUpdated} cập
-            nhật
+            {copy.itemsSummary(summary.itemsInserted, summary.itemsUpdated)}
           </li>
           {summary.variantsItemsReplaced > 0 ? (
-            <li>Biến thể: {summary.variantsItemsReplaced} món được thay thế</li>
+            <li>{copy.variantsSummary(summary.variantsItemsReplaced)}</li>
           ) : null}
           {summary.modifiersItemsReplaced > 0 ? (
-            <li>Món thêm: {summary.modifiersItemsReplaced} món được thay thế</li>
+            <li>{copy.modifiersSummary(summary.modifiersItemsReplaced)}</li>
           ) : null}
           {summary.sidesItemsReplaced > 0 ? (
-            <li>Món phụ: {summary.sidesItemsReplaced} món được thay thế</li>
+            <li>{copy.sidesSummary(summary.sidesItemsReplaced)}</li>
           ) : null}
         </ul>
       )}

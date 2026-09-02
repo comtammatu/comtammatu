@@ -96,7 +96,7 @@ const ArchivedOrdersSheet = dynamic(
   { ssr: false },
 );
 // BillReceipt + OrderDetailSheet are the two heaviest eager sheets (bill
-// pulls qrcode via payment-qr-code.tsx; order-detail pulls its full item/
+// pulls the shared QR renderer through the bill sheet; order-detail pulls its full item/
 // void/discount/transfer sub-component tree). Code-split like the modals
 // above, but participate in HDDT-PAYMENT-FIRST-FAILSOFT-ORPHAN +
 // HDDT-FORM-PAYLOAD-FREEZE-AT-CLICK + POS-PAYMENT-REUSE-UNIQUE-SLOT, so a

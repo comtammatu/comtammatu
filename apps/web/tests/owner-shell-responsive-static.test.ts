@@ -41,6 +41,10 @@ test("Owner mobile shell keeps the module drawer available on the root landing",
   assert.match(source, /isTouchLayout \? "min-h-12" : "min-h-10"/);
   assert.match(
     source,
+    /className="flex min-w-0 items-center gap-2 px-1 py-1"/,
+  );
+  assert.doesNotMatch(
+    source,
     /rounded-md bg-sidebar-accent p-2 ring-1 ring-sidebar-border\/70/,
   );
   assert.match(source, /<BrandMark[\s\S]*?decorative/);
@@ -358,10 +362,8 @@ test("Inventory ingredient editor keeps a touch-safe unit list", () => {
     "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx",
   );
   assert.match(issueDetail, /useIsMobile\((?:1024|OWNER_SHELL_BREAKPOINT)\)/);
-  assert.match(
-    issueDetail,
-    /isTouchLayout \? <div className="min-w-0">\{pageLayout\}<\/div> : pageLayout/,
-  );
+  assert.match(issueDetail, /isTouchLayout \? \(/);
+  assert.match(issueDetail, /<div className="min-w-0">\{pageLayout\}<\/div>/);
   assert.doesNotMatch(issueDetail, /lg:hidden">\{mobileLayout\}/);
   assert.doesNotMatch(issueDetail, /hidden lg:block">\{pageLayout\}/);
 });
@@ -450,8 +452,8 @@ test("Owner page-header actions use responsive named button sizes", () => {
     const actionsStart = source.indexOf("actions={");
     assert.match(
       source.slice(actionsStart, actionsStart + 500),
-      /<Button[\s\S]{0,240}size="lg"/,
-      `${path} must use the page-header button size`,
+      /<ResponsiveActionButton[\s\S]{0,240}density="header"/,
+      `${path} must resolve its page-header button responsively`,
     );
   }
 

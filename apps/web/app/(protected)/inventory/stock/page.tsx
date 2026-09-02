@@ -1,4 +1,5 @@
 import { loadStockOnHandPageData } from "@lib/inventory/stock-on-hand-data";
+import { loadAuthState } from "@/_lib/auth";
 import { StockClient } from "./stock-client";
 
 interface StockPageProps {
@@ -33,11 +34,12 @@ export default async function StockPage({ searchParams }: StockPageProps) {
   } = await loadStockOnHandPageData({
     queryBranch: params.branch,
   });
-  const initialLocationId = locations.some(
-    (location) => location.id === requestedLocationId,
-  )
-    ? requestedLocationId
-    : defaultLocationId;
+  const initialLocationId =
+    rawLocationId === "total"
+      ? null
+      : locations.some((location) => location.id === requestedLocationId)
+        ? requestedLocationId
+        : defaultLocationId;
 
   let initialDetailData = null;
   if (!isNaN(ingredientId) && ingredientId > 0) {
@@ -53,8 +55,10 @@ export default async function StockPage({ searchParams }: StockPageProps) {
     [];
   let reorderSuggestions: import("@lib/inventory/smart-reorder-data").ReorderSuggestionItem[] =
     [];
+  let intraSiteTransferData: import("@lib/inventory/intra-site-transfer-data").IntraSiteTransferData | null =
+    null;
 
-  if (branchId != null) {
+  if (branchId != null && initialLocationId != null) {
     const [
       { loadBranchStockThresholdsData },
       { loadBranchReorderSuggestionsData },
@@ -64,11 +68,24 @@ export default async function StockPage({ searchParams }: StockPageProps) {
     ]);
 
     const [thresholdsRes, reorderRes] = await Promise.all([
-      loadBranchStockThresholdsData(branchId),
-      loadBranchReorderSuggestionsData(branchId),
+      loadBranchStockThresholdsData(branchId, initialLocationId),
+      loadBranchReorderSuggestionsData(branchId, initialLocationId),
     ]);
     branchThresholds = thresholdsRes.rows;
     reorderSuggestions = reorderRes.allItems;
+  }
+
+  if (branchId != null) {
+    const { supabase, claims } = await loadAuthState();
+    if (claims.user_role === "owner") {
+      const { loadIntraSiteTransferData } =
+        await import("@lib/inventory/intra-site-transfer-data");
+      intraSiteTransferData = await loadIntraSiteTransferData({
+        supabase,
+        tenantId: claims.tenant_id,
+        branchId,
+      });
+    }
   }
 
   return (
@@ -88,6 +105,7 @@ export default async function StockPage({ searchParams }: StockPageProps) {
       initialDetailData={initialDetailData}
       branchThresholds={branchThresholds}
       reorderSuggestions={reorderSuggestions}
+      intraSiteTransferData={intraSiteTransferData}
     />
   );
 }

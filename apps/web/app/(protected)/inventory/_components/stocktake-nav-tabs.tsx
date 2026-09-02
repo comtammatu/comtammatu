@@ -20,16 +20,24 @@ interface StocktakeNavTabsProps {
   branchId?: number | null;
 }
 
-export function StocktakeNavTabs({ currentTab, branchId }: StocktakeNavTabsProps) {
+export function StocktakeNavTabs({
+  currentTab,
+  branchId,
+}: StocktakeNavTabsProps) {
   const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
   const searchParams = useSearchParams();
-  const branchParam = branchId != null ? String(branchId) : searchParams.get("branch");
+  const requestedBranchId = Number(searchParams.get("branch"));
+  const scopedBranchId =
+    branchId ??
+    (Number.isSafeInteger(requestedBranchId) && requestedBranchId > 0
+      ? requestedBranchId
+      : null);
 
   const buildHref = (basePath: string) => {
-    if (branchParam) {
+    if (scopedBranchId !== null) {
       return withControlSurfaceBranchScope(
         basePath,
-        branchParam === "all" ? "all" : (Number(branchParam) as unknown as `${number}`),
+        String(scopedBranchId) as `${number}`,
         { prefixes: ["/inventory"] },
       );
     }

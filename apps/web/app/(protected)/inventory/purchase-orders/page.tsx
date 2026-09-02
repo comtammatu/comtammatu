@@ -19,7 +19,7 @@ import {
 import { fetchIngredients } from "../ingredient-actions";
 import { PurchaseRequestsClient } from "../purchase-requests/purchase-requests-client";
 import type { PurchaseRequestIngredientOption } from "@lib/inventory/purchase-request-model";
-import type { PurchaseOrderSupplier } from "../purchase-requests/purchase-order-drafts";
+import type { PurchaseOrderSupplier } from "@lib/inventory/purchase-order-drafts";
 import { PurchaseOrdersClient } from "./purchase-orders-client";
 
 function firstParam(value: string | string[] | undefined) {

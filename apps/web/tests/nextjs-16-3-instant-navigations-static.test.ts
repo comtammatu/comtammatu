@@ -1,55 +1,39 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 
 const readWeb = (path: string): string =>
   readFileSync(join(process.cwd(), path), "utf8");
 
-test("web is on Next.js 16.3 Instant Navigations without offline retry", () => {
+const listSourceFiles = (path: string): string[] =>
+  readdirSync(path, { withFileTypes: true }).flatMap((entry) => {
+    const entryPath = join(path, entry.name);
+    return entry.isDirectory() ? listSourceFiles(entryPath) : [entryPath];
+  });
+
+test("web disables PPR fallback rendering until Next.js fixes action routing", () => {
   const pkg = readWeb("package.json");
   const config = readWeb("next.config.ts");
-  assert.match(pkg, /"next": "\^16\.3\./);
-  assert.match(config, /cacheComponents:\s*true/);
-  assert.match(config, /partialPrefetching:\s*true/);
+  assert.match(pkg, /"next": "16\.3\.3"/);
+  assert.match(config, /cacheComponents:\s*false/);
+  assert.match(config, /partialPrefetching:\s*false/);
   assert.doesNotMatch(config, /useOffline:\s*true/);
   assert.match(config, /agentRules:\s*false/);
 });
 
-test("root and station layouts opt out of instant validation", () => {
-  assert.match(readWeb("app/layout.tsx"), /export const instant = false/);
-  assert.match(
-    readWeb("app/(protected)/layout.tsx"),
-    /export const instant = false/,
+test("instant route config stays absent while Cache Components is disabled", () => {
+  const sourceFiles = listSourceFiles(join(process.cwd(), "app")).filter(
+    (path) => path.endsWith(".ts") || path.endsWith(".tsx"),
   );
-  assert.match(
-    readWeb("app/(protected)/br/[branchId]/(operator)/layout.tsx"),
-    /export const instant = false/,
-  );
-  assert.match(
-    readWeb("app/(protected)/br/[branchId]/pos/layout.tsx"),
-    /export const instant = false/,
-  );
-  assert.match(
-    readWeb("app/(protected)/br/[branchId]/kds/layout.tsx"),
-    /export const instant = false/,
-  );
-  assert.match(
-    readWeb("app/(protected)/br/[branchId]/pickup/layout.tsx"),
-    /export const instant = false/,
-  );
-  assert.match(
-    readWeb("app/(protected)/me/layout.tsx"),
-    /export const instant = false/,
-  );
-  assert.match(
-    readWeb("app/q/[token]/page.tsx"),
-    /export const instant = false/,
-  );
-  assert.match(
-    readWeb("app/q/invoice/[token]/page.tsx"),
-    /export const instant = false/,
-  );
+
+  for (const path of sourceFiles) {
+    assert.doesNotMatch(
+      readFileSync(path, "utf8"),
+      /export const instant\s*=/,
+      path,
+    );
+  }
 });
 
 test("Cổng catalog and on-hand stream behind Suspense with URL prefetch", () => {

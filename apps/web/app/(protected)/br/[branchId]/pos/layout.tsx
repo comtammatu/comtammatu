@@ -2,10 +2,8 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { loadAuthState } from "@/_lib/auth";
 import { ForceLightMode } from "@/components/force-light-mode";
-import { PosPwaProvider } from "./_components/pwa/online-status-provider";
-import { PosPwaToolbar } from "./_components/pwa/pos-pwa-toolbar";
-
-export const instant = false;
+import { PwaRuntimeProvider as PosPwaProvider } from "@/components/pwa-runtime";
+import { PosPwaToolbar } from "../_components/operational-pwa/toolbar";
 
 export async function generateMetadata({
   params,

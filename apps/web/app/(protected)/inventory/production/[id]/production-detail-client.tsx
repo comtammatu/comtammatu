@@ -1,11 +1,9 @@
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@comtammatu/ui/components/button";
-import { Frame } from "@comtammatu/ui/components/frame";
 import { Item } from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Alert, AlertDescription, AlertTitle } from "@comtammatu/ui/components/alert";
@@ -17,6 +15,11 @@ import {
   DescriptionList,
 } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
+import { ResponsiveActionButton } from "@/components/responsive-action-button";
 import {
   formatDateTime,
   formatQty,
@@ -106,7 +109,7 @@ export function ProductionDetailClient({
 
   function refreshAfter(result: { success: boolean; error?: string }) {
     if (!result.success) {
-      setActionError(result.error ?? "Thao tác không thành công.");
+      setActionError(result.error ?? detailCopy.actionFailed);
       return false;
     }
     setActionError(null);
@@ -120,17 +123,16 @@ export function ProductionDetailClient({
         id: run.id,
         branchId: run.branch_id,
       });
-      if (refreshAfter(result)) toast.success("Đã bắt đầu sản xuất.");
+      if (refreshAfter(result)) toast.success(detailCopy.startSuccess);
     });
   }
 
   async function handleCancel() {
     const accepted = await confirm({
-      title: "Hủy Lệnh sản xuất?",
-      description:
-        "Lệnh sẽ chỉ đọc sau khi hủy. Nếu có vật tư hỏng, hãy ghi nhận bằng Hao hụt.",
-      confirmText: "Hủy lệnh",
-      cancelText: "Quay lại",
+      title: detailCopy.cancelTitle,
+      description: detailCopy.cancelDescription,
+      confirmText: detailCopy.cancelAction,
+      cancelText: detailCopy.backAction,
       variant: "destructive",
     });
     if (!accepted) return;
@@ -139,7 +141,7 @@ export function ProductionDetailClient({
         id: run.id,
         branchId: run.branch_id,
       });
-      if (refreshAfter(result)) toast.success("Đã hủy Lệnh sản xuất.");
+      if (refreshAfter(result)) toast.success(detailCopy.cancelSuccess);
     });
   }
 
@@ -153,9 +155,7 @@ export function ProductionDetailClient({
       ) ||
       actualRows.every((line) => line.actualQuantity === 0)
     ) {
-      setActionError(
-        "Sản lượng phải lớn hơn 0 và tổng nguyên liệu thực tế không được bằng 0.",
-      );
+      setActionError(detailCopy.invalidActualQuantity);
       return;
     }
     setShortages([]);
@@ -167,7 +167,7 @@ export function ProductionDetailClient({
         actualIngredients: actualRows,
       });
       if (!result.success) {
-        setActionError(result.error ?? "Không thể hoàn thành Lệnh sản xuất.");
+        setActionError(result.error ?? detailCopy.completeFailed);
         setShortages(
           result.errorCode === "PRODUCTION_SHORTAGE"
             ? Array.isArray(result.data)
@@ -179,7 +179,7 @@ export function ProductionDetailClient({
         );
         return;
       }
-      toast.success("Đã hoàn thành và nhập thành phẩm tại Bếp Trung Tâm.");
+      toast.success(detailCopy.completeSuccess);
       void reloadRun();
     });
   }
@@ -192,6 +192,160 @@ export function ProductionDetailClient({
       : `${actualSmart.formattedQty} ${actualSmart.displayUnit}`.trim();
 
   const plannedSmart = formatSmartQuantityUnit(run.planned_quantity, unit);
+
+  type ProductionLine = ProductionRunRow["lines"][number];
+
+  function getLineMetrics(line: ProductionLine) {
+    const planned = Number(line.planned_quantity);
+    const currentActual =
+      run.status === "in_progress"
+        ? Number(actualIngredients[line.ingredient_id])
+        : line.actual_quantity;
+    const hasActual =
+      currentActual != null &&
+      Number.isFinite(currentActual) &&
+      run.status !== "draft";
+    const diff = hasActual ? Number(currentActual) - planned : null;
+    const diffPercent = diff != null && planned > 0 ? (diff / planned) * 100 : null;
+    return {
+      plannedSmart: formatSmartQuantityUnit(
+        line.planned_quantity,
+        line.entry_unit_name,
+      ),
+      actualSmart: formatSmartQuantityUnit(
+        line.actual_quantity,
+        line.entry_unit_name,
+      ),
+      diff,
+      diffPercent,
+    };
+  }
+
+  function renderActualQuantity(line: ProductionLine) {
+    const { actualSmart: actualLine } = getLineMetrics(line);
+    if (run.status !== "in_progress") {
+      return (
+        <span className="font-mono font-medium tabular-nums">
+          {line.actual_quantity == null
+            ? "—"
+            : `${actualLine.formattedQty} ${actualLine.displayUnit}`}
+        </span>
+      );
+    }
+    return (
+      <div className="flex min-w-36 items-center gap-2">
+        <QuantityInput
+          value={actualIngredients[line.ingredient_id] ?? ""}
+          onValueChange={(value) =>
+            setActualIngredients((current) => ({
+              ...current,
+              [line.ingredient_id]: value,
+            }))
+          }
+          min="0"
+          maxFractionDigits={3}
+          aria-label={detailCopy.actualQuantityAria(line.ingredient_name)}
+        />
+        <span className="shrink-0 text-xs text-muted-foreground">
+          {line.entry_unit_name}
+        </span>
+      </div>
+    );
+  }
+
+  function renderVariance(line: ProductionLine) {
+    const { diff, diffPercent } = getLineMetrics(line);
+    if (diff == null) {
+      return <span className="font-mono text-muted-foreground">—</span>;
+    }
+    if (Math.abs(diff) < 1e-4) {
+      return <span className="font-mono text-muted-foreground">±0%</span>;
+    }
+    const isOver = diff > 0;
+    return (
+      <span
+        className={
+          isOver
+            ? "font-mono font-semibold text-destructive"
+            : "font-mono font-semibold text-success"
+        }
+        title={
+          isOver
+            ? detailCopy.varianceOver(
+                formatQty(Math.abs(diff)),
+                line.entry_unit_name,
+              )
+            : detailCopy.varianceSaved(
+                formatQty(Math.abs(diff)),
+                line.entry_unit_name,
+              )
+        }
+      >
+        {isOver ? "+" : ""}
+        {diffPercent != null ? formatPercent(diffPercent, 1) : ""}
+      </span>
+    );
+  }
+
+  const lineColumns: DataTableColumn<ProductionLine>[] = [
+    {
+      key: "ingredient",
+      header: detailCopy.ingredientColumn,
+      className: "min-w-48",
+      render: (line) => <span className="font-medium">{line.ingredient_name}</span>,
+    },
+    {
+      key: "planned",
+      header: detailCopy.plannedColumn,
+      className: "w-32 text-right",
+      render: (line) => {
+        const { plannedSmart: plannedLine } = getLineMetrics(line);
+        return (
+          <span className="block text-right font-mono tabular-nums text-muted-foreground">
+            {plannedLine.formattedQty} {plannedLine.displayUnit}
+          </span>
+        );
+      },
+    },
+    {
+      key: "actual",
+      header: detailCopy.actualColumn,
+      className: "min-w-44 text-right",
+      render: (line) => (
+        <div className="flex justify-end">{renderActualQuantity(line)}</div>
+      ),
+    },
+    {
+      key: "variance",
+      header: detailCopy.varianceColumn,
+      className: "w-28 text-right",
+      render: (line) => <span className="block text-right">{renderVariance(line)}</span>,
+    },
+    {
+      key: "unitCost",
+      header: detailCopy.unitCostColumn,
+      className: "w-28 text-right",
+      render: (line) => (
+        <span className="block text-right font-mono text-xs tabular-nums text-muted-foreground">
+          {line.unit_cost != null && line.unit_cost > 0
+            ? formatVND(line.unit_cost)
+            : "—"}
+        </span>
+      ),
+    },
+    {
+      key: "lineCost",
+      header: detailCopy.lineCostColumn,
+      className: "w-32 text-right",
+      render: (line) => (
+        <span className="block text-right font-mono font-medium tabular-nums">
+          {line.line_cost != null && line.line_cost > 0
+            ? formatVND(line.line_cost)
+            : "—"}
+        </span>
+      ),
+    },
+  ];
 
   const body = (
     <div className="flex flex-col gap-5">
@@ -241,7 +395,9 @@ export function ProductionDetailClient({
         </div>
         <div className="col-span-2 min-w-0 sm:col-span-1">
           <span className="block font-medium text-muted-foreground">
-            {run.status === "completed" ? "Giá vốn mẻ (Thực tế)" : "Giá vốn mẻ (Dự kiến)"}
+            {run.status === "completed"
+              ? detailCopy.actualBatchCost
+              : detailCopy.plannedBatchCost}
           </span>
           <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
             {run.total_cost != null && run.total_cost > 0 ? formatVND(run.total_cost) : "—"}
@@ -249,15 +405,19 @@ export function ProductionDetailClient({
           {run.unit_cost != null && run.unit_cost > 0 ? (
             <span
               className="block text-xs text-muted-foreground font-mono"
-              title={`Giá vốn: ${formatVND(run.unit_cost)} / ${run.entry_unit_name ?? "ĐV"}`}
+              title={detailCopy.unitCostTitle(
+                formatVND(run.unit_cost),
+                run.entry_unit_name ?? detailCopy.unitFallback,
+              )}
             >
-              {formatVND(run.unit_cost)} / {run.entry_unit_name ?? "ĐV"}
+              {formatVND(run.unit_cost)} /{" "}
+              {run.entry_unit_name ?? detailCopy.unitFallback}
             </span>
           ) : null}
         </div>
       </Item>
 
-      <AppSection title="Thông tin lệnh" size="sm">
+      <AppSection title={detailCopy.infoTitle} size="sm">
         <DescriptionList
           className="grid gap-3 sm:grid-cols-2"
           descriptionClassName="font-medium"
@@ -279,133 +439,76 @@ export function ProductionDetailClient({
       </AppSection>
 
       <AppSection
-        title="Định mức đã chốt theo lệnh"
-        description={`${detailCopy.sectionLineCount(run.lines.length)} · Lệnh giữ nguyên định mức dù công thức được sửa sau đó.`}
+        title={detailCopy.snapshotTitle}
+        description={detailCopy.snapshotDescription(run.lines.length)}
         contentFlush
       >
-        <Frame className="border-0 rounded-none overflow-hidden">
-          <div className="overflow-x-auto">
-            <div className="min-w-[640px]">
-              <div className="flex gap-2 border-b bg-muted/30 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                <span className="min-w-0 flex-1">Nguyên liệu</span>
-                <span className="w-24 shrink-0 text-right">Kế hoạch</span>
-                <span className="w-28 shrink-0 text-right">Thực tế</span>
-                <span className="w-24 shrink-0 text-right">Chênh lệch</span>
-                <span className="w-24 shrink-0 text-right">Đơn giá</span>
-                <span className="w-28 shrink-0 text-right">Thành tiền</span>
-              </div>
-              <div className="divide-y">
-                {run.lines.map((line) => {
-                  const plannedSmartLine = formatSmartQuantityUnit(line.planned_quantity, line.entry_unit_name);
-                  const actualSmartLine = formatSmartQuantityUnit(line.actual_quantity, line.entry_unit_name);
-                  const planned = Number(line.planned_quantity);
-                  const currentActual =
-                    run.status === "in_progress"
-                      ? Number(actualIngredients[line.ingredient_id])
-                      : line.actual_quantity;
-                  const hasActual =
-                    currentActual != null &&
-                    Number.isFinite(currentActual) &&
-                    run.status !== "draft";
-                  const diff = hasActual ? Number(currentActual) - planned : null;
-                  const diffPercent =
-                    diff != null && planned > 0
-                      ? (diff / planned) * 100
-                      : null;
-
-                  return (
-                    <div
-                      key={line.ingredient_id}
-                      className="flex items-center gap-2 px-3 py-2.5 text-sm"
-                    >
-                      <span className="min-w-0 flex-1 font-medium text-foreground">
-                        {line.ingredient_name}
-                      </span>
-                      <span className="w-24 shrink-0 text-right tabular-nums text-muted-foreground text-xs sm:text-sm font-mono">
-                        {plannedSmartLine.formattedQty} {plannedSmartLine.displayUnit}
-                      </span>
-                      <div className="w-28 shrink-0 flex items-center justify-end gap-1.5">
-                        {run.status === "in_progress" ? (
-                          <div className="flex w-full items-center gap-1.5">
-                            <QuantityInput
-                              value={actualIngredients[line.ingredient_id] ?? ""}
-                              onValueChange={(value) =>
-                                setActualIngredients((current) => ({
-                                  ...current,
-                                  [line.ingredient_id]: value,
-                                }))
-                              }
-                              min="0"
-                              maxFractionDigits={3}
-                              className="h-8 text-xs"
-                              aria-label={`Thực tế ${line.ingredient_name}`}
-                            />
-                            <span className="text-xs text-muted-foreground shrink-0">
-                              {line.entry_unit_name}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="tabular-nums font-medium text-foreground font-mono">
-                            {line.actual_quantity == null
-                              ? "—"
-                              : `${actualSmartLine.formattedQty} ${actualSmartLine.displayUnit}`}
-                          </span>
-                        )}
-                      </div>
-                      <div className="w-24 shrink-0 flex items-center justify-end">
-                        {diff == null ? (
-                          <span className="text-xs text-muted-foreground font-mono">—</span>
-                        ) : Math.abs(diff) < 1e-4 ? (
-                          <span className="text-xs text-muted-foreground font-mono">±0%</span>
-                        ) : diff > 0 ? (
-                          <span
-                            className="text-xs font-semibold text-destructive font-mono"
-                            title={`Vượt định mức ${formatQty(diff)} ${line.entry_unit_name}`}
-                          >
-                            +{diffPercent != null ? formatPercent(diffPercent, 1) : ""}
-                          </span>
-                        ) : (
-                          <span
-                            className="text-xs font-semibold text-success font-mono"
-                            title={`Tiết kiệm ${formatQty(Math.abs(diff))} ${line.entry_unit_name}`}
-                          >
-                            {diffPercent != null ? formatPercent(diffPercent, 1) : ""}
-                          </span>
-                        )}
-                      </div>
-                      <div className="w-24 shrink-0 text-right font-mono text-xs tabular-nums text-muted-foreground">
-                        {line.unit_cost != null && line.unit_cost > 0
-                          ? formatVND(line.unit_cost)
-                          : "—"}
-                      </div>
-                      <div className="w-28 shrink-0 text-right font-mono text-xs font-medium tabular-nums text-foreground">
-                        {line.line_cost != null && line.line_cost > 0
-                          ? formatVND(line.line_cost)
-                          : "—"}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center justify-between border-t bg-muted/30 px-3 py-2.5 text-xs font-semibold text-foreground">
-            <span>Tổng giá trị nguyên liệu {run.status === "completed" ? "(Thực tế)" : "(Dự kiến)"}</span>
-            <span className="font-mono text-sm tabular-nums font-semibold text-foreground">
-              {run.total_cost != null && run.total_cost > 0 ? formatVND(run.total_cost) : "—"}
-            </span>
-          </div>
-        </Frame>
+        <DataTable
+          columns={lineColumns}
+          data={run.lines}
+          getRowKey={(line) => line.ingredient_id}
+          emptyTitle={detailCopy.sectionLineCount(0)}
+          mobileCardRender={(line) => {
+            const { plannedSmart: plannedLine } = getLineMetrics(line);
+            return (
+              <Item variant="outline" className="flex-col items-stretch gap-3">
+                <div className="flex items-start justify-between gap-3">
+                  <span className="font-medium">{line.ingredient_name}</span>
+                  <span className="font-mono font-medium tabular-nums">
+                    {line.line_cost != null && line.line_cost > 0
+                      ? formatVND(line.line_cost)
+                      : "—"}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="block text-xs text-muted-foreground">
+                      {detailCopy.plannedColumn}
+                    </span>
+                    <span className="font-mono tabular-nums">
+                      {plannedLine.formattedQty} {plannedLine.displayUnit}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-xs text-muted-foreground">
+                      {detailCopy.varianceColumn}
+                    </span>
+                    {renderVariance(line)}
+                  </div>
+                </div>
+                <div>
+                  <span className="mb-1 block text-xs text-muted-foreground">
+                    {detailCopy.actualColumn}
+                  </span>
+                  {renderActualQuantity(line)}
+                </div>
+              </Item>
+            );
+          }}
+        />
+        <div className="flex items-center justify-between border-t bg-muted/30 px-3 py-2.5 text-xs font-semibold text-foreground">
+          <span>
+            {detailCopy.ingredientTotal}{" "}
+            {run.status === "completed"
+              ? detailCopy.actualSuffix
+              : detailCopy.plannedSuffix}
+          </span>
+          <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
+            {run.total_cost != null && run.total_cost > 0
+              ? formatVND(run.total_cost)
+              : "—"}
+          </span>
+        </div>
       </AppSection>
 
       {run.status === "in_progress" ? (
         <AppSection
-          title="Sản lượng thực tế"
-          description="Nhập số thành phẩm đã đạt. Mẻ không có sản lượng phải hủy."
+          title={detailCopy.actualOutputTitle}
+          description={detailCopy.actualOutputDescription}
         >
           <div className="flex max-w-sm items-center gap-2">
             <QuantityInput
-              aria-label="Số lượng thực tế"
+              aria-label={detailCopy.actualOutputAria}
               value={actualOutput}
               onValueChange={setActualOutput}
               min="0"
@@ -417,14 +520,24 @@ export function ProductionDetailClient({
       ) : null}
 
       {actionError ? (
-        <Alert variant="destructive"><AlertTitle>Thao tác không thành công</AlertTitle><AlertDescription>{actionError}</AlertDescription></Alert>
+        <Alert variant="destructive">
+          <AlertTitle>{detailCopy.actionFailedTitle}</AlertTitle>
+          <AlertDescription>{actionError}</AlertDescription>
+        </Alert>
       ) : null}
       {shortages.length ? (
         <Alert variant="destructive">
-          <AlertTitle>Không đủ tồn nguyên liệu</AlertTitle>
+          <AlertTitle>{detailCopy.shortageTitle}</AlertTitle>
           <AlertDescription>
             {shortages.map((row) => (
-              <div key={row.ingredient_id}>{row.ingredient_name}: cần {formatQty(row.needed)} {row.unit}, còn {formatQty(row.on_hand)} {row.unit}</div>
+              <div key={row.ingredient_id}>
+                {detailCopy.shortageLine(
+                  row.ingredient_name,
+                  formatQty(row.needed),
+                  formatQty(row.on_hand),
+                  row.unit,
+                )}
+              </div>
             ))}
           </AlertDescription>
         </Alert>
@@ -451,13 +564,15 @@ export function ProductionDetailClient({
           }
         >
           <p className="text-sm text-muted-foreground">
-            Lệnh sản xuất đã hoàn tất. Bạn có thể tạo phiếu điều chuyển để xuất thành phẩm tới các chi nhánh bán hàng.
+            {detailCopy.completedTransferHint}
           </p>
         </AppSection>
       ) : null}
 
       {run.status === "cancelled" && run.cancel_reason ? (
-        <AppSection title="Lý do hủy"><p className="text-sm">{run.cancel_reason}</p></AppSection>
+        <AppSection title={detailCopy.cancelReasonTitle}>
+          <p className="text-sm">{run.cancel_reason}</p>
+        </AppSection>
       ) : null}
     </div>
   );
@@ -466,28 +581,41 @@ export function ProductionDetailClient({
     <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       <div>
         {run.status === "draft" || run.status === "in_progress" ? (
-          <Button
+          <ResponsiveActionButton
             type="button"
             variant="destructive"
             onClick={() => void handleCancel()}
             disabled={isPending}
           >
-            Hủy lệnh
-          </Button>
+            {detailCopy.cancelAction}
+          </ResponsiveActionButton>
         ) : null}
       </div>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
+        <ResponsiveActionButton
+          type="button"
+          variant="outline"
+          onClick={onClose}
+          disabled={isPending}
+        >
           {ACTIONS_VI.close}
-        </Button>
+        </ResponsiveActionButton>
         {run.status === "draft" ? (
-          <Button type="button" onClick={handleStart} disabled={isPending}>
-            Bắt đầu sản xuất
-          </Button>
+          <ResponsiveActionButton
+            type="button"
+            onClick={handleStart}
+            disabled={isPending}
+          >
+            {detailCopy.startAction}
+          </ResponsiveActionButton>
         ) : run.status === "in_progress" ? (
-          <Button type="button" onClick={handleComplete} disabled={isPending}>
-            Hoàn thành
-          </Button>
+          <ResponsiveActionButton
+            type="button"
+            onClick={handleComplete}
+            disabled={isPending}
+          >
+            {detailCopy.completeAction}
+          </ResponsiveActionButton>
         ) : null}
       </div>
     </div>

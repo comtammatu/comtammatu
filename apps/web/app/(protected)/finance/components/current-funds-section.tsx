@@ -376,6 +376,7 @@ export function CurrentFundsSection({
         action={fundsAction}
       >
         {fundsFormula}
+        {children}
         {!isBranchScope && cash.branches.length > 0 ? (
           <div className="grid gap-2">
             <p className="text-xs font-medium text-muted-foreground">
@@ -398,7 +399,6 @@ export function CurrentFundsSection({
             </ul>
           </div>
         ) : null}
-        {children}
       </AppSection>
 
       {!booksReady && !(cash.legacySettingsPresent && !cash.hasCompanyOpening) ? (

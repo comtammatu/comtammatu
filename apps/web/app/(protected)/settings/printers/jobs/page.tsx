@@ -208,5 +208,3 @@ export default async function PrintJobsPage({
     </SettingsPageFrame>
   );
 }
-
-export const instant = false;

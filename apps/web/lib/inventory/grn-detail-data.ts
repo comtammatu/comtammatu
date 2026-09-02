@@ -1,5 +1,6 @@
 import "server-only";
 
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { notFound } from "next/navigation";
 import { PERMISSION_KEYS, PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import { fetchEntityAuditLogs } from "@/_lib/audit";
@@ -256,7 +257,7 @@ export async function loadGrnDetailResult(
       name: ingredient?.name ?? "—",
       sku: "",
       supplierId: line.supplier_id,
-      supplierName: lineSupplier?.name ?? `#${line.supplier_id}`,
+      supplierName: lineSupplier?.name ?? UNKNOWN_LABEL_VI,
       poQuantity: line.po_quantity != null ? Number(line.po_quantity) : null,
       previouslyReceived,
       remainingQuantity: remaining,
@@ -280,7 +281,9 @@ export async function loadGrnDetailResult(
       unitCostUnitId: priceUnitId,
       unitCostUnitLabel,
       unitCostToBaseFactor:
-        unitCostToBaseFactor > 0 ? unitCostToBaseFactor : defaultPrice.toBaseFactor,
+        unitCostToBaseFactor > 0
+          ? unitCostToBaseFactor
+          : defaultPrice.toBaseFactor,
       costPending: line.cost_pending === true,
       provisionalCostSource: line.provisional_cost_source ?? null,
       suggestedUnitCost: null,
@@ -306,7 +309,8 @@ export async function loadGrnDetailResult(
       poNumber: po.po_number,
       status: po.status,
       supplierId: po.supplier_id,
-      supplierName: poSupplier?.name ?? (po.supplier_id != null ? `#${po.supplier_id}` : "—"),
+      supplierName:
+        poSupplier?.name ?? (po.supplier_id != null ? UNKNOWN_LABEL_VI : "—"),
     };
   });
 
@@ -345,8 +349,8 @@ export async function loadGrnDetailResult(
       PERMISSION_KEYS.PROCUREMENT_INVOICE_CREATE,
     ),
     context != null &&
-      context.claims.user_role === "owner" &&
-      data.grn.status === "confirmed"
+    context.claims.user_role === "owner" &&
+    data.grn.status === "confirmed"
       ? loadUnpricedConfirmedGrnQueue(context.supabase)
       : Promise.resolve({ rows: [], total: 0 }),
   ]);
@@ -400,7 +404,7 @@ export async function loadGrnDetailResult(
     branchId: data.grn.branch_id,
     locationId: data.grn.location_id ?? null,
     locationName: currentLocationName,
-    branchName: branch?.name ?? `#${data.grn.branch_id}`,
+    branchName: branch?.name ?? UNKNOWN_LABEL_VI,
     supplierId: data.grn.supplier_id,
     supplier: supplierSummary,
     date: data.grn.received_date ? formatDate(data.grn.received_date) : "—",

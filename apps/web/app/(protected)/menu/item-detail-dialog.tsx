@@ -23,7 +23,7 @@ import {
   TabsTrigger,
 } from "@comtammatu/ui/components/tabs";
 import { saveVariants, saveModifiers, saveSides } from "./actions";
-import { SIDE_DISH_TYPE } from "./category-labels";
+import { SIDE_DISH_TYPE } from "@comtammatu/shared/menu";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { createClient } from "@comtammatu/database/supabase/client";
 import type { ItemRow } from "./item-table";

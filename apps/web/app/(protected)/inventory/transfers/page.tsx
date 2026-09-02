@@ -2,8 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Plus as IconPlus } from "lucide-react";
 import { STOCK_REQUEST_FULFILL_ROLES } from "@comtammatu/shared/auth";
-import { Button } from "@comtammatu/ui/components/button";
 import { AppPage, AppPageHeader } from "@/components/surface";
+import { ResponsiveActionButton } from "@/components/responsive-action-button";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveInventoryListScope } from "../_lib/inventory-scope";
 import { loadStockFulfillmentRows } from "@lib/inventory/stock-fulfillment-data";
@@ -156,12 +156,18 @@ export default async function TransfersPage({
                 />
               ) : null}
               {writeRequiresSitePick ? (
-                <Button type="button" disabled title={sitePickTitle}>
+                <ResponsiveActionButton
+                  type="button"
+                  density="header"
+                  disabled
+                  title={sitePickTitle}
+                >
                   <IconPlus data-icon="inline-start" />
                   {copy.manualTransferAction}
-                </Button>
+                </ResponsiveActionButton>
               ) : (
-                <Button
+                <ResponsiveActionButton
+                  density="header"
                   render={
                     <Link
                       href={`/inventory/transfers/new?branch=${branchId}&branch=${branchId}`}
@@ -170,7 +176,7 @@ export default async function TransfersPage({
                 >
                   <IconPlus data-icon="inline-start" />
                   {copy.manualTransferAction}
-                </Button>
+                </ResponsiveActionButton>
               )}
             </div>
           ) : null

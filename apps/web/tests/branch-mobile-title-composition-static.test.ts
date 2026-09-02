@@ -32,7 +32,7 @@ test("BranchOperatorPage keeps hideHeaderOnMobile as an optional adapter API", (
     /className=\{hideHeaderOnMobile \? "max-sm:sr-only" : undefined\}/,
   );
   assert.doesNotMatch(source, /className=\{hideHeaderOnMobile \? "hidden"/);
-  assert.match(source, /compactOnMobile=\{hideHeaderOnMobile\}/);
+  assert.match(source, /compactOnMobile=\{true\}/);
 });
 
 test("BranchOperatorPage only height-fills when fill is opted in", () => {
@@ -99,9 +99,18 @@ test("settings landing and children keep one page H1 without a duplicate mobile 
     "app/(protected)/br/[branchId]/(operator)/settings/page.tsx",
   );
   assert.doesNotMatch(landing, /hideHeaderOnMobile/);
-  assert.doesNotMatch(landing, /BranchOperatorControlBar|BranchSettingsBackControl/);
+  assert.doesNotMatch(
+    landing,
+    /BranchOperatorControlBar|BranchSettingsBackControl/,
+  );
 
-  for (const child of ["tables", "pos", "kds", "printers", "network"] as const) {
+  for (const child of [
+    "tables",
+    "pos",
+    "kds",
+    "printers",
+    "network",
+  ] as const) {
     const source = read(
       `app/(protected)/br/[branchId]/(operator)/settings/${child}/page.tsx`,
     );
@@ -122,7 +131,10 @@ test("menu-limits overlay does not add a ControlBar under the sheet", () => {
   const host = read(
     "app/(protected)/br/[branchId]/(operator)/menu-limits/menu-limits-host.tsx",
   );
-  assert.doesNotMatch(page, /BranchOperatorControlBar|BranchSettingsBackControl/);
+  assert.doesNotMatch(
+    page,
+    /BranchOperatorControlBar|BranchSettingsBackControl/,
+  );
   assert.doesNotMatch(host, /BranchOperatorControlBar/);
   assert.match(host, /BranchQuickMenuLimitSheet/);
 });

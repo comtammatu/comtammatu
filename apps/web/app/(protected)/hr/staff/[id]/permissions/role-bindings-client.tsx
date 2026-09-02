@@ -4,7 +4,6 @@ import {
   OWNER_SHELL_BREAKPOINT,
   useIsMobile,
 } from "@comtammatu/ui/hooks/use-mobile";
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: security role binding surface */
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -22,6 +21,7 @@ import { AppDialog, FormDialog, SelectField } from "@/components/form";
 import { AppSection } from "@/components/surface";
 import { getVerifiedTotpFactorId } from "@lib/auth/mfa";
 import { MfaStepUpDialog } from "@lib/auth/mfa-step-up-dialog";
+import { messages } from "@lib/messages";
 import { setRoleBindingAction } from "./actions";
 import { ROLE_BINDING_ERROR_CODES } from "./role-binding-error-codes";
 
@@ -50,8 +50,10 @@ type Props = {
   canOpenSecuritySettings: boolean;
 };
 
+const copy = messages.hr.accessControl;
+
 const formSchema = z.object({
-  roleCode: z.string().min(1, "Chọn vai trò hệ thống."),
+  roleCode: z.string().min(1, copy.roleRequired),
   branchId: z.string(),
 });
 
@@ -116,7 +118,7 @@ export function RoleBindingsClient({
       if (!steppedUp) {
         return {
           success: false,
-          error: result.error ?? "Cần xác thực AAL2 trước khi thay đổi phân quyền.",
+          error: result.error ?? copy.reauthenticateRequired,
           errorCode: ROLE_BINDING_ERROR_CODES.AAL2_REQUIRED,
         };
       }
@@ -127,14 +129,14 @@ export function RoleBindingsClient({
 
   async function submit(values: FormValues) {
     const role = roleByCode.get(values.roleCode);
-    if (!role) return { success: false, error: "Vai trò không hợp lệ." };
+    if (!role) return { success: false, error: copy.invalidRole };
     const branchId =
       role.allowedScope === "branch" ? Number(values.branchId) : null;
     if (
       role.allowedScope === "branch" &&
       (branchId == null || !Number.isInteger(branchId) || branchId <= 0)
     ) {
-      return { success: false, error: "Chọn chi nhánh cho vai trò này." };
+      return { success: false, error: copy.branchRequired };
     }
     const result = await runBindingMutation({
       targetUserId,
@@ -156,19 +158,19 @@ export function RoleBindingsClient({
         active: false,
       });
       if (!result.success) {
-        toast.error(result.error ?? "Không thể thu hồi vai trò.");
+        toast.error(result.error ?? copy.revokeFailed);
         return;
       }
       setRevoking(null);
       router.refresh();
-      toast.success("Đã thu hồi vai trò hệ thống.");
+      toast.success(copy.revoked);
     });
   }
 
   const columns: DataTableColumn<RoleBinding>[] = [
     {
       key: "role",
-      header: "Vai trò hệ thống",
+      header: copy.roleHeader,
       render: (binding) => (
         <span className="font-medium">
           {roleByCode.get(binding.roleCode)?.label ?? binding.roleCode}
@@ -177,32 +179,32 @@ export function RoleBindingsClient({
     },
     {
       key: "scope",
-      header: "Phạm vi",
+      header: copy.scopeHeader,
       render: (binding) => (
         <Badge variant="secondary">
           {binding.branchId == null
-            ? "Toàn công ty"
-            : (branchById.get(binding.branchId) ?? "Chi nhánh")}
+            ? copy.tenantScope
+            : (branchById.get(binding.branchId) ?? copy.branchFallback)}
         </Badge>
       ),
     },
     {
       key: "status",
-      header: "Trạng thái",
-      render: () => <Badge variant="success">Đang hiệu lực</Badge>,
+      header: copy.statusHeader,
+      render: () => <Badge variant="success">{copy.active}</Badge>,
     },
     ...(canManage
       ? [
           {
             key: "actions",
-            header: <span className="sr-only">Thu hồi</span>,
+            header: <span className="sr-only">{copy.revoke}</span>,
             className: "w-12",
             render: (binding: RoleBinding) => (
               <Button
                 type="button"
                 variant="ghost"
                 size="icon-sm"
-                aria-label="Thu hồi vai trò"
+                aria-label={copy.revokeAria}
                 onClick={() => setRevoking(binding)}
               >
                 <Trash2 />
@@ -216,8 +218,8 @@ export function RoleBindingsClient({
   return (
     <>
       <AppSection
-        title="Vai trò và phạm vi truy cập"
-        description="Chức danh trong hồ sơ không tự cấp quyền hệ thống. Mỗi vai trò dưới đây được gán độc lập theo phạm vi."
+        title={copy.sectionTitle}
+        description={copy.sectionDescription}
         icon={<ShieldCheck />}
         contentFlush
         action={
@@ -227,7 +229,7 @@ export function RoleBindingsClient({
               size={isTouchLayout ? "touch" : "default"}
               onClick={() => setFormOpen(true)}
             >
-              Gán vai trò
+              {copy.addRole}
             </Button>
           ) : undefined
         }
@@ -236,21 +238,21 @@ export function RoleBindingsClient({
           columns={columns}
           data={bindings}
           getRowKey={(binding) => binding.id}
-          emptyTitle="Chưa có vai trò hệ thống"
-          emptyDescription="Người này chưa được cấp quyền truy cập theo role binding."
+          emptyTitle={copy.emptyTitle}
+          emptyDescription={copy.emptyDescription}
         />
       </AppSection>
 
       <FormDialog<FormValues>
         open={formOpen}
         onOpenChange={setFormOpen}
-        title="Gán vai trò hệ thống"
-        description="Thao tác yêu cầu quyền Quản trị phân quyền và phiên đăng nhập AAL2."
+        title={copy.formTitle}
+        description={copy.formDescription}
         schema={formSchema}
         defaultValues={{ roleCode: roles[0]?.code ?? "", branchId: "" }}
         onSubmit={submit}
-        submitLabel="Gán vai trò"
-        successMessage="Đã gán vai trò hệ thống."
+        submitLabel={copy.addRole}
+        successMessage={copy.assigned}
       >
         {(form) => {
           const role = roleByCode.get(form.watch("roleCode"));
@@ -259,14 +261,14 @@ export function RoleBindingsClient({
               <SelectField
                 control={form.control}
                 name="roleCode"
-                label="Vai trò hệ thống"
+                label={copy.roleHeader}
                 options={roles.map((item) => ({
                   value: item.code,
                   label: item.label,
                   hint:
                     item.allowedScope === "branch"
-                      ? "Theo chi nhánh"
-                      : "Toàn công ty",
+                      ? copy.branchScopeHint
+                      : copy.tenantScopeHint,
                 }))}
                 required
               />
@@ -274,7 +276,7 @@ export function RoleBindingsClient({
                 <SelectField
                   control={form.control}
                   name="branchId"
-                  label="Chi nhánh"
+                  label={copy.branchLabel}
                   options={branches.map((branch) => ({
                     value: String(branch.id),
                     label: branch.name,
@@ -292,19 +294,19 @@ export function RoleBindingsClient({
         onOpenChange={(open) => {
           if (!open) setRevoking(null);
         }}
-        title="Thu hồi vai trò hệ thống?"
-        description="Quyền tương ứng sẽ mất hiệu lực ngay sau khi xác nhận."
+        title={copy.revokeTitle}
+        description={copy.revokeDescription}
         footer={
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setRevoking(null)}>
-              Hủy
+              {copy.cancel}
             </Button>
             <Button
               variant="destructive"
               disabled={isRevoking}
               onClick={revoke}
             >
-              Thu hồi
+              {copy.revoke}
             </Button>
           </div>
         }

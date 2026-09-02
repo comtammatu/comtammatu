@@ -188,11 +188,6 @@ export function MfaSecurityClient() {
               ) : (
                 <Badge variant="secondary">{copy.statusDisabled}</Badge>
               )}
-              {aal ? (
-                <Badge variant="outline">
-                  {copy.aalLabel}: {aal.toUpperCase()}
-                </Badge>
-              ) : null}
             </div>
 
             {verifiedFactors.length > 0 ? (

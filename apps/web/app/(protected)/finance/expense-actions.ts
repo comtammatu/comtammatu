@@ -13,6 +13,7 @@
 
 import { z } from "zod";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import {
   addMoney,
   parseMoneyToMinorUnits,
@@ -1099,7 +1100,7 @@ export async function searchSepayRefundOptions(input: {
       amount: Number(row.amount),
       approvedAt: row.approved_at,
       orderId: row.order_id,
-      orderNumber: order?.order_number ?? `#${row.order_id}`,
+      orderNumber: order?.order_number ?? UNKNOWN_LABEL_VI,
       webhookEventId: row.webhook_event_id,
     };
   });

@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { Plus as IconPlus } from "lucide-react";
-import { Button } from "@comtammatu/ui/components/button";
 import { AppPageHeader } from "@/components/surface";
+import { ResponsiveActionButton } from "@/components/responsive-action-button";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import { useDocumentOverlayUrl } from "@lib/navigation/use-document-overlay-url";
@@ -80,19 +80,23 @@ export function ProductionWorkspaceClient({
         title={INVENTORY_VI.productionTitle}
         actions={
           activeTab === "runs" && canCreateProduction ? (
-            <Button size="lg" type="button" onClick={() => setCreateRunOpen(true)}>
+            <ResponsiveActionButton
+              density="header"
+              type="button"
+              onClick={() => setCreateRunOpen(true)}
+            >
               <IconPlus data-icon="inline-start" />
               {INVENTORY_VI.createOrderShort}
-            </Button>
+            </ResponsiveActionButton>
           ) : activeTab === "recipes" && canManageRecipes ? (
-            <Button
-              size="lg"
+            <ResponsiveActionButton
+              density="header"
               type="button"
               onClick={() => setCreateRecipeOpen(true)}
             >
               <IconPlus data-icon="inline-start" />
               {INVENTORY_VI.productionRecipeCreate}
-            </Button>
+            </ResponsiveActionButton>
           ) : null
         }
       />

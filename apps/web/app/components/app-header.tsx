@@ -32,7 +32,7 @@ export function AppHeaderBrand({
       </BrandLogoBox>
       {showText ? (
         <div className="min-w-0">
-          <p className="font-heading truncate text-sm font-semibold sm:text-base">
+          <p className="font-heading line-clamp-2 min-w-0 text-sm font-semibold leading-tight sm:line-clamp-1 sm:text-base">
             {title}
           </p>
           {subtitle ? (
@@ -50,8 +50,8 @@ export function AppHeaderBrand({
     </>
   );
   const className = cn(
-    "flex items-center gap-2",
-    showText ? "min-w-0" : "min-h-11 min-w-11 shrink-0 justify-center",
+    "flex min-h-11 items-center gap-2",
+    showText ? "min-w-0" : "min-w-11 shrink-0 justify-center",
   );
   const linkAriaLabel = ariaLabel || (!showText ? BRAND_NAME : undefined);
 
@@ -94,7 +94,7 @@ export interface AppHeaderProps {
 }
 
 /**
- * Canonical sticky brand-lockup header for standalone (non-sidebar) chrome:
+ * Canonical in-flow brand-lockup header for standalone (non-sidebar) chrome:
  * the Branch runtime operator layout and the Employee/Operations PWA header.
  * Both consumers rendered the identical box + title/subtitle + actions row
  * before this extraction, so the markup is single-sourced here
@@ -116,7 +116,7 @@ export function AppHeader({
   return (
     <header
       className={cn(
-        "sticky top-0 z-30 border-b bg-card/95 backdrop-blur chrome-tap select-none print:hidden",
+        "z-30 shrink-0 border-b border-border/70 bg-card/95 backdrop-blur chrome-tap select-none print:hidden",
         className,
       )}
     >
@@ -136,9 +136,7 @@ export function AppHeader({
         />
         {nav}
         <div className="flex shrink-0 items-center gap-2">
-          {showThemeToggle ? (
-            <ResponsiveThemeToggle variant="outline" />
-          ) : null}
+          {showThemeToggle ? <ResponsiveThemeToggle variant="outline" /> : null}
           {actions}
         </div>
       </div>

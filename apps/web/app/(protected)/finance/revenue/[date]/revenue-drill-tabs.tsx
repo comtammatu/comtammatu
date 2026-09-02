@@ -32,7 +32,7 @@ import {
 } from "@/components/data-table/data-table";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import { StatusBadge } from "@/components/status-badge";
-import { formatVNTime } from "@/_lib/format-datetime";
+import { formatVNTime } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
 import type { HourSummary, OrderRow } from "./_lib/revenue-drill-types";
 
@@ -206,7 +206,7 @@ export function RevenueDrillTabs({
                 href={`/br/${String(row.branch_id)}/pos-sessions?session=${String(row.pos_session_id)}`}
                 className="underline-offset-4 hover:underline"
               >
-                Ca #{String(row.pos_session_id)}
+                {copy.relatedPosSession}
               </Link>
             ) : (
               "Không có ca"

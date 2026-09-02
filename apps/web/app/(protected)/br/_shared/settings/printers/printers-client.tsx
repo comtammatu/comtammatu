@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { ACTIONS_VI, BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { confirm } from "@/components/confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { messages } from "@lib/messages";
@@ -82,37 +83,13 @@ const PRINT_TYPE_ORDER: readonly PrintType[] = [
   "cancel_ticket",
 ];
 
-const PRINT_TYPE_LABEL: Record<PrintType, string> = {
-  receipt: "Hóa đơn thanh toán",
-  provisional_bill: "Phiếu tạm tính",
-  shift_close_report: "Phiếu chốt ca",
-  kitchen_ticket: "Phiếu bếp",
-  cancel_ticket: "Phiếu hủy / giảm món",
-};
+const PRINTER_COPY = messages.settings.printers;
+const PRINT_TYPE_LABEL: Record<PrintType, string> = PRINTER_COPY.printTypes;
 
 const KITCHEN_PRINT_TYPES = new Set<PrintType>([
   "kitchen_ticket",
   "cancel_ticket",
 ]);
-
-const PRINTER_COPY = {
-  active: "Đang bật",
-  inactive: "Tắt",
-  emptyBranch: "Chưa có máy in nào",
-  noPrintTypes: "Chưa chọn loại phiếu",
-  noCategories: "Chưa gán danh mục món",
-  addPrinter: "Thêm máy in",
-  samplePrinterPlaceholder: "Ví dụ: Xprinter XP-T80A",
-  lanPortHelp: "Mặc định 9100. Chỉ đổi khi máy in yêu cầu port khác.",
-  paperWidthLabel: "Khổ giấy",
-  printTypesLabel: "Loại phiếu in trên máy này",
-  categoriesLabel: "Danh mục món in trên máy này",
-  categoriesHint:
-    "Mỗi danh mục chỉ gán cho một máy in bếp trong chi nhánh.",
-  activeControlLabel: "Cho phép nhận lệnh in",
-  testPrint: messages.settings.printers.testPrint,
-  testPrintSent: messages.settings.printers.testPrintSent,
-} as const;
 
 const PRINTER_FORM_ID = "branch-printer-form";
 const PRINTER_FIELD_IDS = {
@@ -187,7 +164,7 @@ export function PrintersClient(props: {
             key={branch.id}
             title={branch.name}
             badge={{
-              children: `Dịch vụ in: ${agent?.is_online ? "Đang kết nối" : "Mất kết nối"}`,
+              children: PRINTER_COPY.serviceStatus(agent?.is_online === true),
               variant: agent?.is_online ? "default" : "outline",
             }}
           >
@@ -206,8 +183,7 @@ export function PrintersClient(props: {
                   );
                   const canTestPrint =
                     printer.is_active && Boolean(printer.lan_host?.trim());
-                  const isTesting =
-                    testPending && testPendingId === printer.id;
+                  const isTesting = testPending && testPendingId === printer.id;
                   return (
                     <Item
                       key={printer.id}
@@ -252,7 +228,7 @@ export function PrintersClient(props: {
                               categoryIds.map((categoryId) => (
                                 <Badge key={categoryId} variant="outline">
                                   {categoryMap.get(categoryId) ??
-                                    `#${categoryId}`}
+                                    UNKNOWN_LABEL_VI}
                                 </Badge>
                               ))
                             ) : (
@@ -376,7 +352,7 @@ function PrinterForm({
     if (pending) return;
     setErr(null);
     if (!form.branch_id) {
-      setErr("Vui lòng chọn chi nhánh");
+      setErr(PRINTER_COPY.branchRequired);
       return;
     }
     const printTypes = asPrintTypes(form.print_types);
@@ -391,12 +367,10 @@ function PrinterForm({
         paper_width_mm: form.paper_width_mm,
         is_active: form.is_active,
         print_types: printTypes,
-        category_ids: showsCategoryRoutes(printTypes)
-          ? form.category_ids
-          : [],
+        category_ids: showsCategoryRoutes(printTypes) ? form.category_ids : [],
       });
       if (!res.success) {
-        setErr(res.error ?? "Có lỗi xảy ra");
+        setErr(res.error ?? PRINTER_COPY.genericError);
         return;
       }
       onClose();
@@ -406,15 +380,20 @@ function PrinterForm({
   const remove = async () => {
     if (!initial) return;
     const ok = await confirm({
-      title: "Xóa máy in này?",
-      description: "Cấu hình máy in sẽ bị xóa và không thể khôi phục.",
+      title: PRINTER_COPY.deleteTitle,
+      description: PRINTER_COPY.deleteDescription,
       details: [
         { label: FORM_VI.name, value: initial.name },
         ...(initial.lan_host
-          ? [{ label: "LAN host / IP", value: initial.lan_host }]
+          ? [
+              {
+                label: PRINTER_COPY.networkAddressLabel,
+                value: initial.lan_host,
+              },
+            ]
           : []),
       ],
-      confirmText: "Xóa",
+      confirmText: PRINTER_COPY.deleteConfirm,
       variant: "destructive",
     });
     if (!ok) return;
@@ -422,7 +401,7 @@ function PrinterForm({
     startTransition(async () => {
       const res = await deletePrinter(initial.id);
       if (!res.success) {
-        setErr(res.error ?? "Có lỗi xảy ra");
+        setErr(res.error ?? PRINTER_COPY.genericError);
         return;
       }
       onClose();
@@ -433,7 +412,7 @@ function PrinterForm({
     <AppDialog
       open
       onOpenChange={(open) => !open && onClose()}
-      title={initial ? "Sửa máy in" : PRINTER_COPY.addPrinter}
+      title={initial ? PRINTER_COPY.editPrinter : PRINTER_COPY.addPrinter}
       description={initial ? initial.name : undefined}
       contentClassName="sm:max-w-md"
       bodyClassName="max-h-dvh-95 overflow-y-auto"
@@ -468,7 +447,7 @@ function PrinterForm({
             className="w-full sm:w-auto"
             disabled={pending}
           >
-            {pending ? "Đang lưu…" : "Lưu"}
+            {pending ? PRINTER_COPY.saving : PRINTER_COPY.save}
           </Button>
         </>
       }
@@ -496,7 +475,7 @@ function PrinterForm({
                   readOnly
                   value={
                     branches.find((branch) => branch.id === form.branch_id)
-                      ?.name ?? `#${form.branch_id}`
+                      ?.name ?? UNKNOWN_LABEL_VI
                   }
                   className="bg-muted/50"
                 />
@@ -549,7 +528,7 @@ function PrinterForm({
 
           <Field>
             <FieldLabel htmlFor={PRINTER_FIELD_IDS.lanHost}>
-              LAN host / IP
+              {PRINTER_COPY.networkAddressLabel}
             </FieldLabel>
             <Input
               id={PRINTER_FIELD_IDS.lanHost}
@@ -568,7 +547,7 @@ function PrinterForm({
 
           <Field>
             <FieldLabel htmlFor={PRINTER_FIELD_IDS.lanPort}>
-              LAN port
+              {PRINTER_COPY.networkPortLabel}
             </FieldLabel>
             <Input
               id={PRINTER_FIELD_IDS.lanPort}
@@ -619,7 +598,10 @@ function PrinterForm({
             </Select>
           </Field>
 
-          <Field orientation="horizontal" className="items-center self-end pb-1">
+          <Field
+            orientation="horizontal"
+            className="items-center self-end pb-1"
+          >
             <Switch
               id={PRINTER_FIELD_IDS.active}
               name="is_active"

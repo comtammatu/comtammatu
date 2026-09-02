@@ -5,6 +5,7 @@ import {
   getVNDateString,
   getVNMonthStartDateString,
 } from "@comtammatu/shared/time";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { loadAuthState } from "@/_lib/auth";
 import { getBranchSiteDisplayName } from "@/(protected)/inventory/_lib/branch-site-labels";
 import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
@@ -75,9 +76,7 @@ export async function loadBranchStockReportData(
 
   return {
     branchId: routeBranchId,
-    branchName: branch
-      ? getBranchSiteDisplayName(branch)
-      : `CN #${routeBranchId}`,
+    branchName: branch ? getBranchSiteDisplayName(branch) : UNKNOWN_LABEL_VI,
     periodStart,
     periodEnd,
     locations,

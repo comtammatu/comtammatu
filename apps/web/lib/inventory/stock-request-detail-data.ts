@@ -1,5 +1,6 @@
 import "server-only";
 
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { fetchEntityAuditLogs, type AuditLogRow } from "@/_lib/audit";
 import type { TenantSupabase } from "@lib/inventory/types";
 import { getStockJourney, type StockJourney } from "./stock-journey-model";
@@ -135,7 +136,7 @@ export async function loadStockRequestDetail({
     (item) => ({
       id: item.id,
       ingredientId: item.ingredient_id,
-      ingredientName: item.ingredients?.name ?? `NL #${item.ingredient_id}`,
+      ingredientName: item.ingredients?.name ?? UNKNOWN_LABEL_VI,
       entryUnitId: item.entry_unit_id,
       unitLabel: unitLabels.get(item.entry_unit_id) ?? "",
       quantity: Number(item.quantity),
@@ -188,8 +189,7 @@ export async function loadStockRequestDetail({
     requestNumber: request.request_number,
     status: request.status,
     branchId: request.branch_id,
-    branchName:
-      branchNames.get(request.branch_id) ?? `Chi nhánh #${request.branch_id}`,
+    branchName: branchNames.get(request.branch_id) ?? UNKNOWN_LABEL_VI,
     neededAt: request.needed_at,
     notes: request.notes,
     statusReason: request.status_reason,
@@ -204,11 +204,8 @@ export async function loadStockRequestDetail({
       status: transfer.status,
       fromBranchKind: branchKinds.get(transfer.from_branch_id) ?? "branch",
       fromBranchName:
-        branchNames.get(transfer.from_branch_id) ??
-        `Điểm #${transfer.from_branch_id}`,
-      toBranchName:
-        branchNames.get(transfer.to_branch_id) ??
-        `Điểm #${transfer.to_branch_id}`,
+        branchNames.get(transfer.from_branch_id) ?? UNKNOWN_LABEL_VI,
+      toBranchName: branchNames.get(transfer.to_branch_id) ?? UNKNOWN_LABEL_VI,
     })),
     journey,
     auditLogs,

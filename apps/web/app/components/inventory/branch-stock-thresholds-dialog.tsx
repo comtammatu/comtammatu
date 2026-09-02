@@ -40,10 +40,14 @@ function getUnitLabel(row: BranchStockThresholdRow): string | null {
 export function BranchStockThresholdsDialog({
   branchId,
   branchName,
+  locationId,
+  locationLabel,
   initialRows,
 }: {
   branchId: number;
   branchName?: string | null;
+  locationId: number;
+  locationLabel: string;
   initialRows: BranchStockThresholdRow[];
 }) {
   const controlSize = useFormControlSize();
@@ -137,6 +141,7 @@ export function BranchStockThresholdsDialog({
     startTransition(async () => {
       const res = await saveBranchStockThresholdsAction({
         branchId,
+        locationId,
         thresholds: changedRows.map((r) => ({
           ingredientId: r.ingredientId,
           minStockLevel: r.effectiveMinStock,
@@ -162,7 +167,7 @@ export function BranchStockThresholdsDialog({
     <>
       <Button
         variant="outline"
-        size="sm"
+        size={controlSize}
         className="gap-1.5"
         onClick={() => setOpen(true)}
       >
@@ -174,7 +179,7 @@ export function BranchStockThresholdsDialog({
         open={open}
         onOpenChange={setOpen}
         title={INVENTORY_VI.branchThresholdsTitle}
-        description={`${branchName ? `${branchName} — ` : ""}${INVENTORY_VI.branchThresholdsDescription}`}
+        description={INVENTORY_VI.branchThresholdsDescription}
         contentClassName="max-w-3xl"
         footer={
           <div className="flex w-full flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -215,6 +220,9 @@ export function BranchStockThresholdsDialog({
         }
       >
         <div className="flex max-h-dvh-70 flex-col gap-4 overflow-y-auto">
+          <p className="text-xs font-medium text-muted-foreground">
+            {[branchName, locationLabel].filter(Boolean).join(" · ")}
+          </p>
           <div className="flex flex-col gap-2">
             <InputGroup size={controlSize}>
               <InputGroupAddon>

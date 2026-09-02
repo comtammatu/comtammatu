@@ -12,6 +12,7 @@ import {
   type BranchKind,
   type ResolvedOperatorTile,
 } from "@comtammatu/shared/auth";
+import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Item,
@@ -368,8 +369,8 @@ export default async function OperatorStockPage({
 
     return (
       <BranchOperatorPage
-        title={journeyCopy.hubTitle}
-        description={journeyCopy.branchHubDescription}
+        title={APP_COPY_VI.branchNavStock}
+        description={messages.inventory.dashboard.mainFlowsOperatorDescription}
         action={<div className="max-sm:hidden">{createActions}</div>}
       >
         <div className="flex min-w-0 flex-col gap-4">

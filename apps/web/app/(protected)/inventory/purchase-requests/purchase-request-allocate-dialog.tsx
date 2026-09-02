@@ -20,7 +20,7 @@ import {
   type PurchaseOrderDraft,
   type PurchaseOrderDraftLine,
   type PurchaseOrderSupplier,
-} from "./purchase-order-drafts";
+} from "@lib/inventory/purchase-order-drafts";
 
 const copy = messages.inventory.purchaseRequests;
 const detailCopy = copy.detail;

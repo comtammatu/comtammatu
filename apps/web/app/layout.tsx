@@ -11,9 +11,9 @@ import { getThemeScriptHtml } from "@comtammatu/ui/components/theme-script";
 import { TooltipProvider } from "@comtammatu/ui/components/tooltip";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { SerwistProvider } from "@serwist/next/react";
 import { ResponsiveToaster } from "./_components/responsive-toaster";
 import { DevServiceWorkerReset } from "./dev-service-worker-reset";
-import { SerwistProvider } from "./serwist-provider";
 import "@comtammatu/ui/globals.css";
 import { cn } from "@comtammatu/ui";
 import { messages } from "@lib/messages";
@@ -23,8 +23,6 @@ import {
   THEME_COOKIE_NAME,
   resolveThemeMode,
 } from "./_lib/theme-tokens";
-
-export const instant = false;
 
 export const metadata: Metadata = {
   title: "Cơm Tấm Má Tư",

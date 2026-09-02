@@ -117,8 +117,9 @@ export function TeamWorkspaceTabs({
       >
         <TabsList
           size="touch"
+          layout="equal"
           aria-label={copy.tabsAriaLabel}
-          className="grid w-full min-w-0 max-w-full grid-cols-2 items-center"
+          className="min-w-0 max-w-full items-center"
         >
           {tabItems.map(({ value: tabValue, shortLabel, Icon }) => (
             <TabsTrigger

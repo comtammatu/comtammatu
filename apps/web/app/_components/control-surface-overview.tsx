@@ -7,6 +7,7 @@ import {
   Item,
   ItemActions,
   ItemContent,
+  ItemDescription,
   ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
@@ -25,11 +26,7 @@ const copy = messages.controlSurface.dashboard;
 
 function AttentionQueue({ items }: { items: ControlHomeAttentionItem[] }) {
   return (
-    <AppSection
-      title={copy.attentionTitle}
-      description={copy.description}
-      headingLevel="h2"
-    >
+    <AppSection title={copy.attentionTitle} headingLevel="h2">
       {items.length === 0 ? (
         <AppEmptyState mode="no-data" title={copy.attentionEmpty} />
       ) : (
@@ -46,8 +43,11 @@ function AttentionQueue({ items }: { items: ControlHomeAttentionItem[] }) {
                 <ItemTitle className="line-clamp-none">
                   {item.documentTitle ?? item.label}
                 </ItemTitle>
+                {item.documentTitle ? (
+                  <ItemDescription>{item.label}</ItemDescription>
+                ) : null}
               </ItemContent>
-              <ItemActions className="ml-auto">
+              <ItemActions className="ml-auto shrink-0">
                 <Badge
                   variant={
                     item.tone === "destructive" ? "destructive" : "warning"
@@ -83,7 +83,7 @@ export function ControlSurfaceOverview({
 
   return (
     <AppPage density="compact" width="wide">
-      <AppPageHeader title={copy.title} description={copy.description} />
+      <AppPageHeader title={copy.title} />
       {showCommandBar ? <AppTodayCommandBar state={todayWork} /> : null}
       <AttentionQueue items={attention} />
     </AppPage>

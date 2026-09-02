@@ -3,7 +3,10 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ACTIONS_VI, BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
-import { PRINT_JOB_STATUS_LABELS_VI } from "@comtammatu/shared/labels";
+import {
+  PRINT_JOB_STATUS_LABELS_VI,
+  UNKNOWN_LABEL_VI,
+} from "@comtammatu/shared/labels";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -74,7 +77,9 @@ function formatTime(iso: string | null): string {
 }
 
 function getJobTypeLabel(jobType: string): string {
-  return PRINT_JOBS_COPY.jobTypes[jobType as PrintJobTypeKey] ?? jobType;
+  return (
+    PRINT_JOBS_COPY.jobTypes[jobType as PrintJobTypeKey] ?? UNKNOWN_LABEL_VI
+  );
 }
 
 export function PrintJobsClient({
@@ -130,12 +135,6 @@ export function PrintJobsClient({
 
   const columns: DataTableColumn<JobRow>[] = [
     {
-      key: "id",
-      header: "#",
-      className: "font-mono text-xs",
-      render: (job) => job.id,
-    },
-    {
       key: "type",
       header: FORM_VI.type,
       render: (job) => getJobTypeLabel(job.job_type),
@@ -145,10 +144,7 @@ export function PrintJobsClient({
       header: PRINT_JOBS_COPY.printerColumn,
       render: (job) => (
         <div className="text-xs">
-          <div>{job.printer_name ?? `#${job.printer_id}`}</div>
-          {job.printer_role ? (
-            <div className="text-muted-foreground">{job.printer_role}</div>
-          ) : null}
+          <div>{job.printer_name ?? UNKNOWN_LABEL_VI}</div>
         </div>
       ),
     },
@@ -186,9 +182,8 @@ export function PrintJobsClient({
       key: "last_error",
       header: PRINT_JOBS_COPY.errorColumn,
       className: "max-w-xs truncate text-xs text-destructive",
-      render: (job) => (
-        <span title={job.last_error ?? ""}>{job.last_error ?? ""}</span>
-      ),
+      render: (job) =>
+        job.last_error ? PRINT_JOBS_COPY.jobErrorNeedsAttention : "",
     },
     {
       key: "actions",
@@ -207,7 +202,11 @@ export function PrintJobsClient({
             updateParam("branch", value === "all" ? null : value)
           }
         >
-          <SelectTrigger size="field" className="min-w-36" aria-label={BRANCH_VI.selectAll}>
+          <SelectTrigger
+            size="field"
+            className="min-w-36"
+            aria-label={BRANCH_VI.selectAll}
+          >
             <SelectValue placeholder={BRANCH_VI.selectAll} />
           </SelectTrigger>
           <SelectContent>
@@ -277,7 +276,11 @@ export function PrintJobsClient({
           variant="inline"
           filters={filterSelects}
           actions={
-            <Button variant="outline" size="sm" onClick={() => router.refresh()}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.refresh()}
+            >
               <IconRefresh className="size-3.5" />
               {ACTIONS_VI.refresh}
             </Button>
@@ -294,14 +297,12 @@ export function PrintJobsClient({
         mobileCardRender={(job) => (
           <Item variant="outline">
             <ItemHeader>
-              <ItemTitle>#{job.id}</ItemTitle>
+              <ItemTitle>{getJobTypeLabel(job.job_type)}</ItemTitle>
               <StatusBadge domain="print-job" value={job.status} />
             </ItemHeader>
             <ItemContent>
-              <ItemDescription>{getJobTypeLabel(job.job_type)}</ItemDescription>
               <ItemDescription>
-                {job.printer_name ?? `#${job.printer_id}`}
-                {job.printer_role ? ` · ${job.printer_role}` : ""}
+                {job.printer_name ?? UNKNOWN_LABEL_VI}
               </ItemDescription>
               <ItemDescription>
                 {PRINT_JOBS_COPY.createdAtColumn}: {formatTime(job.created_at)}
@@ -311,7 +312,7 @@ export function PrintJobsClient({
               </ItemDescription>
               {job.last_error ? (
                 <ItemDescription className="text-destructive">
-                  {job.last_error}
+                  {PRINT_JOBS_COPY.jobErrorNeedsAttention}
                 </ItemDescription>
               ) : null}
             </ItemContent>

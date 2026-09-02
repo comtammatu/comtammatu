@@ -305,10 +305,10 @@ Mỗi hàng = `page.tsx` (shim gộp vào cha). Adapter L0: `AppPage` / `DataTab
 | Catalog | `/inventory/suppliers` + `/[id]/items` LIST | NCC + `supplier_items` → gán NL/NCC ưu tiên → CRUD / gán | Catalog, không giá HĐ |
 | Catalog | `/inventory/menu-recipes` LIST · `FormDialog` | Định mức + WAC công ty → phủ BOM → CRUD dòng | Giữ; không Giá vốn món đã ghi |
 | Catalog | `/inventory/settings/*` SETTINGS (`/` và `/recipes` shim) | units/categories/`min_stock_level` → registry → CRUD | Neo trên form NL |
-| Catalog | `/br/…/stock/catalog*` LANDING/LIST đọc | Cùng loader L0 → tra cứu → không ghi | CRUD Owner L0 |
-| Mua | `/inventory/purchase-orders` LIST+D1 · tabs `AppDialog` ( `/purchase-requests` shim `tab=needs`; `/new` → `tab=orders&mode=create`) | **Tạo đơn** không YCM; tab Yêu cầu mua lịch sử/đọc → `create_purchase_order` / xem YCM; không CTA tạo nhu cầu | Wave 4 REVOKE `save_purchase_demand*` + ẩn Phân bổ |
+| Catalog | `/br/…/stock/catalog*` LANDING/LIST đọc | Cùng loader L0 → tra cứu → không ghi | Owner/Kho Tổng CRUD tại L0; Bếp TT/CN chỉ đọc |
+| Mua | `/inventory/purchase-orders` LIST+D1 · tabs `AppDialog` ( `/purchase-requests` shim `tab=needs`; `/new` → `tab=orders&mode=create`) | **Tạo đơn** không YCM; tab Yêu cầu mua lịch sử/đọc → `create_purchase_order` / xem YCM; không CTA tạo nhu cầu | Wave 4 đã REVOKE `save_purchase_demand*`; action tương thích không phải write surface |
 | Mua | `/br/…/stock/purchase-requests` LIST | Lịch sử YCM site; `mode=create` → **Tạo đơn** | Wave 4 freeze ghi |
-| Nhập | `/inventory/grn` LIST+D1 (`[id]`/`new*` shim) | `loadGrnListPageData` mặc định **Chờ nhập hàng** → SL, từ chối, **Đơn giá**, `grn_confirm`; không CTA HĐ cho kho; Owner tab **Chờ đơn giá** | HĐ NCC chỉ Finance |
+| Nhập | `/inventory/grn` LIST+D1 (`[id]`/`new*` shim) | `loadGrnListPageData` mặc định **Chờ nhập hàng** → SL, từ chối, **Đơn giá**, `confirm_goods_receipt_note`; không CTA HĐ cho kho; Owner tab **Chờ đơn giá** | HĐ NCC chỉ Finance |
 | Nhập | `/inventory/supplier-invoices` shim | — | → `/finance/supplier-invoices` AP |
 | Nhập | `/br/…/stock/grn` LIST + `[id]` DETAIL (`new*` shim) | Nháp người nhận → mã/NCC/ngày; kiểm nhận+Đơn giá → lưu/chốt | CN `branch` không tile GRN |
 | Giao nhận | `/inventory/transfers` LIST hub · `DataTable` | `loadStockFulfillmentRows` → filter `work=` → ship/nhận DC; YCH lịch sử | CTA **Tạo điều chuyển**; ẩn tạo YCH |

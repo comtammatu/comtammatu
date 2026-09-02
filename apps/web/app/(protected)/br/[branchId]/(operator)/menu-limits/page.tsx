@@ -5,8 +5,6 @@ import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { BranchMenuLimitsHost } from "./menu-limits-host";
 
-export const instant = false;
-
 export default async function BranchMenuLimitsPage({
   params,
 }: {

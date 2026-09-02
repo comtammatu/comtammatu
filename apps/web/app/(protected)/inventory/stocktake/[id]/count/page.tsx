@@ -5,8 +5,7 @@ import { getStocktakeLinesBlind } from "../../../stocktake-actions";
 import type { CountUnitOption } from "../../../_lib/count-units";
 import { parseStocktakeDraftCounts } from "@lib/inventory/stocktake-model";
 import { StocktakeCountClient } from "./count-client";
-
-export const instant = false;
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 
 interface StocktakeCountPageContentProps {
   stocktakeId: number;
@@ -28,7 +27,7 @@ async function StocktakeCountPageContent({
   const { data: sessionRow } = await supabase
     .from("stocktake_sessions")
     .select(
-      "id, tenant_id, branch_id, status, blind_mode, started_at, completed_at",
+      "id, tenant_id, branch_id, session_number, status, blind_mode, started_at, completed_at",
     )
     .eq("id", sessionId)
     .maybeSingle();
@@ -96,6 +95,9 @@ async function StocktakeCountPageContent({
   return (
     <StocktakeCountClient
       sessionId={sessionId}
+      sessionNumber={
+        sessionRow.session_number?.trim() || INVENTORY_VI.documentNumberPending
+      }
       branchId={sessionBranchId}
       status={sessionRow.status as string}
       blindMode={Boolean(sessionRow.blind_mode)}

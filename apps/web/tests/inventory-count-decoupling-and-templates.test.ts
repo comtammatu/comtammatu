@@ -147,7 +147,7 @@ test("branch and owner count slip review clients provide variance resolution act
 
   assert.match(branchClient, /autoCreateWaste/);
   assert.match(branchClient, /countSlipApprovedWithWaste/);
-  assert.match(branchClient, /INVENTORY_VI\.countSlipHandoverConfirm/);
+  assert.match(branchClient, /INVENTORY_VI\.countSlipContinueReview/);
 
   assert.match(ownerClient, /autoCreateWaste/);
   assert.match(ownerClient, /countSlipApprovedWithWaste/);
@@ -156,6 +156,32 @@ test("branch and owner count slip review clients provide variance resolution act
     messages,
     /countSlipApprovedWithWaste/,
   );
+});
+
+test("branch count slip review keeps the mobile approval sheet compact and actionable", () => {
+  const branchClient = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-slips/branch-count-slips-client.tsx",
+  );
+  const wasteEvidence = read(
+    "apps/web/app/components/inventory/count-slip-waste-evidence.tsx",
+  );
+  const surplusEvidence = read(
+    "apps/web/app/components/inventory/count-slip-surplus-evidence.tsx",
+  );
+  const messages = read("packages/shared/src/messages/inventory.ts");
+
+  assert.match(branchClient, /formatVNDateTime/);
+  assert.match(branchClient, /showMatchedLines/);
+  assert.match(branchClient, /countSlipCompactSummary/);
+  assert.match(branchClient, /countSlipContinueReview/);
+  assert.match(branchClient, /defaultExpanded/);
+  assert.doesNotMatch(branchClient, /\(live:/);
+  assert.doesNotMatch(branchClient, /matchedAfterSales|soldSinceSubmit/);
+  assert.match(wasteEvidence, /defaultExpanded/);
+  assert.match(surplusEvidence, /defaultExpanded/);
+  assert.match(messages, /systemStockLabel:\s*"Tồn lúc gửi"/);
+  assert.match(messages, /countSlipShortageLines:\s*"Thiếu"/);
+  assert.match(messages, /countSlipSurplusLines:\s*"Thừa"/);
 });
 
 test("isPositionMatchingStationRole accurately maps positions to station roles", async () => {

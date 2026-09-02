@@ -50,11 +50,11 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  // Instant Navigations (16.3). Routes not yet converted keep
-  // `export const instant = false`. Do not enable experimental.useOffline —
-  // PWA keeps NetworkOnly for RSC/Server Actions (`docs/spec/pwa.md`).
-  cacheComponents: true,
-  partialPrefetching: true,
+  // Keep Cache Components and Partial Prefetching disabled until a stable
+  // Next.js release includes vercel/next.js#96932. Dynamic PPR fallback
+  // Server Actions can otherwise fail on Vercel with E592.
+  cacheComponents: false,
+  partialPrefetching: false,
   agentRules: false,
   typescript: {
     ignoreBuildErrors: true,

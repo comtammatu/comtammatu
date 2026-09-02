@@ -11,6 +11,7 @@ export default serwist({
       manifest: [
         ...entries.filter(
           ({ url }) =>
+            url !== "/offline" &&
             !excludedPrecachePrefixes.some((prefix) => url.startsWith(prefix)),
         ),
         {

@@ -267,7 +267,7 @@ test("hospitality is selectable and accepted across expense boundaries", () => {
   assert.match(migration, /hospitality_expense_category_boundary_not_found/);
 });
 
-test("expense LIST loader bounds first paint and fails closed on missing evidence", () => {
+test("expense LIST loader bounds first paint and delegates recoverable failures", () => {
   const actions = readWeb("app/(protected)/finance/expense-actions.ts");
   const page = readWeb("app/(protected)/finance/expenses/page.tsx");
 
@@ -302,7 +302,7 @@ test("expense LIST loader bounds first paint and fails closed on missing evidenc
   );
   assert.match(
     page,
-    /!branchesRes\.success \|\|[\s\S]*!expensesRes\.success[\s\S]*!summaryRes\.success[\s\S]*<AppEmptyState[\s\S]*mode="error"/,
+    /!branchesRes\.success \|\|[\s\S]*!expensesRes\.success[\s\S]*!summaryRes\.success[\s\S]*throw new Error/,
   );
   assert.doesNotMatch(page, /expensesRes\.success \? \(expensesRes\.data/);
   assert.doesNotMatch(page, /fetchActualFoodCostTotal/);

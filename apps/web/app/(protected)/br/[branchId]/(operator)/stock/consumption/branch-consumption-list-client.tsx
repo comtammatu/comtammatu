@@ -190,8 +190,8 @@ export function BranchConsumptionListClient({
         >
           <TabsList
             size="touch"
+            layout="equal"
             aria-label={issuesCopy.surface.consumption.eyebrow}
-            className="grid w-full grid-cols-2"
           >
             <TabsTrigger value="recorded">
               {INVENTORY_VI.consumptionTabRecorded}

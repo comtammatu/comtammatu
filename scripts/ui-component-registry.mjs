@@ -1,7 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { PAGE_ARCHETYPES, CONTROL_SURFACE_COMPOSE_SHAPES } from "./page-archetypes.mjs";
+import {
+  PAGE_ARCHETYPES,
+  CONTROL_SURFACE_COMPOSE_SHAPES,
+} from "./page-archetypes.mjs";
 
 const VALID_ACCESS = new Set([
   "direct",
@@ -303,7 +306,7 @@ export const SHARED_COMPONENT_REGISTRY = {
   ),
   "tabs.tsx": direct(
     "segmented view selection",
-    "Tabs or AppPageTabs",
+    "TabsList layout=equal|scroll or AppPageTabs",
     "URL navigation when views are separate routes",
     "duplicate chips and tabs for the same facet",
     "page subviews and POS modes",
@@ -454,7 +457,7 @@ export const APP_ADAPTER_REGISTRY = {
   AppListFrame: adapter(
     "apps/web/app/components/surface/app-list-frame.tsx",
     "control_surface LIST section with optional inline toolbar",
-    "AppListFrame toolbar={<AppToolbar variant=\"inline\" />} wrapping DataTable",
+    'AppListFrame toolbar={<AppToolbar variant="inline" />} wrapping DataTable',
     "AppSection contentFlush plus a separate AppToolbar card when filters scope multiple sections",
     "route-local list card or separate mobile and desktop trees",
     "HR employee, leave, and staff lists",
@@ -948,7 +951,7 @@ export const APP_ADAPTER_REGISTRY = {
   AppPageTabs: adapter(
     "apps/web/app/components/app-page-tabs.tsx",
     "page-level segmented views",
-    "AppPageTabs",
+    "AppPageTabs (responsive scroll layout)",
     "route navigation for separate pages",
     "route-local tab strip",
     "management page tabs",

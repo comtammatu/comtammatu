@@ -2,6 +2,8 @@ import "server-only";
 
 import { notFound } from "next/navigation";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasPermission } from "@/_lib/permissions";
 import { fetchIngredients } from "@/(protected)/inventory/ingredient-actions";
@@ -72,7 +74,7 @@ function toBranchStockIssue(row: StockIssueListRow): BranchStockIssue | null {
 
   return {
     id: row.id,
-    code: row.issue_number ?? `PXK-${row.id}`,
+    code: row.issue_number ?? INVENTORY_VI.documentNumberPending,
     type: row.issue_type,
     status: toBranchStockIssueStatus(row.status),
     approvalStatus: row.approval_status,
@@ -95,7 +97,7 @@ function toBranchStockIssueLine(
   return {
     id: row.id,
     ingredientId: row.ingredient_id,
-    ingredientName: row.ingredients?.name ?? `#${row.ingredient_id}`,
+    ingredientName: row.ingredients?.name ?? UNKNOWN_LABEL_VI,
     quantity: Number(row.quantity ?? 0),
     unit: row.unit ?? row.ingredients?.unit ?? "",
     entryUnitId: row.entry_unit_id,
@@ -156,9 +158,7 @@ export async function loadBranchStockIssueListData(routeBranchId: number) {
 
   return {
     branchId: routeBranchId,
-    branchName: branch
-      ? getBranchSiteDisplayName(branch)
-      : `CN #${routeBranchId}`,
+    branchName: branch ? getBranchSiteDisplayName(branch) : UNKNOWN_LABEL_VI,
     issues,
     permissions: {
       canCreateWriteoff: permissions.canCreateWriteoff,

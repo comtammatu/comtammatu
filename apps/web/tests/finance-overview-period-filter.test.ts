@@ -78,7 +78,7 @@ describe("Finance overview period filter", () => {
       "utf8",
     );
     assert.match(page, /locationFilter/);
-    assert.match(page, /hide=\{\["granularity", "compare"\]\}/);
+    assert.match(page, /hide=\{\["branch", "granularity", "compare"\]\}/);
     assert.match(shell, /ControlSurfaceScopeControl/);
     assert.match(
       filterBar,

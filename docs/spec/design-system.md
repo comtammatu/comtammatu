@@ -989,8 +989,9 @@ contract change; route-local chrome outside this list is drift.
    `AppHeader wide`, `AppPage`, and `AppBottomNav wide`. Desktop sprawl (`xl`/`2xl`)
    is forbidden. Scrollport is strictly `#main-content`. Top chrome uses inline
    compact headers ($\le 84\text{px}$ top budget) on small screens. Sub-tabs strictly
-   follow the 48px touch standard (`TabsList size="touch"`: Pattern A fixed grid or
-   Pattern B scrollable pills); `branch_management` is a route family inside this
+   follow the 48px touch standard: Pattern A uses `TabsList size="touch"
+layout="equal"`; Pattern B uses `TabsList size="touch" layout="scroll"`.
+   Route-local grid/overflow class recipes are drift. `branch_management` is a route family inside this
    chrome, not a reason to enter `control_surface` chrome.
 3. **station_chrome** — purpose-built, full-screen, single-job surfaces that
    cannot wear the management sidebar: POS, KDS, Runner under

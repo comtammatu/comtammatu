@@ -316,7 +316,9 @@ export function ItemChannelPricesFields({
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/50 pt-3">
             <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">Markup %:</span>
+              <span className="text-xs text-muted-foreground">
+                {MENU_VI.channelPricesMarkupLabel}
+              </span>
               <Input
                 type="number"
                 inputMode="decimal"

@@ -7,11 +7,13 @@ Comprehensive architecture, screen layout specifications, touch target standards
 ## 1. Architectural Foundations & Design Principles
 
 ### A. Personal Plane vs. Branch Runtime Plane
+
 - **Personal Self-Service Plane (`/me/*`):** Central and office-based self-service (desktop-first or standalone personal mobile portal).
 - **Branch Runtime Plane (`/br/[branchId]/*`):** Fast-paced, store-level operations running on mobile phones, iPad/Android store tablets, and POS terminals. Staff are on active store shifts.
 - **Embedded Self-Service (`/br/[branchId]/shift/*`, `/br/[branchId]/profile/*`):** Personal staff workflows accessed while operating inside a store shift must be wrapped in the branch operator chrome with a single-tap `AppBackLink` returning directly to store operations.
 
 ### B. Viewport & Maximum Width Scale
+
 - **Scale Standard:** Normalized branch runtime content width across `AppHeader`, `AppPage`, and `OperatorBottomNav`:
   - **Mobile (390px – 767px):** `max-w-lg` (fills viewport with standard horizontal padding).
   - **Tablet Portrait (768px – 1023px):** `md:max-w-2xl` (avoids excessive card stretching while preserving thumb-friendly ergonomics).
@@ -22,6 +24,7 @@ Comprehensive architecture, screen layout specifications, touch target standards
   - `AppHeader` and `OperatorBottomNav` remain static and in-flow (`position="static"`), never fixed overlays that obscure active inputs or action footers.
 
 ### C. Compact Inline Mobile Header (<= 84px Budget)
+
 - **Problem Statement:** Stacked headers containing breadcrumbs, back buttons, large H1 text, and multi-line descriptions previously consumed ~20% of vertical screen real estate on mobile devices.
 - **Solution Contract:**
   - **Single-Line Inline Layout:** On mobile viewports (`max-sm:`), the back affordance (`AppBackLink`), page title (`Heading`), and status badge are rendered on a single horizontal row (`flex items-center gap-2 py-1`).
@@ -29,16 +32,18 @@ Comprehensive architecture, screen layout specifications, touch target standards
   - **Height Cap:** Total top chrome height is capped at <= 84px, leaving over 85% of viewport height for critical operational tables, touch counting grids, and queue cards.
 
 ### D. Touch Target Standard: 48px (`min-h-12`)
+
 To guarantee zero mis-taps in oily, high-speed kitchen and store environments, touch targets are strictly standardized:
 
-| Dimension Standard | Evaluation & Verdict | Usage Policy in Branch Operations |
-|---|---|---|
-| **40px (`size="sm"`)** | **REJECTED for primary operations.** Too small for rapid kitchen/register touch; high error rate. | Permitted only for secondary table-dense desktop indicators or compact badges. |
-| **44px (`size="default"`)** | **ACCEPTABLE but suboptimal.** Meets minimum Apple HIG touch criteria, but lacks margin for greasy fingers or moving hands. | Used for standard desktop buttons outside active touch workflows. |
-| **48px (`size="touch"` / `min-h-12`)** | **MANDATORY SSOT STANDARD.** Meets Android Material and WCAG AAA touch target requirements. | **Strictly required** for all branch operator primary buttons, sub-tab triggers, select triggers, quantity steppers, and list action items. |
-| **56px (`size="touch-lg"` / `min-h-14`)** | **HERO STANDARD.** Large single-action keypads and primary submission footers. | Used for Order Confirmation, Clock-In Punch CTA, and Final Checkout submissions. |
+| Dimension Standard                        | Evaluation & Verdict                                                                                                        | Usage Policy in Branch Operations                                                                                                           |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| **40px (`size="sm"`)**                    | **REJECTED for primary operations.** Too small for rapid kitchen/register touch; high error rate.                           | Permitted only for secondary table-dense desktop indicators or compact badges.                                                              |
+| **44px (`size="default"`)**               | **ACCEPTABLE but suboptimal.** Meets minimum Apple HIG touch criteria, but lacks margin for greasy fingers or moving hands. | Used for standard desktop buttons outside active touch workflows.                                                                           |
+| **48px (`size="touch"` / `min-h-12`)**    | **MANDATORY SSOT STANDARD.** Meets Android Material and WCAG AAA touch target requirements.                                 | **Strictly required** for all branch operator primary buttons, sub-tab triggers, select triggers, quantity steppers, and list action items. |
+| **56px (`size="touch-lg"` / `min-h-14`)** | **HERO STANDARD.** Large single-action keypads and primary submission footers.                                              | Used for Order Confirmation, Clock-In Punch CTA, and Final Checkout submissions.                                                            |
 
 ### E. Visual Ergonomics & 5-Zone Layout Model
+
 Every operational screen adheres to the 5-Zone layout blueprint to maximize thumb ergonomics and prevent vertical fragmentation:
 
 ```text
@@ -69,7 +74,8 @@ Every operational screen adheres to the 5-Zone layout blueprint to maximize thum
 
 All sub-navigation tabs across all 56 operator screens are strictly consolidated into two standardized patterns built upon `@comtammatu/ui/components/tabs`:
 
-### Pattern A: Fixed Grid Tabs (`grid grid-cols-2` / `grid-cols-3`, 48px Touch)
+### Pattern A: Equal-Width Tabs (`layout="equal"`, 48px Touch)
+
 Designed for binary or ternary workspace modes, approval queues (Pending vs. History), or distinct view switches.
 
 ```text
@@ -83,7 +89,7 @@ Designed for binary or ternary workspace modes, approval queues (Pending vs. His
 - **Technical Structure:**
   ```tsx
   <Tabs value={view} onValueChange={(next) => next && setView(next)}>
-    <TabsList size="touch" className="grid w-full grid-cols-2">
+    <TabsList size="touch" layout="equal">
       <TabsTrigger value="pending">
         <IconZap data-icon="inline-start" />
         Pending (3)
@@ -105,7 +111,8 @@ Designed for binary or ternary workspace modes, approval queues (Pending vs. His
   - `/stock/waste-approvals`: `[ Pending Approvals (1) ] [ Waste History ]`
   - `/feedback`: `[ Feedback Inbox ] [ Table QR Codes ]`
 
-### Pattern B: Scrollable Pill Tabs (`no-scrollbar flex overflow-x-auto gap-1.5`, 48px Touch)
+### Pattern B: Scrollable Tabs (`layout="scroll"`, 48px Touch)
+
 Designed for multi-state status filters, ingredient categories, or floor selectors where items exceed 3 options.
 
 ```text
@@ -117,9 +124,13 @@ Designed for multi-state status filters, ingredient categories, or floor selecto
 - **Technical Structure:**
   ```tsx
   <Tabs value={filter} onValueChange={(next) => next && setFilter(next)}>
-    <TabsList size="touch" className="no-scrollbar flex w-full overflow-x-auto gap-1.5">
-      <TabsTrigger value="all" className="shrink-0">All (86)</TabsTrigger>
-      <TabsTrigger value="low_stock" className="shrink-0 text-destructive">⚠️ Low Stock (4)</TabsTrigger>
+    <TabsList size="touch" layout="scroll">
+      <TabsTrigger value="all" className="shrink-0">
+        All (86)
+      </TabsTrigger>
+      <TabsTrigger value="low_stock" className="shrink-0 text-destructive">
+        ⚠️ Low Stock (4)
+      </TabsTrigger>
       {categories.map((cat) => (
         <TabsTrigger key={cat.id} value={cat.id} className="shrink-0">
           {cat.name}
@@ -180,6 +191,7 @@ graph TD
 ---
 
 ### Domain 1: Home & Sales Orders
+
 - **`/br/[branchId]` (Operational Landing):**
   - KPI Dashboard tiles with active shift metrics, live order count, revenue estimate, and inventory alerts.
   - Action Door Grid (`BranchStockDoors` / station tiles) with 48px touch targets.
@@ -196,6 +208,7 @@ graph TD
 ---
 
 ### Domain 2: Team & Personnel Management
+
 - **`/br/[branchId]/team` (Team Hub Overview):**
   - **Pattern A Tabs:** `[ Today Shifts ] [ Member Directory ]`.
   - Real-time headcount on shift vs. scheduled.
@@ -218,6 +231,7 @@ graph TD
 ---
 
 ### Domain 3: Shift & Personal Self-Service
+
 - **`/br/[branchId]/shift` (Shift Task List):**
   - Opening checklist (Prep ingredients, Stove ignition, Printer check).
   - Active shift timer and personal break triggers.
@@ -237,6 +251,7 @@ graph TD
 ---
 
 ### Domain 4: Stock, Logistics & Catalog
+
 - **`/br/[branchId]/stock` (Stock Hub & Shortage Alerts):**
   - Action cards: Goods Receipt (GRN), Waste Report, Stocktake, Inter-Branch Transfer.
   - Red alert strip highlighting ingredients below reorder threshold.
@@ -264,6 +279,7 @@ graph TD
 ---
 
 ### Domain 5: Settings, Operations & Close-Day
+
 - **`/br/[branchId]/settings` (Configuration Center):**
   - Station routing, peripheral health, and local network status.
 - **`/br/[branchId]/settings/tables` (Floor & Table Layout):**
@@ -284,17 +300,17 @@ graph TD
 
 To prevent component fragmentation, raw HTML and ad-hoc CSS are strictly prohibited. All screens must use the canonical component registry:
 
-| UI Need | Prohibited Anti-Pattern | Mandatory Má Tư DS Component |
-|---|---|---|
-| **Buttons & Triggers** | Raw `<button>`, `<div onClick>`, `h-10`, `h-12` | `<Button size="touch">` (`@comtammatu/ui/components/button`) |
-| **Sub-Tabs / Mode Toggles** | Raw `<button>` loops, standalone toggle buttons | `<TabsList size="touch">` (`@comtammatu/ui/components/tabs`) |
-| **Back Navigation** | Custom back links or raw icons | `<AppBackLink href={...} />` (`@/components/surface`) |
-| **Form Inputs** | Raw `<input>`, `<select>` | `<InputGroup>`, `<InputGroupInput>`, `<Combobox>` |
-| **Numeric Keypads** | Native OS number input keyboard popups | `<NumberPadSheet>`, `<QuantityInput>` |
-| **Modal / Bottom Sheets** | Custom dialog overlays or ad-hoc drawer divs | `<AppSheet>`, `<Drawer>` (`@/components/surface`) |
-| **Empty States** | Plain text paragraphs like `<p>No data</p>` | `<AppEmptyState compact mode="no-data" />` (`@/components/surface`) |
-| **Sticky Action Bars** | Ad-hoc `fixed bottom-0` div with arbitrary z-index | `<AppDetailFooter>` (`@/components/surface`) |
-| **Status Indicators** | Raw coloured span tags `<span className="text-red-500">` | `<StatusBadge domain="..." status="..." />` (`@/components/status-badge`) |
+| UI Need                     | Prohibited Anti-Pattern                                  | Mandatory Má Tư DS Component                                              |
+| --------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------- |
+| **Buttons & Triggers**      | Raw `<button>`, `<div onClick>`, `h-10`, `h-12`          | `<Button size="touch">` (`@comtammatu/ui/components/button`)              |
+| **Sub-Tabs / Mode Toggles** | Raw `<button>` loops, standalone toggle buttons          | `<TabsList size="touch">` (`@comtammatu/ui/components/tabs`)              |
+| **Back Navigation**         | Custom back links or raw icons                           | `<AppBackLink href={...} />` (`@/components/surface`)                     |
+| **Form Inputs**             | Raw `<input>`, `<select>`                                | `<InputGroup>`, `<InputGroupInput>`, `<Combobox>`                         |
+| **Numeric Keypads**         | Native OS number input keyboard popups                   | `<NumberPadSheet>`, `<QuantityInput>`                                     |
+| **Modal / Bottom Sheets**   | Custom dialog overlays or ad-hoc drawer divs             | `<AppSheet>`, `<Drawer>` (`@/components/surface`)                         |
+| **Empty States**            | Plain text paragraphs like `<p>No data</p>`              | `<AppEmptyState compact mode="no-data" />` (`@/components/surface`)       |
+| **Sticky Action Bars**      | Ad-hoc `fixed bottom-0` div with arbitrary z-index       | `<AppDetailFooter>` (`@/components/surface`)                              |
+| **Status Indicators**       | Raw coloured span tags `<span className="text-red-500">` | `<StatusBadge domain="..." status="..." />` (`@/components/status-badge`) |
 
 ---
 

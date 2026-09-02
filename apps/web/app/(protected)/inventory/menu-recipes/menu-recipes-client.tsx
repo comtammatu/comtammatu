@@ -9,7 +9,6 @@ import {
   Search as IconSearch,
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
-import { Button } from "@comtammatu/ui/components/button";
 import {
   Select,
   SelectContent,
@@ -51,6 +50,7 @@ import {
   AppToolbar,
 } from "@/components/surface";
 import { formatVND } from "@lib/inventory/format";
+import { ResponsiveActionButton } from "@/components/responsive-action-button";
 import type {
   MenuItemOption,
   IngredientOption,
@@ -424,10 +424,14 @@ export function MenuRecipesClient({
         title={INVENTORY_VI.menuRecipesPageTitle}
         description={INVENTORY_VI.menuRecipesPageDescription}
         actions={
-          <Button type="button" size="lg" onClick={openCreate}>
+          <ResponsiveActionButton
+            type="button"
+            density="header"
+            onClick={openCreate}
+          >
             <IconPlus data-icon="inline-start" />
             {INVENTORY_VI.menuRecipeCreateAction}
-          </Button>
+          </ResponsiveActionButton>
         }
       />
       <AppListFrame toolbar={listToolbar}>

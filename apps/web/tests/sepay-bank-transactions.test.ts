@@ -1053,7 +1053,11 @@ test("SePay bank page uses one filtered reconciliation table", () => {
   assert.match(messages, /label: "Lọc"/);
   assert.match(messages, /title: "Giao dịch"/);
   assert.match(messages, /bankTransactions: "Giao dịch"/);
-  assert.match(messages, /Thanh toán #\$\{id\}/);
+  assert.match(
+    messages,
+    /matchedPayment: \(_id: number \| string\) => "Thanh toán"/,
+  );
+  assert.doesNotMatch(messages, /Thanh toán #\$\{id\}/);
   assert.match(messages, /linkTitle: "Khớp đơn"/);
 
   const matchCell = read(

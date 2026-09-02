@@ -152,6 +152,11 @@ async function auditRuntimeContract() {
   }
 
   const rootManifest = await readJson(join(ROOT, "package.json"));
+  if (rootManifest.pnpm != null) {
+    failures.push(
+      "package.json must not define pnpm settings; keep project configuration in pnpm-workspace.yaml",
+    );
+  }
   const expectedEngine = `${nodeMajor}.x`;
   if (rootManifest.engines?.node !== expectedEngine) {
     failures.push(

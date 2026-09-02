@@ -1,5 +1,6 @@
 import "server-only";
 
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { notFound } from "next/navigation";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
@@ -138,7 +139,7 @@ function mapStockLevelRows(
     const branch = withBranch ? relatedOne(location?.branches) : null;
     return {
       locationId: row.location_id,
-      name: location?.name ?? `#${row.location_id}`,
+      name: location?.name ?? UNKNOWN_LABEL_VI,
       code: location?.code ?? "",
       locationKind: location?.location_kind ?? "unknown",
       branchName: branch?.name,

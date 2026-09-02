@@ -12,7 +12,10 @@ import { formatDateTime } from "@lib/inventory/format";
 import { fetchStockTransferDetail } from "@/(protected)/inventory/transfer-actions";
 import { computeTransferLineTotal } from "@/(protected)/inventory/transfers/[id]/line-view-model";
 import type { TransferDetail } from "./transfer-detail-model";
-import { formatInventoryLocationLabelVi } from "@comtammatu/shared/labels";
+import {
+  formatInventoryLocationLabelVi,
+  UNKNOWN_LABEL_VI,
+} from "@comtammatu/shared/labels";
 import {
   loadIntraSiteTransferData,
   type IntraSiteTransferData,
@@ -46,7 +49,6 @@ function relatedOne<T>(value: T | T[] | null | undefined): T | null {
 function formatTransferLocationLabel(
   location: TransferLocationRow | undefined,
   fallbackBranchName: string | null,
-  fallbackBranchId: number,
 ): string {
   const branch = location ? relatedOne(location.branches) : null;
   const formatted = formatInventoryLocationLabelVi({
@@ -56,7 +58,7 @@ function formatTransferLocationLabel(
     fallbackName: location?.name,
   });
   if (formatted) return formatted;
-  return fallbackBranchName ?? `Chi nhánh #${fallbackBranchId}`;
+  return fallbackBranchName ?? UNKNOWN_LABEL_VI;
 }
 
 export interface TransferDetailPageData {
@@ -242,21 +244,15 @@ export async function loadTransferDetailPageData({
     toBranchId: detail.transfer.to_branch_id,
     fromLocationId: detail.transfer.from_location_id,
     toLocationId: detail.transfer.to_location_id,
-    fromBranch:
-      detail.transfer.from_branch_name ??
-      `Chi nhánh #${detail.transfer.from_branch_id}`,
-    toBranch:
-      detail.transfer.to_branch_name ??
-      `Chi nhánh #${detail.transfer.to_branch_id}`,
+    fromBranch: detail.transfer.from_branch_name ?? UNKNOWN_LABEL_VI,
+    toBranch: detail.transfer.to_branch_name ?? UNKNOWN_LABEL_VI,
     fromLocation: formatTransferLocationLabel(
       locationById.get(detail.transfer.from_location_id),
       detail.transfer.from_branch_name,
-      detail.transfer.from_branch_id,
     ),
     toLocation: formatTransferLocationLabel(
       locationById.get(detail.transfer.to_location_id),
       detail.transfer.to_branch_name,
-      detail.transfer.to_branch_id,
     ),
     createdBy: "—",
     date: detail.transfer.shipped_at
@@ -287,17 +283,13 @@ export async function loadTransferDetailPageData({
       canAdjustFrom
         ? {
             id: detail.transfer.from_branch_id,
-            name:
-              detail.transfer.from_branch_name ??
-              `Chi nhánh #${detail.transfer.from_branch_id}`,
+            name: detail.transfer.from_branch_name ?? UNKNOWN_LABEL_VI,
           }
         : null,
       canAdjustTo && detail.transfer.status === "received"
         ? {
             id: detail.transfer.to_branch_id,
-            name:
-              detail.transfer.to_branch_name ??
-              `Chi nhánh #${detail.transfer.to_branch_id}`,
+            name: detail.transfer.to_branch_name ?? UNKNOWN_LABEL_VI,
           }
         : null,
     ].filter(

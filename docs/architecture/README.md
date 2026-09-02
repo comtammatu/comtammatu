@@ -1,9 +1,10 @@
 # Architecture Landing
 
 Shared entry point for system-level architecture documentation. `docs/ref/glossary.md`
-describes current-source vocabulary. `docs/spec/architecture.md` is the sole source
-for runtime architecture, package graph, and current code-placement rules. Deployment
-status and day-to-day work live in runbooks or `tasks/todo.md`.
+describes current-source vocabulary. `docs/spec/architecture.md` owns runtime
+architecture and the package graph; `docs/CODEBASE_MAP.md#project-placement-matrix`
+owns project/file placement. Deployment status and day-to-day work live in runbooks
+or `tasks/todo.md`.
 
 Source evolves through existing seams in `apps/*` and `packages/*`; do not fork
 the repo or build a parallel product runtime.
@@ -26,7 +27,8 @@ the repo or build a parallel product runtime.
 
 ## Boundary
 
-- `docs/spec/architecture.md`: current runtime/package/module contract
+- `docs/spec/architecture.md`: current runtime/package/operating-plane contract
+- `docs/CODEBASE_MAP.md#project-placement-matrix`: project/file placement
 - `docs/architecture/*`: landing pointers only; not a second runtime contract
   archive
 - `docs/ref/glossary.md`: source of truth for current-state vocabulary and naming

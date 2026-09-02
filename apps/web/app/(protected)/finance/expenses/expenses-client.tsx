@@ -177,7 +177,7 @@ export function ExpensesClient({
   const branchNames = new Map(branches.map((b) => [b.id, b.name]));
   const branchLabel = (branchId: number | null) =>
     branchId != null
-      ? (branchNames.get(branchId) ?? `#${branchId}`)
+      ? (branchNames.get(branchId) ?? copy.branchFallback)
       : copy.tenantLevel;
 
   function openExpenseDocument(row: ExpenseRow) {
@@ -631,7 +631,7 @@ export function ExpensesClient({
             basePath={listBasePath}
             hide={
               isEquipmentList
-                ? ["compare", "granularity", "range"]
+                ? ["branch", "compare", "granularity", "range"]
                 : ["branch", "compare", "granularity"]
             }
             locationFilter={isEquipmentList}
@@ -737,14 +737,14 @@ export function ExpensesClient({
           title={
             editingExpense && editingPaymentState ? (
               <div className="flex flex-wrap items-center gap-2">
-                <span>{`${copy.form.editTitle} - #${editingExpense.id}`}</span>
+                <span>{copy.form.editTitle}</span>
                 <StatusBadge
                   domain="expense-payment"
                   value={editingPaymentState}
                 />
               </div>
             ) : editingExpense ? (
-              `${isEquipmentList ? equipmentCopy.formEditTitle : copy.form.editTitle} - #${editingExpense.id}`
+              isEquipmentList ? equipmentCopy.formEditTitle : copy.form.editTitle
             ) : (
               isEquipmentList ? equipmentCopy.formTitle : copy.form.title
             )

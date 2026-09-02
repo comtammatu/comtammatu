@@ -38,7 +38,7 @@ test("D099 is the current external purchasing authority", () => {
   assert.match(current, /`HĐ NCC`/);
 });
 
-test("Inventory references expose branch warehouse-kitchen split and physical rejection QC only", () => {
+test("Inventory references expose mandatory branch warehouse-kitchen topology and physical rejection QC only", () => {
   const inventory = read("docs/ref/inventory.md");
   const sop = read("docs/ref/inventory-sop.md");
   const glossary = read("docs/ref/glossary.md");
@@ -46,9 +46,11 @@ test("Inventory references expose branch warehouse-kitchen split and physical re
 
   assert.match(
     inventory,
-    /Chi nhánh chưa tách dùng một `warehouse`; chi nhánh đã tách có một `warehouse`[^\n]*một `kitchen`/,
+    /Mọi chi nhánh thường luôn có đúng một `warehouse`[^\n]*một `kitchen`/,
   );
-  assert.match(inventory, /Site trung tâm vẫn dùng đúng một `warehouse`/);
+  assert.match(inventory, /site trung tâm giữ một `warehouse`/);
+  assert.doesNotMatch(inventory, /Chi nhánh chưa tách|chi nhánh đã tách/);
+  assert.doesNotMatch(sop, /Chi nhánh chưa tách|chi nhánh đã tách/);
   assert.match(inventory, /received_quantity - rejected_quantity/);
   assert.match(sop, /lý do \+ ảnh/);
   assert.match(sop, /\*\*Tạo đơn\*\* theo nguyên liệu/);

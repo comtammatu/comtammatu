@@ -2,6 +2,7 @@ import "server-only";
 
 import { notFound } from "next/navigation";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasPermission } from "@/_lib/permissions";
 import { getBranchSiteDisplayName } from "@/(protected)/inventory/_lib/branch-site-labels";
@@ -26,7 +27,7 @@ export async function loadBranchWasteCreateData(routeBranchId: number) {
   );
   const branchName = branch
     ? getBranchSiteDisplayName(branch)
-    : `CN #${routeBranchId}`;
+    : UNKNOWN_LABEL_VI;
   const canCreateWaste = await currentUserHasPermission(
     routeBranchId,
     PERMISSION_KEYS.INVENTORY_WRITEOFF,

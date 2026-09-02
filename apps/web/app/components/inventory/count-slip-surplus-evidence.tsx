@@ -29,15 +29,17 @@ export function CountSlipSurplusEvidence({
   reasons = {},
   disabled,
   touch,
+  defaultExpanded = false,
   onReasonChange,
 }: {
   lines: CountSlipLineView[];
   reasons?: CountSlipSurplusReasons;
   disabled: boolean;
   touch: boolean;
+  defaultExpanded?: boolean;
   onReasonChange?: (lineId: number, reason: string) => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(defaultExpanded);
   if (lines.length === 0) return null;
 
   function applyReasonToAll(reason: string) {

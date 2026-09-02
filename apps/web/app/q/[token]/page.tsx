@@ -13,8 +13,6 @@ import {
 } from "@comtammatu/ui/components/item";
 import { SelfOrderClient } from "./self-order-client";
 
-export const instant = false;
-
 function UnavailablePage({ description }: { description: string }) {
   return (
     <AppPage

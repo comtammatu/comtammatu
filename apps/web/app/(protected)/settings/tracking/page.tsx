@@ -27,8 +27,8 @@ export default async function SettingsTrackingPage() {
       description={copy.description}
       width="wide"
     >
-      <AppSection title={copy.title} description={copy.description}>
-        <LinkCardGrid className="lg:grid-cols-3 xl:grid-cols-3">
+      <AppSection>
+        <LinkCardGrid className="lg:grid-cols-3">
           <AppLinkCard
             href="/notifications"
             title={copy.needActionTitle}

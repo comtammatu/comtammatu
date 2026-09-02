@@ -41,6 +41,7 @@ import {
   type RowActionItem,
 } from "@/components/row-actions-menu";
 import { StatusBadge } from "@/components/status-badge";
+import { ResponsiveActionButton } from "@/components/responsive-action-button";
 import { deleteSupplier, fetchSuppliers } from "../procurement-actions";
 import type { SupplierRow } from "./supplier-dialog";
 import {
@@ -382,10 +383,14 @@ export function SuppliersClient({
         <AppPageHeader
           title={suppliersCopy.title}
           actions={
-            <Button type="button" size="lg" onClick={openCreate}>
+            <ResponsiveActionButton
+              type="button"
+              density="header"
+              onClick={openCreate}
+            >
               <IconPlus data-icon="inline-start" />
               {suppliersCopy.createAction}
-            </Button>
+            </ResponsiveActionButton>
           }
         />
         {linkIngredient ? (

@@ -132,7 +132,8 @@ export const employee = {
     workflowCheckoutStep: "Kết ca",
     workflowManagerCheckoutStep: "Ra ca",
     workflowCheckoutDescription: "Chốt giờ ra.",
-    workflowCheckoutBlocked: (remaining: number) => `Còn ${remaining} việc bắt buộc`,
+    workflowCheckoutBlocked: (remaining: number) =>
+      `Còn ${remaining} việc bắt buộc`,
     workflowCheckoutBlockedDescription: (remaining: number) =>
       `Cần hoàn thành ${remaining} việc bắt buộc trước khi gửi yêu cầu kết ca.`,
     workflowCheckoutBlockedListTitle: "Việc bắt buộc cần hoàn thành:",
@@ -462,7 +463,7 @@ export const employee = {
     noAssignmentsTitle: "Chưa được giao đếm",
     noAssignmentsDescription:
       "Bạn chưa được giao nguyên liệu nào để kiểm kê. Liên hệ quản lý chi nhánh.",
-    locationFallback: (locationId: number) => `Kho #${locationId}`,
+    locationFallback: (_locationId: number) => "Kho không xác định",
     ingredientFallback: "Nguyên liệu",
   },
   profile: {

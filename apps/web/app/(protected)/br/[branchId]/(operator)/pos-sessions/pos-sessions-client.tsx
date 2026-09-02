@@ -95,7 +95,9 @@ export interface PosSessionRow {
 /** Terminal name is preferred; branch-wide sessions fall back to shared copy. */
 function resolveSessionLabel(session: PosSessionRow): string {
   if (session.pos_terminals?.name) return session.pos_terminals.name;
-  if (session.terminal_id != null) return `POS #${String(session.terminal_id)}`;
+  if (session.terminal_id != null) {
+    return messages.settings.posSessions.terminalUnavailable;
+  }
   return messages.settings.posSessions.branchSharedSession;
 }
 
@@ -183,7 +185,6 @@ export function PosSessionsClient({
   canCorrectPaymentMethod,
 }: PosSessionsClientProps) {
   const isTouchLayout = useIsMobile(1280);
-  const isInsightRailLayout = !useIsMobile(1536);
   const [sessionHistoryOpen, setSessionHistoryOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [closeSessionId, setCloseSessionId] = useState<number | null>(null);
@@ -236,9 +237,7 @@ export function PosSessionsClient({
       session={selectedSession}
       onCloseShift={() => setCloseSessionId(selectedSession.id)}
       onOpenInsights={
-        !isTouchLayout && !isInsightRailLayout
-          ? () => setInsightsOpen(true)
-          : undefined
+        !isTouchLayout ? () => setInsightsOpen(true) : undefined
       }
     />
   ) : null;
@@ -357,25 +356,17 @@ export function PosSessionsClient({
             </AppPageTabs>
           </>
         ) : (
-          <div className="grid min-h-0 flex-1 gap-3 xl:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)] 2xl:grid-cols-[minmax(20rem,24rem)_minmax(0,1.2fr)_minmax(22rem,0.8fr)]">
+          <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)]">
             <div className="flex min-h-0 flex-col">{sessionHistoryPanel}</div>
             <div className="flex min-h-0 flex-col gap-2">
               {sessionContext}
               {billsPanel}
             </div>
-            {isInsightRailLayout ? (
-              <div className="hidden min-h-0 2xl:flex 2xl:flex-col">
-                <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain">
-                  {settlementPanel}
-                  {report ? <SessionReportCard report={report} /> : null}
-                </div>
-              </div>
-            ) : null}
           </div>
         )}
       </div>
 
-      {selectedSession && !isTouchLayout && !isInsightRailLayout ? (
+      {selectedSession && !isTouchLayout ? (
         <AppDrawer
           open={insightsOpen}
           onOpenChange={setInsightsOpen}

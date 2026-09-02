@@ -43,7 +43,7 @@ export function AppPageHeader({
   const Heading = headingLevel;
 
   return (
-    <div>
+    <div data-slot="app-page-header" className="min-w-0">
       <header
         className={cn(
           "flex flex-col gap-2",
@@ -56,7 +56,7 @@ export function AppPageHeader({
         ) : null}
         <div
           className={cn(
-            "flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between",
+            "flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between",
             compactOnMobile && "max-sm:gap-1",
           )}
         >
@@ -71,14 +71,19 @@ export function AppPageHeader({
                 {eyebrow}
               </div>
             ) : null}
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <div
+              className={cn(
+                "flex min-w-0 flex-wrap items-center gap-2",
+                compactOnMobile && "max-sm:flex-nowrap",
+              )}
+            >
               {breadcrumb ? (
                 <div className="shrink-0 -ml-1 sm:hidden">{breadcrumb}</div>
               ) : null}
               <Heading
                 className={cn(
-                  "font-heading min-w-0 text-lg font-semibold tracking-tight sm:text-2xl",
-                  compactOnMobile && "max-sm:text-base",
+                  "font-heading min-w-0 break-words text-lg font-semibold leading-tight tracking-tight sm:text-2xl",
+                  compactOnMobile && "max-sm:truncate max-sm:text-base",
                   titleClassName,
                 )}
               >
@@ -116,7 +121,7 @@ export function AppPageHeader({
             <div
               className={cn(
                 "flex shrink-0 flex-wrap items-center gap-1.5 sm:gap-2",
-                compactOnMobile && "max-sm:hidden",
+                compactOnMobile && "max-sm:pt-1",
               )}
             >
               {actions}
@@ -124,7 +129,11 @@ export function AppPageHeader({
           ) : null}
         </div>
       </header>
-      {tabs ? <div>{tabs}</div> : null}
+      {tabs ? (
+        <div data-slot="app-page-header-tabs" className="mt-3 min-w-0">
+          {tabs}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -168,12 +177,7 @@ export function AppBackLink({
       }
     >
       <IconArrowLeft className="size-4 shrink-0" aria-hidden="true" />
-      {children != null ? (
-        <>
-          {" "}
-          {children}
-        </>
-      ) : null}
+      {children != null ? <> {children}</> : null}
     </Button>
   );
 }

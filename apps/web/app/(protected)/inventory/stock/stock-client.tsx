@@ -3,7 +3,7 @@
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useDeferredValue, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import {
   ArrowRightToLine as IconArrowBarRight,
@@ -111,7 +111,9 @@ import {
 import { BranchStockThresholdsDialog } from "@/components/inventory/branch-stock-thresholds-dialog";
 import { SmartReorderSheet } from "@/components/inventory/smart-reorder-sheet";
 import { StockOnHandPrintDialog } from "@/components/inventory/stock-on-hand-print-dialog";
+import { IntraSiteTransferDialog } from "@/components/inventory/intra-site-transfer-dialog";
 import type { BranchStockThresholdRow } from "@lib/inventory/branch-thresholds-data";
+import type { IntraSiteTransferData } from "@lib/inventory/intra-site-transfer-data";
 import type { ReorderSuggestionItem } from "@lib/inventory/smart-reorder-data";
 
 const stockCopy = messages.inventory.stock;
@@ -320,6 +322,7 @@ export function StockClient({
   initialDetailData = null,
   branchThresholds = [],
   reorderSuggestions = [],
+  intraSiteTransferData = null,
 }: {
   ingredients: StockIngredient[];
   locations: StockLocationOption[];
@@ -334,8 +337,11 @@ export function StockClient({
   initialDetailData?: StockIngredientDetailData | null;
   branchThresholds?: BranchStockThresholdRow[];
   reorderSuggestions?: ReorderSuggestionItem[];
+  intraSiteTransferData?: IntraSiteTransferData | null;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const canViewMonetary = branchValue != null;
   const controlSize = useFormControlSize();
   const [activeCategory, setActiveCategory] = useState(
@@ -343,9 +349,14 @@ export function StockClient({
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [stockFilter, setStockFilter] = useState<StockFilter>("all");
-  const [selectedLocation, setSelectedLocation] = useState(
-    defaultLocationId == null ? "total" : String(defaultLocationId),
-  );
+  const selectedLocation =
+    defaultLocationId == null ? "total" : String(defaultLocationId);
+  function changeLocation(value: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("location", value);
+    params.delete("ingredientId");
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }
   const ingredients = useMemo(
     () =>
       projectStockIngredientsForLocation(
@@ -757,7 +768,7 @@ export function StockClient({
   const filterControls = (
     <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
       {locations.length > 1 ? (
-        <Select value={selectedLocation} onValueChange={setSelectedLocation}>
+        <Select value={selectedLocation} onValueChange={changeLocation}>
           <SelectTrigger
             size={controlSize}
             className={
@@ -1076,6 +1087,12 @@ export function StockClient({
       : selectedLocationObj?.kind === "kitchen"
         ? stockCopy.metrics.selectedKitchen
         : stockCopy.metrics.selectedWarehouse;
+  const selectedLocationLabel =
+    selectedLocationObj?.kind === "kitchen"
+      ? stockCopy.filters.locationKitchen
+      : selectedLocationObj?.kind === "warehouse"
+        ? stockCopy.filters.locationWarehouse
+        : null;
   const visibleLocationValue = useMemo(() => {
     if (visibleTotalValue == null) return null;
     if (selectedLocation === "total") return visibleTotalValue;
@@ -1088,8 +1105,15 @@ export function StockClient({
   const underThresholdButton = (
     <Item
       variant="outline"
-      aria-pressed={stockFilter === "low"}
-      onClick={() => setStockFilter((cur) => (cur === "low" ? "all" : "low"))}
+      render={
+        <button
+          type="button"
+          aria-pressed={stockFilter === "low"}
+          onClick={() =>
+            setStockFilter((cur) => (cur === "low" ? "all" : "low"))
+          }
+        />
+      }
       className={cn(
         "flex flex-col justify-between p-3 text-left cursor-pointer",
         stockFilter === "low"
@@ -1118,32 +1142,42 @@ export function StockClient({
         title={stockCopy.title}
         actions={
           <div className="flex w-full flex-wrap items-center justify-start gap-1.5 sm:w-auto sm:justify-end sm:gap-2">
-            <SmartReorderSheet
-              branchId={branchId}
-              items={reorderSuggestions}
-              trigger={
-                <Button
-                  variant="default"
-                  size="field"
-                  className="w-full gap-1.5 font-medium shadow-xs sm:w-auto"
-                >
-                  <IconSparkles className="size-4" />
-                  <span>{INVENTORY_VI.smartReorderOpenBtn}</span>
-                  {shortageCount > 0 ? (
-                    <Badge
-                      variant="secondary"
-                      className="ml-1 h-4 px-1.5 font-mono text-xs font-semibold bg-background text-foreground"
-                    >
-                      {shortageCount}
-                    </Badge>
-                  ) : null}
-                </Button>
-              }
-            />
-            <BranchStockThresholdsDialog
-              branchId={branchId}
-              initialRows={branchThresholds}
-            />
+            {selectedLocationObj ? (
+              <SmartReorderSheet
+                branchId={branchId}
+                items={reorderSuggestions}
+                trigger={
+                  <Button
+                    variant="default"
+                    size="field"
+                    className="w-full gap-1.5 font-medium shadow-xs sm:w-auto"
+                  >
+                    <IconSparkles className="size-4" />
+                    <span>{INVENTORY_VI.smartReorderOpenBtn}</span>
+                    {shortageCount > 0 ? (
+                      <Badge
+                        variant="secondary"
+                        className="ml-1 h-4 px-1.5 font-mono text-xs font-semibold bg-background text-foreground"
+                      >
+                        {shortageCount}
+                      </Badge>
+                    ) : null}
+                  </Button>
+                }
+              />
+            ) : null}
+            {intraSiteTransferData ? (
+              <IntraSiteTransferDialog data={intraSiteTransferData} />
+            ) : null}
+            {selectedLocationObj && selectedLocationLabel ? (
+              <BranchStockThresholdsDialog
+                key={selectedLocationObj.id}
+                branchId={branchId}
+                locationId={selectedLocationObj.id}
+                locationLabel={selectedLocationLabel}
+                initialRows={branchThresholds}
+              />
+            ) : null}
             <StockOnHandPrintDialog
               branchId={branchId}
               ingredients={filtered}
@@ -1191,7 +1225,13 @@ export function StockClient({
 
         <Item
           variant="outline"
-          onClick={() => setStockFilter("all")}
+          render={
+            <button
+              type="button"
+              aria-pressed={stockFilter === "all"}
+              onClick={() => setStockFilter("all")}
+            />
+          }
           className={cn(
             "flex flex-col justify-between p-3 text-left cursor-pointer",
             stockFilter === "all"
@@ -1215,8 +1255,16 @@ export function StockClient({
 
         <Item
           variant="outline"
-          onClick={() =>
-            setStockFilter((cur) => (cur === "in_stock" ? "all" : "in_stock"))
+          render={
+            <button
+              type="button"
+              aria-pressed={stockFilter === "in_stock"}
+              onClick={() =>
+                setStockFilter((cur) =>
+                  cur === "in_stock" ? "all" : "in_stock",
+                )
+              }
+            />
           }
           className={cn(
             "flex flex-col justify-between p-3 text-left cursor-pointer",
@@ -1243,8 +1291,14 @@ export function StockClient({
 
         <Item
           variant="outline"
-          onClick={() =>
-            setStockFilter((cur) => (cur === "out" ? "all" : "out"))
+          render={
+            <button
+              type="button"
+              aria-pressed={stockFilter === "out"}
+              onClick={() =>
+                setStockFilter((cur) => (cur === "out" ? "all" : "out"))
+              }
+            />
           }
           className={cn(
             "flex flex-col justify-between p-3 text-left cursor-pointer",

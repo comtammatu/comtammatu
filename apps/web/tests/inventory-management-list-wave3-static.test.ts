@@ -6,10 +6,10 @@ import { test } from "node:test";
 /**
  * Wave 3 — waste/count composition + DETAIL embedded burn.
  *
- * Count Owner LISTs converge on management-list (single AppListFrame +
- * AppToolbar). Waste approvals stay the ADR 0018 D0 decision-card exception.
- * Dead Owner `embedded` dual presenters burn; ADR 0018 overlay embeds
- * (fulfillment hub / GRN presentation=dialog) remain.
+ * Count and waste approval Owner queues converge on management-list (single
+ * AppListFrame + AppToolbar). Review remains addressable in a D1 dialog. Dead
+ * Owner `embedded` dual presenters burn; ADR 0018 overlay embeds (fulfillment
+ * hub / GRN presentation=dialog) remain.
  */
 
 function read(path: string): string {
@@ -44,14 +44,19 @@ test("Wave 3 Owner count-assignments uses AppToolbar search/filters", () => {
   assert.match(source, /<AppDialog[\s>]/);
 });
 
-test("Wave 3 waste approvals stays D0 decision-card Gate exception", () => {
+test("Wave 3 waste approvals uses the canonical LIST frame and review dialog", () => {
   const source = read(
     "app/(protected)/inventory/waste/approvals/waste-approvals-client.tsx",
   );
 
-  assert.match(source, /AppSection/);
-  assert.doesNotMatch(source, /AppListFrame/);
-  assert.doesNotMatch(source, /<DataTable[\s>]/);
+  assert.match(source, /<AppListFrame[\s\S]{0,240}toolbar=\{/);
+  assert.match(source, /<AppToolbar[\s\S]{0,120}variant="inline"/);
+  assert.match(source, /<DataTable[\s>]/);
+  assert.match(source, /mobileCardRender=/);
+  assert.match(source, /<AppDialog[\s>]/);
+  assert.match(source, /useDocumentOverlayUrl/);
+  assert.match(source, /wasteIssueId/);
+  assert.doesNotMatch(source, /AppSection/);
 });
 
 test("Wave 3 Branch count/waste stay branch-touch (no DataTable leakage)", () => {
@@ -66,7 +71,11 @@ test("Wave 3 Branch count/waste stay branch-touch (no DataTable leakage)", () =>
     assert.doesNotMatch(source, /<DataTable[\s>]/, `${path}: no DataTable`);
     assert.doesNotMatch(source, /AppListFrame/, `${path}: no AppListFrame`);
     assert.match(source, /ItemGroup|<Item[\s>]/, `${path}: touch Item`);
-    assert.match(source, /<AppSheet[\s>]|<Sheet[\s>]|SheetContent/, `${path}: Sheet review`);
+    assert.match(
+      source,
+      /<AppSheet[\s>]|<Sheet[\s>]|SheetContent/,
+      `${path}: Sheet review`,
+    );
   }
 });
 

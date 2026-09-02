@@ -167,10 +167,7 @@ test("settings tracking hub keeps three store boundaries", () => {
     join(root, "apps/web/lib/messages/settings.ts"),
     "utf8",
   );
-  assert.match(
-    messages,
-    /Thời gian → Hành động → Đối tượng → Người thao tác/,
-  );
+  assert.match(messages, /Tách việc cần xử lý khỏi nhật ký thao tác và thay đổi quyền/);
 });
 
 test("inventory lifecycle audit migration writes issue/stocktake/transfer actions", () => {

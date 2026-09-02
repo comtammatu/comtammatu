@@ -1,0 +1,45 @@
+diff --git a/dist/main/GoTrueClient.js b/dist/main/GoTrueClient.js
+index 7dccf78146d5c2c9b86cf5ddecb958c0faa073a0..a0bdd259a226f2c104a8eec25776988bd8449a38 100644
+--- a/dist/main/GoTrueClient.js
++++ b/dist/main/GoTrueClient.js
+@@ -3665,7 +3665,9 @@ class GoTrueClient {
+                     ((0, errors_1.isAuthApiError)(err) &&
+                         (err.code === 'refresh_token_not_found' ||
+                             err.code === 'refresh_token_already_used' ||
+-                            err.code === 'session_expired'))) {
++                            err.code === 'session_expired' ||
++                            (err.code === 'validation_failed' &&
++                                err.message === 'Refresh token is not valid')))) {
+                     // A missing session, a transient/aborted network failure (e.g. a
+                     // superseded page navigation cancelling the in-flight request), or
+                     // a dead refresh token (e.g. stale SSR cookies) is not an
+diff --git a/dist/module/GoTrueClient.js b/dist/module/GoTrueClient.js
+index f1e5ced602999d87eea9ec71328d67f984f1c647..2f93840c85ab11a6d7441ed0b3d04090b4b0acd3 100644
+--- a/dist/module/GoTrueClient.js
++++ b/dist/module/GoTrueClient.js
+@@ -3662,7 +3662,9 @@ class GoTrueClient {
+                     (isAuthApiError(err) &&
+                         (err.code === 'refresh_token_not_found' ||
+                             err.code === 'refresh_token_already_used' ||
+-                            err.code === 'session_expired'))) {
++                            err.code === 'session_expired' ||
++                            (err.code === 'validation_failed' &&
++                                err.message === 'Refresh token is not valid')))) {
+                     // A missing session, a transient/aborted network failure (e.g. a
+                     // superseded page navigation cancelling the in-flight request), or
+                     // a dead refresh token (e.g. stale SSR cookies) is not an
+diff --git a/src/GoTrueClient.ts b/src/GoTrueClient.ts
+index 61dd97d792db52bf9cd8388948464128a6904d28..737984a489be9bcfafaad42aaf8e86e298e117b1 100644
+--- a/src/GoTrueClient.ts
++++ b/src/GoTrueClient.ts
+@@ -4363,7 +4363,9 @@ export default class GoTrueClient {
+           (isAuthApiError(err) &&
+             (err.code === 'refresh_token_not_found' ||
+               err.code === 'refresh_token_already_used' ||
+-              err.code === 'session_expired'))
++              err.code === 'session_expired' ||
++              (err.code === 'validation_failed' &&
++                err.message === 'Refresh token is not valid')))
+         ) {
+           // A missing session, a transient/aborted network failure (e.g. a
+           // superseded page navigation cancelling the in-flight request), or

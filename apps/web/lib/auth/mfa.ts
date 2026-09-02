@@ -1,6 +1,7 @@
 "use client";
 
 import { createClient } from "@comtammatu/database/supabase/client";
+import { messages } from "@lib/messages";
 
 export type TotpFactor = {
   id: string;
@@ -21,14 +22,14 @@ export type TotpEnrollment = {
 };
 
 export type MfaResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: string };
+  { success: true; data: T } | { success: false; error: string };
 
-const GENERIC_MFA_ERROR = "Không thể xác thực MFA. Vui lòng thử lại.";
+const GENERIC_MFA_ERROR = messages.auth.mfa.genericError;
 
 export async function getAal(): Promise<MfaResult<AalSnapshot>> {
   const supabase = createClient();
-  const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  const { data, error } =
+    await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
   if (error || !data) {
     return { success: false, error: GENERIC_MFA_ERROR };
   }
@@ -59,7 +60,9 @@ export async function listTotpFactors(): Promise<MfaResult<TotpFactor[]>> {
   return { success: true, data: factors };
 }
 
-export async function getVerifiedTotpFactorId(): Promise<MfaResult<string | null>> {
+export async function getVerifiedTotpFactorId(): Promise<
+  MfaResult<string | null>
+> {
   const listed = await listTotpFactors();
   if (!listed.success) return listed;
   const verified = listed.data.find((factor) => factor.status === "verified");

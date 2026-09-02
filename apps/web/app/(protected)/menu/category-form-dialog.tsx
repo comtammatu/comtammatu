@@ -10,7 +10,7 @@ import {
 } from "@/components/form";
 import { ACTIONS_VI, MENU_VI } from "@comtammatu/shared/messages";
 import { createCategory, updateCategory } from "./actions";
-import { CATEGORY_TYPE_LABELS } from "./category-labels";
+import { CATEGORY_TYPE_LABELS } from "@comtammatu/shared/menu";
 import type { CategoryRow } from "./category-table";
 
 const categoryTypeValues = Object.keys(CATEGORY_TYPE_LABELS) as [

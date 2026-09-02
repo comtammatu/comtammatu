@@ -342,7 +342,7 @@ test("finance supplier invoice deep links load the exact scoped invoice", () => 
   assert.match(financePage, /mode="no-data"[\s\S]*copy\.notFoundTitle/);
   assert.match(
     financePage,
-    /requestedInvoiceRes\?\.success === false[\s\S]*mode="error"/,
+    /requestedInvoiceRes\?\.success === false[\s\S]*throw new Error/,
   );
   assert.match(
     actionSource,

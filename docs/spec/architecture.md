@@ -44,7 +44,7 @@ monorepo.
 | Data authority       | Supabase Cloud owns Auth, Postgres, PostgREST, RLS, Realtime, and Storage                                                              |
 | Authorization        | `proxy.ts` gates session/surface/scope; RLS and authorized RPCs own data/action authority                                              |
 | Mutation correctness | Server Action input is Zod-validated; multi-row correctness is implemented in one Postgres RPC                                         |
-| Offline posture      | Cloud-first PWA (D012); no local-first POS. Install / SW / OS: `docs/spec/pwa.md`                                                       |
+| Offline posture      | Cloud-first PWA (D012); no local-first POS. Install / SW / OS: `docs/spec/pwa.md`                                                      |
 | Printing             | `print_jobs` is the durable queue; the branch agent claims idempotently, retries LAN delivery, and recovery-polls around Realtime gaps |
 | Delivery             | Web deploys through Vercel; database and branch-agent releases have separate promotion gates                                           |
 
@@ -69,11 +69,11 @@ and `docs/agent/rules/database.md`.
 
 `getDefaultRedirect(claims)` (`packages/shared/src/auth/scope.ts`):
 
-| Role                | Route                                             |
-| ------------------- | ------------------------------------------------- |
-| `owner`             | `/`, then branch resolver when only one branch exists |
-| L0 adapters + `self_service` | `/` (queue-first Control home)           |
-| Branch-pinned staff | `/br/{branchId}`                                  |
+| Role                         | Route                                                 |
+| ---------------------------- | ----------------------------------------------------- |
+| `owner`                      | `/`, then branch resolver when only one branch exists |
+| L0 adapters + `self_service` | `/` (queue-first Control home)                        |
+| Branch-pinned staff          | `/br/{branchId}`                                      |
 
 Root `/` uses the same resolver (multi-branch → picker). POS/KDS are not
 post-login fallbacks — reach via Branch home or direct link.
@@ -103,18 +103,10 @@ Apps are graph leaves; packages never import apps. Use explicit `exports` and
 `workspace:*`. New package only for a second runtime, trust boundary, or
 independently built artifact.
 
-## Code Placement
-
-| Reuse/correctness boundary          | Location                        |
-| ----------------------------------- | ------------------------------- |
-| One route                           | Beside that route               |
-| Multiple routes in one route family | The route-family `_lib`         |
-| Multiple web route families         | `apps/web/lib/<domain>`         |
-| Multiple runtimes or applications   | An existing `packages/*` export |
-| Correctness across database rows    | Supabase RPC/migration          |
-
-Route-local `_lib` is private to its family. `packages/shared` owns
-runtime-neutral contracts only.
+Project and file placement is owned by
+`docs/CODEBASE_MAP.md#project-placement-matrix`; import/runtime boundaries are
+owned by `docs/agent/rules/engineering.md`. This architecture spec does not
+mirror either contract.
 
 ## Operating Planes
 
@@ -142,36 +134,27 @@ flowchart TB
     verify --> docs
 ```
 
-| Plane       | Owns                                                       | First files to inspect                                                                                                                             |
-| ----------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Control     | Auth, ACL, host/surface routing, branch scope              | `apps/web/proxy.ts`, `packages/shared/src/auth/{route-resolution,module-acl,scope}.ts` |
-| Execution   | Route behavior, Server Actions, realtime UI flows          | `apps/web/app/**`, route-local `actions.ts`, `apps/web/app/_lib/*`                                                                                 |
-| Domain      | Business rules shared across routes/providers              | `packages/shared/src/**`                                                                                                                           |
-| Data        | Schema, RLS, RPCs, generated types, Supabase clients       | `supabase/migrations/**`, `packages/database/src/**`                                                                                               |
-| UI          | Má Tư Design System, reusable primitives, surface rhythm   | `docs/spec/design-system.md`, `packages/ui/src/components/**`, `apps/web/app/components/surface.tsx`                                               |
-| Branch Edge | Local print daemon and branch print/QR behavior            | `apps/print-agent/src/**`, branch settings surfaces                                                                                                |
-| Docs/Ops    | Current source-of-truth, runbooks, active work state       | `docs/CODEBASE_MAP.md`, `docs/modules/**`, `docs/runbooks/**`, `tasks/**`                                                                          |
-
-## Import Boundaries
-
-| Context              | Import from                                | Reason                        |
-| -------------------- | ------------------------------------------ | ----------------------------- |
-| Server Actions / RSC | `@comtammatu/database/supabase/server`     | Request-scoped user client    |
-| Privileged server    | `@comtammatu/database/supabase/service`    | Intentional RLS bypass        |
-| proxy.ts             | `@comtammatu/database/supabase/middleware` | Session refresh boundary      |
-| "use client"         | `@comtammatu/database/supabase/client`     | No server deps (next/headers) |
+| Plane       | Owns                                                     | First files to inspect                                                                               |
+| ----------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Control     | Auth, ACL, host/surface routing, branch scope            | `apps/web/proxy.ts`, `packages/shared/src/auth/{route-resolution,module-acl,scope}.ts`               |
+| Execution   | Route behavior, Server Actions, realtime UI flows        | `apps/web/app/**`, route-local `actions.ts`, `apps/web/app/_lib/*`                                   |
+| Domain      | Business rules shared across routes/providers            | `packages/shared/src/**`                                                                             |
+| Data        | Schema, RLS, RPCs, generated types, Supabase clients     | `supabase/migrations/**`, `packages/database/src/**`                                                 |
+| UI          | Má Tư Design System, reusable primitives, surface rhythm | `docs/spec/design-system.md`, `packages/ui/src/components/**`, `apps/web/app/components/surface.tsx` |
+| Branch Edge | Local print daemon and branch print/QR behavior          | `apps/print-agent/src/**`, branch settings surfaces                                                  |
+| Docs/Ops    | Current source-of-truth, runbooks, active work state     | `docs/CODEBASE_MAP.md`, `docs/modules/**`, `docs/runbooks/**`, `tasks/**`                            |
 
 ## Product Dual Thesis
 
 Two product halves — structure, naming, chrome, and adapters must make both obvious.
 
-| Product half (VI)               | Job                                                                     | Plane ID          | Route root                                                                                      | Shell                    | Adapter prefix    |
-| ------------------------------- | ----------------------------------------------------------------------- | ----------------- | ----------------------------------------------------------------------------------------------- | ------------------------ | ----------------- |
-| **`Quản lý hệ thống`**            | Tenant/branch oversight, menu, central inventory, finance, HR, settings | `control_surface` | `/`, `/menu`, `/orders`, `/inventory`, `/finance`, `/hr`, `/branches`, `/settings`, `/feedback` | `AppShell` (nav-as-data) | `App*`            |
-| **`Vận hành bán hàng` (ca)**      | Shift work, branch stock, team, branch settings                         | `branch_surface`  | `/br/[branchId]/*` (excl. stations)                                                             | Branch operator chrome   | `BranchOperator*` |
-| **`Vận hành bán hàng` (station)** | Sell / kitchen / pickup queue                                           | `station_chrome`  | `/br/[branchId]/{pos,kds,pickup}`                                                               | Station chrome           | station adapters  |
-| **`Trang cá nhân`**               | Self `/me` (ADR 0012/0037); Owner excluded (`module-acl` `me`)          | `self_surface`    | `/me/*`                                                                                         | Control shell / `Employee*` | `Employee*`    |
-| **Public / `khách`**              | Auth, guest order, feedback QR, pickup display                          | `public`          | `/login`, `/q`, `/r`, …                                                                         | none                     | —                 |
+| Product half (VI)                 | Job                                                                     | Plane ID          | Route root                                                                                      | Shell                       | Adapter prefix    |
+| --------------------------------- | ----------------------------------------------------------------------- | ----------------- | ----------------------------------------------------------------------------------------------- | --------------------------- | ----------------- |
+| **`Quản lý hệ thống`**            | Tenant/branch oversight, menu, central inventory, finance, HR, settings | `control_surface` | `/`, `/menu`, `/orders`, `/inventory`, `/finance`, `/hr`, `/branches`, `/settings`, `/feedback` | `AppShell` (nav-as-data)    | `App*`            |
+| **`Vận hành bán hàng` (ca)**      | Shift work, branch stock, team, branch settings                         | `branch_surface`  | `/br/[branchId]/*` (excl. stations)                                                             | Branch operator chrome      | `BranchOperator*` |
+| **`Vận hành bán hàng` (station)** | Sell / kitchen / pickup queue                                           | `station_chrome`  | `/br/[branchId]/{pos,kds,pickup}`                                                               | Station chrome              | station adapters  |
+| **`Trang cá nhân`**               | Self `/me` (ADR 0012/0037); Owner excluded (`module-acl` `me`)          | `self_surface`    | `/me/*`                                                                                         | Control shell / `Employee*` | `Employee*`       |
+| **Public / `khách`**              | Auth, guest order, feedback QR, pickup display                          | `public`          | `/login`, `/q`, `/r`, …                                                                         | none                        | —                 |
 
 - UI copy for the L0 half: **`Quản trị`** / **`Hệ thống`**. Role ACL `owner` is not a plane name.
 - Runtime plane id `RouteSurface: "owner"` remains a technical alias of
@@ -183,29 +166,19 @@ Two product halves — structure, naming, chrome, and adapters must make both ob
 
 ### Folder placement (Dual Thesis)
 
-| Concern                                      | Lives under                                                     | Notes                                                                                                 |
-| -------------------------------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| **`Quản trị`** L0 routes                           | `apps/web/app/(protected)/{menu,orders,inventory,finance,hr,…}` | `App*` adapters; one `AppShell` + nav-as-data                                                         |
-| Branch operations + stations                   | `apps/web/app/(protected)/br/[branchId]/…`                      | `BranchOperator*` / station chrome                                                                    |
-| Branch settings UI (POS/KDS/tables/printers) | `apps/web/app/(protected)/br/_shared/settings/`                 | Not a fake L0 `branch-settings/` tree                                                                 |
-| Dual-plane shared domain logic               | `apps/web/lib/inventory/*`                                      | Same core; different presenters                                                                       |
+| Concern                                      | Lives under                                                     | Notes                                         |
+| -------------------------------------------- | --------------------------------------------------------------- | --------------------------------------------- |
+| **`Quản trị`** L0 routes                     | `apps/web/app/(protected)/{menu,orders,inventory,finance,hr,…}` | `App*` adapters; one `AppShell` + nav-as-data |
+| Branch operations + stations                 | `apps/web/app/(protected)/br/[branchId]/…`                      | `BranchOperator*` / station chrome            |
+| Branch settings UI (POS/KDS/tables/printers) | `apps/web/app/(protected)/br/_shared/settings/`                 | Not a fake L0 `branch-settings/` tree         |
+| Dual-plane shared domain logic               | `apps/web/lib/inventory/*`                                      | Same core; different presenters               |
 
 **Nav-as-data:** one `AppShell`; layouts import `ControlSurfaceShell`; deep nav
 via `resolveControlSurfaceDeepNav`. Do not rewrite POS/KDS.
 
-## Routing (path-based, single domain)
-
-D009 — path-based, no sub-domain. Exact role/module mappings:
-`docs/spec/role-route-matrix.md` (do not copy here).
-
-| Surface (product) | Plane ID                            | Route families                                                                                  | Boundary                                                             |
-| ----------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| **`Quản lý hệ thống`**  | `control_surface`                   | `/`, `/menu`, `/orders`, `/inventory`, `/finance`, `/branches`, `/hr`, `/settings`, `/feedback` | L0 Tenant Command; runtime `RouteSurface: "owner"` is the code alias |
-| **`Trang cá nhân`**     | `self_surface`                      | `/me/*`                                                                                         | ADR 0012/0037; Owner excluded (`module-acl` `me`)                    |
-| **`Vận hành bán hàng`** | `branch_surface` + `station_chrome` | `/br/[branchId]/*`                                                                              | MODULE_ACL + JWT `user_role` / URL branch scope; `has_permission()` + RLS own actions and rows (`docs/modules/auth.md`) |
-| Utility           | —                                   | `/notifications`, `/access-denied`                                                              | Explicit utility/public contracts, not a product plane               |
-
-BM/Staff daily work stays under `/br/[branchId]/*`; `control_surface` is
+D009 remains path-based on one domain. Exact role, module, route, and scope
+mappings are generated in `docs/spec/role-route-matrix.md`; do not mirror them
+here. BM/Staff daily work stays under `/br/[branchId]/*`; `control_surface` is
 L0-gated per ADR 0012.
 
 ## Infrastructure Strategy

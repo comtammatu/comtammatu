@@ -5,9 +5,7 @@ import { BRANCH_VI } from "@comtammatu/shared/messages";
 
 export const controlSurface = {
   dashboard: {
-    eyebrow: "Toàn hệ thống",
     title: "Hôm nay",
-    description: "Việc cần xử lý theo quyền của bạn, rồi vào đúng phân hệ.",
     attentionTitle: "Cần xử lý",
     attentionEmpty: "Không có việc cần xử lý ngay.",
     todayBar: {

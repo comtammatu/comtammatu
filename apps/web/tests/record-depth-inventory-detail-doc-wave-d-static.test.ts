@@ -7,9 +7,9 @@ import { test } from "node:test";
  * Inventory DETAIL+DOC chrome — Wave D (Frame burn-down leftovers).
  *
  * Section/callout boxes use AppSection (or Alert/NoteCallout for tinted
- * callouts). Frame remains only as the layout-free inset primitive.
- * Waste approvals stay the ADR 0018 D0 queue exception (AppPage + AppSection
- * decision cards — never AppListFrame / DataTable LIST recipe).
+ * callouts). Frame remains only as the layout-free inset primitive. Waste
+ * approvals use the canonical LIST recipe with an addressable D1 review
+ * dialog.
  */
 
 function read(path: string): string {
@@ -39,33 +39,32 @@ test("Wave D waste create line cards use AppSection, not Frame", () => {
   );
 });
 
-test("Wave D waste approvals D0 queue uses AppSection cards, not LIST frame", () => {
+test("Wave D waste approvals uses LIST chrome with addressable review", () => {
   const client = read(
     "app/(protected)/inventory/waste/approvals/waste-approvals-client.tsx",
   );
 
   assert.match(client, /AppPage/, "waste approvals: AppPage");
   assert.match(client, /AppPageHeader/, "waste approvals: AppPageHeader");
+  assert.match(client, /AppListFrame/, "waste approvals: canonical LIST frame");
   assert.match(
     client,
-    /AppSection/,
-    "waste approvals: AppSection decision cards",
+    /from "@\/components\/data-table\/data-table"|<DataTable[\s>]/,
+    "waste approvals: DataTable LIST recipe",
   );
-  assert.doesNotMatch(
+  assert.match(
     client,
-    /AppListFrame/,
-    "waste approvals: ADR D0 exception — not LIST frame",
+    /mobileCardRender=/,
+    "waste approvals: touch-safe mobile cards",
   );
-  assert.doesNotMatch(
+  assert.match(client, /<AppDialog[\s>]/, "waste approvals: review dialog");
+  assert.match(
     client,
-    /from "@comtammatu\/ui\/components\/frame"/,
-    "waste approvals: no Frame card chrome",
+    /useDocumentOverlayUrl[\s\S]*wasteIssueId/,
+    "waste approvals: addressable review state",
   );
-  assert.doesNotMatch(
-    client,
-    /from "@\/components\/data-table"|<DataTable[\s>]/,
-    "waste approvals: no DataTable LIST recipe",
-  );
+  assert.doesNotMatch(client, /AppSection/);
+  assert.doesNotMatch(client, /from "@comtammatu\/ui\/components\/frame"/);
 });
 
 test("Wave D stocktake count DOC keeps DocumentFormFrame + NumberPad wizard", () => {
@@ -73,8 +72,16 @@ test("Wave D stocktake count DOC keeps DocumentFormFrame + NumberPad wizard", ()
     "app/(protected)/inventory/stocktake/[id]/count/count-client.tsx",
   );
 
-  assert.match(client, /DocumentFormFrame/, "stocktake count: DocumentFormFrame");
-  assert.match(client, /StocktakeCountWizard/, "stocktake count: NumberPad wizard");
+  assert.match(
+    client,
+    /DocumentFormFrame/,
+    "stocktake count: DocumentFormFrame",
+  );
+  assert.match(
+    client,
+    /StocktakeCountWizard/,
+    "stocktake count: NumberPad wizard",
+  );
   assert.doesNotMatch(
     client,
     /from "@comtammatu\/ui\/components\/frame"/,

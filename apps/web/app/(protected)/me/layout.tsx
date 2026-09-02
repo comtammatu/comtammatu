@@ -3,8 +3,6 @@ import type { ReactNode } from "react";
 import { PwaRuntimeProvider } from "@/components/pwa-runtime";
 import { MePwaToolbar } from "./me-pwa-toolbar";
 
-export const instant = false;
-
 export const metadata: Metadata = {
   manifest: "/me/manifest.webmanifest",
   appleWebApp: {

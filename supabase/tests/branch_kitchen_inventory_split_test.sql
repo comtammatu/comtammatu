@@ -14,13 +14,14 @@ DECLARE
   v_transfer bigint;
   v_repeat bigint;
   v_reverse bigint;
+  v_transition_branch bigint;
+  v_reverse_transition_branch bigint;
   v_key uuid := pg_catalog.gen_random_uuid();
   v_reverse_key uuid := pg_catalog.gen_random_uuid();
   v_suffix text := pg_catalog.substr(pg_catalog.gen_random_uuid()::text, 1, 8);
   v_failed boolean := false;
   v_count integer;
   v_qty numeric;
-  v_prepared jsonb;
 BEGIN
   SELECT profile.tenant_id, profile.id
   INTO v_tenant, v_owner
@@ -33,17 +34,8 @@ BEGIN
   ORDER BY profile.id
   LIMIT 1;
 
-  SELECT branch.id
-  INTO v_branch
-  FROM public.branches AS branch
-  WHERE branch.tenant_id = v_tenant
-    AND branch.branch_kind = 'branch'
-    AND branch.is_active
-  ORDER BY branch.id
-  LIMIT 1;
-
-  IF v_tenant IS NULL OR v_owner IS NULL OR v_branch IS NULL THEN
-    RAISE EXCEPTION 'SPLIT: owner and active store branch fixtures required';
+  IF v_tenant IS NULL OR v_owner IS NULL THEN
+    RAISE EXCEPTION 'SPLIT: owner fixture required';
   END IF;
 
   PERFORM pg_catalog.set_config('request.jwt.claim.sub', v_owner::text, TRUE);
@@ -60,9 +52,68 @@ BEGIN
     TRUE
   );
 
-  v_prepared := public.prepare_branch_kitchen_split(v_branch);
-  v_warehouse := (v_prepared ->> 'warehouse_location_id')::bigint;
-  v_kitchen := (v_prepared ->> 'kitchen_location_id')::bigint;
+  INSERT INTO public.branches (
+    tenant_id, name, code, branch_kind, is_active
+  ) VALUES (
+    v_tenant,
+    '__split_branch_' || v_suffix,
+    'Q' || pg_catalog.upper(pg_catalog.substr(v_suffix, 1, 3)),
+    'branch',
+    TRUE
+  ) RETURNING id INTO v_branch;
+
+  SELECT
+    max(location.id) FILTER (WHERE location.location_kind = 'warehouse'),
+    max(location.id) FILTER (WHERE location.location_kind = 'kitchen')
+  INTO v_warehouse, v_kitchen
+  FROM public.inventory_locations AS location
+  WHERE location.tenant_id = v_tenant
+    AND location.branch_id = v_branch
+    AND location.is_active;
+
+  IF v_warehouse IS NULL OR v_kitchen IS NULL THEN
+    RAISE EXCEPTION 'SPLIT: store branch must own active warehouse and kitchen';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.inventory_locations AS location
+    WHERE location.id = v_warehouse
+      AND location.is_default_receive
+      AND location.is_default_issue
+      AND NOT location.is_default_consumption
+  ) OR NOT EXISTS (
+    SELECT 1
+    FROM public.inventory_locations AS location
+    WHERE location.id = v_kitchen
+      AND location.is_default_consumption
+      AND NOT location.is_default_receive
+      AND NOT location.is_default_issue
+  ) THEN
+    RAISE EXCEPTION 'SPLIT: mandatory warehouse-kitchen defaults are invalid';
+  END IF;
+
+  v_failed := FALSE;
+  BEGIN
+    UPDATE public.branch_feature_flags
+    SET flag_key = 'branch_kitchen_inventory_split_renamed'
+    WHERE branch_id = v_branch
+      AND flag_key = 'branch_kitchen_inventory_split';
+  EXCEPTION WHEN check_violation THEN
+    v_failed := SQLERRM LIKE 'branch_kitchen_topology_mandatory:%';
+  END;
+  IF NOT v_failed THEN
+    RAISE EXCEPTION 'SPLIT: mandatory compatibility marker was renameable';
+  END IF;
+  v_failed := FALSE;
+
+  IF pg_catalog.to_regprocedure(
+       'public.prepare_branch_kitchen_split(bigint)'
+     ) IS NOT NULL
+     OR pg_catalog.to_regprocedure(
+       'public.set_branch_kitchen_split(bigint,boolean,uuid)'
+     ) IS NOT NULL THEN
+    RAISE EXCEPTION 'SPLIT: optional preparation/activation RPCs must be retired';
+  END IF;
 
   INSERT INTO public.units (tenant_id, code, name)
   VALUES (v_tenant, '__split_u_' || v_suffix, 'Split unit')
@@ -257,6 +308,69 @@ BEGIN
   WHERE remaining.ingredient_id = v_ingredient;
   IF v_qty <> 4 THEN
     RAISE EXCEPTION 'SPLIT: expected remaining reversal quantity 4, got %', v_qty;
+  END IF;
+
+  INSERT INTO public.branches (
+    tenant_id, name, code, branch_kind, is_active
+  ) VALUES (
+    v_tenant,
+    '__split_transition_' || v_suffix,
+    'T' || pg_catalog.upper(pg_catalog.substr(v_suffix, 1, 3)),
+    'branch',
+    TRUE
+  ) RETURNING id INTO v_transition_branch;
+
+  UPDATE public.branches
+  SET branch_kind = 'central_supply'
+  WHERE id = v_transition_branch
+    AND tenant_id = v_tenant;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.branch_feature_flags AS flag
+    WHERE flag.branch_id = v_transition_branch
+      AND flag.flag_key = 'branch_kitchen_inventory_split'
+  ) THEN
+    RAISE EXCEPTION 'SPLIT: central site retained the branch compatibility marker';
+  END IF;
+
+  INSERT INTO public.branches (
+    tenant_id, name, code, branch_kind, is_active
+  ) VALUES (
+    v_tenant,
+    '__split_reverse_transition_' || v_suffix,
+    'R' || pg_catalog.upper(pg_catalog.substr(v_suffix, 1, 3)),
+    'central_supply',
+    TRUE
+  ) RETURNING id INTO v_reverse_transition_branch;
+
+  UPDATE public.branches
+  SET branch_kind = 'branch'
+  WHERE id = v_reverse_transition_branch
+    AND tenant_id = v_tenant;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.inventory_locations AS location
+    WHERE location.tenant_id = v_tenant
+      AND location.branch_id = v_reverse_transition_branch
+      AND location.location_kind = 'warehouse'
+      AND location.is_active
+      AND location.is_default_receive
+      AND location.is_default_issue
+      AND NOT location.is_default_consumption
+  ) OR NOT EXISTS (
+    SELECT 1
+    FROM public.inventory_locations AS location
+    WHERE location.tenant_id = v_tenant
+      AND location.branch_id = v_reverse_transition_branch
+      AND location.location_kind = 'kitchen'
+      AND location.is_active
+      AND location.is_default_consumption
+      AND NOT location.is_default_receive
+      AND NOT location.is_default_issue
+  ) THEN
+    RAISE EXCEPTION 'SPLIT: central-to-branch transition produced invalid defaults';
   END IF;
 END;
 $$;

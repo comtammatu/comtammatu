@@ -67,7 +67,7 @@ export function BranchStocktakeListClient({
     const query = search.trim();
     return sessions.filter((session) => {
       if (status !== "all" && session.status !== status) return false;
-      return !query || matchesSearch([`KK-${session.id}`], query);
+      return !query || matchesSearch([session.sessionNumber], query);
     });
   }, [search, sessions, status]);
   const hasFilter = status !== "all" || search.trim().length > 0;
@@ -172,7 +172,7 @@ export function BranchStocktakeListClient({
                       <ItemContent className="min-w-0 gap-1">
                         <div className="flex min-w-0 items-center gap-2">
                           <ItemTitle className="truncate font-mono text-sm font-semibold">
-                            KK-{session.id}
+                            {session.sessionNumber}
                           </ItemTitle>
                           <StatusBadge
                             domain="inventory"

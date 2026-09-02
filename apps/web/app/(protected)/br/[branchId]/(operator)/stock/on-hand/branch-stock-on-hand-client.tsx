@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useDeferredValue, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronRight as IconChevronRight,
   ClipboardList as IconClipboardList,
@@ -40,6 +40,8 @@ import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { AppBackLink, AppEmptyState, AppSheet } from "@/components/surface";
 import { MultiSelectCombobox } from "@/components/form/multi-select-combobox";
 import { StockOnHandPrintDialog } from "@/components/inventory/stock-on-hand-print-dialog";
+import { BranchStockThresholdsDialog } from "@/components/inventory/branch-stock-thresholds-dialog";
+import { IntraSiteTransferDialog } from "@/components/inventory/intra-site-transfer-dialog";
 import { formatQty } from "@lib/inventory/format";
 import { formatStockUnits } from "@/(protected)/inventory/_lib/stock-unit-format";
 import { ITEM_KIND_LABELS } from "@/(protected)/inventory/_lib/constants";
@@ -64,6 +66,8 @@ import {
 } from "@lib/inventory/stock-on-hand-model";
 import { messages } from "@lib/messages";
 import { PURCHASE_ORDER_CREATE_HREF } from "@lib/inventory/purchase-order-paths";
+import type { BranchStockThresholdRow } from "@lib/inventory/branch-thresholds-data";
+import type { IntraSiteTransferData } from "@lib/inventory/intra-site-transfer-data";
 
 const stockCopy = messages.inventory.stock;
 
@@ -107,10 +111,12 @@ function StockQuantity({ item }: { item: StockIngredient }) {
 function StockTouchRow({
   branchId,
   item,
+  selectedLocation,
   showBreakdown = false,
 }: {
   branchId: number;
   item: StockIngredient;
+  selectedLocation: string;
   showBreakdown?: boolean;
 }) {
   return (
@@ -120,7 +126,7 @@ function StockTouchRow({
       className="min-h-12 min-w-0 flex-nowrap touch-manipulation gap-2 rounded-none border-x-0 border-t-0 border-b border-border px-2 py-1.5 last:border-b-0"
       render={
         <Link
-          href={`/br/${branchId}/stock/on-hand/${item.id}`}
+          href={`/br/${branchId}/stock/on-hand/${item.id}?location=${selectedLocation}`}
           prefetch={true}
           aria-label={stockCopy.actions.viewDetailAria(item.name)}
           role="listitem"
@@ -249,7 +255,8 @@ interface BranchStockOnHandClientProps {
   ingredients: StockIngredient[];
   locations: StockLocationOption[];
   defaultLocationId: number | null;
-  underThresholdCount: number;
+  branchThresholds: BranchStockThresholdRow[];
+  intraSiteTransferData: IntraSiteTransferData | null;
   secondaryJobs: StockSecondaryJob[];
 }
 
@@ -261,10 +268,13 @@ export function BranchStockOnHandClient({
   ingredients: allIngredients,
   locations,
   defaultLocationId,
-  underThresholdCount,
+  branchThresholds,
+  intraSiteTransferData,
   secondaryJobs,
 }: BranchStockOnHandClientProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
   const [categories, setCategories] = useState<string[]>([]);
   const [status, setStatus] = useState<StockFilter>(
@@ -272,9 +282,13 @@ export function BranchStockOnHandClient({
   );
   const [filterOpen, setFilterOpen] = useState(false);
   const [moreJobsOpen, setMoreJobsOpen] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState(
-    defaultLocationId == null ? "total" : String(defaultLocationId),
-  );
+  const selectedLocation =
+    defaultLocationId == null ? "total" : String(defaultLocationId);
+  function changeLocation(value: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("location", value);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }
   const ingredients = useMemo(
     () =>
       projectStockIngredientsForLocation(
@@ -283,6 +297,16 @@ export function BranchStockOnHandClient({
       ),
     [allIngredients, selectedLocation],
   );
+  const selectedLocationObj = locations.find(
+    (location) => String(location.id) === selectedLocation,
+  );
+  const selectedLocationLabel =
+    selectedLocationObj?.kind === "kitchen"
+      ? stockCopy.filters.locationKitchen
+      : selectedLocationObj?.kind === "warehouse"
+        ? stockCopy.filters.locationWarehouse
+        : null;
+  const underThresholdCount = ingredients.filter(isStockReorderRisk).length;
   const [draftCategories, setDraftCategories] = useState<string[]>([]);
 
   const { categories: categoryOptions, hasUncategorized } = useMemo(
@@ -354,13 +378,12 @@ export function BranchStockOnHandClient({
       back={<AppBackLink href={`/br/${branchId}/stock`} />}
     >
       {locations.length > 1 ? (
-        <Tabs value={selectedLocation} onValueChange={setSelectedLocation}>
-          <TabsList className="flex w-full">
+        <Tabs value={selectedLocation} onValueChange={changeLocation}>
+          <TabsList size="touch" layout="scroll">
             {locations.map((location) => (
               <TabsTrigger
                 key={location.id}
                 value={String(location.id)}
-                className="flex-1"
               >
                 {location.kind === "kitchen"
                   ? stockCopy.filters.locationKitchen
@@ -369,11 +392,31 @@ export function BranchStockOnHandClient({
                     : location.name}
               </TabsTrigger>
             ))}
-            <TabsTrigger value="total" className="flex-1">
+            <TabsTrigger value="total">
               {stockCopy.filters.locationTotal}
             </TabsTrigger>
           </TabsList>
         </Tabs>
+      ) : null}
+      {selectedLocationObj || intraSiteTransferData ? (
+        <div className="flex flex-wrap items-center gap-2">
+          {intraSiteTransferData ? (
+            <IntraSiteTransferDialog
+              data={intraSiteTransferData}
+              triggerSize="touch"
+              detailBasePath={`/br/${branchId}/stock/transfer`}
+            />
+          ) : null}
+          {selectedLocationObj && selectedLocationLabel ? (
+            <BranchStockThresholdsDialog
+              key={selectedLocationObj.id}
+              branchId={branchId}
+              locationId={selectedLocationObj.id}
+              locationLabel={selectedLocationLabel}
+              initialRows={branchThresholds}
+            />
+          ) : null}
+        </div>
       ) : null}
       {!coreDataLoadFailed && underThresholdCount > 0 ? (
         <NoteCallout tone="warning" className="min-h-12 items-center">
@@ -515,7 +558,7 @@ export function BranchStockOnHandClient({
               >
                 <TabsList
                   size="touch"
-                  className="grid w-full grid-cols-3"
+                  layout="equal"
                   aria-label={stockCopy.filters.statusPlaceholder}
                 >
                   <TabsTrigger value="in_stock">
@@ -576,6 +619,7 @@ export function BranchStockOnHandClient({
                     key={item.id}
                     branchId={branchId}
                     item={item}
+                    selectedLocation={selectedLocation}
                     showBreakdown={selectedLocation === "total"}
                   />
                 ))}

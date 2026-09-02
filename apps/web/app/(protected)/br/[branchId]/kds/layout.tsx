@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { ForceLightMode } from "@/components/force-light-mode";
+import { PwaRuntimeProvider as OperationalPwaProvider } from "@/components/pwa-runtime";
 import { ScreenWakeLock } from "@/components/screen-wake-lock";
-import { OperationalPwaProvider } from "../_components/operational-pwa/provider";
 import { KdsPwaToolbar } from "../_components/operational-pwa/toolbar";
-
-export const instant = false;
 
 export async function generateMetadata({
   params,

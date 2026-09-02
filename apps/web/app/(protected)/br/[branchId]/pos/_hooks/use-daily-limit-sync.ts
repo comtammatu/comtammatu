@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
-import { getVNDateString } from "@/_lib/format-datetime";
+import { getVNDateString } from "@comtammatu/shared/time";
 
 export interface UseDailyLimitSyncArgs {
   branchId: number;

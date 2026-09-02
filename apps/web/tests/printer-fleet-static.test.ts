@@ -20,7 +20,7 @@ test("printer fleet UI drops 3-slot role grid", () => {
   assert.doesNotMatch(client, /ROLE_ORDER/);
   assert.doesNotMatch(client, /Vị trí máy in/);
   assert.doesNotMatch(client, /kitchen_1|kitchen_2/);
-  assert.match(client, /Thêm máy in/);
+  assert.match(client, /PRINTER_COPY\.addPrinter/);
   assert.match(client, /showsCategoryRoutes/);
   assert.match(client, /testPrintPrinter/);
   assert.match(client, /PRINTER_COPY\.testPrint/);

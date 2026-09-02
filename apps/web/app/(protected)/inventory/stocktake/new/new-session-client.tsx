@@ -100,7 +100,7 @@ export function NewStocktakeSessionClient({
         return;
       }
       toast.success(
-        copy.sessionCreated(res.data.sessionId, res.data.seededLines),
+        copy.sessionCreated(res.data.seededLines),
       );
       router.push(`${routeBase}/${res.data.sessionId}/count?branch=${branchId}`);
     });

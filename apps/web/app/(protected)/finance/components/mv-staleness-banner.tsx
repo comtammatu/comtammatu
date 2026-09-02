@@ -9,7 +9,7 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui/lib/utils";
 import { messages } from "@lib/messages";
-import { formatVNTime } from "@/_lib/format-datetime";
+import { formatVNTime } from "@comtammatu/shared/time";
 import { refreshMaterializedViews } from "../actions";
 
 const stalenessCopy = messages.finance.staleness;

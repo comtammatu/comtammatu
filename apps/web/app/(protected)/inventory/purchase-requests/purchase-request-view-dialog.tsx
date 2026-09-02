@@ -15,7 +15,7 @@ import { messages } from "@lib/messages";
 import {
   buildAutomaticPurchaseDemandAllocations,
   type PurchaseOrderSupplier,
-} from "./purchase-order-drafts";
+} from "@lib/inventory/purchase-order-drafts";
 
 const copy = messages.inventory.purchaseRequests;
 const detailCopy = copy.detail;

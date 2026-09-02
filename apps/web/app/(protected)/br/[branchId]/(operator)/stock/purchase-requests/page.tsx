@@ -18,7 +18,7 @@ import { loadSuggestedOrderQtyByIngredient } from "@lib/inventory/load-suggested
 import { suggestedOrderQtyInEntryUnit } from "@lib/inventory/suggested-order-qty";
 import { fetchProcurementBranches } from "@/(protected)/inventory/_lib/procurement-branches";
 import { fetchIngredients } from "@/(protected)/inventory/ingredient-actions";
-import type { PurchaseOrderSupplier } from "@/(protected)/inventory/purchase-requests/purchase-order-drafts";
+import type { PurchaseOrderSupplier } from "@lib/inventory/purchase-order-drafts";
 import { parseOperatorBranchId } from "../../../_lib/parse-branch-id";
 import { BranchPurchaseRequestsClient } from "./branch-purchase-requests-client";
 

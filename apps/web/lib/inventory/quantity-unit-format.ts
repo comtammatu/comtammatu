@@ -105,6 +105,10 @@ export function formatQuantityUnitBreakdown<T extends QuantityUnitFormatRow>(
     break;
   }
 
+  if (parts[0]?.factor === displayFactor) {
+    return { big: null, base };
+  }
+
   if (parts.length < maxUnits && Math.abs(remaining) > QUANTITY_EPSILON) {
     const firstFactor = parts[0]?.factor ?? Number.POSITIVE_INFINITY;
     const smaller = ladder.filter(

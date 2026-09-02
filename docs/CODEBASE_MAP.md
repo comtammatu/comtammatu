@@ -7,28 +7,31 @@
 
 ## How To Use This Map
 
-- Runtime architecture, package graph, and current code-placement rules:
+- Runtime architecture, package graph, and operating planes:
   `docs/spec/architecture.md`.
+- Project/file placement: the Project Placement Matrix below. Import/runtime
+  boundaries: `docs/agent/rules/engineering.md`.
 - Work status changes daily: `tasks/todo.md`; do not copy it into architecture
   docs.
 - Product Dual Thesis has two halves: **`Quản lý hệ thống`**
   (`control_surface`) and **`Vận hành bán hàng`**
   (`branch_surface` + `station_chrome`).
-- Package manifests own exact framework and dependency versions.
+- Package manifests own exact framework and direct dependency versions;
+  `pnpm-workspace.yaml` owns pnpm settings and dependency overrides.
 
 ## Module Index
 
-| Module         | Doc                                            | Purpose                                                 | Risk Level                  |
-| -------------- | ---------------------------------------------- | ------------------------------------------------------- | --------------------------- |
-| Auth & ACL     | [auth.md](modules/auth.md)                     | JWT claims, role hierarchy, RLS, proxy routing          | **High** — gates all access |
-| Database       | [database.md](modules/database.md)             | Supabase clients, types, migrations, RLS policies       | **High** — data integrity   |
-| Finance        | [finance.md](modules/finance.md)               | Finance Basic boundary, daily money, HĐĐT, payables     | **High** — cash/legal data  |
-| Inventory      | [inventory.md](ref/inventory.md)               | Procurement, site inventory, production, and transfers  | **High** — stock integrity  |
-| Web App        | [web-app.md](modules/web-app.md)               | Next.js routes, PWA contract, layouts, surface shells   | Medium                      |
-| UI             | [ui.md](modules/ui.md)                         | Má Tư DS application, shared components, surfaces       | Low                         |
-| Security       | [security.md](modules/security.md)             | Rate limiting (Upstash Redis)                           | Medium                      |
-| Infrastructure | [infrastructure.md](modules/infrastructure.md) | Monorepo, build, deploy, environment                    | Medium                      |
-| Feedback       | [feedback.md](modules/feedback.md)             | Operator feedback capture and review boundary           | Medium                      |
+| Module         | Doc                                            | Purpose                                                | Risk Level                  |
+| -------------- | ---------------------------------------------- | ------------------------------------------------------ | --------------------------- |
+| Auth & ACL     | [auth.md](modules/auth.md)                     | JWT claims, role hierarchy, RLS, proxy routing         | **High** — gates all access |
+| Database       | [database.md](modules/database.md)             | Supabase clients, types, migrations, RLS policies      | **High** — data integrity   |
+| Finance        | [finance.md](modules/finance.md)               | Finance Basic boundary, daily money, HĐĐT, payables    | **High** — cash/legal data  |
+| Inventory      | [inventory.md](ref/inventory.md)               | Procurement, site inventory, production, and transfers | **High** — stock integrity  |
+| Web App        | [web-app.md](modules/web-app.md)               | Next.js routes, PWA contract, layouts, surface shells  | Medium                      |
+| UI             | [ui.md](modules/ui.md)                         | Má Tư DS application, shared components, surfaces      | Low                         |
+| Security       | [security.md](modules/security.md)             | Rate limiting (Upstash Redis)                          | Medium                      |
+| Infrastructure | [infrastructure.md](modules/infrastructure.md) | Monorepo, build, deploy, environment                   | Medium                      |
+| Feedback       | [feedback.md](modules/feedback.md)             | Operator feedback capture and review boundary          | Medium                      |
 
 ## Documentation Index
 
@@ -40,6 +43,7 @@ When you need deeper navigation by document type:
 - [docs/architecture/README.md](architecture/README.md) — system architecture and cross-cutting docs
 - [ref/README.md](ref/README.md) — canonical reference docs
 - [runbooks/README.md](runbooks/README.md) — readiness and smoke gates
+
 ## Authority And Change Routing
 
 This file answers where code belongs and which files have high blast radius. It
@@ -49,7 +53,7 @@ does not restate agent workflow or architecture contracts:
   `docs/agent/rules/skills.md`.
 - Review depth, task lifecycle, and completion gates:
   `docs/agent/rules/workflow.md`.
-- Current architecture, package graph, and placement contract:
+- Current runtime topology, package graph, and operating planes:
   `docs/spec/architecture.md`.
 - Auth/route authority: `docs/modules/auth.md`, with ACL ownership in
   `packages/shared/src/auth/module-acl.ts` and route resolution in
@@ -60,7 +64,8 @@ does not restate agent workflow or architecture contracts:
 
 ### Project Placement Matrix
 
-Use this matrix when adding or moving files. It is the practical replacement for "where should this live?"
+This matrix owns project/file placement. Use it when adding or moving files;
+do not mirror it in architecture or module docs.
 
 | Change type                                  | Primary location                                                    | Must check                                                                                | Avoid                                                  |
 | -------------------------------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------ |

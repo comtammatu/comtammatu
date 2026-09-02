@@ -124,10 +124,6 @@ function referenceCode(tx: SepayBankTransaction): string {
   return tx.referenceCode ?? tx.code ?? tx.requestId;
 }
 
-function formatPaymentId(paymentId: number): string {
-  return `#${paymentId}`;
-}
-
 function formatProviderRef(providerRef: string | null): string {
   return providerRef?.trim() ? providerRef : "—";
 }
@@ -138,9 +134,7 @@ function isReviewStatus(value: string): value is SepayBankWebhookReviewStatus {
 
 function rowPrimaryLabel(row: BankReconciliationRow): string {
   if (row.kind === "missing_webhook") {
-    return `${copy.missingWebhookTable.payment} ${formatPaymentId(
-      row.payment.paymentId,
-    )}`;
+    return copy.missingWebhookTable.payment;
   }
   return displayBankContent(row.tx.content);
 }
@@ -274,8 +268,7 @@ function MissingWebhookStatusCell({
     >
       <div className="flex flex-col gap-3 py-2">
         <p className="text-xs text-muted-foreground">
-          {copy.missingWebhookTable.payment}{" "}
-          {formatPaymentId(payment.paymentId)}
+          {copy.missingWebhookTable.payment}
         </p>
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-medium text-foreground">
@@ -459,9 +452,7 @@ function DateCell({ row }: { row: BankReconciliationRow }) {
 
 function RowContentCell({ row }: { row: BankReconciliationRow }) {
   if (row.kind === "missing_webhook") {
-    const content = `${copy.missingWebhookTable.payment} ${formatPaymentId(
-      row.payment.paymentId,
-    )}`;
+    const content = copy.missingWebhookTable.payment;
     const reference = formatProviderRef(row.payment.providerRef);
     return (
       <div className="flex min-w-0 flex-col gap-1">

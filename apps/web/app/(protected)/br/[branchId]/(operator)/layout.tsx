@@ -27,20 +27,18 @@ import {
 import { AppPage } from "@/components/surface";
 import { AppHeader } from "@/components/app-header";
 import { PwaRuntimeProvider } from "@/components/pwa-runtime";
+import { BranchOpsRefresh } from "@/_components/branch-ops-refresh";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
 import { messages } from "@lib/messages";
 import { parseOperatorBranchId } from "../_lib/parse-branch-id";
 import { branchNavBadgeCounts } from "./_lib/branch-nav-badges";
-import { BranchOpsRefresh } from "./branch-ops-refresh";
 import { fetchBranchQueueCounts } from "./dashboard/data";
 import { OperatorBottomNav } from "./operator-bottom-nav";
 import { OperatorNotificationBell } from "./operator-notification-bell";
 import { OperatorPwaToolbar } from "./operator-pwa-toolbar";
 import { ThemeMenuItem } from "@/components/theme-toggle";
 import { OPERATOR_BRANCH_OPS_TABLES } from "@/_hooks/branch-ops-runtime";
-
-export const instant = false;
 
 export async function generateMetadata({
   params,
@@ -134,7 +132,7 @@ export default async function OperatorLayout({
           homeHref={branchKind === "branch" ? `/br/${context.branchId}` : "/"}
           homeAriaLabel={
             branchKind === "branch"
-              ? APP_COPY_VI.branchHome
+              ? `${APP_COPY_VI.branchHome} · ${context.branch.name}`
               : APP_COPY_VI.ownerTitle
           }
           showThemeToggle={!canOpenOwnerHome}

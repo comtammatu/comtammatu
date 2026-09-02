@@ -111,14 +111,14 @@ export function ProductionRecipeImportExportMenu({
               onClick={() => handleExport("xlsx")}
             >
               <IconDownload data-icon="inline-start" />
-              Export .xlsx
+              {INVENTORY_VI.exportXlsx}
             </DropdownMenuItem>
             <DropdownMenuItem
               size={isTouchLayout ? "touch" : "default"}
               onClick={() => handleExport("csv")}
             >
               <IconDownload data-icon="inline-start" />
-              Export .csv
+              {INVENTORY_VI.exportCsv}
             </DropdownMenuItem>
           </DropdownMenuGroup>
         </DropdownMenuContent>

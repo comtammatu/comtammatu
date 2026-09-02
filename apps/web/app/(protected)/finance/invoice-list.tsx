@@ -51,7 +51,12 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { FormDialog, TextareaField, TextField, BusinessDateField } from "@/components/form";
+import {
+  FormDialog,
+  TextareaField,
+  TextField,
+  BusinessDateField,
+} from "@/components/form";
 import { ResponsiveActionButton } from "@/components/responsive-action-button";
 import {
   Item,
@@ -61,7 +66,7 @@ import {
 } from "@comtammatu/ui/components/item";
 import { BUYER_KIND_TOGGLE_ITEM_CLASS } from "@lib/hddt/buyer-kind-ui";
 import { DescriptionList } from "@/components/surface";
-import { formatVNDateTime, getVNDateString } from "@/_lib/format-datetime";
+import { formatVNDateTime, getVNDateString } from "@comtammatu/shared/time";
 
 import {
   FINANCE_VI,
@@ -77,6 +82,8 @@ import { StatusBadge } from "@/components/status-badge";
 function formatDate(iso: string): string {
   return formatVNDateTime(iso);
 }
+
+const invoiceListCopy = messages.finance.invoiceList;
 
 function formatIssueAttentionStatus(
   status: TaxInvoiceIssueAttention["status"],
@@ -275,7 +282,9 @@ export function InvoiceList({
   function handleReplaceSuccess(result: ActionResult) {
     const data = result.data as ReplaceInvoiceResultData;
     toast.success(
-      `Đã tạo HĐ thay thế ${data?.new_invoice_number ?? `#${data?.new_id ?? "?"}`}`,
+      data?.new_invoice_number
+        ? invoiceListCopy.replaceSuccess(data.new_invoice_number)
+        : invoiceListCopy.replaceSuccessWithoutNumber,
     );
   }
 
@@ -384,7 +393,8 @@ export function InvoiceList({
         const result = await requeueInvoiceTotalMismatchJobs();
         if (!result.success) {
           toast.error(
-            result.error ?? "Không thể đưa yêu cầu phát hành HĐĐT vào hàng chờ.",
+            result.error ??
+              "Không thể đưa yêu cầu phát hành HĐĐT vào hàng chờ.",
           );
           return;
         }
@@ -592,7 +602,8 @@ export function InvoiceList({
       className: "text-sm text-muted-foreground",
       sortable: true,
       sortValue: (inv) => inv.orders?.order_number ?? inv.id,
-      render: (inv) => inv.orders?.order_number ?? `#${inv.id}`,
+      render: (inv) =>
+        inv.orders?.order_number ?? invoiceListCopy.orderNumberUnavailable,
     },
     {
       key: "buyer",
@@ -683,18 +694,15 @@ export function InvoiceList({
                   <p className="text-sm font-semibold">
                     Đơn{" "}
                     <span className="font-mono">
-                      {job.order_number ?? `#${job.order_id}`}
+                      {job.order_number ??
+                        invoiceListCopy.orderNumberUnavailable}
                     </span>
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Mã đơn <span className="font-mono">#{job.order_id}</span>
-                    {" · "}
-                    Mã HĐĐT{" "}
-                    <span className="font-mono">
-                      {job.tax_invoice_id
-                        ? `#${job.tax_invoice_id}`
-                        : "Chưa tạo"}
-                    </span>
+                    HĐĐT:{" "}
+                    {job.tax_invoice_id
+                      ? invoiceListCopy.invoiceCreated
+                      : invoiceListCopy.invoiceNotCreated}
                   </p>
                   <DescriptionList
                     className="mt-3 grid gap-3 sm:grid-cols-2"
@@ -718,8 +726,8 @@ export function InvoiceList({
                       {
                         term: "Phương thức thanh toán",
                         description: job.payment_method
-                          ? (getPaymentMethodLabelVi(job.payment_method) ||
-                            PAYMENT_METHOD_LABELS_VI[job.payment_method])
+                          ? getPaymentMethodLabelVi(job.payment_method) ||
+                            PAYMENT_METHOD_LABELS_VI[job.payment_method]
                           : "Chưa ghi nhận",
                       },
                     ]}
@@ -732,7 +740,6 @@ export function InvoiceList({
                     {" · "}
                     {formatDate(job.updated_at)}
                   </p>
-
                 </ItemContent>
                 {canManageInvoices ? (
                   <ItemFooter className="gap-2">
@@ -783,7 +790,8 @@ export function InvoiceList({
                     {inv.invoice_number ?? "—"}
                   </p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {inv.orders?.order_number ?? `#${inv.id}`}
+                    {inv.orders?.order_number ??
+                      invoiceListCopy.orderNumberUnavailable}
                   </p>
                 </div>
                 <StatusBadge domain="tax-invoice" value={inv.status} />
@@ -843,15 +851,11 @@ export function InvoiceList({
         open={!!cancelTarget}
         onOpenChange={(open) => !open && resetCancelDialog()}
         title={FINANCE_VI.cancelConfirmTitle}
-        description={
-          <>
-            Hủy hóa đơn{" "}
-            <strong>
-              {cancelTarget?.invoice_number ?? `#${cancelTarget?.id}`}
-            </strong>
-            ? {FINANCE_VI.cancelIrreversibleHint}
-          </>
-        }
+        description={invoiceListCopy.cancelDescription(
+          cancelTarget?.invoice_number ??
+            invoiceListCopy.invoiceNumberUnavailable,
+          FINANCE_VI.cancelIrreversibleHint,
+        )}
         reasonId="invoice-cancel-reason"
         reason={cancelReason}
         onReasonChange={setCancelReason}
@@ -945,9 +949,10 @@ export function InvoiceList({
           if (!open) resetReplaceDialog();
         }}
         title={FINANCE_VI.replaceConfirmTitle}
-        description={`Tạo HĐ thay thế cho ${
-          replaceTarget?.invoice_number ?? `#${replaceTarget?.id}`
-        }. HĐ gốc sẽ chuyển sang trạng thái "Đã thay thế". Cần văn bản thỏa thuận với người mua theo TT 32/2025 và NĐ 254/2026.`}
+        description={invoiceListCopy.replaceDescription(
+          replaceTarget?.invoice_number ??
+            invoiceListCopy.invoiceNumberUnavailable,
+        )}
         schema={replaceInvoiceSchema}
         defaultValues={replaceDefaultValues}
         entityKey={replaceTarget?.id ?? "replace-invoice"}
@@ -1056,14 +1061,14 @@ export function InvoiceList({
         onOpenChange={(open) => {
           if (!open) setReconcileTarget(null);
         }}
-        title="Đối soát HĐĐT đã phát hành"
-        description={`Chỉ ghi khi đã xác minh trên Viettel: mã giao dịch ${reconcileTarget?.providerRef ?? "—"}. Thao tác này không phát hành lại hóa đơn.`}
+        title={invoiceListCopy.reconcileTitle}
+        description={invoiceListCopy.reconcileDescription}
         schema={reconcileInvoiceSchema}
         defaultValues={{ invoiceNumber: "", cqtCode: "" }}
         entityKey={reconcileTarget?.key ?? "tax-invoice-reconcile"}
         onSubmit={handleReconcile}
-        onSuccess={() => toast.success("Đã ghi nhận HĐĐT từ Viettel.")}
-        submitLabel="Xác nhận đối soát"
+        onSuccess={() => toast.success(invoiceListCopy.reconcileSuccess)}
+        submitLabel={invoiceListCopy.reconcileSubmit}
         cancelLabel="Không"
         contentClassName="max-w-lg"
       >

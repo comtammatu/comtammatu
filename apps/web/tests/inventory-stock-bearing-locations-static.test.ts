@@ -29,6 +29,8 @@ test("stock-bearing locations disambiguate inventory_locations→branches FK and
     /branches!inventory_locations_branch_id_fkey!inner\s*\(\s*branch_kind\s*\)/,
   );
   assert.doesNotMatch(helper, /branches!inner\s*\(\s*branch_kind\s*\)/);
+  assert.match(helper, /\bis_default_consumption\b/);
+  assert.doesNotMatch(helper, /\bdefault_consumption\b/);
   assert.doesNotMatch(helper, /if\s*\(\s*error\s*\)\s*return\s*\[\s*\]/);
   assert.match(helper, /StockBearingLocationsResult/);
   assert.match(helper, /ok:\s*false/);

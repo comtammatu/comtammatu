@@ -12,7 +12,7 @@ export const FINANCE_VI = {
   emptyNoInvoices: "Chưa có hóa đơn nào",
   cancelConfirmTitle: "Xác nhận hủy hóa đơn",
   cancelIrreversibleHint:
-    "Hành động này không thể hoàn tác. Lý do hủy được lưu vào hồ sơ HĐĐT theo yêu cầu của Nghị định 70/2025.",
+    "Không thể hoàn tác; lý do hủy được lưu trong hồ sơ HĐĐT.",
   cancelReasonPlaceholder:
     "Ví dụ: Khách hàng yêu cầu xuất lại HĐĐT vì sai mã số thuế.",
   replaceReasonPlaceholder:

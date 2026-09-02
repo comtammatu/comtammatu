@@ -1,5 +1,6 @@
 import "server-only";
 
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { notFound } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
@@ -58,12 +59,35 @@ function relatedOne<T>(value: T | T[] | null | undefined): T | null {
   return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
-export async function loadBranchReorderSuggestionsData(routeBranchId: number) {
+export async function loadBranchReorderSuggestionsData(
+  routeBranchId: number,
+  locationId: number,
+) {
   const { supabase, claims } = await loadAuthState();
   const scope = await resolveInventoryListScope(supabase, claims, {
     routeBranchId,
   });
   if (scope.outOfScope || scope.selectedBranchId !== routeBranchId) notFound();
+
+  const locationResult = await supabase
+    .from("inventory_locations")
+    .select("id")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("branch_id", routeBranchId)
+    .eq("id", locationId)
+    .eq("is_active", true)
+    .in("location_kind", ["warehouse", "kitchen"])
+    .maybeSingle();
+  if (locationResult.error || locationResult.data == null) {
+    return {
+      branchId: routeBranchId,
+      locationId,
+      loadFailed: true,
+      allItems: [] as ReorderSuggestionItem[],
+      belowMinItems: [] as ReorderSuggestionItem[],
+      belowMinCount: 0,
+    };
+  }
 
   const baseUnitsResult = await supabase
     .from("ingredient_units")
@@ -90,12 +114,15 @@ export async function loadBranchReorderSuggestionsData(routeBranchId: number) {
   const { data: rpcData, error: rpcError } = await (
     supabase.rpc as unknown as (
       fn: string,
-      args: { p_branch_id: number },
+      args: { p_branch_id: number; p_location_id: number },
     ) => Promise<{
       data: RpcReorderItem[] | null;
       error: { message: string } | null;
     }>
-  )("get_branch_smart_reorder_suggestions", { p_branch_id: routeBranchId });
+  )("get_branch_smart_reorder_suggestions", {
+    p_branch_id: routeBranchId,
+    p_location_id: locationId,
+  });
 
   if (!rpcError && Array.isArray(rpcData)) {
     const items: ReorderSuggestionItem[] = rpcData.map((item) => {
@@ -120,6 +147,7 @@ export async function loadBranchReorderSuggestionsData(routeBranchId: number) {
 
     return {
       branchId: routeBranchId,
+      locationId,
       loadFailed: baseUnitsResult.error != null,
       allItems: items,
       belowMinItems,
@@ -146,11 +174,13 @@ export async function loadBranchReorderSuggestionsData(routeBranchId: number) {
       location:inventory_locations!inner(branch_id)
     `,
     )
-    .eq("inventory_locations.branch_id", routeBranchId);
+    .eq("inventory_locations.branch_id", routeBranchId)
+    .eq("location_id", locationId);
 
   if (stockError || !stockLevels) {
     return {
       branchId: routeBranchId,
+      locationId,
       loadFailed: true,
       allItems: [] as ReorderSuggestionItem[],
       belowMinItems: [] as ReorderSuggestionItem[],
@@ -163,10 +193,12 @@ export async function loadBranchReorderSuggestionsData(routeBranchId: number) {
     .select("ingredient_id, min_stock_level, reorder_quantity")
     .eq("tenant_id", claims.tenant_id)
     .eq("branch_id", routeBranchId)
+    .eq("location_id", locationId)
     .eq("is_active", true);
   if (thresholdError) {
     return {
       branchId: routeBranchId,
+      locationId,
       loadFailed: true,
       allItems: [] as ReorderSuggestionItem[],
       belowMinItems: [] as ReorderSuggestionItem[],
@@ -233,7 +265,7 @@ export async function loadBranchReorderSuggestionsData(routeBranchId: number) {
       const baseUnit = baseUnits.get(ingId);
       return {
         ingredientId: ingId,
-        ingredientName: data.ing?.name ?? `Nguyên liệu #${ingId}`,
+        ingredientName: data.ing?.name ?? UNKNOWN_LABEL_VI,
         sku: data.ing?.sku ?? null,
         categoryName: data.ing?.category?.name ?? null,
         baseUnitId: baseUnit?.id ?? null,
@@ -252,6 +284,7 @@ export async function loadBranchReorderSuggestionsData(routeBranchId: number) {
 
   return {
     branchId: routeBranchId,
+    locationId,
     loadFailed: baseUnitsResult.error != null,
     allItems: items,
     belowMinItems,

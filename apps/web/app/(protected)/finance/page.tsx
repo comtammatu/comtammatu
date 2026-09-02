@@ -9,18 +9,7 @@ import {
 } from "@comtammatu/shared/format";
 import { addMoney, roundToCanonicalMoney } from "@comtammatu/shared/money";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
-import { ChevronRight as IconChevronRight } from "lucide-react";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Frame } from "@comtammatu/ui/components/frame";
-import { cn } from "@comtammatu/ui/lib/utils";
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemDescription,
-  ItemGroup,
-  ItemTitle,
-} from "@comtammatu/ui/components/item";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import {
   AppPage,
@@ -35,13 +24,8 @@ import {
   financeHref,
   parseFinanceParams,
   resolveFinanceRange,
-  type FinanceParams,
 } from "./_lib/finance-params";
-import {
-  fetchFinanceCockpit,
-  type FinanceException,
-} from "./_lib/finance-cockpit";
-import type { PeriodReadinessRpc } from "./_lib/finance-period-readiness";
+import { fetchFinanceCockpit } from "./_lib/finance-cockpit";
 import type { FinanceOverviewSearchParams } from "./_lib/finance-overview-types";
 import { CurrentFundsSection } from "./components/current-funds-section";
 import { Progress } from "@comtammatu/ui/components/progress";
@@ -193,50 +177,6 @@ export default async function FinancePage({
   const inventoryChange = cockpit.kpis.inventoryChange;
   const showInventoryChange = cockpit.canViewInventoryValuation;
   const goodsInIsTransfer = cockpit.kpis.goodsInKind === "inbound_transfer";
-
-  // Period-close readiness (Sức khoẻ chốt sổ) surfaces as ONE aggregated
-  // read-only exception item on the landing; it never exposes a close or
-  // reopen action, and stays hidden when both counts are zero.
-  function buildReadinessException(
-    readiness: PeriodReadinessRpc | null,
-    scope: FinanceParams,
-  ): FinanceException | null {
-    if (readiness == null) return null;
-    if (readiness.blockerCount <= 0 && readiness.warningCount <= 0) {
-      return null;
-    }
-    const findings = [...readiness.blockers, ...readiness.warnings];
-    // Unknown finding codes are omitted: only registered copy renders.
-    const hint = findings
-      .map(
-        (finding) => financeCopy.basic.exceptions.readinessCodes[finding.code],
-      )
-      .filter((label): label is string => typeof label === "string")
-      .join(" · ");
-    const findingCodes = new Set(findings.map((finding) => finding.code));
-    const href = findingCodes.has("operating_expense_missing")
-      ? financeHref("/finance/expenses", scope, { state: "pending" })
-      : findingCodes.has("bank_reconciliation_open")
-        ? financeHref("/finance/bank-transactions", scope, {
-            recon: "needs_review",
-          })
-        : undefined;
-    return {
-      label: financeCopy.basic.exceptions.readinessLabel,
-      value: financeCopy.basic.exceptions.readinessValue(
-        formatCount(readiness.blockerCount),
-        formatCount(readiness.warningCount),
-      ),
-      hint,
-      href,
-      tone: readiness.blockerCount > 0 ? "destructive" : "warning",
-    };
-  }
-
-  const readinessException = buildReadinessException(cockpit.readiness, params);
-  // General cockpit exceptions stay on `/` and list queues (finance.md);
-  // the landing surfaces only the period-close readiness item.
-  const attentionExceptions = readinessException ? [readinessException] : [];
 
   const netRevenueValue = Number(cockpit.kpis.netRevenueBeforeVat);
   const hasNetRevenue = Number.isFinite(netRevenueValue) && netRevenueValue > 0;
@@ -658,55 +598,8 @@ export default async function FinancePage({
         branches={cockpit.branches}
         basePath="/finance"
         locationFilter
-        hide={["granularity", "compare"]}
+        hide={["branch", "granularity", "compare"]}
       />
-
-      {/* Radar Cảnh Báo: đưa lên ngay sau FilterBar để đập vào mắt chủ sở hữu trong 5 giây đầu */}
-      {attentionExceptions.length > 0 ? (
-        <AppSection size="sm" title={powerLiteCopy.exceptionsTitle}>
-          <ItemGroup>
-            {attentionExceptions.map((item, index) => (
-              <Item
-                key={`${item.label}:${index}`}
-                variant="outline"
-                size="sm"
-                className={cn(
-                  "border-l-4 transition-colors",
-                  item.tone === "destructive"
-                    ? "border-l-destructive bg-destructive/10 border-destructive/20 hover:bg-destructive/15"
-                    : "border-l-warning bg-warning/10 border-warning/20 hover:bg-warning/15",
-                )}
-                render={
-                  item.href != null ? <Link href={item.href} /> : undefined
-                }
-              >
-                <ItemContent className="min-w-0">
-                  <ItemTitle className="line-clamp-none font-semibold text-foreground">
-                    {item.label}
-                  </ItemTitle>
-                  {item.hint.length > 0 ? (
-                    <ItemDescription className="line-clamp-none text-muted-foreground">
-                      {item.hint}
-                    </ItemDescription>
-                  ) : null}
-                </ItemContent>
-                <ItemActions className="ml-auto flex items-center gap-2">
-                  <Badge
-                    variant={
-                      item.tone === "destructive" ? "destructive" : "warning"
-                    }
-                  >
-                    {item.value}
-                  </Badge>
-                  {item.href != null ? (
-                    <IconChevronRight className="size-4 text-muted-foreground shrink-0" />
-                  ) : null}
-                </ItemActions>
-              </Item>
-            ))}
-          </ItemGroup>
-        </AppSection>
-      ) : null}
 
       {/* LỢI NHUẬN GỘP & GIÁ VỐN MÓN: Hiệu quả kinh doanh món ăn */}
       <AppSection size="sm" title={financeCopy.basic.sections.grossProfit}>

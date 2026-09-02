@@ -1,9 +1,10 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { PERMISSION_KEYS, INVENTORY_OPS_ROLES } from "@comtammatu/shared/auth";
 import { getAuthContextWithPermission } from "@/(protected)/inventory/_lib/auth";
 import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
 import { parseBranchIdParam } from "@/_lib/branch-context";
+import { withControlSurfaceBranchScope } from "@/lib/control-surface-scope";
 import { getVNBusinessDateString } from "@comtammatu/shared/time";
 import { resolveDefaultShiftId } from "@lib/staff-runtime/_lib/default-shift";
 import { CountAssignmentsClient } from "./count-assignments-client";
@@ -13,8 +14,6 @@ import type {
   CountAssignmentLocation as LocationOption,
   CountAssignmentShift as ShiftOption,
 } from "@lib/inventory/count-assignment-model";
-
-export const instant = false;
 
 const ALL_SHIFTS_PARAM = "all";
 
@@ -68,8 +67,21 @@ async function CountAssignmentsPageContent({
   const scope = await resolveInventoryListScope(supabase, claims, {
     queryBranch: params.branch,
   });
+  if (scope.outOfScope) notFound();
 
   const selectedBranchId = scope.selectedBranchId;
+  if (!selectedBranchId) {
+    if (scope.canSelectAll && scope.defaultBranchId != null) {
+      redirect(
+        withControlSurfaceBranchScope(
+          "/inventory/count-assignments",
+          String(scope.defaultBranchId) as `${number}`,
+          { prefixes: ["/inventory"] },
+        ),
+      );
+    }
+    notFound();
+  }
   const requestedLocationId = parseBranchIdParam(params.locationId);
   const rawShiftId = Array.isArray(params.shiftId)
     ? params.shiftId[0]

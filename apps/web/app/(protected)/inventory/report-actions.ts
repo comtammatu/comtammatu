@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import type { ActionResult } from "@comtammatu/shared/types";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import {
   INVENTORY_OPS_ROLES,
   MODULE_ACL,
@@ -212,7 +213,7 @@ export async function fetchBranchMovementSummary(
   for (const [branchId, sums] of byBranch) {
     rows.push({
       branch_id: branchId,
-      branch_name: branchMap.get(branchId) ?? `#${String(branchId)}`,
+      branch_name: branchMap.get(branchId) ?? UNKNOWN_LABEL_VI,
       grn_receipt: sums.grn_receipt,
       transfer_in: sums.transfer_in,
       transfer_out: sums.transfer_out,
@@ -409,7 +410,7 @@ export async function fetchConsumptionVariance(
 
     rows.push({
       ingredient_id: ingId,
-      ingredient_name: ingInfo?.name ?? `#${String(ingId)}`,
+      ingredient_name: ingInfo?.name ?? UNKNOWN_LABEL_VI,
       unit: ingInfo?.unit ?? "",
       theoretical: Math.round(theoretical * 1000) / 1000,
       actual: Math.round(actual * 1000) / 1000,

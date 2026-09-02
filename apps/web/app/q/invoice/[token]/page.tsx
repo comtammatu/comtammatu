@@ -13,8 +13,6 @@ import { invoiceBuyer } from "@lib/messages/invoice-buyer";
 import { InvoiceBuyerForm } from "./invoice-buyer-form";
 import { InvoiceBuyerOrderCard } from "./invoice-buyer-order-card";
 
-export const instant = false;
-
 function StatusPage({
   title,
   description,

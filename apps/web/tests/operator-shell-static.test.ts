@@ -110,7 +110,7 @@ test("operator header shows branch context and keeps profile and notifications",
   );
   assert.match(
     layout,
-    /homeAriaLabel=\{\s*branchKind === "branch"\s*\?\s*APP_COPY_VI\.branchHome\s*:\s*APP_COPY_VI\.ownerTitle\s*\}/,
+    /homeAriaLabel=\{\s*branchKind === "branch"\s*\?\s*`\$\{APP_COPY_VI\.branchHome\} · \$\{context\.branch\.name\}`\s*:\s*APP_COPY_VI\.ownerTitle\s*\}/,
   );
   assert.match(layout, /subtitle=\{ROLE_LABEL_VI\[claims\.user_role\]\}/);
   assert.match(layout, /subtitleHiddenOnMobile/);
@@ -120,9 +120,12 @@ test("operator header shows branch context and keeps profile and notifications",
   assert.match(layout, /className="sm:hidden"/);
   assert.match(layout, /className="hidden sm:inline"/);
   assert.match(appHeader, /homeHref\?: string/);
+  assert.match(appHeader, /"z-30 shrink-0 border-b/);
+  assert.doesNotMatch(appHeader, /"sticky top-0 z-30/);
   assert.match(appHeader, /showThemeToggle\?: boolean/);
   assert.match(appHeader, /<Link[\s\S]*href=\{href\}/);
-  assert.match(appHeader, /"min-h-11 min-w-11 shrink-0 justify-center"/);
+  assert.match(appHeader, /"flex min-h-11 items-center gap-2"/);
+  assert.match(appHeader, /"min-w-11 shrink-0 justify-center"/);
   assert.doesNotMatch(layout, /IconLayoutDashboard|IconShieldAlert/);
   assert.match(layout, /showThemeToggle=\{!canOpenOwnerHome\}/);
   assert.match(layout, /\{canOpenOwnerHome \? \(/);
@@ -144,10 +147,7 @@ test("operator header shows branch context and keeps profile and notifications",
     layout,
     /href=\{`\/br\/\$\{context\.branchId\}\/close-day`\}/,
   );
-  assert.doesNotMatch(
-    layout,
-    /href=\{`\/br\/\$\{context\.branchId\}\/team`\}/,
-  );
+  assert.doesNotMatch(layout, /href=\{`\/br\/\$\{context\.branchId\}\/team`\}/);
   assert.doesNotMatch(layout, /IconUsersRound/);
   assert.doesNotMatch(layout, /\{APP_COPY_VI\.branchCommand\}/);
   assert.doesNotMatch(layout, /MODULE_ACL\.branch_feedback\.label/);
@@ -160,10 +160,7 @@ test("operator header shows branch context and keeps profile and notifications",
   const sharedBell = read("apps/web/app/_components/notification-bell.tsx");
   assert.match(layout, /<OperatorNotificationBell/);
   assert.doesNotMatch(layout, /notificationsReturnTo/);
-  assert.doesNotMatch(
-    layout,
-    /<OperatorNotificationBell[\s\S]*returnTo=\{/,
-  );
+  assert.doesNotMatch(layout, /<OperatorNotificationBell[\s\S]*returnTo=\{/);
   assert.doesNotMatch(
     layout,
     /returnTo=\{`\/br\/\$\{(?:context\.)?branchId\}`\}/,
@@ -251,26 +248,39 @@ test("operator home keeps visible mobile identity while detail pages may compact
   const surface = read("apps/web/app/components/surface/app-page-header.tsx");
 
   assert.match(adapter, /hideHeaderOnMobile\?: boolean/);
-  assert.match(adapter, /compactOnMobile=\{hideHeaderOnMobile\}/);
+  assert.match(adapter, /compactOnMobile=\{true\}/);
   assert.doesNotMatch(adapter, /sr-only sm:not-sr-only/);
   assert.match(adapter, /data-slot="branch-operator-page"/);
   assert.match(surface, /compactOnMobile\?: boolean/);
-  assert.match(surface, /compactOnMobile && "max-sm:text-base"/);
+  assert.match(
+    surface,
+    /compactOnMobile && "max-sm:truncate max-sm:text-base"/,
+  );
   assert.match(surface, /compactOnMobile && "max-sm:hidden"/);
+  assert.match(surface, /data-slot="app-page-header"/);
+  assert.match(surface, /data-slot="app-page-header-tabs"/);
   // Page title stays in AppPageHeader — no duplicate mobile ControlBar title strip.
   assert.doesNotMatch(home, /hideHeaderOnMobile/);
   assert.doesNotMatch(stock, /hideHeaderOnMobile/);
   assert.doesNotMatch(settings, /hideHeaderOnMobile/);
-  assert.doesNotMatch(
-    home,
-    /<BranchOperatorControlBar className="sm:hidden">/,
-  );
+  assert.doesNotMatch(home, /<BranchOperatorControlBar className="sm:hidden">/);
   assert.doesNotMatch(
     stock,
     /<BranchOperatorControlBar className="sm:hidden">/,
   );
   assert.match(dashboard, /redirect\(`\/br\/\$\{branchId\}`\)/);
   assert.doesNotMatch(dashboard, /hideHeaderOnMobile|BranchOperatorPage/);
+});
+
+test("Branch operator pages do not add xl or 2xl layouts inside the capped canvas", () => {
+  for (const path of [
+    "apps/web/lib/branch-operator/components/branch-operator-page.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/pos-sessions/pos-sessions-client.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-assignments/branch-count-assignments-client.tsx",
+  ]) {
+    const source = read(path);
+    assert.doesNotMatch(source, /(?:^|\s)(?:xl|2xl):grid-cols-/);
+  }
 });
 
 test("operator home renders MODULE_ACL-backed capability tiles", () => {
@@ -487,13 +497,10 @@ test("branch management roots use Branch operator shell adapters", () => {
   assert.match(branchOperatorPage, /"flex flex-col gap-2 lg:flex-row"/);
   assert.match(branchOperatorPage, /align === "end" && "lg:justify-end"/);
   assert.match(branchOperatorPage, /wideColumns &&/);
-  assert.match(branchOperatorPage, /"xl:grid-cols-3 2xl:grid-cols-4"/);
+  assert.match(branchOperatorPage, /"lg:grid-cols-3"/);
   assert.match(branchOperatorPage, /items.length === 3 && "grid-cols-3"/);
   assert.match(branchOperatorPage, /items.length >= 4 && "grid-cols-2"/);
-  assert.doesNotMatch(
-    branchOperatorPage,
-    /items.length >= 3 && "grid-cols-3"/,
-  );
+  assert.doesNotMatch(branchOperatorPage, /items.length >= 3 && "grid-cols-3"/);
   assert.match(
     branchOperatorPage,
     /presentation === "stations" && itemCount === 2 && "grid grid-cols-2"/,
@@ -770,7 +777,10 @@ test("branch settings detail routes stay inside the Branch operator plane", () =
     "apps/web/app/(protected)/br/[branchId]/(operator)/pos-sessions/pos-sessions-client.tsx",
   );
   assert.match(posSessionsClient, /BranchOperatorFrame/);
-  assert.match(posSessionsClient, /grid gap-2 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4/);
+  assert.match(
+    posSessionsClient,
+    /grid gap-2 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4/,
+  );
   assert.match(posSessionsClient, /grid gap-2 lg:grid-cols-2/);
 });
 

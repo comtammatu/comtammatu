@@ -11,7 +11,9 @@ import {
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Check as IconCheck,
+  ChevronDown as IconChevronDown,
   ChevronRight as IconChevronRight,
+  ChevronUp as IconChevronUp,
   ClipboardCheck as IconClipboardCheck,
   RotateCcw as IconRecount,
   Search as IconSearch,
@@ -21,7 +23,7 @@ import {
   INVENTORY_VI,
   STAFF_VI,
 } from "@comtammatu/shared/messages";
-import { formatVNDate } from "@comtammatu/shared/time";
+import { formatVNDate, formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
@@ -156,6 +158,7 @@ export function BranchCountSlipsClient({
     [pathname, router, searchParams],
   );
   const [recounting, setRecounting] = useState(false);
+  const [showMatchedLines, setShowMatchedLines] = useState(false);
   const [recountNote, setRecountNote] = useState("");
   const [selectedRecountLineIds, setSelectedRecountLineIds] = useState<number[]>(
     [],
@@ -223,12 +226,17 @@ export function BranchCountSlipsClient({
       ) ?? [],
     [selected],
   );
-
-  const wasteEvidenceComplete = selectedShortageLines.every(
-    (line) =>
-      !isShortagePhotoRequired(wasteReasons[line.id]) ||
-      (wastePhotoUrls[line.id]?.length ?? 0) > 0,
+  const selectedDiscrepancyLines = useMemo(
+    () => [...selectedShortageLines, ...selectedSurplusLines],
+    [selectedShortageLines, selectedSurplusLines],
   );
+
+  const incompleteResolutionCount = selectedShortageLines.filter(
+    (line) =>
+      isShortagePhotoRequired(wasteReasons[line.id]) &&
+      (wastePhotoUrls[line.id]?.length ?? 0) === 0,
+  ).length;
+  const wasteEvidenceComplete = incompleteResolutionCount === 0;
   const needsWasteRecovery =
     selected?.status === "approved" &&
     selectedShortageLines.length > 0 &&
@@ -236,6 +244,7 @@ export function BranchCountSlipsClient({
 
   useEffect(() => setRows(initialRows), [initialRows]);
   useEffect(() => {
+    setShowMatchedLines(false);
     setWastePhotoUrls({});
     setWasteReasons(
       Object.fromEntries(
@@ -261,6 +270,7 @@ export function BranchCountSlipsClient({
   function closeReview() {
     setSelectedId(null);
     setRecounting(false);
+    setShowMatchedLines(false);
     setRecountNote("");
     setSelectedRecountLineIds([]);
     setWastePhotoUrls({});
@@ -528,8 +538,8 @@ export function BranchCountSlipsClient({
       >
         <TabsList
           size="touch"
+          layout="equal"
           aria-label={INVENTORY_VI.countSlipTitle}
-          className="grid w-full grid-cols-2"
         >
           <TabsTrigger value="pending">
             {INVENTORY_VI.countSlipPendingBadge(pendingRows.length)}
@@ -728,10 +738,13 @@ export function BranchCountSlipsClient({
         }}
         title={
           selected ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono tabular-nums font-semibold">{selected.slipNumber}</span>
-              <span>·</span>
-              <span>{selected.employeeName}</span>
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <span className="truncate font-semibold">{selected.employeeName}</span>
+              <StatusBadge
+                domain="count-slip"
+                value={selected.status}
+                size="sm"
+              />
             </div>
           ) : ""
         }
@@ -740,12 +753,14 @@ export function BranchCountSlipsClient({
             <span className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <span>{selected.locationName}</span>
               {selected.shiftName ? <span>· {selected.shiftName}</span> : null}
-              <span>· {formatVNDate(selected.countDate)}</span>
-              <StatusBadge
-                domain="count-slip"
-                value={selected.status}
-                size="sm"
-              />
+              <span>
+                {INVENTORY_VI.submittedAtSuffix(
+                  selected.submittedAt
+                    ? formatVNDateTime(selected.submittedAt)
+                    : formatVNDate(selected.countDate),
+                )}
+              </span>
+              <span className="font-mono tabular-nums">· {selected.slipNumber}</span>
             </span>
           ) : undefined
         }
@@ -809,6 +824,7 @@ export function BranchCountSlipsClient({
                           )
                           .map((line) => line.id),
                       );
+                      setShowMatchedLines(true);
                       setRecounting(true);
                     }}
                   >
@@ -821,8 +837,7 @@ export function BranchCountSlipsClient({
                     className="flex-1 font-semibold"
                     disabled={
                       isPending ||
-                      (selectedShortageLines.length > 0 &&
-                        !wasteEvidenceComplete)
+                      incompleteResolutionCount > 0
                     }
                     onClick={() => void approveSelected()}
                   >
@@ -831,7 +846,11 @@ export function BranchCountSlipsClient({
                     ) : (
                       <IconCheck className="size-4" />
                     )}
-                    {INVENTORY_VI.countSlipHandoverConfirm}
+                    {incompleteResolutionCount > 0
+                      ? INVENTORY_VI.countSlipResolutionRemaining(
+                          incompleteResolutionCount,
+                        )
+                      : INVENTORY_VI.countSlipContinueReview}
                   </Button>
                 </div>
               )
@@ -878,55 +897,80 @@ export function BranchCountSlipsClient({
       >
         {selected ? (
           <div className="flex min-h-0 flex-1 flex-col gap-3">
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <Item
-                variant="outline"
-                className="flex items-center gap-2 p-2 text-left border-border bg-card"
-              >
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted font-mono text-xs font-semibold text-foreground">
-                  {selected.lines.length}
-                </span>
-                <span className="text-xs font-medium text-foreground truncate">
-                  {INVENTORY_VI.countSlipTotalCountLines}
-                </span>
-              </Item>
-              <Item
-                variant="outline"
-                className="flex items-center gap-2 p-2 text-left border-border bg-card"
-              >
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-success/15 font-mono text-xs font-semibold text-success">
-                  {selectedMatchedLines.length}
-                </span>
-                <span className="text-xs font-medium text-success truncate">
-                  {INVENTORY_VI.countSlipMatchedLines}
-                </span>
-              </Item>
-              <Item
-                variant="outline"
-                className="flex items-center gap-2 p-2 text-left border-border bg-card"
-              >
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-destructive/15 font-mono text-xs font-semibold text-destructive">
-                  {selectedShortageLines.length}
-                </span>
-                <span className="text-xs font-medium text-destructive truncate">
-                  {INVENTORY_VI.countSlipShortageLines}
-                </span>
-              </Item>
-              <Item
-                variant="outline"
-                className="flex items-center gap-2 p-2 text-left border-border bg-card"
-              >
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-warning/15 font-mono text-xs font-semibold text-warning">
-                  {selectedSurplusLines.length}
-                </span>
-                <span className="text-xs font-medium text-warning truncate">
-                  {INVENTORY_VI.countSlipSurplusLines}
-                </span>
-              </Item>
-            </div>
+            <p className="text-xs text-muted-foreground">
+              {INVENTORY_VI.countSlipCompactSummary(
+                selected.lines.length,
+                selectedMatchedLines.length,
+                selectedShortageLines.length,
+                selectedSurplusLines.length,
+              )}
+            </p>
 
-            <ItemGroup className="gap-2">
-              {selected.lines.map((line) => (
+            {selected.note ? (
+              <NoteCallout tone="muted">
+                {INVENTORY_VI.employeeNoteLine(selected.note)}
+              </NoteCallout>
+            ) : null}
+            {selected.reviewNote ? (
+              <NoteCallout tone="warning">
+                {INVENTORY_VI.recountReasonLine(selected.reviewNote)}
+              </NoteCallout>
+            ) : null}
+
+            {selectedDiscrepancyLines.length > 0 ? (
+              <div className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <span>{INVENTORY_VI.countSlipNeedsResolution}</span>
+                <span>{selectedDiscrepancyLines.length}</span>
+              </div>
+            ) : null}
+
+            {selectedDiscrepancyLines.length > 0 ? (
+              <ItemGroup className="gap-2">
+                {selectedDiscrepancyLines.map((line) => (
+                  <CountSlipLineItem
+                    key={line.id}
+                    line={line}
+                    selecting={recounting}
+                    selected={selectedRecountLineIds.includes(line.id)}
+                    onSelectedChange={(checked) =>
+                      setSelectedRecountLineIds((current) =>
+                        checked
+                          ? [...new Set([...current, line.id])]
+                          : current.filter((id) => id !== line.id),
+                      )
+                    }
+                  />
+                ))}
+              </ItemGroup>
+            ) : null}
+
+            {selectedMatchedLines.length > 0 &&
+            selectedDiscrepancyLines.length > 0 &&
+            !recounting ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="touch"
+                className="w-full justify-between px-1 text-success"
+                aria-expanded={showMatchedLines}
+                onClick={() => setShowMatchedLines((current) => !current)}
+              >
+                {INVENTORY_VI.countSlipMatchedDisclosure(selectedMatchedLines.length)}
+                <span className="flex items-center gap-1 text-xs font-normal text-muted-foreground">
+                  {showMatchedLines ? ACTIONS_VI.showLess : ACTIONS_VI.viewDetails}
+                  {showMatchedLines ? (
+                    <IconChevronUp className="size-4" />
+                  ) : (
+                    <IconChevronDown className="size-4" />
+                  )}
+                </span>
+              </Button>
+            ) : null}
+
+            {selectedMatchedLines.length > 0 &&
+            (selectedDiscrepancyLines.length === 0 || recounting || showMatchedLines) ? (
+              <ItemGroup className="gap-2">
+                {selectedMatchedLines.map((line) => (
                 <CountSlipLineItem
                   key={line.id}
                   line={line}
@@ -940,14 +984,15 @@ export function BranchCountSlipsClient({
                     )
                   }
                 />
-              ))}
-            </ItemGroup>
+                ))}
+              </ItemGroup>
+            ) : null}
 
             {!recounting &&
             (selected.status === "submitted" || needsWasteRecovery) &&
             selectedShortageLines.length > 0 ? (
-              <Item variant="outline" className="flex-col items-stretch p-3">
-                <CountSlipWasteEvidence
+              <CountSlipWasteEvidence
+                  key={`waste-${selected.id}`}
                   tenantId={tenantId}
                   branchId={branchId}
                   slipId={selected.id}
@@ -956,6 +1001,7 @@ export function BranchCountSlipsClient({
                   reasons={wasteReasons}
                   disabled={isPending}
                   touch
+                  defaultExpanded
                   onChange={(lineId, url) =>
                     setWastePhotoUrls((current) => ({
                       ...current,
@@ -969,18 +1015,18 @@ export function BranchCountSlipsClient({
                     }))
                   }
                 />
-              </Item>
             ) : null}
 
             {!recounting &&
             selected.status === "submitted" &&
             selectedSurplusLines.length > 0 ? (
-              <Item variant="outline" className="flex-col items-stretch p-3">
-                <CountSlipSurplusEvidence
+              <CountSlipSurplusEvidence
+                  key={`surplus-${selected.id}`}
                   lines={selectedSurplusLines}
                   reasons={surplusReasons}
                   disabled={isPending}
                   touch
+                  defaultExpanded
                   onReasonChange={(lineId, reason) =>
                     setSurplusReasons((current) => ({
                       ...current,
@@ -988,18 +1034,6 @@ export function BranchCountSlipsClient({
                     }))
                   }
                 />
-              </Item>
-            ) : null}
-
-            {selected.note ? (
-              <p className="break-words text-sm italic text-muted-foreground">
-                {INVENTORY_VI.employeeNoteLine(selected.note)}
-              </p>
-            ) : null}
-            {selected.reviewNote ? (
-              <p className="break-words text-sm italic text-warning">
-                {INVENTORY_VI.recountReasonLine(selected.reviewNote)}
-              </p>
             ) : null}
 
             {recounting ? (
@@ -1074,15 +1108,6 @@ function CountSlipLineItem({
   const isShortage = line.variance !== null && line.variance < 0;
   const isSurplus = line.variance !== null && line.variance > 0;
   const isMatched = line.variance === 0;
-  const isMatchedAfterSales =
-    !isMatched &&
-    line.currentLiveQuantity !== null &&
-    line.countedQuantity === line.currentLiveQuantity;
-  const soldSinceSubmit =
-    line.currentLiveBaseQuantity !== null &&
-    line.systemBaseQuantity > line.currentLiveBaseQuantity
-      ? line.systemBaseQuantity - line.currentLiveBaseQuantity
-      : null;
   const hasLiveDelta =
     line.currentLiveBaseQuantity !== null &&
     Math.abs(line.currentLiveBaseQuantity - line.systemBaseQuantity) > 0.0001;
@@ -1112,11 +1137,7 @@ function CountSlipLineItem({
             ) : null}
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
-            {isMatchedAfterSales ? (
-              <Badge variant="success">
-                {INVENTORY_VI.matchedAfterSales}
-              </Badge>
-            ) : isShortage ? (
+            {isShortage ? (
               <Badge variant="destructive">
                 {INVENTORY_VI.varianceShortageBadge}
               </Badge>
@@ -1142,7 +1163,7 @@ function CountSlipLineItem({
             </span>
             {hasLiveDelta ? (
               <span className="text-2xs text-muted-foreground truncate">
-                (live: {formatLineBaseQuantity(line, line.currentLiveBaseQuantity!)})
+                {INVENTORY_VI.currentStockShort} {formatLineBaseQuantity(line, line.currentLiveBaseQuantity!)}
               </span>
             ) : null}
           </div>
@@ -1156,7 +1177,7 @@ function CountSlipLineItem({
           </div>
           <div className="flex flex-col min-w-0">
             <span className="text-2xs uppercase tracking-wider text-muted-foreground">
-              {INVENTORY_VI.varianceLabel}
+              {INVENTORY_VI.varianceShort}
             </span>
             <span
               className={cn(
@@ -1168,15 +1189,6 @@ function CountSlipLineItem({
             </span>
           </div>
         </div>
-
-        {soldSinceSubmit !== null && soldSinceSubmit > 0 ? (
-          <div className="text-2xs text-muted-foreground truncate">
-            {INVENTORY_VI.soldSinceSubmitColon}{" "}
-            <span className="font-mono tabular-nums text-foreground">
-              {formatLineBaseQuantity(line, soldSinceSubmit)}
-            </span>
-          </div>
-        ) : null}
 
         {line.note ? (
           <div className="break-words text-2xs italic text-muted-foreground">

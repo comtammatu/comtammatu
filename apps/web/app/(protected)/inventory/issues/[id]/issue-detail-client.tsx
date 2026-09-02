@@ -13,6 +13,7 @@ import {
   X as IconX,
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@/components/confirm-dialog";
 import { Field, FieldError, FieldLabel } from "@comtammatu/ui/components/field";
@@ -33,7 +34,6 @@ import {
   Item,
   ItemActions,
   ItemContent,
-  ItemDescription,
   ItemFooter,
   ItemHeader,
   ItemTitle,
@@ -309,7 +309,7 @@ export function IssueDetailClient({
       title: surface.confirmTitle,
       description: ISSUES_VI.confirmDescription(issue.branches?.name ?? "—"),
       details: lines.map((line) => ({
-        label: line.ingredients?.name ?? `#${line.ingredient_id}`,
+        label: line.ingredients?.name ?? UNKNOWN_LABEL_VI,
         value: `${formatQty(Number(line.quantity ?? 0))} ${line.unit}`,
       })),
       confirmText: surface.confirmAction,
@@ -361,12 +361,7 @@ export function IssueDetailClient({
       header: tTerm("ingredient"),
       render: (line) => (
         <div className="flex flex-col">
-          <span>
-            {line.ingredients?.name ?? `#${line.ingredient_id}`}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            ID: {line.ingredient_id}
-          </span>
+          <span>{line.ingredients?.name ?? UNKNOWN_LABEL_VI}</span>
         </div>
       ),
     },
@@ -565,7 +560,7 @@ export function IssueDetailClient({
                   ]}
                   itemOptions={lines.map((line) => ({
                     ingredientId: line.ingredient_id,
-                    name: line.ingredients?.name ?? `#${line.ingredient_id}`,
+                    name: line.ingredients?.name ?? UNKNOWN_LABEL_VI,
                     unit: line.unit ?? line.ingredients?.unit ?? "",
                   }))}
                 />
@@ -627,7 +622,9 @@ export function IssueDetailClient({
                       <span className="text-muted-foreground">
                         {ISSUES_VI.goodsSubtotalColon}
                       </span>
-                      <span className="font-semibold">{formatVND(totalAmount)}</span>
+                      <span className="font-semibold">
+                        {formatVND(totalAmount)}
+                      </span>
                     </div>
                     <div className="flex items-end justify-between border-t border-border pt-3">
                       <span className="text-sm font-semibold">
@@ -736,7 +733,11 @@ export function IssueDetailClient({
       stickyList={presentation !== "dialog"}
     >
       <TabsContent value="document" className="mt-4">
-        {isTouchLayout ? <div className="min-w-0">{pageLayout}</div> : pageLayout}
+        {isTouchLayout ? (
+          <div className="min-w-0">{pageLayout}</div>
+        ) : (
+          pageLayout
+        )}
       </TabsContent>
       <TabsContent value="history" className="mt-4">
         <AppSection title={historySectionTitle}>
@@ -774,7 +775,7 @@ export function IssueDetailClient({
             ]}
             itemOptions={lines.map((line) => ({
               ingredientId: line.ingredient_id,
-              name: line.ingredients?.name ?? `#${line.ingredient_id}`,
+              name: line.ingredients?.name ?? UNKNOWN_LABEL_VI,
               unit: line.unit ?? line.ingredients?.unit ?? "",
             }))}
           />
@@ -892,19 +893,21 @@ export function IssueDetailClient({
           issueBranchName,
           issue.issued_at ? formatDateTime(issue.issued_at) : "—",
         )}
-        actions={!isDraft ? (
-          <IssueA4PrintDialog
-            issueNumber={issue.issue_number}
-            issueTypeLabel={surface.label}
-            statusLabel={statusLabel}
-            branchName={issueBranchName}
-            issuedAt={issue.issued_at}
-            notes={issue.notes}
-            lines={lines}
-            canViewMonetary={canViewMonetary}
-            buttonSize={isTouchLayout ? "touch" : "default"}
-          />
-        ) : undefined}
+        actions={
+          !isDraft ? (
+            <IssueA4PrintDialog
+              issueNumber={issue.issue_number}
+              issueTypeLabel={surface.label}
+              statusLabel={statusLabel}
+              branchName={issueBranchName}
+              issuedAt={issue.issued_at}
+              notes={issue.notes}
+              lines={lines}
+              canViewMonetary={canViewMonetary}
+              buttonSize={isTouchLayout ? "touch" : "default"}
+            />
+          ) : undefined
+        }
         breadcrumb={
           <AppBackLink href={listBasePath}>
             {tRoute("/inventory/consumption")}
@@ -1239,9 +1242,11 @@ function AddIssueLineDialog({
                   </div>
                 ) : null}
               </div>
-              {canViewMonetary ? <p className="mt-2 text-xs text-muted-foreground">
-                {ISSUES_VI.wacAutoHint}
-              </p> : null}
+              {canViewMonetary ? (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {ISSUES_VI.wacAutoHint}
+                </p>
+              ) : null}
             </Frame>
 
             {showConsumptionPhoto ? (
@@ -1288,10 +1293,7 @@ function IssueLineMobileCard({
     <Item variant="outline" className="bg-muted/30">
       <ItemHeader>
         <div>
-          <ItemTitle>
-            {item.ingredients?.name ?? `#${item.ingredient_id}`}
-          </ItemTitle>
-          <ItemDescription>ID: {item.ingredient_id}</ItemDescription>
+          <ItemTitle>{item.ingredients?.name ?? UNKNOWN_LABEL_VI}</ItemTitle>
         </div>
         {isDraft ? (
           <ItemActions>
@@ -1350,20 +1352,24 @@ function IssueLineMobileCard({
               {item.unit ?? item.ingredients?.unit ?? "—"}
             </p>
           </div>
-          {canViewMonetary ? <div>
-            <p className="text-muted-foreground">
-              {item.baseUnit
-                ? ISSUES_VI.unitCostWacPerUnit(item.baseUnit)
-                : ISSUES_VI.unitCostWac}
-            </p>
-            <p className="font-semibold">
-              {formatVND(Number(item.monetary?.unitCost ?? 0))}
-            </p>
-          </div> : null}
-          {canViewMonetary ? <div>
-            <p className="text-muted-foreground">{FORM_VI.amount}</p>
-            <p className="font-semibold text-primary">{formatVND(amount)}</p>
-          </div> : null}
+          {canViewMonetary ? (
+            <div>
+              <p className="text-muted-foreground">
+                {item.baseUnit
+                  ? ISSUES_VI.unitCostWacPerUnit(item.baseUnit)
+                  : ISSUES_VI.unitCostWac}
+              </p>
+              <p className="font-semibold">
+                {formatVND(Number(item.monetary?.unitCost ?? 0))}
+              </p>
+            </div>
+          ) : null}
+          {canViewMonetary ? (
+            <div>
+              <p className="text-muted-foreground">{FORM_VI.amount}</p>
+              <p className="font-semibold text-primary">{formatVND(amount)}</p>
+            </div>
+          ) : null}
         </div>
       </ItemContent>
       {item.reason ? (

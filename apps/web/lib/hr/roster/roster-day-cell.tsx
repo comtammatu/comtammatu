@@ -2,6 +2,7 @@
 
 import { Plus as IconPlus, Star as IconStar, X as IconX } from "lucide-react";
 import { cn } from "@comtammatu/ui";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -20,7 +21,6 @@ import {
   type RosterShift,
 } from "./roster-model";
 import { formatShiftLabel } from "./roster-week-helpers";
-
 
 const copy = messages.hr.roster;
 
@@ -89,7 +89,7 @@ export function RosterDayCell({
               <span className="truncate">
                 {shift
                   ? formatShiftLabel(shift.name, shift.startTime, shift.endTime)
-                  : `#${shiftId}`}
+                  : UNKNOWN_LABEL_VI}
               </span>
             </Badge>
             <Button
@@ -105,12 +105,7 @@ export function RosterDayCell({
                 leader?.isLeader ? copy.unmarkShiftLeader : copy.markShiftLeader
               }
               onClick={() =>
-                onLeaderToggle(
-                  employeeId,
-                  workDate,
-                  shiftId,
-                  !leader?.isLeader,
-                )
+                onLeaderToggle(employeeId, workDate, shiftId, !leader?.isLeader)
               }
             >
               <IconStar
@@ -164,7 +159,11 @@ export function RosterDayCell({
                     size={touch ? "touch" : "default"}
                     onClick={() => onAddShift(employeeId, workDate, shift.id)}
                   >
-                    {formatShiftLabel(shift.name, shift.startTime, shift.endTime)}
+                    {formatShiftLabel(
+                      shift.name,
+                      shift.startTime,
+                      shift.endTime,
+                    )}
                   </DropdownMenuItem>
                 ))}
               </>
@@ -183,7 +182,11 @@ export function RosterDayCell({
                     size={touch ? "touch" : "default"}
                     onClick={() => onAddShift(employeeId, workDate, shift.id)}
                   >
-                    {formatShiftLabel(shift.name, shift.startTime, shift.endTime)}
+                    {formatShiftLabel(
+                      shift.name,
+                      shift.startTime,
+                      shift.endTime,
+                    )}
                   </DropdownMenuItem>
                 ))}
               </>
@@ -195,5 +198,4 @@ export function RosterDayCell({
       ) : null}
     </div>
   );
-
 }

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { purchaseDemandLineProgress } from "@lib/inventory/purchase-demand-progress";
 import type {
   PurchaseOrderRow,
@@ -36,8 +37,7 @@ export const DEMAND_COVERAGE_SELECT =
 export const DEMAND_COVERAGE_ITEM_SELECT =
   "po_id, purchase_request_item_id, quantity, entry_to_base_factor";
 
-export const GRN_BY_PO_SELECT =
-  "id, po_id, grn_number, status, received_date";
+export const GRN_BY_PO_SELECT = "id, po_id, grn_number, status, received_date";
 
 type NamedEmbed = { name: string } | { name: string }[] | null;
 type UnitEmbed =
@@ -122,9 +122,10 @@ type PurchaseOrderRecord = {
   }>;
 };
 
-type PurchaseOrderItemRecord = PurchaseOrderRecord["purchase_order_items"][number] & {
-  po_id: number;
-};
+type PurchaseOrderItemRecord =
+  PurchaseOrderRecord["purchase_order_items"][number] & {
+    po_id: number;
+  };
 
 type GrnRecord = {
   id: number;
@@ -219,7 +220,8 @@ export function mapPurchaseDemandRows({
 
   const allocationsByDemandId = new Map<number, AllocationRecord[]>();
   for (const allocation of allocations) {
-    const list = allocationsByDemandId.get(allocation.purchase_request_id) ?? [];
+    const list =
+      allocationsByDemandId.get(allocation.purchase_request_id) ?? [];
     list.push(allocation);
     allocationsByDemandId.set(allocation.purchase_request_id, list);
   }
@@ -247,8 +249,9 @@ export function mapPurchaseDemandRows({
 
     const items = (request.purchase_request_items ?? []).map((item) => {
       const demandFactor =
-        factorByIngredientUnit.get(`${item.ingredient_id}:${item.entry_unit_id}`) ??
-        0;
+        factorByIngredientUnit.get(
+          `${item.ingredient_id}:${item.entry_unit_id}`,
+        ) ?? 0;
       const { orderedQuantity, remainingQuantity } = purchaseDemandLineProgress(
         {
           demandQuantity: Number(item.quantity),
@@ -273,7 +276,7 @@ export function mapPurchaseDemandRows({
       id: request.id,
       code: request.request_number,
       branchId: request.branch_id,
-      branchName: branchNames.get(request.branch_id) ?? `#${request.branch_id}`,
+      branchName: branchNames.get(request.branch_id) ?? UNKNOWN_LABEL_VI,
       status: request.status,
       statusReason: request.status_reason,
       neededBy: request.needed_by,
@@ -334,8 +337,7 @@ export function mapPurchaseOrderRows({
     const receivedByLine = new Map<number, number>();
     for (const grn of linked) {
       for (const line of grn.grn_items ?? []) {
-        const booked =
-          grn.status === "confirmed" || line.confirmed_at != null;
+        const booked = grn.status === "confirmed" || line.confirmed_at != null;
         if (!booked) continue;
         if (line.purchase_order_item_id == null) continue;
         receivedByLine.set(
@@ -393,9 +395,7 @@ export function mapPurchaseOrderRows({
           (line.supplier_id != null
             ? supplierNames.get(line.supplier_id)
             : null) ??
-          (po.supplier_id != null
-            ? supplierNames.get(po.supplier_id)
-            : null) ??
+          (po.supplier_id != null ? supplierNames.get(po.supplier_id) : null) ??
           messages.inventory.po.supplierRequired,
       })),
       linkedGrns,
@@ -419,7 +419,9 @@ export async function loadPurchaseDemandRows({
   canAllocate: boolean;
   branchNames: Map<number, string>;
   supplierNames: Map<number, string>;
-}): Promise<{ success: true; rows: PurchaseRequestRow[] } | { success: false }> {
+}): Promise<
+  { success: true; rows: PurchaseRequestRow[] } | { success: false }
+> {
   let demandQuery = supabase
     .from("purchase_requests" as never)
     .select(DEMAND_LIST_SELECT as never)
@@ -521,7 +523,10 @@ export async function loadPurchaseDemandRows({
   }
 
   const demandItems = itemResult.data as DemandItemRecord[];
-  const itemsByDemandId = new Map<number, DemandRecord["purchase_request_items"]>();
+  const itemsByDemandId = new Map<
+    number,
+    DemandRecord["purchase_request_items"]
+  >();
   for (const item of demandItems) {
     const list = itemsByDemandId.get(item.purchase_request_id) ?? [];
     list.push(item);
@@ -629,7 +634,10 @@ export async function loadPurchaseOrderRows({
   if (itemResult.error || grnHeaderResult.error) return { success: false };
 
   const poItems = itemResult.data as PurchaseOrderItemRecord[];
-  const itemsByPoId = new Map<number, PurchaseOrderRecord["purchase_order_items"]>();
+  const itemsByPoId = new Map<
+    number,
+    PurchaseOrderRecord["purchase_order_items"]
+  >();
   for (const item of poItems) {
     const list = itemsByPoId.get(item.po_id) ?? [];
     list.push(item);
@@ -640,8 +648,10 @@ export async function loadPurchaseOrderRows({
     purchase_order_items: itemsByPoId.get(po.id) ?? [],
   }));
 
-  const grnHeaders = (grnHeaderResult.data ??
-    []) as unknown as Omit<GrnRecord, "grn_items">[];
+  const grnHeaders = (grnHeaderResult.data ?? []) as unknown as Omit<
+    GrnRecord,
+    "grn_items"
+  >[];
   const grnIds = uniqueIds(grnHeaders.map((grn) => grn.id));
   const grnItemResult =
     grnIds.length === 0
@@ -717,7 +727,9 @@ export async function loadPurchasePickerUnits(params: {
 
   for (const row of data) {
     const unitsEmbed = row.units as UnitNameEmbed;
-    const unit = Array.isArray(unitsEmbed) ? (unitsEmbed[0] ?? null) : unitsEmbed;
+    const unit = Array.isArray(unitsEmbed)
+      ? (unitsEmbed[0] ?? null)
+      : unitsEmbed;
     const ingredientId = Number(row.ingredient_id);
     const list = byIngredient.get(ingredientId) ?? [];
     list.push({

@@ -30,7 +30,7 @@ export function BranchFeedbackTabs({
     >
       <TabsList
         size="touch"
-        className="grid w-full grid-cols-2"
+        layout="equal"
         aria-label={feedbackCopy.pageTitle}
       >
         <TabsTrigger value="inbox">{feedbackCopy.tabInbox}</TabsTrigger>

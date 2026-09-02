@@ -37,7 +37,10 @@ import {
   StocktakePrintDialog,
   type StocktakeCountUnitOption,
 } from "@/components/inventory/stocktake-print-dialog";
-import { WASTE_REASON_LABELS_VI } from "@comtammatu/shared/labels";
+import {
+  UNKNOWN_LABEL_VI,
+  WASTE_REASON_LABELS_VI,
+} from "@comtammatu/shared/labels";
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import {
   cancelStocktake,
@@ -52,7 +55,7 @@ import {
 
 /* ─── Types ─── */
 
-import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, FORM_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
 
 const stocktakeCopy = messages.inventory.stocktake;
 const stocktakeDetailCopy = stocktakeCopy.detail;
@@ -78,8 +81,10 @@ interface StocktakeSession {
   created_by_name: string;
 }
 
-function stocktakeCode(session: Pick<StocktakeSession, "id" | "session_number">): string {
-  return session.session_number?.trim() || `KK-${session.id}`;
+function stocktakeCode(
+  session: Pick<StocktakeSession, "id" | "session_number">,
+): string {
+  return session.session_number?.trim() || INVENTORY_VI.documentNumberPending;
 }
 
 interface StocktakeLine {
@@ -99,7 +104,6 @@ interface StocktakeLine {
     units?: CountUnitItem[];
   } | null;
 }
-
 
 export function StocktakeDetailClient({
   session: initialSession,
@@ -216,7 +220,7 @@ export function StocktakeDetailClient({
       lines.map((l) => ({
         id: l.id,
         ingredientId: l.ingredient_id,
-        ingredientName: l.ingredients?.name ?? `#${l.ingredient_id}`,
+        ingredientName: l.ingredients?.name ?? UNKNOWN_LABEL_VI,
         unit: l.ingredients?.unit ?? "",
         category: l.ingredients?.category ?? null,
         systemQuantity: l.system_quantity,
@@ -252,21 +256,14 @@ export function StocktakeDetailClient({
       />
       {session.status === "in_progress" ? (
         <>
-          <Button
-            variant="outline"
-            onClick={handleCancel}
-            disabled={isPending}
-          >
+          <Button variant="outline" onClick={handleCancel} disabled={isPending}>
             <IconBan className="mr-2 size-4" />
             {stocktakeDetailCopy.cancelAction}
           </Button>
           <Button variant="outline" render={<Link href={countHref} />}>
             {stocktakeDetailCopy.continueCounting}
           </Button>
-          <Button
-            onClick={handleComplete}
-            disabled={isPending || !allCounted}
-          >
+          <Button onClick={handleComplete} disabled={isPending || !allCounted}>
             <IconCircleCheck className="mr-2 size-4" />
             {stocktakeDetailCopy.completeAction}
           </Button>
@@ -489,7 +486,7 @@ function CountingPhase({
       header: tTerm("ingredient"),
       render: (line) => (
         <span className="text-sm font-medium">
-          {line.ingredients?.name ?? `#${line.ingredient_id}`}
+          {line.ingredients?.name ?? UNKNOWN_LABEL_VI}
         </span>
       ),
     },
@@ -498,10 +495,14 @@ function CountingPhase({
       header: tTerm("systemQuantity"),
       render: (line) => (
         <span className="font-mono tabular-nums text-sm">
-          {formatMultiUnitBreakdown(line.system_quantity, line.ingredients?.units, {
-            fallbackUnit: line.ingredients?.unit,
-            showBaseSecondary: true,
-          })}
+          {formatMultiUnitBreakdown(
+            line.system_quantity,
+            line.ingredients?.units,
+            {
+              fallbackUnit: line.ingredients?.unit,
+              showBaseSecondary: true,
+            },
+          )}
         </span>
       ),
     },
@@ -512,10 +513,14 @@ function CountingPhase({
         <span className="font-mono tabular-nums text-sm font-semibold">
           {line.counted_quantity == null
             ? "—"
-            : formatMultiUnitBreakdown(line.counted_quantity, line.ingredients?.units, {
-                fallbackUnit: line.ingredients?.unit,
-                showBaseSecondary: true,
-              })}
+            : formatMultiUnitBreakdown(
+                line.counted_quantity,
+                line.ingredients?.units,
+                {
+                  fallbackUnit: line.ingredients?.unit,
+                  showBaseSecondary: true,
+                },
+              )}
         </span>
       ),
     },
@@ -601,7 +606,7 @@ function ResultsPhase({
       header: tTerm("ingredient"),
       render: (line) => (
         <span className="text-sm font-medium">
-          {line.ingredients?.name ?? `#${line.ingredient_id}`}
+          {line.ingredients?.name ?? UNKNOWN_LABEL_VI}
         </span>
       ),
     },
@@ -619,10 +624,14 @@ function ResultsPhase({
       header: stocktakeDetailCopy.results.systemQty,
       render: (line) => (
         <span className="text-sm font-mono tabular-nums">
-          {formatMultiUnitBreakdown(line.system_quantity, line.ingredients?.units, {
-            fallbackUnit: line.ingredients?.unit,
-            showBaseSecondary: true,
-          })}
+          {formatMultiUnitBreakdown(
+            line.system_quantity,
+            line.ingredients?.units,
+            {
+              fallbackUnit: line.ingredients?.unit,
+              showBaseSecondary: true,
+            },
+          )}
         </span>
       ),
     },
@@ -633,10 +642,14 @@ function ResultsPhase({
         <span className="text-sm font-mono tabular-nums font-semibold">
           {line.counted_quantity == null
             ? inventoryCommon.noValue
-            : formatMultiUnitBreakdown(line.counted_quantity, line.ingredients?.units, {
-                fallbackUnit: line.ingredients?.unit,
-                showBaseSecondary: true,
-              })}
+            : formatMultiUnitBreakdown(
+                line.counted_quantity,
+                line.ingredients?.units,
+                {
+                  fallbackUnit: line.ingredients?.unit,
+                  showBaseSecondary: true,
+                },
+              )}
         </span>
       ),
     },
@@ -671,16 +684,15 @@ function ResultsPhase({
       render: (line) => (
         <span className="text-sm text-muted-foreground">
           {line.reason_code
-            ? WASTE_REASON_LABELS_VI[
+            ? (WASTE_REASON_LABELS_VI[
                 line.reason_code as keyof typeof WASTE_REASON_LABELS_VI
-              ] ?? line.reason_code
+              ] ?? line.reason_code)
             : inventoryCommon.noValue}
           {line.variance_reason ? ` — ${line.variance_reason}` : ""}
         </span>
       ),
     },
   ];
-
 
   const legend = (
     <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -715,10 +727,7 @@ function ResultsPhase({
           {stocktakeDetailCopy.results.nextActionDescription(varianceCount)}
         </p>
       </div>
-      <Button
-        size="sm"
-        render={<Link href={reviewHref} />}
-      >
+      <Button size="sm" render={<Link href={reviewHref} />}>
         {stocktakeDetailCopy.results.nextActionCta}
         <IconArrowRight className="size-4" />
       </Button>
@@ -750,7 +759,7 @@ function ResultsPhase({
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="truncate text-sm font-medium">
-                    {line.ingredients?.name ?? `#${line.ingredient_id}`}
+                    {line.ingredients?.name ?? UNKNOWN_LABEL_VI}
                   </span>
                   {line.counted_quantity == null ? (
                     <span className="shrink-0 font-mono text-sm text-muted-foreground">

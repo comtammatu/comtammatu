@@ -415,7 +415,7 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
   );
   assert.match(
     branchClientSource,
-    /href=\{`\/br\/\$\{branchId\}\/stock\/on-hand\/\$\{item\.id\}`\}/,
+    /href=\{`\/br\/\$\{branchId\}\/stock\/on-hand\/\$\{item\.id\}\?location=\$\{selectedLocation\}`\}/,
   );
   assert.doesNotMatch(branchClientSource, /href=\{?[`"]\/inventory\/stock/);
   assert.match(stockClientSource, /href: stockDetailHref\(item\.id\)/);

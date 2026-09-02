@@ -5,6 +5,7 @@ import {
   type InventoryA4PrintColumn,
 } from "@/components/inventory/inventory-a4-print-dialog";
 import { formatDateTime, formatQty, formatVND } from "@lib/inventory/format";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { messages } from "@lib/messages";
 
 const copy = messages.inventory.documentPrint;
@@ -107,7 +108,7 @@ export function IssueA4PrintDialog({
           no: index + 1,
           item: (
             <span className="font-semibold">
-              {line.ingredients?.name ?? `#${line.ingredient_id}`}
+              {line.ingredients?.name ?? UNKNOWN_LABEL_VI}
             </span>
           ),
           quantity: `${formatQty(Number(line.quantity ?? 0))} ${line.unit}`,

@@ -1,4 +1,5 @@
 import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { loadAuthState } from "@/_lib/auth";
 import {
   attachRefundMatches,
@@ -764,7 +765,7 @@ function mapRefundMatches(rows: RefundMatchRow[]): SepayRefundMatchOption[] {
     amount: Number(row.amount),
     approvedAt: row.approved_at,
     orderId: row.order_id,
-    orderNumber: firstRelation(row.orders)?.order_number ?? `#${row.order_id}`,
+    orderNumber: firstRelation(row.orders)?.order_number ?? UNKNOWN_LABEL_VI,
     webhookEventId: row.webhook_event_id,
   }));
 }

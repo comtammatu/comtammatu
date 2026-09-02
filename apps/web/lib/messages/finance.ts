@@ -25,7 +25,7 @@ export const finance = {
     refundReasonPlaceholder:
       "Ví dụ: Thu ngân bấm thanh toán nhầm khi khách chưa đồng ý.",
     refundWarning:
-      "Hoàn tiền cho khách và phục hồi kho. HĐĐT đã phát hành KHÔNG tự hủy — hủy/thay thế riêng nếu cần.",
+      "Ghi nhận hoàn tiền và phục hồi kho; HĐĐT đã phát hành xử lý riêng.",
     refundConfirm: "Hoàn tiền",
     refundCancel: "Không",
     refundSuccess: "Đã hoàn tiền / đảo thanh toán",
@@ -33,7 +33,7 @@ export const finance = {
     methodFix: "Sửa phương thức",
     methodFixDialogTitle: "Sửa phương thức thanh toán",
     methodFixWarning:
-      "Đồng bộ thanh toán, đơn và dự thu ca. Đổi sang VietQR phải khớp trên Giao dịch; đã có bằng chứng NH thì không đổi sang tiền mặt. Không ảnh hưởng HĐĐT đã phát hành.",
+      "Sửa đồng thời phương thức trên thanh toán, đơn và dự thu ca.",
     methodFixNewLabel: "Phương thức đúng",
     methodFixReasonLabel: (min: number) => `Lý do sửa (tối thiểu ${min} ký tự)`,
     methodFixReasonPlaceholder:
@@ -59,6 +59,7 @@ export const finance = {
       timeLabel: "Thời điểm đơn",
       submit: "Xuất hóa đơn",
       success: (num: string) => `Đã xuất HĐĐT ${num}`,
+      successWithoutNumber: "Đã xuất HĐĐT.",
       failed: "Không thể xuất hóa đơn",
       unpaid: "Đơn chưa thanh toán — không thể xuất hóa đơn.",
       noItems: "Đơn không còn món nào (đã hủy hết) — không thể xuất hóa đơn.",
@@ -68,11 +69,26 @@ export const finance = {
       draftRetry:
         "Lần xuất trước bị nhà cung cấp từ chối — bấm xuất để thử lại.",
     },
+    orderNumberUnavailable: "Chưa có mã đơn",
+    invoiceNumberUnavailable: "Chưa cấp số hóa đơn",
+    invoiceCreated: "Đã tạo",
+    invoiceNotCreated: "Chưa tạo",
+    replaceSuccess: (number: string) => `Đã tạo HĐ thay thế ${number}`,
+    replaceSuccessWithoutNumber: "Đã tạo HĐ thay thế.",
+    cancelDescription: (number: string, _hint: string) =>
+      `Hủy hóa đơn ${number}? Lý do hủy sẽ được lưu vào hồ sơ.`,
+    replaceDescription: (number: string) =>
+      `Tạo HĐ thay thế cho ${number}; HĐ gốc chuyển sang trạng thái Đã thay thế.`,
+    reconcileTitle: "Đối soát HĐĐT đã phát hành",
+    reconcileDescription:
+      "Chỉ ghi số hóa đơn sau khi đã đối chiếu trên Viettel.",
+    reconcileSuccess: "Đã ghi nhận HĐĐT từ Viettel.",
+    reconcileSubmit: "Xác nhận đối soát",
   },
   common: {
     noValue: "—",
     allBranches: BRANCH_VI.selectAll,
-    branchFallback: (branchId: number) => `Chi nhánh ${branchId}`,
+    branchFallback: (_branchId: number) => "Chi nhánh không xác định",
     loading: "Đang tải...",
     emptyInRange: "Chưa có dữ liệu trong khoảng này.",
     filter: "Lọc",
@@ -143,7 +159,7 @@ export const finance = {
     stageCompanyReporting: "Hỗ trợ kế toán để riêng",
     exceptionsTitle: "Điểm cần kiểm tra",
     emptyInventoryRanking: "Chưa có tồn kho có giá trị để xếp hạng.",
-    branchFallback: (branchId: number) => `Chi nhánh ${branchId}`,
+    branchFallback: (_branchId: number) => "Chi nhánh không xác định",
     ingredientFallback: "Nguyên liệu chưa đặt tên",
     portions: (count: string) => `${count} phần`,
     emptyTopItems: "Chưa có dữ liệu món bán trong kỳ.",
@@ -459,6 +475,7 @@ export const finance = {
     loadErrorDescription:
       "Sổ chi phí: không tải được số liệu kỳ này. Thử tải lại trang.",
     tenantLevel: "Công ty",
+    branchFallback: "Chi nhánh",
     empty: {
       title: "Chưa có khoản chi trong kỳ",
       description: "Ghi nhận khoản chi để theo dõi chi phí và dòng tiền.",
@@ -495,7 +512,7 @@ export const finance = {
       vatTotalLabel: "GTGT đã ghi nhận",
       grossLabel: "Tổng tiền",
       attachment: "Hóa đơn GTGT / Chứng từ (Đính kèm)",
-      attachmentHint: "Tùy chọn. File PDF hoặc ảnh chụp hóa đơn / biên lai.",
+      attachmentHint: "Tùy chọn. Tệp PDF hoặc ảnh chụp hóa đơn / biên lai.",
       viewPdf: "Xem tệp PDF",
       zoomAttachment: "Phóng to ảnh hóa đơn",
       transferContent: "Nội dung chuyển khoản",
@@ -722,7 +739,7 @@ export const finance = {
     description: "Sao kê SePay. Khớp với chứng từ thanh toán và chi.",
     detailExplanation:
       "Đối chiếu sao kê với VietQR, chi phí và trả NCC. Giao dịch đã có không bị nhập trùng.",
-    importAction: "Nhập file SePay",
+    importAction: "Nhập tệp SePay",
     importTitle: "Nhập lịch sử giao dịch SePay",
     importDescription: "Tệp CSV từ SePay. Giao dịch đã có không bị cộng lại.",
     statementRestoreAction: "Nhập sao kê trước SePay",
@@ -835,8 +852,7 @@ export const finance = {
       conflictOrder: "Đơn liên quan",
       openConflictOrder: "Mở đơn",
       linkTitle: "Khớp đơn",
-      linkDescription:
-        "Nhập mã đơn in trên phiếu để đối soát với giao dịch.",
+      linkDescription: "Nhập mã đơn in trên phiếu để đối soát với giao dịch.",
       linkInputLabel: "Mã đơn",
       linkInputPlaceholder: "Ví dụ: TC-260817-001",
       linkInputHelp: "",
@@ -917,10 +933,10 @@ export const finance = {
       failed: "Cần kiểm tra",
       received: "Đã nhận",
     },
-    matchedPayment: (id: number | string) => `Thanh toán #${id}`,
+    matchedPayment: (_id: number | string) => "Thanh toán",
     matchedCashDeposit: "Nộp tiền mặt vào tài khoản",
     internalCashMovement: "Luân chuyển nội bộ",
-    matchedExpense: (id: number | string) => `Chi phí #${id}`,
+    matchedExpense: (_id: number | string) => "Chi phí",
     openSupplierInvoice: "Mở hóa đơn NCC",
     matchedSupplierPaymentDetail: (supplier: string, amount: string) =>
       `${supplier} · ${amount}`,
@@ -1231,6 +1247,7 @@ export const finance = {
       ordersTitle: (count: string) => `Đơn đã thanh toán (${count})`,
       ordersDescription: "Mỗi đơn một dòng, sắp xếp theo thời điểm thanh toán.",
       noPaidOrders: "Không có đơn đã thanh toán trong ngày.",
+      relatedPosSession: "Xem ca POS",
     },
   },
   cashVarianceCard: {

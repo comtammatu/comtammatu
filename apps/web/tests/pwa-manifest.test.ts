@@ -551,6 +551,11 @@ test("offline page is explicitly precached and reuses the shared error copy", ()
   assert.match(serwistConfigSource, /url: "\/offline"/);
   assert.match(serwistConfigSource, /size: 0/);
   assert.match(serwistConfigSource, /url\.endsWith\("\/_buildManifest\.js"\)/);
+  assert.match(
+    serwistConfigSource,
+    /url !== "\/offline"/,
+    "the transform must remove Next's generated /offline entry before adding the canonical one",
+  );
   assert.match(offlinePageSource, /ERRORS_VI\.networkError/);
   assert.match(offlinePageSource, /ACTIONS_VI\.retry/);
   assert.match(offlinePageSource, /AppEmptyState/);

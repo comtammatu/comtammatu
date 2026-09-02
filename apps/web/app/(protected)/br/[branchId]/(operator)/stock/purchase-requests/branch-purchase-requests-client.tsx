@@ -758,7 +758,7 @@ export function BranchPurchaseRequestsClient({
             >
               <TabsList
                 size="touch"
-                className="no-scrollbar flex w-full overflow-x-auto gap-1.5"
+                layout="scroll"
                 aria-label={copy.statusFilterAria}
               >
                 <TabsTrigger value="all">{copy.allStatuses}</TabsTrigger>

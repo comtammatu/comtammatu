@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { fetchLeaveRequestRows } from "@lib/hr/leave-request-data";
 import { withAction } from "@/_lib/with-action";
 import { messages } from "@lib/messages";
@@ -112,7 +113,7 @@ export const fetchLeaveShiftConflicts = withAction(
       id: row.id,
       workDate: row.work_date,
       shiftId: row.shift_id,
-      shiftName: row.shifts?.name ?? `#${row.shift_id}`,
+      shiftName: row.shifts?.name ?? UNKNOWN_LABEL_VI,
       startTime: row.shifts?.start_time ?? "",
       endTime: row.shifts?.end_time ?? "",
     }));
@@ -250,17 +251,14 @@ export const approveLeaveRequest = withAction(
     requireBranchScope: true,
   },
   async (data, { supabase }) => {
-    const { error } = await supabase.rpc(
-      "approve_leave_request_with_roster",
-      {
-        p_request_id: data.requestId,
-        p_shift_resolution: data.shiftResolution,
-        p_replacement_employee_id:
-          data.shiftResolution === "substitute"
-            ? (data.replacementEmployeeId ?? undefined)
-            : undefined,
-      },
-    );
+    const { error } = await supabase.rpc("approve_leave_request_with_roster", {
+      p_request_id: data.requestId,
+      p_shift_resolution: data.shiftResolution,
+      p_replacement_employee_id:
+        data.shiftResolution === "substitute"
+          ? (data.replacementEmployeeId ?? undefined)
+          : undefined,
+    });
 
     if (error) {
       console.error(

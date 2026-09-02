@@ -9,6 +9,7 @@ import {
   UserRound as IconUserRound,
 } from "lucide-react";
 import { cn } from "@comtammatu/ui";
+import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { Avatar, AvatarFallback } from "@comtammatu/ui/components/avatar";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -136,7 +137,10 @@ function AccountMenu({
         <DropdownMenuGroup>
           {personalHref ? (
             <DropdownMenuItem
-              className={cn("text-sm flex items-center gap-2", isTouchLayout ? "min-h-12" : "min-h-10")}
+              className={cn(
+                "text-sm flex items-center gap-2",
+                isTouchLayout ? "min-h-12" : "min-h-10",
+              )}
               render={<ProtectedLink href={personalHref} />}
             >
               <IconUserRound className="size-4 shrink-0" />
@@ -157,7 +161,13 @@ function AccountMenu({
                 "w-full text-sm flex items-center gap-2",
                 isTouchLayout ? "min-h-12" : "min-h-10",
               )}
-              render={<Button type="submit" variant="ghost" className="w-full justify-start" />}
+              render={
+                <Button
+                  type="submit"
+                  variant="ghost"
+                  className="w-full justify-start"
+                />
+              }
             >
               <IconLogout className="size-4 shrink-0" />
               {copy.signOut}
@@ -209,7 +219,9 @@ function PrimaryNavItem({
             className="flex items-center gap-2 w-full min-w-0"
           >
             <Icon />
-            <span className="min-w-0 flex-1 truncate text-xs font-medium">{item.label}</span>
+            <span className="min-w-0 flex-1 truncate text-xs font-medium">
+              {item.label}
+            </span>
             <UnreadBadge count={item.badgeCount} />
           </ProtectedLink>
         }
@@ -344,7 +356,7 @@ export function AppShell({
     >
       <Sidebar variant="inset" collapsible="offcanvas">
         <SidebarHeader className="border-b border-sidebar-border px-3 py-3">
-          <div className="flex items-center gap-2 rounded-md bg-sidebar-accent p-2 ring-1 ring-sidebar-border/70">
+          <div className="flex min-w-0 items-center gap-2 px-1 py-1">
             <BrandLogoBox tone="sidebar" className="bg-sidebar">
               <BrandMark variant="seal" decorative className="size-full" />
             </BrandLogoBox>
@@ -353,11 +365,11 @@ export function AppShell({
                 {copy.brandShortName}
               </p>
               <p className="mt-0.5 truncate text-sidebar-foreground/70 text-xs">
-                {controlSurfaceCopy.dashboard.title}
+                {APP_COPY_VI.ownerSurface}
               </p>
             </div>
           </div>
-          {sidebarHeaderAccessory ? (
+          {sidebarHeaderAccessory && !isTouchLayout ? (
             <div className="mt-2 w-full">{sidebarHeaderAccessory}</div>
           ) : null}
         </SidebarHeader>
@@ -449,9 +461,11 @@ export function AppShell({
       >
         <div
           data-control-surface-mobile-tools=""
-          className="flex shrink-0 items-center gap-2 border-b border-border/70 bg-background px-3 py-2 lg:hidden"
+          className="flex shrink-0 items-center gap-2 border-b border-border/70 bg-card/95 px-3 py-2 backdrop-blur lg:hidden"
         >
-          <div className="min-w-0 flex-1">{mobileScopeAccessory}</div>
+          <div className="min-w-0 flex-1">
+            {isTouchLayout ? mobileScopeAccessory : null}
+          </div>
           <div className="flex shrink-0 items-center gap-2">
             <NotificationBell
               variant="header"

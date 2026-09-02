@@ -121,8 +121,8 @@ export function OperatorOrdersClient({
       >
         <TabsList
           size="touch"
+          layout="equal"
           aria-label={ORDERS_COPY.operatorTabsAriaLabel}
-          className="grid w-full grid-cols-2"
         >
           <TabsTrigger
             value="active"

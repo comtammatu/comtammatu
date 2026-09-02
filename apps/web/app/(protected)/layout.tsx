@@ -34,8 +34,6 @@ import {
   PRODUCTION_OPEN_PERMISSIONS,
 } from "./inventory/production-data";
 
-export const instant = false;
-
 const INVENTORY_SETTINGS_PERMISSIONS = [
   PERMISSION_KEYS.SETTINGS_BRANCH,
   PERMISSION_KEYS.SETTINGS_TENANT,

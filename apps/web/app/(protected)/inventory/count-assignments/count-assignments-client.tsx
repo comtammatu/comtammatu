@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -36,8 +43,10 @@ import {
 } from "@comtammatu/ui/components/select";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { withControlSurfaceBranchScope } from "@/lib/control-surface-scope";
 import { cn } from "@comtammatu/ui";
 import { ACTIONS_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { formatVNClockTime } from "@comtammatu/shared/time";
 import {
   DataTable,
@@ -45,6 +54,11 @@ import {
 } from "@/components/data-table/data-table";
 import { AppDialog } from "@/components/form";
 import { useFormControlSize } from "@/components/form/control-size";
+import {
+  RowActionsContextMenuItems,
+  RowActionsMenu,
+  type RowActionItem,
+} from "@/components/row-actions-menu";
 import {
   AppEmptyState,
   AppListFrame,
@@ -136,7 +150,7 @@ function AssignmentBadges({
     <div className="flex min-w-0 flex-wrap gap-1">
       {selectedIds.slice(0, 4).map((id) => (
         <Badge key={id} variant="secondary">
-          {ingredientMap.get(id)?.name ?? `#${id}`}
+          {ingredientMap.get(id)?.name ?? UNKNOWN_LABEL_VI}
         </Badge>
       ))}
       {selectedIds.length > 4 ? (
@@ -235,9 +249,7 @@ export function CountAssignmentsClient({
       setSelectionFilter("all");
       return;
     }
-    setDraftIds(
-      selectionByEmployeeRef.current[String(activeEmployeeId)] ?? [],
-    );
+    setDraftIds(selectionByEmployeeRef.current[String(activeEmployeeId)] ?? []);
     setIngredientSearch("");
     setSelectionFilter("all");
   }, [activeEmployeeId]);
@@ -286,7 +298,8 @@ export function CountAssignmentsClient({
     const query = employeeSearch.trim();
     return employees.filter((employee) => {
       const matchSearch =
-        !query || matchesSearch([employee.name, employee.positionName ?? ""], query);
+        !query ||
+        matchesSearch([employee.name, employee.positionName ?? ""], query);
       const isAssigned =
         (selectionByEmployee[String(employee.id)] ?? []).length > 0;
       const isOnDuty =
@@ -304,7 +317,13 @@ export function CountAssignmentsClient({
 
       return matchSearch && matchStatus;
     });
-  }, [employeeSearch, employees, selectedShiftId, selectionByEmployee, staffStatusFilter]);
+  }, [
+    employeeSearch,
+    employees,
+    selectedShiftId,
+    selectionByEmployee,
+    staffStatusFilter,
+  ]);
   const visibleIngredients = useMemo(() => {
     const query = ingredientSearch.trim();
     return ingredients.filter((ingredient) => {
@@ -456,6 +475,29 @@ export function CountAssignmentsClient({
     );
   }
 
+  function getRowActions(employee: EmployeeRow): RowActionItem[] {
+    const hasAssignments =
+      (selectionByEmployee[String(employee.id)] ?? []).length > 0;
+    return [
+      {
+        key: "edit",
+        label: ACTIONS_VI.edit,
+        icon: <IconPencil aria-hidden="true" />,
+        disabled: isPending,
+        onSelect: () => openEditor(employee),
+      },
+      {
+        key: "clear",
+        label: ACTIONS_VI.delete,
+        icon: <IconTrash aria-hidden="true" />,
+        disabled: isPending || !hasAssignments,
+        destructive: true,
+        separatorBefore: true,
+        onSelect: () => void handleClear(employee),
+      },
+    ];
+  }
+
   const columns: DataTableColumn<EmployeeRow>[] = [
     {
       key: "employee",
@@ -511,35 +553,10 @@ export function CountAssignmentsClient({
     {
       key: "actions",
       header: INVENTORY_VI.countAssignTableHeaderActions,
-      className: "w-52 text-right",
-      render: (employee) => {
-        const hasAssignments =
-          (selectionByEmployee[String(employee.id)] ?? []).length > 0;
-        return (
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={isPending}
-              onClick={() => openEditor(employee)}
-            >
-              <IconPencil aria-hidden="true" />
-              {ACTIONS_VI.edit}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              disabled={isPending || !hasAssignments}
-              onClick={() => void handleClear(employee)}
-            >
-              <IconTrash aria-hidden="true" />
-              {ACTIONS_VI.delete}
-            </Button>
-          </div>
-        );
-      },
+      className: "w-12 text-right",
+      render: (employee) => (
+        <RowActionsMenu items={getRowActions(employee)} triggerSize="icon-sm" />
+      ),
     },
   ];
 
@@ -551,7 +568,19 @@ export function CountAssignmentsClient({
           <Button
             variant="outline"
             size={controlSize === "touch" ? "touch" : "lg"}
-            render={<Link href="/inventory/count-slips" />}
+            render={
+              <Link
+                href={
+                  selectedBranchId === null
+                    ? "/inventory/count-slips"
+                    : withControlSurfaceBranchScope(
+                        "/inventory/count-slips",
+                        String(selectedBranchId) as `${number}`,
+                        { prefixes: ["/inventory"] },
+                      )
+                }
+              />
+            }
           >
             <IconFileText aria-hidden="true" />
             {INVENTORY_VI.countSlipTitle}
@@ -598,7 +627,9 @@ export function CountAssignmentsClient({
                       type="search"
                       aria-label={INVENTORY_VI.staffSearchPlaceholder}
                       value={employeeSearch}
-                      onChange={(event) => setEmployeeSearch(event.target.value)}
+                      onChange={(event) =>
+                        setEmployeeSearch(event.target.value)
+                      }
                       placeholder={INVENTORY_VI.staffSearchPlaceholder}
                       inputMode="search"
                     />
@@ -650,7 +681,10 @@ export function CountAssignmentsClient({
                               {INVENTORY_VI.countAssignAllShifts}
                             </SelectItem>
                             {shiftOptions.map((shift) => (
-                              <SelectItem key={shift.id} value={String(shift.id)}>
+                              <SelectItem
+                                key={shift.id}
+                                value={String(shift.id)}
+                              >
                                 {shift.name} ·{" "}
                                 {formatVNClockTime(shift.startTime)}-
                                 {formatVNClockTime(shift.endTime)}
@@ -723,6 +757,9 @@ export function CountAssignmentsClient({
             emptyMode={employeeSearch.trim() ? "no-results" : "no-data"}
             emptyTitle={INVENTORY_VI.countAssignNoEmployeesTitle}
             emptyDescription={INVENTORY_VI.countAssignNoEmployeesDescription}
+            renderRowContextMenu={(employee) => (
+              <RowActionsContextMenuItems items={getRowActions(employee)} />
+            )}
             mobileCardRender={(employee) => {
               const selectedIds =
                 selectionByEmployee[String(employee.id)] ?? [];
@@ -740,27 +777,14 @@ export function CountAssignmentsClient({
                       ingredientMap={ingredientMap}
                     />
                   </ItemContent>
-                  <ItemActions className="flex-col">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size={controlSize === "touch" ? "touch" : "default"}
-                      disabled={isPending}
-                      onClick={() => openEditor(employee)}
-                    >
-                      <IconPencil aria-hidden="true" />
-                      {ACTIONS_VI.edit}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size={controlSize === "touch" ? "touch" : "default"}
-                      disabled={isPending || selectedIds.length === 0}
-                      onClick={() => void handleClear(employee)}
-                    >
-                      <IconTrash aria-hidden="true" />
-                      {ACTIONS_VI.delete}
-                    </Button>
+                  <ItemActions>
+                    <RowActionsMenu
+                      items={getRowActions(employee)}
+                      triggerSize={
+                        controlSize === "touch" ? "icon-touch" : "icon-lg"
+                      }
+                      itemSize={controlSize === "touch" ? "touch" : "default"}
+                    />
                   </ItemActions>
                 </Item>
               );
@@ -896,9 +920,7 @@ export function CountAssignmentsClient({
                       variant="outline"
                       className={cn(
                         "min-w-0 cursor-pointer items-center justify-between gap-2 transition-colors",
-                        checked
-                          ? "border-primary bg-accent"
-                          : "hover:bg-muted",
+                        checked ? "border-primary bg-accent" : "hover:bg-muted",
                       )}
                     >
                       <div className="flex min-w-0 items-center gap-2">

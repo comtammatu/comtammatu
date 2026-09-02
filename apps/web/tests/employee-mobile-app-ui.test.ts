@@ -56,7 +56,7 @@ test("operator entry owns the mobile shell and keeps bottom nav outside scroll c
   );
   assert.match(
     layout,
-    /homeAriaLabel=\{\s*branchKind === "branch"\s*\?\s*APP_COPY_VI\.branchHome\s*:\s*APP_COPY_VI\.ownerTitle\s*\}/,
+    /homeAriaLabel=\{\s*branchKind === "branch"\s*\?\s*`\$\{APP_COPY_VI\.branchHome\} · \$\{context\.branch\.name\}`\s*:\s*APP_COPY_VI\.ownerTitle\s*\}/,
   );
   assert.match(layout, /id="main-content"[\s\S]*overflow-y-auto/);
   assert.match(

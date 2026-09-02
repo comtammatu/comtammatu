@@ -28,6 +28,7 @@ test("count slip review promotes base quantities into the largest convertible un
 
   assert.equal(formatQuantityInLargestUnits(5320, units, viNumber), "5 lít 320 ml");
   assert.equal(formatQuantityInLargestUnits(3, units, viNumber), "3 ml");
+  assert.equal(formatQuantityInLargestUnits(6.4, units, viNumber), "6,4 ml");
   assert.equal(
     formatQuantityInLargestUnits(-5317, units, viNumber),
     "−5 lít 317 ml",

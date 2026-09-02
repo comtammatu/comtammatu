@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { INVENTORY_CATALOG_ROLES } from "@comtammatu/shared/auth";
+import { INGREDIENT_CATALOG_WRITE_ROLES } from "@comtammatu/shared/auth";
 import { withAction } from "@/_lib/with-action";
 import { CATALOG_MANAGE_PERMISSIONS } from "../../_lib/catalog-permissions";
 import { inventoryNonnegativeQuantitySchema } from "../../_lib/inventory-quantity-schema";
@@ -18,7 +18,7 @@ const bulkUpdateThresholdsSchema = z.object({
 
 export const bulkUpdateIngredientThresholds = withAction(
   {
-    roles: INVENTORY_CATALOG_ROLES,
+    roles: INGREDIENT_CATALOG_WRITE_ROLES,
     schema: bulkUpdateThresholdsSchema,
     anyPermission: CATALOG_MANAGE_PERMISSIONS,
   },

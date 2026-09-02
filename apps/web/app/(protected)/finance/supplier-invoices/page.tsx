@@ -132,16 +132,7 @@ export default async function FinanceSupplierInvoicesPage({
     !grnsRes.success ||
     requestedInvoiceRes?.success === false
   ) {
-    return (
-      <AppPage width="xwide" density="compact">
-        <AppPageHeader title={copy.title} />
-        <AppEmptyState
-          mode="error"
-          title={copy.loadErrorTitle}
-          description={copy.loadErrorDescription}
-        />
-      </AppPage>
-    );
+    throw new Error("Failed to load supplier invoice page data.");
   }
 
   const page = res.data;

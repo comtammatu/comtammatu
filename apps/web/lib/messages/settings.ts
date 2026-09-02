@@ -41,8 +41,7 @@ export const settings = {
   pages: {
     branchesTitle: "Chi nhánh",
     branchCount: (count: number) => `${formatCount(count)} chi nhánh`,
-    branchesLoadFailed:
-      "Không thể tải danh sách chi nhánh. Vui lòng thử lại.",
+    branchesLoadFailed: "Không thể tải danh sách chi nhánh. Vui lòng thử lại.",
     settingsEyebrow: "Cài đặt",
     settingsHomeEyebrow: "Quản trị hệ thống",
     settingsHomeTitle: "Cài đặt",
@@ -64,8 +63,7 @@ export const settings = {
     printSettingsTitle: "Thiết bị và in ấn",
     generalTitle: "Doanh nghiệp",
     securityTitle: "Bảo mật đăng nhập",
-    securityDescription:
-      "Bật MFA (TOTP) tùy chọn cho tài khoản Chủ sở hữu.",
+    securityDescription: "Bật xác minh hai bước cho tài khoản Chủ sở hữu.",
     generalDescription:
       "Tên pháp lý, mã số thuế, địa chỉ và người đại diện in trên hóa đơn.",
     kdsTitle: "Trạm bếp (KDS)",
@@ -115,7 +113,7 @@ export const settings = {
     filterApply: "Áp dụng",
     filterReset: "Xóa lọc",
     filterEntityId: "Mã chứng từ",
-    filterEntityIdActive: (id: string) => `Đang lọc chứng từ #${id}`,
+    filterEntityIdActive: (_id: string) => "Đang lọc theo chứng từ",
     clearEntityId: "Bỏ lọc chứng từ",
     recentItems: (count: number) => `${formatCount(count)} mục gần nhất`,
     openDocument: "Mở chứng từ",
@@ -144,8 +142,7 @@ export const settings = {
   },
   tracking: {
     title: "Theo dõi vận hành",
-    description:
-      "Ba nguồn khác nhau: việc còn mở, bằng chứng chứng từ, và thay đổi phân quyền — không gộp một bảng. Nhật ký đọc cùng khung Thời gian → Hành động → Đối tượng → Người thao tác.",
+    description: "Tách việc cần xử lý khỏi nhật ký thao tác và thay đổi quyền.",
     needActionTitle: "Cần xử lý",
     needActionDescription:
       "Việc còn mở từ thông báo: duyệt, bàn giao kho và cảnh báo vận hành.",
@@ -170,8 +167,7 @@ export const settings = {
     moveDown: "Chuyển xuống",
     removeBlock: "Xóa khối",
     previewTitle: "Xem trước",
-    previewDescription:
-      "Xem trước đúng như bản in ra giấy của máy in.",
+    previewDescription: "Xem trước đúng như bản in ra giấy của máy in.",
     previewAlt: (kindLabel: string) => `Xem trước ${kindLabel}`,
     previewLoading: "Đang dựng bản xem trước…",
     previewFailed: "Không thể dựng bản xem trước",
@@ -437,7 +433,8 @@ export const settings = {
     contentPrefix: "Tiền tố chung",
     contentExpenseToken: "Mã phiếu chi",
     contentCashDepositToken: "Mã nộp tiền mặt",
-    contentHelp: "Chỉ dùng cho phiếu chi và nộp tiền mặt, không dùng cho thu POS.",
+    contentHelp:
+      "Chỉ dùng cho phiếu chi và nộp tiền mặt, không dùng cho thu POS.",
     contentCategoryRule:
       "Dùng mã phiếu chi trong lệnh; không đặt tên danh mục chi vào nội dung.",
     contentExpensePreview: "Khớp phiếu chi",
@@ -446,8 +443,7 @@ export const settings = {
   },
   pos: {
     registrationSectionTitle: "Đăng ký POS",
-    registrationIntro:
-      "Thiết lập trạm POS để mở ca bán hàng.",
+    registrationIntro: "Thiết lập trạm POS để mở ca bán hàng.",
     openPosUi: "Vào POS",
     addTerminal: "Thêm đăng ký POS",
     emptyForBranch: "Chưa có đăng ký POS nào",
@@ -470,6 +466,39 @@ export const settings = {
     stockOutcomePostingFailed: "Không thể lưu cấu hình. Vui lòng thử lại.",
   },
   printers: {
+    active: "Đang bật",
+    inactive: "Tắt",
+    emptyBranch: "Chưa có máy in nào",
+    noPrintTypes: "Chưa chọn loại phiếu",
+    noCategories: "Chưa gán danh mục món",
+    addPrinter: "Thêm máy in",
+    editPrinter: "Sửa máy in",
+    samplePrinterPlaceholder: "Ví dụ: Xprinter XP-T80A",
+    networkAddressLabel: "Địa chỉ mạng (IP)",
+    networkAddressRequired: "Nhập địa chỉ mạng của máy in",
+    networkPortLabel: "Cổng mạng",
+    lanPortHelp: "Mặc định 9100. Chỉ đổi khi máy in yêu cầu cổng khác.",
+    paperWidthLabel: "Khổ giấy",
+    printTypesLabel: "Loại phiếu in trên máy này",
+    categoriesLabel: "Danh mục món in trên máy này",
+    categoriesHint: "Mỗi danh mục chỉ gán cho một máy in bếp trong chi nhánh.",
+    activeControlLabel: "Cho phép nhận lệnh in",
+    serviceStatus: (online: boolean) =>
+      `Dịch vụ in: ${online ? "Đang kết nối" : "Mất kết nối"}`,
+    branchRequired: "Vui lòng chọn chi nhánh",
+    genericError: "Có lỗi xảy ra",
+    deleteTitle: "Xóa máy in này?",
+    deleteDescription: "Cấu hình máy in sẽ bị xóa và không thể khôi phục.",
+    deleteConfirm: "Xóa",
+    saving: "Đang lưu…",
+    save: "Lưu",
+    printTypes: {
+      receipt: "Hóa đơn thanh toán",
+      provisional_bill: "Phiếu tạm tính",
+      shift_close_report: "Phiếu chốt ca",
+      kitchen_ticket: "Phiếu bếp",
+      cancel_ticket: "Phiếu hủy / giảm món",
+    },
     backPrinters: "Máy in",
     statPending: "Đang chờ",
     statFailed24h: "Lỗi 24h",
@@ -497,11 +526,13 @@ export const settings = {
     testPrintDenied: "Không có quyền in thử",
     testPrintMissing: "Máy in không tồn tại",
     testPrintInactive: "Bật máy in trước khi in thử",
-    testPrintMissingHost: "Nhập LAN host trước khi in thử",
+    testPrintMissingHost: "Nhập địa chỉ mạng trước khi in thử",
     testPrintFailed: "Không thể gửi phiếu in thử",
     testPrintSlipNote: "IN THỬ — kiểm tra máy in",
-    retrySuccess: (id: number) => `Đã đưa lại lệnh in #${id} vào hàng đợi`,
+    retrySuccess: (_id: number) => "Đã đưa lại lệnh in vào hàng đợi",
     retryFailed: "Không thể thử lại",
+    jobErrorNeedsAttention:
+      "Máy in chưa xử lý lệnh. Kiểm tra kết nối rồi thử lại.",
     jobTypes: {
       kitchen_ticket: "Phiếu bếp",
       receipt: "Hóa đơn",
@@ -529,7 +560,9 @@ export const settings = {
     cockpitFloorOccupied: (occupied: number, total: number) =>
       `${occupied}/${total} bàn đang phục vụ`,
     cockpitFloorReadyItems: (count: number) =>
-      count > 0 ? `${count} món sẵn sàng chờ mang ra` : "Không có món chờ mang ra",
+      count > 0
+        ? `${count} món sẵn sàng chờ mang ra`
+        : "Không có món chờ mang ra",
     cockpitKitchenActive: (count: number) =>
       count > 0 ? `${count} đơn đang chế biến` : "Bếp rảnh",
     cockpitPaymentAwaiting: (count: number) =>
@@ -564,8 +597,7 @@ export const settings = {
     closeDayStep1Title: "Ca POS & két tiền mặt",
     closeDayStep1Desc:
       "Ca POS mở trong cửa sổ ngày kinh doanh (04:00–04:00 hôm sau). Đóng ca tại Đối soát ca POS — không cần chốt ngày.",
-    closeDayStep1Success:
-      "Không còn ca POS mở trong ngày kinh doanh đang xem.",
+    closeDayStep1Success: "Không còn ca POS mở trong ngày kinh doanh đang xem.",
     closeDayCutoffNote:
       "Ngày kinh doanh tính từ 04:00 đến trước 04:00 hôm sau (giờ chi nhánh). Qua 04:00 chỉ đổi cửa sổ báo cáo — không tự đóng sổ.",
     closeDayStep2Title: "Kho & hao hụt",
@@ -860,6 +892,7 @@ export const settings = {
   },
   posSessions: {
     branchSharedSession: "Ca chung của chi nhánh",
+    terminalUnavailable: "Máy POS không xác định",
     emptyTitle: "Chưa có ca POS nào.",
     emptyDescription:
       "Khi nhân viên mở ca từ màn hình POS, lịch sử ca sẽ xuất hiện tại đây.",
@@ -1020,14 +1053,12 @@ export const settings = {
     voiceLabel: "Giọng đọc",
     voiceDefaultFishAudio: "Mặc định (Fish Audio)",
     customVoiceLabel: "Mã giọng đọc (tùy chọn)",
-    customVoiceHelp:
-      "Để trống để dùng giọng mặc định.",
+    customVoiceHelp: "Để trống để dùng giọng mặc định.",
     previewButton: "Nghe thử",
     previewPlaying: "Đang phát…",
     previewSampleText: "Phiếu mới bàn 5",
     inheritTenantLabel: "Kế thừa thiết lập của chuỗi",
-    inheritTenantHelp:
-      "Dùng cấu hình âm thanh chung của chuỗi.",
+    inheritTenantHelp: "Dùng cấu hình âm thanh chung của chuỗi.",
     customBranchLabel: "Tùy chỉnh riêng cho chi nhánh này",
     saveSettings: "Lưu cài đặt",
     audioSettingsLoadFailed: "Không tải được dữ liệu cài đặt âm thanh.",

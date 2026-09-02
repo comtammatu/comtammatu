@@ -188,6 +188,19 @@ test("Branch bottom nav only contains persistent daily job families", () => {
   assert.match(bottomNav, /\bUser\b/);
 });
 
+test("Branch stock landing uses the same Kho identity as bottom navigation", () => {
+  const stockLanding = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/page.tsx",
+  );
+
+  assert.match(stockLanding, /title=\{APP_COPY_VI\.branchNavStock\}/);
+  assert.match(
+    stockLanding,
+    /description=\{messages\.inventory\.dashboard\.mainFlowsOperatorDescription\}/,
+  );
+  assert.doesNotMatch(stockLanding, /title=\{journeyCopy\.hubTitle\}/);
+});
+
 test("POS, KDS, and Pickup stay standalone station apps", () => {
   const routeMap = read("packages/shared/src/auth/route-map.ts");
 
@@ -486,7 +499,7 @@ test("Branch setup clients and POS sessions keep mobile-stable surfaces", () => 
   assert.match(posSessionsClient, /<BranchOperatorFrame/);
   assert.match(posSessionsClient, /min-w-0/);
   assert.match(tablesClient, /w-full sm:w-60/);
-  assert.match(tablesClient, /<TabsList size="touch" className="w-full"/);
+  assert.match(tablesClient, /<TabsList\s+size="touch"\s+layout="equal"/);
   assert.match(terminalsClient, /size="icon-touch"/);
   assert.match(stationsClient, /size="icon-touch"/);
   assert.match(stockControlCard, /<Switch[\s\S]*?size="touch"/);

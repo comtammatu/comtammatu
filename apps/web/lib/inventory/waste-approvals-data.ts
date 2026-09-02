@@ -2,6 +2,7 @@ import "server-only";
 
 import { notFound } from "next/navigation";
 import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasPermission } from "@/_lib/permissions";
 import { getBranchSiteDisplayName } from "@/(protected)/inventory/_lib/branch-site-labels";
@@ -42,7 +43,7 @@ export async function loadWasteApprovalsData({
     ? getBranchSiteDisplayName(routeBranch)
     : routeBranchId === undefined
       ? null
-      : `CN #${routeBranchId}`;
+      : UNKNOWN_LABEL_VI;
   const canApproveWaste =
     STAFF_ROLES.includes(claims.user_role) &&
     (await currentUserHasPermission(
@@ -257,7 +258,7 @@ export async function loadWasteApprovalsData({
       return {
         itemId: item.id,
         ingredientId: item.ingredient_id,
-        ingredientName: ingredient?.name ?? `#${item.ingredient_id}`,
+        ingredientName: ingredient?.name ?? UNKNOWN_LABEL_VI,
         quantity: entryQuantity,
         unit,
         baseUnit,
@@ -272,8 +273,7 @@ export async function loadWasteApprovalsData({
                     ? Number(item.qty_ratio)
                     : null,
                 rolling15MinSum:
-                  "rolling_15min_sum" in item &&
-                  item.rolling_15min_sum !== null
+                  "rolling_15min_sum" in item && item.rolling_15min_sum !== null
                     ? Number(item.rolling_15min_sum)
                     : null,
               }
@@ -296,7 +296,7 @@ export async function loadWasteApprovalsData({
       issueId: issue.id,
       issueNumber: issue.issue_number,
       branchId: issue.branch_id,
-      branchName: branchMap.get(issue.branch_id) ?? `CN #${issue.branch_id}`,
+      branchName: branchMap.get(issue.branch_id) ?? UNKNOWN_LABEL_VI,
       issuedAt: issue.issued_at,
       shiftKey: issue.shift_key ?? "",
       sourceType: issue.source_type ?? "manual",

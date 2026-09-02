@@ -28,7 +28,7 @@ import { BUYER_KIND_TOGGLE_ITEM_CLASS } from "@lib/hddt/buyer-kind-ui";
 import { createTaxInvoice, resolveOrderForManualInvoice } from "./actions";
 import type { ManualInvoiceOrderPreview } from "./_lib/finance-types";
 import { messages } from "@lib/messages";
-import { formatVNDateTime } from "@/_lib/format-datetime";
+import { formatVNDateTime } from "@comtammatu/shared/time";
 
 const MI = messages.finance.invoiceList.manualIssue;
 const MST_REGEX = /^\d{10}(-\d{3})?$/;
@@ -170,7 +170,11 @@ export function ManualIssueInvoiceDialog({
       const issued = result.data as {
         invoice_number?: string | null;
       } | null;
-      toast.success(MI.success(issued?.invoice_number ?? `#${orderId}`));
+      toast.success(
+        issued?.invoice_number
+          ? MI.success(issued.invoice_number)
+          : MI.successWithoutNumber,
+      );
       onIssued();
       handleOpenChange(false);
     });

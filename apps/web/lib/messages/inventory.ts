@@ -63,6 +63,58 @@ export const inventory = {
     shipToBranchDescription:
       "Nếu cần giao về chi nhánh, mở Giao nhận và tạo chuyến từ đây.",
     shipToBranchAction: "Giao chi nhánh",
+    actionFailed: "Thao tác không thành công.",
+    startSuccess: "Đã bắt đầu sản xuất.",
+    cancelTitle: "Hủy lệnh sản xuất?",
+    cancelDescription:
+      "Lệnh chuyển sang chỉ đọc sau khi hủy. Ghi hao hụt riêng nếu có vật tư hỏng.",
+    cancelAction: "Hủy lệnh",
+    backAction: "Quay lại",
+    cancelSuccess: "Đã hủy lệnh sản xuất.",
+    invalidActualQuantity:
+      "Sản lượng phải lớn hơn 0 và nguyên liệu thực tế không được cùng bằng 0.",
+    completeFailed: "Không thể hoàn thành lệnh sản xuất.",
+    completeSuccess: "Đã hoàn thành và nhập thành phẩm.",
+    actualQuantityAria: (name: string) => `Thực tế ${name}`,
+    varianceOver: (quantity: string, unit: string) =>
+      `Vượt định mức ${quantity} ${unit}`.trim(),
+    varianceSaved: (quantity: string, unit: string) =>
+      `Tiết kiệm ${quantity} ${unit}`.trim(),
+    ingredientColumn: "Nguyên liệu",
+    plannedColumn: "Kế hoạch",
+    actualColumn: "Thực tế",
+    varianceColumn: "Chênh lệch",
+    unitCostColumn: "Đơn giá",
+    lineCostColumn: "Thành tiền",
+    actualBatchCost: "Giá vốn mẻ (thực tế)",
+    plannedBatchCost: "Giá vốn mẻ (dự kiến)",
+    unitCostTitle: (amount: string, unit: string) =>
+      `Giá vốn: ${amount} / ${unit}`,
+    unitFallback: "ĐV",
+    infoTitle: "Thông tin lệnh",
+    snapshotTitle: "Định mức đã chốt theo lệnh",
+    snapshotDescription: (count: number) =>
+      `${formatCount(count)} dòng · Định mức giữ nguyên theo lệnh.`,
+    ingredientTotal: "Tổng giá trị nguyên liệu",
+    actualSuffix: "(thực tế)",
+    plannedSuffix: "(dự kiến)",
+    actualOutputTitle: "Sản lượng thực tế",
+    actualOutputDescription:
+      "Nhập số thành phẩm đã đạt. Hủy mẻ nếu không có sản lượng.",
+    actualOutputAria: "Số lượng thực tế",
+    actionFailedTitle: "Thao tác không thành công",
+    shortageTitle: "Không đủ tồn nguyên liệu",
+    shortageLine: (
+      name: string,
+      needed: string,
+      onHand: string,
+      unit: string,
+    ) => `${name}: cần ${needed} ${unit}, còn ${onHand} ${unit}`,
+    completedTransferHint:
+      "Tạo phiếu điều chuyển để giao thành phẩm tới chi nhánh bán hàng.",
+    cancelReasonTitle: "Lý do hủy",
+    startAction: "Bắt đầu sản xuất",
+    completeAction: "Hoàn thành",
   },
   productionRuns: {
     metrics: {
@@ -77,6 +129,32 @@ export const inventory = {
     },
   },
   operatorFlow: {
+    productionCreateFailed: "Không thể tạo lệnh sản xuất.",
+    productionCreateSuccess: "Đã tạo lệnh sản xuất nháp.",
+    productionCreating: "Đang tạo…",
+    productionCreateDraft: "Tạo lệnh nháp",
+    productionPlanTitle: "Kế hoạch sản xuất",
+    productionSiteLabel: "Điểm sản xuất",
+    productionSitePlaceholder: "Chọn điểm sản xuất",
+    productionRecipeLabel: "Công thức",
+    productionRecipePlaceholder: "Chọn công thức đang dùng",
+    productionRecipeSearch: "Tìm thành phẩm",
+    productionPlannedOutputLabel: "Sản lượng kế hoạch",
+    productionUnitFallback: "Đơn vị",
+    productionDraftPlanningHint:
+      "Có thể lưu nháp để chuẩn bị nguyên liệu trước khi sản xuất.",
+    productionIngredientsTitle: "Nguyên liệu kế hoạch",
+    productionStockScope: "Kho điểm sản xuất",
+    productionShortageSummary: (shortage: number, total: number) =>
+      `Thiếu ${formatCount(shortage)}/${formatCount(total)} nguyên liệu`,
+    productionSufficientSummary: (total: number) =>
+      `Đủ tất cả ${formatCount(total)} nguyên liệu`,
+    productionContextErrorTitle: "Chưa thể tạo lệnh",
+    productionIngredientColumn: "Nguyên liệu",
+    productionReconcileColumn: "Đối chiếu",
+    productionMissing: (quantity: string, unit: string) =>
+      `Thiếu ${quantity} ${unit}`.trim(),
+    productionSufficient: "Đủ tồn",
     stepBadge: (current: number, total: number) => `Bước ${current}/${total}`,
     done: "Xong",
     current: "Đang làm",
@@ -1513,9 +1591,9 @@ export const inventory = {
         "Chỉ tính các vị trí được phép giữ tồn vận hành của chi nhánh.",
       systemLocationTitle: "Tồn theo vị trí",
       systemLocationDescription:
-        "Tồn toàn hệ thống theo từng site/kho vận hành.",
+        "Tồn toàn hệ thống theo từng kho và vị trí vận hành.",
       systemLocationEmptyDescription:
-        "Chưa có tồn ở site vận hành nào trong hệ thống.",
+        "Chưa có tồn ở kho hoặc vị trí vận hành nào trong hệ thống.",
       noLocationStockTitle: "Chưa có tồn theo vị trí",
       noLocationStockDescription: "Chưa có tồn ở kho vận hành của chi nhánh.",
       tabValuation: "Giá trị",
@@ -1615,10 +1693,11 @@ export const inventory = {
       writeoff: "Hủy / ghi hao",
       other: "Xuất khác",
       issueStock: "Xuất kho",
-      transferRef: (id: number) => `Điều chuyển #${id}`,
-      issueRef: (id: number) => `Phiếu xuất #${id}`,
-      productionRef: (id: number) => `Lệnh SX #${id}`,
-      orderRef: (id: number) => `Đơn bán #${id}`,
+      grnRef: "Phiếu nhập",
+      transferRef: (_id: number) => "Điều chuyển",
+      issueRef: (_id: number) => "Phiếu xuất",
+      productionRef: (_id: number) => "Lệnh sản xuất",
+      orderRef: (_id: number) => "Đơn bán",
     },
   },
   issues: {
@@ -1681,7 +1760,7 @@ export const inventory = {
     ) => `${entryQty} ${entryUnit} = ${baseQty} ${baseUnit}`,
     headerMeta: (label: string, branch: string, date: string) =>
       `${label} tại ${branch} • ${date}`,
-    branchRef: (id: number) => `Chi nhánh #${id}`,
+    branchRef: (_id: number) => "Chi nhánh không xác định",
     overviewTab: "Tổng quan",
     linesTab: "Dòng",
     historyTab: "Lịch sử",
@@ -2048,8 +2127,7 @@ export const inventory = {
         submit: "Tạo phiếu đảo",
         remainingQuantity: (quantity: number, unit: string) =>
           `Còn được đảo ${quantity} ${unit}`,
-        quantityAria: (ingredient: string) =>
-          `Số lượng đảo ${ingredient}`,
+        quantityAria: (ingredient: string) => `Số lượng đảo ${ingredient}`,
         notesPlaceholder: "Lý do đảo phiếu",
         notesAria: "Lý do đảo phiếu",
       },
@@ -2290,9 +2368,10 @@ export const inventory = {
     vatAttachmentRemindAfterCreate:
       "Đã lưu hóa đơn. Hãy đính kèm HĐ GTGT trước khi thanh toán.",
     vatAttachmentFileSelected: (name: string) => `Đã chọn: ${name}`,
-    vatAttachmentClear: "Bỏ file đã chọn",
+    vatAttachmentClear: "Bỏ tệp đã chọn",
     vatAttachmentOpen: "Mở HĐ GTGT",
-    vatAttachmentOpenFailed: "Không thể mở file HĐ GTGT.",
+    vatAttachmentOpenFailed: "Không thể mở tệp HĐ GTGT.",
+    vatAttachmentInvalidPath: "Đường dẫn tệp HĐ GTGT không hợp lệ.",
     paymentBlockedNoVatAttachment:
       "Cần đính kèm HĐ GTGT trước khi ghi nhận thanh toán.",
     paymentOutstanding: (amount: string) => `Còn phải trả: ${amount}`,
@@ -2499,8 +2578,8 @@ export const inventory = {
     detailLoadFailed: "Không thể tải chi tiết kiểm kê.",
     selectBranchFirst: "Chọn chi nhánh trước",
     createSessionFailed: "Không tạo được phiên kiểm kê",
-    sessionCreated: (sessionId: number, lineCount: number) =>
-      `Đã tạo phiên #${sessionId} — ${formatCount(lineCount)} dòng`,
+    sessionCreated: (lineCount: number) =>
+      `Đã tạo phiên kiểm kê với ${formatCount(lineCount)} dòng.`,
     startTitle: "Bắt đầu kiểm kê",
     startDescription:
       "Đếm số đang có tại kho. Số trên sổ chỉ hiện sau khi đếm xong.",
@@ -2716,6 +2795,19 @@ export const inventory = {
       tier1Label: "Cấp 1 (Chi nhánh)",
       tier2Label: "Cấp 2 (Chủ quán)",
       totalLines: "Số dòng nguyên liệu",
+      searchLabel: "Tìm phiếu hao hụt",
+      issueHeader: "Phiếu",
+      scopeHeader: "Chi nhánh / ca",
+      itemsHeader: "Nguyên liệu",
+      valueHeader: "Giá trị",
+      actionsHeader: "Thao tác",
+      reviewAction: "Xem và duyệt",
+      reviewAria: (issueNumber: string) => `Xem và duyệt phiếu ${issueNumber}`,
+      selfCreatedBypassBadge: "Bạn tạo — được phép duyệt",
+      selfApproveForbidden: "Không thể tự duyệt phiếu do bạn tạo.",
+      approveFailed: "Không duyệt được phiếu.",
+      approveSuccess: (issueNumber: string) => `Đã duyệt phiếu ${issueNumber}`,
+      rejectSuccess: (issueNumber: string) => `Đã từ chối phiếu ${issueNumber}`,
     },
   },
   thermalReceipt: {
@@ -2772,8 +2864,8 @@ export const inventory = {
     previewTitle: "Phiếu in kiểm kê tồn kho",
     previewDescription: (code: string) =>
       `Xem trước và in biểu mẫu kiểm kê cho phiên ${code}.`,
-    branchFallback: (branchId: number | undefined) =>
-      `Chi nhánh #${branchId ?? ""}`,
+    branchFallback: (_branchId: number | undefined) =>
+      "Chi nhánh không xác định",
     formLabel: "Biểu mẫu:",
     paperLabel: "Khổ in:",
     paperSizeA4: "Khổ A4 (Chuẩn)",
@@ -2854,7 +2946,7 @@ export const inventory = {
     previewDescription: (warehouse: string) =>
       `Xem trước và in danh sách tồn kho cho ${warehouse}.`,
     branchFallback: (branchId: number | undefined) =>
-      branchId ? `Chi nhánh #${branchId}` : "Toàn hệ thống",
+      branchId ? "Chi nhánh không xác định" : "Toàn hệ thống",
     formLabel: "Biểu mẫu:",
     paperLabel: "Khổ in:",
     paperSizeA4: "Khổ A4 (Chuẩn)",

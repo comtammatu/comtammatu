@@ -56,22 +56,46 @@ function relatedOne<T>(value: T | T[] | null | undefined): T | null {
   return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
-export async function loadBranchStockThresholdsData(routeBranchId: number) {
+export async function loadBranchStockThresholdsData(
+  routeBranchId: number,
+  locationId: number,
+) {
   const { supabase, claims } = await loadAuthState();
   const scope = await resolveInventoryListScope(supabase, claims, {
     routeBranchId,
   });
   if (scope.outOfScope || scope.selectedBranchId !== routeBranchId) notFound();
 
+  const locationResult = await supabase
+    .from("inventory_locations")
+    .select("id")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("branch_id", routeBranchId)
+    .eq("id", locationId)
+    .eq("is_active", true)
+    .in("location_kind", ["warehouse", "kitchen"])
+    .maybeSingle();
+  if (locationResult.error || locationResult.data == null) {
+    return {
+      branchId: routeBranchId,
+      locationId,
+      loadFailed: true,
+      rows: [] as BranchStockThresholdRow[],
+    };
+  }
+
   const { data: rpcData, error: rpcError } = await (
     supabase.rpc as unknown as (
       fn: string,
-      args: { p_branch_id: number },
+      args: { p_branch_id: number; p_location_id: number },
     ) => Promise<{
       data: RpcThresholdRow[] | null;
       error: { message: string } | null;
     }>
-  )("get_branch_stock_thresholds", { p_branch_id: routeBranchId });
+  )("get_branch_stock_thresholds", {
+    p_branch_id: routeBranchId,
+    p_location_id: locationId,
+  });
 
   const baseUnitsResult = await supabase
     .from("ingredient_units")
@@ -96,9 +120,12 @@ export async function loadBranchStockThresholdsData(routeBranchId: number) {
   );
   const branchThresholdsResult = await supabase
     .from("branch_ingredient_thresholds")
-    .select("ingredient_id, min_stock_level, reorder_quantity")
+    .select(
+      "ingredient_id, min_stock_level, target_stock_level, reorder_quantity",
+    )
     .eq("tenant_id", claims.tenant_id)
     .eq("branch_id", routeBranchId)
+    .eq("location_id", locationId)
     .eq("is_active", true);
 
   if (!rpcError && Array.isArray(rpcData)) {
@@ -136,6 +163,7 @@ export async function loadBranchStockThresholdsData(routeBranchId: number) {
 
     return {
       branchId: routeBranchId,
+      locationId,
       loadFailed: baseUnitsResult.error != null,
       rows,
     };
@@ -145,6 +173,7 @@ export async function loadBranchStockThresholdsData(routeBranchId: number) {
   if (branchThresholdsResult.error) {
     return {
       branchId: routeBranchId,
+      locationId,
       loadFailed: true,
       rows: [] as BranchStockThresholdRow[],
     };
@@ -155,6 +184,10 @@ export async function loadBranchStockThresholdsData(routeBranchId: number) {
       row.ingredient_id,
       {
         minStock: Number(row.min_stock_level),
+        targetStock:
+          row.target_stock_level == null
+            ? null
+            : Number(row.target_stock_level),
         reorderQuantity:
           row.reorder_quantity == null ? null : Number(row.reorder_quantity),
       },
@@ -181,6 +214,7 @@ export async function loadBranchStockThresholdsData(routeBranchId: number) {
   if (ingError || !ingredients) {
     return {
       branchId: routeBranchId,
+      locationId,
       loadFailed: true,
       rows: [] as BranchStockThresholdRow[],
     };
@@ -206,7 +240,9 @@ export async function loadBranchStockThresholdsData(routeBranchId: number) {
       effectiveMinStock:
         branchThreshold?.minStock ?? Number(ing.min_stock_level ?? 0),
       targetStockLevel:
-        branchThreshold?.reorderQuantity != null
+        branchThreshold?.targetStock != null
+          ? branchThreshold.targetStock
+          : branchThreshold?.reorderQuantity != null
           ? (branchThreshold.minStock ?? Number(ing.min_stock_level ?? 0)) +
             branchThreshold.reorderQuantity
           : Number(ing.min_stock_level ?? 0) * 2,
@@ -220,6 +256,7 @@ export async function loadBranchStockThresholdsData(routeBranchId: number) {
 
   return {
     branchId: routeBranchId,
+    locationId,
     loadFailed: baseUnitsResult.error != null,
     rows,
   };

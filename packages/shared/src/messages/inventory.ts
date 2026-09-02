@@ -3,6 +3,7 @@ import { formatCount, formatPercent } from "../format/currency";
 // Inventory-domain Vietnamese copy (extracted from inventory module JSX).
 export const INVENTORY_VI = {
   warehouse: "Kho hàng",
+  documentNumberPending: "Chưa cấp số",
   settingsEyebrow: "Cài đặt kho",
   importFromFile: "Nhập từ tệp",
   downloadTemplate: "Tải mẫu (.xlsx)",
@@ -138,7 +139,8 @@ export const INVENTORY_VI = {
   featureInDevelopmentTitle: "Tính năng đang phát triển",
   createWasteTitle: "Tạo phiếu hao hụt",
   wasteApprovalsTitle: "Duyệt hao hụt",
-  wasteApprovalSearchPlaceholder: "Tìm theo mã phiếu, nguyên liệu, người tạo...",
+  wasteApprovalSearchPlaceholder:
+    "Tìm theo mã phiếu, nguyên liệu, người tạo...",
   wasteApprovalTierFilterPlaceholder: "Lọc theo cấp duyệt",
   wasteApprovalTierAll: "Tất cả cấp duyệt",
   wasteApprovalTier1: "Cấp 1 (Cửa hàng)",
@@ -293,7 +295,8 @@ export const INVENTORY_VI = {
   productionIngredientsNeedVsStock:
     "Đối chiếu số cần theo lệnh với tồn tại kho xuất mặc định.",
   productionSelectRecipeForStock: "Chọn công thức để xem nguyên liệu và tồn.",
-  productionCreateValidate: "Kiểm tra công thức và sản lượng trước khi tạo lệnh.",
+  productionCreateValidate:
+    "Kiểm tra công thức và sản lượng trước khi tạo lệnh.",
   productionConfirmFailed: "Không thể xác nhận",
   productionOrderConfirmed: "Đã xác nhận lệnh sản xuất",
   productionCancelFailed: "Không thể hủy",
@@ -351,8 +354,7 @@ export const INVENTORY_VI = {
   rowRatio: (visible: number, total: number) => `${visible}/${total} dòng`,
   rowRatioRecent: (visible: number, total: number) =>
     `${visible}/${total} dòng gần nhất`,
-  rowRatioOrders: (visible: number, total: number) =>
-    `${visible}/${total} đơn`,
+  rowRatioOrders: (visible: number, total: number) => `${visible}/${total} đơn`,
   rowRatioRecentOrders: (visible: number, total: number) =>
     `${visible}/${total} đơn gần nhất`,
   issueExportEmpty: "Không có dữ liệu để xuất báo cáo.",
@@ -416,9 +418,9 @@ export const INVENTORY_VI = {
   countSlipApprovedCard: "Đã duyệt",
   countSlipTotalCard: "Tổng phiếu",
   countSlipTotalCountLines: "Tổng món đếm",
-  countSlipMatchedLines: "Khớp chuẩn",
-  countSlipShortageLines: "Hao hụt",
-  countSlipSurplusLines: "Dôi dư",
+  countSlipMatchedLines: "Khớp",
+  countSlipShortageLines: "Thiếu",
+  countSlipSurplusLines: "Thừa",
   countSlipApproveTitle: "Xác nhận phiếu đếm ca?",
   countSlipApproveDescription:
     "Xác nhận đối soát số lượng đếm bàn giao ca. Phiếu đếm không làm thay đổi tồn kho sổ cái.",
@@ -432,7 +434,11 @@ export const INVENTORY_VI = {
     `Đã duyệt bàn giao ca và tự động lập phiếu xuất hủy #${wasteNumber} (${formatCount(itemCount)} món hao hụt).`,
   countSlipApprovedWithSurplus: (count: number) =>
     `Đã duyệt bàn giao ca và điều chỉnh tăng tồn ${formatCount(count)} nguyên liệu thừa.`,
-  countSlipApprovedWithWasteAndSurplus: (wasteNumber: string, wasteCount: number, surplusCount: number) =>
+  countSlipApprovedWithWasteAndSurplus: (
+    wasteNumber: string,
+    wasteCount: number,
+    surplusCount: number,
+  ) =>
     `Đã duyệt bàn giao ca, lập phiếu xuất hủy #${wasteNumber} (${formatCount(wasteCount)} món) và điều chỉnh tăng ${formatCount(surplusCount)} nguyên liệu thừa.`,
   countSlipApprovedWithWastePending: (wasteNumber: string) =>
     `Đã duyệt bàn giao ca và lập phiếu xuất hủy #${wasteNumber}; phiếu đang chờ duyệt trước khi trừ kho.`,
@@ -491,12 +497,13 @@ export const INVENTORY_VI = {
   countDateLabel: "Ngày đếm",
   submittedAtLabel: "Thời điểm gửi",
   submittedAtSuffix: (date: string) => ` • Gửi ${date}`,
-  systemStockLabel: "Tồn hệ thống",
+  systemStockLabel: "Tồn lúc gửi",
   countedLabel: "Thực đếm",
   varianceLabel: "Chênh lệch",
-  systemStockColon: "Tồn lúc nộp:",
+  systemStockColon: "Tồn lúc gửi:",
   countedColon: "Số đếm:",
   liveStockColon: "Tồn hiện tại:",
+  currentStockShort: "Hiện tại",
   createWasteFromShortage: "Lập phiếu hao hụt",
   createStocktakeFromSlip: "Lập phiếu kiểm kê",
   stocktakeSessionTitle: "Phiên kiểm kê",
@@ -505,12 +512,23 @@ export const INVENTORY_VI = {
     "Tự động điền các món lệch vào phiếu để trừ kho hoặc cân đối sổ cái hợp lệ.",
   createWasteShortageAction: "Lập phiếu tiêu hao / xuất hủy",
   createStocktakeAction: "Lập phiếu kiểm kê kho",
-  soldSinceSubmitColon: "Đã bán sau nộp:",
   referenceColon: "Tham khảo:",
   varianceShortageBadge: "Thiếu",
   varianceSurplusBadge: "Thừa",
   varianceMatchedBadge: "Khớp",
-  countSlipHandoverConfirm: "Xác nhận bàn giao ca",
+  countSlipContinueReview: "Tiếp tục duyệt",
+  countSlipResolutionRemaining: (count: number) =>
+    `Còn ${formatCount(count)} mục cần xử lý`,
+  countSlipCompactSummary: (
+    total: number,
+    matched: number,
+    shortage: number,
+    surplus: number,
+  ) =>
+    `${formatCount(total)} món · ${formatCount(matched)} khớp · ${formatCount(shortage)} thiếu · ${formatCount(surplus)} thừa`,
+  countSlipNeedsResolution: "Cần xử lý",
+  countSlipMatchedDisclosure: (count: number) =>
+    `${formatCount(count)} món khớp`,
   countSlipHandoverHint: "Không thay đổi tồn kho sổ cái",
   convertedColon: "Quy đổi về đơn vị chuẩn:",
   conversionMissing: "Chưa cấu hình quy đổi",
@@ -531,7 +549,8 @@ export const INVENTORY_VI = {
   countAssignTitle: "Phân công đếm tồn",
   countAssignDescription: "Giao danh sách hàng cần kiểm kê cho từng nhân viên.",
   countAssignStationTitle: "Phân công theo Vai trò ca",
-  countAssignTemplatesCount: (count: number) => `${formatCount(count)} nhóm mẫu`,
+  countAssignTemplatesCount: (count: number) =>
+    `${formatCount(count)} nhóm mẫu`,
   countAssignItemCount: (count: number) => `${formatCount(count)} món`,
   countAssignSelectEmployeePlaceholder: "Chọn nhân sự...",
   countAssignAction: "Gán",
@@ -554,13 +573,16 @@ export const INVENTORY_VI = {
   countStationUnassigned: "Chưa giao",
   countViewByStation: (count: number) => `Theo Trạm (${formatCount(count)})`,
   countViewByStaff: (count: number) => `Theo Nhân viên (${formatCount(count)})`,
-  countStationItemsCount: (count: number) => `${formatCount(count)} mặt hàng trong nhóm`,
+  countStationItemsCount: (count: number) =>
+    `${formatCount(count)} mặt hàng trong nhóm`,
   countStationNoStaffSelected: "Chưa chọn nhân viên",
-  countStationPickStaffHint: "Hãy chọn ít nhất một nhân viên ở trên để giao kiểm kê nhóm này.",
+  countStationPickStaffHint:
+    "Hãy chọn ít nhất một nhân viên ở trên để giao kiểm kê nhóm này.",
   countStationAutoAssignTitle: "Tự động giao toàn bộ",
   countStationAutoAssignBody: (count: number, name: string) =>
     `Toàn bộ ${formatCount(count)} mặt hàng trong nhóm sẽ được giao cho ${name}.`,
-  countStationDistributeHeader: (count: number) => `Phân bổ cho ${formatCount(count)} nhân viên:`,
+  countStationDistributeHeader: (count: number) =>
+    `Phân bổ cho ${formatCount(count)} nhân viên:`,
   countStationQuickShortcuts: "Gán nhanh theo nhóm:",
   countStationSuggestedStaff: "Gợi ý:",
   countAssignProgressSummary: (
@@ -577,8 +599,7 @@ export const INVENTORY_VI = {
   countTemplateEditorSheetDescription:
     "Danh mục nguyên liệu gom theo khu vực hoặc vị trí trạm làm việc.",
   countTemplateNameLabel: "Tên mẫu kiểm đếm",
-  countTemplateNamePlaceholder:
-    "Ví dụ: Quầy Nước, Quầy Nướng, Bếp Chính...",
+  countTemplateNamePlaceholder: "Ví dụ: Quầy Nước, Quầy Nướng, Bếp Chính...",
   countTemplateSelectAll: "Chọn tất cả",
   countTemplateDeselectAll: "Bỏ chọn tất cả",
   countTabAllWithCount: (count: number) => `Tất cả (${formatCount(count)})`,
@@ -590,8 +611,7 @@ export const INVENTORY_VI = {
     `Đã giao (${formatCount(count)})`,
   countTabUnassignedWithCount: (count: number) =>
     `Chưa giao (${formatCount(count)})`,
-  countTabOnDutyWithCount: (count: number) =>
-    `Trực ca (${formatCount(count)})`,
+  countTabOnDutyWithCount: (count: number) => `Trực ca (${formatCount(count)})`,
   countBadgeSelected: "Đã chọn",
   countBadgeUnselected: "Chưa chọn",
   countBadgeAssignedTo: (name: string) => `Đã giao: ${name}`,
@@ -639,7 +659,6 @@ export const INVENTORY_VI = {
   shortagePhotoNotRequired: "✓ Không bắt buộc ảnh cho lý do này",
   shortagePhotoAttached: "Đã đính kèm ảnh",
   liveSalesDeltaColon: "Bán sau khi nộp:",
-  matchedAfterSales: "Khớp sau bán hàng",
   actualVarianceColon: "Lệch thực tế:",
   selfReviewConfirmTitle: "Xác nhận tự duyệt phiếu đếm?",
   selfReviewConfirmHint:
@@ -771,12 +790,13 @@ export const INVENTORY_VI = {
   productionSiteNoneConfigured: "Chưa có điểm sản xuất đang hoạt động.",
   branchThresholdsTitle: "Định mức tồn an toàn theo kho",
   branchThresholdsDescription:
-    "Cài đặt định mức an toàn tối thiểu và lượng đặt khuyến nghị riêng cho từng kho / chi nhánh.",
+    "Đặt mức tồn tối thiểu và lượng đặt khuyến nghị cho kho này.",
   branchThresholdsSaveSuccess: "Đã lưu định mức tồn kho thành công",
   branchThresholdsSaveFailed: "Không thể lưu định mức. Vui lòng thử lại.",
   branchThresholdsCustomizedBadge: "Định mức riêng",
   branchThresholdsGlobalBadge: "Mặc định chuỗi",
-  branchThresholdsItemCount: (count: number) => `${formatCount(count)} mặt hàng`,
+  branchThresholdsItemCount: (count: number) =>
+    `${formatCount(count)} mặt hàng`,
   branchThresholdsSearchPlaceholder: "Tìm tên, mã hoặc nhóm nguyên liệu",
   branchThresholdsAllCategories: "Tất cả nhóm",
   branchThresholdsAllSources: "Mọi nguồn định mức",
@@ -844,7 +864,8 @@ export const INVENTORY_VI = {
   wasteAnalyticsReasonBreakdown: "Phân bổ nguyên nhân hao hụt",
   wasteAnalyticsByCost: "Theo chi phí",
   wasteAnalyticsByShift: "Theo ca làm việc",
-  wasteAnalyticsShiftSlips: (count: number) => `${formatCount(count)} phiếu xuất hủy`,
+  wasteAnalyticsShiftSlips: (count: number) =>
+    `${formatCount(count)} phiếu xuất hủy`,
   wasteAnalyticsNoShiftData: "Chưa có dữ liệu ca trực",
   wasteAnalyticsRankByCost: "Xếp hạng theo chi phí tổn thất",
 } as const;

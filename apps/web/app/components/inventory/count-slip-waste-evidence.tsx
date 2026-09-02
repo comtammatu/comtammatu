@@ -39,6 +39,7 @@ export function CountSlipWasteEvidence({
   reasons = {},
   disabled,
   touch,
+  defaultExpanded = false,
   onChange,
   onReasonChange,
 }: {
@@ -50,10 +51,11 @@ export function CountSlipWasteEvidence({
   reasons?: CountSlipWasteReasons;
   disabled: boolean;
   touch: boolean;
+  defaultExpanded?: boolean;
   onChange: (lineId: number, url: string | null) => void;
   onReasonChange?: (lineId: number, reason: string) => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(defaultExpanded);
   if (lines.length === 0) return null;
 
   const hasPhotoLines = lines.some((l) => isShortagePhotoRequired(reasons[l.id]));

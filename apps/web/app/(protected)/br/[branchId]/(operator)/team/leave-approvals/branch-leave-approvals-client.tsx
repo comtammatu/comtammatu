@@ -348,8 +348,8 @@ export function BranchLeaveApprovalsClient({
         >
           <TabsList
             size="touch"
+            layout="equal"
             aria-label={copy.approvalsTitle}
-            className="grid w-full grid-cols-2"
           >
             <TabsTrigger value="pending">
               {copy.pendingTab(pendingRows.length)}

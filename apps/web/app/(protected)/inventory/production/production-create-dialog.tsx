@@ -1,4 +1,3 @@
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
@@ -188,10 +187,10 @@ export function ProductionCreateDialog({
         targetLocationId,
       });
       if (!result.success || !result.data) {
-        toast.error(result.error ?? "Không thể tạo Lệnh sản xuất.");
+        toast.error(result.error ?? productionCopy.productionCreateFailed);
         return;
       }
-      toast.success("Đã tạo Lệnh sản xuất nháp.");
+      toast.success(productionCopy.productionCreateSuccess);
       onOpenChange(false);
       onCreated(result.data.productionRunId);
     });
@@ -236,7 +235,7 @@ export function ProductionCreateDialog({
       <AppDialog
         open
         onOpenChange={onOpenChange}
-        title="Tạo Lệnh sản xuất"
+        title={INVENTORY_VI.productionOperatorCreateTitle}
         footer={
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             {ACTIONS_VI.close}
@@ -245,8 +244,8 @@ export function ProductionCreateDialog({
       >
         <AppEmptyState
           mode="error"
-          title="Chưa có Bếp Trung Tâm"
-          description="Lệnh sản xuất chỉ được tạo tại site Bếp Trung Tâm."
+          title={INVENTORY_VI.productionSiteNoneConfigured}
+          description={INVENTORY_VI.productionSiteRequired}
         />
       </AppDialog>
     );
@@ -256,8 +255,7 @@ export function ProductionCreateDialog({
     <AppDialog
       open
       onOpenChange={onOpenChange}
-      title="Tạo Lệnh sản xuất (Bếp Trung Tâm)"
-      description="Lên kế hoạch sản xuất thành phẩm. Dữ liệu tồn kho được đối soát tự động từ Kho Bếp Trung Tâm."
+      title={INVENTORY_VI.productionOperatorCreateTitle}
       contentClassName="sm:max-w-3xl"
       footer={
         <>
@@ -275,7 +273,9 @@ export function ProductionCreateDialog({
               planned <= 0
             }
           >
-            {isPending ? "Đang tạo…" : "Tạo lệnh nháp"}
+            {isPending
+              ? productionCopy.productionCreating
+              : productionCopy.productionCreateDraft}
           </Button>
         </>
       }
@@ -283,18 +283,24 @@ export function ProductionCreateDialog({
       <div className="flex flex-col gap-5">
         {/* Section 1: Kế hoạch sản xuất */}
         <div className="flex flex-col gap-3">
-          <h4 className="text-sm font-semibold text-foreground">Kế hoạch sản xuất</h4>
+          <h4 className="text-sm font-semibold text-foreground">
+            {productionCopy.productionPlanTitle}
+          </h4>
 
           <div className="grid gap-3">
             {showBranchPicker ? (
               <Field className="max-w-md gap-1.5">
-                <FieldLabel htmlFor="production-branch">Bếp Trung Tâm</FieldLabel>
+                <FieldLabel htmlFor="production-branch">
+                  {productionCopy.productionSiteLabel}
+                </FieldLabel>
                 <Select
                   value={branchId?.toString()}
                   onValueChange={(value) => setBranchId(Number(value))}
                 >
                   <SelectTrigger id="production-branch">
-                    <SelectValue placeholder="Chọn Bếp TT" />
+                    <SelectValue
+                      placeholder={productionCopy.productionSitePlaceholder}
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {branches.map((branch) => (
@@ -309,7 +315,9 @@ export function ProductionCreateDialog({
 
             <div className="grid gap-3 md:flex md:items-end">
               <Field className="min-w-0 flex-1 gap-1.5">
-                <FieldLabel htmlFor="production-recipe">Công thức</FieldLabel>
+                <FieldLabel htmlFor="production-recipe">
+                  {productionCopy.productionRecipeLabel}
+                </FieldLabel>
                 <Combobox
                   id="production-recipe"
                   className="min-w-0"
@@ -328,12 +336,14 @@ export function ProductionCreateDialog({
                     label: good.name,
                     hint: `${good.outputQuantity ?? "—"} ${good.outputUnitLabel ?? ""}`.trim(),
                   }))}
-                  placeholder="Chọn công thức đang dùng"
-                  searchPlaceholder="Tìm thành phẩm"
+                  placeholder={productionCopy.productionRecipePlaceholder}
+                  searchPlaceholder={productionCopy.productionRecipeSearch}
                 />
               </Field>
               <Field className="w-auto shrink-0 gap-1.5">
-                <FieldLabel htmlFor="production-planned-quantity">Sản lượng kế hoạch</FieldLabel>
+                <FieldLabel htmlFor="production-planned-quantity">
+                  {productionCopy.productionPlannedOutputLabel}
+                </FieldLabel>
                 <div className="flex items-center gap-2">
                   <QuantityInput
                     id="production-planned-quantity"
@@ -345,7 +355,7 @@ export function ProductionCreateDialog({
                     maxFractionDigits={3}
                   />
                   <span className="shrink-0 text-sm font-medium text-muted-foreground">
-                    {outputUnit || "Đơn vị"}
+                    {outputUnit || productionCopy.productionUnitFallback}
                   </span>
                 </div>
               </Field>
@@ -366,7 +376,7 @@ export function ProductionCreateDialog({
                 <AlertDescription className="text-xs text-foreground/80">
                   {INVENTORY_VI.productionPlanExceedsStock}
                   <span className="block mt-0.5 text-muted-foreground text-2xs">
-                    Lệnh vẫn có thể tạo ở trạng thái Nháp để Bếp trưởng lên kế hoạch chuẩn bị nguyên liệu.
+                    {productionCopy.productionDraftPlanningHint}
                   </span>
                 </AlertDescription>
               </Alert>
@@ -378,17 +388,24 @@ export function ProductionCreateDialog({
         <div className="flex flex-col gap-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <h4 className="text-sm font-semibold text-foreground">Nguyên liệu kế hoạch</h4>
-              <span className="text-xs text-muted-foreground">· Kho Bếp Trung Tâm</span>
+              <h4 className="text-sm font-semibold text-foreground">
+                {productionCopy.productionIngredientsTitle}
+              </h4>
+              <span className="text-xs text-muted-foreground">
+                · {productionCopy.productionStockScope}
+              </span>
             </div>
             {totalIngredients > 0 ? (
               shortageCount > 0 ? (
                 <Badge variant="warning" className="text-2xs font-normal">
-                  Thiếu {shortageCount}/{totalIngredients} nguyên liệu
+                  {productionCopy.productionShortageSummary(
+                    shortageCount,
+                    totalIngredients,
+                  )}
                 </Badge>
               ) : (
                 <Badge variant="outline" className="text-success text-2xs font-normal">
-                  Đủ tất cả {totalIngredients} nguyên liệu
+                  {productionCopy.productionSufficientSummary(totalIngredients)}
                 </Badge>
               )
             ) : null}
@@ -399,14 +416,22 @@ export function ProductionCreateDialog({
               {productionCopy.productionRecipeLoading}
             </p>
           ) : contextError ? (
-            <AppEmptyState mode="error" title="Chưa thể tạo lệnh" description={contextError} />
+            <AppEmptyState
+              mode="error"
+              title={productionCopy.productionContextErrorTitle}
+              description={contextError}
+            />
           ) : ingredientRows.length ? (
             <Frame className="overflow-hidden">
               <div className="flex gap-2 border-b bg-muted/30 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                <span className="min-w-0 flex-1">Nguyên liệu</span>
+                <span className="min-w-0 flex-1">
+                  {productionCopy.productionIngredientColumn}
+                </span>
                 <span className="w-24 shrink-0 text-right">{INVENTORY_VI.shortageNeeded}</span>
                 <span className="w-24 shrink-0 text-right">{INVENTORY_VI.shortageOnHand}</span>
-                <span className="w-28 shrink-0 text-right">Đối chiếu</span>
+                <span className="w-28 shrink-0 text-right">
+                  {productionCopy.productionReconcileColumn}
+                </span>
               </div>
               <ScrollArea className="h-60">
                 <div className="divide-y">
@@ -437,11 +462,14 @@ export function ProductionCreateDialog({
                         <span className="w-28 shrink-0 text-right">
                           {short ? (
                             <Badge variant="warning" className="font-mono text-2xs">
-                              Thiếu {smartMissing.formattedQty} {smartMissing.displayUnit}
+                               {productionCopy.productionMissing(
+                                 smartMissing.formattedQty,
+                                 smartMissing.displayUnit,
+                               )}
                             </Badge>
                           ) : (
                             <Badge variant="outline" className="text-success text-2xs">
-                              Đủ tồn
+                               {productionCopy.productionSufficient}
                             </Badge>
                           )}
                         </span>

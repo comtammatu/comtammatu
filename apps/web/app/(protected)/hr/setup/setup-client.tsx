@@ -55,7 +55,6 @@ export function HrSetupClient({
             <AppSection
               title={copy.setupSteps.leavePolicy.title}
               description={copy.setupSteps.leavePolicy.description}
-              headerHint={copy.setupSteps.leavePolicy.hint}
             >
               {leavePolicy ? (
                 <LeavePolicyForm
@@ -75,7 +74,6 @@ export function HrSetupClient({
             <AppSection
               title={copy.setupSteps.shifts.title}
               description={copy.setupSteps.shifts.description}
-              headerHint={copy.setupSteps.shifts.hint}
               contentFlush
               contentScroll
             >
@@ -112,7 +110,6 @@ export function HrSetupClient({
             <AppSection
               title={copy.setupSteps.positionTasks.title}
               description={copy.setupSteps.positionTasks.description}
-              headerHint={copy.setupSteps.positionTasks.hint}
             >
               <PositionTasksClient
                 initialData={positionTasksData}

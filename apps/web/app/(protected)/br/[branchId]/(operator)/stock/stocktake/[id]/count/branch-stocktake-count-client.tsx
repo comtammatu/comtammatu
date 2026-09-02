@@ -240,7 +240,7 @@ export function BranchStocktakeCountClient({
   return (
     <BranchOperatorPage
       title={countCopy.countMode(data.currentRound)}
-      description={`KK-${data.sessionId}`}
+      description={data.sessionNumber}
       back={
         <AppBackLink
           href={`${stocktakeBasePath}/${data.sessionId}?view=detail`}

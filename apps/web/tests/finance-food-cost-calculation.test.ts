@@ -254,7 +254,10 @@ test("finance food cost keeps the resolved period in its filter, not the header"
   assert.match(client, /<FilterBar/);
   assert.doesNotMatch(client, /description=\{foodCopy\.tableDescription\}/);
   assert.doesNotMatch(client, /description=\{foodCopy\.description\}/);
-  assert.match(client, /hide=\{\["compare", "granularity"\]\}/);
+  assert.match(
+    client,
+    /hide=\{\["branch", "compare", "granularity"\]\}/,
+  );
   assert.match(client, /FinanceAmountCell/);
   assert.match(client, /desktopFooterRows/);
   assert.match(client, /summarizeFoodCostRows/);

@@ -53,7 +53,6 @@ export function BranchStocktakeNewClient({
 
       toast.success(
         stocktakeCopy.sessionCreated(
-          result.data.sessionId,
           result.data.seededLines,
         ),
       );

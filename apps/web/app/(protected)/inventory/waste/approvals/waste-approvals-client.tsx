@@ -4,7 +4,11 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
-import { Input } from "@comtammatu/ui/components/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@comtammatu/ui/components/input-group";
 import {
   Select,
   SelectContent,
@@ -40,21 +44,27 @@ import { formatVNDateTime } from "@comtammatu/shared/time";
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import {
   AppEmptyState,
+  AppListFrame,
   AppPage,
   AppPageHeader,
-  AppSection,
+  AppToolbar,
 } from "@/components/surface";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
+import { AppDialog } from "@/components/form";
+import {
+  RowActionsContextMenuItems,
+  RowActionsMenu,
+  type RowActionItem,
+} from "@/components/row-actions-menu";
 import { useFormControlSize } from "@/components/form/control-size";
 import { messages } from "@lib/messages";
 import type { PendingWasteRow } from "@lib/inventory/waste-approval-model";
+import { useDocumentOverlayUrl } from "@lib/navigation/use-document-overlay-url";
 
-const toastSelfApproveForbidden =
-  "Không thể tự duyệt phiếu của mình (4-eye principle)";
-const toastApproveFailed = "Không duyệt được";
-const toastApproveSuccess = (issueNumber: string) =>
-  `Đã duyệt phiếu ${issueNumber}`;
-const toastRejectSuccess = (issueNumber: string) =>
-  `Đã từ chối phiếu ${issueNumber}`;
+const WASTE_APPROVAL_OVERLAY_KEYS = ["wasteIssueId"] as const;
 
 interface Props {
   initial: PendingWasteRow[];
@@ -62,14 +72,17 @@ interface Props {
   loadFailed: boolean;
 }
 
-export function WasteApprovalsClient({
-  initial,
-  branchFilter,
-  loadFailed,
-}: Props) {
+export function WasteApprovalsClient({ initial, loadFailed }: Props) {
   const [rows, setRows] = useState(initial);
   const [searchTerm, setSearchTerm] = useState("");
   const [tierFilter, setTierFilter] = useState<string>("all");
+  const overlay = useDocumentOverlayUrl(WASTE_APPROVAL_OVERLAY_KEYS);
+  const activeIssueIdParam = overlay.get("wasteIssueId");
+  const activeIssueId =
+    activeIssueIdParam && /^\d+$/.test(activeIssueIdParam)
+      ? Number(activeIssueIdParam)
+      : null;
+  const controlSize = useFormControlSize("responsive");
   const copy = messages.inventory.waste.approvals;
 
   useEffect(() => {
@@ -97,129 +110,219 @@ export function WasteApprovalsClient({
     });
   }, [rows, searchTerm, tierFilter]);
 
+  const activeRow = rows.find((row) => row.issueId === activeIssueId) ?? null;
+
+  function resolveRow(issueId: number) {
+    setRows((current) => current.filter((row) => row.issueId !== issueId));
+    overlay.clearOverlay();
+  }
+
+  function getRowActions(row: PendingWasteRow): RowActionItem[] {
+    return [
+      {
+        key: "review",
+        label: copy.reviewAction,
+        onSelect: () =>
+          overlay.patchOverlay({ wasteIssueId: row.issueId }, "push"),
+      },
+    ];
+  }
+
+  const columns: DataTableColumn<PendingWasteRow>[] = [
+    {
+      key: "issue",
+      header: copy.issueHeader,
+      className: "min-w-52",
+      render: (row) => (
+        <div className="flex flex-col gap-1">
+          <span className="font-medium">{row.issueNumber}</span>
+          <span className="text-xs text-muted-foreground">
+            {row.createdByName} · {formatVNDateTime(row.issuedAt)}
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: "scope",
+      header: copy.scopeHeader,
+      className: "min-w-40",
+      render: (row) => (
+        <div className="flex flex-col gap-1">
+          <span>{row.branchName}</span>
+          <span className="text-xs text-muted-foreground">{row.shiftKey}</span>
+        </div>
+      ),
+    },
+    {
+      key: "items",
+      header: copy.itemsHeader,
+      className: "min-w-64",
+      render: (row) => (
+        <div className="flex flex-col gap-1">
+          <span className="line-clamp-1">
+            {row.items
+              .slice(0, 2)
+              .map((item) => item.ingredientName)
+              .join(", ")}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {copy.lineCount(row.items.length)}
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: "value",
+      header: copy.valueHeader,
+      className: "w-36 text-right",
+      render: (row) => (
+        <span className="block text-right font-mono tabular-nums">
+          {row.monetary ? formatVND(row.monetary.totalValue) : "—"}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      header: <span className="sr-only">{copy.actionsHeader}</span>,
+      className: "w-12 text-right",
+      render: (row) => (
+        <RowActionsMenu items={getRowActions(row)} triggerSize="icon-sm" />
+      ),
+    },
+  ];
+
   return (
     <AppPage width="xwide" density="compact">
       <AppPageHeader
         title={copy.title}
-        meta={branchFilter !== null ? `CN #${branchFilter}` : undefined}
         badge={{ children: copy.count(rows.length) }}
       />
       {loadFailed ? (
-        <AppEmptyState
-          compact
-          mode="error"
-          title={copy.loadFailed}
-          description={copy.loadFailedDescription}
-        />
-      ) : rows.length === 0 ? (
-        <AppEmptyState compact title={copy.empty} symbol="riceGrain" />
+        <AppListFrame>
+          <AppEmptyState
+            compact
+            mode="error"
+            title={copy.loadFailed}
+            description={copy.loadFailedDescription}
+          />
+        </AppListFrame>
       ) : (
-        <div className="flex flex-col gap-4">
-          <ItemGroup className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <Item variant="outline" size="sm" className="bg-card">
-              <ItemContent>
-                <ItemDescription className="text-xs">
-                  {copy.totalEstimatedValue}
-                </ItemDescription>
-                <ItemTitle className="font-mono text-base font-semibold text-foreground">
-                  {formatVND(
-                    rows.reduce((sum, r) => sum + (r.monetary?.totalValue ?? 0), 0),
-                  )}
-                </ItemTitle>
-              </ItemContent>
-            </Item>
-            <Item variant="outline" size="sm" className="bg-card">
-              <ItemContent>
-                <ItemDescription className="text-xs">
-                  {copy.authorityBreakdown}
-                </ItemDescription>
-                <ItemTitle className="text-sm font-semibold">
-                  {copy.tier1Label}:{" "}
-                  <span className="font-mono font-semibold">
-                    {
-                      rows.filter((r) =>
-                        r.items.some((i) => (i.wasteTier ?? 1) === 1),
-                      ).length
-                    }
-                  </span>{" "}
-                  · {copy.tier2Label}:{" "}
-                  <span className="font-mono font-semibold text-destructive">
-                    {
-                      rows.filter((r) =>
-                        r.items.some((i) => i.wasteTier === 2),
-                      ).length
-                    }
-                  </span>
-                </ItemTitle>
-              </ItemContent>
-            </Item>
-            <Item variant="outline" size="sm" className="bg-card">
-              <ItemContent>
-                <ItemDescription className="text-xs">
-                  {copy.totalLines}
-                </ItemDescription>
-                <ItemTitle className="font-mono text-base font-semibold text-foreground">
-                  {copy.lineCount(
-                    rows.reduce((sum, r) => sum + r.items.length, 0),
-                  )}
-                </ItemTitle>
-              </ItemContent>
-            </Item>
-          </ItemGroup>
-
-          <Item variant="outline" size="sm" className="flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="relative flex-1">
-              <IconSearch className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder={INVENTORY_VI.wasteApprovalSearchPlaceholder}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="h-8 ps-8 text-sm"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Select value={tierFilter} onValueChange={setTierFilter}>
-                <SelectTrigger className="h-8 w-40 text-xs">
-                  <SelectValue placeholder={INVENTORY_VI.wasteApprovalTierFilterPlaceholder} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{INVENTORY_VI.wasteApprovalTierAll}</SelectItem>
-                  <SelectItem value="tier1">{INVENTORY_VI.wasteApprovalTier1}</SelectItem>
-                  <SelectItem value="tier2">{INVENTORY_VI.wasteApprovalTier2}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </Item>
-
-          <div className="flex flex-col gap-3">
-            {filteredRows.length === 0 ? (
-              <AppEmptyState
-                compact
-                title={INVENTORY_VI.wasteApprovalEmptyTitle}
-                description={INVENTORY_VI.wasteApprovalEmptyDescription}
-              />
-            ) : (
-              filteredRows.map((row) => (
-                <WasteApprovalCard
-                  key={row.issueId}
-                  row={row}
-                  onResolved={(id) =>
-                    setRows((prev) =>
-                      prev.filter((current) => current.issueId !== id),
-                    )
-                  }
-                />
-              ))
+        <AppListFrame
+          toolbar={
+            <AppToolbar
+              variant="inline"
+              search={
+                <InputGroup size={controlSize} className="min-w-0 flex-1">
+                  <InputGroupAddon>
+                    <IconSearch aria-hidden="true" />
+                  </InputGroupAddon>
+                  <InputGroupInput
+                    type="search"
+                    aria-label={copy.searchLabel}
+                    placeholder={INVENTORY_VI.wasteApprovalSearchPlaceholder}
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                    inputMode="search"
+                  />
+                </InputGroup>
+              }
+              filters={
+                <Select value={tierFilter} onValueChange={setTierFilter}>
+                  <SelectTrigger size={controlSize} className="min-w-44">
+                    <SelectValue
+                      placeholder={
+                        INVENTORY_VI.wasteApprovalTierFilterPlaceholder
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">
+                      {INVENTORY_VI.wasteApprovalTierAll}
+                    </SelectItem>
+                    <SelectItem value="tier1">
+                      {INVENTORY_VI.wasteApprovalTier1}
+                    </SelectItem>
+                    <SelectItem value="tier2">
+                      {INVENTORY_VI.wasteApprovalTier2}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              }
+            />
+          }
+        >
+          <DataTable
+            columns={columns}
+            data={filteredRows}
+            getRowKey={(row) => row.issueId}
+            emptyMode={
+              searchTerm.trim() || tierFilter !== "all"
+                ? "no-results"
+                : "no-data"
+            }
+            emptyTitle={
+              rows.length === 0
+                ? copy.empty
+                : INVENTORY_VI.wasteApprovalEmptyTitle
+            }
+            emptyDescription={
+              rows.length === 0
+                ? undefined
+                : INVENTORY_VI.wasteApprovalEmptyDescription
+            }
+            onRowClick={(row) =>
+              overlay.patchOverlay({ wasteIssueId: row.issueId }, "push")
+            }
+            getRowAriaLabel={(row) => copy.reviewAria(row.issueNumber)}
+            renderRowContextMenu={(row) => (
+              <RowActionsContextMenuItems items={getRowActions(row)} />
             )}
-          </div>
-        </div>
+            mobileCardRender={(row) => (
+              <Item variant="outline" className="items-start">
+                <ItemContent className="min-w-0">
+                  <ItemTitle>{row.issueNumber}</ItemTitle>
+                  <ItemDescription>
+                    {row.branchName} · {copy.lineCount(row.items.length)}
+                  </ItemDescription>
+                  <div className="flex flex-wrap gap-1">
+                    <Badge variant="outline">{row.shiftKey}</Badge>
+                    {row.items.some((item) => item.wasteTier === 2) ? (
+                      <WasteTierBadge tier={2} compact />
+                    ) : null}
+                  </div>
+                </ItemContent>
+                <RowActionsMenu
+                  items={getRowActions(row)}
+                  triggerSize={
+                    controlSize === "touch" ? "icon-touch" : "icon-lg"
+                  }
+                  itemSize={controlSize === "touch" ? "touch" : "default"}
+                />
+              </Item>
+            )}
+          />
+        </AppListFrame>
       )}
+
+      {activeRow ? (
+        <AppDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) overlay.clearOverlay();
+          }}
+          title={activeRow.issueNumber}
+          description={`${activeRow.branchName} · ${formatVNDateTime(activeRow.issuedAt)}`}
+          contentClassName="sm:max-w-3xl"
+          bodyClassName="max-h-dvh-95 overflow-y-auto"
+        >
+          <WasteApprovalReview row={activeRow} onResolved={resolveRow} />
+        </AppDialog>
+      ) : null}
     </AppPage>
   );
 }
 
-function WasteApprovalCard({
+function WasteApprovalReview({
   row,
   onResolved,
 }: {
@@ -236,7 +339,7 @@ function WasteApprovalCard({
 
   function handleDecision(decision: "approved" | "rejected") {
     if (row.isSelfCreated && !row.canBypassSelfApproval) {
-      toast.error(toastSelfApproveForbidden);
+      toast.error(copy.selfApproveForbidden);
       return;
     }
     setPending(decision);
@@ -248,13 +351,13 @@ function WasteApprovalCard({
       });
       setPending(null);
       if (!res.success) {
-        toast.error(res.error ?? toastApproveFailed);
+        toast.error(res.error ?? copy.approveFailed);
         return;
       }
       toast.success(
         decision === "approved"
-          ? toastApproveSuccess(row.issueNumber)
-          : toastRejectSuccess(row.issueNumber),
+          ? copy.approveSuccess(row.issueNumber)
+          : copy.rejectSuccess(row.issueNumber),
       );
       setRejectOpen(false);
       setNote("");
@@ -264,40 +367,21 @@ function WasteApprovalCard({
   }
 
   return (
-    <AppSection
-      size="sm"
-      tone={row.isSelfCreated ? "warning" : "default"}
-      title={
-        <span className="flex flex-wrap items-center gap-2">
-          {row.issueNumber}
-          <Badge variant="outline" className="text-xs">
-            {row.branchName}
-          </Badge>
-          <Badge variant="outline" className="text-xs">
-            {row.shiftKey}
-          </Badge>
-          {row.sourceType !== "manual" ? (
-            <Badge variant="secondary" className="text-xs">
-              {row.sourceType}
-            </Badge>
-          ) : null}
-        </span>
-      }
-      description={
-        <>
-          {row.createdByName}
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="outline">{row.shiftKey}</Badge>
+          <span className="text-sm text-muted-foreground">
+            {row.createdByName}
+          </span>
           {row.isSelfCreated ? (
-            <Badge className="ml-2 border border-warning/20 bg-warning/15 text-xs text-warning">
+            <Badge className="border border-warning/20 bg-warning/15 text-warning">
               {row.canBypassSelfApproval
-                ? "Tự tạo (Được duyệt)"
+                ? copy.selfCreatedBypassBadge
                 : copy.selfCreatedBadge}
             </Badge>
           ) : null}
-          {" • "}
-          {formatVNDateTime(row.issuedAt)}
-        </>
-      }
-      action={
+        </div>
         <div className="text-right">
           {row.monetary ? (
             <div className="text-lg font-semibold tabular-nums">
@@ -308,8 +392,7 @@ function WasteApprovalCard({
             {copy.lineCount(row.items.length)}
           </div>
         </div>
-      }
-    >
+      </div>
       <ItemGroup className="flex flex-col gap-2 rounded-none border-0 p-0">
         {row.items.map((it) => (
           <Item
@@ -448,6 +531,6 @@ function WasteApprovalCard({
         isPending={pending === "rejected"}
         onConfirm={() => handleDecision("rejected")}
       />
-    </AppSection>
+    </div>
   );
 }

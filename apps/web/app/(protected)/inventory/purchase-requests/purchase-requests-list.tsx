@@ -49,7 +49,7 @@ import {
   type PurchaseRequestRow,
 } from "@lib/inventory/purchase-request-model";
 import { messages } from "@lib/messages";
-import { buildAutomaticPurchaseDemandAllocations } from "./purchase-order-drafts";
+import { buildAutomaticPurchaseDemandAllocations } from "@lib/inventory/purchase-order-drafts";
 import { blankRequestLine } from "./purchase-request-draft-types";
 
 const copy = messages.inventory.purchaseRequests;

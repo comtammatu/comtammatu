@@ -12,8 +12,7 @@ const slipsClient =
 const slipsPage = "app/(protected)/inventory/count-slips/page.tsx";
 const assignmentsClient =
   "app/(protected)/inventory/count-assignments/count-assignments-client.tsx";
-const assignmentsPage =
-  "app/(protected)/inventory/count-assignments/page.tsx";
+const assignmentsPage = "app/(protected)/inventory/count-assignments/page.tsx";
 
 test("Wave 3 count slips D1 binds addressable ?slipId= on page + client", () => {
   const page = read(slipsPage);
@@ -45,10 +44,7 @@ test("Wave 3 count assignments D1 binds addressable ?assignmentId= on page + cli
   assert.match(page, /assignmentId\?:/);
   assert.match(page, /initialAssignmentId/);
   assert.match(page, /parsePositiveId\(params\.assignmentId\)/);
-  assert.match(
-    page,
-    /<CountAssignmentsClient[\s\S]*initialAssignmentId=/,
-  );
+  assert.match(page, /<CountAssignmentsClient[\s\S]*initialAssignmentId=/);
 
   assert.match(client, /useSearchParams/);
   assert.match(client, /searchParams\.get\("assignmentId"\)/);
@@ -71,7 +67,7 @@ test("Wave 3 count assignments D1 binds addressable ?assignmentId= on page + cli
   assert.doesNotMatch(client, /useLongPress/);
 });
 
-test("Wave 3 waste stays D0 queue / D3 create — no addressable DETAIL param", () => {
+test("Wave 3 waste uses addressable D1 approval review and dedicated D3 create", () => {
   const approvals = read(
     "app/(protected)/inventory/waste/approvals/waste-approvals-client.tsx",
   );
@@ -79,8 +75,11 @@ test("Wave 3 waste stays D0 queue / D3 create — no addressable DETAIL param", 
     "app/(protected)/inventory/waste/new/waste-create-client.tsx",
   );
 
-  assert.doesNotMatch(approvals, /useSearchParams/);
-  assert.doesNotMatch(approvals, /wasteId|entryId/);
+  assert.match(approvals, /useDocumentOverlayUrl/);
+  assert.match(approvals, /WASTE_APPROVAL_OVERLAY_KEYS = \["wasteIssueId"\]/);
+  assert.match(approvals, /overlay\.get\("wasteIssueId"\)/);
+  assert.match(approvals, /overlay\.patchOverlay\(\{ wasteIssueId:/);
+  assert.match(approvals, /overlay\.clearOverlay\(\)/);
   assert.doesNotMatch(approvals, /from "@comtammatu\/ui\/components\/drawer"/);
   assert.doesNotMatch(create, /useSearchParams/);
   assert.doesNotMatch(create, /\?wasteId=/);

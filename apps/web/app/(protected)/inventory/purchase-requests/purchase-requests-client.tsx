@@ -39,7 +39,7 @@ import {
   type PurchaseOrderDraft,
   type PurchaseOrderDraftLine,
   type PurchaseOrderSupplier,
-} from "./purchase-order-drafts";
+} from "@lib/inventory/purchase-order-drafts";
 import { PurchaseRequestAllocateDialog } from "./purchase-request-allocate-dialog";
 import {
   blankRequestLine,

@@ -2,6 +2,8 @@ import "server-only";
 
 import { notFound } from "next/navigation";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasPermission } from "@/_lib/permissions";
 import { fetchStockIssues } from "@/(protected)/inventory/issue-actions";
@@ -85,7 +87,7 @@ function mapManualIssue(row: ConsumptionIssueRow): BranchStockIssue | null {
   }
   return {
     id: row.id,
-    code: row.issue_number ?? `PXK-${row.id}`,
+    code: row.issue_number ?? INVENTORY_VI.documentNumberPending,
     type: row.issue_type,
     status: toBranchStockIssueStatus(row.status),
     approvalStatus: row.approval_status ?? "not_required",
@@ -160,7 +162,7 @@ export async function loadBranchConsumptionListData(
   );
   const branchName = branch
     ? getBranchSiteDisplayName(branch)
-    : `CN #${routeBranchId}`;
+    : UNKNOWN_LABEL_VI;
   const showRecorded = branch?.branch_kind === "branch";
   const recordedQuery = showRecorded
     ? supabase

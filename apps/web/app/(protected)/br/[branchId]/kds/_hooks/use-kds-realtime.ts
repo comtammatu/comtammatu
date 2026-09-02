@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@comtammatu/database/supabase/client";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
-import { getVNDateString, getVNDayUtcRange } from "@/_lib/format-datetime";
+import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import {
   makeKeyedRealtimeBatcher,
   makeRealtimeCoalescer,

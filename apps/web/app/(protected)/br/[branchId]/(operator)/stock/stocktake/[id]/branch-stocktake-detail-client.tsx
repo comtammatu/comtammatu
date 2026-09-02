@@ -245,7 +245,7 @@ export function BranchStocktakeDetailClient({
 
   return (
     <BranchOperatorPage
-      title={`KK-${session.id}`}
+      title={session.sessionNumber}
       description={formatVNDateTime(session.startedAt ?? session.createdAt)}
       badge={{ children: statusBadge.label, variant: statusBadge.variant }}
       back={<AppBackLink href={stocktakeBasePath} />}

@@ -46,6 +46,7 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/status-badge";
+import { ResponsiveActionButton } from "@/components/responsive-action-button";
 import { formatVND } from "@lib/inventory/format";
 import dynamic from "next/dynamic";
 import {
@@ -974,10 +975,14 @@ export function IngredientsClient({
         }
         actions={
           canManage ? (
-            <Button type="button" size="lg" onClick={openCreate}>
+            <ResponsiveActionButton
+              type="button"
+              density="header"
+              onClick={openCreate}
+            >
               <IconPlus data-icon="inline-start" />
               {INVENTORY_VI.createRawIngredient}
-            </Button>
+            </ResponsiveActionButton>
           ) : undefined
         }
       />

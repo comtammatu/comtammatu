@@ -19,6 +19,7 @@ import {
   Zap as IconZap,
 } from "lucide-react";
 import { ACTIONS_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { formatPercent } from "@comtammatu/shared/format";
 import { formatVNClockTime } from "@comtammatu/shared/time";
 import { cn } from "@comtammatu/ui";
@@ -120,7 +121,8 @@ export function BranchCountAssignmentsClient({
   const [stationAssignmentsDraft, setStationAssignmentsDraft] = useState<
     Record<number, number | null>
   >({});
-  const [stationCandidateEmpId, setStationCandidateEmpId] = useState<string>("");
+  const [stationCandidateEmpId, setStationCandidateEmpId] =
+    useState<string>("");
 
   // Station Template Editor Sheet state
   const [editingTemplate, setEditingTemplate] = useState<
@@ -149,10 +151,7 @@ export function BranchCountAssignmentsClient({
   );
 
   const employeeById = useMemo(
-    () =>
-      new Map(
-        data.employees.map((employee) => [employee.id, employee]),
-      ),
+    () => new Map(data.employees.map((employee) => [employee.id, employee])),
     [data.employees],
   );
 
@@ -203,8 +202,7 @@ export function BranchCountAssignmentsClient({
       const matchSearch =
         !searchNormalized ||
         matchesSearch([emp.name, emp.positionName ?? ""], searchNormalized);
-      const isAssigned =
-        (selectionByEmployee[String(emp.id)]?.length ?? 0) > 0;
+      const isAssigned = (selectionByEmployee[String(emp.id)]?.length ?? 0) > 0;
       const isOnDuty =
         data.selectedShiftId != null &&
         Boolean(emp.scheduledShiftIds?.includes(data.selectedShiftId));
@@ -267,7 +265,8 @@ export function BranchCountAssignmentsClient({
   }, [data.ingredients, selectionByEmployee]);
 
   const [unassignedSheetOpen, setUnassignedSheetOpen] = useState(false);
-  const [unassignedTargetEmpId, setUnassignedTargetEmpId] = useState<string>("");
+  const [unassignedTargetEmpId, setUnassignedTargetEmpId] =
+    useState<string>("");
 
   function applyDutyRosterAssignments() {
     if (data.selectedLocationId == null) {
@@ -409,8 +408,7 @@ export function BranchCountAssignmentsClient({
 
   // Active Station being assigned
   const activeStation = useMemo(
-    () =>
-      data.templates.find((t) => t.id === activeStationTemplateId) ?? null,
+    () => data.templates.find((t) => t.id === activeStationTemplateId) ?? null,
     [data.templates, activeStationTemplateId],
   );
 
@@ -637,7 +635,11 @@ export function BranchCountAssignmentsClient({
   }
 
   function handleDeleteTemplate() {
-    if (!editingTemplate || editingTemplate === "new" || editingTemplate.isSystem) {
+    if (
+      !editingTemplate ||
+      editingTemplate === "new" ||
+      editingTemplate.isSystem
+    ) {
       return;
     }
 
@@ -683,13 +685,17 @@ export function BranchCountAssignmentsClient({
 
   function toggleStationShortcut(template: CountTemplate) {
     const templateIds = template.ingredientIds;
-    const allIncluded = templateIds.length > 0 && templateIds.every((id) => draftIds.includes(id));
+    const allIncluded =
+      templateIds.length > 0 &&
+      templateIds.every((id) => draftIds.includes(id));
     if (allIncluded) {
       setDraftIds((current) =>
         current.filter((id) => !templateIds.includes(id)),
       );
     } else {
-      setDraftIds((current) => Array.from(new Set([...current, ...templateIds])));
+      setDraftIds((current) =>
+        Array.from(new Set([...current, ...templateIds])),
+      );
     }
   }
 
@@ -734,7 +740,8 @@ export function BranchCountAssignmentsClient({
     nextShiftId: number | null,
   ) {
     const params = new URLSearchParams();
-    if (nextLocationId != null) params.set("locationId", String(nextLocationId));
+    if (nextLocationId != null)
+      params.set("locationId", String(nextLocationId));
     if (nextShiftId != null) params.set("shiftId", String(nextShiftId));
     const nextQuery = params.toString();
     router.replace(nextQuery ? `${basePath}?${nextQuery}` : basePath);
@@ -966,7 +973,7 @@ export function BranchCountAssignmentsClient({
             </Button>
           </div>
 
-          <ItemGroup className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          <ItemGroup className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {data.templates.map((template) => {
               const assignedEmpCounts: Record<number, number> = {};
               for (const ingId of template.ingredientIds) {
@@ -1012,7 +1019,7 @@ export function BranchCountAssignmentsClient({
                           className="max-w-32 truncate text-xs text-muted-foreground"
                           title={ingredientById.get(id)?.name}
                         >
-                          {ingredientById.get(id)?.name ?? `#${id}`}
+                          {ingredientById.get(id)?.name ?? UNKNOWN_LABEL_VI}
                         </Badge>
                       ))}
                       {template.ingredientIds.length > 3 ? (
@@ -1020,7 +1027,8 @@ export function BranchCountAssignmentsClient({
                           variant="outline"
                           className="text-xs text-muted-foreground"
                         >
-                          +{INVENTORY_VI.countAssignItemCount(
+                          +
+                          {INVENTORY_VI.countAssignItemCount(
                             template.ingredientIds.length - 3,
                           )}
                         </Badge>
@@ -1237,7 +1245,8 @@ export function BranchCountAssignmentsClient({
                               .slice(0, 3)
                               .map(
                                 (id) =>
-                                  ingredientById.get(id)?.name ?? `#${id}`,
+                                  ingredientById.get(id)?.name ??
+                                  UNKNOWN_LABEL_VI,
                               )
                               .join(", ")}
                             {selectedIds.length > 3
@@ -1399,7 +1408,9 @@ export function BranchCountAssignmentsClient({
               type="button"
               size="touch"
               className="flex-1 sm:flex-initial"
-              disabled={isPending || !activeStation || stationStaffIds.length === 0}
+              disabled={
+                isPending || !activeStation || stationStaffIds.length === 0
+              }
               onClick={saveStationAssignment}
             >
               {isPending ? <Spinner className="size-5" /> : null}
@@ -1447,7 +1458,7 @@ export function BranchCountAssignmentsClient({
                       variant="secondary"
                       className="flex items-center gap-1.5 py-1 pl-2.5 pr-1 text-sm font-medium"
                     >
-                      <span>{emp?.name ?? `#${empId}`}</span>
+                      <span>{emp?.name ?? UNKNOWN_LABEL_VI}</span>
                       {emp?.positionName ? (
                         <span className="text-xs text-muted-foreground">
                           ({emp.positionName})
@@ -1623,7 +1634,7 @@ export function BranchCountAssignmentsClient({
                   >
                     <div className="flex w-full items-center justify-between gap-2">
                       <span className="font-medium text-foreground">
-                        {ing?.name ?? `#${ingId}`}
+                        {ing?.name ?? UNKNOWN_LABEL_VI}
                       </span>
                       <div className="flex items-center gap-2">
                         {ing?.unit ? (
@@ -1636,7 +1647,9 @@ export function BranchCountAssignmentsClient({
                             variant="success"
                             className="text-xs font-medium"
                           >
-                            {INVENTORY_VI.countBadgeAssignedTo(assignedEmp.name)}
+                            {INVENTORY_VI.countBadgeAssignedTo(
+                              assignedEmp.name,
+                            )}
                           </Badge>
                         ) : (
                           <Badge
@@ -1654,7 +1667,9 @@ export function BranchCountAssignmentsClient({
                       <div className="flex flex-wrap gap-1 pt-1">
                         <Button
                           type="button"
-                          variant={currentEmpId === null ? "default" : "outline"}
+                          variant={
+                            currentEmpId === null ? "default" : "outline"
+                          }
                           size="touch"
                           className="h-8 text-xs font-medium"
                           onClick={() =>
@@ -1686,7 +1701,7 @@ export function BranchCountAssignmentsClient({
                               {isSelected ? (
                                 <IconCheck className="size-3 mr-1" />
                               ) : null}
-                              {emp?.name ?? `#${empId}`}
+                              {emp?.name ?? UNKNOWN_LABEL_VI}
                             </Button>
                           );
                         })}
@@ -1788,9 +1803,7 @@ export function BranchCountAssignmentsClient({
               <Button
                 type="button"
                 variant={
-                  templateSelectionFilter === "selected"
-                    ? "default"
-                    : "outline"
+                  templateSelectionFilter === "selected" ? "default" : "outline"
                 }
                 size="touch"
                 className="h-8 text-xs font-medium"
@@ -1872,9 +1885,7 @@ export function BranchCountAssignmentsClient({
                   variant={checked ? "muted" : "outline"}
                   className={cn(
                     "min-h-14 cursor-pointer justify-between transition-colors",
-                    checked
-                      ? "border-primary bg-accent"
-                      : "hover:bg-muted",
+                    checked ? "border-primary bg-accent" : "hover:bg-muted",
                   )}
                   onClick={() => toggleTemplateIngredient(ingredient.id)}
                 >
@@ -1950,9 +1961,9 @@ export function BranchCountAssignmentsClient({
               </span>
               <div className="flex flex-wrap gap-1.5">
                 {data.templates.map((tpl) => {
-                  const allIncluded = tpl.ingredientIds.length > 0 && tpl.ingredientIds.every((id) =>
-                    draftIds.includes(id),
-                  );
+                  const allIncluded =
+                    tpl.ingredientIds.length > 0 &&
+                    tpl.ingredientIds.every((id) => draftIds.includes(id));
                   return (
                     <Button
                       key={tpl.id}
@@ -1973,7 +1984,9 @@ export function BranchCountAssignmentsClient({
                       <span>
                         {tpl.name} ({tpl.ingredientIds.length})
                       </span>
-                      {allIncluded ? <IconCheck className="size-3 ml-0.5" /> : null}
+                      {allIncluded ? (
+                        <IconCheck className="size-3 ml-0.5" />
+                      ) : null}
                     </Button>
                   );
                 })}
@@ -1998,9 +2011,7 @@ export function BranchCountAssignmentsClient({
               <Button
                 type="button"
                 variant={
-                  employeeSelectionFilter === "selected"
-                    ? "default"
-                    : "outline"
+                  employeeSelectionFilter === "selected" ? "default" : "outline"
                 }
                 size="touch"
                 className="h-8 text-xs font-medium"
@@ -2030,9 +2041,7 @@ export function BranchCountAssignmentsClient({
                 variant="outline"
                 size="touch"
                 className="h-8 text-xs"
-                onClick={() =>
-                  setDraftIds(data.ingredients.map((i) => i.id))
-                }
+                onClick={() => setDraftIds(data.ingredients.map((i) => i.id))}
               >
                 {INVENTORY_VI.countTemplateSelectAll}
               </Button>
@@ -2083,9 +2092,7 @@ export function BranchCountAssignmentsClient({
                     variant={checked ? "muted" : "outline"}
                     className={cn(
                       "min-h-14 cursor-pointer justify-between transition-colors",
-                      checked
-                        ? "border-primary bg-accent"
-                        : "hover:bg-muted",
+                      checked ? "border-primary bg-accent" : "hover:bg-muted",
                     )}
                     onClick={() => toggleIngredient(ingredient.id)}
                   >

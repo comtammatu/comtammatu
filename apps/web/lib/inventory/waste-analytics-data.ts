@@ -1,5 +1,6 @@
 import "server-only";
 
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
@@ -44,11 +45,13 @@ export type WasteAnalyticsSummary = {
   topLossItems: TopLossIngredientItem[];
 };
 
-export async function loadWasteAnalyticsData(options: {
-  branchId?: number;
-  startDate?: string;
-  endDate?: string;
-} = {}) {
+export async function loadWasteAnalyticsData(
+  options: {
+    branchId?: number;
+    startDate?: string;
+    endDate?: string;
+  } = {},
+) {
   const { supabase, claims } = await loadAuthState();
   const scope = await resolveInventoryListScope(supabase, claims, {
     routeBranchId: options.branchId,
@@ -180,7 +183,7 @@ export async function loadWasteAnalyticsData(options: {
         name?: string;
         category?: { name?: string } | null;
       } | null;
-      const ingName = ingObj?.name ?? `Nguyên liệu #${ingId}`;
+      const ingName = ingObj?.name ?? UNKNOWN_LABEL_VI;
       const catName = ingObj?.category?.name ?? null;
 
       const ingData = ingredientTotals.get(ingId) ?? {

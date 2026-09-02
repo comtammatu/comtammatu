@@ -40,7 +40,7 @@ export async function importSepayBankTransactions(
 ): Promise<SepayImportState> {
   const parsedInput = importSchema.safeParse({ file: formData.get("file") });
   if (!parsedInput.success) {
-    return { status: "error", message: "Chọn đúng file CSV xuất từ SePay." };
+    return { status: "error", message: "Chọn đúng tệp CSV xuất từ SePay." };
   }
 
   const ctx = await getAuthContextWithPermission(
@@ -58,7 +58,7 @@ export async function importSepayBankTransactions(
     });
     sheet = parsedFile.sheets[0];
   } catch {
-    return { status: "error", message: "Không thể đọc file CSV SePay." };
+    return { status: "error", message: "Không thể đọc tệp CSV SePay." };
   }
 
   if (!sheet) {

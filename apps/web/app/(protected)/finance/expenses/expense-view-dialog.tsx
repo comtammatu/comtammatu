@@ -49,7 +49,7 @@ export function ExpenseViewDialog({
       title={
         expense && paymentState ? (
           <div className="flex flex-wrap items-center gap-2">
-            <span>{`${copy.form.viewTitle} - #${expense.id}`}</span>
+            <span>{copy.form.viewTitle}</span>
             <StatusBadge domain="expense-payment" value={paymentState} />
           </div>
         ) : (

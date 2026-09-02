@@ -1,10 +1,14 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import {
   getAuthContext,
   probePermission,
 } from "@/(protected)/inventory/_lib/auth";
+import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
+import { withControlSurfaceBranchScope } from "@/lib/control-surface-scope";
 import { CountSlipsClient } from "./count-slips-client";
 import {
   buildCountSlipLineView,
@@ -14,8 +18,6 @@ import {
 import { resolveCountSlipReviewerEmployeeId } from "@lib/inventory/count-slip-reviewer";
 import { loadCountSlipWasteIssueNumbers } from "@lib/inventory/count-slip-waste-links";
 import type { QuantityUnitFormatRow } from "@lib/inventory/quantity-unit-format";
-
-export const instant = false;
 
 const REVIEW_STATES = ["submitted", "needs_changes", "approved"] as const;
 
@@ -86,8 +88,10 @@ function unitKey(ingredientId: number, unitId: number): string {
 
 export async function CountSlipsPageContent({
   initialSlipId = null,
+  queryBranch,
 }: {
   initialSlipId?: number | null;
+  queryBranch?: string | string[];
 } = {}) {
   const ctx = await getAuthContext(STAFF_ROLES);
   if (!ctx) redirect("/");
@@ -98,6 +102,23 @@ export async function CountSlipsPageContent({
     redirect("/");
   }
   const { supabase, claims, userId } = ctx;
+  const scope = await resolveInventoryListScope(supabase, claims, {
+    queryBranch,
+  });
+  if (scope.outOfScope) notFound();
+  const selectedBranchId = scope.selectedBranchId;
+  if (!selectedBranchId) {
+    if (scope.canSelectAll && scope.defaultBranchId != null) {
+      redirect(
+        withControlSurfaceBranchScope(
+          "/inventory/count-slips",
+          String(scope.defaultBranchId) as `${number}`,
+          { prefixes: ["/inventory"] },
+        ),
+      );
+    }
+    notFound();
+  }
   const reviewerEmployeeId = await resolveCountSlipReviewerEmployeeId(
     claims.tenant_id,
     userId,
@@ -131,6 +152,7 @@ export async function CountSlipsPageContent({
     `,
     )
     .eq("tenant_id", claims.tenant_id)
+    .eq("branch_id", selectedBranchId)
     .in("status", REVIEW_STATES);
   if (reviewerEmployeeId !== null) {
     slipsQuery = slipsQuery.neq("employee_id", reviewerEmployeeId);
@@ -173,7 +195,10 @@ export async function CountSlipsPageContent({
   }
   const lineResult =
     slipIds.length === 0
-      ? { data: [] as Array<CountSlipQueryLine & { slip_id: number }>, error: null }
+      ? {
+          data: [] as Array<CountSlipQueryLine & { slip_id: number }>,
+          error: null,
+        }
       : await supabase
           .from("inventory_count_slip_lines")
           .select(
@@ -309,13 +334,21 @@ export async function CountSlipsPageContent({
       .from("stock_levels")
       .select("branch_id, location_id, ingredient_id, current_quantity")
       .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", selectedBranchId)
       .in("ingredient_id", ingredientIds);
     for (const row of stockRows ?? []) {
       const brId = Number(row.branch_id);
       const locId = Number(row.location_id);
       const ingId = Number(row.ingredient_id);
-      if (Number.isFinite(brId) && Number.isFinite(locId) && Number.isFinite(ingId)) {
-        liveStockByCell.set(`${brId}:${locId}:${ingId}`, Number(row.current_quantity ?? 0));
+      if (
+        Number.isFinite(brId) &&
+        Number.isFinite(locId) &&
+        Number.isFinite(ingId)
+      ) {
+        liveStockByCell.set(
+          `${brId}:${locId}:${ingId}`,
+          Number(row.current_quantity ?? 0),
+        );
       }
     }
   }
@@ -329,10 +362,9 @@ export async function CountSlipsPageContent({
       slipNumber:
         typeof slip.slip_number === "string" && slip.slip_number.trim()
           ? slip.slip_number
-          : `PD-${slip.id}`,
-      branchName: embeddedName(slip.branches) ?? `CN #${slip.branch_id}`,
-      locationName:
-        embeddedName(slip.inventory_locations) ?? `Kho #${slip.location_id}`,
+          : INVENTORY_VI.documentNumberPending,
+      branchName: embeddedName(slip.branches) ?? UNKNOWN_LABEL_VI,
+      locationName: embeddedName(slip.inventory_locations) ?? UNKNOWN_LABEL_VI,
       employeeName:
         employeeNameById.get(Number(slip.employee_id)) ??
         employeeName(slip.employees) ??
@@ -359,11 +391,14 @@ export async function CountSlipsPageContent({
             ? (unitByIngredient.get(unitKey(ingredientId, entryUnitId)) ?? null)
             : null;
         const baseUnit = baseUnitByIngredient.get(ingredientId) ?? null;
-        const liveStock = liveStockByCell.get(`${slip.branch_id}:${slip.location_id}:${ingredientId}`) ?? null;
+        const liveStock =
+          liveStockByCell.get(
+            `${slip.branch_id}:${slip.location_id}:${ingredientId}`,
+          ) ?? null;
         return buildCountSlipLineView({
           id: line.id,
           ingredientId,
-          ingredientName: ingredient ?? `#${line.ingredient_id}`,
+          ingredientName: ingredient ?? UNKNOWN_LABEL_VI,
           entryUnitId,
           entryUnitCode: entryUnit?.code ?? embeddedCode(line.units),
           baseUnitCode: baseUnit?.code ?? null,
@@ -396,6 +431,7 @@ export async function CountSlipsPageContent({
   return (
     <CountSlipsClient
       tenantId={claims.tenant_id}
+      branchId={selectedBranchId}
       initial={rows}
       initialSlipId={resolvedSlipId}
     />
@@ -412,9 +448,17 @@ function parsePositiveId(value: string | string[] | undefined): number | null {
 export default async function CountSlipsPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ slipId?: string | string[] }>;
+  searchParams?: Promise<{
+    branch?: string | string[];
+    slipId?: string | string[];
+  }>;
 }) {
   const params = searchParams ? await searchParams : {};
   const initialSlipId = parsePositiveId(params.slipId);
-  return <CountSlipsPageContent initialSlipId={initialSlipId} />;
+  return (
+    <CountSlipsPageContent
+      initialSlipId={initialSlipId}
+      queryBranch={params.branch}
+    />
+  );
 }

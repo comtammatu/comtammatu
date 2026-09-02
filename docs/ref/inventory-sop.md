@@ -5,9 +5,9 @@
 
 ## 1. Boundary
 
-- Site active: `branch`, `central_supply`, `central_kitchen`. Trung tâm giữ một
-  warehouse. Chi nhánh chưa tách giữ một Kho; chi nhánh đã tách có Kho nhận/cấp
-  và Bếp tiêu hao.
+- Site active: `branch`, `central_supply`, `central_kitchen`. Mỗi chi nhánh
+  thường luôn có đúng một Kho nhận/cấp và một Bếp tiêu hao. Kho Tổng và Bếp
+  Trung Tâm giữ topology trung tâm, không có cặp Kho/Bếp của chi nhánh.
 - **Mua NCC:** chỉ Kho Tổng / Bếp TT — **Tạo đơn** theo nguyên liệu (NCC trên
   từng dòng; một phiếu có thể nhiều NCC) → **một GRN** chung. Mỗi lần NCC giao,
   chốt đúng dòng của NCC đó. Yêu cầu mua chỉ còn lịch sử.
@@ -59,6 +59,12 @@ Có hai loại phiếu dùng chung mã `DC-YYYY-####`:
 - **Nội bộ Kho ↔ Bếp:** cùng chi nhánh, xác nhận một lần và hoàn tất ngay. Kho
   cấp Bếp hoặc Bếp hoàn Kho; thiếu một dòng thì toàn phiếu không ghi sổ.
 
+Mỗi chi nhánh thường luôn có sẵn hai vị trí **Kho** và **Bếp**; không có bước
+bật/tắt riêng. Kho Tổng và Bếp Trung Tâm không dùng topology hai vị trí này. Màn
+hình tồn của Chủ sở hữu và QL chi nhánh cho chuyển tab **Kho / Bếp / Tổng**, đặt
+ngưỡng riêng tại từng vị trí và mở **Cấp Kho ↔ Bếp** ngay cạnh bộ chọn. Hàng liên
+điểm luôn vào Kho; POS và kiểm đếm vận hành mặc định tại Bếp.
+
 Phiếu nội bộ đã hoàn tất không sửa dòng, xóa, hủy hoặc dùng Điều chỉnh tồn một
 đầu. Chọn **Đảo phiếu**, nhập toàn bộ hoặc phần còn lại; hệ thống tạo phiếu nội
 bộ chiều ngược lại. Muốn gửi hàng đang ở Bếp sang site khác, phải hoàn Bếp → Kho
@@ -80,8 +86,9 @@ trước rồi lập phiếu liên điểm từ Kho.
 ## 4. Sản xuất và tiêu hao
 
 - Sản xuất chỉ tại Bếp TT (và Owner). **Không** production tại chi nhánh (D093).
-- Owner duyệt từng công thức: sản lượng chuẩn, đơn vị thành phẩm và đơn vị của
-  từng nguyên liệu. Công thức `Cần duyệt`/`Ngừng dùng` không được tạo lệnh.
+- Owner, Kho Tổng hoặc Bếp TT có quyền production quản lý công thức: sản lượng
+  chuẩn, đơn vị thành phẩm và đơn vị từng nguyên liệu. Công thức `Cần duyệt`/
+  `Ngừng dùng` không được tạo lệnh; Bếp TT chỉ thao tác trong site được gán.
 - Tạo lệnh chỉ nhập sản lượng kế hoạch và vị trí cùng Bếp TT. Bắt đầu lệnh rồi
   mới nhập sản lượng/nguyên liệu thực tế để hoàn thành.
 - Mẻ không có sản lượng: hủy lệnh, sau đó ghi vật tư hỏng qua Hao hụt.
@@ -115,7 +122,7 @@ Thu ngân chi nhánh được gán đếm tồn nước theo ca (sáng/chiều/t
 - [inventory.md](inventory.md)
 - [operational-data-contract.md](operational-data-contract.md)
 
-## 6. Hygiene cutover (Production 2026-08-20)
+## 8. Hygiene cutover (Production 2026-08-20)
 
 Chờ đơn giá GRN đã chốt = 0. Còn đóng **không convert:** YCM-07082026-0022
 (`partially_ordered`); YC-31072026-0001 và YC-08082026-0002 (`submitted`, DC

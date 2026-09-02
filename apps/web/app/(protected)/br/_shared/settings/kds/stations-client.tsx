@@ -35,6 +35,7 @@ import { getKdsSetupWarnings } from "./setup-utils";
 /* ─── Types ─── */
 
 import { BRANCH_VI } from "@comtammatu/shared/messages";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 export interface StationRow {
   id: number;
   name: string;
@@ -152,7 +153,7 @@ export function StationsClient({
       <div className="flex flex-wrap gap-1.5">
         {station.category_ids.map((catId) => (
           <Badge key={catId} variant="secondary">
-            {categoryMap.get(catId) ?? `#${String(catId)}`}
+            {categoryMap.get(catId) ?? UNKNOWN_LABEL_VI}
           </Badge>
         ))}
       </div>
@@ -222,12 +223,18 @@ export function StationsClient({
       />
 
       {unmappedLabel ? (
-        <NoteCallout tone="warning" icon={<IconAlertTriangle className="size-4" />}>
+        <NoteCallout
+          tone="warning"
+          icon={<IconAlertTriangle className="size-4" />}
+        >
           {unmappedLabel}
         </NoteCallout>
       ) : null}
       {showCatchAllWarning ? (
-        <NoteCallout tone="warning" icon={<IconAlertTriangle className="size-4" />}>
+        <NoteCallout
+          tone="warning"
+          icon={<IconAlertTriangle className="size-4" />}
+        >
           {copy.catchAllWarning}
         </NoteCallout>
       ) : null}

@@ -1,4 +1,19 @@
 export const catalog = {
+  menuImport: {
+    description:
+      "Tệp .xlsx gồm 2 trang tính: Danh mục và Món ăn. Tên trùng sẽ được cập nhật.",
+    selectedFile: (fileName: string) => `Đã chọn: ${fileName}`,
+    submit: "Nhập dữ liệu",
+    categoriesSummary: (inserted: number, updated: number) =>
+      `Danh mục: +${inserted} tạo mới, ${updated} cập nhật`,
+    itemsSummary: (inserted: number, updated: number) =>
+      `Món ăn: +${inserted} tạo mới, ${updated} cập nhật`,
+    variantsSummary: (count: number) =>
+      `Biến thể: ${count} món được thay thế`,
+    modifiersSummary: (count: number) =>
+      `Món thêm: ${count} món được thay thế`,
+    sidesSummary: (count: number) => `Món phụ: ${count} món được thay thế`,
+  },
   index: {
     title: "Danh mục",
     back: "Danh mục",

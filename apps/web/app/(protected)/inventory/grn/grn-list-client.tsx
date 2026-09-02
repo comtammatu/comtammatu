@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   ExternalLink as IconExternalLink,
@@ -20,11 +26,7 @@ import {
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
 import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-} from "@comtammatu/ui/components/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import { BusinessDatePicker } from "@/components/form";
@@ -321,7 +323,10 @@ export function GrnListClient({
               label={statusLabels[row.status] ?? grnCopy.unknownStatus}
             />
             {row.invoiceId ? (
-              <Badge variant="outline" className="text-success text-2xs font-normal">
+              <Badge
+                variant="outline"
+                className="text-success text-2xs font-normal"
+              >
                 {valuationCopy.hasInvoice}
               </Badge>
             ) : canManageSupplierInvoice &&
@@ -360,8 +365,8 @@ export function GrnListClient({
       sortable: true,
       sortValue: (row) =>
         row.status === "confirmed"
-          ? row.receivedDate ?? ""
-          : row.expectedReceiveDate ?? "",
+          ? (row.receivedDate ?? "")
+          : (row.expectedReceiveDate ?? ""),
       render: (row) => {
         const date =
           row.status === "confirmed"
@@ -374,8 +379,7 @@ export function GrnListClient({
       key: "result",
       header: "Kết quả",
       sortable: true,
-      sortValue: (row) =>
-        row.completedLineCount / Math.max(row.lineCount, 1),
+      sortValue: (row) => row.completedLineCount / Math.max(row.lineCount, 1),
       render: (row) => (
         <div className="flex flex-col gap-1">
           <div>
@@ -491,20 +495,20 @@ export function GrnListClient({
       }
     >
       <TabsList
+        layout="scroll"
         size={isTouchLayout ? "touch" : "default"}
         aria-label={grnCopy.statusTabsAria}
-        className="flex w-max min-w-full sm:w-fit items-center justify-start flex-nowrap shrink-0"
       >
-        <TabsTrigger value="draft" className="flex-none px-2.5">{statusLabels.draft}</TabsTrigger>
-        <TabsTrigger value="confirmed" className="flex-none px-2.5">{statusLabels.confirmed}</TabsTrigger>
+        <TabsTrigger value="draft">{statusLabels.draft}</TabsTrigger>
+        <TabsTrigger value="confirmed">{statusLabels.confirmed}</TabsTrigger>
         {canPatchConfirmedUnitCost ? (
-          <TabsTrigger value={OWNER_UNPRICED_GRN_STATUS} className="flex-none px-2.5">
+          <TabsTrigger value={OWNER_UNPRICED_GRN_STATUS}>
             {grnCopy.confirmedUnitCost.tab}
             {unpricedTotal > 0 ? ` (${unpricedTotal})` : ""}
           </TabsTrigger>
         ) : null}
-        <TabsTrigger value="cancelled" className="flex-none px-2.5">{statusLabels.cancelled}</TabsTrigger>
-        <TabsTrigger value="all" className="flex-none px-2.5">{grnCopy.allStatuses}</TabsTrigger>
+        <TabsTrigger value="cancelled">{statusLabels.cancelled}</TabsTrigger>
+        <TabsTrigger value="all">{grnCopy.allStatuses}</TabsTrigger>
       </TabsList>
     </Tabs>
   );
@@ -583,7 +587,9 @@ export function GrnListClient({
                 <span className="inline-flex items-center gap-1.5">
                   <span>{grnCopy.listMetaPage}</span>
                   <span className="font-mono font-semibold tabular-nums text-foreground">
-                    {isUnpricedQueue ? visibleUnpricedLines.length : rows.length}
+                    {isUnpricedQueue
+                      ? visibleUnpricedLines.length
+                      : rows.length}
                   </span>
                 </span>
                 <span className="inline-flex items-center gap-1.5">

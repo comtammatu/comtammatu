@@ -30,20 +30,18 @@ UI Advisor Gate
 - States: stopped/starting/running, empty/populated waiting and history, bitmap/text/OCR present or unavailable, resolved, invalid receipt, network error, manually entered, light/dark theme, enlarged font
 - Verification: Agent unit/build/lint gates, receipt-layer unit tests, operational static guard, Redmi runtime and primary viewport inspection, then `corepack pnpm verify`
 
-## Finance period integrity: cockpit identity, startup capital, close readiness
+## Finance period integrity: inventory change, startup capital, close readiness
 
 State: verify
-Kind: feature
+Kind: fix
 Tier: T3
 Lane: finance
-Exit: `/finance` cockpit sums the inventory change for branch and company scope under one RPC identity; startup capital reads from one summary RPC and stays outside the period result; period-close readiness reports blockers and warnings without blocking the owner's manual close; landing surfaces only the readiness item.
-Evidence: Migrations `20260824010533` (cockpit inventory-change identity), `20260824013553` (startup-capital summary RPC), `20260824020445` (period-close readiness RPC); pgTAP tests `finance_cockpit_inventory_change_test.sql`, `finance_startup_capital_summary_test.sql`, `finance_period_close_readiness_test.sql`; static/unit tests `finance-period-readiness.test.ts` and updated finance statics; contract rows in `docs/ref/operational-data-contract.md`; `docs/modules/finance.md`. Hand-bridge RPC entries in `packages/database/src/types/database.types.ts` until types regenerate.
+Exit: `/finance` returns server-computed inventory change for branch and company scope, or the explicit without-inventory state before cutover; startup capital and equipment read one summary RPC and stay outside period result; close readiness reports blockers/warnings without blocking manual close. Soft-close reclassification audit remains outside this slice pending an owner decision.
+Evidence: Migrations `20260824010533`, `20260824013553`, `20260824020445`; pgTAP `finance_cockpit_inventory_change_test.sql`, `finance_startup_capital_summary_test.sql`, `finance_period_close_readiness_test.sql`; static tests `finance-period-readiness.test.ts`, `finance-result.test.ts`, `finance-revenue-date-range.test.ts`; contract `finance.period_close.readiness` in `docs/ref/operational-data-contract.md`; `docs/modules/finance.md`; hand-bridge RPC types pending regeneration.
 
 - [ ] Dry-run `node scripts/supabase-production-push.mjs --dry-run`, then owner-authorized apply of `20260824010533`, `20260824013553`, `20260824020445` on Production `enloyfnuerqgaqderbwb`; then `corepack pnpm db:types` to replace the hand-bridge entries
 - [ ] Run the three pgTAP tests against the applied schema
-- [ ] Smoke: `/finance` company scope shows the inventory change term; readiness item appears for last month only; startup-capital card matches `/finance/expenses` capital/deposit rows
-
-Parked owner decision (separate task, not this slice): audit trail for soft-close expense reclassification (`expense.category_reclassify` audit log), and readiness acknowledgment on `close_period_soft` / snapshot write in `auto_close_periods`.
+- [ ] Smoke: company scope shows the inventory term or without-inventory hint; readiness names current blockers; startup capital matches `/finance/expenses`
 
 ## Warehouse catalog write authority and ingredient unit wizard
 
@@ -71,20 +69,6 @@ Evidence: ADR `docs/plan/adr/0044-production-output-valuation-lineage.md`; migra
 - [ ] Owner applies to Production `enloyfnuerqgaqderbwb`; then `corepack pnpm db:types`
 - [ ] Confirm no `stocktake_gain` event references a `production_output` movement and no trapped `production_run` holder remains
 
-## Finance period integrity: cockpit inventory change, capital RPC, close readiness
-
-State: verify
-Kind: fix
-Tier: T3
-Lane: finance
-Exit: Period cockpit returns server-computed `inventory_change` (company scope sums valued branches; inactive cutover blanks the term with the without-inventory hint instead of zero); startup capital and equipment read one RPC; `/finance` surfaces read-only `Sức khoẻ chốt sổ` blockers/warnings; soft-close reclassification audit stays parked for owner decision.
-Evidence: ADR-less plan absorbed by owners — contract row `finance.period_close.readiness` in `docs/ref/operational-data-contract.md`; glossary `period_close_readiness`; regression FINANCE-RESULT-IDENTITY; pending migrations `20260824010533`, `20260824013553`, `20260824020445` with pgTAP tests `finance_cockpit_inventory_change_test.sql`, `finance_startup_capital_summary_test.sql`, `finance_period_close_readiness_test.sql`; static tests `finance-period-readiness.test.ts`, `finance-result.test.ts`, `finance-revenue-date-range.test.ts`.
-
-- [ ] Rehearse the three finance migrations on the verified Preview Branch and run their pgTAP files
-- [ ] Owner applies to Production `enloyfnuerqgaqderbwb` (same batch as ADR 0044/0045); then `corepack pnpm db:types`
-- [ ] Smoke: company-scope `Kết quả kinh doanh` shows the inventory term or the explicit without-inventory hint; `Sức khoẻ chốt sổ` names current blockers
-- [ ] Owner decision: parked soft-close reclassification audit (log `expense.category_reclassify` in `audit_logs` when category moves operating ↔ capital/deposit inside a soft-closed period; readiness warning `reclassified_after_soft_close`)
-
 ## QR payment no longer traps Self-Order and POS workflows
 
 State: verify
@@ -107,19 +91,6 @@ UI Advisor Gate
 
 - [ ] Phone: create VietQR, close drawers, add an item, reopen QR from bill
 - [ ] POS: opening Pay does not mint a QR; tapping bank transfer does; unused QR then cash still confirms
-
-## Next.js 16.3 Instant Navigations on `Cổng`
-
-State: verify
-Kind: feature
-Tier: T2
-Lane: `web/cổng`
-Exit: `apps/web` is on Next.js 16.3; `cacheComponents` and `partialPrefetching` are on; `Cổng` `/br/[branchId]` catalog and stock lists show a prefetched shell on click; POS/KDS/pickup rendering is unchanged this slice; `experimental.useOffline` stays off; PWA NetworkOnly for RSC/Server Actions still holds.
-Evidence: lockfile `next@16.3.1`; `apps/web/next.config.ts` (`cacheComponents`, `partialPrefetching`, `agentRules: false`, no `useOffline`); `nextjs-16-3-instant-navigations-static.test.ts`; `corepack pnpm verify` green. Phone smoke pending.
-
-Owner lock 2026-08-20: `Cổng`/kho only; no `useOffline`; `'use cache'` later with `updateTag`; `prefetch={true}` only list→detail.
-
-- [ ] Phone smoke: `Cổng` list→detail shows shell immediately; POS add-item and KDS ticket flow still match today
 
 ## Sales-branch cash books and company fund rollup
 
@@ -153,19 +124,6 @@ Exit: House drinks plus Coca/Fanta/Sprite each have 1 `"Ly nhựa trơn PP 95 - 
 Evidence: Production `enloyfnuerqgaqderbwb` applied `20260820002602` in the owner-authorized four-file batch (`20260820001437`, `20260820002602`, `20260820003251`, `20260820010000`). Live recipes: nine drinks x 1 `"Ly nhựa trơn PP 95 - 650ml"` (`cái`); `"Nước suối"` / `"Khăn Lạnh"` / `"Dụng cụ mang về"` have 0 cup lines. `corepack pnpm db:types` regenerated.
 
 - [ ] Reload `/inventory/menu-recipes` and confirm Coca/Fanta/Sprite show the cup line
-
-## PWA remediation (install identity + SW)
-
-State: verify
-Kind: feature
-Tier: T3
-Lane: web/pwa
-Exit: Phase 0 contract in `docs/spec/pwa.md` includes locked OQ-2 `/me` PWA, OQ-3 isolation (overlapping `scope: "/"`, per-branch `"Cổng"` `start_url`), OQ-4 distinct icons/badges, OQ-5 no iOS splash (Android TV pickup). Phase 1 H5/H9/H6, Phase 2 H2/H20/H7/H8, Phase 3 icons, and KDS/pickup Wake Lock landed. POS stays cloud-first. Unrelated dirty KDS layout files are untouched.
-Evidence: `docs/spec/pwa.md`; `apps/web/tests/pwa-manifest.test.ts`; `lint:copy`; `lint:language-policy`; `corepack pnpm verify`
-
-Plan pointer: `docs/plan/pwa-remediation.md` (do not implement Phases 0–4 from it). Remaining later: optional H11 station `themeColor`, H12 screenshots, Phase 5 HyperOS ops runbook (H1). H10 cancelled.
-
-- [ ] Optional later polish (H11/H12) or Phase 5 H1 runbook — not this slice
 
 ## Branch `Công cụ` hub: advertise tools instead of hiding them
 
@@ -280,7 +238,7 @@ Tier: T3
 Lane: inventory
 Exit: Warehouse creates PO with `purchase_request_id` null and Auto-GRN; YCM/YCH writes frozen; tables dropped only after soak. Do not convert a YCM already turned into a PO, or a YCH already fulfilled into a received DC.
 Blocker: Hide YCM create only after warehouse `"Tạo đơn"` works live on Production.
-Evidence: Production `enloyfnuerqgaqderbwb` applied `20260820001437` in the owner-authorized four-file batch. Contract: ADR 0040–0042 + `docs/ref/inventory.md`. Plan: `docs/plan/inventory-operating-cutover.md`.
+Evidence: Production `enloyfnuerqgaqderbwb` applied `20260820001437` in the owner-authorized four-file batch. Contract: ADR 0040–0042 + `docs/ref/inventory.md`.
 
 - [ ] Hide YCM create / allocate only after warehouse `"Tạo đơn"` works live
 - [ ] Wave 3 dest-initiated DC + BM `inventory:transfer_create` (separate)
@@ -809,16 +767,7 @@ Exit: The owner has answered the open questions below, and the answers are recor
 Evidence: Owner workshop outcome; `apps/web/lib/finance/finance-cockpit.ts:203` and `apps/web/lib/finance/expense-actions.ts:568` gate food cost on cutover `status === 'active'`; `prepare_/activate_inventory_valuation_cutover` are `GRANT … TO service_role` only with no UI (`supabase/migrations/20260802162900_baseline.sql:89302-89303`).
 Blocker: Owner-only — needs investigation and discussion before any decision. Explicitly parked, not deferred by the agent. Do not write an Accepted ADR for this until the workshop happens.
 
-Open questions for the workshop:
-
-- What does "valuation cutover" mean in operations language, stated without accounting vocabulary?
-- Which business date is the cutover day, and what happens to movements before it?
-- Who produces the opening stock quantities and unit costs, and how are they verified before activation?
-- Should food-cost screens be visible before activation (showing that they are inert), or stay hidden until cutover is active?
-- How does activation relate to the `pos_stock_outcome_posting` branch flag: flipped at the same moment, staged per branch afterwards, or independent?
-- Reconciliation only iterates tenants that already have a cutover row, and its results have no screen (INV-14). Does the output need a surface, or does it reach the owner through an existing notification?
-
-- [ ] Hold the owner workshop, then record the answers in `docs/ref/inventory.md` / `docs/modules/finance.md` or a design ADR and delete this entry.
+- [ ] Hold the owner workshop: define the operational meaning/date, opening stock owner/proof, pre-cutover food-cost visibility, relation to `pos_stock_outcome_posting`, and the reconciliation output surface; record answers in `docs/ref/inventory.md`, `docs/modules/finance.md`, or a design ADR, then delete this outcome.
 
 ## Remove compatibility payment writes
 
@@ -863,21 +812,7 @@ Kind: debt
 Tier: T3
 Lane: design-system/enforcement
 Exit: Every frozen budget below trends down by removing allowlist entries (ratchet only fails on growth, so burned files may be dropped); the 40 `tune` pages reach `keep`/`final` disposition through the three exemplar waves. Never raise a budget; new files start at 0.
-Evidence: `scripts/check-ui-contract.mjs` `legacy-debt-ratchet` guards (frozen 2026-08-13); `corepack pnpm audit:ui-components` Page Disposition Coverage; exemplar fixes in `finance/components/filter-bar.tsx`, `team/team-workspace-tabs.tsx`, `work/_lib/compose-styles.ts`, and the icon-tier batch.
-
-Frozen debt per guard (burn down to zero):
-
-| guard | frozen hits | files |
-| --- | --- | --- |
-| `arbitrary-dimension` | 85 | 53 |
-| `presentation-inline-style` | 13 | 7 |
-| `font-bold-lock` | 26 | 15 |
-| `hex-literal-app` | 15 | 2 |
-| `off-tier-radius-app` | 6 | 1 (ds-lab tier demo — keep until ds-lab cleanup) |
-| `icon-size-tier` | 0 | 0 |
-| `chrome-class-constant` | 0 | 0 |
-
-`audit:ui-components` tune pages (40) in three waves, each anchored to an Exemplar Matrix exemplar:
+Evidence: `scripts/check-ui-contract.mjs` owns the frozen `legacy-debt-ratchet` counts; `corepack pnpm audit:ui-components` owns Page Disposition Coverage; exemplar fixes in `finance/components/filter-bar.tsx`, `team/team-workspace-tabs.tsx`, `work/_lib/compose-styles.ts`, and the icon-tier batch.
 
 - [ ] Wave 1 — control_surface LIST/DETAIL pages follow `apps/web/app/(protected)/inventory/grn/page.tsx`. Burned so far: `inventory/production/new/production-new-client.tsx` (4 hits → flex + `max-w-44`/`w-22` named scale) and the `font-bold` → `font-semibold` batch (`finance/revenue/[date]/revenue-drill-tabs.tsx`, `finance/revenue/revenue-client.tsx`, `components/form/photo-upload-input.tsx`).
 - [ ] Wave 2 — branch `(operator)` pages follow `apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx`.

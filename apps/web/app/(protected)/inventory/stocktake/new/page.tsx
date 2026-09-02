@@ -5,8 +5,6 @@ import { getBranchSiteDisplayName } from "../../_lib/branch-site-labels";
 import { NewStocktakeSessionClient } from "./new-session-client";
 import { messages } from "@lib/messages";
 
-export const instant = false;
-
 interface NewStocktakeSessionPageContentProps {
   searchParams?: Promise<{ branch?: string | string[] }>;
   routeBranchId?: number;

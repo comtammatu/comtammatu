@@ -53,7 +53,12 @@ import {
   type RowActionItem,
 } from "@/components/row-actions-menu";
 
-import { ACTIONS_VI, BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
+import {
+  ACTIONS_VI,
+  BRANCH_VI,
+  FORM_VI,
+  INVENTORY_VI,
+} from "@comtammatu/shared/messages";
 import {
   inventoryListFilterSelectClassName,
 } from "../_components/inventory-list-filters";
@@ -73,7 +78,7 @@ export interface StocktakeSessionRow {
 }
 
 function stocktakeCode(row: Pick<StocktakeSessionRow, "id" | "session_number">): string {
-  return row.session_number?.trim() || `KK-${row.id}`;
+  return row.session_number?.trim() || INVENTORY_VI.documentNumberPending;
 }
 
 export interface BranchOption {
@@ -372,7 +377,13 @@ export function StocktakeListClient({
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Item
           variant="outline"
-          onClick={() => replaceListFilters({ status: "all" })}
+          render={
+            <button
+              type="button"
+              aria-pressed={statusFilter === "all"}
+              onClick={() => replaceListFilters({ status: "all" })}
+            />
+          }
           className={cn(
             "flex flex-col justify-between p-3 text-left cursor-pointer",
             statusFilter === "all"
@@ -396,10 +407,17 @@ export function StocktakeListClient({
 
         <Item
           variant="outline"
-          onClick={() =>
-            replaceListFilters({
-              status: statusFilter === "in_progress" ? "all" : "in_progress",
-            })
+          render={
+            <button
+              type="button"
+              aria-pressed={statusFilter === "in_progress"}
+              onClick={() =>
+                replaceListFilters({
+                  status:
+                    statusFilter === "in_progress" ? "all" : "in_progress",
+                })
+              }
+            />
           }
           className={cn(
             "flex flex-col justify-between p-3 text-left cursor-pointer",
@@ -424,10 +442,16 @@ export function StocktakeListClient({
 
         <Item
           variant="outline"
-          onClick={() =>
-            replaceListFilters({
-              status: statusFilter === "completed" ? "all" : "completed",
-            })
+          render={
+            <button
+              type="button"
+              aria-pressed={statusFilter === "completed"}
+              onClick={() =>
+                replaceListFilters({
+                  status: statusFilter === "completed" ? "all" : "completed",
+                })
+              }
+            />
           }
           className={cn(
             "flex flex-col justify-between p-3 text-left cursor-pointer",
@@ -452,10 +476,16 @@ export function StocktakeListClient({
 
         <Item
           variant="outline"
-          onClick={() =>
-            replaceListFilters({
-              status: statusFilter === "cancelled" ? "all" : "cancelled",
-            })
+          render={
+            <button
+              type="button"
+              aria-pressed={statusFilter === "cancelled"}
+              onClick={() =>
+                replaceListFilters({
+                  status: statusFilter === "cancelled" ? "all" : "cancelled",
+                })
+              }
+            />
           }
           className={cn(
             "flex flex-col justify-between p-3 text-left cursor-pointer",

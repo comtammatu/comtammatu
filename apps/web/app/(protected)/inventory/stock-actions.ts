@@ -4,7 +4,10 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { INVENTORY_OPS_ROLES } from "@comtammatu/shared/auth";
 import { withAction } from "@/_lib/with-action";
-import { inventoryNonzeroQuantitySchema } from "./_lib/inventory-quantity-schema";
+import {
+  inventoryNonnegativeQuantitySchema,
+  inventoryNonzeroQuantitySchema,
+} from "./_lib/inventory-quantity-schema";
 import { mapInventoryRpcFailure } from "./_lib/rpc-failure";
 import {
   INVENTORY_ERROR_CODES,
@@ -177,9 +180,9 @@ export const ownerSetCompanyWac = withAction(
 const thresholdItemSchema = z
   .object({
     ingredientId: z.coerce.number().int().positive(),
-    minStockLevel: z.coerce.number().min(0),
-    targetStockLevel: z.coerce.number().min(0),
-    reorderQuantity: z.coerce.number().min(0).nullable().optional(),
+    minStockLevel: inventoryNonnegativeQuantitySchema,
+    targetStockLevel: inventoryNonnegativeQuantitySchema,
+    reorderQuantity: inventoryNonnegativeQuantitySchema.nullable().optional(),
   })
   .refine((item) => item.targetStockLevel >= item.minStockLevel, {
     message: "Mức cấp lên phải lớn hơn hoặc bằng mức cảnh báo.",
@@ -187,6 +190,7 @@ const thresholdItemSchema = z
 
 const saveBranchThresholdsSchema = z.object({
   branchId: z.coerce.number().int().positive(),
+  locationId: z.coerce.number().int().positive(),
   thresholds: z.array(thresholdItemSchema).min(1).max(500),
 });
 
@@ -207,12 +211,21 @@ export const saveBranchStockThresholdsAction = withAction(
     const ingredientIds = [
       ...new Set(data.thresholds.map((threshold) => threshold.ingredientId)),
     ];
-    const [branchResult, ingredientsResult] = await Promise.all([
+    const [branchResult, locationResult, ingredientsResult] = await Promise.all([
       supabase
         .from("branches")
         .select("id")
         .eq("tenant_id", claims.tenant_id)
         .eq("id", data.branchId)
+        .maybeSingle(),
+      supabase
+        .from("inventory_locations")
+        .select("id")
+        .eq("tenant_id", claims.tenant_id)
+        .eq("branch_id", data.branchId)
+        .eq("id", data.locationId)
+        .eq("is_active", true)
+        .in("location_kind", ["warehouse", "kitchen"])
         .maybeSingle(),
       supabase
         .from("ingredients")
@@ -223,6 +236,8 @@ export const saveBranchStockThresholdsAction = withAction(
     if (
       branchResult.error ||
       branchResult.data == null ||
+      locationResult.error ||
+      locationResult.data == null ||
       ingredientsResult.error ||
       (ingredientsResult.data ?? []).length !== ingredientIds.length
     ) {
@@ -232,10 +247,15 @@ export const saveBranchStockThresholdsAction = withAction(
     const { error: rpcError } = await (
       supabase.rpc as unknown as (
         fn: string,
-        args: { p_branch_id: number; p_thresholds: unknown },
+        args: {
+          p_branch_id: number;
+          p_location_id: number;
+          p_thresholds: unknown;
+        },
       ) => Promise<{ error: { message: string } | null }>
     )("upsert_branch_stock_thresholds", {
       p_branch_id: data.branchId,
+      p_location_id: data.locationId,
       p_thresholds: data.thresholds.map((t) => ({
         ingredient_id: t.ingredientId,
         min_stock_level: t.minStockLevel,

@@ -6,7 +6,7 @@
 
 ## Context
 
-A store branch currently owns one active warehouse that receives external
+A store branch historically owned one active warehouse that received external
 transfers, feeds POS/KDS consumption, and hosts employee counts. This hides the
 physical handoff from storage to preparation and makes warehouse reconciliation
 indistinguishable from daily kitchen counting.
@@ -17,11 +17,13 @@ therefore be additive and ledger-driven.
 
 ## Decision
 
-An activated store branch owns exactly one active `warehouse` and one active
-`kitchen` location.
+Every active store branch owns exactly one active `warehouse` and one active
+`kitchen` location. This topology is mandatory, not a feature that an Owner
+prepares, activates, disables, or rolls back. `central_supply` and
+`central_kitchen` remain single-warehouse sites and do not own a store kitchen.
 
 - The warehouse remains `default_receive` and `default_issue`.
-- The kitchen becomes `default_consumption` after activation.
+- The kitchen is `default_consumption`.
 - POS orders and daily-limit holds snapshot
   `stock_consumption_location_id`; the snapshot is immutable.
 - Existing orders and holds are backfilled to the historical warehouse.
@@ -49,27 +51,24 @@ creates a received transfer in the opposite direction and may reverse all or a
 validated remaining quantity. The generic one-sided inventory correction RPC
 rejects intra-site transfers.
 
-## Preparation and Cutover
+## Provisioning and Cutover
 
-`prepare_branch_kitchen_split` is Owner-only. It creates or reuses an inactive-
-routing kitchen without changing defaults. The Owner then creates one intra-site
-warehouse-to-kitchen transfer containing every positive warehouse balance.
+`ensure_branch_inventory_location_defaults` creates or repairs both locations
+when a store branch is created or reactivated. The database trigger is the
+authority; application UI does not expose a topology toggle. A compatibility
+flag remains enabled for routines introduced during the staged ADR 0048 rollout,
+but attempts to disable or delete it fail closed.
 
-`set_branch_kitchen_split` is Owner-only. Activation fails while the branch has
-open POS work or holds, live KDS tickets, open inter-site transfers, open
-stocktakes/count slips, or a non-zero warehouse balance. It atomically enables
-the feature flag, moves active employee count assignments to the kitchen, and
-switches consumption.
-
-Rollback switches the default consumption location back to the warehouse. It
-does not rewrite order/hold snapshots or balances. Stock returns through an
-intra-site kitchen-to-warehouse transfer.
+Existing order and hold snapshots retain their historical location. Existing
+warehouse balances also remain warehouse balances; operators supply the kitchen
+through an auditable intra-site transfer before opening POS after migration.
+There is no rollback to a single-location store model.
 
 ## Thresholds, Counts, and Reporting
 
 Thresholds are keyed by location and store both `min_stock_level` and
 `target_stock_level`. Kitchen replenishment is capped at warehouse availability.
-Employee count assignments resolve to the kitchen after activation. Warehouse
+Employee count assignments resolve to the kitchen. Warehouse
 stocktakes require an explicit location and Manager/Owner authority.
 
 Finance goods-in includes only `inter_site` transfers. Location reports expose
@@ -85,5 +84,5 @@ receiving remains operationally unchanged. The extra location and transfer scope
 increase reporting and UI state, but eliminate one-sided corrections and make
 the warehouse-to-kitchen custody handoff auditable.
 
-Production apply and branch activation require explicit Owner delegation. The
-application can deploy with every split flag disabled.
+Production apply requires explicit Owner delegation and an operational cutover
+window so each existing branch can supply its kitchen before POS reopens.

@@ -20,11 +20,11 @@ const attendanceSource = readAttendanceTableModules();
 test("HR permission and audit selects expose persistent accessible names", () => {
   assert.match(
     permissionsSource,
-    /<SelectField[\s\S]*?name="roleCode"[\s\S]*?label="Vai trò hệ thống"/,
+    /<SelectField[\s\S]*?name="roleCode"[\s\S]*?label=\{copy\.roleHeader\}/,
   );
   assert.match(
     permissionsSource,
-    /<SelectField[\s\S]*?name="branchId"[\s\S]*?label="Chi nhánh"/,
+    /<SelectField[\s\S]*?name="branchId"[\s\S]*?label=\{copy\.branchLabel\}/,
   );
   assert.match(auditFiltersSource, /const filterIdPrefix = useId\(\)/);
   assert.match(auditFiltersSource, /htmlFor=\{actionFilterId\}/);

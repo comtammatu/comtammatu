@@ -1,6 +1,38 @@
 import { ORDER_VI, ORDERS_VI } from "@comtammatu/shared/messages";
 
 export const orders = {
+  operationalVerdict: {
+    cancelled: {
+      title: "Đơn đã hủy",
+      description: "Xem món và lịch sử thao tác để xác định phần đã hủy.",
+    },
+    in_progress: {
+      title: "Đơn đang được xử lý",
+      description: "Trạng thái bên dưới phản ánh lần ghi nhận gần nhất.",
+    },
+    payment_needs_review: {
+      title: "Thanh toán cần kiểm tra",
+      description:
+        "Có khoản VietQR chưa khớp. Kiểm tra thanh toán và lịch sử đơn.",
+    },
+    print_needs_review: {
+      title: "Có phiếu chưa in thành công",
+      description: "Kiểm tra máy in và lịch sử phiếu.",
+    },
+    kitchen_needs_review: {
+      title: "Món và bếp chưa khớp",
+      description: "Có món chưa đủ ghi nhận hoàn thành tại bếp.",
+    },
+    history_incomplete: {
+      title: "Chưa đủ dữ liệu để kết luận",
+      description:
+        "Dữ liệu cũ chưa đầy đủ; đối chiếu phiếu giấy hoặc xác nhận ca.",
+    },
+    recorded: {
+      title: "Chưa thấy lỗi rõ ràng",
+      description: "Đối chiếu thực tế nếu ca vận hành có phản ánh.",
+    },
+  },
   eyebrow: ORDER_VI.short,
   description: `${ORDER_VI.short} và hoàn tiền.`,
   operatorDescription: "Ưu tiên đơn đang xử lý; tra cứu ở tab Gần đây.",
@@ -26,6 +58,7 @@ export const orders = {
   refundFailed: "Không thể ghi nhận hoàn tiền",
   refundEligible: "Đủ điều kiện hoàn toàn bộ thanh toán",
   loadFailed: ORDERS_VI.loadOrdersFailed,
+  relatedPosSession: "ca POS liên quan",
   noPayment: "—",
   operatorCountNote: (shown: number, total: number) =>
     total > shown

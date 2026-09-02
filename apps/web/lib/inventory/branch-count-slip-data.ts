@@ -3,6 +3,8 @@ import "server-only";
 import { notFound, redirect } from "next/navigation";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import {
   getAuthContext,
   probePermission,
@@ -111,7 +113,7 @@ export async function loadBranchCountSlipData(
   if (scope.outOfScope || scope.selectedBranchId !== routeBranchId) notFound();
   const branchName =
     scope.allowedBranches.find((branch) => branch.id === routeBranchId)?.name ??
-    `CN #${routeBranchId}`;
+    UNKNOWN_LABEL_VI;
 
   let slipsQuery = supabase
     .from("inventory_count_slips")
@@ -176,7 +178,10 @@ export async function loadBranchCountSlipData(
   }
   const lineResult =
     slipIds.length === 0
-      ? { data: [] as Array<CountSlipQueryLine & { slip_id: number }>, error: null }
+      ? {
+          data: [] as Array<CountSlipQueryLine & { slip_id: number }>,
+          error: null,
+        }
       : await supabase
           .from("inventory_count_slip_lines")
           .select(
@@ -303,7 +308,10 @@ export async function loadBranchCountSlipData(
       const locId = Number(row.location_id);
       const ingId = Number(row.ingredient_id);
       if (Number.isFinite(locId) && Number.isFinite(ingId)) {
-        liveStockByCell.set(`${locId}:${ingId}`, Number(row.current_quantity ?? 0));
+        liveStockByCell.set(
+          `${locId}:${ingId}`,
+          Number(row.current_quantity ?? 0),
+        );
       }
     }
   }
@@ -317,11 +325,10 @@ export async function loadBranchCountSlipData(
       slipNumber:
         typeof slip.slip_number === "string" && slip.slip_number.trim()
           ? slip.slip_number
-          : `PD-${slip.id}`,
+          : INVENTORY_VI.documentNumberPending,
       branchName,
       locationName:
-        embeddedString(slip.inventory_locations, "name") ??
-        `Kho #${slip.location_id}`,
+        embeddedString(slip.inventory_locations, "name") ?? UNKNOWN_LABEL_VI,
       employeeName:
         employeeNameById.get(Number(slip.employee_id)) ??
         employeeName(slip.employees) ??
@@ -347,13 +354,13 @@ export async function loadBranchCountSlipData(
             ? (unitByIngredient.get(unitKey(ingredientId, entryUnitId)) ?? null)
             : null;
         const baseUnit = baseUnitByIngredient.get(ingredientId) ?? null;
-        const liveStock = liveStockByCell.get(`${slip.location_id}:${ingredientId}`) ?? null;
+        const liveStock =
+          liveStockByCell.get(`${slip.location_id}:${ingredientId}`) ?? null;
         return buildCountSlipLineView({
           id: line.id,
           ingredientId,
           ingredientName:
-            embeddedString(line.ingredients, "name") ??
-            `#${line.ingredient_id}`,
+            embeddedString(line.ingredients, "name") ?? UNKNOWN_LABEL_VI,
           entryUnitId,
           entryUnitCode: entryUnit?.code ?? embeddedString(line.units, "code"),
           baseUnitCode: baseUnit?.code ?? null,

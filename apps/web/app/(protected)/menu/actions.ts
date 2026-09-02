@@ -852,7 +852,7 @@ export async function importMenu(
 
   const file = formData.get("file");
   if (!(file instanceof File)) {
-    return { success: false, error: "Thiếu file dữ liệu" };
+    return { success: false, error: "Thiếu tệp dữ liệu" };
   }
 
   let parsed;
@@ -864,7 +864,7 @@ export async function importMenu(
     console.error("menu.import.parse_failed", { error: err });
     return {
       success: false,
-      error: "Không đọc được file.",
+      error: "Không đọc được tệp.",
     };
   }
 
@@ -907,7 +907,7 @@ export async function importMenu(
       return {
         success: false,
         error:
-          'Không nhận diện được file CSV. Tiêu đề cột phải có "Tên món" (nhập món ăn) hoặc "Tên danh mục" (nhập danh mục).',
+          'Không nhận diện được tệp CSV. Tiêu đề cột phải có "Tên món" (nhập món ăn) hoặc "Tên danh mục" (nhập danh mục).',
       };
     }
   }
@@ -993,7 +993,7 @@ export async function importMenu(
     if (issues.length > 0) {
       return {
         success: false,
-        error: `Có ${issues.length} dòng lỗi trong "Danh muc". Vui lòng sửa và thử lại.`,
+        error: `Có ${issues.length} dòng lỗi trong "Danh mục". Vui lòng sửa và thử lại.`,
         issues,
       };
     }
@@ -1114,7 +1114,7 @@ export async function importMenu(
           sheet: itemSheet.name,
           row: rowNumber,
           field: "Danh mục",
-          message: `Danh mục "${parsedRow.data.category_name}" không tồn tại. Thêm vào trang tính "Danh muc" trước.`,
+          message: `Danh mục "${parsedRow.data.category_name}" không tồn tại. Thêm vào trang tính "Danh mục" trước.`,
         });
         return;
       }
@@ -1134,7 +1134,7 @@ export async function importMenu(
     if (issues.length > 0) {
       return {
         success: false,
-        error: `Có ${issues.length} dòng lỗi trong "Mon an". Vui lòng sửa và thử lại.`,
+        error: `Có ${issues.length} dòng lỗi trong "Món ăn". Vui lòng sửa và thử lại.`,
         issues,
       };
     }

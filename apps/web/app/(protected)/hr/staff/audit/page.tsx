@@ -17,8 +17,6 @@ import {
   withHrBranchScope,
 } from "@/lib/hr-scope";
 
-export const instant = false;
-
 interface Props {
   searchParams: Promise<{
     action?: string;

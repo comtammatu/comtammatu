@@ -42,8 +42,6 @@
 ## Inventory nhanh
 
 - Canonical reference: [ref/inventory.md](ref/inventory.md)
-- Cutover discussion log (do not implement from): [plan/inventory-operating-cutover.md](plan/inventory-operating-cutover.md)
-- PWA pointer (canonical: [spec/pwa.md](spec/pwa.md)): [plan/pwa-remediation.md](plan/pwa-remediation.md)
 - SOP: [ref/inventory-sop.md](ref/inventory-sop.md)
 - QA gate: [runbooks/inventory/pre-release-qa.md](runbooks/inventory/pre-release-qa.md)
 - Runtime route/UI contract: [modules/web-app.md](modules/web-app.md)
@@ -56,6 +54,6 @@
 - `agent/rules/`: agent entry rules, workflow gates, skill routing, database/UI/engineering constraints
 - `spec/design-system.md`: Má Tư visual contract; primitive behavior,
   workflow composition và regression proof có owner riêng trong authority map
-- `plan/`: compatibility decisions, ADR records, and retired discussion
-  pointers (inventory cutover, PWA remediation); not implementation SSOT
+- `plan/`: compatibility decisions, ADR records, and the one active registered
+  rollout plan; not implementation SSOT
 - `runbooks/`: operational verification (gồm `db/` cho Preview branch và re-baseline)

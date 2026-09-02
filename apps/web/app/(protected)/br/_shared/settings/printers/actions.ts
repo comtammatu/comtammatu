@@ -28,7 +28,10 @@ const printerSchema = z.object({
   branch_id: z.coerce.number().int().positive(),
   role: z.string().trim().min(1).max(64).optional(),
   name: z.string().trim().min(1, { error: "Nhập tên máy in" }).max(120),
-  lan_host: z.string().trim().min(1, { error: "Nhập LAN host" }),
+  lan_host: z
+    .string()
+    .trim()
+    .min(1, { error: printerCopy.networkAddressRequired }),
   lan_port: z.coerce.number().int().min(1).max(65535).nullable().optional(),
   paper_width_mm: z.union([z.literal(58), z.literal(80)]).default(80),
   is_active: z.boolean().default(true),

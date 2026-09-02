@@ -17,8 +17,6 @@ import {
 import { messages } from "@lib/messages";
 import { WasteCreateClient } from "./waste-create-client";
 
-export const instant = false;
-
 interface WasteNewPageContentProps {
   searchParams?: Promise<{ branch?: string | string[] }>;
 }

@@ -83,7 +83,7 @@ test("Control home root is a real responsive landing", () => {
   assert.doesNotMatch(overview, /module-link/);
   assert.doesNotMatch(overview, /AppLinkCard|LinkCardGrid/);
   assert.doesNotMatch(overview, /KpiCard/);
-  assert.match(copy, /eyebrow: "Toàn hệ thống"/);
+  assert.doesNotMatch(copy, /eyebrow: "Toàn hệ thống"/);
   assert.match(copy, /title: "Hôm nay"/);
   assert.match(copy, /attentionTitle: "Cần xử lý"/);
   assert.doesNotMatch(copy, /Chỉ dành cho Owner/);

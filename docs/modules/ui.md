@@ -8,36 +8,36 @@ adapter serves which plane, and the runtime details that exist only in source.
 This file answers "which file do I import and what does it already do". It does
 not own policy. On any conflict the owner below wins.
 
-| Concern | Owner |
-| --- | --- |
-| Tokens, Color Usage, typography, rhythm, elevation, motion, Naming Standard, Base UI rule, Frame law, Dual Thesis, Structural Governance, Component Authority (Date / Button / Overlay choosers), Layout UI/UX Frame, Copy Contract, record depth | `docs/spec/design-system.md` |
-| Archetypes, UI Advisor Gate template, composition workflow | `docs/spec/page-archetypes.md` |
-| Actor, device, route context, what a role may see | `docs/ref/screen-context-map.md` |
-| Adapter/block recipes (`need` / `use` / `fallback` / `forbidden` / `exemplar`) | `scripts/ui-component-registry.mjs` |
-| Agent guardrails, Decision Ladder, UI Review Checklist | `docs/agent/rules/ui.md` |
-| Toast, notification, severity, routing | `docs/spec/toast-notification-system.md` |
-| Installable PWA, offline/SW, OS support | `docs/spec/pwa.md` |
-| Negative rules from incidents | `tasks/regressions.md` |
+| Concern                                                                                                                                                                                                                                           | Owner                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| Tokens, Color Usage, typography, rhythm, elevation, motion, Naming Standard, Base UI rule, Frame law, Dual Thesis, Structural Governance, Component Authority (Date / Button / Overlay choosers), Layout UI/UX Frame, Copy Contract, record depth | `docs/spec/design-system.md`             |
+| Archetypes, UI Advisor Gate template, composition workflow                                                                                                                                                                                        | `docs/spec/page-archetypes.md`           |
+| Actor, device, route context, what a role may see                                                                                                                                                                                                 | `docs/ref/screen-context-map.md`         |
+| Adapter/block recipes (`need` / `use` / `fallback` / `forbidden` / `exemplar`)                                                                                                                                                                    | `scripts/ui-component-registry.mjs`      |
+| Agent guardrails, Decision Ladder, UI Review Checklist                                                                                                                                                                                            | `docs/agent/rules/ui.md`                 |
+| Toast, notification, severity, routing                                                                                                                                                                                                            | `docs/spec/toast-notification-system.md` |
+| Installable PWA, offline/SW, OS support                                                                                                                                                                                                           | `docs/spec/pwa.md`                       |
+| Negative rules from incidents                                                                                                                                                                                                                     | `tasks/regressions.md`                   |
 
 Do not restate token values, class recipes, copy budgets, or archetype contracts
 here. Update the owner instead.
 
 ## Where Code Lives
 
-| Layer | Path | Import specifier |
-| --- | --- | --- |
-| Shared primitives | `packages/ui/src/components/*` | `@comtammatu/ui/components/<name>` |
-| Shared utilities | `packages/ui/src/lib/*` | `@comtammatu/ui/lib/<name>` |
-| Single CSS entry | `packages/ui/src/styles/globals.css` | — |
-| App surface adapters | `apps/web/app/components/surface/*` | `@/components/surface` |
-| Responsive table adapter | `apps/web/app/components/data-table/*` | `@/components/data-table` |
-| KPI adapters | `apps/web/app/components/kpi/*` | `@/components/kpi` |
-| Form helpers | `apps/web/app/components/form/*` | `@/components/form` |
-| control_surface chrome | `apps/web/app/components/app-shell.tsx`, `control-surface-shell.tsx` | `@/components/*` |
-| Branch operator adapters | `apps/web/lib/branch-operator/components/branch-operator-page.tsx` | — |
-| Employee adapters | `apps/web/lib/staff-runtime/components/staff-runtime-page.tsx` | — |
-| Settings shell | `apps/web/app/(protected)/settings/settings-page-frame.tsx` | — |
-| Dev-only layout lab (production 404) | `apps/web/app/(dev)/ds-lab/` | — |
+| Layer                                | Path                                                                 | Import specifier                   |
+| ------------------------------------ | -------------------------------------------------------------------- | ---------------------------------- |
+| Shared primitives                    | `packages/ui/src/components/*`                                       | `@comtammatu/ui/components/<name>` |
+| Shared utilities                     | `packages/ui/src/lib/*`                                              | `@comtammatu/ui/lib/<name>`        |
+| Single CSS entry                     | `packages/ui/src/styles/globals.css`                                 | —                                  |
+| App surface adapters                 | `apps/web/app/components/surface/*`                                  | `@/components/surface`             |
+| Responsive table adapter             | `apps/web/app/components/data-table/*`                               | `@/components/data-table`          |
+| KPI adapters                         | `apps/web/app/components/kpi/*`                                      | `@/components/kpi`                 |
+| Form helpers                         | `apps/web/app/components/form/*`                                     | `@/components/form`                |
+| control_surface chrome               | `apps/web/app/components/app-shell.tsx`, `control-surface-shell.tsx` | `@/components/*`                   |
+| Branch operator adapters             | `apps/web/lib/branch-operator/components/branch-operator-page.tsx`   | —                                  |
+| Employee adapters                    | `apps/web/lib/staff-runtime/components/staff-runtime-page.tsx`       | —                                  |
+| Settings shell                       | `apps/web/app/(protected)/settings/settings-page-frame.tsx`          | —                                  |
+| Dev-only layout lab (production 404) | `apps/web/app/(dev)/ds-lab/`                                         | —                                  |
 
 `@/components/surface` re-exports only; each adapter is one file under
 `surface/`. Domain wrappers may keep their own API but must delegate to these
@@ -90,6 +90,10 @@ Facts that live in code and cannot be read off the spec:
 - Prefer named props over ad-hoc classes: `flush` for table/list edge alignment,
   `scroll` for horizontal table scroll; `AppSection` uses `contentFlush` /
   `contentScroll` for the same roles.
+- `TabsList layout="equal"` owns fixed two/three-way workspace tabs;
+  `layout="scroll"` owns variable-length status/category tabs. Branch sub-tabs
+  pair either layout with `size="touch"`; `AppPageTabs` owns the responsive
+  control-surface variant.
 - Theme runtime is single-source in `packages/ui/src/lib/theme-cookie.ts`. No
   second theme context, toggle, or storage key.
 
@@ -98,12 +102,12 @@ Facts that live in code and cannot be read off the spec:
 Composition ladder and plane definitions: `design-system.md` § Layout UI/UX
 Frame and § Structural Governance. This table only maps plane to code.
 
-| Plane | Adapters |
-| --- | --- |
-| `control_surface` | `AppPage` → `AppPageHeader` → `AppListFrame` / `AppSection` / `DocumentFormFrame` → `AppToolbar` / `AppDetailFooter` |
-| Branch operator | `BranchOperatorPage`, `BranchOperatorPanel`, `BranchOperatorActionSection`, `ItemGroup` |
-| Station | `StationSection`, `Frame`, `OperationalBoardCard` |
-| Public | `AppPage` + `PublicSection` / `AppEmptyState` |
+| Plane                 | Adapters                                                                                                                      |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `control_surface`     | `AppPage` → `AppPageHeader` → `AppListFrame` / `AppSection` / `DocumentFormFrame` → `AppToolbar` / `AppDetailFooter`          |
+| Branch operator       | `BranchOperatorPage`, `BranchOperatorPanel`, `BranchOperatorActionSection`, `ItemGroup`                                       |
+| Station               | `StationSection`, `Frame`, `OperationalBoardCard`                                                                             |
+| Public                | `AppPage` + `PublicSection` / `AppEmptyState`                                                                                 |
 | Employee self-service | `EmployeePage`, `EmployeePanel`, `EmployeeActionSection`, and the rest of the `Employee*` exports in `staff-runtime-page.tsx` |
 
 Cross-plane imports are guarded. Branch, station, and staff-runtime routes must
@@ -117,22 +121,22 @@ not import `AppShell`, `ControlSurfaceShell`, `resolveControlSurface*`,
 Full lookup: `corepack pnpm audit:ui-components`. This is the gold path per
 block.
 
-| Block | Plane | Exemplar |
-| --- | --- | --- |
-| `management-list` | control_surface | `apps/web/app/(protected)/inventory/grn/page.tsx` |
-| `management-detail` | control_surface | `apps/web/app/(protected)/inventory/transfers/[id]/page.tsx` |
-| `management-document` | control_surface | `apps/web/app/(protected)/inventory/transfers/new/page.tsx` |
-| `pos-board` | station | `apps/web/app/(protected)/br/[branchId]/pos/session-gate.tsx` |
-| `realtime-board` | station | `apps/web/app/(protected)/br/[branchId]/kds/page.tsx` |
-| `runner-board` | station | `apps/web/app/(protected)/br/[branchId]/pickup/page.tsx` |
-| `branch-action-home` | branch | `apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx` |
-| `branch-touch-list` | branch | `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/page.tsx` |
-| `branch-touch-detail` | branch | `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/page.tsx` |
-| `branch-touch-document` | branch | `apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste/page.tsx` |
-| `employee-self-service` | staff | `apps/web/lib/staff-runtime/page.tsx` |
-| `public-transaction` | public | `apps/web/app/q/[token]/page.tsx` |
-| `system-gate` | public | `apps/web/app/(public)/access-denied/page.tsx` |
-| Layout lab | dev | `apps/web/app/(dev)/ds-lab/ds-lab-client.tsx` |
+| Block                   | Plane           | Exemplar                                                                    |
+| ----------------------- | --------------- | --------------------------------------------------------------------------- |
+| `management-list`       | control_surface | `apps/web/app/(protected)/inventory/grn/page.tsx`                           |
+| `management-detail`     | control_surface | `apps/web/app/(protected)/inventory/transfers/[id]/page.tsx`                |
+| `management-document`   | control_surface | `apps/web/app/(protected)/inventory/transfers/new/page.tsx`                 |
+| `pos-board`             | station         | `apps/web/app/(protected)/br/[branchId]/pos/session-gate.tsx`               |
+| `realtime-board`        | station         | `apps/web/app/(protected)/br/[branchId]/kds/page.tsx`                       |
+| `runner-board`          | station         | `apps/web/app/(protected)/br/[branchId]/pickup/page.tsx`                    |
+| `branch-action-home`    | branch          | `apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx`                |
+| `branch-touch-list`     | branch          | `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/page.tsx`      |
+| `branch-touch-detail`   | branch          | `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/page.tsx` |
+| `branch-touch-document` | branch          | `apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste/page.tsx`    |
+| `employee-self-service` | staff           | `apps/web/lib/staff-runtime/page.tsx`                                       |
+| `public-transaction`    | public          | `apps/web/app/q/[token]/page.tsx`                                           |
+| `system-gate`           | public          | `apps/web/app/(public)/access-denied/page.tsx`                              |
+| Layout lab              | dev             | `apps/web/app/(dev)/ds-lab/ds-lab-client.tsx`                               |
 
 ## Control Surface Canonical Compose
 
@@ -143,13 +147,13 @@ for `/me/*` child routes. `/me` itself is a LANDING hub (`DASHBOARD_REPORT`).
 Census: `CONTROL_SURFACE_COMPOSE` in
 `scripts/page-archetypes.mjs`.
 
-| Shape | Adapters (thin pointer) |
-| --- | --- |
-| LIST | `AppPage xwide+compact` → `AppPageHeader` → `AppListFrame` + inline `AppToolbar` → `DataTable` |
-| DETAIL | `AppPage` → `AppPageHeader` → `DescriptionList` + lines → `AppDetailFooter` |
-| DOC | `DocumentFormFrame` (or LIST host + document `AppDialog`) |
-| DASHBOARD_REPORT | Non-sticky filters → optional `KpiRow` → charts/breakdown; hubs use link cards |
-| REDIRECT | `redirect()` only |
+| Shape            | Adapters (thin pointer)                                                                        |
+| ---------------- | ---------------------------------------------------------------------------------------------- |
+| LIST             | `AppPage xwide+compact` → `AppPageHeader` → `AppListFrame` + inline `AppToolbar` → `DataTable` |
+| DETAIL           | `AppPage` → `AppPageHeader` → `DescriptionList` + lines → `AppDetailFooter`                    |
+| DOC              | `DocumentFormFrame` (or LIST host + document `AppDialog`)                                      |
+| DASHBOARD_REPORT | Non-sticky filters → optional `KpiRow` → charts/breakdown; hubs use link cards                 |
+| REDIRECT         | `redirect()` only                                                                              |
 
 ## control_surface LIST Runtime
 
@@ -186,11 +190,11 @@ code knows:
 Control Surface **Work** (`/work`) uses LIST at the route census; board, calendar,
 and timeline are **TASK_*** compose recipes inside one `AppListFrame` (ADR 0033).
 
-| Constant / component | Role |
-| --- | --- |
-| `work/_lib/compose-styles.ts` | SSOT Tailwind for inbox inset, Kanban columns, month cells, timeline rows |
-| `WorkComposeShell` | `AppListFrame` + `data-page-archetype=TASK_*` wrapper |
-| `WorkMonthGrid` + `WorkTaskChip` | Vietnam month grid from `getVNMonthCalendarCells` — **not** `ui/calendar` DayPicker |
+| Constant / component                 | Role                                                                                      |
+| ------------------------------------ | ----------------------------------------------------------------------------------------- |
+| `work/_lib/compose-styles.ts`        | SSOT Tailwind for inbox inset, Kanban columns, month cells, timeline rows                 |
+| `WorkComposeShell`                   | `AppListFrame` + `data-page-archetype=TASK_*` wrapper                                     |
+| `WorkMonthGrid` + `WorkTaskChip`     | Vietnam month grid from `getVNMonthCalendarCells` — **not** `ui/calendar` DayPicker       |
 | `WorkScopePicker` / `WorkScopeLabel` | URL scope for board (department or project), timeline (project only), calendar (optional) |
 
 Registry blocks: `work-task-inbox`, `work-task-board`, `work-task-calendar`.
@@ -251,27 +255,27 @@ page client, no branch picker, no WAC or stock valuation, no audit history, no
 export. Detail and edit steps open a bottom `Sheet` with a sticky
 `AppDetailFooter`.
 
-| Route | Archetype | Branch-native shape |
-| --- | --- | --- |
-| `/stock` | LANDING | Stock home: fulfillment slips + four doors (`Kho hàng` / `Yêu cầu hàng` / `Kiểm kê` / `Hao hụt`). `/stock/transfer` for a store redirects here. |
-| `/stock/on-hand` | LIST | `loadStockOnHandPageData` + filter model; `Item` separator rows, `ToggleGroup` status, filter `Sheet`. |
-| `/stock/on-hand/[ingredientId]` | DETAIL | `loadStockIngredientDetailData` with `includeValuation: false`. Supplier receiving links to `/stock/grn/new`, never `/stock/receive`. |
-| `/stock/grn` | LIST | `loadGrnListPageData`; own drafts first, then queue. Row shows code, supplier, date, status only. |
-| `/stock/grn/new`, `/stock/grn/new/[supplierId]` | REDIRECT-SHIM | Compatibility redirects: store → `Yêu cầu hàng`; `Kho Tổng`/`Bếp TT` → `Tạo đơn`. No live create UI. |
-| `/stock/grn/[id]` | DETAIL | Draft owns a touch receiving list and line sheet; confirmed slips are read-only. Post-confirm correction stays on control_surface `/inventory/grn?grnId=&mode=view`. |
-| `/stock/stocktake` | LIST | `loadBranchStocktakeListData`; manager sessions, distinct from `/stock/count` slips. |
-| `/stock/stocktake/new` | DOC-WORKFLOW | Mode + location only, then open the session and enter count. |
-| `/stock/stocktake/[id]/count` | DOC-WORKFLOW | Number pad entry with unit choice, autosave draft, and round submit. Blind payload carries no system quantity. |
-| `/stock/stocktake/[id]` | DETAIL | Active review takes blind counts and status actions; completed result uses `ItemGroup` system/count/variance. |
-| `/stock/issues` | LIST | `writeoff` slips only. New shrinkage goes through `/stock/waste`. |
-| `/stock/issues/[id]` | DETAIL | Draft line add/edit/delete in a `Sheet`; quantity capped by stock, reason required. |
-| `/stock/waste` | DOC-WORKFLOW | Location/cap plus selected lines; tier, evidence photo, rolling meter, stock cap preserved. |
-| `/stock/waste-approvals` | LIST | Queue locked to URL branch; review sheet calls `approveWaste` and keeps the four-eye rule. |
-| `/stock/consumption` | LIST | Segmented ledger vs manual document; `/stock/consumption/[id]` is a typed DETAIL. |
-| `/stock/count-assignments`, `/stock/count-slips` | LIST | Assignments group by employee; slip review approves or requests recount in a `Sheet`. |
-| `/stock/transfer` | LIST | Incoming, history, and detail only. Branch has no create route or CTA. |
-| `/stock/reports` | REPORT | URL branch and current month; consumption variance first, then per-ingredient movement with drill-in. Every quantity carries its ingredient unit. |
-| `/team/leave-approvals` | LIST | Status tabs plus full-row items; approve/reject in a bottom `Sheet`. |
+| Route                                            | Archetype     | Branch-native shape                                                                                                                                                  |
+| ------------------------------------------------ | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/stock`                                         | LANDING       | Stock home: fulfillment slips + four doors (`Kho hàng` / `Yêu cầu hàng` / `Kiểm kê` / `Hao hụt`). `/stock/transfer` for a store redirects here.                      |
+| `/stock/on-hand`                                 | LIST          | `loadStockOnHandPageData` + filter model; `Item` separator rows, `ToggleGroup` status, filter `Sheet`.                                                               |
+| `/stock/on-hand/[ingredientId]`                  | DETAIL        | `loadStockIngredientDetailData` with `includeValuation: false`. Supplier receiving links to `/stock/grn/new`, never `/stock/receive`.                                |
+| `/stock/grn`                                     | LIST          | `loadGrnListPageData`; own drafts first, then queue. Row shows code, supplier, date, status only.                                                                    |
+| `/stock/grn/new`, `/stock/grn/new/[supplierId]`  | REDIRECT-SHIM | Compatibility redirects: store → `Yêu cầu hàng`; `Kho Tổng`/`Bếp TT` → `Tạo đơn`. No live create UI.                                                                 |
+| `/stock/grn/[id]`                                | DETAIL        | Draft owns a touch receiving list and line sheet; confirmed slips are read-only. Post-confirm correction stays on control_surface `/inventory/grn?grnId=&mode=view`. |
+| `/stock/stocktake`                               | LIST          | `loadBranchStocktakeListData`; manager sessions, distinct from `/stock/count` slips.                                                                                 |
+| `/stock/stocktake/new`                           | DOC-WORKFLOW  | Mode + location only, then open the session and enter count.                                                                                                         |
+| `/stock/stocktake/[id]/count`                    | DOC-WORKFLOW  | Number pad entry with unit choice, autosave draft, and round submit. Blind payload carries no system quantity.                                                       |
+| `/stock/stocktake/[id]`                          | DETAIL        | Active review takes blind counts and status actions; completed result uses `ItemGroup` system/count/variance.                                                        |
+| `/stock/issues`                                  | LIST          | `writeoff` slips only. New shrinkage goes through `/stock/waste`.                                                                                                    |
+| `/stock/issues/[id]`                             | DETAIL        | Draft line add/edit/delete in a `Sheet`; quantity capped by stock, reason required.                                                                                  |
+| `/stock/waste`                                   | DOC-WORKFLOW  | Location/cap plus selected lines; tier, evidence photo, rolling meter, stock cap preserved.                                                                          |
+| `/stock/waste-approvals`                         | LIST          | Queue locked to URL branch; review sheet calls `approveWaste` and keeps the four-eye rule.                                                                           |
+| `/stock/consumption`                             | LIST          | Segmented ledger vs manual document; `/stock/consumption/[id]` is a typed DETAIL.                                                                                    |
+| `/stock/count-assignments`, `/stock/count-slips` | LIST          | Assignments group by employee; slip review approves or requests recount in a `Sheet`.                                                                                |
+| `/stock/transfer`                                | LIST          | Incoming, history, and detail only. Branch has no create route or CTA.                                                                                               |
+| `/stock/reports`                                 | REPORT        | URL branch and current month; consumption variance first, then per-ingredient movement with drill-in. Every quantity carries its ingredient unit.                    |
+| `/team/leave-approvals`                          | LIST          | Status tabs plus full-row items; approve/reject in a bottom `Sheet`.                                                                                                 |
 
 control_surface counterparts keep their own management presenters
 (`StockClient`, `GrnListClient`, `ReportsPageContent`, `LeaveRequestsTable`,
@@ -294,28 +298,28 @@ registry; routes do not hardcode new operational copy.
 `apps/web/app/components/form/`, imported as
 `import { TextField, FormDialog } from "@/components/form"`.
 
-| Helper | Job |
-| --- | --- |
-| `TextField` | Text input + RHF `useController` |
-| `NumberField` | Generic `FormattedNumberInput` + RHF; not a substitute for a money or quantity adapter |
-| `MoneyVndInput` / `MoneyVndField` | Accounting money, up to 2 decimals, `vi-VN` grouping, canonical `.` on submit |
-| `WholeVndInput` / `WholeVndField` | Whole-dong money for menu/POS, cash, VietQR, shift count; no decimals |
-| `QuantityInput` / `QuantityField` | Inventory quantity, 3 decimals, grouped display |
-| `BusinessDateField` | RHF date picker; shows `dd/mm/yyyy`, stores `yyyy-mm-dd`, optional branch timezone note |
-| `BusinessDatePicker` | Filter / URL date; same chrome as the field |
-| `BusinessWeekPicker` | Week-range highlight inside the date adapter (finance period week) |
-| `AppSheet` | Branch short CRUD and D1; `side` right on `lg+`, bottom on touch |
-| `StationSheet` | POS / KDS / guest overlay; no `AppDialog` / `AppSection` chrome |
-| `AppDrawer` | Short touch task overlay through the approved adapter |
-| `SelectField` | Select with `options={[{ value, label }]}` |
-| `ComboboxField` | Searchable select + RHF; description and error wired to the trigger |
-| `Combobox` | Standalone searchable control; inside data entry it must sit in a `FormField` with a stable `id` |
-| `FormField` | Label/help/error anatomy for non-RHF or bespoke composition; the child control still owns `id`, `disabled`, and ARIA state |
-| `TextareaField` | Textarea + RHF |
-| `AppDialog` | Generic app dialog shell; `variant="document"` for list-first PO, GRN, and production documents |
-| `FormDialog` | Owner (`control_surface`) short CRUD; not Branch operator or station |
-| `FormSheet` | Branch short CRUD: same Zod/RHF contract as `FormDialog`, `AppSheet` chrome |
-| `valuesToFormData` | Adapter for `withFormAction`-wrapped Server Actions |
+| Helper                            | Job                                                                                                                        |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `TextField`                       | Text input + RHF `useController`                                                                                           |
+| `NumberField`                     | Generic `FormattedNumberInput` + RHF; not a substitute for a money or quantity adapter                                     |
+| `MoneyVndInput` / `MoneyVndField` | Accounting money, up to 2 decimals, `vi-VN` grouping, canonical `.` on submit                                              |
+| `WholeVndInput` / `WholeVndField` | Whole-dong money for menu/POS, cash, VietQR, shift count; no decimals                                                      |
+| `QuantityInput` / `QuantityField` | Inventory quantity, 3 decimals, grouped display                                                                            |
+| `BusinessDateField`               | RHF date picker; shows `dd/mm/yyyy`, stores `yyyy-mm-dd`, optional branch timezone note                                    |
+| `BusinessDatePicker`              | Filter / URL date; same chrome as the field                                                                                |
+| `BusinessWeekPicker`              | Week-range highlight inside the date adapter (finance period week)                                                         |
+| `AppSheet`                        | Branch short CRUD and D1; `side` right on `lg+`, bottom on touch                                                           |
+| `StationSheet`                    | POS / KDS / guest overlay; no `AppDialog` / `AppSection` chrome                                                            |
+| `AppDrawer`                       | Short touch task overlay through the approved adapter                                                                      |
+| `SelectField`                     | Select with `options={[{ value, label }]}`                                                                                 |
+| `ComboboxField`                   | Searchable select + RHF; description and error wired to the trigger                                                        |
+| `Combobox`                        | Standalone searchable control; inside data entry it must sit in a `FormField` with a stable `id`                           |
+| `FormField`                       | Label/help/error anatomy for non-RHF or bespoke composition; the child control still owns `id`, `disabled`, and ARIA state |
+| `TextareaField`                   | Textarea + RHF                                                                                                             |
+| `AppDialog`                       | Generic app dialog shell; `variant="document"` for list-first PO, GRN, and production documents                            |
+| `FormDialog`                      | Owner (`control_surface`) short CRUD; not Branch operator or station                                                       |
+| `FormSheet`                       | Branch short CRUD: same Zod/RHF contract as `FormDialog`, `AppSheet` chrome                                                |
+| `valuesToFormData`                | Adapter for `withFormAction`-wrapped Server Actions                                                                        |
 
 Schemas use Zod 4 with `{ error: "..." }`, never `{ message }`. Schemas imported
 by both client and server live in `packages/shared/src/forms/<name>.ts`.
@@ -357,11 +361,11 @@ Single helper: `useKeyboardShortcut` in
 - Render hints with `<Kbd>` / `<KbdGroup>` next to the button label, with
   `className="hidden md:inline-flex"`, and set `aria-keyshortcuts`.
 
-| Surface | Keys |
-| --- | --- |
-| POS cart (`cart-pane.tsx`) | `Cmd/Ctrl + Enter` send-to-kitchen confirm (fires while typing a note) |
-| POS append draft (`append-draft-pane.tsx`) | None — appending must go through the explicit send button |
-| KDS (`kds-board.tsx`) | `Escape` clears the station filter |
+| Surface                                    | Keys                                                                   |
+| ------------------------------------------ | ---------------------------------------------------------------------- |
+| POS cart (`cart-pane.tsx`)                 | `Cmd/Ctrl + Enter` send-to-kitchen confirm (fires while typing a note) |
+| POS append draft (`append-draft-pane.tsx`) | None — appending must go through the explicit send button              |
+| KDS (`kds-board.tsx`)                      | `Escape` clears the station filter                                     |
 
 Adding a shortcut means updating this table and the matching
 `aria-keyshortcuts`.

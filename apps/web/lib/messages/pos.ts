@@ -27,7 +27,8 @@ export const pos = {
     refundPayoutMethod: "Hoàn bằng",
     refundPayoutMethodPlaceholder: "Chọn nơi tiền được trả",
     voidPaidSuccess: "Đã ghi nhận trả đơn và hoàn tiền",
-    voidPaidRequestSuccess: "Đã gửi yêu cầu trả đơn & hoàn tiền — chờ quản lý duyệt",
+    voidPaidRequestSuccess:
+      "Đã gửi yêu cầu trả đơn & hoàn tiền — chờ quản lý duyệt",
     voidPaidFailed: "Không thể trả đơn đã thanh toán",
     voidRequestQueueTitle: "Yêu cầu hủy đơn chờ duyệt",
     voidRequestOrderLabel: (orderId: number) => `Đơn #${orderId}`,
@@ -85,9 +86,7 @@ export const pos = {
     emptyWithContext: "Chạm món trên thực đơn để thêm vào đơn.",
     emptyNoContext: "Chạm bàn bên trái hoặc chọn 'Mang về' để bắt đầu.",
     itemDiscount: (amount: string, note?: string) =>
-      note
-        ? `Giảm giá món: -${amount} · ${note}`
-        : `Giảm giá món: -${amount}`,
+      note ? `Giảm giá món: -${amount} · ${note}` : `Giảm giá món: -${amount}`,
     removeItemAria: (name: string) => `Xóa ${name} khỏi món chưa gửi`,
     noteLabel: "Ghi chú đơn",
     notePlaceholder: "Ví dụ: ít đường, không hành...",
@@ -184,8 +183,7 @@ export const pos = {
     platformPrepaidHint:
       "Khách đã trả qua ứng dụng (Công cụ quản lý). Không vào ngăn kéo tiền mặt.",
     platformConfirmSuccess: "Đã xác nhận thu nền tảng",
-    platformConfirmSuccessInvoice:
-      "Đã xác nhận thu nền tảng — HĐĐT đang xử lý",
+    platformConfirmSuccessInvoice: "Đã xác nhận thu nền tảng — HĐĐT đang xử lý",
     platformConfirmFailed: "Không thể xác nhận thu nền tảng",
   },
   receipt: {
@@ -415,7 +413,7 @@ export const pos = {
     editDeliveryInfo: "Sửa",
   },
   sessionGate: {
-    branch: (branchId: number) => `Chi nhánh #${branchId}`,
+    branch: (_branchId: number) => "Chi nhánh không xác định",
     title: "Mở ca bán hàng",
     noTerminalTitle: "Chưa có máy POS",
     noTerminalDescription:
@@ -481,7 +479,8 @@ export const pos = {
     orderNoteDialogTitle: "Ghi chú đơn hàng",
     orderNotePlaceholder: "Nhập ghi chú cho đơn hàng (tối đa 300 ký tự)...",
     orderNotePresetsHint: "Chọn nhanh gợi ý hoặc nhập tự do:",
-    orderNoteSyncHint: "Ghi chú sẽ hiển thị trên phiếu Bếp (KDS) và màn hình POS của toàn bộ nhân viên.",
+    orderNoteSyncHint:
+      "Ghi chú sẽ hiển thị trên phiếu Bếp (KDS) và màn hình POS của toàn bộ nhân viên.",
     saveNote: "Lưu ghi chú",
     clearNote: "Xóa ghi chú",
     noteUpdated: "Đã cập nhật ghi chú đơn",
@@ -586,8 +585,7 @@ export const pos = {
     printProvisionalTitle: "In phiếu tạm tính",
     printProvisionalDesc: "In bill kiểm đồ / tạm tính cho khách xem",
     appendTitle: "Gọi thêm món",
-    appendDesc: (orderNumber: string) =>
-      `Thêm món mới vào đơn #${orderNumber}`,
+    appendDesc: (orderNumber: string) => `Thêm món mới vào đơn #${orderNumber}`,
     transferTitle: "Chuyển bàn",
     transferDesc: (tableNumber: number | string) =>
       `Chuyển đơn từ bàn ${tableNumber} sang bàn khác`,
@@ -599,7 +597,8 @@ export const pos = {
   },
   printerStatus: {
     sheetTitle: "Trạng thái máy in",
-    sheetDescription: "Kiểm tra kết nối máy in và xử lý các lệnh in bị gián đoạn.",
+    sheetDescription:
+      "Kiểm tra kết nối máy in và xử lý các lệnh in bị gián đoạn.",
     onlineBadge: "Đang kết nối",
     offlineBadge: "Mất kết nối",
     errorBadge: (count: number) => `${count} lỗi`,

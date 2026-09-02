@@ -3,6 +3,7 @@ import "server-only";
 import { notFound, redirect } from "next/navigation";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { INVENTORY_OPS_ROLES, PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { getAuthContextWithPermission } from "@/(protected)/inventory/_lib/auth";
 import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
 import { parseBranchIdParam } from "@/_lib/branch-context";
@@ -23,8 +24,7 @@ type IngredientCountOptionRow = {
   id: number;
   name: string;
   ingredient_units?:
-    | { is_base: boolean; units: { code: string } | null }[]
-    | null;
+    { is_base: boolean; units: { code: string } | null }[] | null;
 };
 
 function countLocationLabel(
@@ -64,7 +64,7 @@ export async function loadBranchCountAssignmentData({
 
   const branchName =
     scope.allowedBranches.find((branch) => branch.id === routeBranchId)?.name ??
-    `CN #${routeBranchId}`;
+    UNKNOWN_LABEL_VI;
   const requestedLocationId = parseBranchIdParam(locationParam);
   const rawShiftId = Array.isArray(shiftParam) ? shiftParam[0] : shiftParam;
   const requestedShiftId = parseBranchIdParam(shiftParam);
@@ -148,7 +148,9 @@ export async function loadBranchCountAssignmentData({
   const rosterClient = createServiceClient();
   const profilesResult = await rosterClient
     .from("profiles")
-    .select("id, full_name, is_active, position_id, positions(id, code, label_vi)")
+    .select(
+      "id, full_name, is_active, position_id, positions(id, code, label_vi)",
+    )
     .eq("tenant_id", claims.tenant_id)
     .eq("branch_id", routeBranchId)
     .or("is_active.is.null,is_active.eq.true")
@@ -237,7 +239,9 @@ export async function loadBranchCountAssignmentData({
     console.error("inventory.count_assignments.ingredients_fetch_failed", {
       code: ingredientsResult.error.code,
     });
-    throw new Error("Không đọc được danh mục nguyên liệu để phân công đếm tồn.");
+    throw new Error(
+      "Không đọc được danh mục nguyên liệu để phân công đếm tồn.",
+    );
   }
 
   const ingredients: CountAssignmentIngredient[] = (

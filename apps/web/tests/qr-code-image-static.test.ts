@@ -20,8 +20,8 @@ function readRepo(path: string): string {
 
 test("public QR surfaces use the shared web QR renderer", () => {
   const sharedQr = readWeb("app/components/qr-code-image.tsx");
-  const posQr = readWeb(
-    "app/(protected)/br/[branchId]/pos/_components/bill/payment-qr-code.tsx",
+  const posReceipt = readWeb(
+    "app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx",
   );
   const selfOrderPayment = readWeb(
     "app/q/[token]/self-order/payment-panel.tsx",
@@ -32,7 +32,7 @@ test("public QR surfaces use the shared web QR renderer", () => {
 
   assert.match(sharedQr, /import QRCode from "qrcode"/);
   assert.match(sharedQr, /QRCode\.toDataURL/);
-  assert.match(posQr, /QrCodeImage as PaymentQrCode/);
+  assert.match(posReceipt, /QrCodeImage as PaymentQrCode/);
   assert.match(
     selfOrderPayment,
     /import \{ QrCodeImage \} from "@\/components\/qr-code-image"/,

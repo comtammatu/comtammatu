@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { canSubscribeBranchOpsTopic } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
-import { BranchOpsRefresh } from "@/(protected)/br/[branchId]/(operator)/branch-ops-refresh";
+import { BranchOpsRefresh } from "@/_components/branch-ops-refresh";
 import { INVENTORY_BRANCH_OPS_TABLES } from "@/_hooks/branch-ops-runtime";
 import { resolveInventoryBranchScope } from "./_lib/inventory-scope";
 

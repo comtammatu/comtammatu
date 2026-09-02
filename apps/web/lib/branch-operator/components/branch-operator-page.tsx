@@ -87,7 +87,7 @@ export function BranchOperatorPage({
         title={title}
         description={description}
         className={hideHeaderOnMobile ? "max-sm:sr-only" : undefined}
-        compactOnMobile={hideHeaderOnMobile}
+        compactOnMobile={true}
         breadcrumb={back}
         badge={badge}
         actions={action}
@@ -497,7 +497,7 @@ function BranchOperatorActionList({
         presentation !== "stations" &&
           columns === 2 &&
           wideColumns &&
-          "xl:grid-cols-3 2xl:grid-cols-4",
+          "lg:grid-cols-3",
         className,
       )}
     >
@@ -707,11 +707,7 @@ export function BranchOperatorActionSection({
 
   // Nested job tiles: omit section chrome when the parent panel owns the title.
   if (!title && !description && !badge) {
-    return className ? (
-      <div className={className}>{content}</div>
-    ) : (
-      content
-    );
+    return className ? <div className={className}>{content}</div> : content;
   }
 
   return (
@@ -720,12 +716,13 @@ export function BranchOperatorActionSection({
         {title || badge ? (
           <div className="flex items-center justify-between gap-2">
             {title ? (
-              <h2 className="font-heading text-base font-semibold">
-                {title}
-              </h2>
+              <h2 className="font-heading text-base font-semibold">{title}</h2>
             ) : null}
             {badge ? (
-              <Badge variant={badge.variant ?? "secondary"} className="shrink-0">
+              <Badge
+                variant={badge.variant ?? "secondary"}
+                className="shrink-0"
+              >
                 {badge.children}
               </Badge>
             ) : null}
