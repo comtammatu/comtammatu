@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: HR operational copy inline */
-
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -35,6 +33,11 @@ import type {
 } from "./_types";
 import type { PositionTasksData } from "./position-tasks-actions";
 import { CONTRACT_TYPE_OPTIONS } from "./employee-form-dialog";
+import { messages } from "@lib/messages";
+
+const copy = messages.hr.client.employeeDetail;
+const quickCopy = messages.hr.client.quickConfig;
+const taskCopy = messages.hr.client.positionTasks;
 
 interface EmployeeDetailSheetProps {
   open: boolean;
@@ -108,12 +111,12 @@ export function EmployeeDetailSheet({
 
   const contractLabel =
     CONTRACT_TYPE_OPTIONS.find((o) => o.value === employee.contract_type)
-      ?.label ?? "Chưa ghi nhận";
+      ?.label ?? copy.notRecorded;
 
   function handleResetPassword() {
     if (!employee) return;
     if (newPassword.trim().length < 8) {
-      toast.error("Mật khẩu mới phải có ít nhất 8 ký tự.");
+      toast.error(copy.passwordTooShort);
       return;
     }
     startTransition(async () => {
@@ -122,10 +125,10 @@ export function EmployeeDetailSheet({
         newPassword: newPassword.trim(),
       });
       if (!res.success) {
-        toast.error(res.error ?? "Không thể đặt lại mật khẩu.");
+        toast.error(res.error ?? copy.resetFailed);
         return;
       }
-      toast.success("Đã đặt lại mật khẩu mới cho nhân viên.");
+      toast.success(copy.resetSuccess);
       setNewPassword("");
       setShowPasswordInput(false);
     });
@@ -139,13 +142,11 @@ export function EmployeeDetailSheet({
         canLogin: !isLoginActive,
       });
       if (!res.success) {
-        toast.error(res.error ?? "Không thể cập nhật trạng thái đăng nhập.");
+        toast.error(res.error ?? copy.loginUpdateFailed);
         return;
       }
       toast.success(
-        !isLoginActive
-          ? "Đã kích hoạt quyền đăng nhập hệ thống."
-          : "Đã tạm khóa quyền đăng nhập hệ thống.",
+        !isLoginActive ? copy.loginEnabled : copy.loginDisabled,
       );
       router.refresh();
     });
@@ -156,10 +157,10 @@ export function EmployeeDetailSheet({
     startTransition(async () => {
       const res = await deleteDraftEmployee({ employeeId: employee.id });
       if (!res.success) {
-        toast.error(res.error ?? "Không thể xóa hồ sơ.");
+        toast.error(res.error ?? copy.deleteFailed);
         return;
       }
-      toast.success("Đã xóa hồ sơ nhân viên thành công.");
+      toast.success(copy.deleteSuccess);
       setDeleteConfirmOpen(false);
       onOpenChange(false);
       router.refresh();
@@ -175,13 +176,13 @@ export function EmployeeDetailSheet({
         <div className="flex items-center justify-between gap-3 pr-4">
           <div className="flex flex-col gap-1">
             <span className="text-base font-semibold">
-              {profile?.full_name ?? "Hồ sơ nhân viên"}
+              {profile?.full_name ?? copy.fallbackTitle}
             </span>
             <span className="text-xs font-normal text-muted-foreground">
               {[
                 employee.employee_code ?? `NV#${employee.id}`,
-                profile?.positions?.label_vi ?? "Chưa gán chức vụ",
-                profile?.branches?.name ?? "Văn phòng công ty",
+                profile?.positions?.label_vi ?? quickCopy.noPosition,
+                profile?.branches?.name ?? quickCopy.office,
               ].join(" · ")}
             </span>
           </div>
@@ -206,7 +207,7 @@ export function EmployeeDetailSheet({
               }}
             >
               <IconPencil className="size-3.5" />
-              Sửa hồ sơ
+              {copy.editProfile}
             </Button>
           ) : null}
 
@@ -222,7 +223,7 @@ export function EmployeeDetailSheet({
               }}
             >
               <IconClock className="size-3.5" />
-              Đổi ca hôm nay
+              {copy.changeTodayShift}
             </Button>
           ) : null}
 
@@ -237,7 +238,7 @@ export function EmployeeDetailSheet({
               }}
             >
               <IconUserMinus className="size-3.5" />
-              Cho thôi việc
+              {copy.offboard}
             </Button>
           ) : null}
         </div>
@@ -251,7 +252,7 @@ export function EmployeeDetailSheet({
             className="h-7 text-xs"
             onClick={() => setActiveTab("profile")}
           >
-            Hồ sơ & Vị trí
+            {copy.tabProfile}
           </Button>
           <Button
             type="button"
@@ -260,7 +261,7 @@ export function EmployeeDetailSheet({
             className="h-7 text-xs"
             onClick={() => setActiveTab("tasks")}
           >
-            Ca làm & Việc ({activeTasks.length})
+            {copy.tabTasks(activeTasks.length)}
           </Button>
           <Button
             type="button"
@@ -269,7 +270,7 @@ export function EmployeeDetailSheet({
             className="h-7 text-xs"
             onClick={() => setActiveTab("compensation")}
           >
-            Lương & HĐLĐ
+            {copy.tabCompensation}
           </Button>
           <Button
             type="button"
@@ -278,7 +279,7 @@ export function EmployeeDetailSheet({
             className="h-7 text-xs"
             onClick={() => setActiveTab("account")}
           >
-            Tài khoản & Quyền
+            {copy.tabAccount}
           </Button>
         </div>
 
@@ -288,30 +289,30 @@ export function EmployeeDetailSheet({
             <FieldGroup className="gap-3 p-3">
               <div className="flex flex-col gap-1">
                 <p className="font-heading text-sm font-semibold">
-                  Thông tin công việc
+                  {copy.jobInfo}
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-4 text-xs">
                 <div>
-                  <span className="text-muted-foreground">Chức vụ:</span>
+                  <span className="text-muted-foreground">{copy.position}</span>
                   <p className="font-medium mt-1">
-                    {profile?.positions?.label_vi ?? "Chưa gán chức vụ"}
+                    {profile?.positions?.label_vi ?? quickCopy.noPosition}
                   </p>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Nơi làm việc:</span>
+                  <span className="text-muted-foreground">{copy.workplace}</span>
                   <p className="font-medium mt-1">
-                    {profile?.branches?.name ?? "Văn phòng công ty"}
+                    {profile?.branches?.name ?? quickCopy.office}
                   </p>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Mã nhân viên:</span>
+                  <span className="text-muted-foreground">{copy.employeeCode}</span>
                   <p className="font-medium mt-1">
                     {employee.employee_code || "—"}
                   </p>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Ngày bắt đầu:</span>
+                  <span className="text-muted-foreground">{copy.startDate}</span>
                   <p className="font-medium mt-1">
                     {employee.start_date || "—"}
                   </p>
@@ -322,30 +323,30 @@ export function EmployeeDetailSheet({
             <FieldGroup className="gap-3 p-3">
               <div className="flex flex-col gap-1">
                 <p className="font-heading text-sm font-semibold">
-                  Liên hệ & Thanh toán
+                  {copy.contactPay}
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-4 text-xs">
                 <div>
-                  <span className="text-muted-foreground">Số điện thoại:</span>
+                  <span className="text-muted-foreground">{copy.phone}</span>
                   <p className="font-medium mt-1">
-                    {profile?.phone || "Chưa có"}
+                    {profile?.phone || copy.noPhone}
                   </p>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">CMND / CCCD:</span>
+                  <span className="text-muted-foreground">{copy.idNumber}</span>
                   <p className="font-medium mt-1">
                     {employee.id_number || "—"}
                   </p>
                 </div>
                 <div className="col-span-2">
                   <span className="text-muted-foreground">
-                    Số tài khoản ngân hàng:
+                    {copy.bankAccount}
                   </span>
                   <p className="font-medium mt-1">
                     {employee.bank_account
                       ? `${employee.bank_account} ${employee.bank_name ? `(${employee.bank_name})` : ""}`
-                      : "Chưa ghi nhận"}
+                      : copy.notRecorded}
                   </p>
                 </div>
               </div>
@@ -359,7 +360,7 @@ export function EmployeeDetailSheet({
             <FieldGroup className="gap-3 p-3">
               <div className="flex items-center justify-between">
                 <p className="font-heading text-sm font-semibold">
-                  Ca làm hôm nay
+                  {copy.todayShift}
                 </p>
                 {canAssignShift ? (
                   <Button
@@ -371,7 +372,7 @@ export function EmployeeDetailSheet({
                       onOpenShiftDialog?.(employee);
                     }}
                   >
-                    Đổi ca
+                    {copy.changeShift}
                   </Button>
                 ) : null}
               </div>
@@ -383,12 +384,10 @@ export function EmployeeDetailSheet({
                   <p className="text-sm font-semibold">
                     {shift
                       ? `${shift.name} (${shift.start_time.slice(0, 5)} – ${shift.end_time.slice(0, 5)})`
-                      : "Chưa phân ca hôm nay"}
+                      : copy.noShiftToday}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {shift
-                      ? "Nhân viên có thể chấm công vào khung giờ này"
-                      : "Gán ca để nhân viên có thể chấm công vào hệ thống"}
+                    {shift ? copy.shiftPunchHint : copy.assignShiftHint}
                   </p>
                 </div>
               </div>
@@ -398,10 +397,12 @@ export function EmployeeDetailSheet({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <p className="font-heading text-sm font-semibold">
-                    Việc trong ca ({activeTasks.length})
+                    {copy.shiftTasksTitle(activeTasks.length)}
                   </p>
                   <Badge variant={hasOverride ? "default" : "secondary"}>
-                    {hasOverride ? "Mẫu riêng" : "Theo chức vụ"}
+                    {hasOverride
+                      ? quickCopy.employeeTemplateShort
+                      : quickCopy.positionTemplateShort}
                   </Badge>
                 </div>
                 {canManageTasks ? (
@@ -415,7 +416,9 @@ export function EmployeeDetailSheet({
                         onOpenTaskDialog?.(employee);
                       }}
                     >
-                      {hasOverride ? "Sửa mẫu riêng" : "Tạo mẫu riêng"}
+                      {hasOverride
+                        ? copy.editEmployeeTemplate
+                        : taskCopy.createEmployeeTemplate}
                     </Button>
                     {hasOverride ? (
                       <Button
@@ -426,7 +429,7 @@ export function EmployeeDetailSheet({
                           onClearTaskOverride?.(employee);
                         }}
                       >
-                        Dùng lại chức vụ
+                        {copy.restorePositionTemplate}
                       </Button>
                     ) : null}
                   </div>
@@ -442,22 +445,22 @@ export function EmployeeDetailSheet({
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{task.title}</span>
                         {task.isRequired ? (
-                          <Badge variant="outline">Bắt buộc</Badge>
+                          <Badge variant="outline">{copy.required}</Badge>
                         ) : null}
                       </div>
                       <span className="text-muted-foreground">
                         {task.phase === "start_of_shift"
-                          ? "Đầu ca"
+                          ? taskCopy.phaseLabels.start_of_shift
                           : task.phase === "end_of_shift"
-                            ? "Cuối ca"
-                            : "Trong ca"}
+                            ? taskCopy.phaseLabels.end_of_shift
+                            : copy.phaseDuring}
                       </span>
                     </div>
                   ))}
                 </div>
               ) : (
                 <p className="text-xs italic text-muted-foreground">
-                  Chưa có danh sách việc mẫu cho chức vụ này.
+                  {copy.noTaskTemplate}
                 </p>
               )}
             </FieldGroup>
@@ -470,31 +473,31 @@ export function EmployeeDetailSheet({
             <FieldGroup className="gap-3 p-3">
               <div className="flex flex-col gap-1">
                 <p className="font-heading text-sm font-semibold">
-                  Chế độ lương & Đãi ngộ
+                  {copy.compensationTitle}
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-4 text-xs">
                 <div>
-                  <span className="text-muted-foreground">Đơn vị tính lương:</span>
+                  <span className="text-muted-foreground">{copy.wageUnit}</span>
                   <p className="font-medium mt-1">
                     {activeContract?.wage_unit === "daily"
-                      ? "Lương ngày (theo công)"
-                      : "Lương tháng"}
+                      ? copy.dailyWage
+                      : copy.monthlyWage}
                   </p>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Chế độ lương:</span>
+                  <span className="text-muted-foreground">{copy.payBasis}</span>
                   <p className="font-medium mt-1">
                     {activeContract?.pay_basis === "fixed_monthly"
-                      ? "Lương tháng cố định"
-                      : "Theo ngày công thực tế"}
+                      ? copy.fixedMonthly
+                      : copy.attendanceProrated}
                   </p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">
                     {activeContract?.wage_unit === "daily"
-                      ? "Mức lương ngày:"
-                      : "Lương cơ bản:"}
+                      ? copy.dailyRate
+                      : copy.baseSalary}
                   </span>
                   <p className="font-semibold text-primary mt-1">
                     {activeContract?.wage_unit === "daily"
@@ -507,17 +510,17 @@ export function EmployeeDetailSheet({
                   </p>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Lương đóng BHXH:</span>
+                  <span className="text-muted-foreground">{copy.insuranceBase}</span>
                   <p className="font-medium mt-1">
                     {(employee.insurance_base_salary ?? 0) > 0
                       ? formatVND(employee.insurance_base_salary ?? 0)
-                      : "Chưa tham gia BHXH"}
+                      : copy.noInsurance}
                   </p>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Người phụ thuộc:</span>
+                  <span className="text-muted-foreground">{copy.dependents}</span>
                   <p className="font-medium mt-1">
-                    {employee.dependents_count} người (giảm trừ thuế TNCN)
+                    {copy.dependentsValue(employee.dependents_count)}
                   </p>
                 </div>
               </div>
@@ -526,30 +529,30 @@ export function EmployeeDetailSheet({
             <FieldGroup className="gap-3 p-3">
               <div className="flex flex-col gap-1">
                 <p className="font-heading text-sm font-semibold">
-                  Hợp đồng lao động
+                  {copy.contractTitle}
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-4 text-xs">
                 <div>
-                  <span className="text-muted-foreground">Loại hợp đồng:</span>
+                  <span className="text-muted-foreground">{copy.contractType}</span>
                   <p className="font-medium mt-1">{contractLabel}</p>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Số hợp đồng:</span>
+                  <span className="text-muted-foreground">{copy.contractNumber}</span>
                   <p className="font-medium mt-1">
-                    {activeContract?.contract_number || "Chưa ghi nhận"}
+                    {activeContract?.contract_number || copy.notRecorded}
                   </p>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Ngày ký:</span>
+                  <span className="text-muted-foreground">{copy.signedDate}</span>
                   <p className="font-medium mt-1">
                     {activeContract?.signed_date || "—"}
                   </p>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Ngày hết hạn:</span>
+                  <span className="text-muted-foreground">{copy.endDate}</span>
                   <p className="font-medium mt-1">
-                    {activeContract?.end_date || "Không xác định"}
+                    {activeContract?.end_date || copy.indefinite}
                   </p>
                 </div>
               </div>
@@ -564,10 +567,10 @@ export function EmployeeDetailSheet({
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-heading text-sm font-semibold">
-                    Trạng thái đăng nhập
+                    {copy.loginStatus}
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Quyền truy cập ứng dụng POS, KDS và chấm công.
+                    {copy.loginStatusHint}
                   </p>
                 </div>
                 {canManage ? (
@@ -581,21 +584,21 @@ export function EmployeeDetailSheet({
                     {isLoginActive ? (
                       <>
                         <IconLock className="size-3.5" />
-                        Khóa đăng nhập
+                        {copy.lockLogin}
                       </>
                     ) : (
                       <>
                         <IconUnlock className="size-3.5" />
-                        Mở khóa đăng nhập
+                        {copy.unlockLogin}
                       </>
                     )}
                   </Button>
                 ) : null}
               </div>
               <div className="flex items-center gap-2 text-xs">
-                <span className="text-muted-foreground">Trạng thái:</span>
+                <span className="text-muted-foreground">{copy.statusLabel}</span>
                 <Badge variant={isLoginActive ? "default" : "destructive"}>
-                  {isLoginActive ? "Đang cho phép đăng nhập" : "Đang bị khóa"}
+                  {isLoginActive ? copy.loginAllowed : copy.loginLocked}
                 </Badge>
               </div>
             </FieldGroup>
@@ -604,10 +607,10 @@ export function EmployeeDetailSheet({
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-heading text-sm font-semibold">
-                    Mật khẩu đăng nhập
+                    {copy.passwordTitle}
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Đặt lại mật khẩu cho nhân viên nếu quên.
+                    {copy.passwordHint}
                   </p>
                 </div>
                 {canManage && !showPasswordInput ? (
@@ -618,7 +621,7 @@ export function EmployeeDetailSheet({
                     onClick={() => setShowPasswordInput(true)}
                   >
                     <IconKeyRound className="size-3.5" />
-                    Đặt lại mật khẩu
+                    {copy.resetPassword}
                   </Button>
                 ) : null}
               </div>
@@ -626,7 +629,7 @@ export function EmployeeDetailSheet({
                 <div className="flex items-center gap-2">
                   <Input
                     type="password"
-                    placeholder="Mật khẩu mới (ít nhất 8 ký tự)"
+                    placeholder={copy.newPasswordPlaceholder}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     className="h-8 flex-1 text-xs"
@@ -637,7 +640,7 @@ export function EmployeeDetailSheet({
                     disabled={isPending || newPassword.trim().length < 8}
                     onClick={handleResetPassword}
                   >
-                    Lưu mật khẩu
+                    {copy.savePassword}
                   </Button>
                   <Button
                     variant="ghost"
@@ -648,12 +651,12 @@ export function EmployeeDetailSheet({
                       setNewPassword("");
                     }}
                   >
-                    Hủy
+                    {quickCopy.cancel}
                   </Button>
                 </div>
               ) : (
                 <p className="text-xs text-muted-foreground">
-                  Mật khẩu được mã hóa an toàn và chỉ có thể đặt lại mới.
+                  {copy.passwordEncryptedHint}
                 </p>
               )}
             </FieldGroup>
@@ -663,10 +666,10 @@ export function EmployeeDetailSheet({
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-heading text-sm font-semibold">
-                      Phân quyền hệ thống
+                      {copy.permissionsTitle}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Xem chi tiết ma trận quyền và điều chỉnh ngoại lệ.
+                      {copy.permissionsHint}
                     </p>
                   </div>
                   <Link
@@ -674,7 +677,7 @@ export function EmployeeDetailSheet({
                     className="inline-flex items-center gap-1 text-xs text-primary font-medium hover:underline"
                   >
                     <IconShield className="size-3.5" />
-                    Mở bảng phân quyền
+                    {copy.openPermissions}
                   </Link>
                 </div>
               </FieldGroup>
@@ -685,16 +688,16 @@ export function EmployeeDetailSheet({
               <FieldGroup className="gap-3 p-3">
                 <div>
                   <p className="font-heading text-sm font-semibold">
-                    Xóa hồ sơ nháp
+                    {copy.deleteDraftTitle}
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Chỉ dùng cho trường hợp tạo nhầm hồ sơ và chưa phát sinh chấm công hay bảng lương.
+                    {copy.deleteDraftHint}
                   </p>
                 </div>
                 {deleteConfirmOpen ? (
                   <div className="flex flex-col gap-2 pt-2 border-t border-border/50">
                     <p className="text-xs text-destructive font-medium">
-                      Bạn có chắc chắn muốn xóa dứt điểm nhân viên này?
+                      {copy.deleteConfirm}
                     </p>
                     <div className="flex items-center gap-2">
                       <Button
@@ -704,7 +707,7 @@ export function EmployeeDetailSheet({
                         disabled={isPending}
                         onClick={handleDeleteDraft}
                       >
-                        Xác nhận xóa
+                        {copy.confirmDelete}
                       </Button>
                       <Button
                         variant="ghost"
@@ -712,7 +715,7 @@ export function EmployeeDetailSheet({
                         className="h-8 text-xs"
                         onClick={() => setDeleteConfirmOpen(false)}
                       >
-                        Hủy
+                        {quickCopy.cancel}
                       </Button>
                     </div>
                   </div>
@@ -725,7 +728,7 @@ export function EmployeeDetailSheet({
                       onClick={() => setDeleteConfirmOpen(true)}
                     >
                       <IconTrash2 className="size-3.5 mr-1" />
-                      Xóa hồ sơ này
+                      {copy.deleteThisProfile}
                     </Button>
                   </div>
                 )}

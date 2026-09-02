@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: HR operational copy inline */
-
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
@@ -110,14 +108,14 @@ export function ProfileBankDialog({
               control={form.control}
               name="bankAccount"
               label={copy.bankAccount}
-              placeholder="Ví dụ: 1903..."
+              placeholder={copy.bankAccountPlaceholder}
               autoComplete="off"
             />
             <TextField
               control={form.control}
               name="bankName"
               label={copy.bankName}
-              placeholder="Ví dụ: Techcombank, MB Bank, Vietcombank..."
+              placeholder={copy.bankNamePlaceholder}
               autoComplete="off"
             />
             <TextField

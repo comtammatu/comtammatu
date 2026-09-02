@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: HR operational copy inline */
-
 import { z } from "zod";
 import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import { getVNDateString } from "@comtammatu/shared/time";
@@ -15,23 +13,17 @@ import { offboardEmployee } from "./actions";
 import type { EmployeeRow } from "./_types";
 import { messages } from "@lib/messages";
 
+const offboardCopy = messages.hr.client.offboarding;
+
 const offboardSchema = z.object({
   resignationDate: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Chọn ngày thôi việc hợp lệ" }),
-  reason: z.string().min(1, { error: "Vui lòng chọn lý do thôi việc" }),
+    .regex(/^\d{4}-\d{2}-\d{2}$/, { error: offboardCopy.invalidDate }),
+  reason: z.string().min(1, { error: offboardCopy.reasonRequired }),
   note: z.string().trim().optional(),
 });
 
 type OffboardFormValues = z.infer<typeof offboardSchema>;
-
-const REASON_OPTIONS = [
-  { value: "Nhân viên xin thôi việc", label: "Nhân viên xin thôi việc" },
-  { value: "Hết hạn hợp đồng lao động", label: "Hết hạn hợp đồng lao động" },
-  { value: "Thỏa thuận chấm dứt hợp đồng", label: "Thỏa thuận chấm dứt hợp đồng" },
-  { value: "Kỷ luật / Cho thôi việc", label: "Kỷ luật / Cho thôi việc" },
-  { value: "Khác", label: "Lý do khác" },
-];
 
 interface EmployeeOffboardingDialogProps {
   open: boolean;
@@ -46,19 +38,19 @@ export function EmployeeOffboardingDialog({
   employee,
   onSuccess,
 }: EmployeeOffboardingDialogProps) {
-  const copy = messages.hr.client.offboarding;
+  const copy = offboardCopy;
 
   if (!employee) return null;
 
   const today = getVNDateString();
   const defaultValues: OffboardFormValues = {
     resignationDate: today,
-    reason: REASON_OPTIONS[0]?.value ?? "Nhân viên xin thôi việc",
+    reason: copy.reasons[0]?.value ?? "",
     note: "",
   };
 
   async function handleSubmit(values: OffboardFormValues) {
-    if (!employee) return { success: false, error: "Nhân viên không tồn tại" };
+    if (!employee) return { success: false, error: copy.employeeMissing };
     return offboardEmployee({
       employeeId: employee.id,
       resignationDate: values.resignationDate,
@@ -91,13 +83,16 @@ export function EmployeeOffboardingDialog({
           <NoteCallout tone="warning">
             <div className="flex flex-col gap-1 text-xs">
               <p className="font-semibold">
-                Nhân sự: {employee.profiles?.full_name ?? "—"} ({employee.employee_code ?? `#${employee.id}`})
+                {copy.staffLine(
+                  employee.profiles?.full_name ?? "—",
+                  employee.employee_code ?? `#${employee.id}`,
+                )}
               </p>
               <ul className="list-disc pl-4 flex flex-col gap-1 text-muted-foreground">
-                <li>Tài khoản đăng nhập sẽ bị khóa ngay lập tức.</li>
-                <li>Hủy các ca làm việc được phân trong tương lai.</li>
-                <li>Chấm dứt hợp đồng lao động đang hoạt động.</li>
-                <li>Lịch sử chấm công và bảng lương cũ được bảo toàn.</li>
+                <li>{copy.lockLoginEffect}</li>
+                <li>{copy.cancelShiftsEffect}</li>
+                <li>{copy.closeContractEffect}</li>
+                <li>{copy.keepHistoryEffect}</li>
               </ul>
             </div>
           </NoteCallout>
@@ -112,14 +107,14 @@ export function EmployeeOffboardingDialog({
             control={form.control}
             name="reason"
             label={copy.reason}
-            options={REASON_OPTIONS}
+            options={[...copy.reasons]}
           />
 
           <TextField
             control={form.control}
             name="note"
             label={copy.note}
-            placeholder="Ghi chú thêm về lý do hoặc bàn giao tài sản..."
+            placeholder={copy.notePlaceholder}
           />
         </div>
       )}

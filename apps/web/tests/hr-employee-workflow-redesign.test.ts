@@ -115,4 +115,6 @@ test("HR copy messages define Vietnamese labels for new workflows", () => {
   assert.match(messagesSource, /contract:\s*\{[\s\S]*title: "Bước 4 · Chế độ, lương & HĐLĐ"/);
   assert.match(messagesSource, /offboarding:\s*\{/);
   assert.match(messagesSource, /deleteDraft:\s*\{/);
+  assert.match(messagesSource, /employeeDetail:\s*\{/);
+  assert.match(messagesSource, /lockLoginEffect:/);
 });

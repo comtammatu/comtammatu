@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: HR operational copy inline */
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
@@ -91,7 +89,7 @@ export function ProfileSecurityDialog({
               name="newPassword"
               label={copy.newPassword}
               type="password"
-              placeholder="Tối thiểu 8 ký tự"
+              placeholder={copy.passwordMinPlaceholder}
               autoComplete="new-password"
               required
             />
@@ -100,7 +98,7 @@ export function ProfileSecurityDialog({
               name="confirmPassword"
               label={copy.confirmPassword}
               type="password"
-              placeholder="Nhập lại mật khẩu mới"
+              placeholder={copy.confirmPasswordPlaceholder}
               autoComplete="new-password"
               required
             />
