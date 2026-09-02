@@ -2,11 +2,15 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 const repoRoot = resolve(process.cwd(), "../..");
 
 function read(relativePath: string): string {
-  return readFileSync(resolve(repoRoot, relativePath), "utf8");
+  return String(relativePath).includes("supabase/migrations/")
+    ? readSql(repoRoot, String(relativePath).replace(/^.*?(supabase\/)/, "supabase/"))
+    : readFileSync(resolve(repoRoot, relativePath), "utf8");
 }
 
 test("printer fleet UI drops 3-slot role grid", () => {
@@ -46,19 +50,18 @@ test("template test print picks printer via print_types routing", () => {
 
 test("printer fleet migration widens schema and sort_order routing", () => {
   const migration = read(
-    "supabase/migration-archive/20260729140600_printer_fleet_sort_order.sql",
+    "supabase/migrations/20260729140600_printer_fleet_sort_order.sql",
   );
 
-  assert.match(migration, /ADD COLUMN IF NOT EXISTS sort_order/);
-  assert.match(migration, /DROP CONSTRAINT IF EXISTS printers_role_check/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /ADD COLUMN IF NOT EXISTS sort_order/);
+  assertSqlMatch(migration, /DROP CONSTRAINT IF EXISTS printers_role_check/);
+  assertSqlMatch(migration,
     /DROP CONSTRAINT IF EXISTS printers_branch_id_role_tenant_id_key/,
   );
-  assert.match(migration, /printers_tenant_branch_name_key/);
-  assert.match(migration, /ORDER BY p\.sort_order, p\.id/);
-  assert.match(migration, /v_role := COALESCE/);
-  assert.doesNotMatch(migration, /invalid printer role/);
+  assertSqlMatch(migration, /printers_tenant_branch_name_key/);
+  assertSqlMatch(migration, /ORDER BY p\.sort_order, p\.id/);
+  assertSqlMatch(migration, /v_role := COALESCE/);
+  assertSqlNotMatch(migration, /invalid printer role/);
 });
 
 test("settings copy no longer advertises fixed 3-printer topology", () => {

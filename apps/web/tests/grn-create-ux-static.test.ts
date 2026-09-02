@@ -1,9 +1,13 @@
+import { readSql } from "./_lib/active-sql.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 
-const read = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
+const read = (path: string) =>
+  String(path).includes("supabase/migrations/")
+    ? readSql(process.cwd(), String(path).replace(/^.*?(supabase\/)/, "supabase/"))
+    : readFileSync(join(process.cwd(), path), "utf8");
 
 test("direct GRN creation routes operators back to the GRN queue", () => {
   const page = read("app/(protected)/inventory/grn/new/page.tsx");

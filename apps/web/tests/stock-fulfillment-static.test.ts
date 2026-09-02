@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 const repoRoot = resolve(process.cwd(), "../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 test("stock requests and transfers share job-based canonical hubs", () => {
   const centralHub = read(
@@ -48,8 +49,7 @@ test("stock requests and transfers share job-based canonical hubs", () => {
   assert.match(branchHubClient, /Đang lọc: cần nhận/);
   assert.match(branchHubClient, /Điều chuyển và phiếu đang tới/);
   assert.doesNotMatch(branchHubClient, /grid-cols-3/);
-  assert.match(
-    read(
+  assertSqlMatch(read(
       "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/data.ts",
     ),
     /STOCK_FULFILLMENT_RECEIVE_READY_STATUSES/,
@@ -58,8 +58,7 @@ test("stock requests and transfers share job-based canonical hubs", () => {
   assert.match(centralHub, /state.*"all"/s);
   assert.match(inventoryMessages, /requestAction: "Tạo điều chuyển"/);
   assert.match(branchHub, /AppDetailFooter|permanentRedirect|redirect\(/);
-  assert.match(
-    read("apps/web/app/(protected)/inventory/transfers/page.tsx"),
+  assertSqlMatch(read("apps/web/app/(protected)/inventory/transfers/page.tsx"),
     /STOCK_REQUEST_FULFILL_ROLES/,
   );
   assert.match(centralAlias, /\/inventory\/transfers\?work=request/);
@@ -128,10 +127,10 @@ test("shipping and receiving use explicit atomic transitions", () => {
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/[id]/transfer-receive-client.tsx",
   );
   const migration = read(
-    "supabase/migration-archive/20260730090000_unify_stock_fulfillment.sql",
+    "supabase/migrations/20260730090000_unify_stock_fulfillment.sql",
   );
   const shortfallMigration = read(
-    "supabase/migration-archive/20260810012250_transfer_shortfall_ownership.sql",
+    "supabase/migrations/20260810012250_transfer_shortfall_ownership.sql",
   );
 
   const shipAction = actions.slice(
@@ -143,11 +142,11 @@ test("shipping and receiving use explicit atomic transitions", () => {
   assert.match(receiveClient, /transferConfirmReceive/);
   assert.match(receiveClient, /startReceiveSession/);
   assert.match(receiveClient, /shortfall_class/);
-  assert.match(migration, /RETURN public\.stock_transfer_mark_in_transit/);
-  assert.match(migration, /short_receive_reason_required/);
-  assert.match(shortfallMigration, /short_receive_classification_required/);
-  assert.match(shortfallMigration, /transfer_transit_loss/);
-  assert.match(migration, /FROM PUBLIC, anon, authenticated, service_role/);
+  assertSqlMatch(migration, /RETURN public\.stock_transfer_mark_in_transit/);
+  assertSqlMatch(migration, /short_receive_reason_required/);
+  assertSqlMatch(shortfallMigration, /short_receive_classification_required/);
+  assertSqlMatch(shortfallMigration, /transfer_transit_loss/);
+  assertSqlMatch(migration, /FROM PUBLIC, anon, authenticated, service_role/);
 });
 
 test("owner fulfillment detail is one URL-addressable document dialog", () => {
@@ -321,35 +320,30 @@ test("central kitchen request create redirects to dest-initiated DC", () => {
   );
   const roles = read("packages/shared/src/auth/inventory-roles.ts");
   const migration = read(
-    "supabase/migration-archive/20260730194403_enable_central_kitchen_stock_requests.sql",
+    "supabase/migrations/20260730194403_enable_central_kitchen_stock_requests.sql",
   );
 
   assert.match(roles, /STOCK_REQUEST_ROLES[\s\S]*central_kitchen_lead/);
   assert.match(route, /controlTransferCreateHref/);
   assert.match(route, /"pull"/);
   assert.doesNotMatch(route, /StockRequestEditor/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /branch\.branch_kind IN \('branch', 'central_kitchen'\)/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /ingredient\.default_fulfill_site_kind = 'central_supply'/,
   );
-  assert.match(migration, /\/inventory\/transfers\?requestId=%s/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /\/inventory\/transfers\?requestId=%s/);
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION private\.canonicalize_notification\(\)[\s\S]*WHEN 'inventory\.stock_request_submitted' THEN[\s\S]*\/inventory\/transfers\?requestId=%s/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /ON CONFLICT \(tenant_id, dedup_key\)[\s\S]*DO UPDATE[\s\S]*expires_at = NULL/,
   );
-  assert.doesNotMatch(
-    migration,
+  assertSqlNotMatch(migration,
     /OLD\.status IS NOT DISTINCT FROM 'submitted'/,
   );
-  assert.match(migration, /expire_stock_request_source_notification/);
-  assert.match(migration, /AFTER INSERT OR UPDATE OF status OR DELETE/);
-  assert.match(migration, /'fulfilled', 'closed', 'cancelled'/);
+  assertSqlMatch(migration, /expire_stock_request_source_notification/);
+  assertSqlMatch(migration, /AFTER INSERT OR UPDATE OF status OR DELETE/);
+  assertSqlMatch(migration, /'fulfilled', 'closed', 'cancelled'/);
 });

@@ -1,14 +1,15 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
+import { readSql } from "./_lib/active-sql.ts";
+
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
-const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 const fix = read(
-  "supabase/migration-archive/20260820215700_fix_enforce_cash_sales_branch_category.sql",
+  "supabase/migrations/20260820215700_fix_enforce_cash_sales_branch_category.sql",
 );
 
 test("cash sales branch trigger nests NEW.category under expenses only", () => {

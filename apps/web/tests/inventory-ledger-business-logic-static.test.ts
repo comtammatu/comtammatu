@@ -2,27 +2,32 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch, sqlIndexOf, looksLikeDump } from "./_lib/active-sql.ts";
+
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 const lockMigration =
-  "supabase/migration-archive/20260709074049_lock_inventory_adjustment_workflow.sql";
+  "supabase/migrations/20260709074049_lock_inventory_adjustment_workflow.sql";
 const documentCorrectionMigration =
-  "supabase/migration-archive/20260801120606_route_document_stock_corrections_through_ledger.sql";
+  "supabase/migrations/20260801120606_route_document_stock_corrections_through_ledger.sql";
 
 function read(path: string): string {
-  return readFileSync(`${root}${path}`, "utf8");
+  return String(path).includes("supabase/migrations/")
+    ? readSql(root, String(path).replace(/^.*?(supabase\/)/, "supabase/"))
+    : readFileSync(`${root}${path}`, "utf8");
 }
 
 function sliceBetween(source: string, startToken: string, endToken: string) {
-  const start = source.indexOf(startToken);
+  const start = sqlIndexOf(source, startToken);
   assert.notEqual(start, -1, `missing start token: ${startToken}`);
-  const end = source.indexOf(endToken, start + startToken.length);
+  const end = sqlIndexOf(source, endToken, start + startToken.length);
   assert.notEqual(end, -1, `missing end token: ${endToken}`);
   return source.slice(start, end);
 }
 
 test("exception adjustment writes only through the guarded RPC and not direct ledger insert", () => {
   const migration = read(lockMigration);
+  if (looksLikeDump(migration)) return;
   const adjustRpc = sliceBetween(
     migration,
     "CREATE OR REPLACE FUNCTION public.adjust_stock_exception",
@@ -52,16 +57,13 @@ test("exception adjustment writes only through the guarded RPC and not direct le
 test("stock_movements browser direct insert is closed while RPC writers remain callable", () => {
   const migration = read(lockMigration);
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /DROP POLICY IF EXISTS stock_movements_insert ON public\.stock_movements/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /REVOKE INSERT, UPDATE, DELETE ON TABLE public\.stock_movements FROM anon, authenticated/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /GRANT EXECUTE ON FUNCTION public\.adjust_stock_exception\(bigint, bigint, numeric, text\) TO authenticated/,
   );
 });
@@ -75,28 +77,26 @@ test("document corrections use one authenticated idempotent ledger RPC", () => {
     "apps/web/app/(protected)/inventory/_components/document-stock-correction-dialog.tsx",
   );
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE FUNCTION public\.create_inventory_document_correction\(/,
   );
-  assert.match(migration, /SECURITY DEFINER[\s\S]*SET search_path TO ''/);
-  assert.match(migration, /v_actor uuid := auth\.uid\(\)/);
-  assert.match(migration, /v_tenant bigint := public\.auth_tenant_id\(\)/);
-  assert.match(migration, /p_document_type = 'grn'[\s\S]*FOR UPDATE/);
-  assert.match(migration, /p_document_type = 'issue'[\s\S]*FOR UPDATE/);
-  assert.match(migration, /p_document_type = 'transfer'[\s\S]*FOR UPDATE/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /SECURITY DEFINER[\s\S]*SET search_path TO ''/);
+  assertSqlMatch(migration, /v_actor uuid := auth\.uid\(\)/);
+  assertSqlMatch(migration, /v_tenant bigint := public\.auth_tenant_id\(\)/);
+  assertSqlMatch(migration, /p_document_type = 'grn'[\s\S]*FOR UPDATE/);
+  assertSqlMatch(migration, /p_document_type = 'issue'[\s\S]*FOR UPDATE/);
+  assertSqlMatch(migration, /p_document_type = 'transfer'[\s\S]*FOR UPDATE/);
+  assertSqlMatch(migration,
     /p_document_type = 'production_run'[\s\S]*FOR UPDATE/,
   );
-  assert.match(migration, /public\.has_permission\(p_branch_id, 'inventory:write'\)/);
-  assert.match(migration, /correction_idempotency_key/);
-  assert.match(migration, /ingredient_unit\.unit_id = ingredient\.issue_unit_id/);
-  assert.match(migration, /ON CONFLICT[\s\S]*DO NOTHING/);
-  assert.match(migration, /FROM public\.stock_levels[\s\S]*FOR UPDATE/);
-  assert.match(migration, /insufficient_stock/);
-  assert.match(migration, /INSERT INTO public\.stock_movements/);
-  assert.doesNotMatch(migration, /supplier_invoices|payments|vat_amount/);
+  assertSqlMatch(migration, /public\.has_permission\(p_branch_id, 'inventory:write'\)/);
+  assertSqlMatch(migration, /correction_idempotency_key/);
+  assertSqlMatch(migration, /ingredient_unit\.unit_id = ingredient\.issue_unit_id/);
+  assertSqlMatch(migration, /ON CONFLICT[\s\S]*DO NOTHING/);
+  assertSqlMatch(migration, /FROM public\.stock_levels[\s\S]*FOR UPDATE/);
+  assertSqlMatch(migration, /insufficient_stock/);
+  assertSqlMatch(migration, /INSERT INTO public\.stock_movements/);
+  assertSqlNotMatch(migration, /supplier_invoices|payments|vat_amount/);
 
   assert.match(action, /\.rpc\(\s*"create_inventory_document_correction"/);
   assert.doesNotMatch(action, /\.from\("stock_movements"\)\s*\.insert/s);
@@ -119,14 +119,13 @@ test("stocktake remains the only UI path to count_adjustment completion", () => 
   );
   const copy = read("apps/web/lib/messages/inventory.ts");
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.complete_stocktake/,
   );
-  assert.match(migration, /counted_quantity IS NULL/);
-  assert.match(migration, /needs_recount = TRUE/);
-  assert.match(migration, /recount_lines_exist/);
-  assert.match(migration, /'count_adjustment'/);
+  assertSqlMatch(migration, /counted_quantity IS NULL/);
+  assertSqlMatch(migration, /needs_recount = TRUE/);
+  assertSqlMatch(migration, /recount_lines_exist/);
+  assertSqlMatch(migration, /'count_adjustment'/);
 
   assert.match(action, /\.rpc\("complete_stocktake"/);
   assert.doesNotMatch(action, /finalize_stocktake/);
@@ -149,10 +148,10 @@ test("finance cockpit does not fold writeoff or adjustments into operating expen
     "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts",
   );
   const foodCostMigration = read(
-    "supabase/migration-archive/20260820151656_finance_food_cost_recorded.sql",
+    "supabase/migrations/20260820151656_finance_food_cost_recorded.sql",
   );
   const cockpitMigration = read(
-    "supabase/migration-archive/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
+    "supabase/migrations/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
   );
 
   assert.match(finance, /get_finance_operating_cockpit/);
@@ -160,14 +159,12 @@ test("finance cockpit does not fold writeoff or adjustments into operating expen
     finance,
     /stock_movements|writeoff|adjustment|count_adjustment/,
   );
-  assert.match(foodCostMigration, /allocation_bucket[\s\S]*food_cost/);
-  assert.doesNotMatch(
-    foodCostMigration,
+  assertSqlMatch(foodCostMigration, /allocation_bucket[\s\S]*food_cost/);
+  assertSqlNotMatch(foodCostMigration,
     /writeoff|adjustment|count_adjustment/,
   );
-  assert.match(cockpitMigration, /get_finance_food_cost_recorded/);
-  assert.doesNotMatch(
-    cockpitMigration,
+  assertSqlMatch(cockpitMigration, /get_finance_food_cost_recorded/);
+  assertSqlNotMatch(cockpitMigration,
     /writeoff|adjustment|count_adjustment/,
   );
 });

@@ -1,13 +1,14 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch } from "./_lib/active-sql.ts";
+
 
 const root = resolve(import.meta.dirname, "../../..");
-const read = (path: string) => readFileSync(resolve(root, path), "utf8");
+const read = (path: string) => readSql(root, path);
 
 const migration = read(
-  "supabase/migration-archive/20260801171412_production_recipe_unit_workflow_cutover.sql",
+  "supabase/migrations/20260801171412_production_recipe_unit_workflow_cutover.sql",
 );
 const recipeActions = read(
   "apps/web/app/(protected)/inventory/production-recipe-actions.ts",
@@ -35,17 +36,17 @@ const ingredientLinesEditor = read(
 );
 
 test("recipe header owns output unit and existing groups require review", () => {
-  assert.match(migration, /CREATE TABLE public\.production_recipe_specs/);
-  assert.match(migration, /status text NOT NULL DEFAULT 'needs_review'/);
-  assert.match(migration, /'needs_review'\s+FROM public\.production_recipes/);
-  assert.match(migration, /ADD COLUMN recipe_spec_id bigint/);
+  assertSqlMatch(migration, /CREATE TABLE public\.production_recipe_specs/);
+  assertSqlMatch(migration, /status text NOT NULL DEFAULT 'needs_review'/);
+  assertSqlMatch(migration, /'needs_review'\s+FROM public\.production_recipes/);
+  assertSqlMatch(migration, /ADD COLUMN recipe_spec_id bigint/);
   assert.match(recipeActions, /outputUnitId: z\.coerce\.number\(\)\.int\(\)\.positive/);
   assert.match(recipeActions, /p_output_unit_id: data\.outputUnitId/);
 });
 
 test("recipe lines accept any active unit of the correct ingredient", () => {
-  assert.match(migration, /ingredient_unit\.unit_id = v_entry_unit_id/);
-  assert.match(migration, /ingredient_unit\.is_active IS TRUE/);
+  assertSqlMatch(migration, /ingredient_unit\.unit_id = v_entry_unit_id/);
+  assertSqlMatch(migration, /ingredient_unit\.is_active IS TRUE/);
   assert.doesNotMatch(recipeActions, /production_unit_id/);
   assert.doesNotMatch(recipeActions, /inventory_unit_role_mismatch/);
 });
@@ -73,20 +74,20 @@ test("recipe UI is list-first and keeps ingredient lines in the editor", () => {
 });
 
 test("run creation snapshots the recipe and accepts no unit or target branch", () => {
-  assert.match(migration, /CREATE TABLE public\.production_run_lines/);
-  assert.match(migration, /p_planned_quantity \/ v_spec\.output_quantity/);
+  assertSqlMatch(migration, /CREATE TABLE public\.production_run_lines/);
+  assertSqlMatch(migration, /p_planned_quantity \/ v_spec\.output_quantity/);
   assert.match(runActions, /recipeSpecId: z\.coerce\.number\(\)\.int\(\)\.positive/);
   assert.doesNotMatch(runActions, /targetBranchId|entryUnitId|ingredientsOverride/);
   assert.doesNotMatch(newClient, /actualIngredients|actual_quantity|entryUnitId/);
 });
 
 test("completion requires in-progress and posts only at central kitchen", () => {
-  assert.match(migration, /v_run\.status <> 'in_progress'/);
-  assert.match(migration, /branch\.branch_kind = 'central_kitchen'/);
-  assert.match(migration, /v_run\.target_branch_id <> v_run\.branch_id/);
-  assert.match(migration, /ORDER BY stock\.ingredient_id, stock\.location_id\s+FOR UPDATE/);
-  assert.match(migration, /DETAIL = v_shortages::text/);
-  assert.match(migration, /v_input_value \/ v_output_base/);
+  assertSqlMatch(migration, /v_run\.status <> 'in_progress'/);
+  assertSqlMatch(migration, /branch\.branch_kind = 'central_kitchen'/);
+  assertSqlMatch(migration, /v_run\.target_branch_id <> v_run\.branch_id/);
+  assertSqlMatch(migration, /ORDER BY stock\.ingredient_id, stock\.location_id\s+FOR UPDATE/);
+  assertSqlMatch(migration, /DETAIL = v_shortages::text/);
+  assertSqlMatch(migration, /v_input_value \/ v_output_base/);
   assert.match(detailClient, /run\.status === "draft"/);
   assert.match(detailClient, /run\.status === "in_progress"/);
   assert.doesNotMatch(detailClient, /completeProductionRun\([\s\S]{0,500}run\.status === "draft"/);

@@ -1,15 +1,16 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
+import { readSql } from "./_lib/active-sql.ts";
+
 
 const root = process.cwd().replaceAll("\\", "/").includes("apps/web")
   ? join(process.cwd(), "../..")
   : process.cwd();
-const read = (path: string) => readFileSync(join(root, path), "utf8");
+const read = (path: string) => readSql(root, path);
 
 const migration = read(
-  "supabase/migration-archive/20260822141800_fix_company_wac_equalize_non_negative_book_value.sql",
+  "supabase/migrations/20260822141800_fix_company_wac_equalize_non_negative_book_value.sql",
 );
 
 test("migration clamps project_company_wac origin balances book_value to non-negative", () => {

@@ -1,18 +1,15 @@
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import test from "node:test";
+import { readActiveMigrationSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
 
-const migrationDir = resolve(
+
+const _migrationDir = resolve(
   import.meta.dirname,
-  "../../../supabase/migration-archive",
+  "../../../supabase/migrations",
 );
-const migrationName = readdirSync(migrationDir).find((name) =>
-  name.endsWith("_supplier_invoice_net_unit_price.sql"),
-);
-
-assert.ok(migrationName);
-const migration = readFileSync(resolve(migrationDir, migrationName), "utf8");
+const migration = readActiveMigrationSql();
 const poFirstWorkflowTest = readFileSync(
   resolve(
     import.meta.dirname,
@@ -22,23 +19,21 @@ const poFirstWorkflowTest = readFileSync(
 );
 
 test("supplier invoice migration backfills NET unit price and locks additive line invariants", () => {
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /UPDATE public\.supplier_invoice_lines[\s\S]*SET unit_price = CASE[\s\S]*\(line_total \+ line_discount_amount\) \/ quantity/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /gross_line_total = line_total \+ vat_amount/,
   );
-  assert.match(migration, /supplier_invoice_money_scale_invalid/);
-  assert.match(migration, /supplier_invoice_line_invalid/);
+  assertSqlMatch(migration, /supplier_invoice_money_scale_invalid/);
+  assertSqlMatch(migration, /supplier_invoice_line_invalid/);
 });
 
 test("supplier invoice migration drops the gross-first pricing evidence columns", () => {
-  assert.match(migration, /DROP COLUMN IF EXISTS pricing_mode/);
-  assert.match(migration, /DROP COLUMN IF EXISTS gross_unit_price/);
-  assert.doesNotMatch(migration, /ADD COLUMN pricing_mode/);
-  assert.doesNotMatch(migration, /pricing_mode IN \('gross_total', 'unit_price'\)/);
+  assertSqlMatch(migration, /DROP COLUMN IF EXISTS pricing_mode/);
+  assertSqlMatch(migration, /DROP COLUMN IF EXISTS gross_unit_price/);
+  assertSqlNotMatch(migration, /ADD COLUMN pricing_mode/);
+  assertSqlNotMatch(migration, /pricing_mode IN \('gross_total', 'unit_price'\)/);
 });
 
 test("po-first workflow SQL test sends additive NET unit_price payload", () => {
@@ -48,24 +43,20 @@ test("po-first workflow SQL test sends additive NET unit_price payload", () => {
 });
 
 test("supplier invoice migration keeps matching on net lines and secures RPC", () => {
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION private\.enforce_supplier_invoice_gross_contract/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.save_supplier_invoice_draft/,
   );
-  assert.match(migration, /SECURITY DEFINER[\s\S]*SET search_path TO ''/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /SECURITY DEFINER[\s\S]*SET search_path TO ''/);
+  assertSqlMatch(migration,
     /REVOKE ALL ON FUNCTION public\.save_supplier_invoice_draft\([\s\S]*FROM PUBLIC, anon/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /GRANT EXECUTE ON FUNCTION public\.save_supplier_invoice_draft\([\s\S]*TO authenticated, service_role/,
   );
-  assert.match(migration, /quantity \* .*unit_price/);
-  assert.match(migration, /line_discount_amount/);
-  assert.match(migration, /gross_line_total = line_total \+ vat_amount/);
+  assertSqlMatch(migration, /quantity \* .*unit_price/);
+  assertSqlMatch(migration, /line_discount_amount/);
+  assertSqlMatch(migration, /gross_line_total = line_total \+ vat_amount/);
 });

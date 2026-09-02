@@ -1,14 +1,9 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { test } from "node:test";
+import { readSql } from "./_lib/active-sql.ts";
 
-const migration = readFileSync(
-  new URL(
-    "../../../supabase/migration-archive/20260711043533_self_order_bill_financial_breakdown.sql",
-    import.meta.url,
-  ),
-  "utf8",
-);
+
+const migration = readSql(process.cwd(), "supabase/migrations/20260711043533_self_order_bill_financial_breakdown.sql");
 
 test("Self-Order snapshot exposes authoritative bill totals", () => {
   assert.match(migration, /'subtotal', o\.subtotal/);

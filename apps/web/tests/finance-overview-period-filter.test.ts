@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
+import { readSql } from "./_lib/active-sql.ts";
+
 import {
   FINANCE_LOCATIONS,
   FINANCE_OVERVIEW_PERIODS,
@@ -93,25 +95,13 @@ describe("Finance overview period filter", () => {
     // Startup-capital scoping moved into get_finance_startup_capital_summary:
     // company stays NULL-branch-only inside the RPC, never a client filter.
     assert.match(cockpit, /get_finance_startup_capital_summary/);
-    const startupCapitalMigration = readFileSync(
-      new URL(
-        "../../../supabase/migration-archive/20260824013553_finance_startup_capital_summary_rpc.sql",
-        import.meta.url,
-      ),
-      "utf8",
-    );
+    const startupCapitalMigration = readSql(process.cwd(), "supabase/migrations/20260824013553_finance_startup_capital_summary_rpc.sql");
     assert.match(
       startupCapitalMigration,
       /WHEN 'company' THEN expense\.branch_id IS NULL/,
     );
     assert.match(cockpit, /get_finance_operating_cockpit/);
-    const operatingCockpitMigration = readFileSync(
-      new URL(
-        "../../../supabase/migration-archive/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
-        import.meta.url,
-      ),
-      "utf8",
-    );
+    const operatingCockpitMigration = readSql(process.cwd(), "supabase/migrations/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql");
     assert.match(operatingCockpitMigration, /invoice\.grn_id IS NULL/);
   });
 

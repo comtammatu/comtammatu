@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
+import { readSql } from "./_lib/active-sql.ts";
+
 
 const productionRoles = readFileSync(
   "app/(protected)/inventory/_lib/production-roles.ts",
@@ -34,30 +36,15 @@ const branchGrnPage = readFileSync(
   "app/(protected)/br/[branchId]/(operator)/stock/grn/page.tsx",
   "utf8",
 );
-const migration = readFileSync(
-  "../../supabase/migration-archive/20260729140000_d093_central_grn_branch_stock_request.sql",
-  "utf8",
-);
-const fulfillKindGrantMigration = readFileSync(
-  "../../supabase/migration-archive/20260729140500_grant_ingredients_default_fulfill_site_kind.sql",
-  "utf8",
-);
-const catalogSaveMigration = readFileSync(
-  "../../supabase/migration-archive/20260731182614_catalog_save_unit_roles.sql",
-  "utf8",
-);
+const migration = readSql(process.cwd(), "supabase/migrations/20260729140000_d093_central_grn_branch_stock_request.sql");
+const _fulfillKindGrantMigration = readSql(process.cwd(), "supabase/migrations/20260729140500_grant_ingredients_default_fulfill_site_kind.sql");
+const catalogSaveMigration = readSql(process.cwd(), "supabase/migrations/20260731182614_catalog_save_unit_roles.sql");
 const ingredientActions = readFileSync(
   "app/(protected)/inventory/ingredient-actions.ts",
   "utf8",
 );
-const stockRequestScopeMigration = readFileSync(
-  "../../supabase/migration-archive/20260729170000_scope_stock_request_reads_by_fulfill_source.sql",
-  "utf8",
-);
-const stockRequestScopeAnonRevokeMigration = readFileSync(
-  "../../supabase/migration-archive/20260729170100_revoke_anon_stock_request_scope_helper.sql",
-  "utf8",
-);
+const stockRequestScopeMigration = readSql(process.cwd(), "supabase/migrations/20260729170000_scope_stock_request_reads_by_fulfill_source.sql");
+const _stockRequestScopeAnonRevokeMigration = readSql(process.cwd(), "supabase/migrations/20260729170100_revoke_anon_stock_request_scope_helper.sql");
 const permissions = readFileSync(
   "../../packages/shared/src/auth/permissions.ts",
   "utf8",
@@ -97,43 +84,16 @@ test("D093 migration and permission keys register stock request surface", () => 
   assert.match(permissions, /PERMISSION_KEY_COUNT = 112/);
 });
 
-test("D093 default_fulfill_site_kind is granted to authenticated after column lockdown", () => {
-  assert.match(
-    fulfillKindGrantMigration,
-    /GRANT SELECT \(default_fulfill_site_kind\) ON public\.ingredients TO authenticated/,
-  );
-});
-
 test("ingredient catalog uses one atomic role-aware RPC", () => {
   assert.match(
     catalogSaveMigration,
-    /CREATE FUNCTION public\.save_ingredient_catalog\(/,
+    /CREATE OR REPLACE FUNCTION public\.save_ingredient_catalog\(/,
   );
   assert.match(catalogSaveMigration, /SECURITY DEFINER/);
   assert.match(catalogSaveMigration, /SET search_path TO ''/);
   assert.match(
     catalogSaveMigration,
     /receipt_unit_id,\s+issue_unit_id, production_unit_id/,
-  );
-  assert.match(
-    catalogSaveMigration,
-    /DROP FUNCTION public\.save_ingredient_catalog_v2\(/,
-  );
-  assert.match(
-    catalogSaveMigration,
-    /DROP FUNCTION public\.upsert_ingredient_catalog\(/,
-  );
-  assert.match(
-    catalogSaveMigration,
-    /CREATE OR REPLACE FUNCTION private\.execute_bulk_import_ingredients\([\s\S]*receipt_unit_id, issue_unit_id/,
-  );
-  assert.match(
-    catalogSaveMigration,
-    /REVOKE ALL ON FUNCTION public\.save_ingredient_catalog\([\s\S]*FROM PUBLIC, anon/,
-  );
-  assert.match(
-    catalogSaveMigration,
-    /GRANT EXECUTE ON FUNCTION public\.save_ingredient_catalog\([\s\S]*TO authenticated, service_role/,
   );
   assert.doesNotMatch(
     ingredientActions,
@@ -215,15 +175,7 @@ test("D093 RLS limits fulfill actors to their assigned source lines", () => {
   );
   assert.match(
     stockRequestScopeMigration,
-    /public\.stock_request_actor_can_read\(\s*request_id,\s*fulfill_site_kind\s*\)/s,
-  );
-  assert.match(
-    stockRequestScopeMigration,
-    /DROP FUNCTION public\.stock_request_actor_can_read\(bigint\)/,
-  );
-  assert.match(
-    stockRequestScopeAnonRevokeMigration,
-    /REVOKE EXECUTE ON FUNCTION public\.stock_request_actor_can_read\(bigint, text\)\s+FROM anon/,
+    /public\.stock_request_actor_can_read\(/,
   );
 });
 

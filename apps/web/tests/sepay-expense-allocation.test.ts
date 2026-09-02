@@ -1,15 +1,16 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
+import { readSql } from "./_lib/active-sql.ts";
+
 import {
   isSepayExpenseAllocationBalanced,
   nextSepayExpenseSelection,
 } from "../app/(protected)/finance/_lib/sepay-bank-transaction-model";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
-const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 test("expense allocation must conserve the bank transaction amount", () => {
   assert.equal(isSepayExpenseAllocationBalanced(1_000_000, 1_000_000, 2), true);
@@ -39,7 +40,7 @@ test("UI and RPC both reject non-zero expense allocation delta", () => {
     "apps/web/app/(protected)/finance/bank-transactions/match-expense-cell.tsx",
   );
   const migration = read(
-    "supabase/migration-archive/20260714031023_20260713151901_enforce_sepay_expense_allocation_amount.sql",
+    "supabase/migrations/20260714031023_20260713151901_enforce_sepay_expense_allocation_amount.sql",
   );
 
   assert.match(cell, /!hasChanges \|\| !allocationBalanced/);

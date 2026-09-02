@@ -2,15 +2,10 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { readSql } from "./_lib/active-sql.ts";
 
 const root = join(import.meta.dirname, "../../..");
-const datedDocNumberMigration = readFileSync(
-  join(
-    root,
-    "supabase/migration-archive/20260729160000_inventory_doc_numbers_with_date.sql",
-  ),
-  "utf8",
-);
+const datedDocNumberMigration = readSql(root, "supabase/migrations/20260729160000_inventory_doc_numbers_with_date.sql");
 
 test("app create paths no longer mint opaque UUID document codes", () => {
   const grn = readFileSync(

@@ -1,10 +1,14 @@
+import { readSql } from "./_lib/active-sql.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 
 const root = process.cwd();
-const read = (path: string) => readFileSync(join(root, path), "utf8");
+const read = (path: string) =>
+  String(path).includes("supabase/migrations/")
+    ? readSql(root, String(path).replace(/^.*?(supabase\/)/, "supabase/"))
+    : readFileSync(join(root, path), "utf8");
 
 test("public auth surfaces preserve responsive input density and a visible page heading", () => {
   const loginForm = read("app/(public)/(auth)/login/login-form.tsx");

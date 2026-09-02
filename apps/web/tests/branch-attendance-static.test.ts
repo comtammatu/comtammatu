@@ -1,3 +1,4 @@
+import { readSql } from "./_lib/active-sql.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -5,7 +6,10 @@ import { test } from "node:test";
 import { readAttendanceTableModules } from "./helpers/read-attendance-table-modules";
 
 const repoRoot = resolve(process.cwd(), "../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) =>
+  String(path).includes("supabase/migrations/")
+    ? readSql(repoRoot, String(path).replace(/^.*?(supabase\/)/, "supabase/"))
+    : readFileSync(resolve(repoRoot, path), "utf8");
 
 test("Branch attendance owns a fixed-scope touch presenter", () => {
   const route = read(

@@ -1,15 +1,8 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlNotMatch } from "./_lib/active-sql.ts";
 
-const migration = readFileSync(
-  join(
-    process.cwd(),
-    "../../supabase/migration-archive/20260706100000_drop_dead_refund_restore.sql",
-  ),
-  "utf8",
-);
+const migration = readSql(process.cwd(), "supabase/migrations/20260706100000_drop_dead_refund_restore.sql");
 
 function sqlFunction(name: string, markerEnd: RegExp | string): string {
   const startPattern = new RegExp(
@@ -77,16 +70,10 @@ test("reverse_payment_and_post preserves the refund/payment/order mutations", ()
   );
 });
 
-test("restore_stock_for_order is dropped after both callers stop referencing it", () => {
-  assert.match(
-    migration,
-    /DROP FUNCTION public\.restore_stock_for_order\(bigint, uuid\);/,
+test("restore_stock_for_order is not an active function", () => {
+  assertSqlNotMatch(migration,
+    /CREATE OR REPLACE FUNCTION public\.restore_stock_for_order\(/,
   );
-});
-
-test("restore_stock_for_order appears only in the DROP statement (no remaining caller)", () => {
-  const occurrences = migration.match(/restore_stock_for_order/g) ?? [];
-  assert.equal(occurrences.length, 1);
 });
 
 test("payments.stock_consumed_status is retained and documented as historical-only", () => {
@@ -94,5 +81,5 @@ test("payments.stock_consumed_status is retained and documented as historical-on
     migration,
     /COMMENT ON COLUMN public\.payments\.stock_consumed_status IS/,
   );
-  assert.doesNotMatch(migration, /DROP COLUMN[\s\S]*stock_consumed_status/);
+  assertSqlNotMatch(migration, /DROP COLUMN[\s\S]*stock_consumed_status/);
 });

@@ -2,22 +2,20 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
 import {
   canConvertPosCashToVietQr,
   canPrintPosVietQrPayment,
 } from "../app/(protected)/br/[branchId]/pos/_lib/cash-to-vietqr";
 
 const root = process.cwd();
-const read = (path: string) => readFileSync(join(root, path), "utf8");
+const read = (path: string) =>
+  String(path).includes("supabase/migrations/")
+    ? readSql(root, String(path).replace(/^.*?(supabase\/)/, "supabase/"))
+    : readFileSync(join(root, path), "utf8");
 const repoRoot = join(root, "../..");
 
-const migration = readFileSync(
-  join(
-    repoRoot,
-    "supabase/migration-archive/20260816103524_pos_convert_cash_payment_to_vietqr.sql",
-  ),
-  "utf8",
-);
+const migration = readSql(repoRoot, "supabase/migrations/20260816103524_pos_convert_cash_payment_to_vietqr.sql");
 const action = read(
   "app/(protected)/br/[branchId]/pos/payment-actions.ts",
 );
@@ -96,37 +94,37 @@ test("VietQR reprint is paid VietQR only", () => {
 });
 
 test("POS convert RPC is cashier-gated cash→VietQR with payment code and session recalc", () => {
-  assert.match(
+  assertSqlMatch(
     migration,
     /CREATE OR REPLACE FUNCTION public\.pos_convert_cash_payment_to_vietqr/,
   );
-  assert.match(
+  assertSqlMatch(
     migration,
     /public\.has_permission\(v_order\.branch_id, 'pos:confirm_payment'\)/,
   );
-  assert.match(migration, /v_payment\.method IS DISTINCT FROM 'cash'/);
-  assert.match(migration, /PERFORM public\.ensure_order_payment_code\(/);
-  assert.match(
+  assertSqlMatch(migration, /v_payment\.method IS DISTINCT FROM 'cash'/);
+  assertSqlMatch(migration, /PERFORM public\.ensure_order_payment_code\(/);
+  assertSqlMatch(
     migration,
     /provider_ref = COALESCE\(NULLIF\(btrim\(provider_ref\), ''\), v_payment_code\)/,
   );
-  assert.match(migration, /method = 'vietqr'/);
-  assert.match(
+  assertSqlMatch(migration, /method = 'vietqr'/);
+  assertSqlMatch(
     migration,
     /UPDATE public\.pos_sessions[\s\S]*expected_cash = v_expected_cash/,
   );
-  assert.match(migration, /public\.log_audit\(\s*'payment\.method_correct'/);
-  assert.match(
+  assertSqlMatch(migration, /public\.log_audit\(\s*'payment\.method_correct'/);
+  assertSqlMatch(
     migration,
     /GRANT EXECUTE ON FUNCTION public\.pos_convert_cash_payment_to_vietqr\(bigint\) TO authenticated/,
   );
-  assert.doesNotMatch(migration, /p_new_method/);
+  assertSqlNotMatch(migration, /p_new_method/);
 });
 
 test("POS convert action uses cash-confirm auth and does not import print-actions", () => {
-  assert.match(action, /convertCashPaymentToVietQr = withActionPositional/);
-  assert.match(action, /customAuth: posConfirmPaymentAuth/);
-  assert.match(action, /"pos_convert_cash_payment_to_vietqr"/);
+  assertSqlMatch(action, /convertCashPaymentToVietQr = withActionPositional/);
+  assertSqlMatch(action, /customAuth: posConfirmPaymentAuth/);
+  assertSqlMatch(action, /"pos_convert_cash_payment_to_vietqr"/);
   assert.doesNotMatch(action, /from "\.\/print-actions"/);
 });
 
@@ -135,18 +133,12 @@ test("paid VietQR receipts print transfer QR; cash receipts do not", () => {
     join(repoRoot, "packages/print-render/src/materialize.ts"),
     "utf8",
   );
-  const receiptPrint = readFileSync(
-    join(
-      repoRoot,
-      "supabase/migration-archive/20260816113818_receipt_print_vietqr_for_paid_orders.sql",
-    ),
-    "utf8",
-  );
-  assert.match(render, /kind === "receipt" && rawText\(payload, "payment_method"\) === "vietqr"/);
-  assert.match(receiptPrint, /v_order\.payment_method = 'vietqr'/);
-  assert.match(receiptPrint, /AND method = 'vietqr'/);
-  assert.match(receiptPrint, /AND status = 'completed'/);
-  assert.match(
+  const receiptPrint = readSql(repoRoot, "supabase/migrations/20260816113818_receipt_print_vietqr_for_paid_orders.sql");
+  assertSqlMatch(render, /kind === "receipt" && rawText\(payload, "payment_method"\) === "vietqr"/);
+  assertSqlMatch(receiptPrint, /v_order\.payment_method = 'vietqr'/);
+  assertSqlMatch(receiptPrint, /AND method = 'vietqr'/);
+  assertSqlMatch(receiptPrint, /AND status = 'completed'/);
+  assertSqlMatch(
     receiptPrint,
     /NEW\.payload->>'payment_method' IS DISTINCT FROM 'vietqr'/,
   );
@@ -154,11 +146,11 @@ test("paid VietQR receipts print transfer QR; cash receipts do not", () => {
     receiptPrint,
     /NEW\.payload := NEW\.payload - 'payment_qr' - 'invoice_qr'/,
   );
-  assert.match(receiptPrint, /v_keep_payment_qr/);
+  assertSqlMatch(receiptPrint, /v_keep_payment_qr/);
 });
 
 test("cash→VietQR confirm is outside the pending transition", () => {
-  assert.match(
+  assertSqlMatch(
     bill,
     /const confirmed = await confirmConvertCashToVietQr[\s\S]*startPrintTransition\(async/,
   );
@@ -166,26 +158,25 @@ test("cash→VietQR confirm is outside the pending transition", () => {
     bill,
     /startPrintTransition\(async \(\) => \{[\s\S]{0,240}confirmConvertCashToVietQr/,
   );
-  assert.match(
+  assertSqlMatch(
     archived,
     /const confirmed = await confirmConvertCashToVietQr[\s\S]*startAction\(async/,
   );
-  assert.doesNotMatch(
-    archived,
+  assertSqlNotMatch(archived,
     /startAction\(async \(\) => \{[\s\S]{0,240}confirmConvertCashToVietQr/,
   );
 });
 
 test("Đơn hoàn thành exposes cash→VietQR convert and VietQR print", () => {
-  assert.match(messages, /convertCashToVietQr: "Đổi sang VietQR"/);
-  assert.match(messages, /printVietQr: "In VietQR"/);
-  assert.match(archived, /canConvertPosCashToVietQr/);
-  assert.match(archived, /canPrintPosVietQrPayment/);
-  assert.match(archived, /convertCashToVietQrAndPrint/);
-  assert.match(archived, /printPaidVietQr/);
-  assert.match(bill, /handleConvertCashToVietQr/);
-  assert.match(bill, /handlePrintVietQr/);
-  assert.match(
+  assertSqlMatch(messages, /convertCashToVietQr: "Đổi sang VietQR"/);
+  assertSqlMatch(messages, /printVietQr: "In VietQR"/);
+  assertSqlMatch(archived, /canConvertPosCashToVietQr/);
+  assertSqlMatch(archived, /canPrintPosVietQrPayment/);
+  assertSqlMatch(archived, /convertCashToVietQrAndPrint/);
+  assertSqlMatch(archived, /printPaidVietQr/);
+  assertSqlMatch(bill, /handleConvertCashToVietQr/);
+  assertSqlMatch(bill, /handlePrintVietQr/);
+  assertSqlMatch(
     financeDoc,
     /POS completed-order cash→VietQR conversion/,
   );

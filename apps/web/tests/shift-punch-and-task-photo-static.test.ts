@@ -1,14 +1,15 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 function readWeb(path: string): string {
-  return readFileSync(join(process.cwd(), path), "utf8");
+  return readSql(process.cwd(), path);
 }
 
 function readRepo(path: string): string {
-  return readFileSync(join(process.cwd(), "../..", path), "utf8");
+  return readSql(join(process.cwd(), "../.."), path);
 }
 
 test("rejected checkout keeps shift tasks and count on the open punch", () => {
@@ -81,10 +82,10 @@ test("shift task photo is required to mark done", () => {
   const tasksClient = readWeb("lib/staff-runtime/tasks/tasks-client.tsx");
   const actions = readWeb("lib/staff-runtime/clock/actions.ts");
   const rpcMigration = readRepo(
-    "supabase/migration-archive/20260817141000_shift_task_photo_required.sql",
+    "supabase/migrations/20260817141000_shift_task_photo_required.sql",
   );
   const compactMigration = readRepo(
-    "supabase/migration-archive/20260817191830_compact_position_shift_tasks_photo_required.sql",
+    "supabase/migrations/20260817191830_compact_position_shift_tasks_photo_required.sql",
   );
   const messages = readWeb("lib/messages/employee.ts");
   const hr = readWeb("lib/messages/hr.ts");
@@ -95,10 +96,9 @@ test("shift task photo is required to mark done", () => {
   assert.match(tasksClient, /isRequiredChecklistItemComplete/);
   assert.match(tasksClient, /phaseHints/);
   assert.match(actions, /photo_required/);
-  assert.match(rpcMigration, /RAISE EXCEPTION 'photo_required'/);
-  assert.match(rpcMigration, /is_done = true/);
-  assert.match(
-    compactMigration,
+  assertSqlMatch(rpcMigration, /RAISE EXCEPTION 'photo_required'/);
+  assertSqlMatch(rpcMigration, /is_done = true/);
+  assertSqlMatch(compactMigration,
     /attendance_checklist_items_photo_required_when_done/,
   );
   assert.match(messages, /photoRequired:/);
@@ -119,47 +119,41 @@ test("shift task photo is required to mark done", () => {
 
 test("floor shift tasks stay compact and waiter cannot close cash", () => {
   const migration = readRepo(
-    "supabase/migration-archive/20260817191830_compact_position_shift_tasks_photo_required.sql",
+    "supabase/migrations/20260817191830_compact_position_shift_tasks_photo_required.sql",
   );
   const refinedMigration = readRepo(
-    "supabase/migration-archive/20260821200000_refine_position_shift_tasks_sop.sql",
+    "supabase/migrations/20260821200000_refine_position_shift_tasks_sop.sql",
   );
   const docs = readRepo("docs/ref/branch-operations.md");
 
-  assert.match(migration, /\('cashier', 'end_of_shift', 'Đếm tiền, chốt ca POS'/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /\('cashier', 'end_of_shift', 'Đếm tiền, chốt ca POS'/);
+  assertSqlMatch(migration,
     /\('waiter', 'end_of_shift', 'Dọn sảnh, quầy nước'/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /\('waiter', 'end_of_shift', 'Dọn khu phụ trách', 'Chụp ảnh khu vực phụ trách đã dọn\.', 4, true\)/,
   );
-  assert.doesNotMatch(
-    migration,
+  assertSqlNotMatch(migration,
     /\('waiter', 'end_of_shift', 'Đếm tiền/,
     "Waiter must not close POS cash",
   );
-  assert.doesNotMatch(
-    migration,
+  assertSqlNotMatch(migration,
     /'Chấm công'/,
     "Clock-in is a system event, not a checklist row",
   );
 
   // Refined SOP migration checks
-  assert.match(refinedMigration, /\('waiter', 'start_of_shift', 'Setup sảnh/);
-  assert.match(refinedMigration, /\('cashier', 'start_of_shift', 'Setup & vệ sinh quầy thu ngân/);
-  assert.match(refinedMigration, /\('kitchen_helper', 'start_of_shift', 'Nấu cơm tấm & nước canh/);
-  assert.match(refinedMigration, /\('cleaner', 'start_of_shift', 'Vệ sinh & khử mùi WC/);
-  assert.match(refinedMigration, /\('guard', 'start_of_shift', 'Quét sân trước/);
-  assert.match(refinedMigration, /\('branch_manager', 'start_of_shift', 'Điểm danh ca làm việc/);
-  assert.doesNotMatch(
-    refinedMigration,
+  assertSqlMatch(refinedMigration, /\('waiter', 'start_of_shift', 'Setup sảnh/);
+  assertSqlMatch(refinedMigration, /\('cashier', 'start_of_shift', 'Setup & vệ sinh quầy thu ngân/);
+  assertSqlMatch(refinedMigration, /\('kitchen_helper', 'start_of_shift', 'Nấu cơm tấm & nước canh/);
+  assertSqlMatch(refinedMigration, /\('cleaner', 'start_of_shift', 'Vệ sinh & khử mùi WC/);
+  assertSqlMatch(refinedMigration, /\('guard', 'start_of_shift', 'Quét sân trước/);
+  assertSqlMatch(refinedMigration, /\('branch_manager', 'start_of_shift', 'Điểm danh ca làm việc/);
+  assertSqlNotMatch(refinedMigration,
     /'Chấm công'/,
     "Clock-in is a system event, not a checklist row",
   );
-  assert.doesNotMatch(
-    refinedMigration,
+  assertSqlNotMatch(refinedMigration,
     /'Kết ca'/,
     "Clock-out is a system event, not a checklist row",
   );

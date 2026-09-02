@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch } from "./_lib/active-sql.ts";
+
 
 const repoRoot = resolve(process.cwd(), "../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 const readDemandModule = () =>
   [
     "purchase-requests-client.tsx",
@@ -30,10 +31,10 @@ test("purchase demand review atomically creates supplier POs and GRN drafts", ()
   const grnActions = read("apps/web/app/(protected)/inventory/grn-actions.ts");
   const migration =
     read(
-      "supabase/migration-archive/20260730140000_po_first_purchase_workflow.sql",
+      "supabase/migrations/20260730140000_po_first_purchase_workflow.sql",
     ) +
     read(
-      "supabase/migration-archive/20260730190000_purchase_demand_supplier_allocation.sql",
+      "supabase/migrations/20260730190000_purchase_demand_supplier_allocation.sql",
     );
 
   assert.match(purchaseActions, /export const savePurchaseDemand/);
@@ -54,7 +55,7 @@ test("purchase demand review atomically creates supplier POs and GRN drafts", ()
     "cancel_purchase_order",
     "close_purchase_order",
   ]) {
-    assert.match(migration, new RegExp(`FUNCTION public\\.${rpc}`), rpc);
+    assertSqlMatch(migration, new RegExp(`FUNCTION public\\.${rpc}`), rpc);
   }
 });
 
@@ -107,7 +108,7 @@ test("submitted demands remain allocatable during cutover", () => {
     "apps/web/app/(protected)/inventory/purchase-orders/page.tsx",
   );
   const migration = read(
-    "supabase/migration-archive/20260730192000_fix_purchase_demand_legacy_cutover.sql",
+    "supabase/migrations/20260730192000_fix_purchase_demand_legacy_cutover.sql",
   );
 
   assert.doesNotMatch(purchaseActions, /export const savePurchaseRequest/);
@@ -119,12 +120,10 @@ test("submitted demands remain allocatable during cutover", () => {
     purchasePage,
     /\["submitted", "pending_allocation", "partially_ordered"\]/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /status = 'submitted'[\s\S]*status <> 'cancelled'[\s\S]*status = 'pending_allocation'/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /REVOKE ALL ON FUNCTION public\.save_purchase_request\([\s\S]*FROM PUBLIC, anon, authenticated/,
   );
 });
@@ -146,15 +145,13 @@ test("purchase request URLs redirect history to Đơn mua and create to Tạo đ
 
 test("PO cancellation permits only trusted cancellation after linked GRNs are cancelled", () => {
   const migration = read(
-    "supabase/migration-archive/20260730120000_allow_po_cancel_after_draft_grn.sql",
+    "supabase/migrations/20260730120000_allow_po_cancel_after_draft_grn.sql",
   );
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /OLD\.status IN \('draft', 'sent'\)[\s\S]*NEW\.status = 'cancelled'/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /v_trusted_rpc IS TRUE[\s\S]*AND NOT EXISTS \([\s\S]*goods_received_notes[\s\S]*grn\.status <> 'cancelled'/,
   );
 });

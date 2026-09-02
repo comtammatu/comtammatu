@@ -2,13 +2,14 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { readSql } from "./_lib/active-sql.ts";
 
 function readAppFile(path: string): string {
   return readFileSync(join(process.cwd(), path), "utf8");
 }
 
 function readRepoFile(path: string): string {
-  return readFileSync(join(process.cwd(), "../..", path), "utf8");
+  return readSql(join(process.cwd(), "../.."), path);
 }
 
 test("Owner settings uses a permission-scoped landing instead of redirecting to one form", () => {

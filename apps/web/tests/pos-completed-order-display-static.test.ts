@@ -3,9 +3,13 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { getPosCompletedOrderStatusInfo } from "../app/(protected)/br/[branchId]/pos/_lib/order-status-display";
+import { assertSqlNotMatch, readSql } from "./_lib/active-sql.ts";
 
 const root = process.cwd();
-const read = (path: string) => readFileSync(join(root, path), "utf8");
+const read = (path: string) =>
+  String(path).includes("supabase/migrations/")
+    ? readSql(root, String(path).replace(/^.*?(supabase\/)/, "supabase/"))
+    : readFileSync(join(root, path), "utf8");
 
 const archived = read(
   "app/(protected)/br/[branchId]/pos/_components/archived-orders-sheet.tsx",
@@ -32,8 +36,8 @@ test("POS completed rows are receipt chrome, not live kitchen pills", () => {
   assert.match(archived, /getPosCompletedOrderStatusInfo/);
   assert.match(archived, /metaTimestamp=\{order\.updated_at\}/);
   assert.match(archived, /onViewBill\(order\.id, "receipt"\)/);
-  assert.doesNotMatch(archived, /<OrderStatePill/);
-  assert.doesNotMatch(archived, /intent: "payment"/);
+  assertSqlNotMatch(archived, /<OrderStatePill/);
+  assertSqlNotMatch(archived, /intent: "payment"/);
 });
 
 test("POS completed status helper is paid or cancelled only", () => {

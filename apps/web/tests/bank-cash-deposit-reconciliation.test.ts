@@ -1,17 +1,18 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
+import { readSql, assertSqlMatch } from "./_lib/active-sql.ts";
+
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
-const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 const migration = read(
-  "supabase/migration-archive/20260820021152_sales_branch_cash_books.sql",
+  "supabase/migrations/20260820021152_sales_branch_cash_books.sql",
 );
 const archived = read(
-  "supabase/migration-archive/20260720130000_record_bank_transaction_cash_deposit.sql",
+  "supabase/migrations/20260720130000_record_bank_transaction_cash_deposit.sql",
 );
 const action = read(
   "apps/web/app/(protected)/finance/bank-webhook-review-actions.ts",
@@ -24,43 +25,37 @@ const matchPayment = read(
 );
 
 test("cash deposit reconciliation is an Owner-only atomic classification", () => {
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE FUNCTION public\.record_bank_transaction_cash_deposit\(\s*p_bank_transaction_id bigint,\s*p_branch_id bigint/,
   );
-  assert.match(migration, /PERFORM private\.assert_sales_branch/);
-  assert.match(migration, /SECURITY DEFINER/);
-  assert.match(migration, /NOT public\.auth_is_owner\(v_actor\)/);
-  assert.match(migration, /FOR UPDATE/);
-  assert.match(migration, /v_transaction\.transfer_type <> 'in'/);
-  assert.match(migration, /bank_transaction_already_reconciled/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /PERFORM private\.assert_sales_branch/);
+  assertSqlMatch(migration, /SECURITY DEFINER/);
+  assertSqlMatch(migration, /NOT public\.auth_is_owner\(v_actor\)/);
+  assertSqlMatch(migration, /FOR UPDATE/);
+  assertSqlMatch(migration, /v_transaction\.transfer_type <> 'in'/);
+  assertSqlMatch(migration, /bank_transaction_already_reconciled/);
+  assertSqlMatch(migration,
     /branch_id,[\s\S]*'bank_deposit'[\s\S]*p_branch_id[\s\S]*'cash'/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /INSERT INTO public\.bank_transaction_reconciliation_matches/,
   );
-  assert.match(
-    archived,
+  assertSqlMatch(archived,
     /CREATE CONSTRAINT TRIGGER trg_bank_reconciliation_matches_require_evidence/,
   );
-  assert.match(migration, /SET CONSTRAINTS[\s\S]*IMMEDIATE/);
-  assert.match(migration, /bank_transaction\.cash_deposit/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /SET CONSTRAINTS[\s\S]*IMMEDIATE/);
+  assertSqlMatch(migration, /bank_transaction\.cash_deposit/);
+  assertSqlMatch(migration,
     /REVOKE ALL ON FUNCTION public\.record_bank_transaction_cash_deposit\(bigint, bigint\)[\s\S]*GRANT EXECUTE[\s\S]*TO authenticated/,
   );
 });
 
 test("bank deposit evidence can be a canonical trusted bank transaction", () => {
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /FROM public\.bank_transaction_reconciliation_matches match[\s\S]*JOIN public\.expenses expense/,
   );
-  assert.match(migration, /expense\.category = 'bank_deposit'/);
-  assert.match(migration, /match\.matched_amount = v_transaction\.amount/);
+  assertSqlMatch(migration, /expense\.category = 'bank_deposit'/);
+  assertSqlMatch(migration, /match\.matched_amount = v_transaction\.amount/);
 });
 
 test("the bank transactions UI offers cash deposit beside payment reconciliation", () => {

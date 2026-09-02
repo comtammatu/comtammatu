@@ -9,6 +9,7 @@ import {
   PAGE_DISPOSITIONS,
 } from "./page-archetypes.mjs";
 import { validateUiComponentRegistry } from "./ui-component-registry.mjs";
+
 import {
   buildUiContractGuardReporting,
   UI_CONTRACT_LINT_ONLY_GROUPS,
@@ -1214,10 +1215,7 @@ const docsPathPattern =
 
 function isHistoricalSqlSnapshot(filePath) {
   const relativePath = toPosix(filePath);
-  return (
-    relativePath.startsWith("supabase/migration-archive/") ||
-    /supabase\/migrations\/\d{14}_baseline\.sql$/.test(relativePath)
-  );
+  return /supabase\/migrations\/\d{14}_baseline\.sql$/.test(relativePath);
 }
 
 for (const file of legacyDocReferenceFiles.filter(
@@ -2191,10 +2189,10 @@ function runLegacyDebtBudgetSelfTest() {
   }
 
   if (
-    !isHistoricalSqlSnapshot(
+    isHistoricalSqlSnapshot(
       path.join(
         REPO_ROOT,
-        "supabase/migration-archive/20260101000000_history.sql",
+        "supabase/migrations/20260101000000_history.sql",
       ),
     ) ||
     !isHistoricalSqlSnapshot(

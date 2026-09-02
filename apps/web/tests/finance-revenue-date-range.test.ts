@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 const repoRoot = resolve(process.cwd(), "../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 test("Finance Revenue top items follows the selected date range", () => {
   const revenueLoader = read(
@@ -40,26 +41,22 @@ test("Finance Revenue top items follows the selected date range", () => {
 
 test("Finance top-items migration keeps compatibility and adds range RPC", () => {
   const migration = read(
-    "supabase/migration-archive/20260609151615_finance_top_items_date_range.sql",
+    "supabase/migrations/20260609151615_finance_top_items_date_range.sql",
   );
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.get_top_items\(\s*p_branch_id BIGINT,\s*p_start_date DATE,\s*p_end_date DATE,/,
     "expected new range-bound top-items RPC",
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /p\.paid_at >= v_start_utc[\s\S]*p\.paid_at < v_end_utc/,
     "expected top items to filter by the selected paid-at window",
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.get_top_items\(\s*p_branch_id BIGINT DEFAULT NULL,\s*p_period_start DATE DEFAULT NULL,/,
     "expected old month-bucket signature to remain as a wrapper",
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /FROM public\.get_top_items\(\s*p_branch_id,\s*v_period_start,\s*v_period_end,\s*p_limit\s*\)/,
     "expected wrapper to delegate to the range RPC",
   );
@@ -67,31 +64,26 @@ test("Finance top-items migration keeps compatibility and adds range RPC", () =>
 
 test("Finance top-items decomposes side-items without double-counting revenue", () => {
   const migration = read(
-    "supabase/migration-archive/20260609161402_finance_top_items_side_items.sql",
+    "supabase/migrations/20260609161402_finance_top_items_side_items.sql",
   );
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CROSS JOIN LATERAL jsonb_array_elements\(pi\.sides\) AS side_el/,
     "expected side-items stored on order_items.sides to be expanded",
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /\(side_el ->> 'side_item_id'\)::BIGINT AS menu_item_id/,
     "expected side-items to report as their own menu_item_id",
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /SUM\(GREATEST\(pi\.line_revenue - COALESCE\(st\.side_revenue, 0\), 0\)\)/,
     "expected main item revenue to subtract side revenue",
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /SUM\(parent_quantity \* quantity_per_parent\)/,
     "expected side quantity to multiply by the parent order item quantity",
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /UNION ALL\s+SELECT branch_id, tenant_id, menu_item_id, item_name, quantity_sold, revenue\s+FROM side_components/,
     "expected top items to combine main and side component rows",
   );
@@ -102,13 +94,13 @@ test("Finance cockpit actual food cost follows the VN business-day window", () =
     "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts",
   );
   const foodCostMigration = read(
-    "supabase/migration-archive/20260820151656_finance_food_cost_recorded.sql",
+    "supabase/migrations/20260820151656_finance_food_cost_recorded.sql",
   );
 
   assert.match(cockpit, /get_finance_operating_cockpit/);
-  assert.match(foodCostMigration, /Asia\/Ho_Chi_Minh/);
-  assert.match(foodCostMigration, /effective_at >= v_start_utc/);
-  assert.match(foodCostMigration, /effective_at < v_end_utc/);
+  assertSqlMatch(foodCostMigration, /Asia\/Ho_Chi_Minh/);
+  assertSqlMatch(foodCostMigration, /effective_at >= v_start_utc/);
+  assertSqlMatch(foodCostMigration, /effective_at < v_end_utc/);
   assert.doesNotMatch(cockpit, /getVNDayUtcRange/);
   assert.doesNotMatch(cockpit, /fetchAllPagedRows/);
 });
@@ -118,13 +110,13 @@ test("Finance expenses actual food cost follows the VN business-day window", () 
     "apps/web/app/(protected)/finance/expense-actions.ts",
   );
   const foodCostMigration = read(
-    "supabase/migration-archive/20260820151656_finance_food_cost_recorded.sql",
+    "supabase/migrations/20260820151656_finance_food_cost_recorded.sql",
   );
 
   assert.match(expenseActions, /get_finance_food_cost_recorded/);
-  assert.match(foodCostMigration, /Asia\/Ho_Chi_Minh/);
-  assert.match(foodCostMigration, /effective_at >= v_start_utc/);
-  assert.match(foodCostMigration, /effective_at < v_end_utc/);
+  assertSqlMatch(foodCostMigration, /Asia\/Ho_Chi_Minh/);
+  assertSqlMatch(foodCostMigration, /effective_at >= v_start_utc/);
+  assertSqlMatch(foodCostMigration, /effective_at < v_end_utc/);
   assert.doesNotMatch(expenseActions, /getVNDayUtcRange/);
   assert.doesNotMatch(expenseActions, /fetchAllPagedRows/);
 });
@@ -147,13 +139,13 @@ test("Finance operating expense excludes food-cost and transfer categories", () 
   );
   const dataContract = read("docs/ref/operational-data-contract.md");
   const expenseSummaryMigration = read(
-    "supabase/migration-archive/20260818171912_finance_expense_period_summary.sql",
+    "supabase/migrations/20260818171912_finance_expense_period_summary.sql",
   );
   const operatingCockpitMigration = read(
-    "supabase/migration-archive/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
+    "supabase/migrations/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
   );
   const startupCapitalMigration = read(
-    "supabase/migration-archive/20260824013553_finance_startup_capital_summary_rpc.sql",
+    "supabase/migrations/20260824013553_finance_startup_capital_summary_rpc.sql",
   );
 
   assert.match(categories, /cogs_manual: "materials"/);
@@ -166,10 +158,10 @@ test("Finance operating expense excludes food-cost and transfer categories", () 
   // Startup-capital classification truth moved server-side: the cockpit
   // calls the summary RPC and the RPC keeps the capital+deposit slice.
   assert.match(cockpit, /get_finance_startup_capital_summary/);
-  assert.match(startupCapitalMigration, /category IN \('capital', 'deposit'\)/);
-  assert.match(operatingCockpitMigration, /get_finance_expense_period_summary/);
-  assert.doesNotMatch(expenseSummaryMigration, /cogs_manual/);
-  assert.doesNotMatch(expenseSummaryMigration, /bank_deposit/);
+  assertSqlMatch(startupCapitalMigration, /category IN \('capital', 'deposit'\)/);
+  assertSqlMatch(operatingCockpitMigration, /get_finance_expense_period_summary/);
+  assertSqlNotMatch(expenseSummaryMigration, /cogs_manual/);
+  assertSqlNotMatch(expenseSummaryMigration, /bank_deposit/);
   assert.doesNotMatch(
     cockpit.slice(
       cockpit.indexOf("async function fetchStartupCapitalSummary"),
@@ -197,7 +189,7 @@ test("Finance treats 0đ operating expense as numeric and explains All-scope inv
   );
   const messages = read("apps/web/lib/messages/finance.ts");
   const migration = read(
-    "supabase/migration-archive/20260901091614_finance_zero_opex_inventory_breakdown.sql",
+    "supabase/migrations/20260901091614_finance_zero_opex_inventory_breakdown.sql",
   );
 
   assert.match(
@@ -212,51 +204,44 @@ test("Finance treats 0đ operating expense as numeric and explains All-scope inv
   );
   assert.match(messages, /0đ vẫn được tính vào kết quả/);
   assert.match(page, /inventoryBreakdownHint/);
-  assert.match(migration, /'inventory_breakdown', v_breakdown/);
-  assert.match(migration, /'severity', 'warning'/);
+  assertSqlMatch(migration, /'inventory_breakdown', v_breakdown/);
+  assertSqlMatch(migration, /'severity', 'warning'/);
 });
 
 test("Finance revenue money-collected fields use payment amount", () => {
   const migration = read(
-    "supabase/migration-archive/20260709050743_finance_revenue_payment_amount_contract.sql",
+    "supabase/migrations/20260709050743_finance_revenue_payment_amount_contract.sql",
   );
   const revenueClient = read(
     "apps/web/app/(protected)/finance/revenue/revenue-client.tsx",
   );
   const dataContract = read("docs/ref/operational-data-contract.md");
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /p\.amount AS payment_amount/,
     "revenue migration should carry payment amount as the money-collected source",
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /SUM\(pp\.payment_amount\)[\s\S]*AS net_revenue/,
     "KPI net_revenue should mean money collected from payments.amount",
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /SUM\(pp\.payment_amount\) FILTER \(WHERE pp\.method = 'cash'\)/,
     "cash revenue should sum payment amount by payment method",
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /COUNT\(\*\)::BIGINT AS order_count/,
     "order_count should be calculated from distinct order facts, not payment rows",
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /SELECT DISTINCT ON \(pp\.tenant_id, pp\.branch_id, pp\.order_id\)/,
     "KPI order facts should deduplicate paid orders",
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /SELECT DISTINCT ON \(pp\.paid_date, pp\.branch_id, pp\.tenant_id, pp\.order_id\)/,
     "daily and rollup order facts should deduplicate paid orders per paid date",
   );
-  assert.doesNotMatch(
-    migration,
+  assertSqlNotMatch(migration,
     /SUM\(o\.total_amount\) FILTER \(WHERE p\.method/,
     "method breakdowns must not bucket order totals by payment method",
   );
@@ -420,28 +405,26 @@ test("Finance cockpit branch filter also scopes supplier payable risk", () => {
     "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts",
   );
   const migration = read(
-    "supabase/migration-archive/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
+    "supabase/migrations/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
   );
 
   assert.match(cockpit, /branchId: number \| null/);
   assert.match(cockpit, /get_finance_operating_cockpit/);
-  assert.match(migration, /unpaid_ap_count/);
-  assert.match(migration, /unpaid_ap_amount/);
-  assert.match(migration, /goods_received_notes|supplier_invoices/);
+  assertSqlMatch(migration, /unpaid_ap_count/);
+  assertSqlMatch(migration, /unpaid_ap_amount/);
+  assertSqlMatch(migration, /goods_received_notes|supplier_invoices/);
 });
 
 test("Finance top-items side-item fanout avoids PL/pgSQL output-column ambiguity", () => {
   const migration = read(
-    "supabase/migration-archive/20260701000214_fix_top_items_branch_ambiguity.sql",
+    "supabase/migrations/20260701000214_fix_top_items_branch_ambiguity.sql",
   );
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /FROM side_lines sl[\s\S]*GROUP BY sl\.branch_id,\s*sl\.tenant_id,\s*sl\.menu_item_id/,
     "side_components must qualify branch/tenant/menu columns",
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /mc\.branch_id[\s\S]*FROM main_components mc[\s\S]*sc\.branch_id[\s\S]*FROM side_components sc/,
     "component_rows must qualify both component sources",
   );

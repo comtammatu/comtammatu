@@ -1,13 +1,15 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { normalizeEol } from "./static-source";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 const repoRoot = join(import.meta.dirname, "../../..");
 
 function read(path: string): string {
-  return normalizeEol(readFileSync(join(repoRoot, path), "utf8"));
+  return normalizeEol(readSql(repoRoot, path));
 }
 
 function decision(source: string, id: string): string {
@@ -59,7 +61,7 @@ test("Inventory references expose mandatory branch warehouse-kitchen topology an
   assert.match(inventory, /HĐ NCC công nợ \+ VAT/);
 
   for (const source of [inventory, sop, glossary]) {
-    assert.doesNotMatch(source, /po_unit_price/);
+    assertSqlNotMatch(source, /po_unit_price/);
   }
   assert.doesNotMatch(inventory, /Price Variance|receiving_temperature/);
   assert.doesNotMatch(
@@ -73,7 +75,7 @@ test("the Inventory cleanup ships as a forward migration", () => {
     existsSync(
       join(
         repoRoot,
-        "supabase/migration-archive/20260728190000_inventory_topology_physical_qc_cleanup.sql",
+        "supabase/migrations/20260902162918_baseline.sql",
       ),
     ),
     true,
@@ -108,10 +110,9 @@ test("generated database types match the final D091 catalog", () => {
     assert.doesNotMatch(generated, new RegExp(`\\b${retired}\\b`));
   }
   const dropOrphans = read(
-    "supabase/migration-archive/20260813142200_drop_inventory_orphan_rpcs.sql",
+    "supabase/migrations/20260813142200_drop_inventory_orphan_rpcs.sql",
   );
-  assert.match(
-    dropOrphans,
+  assertSqlMatch(dropOrphans,
     /DROP FUNCTION IF EXISTS public\.create_grn_from_approved_po\(bigint\)/,
   );
   assert.match(generated, /\bcreate_grn_draft_from_po\b/);
@@ -172,8 +173,8 @@ test("app authority keeps inter-site warehouse routing, split stock visibility, 
     /qcSettings|Dung sai số lượng & giá|Giá lệch (?:cảnh báo|kiểm tra)/,
   );
   for (const source of rejectionPhotoInputs) {
-    assert.match(source, /acceptTypes="image"/);
-    assert.match(source, /allowPaste=\{false\}/);
+    assertSqlMatch(source, /acceptTypes="image"/);
+    assertSqlMatch(source, /allowPaste=\{false\}/);
   }
   assert.match(quality, /deriveGrnQualityStatus/);
   assert.doesNotMatch(quality, /Baseline|Variance|REVIEW_PCT/);
@@ -203,7 +204,7 @@ test("D101 requires invoice valuation settlement instead of price history only",
   const decisions = read("docs/plan/decisions.md");
   const current = decision(decisions, "D101");
   const migration = read(
-    "supabase/migration-archive/20260730155938_inventory_valuation_subledger.sql",
+    "supabase/migrations/20260730155938_inventory_valuation_subledger.sql",
   );
 
   assert.match(current, /company WAC/i);
@@ -211,8 +212,8 @@ test("D101 requires invoice valuation settlement instead of price history only",
   assert.match(current, /never a second quantity/);
   assert.match(current, /legacy_purchase_price_variance/);
   assert.match(current, /ADR 0040/);
-  assert.match(migration, /CREATE TABLE public\.inventory_valuation_events/);
-  assert.match(migration, /CREATE TABLE public\.inventory_value_allocations/);
-  assert.match(migration, /inventory_valuation_events_immutable/);
-  assert.match(migration, /stock_movements[\s\S]*grn_item_id/);
+  assertSqlMatch(migration, /CREATE TABLE public\.inventory_valuation_events/);
+  assertSqlMatch(migration, /CREATE TABLE public\.inventory_value_allocations/);
+  assertSqlMatch(migration, /inventory_valuation_events_immutable/);
+  assertSqlMatch(migration, /stock_movements[\s\S]*grn_item_id/);
 });

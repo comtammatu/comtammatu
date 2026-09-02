@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { readSql } from "./_lib/active-sql.ts";
+
 
 const repoRoot = resolve(process.cwd(), "../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 test("close-day is Daily Summary only (ADR 0024)", () => {
   const client = read(
@@ -20,17 +22,17 @@ test("close-day is Daily Summary only (ADR 0024)", () => {
   const archetypes = read("scripts/page-archetypes.mjs");
   const acl = read("packages/shared/src/auth/module-acl.ts");
   const migration = read(
-    "supabase/migration-archive/20260808085336_retire_close_branch_day_ceremony.sql",
+    "supabase/migrations/20260808085336_retire_close_branch_day_ceremony.sql",
   );
   const reportRpc = read(
-    "supabase/migration-archive/20260819203012_get_branch_day_report.sql",
+    "supabase/migrations/20260819203012_get_branch_day_report.sql",
   );
   const reportRpcFrom = read(
-    "supabase/migration-archive/20260820014659_get_branch_day_report_order_facts_from.sql",
+    "supabase/migrations/20260820014659_get_branch_day_report_order_facts_from.sql",
   );
 
   const reportRpcModifiers = read(
-    "supabase/migration-archive/20260822193600_get_branch_day_report_include_modifiers.sql",
+    "supabase/migrations/20260822193600_get_branch_day_report_include_modifiers.sql",
   );
 
   assert.equal(

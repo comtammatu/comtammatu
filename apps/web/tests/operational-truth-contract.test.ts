@@ -1,31 +1,36 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 function read(path: string): string {
+  if (path.includes("supabase/migrations/") && path.endsWith(".sql")) {
+    return readSql(process.cwd(), path);
+  }
   return readFileSync(new URL(path, import.meta.url), "utf8");
 }
 
 const evidenceMigration = read(
-  "../../../supabase/migration-archive/20260725141050_add_order_kds_operational_evidence.sql",
+  "../../../supabase/migrations/20260725141050_add_order_kds_operational_evidence.sql",
 );
 const baselineMigration = read(
-  "../../../supabase/migration-archive/20260727120000_baseline.sql",
+  "../../../supabase/migrations/20260902162918_baseline.sql",
 );
 const reconciliationMigration = read(
-  "../../../supabase/migration-archive/20260725141240_repair_sepay_canonical_reconciliation.sql",
+  "../../../supabase/migrations/20260725141240_repair_sepay_canonical_reconciliation.sql",
 );
 const financeMigration = read(
-  "../../../supabase/migration-archive/20260725141900_unify_order_finance_operational_truth.sql",
+  "../../../supabase/migrations/20260725141900_unify_order_finance_operational_truth.sql",
 );
 const posReportMigration = read(
-  "../../../supabase/migration-archive/20260725142100_fix_pos_session_payment_reporting.sql",
+  "../../../supabase/migrations/20260725142100_fix_pos_session_payment_reporting.sql",
 );
 const printMigration = read(
-  "../../../supabase/migration-archive/20260725142200_canonicalize_shift_close_print_evidence.sql",
+  "../../../supabase/migrations/20260725142200_canonicalize_shift_close_print_evidence.sql",
 );
 const revenueAuthorityMigration = read(
-  "../../../supabase/migration-archive/20260725142300_fix_revenue_payment_authority.sql",
+  "../../../supabase/migrations/20260725142300_fix_revenue_payment_authority.sql",
 );
 const databaseContractTest = read(
   "../../../supabase/tests/order_kds_payment_revenue_operational_truth_test.sql",
@@ -57,137 +62,111 @@ test("operational RPC calls preserve the Supabase client receiver", () => {
 });
 
 test("sale classification and KDS evidence are immutable at the database boundary", () => {
-  assert.match(
-    evidenceMigration,
+  assertSqlMatch(evidenceMigration,
     /CREATE FUNCTION private\.snapshot_order_item_category\(\)[\s\S]*FROM public\.menu_items[\s\S]*JOIN public\.menu_categories/,
   );
-  assert.match(evidenceMigration, /order_item_category_snapshot_immutable/);
-  assert.match(evidenceMigration, /CREATE TABLE public\.kds_ticket_events/);
-  assert.match(
-    evidenceMigration,
+  assertSqlMatch(evidenceMigration, /order_item_category_snapshot_immutable/);
+  assertSqlMatch(evidenceMigration, /CREATE TABLE public\.kds_ticket_events/);
+  assertSqlMatch(evidenceMigration,
     /CREATE TRIGGER trg_kds_ticket_events_immutable[\s\S]*BEFORE UPDATE OR DELETE/,
   );
-  assert.match(
-    evidenceMigration,
+  assertSqlMatch(evidenceMigration,
     /REVOKE ALL ON TABLE public\.kds_ticket_events FROM anon, authenticated/,
   );
   assert.match(kdsActions, /get_kds_ticket_history/);
   assert.doesNotMatch(kdsActions, /\.from\("kds_tickets"\)/);
-  assert.match(evidenceMigration, /legacy_live_snapshot/);
+  assertSqlMatch(evidenceMigration, /legacy_live_snapshot/);
   assert.match(kdsActions, /parsed\.data\.eventType === "all"/);
   assert.match(kdsActions, /getVNDayUtcRange\(parsed\.data\.date\)/);
 });
 
 test("print evidence is append-only while receipt and shift producers get stable versioned keys", () => {
-  assert.match(
-    evidenceMigration,
+  assertSqlMatch(evidenceMigration,
     /CREATE TRIGGER trg_print_jobs_evidence_immutable[\s\S]*BEFORE UPDATE/,
   );
-  assert.match(
-    evidenceMigration,
+  assertSqlMatch(evidenceMigration,
     /REVOKE UPDATE, DELETE, MAINTAIN[\s\S]*public\.print_jobs FROM anon, authenticated/,
   );
-  assert.match(
-    printMigration,
+  assertSqlMatch(printMigration,
     /payment\.status = 'completed'[\s\S]*payment\.paid_at IS NOT NULL/,
   );
-  assert.match(printMigration, /:receipt:truth:v2:/);
-  assert.match(printMigration, /:shift_close:truth:v2:/);
-  assert.match(printMigration, /NEW\.payload::text/);
-  assert.match(printMigration, /'ticket_ids', to_jsonb\(v_route\.ticket_ids\)/);
-  assert.match(
-    printMigration,
+  assertSqlMatch(printMigration, /:receipt:truth:v2:/);
+  assertSqlMatch(printMigration, /:shift_close:truth:v2:/);
+  assertSqlMatch(printMigration, /NEW\.payload::text/);
+  assertSqlMatch(printMigration, /'ticket_ids', to_jsonb\(v_route\.ticket_ids\)/);
+  assertSqlMatch(printMigration,
     /LEFT JOIN public\.printer_menu_categories route[\s\S]*OR NOT EXISTS \([\s\S]*public\.printer_menu_categories route_any[\s\S]*'skipped_ticket_count', GREATEST/,
   );
-  assert.match(baselineMigration, /v_print_warning := 'kitchen_print_skipped'/);
-  assert.match(
-    evidenceMigration,
+  assertSqlMatch(baselineMigration, /v_print_warning := 'kitchen_print_skipped'/);
+  assertSqlMatch(evidenceMigration,
     /job\.payload->'ticket_ids'[\s\S]*jsonb_build_array\(event\.ticket_id\)/,
   );
 });
 
 test("SePay exact matches create one canonical bank-to-payment link", () => {
-  assert.match(
-    baselineMigration,
+  assertSqlMatch(baselineMigration,
     /CREATE UNIQUE INDEX bank_transaction_reconciliation_matches_payment_key[\s\S]*\(payment_id, tenant_id\) WHERE \(payment_id IS NOT NULL\)/,
   );
-  assert.match(
-    reconciliationMigration,
+  assertSqlMatch(reconciliationMigration,
     /CREATE UNIQUE INDEX IF NOT EXISTS[\s\S]*bank_transaction_reconciliation_matches_payment_key[\s\S]*payment_id,[\s\S]*tenant_id[\s\S]*WHERE payment_id IS NOT NULL/,
   );
-  assert.match(
-    reconciliationMigration,
+  assertSqlMatch(reconciliationMigration,
     /CREATE UNIQUE INDEX bank_transaction_reconciliation_matches_bank_payment_key/,
   );
-  assert.match(
-    reconciliationMigration,
+  assertSqlMatch(reconciliationMigration,
     /provider_transaction_id = v_provider_transaction_id/,
   );
-  assert.match(
-    reconciliationMigration,
+  assertSqlMatch(reconciliationMigration,
     /v_bank\.amount <> v_event_amount[\s\S]*v_payment\.amount <> v_event_amount/,
   );
-  assert.match(
-    reconciliationMigration,
+  assertSqlMatch(reconciliationMigration,
     /ALTER FUNCTION public\.reconcile_sepay_order_evidence\(bigint, text\)[\s\S]*RENAME TO reconcile_sepay_order_evidence_core/,
   );
-  assert.match(
-    reconciliationMigration,
+  assertSqlMatch(reconciliationMigration,
     /sepay_canonical_reconciliation_backfill/,
   );
-  assert.match(
-    reconciliationMigration,
+  assertSqlMatch(reconciliationMigration,
     /AND NOT EXISTS \(\s*SELECT 1\s*FROM public\.bank_transaction_reconciliation_matches match\s*WHERE match\.tenant_id = event\.tenant_id\s*AND match\.bank_transaction_id = bank\.id\s*AND match\.payment_id = payment\.id\s*\)/,
   );
-  assert.match(
-    reconciliationMigration,
+  assertSqlMatch(reconciliationMigration,
     /bank_payment_mixed_target_requires_review/,
   );
-  assert.match(
-    reconciliationMigration,
+  assertSqlMatch(reconciliationMigration,
     /v_bank_match\.payment_id IS DISTINCT FROM v_payment\.id/,
   );
 });
 
 test("Finance and POS money use completed payments and paid_at", () => {
-  assert.match(
-    baselineMigration,
+  assertSqlMatch(baselineMigration,
     /CREATE UNIQUE INDEX idx_payments_order_active[\s\S]{0,300}status <> 'failed'/,
   );
-  assert.match(
-    financeMigration,
+  assertSqlMatch(financeMigration,
     /CREATE FUNCTION public\.get_orders_for_day_v2[\s\S]*candidate\.status = 'completed'[\s\S]*candidate\.paid_at IS NOT NULL/,
   );
-  assert.match(
-    financeMigration,
+  assertSqlMatch(financeMigration,
     /payment\.paid_at AT TIME ZONE 'Asia\/Ho_Chi_Minh'/,
   );
-  assert.match(financeMigration, /public\.tax_invoice_orders/);
-  assert.match(financeMigration, /public\.get_order_operational_trace/);
-  assert.match(
-    posReportMigration,
+  assertSqlMatch(financeMigration, /public\.tax_invoice_orders/);
+  assertSqlMatch(financeMigration, /public\.get_order_operational_trace/);
+  assertSqlMatch(posReportMigration,
     /sum\(payment\.amount\)[\s\S]*payment\.paid_at AT TIME ZONE 'Asia\/Ho_Chi_Minh'/,
   );
-  assert.match(
-    posReportMigration,
+  assertSqlMatch(posReportMigration,
     /REVOKE ALL ON FUNCTION[\s\S]*get_pos_session_report_legacy_20260725/,
   );
   assert.match(financeDrill, /getRowKey=\{\(row\) => row\.order_id\}/);
-  assert.match(posReportMigration, /late_payment_count/);
-  assert.match(posReportMigration, /order_payment_state_mismatch_count/);
-  assert.match(posReportMigration, /kds_legacy_completed_item_quantity/);
-  assert.match(financeMigration, /kds_legacy_completed_item_quantity/);
-  assert.doesNotMatch(financeMigration, /AND orders\.payment_status = 'paid'/);
-  assert.doesNotMatch(
-    posReportMigration,
+  assertSqlMatch(posReportMigration, /late_payment_count/);
+  assertSqlMatch(posReportMigration, /order_payment_state_mismatch_count/);
+  assertSqlMatch(posReportMigration, /kds_legacy_completed_item_quantity/);
+  assertSqlMatch(financeMigration, /kds_legacy_completed_item_quantity/);
+  assertSqlNotMatch(financeMigration, /AND orders\.payment_status = 'paid'/);
+  assertSqlNotMatch(posReportMigration,
     /AND orders\.payment_status = 'paid'/,
   );
-  assert.match(
-    revenueAuthorityMigration,
+  assertSqlMatch(revenueAuthorityMigration,
     /CREATE OR REPLACE FUNCTION public\.get_revenue_rollup/,
   );
-  assert.doesNotMatch(
-    revenueAuthorityMigration,
+  assertSqlNotMatch(revenueAuthorityMigration,
     /orders\.payment_status = 'paid'/,
   );
 });

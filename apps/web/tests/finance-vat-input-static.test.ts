@@ -2,20 +2,21 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch } from "./_lib/active-sql.ts";
+
 
 const readWeb = (path: string) =>
   readFileSync(resolve(import.meta.dirname, "..", path), "utf8");
 
 const readRoot = (path: string) =>
-  readFileSync(resolve(import.meta.dirname, "../../..", path), "utf8");
+  readSql(process.cwd(), path);
 
 test("VAT cockpit sums supplier and operating-expense input VAT, and issued HĐĐT output VAT", () => {
   const cockpit = readWeb("app/(protected)/finance/_lib/finance-cockpit.ts");
   const page = readWeb("app/(protected)/finance/page.tsx");
 
-  assert.match(
-    readRoot(
-      "supabase/migration-archive/20260731130332_grant_supplier_invoice_cockpit_columns.sql",
+  assertSqlMatch(readRoot(
+      "supabase/migrations/20260731130332_grant_supplier_invoice_cockpit_columns.sql",
     ),
     /GRANT SELECT\s+\(document_status\)\s+ON public\.supplier_invoices\s+TO authenticated/,
   );

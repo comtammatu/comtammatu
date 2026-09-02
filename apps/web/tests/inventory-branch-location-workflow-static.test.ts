@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
 import { test } from "node:test";
+import { readActiveMigrationSql, readSql, assertSqlMatch } from "./_lib/active-sql.ts";
+
 
 function read(path: string): string {
-  return readFileSync(join(process.cwd(), path), "utf8");
+  return readSql(process.cwd(), path);
 }
 
 const ownerStockPage = read("app/(protected)/inventory/stock/page.tsx");
@@ -62,15 +62,9 @@ test("Kho-Bếp controls expose threshold setup and atomic intra-site transfer",
 });
 
 test("every store branch owns mandatory Kho and Bếp locations", () => {
-  const migrationsDir = resolve(process.cwd(), "../../supabase/migration-archive");
-  const migrationName = readdirSync(migrationsDir).find((name) =>
-    name.endsWith("_make_branch_warehouse_kitchen_topology_mandatory.sql"),
-  );
-  assert.ok(migrationName, "mandatory branch Kho-Bếp migration is missing");
-  const migration = readFileSync(join(migrationsDir, migrationName), "utf8");
+  const migration = readActiveMigrationSql();
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.ensure_branch_inventory_location_defaults/,
   );
   const clearDefaultsIndex = migration.indexOf(
@@ -81,37 +75,30 @@ test("every store branch owns mandatory Kho and Bếp locations", () => {
     clearDefaultsIndex >= 0 && clearDefaultsIndex < warehouseSelectionIndex,
     "existing defaults must be cleared before replacement locations are selected",
   );
-  assert.match(migration, /v_branch_kind = 'branch'[\s\S]*'kitchen'/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /v_branch_kind = 'branch'[\s\S]*'kitchen'/);
+  assertSqlMatch(migration,
     /is_default_consumption = CASE[\s\S]*v_branch_kind = 'branch' THEN id = v_kitchen_id/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /FOR branch_row IN[\s\S]*branch_kind IN \('branch', 'central_supply', 'central_kitchen'\)/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.trg_ensure_branch_inventory_location_defaults\(\)[\s\S]*NEW\.branch_kind IN \('branch', 'central_supply', 'central_kitchen'\)/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION private\.enforce_mandatory_branch_kitchen_flag[\s\S]*NEW\.enabled IS DISTINCT FROM TRUE[\s\S]*CREATE TRIGGER branch_kitchen_topology_mandatory/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /IF TG_OP = 'DELETE' THEN[\s\S]*IF v_branch_kind = 'branch' THEN[\s\S]*branch_kitchen_topology_mandatory[\s\S]*RETURN OLD/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /OLD\.flag_key = 'branch_kitchen_inventory_split'[\s\S]*NEW\.flag_key IS DISTINCT FROM OLD\.flag_key[\s\S]*NEW\.branch_id IS DISTINCT FROM OLD\.branch_id/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /v_branch_kind IN \('central_supply', 'central_kitchen'\)[\s\S]*DELETE FROM public\.branch_feature_flags[\s\S]*flag_key = 'branch_kitchen_inventory_split'/,
   );
-  assert.match(migration, /DROP FUNCTION public\.prepare_branch_kitchen_split/);
-  assert.match(migration, /DROP FUNCTION public\.set_branch_kitchen_split/);
+  assertSqlMatch(migration, /DROP FUNCTION public\.prepare_branch_kitchen_split/);
+  assertSqlMatch(migration, /DROP FUNCTION public\.set_branch_kitchen_split/);
 });
 
 test("stock UI treats Kho-Bếp as topology, not an owner feature toggle", () => {

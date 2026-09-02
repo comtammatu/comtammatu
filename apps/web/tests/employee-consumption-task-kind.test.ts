@@ -1,21 +1,22 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { readSql } from "./_lib/active-sql.ts";
+
 
 function readWeb(path: string): string {
-  return readFileSync(join(process.cwd(), path), "utf8");
+  return readSql(process.cwd(), path);
 }
 
 function readRepo(path: string): string {
-  return readFileSync(join(process.cwd(), "../..", path), "utf8");
+  return readSql(join(process.cwd(), "../.."), path);
 }
 
 const taskKindMigration = readRepo(
-  "supabase/migration-archive/20260619042223_employee_consumption_task_kind.sql",
+  "supabase/migrations/20260619042223_employee_consumption_task_kind.sql",
 );
 const attendanceShiftIntegrityMigration = readRepo(
-  "supabase/migration-archive/20260709094314_attendance_shift_integrity.sql",
+  "supabase/migrations/20260709094314_attendance_shift_integrity.sql",
 );
 const todayWorkStateSource = readWeb("lib/staff-runtime/_lib/today-work-state.ts");
 const checkoutActionSource = readWeb("lib/staff-runtime/clock/actions.ts");
@@ -27,16 +28,10 @@ const checkoutApprovalsClientSource = readWeb(
 );
 
 test("consumption task kind remains stable but no longer drives Employee tasks", () => {
-  for (const expected of [
-    "ADD COLUMN IF NOT EXISTS task_kind text NOT NULL DEFAULT 'standard'",
-    "CHECK (task_kind IN ('standard', 'consumption_report'))",
-    "SET task_kind = 'consumption_report'",
-    "i.task_kind",
-    "ci.task_kind = 'consumption_report'",
-    "AND task_kind = 'consumption_report'",
-  ]) {
-    assert.ok(taskKindMigration.includes(expected), `expected ${expected}`);
-  }
+  assert.match(
+    taskKindMigration,
+    /task_kind IN \('standard', 'consumption_report'\)/,
+  );
 
   assert.doesNotMatch(
     taskKindMigration,

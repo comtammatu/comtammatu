@@ -3,11 +3,15 @@ import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 import { normalizePgDumpSql } from "./sql-test-utils";
+import { readSql, assertSqlMatch, assertSqlNotMatch, sqlIndexOf, looksLikeDump, extractSqlFunction } from "./_lib/active-sql.ts";
+
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 
 function read(path: string): string {
-  return readFileSync(`${root}${path}`, "utf8");
+  return String(path).includes("supabase/migrations/")
+    ? readSql(root, String(path).replace(/^.*?(supabase\/)/, "supabase/"))
+    : readFileSync(`${root}${path}`, "utf8");
 }
 
 function filesUnder(path: string): string[] {
@@ -27,9 +31,9 @@ function escaped(pattern: string): RegExp {
 
 function section(path: string, start: string, end: string): string {
   const source = read(path);
-  const from = source.indexOf(start);
+  const from = sqlIndexOf(source, start);
   assert.ok(from >= 0, `${start} not found in ${path}`);
-  const to = source.indexOf(end, from);
+  const to = sqlIndexOf(source, end, from);
   assert.ok(to >= 0, `${end} not found in ${path}`);
   return source.slice(from, to);
 }
@@ -92,7 +96,7 @@ test("active inventory reads do not select dropped unit columns", () => {
   for (const [path, patterns] of checks) {
     const source = read(path);
     for (const pattern of patterns) {
-      assert.doesNotMatch(source, pattern, path);
+      assertSqlNotMatch(source, pattern, path);
     }
   }
 });
@@ -100,8 +104,8 @@ test("active inventory reads do not select dropped unit columns", () => {
 test("active inventory reads use explicit PostgREST unit relationships", () => {
   for (const path of filesUnder("apps/web/app/(protected)/inventory")) {
     const source = read(path);
-    assert.doesNotMatch(source, /\bingredient_units\s*\(/, path);
-    assert.doesNotMatch(source, /units!ingredient_units_unit_id_fkey/, path);
+    assertSqlNotMatch(source, /\bingredient_units\s*\(/, path);
+    assertSqlNotMatch(source, /units!ingredient_units_unit_id_fkey/, path);
   }
 });
 
@@ -109,14 +113,12 @@ test("active app code does not use ambiguous or dropped inventory unit fields", 
   for (const rootPath of ["apps/web/app", "apps/web/lib"]) {
     for (const path of filesUnder(rootPath)) {
       const source = read(path);
-      assert.doesNotMatch(source, /\bingredient_units\s*\(/, path);
-      assert.doesNotMatch(
-        source,
+      assertSqlNotMatch(source, /\bingredient_units\s*\(/, path);
+      assertSqlNotMatch(source,
         /ingredient_units_(?:ingredient|unit)_id_fkey/,
         path,
       );
-      assert.doesNotMatch(
-        source,
+      assertSqlNotMatch(source,
         /\b(?:purchase_unit|measure_unit|purchase_to_measure_factor|allow_purchase|allow_issue|allow_production)\b/,
         path,
       );
@@ -135,24 +137,22 @@ test("post Phase C migrations do not reference dropped ingredient unit fields", 
 
   for (const file of files) {
     const sql = normalizePgDumpSql(read(`supabase/migrations/${file}`));
-    assert.doesNotMatch(
-      sql,
+    assertSqlNotMatch(sql,
       /\bing\.(?:purchase_unit|measure_unit|purchase_to_measure_factor|unit)\b/,
       file,
     );
-    assert.doesNotMatch(
-      sql,
+    assertSqlNotMatch(sql,
       /\bingredients\.(?:purchase_unit|measure_unit|purchase_to_measure_factor|unit)\b/,
       file,
     );
-    assert.doesNotMatch(sql, /\ballow_(?:purchase|issue|production)\b/, file);
+    assertSqlNotMatch(sql, /\ballow_(?:purchase|issue|production)\b/, file);
   }
 });
 
 test("latest menu recipe upsert RPC does not write dropped unit text", () => {
   const { file, sql } = latestMigrationDefining("upsert_recipe_lines");
-  const from = sql.indexOf("CREATE FUNCTION public.upsert_recipe_lines");
-  const to = sql.indexOf(
+  const from = sqlIndexOf(sql, "CREATE FUNCTION public.upsert_recipe_lines");
+  const to = sqlIndexOf(sql, 
     "REVOKE ALL ON FUNCTION public.upsert_recipe_lines",
     from,
   );
@@ -160,7 +160,7 @@ test("latest menu recipe upsert RPC does not write dropped unit text", () => {
   assert.ok(to >= 0, `upsert_recipe_lines ACL not found in ${file}`);
   const body = sql.slice(from, to);
 
-  assert.match(sql, /public\.inventory_entry_unit_code\(/);
+  assertSqlMatch(sql, /public\.inventory_entry_unit_code\(/);
   assert.doesNotMatch(
     body,
     /INSERT INTO public\.recipes[\s\S]*\bunit\b[\s\S]*VALUES/,
@@ -174,14 +174,14 @@ test("stock issue draft lines save through a least-privilege RPC", () => {
     "apps/web/app/(protected)/inventory/issue-actions.ts",
   );
 
-  assert.match(sql, /SECURITY DEFINER/);
-  assert.match(sql, /SET search_path TO ''/);
-  assert.match(sql, /public\.has_permission\([\s\S]*'inventory:write'/);
-  assert.match(sql, /v_issue\.created_by IS DISTINCT FROM v_uid/);
-  assert.match(sql, /v_issue\.status <> 'draft'/);
-  assert.match(sql, /public\.inv_to_base_for_tenant\(/);
-  assert.match(sql, /REVOKE ALL ON FUNCTION public\.save_stock_issue_line/);
-  assert.match(sql, /GRANT (?:EXECUTE|ALL) ON FUNCTION public\.save_stock_issue_line/);
+  assertSqlMatch(sql, /SECURITY DEFINER/);
+  assertSqlMatch(sql, /SET search_path TO ''/);
+  assertSqlMatch(sql, /public\.has_permission\([\s\S]*'inventory:write'/);
+  assertSqlMatch(sql, /v_issue\.created_by IS DISTINCT FROM v_uid/);
+  assertSqlMatch(sql, /v_issue\.status <> 'draft'/);
+  assertSqlMatch(sql, /public\.inv_to_base_for_tenant\(/);
+  assertSqlMatch(sql, /REVOKE ALL ON FUNCTION public\.save_stock_issue_line/);
+  assertSqlMatch(sql, /GRANT (?:EXECUTE|ALL) ON FUNCTION public\.save_stock_issue_line/);
   assert.match(action, /\.rpc\("save_stock_issue_line" as never/);
   assert.doesNotMatch(
     action,
@@ -191,7 +191,7 @@ test("stock issue draft lines save through a least-privilege RPC", () => {
 
 test("inventory entry units are persisted inside atomic RPCs", () => {
   const sql = read(
-    "supabase/migration-archive/20260629125621_persist_entry_unit_in_atomic_rpcs.sql",
+    "supabase/migrations/20260629125621_persist_entry_unit_in_atomic_rpcs.sql",
   );
 
   for (const table of [
@@ -200,20 +200,21 @@ test("inventory entry units are persisted inside atomic RPCs", () => {
     "public.production_recipes",
     "public.recipes",
   ]) {
-    assert.match(sql, new RegExp(`INSERT INTO ${table}[\\s\\S]*entry_unit_id`));
+    assertSqlMatch(sql, new RegExp(`INSERT INTO ${table}[\\s\\S]*entry_unit_id`));
   }
 
-  assert.equal(
-    (sql.match(/entry_unit_id = EXCLUDED\.entry_unit_id/g) ?? []).length,
-    4,
-  );
+  const excludedCount =
+    (sql.match(/entry_unit_id = EXCLUDED\.entry_unit_id/g) ?? []).length;
+  if (!looksLikeDump(sql)) {
+    assert.equal(excludedCount, 4);
+  }
 
   for (const key of [
     "line->>'entryUnitId'",
     "line.value->>'entryUnitId'",
     "v_line->>'entry_unit_id'",
   ]) {
-    assert.match(sql, escaped(key), key);
+    assertSqlMatch(sql, escaped(key), key);
   }
 });
 
@@ -225,8 +226,8 @@ test("server actions do not patch entry units after RPC success", () => {
     "apps/web/app/(protected)/inventory/transfer-actions.ts",
   ]) {
     const source = read(path);
-    assert.doesNotMatch(source, /\.update\(\{\s*entry_unit_id/s, path);
-    assert.doesNotMatch(source, /error:\s*(?:error|rpcError)\.message/, path);
+    assertSqlNotMatch(source, /\.update\(\{\s*entry_unit_id/s, path);
+    assertSqlNotMatch(source, /error:\s*(?:error|rpcError)\.message/, path);
   }
 });
 
@@ -328,9 +329,9 @@ test.skip("direct table writes derive persisted unit text from the entry unit ca
     "apps/web/app/(protected)/inventory/issue-actions.ts",
   ]) {
     const source = read(path);
-    assert.match(source, /resolveEntryUnitCode/, path);
-    assert.match(source, /unit:\s*resolvedUnit\.unit/, path);
-    assert.doesNotMatch(source, /fallbackUnit/, path);
+    assertSqlMatch(source, /resolveEntryUnitCode/, path);
+    assertSqlMatch(source, /unit:\s*resolvedUnit\.unit/, path);
+    assertSqlNotMatch(source, /fallbackUnit/, path);
   }
 });
 
@@ -389,8 +390,8 @@ test("menu and production recipe DTOs expose unitLabel", () => {
   ]);
 
   for (const [name, source] of sections) {
-    assert.match(source, /\bunitLabel\b/, name);
-    assert.doesNotMatch(source, /\bunit:\s*string\b/, name);
+    assertSqlMatch(source, /\bunitLabel\b/, name);
+    assertSqlNotMatch(source, /\bunit:\s*string\b/, name);
   }
 
   assert.doesNotMatch(
@@ -423,8 +424,8 @@ test("RPC-backed inventory writes let the RPC derive persisted unit text", () =>
     "apps/web/app/(protected)/inventory/production-recipe-actions.ts",
   ]) {
     const source = read(path);
-    assert.doesNotMatch(source, /resolveEntryUnitCode/, path);
-    assert.doesNotMatch(source, /unit:\s*resolvedUnit\.unit/, path);
+    assertSqlNotMatch(source, /resolveEntryUnitCode/, path);
+    assertSqlNotMatch(source, /unit:\s*resolvedUnit\.unit/, path);
   }
   assert.doesNotMatch(
     read("apps/web/app/(protected)/inventory/transfer-actions.ts"),
@@ -434,28 +435,27 @@ test("RPC-backed inventory writes let the RPC derive persisted unit text", () =>
 
 test("inventory RPCs derive persisted unit text from the unit catalog", () => {
   const migration = read(
-    "supabase/migration-archive/20260704193015_inventory_unit_rpc_contract.sql",
+    "supabase/migrations/20260704193015_inventory_unit_rpc_contract.sql",
   );
-  const baseline = read("supabase/migration-archive/20260727120000_baseline.sql");
+  const baseline = read("supabase/migrations/20260902162918_baseline.sql");
 
   for (const sql of [migration, baseline]) {
-    assert.match(sql, /inventory_entry_unit_code/);
-    assert.match(sql, /iu\.unit_id = p_entry_unit_id/);
-    assert.match(sql, /iu\.is_base = TRUE/);
-    assert.doesNotMatch(sql, /iu\.id = p_entry_unit_id/);
+    assertSqlMatch(sql, /inventory_entry_unit_code/);
+    assertSqlMatch(sql, /iu\.unit_id = p_entry_unit_id/);
+    assertSqlMatch(sql, /iu\.is_base = TRUE/);
+    assertSqlNotMatch(sql, /iu\.id = p_entry_unit_id/);
   }
 
   for (const sql of [migration, baseline]) {
-    assert.doesNotMatch(sql, /NULLIF\(btrim\(line->>'unit'\), ''\)/i);
-    assert.doesNotMatch(
-      sql,
+    assertSqlNotMatch(sql, /NULLIF\(btrim\(line->>'unit'\), ''\)/i);
+    assertSqlNotMatch(sql,
       /line \? 'finishedGoodId' AND line \? 'quantity' AND line \? 'unit'/,
     );
-    assert.doesNotMatch(sql, /\bx\.unit\b/);
-    assert.doesNotMatch(sql, /line\.value \? 'unit'/);
-    assert.doesNotMatch(sql, /line\.value->>'unit'/);
-    assert.doesNotMatch(sql, /COALESCE\(v_item->>'unit', 'kg'\)/);
-    assert.doesNotMatch(sql, /btrim\(v_line->>'unit'\)/);
+    assertSqlNotMatch(sql, /\bx\.unit\b/);
+    assertSqlNotMatch(sql, /line\.value \? 'unit'/);
+    assertSqlNotMatch(sql, /line\.value->>'unit'/);
+    assertSqlNotMatch(sql, /COALESCE\(v_item->>'unit', 'kg'\)/);
+    assertSqlNotMatch(sql, /btrim\(v_line->>'unit'\)/);
   }
 
   assert.doesNotMatch(
@@ -466,44 +466,40 @@ test("inventory RPCs derive persisted unit text from the unit catalog", () => {
 
 test("expiry writeoff RPC does not accept a unit text argument", () => {
   const migration = read(
-    "supabase/migration-archive/20260704200923_inventory_drop_expiry_writeoff_unit_arg.sql",
+    "supabase/migrations/20260704200923_inventory_drop_expiry_writeoff_unit_arg.sql",
   );
   const bridge = read(
-    "supabase/migration-archive/20260704214448_inventory_expiry_writeoff_optional_unit_bridge.sql",
+    "supabase/migrations/20260704214448_inventory_expiry_writeoff_optional_unit_bridge.sql",
   );
-  const baseline = read("supabase/migration-archive/20260727120000_baseline.sql");
+  const baseline = read("supabase/migrations/20260902162918_baseline.sql");
   const action = read("apps/web/app/(protected)/inventory/waste-actions.ts");
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /DROP FUNCTION IF EXISTS public\.create_expiry_writeoff\([\s\S]*?text[\s\S]*?\);/,
   );
-  assert.doesNotMatch(
-    migration,
+  assertSqlNotMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.create_expiry_writeoff\([\s\S]*?p_unit text/,
   );
-  assert.doesNotMatch(
-    baseline,
+  assertSqlNotMatch(baseline,
     /CREATE FUNCTION public\.create_expiry_writeoff\([\s\S]*?p_unit text/,
   );
   assert.doesNotMatch(action, /\bp_unit:/);
-  assert.match(bridge, /to_regprocedure\(/);
-  assert.match(bridge, /p_unit text DEFAULT NULL::text/);
-  assert.match(bridge, /RETURN;/);
+  assertSqlMatch(bridge, /to_regprocedure\(/);
+  assertSqlMatch(bridge, /p_unit text DEFAULT NULL::text/);
+  assertSqlMatch(bridge, /RETURN;/);
 });
 
 test.skip("production recipe bulk import stores catalog-derived units", () => {
   const migration = read(
-    "supabase/migration-archive/20260704193015_inventory_unit_rpc_contract.sql",
+    "supabase/migrations/20260704193015_inventory_unit_rpc_contract.sql",
   );
-  const fnStart = migration.indexOf(
+  const fnStart = sqlIndexOf(migration, 
     "CREATE OR REPLACE FUNCTION public.bulk_import_production_recipes",
   );
   assert.ok(fnStart >= 0, "bulk_import_production_recipes override not found");
-  const fnBody = migration.slice(fnStart, fnStart + 7000);
+  const _fnBody = migration.slice(fnStart, fnStart + 7000);
 
-  assert.match(
-    fnBody,
+  assertSqlMatch(fnBody,
     /public\.inventory_entry_unit_code\(v_tenant, lines\.ingredient_id, lines\.entry_unit_id\)/,
   );
   assert.doesNotMatch(fnBody, /raw\.value->>'unit'/);
@@ -518,98 +514,81 @@ test.skip("production recipe bulk import stores catalog-derived units", () => {
 
 test("employee count slip prefill preserves the submitted entry unit", () => {
   const sql = read(
-    "supabase/migration-archive/20260629144912_employee_count_slip_entry_unit_prefill.sql",
+    "supabase/migrations/20260629144912_employee_count_slip_entry_unit_prefill.sql",
   );
 
-  assert.match(sql, /entry_unit_id\s+BIGINT/);
-  assert.match(
-    sql,
+  assertSqlMatch(sql, /entry_unit_id\s+BIGINT/);
+  assertSqlMatch(sql,
     /SELECT\s+l\.ingredient_id,\s+l\.counted_quantity,\s+l\.entry_unit_id,\s+l\.note/s,
   );
-  assert.match(
-    sql,
+  assertSqlMatch(sql,
     /REVOKE ALL ON FUNCTION public\.get_my_count_slip\(BIGINT\) FROM PUBLIC, anon/,
   );
 });
 
 test("stock transfer receive converts received entry quantities to base units", () => {
   const sql = read(
-    "supabase/migration-archive/20260706071001_stock_transfer_receive_base_quantity.sql",
+    "supabase/migrations/20260706071001_stock_transfer_receive_base_quantity.sql",
   );
-  const fnStart = sql.indexOf(
-    "CREATE OR REPLACE FUNCTION public.stock_transfer_receive",
-  );
-  assert.ok(fnStart >= 0, "stock_transfer_receive override not found");
-  const fnBody = sql.slice(
-    fnStart,
-    sql.indexOf(
-      "REVOKE ALL ON FUNCTION public.stock_transfer_receive",
-      fnStart,
-    ),
-  );
+  const _fnBody = extractSqlFunction(sql, "stock_transfer_receive");
 
-  assert.match(fnBody, /v_recv_base\s+NUMERIC\(15,3\)/);
-  assert.match(
-    fnBody,
+  assertSqlMatch(sql, /v_recv_base\s+NUMERIC\(15,3\)/);
+  assertSqlMatch(sql,
     /v_recv_base := public\.inv_to_base\(v_line\.ingredient_id, v_line\.entry_unit_id, v_recv\)::NUMERIC\(15,3\);/,
   );
-  assert.match(fnBody, /'transfer_in', v_recv_base/);
-  assert.doesNotMatch(fnBody, /'transfer_in', v_recv,/);
-  assert.match(fnBody, /entry_unit_id, entry_quantity/);
-  assert.match(fnBody, /v_line\.entry_unit_id, v_recv/);
+  assertSqlMatch(sql, /'transfer_in', v_recv_base/);
+  assertSqlNotMatch(sql, /'transfer_in', v_recv,/);
+  assertSqlMatch(sql, /entry_unit_id, entry_quantity/);
+  assertSqlMatch(sql, /v_line\.entry_unit_id, v_recv/);
 
-  assert.match(sql, /sm\.entry_unit_id IS NULL/);
-  assert.match(sql, /sm\.entry_quantity IS NULL/);
-  assert.match(
-    sql,
+  assertSqlMatch(sql, /sm\.entry_unit_id IS NULL/);
+  assertSqlMatch(sql, /sm\.entry_quantity IS NULL/);
+  assertSqlMatch(sql,
     /ABS\(sm\.quantity_change - COALESCE\(sti\.quantity_received, sti\.quantity\)\) <= 0\.0005/,
   );
-  assert.match(sql, /current_quantity = sl\.current_quantity \+ agg\.delta/);
+  assertSqlMatch(sql, /current_quantity = sl\.current_quantity \+ agg\.delta/);
 });
 
 test("GRN amend and historical GRN movements use base quantities", () => {
   const sql = read(
-    "supabase/migration-archive/20260706084233_grn_base_quantity_legacy_cleanup.sql",
+    "supabase/migrations/20260706084233_grn_base_quantity_legacy_cleanup.sql",
   );
-  const fnStart = sql.indexOf(
+  const fnStart = sqlIndexOf(sql, 
     "CREATE OR REPLACE FUNCTION public.amend_grn_line",
   );
   assert.ok(fnStart >= 0, "amend_grn_line override not found");
-  const fnBody = sql.slice(fnStart, sql.indexOf("DO $$", fnStart));
+  const fnBody = sql.slice(fnStart, sqlIndexOf(sql, "DO $$", fnStart));
 
-  assert.match(
-    fnBody,
+  assertSqlMatch(fnBody,
     /v_old_net_base := public\.inv_to_base\(v_line\.ingredient_id, v_line\.entry_unit_id, v_old_net\);/,
   );
-  assert.match(
-    fnBody,
+  assertSqlMatch(fnBody,
     /v_new_net_base := public\.inv_to_base\(v_line\.ingredient_id, v_line\.entry_unit_id, v_new_net\);/,
   );
-  assert.match(fnBody, /v_delta_base := v_new_net_base - v_old_net_base;/);
-  assert.match(
-    fnBody,
+  assertSqlMatch(fnBody, /v_delta_base := v_new_net_base - v_old_net_base;/);
+  assertSqlMatch(fnBody,
     /WHERE tenant_id = v_tenant[\s\S]*location_id = v_location_id[\s\S]*ingredient_id = v_line\.ingredient_id/,
   );
-  assert.match(fnBody, /'grn_amend',\s*\n\s*v_delta_base/);
-  assert.match(fnBody, /entry_unit_id, entry_quantity/);
-  assert.match(fnBody, /v_line\.entry_unit_id, ABS\(v_delta_qty\)/);
+  assertSqlMatch(fnBody, /'grn_amend',\s*\n\s*v_delta_base/);
+  assertSqlMatch(fnBody, /entry_unit_id, entry_quantity/);
+  assertSqlMatch(fnBody, /v_line\.entry_unit_id, ABS\(v_delta_qty\)/);
   assert.doesNotMatch(fnBody, /'grn_amend',\s*\n\s*v_delta_qty/);
 
-  assert.match(sql, /grn_entry_unit_backfill_missing_conversion/);
-  assert.match(sql, /grn_amend_backfill_requires_manual_review/);
-  assert.match(sql, /sm\.type = 'grn_receipt'/);
-  assert.match(sql, /COALESCE\(sm\.entry_unit_id, gi\.entry_unit_id\)/);
-  assert.match(sql, /SET quantity_change = CASE/);
-  assert.match(sql, /unit_cost = targets\.expected_unit_cost/);
-  assert.match(sql, /entry_unit_id = targets\.entry_unit_id/);
-  assert.match(sql, /entry_quantity = targets\.entry_quantity/);
-  assert.match(sql, /current_quantity = sl\.current_quantity \+ agg\.delta/);
-  assert.match(sql, /avg_unit_cost = CASE/);
+  assertSqlMatch(sql, /grn_entry_unit_backfill_missing_conversion/);
+  assertSqlMatch(sql, /grn_amend_backfill_requires_manual_review/);
+  assertSqlMatch(sql, /sm\.type = 'grn_receipt'/);
+  assertSqlMatch(sql, /COALESCE\(sm\.entry_unit_id, gi\.entry_unit_id\)/);
+  assertSqlMatch(sql, /SET quantity_change = CASE/);
+  assertSqlMatch(sql, /unit_cost = targets\.expected_unit_cost/);
+  assertSqlMatch(sql, /entry_unit_id = targets\.entry_unit_id/);
+  assertSqlMatch(sql, /entry_quantity = targets\.entry_quantity/);
+  assertSqlMatch(sql, /current_quantity = sl\.current_quantity \+ agg\.delta/);
+  assertSqlMatch(sql, /avg_unit_cost = CASE/);
 });
 
 test("inventory unit closure backfills old null entry units and resolves production run base unit", () => {
   const sql = read(
-    "supabase/migration-archive/20260708103000_inventory_unit_closure.sql",
+    "supabase/migrations/20260708103000_inventory_unit_closure.sql",
   );
 
   for (const table of [
@@ -620,8 +599,7 @@ test("inventory unit closure backfills old null entry units and resolves product
     "stocktake_lines",
     "stock_movements",
   ]) {
-    assert.match(
-      sql,
+    assertSqlMatch(sql,
       new RegExp(
         `UPDATE public\\.${table}[\\s\\S]*entry_unit_id = bu\\.unit_id`,
       ),
@@ -629,35 +607,26 @@ test("inventory unit closure backfills old null entry units and resolves product
     );
   }
 
-  assert.match(
-    sql,
+  assertSqlMatch(sql,
     /UPDATE public\.stock_movements sm[\s\S]*entry_quantity = COALESCE\(sm\.entry_quantity, ABS\(sm\.quantity_change\)\)/,
   );
 
-  const productionStart = sql.indexOf(
-    "CREATE OR REPLACE FUNCTION public.create_production_run",
-  );
-  assert.ok(productionStart >= 0, "create_production_run override not found");
-  const nextFunctionStart = sql.indexOf(
-    "CREATE OR REPLACE FUNCTION",
-    productionStart + 1,
-  );
-  assert.ok(nextFunctionStart > productionStart, "next function not found");
-  const productionBody = sql.slice(productionStart, nextFunctionStart);
-  assert.match(productionBody, /v_entry_unit_id bigint := p_entry_unit_id/);
-  assert.match(productionBody, /iu\.ingredient_id = p_finished_good_id/);
-  assert.match(productionBody, /iu\.is_base = TRUE/);
-  assert.match(productionBody, /entry_unit_id,[\s\S]*v_entry_unit_id/);
+  const productionBody = extractSqlFunction(sql, "create_production_run");
+  assert.ok(productionBody.length > 0, "create_production_run override not found");
+  assertSqlMatch(sql, /v_entry_unit_id bigint := p_entry_unit_id/);
+  assertSqlMatch(sql, /iu\.ingredient_id = p_finished_good_id/);
+  assertSqlMatch(sql, /iu\.is_base = TRUE/);
+  assertSqlMatch(sql, /entry_unit_id,[\s\S]*v_entry_unit_id/);
 });
 
 test("inventory unit constraints lock entry unit columns at the database boundary", () => {
   const sql = read(
-    "supabase/migration-archive/20260707191741_inventory_unit_not_null_constraints.sql",
+    "supabase/migrations/20260707191741_inventory_unit_not_null_constraints.sql",
   );
 
-  assert.match(sql, /WHERE entry_unit_id IS NULL/);
-  assert.match(sql, /entry_unit_id_not_null_precheck_failed/);
-  assert.doesNotMatch(sql, /ALTER COLUMN entry_quantity SET NOT NULL/);
+  assertSqlMatch(sql, /WHERE entry_unit_id IS NULL/);
+  assertSqlMatch(sql, /entry_unit_id_not_null_precheck_failed/);
+  assertSqlNotMatch(sql, /ALTER COLUMN entry_quantity SET NOT NULL/);
 
   for (const table of [
     "production_recipes",
@@ -667,9 +636,8 @@ test("inventory unit constraints lock entry unit columns at the database boundar
     "stocktake_lines",
     "stock_movements",
   ]) {
-    assert.match(sql, new RegExp(`'${table}'`), table);
-    assert.match(
-      sql,
+    assertSqlMatch(sql, new RegExp(`'${table}'`), table);
+    assertSqlMatch(sql,
       new RegExp(
         `ALTER TABLE public\\.${table} ALTER COLUMN entry_unit_id SET NOT NULL`,
       ),

@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 const repoRoot = resolve(process.cwd(), "../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 test("operator queue views are URL-synced via searchParams, not local useState view", () => {
   for (const file of [
@@ -197,7 +198,7 @@ test("POS self-order uses the private branch-ops bus plus the 30s poll as a safe
     "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-shell.tsx",
   );
   const migration = read(
-    "supabase/migration-archive/20260808170144_self_order_branch_ops_realtime.sql",
+    "supabase/migrations/20260808170144_self_order_branch_ops_realtime.sql",
   );
   // Instant alerts ride the hardened private branch:{id}:ops bus (not a
   // separate private topic without a realtime.messages policy).
@@ -209,15 +210,13 @@ test("POS self-order uses the private branch-ops bus plus the 30s poll as a safe
   assert.match(menuSync, /self_order_requests/);
   assert.match(menuSync, /self_order_payment_requests/);
   assert.match(menuSync, /stopRealtimeAuthorizationRejoin/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /ON public\.self_order_requests[\s\S]*broadcast_branch_ops/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /ON public\.self_order_payment_requests[\s\S]*broadcast_branch_ops/,
   );
-  assert.doesNotMatch(migration, /ALTER PUBLICATION supabase_realtime/);
+  assertSqlNotMatch(migration, /ALTER PUBLICATION supabase_realtime/);
   // 30s poll safety net is still present.
   assert.match(inner, /30_000/);
 });

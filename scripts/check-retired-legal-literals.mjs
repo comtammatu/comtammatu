@@ -22,8 +22,7 @@ const forbidden = [
   new RegExp(`\\b${"Green" + "field"}\\b`, "iu"),
 ];
 const immutableHistory = [
-  "supabase/migration-archive/",
-  "supabase/migrations/20260727120000_baseline.sql",
+  "supabase/migrations/20260902162918_baseline.sql",
   "supabase/migrations/20260727190000_central_procurement_and_vat_evidence.sql",
   `supabase/migrations/20260727220000_compact_${"green" + "field"}_branch_id_gap.sql`,
   `supabase/migrations/20260728170006_harden_${"green" + "field"}_advisor_findings.sql`,

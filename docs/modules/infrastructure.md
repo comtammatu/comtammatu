@@ -57,7 +57,8 @@ Owner env checklist: `docs/ref/setup.md`.
 
 - Production is the repository type source (`pnpm db:types` requires the
   registered Production project id).
-- Active migrations: `supabase/migrations/`; history: `supabase/migration-archive/`.
+- Active migrations: `supabase/migrations/` (baseline + forwards). Historical
+  incrementals are git history, not an in-tree archive.
 - Production apply is owner-gated; never raw `supabase db push` to Cloud.
 - Disposable Preview Branches must be children of Production; Local Docker is
   not a Cloud substitute (CI E2E harness is the sole Docker write exception).

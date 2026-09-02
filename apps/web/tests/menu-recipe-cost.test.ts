@@ -1,6 +1,4 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { test } from "node:test";
 import {
   buildCompanyWacMap,
@@ -14,6 +12,7 @@ import {
   sumMenuRecipeEstimatedCost,
 } from "../app/(protected)/inventory/_lib/menu-recipe-cost";
 import type { IngredientUnitRow } from "../lib/inventory/types";
+import { readSql, assertSqlMatch, sqlIndexOf } from "./_lib/active-sql.ts";
 
 function unit(row: Partial<IngredientUnitRow>): IngredientUnitRow {
   return {
@@ -424,14 +423,8 @@ test("formatMenuRecipeBomSummary keeps declared qty and unit", () => {
 });
 
 test("inv_to_base_for_tenant still raises when the entry unit is missing", () => {
-  const sql = readFileSync(
-    resolve(
-      import.meta.dirname,
-      "../../../supabase/migrations/20260902162918_baseline.sql",
-    ),
-    "utf8",
-  );
-  const start = sql.indexOf(
+  const sql = readSql(process.cwd(), "supabase/migrations/20260902162918_baseline.sql");
+  const start = sqlIndexOf(sql, 
     "CREATE FUNCTION public.inv_to_base_for_tenant",
   );
   assert.notEqual(start, -1);
@@ -442,13 +435,7 @@ test("inv_to_base_for_tenant still raises when the entry unit is missing", () =>
 });
 
 test("POS sale consumption still converts qty through inv_to_base_for_tenant", () => {
-  const sql = readFileSync(
-    resolve(
-      import.meta.dirname,
-      "../../../supabase/migration-archive/20260810012014_pos_stock_post_and_flag.sql",
-    ),
-    "utf8",
-  );
-  assert.match(sql, /post_pos_sale_consumption_if_ready/);
-  assert.match(sql, /inv_to_base_for_tenant\(/);
+  const sql = readSql(process.cwd(), "supabase/migrations/20260810012014_pos_stock_post_and_flag.sql");
+  assertSqlMatch(sql, /post_pos_sale_consumption_if_ready/);
+  assertSqlMatch(sql, /inv_to_base_for_tenant\(/);
 });

@@ -1,16 +1,17 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch } from "./_lib/active-sql.ts";
+
 
 const root = process.cwd();
-const readWeb = (path: string) => readFileSync(join(root, path), "utf8");
+const readWeb = (path: string) => readSql(root, path);
 const readRepo = (path: string) =>
-  readFileSync(join(root, "../..", path), "utf8");
+  readSql(join(root, "../.."), path);
 
 test("guest staff-call notifies POS without a second order request", () => {
   const migration = readRepo(
-    "supabase/migration-archive/20260814001447_self_order_staff_call.sql",
+    "supabase/migrations/20260814001447_self_order_staff_call.sql",
   );
   const route = readWeb("app/api/self-order/[token]/staff-call/route.ts");
   const server = readWeb("lib/self-order/server.ts");
@@ -24,20 +25,18 @@ test("guest staff-call notifies POS without a second order request", () => {
     "app/(protected)/br/[branchId]/pos/_hooks/use-pos-menu-sync.ts",
   );
 
-  assert.match(migration, /CREATE TABLE public\.self_order_staff_calls/);
-  assert.match(migration, /self_order_staff_calls_one_pending_per_table/);
-  assert.match(migration, /CREATE OR REPLACE FUNCTION public\.self_order_call_staff/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /CREATE TABLE public\.self_order_staff_calls/);
+  assertSqlMatch(migration, /self_order_staff_calls_one_pending_per_table/);
+  assertSqlMatch(migration, /CREATE OR REPLACE FUNCTION public\.self_order_call_staff/);
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.self_order_ack_staff_call/,
   );
-  assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.self_order_call_staff/);
-  assert.match(migration, /TO service_role/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /GRANT EXECUTE ON FUNCTION public\.self_order_call_staff/);
+  assertSqlMatch(migration, /TO service_role/);
+  assertSqlMatch(migration,
     /GRANT EXECUTE ON FUNCTION public\.self_order_ack_staff_call/,
   );
-  assert.match(migration, /trg_broadcast_branch_ops ON public\.self_order_staff_calls/);
+  assertSqlMatch(migration, /trg_broadcast_branch_ops ON public\.self_order_staff_calls/);
 
   assert.match(route, /callSelfOrderStaff/);
   assert.match(route, /selfOrderStaffCallRequestSchema/);

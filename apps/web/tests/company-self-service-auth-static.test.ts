@@ -1,14 +1,15 @@
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import test from "node:test";
+import { readActiveMigrationSql, readSql, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 const root = resolve(import.meta.dirname, "../../..");
-const read = (path: string) => readFileSync(resolve(root, path), "utf8");
+const read = (path: string) => readSql(root, path);
 
 test("company self-service is authorized by a live binding only", () => {
   const migration = read(
-    "supabase/migration-archive/20260801205519_company_self_service_binding.sql",
+    "supabase/migrations/20260801205519_company_self_service_binding.sql",
   );
   const proxy = read("apps/web/proxy.ts");
   const types = read("packages/shared/src/auth/types.ts");
@@ -23,7 +24,7 @@ test("company self-service is authorized by a live binding only", () => {
   ]) {
     assert.ok(migration.includes(contract), contract);
   }
-  assert.doesNotMatch(migration, /WHEN 'hr_manager' THEN 'branch_staff'/);
+  assertSqlNotMatch(migration, /WHEN 'hr_manager' THEN 'branch_staff'/);
   assert.match(migration, /IF v_user_role IS NULL THEN\s+RETURN;/);
   assert.match(proxy, /p_key: PERMISSION_KEYS\.SELF_ACCESS/);
   assert.ok(
@@ -67,14 +68,7 @@ test("assigned company staff can clock in only through live self-service scope",
   const clockClient = read(
     "apps/web/lib/staff-runtime/clock/clock-client.tsx",
   );
-  const migrationName = readdirSync(
-    resolve(root, "supabase/migration-archive"),
-  ).find(
-    (name) => name.endsWith("_allow_company_self_service_clock_in.sql"),
-  );
-
-  assert.ok(migrationName, "missing company self-service clock-in migration");
-  const migration = read(`supabase/migration-archive/${migrationName}`);
+  const migration = readActiveMigrationSql(root);
 
   assert.match(todayWorkState, /clockInGate\.kind !== "unassigned"/);
   assert.match(todayWorkState, /claims\.user_role !== "self_service"/);

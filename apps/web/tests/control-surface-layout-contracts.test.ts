@@ -1,3 +1,4 @@
+import { readSql } from "./_lib/active-sql.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -13,7 +14,10 @@ import {
 import type { ShellNavGroup, ShellNavItem } from "../app/lib/shell-primitives";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
-const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
+const read = (path: string) =>
+  String(path).includes("supabase/migrations/")
+    ? readSql(repoRoot, String(path).replace(/^.*?(supabase\/)/, "supabase/"))
+    : readFileSync(join(repoRoot, path), "utf8");
 
 function item(href: string, label: string): ShellNavItem {
   return { href, label, icon: LayoutDashboard };

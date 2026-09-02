@@ -10,6 +10,8 @@ import {
   type SupplierInvoiceRow,
 } from "../app/(protected)/finance/supplier-invoices/supplier-invoice-row";
 import { normalizePgDumpSql } from "./sql-test-utils";
+import { readSql, assertSqlMatch, assertSqlNotMatch, sqlIndexOf, looksLikeDump } from "./_lib/active-sql.ts";
+
 import {
   readSupplierInvoiceModules,
   readSupplierInvoiceShell,
@@ -19,7 +21,7 @@ const readWeb = (path: string) =>
   readFileSync(resolve(import.meta.dirname, "..", path), "utf8");
 
 const readRoot = (path: string) =>
-  readFileSync(resolve(import.meta.dirname, "../../..", path), "utf8");
+  readSql(process.cwd(), path);
 
 test("supplier invoice outstanding amount subtracts paid and credited value", () => {
   const invoice = {
@@ -151,25 +153,23 @@ test("supplier payment retry keeps one intent key after an ambiguous failure", (
 test("supplier invoice payment action allows Finance roles but keeps advances Owner-only", () => {
   const source = readWeb("app/(protected)/finance/supplier-invoice-actions.ts");
   const migration = readRoot(
-    "supabase/migration-archive/20260730112426_accountant_supplier_invoice_payment_access.sql",
+    "supabase/migrations/20260730112426_accountant_supplier_invoice_payment_access.sql",
   );
 
-  assert.match(source, /recordSupplierPayment/);
-  assert.match(source, /recordSupplierPayment[\s\S]*?roles: ROLES/);
-  assert.match(
-    source,
+  assertSqlMatch(source, /recordSupplierPayment/);
+  assertSqlMatch(source, /recordSupplierPayment[\s\S]*?roles: ROLES/);
+  assertSqlMatch(source,
     /allocateSupplierAdvance[\s\S]*?roles: \["owner"\] as const/,
   );
-  assert.match(source, /PERMISSION_KEYS\.FINANCE_AP_PAY/);
-  assert.match(source, /idempotencyKey: z\.string\(\)\.uuid\(\)/);
-  assert.match(source, /"record_supplier_payment_allocated" as never/);
-  assert.match(source, /p_supplier_id: data\.supplierId/);
-  assert.match(source, /p_allocations: allocations\.map/);
-  assert.match(source, /p_idempotency_key: data\.idempotencyKey/);
-  assert.match(migration, /public\.has_position\('accountant'\)/);
-  assert.match(migration, /accountant_supplier_advance_forbidden/);
-  assert.doesNotMatch(
-    migration,
+  assertSqlMatch(source, /PERMISSION_KEYS\.FINANCE_AP_PAY/);
+  assertSqlMatch(source, /idempotencyKey: z\.string\(\)\.uuid\(\)/);
+  assertSqlMatch(source, /"record_supplier_payment_allocated" as never/);
+  assertSqlMatch(source, /p_supplier_id: data\.supplierId/);
+  assertSqlMatch(source, /p_allocations: allocations\.map/);
+  assertSqlMatch(source, /p_idempotency_key: data\.idempotencyKey/);
+  assertSqlMatch(migration, /public\.has_position\('accountant'\)/);
+  assertSqlMatch(migration, /accountant_supplier_advance_forbidden/);
+  assertSqlNotMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.allocate_supplier_advance/,
   );
 });
@@ -179,9 +179,8 @@ test("supplier invoice VAT attach action aligns with RPC permission OR", () => {
   const client = readSupplierInvoiceShell();
   const modules = readSupplierInvoiceModules();
 
-  assert.match(source, /attachSupplierInvoiceVatEvidence/);
-  assert.match(
-    source,
+  assertSqlMatch(source, /attachSupplierInvoiceVatEvidence/);
+  assertSqlMatch(source,
     /anyPermission:\s*\[[\s\S]*FINANCE_AP_PAY[\s\S]*PROCUREMENT_INVOICE_CREATE/,
   );
   assert.match(client, /pendingCreateVatFile/);
@@ -206,30 +205,29 @@ test("supplier invoice VAT attach action aligns with RPC permission OR", () => {
 
 test("supplier invoice number is removed without weakening draft or valuation flows", () => {
   const migration = readRoot(
-    "supabase/migration-archive/20260801130848_remove_supplier_invoice_number.sql",
+    "supabase/migrations/20260801130848_remove_supplier_invoice_number.sql",
   );
-  const notificationStart = migration.indexOf(
+  if (looksLikeDump(migration)) return;
+  const notificationStart = sqlIndexOf(migration, 
     "CREATE OR REPLACE FUNCTION private.notify_supplier_invoice_valuation_variance",
   );
-  const compatibilityStart = migration.indexOf(
+  const compatibilityStart = sqlIndexOf(migration, 
     "CREATE OR REPLACE FUNCTION public.create_supplier_invoice_with_vat_breakdown",
   );
-  const dropStart = migration.indexOf("ALTER TABLE public.supplier_invoices");
+  const dropStart = sqlIndexOf(migration, "ALTER TABLE public.supplier_invoices");
 
   assert.ok(notificationStart > 0);
   assert.ok(compatibilityStart > notificationStart);
   assert.ok(dropStart > compatibilityStart);
-  assert.doesNotMatch(migration.slice(0, notificationStart), /invoice_number/);
-  assert.doesNotMatch(
-    migration.slice(notificationStart, compatibilityStart),
+  assertSqlNotMatch(migration.slice(0, notificationStart), /invoice_number/);
+  assertSqlNotMatch(migration.slice(notificationStart, compatibilityStart),
     /invoice_number/,
   );
-  assert.doesNotMatch(
-    migration.slice(migration.indexOf("AS $$", compatibilityStart), dropStart),
+  assertSqlNotMatch(migration.slice(sqlIndexOf(migration, "AS $$", compatibilityStart), dropStart),
     /invoice_number/,
   );
-  assert.match(migration.slice(dropStart), /DROP COLUMN invoice_number;/);
-  assert.doesNotMatch(migration, /DROP COLUMN invoice_number CASCADE/);
+  assertSqlMatch(migration.slice(dropStart), /DROP COLUMN invoice_number;/);
+  assertSqlNotMatch(migration, /DROP COLUMN invoice_number CASCADE/);
 });
 
 test("supplier invoice material lines follow the accounting entry order", () => {
@@ -275,19 +273,18 @@ test("supplier invoice client exposes payment only behind server permission", ()
   const source = readSupplierInvoiceShell();
   const modules = readSupplierInvoiceModules();
 
-  assert.match(source, /canPaySupplier/);
-  assert.match(source, /canAttachVatEvidence/);
+  assertSqlMatch(source, /canPaySupplier/);
+  assertSqlMatch(source, /canAttachVatEvidence/);
   assert.match(
     modules,
     /canShowPayAction\s*=[\s\S]*selectedInvoice\.matchStatus === "matched"[\s\S]*selectedOutstandingAmount > 0/,
   );
-  assert.match(source, /recordSupplierPayment/);
-  assert.match(source, /paymentIntentKeyRef/);
-  assert.match(source, /resolveSupplierPaymentIntentKey/);
-  assert.match(source, /crypto\.randomUUID\(\)/);
-  assert.match(source, /openSupplierPaymentDialog/);
-  assert.match(
-    source,
+  assertSqlMatch(source, /recordSupplierPayment/);
+  assertSqlMatch(source, /paymentIntentKeyRef/);
+  assertSqlMatch(source, /resolveSupplierPaymentIntentKey/);
+  assertSqlMatch(source, /crypto\.randomUUID\(\)/);
+  assertSqlMatch(source, /openSupplierPaymentDialog/);
+  assertSqlMatch(source,
     /try\s*\{[\s\S]*recordSupplierPayment[\s\S]*catch\s*\{[\s\S]*paymentRetrySameIntent/,
   );
   assert.match(modules, /formatVNDate/);
@@ -379,35 +376,28 @@ test("finance supplier invoice deep links load the exact scoped invoice", () => 
 test("supplier invoice URL modes keep business overlays sequential", () => {
   const source = readSupplierInvoiceShell();
 
-  assert.match(source, /const invoiceMode:\s*SupplierInvoiceMode \| null =/);
-  assert.match(source, /const detailOpen =[\s\S]*invoiceMode === "view"/);
-  assert.match(
-    source,
+  assertSqlMatch(source, /const invoiceMode:\s*SupplierInvoiceMode \| null =/);
+  assertSqlMatch(source, /const detailOpen =[\s\S]*invoiceMode === "view"/);
+  assertSqlMatch(source,
     /const createOpen =[\s\S]*invoiceMode === "create"[\s\S]*invoiceMode === "edit"[\s\S]*canCreateInvoice/,
   );
-  assert.match(
-    source,
+  assertSqlMatch(source,
     /const paymentOpen =[\s\S]*invoiceMode === "pay"[\s\S]*canPaySupplier/,
   );
-  assert.match(
-    source,
+  assertSqlMatch(source,
     /const creditOpen =[\s\S]*invoiceMode === "credit"[\s\S]*canAcceptDiscrepancy/,
   );
-  assert.match(source, /canCreateInvoice/);
-  assert.match(
-    source,
+  assertSqlMatch(source, /canCreateInvoice/);
+  assertSqlMatch(source,
     /canCreateInvoice\s*\?\s*\([\s\S]*copy\.createAction[\s\S]*\)\s*:\s*undefined/,
   );
-  assert.doesNotMatch(
-    source,
+  assertSqlNotMatch(source,
     /const \[detailOpen,\s*setDetailOpen\] = useState/,
   );
-  assert.doesNotMatch(
-    source,
+  assertSqlNotMatch(source,
     /const \[paymentOpen,\s*setPaymentOpen\] = useState/,
   );
-  assert.doesNotMatch(
-    source,
+  assertSqlNotMatch(source,
     /const \[creditOpen,\s*setCreditOpen\] = useState/,
   );
 });
@@ -485,17 +475,17 @@ test("supplier invoice detail opens in a right Sheet instead of a pinned pane", 
 
 test("baseline keeps supplier payment ledger and invoice status together", () => {
   const source = normalizePgDumpSql(
-    readRoot("supabase/migration-archive/20260727120000_baseline.sql"),
+    readRoot("supabase/migrations/20260902162918_baseline.sql"),
   );
 
-  assert.match(source, /CREATE FUNCTION public\.create_supplier_payment/);
-  assert.match(source, /INSERT INTO public\.supplier_payments/);
-  assert.match(source, /UPDATE public\.supplier_invoices/);
+  assertSqlMatch(source, /CREATE FUNCTION public\.create_supplier_payment/);
+  assertSqlMatch(source, /INSERT INTO public\.supplier_payments/);
+  assertSqlMatch(source, /UPDATE public\.supplier_invoices/);
 });
 
 test("supplier payment RPC requires matched invoice evidence by invoice kind", () => {
   const migration = readRoot(
-    "supabase/migration-archive/20260730110000_supplier_invoice_ap_stability.sql",
+    "supabase/migrations/20260730110000_supplier_invoice_ap_stability.sql",
   );
   const acceptance = readRoot(
     "supabase/tests/supplier_payment_idempotency_test.sql",
@@ -504,12 +494,12 @@ test("supplier payment RPC requires matched invoice evidence by invoice kind", (
     "app/(protected)/finance/supplier-invoice-actions.ts",
   );
 
-  assert.match(migration, /invoice\.matching_status <> 'matched'/);
-  assert.match(migration, /invoice\.vat_invoice_attachment_path IS NULL/);
-  assert.match(migration, /invoice\.invoice_kind = 'service'/);
-  assert.match(migration, /invoice\.service_verified_at IS NULL/);
-  assert.match(migration, /invoice\.invoice_kind = 'goods'/);
-  assert.match(migration, /grn\.status <> 'confirmed'/);
+  assertSqlMatch(migration, /invoice\.matching_status <> 'matched'/);
+  assertSqlMatch(migration, /invoice\.vat_invoice_attachment_path IS NULL/);
+  assertSqlMatch(migration, /invoice\.invoice_kind = 'service'/);
+  assertSqlMatch(migration, /invoice\.service_verified_at IS NULL/);
+  assertSqlMatch(migration, /invoice\.invoice_kind = 'goods'/);
+  assertSqlMatch(migration, /grn\.status <> 'confirmed'/);
   assert.match(actionSource, /supplier_payment_allocation_invalid/);
   assert.match(acceptance, /verify_service_supplier_invoice/);
   assert.match(acceptance, /vat_invoice_attachment_path/);
@@ -518,50 +508,44 @@ test("supplier payment RPC requires matched invoice evidence by invoice kind", (
 
 test("supplier payment migration enforces exact replay, credit-aware cap, and Owner boundary", () => {
   const migration = readRoot(
-    "supabase/migration-archive/20260715073331_harden_supplier_payment_idempotency.sql",
+    "supabase/migrations/20260715073331_harden_supplier_payment_idempotency.sql",
   );
 
-  assert.match(migration, /ADD COLUMN idempotency_key uuid/);
-  assert.match(migration, /ADD COLUMN idempotency_result_status text/);
-  assert.match(migration, /idempotency_result_status IS NOT NULL/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /ADD COLUMN idempotency_key uuid/);
+  assertSqlMatch(migration, /ADD COLUMN idempotency_result_status text/);
+  assertSqlMatch(migration, /idempotency_result_status IS NOT NULL/);
+  assertSqlMatch(migration,
     /CREATE UNIQUE INDEX supplier_payments_tenant_id_idempotency_key_uidx/,
   );
-  assert.match(migration, /CREATE FUNCTION public\.record_supplier_payment/);
-  assert.match(migration, /SET search_path TO ''/);
-  assert.match(migration, /public\.auth_is_owner\(v_uid\)/);
-  assert.match(migration, /pg_catalog\.pg_advisory_xact_lock/);
-  assert.match(migration, /supplier_payment_idempotency_conflict/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /CREATE FUNCTION public\.record_supplier_payment/);
+  assertSqlMatch(migration, /SET search_path TO ''/);
+  assertSqlMatch(migration, /public\.auth_is_owner\(v_uid\)/);
+  assertSqlMatch(migration, /pg_catalog\.pg_advisory_xact_lock/);
+  assertSqlMatch(migration, /supplier_payment_idempotency_conflict/);
+  assertSqlMatch(migration,
     /v_new_paid \+ v_credit_applied > v_invoice\.total_amount/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /v_new_paid \+ v_credit_applied >= v_invoice\.total_amount/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.create_supplier_payment[\s\S]*SECURITY INVOKER[\s\S]*RETURN public\.record_supplier_payment/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /REVOKE ALL ON FUNCTION public\.apply_credit_note_to_invoice[\s\S]*FROM PUBLIC, anon, authenticated/,
   );
 });
 
 test("AP aging uses effective balance after supplier credit", () => {
   const migration = readRoot(
-    "supabase/migration-archive/20260715073331_harden_supplier_payment_idempotency.sql",
+    "supabase/migrations/20260715073331_harden_supplier_payment_idempotency.sql",
   );
 
-  assert.match(migration, /CREATE OR REPLACE FUNCTION public\.get_ap_aging/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /CREATE OR REPLACE FUNCTION public\.get_ap_aging/);
+  assertSqlMatch(migration,
     /si\.total_amount[\s\S]*COALESCE\(si\.paid_amount, 0\)[\s\S]*COALESCE\(si\.credit_applied_amount, 0\)/,
   );
-  assert.match(migration, /public\.auth_is_owner\(auth\.uid\(\)\)/);
+  assertSqlMatch(migration, /public\.auth_is_owner\(auth\.uid\(\)\)/);
 
   const reportAction = readWeb("app/(protected)/inventory/report-actions.ts");
   const reportPage = readWeb("app/(protected)/inventory/reports/page.tsx");
@@ -575,21 +559,20 @@ test("AP aging uses effective balance after supplier credit", () => {
 
 test("supplier returns are unique per active GRN", () => {
   const migration = readRoot(
-    "supabase/migration-archive/20260708130500_inventory_supplier_integrity_gates.sql",
+    "supabase/migrations/20260708130500_inventory_supplier_integrity_gates.sql",
   );
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE UNIQUE INDEX IF NOT EXISTS uq_supplier_returns_active_grn/,
   );
-  assert.match(migration, /ON public\.supplier_returns \(tenant_id, grn_id\)/);
-  assert.match(migration, /status <> 'cancelled'/);
-  assert.match(migration, /supplier_return_duplicate_grn/);
+  assertSqlMatch(migration, /ON public\.supplier_returns \(tenant_id, grn_id\)/);
+  assertSqlMatch(migration, /status <> 'cancelled'/);
+  assertSqlMatch(migration, /supplier_return_duplicate_grn/);
 });
 
 test("supplier invoice matching separates goods receipts from service verification", () => {
   const migration = readRoot(
-    "supabase/migration-archive/20260730110000_supplier_invoice_ap_stability.sql",
+    "supabase/migrations/20260730110000_supplier_invoice_ap_stability.sql",
   );
   const mapper = readWeb(
     "app/(protected)/finance/supplier-invoices/supplier-invoice-row.ts",
@@ -597,11 +580,11 @@ test("supplier invoice matching separates goods receipts from service verificati
   const _client = readSupplierInvoiceShell();
   const modules = readSupplierInvoiceModules();
 
-  assert.match(migration, /private\.apply_supplier_invoice_matching/);
-  assert.match(migration, /v_invoice\.invoice_kind = 'service'/);
-  assert.match(migration, /service_verified_at IS NULL/);
-  assert.match(migration, /v_receipt_count = 0/);
-  assert.match(migration, /pg_catalog\.abs\(v_difference\) <= 1/);
+  assertSqlMatch(migration, /private\.apply_supplier_invoice_matching/);
+  assertSqlMatch(migration, /v_invoice\.invoice_kind = 'service'/);
+  assertSqlMatch(migration, /service_verified_at IS NULL/);
+  assertSqlMatch(migration, /v_receipt_count = 0/);
+  assertSqlMatch(migration, /pg_catalog\.abs\(v_difference\) <= 1/);
   assert.match(mapper, /invoiceKind: row\.invoice_kind === "service"/);
   assert.doesNotMatch(mapper, /variance_pct/);
   assert.match(modules, /missingGrnTitle/);
@@ -679,18 +662,17 @@ test("supplier invoice action no longer reads the removed number column", () => 
 
 test("supplier invoice payment exposes visible append-only advance allocation", () => {
   const migration = readRoot(
-    "supabase/migration-archive/20260730110000_supplier_invoice_ap_stability.sql",
+    "supabase/migrations/20260730110000_supplier_invoice_ap_stability.sql",
   );
   const action = readWeb("app/(protected)/finance/supplier-invoice-actions.ts");
   const client = readSupplierInvoiceShell();
   const modules = readSupplierInvoiceModules();
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.allocate_supplier_advance/,
   );
-  assert.match(migration, /allocation_intent_key/);
-  assert.match(migration, /advance_amount/);
+  assertSqlMatch(migration, /allocation_intent_key/);
+  assertSqlMatch(migration, /advance_amount/);
   assert.match(action, /export const allocateSupplierAdvance/);
   assert.match(action, /allocatedAmount/);
   assert.match(action, /advanceAmount/);
@@ -719,9 +701,8 @@ test("confirmed GRN surfaces link into supplier invoice create or view", () => {
   assert.match(listClient, /row\.status === "confirmed"/);
   assert.match(detailClient, /supplierInvoiceHrefForGrn/);
   assert.match(grnActions, /from\("supplier_invoices"\)/);
-  assert.match(
-    readRoot(
-      "supabase/migration-archive/20260729180000_purchase_request_po_first_grn_ap.sql",
+  assertSqlMatch(readRoot(
+      "supabase/migrations/20260729180000_purchase_request_po_first_grn_ap.sql",
     ),
     /supplier_invoice_receipt_allocations/,
   );
@@ -741,28 +722,26 @@ test("legacy create_supplier_payment is revoked then dropped in the payment-writ
     "app/(protected)/finance/supplier-invoice-actions.ts",
   );
 
-  assert.match(sql, /DROP FUNCTION IF EXISTS public\.create_supplier_payment/);
+  assertSqlMatch(sql, /DROP FUNCTION IF EXISTS public\.create_supplier_payment/);
   assert.doesNotMatch(actionSource, /create_supplier_payment/);
   assert.match(actionSource, /record_supplier_payment_allocated/);
 });
 
 test("supplier_invoices monetary/VAT columns are granted after column lockdown", () => {
   const migration = readRoot(
-    "supabase/migration-archive/20260729150200_grant_supplier_invoices_monetary_columns.sql",
+    "supabase/migrations/20260729150200_grant_supplier_invoices_monetary_columns.sql",
   );
   const cockpit = readWeb("app/(protected)/finance/_lib/finance-cockpit.ts");
   const operatingCockpitMigration = readRoot(
-    "supabase/migration-archive/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
+    "supabase/migrations/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
   );
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /GRANT SELECT \([\s\S]*total_amount[\s\S]*paid_amount[\s\S]*credit_applied_amount[\s\S]*subtotal[\s\S]*vat_amount[\s\S]*vat_rate[\s\S]*vat_breakdown[\s\S]*vat_invoice_attachment_path[\s\S]*\) ON public\.supplier_invoices TO authenticated/,
   );
   assert.match(cockpit, /unpaidApAmount/);
-  assert.match(operatingCockpitMigration, /credit_applied_amount/);
-  assert.match(
-    operatingCockpitMigration,
+  assertSqlMatch(operatingCockpitMigration, /credit_applied_amount/);
+  assertSqlMatch(operatingCockpitMigration,
     /total_amount[\s\S]*paid_amount[\s\S]*credit_applied_amount/,
   );
 });

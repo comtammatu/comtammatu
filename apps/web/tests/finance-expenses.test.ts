@@ -12,6 +12,7 @@ import {
   isStartupCapitalCategory,
 } from "../app/(protected)/finance/_lib/expense-categories";
 import { parseExpenseListState } from "../app/(protected)/finance/expenses/expense-list-state";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
 
 const readWeb = (path: string) =>
   readFileSync(resolve(import.meta.dirname, "..", path), "utf8");
@@ -201,13 +202,7 @@ test("bank deposits stay out of operating expense totals", () => {
 test("startup capital is selectable and excluded from operating cash movement", () => {
   const client = readExpenseClientBundle();
   const messages = readWeb("lib/messages/finance.ts");
-  const migration = readFileSync(
-    resolve(
-      import.meta.dirname,
-      "../../../supabase/migration-archive/20260817181500_expense_startup_capital_category.sql",
-    ),
-    "utf8",
-  );
+  const migration = readSql(process.cwd(), "supabase/migrations/20260817181500_expense_startup_capital_category.sql");
 
   assert.equal(EXPENSE_CATEGORY_VALUES.includes("capital"), true);
   assert.equal(EXPENSE_CATEGORY_VALUES.includes("deposit"), true);
@@ -219,21 +214,17 @@ test("startup capital is selectable and excluded from operating cash movement", 
   assert.equal(EXPENSE_CATEGORIES_BY_GROUP.startup.includes("deposit"), true);
   assert.match(messages, /capital: "Thi công \/ tài sản"/);
   assert.match(messages, /deposit: "Đặt cọc \/ ký quỹ"/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /ADD CONSTRAINT expenses_category_check[\s\S]*'capital'[\s\S]*'deposit'/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /create_expense_transfer_intent\(bigint,date,text,jsonb,text,text,text\)/,
   );
-  assert.match(migration, /startup_capital_expense_category_boundary_not_found/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /startup_capital_expense_category_boundary_not_found/);
+  assertSqlMatch(migration,
     /SET LOCAL session_replication_role = replica/,
   );
-  assert.doesNotMatch(
-    migration,
+  assertSqlNotMatch(migration,
     /get_operating_cash_movement_for_period/,
   );
 });
@@ -241,13 +232,7 @@ test("startup capital is selectable and excluded from operating cash movement", 
 test("hospitality is selectable and accepted across expense boundaries", () => {
   const client = readExpenseClientBundle();
   const messages = readWeb("lib/messages/finance.ts");
-  const migration = readFileSync(
-    resolve(
-      import.meta.dirname,
-      "../../../supabase/migration-archive/20260802135333_add_hospitality_expense_category.sql",
-    ),
-    "utf8",
-  );
+  const migration = readSql(process.cwd(), "supabase/migrations/20260802135333_add_hospitality_expense_category.sql");
 
   assert.equal(EXPENSE_CATEGORY_VALUES.includes("hospitality"), true);
   assert.match(client, /EXPENSE_CATEGORIES_BY_GROUP\.operating/);
@@ -256,15 +241,13 @@ test("hospitality is selectable and accepted across expense boundaries", () => {
     true,
   );
   assert.match(messages, /hospitality: "Tiếp khách"/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /ADD CONSTRAINT expenses_category_check[\s\S]*'hospitality'/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /create_expense_transfer_intent\(bigint,date,text,jsonb,text,text,text\)/,
   );
-  assert.match(migration, /hospitality_expense_category_boundary_not_found/);
+  assertSqlMatch(migration, /hospitality_expense_category_boundary_not_found/);
 });
 
 test("expense LIST loader bounds first paint and delegates recoverable failures", () => {
@@ -358,20 +341,14 @@ test("operating KPI uses pre-VAT totals while action totals keep gross cash", ()
   const page = readWeb("app/(protected)/finance/expenses/page.tsx");
   const actions = readWeb("app/(protected)/finance/expense-actions.ts");
   const cockpit = readWeb("app/(protected)/finance/_lib/finance-cockpit.ts");
-  const migration = readFileSync(
-    resolve(
-      import.meta.dirname,
-      "../../../supabase/migration-archive/20260818171912_finance_expense_period_summary.sql",
-    ),
-    "utf8",
-  );
+  const migration = readSql(process.cwd(), "supabase/migrations/20260818171912_finance_expense_period_summary.sql");
 
   assert.match(page, /fetchExpensePeriodSummary\(/);
   assert.match(actions, /get_finance_expense_period_summary/);
   assert.match(actions, /operating_total/);
   assert.match(actions, /needs_action_total/);
-  assert.match(migration, /SUM\(scoped\.subtotal\)/);
-  assert.match(migration, /SUM\(scoped\.amount\) FILTER \(WHERE scoped\.needs_action\)/);
+  assertSqlMatch(migration, /SUM\(scoped\.subtotal\)/);
+  assertSqlMatch(migration, /SUM\(scoped\.amount\) FILTER \(WHERE scoped\.needs_action\)/);
   assert.doesNotMatch(
     page,
     /if \(isOperatingExpenseCategory\(row\.category\)\) \{/,
@@ -460,13 +437,7 @@ test("expense triage filter shares one needs-action definition with its KPI", ()
 test("expense create captures immutable multi-rate VAT and optional attachment", () => {
   const actions = readWeb("app/(protected)/finance/expense-actions.ts");
   const client = readExpenseClientBundle();
-  const migration = readFileSync(
-    resolve(
-      import.meta.dirname,
-      "../../../supabase/migration-archive/20260727141702_expense_vat_and_attachment.sql",
-    ),
-    "utf8",
-  );
+  const migration = readSql(process.cwd(), "supabase/migrations/20260727141702_expense_vat_and_attachment.sql");
 
   assert.match(actions, /vatBreakdown/);
   assert.match(actions, /invoiceAttachmentUrl/);
@@ -481,22 +452,16 @@ test("expense create captures immutable multi-rate VAT and optional attachment",
   assert.match(client, /taxableName=\{`lines\.\$\{index\}\.taxableAmount`\}/);
   assert.match(client, /vatRateName=\{`lines\.\$\{index\}\.vatRate`\}/);
   assert.doesNotMatch(client, /được khấu trừ/);
-  assert.match(migration, /normalize_expense_vat_breakdown/);
-  assert.match(migration, /expense_vat_snapshot_immutable/);
-  assert.match(migration, /invoice_attachment_url/);
-  assert.match(migration, /finance:expense_create/);
+  assertSqlMatch(migration, /normalize_expense_vat_breakdown/);
+  assertSqlMatch(migration, /expense_vat_snapshot_immutable/);
+  assertSqlMatch(migration, /invoice_attachment_url/);
+  assertSqlMatch(migration, /finance:expense_create/);
 });
 
 test("expense edit keeps payment evidence immutable and audits the locked RPC write", () => {
   const actions = readWeb("app/(protected)/finance/expense-actions.ts");
   const client = readExpenseClientBundle();
-  const migration = readFileSync(
-    resolve(
-      import.meta.dirname,
-      "../../../supabase/migration-archive/20260731184719_update_operating_expense.sql",
-    ),
-    "utf8",
-  );
+  const migration = readSql(process.cwd(), "supabase/migrations/20260731184719_update_operating_expense.sql");
 
   assert.match(actions, /const updateExpenseSchema = expenseInputSchema/);
   assert.match(actions, /update_operating_expense/);
@@ -511,14 +476,13 @@ test("expense edit keeps payment evidence immutable and audits the locked RPC wr
   assert.match(client, /label=\{copy\.form\.paymentSection\}/);
   assert.doesNotMatch(client, /methodCorrectHint/);
   assert.doesNotMatch(client, /methodEditHint/);
-  assert.match(migration, /CREATE FUNCTION public\.update_operating_expense/);
-  assert.match(migration, /FOR UPDATE/);
-  assert.match(migration, /app\.expense_update_id/);
-  assert.match(migration, /v_expense\.transfer_content IS NOT NULL/);
-  assert.match(migration, /bank_transaction_expense_matches/);
-  assert.match(migration, /PERFORM public\.log_audit/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /CREATE FUNCTION public\.update_operating_expense/);
+  assertSqlMatch(migration, /FOR UPDATE/);
+  assertSqlMatch(migration, /app\.expense_update_id/);
+  assertSqlMatch(migration, /v_expense\.transfer_content IS NOT NULL/);
+  assertSqlMatch(migration, /bank_transaction_expense_matches/);
+  assertSqlMatch(migration, /PERFORM public\.log_audit/);
+  assertSqlMatch(migration,
     /REVOKE ALL ON FUNCTION public\.update_operating_expense/,
   );
 });
@@ -528,13 +492,7 @@ test("Owner/Accountant can correct unmatched paid expense payment methods", () =
     "app/(protected)/finance/_lib/expense-categories.ts",
   );
   const messages = readWeb("lib/messages/finance.ts");
-  const migration = readFileSync(
-    resolve(
-      import.meta.dirname,
-      "../../../supabase/migration-archive/20260801053526_correct_expense_payment_method.sql",
-    ),
-    "utf8",
-  );
+  const migration = readSql(process.cwd(), "supabase/migrations/20260801053526_correct_expense_payment_method.sql");
 
   assert.match(categories, /export function canCorrectExpensePaymentMethod/);
   assert.match(
@@ -544,13 +502,11 @@ test("Owner/Accountant can correct unmatched paid expense payment methods", () =
   assert.match(messages, /paymentSection: "Ghi nhận thanh toán"/);
   assert.doesNotMatch(messages, /methodCorrectHint/);
   assert.doesNotMatch(messages, /methodEditHint/);
-  assert.match(migration, /v_is_paid_correction/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /v_is_paid_correction/);
+  assertSqlMatch(migration,
     /OLD\.paid_at IS NOT NULL[\s\S]*OLD\.payment_method IN \('cash', 'transfer'\)/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /WHEN v_expense\.paid_at IS NOT NULL THEN v_expense\.paid_at/,
   );
 });
@@ -582,13 +538,7 @@ test("expense list opens form-shaped document from row click", () => {
 test("expense mutate gates Owner/Accountant on finance:expense_create", () => {
   const actions = readWeb("app/(protected)/finance/expense-actions.ts");
   const page = readWeb("app/(protected)/finance/expenses/page.tsx");
-  const migration = readFileSync(
-    resolve(
-      import.meta.dirname,
-      "../../../supabase/migration-archive/20260801051906_expense_mutate_requires_expense_create.sql",
-    ),
-    "utf8",
-  );
+  const migration = readSql(process.cwd(), "supabase/migrations/20260801051906_expense_mutate_requires_expense_create.sql");
 
   assert.match(
     actions,
@@ -614,13 +564,11 @@ test("expense mutate gates Owner/Accountant on finance:expense_create", () => {
     page,
     /currentUserHasPermissionAny\(PERMISSION_KEYS\.FINANCE_EXPENSE_CREATE\)/,
   );
-  assert.match(migration, /has_permission_any\('finance:expense_create'\)/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /has_permission_any\('finance:expense_create'\)/);
+  assertSqlMatch(migration,
     /NEW\.payment_method = 'transfer'[\s\S]*NEW\.paid_at IS NOT NULL/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /expense_payment_transition_evidence_authorization_not_found/,
   );
 });

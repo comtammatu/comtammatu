@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync } from "node:fs";
+import { readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -26,9 +26,11 @@ import {
 } from "../app/(protected)/finance/_lib/sepay-bank-transaction-model";
 import { fetchSepayDataApiRows } from "../app/(protected)/finance/_lib/sepay-bank-transactions";
 import { isExpenseVisibleForBankMatch } from "../app/(protected)/finance/_lib/expense-categories";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
-const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 function readActiveMigrationChain(): string {
   const migrationsDir = join(repoRoot, "supabase/migrations");
@@ -55,15 +57,13 @@ function extractLatestSqlFunction(source: string, functionName: string): string 
 
 test("bank reconciliation index alignment is replay-safe", () => {
   const baseline = read(
-    "supabase/migration-archive/20260727120000_baseline.sql",
+    "supabase/migrations/20260902162918_baseline.sql",
   );
 
-  assert.match(
-    baseline,
+  assertSqlMatch(baseline,
     /CREATE INDEX bank_transaction_reconciliation_matches_created_by_idx/,
   );
-  assert.match(
-    baseline,
+  assertSqlMatch(baseline,
     /CREATE INDEX bank_transaction_reconciliation_matches_tenant_idx/,
   );
 });
@@ -744,7 +744,7 @@ test("Owner replay of signed SePay evidence is exact, atomic, and audited", () =
 
 test("SePay money-in manual link stays guarded by RPC", () => {
   const migration = read(
-    "supabase/migration-archive/20260709064834_link_sepay_transaction_to_payment.sql",
+    "supabase/migrations/20260709064834_link_sepay_transaction_to_payment.sql",
   );
   const action = read(
     "apps/web/app/(protected)/finance/bank-webhook-review-actions.ts",
@@ -753,45 +753,39 @@ test("SePay money-in manual link stays guarded by RPC", () => {
     "apps/web/app/(protected)/finance/bank-transactions/bank-transactions-table.tsx",
   );
   const canonicalMigration = read(
-    "supabase/migration-archive/20260719220000_create_bank_reconciliation_matches.sql",
+    "supabase/migrations/20260719220000_create_bank_reconciliation_matches.sql",
   );
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.link_sepay_transaction_to_payment/,
   );
-  assert.match(migration, /SECURITY DEFINER/);
-  assert.match(migration, /provider = 'sepay'/);
-  assert.match(migration, /payload->>'transferType'[\s\S]*<> 'in'/);
-  assert.match(migration, /v_payment\.amount <> v_amount/);
-  assert.match(migration, /payment_already_has_bank_webhook/);
-  assert.match(migration, /PERFORM public\.log_audit/);
+  assertSqlMatch(migration, /SECURITY DEFINER/);
+  assertSqlMatch(migration, /provider = 'sepay'/);
+  assertSqlMatch(migration, /payload->>'transferType'[\s\S]*<> 'in'/);
+  assertSqlMatch(migration, /v_payment\.amount <> v_amount/);
+  assertSqlMatch(migration, /payment_already_has_bank_webhook/);
+  assertSqlMatch(migration, /PERFORM public\.log_audit/);
   assert.match(action, /linkSepayTransactionToPayment/);
   assert.match(action, /link_sepay_transaction_to_payment/);
   assert.match(action, /reconcile_bank_transaction_targets/);
   assert.match(action, /searchSepayMatchablePayments/);
   assert.match(action, /ilike\("order_number"/);
   assert.match(table, /MatchPaymentSheet/);
-  assert.match(
-    read(
+  assertSqlMatch(read(
       "apps/web/app/(protected)/finance/bank-transactions/match-payment-sheet.tsx",
     ),
     /linkSepayTransactionToPayment/,
   );
-  assert.match(
-    canonicalMigration,
+  assertSqlMatch(canonicalMigration,
     /CREATE TABLE public\.bank_transaction_reconciliation_matches/,
   );
-  assert.match(
-    canonicalMigration,
+  assertSqlMatch(canonicalMigration,
     /COMMENT ON TABLE public\.bank_transaction_reconciliation_matches IS[\s\S]*never change bank balance/,
   );
-  assert.match(
-    canonicalMigration,
+  assertSqlMatch(canonicalMigration,
     /CREATE OR REPLACE FUNCTION public\.reconcile_bank_transaction_targets/,
   );
-  assert.doesNotMatch(
-    canonicalMigration.match(
+  assertSqlNotMatch(canonicalMigration.match(
       /CREATE OR REPLACE FUNCTION public\.reconcile_bank_transaction_targets[\s\S]*?COMMENT ON FUNCTION public\.reconcile_bank_transaction_targets/,
     )?.[0] ?? "",
     /UPDATE public\.bank_transactions|SET amount =|SET transfer_type =/,
@@ -800,32 +794,28 @@ test("SePay money-in manual link stays guarded by RPC", () => {
 
 test("SePay conflict hardening gates automatic settlement and Owner recovery", () => {
   const migration = read(
-    "supabase/migration-archive/20260715135031_harden_sepay_payment_conflicts.sql",
+    "supabase/migrations/20260715135031_harden_sepay_payment_conflicts.sql",
   );
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.reconcile_sepay_order_evidence/,
   );
-  assert.match(migration, /PERFORM pg_advisory_xact_lock\(v_order_id\)/);
-  assert.match(migration, /payment_method_conflict_needs_review/);
-  assert.match(migration, /payment_state_conflict_needs_review/);
-  assert.match(migration, /overpayment_needs_review/);
-  assert.match(migration, /prior_event\.payment_id IS NOT NULL/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /PERFORM pg_advisory_xact_lock\(v_order_id\)/);
+  assertSqlMatch(migration, /payment_method_conflict_needs_review/);
+  assertSqlMatch(migration, /payment_state_conflict_needs_review/);
+  assertSqlMatch(migration, /overpayment_needs_review/);
+  assertSqlMatch(migration, /prior_event\.payment_id IS NOT NULL/);
+  assertSqlMatch(migration,
     /REVOKE ALL ON FUNCTION public\.confirm_sepay_payment\([\s\S]*service_role/,
   );
-  assert.match(migration, /NOT public\.auth_is_owner\(v_user_id\)/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /NOT public\.auth_is_owner\(v_user_id\)/);
+  assertSqlMatch(migration,
     /GRANT EXECUTE ON FUNCTION public\.link_sepay_transaction_to_payment\(bigint, bigint\)[\s\S]*TO authenticated/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /WHEN 'missing_payment_code' THEN 'missing_payment_code_needs_review'/,
   );
-  assert.doesNotMatch(migration, /corrected_from_cash/);
+  assertSqlNotMatch(migration, /corrected_from_cash/);
 });
 
 test("SePay reconciliation LIST loader bounds first paint without exhaust scan", () => {
@@ -884,7 +874,7 @@ test("SePay bank reconciliation reads supplier AP payments without turning them 
   );
   const action = read("apps/web/app/(protected)/finance/expense-actions.ts");
   const migration = read(
-    "supabase/migration-archive/20260714031025_20260713153523_persist_sepay_supplier_payment_match.sql",
+    "supabase/migrations/20260714031025_20260713153523_persist_sepay_supplier_payment_match.sql",
   );
 
   assert.match(loader, /\.from\("supplier_payments"\)/);
@@ -897,14 +887,13 @@ test("SePay bank reconciliation reads supplier AP payments without turning them 
   assert.match(cell, /matchSepayTransactionWithSupplierPayments/);
   assert.doesNotMatch(cell, /sm:h-7|sm:min-h-7/);
   assert.match(action, /match_sepay_transaction_supplier_payments/);
-  assert.match(migration, /ADD COLUMN webhook_event_id bigint/);
-  assert.match(migration, /public\.auth_is_owner\(v_user_id\)/);
-  assert.match(migration, /supplier_payment_amount_mismatch/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /ADD COLUMN webhook_event_id bigint/);
+  assertSqlMatch(migration, /public\.auth_is_owner\(v_user_id\)/);
+  assertSqlMatch(migration, /supplier_payment_amount_mismatch/);
+  assertSqlMatch(migration,
     /REVOKE INSERT, UPDATE, DELETE ON public\.supplier_payments/,
   );
-  assert.match(migration, /guard_expense_match_without_supplier_payment/);
+  assertSqlMatch(migration, /guard_expense_match_without_supplier_payment/);
 });
 
 test("SePay bank page uses one filtered reconciliation table", () => {
@@ -955,8 +944,7 @@ test("SePay bank page uses one filtered reconciliation table", () => {
     /import \{ displayBankContent \} from "\.\.\/_lib\/display-bank-content"/,
   );
   assert.match(table, /export \{ displayBankContent \}/);
-  assert.match(
-    read(
+  assertSqlMatch(read(
       "apps/web/app/(protected)/finance/_lib/display-bank-content.ts",
     ),
     /export function displayBankContent/,
@@ -1256,14 +1244,12 @@ test("searchSepayRefundOptions uses FINANCE_VIEW permission key", () => {
 
 test("bank reconciliation migration supports unpaid expenses and accountant replay", () => {
   const migration = read(
-    "supabase/migration-archive/20260831210000_fix_bank_reconciliation_unpaid_and_accountant_replay.sql",
+    "supabase/migrations/20260831210000_fix_bank_reconciliation_unpaid_and_accountant_replay.sql",
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /expense\.payment_method IN \('transfer', 'unpaid'\)/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /position\.code IN \('owner', 'accountant'\)/,
   );
 });

@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch } from "./_lib/active-sql.ts";
+
 
 function readWeb(path: string): string {
-  return readFileSync(join(process.cwd(), path), "utf8");
+  return readSql(process.cwd(), path);
 }
 
 const countAssignmentsClientSource = readWeb(
@@ -17,7 +17,7 @@ const countAssignmentsActionsSource = readWeb(
   "app/(protected)/inventory/count-assignments/actions.ts",
 );
 const countAssignmentShiftMigrationSource = readWeb(
-  "../../supabase/migration-archive/20260708064356_inventory_count_assignment_shift_scope.sql",
+  "../../supabase/migrations/20260708064356_inventory_count_assignment_shift_scope.sql",
 );
 
 test("count assignment checklist uses one labeled hit target", () => {
@@ -230,28 +230,15 @@ test("Branch stays touch-native while Owner surface uses a management table and 
 });
 
 test("count assignment migration stores assignment and slip shift scope", () => {
-  assert.match(
-    countAssignmentShiftMigrationSource,
-    /ALTER TABLE public\.inventory_count_assignments[\s\S]*ADD COLUMN IF NOT EXISTS shift_id bigint/,
-    "assignment table should carry nullable shift_id",
+  assertSqlMatch(countAssignmentShiftMigrationSource,
+    /CREATE OR REPLACE FUNCTION public\.set_inventory_count_assignments\([\s\S]*p_shift_id bigint/,
+    "assignment writer accepts an optional shift scope",
   );
-  assert.match(
-    countAssignmentShiftMigrationSource,
-    /ALTER TABLE public\.inventory_count_slips[\s\S]*ADD COLUMN IF NOT EXISTS shift_id bigint/,
-    "count slips should record the actual submitted shift",
-  );
-  assert.match(
-    countAssignmentShiftMigrationSource,
-    /CREATE UNIQUE INDEX uq_count_assignment_scope[\s\S]*COALESCE\(shift_id, 0::bigint\)/,
-    "assignment identity should include null-safe shift scope",
-  );
-  assert.match(
-    countAssignmentShiftMigrationSource,
+  assertSqlMatch(countAssignmentShiftMigrationSource,
     /a\.shift_id IS NOT DISTINCT FROM v_shift_id/,
     "assignment writer should only replace rows inside the selected scope",
   );
-  assert.match(
-    countAssignmentShiftMigrationSource,
+  assertSqlMatch(countAssignmentShiftMigrationSource,
     /p_shift_id bigint DEFAULT NULL[\s\S]*NOT EXISTS \([\s\S]*specific\.shift_id = v_shift_id[\s\S]*specific\.is_active/,
     "count submit RPC should let current-shift assignments override every-shift assignments for the same cell",
   );

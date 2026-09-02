@@ -2,15 +2,10 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import test from "node:test";
+import { readSql, assertSqlNotMatch } from "./_lib/active-sql.ts";
 
 const repoRoot = resolve(process.cwd(), "../..");
-const migration = readFileSync(
-  resolve(
-    repoRoot,
-    "supabase/migration-archive/20260711130000_repair_inventory_unit_readers.sql",
-  ),
-  "utf8",
-);
+const migration = readSql(repoRoot, "supabase/migrations/20260711130000_repair_inventory_unit_readers.sql");
 const actions = readFileSync(
   resolve(
     repoRoot,
@@ -23,7 +18,7 @@ test("inventory readers use the canonical base-unit contract", () => {
   assert.match(migration, /CREATE OR REPLACE FUNCTION public\.scan_inventory_alerts/);
   assert.match(migration, /CREATE OR REPLACE FUNCTION public\.get_stock_movement_report/);
   assert.match(migration, /CREATE OR REPLACE FUNCTION public\.get_stocktake_lines_blind/);
-  assert.doesNotMatch(migration, /\bing\.unit\b/);
+  assertSqlNotMatch(migration, /\bing\.unit\b/);
   assert.match(
     migration,
     /public\.inventory_entry_unit_code\(v_tenant, ing\.id, NULL\)/,

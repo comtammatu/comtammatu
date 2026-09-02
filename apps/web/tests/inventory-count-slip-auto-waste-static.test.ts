@@ -1,21 +1,23 @@
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
+import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch } from "./_lib/active-sql.ts";
+
 
 const repoRoot = join(import.meta.dirname, "../../..");
 
 function readRepoFile(path: string) {
-  return readFileSync(join(repoRoot, path), "utf8");
+  return readSql(repoRoot, path);
 }
 
 test("approveCountSlip keeps count approval and auto waste in one database transaction", () => {
   const actionsSource = readRepoFile(
     "apps/web/app/(protected)/inventory/count-slips/actions.ts",
   );
-  const migrationSource = readdirSync(join(repoRoot, "supabase/migration-archive"))
+  const migrationSource = readdirSync(join(repoRoot, "supabase/migrations"))
     .filter((name) => name.endsWith(".sql"))
-    .map((name) => readRepoFile(`supabase/migration-archive/${name}`))
+    .map((name) => readRepoFile(`supabase/migrations/${name}`))
     .join("\n");
 
   assert.match(
@@ -53,8 +55,7 @@ test("approveCountSlip keeps count approval and auto waste in one database trans
     /createWasteEntry/,
     "approveCountSlip must not commit approval and waste through separate RPCs",
   );
-  assert.match(
-    migrationSource,
+  assertSqlMatch(migrationSource,
     /CREATE OR REPLACE FUNCTION public\.approve_inventory_count_slip_with_waste/,
     "the database must own the atomic approval + waste boundary",
   );
@@ -112,9 +113,9 @@ test("branch and desktop review clients provide seamless 1-touch auto waste on a
 });
 
 test("stock_issues_source_type_check allows count_slip_auto_waste and UI displays proper Vietnamese source label", () => {
-  const migrationSource = readdirSync(join(repoRoot, "supabase/migration-archive"))
+  const migrationSource = readdirSync(join(repoRoot, "supabase/migrations"))
     .filter((name) => name.endsWith(".sql"))
-    .map((name) => readRepoFile(`supabase/migration-archive/${name}`))
+    .map((name) => readRepoFile(`supabase/migrations/${name}`))
     .join("\n");
   const issueDetailSource = readRepoFile(
     "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx",
@@ -123,8 +124,7 @@ test("stock_issues_source_type_check allows count_slip_auto_waste and UI display
     "apps/web/lib/messages/inventory.ts",
   );
 
-  assert.match(
-    migrationSource,
+  assertSqlMatch(migrationSource,
     /'count_slip_auto_waste'/,
     "migrations must permit 'count_slip_auto_waste' in stock_issues_source_type_check",
   );
@@ -141,9 +141,9 @@ test("stock_issues_source_type_check allows count_slip_auto_waste and UI display
 });
 
 test("stock_issue_items_reason_code_check and shared labels support count slip shortage reason codes", () => {
-  const migrationSource = readdirSync(join(repoRoot, "supabase/migration-archive"))
+  const migrationSource = readdirSync(join(repoRoot, "supabase/migrations"))
     .filter((name) => name.endsWith(".sql"))
-    .map((name) => readRepoFile(`supabase/migration-archive/${name}`))
+    .map((name) => readRepoFile(`supabase/migrations/${name}`))
     .join("\n");
   const labelsSource = readRepoFile("packages/shared/src/labels/vi.ts");
   const actionsSource = readRepoFile(
@@ -151,8 +151,7 @@ test("stock_issue_items_reason_code_check and shared labels support count slip s
   );
 
   for (const reason of ["discrepancy", "loss", "damaged"]) {
-    assert.match(
-      migrationSource,
+    assertSqlMatch(migrationSource,
       new RegExp(`'${reason}'::text`),
       `migrations must allow reason_code '${reason}' in stock_issue_items_reason_code_check`,
     );
@@ -170,18 +169,16 @@ test("stock_issue_items_reason_code_check and shared labels support count slip s
 });
 
 test("approve_inventory_count_slip_with_waste auto-approves and confirms shortage waste", () => {
-  const migrationSource = readdirSync(join(repoRoot, "supabase/migration-archive"))
+  const migrationSource = readdirSync(join(repoRoot, "supabase/migrations"))
     .filter((name) => name.endsWith(".sql"))
-    .map((name) => readRepoFile(`supabase/migration-archive/${name}`))
+    .map((name) => readRepoFile(`supabase/migrations/${name}`))
     .join("\n");
 
-  assert.match(
-    migrationSource,
+  assertSqlMatch(migrationSource,
     /approval_status\s*=\s*'approved'/,
     "count slip waste approval must directly approve the generated waste issue",
   );
-  assert.match(
-    migrationSource,
+  assertSqlMatch(migrationSource,
     /execute_post_writeoff_movements/,
     "count slip waste approval must post writeoff stock movements immediately",
   );

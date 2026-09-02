@@ -1,39 +1,33 @@
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import { readActiveMigrationSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 const repoRoot = path.resolve(import.meta.dirname, "../../..");
-const migrationsRoot = path.join(repoRoot, "supabase", "migration-archive");
+const _migrationsRoot = path.join(repoRoot, "supabase", "migrations");
 
-function readMigrationBySuffix(suffix: string): string {
-  const filename = readdirSync(migrationsRoot).find((candidate) =>
-    candidate.endsWith(suffix),
-  );
-  assert.ok(filename, `${suffix} migration must exist`);
-  return readFileSync(path.join(migrationsRoot, filename), "utf8");
+function readMigrationBySuffix(_suffix: string): string {
+  return readActiveMigrationSql(repoRoot);
 }
 
 test("receipt print migration builds tax_breakdowns from _compute_vat_breakdown", () => {
   const migration = readMigrationBySuffix("_receipt_print_tax_breakdowns.sql");
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.bill_tax_breakdowns\(p_order_id bigint\)/,
   );
-  assert.match(migration, /_compute_vat_breakdown\(ARRAY\[p_order_id\]\)/);
-  assert.match(migration, /ORDER BY vat\.vat_rate DESC/);
+  assertSqlMatch(migration, /_compute_vat_breakdown\(ARRAY\[p_order_id\]\)/);
+  assertSqlMatch(migration, /ORDER BY vat\.vat_rate DESC/);
 });
 
 test("enqueue receipt and provisional bill attach tax_breakdowns to payload", () => {
   const migration = readMigrationBySuffix("_receipt_print_tax_breakdowns.sql");
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.enqueue_provisional_bill/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.enqueue_receipt_print/,
   );
   assert.equal(
@@ -53,12 +47,10 @@ test("enqueue receipt and provisional bill attach tax_breakdowns to payload", ()
 test("SQL materialize passes tax_breakdowns into totals blocks", () => {
   const migration = readMigrationBySuffix("_receipt_print_tax_breakdowns.sql");
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.materialize_print_document/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /WHEN 'totals' THEN[\s\S]*'tax_breakdowns',\s*COALESCE\(p_payload->'tax_breakdowns', '\[\]'::jsonb\)/,
   );
 });
@@ -68,18 +60,15 @@ test("receipt print VAT amounts round to whole VND like Sinvoice", () => {
     "_receipt_print_vat_round_whole_vnd.sql",
   );
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.bill_tax_breakdowns\(p_order_id bigint\)/,
   );
-  assert.match(migration, /ROUND\(vat\.line_gross, 0\)/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /ROUND\(vat\.line_gross, 0\)/);
+  assertSqlMatch(migration,
     /ROUND\(vat\.line_gross \/ \(1 \+ vat\.vat_rate \/ 100\.0\), 0\)/,
   );
-  assert.match(migration, /rounded\.amount > 0/);
-  assert.doesNotMatch(
-    migration,
+  assertSqlMatch(migration, /rounded\.amount > 0/);
+  assertSqlNotMatch(migration,
     /'amount',\s*vat\.line_vat/,
     "print helper must not emit unrounded 2dp residual VAT",
   );

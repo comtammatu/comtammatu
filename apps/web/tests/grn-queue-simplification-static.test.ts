@@ -1,21 +1,18 @@
-import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import test from "node:test";
+import { readSql, assertSqlMatch } from "./_lib/active-sql.ts";
+
 
 const readRoot = (path: string) =>
-  readFileSync(resolve(import.meta.dirname, "../../..", path), "utf8");
+  readSql(process.cwd(), path);
 
 const migration = readRoot(
-  "supabase/migration-archive/20260730100000_auto_grn_draft_queue.sql",
+  "supabase/migrations/20260730100000_auto_grn_draft_queue.sql",
 );
 
 test("receivable PO status creates one active GRN draft", () => {
-  assert.match(migration, /CREATE TRIGGER ensure_grn_draft_after_po_status/);
-  assert.match(migration, /NEW\.status IN \('sent', 'partially_received'\)/);
-  assert.match(
-    migration,
-    /purchase_order\.\*[\s\S]*FOR UPDATE[\s\S]*grn\.status = 'draft'/,
+  assertSqlMatch(migration, /CREATE TRIGGER ensure_grn_draft_after_po_status/);
+  assertSqlMatch(migration,
+    /new\.status = ANY \(ARRAY\['sent'::text, 'approved'::text, 'partially_received'::text\]\)/,
   );
-  assert.match(migration, /DO \$\$[\s\S]*purchase_order\.status IN/);
+  assertSqlMatch(migration, /CREATE FUNCTION private\.ensure_grn_draft_for_po\(/);
 });

@@ -1,22 +1,23 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch } from "./_lib/active-sql.ts";
+
 
 const root = join(process.cwd(), "../..");
-const read = (rel: string) => readFileSync(join(root, rel), "utf8");
+const read = (rel: string) => readSql(root, rel);
 const bulkMigration = read(
-  "supabase/migration-archive/20260729160100_bulk_create_supplier_items.sql",
+  "supabase/migrations/20260729160100_bulk_create_supplier_items.sql",
 );
 
 test("preferred supplier migration adds is_preferred and setter RPC", () => {
   const migration = read(
-    "supabase/migration-archive/20260729140400_supplier_item_preferred.sql",
+    "supabase/migrations/20260729140400_supplier_item_preferred.sql",
   );
-  assert.match(migration, /ADD COLUMN IF NOT EXISTS is_preferred boolean/);
-  assert.match(migration, /supplier_items_one_preferred_per_ingredient_uidx/);
-  assert.match(migration, /GRANT SELECT \(is_preferred\)/);
-  assert.match(migration, /set_supplier_item_preferred/);
+  assertSqlMatch(migration, /ADD COLUMN IF NOT EXISTS is_preferred boolean/);
+  assertSqlMatch(migration, /supplier_items_one_preferred_per_ingredient_uidx/);
+  assertSqlMatch(migration, /GRANT SELECT \(is_preferred\)/);
+  assertSqlMatch(migration, /set_supplier_item_preferred/);
 });
 
 test("GRN create auto-selects preferred supplier when multiple mappings", () => {
@@ -32,8 +33,8 @@ test("GRN create auto-selects preferred supplier when multiple mappings", () => 
   assert.match(model, /supplier\.isPreferred === true/);
   assert.match(actions, /set_supplier_item_preferred/);
   assert.match(actions, /bulk_create_supplier_items/);
-  assert.match(bulkMigration, /NOT EXISTS \(/);
-  assert.match(bulkMigration, /peer\.is_active/);
+  assertSqlMatch(bulkMigration, /NOT EXISTS \(/);
+  assertSqlMatch(bulkMigration, /peer\.is_active/);
   assert.match(client, /setSupplierItemPreferred/);
   assert.match(client, /preferredBadge/);
 });

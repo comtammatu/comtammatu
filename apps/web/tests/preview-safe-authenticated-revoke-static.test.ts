@@ -2,10 +2,14 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { assertSqlMatch, assertSqlNotMatch, readSql } from "./_lib/active-sql.ts";
 
 const repoRoot = resolve(import.meta.dirname, "../../..");
 const migrationsDir = resolve(repoRoot, "supabase/migrations");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) =>
+  String(path).includes("supabase/migrations/")
+    ? readSql(repoRoot, String(path).replace(/^.*?(supabase\/)/, "supabase/"))
+    : readFileSync(resolve(repoRoot, path), "utf8");
 
 function activeMigrationNamed(suffix: string): string {
   const names = readdirSync(migrationsDir).filter((name) =>
@@ -24,8 +28,8 @@ test("parked cutover and high-confidence twins revoke authenticated EXECUTE with
     "_revoke_parked_authenticated_execute.sql",
   );
 
-  assert.doesNotMatch(sql, /DROP FUNCTION/i);
-  assert.doesNotMatch(sql, /DROP TABLE/i);
+  assertSqlNotMatch(sql, /DROP FUNCTION/i);
+  assertSqlNotMatch(sql, /DROP TABLE/i);
 
   for (const signature of [
     "public.prepare_inventory_valuation_cutover(uuid)",
@@ -37,8 +41,7 @@ test("parked cutover and high-confidence twins revoke authenticated EXECUTE with
     "public.get_inventory_dashboard(bigint)",
     "public.get_branch_day_summary(bigint, date)",
   ]) {
-    assert.match(
-      sql,
+    assertSqlMatch(sql,
       new RegExp(
         `REVOKE ALL ON FUNCTION ${signature.replace(/[()]/g, "\\$&")}[\\s\\S]*?FROM(?: anon,)? authenticated`,
       ),
@@ -46,8 +49,7 @@ test("parked cutover and high-confidence twins revoke authenticated EXECUTE with
     );
   }
 
-  assert.match(
-    sql,
+  assertSqlMatch(sql,
     /REVOKE ALL ON FUNCTION public\.get_branch_day_summary\(bigint, date\)[\s\S]*FROM anon, authenticated/,
   );
 
@@ -57,8 +59,7 @@ test("parked cutover and high-confidence twins revoke authenticated EXECUTE with
     "create_supplier_payment",
     "save_purchase_demand",
   ]) {
-    assert.doesNotMatch(
-      sql,
+    assertSqlNotMatch(sql,
       new RegExp(`REVOKE[\\s\\S]*${keep}`),
       `must not revoke ${keep} in this parked-twin batch`,
     );
@@ -77,11 +78,10 @@ test("fold and reregister both schedule valuation reconciliation and order-delay
   );
 
   for (const sql of [fold, reregister, forward]) {
-    assert.match(
-      sql,
+    assertSqlMatch(sql,
       /cron\.schedule\(\s*'inventory-valuation-reconciliation-daily'/,
     );
-    assert.match(sql, /cron\.schedule\(\s*'scan-order-delay-sla'/);
+    assertSqlMatch(sql, /cron\.schedule\(\s*'scan-order-delay-sla'/);
   }
 });
 

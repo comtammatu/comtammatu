@@ -77,7 +77,6 @@
         "$TURBO_ROOT$/apps/web/tests/fixtures/supabase-e2e/**",
         "$TURBO_ROOT$/packages/database/src/types/database.types.ts",
         "$TURBO_ROOT$/supabase/migrations/**",
-        "$TURBO_ROOT$/supabase/migration-archive/**",
         "$TURBO_ROOT$/docs/**",
         "$TURBO_ROOT$/tasks/todo.md"
       ],
@@ -89,7 +88,6 @@
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.base.json",
         "$TURBO_ROOT$/supabase/migrations/**",
-        "$TURBO_ROOT$/supabase/migration-archive/**",
         "$TURBO_ROOT$/supabase/tests/**",
         "$TURBO_ROOT$/scripts/**",
         "$TURBO_ROOT$/docs/**"

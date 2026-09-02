@@ -1,14 +1,16 @@
 import assert from "node:assert/strict";
-import { readFileSync, existsSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 function readWeb(path: string): string {
-  return readFileSync(join(process.cwd(), path), "utf8");
+  return readSql(process.cwd(), path);
 }
 
 function readRepo(path: string): string {
-  return readFileSync(join(process.cwd(), "../..", path), "utf8");
+  return readSql(join(process.cwd(), "../.."), path);
 }
 
 test("WP-A daily summary has no operator close ceremony", () => {
@@ -31,32 +33,29 @@ test("WP-A daily summary has no operator close ceremony", () => {
 
 test("WP-C pos_void_requests is SELECT-only for authenticated", () => {
   const grants = readRepo(
-    "supabase/migration-archive/20260808091754_harden_pos_void_requests_grants.sql",
+    "supabase/migrations/20260808091754_harden_pos_void_requests_grants.sql",
   );
-  assert.match(
-    grants,
+  assertSqlMatch(grants,
     /REVOKE ALL ON TABLE public\.pos_void_requests FROM PUBLIC, anon, authenticated/,
   );
-  assert.match(
-    grants,
+  assertSqlMatch(grants,
     /GRANT SELECT ON TABLE public\.pos_void_requests TO authenticated/,
   );
 });
 
 test("WP-C pos_void_requests select policy avoids locked auth_is_owner EXECUTE", () => {
   const createQueue = readRepo(
-    "supabase/migration-archive/20260808085549_shift_leader_void_request_queue.sql",
+    "supabase/migrations/20260808085549_shift_leader_void_request_queue.sql",
   );
   const fix = readRepo(
-    "supabase/migration-archive/20260808134718_remove_auth_is_owner_from_authenticated_policies.sql",
+    "supabase/migrations/20260808134718_remove_auth_is_owner_from_authenticated_policies.sql",
   );
-  assert.match(createQueue, /pos_void_requests_select/);
-  assert.match(createQueue, /public\.auth_is_owner\(auth\.uid\(\)\)/);
-  assert.match(fix, /ALTER POLICY pos_void_requests_select/);
-  assert.match(fix, /public\.has_permission\(branch_id, 'pos:use'\)/);
-  assert.match(fix, /public\.has_permission\(branch_id, 'settings:branch'\)/);
-  assert.doesNotMatch(
-    fix,
+  assertSqlMatch(createQueue, /pos_void_requests_select/);
+  assertSqlMatch(createQueue, /public\.auth_is_owner\(auth\.uid\(\)\)/);
+  assertSqlMatch(fix, /ALTER POLICY pos_void_requests_select/);
+  assertSqlMatch(fix, /public\.has_permission\(branch_id, 'pos:use'\)/);
+  assertSqlMatch(fix, /public\.has_permission\(branch_id, 'settings:branch'\)/);
+  assertSqlNotMatch(fix,
     /ALTER POLICY pos_void_requests_select[\s\S]*auth_is_owner/,
   );
 });
@@ -75,13 +74,13 @@ test("WP-C void request queue is wired into POS", () => {
 
 test("WP-D allows_photo flows through HR + PWA tasks", () => {
   const migration = readRepo(
-    "supabase/migration-archive/20260808085917_position_shift_task_photo_and_kds_default_station.sql",
+    "supabase/migrations/20260808085917_position_shift_task_photo_and_kds_default_station.sql",
   );
   const hrClient = readWeb("app/(protected)/hr/position-tasks-client.tsx");
   const tasksClient = readWeb("lib/staff-runtime/tasks/tasks-client.tsx");
-  assert.match(migration, /allows_photo/);
-  assert.match(migration, /self_service_attach_task_photo/);
-  assert.match(migration, /Quầy lên món/);
+  assertSqlMatch(migration, /allows_photo/);
+  assertSqlMatch(migration, /self_service_attach_task_photo/);
+  assertSqlMatch(migration, /Quầy lên món/);
   assert.match(hrClient, /allowsPhoto/);
   assert.match(tasksClient, /attachChecklistTaskPhoto/);
 });

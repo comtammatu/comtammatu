@@ -1,13 +1,14 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 const repoRoot = resolve(process.cwd(), "../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 const WAVE3_MIGRATION =
-  "supabase/migration-archive/20260820030125_dest_dc_and_fulfill_sites.sql";
+  "supabase/migrations/20260820030125_dest_dc_and_fulfill_sites.sql";
 
 test("YCH create is hidden and redirects to dest-initiated DC", () => {
   const branchNew = read(
@@ -50,24 +51,22 @@ test("YCH create is hidden and redirects to dest-initiated DC", () => {
 
 test("Wave 3 SQL grants dest-initiated DC and OD-4 flags without dropping YCH", () => {
   const migration = read(WAVE3_MIGRATION);
-  assert.match(migration, /fulfill_from_central_supply/);
-  assert.match(migration, /fulfill_from_central_kitchen/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /fulfill_from_central_supply/);
+  assertSqlMatch(migration, /fulfill_from_central_kitchen/);
+  assertSqlMatch(migration,
     /GRANT SELECT \(fulfill_from_central_supply\) ON public\.ingredients TO authenticated/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /GRANT SELECT \(fulfill_from_central_kitchen\) ON public\.ingredients TO authenticated/,
   );
-  assert.match(migration, /create_stock_transfer_draft/);
-  assert.match(migration, /p_from_branch_id,[\s\S]*'inventory:transfer_create'/);
-  assert.match(migration, /p_to_branch_id,[\s\S]*'inventory:transfer_create'/);
-  assert.match(migration, /stock_transfer_confirm_ship/);
-  assert.match(migration, /from_branch_id,[\s\S]*'inventory:transfer_ship'/);
-  assert.doesNotMatch(migration, /DROP TABLE[\s\S]*stock_requests/);
-  assert.doesNotMatch(migration, /REVOKE[\s\S]*save_stock_request/);
-  assert.doesNotMatch(migration, /branch_manager_inter_site_ship_forbidden/);
+  assertSqlMatch(migration, /create_stock_transfer_draft/);
+  assertSqlMatch(migration, /p_from_branch_id,[\s\S]*'inventory:transfer_create'/);
+  assertSqlMatch(migration, /p_to_branch_id,[\s\S]*'inventory:transfer_create'/);
+  assertSqlMatch(migration, /stock_transfer_confirm_ship/);
+  assertSqlMatch(migration, /from_branch_id,[\s\S]*'inventory:transfer_ship'/);
+  assertSqlNotMatch(migration, /DROP TABLE[\s\S]*stock_requests/);
+  assertSqlNotMatch(migration, /REVOKE[\s\S]*save_stock_request/);
+  assertSqlNotMatch(migration, /branch_manager_inter_site_ship_forbidden/);
 });
 
 test("hub door and catalog OD-4 are Điều chuyển-first", () => {

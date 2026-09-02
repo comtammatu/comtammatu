@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
 import { INVENTORY_OPS_ROLES } from "../inventory-roles";
 import { canAccess } from "../module-acl";
+import { readSql, assertSqlMatch } from "../../test-utils/active-sql";
+
 import {
   ROLE_LABEL_VI,
   STAFF_ROLES,
@@ -14,7 +15,7 @@ import {
 const repoRoot = join(import.meta.dirname, "../../../../..");
 
 function read(path: string): string {
-  return readFileSync(join(repoRoot, path), "utf8");
+  return readSql(repoRoot, path);
 }
 
 test("D076 operational roles are canonical and have Vietnamese labels", () => {
@@ -137,10 +138,10 @@ test("R08/R09 branch_manager seed strips retired procurement keys", () => {
 
 test("R08/R09 migration strips BM template and live staff_permissions", () => {
   const migration = read(
-    "supabase/migration-archive/20260809113024_strip_branch_manager_retired_procurement_grants.sql",
+    "supabase/migrations/20260809113024_strip_branch_manager_retired_procurement_grants.sql",
   );
-  assert.match(migration, /position_code = 'branch_manager'/);
-  assert.match(migration, /DELETE FROM public\.staff_permissions/);
+  assertSqlMatch(migration, /position_code = 'branch_manager'/);
+  assertSqlMatch(migration, /DELETE FROM public\.staff_permissions/);
   for (const key of [
     "procurement:read",
     "procurement:supplier_manage",
@@ -148,7 +149,7 @@ test("R08/R09 migration strips BM template and live staff_permissions", () => {
     "supplier_return:create",
     "supplier_return:confirm",
   ]) {
-    assert.match(migration, new RegExp(`'${key}'`), key);
+    assertSqlMatch(migration, new RegExp(`'${key}'`), key);
   }
 });
 

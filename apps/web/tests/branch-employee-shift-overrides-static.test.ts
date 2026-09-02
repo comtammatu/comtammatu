@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 const root = join(import.meta.dirname, "../../..");
 
 function read(relativePath: string): string {
-  return readFileSync(join(root, relativePath), "utf8");
+  return readSql(root, relativePath);
 }
 
 describe("Branch manager employee shift-task overrides", () => {
@@ -19,28 +20,23 @@ describe("Branch manager employee shift-task overrides", () => {
     assert.match(permissions, /PERMISSION_KEY_COUNT = 112/);
 
     const migration = read(
-      "supabase/migration-archive/20260808162041_branch_manager_employee_shift_task_overrides.sql",
+      "supabase/migrations/20260808162041_branch_manager_employee_shift_task_overrides.sql",
     );
-    assert.match(migration, /hr:manage_employee_shift_overrides/);
-    assert.match(
-      migration,
+    assertSqlMatch(migration, /hr:manage_employee_shift_overrides/);
+    assertSqlMatch(migration,
       /Manage employee-specific shift task overrides at a branch',\s*'branch',\s*true/,
     );
-    assert.match(migration, /is_delegable_to_staff\s*=\s*EXCLUDED\.is_delegable_to_staff/);
-    assert.match(
-      migration,
+    assertSqlMatch(migration, /is_delegable_to_staff\s*=\s*EXCLUDED\.is_delegable_to_staff/);
+    assertSqlMatch(migration,
       /\('branch_manager',\s*'hr:manage_employee_shift_overrides'\)/,
     );
-    assert.match(
-      migration,
+    assertSqlMatch(migration,
       /has_permission\(\s*NULL,\s*'hr:manage_position_tasks'\s*\)/,
     );
-    assert.match(
-      migration,
+    assertSqlMatch(migration,
       /has_permission\(\s*v_branch_id,\s*'hr:manage_employee_shift_overrides'\s*\)/,
     );
-    assert.doesNotMatch(
-      migration,
+    assertSqlNotMatch(migration,
       /\('branch_manager',\s*'hr:manage_position_tasks'\)/,
     );
   });

@@ -1,10 +1,14 @@
+import { readSql } from "./_lib/active-sql.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 
 const repoRoot = join(import.meta.dirname, "../../..");
-const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
+const read = (path: string) =>
+  String(path).includes("supabase/migrations/")
+    ? readSql(repoRoot, String(path).replace(/^.*?(supabase\/)/, "supabase/"))
+    : readFileSync(join(repoRoot, path), "utf8");
 
 test("stock surfaces do not expose a location filter when topology owns one warehouse", () => {
   const stockClient = read(

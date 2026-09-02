@@ -1,10 +1,14 @@
+import { readSql } from "./_lib/active-sql.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 
 const repoRoot = resolve(process.cwd(), "../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) =>
+  String(path).includes("supabase/migrations/")
+    ? readSql(repoRoot, String(path).replace(/^.*?(supabase\/)/, "supabase/"))
+    : readFileSync(resolve(repoRoot, path), "utf8");
 
 test("Branch count assignment owns a keyboard and touch native presenter", () => {
   const route = read(

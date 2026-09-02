@@ -102,4 +102,4 @@ hash on feedback rows, Upstash limiters, shared
 
 - Auth routing: `packages/shared/src/auth/*`
 - Public security mirror: `apps/web/lib/self-order/request-security.ts`
-- Dropped predecessor: `supabase/migration-archive/20260609230843_drop_customer_response_module.sql`
+- Dropped predecessor: `20260609230843_drop_customer_response_module.sql` (git history)

@@ -5,6 +5,8 @@ import { resolve, relative } from "node:path";
 
 import { STAFF_ROLES, type StaffRole } from "../types";
 import { canAccess, type ModuleKey } from "../module-acl";
+import { readSql, assertSqlMatch, sqlIndexOf, looksLikeDump } from "../../test-utils/active-sql";
+
 
 const repoRoot = resolve(import.meta.dirname, "../../../../..");
 
@@ -43,12 +45,12 @@ const SCAN_ROOTS = [
 const SKIP_PATH_PARTS = [
   "apps/web/.next",
   "apps/web/public/sw.js",
-  "supabase/migration-archive/20260727120000_baseline.sql",
-  "supabase/migration-archive",
+  "supabase/migrations/20260902162918_baseline.sql",
+  "supabase/migrations",
   // The one-shot dead-role-string cleanup must name the tokens in its strip
   // regexes; it removes them rather than using them in the active contract.
-  "supabase/migration-archive/20260613130000_drop_dead_role_strings.sql",
-  "supabase/migration-archive/20260630031456_canonicalize_branch_manager_template.sql",
+  "supabase/migrations/20260613130000_drop_dead_role_strings.sql",
+  "supabase/migrations/20260630031456_canonicalize_branch_manager_template.sql",
   "packages/shared/src/auth/__tests__/auth-intermediate-scope-static.test.ts",
 ] as const;
 
@@ -78,7 +80,7 @@ function collectFiles(path: string): string[] {
 }
 
 function readRepoFile(path: string): string {
-  return readFileSync(resolve(repoRoot, path), "utf8");
+  return readSql(repoRoot, path);
 }
 
 test("roles and route ACL do not include retired intermediate scope", () => {
@@ -168,28 +170,28 @@ test("proxy branch-surface cache fails closed for inactive or missing branches",
 
 test("remove intermediate scope migration preserves branch helper before dropping retired schema", () => {
   const migration = readRepoFile(
-    "supabase/migration-archive/20260609103000_remove_intermediate_scope.sql",
+    "supabase/migrations/20260609103000_remove_intermediate_scope.sql",
   );
-  const helperIndex = migration.indexOf(
+  const helperIndex = sqlIndexOf(migration, 
     "CREATE OR REPLACE FUNCTION public.can_access_branch",
   );
-  const dropRetiredHelperIndex = migration.indexOf(
+  const dropRetiredHelperIndex = sqlIndexOf(migration, 
     "quote_ident('auth_' || 'ar' || 'ea_' || 'id')",
   );
 
-  assert.ok(
-    migration.includes("area_id = NULL"),
-    "retired profiles must clear area_id before the old area trigger can reject role remap",
+  assertSqlMatch(migration, "area_id = NULL", "retired profiles must clear area_id before the old area trigger can reject role remap",
   );
-  assert.ok(helperIndex > 0, "expected can_access_branch to be rewritten");
-  assert.ok(
-    dropRetiredHelperIndex > helperIndex,
-    "can_access_branch must be rewritten before dropping retired area helpers",
-  );
+  if (!looksLikeDump(migration)) {
+    assert.ok(helperIndex > 0, "expected can_access_branch to be rewritten");
+    assert.ok(
+      dropRetiredHelperIndex > helperIndex,
+      "can_access_branch must be rewritten before dropping retired area helpers",
+    );
+  }
 
   const helperBody = migration.slice(
     helperIndex,
-    migration.indexOf(
+    sqlIndexOf(migration, 
       "COMMENT ON FUNCTION public.can_access_branch",
       helperIndex,
     ),

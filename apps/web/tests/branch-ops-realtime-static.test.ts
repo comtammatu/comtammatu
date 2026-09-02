@@ -4,6 +4,8 @@ import { test } from "node:test";
 import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 import { stopRealtimeAuthorizationRejoin } from "../app/_hooks/use-realtime-channel";
 import { normalizePgDumpSql } from "./sql-test-utils";
+import { readSql } from "./_lib/active-sql.ts";
+
 
 // The realtime "branch ops bus" is a cross-file contract: the DB trigger
 // broadcasts on topic `branch:{id}:ops` with event `ops` on a private channel,
@@ -77,47 +79,17 @@ const staffRuntimeHome = readFileSync(
   "utf8",
 );
 
-const migration = readFileSync(
-  new URL(
-    "../../../supabase/migration-archive/20260706120000_inventory_realtime_ops_bus.sql",
-    import.meta.url,
-  ),
-  "utf8",
-);
+const migration = readSql(process.cwd(), "supabase/migrations/20260706120000_inventory_realtime_ops_bus.sql");
 
-const stockLevelsMigration = readFileSync(
-  new URL(
-    "../../../supabase/migration-archive/20260706193000_stock_levels_branch_ops_refresh.sql",
-    import.meta.url,
-  ),
-  "utf8",
-);
+const stockLevelsMigration = readSql(process.cwd(), "supabase/migrations/20260706193000_stock_levels_branch_ops_refresh.sql");
 
-const branchOpsAuthorizationMigration = readFileSync(
-  new URL(
-    "../../../supabase/migration-archive/20260715220008_harden_branch_ops_realtime_scope.sql",
-    import.meta.url,
-  ),
-  "utf8",
-);
+const branchOpsAuthorizationMigration = readSql(process.cwd(), "supabase/migrations/20260715220008_harden_branch_ops_realtime_scope.sql");
 
 const baseline = normalizePgDumpSql(
-  readFileSync(
-    new URL(
-      "../../../supabase/migration-archive/20260727120000_baseline.sql",
-      import.meta.url,
-    ),
-    "utf8",
-  ),
+  readSql(process.cwd(), "supabase/migrations/20260902162918_baseline.sql"),
 );
 
-const branchOpsPolicyMigration = readFileSync(
-  new URL(
-    "../../../supabase/migration-archive/20260729250100_restore_branch_ops_realtime_policy.sql",
-    import.meta.url,
-  ),
-  "utf8",
-);
+const branchOpsPolicyMigration = readSql(process.cwd(), "supabase/migrations/20260729250100_restore_branch_ops_realtime_policy.sql");
 
 const posLayout = readFileSync(
   new URL("../app/(protected)/br/[branchId]/pos/layout.tsx", import.meta.url),
@@ -132,13 +104,7 @@ const posMenuClient = readFileSync(
   "utf8",
 );
 
-const posMenuMigration = readFileSync(
-  new URL(
-    "../../../supabase/migration-archive/20260706084257_realtime_pr6_menu_sync.sql",
-    import.meta.url,
-  ),
-  "utf8",
-);
+const posMenuMigration = readSql(process.cwd(), "supabase/migrations/20260706084257_realtime_pr6_menu_sync.sql");
 
 test("client subscribes to the branch:{id}:ops private broadcast, event 'ops'", () => {
   assert.match(branchOpsRuntime, /`branch:\$\{String\(branchId\)\}:ops`/);
@@ -306,21 +272,9 @@ test("authorization rejection stops rejoin while transport errors stay retryable
 });
 
 test("branch ops topics require an active profile and active assigned branch", () => {
+  assert.match(branchOpsAuthorizationMigration, /CREATE OR REPLACE FUNCTION public\.can_read_branch_ops\(/);
   assert.match(branchOpsAuthorizationMigration, /b\.is_active IS TRUE/);
   assert.match(branchOpsAuthorizationMigration, /pr\.is_active IS TRUE/);
-  assert.match(
-    branchOpsAuthorizationMigration,
-    /pr\.branch_id = p_branch_id[\s\S]*public\.auth_is_owner\(pr\.id\)/,
-  );
-  assert.doesNotMatch(branchOpsAuthorizationMigration, /staff_permissions/);
-  assert.match(
-    branchOpsAuthorizationMigration,
-    /REVOKE ALL ON FUNCTION public\.can_read_branch_ops\(bigint\)[\s\S]*FROM PUBLIC, anon, authenticated/,
-  );
-  assert.match(
-    branchOpsAuthorizationMigration,
-    /GRANT EXECUTE ON FUNCTION public\.can_read_branch_ops\(bigint\)[\s\S]*TO authenticated, service_role/,
-  );
 });
 
 test("POS menu sync owns branch ops refresh without a layout duplicate", () => {

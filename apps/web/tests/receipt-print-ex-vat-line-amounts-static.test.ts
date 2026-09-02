@@ -1,17 +1,14 @@
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import { readActiveMigrationSql } from "./_lib/active-sql.ts";
+
 
 const repoRoot = path.resolve(import.meta.dirname, "../../..");
-const migrationsRoot = path.join(repoRoot, "supabase", "migration-archive");
+const _migrationsRoot = path.join(repoRoot, "supabase", "migrations");
 
-function readMigrationBySuffix(suffix: string): string {
-  const filename = readdirSync(migrationsRoot).find((candidate) =>
-    candidate.endsWith(suffix),
-  );
-  assert.ok(filename, `${suffix} migration must exist`);
-  return readFileSync(path.join(migrationsRoot, filename), "utf8");
+function readMigrationBySuffix(_suffix: string): string {
+  return readActiveMigrationSql(repoRoot);
 }
 
 test("bill_line_items snapshots vat_rate for bill tax lines", () => {

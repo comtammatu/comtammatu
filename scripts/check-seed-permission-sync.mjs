@@ -16,24 +16,26 @@ if (unexpectedAutoSeeds.length > 0) {
 // kills every from-empty bring-up (SQLSTATE 23503) while prod keeps working —
 // this check fails it in the lint chain instead of in the e2e-smoke job.
 const SEED = "apps/web/tests/fixtures/supabase-e2e/tenant.sql";
-const DELEGABILITY_BASE_MIGRATION =
-  "supabase/migration-archive/20260718174604_canonical_auth_role_position_cleanup.sql";
 const text = fs.readFileSync(SEED, "utf8");
-const DELEGABILITY_BASE_FILE = DELEGABILITY_BASE_MIGRATION.split("/").at(-1);
-const migrationFiles = [
-  ...fs
-    .readdirSync("supabase/migration-archive")
-    .filter((file) => file.endsWith(".sql") && file >= DELEGABILITY_BASE_FILE)
-    .map((file) => `supabase/migration-archive/${file}`),
-  ...fs
-    .readdirSync("supabase/migrations")
-    .filter((file) => file.endsWith(".sql") && !file.endsWith("_baseline.sql"))
-    .map((file) => `supabase/migrations/${file}`),
-].sort((left, right) => left.slice(left.lastIndexOf("/") + 1).localeCompare(right.slice(right.lastIndexOf("/") + 1)));
+const delegablePattern =
+  /UPDATE public\.permission_keys\s+SET is_delegable_to_staff = key = ANY \(ARRAY\[([\s\S]*?)\]::text\[\]\);/;
+const migrationFiles = fs
+  .readdirSync("supabase/migrations")
+  .filter((file) => file.endsWith(".sql"))
+  .sort()
+  .map((file) => `supabase/migrations/${file}`);
 const migrationTexts = migrationFiles.map(
   (file) => fs.readFileSync(file, "utf8"),
 );
-const migrationText = migrationTexts[0];
+const baseIndex = migrationTexts.findIndex((sql) => delegablePattern.test(sql));
+if (baseIndex < 0) {
+  console.error(
+    "[seed-permissions] could not locate canonical staff delegability in the active migration chain",
+  );
+  process.exit(1);
+}
+const migrationText = migrationTexts[baseIndex];
+const forwardTexts = migrationTexts.slice(baseIndex + 1);
 
 // End each INSERT block at a semicolon that closes a line — descriptions may
 // legitimately contain inline semicolons (e.g. "…HĐĐT); manager-gated").
@@ -69,13 +71,11 @@ if (missing.length > 0) {
   process.exit(1);
 }
 
-const delegablePattern =
-  /UPDATE public\.permission_keys\s+SET is_delegable_to_staff = key = ANY \(ARRAY\[([\s\S]*?)\]::text\[\]\);/;
 const seedDelegableBlock = text.match(delegablePattern)?.[1];
 const migrationDelegableBlock = migrationText.match(delegablePattern)?.[1];
 if (!seedDelegableBlock || !migrationDelegableBlock) {
   console.error(
-    `[seed-permissions] could not locate canonical staff delegability in ${SEED} and ${DELEGABILITY_BASE_MIGRATION}`,
+    `[seed-permissions] could not locate canonical staff delegability in ${SEED} and the active migration chain`,
   );
   process.exit(1);
 }
@@ -84,7 +84,7 @@ const parseKeys = (block) =>
   new Set([...block.matchAll(/'([a-z_]+:[a-z_]+)'/g)].map((m) => m[1]));
 const seedDelegable = parseKeys(seedDelegableBlock);
 const migrationDelegable = parseKeys(migrationDelegableBlock);
-for (const forwardText of migrationTexts.slice(1)) {
+for (const forwardText of forwardTexts) {
   for (const match of forwardText.matchAll(
     /UPDATE public\.permission_keys\s+SET is_delegable_to_staff = false\s+WHERE key = '([a-z_]+:[a-z_]+)'/g,
   )) {

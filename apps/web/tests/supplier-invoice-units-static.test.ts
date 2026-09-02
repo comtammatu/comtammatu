@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { readSql } from "./_lib/active-sql.ts";
 
 const webRoot = resolve(import.meta.dirname, "..");
 const repoRoot = resolve(webRoot, "../..");
@@ -14,13 +15,7 @@ const invoiceRow = readFileSync(
   resolve(webRoot, "app/(protected)/finance/supplier-invoices/supplier-invoice-row.ts"),
   "utf8",
 );
-const migration = readFileSync(
-  resolve(
-    repoRoot,
-    "supabase/migration-archive/20260822170000_fix_supplier_invoice_unit_matching.sql",
-  ),
-  "utf8",
-);
+const migration = readSql(repoRoot, "supabase/migrations/20260822170000_fix_supplier_invoice_unit_matching.sql");
 
 test("grn-actions fetches PO item units and safely unpacks array/object embeds for invoice dropdown", () => {
   // Verifies that PO item entry unit is queried

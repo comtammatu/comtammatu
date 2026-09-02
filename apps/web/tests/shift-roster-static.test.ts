@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 const repoRoot = join(import.meta.dirname, "../../..");
 
 function read(relativePath: string): string {
-  return readFileSync(join(repoRoot, relativePath), "utf8");
+  return readSql(repoRoot, relativePath);
 }
 
 test("shift roster resolves before generic branch shift module", () => {
@@ -143,58 +144,56 @@ test("Branch roster protects unsaved work and reports load failures", () => {
 
 test("ADR 0019 Phase B migration enables multi-shift roster constraints", () => {
   const migration = read(
-    "supabase/migration-archive/20260812220000_hrm_multi_shift_roster_and_clock_in.sql",
+    "supabase/migrations/20260812220000_hrm_multi_shift_roster_and_clock_in.sql",
   );
 
-  assert.match(migration, /shift_assignments_one_per_employee_day/);
-  assert.match(migration, /NULLS NOT DISTINCT/);
-  assert.match(migration, /shift_assignments_one_day_off_per_day/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /shift_assignments_one_per_employee_day/);
+  assertSqlMatch(migration, /NULLS NOT DISTINCT/);
+  assertSqlMatch(migration, /shift_assignments_one_day_off_per_day/);
+  assertSqlMatch(migration,
     /desired\.shift_id IS NOT DISTINCT FROM assignment\.shift_id/,
   );
-  assert.doesNotMatch(migration, /OR sa\.work_date = v_vn_date/);
-  assert.match(migration, /multiple_shift_candidates/);
-  assert.match(migration, /scheduled_start_at, scheduled_end_at/);
+  assertSqlNotMatch(migration, /OR sa\.work_date = v_vn_date/);
+  assertSqlMatch(migration, /multiple_shift_candidates/);
+  assertSqlMatch(migration, /scheduled_start_at, scheduled_end_at/);
 });
 
 test("recurring materialize conflict target includes shift_id", () => {
   const followUp = read(
-    "supabase/migration-archive/20260813000701_hrm_materialize_shift_assignments_on_conflict.sql",
+    "supabase/migrations/20260813000701_hrm_materialize_shift_assignments_on_conflict.sql",
   );
-  assert.match(
-    followUp,
+  assertSqlMatch(followUp,
     /ON CONFLICT \(tenant_id, employee_id, work_date, shift_id\)/,
   );
 });
 
 test("standardize shifts migration defines 3 operations shifts and 2 guard shifts", () => {
   const migration = read(
-    "supabase/migration-archive/20260829140000_standardize_branch_shifts_catalog.sql",
+    "supabase/migrations/20260829140000_standardize_branch_shifts_catalog.sql",
   );
 
-  assert.match(migration, /'Ca Sáng', '06:00:00', '14:00:00'/);
-  assert.match(migration, /'Ca Chiều', '14:00:00', '22:00:00'/);
-  assert.match(migration, /'Ca Tối', '22:00:00', '02:00:00'/);
-  assert.match(migration, /'Ca Bảo vệ Ngày', '06:00:00', '18:00:00'/);
-  assert.match(migration, /'Ca Bảo vệ Đêm', '18:00:00', '06:00:00'/);
-  assert.match(migration, /is_active = false/);
-  assert.match(migration, /ILIKE '%gãy%'/);
+  assertSqlMatch(migration, /'Ca Sáng', '06:00:00', '14:00:00'/);
+  assertSqlMatch(migration, /'Ca Chiều', '14:00:00', '22:00:00'/);
+  assertSqlMatch(migration, /'Ca Tối', '22:00:00', '02:00:00'/);
+  assertSqlMatch(migration, /'Ca Bảo vệ Ngày', '06:00:00', '18:00:00'/);
+  assertSqlMatch(migration, /'Ca Bảo vệ Đêm', '18:00:00', '06:00:00'/);
+  assertSqlMatch(migration, /is_active = false/);
+  assertSqlMatch(migration, /ILIKE '%gãy%'/);
 });
 
 test("guard shift repair maps legacy assignments and restores recurring schedules", () => {
   const migration = read(
-    "supabase/migration-archive/20260829201214_repair_guard_shift_assignments.sql",
+    "supabase/migrations/20260829201214_repair_guard_shift_assignments.sql",
   );
 
-  assert.match(migration, /WHEN 'Bảo vệ Ca sáng' THEN 'Ca Bảo vệ Ngày'/);
-  assert.match(migration, /WHEN 'Bảo vệ Ca chiều' THEN 'Ca Bảo vệ Đêm'/);
-  assert.match(migration, /guard_shift_repair_assignment_conflict/);
-  assert.match(migration, /guard_shift_repair_ambiguous_weekly_pattern/);
-  assert.match(migration, /INSERT INTO public\.employee_weekly_schedules/);
-  assert.match(migration, /UPDATE public\.shift_assignments assignment/);
-  assert.match(migration, /UPDATE public\.attendance_records attendance/);
-  assert.match(migration, /guard_shift_repair_incomplete/);
+  assertSqlMatch(migration, /WHEN 'Bảo vệ Ca sáng' THEN 'Ca Bảo vệ Ngày'/);
+  assertSqlMatch(migration, /WHEN 'Bảo vệ Ca chiều' THEN 'Ca Bảo vệ Đêm'/);
+  assertSqlMatch(migration, /guard_shift_repair_assignment_conflict/);
+  assertSqlMatch(migration, /guard_shift_repair_ambiguous_weekly_pattern/);
+  assertSqlMatch(migration, /INSERT INTO public\.employee_weekly_schedules/);
+  assertSqlMatch(migration, /UPDATE public\.shift_assignments assignment/);
+  assertSqlMatch(migration, /UPDATE public\.attendance_records attendance/);
+  assertSqlMatch(migration, /guard_shift_repair_incomplete/);
 });
 
 test("branch roster exposes shift group filter and guard candidate categorization", () => {

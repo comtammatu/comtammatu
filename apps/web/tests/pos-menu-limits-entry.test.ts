@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch } from "./_lib/active-sql.ts";
 
 function readSource(path: string): string {
   return readFileSync(join(process.cwd(), path), "utf8");
@@ -121,19 +122,11 @@ test("branch menu-limit management remains on the manager day-control surface", 
   assert.match(homePageSource, /BranchQuickMenuLimitTrigger/);
   assert.match(homeTriggerSource, /BranchQuickMenuLimitSheet/);
 
-  const dropMigration = readFileSync(
-    join(
-      process.cwd(),
-      "../../supabase/migration-archive/20260810013620_drop_menu_item_stock_exception_rpc.sql",
-    ),
-    "utf8",
-  );
-  assert.match(
-    dropMigration,
+  const dropMigration = readSql(process.cwd(), "supabase/migrations/20260810013620_drop_menu_item_stock_exception_rpc.sql");
+  assertSqlMatch(dropMigration,
     /DROP FUNCTION IF EXISTS public\.add_menu_item_stock_exception/,
   );
-  assert.match(
-    dropMigration,
+  assertSqlMatch(dropMigration,
     /DROP FUNCTION IF EXISTS public\.add_menu_item_kitchen_stock_exception/,
   );
 });

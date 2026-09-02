@@ -1,35 +1,37 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch, sqlIndexOf } from "./_lib/active-sql.ts";
+
 
 const repoRoot = resolve(process.cwd(), "../..");
 const webRoot = process.cwd();
 
 function readRepo(path: string): string {
-  return readFileSync(resolve(repoRoot, path), "utf8");
+  return readSql(repoRoot, path);
 }
 
 function readWeb(path: string): string {
-  return readFileSync(join(webRoot, path), "utf8");
+  return readSql(webRoot, path);
 }
 
 test("promotions migration writes existing discount columns via SECURITY DEFINER RPCs", () => {
   const migration = readRepo(
-    "supabase/migration-archive/20260813235300_promotions_and_voucher_codes.sql",
+    "supabase/migrations/20260813235300_promotions_and_voucher_codes.sql",
   );
   const rotation = readRepo(
-    "supabase/migration-archive/20260814021821_upsert_promotion_reusable_code_rotation.sql",
+    "supabase/migrations/20260814021821_upsert_promotion_reusable_code_rotation.sql",
   );
   const freeSide = readRepo(
-    "supabase/migration-archive/20260814114800_promotion_free_side.sql",
+    "supabase/migrations/20260814114800_promotion_free_side.sql",
   );
 
-  assert.match(migration, /CREATE TABLE public\.promotions/);
-  assert.match(migration, /CREATE TABLE public\.promotion_codes/);
-  assert.match(migration, /CREATE TABLE public\.promotion_redemptions/);
-  assert.match(migration, /ADD COLUMN promotion_id/);
-  assert.match(migration, /ADD COLUMN promotion_code_id/);
+  assertSqlMatch(migration, /CREATE TABLE public\.promotions/);
+  assertSqlMatch(migration, /CREATE TABLE public\.promotion_codes/);
+  assertSqlMatch(migration, /CREATE TABLE public\.promotion_redemptions/);
+  assertSqlMatch(migration, /ADD COLUMN promotion_id/);
+  assertSqlMatch(migration, /ADD COLUMN promotion_code_id/);
 
   for (const fn of [
     "upsert_promotion",
@@ -40,20 +42,17 @@ test("promotions migration writes existing discount columns via SECURITY DEFINER
     "issue_promotion_codes",
     "void_promotion_code",
   ]) {
-    assert.match(
-      migration,
+    assertSqlMatch(migration,
       new RegExp(`CREATE FUNCTION public\\.${fn}\\(`),
       fn,
     );
-    assert.match(
-      migration,
+    assertSqlMatch(migration,
       new RegExp(
         `CREATE FUNCTION public\\.${fn}\\([\\s\\S]*?SECURITY DEFINER`,
       ),
       `${fn} SECURITY DEFINER`,
     );
-    assert.match(
-      migration,
+    assertSqlMatch(migration,
       new RegExp(
         `GRANT EXECUTE ON FUNCTION public\\.${fn}\\([\\s\\S]*?\\) TO authenticated, service_role`,
       ),
@@ -61,75 +60,71 @@ test("promotions migration writes existing discount columns via SECURITY DEFINER
     );
   }
 
-  assert.match(migration, /has_permission\(v_order\.branch_id, 'pos:apply_discount'\)/);
-  assert.match(migration, /has_permission\(v_order\.branch_id, 'pos:use'\)/);
-  assert.match(migration, /CREATE POLICY promotions_select/);
-  assert.match(migration, /has_permission\(NULL::bigint, 'promo:read'\)/);
-  assert.doesNotMatch(migration, /GRANT INSERT ON TABLE public\.promotions TO authenticated/);
+  assertSqlMatch(migration, /has_permission\(v_order\.branch_id, 'pos:apply_discount'\)/);
+  assertSqlMatch(migration, /has_permission\(v_order\.branch_id, 'pos:use'\)/);
+  assertSqlMatch(migration, /CREATE POLICY promotions_select/);
+  assertSqlMatch(migration, /has_permission\(NULL::bigint, 'promo:read'\)/);
+  assertSqlNotMatch(migration, /GRANT INSERT ON TABLE public\.promotions TO authenticated/);
 
-  assert.match(rotation, /CREATE OR REPLACE FUNCTION public\.upsert_promotion\(/);
-  assert.match(rotation, /promotion_reusable_code_required/);
-  assert.match(rotation, /replaced_by_code_rotation/);
-  assert.match(rotation, /code <> v_code/);
+  assertSqlMatch(rotation, /CREATE OR REPLACE FUNCTION public\.upsert_promotion\(/);
+  assertSqlMatch(rotation, /promotion_reusable_code_required/);
+  assertSqlMatch(rotation, /replaced_by_code_rotation/);
+  assertSqlMatch(rotation, /code <> v_code/);
 
-  assert.match(freeSide, /free_side/);
-  assert.match(freeSide, /apply_free_side_selection/);
-  assert.match(freeSide, /promotion_free_side_candidates/);
-  assert.match(freeSide, /needs_side_selection/);
-  assert.match(freeSide, /allow_code/);
-  assert.match(freeSide, /allow_auto/);
+  assertSqlMatch(freeSide, /free_side/);
+  assertSqlMatch(freeSide, /apply_free_side_selection/);
+  assertSqlMatch(freeSide, /promotion_free_side_candidates/);
+  assertSqlMatch(freeSide, /needs_side_selection/);
+  assertSqlMatch(freeSide, /allow_code/);
+  assertSqlMatch(freeSide, /allow_auto/);
 
   const perMain = readRepo(
-    "supabase/migration-archive/20260814135200_promotion_free_side_per_main_qty.sql",
+    "supabase/migrations/20260814135200_promotion_free_side_per_main_qty.sql",
   );
-  assert.match(perMain, /promotion_free_side_total_need/);
-  assert.match(perMain, /promotion_free_side_auto_selections/);
-  assert.match(perMain, /line_need/);
-  assert.match(perMain, /needs_side_selection/);
-  assert.match(perMain, /per qualifying main unit/);
+  assertSqlMatch(perMain, /promotion_free_side_total_need/);
+  assertSqlMatch(perMain, /promotion_free_side_auto_selections/);
+  assertSqlMatch(perMain, /line_need/);
+  assertSqlMatch(perMain, /needs_side_selection/);
+  assertSqlMatch(perMain, /per qualifying main unit/);
 
   const recalc = readRepo(
-    "supabase/migration-archive/20260814164500_promotion_free_side_recalc_on_evaluate.sql",
+    "supabase/migrations/20260814164500_promotion_free_side_recalc_on_evaluate.sql",
   );
-  assert.match(recalc, /promotion_free_side_applied_amount/);
-  assert.match(recalc, /Tính lại miễn phí ăn kèm/);
-  assert.match(recalc, /'code', v_code/);
+  assertSqlMatch(recalc, /promotion_free_side_applied_amount/);
+  assertSqlMatch(recalc, /Tính lại miễn phí ăn kèm/);
+  assertSqlMatch(recalc, /'code', v_code/);
 
   const freeItem = readRepo(
-    "supabase/migration-archive/20260818164309_promotion_free_item.sql",
+    "supabase/migrations/20260818164309_promotion_free_item.sql",
   );
-  assert.match(freeItem, /kind = 'free_item'/);
-  assert.match(freeItem, /free_item_qty/);
-  assert.match(freeItem, /apply_free_item_selection/);
-  assert.match(freeItem, /promotion_free_item_candidates/);
-  assert.match(freeItem, /promotion_item_selection_required/);
-  assert.match(freeItem, /allow_auto IS NOT TRUE/);
-  assert.match(freeItem, /Tính lại món tặng/);
+  assertSqlMatch(freeItem, /kind = 'free_item'/);
+  assertSqlMatch(freeItem, /free_item_qty/);
+  assertSqlMatch(freeItem, /apply_free_item_selection/);
+  assertSqlMatch(freeItem, /promotion_free_item_candidates/);
+  assertSqlMatch(freeItem, /promotion_item_selection_required/);
+  assertSqlMatch(freeItem, /allow_auto IS NOT TRUE/);
+  assertSqlMatch(freeItem, /Tính lại món tặng/);
 
   const freeItemStaffQty = readRepo(
-    "supabase/migration-archive/20260818211203_promotion_free_item_staff_qty.sql",
+    "supabase/migrations/20260818211203_promotion_free_item_staff_qty.sql",
   );
-  assert.match(
-    freeItemStaffQty,
+  assertSqlMatch(freeItemStaffQty,
     /free_item_qty IS NULL OR free_item_qty >= 1/,
   );
-  assert.match(freeItemStaffQty, /needs_side_selection', true/);
-  assert.match(freeItemStaffQty, /jsonb_array_length[\s\S]*>= 1/);
-  assert.match(
-    freeItemStaffQty,
+  assertSqlMatch(freeItemStaffQty, /needs_side_selection', true/);
+  assertSqlMatch(freeItemStaffQty, /jsonb_array_length[\s\S]*>= 1/);
+  assertSqlMatch(freeItemStaffQty,
     /v_sum_units < 1 OR v_sum_units > v_quota/,
   );
-  assert.match(
-    freeItemStaffQty,
+  assertSqlMatch(freeItemStaffQty,
     /p_free_item_qty IS NOT NULL AND p_free_item_qty < 1/,
   );
 
   const freeItemNullQty = readRepo(
-    "supabase/migration-archive/20260819125825_promotion_free_item_null_qty_candidates.sql",
+    "supabase/migrations/20260819125825_promotion_free_item_null_qty_candidates.sql",
   );
-  assert.match(freeItemNullQty, /CREATE OR REPLACE FUNCTION public\.promotion_free_item_candidates\(/);
-  assert.doesNotMatch(
-    freeItemNullQty,
+  assertSqlMatch(freeItemNullQty, /CREATE OR REPLACE FUNCTION public\.promotion_free_item_candidates\(/);
+  assertSqlNotMatch(freeItemNullQty,
     /COALESCE\(p_promo\.free_item_qty, 0\) < 1/,
   );
 });
@@ -343,15 +338,15 @@ test("POS evaluate runs on cart change and before pay", () => {
 
 test("voucher lifecycle hardening migration releases codes on cancel_order and void_order_item", () => {
   const hardening = readRepo(
-    "supabase/migration-archive/20260827011500_promotion_voucher_lifecycle_hardening.sql",
+    "supabase/migrations/20260827011500_promotion_voucher_lifecycle_hardening.sql",
   );
-  assert.match(hardening, /CREATE OR REPLACE FUNCTION public\.cancel_order\(/);
-  assert.match(hardening, /v_order\.promotion_code_id IS NOT NULL/);
-  assert.match(hardening, /status = 'active'/);
-  assert.match(hardening, /redeemed_count = GREATEST\(redeemed_count - 1, 0\)/);
-  assert.match(hardening, /status = 'cleared'/);
-  assert.match(hardening, /CREATE OR REPLACE FUNCTION public\.void_order_item\(/);
-  assert.match(hardening, /v_all_cancelled/);
+  assertSqlMatch(hardening, /CREATE OR REPLACE FUNCTION public\.cancel_order\(/);
+  assertSqlMatch(hardening, /v_order\.promotion_code_id IS NOT NULL/);
+  assertSqlMatch(hardening, /status = 'active'/);
+  assertSqlMatch(hardening, /redeemed_count = GREATEST\(redeemed_count - 1, 0\)/);
+  assertSqlMatch(hardening, /status = 'cleared'/);
+  assertSqlMatch(hardening, /CREATE OR REPLACE FUNCTION public\.void_order_item\(/);
+  assertSqlMatch(hardening, /v_all_cancelled/);
 
   const actions = readWeb(
     "app/(protected)/br/[branchId]/pos/discount-actions.ts",
@@ -362,10 +357,10 @@ test("voucher lifecycle hardening migration releases codes on cancel_order and v
 
 test("evaluate_order_promotions rechecks min_subtotal for order-level campaigns", () => {
   const baseline = readRepo("supabase/migrations/20260902162918_baseline.sql");
-  const start = baseline.indexOf(
+  const start = sqlIndexOf(baseline, 
     "CREATE FUNCTION public.evaluate_order_promotions(p_order_id bigint)",
   );
-  const end = baseline.indexOf(
+  const end = sqlIndexOf(baseline, 
     "CREATE FUNCTION public.expire_stuck_print_jobs",
     start,
   );
@@ -383,15 +378,14 @@ test("evaluate_order_promotions rechecks min_subtotal for order-level campaigns"
   const forward = readRepo(
     "supabase/migrations/20260903025327_enhance_promotion_lifecycle_and_cart_invariants.sql",
   );
-  assert.match(
-    forward,
+  assertSqlMatch(forward,
     /IF NOT public\.promotion_is_eligible\([\s\S]*?ELSIF v_promo\.kind IN \('order_pct', 'order_vnd', 'voucher_face'\) THEN/,
   );
-  assert.match(forward, /Khuyến mãi hết điều kiện/);
-  assert.match(forward, /total_discount_amount/);
-  assert.doesNotMatch(forward, /apply_gift_promotion_selection/);
-  assert.doesNotMatch(forward, /merge_orders_auto_clear_promo/);
-  assert.doesNotMatch(forward, /is_promo_gift/);
+  assertSqlMatch(forward, /Khuyến mãi hết điều kiện/);
+  assertSqlMatch(forward, /total_discount_amount/);
+  assertSqlNotMatch(forward, /apply_gift_promotion_selection/);
+  assertSqlNotMatch(forward, /merge_orders_auto_clear_promo/);
+  assertSqlNotMatch(forward, /is_promo_gift/);
 
   const actions = readWeb(
     "app/(protected)/br/[branchId]/pos/discount-actions.ts",

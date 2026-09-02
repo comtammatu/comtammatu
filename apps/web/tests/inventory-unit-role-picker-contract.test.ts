@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 import {
@@ -18,11 +17,13 @@ import {
   getPurchaseUnitOptions,
 } from "../lib/inventory/purchase-units";
 import type { IngredientUnitRow } from "../lib/inventory/types";
+import { readSql } from "./_lib/active-sql.ts";
+
 
 const repoRoot = resolve(process.cwd(), "../..");
 
 function readRepo(path: string): string {
-  return readFileSync(resolve(repoRoot, path), "utf8");
+  return readSql(repoRoot, path);
 }
 
 function unit(row: Partial<IngredientUnitRow>): IngredientUnitRow {
@@ -143,7 +144,7 @@ test("menu recipe and inventory documents accept any active ingredient unit", ()
   assert.match(lineEditor, /getIngredientUnitOptions\(ingredient\)/);
 
   const migration = readRepo(
-    "supabase/migration-archive/20260803105716_active_ingredient_entry_units.sql",
+    "supabase/migrations/20260803105716_active_ingredient_entry_units.sql",
   );
   assert.match(migration, /entry_unit_is_active_for_ingredient/);
   assert.match(migration, /jsonb_array_length\(p_units\) NOT BETWEEN 1 AND 20/);

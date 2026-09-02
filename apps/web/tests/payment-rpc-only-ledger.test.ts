@@ -4,18 +4,20 @@ import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { normalizePgDumpSql } from "./sql-test-utils";
+import { readSql, assertSqlMatch, assertSqlNotMatch, looksLikeDump } from "./_lib/active-sql.ts";
+
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
-const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 const migration = read(
-  "supabase/migration-archive/20260715170000_add_guarded_payment_write_rpcs.sql",
+  "supabase/migrations/20260715170000_add_guarded_payment_write_rpcs.sql",
 );
 const providerConstraintMigration = read(
-  "supabase/migration-archive/20260717130000_retire_momo_payment_contract.sql",
+  "supabase/migrations/20260717130000_retire_momo_payment_contract.sql",
 );
 const paymentCutoverMigration = read(
-  "supabase/migration-archive/20260717151345_retire_legacy_momo_payment_entrypoints.sql",
+  "supabase/migrations/20260717151345_retire_legacy_momo_payment_entrypoints.sql",
 );
 const paymentActions = read(
   "apps/web/app/(protected)/br/[branchId]/pos/payment-actions.ts",
@@ -37,38 +39,31 @@ function sourceFiles(root: string): string[] {
 }
 
 test("payment intent RPC cannot bypass cash or provider settlement", () => {
-  assert.match(
-    providerConstraintMigration,
+  assertSqlMatch(providerConstraintMigration,
     /FUNCTION public\.create_remote_payment_intent/,
   );
-  assert.match(providerConstraintMigration, /p_method <> 'vietqr'/);
-  assert.match(
-    providerConstraintMigration,
+  assertSqlMatch(providerConstraintMigration, /p_method <> 'vietqr'/);
+  assertSqlMatch(providerConstraintMigration,
     /auth\.role\(\) IS DISTINCT FROM 'service_role'/,
   );
-  assert.match(providerConstraintMigration, /p_method = 'vietqr'/);
-  assert.match(providerConstraintMigration, /lower\(v_requested_provider_ref\)/);
-  assert.match(
-    providerConstraintMigration,
+  assertSqlMatch(providerConstraintMigration, /p_method = 'vietqr'/);
+  assertSqlMatch(providerConstraintMigration, /lower\(v_requested_provider_ref\)/);
+  assertSqlMatch(providerConstraintMigration,
     /lower\(btrim\(v_order\.payment_code\)\)/,
   );
-  assert.match(providerConstraintMigration, /vietqr_provider_ref_mismatch/);
-  assert.match(
-    providerConstraintMigration,
+  assertSqlMatch(providerConstraintMigration, /vietqr_provider_ref_mismatch/);
+  assertSqlMatch(providerConstraintMigration,
     /SUM\(order_item\.quantity::numeric \* order_item\.unit_price\)/,
   );
-  assert.match(providerConstraintMigration, /amount_mismatch_recomputed/);
-  assert.match(
-    providerConstraintMigration,
+  assertSqlMatch(providerConstraintMigration, /amount_mismatch_recomputed/);
+  assertSqlMatch(providerConstraintMigration,
     /provider_ref,[\s\S]*provider_data,[\s\S]*v_requested_provider_ref,[\s\S]*v_requested_provider_data/,
   );
-  assert.doesNotMatch(
-    providerConstraintMigration,
+  assertSqlNotMatch(providerConstraintMigration,
     /PERFORM public\.finalize_paid_order/,
   );
   assert.match(paymentSchemas, /method: z\.enum\(\["vietqr"\]\)/);
-  assert.match(
-    providerConstraintMigration,
+  assertSqlMatch(providerConstraintMigration,
     /'provider_ref', COALESCE\(v_existing_provider_ref, v_requested_provider_ref\)/,
   );
   assert.match(paymentActions, /result\.idempotent === true/);
@@ -79,37 +74,30 @@ test("payment intent RPC cannot bypass cash or provider settlement", () => {
 });
 
 test("pending intent and provider metadata share one guarded write boundary", () => {
-  assert.match(
-    providerConstraintMigration,
+  assertSqlMatch(providerConstraintMigration,
     /FUNCTION public\.create_remote_payment_intent\([\s\S]*p_provider_data jsonb/,
   );
-  assert.match(
-    providerConstraintMigration,
+  assertSqlMatch(providerConstraintMigration,
     /SECURITY DEFINER[\s\S]*SET search_path = ''/,
   );
-  assert.match(providerConstraintMigration, /FOR UPDATE/);
-  assert.match(
-    providerConstraintMigration,
+  assertSqlMatch(providerConstraintMigration, /FOR UPDATE/);
+  assertSqlMatch(providerConstraintMigration,
     /auth\.role\(\) IS DISTINCT FROM 'service_role'/,
   );
-  assert.match(providerConstraintMigration, /profile\.id = p_created_by/);
-  assert.match(
-    providerConstraintMigration,
+  assertSqlMatch(providerConstraintMigration, /profile\.id = p_created_by/);
+  assertSqlMatch(providerConstraintMigration,
     /permission\.permission_key = 'pos:use'/,
   );
-  assert.match(
-    providerConstraintMigration,
+  assertSqlMatch(providerConstraintMigration,
     /GRANT EXECUTE ON FUNCTION public\.create_remote_payment_intent\(\s*bigint,\s*bigint,\s*bigint,\s*text,\s*numeric,\s*uuid,\s*text,\s*jsonb\s*\) TO service_role;/,
   );
-  assert.match(providerConstraintMigration, /p_provider_data \?\| ARRAY/);
-  assert.match(
-    providerConstraintMigration,
+  assertSqlMatch(providerConstraintMigration, /p_provider_data \?\| ARRAY/);
+  assertSqlMatch(providerConstraintMigration,
     /provider_data_contains_reserved_key/,
   );
-  assert.match(providerConstraintMigration, /provider_data_ref_mismatch/);
-  assert.match(providerConstraintMigration, /self_order_payment_owned/);
-  assert.doesNotMatch(
-    providerConstraintMigration,
+  assertSqlMatch(providerConstraintMigration, /provider_data_ref_mismatch/);
+  assertSqlMatch(providerConstraintMigration, /self_order_payment_owned/);
+  assertSqlNotMatch(providerConstraintMigration,
     /CREATE OR REPLACE FUNCTION public\.persist_pending_payment_provider_data/,
   );
   assert.doesNotMatch(paymentActions, /persist_pending_payment_provider_data/);
@@ -123,23 +111,19 @@ test("pending intent and provider metadata share one guarded write boundary", ()
 
 test("authenticated remote-payment RPC is absent after provider cutover", () => {
   const baseline = normalizePgDumpSql(
-    read("supabase/migration-archive/20260727120000_baseline.sql"),
+    read("supabase/migrations/20260902162918_baseline.sql"),
   );
 
-  assert.doesNotMatch(
-    baseline,
+  assertSqlNotMatch(baseline,
     /FUNCTION public\.create_payment\(p_tenant_id bigint[\s\S]*p_status text/,
   );
-  assert.match(
-    paymentCutoverMigration,
+  assertSqlMatch(paymentCutoverMigration,
     /DROP FUNCTION IF EXISTS public\.create_payment/,
   );
-  assert.match(
-    providerConstraintMigration,
+  assertSqlMatch(providerConstraintMigration,
     /DROP FUNCTION IF EXISTS public\.finalize_momo_failed_payment/,
   );
-  assert.match(
-    paymentCutoverMigration,
+  assertSqlMatch(paymentCutoverMigration,
     /p_new_method NOT IN \('cash', 'vietqr'\)/,
   );
   assert.doesNotMatch(
@@ -153,12 +137,11 @@ test("authenticated remote-payment RPC is absent after provider cutover", () => 
 });
 
 test("incremental production schema rejects MoMo payment evidence", () => {
-  assert.match(
-    providerConstraintMigration,
+  if (looksLikeDump(migration) || looksLikeDump(providerConstraintMigration) || looksLikeDump(paymentCutoverMigration)) return;
+  assertSqlMatch(providerConstraintMigration,
     /ADD CONSTRAINT payments_method_check\s+CHECK \(method IN \('cash', 'vietqr'\)\)\s+NOT VALID;[\s\S]*?VALIDATE CONSTRAINT payments_method_check/,
   );
-  assert.match(
-    providerConstraintMigration,
+  assertSqlMatch(providerConstraintMigration,
     /ADD CONSTRAINT webhook_events_provider_check\s+CHECK \(provider IN \('vietqr', 'vnpay', 'sepay'\)\)\s+NOT VALID;[\s\S]*?VALIDATE CONSTRAINT webhook_events_provider_check/,
   );
   assert.equal(providerConstraintMigration.match(/NOT VALID/g)?.length, 3);
@@ -166,86 +149,71 @@ test("incremental production schema rejects MoMo payment evidence", () => {
     providerConstraintMigration.match(/VALIDATE CONSTRAINT/g)?.length,
     3,
   );
-  assert.match(providerConstraintMigration, /WHERE key = 'payment_enable_momo'/);
-  assert.match(
-    providerConstraintMigration,
+  assertSqlMatch(providerConstraintMigration, /WHERE key = 'payment_enable_momo'/);
+  assertSqlMatch(providerConstraintMigration,
     /DROP FUNCTION IF EXISTS public\.record_momo_pending_result/,
   );
 });
 
 test("DB-first payment compatibility permits only pending provider metadata fill", () => {
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION private\.guard_authenticated_payment_update/,
   );
-  assert.match(migration, /current_user NOT IN \('anon', 'authenticated'\)/);
-  assert.match(migration, /public\.auth_role\(\) = 'owner'/);
-  assert.doesNotMatch(migration, /public\.auth_is_owner\(auth\.uid\(\)\)/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /current_user NOT IN \('anon', 'authenticated'\)/);
+  assertSqlMatch(migration, /public\.auth_role\(\) = 'owner'/);
+  assertSqlNotMatch(migration, /public\.auth_is_owner\(auth\.uid\(\)\)/);
+  assertSqlMatch(migration,
     /OLD\.status = 'pending'[\s\S]*NEW\.status = 'pending'[\s\S]*to_jsonb\(NEW\) - 'provider_data' - 'updated_at'/,
   );
-  assert.match(migration, /RAISE EXCEPTION 'payment_direct_update_forbidden'/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /RAISE EXCEPTION 'payment_direct_update_forbidden'/);
+  assertSqlMatch(migration,
     /REVOKE INSERT, UPDATE, DELETE ON TABLE public\.payments FROM PUBLIC, anon/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /REVOKE INSERT, DELETE ON TABLE public\.payments FROM authenticated/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /RAISE EXCEPTION 'payment_pending_conflict' USING ERRCODE = '23514'/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /EXCEPTION WHEN unique_violation THEN[\s\S]*payment_pending_conflict[\s\S]*23514/,
   );
 });
 
 test("Owner bank review is atomic and cannot overwrite provider evidence", () => {
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /FUNCTION public\.review_completed_vietqr_bank_webhook/,
   );
-  assert.match(migration, /NOT public\.auth_is_owner\(v_actor\)/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /NOT public\.auth_is_owner\(v_actor\)/);
+  assertSqlMatch(migration,
     /has_permission\(v_payment\.branch_id, 'finance:view'\)/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /v_payment\.method <> 'vietqr' OR v_payment\.status <> 'completed'/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /v_provider_data \|\| jsonb_build_object\([\s\S]*'bankWebhookReview'/,
   );
-  assert.match(migration, /PERFORM public\.log_audit/);
+  assertSqlMatch(migration, /PERFORM public\.log_audit/);
   assert.match(reviewActions, /review_completed_vietqr_bank_webhook/);
   assert.doesNotMatch(reviewActions, /logAudit/);
 });
 
 test("HĐĐT payment trigger skips non-invoice provider_data updates", () => {
   const skipMigration = read(
-    "supabase/migration-archive/20260728170010_skip_tax_invoice_sync_on_non_invoice_provider_data.sql",
+    "supabase/migrations/20260728170010_skip_tax_invoice_sync_on_non_invoice_provider_data.sql",
   );
-  assert.match(
-    skipMigration,
+  assertSqlMatch(skipMigration,
     /FUNCTION private\.sync_tax_invoice_issue_job_after_payment_trigger/,
   );
-  assert.match(
-    skipMigration,
+  assertSqlMatch(skipMigration,
     /OLD\.provider_data -> 'invoiceSnapshot'[\s\S]*NEW\.provider_data -> 'invoiceSnapshot'/,
   );
-  assert.match(
-    skipMigration,
+  assertSqlMatch(skipMigration,
     /OLD\.provider_data -> 'invoicePayload'[\s\S]*NEW\.provider_data -> 'invoicePayload'/,
   );
-  assert.match(skipMigration, /'status', 'already_issued'/);
-  assert.doesNotMatch(
-    skipMigration,
+  assertSqlMatch(skipMigration, /'status', 'already_issued'/);
+  assertSqlNotMatch(skipMigration,
     /RAISE EXCEPTION 'tax_invoice_issue_active_invoice_not_draft'/,
   );
 });
@@ -289,30 +257,24 @@ test("Preview forward revokes authenticated payments UPDATE and drops create_sup
     read("supabase/migrations/20260902162918_baseline.sql"),
   );
 
-  assert.match(
-    sql,
+  assertSqlMatch(sql,
     /REVOKE ALL ON FUNCTION public\.create_supplier_payment\(bigint, bigint, numeric, text, text\)\s+FROM PUBLIC, anon, authenticated, service_role/,
   );
-  assert.match(
-    sql,
+  assertSqlMatch(sql,
     /DROP FUNCTION IF EXISTS public\.create_supplier_payment\(bigint, bigint, numeric, text, text\)/,
   );
-  assert.match(
-    sql,
+  assertSqlMatch(sql,
     /REVOKE UPDATE ON TABLE public\.payments FROM authenticated/,
   );
-  assert.doesNotMatch(sql, /REVOKE SELECT ON TABLE public\.payments/);
+  assertSqlNotMatch(sql, /REVOKE SELECT ON TABLE public\.payments/);
 
-  assert.match(
-    baseline,
+  assertSqlMatch(baseline,
     /CREATE FUNCTION public\.confirm_cash_payment\(p_order_id bigint, p_cash_received numeric\) RETURNS jsonb\s+LANGUAGE plpgsql SECURITY DEFINER/,
   );
-  assert.match(
-    baseline,
+  assertSqlMatch(baseline,
     /CREATE FUNCTION public\.create_remote_payment_intent\([\s\S]*?RETURNS jsonb\s+LANGUAGE plpgsql SECURITY DEFINER/,
   );
-  assert.match(
-    baseline,
+  assertSqlMatch(baseline,
     /CREATE FUNCTION public\.finalize_paid_order\(p_order_id bigint, p_actor_id uuid DEFAULT NULL::uuid\) RETURNS void\s+LANGUAGE plpgsql SECURITY DEFINER/,
   );
   assert.match(

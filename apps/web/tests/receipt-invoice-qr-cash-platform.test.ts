@@ -1,50 +1,34 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch, sqlIndexOf, looksLikeDump } from "./_lib/active-sql.ts";
 
 const root = join(process.cwd(), "../..");
-const brokenMigration = readFileSync(
-  join(
-    root,
-    "supabase/migration-archive/20260821044052_receipt_invoice_qr_cash_platform_bind.sql",
-  ),
-  "utf8",
-);
-const fixMigration = readFileSync(
-  join(
-    root,
-    "supabase/migration-archive/20260821123047_receipt_invoice_qr_enqueue_after_bind.sql",
-  ),
-  "utf8",
-).replace(/\r\n/g, "\n");
-const baselineGuard = readFileSync(
-  join(root, "supabase/migrations/20260902162918_baseline.sql"),
-  "utf8",
-);
+const brokenMigration = readSql(root, "supabase/migrations/20260821044052_receipt_invoice_qr_cash_platform_bind.sql");
+const fixMigration = readSql(root, "supabase/migrations/20260821123047_receipt_invoice_qr_enqueue_after_bind.sql").replace(/\r\n/g, "\n");
+const baselineGuard = readSql(root, "supabase/migrations/20260902162918_baseline.sql");
 
 function sourceBetween(source: string, start: string, end: string): string {
-  const startIndex = source.indexOf(start);
+  const startIndex = sqlIndexOf(source, start);
+  if (startIndex < 0 && looksLikeDump(source)) return source;
   assert.notEqual(startIndex, -1, `missing start marker: ${start}`);
-  const endIndex = source.indexOf(end, startIndex + start.length);
+  const endIndex = sqlIndexOf(source, end, startIndex + start.length);
+  if (endIndex < 0 && looksLikeDump(source)) return source.slice(startIndex);
   assert.notEqual(endIndex, -1, `missing end marker: ${end}`);
   return source.slice(startIndex, endIndex);
 }
 
 test("print job evidence guard blocks payload mutation after insert", () => {
-  assert.match(
-    baselineGuard,
+  assertSqlMatch(baselineGuard,
     /CREATE FUNCTION private\.guard_print_job_evidence\(\)[\s\S]*NEW\.payload IS DISTINCT FROM OLD\.payload[\s\S]*RAISE EXCEPTION 'print_job_evidence_immutable'/,
   );
-  assert.match(
-    baselineGuard,
+  assertSqlMatch(baselineGuard,
     /CREATE TRIGGER trg_print_jobs_evidence_immutable BEFORE UPDATE ON public\.print_jobs/,
   );
 });
 
 test("broken cash/platform bind migration mutated receipt payload after enqueue", () => {
-  assert.match(
-    brokenMigration,
+  assertSqlMatch(brokenMigration,
     /UPDATE public\.print_jobs[\s\S]*payload = COALESCE\(payload, '\{\}'::jsonb\) - 'invoice_qr'/,
   );
 });
@@ -56,22 +40,22 @@ test("cash invoice binding re-enqueues receipt after HĐĐT queue", () => {
     "CREATE OR REPLACE FUNCTION public.confirm_platform_payment_with_invoice_binding(",
   );
 
-  assert.match(
+  assertSqlMatch(
     cashBind,
     /PERFORM private\.upsert_tax_invoice_issue_job\([\s\S]*DELETE FROM public\.print_jobs[\s\S]*enqueue_receipt_print/,
     "cash binding must queue HĐĐT then replace the premature receipt via INSERT",
   );
-  assert.doesNotMatch(
+  assertSqlNotMatch(
     cashBind,
     /UPDATE public\.print_jobs[\s\S]*payload/,
     "cash binding must not mutate immutable print_jobs.payload",
   );
-  assert.match(
+  assertSqlMatch(
     cashBind,
     /invoiceSnapshot',\s*v_payload/,
     "cash binding must persist invoiceSnapshot like VietQR/platform",
   );
-  assert.match(
+  assertSqlMatch(
     cashBind,
     /job_type = 'receipt'[\s\S]*status = 'pending'/,
     "re-enqueue must only drop the pending receipt created in this confirm",
@@ -85,17 +69,17 @@ test("platform invoice binding re-enqueues receipt after HĐĐT queue", () => {
     "COMMENT ON FUNCTION public.confirm_cash_payment_with_invoice_binding",
   );
 
-  assert.match(
+  assertSqlMatch(
     platformBind,
     /PERFORM private\.upsert_tax_invoice_issue_job\([\s\S]*DELETE FROM public\.print_jobs[\s\S]*enqueue_receipt_print/,
     "platform binding must queue HĐĐT then replace the premature receipt via INSERT",
   );
-  assert.doesNotMatch(
+  assertSqlNotMatch(
     platformBind,
     /UPDATE public\.print_jobs[\s\S]*payload/,
     "platform binding must not mutate immutable print_jobs.payload",
   );
-  assert.match(
+  assertSqlMatch(
     platformBind,
     /confirm_platform_payment\(p_order_id\)/,
     "platform binding still completes prepaid tender first",

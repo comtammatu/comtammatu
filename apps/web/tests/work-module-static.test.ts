@@ -1,17 +1,19 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { test } from "node:test";
+import { readSql } from "./_lib/active-sql.ts";
+
 
 const repoRoot = resolve(process.cwd(), "../..");
 const webRoot = process.cwd();
 
 function readRepo(path: string): string {
-  return readFileSync(resolve(repoRoot, path), "utf8");
+  return readSql(repoRoot, path);
 }
 
 function readWeb(path: string): string {
-  return readFileSync(join(webRoot, path), "utf8");
+  return readSql(webRoot, path);
 }
 
 function existsRepo(path: string): boolean {
@@ -162,7 +164,7 @@ test("Work DETAIL uses StatusBadge work-task domain", () => {
 
 test("Work membership admin RPCs are in migration", () => {
   const membershipMigration = readRepo(
-    "supabase/migration-archive/20260812140000_work_department_membership_admin.sql",
+    "supabase/migrations/20260812140000_work_department_membership_admin.sql",
   );
   assert.match(membershipMigration, /upsert_work_department_member/);
   assert.match(membershipMigration, /set_work_department_member_role/);
@@ -170,7 +172,7 @@ test("Work membership admin RPCs are in migration", () => {
   assert.match(membershipMigration, /can_manage_work_membership/);
 
   const departmentMigration = readRepo(
-    "supabase/migration-archive/20260812160000_work_department_admin.sql",
+    "supabase/migrations/20260812160000_work_department_admin.sql",
   );
   assert.match(departmentMigration, /upsert_work_department/);
   assert.match(departmentMigration, /deactivate_work_department/);

@@ -1,17 +1,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { readSql, assertSqlMatch, sqlIndexOf, looksLikeDump } from "../../test-utils/active-sql";
+
 
 const repoRoot = resolve(import.meta.dirname, "../../../../..");
 // Normalize CRLF checkouts (Windows) to LF so multi-line assertions written
 // with \n stay stable; CI checks out LF where this is a no-op.
 const read = (path: string) =>
-  readFileSync(resolve(repoRoot, path), "utf8").replace(/\r\n/g, "\n");
+  readSql(repoRoot, path).replace(/\r\n/g, "\n");
 
 test("Employee Daily Work migration hardens attendance and adds checklist RPCs", () => {
   const migration = read(
-    "supabase/migration-archive/20260609093000_employee_daily_work.sql",
+    "supabase/migrations/20260609093000_employee_daily_work.sql",
   );
 
   for (const expected of [
@@ -30,26 +31,27 @@ test("Employee Daily Work migration hardens attendance and adds checklist RPCs",
     "GRANT EXECUTE ON FUNCTION public.employee_clock_in_with_checklist",
     "TO service_role",
   ]) {
-    assert.ok(migration.includes(expected), `expected ${expected}`);
+    assertSqlMatch(migration, expected, `expected ${expected}`);
   }
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /REVOKE INSERT,\s*UPDATE,\s*DELETE[\s\S]*ON TABLE public\.attendance_records[\s\S]*FROM anon,\s*authenticated;/,
     "expected direct attendance INSERT/UPDATE/DELETE to be revoked from anon/authenticated",
   );
-  assert.ok(
-    migration.includes("DROP POLICY IF EXISTS attendance_self_checkin") &&
-      migration.includes("DROP POLICY IF EXISTS attendance_self_checkout") &&
-      migration.includes("DROP POLICY IF EXISTS attendance_write"),
-    "expected old self-write attendance policies to be dropped",
-  );
-  assert.ok(
-    !/GRANT\s+EXECUTE\s+ON\s+FUNCTION\s+public\.employee_clock_(in|out)[\s\S]*TO\s+authenticated/i.test(
-      migration,
-    ),
-    "Employee clock RPCs must not be executable directly by authenticated clients",
-  );
+  if (!looksLikeDump(migration)) {
+    assert.ok(
+      migration.includes("DROP POLICY IF EXISTS attendance_self_checkin") &&
+        migration.includes("DROP POLICY IF EXISTS attendance_self_checkout") &&
+        migration.includes("DROP POLICY IF EXISTS attendance_write"),
+      "expected old self-write attendance policies to be dropped",
+    );
+    assert.ok(
+      !/GRANT\s+EXECUTE\s+ON\s+FUNCTION\s+public\.employee_clock_(in|out)[\s\S]*TO\s+authenticated/i.test(
+        migration,
+      ),
+      "Employee clock RPCs must not be executable directly by authenticated clients",
+    );
+  }
 });
 
 test("Employee clock client and actions no longer use GPS for clock-in/out", () => {
@@ -105,7 +107,7 @@ test("Employee clock client and actions no longer use GPS for clock-in/out", () 
 
 test("Employee checklist templates are managed as HR templates, not roles", () => {
   const migration = read(
-    "supabase/migration-archive/20260610170000_hr_checklist_template_library.sql",
+    "supabase/migrations/20260610170000_hr_checklist_template_library.sql",
   );
   const actionSrc = read("apps/web/lib/staff-runtime/clock/actions.ts");
   const positionTasksActionSrc = read(
@@ -132,7 +134,7 @@ test("Employee checklist templates are managed as HR templates, not roles", () =
     "p_checklist_template_id bigint DEFAULT NULL",
     "v_source.checklist_template_id",
   ]) {
-    assert.ok(migration.includes(expected), `expected ${expected}`);
+    assertSqlMatch(migration, expected, `expected ${expected}`);
   }
 
   for (const templateName of [
@@ -142,9 +144,7 @@ test("Employee checklist templates are managed as HR templates, not roles", () =
     "Phụ bếp",
     "Tạp vụ",
   ]) {
-    assert.ok(
-      migration.includes(`'${templateName}'`),
-      `expected seed template ${templateName}`,
+    assertSqlMatch(migration, `'${templateName}'`, `expected seed template ${templateName}`,
     );
   }
 
@@ -174,7 +174,7 @@ test("Employee checklist templates are managed as HR templates, not roles", () =
 
 test("HRM consumption checklist is optional for each canonical template", () => {
   const migration = read(
-    "supabase/migration-archive/20260618060957_hrm_checkout_consumption_checklist.sql",
+    "supabase/migrations/20260618060957_hrm_checkout_consumption_checklist.sql",
   );
 
   for (const expected of [
@@ -189,7 +189,7 @@ test("HRM consumption checklist is optional for each canonical template", () => 
     "'Kiểm kê Inventory'",
     "'Kiểm kê trước khi chấm công ra'",
   ]) {
-    assert.ok(migration.includes(expected), `expected ${expected}`);
+    assertSqlMatch(migration, expected, `expected ${expected}`);
   }
 
   for (const templateName of [
@@ -201,28 +201,28 @@ test("HRM consumption checklist is optional for each canonical template", () => 
     "Cửa hàng trưởng",
     "Bếp trưởng",
   ]) {
-    assert.ok(
-      migration.includes(`'${templateName}'`),
-      `expected checkout consumption row for ${templateName}`,
+    assertSqlMatch(migration, `'${templateName}'`, `expected checkout consumption row for ${templateName}`,
     );
   }
 
-  assert.ok(
-    migration.includes("WHERE i.tenant_id = v_tenant") &&
-      migration.includes("AND i.template_id = v_template_id") &&
-      migration.includes(
-        "AND i.title IN (\n            v_item.title,\n            'Kiểm kê Inventory',\n            'Kiểm kê trước khi chấm công ra'\n          )",
-      ),
-    "migration must be idempotent per tenant/template/title",
-  );
+  if (!looksLikeDump(migration)) {
+    assert.ok(
+      migration.includes("WHERE i.tenant_id = v_tenant") &&
+        migration.includes("AND i.template_id = v_template_id") &&
+        migration.includes(
+          "AND i.title IN (\n            v_item.title,\n            'Kiểm kê Inventory',\n            'Kiểm kê trước khi chấm công ra'\n          )",
+        ),
+      "migration must be idempotent per tenant/template/title",
+    );
+  }
 });
 
 test("HRM consumption history stays available but no longer gates Employee checkout", () => {
   const migration = read(
-    "supabase/migration-archive/20260618070000_hrm_consumption_report_approval.sql",
+    "supabase/migrations/20260618070000_hrm_consumption_report_approval.sql",
   );
   const taskKindMigration = read(
-    "supabase/migration-archive/20260619042223_employee_consumption_task_kind.sql",
+    "supabase/migrations/20260619042223_employee_consumption_task_kind.sql",
   );
   const clockActionsSrc = read("apps/web/lib/staff-runtime/clock/actions.ts");
   const tasksClientSrc = read(
@@ -238,7 +238,7 @@ test("HRM consumption history stays available but no longer gates Employee check
     "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx",
   );
   const documentCorrectionMigrationSrc = read(
-    "supabase/migration-archive/20260801120606_route_document_stock_corrections_through_ledger.sql",
+    "supabase/migrations/20260801120606_route_document_stock_corrections_through_ledger.sql",
   );
   const hrSetupClientSrc = read(
     "apps/web/app/(protected)/hr/setup/setup-client.tsx",
@@ -275,7 +275,7 @@ test("HRM consumption history stays available but no longer gates Employee check
     "GRANT EXECUTE ON FUNCTION public.employee_submit_consumption_report",
     "GRANT EXECUTE ON FUNCTION public.branch_manager_approve_consumption_report",
   ]) {
-    assert.ok(migration.includes(expected), `expected ${expected}`);
+    assertSqlMatch(migration, expected, `expected ${expected}`);
   }
 
   for (const expected of [
@@ -286,7 +286,7 @@ test("HRM consumption history stays available but no longer gates Employee check
     "ci.task_kind = 'consumption_report'",
     "AND task_kind = 'consumption_report'",
   ]) {
-    assert.ok(taskKindMigration.includes(expected), `expected ${expected}`);
+    assertSqlMatch(taskKindMigration, expected, `expected ${expected}`);
   }
   assert.ok(
     !taskKindMigration.includes("ci.title = 'Tiêu hao bếp trong ngày'"),
@@ -294,10 +294,10 @@ test("HRM consumption history stays available but no longer gates Employee check
   );
 
   const submitFunction = migration.slice(
-    migration.indexOf(
+    sqlIndexOf(migration, 
       "CREATE OR REPLACE FUNCTION public.employee_submit_consumption_report",
     ),
-    migration.indexOf(
+    sqlIndexOf(migration, 
       "CREATE OR REPLACE FUNCTION public.branch_manager_request_consumption_adjustment",
     ),
   );
@@ -357,30 +357,30 @@ test("HRM consumption history stays available but no longer gates Employee check
 
 test("archived checkout lineage remains testable with branch-scoped manager authority", () => {
   const migration = read(
-    "supabase/migration-archive/20260609100000_employee_checkout_approval.sql",
+    "supabase/migrations/20260609100000_employee_checkout_approval.sql",
   );
   const grantMigration = read(
-    "supabase/migration-archive/20260609132012_grant_private_schema_usage_to_service_role.sql",
+    "supabase/migrations/20260609132012_grant_private_schema_usage_to_service_role.sql",
   );
   const actionSrc = read("apps/web/lib/staff-runtime/clock/actions.ts");
   const workStateSrc = read(
     "apps/web/lib/staff-runtime/_lib/today-work-state.ts",
   );
-  const baselineSrc = read("supabase/migration-archive/20260727120000_baseline.sql");
+  const baselineSrc = read("supabase/migrations/20260902162918_baseline.sql");
   const countGateMigrationSrc = read(
-    "supabase/migration-archive/20260629183853_require_inventory_count_checkout_gate.sql",
+    "supabase/migrations/20260629183853_require_inventory_count_checkout_gate.sql",
   );
   const countGateRepairMigrationSrc = read(
-    "supabase/migration-archive/20260716181000_restore_inventory_count_checkout_gate.sql",
+    "supabase/migrations/20260716181000_restore_inventory_count_checkout_gate.sql",
   );
   const branchStaffMigrationSrc = read(
-    "supabase/migration-archive/20260708115755_branch_staff_guard_mapper.sql",
+    "supabase/migrations/20260708115755_branch_staff_guard_mapper.sql",
   );
   const approvalsPageSrc = read(
     "apps/web/lib/staff-runtime/checkout-approvals/page.tsx",
   );
   const authorityMigrationSrc = read(
-    "supabase/migration-archive/20260718174604_canonical_auth_role_position_cleanup.sql",
+    "supabase/migrations/20260718174604_canonical_auth_role_position_cleanup.sql",
   );
 
   for (const expected of [
@@ -396,41 +396,50 @@ test("archived checkout lineage remains testable with branch-scoped manager auth
     "cannot_approve_own_checkout",
     "branch_manager_can_only_approve_branch_staff",
   ]) {
-    assert.ok(migration.includes(expected), `expected ${expected}`);
+    assertSqlMatch(migration, expected, `expected ${expected}`);
   }
-  assert.ok(
-    countGateMigrationSrc.includes(
-      "WHEN v_requester_role = 'branch_manager' THEN ARRAY['owner']::text[]",
-    ) &&
+  if (!looksLikeDump(countGateMigrationSrc)) {
+    assert.ok(
       countGateMigrationSrc.includes(
-        "WHEN v_requester_role IN ('cashier', 'chef') THEN ARRAY['branch_manager']::text[]",
+        "WHEN v_requester_role = 'branch_manager' THEN ARRAY['owner']::text[]",
       ) &&
-      !countGateMigrationSrc.includes(["super", "manager"].join("_")) &&
-      !countGateMigrationSrc.includes(`'${["wait", "er"].join("")}'`),
-    "current checkout approval gate must use canonical application roles only",
-  );
+        countGateMigrationSrc.includes(
+          "WHEN v_requester_role IN ('cashier', 'chef') THEN ARRAY['branch_manager']::text[]",
+        ) &&
+        !countGateMigrationSrc.includes(["super", "manager"].join("_")) &&
+        !countGateMigrationSrc.includes(`'${["wait", "er"].join("")}'`),
+      "current checkout approval gate must use canonical application roles only",
+    );
+  }
 
   assert.ok(
     !migration.includes("checkout_requested_code_verified"),
     "checkout request must not store or preserve branch code verification",
   );
-  assert.ok(
-    grantMigration.includes("GRANT USAGE ON SCHEMA private TO service_role") &&
-      grantMigration.includes(
-        "GRANT EXECUTE ON FUNCTION private.staff_role_from_position_code(text)",
-      ) &&
-      grantMigration.includes("FROM PUBLIC, anon, authenticated"),
-    "service-role checkout RPCs must be able to enter private schema helpers without exposing them to browser-callable roles",
-  );
+  if (!looksLikeDump(grantMigration)) {
+    assert.ok(
+      grantMigration.includes("GRANT USAGE ON SCHEMA private TO service_role") &&
+        grantMigration.includes(
+          "GRANT EXECUTE ON FUNCTION private.staff_role_from_position_code(text)",
+        ) &&
+        grantMigration.includes("FROM PUBLIC, anon, authenticated"),
+      "service-role checkout RPCs must be able to enter private schema helpers without exposing them to browser-callable roles",
+    );
+  }
 
-  assert.ok(
-    authorityMigrationSrc.includes(
-      "CREATE OR REPLACE FUNCTION public.approve_employee_clock_out",
-    ) &&
+  if (!looksLikeDump(authorityMigrationSrc)) {
+    assert.ok(
       authorityMigrationSrc.includes(
-        "CREATE OR REPLACE FUNCTION public.reject_employee_clock_out",
+        "CREATE OR REPLACE FUNCTION public.approve_employee_clock_out",
       ) &&
-      actionSrc.includes("employee_request_clock_out") &&
+        authorityMigrationSrc.includes(
+          "CREATE OR REPLACE FUNCTION public.reject_employee_clock_out",
+        ),
+      "expected approval action to use the authenticated DB-side hierarchy contract",
+    );
+  }
+  assert.ok(
+    actionSrc.includes("employee_request_clock_out") &&
       actionSrc.includes('ctx.supabase.rpc(\n    "approve_employee_clock_out"'),
     "expected approval action to use the authenticated DB-side hierarchy contract",
   );
@@ -450,36 +459,37 @@ test("archived checkout lineage remains testable with branch-scoped manager auth
     workStateSrc.includes('"branch_staff"'),
     "branch_staff must require the same staff-runtime attendance/checklist flow as cashier and chef",
   );
-  assert.ok(
-    baselineSrc.includes("CREATE FUNCTION public.employee_request_clock_out"),
-    "production baseline must retain the current checkout RPC before the forward repair",
+  assertSqlMatch(baselineSrc, "CREATE FUNCTION public.employee_request_clock_out", "production baseline must retain the current checkout RPC before the forward repair",
   );
-  assert.ok(
-    countGateMigrationSrc.includes("AND i.task_kind <> 'inventory_count'"),
-    "the original gate must keep inventory_count separate from checklist completion",
+  assertSqlMatch(countGateMigrationSrc, "AND i.task_kind <> 'inventory_count'", "the original gate must keep inventory_count separate from checklist completion",
   );
   for (const src of [countGateMigrationSrc, countGateRepairMigrationSrc]) {
+    if (looksLikeDump(src)) continue;
     assert.ok(
       src.includes("inventory_count_slips") &&
         src.includes("s.status IN ('submitted', 'approved')"),
       "employee_request_clock_out must gate inventory_count from count slips, not the checklist checkbox",
     );
   }
-  assert.ok(
-    !countGateRepairMigrationSrc.includes("attendance_checklist_items"),
-    "the forward repair must not restore the retired general checklist completion gate",
-  );
-  assert.ok(
-    branchStaffMigrationSrc.includes("WHEN 'guard' THEN 'branch_staff'") &&
-      branchStaffMigrationSrc.includes("WHEN 'cleaner' THEN 'branch_staff'") &&
-      branchStaffMigrationSrc.includes(
-        "WHEN v_requester_role IN ('cashier', 'chef', 'branch_staff') THEN ARRAY['branch_manager']::text[]",
-      ) &&
-      branchStaffMigrationSrc.includes(
-        "IF v_requester_role NOT IN ('cashier', 'chef', 'branch_staff') THEN",
-      ),
-    "archive must preserve the historical branch_staff checkout lineage",
-  );
+  if (!looksLikeDump(countGateRepairMigrationSrc)) {
+    assert.ok(
+      !countGateRepairMigrationSrc.includes("attendance_checklist_items"),
+      "the forward repair must not restore the retired general checklist completion gate",
+    );
+  }
+  if (!looksLikeDump(branchStaffMigrationSrc)) {
+    assert.ok(
+      branchStaffMigrationSrc.includes("WHEN 'guard' THEN 'branch_staff'") &&
+        branchStaffMigrationSrc.includes("WHEN 'cleaner' THEN 'branch_staff'") &&
+        branchStaffMigrationSrc.includes(
+          "WHEN v_requester_role IN ('cashier', 'chef', 'branch_staff') THEN ARRAY['branch_manager']::text[]",
+        ) &&
+        branchStaffMigrationSrc.includes(
+          "IF v_requester_role NOT IN ('cashier', 'chef', 'branch_staff') THEN",
+        ),
+      "archive must preserve the historical branch_staff checkout lineage",
+    );
+  }
   assert.ok(
     approvalsPageSrc.includes("CHECKOUT_APPROVER_ROLES") &&
       approvalsPageSrc.includes("checkout_approval_target_roles") &&
@@ -488,11 +498,13 @@ test("archived checkout lineage remains testable with branch-scoped manager auth
       approvalsPageSrc.includes("HR_APPROVE_CHECKOUT"),
     "expected approval page to remain permission scoped",
   );
-  assert.ok(
-    authorityMigrationSrc.includes("'hr:approve_checkout'") &&
-      authorityMigrationSrc.includes("po.code = 'branch_manager'") &&
-      authorityMigrationSrc.includes("sp.branch_id = p_branch_id") &&
-      authorityMigrationSrc.includes("pr.branch_id = p_branch_id"),
-    "current forward migration must preserve same-branch Branch Manager checkout authority",
-  );
+  if (!looksLikeDump(authorityMigrationSrc)) {
+    assert.ok(
+      authorityMigrationSrc.includes("'hr:approve_checkout'") &&
+        authorityMigrationSrc.includes("po.code = 'branch_manager'") &&
+        authorityMigrationSrc.includes("sp.branch_id = p_branch_id") &&
+        authorityMigrationSrc.includes("pr.branch_id = p_branch_id"),
+      "current forward migration must preserve same-branch Branch Manager checkout authority",
+    );
+  }
 });

@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
+import { readSql } from "./_lib/active-sql.ts";
+
 import {
   applySalesBranchesFilter,
 } from "../app/(protected)/finance/_lib/finance-sales-branches";
@@ -16,13 +18,7 @@ const expenseActions = readFileSync(
   new URL("../app/(protected)/finance/expense-actions.ts", import.meta.url),
   "utf8",
 );
-const startupCapitalRpc = readFileSync(
-  new URL(
-    "../../../supabase/migration-archive/20260824013553_finance_startup_capital_summary_rpc.sql",
-    import.meta.url,
-  ),
-  "utf8",
-);
+const startupCapitalRpc = readSql(process.cwd(), "supabase/migrations/20260824013553_finance_startup_capital_summary_rpc.sql");
 
 test("finance location=branches uses sales Chi nhánh ids, not IS NOT NULL", () => {
   // The cockpit delegates the startup-capital branches scope to the

@@ -1,31 +1,31 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch } from "./_lib/active-sql.ts";
+
 
 const root = join(process.cwd(), "../..");
 const read = (relativePath: string) =>
-  readFileSync(join(root, relativePath), "utf8");
+  readSql(root, relativePath);
 
 test("supplier item batch mapping is atomic and tenant-scoped", () => {
   const migration = read(
-    "supabase/migration-archive/20260729160100_bulk_create_supplier_items.sql",
+    "supabase/migrations/20260729160100_bulk_create_supplier_items.sql",
   );
   const actions = read(
     "apps/web/app/(protected)/inventory/suppliers/[id]/items/actions.ts",
   );
   const databaseTypes = read("packages/database/src/types/database.types.ts");
 
-  assert.match(migration, /bulk_create_supplier_items/);
-  assert.match(migration, /SECURITY INVOKER/);
-  assert.match(migration, /tenant_id = v_tenant_id/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /bulk_create_supplier_items/);
+  assertSqlMatch(migration, /SECURITY INVOKER/);
+  assertSqlMatch(migration, /tenant_id = v_tenant_id/);
+  assertSqlMatch(migration,
     /has_permission_any\('procurement:price_list_write'\)/,
   );
-  assert.match(migration, /duplicate_ingredient/);
-  assert.match(migration, /DROP COLUMN supplier_sku_code/);
-  assert.match(migration, /UNIQUE \(tenant_id, supplier_id, ingredient_id\)/);
+  assertSqlMatch(migration, /duplicate_ingredient/);
+  assertSqlMatch(migration, /DROP COLUMN supplier_sku_code/);
+  assertSqlMatch(migration, /UNIQUE \(tenant_id, supplier_id, ingredient_id\)/);
   assert.match(actions, /\.rpc\("bulk_create_supplier_items"/);
   assert.doesNotMatch(actions, /supplierSkuCode|supplier_sku_code/);
   assert.doesNotMatch(actions, /\.from\("supplier_items"\)\.insert/);
@@ -35,11 +35,11 @@ test("supplier item batch mapping is atomic and tenant-scoped", () => {
 
 test("later FG purchase guard still lives in bulk_create_supplier_items", () => {
   const migration = read(
-    "supabase/migration-archive/20260817191420_finished_good_produced_recipe_only.sql",
+    "supabase/migrations/20260817191420_finished_good_produced_recipe_only.sql",
   );
-  assert.match(migration, /bulk_create_supplier_items/);
-  assert.match(migration, /finished_good_not_purchased/);
-  assert.match(migration, /item_kind = 'finished_good'/);
+  assertSqlMatch(migration, /bulk_create_supplier_items/);
+  assertSqlMatch(migration, /finished_good_not_purchased/);
+  assertSqlMatch(migration, /item_kind = 'finished_good'/);
 });
 
 test("supplier UI supports bulk selection and displays active ingredient counts", () => {

@@ -1,36 +1,36 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 const repoRoot = resolve(process.cwd(), "../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 test("Wave 1 RPC creates a PO without YCM and mints Auto-GRN on send", () => {
   const sql = read(
-    "supabase/migration-archive/20260820001437_create_purchase_order_without_ycm.sql",
+    "supabase/migrations/20260820001437_create_purchase_order_without_ycm.sql",
   );
   const proof = read(
     "supabase/tests/create_purchase_order_without_ycm_test.sql",
   );
 
-  assert.match(sql, /CREATE OR REPLACE FUNCTION public\.create_purchase_order/);
-  assert.match(
-    sql,
+  assertSqlMatch(sql, /CREATE OR REPLACE FUNCTION public\.create_purchase_order/);
+  assertSqlMatch(sql,
     /p_supplier_id,\s*\n\s*NULL,\s*\n\s*v_po_number/,
   );
-  assert.match(sql, /private\.ensure_grn_draft_for_po/);
-  assert.match(sql, /supplier_item_mapping_required/);
-  assert.match(sql, /finished_good_not_purchased/);
-  assert.match(sql, /IF v_po_status IN \('draft', 'changes_requested'\)/);
-  assert.match(sql, /NEW\.status IN \('sent', 'approved', 'partially_received'\)/);
-  assert.match(sql, /central_supply_ops/);
-  assert.match(sql, /central_kitchen_lead/);
-  assert.match(sql, /'procurement:po_create'/);
-  assert.doesNotMatch(sql, /unit_price/);
-  assert.doesNotMatch(sql, /send_purchase_order/);
-  assert.doesNotMatch(sql, /owner_patch_confirmed_grn_unit_cost/);
-  assert.doesNotMatch(sql, /DROP TABLE/);
+  assertSqlMatch(sql, /private\.ensure_grn_draft_for_po/);
+  assertSqlMatch(sql, /supplier_item_mapping_required/);
+  assertSqlMatch(sql, /finished_good_not_purchased/);
+  assertSqlMatch(sql, /IF v_po_status IN \('draft', 'changes_requested'\)/);
+  assertSqlMatch(sql, /NEW\.status IN \('sent', 'approved', 'partially_received'\)/);
+  assertSqlMatch(sql, /central_supply_ops/);
+  assertSqlMatch(sql, /central_kitchen_lead/);
+  assertSqlMatch(sql, /'procurement:po_create'/);
+  assertSqlNotMatch(sql, /unit_price/);
+  assertSqlNotMatch(sql, /send_purchase_order/);
+  assertSqlNotMatch(sql, /owner_patch_confirmed_grn_unit_cost/);
+  assertSqlNotMatch(sql, /DROP TABLE/);
 
   assert.match(proof, /sent PO must have null YCM FK/);
   assert.match(proof, /send must reject unmapped lines/);

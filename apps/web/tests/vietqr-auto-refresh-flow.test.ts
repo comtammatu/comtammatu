@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 function read(path: string): string {
-  return readFileSync(join(process.cwd(), path), "utf8");
+  return readSql(process.cwd(), path);
 }
 
 const migration = read(
-  "../../supabase/migration-archive/20260815170000_vietqr_auto_refresh_and_self_order_unblock.sql",
+  "../../supabase/migrations/20260815170000_vietqr_auto_refresh_and_self_order_unblock.sql",
 );
 const paymentActions = read(
   "app/(protected)/br/[branchId]/pos/payment-actions.ts",
@@ -22,28 +22,23 @@ const selfOrderPaymentPanel = read(
 );
 
 test("migration defines create_remote_payment_intent with in-place amount update", () => {
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.create_remote_payment_intent/,
   );
-  assert.match(migration, /UPDATE public\.payments\s+SET amount = p_amount/);
-  assert.doesNotMatch(
-    migration,
+  assertSqlMatch(migration, /UPDATE public\.payments\s+SET amount = p_amount/);
+  assertSqlNotMatch(migration,
     /RAISE EXCEPTION 'payment_pending_amount_mismatch'/,
   );
 });
 
 test("migration defines self_order_submit with auto-cancelling of pending payment requests", () => {
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.self_order_submit/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /UPDATE public\.self_order_payment_requests\s+SET status = 'cancelled'/,
   );
-  assert.doesNotMatch(
-    migration,
+  assertSqlNotMatch(migration,
     /RAISE EXCEPTION 'self_order_pending_payment_exists'/,
   );
 });

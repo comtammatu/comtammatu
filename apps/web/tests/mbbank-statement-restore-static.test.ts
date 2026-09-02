@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { MBBANK_STATEMENT_PRE_SEPAY_ROWS } from "../app/(protected)/finance/bank-transactions/mbbank-statement-pre-sepay";
+import { readSql, assertSqlMatch } from "./_lib/active-sql.ts";
+
 import {
   MBBANK_STATEMENT_ACCOUNT,
   MBBANK_STATEMENT_OPENING_BANK_DELTA,
@@ -13,55 +14,45 @@ import {
 } from "../app/(protected)/finance/bank-transactions/mbbank-statement-restore-contract";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
-const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 const migration = read(
-  "supabase/migration-archive/20260817204635_restore_bank_ledger_from_mbbank_statement.sql",
+  "supabase/migrations/20260817204635_restore_bank_ledger_from_mbbank_statement.sql",
 );
 const openingMigration = read(
-  "supabase/migration-archive/20260817211739_finance_funds_repoint_opening_effective_at.sql",
+  "supabase/migrations/20260817211739_finance_funds_repoint_opening_effective_at.sql",
 );
 const webhookCutoff = Date.parse("2026-08-08T07:50:00.000Z");
 
 test("MB statement restore keeps one bank movement and attaches SePay later", () => {
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /mbbank_statement/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE UNIQUE INDEX bank_transactions_tenant_reference_fact_uidx/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION private\.upsert_canonical_bank_transaction/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /date_trunc\('minute', v_existing\.occurred_at\)/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /v_existing\.ingest_source = 'mbbank_statement'/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /PERFORM private\.upsert_canonical_bank_transaction/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.restore_mbbank_statement_gap/,
   );
-  assert.match(migration, /auth_is_owner\(v_actor\)/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /auth_is_owner\(v_actor\)/);
+  assertSqlMatch(migration,
     /public\.create_finance_fund_adjustment\(\s*0,\s*p_bank_opening_delta/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /GRANT EXECUTE ON FUNCTION public\.restore_mbbank_statement_gap/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /REVOKE ALL ON FUNCTION private\.upsert_canonical_bank_transaction/,
   );
 
@@ -91,16 +82,14 @@ test("MB statement restore keeps one bank movement and attaches SePay later", ()
     action,
     /MBBANK_STATEMENT_RESTORE_IDEMPOTENCY_KEY/,
   );
-  assert.match(
-    openingMigration,
+  assertSqlMatch(openingMigration,
     /CREATE OR REPLACE FUNCTION public\.repoint_finance_fund_opening/,
   );
-  assert.match(openingMigration, /app\.finance_opening_repoint/);
-  assert.match(
-    openingMigration,
+  assertSqlMatch(openingMigration, /app\.finance_opening_repoint/);
+  assertSqlMatch(openingMigration,
     /IF p_bank_opening_delta <> 0 THEN/,
   );
-  assert.match(openingMigration, /p_opening_effective_at timestamp with time zone/);
+  assertSqlMatch(openingMigration, /p_opening_effective_at timestamp with time zone/);
   assert.match(
     action,
     /p_opening_effective_at: MBBANK_STATEMENT_OPENING_EFFECTIVE_AT/,

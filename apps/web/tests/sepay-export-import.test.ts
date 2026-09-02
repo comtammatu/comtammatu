@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { parseSepayExportRows } from "../app/(protected)/finance/_lib/sepay-export-model";
+import { readSql, assertSqlMatch } from "./_lib/active-sql.ts";
+
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
-const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 const headers = [
   "ID",
@@ -82,7 +83,7 @@ test("SePay export parser fails closed on missing columns and invalid money", ()
 
 test("canonical bank ledger import is atomic and idempotent", () => {
   const migration = read(
-    "supabase/migration-archive/20260719210000_create_canonical_bank_transactions.sql",
+    "supabase/migrations/20260719210000_create_canonical_bank_transactions.sql",
   );
   const action = read(
     "apps/web/app/(protected)/finance/bank-transactions/import-actions.ts",
@@ -90,21 +91,18 @@ test("canonical bank ledger import is atomic and idempotent", () => {
   const page = read(
     "apps/web/app/(protected)/finance/bank-transactions/page.tsx",
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /UNIQUE \(tenant_id, provider_transaction_id\)/,
   );
   const dialog = read(
     "apps/web/app/(protected)/finance/bank-transactions/sepay-import-dialog.tsx",
   );
 
-  assert.match(migration, /UNIQUE \(tenant_id, provider_transaction_id\)/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /UNIQUE \(tenant_id, provider_transaction_id\)/);
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.import_sepay_bank_transactions[\s\S]*FOR v_row IN[\s\S]*bank_transaction_conflict/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /FROM public\.bank_transactions transaction[\s\S]*transaction\.occurred_at >= p_since/,
   );
   assert.match(action, /const importSchema = z\.object/);

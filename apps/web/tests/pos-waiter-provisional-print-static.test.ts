@@ -1,14 +1,15 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch } from "./_lib/active-sql.ts";
+
 
 function readRepo(path: string): string {
-  return readFileSync(join(process.cwd(), "../..", path), "utf8");
+  return readSql(join(process.cwd(), "../.."), path);
 }
 
 const revokeMigration = readRepo(
-  "supabase/migration-archive/20260816084532_waiter_revoke_provisional_print.sql",
+  "supabase/migrations/20260816084532_waiter_revoke_provisional_print.sql",
 );
 const posAuth = readRepo(
   "apps/web/app/(protected)/br/[branchId]/pos/_lib/auth.ts",
@@ -31,10 +32,10 @@ const posPage = readRepo(
 const e2eSeed = readRepo("apps/web/tests/fixtures/supabase-e2e/tenant.sql");
 
 test("waiter template loses pos:print; reprint and kitchen stay", () => {
-  assert.match(revokeMigration, /position_code = 'waiter'/);
-  assert.match(revokeMigration, /array_remove\(template\.permission_keys, 'pos:print'\)/);
-  assert.match(revokeMigration, /permission\.permission_key = 'pos:print'/);
-  assert.match(revokeMigration, /position\.code = 'waiter'/);
+  assertSqlMatch(revokeMigration, /position_code = 'waiter'/);
+  assertSqlMatch(revokeMigration, /array_remove\(template\.permission_keys, 'pos:print'\)/);
+  assertSqlMatch(revokeMigration, /permission\.permission_key = 'pos:print'/);
+  assertSqlMatch(revokeMigration, /position\.code = 'waiter'/);
 });
 
 test("provisional print is cashier-counter only; waiter role is excluded", () => {

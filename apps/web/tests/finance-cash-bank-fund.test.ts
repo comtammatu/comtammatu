@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 import { calculateSepayBankBalance } from "../app/(protected)/finance/_lib/sepay-bank-transaction-model";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 const repoRoot = resolve(process.cwd(), "../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 test("bank balance counts each signed SePay movement once", () => {
   assert.equal(
@@ -80,7 +81,7 @@ test("finance landing presents immutable book funds", () => {
 test("current funds load from one PostgreSQL snapshot of company and branch books", () => {
   const cockpit = read("apps/web/app/(protected)/finance/_lib/cash-cockpit.ts");
   const migration = read(
-    "supabase/migration-archive/20260820021152_sales_branch_cash_books.sql",
+    "supabase/migrations/20260820021152_sales_branch_cash_books.sql",
   );
 
   assert.match(cockpit, /\.rpc\("get_finance_current_funds"\)/);
@@ -104,25 +105,21 @@ test("current funds load from one PostgreSQL snapshot of company and branch book
     /cashOutSince: cashRefunds \+ cashExpenses \+ cashSupplierPayments/,
   );
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /public\.get_cash_ledger_movement_since\(\s*v_opening\.effective_at,\s*v_branch\.id/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /public\.get_bank_ledger_movement_since\(v_company\.effective_at\)/,
   );
-  assert.match(migration, /'cash_variance_adjustments', 0/);
-  assert.doesNotMatch(migration, /public\.pos_sessions|cash_difference/);
-  assert.match(migration, /supplier_payment\.payment_method = 'cash'/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /'cash_variance_adjustments', 0/);
+  assertSqlNotMatch(migration, /public\.pos_sessions|cash_difference/);
+  assertSqlMatch(migration, /supplier_payment\.payment_method = 'cash'/);
+  assertSqlMatch(migration,
     /v_company\.bank_delta[\s\S]*\+ v_bank_in[\s\S]*- v_bank_out[\s\S]*\+ v_bank_adjustments/,
   );
-  assert.match(migration, /finance_fund_entries_one_company_opening/);
-  assert.match(migration, /finance_fund_entries_one_opening_per_branch/);
-  assert.doesNotMatch(
-    migration,
+  assertSqlMatch(migration, /finance_fund_entries_one_company_opening/);
+  assertSqlMatch(migration, /finance_fund_entries_one_opening_per_branch/);
+  assertSqlNotMatch(migration,
     /setting\.value[\s\S]*opening_(cash|bank)|cash_opening_balance'::numeric/,
   );
 });
@@ -130,16 +127,16 @@ test("current funds load from one PostgreSQL snapshot of company and branch book
 test("finance funds use one immutable append-only ledger contract", () => {
   const action = read("apps/web/app/(protected)/finance/cash-actions.ts");
   const migration = read(
-    "supabase/migration-archive/20260726140000_immutable_finance_fund_ledger.sql",
+    "supabase/migrations/20260726140000_immutable_finance_fund_ledger.sql",
   );
   const branchCashMigration = read(
-    "supabase/migration-archive/20260820021152_sales_branch_cash_books.sql",
+    "supabase/migrations/20260820021152_sales_branch_cash_books.sql",
   );
   const branchOpeningCutover = read(
-    "supabase/migration-archive/20260820025641_branch_cash_opening_cutover.sql",
+    "supabase/migrations/20260820025641_branch_cash_opening_cutover.sql",
   );
   const currentFundsMigration = read(
-    "supabase/migration-archive/20260726160405_remove_pos_variance_from_current_funds.sql",
+    "supabase/migrations/20260726160405_remove_pos_variance_from_current_funds.sql",
   );
   const databaseTypes = read("packages/database/src/types/database.types.ts");
   const databaseTest = read("supabase/tests/finance_current_funds_test.sql");
@@ -159,57 +156,45 @@ test("finance funds use one immutable append-only ledger contract", () => {
   assert.doesNotMatch(action, /\.from\("system_settings"\)/);
   assert.match(action, /boundaryMode === "project_start_day"/);
   assert.match(action, /p_cash_opening: 0/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE TABLE public\.finance_fund_entries/,
     "migration must define the append-only ledger",
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE UNIQUE INDEX finance_fund_entries_one_opening_per_tenant/,
     "database must allow one opening per tenant",
   );
-  assert.match(
-    branchCashMigration,
+  assertSqlMatch(branchCashMigration,
     /CREATE UNIQUE INDEX finance_fund_entries_one_company_opening/,
   );
-  assert.match(
-    branchCashMigration,
+  assertSqlMatch(branchCashMigration,
     /CREATE UNIQUE INDEX finance_fund_entries_one_opening_per_branch/,
   );
-  assert.match(
-    branchCashMigration,
+  assertSqlMatch(branchCashMigration,
     /CREATE OR REPLACE FUNCTION public\.initialize_branch_cash_opening/,
   );
-  assert.match(
-    branchOpeningCutover,
+  assertSqlMatch(branchOpeningCutover,
     /CREATE OR REPLACE FUNCTION private\.enforce_fund_entry_cash_sales_branch/,
   );
-  assert.match(
-    branchOpeningCutover,
+  assertSqlMatch(branchOpeningCutover,
     /timezone\('Asia\/Ho_Chi_Minh', timestamp '2026-08-14 00:00:00'\)/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE TRIGGER finance_fund_entries_reject_update_delete/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.get_finance_current_funds/,
     "one RPC snapshot must return the complete current funds result",
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /DROP FUNCTION IF EXISTS public\.set_finance_cash_opening/,
     "mutable opening RPC must be removed",
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /cash_opening_balance[\s\S]*bank_opening_balance[\s\S]*cash_opening_date/,
     "prior setting keys must remain frozen as evidence",
   );
-  assert.match(
-    currentFundsMigration,
+  assertSqlMatch(currentFundsMigration,
     /app\.finance_legacy_cutover_idempotency_key[\s\S]*IS DISTINCT FROM p_idempotency_key::text/,
     "cutover must require an operator-controlled key bound to the opening request",
   );

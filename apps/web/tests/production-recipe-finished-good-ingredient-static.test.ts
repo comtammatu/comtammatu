@@ -1,14 +1,15 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 const repoRoot = resolve(import.meta.dirname, "../../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 test("production recipe upsert migration allows finished goods and guards against circular dependency", () => {
   const migration = read(
-    "supabase/migration-archive/20260827171422_allow_finished_goods_in_production_recipes.sql",
+    "supabase/migrations/20260827171422_allow_finished_goods_in_production_recipes.sql",
   );
 
   assert.match(migration, /CREATE OR REPLACE FUNCTION public\.upsert_production_recipe_lines/);
@@ -18,8 +19,7 @@ test("production recipe upsert migration allows finished goods and guards agains
   assert.match(migration, /WITH RECURSIVE dependency_chain AS/);
   assert.match(migration, /recipe_circular_dependency/);
   // Does NOT restrict ingredient to raw_material only
-  assert.doesNotMatch(
-    migration,
+  assertSqlNotMatch(migration,
     /ingredient\.item_kind = 'raw_material'/,
     "Migration must not restrict recipe ingredients to raw_material only",
   );

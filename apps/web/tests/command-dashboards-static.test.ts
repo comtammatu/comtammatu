@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch } from "./_lib/active-sql.ts";
+
 
 const repoRoot = resolve(process.cwd(), "../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 const ADMIN_COPY = "apps/web/lib/messages/control-surface.ts";
 const FINANCE_PAGE = "apps/web/app/(protected)/finance/page.tsx";
@@ -38,7 +39,7 @@ const BRANCH_DATA =
   "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/data.ts";
 const TODAY_WORK_STATE = "apps/web/lib/staff-runtime/_lib/today-work-state.ts";
 const ATTENDANCE_POLICY_MIGRATION =
-  "supabase/migration-archive/20260719070350_align_attendance_checkout_read_policy.sql";
+  "supabase/migrations/20260719070350_align_attendance_checkout_read_policy.sql";
 const BACKTICK = "`";
 
 function literalWith(pattern: string, flags = "i"): RegExp {
@@ -234,8 +235,7 @@ test("finance and admin copy keep domain vocabulary explicit", () => {
 
 test("finance subroutes share the compact surface and operational vocabulary", () => {
   for (const path of FINANCE_SUBROUTE_SURFACES) {
-    assert.match(
-      read(path),
+    assertSqlMatch(read(path),
       /<AppPage width="xwide" density="compact">/,
       `${path} must use the shared compact finance surface`,
     );
@@ -364,9 +364,9 @@ test("branch runtime reads stay session-scoped with hierarchy-aware checkout pro
   );
   assert.match(data, /isStoreBranch|branchKind === ["']branch["']/);
   assert.match(data, /branchKind\?:/);
-  assert.match(attendancePolicy, /ALTER POLICY "attendance_select"/i);
-  assert.match(attendancePolicy, /auth_tenant_id"?\(\)/);
-  assert.match(
+  assertSqlMatch(attendancePolicy, /ALTER POLICY "attendance_select"/i);
+  assertSqlMatch(attendancePolicy, /auth_tenant_id"?\(\)/);
+  assertSqlMatch(
     attendancePolicy,
     /has_permission"?\("branch_id", 'hr:approve_checkout'::text\)/,
   );

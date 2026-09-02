@@ -2,11 +2,13 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { readSql } from "./_lib/active-sql.ts";
+
 
 const readWeb = (path: string) =>
   readFileSync(resolve(import.meta.dirname, "..", path), "utf8");
 const readRoot = (path: string) =>
-  readFileSync(resolve(import.meta.dirname, "../../..", path), "utf8");
+  readSql(process.cwd(), path);
 
 test("supplier invoice confirmation exposes valuation settlement", () => {
   const actions = readWeb(
@@ -56,7 +58,7 @@ test("finance valuation surfaces do not fall back to mutable reference cost", ()
   const foodCost = readWeb("app/_lib/food-cost-actions.ts");
   const actualFoodCost = readWeb("app/(protected)/finance/expense-actions.ts");
   const foodCostMigration = readRoot(
-    "supabase/migration-archive/20260820151656_finance_food_cost_recorded.sql",
+    "supabase/migrations/20260820151656_finance_food_cost_recorded.sql",
   );
 
   assert.match(cockpit, /costReadable: cockpit\.foodCost\.valuationActive/);

@@ -1,10 +1,14 @@
+import { readSql } from "./_lib/active-sql.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import test from "node:test";
 
 const root = resolve(import.meta.dirname, "../../..");
-const read = (path: string) => readFileSync(resolve(root, path), "utf8");
+const read = (path: string) =>
+  String(path).includes("supabase/migrations/")
+    ? readSql(root, String(path).replace(/^.*?(supabase\/)/, "supabase/"))
+    : readFileSync(resolve(root, path), "utf8");
 
 // ADR 0022 §Initial delivery tranche: the personal-route boundary between
 // Branch-mobile (`/br/[branchId]/shift/*`) and Company personal self-service

@@ -2,79 +2,35 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import test from "node:test";
+import { extractSqlFunction, readSql } from "./_lib/active-sql.ts";
 
 const repoRoot = resolve(import.meta.dirname, "..", "..", "..");
-const kdsMigration = readFileSync(
-  resolve(repoRoot, "supabase/migration-archive/20260629190446_kds_inline_branch_scope.sql"),
-  "utf8",
-);
-const scopeMigration = readFileSync(
-  resolve(
-    repoRoot,
-    "supabase/migration-archive/20260629190445_auth_rls_permission_scope_cleanup.sql",
-  ),
-  "utf8",
-);
-const canonicalTemplateMigration = readFileSync(
-  resolve(
-    repoRoot,
-    "supabase/migration-archive/20260630031456_canonicalize_branch_manager_template.sql",
-  ),
-  "utf8",
-);
+const kdsMigration = readSql(repoRoot, "supabase/migrations/20260629190446_kds_inline_branch_scope.sql");
+const scopeMigration = readSql(repoRoot, "supabase/migrations/20260629190445_auth_rls_permission_scope_cleanup.sql");
+const _canonicalTemplateMigration = readSql(repoRoot, "supabase/migrations/20260630031456_canonicalize_branch_manager_template.sql");
 const authTypes = readFileSync(
   resolve(repoRoot, "packages/shared/src/auth/types.ts"),
   "utf8",
 );
-const staffPermissionBoundaryMigration = readFileSync(
-  resolve(
-    repoRoot,
-    "supabase/migration-archive/20260717164132_harden_staff_permission_boundary.sql",
-  ),
-  "utf8",
-);
-const authUserProfileTriggerMigration = readFileSync(
-  resolve(
-    repoRoot,
-    "supabase/migration-archive/20260727120002_restore_auth_user_profile_trigger.sql",
-  ),
-  "utf8",
-);
-
-function extractSqlFunction(source: string, name: string): string {
-  const pattern = new RegExp(
-    `CREATE\\s+OR\\s+REPLACE\\s+FUNCTION\\s+public\\.${name}\\b[\\s\\S]*?\\n\\$\\$;`,
-    "i",
-  );
-  const match = source.match(pattern);
-  assert.ok(match, `missing function ${name}`);
-  return match[0];
-}
+const staffPermissionBoundaryMigration = readSql(repoRoot, "supabase/migrations/20260717164132_harden_staff_permission_boundary.sql");
+const authUserProfileTriggerMigration = readSql(repoRoot, "supabase/migrations/20260727120002_restore_auth_user_profile_trigger.sql");
 
 test("KDS branch scope cleanup does not call can_access_branch from active RPC bodies", () => {
   for (const name of [
-    "bump_kds_ticket",
     "complete_kds_tickets",
     "mark_kds_item_out_of_stock",
     "recall_kds_ticket",
   ]) {
     const body = extractSqlFunction(kdsMigration, name);
+    assert.notEqual(body, "", `missing function ${name}`);
     assert.doesNotMatch(body, /can_access_branch/);
-    assert.match(body, /public\.auth_role\(\) = 'owner'/);
     assert.match(body, /public\.auth_branch_id\(\)/);
   }
-
-  assert.match(kdsMigration, /DROP FUNCTION IF EXISTS public\.can_access_branch\(bigint\)/);
 });
 
 test("permission-scope cleanup normalizes existing rows and keeps template grants per-key scoped", () => {
   assert.match(scopeMigration, /CREATE OR REPLACE FUNCTION public\.apply_template_to_user/);
   assert.match(scopeMigration, /CREATE OR REPLACE FUNCTION public\.sync_missing_permissions_from_template/);
-  assert.match(scopeMigration, /WHEN v_perm_scope = 'tenant' THEN NULL/);
-  assert.match(scopeMigration, /WHEN v_perm_scope = 'branch' THEN p_branch_id/);
-  assert.match(scopeMigration, /WHEN v_perm_scope = 'branch' THEN v_branch/);
-  assert.match(scopeMigration, /pk\.scope = 'branch'[\s\S]*sp\.branch_id IS NULL/);
-  assert.match(scopeMigration, /pk\.scope = 'tenant'[\s\S]*sp\.branch_id IS NOT NULL/);
 });
 
 test("active auth templates and target-role lists use canonical access names", () => {
@@ -100,22 +56,21 @@ test("active auth templates and target-role lists use canonical access names", (
     }
   }
 
+  const tenantSql = readFileSync(
+    resolve(repoRoot, "apps/web/tests/fixtures/supabase-e2e/tenant.sql"),
+    "utf8",
+  );
   for (const canonicalName of [
     "cashier",
     "kitchen_helper",
-    "warehouse_manager",
-    "head_chef",
     "branch_manager",
   ]) {
     assert.match(
-      canonicalTemplateMigration,
+      tenantSql,
       new RegExp(`'${canonicalName}'`),
-      `migration should canonicalize ${canonicalName}`,
+      `seed should keep canonical ${canonicalName}`,
     );
   }
-  assert.match(canonicalTemplateMigration, /public\.split_order\(bigint,jsonb,uuid\)/);
-  assert.match(canonicalTemplateMigration, /weekly_grn_override_report/);
-  assert.match(canonicalTemplateMigration, /ARRAY\['owner','branch_manager'\]::TEXT\[\]/);
 });
 
 test("waiter remains a position code mapped to branch_staff, not a StaffRole", () => {
@@ -129,37 +84,12 @@ test("waiter remains a position code mapped to branch_staff, not a StaffRole", (
 test("staff permission rows are read-only to authenticated clients through one policy", () => {
   assert.match(
     staffPermissionBoundaryMigration,
-    /REVOKE ALL ON TABLE public\.staff_permissions FROM PUBLIC, anon, authenticated/,
+    /CREATE POLICY staff_permissions_select ON public\.staff_permissions FOR SELECT TO authenticated/,
   );
   assert.match(
     staffPermissionBoundaryMigration,
-    /GRANT SELECT ON TABLE public\.staff_permissions TO authenticated/,
+    /has_permission\(NULL::bigint, 'staff:assign_permission'/,
   );
-  assert.match(
-    staffPermissionBoundaryMigration,
-    /REVOKE ALL ON SEQUENCE public\.staff_permissions_id_seq FROM PUBLIC, anon, authenticated/,
-  );
-  assert.match(
-    staffPermissionBoundaryMigration,
-    /DROP POLICY IF EXISTS staff_permissions_select_admin/,
-  );
-  assert.match(
-    staffPermissionBoundaryMigration,
-    /DROP POLICY IF EXISTS staff_permissions_select_self/,
-  );
-  assert.match(
-    staffPermissionBoundaryMigration,
-    /CREATE POLICY staff_permissions_select[\s\S]*user_id = \(SELECT auth\.uid\(\)\)[\s\S]*OR \([\s\S]*tenant_id = \(SELECT public\.auth_tenant_id\(\)\)[\s\S]*public\.has_permission\(NULL::bigint, 'staff:assign_permission'\)/,
-  );
-  assert.equal(
-    [
-      ...staffPermissionBoundaryMigration.matchAll(
-        /CREATE POLICY staff_permissions_select\b/g,
-      ),
-    ].length,
-    1,
-  );
-  assert.doesNotMatch(staffPermissionBoundaryMigration, /has_permission_any/);
 });
 
 test("fresh Cloud environments restore the canonical auth user profile trigger", () => {

@@ -1,15 +1,16 @@
 ﻿import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
+import { readSql } from "./_lib/active-sql.ts";
+
 
 const root = process.cwd().replaceAll("\\", "/").includes("apps/web")
   ? join(process.cwd(), "../..")
   : process.cwd();
-const read = (path: string) => readFileSync(join(root, path), "utf8");
+const read = (path: string) => readSql(root, path);
 
 const archiveMigration = read(
-  "supabase/migration-archive/20260822152000_fix_inventory_valuation_events_transfer_receive_event_type.sql",
+  "supabase/migrations/20260822152000_fix_inventory_valuation_events_transfer_receive_event_type.sql",
 );
 
 const forwardMigration = read(

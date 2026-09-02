@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 
@@ -9,9 +8,10 @@ import {
   editRpcMappings,
 } from "../app/(protected)/br/[branchId]/pos/_lib/messages";
 import { POS_ERROR_CODES } from "../app/(protected)/br/[branchId]/pos/_utils/error-codes";
+import { readSql } from "./_lib/active-sql.ts";
 
 function readRepo(path: string): string {
-  return readFileSync(join(process.cwd(), "../..", path), "utf8");
+  return readSql(join(process.cwd(), "../.."), path);
 }
 
 test("stale pending-item edits map to a dedicated recovery error", () => {

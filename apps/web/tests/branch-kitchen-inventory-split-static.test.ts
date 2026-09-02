@@ -1,42 +1,37 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { readActiveMigrationSql, readSql, assertSqlMatch } from "./_lib/active-sql.ts";
+
 
 const repoRoot = resolve(
   process.cwd(),
-  existsSync(resolve(process.cwd(), "supabase/migration-archive")) ? "." : "../..",
+  existsSync(resolve(process.cwd(), "supabase/migrations")) ? "." : "../..",
 );
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 function splitMigration(): string {
-  const migration = readdirSync(resolve(repoRoot, "supabase/migration-archive")).find(
-    (name) => name.endsWith("_branch_kitchen_inventory_split.sql"),
-  );
-  assert.ok(migration, "branch kitchen inventory split migration is missing");
-  return read(`supabase/migration-archive/${migration}`);
+  return readActiveMigrationSql(repoRoot);
 }
 
 test("branch kitchen split schema preserves historical locations and snapshots consumption", () => {
   const sql = splitMigration();
 
-  assert.match(sql, /location_kind[\s\S]*'kitchen'/);
-  assert.match(sql, /orders[\s\S]*stock_consumption_location_id/);
-  assert.match(
-    sql,
+  assertSqlMatch(sql, /location_kind[\s\S]*'kitchen'/);
+  assertSqlMatch(sql, /orders[\s\S]*stock_consumption_location_id/);
+  assertSqlMatch(sql,
     /branch_menu_item_daily_holds[\s\S]*stock_consumption_location_id/,
   );
-  assert.match(sql, /stock_transfers[\s\S]*transfer_scope/);
-  assert.match(sql, /stock_transfers[\s\S]*idempotency_key/);
-  assert.match(sql, /stock_transfers[\s\S]*reverses_transfer_id/);
-  assert.match(sql, /branch_ingredient_thresholds[\s\S]*location_id/);
-  assert.match(sql, /branch_ingredient_thresholds[\s\S]*target_stock_level/);
-  assert.match(
-    sql,
+  assertSqlMatch(sql, /stock_transfers[\s\S]*transfer_scope/);
+  assertSqlMatch(sql, /stock_transfers[\s\S]*idempotency_key/);
+  assertSqlMatch(sql, /stock_transfers[\s\S]*reverses_transfer_id/);
+  assertSqlMatch(sql, /branch_ingredient_thresholds[\s\S]*location_id/);
+  assertSqlMatch(sql, /branch_ingredient_thresholds[\s\S]*target_stock_level/);
+  assertSqlMatch(sql,
     /CREATE OR REPLACE FUNCTION public\.prepare_branch_kitchen_split/,
   );
-  assert.match(
-    sql,
+  assertSqlMatch(sql,
     /CREATE OR REPLACE FUNCTION public\.set_branch_kitchen_split/,
   );
 });
@@ -44,27 +39,24 @@ test("branch kitchen split schema preserves historical locations and snapshots c
 test("intra-site transfers are atomic, idempotent, reversible, and correction-safe", () => {
   const sql = splitMigration();
 
-  assert.match(
-    sql,
+  assertSqlMatch(sql,
     /CREATE OR REPLACE FUNCTION public\.commit_intra_site_transfer/,
   );
-  assert.match(
-    sql,
+  assertSqlMatch(sql,
     /CREATE OR REPLACE FUNCTION public\.reverse_intra_site_transfer/,
   );
-  assert.match(sql, /transfer_scope\s*=\s*'intra_site'/);
-  assert.match(sql, /status[\s\S]*'received'/);
-  assert.match(sql, /ORDER BY[\s\S]*ingredient_id[\s\S]*FOR UPDATE/i);
-  assert.match(sql, /intra_site_transfer_insufficient_stock/);
-  assert.match(sql, /intra_site_transfer_idempotency_conflict/);
-  assert.match(sql, /intra_site_transfer_reverse_exceeds_remaining/);
-  assert.match(sql, /intra_site_transfer_requires_reversal/);
-  assert.match(sql, /intra_site_transfer_document_immutable/);
-  assert.match(sql, /intra_site_transfer_items_immutable/);
-  assert.match(sql, /intra_site_transfer_ledger_incomplete/);
-  assert.match(sql, /type[\s\S]*'transfer_out'[\s\S]*type[\s\S]*'transfer_in'/);
-  assert.match(
-    sql,
+  assertSqlMatch(sql, /transfer_scope\s*=\s*'intra_site'/);
+  assertSqlMatch(sql, /status[\s\S]*'received'/);
+  assertSqlMatch(sql, /ORDER BY[\s\S]*ingredient_id[\s\S]*FOR UPDATE/i);
+  assertSqlMatch(sql, /intra_site_transfer_insufficient_stock/);
+  assertSqlMatch(sql, /intra_site_transfer_idempotency_conflict/);
+  assertSqlMatch(sql, /intra_site_transfer_reverse_exceeds_remaining/);
+  assertSqlMatch(sql, /intra_site_transfer_requires_reversal/);
+  assertSqlMatch(sql, /intra_site_transfer_document_immutable/);
+  assertSqlMatch(sql, /intra_site_transfer_items_immutable/);
+  assertSqlMatch(sql, /intra_site_transfer_ledger_incomplete/);
+  assertSqlMatch(sql, /type[\s\S]*'transfer_out'[\s\S]*type[\s\S]*'transfer_in'/);
+  assertSqlMatch(sql,
     /REVOKE EXECUTE[\s\S]*commit_intra_site_transfer[\s\S]*FROM PUBLIC, anon/,
   );
 });
@@ -72,33 +64,29 @@ test("intra-site transfers are atomic, idempotent, reversible, and correction-sa
 test("POS, count assignment, threshold, and report contracts are location-aware", () => {
   const sql = splitMigration();
 
-  assert.match(sql, /v_order\.stock_consumption_location_id/);
-  assert.match(sql, /LIMIT 1;\$old_location\$, E'\\r\\n', E'\\n'\)/);
-  assert.match(sql, /pg_get_functiondef\([\s\S]*E'\\r\\n',[\s\S]*E'\\n'/);
-  assert.match(sql, /post_pos_sale_consumption_if_ready/);
-  assert.match(sql, /E'\s*AND sm\.location_id = v_location_id\\n'/);
-  assert.match(sql, /prior movements across all locations/);
-  assert.match(
-    sql,
+  assertSqlMatch(sql, /v_order\.stock_consumption_location_id/);
+  assertSqlMatch(sql, /LIMIT 1;\$old_location\$, E'\\r\\n', E'\\n'\)/);
+  assertSqlMatch(sql, /pg_get_functiondef\([\s\S]*E'\\r\\n',[\s\S]*E'\\n'/);
+  assertSqlMatch(sql, /post_pos_sale_consumption_if_ready/);
+  assertSqlMatch(sql, /E'\s*AND sm\.location_id = v_location_id\\n'/);
+  assertSqlMatch(sql, /prior movements across all locations/);
+  assertSqlMatch(sql,
     /inventory_count_assignments[\s\S]*location_id = v_kitchen_id/,
   );
-  assert.match(sql, /get_branch_stock_thresholds\([\s\S]*p_location_id bigint/);
-  assert.match(
-    sql,
+  assertSqlMatch(sql, /get_branch_stock_thresholds\([\s\S]*p_location_id bigint/);
+  assertSqlMatch(sql,
     /get_branch_smart_reorder_suggestions\([\s\S]*p_location_id bigint/,
   );
-  assert.match(sql, /transfer_scope\s*=\s*'inter_site'/);
-  assert.match(
-    sql,
+  assertSqlMatch(sql, /transfer_scope\s*=\s*'inter_site'/);
+  assertSqlMatch(sql,
     /private\.get_finance_operating_cockpit_without_inventory_breakdown/,
   );
-  assert.match(sql, /finance_goods_in_scope_patch_failed/);
-  assert.match(
-    sql,
+  assertSqlMatch(sql, /finance_goods_in_scope_patch_failed/);
+  assertSqlMatch(sql,
     /public\.kds_tickets[\s\S]*'pending', 'preparing', 'ready'/,
   );
-  assert.match(sql, /inventory\.stock_low:%s:%s:%s/);
-  assert.match(sql, /stock\/on-hand\?location=%s/);
+  assertSqlMatch(sql, /inventory\.stock_low:%s:%s:%s/);
+  assertSqlMatch(sql, /stock\/on-hand\?location=%s/);
 });
 
 test("transfer UI exposes scope and reversal instead of one-sided correction", () => {

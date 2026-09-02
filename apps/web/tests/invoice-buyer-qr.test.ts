@@ -1,82 +1,69 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 const root = join(process.cwd(), "../..");
-const readRepo = (path: string) => readFileSync(join(root, path), "utf8");
+const readRepo = (path: string) => readSql(root, path);
 const migration = readRepo(
-  "supabase/migration-archive/20260725160907_add_customer_invoice_qr_flow.sql",
+  "supabase/migrations/20260725160907_add_customer_invoice_qr_flow.sql",
 );
 const worker = readRepo("apps/web/lib/tax-invoice-issue-worker.ts");
 
 test("customer invoice QR keeps buyer writes private and before issuance claim", () => {
-  assert.match(migration, /CREATE TABLE public\.tax_invoice_buyer_requests/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /CREATE TABLE public\.tax_invoice_buyer_requests/);
+  assertSqlMatch(migration,
     /ALTER TABLE public\.tax_invoice_buyer_requests ENABLE ROW LEVEL SECURITY/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /REVOKE ALL ON TABLE public\.tax_invoice_buyer_requests[\s\S]*PUBLIC, anon, authenticated/,
   );
-  assert.match(migration, /extensions\.gen_random_bytes\(24\)/);
-  assert.match(migration, /extensions\.digest\(/);
-  assert.match(migration, /pg_catalog\.pg_advisory_xact_lock/);
-  assert.match(migration, /NEW\.payload := NEW\.payload - 'payment_qr'/);
-  assert.match(migration, /- 'invoice_qr'/);
-  assert.match(migration, /entry\.block->>'type' IS DISTINCT FROM 'paymentQr'/);
-  assert.match(migration, /entry\.block->>'type' IS DISTINCT FROM 'invoiceQr'/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /extensions\.gen_random_bytes\(24\)/);
+  assertSqlMatch(migration, /extensions\.digest\(/);
+  assertSqlMatch(migration, /pg_catalog\.pg_advisory_xact_lock/);
+  assertSqlMatch(migration, /NEW\.payload := NEW\.payload - 'payment_qr'/);
+  assertSqlMatch(migration, /- 'invoice_qr'/);
+  assertSqlMatch(migration, /entry\.block->>'type' IS DISTINCT FROM 'paymentQr'/);
+  assertSqlMatch(migration, /entry\.block->>'type' IS DISTINCT FROM 'invoiceQr'/);
+  assertSqlMatch(migration,
     /v_available_at := v_payment\.paid_at \+ interval '2 hours'/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /FROM public\.tax_invoice_issue_jobs job[\s\S]*JOIN public\.payments payment[\s\S]*payment\.id = job\.payment_id[\s\S]*JOIN public\.tax_invoices invoice[\s\S]*job\.status = 'queued'[\s\S]*invoice\.status = 'draft'/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /job\.available_at <= now\(\)[\s\S]*FOR UPDATE SKIP LOCKED/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /'invoiceTime', v_payment\.paid_at[\s\S]*'items', v_items/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /WHERE job\.status = 'queued'[\s\S]*job\.tax_invoice_id IS NULL[\s\S]*PERFORM private\.upsert_tax_invoice_issue_job/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /INSERT INTO public\.tax_invoices[\s\S]*'draft'[\s\S]*v_payment\.paid_at/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /submit_invoice_buyer_request_as_system[\s\S]*FOR UPDATE[\s\S]*UPDATE public\.tax_invoices[\s\S]*buyer_tax_code[\s\S]*invoice_payload = v_payload[\s\S]*available_at = now\(\)/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /prepare_tax_invoice_issue_job_as_system[\s\S]*status = 'signing'[\s\S]*provider_ref = btrim\(p_provider_ref\)/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /OLD\.invoice_payload -> 'draftSnapshot'[\s\S]*IS DISTINCT FROM NEW\.invoice_payload -> 'draftSnapshot'/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /NOT \(COALESCE\(NEW\.provider_data, '\{\}'::jsonb\) \? 'invoiceSnapshot'\)[\s\S]*NEW\.provider_data :=[\s\S]*jsonb_build_object\('invoiceSnapshot', OLD\.provider_data -> 'invoiceSnapshot'\)[\s\S]*jsonb_typeof\(OLD\.provider_data #> '\{invoiceSnapshot,draftSnapshot\}'\)/,
   );
-  assert.match(migration, /ON CONFLICT \(tenant_id, order_id\) DO NOTHING/);
-  assert.match(migration, /status IN \('open', 'submitted', 'expired'\)/);
-  assert.match(migration, /close_reason = 'customer_submitted'/);
-  assert.match(migration, /close_reason = 'deadline_elapsed'/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /ON CONFLICT \(tenant_id, order_id\) DO NOTHING/);
+  assertSqlMatch(migration, /status IN \('open', 'submitted', 'expired'\)/);
+  assertSqlMatch(migration, /close_reason = 'customer_submitted'/);
+  assertSqlMatch(migration, /close_reason = 'deadline_elapsed'/);
+  assertSqlMatch(migration,
     /prepare_tax_invoice_issue_job_as_system[\s\S]*FROM public\.tax_invoice_buyer_requests request[\s\S]*FOR UPDATE[\s\S]*FROM public\.tax_invoice_issue_jobs job[\s\S]*FOR UPDATE[\s\S]*FROM public\.tax_invoices invoice[\s\S]*FOR UPDATE/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /REVOKE ALL ON FUNCTION public\.queue_tax_invoice_issue_job_for_completed_order\([\s\S]*FROM PUBLIC, anon, authenticated, service_role;[\s\S]*GRANT EXECUTE ON FUNCTION public\.queue_tax_invoice_issue_job_for_completed_order\([\s\S]*TO authenticated, service_role;/,
   );
   assert.match(worker, /Promise\.all\(/);
@@ -86,8 +73,7 @@ test("customer invoice QR keeps buyer writes private and before issuance claim",
   assert.doesNotMatch(worker, /\{ p_limit: 20, p_lease_seconds: 300 \}/);
   assert.doesNotMatch(worker, /const jobs = \[\.\.\.\(data \?\? \[\]\)\]/);
   assert.doesNotMatch(worker, /for \(const job of data \?\? \[\]\)/);
-  assert.doesNotMatch(
-    migration,
+  assertSqlNotMatch(migration,
     /interval '10 minutes'|SET token_hash = EXCLUDED\.token_hash/,
   );
 });
@@ -96,13 +82,13 @@ test("backlog HĐĐT drafts send the S-invoice submit instant", () => {
   const helper = readRepo("packages/shared/src/hddt/issue-date.ts");
   const issuer = readRepo("apps/web/lib/hddt-per-order.ts");
   const evening = readRepo(
-    "supabase/migration-archive/20260818101813_hddt_evening_immediate_issue.sql",
+    "supabase/migrations/20260818101813_hddt_evening_immediate_issue.sql",
   );
   const requeue = readRepo(
-    "supabase/migration-archive/20260818161136_hddt_backlog_submit_date.sql",
+    "supabase/migrations/20260818161136_hddt_backlog_submit_date.sql",
   );
   const collision = readRepo(
-    "supabase/migration-archive/20260818224935_hddt_uuid_collision_rebind.sql",
+    "supabase/migrations/20260818224935_hddt_uuid_collision_rebind.sql",
   );
 
   assert.match(helper, /allowBacklogSubmitDate === true/);
@@ -114,51 +100,44 @@ test("backlog HĐĐT drafts send the S-invoice submit instant", () => {
     /allowBacklogSubmitDate: parsed\.data\.allowBacklogSubmitDate === true/,
   );
   assert.match(issuer, /errorCode: "invoice_issue_date_not_today"/);
-  assert.match(
-    evening,
+  assertSqlMatch(evening,
     /EXTRACT\(\s*HOUR FROM \(p_paid_at AT TIME ZONE 'Asia\/Ho_Chi_Minh'\)\s*\) >= 22 THEN p_paid_at/,
   );
-  assert.match(requeue, /job\.status = 'blocked'/);
-  assert.match(requeue, /invoice\.status = 'draft'/);
-  assert.match(requeue, /last_error = 'invoice_issue_date_not_today'/);
-  assert.match(requeue, /INVOICE_ISSUE_DATE_INVALID_TT78/);
-  assert.match(
-    requeue,
+  assertSqlMatch(requeue, /job\.status = 'blocked'/);
+  assertSqlMatch(requeue, /invoice\.status = 'draft'/);
+  assertSqlMatch(requeue, /last_error = 'invoice_issue_date_not_today'/);
+  assertSqlMatch(requeue, /INVOICE_ISSUE_DATE_INVALID_TT78/);
+  assertSqlMatch(requeue,
     /jsonb_build_object\('allowBacklogSubmitDate', true\)/,
   );
-  assert.match(collision, /hddt_uuid_collision_expected_pairs_invalid/);
-  assert.match(collision, /uq_tax_invoices_issued_invoice_number/);
-  assert.match(collision, /tax_invoice_number_already_bound/);
-  assert.match(collision, /status = 'cancelled'/);
-  assert.match(
-    collision,
+  assertSqlMatch(collision, /hddt_uuid_collision_expected_pairs_invalid/);
+  assertSqlMatch(collision, /uq_tax_invoices_issued_invoice_number/);
+  assertSqlMatch(collision, /tax_invoice_number_already_bound/);
+  assertSqlMatch(collision, /status = 'cancelled'/);
+  assertSqlMatch(collision,
     /jsonb_build_object\('allowBacklogSubmitDate', true\)/,
   );
-  assert.doesNotMatch(requeue, /reconcile_required/);
+  assertSqlNotMatch(requeue, /reconcile_required/);
 });
 
 test("buyer request submit close_reason matches queue_submitted constraint", () => {
   const submitMigration = readRepo(
-    "supabase/migration-archive/20260808130119_hddt_buyer_kind_invoice_payload.sql",
+    "supabase/migrations/20260808130119_hddt_buyer_kind_invoice_payload.sql",
   );
   const closeStateMigration = readRepo(
-    "supabase/migration-archive/20260811030705_hddt_buyer_request_queue_submitted_close_reason.sql",
+    "supabase/migrations/20260811030705_hddt_buyer_request_queue_submitted_close_reason.sql",
   );
 
-  assert.match(
-    submitMigration,
+  assertSqlMatch(submitMigration,
     /submit_invoice_buyer_request_as_system[\s\S]*close_reason = 'queue_submitted'/,
   );
-  assert.match(
-    closeStateMigration,
+  assertSqlMatch(closeStateMigration,
     /DROP CONSTRAINT tax_invoice_buyer_requests_close_state_check/,
   );
-  assert.match(
-    closeStateMigration,
+  assertSqlMatch(closeStateMigration,
     /status = 'submitted'[\s\S]*close_reason = 'queue_submitted'/,
   );
-  assert.match(
-    closeStateMigration,
+  assertSqlMatch(closeStateMigration,
     /WHERE status = 'submitted'\s+AND close_reason = 'customer_submitted'/,
   );
 });
@@ -317,27 +296,23 @@ test("POS defers buyer details to the receipt QR; Self-Order may collect VAT inv
   );
   assert.doesNotMatch(form, /invoiceBuyer\.optional/);
   const zeroTotalMigration = readRepo(
-    "supabase/migration-archive/20260812105224_hddt_discount_projection_zero_total.sql",
+    "supabase/migrations/20260812105224_hddt_discount_projection_zero_total.sql",
   );
-  assert.match(
-    zeroTotalMigration,
+  assertSqlMatch(zeroTotalMigration,
     /OR EXISTS \([\s\S]*invoice\.status = 'not_required'/,
   );
-  assert.match(
-    zeroTotalMigration,
+  assertSqlMatch(zeroTotalMigration,
     /WHEN v_invoice\.status = 'not_required'[\s\S]*THEN 'not_required'/,
   );
-  assert.match(
-    zeroTotalMigration,
+  assertSqlMatch(zeroTotalMigration,
     /RETURN jsonb_build_object\('status', 'not_required'\)/,
   );
   const buyerKindMigration = readRepo(
-    "supabase/migration-archive/20260808130119_hddt_buyer_kind_invoice_payload.sql",
+    "supabase/migrations/20260808130119_hddt_buyer_kind_invoice_payload.sql",
   );
-  assert.match(buyerKindMigration, /buyerKind/);
-  assert.match(
-    buyerKindMigration,
+  assertSqlMatch(buyerKindMigration, /buyerKind/);
+  assertSqlMatch(buyerKindMigration,
     /v_kind NOT IN \('business', 'individual'\)/,
   );
-  assert.match(buyerKindMigration, /p_buyer_kind text DEFAULT NULL/);
+  assertSqlMatch(buyerKindMigration, /p_buyer_kind text DEFAULT NULL/);
 });

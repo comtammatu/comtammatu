@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch } from "./_lib/active-sql.ts";
+
 
 const repoRoot = join(import.meta.dirname, "../../..");
 
 function read(path: string): string {
-  return readFileSync(join(repoRoot, path), "utf8");
+  return readSql(repoRoot, path);
 }
 
 test("count slip review queues exclude the reviewer's own employee slip", () => {
@@ -36,7 +37,7 @@ test("count slip action rejects self-review before calling the database RPC", ()
     "apps/web/app/(protected)/inventory/count-slips/actions.ts",
   );
   const migration = read(
-    "supabase/migration-archive/20260826163516_inventory_role_count_and_snapshot_decouple.sql",
+    "supabase/migrations/20260826163516_inventory_role_count_and_snapshot_decouple.sql",
   );
 
   assert.match(action, /resolveCountSlipReviewerEmployeeId/);
@@ -57,9 +58,8 @@ test("count slip action rejects self-review before calling the database RPC", ()
     "self-review preflight must run before the recount RPC",
   );
 
-  assert.match(migration, /cannot_review_own_slip/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /cannot_review_own_slip/);
+  assertSqlMatch(migration,
     /e\.id = v_slip\.employee_id AND e\.profile_id = v_uid/,
   );
 });

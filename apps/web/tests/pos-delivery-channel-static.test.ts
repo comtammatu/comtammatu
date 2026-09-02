@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { test } from "node:test";
 import { normalizeEol } from "./static-source";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 const read = (path: string) =>
-  normalizeEol(readFileSync(join(process.cwd(), path), "utf8"));
+  normalizeEol(readSql(process.cwd(), path));
 
 const migration = read(
-  "../../supabase/migration-archive/20260820174417_pos_delivery_channel.sql",
+  "../../supabase/migrations/20260820174417_pos_delivery_channel.sql",
 );
 const menuFields = read(
   "app/(protected)/menu/item-channel-prices-fields.tsx",
@@ -22,21 +22,19 @@ const decisions = read("../../docs/plan/decisions.md");
 const einvoice = read("../../docs/ref/einvoice-tax.md");
 
 test("delivery migration allows platform tender and channel prices", () => {
-  assert.match(migration, /order_type = ANY \(ARRAY\['dine_in'::text, 'takeaway'::text, 'delivery'::text\]\)/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /order_type = ANY \(ARRAY\['dine_in'::text, 'takeaway'::text, 'delivery'::text\]\)/);
+  assertSqlMatch(migration,
     /payment_method = ANY \(ARRAY\['cash'::text, 'vietqr'::text, 'platform'::text\]\)/,
   );
-  assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.menu_item_channel_prices/);
-  assert.match(migration, /FUNCTION public\.confirm_platform_payment/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /CREATE TABLE IF NOT EXISTS public\.menu_item_channel_prices/);
+  assertSqlMatch(migration, /FUNCTION public\.confirm_platform_payment/);
+  assertSqlMatch(migration,
     /v_payment\.method NOT IN \('vietqr', 'cash', 'platform'\)/,
   );
-  assert.match(migration, /platform_revenue/);
-  assert.match(migration, /delivery_revenue/);
-  assert.match(migration, /seed_menu_item_channel_prices/);
-  assert.match(migration, /payments_method_check[\s\S]*platform/);
+  assertSqlMatch(migration, /platform_revenue/);
+  assertSqlMatch(migration, /delivery_revenue/);
+  assertSqlMatch(migration, /seed_menu_item_channel_prices/);
+  assertSqlMatch(migration, /payments_method_check[\s\S]*platform/);
 });
 
 test("menu channel prices UI supports per-platform and apply-all", () => {
@@ -148,18 +146,15 @@ test("POS session list treats delivery as Mang về ops queue with dual identity
   assert.match(printActions, /order\.order_type === "delivery"/);
 
   const deliveryUnblockMigration = read(
-    "../../supabase/migration-archive/20260822162000_delivery_order_ref_unblock_and_receipt_payload.sql",
+    "../../supabase/migrations/20260822162000_delivery_order_ref_unblock_and_receipt_payload.sql",
   );
-  assert.match(
-    deliveryUnblockMigration,
+  assertSqlMatch(deliveryUnblockMigration,
     /DROP INDEX IF EXISTS public\.orders_branch_delivery_ref_active_uidx/,
   );
-  assert.match(
-    deliveryUnblockMigration,
+  assertSqlMatch(deliveryUnblockMigration,
     /'delivery_platform',\s*v_order\.delivery_platform/,
   );
-  assert.match(
-    deliveryUnblockMigration,
+  assertSqlMatch(deliveryUnblockMigration,
     /'external_order_ref',\s*v_order\.external_order_ref/,
   );
 
@@ -170,14 +165,12 @@ test("POS session list treats delivery as Mang về ops queue with dual identity
 });
 
 test("server re-prices from channel helper; POS list price follows append target", () => {
-  assert.match(migration, /pos_resolve_item_list_price\(/);
-  assert.match(migration, /channel_price_missing/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /pos_resolve_item_list_price\(/);
+  assertSqlMatch(migration, /channel_price_missing/);
+  assertSqlMatch(migration,
     /v_base_price := public\.pos_resolve_item_list_price\(\s*p_tenant_id/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /v_base_price := public\.pos_resolve_item_list_price\(\s*v_order\.tenant_id/,
   );
 
@@ -201,31 +194,25 @@ test("server re-prices from channel helper; POS list price follows append target
 
 test("delivery sides use channel list price on server and POS customizer", () => {
   const sidesMigration = read(
-    "../../supabase/migration-archive/20260821044934_delivery_side_channel_list_price.sql",
+    "../../supabase/migrations/20260821044934_delivery_side_channel_list_price.sql",
   );
-  assert.match(
-    sidesMigration,
+  assertSqlMatch(sidesMigration,
     /pos_resolve_item_list_price\(\s*p_tenant_id,\s*mi\.id/,
   );
   // Production append_order_items identity (not p_request_key text).
-  assert.match(
-    sidesMigration,
+  assertSqlMatch(sidesMigration,
     /p_order_id bigint, p_items jsonb, p_idempotency_key uuid/,
   );
-  assert.doesNotMatch(
-    sidesMigration,
+  assertSqlNotMatch(sidesMigration,
     /p_order_id bigint, p_items jsonb, p_request_key text/,
   );
-  assert.match(
-    sidesMigration,
+  assertSqlMatch(sidesMigration,
     /COALESCE\(v_item -> 'sides', '\[\]'::JSONB\),\s*p_order_type,\s*v_platform/,
   );
-  assert.match(
-    sidesMigration,
+  assertSqlMatch(sidesMigration,
     /COALESCE\(v_item -> 'sides', '\[\]'::JSONB\),\s*v_order\.order_type,\s*v_order\.delivery_platform/,
   );
-  assert.match(
-    sidesMigration,
+  assertSqlMatch(sidesMigration,
     /COALESCE\(p_sides, '\[\]'::JSONB\),\s*v_order\.order_type,\s*v_order\.delivery_platform/,
   );
 

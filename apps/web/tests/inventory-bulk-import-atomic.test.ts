@@ -1,3 +1,4 @@
+import { readSql } from "./_lib/active-sql.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -6,7 +7,9 @@ import { test } from "node:test";
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 
 function read(path: string): string {
-  return readFileSync(`${root}${path}`, "utf8");
+  return String(path).includes("supabase/migrations/")
+    ? readSql(root, String(path).replace(/^.*?(supabase\/)/, "supabase/"))
+    : readFileSync(`${root}${path}`, "utf8");
 }
 
 function sourceBetween(source: string, start: string, end: string): string {

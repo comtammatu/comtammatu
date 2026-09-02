@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch } from "./_lib/active-sql.ts";
+
 
 const repoRoot = resolve(process.cwd(), "../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 const exists = (path: string) => existsSync(resolve(repoRoot, path));
 
 test("operator routes use a route group without wrapping station apps", () => {
@@ -705,56 +707,47 @@ test("branch settings detail routes stay inside the Branch operator plane", () =
     /<AppPage\b|AppPageHeader|BranchManagementShell|OwnerModuleShell|ControlSurfaceShell|ManagementShell|KpiCard/,
   );
 
-  assert.match(
-    read(
+  assertSqlMatch(read(
       "apps/web/app/(protected)/br/[branchId]/(operator)/settings/pos/page.tsx",
     ),
     /messages\.settings\.branch\.posSetupDescription/,
   );
-  assert.match(
-    read(
+  assertSqlMatch(read(
       "apps/web/app/(protected)/br/[branchId]/(operator)/settings/pos/page.tsx",
     ),
     /<TerminalsClient[\s\S]*embedded/,
   );
-  assert.match(
-    read(
+  assertSqlMatch(read(
       "apps/web/app/(protected)/br/[branchId]/(operator)/settings/pos/page.tsx",
     ),
     /<StockControlCard[\s\S]*embedded/,
   );
-  assert.match(
-    read(
+  assertSqlMatch(read(
       "apps/web/app/(protected)/br/_shared/settings/pos/stock-control-card.tsx",
     ),
     /if \(embedded\) return content/,
   );
-  assert.match(
-    read(
+  assertSqlMatch(read(
       "apps/web/app/(protected)/br/[branchId]/(operator)/settings/kds/page.tsx",
     ),
     /messages\.settings\.branch\.kdsSetupDescription/,
   );
-  assert.match(
-    read(
+  assertSqlMatch(read(
       "apps/web/app/(protected)/br/[branchId]/(operator)/settings/kds/page.tsx",
     ),
     /<StationsClient[\s\S]*embedded/,
   );
-  assert.match(
-    read(
+  assertSqlMatch(read(
       "apps/web/app/(protected)/br/[branchId]/(operator)/settings/tables/page.tsx",
     ),
     /messages\.settings\.branch\.tablesDescription/,
   );
-  assert.match(
-    read(
+  assertSqlMatch(read(
       "apps/web/app/(protected)/br/[branchId]/(operator)/settings/tables/page.tsx",
     ),
     /<TablesClient[\s\S]*embedded/,
   );
-  assert.match(
-    read(
+  assertSqlMatch(read(
       "apps/web/app/(protected)/br/[branchId]/(operator)/settings/printers/page.tsx",
     ),
     /messages\.settings\.branch\.printersDescription/,
@@ -914,7 +907,7 @@ test("employee profile self-service update uses the scoped profile RPC", () => {
   );
   const copy = read("apps/web/lib/messages/employee.ts");
   const migration = read(
-    "supabase/migration-archive/20260707165303_add_profile_birth_date.sql",
+    "supabase/migrations/20260707165303_add_profile_birth_date.sql",
   );
 
   assert.match(action, /z\.object/);
@@ -952,8 +945,8 @@ test("employee profile self-service update uses the scoped profile RPC", () => {
   assert.match(copy, /title: "Hồ sơ"/);
   assert.doesNotMatch(copy, /Hồ sơ cá nhân, ca hôm nay và công lương/);
   assert.doesNotMatch(copy, /URL ảnh đại diện/);
-  assert.match(migration, /ADD COLUMN IF NOT EXISTS birth_date date/);
-  assert.match(migration, /p_birth_date date DEFAULT NULL::date/);
+  assertSqlMatch(migration, /ADD COLUMN IF NOT EXISTS birth_date date/);
+  assertSqlMatch(migration, /p_birth_date date DEFAULT NULL::date/);
 });
 
 test("manager smart card counts pending waste approvals with checkouts", () => {

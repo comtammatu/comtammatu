@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 
 const repoRoot = join(import.meta.dirname, "../../..");
-const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 
 test("Branch leave approvals own a fixed-scope touch presenter", () => {
@@ -51,7 +53,7 @@ test("leave data is neutral while Owner surface keeps its desktop presenter", ()
     "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/data.ts",
   );
   const migration = read(
-    "supabase/migration-archive/20260718174604_canonical_auth_role_position_cleanup.sql",
+    "supabase/migrations/20260718174604_canonical_auth_role_position_cleanup.sql",
   );
   const ownerSurface = read(
     "apps/web/app/(protected)/hr/leave-requests-table.tsx",
@@ -72,20 +74,16 @@ test("leave data is neutral while Owner surface keeps its desktop presenter", ()
     dashboardData,
     /\.from\("leave_requests"\)|staffRoleFromPositionCode/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.get_leave_review_queue\([\s\S]*?SECURITY DEFINER[\s\S]*?SET search_path TO ''/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /requester_profile\.branch_id = p_branch_id[\s\S]*?IN \('cashier', 'chef', 'branch_staff'\)/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /GRANT EXECUTE ON FUNCTION public\.get_leave_review_queue\(bigint, boolean\)\s+TO authenticated/,
   );
-  assert.doesNotMatch(
-    migration.match(
+  assertSqlNotMatch(migration.match(
       /CREATE OR REPLACE FUNCTION public\.get_leave_review_queue\([\s\S]*?COMMENT ON FUNCTION public\.get_leave_review_queue\(bigint, boolean\)/,
     )?.[0] ?? "",
     /base_salary|bank_account|contract_type|insurance_base|id_number/,

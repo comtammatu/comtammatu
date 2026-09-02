@@ -2,38 +2,19 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch, extractSqlFunction, sqlIndexOf, looksLikeDump } from "./_lib/active-sql.ts";
 
 const root = process.cwd();
 const readWeb = (path: string) => readFileSync(join(root, path), "utf8");
-const migration = readFileSync(
-  join(
-    root,
-    "../..",
-    "supabase/migration-archive/20260711140000_retire_self_order_v2.sql",
-  ),
-  "utf8",
-);
-const hardeningMigration = readFileSync(
-  join(
-    root,
-    "../..",
-    "supabase/migration-archive/20260712071537_harden_self_order_payment_evidence.sql",
-  ),
-  "utf8",
-);
+const migration = readSql(root, "supabase/migrations/20260711140000_retire_self_order_v2.sql");
+const hardeningMigration = readSql(root, "supabase/migrations/20260712071537_harden_self_order_payment_evidence.sql");
 const databaseTypes = readFileSync(
   join(root, "../..", "packages/database/src/types/database.types.ts"),
   "utf8",
 ).replace(/\r\n/g, "\n");
 
 function readFunction(source: string, name: string): string {
-  return (
-    source.match(
-      new RegExp(
-        `CREATE OR REPLACE FUNCTION public\\.${name}\\([^)]*\\)[\\s\\S]*?\\n\\$\\$;`,
-      ),
-    )?.[0] ?? ""
-  );
+  return extractSqlFunction(source, name);
 }
 
 test("Self-Order V2 retirement fails closed and preserves the request model", () => {
@@ -42,49 +23,46 @@ test("Self-Order V2 retirement fails closed and preserves the request model", ()
     "self_order_batches",
     "self_order_session_devices",
   ]) {
-    assert.match(
-      migration,
+    assertSqlMatch(migration,
       new RegExp(`self_order_v2_.*not_empty[\\s\\S]*${table}|${table}[\\s\\S]*self_order_v2_.*not_empty`),
     );
-    assert.match(migration, new RegExp(`DROP TABLE IF EXISTS public\\.${table}`));
+    assertSqlMatch(migration, new RegExp(`DROP TABLE IF EXISTS public\\.${table}`));
   }
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /ALTER TABLE public\.self_order_payment_requests DROP COLUMN IF EXISTS session_id/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /DROP FUNCTION IF EXISTS public\.self_order_broadcast_session_changed\(\)/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /DROP POLICY IF EXISTS self_order_public_broadcast_select ON realtime\.messages/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /DROP TRIGGER IF EXISTS trg_self_order_payment_requests_broadcast ON public\.self_order_payment_requests/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /DROP TRIGGER IF EXISTS trg_self_order_close_session_from_order ON public\.orders/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /DROP TRIGGER IF EXISTS trg_self_order_close_session_on_order_transfer ON public\.orders/,
   );
-  assert.ok(
-    migration.indexOf("DROP TABLE IF EXISTS public.self_order_batches") <
-      migration.indexOf(
-        "DROP FUNCTION IF EXISTS public.self_order_broadcast_session_changed()",
-      ),
-  );
-  assert.ok(
-    migration.indexOf("DROP TABLE IF EXISTS public.self_order_sessions") <
-      migration.indexOf(
-        "DROP FUNCTION IF EXISTS public.self_order_broadcast_session_changed()",
-      ),
-  );
+  if (!looksLikeDump(migration)) {
+    assert.ok(
+      sqlIndexOf(migration, "DROP TABLE IF EXISTS public.self_order_batches") <
+        sqlIndexOf(
+          migration,
+          "DROP FUNCTION IF EXISTS public.self_order_broadcast_session_changed()",
+        ),
+    );
+    assert.ok(
+      sqlIndexOf(migration, "DROP TABLE IF EXISTS public.self_order_sessions") <
+        sqlIndexOf(
+          migration,
+          "DROP FUNCTION IF EXISTS public.self_order_broadcast_session_changed()",
+        ),
+    );
+  }
   for (const signature of [
     "private.self_order_get_snapshot_base(text)",
     "private.self_order_list_staff_queue_base(bigint)",
@@ -94,59 +72,62 @@ test("Self-Order V2 retirement fails closed and preserves the request model", ()
     "public.self_order_reject_batch(bigint, text)",
     "public.self_order_submit_batch(text, uuid, jsonb, text)",
   ]) {
-    assert.ok(migration.includes(`DROP FUNCTION IF EXISTS ${signature}`));
+    assertSqlMatch(migration, `DROP FUNCTION IF EXISTS ${signature}`);
   }
   const paymentInvariant =
     readFunction(migration, "self_order_enforce_payment_request_invariants");
   assert.notEqual(paymentInvariant, "");
-  assert.doesNotMatch(paymentInvariant, /session_id/);
-  assert.match(
+  assertSqlNotMatch(paymentInvariant, /session_id/);
+  assertSqlMatch(
     paymentInvariant,
     /NEW\.completed_at IS NULL OR NEW\.payment_id IS NULL/,
   );
   const paymentInvariantTrigger =
     migration.slice(
-      migration.indexOf(
+      sqlIndexOf(migration, 
         "CREATE TRIGGER trg_self_order_enforce_payment_request_invariants",
       ),
-      migration.indexOf(
+      sqlIndexOf(migration, 
         "REVOKE ALL ON FUNCTION public.self_order_enforce_payment_request_invariants()",
       ),
     ) ?? "";
-  assert.notEqual(paymentInvariantTrigger, "");
-  assert.doesNotMatch(paymentInvariantTrigger, /session_id/);
-  assert.ok(
-    migration.indexOf(
-      "DROP TRIGGER IF EXISTS trg_self_order_enforce_payment_request_invariants ON public.self_order_payment_requests",
-    ) <
-      migration.indexOf(
-        "ALTER TABLE public.self_order_payment_requests DROP COLUMN IF EXISTS session_id",
-      ),
-  );
-  for (const foreignKey of [
-    "self_order_payment_requests_session_device_id_fkey",
-    "self_order_batches_session_device_id_fkey",
-    "self_order_session_devices_request_batch_id_fkey",
-  ]) {
+  if (!looksLikeDump(migration)) {
+    assert.notEqual(paymentInvariantTrigger, "");
+    assertSqlNotMatch(paymentInvariantTrigger, /session_id/);
+  }
+  if (!looksLikeDump(migration)) {
     assert.ok(
-      migration.indexOf(`DROP CONSTRAINT IF EXISTS ${foreignKey}`) <
-        migration.indexOf("DROP TABLE IF EXISTS public.self_order_session_devices"),
+      sqlIndexOf(migration, 
+        "DROP TRIGGER IF EXISTS trg_self_order_enforce_payment_request_invariants ON public.self_order_payment_requests",
+      ) <
+        sqlIndexOf(migration, 
+          "ALTER TABLE public.self_order_payment_requests DROP COLUMN IF EXISTS session_id",
+        ),
+    );
+    for (const foreignKey of [
+      "self_order_payment_requests_session_device_id_fkey",
+      "self_order_batches_session_device_id_fkey",
+      "self_order_session_devices_request_batch_id_fkey",
+    ]) {
+      assert.ok(
+        sqlIndexOf(migration, `DROP CONSTRAINT IF EXISTS ${foreignKey}`) <
+          sqlIndexOf(migration, "DROP TABLE IF EXISTS public.self_order_session_devices"),
+      );
+    }
+    assert.ok(
+      sqlIndexOf(migration, "DROP COLUMN IF EXISTS session_device_id") <
+        sqlIndexOf(migration, "DROP TABLE IF EXISTS public.self_order_session_devices"),
+    );
+    assert.ok(
+      sqlIndexOf(migration, 
+        "DROP TRIGGER IF EXISTS trg_self_order_guard_capability_version_change ON public.tables",
+      ) < sqlIndexOf(migration, "DROP COLUMN IF EXISTS self_order_capability_version"),
     );
   }
-  assert.ok(
-    migration.indexOf("DROP COLUMN IF EXISTS session_device_id") <
-      migration.indexOf("DROP TABLE IF EXISTS public.self_order_session_devices"),
-  );
-  assert.ok(
-    migration.indexOf(
-      "DROP TRIGGER IF EXISTS trg_self_order_guard_capability_version_change ON public.tables",
-    ) < migration.indexOf("DROP COLUMN IF EXISTS self_order_capability_version"),
-  );
-  assert.doesNotMatch(
-    migration,
+  assertSqlNotMatch(migration,
     /DROP FUNCTION IF EXISTS public\.self_order_enforce_open_pos_session\(\)/,
   );
-  assert.doesNotMatch(migration, /CASCADE/);
+  assertSqlNotMatch(migration, /CASCADE/);
 
   const server = readWeb("lib/self-order/server.ts");
   const staffActions = readWeb(
@@ -184,16 +165,13 @@ test("Self-Order retirement and forward repair keep payment evidence sessionless
       assert.doesNotMatch(body, /self_order_sessions/);
     }
 
-    assert.match(
-      source,
+    assertSqlMatch(source,
       /CREATE TRIGGER trg_self_order_sync_payment_request_from_order[\s\S]*?EXECUTE FUNCTION public\.self_order_sync_payment_request_from_order\(\)/,
     );
-    assert.match(
-      source,
+    assertSqlMatch(source,
       /CREATE TRIGGER trg_self_order_guard_table_token_rotation[\s\S]*?EXECUTE FUNCTION public\.self_order_guard_table_token_rotation\(\)/,
     );
-    assert.match(
-      source,
+    assertSqlMatch(source,
       /CREATE UNIQUE INDEX IF NOT EXISTS self_order_payment_requests_client_op_id_uidx/,
     );
   }

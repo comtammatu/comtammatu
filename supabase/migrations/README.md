@@ -23,9 +23,9 @@ for every action.
   functions, RLS policies, indexes, grants, materialized views, the auth hook
   (`custom_access_token_hook` + its grant), and the `private` schema helpers.
   Apply first on a fresh env. Self-contained — no separate bootstrap file.
-- `../migration-archive/` — historical incremental migrations retained for history: the
-  pre-baseline chain plus the forward chain squashed into the current baseline.
-  NOT the install path; NOT applied by a fresh `supabase db reset`.
+- Historical incrementals are **not** stored in-tree. After the soaked-schema
+  cut, `migration-archive/` was removed so clones stay small. Git history keeps
+  the old files; the active install path is this 11-file chain only.
 
 ## Managed surfaces (folded into the chain)
 
@@ -75,8 +75,8 @@ the re-registration path.
 - Native Supabase Branching provides the disposable migration-replay target and
   requires the guard to verify the Production parent. Do not substitute a local
   database.
-  Moving files to `../migration-archive/` alone does not change the parent
-  project's ledger.
+  Archiving files out of this directory does not change the parent project's
+  ledger.
 
 ## Regenerating the baseline (re-baseline)
 
@@ -89,7 +89,7 @@ Full procedure: `docs/runbooks/db/re-baseline.md`. In short — owner dumps
 - neutralize environment-managed table/sequence ACL defaults before replaying
   the explicit production grants,
 - dump `private` and `public` together so pg_dump preserves cross-schema dependencies,
-- `git mv` the squashed forward chain into `supabase/migration-archive/`,
+- drop retired incrementals from the tree (git history remains the archive),
 - re-version the managed-surfaces fold strictly after the new baseline cutoff,
 - classify required bootstrap DML into seed/fold instead of losing it in a schema
   dump,

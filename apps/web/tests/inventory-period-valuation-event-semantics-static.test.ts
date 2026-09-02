@@ -1,17 +1,13 @@
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import test from "node:test";
+import { readActiveMigrationSql, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 const root = resolve(import.meta.dirname, "../../..");
-const migrationsDir = resolve(root, "supabase/migration-archive");
-const migrationName = readdirSync(migrationsDir).find((name) =>
-  name.endsWith("_inventory_period_valuation_event_semantics.sql"),
-);
-
+const _migrationsDir = resolve(root, "supabase/migrations");
 test("period valuation counts account events once and reprices only held inventory", () => {
-  assert.ok(migrationName, "expected the period valuation semantics migration");
-  const migration = readFileSync(resolve(migrationsDir, migrationName), "utf8");
+  const migration = readActiveMigrationSql(root);
 
   assert.match(
     migration,
@@ -32,6 +28,6 @@ test("period valuation counts account events once and reprices only held invento
     migration,
     /event\.event_type IN \(\s*'invoice_reprice',\s*'credit_reprice',\s*'provisional_reprice'/,
   );
-  assert.doesNotMatch(migration, /from_balance_account/);
-  assert.doesNotMatch(migration, /Nguyễn Hữu Thọ|branch_id\s*=\s*3\b/);
+  assertSqlNotMatch(migration, /from_balance_account/);
+  assertSqlNotMatch(migration, /Nguyễn Hữu Thọ|branch_id\s*=\s*3\b/);
 });

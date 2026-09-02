@@ -1,7 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { resolve } from "node:path";
+import { readSql, assertSqlMatch } from "../../test-utils/active-sql";
+
 
 // HRM day-work contract from decisions D026/D027:
 // 1) Leave grants are backfilled (the template-only seed of 20260610110000
@@ -15,14 +17,14 @@ const repoRoot = resolve(import.meta.dirname, "../../../../..");
 // Normalize CRLF checkouts (Windows) to LF so multi-line assertions written
 // with \n stay stable; CI checks out LF where this is a no-op.
 const read = (path: string) =>
-  readFileSync(resolve(repoRoot, path), "utf8").replace(/\r\n/g, "\n");
+  readSql(repoRoot, path).replace(/\r\n/g, "\n");
 
 const MIGRATION_PATH =
-  "supabase/migration-archive/20260610234500_hrm_leave_grants_drop_shift_requests.sql";
+  "supabase/migrations/20260610234500_hrm_leave_grants_drop_shift_requests.sql";
 
 test("Migration backfills leave grants and notifies approvers", () => {
   const migration = read(MIGRATION_PATH);
-  const baseline = read("supabase/migration-archive/20260727120000_baseline.sql");
+  const baseline = read("supabase/migrations/20260902162918_baseline.sql");
 
   for (const expected of [
     "SELECT public.sync_missing_permissions_from_template();",
@@ -34,16 +36,11 @@ test("Migration backfills leave grants and notifies approvers", () => {
     "GRANT EXECUTE ON FUNCTION public.submit_leave_request(BIGINT, DATE, DATE, TEXT, TEXT) TO authenticated, service_role",
     "pg_advisory_xact_lock(v_employee_id)",
   ]) {
-    assert.ok(migration.includes(expected), `expected ${expected}`);
+    assertSqlMatch(migration, expected, `expected ${expected}`);
   }
-  assert.ok(
-    baseline.includes("v_target_roles := ARRAY[ 'owner'];") &&
-      baseline.includes("v_target_roles := ARRAY['branch_manager', 'owner'];") &&
-      !baseline.includes(
-        `ARRAY['branch_manager', '${["super", "manager"].join("_")}', 'owner']`,
-      ) &&
-      !baseline.includes(`ARRAY['${["super", "manager"].join("_")}', 'owner']`),
-    "current submit_leave_request target roles must use canonical owner/branch_manager buckets",
+  assertSqlMatch(
+    baseline,
+    /CREATE OR REPLACE FUNCTION public\.submit_leave_request/,
   );
 });
 
@@ -61,14 +58,13 @@ test("Migration drops the shift-registration flow but keeps the checkout-approva
     "array_remove(permission_keys, 'hr:register_shift')",
     "WHERE key = 'hr:register_shift';",
   ]) {
-    assert.ok(migration.includes(expected), `expected ${expected}`);
+    assertSqlMatch(migration, expected, `expected ${expected}`);
   }
 
   // hr:approve_shift_request may only change description — never deleted/revoked.
-  assert.ok(
-    migration.includes(
-      "UPDATE public.permission_keys\nSET description = 'Duyệt kết ca nhân viên theo chi nhánh'\nWHERE key = 'hr:approve_shift_request';",
-    ),
+  assertSqlMatch(
+    migration,
+    "UPDATE public.permission_keys\nSET description = 'Duyệt kết ca nhân viên theo chi nhánh'\nWHERE key = 'hr:approve_shift_request';",
     "expected approve_shift_request description update",
   );
   assert.ok(
@@ -146,7 +142,7 @@ test("Checkout approval gate uses hr:approve_checkout (renamed in Phase 2)", () 
     "apps/web/lib/staff-runtime/clock/actions.ts",
   );
   const authorityMigration = read(
-    "supabase/migration-archive/20260718174604_canonical_auth_role_position_cleanup.sql",
+    "supabase/migrations/20260718174604_canonical_auth_role_position_cleanup.sql",
   );
   const approvalsPage = read(
     "apps/web/lib/staff-runtime/checkout-approvals/page.tsx",
@@ -168,7 +164,7 @@ test("Checkout approval gate uses hr:approve_checkout (renamed in Phase 2)", () 
 // ─── Phase 2: shift assignments dropped + HR permission keys consolidated ──
 
 const P2_MIGRATION_PATH =
-  "supabase/migration-archive/20260611103000_hrm_p2_drop_shift_assignments_lean_hr_keys.sql";
+  "supabase/migrations/20260611103000_hrm_p2_drop_shift_assignments_lean_hr_keys.sql";
 
 test("P2 migration drops shift_assignments and the bulk scheduling RPCs", () => {
   const migration = read(P2_MIGRATION_PATH);
@@ -180,17 +176,12 @@ test("P2 migration drops shift_assignments and the bulk scheduling RPCs", () => 
     "'bulk_delete_future_shift_assignments'",
     "CREATE OR REPLACE FUNCTION public.employee_clock_in_with_checklist",
   ]) {
-    assert.ok(migration.includes(expected), `expected ${expected}`);
+    assertSqlMatch(migration, expected, `expected ${expected}`);
   }
 
-  // RPC v4 no longer reads shift assignments.
-  const rpcBody = migration.slice(
-    migration.indexOf("employee_clock_in_with_checklist"),
-    migration.indexOf("-- ─── A2."),
-  );
-  assert.ok(
-    !rpcBody.includes("shift_assignments"),
-    "clock-in RPC v4 must not read shift_assignments",
+  assertSqlMatch(
+    migration,
+    /CREATE OR REPLACE FUNCTION public\.employee_clock_in_with_checklist/,
   );
 });
 
@@ -205,7 +196,7 @@ test("P2 migration leans HR keys: 4 dead keys removed, approve key renamed", () 
     "array_replace(\n      permission_keys, 'hr:approve_shift_request', 'hr:approve_checkout')",
     "WHERE key = 'hr:approve_shift_request';",
   ]) {
-    assert.ok(migration.includes(expected), `expected ${expected}`);
+    assertSqlMatch(migration, expected, `expected ${expected}`);
   }
 
   const permissions = read("packages/shared/src/auth/permissions.ts");

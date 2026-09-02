@@ -8,6 +8,7 @@ import {
   isDailyLimitBlockedAfterDemand,
 } from "../app/(protected)/br/[branchId]/pos/_utils/daily-limit-draft";
 import type { MenuItemDailyLimit } from "../app/(protected)/br/[branchId]/pos/pos-menu-types";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
 
 function limit(p: Partial<MenuItemDailyLimit>): MenuItemDailyLimit {
   return {
@@ -19,21 +20,9 @@ function limit(p: Partial<MenuItemDailyLimit>): MenuItemDailyLimit {
   };
 }
 
-const stockOutcomeAvailabilityMigration = readFileSync(
-  join(
-    process.cwd(),
-    "../../supabase/migration-archive/20260630071000_pos_kds_inventory_truth_g2_availability.sql",
-  ),
-  "utf8",
-);
+const stockOutcomeAvailabilityMigration = readSql(process.cwd(), "supabase/migrations/20260630071000_pos_kds_inventory_truth_g2_availability.sql");
 
-const ingredientPoolAvailabilityMigration = readFileSync(
-  join(
-    process.cwd(),
-    "../../supabase/migration-archive/20260709143000_pos_menu_availability_ingredient_pool.sql",
-  ),
-  "utf8",
-);
+const ingredientPoolAvailabilityMigration = readSql(process.cwd(), "supabase/migrations/20260709143000_pos_menu_availability_ingredient_pool.sql");
 
 const menuLimitsDrawer = readFileSync(
   join(
@@ -51,13 +40,7 @@ const menuLimitsActions = readFileSync(
   "utf8",
 );
 
-const warehouseStockGateMigration = readFileSync(
-  join(
-    process.cwd(),
-    "../../supabase/migration-archive/20260711120000_enable_pos_sale_stock_deduction_at_branch_warehouse.sql",
-  ),
-  "utf8",
-);
+const warehouseStockGateMigration = readSql(process.cwd(), "supabase/migrations/20260711120000_enable_pos_sale_stock_deduction_at_branch_warehouse.sql");
 
 test("remaining is unbounded when available_to_sell is null", () => {
   assert.equal(remainingDailyQuotaAfterDemand(limit({}), 3), null);
@@ -178,48 +161,39 @@ test("limit_ratchet: shrinking live capacity must not double-count sold_today", 
 });
 
 test("stock-outcome availability SQL separates stock outcome and fallback counters", () => {
-  assert.match(stockOutcomeAvailabilityMigration, /pos_stock_outcome_posting/);
-  assert.match(
-    stockOutcomeAvailabilityMigration,
+  assertSqlMatch(stockOutcomeAvailabilityMigration, /pos_stock_outcome_posting/);
+  assertSqlMatch(stockOutcomeAvailabilityMigration,
     /COALESCE\(bl\.limit_quantity, bl\.stock_capacity\) AS limit_quantity/,
   );
-  assert.match(stockOutcomeAvailabilityMigration, /pending_unfinalized_demand/);
-  assert.match(stockOutcomeAvailabilityMigration, /active_hold_demand/);
-  assert.match(
-    stockOutcomeAvailabilityMigration,
+  assertSqlMatch(stockOutcomeAvailabilityMigration, /pending_unfinalized_demand/);
+  assertSqlMatch(stockOutcomeAvailabilityMigration, /active_hold_demand/);
+  assertSqlMatch(stockOutcomeAvailabilityMigration,
     /WHEN p_stock_outcome_enabled THEN\s+r\.stock_capacity_live - r\.pending_unfinalized_demand - r\.active_hold_demand/,
   );
-  assert.match(
-    stockOutcomeAvailabilityMigration,
+  assertSqlMatch(stockOutcomeAvailabilityMigration,
     /ELSE\s+r\.stock_capacity_live - r\.accepted_today - r\.active_hold_demand/,
   );
 });
 
 test("stock availability reserves shared recipe ingredients across menu items", () => {
-  assert.match(ingredientPoolAvailabilityMigration, /pending_ingredient AS \(/);
-  assert.match(ingredientPoolAvailabilityMigration, /holds_ingredient AS \(/);
-  assert.match(
-    ingredientPoolAvailabilityMigration,
+  assertSqlMatch(ingredientPoolAvailabilityMigration, /pending_ingredient AS \(/);
+  assertSqlMatch(ingredientPoolAvailabilityMigration, /holds_ingredient AS \(/);
+  assertSqlMatch(ingredientPoolAvailabilityMigration,
     /JOIN recipe_lines rl ON rl\.menu_item_id = pi\.menu_item_id/,
   );
-  assert.match(
-    ingredientPoolAvailabilityMigration,
+  assertSqlMatch(ingredientPoolAvailabilityMigration,
     /JOIN recipe_lines rl ON rl\.menu_item_id = hi\.menu_item_id/,
   );
-  assert.match(
-    ingredientPoolAvailabilityMigration,
+  assertSqlMatch(ingredientPoolAvailabilityMigration,
     /pi\.ingredient_id = rl\.ingredient_id/,
   );
-  assert.match(
-    ingredientPoolAvailabilityMigration,
+  assertSqlMatch(ingredientPoolAvailabilityMigration,
     /hi\.ingredient_id = rl\.ingredient_id/,
   );
-  assert.match(
-    ingredientPoolAvailabilityMigration,
+  assertSqlMatch(ingredientPoolAvailabilityMigration,
     /ELSE r\.manual_limit_quantity - r\.sold_today - r\.item_active_hold_demand/,
   );
-  assert.doesNotMatch(
-    ingredientPoolAvailabilityMigration,
+  assertSqlNotMatch(ingredientPoolAvailabilityMigration,
     /ELSE r\.manual_limit_quantity - r\.sold_today - r\.active_hold_demand/,
   );
 });
@@ -236,5 +210,5 @@ test("menu-limit drawer keeps scan facts compact and edits allowance as a switch
   assert.doesNotMatch(menuLimitsDrawer, /getSoldProgress/);
   assert.doesNotMatch(menuLimitsActions, /default to stock capacity/);
   assert.doesNotMatch(menuLimitsActions, /Tồn Bếp chi nhánh/);
-  assert.match(warehouseStockGateMigration, /pos_stock_outcome_posting/);
+  assertSqlMatch(warehouseStockGateMigration, /pos_stock_outcome_posting/);
 });

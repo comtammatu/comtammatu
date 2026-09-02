@@ -1,22 +1,17 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "../../test-utils/active-sql";
+
 
 const repoRoot = new URL("../../../../../", import.meta.url);
 
 function readRepoFile(path: string): string {
-  const candidate = new URL(path, repoRoot);
-  if (existsSync(candidate)) return readFileSync(candidate, "utf8");
-  if (path.startsWith("supabase/migrations/")) {
-    return readFileSync(
-      new URL(
-        path.replace("supabase/migrations/", "supabase/migration-archive/"),
-        repoRoot,
-      ),
-      "utf8",
-    );
+  if (path.startsWith("supabase/") || path.includes("migration-archive")) {
+    return readSql(fileURLToPath(repoRoot), path);
   }
-  return readFileSync(candidate, "utf8");
+  return readFileSync(new URL(path, repoRoot), "utf8");
 }
 
 const route = readRepoFile("apps/web/app/api/branch-presence/route.ts");
@@ -29,7 +24,7 @@ const printAgentRunbook = readRepoFile(
   "docs/runbooks/pos-kds/print-agent-rollout.md",
 );
 const migration = readRepoFile(
-  "supabase/migration-archive/20260601870000_network_gate_presence_token_registry.sql",
+  "supabase/migrations/20260601870000_network_gate_presence_token_registry.sql",
 );
 const emergencyBypassMigration = readRepoFile(
   "supabase/migrations/20260810020844_branch_network_gate_emergency_bypass.sql",
@@ -54,33 +49,27 @@ test("branch-presence route uses token hash + RPC instead of a global shared tok
 test("agent heartbeat cannot clear a revoked trusted IP row", () => {
   assert.doesNotMatch(route, /revoked_at:\s*null/);
   assert.doesNotMatch(route, /\.upsert\(/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /AND revoked_at IS NULL\s+RETURNING id INTO v_updated_id/,
   );
-  assert.doesNotMatch(
-    migration,
+  assertSqlNotMatch(migration,
     /UPDATE public\.branch_trusted_egress_ips[\s\S]*revoked_at\s*=\s*NULL/i,
   );
 });
 
 test("presence token registry is service-role only and bound to tenant branch agent tuple", () => {
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE TABLE IF NOT EXISTS public\.printer_agent_presence_tokens/,
   );
-  assert.match(migration, /UNIQUE \(tenant_id, branch_id, agent_id\)/);
-  assert.match(migration, /UNIQUE \(token_sha256\)/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /UNIQUE \(tenant_id, branch_id, agent_id\)/);
+  assertSqlMatch(migration, /UNIQUE \(token_sha256\)/);
+  assertSqlMatch(migration,
     /REVOKE ALL ON TABLE public\.printer_agent_presence_tokens\s+FROM PUBLIC, anon, authenticated/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /REVOKE EXECUTE ON FUNCTION public\.register_branch_presence\(BIGINT, BIGINT, TEXT, TEXT, INET\)\s+FROM PUBLIC, anon, authenticated/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /GRANT EXECUTE ON FUNCTION public\.register_branch_presence\(BIGINT, BIGINT, TEXT, TEXT, INET\)\s+TO service_role/,
   );
 });
@@ -108,40 +97,32 @@ test("proxy checks per-branch emergency bypass before trusted-IP deny", () => {
 });
 
 test("branch_network_gate_bypass_active RPC is SECURITY DEFINER and pos_shift aware", () => {
-  assert.match(
-    bypassActiveRpcMigration,
+  assertSqlMatch(bypassActiveRpcMigration,
     /CREATE OR REPLACE FUNCTION public\.branch_network_gate_bypass_active/,
   );
-  assert.match(bypassActiveRpcMigration, /SECURITY DEFINER/);
-  assert.match(
-    bypassActiveRpcMigration,
+  assertSqlMatch(bypassActiveRpcMigration, /SECURITY DEFINER/);
+  assertSqlMatch(bypassActiveRpcMigration,
     /bound_pos_session_id[\s\S]*pos_sessions[\s\S]*status = 'open'/,
   );
-  assert.match(
-    bypassActiveRpcMigration,
+  assertSqlMatch(bypassActiveRpcMigration,
     /GRANT EXECUTE ON FUNCTION public\.branch_network_gate_bypass_active\(bigint, bigint\)\s+TO authenticated, service_role/,
   );
 });
 
 test("emergency bypass migration enforces duration kinds and pos_shift auto-revoke", () => {
-  assert.match(
-    emergencyBypassMigration,
+  assertSqlMatch(emergencyBypassMigration,
     /CREATE TABLE public\.branch_network_gate_bypasses/,
   );
-  assert.match(
-    emergencyBypassMigration,
+  assertSqlMatch(emergencyBypassMigration,
     /duration_kind = ANY \(ARRAY\['1h'::text, '2h'::text, '4h'::text, 'pos_shift'::text, 'business_day'::text\]\)/,
   );
-  assert.match(
-    emergencyBypassMigration,
+  assertSqlMatch(emergencyBypassMigration,
     /CREATE UNIQUE INDEX branch_network_gate_bypasses_one_open_per_branch_idx/,
   );
-  assert.match(
-    emergencyBypassMigration,
+  assertSqlMatch(emergencyBypassMigration,
     /trg_revoke_network_gate_bypass_on_pos_session_close/,
   );
-  assert.match(
-    emergencyBypassMigration,
+  assertSqlMatch(emergencyBypassMigration,
     /AFTER UPDATE OF status ON public\.pos_sessions/,
   );
 });
@@ -190,13 +171,12 @@ test("owner network gate UI is reachable from branch cards and branch settings",
 });
 
 test("register_branch_presence enforces durable 30s rate limit and 60s noisy-write skip", () => {
-  assert.match(migration, /last_attempt_at <= v_now - INTERVAL '30 seconds'/);
-  assert.match(migration, /RETURN QUERY SELECT false, 'rate_limited'/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /last_attempt_at <= v_now - INTERVAL '30 seconds'/);
+  assertSqlMatch(migration, /RETURN QUERY SELECT false, 'rate_limited'/);
+  assertSqlMatch(migration,
     /v_existing\.last_seen_at > v_now - INTERVAL '60 seconds'/,
   );
-  assert.match(migration, /RETURN QUERY SELECT true, 'skipped'/);
+  assertSqlMatch(migration, /RETURN QUERY SELECT true, 'skipped'/);
 });
 
 test("presence token lifecycle is operated through the repo CLI, not SQL Editor", () => {

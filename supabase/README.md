@@ -8,7 +8,6 @@ persistent database. Agent rights and apply policy:
 | Path | Purpose |
 | --- | --- |
 | [`migrations/`](migrations/) | Active, ordered install input (baseline + forwards) |
-| [`migration-archive/`](migration-archive/) | Historical SQL — not the fresh-env install path |
 | [`tests/`](tests/) | SQL / pgTAP-style DB tests |
 | [`migration-lineage.json`](migration-lineage.json) | Baseline identity for `lint:migration-lineage` |
 

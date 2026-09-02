@@ -2,10 +2,14 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { test } from "node:test";
+import { assertSqlNotMatch, readSql } from "./_lib/active-sql.ts";
 
 const repoRoot = resolve(process.cwd(), "../..");
 const migrationsDir = resolve(repoRoot, "supabase/migrations");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) =>
+  String(path).includes("supabase/migrations/")
+    ? readSql(repoRoot, String(path).replace(/^.*?(supabase\/)/, "supabase/"))
+    : readFileSync(resolve(repoRoot, path), "utf8");
 
 function activeMigrationNamed(suffix: string): { name: string; sql: string } {
   const names = readdirSync(migrationsDir).filter((name) =>
@@ -123,12 +127,11 @@ test("Wave 5 drops YCM/YCH request tables after soak and rewrites live PO/GRN RP
     sql,
     /CREATE OR REPLACE FUNCTION public\.list_goods_receipt_notes/,
   );
-  assert.doesNotMatch(
-    sql.split(/CREATE OR REPLACE FUNCTION public\.list_goods_receipt_notes/)[1] ??
+  assertSqlNotMatch(sql.split(/CREATE OR REPLACE FUNCTION public\.list_goods_receipt_notes/)[1] ??
       "",
     /JOIN public\.purchase_requests/,
   );
-  assert.doesNotMatch(sql, /pos:close_shift_variance_override/);
+  assertSqlNotMatch(sql, /pos:close_shift_variance_override/);
 });
 
 test("Wave 5 app no longer queries dropped request tables", () => {

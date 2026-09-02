@@ -1,3 +1,4 @@
+import { readSql } from "./_lib/active-sql.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -5,7 +6,10 @@ import { test } from "node:test";
 
 // Static wiring guards for payment completion and durable HĐĐT job creation.
 
-const read = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
+const read = (p: string) =>
+  String(p).includes("supabase/migrations/")
+    ? readSql(process.cwd(), String(p).replace(/^.*?(supabase\/)/, "supabase/"))
+    : readFileSync(join(process.cwd(), p), "utf8");
 const paymentActionsSource = read(
   "app/(protected)/br/[branchId]/pos/payment-actions.ts",
 );

@@ -1,29 +1,10 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import test from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
 
-const migration = readFileSync(
-  resolve(
-    import.meta.dirname,
-    "../../../supabase/migration-archive/20260727120003_initialize_materialized_views.sql",
-  ),
-  "utf8",
-);
-const foldMigration = readFileSync(
-  resolve(
-    import.meta.dirname,
-    "../../../supabase/migration-archive/20260727120001_fold_managed_surfaces.sql",
-  ),
-  "utf8",
-);
-const cronMigration = readFileSync(
-  resolve(
-    import.meta.dirname,
-    "../../../supabase/migration-archive/20260727120004_reregister_managed_cron_jobs.sql",
-  ),
-  "utf8",
-);
+const migration = readSql(process.cwd(), "supabase/migrations/20260727120003_initialize_materialized_views.sql");
+const foldMigration = readSql(process.cwd(), "supabase/migrations/20260727120001_fold_managed_surfaces.sql");
+const cronMigration = readSql(process.cwd(), "supabase/migrations/20260727120004_reregister_managed_cron_jobs.sql");
 
 test("fresh baseline initializes current materialized views in dependency order", () => {
   const views = [
@@ -39,9 +20,9 @@ test("fresh baseline initializes current materialized views in dependency order"
     ),
     views,
   );
-  assert.match(migration, /SELECT relispopulated FROM pg_class/);
-  assert.match(migration, /REFRESH MATERIALIZED VIEW %s/);
-  assert.doesNotMatch(migration, /CONCURRENTLY|mv_grn_price_baseline|realtime\./);
+  assertSqlMatch(migration, /SELECT relispopulated FROM pg_class/);
+  assertSqlMatch(migration, /REFRESH MATERIALIZED VIEW %s/);
+  assertSqlNotMatch(migration, /CONCURRENTLY|mv_grn_price_baseline|realtime\./);
 });
 
 test("managed cron jobs are re-registered from the canonical fold", () => {
@@ -57,19 +38,18 @@ test("managed cron jobs are re-registered from the canonical fold", () => {
   for (const name of canonicalNames) assert.match(unscheduleBlock, new RegExp(`'${name}'`));
   assert.match(unscheduleBlock, /'refresh_mv_grn_price_baseline'/);
   assert.match(unscheduleBlock, /'refresh-finance-views-daily'/);
-  assert.match(cronMigration, /CREATE TABLE IF NOT EXISTS private\.cron_job_health_grace/);
-  assert.match(cronMigration, /IF EXISTS \(SELECT 1 FROM public\.orders LIMIT 1\)/);
-  assert.match(cronMigration, /INSERT INTO private\.cron_job_health_grace/);
-  assert.match(cronMigration, /now\(\) < v_registered_at \+ v_max_age/);
-  assert.match(cronMigration, /v_last_run\.start_time >= now\(\) - v_max_age/);
-  assert.match(
-    cronMigration,
+  assertSqlMatch(cronMigration, /CREATE TABLE IF NOT EXISTS private\.cron_job_health_grace/);
+  assertSqlMatch(cronMigration, /IF EXISTS \(SELECT 1 FROM public\.orders LIMIT 1\)/);
+  assertSqlMatch(cronMigration, /INSERT INTO private\.cron_job_health_grace/);
+  assertSqlMatch(cronMigration, /now\(\) < v_registered_at \+ v_max_age/);
+  assertSqlMatch(cronMigration, /v_last_run\.start_time >= now\(\) - v_max_age/);
+  assertSqlMatch(cronMigration,
     /ON CONFLICT \(tenant_id, dedup_key\)\s+WHERE dedup_key IS NOT NULL/,
   );
-  assert.match(cronMigration, /PERFORM pg_reload_conf\(\)/);
-  assert.match(cronMigration, /SET search_path TO ''/);
-  assert.match(cronMigration, /title,\s*body,/);
-  assert.match(cronMigration, /'Tác vụ tự động cần kiểm tra'/);
-  assert.match(cronMigration, /ARRAY\['owner'\]::text\[\]/);
-  assert.doesNotMatch(cronMigration, /ARRAY\['owner',\s*'admin'\]/);
+  assertSqlMatch(cronMigration, /PERFORM pg_reload_conf\(\)/);
+  assertSqlMatch(cronMigration, /SET search_path TO ''/);
+  assertSqlMatch(cronMigration, /title,\s*body,/);
+  assertSqlMatch(cronMigration, /'Tác vụ tự động cần kiểm tra'/);
+  assertSqlMatch(cronMigration, /ARRAY\['owner'\]::text\[\]/);
+  assertSqlNotMatch(cronMigration, /ARRAY\['owner',\s*'admin'\]/);
 });

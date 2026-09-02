@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 const repoRoot = resolve(process.cwd(), "../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 const exists = (path: string) => existsSync(resolve(repoRoot, path));
 
 function walkFiles(dir: string): string[] {
@@ -97,14 +99,14 @@ test("no KpiCard/KpiRow stat surfaces remain under the /br/ route tree", () => {
 
 test("home revenue RPC measures MTD and today on the 04:00 business day", () => {
   const sql = read(
-    "supabase/migration-archive/20260820010000_branch_revenue_target_progress_business_day.sql",
+    "supabase/migrations/20260820010000_branch_revenue_target_progress_business_day.sql",
   );
   const sqlTest = read("supabase/tests/branch_revenue_targets_test.sql");
 
   assert.match(sql, /branch_business_date\(p_branch_id, now\(\)\)/);
   assert.match(sql, /branch_business_day_bounds\(p_branch_id, v_today\)/);
   assert.match(sql, /branch_business_day_bounds\(p_branch_id, v_month\)/);
-  assert.doesNotMatch(sql, /calendar-day/);
+  assertSqlNotMatch(sql, /calendar-day/);
   assert.match(sqlTest, /branch_business_date/);
   assert.match(sqlTest, /branch_business_day_bounds/);
 });

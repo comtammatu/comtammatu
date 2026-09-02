@@ -1,5 +1,4 @@
-# Exclude archived database migrations & SQL baseline snapshots from language stats
-supabase/migration-archive/** linguist-generated=true
+# Exclude the squashed schema baseline from language stats
 supabase/migrations/*_baseline.sql linguist-generated=true
 
 # Exclude generated database types

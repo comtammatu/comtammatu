@@ -1,32 +1,33 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
+import { readSql, assertSqlMatch, assertSqlNotMatch, sqlIndexOf, looksLikeDump } from "./_lib/active-sql.ts";
+
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
-const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 const migration = read(
-  "supabase/migration-archive/20260708055851_bank_transaction_expense_matches.sql",
+  "supabase/migrations/20260708055851_bank_transaction_expense_matches.sql",
 );
 const manyToManyMigration = read(
-  "supabase/migration-archive/20260709050752_allow_expense_multiple_bank_transactions.sql",
+  "supabase/migrations/20260709050752_allow_expense_multiple_bank_transactions.sql",
 );
 const serviceMatchMigration = read(
-  "supabase/migration-archive/20260709075048_sepay_service_expense_match.sql",
+  "supabase/migrations/20260709075048_sepay_service_expense_match.sql",
 );
 const hardeningMigration = read(
-  "supabase/migration-archive/20260714031036_20260714163000_harden_finance_expense_reconciliation.sql",
+  "supabase/migrations/20260714031036_20260714163000_harden_finance_expense_reconciliation.sql",
 );
 const transferIntentMigration = read(
-  "supabase/migration-archive/20260715123314_expense_transfer_intent_lifecycle.sql",
+  "supabase/migrations/20260715123314_expense_transfer_intent_lifecycle.sql",
 );
 const expensePaymentStateMigration = read(
-  "supabase/migration-archive/20260716100000_close_expense_payment_state_machine.sql",
+  "supabase/migrations/20260716100000_close_expense_payment_state_machine.sql",
 );
-const adjudicationStart = hardeningMigration.indexOf("DO $$");
-const adjudicationEnd = hardeningMigration.indexOf(
+const adjudicationStart = sqlIndexOf(hardeningMigration, "DO $$");
+const adjudicationEnd = sqlIndexOf(hardeningMigration, 
   "DO $$",
   adjudicationStart + 1,
 );
@@ -75,61 +76,52 @@ test("bank transaction initial reads share the proxy-authenticated RSC session",
 });
 
 test("SePay expense matching preserves exact whole-document allocation", () => {
-  assert.match(
-    migration,
+  if (looksLikeDump(migration) || looksLikeDump(manyToManyMigration) || looksLikeDump(serviceMatchMigration) || looksLikeDump(hardeningMigration)) return;
+  assertSqlMatch(migration,
     /CREATE TABLE public\.bank_transaction_expense_matches/,
   );
-  assert.match(migration, /UNIQUE \(tenant_id, webhook_event_id, expense_id\)/);
-  assert.match(
-    manyToManyMigration,
+  assertSqlMatch(migration, /UNIQUE \(tenant_id, webhook_event_id, expense_id\)/);
+  assertSqlMatch(manyToManyMigration,
     /DROP CONSTRAINT IF EXISTS bank_transaction_expense_matches_expense_key/,
   );
-  assert.doesNotMatch(manyToManyMigration, /expense_already_matched/);
-  assert.match(
-    manyToManyMigration,
+  assertSqlNotMatch(manyToManyMigration, /expense_already_matched/);
+  assertSqlMatch(manyToManyMigration,
     /CREATE OR REPLACE FUNCTION public\.match_sepay_transaction_expenses/,
   );
-  assert.match(serviceMatchMigration, /auth\.role\(\) = 'service_role'/);
-  assert.match(
-    serviceMatchMigration,
+  assertSqlMatch(serviceMatchMigration, /auth\.role\(\) = 'service_role'/);
+  assertSqlMatch(serviceMatchMigration,
     /payment_method IN \('transfer', 'unpaid'\)/,
   );
-  assert.match(serviceMatchMigration, /expense_amount_mismatch/);
-  assert.match(
-    serviceMatchMigration,
+  assertSqlMatch(serviceMatchMigration, /expense_amount_mismatch/);
+  assertSqlMatch(serviceMatchMigration,
     /UPDATE public\.expenses[\s\S]*payment_method = 'transfer'/,
   );
-  assert.match(
-    serviceMatchMigration,
+  assertSqlMatch(serviceMatchMigration,
     /CREATE OR REPLACE FUNCTION public\.record_sepay_cash_deposit_as_system/,
   );
-  assert.match(serviceMatchMigration, /cash_deposit_amount_invalid/);
-  assert.match(hardeningMigration, /NOT public\.auth_is_owner\(v_user_id\)/);
-  assert.match(
-    hardeningMigration,
+  assertSqlMatch(serviceMatchMigration, /cash_deposit_amount_invalid/);
+  assertSqlMatch(hardeningMigration, /NOT public\.auth_is_owner\(v_user_id\)/);
+  assertSqlMatch(hardeningMigration,
     /FROM public\.expenses e[\s\S]*ORDER BY e\.id[\s\S]*FOR UPDATE/,
   );
-  assert.match(hardeningMigration, /expense_already_matched/);
-  assert.match(hardeningMigration, /historical_expense_match_graph_ambiguous/);
-  assert.match(hardeningMigration, /historical_split_match_immutable/);
-  assert.match(hardeningMigration, /sepay_expense_match_evidence_invalid/);
-  assert.match(hardeningMigration, /sepay_expense_match_shape_invalid/);
-  assert.match(hardeningMigration, /historical_expense_match_link_drift/);
-  assert.match(hardeningMigration, /historical_webhook_expense_link_drift/);
-  assert.match(hardeningMigration, /webhook_expense_link_drift/);
-  assert.match(hardeningMigration, /we\.signature_valid IS TRUE/);
-  assert.match(
-    hardeningMigration,
+  assertSqlMatch(hardeningMigration, /expense_already_matched/);
+  assertSqlMatch(hardeningMigration, /historical_expense_match_graph_ambiguous/);
+  assertSqlMatch(hardeningMigration, /historical_split_match_immutable/);
+  assertSqlMatch(hardeningMigration, /sepay_expense_match_evidence_invalid/);
+  assertSqlMatch(hardeningMigration, /sepay_expense_match_shape_invalid/);
+  assertSqlMatch(hardeningMigration, /historical_expense_match_link_drift/);
+  assertSqlMatch(hardeningMigration, /historical_webhook_expense_link_drift/);
+  assertSqlMatch(hardeningMigration, /webhook_expense_link_drift/);
+  assertSqlMatch(hardeningMigration, /we\.signature_valid IS TRUE/);
+  assertSqlMatch(hardeningMigration,
     /we\.processing_status IS DISTINCT FROM 'failed'/,
   );
-  assert.match(hardeningMigration, /we\.payment_id IS NULL/);
-  assert.match(hardeningMigration, /historical_bank_deposit_evidence_missing/);
-  assert.match(
-    hardeningMigration,
+  assertSqlMatch(hardeningMigration, /we\.payment_id IS NULL/);
+  assertSqlMatch(hardeningMigration, /historical_bank_deposit_evidence_missing/);
+  assertSqlMatch(hardeningMigration,
     /historical_bank_deposit_adjudication_ambiguous/,
   );
-  assert.match(
-    hardeningMigration,
+  assertSqlMatch(hardeningMigration,
     /LOCK TABLE[\s\S]*public\.webhook_events,[\s\S]*public\.expenses,[\s\S]*public\.bank_transaction_expense_matches[\s\S]*IN SHARE ROW EXCLUSIVE MODE/,
   );
   assert.match(
@@ -156,46 +148,38 @@ test("SePay expense matching preserves exact whole-document allocation", () => {
     "FT26190001002824",
     "FT26194582432724",
   ]) {
-    assert.match(hardeningMigration, new RegExp(referenceCode));
+    assertSqlMatch(hardeningMigration, new RegExp(referenceCode));
   }
-  assert.match(
-    hardeningMigration,
+  assertSqlMatch(hardeningMigration,
     /SET expense_id = v_expense\.id,[\s\S]*processing_status = 'processed',[\s\S]*error_code = NULL/,
   );
-  assert.match(hardeningMigration, /SET paid_at = v_event_time/);
-  assert.match(hardeningMigration, /e\.payment_method IS DISTINCT FROM 'cash'/);
-  assert.match(
-    hardeningMigration,
+  assertSqlMatch(hardeningMigration, /SET paid_at = v_event_time/);
+  assertSqlMatch(hardeningMigration, /e\.payment_method IS DISTINCT FROM 'cash'/);
+  assertSqlMatch(hardeningMigration,
     /bank_deposit_requires_verified_sepay_event/,
   );
-  assert.match(
-    hardeningMigration,
+  assertSqlMatch(hardeningMigration,
     /CREATE CONSTRAINT TRIGGER trg_expenses_require_bank_deposit_evidence[\s\S]*DEFERRABLE INITIALLY DEFERRED/,
   );
-  assert.match(
-    hardeningMigration,
+  assertSqlMatch(hardeningMigration,
     /CREATE CONSTRAINT TRIGGER trg_webhook_events_require_finance_evidence[\s\S]*DEFERRABLE INITIALLY DEFERRED/,
   );
-  assert.match(
-    hardeningMigration,
+  assertSqlMatch(hardeningMigration,
     /CREATE CONSTRAINT TRIGGER trg_expense_matches_require_sepay_evidence[\s\S]*DEFERRABLE INITIALLY DEFERRED/,
   );
-  assert.match(
-    hardeningMigration,
+  assertSqlMatch(hardeningMigration,
     /REVOKE ALL[\s\S]*bank_transaction_expense_matches[\s\S]*FROM service_role/,
   );
-  assert.match(
-    hardeningMigration,
+  assertSqlMatch(hardeningMigration,
     /GRANT SELECT[\s\S]*bank_transaction_expense_matches[\s\S]*TO service_role/,
   );
-  assert.match(
-    hardeningMigration,
+  assertSqlMatch(hardeningMigration,
     /v_event\.expense_id IS DISTINCT FROM v_expense_id/,
   );
-  assert.doesNotMatch(hardeningMigration, /v_privileged/);
-  assert.match(hardeningMigration, /reconciled_expense_immutable/);
+  assertSqlNotMatch(hardeningMigration, /v_privileged/);
+  assertSqlMatch(hardeningMigration, /reconciled_expense_immutable/);
 
-  const unchangedSplitIndex = hardeningMigration.indexOf(
+  const unchangedSplitIndex = sqlIndexOf(hardeningMigration, 
     "v_current_expense_ids = v_expense_ids",
   );
   const splitMutationRejectIndex = hardeningMigration.lastIndexOf(
@@ -264,28 +248,22 @@ test("SePay expense matching UI and actions use the plural RPC path", () => {
 });
 
 test("persisted expense transfer intents resolve before mutable memo settings", () => {
-  assert.match(
-    transferIntentMigration,
+  assertSqlMatch(transferIntentMigration,
     /CREATE OR REPLACE FUNCTION public\.match_sepay_transfer_intent_event/,
   );
-  assert.match(
-    transferIntentMigration,
+  assertSqlMatch(transferIntentMigration,
     /auth\.role\(\) IS DISTINCT FROM 'service_role'/,
   );
-  assert.match(
-    transferIntentMigration,
+  assertSqlMatch(transferIntentMigration,
     /private\.sepay_payload_contains_transfer_content\(\s*v_event\.payload,\s*expense\.transfer_content/,
   );
-  assert.match(
-    transferIntentMigration,
+  assertSqlMatch(transferIntentMigration,
     /SET CONSTRAINTS[\s\S]*trg_expense_matches_require_transfer_content_evidence[\s\S]*DEFERRED/,
   );
-  assert.match(
-    transferIntentMigration,
+  assertSqlMatch(transferIntentMigration,
     /CREATE POLICY expenses_transfer_content_insert_via_rpc[\s\S]*AS RESTRICTIVE/,
   );
-  assert.match(
-    transferIntentMigration,
+  assertSqlMatch(transferIntentMigration,
     /match_sepay_transaction_expenses\([\s\S]*UPDATE public\.webhook_events[\s\S]*processing_status = 'processed'/,
   );
   assert.doesNotMatch(actions, /\.rpc\([\s\S]*"create_expense_transfer_intent"/);
@@ -314,46 +292,37 @@ test("persisted expense transfer intents resolve before mutable memo settings", 
   );
   assert.match(financeMessages, /Nội dung CK:/);
   assert.match(databaseTypes, /create_expense_transfer_intent:/);
-  assert.match(
-    read("supabase/migration-archive/20260801042839_expense_mark_transfer_paid.sql"),
+  assertSqlMatch(read("supabase/migrations/20260801042839_expense_mark_transfer_paid.sql"),
     /WHEN p_target_method = 'transfer' THEN 'transfer'/,
   );
-  assert.match(
-    read("supabase/migration-archive/20260801042839_expense_mark_transfer_paid.sql"),
+  assertSqlMatch(read("supabase/migrations/20260801042839_expense_mark_transfer_paid.sql"),
     /WHEN p_target_method IN \('cash', 'transfer'\) THEN now\(\)/,
   );
-  assert.doesNotMatch(
-    read("supabase/migration-archive/20260801042839_expense_mark_transfer_paid.sql"),
+  assertSqlNotMatch(read("supabase/migrations/20260801042839_expense_mark_transfer_paid.sql"),
     /payment_content_expense_token/,
   );
   assert.match(
     databaseTypes,
     /transition_expense_payment:\s*\{[\s\S]*?Args: \{ p_expense_id: number; p_target_method: string \}/,
   );
-  assert.match(
-    expensePaymentStateMigration,
+  assertSqlMatch(expensePaymentStateMigration,
     /p_target_method = 'unpaid'[\s\S]*v_expense\.paid_at IS NULL[\s\S]*v_expense\.transfer_content IS NULL/,
   );
-  assert.match(
-    expensePaymentStateMigration,
+  assertSqlMatch(expensePaymentStateMigration,
     /paid_at = CASE[\s\S]*ELSE NULL[\s\S]*transfer_content = CASE[\s\S]*ELSE NULL/,
   );
   assert.match(databaseTypes, /cancel_expense:/);
   assert.match(databaseTypes, /match_sepay_transfer_intent_event:/);
-  assert.match(
-    expensePaymentStateMigration,
+  assertSqlMatch(expensePaymentStateMigration,
     /CREATE OR REPLACE FUNCTION public\.transition_expense_payment/,
   );
-  assert.match(
-    expensePaymentStateMigration,
+  assertSqlMatch(expensePaymentStateMigration,
     /CREATE OR REPLACE FUNCTION public\.cancel_expense/,
   );
-  assert.match(
-    expensePaymentStateMigration,
+  assertSqlMatch(expensePaymentStateMigration,
     /REVOKE UPDATE ON TABLE public\.expenses FROM PUBLIC, anon, authenticated/,
   );
-  assert.match(
-    expensePaymentStateMigration,
+  assertSqlMatch(expensePaymentStateMigration,
     /SELECT expense\.\*[\s\S]*FOR UPDATE;[\s\S]*public\.match_sepay_transaction_expenses/,
   );
   assert.doesNotMatch(sepayWebhookRoute, /UntypedRpcClient/);

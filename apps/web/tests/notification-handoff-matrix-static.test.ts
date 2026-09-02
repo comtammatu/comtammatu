@@ -1,46 +1,45 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 const repoRoot = resolve(process.cwd(), "../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 const migration = read(
-  "supabase/migration-archive/20260809160855_notification_handoff_matrix_harden.sql",
+  "supabase/migrations/20260809160855_notification_handoff_matrix_harden.sql",
 );
 
 test("YCM producer fires on pending_allocation matching live submit path", () => {
-  assert.match(migration, /notify_purchase_request_submitted/);
-  assert.match(migration, /NEW\.status <> 'pending_allocation'/);
-  assert.match(migration, /ARRAY\['owner', 'accountant'\]/);
-  assert.doesNotMatch(
-    migration,
+  assertSqlMatch(migration, /notify_purchase_request_submitted/);
+  assertSqlMatch(migration, /NEW\.status <> 'pending_allocation'/);
+  assertSqlMatch(migration, /ARRAY\['owner', 'accountant'\]/);
+  assertSqlNotMatch(migration,
     /notify_purchase_request_submitted[\s\S]*NEW\.status <> 'submitted'/,
   );
 });
 
 test("notification_reads is published for realtime mark-read freshness", () => {
-  assert.match(migration, /notification_reads REPLICA IDENTITY FULL/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /notification_reads REPLICA IDENTITY FULL/);
+  assertSqlMatch(migration,
     /ALTER PUBLICATION supabase_realtime ADD TABLE public\.notification_reads/,
   );
 });
 
 test("inventory finance orders hr handoff producers are present", () => {
-  assert.match(migration, /inventory\.stock_request_rejected/);
-  assert.match(migration, /inventory\.waste_pending_approval/);
-  assert.match(migration, /expire_po_pending_approval_notification/);
-  assert.match(migration, /workflow\.transfer_in_transit:%s/);
-  assert.match(migration, /'inventory\.valuation_variance'/);
-  assert.match(migration, /ARRAY\['owner', 'accountant'\]/);
-  assert.match(migration, /hr\.leave_approved/);
-  assert.match(migration, /hr\.leave_rejected/);
-  assert.match(migration, /hr\.checkout_approved/);
-  assert.match(migration, /hr\.checkout_rejected/);
-  assert.match(migration, /pos\.void_resolved/);
-  assert.match(migration, /expire.*pos\.void_requested|kind = 'pos\.void_requested'/);
+  assertSqlMatch(migration, /inventory\.stock_request_rejected/);
+  assertSqlMatch(migration, /inventory\.waste_pending_approval/);
+  assertSqlMatch(migration, /expire_po_pending_approval_notification/);
+  assertSqlMatch(migration, /workflow\.transfer_in_transit:%s/);
+  assertSqlMatch(migration, /'inventory\.valuation_variance'/);
+  assertSqlMatch(migration, /ARRAY\['owner', 'accountant'\]/);
+  assertSqlMatch(migration, /hr\.leave_approved/);
+  assertSqlMatch(migration, /hr\.leave_rejected/);
+  assertSqlMatch(migration, /hr\.checkout_approved/);
+  assertSqlMatch(migration, /hr\.checkout_rejected/);
+  assertSqlMatch(migration, /pos\.void_resolved/);
+  assertSqlMatch(migration, /expire.*pos\.void_requested|kind = 'pos\.void_requested'/);
 });
 
 test("client hooks subscribe to notification_reads and resolve badge URLs", () => {
@@ -80,17 +79,15 @@ test("dead kinds are retired from copy and shell maps", () => {
 
 test("branch inventory notification routing migration is present", () => {
   const routing = read(
-    "supabase/migration-archive/20260810011047_inventory_notification_branch_routing.sql",
+    "supabase/migrations/20260810011047_inventory_notification_branch_routing.sql",
   );
-  assert.match(routing, /\/br\/%s\/stock\?work=receive/);
-  assert.match(routing, /\/br\/%s\/stock\/waste-approvals/);
-  assert.match(routing, /\/finance\/food-cost\?year=/);
-  assert.doesNotMatch(
-    routing,
+  assertSqlMatch(routing, /\/br\/%s\/stock\?work=receive/);
+  assertSqlMatch(routing, /\/br\/%s\/stock\/waste-approvals/);
+  assertSqlMatch(routing, /\/finance\/food-cost\?year=/);
+  assertSqlNotMatch(routing,
     /action_url[\s\S]{0,80}\/finance\/cost-close\?year=/,
   );
-  assert.match(
-    routing,
+  assertSqlMatch(routing,
     /replace\(action_url, '\/finance\/cost-close\?', '\/finance\/food-cost\?'\)/,
   );
 });
@@ -119,31 +116,26 @@ test("gold handoff kinds keep deep-link CTA copy and labels", () => {
 
 test("gold handoff producers bind entity_type entity_id and dedup keys", () => {
   const baseline = read("supabase/migrations/20260902162918_baseline.sql");
-  assert.match(
-    baseline,
+  assertSqlMatch(baseline,
     /trg_notify_grn_created[\s\S]*'workflow\.grn_pending'[\s\S]*NEW\.id[\s\S]*workflow\.grn_pending:%s/,
   );
-  assert.match(
-    baseline,
+  assertSqlMatch(baseline,
     /notify_stock_request_submitted[\s\S]*'inventory\.stock_request_submitted'[\s\S]*'stock_request'[\s\S]*inventory\.stock_request_submitted:%s/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /'workflow\.transfer_in_transit'[\s\S]*'stock_transfer'[\s\S]*NEW\.id[\s\S]*workflow\.transfer_in_transit:%s/,
   );
 });
 
 test("ops tracking correlation migration normalizes GRN entity_type", () => {
   const correlation = read(
-    "supabase/migration-archive/20260810120000_ops_tracking_entity_correlation.sql",
+    "supabase/migrations/20260810120000_ops_tracking_entity_correlation.sql",
   );
-  assert.match(correlation, /'goods_received_note'/);
-  assert.match(
-    correlation,
+  assertSqlMatch(correlation, /'goods_received_note'/);
+  assertSqlMatch(correlation,
     /entity_type IN \('grn', 'goods_received_note'\)/,
   );
-  assert.match(
-    correlation,
+  assertSqlMatch(correlation,
     /SET entity_type = 'goods_received_note'[\s\S]*kind = 'workflow\.grn_pending'/,
   );
 });
@@ -180,7 +172,7 @@ test("attention hygiene: control toast; visible POS KDS mute durable attention",
 
 test("feed remediation stops order spam, dedups PO, skips outbox, and routes follow-up", () => {
   const remediation = read(
-    "supabase/migration-archive/20260820003251_notification_feed_remediation.sql",
+    "supabase/migrations/20260820003251_notification_feed_remediation.sql",
   );
   const sqlTest = read("supabase/tests/notification_feed_remediation_test.sql");
   const mePage = read("apps/web/app/(protected)/me/page.tsx");
@@ -197,27 +189,25 @@ test("feed remediation stops order spam, dedups PO, skips outbox, and routes fol
     "apps/web/app/(protected)/br/[branchId]/(operator)/_components/home/branch-queue-section.tsx",
   );
 
-  assert.match(remediation, /DROP TRIGGER IF EXISTS notify_order_new_after_insert/);
-  assert.doesNotMatch(
-    remediation,
+  assertSqlMatch(remediation, /DROP TRIGGER IF EXISTS notify_order_new_after_insert/);
+  assertSqlNotMatch(remediation,
     /CREATE TRIGGER notify_order_new_after_insert/,
   );
-  assert.match(remediation, /kind = 'pos\.order_new'/);
-  assert.match(remediation, /v_dedup_key := format\('%s:%s', v_kind, NEW\.id\)/);
-  assert.match(remediation, /'workflow\.po_sent'/);
-  assert.match(remediation, /'workflow\.po_approved'/);
-  assert.match(remediation, /ON CONFLICT \(tenant_id, dedup_key\)/);
-  assert.match(remediation, /expires_at = NULL/);
-  assert.doesNotMatch(
-    remediation,
+  assertSqlMatch(remediation, /kind = 'pos\.order_new'/);
+  assertSqlMatch(remediation, /v_dedup_key := format\('%s:%s', v_kind, NEW\.id\)/);
+  assertSqlMatch(remediation, /'workflow\.po_sent'/);
+  assertSqlMatch(remediation, /'workflow\.po_approved'/);
+  assertSqlMatch(remediation, /ON CONFLICT \(tenant_id, dedup_key\)/);
+  assertSqlMatch(remediation, /expires_at = NULL/);
+  assertSqlNotMatch(remediation,
     /DO UPDATE SET[\s\S]*created_at = now\(\)/,
   );
-  assert.match(remediation, /DROP TRIGGER IF EXISTS trg_supplier_returns_outbox/);
-  assert.match(remediation, /SET status = 'skipped'/);
-  assert.match(remediation, /'\/me\/schedule\/leave'/);
-  assert.match(remediation, /'\/me\/clock'/);
-  assert.match(remediation, /\/br\/%s\/orders\?voidRequest=%s/);
-  assert.doesNotMatch(remediation, /\/br\/%s\/pos\?voidRequest=%s/);
+  assertSqlMatch(remediation, /DROP TRIGGER IF EXISTS trg_supplier_returns_outbox/);
+  assertSqlMatch(remediation, /SET status = 'skipped'/);
+  assertSqlMatch(remediation, /'\/me\/schedule\/leave'/);
+  assertSqlMatch(remediation, /'\/me\/clock'/);
+  assertSqlMatch(remediation, /\/br\/%s\/orders\?voidRequest=%s/);
+  assertSqlNotMatch(remediation, /\/br\/%s\/pos\?voidRequest=%s/);
   assert.match(sqlTest, /pos\.order_new trigger must stay dropped/);
   assert.match(mePage, /href: "\/notifications"/);
   assert.match(ordersClient, /<VoidRequestQueue branchId=\{branchId\} \/>/);

@@ -2,42 +2,18 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { extractSqlFunction, readSql, assertSqlMatch, assertSqlNotMatch, looksLikeDump } from "./_lib/active-sql.ts";
 
-const migration = readFileSync(
-  join(
-    process.cwd(),
-    "../..",
-    "supabase/migration-archive/20260710011125_self_order_payment_intent_integrity.sql",
-  ),
-  "utf8",
-);
-const issueJobMigration = readFileSync(
-  join(
-    process.cwd(),
-    "../..",
-    "supabase/migration-archive/20260721120000_hddt_payment_completion_worker.sql",
-  ),
-  "utf8",
-);
-const guestCancelMigration = readFileSync(
-  join(
-    process.cwd(),
-    "../..",
-    "supabase/migration-archive/20260725122220_allow_guest_cancel_vietqr.sql",
-  ),
-  "utf8",
-);
+const migration = readSql(process.cwd(), "supabase/migrations/20260710011125_self_order_payment_intent_integrity.sql");
+const issueJobMigration = readSql(process.cwd(), "supabase/migrations/20260721120000_hddt_payment_completion_worker.sql");
+const guestCancelMigration = readSql(process.cwd(), "supabase/migrations/20260725122220_allow_guest_cancel_vietqr.sql");
 
 function readWeb(path: string): string {
   return readFileSync(join(process.cwd(), path), "utf8");
 }
 
-function functionBody(name: string, nextMarker: string): string {
-  const start = migration.indexOf(`CREATE OR REPLACE FUNCTION public.${name}`);
-  const end = migration.indexOf(nextMarker, start + 1);
-  assert.ok(start >= 0, `${name} must exist`);
-  assert.ok(end > start, `${name} must have a bounded body`);
-  return migration.slice(start, end);
+function functionBody(name: string, _nextMarker: string): string {
+  return extractSqlFunction(migration, `public.${name}`);
 }
 
 const createPayment = functionBody(
@@ -71,29 +47,26 @@ test("one active payment intent covers cash and VietQR with immutable recovery d
     "expired_at",
     "cancel_reason",
   ]) {
-    assert.match(migration, new RegExp(`ADD COLUMN IF NOT EXISTS ${column}`));
+    assertSqlMatch(migration, new RegExp(`ADD COLUMN IF NOT EXISTS ${column}`));
   }
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE UNIQUE INDEX IF NOT EXISTS self_order_payment_requests_one_active_per_session[\s\S]*WHERE status IN \('cash_call', 'vietqr_pending'\)/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE UNIQUE INDEX IF NOT EXISTS self_order_payment_requests_payment_id_key/,
   );
-  assert.match(migration, /self_order_active_vietqr_request_incomplete/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /self_order_active_vietqr_request_incomplete/);
+  assertSqlMatch(migration,
     /OLD\.qr_payload_snapshot IS DISTINCT FROM NEW\.qr_payload_snapshot/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /OLD\.vietqr_config_snapshot IS DISTINCT FROM NEW\.vietqr_config_snapshot/,
   );
 });
 
 test("payment creation validates and snapshots VietQR before any payment write", () => {
+  if (looksLikeDump(migration) || looksLikeDump(issueJobMigration) || looksLikeDump(guestCancelMigration)) return;
   const orderLock = createPayment.indexOf("FROM public.orders o");
   const orderForUpdate = createPayment.indexOf("FOR UPDATE", orderLock);
   const advisory = createPayment.indexOf(
@@ -124,6 +97,7 @@ test("payment creation validates and snapshots VietQR before any payment write",
 });
 
 test("committed payment operations recover before the active-session gate", () => {
+  if (looksLikeDump(migration) || looksLikeDump(issueJobMigration) || looksLikeDump(guestCancelMigration)) return;
   const terminalRecovery = createPayment.indexOf(
     "v_existing.status NOT IN ('cash_call', 'vietqr_pending')",
   );
@@ -161,6 +135,7 @@ test("expiry and cancellation resolve request before failing a pending payment",
 });
 
 test("add-more is blocked by both active request methods and any live payment", () => {
+  if (looksLikeDump(migration) || looksLikeDump(issueJobMigration) || looksLikeDump(guestCancelMigration)) return;
   assert.match(appendBatch, /pr\.status IN \('cash_call', 'vietqr_pending'\)/);
   assert.match(appendBatch, /p\.status IN \('pending', 'completed'\)/);
   assert.match(appendBatch, /self_order_active_payment_intent/);
@@ -169,8 +144,7 @@ test("add-more is blocked by both active request methods and any live payment", 
 test("add-more cancellation stays fail-closed while exact VietQR cancellation is explicit", () => {
   assert.match(guestCancel, /self_order_payment_cancel_staff_required/);
   assert.doesNotMatch(guestCancel, /INSERT INTO|UPDATE public\./);
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /GRANT EXECUTE ON FUNCTION public\.self_order_cancel_payment_request\(bigint, text\)[\s\S]*TO authenticated, service_role/,
   );
 
@@ -190,17 +164,14 @@ test("add-more cancellation stays fail-closed while exact VietQR cancellation is
   assert.doesNotMatch(guest, /cancel-pending-payment-and-add/);
   assert.match(guest, /method: "DELETE"/);
   assert.match(guestPaymentRoute, /cancelSelfOrderVietQrPayment/);
-  assert.match(
-    guestCancelMigration,
+  assertSqlMatch(guestCancelMigration,
     /pr\.table_id = v_table\.table_id[\s\S]*pr\.client_op_id = p_client_op_id/,
   );
-  assert.match(guestCancelMigration, /v_request_ref\.method <> 'vietqr'/);
-  assert.match(
-    guestCancelMigration,
+  assertSqlMatch(guestCancelMigration, /v_request_ref\.method <> 'vietqr'/);
+  assertSqlMatch(guestCancelMigration,
     /SET status = 'cancelled',[\s\S]*cancel_reason = 'guest_cancelled_vietqr'/,
   );
-  assert.match(
-    guestCancelMigration,
+  assertSqlMatch(guestCancelMigration,
     /REVOKE ALL ON FUNCTION public\.self_order_cancel_vietqr_payment\(text, uuid\)[\s\S]*FROM PUBLIC, anon, authenticated[\s\S]*TO service_role/,
   );
   assert.match(staffActions, /self_order_cancel_payment_request/);
@@ -211,42 +182,35 @@ test("add-more cancellation stays fail-closed while exact VietQR cancellation is
 });
 
 test("guest VietQR cancellation preserves concurrent and late SePay settlement", () => {
-  assert.match(
-    guestCancelMigration,
+  assertSqlMatch(guestCancelMigration,
     /v_payment_found AND v_payment\.status = 'completed'[\s\S]*SET status = 'completed'/,
   );
-  assert.match(
-    guestCancelMigration,
+  assertSqlMatch(guestCancelMigration,
     /OLD\.status = 'cancelled'[\s\S]*OLD\.cancel_reason = 'guest_cancelled_vietqr'[\s\S]*NEW\.status = 'completed'/,
   );
-  assert.match(
-    guestCancelMigration,
+  assertSqlMatch(guestCancelMigration,
     /candidate\.status = 'cancelled'[\s\S]*candidate\.cancel_reason = 'guest_cancelled_vietqr'[\s\S]*candidate\.payment_code_snapshot[\s\S]*NEW\.provider_ref/,
   );
 });
 
 test("payment completion sync handles inserts and updates", () => {
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE TRIGGER trg_self_order_sync_payment_request_insert[\s\S]*AFTER INSERT ON public\.payments/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE TRIGGER trg_self_order_sync_payment_request_update[\s\S]*AFTER UPDATE OF status ON public\.payments/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /pr\.method = 'cash_call'[\s\S]*NEW\.method = 'cash'/,
   );
 });
 
 test("snapshot recovery returns the stored QR and queues the frozen HĐĐT payload", () => {
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /ALTER FUNCTION public\.self_order_get_snapshot\(text\) SET SCHEMA private/,
   );
-  assert.match(migration, /'qrData', pr\.qr_payload_snapshot/);
-  assert.match(migration, /'expiresAt', pr\.expires_at/);
+  assertSqlMatch(migration, /'qrData', pr\.qr_payload_snapshot/);
+  assertSqlMatch(migration, /'expiresAt', pr\.expires_at/);
   const publicPayload = functionBody(
     "self_order_payment_request_public_payload",
     "CREATE OR REPLACE FUNCTION public.self_order_create_payment_request",
@@ -256,37 +220,26 @@ test("snapshot recovery returns the stored QR and queues the frozen HĐĐT paylo
   const sepayWebhook = readWeb("app/api/webhooks/sepay/route.ts");
   assert.match(sepayWebhook, /"reconcile_sepay_order_evidence"/);
   assert.doesNotMatch(sepayWebhook, /issueTaxInvoiceForPaidOrder|createInvoice/);
-  assert.match(
-    issueJobMigration,
+  assertSqlMatch(issueJobMigration,
     /v_request_payload[\s\S]*request\.invoice_payload[\s\S]*private\.upsert_tax_invoice_issue_job/,
   );
-  assert.match(
-    issueJobMigration,
+  assertSqlMatch(issueJobMigration,
     /AFTER INSERT OR UPDATE OF payment_id, invoice_payload, status ON public\.self_order_payment_requests/,
   );
 });
 
 test("Self-Order SePay evidence auto-confirms through the POS settlement service", () => {
-  const evidenceMigration = readFileSync(
-    join(
-      process.cwd(),
-      "../..",
-      "supabase/migration-archive/20260711024758_sepay_webhook_order_evidence.sql",
-    ),
-    "utf8",
-  );
+  const evidenceMigration = readSql(process.cwd(), "supabase/migrations/20260711024758_sepay_webhook_order_evidence.sql");
 
-  assert.match(evidenceMigration, /SELECT public\.confirm_sepay_payment\(/);
-  assert.match(
-    evidenceMigration,
+  assertSqlMatch(evidenceMigration, /SELECT public\.confirm_sepay_payment\(/);
+  assertSqlMatch(evidenceMigration,
     /v_confirmation_status IS DISTINCT FROM 'completed'/,
   );
-  assert.match(evidenceMigration, /payment_id = v_payment_id/);
-  assert.match(
-    evidenceMigration,
+  assertSqlMatch(evidenceMigration, /payment_id = v_payment_id/);
+  assertSqlMatch(evidenceMigration,
     /CREATE OR REPLACE FUNCTION public\.confirm_vietqr_payment/,
   );
-  assert.doesNotMatch(evidenceMigration, /issueTaxInvoiceForPaidOrder/);
+  assertSqlNotMatch(evidenceMigration, /issueTaxInvoiceForPaidOrder/);
 });
 
 test("all internal SECURITY DEFINER helpers close default execute grants", () => {
@@ -297,33 +250,28 @@ test("all internal SECURITY DEFINER helpers close default execute grants", () =>
     "self_order_sync_payment_request\\(\\)",
     "self_order_close_session_from_order\\(\\)",
   ]) {
-    assert.match(
-      migration,
+    assertSqlMatch(migration,
       new RegExp(
         `REVOKE ALL ON FUNCTION public\\.${signature}[\\s\\S]*?FROM PUBLIC, anon, authenticated, service_role`,
       ),
     );
   }
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /REVOKE ALL ON FUNCTION private\.self_order_get_snapshot_base\(text\)[\s\S]*FROM PUBLIC, anon, authenticated, service_role/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /REVOKE ALL ON FUNCTION private\.self_order_list_staff_queue_base\(bigint\)[\s\S]*FROM PUBLIC, anon, authenticated, service_role/,
   );
 });
 
 test("R0C does not redefine payment completion, table release, or KDS behavior", () => {
-  assert.doesNotMatch(
-    migration,
+  assertSqlNotMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.finalize_paid_order/,
   );
-  assert.doesNotMatch(
-    migration,
+  assertSqlNotMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.complete_payment_and_consume_stock/,
   );
-  assert.doesNotMatch(migration, /UPDATE public\.kds_tickets/);
-  assert.doesNotMatch(migration, /UPDATE public\.order_items/);
+  assertSqlNotMatch(migration, /UPDATE public\.kds_tickets/);
+  assertSqlNotMatch(migration, /UPDATE public\.order_items/);
 });

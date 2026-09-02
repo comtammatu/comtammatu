@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
+import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch } from "./_lib/active-sql.ts";
 
 const repoRoot = join(import.meta.dirname, "../../..");
 
 function readRepoFile(path: string) {
-  return readFileSync(join(repoRoot, path), "utf8");
+  return readSql(repoRoot, path);
 }
 
 test("approveCountSlip schema and RPC support atomic surplus adjustment", () => {
@@ -33,13 +34,11 @@ test("approveCountSlip schema and RPC support atomic surplus adjustment", () => 
     /p_adjust_surplus:\s*parsed\.data\.autoAdjustSurplus/,
     "approveCountSlip must pass p_adjust_surplus to approve_inventory_count_slip_with_waste",
   );
-  assert.match(
-    migrationSource,
+  assertSqlMatch(migrationSource,
     /p_adjust_surplus boolean DEFAULT false/,
     "approve_inventory_count_slip_with_waste must define p_adjust_surplus parameter",
   );
-  assert.match(
-    migrationSource,
+  assertSqlMatch(migrationSource,
     /'count_adjustment'/,
     "approve_inventory_count_slip_with_waste must post count_adjustment movements for surplus lines",
   );

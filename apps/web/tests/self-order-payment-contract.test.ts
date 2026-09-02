@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch } from "./_lib/active-sql.ts";
 import {
   selfOrderPaymentCancelRequestSchema,
   selfOrderPaymentRequestSchema,
@@ -9,32 +10,11 @@ import {
   selfOrderVietQrResponseSchema,
 } from "../lib/self-order/contracts";
 
-const paymentTimingMigration = readFileSync(
-  join(
-    process.cwd(),
-    "../..",
-    "supabase/migration-archive/20260711033150_allow_self_order_payment_before_kds_ready.sql",
-  ),
-  "utf8",
-);
+const paymentTimingMigration = readSql(process.cwd(), "supabase/migrations/20260711033150_allow_self_order_payment_before_kds_ready.sql");
 
-const paymentStatusMigration = readFileSync(
-  join(
-    process.cwd(),
-    "../..",
-    "supabase/migration-archive/20260711034552_self_order_payment_status.sql",
-  ),
-  "utf8",
-);
+const paymentStatusMigration = readSql(process.cwd(), "supabase/migrations/20260711034552_self_order_payment_status.sql");
 
-const guestCancelMigration = readFileSync(
-  join(
-    process.cwd(),
-    "../..",
-    "supabase/migration-archive/20260725122220_allow_guest_cancel_vietqr.sql",
-  ),
-  "utf8",
-);
+const guestCancelMigration = readSql(process.cwd(), "supabase/migrations/20260725122220_allow_guest_cancel_vietqr.sql");
 
 function readWeb(path: string): string {
   return readFileSync(join(process.cwd(), path), "utf8");
@@ -127,12 +107,11 @@ test("payment server maps R0C domain errors without returning database text", ()
 test("Self-Order permits payment while KDS is still preparing", () => {
   const paymentPanel = readWeb("app/q/[token]/self-order/payment-panel.tsx");
 
-  assert.match(
-    paymentTimingMigration,
+  assertSqlMatch(paymentTimingMigration,
     /self_order_payment_ready_guard_not_removed/,
   );
-  assert.match(paymentTimingMigration, /chr\(10\)/);
-  assert.match(paymentTimingMigration, /EXECUTE v_definition/);
+  assertSqlMatch(paymentTimingMigration, /chr\(10\)/);
+  assertSqlMatch(paymentTimingMigration, /EXECUTE v_definition/);
   assert.doesNotMatch(paymentPanel, /canCreateVietQr/);
   assert.doesNotMatch(paymentPanel, /paymentNotReady/);
 });
@@ -232,16 +211,13 @@ test("guest can cancel only the exact active VietQR request", () => {
   assert.match(route, /selfOrderPaymentCancelRequestSchema\.safeParse/);
   assert.match(route, /validateSelfOrderMutationRequest/);
   assert.match(server, /"self_order_cancel_vietqr_payment"/);
-  assert.match(
-    guestCancelMigration,
+  assertSqlMatch(guestCancelMigration,
     /auth\.role\(\) IS DISTINCT FROM 'service_role'/,
   );
-  assert.match(
-    guestCancelMigration,
+  assertSqlMatch(guestCancelMigration,
     /pr\.table_id = v_table\.table_id[\s\S]*pr\.client_op_id = p_client_op_id/,
   );
-  assert.match(
-    guestCancelMigration,
+  assertSqlMatch(guestCancelMigration,
     /v_request_ref\.method <> 'vietqr'[\s\S]*v_request_ref\.status <> 'vietqr_pending'/,
   );
 });
@@ -252,21 +228,18 @@ test("only the current payment request can unlock the Self-Order completion scre
   );
   const client = readWeb("app/q/[token]/self-order-client.tsx");
 
-  assert.match(
-    paymentStatusMigration,
+  assertSqlMatch(paymentStatusMigration,
     /self_order_get_payment_request_status\(\s*p_token text,\s*p_client_op_id uuid/s,
   );
-  assert.match(paymentStatusMigration, /pr\.table_id = v_table\.table_id/);
-  assert.match(paymentStatusMigration, /pr\.client_op_id = p_client_op_id/);
-  assert.match(
-    paymentStatusMigration,
+  assertSqlMatch(paymentStatusMigration, /pr\.table_id = v_table\.table_id/);
+  assertSqlMatch(paymentStatusMigration, /pr\.client_op_id = p_client_op_id/);
+  assertSqlMatch(paymentStatusMigration,
     /auth\.role\(\) IS DISTINCT FROM 'service_role'/,
   );
-  assert.match(
-    paymentStatusMigration,
+  assertSqlMatch(paymentStatusMigration,
     /REVOKE ALL ON FUNCTION public\.self_order_get_payment_request_status/,
   );
-  assert.match(paymentStatusMigration, /TO service_role/);
+  assertSqlMatch(paymentStatusMigration, /TO service_role/);
   assert.match(paymentStatusRoute, /selfOrderClientOpIdSchema\.safeParse/);
   assert.match(paymentStatusRoute, /applySelfOrderPrivateHeaders/);
   assert.match(client, /payment-status\?\$\{query\.toString\(\)\}/);

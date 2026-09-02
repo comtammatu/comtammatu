@@ -93,8 +93,8 @@ over older task notes, regressions, and memory.
 - Every migration is T3. Write the migration file before applying it.
 - `supabase/migrations/` is the active, ordered install input. A file placed
   there is a proposal to apply in the next `db push`; it must belong to the
-  current task/PR and its purpose must be named in the owner approval. Keep
-  historical SQL only in `supabase/migration-archive/`.
+  current task/PR and its purpose must be named in the owner approval. Do not
+  store retired incrementals in-tree; git history is the archive.
 - Create an active file only with `node scripts/supabase-migration-new.mjs
   <lower_snake_case_name>` from the repository root. It generates only that new
   file with its validated 14-digit UTC+7 version. Never hand-pick a timestamp,

@@ -1,28 +1,29 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 const repoRoot = resolve(process.cwd(), "../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 const readWeb = (path: string) =>
-  readFileSync(resolve(process.cwd(), path), "utf8");
+  readSql(process.cwd(), path);
 
 test("finished goods without a production recipe reclassify to raw_material", () => {
   const sql = read(
-    "supabase/migration-archive/20260817191420_finished_good_produced_recipe_only.sql",
+    "supabase/migrations/20260817191420_finished_good_produced_recipe_only.sql",
   );
 
-  assert.match(sql, /item_kind = 'raw_material'/);
-  assert.match(sql, /production_recipe_specs/);
-  assert.match(sql, /production_output/);
-  assert.match(sql, /finished_good_not_purchased/);
-  assert.match(sql, /trg_supplier_items_require_purchased/);
-  assert.match(sql, /trg_purchase_request_items_require_purchased/);
-  assert.match(sql, /trg_purchase_order_items_require_purchased/);
-  assert.match(sql, /trg_grn_items_require_purchased/);
-  assert.match(sql, /bulk_create_supplier_items/);
-  assert.doesNotMatch(sql, /trg_stock_request/);
+  assertSqlMatch(sql, /item_kind = 'raw_material'/);
+  assertSqlMatch(sql, /production_recipe_specs/);
+  assertSqlMatch(sql, /production_output/);
+  assertSqlMatch(sql, /finished_good_not_purchased/);
+  assertSqlMatch(sql, /trg_supplier_items_require_purchased/);
+  assertSqlMatch(sql, /trg_purchase_request_items_require_purchased/);
+  assertSqlMatch(sql, /trg_purchase_order_items_require_purchased/);
+  assertSqlMatch(sql, /trg_grn_items_require_purchased/);
+  assertSqlMatch(sql, /bulk_create_supplier_items/);
+  assertSqlNotMatch(sql, /trg_stock_request/);
 });
 
 test("purchase pickers exclude finished goods and map the purchase error", () => {

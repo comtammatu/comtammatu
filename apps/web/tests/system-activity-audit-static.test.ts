@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { readSql } from "./_lib/active-sql.ts";
 import {
   AUDIT_ACTION_LABELS_VI,
   INVENTORY_AUDIT_ACTION_CODES,
@@ -171,13 +172,7 @@ test("settings tracking hub keeps three store boundaries", () => {
 });
 
 test("inventory lifecycle audit migration writes issue/stocktake/transfer actions", () => {
-  const migration = readFileSync(
-    join(
-      root,
-      "supabase/migration-archive/20260810101500_inventory_lifecycle_audit_logs.sql",
-    ),
-    "utf8",
-  );
+  const migration = readSql(root, "supabase/migrations/20260810101500_inventory_lifecycle_audit_logs.sql");
   for (const action of [
     "inventory.issue.confirmed",
     "inventory.stocktake.created",

@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { resolve } from "node:path";
+import { readSql } from "./_lib/active-sql.ts";
+
 
 const repoRoot = resolve(process.cwd(), "../..");
 
 function read(path: string): string {
-  return readFileSync(resolve(repoRoot, path), "utf8");
+  return readSql(repoRoot, path);
 }
 
 test("POS session variance resolution keeps the close-time cash difference immutable", () => {
@@ -17,7 +18,7 @@ test("POS session variance resolution keeps the close-time cash difference immut
     "apps/web/app/(protected)/br/[branchId]/(operator)/pos-sessions/pos-sessions-client.tsx",
   );
   const migration = read(
-    "supabase/migration-archive/20260719190000_align_finance_cash_shift_truth.sql",
+    "supabase/migrations/20260719190000_align_finance_cash_shift_truth.sql",
   );
   const closeSheet = read(
     "apps/web/app/(protected)/br/[branchId]/pos/close-session-sheet.tsx",
@@ -76,10 +77,10 @@ test("payment-method correction synchronizes POS cash and protects bank evidence
     "apps/web/app/(protected)/finance/payment-method-actions.ts",
   );
   const migration = read(
-    "supabase/migration-archive/20260719190000_align_finance_cash_shift_truth.sql",
+    "supabase/migrations/20260719190000_align_finance_cash_shift_truth.sql",
   );
   const guardMigration = read(
-    "supabase/migration-archive/20260719224000_guard_cash_correction_with_bank_evidence.sql",
+    "supabase/migrations/20260719224000_guard_cash_correction_with_bank_evidence.sql",
   );
 
   assert.match(
@@ -109,10 +110,10 @@ test("Finance attention deep-links to the exact unresolved POS session", () => {
     "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts",
   );
   const migration = read(
-    "supabase/migration-archive/20260719225000_create_finance_attention_targets.sql",
+    "supabase/migrations/20260719225000_create_finance_attention_targets.sql",
   );
   const operatingCockpitMigration = read(
-    "supabase/migration-archive/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
+    "supabase/migrations/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
   );
 
   assert.match(cockpit, /cashVarianceSessionId/);

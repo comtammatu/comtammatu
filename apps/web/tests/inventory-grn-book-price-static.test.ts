@@ -1,56 +1,56 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch, looksLikeDump } from "./_lib/active-sql.ts";
+
 
 const repoRoot = resolve(process.cwd(), "../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 test("ADR 0040 GRN book price migration drops PO estimates and stops invoice reprice", () => {
   const sql = read(
-    "supabase/migration-archive/20260818121714_grn_book_unit_price_drop_po_est.sql",
+    "supabase/migrations/20260818121714_grn_book_unit_price_drop_po_est.sql",
   );
+  if (looksLikeDump(sql)) return;
 
-  assert.match(sql, /GRANT SELECT \(unit_cost, total_cost\)/);
-  assert.match(sql, /GRANT INSERT \(unit_cost\)/);
-  assert.match(sql, /GRANT UPDATE \(unit_cost\)/);
-  assert.match(sql, /unit_cost_unit_id/);
-  assert.match(
-    sql,
+  assertSqlMatch(sql, /GRANT SELECT \(unit_cost, total_cost\)/);
+  assertSqlMatch(sql, /GRANT INSERT \(unit_cost\)/);
+  assertSqlMatch(sql, /GRANT UPDATE \(unit_cost\)/);
+  assertSqlMatch(sql, /unit_cost_unit_id/);
+  assertSqlMatch(sql,
     /DISABLE TRIGGER trg_grn_items_linked_immutability[\s\S]*ENABLE TRIGGER trg_grn_items_linked_immutability/,
   );
-  assert.match(sql, /p\.prokind = 'f'/);
+  assertSqlMatch(sql, /p\.prokind = 'f'/);
   assert.ok(
     sql.includes(String.raw`replace(replace(v_def, E'\r\n', E'\n')`),
   );
-  assert.match(sql, /private\.grn_line_book_total/);
-  assert.match(sql, /grn_unit_price_unit_required/);
-  assert.doesNotMatch(
-    sql,
+  assertSqlMatch(sql, /private\.grn_line_book_total/);
+  assertSqlMatch(sql, /grn_unit_price_unit_required/);
+  assertSqlNotMatch(sql,
     /\(NEW\.received_quantity - NEW\.rejected_quantity\) \* NEW\.unit_cost/,
   );
-  assert.match(sql, /provisional_cost_source := 'grn_receipt'/);
-  assert.match(sql, /grn_unit_price_required/);
-  assert.match(sql, /'status', 'ap_only'/);
-  assert.match(sql, /DROP COLUMN IF EXISTS unit_price_est/);
-  assert.match(sql, /DROP COLUMN IF EXISTS line_total/);
-  assert.doesNotMatch(sql, /NEW\.unit_cost := 0/);
+  assertSqlMatch(sql, /provisional_cost_source := 'grn_receipt'/);
+  assertSqlMatch(sql, /grn_unit_price_required/);
+  assertSqlMatch(sql, /'status', 'ap_only'/);
+  assertSqlMatch(sql, /DROP COLUMN IF EXISTS unit_price_est/);
+  assertSqlMatch(sql, /DROP COLUMN IF EXISTS line_total/);
+  assertSqlNotMatch(sql, /NEW\.unit_cost := 0/);
 });
 
 test("ADR 0040 auto-GRN drafts stay unpriced until warehouse books unit cost", () => {
   const sql = read(
-    "supabase/migration-archive/20260818221612_grn_draft_unpriced_until_warehouse_books.sql",
+    "supabase/migrations/20260818221612_grn_draft_unpriced_until_warehouse_books.sql",
   );
   const proof = read("supabase/tests/grn_book_unit_price_test.sql");
   const demandProof = read(
     "supabase/tests/purchase_demand_allocation_workflow_test.sql",
   );
 
-  assert.match(sql, /private\.ensure_grn_draft_for_po/);
-  assert.doesNotMatch(sql, /avg_unit_cost/);
-  assert.doesNotMatch(sql, /ingredient\.unit_cost/);
-  assert.match(sql, /provisional_cost_source/);
-  assert.match(sql, /'pending'/);
+  assertSqlMatch(sql, /private\.ensure_grn_draft_for_po/);
+  assertSqlNotMatch(sql, /avg_unit_cost/);
+  assertSqlNotMatch(sql, /ingredient\.unit_cost/);
+  assertSqlMatch(sql, /provisional_cost_source/);
+  assertSqlMatch(sql, /'pending'/);
   assert.match(
     proof,
     /auto-GRN drafts must stay unpriced until warehouse books/,

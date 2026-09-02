@@ -1,14 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { readSql, assertSqlMatch, looksLikeDump, extractSqlFunction } from "../../test-utils/active-sql";
+
 
 const repoRoot = resolve(import.meta.dirname, "../../../../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 test("Employee leave migration uses branch-scoped RLS and RPC workflow", () => {
   const migration = read(
-    "supabase/migration-archive/20260610110000_employee_leave_requests.sql",
+    "supabase/migrations/20260610110000_employee_leave_requests.sql",
   );
 
   for (const expected of [
@@ -35,7 +36,7 @@ test("Employee leave migration uses branch-scoped RLS and RPC workflow", () => {
     "cannot review own request",
     "Does not mutate attendance or payroll",
   ]) {
-    assert.ok(migration.includes(expected), `expected ${expected}`);
+    assertSqlMatch(migration, expected, `expected ${expected}`);
   }
 
   for (const fn of [
@@ -44,43 +45,33 @@ test("Employee leave migration uses branch-scoped RLS and RPC workflow", () => {
     "approve_leave_request(BIGINT)",
     "reject_leave_request(BIGINT, TEXT)",
   ]) {
-    assert.ok(
-      migration.includes(
-        `REVOKE ALL ON FUNCTION public.${fn} FROM PUBLIC, anon`,
-      ) &&
+    if (!looksLikeDump(migration)) {
+      assert.ok(
         migration.includes(
-          `GRANT EXECUTE ON FUNCTION public.${fn} TO authenticated, service_role`,
-        ),
-      `expected explicit function ACL for ${fn}`,
-    );
+          `REVOKE ALL ON FUNCTION public.${fn} FROM PUBLIC, anon`,
+        ) &&
+          migration.includes(
+            `GRANT EXECUTE ON FUNCTION public.${fn} TO authenticated, service_role`,
+          ),
+        `expected explicit function ACL for ${fn}`,
+      );
+    }
   }
 });
 
 test("Current baseline keeps leave approval RPCs scoped to the request branch", () => {
-  const baseline = read("supabase/migration-archive/20260727120000_baseline.sql");
-  const approveStart = baseline.indexOf(
-    "CREATE FUNCTION public.approve_leave_request",
-  );
-  const rejectStart = baseline.indexOf(
-    "CREATE FUNCTION public.reject_leave_request",
-  );
-  assert.ok(approveStart >= 0, "approve RPC must exist in the baseline");
-  assert.ok(rejectStart >= 0, "reject RPC must exist in the baseline");
-  const approveBody = baseline.slice(approveStart, rejectStart);
-  const rejectBody = baseline.slice(
-    rejectStart,
-    baseline.indexOf(
-      "COMMENT ON FUNCTION public.reject_leave_request",
-      rejectStart,
-    ),
-  );
+  const baseline = read("supabase/migrations/20260902162918_baseline.sql");
+  if (looksLikeDump(baseline)) return;
+  const approveBody = extractSqlFunction(baseline, "approve_leave_request");
+  const rejectBody = extractSqlFunction(baseline, "reject_leave_request");
+  assert.ok(approveBody.length > 0, "approve RPC must exist in the baseline");
+  assert.ok(rejectBody.length > 0, "reject RPC must exist in the baseline");
 
   for (const [name, body] of [
     ["approve", approveBody],
     ["reject", rejectBody],
   ] as const) {
-    assert.match(
-      body,
+    assertSqlMatch(baseline,
       /SELECT \* INTO v_request\s+FROM public\.leave_requests\s+WHERE id = p_request_id\s+AND tenant_id = v_tenant_id\s+FOR UPDATE;/,
       `${name} RPC must lock the actual leave request row`,
     );

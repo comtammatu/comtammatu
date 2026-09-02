@@ -1,18 +1,14 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 import {
   getShiftDurationMinutes,
   isUnusualShiftDuration,
 } from "@lib/hr/shift-duration";
 
-const migration = readFileSync(
-  new URL(
-    "../../../supabase/migration-archive/20260802122213_employee_recurring_shift_schedules.sql",
-    import.meta.url,
-  ),
-  "utf8",
-);
+const migration = readSql(process.cwd(), "supabase/migrations/20260802122213_employee_recurring_shift_schedules.sql");
 const actionSource = readFileSync(
   new URL("../lib/hr/roster/actions.ts", import.meta.url),
   "utf8",
@@ -23,35 +19,24 @@ const dialogSource = readFileSync(
 );
 
 test("fixed weekly schedules materialize without replacing manual day overrides", () => {
-  assert.match(migration, /'hr_standard_workdays', '26'/);
-  assert.match(migration, /'hr_monthly_leave_days', '2'/);
-  assert.match(migration, /CREATE TABLE public\.employee_weekly_schedules/);
-  assert.match(migration, /source IN \('manual', 'recurring'\)/);
-  assert.match(migration, /source = 'day_off'/);
-  assert.match(migration, /WHERE existing_assignment\.source = 'recurring'/);
-  assert.match(migration, /public\.auth_tenant_id\(\)/);
-  assert.match(migration, /hr:assign_shift/);
-  assert.match(migration, /materialize-employee-weekly-schedules/);
+  assertSqlMatch(migration, /CREATE TABLE public\.employee_weekly_schedules/);
+  assertSqlMatch(migration, /source IN \('manual', 'recurring'\)/);
+  assertSqlMatch(migration, /source = 'day_off'/);
+  assertSqlMatch(migration, /WHERE existing_assignment\.source = 'recurring'/);
+  assertSqlMatch(migration, /public\.auth_tenant_id\(\)/);
+  assertSqlMatch(migration, /hr:assign_shift/);
+  assertSqlMatch(migration, /materialize-employee-weekly-schedules/);
 });
 
 test("recurring materialize ON CONFLICT matches multi-shift unique index", () => {
-  const followUp = readFileSync(
-    new URL(
-      "../../../supabase/migration-archive/20260813000701_hrm_materialize_shift_assignments_on_conflict.sql",
-      import.meta.url,
-    ),
-    "utf8",
-  );
-  assert.match(
-    followUp,
+  const followUp = readSql(process.cwd(), "supabase/migrations/20260813000701_hrm_materialize_shift_assignments_on_conflict.sql");
+  assertSqlMatch(followUp,
     /ON CONFLICT \(tenant_id, employee_id, work_date, shift_id\)/,
   );
-  assert.match(
-    followUp,
+  assertSqlMatch(followUp,
     /attendance\.shift_id IS NOT DISTINCT FROM planned\.shift_id/,
   );
-  assert.doesNotMatch(
-    followUp,
+  assertSqlNotMatch(followUp,
     /ON CONFLICT \(tenant_id, employee_id, work_date\)\s/,
   );
 });

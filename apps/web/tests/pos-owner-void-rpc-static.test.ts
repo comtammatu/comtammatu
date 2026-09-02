@@ -1,14 +1,15 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 function readRepo(path: string): string {
-  return readFileSync(join(process.cwd(), "../..", path), "utf8");
+  return readSql(join(process.cwd(), "../.."), path);
 }
 
 const migration = readRepo(
-  "supabase/migration-archive/20260828203623_allow_waiter_pos_item_edit_and_void.sql",
+  "supabase/migrations/20260828203623_allow_waiter_pos_item_edit_and_void.sql",
 );
 
 const ITEM_MUTATION_RPCS = [
@@ -19,22 +20,19 @@ const ITEM_MUTATION_RPCS = [
 
 test("waiter item mutation migration admits branch_staff without widening whole-order cancel", () => {
   for (const name of ITEM_MUTATION_RPCS) {
-    assert.match(
-      migration,
+    assertSqlMatch(migration,
       new RegExp(`proname = '${name}'`),
       `${name} must be patched by the forward migration`,
     );
   }
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /v_prof_role NOT IN \(''owner'', ''branch_manager'', ''cashier'', ''branch_staff''\)/,
   );
-  assert.match(migration, /position_code = 'waiter'/);
-  assert.match(migration, /'pos:void_order'/);
-  assert.match(migration, /sync_missing_permissions_from_template/);
-  assert.doesNotMatch(
-    migration,
+  assertSqlMatch(migration, /position_code = 'waiter'/);
+  assertSqlMatch(migration, /'pos:void_order'/);
+  assertSqlMatch(migration, /sync_missing_permissions_from_template/);
+  assertSqlNotMatch(migration,
     /proname = 'cancel_order'/,
     "whole-order cancellation must keep its tighter role boundary",
   );

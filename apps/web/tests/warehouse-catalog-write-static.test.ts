@@ -1,16 +1,17 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 const repoRoot = resolve(import.meta.dirname, "..", "..", "..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 const migration = read(
-  "supabase/migration-archive/20260824015244_ingredient_catalog_warehouse_write_and_unit_cap.sql",
+  "supabase/migrations/20260824015244_ingredient_catalog_warehouse_write_and_unit_cap.sql",
 );
 const thresholdAuthorityMigration = read(
-  "supabase/migration-archive/20260902153415_align_inventory_threshold_catalog_authority.sql",
+  "supabase/migrations/20260902153415_align_inventory_threshold_catalog_authority.sql",
 );
 const permissions = read("packages/shared/src/auth/permissions.ts");
 const inventoryRoles = read("packages/shared/src/auth/inventory-roles.ts");
@@ -34,22 +35,21 @@ const wizard = read(
 );
 
 test("ADR 0045 seeds inventory:catalog_write and keeps the TS mirror in sync", () => {
-  assert.match(migration, /'inventory:catalog_write'/);
-  assert.match(migration, /INSERT INTO public\.permission_keys/);
-  assert.match(migration, /SELECT 'tenant_owner', key/);
+  assertSqlMatch(migration, /'inventory:catalog_write'/);
+  assertSqlMatch(migration, /INSERT INTO public\.permission_keys/);
+  assertSqlMatch(migration, /SELECT 'tenant_owner', key/);
   assert.match(permissions, /INVENTORY_CATALOG_WRITE: "inventory:catalog_write"/);
 });
 
 test("ADR 0045 RPC gate is capability or warehouse position, not the owner role", () => {
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /public\.has_permission_any\('inventory:catalog_write'\)/,
   );
-  assert.match(migration, /public\.has_position\('central_supply_ops'\)/);
-  assert.doesNotMatch(migration, /auth_role\(\) <> 'owner'/);
+  assertSqlMatch(migration, /public\.has_position\('central_supply_ops'\)/);
+  assertSqlNotMatch(migration, /auth_role\(\) <> 'owner'/);
   // The 20-unit cap restored after the 20260820030125 regression.
-  assert.match(migration, /jsonb_array_length\(p_units\) NOT BETWEEN 1 AND 20/);
-  assert.doesNotMatch(migration, /NOT BETWEEN 1 AND 3\b/);
+  assertSqlMatch(migration, /jsonb_array_length\(p_units\) NOT BETWEEN 1 AND 20/);
+  assertSqlNotMatch(migration, /NOT BETWEEN 1 AND 3\b/);
 });
 
 test("ADR 0045 opens catalog write actions to warehouse ops behind one role list", () => {
@@ -82,16 +82,13 @@ test("catalog settings expose the same dedicated capabilities enforced by action
   );
   assert.match(thresholdActions, /INGREDIENT_CATALOG_WRITE_ROLES/);
   assert.doesNotMatch(thresholdActions, /INVENTORY_CATALOG_ROLES/);
-  assert.match(
-    thresholdAuthorityMigration,
+  assertSqlMatch(thresholdAuthorityMigration,
     /public\.has_permission_any\('inventory:catalog_write'\)/,
   );
-  assert.match(
-    thresholdAuthorityMigration,
+  assertSqlMatch(thresholdAuthorityMigration,
     /public\.has_position\('central_supply_ops'\)/,
   );
-  assert.doesNotMatch(
-    thresholdAuthorityMigration,
+  assertSqlNotMatch(thresholdAuthorityMigration,
     /auth_role\(\) <> 'owner'[\s\S]{0,80}has_permission_any\('inventory:write'\)/,
   );
 });
@@ -111,22 +108,18 @@ test("location threshold RPC matches the operational roles exposed by stock UI",
     stockActions,
     /reorderQuantity: inventoryNonnegativeQuantitySchema\.nullable\(\)\.optional\(\)/,
   );
-  assert.match(
-    thresholdAuthorityMigration,
+  assertSqlMatch(thresholdAuthorityMigration,
     /CREATE OR REPLACE FUNCTION public\.upsert_branch_stock_thresholds\([\s\S]*?p_location_id bigint/,
   );
-  assert.match(
-    thresholdAuthorityMigration,
+  assertSqlMatch(thresholdAuthorityMigration,
     /public\.has_position\('central_supply_ops'\)/,
   );
-  assert.match(thresholdAuthorityMigration, /'central_kitchen_lead'/);
-  assert.match(thresholdAuthorityMigration, /'branch_manager'/);
-  assert.match(
-    thresholdAuthorityMigration,
+  assertSqlMatch(thresholdAuthorityMigration, /'central_kitchen_lead'/);
+  assertSqlMatch(thresholdAuthorityMigration, /'branch_manager'/);
+  assertSqlMatch(thresholdAuthorityMigration,
     /jsonb_array_length\(p_thresholds\) NOT BETWEEN 1 AND 500/,
   );
-  assert.match(
-    thresholdAuthorityMigration,
+  assertSqlMatch(thresholdAuthorityMigration,
     /v_reorder_quantity IN \([\s\S]*?'NaN'::numeric,[\s\S]*?'Infinity'::numeric,[\s\S]*?'-Infinity'::numeric[\s\S]*?\)/,
   );
 });

@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 import {
   POPULAR_BANK_APP_IDS,
   STATIC_VIETQR_BANK_APPS,
@@ -11,11 +12,11 @@ import {
 } from "../lib/self-order/bank-app-link";
 
 function readWeb(path: string): string {
-  return readFileSync(join(process.cwd(), path), "utf8");
+  return readSql(process.cwd(), path);
 }
 
 function readRepo(path: string): string {
-  return readFileSync(join(process.cwd(), "../..", path), "utf8");
+  return readSql(join(process.cwd(), "../.."), path);
 }
 
 test("public QR surfaces use the shared web QR renderer", () => {
@@ -389,47 +390,44 @@ test("unknown catalog appIds still fall back to the VietQR aggregator", () => {
 
 test("self-order snapshot migration does not read unassigned records", () => {
   const migration = readRepo(
-    "supabase/migration-archive/20260708124000_fix_self_order_snapshot_empty_session.sql",
+    "supabase/migrations/20260708124000_fix_self_order_snapshot_empty_session.sql",
   );
 
-  assert.match(migration, /v_session_payload jsonb := NULL/);
-  assert.match(migration, /v_order_payload jsonb := NULL/);
-  assert.match(migration, /v_payment_request_payload jsonb := NULL/);
-  assert.match(migration, /'session', v_session_payload/);
-  assert.match(migration, /'order', v_order_payload/);
-  assert.match(migration, /'paymentRequest', v_payment_request_payload/);
-  assert.doesNotMatch(migration, /v_session\\.id IS NULL/);
-  assert.doesNotMatch(migration, /v_order\\.order_number IS NULL/);
-  assert.doesNotMatch(migration, /v_payment_request\\.status IS NULL/);
+  assertSqlMatch(migration, /v_session_payload jsonb := NULL/);
+  assertSqlMatch(migration, /v_order_payload jsonb := NULL/);
+  assertSqlMatch(migration, /v_payment_request_payload jsonb := NULL/);
+  assertSqlMatch(migration, /'session', v_session_payload/);
+  assertSqlMatch(migration, /'order', v_order_payload/);
+  assertSqlMatch(migration, /'paymentRequest', v_payment_request_payload/);
+  assertSqlNotMatch(migration, /v_session\\.id IS NULL/);
+  assertSqlNotMatch(migration, /v_order\\.order_number IS NULL/);
+  assertSqlNotMatch(migration, /v_payment_request\\.status IS NULL/);
 });
 
 test("self-order requires an open POS session before customer writes", () => {
   const migration = readRepo(
-    "supabase/migration-archive/20260708125500_self_order_require_open_pos_session.sql",
+    "supabase/migrations/20260708125500_self_order_require_open_pos_session.sql",
   );
   const server = readWeb("lib/self-order/server.ts");
   const staffActions = readWeb(
     "app/(protected)/br/[branchId]/pos/self-order-actions.ts",
   );
 
-  assert.match(migration, /self_order_branch_has_open_pos_session/);
-  assert.match(migration, /FROM public\.pos_sessions ps/);
-  assert.match(migration, /ps\.status = 'open'/);
-  assert.match(migration, /'pos_session_closed'/);
-  assert.match(migration, /self_order_pos_session_closed/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /self_order_branch_has_open_pos_session/);
+  assertSqlMatch(migration, /FROM public\.pos_sessions ps/);
+  assertSqlMatch(migration, /ps\.status = 'open'/);
+  assertSqlMatch(migration, /'pos_session_closed'/);
+  assertSqlMatch(migration, /self_order_pos_session_closed/);
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.self_order_approve_batch/,
   );
-  assert.match(migration, /v_pos_session_id bigint/);
-  assert.match(migration, /ps\.id = p_pos_session_id/);
-  assert.match(migration, /v_order\.pos_session_id <> v_pos_session_id/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /v_pos_session_id bigint/);
+  assertSqlMatch(migration, /ps\.id = p_pos_session_id/);
+  assertSqlMatch(migration, /v_order\.pos_session_id <> v_pos_session_id/);
+  assertSqlMatch(migration,
     /BEFORE INSERT OR UPDATE OF status ON public\.self_order_batches/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /BEFORE INSERT ON public\.self_order_payment_requests/,
   );
   assert.match(server, /code: "pos_session_closed"/);

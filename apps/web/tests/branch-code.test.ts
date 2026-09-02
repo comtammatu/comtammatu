@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
+import { readSql, assertSqlMatch } from "./_lib/active-sql.ts";
+
 import {
   BRANCH_CODE_PATTERN,
   branchCodeSchema,
@@ -21,14 +23,11 @@ test("branch code matches the migration contract", async () => {
 
   assert.equal(BRANCH_CODE_PATTERN.source, "^[A-Z]{2,4}$");
 
-  const migration = await readFile(
-    path.join(
-      repositoryRoot,
-      "supabase/migration-archive/20260727120000_baseline.sql",
-    ),
-    "utf8",
+  const migration = readSql(
+    repositoryRoot,
+    "supabase/migrations/20260902162918_baseline.sql",
   );
-  assert.match(
+  assertSqlMatch(
     migration,
     /code ~ '\^\[A-Z\]\{2,4\}\$'/,
   );

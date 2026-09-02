@@ -1,25 +1,26 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 function readRepo(path: string): string {
-  return readFileSync(join(process.cwd(), "../..", path), "utf8");
+  return readSql(join(process.cwd(), "../.."), path);
 }
 
 const baseMigration = readRepo(
-  "supabase/migration-archive/20260808092216_waiter_near_cashier_pos_grants.sql",
+  "supabase/migrations/20260808092216_waiter_near_cashier_pos_grants.sql",
 );
 const itemMutationMigration = readRepo(
-  "supabase/migration-archive/20260828203623_allow_waiter_pos_item_edit_and_void.sql",
+  "supabase/migrations/20260828203623_allow_waiter_pos_item_edit_and_void.sql",
 );
 
 test("waiter template adds item edit/void while keeping cashbox and close excluded", () => {
-  assert.match(itemMutationMigration, /position_code = 'waiter'/);
-  assert.match(itemMutationMigration, /'pos:void_order'/);
-  assert.doesNotMatch(itemMutationMigration, /'pos:open_cashbox'/);
-  assert.doesNotMatch(itemMutationMigration, /'pos:close_shift'/);
-  assert.match(itemMutationMigration, /sync_missing_permissions_from_template/);
+  assertSqlMatch(itemMutationMigration, /position_code = 'waiter'/);
+  assertSqlMatch(itemMutationMigration, /'pos:void_order'/);
+  assertSqlNotMatch(itemMutationMigration, /'pos:open_cashbox'/);
+  assertSqlNotMatch(itemMutationMigration, /'pos:close_shift'/);
+  assertSqlMatch(itemMutationMigration, /sync_missing_permissions_from_template/);
 });
 
 test("merge/split/status and item mutation RPCs admit branch_staff", () => {
@@ -43,6 +44,6 @@ test("merge/split/status and item mutation RPCs admit branch_staff", () => {
     "reduce_order_item_quantity",
     "edit_pending_order_item",
   ]) {
-    assert.match(itemMutationMigration, new RegExp(`proname = '${name}'`));
+    assertSqlMatch(itemMutationMigration, new RegExp(`proname = '${name}'`));
   }
 });

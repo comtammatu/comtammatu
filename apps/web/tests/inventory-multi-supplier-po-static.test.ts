@@ -1,36 +1,36 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 const repoRoot = resolve(process.cwd(), "../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 test("ADR 0040 PO lines carry supplier_id and confirm books one NCC on a shared GRN", () => {
   const sql = read(
-    "supabase/migration-archive/20260820122811_po_line_supplier_shared_grn.sql",
+    "supabase/migrations/20260820122811_po_line_supplier_shared_grn.sql",
   );
   const proof = read(
     "supabase/tests/multi_supplier_po_shared_grn_test.sql",
   );
   const wave4 = read(
-    "supabase/migration-archive/20260820123758_wave4_revoke_ycm_ych_write.sql",
+    "supabase/migrations/20260820123758_wave4_revoke_ycm_ych_write.sql",
   );
 
-  assert.match(sql, /purchase_order_items[\s\S]*supplier_id bigint/);
-  assert.match(sql, /ALTER COLUMN supplier_id DROP NOT NULL/);
-  assert.match(sql, /ADD COLUMN IF NOT EXISTS confirmed_at timestamptz/);
-  assert.match(
-    sql,
+  assertSqlMatch(sql, /purchase_order_items[\s\S]*supplier_id bigint/);
+  assertSqlMatch(sql, /ALTER COLUMN supplier_id DROP NOT NULL/);
+  assertSqlMatch(sql, /ADD COLUMN IF NOT EXISTS confirmed_at timestamptz/);
+  assertSqlMatch(sql,
     /CREATE OR REPLACE FUNCTION public\.confirm_goods_receipt_note\(\s*p_grn_id bigint,\s*p_supplier_id bigint DEFAULT NULL/,
   );
-  assert.match(sql, /grn_supplier_confirm_required/);
-  assert.match(sql, /item\.confirmed_at IS NULL/);
-  assert.match(sql, /save_supplier_invoice_draft_unchecked missing/);
-  assert.match(sql, /grn_item\.confirmed_at IS NOT NULL/);
-  assert.match(sql, /drop unconfirmed GRN lines/);
-  assert.match(sql, /LEFT JOIN public\.suppliers supplier/);
-  assert.doesNotMatch(sql, /invoice_reprice/);
+  assertSqlMatch(sql, /grn_supplier_confirm_required/);
+  assertSqlMatch(sql, /item\.confirmed_at IS NULL/);
+  assertSqlMatch(sql, /save_supplier_invoice_draft_unchecked missing/);
+  assertSqlMatch(sql, /grn_item\.confirmed_at IS NOT NULL/);
+  assertSqlMatch(sql, /drop unconfirmed GRN lines/);
+  assertSqlMatch(sql, /LEFT JOIN public\.suppliers supplier/);
+  assertSqlNotMatch(sql, /invoice_reprice/);
 
   assert.match(proof, /mixed PO header supplier must be null/);
   assert.match(proof, /confirm A must leave shared GRN draft/);
@@ -38,10 +38,10 @@ test("ADR 0040 PO lines carry supplier_id and confirm books one NCC on a shared 
   assert.match(proof, /confirm B must close shared GRN/);
   assert.match(proof, /invoice A must not allocate B/);
 
-  assert.match(wave4, /REVOKE ALL ON FUNCTION public\.save_purchase_demand/);
-  assert.match(wave4, /REVOKE ALL ON FUNCTION public\.save_stock_request/);
-  assert.doesNotMatch(wave4, /REVOKE ALL ON FUNCTION public\.close_stock_request/);
-  assert.doesNotMatch(wave4, /DROP TABLE/);
+  assertSqlMatch(wave4, /REVOKE ALL ON FUNCTION public\.save_purchase_demand/);
+  assertSqlMatch(wave4, /REVOKE ALL ON FUNCTION public\.save_stock_request/);
+  assertSqlNotMatch(wave4, /REVOKE ALL ON FUNCTION public\.close_stock_request/);
+  assertSqlNotMatch(wave4, /DROP TABLE/);
 });
 
 test("ADR 0040 UI is ingredient-first and confirms GRN by NCC", () => {

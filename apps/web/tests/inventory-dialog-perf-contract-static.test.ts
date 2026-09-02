@@ -1,3 +1,4 @@
+import { readSql } from "./_lib/active-sql.ts";
 /**
  * Performance contract for Inventory list-first document dialogs (YCM/PO/GRN).
  * Assertions encode the fixed open path: History-API overlay URL, gated dialog
@@ -9,7 +10,10 @@ import { resolve } from "node:path";
 import { test } from "node:test";
 
 const repoRoot = resolve(process.cwd(), "../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) =>
+  String(path).includes("supabase/migrations/")
+    ? readSql(repoRoot, String(path).replace(/^.*?(supabase\/)/, "supabase/"))
+    : readFileSync(resolve(repoRoot, path), "utf8");
 
 test("document overlay URL primitive exists for History-API dialog keys", () => {
   const hookPath = resolve(

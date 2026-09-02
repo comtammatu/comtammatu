@@ -1,95 +1,86 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "../../test-utils/active-sql";
+
 
 const repoRoot = new URL("../../../../../", import.meta.url);
 
 function readRepoFile(path: string): string {
-  const candidate = new URL(path, repoRoot);
-  if (existsSync(candidate)) return readFileSync(candidate, "utf8");
-  if (path.startsWith("supabase/migrations/")) {
-    return readFileSync(
-      new URL(
-        path.replace("supabase/migrations/", "supabase/migration-archive/"),
-        repoRoot,
-      ),
-      "utf8",
-    );
+  if (path.startsWith("supabase/") || path.includes("migration-archive")) {
+    return readSql(fileURLToPath(repoRoot), path);
   }
-  return readFileSync(candidate, "utf8");
+  return readFileSync(new URL(path, repoRoot), "utf8");
 }
 
 test("SePay webhook verifies raw-body HMAC and returns SePay success JSON", () => {
   const source = readRepoFile("apps/web/app/api/webhooks/sepay/route.ts");
 
-  assert.match(source, /await request\.text\(\)/);
-  assert.doesNotMatch(source, /await request\.json\(\)/);
-  assert.match(source, /request\.headers\.get\("x-sepay-signature"\)/);
-  assert.match(source, /request\.headers\.get\("x-sepay-timestamp"\)/);
-  assert.match(source, /createHmac\("sha256", SEPAY_WEBHOOK_SECRET\)/);
-  assert.match(source, /update\(`\$\{timestampHeader\}\.\$\{rawBody\}`\)/);
-  assert.match(source, /NextResponse\.json\(\{ success: true \}\)/);
+  assertSqlMatch(source, /await request\.text\(\)/);
+  assertSqlNotMatch(source, /await request\.json\(\)/);
+  assertSqlMatch(source, /request\.headers\.get\("x-sepay-signature"\)/);
+  assertSqlMatch(source, /request\.headers\.get\("x-sepay-timestamp"\)/);
+  assertSqlMatch(source, /createHmac\("sha256", SEPAY_WEBHOOK_SECRET\)/);
+  assertSqlMatch(source, /update\(`\$\{timestampHeader\}\.\$\{rawBody\}`\)/);
+  assertSqlMatch(source, /NextResponse\.json\(\{ success: true \}\)/);
 });
 
 test("SePay webhook claims idempotency before order-evidence reconciliation", () => {
   const source = readRepoFile("apps/web/app/api/webhooks/sepay/route.ts");
 
-  assert.match(source, /function buildPaymentCodeRe/);
-  assert.match(source, /function resolvePaymentCodePrefix/);
-  assert.match(source, /SYSTEM_SETTING_KEYS\.PAYMENT_VIETQR_CODE_PREFIX/);
-  assert.match(source, /function resolveBankContentSettings/);
-  assert.match(source, /function extractBankContentCommand/);
-  assert.match(source, /SYSTEM_SETTING_KEYS\.PAYMENT_CONTENT_PREFIX/);
-  assert.match(source, /SYSTEM_SETTING_KEYS\.PAYMENT_CONTENT_EXPENSE_TOKEN/);
-  assert.match(
-    source,
+  assertSqlMatch(source, /function buildPaymentCodeRe/);
+  assertSqlMatch(source, /function resolvePaymentCodePrefix/);
+  assertSqlMatch(source, /SYSTEM_SETTING_KEYS\.PAYMENT_VIETQR_CODE_PREFIX/);
+  assertSqlMatch(source, /function resolveBankContentSettings/);
+  assertSqlMatch(source, /function extractBankContentCommand/);
+  assertSqlMatch(source, /SYSTEM_SETTING_KEYS\.PAYMENT_CONTENT_PREFIX/);
+  assertSqlMatch(source, /SYSTEM_SETTING_KEYS\.PAYMENT_CONTENT_EXPENSE_TOKEN/);
+  assertSqlMatch(source,
     /SYSTEM_SETTING_KEYS\.PAYMENT_CONTENT_CASH_DEPOSIT_TOKEN/,
   );
-  assert.doesNotMatch(source, /NOP TIEN MATU/);
-  assert.match(source, /LEGACY_PAYMENT_CODE_RE/);
-  assert.match(source, /id: z\.coerce\.number\(\)\.int\(\)\.nonnegative\(\)/);
-  assert.match(source, /new URLSearchParams\(rawBody\)/);
-  assert.match(source, /transferAmount: z\.coerce\.number\(\)/);
-  assert.doesNotMatch(
-    source,
+  assertSqlNotMatch(source, /NOP TIEN MATU/);
+  assertSqlMatch(source, /LEGACY_PAYMENT_CODE_RE/);
+  assertSqlMatch(source, /id: z\.coerce\.number\(\)\.int\(\)\.nonnegative\(\)/);
+  assertSqlMatch(source, /new URLSearchParams\(rawBody\)/);
+  assertSqlMatch(source, /transferAmount: z\.coerce\.number\(\)/);
+  assertSqlNotMatch(source,
     /transferAmount: z\.coerce\.number\(\)\.nonnegative\(\)/,
   );
-  assert.match(source, /payload\.transferType === "out"/);
-  assert.match(source, /bankCommand\?\.kind === "expense"/);
-  assert.match(source, /bankCommand\?\.kind === "cash_deposit"/);
-  assert.match(source, /\.rpc\(\s*"match_sepay_transaction_expenses"/);
-  assert.match(source, /"record_sepay_cash_deposit_as_system"/);
-  assert.doesNotMatch(source, /\.from\("expenses"\)[\s\S]*\.insert\(/);
+  assertSqlMatch(source, /payload\.transferType === "out"/);
+  assertSqlMatch(source, /bankCommand\?\.kind === "expense"/);
+  assertSqlMatch(source, /bankCommand\?\.kind === "cash_deposit"/);
+  assertSqlMatch(source, /\.rpc\(\s*"match_sepay_transaction_expenses"/);
+  assertSqlMatch(source, /"record_sepay_cash_deposit_as_system"/);
+  assertSqlNotMatch(source, /\.from\("expenses"\)[\s\S]*\.insert\(/);
   // Match regex is built per-webhook from the configured prefix (+ grandfather
   // branches), not a static literal.
-  assert.match(source, /LEGACY_SOUNDBOX_PREFIX = "VQRLOAMB20260626100157757"/);
-  assert.match(source, /\$\{configured\} \[A-Z0-9\]\{12\}/);
-  assert.match(source, /\$\{LEGACY_SOUNDBOX_PREFIX\} \[A-Z0-9\]\{12\}/);
-  assert.match(source, /DH\[A-Z0-9\]\{3,12\}/);
-  assert.ok(
-    source.includes(
-      "const LEGACY_PAYMENT_CODE_RE = /\\bDH\\s+\\d{6}\\s+[A-Z0-9]{5}\\b/gi;",
-    ),
+  assertSqlMatch(source, /LEGACY_SOUNDBOX_PREFIX = "VQRLOAMB20260626100157757"/);
+  assertSqlMatch(source, /\$\{configured\} \[A-Z0-9\]\{12\}/);
+  assertSqlMatch(source, /\$\{LEGACY_SOUNDBOX_PREFIX\} \[A-Z0-9\]\{12\}/);
+  assertSqlMatch(source, /DH\[A-Z0-9\]\{3,12\}/);
+  assertSqlMatch(
+    source,
+    "const LEGACY_PAYMENT_CODE_RE = /\\bDH\\s+\\d{6}\\s+[A-Z0-9]{5}\\b/gi;",
   );
   assert.ok(source.includes('replace(/^DH\\s+/, "DH ")'));
-  assert.match(source, /function extractPaymentCode/);
-  assert.match(source, /function resolveAccountScope/);
-  assert.match(source, /\.from\("system_settings"\)/);
-  assert.match(
-    source,
+  assertSqlMatch(source, /function extractPaymentCode/);
+  assertSqlMatch(source, /function resolveAccountScope/);
+  assertSqlMatch(source, /\.from\("system_settings"\)/);
+  assertSqlMatch(source,
     /\.eq\("key", SYSTEM_SETTING_KEYS\.PAYMENT_VIETQR_ACCOUNT_NO\)/,
   );
-  assert.match(source, /\.eq\("value", normalizedAccount\)/);
-  assert.match(source, /"reconcile_sepay_order_evidence"/);
-  assert.match(source, /p_event_id: webhookEventId/);
-  assert.match(source, /p_payment_code: paymentCode/);
-  assert.doesNotMatch(source, /"confirm_sepay_payment"/);
-  assert.doesNotMatch(source, /issueTaxInvoiceForPaidOrder|createInvoice/);
-  assert.doesNotMatch(source, /type SepayRpcClient/);
-  assert.doesNotMatch(source, /as unknown as SepayRpcClient/);
-  assert.doesNotMatch(source, /p_order_number/);
-  assert.match(source, /provider: "sepay"/);
-  assert.match(source, /request_id: input\.requestId/);
+  assertSqlMatch(source, /\.eq\("value", normalizedAccount\)/);
+  assertSqlMatch(source, /"reconcile_sepay_order_evidence"/);
+  assertSqlMatch(source, /p_event_id: webhookEventId/);
+  assertSqlMatch(source, /p_payment_code: paymentCode/);
+  assertSqlNotMatch(source, /"confirm_sepay_payment"/);
+  assertSqlNotMatch(source, /issueTaxInvoiceForPaidOrder|createInvoice/);
+  assertSqlNotMatch(source, /type SepayRpcClient/);
+  assertSqlNotMatch(source, /as unknown as SepayRpcClient/);
+  assertSqlNotMatch(source, /p_order_number/);
+  assertSqlMatch(source, /provider: "sepay"/);
+  assertSqlMatch(source, /request_id: input\.requestId/);
 
   const claimIndex = source.indexOf(
     "const webhookClaim = await claimWebhookEvent",
@@ -112,8 +103,8 @@ test("SePay webhook prefers full transfer content code over truncated code field
   assert.match(block, /payload\.description/);
   assert.match(block, /payload\.code/);
   assert.match(block, /pickLongestPaymentCode/);
-  assert.match(source, /function pickLongestPaymentCode[\s\S]*sort\(/);
-  assert.match(source, /replace\(\/\\s\+\/g, ""\)\.length/);
+  assertSqlMatch(source, /function pickLongestPaymentCode[\s\S]*sort\(/);
+  assertSqlMatch(source, /replace\(\/\\s\+\/g, ""\)\.length/);
   assert.doesNotMatch(
     block,
     /normalizePaymentCodeCandidate\(payload\.code \?\? null\)\s*\?\?/,
@@ -123,132 +114,113 @@ test("SePay webhook prefers full transfer content code over truncated code field
 test("SePay evidence invokes the POS settlement service only after an exact match", () => {
   const route = readRepoFile("apps/web/app/api/webhooks/sepay/route.ts");
   const migration = readRepoFile(
-    "supabase/migration-archive/20260711024758_sepay_webhook_order_evidence.sql",
+    "supabase/migrations/20260711024758_sepay_webhook_order_evidence.sql",
   );
 
-  assert.match(migration, /ADD COLUMN IF NOT EXISTS order_id/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /ADD COLUMN IF NOT EXISTS order_id/);
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.reconcile_sepay_order_evidence/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /lower\(COALESCE\(payment_code, ''\)\) = lower\(v_payment_code\)/,
   );
-  assert.match(migration, /public\.confirm_sepay_payment\(/);
-  assert.match(migration, /v_confirmation_status IS DISTINCT FROM 'completed'/);
-  assert.doesNotMatch(migration, /FOR v_event IN/);
+  assertSqlMatch(migration, /public\.confirm_sepay_payment\(/);
+  assertSqlMatch(migration, /v_confirmation_status IS DISTINCT FROM 'completed'/);
+  assertSqlNotMatch(migration, /FOR v_event IN/);
   assert.doesNotMatch(route, /confirm_sepay_payment/);
   assert.doesNotMatch(route, /issueTaxInvoiceForPaidOrder|createInvoice/);
 });
 
 test("Each order owns one immutable MB speaker payment code", () => {
   const migration = readRepoFile(
-    "supabase/migration-archive/20260629160000_mb_speaker_payment_code.sql",
+    "supabase/migrations/20260629160000_mb_speaker_payment_code.sql",
   );
   const grantMigration = readRepoFile(
-    "supabase/migration-archive/20260629161000_restrict_order_payment_code_generator.sql",
+    "supabase/migrations/20260629161000_restrict_order_payment_code_generator.sql",
   );
   const sequenceGrantMigration = readRepoFile(
-    "supabase/migration-archive/20260629162000_restrict_order_payment_code_sequence.sql",
+    "supabase/migrations/20260629162000_restrict_order_payment_code_sequence.sql",
   );
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE SEQUENCE IF NOT EXISTS public\.order_payment_code_sequence/,
   );
-  assert.match(migration, /public\.generate_order_payment_code\(\)/);
-  assert.match(migration, /orders_payment_code_format_check/);
-  assert.match(migration, /idx_orders_payment_code_unique/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /public\.generate_order_payment_code\(\)/);
+  assertSqlMatch(migration, /orders_payment_code_format_check/);
+  assertSqlMatch(migration, /idx_orders_payment_code_unique/);
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.ensure_order_payment_code/,
   );
-  assert.match(migration, /VQRLOAMB/);
-  assert.match(migration, /DH\[A-Z0-9\]\{3,12\}/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /VQRLOAMB/);
+  assertSqlMatch(migration, /DH\[A-Z0-9\]\{3,12\}/);
+  assertSqlMatch(migration,
     /CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_payment_code_unique[\s\S]*lower\(payment_code\)/,
   );
-  assert.match(migration, /FOR v_try IN 1\.\.20 LOOP/);
-  assert.match(migration, /EXCEPTION WHEN unique_violation THEN/);
-  assert.match(
-    grantMigration,
+  assertSqlMatch(migration, /FOR v_try IN 1\.\.20 LOOP/);
+  assertSqlMatch(migration, /EXCEPTION WHEN unique_violation THEN/);
+  assertSqlMatch(grantMigration,
     /REVOKE ALL ON FUNCTION public\.generate_order_payment_code\(\) FROM anon;/,
   );
-  assert.match(
-    grantMigration,
+  assertSqlMatch(grantMigration,
     /GRANT EXECUTE ON FUNCTION public\.generate_order_payment_code\(\) TO authenticated;/,
   );
-  assert.match(
-    sequenceGrantMigration,
+  assertSqlMatch(sequenceGrantMigration,
     /REVOKE ALL ON SEQUENCE public\.order_payment_code_sequence FROM anon;/,
   );
-  assert.match(
-    sequenceGrantMigration,
+  assertSqlMatch(sequenceGrantMigration,
     /GRANT USAGE, SELECT ON SEQUENCE public\.order_payment_code_sequence TO authenticated;/,
   );
 });
 
 test("SePay migration extends webhook provider check and keeps RPC service-only", () => {
   const source = readRepoFile(
-    "supabase/migration-archive/20260625171721_sepay_webhook_payment.sql",
+    "supabase/migrations/20260625171721_sepay_webhook_payment.sql",
   );
 
-  assert.match(source, /webhook_events_provider_check/);
-  assert.match(source, /'sepay'::text/);
-  assert.match(source, /idx_payments_vietqr_provider_ref_active/);
-  assert.match(source, /p_method NOT IN \('cash', 'momo', 'vietqr'\)/);
-  assert.match(source, /payment_pending_different_method/);
-  assert.match(source, /p\.tenant_id = p_tenant_id/);
-  assert.match(source, /p\.id = p_payment_id/);
-  assert.match(
-    source,
+  assertSqlMatch(source, /webhook_events_provider_check/);
+  assertSqlMatch(source, /'sepay'::text/);
+  assertSqlMatch(source, /idx_payments_vietqr_provider_ref_active/);
+  assertSqlMatch(source, /p_method NOT IN \('cash', 'momo', 'vietqr'\)/);
+  assertSqlMatch(source, /payment_pending_different_method/);
+  assertSqlMatch(source, /p\.tenant_id = p_tenant_id/);
+  assertSqlMatch(source, /p\.id = p_payment_id/);
+  assertSqlMatch(source,
     /lower\(p\.provider_ref\) = lower\(btrim\(p_provider_ref\)\)/,
   );
-  assert.match(source, /auth\.role\(\) IS DISTINCT FROM 'service_role'/);
-  assert.match(source, /account_config_missing/);
-  assert.match(
-    source,
+  assertSqlMatch(source, /auth\.role\(\) IS DISTINCT FROM 'service_role'/);
+  assertSqlMatch(source, /account_config_missing/);
+  assertSqlMatch(source,
     /CREATE OR REPLACE FUNCTION public\.confirm_sepay_payment/,
   );
-  assert.match(
-    source,
+  assertSqlMatch(source,
     /REVOKE ALL ON FUNCTION public\.confirm_sepay_payment\(bigint, bigint, text, numeric, text, text, jsonb\) FROM PUBLIC;/,
   );
-  assert.match(
-    source,
+  assertSqlMatch(source,
     /REVOKE ALL ON FUNCTION public\.confirm_sepay_payment\(bigint, bigint, text, numeric, text, text, jsonb\) FROM anon;/,
   );
-  assert.match(
-    source,
+  assertSqlMatch(source,
     /REVOKE ALL ON FUNCTION public\.confirm_sepay_payment\(bigint, bigint, text, numeric, text, text, jsonb\) FROM authenticated;/,
   );
-  assert.match(
-    source,
+  assertSqlMatch(source,
     /GRANT EXECUTE ON FUNCTION public\.confirm_sepay_payment\(bigint, bigint, text, numeric, text, text, jsonb\) TO service_role;/,
   );
-  assert.match(
-    source,
+  assertSqlMatch(source,
     /REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN ON TABLE public\.webhook_events FROM anon;/,
   );
-  assert.match(
-    source,
+  assertSqlMatch(source,
     /REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN ON TABLE public\.webhook_events FROM authenticated;/,
   );
-  assert.match(
-    source,
+  assertSqlMatch(source,
     /DROP FUNCTION IF EXISTS public\.confirm_sepay_payment\(text, numeric, text, text, jsonb\);/,
   );
 });
 
 test("Webhook event audit table is not selectable by anon", () => {
   const source = readRepoFile(
-    "supabase/migration-archive/20260626021425_revoke_webhook_events_anon_select.sql",
+    "supabase/migrations/20260626021425_revoke_webhook_events_anon_select.sql",
   );
 
-  assert.match(
-    source,
+  assertSqlMatch(source,
     /REVOKE SELECT ON TABLE public\.webhook_events FROM anon;/,
   );
 });
@@ -329,14 +301,13 @@ test("Printed provisional bills create or reuse the canonical VietQR payment", (
 
 test("SePay webhook retries receipt enqueue on already-completed settlements", () => {
   const migration = readRepoFile(
-    "supabase/migration-archive/20260703140015_sepay_webhook_receipt_already_completed.sql",
+    "supabase/migrations/20260703140015_sepay_webhook_receipt_already_completed.sql",
   );
   const baseline = readRepoFile(
-    "supabase/migration-archive/20260727120000_baseline.sql",
+    "supabase/migrations/20260902162918_baseline.sql",
   );
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.confirm_sepay_payment/,
   );
   const alreadyCompletedStart = migration.indexOf(
@@ -363,23 +334,21 @@ test("SePay webhook retries receipt enqueue on already-completed settlements", (
   assert.match(alreadyCompletedBlock, /'job_id', v_print_job_id/);
   assert.match(alreadyCompletedBlock, /'failed', v_print_failed/);
   assert.match(alreadyCompletedBlock, /EXCEPTION WHEN OTHERS/);
-  assert.match(migration, /public\.complete_payment_and_consume_stock/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /public\.complete_payment_and_consume_stock/);
+  assertSqlMatch(migration,
     /GRANT EXECUTE ON FUNCTION public\.confirm_sepay_payment\(bigint, bigint, text, numeric, text, text, jsonb\) TO service_role;/,
   );
-  assert.match(
-    baseline,
+  assertSqlMatch(baseline,
     /WHEN public\.print_jobs\.status = 'printed' AND NOT v_is_service/,
   );
 });
 
 test("Order money mutations are locked after VietQR code exposure", () => {
   const migration = readRepoFile(
-    "supabase/migration-archive/20260626072000_lock_order_amount_after_payment_code_exposed.sql",
+    "supabase/migrations/20260626072000_lock_order_amount_after_payment_code_exposed.sql",
   );
   const cancelFixMigration = readRepoFile(
-    "supabase/migration-archive/20260630134012_allow_cancel_after_pending_payment_cancel.sql",
+    "supabase/migrations/20260630134012_allow_cancel_after_pending_payment_cancel.sql",
   );
   const messages = readRepoFile(
     "apps/web/app/(protected)/br/[branchId]/pos/_lib/messages.ts",
@@ -391,47 +360,39 @@ test("Order money mutations are locked after VietQR code exposure", () => {
     "apps/web/app/(protected)/br/[branchId]/pos/service-charge-actions.ts",
   );
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.order_payment_code_is_exposed/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /FROM public\.payments p[\s\S]*p\.method = 'vietqr'[\s\S]*p\.status IN \('pending', 'failed'\)[\s\S]*lower\(p\.provider_ref\) = lower\(p_payment_code\)/,
   );
-  assert.match(
-    cancelFixMigration,
+  assertSqlMatch(cancelFixMigration,
     /CREATE OR REPLACE FUNCTION public\.order_payment_code_is_exposed/,
   );
-  assert.match(
-    cancelFixMigration,
+  assertSqlMatch(cancelFixMigration,
     /FROM public\.payments p[\s\S]*p\.method = 'vietqr'[\s\S]*p\.status = 'pending'[\s\S]*lower\(p\.provider_ref\) = lower\(p_payment_code\)/,
   );
-  assert.doesNotMatch(
-    cancelFixMigration,
+  assertSqlNotMatch(cancelFixMigration,
     /p\.status IN \('pending', 'failed'\)/,
   );
-  assert.doesNotMatch(migration, /FROM public\.print_jobs/);
-  assert.match(migration, /CREATE TRIGGER trg_orders_zz_payment_code_lock/);
-  assert.match(
-    migration,
+  assertSqlNotMatch(migration, /FROM public\.print_jobs/);
+  assertSqlMatch(migration, /CREATE TRIGGER trg_orders_zz_payment_code_lock/);
+  assertSqlMatch(migration,
     /BEFORE UPDATE OF[\s\S]*updated_at[\s\S]*ON public\.orders/,
   );
-  assert.match(migration, /RAISE EXCEPTION 'payment_code_locked'/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /RAISE EXCEPTION 'payment_code_locked'/);
+  assertSqlMatch(migration,
     /REVOKE ALL ON FUNCTION public\.order_payment_code_is_exposed\(bigint, bigint, bigint, text\) FROM authenticated;/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /REVOKE ALL ON FUNCTION public\.prevent_order_amount_mutation_after_payment_code_exposed\(\) FROM authenticated;/,
   );
 
   const revokeMigration = readRepoFile(
-    "supabase/migration-archive/20260626073500_revoke_payment_code_lock_function_exec.sql",
+    "supabase/migrations/20260626073500_revoke_payment_code_lock_function_exec.sql",
   );
-  assert.match(revokeMigration, /FROM anon;/);
-  assert.match(revokeMigration, /FROM authenticated;/);
+  assertSqlMatch(revokeMigration, /FROM anon;/);
+  assertSqlMatch(revokeMigration, /FROM authenticated;/);
 
   for (const mapping of [
     "voidRpcMappings",
@@ -485,7 +446,7 @@ test("POS VietQR uses locally generated EMVCo payloads, not VietQR image URLs", 
     "apps/web/app/(protected)/br/[branchId]/pos/payment-actions.ts",
   );
   const migration = readRepoFile(
-    "supabase/migration-archive/20260626043000_refresh_vietqr_bank_bins.sql",
+    "supabase/migrations/20260626043000_refresh_vietqr_bank_bins.sql",
   );
 
   assert.match(provider, /const qrData = buildVietQrEmvco\(/);
@@ -497,9 +458,9 @@ test("POS VietQR uses locally generated EMVCo payloads, not VietQR image URLs", 
   assert.doesNotMatch(bill, /preferImage=\{selectedMethod === "vietqr"\}/);
   assert.doesNotMatch(provider, /img\.vietqr\.io/);
   assert.doesNotMatch(action, /img\.vietqr\.io/);
-  assert.match(migration, /\('ABB', '970425'\)/);
-  assert.match(migration, /\('MB', '970422'\)/);
-  assert.match(migration, /\('OCB', '970448'\)/);
+  assertSqlMatch(migration, /\('ABB', '970425'\)/);
+  assertSqlMatch(migration, /\('MB', '970422'\)/);
+  assertSqlMatch(migration, /\('OCB', '970448'\)/);
 });
 
 test("POS rehydrates pending VietQR QR from current Owner settings", () => {
@@ -550,13 +511,13 @@ test("VietQR bank account configuration lives in Owner settings, not env", () =>
 
 test("payment completion migration recomputes amount and does not complete on stock failure", () => {
   const source = readRepoFile(
-    "supabase/migration-archive/20260601780000_payment_completion_failhard_recompute.sql",
+    "supabase/migrations/20260601780000_payment_completion_failhard_recompute.sql",
   );
 
-  assert.match(source, /amount_mismatch_recomputed/);
-  assert.match(source, /SUM\(oi\.quantity::NUMERIC \* oi\.unit_price\)/);
-  assert.match(source, /'stock_failed'::TEXT/);
-  assert.doesNotMatch(source, /Stock consumption remains fail-soft/i);
+  assertSqlMatch(source, /amount_mismatch_recomputed/);
+  assertSqlMatch(source, /SUM\(oi\.quantity::NUMERIC \* oi\.unit_price\)/);
+  assertSqlMatch(source, /'stock_failed'::TEXT/);
+  assertSqlNotMatch(source, /Stock consumption remains fail-soft/i);
 });
 
 test("VietQR completion has no cashier fallback", () => {

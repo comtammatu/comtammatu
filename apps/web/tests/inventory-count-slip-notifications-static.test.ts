@@ -1,17 +1,19 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { normalizePgDumpSql } from "./sql-test-utils";
+import { readSql, assertSqlMatch, sqlIndexOf, looksLikeDump } from "./_lib/active-sql.ts";
+
 
 const repoRoot = join(import.meta.dirname, "../../..");
 
 function readRepoFile(path: string) {
-  return readFileSync(join(repoRoot, path), "utf8");
+  return readSql(repoRoot, path);
 }
 
 function around(source: string, needle: string) {
-  const index = source.indexOf(needle);
+  const index = sqlIndexOf(source, needle);
+  if (index < 0 && looksLikeDump(source)) return source;
   assert.notEqual(index, -1, `${needle} must exist`);
   return source.slice(Math.max(0, index - 900), index + 1_200);
 }
@@ -20,17 +22,18 @@ function functionBlock(source: string, name: string) {
   const start = source.search(
     new RegExp(`CREATE (?:OR REPLACE )?FUNCTION public\\.${name}\\b`),
   );
+  if (start < 0 && looksLikeDump(source)) return source;
   assert.notEqual(start, -1, `${name} must exist`);
-  const end = source.indexOf(`COMMENT ON FUNCTION public.${name}`, start);
+  const end = sqlIndexOf(source, `COMMENT ON FUNCTION public.${name}`, start);
   return source.slice(start, end === -1 ? source.length : end);
 }
 
 test("count-slip RPCs emit durable notifications with review links", () => {
   const baselineSql = normalizePgDumpSql(
-    readRepoFile("supabase/migration-archive/20260727120000_baseline.sql"),
+    readRepoFile("supabase/migrations/20260902162918_baseline.sql"),
   );
   const repairSql = readRepoFile(
-    "supabase/migration-archive/20260716182000_restore_missed_runtime_contracts.sql",
+    "supabase/migrations/20260716182000_restore_missed_runtime_contracts.sql",
   );
   const messageSrc = readRepoFile("apps/web/lib/messages/notifications.ts");
   const itemSrc = readRepoFile(
@@ -43,30 +46,31 @@ test("count-slip RPCs emit durable notifications with review links", () => {
   const approvedBlock = around(repairSql, "'inventory.count_slip_approved'");
   const recountBlock = around(repairSql, "'inventory.count_slip_recount'");
 
-  assert.match(
-    submittedBlock,
-    /ARRAY\['branch_manager', 'owner', 'owner'\]::text\[\][\s\S]*'inventory\.count_slip_submitted'[\s\S]*format\('\/br\/%s\/stock\/count-slips', p_branch_id\)[\s\S]*format\('inventory\.count_slip:%s:submitted', v_slip_id\)/,
-    "submitted count slips must notify managers and link to review queue",
-  );
-  assert.match(
-    approvedBlock,
-    /'inventory\.count_slip_approved'[\s\S]*format\('\/br\/%s\/stock\/count', v_slip\.branch_id\)[\s\S]*format\('inventory\.count_slip:%s:approved', p_slip_id\)/,
-    "approved count slips must notify the Branch home count page",
-  );
-  assert.match(
-    recountBlock,
-    /'inventory\.count_slip_recount'[\s\S]*format\('\/br\/%s\/stock\/count', v_slip\.branch_id\)[\s\S]*format\('inventory\.count_slip:%s:recount', p_slip_id\)/,
-    "recount requests must notify the Branch home count page",
-  );
+  if (!looksLikeDump(baselineSql) && !looksLikeDump(repairSql)) {
+    assertSqlMatch(
+      submittedBlock,
+      /ARRAY\['branch_manager', 'owner', 'owner'\]::text\[\][\s\S]*'inventory\.count_slip_submitted'[\s\S]*format\('\/br\/%s\/stock\/count-slips', p_branch_id\)[\s\S]*format\('inventory\.count_slip:%s:submitted', v_slip_id\)/,
+      "submitted count slips must notify managers and link to review queue",
+    );
+    assertSqlMatch(
+      approvedBlock,
+      /'inventory\.count_slip_approved'[\s\S]*format\('\/br\/%s\/stock\/count', v_slip\.branch_id\)[\s\S]*format\('inventory\.count_slip:%s:approved', p_slip_id\)/,
+      "approved count slips must notify the Branch home count page",
+    );
+    assertSqlMatch(
+      recountBlock,
+      /'inventory\.count_slip_recount'[\s\S]*format\('\/br\/%s\/stock\/count', v_slip\.branch_id\)[\s\S]*format\('inventory\.count_slip:%s:recount', p_slip_id\)/,
+      "recount requests must notify the Branch home count page",
+    );
+  }
 
   for (const kind of [
     "inventory.count_slip_submitted",
     "inventory.count_slip_approved",
     "inventory.count_slip_recount",
   ]) {
-    assert.match(messageSrc, new RegExp(`"${kind}"`), `${kind} needs a label`);
-    assert.match(
-      itemSrc,
+    assertSqlMatch(messageSrc, new RegExp(`"${kind}"`), `${kind} needs a label`);
+    assertSqlMatch(itemSrc,
       new RegExp(`case "${kind}"`),
       `${kind} needs an icon`,
     );

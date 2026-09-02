@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
+import { readActiveMigrationSql, extractSqlFunction, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 const root = join(import.meta.dirname, "../../..");
 
@@ -51,25 +53,14 @@ const branchCountClientSource = readFileSync(
 );
 
 function latestCompleteStocktakeDefinition(): string {
-  const migrationDir = join(root, "supabase/migration-archive");
-  const candidates = readdirSync(migrationDir)
-    .filter((name) => name.endsWith(".sql"))
-    .sort()
-    .map((name) => readFileSync(join(migrationDir, name), "utf8"))
-    .filter((sql) =>
-      /CREATE OR REPLACE FUNCTION public\.complete_stocktake\(p_session_id bigint\)/.test(
-        sql,
-      ),
-    );
-
-  return candidates.at(-1) ?? "";
+  return extractSqlFunction(readActiveMigrationSql(root), "complete_stocktake");
 }
 
 test("counted stocktake variances can be completed without reason metadata", () => {
   const sql = latestCompleteStocktakeDefinition();
 
   assert.notEqual(sql, "");
-  assert.doesNotMatch(sql, /stocktake_reason_code_required/);
+  assertSqlNotMatch(sql, /stocktake_reason_code_required/);
   assert.doesNotMatch(actionSource, /stocktake_reason_code_required/);
   assert.doesNotMatch(detailSource, /reasonCodeRequired|missingReason/);
 });

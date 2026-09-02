@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 const MANIFEST_PATH = "supabase/migration-lineage.json";
@@ -68,12 +68,19 @@ if (!existsSync(baselineFile ?? "")) {
   }
 }
 
-if (!existsSync(ARCHIVE_PATH) || !statSync(ARCHIVE_PATH).isDirectory()) {
-  fail(`${ARCHIVE_PATH} must remain outside ${MIGRATIONS_PATH}`);
+if (existsSync(ARCHIVE_PATH)) {
+  const leftover = readdirSync(ARCHIVE_PATH).filter((name) =>
+    name.endsWith(".sql"),
+  );
+  if (leftover.length > 0) {
+    fail(
+      `${ARCHIVE_PATH} must stay empty after the soaked-schema cleanup; historical SQL is git history`,
+    );
+  }
 }
 if (existsSync(join(MIGRATIONS_PATH, "_archive"))) {
   fail(
-    `${MIGRATIONS_PATH}/_archive is forbidden; historical SQL belongs in ${ARCHIVE_PATH}`,
+    `${MIGRATIONS_PATH}/_archive is forbidden; historical SQL is git history, not an in-tree folder`,
   );
 }
 

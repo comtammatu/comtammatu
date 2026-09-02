@@ -1,27 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { readSql } from "../../test-utils/active-sql";
+
 
 const repoRoot = resolve(import.meta.dirname, "../../../../..");
-const read = (path: string) => {
-  const candidate = resolve(repoRoot, path);
-  if (existsSync(candidate)) return readFileSync(candidate, "utf8");
-  if (path.startsWith("supabase/migrations/")) {
-    return readFileSync(
-      resolve(
-        repoRoot,
-        path.replace("supabase/migrations/", "supabase/migration-archive/"),
-      ),
-      "utf8",
-    );
-  }
-  return readFileSync(candidate, "utf8");
-};
+const read = (path: string) => readSql(repoRoot, path);
 
 test("edit pending quantity migration enqueues kitchen-visible print deltas", () => {
   const src = read(
-    "supabase/migration-archive/20260601790000_edit_pending_quantity_print.sql",
+    "supabase/migrations/20260601790000_edit_pending_quantity_print.sql",
   );
 
   assert.match(

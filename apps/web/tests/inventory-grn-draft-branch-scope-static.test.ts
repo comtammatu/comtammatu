@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch } from "./_lib/active-sql.ts";
+
 
 const repoRoot = resolve(process.cwd(), "../..");
 
 function readRepo(path: string): string {
-  return readFileSync(resolve(repoRoot, path), "utf8");
+  return readSql(repoRoot, path);
 }
 
 const grnActions = readRepo(
@@ -25,10 +27,10 @@ const grnNewPage = readRepo(
   "apps/web/app/(protected)/inventory/grn/new/page.tsx",
 );
 const poDraftMigration = readRepo(
-  "supabase/migration-archive/20260708130514_separate_free_and_po_grn_drafts.sql",
+  "supabase/migrations/20260708130514_separate_free_and_po_grn_drafts.sql",
 );
 const multiSupplierMigration = readRepo(
-  "supabase/migration-archive/20260729010000_multi_supplier_grn_split_po.sql",
+  "supabase/migrations/20260729010000_multi_supplier_grn_split_po.sql",
 );
 
 test("GRN drafts are created only from a purchase order", () => {
@@ -38,16 +40,13 @@ test("GRN drafts are created only from a purchase order", () => {
 });
 
 test("GRN free drafts and PO-linked drafts do not share the same unique slot", () => {
-  assert.match(
-    poDraftMigration,
+  assertSqlMatch(poDraftMigration,
     /DROP INDEX IF EXISTS public\.uq_grn_active_draft_per_user_supplier_branch;/,
   );
-  assert.match(
-    multiSupplierMigration,
+  assertSqlMatch(multiSupplierMigration,
     /CREATE UNIQUE INDEX uq_grn_active_free_draft_per_user_branch/,
   );
-  assert.match(
-    multiSupplierMigration,
+  assertSqlMatch(multiSupplierMigration,
     /ON public\.goods_received_notes \(tenant_id, created_by, branch_id\)/,
   );
   assert.match(grnListClient, /useDocumentOverlayUrl/);

@@ -1,15 +1,16 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { normalizePgDumpSql } from "./sql-test-utils";
+import { readSql } from "./_lib/active-sql.ts";
+
 
 function readWebSource(path: string): string {
-  return readFileSync(join(process.cwd(), path), "utf8");
+  return readSql(process.cwd(), path);
 }
 
 function readRepoSource(path: string): string {
-  return readFileSync(join(process.cwd(), "../..", path), "utf8");
+  return readSql(join(process.cwd(), "../.."), path);
 }
 
 const tableWorkflowSources = [
@@ -37,7 +38,7 @@ test("table creation still relies on the database default capacity", () => {
     "app/(protected)/br/_shared/settings/tables/actions.ts",
   );
   const baselineSource = normalizePgDumpSql(
-    readRepoSource("supabase/migration-archive/20260727120000_baseline.sql"),
+    readRepoSource("supabase/migrations/20260902162918_baseline.sql"),
   );
 
   assert.match(

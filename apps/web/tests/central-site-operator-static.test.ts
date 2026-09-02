@@ -1,17 +1,19 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { readSql } from "./_lib/active-sql.ts";
+
 
 // D076: central-site soft-routing (warehouse_manager / production_manager
 // tenant-level claims resolving to a "home" branch by branch_kind) is
 // retired. These tests assert the soft-routing contract is GONE from the
 // active auth surface — `branch_kind` itself stays on the enum for
-// historical inventory rows (see supabase/migration-archive/... for the
+// historical inventory rows (see supabase/migrations/... for the
 // retired mapping), but no role resolves through it anymore.
 
 const repoRoot = resolve(process.cwd(), "../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 test("proxy no longer soft-routes central-site roles", () => {
   const proxy = read("apps/web/proxy.ts");

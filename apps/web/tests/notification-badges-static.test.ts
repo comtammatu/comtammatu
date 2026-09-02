@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 import {
   getNavNotificationCount,
   type ShellNavItem,
@@ -9,7 +10,7 @@ import {
 } from "../app/lib/shell-primitives";
 
 const repoRoot = resolve(process.cwd(), "../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 const navItem = (
   href: string,
@@ -167,32 +168,32 @@ test("notification feed uses RowActionsMenu and ContextMenu from one RowActionIt
 
 test("migration expires leave checkout count-slip and adds payroll ready", () => {
   const migration = read(
-    "supabase/migration-archive/20260806141945_notification_work_queue_expire_and_payroll.sql",
+    "supabase/migrations/20260806141945_notification_work_queue_expire_and_payroll.sql",
   );
-  assert.match(migration, /expire_leave_request_notification/);
-  assert.match(migration, /expire_checkout_request_notification/);
-  assert.match(migration, /expire_count_slip_submitted_notification/);
-  assert.match(migration, /hr\.payroll_period_ready/);
-  assert.match(migration, /team\?tab=leaves/);
-  assert.match(migration, /team\?tab=checkouts/);
-  assert.match(migration, /p_include_expired/);
-  assert.match(migration, /WHEN 'critical' THEN 0/);
+  assertSqlMatch(migration, /expire_leave_request_notification/);
+  assertSqlMatch(migration, /expire_checkout_request_notification/);
+  assertSqlMatch(migration, /expire_count_slip_submitted_notification/);
+  assertSqlMatch(migration, /hr\.payroll_period_ready/);
+  assertSqlMatch(migration, /team\?tab=leaves/);
+  assertSqlMatch(migration, /team\?tab=checkouts/);
+  assertSqlMatch(migration, /p_include_expired/);
+  assertSqlMatch(migration, /WHEN 'critical' THEN 0/);
 });
 
 test("migration retires cron health from the Owner notification feed", () => {
   const migration = read(
-    "supabase/migration-archive/20260806145335_remove_cron_health_owner_notifications.sql",
+    "supabase/migrations/20260806145335_remove_cron_health_owner_notifications.sql",
   );
-  assert.match(migration, /CREATE OR REPLACE FUNCTION public\.check_cron_jobs_health/);
-  assert.match(migration, /jobname = 'check_cron_jobs_health_job'/);
-  assert.match(migration, /cron\.unschedule/);
-  assert.match(migration, /DELETE FROM public\.notifications[\s\S]*kind = 'system\.cron_failed'/);
-  assert.doesNotMatch(migration, /INSERT INTO public\.notifications/);
+  assertSqlMatch(migration, /CREATE OR REPLACE FUNCTION public\.check_cron_jobs_health/);
+  assertSqlMatch(migration, /jobname = 'check_cron_jobs_health_job'/);
+  assertSqlMatch(migration, /cron\.unschedule/);
+  assertSqlMatch(migration, /DELETE FROM public\.notifications[\s\S]*kind = 'system\.cron_failed'/);
+  assertSqlNotMatch(migration, /INSERT INTO public\.notifications/);
 });
 
 test("migration targets each handoff role and exposes exact grouped counts", () => {
   const migration = read(
-    "supabase/migration-archive/20260730180000_ops_notification_badges.sql",
+    "supabase/migrations/20260730180000_ops_notification_badges.sql",
   );
   const notificationItem = read(
     "apps/web/app/_components/notification-item.tsx",
@@ -201,64 +202,54 @@ test("migration targets each handoff role and exposes exact grouped counts", () 
     "apps/web/lib/messages/notifications.ts",
   );
 
-  assert.match(migration, /ARRAY\['owner', 'central_supply_ops'\]::text\[\]/);
-  assert.match(migration, /ARRAY\['owner', 'central_kitchen_lead'\]::text\[\]/);
-  assert.match(migration, /ARRAY\['owner', 'accountant'\]::text\[\]/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /ARRAY\['owner', 'central_supply_ops'\]::text\[\]/);
+  assertSqlMatch(migration, /ARRAY\['owner', 'central_kitchen_lead'\]::text\[\]/);
+  assertSqlMatch(migration, /ARRAY\['owner', 'accountant'\]::text\[\]/);
+  assertSqlMatch(migration,
     /FUNCTION public\.trg_notify_po_sent\(\)[\s\S]*WHEN 'central_supply'[\s\S]*central_supply_ops[\s\S]*WHEN 'central_kitchen'[\s\S]*central_kitchen_lead/,
   );
-  assert.match(migration, /'inventory\.stock_request_submitted'/);
-  assert.match(migration, /'procurement\.purchase_request_submitted'/);
-  assert.match(migration, /'procurement\.po_pending_approval'/);
-  assert.match(migration, /'workflow\.po_approved'/);
+  assertSqlMatch(migration, /'inventory\.stock_request_submitted'/);
+  assertSqlMatch(migration, /'procurement\.purchase_request_submitted'/);
+  assertSqlMatch(migration, /'procurement\.po_pending_approval'/);
+  assertSqlMatch(migration, /'workflow\.po_approved'/);
   assert.match(notificationItem, /case "procurement\.po_pending_approval"/);
   assert.match(notificationItem, /case "workflow\.po_approved"/);
   assert.match(notificationMessages, /"procurement\.po_pending_approval"/);
   assert.match(notificationMessages, /"workflow\.po_approved"/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /NEW\.status NOT IN \('sent', 'pending_approval', 'approved'\)/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /ON CONFLICT \(tenant_id, dedup_key\)[\s\S]*DO NOTHING/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /FUNCTION public\.count_unread_notifications_by_target\(\)[\s\S]*GROUP BY notification\.kind, notification\.action_url/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /REVOKE ALL[\s\S]*count_unread_notifications_by_target\(\)[\s\S]*FROM PUBLIC, anon/,
   );
 });
 
 test("resolved or deleted GRNs expire receiving notifications in realtime", () => {
   const migration = read(
-    "supabase/migration-archive/20260730193000_expire_stale_grn_notifications.sql",
+    "supabase/migrations/20260730193000_expire_stale_grn_notifications.sql",
   );
   const hook = read("apps/web/app/_hooks/use-notification-badges.ts");
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /FUNCTION private\.expire_grn_pending_notification\(\)[\s\S]*SECURITY DEFINER[\s\S]*SET search_path TO ''/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /UPDATE public\.notifications[\s\S]*SET expires_at = now\(\)[\s\S]*kind = 'workflow\.grn_pending'[\s\S]*entity_type = 'grn'/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /kind IN \('workflow\.po_approved', 'workflow\.po_sent'\)[\s\S]*entity_type = 'purchase_order'[\s\S]*entity_id = v_po_id/,
   );
-  assert.match(migration, /v_po_id bigint := OLD\.po_id/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /v_po_id bigint := OLD\.po_id/);
+  assertSqlMatch(migration,
     /NOT EXISTS[\s\S]*FROM public\.goods_received_notes[\s\S]*status = 'draft'/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /AFTER UPDATE OF status OR DELETE[\s\S]*ON public\.goods_received_notes/,
   );
   assert.match(hook, /event: "\*"/);
@@ -267,7 +258,7 @@ test("resolved or deleted GRNs expire receiving notifications in realtime", () =
 test("procurement notifications route to Mua hàng and GRNs route to Nhập kho", () => {
   const shell = read("apps/web/app/lib/shell-primitives.ts");
   const migration = read(
-    "supabase/migration-archive/20260730195000_route_procurement_notifications.sql",
+    "supabase/migrations/20260730195000_route_procurement_notifications.sql",
   );
 
   for (const kind of [
@@ -288,16 +279,13 @@ test("procurement notifications route to Mua hàng and GRNs route to Nhập kho"
     shell,
     /const targetPath = notificationKindTargetPath\(target\.kind\) \?\? actionPath/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /WHEN 'procurement\.purchase_request_submitted'[\s\S]*tab=needs&demandId=%s&mode=view/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /WHEN 'workflow\.po_approved'[\s\S]*WHEN 'workflow\.po_sent'[\s\S]*tab=orders&poId=%s&mode=view/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /UPDATE public\.notifications[\s\S]*procurement\.purchase_request_submitted[\s\S]*workflow\.po_approved[\s\S]*workflow\.po_sent/,
   );
 });
@@ -305,7 +293,7 @@ test("procurement notifications route to Mua hàng and GRNs route to Nhập kho"
 test("stocktake completed is excluded from nav badges; conflict expires on resolve", () => {
   const shell = read("apps/web/app/lib/shell-primitives.ts");
   const migration = read(
-    "supabase/migration-archive/20260811142314_expire_stocktake_conflict_notification.sql",
+    "supabase/migrations/20260811142314_expire_stocktake_conflict_notification.sql",
   );
 
   assert.match(shell, /NAV_BADGE_EXCLUDED_KINDS/);
@@ -316,20 +304,16 @@ test("stocktake completed is excluded from nav badges; conflict expires on resol
   );
   assert.match(shell, /"inventory\.stocktake_conflict": "\/inventory\/stocktake"/);
   assert.match(shell, /"inventory\.count_slip_recount": "\/inventory\/count-slips"/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /FUNCTION private\.expire_stocktake_conflict_notification\(\)/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /kind = 'inventory\.stocktake_conflict'[\s\S]*dedup_key = format\(\s*'stocktake\.conflict:%s:%s'/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /AFTER UPDATE OF resolved_at OR DELETE[\s\S]*ON public\.stocktake_conflicts/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /UPDATE public\.notifications AS notification[\s\S]*conflict\.resolved_at IS NOT NULL/,
   );
 });

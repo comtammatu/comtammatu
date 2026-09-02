@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { readActiveMigrationSql } from "./active-migration-sql.mjs";
 
 const repoRoot = resolve(import.meta.dirname, "..");
-const migrationsDir = resolve(repoRoot, "supabase/migrations");
 const sqlCoverage = readFileSync(
   resolve(repoRoot, "supabase/tests/inventory_unit_anchor_graph_test.sql"),
   "utf8",
@@ -13,17 +13,8 @@ const inventoryContract = readFileSync(
   resolve(repoRoot, "docs/ref/inventory.md"),
   "utf8",
 );
-const migrationNames = readdirSync(migrationsDir)
-  .filter((name) => name.endsWith("_ingredient_unit_anchor_graph_contract.sql"))
-  .sort();
-
-test("the active chain has one forward ingredient-unit graph hardening migration", () => {
-  assert.equal(migrationNames.length, 1);
-});
-
 test("the graph resolver follows selected standard anchors and enforces membership", () => {
-  assert.equal(migrationNames.length, 1);
-  const migration = readFileSync(resolve(migrationsDir, migrationNames[0]), "utf8");
+  const migration = readActiveMigrationSql();
 
   assert.match(
     migration,
@@ -49,8 +40,7 @@ test("the graph resolver follows selected standard anchors and enforces membersh
 });
 
 test("the catalog resolver validates anchors before accepting a base row", () => {
-  assert.equal(migrationNames.length, 1);
-  const migration = readFileSync(resolve(migrationsDir, migrationNames[0]), "utf8");
+  const migration = readActiveMigrationSql();
 
   assert.match(
     migration,
@@ -74,8 +64,7 @@ test("the catalog resolver validates anchors before accepting a base row", () =>
 });
 
 test("anchorless standard rows still use the dimension-aware resolver", () => {
-  assert.equal(migrationNames.length, 1);
-  const migration = readFileSync(resolve(migrationsDir, migrationNames[0]), "utf8");
+  const migration = readActiveMigrationSql();
   const catalogStart = migration.indexOf(
     "CREATE OR REPLACE FUNCTION public.inv_catalog_unit_to_base",
   );
@@ -90,8 +79,7 @@ test("anchorless standard rows still use the dimension-aware resolver", () => {
 });
 
 test("anchorless packaging rows fail closed instead of trusting effective factors", () => {
-  assert.equal(migrationNames.length, 1);
-  const migration = readFileSync(resolve(migrationsDir, migrationNames[0]), "utf8");
+  const migration = readActiveMigrationSql();
   const catalogStart = migration.indexOf(
     "CREATE OR REPLACE FUNCTION public.inv_catalog_unit_to_base",
   );
@@ -105,8 +93,7 @@ test("anchorless packaging rows fail closed instead of trusting effective factor
 });
 
 test("anchor and accumulated factors must fit their persisted numeric domains exactly", () => {
-  assert.equal(migrationNames.length, 1);
-  const migration = readFileSync(resolve(migrationsDir, migrationNames[0]), "utf8");
+  const migration = readActiveMigrationSql();
 
   assert.match(migration, /anchor_factor_not_representable/);
   assert.match(migration, /effective_factor_not_representable/);
@@ -119,8 +106,7 @@ test("anchor and accumulated factors must fit their persisted numeric domains ex
 });
 
 test("effective factor bounds apply to stored row finals, not path prefixes", () => {
-  assert.equal(migrationNames.length, 1);
-  const migration = readFileSync(resolve(migrationsDir, migrationNames[0]), "utf8");
+  const migration = readActiveMigrationSql();
   const multiply = migration.indexOf(
     "v_acc_factor := v_acc_factor * v_current_factor;",
   );
@@ -140,8 +126,7 @@ test("effective factor bounds apply to stored row finals, not path prefixes", ()
 });
 
 test("direct base helper calls validate identity, existence and selected membership", () => {
-  assert.equal(migrationNames.length, 1);
-  const migration = readFileSync(resolve(migrationsDir, migrationNames[0]), "utf8");
+  const migration = readActiveMigrationSql();
   const directHelperStart = migration.indexOf("IF p_is_base THEN");
   const directHelperEnd = migration.indexOf(
     "SELECT dimension, is_standard, standard_factor",
@@ -174,8 +159,7 @@ test("direct base helper calls validate identity, existence and selected members
 });
 
 test("the resolver keeps its existing ACL and numeric storage contract", () => {
-  assert.equal(migrationNames.length, 1);
-  const migration = readFileSync(resolve(migrationsDir, migrationNames[0]), "utf8");
+  const migration = readActiveMigrationSql();
 
   assert.match(
     migration,

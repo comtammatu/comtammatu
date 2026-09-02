@@ -1,14 +1,15 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { readSql } from "./_lib/active-sql.ts";
+
 
 const repoRoot = resolve(process.cwd(), "../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 test("close-day top_items decomposes main, sides, and modifiers correctly with sum conservation", () => {
   const migration = read(
-    "supabase/migration-archive/20260822193600_get_branch_day_report_include_modifiers.sql",
+    "supabase/migrations/20260822193600_get_branch_day_report_include_modifiers.sql",
   );
   const sqlTest = read("supabase/tests/get_branch_day_report_test.sql");
 

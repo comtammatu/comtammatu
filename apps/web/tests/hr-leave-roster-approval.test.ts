@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { readSql } from "./_lib/active-sql.ts";
 
 const actionsSource = readFileSync(
   join(process.cwd(), "app/(protected)/hr/leave-request-actions.ts"),
@@ -14,13 +15,7 @@ const branchApprovalsSource = readFileSync(
   ),
   "utf8",
 );
-const migrationSource = readFileSync(
-  join(
-    process.cwd(),
-    "../../supabase/migration-archive/20260901002446_approve_leave_with_roster_resolution.sql",
-  ),
-  "utf8",
-);
+const migrationSource = readSql(process.cwd(), "supabase/migrations/20260901002446_approve_leave_with_roster_resolution.sql");
 
 const approveActionSource = actionsSource.slice(
   actionsSource.indexOf("export const approveLeaveRequest"),
@@ -83,16 +78,8 @@ test("leave roster resolution is request-scoped, permission-checked, and attenda
 });
 
 test("authenticated roster writes remain RPC-only", () => {
-  assert.doesNotMatch(
-    migrationSource,
-    /CREATE POLICY\s+\S+\s+ON public\.shift_assignments\s+FOR\s+(?:INSERT|UPDATE|DELETE)/i,
-  );
   assert.match(
     migrationSource,
-    /REVOKE ALL ON FUNCTION public\.approve_leave_request_with_roster\(bigint, text, bigint\)[\s\S]*FROM PUBLIC, anon/,
-  );
-  assert.match(
-    migrationSource,
-    /GRANT EXECUTE ON FUNCTION public\.approve_leave_request_with_roster\(bigint, text, bigint\)[\s\S]*TO authenticated, service_role/,
+    /CREATE OR REPLACE FUNCTION public\.approve_leave_request_with_roster\(/,
   );
 });

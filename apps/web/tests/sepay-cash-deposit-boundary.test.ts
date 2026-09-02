@@ -1,15 +1,17 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
+import { readSql } from "./_lib/active-sql.ts";
+
 import {
   classifySepayReconciliationState,
   type SepayBankTransaction,
 } from "../app/(protected)/finance/_lib/sepay-bank-transaction-model";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
-const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 function matchedCashDeposit(): SepayBankTransaction {
   return {
@@ -57,7 +59,7 @@ test("cash deposit is a matched internal transfer, not customer money-in", () =>
 
 test("cash deposit has one verified atomic write boundary", () => {
   const migration = read(
-    "supabase/migration-archive/20260714031021_20260713150807_harden_sepay_cash_deposit_boundary.sql",
+    "supabase/migrations/20260714031021_20260713150807_harden_sepay_cash_deposit_boundary.sql",
   );
   const route = read("apps/web/app/api/webhooks/sepay/route.ts");
 
@@ -76,7 +78,7 @@ test("cash deposit has one verified atomic write boundary", () => {
   assert.match(route, /parseExpenseCommandId\(bankCommand\.value\)/);
   assert.match(route, /finance_cash_branch_invalid/);
   const branchCash = read(
-    "supabase/migration-archive/20260820021152_sales_branch_cash_books.sql",
+    "supabase/migrations/20260820021152_sales_branch_cash_books.sql",
   );
   assert.match(branchCash, /private\.sepay_cash_deposit_branch_id/);
   assert.match(branchCash, /\\yNOP \(\[0-9\]\+\)\\y/);

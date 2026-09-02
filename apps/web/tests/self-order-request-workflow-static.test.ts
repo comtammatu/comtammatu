@@ -1,42 +1,17 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { test } from "node:test";
 import { normalizePgDumpSql } from "./sql-test-utils";
+import { extractSqlFunction, readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
 
-const migration = readFileSync(
-  join(
-    process.cwd(),
-    "../..",
-    "supabase/migration-archive/20260710113746_self_order_request_workflow.sql",
-  ),
-  "utf8",
-);
-const rateLimitMigration = readFileSync(
-  join(
-    process.cwd(),
-    "../..",
-    "supabase/migration-archive/20260710191526_self_order_request_rate_limits.sql",
-  ),
-  "utf8",
-);
+const migration = readSql(process.cwd(), "supabase/migrations/20260710113746_self_order_request_workflow.sql");
+const rateLimitMigration = readSql(process.cwd(), "supabase/migrations/20260710191526_self_order_request_rate_limits.sql");
 const baseline = normalizePgDumpSql(
-  readFileSync(
-    join(
-      process.cwd(),
-      "../..",
-      "supabase/migration-archive/20260727120000_baseline.sql",
-    ),
-    "utf8",
-  ),
+  readSql(process.cwd(), "supabase/migrations/20260902162918_baseline.sql"),
 );
 
-function functionBody(signature: string, next: string): string {
-  const start = migration.indexOf(signature);
-  const end = migration.indexOf(next, start);
-  assert.notEqual(start, -1, `missing ${signature}`);
-  assert.notEqual(end, -1, `missing boundary ${next}`);
-  return migration.slice(start, end);
+function functionBody(signature: string, _next: string): string {
+  const name = signature.match(/FUNCTION ((?:public|private)\.\w+)/)?.[1];
+  return name ? extractSqlFunction(migration, name) : "";
 }
 
 const submit = functionBody(
@@ -70,28 +45,23 @@ const createOrder = baselineFunctionBody(
 );
 
 test("S1 creates one RPC-only request model and backfills pending batches", () => {
-  assert.match(migration, /CREATE TABLE public\.self_order_requests/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /CREATE TABLE public\.self_order_requests/);
+  assertSqlMatch(migration,
     /CREATE UNIQUE INDEX self_order_requests_one_pending_per_table[\s\S]*ON public\.self_order_requests \(table_id\)[\s\S]*WHERE status = 'pending'/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE UNIQUE INDEX self_order_requests_client_op_id_uidx[\s\S]*\(tenant_id, client_op_id\)/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /FROM public\.self_order_batches b[\s\S]*WHERE b\.status = 'pending_approval'[\s\S]*INSERT INTO public\.self_order_requests/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /REVOKE ALL PRIVILEGES ON TABLE public\.self_order_requests[\s\S]*FROM PUBLIC, anon, authenticated, service_role/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /GRANT SELECT ON TABLE public\.self_order_requests TO authenticated, service_role/,
   );
-  assert.doesNotMatch(migration, /DROP (?:TABLE|FUNCTION|COLUMN)/i);
+  assertSqlNotMatch(migration, /DROP (?:TABLE|FUNCTION|COLUMN)/i);
 });
 
 test("self_order_submit serializes by table and branches on the open-order count", () => {
@@ -133,9 +103,8 @@ test("staff acceptance changes only the request and preserves canonical KDS rout
 });
 
 test("snapshot and payment fail closed for multi-bill tables", () => {
-  assert.match(migration, /'multiple_open_orders'/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /'multiple_open_orders'/);
+  assertSqlMatch(migration,
     /client_op_id = p_client_op_id[\s\S]*status = 'rejected'/,
   );
   assert.match(payment, /IF v_open_order_count <> 1 THEN/);
@@ -145,16 +114,13 @@ test("snapshot and payment fail closed for multi-bill tables", () => {
 });
 
 test("payment intent integrity moves from session to order", () => {
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /ALTER TABLE public\.self_order_payment_requests[\s\S]*ALTER COLUMN session_id DROP NOT NULL/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE UNIQUE INDEX self_order_payment_requests_one_active_per_order[\s\S]*\(tenant_id, order_id\)[\s\S]*WHERE status IN \('cash_call', 'vietqr_pending'\)/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE UNIQUE INDEX self_order_payment_requests_sessionless_client_op_uidx[\s\S]*WHERE session_id IS NULL/,
   );
   assert.match(
@@ -169,29 +135,24 @@ test("public security-definer RPCs keep explicit checks and least privilege", ()
     assert.match(body, /auth\.role\(\) IS DISTINCT FROM 'service_role'/);
     assert.match(body, /SET search_path TO ''/);
   }
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /REVOKE ALL ON FUNCTION public\.self_order_submit\(text, jsonb, text, uuid\)[\s\S]*FROM PUBLIC, anon, authenticated/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /GRANT EXECUTE ON FUNCTION public\.self_order_accept_request\(bigint, bigint\)[\s\S]*TO authenticated, service_role/,
   );
 });
 
 test("request rate limits keep only token and IP scopes", () => {
-  assert.match(
-    rateLimitMigration,
+  assertSqlMatch(rateLimitMigration,
     /CHECK \(purpose IN \('batch', 'payment'\)\)/,
   );
-  assert.match(rateLimitMigration, /CHECK \(scope_type IN \('token', 'ip'\)\)/);
-  assert.match(
-    rateLimitMigration,
+  assertSqlMatch(rateLimitMigration, /CHECK \(scope_type IN \('token', 'ip'\)\)/);
+  assertSqlMatch(rateLimitMigration,
     /self_order_consume_rate_limits\([\s\S]*p_token text,[\s\S]*p_ip_hash text/,
   );
-  assert.doesNotMatch(rateLimitMigration, /p_session_id|p_device_hash/);
-  assert.match(
-    rateLimitMigration,
+  assertSqlNotMatch(rateLimitMigration, /p_session_id|p_device_hash/);
+  assertSqlMatch(rateLimitMigration,
     /REVOKE ALL PRIVILEGES ON TABLE public\.self_order_rate_buckets[\s\S]*FROM PUBLIC, anon, authenticated, service_role/,
   );
 });

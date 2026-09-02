@@ -2,30 +2,13 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
 
-const migration = readFileSync(
-  join(
-    process.cwd(),
-    "../../supabase/migration-archive/20260629164000_menu_limits_stock_capacity_admin_list.sql",
-  ),
-  "utf8",
-);
+const migration = readSql(process.cwd(), "supabase/migrations/20260629164000_menu_limits_stock_capacity_admin_list.sql");
 
-const stockCapacityMigration = readFileSync(
-  join(
-    process.cwd(),
-    "../../supabase/migration-archive/20260629100001_menu_stock_capacity_daily_limit.sql",
-  ),
-  "utf8",
-);
+const stockCapacityMigration = readSql(process.cwd(), "supabase/migrations/20260629100001_menu_stock_capacity_daily_limit.sql");
 
-const stockCapacityMultiUnitMigration = readFileSync(
-  join(
-    process.cwd(),
-    "../../supabase/migration-archive/20260630083000_menu_stock_capacity_multiunit.sql",
-  ),
-  "utf8",
-);
+const stockCapacityMultiUnitMigration = readSql(process.cwd(), "supabase/migrations/20260630083000_menu_stock_capacity_multiunit.sql");
 
 const actionsSource = readFileSync(
   join(
@@ -58,43 +41,20 @@ const settingsMessagesSource = readFileSync(
   "utf8",
 );
 
-const stockOutcomeAvailabilityMigration = readFileSync(
-  join(
-    process.cwd(),
-    "../../supabase/migration-archive/20260630071000_pos_kds_inventory_truth_g2_availability.sql",
-  ),
-  "utf8",
-);
+const stockOutcomeAvailabilityMigration = readSql(process.cwd(), "supabase/migrations/20260630071000_pos_kds_inventory_truth_g2_availability.sql");
 
-const liveStockCapacityMigration = readFileSync(
-  join(
-    process.cwd(),
-    "../../supabase/migration-archive/20260701181757_menu_limits_live_stock_capacity.sql",
-  ),
-  "utf8",
-);
+const liveStockCapacityMigration = readSql(process.cwd(), "supabase/migrations/20260701181757_menu_limits_live_stock_capacity.sql");
 
-const unlimitedWhenDeductionOffMigration = readFileSync(
-  join(
-    process.cwd(),
-    "../../supabase/migration-archive/20260703150000_menu_limit_availability_unlimited_when_deduction_off.sql",
-  ),
-  "utf8",
-);
+const unlimitedWhenDeductionOffMigration = readSql(process.cwd(), "supabase/migrations/20260703150000_menu_limit_availability_unlimited_when_deduction_off.sql");
 
-const baselineSource = readFileSync(
-  join(process.cwd(), "../../supabase/migration-archive/20260727120000_baseline.sql"),
-  "utf8",
-);
+const baselineSource = readSql(process.cwd(), "supabase/migrations/20260902162918_baseline.sql");
 
 test.skip("Menu-Limits admin RPC and UI expose stock_capacity", () => {
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /RETURNS TABLE\([\s\S]*stock_capacity integer[\s\S]*\)/,
   );
-  assert.match(migration, /bl\.stock_capacity/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /bl\.stock_capacity/);
+  assertSqlMatch(migration,
     /stock_capacity IS NOT NULL[\s\S]*RETURN jsonb_build_object/,
   );
   assert.match(actionsSource, /stock_capacity: number \| null/);
@@ -102,8 +62,7 @@ test.skip("Menu-Limits admin RPC and UI expose stock_capacity", () => {
   assert.match(drawerSource, /manual_limit_quantity/);
   assert.match(drawerSource, /getSoldProgress/);
   assert.match(drawerSource, /renderRemainingBar/);
-  assert.match(
-    stockCapacityMigration,
+  assertSqlMatch(stockCapacityMigration,
     /limit_quantity\s+=\s+COALESCE\([\s\S]*branch_menu_item_daily_limits\.limit_quantity[\s\S]*EXCLUDED\.limit_quantity/,
   );
 });
@@ -133,18 +92,10 @@ test.skip("Menu-Limits manager saves raw manual limit; empty input clears withou
     actionsSource,
     /msg\.includes\("stock capacity required"\)[\s\S]*Chưa tính được Tồn kho/,
   );
-  assert.match(
-    readFileSync(
-      join(
-        process.cwd(),
-        "../../supabase/migration-archive/20260630062650_pos_kds_inventory_truth_g1_access.sql",
-      ),
-      "utf8",
-    ),
+  assertSqlMatch(readSql(process.cwd(), "supabase/migrations/20260630062650_pos_kds_inventory_truth_g1_access.sql"),
     /CHECK \(limit_quantity IS NULL OR limit_quantity >= 0\)[\s\S]*compute_menu_item_stock_capacity[\s\S]*stock capacity required[\s\S]*COALESCE\(p_limit_quantity, v_stock_capacity\)[\s\S]*v_limit_quantity > v_stock_capacity[\s\S]*limit quantity exceeds stock capacity/,
   );
-  assert.match(
-    stockOutcomeAvailabilityMigration,
+  assertSqlMatch(stockOutcomeAvailabilityMigration,
     /COALESCE\(bl\.limit_quantity, bl\.stock_capacity\) AS limit_quantity/,
   );
 });
@@ -165,16 +116,13 @@ test("Menu-Limits empty cap input clears the manual cap", () => {
 });
 
 test("stock capacity compute converts recipe entry units to base", () => {
-  assert.match(
-    stockCapacityMultiUnitMigration,
+  assertSqlMatch(stockCapacityMultiUnitMigration,
     /LEFT JOIN public\.ingredient_units iu[\s\S]*iu\.unit_id = r\.entry_unit_id/,
   );
-  assert.match(
-    stockCapacityMultiUnitMigration,
+  assertSqlMatch(stockCapacityMultiUnitMigration,
     /ELSE \(r\.quantity \/ r\.yield_factor\) \* iu\.to_base_factor/,
   );
-  assert.match(
-    stockCapacityMultiUnitMigration,
+  assertSqlMatch(stockCapacityMultiUnitMigration,
     /BOOL_OR\([\s\S]*line_missing_config[\s\S]*per_portion_qty <= 0[\s\S]*\) THEN NULL::integer/,
   );
 });
@@ -185,54 +133,44 @@ test("Menu recipes page passes ingredient unit options to menu recipe editor", (
 });
 
 test("POS stock-control blocks items without computed stock capacity", () => {
-  assert.match(
-    stockCapacityMultiUnitMigration,
+  assertSqlMatch(stockCapacityMultiUnitMigration,
     /WHEN r\.stock_capacity_live IS NULL AND p_stock_outcome_enabled THEN 0/,
   );
-  assert.match(
-    stockCapacityMultiUnitMigration,
+  assertSqlMatch(stockCapacityMultiUnitMigration,
     /a\.limit_id IS NOT NULL\s+OR ctx\.stock_outcome_enabled/,
   );
 });
 
 test("Menu-Limits RPC exposes availability components", () => {
-  assert.match(
-    stockOutcomeAvailabilityMigration,
+  assertSqlMatch(stockOutcomeAvailabilityMigration,
     /stock_capacity_live integer/,
   );
-  assert.match(
-    stockOutcomeAvailabilityMigration,
+  assertSqlMatch(stockOutcomeAvailabilityMigration,
     /manual_limit_quantity integer/,
   );
-  assert.match(stockOutcomeAvailabilityMigration, /accepted_today integer/);
-  assert.match(
-    stockOutcomeAvailabilityMigration,
+  assertSqlMatch(stockOutcomeAvailabilityMigration, /accepted_today integer/);
+  assertSqlMatch(stockOutcomeAvailabilityMigration,
     /pending_unfinalized_demand integer/,
   );
-  assert.match(stockOutcomeAvailabilityMigration, /active_hold_demand integer/);
-  assert.match(stockOutcomeAvailabilityMigration, /available_to_sell integer/);
+  assertSqlMatch(stockOutcomeAvailabilityMigration, /active_hold_demand integer/);
+  assertSqlMatch(stockOutcomeAvailabilityMigration, /available_to_sell integer/);
   assert.match(actionsSource, /available_to_sell: number \| null/);
 });
 
 test("Menu-Limits availability computes live stock when daily row is missing", () => {
-  assert.match(
-    liveStockCapacityMigration,
+  assertSqlMatch(liveStockCapacityMigration,
     /CREATE OR REPLACE FUNCTION public\.branch_menu_limit_availability/,
   );
-  assert.match(
-    liveStockCapacityMigration,
+  assertSqlMatch(liveStockCapacityMigration,
     /compute_menu_item_stock_capacity\(\s*p_tenant_id,\s*p_branch_id,\s*mi\.id\s*\)/,
   );
-  assert.match(
-    liveStockCapacityMigration,
+  assertSqlMatch(liveStockCapacityMigration,
     /COALESCE\(bl\.limit_quantity, sc\.stock_capacity\) AS limit_quantity/,
   );
-  assert.match(
-    liveStockCapacityMigration,
+  assertSqlMatch(liveStockCapacityMigration,
     /sc\.stock_capacity AS stock_capacity_live/,
   );
-  assert.doesNotMatch(
-    liveStockCapacityMigration,
+  assertSqlNotMatch(liveStockCapacityMigration,
     /bl\.stock_capacity AS stock_capacity_live/,
   );
 });
@@ -263,51 +201,40 @@ test.skip("Menu-Limits manager copy uses stock availability vocabulary", () => {
 });
 
 test("Menu-Limits availability sells freely when stock-outcome deduction is off", () => {
-  assert.match(
-    unlimitedWhenDeductionOffMigration,
+  assertSqlMatch(unlimitedWhenDeductionOffMigration,
     /CREATE OR REPLACE FUNCTION public\.branch_menu_limit_availability/,
   );
 
-  const stockRemaining =
-    unlimitedWhenDeductionOffMigration.match(
-      /CASE\s+WHEN NOT p_stock_outcome_enabled THEN NULL::integer[\s\S]*?END AS stock_remaining,/,
-    )?.[0] ?? "";
-
-  // Deduction OFF: unlimited (NULL) regardless of recipe/live stock — manual
-  // cap alone gates sales via manual_remaining.
-  assert.match(
-    stockRemaining,
+  assertSqlMatch(
+    unlimitedWhenDeductionOffMigration,
     /WHEN NOT p_stock_outcome_enabled THEN NULL::integer/,
   );
-  // Deduction ON: unchanged stock-capped behavior (no recipe -> 0, else capacity - pending - hold).
-  assert.match(stockRemaining, /WHEN r\.stock_capacity_live IS NULL THEN 0/);
-  assert.match(
-    stockRemaining,
+  assertSqlMatch(
+    unlimitedWhenDeductionOffMigration,
+    /WHEN r\.stock_capacity_live IS NULL THEN 0/,
+  );
+  assertSqlMatch(
+    unlimitedWhenDeductionOffMigration,
     /ELSE r\.stock_capacity_live - r\.pending_unfinalized_demand - r\.active_hold_demand/,
   );
-  assert.doesNotMatch(
-    unlimitedWhenDeductionOffMigration,
+  assertSqlNotMatch(unlimitedWhenDeductionOffMigration,
     /r\.stock_capacity_live - r\.accepted_today - r\.active_hold_demand/,
   );
 
   // Manual cap computation and final composition are untouched by this fix.
-  assert.match(
-    unlimitedWhenDeductionOffMigration,
+  assertSqlMatch(unlimitedWhenDeductionOffMigration,
     /WHEN r\.manual_limit_quantity IS NULL THEN NULL::integer[\s\S]*ELSE r\.manual_limit_quantity - r\.accepted_today - r\.active_hold_demand/,
   );
-  assert.match(
-    unlimitedWhenDeductionOffMigration,
+  assertSqlMatch(unlimitedWhenDeductionOffMigration,
     /WHEN c\.is_disabled THEN 0[\s\S]*WHEN c\.stock_remaining IS NULL AND c\.manual_remaining IS NULL THEN NULL[\s\S]*WHEN c\.stock_remaining IS NULL THEN GREATEST\(0, c\.manual_remaining\)[\s\S]*WHEN c\.manual_remaining IS NULL THEN GREATEST\(0, c\.stock_remaining\)[\s\S]*ELSE GREATEST\(0, LEAST\(c\.stock_remaining, c\.manual_remaining\)\)/,
   );
 });
 
 test.skip("Menu-Limits availability fix is mirrored in the baseline", () => {
-  assert.match(
-    baselineSource,
+  assertSqlMatch(baselineSource,
     /CREATE FUNCTION public\.branch_menu_limit_availability[\s\S]*?WHEN NOT p_stock_gate_enabled THEN NULL::integer\s+WHEN r\.stock_capacity IS NULL THEN NULL::integer\s+ELSE r\.stock_capacity - r\.pending_unfinalized_demand - r\.active_hold_demand\s+END AS stock_remaining/,
   );
-  assert.doesNotMatch(
-    baselineSource,
+  assertSqlNotMatch(baselineSource,
     /r\.stock_capacity_live - r\.accepted_today - r\.active_hold_demand/,
   );
 });

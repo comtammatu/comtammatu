@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch, sqlSlice } from "./_lib/active-sql.ts";
+
 
 const repoRoot = resolve(process.cwd(), "../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 const CENTRAL_COUNT_CLIENT =
   "apps/web/app/(protected)/inventory/stocktake/[id]/count/count-client.tsx";
@@ -17,7 +19,7 @@ const STOCKTAKE_ACTIONS =
 const SHARED_INVENTORY_MESSAGES = "packages/shared/src/messages/inventory.ts";
 const WEB_INVENTORY_MESSAGES = "apps/web/lib/messages/inventory.ts";
 const REMOVE_MIGRATION =
-  "supabase/migration-archive/20260831210500_remove_stocktake_zone_locks.sql";
+  "supabase/migrations/20260831210500_remove_stocktake_zone_locks.sql";
 const DATABASE_BASELINE = "supabase/migrations/20260902162918_baseline.sql";
 
 test("stocktake count clients stay editable without a zone-lock lifecycle", () => {
@@ -35,51 +37,45 @@ test("stocktake count clients stay editable without a zone-lock lifecycle", () =
 
 test("stocktake zone-lock UI, actions, and copy are removed", () => {
   assert.equal(existsSync(resolve(repoRoot, ZONE_LOCK_INDICATOR)), false);
-  assert.doesNotMatch(
-    read(STOCKTAKE_ACTIONS),
+  assertSqlNotMatch(read(STOCKTAKE_ACTIONS),
     /acquireZoneLock|heartbeatZoneLock|releaseZoneLock|(?:acquire|heartbeat|release)_zone_lock/,
   );
-  assert.doesNotMatch(
-    read(SHARED_INVENTORY_MESSAGES),
+  assertSqlNotMatch(read(SHARED_INVENTORY_MESSAGES),
     /holdingLock|lockHeldByOther|lockExpiresIn|lockAcquireFailed/,
   );
-  assert.doesNotMatch(read(WEB_INVENTORY_MESSAGES), /zoneLockLost/);
+  assertSqlNotMatch(read(WEB_INVENTORY_MESSAGES), /zoneLockLost/);
 });
 
 test("schema cleanup drops the retired zone-lock functions and table", () => {
   const migration = read(REMOVE_MIGRATION);
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /DROP FUNCTION IF EXISTS public\.acquire_zone_lock\(bigint, text, integer\)/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /DROP FUNCTION IF EXISTS public\.heartbeat_zone_lock\(bigint, text, integer\)/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /DROP FUNCTION IF EXISTS public\.release_zone_lock\(bigint, text\)/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /DROP TABLE IF EXISTS public\.stocktake_zone_locks/,
   );
 });
 
 test("count submission keeps atomic session, permission, and round guards", () => {
   const baseline = read(DATABASE_BASELINE);
-  const start = baseline.indexOf("CREATE FUNCTION public.submit_count_round");
-  const end = baseline.indexOf("CREATE FUNCTION public.submit_feedback", start);
-  assert.notEqual(start, -1);
-  assert.notEqual(end, -1);
-  const submitCountRound = baseline.slice(start, end);
+  const submitCountRound = sqlSlice(
+    baseline,
+    "CREATE FUNCTION public.submit_count_round",
+    "CREATE FUNCTION public.submit_feedback",
+  );
+  assert.notEqual(submitCountRound, "");
 
-  assert.match(submitCountRound, /FOR UPDATE OF session/);
-  assert.match(submitCountRound, /v_session\.status <> 'in_progress'/);
-  assert.match(submitCountRound, /public\.has_permission\(/);
-  assert.match(submitCountRound, /p_round_no <> v_session\.current_round/);
-  assert.match(
-    submitCountRound,
+  assertSqlMatch(submitCountRound, /FOR UPDATE OF session/);
+  assertSqlMatch(submitCountRound, /v_session\.status <> 'in_progress'/);
+  assertSqlMatch(submitCountRound, /public\.has_permission\(/);
+  assertSqlMatch(submitCountRound, /p_round_no <> v_session\.current_round/);
+  assertSqlMatch(submitCountRound,
     /ON CONFLICT \(session_id, ingredient_id, round_no\) DO UPDATE/,
   );
 });

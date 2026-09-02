@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch, sqlIndexOf } from "./_lib/active-sql.ts";
+
 
 const repoRoot = resolve(process.cwd(), "../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 const ACTIONS = "apps/web/app/(protected)/finance/actions.ts";
 const INVOICES_PAGE = "apps/web/app/(protected)/finance/invoices/page.tsx";
@@ -19,36 +20,35 @@ const INVOICE_LIST = "apps/web/app/(protected)/finance/invoice-list.tsx";
 test("fetchTaxInvoicesPage filters to attention statuses when queue=attention", () => {
   const src = read(ACTIONS);
   // Attention set = non-terminal, action-needing states only.
-  assert.match(
-    src,
+  assertSqlMatch(src,
     /ATTENTION_STATES\s*=\s*\[\s*"draft",\s*"signing",\s*"submitted"\s*\]/,
   );
   // Param is Zod-validated.
-  assert.match(src, /queue:\s*z\.enum\(\["attention"\]\)\.optional\(\)/);
+  assertSqlMatch(src, /queue:\s*z\.enum\(\["attention"\]\)\.optional\(\)/);
   // Filter is applied conditionally on the param.
-  assert.match(src, /queue === "attention"/);
-  assert.match(src, /\.in\("status",\s*\[\.\.\.ATTENTION_STATES\]\)/);
+  assertSqlMatch(src, /queue === "attention"/);
+  assertSqlMatch(src, /\.in\("status",\s*\[\.\.\.ATTENTION_STATES\]\)/);
 });
 
 test("invoices page forwards queue to the fetch and the list (no void)", () => {
   const src = read(INVOICES_PAGE);
-  assert.doesNotMatch(src, /void queue/);
-  assert.match(src, /fetchTaxInvoicesPage\(\{ branchId, queue \}\)/);
-  assert.match(src, /queue=\{queue\}/);
+  assertSqlNotMatch(src, /void queue/);
+  assertSqlMatch(src, /fetchTaxInvoicesPage\(\{ branchId, queue \}\)/);
+  assertSqlMatch(src, /queue=\{queue\}/);
 });
 
 test("invoice list preserves queue across Tải thêm pagination", () => {
   const src = read(INVOICE_LIST);
-  assert.match(src, /queue\?:\s*"attention"/);
+  assertSqlMatch(src, /queue\?:\s*"attention"/);
   // The load-more fetch keeps the queue filter so paging stays narrowed.
-  assert.match(src, /before:\s*nextCursor,\s*\n\s*queue,/);
+  assertSqlMatch(src, /before:\s*nextCursor,\s*\n\s*queue,/);
 });
 
 test("attention banner bulk-requeues only invoice_total_mismatch jobs", () => {
   const actions = read(ACTIONS);
   const list = read(INVOICE_LIST);
   const migration = read(
-    "supabase/migration-archive/20260817222103_requeue_invoice_total_mismatch_jobs.sql",
+    "supabase/migrations/20260817222103_requeue_invoice_total_mismatch_jobs.sql",
   );
   const bulkActionStart = actions.indexOf(
     "export async function requeueInvoiceTotalMismatchJobs",
@@ -69,13 +69,13 @@ test("attention banner bulk-requeues only invoice_total_mismatch jobs", () => {
   );
   assert.match(list, /confirm\(\{[\s\S]*Đưa HĐĐT lệch tổng vào hàng chờ\?/);
   assert.doesNotMatch(list, /còn trong ngày bán/);
-  assert.match(migration, /last_error = 'invoice_total_mismatch'/);
+  assertSqlMatch(migration, /last_error = 'invoice_total_mismatch'/);
   const functionBody = migration.slice(
-    migration.indexOf("CREATE OR REPLACE FUNCTION"),
+    sqlIndexOf(migration, "CREATE OR REPLACE FUNCTION"),
   );
-  assert.match(functionBody, /job.status = 'blocked'/);
-  assert.match(functionBody, /tax_invoice_id IS NULL/);
-  assert.match(functionBody, /available_at = now\(\)/);
-  assert.doesNotMatch(functionBody, /reconcile_required/);
-  assert.doesNotMatch(functionBody, /Asia\/Ho_Chi_Minh/);
+  assertSqlMatch(functionBody, /job.status = 'blocked'/);
+  assertSqlMatch(functionBody, /tax_invoice_id IS NULL/);
+  assertSqlMatch(functionBody, /available_at = now\(\)/);
+  assertSqlNotMatch(functionBody, /reconcile_required/);
+  assertSqlNotMatch(functionBody, /Asia\/Ho_Chi_Minh/);
 });

@@ -8,7 +8,7 @@ const migrationsDir = resolve(repoRoot, "supabase/migrations");
 
 test("historical migrations stay outside the Preview migration input", () => {
   assert.equal(existsSync(resolve(migrationsDir, "_archive")), false);
-  assert.ok(existsSync(resolve(repoRoot, "supabase/migration-archive")));
+  assert.equal(existsSync(resolve(repoRoot, "supabase/migration-archive")), false);
   assert.ok(
     readdirSync(migrationsDir).every(
       (entry) =>

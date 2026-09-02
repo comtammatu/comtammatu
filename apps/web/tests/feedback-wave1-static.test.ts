@@ -1,17 +1,19 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 const repoRoot = resolve(process.cwd(), "../..");
 const webRoot = process.cwd();
 
 function readRepo(path: string): string {
-  return readFileSync(resolve(repoRoot, path), "utf8");
+  return readSql(repoRoot, path);
 }
 
 function readWeb(path: string): string {
-  return readFileSync(join(webRoot, path), "utf8");
+  return readSql(webRoot, path);
 }
 
 function existsRepo(path: string): boolean {
@@ -20,31 +22,27 @@ function existsRepo(path: string): boolean {
 
 test("Wave 1 feedback migration RPC is service_role-only with empty search_path", () => {
   const migration = readRepo(
-    "supabase/migration-archive/20260728062249_qr_feedback_wave1.sql",
+    "supabase/migrations/20260728062249_qr_feedback_wave1.sql",
   );
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.submit_feedback\([\s\S]*?SECURITY DEFINER/,
   );
-  assert.match(migration, /SET search_path TO ''/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /SET search_path TO ''/);
+  assertSqlMatch(migration,
     /GRANT EXECUTE ON FUNCTION public\.submit_feedback\([\s\S]*?\) TO service_role/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /REVOKE ALL ON FUNCTION public\.submit_feedback\([\s\S]*?\) FROM anon, authenticated/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /REVOKE ALL ON FUNCTION public\.submit_feedback\([\s\S]*?\) FROM PUBLIC/,
   );
 });
 
 test("Wave 1 permission catalog is branch-scoped and delegable with BM backfill", () => {
   const migration = readRepo(
-    "supabase/migration-archive/20260728062249_qr_feedback_wave1.sql",
+    "supabase/migrations/20260728062249_qr_feedback_wave1.sql",
   );
   const permissions = readRepo("packages/shared/src/auth/permissions.ts");
   const fixture = readWeb("tests/fixtures/supabase-e2e/tenant.sql");
@@ -53,14 +51,13 @@ test("Wave 1 permission catalog is branch-scoped and delegable with BM backfill"
   assert.match(permissions, /FEEDBACK_MANAGE_QR: "feedback:manage_qr"/);
   assert.match(permissions, /PERMISSION_KEY_COUNT = 112/);
 
-  assert.match(migration, /\('feedback:view'[\s\S]*?'branch'[\s\S]*?true\)/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /\('feedback:view'[\s\S]*?'branch'[\s\S]*?true\)/);
+  assertSqlMatch(migration,
     /\('feedback:manage_qr'[\s\S]*?'branch'[\s\S]*?true\)/,
   );
-  assert.match(migration, /INSERT INTO public\.staff_permissions/);
-  assert.match(migration, /'feedback:view'/);
-  assert.match(migration, /'feedback:manage_qr'/);
+  assertSqlMatch(migration, /INSERT INTO public\.staff_permissions/);
+  assertSqlMatch(migration, /'feedback:view'/);
+  assertSqlMatch(migration, /'feedback:manage_qr'/);
 
   assert.match(fixture, /\('feedback:view'/);
   assert.match(fixture, /\('feedback:manage_qr'/);
@@ -68,15 +65,15 @@ test("Wave 1 permission catalog is branch-scoped and delegable with BM backfill"
 
 test("Wave 1 schema keeps composite ownership and no phone/photo/AI restore", () => {
   const migration = readRepo(
-    "supabase/migration-archive/20260728062249_qr_feedback_wave1.sql",
+    "supabase/migrations/20260728062249_qr_feedback_wave1.sql",
   );
 
-  assert.match(migration, /feedback_qr_codes_branch_tenant_fkey/);
-  assert.match(migration, /feedback_qr_codes_table_scope_fkey/);
-  assert.match(migration, /UNIQUE \(qr_code_id, client_submission_id\)/);
-  assert.doesNotMatch(migration, /view_phone|guest_phone|phone_number/);
-  assert.doesNotMatch(migration, /is_suspect|telegram|openai|photo_url/);
-  assert.doesNotMatch(migration, /feedback_settings/);
+  assertSqlMatch(migration, /feedback_qr_codes_branch_tenant_fkey/);
+  assertSqlMatch(migration, /feedback_qr_codes_table_scope_fkey/);
+  assertSqlMatch(migration, /UNIQUE \(qr_code_id, client_submission_id\)/);
+  assertSqlNotMatch(migration, /view_phone|guest_phone|phone_number/);
+  assertSqlNotMatch(migration, /is_suspect|telegram|openai|photo_url/);
+  assertSqlNotMatch(migration, /feedback_settings/);
 });
 
 test("public guest paths and staff surfaces exist without admin restore", () => {
@@ -219,30 +216,27 @@ test("Feedback LIST surfaces use AppToolbar section nav and AppListFrame", () =>
 
 test("Wave 1.1 self-order feedback anchors paid order with snapshot columns", () => {
   const migration = readRepo(
-    "supabase/migration-archive/20260810123000_self_order_feedback_order_snapshot.sql",
+    "supabase/migrations/20260810123000_self_order_feedback_order_snapshot.sql",
   );
 
-  assert.match(migration, /ADD COLUMN IF NOT EXISTS order_id/);
-  assert.match(migration, /ADD COLUMN IF NOT EXISTS order_number/);
-  assert.match(migration, /ADD COLUMN IF NOT EXISTS table_number/);
-  assert.match(migration, /ADD COLUMN IF NOT EXISTS order_created_at/);
-  assert.match(migration, /idx_feedbacks_order_id_unique/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /ADD COLUMN IF NOT EXISTS order_id/);
+  assertSqlMatch(migration, /ADD COLUMN IF NOT EXISTS order_number/);
+  assertSqlMatch(migration, /ADD COLUMN IF NOT EXISTS table_number/);
+  assertSqlMatch(migration, /ADD COLUMN IF NOT EXISTS order_created_at/);
+  assertSqlMatch(migration, /idx_feedbacks_order_id_unique/);
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.submit_self_order_feedback\([\s\S]*?SECURITY DEFINER/,
   );
-  assert.match(migration, /SET search_path TO ''/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /SET search_path TO ''/);
+  assertSqlMatch(migration,
     /GRANT EXECUTE ON FUNCTION public\.submit_self_order_feedback\([\s\S]*?\) TO service_role/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /REVOKE ALL ON FUNCTION public\.submit_self_order_feedback\([\s\S]*?\) FROM anon, authenticated/,
   );
-  assert.match(migration, /payment_status IS DISTINCT FROM 'paid'/);
-  assert.match(migration, /feedback_qr_required/);
-  assert.match(migration, /feedback_order_already_submitted/);
+  assertSqlMatch(migration, /payment_status IS DISTINCT FROM 'paid'/);
+  assertSqlMatch(migration, /feedback_qr_required/);
+  assertSqlMatch(migration, /feedback_order_already_submitted/);
 
   assert.equal(
     existsRepo("apps/web/app/api/self-order/[token]/feedback/route.ts"),
@@ -282,12 +276,12 @@ test("Wave 1.1 self-order feedback anchors paid order with snapshot columns", ()
 
 test("Wave 1.2 routes >=4 to Google Review and <=3 to branch phone", () => {
   const migration = readRepo(
-    "supabase/migration-archive/20260810124502_branch_google_review_url.sql",
+    "supabase/migrations/20260810124502_branch_google_review_url.sql",
   );
-  assert.match(migration, /ADD COLUMN IF NOT EXISTS google_review_url/);
-  assert.match(migration, /branches_google_review_url_chk/);
-  assert.match(migration, /googleReviewUrl/);
-  assert.match(migration, /branch_phone/);
+  assertSqlMatch(migration, /ADD COLUMN IF NOT EXISTS google_review_url/);
+  assertSqlMatch(migration, /branches_google_review_url_chk/);
+  assertSqlMatch(migration, /googleReviewUrl/);
+  assertSqlMatch(migration, /branch_phone/);
 
   const contracts = readWeb("lib/self-order/contracts.ts");
   assert.match(contracts, /googleReviewUrl/);

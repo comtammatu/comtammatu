@@ -1,63 +1,60 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 const root = join(import.meta.dirname, "../../..");
 
 function read(rel: string): string {
-  return readFileSync(join(root, rel), "utf8");
+  return readSql(root, rel);
 }
 
 test("finance food-cost recorded RPC is DEFINER + finance:view gated", () => {
   const migration = read(
-    "supabase/migration-archive/20260820151656_finance_food_cost_recorded.sql",
+    "supabase/migrations/20260820151656_finance_food_cost_recorded.sql",
   );
-  assert.match(migration, /CREATE FUNCTION public\.get_finance_food_cost_recorded/);
-  assert.match(migration, /SECURITY DEFINER/);
-  assert.match(migration, /private\.finance_scope\(v_uid, 'finance:view'\)/);
-  assert.match(migration, /GRANT EXECUTE[\s\S]*get_finance_food_cost_recorded[\s\S]*TO authenticated/);
-  assert.match(migration, /REVOKE ALL[\s\S]*get_finance_food_cost_recorded[\s\S]*FROM PUBLIC/);
-  assert.match(migration, /allocation_bucket[\s\S]*food_cost/);
-  assert.match(migration, /covered_order_count/);
+  assertSqlMatch(migration, /CREATE FUNCTION public\.get_finance_food_cost_recorded/);
+  assertSqlMatch(migration, /SECURITY DEFINER/);
+  assertSqlMatch(migration, /private\.finance_scope\(v_uid, 'finance:view'\)/);
+  assertSqlMatch(migration, /GRANT EXECUTE[\s\S]*get_finance_food_cost_recorded[\s\S]*TO authenticated/);
+  assertSqlMatch(migration, /REVOKE ALL[\s\S]*get_finance_food_cost_recorded[\s\S]*FROM PUBLIC/);
+  assertSqlMatch(migration, /allocation_bucket[\s\S]*food_cost/);
+  assertSqlMatch(migration, /covered_order_count/);
 });
 
 test("finance operating cockpit RPC aggregates period KPIs and stops mv_food_cost refresh", () => {
   const migration = read(
-    "supabase/migration-archive/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
+    "supabase/migrations/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
   );
-  assert.match(migration, /CREATE FUNCTION public\.get_finance_operating_cockpit/);
-  assert.match(migration, /SECURITY DEFINER/);
-  assert.match(migration, /has_permission_any\('finance:view'\)/);
-  assert.match(migration, /get_finance_food_cost_recorded/);
-  assert.match(migration, /GRANT EXECUTE[\s\S]*get_finance_operating_cockpit[\s\S]*TO authenticated/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /CREATE FUNCTION public\.get_finance_operating_cockpit/);
+  assertSqlMatch(migration, /SECURITY DEFINER/);
+  assertSqlMatch(migration, /has_permission_any\('finance:view'\)/);
+  assertSqlMatch(migration, /get_finance_food_cost_recorded/);
+  assertSqlMatch(migration, /GRANT EXECUTE[\s\S]*get_finance_operating_cockpit[\s\S]*TO authenticated/);
+  assertSqlMatch(migration,
     /CREATE OR REPLACE FUNCTION public\.refresh_finance_views\(\)[\s\S]*mv_food_cost is no longer/,
   );
-  assert.doesNotMatch(
-    migration,
+  assertSqlNotMatch(migration,
     /REFRESH MATERIALIZED VIEW CONCURRENTLY public\.mv_food_cost/,
   );
 });
 
 test("finance bank list + token match RPCs are finance:view gated", () => {
   const migration = read(
-    "supabase/migration-archive/20260820151658_list_finance_bank_transactions_and_match_token.sql",
+    "supabase/migrations/20260820151658_list_finance_bank_transactions_and_match_token.sql",
   );
-  assert.match(migration, /CREATE FUNCTION public\.list_finance_bank_transactions/);
-  assert.match(migration, /CREATE FUNCTION public\.match_bank_by_transfer_token/);
-  assert.match(migration, /has_permission_any\('finance:view'\)/);
-  assert.match(migration, /match_kind/);
-  assert.match(migration, /needs_review/);
-  assert.match(migration, /reconcile_bank_transaction_targets/);
-  assert.match(migration, /record_bank_transaction_cash_deposit/);
-  assert.match(
-    migration,
+  assertSqlMatch(migration, /CREATE FUNCTION public\.list_finance_bank_transactions/);
+  assertSqlMatch(migration, /CREATE FUNCTION public\.match_bank_by_transfer_token/);
+  assertSqlMatch(migration, /has_permission_any\('finance:view'\)/);
+  assertSqlMatch(migration, /match_kind/);
+  assertSqlMatch(migration, /needs_review/);
+  assertSqlMatch(migration, /reconcile_bank_transaction_targets/);
+  assertSqlMatch(migration, /record_bank_transaction_cash_deposit/);
+  assertSqlMatch(migration,
     /GRANT EXECUTE[\s\S]*list_finance_bank_transactions[\s\S]*TO authenticated/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /GRANT EXECUTE[\s\S]*match_bank_by_transfer_token[\s\S]*TO authenticated/,
   );
 });

@@ -18,7 +18,6 @@ const SESSION_POOLER_PORT = "5432";
 const EXPECTED_USERNAME = `postgres.${PRODUCTION_PROJECT_REF}`;
 const MIGRATION_MANIFEST = "supabase/migration-lineage.json";
 const ACTIVE_MIGRATIONS = "supabase/migrations";
-const ARCHIVED_MIGRATIONS = "supabase/migration-archive";
 const VERSIONED_SQL = /^(\d{14})_.+\.sql$/;
 
 function validateDbUrl(value) {
@@ -42,7 +41,6 @@ function validateDbUrl(value) {
 
 function selectProductionMigrations(
   activeFiles,
-  archivedFiles,
   baselineVersion,
   remoteVersions,
 ) {
@@ -54,21 +52,23 @@ function selectProductionMigrations(
   const activeForwards = activeFiles.filter(
     (file) => file.match(VERSIONED_SQL)?.[1] > baselineVersion,
   );
-  const selected = [];
-  for (const version of remoteVersions) {
-    const source = version <= baselineVersion ? archivedFiles : activeForwards;
-    const matches = source.filter((file) => file.startsWith(`${version}_`));
-    if (matches.length !== 1) {
-      throw new Error(
-        `Expected exactly one local migration for applied Production version ${version}`,
-      );
+  const remoteSet = new Set(remoteVersions);
+  for (const file of activeForwards) {
+    const version = file.match(VERSIONED_SQL)?.[1];
+    if (!version) {
+      throw new Error(`Invalid migration filename: ${file}`);
     }
-    if (version <= baselineVersion) {
-      selected.push([ARCHIVED_MIGRATIONS, matches[0]]);
+    if (remoteSet.size > 0 && !remoteSet.has(version)) {
+      const newestRemote = [...remoteSet].sort().at(-1) ?? "";
+      if (version <= newestRemote) {
+        throw new Error(
+          `Active forward ${file} is missing from the Production ledger`,
+        );
+      }
     }
   }
-  selected.push(...activeForwards.map((file) => [ACTIVE_MIGRATIONS, file]));
 
+  const selected = activeForwards.map((file) => [ACTIVE_MIGRATIONS, file]);
   const versions = new Set();
   for (const [source, file] of selected) {
     const version = file.match(VERSIONED_SQL)?.[1];
@@ -175,10 +175,8 @@ function createProductionWorkdir(projectRoot, remoteVersions) {
     throw new Error(`${MIGRATION_MANIFEST}: baselineVersion must be 14 digits`);
   }
   const activeFiles = readdirSync(join(projectRoot, ACTIVE_MIGRATIONS));
-  const archivedFiles = readdirSync(join(projectRoot, ARCHIVED_MIGRATIONS));
   const migrations = selectProductionMigrations(
     activeFiles,
-    archivedFiles,
     baselineVersion,
     remoteVersions,
   );
@@ -218,14 +216,10 @@ function selfTest() {
   }
   const selected = selectProductionMigrations(
     ["20260101000000_baseline.sql", "20260101000001_forward.sql"],
-    ["20251231235959_history.sql", "20260101000000_cutoff.sql"],
     "20260101000000",
     ["20251231235959", "20260101000000"],
   );
-  if (
-    selected.map(([, file]) => file).join(",") !==
-    "20251231235959_history.sql,20260101000000_cutoff.sql,20260101000001_forward.sql"
-  ) {
+  if (selected.map(([, file]) => file).join(",") !== "20260101000001_forward.sql") {
     throw new Error("Production migration projection selected the wrong files");
   }
   const parsed = parseRemoteMigrationVersions(

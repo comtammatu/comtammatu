@@ -1,15 +1,16 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
+import { readSql, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 const root = process.cwd().replaceAll("\\", "/").includes("apps/web")
   ? join(process.cwd(), "../..")
   : process.cwd();
-const read = (path: string) => readFileSync(join(root, path), "utf8");
+const read = (path: string) => readSql(root, path);
 
 const migration = read(
-  "supabase/migration-archive/20260822143600_universal_inventory_shortfall_valuation.sql",
+  "supabase/migrations/20260822143600_universal_inventory_shortfall_valuation.sql",
 );
 
 test("migration adds inventory_shortfall to source_kind constraint", () => {
@@ -23,5 +24,5 @@ test("migration synthesizes shortfall for all unbacked negative movements", () =
 });
 
 test("migration eliminates hard inventory_valuation_insufficient_quantity exception", () => {
-  assert.doesNotMatch(migration, /RAISE EXCEPTION 'inventory_valuation_insufficient_quantity'/);
+  assertSqlNotMatch(migration, /RAISE EXCEPTION 'inventory_valuation_insufficient_quantity'/);
 });

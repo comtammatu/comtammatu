@@ -1,31 +1,32 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 const repoRoot = resolve(process.cwd(), "../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 test("ISS-06 owner WAC RPC is owner-only append-only Giá vốn restatement", () => {
-  const sql = read("supabase/migration-archive/20260820014906_owner_set_company_wac.sql");
+  const sql = read("supabase/migrations/20260820014906_owner_set_company_wac.sql");
 
-  assert.match(sql, /auth_is_owner/);
-  assert.match(sql, /owner_set_company_wac/);
-  assert.match(sql, /private\.project_company_wac/);
-  assert.match(sql, /private\.propagate_inventory_origin_reprice/);
-  assert.match(sql, /quantity_delta/);
-  assert.match(sql, /provisional_reprice/);
-  assert.match(sql, /finished_good_wac_overwrite_forbidden/);
-  assert.match(sql, /v_kind IS DISTINCT FROM 'raw_material'/);
-  assert.match(sql, /company_wac_invalid/);
-  assert.match(sql, /reason_required/);
-  assert.doesNotMatch(sql, /confirm_goods_receipt_note\s*\(/);
-  assert.doesNotMatch(sql, /UPDATE public\.stock_movements/);
-  assert.doesNotMatch(sql, /UPDATE public\.grn_items/);
-  assert.doesNotMatch(sql, /invoice_reprice\s*\(/);
-  assert.doesNotMatch(sql, /ingredients\.unit_cost\s*=/);
-  assert.doesNotMatch(sql, /create_purchase_order\s*\(/);
-  assert.doesNotMatch(sql, /owner_patch_confirmed_grn_unit_cost/);
+  assertSqlMatch(sql, /auth_is_owner/);
+  assertSqlMatch(sql, /owner_set_company_wac/);
+  assertSqlMatch(sql, /private\.project_company_wac/);
+  assertSqlMatch(sql, /private\.propagate_inventory_origin_reprice/);
+  assertSqlMatch(sql, /quantity_delta/);
+  assertSqlMatch(sql, /provisional_reprice/);
+  assertSqlMatch(sql, /finished_good_wac_overwrite_forbidden/);
+  assertSqlMatch(sql, /v_kind IS DISTINCT FROM 'raw_material'/);
+  assertSqlMatch(sql, /company_wac_invalid/);
+  assertSqlMatch(sql, /reason_required/);
+  assertSqlNotMatch(sql, /confirm_goods_receipt_note\s*\(/);
+  assertSqlNotMatch(sql, /UPDATE public\.stock_movements/);
+  assertSqlNotMatch(sql, /UPDATE public\.grn_items/);
+  assertSqlNotMatch(sql, /invoice_reprice\s*\(/);
+  assertSqlNotMatch(sql, /ingredients\.unit_cost\s*=/);
+  assertSqlNotMatch(sql, /create_purchase_order\s*\(/);
+  assertSqlNotMatch(sql, /owner_patch_confirmed_grn_unit_cost/);
 });
 
 test("ISS-06 SQL proof covers owner-only, qty, WAC, FG, zero, and reason", () => {

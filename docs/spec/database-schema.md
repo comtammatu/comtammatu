@@ -20,8 +20,9 @@ The pre-baseline incremental chain could not replay from an empty DB (ordering b
 - `supabase/migrations/20260902162918_baseline.sql` — canonical public+private
   schema install; validated to replay on an empty DB.
 - `supabase/migrations/<timestamp>_*.sql` after it — forward migrations on the baseline.
-- `supabase/migration-archive/` — historical and squashed forward migrations
-  retained for archaeology, not replayed by the active chain.
+- Historical incremental SQL is git history, not an in-tree
+  `migration-archive/` folder. Fresh clones keep only the active 11-file
+  chain.
 - `supabase/migration-lineage.json` — machine guard for the baseline hash and
   active migration layout. It is not Production-ledger proof and does not govern
   Preview eligibility.

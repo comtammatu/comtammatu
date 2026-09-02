@@ -48,7 +48,8 @@ Production ledger or schema write.
 
 3. Classify every active migration at or before the cutoff:
 
-   - archive schema/DML already represented by the dump;
+   - drop schema/DML already represented by the dump from the active tree
+     (git history is the archive; do not recreate `migration-archive/`);
    - keep newer or unapplied forwards active;
    - retain required bootstrap/reference data in the active install path;
    - keep managed surfaces such as extensions, Storage, Realtime and cron in a

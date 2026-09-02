@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 import {
   attachRefundMatches,
   classifySepayReconciliationState,
@@ -12,7 +13,7 @@ import {
 } from "../app/(protected)/finance/_lib/sepay-bank-transaction-model";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
-const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 function moneyOut(): SepayBankTransaction {
   return {
@@ -78,55 +79,51 @@ test("refund allocation requires exact money conservation", () => {
 
 test("refund ledger migration enforces the smallest safe v1 contract", () => {
   const migration = read(
-    "supabase/migration-archive/20260714031027_20260713160248_persist_sepay_refund_match.sql",
+    "supabase/migrations/20260714031027_20260713160248_persist_sepay_refund_match.sql",
   );
 
-  assert.match(migration, /existing_refunds_require_payout_classification/);
-  assert.match(migration, /partial_refund_not_supported/);
-  assert.match(migration, /payout_method IN \('cash', 'bank_transfer'\)/);
-  assert.match(migration, /public\.auth_is_owner\(v_actor\)/);
-  assert.match(migration, /refund_amount_mismatch/);
-  assert.match(migration, /webhook_event_already_linked/);
-  assert.match(migration, /FOR UPDATE/);
-  assert.match(migration, /guard_approved_refund_facts/);
-  assert.match(migration, /validate_refund_webhook_event_update/);
-  assert.match(migration, /get_cash_ledger_movement_since/);
-  assert.match(migration, /get_bank_ledger_movement_since/);
-  assert.match(migration, /REVOKE INSERT, UPDATE, DELETE ON public\.refunds/);
-  assert.match(migration, /CREATE OR REPLACE FUNCTION public\.reject_refund/);
-  assert.match(migration, /v_event\.order_id IS NOT NULL/);
-  assert.doesNotMatch(migration, /payout_method IN \([^)]*'momo'/);
+  assertSqlMatch(migration, /existing_refunds_require_payout_classification/);
+  assertSqlMatch(migration, /partial_refund_not_supported/);
+  assertSqlMatch(migration, /payout_method IN \('cash', 'bank_transfer'\)/);
+  assertSqlMatch(migration, /public\.auth_is_owner\(v_actor\)/);
+  assertSqlMatch(migration, /refund_amount_mismatch/);
+  assertSqlMatch(migration, /webhook_event_already_linked/);
+  assertSqlMatch(migration, /FOR UPDATE/);
+  assertSqlMatch(migration, /guard_approved_refund_facts/);
+  assertSqlMatch(migration, /validate_refund_webhook_event_update/);
+  assertSqlMatch(migration, /get_cash_ledger_movement_since/);
+  assertSqlMatch(migration, /get_bank_ledger_movement_since/);
+  assertSqlMatch(migration, /REVOKE INSERT, UPDATE, DELETE ON public\.refunds/);
+  assertSqlMatch(migration, /CREATE OR REPLACE FUNCTION public\.reject_refund/);
+  assertSqlMatch(migration, /v_event\.order_id IS NOT NULL/);
+  assertSqlNotMatch(migration, /payout_method IN \([^)]*'momo'/);
 });
 
 test("refund RLS reuses the browser-callable Owner permission boundary", () => {
   const migration = read(
-    "supabase/migration-archive/20260714144849_fix_refund_owner_policy_execution.sql",
+    "supabase/migrations/20260714144849_fix_refund_owner_policy_execution.sql",
   );
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /ALTER POLICY refunds_select[^;]*has_permission\(branch_id, 'orders:refund_approve'\)[^;]*;/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /ALTER POLICY refunds_insert[^;]*has_permission\(branch_id, 'orders:refund'\)[^;]*;/,
   );
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /ALTER POLICY refunds_update[^;]*has_permission\(branch_id, 'orders:refund_approve'\)[^;]*has_permission\(branch_id, 'orders:refund_approve'\)[^;]*;/,
   );
 });
 
 test("owner predicate remains service-only", () => {
   const migration = read(
-    "supabase/migration-archive/20260714155721_lock_owner_predicate_function_acl.sql",
+    "supabase/migrations/20260714155721_lock_owner_predicate_function_acl.sql",
   );
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /REVOKE ALL ON FUNCTION public\.auth_is_owner\(uuid\)\s+FROM PUBLIC, anon, authenticated;/,
   );
-  assert.doesNotMatch(migration, /GRANT\s+EXECUTE/i);
+  assertSqlNotMatch(migration, /GRANT\s+EXECUTE/i);
 });
 
 test("Owner workbench exposes persistent refund matching and evidence", () => {

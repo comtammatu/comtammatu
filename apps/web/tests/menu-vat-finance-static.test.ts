@@ -1,17 +1,18 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+
 
 const repoRoot = resolve(process.cwd(), "../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 test("menu VAT is validated at the form, action, and database boundaries", () => {
   const form = read("apps/web/app/(protected)/menu/item-form-dialog.tsx");
   const actions = read("apps/web/app/(protected)/menu/actions.ts");
   const menuCopy = read("packages/shared/src/messages/menu.ts");
   const migration = read(
-    "supabase/migration-archive/20260727121036_add_menu_vat_and_purchase_approval.sql",
+    "supabase/migrations/20260727121036_add_menu_vat_and_purchase_approval.sql",
   );
 
   assert.match(form, /vat_rate: z\.enum\(\["0", "5", "8", "10"\]\)/);
@@ -25,10 +26,10 @@ test("menu VAT is validated at the form, action, and database boundaries", () =>
     /raw\["Thuế GTGT \(%\)"\] \?\? raw\["vat_rate"\]/,
   );
   assert.match(actions, /vat_rate: parsedRow\.data\.vat_rate/);
-  assert.match(migration, /CHECK \(vat_rate IN \(0, 5, 8, 10\)\)/);
+  assertSqlMatch(migration, /CHECK \(vat_rate IN \(0, 5, 8, 10\)\)/);
   assert.match(menuCopy, /Giá bán đã gồm thuế GTGT/);
   assert.match(menuCopy, /không cộng thêm khi thu/);
-  assert.match(migration, /VAT must not be added again at checkout/);
+  assertSqlMatch(migration, /VAT must not be added again at checkout/);
 });
 
 test("finance exposes input VAT invoices and supplier payments together", () => {
@@ -45,7 +46,7 @@ test("finance exposes input VAT invoices and supplier payments together", () => 
   );
   const inventoryCopy = read("apps/web/lib/messages/inventory.ts");
   const vatMigration = read(
-    "supabase/migration-archive/20260730150000_supplier_invoice_line_pricing.sql",
+    "supabase/migrations/20260730150000_supplier_invoice_line_pricing.sql",
   );
 
   assert.match(financeCopy, /HĐ đầu vào/);
@@ -65,14 +66,13 @@ test("finance exposes input VAT invoices and supplier payments together", () => 
   assert.match(invoiceRow, /row\.vat_breakdown/);
   assert.match(invoiceClient, /selectedInvoice\.vatBreakdown/);
   assert.match(invoiceClient, /vatSummaryLabel/);
-  assert.match(vatMigration, /ADD COLUMN IF NOT EXISTS vat_rate/);
-  assert.match(vatMigration, /NEW\.subtotal := pg_catalog\.round/);
-  assert.match(
-    vatMigration,
+  assertSqlMatch(vatMigration, /ADD COLUMN IF NOT EXISTS vat_rate/);
+  assertSqlMatch(vatMigration, /NEW\.subtotal := pg_catalog\.round/);
+  assertSqlMatch(vatMigration,
     /NEW\.total_amount := NEW\.subtotal[\s\S]*- NEW\.document_discount_amount[\s\S]*\+ NEW\.vat_amount/,
   );
-  assert.match(vatMigration, /NEW\.vat_rate := CASE WHEN v_line_count = 1/);
-  assert.match(vatMigration, /supplier_invoice_confirmed_immutable/);
+  assertSqlMatch(vatMigration, /NEW\.vat_rate := CASE WHEN v_line_count = 1/);
+  assertSqlMatch(vatMigration, /supplier_invoice_confirmed_immutable/);
 });
 
 test("finance separates inventory, equipment acquisition, and period expense", () => {
@@ -87,26 +87,24 @@ test("finance separates inventory, equipment acquisition, and period expense", (
 
 test("supplier invoice matching uses confirmed GRN quantities and invoice line prices", () => {
   const migration = read(
-    "supabase/migration-archive/20260730150000_supplier_invoice_line_pricing.sql",
+    "supabase/migrations/20260730150000_supplier_invoice_line_pricing.sql",
   );
   const invoiceActions = read(
     "apps/web/app/(protected)/finance/supplier-invoice-actions.ts",
   );
   const grnActions = read("apps/web/app/(protected)/inventory/grn-actions.ts");
   const vatMigration = read(
-    "supabase/migration-archive/20260730150000_supplier_invoice_line_pricing.sql",
+    "supabase/migrations/20260730150000_supplier_invoice_line_pricing.sql",
   );
 
-  assert.match(
-    migration,
+  assertSqlMatch(migration,
     /allocation\.billed_quantity \* invoice_line\.unit_price/,
   );
-  assert.match(migration, /grn\.status <> 'confirmed'/);
-  assert.match(migration, /purchase_order\.supplier_id IS DISTINCT FROM/);
+  assertSqlMatch(migration, /grn\.status <> 'confirmed'/);
+  assertSqlMatch(migration, /purchase_order\.supplier_id IS DISTINCT FROM/);
   assert.match(invoiceActions, /save_supplier_invoice_draft/);
-  assert.match(vatMigration, /pg_catalog\.abs\(v_difference\) <= 1/);
-  assert.doesNotMatch(
-    vatMigration,
+  assertSqlMatch(vatMigration, /pg_catalog\.abs\(v_difference\) <= 1/);
+  assertSqlNotMatch(vatMigration,
     /IF p_po_id IS NOT NULL AND p_po_id IS DISTINCT FROM v_grn\.po_id/,
   );
   assert.match(grnActions, /\.in\("status", \["confirmed", "draft"\]\)/);

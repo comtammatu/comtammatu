@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 import {
@@ -10,9 +9,11 @@ import {
 } from "../app/_lib/food-cost-calculation";
 import { calculateGrossProfitIdentity } from "../app/(protected)/finance/_lib/finance-result";
 import type { IngredientUnitRow } from "../lib/inventory/types";
+import { readSql } from "./_lib/active-sql.ts";
+
 
 const repoRoot = resolve(process.cwd(), "../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) => readSql(repoRoot, path);
 
 function unit(row: Partial<IngredientUnitRow>): IngredientUnitRow {
   return {
@@ -222,7 +223,7 @@ test("finance food cost treats a menu item with no recipe as zero định mức"
 
 test("paid menu-item sales allocate order discounts before calculating gross profit", () => {
   const migration = read(
-    "supabase/migration-archive/20260720120000_fix_paid_menu_item_sales_aggregation.sql",
+    "supabase/migrations/20260720120000_fix_paid_menu_item_sales_aggregation.sql",
   );
 
   assert.match(migration, /FROM public\.payments p/);
