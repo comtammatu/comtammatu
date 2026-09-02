@@ -35,6 +35,7 @@ export interface EmployeeRow {
     id: string;
     full_name: string;
     phone: string | null;
+    is_active?: boolean | null;
     positions: {
       code: string | null;
       label_vi: string | null;

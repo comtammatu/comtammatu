@@ -8,7 +8,7 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 test("Wave 1 RPC creates a PO without YCM and mints Auto-GRN on send", () => {
   const sql = read(
-    "supabase/migrations/20260820001437_create_purchase_order_without_ycm.sql",
+    "supabase/migration-archive/20260820001437_create_purchase_order_without_ycm.sql",
   );
   const proof = read(
     "supabase/tests/create_purchase_order_without_ycm_test.sql",
@@ -63,9 +63,16 @@ test("Wave 1 orders tab can Tạo đơn; YCM tab stays readable without create",
   assert.match(actions, /PO_CREATE_ROLES/);
   assert.match(actions, /export const savePurchaseDemand/);
   assert.match(actions, /export const reviewPurchaseDemand/);
+  assert.match(actions, /ycmWriteFrozen/);
+  assert.doesNotMatch(actions, /"save_purchase_demand" as never/);
+  assert.doesNotMatch(actions, /"save_purchase_demand_allocations" as never/);
+  assert.doesNotMatch(actions, /"review_purchase_demand" as never/);
+  assert.doesNotMatch(actions, /"cancel_purchase_request" as never/);
+  assert.doesNotMatch(actions, /"close_purchase_request" as never/);
   assert.match(page, /canCreate=\{canManagePo && createBranches\.length > 0\}/);
-  assert.match(page, /PurchaseRequestsClient/);
-  assert.match(page, /canCreateRequest=\{false\}/);
+  assert.doesNotMatch(page, /PurchaseRequestsClient/);
+  assert.doesNotMatch(page, /canCreateRequest=\{false\}/);
+  assert.match(page, /loadPurchaseOrderRows/);
   assert.match(client, /copy\.createAction/);
   assert.match(client, /mode === "create"/);
   assert.match(client, /pickDefaultPurchaseDemandSupplier/);
@@ -83,6 +90,7 @@ test("Wave 1 orders tab can Tạo đơn; YCM tab stays readable without create",
   assert.match(copy, /multiSupplierPreview:/);
   assert.match(copy, /noMappedIngredients:/);
   assert.match(copy, /needsTab: "Yêu cầu mua"/);
+  assert.match(copy, /writeFrozen: "Yêu cầu mua đã gỡ/);
   assert.match(roles, /"central_supply_ops"/);
   assert.match(roles, /"central_kitchen_lead"/);
   assert.doesNotMatch(client, /unitPrice|Đơn giá/);

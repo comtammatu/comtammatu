@@ -97,7 +97,7 @@ test("no KpiCard/KpiRow stat surfaces remain under the /br/ route tree", () => {
 
 test("home revenue RPC measures MTD and today on the 04:00 business day", () => {
   const sql = read(
-    "supabase/migrations/20260820010000_branch_revenue_target_progress_business_day.sql",
+    "supabase/migration-archive/20260820010000_branch_revenue_target_progress_business_day.sql",
   );
   const sqlTest = read("supabase/tests/branch_revenue_targets_test.sql");
 

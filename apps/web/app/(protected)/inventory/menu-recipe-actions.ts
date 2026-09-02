@@ -289,7 +289,7 @@ export async function fetchBranchWacMap(
 
   const query = monetary.client
     .from("stock_levels")
-    .select("ingredient_id, avg_unit_cost, branch_id")
+    .select("ingredient_id, avg_unit_cost, branch_id, current_quantity")
     .eq("tenant_id", claims.tenant_id)
     .in("location_id", stockBearingLocations.locationIds)
     .not("avg_unit_cost", "is", null)
@@ -340,6 +340,7 @@ export async function fetchBranchWacMap(
     ingredient_id: number;
     avg_unit_cost: number | string | null;
     branch_id: number;
+    current_quantity?: number | string | null;
   };
   const branchKindById = new Map(
     (branchesResult.data ?? []).map((branch) => [
@@ -351,6 +352,7 @@ export async function fetchBranchWacMap(
     ingredientId: row.ingredient_id,
     branchKind: branchKindById.get(Number(row.branch_id)) ?? null,
     avgUnitCost: row.avg_unit_cost,
+    currentQuantity: row.current_quantity,
   }));
   const map = buildSourceSiteWacMap(stockRows);
   const company = buildCompanyWacMap(stockRows);

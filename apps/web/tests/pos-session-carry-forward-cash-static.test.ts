@@ -8,7 +8,7 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 test("D1 leftover cash is rebound and counted on the open till", () => {
   const sql = read(
-    "supabase/migrations/20260818221238_pos_session_carry_forward_cash.sql",
+    "supabase/migration-archive/20260818221238_pos_session_carry_forward_cash.sql",
   );
   const proof = read("supabase/tests/pos_session_carry_forward_cash_test.sql");
   const financeDoc = read("docs/modules/finance.md");

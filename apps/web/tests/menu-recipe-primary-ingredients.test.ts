@@ -7,7 +7,7 @@ import { formatMenuRecipeBomSummary } from "../app/(protected)/inventory/_lib/me
 const migration = readFileSync(
   resolve(
     import.meta.dirname,
-    "../../../supabase/migrations/20260827010000_recipe_primary_ingredients.sql",
+    "../../../supabase/migration-archive/20260827010000_recipe_primary_ingredients.sql",
   ),
   "utf8",
 );

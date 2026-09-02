@@ -137,7 +137,7 @@ test("R08/R09 branch_manager seed strips retired procurement keys", () => {
 
 test("R08/R09 migration strips BM template and live staff_permissions", () => {
   const migration = read(
-    "supabase/migrations/20260809113024_strip_branch_manager_retired_procurement_grants.sql",
+    "supabase/migration-archive/20260809113024_strip_branch_manager_retired_procurement_grants.sql",
   );
   assert.match(migration, /position_code = 'branch_manager'/);
   assert.match(migration, /DELETE FROM public\.staff_permissions/);

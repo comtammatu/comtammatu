@@ -10,10 +10,10 @@ function readRepo(path: string): string {
 }
 
 function activeMigrationSql(): string {
-  return readdirSync(resolve(repoRoot, "supabase/migrations"))
+  return readdirSync(resolve(repoRoot, "supabase/migration-archive"))
     .filter((name) => name.endsWith(".sql"))
     .sort()
-    .map((name) => readRepo(`supabase/migrations/${name}`))
+    .map((name) => readRepo(`supabase/migration-archive/${name}`))
     .join("\n");
 }
 

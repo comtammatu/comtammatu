@@ -8,7 +8,7 @@ function readRepo(path: string): string {
 }
 
 const revokeMigration = readRepo(
-  "supabase/migrations/20260816084532_waiter_revoke_provisional_print.sql",
+  "supabase/migration-archive/20260816084532_waiter_revoke_provisional_print.sql",
 );
 const posAuth = readRepo(
   "apps/web/app/(protected)/br/[branchId]/pos/_lib/auth.ts",

@@ -8,7 +8,7 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 test("kitchen send batch unique collisions retry with daily ticket_seq", () => {
   const sql = read(
-    "supabase/migrations/20260818221613_kitchen_send_batch_ticket_unique_retry.sql",
+    "supabase/migration-archive/20260818221613_kitchen_send_batch_ticket_unique_retry.sql",
   );
   const proof = read("supabase/tests/kds_completion_print_contract_test.sql");
 

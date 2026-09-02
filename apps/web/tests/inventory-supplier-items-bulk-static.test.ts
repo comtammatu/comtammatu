@@ -35,7 +35,7 @@ test("supplier item batch mapping is atomic and tenant-scoped", () => {
 
 test("later FG purchase guard still lives in bulk_create_supplier_items", () => {
   const migration = read(
-    "supabase/migrations/20260817191420_finished_good_produced_recipe_only.sql",
+    "supabase/migration-archive/20260817191420_finished_good_produced_recipe_only.sql",
   );
   assert.match(migration, /bulk_create_supplier_items/);
   assert.match(migration, /finished_good_not_purchased/);

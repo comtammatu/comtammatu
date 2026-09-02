@@ -7,14 +7,14 @@ const repoRoot = resolve(process.cwd(), "../..");
 const approvalMigration = readFileSync(
   resolve(
     repoRoot,
-    "supabase/migrations/20260829164500_fix_waste_self_approval_and_deadlocks.sql",
+    "supabase/migration-archive/20260829164500_fix_waste_self_approval_and_deadlocks.sql",
   ),
   "utf8",
 );
 const recoveryMigration = readFileSync(
   resolve(
     repoRoot,
-    "supabase/migrations/20260829190058_repair_inventory_unit_rebase_incident.sql",
+    "supabase/migration-archive/20260829190058_repair_inventory_unit_rebase_incident.sql",
   ),
   "utf8",
 );

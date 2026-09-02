@@ -115,7 +115,7 @@ test("createTaxInvoice does not create new not_required/skipped rows", () => {
     "supabase/migration-archive/20260725160907_add_customer_invoice_qr_flow.sql",
   );
   const zeroTotalMigration = read(
-    "supabase/migrations/20260812105224_hddt_discount_projection_zero_total.sql",
+    "supabase/migration-archive/20260812105224_hddt_discount_projection_zero_total.sql",
   );
 
   assert.ok(
@@ -303,7 +303,7 @@ test("per-order HĐĐT payload expands POS modifiers and sides", () => {
     "supabase/migration-archive/20260725160907_add_customer_invoice_qr_flow.sql",
   );
   const projectionMigration = read(
-    "supabase/migrations/20260812105224_hddt_discount_projection_zero_total.sql",
+    "supabase/migration-archive/20260812105224_hddt_discount_projection_zero_total.sql",
   );
   const replaceSrc = read(
     "apps/web/app/(protected)/finance/replace-invoice-actions.ts",
@@ -328,7 +328,7 @@ test("per-order HĐĐT payload expands POS modifiers and sides", () => {
     "payment-time draft must preserve service charge for ADR 0013 projection",
   );
   const snapshotServiceChargeMigration = read(
-    "supabase/migrations/20260812113334_hddt_snapshot_service_charge.sql",
+    "supabase/migration-archive/20260812113334_hddt_snapshot_service_charge.sql",
   );
   assert.match(
     snapshotServiceChargeMigration,
@@ -468,7 +468,7 @@ test("POS item-level discount migration and actions exist", () => {
     "supabase/migration-archive/20260609094000_pos_item_level_discount.sql",
   );
   const vndOnlyMigration = read(
-    "supabase/migrations/20260812105224_hddt_discount_projection_zero_total.sql",
+    "supabase/migration-archive/20260812105224_hddt_discount_projection_zero_total.sql",
   );
   const actions = read(
     "apps/web/app/(protected)/br/[branchId]/pos/discount-actions.ts",

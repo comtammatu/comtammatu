@@ -519,6 +519,34 @@ export const employee = {
     missingProfileDescription:
       "Tài khoản chưa liên kết hồ sơ nhân viên. Liên hệ quản lý.",
     openProfile: "Mở hồ sơ",
+    securityTitle: "Bảo mật",
+    changePassword: "Đổi mật khẩu",
+    changePasswordShort: "Mật khẩu",
+    changePasswordDescription:
+      "Tự đặt lại mật khẩu đăng nhập cho tài khoản của bạn.",
+    newPassword: "Mật khẩu mới",
+    confirmPassword: "Xác nhận mật khẩu mới",
+    passwordMismatch: "Mật khẩu xác nhận không khớp.",
+    passwordMinLength: "Mật khẩu phải có ít nhất 8 ký tự.",
+    savedPassword: "Đã đổi mật khẩu thành công",
+    savePassword: "Lưu mật khẩu",
+    bankTitle: "Nhận lương & Thuế",
+    editBank: "Tài khoản nhận lương",
+    editBankShort: "Ngân hàng",
+    editBankDescription:
+      "Cập nhật số tài khoản ngân hàng và CMND/CCCD để nhận lương chuyển khoản.",
+    idNumber: "Số CMND / CCCD",
+    idNumberPlaceholder: "12 chữ số CCCD",
+    saveBank: "Lưu thông tin",
+    savedBank: "Đã cập nhật thông tin nhận lương",
+    deviceSettingsTitle: "Tùy chọn thiết bị",
+    deviceSettingsDescription:
+      "Âm thanh thông báo và chuông báo vận hành trên thiết bị này.",
+    soundAlertsLabel: "Âm thanh chuông báo vận hành",
+    soundAlertsDescription:
+      "Phát âm thanh báo khi có đơn hàng mới hoặc sự kiện vận hành.",
+    testSoundButton: "Nghe thử chuông",
+    testSoundSuccess: "Đã phát âm thanh thử nghiệm",
   },
   leave: {
     title: "Nghỉ phép",

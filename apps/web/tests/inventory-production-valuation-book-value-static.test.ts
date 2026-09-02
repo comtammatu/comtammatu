@@ -8,7 +8,7 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 test("inventory valuation migration safely clamps origin balance allocations", () => {
   const sql = read(
-    "supabase/migrations/20260821203000_fix_inventory_origin_balances_book_value_check.sql",
+    "supabase/migration-archive/20260821203000_fix_inventory_origin_balances_book_value_check.sql",
   );
 
   assert.match(sql, /post_stock_movement_valuation/);

@@ -8,7 +8,7 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 test("valuation keeps last positive WAC when the pool is empty or negative", () => {
   const sql = read(
-    "supabase/migrations/20260816165500_persist_wac_at_zero_qty.sql",
+    "supabase/migration-archive/20260816165500_persist_wac_at_zero_qty.sql",
   );
 
   assert.match(sql, /WHEN account\.quantity > 0/);

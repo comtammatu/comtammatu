@@ -204,7 +204,7 @@ test("startup capital is selectable and excluded from operating cash movement", 
   const migration = readFileSync(
     resolve(
       import.meta.dirname,
-      "../../../supabase/migrations/20260817181500_expense_startup_capital_category.sql",
+      "../../../supabase/migration-archive/20260817181500_expense_startup_capital_category.sql",
     ),
     "utf8",
   );
@@ -361,7 +361,7 @@ test("operating KPI uses pre-VAT totals while action totals keep gross cash", ()
   const migration = readFileSync(
     resolve(
       import.meta.dirname,
-      "../../../supabase/migrations/20260818171912_finance_expense_period_summary.sql",
+      "../../../supabase/migration-archive/20260818171912_finance_expense_period_summary.sql",
     ),
     "utf8",
   );

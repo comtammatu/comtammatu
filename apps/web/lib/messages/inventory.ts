@@ -799,11 +799,13 @@ export const inventory = {
       history: "Lịch sử",
       offlineMutation:
         "Đang mất kết nối. Kết nối lại rồi thử thao tác lần nữa.",
+      writeFrozen: "Yêu cầu hàng đã gỡ. Tạo điều chuyển mới.",
     },
   },
   purchaseRequests: {
     title: "Nhu cầu mua",
     description: "Lịch sử nhu cầu mua. Đơn mới tạo bằng Tạo đơn trên Đơn mua.",
+    writeFrozen: "Yêu cầu mua đã gỡ. Tạo đơn mới trên Đơn mua.",
     createAction: "Tạo nhu cầu mua",
     createTitle: "Tạo nhu cầu mua",
     createSuccess: "Đã lưu nhu cầu mua.",
@@ -851,7 +853,7 @@ export const inventory = {
     createPoFailed: "Không thể tạo đơn đặt hàng.",
     searchPlaceholder: "Tìm mã nhu cầu, kho hoặc nguyên liệu...",
     emptyTitle: "Chưa có nhu cầu mua",
-    emptyDescription: "Đơn mới tạo bằng Tạo đơn. Đây chỉ còn lịch sử.",
+    emptyDescription: "Yêu cầu mua đã gỡ. Tạo đơn mới trên Đơn mua.",
     loadFailed: "Không thể tải danh sách nhu cầu mua.",
     notFound: "Nhu cầu mua không còn tồn tại.",
     codeColumn: "Nhu cầu mua",
@@ -1310,7 +1312,7 @@ export const inventory = {
   po: {
     workspaceTitle: "Mua hàng",
     workspaceDescription:
-      "Tạo đơn mua theo từng nhà cung cấp. Yêu cầu mua chỉ còn lịch sử.",
+      "Tạo đơn mua theo từng nhà cung cấp. Đơn mua là nguồn sự thật.",
     metrics: {
       total: "Tổng đơn mua",
       open: "Chờ xử lý / Đang mở",

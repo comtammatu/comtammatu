@@ -14,7 +14,7 @@ const repoRoot = join(root, "../..");
 const migration = readFileSync(
   join(
     repoRoot,
-    "supabase/migrations/20260816103524_pos_convert_cash_payment_to_vietqr.sql",
+    "supabase/migration-archive/20260816103524_pos_convert_cash_payment_to_vietqr.sql",
   ),
   "utf8",
 );
@@ -138,7 +138,7 @@ test("paid VietQR receipts print transfer QR; cash receipts do not", () => {
   const receiptPrint = readFileSync(
     join(
       repoRoot,
-      "supabase/migrations/20260816113818_receipt_print_vietqr_for_paid_orders.sql",
+      "supabase/migration-archive/20260816113818_receipt_print_vietqr_for_paid_orders.sql",
     ),
     "utf8",
   );

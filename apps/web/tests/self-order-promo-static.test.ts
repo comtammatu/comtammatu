@@ -9,7 +9,7 @@ const readRepo = (path: string) =>
   readFileSync(join(root, "../..", path), "utf8");
 
 const migration = readRepo(
-  "supabase/migrations/20260819131047_self_order_guest_promotion_code.sql",
+  "supabase/migration-archive/20260819131047_self_order_guest_promotion_code.sql",
 );
 
 test("guest promo RPCs stay service_role SECURITY DEFINER and fail closed for picker kinds", () => {

@@ -14,7 +14,6 @@ import {
 import { fetchFinanceAttentionExceptions } from "@/(protected)/finance/_lib/finance-cockpit";
 import {
   countOpenPurchaseOrders,
-  countOpenPurchaseRequests,
   countOpenSupplierInvoices,
   listOpenGrnsForAttention,
 } from "@/(protected)/inventory/_lib/receiving-counts";
@@ -80,10 +79,9 @@ async function loadInventoryAttention(
   role: StaffRole,
 ): Promise<ControlHomeAttentionItem[]> {
   if (!canAccess(role, "inventory")) return [];
-  const [po, grn, ycm, invoices] = await Promise.all([
+  const [po, grn, invoices] = await Promise.all([
     settledCount(countOpenPurchaseOrders()),
     listOpenGrnsForAttention().catch(() => ({ count: 0, items: [] })),
-    settledCount(countOpenPurchaseRequests()),
     settledCount(countOpenSupplierInvoices()),
   ]);
   const items: ControlHomeAttentionItem[] = [];
@@ -115,16 +113,6 @@ async function loadInventoryAttention(
       label: copy.attention.grn,
       count: grn.count,
       href: "/inventory/grn",
-      tone: "warning",
-    });
-  }
-  if (ycm > 0) {
-    items.push({
-      id: "inventory:ycm",
-      moduleKey: "inventory",
-      label: copy.attention.purchaseRequests,
-      count: ycm,
-      href: "/inventory/purchase-requests",
       tone: "warning",
     });
   }

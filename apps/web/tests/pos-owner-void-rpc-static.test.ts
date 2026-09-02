@@ -8,7 +8,7 @@ function readRepo(path: string): string {
 }
 
 const migration = readRepo(
-  "supabase/migrations/20260828203623_allow_waiter_pos_item_edit_and_void.sql",
+  "supabase/migration-archive/20260828203623_allow_waiter_pos_item_edit_and_void.sql",
 );
 
 const ITEM_MUTATION_RPCS = [

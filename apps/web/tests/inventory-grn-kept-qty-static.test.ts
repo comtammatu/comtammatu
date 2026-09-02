@@ -8,7 +8,7 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 test("ADR 0040 kept GRN qty amends the PO line and warehouse may close remainder", () => {
   const sql = read(
-    "supabase/migrations/20260818160643_grn_kept_qty_amends_po.sql",
+    "supabase/migration-archive/20260818160643_grn_kept_qty_amends_po.sql",
   );
   const proof = read("supabase/tests/grn_kept_qty_amends_po_test.sql");
   const actions = read(

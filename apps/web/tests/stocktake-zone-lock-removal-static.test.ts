@@ -17,8 +17,8 @@ const STOCKTAKE_ACTIONS =
 const SHARED_INVENTORY_MESSAGES = "packages/shared/src/messages/inventory.ts";
 const WEB_INVENTORY_MESSAGES = "apps/web/lib/messages/inventory.ts";
 const REMOVE_MIGRATION =
-  "supabase/migrations/20260831210500_remove_stocktake_zone_locks.sql";
-const DATABASE_BASELINE = "supabase/migrations/20260802162900_baseline.sql";
+  "supabase/migration-archive/20260831210500_remove_stocktake_zone_locks.sql";
+const DATABASE_BASELINE = "supabase/migrations/20260902162918_baseline.sql";
 
 test("stocktake count clients stay editable without a zone-lock lifecycle", () => {
   const forbidden =

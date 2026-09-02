@@ -180,6 +180,8 @@ export function HrClient({
           onOpenChange={setAddOpen}
           branches={branches}
           positionOptions={positionOptions}
+          shifts={shifts}
+          positionTasksData={positionTasksData}
         />
       ) : null}
     </AppPage>

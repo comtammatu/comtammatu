@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
   PERMISSION_KEYS,
@@ -9,16 +8,15 @@ import {
 } from "@comtammatu/shared/auth";
 import { withAction } from "@/_lib/with-action";
 import { inventoryPositiveQuantitySchema } from "./_lib/inventory-quantity-schema";
-import { mapInventoryRpcFailure } from "./_lib/rpc-failure";
-import {
-  stockRequestRpcFallback,
-  stockRequestRpcMappings,
-} from "@lib/messages/inventory-rpc-errors";
+import { messages } from "@lib/messages";
+import type { ActionResult } from "@comtammatu/shared/types";
 
-type RpcJson = {
-  transfer_id?: number;
-  id?: number;
-};
+function ychWriteFrozen<T = never>(): ActionResult<T> {
+  return {
+    success: false,
+    error: messages.inventory.stockRequests.journey.writeFrozen,
+  };
+}
 
 const stockRequestLineSchema = z.object({
   ingredientId: z.coerce.number().int().positive(),
@@ -43,55 +41,11 @@ export const saveStockRequest = withAction(
     permissionBranchId: (data) => data.branchId,
     requireBranchScope: true,
   },
-  async (data, { supabase }) => {
-    const { data: raw, error } = await supabase.rpc(
-      "save_stock_request" as never,
-      {
-        p_request_id: data.requestId ?? null,
-        p_branch_id: data.branchId,
-        p_needed_at: data.neededAt ?? null,
-        p_notes: data.notes ?? "",
-        p_lines: data.lines.map((line) => ({
-          ingredient_id: line.ingredientId,
-          entry_unit_id: line.entryUnitId,
-          quantity: line.quantity,
-          notes: line.notes ?? "",
-        })),
-        p_submit: data.submit,
-        p_idempotency_key: data.idempotencyKey ?? null,
-      } as never,
-    );
-    if (error) {
-      return mapInventoryRpcFailure(
-        error,
-        stockRequestRpcMappings,
-        stockRequestRpcFallback,
-      );
-    }
-    const parsed = z
-      .object({
-        request_id: z.coerce.number().int().positive(),
-        request_number: z.string(),
-        status: z.enum(["draft", "submitted"]),
-      })
-      .safeParse(raw);
-    if (!parsed.success) {
-      return { success: false as const, error: "Không lưu được yêu cầu hàng." };
-    }
-    revalidatePath(`/br/${data.branchId}/stock/transfer`);
-    revalidatePath(
-      `/br/${data.branchId}/stock/requests/${parsed.data.request_id}`,
-    );
-    revalidatePath("/inventory/transfers");
-    return {
-      success: true as const,
-      data: {
-        requestId: parsed.data.request_id,
-        requestNumber: parsed.data.request_number,
-        status: parsed.data.status,
-      },
-    };
-  },
+  async () => ychWriteFrozen<{
+    requestId: number;
+    requestNumber: string;
+    status: "draft" | "submitted";
+  }>(),
 );
 
 export const cancelStockRequest = withAction(
@@ -106,26 +60,7 @@ export const cancelStockRequest = withAction(
     permissionBranchId: (data) => data.branchId,
     requireBranchScope: true,
   },
-  async (data, { supabase }) => {
-    const { error } = await supabase.rpc(
-      "cancel_stock_request" as never,
-      {
-        p_request_id: data.requestId,
-        p_reason: data.reason,
-      } as never,
-    );
-    if (error) {
-      return mapInventoryRpcFailure(
-        error,
-        stockRequestRpcMappings,
-        stockRequestRpcFallback,
-      );
-    }
-    revalidatePath(`/br/${data.branchId}/stock/transfer`);
-    revalidatePath(`/br/${data.branchId}/stock/requests/${data.requestId}`);
-    revalidatePath("/inventory/transfers");
-    return { success: true as const };
-  },
+  async () => ychWriteFrozen(),
 );
 
 export const closeStockRequest = withAction(
@@ -137,25 +72,7 @@ export const closeStockRequest = withAction(
     }),
     permission: PERMISSION_KEYS.INVENTORY_REQUEST_FULFILL,
   },
-  async (data, { supabase }) => {
-    const { error } = await supabase.rpc(
-      "close_stock_request" as never,
-      {
-        p_request_id: data.requestId,
-        p_reason: data.reason,
-      } as never,
-    );
-    if (error) {
-      return mapInventoryRpcFailure(
-        error,
-        stockRequestRpcMappings,
-        stockRequestRpcFallback,
-      );
-    }
-    revalidatePath("/inventory/transfers");
-    revalidatePath(`/inventory/stock-requests/${data.requestId}`);
-    return { success: true as const };
-  },
+  async () => ychWriteFrozen(),
 );
 
 export const rejectStockRequestLines = withAction(
@@ -169,27 +86,7 @@ export const rejectStockRequestLines = withAction(
     }),
     permission: PERMISSION_KEYS.INVENTORY_REQUEST_FULFILL,
   },
-  async (data, { supabase }) => {
-    const { error } = await supabase.rpc(
-      "reject_stock_request_lines" as never,
-      {
-        p_request_id: data.requestId,
-        p_fulfill_site_kind: data.fulfillSiteKind,
-        p_item_ids: data.itemIds,
-        p_reason: data.reason,
-      } as never,
-    );
-    if (error) {
-      return mapInventoryRpcFailure(
-        error,
-        stockRequestRpcMappings,
-        stockRequestRpcFallback,
-      );
-    }
-    revalidatePath("/inventory/transfers");
-    revalidatePath(`/inventory/stock-requests/${data.requestId}`);
-    return { success: true as const };
-  },
+  async () => ychWriteFrozen(),
 );
 
 export const fulfillStockRequestLines = withAction(
@@ -205,34 +102,5 @@ export const fulfillStockRequestLines = withAction(
     permission: PERMISSION_KEYS.INVENTORY_REQUEST_FULFILL,
     permissionBranchId: (data) => data.fromBranchId,
   },
-  async (data, { supabase }) => {
-    const { data: raw, error } = await supabase.rpc(
-      "fulfill_stock_request_lines",
-      {
-        p_request_id: data.requestId,
-        p_fulfill_site_kind: data.fulfillSiteKind,
-        p_from_branch_id: data.fromBranchId,
-        p_from_location_id: data.fromLocationId,
-        p_item_ids: data.itemIds,
-      },
-    );
-    if (error) {
-      return mapInventoryRpcFailure(
-        error,
-        stockRequestRpcMappings,
-        stockRequestRpcFallback,
-      );
-    }
-    const row = raw as RpcJson | null;
-    const transferId = row?.transfer_id ?? row?.id;
-    if (!transferId) {
-      return {
-        success: false as const,
-        error: "Không tạo được phiếu điều chuyển.",
-      };
-    }
-    revalidatePath("/inventory/transfers");
-    revalidatePath(`/inventory/stock-requests/${data.requestId}`);
-    return { success: true as const, data: { transferId } };
-  },
+  async () => ychWriteFrozen<{ transferId: number }>(),
 );

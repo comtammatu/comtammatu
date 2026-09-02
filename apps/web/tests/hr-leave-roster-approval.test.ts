@@ -17,7 +17,7 @@ const branchApprovalsSource = readFileSync(
 const migrationSource = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/20260901002446_approve_leave_with_roster_resolution.sql",
+    "../../supabase/migration-archive/20260901002446_approve_leave_with_roster_resolution.sql",
   ),
   "utf8",
 );

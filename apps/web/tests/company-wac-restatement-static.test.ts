@@ -8,7 +8,7 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 test("company WAC migration keeps GRN unpriced and restates via events", () => {
   const sql = read(
-    "supabase/migrations/20260817183130_company_wac_and_cost_restatement.sql",
+    "supabase/migration-archive/20260817183130_company_wac_and_cost_restatement.sql",
   );
 
   assert.match(sql, /ingredient_provisional_unit_cost/);
@@ -37,7 +37,7 @@ test("company WAC SQL proof covers pending GRN, FG skip GRN, equalize, and appen
 
 test("transfer receive must not overwrite company WAC", () => {
   const sql = read(
-    "supabase/migrations/20260818012917_transfer_receive_keep_company_wac.sql",
+    "supabase/migration-archive/20260818012917_transfer_receive_keep_company_wac.sql",
   );
   const proof = read("supabase/tests/stock_fulfillment_workflow_test.sql");
 
@@ -60,7 +60,7 @@ test("ADR 0040 treats FG site WAC spread as a bug", () => {
 
 test("sườn một gang restatement uses append-only provisional reprice", () => {
   const sql = read(
-    "supabase/migrations/20260817201330_reprice_suon_mot_gang_zero_origins.sql",
+    "supabase/migration-archive/20260817201330_reprice_suon_mot_gang_zero_origins.sql",
   );
   const cockpit = read(
     "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts",
@@ -78,7 +78,7 @@ test("sườn một gang restatement uses append-only provisional reprice", () =
   assert.match(sql, /provisional_reprice/);
   assert.doesNotMatch(sql, /UPDATE public\.stock_movements/);
   const foodCostMigration = read(
-    "supabase/migrations/20260820151656_finance_food_cost_recorded.sql",
+    "supabase/migration-archive/20260820151656_finance_food_cost_recorded.sql",
   );
   assert.match(foodCostMigration, /'provisional_reprice'/);
   assert.match(

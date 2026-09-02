@@ -7,10 +7,10 @@ const repoRoot = resolve(import.meta.dirname, "..", "..", "..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 const migration = read(
-  "supabase/migrations/20260824015244_ingredient_catalog_warehouse_write_and_unit_cap.sql",
+  "supabase/migration-archive/20260824015244_ingredient_catalog_warehouse_write_and_unit_cap.sql",
 );
 const thresholdAuthorityMigration = read(
-  "supabase/migrations/20260902153415_align_inventory_threshold_catalog_authority.sql",
+  "supabase/migration-archive/20260902153415_align_inventory_threshold_catalog_authority.sql",
 );
 const permissions = read("packages/shared/src/auth/permissions.ts");
 const inventoryRoles = read("packages/shared/src/auth/inventory-roles.ts");

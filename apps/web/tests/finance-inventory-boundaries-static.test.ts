@@ -7,7 +7,7 @@ const read = (path: string) => readFileSync(path, "utf8");
 test("Finance desync attention follows the selected local period and branch", () => {
   const source = read("app/(protected)/finance/_lib/finance-cockpit.ts");
   const migration = read(
-    "../../supabase/migrations/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
+    "../../supabase/migration-archive/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
   );
 
   assert.match(source, /get_finance_operating_cockpit/);

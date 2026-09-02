@@ -8,7 +8,7 @@ function read(path: string): string {
 }
 
 const migration = read(
-  "../../supabase/migrations/20260815170000_vietqr_auto_refresh_and_self_order_unblock.sql",
+  "../../supabase/migration-archive/20260815170000_vietqr_auto_refresh_and_self_order_unblock.sql",
 );
 const paymentActions = read(
   "app/(protected)/br/[branchId]/pos/payment-actions.ts",

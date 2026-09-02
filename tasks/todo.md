@@ -245,17 +245,14 @@ UI Advisor Gate
 
 ## YCM/YCH schema cleanup (freeze then drop)
 
-State: blocked
+State: verify
 Kind: feature
 Tier: T3
 Lane: inventory
-Exit: Warehouse creates PO with `purchase_request_id` null and Auto-GRN; YCM/YCH writes frozen; tables dropped only after soak. Do not convert a YCM already turned into a PO, or a YCH already fulfilled into a received DC.
-Blocker: Hide YCM create only after warehouse `"Tạo đơn"` works live on Production.
-Evidence: Production `enloyfnuerqgaqderbwb` applied `20260820001437` in the owner-authorized four-file batch. Contract: ADR 0040–0042 + `docs/ref/inventory.md`.
+Exit: Warehouse creates PO with `purchase_request_id` null and Auto-GRN; YCM/YCH tables absent on Production after soak.
+Evidence: Production `enloyfnuerqgaqderbwb` applied the owner-delegated 10-file batch including Wave 5 `20260903021537`; catalog has no `purchase_requests` / `stock_requests`; `db:types` regenerated. Live Vercel `main` can 500 those pages until the matching Wave 5 Next app deploys. ADR 0040–0042 + `docs/ref/inventory.md`.
 
-- [ ] Hide YCM create / allocate only after warehouse `"Tạo đơn"` works live
-- [ ] Wave 3 dest-initiated DC + BM `inventory:transfer_create` (separate)
-- [ ] Wave 4 REVOKE write RPCs; Wave 5 soak then DROP FKs/tables
+- [ ] Deploy the matching Wave 5 Next app, then smoke warehouse `"Tạo đơn"` with null `purchase_request_id` and Auto-GRN
 
 ## POS/KDS operational audio no longer mix guest events
 
@@ -784,16 +781,11 @@ Blocker: Owner-only — needs investigation and discussion before any decision. 
 
 ## Remove compatibility payment writes
 
-State: blocked
-Kind: release
-Tier: T3
-Lane: finance/payments
-Exit: Legacy `create_supplier_payment` and authenticated direct `payments` UPDATE are absent; owner-operated Preview schema/type/advisor gates pass; the separately owner-delegated Production apply and smoke are evidenced.
-Evidence: Required-key proof from the preceding outcome, catalog/ACL checks, generated-type no-diff, repository gates, advisors, and explicit Production apply/smoke evidence.
-Blocker: Production baseline still exposes legacy `create_supplier_payment` to `authenticated` and `GRANT … UPDATE ON public.payments TO authenticated` — drop only after owner-authorized required-key runtime proof.
+State: verify
+Exit: Legacy `create_supplier_payment` and authenticated direct `payments` UPDATE are absent on Production; types regenerated; advisors pass.
+Evidence: Production `enloyfnuerqgaqderbwb` applied `20260903021552` and parked revoke `20260903005112` in the same 10-file batch; catalog: `create_supplier_payment` gone; `payments` authenticated SELECT only; `db:types` regenerated. Remaining: deploy matching Next app + smoke; advisors not re-run here.
 
-- [ ] Revoke authenticated direct `UPDATE` on `payments` and drop legacy `create_supplier_payment` only after the required-key runtime proof.
-- [ ] Apply the cleanup only through the trusted registration/owner-operated Preview path; regenerate types from the explicit Production source and run repository gates plus database advisors.
+- [ ] Deploy the matching Next app, then smoke POS/payment flows and run security advisors
 
 ## Prove Work module pilot smoke
 
@@ -818,6 +810,14 @@ Evidence: ADR 0033 Accepted; W-UI-4..3 app code; Production migration `202608121
 
 - [ ] Manual exit: add Van phong member via `/work/team` → that user opens `/work`.
 
+## Promotion cart min_subtotal (Gemini promotions/workspace plan)
+
+State: verify
+Exit: Cart mutations below `min_subtotal` clear order-level campaigns. Gift auto-add and merge auto-release stay out unless ADR 0039 is amended.
+Evidence: Production `enloyfnuerqgaqderbwb` applied `20260903025327` in the owner-delegated 10-file batch. Gemini phases 2–4 still need a new Accepted ADR. ADR 0039 still requires existing-line picks and fail-closed merge. Static `promotions-static`.
+
+- [ ] Smoke: 200k-min code, void below min, promo clears
+
 ## Burn down frozen Má Tư DS debt
 
 State: doing
@@ -827,7 +827,7 @@ Lane: design-system/enforcement
 Exit: Every frozen budget below trends down by removing allowlist entries (ratchet only fails on growth, so burned files may be dropped); the 40 `tune` pages reach `keep`/`final` disposition through the three exemplar waves. Never raise a budget; new files start at 0.
 Evidence: `scripts/check-ui-contract.mjs` owns the frozen `legacy-debt-ratchet` counts; `corepack pnpm audit:ui-components` owns Page Disposition Coverage; exemplar fixes in `finance/components/filter-bar.tsx`, `team/team-workspace-tabs.tsx`, `work/_lib/compose-styles.ts`, and the icon-tier batch.
 
-- [ ] Wave 1 — control_surface LIST/DETAIL pages follow `apps/web/app/(protected)/inventory/grn/page.tsx`. Burned so far: `inventory/production/new/production-new-client.tsx` (4 hits → flex + `max-w-44`/`w-22` named scale) and the `font-bold` → `font-semibold` batch (`finance/revenue/[date]/revenue-drill-tabs.tsx`, `finance/revenue/revenue-client.tsx`, `components/form/photo-upload-input.tsx`).
+- [ ] Wave 1 — control_surface LIST/DETAIL pages follow `apps/web/app/(protected)/inventory/grn/page.tsx`.
 - [ ] Wave 2 — branch `(operator)` pages follow `apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx`.
 - [ ] Wave 3 — station plane pages follow `apps/web/app/(protected)/br/[branchId]/kds/page.tsx`; spot-check light + dark at the station viewport.
 

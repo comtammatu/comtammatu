@@ -156,8 +156,9 @@ test("GRN valuation derives price only from confirmed supplier invoices", () => 
     /export const savePurchaseOrder\s*=/,
   );
   assert.doesNotMatch(purchaseOrderActions, /loadInventoryMonetaryAccess/);
-  assert.match(grnArchetype, /"save_purchase_demand"/);
-  assert.match(grnArchetype, /"review_purchase_demand"/);
+  assert.match(grnArchetype, /"create_purchase_order"/);
+  assert.doesNotMatch(grnArchetype, /"save_purchase_demand"/);
+  assert.doesNotMatch(grnArchetype, /"review_purchase_demand"/);
   assert.match(grnArchetype, /"create_grn_draft_from_po"/);
   assert.doesNotMatch(grnArchetype, /unit_price/);
   assert.doesNotMatch(grnArchetype, /save_purchase_orders_from_request/);

@@ -178,27 +178,47 @@ export const hr = {
       },
     },
     onboardSteps: {
-      profile: {
-        title: "Bước 1 · Hồ sơ",
-        description: "Họ tên và thông tin định danh cơ bản.",
+      account: {
+        title: "Bước 1 · Tài khoản & định danh",
+        description: "Họ tên, số điện thoại, email và mật khẩu đăng nhập.",
       },
       placement: {
-        title: "Bước 2 · Vị trí & địa điểm",
-        description: "Chức vụ và chi nhánh / Kho Tổng / Bếp TT / Văn phòng.",
+        title: "Bước 2 · Vai trò & địa điểm",
+        description: "Chức vụ, chi nhánh làm việc, mã nhân viên và ngày bắt đầu.",
+      },
+      shift_tasks: {
+        title: "Bước 3 · Ca làm & việc trong ca",
+        description: "Bộ danh sách việc theo vị trí và ca làm việc tiêu chuẩn.",
       },
       contract: {
-        title: "Bước 3 · HĐLĐ & chế độ lương",
+        title: "Bước 4 · Chế độ, lương & HĐLĐ",
         description:
           "Hợp đồng, mức lương, BHXH và chế độ Theo công / Lương tháng.",
       },
-      account: {
-        title: "Bước 4 · Tạo đăng nhập",
-        description:
-          "Email và mật khẩu. Phân quyền chi tiết ở tab Tài khoản & quyền.",
+      profile: {
+        title: "Hồ sơ cá nhân",
+        description: "Thông tin định danh cơ bản.",
       },
       next: "Tiếp",
       back: "Quay lại",
       staffLink: "Sau khi tạo, phân quyền chi tiết ở tab Tài khoản & quyền.",
+    },
+    offboarding: {
+      title: "Cho thôi việc nhân viên",
+      description:
+        "Quy trình thôi việc sẽ tự động khóa đăng nhập, hủy các ca phân trong tương lai và cập nhật trạng thái hợp đồng.",
+      resignationDate: "Ngày thôi việc chính thức",
+      reason: "Lý do thôi việc",
+      note: "Ghi chú thêm",
+      confirm: "Xác nhận thôi việc",
+      success: "Đã cập nhật trạng thái thôi việc cho nhân viên.",
+    },
+    deleteDraft: {
+      title: "Xóa hồ sơ nhân viên?",
+      description:
+        "Chỉ áp dụng khi hồ sơ được tạo nhầm và chưa phát sinh dữ liệu chấm công hay bảng lương. Thao tác này không thể hoàn tác.",
+      confirm: "Xóa vĩnh viễn",
+      success: "Đã xóa hồ sơ nhân viên.",
     },
     leavePolicy: {
       standardWorkdaysLabel: "Ngày công chuẩn",

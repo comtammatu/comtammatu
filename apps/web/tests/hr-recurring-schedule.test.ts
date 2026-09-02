@@ -37,7 +37,7 @@ test("fixed weekly schedules materialize without replacing manual day overrides"
 test("recurring materialize ON CONFLICT matches multi-shift unique index", () => {
   const followUp = readFileSync(
     new URL(
-      "../../../supabase/migrations/20260813000701_hrm_materialize_shift_assignments_on_conflict.sql",
+      "../../../supabase/migration-archive/20260813000701_hrm_materialize_shift_assignments_on_conflict.sql",
       import.meta.url,
     ),
     "utf8",

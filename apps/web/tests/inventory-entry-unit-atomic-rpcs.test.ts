@@ -181,7 +181,7 @@ test("stock issue draft lines save through a least-privilege RPC", () => {
   assert.match(sql, /v_issue\.status <> 'draft'/);
   assert.match(sql, /public\.inv_to_base_for_tenant\(/);
   assert.match(sql, /REVOKE ALL ON FUNCTION public\.save_stock_issue_line/);
-  assert.match(sql, /GRANT EXECUTE ON FUNCTION public\.save_stock_issue_line/);
+  assert.match(sql, /GRANT (?:EXECUTE|ALL) ON FUNCTION public\.save_stock_issue_line/);
   assert.match(action, /\.rpc\("save_stock_issue_line" as never/);
   assert.doesNotMatch(
     action,

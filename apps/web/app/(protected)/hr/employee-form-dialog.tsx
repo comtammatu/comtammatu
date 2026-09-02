@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { z } from "zod";
 import type { UseFormReturn } from "react-hook-form";
 import { Button } from "@comtammatu/ui/components/button";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { FieldGroup } from "@comtammatu/ui/components/field";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
@@ -19,10 +20,16 @@ import {
 import { requiredBranchKindForPositionCode } from "@comtammatu/shared/auth";
 import { messages } from "@lib/messages";
 import { createEmployeeAccount, updateEmployee } from "./actions";
-import type { BranchOption, EmployeeRow } from "./_types";
+import type {
+  BranchOption,
+  EmployeeRow,
+  EmployeeShiftOption,
+} from "./_types";
+import type { PositionTasksData } from "./position-tasks-actions";
 
 const NO_BRANCH = "none";
 const NO_CONTRACT = "none";
+const NO_SHIFT = "none";
 const STATUS_ACTIVE = "active";
 const STATUS_INACTIVE = "inactive";
 const PAY_BASIS_DEFAULT = "attendance_prorated" as const;
@@ -33,7 +40,12 @@ export const CONTRACT_TYPE_OPTIONS = [
   { value: "indefinite", label: "Không xác định thời hạn" },
 ] as const;
 
-const ONBOARD_STEPS = ["profile", "placement", "contract", "account"] as const;
+const ONBOARD_STEPS = [
+  "account",
+  "placement",
+  "shift_tasks",
+  "contract",
+] as const;
 type OnboardStep = (typeof ONBOARD_STEPS)[number];
 
 const baseSalaryField = z
@@ -76,6 +88,7 @@ const employeeSchema = z.object({
   branch_id: z.string().optional(),
   employee_code: z.string().trim().optional(),
   start_date: z.string().optional(),
+  today_shift_id: z.string().optional(),
   contract_type: z.string().optional(),
   contract_number: z.string().trim().optional(),
   contract_signed_date: z.string().optional(),
@@ -126,6 +139,7 @@ const DEFAULT_VALUES: EmployeeFormValues = {
   branch_id: NO_BRANCH,
   employee_code: "",
   start_date: "",
+  today_shift_id: NO_SHIFT,
   contract_type: NO_CONTRACT,
   contract_number: "",
   contract_signed_date: "",
@@ -141,8 +155,9 @@ const DEFAULT_VALUES: EmployeeFormValues = {
 };
 
 const STEP_FIELDS: Record<OnboardStep, (keyof EmployeeFormValues)[]> = {
-  profile: ["full_name", "phone", "id_number", "bank_account"],
+  account: ["full_name", "email", "password"],
   placement: ["position_code", "branch_id", "employee_code", "start_date"],
+  shift_tasks: ["today_shift_id"],
   contract: [
     "contract_type",
     "contract_number",
@@ -154,8 +169,9 @@ const STEP_FIELDS: Record<OnboardStep, (keyof EmployeeFormValues)[]> = {
     "pay_basis",
     "wage_unit",
     "daily_rate",
+    "id_number",
+    "bank_account",
   ],
-  account: ["email", "password"],
 };
 
 function activeContract(employee: EmployeeRow) {
@@ -227,6 +243,8 @@ interface EmployeeFormDialogProps {
   positionOptions: { value: string; label: string }[];
   mode?: "create" | "edit";
   employee?: EmployeeRow | null;
+  shifts?: EmployeeShiftOption[];
+  positionTasksData?: PositionTasksData | null;
 }
 
 export function EmployeeFormDialog({
@@ -236,6 +254,8 @@ export function EmployeeFormDialog({
   positionOptions,
   mode = "create",
   employee,
+  shifts = [],
+  positionTasksData = null,
 }: EmployeeFormDialogProps) {
   const onboardCopy = messages.hr.client.onboardSteps;
   const [stepIndex, setStepIndex] = useState(0);
@@ -479,6 +499,11 @@ export function EmployeeFormDialog({
       values.branch_id && values.branch_id !== NO_BRANCH
         ? Number(values.branch_id)
         : undefined;
+    const todayShiftId =
+      values.today_shift_id && values.today_shift_id !== NO_SHIFT
+        ? Number(values.today_shift_id)
+        : undefined;
+
     return createEmployeeAccount({
       fullName: values.full_name,
       email: values.email,
@@ -488,6 +513,7 @@ export function EmployeeFormDialog({
       branchId,
       employeeCode: values.employee_code || undefined,
       startDate: values.start_date || undefined,
+      todayShiftId,
       contractType: contractType(values.contract_type),
       contractNumber: values.contract_number || undefined,
       contractSignedDate: values.contract_signed_date || undefined,
@@ -507,8 +533,8 @@ export function EmployeeFormDialog({
     });
   }
 
-  const step = ONBOARD_STEPS[stepIndex] ?? "profile";
-  const stepMeta = onboardCopy[step];
+  const step = ONBOARD_STEPS[stepIndex] ?? "account";
+  const stepMeta = onboardCopy[step] ?? onboardCopy.account;
   const isLastStep = stepIndex === ONBOARD_STEPS.length - 1;
 
   return (
@@ -600,6 +626,16 @@ export function EmployeeFormDialog({
               )
             : branches;
 
+        const selectedPositionTasks =
+          positionTasksData && selectedPosition
+            ? (() => {
+                const pos = positionTasksData.positions.find(
+                  (p) => p.code === selectedPosition,
+                );
+                return pos ? (positionTasksData.tasksByPosition[pos.id] ?? []) : [];
+              })()
+            : [];
+
         return (
           <>
             <ol className="flex flex-wrap gap-2 text-xs text-muted-foreground">
@@ -613,20 +649,20 @@ export function EmployeeFormDialog({
                   }
                 >
                   {index + 1}.{" "}
-                  {onboardCopy[key].title.replace(/^Bước \d+ · /, "")}
+                  {(onboardCopy[key]?.title ?? key).replace(/^Bước \d+ · /, "")}
                 </li>
               ))}
             </ol>
 
-            {step === "profile" ? (
+            {step === "account" ? (
               <FormGroupBlock
-                title={onboardCopy.profile.title}
-                description={onboardCopy.profile.description}
+                title="Tài khoản đăng nhập & Định danh"
+                description="Tạo tài khoản truy cập hệ thống và thông tin liên hệ chính của nhân viên."
               >
                 <TextField
                   control={form.control}
                   name="full_name"
-                  label="Họ tên"
+                  label="Họ và tên"
                   placeholder="Nguyễn Văn A"
                   required
                 />
@@ -635,24 +671,74 @@ export function EmployeeFormDialog({
                   name="phone"
                   label="Số điện thoại"
                   placeholder="0901234567"
+                  required
                 />
                 <TextField
                   control={form.control}
-                  name="id_number"
-                  label="CMND/CCCD"
+                  name="email"
+                  label="Email đăng nhập"
+                  type="email"
+                  placeholder="nhanvien@comtammatu.vn"
+                  required
                 />
                 <TextField
                   control={form.control}
-                  name="bank_account"
-                  label="Số tài khoản"
+                  name="password"
+                  label="Mật khẩu khởi tạo"
+                  type="password"
+                  placeholder="Tối thiểu 8 ký tự"
+                  required
                 />
+                <div className="col-span-full flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0 text-xs font-normal text-primary"
+                    onClick={() => {
+                      const fn = form.getValues("full_name");
+                      if (fn) {
+                        const parts = fn
+                          .toLowerCase()
+                          .normalize("NFD")
+                          .replace(/[\u0300-\u036f]/g, "")
+                          .replace(/đ/g, "d")
+                          .trim()
+                          .split(/\s+/);
+                        const last = parts[parts.length - 1] ?? "nv";
+                        const initials = parts.slice(0, -1).map((p) => p[0]).join("");
+                        const rand = Math.floor(10 + Math.random() * 90);
+                        form.setValue("email", `${last}${initials}${rand}@comtammatu.vn`, {
+                          shouldValidate: true,
+                        });
+                      }
+                    }}
+                  >
+                    Gợi ý email theo tên
+                  </Button>
+                  <span>·</span>
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0 text-xs font-normal text-primary"
+                    onClick={() => {
+                      const rand = Math.floor(100000 + Math.random() * 900000);
+                      form.setValue("password", `Matu@${rand}`, {
+                        shouldValidate: true,
+                      });
+                    }}
+                  >
+                    Tạo mật khẩu ngẫu nhiên
+                  </Button>
+                </div>
               </FormGroupBlock>
             ) : null}
 
             {step === "placement" ? (
               <FormGroupBlock
-                title={onboardCopy.placement.title}
-                description={onboardCopy.placement.description}
+                title="Vai trò & Nơi làm việc"
+                description="Chức vụ và chi nhánh làm việc (hệ thống tự động áp dụng mẫu phân quyền tương ứng)."
               >
                 <SelectField
                   control={form.control}
@@ -686,36 +772,148 @@ export function EmployeeFormDialog({
                   name="start_date"
                   label="Ngày bắt đầu"
                 />
+                <div className="col-span-full">
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0 text-xs font-normal text-primary"
+                    onClick={() => {
+                      const rand = Math.floor(100 + Math.random() * 900);
+                      form.setValue("employee_code", `NV${rand}`, {
+                        shouldValidate: true,
+                      });
+                    }}
+                  >
+                    Sinh mã nhân viên tự động
+                  </Button>
+                </div>
               </FormGroupBlock>
+            ) : null}
+
+            {step === "shift_tasks" ? (
+              <div className="flex flex-col gap-4">
+                <FormGroupBlock
+                  title="Ca làm việc ban đầu"
+                  description="Chọn ca làm việc tiêu chuẩn hoặc phân ca ngay cho hôm nay."
+                >
+                  <SelectField
+                    control={form.control}
+                    name="today_shift_id"
+                    label="Phân ca hôm nay (tùy chọn)"
+                    options={[
+                      {
+                        value: NO_SHIFT,
+                        label: "Chưa phân ca hôm nay (phân ca sau)",
+                      },
+                      ...shifts.map((s) => ({
+                        value: s.id.toString(),
+                        label: `${s.name} (${s.start_time.slice(0, 5)}–${s.end_time.slice(0, 5)})`,
+                      })),
+                    ]}
+                    placeholder="Chọn ca làm việc"
+                  />
+                </FormGroupBlock>
+
+                <FormGroupBlock
+                  title="Việc trong ca theo chức vụ"
+                  description="Danh sách công việc tự động giao cho nhân viên khi chấm công vào ca."
+                >
+                  <div className="col-span-full">
+                    {selectedPositionTasks.length > 0 ? (
+                      <div className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1">
+                        {selectedPositionTasks.map((t, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between rounded bg-muted/30 px-3 py-2 text-xs"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{t.title}</span>
+                              {t.isRequired ? (
+                                <Badge variant="outline">Bắt buộc</Badge>
+                              ) : null}
+                            </div>
+                            <span className="text-muted-foreground">
+                              {t.phase === "start_of_shift"
+                                ? "Đầu ca"
+                                : t.phase === "end_of_shift"
+                                  ? "Cuối ca"
+                                  : "Trong ca"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs italic text-muted-foreground">
+                        Chức vụ này chưa có danh sách việc mẫu (có thể thiết lập tại mục Thiết lập nhân sự &gt; Việc trong ca).
+                      </p>
+                    )}
+                  </div>
+                </FormGroupBlock>
+              </div>
             ) : null}
 
             {step === "contract" ? (
               <FormGroupBlock
-                title={onboardCopy.contract.title}
-                description={onboardCopy.contract.description}
+                title="Chế độ đãi ngộ & HĐLĐ"
+                description="Nguồn tính lương tháng, mức đóng BHXH và thông tin thanh toán (chọn mẫu nhanh để điền tự động)."
               >
+                <div className="col-span-full flex flex-wrap items-center gap-2 pb-1">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Mẫu nhanh:
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => {
+                      form.setValue("wage_unit", "daily");
+                      form.setValue("pay_basis", "attendance_prorated");
+                      form.setValue("contract_type", "probation");
+                      form.setValue("insurance_base_salary", "0");
+                      form.setValue("dependents_count", "0");
+                    }}
+                  >
+                    Thời vụ / Part-time
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => {
+                      form.setValue("wage_unit", "monthly");
+                      form.setValue("pay_basis", "attendance_prorated");
+                      form.setValue("contract_type", "probation");
+                      form.setValue("insurance_base_salary", "0");
+                    }}
+                  >
+                    Thử việc
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => {
+                      form.setValue("wage_unit", "monthly");
+                      form.setValue("pay_basis", "attendance_prorated");
+                      form.setValue("contract_type", "fixed_term");
+                    }}
+                  >
+                    Chính thức (Full-time)
+                  </Button>
+                </div>
+
                 <SelectField
                   control={form.control}
-                  name="contract_type"
-                  label="Loại hợp đồng"
-                  options={CONTRACT_TYPE_OPTIONS}
-                  placeholder="Chưa ghi nhận"
-                />
-                <TextField
-                  control={form.control}
-                  name="contract_number"
-                  label="Số HĐLĐ"
-                  placeholder="HD-2026-001"
-                />
-                <BusinessDateField
-                  control={form.control}
-                  name="contract_signed_date"
-                  label="Ngày ký HĐ"
-                />
-                <BusinessDateField
-                  control={form.control}
-                  name="contract_end_date"
-                  label="Ngày hết hạn HĐ"
+                  name="wage_unit"
+                  label={messages.hr.wageUnit.fieldLabel}
+                  options={messages.hr.wageUnit.options.map((option) => ({
+                    value: option.value,
+                    label: option.label,
+                  }))}
                 />
                 <SelectField
                   control={form.control}
@@ -726,21 +924,12 @@ export function EmployeeFormDialog({
                     label: option.label,
                   }))}
                 />
-                <SelectField
-                  control={form.control}
-                  name="wage_unit"
-                  label={messages.hr.wageUnit.fieldLabel}
-                  options={messages.hr.wageUnit.options.map((option) => ({
-                    value: option.value,
-                    label: option.label,
-                  }))}
-                />
                 {form.watch("wage_unit") === "daily" ? (
                   <MoneyVndField
                     control={form.control}
                     name="daily_rate"
                     label="Lương ngày (VND)"
-                    placeholder="500.000"
+                    placeholder="300.000"
                   />
                 ) : (
                   <MoneyVndField
@@ -765,33 +954,47 @@ export function EmployeeFormDialog({
                   description="Chỉ ảnh hưởng thuế TNCN"
                   allowNegative={false}
                 />
-              </FormGroupBlock>
-            ) : null}
+                <TextField
+                  control={form.control}
+                  name="id_number"
+                  label="CMND / CCCD"
+                  placeholder="079..."
+                />
+                <TextField
+                  control={form.control}
+                  name="bank_account"
+                  label="Số tài khoản ngân hàng"
+                  placeholder="Vietcombank - 0123..."
+                />
 
-            {step === "account" ? (
-              <FormGroupBlock
-                title={onboardCopy.account.title}
-                description={onboardCopy.account.description}
-              >
-                <TextField
+                <div className="col-span-full pt-2 border-t border-border/50">
+                  <p className="text-xs font-semibold text-muted-foreground mb-1">
+                    Hợp đồng lao động (Tùy chọn bổ sung)
+                  </p>
+                </div>
+                <SelectField
                   control={form.control}
-                  name="email"
-                  label="Email đăng nhập"
-                  type="email"
-                  placeholder="nhanvien@comtammatu.vn"
-                  required
+                  name="contract_type"
+                  label="Loại hợp đồng"
+                  options={CONTRACT_TYPE_OPTIONS}
+                  placeholder="Chưa ghi nhận"
                 />
                 <TextField
                   control={form.control}
-                  name="password"
-                  label="Mật khẩu"
-                  type="password"
-                  placeholder="Tối thiểu 8 ký tự"
-                  required
+                  name="contract_number"
+                  label="Số HĐLĐ"
+                  placeholder="HD-2026-001"
                 />
-                <p className="col-span-full text-xs text-muted-foreground">
-                  {onboardCopy.staffLink}
-                </p>
+                <BusinessDateField
+                  control={form.control}
+                  name="contract_signed_date"
+                  label="Ngày ký HĐ"
+                />
+                <BusinessDateField
+                  control={form.control}
+                  name="contract_end_date"
+                  label="Ngày hết hạn HĐ"
+                />
               </FormGroupBlock>
             ) : null}
           </>

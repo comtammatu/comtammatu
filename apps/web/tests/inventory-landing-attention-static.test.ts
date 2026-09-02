@@ -18,9 +18,9 @@ test("inventory landing queue names Yêu cầu hàng, Điều chuyển, and Ch�
   assert.doesNotMatch(copy, /attentionTransfers: "YCH đang mở"/);
 
   assert.match(hub, /countGrnsAwaitingUnitPrice/);
-  assert.match(hub, /countOpenStockRequests/);
+  assert.doesNotMatch(hub, /countOpenStockRequests/);
   assert.match(hub, /countOpenStockTransfers/);
-  assert.match(hub, /\/inventory\/transfers\?work=request/);
+  assert.doesNotMatch(hub, /\/inventory\/transfers\?work=request/);
   assert.match(hub, /\/inventory\/transfers\?work=dispatch/);
 
   assert.match(counts, /export async function countGrnsAwaitingUnitPrice/);
@@ -32,8 +32,8 @@ test("purchase workspace chrome leads with đơn mua, not nhu cầu", () => {
   const page = read("app/(protected)/inventory/purchase-orders/page.tsx");
   const copy = read("lib/messages/inventory.ts");
 
-  assert.match(page, /messages\.inventory\.po\.needsTab/);
-  assert.match(page, /messages\.inventory\.po\.ordersTab/);
+  assert.doesNotMatch(page, /messages\.inventory\.po\.needsTab/);
+  assert.doesNotMatch(page, /messages\.inventory\.po\.ordersTab/);
   assert.match(page, /workspaceDescription/);
   assert.doesNotMatch(page, /label: "Nhu cầu mua"/);
   assert.match(copy, /needsTab: "Yêu cầu mua"/);
@@ -41,4 +41,5 @@ test("purchase workspace chrome leads with đơn mua, not nhu cầu", () => {
     copy,
     /workspaceDescription:\s*\n\s*"Tạo đơn mua theo từng nhà cung cấp/,
   );
+  assert.match(copy, /Đơn mua là nguồn sự thật/);
 });

@@ -152,17 +152,6 @@ async function resolveEntityLabels(
     }
   }
 
-  const requestIds = unique(byType.get("stock_request") ?? []);
-  if (requestIds.length) {
-    const { data } = await supabase
-      .from("stock_requests")
-      .select("id, request_number")
-      .in("id", requestIds);
-    for (const row of data ?? []) {
-      labels.set(key("stock_request", row.id), row.request_number);
-    }
-  }
-
   const issueIds = unique(byType.get("stock_issue") ?? []);
   if (issueIds.length) {
     const { data } = await supabase

@@ -31,7 +31,7 @@ test("WP-A daily summary has no operator close ceremony", () => {
 
 test("WP-C pos_void_requests is SELECT-only for authenticated", () => {
   const grants = readRepo(
-    "supabase/migrations/20260808091754_harden_pos_void_requests_grants.sql",
+    "supabase/migration-archive/20260808091754_harden_pos_void_requests_grants.sql",
   );
   assert.match(
     grants,
@@ -45,10 +45,10 @@ test("WP-C pos_void_requests is SELECT-only for authenticated", () => {
 
 test("WP-C pos_void_requests select policy avoids locked auth_is_owner EXECUTE", () => {
   const createQueue = readRepo(
-    "supabase/migrations/20260808085549_shift_leader_void_request_queue.sql",
+    "supabase/migration-archive/20260808085549_shift_leader_void_request_queue.sql",
   );
   const fix = readRepo(
-    "supabase/migrations/20260808134718_remove_auth_is_owner_from_authenticated_policies.sql",
+    "supabase/migration-archive/20260808134718_remove_auth_is_owner_from_authenticated_policies.sql",
   );
   assert.match(createQueue, /pos_void_requests_select/);
   assert.match(createQueue, /public\.auth_is_owner\(auth\.uid\(\)\)/);
@@ -75,7 +75,7 @@ test("WP-C void request queue is wired into POS", () => {
 
 test("WP-D allows_photo flows through HR + PWA tasks", () => {
   const migration = readRepo(
-    "supabase/migrations/20260808085917_position_shift_task_photo_and_kds_default_station.sql",
+    "supabase/migration-archive/20260808085917_position_shift_task_photo_and_kds_default_station.sql",
   );
   const hrClient = readWeb("app/(protected)/hr/position-tasks-client.tsx");
   const tasksClient = readWeb("lib/staff-runtime/tasks/tasks-client.tsx");

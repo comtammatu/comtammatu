@@ -66,12 +66,13 @@ test("stock requests and transfers share job-based canonical hubs", () => {
   assert.match(branchAlias, /\/br\/\$\{branchId\}\/stock`\);/);
 });
 
-test("fulfillment loader restores parents and sibling trips outside list windows", () => {
+test("fulfillment loader is transfers-only after Wave 5", () => {
   const loader = read("apps/web/lib/inventory/stock-fulfillment-data.ts");
 
-  assert.match(loader, /missingParentIds/);
-  assert.match(loader, /\.in\("id", missingParentIds\)/);
-  assert.match(loader, /\.in\("stock_request_id", requestIds\)/);
+  assert.doesNotMatch(loader, /missingParentIds/);
+  assert.doesNotMatch(loader, /from\("stock_requests"\)/);
+  assert.match(loader, /requests: \[\]/);
+  assert.match(loader, /from\("stock_transfers"\)/);
 });
 
 test("stock request details stay canonical and expose the full timeline", () => {
@@ -114,7 +115,9 @@ test("stock request details stay canonical and expose the full timeline", () => 
   );
   assert.doesNotMatch(detail, /<ItemDescription[^>]*>\s*<TransferLinks/);
   assert.doesNotMatch(detail, /detailsWithTripsToggle/);
-  assert.doesNotMatch(branchDetail, /useSearchParams|redirect\(/);
+  assert.match(branchDetail, /redirect\(`\/br\/\$\{branchId\}\/stock\/transfer`\)/);
+  assert.doesNotMatch(branchDetail, /useSearchParams/);
+  assert.doesNotMatch(branchDetail, /loadStockRequestDetail/);
 });
 
 test("shipping and receiving use explicit atomic transitions", () => {
@@ -128,7 +131,7 @@ test("shipping and receiving use explicit atomic transitions", () => {
     "supabase/migration-archive/20260730090000_unify_stock_fulfillment.sql",
   );
   const shortfallMigration = read(
-    "supabase/migrations/20260810012250_transfer_shortfall_ownership.sql",
+    "supabase/migration-archive/20260810012250_transfer_shortfall_ownership.sql",
   );
 
   const shipAction = actions.slice(
@@ -205,17 +208,19 @@ test("owner stock-request detail redirects to the transfers hub", () => {
   assert.doesNotMatch(page, /loadStockRequestFulfillmentDetail/);
 });
 
-test("fulfill maps insufficient_stock ingredient id for UI feedback", () => {
+test("YCH write actions fail closed without calling frozen RPCs", () => {
   const actions = read(
     "apps/web/app/(protected)/inventory/stock-request-actions.ts",
   );
-  const helper = read(
-    "apps/web/app/(protected)/inventory/_lib/rpc-failure.ts",
-  );
-  assert.match(actions, /mapInventoryRpcFailure/);
-  assert.match(helper, /parseInsufficientStockIngredientId/);
-  assert.match(helper, /INSUFFICIENT_STOCK/);
-  assert.match(helper, /meta:[\s\S]*ingredientId/);
+  const copy = read("apps/web/lib/messages/inventory.ts");
+  assert.match(actions, /ychWriteFrozen/);
+  assert.match(copy, /writeFrozen: "Yêu cầu hàng đã gỡ/);
+  assert.doesNotMatch(actions, /"save_stock_request"/);
+  assert.doesNotMatch(actions, /"cancel_stock_request"/);
+  assert.doesNotMatch(actions, /"close_stock_request"/);
+  assert.doesNotMatch(actions, /"reject_stock_request_lines"/);
+  assert.doesNotMatch(actions, /fulfill_stock_request_lines/);
+  assert.doesNotMatch(actions, /mapInventoryRpcFailure/);
 });
 
 test("fulfill copy shows quantity with unit, on-hand, and shortage alerts", () => {

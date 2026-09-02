@@ -8,7 +8,7 @@ function readRepo(path: string): string {
 }
 
 const migration = readRepo(
-  "supabase/migrations/20260815062117_menu_limits_skip_dead_stock_capacity_snapshot.sql",
+  "supabase/migration-archive/20260815062117_menu_limits_skip_dead_stock_capacity_snapshot.sql",
 );
 
 test("menu-limit writers no longer persist dead stock_capacity snapshot", () => {

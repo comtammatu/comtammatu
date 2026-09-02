@@ -273,3 +273,51 @@ test("web application has no direct payments mutation", () => {
 
   assert.deepEqual(offenders, []);
 });
+
+test("Preview forward revokes authenticated payments UPDATE and drops create_supplier_payment", () => {
+  const names = readdirSync(join(repoRoot, "supabase/migrations")).filter(
+    (name) => name.endsWith("_revoke_authenticated_payment_writes.sql"),
+  );
+  assert.equal(names.length, 1, "expected one payment-write revoke forward");
+  assert.ok(
+    names[0]! >
+      "20260903014353_include_branch_kitchen_in_inventory_value_period.sql",
+    "payment forward must sort after the latest local forward",
+  );
+  const sql = read(`supabase/migrations/${names[0]!}`);
+  const baseline = normalizePgDumpSql(
+    read("supabase/migrations/20260902162918_baseline.sql"),
+  );
+
+  assert.match(
+    sql,
+    /REVOKE ALL ON FUNCTION public\.create_supplier_payment\(bigint, bigint, numeric, text, text\)\s+FROM PUBLIC, anon, authenticated, service_role/,
+  );
+  assert.match(
+    sql,
+    /DROP FUNCTION IF EXISTS public\.create_supplier_payment\(bigint, bigint, numeric, text, text\)/,
+  );
+  assert.match(
+    sql,
+    /REVOKE UPDATE ON TABLE public\.payments FROM authenticated/,
+  );
+  assert.doesNotMatch(sql, /REVOKE SELECT ON TABLE public\.payments/);
+
+  assert.match(
+    baseline,
+    /CREATE FUNCTION public\.confirm_cash_payment\(p_order_id bigint, p_cash_received numeric\) RETURNS jsonb\s+LANGUAGE plpgsql SECURITY DEFINER/,
+  );
+  assert.match(
+    baseline,
+    /CREATE FUNCTION public\.create_remote_payment_intent\([\s\S]*?RETURNS jsonb\s+LANGUAGE plpgsql SECURITY DEFINER/,
+  );
+  assert.match(
+    baseline,
+    /CREATE FUNCTION public\.finalize_paid_order\(p_order_id bigint, p_actor_id uuid DEFAULT NULL::uuid\) RETURNS void\s+LANGUAGE plpgsql SECURITY DEFINER/,
+  );
+  assert.match(
+    paymentActions,
+    /\.rpc\([\s\S]*"confirm_cash_payment"|"confirm_cash_payment_with_invoice_binding"/,
+  );
+  assert.doesNotMatch(paymentActions, /create_supplier_payment/);
+});

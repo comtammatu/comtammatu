@@ -8,7 +8,7 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 test("production recipe upsert migration allows finished goods and guards against circular dependency", () => {
   const migration = read(
-    "supabase/migrations/20260827171422_allow_finished_goods_in_production_recipes.sql",
+    "supabase/migration-archive/20260827171422_allow_finished_goods_in_production_recipes.sql",
   );
 
   assert.match(migration, /CREATE OR REPLACE FUNCTION public\.upsert_production_recipe_lines/);

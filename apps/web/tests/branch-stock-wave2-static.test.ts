@@ -127,12 +127,12 @@ test("Branch purchase requests own a Sheet presenter", () => {
     "apps/web/app/(protected)/inventory/purchase-requests/purchase-requests-list.tsx",
   );
 
-  assert.match(page, /BranchPurchaseRequestsClient/);
-  assert.match(page, /loadPurchaseDemandRows/);
-  assert.match(page, /includeUnits: false/);
-  assert.match(page, /loadPurchasePickerUnits/);
+  assert.match(page, /redirect\(PURCHASE_ORDER_CREATE_HREF\)/);
+  assert.match(page, /redirect\(`\/br\/\$\{branchId\}\/stock`\)/);
+  assert.doesNotMatch(page, /loadPurchaseDemandRows/);
+  assert.doesNotMatch(page, /BranchPurchaseRequestsClient/);
   assert.doesNotMatch(page, /(?<!Branch)PurchaseRequestsClient/);
-  assert.match(page, /branch_kind === "branch"/);
+  assert.match(page, /parseOperatorBranchId/);
 
   assert.match(client, /BranchOperatorPage/);
   assert.match(client, /NumberPadSheet/);

@@ -61,7 +61,7 @@ test("count slip line view shows live stock without mutating snapshot variance",
 
 test("migration and actions confirm count slip approval is decoupled from stock movements", () => {
   const migration = read(
-    "supabase/migrations/20260826163516_inventory_role_count_and_snapshot_decouple.sql",
+    "supabase/migration-archive/20260826163516_inventory_role_count_and_snapshot_decouple.sql",
   );
   const backfill = migration.slice(
     migration.indexOf("-- Backfill"),

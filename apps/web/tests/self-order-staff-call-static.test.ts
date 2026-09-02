@@ -10,7 +10,7 @@ const readRepo = (path: string) =>
 
 test("guest staff-call notifies POS without a second order request", () => {
   const migration = readRepo(
-    "supabase/migrations/20260814001447_self_order_staff_call.sql",
+    "supabase/migration-archive/20260814001447_self_order_staff_call.sql",
   );
   const route = readWeb("app/api/self-order/[token]/staff-call/route.ts");
   const server = readWeb("lib/self-order/server.ts");

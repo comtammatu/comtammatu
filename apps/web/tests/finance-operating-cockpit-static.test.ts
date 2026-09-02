@@ -11,7 +11,7 @@ function read(rel: string): string {
 
 test("finance food-cost recorded RPC is DEFINER + finance:view gated", () => {
   const migration = read(
-    "supabase/migrations/20260820151656_finance_food_cost_recorded.sql",
+    "supabase/migration-archive/20260820151656_finance_food_cost_recorded.sql",
   );
   assert.match(migration, /CREATE FUNCTION public\.get_finance_food_cost_recorded/);
   assert.match(migration, /SECURITY DEFINER/);
@@ -24,7 +24,7 @@ test("finance food-cost recorded RPC is DEFINER + finance:view gated", () => {
 
 test("finance operating cockpit RPC aggregates period KPIs and stops mv_food_cost refresh", () => {
   const migration = read(
-    "supabase/migrations/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
+    "supabase/migration-archive/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
   );
   assert.match(migration, /CREATE FUNCTION public\.get_finance_operating_cockpit/);
   assert.match(migration, /SECURITY DEFINER/);
@@ -43,7 +43,7 @@ test("finance operating cockpit RPC aggregates period KPIs and stops mv_food_cos
 
 test("finance bank list + token match RPCs are finance:view gated", () => {
   const migration = read(
-    "supabase/migrations/20260820151658_list_finance_bank_transactions_and_match_token.sql",
+    "supabase/migration-archive/20260820151658_list_finance_bank_transactions_and_match_token.sql",
   );
   assert.match(migration, /CREATE FUNCTION public\.list_finance_bank_transactions/);
   assert.match(migration, /CREATE FUNCTION public\.match_bank_by_transfer_token/);

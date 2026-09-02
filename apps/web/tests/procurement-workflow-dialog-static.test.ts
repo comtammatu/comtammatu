@@ -36,10 +36,14 @@ test("purchase demand review atomically creates supplier POs and GRN drafts", ()
       "supabase/migration-archive/20260730190000_purchase_demand_supplier_allocation.sql",
     );
 
-  assert.match(purchaseActions, /save_purchase_demand/);
-  assert.match(purchaseActions, /save_purchase_demand_allocations/);
-  assert.match(purchaseActions, /review_purchase_demand/);
-  assert.match(stockRequestActions, /save_stock_request/);
+  assert.match(purchaseActions, /export const savePurchaseDemand/);
+  assert.match(purchaseActions, /export const savePurchaseDemandAllocations/);
+  assert.match(purchaseActions, /export const reviewPurchaseDemand/);
+  assert.match(purchaseActions, /ycmWriteFrozen/);
+  assert.doesNotMatch(purchaseActions, /"save_purchase_demand"/);
+  assert.match(stockRequestActions, /export const saveStockRequest/);
+  assert.match(stockRequestActions, /ychWriteFrozen/);
+  assert.doesNotMatch(stockRequestActions, /"save_stock_request"/);
   assert.match(grnActions, /save_goods_receipt_note/);
   assert.match(purchaseActions, /PROCUREMENT_PO_APPROVE/);
 
@@ -108,15 +112,12 @@ test("submitted demands remain allocatable during cutover", () => {
 
   assert.doesNotMatch(purchaseActions, /export const savePurchaseRequest/);
   assert.match(purchaseActions, /export const savePurchaseDemand/);
-  assert.match(purchaseActions, /"save_purchase_demand"/);
+  assert.doesNotMatch(purchaseActions, /"save_purchase_demand"/);
   assert.doesNotMatch(purchaseActions, /"save_purchase_request"/);
   assert.ok((demandClient.match(/status === "submitted"/g) ?? []).length >= 2);
-  assert.ok(
-    (
-      purchasePage.match(
-        /\["submitted", "pending_allocation", "partially_ordered"\]/g,
-      ) ?? []
-    ).length >= 1,
+  assert.doesNotMatch(
+    purchasePage,
+    /\["submitted", "pending_allocation", "partially_ordered"\]/,
   );
   assert.match(
     migration,
@@ -128,7 +129,7 @@ test("submitted demands remain allocatable during cutover", () => {
   );
 });
 
-test("purchase request URLs redirect history to needs and create to Tạo đơn", () => {
+test("purchase request URLs redirect history to Đơn mua and create to Tạo đơn", () => {
   const requestPage = read(
     "apps/web/app/(protected)/inventory/purchase-requests/page.tsx",
   );
@@ -136,9 +137,9 @@ test("purchase request URLs redirect history to needs and create to Tạo đơn"
     "apps/web/app/(protected)/inventory/purchase-requests/new/page.tsx",
   );
 
-  assert.match(requestPage, /params\.set\("tab", "needs"\)/);
-  assert.match(requestPage, /key === "requestId" \? "demandId" : key/);
   assert.match(requestPage, /redirect\(PURCHASE_ORDER_CREATE_HREF\)/);
+  assert.match(requestPage, /redirect\("\/inventory\/purchase-orders"\)/);
+  assert.doesNotMatch(requestPage, /params\.set\("tab", "needs"\)/);
   assert.doesNotMatch(requestPage, /create-po" \? "allocate"/);
   assert.match(newPage, /PURCHASE_ORDER_CREATE_HREF/);
 });

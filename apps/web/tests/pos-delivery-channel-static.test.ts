@@ -8,7 +8,7 @@ const read = (path: string) =>
   normalizeEol(readFileSync(join(process.cwd(), path), "utf8"));
 
 const migration = read(
-  "../../supabase/migrations/20260820174417_pos_delivery_channel.sql",
+  "../../supabase/migration-archive/20260820174417_pos_delivery_channel.sql",
 );
 const menuFields = read(
   "app/(protected)/menu/item-channel-prices-fields.tsx",
@@ -148,7 +148,7 @@ test("POS session list treats delivery as Mang về ops queue with dual identity
   assert.match(printActions, /order\.order_type === "delivery"/);
 
   const deliveryUnblockMigration = read(
-    "../../supabase/migrations/20260822162000_delivery_order_ref_unblock_and_receipt_payload.sql",
+    "../../supabase/migration-archive/20260822162000_delivery_order_ref_unblock_and_receipt_payload.sql",
   );
   assert.match(
     deliveryUnblockMigration,
@@ -201,7 +201,7 @@ test("server re-prices from channel helper; POS list price follows append target
 
 test("delivery sides use channel list price on server and POS customizer", () => {
   const sidesMigration = read(
-    "../../supabase/migrations/20260821044934_delivery_side_channel_list_price.sql",
+    "../../supabase/migration-archive/20260821044934_delivery_side_channel_list_price.sql",
   );
   assert.match(
     sidesMigration,

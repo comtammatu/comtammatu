@@ -178,7 +178,7 @@ export async function fetchFoodCost(
     const [stockResult, branchesResult, lastKnownResult] = await Promise.all([
       monetaryClient
         .from("stock_levels")
-        .select("ingredient_id, avg_unit_cost, branch_id")
+        .select("ingredient_id, avg_unit_cost, branch_id, current_quantity")
         .eq("tenant_id", tenantId)
         .in("location_id", stockBearing.locationIds)
         .not("avg_unit_cost", "is", null)
@@ -205,6 +205,7 @@ export async function fetchFoodCost(
       ingredient_id: number;
       avg_unit_cost: number | string | null;
       branch_id: number;
+      current_quantity?: number | string | null;
     };
     const branchKindById = new Map(
       (branchesResult.data ?? []).map((branch) => [
@@ -216,6 +217,7 @@ export async function fetchFoodCost(
       ingredientId: row.ingredient_id,
       branchKind: branchKindById.get(Number(row.branch_id)) ?? null,
       avgUnitCost: row.avg_unit_cost,
+      currentQuantity: row.current_quantity,
     }));
     // Same company WAC as /inventory/menu-recipes (ADR 0040).
     sourceSiteWacMap = buildSourceSiteWacMap(stockRows);

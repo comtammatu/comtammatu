@@ -197,7 +197,7 @@ test("POS self-order uses the private branch-ops bus plus the 30s poll as a safe
     "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-shell.tsx",
   );
   const migration = read(
-    "supabase/migrations/20260808170144_self_order_branch_ops_realtime.sql",
+    "supabase/migration-archive/20260808170144_self_order_branch_ops_realtime.sql",
   );
   // Instant alerts ride the hardened private branch:{id}:ops bus (not a
   // separate private topic without a realtime.messages policy).

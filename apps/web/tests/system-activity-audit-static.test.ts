@@ -174,7 +174,7 @@ test("inventory lifecycle audit migration writes issue/stocktake/transfer action
   const migration = readFileSync(
     join(
       root,
-      "supabase/migrations/20260810101500_inventory_lifecycle_audit_logs.sql",
+      "supabase/migration-archive/20260810101500_inventory_lifecycle_audit_logs.sql",
     ),
     "utf8",
   );

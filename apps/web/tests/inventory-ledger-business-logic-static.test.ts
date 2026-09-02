@@ -149,10 +149,10 @@ test("finance cockpit does not fold writeoff or adjustments into operating expen
     "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts",
   );
   const foodCostMigration = read(
-    "supabase/migrations/20260820151656_finance_food_cost_recorded.sql",
+    "supabase/migration-archive/20260820151656_finance_food_cost_recorded.sql",
   );
   const cockpitMigration = read(
-    "supabase/migrations/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
+    "supabase/migration-archive/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
   );
 
   assert.match(finance, /get_finance_operating_cockpit/);

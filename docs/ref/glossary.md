@@ -498,9 +498,9 @@ Detail: `inventory.md`, `inventory-sop.md`.
 
 | Term | Label | Definition |
 | --- | --- | --- |
-| `stock_request` | yêu cầu hàng | Phiếu vận hành đã rút (`YC`). Giữ hàng đến freeze-then-drop; chi nhánh xin hàng bằng DC do CN tạo. |
-| `purchase_request` | yêu cầu mua | Phiếu vận hành đã rút (`YCM`). Giữ hàng đến freeze-then-drop; kho trung tâm lập PO trực tiếp. |
-| `purchase_order` | đơn đặt hàng NCC | Một NCC + một kho nhận. PO mới không gắn YCM; phiếu cũ có thể còn trỏ YCM. |
+| `stock_request` | yêu cầu hàng | Phiếu vận hành đã rút (`YC`). Bảng đã DROP sau soak; chi nhánh xin hàng bằng DC do CN tạo. |
+| `purchase_request` | yêu cầu mua | Phiếu vận hành đã rút (`YCM`). Bảng đã DROP sau soak; kho trung tâm lập PO trực tiếp. |
+| `purchase_order` | đơn đặt hàng NCC | Một NCC + một kho nhận. PO mới không gắn YCM; cột `purchase_request_id` cũ có thể còn orphan. |
 | `preferred_supplier` | NCC ưu tiên | `supplier_items.is_preferred` — default NCC on the allocate worksheet when a demand line maps to more than one supplier. |
 | `goods_received_note` | phiếu nhập kho | One physical receipt against one PO. |
 | `supplier_invoice` | hóa đơn NCC | Supplier input invoice; AP and VAT only (ADR 0040). Inventory book price is the GRN unit price. |

@@ -221,7 +221,7 @@ test("every payment completion surface schedules the due HĐĐT job and cron is 
   const webhook = read("apps/web/app/api/webhooks/sepay/route.ts");
   const route = read("apps/web/app/api/cron/tax-invoice-issue/route.ts");
   const recovery = read(
-    "supabase/migrations/20260826225104_requeue_unsent_date_blocked_invoices.sql",
+    "supabase/migration-archive/20260826225104_requeue_unsent_date_blocked_invoices.sql",
   );
 
   assert.match(worker, /after\(async \(\) =>/);

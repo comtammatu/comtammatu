@@ -8,7 +8,7 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 test("transfer receive valuation shortfall migration provides resilient origin posting", () => {
   const sql = read(
-    "supabase/migrations/20260822015244_transfer_receive_valuation_shortfall.sql",
+    "supabase/migration-archive/20260822015244_transfer_receive_valuation_shortfall.sql",
   );
 
   assert.match(sql, /transfer_shortfall/);

@@ -143,7 +143,7 @@ test("menu recipe and inventory documents accept any active ingredient unit", ()
   assert.match(lineEditor, /getIngredientUnitOptions\(ingredient\)/);
 
   const migration = readRepo(
-    "supabase/migrations/20260803105716_active_ingredient_entry_units.sql",
+    "supabase/migration-archive/20260803105716_active_ingredient_entry_units.sql",
   );
   assert.match(migration, /entry_unit_is_active_for_ingredient/);
   assert.match(migration, /jsonb_array_length\(p_units\) NOT BETWEEN 1 AND 20/);

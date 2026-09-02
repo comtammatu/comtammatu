@@ -22,7 +22,7 @@ Contract vận hành Inventory hiện tại, không phải roadmap. Ý tưởng 
 | Tồn kho `stock_levels`          | `current_quantity`, `avg_unit_cost`; valuation account giữ book value chính xác và chiếu WAC hiện tại sang stock level                                                                                                                                                                                                         | Không chuyển sang FIFO engine                                                                          |
 | Biến động `stock_movements`     | Append-only quantity ledger; valuation events append-only giữ value adjustment và lineage qua receipt, transfer, production, consumption, waste và stocktake                                                                                                                                                                   | Không mở lot-first ledger / batch accounting                                                           |
 | Mô hình site                    | `branches` là site table Production; kinds active: `branch`, `central_supply` (Kho Tổng), `central_kitchen` (Bếp Trung Tâm). Mọi chi nhánh thường luôn có đúng một `warehouse` mặc định nhận/cấp và một `kitchen` mặc định tiêu hao. Kho Tổng và Bếp Trung Tâm không có cặp Kho/Bếp của chi nhánh; site trung tâm giữ một `warehouse`.                     | `production_storage` chỉ dùng tường minh cho production trung tâm; không mở location hierarchy khác Kho/Bếp tại chi nhánh |
-| Nhu cầu mua / PO / GRN / NCC    | Kho trung tâm **Tạo đơn** theo NL (NCC trên dòng; một phiếu có thể nhiều NCC, ADR 0040). YCM chỉ đọc lịch sử. Một PO → một GRN nháp. Chốt GRN theo nhóm NCC đang giao. PO không giá. Số giữ viết lại SL dòng PO khi giao dư (ADR 0040). **Đơn giá** net trên dòng GRN. HĐ NCC công nợ + VAT theo NCC của dòng đã `po_applied`. | Không promotion engine, duyệt nhiều cấp, OCR hoặc price-QC tại GRN                                     |
+| Nhu cầu mua / PO / GRN / NCC    | Kho trung tâm **Tạo đơn** theo NL (NCC trên dòng; một phiếu có thể nhiều NCC, ADR 0040). YCM/YCH đã gỡ sau soak (Wave 5); danh sách Đơn mua là nguồn sự thật. Một PO → một GRN nháp. Chốt GRN theo nhóm NCC đang giao. PO không giá. Số giữ viết lại SL dòng PO khi giao dư (ADR 0040). **Đơn giá** net trên dòng GRN. HĐ NCC công nợ + VAT theo NCC của dòng đã `po_applied`. | Không promotion engine, duyệt nhiều cấp, OCR hoặc price-QC tại GRN                                     |
 | QC nhận hàng                    | Kho nhập `received_quantity` và `rejected_quantity`; số đạt = thực nhận − từ chối. Có hàng từ chối thì bắt buộc lý do + ảnh. Trạng thái chỉ là giá trị hiển thị được suy ra.                                                                                                                                                   | Không lưu status, tolerance, lot/HSD/nhiệt độ, price variance hoặc auto-approval                       |
 | Luân chuyển nội bộ              | ĐC liên điểm đi giữa hai warehouse khác site; ĐC nội bộ đi đúng cặp Kho↔Bếp cùng chi nhánh và hoàn tất nguyên tử. Tiêu hao, write-off và production không được mô phỏng bằng transfer.                                                                                                                                         | Không có location hierarchy ngoài Kho/Bếp tại chi nhánh                                                |
 | HĐ NCC                          | `supplier_invoices` + đối soát GRN + thanh toán NCC là Finance handoff; thanh toán bắt buộc có file HĐ GTGT đính kèm (ADR 0017)                                                                                                                                                                                                | Không mở payment proposal engine trong Inventory                                                       |
@@ -54,7 +54,7 @@ Những thứ dưới đây không thuộc Inventory current contract dù có xu
   mua, PO hoặc GRN.
 - **Kho Tổng (`central_supply`) và Bếp Trung Tâm (`central_kitchen`):** cùng happy
   path **Tạo đơn** (không YCM) → PO theo NCC → GRN theo lần giao.
-  Yêu cầu mua chỉ còn lịch sử. Mỗi site active có đúng một `warehouse`.
+  Yêu cầu mua đã gỡ. Mỗi site active có đúng một `warehouse`.
   `production_storage` chỉ hợp lệ khi production trung tâm chọn tường minh,
   không làm fallback cho site/branch thiếu warehouse.
 - **Tiêu hao chi nhánh:** nguyên liệu đã dùng để tạo doanh thu hoặc tiêu hao
@@ -117,10 +117,10 @@ năm; không reset theo ngày). PO dùng `next_po_display_id`. Phiếu cũ giữ
 | Lệnh sản xuất      | `LSX`        | `production_runs.production_number`                         |
 | Kiểm kê            | `KK`         | `stocktake_sessions.session_number`                         |
 | Phiếu đếm          | `PD`         | `inventory_count_slips.slip_number`                         |
-| Yêu cầu hàng / mua | `YC` / `YCM` | lịch sử `stock_requests` / `purchase_requests`              |
+| Yêu cầu hàng / mua | `YC` / `YCM` | tiền tố lịch sử; bảng yêu cầu đã DROP sau soak Wave 5 |
 | Tiêu hao HRM       | `THB`        | `stock_issues.issue_number` = `THB-{report_id}` (không đổi) |
 
-Prefix là identifier; UI dùng nhãn Việt. `YC`/`YCM` freeze ghi trước DROP; không chuyển phiếu đã thành PO/DC (trùng tồn).
+Prefix là identifier; UI dùng nhãn Việt. `YC`/`YCM` freeze ghi rồi DROP bảng yêu cầu sau soak; không chuyển phiếu đã thành PO/DC (trùng tồn). Cột `purchase_request_id` / `stock_request_id` trên PO/DC có thể còn orphan.
 
 ---
 
@@ -256,7 +256,7 @@ tiêu hao thủ công không ghi lại NL đã trừ từ POS.
 ### 5.1 Quy trình
 
 1. Thiết lập **NCC**, điều khoản và `supplier_items`.
-2. Kho Tổng / Bếp TT **Tạo đơn** (kho nhận + NL; NCC trên dòng, ADR 0040). Yêu cầu mua chỉ còn lịch sử đến Wave 4. **Điều chuyển xin hàng** = cấp nội bộ về CN.
+2. Kho Tổng / Bếp TT **Tạo đơn** (kho nhận + NL; NCC trên dòng, ADR 0040). Yêu cầu mua đã gỡ sau Wave 5. **Điều chuyển xin hàng** = cấp nội bộ về CN.
 3. Gửi đơn (`approved`) chặn dòng chưa `supplier_items` của **NCC dòng**. PO mới không gắn YCM.
 4. Gửi đơn → đúng một GRN nháp **Chờ nhập hàng** (mọi dòng PO). Làm việc từ danh sách GRN.
 5. Kho nhập thực nhận/từ chối; **chốt theo NCC** đang giao (Đơn giá > 0 trên dòng nhận). Dòng NCC khác chờ trên cùng phiếu. Giao dư → tăng SL dòng PO (ADR 0040). Thiếu → dòng còn trên cùng GRN hoặc `close_purchase_order`.
@@ -380,7 +380,7 @@ Tóm tắt vai (D093):
 - `branch_manager`: hub `/br/{id}/stock` (tồn / Điều chuyển / kiểm kê / hao); tạo
   DC xin hàng hoặc giao đi (nháp); ship outbound từ CN mình; nhận DC inbound;
   **không** GRN, PO, production, giá mua, `procurement:read` /
-  `supplier_manage` / `supplier_return:*` (R08/R09). YCH lịch sử còn đọc.
+  `supplier_manage` / `supplier_return:*` (R08/R09). YCH đã gỡ; xin hàng bằng Điều chuyển.
 - `cashier`: tạm thời đếm Coca, Sprite, Fanta cam, Fanta xá xị, Nước suối theo ca được gán; phiếu/duyệt cùng đơn vị nhân viên chọn, không tự sửa sổ. `chef` / `branch_staff`: chỉ đếm khi được gán.
 
 Ma trận thao tác hiệu lực (role là cửa thô; permission + RLS/RPC là cửa cuối):
@@ -415,7 +415,7 @@ Flow thao tác chuẩn:
 2. **Mua:** actor có `procurement:po_create` mở **Tạo đơn**, chọn site trung tâm,
    nguyên liệu, đơn vị và NCC từng dòng → `create_purchase_order`; gửi đơn tạo
    trạng thái `approved` và Auto-GRN nháp. Owner/Kế toán giữ quyền duyệt/ngoại lệ;
-   các bản YCM cũ chỉ đọc.
+   các bản YCM cũ đã gỡ cùng bảng yêu cầu.
 3. **Nhập:** Kho Tổng/Bếp TT kiểm nhận GRN theo NCC đang giao, nhập thực nhận,
    từ chối + bằng chứng và Đơn giá net → `confirm_goods_receipt_note` ghi
    movement, WAC và số giữ trong một transaction. Kế toán nhận handoff HĐ/AP,
@@ -434,8 +434,8 @@ Permission keys (D093 + ADR 0045):
 
 | Key                                           | Ai                                                     |
 | --------------------------------------------- | ------------------------------------------------------ |
-| `inventory:request_create/submit/cancel`      | owner, branch_manager                                  |
-| `inventory:request_fulfill`                   | owner, central_supply_ops, central_kitchen_lead        |
+| `inventory:request_create/submit/cancel`      | chỉ khóa catalog (Wave 4 đã gỡ grant sống; giữ khóa tương thích) |
+| `inventory:request_fulfill`                   | owner, central_supply_ops, central_kitchen_lead; Giao nhận / DC |
 | `inventory:transfer_create` / `transfer_ship` | owner, central ops; BM own-site create + outbound ship |
 | `procurement:grn_*`                           | central sites (+ owner); không BM                      |
 | `procurement:read` / `supplier_manage`        | owner, accountant (read), central ops; không BM        |

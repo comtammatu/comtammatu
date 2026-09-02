@@ -234,8 +234,8 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
   - Kiểm soát chính xác số lượng nguyên liệu tồn kho thực tế, tính toán giá vốn hàng bán (WAC), giảm thiểu hao hụt/thất thoát nguyên liệu và tối ưu hóa chi phí mua hàng.
 - **Mục tiêu Người dùng (Goal):** Nhìn tồn để quyết định đúng việc cần làm, nhập kho nhanh và tạo lệnh sản xuất không sai lệch.
 - **Luồng thao tác (Workflow):**
-  - **Yêu cầu mua:** Tab lịch sử trên `/inventory/purchase-orders?tab=needs`.
-    Không tạo nhu cầu mới; happy path là **Tạo đơn**.
+  - **Yêu cầu mua:** `/inventory/purchase-requests` chuyển sang danh sách Đơn mua
+    (`mode=create` → **Tạo đơn**). Không còn tab lịch sử YCM.
   - **Đơn mua hàng:** Kho/Owner **Tạo đơn** theo nguyên liệu (NCC trên dòng;
     một phiếu có thể nhiều NCC). PO không chứa giá. Gửi đơn tạo **một** GRN.
   - **Nhập kho:** `/inventory/grn` **Chờ nhập hàng**. Chốt theo NCC đang giao
@@ -246,7 +246,7 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
   - **Điều chuyển (Transfer):** Một loại phiếu. CN tạo nháp xin hàng (Kho Tổng
     hoặc Bếp TT → CN) hoặc giao đi (CN → trung tâm / CN khác); chưa trừ tồn.
     Ship = điểm from; nhận = điểm to. Hub Giao nhận CTA **Tạo điều chuyển**.
-    YCH lịch sử còn đọc (filter YCH); không tạo YCH mới. Bếp TT xin Kho Tổng
+    Yêu cầu hàng đã gỡ; không tạo YCH mới. Bếp TT xin Kho Tổng
     cũng bằng DC.
   - **Xuất nội bộ (Issue):** Mở phiếu hủy hỏng hoặc xuất khác tại chi nhánh -> thêm từng nguyên liệu với đơn vị, số lượng và lý do -> rà soát phiếu nháp -> xác nhận để ghi giảm tồn hoặc hủy trước khi chốt.
   - **Hao hụt thủ công (Waste):** Chọn đúng vị trí kho của chi nhánh -> thêm từng nguyên liệu trong một dòng chạm riêng -> nhập số lượng không vượt tồn, lý do và ảnh khi được yêu cầu -> xem cảnh báo cap theo ca/ngày -> tạo phiếu để ghi giảm hoặc chờ quản lý duyệt theo tier. WAC, đơn vị và bằng chứng được server kiểm tra lại khi submit.
@@ -261,14 +261,14 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
     `Tiêu hao`; kiểm kê, hao hụt, giao đếm, danh mục ở nhóm sau. **Không** tile
     Nhập hàng (GRN) hay Sản xuất trên kind `branch` (route redirect). Nhận hàng
     nội bộ qua DC.
-  - Kho Tổng / Bếp TT `/br/[siteId]/stock`: tile GRN, Giao nhận, Yêu cầu mua,
+  - Kho Tổng / Bếp TT `/br/[siteId]/stock`: tile GRN, Giao nhận,
     Tồn/Kiểm/Hao hụt; Bếp TT thêm Sản xuất. Route GRN/SX chỉ mount khi
     `branch_kind` trung tâm.
-  - Branch `/br/[branchId]/stock/requests` — lịch sử YCH (DETAIL đọc);
+  - Branch `/br/[branchId]/stock/requests` — shim sang Điều chuyển;
     `/requests/new` redirect tạo DC xin hàng.
   - On-hand CN “Cần bổ sung” CTA → Tạo điều chuyển xin hàng (không mở GRN).
   - Chi tiết phân vai: `docs/ref/inventory.md`.
-  - `/br/[branchId]/stock` là **stock home** CN: 4 cửa hàng hóa (tồn / Điều chuyển / Kiểm kê / hao) **trên**, list phiếu fulfillment **dưới**. Không đặt Phân công đếm / Phiếu đếm làm cửa Kho (entry từ Đội). `/stock/transfer` store → redirect `/stock`. Pad nhận `/receive/[id]` tự mở phiên kiểm nhận khi `in_transit` (hiện danh sách đếm ngay, không splash CTA). Tạo DC tại `/stock/transfer/new` (xin hàng / giao đi). YCH lịch sử còn đọc.
+  - `/br/[branchId]/stock` là **stock home** CN: 4 cửa hàng hóa (tồn / Điều chuyển / Kiểm kê / hao) **trên**, list phiếu fulfillment **dưới**. Không đặt Phân công đếm / Phiếu đếm làm cửa Kho (entry từ Đội). `/stock/transfer` store → redirect `/stock`. Pad nhận `/receive/[id]` tự mở phiên kiểm nhận khi `in_transit` (hiện danh sách đếm ngay, không splash CTA). Tạo DC tại `/stock/transfer/new` (xin hàng / giao đi). Yêu cầu hàng đã gỡ.
   - `/br/[branchId]/stock/on-hand` là LIST tồn touch-first. Attention theo `branch_kind`. Không Tiêu Hao SX trên primary CN.
   - `/br/[branchId]/stock/on-hand/[ingredientId]` là `DETAIL` touch-native: tồn/trạng thái → vị trí → biến động → ngưỡng; primary CTA kind-aware trên sticky footer; secondary trong `DropdownMenu`; back → on-hand. Không WAC/audit/control_surface chrome. `/stock/receive` chỉ dành cho phiếu chuyển nội bộ.
   - Branch `/br/[branchId]/stock/grn` ưu tiên nháp của người đang nhận hàng, sau đó là hàng đợi GRN có tìm kiếm/lọc trạng thái. Mỗi row chỉ hiển thị mã, NCC, ngày và trạng thái; chạm để tiếp tục/xem phiếu, bỏ nháp là action riêng có xác nhận. Không đưa tổng tiền, tên chi nhánh, `DataTable` hay long-press từ control_surface sang route này.
@@ -293,12 +293,12 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 
 ### 2.5A. Hợp đồng từng màn Inventory
 
-Mỗi hàng = `page.tsx` (shim gộp vào cha). Adapter L0: `AppPage` / `DataTable` / `AppDialog variant="document"` / `FormDialog`. Branch: `BranchOperatorPage` + touch/`AppSheet`. Nguồn: `apps/web/app/(protected)/inventory/**` và `/br/[branchId]/(operator)/stock/**`. **Khóa:** mua chỉ PO; phiếu nhập ghi **Đơn giá**; HĐ NCC công nợ; một loại Điều chuyển (CN hai chiều); ẩn YCM + Yêu cầu hàng; hub = Điều chuyển; không drop bảng/RPC Wave này.
+Mỗi hàng = `page.tsx` (shim gộp vào cha). Adapter L0: `AppPage` / `DataTable` / `AppDialog variant="document"` / `FormDialog`. Branch: `BranchOperatorPage` + touch/`AppSheet`. Nguồn: `apps/web/app/(protected)/inventory/**` và `/br/[branchId]/(operator)/stock/**`. **Khóa:** mua chỉ PO; phiếu nhập ghi **Đơn giá**; HĐ NCC công nợ; một loại Điều chuyển (CN hai chiều); YCM + Yêu cầu hàng đã gỡ; hub = Điều chuyển; Wave 5 DROP bảng yêu cầu sau soak.
 
 | Lane | Route (archetype · components) | Load → hiển thị → submit | Hiện → mục tiêu |
 | --- | --- | --- | --- |
-| Landing | `/inventory` LANDING · `AppSection` `Item` `AppLinkCard` | Đếm GRN/Đơn giá/Yêu cầu hàng/DC/hao → `Cần xử lý` + lane → chỉ điều hướng | Tách Yêu cầu hàng vs Điều chuyển + **Chờ đơn giá** → ẩn YCM/YCH |
-| Landing | `/br/[branchId]/stock` LANDING · cửa + hub | Tile `branch_kind` + fulfillment → 4 cửa rồi list phiếu → mở phiếu | Cửa Điều chuyển hai chiều; YCH lịch sử còn đọc |
+| Landing | `/inventory` LANDING · `AppSection` `Item` `AppLinkCard` | Đếm GRN/Đơn giá/DC/hao → `Cần xử lý` + lane → chỉ điều hướng | **Chờ đơn giá** + Điều chuyển; YCM/YCH đã gỡ |
+| Landing | `/br/[branchId]/stock` LANDING · cửa + hub | Tile `branch_kind` + fulfillment → 4 cửa rồi list phiếu → mở phiếu | Cửa Điều chuyển hai chiều; YCH đã gỡ |
 | Tồn | `/inventory/stock` LIST+D1 · `DataTable` `AppDialog` (`[id]` shim `?ingredientId=`) | `loadStockOnHandPageData` → tồn/Đơn vị chuẩn/ngưỡng; WAC sau nếp; Owner **Ghi Giá vốn** theo Đơn vị chuẩn (không Đơn giá GRN) | Giữ; Nguồn hàng ≠ vị trí tồn |
 | Tồn | `/br/…/stock/on-hand` LIST + `[id]` DETAIL | Tồn site → cảnh báo, không WAC → CTA kind-aware / `AppSheet` | CTA tạo DC xin hàng |
 | Catalog | `/inventory/ingredients` LIST · `FormDialog` | `fetchIngredients`+đơn vị → kind, Nguồn hàng, Đơn vị chuẩn, Giá tham chiếu đọc → `save_ingredient_catalog` | Giữ form neo/TP; TP không mua; Nguồn hàng tick Kho Tổng và/hoặc Bếp TT (OD-4) |
@@ -306,15 +306,15 @@ Mỗi hàng = `page.tsx` (shim gộp vào cha). Adapter L0: `AppPage` / `DataTab
 | Catalog | `/inventory/menu-recipes` LIST · `FormDialog` | Định mức + WAC công ty → phủ BOM → CRUD dòng | Giữ; không Giá vốn món đã ghi |
 | Catalog | `/inventory/settings/*` SETTINGS (`/` và `/recipes` shim) | units/categories/`min_stock_level` → registry → CRUD | Neo trên form NL |
 | Catalog | `/br/…/stock/catalog*` LANDING/LIST đọc | Cùng loader L0 → tra cứu → không ghi | Owner/Kho Tổng CRUD tại L0; Bếp TT/CN chỉ đọc |
-| Mua | `/inventory/purchase-orders` LIST+D1 · tabs `AppDialog` ( `/purchase-requests` shim `tab=needs`; `/new` → `tab=orders&mode=create`) | **Tạo đơn** không YCM; tab Yêu cầu mua lịch sử/đọc → `create_purchase_order` / xem YCM; không CTA tạo nhu cầu | Wave 4 đã REVOKE `save_purchase_demand*`; action tương thích không phải write surface |
-| Mua | `/br/…/stock/purchase-requests` LIST | Lịch sử YCM site; `mode=create` → **Tạo đơn** | Wave 4 freeze ghi |
+| Mua | `/inventory/purchase-orders` LIST+D1 · `AppDialog` (`/purchase-requests` shim → danh sách PO; `/new` → `tab=orders&mode=create`) | **Tạo đơn** không YCM → `create_purchase_order`; không CTA/tab YCM | Wave 5 DROP bảng yêu cầu; Class C shim |
+| Mua | `/br/…/stock/purchase-requests` shim | `mode=create` → **Tạo đơn**; còn lại → danh sách Đơn mua | Wave 5 DROP |
 | Nhập | `/inventory/grn` LIST+D1 (`[id]`/`new*` shim) | `loadGrnListPageData` mặc định **Chờ nhập hàng** → SL, từ chối, **Đơn giá**, `confirm_goods_receipt_note`; không CTA HĐ cho kho; Owner tab **Chờ đơn giá** | HĐ NCC chỉ Finance |
 | Nhập | `/inventory/supplier-invoices` shim | — | → `/finance/supplier-invoices` AP |
 | Nhập | `/br/…/stock/grn` LIST + `[id]` DETAIL (`new*` shim) | Nháp người nhận → mã/NCC/ngày; kiểm nhận+Đơn giá → lưu/chốt | CN `branch` không tile GRN |
-| Giao nhận | `/inventory/transfers` LIST hub · `DataTable` | `loadStockFulfillmentRows` → filter `work=` → ship/nhận DC; YCH lịch sử | CTA **Tạo điều chuyển**; ẩn tạo YCH |
+| Giao nhận | `/inventory/transfers` LIST hub · `DataTable` | `loadStockFulfillmentRows` → filter `work=` → ship/nhận DC | CTA **Tạo điều chuyển**; YCH đã gỡ |
 | Giao nhận | `/inventory/transfers/new` DOC · `[id]` DETAIL | Site+NL / phiếu DC → tạo/xem → `stock_transfer_*` | Một loại DC; xin hàng hoặc giao đi |
-| Giao nhận | `/inventory/stock-requests*` shim/DETAIL | `/new` → DC xin hàng; `[id]` lịch sử YCH | Wave 4 REVOKE ghi YCH |
-| Giao nhận | `/br/…/stock/transfer*` `/receive*` `/requests*` | CN tạo DC; nhận trên DC; `/requests/new` redirect | YCH lịch sử đọc |
+| Giao nhận | `/inventory/stock-requests*` shim | `/new` → DC xin hàng; `[id]` → hub Điều chuyển | Wave 5 DROP |
+| Giao nhận | `/br/…/stock/transfer*` `/receive*` `/requests*` | CN tạo DC; nhận trên DC; `/requests*` redirect | YCH đã gỡ |
 | SX | `/inventory/production` LIST 2 tab (`/new` `[id]` shim) | Runs+recipes → Lệnh/Công thức → tạo/bắt đầu/hoàn thành | TP không PO/GRN |
 | SX | `/br/…/stock/production*` shim | — | CN không SX |
 | Hao | `/inventory/consumption` LIST · `/[id]` DETAIL (`/issues` shim waste) | Ledger+phiếu → nguồn pos/manual → chốt/hủy | Giữ tách tiêu hao vs hao |

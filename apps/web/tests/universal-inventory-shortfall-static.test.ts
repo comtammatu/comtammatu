@@ -9,7 +9,7 @@ const root = process.cwd().replaceAll("\\", "/").includes("apps/web")
 const read = (path: string) => readFileSync(join(root, path), "utf8");
 
 const migration = read(
-  "supabase/migrations/20260822143600_universal_inventory_shortfall_valuation.sql",
+  "supabase/migration-archive/20260822143600_universal_inventory_shortfall_valuation.sql",
 );
 
 test("migration adds inventory_shortfall to source_kind constraint", () => {

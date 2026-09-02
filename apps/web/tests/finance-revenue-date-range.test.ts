@@ -102,7 +102,7 @@ test("Finance cockpit actual food cost follows the VN business-day window", () =
     "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts",
   );
   const foodCostMigration = read(
-    "supabase/migrations/20260820151656_finance_food_cost_recorded.sql",
+    "supabase/migration-archive/20260820151656_finance_food_cost_recorded.sql",
   );
 
   assert.match(cockpit, /get_finance_operating_cockpit/);
@@ -118,7 +118,7 @@ test("Finance expenses actual food cost follows the VN business-day window", () 
     "apps/web/app/(protected)/finance/expense-actions.ts",
   );
   const foodCostMigration = read(
-    "supabase/migrations/20260820151656_finance_food_cost_recorded.sql",
+    "supabase/migration-archive/20260820151656_finance_food_cost_recorded.sql",
   );
 
   assert.match(expenseActions, /get_finance_food_cost_recorded/);
@@ -147,13 +147,13 @@ test("Finance operating expense excludes food-cost and transfer categories", () 
   );
   const dataContract = read("docs/ref/operational-data-contract.md");
   const expenseSummaryMigration = read(
-    "supabase/migrations/20260818171912_finance_expense_period_summary.sql",
+    "supabase/migration-archive/20260818171912_finance_expense_period_summary.sql",
   );
   const operatingCockpitMigration = read(
-    "supabase/migrations/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
+    "supabase/migration-archive/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
   );
   const startupCapitalMigration = read(
-    "supabase/migrations/20260824013553_finance_startup_capital_summary_rpc.sql",
+    "supabase/migration-archive/20260824013553_finance_startup_capital_summary_rpc.sql",
   );
 
   assert.match(categories, /cogs_manual: "materials"/);
@@ -197,7 +197,7 @@ test("Finance treats 0đ operating expense as numeric and explains All-scope inv
   );
   const messages = read("apps/web/lib/messages/finance.ts");
   const migration = read(
-    "supabase/migrations/20260901091614_finance_zero_opex_inventory_breakdown.sql",
+    "supabase/migration-archive/20260901091614_finance_zero_opex_inventory_breakdown.sql",
   );
 
   assert.match(
@@ -420,7 +420,7 @@ test("Finance cockpit branch filter also scopes supplier payable risk", () => {
     "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts",
   );
   const migration = read(
-    "supabase/migrations/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
+    "supabase/migration-archive/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
   );
 
   assert.match(cockpit, /branchId: number \| null/);

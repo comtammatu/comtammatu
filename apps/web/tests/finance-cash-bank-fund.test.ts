@@ -80,7 +80,7 @@ test("finance landing presents immutable book funds", () => {
 test("current funds load from one PostgreSQL snapshot of company and branch books", () => {
   const cockpit = read("apps/web/app/(protected)/finance/_lib/cash-cockpit.ts");
   const migration = read(
-    "supabase/migrations/20260820021152_sales_branch_cash_books.sql",
+    "supabase/migration-archive/20260820021152_sales_branch_cash_books.sql",
   );
 
   assert.match(cockpit, /\.rpc\("get_finance_current_funds"\)/);
@@ -133,10 +133,10 @@ test("finance funds use one immutable append-only ledger contract", () => {
     "supabase/migration-archive/20260726140000_immutable_finance_fund_ledger.sql",
   );
   const branchCashMigration = read(
-    "supabase/migrations/20260820021152_sales_branch_cash_books.sql",
+    "supabase/migration-archive/20260820021152_sales_branch_cash_books.sql",
   );
   const branchOpeningCutover = read(
-    "supabase/migrations/20260820025641_branch_cash_opening_cutover.sql",
+    "supabase/migration-archive/20260820025641_branch_cash_opening_cutover.sql",
   );
   const currentFundsMigration = read(
     "supabase/migration-archive/20260726160405_remove_pos_variance_from_current_funds.sql",

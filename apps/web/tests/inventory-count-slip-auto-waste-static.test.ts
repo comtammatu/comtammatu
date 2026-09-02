@@ -13,9 +13,9 @@ test("approveCountSlip keeps count approval and auto waste in one database trans
   const actionsSource = readRepoFile(
     "apps/web/app/(protected)/inventory/count-slips/actions.ts",
   );
-  const migrationSource = readdirSync(join(repoRoot, "supabase/migrations"))
+  const migrationSource = readdirSync(join(repoRoot, "supabase/migration-archive"))
     .filter((name) => name.endsWith(".sql"))
-    .map((name) => readRepoFile(`supabase/migrations/${name}`))
+    .map((name) => readRepoFile(`supabase/migration-archive/${name}`))
     .join("\n");
 
   assert.match(
@@ -112,9 +112,9 @@ test("branch and desktop review clients provide seamless 1-touch auto waste on a
 });
 
 test("stock_issues_source_type_check allows count_slip_auto_waste and UI displays proper Vietnamese source label", () => {
-  const migrationSource = readdirSync(join(repoRoot, "supabase/migrations"))
+  const migrationSource = readdirSync(join(repoRoot, "supabase/migration-archive"))
     .filter((name) => name.endsWith(".sql"))
-    .map((name) => readRepoFile(`supabase/migrations/${name}`))
+    .map((name) => readRepoFile(`supabase/migration-archive/${name}`))
     .join("\n");
   const issueDetailSource = readRepoFile(
     "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx",
@@ -141,9 +141,9 @@ test("stock_issues_source_type_check allows count_slip_auto_waste and UI display
 });
 
 test("stock_issue_items_reason_code_check and shared labels support count slip shortage reason codes", () => {
-  const migrationSource = readdirSync(join(repoRoot, "supabase/migrations"))
+  const migrationSource = readdirSync(join(repoRoot, "supabase/migration-archive"))
     .filter((name) => name.endsWith(".sql"))
-    .map((name) => readRepoFile(`supabase/migrations/${name}`))
+    .map((name) => readRepoFile(`supabase/migration-archive/${name}`))
     .join("\n");
   const labelsSource = readRepoFile("packages/shared/src/labels/vi.ts");
   const actionsSource = readRepoFile(
@@ -170,9 +170,9 @@ test("stock_issue_items_reason_code_check and shared labels support count slip s
 });
 
 test("approve_inventory_count_slip_with_waste auto-approves and confirms shortage waste", () => {
-  const migrationSource = readdirSync(join(repoRoot, "supabase/migrations"))
+  const migrationSource = readdirSync(join(repoRoot, "supabase/migration-archive"))
     .filter((name) => name.endsWith(".sql"))
-    .map((name) => readRepoFile(`supabase/migrations/${name}`))
+    .map((name) => readRepoFile(`supabase/migration-archive/${name}`))
     .join("\n");
 
   assert.match(

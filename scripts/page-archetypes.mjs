@@ -275,22 +275,22 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/feedback/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
   "apps/web/app/(protected)/feedback/qr/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
   "apps/web/app/(protected)/br/[branchId]/(operator)/feedback/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
   "apps/web/app/(protected)/br/[branchId]/(operator)/feedback/qr/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
@@ -360,7 +360,7 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/inventory/issues/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
@@ -370,7 +370,7 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/inventory/production/[id]/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
@@ -385,7 +385,7 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/inventory/production/new/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
@@ -420,7 +420,7 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/inventory/stock/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
@@ -430,7 +430,7 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/inventory/stocktake/[id]/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
@@ -455,12 +455,12 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/inventory/suppliers/[id]/items/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
   "apps/web/app/(protected)/inventory/transfers/[id]/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
@@ -470,29 +470,29 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/inventory/stock-requests/[id]/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
   "apps/web/app/(protected)/inventory/stock-requests/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/requests/[id]/page.tsx":
     {
-      status: "tune",
+      status: "keep",
       evidence: "implemented-static",
       final: false,
     },
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/requests/new/page.tsx":
     {
-      status: "tune",
+      status: "keep",
       evidence: "implemented-static",
       final: false,
     },
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/requests/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
@@ -549,22 +549,22 @@ const PAGE_DISPOSITION_OVERRIDES = {
     },
   "apps/web/app/(protected)/br/[branchId]/(operator)/team/attendance/page.tsx":
     {
-      status: "tune",
+      status: "keep",
       evidence: "implemented-static",
       final: false,
     },
   "apps/web/app/(protected)/br/[branchId]/(operator)/team/roster/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
@@ -574,7 +574,7 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/branches/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },

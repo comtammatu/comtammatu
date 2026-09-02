@@ -1,15 +1,17 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type {
-  AuthChangeEvent,
-  RealtimeChannel,
-  Session,
-  SupabaseClient,
+import {
+  createClient,
+  type AuthChangeEvent,
+  type RealtimeChannel,
+  type Session,
+  type SupabaseClient,
 } from "@supabase/supabase-js";
 import {
   BranchOpsRuntime,
   parseBranchOpsEvent,
 } from "../app/_hooks/branch-ops-runtime";
+import { evictRealtimeChannel } from "../app/_hooks/use-realtime-channel";
 
 type AuthListener = (event: AuthChangeEvent, session: Session | null) => void;
 type ChannelStatus = "SUBSCRIBED" | "TIMED_OUT" | "CLOSED" | "CHANNEL_ERROR";
@@ -273,3 +275,50 @@ test("branch ops runtime evicts a stale same-topic channel before route rejoin",
   assert.equal(client.removeCount, 1);
   stop();
 });
+
+test("evictRealtimeChannel invokes both removeChannel and synchronous _remove on Supabase client", () => {
+  let removeChannelCalled = false;
+  let removeInternalCalled = false;
+  const mockChannel = { topic: "realtime:branch:73:ops" } as unknown as RealtimeChannel;
+  const mockClient = {
+    removeChannel: (_channel: RealtimeChannel) => {
+      removeChannelCalled = true;
+      return Promise.resolve("ok" as const);
+    },
+    realtime: {
+      _remove: (_channel: RealtimeChannel) => {
+        removeInternalCalled = true;
+      },
+    },
+  };
+
+  evictRealtimeChannel(
+    mockClient as unknown as Parameters<typeof evictRealtimeChannel>[0],
+    mockChannel,
+  );
+  assert.equal(removeChannelCalled, true);
+  assert.equal(removeInternalCalled, true);
+});
+
+test("pinned supabase-js 2.112.4 evictRealtimeChannel purges socket channels synchronously", () => {
+  const supabase = createClient(
+    "https://example.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.signature",
+  );
+  const ch1 = supabase.channel("branch:73:ops");
+  assert.equal(supabase.getChannels().length, 1);
+  assert.equal(supabase.getChannels()[0]?.topic, "realtime:branch:73:ops");
+
+  evictRealtimeChannel(supabase, ch1);
+  assert.equal(supabase.getChannels().length, 0);
+
+  // A new channel on the same topic builds fresh
+  const ch2 = supabase.channel("branch:73:ops");
+  assert.notEqual(ch1, ch2);
+  assert.equal(supabase.getChannels().length, 1);
+  assert.equal(supabase.getChannels()[0]?.topic, "realtime:branch:73:ops");
+
+  evictRealtimeChannel(supabase, ch2);
+  assert.equal(supabase.getChannels().length, 0);
+});
+

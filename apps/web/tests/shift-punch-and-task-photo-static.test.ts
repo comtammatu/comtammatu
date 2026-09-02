@@ -81,10 +81,10 @@ test("shift task photo is required to mark done", () => {
   const tasksClient = readWeb("lib/staff-runtime/tasks/tasks-client.tsx");
   const actions = readWeb("lib/staff-runtime/clock/actions.ts");
   const rpcMigration = readRepo(
-    "supabase/migrations/20260817141000_shift_task_photo_required.sql",
+    "supabase/migration-archive/20260817141000_shift_task_photo_required.sql",
   );
   const compactMigration = readRepo(
-    "supabase/migrations/20260817191830_compact_position_shift_tasks_photo_required.sql",
+    "supabase/migration-archive/20260817191830_compact_position_shift_tasks_photo_required.sql",
   );
   const messages = readWeb("lib/messages/employee.ts");
   const hr = readWeb("lib/messages/hr.ts");
@@ -119,10 +119,10 @@ test("shift task photo is required to mark done", () => {
 
 test("floor shift tasks stay compact and waiter cannot close cash", () => {
   const migration = readRepo(
-    "supabase/migrations/20260817191830_compact_position_shift_tasks_photo_required.sql",
+    "supabase/migration-archive/20260817191830_compact_position_shift_tasks_photo_required.sql",
   );
   const refinedMigration = readRepo(
-    "supabase/migrations/20260821200000_refine_position_shift_tasks_sop.sql",
+    "supabase/migration-archive/20260821200000_refine_position_shift_tasks_sop.sql",
   );
   const docs = readRepo("docs/ref/branch-operations.md");
 

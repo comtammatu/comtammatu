@@ -92,6 +92,25 @@ test("buildCompanyWacMap averages every site into one SKU cost", () => {
   assert.equal(map[67], undefined);
 });
 
+test("buildCompanyWacMap weights by quantity across sites when quantities differ", () => {
+  const map = buildCompanyWacMap([
+    {
+      ingredientId: 72,
+      branchKind: "central_supply",
+      avgUnitCost: 2000,
+      currentQuantity: 90,
+    },
+    {
+      ingredientId: 72,
+      branchKind: "branch",
+      avgUnitCost: 3000,
+      currentQuantity: 10,
+    },
+  ]);
+  // Weighted: (90 * 2000 + 10 * 3000) / 100 = 2100; unweighted mean would be 2500.
+  assert.equal(map[72], 2100);
+});
+
 test("resolveMenuRecipeUnitCost uses company WAC from any site", () => {
   const sourceSiteWacMap = buildSourceSiteWacMap([
     {
@@ -408,7 +427,7 @@ test("inv_to_base_for_tenant still raises when the entry unit is missing", () =>
   const sql = readFileSync(
     resolve(
       import.meta.dirname,
-      "../../../supabase/migrations/20260802162900_baseline.sql",
+      "../../../supabase/migrations/20260902162918_baseline.sql",
     ),
     "utf8",
   );
@@ -426,7 +445,7 @@ test("POS sale consumption still converts qty through inv_to_base_for_tenant", (
   const sql = readFileSync(
     resolve(
       import.meta.dirname,
-      "../../../supabase/migrations/20260810012014_pos_stock_post_and_flag.sql",
+      "../../../supabase/migration-archive/20260810012014_pos_stock_post_and_flag.sql",
     ),
     "utf8",
   );

@@ -17,10 +17,10 @@ test("paid orders with no recipe lines count as covered food cost", () => {
 
 test("paid sale consumption no longer waits for kitchen dispatch", () => {
   const sql = read(
-    "supabase/migrations/20260816172557_post_paid_sale_consumption_without_dispatch.sql",
+    "supabase/migration-archive/20260816172557_post_paid_sale_consumption_without_dispatch.sql",
   );
   const foodCostMigration = read(
-    "supabase/migrations/20260820151656_finance_food_cost_recorded.sql",
+    "supabase/migration-archive/20260820151656_finance_food_cost_recorded.sql",
   );
   const cockpit = read(
     "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts",

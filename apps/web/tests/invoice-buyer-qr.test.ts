@@ -96,13 +96,13 @@ test("backlog HĐĐT drafts send the S-invoice submit instant", () => {
   const helper = readRepo("packages/shared/src/hddt/issue-date.ts");
   const issuer = readRepo("apps/web/lib/hddt-per-order.ts");
   const evening = readRepo(
-    "supabase/migrations/20260818101813_hddt_evening_immediate_issue.sql",
+    "supabase/migration-archive/20260818101813_hddt_evening_immediate_issue.sql",
   );
   const requeue = readRepo(
-    "supabase/migrations/20260818161136_hddt_backlog_submit_date.sql",
+    "supabase/migration-archive/20260818161136_hddt_backlog_submit_date.sql",
   );
   const collision = readRepo(
-    "supabase/migrations/20260818224935_hddt_uuid_collision_rebind.sql",
+    "supabase/migration-archive/20260818224935_hddt_uuid_collision_rebind.sql",
   );
 
   assert.match(helper, /allowBacklogSubmitDate === true/);
@@ -139,10 +139,10 @@ test("backlog HĐĐT drafts send the S-invoice submit instant", () => {
 
 test("buyer request submit close_reason matches queue_submitted constraint", () => {
   const submitMigration = readRepo(
-    "supabase/migrations/20260808130119_hddt_buyer_kind_invoice_payload.sql",
+    "supabase/migration-archive/20260808130119_hddt_buyer_kind_invoice_payload.sql",
   );
   const closeStateMigration = readRepo(
-    "supabase/migrations/20260811030705_hddt_buyer_request_queue_submitted_close_reason.sql",
+    "supabase/migration-archive/20260811030705_hddt_buyer_request_queue_submitted_close_reason.sql",
   );
 
   assert.match(
@@ -317,7 +317,7 @@ test("POS defers buyer details to the receipt QR; Self-Order may collect VAT inv
   );
   assert.doesNotMatch(form, /invoiceBuyer\.optional/);
   const zeroTotalMigration = readRepo(
-    "supabase/migrations/20260812105224_hddt_discount_projection_zero_total.sql",
+    "supabase/migration-archive/20260812105224_hddt_discount_projection_zero_total.sql",
   );
   assert.match(
     zeroTotalMigration,
@@ -332,7 +332,7 @@ test("POS defers buyer details to the receipt QR; Self-Order may collect VAT inv
     /RETURN jsonb_build_object\('status', 'not_required'\)/,
   );
   const buyerKindMigration = readRepo(
-    "supabase/migrations/20260808130119_hddt_buyer_kind_invoice_payload.sql",
+    "supabase/migration-archive/20260808130119_hddt_buyer_kind_invoice_payload.sql",
   );
   assert.match(buyerKindMigration, /buyerKind/);
   assert.match(

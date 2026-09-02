@@ -127,7 +127,6 @@ test("inventory mutation actions import mapInventoryRpcFailure", () => {
     "apps/web/app/(protected)/inventory/stocktake-actions.ts",
     "apps/web/app/(protected)/inventory/issue-actions.ts",
     "apps/web/app/(protected)/inventory/grn-actions.ts",
-    "apps/web/app/(protected)/inventory/stock-request-actions.ts",
     "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
     "apps/web/app/(protected)/inventory/production-run-actions.ts",
   ];
@@ -139,4 +138,11 @@ test("inventory mutation actions import mapInventoryRpcFailure", () => {
       `${file} must route RPC errors through inventory mapper helpers`,
     );
   }
+
+  const frozenYch = read(
+    "apps/web/app/(protected)/inventory/stock-request-actions.ts",
+  );
+  assert.match(frozenYch, /ychWriteFrozen/);
+  assert.doesNotMatch(frozenYch, /"save_stock_request"/);
+  assert.doesNotMatch(frozenYch, /"fulfill_stock_request_lines"/);
 });

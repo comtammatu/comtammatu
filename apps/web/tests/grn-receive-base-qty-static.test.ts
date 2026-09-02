@@ -7,17 +7,17 @@ const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 const MIGRATION =
-  "supabase/migrations/20260817122500_grn_receive_base_qty_and_excess.sql";
+  "supabase/migration-archive/20260817122500_grn_receive_base_qty_and_excess.sql";
 
 function latestPoLineImmutabilityDefinition(): {
   definition: string;
   migration: string;
 } {
-  const migrationDir = resolve(repoRoot, "supabase/migrations");
+  const migrationDir = resolve(repoRoot, "supabase/migration-archive");
   const migrations = readdirSync(migrationDir)
-    .filter((file) => file.endsWith(".sql"))
+    .filter((file) => file.endsWith(".sql") && !file.includes("baseline"))
     .sort()
-    .map((file) => ({ file, sql: read(`supabase/migrations/${file}`) }))
+    .map((file) => ({ file, sql: read(`supabase/migration-archive/${file}`) }))
     .filter(({ sql }) =>
       /CREATE(?: OR REPLACE)? FUNCTION private\.enforce_retrospective_purchase_order_line_immutability\(\)/.test(
         sql,

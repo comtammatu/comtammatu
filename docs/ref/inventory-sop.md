@@ -10,12 +10,12 @@
   Trung Tâm giữ topology trung tâm, không có cặp Kho/Bếp của chi nhánh.
 - **Mua NCC:** chỉ Kho Tổng / Bếp TT — **Tạo đơn** theo nguyên liệu (NCC trên
   từng dòng; một phiếu có thể nhiều NCC) → **một GRN** chung. Mỗi lần NCC giao,
-  chốt đúng dòng của NCC đó. Yêu cầu mua chỉ còn lịch sử.
+  chốt đúng dòng của NCC đó. Yêu cầu mua đã gỡ; Đơn mua là nguồn sự thật.
 - **Bổ sung CN:** phiếu **Điều chuyển** xin hàng (QL CN tạo nháp, chưa trừ tồn)
   → Kho Tổng / Bếp TT ship từ điểm nguồn → CN nhận. Nguồn dòng = Owner tick
   Nguồn hàng trên catalog (Kho Tổng, Bếp TT, hoặc cả hai — OD-4). Prefill
   `from` = Kho Tổng khi cả hai còn tồn; Bếp TT khi Kho Tổng = 0 và Bếp còn
-  tồn. Lịch sử Yêu cầu hàng vẫn đọc được. Checklist sẵn sàng tại
+  tồn. Yêu cầu hàng đã gỡ; xin hàng bằng Điều chuyển. Checklist sẵn sàng tại
   `/inventory/ingredients`. «Thiếu» = chưa tick kho nào, không phải hết tồn.
 - Kho trên GRN nháp ghi SL / đơn vị / **Đơn giá** net (chưa VAT) / từ chối
   (+ lý do/ảnh). PO không chứa giá thương mại.
@@ -27,7 +27,7 @@
 ### 2a. Happy path — Kho Tổng / Bếp TT
 
 1. Kho **Tạo đơn** (kho nhận + nguyên liệu; NCC trên từng dòng) trên Đơn mua.
-   Yêu cầu mua chỉ còn lịch sử.
+   Yêu cầu mua đã gỡ.
 2. Gửi đơn (`approved`). PO không nhập giá. Phân bổ YCM không còn happy path.
 3. Hệ thống **tự tạo đúng một GRN nháp** cho cả phiếu (Auto-GRN), kể cả khi
    nhiều NCC. Nút «Tạo phiếu nhập» trên PO chỉ là recovery / idempotent.
@@ -80,8 +80,8 @@ trước rồi lập phiếu liên điểm từ Kho.
    không vượt tồn nguồn.
 4. Điểm **from** ship (`stock_transfer_confirm_ship`) — QL CN chỉ ship phiếu
    xuất từ CN mình. Điểm **to** nhận.
-5. Lịch sử YCH còn đọc tại `/br/.../stock/requests/[id]` và filter YCH trên
-   hub. Không tạo YCH mới (`/requests/new` chuyển sang tạo DC).
+5. Yêu cầu hàng đã gỡ. `/br/.../stock/requests/[id]` chuyển sang Điều chuyển.
+   Không tạo YCH mới (`/requests/new` chuyển sang tạo DC).
 
 ## 4. Sản xuất và tiêu hao
 
@@ -127,4 +127,4 @@ Thu ngân chi nhánh được gán đếm tồn nước theo ca (sáng/chiều/t
 Chờ đơn giá GRN đã chốt = 0. Còn đóng **không convert:** YCM-07082026-0022
 (`partially_ordered`); YC-31072026-0001 và YC-08082026-0002 (`submitted`, DC
 đã nhận). Map NL↔NCC + NCC ưu tiên trước khi dựa Tạo đơn NL-first. Wave 4
-REVOKE ghi YCM/YCH sau soak.
+REVOKE ghi YCM/YCH rồi DROP bảng yêu cầu sau soak (Wave 5, Preview trước).

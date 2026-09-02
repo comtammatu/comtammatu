@@ -7,7 +7,7 @@ const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 test("ISS-06 owner WAC RPC is owner-only append-only Giá vốn restatement", () => {
-  const sql = read("supabase/migrations/20260820014906_owner_set_company_wac.sql");
+  const sql = read("supabase/migration-archive/20260820014906_owner_set_company_wac.sql");
 
   assert.match(sql, /auth_is_owner/);
   assert.match(sql, /owner_set_company_wac/);

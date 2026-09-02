@@ -55,22 +55,28 @@ test("YCM create is hidden and redirects to Tạo đơn", () => {
   assert.match(newPage, /PURCHASE_ORDER_CREATE_HREF/);
   assert.match(shim, /CREATE_MODES/);
   assert.match(shim, /redirect\(PURCHASE_ORDER_CREATE_HREF\)/);
-  assert.match(shim, /params\.set\("tab", "needs"\)/);
+  assert.match(shim, /redirect\("\/inventory\/purchase-orders"\)/);
+  assert.doesNotMatch(shim, /params\.set\("tab", "needs"\)/);
   assert.doesNotMatch(shim, /create-po" \? "allocate"/);
 
-  assert.match(ordersPage, /canCreateRequest=\{false\}/);
-  assert.match(ordersPage, /defaultTab = requestedTab === "needs" \? "needs" : "orders"/);
+  assert.doesNotMatch(ordersPage, /canCreateRequest/);
+  assert.doesNotMatch(ordersPage, /canAllocate=\{false\}/);
+  assert.doesNotMatch(ordersPage, /defaultTab = requestedTab === "needs"/);
+  assert.match(ordersPage, /loadPurchaseOrderRows/);
   assert.doesNotMatch(ordersPage, /hasPendingDemand/);
   assert.match(demandClient, /canCreateRequest &&/);
+  assert.match(demandClient, /canAllocate && mode === "allocate"/);
   assert.match(demandList, /canCreateRequest \? \(/);
-  assert.match(branchPage, /canCreateRequest=\{false\}/);
-  assert.match(branchPage, /mode === "create" \|\| mode === "create-po"/);
+  assert.match(branchPage, /redirect\(PURCHASE_ORDER_CREATE_HREF\)/);
+  assert.match(branchPage, /redirect\(`\/br\/\$\{branchId\}\/stock`\)/);
+  assert.doesNotMatch(branchPage, /canCreateRequest/);
   assert.match(branchPage, /PURCHASE_ORDER_CREATE_HREF/);
   assert.match(branchPage, /@lib\/inventory\/purchase-order-paths/);
   assert.match(branchClient, /canCreateRequest &&/);
 
   assert.match(actions, /export const savePurchaseDemand/);
   assert.match(actions, /export const reviewPurchaseDemand/);
+  assert.match(actions, /ycmWriteFrozen/);
   assert.doesNotMatch(actions, /REVOKE/);
 });
 

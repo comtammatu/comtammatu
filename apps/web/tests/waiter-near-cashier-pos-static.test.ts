@@ -8,10 +8,10 @@ function readRepo(path: string): string {
 }
 
 const baseMigration = readRepo(
-  "supabase/migrations/20260808092216_waiter_near_cashier_pos_grants.sql",
+  "supabase/migration-archive/20260808092216_waiter_near_cashier_pos_grants.sql",
 );
 const itemMutationMigration = readRepo(
-  "supabase/migrations/20260828203623_allow_waiter_pos_item_edit_and_void.sql",
+  "supabase/migration-archive/20260828203623_allow_waiter_pos_item_edit_and_void.sql",
 );
 
 test("waiter template adds item edit/void while keeping cashbox and close excluded", () => {

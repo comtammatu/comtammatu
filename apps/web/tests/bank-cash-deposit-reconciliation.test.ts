@@ -8,7 +8,7 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
 
 const migration = read(
-  "supabase/migrations/20260820021152_sales_branch_cash_books.sql",
+  "supabase/migration-archive/20260820021152_sales_branch_cash_books.sql",
 );
 const archived = read(
   "supabase/migration-archive/20260720130000_record_bank_transaction_cash_deposit.sql",

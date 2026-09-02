@@ -17,7 +17,7 @@ const invoiceRow = readFileSync(
 const migration = readFileSync(
   resolve(
     repoRoot,
-    "supabase/migrations/20260822170000_fix_supplier_invoice_unit_matching.sql",
+    "supabase/migration-archive/20260822170000_fix_supplier_invoice_unit_matching.sql",
   ),
   "utf8",
 );

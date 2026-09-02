@@ -106,10 +106,6 @@ export async function loadGrnDetailResult(
         po_number: string;
         status: string;
         purchase_request_id: number | null;
-        purchase_requests:
-          | { id: number; request_number: string }
-          | Array<{ id: number; request_number: string }>
-          | null;
       } | null;
     };
     lines: Array<{
@@ -160,7 +156,6 @@ export async function loadGrnDetailResult(
   const supplier = data.grn.suppliers;
   const branch = data.grn.branches;
   const purchaseOrder = data.grn.purchase_orders;
-  const purchaseRequest = relatedOne(purchaseOrder?.purchase_requests);
   const ingredients = (ingredientsResult.data ?? []) as IngredientRow[];
   const ingredientById = new Map(
     ingredients.map((ingredient) => [ingredient.id, ingredient]),
@@ -395,7 +390,7 @@ export async function loadGrnDetailResult(
     poId: data.grn.po_id ?? linkedPos[0]?.id ?? null,
     poStatus: linkedPos[0]?.status ?? purchaseOrder?.status ?? null,
     purchaseRequestId: purchaseOrder?.purchase_request_id ?? null,
-    purchaseRequestCode: purchaseRequest?.request_number ?? null,
+    purchaseRequestCode: null,
     expectedReceiveDate: data.grn.expected_receive_date
       ? formatDate(data.grn.expected_receive_date)
       : null,

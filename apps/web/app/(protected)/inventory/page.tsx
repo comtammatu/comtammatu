@@ -39,7 +39,6 @@ import { resolveRequestedBranchId } from "./_lib/inventory-scope";
 import {
   countGrnsAwaitingUnitPrice,
   countOpenGrns,
-  countOpenStockRequests,
   countOpenStockTransfers,
   countPendingWasteApprovals,
 } from "./_lib/receiving-counts";
@@ -178,7 +177,7 @@ export default async function InventoryPage({
     branchId,
   );
 
-  const [grnCount, grnPriceCount, wasteCount, requestCount, transferCount] =
+  const [grnCount, grnPriceCount, wasteCount, transferCount] =
     await Promise.all([
       flags.showProcurement
         ? settledCount(countOpenGrns(branchId ?? undefined))
@@ -187,9 +186,6 @@ export default async function InventoryPage({
         ? settledCount(countGrnsAwaitingUnitPrice(branchId ?? undefined))
         : Promise.resolve(0),
       settledCount(countPendingWasteApprovals(branchId ?? undefined)),
-      flags.showStockRequestInbox
-        ? settledCount(countOpenStockRequests(branchId ?? undefined))
-        : Promise.resolve(0),
       flags.showStockRequestInbox
         ? settledCount(countOpenStockTransfers(branchId ?? undefined))
         : Promise.resolve(0),
@@ -210,14 +206,6 @@ export default async function InventoryPage({
           label: copy.attentionGrnPrice,
           count: grnPriceCount,
           href: scopeHref("/inventory/grn", branchId),
-        }
-      : null,
-    requestCount > 0
-      ? {
-          id: "stock-requests",
-          label: copy.attentionStockRequests,
-          count: requestCount,
-          href: scopeHref("/inventory/transfers?work=request", branchId),
         }
       : null,
     transferCount > 0

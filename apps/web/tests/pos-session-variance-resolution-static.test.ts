@@ -112,7 +112,7 @@ test("Finance attention deep-links to the exact unresolved POS session", () => {
     "supabase/migration-archive/20260719225000_create_finance_attention_targets.sql",
   );
   const operatingCockpitMigration = read(
-    "supabase/migrations/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
+    "supabase/migration-archive/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
   );
 
   assert.match(cockpit, /cashVarianceSessionId/);

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 import {
@@ -731,13 +731,28 @@ test("confirmed GRN surfaces link into supplier invoice create or view", () => {
   );
 });
 
+test("legacy create_supplier_payment is revoked then dropped in the payment-write forward", () => {
+  const names = readdirSync(
+    resolve(import.meta.dirname, "../../../supabase/migrations"),
+  ).filter((name) => name.endsWith("_revoke_authenticated_payment_writes.sql"));
+  assert.equal(names.length, 1);
+  const sql = readRoot(`supabase/migrations/${names[0]!}`);
+  const actionSource = readWeb(
+    "app/(protected)/finance/supplier-invoice-actions.ts",
+  );
+
+  assert.match(sql, /DROP FUNCTION IF EXISTS public\.create_supplier_payment/);
+  assert.doesNotMatch(actionSource, /create_supplier_payment/);
+  assert.match(actionSource, /record_supplier_payment_allocated/);
+});
+
 test("supplier_invoices monetary/VAT columns are granted after column lockdown", () => {
   const migration = readRoot(
     "supabase/migration-archive/20260729150200_grant_supplier_invoices_monetary_columns.sql",
   );
   const cockpit = readWeb("app/(protected)/finance/_lib/finance-cockpit.ts");
   const operatingCockpitMigration = readRoot(
-    "supabase/migrations/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
+    "supabase/migration-archive/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
   );
 
   assert.match(

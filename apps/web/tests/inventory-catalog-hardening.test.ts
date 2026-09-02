@@ -25,7 +25,7 @@ const independentRoleMigration = readRepo(
   "supabase/migration-archive/20260801151413_independent_inventory_unit_roles.sql",
 );
 const activeUnitMigration = readRepo(
-  "supabase/migrations/20260803105716_active_ingredient_entry_units.sql",
+  "supabase/migration-archive/20260803105716_active_ingredient_entry_units.sql",
 );
 
 test("ingredient catalog tenant-scope hardening enforces new cross-tenant rows", () => {

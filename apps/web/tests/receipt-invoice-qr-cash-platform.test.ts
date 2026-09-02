@@ -7,19 +7,19 @@ const root = join(process.cwd(), "../..");
 const brokenMigration = readFileSync(
   join(
     root,
-    "supabase/migrations/20260821044052_receipt_invoice_qr_cash_platform_bind.sql",
+    "supabase/migration-archive/20260821044052_receipt_invoice_qr_cash_platform_bind.sql",
   ),
   "utf8",
 );
 const fixMigration = readFileSync(
   join(
     root,
-    "supabase/migrations/20260821123047_receipt_invoice_qr_enqueue_after_bind.sql",
+    "supabase/migration-archive/20260821123047_receipt_invoice_qr_enqueue_after_bind.sql",
   ),
   "utf8",
 ).replace(/\r\n/g, "\n");
 const baselineGuard = readFileSync(
-  join(root, "supabase/migrations/20260802162900_baseline.sql"),
+  join(root, "supabase/migrations/20260902162918_baseline.sql"),
   "utf8",
 );
 

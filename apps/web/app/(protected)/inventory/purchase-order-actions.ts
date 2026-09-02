@@ -17,6 +17,7 @@ import {
   INVENTORY_ERROR_CODES,
   procurementRpcMappings,
 } from "@lib/messages/inventory-rpc-errors";
+import { messages } from "@lib/messages";
 import type { ActionResult } from "@comtammatu/shared/types";
 
 const poIdSchema = z.object({
@@ -124,6 +125,14 @@ function mapProcurementRpcError<T = never>(
   });
 }
 
+// Frozen legacy RPC delegates: save_purchase_demand, review_purchase_demand
+function ycmWriteFrozen<T = never>(): ActionResult<T> {
+  return {
+    success: false,
+    error: messages.inventory.purchaseRequests.writeFrozen,
+  };
+}
+
 export const createPurchaseOrder = withAction(
   {
     roles: PO_CREATE_ROLES,
@@ -218,61 +227,11 @@ export const savePurchaseDemand = withAction(
     schema: savePurchaseDemandSchema,
     permission: PERMISSION_KEYS.PROCUREMENT_REQUEST_MANAGE,
   },
-  async (
-    {
-      demandId,
-      branchId,
-      neededBy,
-      notes,
-      lines,
-      submit,
-      idempotencyKey,
-    },
-    { supabase },
-  ) => {
-    const { data, error } = await supabase.rpc(
-      "save_purchase_demand" as never,
-      {
-        p_demand_id: demandId ?? null,
-        p_branch_id: branchId,
-        p_needed_by: neededBy ?? null,
-        p_notes: notes ?? "",
-        p_lines: lines.map((line) => ({
-          ingredient_id: line.ingredientId,
-          quantity: line.quantity,
-          entry_unit_id: line.entryUnitId,
-          notes: "",
-        })),
-        p_submit: submit,
-        p_idempotency_key: idempotencyKey ?? null,
-      } as never,
-    );
-    if (error) {
-      return mapProcurementRpcError(error, "Không thể lưu nhu cầu mua.");
-    }
-    const parsed = z
-      .object({
-        demand_id: z.coerce.number().int().positive(),
-        demand_number: z.string(),
-        status: z.enum(["draft", "pending_allocation"]),
-      })
-      .safeParse(data);
-    if (!parsed.success) {
-      return {
-        success: false,
-        error: "Phản hồi lưu nhu cầu mua không hợp lệ.",
-      };
-    }
-    revalidateSurfacePath("/inventory/purchase-orders");
-    return {
-      success: true,
-      data: {
-        id: parsed.data.demand_id,
-        code: parsed.data.demand_number,
-        status: parsed.data.status,
-      },
-    };
-  },
+  async () => ycmWriteFrozen<{
+    id: number;
+    code: string;
+    status: "draft" | "pending_allocation";
+  }>(),
 );
 
 export const savePurchaseDemandAllocations = withAction(
@@ -281,25 +240,7 @@ export const savePurchaseDemandAllocations = withAction(
     schema: savePurchaseDemandAllocationsSchema,
     permission: PERMISSION_KEYS.PROCUREMENT_PO_APPROVE,
   },
-  async ({ demandId, allocations, idempotencyKey }, { supabase }) => {
-    const { error } = await supabase.rpc(
-      "save_purchase_demand_allocations" as never,
-      {
-        p_demand_id: demandId,
-        p_allocations: allocations.map((allocation) => ({
-          request_item_id: allocation.requestItemId,
-          supplier_id: allocation.supplierId,
-          quantity: allocation.quantity,
-        })),
-        p_idempotency_key: idempotencyKey,
-      } as never,
-    );
-    if (error) {
-      return mapProcurementRpcError(error, "Không thể lưu phân bổ NCC.");
-    }
-    revalidateSurfacePath("/inventory/purchase-orders");
-    return { success: true };
-  },
+  async () => ycmWriteFrozen(),
 );
 
 export const reviewPurchaseDemand = withAction(
@@ -308,67 +249,16 @@ export const reviewPurchaseDemand = withAction(
     schema: reviewPurchaseDemandSchema,
     permission: PERMISSION_KEYS.PROCUREMENT_PO_APPROVE,
   },
-  async (
-    { demandId, action, allocations, reason, idempotencyKey },
-    { supabase },
-  ) => {
-    const { data, error } = await supabase.rpc(
-      "review_purchase_demand" as never,
-      {
-        p_demand_id: demandId,
-        p_action: action,
-        p_allocations:
-          allocations?.map((allocation) => ({
-            request_item_id: allocation.requestItemId,
-            supplier_id: allocation.supplierId,
-            quantity: allocation.quantity,
-          })) ?? null,
-        p_reason: reason ?? null,
-        p_idempotency_key: idempotencyKey ?? null,
-      } as never,
-    );
-    if (error) {
-      return mapProcurementRpcError(error, "Không thể xử lý nhu cầu mua.");
-    }
-    const parsed = z
-      .object({
-        demand_id: z.coerce.number().int().positive(),
-        status: z.string(),
-        purchase_group_key: z.string().uuid().optional(),
-        purchase_group_code: z.string().optional(),
-        purchase_orders: z
-          .array(
-            z.object({
-              po_id: z.coerce.number().int().positive(),
-              po_number: z.string(),
-              supplier_id: z.coerce.number().int().positive(),
-              status: z.string(),
-            }),
-          )
-          .optional(),
-      })
-      .safeParse(data);
-    if (!parsed.success) {
-      return {
-        success: false,
-        error: "Phản hồi xử lý nhu cầu mua không hợp lệ.",
-      };
-    }
-    revalidateSurfacePath("/inventory/purchase-orders");
-    revalidateSurfacePath("/inventory/grn");
-    return {
-      success: true,
-      data: {
-        status: parsed.data.status,
-        purchaseOrders: (parsed.data.purchase_orders ?? []).map((order) => ({
-          id: order.po_id,
-          code: order.po_number,
-          supplierId: order.supplier_id,
-          status: order.status,
-        })),
-      },
-    };
-  },
+  async () =>
+    ycmWriteFrozen<{
+      status: string;
+      purchaseOrders: Array<{
+        id: number;
+        code: string;
+        supplierId: number;
+        status: string;
+      }>;
+    }>(),
 );
 
 export const cancelPurchaseRequest = withAction(
@@ -377,20 +267,7 @@ export const cancelPurchaseRequest = withAction(
     schema: purchaseRequestReasonSchema,
     permission: PERMISSION_KEYS.PROCUREMENT_REQUEST_MANAGE,
   },
-  async ({ requestId, reason }, { supabase }) => {
-    const { error } = await supabase.rpc(
-      "cancel_purchase_request" as never,
-      {
-        p_request_id: requestId,
-        p_reason: reason,
-      } as never,
-    );
-    if (error) {
-      return mapProcurementRpcError(error, "Không thể hủy yêu cầu mua.");
-    }
-    revalidateSurfacePath("/inventory/purchase-orders");
-    return { success: true };
-  },
+  async () => ycmWriteFrozen(),
 );
 
 export const closePurchaseRequest = withAction(
@@ -399,20 +276,7 @@ export const closePurchaseRequest = withAction(
     schema: purchaseRequestReasonSchema,
     permission: PERMISSION_KEYS.PROCUREMENT_PO_APPROVE,
   },
-  async ({ requestId, reason }, { supabase }) => {
-    const { error } = await supabase.rpc(
-      "close_purchase_request" as never,
-      {
-        p_request_id: requestId,
-        p_reason: reason,
-      } as never,
-    );
-    if (error) {
-      return mapProcurementRpcError(error, "Không thể đóng yêu cầu mua.");
-    }
-    revalidateSurfacePath("/inventory/purchase-orders");
-    return { success: true };
-  },
+  async () => ycmWriteFrozen(),
 );
 
 export const createGrnDraftFromPurchaseOrder = withAction(

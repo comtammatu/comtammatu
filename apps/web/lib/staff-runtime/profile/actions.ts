@@ -50,6 +50,8 @@ function isAvatarMime(mime: string): mime is keyof typeof AVATAR_MIME_TO_EXT {
 }
 
 function revalidateProfilePath(branchId?: number | null) {
+  revalidatePath("/me");
+  revalidatePath("/me/profile");
   revalidatePath("/br");
   if (typeof branchId === "number") revalidatePath(`/br/${branchId}/profile`);
 }
@@ -141,3 +143,123 @@ export async function uploadMyAvatar(
   revalidateProfilePath(branchId);
   return { success: true, data: { avatarUrl: publicUrl } };
 }
+
+const changePasswordSchema = z.object({
+  newPassword: z
+    .string()
+    .min(8, { error: messages.employee.profile.passwordMinLength }),
+  branchId: z.number().int().positive().nullable().optional(),
+});
+
+export type ChangeMyPasswordInput = z.infer<typeof changePasswordSchema>;
+
+export async function changeMyPassword(
+  input: ChangeMyPasswordInput,
+): Promise<ActionResult> {
+  const parsed = changePasswordSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Mật khẩu không hợp lệ",
+    };
+  }
+
+  const { userId } = await loadAuthState();
+  if (!userId) {
+    return { success: false, error: "Chưa đăng nhập" };
+  }
+
+  const service = createServiceClient();
+  const { error } = await service.auth.admin.updateUserById(userId, {
+    password: parsed.data.newPassword,
+  });
+
+  if (error) {
+    console.error("[profile/actions:changeMyPassword] Auth error:", error);
+    return { success: false, error: "Không thể đổi mật khẩu" };
+  }
+
+  revalidateProfilePath(parsed.data.branchId);
+  return { success: true };
+}
+
+const bankInfoSchema = z.object({
+  bankAccount: optionalText,
+  bankName: optionalText,
+  idNumber: optionalText,
+  branchId: z.number().int().positive().nullable().optional(),
+});
+
+export type UpdateMyBankInfoInput = z.infer<typeof bankInfoSchema>;
+
+export async function updateMyBankInfo(
+  input: UpdateMyBankInfoInput,
+): Promise<ActionResult> {
+  const parsed = bankInfoSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+
+  const { claims, userId } = await loadAuthState();
+  if (!userId) {
+    return { success: false, error: "Chưa đăng nhập" };
+  }
+
+  const service = createServiceClient();
+  const { error } = await service
+    .from("employees")
+    .update({
+      bank_account: parsed.data.bankAccount || null,
+      bank_name: parsed.data.bankName || null,
+      id_number: parsed.data.idNumber || null,
+    })
+    .eq("profile_id", userId)
+    .eq("tenant_id", claims.tenant_id);
+
+  if (error) {
+    console.error("[profile/actions:updateMyBankInfo] DB error:", error);
+    return { success: false, error: "Không thể cập nhật thông tin ngân hàng" };
+  }
+
+  revalidateProfilePath(parsed.data.branchId);
+  return { success: true };
+}
+
+export async function getMyBankInfo(): Promise<
+  ActionResult<{
+    bankAccount: string | null;
+    bankName: string | null;
+    idNumber: string | null;
+  }>
+> {
+  const { claims, userId } = await loadAuthState();
+  if (!userId) {
+    return { success: false, error: "Chưa đăng nhập" };
+  }
+
+  const service = createServiceClient();
+  const { data, error } = await service
+    .from("employees")
+    .select("bank_account, bank_name, id_number")
+    .eq("profile_id", userId)
+    .eq("tenant_id", claims.tenant_id)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[profile/actions:getMyBankInfo] DB error:", error);
+    return { success: false, error: "Không đọc được thông tin ngân hàng" };
+  }
+
+  return {
+    success: true,
+    data: {
+      bankAccount: data?.bank_account ?? null,
+      bankName: data?.bank_name ?? null,
+      idNumber: data?.id_number ?? null,
+    },
+  };
+}
+

@@ -143,7 +143,7 @@ test("Branch roster protects unsaved work and reports load failures", () => {
 
 test("ADR 0019 Phase B migration enables multi-shift roster constraints", () => {
   const migration = read(
-    "supabase/migrations/20260812220000_hrm_multi_shift_roster_and_clock_in.sql",
+    "supabase/migration-archive/20260812220000_hrm_multi_shift_roster_and_clock_in.sql",
   );
 
   assert.match(migration, /shift_assignments_one_per_employee_day/);
@@ -160,7 +160,7 @@ test("ADR 0019 Phase B migration enables multi-shift roster constraints", () => 
 
 test("recurring materialize conflict target includes shift_id", () => {
   const followUp = read(
-    "supabase/migrations/20260813000701_hrm_materialize_shift_assignments_on_conflict.sql",
+    "supabase/migration-archive/20260813000701_hrm_materialize_shift_assignments_on_conflict.sql",
   );
   assert.match(
     followUp,
@@ -170,7 +170,7 @@ test("recurring materialize conflict target includes shift_id", () => {
 
 test("standardize shifts migration defines 3 operations shifts and 2 guard shifts", () => {
   const migration = read(
-    "supabase/migrations/20260829140000_standardize_branch_shifts_catalog.sql",
+    "supabase/migration-archive/20260829140000_standardize_branch_shifts_catalog.sql",
   );
 
   assert.match(migration, /'Ca Sáng', '06:00:00', '14:00:00'/);
@@ -184,7 +184,7 @@ test("standardize shifts migration defines 3 operations shifts and 2 guard shift
 
 test("guard shift repair maps legacy assignments and restores recurring schedules", () => {
   const migration = read(
-    "supabase/migrations/20260829201214_repair_guard_shift_assignments.sql",
+    "supabase/migration-archive/20260829201214_repair_guard_shift_assignments.sql",
   );
 
   assert.match(migration, /WHEN 'Bảo vệ Ca sáng' THEN 'Ca Bảo vệ Ngày'/);

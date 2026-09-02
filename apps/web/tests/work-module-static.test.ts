@@ -162,7 +162,7 @@ test("Work DETAIL uses StatusBadge work-task domain", () => {
 
 test("Work membership admin RPCs are in migration", () => {
   const membershipMigration = readRepo(
-    "supabase/migrations/20260812140000_work_department_membership_admin.sql",
+    "supabase/migration-archive/20260812140000_work_department_membership_admin.sql",
   );
   assert.match(membershipMigration, /upsert_work_department_member/);
   assert.match(membershipMigration, /set_work_department_member_role/);
@@ -170,7 +170,7 @@ test("Work membership admin RPCs are in migration", () => {
   assert.match(membershipMigration, /can_manage_work_membership/);
 
   const departmentMigration = readRepo(
-    "supabase/migrations/20260812160000_work_department_admin.sql",
+    "supabase/migration-archive/20260812160000_work_department_admin.sql",
   );
   assert.match(departmentMigration, /upsert_work_department/);
   assert.match(departmentMigration, /deactivate_work_department/);

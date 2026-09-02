@@ -13,6 +13,7 @@ export type SourceSiteWacRow = {
   ingredientId: number;
   branchKind: string | null | undefined;
   avgUnitCost: number | string | null;
+  currentQuantity?: number | string | null;
 };
 
 /**
@@ -91,26 +92,56 @@ export function menuRecipeSourceWacKey(
 }
 
 /**
- * Company WAC per ingredient (ADR 0040). Averages every positive
- * `avg_unit_cost` across stock-bearing sites — Kho Tổng, Bếp TT, and CN.
+ * Company WAC per ingredient (ADR 0040). Computes quantity-weighted average
+ * cost across stock-bearing sites holding positive stock, falling back to
+ * unweighted average when site quantities are omitted or zero.
  */
 export function buildCompanyWacMap(
   rows: readonly SourceSiteWacRow[],
 ): Record<number, number> {
-  const accum = new Map<number, { sum: number; count: number }>();
+  const accum = new Map<
+    number,
+    {
+      weightedValueSum: number;
+      positiveQtySum: number;
+      costSum: number;
+      costCount: number;
+    }
+  >();
+
   for (const row of rows) {
     const cost = Number(row.avgUnitCost);
     if (!isPositiveUnitCost(cost)) continue;
     const id = Number(row.ingredientId);
     if (!Number.isFinite(id) || id <= 0) continue;
-    const entry = accum.get(id) ?? { sum: 0, count: 0 };
-    entry.sum += cost;
-    entry.count += 1;
+
+    const entry = accum.get(id) ?? {
+      weightedValueSum: 0,
+      positiveQtySum: 0,
+      costSum: 0,
+      costCount: 0,
+    };
+
+    entry.costSum += cost;
+    entry.costCount += 1;
+
+    const qty =
+      row.currentQuantity != null ? Number(row.currentQuantity) : null;
+    if (qty != null && Number.isFinite(qty) && qty > 0) {
+      entry.weightedValueSum += cost * qty;
+      entry.positiveQtySum += qty;
+    }
+
     accum.set(id, entry);
   }
+
   const map: Record<number, number> = {};
   for (const [id, entry] of accum) {
-    map[id] = entry.sum / entry.count;
+    if (entry.positiveQtySum > 0) {
+      map[id] = entry.weightedValueSum / entry.positiveQtySum;
+    } else if (entry.costCount > 0) {
+      map[id] = entry.costSum / entry.costCount;
+    }
   }
   return map;
 }

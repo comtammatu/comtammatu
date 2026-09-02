@@ -5,16 +5,16 @@ import { test } from "node:test";
 
 const repoRoot = resolve(
   process.cwd(),
-  existsSync(resolve(process.cwd(), "supabase/migrations")) ? "." : "../..",
+  existsSync(resolve(process.cwd(), "supabase/migration-archive")) ? "." : "../..",
 );
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 function splitMigration(): string {
-  const migration = readdirSync(resolve(repoRoot, "supabase/migrations")).find(
+  const migration = readdirSync(resolve(repoRoot, "supabase/migration-archive")).find(
     (name) => name.endsWith("_branch_kitchen_inventory_split.sql"),
   );
   assert.ok(migration, "branch kitchen inventory split migration is missing");
-  return read(`supabase/migrations/${migration}`);
+  return read(`supabase/migration-archive/${migration}`);
 }
 
 test("branch kitchen split schema preserves historical locations and snapshots consumption", () => {

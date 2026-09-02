@@ -317,46 +317,15 @@ export const createReorderDraftDemandsAction = withAction(
         item.supplyChannel !== "intra_site_transfer",
     );
 
-    let createdPurchaseDemandCount = 0;
     let createdStockRequestCount = 0;
 
-    // Create purchase demand draft if there are supplier items
+    // Wave 4 froze authenticated YCM writes. Warehouse "Tạo đơn" is the live
+    // PO path; Smart Reorder must not pretend a supplier demand write still works.
     if (supplierItems.length > 0) {
-      const { data: demandId, error: poError } = await (
-        supabase.rpc as unknown as (
-          fn: string,
-          args: {
-            p_branch_id: number;
-            p_needed_by: string | null;
-            p_notes: string;
-            p_lines: Array<{
-              ingredient_id: number;
-              quantity: number;
-              entry_unit_id: number;
-            }>;
-            p_submit: boolean;
-            p_idempotency_key: string;
-          },
-        ) => Promise<{
-          data: string | number | null;
-          error: { message: string } | null;
-        }>
-      )("save_purchase_demand", {
-        p_branch_id: data.branchId,
-        p_needed_by: null,
-        p_notes: "Gợi ý tự động từ định mức an toàn kho (Smart Reorder)",
-        p_lines: supplierItems.map((item) => ({
-          ingredient_id: item.ingredientId,
-          quantity: item.quantity,
-          entry_unit_id: item.entryUnitId,
-        })),
-        p_submit: false,
-        p_idempotency_key: crypto.randomUUID(),
-      });
-
-      if (!poError && demandId) {
-        createdPurchaseDemandCount += 1;
-      }
+      return {
+        success: false,
+        error: "Không thể tạo đề xuất. Vui lòng thử lại.",
+      };
     }
 
     if (internalItems.length > 0) {
@@ -416,7 +385,7 @@ export const createReorderDraftDemandsAction = withAction(
     return {
       success: true,
       data: {
-        createdPurchaseDemandCount,
+        createdPurchaseDemandCount: 0,
         createdStockRequestCount,
       },
     };

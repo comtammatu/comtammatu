@@ -7,7 +7,7 @@ const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 const WAVE3_MIGRATION =
-  "supabase/migrations/20260820030125_dest_dc_and_fulfill_sites.sql";
+  "supabase/migration-archive/20260820030125_dest_dc_and_fulfill_sites.sql";
 
 test("YCH create is hidden and redirects to dest-initiated DC", () => {
   const branchNew = read(

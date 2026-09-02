@@ -47,9 +47,10 @@ function extractLatestSqlFunction(source: string, functionName: string): string 
   const start = Math.max(...markers.map((marker) => source.lastIndexOf(marker)));
   assert.notEqual(start, -1, `Missing SQL function ${functionName}`);
 
-  const end = source.indexOf("\n$$;", start);
-  assert.notEqual(end, -1, `Unterminated SQL function ${functionName}`);
-  return source.slice(start, end + 4);
+  const slice = source.slice(start);
+  const match = slice.match(/\n(\$[a-zA-Z0-9_]*\$);/);
+  assert.ok(match && match.index !== undefined, `Unterminated SQL function ${functionName}`);
+  return slice.slice(0, match.index + match[0].length);
 }
 
 test("bank reconciliation index alignment is replay-safe", () => {
@@ -703,7 +704,7 @@ test("Owner replay of signed SePay evidence is exact, atomic, and audited", () =
 
   assert.match(
     replayFunction,
-    /CREATE OR REPLACE FUNCTION public\.replay_signed_sepay_payment_evidence/,
+    /CREATE (?:OR REPLACE )?FUNCTION public\.replay_signed_sepay_payment_evidence/,
   );
   assert.match(replayFunction, /auth\.role\(\) IS DISTINCT FROM 'service_role'/);
   assert.match(replayFunction, /v_event\.signature_valid/);
@@ -1255,7 +1256,7 @@ test("searchSepayRefundOptions uses FINANCE_VIEW permission key", () => {
 
 test("bank reconciliation migration supports unpaid expenses and accountant replay", () => {
   const migration = read(
-    "supabase/migrations/20260831210000_fix_bank_reconciliation_unpaid_and_accountant_replay.sql",
+    "supabase/migration-archive/20260831210000_fix_bank_reconciliation_unpaid_and_accountant_replay.sql",
   );
   assert.match(
     migration,

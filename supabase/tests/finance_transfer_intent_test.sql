@@ -175,7 +175,7 @@ BEGIN
       'public.create_expense_transfer_intent(bigint,date,text,jsonb,text,text,text)',
       'EXECUTE'
     )
-    OR NOT has_function_privilege(
+    OR has_function_privilege(
       'authenticated',
       'public.create_expense_transfer_intent(bigint,date,text,jsonb,text,text,text)',
       'EXECUTE'

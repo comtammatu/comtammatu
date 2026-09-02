@@ -8,13 +8,13 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 test("ADR 0040 PO lines carry supplier_id and confirm books one NCC on a shared GRN", () => {
   const sql = read(
-    "supabase/migrations/20260820122811_po_line_supplier_shared_grn.sql",
+    "supabase/migration-archive/20260820122811_po_line_supplier_shared_grn.sql",
   );
   const proof = read(
     "supabase/tests/multi_supplier_po_shared_grn_test.sql",
   );
   const wave4 = read(
-    "supabase/migrations/20260820123758_wave4_revoke_ycm_ych_write.sql",
+    "supabase/migration-archive/20260820123758_wave4_revoke_ycm_ych_write.sql",
   );
 
   assert.match(sql, /purchase_order_items[\s\S]*supplier_id bigint/);

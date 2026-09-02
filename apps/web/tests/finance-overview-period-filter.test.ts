@@ -95,7 +95,7 @@ describe("Finance overview period filter", () => {
     assert.match(cockpit, /get_finance_startup_capital_summary/);
     const startupCapitalMigration = readFileSync(
       new URL(
-        "../../../supabase/migrations/20260824013553_finance_startup_capital_summary_rpc.sql",
+        "../../../supabase/migration-archive/20260824013553_finance_startup_capital_summary_rpc.sql",
         import.meta.url,
       ),
       "utf8",
@@ -107,7 +107,7 @@ describe("Finance overview period filter", () => {
     assert.match(cockpit, /get_finance_operating_cockpit/);
     const operatingCockpitMigration = readFileSync(
       new URL(
-        "../../../supabase/migrations/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
+        "../../../supabase/migration-archive/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
         import.meta.url,
       ),
       "utf8",

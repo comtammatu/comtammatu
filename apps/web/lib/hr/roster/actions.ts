@@ -560,3 +560,52 @@ export async function loadRosterWeekForPage(
   }
   return payload;
 }
+
+export async function assignEmployeeInitialShift(options: {
+  employeeId: number;
+  branchId: number | null;
+  shiftId: number;
+  tenantId: number;
+}) {
+  const service = createServiceClient();
+  const today = getVNDateString();
+  return service
+    .from("shift_assignments")
+    .upsert(
+      {
+        tenant_id: options.tenantId,
+        branch_id: options.branchId,
+        employee_id: options.employeeId,
+        work_date: today,
+        shift_id: options.shiftId,
+      },
+      { onConflict: "employee_id,work_date" },
+    );
+}
+
+export async function deleteEmployeeFutureShiftAssignments(options: {
+  employeeId: number;
+  fromDate: string;
+  tenantId: number;
+}) {
+  const service = createServiceClient();
+  return service
+    .from("shift_assignments")
+    .delete()
+    .eq("tenant_id", options.tenantId)
+    .eq("employee_id", options.employeeId)
+    .gte("work_date", options.fromDate);
+}
+
+export async function deleteEmployeeAllShiftAssignments(options: {
+  employeeId: number;
+  tenantId: number;
+}) {
+  const service = createServiceClient();
+  return service
+    .from("shift_assignments")
+    .delete()
+    .eq("tenant_id", options.tenantId)
+    .eq("employee_id", options.employeeId);
+}
+

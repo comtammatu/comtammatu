@@ -8,10 +8,10 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 test("ISS-05 owner patch RPC is owner-only append-only GRN price repair", () => {
   const sql = read(
-    "supabase/migrations/20260819173021_owner_patch_confirmed_grn_unit_cost.sql",
+    "supabase/migration-archive/20260819173021_owner_patch_confirmed_grn_unit_cost.sql",
   );
   const booked = read(
-    "supabase/migrations/20260820014701_owner_patch_confirmed_grn_booked_value.sql",
+    "supabase/migration-archive/20260820014701_owner_patch_confirmed_grn_booked_value.sql",
   );
 
   assert.match(sql, /auth_is_owner/);

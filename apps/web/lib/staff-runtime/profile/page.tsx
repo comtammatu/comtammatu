@@ -31,7 +31,13 @@ import {
   EmployeePanel,
 } from "../components/staff-runtime-page";
 import { getEmployeeContext } from "../_lib/staff-runtime-context";
-import { ProfileAvatarAction, ProfileEditAction } from "./profile-actions";
+import {
+  ProfileAvatarAction,
+  ProfileBankAction,
+  ProfileEditAction,
+  ProfileSecurityAction,
+} from "./profile-actions";
+import { ProfilePreferencesSection } from "./profile-preferences-section";
 
 const employeeCopy = messages.employee;
 const copy = employeeCopy.profile;
@@ -212,7 +218,7 @@ export async function StaffProfilePageContent({
               </div>
             </div>
 
-            <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               <ProfileAvatarAction
                 branchId={effectiveBranchId}
                 buttonSize="touch"
@@ -226,6 +232,18 @@ export async function StaffProfilePageContent({
                 className="w-full sm:w-auto"
                 triggerLabel={copy.editProfileShort}
                 defaultValues={profileEditDefaults}
+              />
+              <ProfileBankAction
+                branchId={effectiveBranchId}
+                buttonSize="touch"
+                buttonVariant="outline"
+                className="w-full sm:w-auto"
+              />
+              <ProfileSecurityAction
+                branchId={effectiveBranchId}
+                buttonSize="touch"
+                buttonVariant="outline"
+                className="w-full sm:w-auto"
               />
             </div>
 
@@ -287,6 +305,10 @@ export async function StaffProfilePageContent({
           links={personalToolsLinks}
         />
 
+        <BranchOperatorPanel>
+          <ProfilePreferencesSection />
+        </BranchOperatorPanel>
+
         <BranchOperatorActionBar align="end">
           {signOutAction}
         </BranchOperatorActionBar>
@@ -333,14 +355,26 @@ export async function StaffProfilePageContent({
               </p>
             </div>
 
-            <ProfileEditAction
-              branchId={effectiveBranchId}
-              buttonSize="sm"
-              buttonVariant="outline"
-              className="justify-self-end"
-              triggerLabel={copy.editProfileShort}
-              defaultValues={profileEditDefaults}
-            />
+            <div className="flex items-center gap-1.5 justify-self-end">
+              <ProfileBankAction
+                branchId={effectiveBranchId}
+                buttonSize="sm"
+                buttonVariant="outline"
+              />
+              <ProfileSecurityAction
+                branchId={effectiveBranchId}
+                buttonSize="sm"
+                buttonVariant="outline"
+              />
+              <ProfileEditAction
+                branchId={effectiveBranchId}
+                buttonSize="sm"
+                buttonVariant="outline"
+                className="justify-self-end"
+                triggerLabel={copy.editProfileShort}
+                defaultValues={profileEditDefaults}
+              />
+            </div>
           </div>
 
           <div className="grid gap-2 border-t border-border/60 pt-3 text-sm">
@@ -429,6 +463,10 @@ export async function StaffProfilePageContent({
         columns={2}
         links={personalToolsLinks}
       />
+
+      <EmployeePanel>
+        <ProfilePreferencesSection />
+      </EmployeePanel>
 
       <EmployeeActionBar align="end">{signOutAction}</EmployeeActionBar>
     </EmployeePage>

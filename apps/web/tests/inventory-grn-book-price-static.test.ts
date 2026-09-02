@@ -8,7 +8,7 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 test("ADR 0040 GRN book price migration drops PO estimates and stops invoice reprice", () => {
   const sql = read(
-    "supabase/migrations/20260818121714_grn_book_unit_price_drop_po_est.sql",
+    "supabase/migration-archive/20260818121714_grn_book_unit_price_drop_po_est.sql",
   );
 
   assert.match(sql, /GRANT SELECT \(unit_cost, total_cost\)/);
@@ -39,7 +39,7 @@ test("ADR 0040 GRN book price migration drops PO estimates and stops invoice rep
 
 test("ADR 0040 auto-GRN drafts stay unpriced until warehouse books unit cost", () => {
   const sql = read(
-    "supabase/migrations/20260818221612_grn_draft_unpriced_until_warehouse_books.sql",
+    "supabase/migration-archive/20260818221612_grn_draft_unpriced_until_warehouse_books.sql",
   );
   const proof = read("supabase/tests/grn_book_unit_price_test.sql");
   const demandProof = read(

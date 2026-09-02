@@ -7,7 +7,7 @@ const repoRoot = resolve(import.meta.dirname, "..", "..", "..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 const MIGRATION =
-  "supabase/migrations/20260824004731_restore_production_output_valuation_lineage.sql";
+  "supabase/migration-archive/20260824004731_restore_production_output_valuation_lineage.sql";
 
 test("ADR 0044 keeps a dedicated production_output valuation branch", () => {
   const sql = read(MIGRATION);

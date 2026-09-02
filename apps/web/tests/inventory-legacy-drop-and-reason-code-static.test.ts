@@ -9,7 +9,7 @@ test("drop transfer legacy migration inlines wrappers before DROP", () => {
   const sql = readFileSync(
     join(
       root,
-      "supabase/migrations/20260810022022_drop_transfer_legacy_and_consume_stock_orphans.sql",
+      "supabase/migration-archive/20260810022022_drop_transfer_legacy_and_consume_stock_orphans.sql",
     ),
     "utf8",
   );
@@ -31,7 +31,7 @@ test("stocktake variance reason_code migration shares waste enum", () => {
   const sql = readFileSync(
     join(
       root,
-      "supabase/migrations/20260810022059_stocktake_variance_reason_code.sql",
+      "supabase/migration-archive/20260810022059_stocktake_variance_reason_code.sql",
     ),
     "utf8",
   );

@@ -124,7 +124,7 @@ test("branch menu-limit management remains on the manager day-control surface", 
   const dropMigration = readFileSync(
     join(
       process.cwd(),
-      "../../supabase/migrations/20260810013620_drop_menu_item_stock_exception_rpc.sql",
+      "../../supabase/migration-archive/20260810013620_drop_menu_item_stock_exception_rpc.sql",
     ),
     "utf8",
   );

@@ -36,7 +36,7 @@ test("count slip action rejects self-review before calling the database RPC", ()
     "apps/web/app/(protected)/inventory/count-slips/actions.ts",
   );
   const migration = read(
-    "supabase/migrations/20260826163516_inventory_role_count_and_snapshot_decouple.sql",
+    "supabase/migration-archive/20260826163516_inventory_role_count_and_snapshot_decouple.sql",
   );
 
   assert.match(action, /resolveCountSlipReviewerEmployeeId/);

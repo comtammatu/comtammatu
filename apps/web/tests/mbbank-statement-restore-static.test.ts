@@ -15,10 +15,10 @@ import {
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
 const migration = read(
-  "supabase/migrations/20260817204635_restore_bank_ledger_from_mbbank_statement.sql",
+  "supabase/migration-archive/20260817204635_restore_bank_ledger_from_mbbank_statement.sql",
 );
 const openingMigration = read(
-  "supabase/migrations/20260817211739_finance_funds_repoint_opening_effective_at.sql",
+  "supabase/migration-archive/20260817211739_finance_funds_repoint_opening_effective_at.sql",
 );
 const webhookCutoff = Date.parse("2026-08-08T07:50:00.000Z");
 

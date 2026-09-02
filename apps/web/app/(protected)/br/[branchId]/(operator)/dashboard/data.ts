@@ -27,7 +27,7 @@ export interface BranchQueueCounts {
  *
  * Leave/checkout review RPCs only allow `branch_kind = 'branch'`; for
  * central sites skip those RPCs and leave the fields null (no queue row).
- * Open YCH counts are store-branch only (requester = this branch).
+ * Open YCH counts are retired after Wave 5; inbound DC remains.
  */
 export const fetchBranchQueueCounts = cache(
   async function fetchBranchQueueCounts(
@@ -61,7 +61,6 @@ export const fetchBranchQueueCounts = cache(
       countPermission,
       wastePermission,
       transferPermission,
-      requestPermission,
     ] = await Promise.all([
       isStoreBranch
         ? supabase.rpc("has_permission", {
@@ -87,12 +86,6 @@ export const fetchBranchQueueCounts = cache(
         p_branch_id: branchId,
         p_key: PERMISSION_KEYS.INVENTORY_TRANSFER_RECEIVE,
       }),
-      isStoreBranch
-        ? supabase.rpc("has_permission", {
-            p_branch_id: branchId,
-            p_key: PERMISSION_KEYS.INVENTORY_REQUEST_CREATE,
-          })
-        : Promise.resolve({ data: false as boolean | null }),
     ]);
     const reviewerEmployeeId = await reviewerEmployeeIdPromise;
     let countSlipsQuery = supabase
@@ -110,7 +103,6 @@ export const fetchBranchQueueCounts = cache(
       countRes,
       wasteRes,
       inboundTransferRes,
-      openStockRequestRes,
       voidRes,
       outOfStockRes,
     ] = await Promise.all([
@@ -143,14 +135,6 @@ export const fetchBranchQueueCounts = cache(
             .eq("tenant_id", claims.tenant_id)
             .eq("to_branch_id", branchId)
             .in("status", [...STOCK_FULFILLMENT_RECEIVE_READY_STATUSES])
-        : Promise.resolve(null),
-      requestPermission.data === true
-        ? supabase
-            .from("stock_requests")
-            .select("id", { count: "exact", head: true })
-            .eq("tenant_id", claims.tenant_id)
-            .eq("branch_id", branchId)
-            .in("status", ["draft", "submitted"])
         : Promise.resolve(null),
       canSeeVoids
         ? supabase
@@ -185,9 +169,7 @@ export const fetchBranchQueueCounts = cache(
       inboundTransfers: inboundTransferRes
         ? (inboundTransferRes.count ?? 0)
         : null,
-      openStockRequests: openStockRequestRes
-        ? (openStockRequestRes.count ?? 0)
-        : null,
+      openStockRequests: null,
       pendingVoids: voidRes ? (voidRes.count ?? 0) : null,
       outOfStockAlerts: outOfStockRes ? (outOfStockRes.count ?? 0) : null,
     };

@@ -56,7 +56,7 @@ test("finance valuation surfaces do not fall back to mutable reference cost", ()
   const foodCost = readWeb("app/_lib/food-cost-actions.ts");
   const actualFoodCost = readWeb("app/(protected)/finance/expense-actions.ts");
   const foodCostMigration = readRoot(
-    "supabase/migrations/20260820151656_finance_food_cost_recorded.sql",
+    "supabase/migration-archive/20260820151656_finance_food_cost_recorded.sql",
   );
 
   assert.match(cockpit, /costReadable: cockpit\.foodCost\.valuationActive/);

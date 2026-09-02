@@ -14,7 +14,7 @@ const root = process.cwd().replaceAll("\\", "/").includes("apps/web")
 const read = (path: string) => readFileSync(join(root, path), "utf8");
 
 const migration = read(
-  "supabase/migrations/20260822140500_fix_confirm_grn_overload_and_zero_qty_valuation.sql",
+  "supabase/migration-archive/20260822140500_fix_confirm_grn_overload_and_zero_qty_valuation.sql",
 );
 
 test("migration explicitly drops legacy 1-arg confirm_goods_receipt_note(bigint)", () => {

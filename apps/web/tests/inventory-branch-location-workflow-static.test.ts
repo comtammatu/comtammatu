@@ -62,7 +62,7 @@ test("Kho-Bếp controls expose threshold setup and atomic intra-site transfer",
 });
 
 test("every store branch owns mandatory Kho and Bếp locations", () => {
-  const migrationsDir = resolve(process.cwd(), "../../supabase/migrations");
+  const migrationsDir = resolve(process.cwd(), "../../supabase/migration-archive");
   const migrationName = readdirSync(migrationsDir).find((name) =>
     name.endsWith("_make_branch_warehouse_kitchen_topology_mandatory.sql"),
   );

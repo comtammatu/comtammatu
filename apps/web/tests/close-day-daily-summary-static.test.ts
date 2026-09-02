@@ -20,17 +20,17 @@ test("close-day is Daily Summary only (ADR 0024)", () => {
   const archetypes = read("scripts/page-archetypes.mjs");
   const acl = read("packages/shared/src/auth/module-acl.ts");
   const migration = read(
-    "supabase/migrations/20260808085336_retire_close_branch_day_ceremony.sql",
+    "supabase/migration-archive/20260808085336_retire_close_branch_day_ceremony.sql",
   );
   const reportRpc = read(
-    "supabase/migrations/20260819203012_get_branch_day_report.sql",
+    "supabase/migration-archive/20260819203012_get_branch_day_report.sql",
   );
   const reportRpcFrom = read(
-    "supabase/migrations/20260820014659_get_branch_day_report_order_facts_from.sql",
+    "supabase/migration-archive/20260820014659_get_branch_day_report_order_facts_from.sql",
   );
 
   const reportRpcModifiers = read(
-    "supabase/migrations/20260822193600_get_branch_day_report_include_modifiers.sql",
+    "supabase/migration-archive/20260822193600_get_branch_day_report_include_modifiers.sql",
   );
 
   assert.equal(

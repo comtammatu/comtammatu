@@ -7,7 +7,7 @@ const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 const migration = read(
-  "supabase/migrations/20260817200004_post_missing_sale_consumption_after_recipe_change.sql",
+  "supabase/migration-archive/20260817200004_post_missing_sale_consumption_after_recipe_change.sql",
 );
 const acceptance = read(
   "supabase/tests/pos_stock_outcome_multiunit_acceptance_test.sql",

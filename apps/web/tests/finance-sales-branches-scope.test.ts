@@ -18,7 +18,7 @@ const expenseActions = readFileSync(
 );
 const startupCapitalRpc = readFileSync(
   new URL(
-    "../../../supabase/migrations/20260824013553_finance_startup_capital_summary_rpc.sql",
+    "../../../supabase/migration-archive/20260824013553_finance_startup_capital_summary_rpc.sql",
     import.meta.url,
   ),
   "utf8",

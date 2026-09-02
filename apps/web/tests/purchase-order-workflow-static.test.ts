@@ -48,9 +48,10 @@ test("warehouse creates demand and accountant allocation creates POs with GRN dr
   assert.match(actions, /savePurchaseDemand/);
   assert.match(actions, /savePurchaseDemandAllocations/);
   assert.match(actions, /reviewPurchaseDemand/);
+  assert.match(actions, /ycmWriteFrozen/);
+  assert.doesNotMatch(actions, /"save_purchase_demand"/);
+  assert.doesNotMatch(actions, /"review_purchase_demand"/);
   assert.match(actions, /PROCUREMENT_PO_APPROVE/);
-  assert.match(actions, /save_purchase_demand/);
-  assert.match(actions, /review_purchase_demand/);
   assert.doesNotMatch(actions, /createPurchaseOrderFromGrn/);
   assert.match(demandClient, /copy\.submitAction/);
   assert.match(demandClient, /copy\.approveAllocationAction/);
@@ -85,7 +86,7 @@ test("demand review keeps approve, return, and reject in one action", () => {
   assert.match(viewDialog, /copy\.allocateAction/);
   assert.match(viewDialog, /canAllocate/);
   assert.match(actions, /PROCUREMENT_PO_APPROVE/);
-  assert.match(actions, /review_purchase_demand/);
+  assert.doesNotMatch(actions, /"review_purchase_demand"/);
 });
 
 test("warehouse cannot submit demand lines without an active supplier", () => {
@@ -132,7 +133,8 @@ test("pending demand edit RPC remains; Wave 2 hides the create/edit chrome", () 
     "supabase/migration-archive/20260730121028_allow_pending_demand_edit_before_allocation.sql",
   );
 
-  assert.match(page, /canCreateRequest=\{false\}/);
+  assert.doesNotMatch(page, /canCreateRequest=\{false\}/);
+  assert.doesNotMatch(page, /canAllocate=\{false\}/);
   assert.match(client, /canCreateRequest &&/);
   assert.match(client, /key: "edit"/);
   assert.match(client, /editingPendingDemand/);
@@ -243,11 +245,11 @@ test("demand progress converts PO receipt qty into demand entry units", () => {
     "supabase/migration-archive/20260731212207_purchase_demand_coverage_base_units.sql",
   );
 
-  assert.match(page, /loadPurchaseDemandRows/);
+  assert.doesNotMatch(page, /loadPurchaseDemandRows/);
+  assert.match(loader, /export function mapPurchaseDemandRows/);
   assert.match(loader, /purchaseDemandLineProgress/);
   assert.match(loader, /entry_to_base_factor/);
-  assert.match(loader, /from\("ingredient_units"\)/);
-  assert.match(loader, /\.in\("purchase_request_id", demandIds\)/);
+  assert.doesNotMatch(loader, /from\("purchase_requests"/);
   assert.doesNotMatch(
     loader,
     /ingredient_units!ingredient_units_ingredient_tenant_fkey/,
@@ -302,7 +304,7 @@ test("purchase_order_items entry snapshot columns are granted to authenticated",
 
 test("ADR 0040 line columns are granted to authenticated", () => {
   const migration = read(
-    "supabase/migrations/20260820133724_grant_po_grn_line_column_access_and_fix_grn_trigger_coalesce.sql",
+    "supabase/migration-archive/20260820133724_grant_po_grn_line_column_access_and_fix_grn_trigger_coalesce.sql",
   );
   assert.match(
     migration,
@@ -320,7 +322,7 @@ test("ADR 0040 line columns are granted to authenticated", () => {
 
 test("purchase order immutability allows direct approved transition and maps status transition error", () => {
   const migration = read(
-    "supabase/migrations/20260820212536_fix_po_status_transition_approved.sql",
+    "supabase/migration-archive/20260820212536_fix_po_status_transition_approved.sql",
   );
   const rpcErrors = read("apps/web/lib/messages/inventory-rpc-errors.ts");
 

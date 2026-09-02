@@ -7,7 +7,7 @@ const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 const migration = read(
-  "supabase/migrations/20260809160855_notification_handoff_matrix_harden.sql",
+  "supabase/migration-archive/20260809160855_notification_handoff_matrix_harden.sql",
 );
 
 test("YCM producer fires on pending_allocation matching live submit path", () => {
@@ -80,7 +80,7 @@ test("dead kinds are retired from copy and shell maps", () => {
 
 test("branch inventory notification routing migration is present", () => {
   const routing = read(
-    "supabase/migrations/20260810011047_inventory_notification_branch_routing.sql",
+    "supabase/migration-archive/20260810011047_inventory_notification_branch_routing.sql",
   );
   assert.match(routing, /\/br\/%s\/stock\?work=receive/);
   assert.match(routing, /\/br\/%s\/stock\/waste-approvals/);
@@ -118,7 +118,7 @@ test("gold handoff kinds keep deep-link CTA copy and labels", () => {
 });
 
 test("gold handoff producers bind entity_type entity_id and dedup keys", () => {
-  const baseline = read("supabase/migrations/20260802162900_baseline.sql");
+  const baseline = read("supabase/migrations/20260902162918_baseline.sql");
   assert.match(
     baseline,
     /trg_notify_grn_created[\s\S]*'workflow\.grn_pending'[\s\S]*NEW\.id[\s\S]*workflow\.grn_pending:%s/,
@@ -135,7 +135,7 @@ test("gold handoff producers bind entity_type entity_id and dedup keys", () => {
 
 test("ops tracking correlation migration normalizes GRN entity_type", () => {
   const correlation = read(
-    "supabase/migrations/20260810120000_ops_tracking_entity_correlation.sql",
+    "supabase/migration-archive/20260810120000_ops_tracking_entity_correlation.sql",
   );
   assert.match(correlation, /'goods_received_note'/);
   assert.match(
@@ -180,7 +180,7 @@ test("attention hygiene: control toast; visible POS KDS mute durable attention",
 
 test("feed remediation stops order spam, dedups PO, skips outbox, and routes follow-up", () => {
   const remediation = read(
-    "supabase/migrations/20260820003251_notification_feed_remediation.sql",
+    "supabase/migration-archive/20260820003251_notification_feed_remediation.sql",
   );
   const sqlTest = read("supabase/tests/notification_feed_remediation_test.sql");
   const mePage = read("apps/web/app/(protected)/me/page.tsx");

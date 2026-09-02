@@ -10,7 +10,7 @@ const readWeb = (path: string) =>
 
 test("finished goods without a production recipe reclassify to raw_material", () => {
   const sql = read(
-    "supabase/migrations/20260817191420_finished_good_produced_recipe_only.sql",
+    "supabase/migration-archive/20260817191420_finished_good_produced_recipe_only.sql",
   );
 
   assert.match(sql, /item_kind = 'raw_material'/);

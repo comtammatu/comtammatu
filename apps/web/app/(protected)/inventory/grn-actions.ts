@@ -459,7 +459,7 @@ export async function fetchGrnDetail(
   const grnQuery = supabase
     .from("goods_received_notes")
     .select(
-      "id, tenant_id, branch_id, location_id, supplier_id, po_id, grn_number, status, received_date, expected_receive_date, notes, created_by, created_at, updated_at, branches ( id, name, branch_kind ), suppliers ( id, name ), purchase_orders!goods_received_notes_po_id_fkey ( id, po_number, display_id, status, purchase_request_id, purchase_requests!purchase_orders_purchase_request_tenant_fkey ( id, request_number ) )" as never,
+      "id, tenant_id, branch_id, location_id, supplier_id, po_id, grn_number, status, received_date, expected_receive_date, notes, created_by, created_at, updated_at, branches ( id, name, branch_kind ), suppliers ( id, name ), purchase_orders!goods_received_notes_po_id_fkey ( id, po_number, display_id, status, purchase_request_id )" as never,
     )
     .eq("tenant_id", claims.tenant_id);
   const { data: grnRaw, error: e1 } = await (

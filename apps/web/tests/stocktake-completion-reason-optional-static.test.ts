@@ -51,7 +51,7 @@ const branchCountClientSource = readFileSync(
 );
 
 function latestCompleteStocktakeDefinition(): string {
-  const migrationDir = join(root, "supabase/migrations");
+  const migrationDir = join(root, "supabase/migration-archive");
   const candidates = readdirSync(migrationDir)
     .filter((name) => name.endsWith(".sql"))
     .sort()

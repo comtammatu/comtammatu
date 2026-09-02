@@ -28,6 +28,11 @@ import { withAction } from "@/_lib/with-action";
 import { logAudit } from "@/_lib/audit";
 import { calculateAttendanceWorkHours } from "./attendance-summary";
 import { getHrScopeBranchId, resolveHrBranchScope } from "@/lib/hr-scope";
+import {
+  assignEmployeeInitialShift,
+  deleteEmployeeFutureShiftAssignments,
+  deleteEmployeeAllShiftAssignments,
+} from "@lib/hr/roster/actions";
 
 const HR_ROLES: readonly StaffRole[] = STAFF_ROLES;
 const HR_EMPLOYEE_VIEW_ROLES: readonly StaffRole[] = STAFF_ROLES;
@@ -67,6 +72,7 @@ const createEmployeeAccountSchema = z.object({
   payBasis: z.enum(PAY_BASIS_VALUES).optional(),
   wageUnit: z.enum(["monthly", "daily"]).optional(),
   dailyRate: z.coerce.number().int().nonnegative().nullable().optional(),
+  todayShiftId: z.coerce.number().int().positive().nullable().optional(),
 });
 
 const updateEmployeeSchema = z.object({
@@ -214,10 +220,10 @@ const EMPLOYEE_SELECT_OWNER = `
       default_checklist_template_id,
       employment_contracts (
         id, contract_number, signed_date, start_date, end_date,
-        gross_salary, insurance_base_salary, status
+        gross_salary, insurance_base_salary, status, pay_basis, wage_unit, daily_rate
       ),
       profiles!inner (
-        id, full_name, phone, branch_id,
+        id, full_name, phone, branch_id, is_active,
         positions ( code, label_vi, default_checklist_template_id ),
         branches ( name )
       )
@@ -571,6 +577,21 @@ export const createEmployeeAccount = withAction(
       },
     });
 
+    if (data.todayShiftId) {
+      const { error: assignError } = await assignEmployeeInitialShift({
+        tenantId: claims.tenant_id,
+        branchId: data.branchId ?? null,
+        employeeId: result.id,
+        shiftId: data.todayShiftId,
+      });
+      if (assignError) {
+        console.warn(
+          "[hr/actions:createEmployeeAccount] assign today shift warning:",
+          assignError,
+        );
+      }
+    }
+
     revalidateHrPaths();
     return { success: true, data: result };
   },
@@ -838,6 +859,354 @@ export const updateEmployee = withAction(
 
     revalidateHrPaths();
     return { success: true, data: { id: data.employeeId } };
+  },
+);
+
+const offboardEmployeeSchema = z.object({
+  employeeId: z.coerce.number().int().positive(),
+  resignationDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Ngày thôi việc không hợp lệ (YYYY-MM-DD)" }),
+  reason: z
+    .string()
+    .trim()
+    .min(1, { error: "Vui lòng nhập lý do thôi việc" })
+    .max(300),
+  note: z.string().trim().max(500).optional(),
+});
+
+export const offboardEmployee = withAction(
+  {
+    roles: HR_ROLES,
+    schema: offboardEmployeeSchema,
+    permission: PERMISSION_KEYS.HR_MANAGE_EMPLOYEE,
+  },
+  async (data, { claims, supabase }) => {
+    const service = createServiceClient();
+    const { data: employee, error: empError } = await service
+      .from("employees")
+      .select("id, profile_id, is_active, profiles(id, positions(code))")
+      .eq("id", data.employeeId)
+      .eq("tenant_id", claims.tenant_id)
+      .maybeSingle();
+
+    if (empError || !employee) {
+      return { success: false, error: "Không tìm thấy hồ sơ nhân viên." };
+    }
+
+    const posCode = (
+      employee.profiles as {
+        positions?: { code?: string | null } | null;
+      } | null
+    )?.positions?.code;
+    if (isOwnerPositionCode(posCode)) {
+      return { success: false, error: "Không thể cho chủ sở hữu thôi việc" };
+    }
+
+    // 1. Mark employee inactive
+    await service
+      .from("employees")
+      .update({ is_active: false })
+      .eq("id", data.employeeId)
+      .eq("tenant_id", claims.tenant_id);
+
+    // 2. Mark profile inactive and ban user in auth
+    if (employee.profile_id) {
+      await service
+        .from("profiles")
+        .update({ is_active: false })
+        .eq("id", employee.profile_id)
+        .eq("tenant_id", claims.tenant_id);
+
+      try {
+        await service.auth.admin.updateUserById(employee.profile_id, {
+          ban_duration: "876000h",
+        });
+      } catch (authErr) {
+        console.warn(
+          "[hr/actions:offboardEmployee] Auth disable user warning:",
+          authErr,
+        );
+      }
+    }
+
+    // 3. Terminate active employment contract
+    await service
+      .from("employment_contracts")
+      .update({
+        status: "terminated",
+        end_date: data.resignationDate,
+      })
+      .eq("employee_id", data.employeeId)
+      .eq("tenant_id", claims.tenant_id)
+      .eq("status", "active");
+
+    // 4. Remove future shift assignments
+    await deleteEmployeeFutureShiftAssignments({
+      tenantId: claims.tenant_id,
+      employeeId: data.employeeId,
+      fromDate: data.resignationDate,
+    });
+
+    logAudit(supabase, {
+      action: "update",
+      entityType: "employee",
+      entityId: data.employeeId,
+      newData: {
+        is_active: false,
+        resignation_date: data.resignationDate,
+        reason: data.reason,
+        note: data.note,
+      },
+    });
+
+    revalidateHrPaths();
+    return { success: true };
+  },
+);
+
+const deleteDraftEmployeeSchema = z.object({
+  employeeId: z.coerce.number().int().positive(),
+});
+
+export const deleteDraftEmployee = withAction(
+  {
+    roles: HR_ROLES,
+    schema: deleteDraftEmployeeSchema,
+    permission: PERMISSION_KEYS.HR_MANAGE_EMPLOYEE,
+  },
+  async (data, { claims, supabase }) => {
+    const service = createServiceClient();
+    const { data: employee, error: empError } = await service
+      .from("employees")
+      .select("id, profile_id, profiles(id, positions(code))")
+      .eq("id", data.employeeId)
+      .eq("tenant_id", claims.tenant_id)
+      .maybeSingle();
+
+    if (empError || !employee) {
+      return { success: false, error: "Không tìm thấy hồ sơ nhân viên." };
+    }
+
+    const posCode = (
+      employee.profiles as {
+        positions?: { code?: string | null } | null;
+      } | null
+    )?.positions?.code;
+    if (isOwnerPositionCode(posCode)) {
+      return { success: false, error: "Không thể xóa chủ sở hữu" };
+    }
+
+    // Check attendance records
+    const { count: attendanceCount } = await service
+      .from("attendance_records")
+      .select("id", { count: "exact", head: true })
+      .eq("employee_id", data.employeeId);
+
+    if ((attendanceCount ?? 0) > 0) {
+      return {
+        success: false,
+        error:
+          "Nhân viên đã có dữ liệu chấm công. Vui lòng sử dụng tính năng Cho thôi việc để lưu trữ lịch sử.",
+      };
+    }
+
+    // Check payroll entries
+    const { count: payrollCount } = await service
+      .from("payroll_entries")
+      .select("id", { count: "exact", head: true })
+      .eq("employee_id", data.employeeId);
+
+    if ((payrollCount ?? 0) > 0) {
+      return {
+        success: false,
+        error:
+          "Nhân viên đã có dữ liệu bảng lương. Vui lòng sử dụng tính năng Cho thôi việc để lưu trữ lịch sử.",
+      };
+    }
+
+    const profileId = employee.profile_id;
+
+    // Delete shift assignments
+    await deleteEmployeeAllShiftAssignments({
+      tenantId: claims.tenant_id,
+      employeeId: data.employeeId,
+    });
+
+    // Delete employee task templates
+    await service
+      .from("shift_checklist_templates")
+      .delete()
+      .eq("employee_id", data.employeeId)
+      .eq("tenant_id", claims.tenant_id);
+
+    // Delete employment contracts
+    await service
+      .from("employment_contracts")
+      .delete()
+      .eq("employee_id", data.employeeId)
+      .eq("tenant_id", claims.tenant_id);
+
+    // Delete employee row
+    await service
+      .from("employees")
+      .delete()
+      .eq("id", data.employeeId)
+      .eq("tenant_id", claims.tenant_id);
+
+    // Delete profile and auth user
+    if (profileId) {
+      await service
+        .from("profiles")
+        .delete()
+        .eq("id", profileId)
+        .eq("tenant_id", claims.tenant_id);
+
+      try {
+        await service.auth.admin.deleteUser(profileId);
+      } catch (authErr) {
+        console.warn(
+          "[hr/actions:deleteDraftEmployee] Auth delete user warning:",
+          authErr,
+        );
+      }
+    }
+
+    logAudit(supabase, {
+      action: "delete",
+      entityType: "employee",
+      entityId: data.employeeId,
+    });
+
+    revalidateHrPaths();
+    return { success: true };
+  },
+);
+
+const resetEmployeePasswordSchema = z.object({
+  employeeId: z.coerce.number().int().positive(),
+  newPassword: z
+    .string()
+    .min(8, { error: "Mật khẩu phải có ít nhất 8 ký tự" }),
+});
+
+export const resetEmployeePassword = withAction(
+  {
+    roles: HR_ROLES,
+    schema: resetEmployeePasswordSchema,
+    permission: PERMISSION_KEYS.HR_MANAGE_EMPLOYEE,
+  },
+  async (data, { claims, supabase }) => {
+    const service = createServiceClient();
+    const { data: employee, error: empError } = await service
+      .from("employees")
+      .select("id, profile_id, profiles(id, positions(code))")
+      .eq("id", data.employeeId)
+      .eq("tenant_id", claims.tenant_id)
+      .maybeSingle();
+
+    if (empError || !employee || !employee.profile_id) {
+      return { success: false, error: "Không tìm thấy tài khoản nhân viên." };
+    }
+
+    const posCode = (
+      employee.profiles as {
+        positions?: { code?: string | null } | null;
+      } | null
+    )?.positions?.code;
+    if (isOwnerPositionCode(posCode)) {
+      return {
+        success: false,
+        error: "Không thể đặt lại mật khẩu của chủ sở hữu",
+      };
+    }
+
+    const { error: authError } = await service.auth.admin.updateUserById(
+      employee.profile_id,
+      { password: data.newPassword },
+    );
+
+    if (authError) {
+      console.error(
+        "[hr/actions:resetEmployeePassword] Auth error:",
+        authError,
+      );
+      return { success: false, error: "Không thể đặt lại mật khẩu." };
+    }
+
+    logAudit(supabase, {
+      action: "update",
+      entityType: "employee",
+      entityId: data.employeeId,
+      newData: { event: "reset_password" },
+    });
+
+    return { success: true };
+  },
+);
+
+const toggleEmployeeLoginAccessSchema = z.object({
+  employeeId: z.coerce.number().int().positive(),
+  canLogin: z.boolean(),
+});
+
+export const toggleEmployeeLoginAccess = withAction(
+  {
+    roles: HR_ROLES,
+    schema: toggleEmployeeLoginAccessSchema,
+    permission: PERMISSION_KEYS.HR_MANAGE_EMPLOYEE,
+  },
+  async (data, { claims, supabase }) => {
+    const service = createServiceClient();
+    const { data: employee, error: empError } = await service
+      .from("employees")
+      .select("id, profile_id, profiles(id, positions(code))")
+      .eq("id", data.employeeId)
+      .eq("tenant_id", claims.tenant_id)
+      .maybeSingle();
+
+    if (empError || !employee || !employee.profile_id) {
+      return { success: false, error: "Không tìm thấy tài khoản nhân viên." };
+    }
+
+    const posCode = (
+      employee.profiles as {
+        positions?: { code?: string | null } | null;
+      } | null
+    )?.positions?.code;
+    if (isOwnerPositionCode(posCode)) {
+      return {
+        success: false,
+        error: "Không có quyền chỉnh sửa chủ sở hữu",
+      };
+    }
+
+    await service
+      .from("profiles")
+      .update({ is_active: data.canLogin })
+      .eq("id", employee.profile_id)
+      .eq("tenant_id", claims.tenant_id);
+
+    try {
+      await service.auth.admin.updateUserById(employee.profile_id, {
+        ban_duration: data.canLogin ? "none" : "876000h",
+      });
+    } catch (authErr) {
+      console.warn(
+        "[hr/actions:toggleEmployeeLoginAccess] Auth ban warning:",
+        authErr,
+      );
+    }
+
+    logAudit(supabase, {
+      action: "update",
+      entityType: "employee",
+      entityId: data.employeeId,
+      newData: { can_login: data.canLogin },
+    });
+
+    revalidateHrPaths();
+    return { success: true };
   },
 );
 

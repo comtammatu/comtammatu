@@ -222,16 +222,7 @@ export async function loadTransferDetailPageData({
     detail.transfer.stock_request_id > 0
       ? detail.transfer.stock_request_id
       : null;
-  let stockRequestNumber: string | null = null;
-  if (stockRequestId != null) {
-    const { data: parentRequest } = await supabase
-      .from("stock_requests")
-      .select("request_number")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("id", stockRequestId)
-      .maybeSingle();
-    stockRequestNumber = parentRequest?.request_number ?? null;
-  }
+  const stockRequestNumber: string | null = null;
   const transfer: TransferDetail = {
     id: detail.transfer.id ?? transferId,
     code: detail.transfer.transfer_number ?? "",

@@ -167,7 +167,7 @@ test("notification feed uses RowActionsMenu and ContextMenu from one RowActionIt
 
 test("migration expires leave checkout count-slip and adds payroll ready", () => {
   const migration = read(
-    "supabase/migrations/20260806141945_notification_work_queue_expire_and_payroll.sql",
+    "supabase/migration-archive/20260806141945_notification_work_queue_expire_and_payroll.sql",
   );
   assert.match(migration, /expire_leave_request_notification/);
   assert.match(migration, /expire_checkout_request_notification/);
@@ -181,7 +181,7 @@ test("migration expires leave checkout count-slip and adds payroll ready", () =>
 
 test("migration retires cron health from the Owner notification feed", () => {
   const migration = read(
-    "supabase/migrations/20260806145335_remove_cron_health_owner_notifications.sql",
+    "supabase/migration-archive/20260806145335_remove_cron_health_owner_notifications.sql",
   );
   assert.match(migration, /CREATE OR REPLACE FUNCTION public\.check_cron_jobs_health/);
   assert.match(migration, /jobname = 'check_cron_jobs_health_job'/);
@@ -305,7 +305,7 @@ test("procurement notifications route to Mua hàng and GRNs route to Nhập kho"
 test("stocktake completed is excluded from nav badges; conflict expires on resolve", () => {
   const shell = read("apps/web/app/lib/shell-primitives.ts");
   const migration = read(
-    "supabase/migrations/20260811142314_expire_stocktake_conflict_notification.sql",
+    "supabase/migration-archive/20260811142314_expire_stocktake_conflict_notification.sql",
   );
 
   assert.match(shell, /NAV_BADGE_EXCLUDED_KINDS/);

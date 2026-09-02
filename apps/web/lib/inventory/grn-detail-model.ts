@@ -1,4 +1,4 @@
-import { formatQuantity } from "@comtammatu/shared/format";
+import { formatDecimal, formatQuantity } from "@comtammatu/shared/format";
 import { formatVNDate } from "@comtammatu/shared/time";
 import type { IngredientRow, IngredientUnitRow } from "@lib/inventory/types";
 import { messages } from "@lib/messages";
@@ -576,7 +576,7 @@ export function formatGrnLineUnitPrice(
 ): string | null {
   const unitPrice = line.monetary?.unitPrice;
   if (unitPrice == null || !(unitPrice > 0)) return null;
-  return unitPrice.toLocaleString("vi-VN");
+  return formatDecimal(unitPrice, 2);
 }
 
 export function formatGrnLineTotalCost(
@@ -587,7 +587,7 @@ export function formatGrnLineTotalCost(
     line.monetary?.lineTotal ??
     (line.monetary?.unitPrice ? line.monetary.unitPrice * acceptedQty : 0);
   if (!(total > 0)) return null;
-  return total.toLocaleString("vi-VN");
+  return formatDecimal(total, 2);
 }
 
 export function calculateGrnTotalReceiptValue(
@@ -604,7 +604,7 @@ export function calculateGrnTotalReceiptValue(
 
 export function formatGrnTotalAmount(amount: number): string | null {
   if (!(amount > 0)) return null;
-  return amount.toLocaleString("vi-VN");
+  return formatDecimal(amount, 2);
 }
 
 export function formatGrnDate(

@@ -5,19 +5,19 @@ import { test } from "node:test";
 
 const repoRoot = resolve(
   process.cwd(),
-  existsSync(resolve(process.cwd(), "supabase/migrations")) ? "." : "../..",
+  existsSync(resolve(process.cwd(), "supabase/migration-archive")) ? "." : "../..",
 );
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 function holdFixMigration(): string {
-  const migration = readdirSync(resolve(repoRoot, "supabase/migrations")).find(
+  const migration = readdirSync(resolve(repoRoot, "supabase/migration-archive")).find(
     (name) => name.endsWith("_fix_daily_hold_consumption_location_trigger.sql"),
   );
   assert.ok(
     migration,
     "fix daily hold consumption location trigger migration is missing",
   );
-  return read(`supabase/migrations/${migration}`);
+  return read(`supabase/migration-archive/${migration}`);
 }
 
 test("orders and branch_menu_item_daily_holds use dedicated, type-safe trigger functions", () => {

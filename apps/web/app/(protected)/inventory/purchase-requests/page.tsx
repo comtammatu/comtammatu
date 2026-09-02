@@ -14,13 +14,5 @@ export default async function PurchaseRequestsPage({
   if (mode != null && CREATE_MODES.has(mode)) {
     redirect(PURCHASE_ORDER_CREATE_HREF);
   }
-
-  const params = new URLSearchParams();
-  for (const [key, rawValue] of Object.entries(incoming)) {
-    const value = Array.isArray(rawValue) ? rawValue[0] : rawValue;
-    if (value == null) continue;
-    params.set(key === "requestId" ? "demandId" : key, value);
-  }
-  params.set("tab", "needs");
-  redirect(`/inventory/purchase-orders?${params}`);
+  redirect("/inventory/purchase-orders");
 }

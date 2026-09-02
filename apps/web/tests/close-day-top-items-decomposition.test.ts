@@ -8,7 +8,7 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 test("close-day top_items decomposes main, sides, and modifiers correctly with sum conservation", () => {
   const migration = read(
-    "supabase/migrations/20260822193600_get_branch_day_report_include_modifiers.sql",
+    "supabase/migration-archive/20260822193600_get_branch_day_report_include_modifiers.sql",
   );
   const sqlTest = read("supabase/tests/get_branch_day_report_test.sql");
 

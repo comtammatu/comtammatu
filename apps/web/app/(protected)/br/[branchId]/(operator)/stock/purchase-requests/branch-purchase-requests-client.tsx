@@ -219,7 +219,8 @@ export function BranchPurchaseRequestsClient({
   const createOpen =
     canCreateRequest &&
     (mode === "create" || (mode === "edit" && selected != null));
-  const allocateOpen = mode === "allocate" && selected != null;
+  const allocateOpen =
+    canAllocate && mode === "allocate" && selected != null;
   const viewOpen = mode === "view" && selected != null;
   const recordMode = mode === "view" || mode === "edit" || mode === "allocate";
 

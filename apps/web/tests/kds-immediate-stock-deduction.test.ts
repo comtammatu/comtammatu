@@ -7,7 +7,7 @@ const repoRoot = resolve(import.meta.dirname, "../../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 const migration = read(
-  "supabase/migrations/20260828200000_kds_completion_immediate_stock_deduction.sql",
+  "supabase/migration-archive/20260828200000_kds_completion_immediate_stock_deduction.sql",
 );
 
 test("kds immediate stock deduction: does not block on order status or payment status", () => {

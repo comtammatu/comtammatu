@@ -9,6 +9,7 @@ import {
   EyeOff as IconEyeOff,
   Pencil as IconPencil,
   Search as IconSearch,
+  UserMinus as IconUserMinus,
   Users as IconUsers,
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -62,6 +63,8 @@ import {
   type RowActionItem,
 } from "@/components/row-actions-menu";
 import { CONTRACT_TYPE_OPTIONS, EmployeeFormDialog } from "./employee-form-dialog";
+import { EmployeeDetailSheet } from "./employee-detail-sheet";
+import { EmployeeOffboardingDialog } from "./employee-offboarding-dialog";
 import {
   clearEmployeeShiftTaskOverride,
   type PositionTasksData,
@@ -116,6 +119,9 @@ export function EmployeeTable({
   const controlSize = useFormControlSize();
   const [isPending, startTransition] = useTransition();
   const [editEmployee, setEditEmployee] = useState<EmployeeRow | null>(null);
+  const [detailEmployee, setDetailEmployee] = useState<EmployeeRow | null>(null);
+  const [offboardEmployeeTarget, setOffboardEmployeeTarget] =
+    useState<EmployeeRow | null>(null);
   const [taskEmployeeId, setTaskEmployeeId] = useState<number | null>(null);
   const [clearTaskEmployee, setClearTaskEmployee] =
     useState<EmployeeRow | null>(null);
@@ -352,7 +358,14 @@ export function EmployeeTable({
 
   function rowActions(employee: EmployeeRow): RowActionItem[] {
     const task = taskRow(employee);
-    const items: RowActionItem[] = [];
+    const items: RowActionItem[] = [
+      {
+        key: "view-detail",
+        label: "Xem chi tiết",
+        icon: <IconEye />,
+        onSelect: () => setDetailEmployee(employee),
+      },
+    ];
     if (canManage) {
       items.push({
         key: "edit",
@@ -389,6 +402,16 @@ export function EmployeeTable({
           onSelect: () => setClearTaskEmployee(employee),
         });
       }
+    }
+    if (canManage && employee.is_active) {
+      items.push({
+        key: "offboard",
+        label: "Cho thôi việc",
+        icon: <IconUserMinus />,
+        destructive: true,
+        separatorBefore: true,
+        onSelect: () => setOffboardEmployeeTarget(employee),
+      });
     }
     return items;
   }
@@ -636,6 +659,7 @@ export function EmployeeTable({
           data={filteredEmployees}
           pageSize={25}
           getRowKey={(employee) => employee.id}
+          onRowClick={(employee) => setDetailEmployee(employee)}
           emptyTitle={
             hasActiveFilters
               ? "Không tìm thấy nhân viên phù hợp"
@@ -649,7 +673,11 @@ export function EmployeeTable({
           emptyMode={hasActiveFilters ? "no-results" : "no-data"}
           emptyIcon={<IconUsers />}
           mobileCardRender={(employee, index) => (
-            <Item variant="outline" className="w-full text-left">
+            <Item
+              variant="outline"
+              className="w-full text-left cursor-pointer"
+              onClick={() => setDetailEmployee(employee)}
+            >
               <ItemHeader>
                 <ItemTitle className="truncate font-mono font-semibold">
                   #{index + 1} · {employee.profiles?.full_name ?? "—"}
@@ -702,6 +730,41 @@ export function EmployeeTable({
           employee={editEmployee}
           branches={branches}
           positionOptions={positionOptions}
+          shifts={shifts}
+          positionTasksData={positionTasksData}
+        />
+      ) : null}
+      <EmployeeDetailSheet
+        open={!!detailEmployee}
+        onOpenChange={(open) => !open && setDetailEmployee(null)}
+        employee={detailEmployee}
+        branches={branches}
+        positionOptions={positionOptions}
+        shifts={shifts}
+        todayAssignmentShiftId={
+          detailEmployee
+            ? (assignmentByEmployee.get(detailEmployee.id) ?? null)
+            : null
+        }
+        positionTasksData={positionTasksData}
+        canManage={canManage}
+        canAssignShift={canAssignShift}
+        canManageTasks={canManageTasks}
+        onEditQuick={(emp) => setEditEmployee(emp)}
+        onOffboard={(emp) => setOffboardEmployeeTarget(emp)}
+        onOpenShiftDialog={(emp) => setShiftEmployee(emp)}
+        onOpenTaskDialog={(emp) => setTaskEmployeeId(emp.id)}
+        onClearTaskOverride={(emp) => setClearTaskEmployee(emp)}
+      />
+      {canManage ? (
+        <EmployeeOffboardingDialog
+          open={!!offboardEmployeeTarget}
+          onOpenChange={(open) => !open && setOffboardEmployeeTarget(null)}
+          employee={offboardEmployeeTarget}
+          onSuccess={() => {
+            setOffboardEmployeeTarget(null);
+            router.refresh();
+          }}
         />
       ) : null}
       {canAssignShift && shiftEmployee ? (

@@ -48,7 +48,7 @@ test("attention banner bulk-requeues only invoice_total_mismatch jobs", () => {
   const actions = read(ACTIONS);
   const list = read(INVOICE_LIST);
   const migration = read(
-    "supabase/migrations/20260817222103_requeue_invoice_total_mismatch_jobs.sql",
+    "supabase/migration-archive/20260817222103_requeue_invoice_total_mismatch_jobs.sql",
   );
   const bulkActionStart = actions.indexOf(
     "export async function requeueInvoiceTotalMismatchJobs",

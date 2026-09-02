@@ -140,26 +140,6 @@ export async function countOpenSupplierInvoices(
   return error ? 0 : (count ?? 0);
 }
 
-/** Open YCM awaiting allocation (submitted / pending_allocation). */
-export async function countOpenPurchaseRequests(
-  branchId?: number,
-): Promise<number> {
-  const ctx = await getAuthContextWithPermission(
-    PROCUREMENT_ROLES,
-    PERMISSION_KEYS.PROCUREMENT_READ,
-  );
-  if (!ctx) return 0;
-  const { supabase, claims } = ctx;
-  let query = supabase
-    .from("purchase_requests")
-    .select("id", { count: "exact", head: true })
-    .eq("tenant_id", claims.tenant_id)
-    .in("status", ["submitted", "pending_allocation"]);
-  if (branchId != null) query = query.eq("branch_id", branchId);
-  const { count, error } = await query;
-  return error ? 0 : (count ?? 0);
-}
-
 const INVENTORY_ATTENTION_ROLES = [
   "owner",
   "central_supply_ops",
@@ -216,34 +196,6 @@ export async function countOpenStockTransfers(
       `from_branch_id.eq.${branchId},to_branch_id.eq.${branchId}`,
     );
   }
-  const { count, error } = await query;
-  return error ? 0 : (count ?? 0);
-}
-
-/** Open YCH still in fulfill queue (not draft / closed / cancelled). */
-export async function countOpenStockRequests(
-  branchId?: number,
-): Promise<number> {
-  const ctx = await getAuthContextWithAnyPermission(
-    INVENTORY_ATTENTION_ROLES,
-    [
-      PERMISSION_KEYS.INVENTORY_REQUEST_FULFILL,
-      PERMISSION_KEYS.INVENTORY_READ,
-    ],
-  );
-  if (!ctx) return 0;
-  const { supabase, claims } = ctx;
-  let query = supabase
-    .from("stock_requests")
-    .select("id", { count: "exact", head: true })
-    .eq("tenant_id", claims.tenant_id)
-    .in("status", [
-      "submitted",
-      "partially_fulfilled",
-      "pending",
-      "allocated",
-    ]);
-  if (branchId != null) query = query.eq("branch_id", branchId);
   const { count, error } = await query;
   return error ? 0 : (count ?? 0);
 }

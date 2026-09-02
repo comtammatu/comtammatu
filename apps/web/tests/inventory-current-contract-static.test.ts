@@ -108,7 +108,7 @@ test("generated database types match the final D091 catalog", () => {
     assert.doesNotMatch(generated, new RegExp(`\\b${retired}\\b`));
   }
   const dropOrphans = read(
-    "supabase/migrations/20260813142200_drop_inventory_orphan_rpcs.sql",
+    "supabase/migration-archive/20260813142200_drop_inventory_orphan_rpcs.sql",
   );
   assert.match(
     dropOrphans,

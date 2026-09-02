@@ -219,7 +219,7 @@ test("Feedback LIST surfaces use AppToolbar section nav and AppListFrame", () =>
 
 test("Wave 1.1 self-order feedback anchors paid order with snapshot columns", () => {
   const migration = readRepo(
-    "supabase/migrations/20260810123000_self_order_feedback_order_snapshot.sql",
+    "supabase/migration-archive/20260810123000_self_order_feedback_order_snapshot.sql",
   );
 
   assert.match(migration, /ADD COLUMN IF NOT EXISTS order_id/);
@@ -282,7 +282,7 @@ test("Wave 1.1 self-order feedback anchors paid order with snapshot columns", ()
 
 test("Wave 1.2 routes >=4 to Google Review and <=3 to branch phone", () => {
   const migration = readRepo(
-    "supabase/migrations/20260810124502_branch_google_review_url.sql",
+    "supabase/migration-archive/20260810124502_branch_google_review_url.sql",
   );
   assert.match(migration, /ADD COLUMN IF NOT EXISTS google_review_url/);
   assert.match(migration, /branches_google_review_url_chk/);

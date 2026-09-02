@@ -10,10 +10,10 @@ function readRepoFile(path: string) {
 }
 
 function readAllMigrations() {
-  return readdirSync(join(repoRoot, "supabase/migrations"))
+  return readdirSync(join(repoRoot, "supabase/migration-archive"))
     .filter((name) => name.endsWith(".sql"))
     .sort()
-    .map((name) => readRepoFile(`supabase/migrations/${name}`))
+    .map((name) => readRepoFile(`supabase/migration-archive/${name}`))
     .join("\n");
 }
 

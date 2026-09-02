@@ -58,7 +58,7 @@ test("Wave 2 hub attention deep-links and nav includes stocktake", () => {
     /countPendingWasteApprovals/,
     "hub: waste approval attention",
   );
-  assert.match(hub, /countOpenStockRequests/, "hub: stock-request attention");
+  assert.doesNotMatch(hub, /countOpenStockRequests/);
   assert.match(hub, /countOpenStockTransfers/, "hub: transfer attention");
   assert.match(hub, /countGrnsAwaitingUnitPrice/, "hub: unit-price attention");
   assert.match(
