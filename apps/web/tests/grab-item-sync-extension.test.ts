@@ -162,26 +162,16 @@ test("Grab modifier status sync matches the observed portal mutation contract", 
 });
 
 test("Grab status backend keeps item and modifier availability contracts distinct", () => {
-  assert.match(itemStatusRouteSource, /grab_item_ids:/);
-  assert.match(itemStatusRouteSource, /grab_modifier_ids:/);
-  assert.match(itemStatusRouteSource, /grabId\.startsWith\("VNMOD"\)/);
-  assert.match(
-    itemStatusRouteSource,
-    /if \(row\.is_disabled\)[\s\S]*?itemAvailableStatus = 3/,
+  const mapSource = readFileSync(
+    `${repositoryRoot}/apps/web/lib/grabfood/item-status-map.ts`,
+    "utf8",
   );
-  assert.match(
-    itemStatusRouteSource,
-    /else if \(row\.available_to_sell === 0\)[\s\S]*?itemAvailableStatus = 2/,
-  );
-  assert.match(
-    itemStatusRouteSource,
-    /row\.is_disabled\s*\|\|\s*row\.available_to_sell === 0[\s\S]*?modifierAvailableStatus = 2/,
-  );
-  assert.match(itemStatusRouteSource, /item_available_status: itemAvailableStatus/);
-  assert.match(
-    itemStatusRouteSource,
-    /modifier_available_status: modifierAvailableStatus/,
-  );
+  assert.match(itemStatusRouteSource, /mapLimitRowsToGrabSyncItems/);
+  assert.match(itemStatusRouteSource, /unmapped_items/);
+  assert.match(mapSource, /grab_item_ids/);
+  assert.match(mapSource, /grab_modifier_ids/);
+  assert.match(mapSource, /item_available_status/);
+  assert.match(mapSource, /modifier_available_status/);
 });
 
 test("Grab relay queues modifier availability separately from item stock", () => {
@@ -279,7 +269,7 @@ test("Grab relay coalesces normal stock changes for five minutes", () => {
   const getPendingStockUpdate = loadGetPendingStockUpdate();
 
   assert.match(contentSource, /const STOCK_FLUSH_DELAY_MS = 5 \* 60 \* 1000/);
-  assert.match(contentSource, /const ITEM_STATUS_POLL_INTERVAL_MS = 30 \* 1000/);
+  assert.match(contentSource, /const ITEM_STATUS_POLL_INTERVAL_MS = 10 \* 1000/);
   assert.match(contentSource, /const pendingStockUpdates = new Map\(\)/);
   assert.match(contentSource, /function stageStockUpdate/);
   assert.match(contentSource, /function schedulePendingStockFlush/);
@@ -428,12 +418,62 @@ test("Grab mutation headers retain only portal authentication context", () => {
   assert.match(injectedSource, /'x-grabkit-clientid': 'grabmerchant-portal'/);
 });
 
-test("Grab item mutations are serialized, deduplicated, and retry throttled", () => {
-  assert.match(injectedSource, /let itemSyncTail = Promise\.resolve\(\)/);
+test("Grab item mutations use bounded slots instead of one exclusive tail", () => {
+  assert.match(injectedSource, /const MAX_ITEM_MUTATION_SLOTS = 2/);
+  assert.match(injectedSource, /itemSyncActive >= MAX_ITEM_MUTATION_SLOTS/);
+  assert.doesNotMatch(injectedSource, /let itemSyncTail = Promise\.resolve\(\)/);
   assert.match(injectedSource, /response\.status === 429/);
   assert.match(injectedSource, /response\.headers\.get\('retry-after'\)/);
   assert.match(contentSource, /const pendingItemSyncs = new Map\(\)/);
-  assert.match(contentSource, /if \(pendingItemSyncs\.has\(key\)\) return false/);
+  assert.match(contentSource, /const ITEM_SYNC_PENDING_TTL_MS = 20 \* 1000/);
+  assert.match(contentSource, /isPendingItemSyncFresh/);
+});
+
+test("Grab item-sync pending keys expire so a lost result can be queued again", () => {
+  const functionSource = sourceBlock(
+    contentSource,
+    "function isPendingItemSyncFresh",
+    "function finishItemSync",
+  );
+  const isPendingItemSyncFresh = Function(
+    `"use strict"; const ITEM_SYNC_PENDING_TTL_MS = 20 * 1000; ${functionSource}; return isPendingItemSyncFresh;`,
+  )() as (
+    pending: { startedAt: number } | undefined,
+    now: number,
+  ) => boolean;
+
+  assert.equal(
+    isPendingItemSyncFresh({ startedAt: 1000 }, 1000 + 19_999),
+    true,
+  );
+  assert.equal(
+    isPendingItemSyncFresh({ startedAt: 1000 }, 1000 + 20_000),
+    false,
+  );
+});
+
+test("Grab item-sync hydrate never clears the confirmed cache", () => {
+  const hydrateSource = sourceBlock(
+    contentSource,
+    "async function hydrateItemSyncState",
+    "function persistItemSyncState",
+  );
+  assert.doesNotMatch(hydrateSource, /itemStatusCache\.clear/);
+  assert.match(contentSource, /scopeKey: itemSyncScopeKey/);
+  assert.match(contentSource, /signature: `enabled:\$\{currentStock\}`/);
+});
+
+test("Grab follower tabs do not poll POS item status", () => {
+  assert.match(contentSource, /if \(!isLeaderTab && !forceAll\) return/);
+  assert.match(contentSource, /grabRelayLeader/);
+  assert.match(injectedSource, /isLeaderTab/);
+  assert.match(injectedSource, /PageType=Cancelled/);
+  assert.match(injectedSource, /MARK_ORDER_QUEUED/);
+  assert.match(injectedSource, /contentFingerprint/);
+  assert.doesNotMatch(
+    injectedSource,
+    /processedOrderIds\.add\(order\.orderID\);\s*fetchOrderDetail/,
+  );
 });
 
 test("valid stock has a stable bounded cache signature", () => {

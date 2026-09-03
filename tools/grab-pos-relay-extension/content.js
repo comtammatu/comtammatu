@@ -1,6 +1,6 @@
 // content.js - Content script running in merchant.grab.com
 (function () {
-  const extVersion = chrome.runtime.getManifest()?.version || '1.1.11';
+  const extVersion = chrome.runtime.getManifest()?.version || '1.2.0';
   console.log(`[Grab POS Relay v${extVersion}] Content script active`);
 
   // Inject injected.js into page context
@@ -83,11 +83,16 @@
   }
 
   const ITEM_SYNC_STATE_STORAGE_KEY = 'grabItemSyncStateV1';
-  const ITEM_STATUS_POLL_INTERVAL_MS = 30 * 1000;
+  const ITEM_SYNC_HEALTH_STORAGE_KEY = 'grabItemSyncHealth';
+  const LEADER_STORAGE_KEY = 'grabRelayLeader';
+  const ITEM_STATUS_POLL_INTERVAL_MS = 10 * 1000;
   const INITIAL_ITEM_STATUS_POLL_DELAY_MS = 2 * 1000;
   const STOCK_FLUSH_DELAY_MS = 5 * 60 * 1000;
   const STOCK_RETRY_DELAY_MS = 30 * 1000;
   const LOW_STOCK_IMMEDIATE_THRESHOLD = 3;
+  const ITEM_SYNC_PENDING_TTL_MS = 20 * 1000;
+  const LEADER_HEARTBEAT_MS = 5 * 1000;
+  const LEADER_STEAL_MS = 15 * 1000;
 
   // Cache item and modifier state independently. Only item entries carry stock.
   const itemStatusCache = new Map(); // entity:id -> { status, stockSignature? }
@@ -100,6 +105,9 @@
   let itemSyncScopeKey = null;
   let pendingStockFlushTimer = null;
   let itemSyncPersistTail = Promise.resolve();
+  let myTabId = null;
+  let isLeaderTab = true;
+  let itemSyncHealth = { lastOkAt: null, failedIds: [], unmappedCount: 0 };
 
   function getStoredValues(keys) {
     return new Promise((resolve) => {
@@ -272,9 +280,19 @@
     };
   }
 
+  function isPendingItemSyncFresh(pending, now = Date.now()) {
+    return Boolean(
+      pending &&
+        Number.isFinite(pending.startedAt) &&
+        now - pending.startedAt < ITEM_SYNC_PENDING_TTL_MS
+    );
+  }
+
   function queueItemSync(operation, command, itemId, signature, desiredValue, payload) {
     const key = `${operation}:${itemId}`;
-    if (pendingItemSyncs.has(key)) return false;
+    const pending = pendingItemSyncs.get(key);
+    if (isPendingItemSyncFresh(pending)) return false;
+    if (pending) pendingItemSyncs.delete(key);
 
     const requestId = `${operation}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     pendingItemSyncs.set(key, {
@@ -282,6 +300,7 @@
       signature,
       desiredValue,
       scopeKey: itemSyncScopeKey,
+      startedAt: Date.now(),
     });
     sendCommandToInjected(command, { requestId, itemId, ...payload });
     return true;
@@ -299,6 +318,58 @@
     }
     pendingItemSyncs.delete(key);
     return pending || null;
+  }
+
+  function persistItemSyncHealth() {
+    return setStoredValues({ [ITEM_SYNC_HEALTH_STORAGE_KEY]: itemSyncHealth }).catch((error) => {
+      console.warn('[Grab POS Relay] Failed persisting item sync health:', error);
+    });
+  }
+
+  function noteItemSyncSuccess(itemId) {
+    itemSyncHealth.lastOkAt = Date.now();
+    itemSyncHealth.failedIds = itemSyncHealth.failedIds.filter((id) => id !== itemId);
+    persistItemSyncHealth();
+  }
+
+  function noteItemSyncFailure(itemId) {
+    if (!itemSyncHealth.failedIds.includes(itemId)) {
+      itemSyncHealth.failedIds = [...itemSyncHealth.failedIds, itemId].slice(-40);
+      persistItemSyncHealth();
+    }
+  }
+
+  function isGrabRelayLeader(leader, tabId, now, stealMs = LEADER_STEAL_MS) {
+    if (!Number.isInteger(tabId) || tabId <= 0) return false;
+    if (!leader || !Number.isInteger(leader.tabId) || !Number.isFinite(leader.heartbeatAt)) {
+      return true;
+    }
+    if (now - leader.heartbeatAt > stealMs) return true;
+    return leader.tabId === tabId;
+  }
+
+  async function beatLeaderLock() {
+    if (!Number.isInteger(myTabId)) {
+      myTabId = await new Promise((resolve) => {
+        chrome.runtime.sendMessage({ action: 'GET_TAB_ID' }, (response) => {
+          resolve(response?.tabId ?? null);
+        });
+      });
+    }
+    const now = Date.now();
+    const stored = await getStoredValues([LEADER_STORAGE_KEY]);
+    const nextLeader = isGrabRelayLeader(stored[LEADER_STORAGE_KEY], myTabId, now, LEADER_STEAL_MS);
+    isLeaderTab = nextLeader;
+    if (isLeaderTab) {
+      await setStoredValues({
+        [LEADER_STORAGE_KEY]: { tabId: myTabId, heartbeatAt: now },
+      }).catch(() => {});
+    }
+    sendCommandToInjected('SET_LEADER', { isLeader: isLeaderTab });
+    if (!isLeaderTab) {
+      updateBadge('Đang phụ — tab khác đang trực', true);
+    }
+    return isLeaderTab;
   }
 
   const itemSyncStateReady = hydrateItemSyncState();
@@ -382,6 +453,7 @@
   // Poll POS Backend for Menu Limits / Item Status changes
   async function pollPosItemStatus(forceAll = false) {
     await itemSyncStateReady;
+    if (!isLeaderTab && !forceAll) return;
     if (grabSessionExpired) return;
     if (itemStatusPollInFlight) {
       forceSyncQueued = forceSyncQueued || forceAll;
@@ -420,8 +492,13 @@
 
       const data = await response.json();
       if (data.success && Array.isArray(data.items)) {
+        itemSyncHealth.unmappedCount = Array.isArray(data.unmapped_items)
+          ? data.unmapped_items.length
+          : 0;
+        persistItemSyncHealth();
         let syncedCount = 0;
         const seenGrabItemIds = new Set();
+        const failedIds = new Set(itemSyncHealth.failedIds);
         for (const item of data.items) {
           const grabItemIds = normalizeGrabIds(item.grab_item_ids, item.grab_item_id, 'VNITE');
           const grabModifierIds = normalizeGrabIds(item.grab_modifier_ids, null, 'VNMOD');
@@ -452,6 +529,7 @@
             const prev = itemStatusCache.get(cacheKey);
 
             if (
+              failedIds.has(grabId) ||
               shouldSyncAvailabilityStatus(
                 itemGrabStatus,
                 prev?.status,
@@ -480,6 +558,7 @@
             const prev = itemStatusCache.get(cacheKey);
 
             if (
+              failedIds.has(grabId) ||
               shouldSyncAvailabilityStatus(
                 modifierGrabStatus,
                 prev?.status,
@@ -523,7 +602,7 @@
             const stockChanged = !prev || prev.stockSignature !== stockPayload.signature;
             const inFlightStock = pendingItemSyncs.get(`stock:${grabId}`);
 
-            if (!forceAll && !stockChanged && !statusChanged) {
+            if (!forceAll && !failedIds.has(grabId) && !stockChanged && !statusChanged) {
               if (inFlightStock && inFlightStock.signature !== stockPayload.signature) {
                 stageStockUpdate(grabId, stockPayload, true);
               } else {
@@ -568,7 +647,17 @@
   // Listen to messages from popup
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'FORCE_FULL_SYNC') {
+      if (!isLeaderTab) {
+        sendResponse({ success: false, reason: 'follower' });
+        return;
+      }
       pollPosItemStatus(true);
+      sendResponse({ success: true });
+      return;
+    }
+    if (request.action === 'RECOVER_MISSED_ORDERS') {
+      sendCommandToInjected('RECOVER_MISSED_ORDERS', {});
+      if (isLeaderTab) pollPosItemStatus(false);
       sendResponse({ success: true });
     }
   });
@@ -590,7 +679,8 @@
     if (type === 'AUTH_RECOVERED') {
       grabSessionExpired = false;
       updateBadge('✅ Đã kết nối lại Grab — tiếp tục trực đơn');
-      pollPosItemStatus(false);
+      sendCommandToInjected('RECOVER_MISSED_ORDERS', {});
+      if (isLeaderTab) pollPosItemStatus(false);
       return;
     }
 
@@ -606,10 +696,12 @@
           status: pending?.desiredValue || data.statusStr || data.availableStatus,
         });
         persistItemSyncState();
+        noteItemSyncSuccess(data.itemId);
         console.log(`[Grab POS Relay] Status sync confirmed for item ${data.itemId}`);
       } else {
         const detail = data.error ? `: ${data.error}` : '';
         console.warn(`[Grab POS Relay] Status sync failed for item ${data.itemId} (HTTP ${data.status})${detail}`);
+        noteItemSyncFailure(data.itemId);
         updateBadge(`⚠️ Grab từ chối trạng thái món (HTTP ${data.status || 0})`, false);
       }
       return;
@@ -626,10 +718,12 @@
           status: pending?.desiredValue || data.statusStr || data.availableStatus,
         });
         persistItemSyncState();
+        noteItemSyncSuccess(data.itemId);
         console.log(`[Grab POS Relay] Status sync confirmed for modifier ${data.itemId}`);
       } else {
         const detail = data.error ? `: ${data.error}` : '';
         console.warn(`[Grab POS Relay] Modifier status sync failed for ${data.itemId} (HTTP ${data.status})${detail}`);
+        noteItemSyncFailure(data.itemId);
         updateBadge(`⚠️ Grab từ chối trạng thái món kèm (HTTP ${data.status || 0})`, false);
       }
       return;
@@ -653,6 +747,7 @@
         }
         persistItemSyncState();
         schedulePendingStockFlush();
+        noteItemSyncSuccess(data.itemId);
         console.log(`[Grab POS Relay] Stock sync confirmed for item ${data.itemId}`);
       } else {
         const queuedStock = pendingStockUpdates.get(data.itemId);
@@ -666,6 +761,7 @@
         }
         const detail = data.error ? `: ${data.error}` : '';
         console.warn(`[Grab POS Relay] Stock sync failed for item ${data.itemId} (HTTP ${data.status})${detail}`);
+        noteItemSyncFailure(data.itemId);
         updateBadge(`⚠️ Grab từ chối tồn món (HTTP ${data.status || 0})`, false);
       }
       return;
@@ -687,13 +783,66 @@
         (res) => {
           if (chrome.runtime.lastError) {
             console.warn('[Grab POS Relay] Background communication error:', chrome.runtime.lastError);
-          } else if (res?.success) {
+            sendCommandToInjected('MARK_ORDER_QUEUE_FAILED', {
+              orderID: order.orderID,
+              contentFingerprint: order.contentFingerprint,
+            });
+            return;
+          }
+          if (res?.success) {
             updateBadge(`✅ Đã tiếp nhận đơn ${order.displayID}`);
+            sendCommandToInjected('MARK_ORDER_QUEUED', {
+              orderID: order.orderID,
+              contentFingerprint: order.contentFingerprint,
+            });
+          } else {
+            sendCommandToInjected('MARK_ORDER_QUEUE_FAILED', {
+              orderID: order.orderID,
+              contentFingerprint: order.contentFingerprint,
+            });
           }
         }
       );
+      return;
+    }
+
+    if (type === 'ORDER_CANCELLED' && data?.orderID) {
+      getStoredValues(['grabRelayedOrders']).then((stored) => {
+        const relayed = Array.isArray(stored.grabRelayedOrders) ? stored.grabRelayedOrders : [];
+        const known = relayed.find((entry) => entry?.orderID === data.orderID);
+        if (!known) return;
+        chrome.runtime.sendMessage({
+          action: 'ENQUEUE_ORDER',
+          payload: {
+            order: {
+              orderID: data.orderID,
+              displayID: data.displayID || known.displayID,
+              action: 'cancel',
+              contentFingerprint: `cancel:${data.orderID}`,
+              orderState: 'CANCELLED',
+              itemInfo: { items: [{ name: 'Hủy đơn Grab', quantity: 1 }] },
+            },
+            merchantId: data.merchantId,
+          },
+        });
+      });
     }
   });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    sendCommandToInjected('RECOVER_MISSED_ORDERS', {});
+    if (isLeaderTab) pollPosItemStatus(false);
+  });
+  window.addEventListener('pageshow', () => {
+    sendCommandToInjected('RECOVER_MISSED_ORDERS', {});
+    if (isLeaderTab) pollPosItemStatus(false);
+  });
+
+  beatLeaderLock();
+  setInterval(() => {
+    beatLeaderLock();
+  }, LEADER_HEARTBEAT_MS);
 
   // Start polling POS backend for menu limit & availability changes
   setInterval(() => pollPosItemStatus(false), ITEM_STATUS_POLL_INTERVAL_MS);

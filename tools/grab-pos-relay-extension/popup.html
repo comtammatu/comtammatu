@@ -51,6 +51,10 @@
         <span id="branchMetric">Chưa chọn chi nhánh</span>
         <span aria-hidden="true">·</span>
         <span id="stockQueueMetric">Đang đọc tồn chờ</span>
+        <span aria-hidden="true">·</span>
+        <span id="queueMetric">Đang đọc hàng đợi</span>
+        <span aria-hidden="true">·</span>
+        <span id="itemSyncHealthMetric">Đang đọc đồng bộ món</span>
       </div>
     </section>
 
@@ -126,13 +130,18 @@
         </span>
         <div>
           <h2 id="recoveryTitle">Khôi phục đồng bộ</h2>
-          <p>Chỉ dùng khi trạng thái trên Grab không còn khớp với POS.</p>
+          <p>Chỉ dùng khi trạng thái trên Grab không còn khớp với POS. Đơn lỗi có nút Thử lại trong danh sách.</p>
         </div>
       </div>
-      <button class="button button-recovery" type="button" id="btnSyncMenu">
-        <span class="button-label">Đồng bộ toàn bộ</span>
-        <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="m7.5 5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
+      <div class="recovery-actions">
+        <button class="button button-recovery" type="button" id="btnRecoverOrders">
+          <span class="button-label">Khôi phục đơn</span>
+        </button>
+        <button class="button button-recovery" type="button" id="btnSyncMenu">
+          <span class="button-label">Đồng bộ toàn bộ</span>
+          <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="m7.5 5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
     </section>
   </main>
 

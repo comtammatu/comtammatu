@@ -98,6 +98,28 @@ test("Grab relay validation keeps the internal envelope strict", () => {
   assert.equal(result.success, false);
 });
 
+test("Grab relay 1.1.11 payloads without action or fingerprint still parse", () => {
+  const result = grabRelaySchema.safeParse(makeExtensionPayload());
+
+  assert.equal(result.success, true);
+  if (!result.success) return;
+  assert.equal(result.data.action, undefined);
+  assert.equal(result.data.content_fingerprint, undefined);
+});
+
+test("Grab relay accepts optional action and content fingerprint", () => {
+  const result = grabRelaySchema.safeParse({
+    ...makeExtensionPayload(),
+    action: "amend",
+    content_fingerprint: "items:1|qty:2",
+  });
+
+  assert.equal(result.success, true);
+  if (!result.success) return;
+  assert.equal(result.data.action, "amend");
+  assert.equal(result.data.content_fingerprint, "items:1|qty:2");
+});
+
 test("Grab relay validation rejects malformed core order data", () => {
   const missingItems = makeExtensionPayload();
   missingItems.order.itemInfo.items = [];

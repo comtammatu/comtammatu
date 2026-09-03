@@ -3,12 +3,8 @@ import { z } from "zod";
 import { timingSafeEqual } from "node:crypto";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { getVNDateString } from "@comtammatu/shared/time";
-import {
-  GRAB_MENU_MAPPING,
-  normalizeMenuName,
-  validateGrabMerchantForBranch,
-  type GrabMappingItem,
-} from "@lib/grabfood/mapping";
+import { validateGrabMerchantForBranch } from "@lib/grabfood/mapping";
+import { mapLimitRowsToGrabSyncItems } from "@lib/grabfood/item-status-map";
 
 const querySchema = z.object({
   branch_id: z.coerce.number().int().positive(),
@@ -142,115 +138,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // One POS menu item can own both a standalone Grab item and one or more
-    // modifier options. Availability follows the same canonical POS item;
-    // numeric stock remains item-only at the extension boundary.
-    const nameToGrabIds = new Map<
-      string,
-      { itemIds: string[]; modifierIds: string[] }
-    >();
-    for (const [grabId, item] of Object.entries(GRAB_MENU_MAPPING) as [string, GrabMappingItem][]) {
-      const normalized = normalizeMenuName(item.name);
-      const ids = nameToGrabIds.get(normalized) ?? {
-        itemIds: [],
-        modifierIds: [],
-      };
-      if (grabId.startsWith("VNITE")) ids.itemIds.push(grabId);
-      if (grabId.startsWith("VNMOD")) ids.modifierIds.push(grabId);
-      nameToGrabIds.set(normalized, ids);
-    }
-
-    interface MenuLimitRawRow {
-      menu_item_id: number;
-      item_name: string;
-      is_disabled: boolean;
-      available_to_sell: number | null;
-      sold_today: number;
-      stock_capacity: number | null;
-      manual_limit_quantity: number | null;
-    }
-
-    type GrabItemStatus =
-      | "AVAILABLE"
-      | "UNAVAILABLE_TODAY"
-      | "UNAVAILABLE_INDEFINITELY"
-      | "HIDDEN";
-    type GrabItemAvailableStatus = 1 | 2 | 3 | 7;
-    type GrabModifierStatus = "AVAILABLE" | "UNAVAILABLE_TODAY";
-    type GrabModifierAvailableStatus = 1 | 2;
-
-    const rows = (limitsData ?? []) as MenuLimitRawRow[];
-
-    const syncItems = rows.map((row) => {
-      const normalized = normalizeMenuName(row.item_name);
-      const grabIds = nameToGrabIds.get(normalized) ?? {
-        itemIds: [],
-        modifierIds: [],
-      };
-
-      // Grab item availableStatus:
-      // 1: Có bán (AVAILABLE)
-      // 2: Hết hàng hôm nay (UNAVAILABLE_TODAY - tự động mở lại ngày mai)
-      // 3: Không về hàng nữa (UNAVAILABLE_INDEFINITELY / DISCONTINUED)
-      // 7: Ẩn giấu (HIDDEN). No current POS availability field infers this.
-      let itemGrabStatus: GrabItemStatus;
-      let itemAvailableStatus: GrabItemAvailableStatus;
-
-      if (row.is_disabled) {
-        itemGrabStatus = "UNAVAILABLE_INDEFINITELY";
-        itemAvailableStatus = 3;
-      } else if (row.available_to_sell === 0) {
-        itemGrabStatus = "UNAVAILABLE_TODAY";
-        itemAvailableStatus = 2;
-      } else {
-        itemGrabStatus = "AVAILABLE";
-        itemAvailableStatus = 1;
-      }
-
-      // The observed modifier endpoint currently proves only statuses 1 and 2.
-      // Keep this contract separate so it cannot narrow the item endpoint.
-      let modifierGrabStatus: GrabModifierStatus;
-      let modifierAvailableStatus: GrabModifierAvailableStatus;
-      if (row.is_disabled || row.available_to_sell === 0) {
-        modifierGrabStatus = "UNAVAILABLE_TODAY";
-        modifierAvailableStatus = 2;
-      } else {
-        modifierGrabStatus = "AVAILABLE";
-        modifierAvailableStatus = 1;
-      }
-
-      const maxStock =
-        row.stock_capacity ??
-        row.manual_limit_quantity ??
-        (row.available_to_sell != null ? Math.max(row.available_to_sell, 100) : -1);
-
-      return {
-        menu_item_id: row.menu_item_id,
-        name: row.item_name,
-        // Keep the singular field during the extension rollout.
-        grab_item_id: grabIds.itemIds[0] ?? null,
-        grab_item_ids: grabIds.itemIds,
-        grab_modifier_ids: grabIds.modifierIds,
-        is_disabled: row.is_disabled,
-        available_to_sell: row.available_to_sell,
-        // Legacy item fields remain during the extension rollout.
-        available_status: itemAvailableStatus,
-        grab_status: itemGrabStatus,
-        item_available_status: itemAvailableStatus,
-        item_grab_status: itemGrabStatus,
-        modifier_available_status: modifierAvailableStatus,
-        modifier_grab_status: modifierGrabStatus,
-        stock_capacity: row.stock_capacity,
-        max_stock: maxStock,
-      };
-    });
+    const mapped = mapLimitRowsToGrabSyncItems(
+      (limitsData ?? []) as Parameters<typeof mapLimitRowsToGrabSyncItems>[0],
+    );
 
     return NextResponse.json(
       {
         success: true,
         branch_id: branchId,
         timestamp: Date.now(),
-        items: syncItems,
+        items: mapped.items,
+        unmapped_items: mapped.unmapped_items,
       },
       { headers: CORS_HEADERS },
     );

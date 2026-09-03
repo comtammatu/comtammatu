@@ -160,6 +160,8 @@ export const grabRelaySchema = z
     relay_version: optionalProviderString(20),
     branch_id: z.coerce.number().int().positive().optional(),
     merchant_id: z.string().max(100).optional(),
+    action: z.enum(["create", "amend", "cancel"]).optional(),
+    content_fingerprint: optionalProviderString(8000),
     order: grabOrderPayloadSchema.optional(),
   })
   .strict()

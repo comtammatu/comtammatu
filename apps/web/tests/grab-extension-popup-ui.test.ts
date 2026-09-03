@@ -41,3 +41,16 @@ test("Grab extension popup renders provider data as text instead of HTML", () =>
   assert.match(popupSource, /description\.textContent/);
   assert.match(popupSource, /order\.time/);
 });
+
+test("Grab extension popup surfaces queue health and recover actions", () => {
+  assert.match(popupHtml, /id="queueMetric"/);
+  assert.match(popupHtml, /id="itemSyncHealthMetric"/);
+  assert.match(popupHtml, /id="btnRecoverOrders"/);
+  assert.match(popupHtml, /Khôi phục đơn/);
+  assert.match(popupHtml, /Thử lại/);
+  assert.match(popupSource, /grabRelayQueue/);
+  assert.match(popupSource, /grabItemSyncHealth/);
+  assert.match(popupSource, /RETRY_QUEUE_ITEM/);
+  assert.match(popupSource, /RECOVER_MISSED_ORDERS/);
+  assert.match(popupSource, /permissions\.request/);
+});

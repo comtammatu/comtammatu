@@ -56,3 +56,18 @@ test("Grab relay never returns a negative acknowledgement after create_order com
   assert.doesNotMatch(postCommitSection, /status:\s*422/);
   assert.match(postCommitSection, /diagnostic only/);
 });
+
+test("Grab relay does not early-return create when an existing ref needs amend or cancel", () => {
+  const existingLookup = routeSource.indexOf(".eq(\"external_order_ref\"");
+  const decision = routeSource.indexOf("const existingDecision = resolveGrabRelayExistingDecision");
+  const idempotentReturn = routeSource.indexOf("idempotent: true");
+
+  assert.notEqual(existingLookup, -1);
+  assert.notEqual(decision, -1);
+  assert.ok(existingLookup < decision);
+  assert.ok(decision < idempotentReturn);
+  assert.match(routeSource, /kind === "amend"/);
+  assert.match(routeSource, /kind === "cancel"/);
+  assert.match(routeSource, /callRelayApplyGrabOrderRevision/);
+  assert.match(routeSource, /callRelayCancelDeliveryOrder/);
+});

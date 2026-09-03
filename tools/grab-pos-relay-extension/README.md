@@ -38,3 +38,13 @@ Tiện ích mở rộng Chrome/Edge giúp **tự động bắt đơn hàng từ 
   * **Địa chỉ máy chủ POS:** Mặc định `http://localhost:3000` (hoặc domain Production).
   * **Chi nhánh (Branch ID):** Nhập ID từ URL POS của đúng chi nhánh. Tiện ích sẽ không gửi đơn nếu chưa cấu hình.
   * Xem danh sách các đơn Grab vừa nhận gần nhất.
+
+---
+
+## Cập nhật phiên bản (quầy đang chạy)
+
+Không Remove tiện ích và không Load unpacked đường dẫn khác — việc đó xóa `chrome.storage` và đẩy lại cả menu lên Grab.
+
+1. Vào `chrome://extensions`, bấm **Reload** đúng tiện ích đang cài (cùng id).
+2. Tải lại tab `merchant.grab.com` (F5) để `injected.js` khớp phiên bản mới.
+3. Nếu ping POS thất bại sau bản 1.2.0, mở popup bấm **Kiểm tra** một lần để cấp quyền origin máy chủ.

@@ -20,6 +20,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const liveStatusLabel = document.getElementById('liveStatusLabel');
   const branchMetric = document.getElementById('branchMetric');
   const stockQueueMetric = document.getElementById('stockQueueMetric');
+  const queueMetric = document.getElementById('queueMetric');
+  const itemSyncHealthMetric = document.getElementById('itemSyncHealthMetric');
+  const btnRecoverOrders = document.getElementById('btnRecoverOrders');
   let toastTimer = null;
 
   try {
@@ -95,7 +98,34 @@ document.addEventListener('DOMContentLoaded', () => {
     return Object.keys(syncState.pendingStock).length;
   }
 
-  function updateOperationalStatus({ isConfigured, hasGrabTab, branchId, backendUrl, pendingStockCount }) {
+  function summarizeQueue(queue) {
+    const items = Array.isArray(queue) ? queue : [];
+    return {
+      pending: items.filter((item) => !item?.isTerminal && (item?.attempts || 0) === 0).length,
+      retry: items.filter((item) => !item?.isTerminal && (item?.attempts || 0) > 0).length,
+      error: items.filter((item) => item?.isTerminal).length,
+    };
+  }
+
+  async function requestBackendOrigin(backendUrl) {
+    if (!chrome.permissions?.request) return true;
+    try {
+      const origin = `${new URL(backendUrl).origin}/*`;
+      return await chrome.permissions.request({ origins: [origin] });
+    } catch {
+      return false;
+    }
+  }
+
+  function updateOperationalStatus({
+    isConfigured,
+    hasGrabTab,
+    branchId,
+    backendUrl,
+    pendingStockCount,
+    queueSummary,
+    itemSyncHealth,
+  }) {
     configSummary.textContent = isConfigured
       ? `CN ${branchId} · ${formatBackendHost(backendUrl)}`
       : 'Chưa thiết lập máy chủ và chi nhánh';
@@ -103,6 +133,20 @@ document.addEventListener('DOMContentLoaded', () => {
     stockQueueMetric.textContent = pendingStockCount > 0
       ? `${pendingStockCount} cập nhật tồn đang chờ`
       : 'Không có tồn chờ';
+    const summary = queueSummary || { pending: 0, retry: 0, error: 0 };
+    queueMetric.textContent =
+      summary.error > 0 || summary.retry > 0 || summary.pending > 0
+        ? `Hàng đợi ${summary.pending} mới · ${summary.retry} thử lại · ${summary.error} lỗi`
+        : 'Hàng đợi trống';
+    const failedCount = Array.isArray(itemSyncHealth?.failedIds) ? itemSyncHealth.failedIds.length : 0;
+    const unmappedCount = Number(itemSyncHealth?.unmappedCount) || 0;
+    if (failedCount > 0 || unmappedCount > 0) {
+      itemSyncHealthMetric.textContent = `${failedCount} món lỗi · ${unmappedCount} chưa ánh xạ`;
+    } else if (itemSyncHealth?.lastOkAt) {
+      itemSyncHealthMetric.textContent = 'Đồng bộ món ổn';
+    } else {
+      itemSyncHealthMetric.textContent = 'Chưa có đồng bộ món';
+    }
 
     if (!isConfigured) {
       relayStatus.dataset.tone = 'setup';
@@ -157,18 +201,46 @@ document.addEventListener('DOMContentLoaded', () => {
     return emptyState;
   }
 
-  function renderOrders(orders) {
+  function retryQueuedOrder(order) {
+    if (!order?.orderID) return;
+    chrome.runtime.sendMessage(
+      {
+        action: 'RETRY_QUEUE_ITEM',
+        payload: {
+          order: order.order || order,
+          merchantId: order.merchantId || order.order?.merchant?.ID,
+        },
+      },
+      () => {
+        if (chrome.runtime.lastError) {
+          showToast('Không thử lại được. Mở lại popup.', 'error');
+          return;
+        }
+        showToast(`Đã đưa đơn ${order.displayID || ''} vào hàng đợi lại.`, 'success');
+      },
+    );
+  }
+
+  function renderOrders(orders, queue) {
     const recentOrders = Array.isArray(orders) ? orders.slice(0, 8) : [];
-    recentOrderCount.textContent = `${recentOrders.length} đơn`;
+    const queued = Array.isArray(queue) ? queue.filter((item) => item?.isTerminal || (item?.attempts || 0) > 0) : [];
+    const rows = [...queued.map((item) => ({
+      ...item,
+      status: item.isTerminal ? 'error' : 'retry',
+      error: item.lastError,
+      items: item.order?.itemInfo?.items?.map((entry) => `${entry.quantity}x ${entry.name}`).join(', '),
+      canRetry: true,
+    })), ...recentOrders].slice(0, 8);
+    recentOrderCount.textContent = `${rows.length} đơn`;
     orderList.replaceChildren();
 
-    if (recentOrders.length === 0) {
+    if (rows.length === 0) {
       orderList.appendChild(createEmptyOrderState());
       return;
     }
 
-    for (const order of recentOrders) {
-      const isError = order?.status === 'error';
+    for (const order of rows) {
+      const isError = order?.status === 'error' || order?.status === 'retry';
       const item = document.createElement('article');
       item.className = 'order-item';
       item.dataset.tone = isError ? 'error' : 'success';
@@ -193,8 +265,16 @@ document.addEventListener('DOMContentLoaded', () => {
       meta.className = 'order-meta';
       const status = document.createElement('span');
       status.className = 'order-status';
-      status.textContent = isError ? 'Cần xử lý' : 'Đã chuyển POS';
+      status.textContent = order?.status === 'retry' ? 'Đang chờ thử lại' : isError ? 'Cần xử lý' : 'Đã chuyển POS';
       meta.appendChild(status);
+      if (order?.canRetry || order?.status === 'error') {
+        const retry = document.createElement('button');
+        retry.type = 'button';
+        retry.className = 'order-retry';
+        retry.textContent = 'Thử lại';
+        retry.addEventListener('click', () => retryQueuedOrder(order));
+        meta.appendChild(retry);
+      }
       if (order?.time) {
         const separator = document.createElement('span');
         separator.setAttribute('aria-hidden', 'true');
@@ -219,11 +299,21 @@ document.addEventListener('DOMContentLoaded', () => {
       branchId,
       backendUrl,
       pendingStockCount: getPendingStockCount(settings.grabItemSyncStateV1),
+      queueSummary: summarizeQueue(settings.grabRelayQueue),
+      itemSyncHealth: settings.grabItemSyncHealth,
     });
   }
 
   chrome.storage.local.get(
-    ['backendUrl', 'branchId', 'relaySecret', 'recentOrders', 'grabItemSyncStateV1'],
+    [
+      'backendUrl',
+      'branchId',
+      'relaySecret',
+      'recentOrders',
+      'grabItemSyncStateV1',
+      'grabRelayQueue',
+      'grabItemSyncHealth',
+    ],
     async (settings) => {
       const backendUrl = settings.backendUrl || 'http://localhost:3000';
       const branchId = normalizeBranchId(settings.branchId);
@@ -233,7 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
       branchIdInput.value = branchId ?? '';
       relaySecretInput.value = settings.relaySecret || '';
       configPanel.open = !isConfigured;
-      renderOrders(settings.recentOrders);
+      renderOrders(settings.recentOrders, settings.grabRelayQueue);
       await refreshOperationalStatus(settings);
     }
   );
@@ -265,7 +355,12 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast('Không lưu được cấu hình. Hãy thử lại.', 'error');
         return;
       }
-      showToast(`Đã lưu cấu hình cho chi nhánh ${branchId}.`, 'success');
+      const granted = await requestBackendOrigin(backendUrl);
+      if (!granted) {
+        showToast('Cần cấp quyền máy chủ POS. Bấm Kiểm tra rồi cho phép origin.', 'error');
+      } else {
+        showToast(`Đã lưu cấu hình cho chi nhánh ${branchId}.`, 'success');
+      }
       configPanel.open = false;
       await refreshOperationalStatus({ backendUrl, branchId, grabItemSyncStateV1: null });
     });
@@ -283,6 +378,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const relaySecret = relaySecretInput.value.trim();
     setButtonBusy(btnPing, true, 'Đang kiểm tra');
     try {
+      const granted = await requestBackendOrigin(backendUrl);
+      if (!granted) {
+        showToast('Chrome chưa cho phép gọi máy chủ POS. Hãy cấp quyền origin.', 'error');
+        return;
+      }
       const headers = { 'Content-Type': 'application/json' };
       if (relaySecret) headers['x-grab-relay-secret'] = relaySecret;
       const response = await fetch(`${backendUrl}/api/webhooks/grabfood/relay`, {
@@ -324,15 +424,40 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    chrome.tabs.sendMessage(relayTab.id, { action: 'FORCE_FULL_SYNC' }, (response) => {
-      setButtonBusy(btnSyncMenu, false, 'Đang gửi lệnh');
-      if (chrome.runtime.lastError) {
-        showToast('Không gửi được lệnh. Hãy tải lại tab Grab Merchant.', 'error');
-      } else if (response?.success) {
-        showToast('Đã bắt đầu đồng bộ toàn bộ trạng thái và tồn kho.', 'success');
-      } else {
-        showToast('Grab Merchant chưa nhận lệnh đồng bộ.', 'error');
+    let accepted = false;
+    for (const tab of tabs) {
+      if (tab?.id === undefined || tab.discarded) continue;
+      const response = await new Promise((resolve) => {
+        chrome.tabs.sendMessage(tab.id, { action: 'FORCE_FULL_SYNC' }, (result) => {
+          if (chrome.runtime.lastError) {
+            resolve(null);
+            return;
+          }
+          resolve(result);
+        });
+      });
+      if (response?.success) {
+        accepted = true;
+        break;
       }
+    }
+    setButtonBusy(btnSyncMenu, false, 'Đang gửi lệnh');
+    if (accepted) {
+      showToast('Đã bắt đầu đồng bộ toàn bộ trạng thái và tồn kho.', 'success');
+    } else {
+      showToast('Không gửi được lệnh. Hãy tải lại tab Grab Merchant.', 'error');
+    }
+  });
+
+  btnRecoverOrders.addEventListener('click', async () => {
+    setButtonBusy(btnRecoverOrders, true, 'Đang khôi phục');
+    chrome.runtime.sendMessage({ action: 'RECOVER_MISSED_ORDERS' }, () => {
+      setButtonBusy(btnRecoverOrders, false, 'Đang khôi phục');
+      if (chrome.runtime.lastError) {
+        showToast('Không khôi phục được. Mở lại popup.', 'error');
+        return;
+      }
+      showToast('Đã yêu cầu khôi phục đơn đang mở trên Grab.', 'success');
     });
   });
 });

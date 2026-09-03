@@ -15,6 +15,12 @@ import {
   summarizeGrabRelayValidationIssues,
 } from "@lib/grabfood/relay-schema";
 import { mapRelayCreateOrderRpcError } from "@lib/delivery/create-order-rpc-error";
+import { resolveGrabRelayExistingDecision } from "@lib/grabfood/relay-action";
+import {
+  callRelayApplyGrabOrderRevision,
+  callRelayCancelDeliveryOrder,
+  mapGrabRelayMutationError,
+} from "@lib/grabfood/relay-rpc";
 
 const MAX_PAYLOAD_BYTES = 64 * 1024; // 64 KB limit per D104
 
@@ -165,11 +171,15 @@ export async function POST(request: NextRequest) {
       "",
     );
 
-    // 4. Reject completed/cancelled/history orders immediately
+    const relayAction = parsed.data.action;
+    const contentFingerprint = parsed.data.content_fingerprint;
+    // 4. Reject completed/cancelled/history creates. Cancel may arrive from
+    // the Cancelled page after the POS row already exists.
     const rawState = String(
       grabOrder.orderState || grabOrder.state || grabOrder.status || "",
     ).toUpperCase();
     if (
+      relayAction !== "cancel" &&
       [
         "COMPLETED",
         "CANCELLED",
@@ -227,7 +237,36 @@ export async function POST(request: NextRequest) {
       .limit(1)
       .maybeSingle();
 
-    if (existingOrder) {
+    const existingDecision = resolveGrabRelayExistingDecision({
+      action: relayAction,
+      existing: existingOrder,
+      contentFingerprint,
+    });
+
+    if (existingDecision.kind === "noop_cancel") {
+      return NextResponse.json(
+        {
+          success: true,
+          noop: true,
+          message: "Không có đơn POS để hủy",
+          display_id: grabOrder.displayID,
+        },
+        { headers: CORS_HEADERS },
+      );
+    }
+
+    if (existingDecision.kind === "reject") {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Đơn đã thanh toán hoặc đã kết thúc, không thể sửa hoặc hủy từ Grab",
+        },
+        { status: 422, headers: CORS_HEADERS },
+      );
+    }
+
+    if (existingDecision.kind === "idempotent" && existingOrder) {
       return NextResponse.json(
         {
           success: true,
@@ -237,6 +276,52 @@ export async function POST(request: NextRequest) {
           order_id: existingOrder.id,
           order_number: existingOrder.order_number,
           display_id: grabOrder.displayID,
+        },
+        { headers: CORS_HEADERS },
+      );
+    }
+
+    const createdBy = await resolveBranchStaffId(
+      supabase,
+      branch.tenant_id,
+      branch.id,
+    );
+
+    if (!createdBy) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Không tìm thấy hồ sơ nhân viên hợp lệ cho chi nhánh",
+        },
+        { status: 500, headers: CORS_HEADERS },
+      );
+    }
+
+    if (existingDecision.kind === "cancel" && existingOrder) {
+      const { data: cancelResult, error: cancelError } =
+        await callRelayCancelDeliveryOrder(supabase, {
+          p_order_id: existingOrder.id,
+          p_actor_staff_id: createdBy,
+          p_reason: "Khách hủy đơn trên Grab Merchant",
+        });
+      if (cancelError) {
+        const failure = mapGrabRelayMutationError(
+          cancelError,
+          "Không hủy được đơn Grab trên POS",
+        );
+        return NextResponse.json(
+          { success: false, error: failure.message, code: failure.code },
+          { status: failure.status, headers: CORS_HEADERS },
+        );
+      }
+      return NextResponse.json(
+        {
+          success: true,
+          cancelled: true,
+          order_id: existingOrder.id,
+          order_number: existingOrder.order_number,
+          display_id: grabOrder.displayID,
+          result: cancelResult,
         },
         { headers: CORS_HEADERS },
       );
@@ -317,20 +402,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 10. Find staff profile to act as created_by (prioritize branch_manager -> cashier -> branch staff -> HQ)
-    const createdBy = await resolveBranchStaffId(
-      supabase,
-      branch.tenant_id,
-      branch.id,
-    );
-
-    if (!createdBy) {
+    if (existingDecision.kind === "amend" && existingOrder) {
+      const { data: amendResult, error: amendError } =
+        await callRelayApplyGrabOrderRevision(supabase, {
+          p_order_id: existingOrder.id,
+          p_actor_staff_id: createdBy,
+          p_items: transformed.items,
+          p_note: transformed.customerNote,
+          p_reason: "Grab sửa đơn trên Merchant",
+        });
+      if (amendError) {
+        const failure = mapGrabRelayMutationError(
+          amendError,
+          "Không sửa được đơn Grab trên POS",
+        );
+        return NextResponse.json(
+          { success: false, error: failure.message, code: failure.code },
+          { status: failure.status, headers: CORS_HEADERS },
+        );
+      }
       return NextResponse.json(
         {
-          success: false,
-          error: "Không tìm thấy hồ sơ nhân viên hợp lệ cho chi nhánh",
+          success: true,
+          amended: true,
+          order_id: existingOrder.id,
+          order_number: existingOrder.order_number,
+          display_id: grabOrder.displayID,
+          items_count: transformed.items.length,
+          total_amount: transformed.posTotalAmount,
+          customer_payable_amount: transformed.customerPayableAmount,
+          result: amendResult,
         },
-        { status: 500, headers: CORS_HEADERS },
+        { headers: CORS_HEADERS },
       );
     }
 

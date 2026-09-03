@@ -731,7 +731,24 @@ input:focus {
   white-space: nowrap;
 }
 
-.button-recovery:hover:not(:disabled) {
+.recovery-actions {
+  display: grid;
+  gap: 8px;
+  justify-items: stretch;
+}
+
+.order-retry {
+  margin-left: auto;
+  border: 1px solid #dfc48f;
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: #fffaf0;
+  color: #81500b;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.order-retry:hover {
   background: var(--warning-soft);
 }
 

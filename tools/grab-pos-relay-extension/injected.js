@@ -2,10 +2,12 @@
 (function () {
   console.log('[Grab POS Relay] Injected script loaded into page context');
 
-  const processedOrderIds = new Set();
-  const dispatchedOrderIds = new Set();
+  const queuedOrderFingerprints = new Map();
+  const dispatchedOrderFingerprints = new Map();
+  const fetchingOrderIds = new Set();
   let merchantId = null;
   let lastSuccessfulPollAt = Date.now();
+  let isLeaderTab = true;
 
   // 1. Keep-Alive: Override visibilityState so Grab portal never pauses background timers / WebSockets
   try {
@@ -67,7 +69,9 @@
   const ITEM_SYNC_GAP_MS = 150;
   const MAX_MUTATION_ATTEMPTS = 3;
   const MUTATION_TIMEOUT_MS = 15000;
-  let itemSyncTail = Promise.resolve();
+  const MAX_ITEM_MUTATION_SLOTS = 2;
+  let itemSyncActive = 0;
+  const itemSyncWaiters = [];
 
   function dispatchOrderEvent(type, data) {
     window.postMessage(
@@ -153,12 +157,21 @@
   }
 
   function enqueueItemSync(operation) {
-    itemSyncTail = itemSyncTail
-      .catch(() => {})
-      .then(async () => {
+    const run = async () => {
+      while (itemSyncActive >= MAX_ITEM_MUTATION_SLOTS) {
+        await new Promise((resolve) => itemSyncWaiters.push(resolve));
+      }
+      itemSyncActive += 1;
+      try {
         await operation();
         await delay(ITEM_SYNC_GAP_MS);
-      });
+      } finally {
+        itemSyncActive -= 1;
+        const next = itemSyncWaiters.shift();
+        if (next) next();
+      }
+    };
+    void run();
   }
 
   function retryDelayMs(response, attempt) {
@@ -336,15 +349,43 @@
     };
   }
 
+  function contentFingerprint(order) {
+    if (!order) return '';
+    return JSON.stringify({
+      items: Array.isArray(order.itemInfo?.items)
+        ? order.itemInfo.items.map((item) => ({
+            itemID: item.itemID || '',
+            name: item.name || '',
+            quantity: item.quantity || 1,
+            comment: item.comment || null,
+            fare: item.fare || null,
+            discountInfo: item.discountInfo || null,
+            modifierGroups: item.modifierGroups || [],
+          }))
+        : [],
+      fare: order.fare || null,
+      cutlery: Number.isInteger(order.cutlery) ? order.cutlery : null,
+    });
+  }
+
+  function shouldFetchOrder(order) {
+    if (!order?.orderID || !isOrderEligibleForRelay(order)) return false;
+    const fingerprint = contentFingerprint(projectAllowlistedOrder(order) || order);
+    if (queuedOrderFingerprints.get(order.orderID) === fingerprint) return false;
+    if (dispatchedOrderFingerprints.get(order.orderID) === fingerprint) return false;
+    if (fetchingOrderIds.has(order.orderID)) return false;
+    return true;
+  }
+
   function dispatchOrderDetailOnce(order) {
     if (!isOrderEligibleForRelay(order)) return;
     const cleanOrder = projectAllowlistedOrder(order);
     if (!cleanOrder) return;
-    const key = cleanOrder.orderID || cleanOrder.displayID;
-    if (key) {
-      if (dispatchedOrderIds.has(key)) return;
-      dispatchedOrderIds.add(key);
-    }
+    const fingerprint = contentFingerprint(cleanOrder);
+    cleanOrder.contentFingerprint = fingerprint;
+    if (queuedOrderFingerprints.get(cleanOrder.orderID) === fingerprint) return;
+    if (dispatchedOrderFingerprints.get(cleanOrder.orderID) === fingerprint) return;
+    dispatchedOrderFingerprints.set(cleanOrder.orderID, fingerprint);
     console.log(`[Grab POS Relay] Caught order detail: ${cleanOrder.displayID} (${cleanOrder.orderID})`);
     dispatchOrderEvent('ORDER_DETAIL', { order: cleanOrder, merchantId });
   }
@@ -384,11 +425,11 @@
 
               if (isOrderEligibleForRelay(null, url)) {
                 for (const order of data.orders) {
-                  if (isOrderEligibleForRelay(order, url)) {
-                    if (order.orderID && !processedOrderIds.has(order.orderID)) {
-                      processedOrderIds.add(order.orderID);
-                      fetchOrderDetail(order.orderID);
-                    }
+                  if (isOrderEligibleForRelay(order, url) && shouldFetchOrder(order)) {
+                    fetchingOrderIds.add(order.orderID);
+                    fetchOrderDetail(order.orderID).finally(() => {
+                      fetchingOrderIds.delete(order.orderID);
+                    });
                   }
                 }
               }
@@ -432,8 +473,37 @@
 
   // Active polling loop using native page fetch. Backs off to a slow probe
   // while the Grab session is expired so recovery is detected on its own.
+  async function pollCancelledOrders() {
+    if (!isLeaderTab || !merchantId) return;
+    try {
+      const url = `https://api.grab.com/delvplatformapi/merchant/v4/orders-pagination?AutoAcceptGroup=1&merchantID=${merchantId}&PageType=Cancelled&searchToken=&size=10`;
+      const res = await originalFetch(url, {
+        credentials: 'include',
+        headers: buildGrabHeaders(),
+      });
+      if (res.ok) {
+        noteAuthSuccess();
+        const data = await res.json();
+        if (Array.isArray(data.orders)) {
+          for (const order of data.orders) {
+            if (!order?.orderID) continue;
+            dispatchOrderEvent('ORDER_CANCELLED', {
+              orderID: order.orderID,
+              displayID: order.displayID,
+              merchantId,
+            });
+          }
+        }
+      } else {
+        noteAuthFailure(res.status, url);
+      }
+    } catch (err) {
+      // Network errors are not auth signals; keep polling quietly.
+    }
+  }
+
   async function pollOrders() {
-    if (!merchantId) return;
+    if (!isLeaderTab || !merchantId) return;
     try {
       const url = `https://api.grab.com/delvplatformapi/merchant/v4/orders-pagination?AutoAcceptGroup=1&merchantID=${merchantId}&PageType=PreparingV2&searchToken=&size=50`;
       const res = await originalFetch(url, {
@@ -445,9 +515,13 @@
         const data = await res.json();
         if (Array.isArray(data.orders)) {
           for (const o of data.orders) {
-            if (o.orderID && !processedOrderIds.has(o.orderID)) {
-              processedOrderIds.add(o.orderID);
-              await fetchOrderDetail(o.orderID);
+            if (shouldFetchOrder(o)) {
+              fetchingOrderIds.add(o.orderID);
+              try {
+                await fetchOrderDetail(o.orderID);
+              } finally {
+                fetchingOrderIds.delete(o.orderID);
+              }
             }
           }
         }
@@ -773,11 +847,11 @@
             dispatchOrderEvent('ORDERS_PAGINATION', { url, data, merchantId });
             if (isOrderEligibleForRelay(null, url)) {
               for (const order of data.orders) {
-                if (isOrderEligibleForRelay(order, url)) {
-                  if (order.orderID && !processedOrderIds.has(order.orderID)) {
-                    processedOrderIds.add(order.orderID);
-                    fetchOrderDetail(order.orderID);
-                  }
+                if (isOrderEligibleForRelay(order, url) && shouldFetchOrder(order)) {
+                  fetchingOrderIds.add(order.orderID);
+                  fetchOrderDetail(order.orderID).finally(() => {
+                    fetchingOrderIds.delete(order.orderID);
+                  });
                 }
               }
             }
@@ -813,6 +887,22 @@
       enqueueItemSync(() =>
         setGrabItemStock(payload?.requestId, payload?.itemId, payload?.currentStock)
       );
+    } else if (command === 'SET_LEADER') {
+      isLeaderTab = Boolean(payload?.isLeader);
+    } else if (command === 'MARK_ORDER_QUEUED') {
+      if (payload?.orderID && payload?.contentFingerprint) {
+        queuedOrderFingerprints.set(payload.orderID, payload.contentFingerprint);
+      }
+    } else if (command === 'MARK_ORDER_QUEUE_FAILED') {
+      if (
+        payload?.orderID &&
+        dispatchedOrderFingerprints.get(payload.orderID) === payload.contentFingerprint
+      ) {
+        dispatchedOrderFingerprints.delete(payload.orderID);
+      }
+    } else if (command === 'RECOVER_MISSED_ORDERS') {
+      pollOrders();
+      pollCancelledOrders();
     }
   });
 
@@ -820,12 +910,14 @@
   function schedulePoll() {
     setTimeout(async () => {
       await pollOrders();
+      await pollCancelledOrders();
       schedulePoll();
     }, authExpired ? AUTH_RETRY_INTERVAL_MS : POLL_INTERVAL_MS);
   }
 
   setTimeout(async () => {
     await pollOrders();
+    await pollCancelledOrders();
     schedulePoll();
   }, 1500);
 })();
