@@ -99,6 +99,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvStatus: TextView
     private lateinit var tvStatusBadge: TextView
     private lateinit var tvEndpoint: TextView
+    private var tvMarketplaceHome: TextView? = null
+    private var tvMarketplaceDiagnostics: TextView? = null
+    private var tvGreenSmHome: TextView? = null
+    private var tvGreenSmDiagnostics: TextView? = null
     private lateinit var tvWaitingKpi: TextView
     private lateinit var tvActionKpi: TextView
     private lateinit var tvSentKpi: TextView
@@ -670,6 +674,46 @@ class MainActivity : AppCompatActivity() {
         endpointContainer.addView(tvEndpoint)
         endpointContainer.addView(btnCopyEndpoint)
 
+        val marketplaceBlock = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            isClickable = true
+            isFocusable = true
+            background = roundedBackground(
+                color(R.color.surface_muted),
+                color(R.color.border),
+                10
+            )
+            setPadding(dp(12), dp(10), dp(12), dp(10))
+            setOnClickListener {
+                selectDestination(DESTINATION_DEVICE)
+                if (::deviceTabs.isInitialized) {
+                    deviceTabs.getTabAt(2)?.select()
+                }
+            }
+            addView(TextView(this@MainActivity).apply {
+                text = getString(R.string.marketplace_connection_title)
+                textSize = 13f
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                setTextColor(color(R.color.ink))
+            })
+        }
+        tvMarketplaceHome = TextView(this).apply {
+            text = marketplaceStatusCopy()
+            textSize = 12.5f
+            setTextColor(color(R.color.ink_muted))
+            setPadding(0, dp(4), 0, 0)
+            setLineSpacing(dp(2).toFloat(), 1f)
+        }
+        tvGreenSmHome = TextView(this).apply {
+            textSize = 12.5f
+            setTextColor(color(R.color.warning_text))
+            setPadding(0, dp(6), 0, 0)
+            setLineSpacing(dp(2).toFloat(), 1f)
+            visibility = View.GONE
+        }
+        marketplaceBlock.addView(tvMarketplaceHome)
+        marketplaceBlock.addView(tvGreenSmHome)
+
         btnToggle = MaterialButton(this).apply {
             isAllCaps = false
             textSize = 15f
@@ -687,6 +731,8 @@ class MainActivity : AppCompatActivity() {
         panel.addView(tvStatus)
         panel.addView(space(14))
         panel.addView(endpointContainer)
+        panel.addView(space(10))
+        panel.addView(marketplaceBlock)
         panel.addView(space(16))
         panel.addView(btnToggle)
         return panel
@@ -869,7 +915,7 @@ class MainActivity : AppCompatActivity() {
         panel.addView(sourceStatusCard(
             platformName = "Green SM Food",
             status = getString(R.string.source_not_supported_status),
-            description = getString(R.string.greensm_not_supported_description),
+            description = greenSmTransportCopy(),
             colorRes = R.color.greensm_green,
             surfaceRes = R.color.greensm_surface,
             borderRes = R.color.greensm_border
@@ -1115,9 +1161,39 @@ class MainActivity : AppCompatActivity() {
         section.addView(space(10))
 
         val panel = panel()
+        tvMarketplaceDiagnostics = TextView(this).apply {
+            text = marketplaceStatusCopy()
+            textSize = 13f
+            setTextColor(color(R.color.ink_secondary))
+            setLineSpacing(dp(2).toFloat(), 1f)
+        }
+        panel.addView(TextView(this).apply {
+            text = getString(R.string.marketplace_connection_title)
+            textSize = 15f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            setTextColor(color(R.color.ink))
+        })
+        panel.addView(tvMarketplaceDiagnostics)
+        tvGreenSmDiagnostics = TextView(this).apply {
+            text = greenSmTransportCopy()
+            textSize = 13f
+            setTextColor(color(R.color.warning_text))
+            setPadding(0, dp(8), 0, 0)
+            setLineSpacing(dp(2).toFloat(), 1f)
+        }
+        panel.addView(tvGreenSmDiagnostics)
+        panel.addView(space(12))
         panel.addView(secondaryButton(getString(R.string.check_pos_action)) { testPingPos() })
         panel.addView(space(8))
         panel.addView(secondaryButton(getString(R.string.check_print_port_action)) { testPrintPort() })
+        panel.addView(space(8))
+        panel.addView(secondaryButton(getString(R.string.check_marketplace_connection_action)) {
+            checkMarketplaceConnection()
+        })
+        panel.addView(space(8))
+        panel.addView(secondaryButton(getString(R.string.check_greensm_transport_action)) {
+            checkGreenSmTransport()
+        })
         panel.addView(space(8))
         panel.addView(secondaryButton(getString(R.string.view_queue_action)) { viewQueueSummary() })
         panel.addView(space(8))
@@ -1777,9 +1853,81 @@ class MainActivity : AppCompatActivity() {
 
             val summary = dbHelper.getQueueSummary()
             AppLogger.i("CHẨN ĐOÁN", "3. Trạng thái hàng đợi:\n$summary")
+
+            val marketplace = IntakeConnectionMonitor.lastMarketplace()
+            if (marketplace != null) {
+                AppLogger.s("CHẨN ĐOÁN", "4. Kết nối app sàn: ${marketplaceStatusCopy()}")
+            } else {
+                AppLogger.w("CHẨN ĐOÁN", "4. Kết nối app sàn: ${getString(R.string.marketplace_connection_empty)}")
+            }
+            AppLogger.w("CHẨN ĐOÁN", "5. Green SM Food: ${greenSmTransportCopy()}")
             AppLogger.i("CHẨN ĐOÁN", "--- Hoàn thành kiểm tra toàn diện ---")
             Toast.makeText(this@MainActivity, "Đã hoàn thành chẩn đoán, xem kết quả trong nhật ký", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun marketplaceStatusCopy(): String {
+        val event = IntakeConnectionMonitor.lastMarketplace()
+            ?: return getString(R.string.marketplace_connection_empty)
+        val clock = IntakeConnectionPolicy.formatClock(event.atMs)
+        return when (event.kind) {
+            IntakeConnectionKind.MARKETPLACE_JOB ->
+                getString(R.string.marketplace_connection_job, clock, event.remoteHost)
+            else ->
+                getString(R.string.marketplace_connection_probe, clock, event.remoteHost)
+        }
+    }
+
+    private fun refreshMarketplaceStatus() {
+        val copy = marketplaceStatusCopy()
+        tvMarketplaceHome?.text = copy
+        tvMarketplaceDiagnostics?.text = copy
+        refreshGreenSmStatus()
+    }
+
+    private fun greenSmInstalled(): Boolean =
+        GreenSmTransportPolicy.isMerchantInstalled(packageManager)
+
+    private fun greenSmTransportCopy(): String =
+        when (GreenSmTransportPolicy.classify(greenSmInstalled())) {
+            GreenSmTransportKind.BLUETOOTH_OR_SUNMI ->
+                getString(R.string.greensm_bluetooth_installed)
+            GreenSmTransportKind.ABSENT ->
+                getString(R.string.greensm_bluetooth_absent)
+        }
+
+    private fun refreshGreenSmStatus() {
+        val installed = greenSmInstalled()
+        val copy = greenSmTransportCopy()
+        tvGreenSmHome?.apply {
+            text = copy
+            visibility = if (installed) View.VISIBLE else View.GONE
+        }
+        tvGreenSmDiagnostics?.text = copy
+    }
+
+    private fun checkGreenSmTransport() {
+        refreshGreenSmStatus()
+        val copy = greenSmTransportCopy()
+        AppLogger.w("GREEN SM", copy)
+        Toast.makeText(this, copy, Toast.LENGTH_LONG).show()
+    }
+
+    private fun checkMarketplaceConnection() {
+        refreshMarketplaceStatus()
+        val event = IntakeConnectionMonitor.lastMarketplace()
+        if (event == null) {
+            AppLogger.w("APP SÀN", getString(R.string.marketplace_connection_empty))
+            Toast.makeText(
+                this,
+                getString(R.string.marketplace_connection_check_empty),
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+        val copy = marketplaceStatusCopy()
+        AppLogger.s("APP SÀN", copy)
+        Toast.makeText(this, copy, Toast.LENGTH_LONG).show()
     }
 
     private fun refreshServiceState() {
@@ -1806,6 +1954,7 @@ class MainActivity : AppCompatActivity() {
         }
         updateReceiptsBadge(actionNeeded)
         renderOrderList()
+        refreshMarketplaceStatus()
 
         if (PrintIntakeService.isServiceRunning) {
             btnToggle.text = getString(R.string.stop_service_action)

@@ -8,10 +8,7 @@ data class EscPosRaster(
 
 /** Decodes the largest GS v 0 monochrome raster in an ESC/POS stream. */
 object EscPosRasterDecoder {
-    private const val GS = 0x1D
-    private const val RASTER_BIT_IMAGE = 0x76
-    private const val RASTER_MODE_PREFIX = 0x30
-    private const val HEADER_BYTES = 8
+    private const val HEADER_BYTES = EscPosRasterFormat.HEADER_BYTES
     private const val MAX_PIXELS = 4_000_000
 
     fun hasDecodableRaster(bytes: ByteArray): Boolean = firstValidHeader(bytes) != null
@@ -75,11 +72,7 @@ object EscPosRasterDecoder {
 
     private fun readHeader(bytes: ByteArray, offset: Int): RasterHeader? {
         if (offset + HEADER_BYTES > bytes.size) return null
-        if (
-            unsigned(bytes[offset]) != GS ||
-            unsigned(bytes[offset + 1]) != RASTER_BIT_IMAGE ||
-            unsigned(bytes[offset + 2]) != RASTER_MODE_PREFIX
-        ) {
+        if (!EscPosRasterFormat.isRasterPrefix(bytes, offset)) {
             return null
         }
 

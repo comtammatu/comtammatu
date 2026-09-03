@@ -52,7 +52,7 @@ class EscPosPrinterProtocolTest {
     @Test
     fun `does not treat cut-like bytes inside raster data as receipt terminator`() {
         val rasterWithCutLikeBytes = byteArrayOf(
-            0x1D, 0x76, 0x30, 0x00,
+            0x1D, 0x76, 0x00, 0x00,
             0x04, 0x00, 0x01, 0x00,
             0x41, 0x1D, 0x56, 0x42
         )

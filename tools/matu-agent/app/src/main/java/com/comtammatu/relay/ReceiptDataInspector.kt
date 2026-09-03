@@ -74,15 +74,14 @@ object ReceiptDataInspector {
     }
 
     private fun isRasterCommand(bytes: ByteArray, offset: Int): Boolean =
-        offset + RASTER_HEADER_BYTES <= bytes.size &&
-            unsigned(bytes[offset]) == GS &&
-            unsigned(bytes[offset + 1]) == RASTER_V &&
-            unsigned(bytes[offset + 2]) == RASTER_ZERO
+        offset + EscPosRasterFormat.HEADER_BYTES <= bytes.size &&
+            EscPosRasterFormat.isRasterPrefix(bytes, offset)
 
     private fun rasterCommandEnd(bytes: ByteArray, offset: Int): Int {
         val widthBytes = unsigned(bytes[offset + 4]) + unsigned(bytes[offset + 5]) * 256
         val height = unsigned(bytes[offset + 6]) + unsigned(bytes[offset + 7]) * 256
-        val payloadEnd = offset.toLong() + RASTER_HEADER_BYTES + widthBytes.toLong() * height
+        val payloadEnd =
+            offset.toLong() + EscPosRasterFormat.HEADER_BYTES + widthBytes.toLong() * height
         return payloadEnd.coerceAtMost(bytes.size.toLong()).toInt()
     }
 
@@ -120,7 +119,4 @@ object ReceiptDataInspector {
     private const val ESC_ABSOLUTE_POSITION = 0x24
     private const val ESC_RELATIVE_POSITION = 0x5C
     private const val GS_BARCODE = 0x6B
-    private const val RASTER_V = 0x76
-    private const val RASTER_ZERO = 0x30
-    private const val RASTER_HEADER_BYTES = 8
 }

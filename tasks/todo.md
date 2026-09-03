@@ -5,17 +5,23 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Clarify expense list purpose and startup filters
+State: verify
+Exit: Expense LIST leads with spend purpose; URL `q`/`kind` slice operating vs startup.
+Evidence: `finance-expenses.test.ts`.
+- [ ] Owner reviews purpose-first rows and startup kind filter on `/finance/expenses`
+## Split construction from capital assets
+State: verify
+Exit: Separate `capital`/`construction`; construction outside total operational value.
+Evidence: `20260903124906`; `finance-construction-split-static.test.ts`.
+- [ ] Owner applies the migration on Production and reclassifies fit-out `capital` rows
 ## Consolidate Má Tư Agent into one supported Android application
-
 State: doing
-Kind: feature
-Tier: T3
-Lane: delivery/print-agent
 Exit: The project builds and distributes exactly one Má Tư Agent APK; Redmi UI reports only verified direct intake capabilities and does not claim Green SM/beFood auto-discovery. A cashier can resolve a waiting receipt as manually entered without deleting its source identity or fingerprint, so later reprints remain deduplicated. Resolved history preserves the source-to-POS mapping; cleanup removes only heavy diagnostic payloads. Shopee full references remain the source identity while operator/POS surfaces display the final four digits.
 Evidence: Redmi Green SM Merchant 1.0.30 runtime log showed `initPrinter` → `Printer finded` followed by Bluetooth scanning on Xiaomi/Redmi hardware; the app's `hasInternalPrinter`/manufacturer gate makes the companion ineffective. Agent 1.4.0 (`versionCode=12`) is installed on Redmi serial `6ded1ffa`; the companion package is absent, the service remains stopped after launch, and the preserved ledger reports 0 waiting / 7 resolved with Shopee source and POS references rendered as four digits. Agent 1.6.0 (`versionCode=14`) builds one Material 3 APK with adaptive bottom-bar/navigation-rail destinations and independent bitmap/text/OCR receipt inspection. `check-operational-tools` enforces the single-APK, retained-DISMISSED-row, Material navigation, and data-layer contracts; Agent queue lifecycle, short-reference, error-copy, OCR, receipt-layer, platform, protocol, and relay response unit tests; targeted delivery dedup tests (17/17); Agent `test`/`assembleDebug`/`lintDebug`; full `corepack pnpm verify`; `docs/runbooks/food-delivery-matu-agent.md`.
-
 - [ ] Deploy the relay short-reference containment, then restart the main Agent and confirm historical Shopee receipts resolve idempotently or stay quarantined without a duplicate POS order
 - [ ] After relay deployment, submit one known handled Shopee receipt and verify manual-entry/cleanup retention on a quarantined test row without creating a duplicate POS order
+- [ ] Install Agent 1.6.8 on Redmi: confirm `Tổng quan` `Kết nối app sàn` and `Nhật ký` `APP SÀN` after a ShopeeFood status probe, leave the session idle, then confirm a later ShopeeFood job still arrives on the same printer target; `Kiểm tra Green SM Food` / `GREEN SM` must not treat Bluetooth or a missing `APP SÀN` line as an Agent socket failure
 - [ ] Install Agent 1.6.0 on Redmi, inspect the Material 3 shell and bitmap/text/OCR receipt detail at primary font scale, enable HyperOS Autostart / No restrictions / floating `Đơn mới` alerts, then verify service survival after screen-off, recent-task dismissal, APK replacement, and a device reboot
 - [ ] Validate a supported beFood transport independently before enabling beFood intake on Redmi
 
@@ -89,7 +95,7 @@ Kind: fix
 Tier: T3
 Lane: pos
 Exit: A live VietQR is recoverable from Self-Order and refreshes in place when the bill changes. Guests who close mid-pay reopen on the same QR. POS can add items without cancelling the code.
-Evidence: static tests `vietqr-auto-refresh-flow`, `pos-table-order-visual-state` green. Migration `20260903120620_refresh_pending_vietqr_on_order_change.sql` is in-tree and not yet applied.
+Evidence: static tests `vietqr-auto-refresh-flow`, `pos-table-order-visual-state` green. Production `enloyfnuerqgaqderbwb` ledger has `20260903120620`; refresh function and `orders` trigger are live; `db:types` regenerated.
 
 UI Advisor Gate
 - Surface: `/q/[token]` G1/G6/G7 + POS bill `StationSheet`; route family: public QR + station POS; plane: `public` + `station_chrome`; change: interaction + overlay
@@ -102,7 +108,6 @@ UI Advisor Gate
 - Responsive: phone 390 self-order; station touch bill sheet
 - Verification: static tests + `lint:copy`
 
-- [ ] Owner applies `20260903120620` to Production `enloyfnuerqgaqderbwb`
 - [ ] Phone: create VietQR, close the tab, reopen Self-Order, pay the same QR
 - [ ] POS: add an item while QR is pending and confirm the QR amount updates
 

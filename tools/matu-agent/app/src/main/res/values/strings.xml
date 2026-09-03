@@ -19,7 +19,10 @@
     <string name="platform_configuration_title">Nguồn nhận phiếu</string>
     <string name="platform_configuration_description">Hiển thị đúng khả năng nhận đơn trực tiếp của thiết bị này.</string>
     <string name="source_not_supported_status">CHƯA HỖ TRỢ</string>
-    <string name="greensm_not_supported_description">Trên Redmi, Green SM Food yêu cầu máy in Bluetooth hoặc thiết bị SUNMI.</string>
+    <string name="greensm_not_supported_description">Trên Redmi, Green SM Food yêu cầu máy in Bluetooth hoặc thiết bị SUNMI. Cùng máy không thể ghép Bluetooth với Má Tư Agent.</string>
+    <string name="greensm_bluetooth_installed">Green SM Food đang cài trên máy. App này chỉ in Bluetooth hoặc SUNMI, không gửi vào cổng nhận phiếu.</string>
+    <string name="greensm_bluetooth_absent">Chưa cài Green SM Merchant trên máy này.</string>
+    <string name="check_greensm_transport_action">Kiểm tra Green SM Food</string>
     <string name="befood_not_supported_description">Chưa xác nhận beFood có thể gửi phiếu trực tiếp tới Agent trên Redmi.</string>
     <string name="backend_url_label">Địa chỉ máy chủ POS</string>
     <string name="branch_id_label">Mã chi nhánh</string>
@@ -33,6 +36,12 @@
     <string name="diagnostics_description">Xác nhận kết nối trước khi bắt đầu nhận đơn.</string>
     <string name="check_pos_action">Kiểm tra POS</string>
     <string name="check_print_port_action">Kiểm tra cổng in</string>
+    <string name="check_marketplace_connection_action">Kiểm tra kết nối app sàn</string>
+    <string name="marketplace_connection_title">Kết nối app sàn</string>
+    <string name="marketplace_connection_empty">Chưa thấy ShopeeFood hay app sàn nào kết nối tới cổng nhận phiếu.</string>
+    <string name="marketplace_connection_probe">App sàn đã hỏi máy in lúc %1$s từ %2$s.</string>
+    <string name="marketplace_connection_job">App sàn đã gửi phiếu lúc %1$s từ %2$s.</string>
+    <string name="marketplace_connection_check_empty">Chưa thấy app sàn trên cổng nhận phiếu. Mở ShopeeFood, xác nhận máy in 127.0.0.1 cổng 9100, rồi in thử một đơn. Green SM Food in Bluetooth nên không hiện ở đây.</string>
     <string name="view_queue_action">Xem tổng kết hàng đợi</string>
 
     <string name="orders_title">Sổ đối chiếu đơn</string>

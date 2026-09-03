@@ -29,5 +29,6 @@ object DeliveryPlatformDetector {
         return matches.singleOrNull()
     }
 
-    fun detect(rawBytes: ByteArray): DeliveryPlatform? = detect(rawBytes.toString(Charsets.UTF_8))
+    fun detect(rawBytes: ByteArray): DeliveryPlatform? =
+        ReceiptDataInspector.extractPrintableText(rawBytes)?.let(::detect)
 }

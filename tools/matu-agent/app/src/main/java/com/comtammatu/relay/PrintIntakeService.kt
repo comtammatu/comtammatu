@@ -63,7 +63,7 @@ class PrintIntakeService : Service() {
     }
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private var serverSocket: ServerSocket? = null
+    private val serverSockets = mutableListOf<ServerSocket>()
     private lateinit var dispatcher: WebhookDispatcher
     private lateinit var receiptTextRecognizer: ReceiptTextRecognizer
     private lateinit var printerDiscovery: PrinterDiscovery
@@ -170,18 +170,19 @@ class PrintIntakeService : Service() {
         // Bind synchronously so a failed bind never leaves the service in a
         // zombie "running" state. Loopback only by default: the intake port is
         // unauthenticated, so LAN exposure must be explicitly opted into.
-        try {
-            val bindAddress = InetAddress.getByName(PrinterEndpoint.bindHost(lanMode))
-            serverSocket = ServerSocket(port, 50, bindAddress)
-            isServiceRunning = true
-            acquireRuntimeWakeLock()
-            if (lanMode) printerDiscovery.register(port)
-            Log.i(TAG, "Print intake server listening on ${bindAddress.hostAddress}:$port (lanMode=$lanMode)")
-            AppLogger.s("NHẬN PHIẾU", "Đang mở cổng TCP $port (${if (lanMode) "0.0.0.0 Mạng LAN" else "127.0.0.1 Cục bộ"}). Sẵn sàng nhận đơn!")
-        } catch (e: Exception) {
+        val bound = mutableListOf<ServerSocket>()
+        for (host in PrinterEndpoint.bindHosts(lanMode)) {
+            try {
+                val bindAddress = InetAddress.getByName(host)
+                bound += ServerSocket(port, 50, bindAddress)
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to bind $host:$port: ${e.message}", e)
+                AppLogger.w("NHẬN PHIẾU", "Không mở được $host:$port: ${e.message}")
+            }
+        }
+        if (bound.isEmpty()) {
             isServiceRunning = false
-            Log.e(TAG, "Failed to bind port $port: ${e.message}", e)
-            AppLogger.e("NHẬN PHIẾU", "Không mở được cổng TCP $port: ${e.message} (Có thể cổng 9100 đang bị chiếm dụng)")
+            AppLogger.e("NHẬN PHIẾU", "Không mở được cổng TCP $port (Có thể cổng 9100 đang bị chiếm dụng)")
             startForeground(
                 AgentNotifications.SERVICE_NOTIFICATION_ID,
                 AgentNotifications.buildServiceNotification(
@@ -192,43 +193,96 @@ class PrintIntakeService : Service() {
             return
         }
 
-        serviceScope.launch {
-            try {
-                while (isServiceRunning && serverSocket != null && !serverSocket!!.isClosed) {
-                    val clientSocket = serverSocket!!.accept()
-                    serviceScope.launch {
-                        handleClientConnection(clientSocket)
-                    }
+        synchronized(this) {
+            serverSockets.addAll(bound)
+        }
+        isServiceRunning = true
+        acquireRuntimeWakeLock()
+        if (lanMode) printerDiscovery.register(port)
+        val endpointLabel = if (lanMode) "0.0.0.0 Mạng LAN" else "127.0.0.1 + ::1 Cục bộ"
+        Log.i(TAG, "Print intake server listening on $endpointLabel:$port")
+        AppLogger.s("NHẬN PHIẾU", "Đang mở cổng TCP $port ($endpointLabel). Sẵn sàng nhận đơn!")
+        startForeground(
+            AgentNotifications.SERVICE_NOTIFICATION_ID,
+            AgentNotifications.buildServiceNotification(
+                this,
+                "Đang nhận phiếu tại cổng TCP $port · ${dispatcher.getPendingCount()} đang chờ"
+            )
+        )
+        if (GreenSmTransportPolicy.isMerchantInstalled(packageManager)) {
+            AppLogger.w(
+                "GREEN SM",
+                "Green SM Food đang cài trên máy; in Bluetooth hoặc SUNMI, không vào cổng $port"
+            )
+        }
+
+        for (server in bound) {
+            serviceScope.launch { acceptLoop(server) }
+        }
+    }
+
+    private suspend fun acceptLoop(serverSocket: ServerSocket) {
+        try {
+            while (isServiceRunning && !serverSocket.isClosed) {
+                val clientSocket = serverSocket.accept()
+                serviceScope.launch {
+                    handleClientConnection(clientSocket)
                 }
-            } catch (e: Exception) {
-                if (isServiceRunning) {
-                    Log.e(TAG, "ServerSocket error: ${e.message}", e)
-                    AppLogger.e("NHẬN PHIẾU", "Lỗi cổng nhận phiếu: ${e.message}")
-                    restartServerAfterFailure()
-                }
+            }
+        } catch (e: Exception) {
+            if (!isServiceRunning) return
+            Log.e(TAG, "ServerSocket error: ${e.message}", e)
+            val address = serverSocket.inetAddress?.hostAddress ?: "?"
+            AppLogger.e("NHẬN PHIẾU", "Lỗi cổng nhận phiếu $address: ${e.message}")
+            val siblingListening = synchronized(this) {
+                serverSockets.remove(serverSocket)
+                runCatching { if (!serverSocket.isClosed) serverSocket.close() }
+                serverSockets.any { !it.isClosed }
+            }
+            if (IntakeListenPolicy.shouldRebindAll(siblingListening)) {
+                restartServerAfterFailure()
+            } else {
+                AppLogger.w(
+                    "NHẬN PHIẾU",
+                    "Một địa chỉ listen đã lỗi; địa chỉ còn lại vẫn nhận phiếu"
+                )
             }
         }
     }
 
     private suspend fun restartServerAfterFailure() {
-        isServiceRunning = false
+        synchronized(this) {
+            if (!isServiceRunning) return
+            isServiceRunning = false
+        }
         printerDiscovery.unregister()
-        runCatching { serverSocket?.close() }
-        serverSocket = null
+        closeServerSockets()
         releaseRuntimeWakeLock()
-        delay(2_000)
 
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        if (!prefs.getBoolean(KEY_AGENT_ENABLED, false)) return
         val saved = configFromPrefs()
-        AppLogger.w("CHẠY NỀN", "Đang tự mở lại cổng nhận phiếu sau lỗi nền")
-        startServer(saved.port, saved.lanMode)
+        var attempt = 0
+        while (
+            IntakeListenPolicy.shouldKeepRebinding(
+                agentEnabled = prefs.getBoolean(KEY_AGENT_ENABLED, false),
+                listening = isServiceRunning
+            )
+        ) {
+            delay(IntakeListenPolicy.nextRebindDelayMs(attempt))
+            if (!prefs.getBoolean(KEY_AGENT_ENABLED, false)) return
+            AppLogger.w("CHẠY NỀN", "Đang tự mở lại cổng nhận phiếu sau lỗi nền")
+            startServer(saved.port, saved.lanMode)
+            if (isServiceRunning) return
+            attempt += 1
+        }
     }
 
     private fun handleClientConnection(socket: Socket) {
         val clientAddress = socket.remoteSocketAddress.toString()
         AppLogger.net("Phát hiện kết nối in từ: $clientAddress")
+        var loggedMarketplaceProbe = false
         try {
+            socket.keepAlive = true
             socket.soTimeout = READ_TIMEOUT_MS
             val inputStream: InputStream = socket.getInputStream()
             val clientOutput: OutputStream = socket.getOutputStream()
@@ -236,11 +290,22 @@ class PrintIntakeService : Service() {
             val outputStream = ByteArrayOutputStream()
             val statusResponder = EscPosStatusResponder()
             var drainingAfterCut = false
+            var emptyKeepAlives = 0
+            var receivedAnyBytes = false
 
-            try {
-                while (true) {
+            while (true) {
+                try {
                     val bytesRead = inputStream.read(buffer)
-                    if (bytesRead == -1) break
+                    if (bytesRead == -1) {
+                        val remaining = outputStream.toByteArray()
+                        if (remaining.isEmpty()) {
+                            noteIntakePeer(clientAddress, remaining, sessionEnded = true)
+                        }
+                        processAccumulatedReceipt(clientAddress, remaining)
+                        return
+                    }
+                    receivedAnyBytes = true
+                    emptyKeepAlives = 0
                     outputStream.write(buffer, 0, bytesRead)
 
                     val statusResponses = statusResponder.responsesFor(buffer.copyOf(bytesRead))
@@ -251,18 +316,21 @@ class PrintIntakeService : Service() {
                             "IN ẤN",
                             "Đã phản hồi ${statusResponses.size} truy vấn trạng thái ESC/POS"
                         )
+                        val marketplace = noteIntakePeer(
+                            clientAddress,
+                            buffer.copyOf(bytesRead),
+                            sessionEnded = false,
+                            writeLog = !loggedMarketplaceProbe
+                        )
+                        loggedMarketplaceProbe = loggedMarketplaceProbe || marketplace
                     }
 
-                    // Reject oversized streams (slow-loris / abuse) before they
-                    // grow the in-memory buffer without bound.
                     if (outputStream.size() > MAX_PAYLOAD_BYTES) {
                         Log.e(TAG, "Payload exceeded ${MAX_PAYLOAD_BYTES} bytes from $clientAddress; dropping connection")
                         AppLogger.e("IN ẤN", "Dữ liệu vượt quá giới hạn $MAX_PAYLOAD_BYTES bytes từ $clientAddress")
                         return
                     }
 
-                    // Once a cut command appears, keep a short drain window open so
-                    // a trailing cut sequence (double-cut printers) is captured too.
                     if (
                         !drainingAfterCut &&
                         EscPosReceiptBoundary.hasCutCommand(outputStream.toByteArray())
@@ -270,78 +338,36 @@ class PrintIntakeService : Service() {
                         drainingAfterCut = true
                         socket.soTimeout = CUT_DRAIN_TIMEOUT_MS
                     }
-                }
-            } catch (_: SocketTimeoutException) {
-                // Inactivity timeout reached, process accumulated payload
-            }
-
-            val rawBytes = outputStream.toByteArray()
-
-            if (EscPosStatusResponder.isStatusOnly(rawBytes)) {
-                AppLogger.i("IN ẤN", "Kiểm tra trạng thái máy in thành công")
-            } else if (rawBytes.isNotEmpty()) {
-                Log.i(TAG, "Received ${rawBytes.size} bytes from $clientAddress")
-                AppLogger.i("IN ẤN", "Nhận được trọn vẹn luồng in (${rawBytes.size} bytes) từ $clientAddress")
-
-                serviceScope.launch {
-                    var receiptText: String? = null
-                    var platform = DeliveryPlatformDetector.detect(rawBytes)
-                    val hasRaster = EscPosRasterDecoder.hasDecodableRaster(rawBytes)
-
-                    if (AgentOcrPolicy.shouldRunOcr(platform, hasRaster)) {
-                        AppLogger.i("OCR", "Phiếu là ảnh; đang đọc chữ trực tiếp trên thiết bị...")
-                        try {
-                            receiptText = receiptTextRecognizer.recognize(rawBytes)
-                            platform = receiptText?.let(DeliveryPlatformDetector::detect)
-                            if (receiptText != null) {
-                                AppLogger.s("OCR", "Đã đọc xong nội dung phiếu in bằng OCR")
+                } catch (_: SocketTimeoutException) {
+                    val rawBytes = outputStream.toByteArray()
+                    if (EscPosIntakePolicy.shouldKeepListening(rawBytes)) {
+                        if (rawBytes.isEmpty()) {
+                            emptyKeepAlives += 1
+                            if (
+                                EscPosIntakePolicy.shouldCloseAfterEmptyKeepAlives(
+                                    emptyKeepAlives,
+                                    receivedAnyBytes
+                                )
+                            ) {
+                                AppLogger.w("IN ẤN", "Kết nối từ $clientAddress hết thời gian chờ trước khi có dữ liệu")
+                                noteIntakePeer(clientAddress, byteArrayOf(), sessionEnded = true)
+                                return
                             }
-                        } catch (error: Exception) {
-                            Log.w(TAG, "On-device receipt OCR failed", error)
-                            AppLogger.e("OCR", "Không đọc được chữ trên phiếu ảnh: ${error.localizedMessage ?: "lỗi OCR"}")
+                        } else {
+                            AppLogger.i("IN ẤN", "Kiểm tra trạng thái máy in thành công; giữ kết nối để nhận phiếu")
+                            emptyKeepAlives = 0
                         }
+                        outputStream.reset()
+                        drainingAfterCut = false
+                        socket.soTimeout = READ_TIMEOUT_MS
+                        continue
                     }
 
-                    if (platform == null) {
-                        val queuedId = dispatcher.storeUnclassifiedReceipt(rawBytes, receiptText)
-                        AppLogger.e(
-                            "PHÂN LOẠI",
-                            "Phiếu #$queuedId chưa xác định được nguồn hỗ trợ; đã giữ lại và không gửi lên POS."
-                        )
-                    } else if (!isPlatformEnabled(platform)) {
-                        val reason = when (platform) {
-                            DeliveryPlatform.SHOPEE_FOOD -> "Nguồn ShopeeFood đang tắt trong cấu hình"
-                            DeliveryPlatform.GREEN_SM_FOOD -> "Green SM Food chưa hỗ trợ gửi trực tiếp tới Agent trên Redmi"
-                            DeliveryPlatform.BE_FOOD -> "beFood chưa hỗ trợ gửi trực tiếp tới Agent trên Redmi"
-                        }
-                        val queuedId = dispatcher.storeHeldReceipt(
-                            rawBytes,
-                            platform,
-                            receiptText,
-                            reason
-                        )
-                        AppLogger.w(
-                            "NGUỒN PHIẾU",
-                            "Phiếu #$queuedId thuộc ${platform.displayName}; đã giữ lại vì nguồn này chưa được bật."
-                        )
-                    } else {
-                        AppLogger.i("PHÂN LOẠI", "Nhận diện nguồn ${platform.displayName}")
-                        dispatcher.dispatchRawReceipt(
-                            rawBytes,
-                            platform,
-                            receiptText
-                        ) { queueId, sourceOrderRef ->
-                            AgentNotifications.showIncomingOrder(
-                                this@PrintIntakeService,
-                                platform,
-                                sourceOrderRef,
-                                queueId
-                            )
-                        }
-                    }
+                    processAccumulatedReceipt(clientAddress, rawBytes)
+                    outputStream.reset()
+                    drainingAfterCut = false
+                    socket.soTimeout = READ_TIMEOUT_MS
                 }
-            } else {
-                AppLogger.w("IN ẤN", "Kết nối từ $clientAddress nhưng không nhận được byte dữ liệu nào")
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error handling client connection: ${e.message}", e)
@@ -353,13 +379,121 @@ class PrintIntakeService : Service() {
         }
     }
 
+    private fun noteIntakePeer(
+        remoteAddress: String,
+        bytes: ByteArray,
+        sessionEnded: Boolean,
+        writeLog: Boolean = true
+    ): Boolean {
+        val kind = IntakeConnectionPolicy.classify(remoteAddress, bytes, sessionEnded)
+        val host = IntakeConnectionPolicy.remoteHost(remoteAddress)
+        IntakeConnectionMonitor.record(
+            IntakeConnectionEvent(
+                atMs = System.currentTimeMillis(),
+                remoteHost = host,
+                kind = kind,
+                byteCount = bytes.size
+            )
+        )
+        if (writeLog) {
+            when (kind) {
+                IntakeConnectionKind.SELF_CHECK ->
+                    AppLogger.i("KIỂM TRA CỔNG", "Kết nối nội bộ từ $host; đây chưa phải app sàn")
+                IntakeConnectionKind.MARKETPLACE_PROBE ->
+                    AppLogger.s("APP SÀN", "Đã kết nối từ $host và hỏi trạng thái máy in")
+                IntakeConnectionKind.MARKETPLACE_JOB ->
+                    AppLogger.s("APP SÀN", "Đã gửi phiếu từ $host (${bytes.size} bytes)")
+                IntakeConnectionKind.INBOUND_IDLE -> Unit
+            }
+        }
+        return IntakeConnectionPolicy.isMarketplace(kind)
+    }
+
+    private fun processAccumulatedReceipt(remoteAddress: String, rawBytes: ByteArray) {
+        if (EscPosIntakePolicy.shouldKeepListening(rawBytes)) {
+            return
+        }
+
+        Log.i(TAG, "Received ${rawBytes.size} bytes")
+        AppLogger.i("IN ẤN", "Nhận được trọn vẹn luồng in (${rawBytes.size} bytes)")
+        noteIntakePeer(remoteAddress, rawBytes, sessionEnded = false)
+
+        serviceScope.launch {
+            var receiptText: String? = null
+            var platform = DeliveryPlatformDetector.detect(rawBytes)
+            val hasRaster = EscPosRasterDecoder.hasDecodableRaster(rawBytes)
+
+            if (AgentOcrPolicy.shouldRunOcr(platform, hasRaster)) {
+                AppLogger.i("OCR", "Phiếu là ảnh; đang đọc chữ trực tiếp trên thiết bị...")
+                try {
+                    receiptText = receiptTextRecognizer.recognize(rawBytes)
+                    platform = receiptText?.let(DeliveryPlatformDetector::detect)
+                    if (receiptText != null) {
+                        AppLogger.s("OCR", "Đã đọc xong nội dung phiếu in bằng OCR")
+                    }
+                } catch (error: Exception) {
+                    Log.w(TAG, "On-device receipt OCR failed", error)
+                    AppLogger.e("OCR", "Không đọc được chữ trên phiếu ảnh: ${error.localizedMessage ?: "lỗi OCR"}")
+                }
+            }
+
+            if (platform == null) {
+                val queuedId = dispatcher.storeUnclassifiedReceipt(rawBytes, receiptText)
+                AppLogger.e(
+                    "PHÂN LOẠI",
+                    "Phiếu #$queuedId chưa xác định được nguồn hỗ trợ; đã giữ lại và không gửi lên POS."
+                )
+            } else if (!isPlatformEnabled(platform)) {
+                val reason = when (platform) {
+                    DeliveryPlatform.SHOPEE_FOOD -> "Nguồn ShopeeFood đang tắt trong cấu hình"
+                    DeliveryPlatform.GREEN_SM_FOOD -> "Green SM Food chưa hỗ trợ gửi trực tiếp tới Agent trên Redmi"
+                    DeliveryPlatform.BE_FOOD -> "beFood chưa hỗ trợ gửi trực tiếp tới Agent trên Redmi"
+                }
+                val queuedId = dispatcher.storeHeldReceipt(
+                    rawBytes,
+                    platform,
+                    receiptText,
+                    reason
+                )
+                AppLogger.w(
+                    "NGUỒN PHIẾU",
+                    "Phiếu #$queuedId thuộc ${platform.displayName}; đã giữ lại vì nguồn này chưa được bật."
+                )
+            } else {
+                AppLogger.i("PHÂN LOẠI", "Nhận diện nguồn ${platform.displayName}")
+                dispatcher.dispatchRawReceipt(
+                    rawBytes,
+                    platform,
+                    receiptText
+                ) { queueId, sourceOrderRef ->
+                    AgentNotifications.showIncomingOrder(
+                        this@PrintIntakeService,
+                        platform,
+                        sourceOrderRef,
+                        queueId
+                    )
+                }
+            }
+        }
+    }
+
+    private fun closeServerSockets() {
+        val sockets = synchronized(this) {
+            val copy = serverSockets.toList()
+            serverSockets.clear()
+            copy
+        }
+        for (socket in sockets) {
+            runCatching { socket.close() }
+        }
+    }
+
     private fun stopServer() {
         isServiceRunning = false
         printerDiscovery.unregister()
         releaseRuntimeWakeLock()
         try {
-            serverSocket?.close()
-            serverSocket = null
+            closeServerSockets()
             AppLogger.w("NHẬN PHIẾU", "Đã đóng cổng nhận phiếu")
         } catch (e: Exception) {
             Log.e(TAG, "Error closing serverSocket: ${e.message}")
@@ -370,7 +504,11 @@ class PrintIntakeService : Service() {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return when (platform) {
             DeliveryPlatform.SHOPEE_FOOD -> prefs.getBoolean(KEY_SHOPEE_ENABLED, true)
-            DeliveryPlatform.GREEN_SM_FOOD,
+            DeliveryPlatform.GREEN_SM_FOOD -> GreenSmTransportPolicy.canUseAgentTcpIntake(
+                GreenSmTransportPolicy.isMerchantInstalled(packageManager),
+                Build.MANUFACTURER,
+                Build.BRAND
+            )
             DeliveryPlatform.BE_FOOD -> false
         }
     }

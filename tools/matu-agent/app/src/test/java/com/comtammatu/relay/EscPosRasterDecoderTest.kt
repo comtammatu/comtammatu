@@ -35,6 +35,23 @@ class EscPosRasterDecoderTest {
     }
 
     @Test
+    fun `decodes GS v 0 rasters that use numeric mode zero`() {
+        val receipt = byteArrayOf(
+            0x1D, 0x76, 0x00, 0x00,
+            0x01, 0x00,
+            0x01, 0x00,
+            0b1000_0000.toByte()
+        )
+
+        val raster = EscPosRasterDecoder.decodeLargest(receipt)
+
+        requireNotNull(raster)
+        assertEquals(8, raster.width)
+        assertEquals(1, raster.height)
+        assertTrue(EscPosRasterDecoder.hasDecodableRaster(receipt))
+    }
+
+    @Test
     fun `rejects truncated and implausibly large raster payloads`() {
         assertNull(
             EscPosRasterDecoder.decodeLargest(

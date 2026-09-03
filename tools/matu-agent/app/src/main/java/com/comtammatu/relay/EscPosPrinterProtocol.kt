@@ -131,7 +131,7 @@ object EscPosReceiptBoundary {
                     0x56 -> return true
                     0x76 -> {
                         if (offset + 7 >= bytes.size) return false
-                        if (unsigned(bytes[offset + 2]) != 0x30) {
+                        if (!EscPosRasterFormat.isSupportedMode(unsigned(bytes[offset + 2]))) {
                             offset += 2
                             continue
                         }

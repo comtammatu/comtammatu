@@ -14,7 +14,7 @@ Má Tư Agent biến một máy Android thông thường thành điểm nhận p
 
 ## Chạy nền và cảnh báo đơn mới trên Redmi
 
-Má Tư Agent 1.6.0 dùng foreground service thường trực. Khi thu ngân đã bấm **Bật nhận đơn**, Agent ghi nhớ trạng thái này và tự mở lại sau khi điện thoại khởi động hoặc APK được cập nhật. Khi màn hình tắt, Agent giữ tiến trình nhận phiếu hoạt động; nếu cổng nhận phiếu lỗi bất thường, Agent tự mở lại cổng. Thông báo **Má Tư Agent đang nhận đơn** phải luôn có trong vùng thông báo khi dịch vụ đang chạy.
+Má Tư Agent 1.6.8 dùng foreground service thường trực. Khi thu ngân đã bấm **Bật nhận đơn**, Agent ghi nhớ trạng thái này và tự mở lại sau khi điện thoại khởi động hoặc APK được cập nhật. Khi màn hình tắt, Agent giữ tiến trình nhận phiếu hoạt động; nếu một địa chỉ listen lỗi, địa chỉ còn lại vẫn nhận phiếu, và Agent tự mở lại cổng khi không còn socket nào. Phiên TCP của app sàn được giữ như máy in mạng thật: Agent không đóng vì im lặng, chỉ đóng khi ShopeeFood tự ngắt, lỗi I/O, hoặc thu ngân bấm **Dừng nhận đơn**. Thông báo **Má Tư Agent đang nhận đơn** phải luôn có trong vùng thông báo khi dịch vụ đang chạy.
 
 Kênh **Đơn mới** là kênh riêng có mức ưu tiên cao. Khi nhận một phiếu mới hợp lệ, Agent phát âm thanh, rung và hiện thẻ heads-up trên ứng dụng đang mở. Android 14 không cho ứng dụng bán hàng thông thường chiếm toàn màn hình như ứng dụng gọi điện/báo thức, vì vậy Agent dùng heads-up chính thức thay cho full-screen intent. Bấm **Gửi thử cảnh báo nổi** để xác nhận cấu hình mà không tạo đơn POS.
 
@@ -32,8 +32,9 @@ Không chọn **Buộc dừng** trong thông tin ứng dụng. Android coi đây
 Với Green SM Food trên Redmi:
 
 - Green SM Merchant 1.0.30 tìm thấy dịch vụ PrinterX nhưng vẫn chọn luồng Bluetooth khi thiết bị báo hãng Xiaomi/Redmi.
-- Má Tư Agent không thể thay đổi quyết định này của ứng dụng Green SM Merchant. Dùng máy in Bluetooth ngoài, máy SUNMI thật hoặc luồng tích hợp được Green SM hỗ trợ.
+- Má Tư Agent trên **cùng điện thoại** không thể làm máy in Bluetooth của Green SM: Bluetooth cần hai thiết bị. Cổng `9100` và dòng `APP SÀN` chỉ dành cho app máy in mạng như ShopeeFood.
 - Không cài APK giả lập SUNMI và không coi việc ứng dụng bind dịch vụ là bằng chứng đã nhận máy in.
+- Đơn Green SM nhập tay trên POS. Nếu Agent lỡ giữ phiếu, chọn **Đã nhập tay**. Bấm **Kiểm tra Green SM Food** để xác nhận app đang cài và không đi cổng nhận phiếu.
 
 Với beFood trên Redmi:
 
@@ -52,7 +53,9 @@ Khi thu ngân phải nhập tay đơn ShopeeFood trong thời gian Agent dừng,
 
 Nếu dữ liệu cũ chỉ còn mã ShopeeFood bốn số, POS chỉ xác nhận trùng khi tìm thấy đúng một đơn cùng chi nhánh, cùng ngày trên mã đầy đủ và khớp toàn bộ món/số lượng. Trường hợp không khớp hoặc có nhiều ứng viên phải giữ ở **Đang chờ** để đối chiếu, tuyệt đối không tự tạo đơn mới.
 
-Bấm **Kiểm tra cổng in** trong Agent để xác nhận cổng cục bộ đang nhận kết nối. Thao tác này không tạo đơn giả trên POS.
+Bấm **Kiểm tra cổng in** trong Agent để xác nhận cổng cục bộ đang nhận kết nối. Thao tác này không tạo đơn giả trên POS và **không** chứng minh ShopeeFood đã nối tới Agent.
+
+Bấm **Kiểm tra kết nối app sàn** hoặc xem dòng **Kết nối app sàn** trên Tổng quan. Chỉ khi Nhật ký có dòng `APP SÀN` (hỏi trạng thái máy in hoặc gửi phiếu) mới coi app sàn đã kết nối. Nếu chưa thấy, mở ShopeeFood, xác nhận máy in `127.0.0.1` cổng `9100`, rồi in thử một đơn.
 
 Thanh điều hướng chính tách bốn khu vực: **Tổng quan**, **Phiếu**, **Thiết bị** và
 **Nhật ký**. Trên điện thoại, các khu vực nằm ở thanh điều hướng dưới; trên màn
@@ -92,10 +95,11 @@ Phiếu không có chữ ký hoặc chứa chữ ký xung đột được giữ 
 
 | Sự cố | Cách xử lý |
 | --- | --- |
-| Green SM Food yêu cầu Bluetooth | Đây là hành vi hiện tại trên Redmi. Dùng máy in Bluetooth ngoài/máy SUNMI hoặc chờ luồng tích hợp chính thức; không cài APK giả lập SUNMI. |
+| Green SM Food yêu cầu Bluetooth | Đây là hành vi hiện tại trên Redmi. Không chờ `APP SÀN`. Nhập tay trên POS; máy in Bluetooth ngoài hoặc máy SUNMI thật chỉ in giấy, không đưa đơn vào Agent. |
 | beFood không thấy Agent | Giữ trạng thái chưa hỗ trợ; không bật bằng giả lập khi chưa có mẫu phiếu và kiểm thử xác nhận. |
 | Đơn ShopeeFood cũ xuất hiện lại sau khi mở app | Dừng nhận đơn, đối chiếu mã bốn số và món/số lượng. Nếu thu ngân đã nhập tay, chọn **Đã nhập tay**; không xóa bản ghi nhận diện. |
-| App máy in mạng không kết nối được | Kiểm tra Agent đang xanh, IP và cổng `9100`; cùng máy phải dùng `127.0.0.1`. |
+| App máy in mạng không kết nối được | Kiểm tra Agent đang xanh, IP và cổng `9100`; cùng máy phải dùng `127.0.0.1`. **Kiểm tra cổng in** xanh chưa đủ: Nhật ký phải có `APP SÀN`. |
+| ShopeeFood mất máy in, không gửi phiếu | Phân biệt hai lớp: cổng listen `9100` và phiên TCP của ShopeeFood. Nhật ký `hết thời gian chờ trước khi có dữ liệu` sau `APP SÀN` là bản cũ đã đóng phiên. Cài 1.6.8 trở lên: Agent giữ phiên đến khi ShopeeFood tự ngắt. `Lỗi cổng nhận phiếu` / `Đang tự mở lại cổng` là listen socket; chờ Agent mở lại nếu Tổng quan vẫn bật nhận đơn. |
 | Agent không chuyển sang xanh | Cổng đang bị chiếm hoặc bind thất bại; xem nhật ký trong Agent rồi đổi cổng/cắt ứng dụng chiếm cổng. |
 | Agent tắt sau khi khóa màn hình | Mở **Chạy nền trên Redmi**, bật Tự khởi động, đặt pin Không hạn chế và không dùng **Buộc dừng**. Xác nhận thông báo thường trực của Agent còn hiển thị. |
 | Không thấy cảnh báo đè trên ứng dụng khác | Cho phép thông báo Android, mở kênh **Đơn mới**, bật Thông báo nổi/âm thanh/rung rồi bấm **Gửi thử cảnh báo nổi**. |
