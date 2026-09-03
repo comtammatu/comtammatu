@@ -35,7 +35,12 @@ test("long notes stay contained across self-order, POS, and KDS", () => {
   assert.match(kdsOrderNote, /overflow-y-auto break-words pr-1/);
   assert.match(kdsOrderNote, /max-h-20 text-sm/);
   assert.match(kdsOrderNote, /max-h-32 text-base/);
-  assert.match(kdsItemMeta, /max-h-16 min-w-0 overflow-y-auto break-words pr-1/);
-  assert.match(kdsItemMeta, /max-h-20 min-w-0 overflow-y-auto break-words pr-1/);
+  assert.match(kdsItemMeta, /NoteCallout/);
+  assert.match(kdsItemMeta, /w-full min-w-0/);
+  assert.match(kdsItemMeta, /break-words/);
+  assert.doesNotMatch(
+    kdsItemMeta,
+    /overflow-y-auto|max-h-16|max-h-20|overflow-hidden|whitespace-nowrap|line-clamp|truncate/,
+  );
   assert.doesNotMatch(kdsOrderNote, /line-clamp|overflow-hidden/);
 });

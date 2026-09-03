@@ -375,14 +375,15 @@ test("KDS title keeps table target and ticket code without append labels", () =>
     focusViewSource,
     /externalOrderRef=\{order\.externalOrderRef\}/,
   );
-  // Ergonomic ordering: Item note is rendered before modifiers and sides
-  const inlineReturnIdx = ticketRowMetaSource.indexOf('layout === "inline"');
-  const noteIdx = ticketRowMetaSource.indexOf("{hasNote &&", inlineReturnIdx);
-  const modIdx = ticketRowMetaSource.indexOf("{hasModifiers &&", inlineReturnIdx);
-  const sidesIdx = ticketRowMetaSource.indexOf("{hasSides &&", inlineReturnIdx);
-  assert.ok(noteIdx >= 0 && modIdx >= 0 && sidesIdx >= 0);
+  // Ergonomic ordering: item note is its own full-width row above chips.
+  const noteIdx = ticketRowMetaSource.indexOf("{hasNote && <ItemNote");
+  const chipsIdx = ticketRowMetaSource.indexOf(
+    "{hasModifiers || hasSides ? chips : null}",
+  );
+  const inlineIdx = ticketRowMetaSource.indexOf('layout === "inline"');
+  assert.ok(noteIdx >= 0 && chipsIdx >= 0 && inlineIdx >= 0);
   assert.ok(
-    noteIdx < modIdx && modIdx < sidesIdx,
+    noteIdx < chipsIdx,
     "Ergonomic priority: item note must render before modifiers and sides",
   );
 });

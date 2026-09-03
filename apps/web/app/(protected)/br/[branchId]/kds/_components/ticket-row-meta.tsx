@@ -3,6 +3,7 @@
 import * as React from "react";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import {
   Ban as IconBan,
   NotebookText as IconNote,
@@ -21,38 +22,40 @@ interface TicketRowMetaProps {
   layout?: "stacked" | "inline";
 }
 
+function ItemNote({ note }: { note: string }) {
+  return (
+    <NoteCallout
+      tone="warning"
+      icon={<IconNote aria-hidden />}
+      className="w-full min-w-0"
+    >
+      <span className="min-w-0 break-words">
+        {ITEM_NOTE_PREFIX}: {note}
+      </span>
+    </NoteCallout>
+  );
+}
+
 export function TicketRowMeta({
   note,
   modifiers,
   sides,
   layout = "stacked",
 }: TicketRowMetaProps) {
+  const trimmedNote = note?.trim() ?? "";
   const hasModifiers = modifiers && modifiers.length > 0;
   const hasSides = sides && sides.length > 0;
-  const hasNote = !!note && note.trim().length > 0;
+  const hasNote = trimmedNote.length > 0;
 
   if (!hasModifiers && !hasSides && !hasNote) return null;
 
-  if (layout === "inline") {
-    return (
-      <span className="inline-flex min-w-0 flex-wrap items-center gap-1 text-sm font-medium leading-snug">
-        {hasNote && (
-          <Badge
-            variant="warning"
-            className="h-auto min-h-6 min-w-0 max-w-full gap-1 rounded-md px-2 py-0.5"
-          >
-            <IconNote aria-hidden className="size-3 shrink-0" />
-            <span className="max-h-16 min-w-0 overflow-y-auto break-words pr-1 text-xs font-semibold leading-tight xl:text-sm">
-              {ITEM_NOTE_PREFIX}: {note}
-            </span>
-          </Badge>
-        )}
-
+  const chips =
+    layout === "inline" ? (
+      <span className="inline-flex min-w-0 flex-wrap items-center gap-1">
         {hasModifiers &&
           modifiers.map((m, idx) => (
             <ModifierChip key={`${m.modifier_id}-${idx}`} label={m.name} />
           ))}
-
         {hasSides &&
           sides.map((s, idx) => (
             <Badge
@@ -67,50 +70,38 @@ export function TicketRowMeta({
             </Badge>
           ))}
       </span>
+    ) : (
+      <>
+        {hasModifiers && (
+          <div className="flex flex-wrap items-center gap-1">
+            {modifiers.map((m, idx) => (
+              <ModifierChip key={`${m.modifier_id}-${idx}`} label={m.name} />
+            ))}
+          </div>
+        )}
+        {hasSides && (
+          <div className="flex flex-wrap items-center gap-1">
+            {sides.map((s, idx) => (
+              <Badge
+                key={`${s.side_item_id}-${idx}`}
+                variant="outline"
+                className={cn(
+                  "h-auto min-h-5 rounded-md px-1.5 py-0.5 text-xs font-semibold leading-tight text-foreground xl:text-sm xl:px-2",
+                  getSideBadgeToneClass(s),
+                )}
+              >
+                + {formatSideLabel(s)}
+              </Badge>
+            ))}
+          </div>
+        )}
+      </>
     );
-  }
 
   return (
-    <div className="flex flex-col gap-1 text-sm font-medium leading-snug">
-      {hasNote && (
-        <Badge
-          variant="warning"
-          className="h-auto min-h-6 min-w-0 max-w-full items-start gap-1 rounded-md px-2 py-0.5 text-xs font-medium xl:text-sm"
-        >
-          <IconNote
-            aria-hidden
-            className="mt-0.5 size-3 shrink-0"
-          />
-          <span className="max-h-20 min-w-0 overflow-y-auto break-words pr-1">
-            {ITEM_NOTE_PREFIX}: {note}
-          </span>
-        </Badge>
-      )}
-
-      {hasModifiers && (
-        <div className="flex flex-wrap items-center gap-1">
-          {modifiers.map((m, idx) => (
-            <ModifierChip key={`${m.modifier_id}-${idx}`} label={m.name} />
-          ))}
-        </div>
-      )}
-
-      {hasSides && (
-        <div className="flex flex-wrap items-center gap-1">
-          {sides.map((s, idx) => (
-            <Badge
-              key={`${s.side_item_id}-${idx}`}
-              variant="outline"
-              className={cn(
-                "h-auto min-h-5 rounded-md px-1.5 py-0.5 text-xs font-semibold leading-tight text-foreground xl:text-sm xl:px-2",
-                getSideBadgeToneClass(s),
-              )}
-            >
-              + {formatSideLabel(s)}
-            </Badge>
-          ))}
-        </div>
-      )}
+    <div className="flex w-full min-w-0 flex-col gap-1 text-sm font-medium leading-snug">
+      {hasNote && <ItemNote note={trimmedNote} />}
+      {hasModifiers || hasSides ? chips : null}
     </div>
   );
 }
