@@ -186,7 +186,9 @@ if (
   !fs.existsSync(MATU_AGENT_NOTIFICATION_SOURCE) ||
   !serviceSource.includes("PowerManager.PARTIAL_WAKE_LOCK") ||
   !serviceSource.includes("AgentNotifications.showIncomingOrder") ||
-  !serviceSource.includes("restartServerAfterFailure()")
+  !serviceSource.includes("restartServerAfterFailure()") ||
+  !serviceSource.includes("receivedAnyBytes") ||
+  !serviceSource.includes("IntakeListenPolicy.shouldRebindAll")
 ) {
   fail("Má Tư Agent must hold its intake runtime awake and surface each new order through a dedicated alert channel");
 }
