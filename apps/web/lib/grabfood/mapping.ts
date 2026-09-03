@@ -1,4 +1,6 @@
 import { createHash } from "node:crypto";
+import { sanitizeDeliveryOptionName } from "../delivery/receipt-text";
+import { resolveParentItemDeliveryVariant } from "../shopeefood/mapping";
 
 /**
  * GrabFood Menu Mapping and Order Transformation Dictionary
@@ -297,17 +299,14 @@ export function matchMenuItem(
       throw new Error(`Món "${grabItem.name}" (ID: ${grabItem.itemID || "N/A"}) chưa được ánh xạ trong thực đơn quán`);
     }
 
-    if (mapped?.variantName) {
-      const normalizedVariant = normalizeMenuName(mapped.variantName);
-      const variantMatches = (matchedDb.variants ?? []).filter(
-        (variant) => normalizeMenuName(variant.name) === normalizedVariant,
+    if (mapped?.variantName || (matchedDb.variants?.length ?? 0) > 0) {
+      const variant = resolveParentItemDeliveryVariant(
+        matchedDb,
+        mapped?.variantName,
       );
-      const variant = variantMatches.length === 1 ? variantMatches[0] : null;
-      if (variant) return { ...matchedDb, variant };
-      throw new Error(`Món "${grabItem.name}" (ID: ${grabItem.itemID || "N/A"}) chưa được ánh xạ trong thực đơn quán`);
-    }
-
-    if ((matchedDb.variants?.length ?? 0) > 0) {
+      if (variant) {
+        return { ...matchedDb, variant };
+      }
       throw new Error(`Món "${grabItem.name}" (ID: ${grabItem.itemID || "N/A"}) chưa được ánh xạ trong thực đơn quán`);
     }
 
@@ -388,7 +387,7 @@ export function matchSideItem(
   targetName: string,
   dbItems: GrabMenuItemPrice[],
 ): GrabMenuItemPrice | null {
-  const normalizedTarget = normalizeMenuName(targetName);
+  const normalizedTarget = normalizeMenuName(sanitizeDeliveryOptionName(targetName));
   const alias = SIDE_NAME_ALIASES[normalizedTarget];
   const target = alias ? normalizeMenuName(alias) : normalizedTarget;
 

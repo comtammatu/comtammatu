@@ -83,7 +83,18 @@ object RasterReceiptTextNormalizer {
         RegexOption.IGNORE_CASE
     )
     private val sideLine = Regex("^[+\\-*•>]\\s*(.+)$")
-    private val sideQuantity = Regex("^(\\d+)\\s*[xX]\\s*(.+)$")
+    private val sideQuantity = Regex(
+        "^(?:(\\d+)|[Il1])\\s*[xX]\\s*(.+)$",
+        RegexOption.IGNORE_CASE
+    )
+    private val receiptFooter = Regex(
+        "^(?:Tổng\\s*m[oóớ]n|Tống\\s*ti[eêểề]n|Tổng\\s*cộng|Tổng\\s*ti[eêểề]n|Tạm\\s*tính|Thành\\s*tiền|Thanh\\s*toán|Chiết\\s*khấu|Giảm\\s*gi[aáả])",
+        RegexOption.IGNORE_CASE
+    )
+    private val customerNoteLabel = Regex(
+        "ghi\\s*ch[uúủ]\\s*(?:của\\s*)?khách(?:\\s*hàng)?[:\\s]*(.*)",
+        RegexOption.IGNORE_CASE
+    )
 
     fun normalize(text: String): String {
         val lines = text
@@ -114,13 +125,23 @@ object RasterReceiptTextNormalizer {
 
                 while (cursor < lines.size) {
                     val detail = lines[cursor]
-                    if (
-                        numberedItem.matches(detail) ||
-                        Regex(
-                            "^(?:Tổng\\s*món|Tổng\\s*cộng|Tạm\\s*tính|Thành\\s*tiền|Thanh\\s*toán)",
-                            RegexOption.IGNORE_CASE
-                        ).containsMatchIn(detail)
-                    ) {
+                    if (numberedItem.matches(detail)) {
+                        break
+                    }
+
+                    val customerNote = customerNoteLabel.find(detail)?.groupValues?.get(1)?.trim()
+                    if (customerNote != null || receiptFooter.containsMatchIn(detail)) {
+                        if (!customerNote.isNullOrBlank()) notes.add(customerNote)
+                        var scan = cursor + 1
+                        while (scan < lines.size && !numberedItem.matches(lines[scan])) {
+                            val laterNote = customerNoteLabel
+                                .find(lines[scan])
+                                ?.groupValues
+                                ?.get(1)
+                                ?.trim()
+                            if (!laterNote.isNullOrBlank()) notes.add(laterNote)
+                            scan += 1
+                        }
                         break
                     }
 
@@ -160,11 +181,6 @@ object RasterReceiptTextNormalizer {
                     }
                     val regularSides = sides.filter { canonicalStandaloneSoup(it.name) == null }
                     val itemNotes = notes.toMutableList()
-                    if (standaloneSoups.isNotEmpty()) {
-                        itemNotes.add(
-                            "Tùy chọn: ${standaloneSoups.joinToString(", ") { it.name }}"
-                        )
-                    }
 
                     output.add("${quantity}x $itemName $rowPrice")
                     output.addAll(regularSides.map { side ->

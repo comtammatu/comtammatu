@@ -104,9 +104,9 @@ class ReceiptOcrNormalizerTest {
 
         assertTrue(normalized.contains("1x Sườn Cốt Lết 97.000"))
         assertTrue(normalized.contains("+ Trűng"))
-        assertTrue(normalized.contains("Ghi chú: Tùy chọn: Canh Chua Tôm"))
         assertTrue(normalized.contains("1x Canh Chua Tôm 1"))
         assertTrue(!normalized.contains("+ Canh chua tôm"))
+        assertTrue(!normalized.contains("Ghi chú: Tùy chọn: Canh Chua Tôm"))
     }
 
     @Test
@@ -125,8 +125,8 @@ class ReceiptOcrNormalizerTest {
         )
 
         assertTrue(normalized.contains("+ Canh theo ngày"))
-        assertTrue(normalized.contains("Ghi chú: Tùy chọn: Canh Khổ Qua"))
         assertTrue(normalized.contains("1x Canh Khổ Qua 1"))
+        assertTrue(!normalized.contains("Ghi chú: Tùy chọn: Canh Khổ Qua"))
     }
 
     @Test
@@ -143,6 +143,32 @@ class ReceiptOcrNormalizerTest {
         )
 
         assertTrue(normalized.contains("1x Trà Tắc 20.000"))
+    }
+
+    @Test
+    fun `keeps the customer kitchen note and ignores OCR settlement footer`() {
+        val normalized = RasterReceiptTextNormalizer.normalize(
+            """
+                ShopeeFood
+                Mã đơn hàng
+                27086-730200001
+                1. Cơm Sườn Cốt Lết
+                • IxDụng cụ ăn uống
+                X1 54.000d
+                Tổng mớn 2
+                Tổng tiền món (giá gốc) 82.000d
+                Giảm giả mồn -27.000d
+                Chiết khấu -15.703d
+                Ghi chủ của khách hàng Nước mắm không cay giúp em
+                Tổng tiền 39.298d
+            """.trimIndent()
+        )
+
+        assertTrue(normalized.contains("1x Sườn Cốt Lết 54.000"))
+        assertTrue(normalized.contains("+ Dụng cụ ăn uống"))
+        assertTrue(normalized.contains("Ghi chú: Nước mắm không cay giúp em"))
+        assertTrue(!normalized.contains("Ghi chú: Tổng"))
+        assertTrue(!normalized.contains("Ghi chú: Chiết"))
     }
 
     @Test

@@ -181,6 +181,74 @@ test("ShopeeFood mapping: resolves Rau Má Đường and Rau Má Sữa as varian
   );
 });
 
+test("ShopeeFood mapping: receipt dish names default to the Cơm variant when POS has rice-on/off choices", () => {
+  const catalog = [
+    {
+      id: 1,
+      name: "Sườn Cốt Lết",
+      base_price: 45000,
+      variants: [
+        { id: 20, name: "Cơm", price_adjustment: 0 },
+        { id: 21, name: "Không Cơm", price_adjustment: -5000 },
+      ],
+    },
+    {
+      id: 7,
+      name: "Sườn Cọng",
+      base_price: 78000,
+      variants: [
+        { id: 16, name: "Cơm", price_adjustment: 0 },
+        { id: 17, name: "Không Cơm", price_adjustment: -5000 },
+      ],
+    },
+  ];
+
+  const matched = matchMenuItem({ name: "Sườn Cốt Lết", quantity: 1 }, catalog);
+  assert.equal(matched.id, 1);
+  assert.equal(matched.variant?.id, 20);
+  assert.equal(matched.variant?.name, "Cơm");
+
+  const aliased = matchMenuItem(
+    { name: "Cơm Sườn Cốt Lết", quantity: 1 },
+    catalog,
+  );
+  assert.equal(aliased.id, 1);
+  assert.equal(aliased.variant?.id, 20);
+
+  const transformed = transformShopeeOrderPayload(
+    {
+      orderId: "prod-suon-cot-let-unmapped",
+      items: [{ name: "Sườn Cốt Lết", quantity: 1 }],
+    },
+    catalog,
+  );
+  assert.equal(transformed.items[0]?.menu_item_id, 1);
+  assert.equal(transformed.items[0]?.variant_id, 20);
+  assert.equal(transformed.items[0]?.variant_name, "Cơm");
+  assert.equal(transformed.items[0]?.unit_price, 45000);
+});
+
+test("ShopeeFood mapping: parent item with a same-named variant selects that variant", () => {
+  const matched = matchMenuItem(
+    { name: "Fanta Cam", quantity: 1 },
+    [
+      {
+        id: 19,
+        name: "Fanta Cam",
+        base_price: 25000,
+        variants: [
+          { id: 11, name: "Fanta Cam", price_adjustment: 0 },
+          { id: 12, name: "Fanta Xá Xị", price_adjustment: 0 },
+        ],
+      },
+    ],
+  );
+
+  assert.equal(matched.id, 19);
+  assert.equal(matched.variant?.id, 11);
+  assert.equal(matched.variant?.name, "Fanta Cam");
+});
+
 test("ShopeeFood mapping: rejects unknown items instead of silently choosing another menu item", () => {
   assert.throws(
     () =>
@@ -319,7 +387,7 @@ test("ShopeeFood transformation: promotes explicit soup options to standalone PO
     transformed.items[0]?.sides.map((side) => side.name),
     ["Trứng", "Dụng Cụ Mang Về"],
   );
-  assert.match(transformed.items[0]?.note ?? "", /Tùy chọn: Canh Chua Tôm/);
+  assert.equal(transformed.items[0]?.note, null);
   assert.deepEqual(transformed.items[1], {
     menu_item_id: 5,
     item_name: "Canh Chua Tôm",
@@ -371,6 +439,46 @@ test("ShopeeFood transformation: missing OCR price never creates a free-item dis
   assert.equal(transformed.items[0]?.unit_price, 54000);
   assert.equal(transformed.items[0]?.discount_type, undefined);
   assert.equal(transformed.items[0]?.discount_value, undefined);
+});
+
+test("ShopeeFood mapping: maps OCR-glued cutlery and drops receipt-footer notes", () => {
+  const catalog = [
+    ...MOCK_DB_ITEMS,
+    { id: 17, name: "Trà Tắc", base_price: 20000 },
+  ];
+
+  const cutlery = matchMenuItem(
+    {
+      name: "Sườn Cốt Lết",
+      quantity: 1,
+      options: [{ name: "IxDụng cụ ăn uống", price: 3000 }],
+    },
+    catalog,
+  );
+  assert.equal(cutlery.id, 1);
+
+  const transformed = transformShopeeOrderPayload(
+    {
+      orderId: "prod-ocr-footer-7302",
+      items: [
+        {
+          name: "Sườn Cốt Lết",
+          quantity: 1,
+          options: [{ name: "IxDụng cụ ăn uống" }],
+          note: "Tổng mớn 2 Tổng tiền món (giá gốc) 82.000d Ghi chủ của khách hàng Nước mắm không cay giúp em",
+        },
+        { name: "Trà Tắấc", quantity: 1 },
+      ],
+    },
+    catalog,
+  );
+
+  assert.deepEqual(
+    transformed.items[0]?.sides.map((side) => side.name),
+    ["Dụng Cụ Mang Về"],
+  );
+  assert.equal(transformed.items[0]?.note, "Nước mắm không cay giúp em");
+  assert.equal(transformed.items[1]?.item_name, "Trà Tắc");
 });
 
 test("ShopeeFood mapping: resolves extra rice to the real POS menu name", () => {

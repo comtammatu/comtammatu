@@ -243,6 +243,31 @@ Tổng tiền 94.000đ
   assert.equal(parsed.total, 94000);
 });
 
+test("ESC/POS parser: keeps the customer kitchen note and ignores OCR settlement footer", () => {
+  const parsed = parseShopeeReceiptText(`
+ShopeeFood
+Mã đơn hàng
+27086-730200001
+1. Cơm Sườn Cốt Lết
+• IxDụng cụ ăn uống
+x1 54.000đ
+Tổng mớn 2
+Tổng tiền món (giá gốc) 82.000d
+Giảm giả mồn -27.000d
+Chiết khấu -15.703d
+Ghi chủ của khách hàng Nước mắm không cay giúp em
+Tổng tiền 39.298d
+  `);
+
+  assert.equal(parsed.orderId, "27086-730200001");
+  assert.equal(parsed.items?.length, 1);
+  assert.equal(parsed.items?.[0]?.name, "Cơm Sườn Cốt Lết");
+  assert.equal(parsed.items?.[0]?.options?.[0]?.name, "IxDụng cụ ăn uống");
+  assert.equal(parsed.items?.[0]?.note, "Nước mắm không cay giúp em");
+  assert.equal(parsed.customer?.note, "Nước mắm không cay giúp em");
+  assert.equal(parsed.total, 39298);
+});
+
 test("ESC/POS platform detection: identifies all 4 platforms accurately from receipt signature", () => {
   const shopeeSample = "ShopeeFood\nMã đơn: SPF-123\nVí ShopeePay\n1x Cơm sườn 54.000";
   const grabSample = "GrabFood\nOrder: GF-789\nGrabPay\n1x Sườn Một Gang 120.000";

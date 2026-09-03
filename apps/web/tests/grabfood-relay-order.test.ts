@@ -145,6 +145,46 @@ test("GrabFood mapping: resolves Rau Má Sữa as a variant of Rau Má", () => {
   assert.equal(transformed.items[0]?.variant_name, "Rau Má Sữa");
 });
 
+test("GrabFood mapping: receipt dish names default to the Cơm variant when POS has rice-on/off choices", () => {
+  const catalog = [
+    {
+      id: 1,
+      name: "Sườn Cốt Lết",
+      base_price: 45000,
+      variants: [
+        { id: 20, name: "Cơm", price_adjustment: 0 },
+        { id: 21, name: "Không Cơm", price_adjustment: -5000 },
+      ],
+    },
+  ];
+
+  const matched = matchMenuItem(
+    {
+      itemID: "VNITE20260818044418231553",
+      name: "Sườn Cốt Lết",
+      quantity: 1,
+    },
+    catalog,
+  );
+  assert.equal(matched.id, 1);
+  assert.equal(matched.variant?.id, 20);
+  assert.equal(matched.variant?.name, "Cơm");
+
+  const transformed = transformGrabOrderPayload(
+    {
+      orderID: "prod-suon-cot-let-unmapped",
+      displayID: "GF-TEST",
+      itemInfo: {
+        items: [{ name: "Sườn Cốt Lết", quantity: 1 }],
+      },
+    },
+    catalog,
+  );
+  assert.equal(transformed.items[0]?.menu_item_id, 1);
+  assert.equal(transformed.items[0]?.variant_id, 20);
+  assert.equal(transformed.items[0]?.variant_name, "Cơm");
+});
+
 test("GrabFood mapping: matchMenuItem throws explicit error on unknown unmapped item", () => {
   const unmappedGrabItem = {
     itemID: "VNITE99999999999999999999",

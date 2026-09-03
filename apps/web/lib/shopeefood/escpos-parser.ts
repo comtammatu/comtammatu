@@ -1,3 +1,7 @@
+import {
+  extractCustomerNoteFromLine,
+  isReceiptFooterLine,
+} from "../delivery/receipt-text";
 import type { ShopeeOrderRaw, ShopeeOrderItemRaw } from "./mapping";
 
 /**
@@ -222,10 +226,17 @@ export function parseShopeeReceiptText(receiptText: string): ShopeeOrderRaw {
       needCutlery = true;
     }
 
-    // 4. Overall Order Note / Lời nhắn
-    const noteMatch = line.match(/(?:ghi\s*chú\s*đơn|lời\s*nhắn|ghi\s*chú\s*của\s*khách|order\s*note)[:\s]+(.+)/i);
-    if (noteMatch && noteMatch[1]) {
-      customerNote = noteMatch[1].trim();
+    // 4. Overall Order Note / Lời nhắn. OCR often misspells "Ghi chú của khách hàng".
+    const labeledCustomerNote = extractCustomerNoteFromLine(line);
+    if (labeledCustomerNote) {
+      customerNote = labeledCustomerNote;
+    } else {
+      const noteMatch = line.match(
+        /(?:ghi\s*chú\s*đơn|lời\s*nhắn|order\s*note)[:\s]+(.+)/i,
+      );
+      if (noteMatch && noteMatch[1]) {
+        customerNote = noteMatch[1].trim();
+      }
     }
 
     // 5. Payment Method
@@ -244,6 +255,13 @@ export function parseShopeeReceiptText(receiptText: string): ShopeeOrderRaw {
     const totalMatch = line.match(/(?:tổng\s*cộng|tổng\s*thanh\s*toán|thành\s*tiền|tổng\s*tiền|tổng\s*đơn|grand\s*total|total)[:\s]*([\d.,]+)\s*(?:đ|vnd)?/i);
     if (totalMatch && totalMatch[1]) {
       totalAmount = parsePriceNumber(totalMatch[1]);
+    }
+
+    if (isReceiptFooterLine(line)) {
+      if (labeledCustomerNote && currentItem && !currentItem.note) {
+        currentItem.note = labeledCustomerNote;
+      }
+      continue;
     }
 
     // 7. Parse Line Items vs Side Items (Món thêm)

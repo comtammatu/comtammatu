@@ -1,4 +1,8 @@
 import { createHash } from "node:crypto";
+import {
+  sanitizeDeliveryItemNote,
+  sanitizeDeliveryOptionName,
+} from "../delivery/receipt-text";
 
 /**
  * ShopeeFood Menu Mapping and Order Transformation Dictionary
@@ -95,11 +99,51 @@ export function normalizeMenuName(name: string): string {
     .trim();
 }
 
+const DELIVERY_DEFAULT_VARIANT_NAME = "com";
+
+/**
+ * Delivery receipts name the dish, not the dine-in rice-on/rice-off choice.
+ * When the parent item matches, prefer a mapped variant, then a same-named
+ * variant, then the unique `Cơm` plate. Ambiguous drink/flavor sets stay
+ * unmapped.
+ */
+export function resolveParentItemDeliveryVariant<TVariant extends { name: string }>(
+  item: { name: string; variants?: TVariant[] },
+  mappedVariantName?: string,
+): TVariant | undefined {
+  const variants = item.variants ?? [];
+  if (variants.length === 0) return undefined;
+
+  const uniqueMatch = (
+    predicate: (variant: TVariant) => boolean,
+  ): TVariant | undefined => {
+    const matches = variants.filter(predicate);
+    return matches.length === 1 ? matches[0] : undefined;
+  };
+
+  if (mappedVariantName) {
+    const normalizedVariant = normalizeMenuName(mappedVariantName);
+    return uniqueMatch(
+      (variant) => normalizeMenuName(variant.name) === normalizedVariant,
+    );
+  }
+
+  const sameName = uniqueMatch(
+    (variant) => normalizeMenuName(variant.name) === normalizeMenuName(item.name),
+  );
+  if (sameName) return sameName;
+
+  return uniqueMatch(
+    (variant) => normalizeMenuName(variant.name) === DELIVERY_DEFAULT_VARIANT_NAME,
+  );
+}
+
 const ITEM_NAME_ALIASES: Record<string, string> = {
   "com suon cot let": "Sườn Cốt Lết",
   "com suon cong": "Sườn Cọng",
   "com suon mot gang": "Sườn Một Gang",
   "com them": "Cơm Thêm",
+  "tra taac": "Trà Tắc",
 };
 
 const STANDALONE_OPTION_ALIASES: Record<string, string> = {
@@ -226,18 +270,14 @@ export function matchMenuItem(
       throw new UnmappedDeliveryMenuItemError(shopeeItem.name, idStr);
     }
 
-    if (mapped?.variantName) {
-      const normalizedVariant = normalizeMenuName(mapped.variantName);
-      const variantMatches = (matchedDb.variants ?? []).filter(
-        (variant) => normalizeMenuName(variant.name) === normalizedVariant,
+    if (mapped?.variantName || (matchedDb.variants?.length ?? 0) > 0) {
+      const variant = resolveParentItemDeliveryVariant(
+        matchedDb,
+        mapped?.variantName,
       );
-      if (variantMatches.length === 1) {
-        return { ...matchedDb, variant: variantMatches[0] };
+      if (variant) {
+        return { ...matchedDb, variant };
       }
-      throw new UnmappedDeliveryMenuItemError(shopeeItem.name, idStr);
-    }
-
-    if ((matchedDb.variants?.length ?? 0) > 0) {
       throw new UnmappedDeliveryMenuItemError(shopeeItem.name, idStr);
     }
 
@@ -315,7 +355,7 @@ export function matchSideItem(
   targetName: string,
   dbItems: Array<{ id: number; name: string; base_price: number }>,
 ): { id: number; name: string; base_price: number } | null {
-  const normalizedTarget = normalizeMenuName(targetName);
+  const normalizedTarget = normalizeMenuName(sanitizeDeliveryOptionName(targetName));
   const alias = SIDE_NAME_ALIASES[normalizedTarget];
   const target = alias ? normalizeMenuName(alias) : normalizedTarget;
 
@@ -358,7 +398,10 @@ function matchStandaloneOptionItem(
   optionName: string,
   dbItems: Array<{ id: number; name: string; base_price: number }>,
 ): { id: number; name: string; base_price: number } | null {
-  const canonicalName = STANDALONE_OPTION_ALIASES[normalizeMenuName(optionName)];
+  const canonicalName =
+    STANDALONE_OPTION_ALIASES[
+      normalizeMenuName(sanitizeDeliveryOptionName(optionName))
+    ];
   if (!canonicalName) return null;
   const normalizedCanonical = normalizeMenuName(canonicalName);
   return (
@@ -417,7 +460,6 @@ export function transformShopeeOrderPayload(
           price: standaloneItem.base_price,
           quantity: optQty,
         });
-        optionNotes.push(standaloneItem.name);
         continue;
       }
 
@@ -458,8 +500,10 @@ export function transformShopeeOrderPayload(
     }
 
     const noteParts = [
-      si.note?.trim(),
-      optionNotes.length > 0 ? `Tùy chọn: ${optionNotes.join(", ")}` : null,
+      sanitizeDeliveryItemNote(si.note),
+      optionNotes.length > 0
+        ? `Tùy chọn: ${optionNotes.map(sanitizeDeliveryOptionName).join(", ")}`
+        : null,
     ].filter(Boolean);
 
     const mainItem: TransformedOrderForRpc["items"][number] = {
