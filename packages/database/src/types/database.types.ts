@@ -15141,6 +15141,10 @@ export type Database = {
       refresh_abc_classification: { Args: never; Returns: number }
       refresh_finance_views: { Args: never; Returns: undefined }
       refresh_inventory_dashboard: { Args: never; Returns: string }
+      refresh_pending_vietqr_for_order: {
+        Args: { p_order_id: number }
+        Returns: Json
+      }
       refund_paid_order: {
         Args: { p_order_id: number; p_reason: string }
         Returns: Json
@@ -15451,6 +15455,16 @@ export type Database = {
         Args: { p_order_id: number }
         Returns: number
       }
+      self_order_adopt_pending_vietqr: {
+        Args: {
+          p_client_op_id: string
+          p_fingerprint: string
+          p_invoice_payload: Json
+          p_order: Database["public"]["Tables"]["orders"]["Row"]
+          p_table: Database["public"]["Tables"]["tables"]["Row"]
+        }
+        Returns: Json
+      }
       self_order_apply_promotion_code: {
         Args: { p_client_op_id: string; p_code: string; p_token: string }
         Returns: Json
@@ -15529,6 +15543,10 @@ export type Database = {
       }
       self_order_payment_request_public_payload: {
         Args: { p_request_id: number }
+        Returns: Json
+      }
+      self_order_pending_vietqr_public_payload: {
+        Args: { p_order_id: number }
         Returns: Json
       }
       self_order_reconcile_expired_payment_requests: {

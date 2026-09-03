@@ -158,9 +158,12 @@ test("finance report actions and period cards stay touch-safe below desktop", ()
 });
 
 test("expense primary and dialog actions use the touch contract", () => {
-  const source = read(
+  const source = [
     "apps/web/app/(protected)/finance/expenses/expenses-client.tsx",
-  );
+    "apps/web/app/(protected)/finance/expenses/expense-form-dialog.tsx",
+  ]
+    .map(read)
+    .join("\n");
 
   assert.match(source, /size=\{isTouchLayout \? "touch" : "default"\}/);
   assert.match(source, /size=\{actionSize\}/);

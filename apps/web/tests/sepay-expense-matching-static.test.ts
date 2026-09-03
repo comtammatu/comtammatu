@@ -43,6 +43,7 @@ const expenseClient = read(
 const expenseClientBundle = [
   "apps/web/app/(protected)/finance/expenses/expenses-client.tsx",
   "apps/web/app/(protected)/finance/expenses/expense-form-schema.ts",
+  "apps/web/app/(protected)/finance/expenses/expense-form-dialog.tsx",
   "apps/web/app/(protected)/finance/expenses/expense-form-fields.tsx",
   "apps/web/app/(protected)/finance/expenses/expense-view-dialog.tsx",
 ]

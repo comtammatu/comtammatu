@@ -27,6 +27,7 @@ const EXPENSE_CLIENT_PATHS = [
   "app/(protected)/finance/expenses/expenses-client.tsx",
   "app/(protected)/finance/expenses/expense-list-kpis.tsx",
   "app/(protected)/finance/expenses/expense-form-schema.ts",
+  "app/(protected)/finance/expenses/expense-form-dialog.tsx",
   "app/(protected)/finance/expenses/expense-form-fields.tsx",
   "app/(protected)/finance/expenses/expense-view-dialog.tsx",
 ] as const;
@@ -647,9 +648,9 @@ test("expense list opens form-shaped document from row click", () => {
   assert.match(client, /copy\.form\.openAria/);
   assert.match(bundle, /function ExpenseViewDialog/);
   assert.match(bundle, /expenseToFormValues/);
-  assert.match(client, /editingPaymentState === "unpaid"/);
-  assert.match(client, /onPayCash\(editingExpense\)/);
-  assert.match(client, /onPayTransfer\(editingExpense\)/);
+  assert.match(bundle, /editingPaymentState === "unpaid"/);
+  assert.match(bundle, /onPayCash\(editingExpense\)/);
+  assert.match(bundle, /onPayTransfer\(editingExpense\)/);
   assert.doesNotMatch(client, /selectedExpenseId/);
   assert.doesNotMatch(
     messages,

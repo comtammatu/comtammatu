@@ -40,12 +40,10 @@ import {
 } from "@comtammatu/ui/components/item";
 import { confirm } from "@/components/confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
   OWNER_SHELL_BREAKPOINT,
   useIsMobile,
 } from "@comtammatu/ui/hooks/use-mobile";
-import type { ActionResult } from "@comtammatu/shared/types";
 import {
   RowActionsContextMenuItems,
   RowActionsMenu,
@@ -57,7 +55,6 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { FormDialog } from "@/components/form";
 import { useFormControlSize } from "@/components/form/control-size";
 import { messages } from "@lib/messages";
 import { useDocumentOverlayUrl } from "@lib/navigation/use-document-overlay-url";
@@ -65,11 +62,9 @@ import { FilterBar } from "../components/filter-bar";
 import { FinanceAmountCell } from "../components/finance-amount-cell";
 import { moneyLabels } from "../components/finance-money-block";
 import {
-  canCorrectExpensePaymentMethod,
   classifyExpensePaymentState,
   EXPENSE_CATEGORIES_BY_GROUP,
   expenseNeedsAction,
-  type ExpenseCategory,
   type ExpensePaymentMethod,
 } from "../_lib/expense-categories";
 import type { FinanceParams } from "../_lib/finance-params";
@@ -81,27 +76,20 @@ import {
   type ExpenseListFilters,
 } from "./expense-list-state";
 import {
-  createExpense,
   deleteExpense,
   transitionExpensePayment,
-  updateExpense,
   type ExpenseRow,
 } from "../expense-actions";
-import { ExpenseFormFields } from "./expense-form-fields";
+import { ExpenseFormDialog } from "./expense-form-dialog";
 import { ExpenseListKpis } from "./expense-list-kpis";
 import {
-  buildExpenseVatBreakdown,
   canDeleteExpense,
   copy,
-  EMPTY_EXPENSE_LINE,
   expenseCategoryBucketLabel,
-  expenseFormSchema,
   expenseKindOptionLabel,
   expensePaymentMethod,
   expensePurpose,
-  expenseToFormValues,
   TENANT_LEVEL_BRANCH_VALUE,
-  type ExpenseFormValues,
 } from "./expense-form-schema";
 import { ExpenseViewDialog } from "./expense-view-dialog";
 
@@ -310,82 +298,7 @@ export function ExpensesClient({
     ...branches.map((b) => ({ value: String(b.id), label: b.name })),
   ];
 
-  const defaultValues: ExpenseFormValues = {
-    expenseDate: todayBusinessDate,
-    branchId: String(
-      params.branch ?? branches[0]?.id ?? TENANT_LEVEL_BRANCH_VALUE,
-    ),
-    category: lockedCategory ?? "",
-    paymentMethod: "cash",
-    note: "",
-    invoiceAttachmentUrl: "",
-    lines: [EMPTY_EXPENSE_LINE],
-  };
-
-  const formDefaultValues: ExpenseFormValues = editingExpense
-    ? expenseToFormValues(editingExpense)
-    : defaultValues;
-
-  const editingPaymentState = editingExpense
-    ? classifyExpensePaymentState(editingExpense)
-    : null;
-
-  async function onSubmit(values: ExpenseFormValues): Promise<ActionResult> {
-    const branchId =
-      !values.branchId || values.branchId === TENANT_LEVEL_BRANCH_VALUE
-        ? null
-        : Number(values.branchId);
-    const vatBreakdown = buildExpenseVatBreakdown(values);
-    const attachment = values.invoiceAttachmentUrl?.trim();
-    const nextMethod = values.paymentMethod as ExpensePaymentMethod;
-
-    if (!editingExpense) {
-      const result = await createExpense({
-        branchId,
-        expenseDate: values.expenseDate,
-        category: values.category as ExpenseCategory,
-        vatBreakdown,
-        paymentMethod: nextMethod,
-        note: values.note,
-        invoiceAttachmentUrl: attachment || undefined,
-      });
-      if (result.success) router.refresh();
-      return result;
-    }
-
-    const result = await updateExpense({
-      expenseId: editingExpense.id,
-      branchId,
-      expenseDate: values.expenseDate,
-      category: values.category as ExpenseCategory,
-      vatBreakdown,
-      note: values.note,
-      invoiceAttachmentUrl: attachment || undefined,
-    });
-    if (!result.success) return result;
-
-    const previousMethod = expensePaymentMethod(editingExpense) as ExpensePaymentMethod;
-    if (
-      nextMethod !== previousMethod &&
-      canCorrectExpensePaymentMethod(editingExpense)
-    ) {
-      const transition = await transitionExpensePayment({
-        expenseId: editingExpense.id,
-        targetMethod: nextMethod,
-      });
-      if (!transition.success) {
-        return {
-          success: false,
-          error: transition.error ?? copy.actions.updateFailed,
-        };
-      }
-    }
-
-    router.refresh();
-    return result;
-  }
-
-  function onCreateSuccess(_result: ActionResult) {
+  function onExpenseFormSuccess() {
     toast.success(editingExpense ? copy.form.editSuccess : copy.form.success);
     if (editingExpense) {
       patchOverlay({ expenseId: editingExpense.id, mode: "view" }, "replace");
@@ -914,101 +827,27 @@ export function ExpensesClient({
       </AppListFrame>
 
       {canManageExpenses ? (
-        <FormDialog
+        <ExpenseFormDialog
           open={formDialogOpen}
-          onOpenChange={(open) => {
-            if (!open) closeExpenseForm();
-          }}
-          title={
-            editingExpense && editingPaymentState ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <span>{copy.form.editTitle}</span>
-                <StatusBadge
-                  domain="expense-payment"
-                  value={editingPaymentState}
-                />
-              </div>
-            ) : editingExpense ? (
-              isLockedCategoryList
-                ? lockedCopy.formEditTitle
-                : copy.form.editTitle
-            ) : (
-              isLockedCategoryList ? lockedCopy.formTitle : copy.form.title
-            )
-          }
-          schema={expenseFormSchema}
-          defaultValues={formDefaultValues}
-          entityKey={editingExpense?.id ?? "create"}
-          onSubmit={onSubmit}
-          onSuccess={onCreateSuccess}
-          submitLabel={editingExpense ? copy.form.editSubmit : copy.form.submit}
-          actionSize={isTouchLayout ? "touch" : "default"}
-          variant="document"
-          renderFooter={
-            editingExpense &&
-            (editingPaymentState === "unpaid" ||
-              editingPaymentState === "transfer_needs_match")
-              ? ({ formId, isPending, requestClose, submitLabel, actionSize, cancelLabel }) => (
-                  <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
-                    <Button type="button" variant="outline" size={actionSize} onClick={requestClose} disabled={isPending || isMutating}>
-                      {cancelLabel}
-                    </Button>
-                    {editingPaymentState === "unpaid" ? (
-                      <>
-                        <Button type="button" variant="outline" size={actionSize} disabled={isPending || isMutating} onClick={() => void onPayCash(editingExpense)}>
-                          {isMutating ? <Spinner /> : null}
-                          <IconBanknote data-icon="inline-start" />
-                          {copy.actions.cash}
-                        </Button>
-                        <Button type="button" size={actionSize} disabled={isPending || isMutating} onClick={() => void onPayTransfer(editingExpense)}>
-                          {isMutating ? <Spinner /> : null}
-                          <IconLandmark data-icon="inline-start" />
-                          {copy.actions.transfer}
-                        </Button>
-                      </>
-                    ) : null}
-                    {editingPaymentState === "transfer_needs_match" && editingExpense.transfer_content ? (
-                      <>
-                        <Button type="button" variant="outline" size={actionSize} disabled={isPending || isMutating} onClick={() => void copyTransferContent(editingExpense.transfer_content!)}>
-                          <IconCopy data-icon="inline-start" />
-                          {copy.transferInstruction.copy}
-                        </Button>
-                        <Button type="button" variant="outline" size={actionSize} disabled={isPending || isMutating} onClick={() => void onCancelTransfer(editingExpense)}>
-                          {isMutating ? <Spinner /> : null}
-                          <IconRotateCcw data-icon="inline-start" />
-                          {copy.actions.cancelTransfer}
-                        </Button>
-                      </>
-                    ) : null}
-                    <Button type="submit" form={formId} variant="outline" size={actionSize} disabled={isPending || isMutating}>
-                      {isPending ? <Spinner /> : null}
-                      {submitLabel}
-                    </Button>
-                  </div>
-                )
-              : undefined
-          }
-        >
-          {(form) => {
-            const canEditPaymentMethod =
-              editingExpense == null ||
-              canCorrectExpensePaymentMethod(editingExpense);
-            return (
-              <ExpenseFormFields
-                form={form}
-                branchOptions={branchOptions}
-                tenantId={tenantId}
-                isTouchLayout={isTouchLayout}
-                paymentMethodReadOnly={!canEditPaymentMethod}
-                transferContent={editingExpense?.transfer_content}
-                onCopyTransferContent={(content) =>
-                  void copyTransferContent(content)
-                }
-                lockedCategory={lockedCategory}
-              />
-            );
-          }}
-        </FormDialog>
+          editingExpense={editingExpense}
+          todayBusinessDate={todayBusinessDate}
+          defaultBranchId={String(
+            params.branch ?? branches[0]?.id ?? TENANT_LEVEL_BRANCH_VALUE,
+          )}
+          lockedCategory={lockedCategory}
+          isLockedCategoryList={isLockedCategoryList}
+          lockedCopy={lockedCopy}
+          isTouchLayout={isTouchLayout}
+          isMutating={isMutating}
+          tenantId={tenantId}
+          branchOptions={branchOptions}
+          onClose={closeExpenseForm}
+          onSuccess={onExpenseFormSuccess}
+          onPayCash={(row) => void onPayCash(row)}
+          onPayTransfer={(row) => void onPayTransfer(row)}
+          onCancelTransfer={(row) => void onCancelTransfer(row)}
+          onCopyTransferContent={(content) => void copyTransferContent(content)}
+        />
       ) : null}
 
       <ExpenseViewDialog

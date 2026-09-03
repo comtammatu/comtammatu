@@ -25,10 +25,14 @@ test("Expenses LIST shell stays under megaclient budget and imports overlays", (
   );
   assert.match(source, /export function ExpensesClient/);
   assert.match(source, /useDocumentOverlayUrl/);
-  assert.match(source, /from "\.\/expense-form-fields"/);
+  assert.match(source, /from "\.\/expense-form-dialog"/);
   assert.match(source, /from "\.\/expense-list-kpis"/);
   assert.match(source, /from "\.\/expense-view-dialog"/);
   assert.match(source, /from "\.\/expense-form-schema"/);
+  const formDialog = read(
+    "app/(protected)/finance/expenses/expense-form-dialog.tsx",
+  );
+  assert.match(formDialog, /from "\.\/expense-form-fields"/);
   assert.match(source, /EXPENSE_OVERLAY_KEYS|expenseId/);
 });
 
