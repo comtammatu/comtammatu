@@ -27,6 +27,10 @@ test("Branch count assignment owns a keyboard and touch native presenter", () =>
   assert.doesNotMatch(route, /CountAssignmentsPageContent|embedded/);
   assert.match(data, /import "server-only"/);
   assert.match(data, /PERMISSION_KEYS\.INVENTORY_COUNT_ASSIGN/);
+  assert.match(data, /selectStaffCountLocations/);
+  assert.match(data, /pickDefaultStaffCountLocationId/);
+  assert.match(data, /\.in\("location_kind", \["warehouse", "kitchen"\]\)/);
+  assert.doesNotMatch(data, /\.in\("location_kind", \["warehouse"\]\)/);
   assert.match(data, /scope\.selectedBranchId !== routeBranchId/);
   assert.match(
     client,

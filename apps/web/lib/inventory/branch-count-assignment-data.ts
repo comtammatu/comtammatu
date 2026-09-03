@@ -8,6 +8,10 @@ import { getAuthContextWithPermission } from "@/(protected)/inventory/_lib/auth"
 import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
 import { parseBranchIdParam } from "@/_lib/branch-context";
 import { resolveDefaultShiftId } from "@lib/staff-runtime/_lib/default-shift";
+import {
+  pickDefaultStaffCountLocationId,
+  selectStaffCountLocations,
+} from "@lib/inventory/staff-count-location";
 import { getVNBusinessDateString } from "@comtammatu/shared/time";
 import type {
   BranchCountAssignmentData,
@@ -76,7 +80,7 @@ export async function loadBranchCountAssignmentData({
     .eq("tenant_id", claims.tenant_id)
     .eq("branch_id", routeBranchId)
     .eq("is_active", true)
-    .in("location_kind", ["warehouse"])
+    .in("location_kind", ["warehouse", "kitchen"])
     .order("name");
 
   if (locationsResult.error) {
@@ -86,8 +90,8 @@ export async function loadBranchCountAssignmentData({
     throw new Error("inventory.count_assignments.load_failed");
   }
 
-  const locationOptions: CountAssignmentLocation[] = (
-    locationsResult.data ?? []
+  const locationOptions: CountAssignmentLocation[] = selectStaffCountLocations(
+    locationsResult.data ?? [],
   ).map((loc) => ({
     id: loc.id,
     label: countLocationLabel(
@@ -130,13 +134,10 @@ export async function loadBranchCountAssignmentData({
     })),
   );
 
-  const selectedLocationId =
-    requestedLocationId != null &&
-    locationOptions.some((l) => l.id === requestedLocationId)
-      ? requestedLocationId
-      : (locationOptions.find((l) => l.kind === "warehouse")?.id ??
-        locationOptions[0]?.id ??
-        null);
+  const selectedLocationId = pickDefaultStaffCountLocationId(
+    locationOptions,
+    requestedLocationId,
+  );
 
   const selectedShiftId = requestedAllShifts
     ? null

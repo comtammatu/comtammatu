@@ -51,6 +51,7 @@ import {
   BranchOperatorPanel,
   BranchOperatorStatusStrip,
 } from "@lib/branch-operator/components/branch-operator-page";
+import { getLargestIngredientUnit } from "@lib/inventory/unit-options";
 import { submitCountSlip } from "./actions";
 import type {
   CountLocationGroup,
@@ -161,6 +162,23 @@ function getBaseCountUnit(units: CountUnitChoice[]) {
 }
 
 function getDefaultCountUnitChoice(units: CountUnitChoice[]) {
+  const options = units.flatMap((unit) => {
+    const factor = unit.toBaseFactor;
+    if (factor == null || !Number.isFinite(factor) || factor <= 0) return [];
+    return [
+      {
+        unitId: unit.unitId,
+        code: unit.code,
+        label: unit.label,
+        isBase: unit.isBase,
+        toBaseFactor: factor,
+      },
+    ];
+  });
+  const largest = getLargestIngredientUnit(options);
+  if (largest) {
+    return units.find((unit) => unit.unitId === largest.unitId) ?? largest;
+  }
   return getBaseCountUnit(units);
 }
 

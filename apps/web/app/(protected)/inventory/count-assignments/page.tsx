@@ -7,6 +7,10 @@ import { parseBranchIdParam } from "@/_lib/branch-context";
 import { withControlSurfaceBranchScope } from "@/lib/control-surface-scope";
 import { getVNBusinessDateString } from "@comtammatu/shared/time";
 import { resolveDefaultShiftId } from "@lib/staff-runtime/_lib/default-shift";
+import {
+  pickDefaultStaffCountLocationId,
+  selectStaffCountLocations,
+} from "@lib/inventory/staff-count-location";
 import { CountAssignmentsClient } from "./count-assignments-client";
 import type {
   CountAssignmentEmployee as EmployeeRow,
@@ -109,12 +113,8 @@ async function CountAssignmentsPageContent({
       });
       throw new Error("inventory.count_assignments.load_failed");
     }
-    const rows = locationsRes.data ?? [];
-    const hasKitchen = rows.some(
-      (location) => location.location_kind === "kitchen",
-    );
+    const rows = selectStaffCountLocations(locationsRes.data ?? []);
     for (const l of rows) {
-      if (hasKitchen && l.location_kind !== "kitchen") continue;
       locations.push({
         id: l.id,
         label: countLocationLabel(
@@ -127,14 +127,10 @@ async function CountAssignmentsPageContent({
     }
   }
 
-  const selectedLocationId =
-    requestedLocationId != null &&
-    locations.some((l) => l.id === requestedLocationId)
-      ? requestedLocationId
-      : (locations.find((l) => l.kind === "kitchen")?.id ??
-        locations.find((l) => l.kind === "warehouse")?.id ??
-        locations[0]?.id ??
-        null);
+  const selectedLocationId = pickDefaultStaffCountLocationId(
+    locations,
+    requestedLocationId,
+  );
 
   const shiftOptions: ShiftOption[] = [];
   if (selectedBranchId !== null) {

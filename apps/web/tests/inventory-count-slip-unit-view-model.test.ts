@@ -218,7 +218,11 @@ test("employee count UI uses named touch sizes without extra unit hints", () => 
   assert.doesNotMatch(clientSource, /Ví dụ:/);
   assert.doesNotMatch(clientSource, /\.toLocaleString\("vi-VN"/);
   assert.match(clientSource, /getDefaultCountUnitChoice/);
-  assert.match(clientSource, /return getBaseCountUnit\(units\)/);
+  assert.match(clientSource, /const largest = getLargestIngredientUnit\(options\)/);
+  assert.doesNotMatch(
+    clientSource,
+    /function getDefaultCountUnitChoice\([^)]*\) \{\s*return getBaseCountUnit\(units\);\s*\}/,
+  );
   assert.doesNotMatch(clientSource, /toBaseFactor > best.toBaseFactor/);
   assert.doesNotMatch(clientSource, /assignment\.measureUnit/);
   assert.doesNotMatch(pageSource, /measureUnit/);

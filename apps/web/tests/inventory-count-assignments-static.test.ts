@@ -170,7 +170,7 @@ test("count assignments use kitchen after split and warehouse before split", () 
   );
   assert.match(
     countAssignmentsPageSource,
-    /hasKitchen && l\.location_kind !== "kitchen"/,
+    /selectStaffCountLocations/,
     "employee count assignments should only offer the kitchen after split",
   );
   assert.match(
@@ -195,7 +195,7 @@ test("count assignments use kitchen after split and warehouse before split", () 
   );
   assert.match(
     countAssignmentsPageSource,
-    /locations\.find\(\(l\) => l\.kind === "kitchen"\)\?\.id \?\?\s*locations\.find\(\(l\) => l\.kind === "warehouse"\)\?\.id/,
+    /pickDefaultStaffCountLocationId\(\s*locations,\s*requestedLocationId/,
     "count assignments should prefer Bếp and retain Kho as the legacy fallback",
   );
 });
@@ -318,7 +318,7 @@ test.skip("count assignment UI uses the branch warehouse checklist layout", () =
   );
   assert.match(
     countAssignmentsPageSource,
-    /\.in\("location_kind", \["warehouse"\]\)[\s\S]*\.in\("item_kind", \["raw_material", "finished_good"\]\)/,
-    "Assignments should target the branch warehouse and list active countable goods",
+    /\.in\("location_kind", \["warehouse", "kitchen"\]\)[\s\S]*\.in\("item_kind", \["raw_material", "finished_good"\]\)/,
+    "Assignments should target Bếp after split and list active countable goods",
   );
 });
