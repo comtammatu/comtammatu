@@ -76,6 +76,9 @@ const ALL_ROLES_VALUE = "all";
 
 type ViewMode = "stations" | "staff";
 
+const CHIP_SCROLL_ROW =
+  "no-scrollbar flex min-w-0 touch-pan-x gap-1.5 overflow-x-auto overscroll-x-contain pb-1 md:flex-wrap md:overflow-visible";
+
 function seedSelections(data: BranchCountAssignmentData) {
   const seeded: Record<string, number[]> = {};
   for (const employee of data.employees) {
@@ -750,9 +753,9 @@ export function BranchCountAssignmentsClient({
   const content = (
     <div className="flex flex-col gap-4">
       {/* Scope selector: Location & Shift */}
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         {data.locationOptions.length > 1 ? (
-          <div className="flex min-w-0 flex-col gap-1.5">
+          <div className="flex min-w-0 shrink-0 flex-col gap-1.5 sm:w-64">
             <Label htmlFor="branch-count-assignment-location">
               {INVENTORY_VI.warehouseShort}
             </Label>
@@ -789,12 +792,12 @@ export function BranchCountAssignmentsClient({
         ) : null}
 
         {data.shiftOptions.length > 0 ? (
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center justify-between">
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <div className="flex items-center justify-between gap-2">
               <Label className="text-xs font-semibold text-muted-foreground">
                 {INVENTORY_VI.countAssignShiftLabel}
               </Label>
-              <span className="text-xs text-muted-foreground">
+              <span className="hidden min-w-0 truncate text-xs text-muted-foreground md:inline">
                 {INVENTORY_VI.countAssignProgressSummary(
                   assignedEmployeeCount,
                   data.employees.length,
@@ -804,7 +807,7 @@ export function BranchCountAssignmentsClient({
               </span>
             </div>
             <div
-              className="no-scrollbar flex touch-pan-x gap-1.5 overflow-x-auto overscroll-x-contain pb-1"
+              className={CHIP_SCROLL_ROW}
               role="group"
               aria-label={INVENTORY_VI.countAssignShiftLabel}
             >
@@ -883,13 +886,13 @@ export function BranchCountAssignmentsClient({
             </span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             {unassignedIngredients.length > 0 ? (
               <Button
                 type="button"
                 variant="outline"
                 size="touch"
-                className="text-xs"
+                className="w-full min-w-0 sm:w-auto"
                 onClick={() => setUnassignedSheetOpen(true)}
               >
                 <IconClipboardCheck className="size-4" />
@@ -904,7 +907,7 @@ export function BranchCountAssignmentsClient({
               variant="default"
               size="touch"
               disabled={isPending || data.templates.length === 0}
-              className="gap-1.5 text-xs"
+              className="w-full min-w-0 gap-1.5 sm:w-auto"
               onClick={applyDutyRosterAssignments}
             >
               <IconZap className="size-4" />
@@ -973,7 +976,14 @@ export function BranchCountAssignmentsClient({
             </Button>
           </div>
 
-          <ItemGroup className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {data.templates.length === 0 ? (
+            <AppEmptyState
+              compact
+              mode="no-data"
+              title={INVENTORY_VI.countAssignStationTitle}
+            />
+          ) : (
+          <ItemGroup className="grid gap-2 lg:grid-cols-2">
             {data.templates.map((template) => {
               const assignedEmpCounts: Record<number, number> = {};
               for (const ingId of template.ingredientIds) {
@@ -1081,6 +1091,7 @@ export function BranchCountAssignmentsClient({
               );
             })}
           </ItemGroup>
+          )}
         </div>
       ) : null}
 
@@ -1097,12 +1108,12 @@ export function BranchCountAssignmentsClient({
           </div>
 
           {/* Status filter tabs */}
-          <div className="flex flex-wrap gap-1">
+          <div className={CHIP_SCROLL_ROW} role="group">
             <Button
               type="button"
               variant={staffStatusFilter === "all" ? "default" : "outline"}
               size="touch"
-              className="h-8 text-xs font-medium"
+              className="shrink-0"
               onClick={() => setStaffStatusFilter("all")}
             >
               {INVENTORY_VI.countTabAllWithCount(data.employees.length)}
@@ -1112,7 +1123,7 @@ export function BranchCountAssignmentsClient({
                 type="button"
                 variant={staffStatusFilter === "onDuty" ? "default" : "outline"}
                 size="touch"
-                className="h-8 text-xs font-medium"
+                className="shrink-0"
                 onClick={() => setStaffStatusFilter("onDuty")}
               >
                 {INVENTORY_VI.countTabOnDutyWithCount(onDutyEmployeesCount)}
@@ -1122,7 +1133,7 @@ export function BranchCountAssignmentsClient({
               type="button"
               variant={staffStatusFilter === "assigned" ? "default" : "outline"}
               size="touch"
-              className="h-8 text-xs font-medium"
+              className="shrink-0"
               onClick={() => setStaffStatusFilter("assigned")}
             >
               {INVENTORY_VI.countTabAssignedWithCount(assignedEmployeeCount)}
@@ -1133,7 +1144,7 @@ export function BranchCountAssignmentsClient({
                 staffStatusFilter === "unassigned" ? "default" : "outline"
               }
               size="touch"
-              className="h-8 text-xs font-medium"
+              className="shrink-0"
               onClick={() => setStaffStatusFilter("unassigned")}
             >
               {INVENTORY_VI.countTabUnassignedWithCount(
@@ -1390,8 +1401,8 @@ export function BranchCountAssignmentsClient({
         }
         side="bottom"
         showCloseButton={false}
-        contentClassName="max-h-dvh-95 flex flex-col overflow-hidden sm:mx-auto sm:max-w-3xl"
-        bodyClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-0"
+        contentClassName="max-h-dvh-95 flex flex-col overflow-hidden sm:mx-auto sm:max-w-3xl md:max-w-4xl lg:max-w-5xl"
+        bodyClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-0 md:flex-row"
         footer={
           <div className="flex w-full items-center justify-end gap-2">
             <Button
@@ -1419,7 +1430,7 @@ export function BranchCountAssignmentsClient({
           </div>
         }
       >
-        <div className="flex shrink-0 flex-col gap-3 px-3 pb-3 pt-2 sm:px-4">
+        <div className="flex shrink-0 flex-col gap-3 px-3 pb-3 pt-2 sm:px-4 md:h-full md:w-80 md:overflow-y-auto md:border-r">
           {/* Step 1: Staff Selection */}
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
@@ -1472,9 +1483,9 @@ export function BranchCountAssignmentsClient({
                       <Button
                         type="button"
                         variant="ghost"
-                        size="touch"
+                        size="icon-xs"
                         aria-label={ACTIONS_VI.delete}
-                        className="size-5 min-h-0 min-w-0 rounded-full p-0 text-muted-foreground hover:text-foreground"
+                        className="rounded-full text-muted-foreground hover:text-foreground"
                         onClick={() => removeStaffFromStation(empId)}
                       >
                         <IconX className="size-3" />
@@ -1576,7 +1587,7 @@ export function BranchCountAssignmentsClient({
                   type="button"
                   variant="outline"
                   size="touch"
-                  className="h-8 text-xs font-medium"
+                  className="shrink-0"
                   onClick={splitStationItemsEvenly}
                 >
                   <IconSparkles className="size-3.5 mr-1" />
@@ -1590,7 +1601,7 @@ export function BranchCountAssignmentsClient({
                       type="button"
                       variant="outline"
                       size="touch"
-                      className="h-8 text-xs"
+                      className="shrink-0"
                       onClick={() => assignAllStationItemsTo(empId)}
                     >
                       {INVENTORY_VI.countStationAssignAllTo(emp?.name ?? "")}
@@ -1601,7 +1612,7 @@ export function BranchCountAssignmentsClient({
                   type="button"
                   variant="ghost"
                   size="touch"
-                  className="h-8 text-xs text-destructive hover:text-destructive"
+                  className="shrink-0 text-destructive hover:text-destructive"
                   onClick={clearStationAssignments}
                 >
                   {INVENTORY_VI.countStationClearAssignments}
@@ -1613,8 +1624,8 @@ export function BranchCountAssignmentsClient({
 
         {/* Station Ingredients List */}
         {activeStation && activeStation.ingredientIds.length > 0 ? (
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4 sm:px-4">
-            <div className="flex flex-col gap-2">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4 sm:px-4 md:px-4">
+            <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
               {activeStation.ingredientIds.map((ingId) => {
                 const ing = ingredientById.get(ingId);
                 const currentEmpId = stationAssignmentsDraft[ingId] ?? null;
@@ -1664,14 +1675,14 @@ export function BranchCountAssignmentsClient({
 
                     {/* Quick Assignee Pill selection for multi-staff setup */}
                     {stationStaffIds.length > 1 ? (
-                      <div className="flex flex-wrap gap-1 pt-1">
+                      <div className={cn(CHIP_SCROLL_ROW, "pt-1")}>
                         <Button
                           type="button"
                           variant={
                             currentEmpId === null ? "default" : "outline"
                           }
                           size="touch"
-                          className="h-8 text-xs font-medium"
+                          className="shrink-0"
                           onClick={() =>
                             setStationAssignmentsDraft((prev) => ({
                               ...prev,
@@ -1690,7 +1701,7 @@ export function BranchCountAssignmentsClient({
                               type="button"
                               variant={isSelected ? "default" : "outline"}
                               size="touch"
-                              className="h-8 text-xs font-medium"
+                              className="shrink-0"
                               onClick={() =>
                                 setStationAssignmentsDraft((prev) => ({
                                   ...prev,
@@ -1727,7 +1738,7 @@ export function BranchCountAssignmentsClient({
         description={INVENTORY_VI.countTemplateEditorSheetDescription}
         side="bottom"
         showCloseButton={false}
-        contentClassName="max-h-dvh-95 flex flex-col overflow-hidden sm:mx-auto sm:max-w-2xl"
+        contentClassName="max-h-dvh-95 flex flex-col overflow-hidden sm:mx-auto sm:max-w-2xl md:max-w-3xl lg:max-w-4xl"
         bodyClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-0"
         footer={
           <div className="flex w-full items-center justify-end gap-2">
@@ -1787,15 +1798,15 @@ export function BranchCountAssignmentsClient({
           </div>
 
           {/* Quick Select & Filter Tabs */}
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-2">
-            <div className="flex flex-wrap gap-1">
+          <div className="flex flex-col gap-2 border-t pt-2 md:flex-row md:items-center md:justify-between">
+            <div className={CHIP_SCROLL_ROW}>
               <Button
                 type="button"
                 variant={
                   templateSelectionFilter === "all" ? "default" : "outline"
                 }
                 size="touch"
-                className="h-8 text-xs font-medium"
+                className="shrink-0"
                 onClick={() => setTemplateSelectionFilter("all")}
               >
                 {INVENTORY_VI.countTabAllWithCount(data.ingredients.length)}
@@ -1806,7 +1817,7 @@ export function BranchCountAssignmentsClient({
                   templateSelectionFilter === "selected" ? "default" : "outline"
                 }
                 size="touch"
-                className="h-8 text-xs font-medium"
+                className="shrink-0"
                 onClick={() => setTemplateSelectionFilter("selected")}
               >
                 {INVENTORY_VI.countTabSelectedWithCount(
@@ -1821,7 +1832,7 @@ export function BranchCountAssignmentsClient({
                     : "outline"
                 }
                 size="touch"
-                className="h-8 text-xs font-medium"
+                className="shrink-0"
                 onClick={() => setTemplateSelectionFilter("unselected")}
               >
                 {INVENTORY_VI.countTabUnselectedWithCount(
@@ -1829,12 +1840,12 @@ export function BranchCountAssignmentsClient({
                 )}
               </Button>
             </div>
-            <div className="flex gap-1">
+            <div className={cn(CHIP_SCROLL_ROW, "md:justify-end")}>
               <Button
                 type="button"
                 variant="outline"
                 size="touch"
-                className="h-8 text-xs"
+                className="shrink-0"
                 onClick={() =>
                   setTemplateDraftIngredientIds(
                     data.ingredients.map((i) => i.id),
@@ -1847,7 +1858,7 @@ export function BranchCountAssignmentsClient({
                 type="button"
                 variant="outline"
                 size="touch"
-                className="h-8 text-xs"
+                className="shrink-0"
                 onClick={() => setTemplateDraftIngredientIds([])}
               >
                 {INVENTORY_VI.countTemplateDeselectAll}
@@ -1874,7 +1885,7 @@ export function BranchCountAssignmentsClient({
 
         {/* Native Smooth Scrollable Ingredient List */}
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4 sm:px-4">
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
             {templateVisibleIngredients.map((ingredient) => {
               const checked = templateDraftIngredientIds.includes(
                 ingredient.id,
@@ -1925,7 +1936,7 @@ export function BranchCountAssignmentsClient({
         )}
         side="bottom"
         showCloseButton={false}
-        contentClassName="max-h-dvh-95 flex flex-col overflow-hidden sm:mx-auto sm:max-w-2xl"
+        contentClassName="max-h-dvh-95 flex flex-col overflow-hidden sm:mx-auto sm:max-w-2xl md:max-w-3xl lg:max-w-4xl"
         bodyClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-0"
         footer={
           <div className="flex w-full items-center justify-end gap-2">
@@ -1959,7 +1970,7 @@ export function BranchCountAssignmentsClient({
               <span className="text-xs font-semibold text-muted-foreground">
                 {INVENTORY_VI.countStationQuickShortcuts}
               </span>
-              <div className="flex flex-wrap gap-1.5">
+              <div className={CHIP_SCROLL_ROW}>
                 {data.templates.map((tpl) => {
                   const allIncluded =
                     tpl.ingredientIds.length > 0 &&
@@ -1970,7 +1981,7 @@ export function BranchCountAssignmentsClient({
                       type="button"
                       variant={allIncluded ? "secondary" : "outline"}
                       size="touch"
-                      className="h-8 text-xs gap-1.5 font-medium"
+                      className="shrink-0 gap-1.5"
                       onClick={() => toggleStationShortcut(tpl)}
                     >
                       <IconZap
@@ -1995,15 +2006,15 @@ export function BranchCountAssignmentsClient({
           ) : null}
 
           {/* Quick Select & Filter Tabs */}
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-2">
-            <div className="flex flex-wrap gap-1">
+          <div className="flex flex-col gap-2 border-t pt-2 md:flex-row md:items-center md:justify-between">
+            <div className={CHIP_SCROLL_ROW}>
               <Button
                 type="button"
                 variant={
                   employeeSelectionFilter === "all" ? "default" : "outline"
                 }
                 size="touch"
-                className="h-8 text-xs font-medium"
+                className="shrink-0"
                 onClick={() => setEmployeeSelectionFilter("all")}
               >
                 {INVENTORY_VI.countTabAllWithCount(data.ingredients.length)}
@@ -2014,7 +2025,7 @@ export function BranchCountAssignmentsClient({
                   employeeSelectionFilter === "selected" ? "default" : "outline"
                 }
                 size="touch"
-                className="h-8 text-xs font-medium"
+                className="shrink-0"
                 onClick={() => setEmployeeSelectionFilter("selected")}
               >
                 {INVENTORY_VI.countTabSelectedWithCount(draftIds.length)}
@@ -2027,7 +2038,7 @@ export function BranchCountAssignmentsClient({
                     : "outline"
                 }
                 size="touch"
-                className="h-8 text-xs font-medium"
+                className="shrink-0"
                 onClick={() => setEmployeeSelectionFilter("unselected")}
               >
                 {INVENTORY_VI.countTabUnselectedWithCount(
@@ -2035,12 +2046,12 @@ export function BranchCountAssignmentsClient({
                 )}
               </Button>
             </div>
-            <div className="flex gap-1">
+            <div className={cn(CHIP_SCROLL_ROW, "md:justify-end")}>
               <Button
                 type="button"
                 variant="outline"
                 size="touch"
-                className="h-8 text-xs"
+                className="shrink-0"
                 onClick={() => setDraftIds(data.ingredients.map((i) => i.id))}
               >
                 {INVENTORY_VI.countTemplateSelectAll}
@@ -2049,7 +2060,7 @@ export function BranchCountAssignmentsClient({
                 type="button"
                 variant="outline"
                 size="touch"
-                className="h-8 text-xs"
+                className="shrink-0"
                 onClick={() => setDraftIds([])}
               >
                 {INVENTORY_VI.countTemplateDeselectAll}
@@ -2076,7 +2087,7 @@ export function BranchCountAssignmentsClient({
 
         {/* Native Smooth Scrollable Ingredient List */}
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4 sm:px-4">
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
             {visibleIngredients.length === 0 ? (
               <AppEmptyState
                 compact
@@ -2194,7 +2205,7 @@ export function BranchCountAssignmentsClient({
             <span className="text-xs font-medium text-muted-foreground">
               {INVENTORY_VI.countAssignUnassignedListLabel}
             </span>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
               {unassignedIngredients.map((ing) => (
                 <Item key={ing.id} variant="outline" className="min-h-12 p-2.5">
                   <ItemContent className="min-w-0">

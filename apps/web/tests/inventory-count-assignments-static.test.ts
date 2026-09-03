@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { readSql, assertSqlMatch } from "./_lib/active-sql.ts";
+import {
+  assertSqlMatch,
+  extractSqlFunction,
+  readActiveMigrationSql,
+  readSql,
+} from "./_lib/active-sql.ts";
 
 
 function readWeb(path: string): string {
@@ -198,6 +203,28 @@ test("count assignments use kitchen after split and warehouse before split", () 
     /pickDefaultStaffCountLocationId\(\s*locations,\s*requestedLocationId/,
     "count assignments should prefer Bếp and retain Kho as the legacy fallback",
   );
+
+  const staffCountLocationGate =
+    /location\.location_kind = ANY \(ARRAY\['warehouse'::text, 'kitchen'::text\]\)/;
+  const activeSql = readActiveMigrationSql();
+  for (const functionName of [
+    "set_inventory_count_assignments",
+    "set_inventory_count_assignments_by_template",
+    "set_station_count_assignments",
+    "submit_inventory_count_slip",
+  ]) {
+    const body = extractSqlFunction(activeSql, functionName);
+    assert.match(
+      body,
+      staffCountLocationGate,
+      `${functionName} must accept kitchen after split and warehouse before split`,
+    );
+    assert.doesNotMatch(
+      body,
+      /location\.location_kind = 'warehouse'/,
+      `${functionName} must not keep the pre-split warehouse-only staff-count gate`,
+    );
+  }
 });
 
 test("Branch stays touch-native while Owner surface uses a management table and dialog", () => {
@@ -205,10 +232,24 @@ test("Branch stays touch-native while Owner surface uses a management table and 
     "app/(protected)/br/[branchId]/(operator)/stock/count-assignments/branch-count-assignments-client.tsx",
   );
 
+  const branchCardGrids =
+    branchClientSource.match(
+      /<ItemGroup className="grid gap-2 lg:grid-cols-2">/g,
+    ) ?? [];
+  assert.equal(
+    branchCardGrids.length,
+    2,
+    "Station and staff card lists should stay single-column until lg, never a desktop table",
+  );
   assert.match(
     branchClientSource,
-    /<ItemGroup className="grid gap-2 lg:grid-cols-2">/,
-    "Branch count assignment rows should keep a touch grid instead of a desktop table",
+    /bodyClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-0 md:flex-row"/,
+    "Station assignment sheet should become a two-pane layout from tablet up",
+  );
+  assert.doesNotMatch(
+    branchClientSource,
+    /size="touch"[\s\S]{0,120}className="[^"]*\bh-8\b/,
+    "Branch touch buttons must not be crushed with a conflicting h-8",
   );
   assert.match(
     branchClientSource,

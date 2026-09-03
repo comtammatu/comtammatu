@@ -697,7 +697,7 @@ export function CountAssignmentsClient({
                   ) : undefined
                 }
               />
-              <div className="flex flex-wrap gap-1 px-1 pb-1">
+              <div className="no-scrollbar flex min-w-0 touch-pan-x gap-1 overflow-x-auto overscroll-x-contain px-1 pb-1 md:flex-wrap md:overflow-visible">
                 <Button
                   type="button"
                   variant={staffStatusFilter === "all" ? "default" : "outline"}
@@ -764,13 +764,21 @@ export function CountAssignmentsClient({
               const selectedIds =
                 selectionByEmployee[String(employee.id)] ?? [];
               return (
-                <Item variant="outline" className="items-start">
+                <Item
+                  variant="outline"
+                  className="min-h-20 min-w-0 items-start"
+                >
                   <ItemContent className="min-w-0">
                     <ItemTitle>{employee.name}</ItemTitle>
                     <ItemDescription>
-                      {selectedIds.length > 0
-                        ? INVENTORY_VI.countAssignItemCount(selectedIds.length)
-                        : INVENTORY_VI.countStationUnassigned}
+                      {[
+                        employee.positionName,
+                        selectedIds.length > 0
+                          ? INVENTORY_VI.countAssignItemCount(selectedIds.length)
+                          : INVENTORY_VI.countStationUnassigned,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </ItemDescription>
                     <AssignmentBadges
                       selectedIds={selectedIds}
@@ -804,7 +812,7 @@ export function CountAssignmentsClient({
         description={INVENTORY_VI.countAssignEditDescription(
           activeEmployee?.name ?? "",
         )}
-        contentClassName="max-h-dvh-95 overflow-hidden sm:max-w-3xl"
+        contentClassName="max-h-dvh-95 overflow-hidden sm:max-w-3xl lg:max-w-4xl"
         bodyClassName="min-h-0 overflow-hidden flex flex-col gap-3"
         footer={
           <>
@@ -825,8 +833,8 @@ export function CountAssignmentsClient({
       >
         <div className="flex shrink-0 flex-col gap-2">
           {/* Quick Select & Filter Tabs */}
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-2">
-            <div className="flex flex-wrap gap-1">
+          <div className="flex flex-col gap-2 border-b pb-2 md:flex-row md:items-center md:justify-between">
+            <div className="no-scrollbar flex min-w-0 touch-pan-x gap-1 overflow-x-auto overscroll-x-contain md:flex-wrap md:overflow-visible">
               <Button
                 type="button"
                 variant={selectionFilter === "all" ? "default" : "outline"}
@@ -859,12 +867,12 @@ export function CountAssignmentsClient({
                 )}
               </Button>
             </div>
-            <div className="flex gap-1">
+            <div className="no-scrollbar flex min-w-0 touch-pan-x gap-1 overflow-x-auto overscroll-x-contain md:overflow-visible">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                className="h-8 text-xs"
+                className="h-8 shrink-0 text-xs"
                 onClick={() => setDraftIds(ingredients.map((i) => i.id))}
               >
                 {INVENTORY_VI.countTemplateSelectAll}
@@ -900,7 +908,7 @@ export function CountAssignmentsClient({
 
         <Frame className="h-96 min-h-0 overflow-hidden">
           <div className="h-full overflow-y-auto overscroll-contain p-2">
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
               {ingredients.length === 0 ? (
                 <p className="col-span-full px-3 py-2 text-sm text-muted-foreground">
                   {INVENTORY_VI.countAssignNoFinishedGoods}

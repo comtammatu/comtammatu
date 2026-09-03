@@ -7,6 +7,7 @@ import {
   readFileSync,
   readdirSync,
   rmSync,
+  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -82,6 +83,22 @@ function selectProductionMigrations(
     versions.add(version);
   }
   return selected;
+}
+
+function pendingProductionMigrations(selected, remoteVersions) {
+  const remoteSet = new Set(remoteVersions);
+  return selected
+    .map(([, file]) => file)
+    .filter((file) => {
+      const version = file.match(VERSIONED_SQL)?.[1];
+      return version != null && !remoteSet.has(version);
+    });
+}
+
+function remoteHistoryStubFiles(remoteVersions, copiedVersions) {
+  return remoteVersions
+    .filter((version) => !copiedVersions.has(version))
+    .map((version) => `${version}_remote_history.sql`);
 }
 
 function extractFirstJsonObject(output) {
@@ -184,10 +201,26 @@ function createProductionWorkdir(projectRoot, remoteVersions) {
   const supabaseDir = join(workdir, "supabase");
   const migrationsDir = join(supabaseDir, "migrations");
   mkdirSync(migrationsDir, { recursive: true });
+  const copiedVersions = new Set();
   for (const [source, file] of migrations) {
     copyFileSync(join(projectRoot, source, file), join(migrationsDir, file));
+    const version = file.match(VERSIONED_SQL)?.[1];
+    if (version) copiedVersions.add(version);
   }
-  return workdir;
+  // CLI 2.10x+ refuses db push when a remote ledger version has no local file.
+  // Historical remotes were folded into the baseline and must not be replayed.
+  for (const file of remoteHistoryStubFiles(remoteVersions, copiedVersions)) {
+    const version = file.match(VERSIONED_SQL)?.[1];
+    writeFileSync(
+      join(migrationsDir, file),
+      `-- remote history ${version}\n`,
+      "utf8",
+    );
+  }
+  return {
+    workdir,
+    pending: pendingProductionMigrations(migrations, remoteVersions),
+  };
 }
 
 function selfTest() {
@@ -221,6 +254,21 @@ function selfTest() {
   );
   if (selected.map(([, file]) => file).join(",") !== "20260101000001_forward.sql") {
     throw new Error("Production migration projection selected the wrong files");
+  }
+  if (
+    pendingProductionMigrations(selected, ["20251231235959", "20260101000000"]).join(
+      ",",
+    ) !== "20260101000001_forward.sql"
+  ) {
+    throw new Error("Production pending-migration filter selected the wrong files");
+  }
+  if (
+    remoteHistoryStubFiles(
+      ["20251231235959", "20260101000000", "20260101000001"],
+      new Set(["20260101000001"]),
+    ).join(",") !== "20251231235959_remote_history.sql,20260101000000_remote_history.sql"
+  ) {
+    throw new Error("Production remote-history stubs selected the wrong files");
   }
   const parsed = parseRemoteMigrationVersions(
     JSON.stringify({
@@ -260,7 +308,16 @@ function main() {
   );
   const projectRoot = process.cwd();
   const remoteVersions = listRemoteMigrationVersions(projectRoot, url);
-  const workdir = createProductionWorkdir(projectRoot, remoteVersions);
+  const { workdir, pending } = createProductionWorkdir(
+    projectRoot,
+    remoteVersions,
+  );
+  process.stdout.write(
+    `Would push these migrations:\n${pending.map((file) => `  ${file}`).join("\n") || "  (none)"}\n`,
+  );
+  if (!dryRun && pending.length === 0) {
+    throw new Error("No pending Production migrations to apply");
+  }
   const corepackCmd = process.platform === "win32" ? "corepack.cmd" : "corepack";
   try {
     const result = spawnSync(
