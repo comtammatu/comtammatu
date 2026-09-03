@@ -43,12 +43,13 @@ export function extractSqlFunction(
     const rest = source.slice(match.index);
     const functionEnd = rest.search(/\n\$function\$;/);
     const dollarEnd = rest.search(/\n\$\$;/);
-    const end =
-      functionEnd >= 0 && (dollarEnd < 0 || functionEnd < dollarEnd)
-        ? functionEnd + "\n$function$;".length
-        : dollarEnd >= 0
-          ? dollarEnd + "\n$$;".length
-          : -1;
+    const taggedEnd = rest.search(/\n\$_\$;/);
+    const candidates = [
+      functionEnd >= 0 ? functionEnd + "\n$function$;".length : -1,
+      dollarEnd >= 0 ? dollarEnd + "\n$$;".length : -1,
+      taggedEnd >= 0 ? taggedEnd + "\n$_$;".length : -1,
+    ].filter((value) => value > 0);
+    const end = candidates.length > 0 ? Math.min(...candidates) : -1;
     if (end > 0) last = rest.slice(0, end);
     match = startRe.exec(source);
   }

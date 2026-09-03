@@ -21,12 +21,12 @@ type PosOrderMutationStateInput = {
 };
 
 export function isPosOrderAmountLocked(
-  order: Pick<PosOrderMutationStateInput, "payment_method" | "payment_status">,
+  _order: Pick<PosOrderMutationStateInput, "payment_method" | "payment_status">,
 ): boolean {
-  return order.payment_status !== "paid" && order.payment_method === "vietqr";
+  return false;
 }
 
-/** Show append even when VietQR is pending — click-time confirm unlocks. */
+/** Show append even when VietQR is pending — the live QR refreshes to the new total. */
 export function canOfferPosOrderAppend(
   order: PosOrderMutationStateInput,
   activeStatuses: readonly string[],

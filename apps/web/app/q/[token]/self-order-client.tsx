@@ -172,6 +172,16 @@ function readOptionalNumber(
   return Number.isFinite(candidate) && candidate > 0 ? candidate : null;
 }
 
+function hasLiveSelfOrderPayment(
+  snapshot: PublicSelfOrderSnapshot | PublicSelfOrderAvailableSnapshot,
+): boolean {
+  if (!snapshot.ok) return false;
+  const payment = normalizePaymentRequest(snapshot.paymentRequest);
+  return (
+    payment?.status === "vietqr_pending" || payment?.status === "cash_call"
+  );
+}
+
 function normalizePaymentRequest(
   value: unknown,
 ): GuestPaymentRequestState | null {
@@ -330,8 +340,12 @@ export function SelfOrderClient({
   const [activeCategoryValue, setActiveCategoryValue] = useState(() =>
     defaultSelfOrderCategoryValue(initialSnapshot.menu),
   );
-  const [billOpen, setBillOpen] = useState(false);
-  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [billOpen, setBillOpen] = useState(() =>
+    hasLiveSelfOrderPayment(initialSnapshot),
+  );
+  const [paymentOpen, setPaymentOpen] = useState(() =>
+    hasLiveSelfOrderPayment(initialSnapshot),
+  );
   const [pendingPaymentMethod, setPendingPaymentMethod] = useState<
     "cash_call" | "vietqr" | null
   >(null);
@@ -1065,7 +1079,7 @@ export function SelfOrderClient({
       >
         {order ? (
           <PaymentPanel
-            disabled={awaiting || paymentPending}
+            disabled={awaiting}
             activeOrder={order}
             activePaymentRequest={activePaymentRequest}
             isPending={isPaymentPending}

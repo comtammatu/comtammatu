@@ -73,7 +73,7 @@ campaign condition (for example a 5-star review).
 ### 4. Schedule, lock, zero-total, restructure
 
 - Timezone is `Asia/Ho_Chi_Minh` (same as business dates).
-- `payment_code_locked` still blocks amount changes.
+- A live VietQR refreshes in place when the order total changes.
 - A campaign that zeros `total_amount` stays ADR 0013 (`not_required`, no Viettel job).
 - Merge or split while `promotion_id` is set fails closed
   (`merge_promotion_blocked` / `split_promotion_blocked`). Cashier clears first.

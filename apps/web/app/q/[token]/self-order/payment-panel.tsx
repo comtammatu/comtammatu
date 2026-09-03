@@ -654,7 +654,7 @@ export function PaymentPanel({
         </div>
       </ScrollArea>
 
-      {hasRecoverableVietQr && activePaymentRequest ? (
+      {hasRecoverableVietQr && activePaymentRequest?.clientOpId ? (
         <SheetFooter className="workflow-safe-pb shrink-0 border-border bg-card p-4">
           <Button
             type="button"

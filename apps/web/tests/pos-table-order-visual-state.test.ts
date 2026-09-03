@@ -11,7 +11,7 @@ import {
 
 const ACTIVE_STATUSES = ["new", "confirmed", "preparing", "ready", "served"];
 
-test("VietQR exposure locks amount mutations and append affordances", () => {
+test("pending VietQR does not lock amount mutations or append", () => {
   const activeOrder = {
     status: "served",
     payment_status: "unpaid",
@@ -25,9 +25,9 @@ test("VietQR exposure locks amount mutations and append affordances", () => {
   assert.equal(isPosOrderAmountLocked(activeOrder), false);
   assert.equal(canOfferPosOrderAppend(activeOrder, ACTIVE_STATUSES), true);
   assert.equal(canAppendPosOrder(activeOrder, ACTIVE_STATUSES), true);
-  assert.equal(isPosOrderAmountLocked(pendingVietQrOrder), true);
+  assert.equal(isPosOrderAmountLocked(pendingVietQrOrder), false);
   assert.equal(canOfferPosOrderAppend(pendingVietQrOrder, ACTIVE_STATUSES), true);
-  assert.equal(canAppendPosOrder(pendingVietQrOrder, ACTIVE_STATUSES), false);
+  assert.equal(canAppendPosOrder(pendingVietQrOrder, ACTIVE_STATUSES), true);
   assert.equal(
     canAppendPosOrder({ ...activeOrder, status: "completed" }, ACTIVE_STATUSES),
     false,

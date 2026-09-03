@@ -86,24 +86,25 @@ Evidence: ADR `docs/plan/adr/0044-production-output-valuation-lineage.md`; migra
 
 State: verify
 Kind: fix
-Tier: T2
+Tier: T3
 Lane: pos
-Exit: Live VietQR/cash-call is a recoverable payment step, not a modal lock. Guests can dismiss payment, browse, and add more. POS does not auto-issue QR on bill open; cash can proceed after an unused POS QR; QR chrome stays compact so footer actions stay on-screen.
-Evidence: `corepack pnpm verify` green on the isolated QR slice. Static tests `self-order-payment-contract`, `pos-payment-single-tap`, `self-order-cutover-static`, `vietqr-auto-refresh-flow`, `qr-code-image-static` green.
+Exit: A live VietQR is recoverable from Self-Order and refreshes in place when the bill changes. Guests who close mid-pay reopen on the same QR. POS can add items without cancelling the code.
+Evidence: static tests `vietqr-auto-refresh-flow`, `pos-table-order-visual-state` green. Migration `20260903120620_refresh_pending_vietqr_on_order_change.sql` is in-tree and not yet applied.
 
 UI Advisor Gate
 - Surface: `/q/[token]` G1/G6/G7 + POS bill `StationSheet`; route family: public QR + station POS; plane: `public` + `station_chrome`; change: interaction + overlay
-- Context: screen-context-map §2.12 / §2.1; actor: guest + cashier/waiter; job: keep ordering and till work while a QR exists
-- Journey: create QR → dismiss → menu/till work → reopen QR from bill; bank-app return still restores G7; POS issues QR only on an explicit bank-transfer or create-QR tap
-- Information order: 1) menu or till 2) bill 3) compact QR; exclude: forced nested overlays, auto-create on sheet open
+- Context: screen-context-map §2.12 / §2.1; actor: guest + cashier/waiter; job: resume pay and keep ordering while a QR exists
+- Journey: create QR → close/reopen Self-Order lands on G7; add-more refreshes QR; POS add-item keeps the same payment code
+- Information order: 1) live QR 2) menu or till 3) bill; exclude: blocked entry, cancel-to-edit
 - Pattern: PUBLIC-WORKFLOW + BOARD; block `public-transaction` + `pos-board`; exemplar `self-order-client.tsx` / `bill-receipt-sheet.tsx`
-- States: live intent / dismissed / bank-app return / POS cash after unused QR
+- States: live intent / reopen resume / order-total change / POS cash after unused QR
 - Block: `public-transaction` + `pos-board` — overlay behavior only
 - Responsive: phone 390 self-order; station touch bill sheet
-- Verification: static tests + `lint:copy` + `corepack pnpm verify`
+- Verification: static tests + `lint:copy`
 
-- [ ] Phone: create VietQR, close drawers, add an item, reopen QR from bill
-- [ ] POS: opening Pay does not mint a QR; tapping bank transfer does; unused QR then cash still confirms
+- [ ] Owner applies `20260903120620` to Production `enloyfnuerqgaqderbwb`
+- [ ] Phone: create VietQR, close the tab, reopen Self-Order, pay the same QR
+- [ ] POS: add an item while QR is pending and confirm the QR amount updates
 
 ## Sales-branch cash books and company fund rollup
 
