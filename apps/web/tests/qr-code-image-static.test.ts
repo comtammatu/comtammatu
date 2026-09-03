@@ -114,7 +114,7 @@ test("bank app catalog keeps safe unique apps for testing", () => {
         id: "vcb",
         name: "Vietcombank",
         logoUrl: null,
-        autofill: false,
+        autofill: true,
         monthlyInstall: 0,
       },
     ],
@@ -153,28 +153,55 @@ test("bank app catalog hosts remain allowed by CSP", () => {
   assert.match(config, /img-src[^\n]+https:\/\/api\.vietqr\.io/);
 });
 
-test("MB Bank link uses the supported VietQR deeplink parameters", () => {
-  const href = buildVietQrBankAppUrl({
+const SAMPLE_EMV_QR =
+  "00020101021238530010A0000007270123000697042201091234567890208QRIBFTTA530370454061670005802VN6304ABCD";
+
+function assertDirectNativeHandoff(href: string | null) {
+  assert.ok(href);
+  assert.doesNotMatch(href, /^https?:\/\//i);
+  assert.doesNotMatch(
+    href,
+    /play\.google\.com|market:|dl\.vietqr\.io|intent:/i,
+  );
+}
+
+test("MB Bank link receives the exact VietQR payload on both platforms", () => {
+  const input = {
     appId: "mb",
     accountNo: "0123456789",
     bankCode: "MB",
     amount: 167_000,
     paymentCode: "MATU ABC123",
     accountName: "COM TAM MA TU",
-  });
+    qrData: SAMPLE_EMV_QR,
+  } as const;
 
-  assert.ok(href);
-  const url = new URL(href);
-  assert.equal(url.origin, "https://dl.vietqr.io");
-  assert.equal(url.pathname, "/pay");
-  assert.equal(url.searchParams.get("app"), "mb");
-  assert.equal(url.searchParams.get("ba"), "0123456789@mb");
-  assert.equal(url.searchParams.get("am"), "167000");
-  assert.equal(url.searchParams.get("tn"), "MATU ABC123");
-  assert.equal(url.searchParams.get("bn"), "COM TAM MA TU");
+  const ios = buildVietQrBankAppUrl({ ...input, platform: "ios" });
+  const android = buildVietQrBankAppUrl({ ...input, platform: "android" });
+  assert.equal(ios, android);
+  assertDirectNativeHandoff(ios);
+
+  const url = new URL(ios ?? "");
+  assert.equal(url.protocol, "mbbank:");
+  assert.equal(url.host, "applink");
+  assert.equal(url.searchParams.get("targetPage"), "QRPay");
+  assert.equal(url.searchParams.get("qrContent"), SAMPLE_EMV_QR);
 });
 
-test("VietinBank autofill uses the supported VietQR deeplink parameters", () => {
+test("MB Bank without an EMV payload does not invent a handoff", () => {
+  assert.equal(
+    buildVietQrBankAppUrl({
+      appId: "mb",
+      accountNo: "0123456789",
+      bankCode: "MB",
+      amount: 167_000,
+      paymentCode: "MATU ABC123",
+    }),
+    null,
+  );
+});
+
+test("VietinBank autofill passes the EMV payload on the native iPay path", () => {
   const href = buildVietQrBankAppUrl({
     appId: "icb",
     accountNo: "0123456789",
@@ -182,21 +209,16 @@ test("VietinBank autofill uses the supported VietQR deeplink parameters", () => 
     amount: 167_000,
     paymentCode: "MATU ABC123",
     accountName: "COM TAM MA TU",
-    qrData:
-      "00020101021238530010A0000007270123000697042201091234567890208QRIBFTTA530370454061670005802VN6304ABCD",
+    qrData: SAMPLE_EMV_QR,
     platform: "ios",
   });
 
-  assert.ok(href);
-  const url = new URL(href);
-  assert.equal(url.origin, "https://dl.vietqr.io");
-  assert.equal(url.pathname, "/pay");
-  assert.equal(url.searchParams.get("app"), "icb");
-  assert.equal(url.searchParams.get("ba"), "0123456789@mb");
-  assert.equal(url.searchParams.get("am"), "167000");
-  assert.equal(url.searchParams.get("tn"), "MATU ABC123");
-  assert.equal(url.searchParams.get("bn"), "COM TAM MA TU");
-  assert.equal(url.searchParams.has("qrContent"), false);
+  assertDirectNativeHandoff(href);
+  const url = new URL(href ?? "");
+  assert.equal(url.protocol, "vietinbankipay:");
+  assert.equal(url.host, "host.qrTransfer");
+  assert.equal(url.searchParams.get("targetPage"), "QRPay");
+  assert.equal(url.searchParams.get("qrContent"), SAMPLE_EMV_QR);
 });
 
 test("Self-Order does not hardcode a MoMo payment or unsupported app target", () => {
@@ -209,9 +231,8 @@ test("Self-Order does not hardcode a MoMo payment or unsupported app target", ()
   assert.doesNotMatch(server, /createSelfOrderMomoPaymentRequest/);
 });
 
-test("bank app handoffs respect the verified autofill boundary", () => {
-  const qrData =
-    "00020101021238530010A0000007270123000697042201091234567890208QRIBFTTA530370454061670005802VN6304ABCD";
+test("bank app handoffs pass EMV payload on native schemes", () => {
+  const qrData = SAMPLE_EMV_QR;
 
   const icb = buildVietQrBankAppUrl({
     appId: "icb",
@@ -222,9 +243,8 @@ test("bank app handoffs respect the verified autofill boundary", () => {
     qrData,
     platform: "ios",
   });
-  assert.ok(icb);
-  assert.equal(new URL(icb).searchParams.get("app"), "icb");
-  assert.equal(new URL(icb).searchParams.get("ba"), "0123456789@mb");
+  assertDirectNativeHandoff(icb);
+  assert.equal(new URL(icb ?? "").searchParams.get("qrContent"), qrData);
 
   const bidvAndroid = buildVietQrBankAppUrl({
     appId: "bidv",
@@ -235,9 +255,10 @@ test("bank app handoffs respect the verified autofill boundary", () => {
     qrData,
     platform: "android",
   });
-  assert.ok(bidvAndroid);
-  assert.equal(new URL(bidvAndroid).searchParams.get("app"), "bidv");
-  assert.equal(new URL(bidvAndroid).searchParams.get("am"), "1000");
+  assertDirectNativeHandoff(bidvAndroid);
+  assert.match(bidvAndroid ?? "", /^dl\.bidvsmartbanking\.vn:\/\/applink\?/);
+  assert.equal(new URL(bidvAndroid ?? "").searchParams.get("targetPage"), "QRPay");
+  assert.equal(new URL(bidvAndroid ?? "").searchParams.get("qrContent"), qrData);
 
   const acb = buildVietQrBankAppUrl({
     appId: "acb",
@@ -248,9 +269,9 @@ test("bank app handoffs respect the verified autofill boundary", () => {
     qrData,
     platform: "ios",
   });
-  assert.ok(acb);
-  assert.equal(new URL(acb).searchParams.get("app"), "acb");
-  assert.equal(new URL(acb).searchParams.get("tn"), "CODE");
+  assertDirectNativeHandoff(acb);
+  assert.match(acb ?? "", /^acbone:\/\/ZaloPay\/external\/transactions\/v1\/qrcode\?/);
+  assert.equal(new URL(acb ?? "").searchParams.get("qrCode"), qrData);
 
   const tpb = buildVietQrBankAppUrl({
     appId: "tpb",
@@ -261,10 +282,8 @@ test("bank app handoffs respect the verified autofill boundary", () => {
     qrData,
     platform: "ios",
   });
-  assert.ok(tpb);
-  assert.equal(tpb, "hydro://");
+  assert.equal(tpb, `hydro://ZaloPay/${encodeURIComponent(qrData)}`);
 
-  // ZaloPay: opens the app without unverified transfer parameters.
   const zalopayIos = buildVietQrBankAppUrl({
     appId: "zalopay",
     accountNo: "0123456789",
@@ -274,9 +293,6 @@ test("bank app handoffs respect the verified autofill boundary", () => {
     qrData,
     platform: "ios",
   });
-  assert.ok(zalopayIos);
-  assert.equal(zalopayIos, "zalopay://");
-
   const zalopayAndroid = buildVietQrBankAppUrl({
     appId: "zalopay",
     accountNo: "0123456789",
@@ -286,13 +302,9 @@ test("bank app handoffs respect the verified autofill boundary", () => {
     qrData,
     platform: "android",
   });
-  assert.ok(zalopayAndroid);
-  assert.equal(
-    zalopayAndroid,
-    "intent://#Intent;scheme=zalopay;package=vn.com.vng.zalopay;end",
-  );
+  assert.equal(zalopayIos, `zalopay://ZaloPay/${encodeURIComponent(qrData)}`);
+  assert.equal(zalopayAndroid, zalopayIos);
 
-  // MoMo: opens native scheme or intent.
   const momoIos = buildVietQrBankAppUrl({
     appId: "momo",
     accountNo: "0123456789",
@@ -301,9 +313,6 @@ test("bank app handoffs respect the verified autofill boundary", () => {
     paymentCode: "MATU 123",
     platform: "ios",
   });
-  assert.ok(momoIos);
-  assert.equal(momoIos, "momo://");
-
   const momoAndroid = buildVietQrBankAppUrl({
     appId: "momo",
     accountNo: "0123456789",
@@ -312,13 +321,9 @@ test("bank app handoffs respect the verified autofill boundary", () => {
     paymentCode: "MATU 123",
     platform: "android",
   });
-  assert.ok(momoAndroid);
-  assert.equal(
-    momoAndroid,
-    "intent://#Intent;scheme=momo;package=com.mservice.momotransfer;end",
-  );
+  assert.equal(momoIos, "momo://");
+  assert.equal(momoAndroid, "momo://");
 
-  // Sacombank & MSB: open the app without unverified QRPay params.
   const stb = buildVietQrBankAppUrl({
     appId: "stb",
     accountNo: "0123456789",
@@ -328,8 +333,8 @@ test("bank app handoffs respect the verified autofill boundary", () => {
     qrData,
     platform: "ios",
   });
-  assert.ok(stb);
-  assert.equal(stb, "sacombankpay://");
+  assert.match(stb ?? "", /^sacombankpay:\/\/applink\?/);
+  assert.equal(new URL(stb ?? "").searchParams.get("qrContent"), qrData);
 
   const msb = buildVietQrBankAppUrl({
     appId: "msb",
@@ -340,22 +345,26 @@ test("bank app handoffs respect the verified autofill boundary", () => {
     qrData,
     platform: "ios",
   });
-  assert.ok(msb);
-  assert.equal(msb, "msbmobile://");
+  assert.match(msb ?? "", /^msbmobile:\/\/applink\?/);
+  assert.equal(new URL(msb ?? "").searchParams.get("qrContent"), qrData);
 
-  // Viettel Money: opens the wallet without unverified transfer params.
   const viettelMoneyIos = buildVietQrBankAppUrl({
     appId: "viettelmoney",
     accountNo: "0123456789",
     bankCode: "MB",
     amount: 150_000,
     paymentCode: "MATU 999",
-    platform: "ios",
+    platform: "android",
   });
-  assert.ok(viettelMoneyIos);
-  assert.equal(viettelMoneyIos, "viettelpay://");
+  assertDirectNativeHandoff(viettelMoneyIos);
+  const viettelUrl = new URL(viettelMoneyIos ?? "");
+  assert.equal(viettelUrl.protocol, "viettelpay:");
+  assert.equal(viettelUrl.host, "transfer");
+  assert.equal(viettelUrl.searchParams.get("toAccount"), "0123456789");
+  assert.equal(viettelUrl.searchParams.get("bank"), "mb");
+  assert.equal(viettelUrl.searchParams.get("amount"), "150000");
+  assert.equal(viettelUrl.searchParams.get("content"), "MATU 999");
 
-  // Open-app-only bank (no EMV template): bare native scheme, no QR payload.
   const shb = buildVietQrBankAppUrl({
     appId: "shb",
     accountNo: "0123456789",
@@ -363,29 +372,39 @@ test("bank app handoffs respect the verified autofill boundary", () => {
     amount: 10_000,
     paymentCode: "CODE",
     qrData,
-    platform: "ios",
+    platform: "android",
   });
-  assert.ok(shb);
   assert.equal(shb, "shbmobile://");
-  assert.doesNotMatch(shb, /qrContent|qrCode|qr_data/);
+  assert.doesNotMatch(shb ?? "", /qrContent|qrCode|qr_data/);
 });
 
-test("unknown catalog appIds still fall back to the VietQR aggregator", () => {
-  const href = buildVietQrBankAppUrl({
-    appId: "futurebank",
-    accountNo: "0123456789",
-    bankCode: "MB",
-    amount: 167_000,
-    paymentCode: "MATU ABC123",
-    platform: "ios",
-  });
-  assert.ok(href);
-  const url = new URL(href);
-  assert.equal(url.hostname, "dl.vietqr.io");
-  assert.equal(url.searchParams.get("app"), "futurebank");
-  assert.equal(url.searchParams.get("ba"), "0123456789@mb");
-  assert.equal(url.searchParams.get("am"), "167000");
-  assert.equal(url.searchParams.get("tn"), "MATU ABC123");
+test("Android popular wallets open the installed app instead of Play Store", () => {
+  for (const appId of POPULAR_BANK_APP_IDS) {
+    const href = buildVietQrBankAppUrl({
+      appId,
+      accountNo: "0123456789",
+      bankCode: "MB",
+      amount: 50_000,
+      paymentCode: "MATU 123",
+      qrData: SAMPLE_EMV_QR,
+      platform: "android",
+    });
+    assertDirectNativeHandoff(href);
+  }
+});
+
+test("unknown catalog appIds do not redirect through VietQR or Play Store", () => {
+  assert.equal(
+    buildVietQrBankAppUrl({
+      appId: "futurebank",
+      accountNo: "0123456789",
+      bankCode: "MB",
+      amount: 167_000,
+      paymentCode: "MATU ABC123",
+      platform: "android",
+    }),
+    null,
+  );
 });
 
 test("self-order snapshot migration does not read unassigned records", () => {
@@ -469,6 +488,32 @@ test("Self-Order includes major banks and wallets in app catalog", () => {
     STATIC_VIETQR_BANK_APPS.filter((app) => app.autofill)
       .map((app) => app.id)
       .toSorted(),
-    ["acb", "bidv", "icb", "mb", "ocb"],
+    [
+      "abb",
+      "acb",
+      "bab",
+      "bidv",
+      "cake",
+      "eib",
+      "hdb",
+      "icb",
+      "lpb",
+      "mb",
+      "msb",
+      "nab",
+      "ocb",
+      "pgb",
+      "pvcb",
+      "stb",
+      "tcb",
+      "tpb",
+      "vab",
+      "vcb",
+      "vib-2",
+      "viettelmoney",
+      "vpb",
+      "wvn",
+      "zalopay",
+    ],
   );
 });
