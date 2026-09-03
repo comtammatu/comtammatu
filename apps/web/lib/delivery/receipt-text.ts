@@ -4,7 +4,9 @@ const RECEIPT_FOOTER_LINE =
   /^(?:tổng\s*m[oóớòôốộơỡ]*n|tống\s*ti[eêểề]n|tổng\s*cộng|tổng\s*ti[eêểề]n|tạm\s*tính|thành\s*tiền|thanh\s*toán|chiết\s*khấu|giảm\s*gi[aáả])/i;
 
 const CUSTOMER_NOTE_LABEL =
-  /ghi\s*ch[uúủ]\s*(?:(?:của\s*)?khách(?:\s*hàng)?[:\s]+|:\s*)/i;
+  /ghi\s*ch[uúủ]\s*(?:của\s*)?khách(?:\s*hàng)?[:\s]+/i;
+
+const ITEM_NOTE_LABEL = /^ghi\s*ch[uúủ]\s*:\s*/i;
 
 const OPTION_NOTE = /tùy\s*chọn:\s*([^•]+)/gi;
 
@@ -50,7 +52,7 @@ export function sanitizeDeliveryItemNote(
   }
 
   if (parts.length === 0) {
-    const cleaned = stripReceiptFooterTokens(text);
+    const cleaned = stripReceiptFooterTokens(text.replace(ITEM_NOTE_LABEL, ""));
     if (cleaned && !isReceiptFooterLine(cleaned)) parts.push(cleaned);
   }
 

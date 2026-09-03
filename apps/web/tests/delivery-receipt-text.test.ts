@@ -33,7 +33,7 @@ test("customer-note extraction keeps the kitchen request and drops totals", () =
     extractCustomerNoteFromLine(
       "Ghi chú: Không lấy đồ chua xin nhiều cà chu a mỡ hành Tổng mớón",
     ),
-    "Không lấy đồ chua xin nhiều cà chua mỡ hành",
+    null,
   );
 });
 
