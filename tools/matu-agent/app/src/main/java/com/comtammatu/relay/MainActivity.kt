@@ -113,6 +113,7 @@ class MainActivity : AppCompatActivity() {
     private var showingResolvedOrders = false
     private var navigationBar: BottomNavigationView? = null
     private var navigationRail: NavigationRailView? = null
+    private var applyingProgrammaticSelection = false
 
     private val activityScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private lateinit var dbHelper: OrderQueueDbHelper
@@ -265,7 +266,9 @@ class MainActivity : AppCompatActivity() {
                 menuGravity = Gravity.CENTER
                 addNavigationItems(menu)
                 setOnItemSelectedListener { item ->
-                    selectDestination(item.itemId)
+                    if (AgentNavigationPolicy.shouldHandleItemSelection(applyingProgrammaticSelection)) {
+                        selectDestination(item.itemId)
+                    }
                     true
                 }
             }
@@ -299,7 +302,9 @@ class MainActivity : AppCompatActivity() {
                 labelVisibilityMode = com.google.android.material.navigation.NavigationBarView.LABEL_VISIBILITY_LABELED
                 addNavigationItems(menu)
                 setOnItemSelectedListener { item ->
-                    selectDestination(item.itemId)
+                    if (AgentNavigationPolicy.shouldHandleItemSelection(applyingProgrammaticSelection)) {
+                        selectDestination(item.itemId)
+                    }
                     true
                 }
             }
@@ -360,11 +365,16 @@ class MainActivity : AppCompatActivity() {
                 toolbar.subtitle = getString(R.string.brand_subtitle)
             }
         }
-        if (navigationBar?.selectedItemId != currentDestination) {
-            navigationBar?.selectedItemId = currentDestination
-        }
-        if (navigationRail?.selectedItemId != currentDestination) {
-            navigationRail?.selectedItemId = currentDestination
+        applyingProgrammaticSelection = true
+        try {
+            if (navigationBar?.selectedItemId != currentDestination) {
+                navigationBar?.selectedItemId = currentDestination
+            }
+            if (navigationRail?.selectedItemId != currentDestination) {
+                navigationRail?.selectedItemId = currentDestination
+            }
+        } finally {
+            applyingProgrammaticSelection = false
         }
     }
 
