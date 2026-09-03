@@ -14,6 +14,7 @@ const FINANCE_COCKPIT =
 const FINANCE_COPY = "apps/web/lib/messages/finance.ts";
 const FINANCE_SUBROUTE_SURFACES = [
   "apps/web/app/(protected)/finance/bank-transactions/page.tsx",
+  "apps/web/app/(protected)/finance/construction/page.tsx",
   "apps/web/app/(protected)/finance/equipment/page.tsx",
   "apps/web/app/(protected)/finance/expenses/page.tsx",
   "apps/web/app/(protected)/finance/food-cost/page.tsx",
@@ -102,6 +103,8 @@ test("finance overview presents period results, current funds, and inventory in 
   assert.doesNotMatch(page, /String\(cash\.cashOnHand\)/);
   assert.doesNotMatch(page, /String\(cockpit\.kpis\.inventoryValue\)/);
   assert.match(page, /financeHref\("\/finance\/equipment"/);
+  assert.match(page, /financeHref\("\/finance\/construction"/);
+  assert.match(page, /kpis\.construction/);
   assert.match(page, /className="pb-4"/);
   assert.match(
     page,
@@ -147,6 +150,11 @@ test("finance overview presents period results, current funds, and inventory in 
     "Startup capital must appear outside CurrentFundsSection",
   );
   assert.ok(
+    pageBody.indexOf("</CurrentFundsSection>") <
+      pageBody.indexOf("label={financeCopy.basic.kpis.construction}"),
+    "Construction must appear outside CurrentFundsSection",
+  );
+  assert.ok(
     pageBody.indexOf("label={financeCopy.basic.kpis.totalAssetValue}") <
       pageBody.indexOf("label={financeCopy.basic.kpis.startupCapital}"),
     "Total asset value must appear before startup capital",
@@ -164,6 +172,7 @@ test("finance overview presents period results, current funds, and inventory in 
   assert.match(copy, /operatingExpense: "Chi vận hành"/);
   assert.match(copy, /startupCapital: "Chi phí ban đầu"/);
   assert.match(copy, /equipment: "Thiết bị"/);
+  assert.match(copy, /construction: "Thi công"/);
   assert.match(copy, /totalAssetValue: "Tổng giá trị"/);
   assert.match(copy, /assets: "Tài sản"/);
   assert.match(copy, /inventoryClosingValue: "Tồn kho"/);

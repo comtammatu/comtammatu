@@ -101,6 +101,12 @@ test("equipment list skips sepay-only refresh scope", () => {
   ]);
 });
 
+test("construction list skips sepay-only refresh scope", () => {
+  assert.deepEqual(resolveFinanceRealtimeEvents("/finance/construction"), [
+    "payment",
+  ]);
+});
+
 test("food-cost report skips finance realtime refresh", () => {
   assert.deepEqual(resolveFinanceRealtimeEvents("/finance/food-cost"), []);
 });

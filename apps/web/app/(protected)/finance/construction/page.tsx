@@ -5,26 +5,21 @@ import { currentUserHasPermissionAny } from "@/_lib/permissions";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchAccessibleBranches } from "../actions";
 import {
+  fetchConstructionExpenses,
   fetchExpenseById,
-  fetchExpensePeriodSummary,
-  fetchExpenses,
   fetchStartupCapitalSummary,
 } from "../expense-actions";
-import {
-  parseFinanceParams,
-  resolveFinanceRange,
-} from "../_lib/finance-params";
-import { ExpensesClient } from "./expenses-client";
-import { parseExpenseListFilters } from "./expense-list-state";
+import { parseFinanceParams } from "../_lib/finance-params";
+import { ExpensesClient } from "../expenses/expenses-client";
+import { parseExpenseListFilters } from "../expenses/expense-list-state";
 
-export default async function ExpensesPage({
+export default async function ConstructionPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const sp = await searchParams;
   const params = parseFinanceParams(sp);
-  const resolved = resolveFinanceRange(params);
 
   const rawExpenseId = Array.isArray(sp.expenseId)
     ? sp.expenseId[0]
@@ -36,29 +31,17 @@ export default async function ExpensesPage({
       ? Number(rawExpenseId)
       : null;
 
-  // Settle cookie session before parallel getAuthContext fan-out.
-  // Racing loadAuthState with finance actions on the shared GoTrue client
-  // yields false-null ctx and the expenses soft load-error empty state.
   const { claims } = await loadAuthState();
   const [
     branchesRes,
     expensesRes,
-    summaryRes,
     startupRes,
     canManageExpenses,
     targetExpenseRes,
   ] = await Promise.all([
     fetchAccessibleBranches(),
-    fetchExpenses({
+    fetchConstructionExpenses({
       location: params.location,
-      startDate: resolved.start,
-      endDate: resolved.end,
-      ...(params.branch != null ? { branchId: params.branch } : {}),
-    }),
-    fetchExpensePeriodSummary({
-      location: params.location,
-      startDate: resolved.start,
-      endDate: resolved.end,
       ...(params.branch != null ? { branchId: params.branch } : {}),
     }),
     fetchStartupCapitalSummary({
@@ -71,14 +54,8 @@ export default async function ExpensesPage({
       : Promise.resolve({ success: true, data: null }),
   ]);
 
-  if (
-    !branchesRes.success ||
-    !expensesRes.success ||
-    !summaryRes.success ||
-    !startupRes.success ||
-    summaryRes.data == null
-  ) {
-    throw new Error("Failed to load finance expenses page data.");
+  if (!branchesRes.success || !expensesRes.success || !startupRes.success) {
+    throw new Error("Failed to load finance construction page data.");
   }
 
   const branches = (branchesRes.data ?? []) as {
@@ -89,18 +66,18 @@ export default async function ExpensesPage({
   if (
     targetExpenseRes?.success &&
     targetExpenseRes.data &&
+    targetExpenseRes.data.category === "construction" &&
     !rows.some((row) => row.id === targetExpenseRes.data!.id)
   ) {
     rows = [targetExpenseRes.data, ...rows];
   }
-  const periodSummary = summaryRes.data;
   const summary = {
-    operatingTotal: periodSummary.operatingTotal,
-    operatingCount: periodSummary.operatingCount,
-    startupTotal: startupRes.data?.total ?? "0.00",
-    startupCount: startupRes.data?.count ?? 0,
-    needsActionTotal: periodSummary.needsActionTotal,
-    needsActionCount: periodSummary.needsActionCount,
+    operatingTotal: "0.00",
+    operatingCount: 0,
+    startupTotal: startupRes.data?.constructionTotal ?? "0.00",
+    startupCount: startupRes.data?.constructionCount ?? 0,
+    needsActionTotal: "0.00",
+    needsActionCount: 0,
   };
   const todayBusinessDate = getVNDateString();
 
@@ -115,6 +92,7 @@ export default async function ExpensesPage({
         todayBusinessDate={todayBusinessDate}
         canManageExpenses={canManageExpenses}
         tenantId={claims.tenant_id}
+        listMode="construction"
       />
     </AppPage>
   );

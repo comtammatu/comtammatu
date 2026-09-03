@@ -630,7 +630,7 @@ export default async function FinancePage({
         />
       </CurrentFundsSection>
 
-      {/* CHI PHÍ BAN ĐẦU: Thi công, tài sản, đặt cọc ban đầu */}
+      {/* CHI PHÍ BAN ĐẦU: Tài sản, thi công, đặt cọc — outside Tổng giá trị */}
       <AppSection size="sm" title={financeCopy.basic.sections.startupCapital}>
         <KpiRow
           density="compact"
@@ -654,6 +654,23 @@ export default async function FinancePage({
                 : undefined
             }
             href={financeHref("/finance/expenses", params)}
+          />
+          <KpiCard
+            density="compact"
+            label={financeCopy.basic.kpis.construction}
+            value={
+              cockpit.kpis.startupCapitalLoadFailed
+                ? financeCopy.basic.kpis.vatUnavailable
+                : cockpit.kpis.constructionRecorded
+                  ? formatVND(cockpit.kpis.construction)
+                  : financeCopy.basic.kpis.notRecorded
+            }
+            shortValue={
+              cockpit.kpis.constructionRecorded
+                ? formatCompactVND(cockpit.kpis.construction)
+                : undefined
+            }
+            href={financeHref("/finance/construction", params)}
           />
         </KpiRow>
       </AppSection>

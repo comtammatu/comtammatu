@@ -12,14 +12,14 @@ Period-result formula (two rows):
 - **`Giá vốn món`**: recorded POS ingredient cost for paid orders at sales `Chi nhánh` only (`branch_kind = branch`, `order_id` present). Runtime source: `inventory_value_allocations` (`food_cost`) when `inventory_valuation_cutovers.status = active`; otherwise empty. Excludes manual `phiếu tiêu hao`, `Kho Tổng`, `Bếp Trung Tâm`. `/finance/food-cost` **`Định mức/phần`** uses `/inventory/menu-recipes` catalog resolver (company WAC, then last-known; missing WAC is empty; no-recipe is `0đ`). **`Giá thuần/phần`** = net revenue / qty after side split/discount. See `docs/ref/inventory.md` § 3.
 - **`Lợi nhuận gộp`**: net revenue − recorded food cost. Sales identity only. Incomplete POS coverage shows recorded portion + badge (`N/M` orders, `needs_review`); blank only when valuation cutover inactive. Gross margin uses recorded food cost / net sales.
 - **`Chi phí hàng` / `Chi mua hàng`**: inbound `transfer_in` at branch, or confirmed `/finance/supplier-invoices` `subtotal` (ex-VAT) at company. Bank settlement is payment, not a second P&L hit.
-- **`Chi vận hành`**: posted period expense (rent, utilities, payroll, repairs, consumables, marketing, fees/tax, hospitality, other). Excludes `capital`/`deposit`, capitalized equipment, ingredient COGS, cash↔bank.
+- **`Chi vận hành`**: posted period expense (rent, utilities, payroll, repairs, consumables, marketing, fees/tax, hospitality, other). Excludes `capital`/`construction`/`deposit`, capitalized equipment, ingredient COGS, cash↔bank.
 - **`Biến động tồn kho`**: closing − opening inventory value (when readable).
 - **`Kết quả kinh doanh`**: revenue − goods-in − opex + inventory change. Not derived from GP.
 - Cockpit RPC returns server-computed `inventory_change` with `inventory_change_included` flag; company scope sums across all valued branches. Valuation column grants remain fail-closed gate (`inventory_readable=false` → term excluded with explicit hint, never zero).
 
 Incomplete food-cost coverage warns via coverage badge. No recorded operating expense keeps period result unavailable (not zero).
 
-After period result, **`Tài sản`**: scoped `Tiền mặt + Tiền tài khoản = Tổng tiền`; filtered period-end **`Tồn kho`**; all-time **`Thiết bị`** (`category = capital` spend, not a register; never `Giá trị thiết bị`); then separate **`Chi phí ban đầu`** section (`capital`+`deposit`, period ignored, branch filter matches opex). `Thiết bị` is capital slice of startup — do not add together.
+After period result, **`Tài sản`**: scoped `Tiền mặt + Tiền tài khoản = Tổng tiền`; filtered period-end **`Tồn kho`**; all-time **`Thiết bị`** (`category = capital` spend, not a register; never `Giá trị thiết bị`); then separate **`Chi phí ban đầu`** section (`capital`+`construction`+`deposit`, period ignored, branch filter matches opex). `Thiết bị` is the capital slice; **`Thi công`** (`category = construction`) stays in **`Chi phí ban đầu`** and out of `Tổng giá trị` — do not add together.
 
 Funds formula:
 - **Company `Tiền mặt`**: sum of sales-branch cash books (`branch_kind = branch`). `Kho Tổng` / `Bếp Trung Tâm` have no cash book. Readable only when every active sales branch has a cash opening.
@@ -49,7 +49,8 @@ Cash supplier payments (`payment_method='cash'`) reduce cash.
 the canonical outgoing `bank_transactions` row reduces bank funds.
 
 Inventory sits in **`Tài sản`** with funds and **`Thiết bị`**. **`Chi phí ban đầu`**
-is a separate section after **`Tài sản`** (outside `Tổng giá trị`).
+is a separate section after **`Tài sản`** (outside `Tổng giá trị`) and carries
+the **`Thi công`** card.
 No attention queue or VAT mosaic on this landing; tax/GTGT stay on HĐĐT routes.
 
 Do not expand Finance into a full enterprise accounting product by default.
@@ -85,15 +86,16 @@ Landing cards (formulas in Product Boundary):
 2. **Food cost** — sale-consumption for paid orders; incomplete → warning + `N/M` coverage, still show recorded amount.
 3. **Gross profit** — net revenue − recorded food cost; warning tone when coverage incomplete; blank only when valuation is inactive.
 4. **Operating expense** — operating categories only. Exclude COGS,
-   `capital`, `deposit`, supplier payments, cash↔bank. None → `Chưa ghi nhận`.
+   `capital`, `construction`, `deposit`, supplier payments, cash↔bank. None → `Chưa ghi nhận`.
 5. **Period result** — revenue − goods-in − opex + inventory change. Not from GP. Not "net profit".
 6. **Assets** — company funds (`Tiền mặt` = sum of sales-branch books + one
    bank ledger); single-branch scope shows that branch cash book plus period
    VietQR inflows, not the company bank balance. Then
    **`Tổng tiền + Tồn kho + Thiết bị = Tổng giá trị`**. Inventory term only with
    valuation permission. Funds not opened → do not invent the total.
-   **`Chi phí ban đầu`** (`capital`+`deposit`) stays outside that sum. Equipment
-   drills `/finance/equipment` (capital spend LIST, not a `TSCĐ` register).
+   **`Chi phí ban đầu`** (`capital`+`construction`+`deposit`) stays outside that
+   sum. Equipment drills `/finance/equipment`; construction drills
+   `/finance/construction`. Neither is a `TSCĐ` register.
    Exceptions stay on `/` and list queues, not this landing.
 Layout: desktop two rows; tablet two cols; mobile one. Supporting (not first):
 food-cost analysis, cash sessions, desync recovery, HĐĐT, AP, export.
@@ -189,17 +191,18 @@ the actions above. RLS remains final enforcement.
 
 | Route family                 | Role                         | Decision |
 | ---------------------------- | ---------------------------- | -------- |
-| `/finance`                   | Finance Basic landing        | Period formula then `Tài sản` (funds `TM + NH = Tổng tiền`, then `Tổng tiền` + inventory + equipment = `Tổng giá trị`); `Chi phí ban đầu` in its own section after assets |
+| `/finance`                   | Finance Basic landing        | Period formula then `Tài sản` (funds `TM + NH = Tổng tiền`, then `Tổng tiền` + inventory + equipment = `Tổng giá trị`); `Chi phí ban đầu` in its own section after assets, with a `Thi công` card |
 | `/finance/bank-transactions` | Bank LIST | Manual match by `order_number` (`mã đơn`); classify only, never change bank balance |
-| `/finance/expenses`          | Operating expense LIST       | Period KPI from `get_finance_expense_period_summary`; list stays paged |
+| `/finance/expenses`          | Operating expense LIST       | Period KPI from `get_finance_expense_period_summary`; rows lead with spend purpose; URL `q`/`kind` filters; list stays paged |
 | `/finance/equipment`         | Capital equipment LIST       | All-time `category=capital` spend; not a depreciation register |
+| `/finance/construction`      | Construction LIST            | All-time `category=construction` spend; outside `Tổng giá trị` |
 | `/finance/targets`           | Monthly revenue targets      | Finance-managed targets + non-cumulative reward tiers; no auto payroll |
 | `/finance/food-cost`         | Gross profit / margin        | Recorded gross-margin KPI; per-item table is theoretical portion cost |
 | `/finance/supplier-invoices` | Supplier payable             | Thin AP entry; not expenses |
 | `/finance/invoices`          | HĐĐT queue                   | Support workflow; same-VN-day issue window |
 
 Inventory owns stock-value detail; Finance shows only the current-value card
-inside `Tài sản`. Sidebar: `Tiền` (includes `Thiết bị`), `Doanh thu`, `Chứng từ` (food-cost and
+inside `Tài sản`. Sidebar: `Tiền` (includes `Thiết bị` and `Thi công`), `Doanh thu`, `Chứng từ` (food-cost and
 targets stay sibling routes). No `/accounting/*` app surface.
 
 Supplier invoice matching/VAT/payment: actions +
@@ -238,8 +241,9 @@ Output VAT belongs to issued/corrected sales invoice snapshots — not revenue.
 
 Equipment: classify before operating result (fixed asset → depreciation;
 below-criteria tools → expense/allocate; period consumables → expense).
-`/finance/equipment` lists recorded `capital` spend (`máy móc`, `thiết bị`). It is
-not a `TSCĐ` register or carrying-value card.
+`/finance/equipment` lists recorded `capital` spend (`máy móc`, `thiết bị`).
+`/finance/construction` lists recorded `construction` spend (`thi công`,
+`thiết kế`). Neither is a `TSCĐ` register or carrying-value card.
 
 ## Acceptance Criteria
 
@@ -259,7 +263,7 @@ not a `TSCĐ` register or carrying-value card.
 
 ## Current Gaps
 
-- `/finance/expenses` is operating + opening-capital ledger, not a statutory journal. Deductible VAT / equipment value / period close stay blocked (D020).
+- `/finance/expenses` is operating + opening-capital ledger, not a statutory journal. Rows lead with spend purpose; `q` searches note/vendor and `kind` slices operating vs startup (`capital` / `construction` / `deposit`). Deductible VAT / equipment value / period close stay blocked (D020).
 - Period-close readiness (`get_finance_period_close_readiness`) is read-only advisory; `close_period_soft`/`close_period_hard` and the `auto_close_periods` cron stay unconditional until an owner-approved follow-up gates them.
 
 ## Source Files

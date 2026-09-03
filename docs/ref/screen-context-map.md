@@ -408,13 +408,13 @@ Mỗi hàng = `page.tsx` (shim gộp vào cha). Adapter L0: `AppPage` / `DataTab
 ### 2.9. Tài chính — `/finance`
 
 - **Gia đình:** Finance (spine §1A). Sibling oversight cùng plane: `/finance/revenue`
-  (REPORT), `/finance/expenses`, `/finance/equipment`, `/finance/bank-transactions`, `/finance/targets`,
+  (REPORT), `/finance/expenses`, `/finance/equipment`, `/finance/construction`, `/finance/bank-transactions`, `/finance/targets`,
   và AP `/finance/supplier-invoices` (§2.7). Không dựng dashboard bán hàng/POS.
 - **Archetype:** `DASHBOARD`.
 - **Actor:** `owner`.
 - **Job:** Công thức KQKD theo kỳ (hai dòng); khối **Tài sản** gồm quỹ hiện có, rồi Tổng tiền + tồn cuối kỳ + thiết bị (`capital`) = **Tổng giá trị**; Chi phí ban đầu đứng ngoài công thức đó.
 - **Goal:** Doanh thu thuần sau giá vốn món / chi vận hành / biến động tồn; drill báo cáo chuyên biệt khi cần.
-- **Workflow:** Chọn kỳ (`Nay`…`Năm`) → phạm vi (`Tất cả`/`Công ty`/`Toàn bộ CN`/`CN`) → đọc 2 dòng công thức → Tài sản (mọi scope: TM theo phạm vi + một sổ NH công ty = Tổng tiền; rồi Tổng giá trị; section Chi phí ban đầu sau khối Tài sản). Drill thiết bị → `/finance/equipment`. Ngoại lệ xử lý trên `/` và list Giao dịch / Chi phí / HĐĐT — không hàng đợi trên landing.
+- **Workflow:** Chọn kỳ (`Nay`…`Năm`) → phạm vi (`Tất cả`/`Công ty`/`Toàn bộ CN`/`CN`) → đọc 2 dòng công thức → Tài sản (mọi scope: TM theo phạm vi + một sổ NH công ty = Tổng tiền; rồi Tổng giá trị; section Chi phí ban đầu sau khối Tài sản). Drill thiết bị → `/finance/equipment`; drill thi công → `/finance/construction`. Ngoại lệ xử lý trên `/` và list Giao dịch / Chi phí / HĐĐT — không hàng đợi trên landing.
 - **Ưu tiên data:** Hai dòng KPI kỳ; công thức quỹ; Tổng tiền + Tồn kho + Thiết bị = Tổng giá trị; Chi phí ban đầu ngoài tổng. Tháng/`mtd` + chỉ tiêu → Progress trên Doanh thu thuần; đua CN/pace/editor → `/finance/revenue` · `/finance/targets`. **Không lặp:** bảng tồn chi tiết (Inventory). Thiếu coverage giá vốn → không tính Lợi nhuận gộp/KQKD; chưa chi phí → không KQKD. **Không:** LN sau thuế khi chưa sổ/khóa sổ; nút order/KDS; mosaic GTGT; danh sách cần xử lý trên `/finance`; Thu VietQR trên Tài sản.
 - **UX:** `formatVND`. Desktop: dòng 1 = 3 card, dòng 2 = 4 card (khi có quyền tồn); khối Tài sản = công thức quỹ, công thức Tổng giá trị (shell giống kỳ); rồi section Chi phí ban đầu; tablet 2 cột; mobile 1 cột (`KpiCard`/`KpiRow`/`AppSection`). Chart chỉ `chart-1`…`chart-5`.
 
@@ -425,9 +425,31 @@ Mỗi hàng = `page.tsx` (shim gộp vào cha). Adapter L0: `AppPage` / `DataTab
 - **Actor:** `owner`, `accountant`.
 - **Job:** Ghi nhận và theo dõi máy móc, thiết bị đã mua (`expenses.category = capital`).
 - **Goal:** Thấy số tiền đã chi cho thiết bị; thêm/sửa khoản capital; không giả sổ TSCĐ.
-- **Workflow:** Vào từ card Thiết bị trên `/finance` → lọc phạm vi → thêm khoản → thanh toán/khớp như sổ chi phí.
-- **Ưu tiên data:** KPI all-time `capital`; danh sách khoản. **Không:** khấu hao, giá trị còn lại, đặt cọc.
-- **UX:** Cùng LIST recipe với `/finance/expenses` (`AppListFrame` + overlay chứng từ).
+- **Workflow:** Vào từ card Thiết bị trên `/finance` → lọc phạm vi / tìm nội dung → thêm khoản → thanh toán/khớp như sổ chi phí.
+- **Ưu tiên data:** KPI all-time `capital`; nội dung chi (note/vendor) trước loại khoản. **Không:** khấu hao, giá trị còn lại, đặt cọc.
+- **UX:** Cùng LIST recipe với `/finance/expenses` (`AppListFrame` + overlay chứng từ). Cột chính là nội dung chi.
+
+### 2.9b. Thi công — `/finance/construction`
+
+- **Gia đình:** Finance. Sibling của `/finance/equipment`.
+- **Archetype:** `LIST`.
+- **Actor:** `owner`, `accountant`.
+- **Job:** Ghi nhận và theo dõi thi công, thiết kế, hạng mục chưa nghiệm thu (`expenses.category = construction`).
+- **Goal:** Thấy số tiền đã chi cho thi công; thêm/sửa khoản construction; không gộp vào thiết bị hay `Tổng giá trị`.
+- **Workflow:** Vào từ card Thi công trên `/finance` → lọc phạm vi / tìm nội dung → thêm khoản → thanh toán/khớp như sổ chi phí.
+- **Ưu tiên data:** KPI all-time `construction`; nội dung chi trước loại khoản. **Không:** khấu hao, giá trị còn lại, thiết bị sẵn sàng dùng.
+- **UX:** Cùng LIST recipe với `/finance/equipment` (`AppListFrame` + overlay chứng từ). Cột chính là nội dung chi.
+
+### 2.9c. Chi phí — `/finance/expenses`
+
+- **Gia đình:** Finance. Sibling của `/finance/equipment`.
+- **Archetype:** `LIST`.
+- **Actor:** `owner`, `accountant`.
+- **Job:** Ghi nhận và duyệt chi vận hành + vốn ban đầu; thấy mỗi dòng chi cho việc gì.
+- **Goal:** Phân biệt Chi vận hành (trừ tháng) và Vốn ban đầu (Tài sản / Thi công / Đặt cọc); lọc rồi mở chứng từ.
+- **Workflow:** Chọn kỳ/phạm vi → tìm nội dung → lọc nhóm/khoản → mở overlay chứng từ.
+- **Ưu tiên data:** Nội dung chi (`note`/`vendor`) trước; loại khoản là lọc/phụ. **Không:** nguyên liệu (HĐ đầu vào).
+- **UX:** `AppListFrame` + FilterBar (search + `kind`) + DataTable purpose-first; mobile card lấy nội dung làm tiêu đề.
 
 ---
 

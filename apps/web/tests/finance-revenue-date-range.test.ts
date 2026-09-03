@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { resolve } from "node:path";
 import { test } from "node:test";
-import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+import { readSql, assertSqlMatch, assertSqlNotMatch, extractSqlFunction, readActiveMigrationSql } from "./_lib/active-sql.ts";
 
 
 const repoRoot = resolve(process.cwd(), "../..");
@@ -144,13 +144,11 @@ test("Finance operating expense excludes food-cost and transfer categories", () 
   const operatingCockpitMigration = read(
     "supabase/migrations/20260820151657_finance_operating_cockpit_and_stop_mv_food_cost.sql",
   );
-  const startupCapitalMigration = read(
-    "supabase/migrations/20260824013553_finance_startup_capital_summary_rpc.sql",
-  );
 
   assert.match(categories, /cogs_manual: "materials"/);
   assert.match(categories, /bank_deposit: "transfer"/);
   assert.match(categories, /capital: "startup"/);
+  assert.match(categories, /construction: "startup"/);
   assert.match(categories, /deposit: "startup"/);
   assert.match(categories, /isOperatingExpenseCategory/);
   assert.match(categories, /isStartupCapitalCategory/);
@@ -158,7 +156,13 @@ test("Finance operating expense excludes food-cost and transfer categories", () 
   // Startup-capital classification truth moved server-side: the cockpit
   // calls the summary RPC and the RPC keeps the capital+deposit slice.
   assert.match(cockpit, /get_finance_startup_capital_summary/);
-  assertSqlMatch(startupCapitalMigration, /category IN \('capital', 'deposit'\)/);
+  assertSqlMatch(
+    extractSqlFunction(
+      readActiveMigrationSql(repoRoot),
+      "get_finance_startup_capital_summary",
+    ),
+    /category IN \('capital', 'construction', 'deposit'\)/,
+  );
   assertSqlMatch(operatingCockpitMigration, /get_finance_expense_period_summary/);
   assertSqlNotMatch(expenseSummaryMigration, /cogs_manual/);
   assertSqlNotMatch(expenseSummaryMigration, /bank_deposit/);

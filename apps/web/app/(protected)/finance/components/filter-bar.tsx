@@ -48,6 +48,8 @@ interface FilterBarProps {
   basePath: string;
   locationFilter?: boolean;
   hide?: ReadonlyArray<FilterBarControl>;
+  search?: ReactNode;
+  extraFilters?: ReactNode;
   trailing?: ReactNode;
   className?: string;
   branchLabel?: string;
@@ -122,6 +124,8 @@ export function FilterBar({
   basePath,
   locationFilter = false,
   hide = [],
+  search,
+  extraFilters,
   trailing,
   className,
   branchLabel = filterCopy.branch,
@@ -264,6 +268,10 @@ export function FilterBar({
       )}
     >
       <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center lg:flex-nowrap">
+        {search ? (
+          <div className="col-span-2 min-w-0 sm:min-w-64 sm:flex-1">{search}</div>
+        ) : null}
+        {extraFilters}
         {showBranch && locationFilter ? (
           <Select
             value={locationValue}

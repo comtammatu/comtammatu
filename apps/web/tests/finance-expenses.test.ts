@@ -11,7 +11,13 @@ import {
   isOperatingExpenseCategory,
   isStartupCapitalCategory,
 } from "../app/(protected)/finance/_lib/expense-categories";
-import { parseExpenseListState } from "../app/(protected)/finance/expenses/expense-list-state";
+import { expensePurpose } from "../app/(protected)/finance/expenses/expense-form-schema";
+import {
+  filterExpenseRows,
+  parseExpenseListFilters,
+  parseExpenseListKind,
+  parseExpenseListState,
+} from "../app/(protected)/finance/expenses/expense-list-state";
 import { readSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
 
 const readWeb = (path: string) =>
@@ -193,8 +199,10 @@ test("bank deposits stay out of operating expense totals", () => {
   assert.equal(isOperatingExpenseCategory("bank_deposit"), false);
   assert.equal(isOperatingExpenseCategory("cogs_manual"), false);
   assert.equal(isOperatingExpenseCategory("capital"), false);
+  assert.equal(isOperatingExpenseCategory("construction"), false);
   assert.equal(isOperatingExpenseCategory("deposit"), false);
   assert.equal(isStartupCapitalCategory("capital"), true);
+  assert.equal(isStartupCapitalCategory("construction"), true);
   assert.equal(isStartupCapitalCategory("deposit"), true);
   assert.equal(isStartupCapitalCategory("rent"), false);
 });
@@ -207,12 +215,14 @@ test("startup capital is selectable and excluded from operating cash movement", 
   assert.equal(EXPENSE_CATEGORY_VALUES.includes("capital"), true);
   assert.equal(EXPENSE_CATEGORY_VALUES.includes("deposit"), true);
   assert.match(client, /EXPENSE_CATEGORIES_BY_GROUP\.startup/);
-  assert.match(client, /label: copy\.monthLabel/);
-  assert.match(client, /label: copy\.startupLabel/);
+  assert.match(client, /label: copy\.kindLabels\.operating/);
+  assert.match(client, /label: copy\.kindLabels\.startup/);
   assert.match(client, /expenseCategoryBucketLabel/);
   assert.equal(EXPENSE_CATEGORIES_BY_GROUP.startup.includes("capital"), true);
+  assert.equal(EXPENSE_CATEGORIES_BY_GROUP.startup.includes("construction"), true);
   assert.equal(EXPENSE_CATEGORIES_BY_GROUP.startup.includes("deposit"), true);
-  assert.match(messages, /capital: "Thi công \/ tài sản"/);
+  assert.match(messages, /capital: "Tài sản"/);
+  assert.match(messages, /construction: "Thi công"/);
   assert.match(messages, /deposit: "Đặt cọc \/ ký quỹ"/);
   assertSqlMatch(migration,
     /ADD CONSTRAINT expenses_category_check[\s\S]*'capital'[\s\S]*'deposit'/,
@@ -426,12 +436,127 @@ test("expense triage filter shares one needs-action definition with its KPI", ()
   assert.equal(parseExpenseListState(undefined), null);
 
   // List URL owns the filter (ADR 0018) and the table renders the filtered set.
-  assert.match(page, /stateFilter=\{parseExpenseListState\(sp\.state\)\}/);
+  assert.match(page, /listFilters=\{parseExpenseListFilters\(sp\)\}/);
   assert.match(actions, /needs_action_total/);
-  assert.match(client, /rows\.filter\(expenseNeedsAction\)/);
+  assert.match(client, /filterExpenseRows\(/);
   assert.match(client, /data=\{visibleRows\}/);
-  assert.match(client, /next\.set\(EXPENSE_LIST_STATE_PARAM, "pending"\)/);
+  assert.match(client, /params\.set\(EXPENSE_LIST_STATE_PARAM, next\.state\)/);
   assert.match(client, /aria-pressed=\{showOnlyNeedsAction\}/);
+});
+
+test("expense list leads with spend purpose and URL-owned kind/search filters", () => {
+  const client = readWeb(
+    "app/(protected)/finance/expenses/expenses-client.tsx",
+  );
+  const state = readWeb(
+    "app/(protected)/finance/expenses/expense-list-state.ts",
+  );
+  const schema = readWeb(
+    "app/(protected)/finance/expenses/expense-form-schema.ts",
+  );
+  const fields = readWeb(
+    "app/(protected)/finance/expenses/expense-form-fields.tsx",
+  );
+  const page = readWeb("app/(protected)/finance/expenses/page.tsx");
+  const equipmentPage = readWeb("app/(protected)/finance/equipment/page.tsx");
+  const constructionPage = readWeb(
+    "app/(protected)/finance/construction/page.tsx",
+  );
+  const filterBar = readWeb(
+    "app/(protected)/finance/components/filter-bar.tsx",
+  );
+  const messages = readWeb("lib/messages/finance.ts");
+
+  assert.match(state, /EXPENSE_LIST_QUERY_PARAM = "q"/);
+  assert.match(state, /EXPENSE_LIST_KIND_PARAM = "kind"/);
+  assert.match(state, /export function parseExpenseListFilters/);
+  assert.match(state, /export function filterExpenseRows/);
+  assert.match(page, /listFilters=\{parseExpenseListFilters\(sp\)\}/);
+  assert.match(equipmentPage, /listFilters=\{parseExpenseListFilters\(sp\)\}/);
+  assert.match(
+    constructionPage,
+    /listFilters=\{parseExpenseListFilters\(sp\)\}/,
+  );
+  assert.match(filterBar, /search\?: ReactNode/);
+  assert.match(filterBar, /extraFilters\?: ReactNode/);
+  assert.match(client, /search=\{/);
+  assert.match(client, /extraFilters=\{/);
+  assert.match(client, /EXPENSE_LIST_KIND_PARAM/);
+  assert.match(client, /key: "purpose"/);
+  assert.match(client, /expensePurpose\(/);
+  assert.doesNotMatch(
+    client,
+    /className: "max-w-48 truncate text-muted-foreground"/,
+  );
+  assert.match(schema, /export function expensePurpose/);
+  assert.match(fields, /copy\.categoryExamples/);
+  assert.match(messages, /kindLabels:/);
+  assert.match(messages, /categoryExamples:/);
+  assert.match(messages, /capital: "Máy, xe, nội thất sẵn sàng dùng\."/);
+  assert.match(messages, /categoryFilterLabels:/);
+  assert.match(messages, /capital: "Tài sản — máy, xe, nội thất"/);
+});
+
+test("expense list filters parse kind, query, and match spend purpose", () => {
+  assert.deepEqual(
+    parseExpenseListFilters({
+      q: "máy thái",
+      kind: "startup",
+      state: "pending",
+    }),
+    { state: "pending", query: "máy thái", kind: "startup" },
+  );
+  assert.equal(parseExpenseListKind("capital"), "capital");
+  assert.equal(parseExpenseListKind("bank_deposit"), null);
+  assert.equal(parseExpenseListKind("paid"), null);
+
+  const purpose = expensePurpose({
+    note: "Máy thái thịt",
+    vendor_name: "Kiến Cons",
+  });
+  assert.equal(purpose.title, "Máy thái thịt");
+  assert.equal(purpose.subtitle, "Kiến Cons");
+  assert.equal(
+    expensePurpose({ note: null, vendor_name: "NCC A" }).title,
+    "NCC A",
+  );
+
+  const rows = [
+    {
+      category: "capital",
+      note: "Máy thái thịt",
+      vendor_name: "Kiến Cons",
+      transfer_content: null,
+      payment_method: "cash",
+      paid_at: "2026-09-01T00:00:00.000Z",
+    },
+    {
+      category: "rent",
+      note: "Thuê tháng 9",
+      vendor_name: null,
+      transfer_content: null,
+      payment_method: "unpaid",
+      paid_at: null,
+    },
+  ];
+  assert.equal(
+    filterExpenseRows(rows, { state: null, query: "", kind: "startup" }).length,
+    1,
+  );
+  assert.equal(
+    filterExpenseRows(rows, { state: null, query: "may thai", kind: null })
+      .length,
+    1,
+  );
+  assert.equal(
+    filterExpenseRows(rows, { state: "pending", query: "", kind: null }).length,
+    1,
+  );
+  assert.equal(
+    filterExpenseRows(rows, { state: null, query: "", kind: "capital" })[0]
+      ?.note,
+    "Máy thái thịt",
+  );
 });
 
 test("expense create captures immutable multi-rate VAT and optional attachment", () => {
@@ -579,13 +704,17 @@ test("expense list keeps the ledger compact and uses consistent operator terms",
   );
   const bundle = readExpenseClientBundle();
   const messages = readWeb("lib/messages/finance.ts");
+  const columnsStart = client.indexOf(
+    "const columns: DataTableColumn<ExpenseRow>[] = [",
+  );
   const columns = client.slice(
-    client.indexOf("const columns: DataTableColumn<ExpenseRow>[] = ["),
-    client.indexOf("  return (", client.indexOf("const columns:")),
+    columnsStart,
+    client.indexOf("const needsActionFilterButton", columnsStart),
   );
 
   assert.doesNotMatch(columns, /key: "(?:payment_state|attachment)"/);
   assert.doesNotMatch(columns, /key: "(?:subtotal|vat)"/);
+  assert.match(columns, /key: "purpose"/);
   assert.match(columns, /key: "amount"/);
   assert.match(columns, /key: "paymentState"/);
   assert.match(client, /rowClassName=\{/);

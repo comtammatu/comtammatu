@@ -503,6 +503,22 @@ export async function fetchEquipmentExpenses(params: {
   });
 }
 
+export async function fetchConstructionExpenses(params: {
+  location: FinanceLocation;
+  branchId?: number | null;
+}): Promise<ActionResult<ExpenseRow[]>> {
+  const parsed = fetchStartupCapitalSchema.safeParse(params);
+  if (!parsed.success) {
+    return { success: false, error: "Bộ lọc chi phí không hợp lệ." };
+  }
+
+  return fetchExpenseLedgerPage({
+    location: parsed.data.location,
+    branchId: parsed.data.branchId,
+    categories: ["construction"],
+  });
+}
+
 async function fetchExpenseLedgerPage(params: {
   location: FinanceLocation;
   branchId?: number | null;
@@ -725,6 +741,8 @@ export async function fetchStartupCapitalSummary(params: {
     count: number;
     equipmentTotal: string;
     equipmentCount: number;
+    constructionTotal: string;
+    constructionCount: number;
   }>
 > {
   const parsed = fetchStartupCapitalSchema.safeParse(params);
@@ -768,6 +786,7 @@ export async function fetchStartupCapitalSummary(params: {
 
   const rows = data ?? [];
   const equipmentRows = rows.filter((row) => row.category === "capital");
+  const constructionRows = rows.filter((row) => row.category === "construction");
   return {
     success: true,
     data: {
@@ -779,6 +798,10 @@ export async function fetchStartupCapitalSummary(params: {
         equipmentRows.map((row) => roundToCanonicalMoney(row.amount ?? 0)),
       ),
       equipmentCount: equipmentRows.length,
+      constructionTotal: addMoney(
+        constructionRows.map((row) => roundToCanonicalMoney(row.amount ?? 0)),
+      ),
+      constructionCount: constructionRows.length,
     },
   };
 }

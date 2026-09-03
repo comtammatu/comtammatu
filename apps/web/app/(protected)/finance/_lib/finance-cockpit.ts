@@ -43,6 +43,8 @@ interface StartupCapitalSummary {
   recorded: boolean;
   equipment: number;
   equipmentRecorded: boolean;
+  construction: number;
+  constructionRecorded: boolean;
 }
 
 interface FinanceVatSummary {
@@ -68,6 +70,8 @@ interface FinanceCockpitKpis {
   startupCapitalRecorded: boolean;
   equipment: number;
   equipmentRecorded: boolean;
+  construction: number;
+  constructionRecorded: boolean;
   /** Startup-capital RPC failed — the cards must show a load error, not zero. */
   startupCapitalLoadFailed: boolean;
   goodsIn: number;
@@ -154,9 +158,12 @@ function parseStartupCapitalSummaryRpc(
   const row = payload as Record<string, unknown>;
   const startupTotal = row.startup_total;
   const equipmentTotal = row.equipment_total;
+  const constructionTotal = row.construction_total;
   if (
     (typeof startupTotal !== "number" && typeof startupTotal !== "string") ||
-    (typeof equipmentTotal !== "number" && typeof equipmentTotal !== "string")
+    (typeof equipmentTotal !== "number" && typeof equipmentTotal !== "string") ||
+    (typeof constructionTotal !== "number" &&
+      typeof constructionTotal !== "string")
   ) {
     return null;
   }
@@ -165,9 +172,11 @@ function parseStartupCapitalSummaryRpc(
   // coerced into a silent zero total.
   const parsedStartupTotal = Number(startupTotal);
   const parsedEquipmentTotal = Number(equipmentTotal);
+  const parsedConstructionTotal = Number(constructionTotal);
   if (
     !Number.isFinite(parsedStartupTotal) ||
-    !Number.isFinite(parsedEquipmentTotal)
+    !Number.isFinite(parsedEquipmentTotal) ||
+    !Number.isFinite(parsedConstructionTotal)
   ) {
     return null;
   }
@@ -176,6 +185,8 @@ function parseStartupCapitalSummaryRpc(
     recorded: row.startup_recorded === true,
     equipment: parsedEquipmentTotal,
     equipmentRecorded: row.equipment_recorded === true,
+    construction: parsedConstructionTotal,
+    constructionRecorded: row.construction_recorded === true,
   };
 }
 
@@ -275,6 +286,8 @@ function buildKpisFromCockpit({
     startupCapitalRecorded: startupCapital.recorded,
     equipment: startupCapital.equipment,
     equipmentRecorded: startupCapital.equipmentRecorded,
+    construction: startupCapital.construction,
+    constructionRecorded: startupCapital.constructionRecorded,
     startupCapitalLoadFailed: false,
     goodsIn: cockpit.goodsIn,
     goodsInKind: cockpit.goodsInKind,
@@ -302,6 +315,8 @@ function emptyKpis(goodsInKind: PeriodGoodsInKind): FinanceCockpitKpis {
     startupCapitalRecorded: false,
     equipment: 0,
     equipmentRecorded: false,
+    construction: 0,
+    constructionRecorded: false,
     startupCapitalLoadFailed: false,
     goodsIn: 0,
     goodsInKind,
@@ -525,6 +540,8 @@ export async function fetchFinanceAttentionExceptions(
       recorded: false,
       equipment: 0,
       equipmentRecorded: false,
+      construction: 0,
+      constructionRecorded: false,
     },
     includeInventoryChange: false,
   });
@@ -629,6 +646,8 @@ export async function fetchFinanceCockpit(
             recorded: false,
             equipment: 0,
             equipmentRecorded: false,
+            construction: 0,
+            constructionRecorded: false,
           },
           includeInventoryChange: canViewInventoryValuation,
         }),
@@ -640,6 +659,9 @@ export async function fetchFinanceCockpit(
         startupCapitalRecorded: startupCapitalSummary?.recorded ?? false,
         equipment: startupCapitalSummary?.equipment ?? 0,
         equipmentRecorded: startupCapitalSummary?.equipmentRecorded ?? false,
+        construction: startupCapitalSummary?.construction ?? 0,
+        constructionRecorded:
+          startupCapitalSummary?.constructionRecorded ?? false,
         startupCapitalLoadFailed,
       };
 
@@ -652,6 +674,8 @@ export async function fetchFinanceCockpit(
             recorded: false,
             equipment: 0,
             equipmentRecorded: false,
+            construction: 0,
+            constructionRecorded: false,
           },
           includeInventoryChange: canViewInventoryValuation,
         })

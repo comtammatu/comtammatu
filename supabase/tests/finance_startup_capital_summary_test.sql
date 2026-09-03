@@ -1,6 +1,7 @@
 -- Finance startup-capital summary RPC:
--- get_finance_startup_capital_summary aggregates all-time capital+deposit
--- expenses (Chi phí ban đầu) and the capital slice (Thiết bị) per location
+-- get_finance_startup_capital_summary aggregates all-time
+-- capital+construction+deposit expenses (Chi phí ban đầu), the capital
+-- slice (Thiết bị), and the construction slice (Thi công) per location
 -- scope. The RPC takes no dates at all; rows are seeded with dates spread
 -- across a decade to prove the period never changes the totals.
 
@@ -93,6 +94,14 @@ BEGIN
      jsonb_build_array(jsonb_build_object(
        'vat_rate', 0, 'taxable_amount', 700000, 'vat_amount', 0)),
      0, 'cash', statement_timestamp(), v_owner, statement_timestamp()),
+    (v_tenant, v_branch1, DATE '2025-08-18', 'construction', 800000, 800000,
+     jsonb_build_array(jsonb_build_object(
+       'vat_rate', 0, 'taxable_amount', 800000, 'vat_amount', 0)),
+     0, 'cash', statement_timestamp(), v_owner, statement_timestamp()),
+    (v_tenant, NULL, DATE '2020-04-01', 'construction', 2000000, 2000000,
+     jsonb_build_array(jsonb_build_object(
+       'vat_rate', 0, 'taxable_amount', 2000000, 'vat_amount', 0)),
+     0, 'transfer', statement_timestamp(), v_owner, statement_timestamp()),
     (v_tenant, v_branch2, DATE '2022-02-14', 'capital', 1200000, 1200000,
      jsonb_build_array(jsonb_build_object(
        'vat_rate', 0, 'taxable_amount', 1200000, 'vat_amount', 0)),
@@ -134,7 +143,7 @@ BEGIN
   INTO v_exp_all, v_exp_all_capital
   FROM public.expenses expense
   WHERE expense.tenant_id = v_tenant
-    AND expense.category IN ('capital', 'deposit');
+    AND expense.category IN ('capital', 'construction', 'deposit');
 
   SELECT
     COALESCE(SUM(expense.amount), 0),
@@ -144,7 +153,7 @@ BEGIN
   INTO v_exp_company, v_exp_company_capital, v_exp_company_cnt
   FROM public.expenses expense
   WHERE expense.tenant_id = v_tenant
-    AND expense.category IN ('capital', 'deposit')
+    AND expense.category IN ('capital', 'construction', 'deposit')
     AND expense.branch_id IS NULL;
 
   SELECT
@@ -154,7 +163,7 @@ BEGIN
   INTO v_exp_branches, v_exp_branches_capital
   FROM public.expenses expense
   WHERE expense.tenant_id = v_tenant
-    AND expense.category IN ('capital', 'deposit')
+    AND expense.category IN ('capital', 'construction', 'deposit')
     AND expense.branch_id IN (
       SELECT branch.id
       FROM public.branches branch
@@ -188,14 +197,14 @@ BEGIN
 END;
 $$;
 
-SELECT plan(20);
+SELECT plan(24);
 
 -- (a) All scope: equals the date-free tenant-wide recomputation, proving
 -- the decade-spread fixture dates have zero effect on the totals.
 SELECT is(
   (current_setting('test.fscs_all')::jsonb ->> 'startup_total')::numeric,
   current_setting('test.fscs_exp_all')::numeric,
-  'all scope: startup_total equals every capital+deposit row, dates ignored'
+  'all scope: startup_total equals every capital+construction+deposit row, dates ignored'
 );
 
 SELECT ok(
@@ -243,8 +252,19 @@ SELECT is(
 -- pre-existing data, so the fixed numbers also prove NULL-branch rows are
 -- excluded (they would otherwise push the totals above these values).
 SELECT is(
+  (current_setting('test.fscs_all')::jsonb ->> 'construction_total')::numeric,
+  2800000::numeric,
+  'all scope: construction_total is the construction slice only'
+);
+
+SELECT ok(
+  (current_setting('test.fscs_all')::jsonb ->> 'construction_recorded')::boolean,
+  'all scope: construction_recorded is true with construction rows present'
+);
+
+SELECT is(
   (current_setting('test.fscs_b1')::jsonb ->> 'startup_total')::numeric,
-  4200000::numeric,
+  5000000::numeric,
   'branch scope: startup_total is that branch only (NULL rows excluded)'
 );
 
@@ -262,6 +282,18 @@ SELECT is(
 SELECT ok(
   (current_setting('test.fscs_b1')::jsonb ->> 'equipment_recorded')::boolean,
   'branch scope: equipment_recorded is true'
+);
+
+SELECT is(
+  (current_setting('test.fscs_b1')::jsonb ->> 'construction_total')::numeric,
+  800000::numeric,
+  'branch scope: construction_total is the construction slice of that branch only'
+);
+
+SELECT ok(
+  (current_setting('test.fscs_kitchen_payload')::jsonb ->> 'construction_recorded')::boolean
+    IS NOT TRUE,
+  'non-sales branch scope: construction_recorded is false without construction rows'
 );
 
 -- (d) Branches scope: every active sales branch (branch_kind = 'branch'),

@@ -9,15 +9,16 @@ import { messages } from "@lib/messages";
 import { copy } from "./expense-form-schema";
 
 const equipmentCopy = messages.finance.equipment;
+const constructionCopy = messages.finance.construction;
 
 export function ExpenseListKpis({
-  isEquipmentList,
+  listMode,
   operatingTotal,
   operatingCount,
   startupTotal,
   startupCount,
 }: {
-  isEquipmentList: boolean;
+  listMode: "ledger" | "equipment" | "construction";
   operatingTotal: string;
   operatingCount: number;
   startupTotal: string;
@@ -27,20 +28,19 @@ export function ExpenseListKpis({
   isNeedsActionActive?: boolean;
   onToggleNeedsAction?: () => void;
 }) {
+  const lockedCopy =
+    listMode === "construction" ? constructionCopy : equipmentCopy;
+  const lockedLabel =
+    listMode === "construction"
+      ? messages.finance.basic.kpis.construction
+      : messages.finance.basic.kpis.equipment;
+
   return (
     <KpiRow
       density="compact"
       className="grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2"
     >
-      {isEquipmentList ? (
-        <KpiCard
-          density="compact"
-          label={messages.finance.basic.kpis.equipment}
-          value={formatAccountingVND(startupTotal)}
-          shortValue={formatCompactVND(startupTotal)}
-          hint={equipmentCopy.totalHint(formatCount(startupCount))}
-        />
-      ) : (
+      {listMode === "ledger" ? (
         <>
           <KpiCard
             density="compact"
@@ -57,6 +57,14 @@ export function ExpenseListKpis({
             hint={copy.startupHint(formatCount(startupCount))}
           />
         </>
+      ) : (
+        <KpiCard
+          density="compact"
+          label={lockedLabel}
+          value={formatAccountingVND(startupTotal)}
+          shortValue={formatCompactVND(startupTotal)}
+          hint={lockedCopy.totalHint(formatCount(startupCount))}
+        />
       )}
     </KpiRow>
   );

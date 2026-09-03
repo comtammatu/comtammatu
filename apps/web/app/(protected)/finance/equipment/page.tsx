@@ -11,7 +11,7 @@ import {
 } from "../expense-actions";
 import { parseFinanceParams } from "../_lib/finance-params";
 import { ExpensesClient } from "../expenses/expenses-client";
-import { parseExpenseListState } from "../expenses/expense-list-state";
+import { parseExpenseListFilters } from "../expenses/expense-list-state";
 
 export default async function EquipmentPage({
   searchParams,
@@ -88,7 +88,7 @@ export default async function EquipmentPage({
         branches={branches}
         rows={rows}
         summary={summary}
-        stateFilter={parseExpenseListState(sp.state)}
+        listFilters={parseExpenseListFilters(sp)}
         todayBusinessDate={todayBusinessDate}
         canManageExpenses={canManageExpenses}
         tenantId={claims.tenant_id}

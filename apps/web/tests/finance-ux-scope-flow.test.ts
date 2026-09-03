@@ -49,12 +49,14 @@ describe("Finance UX scope flow", () => {
     );
     const merged = mergePreservedFinanceSearch(
       financeSearch,
-      new URLSearchParams("recon=money_in_review&state=pending"),
+      new URLSearchParams("recon=money_in_review&state=pending&q=may&kind=startup"),
     );
     assert.equal(merged.get("branch"), "3");
     assert.equal(merged.get("range"), "today");
     assert.equal(merged.get("recon"), "money_in_review");
     assert.equal(merged.get("state"), "pending");
+    assert.equal(merged.get("q"), "may");
+    assert.equal(merged.get("kind"), "startup");
   });
 
   it("attaches scope via linkHref on finance deep nav without changing match href", () => {
@@ -74,7 +76,7 @@ describe("Finance UX scope flow", () => {
     );
     assert.deepEqual(
       groups[0]?.items.map((item) => item.href),
-      ["/finance", "/finance/bank-transactions", "/finance/expenses", "/finance/equipment"],
+      ["/finance", "/finance/bank-transactions", "/finance/expenses", "/finance/equipment", "/finance/construction"],
     );
     assert.deepEqual(
       groups[1]?.items.map((item) => item.href),
@@ -172,6 +174,7 @@ describe("Finance UX scope flow", () => {
       "bank-transactions",
       "expenses",
       "equipment",
+      "construction",
       "food-cost",
       "invoices",
       "supplier-invoices",

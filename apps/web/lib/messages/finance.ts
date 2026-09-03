@@ -279,6 +279,7 @@ export const finance = {
       startupCapitalHint:
         "Thi công, máy, xe, nội thất, thiết bị/TSCĐ, đặt cọc. Toàn bộ vốn đã bỏ ra, không theo kỳ. Đã gồm GTGT. Không trừ vào kết quả tháng.",
       equipment: "Thiết bị",
+      construction: "Thi công",
       inventoryChange: "Biến động tồn kho",
       inventoryChangeHint:
         "Tồn cuối kỳ trừ tồn đầu kỳ. Hàng còn lại, không phải lãi.",
@@ -344,6 +345,7 @@ export const finance = {
       bankTransactions: "Giao dịch",
       expenses: "Chi phí",
       equipment: "Thiết bị",
+      construction: "Thi công",
       supplierPayables: "HĐ đầu vào",
       invoices: "HĐ đầu ra",
       foodCost: "Giá vốn món",
@@ -455,9 +457,9 @@ export const finance = {
       eyebrow: "Tài chính",
       title: "Chi phí",
       description:
-        "Ghi nhận chi phí vận hành tháng và vốn mở quán. Không ghi nguyên liệu vào đây.",
+        "Chi vận hành trừ vào tháng. Vốn ban đầu (Tài sản, Thi công, Đặt cọc) không trừ tháng.",
       detailExplanation:
-        "Chi phí vận hành (thuê, điện, lương) vào kết quả tháng. Chi phí ban đầu và đặt cọc là vốn bỏ ra cho quán, không trừ vào kết quả tháng.",
+        "Thuê, điện, lương trừ tháng. Vốn ban đầu: Tài sản, Thi công, Đặt cọc.",
     },
     add: "Ghi nhận khoản chi",
     listTitle: "Sổ chi phí",
@@ -465,7 +467,25 @@ export const finance = {
     monthLabel: "Chi vận hành",
     monthHint: (count: string) => `${count} khoản`,
     startupLabel: "Chi phí ban đầu",
-    startupHint: (count: string) => `${count} khoản`,
+    startupHint: (count: string) =>
+      `${count} khoản · tài sản, thi công, đặt cọc`,
+    kindFilter: "Khoản chi",
+    searchPlaceholder: "Tìm nội dung chi",
+    kindLabels: {
+      all: "Mọi khoản chi",
+      operating: "Chi vận hành",
+      startup: "Vốn ban đầu",
+    },
+    categoryExamples: {
+      capital: "Máy, xe, nội thất sẵn sàng dùng.",
+      construction: "Thiết kế, xây dựng — không vào Tổng giá trị.",
+      deposit: "Đặt cọc mặt bằng, điện. Không phải thuê tháng.",
+    },
+    categoryFilterLabels: {
+      capital: "Tài sản — máy, xe, nội thất",
+      construction: "Thi công — thiết kế, xây dựng",
+      deposit: "Đặt cọc / ký quỹ",
+    },
     totalHint: (count: string) => `${count} khoản, đã gồm GTGT`,
     needsActionLabel: "Cần xử lý",
     needsActionHint: (count: string) =>
@@ -481,6 +501,8 @@ export const finance = {
       description: "Ghi nhận khoản chi để theo dõi chi phí và dòng tiền.",
       clearedTitle: "Không còn khoản chi cần xử lý",
       clearedDescription: "Mọi khoản trong kỳ đã trả và đã khớp ngân hàng.",
+      filteredTitle: "Không có khoản chi khớp bộ lọc",
+      filteredDescription: "Đổi nội dung tìm hoặc khoản chi.",
     },
     form: {
       title: "Ghi nhận khoản chi",
@@ -576,7 +598,7 @@ export const finance = {
     },
     categoryGroupLabels: {
       operating: "Chi phí vận hành tháng (Trừ vào kết quả tháng)",
-      startup: "Vốn ban đầu & Thi công (Không trừ vào tháng)",
+      startup: "Vốn ban đầu (Không trừ vào tháng)",
       materials: "Chi nguyên liệu (Điều chỉnh giá vốn)",
       transfer: "Trung chuyển nội bộ / Nộp tiền NH",
       other: "Khác",
@@ -592,7 +614,8 @@ export const finance = {
       marketing: "Quảng cáo / khuyến mãi",
       fees_tax: "Phí ngân hàng / thuế",
       hospitality: "Tiếp khách",
-      capital: "Thi công / tài sản",
+      capital: "Tài sản",
+      construction: "Thi công",
       deposit: "Đặt cọc / ký quỹ",
       bank_deposit: "Nộp tiền mặt vào NH",
       other: "Khác",
@@ -619,9 +642,33 @@ export const finance = {
       clearedTitle: "Không còn khoản cần xử lý",
       clearedDescription:
         "Không có thiết bị nào chưa trả hoặc chờ khớp ngân hàng.",
+      filteredTitle: "Không có thiết bị khớp bộ lọc",
+      filteredDescription: "Đổi nội dung tìm.",
     },
     formTitle: "Thêm thiết bị",
     formEditTitle: "Sửa thiết bị",
+  },
+  construction: {
+    page: {
+      title: "Thi công",
+    },
+    add: "Thêm khoản thi công",
+    listTitle: "Thi công, thiết kế",
+    totalHint: (count: string) => `${count} khoản`,
+    loadErrorTitle: "Không tải được thi công",
+    loadErrorDescription:
+      "Không tải được danh sách khoản thi công. Thử tải lại trang.",
+    empty: {
+      title: "Chưa có khoản thi công",
+      description: "Thêm chi phí thi công, thiết kế, hạng mục chưa nghiệm thu.",
+      clearedTitle: "Không còn khoản cần xử lý",
+      clearedDescription:
+        "Không có khoản thi công nào chưa trả hoặc chờ khớp ngân hàng.",
+      filteredTitle: "Không có khoản thi công khớp bộ lọc",
+      filteredDescription: "Đổi nội dung tìm.",
+    },
+    formTitle: "Thêm khoản thi công",
+    formEditTitle: "Sửa khoản thi công",
   },
   supplierInvoicesPage: {
     eyebrow: "Tài chính",

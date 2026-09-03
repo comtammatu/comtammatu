@@ -119,6 +119,11 @@ export function ExpenseFormFields({
           label={copy.form.category}
           groups={expenseCategoryGroups(category, lockedCategory)}
           placeholder={copy.form.categoryPlaceholder}
+          description={
+            (
+              copy.categoryExamples as Record<string, string | undefined>
+            )[category]
+          }
           required
           disabled={readOnly || lockedCategory != null}
         />

@@ -166,12 +166,20 @@ export function expenseCategoryGroups(
         ]
       : [];
   return [
-    { label: copy.monthLabel, options: operatingOptions },
-    { label: copy.startupLabel, options: startupOptions },
+    { label: copy.kindLabels.operating, options: operatingOptions },
+    { label: copy.kindLabels.startup, options: startupOptions },
     ...(extraOptions.length > 0
       ? [{ label: copy.categoryGroupLabels.other, options: extraOptions }]
       : []),
   ];
+}
+
+export function expenseKindOptionLabel(category: ExpenseCategory): string {
+  return (
+    (copy.categoryFilterLabels as Partial<Record<ExpenseCategory, string>>)[
+      category
+    ] ?? copy.categoryLabels[category]
+  );
 }
 
 export function expenseCategoryBucketLabel(category: string): string {
@@ -225,6 +233,16 @@ export function expenseToFormValues(expense: ExpenseRow): ExpenseFormValues {
           }))
         : [EMPTY_EXPENSE_LINE],
   };
+}
+
+export function expensePurpose(
+  row: Pick<ExpenseRow, "note" | "vendor_name">,
+): { title: string; subtitle: string | null } {
+  const note = row.note?.trim() ?? "";
+  const vendor = row.vendor_name?.trim() ?? "";
+  if (note) return { title: note, subtitle: vendor || null };
+  if (vendor) return { title: vendor, subtitle: null };
+  return { title: "", subtitle: null };
 }
 
 export function expenseDetail(row: ExpenseRow): string {

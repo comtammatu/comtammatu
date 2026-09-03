@@ -128,6 +128,9 @@ test("Finance errors are recoverable and expense titles hide database ids", () =
   const equipmentPage = read(
     "apps/web/app/(protected)/finance/equipment/page.tsx",
   );
+  const constructionPage = read(
+    "apps/web/app/(protected)/finance/construction/page.tsx",
+  );
   const invoicesPage = read(
     "apps/web/app/(protected)/finance/supplier-invoices/page.tsx",
   );
@@ -140,6 +143,7 @@ test("Finance errors are recoverable and expense titles hide database ids", () =
 
   assert.match(expensePage, /throw new Error/);
   assert.match(equipmentPage, /throw new Error/);
+  assert.match(constructionPage, /throw new Error/);
   assert.match(invoicesPage, /throw new Error/);
   assert.doesNotMatch(expensesClient, /#\$\{editingExpense\.id\}/);
   assert.doesNotMatch(viewDialog, /#\$\{expense\.id\}/);
