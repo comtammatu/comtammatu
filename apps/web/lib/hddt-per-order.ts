@@ -5,6 +5,7 @@ import {
   BUYER_NOT_GET_INVOICE_NAME,
   buildSinvoiceTransactionUuid,
   getInvoiceProvider,
+  type InvoiceLookupOutcome,
   type InvoiceProvider,
   type InvoiceRequest,
   type InvoiceResult,
@@ -161,12 +162,39 @@ async function submitReservedTaxInvoice({
       ? result.codeOfTax
       : null;
 
-  const providerPayload = providerData
-    ? JSON.parse(JSON.stringify(providerData))
+  let resolvedStatus = invoiceStatus;
+  let resolvedNumber = invoiceNumber;
+  let resolvedCqt = cqtCode;
+  let resolvedPayload = providerData
+    ? (JSON.parse(JSON.stringify(providerData)) as Record<string, unknown>)
     : null;
+  let resolvedIssuedAt = new Date().toISOString();
 
-  if (invoiceStatus === "issued") {
-    if (!invoiceNumber || !providerRef) {
+  if (
+    (resolvedStatus === "signing" || resolvedStatus === "submitted") &&
+    providerRef.trim().length >= 10
+  ) {
+    const lookup = await invoiceProvider.lookupInvoice(providerRef);
+    if (lookup.outcome === "issued" && lookup.invoiceNumber) {
+      resolvedStatus = "issued";
+      resolvedNumber = lookup.invoiceNumber;
+      resolvedCqt =
+        typeof lookup.codeOfTax === "string" &&
+        lookup.codeOfTax.trim().length > 0
+          ? lookup.codeOfTax.trim()
+          : resolvedCqt;
+      resolvedPayload = lookup.providerData
+        ? (JSON.parse(JSON.stringify(lookup.providerData)) as Record<
+            string,
+            unknown
+          >)
+        : resolvedPayload;
+      resolvedIssuedAt = lookup.issuedAt ?? resolvedIssuedAt;
+    }
+  }
+
+  if (resolvedStatus === "issued") {
+    if (!resolvedNumber || !providerRef) {
       return {
         success: false,
         error:
@@ -174,47 +202,20 @@ async function submitReservedTaxInvoice({
         errorCode: "invoice_provider_incomplete",
       };
     }
-
-    const rpc = supabase as unknown as {
-      rpc: <T>(
-        name: string,
-        args: Record<string, unknown>,
-      ) => Promise<{ data: T | null; error: { code?: string | null } | null }>;
-    };
-    const { data: invoice, error: reconcileErr } =
-      await rpc.rpc<TaxInvoiceIssueRow>(
-        "reconcile_tax_invoice_provider_issued",
-        {
-          p_tax_invoice_id: reservedInvoiceId,
-          p_provider_ref: providerRef,
-          p_invoice_number: invoiceNumber,
-          p_cqt_code: cqtCode,
-          p_provider_data: providerPayload,
-          p_issued_at: new Date().toISOString(),
-          p_trigger_source: "cron",
-        },
-      );
-
-    if (reconcileErr || !invoice) {
-      console.error(
-        `[${logPrefix}] Reconcile issued invoice error:`,
-        reconcileErr,
-      );
-      return {
-        success: false,
-        error:
-          "Hóa đơn đã được gửi nhưng chưa lưu đủ trạng thái. Hệ thống đã giữ lệnh để đối soát.",
-        errorCode: "invoice_write_failed",
-      };
-    }
-
-    return {
-      success: true,
-      data: invoice as unknown as TaxInvoiceIssueRow,
-    };
+    return writeIssuedReconciliation({
+      supabase,
+      logPrefix,
+      taxInvoiceId: reservedInvoiceId,
+      providerRef,
+      invoiceNumber: resolvedNumber,
+      cqtCode: resolvedCqt,
+      providerPayload: resolvedPayload,
+      issuedAt: resolvedIssuedAt,
+      triggerSource: "cron",
+    });
   }
 
-  if (invoiceStatus === "signing") {
+  if (resolvedStatus === "signing") {
     return {
       success: true,
       data: {
@@ -237,7 +238,7 @@ async function submitReservedTaxInvoice({
       p_tax_invoice_id: reservedInvoiceId,
       p_to_status: invoiceStatus,
       p_actor: null,
-      p_payload: providerPayload,
+      p_payload: resolvedPayload,
       p_note:
         invoiceStatus === "draft"
           ? "Provider rejected invoice issuance"
@@ -366,4 +367,183 @@ export async function issuePreparedTaxInvoice({
       totalAmount: parsed.data.draftSnapshot.totalAmount,
     },
   });
+}
+
+async function writeIssuedReconciliation({
+  supabase,
+  logPrefix,
+  taxInvoiceId,
+  providerRef,
+  invoiceNumber,
+  cqtCode,
+  providerPayload,
+  issuedAt,
+  triggerSource,
+}: {
+  supabase: SupabaseClient<Database>;
+  logPrefix: string;
+  taxInvoiceId: number;
+  providerRef: string;
+  invoiceNumber: string;
+  cqtCode: string | null;
+  providerPayload: Record<string, unknown> | null;
+  issuedAt: string;
+  triggerSource: "manual" | "cron";
+}): Promise<ActionResult<TaxInvoiceIssueRow>> {
+  const rpc = supabase as unknown as {
+    rpc: <T>(
+      name: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ data: T | null; error: { code?: string | null } | null }>;
+  };
+  const { data: invoice, error: reconcileErr } =
+    await rpc.rpc<TaxInvoiceIssueRow>("reconcile_tax_invoice_provider_issued", {
+      p_tax_invoice_id: taxInvoiceId,
+      p_provider_ref: providerRef,
+      p_invoice_number: invoiceNumber,
+      p_cqt_code: cqtCode,
+      p_provider_data: providerPayload,
+      p_issued_at: issuedAt,
+      p_trigger_source: triggerSource,
+    });
+
+  if (reconcileErr || !invoice) {
+    console.error(`[${logPrefix}] Reconcile issued invoice error:`, {
+      taxInvoiceId,
+      code: reconcileErr?.code,
+    });
+    return {
+      success: false,
+      error:
+        "Hóa đơn đã được gửi nhưng chưa lưu đủ trạng thái. Hệ thống đã giữ lệnh để đối soát.",
+      errorCode: "invoice_write_failed",
+    };
+  }
+
+  return {
+    success: true,
+    data: invoice as unknown as TaxInvoiceIssueRow,
+  };
+}
+
+export type TaxInvoiceProviderLookupData = {
+  outcome: InvoiceLookupOutcome;
+  invoiceNumber: string | null;
+};
+
+export async function lookupAndReconcileTaxInvoiceFromProvider({
+  supabase,
+  taxInvoiceId,
+  tenantId,
+  triggerSource,
+  logPrefix = "hddt-lookup",
+}: {
+  supabase: SupabaseClient<Database>;
+  taxInvoiceId: number;
+  tenantId: number;
+  triggerSource: "manual" | "cron";
+  logPrefix?: string;
+}): Promise<ActionResult<TaxInvoiceProviderLookupData>> {
+  const { data: invoice, error } = await supabase
+    .from("tax_invoices")
+    .select("id, status, provider_ref, invoice_number")
+    .eq("id", taxInvoiceId)
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+
+  if (error) {
+    console.error(`[${logPrefix}] invoice read failed`, {
+      taxInvoiceId,
+      tenantId,
+      code: error.code,
+    });
+    return {
+      success: false,
+      error: "Không thể tra cứu HĐĐT.",
+      errorCode: "invoice_lookup_read_failed",
+    };
+  }
+  if (!invoice) {
+    return {
+      success: false,
+      error: "Không tìm thấy hóa đơn.",
+      errorCode: "invoice_not_found",
+    };
+  }
+  if (invoice.status === "issued") {
+    return {
+      success: true,
+      data: {
+        outcome: "issued",
+        invoiceNumber: invoice.invoice_number,
+      },
+    };
+  }
+  if (invoice.status !== "signing" && invoice.status !== "submitted") {
+    return {
+      success: false,
+      error: "Hóa đơn không ở trạng thái cần đối soát.",
+      errorCode: "invoice_lookup_status_invalid",
+    };
+  }
+  const providerRef = invoice.provider_ref?.trim() ?? "";
+  if (providerRef.length < 10) {
+    return {
+      success: false,
+      error: "Thiếu mã giao dịch Viettel để tra cứu.",
+      errorCode: "invoice_provider_ref_missing",
+    };
+  }
+
+  ensureInvoiceProviderRegistered();
+  const invoiceProvider = getInvoiceProvider();
+  if (invoiceProvider?.name !== "viettel") {
+    return {
+      success: false,
+      error: "Nhà cung cấp HĐĐT chưa được cấu hình.",
+      errorCode: "invoice_provider_not_configured",
+    };
+  }
+
+  const lookup = await invoiceProvider.lookupInvoice(providerRef);
+  if (lookup.outcome !== "issued" || !lookup.invoiceNumber) {
+    return {
+      success: true,
+      data: {
+        outcome: lookup.outcome === "not_found" ? "not_found" : "unknown",
+        invoiceNumber: null,
+      },
+    };
+  }
+
+  const written = await writeIssuedReconciliation({
+    supabase,
+    logPrefix,
+    taxInvoiceId,
+    providerRef,
+    invoiceNumber: lookup.invoiceNumber,
+    cqtCode: lookup.codeOfTax ?? null,
+    providerPayload: lookup.providerData
+      ? (JSON.parse(JSON.stringify(lookup.providerData)) as Record<
+          string,
+          unknown
+        >)
+      : null,
+    issuedAt: lookup.issuedAt ?? new Date().toISOString(),
+    triggerSource,
+  });
+  if (!written.success) {
+    return {
+      success: false,
+      error: written.error,
+      errorCode: written.errorCode,
+    };
+  }
+  return {
+    success: true,
+    data: {
+      outcome: "issued",
+      invoiceNumber: lookup.invoiceNumber,
+    },
+  };
 }

@@ -107,11 +107,28 @@ export interface InvoiceResult {
   providerData?: Record<string, unknown>;
 }
 
+export type InvoiceLookupOutcome = "issued" | "not_found" | "unknown";
+
+export interface InvoiceLookupResult {
+  outcome: InvoiceLookupOutcome;
+  invoiceNumber: string | null;
+  providerRef: string;
+  codeOfTax?: string | null;
+  issuedAt?: string | null;
+  providerData?: Record<string, unknown>;
+}
+
 export interface InvoiceProvider {
   readonly name: string;
 
   /** Create and submit invoice to CQT */
   createInvoice(request: InvoiceRequest): Promise<InvoiceResult>;
+
+  /**
+   * Read the provider's record for an existing transactionUuid.
+   * Must not create, cancel, or replace an invoice.
+   */
+  lookupInvoice(providerRef: string): Promise<InvoiceLookupResult>;
 
   /** Cancel an issued invoice */
   cancelInvoice(providerRef: string, reason: string): Promise<void>;

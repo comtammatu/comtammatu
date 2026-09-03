@@ -158,6 +158,37 @@ test("one-shot HĐĐT worker claims only the requested job", () => {
   );
 });
 
+test("HĐĐT worker looks up signing invoices and does not create a second one", () => {
+  const worker = read("apps/web/lib/tax-invoice-issue-worker.ts");
+  const issuer = read("apps/web/lib/hddt-per-order.ts");
+  const lookupHelper = issuer.slice(
+    issuer.indexOf("export async function lookupAndReconcileTaxInvoiceFromProvider"),
+  );
+
+  assert.match(
+    worker,
+    /existingStatus === "signing" \|\| existingStatus === "submitted"[\s\S]*lookupAndReconcileTaxInvoiceFromProvider/,
+  );
+  assert.match(
+    worker,
+    /lookupOutstandingReconcileJobs[\s\S]*\.eq\("status", "reconcile_required"\)/,
+  );
+  assert.match(
+    worker,
+    /async function lookupOutstandingReconcileJobs[\s\S]*lookupAndReconcileTaxInvoiceFromProvider/,
+  );
+  assert.doesNotMatch(
+    lookupHelper,
+    /createInvoice\(/,
+    "lookup helper must never call createInvoice",
+  );
+  assert.doesNotMatch(
+    worker.slice(worker.indexOf("async function lookupOutstandingReconcileJobs")),
+    /createInvoice\(|issuePreparedTaxInvoice/,
+    "outstanding lookup must not issue invoices",
+  );
+});
+
 test("HĐĐT worker failures log bounded diagnostics and preserve recovery state", () => {
   const worker = read("apps/web/lib/tax-invoice-issue-worker.ts");
   const route = read("apps/web/app/api/cron/tax-invoice-issue/route.ts");

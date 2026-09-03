@@ -1,6 +1,7 @@
 import {
   BUYER_NOT_GET_INVOICE_NAME,
   type InvoiceLineItem,
+  type InvoiceLookupResult,
   type InvoiceProvider,
   type InvoiceRequest,
   type InvoiceResult,
@@ -96,6 +97,38 @@ interface SinvoiceCreateResult {
   transactionID?: string;
   supplierTaxCode?: string;
   codeOfTax?: string | null;
+}
+
+interface SinvoiceSearchHit {
+  invoiceNo?: string;
+  reservationCode?: string;
+  issueDate?: number;
+  status?: string;
+  codeOfTax?: string | null;
+  supplierTaxCode?: string;
+}
+
+function firstSearchHit(
+  result: SinvoiceSearchHit[] | SinvoiceSearchHit | null | undefined,
+): SinvoiceSearchHit | null {
+  if (Array.isArray(result)) {
+    return result[0] ?? null;
+  }
+  if (result && typeof result === "object") {
+    return result;
+  }
+  return null;
+}
+
+function lookupIssuedAt(issueDate: number | undefined): string | null {
+  if (typeof issueDate !== "number" || !Number.isFinite(issueDate)) {
+    return null;
+  }
+  const issued = new Date(issueDate);
+  if (Number.isNaN(issued.getTime())) {
+    return null;
+  }
+  return issued.toISOString();
 }
 
 /**
@@ -483,6 +516,33 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
     return res;
   }
 
+  private async authedFormPost(
+    apiPath: string,
+    body: URLSearchParams,
+  ): Promise<Response> {
+    let token = await this.ensureToken();
+    const exec = (auth: string) =>
+      fetch(`${this.baseUrl}${API_PREFIX}${apiPath}`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
+          Authorization: `Bearer ${auth}`,
+          Cookie: `access_token=${auth}`,
+        },
+        body,
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+
+    let res = await exec(token);
+    if (res.status === 401) {
+      this.tokenCache = null;
+      token = await this.ensureToken();
+      res = await exec(token);
+    }
+    return res;
+  }
+
   private async readEnvelope<TResult>(
     res: Response,
   ): Promise<SinvoiceEnvelope<TResult>> {
@@ -720,6 +780,89 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
             err instanceof Error ? err.message : "sinvoice_call_failed",
           transactionUuid,
         },
+      };
+    }
+  }
+
+  async lookupInvoice(providerRef: string): Promise<InvoiceLookupResult> {
+    const transactionUuid = providerRef.trim();
+    if (transactionUuid.length < 10 || transactionUuid.length > 36) {
+      return {
+        outcome: "unknown",
+        invoiceNumber: null,
+        providerRef: transactionUuid,
+      };
+    }
+
+    try {
+      const res = await this.authedFormPost(
+        "/InvoiceAPI/InvoiceWS/searchInvoiceByTransactionUuid",
+        new URLSearchParams({
+          supplierTaxCode: this.taxCode,
+          transactionUuid,
+        }),
+      );
+      const envelope = await this.readEnvelope<
+        SinvoiceSearchHit[] | SinvoiceSearchHit
+      >(res);
+      if (!res.ok) {
+        return {
+          outcome: "unknown",
+          invoiceNumber: null,
+          providerRef: transactionUuid,
+          providerData: {
+            httpStatus: res.status,
+            errorCode: envelope.errorCode ?? res.status,
+          },
+        };
+      }
+      if (envelope.errorCode) {
+        return {
+          outcome: "not_found",
+          invoiceNumber: null,
+          providerRef: transactionUuid,
+          providerData: {
+            errorCode: envelope.errorCode,
+          },
+        };
+      }
+
+      const hit = firstSearchHit(envelope.result);
+      const invoiceNumber =
+        typeof hit?.invoiceNo === "string" && hit.invoiceNo.trim().length > 0
+          ? hit.invoiceNo.trim()
+          : null;
+      if (!invoiceNumber) {
+        return {
+          outcome: "not_found",
+          invoiceNumber: null,
+          providerRef: transactionUuid,
+        };
+      }
+
+      const codeOfTax =
+        typeof hit?.codeOfTax === "string" && hit.codeOfTax.trim().length > 0
+          ? hit.codeOfTax.trim()
+          : null;
+      return {
+        outcome: "issued",
+        invoiceNumber,
+        providerRef: transactionUuid,
+        codeOfTax,
+        issuedAt: lookupIssuedAt(hit?.issueDate),
+        providerData: {
+          transactionUuid,
+          invoiceNo: invoiceNumber,
+          reservationCode: hit?.reservationCode,
+          codeOfTax,
+        },
+      };
+    } catch {
+      return {
+        outcome: "unknown",
+        invoiceNumber: null,
+        providerRef: transactionUuid,
+        providerData: { errorCode: "exception" },
       };
     }
   }

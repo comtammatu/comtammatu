@@ -121,7 +121,10 @@ khớp provider order ID và số tiền trước khi hoàn tất.
 
 1. `POST /auth/login` với JSON `{ username, password }`
 2. Dùng Bearer token gọi `InvoiceWS/createInvoice/{supplierTaxCode}`
-3. Reconcile dùng `InvoiceWS/searchInvoiceByTransactionUuid`
+3. Reconcile dùng `POST InvoiceWS/searchInvoiceByTransactionUuid` với body
+   `application/x-www-form-urlencoded` (`supplierTaxCode`, `transactionUuid`).
+   Runtime gọi API này từ worker và Finance Tra cứu Viettel. Lookup không được
+   gọi `createInvoice`.
 
 **Config runtime**:
 

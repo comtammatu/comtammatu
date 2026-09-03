@@ -8,7 +8,10 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import { getInvoiceProvider } from "@comtammatu/shared/providers";
 import { ensureInvoiceProviderRegistered } from "@lib/invoice-provider-init";
 import { messages } from "@lib/messages";
-import { createInvoiceSchema } from "@lib/hddt-per-order";
+import {
+  createInvoiceSchema,
+  lookupAndReconcileTaxInvoiceFromProvider,
+} from "@lib/hddt-per-order";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
 import { logAudit } from "@/_lib/audit";
@@ -254,6 +257,37 @@ export async function reconcileTaxInvoiceProviderIssued(
   }
   revalidatePath("/finance/invoices");
   return { success: true };
+}
+
+export type TaxInvoiceLookupActionData = {
+  outcome: "issued" | "not_found" | "unknown";
+  invoiceNumber: string | null;
+};
+
+export async function lookupAndReconcileTaxInvoice(
+  taxInvoiceId: number,
+): Promise<ActionResult<TaxInvoiceLookupActionData>> {
+  const parsed = z.coerce.number().int().positive().safeParse(taxInvoiceId);
+  if (!parsed.success) {
+    return { success: false, error: "Hóa đơn không hợp lệ." };
+  }
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.SETTINGS_TENANT,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền đối soát HĐĐT." };
+
+  const result = await lookupAndReconcileTaxInvoiceFromProvider({
+    supabase: ctx.supabase,
+    taxInvoiceId: parsed.data,
+    tenantId: ctx.claims.tenant_id,
+    triggerSource: "manual",
+    logPrefix: "finance/actions:lookupAndReconcileTaxInvoice",
+  });
+  if (result.success && result.data?.outcome === "issued") {
+    revalidatePath("/finance/invoices");
+  }
+  return result;
 }
 
 /* ─── HĐĐT: Manual issue for a past paid order ─── */

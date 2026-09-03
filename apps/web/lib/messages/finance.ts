@@ -43,6 +43,15 @@ export const finance = {
     methodFixFailed: "Không thể sửa phương thức",
     loadMore: "Tải thêm",
     loadMoreFailed: "Không thể tải thêm hóa đơn",
+    lookup: "Tra cứu Viettel",
+    lookupSuccess: (num: string) => `Đã ghi nhận HĐĐT ${num} từ Viettel.`,
+    lookupNotFound:
+      "Viettel chưa có hóa đơn cho mã giao dịch này. Không phát hành lại.",
+    lookupUnknown: "Chưa xác định được trên Viettel. Thử lại sau.",
+    lookupFailed: "Không thể tra cứu HĐĐT.",
+    attentionLookupHint:
+      "Tra cứu Viettel theo mã giao dịch. Chỉ ghi số HĐ khi Viettel đã phát hành; không phát hành lại.",
+    manualReconcile: "Đối soát đã phát hành",
     manualIssue: {
       button: "Xuất HĐ cho đơn cũ",
       title: "Xuất HĐĐT cho đơn đã thanh toán",

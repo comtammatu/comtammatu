@@ -10,6 +10,7 @@ import {
   FileEdit as IconFileEdit,
   FileX as IconFileX,
   Receipt as IconReceipt,
+  Search as IconSearch,
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
@@ -22,6 +23,7 @@ import { PAYMENT_METHOD_LABELS_VI } from "@comtammatu/shared/labels";
 import {
   cancelTaxInvoice,
   fetchTaxInvoicesPage,
+  lookupAndReconcileTaxInvoice,
   reconcileTaxInvoiceProviderIssued,
   requeueTaxInvoiceIssueJob,
   type TaxInvoiceIssueAttention,
@@ -327,6 +329,55 @@ export function InvoiceList({
     });
   }
 
+  function applyLookupIssued(
+    taxInvoiceId: number,
+    invoiceNumber: string,
+    attentionJobId?: number,
+  ) {
+    if (attentionJobId) {
+      setIssueAttention((current) =>
+        current.filter((item) => item.id !== attentionJobId),
+      );
+    }
+    setInvoices((current) =>
+      current.map((invoice) =>
+        invoice.id === taxInvoiceId
+          ? {
+              ...invoice,
+              status: "issued",
+              invoice_number: invoiceNumber,
+            }
+          : invoice,
+      ),
+    );
+  }
+
+  function handleLookup(taxInvoiceId: number, attentionJobId?: number) {
+    startTransition(async () => {
+      const result = await lookupAndReconcileTaxInvoice(taxInvoiceId);
+      if (!result.success) {
+        toast.error(result.error ?? messages.finance.invoiceList.lookupFailed);
+        return;
+      }
+      if (result.data?.outcome === "issued" && result.data.invoiceNumber) {
+        applyLookupIssued(
+          taxInvoiceId,
+          result.data.invoiceNumber,
+          attentionJobId,
+        );
+        toast.success(
+          messages.finance.invoiceList.lookupSuccess(result.data.invoiceNumber),
+        );
+        return;
+      }
+      if (result.data?.outcome === "not_found") {
+        toast.warning(messages.finance.invoiceList.lookupNotFound);
+        return;
+      }
+      toast.error(messages.finance.invoiceList.lookupUnknown);
+    });
+  }
+
   function openReconcileForInvoice(invoice: InvoiceRow) {
     if (!invoice.provider_ref) return;
     setReconcileTarget({
@@ -471,19 +522,40 @@ export function InvoiceList({
         {canManageInvoices &&
         ["signing", "submitted"].includes(inv.status) &&
         inv.provider_ref ? (
-          <Button
-            variant="ghost"
-            size={size}
-            onClick={() => openReconcileForInvoice(inv)}
-            title="Đối soát đã phát hành"
-          >
-            <IconReconcile className="size-4" />
-            {dense ? (
-              <span className="sr-only">Đối soát đã phát hành</span>
-            ) : (
-              "Đối soát đã phát hành"
-            )}
-          </Button>
+          <>
+            <Button
+              variant="ghost"
+              size={size}
+              onClick={() => handleLookup(inv.id)}
+              title={messages.finance.invoiceList.lookup}
+              disabled={isPending}
+            >
+              <IconSearch className="size-4" />
+              {dense ? (
+                <span className="sr-only">
+                  {messages.finance.invoiceList.lookup}
+                </span>
+              ) : (
+                messages.finance.invoiceList.lookup
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size={size}
+              onClick={() => openReconcileForInvoice(inv)}
+              title={messages.finance.invoiceList.manualReconcile}
+              disabled={isPending}
+            >
+              <IconReconcile className="size-4" />
+              {dense ? (
+                <span className="sr-only">
+                  {messages.finance.invoiceList.manualReconcile}
+                </span>
+              ) : (
+                messages.finance.invoiceList.manualReconcile
+              )}
+            </Button>
+          </>
         ) : null}
       </div>
     );
@@ -557,8 +629,7 @@ export function InvoiceList({
               <ItemContent>
                 <p className="font-semibold">HĐĐT cần kiểm tra trên Viettel</p>
                 <p className="text-sm text-muted-foreground">
-                  Đối chiếu đúng mã đơn, ID HĐĐT và mã giao dịch Viettel. Chỉ
-                  ghi số HĐ sau khi xác minh; không phát hành lại.
+                  {messages.finance.invoiceList.attentionLookupHint}
                 </p>
               </ItemContent>
             </ItemHeader>
@@ -622,15 +693,30 @@ export function InvoiceList({
                     {job.status === "reconcile_required" &&
                     job.tax_invoice_id &&
                     job.provider_ref ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openReconcileForJob(job)}
-                        disabled={isPending}
-                      >
-                        Đối soát đã phát hành
-                      </Button>
+                      <>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => {
+                            const taxInvoiceId = job.tax_invoice_id;
+                            if (taxInvoiceId) {
+                              handleLookup(taxInvoiceId, job.id);
+                            }
+                          }}
+                          disabled={isPending}
+                        >
+                          {messages.finance.invoiceList.lookup}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openReconcileForJob(job)}
+                          disabled={isPending}
+                        >
+                          {messages.finance.invoiceList.manualReconcile}
+                        </Button>
+                      </>
                     ) : null}
                     {job.status === "blocked" ? (
                       <Button

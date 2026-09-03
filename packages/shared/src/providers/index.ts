@@ -16,6 +16,8 @@ export type {
   InvoiceProvider,
   InvoiceRequest,
   InvoiceResult,
+  InvoiceLookupOutcome,
+  InvoiceLookupResult,
   InvoiceLineItem,
 } from "./invoice";
 export {

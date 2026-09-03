@@ -5,6 +5,17 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Look up hung HĐĐT by Viettel transactionUuid
+
+State: doing
+Kind: defect
+Tier: T3
+Lane: hddt/provider-lookup
+Exit: `signing`/`submitted` invoices and `reconcile_required` jobs are resolved by `searchInvoiceByTransactionUuid` then the existing reconcile RPC when Viettel already issued; Finance Tra cứu Viettel is the primary action; no second `createInvoice`.
+Evidence: Focused Viettel lookup, finance list, and worker static tests; repository gates (`typecheck`/`lint`/`build`); hung Phước Hải rows heal on the next cron after deploy, or Owner Tra cứu on `/finance/invoices`.
+
+- [ ] Deploy the web runtime, then Owner-smoke Tra cứu Viettel on `/finance/invoices` and confirm the next cron heals remaining `reconcile_required` rows without a second create.
+
 ## Port branch revenue KPI from comtammatu
 
 State: verify

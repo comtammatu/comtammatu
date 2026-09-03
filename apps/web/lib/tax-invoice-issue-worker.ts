@@ -1,5 +1,8 @@
 import { createServiceClient } from "@comtammatu/database/supabase/service";
-import { issuePreparedTaxInvoice } from "@lib/hddt-per-order";
+import {
+  issuePreparedTaxInvoice,
+  lookupAndReconcileTaxInvoiceFromProvider,
+} from "@lib/hddt-per-order";
 
 type ClaimedTaxInvoiceJob = {
   id: number;
@@ -115,11 +118,25 @@ async function processJob(
     return "completed";
   }
   if (existingStatus === "signing" || existingStatus === "submitted") {
+    const looked = await lookupAndReconcileTaxInvoiceFromProvider({
+      supabase: service,
+      taxInvoiceId,
+      tenantId: job.tenant_id,
+      triggerSource: "cron",
+      logPrefix: "tax-invoice-worker",
+    });
+    if (looked.success && looked.data?.outcome === "issued") {
+      return "completed";
+    }
     await finishJob(
       rpc,
       job.id,
       "reconcile_required",
-      "provider_state_unknown",
+      looked.success
+        ? looked.data?.outcome === "not_found"
+          ? "provider_lookup_not_found"
+          : "provider_state_unknown"
+        : (looked.errorCode ?? "provider_state_unknown"),
     );
     return "reconcile_required";
   }
@@ -152,11 +169,26 @@ async function processJob(
     return "completed";
   }
   if (finalStatus === "signing" || finalStatus === "submitted") {
+    const looked = await lookupAndReconcileTaxInvoiceFromProvider({
+      supabase: service,
+      taxInvoiceId,
+      tenantId: job.tenant_id,
+      triggerSource: "cron",
+      logPrefix: "tax-invoice-worker",
+    });
+    if (looked.success && looked.data?.outcome === "issued") {
+      return "completed";
+    }
     await finishJob(
       rpc,
       job.id,
       "reconcile_required",
-      result.success ? "provider_state_unknown" : result.errorCode,
+      looked.success
+        ? looked.data?.outcome === "not_found"
+          ? "provider_lookup_not_found"
+          : "provider_state_unknown"
+        : (looked.errorCode ??
+          (result.success ? "provider_state_unknown" : result.errorCode)),
     );
     return "reconcile_required";
   }
@@ -239,5 +271,66 @@ export async function runTaxInvoiceIssueWorker(jobId?: number): Promise<{
     }),
   );
   if (claimFailed) throw new Error("claim_failed");
+  await lookupOutstandingReconcileJobs(service, summary);
   return summary;
+}
+
+async function lookupOutstandingReconcileJobs(
+  service: ReturnType<typeof createServiceClient>,
+  summary: {
+    claimed: number;
+    completed: number;
+    blocked: number;
+    reconcile_required: number;
+  },
+): Promise<void> {
+  const { data, error } = await service
+    .from("tax_invoice_issue_jobs")
+    .select("id, tenant_id, tax_invoice_id")
+    .eq("status", "reconcile_required")
+    .order("updated_at", { ascending: true })
+    .limit(MAX_JOBS_PER_RUN);
+  if (error) {
+    console.error("[tax-invoice-worker] outstanding lookup failed", {
+      code: error.code,
+    });
+    return;
+  }
+
+  const jobs = (data ?? []).filter(
+    (
+      job,
+    ): job is {
+      id: number;
+      tenant_id: number;
+      tax_invoice_id: number;
+    } => job.tax_invoice_id !== null,
+  );
+  await Promise.all(
+    Array.from({ length: WORKER_CONCURRENCY }, async (_, lane) => {
+      for (let index = lane; index < jobs.length; index += WORKER_CONCURRENCY) {
+        const job = jobs[index];
+        if (!job) continue;
+        try {
+          const looked = await lookupAndReconcileTaxInvoiceFromProvider({
+            supabase: service,
+            taxInvoiceId: job.tax_invoice_id,
+            tenantId: job.tenant_id,
+            triggerSource: "cron",
+            logPrefix: "tax-invoice-worker",
+          });
+          if (looked.success && looked.data?.outcome === "issued") {
+            summary.completed += 1;
+          }
+        } catch (lookupError) {
+          console.error("[tax-invoice-worker] outstanding lookup failed", {
+            jobId: job.id,
+            tenantId: job.tenant_id,
+            taxInvoiceId: job.tax_invoice_id,
+            code: workerErrorCode(lookupError),
+          });
+        }
+      }
+    }),
+  );
 }

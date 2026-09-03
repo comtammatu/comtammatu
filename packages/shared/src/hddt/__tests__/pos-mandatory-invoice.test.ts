@@ -187,6 +187,21 @@ test("finance handles HĐĐT jobs instead of scanning SePay webhooks", () => {
     "finance must reconcile a provider-issued invoice through the canonical action",
   );
   assert.match(
+    actionSrc,
+    /lookupAndReconcileTaxInvoice/,
+    "finance must look up a hung invoice by Viettel transactionUuid",
+  );
+  const lookupAction = sourceBetween(
+    actionSrc,
+    "export async function lookupAndReconcileTaxInvoice",
+    "/* ─── HĐĐT: Manual issue",
+  );
+  assert.doesNotMatch(
+    lookupAction,
+    /createInvoice\(|issuePreparedTaxInvoice|issueTaxInvoiceForPaidOrder/,
+    "lookup must never issue a second invoice",
+  );
+  assert.match(
     listSrc,
     /HĐĐT cần kiểm tra trên Viettel/,
     "finance list must expose attention jobs",
@@ -218,13 +233,18 @@ test("finance handles HĐĐT jobs instead of scanning SePay webhooks", () => {
   );
   assert.match(
     invoiceActions,
-    /\["signing", "submitted"\]\.includes\(inv\.status\)[\s\S]*inv\.provider_ref/,
-    "Owner must reconcile provider-bound signing/submitted invoices without waiting for a job",
+    /\["signing", "submitted"\]\.includes\(inv\.status\)[\s\S]*inv\.provider_ref[\s\S]*handleLookup\(inv\.id\)[\s\S]*openReconcileForInvoice/,
+    "Owner must look up then manually reconcile provider-bound signing/submitted invoices",
   );
   assert.doesNotMatch(
     invoiceActions,
     /createTaxInvoice|issueTaxInvoiceForPaidOrder/,
     "reconciliation UI must never issue a second invoice",
+  );
+  assert.match(
+    listSrc,
+    /status === "reconcile_required"[\s\S]*handleLookup[\s\S]*openReconcileForJob/,
+    "attention rows must offer Viettel lookup before manual reconcile",
   );
 });
 

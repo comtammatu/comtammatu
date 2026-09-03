@@ -1126,6 +1126,139 @@ test("deriveInvoiceTypeFromTemplate: throws on out-of-range kind (7+)", () => {
   );
 });
 
+function lookupProvider(): ViettelSinvoiceProvider {
+  return new ViettelSinvoiceProvider({
+    username: "0100109106-509",
+    password: "test-password",
+    taxCode: "0100109106-509",
+    templateCode: "2/001",
+    invoiceSeries: "C22TYY",
+    baseUrl: "https://example.test",
+  });
+}
+
+test("lookupInvoice: searches by transactionUuid and does not create", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{
+    input: Parameters<typeof fetch>[0];
+    init: NonNullable<Parameters<typeof fetch>[1]>;
+  }> = [];
+  globalThis.fetch = (async (input, init) => {
+    calls.push({ input, init: init ?? {} });
+    if (String(input).endsWith("/auth/login")) {
+      return new Response(
+        JSON.stringify({ access_token: "test-token", expires_in: 3600 }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    return new Response(
+      JSON.stringify({
+        transactionUuid: "HDDT0000000000000000000000012833",
+        errorCode: null,
+        result: [
+          {
+            invoiceNo: "C26MAA9999",
+            reservationCode: "ABC123",
+            issueDate: Date.parse("2026-08-30T15:31:39.000Z"),
+            codeOfTax: "00CQTCODE",
+          },
+        ],
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }) as typeof fetch;
+
+  try {
+    const result = await lookupProvider().lookupInvoice(
+      "HDDT0000000000000000000000012833",
+    );
+    assert.equal(result.outcome, "issued");
+    assert.equal(result.invoiceNumber, "C26MAA9999");
+    assert.equal(result.codeOfTax, "00CQTCODE");
+    assert.equal(result.issuedAt, "2026-08-30T15:31:39.000Z");
+
+    const searchCall = calls.find((call) =>
+      String(call.input).includes(
+        "/InvoiceAPI/InvoiceWS/searchInvoiceByTransactionUuid",
+      ),
+    );
+    assert.ok(searchCall, "expected searchInvoiceByTransactionUuid");
+    assert.equal(
+      new Headers(searchCall.init.headers).get("Content-Type"),
+      "application/x-www-form-urlencoded",
+    );
+    assert.equal(
+      String(searchCall.init.body),
+      "supplierTaxCode=0100109106-509&transactionUuid=HDDT0000000000000000000000012833",
+    );
+    assert.equal(
+      calls.some((call) =>
+        String(call.input).includes("/InvoiceAPI/InvoiceWS/createInvoice/"),
+      ),
+      false,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("lookupInvoice: empty result is not_found", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input) => {
+    if (String(input).endsWith("/auth/login")) {
+      return new Response(
+        JSON.stringify({ access_token: "test-token", expires_in: 3600 }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    return new Response(
+      JSON.stringify({ errorCode: null, result: [] }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }) as typeof fetch;
+
+  try {
+    const result = await lookupProvider().lookupInvoice(
+      "HDDT0000000000000000000000010707",
+    );
+    assert.equal(result.outcome, "not_found");
+    assert.equal(result.invoiceNumber, null);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("lookupInvoice: HTTP 500 is unknown and does not create", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: string[] = [];
+  globalThis.fetch = (async (input) => {
+    calls.push(String(input));
+    if (String(input).endsWith("/auth/login")) {
+      return new Response(
+        JSON.stringify({ access_token: "test-token", expires_in: 3600 }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    return new Response(JSON.stringify({ errorCode: "GENERAL" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }) as typeof fetch;
+
+  try {
+    const result = await lookupProvider().lookupInvoice(
+      "HDDT0000000000000000000000012833",
+    );
+    assert.equal(result.outcome, "unknown");
+    assert.equal(
+      calls.some((url) => url.includes("/InvoiceAPI/InvoiceWS/createInvoice/")),
+      false,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("randomised: validators hold across 200 random (qty, gross, vatRate) trios", () => {
   const rng = (seed: number) => {
     let s = seed;

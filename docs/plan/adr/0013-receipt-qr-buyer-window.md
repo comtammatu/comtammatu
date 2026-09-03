@@ -50,8 +50,11 @@ claim one eligible row at a time with `FOR UPDATE SKIP LOCKED`. A slow invoice
 does not pre-claim or prevent other eligible invoices from being processed.
 
 Provider submission keeps the existing deterministic transaction identity.
-`signing` or `submitted` with an unknown provider outcome moves to
-`reconcile_required`; it must not trigger another `createInvoice` call.
+`signing` or `submitted` with an unknown provider outcome is looked up by
+`transactionUuid` (`searchInvoiceByTransactionUuid`). An `invoiceNo` is
+reconciled through `reconcile_tax_invoice_provider_issued`. `not_found` or
+`unknown` moves the job to `reconcile_required`. That path must not trigger
+another `createInvoice` call.
 
 ## Transaction boundaries
 

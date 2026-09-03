@@ -114,9 +114,12 @@ cho trình duyệt.
 Bốn lane worker claim từng job bằng `FOR UPDATE SKIP LOCKED`; một hóa đơn chậm
 không giữ trước hoặc chặn các hóa đơn đủ điều kiện khác.
 
-Nếu trạng thái `signing` hoặc `submitted` kéo dài, nhân sự Finance tra
-`provider_ref` trực tiếp trên Viettel S-invoice trước khi thử lại. Không tạo
-một hóa đơn mới chỉ vì ứng dụng chưa nhận số hóa đơn.
+Nếu trạng thái `signing` hoặc `submitted` kéo dài, worker và màn `/finance/invoices`
+tra cứu Viettel qua `InvoiceWS/searchInvoiceByTransactionUuid` với `provider_ref`
+(transactionUuid). Chỉ ghi số HĐ khi lookup trả `invoiceNo`; `not_found` hoặc
+`unknown` giữ `reconcile_required`. Finance dùng **Tra cứu Viettel** trước, rồi
+cổng S-invoice hoặc **Đối soát đã phát hành** nếu lookup chưa đủ. Không gọi
+`createInvoice` lần nữa và không tạo hóa đơn mới chỉ vì ứng dụng chưa nhận số.
 
 Việc truyền `invoice_time = payments.paid_at` thành `invoiceIssuedDate` khi gọi
 Viettel sau tối đa hai giờ là cổng phát hành Production, không phải giả định đã

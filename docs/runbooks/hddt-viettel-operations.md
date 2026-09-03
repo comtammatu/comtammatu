@@ -11,9 +11,10 @@ và pháp lý nằm tại `docs/ref/einvoice-tax.md`.
 - Phát hành lại bản nháp bị lỗi sau khi đã sửa dữ liệu.
 - Hủy hoặc thay thế hóa đơn theo quyền Finance.
 
-Ứng dụng không chạy hóa đơn tổng hợp ngày, không tự đối soát trạng thái định kỳ
-và không lưu bản PDF/XML vào kho nội bộ. Tra cứu trạng thái và chứng từ điện tử
-được thực hiện trên Viettel S-invoice theo `provider_ref` hoặc số hóa đơn.
+Ứng dụng không chạy hóa đơn tổng hợp ngày và không lưu bản PDF/XML vào kho nội
+bộ. Worker cron và nút Tra cứu Viettel trên `/finance/invoices` đối soát trạng
+thái bằng `searchInvoiceByTransactionUuid` theo `provider_ref`. Chứng từ điện tử
+(PDF/XML) vẫn tải từ cổng Viettel S-invoice.
 
 ## Env Bắt Buộc
 
@@ -51,8 +52,9 @@ Kỳ vọng:
 - hóa đơn không mã có thể ở `submitted` khi Viettel đã nhận nhưng chưa trả số;
 - tổng tiền sau chiết khấu khớp đơn đã thanh toán.
 
-Nếu kết quả không rõ, tra trực tiếp trên Viettel S-invoice trước khi thử lại.
-Không tạo hóa đơn mới chỉ vì ứng dụng chưa có số hóa đơn.
+Nếu kết quả không rõ, dùng Tra cứu Viettel trên `/finance/invoices` (cùng
+`provider_ref`) rồi đối chiếu cổng S-invoice. Không tạo hóa đơn mới chỉ vì ứng
+dụng chưa có số hóa đơn.
 
 ## Xử Lý Lỗi
 
@@ -60,7 +62,7 @@ Không tạo hóa đơn mới chỉ vì ứng dụng chưa có số hóa đơn.
 | --- | --- |
 | Bản nháp có `last_error` | Sửa dữ liệu/cấu hình rồi dùng phát hành lại trên `/finance/invoices` |
 | CQT từ chối cấp mã | Kiểm MST, mẫu số, ký hiệu và dữ liệu người mua |
-| Timeout hoặc trạng thái `signing`/`submitted` kéo dài | Tra `provider_ref` trên Viettel; không phát hành trùng |
+| Timeout hoặc trạng thái `signing`/`submitted` kéo dài | Tra cứu Viettel theo `provider_ref`; job `reconcile_required` cũng được worker lookup lại. Không `createInvoice` trùng. Đối soát tay khi lookup `not_found`/`unknown`. |
 | Cần PDF/XML | Tải từ Viettel S-invoice và lưu theo quy trình chứng từ của đơn vị |
 | Cần hủy/thay thế | Dùng thao tác trên `/finance/invoices`, sau đó đối chiếu kết quả trên Viettel |
 
