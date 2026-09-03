@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { TenantSupabase } from "@lib/inventory/types";
+import type { IngredientUnitRow, TenantSupabase } from "@lib/inventory/types";
 
 export type IntraSiteLocationKind = "warehouse" | "kitchen";
 
@@ -17,6 +17,7 @@ export interface IntraSiteTransferIngredient {
   unit: string;
   warehouseQuantity: number;
   kitchenQuantity: number;
+  units?: IngredientUnitRow[];
 }
 
 export interface IntraSiteTransferData {
@@ -40,10 +41,22 @@ type StockRow = {
 
 type IngredientRow = { id: number; name: string };
 type UnitRow = {
+  id: number;
   ingredient_id: number;
   unit_id: number;
-  units: { code: string | null; name: string | null } | null;
+  to_base_factor: number;
+  is_base: boolean;
+  is_active: boolean;
+  sort_order: number;
+  units:
+    | { code: string | null; name: string | null }
+    | Array<{ code: string | null; name: string | null }>
+    | null;
 };
+
+function relatedOne<T>(value: T | T[] | null | undefined): T | null {
+  return Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
+}
 
 export async function loadIntraSiteTransferData({
   supabase,
@@ -102,12 +115,12 @@ export async function loadIntraSiteTransferData({
     supabase
       .from("ingredient_units")
       .select(
-        "ingredient_id, unit_id, units!ingredient_units_unit_tenant_fkey(code, name)",
+        "id, ingredient_id, unit_id, to_base_factor, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name)",
       )
       .eq("tenant_id", tenantId)
       .eq("is_active", true)
-      .eq("is_base", true)
-      .in("ingredient_id", ingredientIds),
+      .in("ingredient_id", ingredientIds)
+      .order("sort_order", { ascending: true }),
   ]);
   if (ingredientsResult.error || unitsResult.error) {
     throw new Error("inventory.intra_site.catalog_failed");
@@ -116,9 +129,24 @@ export async function loadIntraSiteTransferData({
   const ingredients = (ingredientsResult.data ??
     []) as unknown as IngredientRow[];
   const units = (unitsResult.data ?? []) as unknown as UnitRow[];
-  const unitByIngredient = new Map(
-    units.map((unit) => [unit.ingredient_id, unit]),
-  );
+  const unitsByIngredient = new Map<number, IngredientUnitRow[]>();
+  for (const row of units) {
+    const unitObj = relatedOne(row.units);
+    const unitRow: IngredientUnitRow = {
+      id: row.id,
+      unit_id: row.unit_id,
+      unit_code: unitObj?.code ?? "",
+      unit_name: unitObj?.name ?? unitObj?.code ?? "",
+      to_base_factor: Number(row.to_base_factor ?? 1),
+      is_base: Boolean(row.is_base),
+      is_active: Boolean(row.is_active),
+      sort_order: Number(row.sort_order ?? 0),
+    };
+    const list = unitsByIngredient.get(row.ingredient_id) ?? [];
+    list.push(unitRow);
+    unitsByIngredient.set(row.ingredient_id, list);
+  }
+
   const quantityByKey = new Map(
     stock.map((row) => [
       `${row.location_id}:${row.ingredient_id}`,
@@ -132,18 +160,21 @@ export async function loadIntraSiteTransferData({
     kitchen: { id: kitchen.id, name: kitchen.name, kind: "kitchen" },
     ingredients: ingredients
       .flatMap<IntraSiteTransferIngredient>((ingredient) => {
-        const unit = unitByIngredient.get(ingredient.id);
-        if (!unit) return [];
+        const ingredientUnits = unitsByIngredient.get(ingredient.id) ?? [];
+        const baseUnit =
+          ingredientUnits.find((unit) => unit.is_base) ?? ingredientUnits[0];
+        if (!baseUnit) return [];
         return [
           {
             ingredientId: ingredient.id,
             name: ingredient.name,
-            baseUnitId: unit.unit_id,
-            unit: unit.units?.name ?? unit.units?.code ?? "unit",
+            baseUnitId: baseUnit.unit_id,
+            unit: baseUnit.unit_name?.trim() || baseUnit.unit_code || "unit",
             warehouseQuantity:
               quantityByKey.get(`${warehouse.id}:${ingredient.id}`) ?? 0,
             kitchenQuantity:
               quantityByKey.get(`${kitchen.id}:${ingredient.id}`) ?? 0,
+            units: ingredientUnits,
           },
         ];
       })

@@ -12,7 +12,12 @@ import {
   ArrowLeftRight as IconArrowLeftRight,
   RotateCcw as IconRotateCcw,
 } from "lucide-react";
+import { FORM_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  InputGroup,
+  InputGroupAddon,
+} from "@comtammatu/ui/components/input-group";
 import {
   Item,
   ItemActions,
@@ -21,14 +26,35 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { QuantityInput } from "@/components/form/domain-number-inputs";
 import { AppDialog } from "@/components/form";
 import { AppEmptyState } from "@/components/surface";
-import type { IntraSiteTransferData } from "@lib/inventory/intra-site-transfer-data";
+import type {
+  IntraSiteTransferData,
+  IntraSiteTransferIngredient,
+} from "@lib/inventory/intra-site-transfer-data";
 import type { TransferDetail } from "@lib/inventory/transfer-detail-model";
 import { messages } from "@lib/messages";
+import {
+  clampIssueEntryQuantity,
+  formatIssueMaxEntryQuantity,
+  getDefaultIssueUnit,
+  getIssueBaseQuantity,
+  getIssueMaxEntryQuantity,
+  getIssueUnitOptions,
+  type IssueUnitOption,
+} from "@/(protected)/inventory/_lib/issue-units";
 import {
   commitIntraSiteTransfer,
   reverseIntraSiteTransfer,
@@ -40,6 +66,32 @@ const copy = messages.inventory.transfer.intraSite;
 function positiveQuantity(value: string | undefined): number | null {
   const quantity = Number(value ?? "");
   return Number.isFinite(quantity) && quantity > 0 ? quantity : null;
+}
+
+function getInitialUnits(
+  ingredients: IntraSiteTransferIngredient[],
+): Record<number, number> {
+  return Object.fromEntries(
+    ingredients.map((ingredient) => {
+      const defaultUnit = getDefaultIssueUnit(ingredient);
+      return [
+        ingredient.ingredientId,
+        defaultUnit?.unitId ?? ingredient.baseUnitId,
+      ];
+    }),
+  );
+}
+
+function resolveSelectedUnit(
+  ingredient: IntraSiteTransferIngredient,
+  unitId?: number,
+): IssueUnitOption | null {
+  const options = getIssueUnitOptions(ingredient);
+  if (unitId != null) {
+    const found = options.find((opt) => opt.unitId === unitId);
+    if (found) return found;
+  }
+  return getDefaultIssueUnit(ingredient);
 }
 
 export function IntraSiteTransferDialog({
@@ -56,8 +108,16 @@ export function IntraSiteTransferDialog({
   triggerLabel?: string;
 }) {
   const router = useRouter();
+  const isMobile = useIsMobile();
+  const isTouchLayout = triggerSize === "touch" || isMobile;
+  const controlSize = isTouchLayout ? "touch" : "default";
+  const optionSize = isTouchLayout ? "touch" : "default";
+
   const [open, setOpen] = useState(false);
   const [direction, setDirection] = useState<Direction>("warehouse_to_kitchen");
+  const [selectedUnits, setSelectedUnits] = useState<Record<number, number>>(
+    () => getInitialUnits(data.ingredients),
+  );
   const [quantities, setQuantities] = useState<Record<number, string>>(() =>
     Object.fromEntries(
       Object.entries(initialQuantities).map(([id, quantity]) => [
@@ -100,13 +160,48 @@ export function IntraSiteTransferDialog({
     idempotencyKey.current = null;
   }
 
+  function handleUnitChange(ingredientId: number, nextUnitId: number) {
+    setSelectedUnits((current) => ({
+      ...current,
+      [ingredientId]: nextUnitId,
+    }));
+    const ingredient = data.ingredients.find(
+      (candidate) => candidate.ingredientId === ingredientId,
+    );
+    if (!ingredient) return;
+    const nextUnit = resolveSelectedUnit(ingredient, nextUnitId);
+    const maxQty = getIssueMaxEntryQuantity(
+      availableQuantity(ingredientId),
+      nextUnit,
+    );
+    setQuantities((current) => {
+      const existing = current[ingredientId];
+      if (!existing) return current;
+      return {
+        ...current,
+        [ingredientId]: clampIssueEntryQuantity(existing, maxQty),
+      };
+    });
+    idempotencyKey.current = null;
+  }
+
   function fillAll() {
     setQuantities(
       Object.fromEntries(
-        availableIngredients.map((ingredient) => [
-          ingredient.ingredientId,
-          String(availableQuantity(ingredient.ingredientId)),
-        ]),
+        availableIngredients.map((ingredient) => {
+          const selectedUnit = resolveSelectedUnit(
+            ingredient,
+            selectedUnits[ingredient.ingredientId],
+          );
+          const maxQty = getIssueMaxEntryQuantity(
+            availableQuantity(ingredient.ingredientId),
+            selectedUnit,
+          );
+          return [
+            ingredient.ingredientId,
+            formatIssueMaxEntryQuantity(maxQty),
+          ];
+        }),
       ),
     );
     idempotencyKey.current = null;
@@ -117,7 +212,13 @@ export function IntraSiteTransferDialog({
     const lines = availableIngredients.flatMap((ingredient) => {
       const quantity = positiveQuantity(quantities[ingredient.ingredientId]);
       if (quantity == null) return [];
-      if (quantity > availableQuantity(ingredient.ingredientId)) {
+      const selectedUnit = resolveSelectedUnit(
+        ingredient,
+        selectedUnits[ingredient.ingredientId],
+      );
+      const baseQtyNeeded = getIssueBaseQuantity(quantity, selectedUnit);
+      const baseQtyAvailable = availableQuantity(ingredient.ingredientId);
+      if (baseQtyNeeded > baseQtyAvailable + 1e-6) {
         invalidIngredient ??= ingredient.name;
         return [];
       }
@@ -125,7 +226,7 @@ export function IntraSiteTransferDialog({
         {
           ingredientId: ingredient.ingredientId,
           quantity,
-          entryUnitId: ingredient.baseUnitId,
+          entryUnitId: selectedUnit?.unitId ?? ingredient.baseUnitId,
         },
       ];
     });
@@ -243,34 +344,126 @@ export function IntraSiteTransferDialog({
           ) : (
             <ScrollArea className="h-80">
               <div className="flex flex-col gap-2 pr-2">
-                {availableIngredients.map((ingredient) => (
-                  <Item key={ingredient.ingredientId} variant="outline">
-                    <ItemContent>
-                      <ItemTitle>{ingredient.name}</ItemTitle>
-                      <ItemDescription>
-                        {copy.availableQuantity(
-                          availableQuantity(ingredient.ingredientId),
-                          ingredient.unit,
+                {availableIngredients.map((ingredient) => {
+                  const unitOptions = getIssueUnitOptions(ingredient);
+                  const selectedUnit = resolveSelectedUnit(
+                    ingredient,
+                    selectedUnits[ingredient.ingredientId],
+                  );
+                  const selectedUnitId =
+                    selectedUnit?.unitId ?? ingredient.baseUnitId;
+                  const maxEntryQuantity = getIssueMaxEntryQuantity(
+                    availableQuantity(ingredient.ingredientId),
+                    selectedUnit,
+                  );
+                  const maxQuantityValue =
+                    formatIssueMaxEntryQuantity(maxEntryQuantity);
+
+                  return (
+                    <Item
+                      key={ingredient.ingredientId}
+                      variant="outline"
+                      className="flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <ItemContent className="min-w-0 flex-1">
+                        <ItemTitle className="truncate">
+                          {ingredient.name}
+                        </ItemTitle>
+                        <ItemDescription>
+                          {copy.availableQuantity(
+                            Number(maxQuantityValue || "0"),
+                            selectedUnit?.label ?? ingredient.unit,
+                          )}
+                        </ItemDescription>
+                      </ItemContent>
+                      <ItemActions className="flex items-center gap-2 self-end sm:self-center">
+                        <InputGroup
+                          size={controlSize}
+                          className="w-28 sm:w-36"
+                        >
+                          <QuantityInput
+                            value={quantities[ingredient.ingredientId] ?? ""}
+                            onValueChange={(value) => {
+                              setQuantities((current) => ({
+                                ...current,
+                                [ingredient.ingredientId]:
+                                  clampIssueEntryQuantity(
+                                    value,
+                                    maxEntryQuantity,
+                                  ),
+                              }));
+                              idempotencyKey.current = null;
+                            }}
+                            maxFractionDigits={3}
+                            placeholder="0"
+                            aria-label={copy.quantityAria(ingredient.name)}
+                            className="h-full"
+                          />
+                          {maxQuantityValue ? (
+                            <InputGroupAddon
+                              align="inline-end"
+                              className="py-0"
+                            >
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size={isTouchLayout ? "touch" : "sm"}
+                                className="shadow-none"
+                                onClick={() => {
+                                  setQuantities((current) => ({
+                                    ...current,
+                                    [ingredient.ingredientId]: maxQuantityValue,
+                                  }));
+                                  idempotencyKey.current = null;
+                                }}
+                              >
+                                {FORM_VI.max}
+                              </Button>
+                            </InputGroupAddon>
+                          ) : null}
+                        </InputGroup>
+                        {unitOptions.length > 1 ? (
+                          <Select
+                            value={String(selectedUnitId)}
+                            onValueChange={(value) =>
+                              handleUnitChange(
+                                ingredient.ingredientId,
+                                Number(value),
+                              )
+                            }
+                          >
+                            <SelectTrigger
+                              size={controlSize}
+                              className="w-24 sm:w-28"
+                              aria-label={messages.inventory.transfer.unit}
+                            >
+                              <SelectValue
+                                placeholder={messages.inventory.transfer.selectUnit}
+                              />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectGroup>
+                                {unitOptions.map((option) => (
+                                  <SelectItem
+                                    key={option.unitId}
+                                    value={String(option.unitId)}
+                                    size={optionSize}
+                                  >
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <span className="w-16 truncate text-right text-sm text-muted-foreground sm:w-20">
+                            {selectedUnit?.label ?? ingredient.unit}
+                          </span>
                         )}
-                      </ItemDescription>
-                    </ItemContent>
-                    <ItemActions className="w-40">
-                      <QuantityInput
-                        value={quantities[ingredient.ingredientId] ?? ""}
-                        onValueChange={(value) => {
-                          setQuantities((current) => ({
-                            ...current,
-                            [ingredient.ingredientId]: value,
-                          }));
-                          idempotencyKey.current = null;
-                        }}
-                        maxFractionDigits={3}
-                        placeholder="0"
-                        aria-label={copy.quantityAria(ingredient.name)}
-                      />
-                    </ItemActions>
-                  </Item>
-                ))}
+                      </ItemActions>
+                    </Item>
+                  );
+                })}
               </div>
             </ScrollArea>
           )}
