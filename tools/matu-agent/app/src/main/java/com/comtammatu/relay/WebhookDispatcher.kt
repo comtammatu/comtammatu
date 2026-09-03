@@ -146,10 +146,20 @@ class WebhookDispatcher(
                         order.rawBase64,
                         android.util.Base64.DEFAULT
                     )
-                    val receiptText = recognizer.recognize(rawBytes) ?: order.receiptText
-                    val platform = receiptText?.let(DeliveryPlatformDetector::detect)
+                    val rawPlatform = DeliveryPlatformDetector.detect(rawBytes)
+                    val ocrText = if (
+                        AgentOcrPolicy.shouldRunOcr(
+                            rawPlatform,
+                            EscPosRasterDecoder.hasDecodableRaster(rawBytes)
+                        )
+                    ) {
+                        recognizer.recognize(rawBytes)
+                    } else {
+                        null
+                    }
+                    val receiptText = ocrText ?: order.receiptText
+                    val platform = rawPlatform ?: receiptText?.let(DeliveryPlatformDetector::detect)
                     if (
-                        receiptText != null &&
                         platform != null &&
                         isPlatformEnabled(platform) &&
                         dbHelper.reclassifyOrder(order.id, platform.wireValue, receiptText)

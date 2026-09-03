@@ -2,6 +2,7 @@ package com.comtammatu.relay
 
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.os.SystemClock
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
@@ -19,7 +20,8 @@ class ReceiptTextRecognizer {
 
     suspend fun recognize(rawBytes: ByteArray): String? {
         val raster = EscPosRasterDecoder.decodeLargest(rawBytes) ?: return null
-        val bitmap = raster.toBitmap()
+        val bitmap = raster.toOcrBitmap()
+        val startedAt = SystemClock.elapsedRealtime()
         return try {
             val image = InputImage.fromBitmap(bitmap, 0)
             suspendCancellableCoroutine { continuation ->
@@ -41,6 +43,11 @@ class ReceiptTextRecognizer {
                             }
                             val layoutText = ReceiptOcrLayout.rebuild(positionedLines)
                                 .ifBlank { result.text }
+                            val elapsedMs = SystemClock.elapsedRealtime() - startedAt
+                            AppLogger.i(
+                                "OCR",
+                                "Đã đọc ảnh ${raster.width}×${raster.height} → ${bitmap.width}×${bitmap.height} trong ${elapsedMs}ms"
+                            )
                             continuation.resume(
                                 RasterReceiptTextNormalizer.normalize(layoutText)
                                     .trim()
@@ -65,10 +72,19 @@ class ReceiptTextRecognizer {
         recognizer.close()
     }
 
+    private fun EscPosRaster.toOcrBitmap(): Bitmap {
+        val full = toBitmap()
+        val (targetWidth, targetHeight) = AgentOcrPolicy.scaledSize(width, height)
+        if (targetWidth == width && targetHeight == height) return full
+        val scaled = Bitmap.createScaledBitmap(full, targetWidth, targetHeight, true)
+        if (scaled != full) full.recycle()
+        return scaled
+    }
+
     private fun EscPosRaster.toBitmap(): Bitmap {
         val colors = IntArray(blackPixels.size) { index ->
             if (blackPixels[index].toInt() == 1) Color.BLACK else Color.WHITE
         }
-        return Bitmap.createBitmap(colors, width, height, Bitmap.Config.ARGB_8888)
+        return Bitmap.createBitmap(colors, width, height, Bitmap.Config.RGB_565)
     }
 }

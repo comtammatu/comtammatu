@@ -35,4 +35,20 @@ class OperatorErrorFormatterTest {
     fun `keeps an empty error absent`() {
         assertNull(OperatorErrorFormatter.format(null))
     }
+
+    @Test
+    fun `explains an unclassified raster without promising a POS retry`() {
+        assertEquals(
+            "Chưa rõ sàn gửi phiếu. Mở phiếu để kiểm tra, hoặc nhập tay nếu đơn đã lên POS.",
+            OperatorErrorFormatter.format("Không nhận diện được duy nhất một nguồn sàn")
+        )
+    }
+
+    @Test
+    fun `explains a held platform that Redmi cannot take directly`() {
+        assertEquals(
+            "Nguồn này chưa nhận trực tiếp trên Redmi. Nhập tay nếu đơn đã lên POS.",
+            OperatorErrorFormatter.format("beFood chưa hỗ trợ gửi trực tiếp tới Agent trên Redmi")
+        )
+    }
 }

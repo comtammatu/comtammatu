@@ -55,6 +55,7 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
+import com.google.android.material.navigation.NavigationBarView
 import com.google.android.material.navigationrail.NavigationRailView
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.textfield.TextInputEditText
@@ -99,6 +100,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvStatusBadge: TextView
     private lateinit var tvEndpoint: TextView
     private lateinit var tvWaitingKpi: TextView
+    private lateinit var tvActionKpi: TextView
     private lateinit var tvSentKpi: TextView
     private lateinit var statusDot: View
     private lateinit var tvLogs: TextView
@@ -106,6 +108,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var toolbar: MaterialToolbar
     private lateinit var screenContainer: FrameLayout
     private lateinit var orderTabs: TabLayout
+    private lateinit var deviceTabs: TabLayout
     private lateinit var orderListContainer: LinearLayout
     private lateinit var clearResolvedButton: Button
     private val destinationViews = mutableMapOf<Int, View>()
@@ -401,6 +404,8 @@ class MainActivity : AppCompatActivity() {
         addView(createServicePanel(saved))
         addView(spaceResource(R.dimen.space_group))
         addView(createHomeQueueSummary())
+        addView(spaceResource(R.dimen.space_group))
+        addView(createHomeBackgroundStrip())
     }
 
     private fun createReceiptsDestination(): View = destinationScroll {
@@ -412,7 +417,7 @@ class MainActivity : AppCompatActivity() {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(color(R.color.canvas))
         }
-        val tabs = TabLayout(this).apply {
+        deviceTabs = TabLayout(this).apply {
             setBackgroundColor(color(R.color.surface))
             addTab(newTab().setText(R.string.device_tab_connection))
             addTab(newTab().setText(R.string.device_tab_background))
@@ -433,12 +438,12 @@ class MainActivity : AppCompatActivity() {
                 FrameLayout.LayoutParams.MATCH_PARENT
             ))
         }
-        tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+        deviceTabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab) = showPage(tab.position)
             override fun onTabUnselected(tab: TabLayout.Tab) = Unit
             override fun onTabReselected(tab: TabLayout.Tab) = Unit
         })
-        root.addView(tabs, LinearLayout.LayoutParams(
+        root.addView(deviceTabs, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
             LinearLayout.LayoutParams.WRAP_CONTENT
         ))
@@ -476,9 +481,23 @@ class MainActivity : AppCompatActivity() {
         section.addView(space(10))
         val body = panel()
         body.addView(queueLinkRow(
-            title = getString(R.string.waiting_orders_action),
-            description = getString(R.string.waiting_orders_home_description),
+            title = getString(R.string.home_action_needed_title),
+            description = getString(R.string.home_action_needed_description),
             toneColor = color(R.color.warning_text),
+            onClick = {
+                showingResolvedOrders = false
+                selectDestination(DESTINATION_RECEIPTS)
+                orderTabs.getTabAt(0)?.select()
+            }
+        ).let { (row, count) ->
+            tvActionKpi = count
+            row
+        })
+        body.addView(divider())
+        body.addView(queueLinkRow(
+            title = getString(R.string.home_sending_title),
+            description = getString(R.string.home_sending_description),
+            toneColor = color(R.color.ink_secondary),
             onClick = {
                 showingResolvedOrders = false
                 selectDestination(DESTINATION_RECEIPTS)
@@ -506,11 +525,33 @@ class MainActivity : AppCompatActivity() {
         return section
     }
 
+    private fun createHomeBackgroundStrip(): View {
+        val section = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val panel = panel()
+        panel.addView(
+            queueLinkRow(
+                title = getString(R.string.home_background_title),
+                description = getString(R.string.home_background_link_description),
+                toneColor = color(R.color.ink_muted),
+                onClick = {
+                    selectDestination(DESTINATION_DEVICE)
+                    if (::deviceTabs.isInitialized) {
+                        deviceTabs.getTabAt(1)?.select()
+                    }
+                },
+                showCount = false
+            ).first
+        )
+        section.addView(panel)
+        return section
+    }
+
     private fun queueLinkRow(
         title: String,
         description: String,
         toneColor: Int,
-        onClick: () -> Unit
+        onClick: () -> Unit,
+        showCount: Boolean = true
     ): Pair<LinearLayout, TextView> {
         val count = TextView(this).apply {
             text = "0"
@@ -519,6 +560,7 @@ class MainActivity : AppCompatActivity() {
             setTextColor(toneColor)
             gravity = Gravity.CENTER
             minWidth = dp(44)
+            visibility = if (showCount) View.VISIBLE else View.GONE
         }
         val row = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -569,7 +611,7 @@ class MainActivity : AppCompatActivity() {
             background = circleBackground(color(R.color.ink_muted))
         }
         tvStatusTitle = TextView(this).apply {
-            textSize = 16f
+            textSize = 20f
             setTextColor(color(R.color.ink))
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
@@ -630,9 +672,9 @@ class MainActivity : AppCompatActivity() {
 
         btnToggle = MaterialButton(this).apply {
             isAllCaps = false
-            textSize = 14f
+            textSize = 15f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            minHeight = dp(52)
+            minHeight = dp(56)
             setPadding(dp(18), dp(12), dp(18), dp(12))
             setOnClickListener { toggleService() }
             layoutParams = LinearLayout.LayoutParams(
@@ -848,11 +890,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun createOrderManagementSection(): View {
         val section = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        section.addView(sectionHeading(
-            getString(R.string.receipts_received_title),
-            getString(R.string.orders_description)
-        ))
-        section.addView(space(12))
 
         orderTabs = TabLayout(this).apply {
             addTab(newTab().setText(getString(R.string.waiting_orders_action)))
@@ -900,7 +937,11 @@ class MainActivity : AppCompatActivity() {
 
         orderListContainer.removeAllViews()
         clearResolvedButton.visibility = if (showingResolvedOrders && resolvedCount > 0) View.VISIBLE else View.GONE
-        val orders = dbHelper.getOrders(showingResolvedOrders)
+        val orders = if (showingResolvedOrders) {
+            dbHelper.getOrders(true)
+        } else {
+            QueuePresentation.sortWaiting(dbHelper.getOrders(false))
+        }
         if (orders.isEmpty()) {
             orderListContainer.addView(TextView(this).apply {
                 text = if (showingResolvedOrders) {
@@ -938,11 +979,16 @@ class MainActivity : AppCompatActivity() {
             OrderQueueDbHelper.STATUS_BLOCKED, OrderQueueDbHelper.STATUS_UNCLASSIFIED -> color(R.color.warning_surface)
             else -> color(R.color.surface_muted)
         }
+        val actionNeeded = QueuePresentation.isActionNeeded(order.status)
         val row = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             minimumHeight = dp(84)
             setPadding(dp(16), dp(14), dp(16), dp(14))
-            background = roundedBackground(color(R.color.surface), color(R.color.border), 14)
+            background = roundedBackground(
+                color(R.color.surface),
+                color(if (actionNeeded) R.color.warning_border else R.color.border),
+                14
+            )
             isClickable = true
             isFocusable = true
             contentDescription = "$sourceRef, ${platformLabel(order.platform)}, $status"
@@ -997,7 +1043,49 @@ class MainActivity : AppCompatActivity() {
                 setPadding(0, dp(5), 0, 0)
             })
         }
+        val lastError = OperatorErrorFormatter.format(order.lastError)
+        if (!lastError.isNullOrEmpty() && actionNeeded) {
+            row.addView(TextView(this).apply {
+                text = lastError
+                textSize = 12.5f
+                setTextColor(color(R.color.warning_text))
+                setPadding(0, dp(6), 0, 0)
+                maxLines = 2
+            })
+        }
+        if (actionNeeded) {
+            row.addView(createOrderRowActions(order))
+        }
         return row
+    }
+
+    private fun createOrderRowActions(order: OrderQueueDbHelper.QueuedOrder): View {
+        val actions = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, dp(10), 0, 0)
+        }
+        if (QueueLifecycle.canDismiss(order.status)) {
+            actions.addView(secondaryButton(getString(R.string.mark_manual_entry_action)) {
+                promptDismissWaitingOrder(order)
+            }.apply {
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    if (order.status == OrderQueueDbHelper.STATUS_BLOCKED) {
+                        marginEnd = dp(8)
+                    }
+                }
+            })
+        }
+        if (order.status == OrderQueueDbHelper.STATUS_BLOCKED) {
+            actions.addView(MaterialButton(this).apply {
+                text = getString(R.string.retry_now_action)
+                isAllCaps = false
+                minHeight = dimen(R.dimen.touch_target)
+                setOnClickListener { retryWaitingOrder(order) }
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            })
+        }
+        return actions
     }
 
     private fun promptClearResolvedOrders() {
@@ -1700,11 +1788,23 @@ class MainActivity : AppCompatActivity() {
         val lanMode = cbLanMode.isChecked
         tvEndpoint.text = endpointSummary(port, branchId, lanMode)
 
-        val waitingCount = dbHelper.getWaitingCount()
+        val waiting = dbHelper.getOrders(false)
         val resolvedCount = dbHelper.getResolvedCount()
+        val actionNeeded = QueuePresentation.actionNeededCount(waiting)
 
-        tvWaitingKpi.text = waitingCount.toString()
-        tvSentKpi.text = resolvedCount.toString()
+        if (::tvActionKpi.isInitialized) {
+            tvActionKpi.text = actionNeeded.toString()
+            tvActionKpi.setTextColor(
+                color(if (actionNeeded > 0) R.color.warning_text else R.color.ink_muted)
+            )
+        }
+        if (::tvWaitingKpi.isInitialized) {
+            tvWaitingKpi.text = QueuePresentation.inFlightCount(waiting).toString()
+        }
+        if (::tvSentKpi.isInitialized) {
+            tvSentKpi.text = resolvedCount.toString()
+        }
+        updateReceiptsBadge(actionNeeded)
         renderOrderList()
 
         if (PrintIntakeService.isServiceRunning) {
@@ -2025,10 +2125,7 @@ class MainActivity : AppCompatActivity() {
                 minHeight = dp(52)
                 setOnClickListener {
                     dialog.dismiss()
-                    if (dbHelper.retryOrderNow(order.id)) {
-                        Toast.makeText(this@MainActivity, "Đã đưa phiếu $sourceRef lên đầu hàng chờ", Toast.LENGTH_SHORT).show()
-                        refreshServiceState()
-                    }
+                    retryWaitingOrder(order)
                 }
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             })
@@ -2163,6 +2260,34 @@ class MainActivity : AppCompatActivity() {
     private fun formatByteCount(byteCount: Int): String = when {
         byteCount < 1024 -> "$byteCount B"
         else -> String.format(Locale.getDefault(), "%.1f KB", byteCount / 1024.0)
+    }
+
+    private fun updateReceiptsBadge(actionNeeded: Int) {
+        updateReceiptsBadgeOn(navigationBar, actionNeeded)
+        updateReceiptsBadgeOn(navigationRail, actionNeeded)
+    }
+
+    private fun updateReceiptsBadgeOn(bar: NavigationBarView?, actionNeeded: Int) {
+        if (bar == null) return
+        if (actionNeeded > 0) {
+            bar.getOrCreateBadge(DESTINATION_RECEIPTS).apply {
+                isVisible = true
+                number = actionNeeded
+                backgroundColor = color(R.color.warning)
+                badgeTextColor = color(R.color.on_primary)
+            }
+        } else {
+            bar.removeBadge(DESTINATION_RECEIPTS)
+        }
+    }
+
+    private fun retryWaitingOrder(order: OrderQueueDbHelper.QueuedOrder) {
+        val sourceRef = OrderIdentity.displaySourceOrderRef(order.platform, order.sourceOrderRef)
+            ?: getString(R.string.receipt_internal_ref, order.id)
+        if (dbHelper.retryOrderNow(order.id)) {
+            Toast.makeText(this, "Đã đưa phiếu $sourceRef lên đầu hàng chờ", Toast.LENGTH_SHORT).show()
+            refreshServiceState()
+        }
     }
 
     private fun promptDismissWaitingOrder(order: OrderQueueDbHelper.QueuedOrder) {

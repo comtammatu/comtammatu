@@ -50,9 +50,16 @@
     <string name="order_row_metadata">%1$s · %2$s · %3$s</string>
 
     <string name="home_attention_title">Việc cần xử lý</string>
-    <string name="home_attention_description">Mở thẳng nhóm phiếu cần đối chiếu, không cần tìm trong một trang dài.</string>
+    <string name="home_attention_description">Phiếu lỗi lên trước; đơn đang gửi và lịch sử nằm ngay dưới.</string>
+    <string name="home_action_needed_title">Cần xử lý</string>
+    <string name="home_action_needed_description">Phiếu lỗi ánh xạ hoặc chưa rõ sàn. Gửi lại hoặc nhập tay.</string>
+    <string name="home_sending_title">Đang gửi</string>
+    <string name="home_sending_description">Phiếu hợp lệ đang chờ POS hoặc thử lại mạng.</string>
     <string name="waiting_orders_home_description">Phiếu chưa gửi xong hoặc cần thu ngân kiểm tra.</string>
     <string name="resolved_orders_home_description">Mã đơn sàn đã đối chiếu với phiếu POS hoặc nhập tay.</string>
+    <string name="home_background_title">Quyền chạy nền</string>
+    <string name="home_background_description">Ba bước trên Redmi; làm một lần để Agent tự mở lại sau khi khóa máy hoặc cập nhật.</string>
+    <string name="home_background_link_description">Mở ba bước Redmi nếu Agent tắt sau khi khóa máy.</string>
 
     <string name="logs_title">Nhật ký hoạt động</string>
     <string name="logs_description">Sự kiện mới nhất được tự động cuộn xuống cuối.</string>

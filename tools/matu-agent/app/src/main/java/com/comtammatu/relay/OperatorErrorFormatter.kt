@@ -22,6 +22,12 @@ object OperatorErrorFormatter {
                 "POS chưa phản hồi kịp. Agent sẽ tự gửi lại."
             "unable to resolve host" in normalized || "connection refused" in normalized ->
                 "Không kết nối được POS. Kiểm tra mạng và địa chỉ máy chủ."
+            "không nhận diện" in normalized || "nguồn sàn" in normalized ->
+                "Chưa rõ sàn gửi phiếu. Mở phiếu để kiểm tra, hoặc nhập tay nếu đơn đã lên POS."
+            "chưa hỗ trợ gửi trực tiếp" in normalized ->
+                "Nguồn này chưa nhận trực tiếp trên Redmi. Nhập tay nếu đơn đã lên POS."
+            "đang tắt trong cấu hình" in normalized ->
+                "Nguồn này đang tắt. Bật lại ở Thiết bị rồi gửi lại, hoặc nhập tay."
             Regex("http 4\\d\\d").containsMatchIn(normalized) ->
                 "POS từ chối tiếp nhận đơn. Kiểm tra nội dung và xử lý thủ công trước khi gửi lại."
             else -> "Chưa chuyển được đơn lên POS. Kiểm tra kết nối; Agent sẽ tự gửi lại."

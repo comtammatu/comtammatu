@@ -2,7 +2,9 @@ package com.comtammatu.relay
 
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class EscPosRasterDecoderTest {
@@ -44,5 +46,21 @@ class EscPosRasterDecoderTest {
                 byteArrayOf(0x1D, 0x76, 0x30, 0x00, 0xFF.toByte(), 0x7F, 0xFF.toByte(), 0x7F)
             )
         )
+        assertTrue(EscPosRasterDecoder.hasDecodableRaster(receiptFixture()))
+        assertFalse(
+            EscPosRasterDecoder.hasDecodableRaster(
+                byteArrayOf(0x1D, 0x76, 0x30, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01)
+            )
+        )
     }
+
+    private fun receiptFixture(): ByteArray = byteArrayOf(
+        0x1B, 0x40,
+        0x1D, 0x76, 0x30, 0x00,
+        0x01, 0x00,
+        0x02, 0x00,
+        0b1010_0000.toByte(),
+        0b0101_0000.toByte(),
+        0x1D, 0x56, 0x00
+    )
 }

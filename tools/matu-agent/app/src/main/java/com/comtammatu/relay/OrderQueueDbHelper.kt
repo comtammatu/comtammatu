@@ -559,11 +559,13 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         return list
     }
 
-    fun reclassifyOrder(orderId: Long, platform: String, receiptText: String): Boolean {
+    fun reclassifyOrder(orderId: Long, platform: String, receiptText: String?): Boolean {
         val values = ContentValues().apply {
             put(COLUMN_PLATFORM, platform)
-            put(COLUMN_RECEIPT_TEXT, receiptText)
-            put(COLUMN_SOURCE_ORDER_REF, OrderIdentity.extractSourceOrderRef(receiptText))
+            if (receiptText != null) {
+                put(COLUMN_RECEIPT_TEXT, receiptText)
+                put(COLUMN_SOURCE_ORDER_REF, OrderIdentity.extractSourceOrderRef(receiptText))
+            }
             put(COLUMN_STATUS, STATUS_PENDING)
             putNull(COLUMN_LAST_ERROR)
             put(COLUMN_NEXT_RETRY_AT, 0)

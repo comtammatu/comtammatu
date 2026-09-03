@@ -79,12 +79,14 @@ class PrintIntakeService : Service() {
         printerDiscovery = PrinterDiscovery(this)
         AgentNotifications.ensureChannels(this)
 
-        // Recover raster-only receipts before entering the normal retry loop.
+        // Recover unclassified rasters in parallel so OCR cannot delay retries.
         serviceScope.launch {
             dispatcher.recoverUnclassifiedReceipts(
                 receiptTextRecognizer,
                 ::isPlatformEnabled
             )
+        }
+        serviceScope.launch {
             dispatcher.startRetryLoop()
         }
     }
@@ -284,8 +286,9 @@ class PrintIntakeService : Service() {
                 serviceScope.launch {
                     var receiptText: String? = null
                     var platform = DeliveryPlatformDetector.detect(rawBytes)
+                    val hasRaster = EscPosRasterDecoder.hasDecodableRaster(rawBytes)
 
-                    if (platform == null && EscPosRasterDecoder.decodeLargest(rawBytes) != null) {
+                    if (AgentOcrPolicy.shouldRunOcr(platform, hasRaster)) {
                         AppLogger.i("OCR", "Phiếu là ảnh; đang đọc chữ trực tiếp trên thiết bị...")
                         try {
                             receiptText = receiptTextRecognizer.recognize(rawBytes)
