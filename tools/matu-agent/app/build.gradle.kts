@@ -11,8 +11,8 @@ android {
         applicationId = "com.comtammatu.relay"
         minSdk = 21
         targetSdk = 34
-        versionCode = 22
-        versionName = "1.6.8"
+        versionCode = 23
+        versionName = "1.6.9"
     }
 
     buildTypes {

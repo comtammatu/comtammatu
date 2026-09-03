@@ -14,7 +14,7 @@ Má Tư Agent biến một máy Android thông thường thành điểm nhận p
 
 ## Chạy nền và cảnh báo đơn mới trên Redmi
 
-Má Tư Agent 1.6.8 dùng foreground service thường trực. Khi thu ngân đã bấm **Bật nhận đơn**, Agent ghi nhớ trạng thái này và tự mở lại sau khi điện thoại khởi động hoặc APK được cập nhật. Khi màn hình tắt, Agent giữ tiến trình nhận phiếu hoạt động; nếu một địa chỉ listen lỗi, địa chỉ còn lại vẫn nhận phiếu, và Agent tự mở lại cổng khi không còn socket nào. Phiên TCP của app sàn được giữ như máy in mạng thật: Agent không đóng vì im lặng, chỉ đóng khi ShopeeFood tự ngắt, lỗi I/O, hoặc thu ngân bấm **Dừng nhận đơn**. Thông báo **Má Tư Agent đang nhận đơn** phải luôn có trong vùng thông báo khi dịch vụ đang chạy.
+Má Tư Agent 1.6.9 dùng foreground service thường trực. Khi thu ngân đã bấm **Bật nhận đơn**, Agent ghi nhớ trạng thái này và tự mở lại sau khi điện thoại khởi động hoặc APK được cập nhật. Khi màn hình tắt, Agent giữ tiến trình nhận phiếu hoạt động; nếu một địa chỉ listen lỗi, địa chỉ còn lại vẫn nhận phiếu, và Agent tự mở lại cổng khi không còn socket nào. Phiên TCP của app sàn được giữ như máy in mạng thật: Agent không đóng vì im lặng, chỉ đóng khi ShopeeFood tự ngắt, lỗi I/O, hoặc thu ngân bấm **Dừng nhận đơn**. Thông báo **Má Tư Agent đang nhận đơn** phải luôn có trong vùng thông báo khi dịch vụ đang chạy.
 
 Kênh **Đơn mới** là kênh riêng có mức ưu tiên cao. Khi nhận một phiếu mới hợp lệ, Agent phát âm thanh, rung và hiện thẻ heads-up trên ứng dụng đang mở. Android 14 không cho ứng dụng bán hàng thông thường chiếm toàn màn hình như ứng dụng gọi điện/báo thức, vì vậy Agent dùng heads-up chính thức thay cho full-screen intent. Bấm **Gửi thử cảnh báo nổi** để xác nhận cấu hình mà không tạo đơn POS.
 

@@ -68,6 +68,7 @@ test("ShopeeFood mapping: normalizeMenuName normalizes accents and case", () => 
   assert.equal(normalizeMenuName("Sườn Cốt Lết"), "suon cot let");
   assert.equal(normalizeMenuName("Trà đá"), "tra da");
   assert.equal(normalizeMenuName("Cơm Tấm Chả"), "com tam cha");
+  assert.equal(normalizeMenuName("Cơmn thêm"), "com them");
   assert.equal(SHOPEE_MENU_MAPPING["SPF_ITEM_SUON_COT_LET"]?.name, "Sườn Cốt Lết");
 });
 
@@ -482,19 +483,49 @@ test("ShopeeFood mapping: maps OCR-glued cutlery and drops receipt-footer notes"
 });
 
 test("ShopeeFood mapping: resolves extra rice to the real POS menu name", () => {
+  const catalog = [
+    ...MOCK_DB_ITEMS,
+    { id: 9, name: "Cơm Thêm", base_price: 6000 },
+  ];
+
   const transformed = transformShopeeOrderPayload(
     {
       orderId: "12345-333333333",
       items: [{ name: "Cơm thêm", quantity: 1, price: 6000 }],
     },
-    [
-      ...MOCK_DB_ITEMS,
-      { id: 9, name: "Cơm Thêm", base_price: 6000 },
-    ],
+    catalog,
   );
 
   assert.equal(transformed.items[0]?.menu_item_id, 9);
   assert.equal(transformed.items[0]?.item_name, "Cơm Thêm");
+
+  const ocrTypo = transformShopeeOrderPayload(
+    {
+      orderId: "12345-333333334",
+      items: [{ name: "Cơmn thêm", quantity: 1, price: 6000 }],
+    },
+    catalog,
+  );
+  assert.equal(ocrTypo.items[0]?.menu_item_id, 9);
+  assert.equal(ocrTypo.items[0]?.item_name, "Cơm Thêm");
+
+  const ocrSide = transformShopeeOrderPayload(
+    {
+      orderId: "12345-333333335",
+      items: [
+        {
+          itemId: "SPF_ITEM_SUON_COT_LET",
+          name: "Sườn Cốt Lết",
+          quantity: 1,
+          options: [{ name: "Cơmn thêm", price: 6000 }],
+        },
+      ],
+    },
+    catalog,
+  );
+  assert.deepEqual(ocrSide.items[0]?.sides, [
+    { side_item_id: 9, name: "Cơm Thêm", price: 6000, quantity: 1 },
+  ]);
 });
 
 test("ShopeeFood transformation: maps the extra-rice option to a priced POS side", () => {
