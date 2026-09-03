@@ -11,7 +11,7 @@
 | Card payment | VNPay | — | **Đã loại bỏ (D012)** |
 | HĐĐT | Viettel S-invoice | — | Finance |
 | BHXH | iBHXH / VNPT-BHXH | Manual portal | Nhân sự & tiền lương |
-| TTS vận hành POS/KDS | Vercel AI Gateway `openai/tts-1` `nova` | Beep only | Operational audio |
+| TTS vận hành POS/KDS | Vercel AI Gateway `openai/tts-1` `onyx` | Beep only | Operational audio |
 
 ## 1. Thanh toán — VietQR + SePay
 

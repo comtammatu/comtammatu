@@ -40,7 +40,7 @@ export const SYSTEM_SETTING_KEYS = {
   HR_MONTHLY_LEAVE_DAYS: "hr_monthly_leave_days",
   /** Tenant default TTS model: "openai/tts-1" | "fish-audio/s2.1-pro". */
   TTS_MODEL: "tts_model",
-  /** Tenant default TTS voice: "nova" | "alloy" | ... or empty for provider default. */
+  /** Tenant default TTS voice: "onyx" | "nova" | ... or empty for provider default. */
   TTS_VOICE: "tts_voice",
   /** "true" | "false" — enables waste tier risk classification and approval gates. */
   INVENTORY_WASTE_TIER_ENABLED: "inventory_waste_tier_enabled",
@@ -78,7 +78,7 @@ export const SYSTEM_SETTING_DEFAULTS: Record<SystemSettingKey, string> = {
   [SYSTEM_SETTING_KEYS.HR_STANDARD_WORKDAYS]: "26",
   [SYSTEM_SETTING_KEYS.HR_MONTHLY_LEAVE_DAYS]: "2",
   [SYSTEM_SETTING_KEYS.TTS_MODEL]: "openai/tts-1",
-  [SYSTEM_SETTING_KEYS.TTS_VOICE]: "nova",
+  [SYSTEM_SETTING_KEYS.TTS_VOICE]: "onyx",
   [SYSTEM_SETTING_KEYS.INVENTORY_WASTE_TIER_ENABLED]: "true",
   [SYSTEM_SETTING_KEYS.INVENTORY_WASTE_TIER1_THRESHOLD]: "500000",
   [SYSTEM_SETTING_KEYS.INVENTORY_WASTE_TIER2_THRESHOLD]: "2000000",

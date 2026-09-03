@@ -17,6 +17,12 @@ test("operational cloud TTS stays allowlisted, authenticated, and cloud-only", (
   const gateway = read("lib/operational-tts-gateway.ts");
   const config = read("lib/operational-tts-config.ts");
   const sharedTts = read("../../packages/shared/src/settings/tts.ts");
+  const branchAudioForm = read(
+    "app/(protected)/br/[branchId]/(operator)/settings/audio/audio-form.tsx",
+  );
+  const tenantAudioForm = read(
+    "app/(protected)/settings/(tenant)/audio/audio-form.tsx",
+  );
   const provider = read(
     "app/(protected)/br/[branchId]/pos/_providers/pos-desktop-provider.tsx",
   );
@@ -42,7 +48,11 @@ test("operational cloud TTS stays allowlisted, authenticated, and cloud-only", (
   assert.doesNotMatch(sharedTts, /tts-1-hd/);
   assert.match(sharedTts, /isAllowedTtsModel/);
   assert.match(sharedTts, /DEFAULT_TTS_MODEL/);
-  assert.match(sharedTts, /DEFAULT_TTS_VOICE/);
+  assert.match(sharedTts, /DEFAULT_TTS_VOICE = "onyx"/);
+  assert.match(branchAudioForm, /DEFAULT_TTS_VOICE/);
+  assert.match(tenantAudioForm, /DEFAULT_TTS_VOICE/);
+  assert.doesNotMatch(branchAudioForm, /setVoice\("nova"\)/);
+  assert.doesNotMatch(tenantAudioForm, /setVoice\("nova"\)/);
 
   assert.match(config, /resolveTtsConfig/);
   assert.match(config, /resolveTtsConfigFromRows/);
@@ -70,8 +80,16 @@ test("operational cloud TTS stays allowlisted, authenticated, and cloud-only", (
   assert.doesNotMatch(gateway, /process\.env\["AI_GATEWAY_API_KEY"\]/);
 
   const signal = read("lib/audio-signal.ts");
-  assert.match(signal, /VOICE_PLAYBACK_GAIN = 6;/);
+  assert.match(signal, /VOICE_PLAYBACK_GAIN = 3;/);
   assert.match(signal, /VOICE_PLAYBACK_RATE = 1;/);
+  assert.match(signal, /VOICE_NORMALIZE_PEAK = 0\.95;/);
+  assert.match(signal, /VOICE_HIGHPASS_HZ = 160;/);
+  assert.match(signal, /VOICE_PRESENCE_HZ = 3000;/);
+  assert.match(signal, /VOICE_PRESENCE_GAIN_DB = 8;/);
+  assert.match(signal, /voiceNormalizeScale/);
+  assert.match(signal, /createBiquadFilter/);
+  assert.match(signal, /type = "highpass"/);
+  assert.match(signal, /type = "peaking"/);
   assert.match(signal, /connectAlertCompressor\(context\);/);
   assert.match(signal, /connectVoiceLimiter\(context\);/);
   assert.doesNotMatch(

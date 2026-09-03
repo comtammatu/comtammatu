@@ -21,6 +21,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { Play } from "lucide-react";
 import { SettingsFormSection } from "@/components/settings-form-section";
 import {
+  DEFAULT_TTS_VOICE,
   OPENAI_TTS_VOICES,
   type TtsModel,
 } from "@comtammatu/shared/settings";
@@ -88,7 +89,7 @@ export function TenantAudioForm({
                 const newModel = val as TtsModel;
                 setModel(newModel);
                 if (newModel === "openai/tts-1" && !voice) {
-                  setVoice("nova");
+                  setVoice(DEFAULT_TTS_VOICE);
                 }
               }}
             >
@@ -117,7 +118,7 @@ export function TenantAudioForm({
             <FieldLabel>{copy.voiceLabel}</FieldLabel>
             <FieldContent>
               <Select
-                value={voice || "nova"}
+                value={voice || DEFAULT_TTS_VOICE}
                 onValueChange={(val) => setVoice(val)}
               >
                 <SelectTrigger>
@@ -126,12 +127,13 @@ export function TenantAudioForm({
                 <SelectContent>
                   {OPENAI_TTS_VOICES.map((v) => (
                     <SelectItem key={v} value={v}>
-                      {v} {v === "nova" ? "(mặc định)" : ""}
+                      {v} {v === DEFAULT_TTS_VOICE ? "(mặc định)" : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </FieldContent>
+            <FieldDescription>{copy.voiceHelp}</FieldDescription>
           </Field>
         ) : (
           <Field>

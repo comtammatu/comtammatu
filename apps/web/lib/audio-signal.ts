@@ -173,10 +173,10 @@ function connectAlertCompressor(context: AudioContext): DynamicsCompressorNode {
   return compressor;
 }
 
-/** Catch peaks after voice gain; the beep compressor at -18 dB ate prior boosts. */
+/** Catch peaks after presence boost; ceiling stays just under full scale. */
 function connectVoiceLimiter(context: AudioContext): DynamicsCompressorNode {
   const limiter = context.createDynamicsCompressor();
-  limiter.threshold.setValueAtTime(-3, context.currentTime);
+  limiter.threshold.setValueAtTime(-0.8, context.currentTime);
   limiter.knee.setValueAtTime(2, context.currentTime);
   limiter.ratio.setValueAtTime(20, context.currentTime);
   limiter.attack.setValueAtTime(0.002, context.currentTime);
@@ -217,10 +217,84 @@ export function playAppSignal(tone: SignalTone, force = false): void {
   }
 }
 
-/** nova MP3 stays well below square beeps; boost then peak-limit. */
-export const VOICE_PLAYBACK_GAIN = 6;
-/** Recorded nova speed. Do not pitch-shift clips with playbackRate. */
+/** After peak-normalize + presence EQ; limiter holds the ceiling. */
+export const VOICE_PLAYBACK_GAIN = 3;
+/** Recorded clip speed. Do not pitch-shift clips with playbackRate. */
 export const VOICE_PLAYBACK_RATE = 1;
+export const VOICE_NORMALIZE_PEAK = 0.95;
+export const VOICE_HIGHPASS_HZ = 160;
+export const VOICE_PRESENCE_HZ = 3000;
+export const VOICE_PRESENCE_GAIN_DB = 8;
+
+export function voiceNormalizeScale(
+  peak: number,
+  targetPeak = VOICE_NORMALIZE_PEAK,
+): number {
+  if (!Number.isFinite(peak) || peak < 0.01 || peak >= targetPeak) return 1;
+  return targetPeak / peak;
+}
+
+function peakNormalizeAudioBuffer(buffer: AudioBuffer): void {
+  let peak = 0;
+  for (let channel = 0; channel < buffer.numberOfChannels; channel += 1) {
+    const data = buffer.getChannelData(channel);
+    for (let index = 0; index < data.length; index += 1) {
+      const sample = Math.abs(data[index] ?? 0);
+      if (sample > peak) peak = sample;
+    }
+  }
+  const scale = voiceNormalizeScale(peak);
+  if (scale === 1) return;
+  for (let channel = 0; channel < buffer.numberOfChannels; channel += 1) {
+    const data = buffer.getChannelData(channel);
+    for (let index = 0; index < data.length; index += 1) {
+      data[index] = (data[index] ?? 0) * scale;
+    }
+  }
+}
+
+function connectVoicePlaybackChain(context: AudioContext): {
+  input: AudioNode;
+  disconnect: () => void;
+} {
+  const highpass = context.createBiquadFilter();
+  highpass.type = "highpass";
+  highpass.frequency.setValueAtTime(VOICE_HIGHPASS_HZ, context.currentTime);
+  highpass.Q.setValueAtTime(0.707, context.currentTime);
+
+  const presence = context.createBiquadFilter();
+  presence.type = "peaking";
+  presence.frequency.setValueAtTime(VOICE_PRESENCE_HZ, context.currentTime);
+  presence.gain.setValueAtTime(VOICE_PRESENCE_GAIN_DB, context.currentTime);
+  presence.Q.setValueAtTime(1, context.currentTime);
+
+  const compressor = context.createDynamicsCompressor();
+  compressor.threshold.setValueAtTime(-24, context.currentTime);
+  compressor.knee.setValueAtTime(10, context.currentTime);
+  compressor.ratio.setValueAtTime(6, context.currentTime);
+  compressor.attack.setValueAtTime(0.004, context.currentTime);
+  compressor.release.setValueAtTime(0.12, context.currentTime);
+
+  const gainNode = context.createGain();
+  gainNode.gain.setValueAtTime(VOICE_PLAYBACK_GAIN, context.currentTime);
+
+  const limiter = connectVoiceLimiter(context);
+  highpass.connect(presence);
+  presence.connect(compressor);
+  compressor.connect(gainNode);
+  gainNode.connect(limiter);
+
+  return {
+    input: highpass,
+    disconnect() {
+      highpass.disconnect();
+      presence.disconnect();
+      compressor.disconnect();
+      gainNode.disconnect();
+      limiter.disconnect();
+    },
+  };
+}
 
 export function playAlertAudioBuffer(buffer: ArrayBuffer): {
   stopped: Promise<void>;
@@ -232,7 +306,7 @@ export function playAlertAudioBuffer(buffer: ArrayBuffer): {
   }
 
   let source: AudioBufferSourceNode | null = null;
-  let limiter: DynamicsCompressorNode | null = null;
+  let chain: { input: AudioNode; disconnect: () => void } | null = null;
   let stopped = false;
 
   const stoppedPromise = context.decodeAudioData(buffer.slice(0)).then(
@@ -242,16 +316,14 @@ export function playAlertAudioBuffer(buffer: ArrayBuffer): {
           resolve();
           return;
         }
-        limiter = connectVoiceLimiter(context);
-        const gainNode = context.createGain();
-        gainNode.gain.setValueAtTime(VOICE_PLAYBACK_GAIN, context.currentTime);
+        peakNormalizeAudioBuffer(audioBuffer);
+        chain = connectVoicePlaybackChain(context);
         source = context.createBufferSource();
         source.buffer = audioBuffer;
         source.playbackRate.value = VOICE_PLAYBACK_RATE;
-        source.connect(gainNode);
-        gainNode.connect(limiter);
+        source.connect(chain.input);
         source.onended = () => {
-          limiter?.disconnect();
+          chain?.disconnect();
           resolve();
         };
         source.start(context.currentTime);
@@ -268,7 +340,7 @@ export function playAlertAudioBuffer(buffer: ArrayBuffer): {
       } catch {
         // Already stopped.
       }
-      limiter?.disconnect();
+      chain?.disconnect();
     },
   };
 }

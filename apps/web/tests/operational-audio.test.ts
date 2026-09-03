@@ -3,8 +3,13 @@ import { test } from "node:test";
 import {
   APP_SIGNAL_PATTERNS,
   getAppSignalDurationMs,
+  VOICE_HIGHPASS_HZ,
+  VOICE_NORMALIZE_PEAK,
   VOICE_PLAYBACK_GAIN,
   VOICE_PLAYBACK_RATE,
+  VOICE_PRESENCE_GAIN_DB,
+  VOICE_PRESENCE_HZ,
+  voiceNormalizeScale,
 } from "../lib/audio-signal";
 import {
   audioModeHasBeep,
@@ -216,9 +221,16 @@ test("signal duration includes every pulse and the gaps between them", () => {
   assert.equal(getAppSignalDurationMs("pos-payment-received"), 580);
 });
 
-test("cloud voice plays nova clips louder at recorded speed", () => {
-  assert.equal(VOICE_PLAYBACK_GAIN, 6);
+test("cloud voice plays onyx clips louder and clearer at recorded speed", () => {
   assert.equal(VOICE_PLAYBACK_RATE, 1);
+  assert.equal(VOICE_NORMALIZE_PEAK, 0.95);
+  assert.equal(VOICE_HIGHPASS_HZ, 160);
+  assert.equal(VOICE_PRESENCE_HZ, 3000);
+  assert.equal(VOICE_PRESENCE_GAIN_DB, 8);
+  assert.equal(VOICE_PLAYBACK_GAIN, 3);
+  assert.equal(voiceNormalizeScale(0.19), 0.95 / 0.19);
+  assert.equal(voiceNormalizeScale(0.95), 1);
+  assert.equal(voiceNormalizeScale(0.005), 1);
 });
 
 test("cloud TTS allowlist stores POS table lines and spoken amounts", () => {

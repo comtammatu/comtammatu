@@ -93,8 +93,8 @@ supplies the user gesture for `AudioContext`.
 ## Voice / surfaces / API
 
 Engine: AI SDK `generateSpeech` + Gateway TTS (`openai/tts-1` or `fish-audio/s2.1-pro`,
-resolved via `branch_settings` -> `system_settings` -> `openai/tts-1 nova` fallback)
-at recorded speed, gain-boosted then peak-limited (no OS TTS). Fetch with the beep
+resolved via `branch_settings` -> `system_settings` -> `openai/tts-1 onyx` fallback)
+at recorded speed, peak-normalized, presence-EQ'd, then peak-limited (no OS TTS). Fetch with the beep
 (10s client / 8s Gateway). Play after 120 ms. Miss → beep only.
 Allowlisted templates only. Live speak (`live=1`) is the only Gateway path;
 prefetch warms device cache only. Not 1–99 or totals.

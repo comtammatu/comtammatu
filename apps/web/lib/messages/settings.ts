@@ -1051,6 +1051,7 @@ export const settings = {
     modelFishAudioS2Pro: "Fish Audio (s2-pro)",
     modelFishAudioS1: "Fish Audio (s1)",
     voiceLabel: "Giọng đọc",
+    voiceHelp: "Onyx to và rõ hơn trên bếp so với nova.",
     voiceDefaultFishAudio: "Mặc định (Fish Audio)",
     customVoiceLabel: "Mã giọng đọc (tùy chọn)",
     customVoiceHelp: "Để trống để dùng giọng mặc định.",

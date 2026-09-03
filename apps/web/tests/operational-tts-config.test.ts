@@ -9,6 +9,11 @@ import {
   SYSTEM_SETTING_KEYS,
 } from "@comtammatu/shared/settings";
 
+test("default OpenAI voice is onyx for kitchen projection", () => {
+  assert.equal(DEFAULT_TTS_VOICE, "onyx");
+  assert.equal(DEFAULT_TTS_MODEL, "openai/tts-1");
+});
+
 test("allowlist validation", () => {
   assert.equal(ALLOWED_TTS_MODELS.includes("openai/tts-1"), true);
   assert.equal(ALLOWED_TTS_MODELS.includes("fish-audio/s2.1-pro"), true);

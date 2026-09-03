@@ -8,14 +8,14 @@ export const ALLOWED_TTS_MODELS = [
 export type TtsModel = (typeof ALLOWED_TTS_MODELS)[number];
 
 export const DEFAULT_TTS_MODEL: TtsModel = "openai/tts-1";
-export const DEFAULT_TTS_VOICE = "nova";
+export const DEFAULT_TTS_VOICE = "onyx";
 
 export const OPENAI_TTS_VOICES = [
-  "nova",
-  "alloy",
-  "echo",
-  "fable",
   "onyx",
+  "echo",
+  "alloy",
+  "nova",
+  "fable",
   "shimmer",
 ] as const;
 
