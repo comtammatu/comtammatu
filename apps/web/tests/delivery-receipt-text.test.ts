@@ -9,6 +9,7 @@ import {
 
 test("receipt footer detection covers production OCR misspellings", () => {
   assert.equal(isReceiptFooterLine("Tổng mớn 2"), true);
+  assert.equal(isReceiptFooterLine("Tổng mớón"), true);
   assert.equal(isReceiptFooterLine("Tống tiền món (giá gốc) 82.000d"), true);
   assert.equal(isReceiptFooterLine("Giảm giả mồn -27.000d"), true);
   assert.equal(isReceiptFooterLine("Chiết khấu -15.703d"), true);
@@ -28,6 +29,12 @@ test("customer-note extraction keeps the kitchen request and drops totals", () =
     "Nước mắ m không cay giúp em a",
   );
   assert.equal(extractCustomerNoteFromLine("Không đồ chua"), null);
+  assert.equal(
+    extractCustomerNoteFromLine(
+      "Ghi chú: Không lấy đồ chua xin nhiều cà chu a mỡ hành Tổng mớón",
+    ),
+    "Không lấy đồ chua xin nhiều cà chua mỡ hành",
+  );
 });
 
 test("item-note sanitizer reproduces production Shopee footer leaks", () => {
@@ -44,6 +51,12 @@ test("item-note sanitizer reproduces production Shopee footer leaks", () => {
     "Tùy chọn: Canh theo ngày",
   );
   assert.equal(sanitizeDeliveryItemNote("Không đồ chua"), "Không đồ chua");
+  assert.equal(
+    sanitizeDeliveryItemNote(
+      "Ghi chú: Không lấy đồ chua xin nhiều cà chu a mỡ hành Tổng mớón",
+    ),
+    "Không lấy đồ chua xin nhiều cà chua mỡ hành",
+  );
   assert.equal(sanitizeDeliveryItemNote("Tùy chọn: IxDụng cụ ăn uống"), "Tùy chọn: Dụng cụ ăn uống");
 });
 

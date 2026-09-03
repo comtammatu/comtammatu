@@ -1,10 +1,10 @@
 /** OCR and receipt-footer helpers shared by the relay parser and menu mapping. */
 
 const RECEIPT_FOOTER_LINE =
-  /^(?:tổng\s*m[oóớ]n|tống\s*ti[eêểề]n|tổng\s*cộng|tổng\s*ti[eêểề]n|tạm\s*tính|thành\s*tiền|thanh\s*toán|chiết\s*khấu|giảm\s*gi[aáả])/i;
+  /^(?:tổng\s*m[oóớòôốộơỡ]*n|tống\s*ti[eêểề]n|tổng\s*cộng|tổng\s*ti[eêểề]n|tạm\s*tính|thành\s*tiền|thanh\s*toán|chiết\s*khấu|giảm\s*gi[aáả])/i;
 
 const CUSTOMER_NOTE_LABEL =
-  /ghi\s*ch[uúủ]\s*(?:của\s*)?khách(?:\s*hàng)?[:\s]+/i;
+  /ghi\s*ch[uúủ]\s*(?:(?:của\s*)?khách(?:\s*hàng)?[:\s]+|:\s*)/i;
 
 const OPTION_NOTE = /tùy\s*chọn:\s*([^•]+)/gi;
 
@@ -60,10 +60,11 @@ export function sanitizeDeliveryItemNote(
 function stripReceiptFooterTokens(value: string): string {
   return value
     .replace(
-      /(?:tổng\s*m[oóớ]n|tống\s*ti[eêểề]n|tổng\s*cộng|tổng\s*ti[eêểề]n|tạm\s*tính|thành\s*tiền|chiết\s*khấu|giảm\s*gi[aáả]|giá\s*gốc)\S*/gi,
+      /(?:tổng\s*m[oóớòôốộơỡ]*n|tống\s*ti[eêểề]n|tổng\s*cộng|tổng\s*ti[eêểề]n|tạm\s*tính|thành\s*tiền|chiết\s*khấu|giảm\s*gi[aáả]|giá\s*gốc)\S*/gi,
       " ",
     )
     .replace(/[-+]?\d[\d.,]*\s*(?:đ|d|vnd)?/gi, " ")
+    .replace(/\bcà\s*chu\s+a\b/gi, "cà chua")
     .replace(/[•·]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();

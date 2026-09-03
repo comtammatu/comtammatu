@@ -88,11 +88,15 @@ object RasterReceiptTextNormalizer {
         RegexOption.IGNORE_CASE
     )
     private val receiptFooter = Regex(
-        "^(?:Tổng\\s*m[oóớ]n|Tống\\s*ti[eêểề]n|Tổng\\s*cộng|Tổng\\s*ti[eêểề]n|Tạm\\s*tính|Thành\\s*tiền|Thanh\\s*toán|Chiết\\s*khấu|Giảm\\s*gi[aáả])",
+        "^(?:Tổng\\s*m[oóớòôốộơỡ]*n|Tống\\s*ti[eêểề]n|Tổng\\s*cộng|Tổng\\s*ti[eêểề]n|Tạm\\s*tính|Thành\\s*tiền|Thanh\\s*toán|Chiết\\s*khấu|Giảm\\s*gi[aáả])",
         RegexOption.IGNORE_CASE
     )
     private val customerNoteLabel = Regex(
-        "ghi\\s*ch[uúủ]\\s*(?:của\\s*)?khách(?:\\s*hàng)?[:\\s]*(.*)",
+        "^ghi\\s*ch[uúủ](?:\\s*(?:của\\s*)?khách(?:\\s*hàng)?)?\\s*:?\\s*(.*)$",
+        RegexOption.IGNORE_CASE
+    )
+    private val gluedFooterInNote = Regex(
+        "\\s*(?:Tổng\\s*m[oóớòôốộơỡ]*n)\\S*",
         RegexOption.IGNORE_CASE
     )
 
@@ -129,16 +133,12 @@ object RasterReceiptTextNormalizer {
                         break
                     }
 
-                    val customerNote = customerNoteLabel.find(detail)?.groupValues?.get(1)?.trim()
+                    val customerNote = cleanCustomerNote(detail)
                     if (customerNote != null || receiptFooter.containsMatchIn(detail)) {
                         if (!customerNote.isNullOrBlank()) notes.add(customerNote)
                         var scan = cursor + 1
                         while (scan < lines.size && !numberedItem.matches(lines[scan])) {
-                            val laterNote = customerNoteLabel
-                                .find(lines[scan])
-                                ?.groupValues
-                                ?.get(1)
-                                ?.trim()
+                            val laterNote = cleanCustomerNote(lines[scan])
                             if (!laterNote.isNullOrBlank()) notes.add(laterNote)
                             scan += 1
                         }
@@ -196,7 +196,13 @@ object RasterReceiptTextNormalizer {
                     output.addAll(standaloneSoups.map { soup ->
                         "${quantity * soup.quantity}x ${soup.name} 1"
                     })
-                    index = cursor
+                    index = if (
+                        cursor < lines.size && cleanCustomerNote(lines[cursor]) != null
+                    ) {
+                        cursor + 1
+                    } else {
+                        cursor
+                    }
                     continue
                 }
             }
@@ -208,11 +214,22 @@ object RasterReceiptTextNormalizer {
         return output.joinToString("\n")
     }
 
+    private fun cleanCustomerNote(line: String): String? {
+        val captured = customerNoteLabel.find(line)?.groupValues?.get(1) ?: return null
+        return captured
+            .replace(gluedFooterInNote, "")
+            .replace(Regex("cà\\s*chu\\s+a", RegexOption.IGNORE_CASE), "cà chua")
+            .trim()
+    }
+
     private fun normalizeFieldSpelling(line: String): String = line
         .replace(Regex("^M[āa]\\s*đơn", RegexOption.IGNORE_CASE)) { match ->
             if (match.value.firstOrNull()?.isUpperCase() == true) "Mã đơn" else "mã đơn"
         }
         .replace(Regex("\\bCdm\\b", RegexOption.IGNORE_CASE)) { match ->
+            if (match.value.firstOrNull()?.isUpperCase() == true) "Cơm" else "cơm"
+        }
+        .replace(Regex("\\bCơmn\\b", RegexOption.IGNORE_CASE)) { match ->
             if (match.value.firstOrNull()?.isUpperCase() == true) "Cơm" else "cơm"
         }
         .replace(Regex("\\bti[ểễ]n\\b", RegexOption.IGNORE_CASE)) { match ->

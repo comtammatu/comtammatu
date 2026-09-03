@@ -87,6 +87,24 @@ class ReceiptOcrNormalizerTest {
     }
 
     @Test
+    fun `repairs the extra-n OCR typo in extra rice without inventing a dish`() {
+        val normalized = RasterReceiptTextNormalizer.normalize(
+            """
+                ShopeeFood
+                Mã đơn hàng
+                25086-333333336
+                1. Cơmn thêm
+                X1 6.000d
+                Tổng món 1
+            """.trimIndent()
+        )
+
+        assertTrue(normalized.contains("1x Cơm thêm 6.000"))
+        assertTrue(!normalized.contains("Cơmn"))
+        assertTrue(!normalized.contains("Cơm Tấm Thêm"))
+    }
+
+    @Test
     fun `accepts a detached item price when OCR drops the quantity marker`() {
         val normalized = RasterReceiptTextNormalizer.normalize(
             """
@@ -169,6 +187,24 @@ class ReceiptOcrNormalizerTest {
         assertTrue(normalized.contains("Ghi chú: Nước mắm không cay giúp em"))
         assertTrue(!normalized.contains("Ghi chú: Tổng"))
         assertTrue(!normalized.contains("Ghi chú: Chiết"))
+    }
+
+    @Test
+    fun `keeps the pickle tomato oil note and drops a glued Tong mon footer`() {
+        val normalized = RasterReceiptTextNormalizer.normalize(
+            """
+                ShopeeFood
+                Mã đơn hàng
+                29086-503463626
+                1. Cơm Sườn Cốt Lết
+                X1 54.000d
+                Ghi chú: Không lấy đồ chua xin nhiều cà chu a mỡ hành Tổng mớón
+            """.trimIndent()
+        )
+
+        assertTrue(normalized.contains("Ghi chú: Không lấy đồ chua xin nhiều cà chua mỡ hành"))
+        assertTrue(!normalized.contains("Tổng mớón"))
+        assertTrue(!normalized.contains("Ghi chú: Ghi chú"))
     }
 
     @Test
