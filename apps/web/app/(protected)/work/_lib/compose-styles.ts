@@ -30,7 +30,7 @@ export const WORK_KANBAN_DESKTOP_GRID = "hidden gap-3 md:grid md:grid-cols-5";
 
 /** Single Kanban column layout (Frame supplies rounded/border chrome). */
 export const WORK_KANBAN_COLUMN =
-  "flex min-h-48 flex-col gap-2 bg-muted/30 p-2";
+  "flex min-h-96 flex-col gap-2.5 bg-muted/30 p-2.5";
 
 /** Task chip inside a calendar day cell. */
 export const WORK_TASK_CHIP =

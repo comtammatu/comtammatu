@@ -1542,7 +1542,7 @@ export async function listAvailablePromotions(
     )
     .eq("tenant_id", scoped.ctx.claims.tenant_id)
     .eq("status", "active")
-    .order("priority", { ascending: false });
+    .order("created_at", { ascending: false });
 
   if (error) {
     return { success: false, error: PROMOTIONS_VI.loadFailed };

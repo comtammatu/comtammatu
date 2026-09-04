@@ -6,10 +6,12 @@ import {
   Check as IconCheck,
   CheckCircle2 as IconCheckCircle2,
   ChevronDown as IconChevronDown,
+  Clock as IconClock,
   ExternalLink as IconExternalLink,
   Plus as IconPlus,
   User as IconUser,
 } from "lucide-react";
+import { cn } from "@comtammatu/ui";
 import {
   formatISODateParts,
   formatVNDate,
@@ -42,10 +44,7 @@ import {
   type WorkTaskStatus,
 } from "../actions";
 import { workCopy } from "@lib/messages/work";
-import {
-  WORK_KANBAN_COLUMN,
-  WORK_TASK_VIEW_SHELL,
-} from "../_lib/compose-styles";
+import { WORK_KANBAN_COLUMN } from "../_lib/compose-styles";
 import { workHref, type ParsedWorkParams } from "../_lib/params";
 import { resolveWorkTaskDocumentLink } from "../_lib/document-links";
 import { WorkCreateDialog } from "./work-create-dialog";
@@ -220,6 +219,7 @@ export function WorkBoard({
 
   const [collapsedDone, setCollapsedDone] = useState<Record<number, boolean>>({});
   const [dragOverCol, setDragOverCol] = useState<number | null>(null);
+  const [draggingId, setDraggingId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
   const controlSize = useFormControlSize();
 
@@ -319,6 +319,7 @@ export function WorkBoard({
       formatISODateParts(getVNDateParts(new Date(task.dueAt))) === todayStr;
 
     const statusBadge = getStatusBadgeProps(task.status);
+    const isDragging = draggingId === task.id;
 
     return (
       <Item
@@ -326,23 +327,27 @@ export function WorkBoard({
         variant="outline"
         draggable={!isPending}
         onDragStart={(event) => {
+          setDraggingId(task.id);
           event.dataTransfer.setData("text/task-id", String(task.id));
           event.dataTransfer.effectAllowed = "move";
         }}
-        className={`cursor-grab bg-background active:cursor-grabbing ${
-          isIncident ? "border-destructive" : ""
-        }`}
+        onDragEnd={() => setDraggingId(null)}
+        className={cn(
+          "cursor-grab bg-card p-3 shadow-2xs transition-colors hover:border-primary/20 active:cursor-grabbing",
+          isIncident && "border-destructive",
+          isDragging && "opacity-40 ring-2 ring-primary/20",
+        )}
       >
-        <ItemContent className="gap-1.5">
-          <div className="flex flex-wrap items-start justify-between gap-1">
+        <ItemContent className="gap-2">
+          <div className="flex flex-wrap items-start justify-between gap-1.5">
             <div className="flex flex-wrap items-center gap-1">
               {isIncident ? (
-                <Badge variant="destructive" className="shrink-0">
+                <Badge variant="destructive" className="shrink-0 text-3xs font-semibold">
                   {workCopy.incidentBadge}
                 </Badge>
               ) : null}
               {subTag ? (
-                <Badge variant="outline" className="shrink-0 text-2xs">
+                <Badge variant="outline" className="shrink-0 text-3xs font-normal">
                   {subTag}
                 </Badge>
               ) : null}
@@ -352,7 +357,7 @@ export function WorkBoard({
                   target="_blank"
                   rel="noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-2xs font-medium text-primary hover:bg-primary/20 hover:underline"
+                  className="inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-3xs font-medium text-primary hover:bg-primary/20 hover:underline"
                 >
                   <span>{docLink.label}</span>
                   <IconExternalLink className="size-2.5" />
@@ -369,6 +374,7 @@ export function WorkBoard({
                       ? "secondary"
                       : "outline"
               }
+              className="shrink-0 text-3xs font-medium"
             >
               {workCopy.priorityLabels[task.priority]}
             </Badge>
@@ -378,30 +384,54 @@ export function WorkBoard({
             <Link
               href={workHref(params, { taskId: task.id })}
               scroll={false}
-              className="hover:underline"
+              className="line-clamp-2 transition-colors hover:text-primary"
             >
               {cleanTitle}
             </Link>
           </ItemTitle>
 
-          <ItemDescription className="flex flex-col gap-1.5 pt-0.5 text-xs">
-            <div className="flex flex-wrap items-center justify-between gap-1">
+          {task.description ? (
+            <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground/80">
+              {task.description}
+            </p>
+          ) : null}
+
+          <ItemDescription className="flex flex-col gap-2 border-t border-border/20 pt-2 text-xs">
+            <div className="flex items-center justify-between gap-1.5">
               {task.assigneeId ? (
-                <span className="inline-flex max-w-40 items-center gap-1 truncate text-muted-foreground">
-                  <IconUser className="size-3 shrink-0" />
-                  <span className="truncate">
+                <span className="inline-flex max-w-32 items-center gap-1.5 truncate text-xs text-muted-foreground">
+                  <span className="flex size-4.5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-3xs font-semibold">
+                    {(assigneeName ?? task.assigneeId).charAt(0).toUpperCase()}
+                  </span>
+                  <span className="truncate font-medium">
                     {assigneeName ?? task.assigneeId.slice(0, 8)}
                   </span>
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 text-2xs italic text-muted-foreground/50">
-                  <IconUser className="size-3 shrink-0 opacity-50" />
+                  <IconUser className="size-3 shrink-0 opacity-40" />
                   <span>{workCopy.unassigned}</span>
                 </span>
               )}
+
+              {task.dueAt ? (
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1 font-mono tabular-nums text-2xs px-1.5 py-0.5 rounded",
+                    isOverdue
+                      ? "font-semibold text-destructive bg-destructive/10"
+                      : isDueToday
+                        ? "font-semibold text-warning bg-warning/10"
+                        : "text-muted-foreground bg-muted/30",
+                  )}
+                >
+                  <IconClock className="size-2.5 shrink-0" />
+                  <span>{formatVNDate(task.dueAt)}</span>
+                </span>
+              ) : null}
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-1.5 border-t border-border/20 pt-1.5">
+            <div className="flex items-center justify-between gap-1.5 pt-0.5">
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={
@@ -452,20 +482,6 @@ export function WorkBoard({
                   })}
                 </DropdownMenuContent>
               </DropdownMenu>
-
-              {task.dueAt ? (
-                <span
-                  className={`font-mono tabular-nums text-xs ${
-                    isOverdue
-                      ? "font-medium text-destructive"
-                      : isDueToday
-                        ? "font-medium text-warning"
-                        : "text-muted-foreground"
-                  }`}
-                >
-                  {workCopy.due}: {formatVNDate(task.dueAt)}
-                </span>
-              ) : null}
             </div>
           </ItemDescription>
         </ItemContent>
@@ -489,9 +505,11 @@ export function WorkBoard({
     return (
       <Frame
         key={column.id}
-        className={`${WORK_KANBAN_COLUMN} w-80 min-w-72 shrink-0 md:flex-1 md:max-w-md ${
-          isDragOver ? "ring-2 ring-primary/20 bg-primary/10" : ""
-        }`}
+        className={cn(
+          WORK_KANBAN_COLUMN,
+          "w-80 min-w-80 shrink-0",
+          isDragOver && "ring-2 ring-primary/20 bg-primary/10",
+        )}
         onDragOver={(event) => {
           event.preventDefault();
           event.dataTransfer.dropEffect = "move";
@@ -510,18 +528,26 @@ export function WorkBoard({
           moveTaskDepartment(taskId, column.id);
         }}
       >
-        <header className="flex items-center justify-between gap-2 px-1 pb-1">
-          <h3 className="truncate text-sm font-semibold">{column.name}</h3>
-          <Badge variant={activeTasks.length > 0 ? "secondary" : "outline"}>
+        <header className="flex items-center justify-between gap-2 border-b border-border/30 px-1 pb-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="size-2 rounded-full bg-primary shrink-0" />
+            <h3 className="truncate text-sm font-semibold text-foreground">{column.name}</h3>
+          </div>
+          <Badge
+            variant={activeTasks.length > 0 ? "secondary" : "outline"}
+            className="tabular-nums font-mono text-xs px-2"
+          >
             {activeTasks.length}
           </Badge>
         </header>
 
         <div className="flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto pr-0.5">
           {activeTasks.length === 0 && doneTasks.length === 0 ? (
-            <div className="flex flex-1 items-center justify-center py-4 text-xs text-muted-foreground/60">
-              {workCopy.checklistEmpty}
-            </div>
+            <Frame className="flex flex-1 flex-col items-center justify-center border-dashed border-border/40 bg-transparent p-4 text-center">
+              <span className="text-xs text-muted-foreground/60">
+                {workCopy.checklistEmpty}
+              </span>
+            </Frame>
           ) : (
             activeTasks.map(renderCard)
           )}
@@ -596,7 +622,7 @@ export function WorkBoard({
     columns.find((c) => c.id === activeDeptId) ?? columns[0]!;
 
   return (
-    <div className={WORK_TASK_VIEW_SHELL}>
+    <div className="flex flex-col gap-3">
       <div className="flex flex-wrap gap-1.5 md:hidden">
         {columns.map((col) => {
           const colTasks = grouped.get(col.id) ?? [];
@@ -632,7 +658,7 @@ export function WorkBoard({
           : null}
       </div>
 
-      <div className="hidden gap-3 overflow-x-auto pb-4 md:flex">
+      <div className="hidden gap-3.5 overflow-x-auto pb-4 pt-1 md:flex">
         {columns.map((col) =>
           renderDepartmentColumn(col, grouped.get(col.id) ?? []),
         )}

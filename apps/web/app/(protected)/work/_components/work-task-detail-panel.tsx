@@ -22,9 +22,10 @@ import {
   Paperclip as IconPaperclip,
   Trash2 as IconTrash2,
 } from "lucide-react";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { useFormControlSize } from "@/components/form/control-size";
 import { confirm } from "@/components/confirm-dialog";
-import { AppDetailFooter, AppSection } from "@/components/surface";
+import { AppDetailFooter } from "@/components/surface";
 import {
   addWorkTaskComment,
   deleteWorkTaskAttachment,
@@ -302,49 +303,344 @@ export function WorkTaskDetailBody({ form }: { form: WorkTaskDetailForm }) {
   });
 
   return (
-    <div className="flex flex-col gap-4">
-      {docLink ? (
-        <Frame className="flex items-center justify-between gap-3 border-primary/20 bg-primary/10 p-3 text-sm">
-          <div className="flex items-center gap-2">
-            <IconFileText className="size-4 shrink-0 text-primary" />
-            <div>
-              <span className="block text-xs font-semibold uppercase tracking-wider text-primary">
-                {workCopy.relatedDocument}
-              </span>
-              <span className="font-medium">{docLink.label}</span>
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+      {/* Main Content Column */}
+      <div className="flex flex-col gap-5 lg:col-span-7">
+        {docLink ? (
+          <Frame className="flex items-center justify-between gap-3 border-primary/20 bg-primary/10 p-3 text-sm">
+            <div className="flex items-center gap-2">
+              <IconFileText className="size-4 shrink-0 text-primary" />
+              <div>
+                <span className="block text-xs font-semibold uppercase tracking-wider text-primary">
+                  {workCopy.relatedDocument}
+                </span>
+                <span className="font-medium">{docLink.label}</span>
+              </div>
             </div>
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-1.5"
-            render={<a href={docLink.href} target="_blank" rel="noreferrer" />}
-          >
-            <span>{docLink.label}</span>
-            <IconExternalLink className="size-3.5" />
-          </Button>
-        </Frame>
-      ) : null}
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              render={<a href={docLink.href} target="_blank" rel="noreferrer" />}
+            >
+              <span>{docLink.label}</span>
+              <IconExternalLink className="size-3.5" />
+            </Button>
+          </Frame>
+        ) : null}
 
-      <AppSection>
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="flex flex-col gap-3">
           <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium">{workCopy.titleLabel}</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {workCopy.titleLabel}
+            </span>
             <Input
               value={form.title}
               onChange={(event) => form.setTitle(event.target.value)}
+              className="text-base font-semibold"
             />
           </label>
 
           <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium">{workCopy.priorityLabel}</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {workCopy.descriptionLabel}
+            </span>
+            <Textarea
+              value={form.description}
+              onChange={(event) => form.setDescription(event.target.value)}
+              rows={4}
+              className="resize-y"
+            />
+          </label>
+        </div>
+
+        <Frame className="flex flex-col gap-3 bg-muted/30 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold">
+                {workCopy.checklistTitle}
+              </span>
+              {form.checklist.length > 0 ? (
+                <Badge variant="secondary" className="font-mono text-2xs">
+                  {form.checklist.filter((i) => i.isDone).length}/
+                  {form.checklist.length}
+                </Badge>
+              ) : null}
+            </div>
+          </div>
+
+          {form.checklist.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              {workCopy.checklistEmpty}
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {form.checklist.map((item) => (
+                <li key={item.id} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={item.isDone}
+                    disabled={form.isPending}
+                    onChange={(event) =>
+                      form.toggleChecklistItem(item, event.target.checked)
+                    }
+                  />
+                  <span
+                    className={
+                      item.isDone
+                        ? "line-through text-muted-foreground"
+                        : undefined
+                    }
+                  >
+                    {item.title}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Input
+              value={form.checklistTitle}
+              onChange={(event) => form.setChecklistTitle(event.target.value)}
+              placeholder={workCopy.checklistPlaceholder}
+              className="bg-background"
+            />
+            <Button
+              size={controlSize}
+              variant="outline"
+              disabled={
+                form.isPending || form.checklistTitle.trim().length === 0
+              }
+              onClick={form.addChecklistItem}
+            >
+              {workCopy.checklistAdd}
+            </Button>
+          </div>
+        </Frame>
+
+        <Frame className="flex flex-col gap-3 bg-muted/30 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold">
+                {workCopy.attachmentsTitle}
+              </span>
+              {form.attachments.length > 0 ? (
+                <Badge variant="secondary" className="font-mono text-2xs">
+                  {form.attachments.length}
+                </Badge>
+              ) : null}
+            </div>
+            <label className="inline-flex cursor-pointer items-center gap-2">
+              <input
+                type="file"
+                accept="image/*,.pdf"
+                className="sr-only"
+                disabled={form.isUploadingAttachment}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    form.handleUploadFile(file);
+                    e.target.value = "";
+                  }
+                }}
+              />
+              <Button
+                size={controlSize}
+                variant="outline"
+                disabled={form.isUploadingAttachment}
+                className="pointer-events-none gap-2"
+              >
+                <IconPaperclip className="size-4" />
+                <span>
+                  {form.isUploadingAttachment
+                    ? workCopy.attachmentUploading
+                    : workCopy.attachmentUpload}
+                </span>
+              </Button>
+            </label>
+          </div>
+
+          {form.attachments.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              {workCopy.attachmentsEmpty}
+            </p>
+          ) : (
+            <div className="grid gap-2 sm:grid-cols-2">
+              {form.attachments.map((item) => {
+                const isImg =
+                  item.contentType?.startsWith("image/") ||
+                  /\.(jpe?g|png|webp|heic)$/i.test(item.storagePath);
+                return (
+                  <Frame
+                    key={item.id}
+                    className="flex items-center justify-between gap-2 bg-background p-2"
+                  >
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                      {isImg ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          src={item.storagePath}
+                          alt={item.fileName}
+                          className="size-10 shrink-0 rounded border border-border object-cover"
+                        />
+                      ) : (
+                        <div className="flex size-10 shrink-0 items-center justify-center rounded bg-muted text-xs font-semibold text-muted-foreground">
+                          FILE
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1 text-xs">
+                        <a
+                          href={item.storagePath}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block truncate font-medium hover:underline"
+                        >
+                          {item.fileName}
+                        </a>
+                        <span className="font-mono text-2xs text-muted-foreground">
+                          {formatVNDate(item.createdAt)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="text-muted-foreground hover:text-foreground"
+                        aria-label={workCopy.attachmentDownload}
+                        render={
+                          <a
+                            href={item.storagePath}
+                            target="_blank"
+                            rel="noreferrer"
+                            download
+                          />
+                        }
+                      >
+                        <IconDownload className="size-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="text-destructive hover:bg-destructive/10"
+                        aria-label={workCopy.attachmentDelete}
+                        disabled={form.isPending}
+                        onClick={async () => {
+                          const ok = await confirm({
+                            title: workCopy.attachmentDelete,
+                            description: workCopy.attachmentDeleteConfirm,
+                            confirmText: workCopy.attachmentDelete,
+                            variant: "destructive",
+                          });
+                          if (!ok) return;
+                          form.handleDeleteAttachment(item.id);
+                        }}
+                      >
+                        <IconTrash2 className="size-4" />
+                      </Button>
+                    </div>
+                  </Frame>
+                );
+              })}
+            </div>
+          )}
+        </Frame>
+
+        <Frame className="flex flex-col gap-3 bg-muted/30 p-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold">
+              {workCopy.commentsTitle}
+            </span>
+            {form.comments.length > 0 ? (
+              <Badge variant="secondary" className="font-mono text-2xs">
+                {form.comments.length}
+              </Badge>
+            ) : null}
+          </div>
+
+          {form.comments.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              {workCopy.commentsEmpty}
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {form.comments.map((comment) => (
+                <li key={comment.id}>
+                  <Frame className="bg-background p-3 text-sm">
+                    <p className="whitespace-pre-wrap">{comment.body}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {formatVNDate(comment.createdAt)}
+                    </p>
+                  </Frame>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className="flex flex-col gap-2">
+            <Textarea
+              value={form.commentBody}
+              onChange={(event) => form.setCommentBody(event.target.value)}
+              placeholder={workCopy.commentPlaceholder}
+              rows={3}
+              className="bg-background"
+            />
+            <Button
+              size={controlSize}
+              variant="outline"
+              className="self-start"
+              disabled={form.isPending || form.commentBody.trim().length === 0}
+              onClick={form.submitComment}
+            >
+              {workCopy.commentSubmit}
+            </Button>
+          </div>
+        </Frame>
+      </div>
+
+      {/* Sidebar Inspector Column */}
+      <div className="flex flex-col gap-4 lg:col-span-5">
+        <Frame className="flex flex-col gap-4 bg-muted/30 p-4">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            {workCopy.statusLabel} & {workCopy.priorityLabel}
+          </span>
+
+          <label className="flex flex-col gap-1.5 text-sm">
+            <span className="font-medium text-muted-foreground">
+              {workCopy.statusLabel}
+            </span>
+            <Select
+              value={form.status}
+              onValueChange={(value) =>
+                form.saveStatus(value as WorkTaskStatus)
+              }
+              disabled={form.isPending}
+            >
+              <SelectTrigger size={controlSize} className="bg-background">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {WORK_TASK_STATUSES.map((item) => (
+                  <SelectItem key={item} value={item}>
+                    {workCopy.statusLabels[item]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </label>
+
+          <label className="flex flex-col gap-1.5 text-sm">
+            <span className="font-medium text-muted-foreground">
+              {workCopy.priorityLabel}
+            </span>
             <Select
               value={form.priority}
               onValueChange={(value) =>
                 form.setPriority(value as WorkTaskPriority)
               }
             >
-              <SelectTrigger size={controlSize}>
+              <SelectTrigger size={controlSize} className="bg-background">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -357,31 +653,15 @@ export function WorkTaskDetailBody({ form }: { form: WorkTaskDetailForm }) {
             </Select>
           </label>
 
-          <label className="flex flex-col gap-1.5 text-sm md:col-span-2">
-            <span className="font-medium">{workCopy.descriptionLabel}</span>
-            <Textarea
-              value={form.description}
-              onChange={(event) => form.setDescription(event.target.value)}
-              rows={4}
-            />
-          </label>
-
           <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium">{workCopy.dueLabel}</span>
-            <Input
-              type="datetime-local"
-              value={form.dueAt}
-              onChange={(event) => form.setDueAt(event.target.value)}
-            />
-          </label>
-
-          <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium">{workCopy.assignee}</span>
+            <span className="font-medium text-muted-foreground">
+              {workCopy.assignee}
+            </span>
             <Select
               value={form.assigneeId}
               onValueChange={form.setAssigneeId}
             >
-              <SelectTrigger size={controlSize}>
+              <SelectTrigger size={controlSize} className="bg-background">
                 <SelectValue placeholder={workCopy.assignee} />
               </SelectTrigger>
               <SelectContent>
@@ -395,229 +675,19 @@ export function WorkTaskDetailBody({ form }: { form: WorkTaskDetailForm }) {
             </Select>
           </label>
 
-          <label className="flex flex-col gap-1.5 text-sm md:col-span-2">
-            <span className="font-medium">{workCopy.statusLabel}</span>
-            <Select
-              value={form.status}
-              onValueChange={(value) =>
-                form.saveStatus(value as WorkTaskStatus)
-              }
-              disabled={form.isPending}
-            >
-              <SelectTrigger size={controlSize}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {WORK_TASK_STATUSES.map((item) => (
-                  <SelectItem key={item} value={item}>
-                    {workCopy.statusLabels[item]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </label>
-        </div>
-      </AppSection>
-
-      <AppSection title={workCopy.checklistTitle}>
-        {form.checklist.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            {workCopy.checklistEmpty}
-          </p>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {form.checklist.map((item) => (
-              <li key={item.id} className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={item.isDone}
-                  disabled={form.isPending}
-                  onChange={(event) =>
-                    form.toggleChecklistItem(item, event.target.checked)
-                  }
-                />
-                <span
-                  className={
-                    item.isDone ? "line-through opacity-70" : undefined
-                  }
-                >
-                  {item.title}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-          <Input
-            value={form.checklistTitle}
-            onChange={(event) => form.setChecklistTitle(event.target.value)}
-            placeholder={workCopy.checklistPlaceholder}
-          />
-          <Button
-            size={controlSize}
-            variant="outline"
-            disabled={form.isPending || form.checklistTitle.trim().length === 0}
-            onClick={form.addChecklistItem}
-          >
-            {workCopy.checklistAdd}
-          </Button>
-        </div>
-      </AppSection>
-
-      <AppSection title={workCopy.attachmentsTitle}>
-        {form.attachments.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            {workCopy.attachmentsEmpty}
-          </p>
-        ) : (
-          <div className="grid gap-2 sm:grid-cols-2">
-            {form.attachments.map((item) => {
-              const isImg =
-                item.contentType?.startsWith("image/") ||
-                /\.(jpe?g|png|webp|heic)$/i.test(item.storagePath);
-              return (
-                <Frame
-                  key={item.id}
-                  className="flex items-center justify-between gap-2 bg-muted/30 p-2"
-                >
-                  <div className="flex min-w-0 flex-1 items-center gap-2">
-                    {isImg ? (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img
-                        src={item.storagePath}
-                        alt={item.fileName}
-                        className="size-10 shrink-0 rounded border border-border object-cover"
-                      />
-                    ) : (
-                      <div className="flex size-10 shrink-0 items-center justify-center rounded bg-muted text-xs font-semibold text-muted-foreground">
-                        FILE
-                      </div>
-                    )}
-                    <div className="min-w-0 flex-1 text-xs">
-                      <a
-                        href={item.storagePath}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="block truncate font-medium hover:underline"
-                      >
-                        {item.fileName}
-                      </a>
-                      <span className="font-mono text-2xs text-muted-foreground">
-                        {formatVNDate(item.createdAt)}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-1">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="text-muted-foreground hover:text-foreground"
-                      aria-label={workCopy.attachmentDownload}
-                      render={
-                        <a
-                          href={item.storagePath}
-                          target="_blank"
-                          rel="noreferrer"
-                          download
-                        />
-                      }
-                    >
-                      <IconDownload className="size-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="text-destructive hover:bg-destructive/10"
-                      aria-label={workCopy.attachmentDelete}
-                      disabled={form.isPending}
-                      onClick={async () => {
-                        const ok = await confirm({
-                          title: workCopy.attachmentDelete,
-                          description: workCopy.attachmentDeleteConfirm,
-                          confirmText: workCopy.attachmentDelete,
-                          variant: "destructive",
-                        });
-                        if (!ok) return;
-                        form.handleDeleteAttachment(item.id);
-                      }}
-                    >
-                      <IconTrash2 className="size-4" />
-                    </Button>
-                  </div>
-                </Frame>
-              );
-            })}
-          </div>
-        )}
-        <div className="mt-3 flex items-center gap-2">
-          <label className="inline-flex cursor-pointer items-center gap-2">
-            <input
-              type="file"
-              accept="image/*,.pdf"
-              className="sr-only"
-              disabled={form.isUploadingAttachment}
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  form.handleUploadFile(file);
-                  e.target.value = "";
-                }
-              }}
+          <label className="flex flex-col gap-1.5 text-sm">
+            <span className="font-medium text-muted-foreground">
+              {workCopy.dueLabel}
+            </span>
+            <Input
+              type="datetime-local"
+              value={form.dueAt}
+              onChange={(event) => form.setDueAt(event.target.value)}
+              className="bg-background"
             />
-            <Button
-              size={controlSize}
-              variant="outline"
-              disabled={form.isUploadingAttachment}
-              className="pointer-events-none gap-2"
-            >
-              <IconPaperclip className="size-4" />
-              <span>
-                {form.isUploadingAttachment
-                  ? workCopy.attachmentUploading
-                  : workCopy.attachmentUpload}
-              </span>
-            </Button>
           </label>
-        </div>
-      </AppSection>
-
-      <AppSection title={workCopy.commentsTitle}>
-        {form.comments.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            {workCopy.commentsEmpty}
-          </p>
-        ) : (
-          <ul className="flex flex-col gap-3">
-            {form.comments.map((comment) => (
-              <li key={comment.id}>
-                <Frame className="p-3 text-sm">
-                  <p className="whitespace-pre-wrap">{comment.body}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {formatVNDate(comment.createdAt)}
-                  </p>
-                </Frame>
-              </li>
-            ))}
-          </ul>
-        )}
-        <div className="mt-3 flex flex-col gap-2">
-          <Textarea
-            value={form.commentBody}
-            onChange={(event) => form.setCommentBody(event.target.value)}
-            placeholder={workCopy.commentPlaceholder}
-            rows={3}
-          />
-          <Button
-            size={controlSize}
-            variant="outline"
-            className="self-start"
-            disabled={form.isPending || form.commentBody.trim().length === 0}
-            onClick={form.submitComment}
-          >
-            {workCopy.commentSubmit}
-          </Button>
-        </div>
-      </AppSection>
+        </Frame>
+      </div>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Search as IconSearch } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
+import { Frame } from "@comtammatu/ui/components/frame";
 import {
   InputGroup,
   InputGroupAddon,
@@ -24,7 +25,6 @@ import {
 } from "@lib/messages/work";
 import {
   type ParsedWorkParams,
-  type WorkGrouping,
   type WorkQuickFilter,
   type WorkView,
   workHref,
@@ -63,8 +63,8 @@ export function WorkListToolbar({
     params.view === "calendar" ||
     params.view === "timeline";
 
-  const viewFilters = (
-    <>
+  const viewSwitcher = (
+    <Frame className="inline-flex items-center bg-muted/30 p-0.5">
       {VIEW_OPTIONS.map((option) => {
         const active = params.view === option.view;
         return (
@@ -73,13 +73,16 @@ export function WorkListToolbar({
             variant={active ? "secondary" : "ghost"}
             size={controlSize}
             aria-current={active ? "page" : undefined}
+            className={`h-7 px-2.5 text-xs transition-colors ${
+              active ? "bg-background font-medium text-foreground shadow-2xs" : ""
+            }`}
             render={<Link href={workHref(params, { view: option.view })} />}
           >
             {option.label}
           </Button>
         );
       })}
-    </>
+    </Frame>
   );
 
   const departmentFilter =
@@ -117,7 +120,7 @@ export function WorkListToolbar({
     ) : null;
 
   const quickFilterChips = (
-    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+    <div className="flex flex-wrap items-center gap-1.5 border-t border-border/20 bg-muted/30 px-3 py-1.5">
       {QUICK_FILTER_OPTIONS.map((option) => {
         const active = (params.filter ?? "all") === option.value;
         return (
@@ -126,6 +129,9 @@ export function WorkListToolbar({
             type="button"
             variant={active ? "secondary" : "outline"}
             size={controlSize}
+            className={`h-6.5 rounded-md px-2.5 text-xs font-medium transition-colors ${
+              active ? "bg-foreground text-background hover:bg-foreground/90" : ""
+            }`}
             onClick={() => {
               router.replace(
                 workHref(params, {
@@ -141,136 +147,88 @@ export function WorkListToolbar({
     </div>
   );
 
-  const isBoard = params.view === "board";
-
-  const boardSearch = isBoard ? (
-    <>
-      <Select
-        value={params.group ?? "status"}
-        onValueChange={(value) => {
-          router.replace(
-            workHref(params, {
-              group: value === "status" ? null : (value as WorkGrouping),
-            }),
-          );
-        }}
-      >
-        <SelectTrigger
-          className="w-40"
-          size={controlSize}
-          aria-label={workCopy.groupingLabel}
-        >
-          <SelectValue placeholder={workCopy.groupingLabel} />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="status">{workCopy.groupStatus}</SelectItem>
-          <SelectItem value="priority">{workCopy.groupPriority}</SelectItem>
-        </SelectContent>
-      </Select>
-      <form
-        className="min-w-0 flex-1 sm:min-w-64"
-        onSubmit={(event) => {
-          event.preventDefault();
-          const form = event.currentTarget;
-          const data = new FormData(form);
-          const q = String(data.get("q") ?? "").trim();
-          router.replace(workHref(params, { q: q.length > 0 ? q : null }));
-        }}
-      >
-        <InputGroup size={controlSize} className="w-full">
-          <InputGroupAddon>
-            <IconSearch />
-          </InputGroupAddon>
-          <InputGroupInput
-            name="q"
-            type="search"
-            defaultValue={params.q ?? ""}
-            placeholder={workCopy.filterSearch}
-            aria-label={workCopy.filterSearch}
-          />
-        </InputGroup>
-      </form>
-    </>
-  ) : null;
+  const searchForm = (
+    <form
+      className="min-w-0 flex-1 sm:max-w-xs"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const data = new FormData(form);
+        const q = String(data.get("q") ?? "").trim();
+        router.replace(workHref(params, { q: q.length > 0 ? q : null }));
+      }}
+    >
+      <InputGroup size={controlSize} className="w-full">
+        <InputGroupAddon>
+          <IconSearch className="size-4 opacity-50" />
+        </InputGroupAddon>
+        <InputGroupInput
+          name="q"
+          type="search"
+          defaultValue={params.q ?? ""}
+          placeholder={workCopy.filterSearch}
+          aria-label={workCopy.filterSearch}
+        />
+      </InputGroup>
+    </form>
+  );
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col">
       <AppToolbar
         variant="inline"
-        filters={viewFilters}
         search={
-          showFilters ? (
-            <>
-              <Button
-                type="button"
-                variant={params.includeDone ? "secondary" : "outline"}
-                size={controlSize}
-                onClick={() => {
-                  router.replace(
-                    workHref(params, { includeDone: !params.includeDone }),
-                  );
-                }}
-              >
-                {workCopy.includeDone}
-              </Button>
-              <Select
-                value={params.status ?? "all"}
-                onValueChange={(value) => {
-                  router.replace(
-                    workHref(params, {
-                      status:
-                        value === "all" ? null : (value as typeof params.status),
-                    }),
-                  );
-                }}
-              >
-                <SelectTrigger
-                  className="w-40"
+          <div className="flex flex-wrap items-center gap-2">
+            {searchForm}
+            {showFilters ? (
+              <>
+                <Button
+                  type="button"
+                  variant={params.includeDone ? "secondary" : "outline"}
                   size={controlSize}
-                  aria-label={workCopy.filterStatus}
+                  onClick={() => {
+                    router.replace(
+                      workHref(params, { includeDone: !params.includeDone }),
+                    );
+                  }}
                 >
-                  <SelectValue placeholder={workCopy.filterStatus} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{workCopy.filterAllStatuses}</SelectItem>
-                  {WORK_TASK_STATUSES.map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {workCopy.statusLabels[status]}
+                  {workCopy.includeDone}
+                </Button>
+                <Select
+                  value={params.status ?? "all"}
+                  onValueChange={(value) => {
+                    router.replace(
+                      workHref(params, {
+                        status:
+                          value === "all" ? null : (value as typeof params.status),
+                      }),
+                    );
+                  }}
+                >
+                  <SelectTrigger
+                    className="w-36"
+                    size={controlSize}
+                    aria-label={workCopy.filterStatus}
+                  >
+                    <SelectValue placeholder={workCopy.filterStatus} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">
+                      {workCopy.filterAllStatuses}
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <form
-                className="min-w-0 flex-1 sm:min-w-72"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  const form = event.currentTarget;
-                  const data = new FormData(form);
-                  const q = String(data.get("q") ?? "").trim();
-                  router.replace(workHref(params, { q: q.length > 0 ? q : null }));
-                }}
-              >
-                <InputGroup size={controlSize} className="w-full">
-                  <InputGroupAddon>
-                    <IconSearch />
-                  </InputGroupAddon>
-                  <InputGroupInput
-                    name="q"
-                    type="search"
-                    defaultValue={params.q ?? ""}
-                    placeholder={workCopy.filterSearch}
-                    aria-label={workCopy.filterSearch}
-                  />
-                </InputGroup>
-              </form>
-            </>
-          ) : isBoard ? (
-            boardSearch
-          ) : (
-            departmentFilter
-          )
+                    {WORK_TASK_STATUSES.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {workCopy.statusLabels[status]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            ) : null}
+          </div>
         }
-        actions={showFilters || isBoard ? departmentFilter : undefined}
+        filters={viewSwitcher}
+        actions={departmentFilter}
       />
       {quickFilterChips}
     </div>

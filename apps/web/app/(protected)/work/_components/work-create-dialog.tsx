@@ -152,55 +152,60 @@ export function WorkCreateDialog({
         }}
       >
         {(form) => (
-          <>
-            <SelectField
-              control={form.control}
-              name="departmentId"
-              label={workCopy.scopeDepartment}
-              options={departments.map((department) => ({
-                value: String(department.id),
-                label: department.name,
-              }))}
-            />
+          <div className="flex flex-col gap-3">
             <TextField
               control={form.control}
               name="title"
               label={workCopy.titleLabel}
             />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <SelectField
+                control={form.control}
+                name="departmentId"
+                label={workCopy.scopeDepartment}
+                options={departments.map((department) => ({
+                  value: String(department.id),
+                  label: department.name,
+                }))}
+              />
+              <SelectField
+                control={form.control}
+                name="assigneeId"
+                label={workCopy.assignee}
+                options={[
+                  { value: "__none__", label: workCopy.clearAssignee },
+                  ...assigneeOptions,
+                ]}
+              />
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <SelectField
+                control={form.control}
+                name="priority"
+                label={workCopy.priorityLabel}
+                options={WORK_TASK_PRIORITIES.map((priority) => ({
+                  value: priority,
+                  label: workCopy.priorityLabels[priority],
+                }))}
+              />
+              <TextField
+                control={form.control}
+                name="dueAt"
+                label={workCopy.dueLabel}
+                type="datetime-local"
+              />
+            </div>
             <TextareaField
               control={form.control}
               name="description"
               label={workCopy.descriptionLabel}
-            />
-            <SelectField
-              control={form.control}
-              name="priority"
-              label={workCopy.priorityLabel}
-              options={WORK_TASK_PRIORITIES.map((priority) => ({
-                value: priority,
-                label: workCopy.priorityLabels[priority],
-              }))}
-            />
-            <SelectField
-              control={form.control}
-              name="assigneeId"
-              label={workCopy.assignee}
-              options={[
-                { value: "__none__", label: workCopy.clearAssignee },
-                ...assigneeOptions,
-              ]}
-            />
-            <TextField
-              control={form.control}
-              name="dueAt"
-              label={workCopy.dueLabel}
-              type="datetime-local"
+              rows={3}
             />
             <DepartmentSync
               value={form.watch("departmentId")}
               onChange={setDepartmentId}
             />
-          </>
+          </div>
         )}
       </FormDialog>
     </>

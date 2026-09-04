@@ -1,7 +1,17 @@
 "use client";
 
-import { getVNDateString, getVNMonthStartDateString, shiftVNMonth } from "@comtammatu/shared/time";
+import Link from "next/link";
+import {
+  getVNDateString,
+  getVNMonthStartDateString,
+  shiftVNMonth,
+} from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
+import {
+  ChevronLeft as IconChevronLeft,
+  ChevronRight as IconChevronRight,
+} from "lucide-react";
 import type { WorkTaskRow } from "../actions";
 import { workCopy } from "@lib/messages/work";
 import { workHref, type ParsedWorkParams } from "../_lib/params";
@@ -24,6 +34,9 @@ export function WorkCalendar({
   const year = Number(monthStart.slice(0, 4));
   const month = Number(monthStart.slice(5, 7));
   const today = getVNDateString();
+  const currentVNMonth = getVNMonthStartDateString().slice(0, 7);
+  const isCurrentMonth =
+    params.month == null || params.month === currentVNMonth;
 
   const tasksByDate = new Map<string, WorkTaskRow[]>();
   for (const task of tasks) {
@@ -40,10 +53,44 @@ export function WorkCalendar({
   const nextMonth = `${next.year}-${String(next.month).padStart(2, "0")}`;
 
   return (
-    <>
-      <h2 className="font-heading text-lg font-semibold">
-        {workCopy.calendarTitle} · {monthLabel(year, month)}
-      </h2>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="font-heading text-base font-semibold sm:text-lg">
+          {workCopy.calendarTitle} · {monthLabel(year, month)}
+        </h2>
+
+        <div className="flex items-center gap-2">
+          {!isCurrentMonth ? (
+            <Button
+              variant="outline"
+              size="sm"
+              render={<Link href={workHref(params, { month: null })} />}
+            >
+              {workCopy.today}
+            </Button>
+          ) : null}
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-8"
+              aria-label={workCopy.stepPrev}
+              render={<Link href={workHref(params, { month: prevMonth })} />}
+            >
+              <IconChevronLeft className="size-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-8"
+              aria-label={workCopy.stepNext}
+              render={<Link href={workHref(params, { month: nextMonth })} />}
+            >
+              <IconChevronRight className="size-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
 
       <WorkMonthGrid
         monthStart={monthStart}
@@ -72,6 +119,6 @@ export function WorkCalendar({
           );
         }}
       />
-    </>
+    </div>
   );
 }

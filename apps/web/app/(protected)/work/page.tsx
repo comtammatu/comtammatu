@@ -159,7 +159,7 @@ export default async function WorkPage({
           : null;
 
   return (
-    <AppPage width="xwide" density="compact" scroll>
+    <AppPage width="full" density="compact" scroll>
       <AppPageHeader title={workCopy.pageTitle} actions={headerActions} />
       <WorkPageShell
         params={params}

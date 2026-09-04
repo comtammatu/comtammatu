@@ -19,7 +19,11 @@ export function WorkComposeShell({
   children: ReactNode;
 }) {
   return (
-    <AppListFrame contentScroll toolbar={toolbar}>
+    <AppListFrame
+      contentScroll
+      toolbar={toolbar}
+      contentClassName={archetype === "TASK_BOARD" ? "overflow-x-auto" : undefined}
+    >
       <div data-page-archetype={archetype} className={WORK_TASK_VIEW_SHELL}>
         {title ? (
           <h2 className="font-heading text-lg font-semibold">{title}</h2>

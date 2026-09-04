@@ -162,4 +162,5 @@ export const workCopy = {
   departmentMoved: "Đã chuyển phòng ban",
   addDepartmentTask: "Thêm việc mới",
   allDepartments: "Tất cả phòng ban",
+  today: "Hôm nay",
 } as const;
