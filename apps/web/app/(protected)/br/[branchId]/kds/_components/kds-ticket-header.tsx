@@ -26,7 +26,7 @@ const DENSITY_CLASS: Record<
   compact: {
     shell:
       "flex min-w-0 flex-col gap-2 px-3 py-2.5 xl:flex-row xl:items-start xl:justify-between xl:gap-2 xl:px-3.5 xl:py-3",
-    identity: "min-w-0 xl:flex-1",
+    identity: "flex min-w-0 flex-col gap-2 xl:flex-1",
     cluster:
       "flex w-full flex-wrap items-center justify-start gap-1.5 xl:w-auto xl:shrink-0 xl:justify-end",
     priority: "px-2 py-0.5 text-xs xl:px-2.5 xl:py-1 xl:text-sm",
@@ -105,7 +105,7 @@ export function KdsTicketHeader({
               size={titleSize}
             />
             {isPriority || isAppend ? (
-              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-1.5">
                 {isPriority ? (
                   <Badge variant="warning" className={densityClass.priority}>
                     {PRIORITY_LABEL}
@@ -124,11 +124,7 @@ export function KdsTicketHeader({
                 ) : null}
               </div>
             ) : null}
-            <OrderNote
-              note={orderNote}
-              compact
-              className="mt-1.5 max-w-full xl:mt-2"
-            />
+            <OrderNote note={orderNote} className="max-w-full" />
           </>
         ) : (
           <>

@@ -361,8 +361,8 @@ function FocusOrderPanel({
                     >
                       {item.quantity}
                     </span>
-                    <div className="flex min-w-0 flex-1 flex-col justify-center min-h-12 gap-1">
-                      <div className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+                    <div className="flex min-w-0 flex-1 flex-col justify-center min-h-12 gap-2">
+                      <div className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-1">
                         <span
                           className={cn(
                             "min-w-0 break-words font-heading text-foreground",
@@ -381,7 +381,7 @@ function FocusOrderPanel({
                           </Badge>
                         )}
                         {item.variant_name && (
-                          <span className="min-w-0 break-words text-base font-medium leading-6 text-muted-foreground">
+                          <span className="min-w-0 break-words text-sm font-medium text-muted-foreground">
                             ({item.variant_name})
                           </span>
                         )}
@@ -558,7 +558,7 @@ function FocusOrderPanel({
       </ScrollArea>
 
       {/* Sticky batch action bar */}
-      {canMarkReady && activeTickets.length > 0 && (
+      {canMarkReady && activeTickets.length >= 2 && (
         <div className="border-t bg-card p-3">
           <div className="mx-auto grid w-full max-w-screen-2xl grid-cols-1 gap-2">
             <Button

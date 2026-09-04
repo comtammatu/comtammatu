@@ -601,7 +601,9 @@ export function KdsBoard({
             onFilter={filterUnassigned}
           />
 
-          <BatchSummaryBar orders={displayOrders} />
+          {mode === "comprehensive" ? (
+            <BatchSummaryBar orders={displayOrders} />
+          ) : null}
         </div>
 
         <KdsRowEffectsProvider value={rowEffects}>

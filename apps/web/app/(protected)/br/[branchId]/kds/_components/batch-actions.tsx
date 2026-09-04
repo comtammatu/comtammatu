@@ -20,7 +20,7 @@ export function BatchActions({
   onCompleteTickets,
   layout = "footer",
 }: BatchActionsProps) {
-  if (activeTickets.length === 0) return null;
+  if (activeTickets.length < 2) return null;
 
   const activeTicketIds = activeTickets.map((ticket) => ticket.id);
   const completeBatchBusy =

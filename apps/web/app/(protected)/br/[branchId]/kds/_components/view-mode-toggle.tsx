@@ -31,12 +31,14 @@ export function ViewModeToggle({ mode, onChange }: ViewModeToggleProps) {
         aria-label={KDS_VI.viewModeFocusAria}
       >
         <IconFocus aria-hidden />
+        {KDS_VI.viewModeFocusLabel}
       </ToggleGroupItem>
       <ToggleGroupItem
         value="comprehensive"
         aria-label={KDS_VI.viewModeOverviewAria}
       >
         <IconLayoutGrid aria-hidden />
+        {KDS_VI.viewModeOverviewLabel}
       </ToggleGroupItem>
     </ToggleGroup>
   );

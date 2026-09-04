@@ -72,10 +72,15 @@ test("KDS header drops redundant title, branch badge, pending count, and order-t
 });
 
 test("KDS filter and mode controls use touch-sized targets", () => {
-  assert.equal(boardHeaderSource.match(/size="icon-touch"/g)?.length, 3);
+  assert.match(boardHeaderSource, /hidden items-center gap-1\.5 xl:flex/);
+  assert.match(boardHeaderSource, /className="xl:hidden"/);
+  assert.match(boardHeaderSource, /<DropdownMenu/);
+  assert.ok((boardHeaderSource.match(/size="icon-touch"/g)?.length ?? 0) >= 4);
   assert.doesNotMatch(boardHeaderSource, /size="icon-lg"/);
 
   assert.match(viewModeToggleSource, /size="touch"/);
+  assert.match(viewModeToggleSource, /KDS_VI\.viewModeFocusLabel/);
+  assert.match(viewModeToggleSource, /KDS_VI\.viewModeOverviewLabel/);
   assert.doesNotMatch(viewModeToggleSource, /(?:min-)?h-11/);
   assert.doesNotMatch(viewModeToggleSource, /className="h-8"/);
   assert.match(completionHistorySource, /size="touch"/);

@@ -51,7 +51,7 @@ export function TicketRowMeta({
 
   const chips =
     layout === "inline" ? (
-      <span className="inline-flex min-w-0 flex-wrap items-center gap-1">
+      <span className="inline-flex min-w-0 flex-wrap items-center gap-1.5">
         {hasModifiers &&
           modifiers.map((m, idx) => (
             <ModifierChip key={`${m.modifier_id}-${idx}`} label={m.name} />
@@ -73,14 +73,14 @@ export function TicketRowMeta({
     ) : (
       <>
         {hasModifiers && (
-          <div className="flex flex-wrap items-center gap-1">
+          <div className="flex flex-wrap items-center gap-1.5">
             {modifiers.map((m, idx) => (
               <ModifierChip key={`${m.modifier_id}-${idx}`} label={m.name} />
             ))}
           </div>
         )}
         {hasSides && (
-          <div className="flex flex-wrap items-center gap-1">
+          <div className="flex flex-wrap items-center gap-1.5">
             {sides.map((s, idx) => (
               <Badge
                 key={`${s.side_item_id}-${idx}`}
@@ -99,7 +99,7 @@ export function TicketRowMeta({
     );
 
   return (
-    <div className="flex w-full min-w-0 flex-col gap-1 text-sm font-medium leading-snug">
+    <div className="flex w-full min-w-0 flex-col gap-2 text-sm font-medium">
       {hasNote && <ItemNote note={trimmedNote} />}
       {hasModifiers || hasSides ? chips : null}
     </div>

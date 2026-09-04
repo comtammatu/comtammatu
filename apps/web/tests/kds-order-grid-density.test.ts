@@ -19,10 +19,10 @@ const batchActionsSource = readFileSync(
   "utf8",
 );
 
-test("KDS service columns keep semantic labels without visible title bars", () => {
+test("KDS service columns keep a compact visible title and count", () => {
   assert.match(orderGridSource, /aria-label=\{column\.title\}/);
-  assert.doesNotMatch(orderGridSource, /kds-column-title-/);
-  assert.doesNotMatch(orderGridSource, /<h2[\s\S]*\{column\.title\}/);
+  assert.match(orderGridSource, /kds-column-title-/);
+  assert.match(orderGridSource, /<h2[\s\S]*\{column\.title\}/);
   assert.match(
     orderGridSource,
     /className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-1 pb-4 xl:gap-3\.5"/,

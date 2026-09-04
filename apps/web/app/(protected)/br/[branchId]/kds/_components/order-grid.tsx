@@ -95,7 +95,7 @@ const CompactItemRow = memo(function CompactItemRow({
       data-testid={`kds-heatmap-item-${String(item.id)}`}
       data-kds-effect={rowEffect ?? undefined}
       className={cn(
-        "grid min-w-0 grid-cols-[2.75rem_minmax(0,1fr)_auto] items-start gap-x-2 gap-y-1 rounded-none border-0 p-0 py-1.5 first:pt-0 last:pb-0 xl:grid-cols-[3.25rem_minmax(0,1fr)_auto] xl:py-2 xl:first:pt-0 xl:last:pb-0",
+        "grid min-w-0 grid-cols-[2.75rem_minmax(0,1fr)_auto] items-start gap-x-2 gap-y-1 rounded-none border-0 p-0 py-2 first:pt-0 last:pb-0 xl:grid-cols-[3.25rem_minmax(0,1fr)_auto] xl:py-2 xl:first:pt-0 xl:last:pb-0",
         getItemRowStatusClass(status),
         getKdsRowEffectClass(rowEffect),
       )}
@@ -110,8 +110,8 @@ const CompactItemRow = memo(function CompactItemRow({
           {item.quantity}
         </span>
       </div>
-      <div className="flex min-w-0 flex-1 flex-col justify-center min-h-8 gap-1 xl:min-h-9">
-        <div className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+      <div className="flex min-w-0 flex-1 flex-col justify-center min-h-8 gap-2 xl:min-h-9">
+        <div className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-1">
           <span
             className={cn(
               "min-w-0 break-words font-heading font-semibold text-foreground",
@@ -130,7 +130,7 @@ const CompactItemRow = memo(function CompactItemRow({
             </Badge>
           )}
           {item.variant_name && (
-            <span className="min-w-0 break-words text-xs font-medium leading-4 text-muted-foreground xl:text-sm xl:leading-5">
+            <span className="min-w-0 break-words text-sm font-medium text-muted-foreground">
               ({item.variant_name})
             </span>
           )}
@@ -155,8 +155,8 @@ const CompactItemRow = memo(function CompactItemRow({
             data-testid={`kds-recall-${String(ticket.id)}`}
             type="button"
             variant="outline"
-            size="default"
-            className="h-8 w-8 px-0 xl:h-9 xl:w-9"
+            size="touch"
+            className="w-12 px-0"
             disabled={isMutating}
             onClick={() => void onRecall(ticket.id)}
             aria-label={KDS_HEATMAP_LABELS.recallNamedItem(item.item_name)}
@@ -173,8 +173,8 @@ const CompactItemRow = memo(function CompactItemRow({
             data-testid={`kds-heatmap-complete-ticket-${String(ticket.id)}`}
             type="button"
             variant="default"
-            size="default"
-            className="h-8 px-2.5 text-xs font-semibold xl:h-9 xl:px-3 xl:text-sm"
+            size="touch"
+            className="px-2.5 font-semibold"
             disabled={isMutating}
             onClick={() => void onCompleteTickets([ticket.id])}
             aria-label={KDS_HEATMAP_LABELS.completeNamedItem(item.item_name)}
@@ -219,7 +219,7 @@ const CompactOrphanRow = memo(function CompactOrphanRow({
     <Item
       data-kds-effect={rowEffect ?? undefined}
       className={cn(
-        "grid min-w-0 grid-cols-[minmax(0,1fr)] items-start gap-1.5 rounded-none border-0 p-0 py-1.5 first:pt-0 last:pb-0 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center xl:gap-2 xl:py-2 xl:first:pt-0 xl:last:pb-0",
+        "grid min-w-0 grid-cols-[minmax(0,1fr)] items-start gap-2 rounded-none border-0 p-0 py-2 first:pt-0 last:pb-0 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center xl:gap-2 xl:py-2 xl:first:pt-0 xl:last:pb-0",
         getItemRowStatusClass(ticket.status),
         getKdsRowEffectClass(rowEffect),
       )}
@@ -245,8 +245,8 @@ const CompactOrphanRow = memo(function CompactOrphanRow({
             data-testid={`kds-recall-${String(ticket.id)}`}
             type="button"
             variant="outline"
-            size="default"
-            className="h-8 w-8 px-0 xl:h-9 xl:w-9"
+            size="touch"
+            className="w-12 px-0"
             disabled={isMutating}
             onClick={() => void onRecall(ticket.id)}
             aria-label={KDS_HEATMAP_LABELS.recallItem}
@@ -263,8 +263,8 @@ const CompactOrphanRow = memo(function CompactOrphanRow({
             data-testid={`kds-heatmap-complete-ticket-${String(ticket.id)}`}
             type="button"
             variant="default"
-            size="default"
-            className="h-8 px-2.5 text-xs font-semibold xl:h-9 xl:px-3 xl:text-sm"
+            size="touch"
+            className="px-2.5 font-semibold"
             disabled={isMutating}
             onClick={() => void onCompleteTickets([ticket.id])}
             aria-label={KDS_HEATMAP_LABELS.completeItem}
@@ -425,6 +425,17 @@ function OrderColumn({
       className="flex min-h-0 min-w-0 flex-col xl:h-full"
       aria-label={column.title}
     >
+      <div
+        data-testid={`kds-column-title-${column.id}`}
+        className="flex shrink-0 items-baseline justify-between gap-2 px-1 pb-1"
+      >
+        <h2 className="font-heading text-sm font-semibold text-foreground">
+          {column.title}
+        </h2>
+        <span className="font-mono text-sm font-semibold tabular-nums text-muted-foreground">
+          {column.orders.length}
+        </span>
+      </div>
       <div
         data-testid={`kds-column-list-${column.id}`}
         className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-1 pb-4 xl:gap-3.5"

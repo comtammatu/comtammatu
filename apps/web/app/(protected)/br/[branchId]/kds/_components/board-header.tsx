@@ -2,6 +2,13 @@
 
 import { Button } from "@comtammatu/ui/components/button";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@comtammatu/ui/components/dropdown-menu";
+import {
+  Ellipsis as IconEllipsis,
   History as IconHistory,
   Maximize2 as IconMaximize,
   Megaphone as IconVoiceOn,
@@ -10,6 +17,7 @@ import {
   VolumeX as IconVolumeOff,
 } from "lucide-react";
 import type { ReactNode } from "react";
+import { KDS_VI } from "@comtammatu/shared/messages";
 import type { OperationalAudioMode } from "@lib/operational-audio";
 import { BranchRuntimeBackControl } from "../../branch-runtime-back-control";
 import { ViewModeToggle } from "./view-mode-toggle";
@@ -55,6 +63,10 @@ export function KdsBoardTopBar({
   onFullscreenToggle,
   stationControls,
 }: KdsBoardTopBarProps) {
+  const fullscreenLabel = isFullscreen
+    ? "Thoát toàn màn hình"
+    : "Mở toàn màn hình";
+
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-2 px-2 py-2 xl:flex-nowrap xl:px-3">
       <div className="flex shrink-0 items-center gap-1.5">
@@ -64,39 +76,83 @@ export function KdsBoardTopBar({
         {stationControls}
       </div>
       <div className="order-2 ml-auto flex shrink-0 items-center gap-1.5 xl:order-none xl:min-w-max">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-touch"
-          aria-label={KDS_HEADER_COPY.completionHistory}
-          onClick={onCompletionHistoryOpen}
-        >
-          <IconHistory aria-hidden />
-        </Button>
-        <Button
-          type="button"
-          variant={audioMode === "off" ? "ghost" : "secondary"}
-          size="icon-touch"
-          aria-label={KDS_AUDIO_MODE_LABEL[audioMode]}
-          aria-pressed={audioMode !== "off"}
-          onClick={onSoundToggle}
-        >
-          <KdsAudioModeIcon mode={audioMode} />
-        </Button>
-        <Button
-          type="button"
-          variant={isFullscreen ? "secondary" : "ghost"}
-          size="icon-touch"
-          aria-label={isFullscreen ? "Thoát toàn màn hình" : "Mở toàn màn hình"}
-          aria-pressed={isFullscreen}
-          onClick={onFullscreenToggle}
-        >
-          {isFullscreen ? (
-            <IconMinimize aria-hidden />
-          ) : (
-            <IconMaximize aria-hidden />
-          )}
-        </Button>
+        <div className="hidden items-center gap-1.5 xl:flex">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-touch"
+            aria-label={KDS_HEADER_COPY.completionHistory}
+            onClick={onCompletionHistoryOpen}
+          >
+            <IconHistory aria-hidden />
+          </Button>
+          <Button
+            type="button"
+            variant={audioMode === "off" ? "ghost" : "secondary"}
+            size="icon-touch"
+            aria-label={KDS_AUDIO_MODE_LABEL[audioMode]}
+            aria-pressed={audioMode !== "off"}
+            onClick={onSoundToggle}
+          >
+            <KdsAudioModeIcon mode={audioMode} />
+          </Button>
+          <Button
+            type="button"
+            variant={isFullscreen ? "secondary" : "ghost"}
+            size="icon-touch"
+            aria-label={fullscreenLabel}
+            aria-pressed={isFullscreen}
+            onClick={onFullscreenToggle}
+          >
+            {isFullscreen ? (
+              <IconMinimize aria-hidden />
+            ) : (
+              <IconMaximize aria-hidden />
+            )}
+          </Button>
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-touch"
+                className="xl:hidden"
+                aria-label={KDS_VI.boardToolsAria}
+              >
+                <IconEllipsis aria-hidden />
+              </Button>
+            }
+          />
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem
+              className="min-h-12 text-sm"
+              onClick={onCompletionHistoryOpen}
+            >
+              <IconHistory aria-hidden />
+              {KDS_HEADER_COPY.completionHistory}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="min-h-12 text-sm"
+              onClick={onSoundToggle}
+            >
+              <KdsAudioModeIcon mode={audioMode} />
+              {KDS_AUDIO_MODE_LABEL[audioMode]}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="min-h-12 text-sm"
+              onClick={onFullscreenToggle}
+            >
+              {isFullscreen ? (
+                <IconMinimize aria-hidden />
+              ) : (
+                <IconMaximize aria-hidden />
+              )}
+              {fullscreenLabel}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <ViewModeToggle mode={mode} onChange={onModeChange} />
       </div>
     </div>
