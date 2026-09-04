@@ -641,7 +641,7 @@ export function BranchAttendanceClient({
                 }
               />
             ) : (
-              <ItemGroup className="grid gap-2 lg:grid-cols-2">
+              <ItemGroup className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {filteredClockRecords.map((record) => {
                   const progress = attendanceChecklistProgress(record);
                   return (
@@ -703,7 +703,7 @@ export function BranchAttendanceClient({
               description={attendanceCopy.summaryEmptyDescription}
             />
           ) : (
-            <ItemGroup className="grid gap-2 lg:grid-cols-2">
+            <ItemGroup className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {summary.map((row) => (
                 <Item
                   key={row.employee_id}

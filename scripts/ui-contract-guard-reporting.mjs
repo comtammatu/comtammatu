@@ -62,6 +62,7 @@ export const UI_CONTRACT_LINT_ONLY_GROUPS = {
       "status-focus-ring-contrast",
       "status-foreground-on-tint",
       "control-surface-hardcoded-touch-size",
+      "button-table-row-size",
     ],
   },
   "legacy-debt-ratchet": {

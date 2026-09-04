@@ -146,7 +146,7 @@ export function OperatorOrdersClient({
           symbol="riceBowl"
         />
       ) : (
-        <ItemGroup className="gap-2">
+        <ItemGroup className="gap-2 sm:grid sm:grid-cols-2 lg:grid-cols-3">
           {visibleOrders.map((order) => {
             const waitInfo = computeOrderWaitInfo(
               order.created_at,

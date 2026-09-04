@@ -78,7 +78,7 @@ export function CatalogIndexClient({
 
   return (
     <div className="flex flex-col gap-3">
-      <ItemGroup className="gap-2">
+      <ItemGroup className="gap-2 sm:grid sm:grid-cols-2 lg:grid-cols-3">
         {rows.map((row) => (
           <Item
             key={row.key}

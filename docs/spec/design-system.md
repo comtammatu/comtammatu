@@ -984,10 +984,13 @@ contract change; route-local chrome outside this list is drift.
    (`apps/web/app/(protected)/br/[branchId]/(operator)/layout.tsx`). Covers the
    branch home, `/br/[branchId]/shift/*`, `/br/[branchId]/team/*`,
    `/br/[branchId]/stock/*`, and `/br/[branchId]/settings/*`. Width scale is
-   single-sourced and touch-first: `max-w-lg` (phone) $\rightarrow$ `md:max-w-2xl`
-   (tablet portrait) $\rightarrow$ `lg:max-w-4xl` (tablet landscape cap) across
-   `AppHeader wide`, `AppPage`, and `AppBottomNav wide`. Desktop sprawl (`xl`/`2xl`)
-   is forbidden. Scrollport is strictly `#main-content`. Top chrome uses inline
+   single-sourced and touch-first: `max-w-lg` (phone) $\rightarrow$ `md:max-w-3xl`
+   (tablet portrait) $\rightarrow$ `lg:max-w-5xl` (tablet landscape) $\rightarrow$ `xl:max-w-6xl`
+   (desktop/POS terminal) across `AppHeader wide`, `AppPage`, `AppBottomNav wide`,
+   and `PwaToolbar` contained layout. Unbounded expansion and dense Owner data tables
+   remain strictly forbidden in Branch runtime chrome; widening enables comfortable
+   spacing, touch targets $\ge 48\text{px}$, and multi-column touch card grids
+   on desktop POS/PCs without desk sprawl. Scrollport is strictly `#main-content`. Top chrome uses inline
    compact headers ($\le 84\text{px}$ top budget) on small screens. Sub-tabs strictly
    follow the 48px touch standard: Pattern A uses `TabsList size="touch"
 layout="equal"`; Pattern B uses `TabsList size="touch" layout="scroll"`.

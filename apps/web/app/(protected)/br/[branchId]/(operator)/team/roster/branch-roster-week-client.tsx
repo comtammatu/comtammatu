@@ -653,7 +653,7 @@ export function BranchRosterWeekClient({
                     </Item>
                   ) : (
                     <>
-                      <ItemGroup className="gap-2">
+                      <ItemGroup className="gap-2 sm:grid sm:grid-cols-2 lg:grid-cols-3">
                         {assignedEmployees.map((employee) => {
                           const leaderKey = rosterAssignmentKey(
                             employee.employeeId,

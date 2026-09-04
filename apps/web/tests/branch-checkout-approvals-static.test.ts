@@ -11,7 +11,10 @@ test("checkout queue and decisions share the live exact-branch hierarchy", () =>
   const migration = read(
     "supabase/migrations/20260718174604_canonical_auth_role_position_cleanup.sql",
   );
-  const page = read("apps/web/lib/staff-runtime/checkout-approvals/page.tsx");
+  const page =
+    read("apps/web/lib/staff-runtime/checkout-approvals/page.tsx") +
+    "\n" +
+    read("apps/web/lib/staff-runtime/checkout-approvals/data.ts");
   const actions = read("apps/web/lib/staff-runtime/clock/actions.ts");
   const dashboard = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/data.ts",

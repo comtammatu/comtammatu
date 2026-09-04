@@ -472,7 +472,7 @@ export function useSupplierInvoiceListUi({
             <RowActionsMenu
               items={items}
               label={`${copy.groupDetailAction}: ${group.title}`}
-              triggerSize={controlSize === "touch" ? "icon-touch" : "icon"}
+              triggerSize="icon-sm"
             />
           </div>
         );

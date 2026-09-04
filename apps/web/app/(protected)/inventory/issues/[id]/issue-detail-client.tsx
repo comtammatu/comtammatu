@@ -443,7 +443,7 @@ export function IssueDetailClient({
             <Button
               type="button"
               variant="ghost"
-              size="icon"
+              size="icon-sm"
               onClick={() => handleEditLine(line)}
               disabled={isPending}
               aria-label={ISSUES_VI.editLineAction}
@@ -453,7 +453,7 @@ export function IssueDetailClient({
             <Button
               type="button"
               variant="ghost"
-              size="icon"
+              size="icon-sm"
               onClick={() => handleDeleteLine(line.id)}
               disabled={isPending}
               className="text-muted-foreground hover:text-destructive"

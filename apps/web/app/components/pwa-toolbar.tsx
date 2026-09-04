@@ -297,7 +297,7 @@ export function PwaToolbar({
         role="region"
         aria-label={copy.regionLabel}
       >
-        <div className="mx-auto flex max-w-lg items-center gap-2 lg:max-w-3xl">
+        <div className="mx-auto flex max-w-lg items-center gap-2 md:max-w-3xl lg:max-w-5xl xl:max-w-6xl">
           <div
             className="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-foreground"
             role="alert"
@@ -336,7 +336,7 @@ export function PwaToolbar({
         role="region"
         aria-label={copy.regionLabel}
       >
-        <div className="mx-auto flex max-w-lg items-center gap-2 lg:max-w-3xl">
+        <div className="mx-auto flex max-w-lg items-center gap-2 md:max-w-3xl lg:max-w-5xl xl:max-w-6xl">
           {!isOnline ? (
             <div
               className="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-destructive"

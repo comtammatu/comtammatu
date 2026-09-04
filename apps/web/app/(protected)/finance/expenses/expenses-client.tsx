@@ -584,7 +584,7 @@ export function ExpensesClient({
             const items = getExpenseRowActions(row);
             return items.length > 0 ? (
               <div onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
-                <RowActionsMenu items={items} label={copy.table.actions} triggerSize={isTouchLayout ? "icon-touch" : "icon"} />
+                <RowActionsMenu items={items} label={copy.table.actions} triggerSize="icon-sm" />
               </div>
             ) : null;
           },

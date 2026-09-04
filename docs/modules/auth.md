@@ -22,7 +22,19 @@ in sync on route/nav/default-landing changes.
 ADR. Owner identity columns: [ADR 0005](../plan/adr/0005-owner-identity-source-separation.md)
 — do not dual-source `tenants.owner_user_id` into `has_permission` /
 `auth_is_owner`. DEFINER / RLS / atomic RPC: [`database.md`](database.md) and
-`docs/agent/rules/database.md` (no ADR 0011).
+`docs/agent/rules/database.md` (no ADR 0011). Do not call this model PBAC.
+
+Write gate: `has_permission*()` + live bindings. Do not authorize INSERT /
+UPDATE / DELETE with a `*:view` key, and do not add `auth_role()` /
+`has_position()` on a new write policy or RPC unless the row cites an adapter
+below. JWT `user_role` + `canAccess` admit routes only. `positions.code` is an
+HR label (mapper feeds JWT). `auth_role()` reads the live profile, not the JWT,
+and is not a write key.
+
+Adapters until ADR 0015: D076 JWT roles on Control L0; ADR 0045
+`has_position('central_supply_ops')` on catalog write; `auth_role() = 'owner'`
+**and** a real write key only to split tenant vs own-branch scope (for example
+`printers_*`).
 
 ## Layer Meanings
 
@@ -65,7 +77,7 @@ central_supply_ops / central_kitchen_lead on Control L0 + GRN/PO per D076/D091.
 - **`has_permission(branch_id, key)`** — live bindings + compat grants; revoke
   **immediate**. Use for destructive UPDATE/DELETE and instant-grant gates.
 - **`auth_role()`** — live role from `profiles.position_id → positions.code`.
-  Hierarchy/scope in RPCs; action grants still use `has_permission*()`.
+  Route/scope only; action grants still use `has_permission*()`.
 
 Notes: `refunds_update` uses `has_permission(...,'orders:refund_approve')` —
 not cached `auth_role()`. `update_staff_profile` / `toggle_profile_active`

@@ -374,6 +374,12 @@ Mỗi hàng = `page.tsx` (shim gộp vào cha). Adapter L0: `AppPage` / `DataTab
 - **Workflow:** `today` → `approvals` → `timesheet` → `roster` (BM peer: `/br/{id}/team/roster`). `tab=roster&branch=all` = LIST địa điểm (mở hàng ghi cùng `branch=`); site cụ thể = lưới tuần trong `AppListFrame`. `tab=approvals` = một LIST, toolbar đổi hàng đợi kết ca / phép (`panel`).
 - **Show / NOT:** Pending trên Cần duyệt; site gồm VP; cảnh báo chưa phân ca. **Không:** phân quyền staff; chỉnh `pay_basis`; KPI bán; empty-state bắt chọn Phạm vi khi `all`; selector chi nhánh thứ hai.
 - **UX:** Filter `date`/`site`/`tab`/`month`/`view`/`week` trên URL. Deep-nav đổi nhà; không Back về `/hr`.
+- **Duyệt kết ca tập trung — `/hr/attendance/checkout-approvals`:**
+  - **Archetype:** `LIST` thuần (`AppPage width="xwide"` + `AppListFrame` + `DataTable`).
+  - **Actor:** `owner` / HR quản trị.
+  - **Job:** Duyệt hoặc từ chối yêu cầu kết ca của nhân viên trên toàn hệ thống (không bắt buộc `branchId`, hỗ trợ lọc theo chi nhánh).
+  - **Responsive:** $\ge 1024\text{px}$ (`OWNER_SHELL_BREAKPOINT`): bảng dữ liệu `DataTable` đa cột (thời gian, nhân viên, chi nhánh, ca, checklist tóm tắt, hành động); $< 1024\text{px}$: `mobileCardRender` thẻ phản hồi với thao tác chạm thuận tiện.
+  - **Thao tác:** Duyệt trực tiếp từng dòng qua action row; Từ chối mở `FormDialog` / `AppDialog` nhập lý do (không dùng `AppSheet` của branch). Không áp dụng duyệt hàng loạt (bulk approve).
 
 ### 2.8b. Bảng lương — `/hr/payroll`
 

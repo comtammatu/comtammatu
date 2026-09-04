@@ -123,7 +123,7 @@ export function AppHeader({
       <div
         className={cn(
           "mx-auto flex w-full max-w-lg items-center justify-between gap-2 px-3 py-1.5 sm:gap-3 sm:py-2",
-          wide && "md:max-w-2xl lg:max-w-4xl",
+          wide && "md:max-w-3xl lg:max-w-5xl xl:max-w-6xl",
         )}
       >
         <AppHeaderBrand

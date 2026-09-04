@@ -891,4 +891,39 @@ export const hr = {
     missingGuardAlert: "Thiếu bảo vệ",
     neededRoleBadge: "Đang thiếu vị trí này",
   },
+  checkoutApprovalsQueue: {
+    pageTitle: "Duyệt kết ca",
+    pageDescription:
+      "Duyệt hoặc từ chối yêu cầu kết ca của nhân viên trên toàn hệ thống.",
+    emptyTitle: "Không có yêu cầu kết ca nào",
+    emptyDescription: "Tất cả các yêu cầu kết ca của nhân viên đã được xử lý.",
+    colEmployee: "Nhân viên",
+    colBranch: "Chi nhánh",
+    colShift: "Ca làm việc",
+    colTasks: "Việc trong ca",
+    actionsAria: "Thao tác",
+    menuAria: "Thao tác kết ca",
+    allChain: "Toàn chuỗi",
+    clockInLabel: (time: string) => `Vào ca: ${time}`,
+    clockInPrefix: "Vào:",
+    requestedPrefix: "Yêu cầu:",
+    tasksCount: (done: number, total: number) =>
+      `${formatCount(done)}/${formatCount(total)} việc`,
+    noTasks: "Không có việc",
+    rejectDialogTitle: "Từ chối kết ca",
+    rejectDialogDescription: (name: string) =>
+      `Nhập lý do từ chối yêu cầu kết ca của ${name}.`,
+    rejectButton: "Từ chối yêu cầu",
+    rejectReasonLabel: "Lý do từ chối",
+    rejectReasonPlaceholder:
+      "Nhập lý do từ chối kết ca (tối thiểu 3 ký tự)...",
+    detailsTitle: (name: string) => `Chi tiết ca — ${name}`,
+    shiftTasksHeader: (done: number, total: number) =>
+      `Việc trong ca (${formatCount(done)}/${formatCount(total)})`,
+    noTasksForShift: "Không có danh sách công việc nào được gán cho ca này.",
+    taskRequired: "Bắt buộc",
+    taskHasPhoto: "Có ảnh",
+    approveAction: "Duyệt",
+    approveCheckout: "Duyệt kết ca",
+  },
 } as const;

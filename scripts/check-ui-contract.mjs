@@ -2434,7 +2434,6 @@ for (const aclPath of ACL_PATHS) {
 // review-owned.
 const VALID_ARCHETYPES = new Set([
   "LIST",
-  "EMBED-WRAPPER",
   "DETAIL",
   "SETTINGS-PANEL",
   "DOC-WORKFLOW",
@@ -2446,6 +2445,17 @@ const VALID_ARCHETYPES = new Set([
   "BOARD",
   "PUBLIC-WORKFLOW",
 ]);
+
+const embedWrapperOccurrences = Object.entries(PAGE_ARCHETYPES).filter(
+  ([, archetype]) => archetype === "EMBED-WRAPPER",
+);
+if (embedWrapperOccurrences.length > 0) {
+  for (const [file] of embedWrapperOccurrences) {
+    failures.push(
+      `page-archetype: ${file} declares retired archetype "EMBED-WRAPPER". EMBED-WRAPPER census target is 0 (docs/spec/page-archetypes.md § 2).`,
+    );
+  }
+}
 
 const allPageFiles = walkFiles("apps/web/app", [".tsx"])
   .map(toPosix)
@@ -2544,22 +2554,6 @@ for (const file of allPageFiles) {
     if (findNearestRouteBoundary(file, boundaryFile)) continue;
     failures.push(
       `route-boundary-coverage: ${file} cannot resolve an inherited ${boundaryFile}. Add a route-family boundary using the shared adapter or restore the app-level boundary.`,
-    );
-  }
-}
-
-for (const file of allPageFiles) {
-  if (PAGE_ARCHETYPES[file] !== "EMBED-WRAPPER") continue;
-  const content = fs.readFileSync(path.join(REPO_ROOT, file), "utf8");
-  const lineCount = content.split("\n").length;
-  if (lineCount > 40) {
-    failures.push(
-      `page-archetype: ${file} is an EMBED-WRAPPER with ${lineCount} lines (limit 40). EMBED-WRAPPER pages only delegate to a canonical *PageContent export (docs/spec/page-archetypes.md § EMBED-WRAPPER).`,
-    );
-  }
-  if (/\bcreateClient\s*\(|\.from\(\s*["'`]/.test(content)) {
-    failures.push(
-      `page-archetype: ${file} is an EMBED-WRAPPER with a local Supabase call. EMBED-WRAPPER pages must have zero local fetch — delegate to the canonical *PageContent export (docs/spec/page-archetypes.md § EMBED-WRAPPER).`,
     );
   }
 }
@@ -2953,6 +2947,100 @@ for (const filePath of walkFiles("apps/web/app/(protected)", [".tsx"])) {
     failures.push(
       `control-surface-compose: ${normalized} keeps twin md:hidden / hidden md:* list trees (use DataTable mobileCardRender — page-archetypes.md § 1.1).`,
     );
+  }
+}
+
+// button-table-row-size: desktop table rows and DataTableColumn renderers must
+// use compact sizes (size="sm" | "xs" | "icon-sm" | "icon-xs", or variant="link").
+// Reject size="default", size="touch", size="touch-lg", size="lg", or non-compact triggerSize in desktop table cells.
+for (const filePath of walkFiles("apps/web/app/(protected)", [".tsx"])) {
+  const normalized = toPosix(filePath);
+  const content = fs.readFileSync(filePath, "utf8");
+  if (!content.includes("DataTableColumn") && !content.includes("<TableCell")) {
+    continue;
+  }
+
+  const lines = content.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Helper to determine if line is inside a desktop table column render or TableCell
+    const isInsideTableColumn = () => {
+      for (let j = i - 1; j >= Math.max(0, i - 12); j--) {
+        const trimmed = lines[j].trim();
+        if (trimmed === "];" || trimmed === "};" || /^(?:const|let|var|function)\b/.test(trimmed)) {
+          return false;
+        }
+        if (/render:\s*(?:\([^)]*\)|[a-zA-Z0-9_]+)\s*=>/.test(lines[j])) {
+          for (let k = j - 1; k >= Math.max(0, j - 8); k--) {
+            if (/header:\s*["'<]|key:\s*["']/.test(lines[k])) {
+              return true;
+            }
+          }
+          return false;
+        }
+        if (lines[j].includes("<TableCell")) {
+          return true;
+        }
+        if (
+          lines[j].includes("mobileCardRender") ||
+          lines[j].includes("renderItem") ||
+          lines[j].includes("<AppPageHeader")
+        ) {
+          return false;
+        }
+      }
+      return false;
+    };
+
+    if (line.includes("<RowActionsMenu") && isInsideTableColumn()) {
+      const fullTag = lines.slice(i, Math.min(lines.length, i + 8)).join(" ");
+      const triggerMatch = fullTag.match(/triggerSize=(?:\{([^}]+)\}|"([^"]+)")/);
+      if (!triggerMatch) {
+        failures.push(
+          `button-table-row-size: ${normalized}:${i + 1} renders <RowActionsMenu> in a table column without explicit compact triggerSize (defaults to icon-lg). Use triggerSize="icon-sm" (page-archetypes.md § 1.1).`,
+        );
+      } else {
+        const sizeVal = triggerMatch[1] || triggerMatch[2];
+        if (
+          sizeVal === "icon" ||
+          sizeVal === "icon-lg" ||
+          sizeVal === "touch" ||
+          sizeVal === "icon-touch" ||
+          sizeVal === "default" ||
+          sizeVal.includes("icon-touch")
+        ) {
+          failures.push(
+            `button-table-row-size: ${normalized}:${i + 1} renders <RowActionsMenu> in a table column with non-compact triggerSize=${JSON.stringify(sizeVal)}. Desktop table rows must use triggerSize="icon-sm" (page-archetypes.md § 1.1).`,
+          );
+        }
+      }
+    }
+
+    if (line.includes("<Button") && isInsideTableColumn()) {
+      const fullTag = lines.slice(i, Math.min(lines.length, i + 8)).join(" ");
+      const isLinkVariant =
+        /variant=["']link["']/.test(fullTag) ||
+        /variant=\{["']link["']\}/.test(fullTag);
+      if (!isLinkVariant) {
+        const sizeMatch = fullTag.match(/size=(?:\{([^}]+)\}|"([^"]+)")/);
+        if (sizeMatch) {
+          const sizeVal = sizeMatch[1] || sizeMatch[2];
+          if (
+            sizeVal === "default" ||
+            sizeVal === "touch" ||
+            sizeVal === "touch-lg" ||
+            sizeVal === "lg" ||
+            sizeVal === "icon" ||
+            sizeVal === "icon-lg"
+          ) {
+            failures.push(
+              `button-table-row-size: ${normalized}:${i + 1} renders <Button> in a table cell with non-compact size=${JSON.stringify(sizeVal)}. Table row action buttons must use size="sm" | "xs" | "icon-sm" | "icon-xs" (or variant="link").`,
+            );
+          }
+        }
+      }
+    }
   }
 }
 

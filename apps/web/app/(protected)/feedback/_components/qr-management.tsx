@@ -255,7 +255,7 @@ export function QrManagement({
           onOpenChange={(open) =>
             setOpenActionRowId(open ? item.id : null)
           }
-          triggerSize={controlSize === "touch" ? "icon-touch" : "icon"}
+          triggerSize="icon-sm"
         />
       ),
     },

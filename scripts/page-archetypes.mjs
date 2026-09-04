@@ -26,9 +26,9 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/orders/page.tsx": "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx": "LANDING",
   "apps/web/app/(protected)/br/[branchId]/(operator)/profile/page.tsx":
-    "EMBED-WRAPPER",
+    "DETAIL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/profile/payslip/page.tsx":
-    "EMBED-WRAPPER",
+    "DETAIL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/settings/audio/page.tsx":
     "SETTINGS-PANEL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/settings/kds/page.tsx":
@@ -54,17 +54,17 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/attendance/page.tsx":
     "REDIRECT-SHIM",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/clock/page.tsx":
-    "EMBED-WRAPPER",
+    "DOC-WORKFLOW",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/page.tsx":
     "REDIRECT-SHIM",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/roster/page.tsx":
     "REDIRECT-SHIM",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/page.tsx":
-    "EMBED-WRAPPER",
+    "LANDING",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/schedule/leave/page.tsx":
-    "EMBED-WRAPPER",
+    "DOC-WORKFLOW",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/schedule/page.tsx":
-    "EMBED-WRAPPER",
+    "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/page.tsx":
     "LANDING",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/categories/page.tsx":
@@ -86,7 +86,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-slips/page.tsx":
     "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count/page.tsx":
-    "EMBED-WRAPPER",
+    "DOC-WORKFLOW",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/page.tsx":
     "DETAIL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/page.tsx":
@@ -146,12 +146,12 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/team/attendance/page.tsx":
     "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/team/checkout-approvals/page.tsx":
-    "EMBED-WRAPPER",
+    "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/team/leave-approvals/page.tsx":
-    "EMBED-WRAPPER",
+    "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/team/page.tsx": "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/team/roster/page.tsx":
-    "EMBED-WRAPPER",
+    "LIST",
   "apps/web/app/(protected)/br/[branchId]/kds/page.tsx": "BOARD",
   "apps/web/app/(protected)/br/[branchId]/pos/page.tsx": "BOARD",
   "apps/web/app/(protected)/br/[branchId]/pickup/page.tsx": "BOARD",
@@ -170,7 +170,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/hr/page.tsx": "LIST",
   "apps/web/app/(protected)/hr/attendance/page.tsx": "LIST",
   "apps/web/app/(protected)/hr/attendance/checkout-approvals/page.tsx":
-    "EMBED-WRAPPER",
+    "LIST",
   "apps/web/app/(protected)/hr/payroll/[periodId]/page.tsx": "REDIRECT-SHIM",
   "apps/web/app/(protected)/hr/payroll/page.tsx": "LIST",
   "apps/web/app/(protected)/hr/setup/page.tsx": "SETTINGS-PANEL",
@@ -241,11 +241,11 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/work/tasks/[id]/page.tsx": "REDIRECT-SHIM",
   "apps/web/app/(protected)/work/team/page.tsx": "LIST",
   "apps/web/app/(protected)/me/page.tsx": "LANDING",
-  "apps/web/app/(protected)/me/clock/page.tsx": "EMBED-WRAPPER",
-  "apps/web/app/(protected)/me/schedule/page.tsx": "EMBED-WRAPPER",
-  "apps/web/app/(protected)/me/schedule/leave/page.tsx": "EMBED-WRAPPER",
-  "apps/web/app/(protected)/me/profile/page.tsx": "EMBED-WRAPPER",
-  "apps/web/app/(protected)/me/payslip/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/me/clock/page.tsx": "DOC-WORKFLOW",
+  "apps/web/app/(protected)/me/schedule/page.tsx": "LIST",
+  "apps/web/app/(protected)/me/schedule/leave/page.tsx": "DOC-WORKFLOW",
+  "apps/web/app/(protected)/me/profile/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/me/payslip/page.tsx": "DETAIL",
   "apps/web/app/(public)/(auth)/login/page.tsx": "GATE/AUTH",
   "apps/web/app/(public)/access-denied/page.tsx": "GATE/AUTH",
   "apps/web/app/offline/page.tsx": "GATE/AUTH",
@@ -511,13 +511,6 @@ const PAGE_DISPOSITION_OVERRIDES = {
   },
   "apps/web/app/(protected)/finance/targets/page.tsx": {
     // Gate exception: SETTINGS-PANEL list-like editor stays width=wide.
-    status: "keep",
-    evidence: "implemented-static",
-    final: false,
-  },
-  "apps/web/app/(protected)/hr/attendance/checkout-approvals/page.tsx": {
-    // Gate exception: EMBED-WRAPPER shared staff-runtime body; Owner tab embeds
-    // intentionally; branch uses native /team/checkout-approvals.
     status: "keep",
     evidence: "implemented-static",
     final: false,

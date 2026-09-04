@@ -216,7 +216,7 @@ Gold LIST exemplar: `apps/web/app/(protected)/inventory/grn/page.tsx` +
 
 ## 2. Archetype Taxonomy
 
-Twelve archetypes. `FORM-PAGE` from the original brief is **not** a
+Eleven archetypes (`EMBED-WRAPPER` retired per MTDS 2.0). `FORM-PAGE` from the original brief is **not** a
 standalone archetype — the census found only 2 candidate pages, and both fit
 an existing archetype better (a line-array create/edit flow is DOC-WORKFLOW;
 a single-entity RHF+Zod edit is SETTINGS-PANEL), so it folds into those two
@@ -225,17 +225,16 @@ rather than staying a near-empty category.
 | #   | Archetype       | Job                                                                              |
 | --- | --------------- | -------------------------------------------------------------------------------- |
 | 1   | LIST            | Browse/filter/search a collection, row actions, quick CRUD                       |
-| 2   | EMBED-WRAPPER   | Branch-runtime re-mount of a canonical control_surface/staff-runtime `PageContent` |
-| 3   | DETAIL          | Single entity: metadata + lines/history + stage actions                          |
-| 4   | SETTINGS-PANEL  | Single-entity or list-shaped configuration form                                  |
-| 5   | DOC-WORKFLOW    | Create/edit a line-array business document                                       |
-| 6   | REDIRECT-SHIM   | No-JSX route selector to a canonical destination                                 |
-| 7   | LANDING         | Link-card menu into a group of capabilities                                      |
-| 8   | REPORT          | control_surface analytics or a fixed-scope Branch operational signal               |
-| 9   | DASHBOARD       | Home-surface KPI summary with drill-downs                                        |
-| 10  | GATE/AUTH       | Pre-context or terminal decision screen                                          |
-| 11  | BOARD           | Realtime operational queue (full-screen station_chrome)                       |
-| 12  | PUBLIC-WORKFLOW | Token-scoped customer transaction without control_surface chrome                   |
+| 2   | DETAIL          | Single entity: metadata + lines/history + stage actions                          |
+| 3   | SETTINGS-PANEL  | Single-entity or list-shaped configuration form                                  |
+| 4   | DOC-WORKFLOW    | Create/edit a line-array business document                                       |
+| 5   | REDIRECT-SHIM   | No-JSX route selector to a canonical destination                                 |
+| 6   | LANDING         | Link-card menu into a group of capabilities                                      |
+| 7   | REPORT          | control_surface analytics or a fixed-scope Branch operational signal               |
+| 8   | DASHBOARD       | Home-surface KPI summary with drill-downs                                        |
+| 9   | GATE/AUTH       | Pre-context or terminal decision screen                                          |
+| 10  | BOARD           | Realtime operational queue (full-screen station_chrome)                       |
+| 11  | PUBLIC-WORKFLOW | Token-scoped customer transaction without control_surface chrome                   |
 
 Control Surface Work compose shapes (ADR 0033 — not station BOARD):
 
@@ -291,13 +290,11 @@ Control Surface Work compose shapes (ADR 0033 — not station BOARD):
   the context menu as the only path to any action.
 - Navigation: back/breadcrumb per this family's `ROUTE_FAMILY_CONTRACTS` entry.
 
-### EMBED-WRAPPER
+### EMBED-WRAPPER (Retired)
 
-**Exemplar:** `apps/web/app/(protected)/br/[branchId]/(operator)/shift/clock/page.tsx`.
+**Status: Retired (Transition Completed).** Formerly used during initial migration to bridge staff-runtime and branch runtime chrome. All routes have been re-homed to first-class archetypes (`LIST`, `DETAIL`, `DOC-WORKFLOW`, `LANDING`). Shared data loaders delegate directly to plane-appropriate presenters (`BranchOperator*` vs `Employee*` via `plane="branch" | "employee"` inside `Staff*PageContent`) rather than nesting foreign management shells. New routes must select an active archetype; `EMBED-WRAPPER` is forbidden.
 
-This is the repo's second-largest archetype and its
-hard rules are stricter than the other archetypes because its only job is
-delegation:
+Historical delegation rules (preserved for audit/archive):
 
 - Branch runtime landing pages and landing roots MUST NOT use this archetype. A
   Branch plane entry such as `/br/[branchId]`, `/br/[branchId]/stock`, or

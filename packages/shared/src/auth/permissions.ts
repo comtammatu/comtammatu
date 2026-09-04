@@ -118,6 +118,7 @@ export const PERMISSION_KEYS = {
 
   // finance
   FINANCE_VIEW: "finance:view",
+  FINANCE_TARGETS_WRITE: "finance:targets_write",
   FINANCE_EXPENSE_CREATE: "finance:expense_create",
   FINANCE_EXPENSE_APPROVE: "finance:expense_approve",
   FINANCE_PAYROLL_CALCULATE: "finance:payroll_calculate",
@@ -174,7 +175,7 @@ export type PermissionKey =
  * (some keys, e.g. crm:*, live only in the DB catalog). Static assertion guarded
  * by a string-match test; bump when a migration adds/removes a catalog key.
  */
-export const PERMISSION_KEY_COUNT = 112;
+export const PERMISSION_KEY_COUNT = 113;
 
 /**
  * Pure function: check if a permission set contains a given key.

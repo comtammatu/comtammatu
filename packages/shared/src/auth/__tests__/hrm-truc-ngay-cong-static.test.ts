@@ -144,9 +144,10 @@ test("Checkout approval gate uses hr:approve_checkout (renamed in Phase 2)", () 
   const authorityMigration = read(
     "supabase/migrations/20260718174604_canonical_auth_role_position_cleanup.sql",
   );
-  const approvalsPage = read(
-    "apps/web/lib/staff-runtime/checkout-approvals/page.tsx",
-  );
+  const approvalsPage =
+    read("apps/web/lib/staff-runtime/checkout-approvals/page.tsx") +
+    "\n" +
+    read("apps/web/lib/staff-runtime/checkout-approvals/data.ts");
 
   assert.ok(
     clockActions.includes('ctx.supabase.rpc(\n    "approve_employee_clock_out"') &&

@@ -1128,15 +1128,6 @@ export const UI_BLOCK_REGISTRY = {
     "AppShell, AppListFrame, DocumentFormFrame, DataTable, desktop side editor, or raw Card",
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste/page.tsx",
   ),
-  "embedded-workflow": block(
-    ["EMBED-WRAPPER"],
-    ["branch", "staff"],
-    "mount a canonical deep workflow inside branch runtime chrome",
-    "delegation-only route + shared PageContent embedded branch",
-    "native Branch presentation when the workflow becomes branch-owned",
-    "local fetching, nested AppPage, or nested AppPageHeader",
-    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/clock/page.tsx",
-  ),
   "realtime-board": block(
     ["BOARD"],
     ["station"],

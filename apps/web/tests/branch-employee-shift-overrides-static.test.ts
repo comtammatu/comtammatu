@@ -17,7 +17,7 @@ describe("Branch manager employee shift-task overrides", () => {
       permissions,
       /HR_MANAGE_EMPLOYEE_SHIFT_OVERRIDES:\s*"hr:manage_employee_shift_overrides"/,
     );
-    assert.match(permissions, /PERMISSION_KEY_COUNT = 112/);
+    assert.match(permissions, /PERMISSION_KEY_COUNT = 113/);
 
     const migration = read(
       "supabase/migrations/20260808162041_branch_manager_employee_shift_task_overrides.sql",

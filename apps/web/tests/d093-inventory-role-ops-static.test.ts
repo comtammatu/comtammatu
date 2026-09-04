@@ -81,7 +81,7 @@ test("D093 migration and permission keys register stock request surface", () => 
   assert.match(migration, /inventory:request_create/);
   assert.match(migration, /grn_central_site_only/);
   assert.match(permissions, /INVENTORY_REQUEST_CREATE/);
-  assert.match(permissions, /PERMISSION_KEY_COUNT = 112/);
+  assert.match(permissions, /PERMISSION_KEY_COUNT = 113/);
 });
 
 test("ingredient catalog uses one atomic role-aware RPC", () => {

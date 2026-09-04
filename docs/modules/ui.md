@@ -282,9 +282,7 @@ control_surface counterparts keep their own management presenters
 …) and no longer carry an `embedded` mode or `/br/` route branching. Owner GRN
 create clients are retired — list-first GRN from PO only.
 
-`EMBED-WRAPPER` is a transition archetype only. Once a route has native Branch
-presentation, update `scripts/page-archetypes.mjs` so the guard prevents a
-regression.
+`EMBED-WRAPPER` has completed its transition phase and is retired (census count = 0). All Branch and Staff routes use native presentations or direct shared loader delegation (`Staff*PageContent` with `plane`).
 
 Station apps (POS, KDS, Runner) live under `/br/[branchId]/*` and use
 `StationSection`, `Frame`, and `OperationalBoardCard`. They never mount the

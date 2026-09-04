@@ -63,7 +63,7 @@ export function AppBottomNav({
       <div
         className={cn(
           "no-scrollbar mx-auto flex max-w-lg items-stretch gap-1 overflow-x-auto",
-          wide && "md:max-w-2xl lg:max-w-4xl",
+          wide && "md:max-w-3xl lg:max-w-5xl xl:max-w-6xl",
         )}
       >
         {leading}

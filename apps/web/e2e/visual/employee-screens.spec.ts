@@ -46,7 +46,8 @@ const VIEWPORTS: ReadonlyArray<{
   height: number;
 }> = [
   { name: "mobile", width: 390, height: 844 },
-  { name: "desktop", width: 1280, height: 900 },
+  { name: "tablet", width: 1024, height: 768 },
+  { name: "desktop", width: 1440, height: 900 },
 ];
 
 const MASK_VOLATILE = (page: import("@playwright/test").Page) => [

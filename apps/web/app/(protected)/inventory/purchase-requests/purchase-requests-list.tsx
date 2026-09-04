@@ -213,7 +213,7 @@ export function PurchaseRequestsList({
           <RowActionsMenu
             items={rowActions(row)}
             label={row.code}
-            triggerSize={controlSize === "touch" ? "icon-touch" : "icon"}
+            triggerSize="icon-sm"
           />
         </div>
       ),

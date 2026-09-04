@@ -376,9 +376,10 @@ test("archived checkout lineage remains testable with branch-scoped manager auth
   const branchStaffMigrationSrc = read(
     "supabase/migrations/20260708115755_branch_staff_guard_mapper.sql",
   );
-  const approvalsPageSrc = read(
-    "apps/web/lib/staff-runtime/checkout-approvals/page.tsx",
-  );
+  const approvalsPageSrc =
+    read("apps/web/lib/staff-runtime/checkout-approvals/page.tsx") +
+    "\n" +
+    read("apps/web/lib/staff-runtime/checkout-approvals/data.ts");
   const authorityMigrationSrc = read(
     "supabase/migrations/20260718174604_canonical_auth_role_position_cleanup.sql",
   );

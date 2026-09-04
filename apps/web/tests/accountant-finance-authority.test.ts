@@ -35,6 +35,7 @@ test("accountant runs Finance operations without Orders or Settings grants", () 
   assert.doesNotMatch(paymentActions, /PERMISSION_KEYS\.ORDERS_REFUND_APPROVE/);
   assert.doesNotMatch(replacementActions, /PERMISSION_KEYS\.SETTINGS_TENANT/);
   assert.doesNotMatch(targetsActions, /user_role !== "owner"/);
+  assert.match(targetsActions, /PERMISSION_KEYS\.FINANCE_TARGETS_WRITE/);
 });
 
 test("Finance RPC authority admits accountant and preserves tenant scope", () => {

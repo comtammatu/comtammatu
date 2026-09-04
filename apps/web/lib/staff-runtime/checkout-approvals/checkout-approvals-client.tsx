@@ -449,7 +449,7 @@ export function CheckoutApprovalsClient({
           description="Chọn ca khác hoặc chọn «Tất cả ca» để xem danh sách chờ duyệt."
         />
       ) : (
-        <ItemGroup className="grid gap-2 lg:grid-cols-2 overflow-hidden sm:overflow-visible">
+        <ItemGroup className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 overflow-hidden sm:overflow-visible">
           {filteredItems.map((item) => {
             const approving = pendingId === item.id && isPending;
             return (

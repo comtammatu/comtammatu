@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { MODULE_ACL } from "@comtammatu/shared/auth";
+import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { hasMaximumScale } from "@comtammatu/shared/money";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext, getAuthContextWithPermission } from "@/_lib/auth";
@@ -193,7 +193,10 @@ export async function upsertBranchRevenueTargets(
     return { success: false, error: targetCopy.errors.invalidPayload };
   }
 
-  const ctx = await getAuthContextWithPermission(FINANCE_ROLES, "finance:view");
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.FINANCE_TARGETS_WRITE,
+  );
   if (!ctx) {
     return { success: false, error: targetCopy.errors.forbidden };
   }
@@ -248,7 +251,10 @@ export async function deleteBranchRevenueTarget(
     return { success: false, error: targetCopy.errors.invalidPayload };
   }
 
-  const ctx = await getAuthContextWithPermission(FINANCE_ROLES, "finance:view");
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.FINANCE_TARGETS_WRITE,
+  );
   if (!ctx) {
     return { success: false, error: targetCopy.errors.forbidden };
   }

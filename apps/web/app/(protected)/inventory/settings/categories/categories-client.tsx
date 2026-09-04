@@ -183,7 +183,7 @@ export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
             <RowActionsMenu
               items={items}
               label={FORM_VI.action}
-              triggerSize={isTouchLayout ? "icon-touch" : "icon"}
+              triggerSize="icon-sm"
             />
           </div>
         );

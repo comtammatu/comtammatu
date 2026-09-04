@@ -178,6 +178,8 @@ Action-layer gates (mirrored by RPC):
   `initialize_branch_cash_opening`,
   `create_finance_fund_adjustment`) → `finance:view` + `owner`/`accountant`
   position — not `finance:ap_pay`.
+- **Revenue target mutations** (`upsertBranchRevenueTargets`,
+  `deleteBranchRevenueTarget`) → `finance:targets_write`.
 - **`finance:ap_pay`** reserved for `attachSupplierInvoiceVatEvidence` (also
   accepts `procurement:invoice_create`), matching its RPC.
 - Owner-only "pay above current allocation" is inside
@@ -196,7 +198,7 @@ the actions above. RLS remains final enforcement.
 | `/finance/expenses`          | Operating expense LIST       | Period KPI from `get_finance_expense_period_summary`; rows lead with spend purpose; URL `q`/`kind` filters; list stays paged |
 | `/finance/equipment`         | Capital equipment LIST       | All-time `category=capital` spend; not a depreciation register |
 | `/finance/construction`      | Construction LIST            | All-time `category=construction` spend; outside `Tổng giá trị` |
-| `/finance/targets`           | Monthly revenue targets      | Finance-managed targets + non-cumulative reward tiers; no auto payroll |
+| `/finance/targets`           | Monthly revenue targets      | Read: `finance:view`. Write: `finance:targets_write` |
 | `/finance/food-cost`         | Gross profit / margin        | Recorded gross-margin KPI; per-item table is theoretical portion cost |
 | `/finance/supplier-invoices` | Supplier payable             | Thin AP entry; not expenses |
 | `/finance/invoices`          | HĐĐT queue                   | Support workflow; same-VN-day issue window |

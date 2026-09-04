@@ -53,11 +53,12 @@ BEGIN
   )
   INTO v_definition;
 
-  IF v_definition NOT LIKE '%auth_is_owner%'
+  IF v_definition NOT LIKE '%finance:targets_write%'
+    OR v_definition LIKE '%finance:view%'
     OR v_definition LIKE '%branch_manager%'
     OR v_definition NOT LIKE '%reward_tiers%'
   THEN
-    RAISE EXCEPTION 'upsert_branch_revenue_targets must stay owner-only and persist reward tiers';
+    RAISE EXCEPTION 'upsert_branch_revenue_targets must require finance:targets_write and persist reward tiers';
   END IF;
 
   SELECT pg_get_functiondef(
@@ -65,10 +66,11 @@ BEGIN
   )
   INTO v_definition;
 
-  IF v_definition NOT LIKE '%auth_is_owner%'
+  IF v_definition NOT LIKE '%finance:targets_write%'
+    OR v_definition LIKE '%finance:view%'
     OR v_definition NOT LIKE '%DELETE FROM public.branch_revenue_targets%'
   THEN
-    RAISE EXCEPTION 'delete_branch_revenue_target must stay owner-only';
+    RAISE EXCEPTION 'delete_branch_revenue_target must require finance:targets_write';
   END IF;
 
   SELECT pg_get_functiondef(

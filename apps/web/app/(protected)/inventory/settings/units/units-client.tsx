@@ -239,7 +239,7 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
             <RowActionsMenu
               items={items}
               label={FORM_VI.action}
-              triggerSize={isTouchLayout ? "icon-touch" : "icon"}
+              triggerSize="icon-sm"
             />
           </div>
         );
