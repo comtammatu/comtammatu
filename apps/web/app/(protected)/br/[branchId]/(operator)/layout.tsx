@@ -37,6 +37,7 @@ import { fetchBranchQueueCounts } from "./dashboard/data";
 import { OperatorBottomNav } from "./operator-bottom-nav";
 import { OperatorNotificationBell } from "./operator-notification-bell";
 import { OperatorPwaToolbar } from "./operator-pwa-toolbar";
+import { BranchIncidentDialog } from "../_components/branch-incident-dialog";
 import { ThemeMenuItem } from "@/components/theme-toggle";
 import { OPERATOR_BRANCH_OPS_TABLES } from "@/_hooks/branch-ops-runtime";
 
@@ -166,6 +167,7 @@ export default async function OperatorLayout({
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : null}
+              <BranchIncidentDialog branchId={context.branchId} />
               <Button
                 variant="outline"
                 size="icon-touch"

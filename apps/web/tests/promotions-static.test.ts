@@ -386,12 +386,55 @@ test("evaluate_order_promotions rechecks min_subtotal for order-level campaigns"
   assertSqlNotMatch(forward, /apply_gift_promotion_selection/);
   assertSqlNotMatch(forward, /merge_orders_auto_clear_promo/);
   assertSqlNotMatch(forward, /is_promo_gift/);
+});
+
+test("promo gift picker, merge release, and branch incident migration and wiring exist", () => {
+  const giftMigration = readRepo(
+    "supabase/migrations/20260904094819_promo_gift_picker_merge_release_and_branch_incident.sql",
+  );
+  assertSqlMatch(giftMigration, /CREATE OR REPLACE FUNCTION public\.apply_gift_promotion_selection/);
+  assertSqlMatch(giftMigration, /CREATE OR REPLACE FUNCTION public\.merge_orders_auto_clear_promo/);
+  assertSqlMatch(giftMigration, /CREATE OR REPLACE FUNCTION public\.create_branch_incident_task/);
+  assertSqlMatch(giftMigration, /GRANT EXECUTE ON FUNCTION public\.apply_gift_promotion_selection/);
+  assertSqlMatch(giftMigration, /GRANT EXECUTE ON FUNCTION public\.merge_orders_auto_clear_promo/);
+  assertSqlMatch(giftMigration, /GRANT EXECUTE ON FUNCTION public\.create_branch_incident_task/);
 
   const actions = readWeb(
     "app/(protected)/br/[branchId]/pos/discount-actions.ts",
   );
-  assert.doesNotMatch(actions, /apply_gift_promotion_selection/);
-  assert.doesNotMatch(actions, /merge_orders_auto_clear_promo/);
-  assert.doesNotMatch(actions, /listAvailablePromotions/);
-  assert.match(actions, /rpc\("merge_orders"/);
+  assert.match(actions, /apply_gift_promotion_selection/);
+  assert.match(actions, /merge_orders_auto_clear_promo/);
+  assert.match(actions, /listAvailablePromotions/);
+  assert.match(actions, /applyGiftPromotionSelection/);
+
+  const sheet = readWeb(
+    "app/(protected)/br/[branchId]/pos/_components/order-detail/discount-sheet.tsx",
+  );
+  assert.match(sheet, /availablePromos/);
+  assert.match(sheet, /giftItems/);
+  assert.match(sheet, /onApplyGiftItem/);
+
+  const orderDetail = readWeb(
+    "app/(protected)/br/[branchId]/pos/order-detail-sheet.tsx",
+  );
+  assert.match(orderDetail, /listAvailablePromotions/);
+  assert.match(orderDetail, /applyGiftPromotionSelection/);
+  assert.match(orderDetail, /releasePromoIfPresent/);
+
+  const incidentActions = readWeb(
+    "app/(protected)/br/[branchId]/_lib/incident-actions.ts",
+  );
+  assert.match(incidentActions, /create_branch_incident_task/);
+  assert.match(incidentActions, /createBranchIncidentAction/);
+
+  const incidentDialog = readWeb(
+    "app/(protected)/br/[branchId]/_components/branch-incident-dialog.tsx",
+  );
+  assert.match(incidentDialog, /BranchIncidentDialog/);
+  assert.match(incidentDialog, /createBranchIncidentAction/);
+
+  const workBoard = readWeb(
+    "app/(protected)/work/_components/work-board.tsx",
+  );
+  assert.match(workBoard, /incidentBadge/);
 });

@@ -14,6 +14,7 @@ import {
 } from "@comtammatu/ui/components/dropdown-menu";
 import { AppHeaderBrand } from "@/components/app-header";
 import { BranchQuickMenuLimitSheet } from "../(operator)/_components/home/branch-quick-menu-limit-sheet";
+import { BranchIncidentDialog } from "../_components/branch-incident-dialog";
 import { PrinterStatusIndicator } from "./printer-status-badge";
 import { usePosSession, usePosSound } from "./_providers/pos-desktop-provider";
 import {
@@ -133,67 +134,84 @@ function PosMoreMenu({
   onShowCloseSession: () => void;
 }) {
   const { audioMode, toggleSound } = usePosSound();
+  const [incidentOpen, setIncidentOpen] = useState(false);
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-touch"
-            className="shrink-0"
-            aria-label={messages.pos.sessionHeader.moreMenuAria}
-          >
-            <IconEllipsis />
-          </Button>
-        }
-      />
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuItem
-          className="min-h-12 text-sm"
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
           render={
-            <Link href={`/br/${branchId}`}>
-              <IconDoorEnter />
-              {APP_COPY_VI.branchHome}
-            </Link>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-touch"
+              className="shrink-0"
+              aria-label={messages.pos.sessionHeader.moreMenuAria}
+            >
+              <IconEllipsis />
+            </Button>
           }
         />
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuItem
+            className="min-h-12 text-sm"
+            render={
+              <Link href={`/br/${branchId}`}>
+                <IconDoorEnter />
+                {APP_COPY_VI.branchHome}
+              </Link>
+            }
+          />
 
-        <DropdownMenuItem
-          className="min-h-12 text-sm"
-          onClick={toggleSound}
-        >
-          {audioMode === "off" ? (
-            <IconVolumeX />
-          ) : audioMode === "beep" ? (
-            <IconVolume2 />
-          ) : (
-            <IconVoiceOn />
-          )}
-          {audioMode === "off"
-            ? "Âm báo POS: tắt"
-            : audioMode === "beep"
-              ? "Âm báo POS: chuông"
-              : audioMode === "voice"
-                ? "Âm báo POS: đọc"
-                : "Âm báo POS: chuông + đọc"}
-        </DropdownMenuItem>
+          <DropdownMenuItem
+            className="min-h-12 text-sm"
+            onClick={toggleSound}
+          >
+            {audioMode === "off" ? (
+              <IconVolumeX />
+            ) : audioMode === "beep" ? (
+              <IconVolume2 />
+            ) : (
+              <IconVoiceOn />
+            )}
+            {audioMode === "off"
+              ? "Âm báo POS: tắt"
+              : audioMode === "beep"
+                ? "Âm báo POS: chuông"
+                : audioMode === "voice"
+                  ? "Âm báo POS: đọc"
+                  : "Âm báo POS: chuông + đọc"}
+          </DropdownMenuItem>
 
-        {canCloseShift ? (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={onShowCloseSession}
-              className="min-h-12 text-sm text-destructive focus:text-destructive"
-            >
-              <IconPowerOff />
-              {messages.pos.sessionHeader.closeShift}
-            </DropdownMenuItem>
-          </>
-        ) : null}
-      </DropdownMenuContent>
-    </DropdownMenu>
+          <DropdownMenuItem
+            className="min-h-12 text-sm text-destructive focus:text-destructive"
+            onClick={() => setIncidentOpen(true)}
+          >
+            <IconShieldAlert />
+            {messages.operator.incident.posMenuLabel}
+          </DropdownMenuItem>
+
+          {canCloseShift ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={onShowCloseSession}
+                className="min-h-12 text-sm text-destructive focus:text-destructive"
+              >
+                <IconPowerOff />
+                {messages.pos.sessionHeader.closeShift}
+              </DropdownMenuItem>
+            </>
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <BranchIncidentDialog
+        branchId={branchId}
+        open={incidentOpen}
+        onOpenChange={setIncidentOpen}
+      />
+    </>
   );
 }
 

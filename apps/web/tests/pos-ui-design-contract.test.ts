@@ -50,7 +50,7 @@ const menuGridSource = read(
 const orderDetailTouchSources = [
   ["split-order-sheet.tsx", 2],
   ["service-charge-sheet.tsx", 3],
-  ["discount-sheet.tsx", 9],
+  ["discount-sheet.tsx", 10],
   ["merge-orders-sheet.tsx", 4],
   ["transfer-table-dialog.tsx", 3],
 ] as const;

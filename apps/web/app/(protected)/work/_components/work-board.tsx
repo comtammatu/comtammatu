@@ -90,6 +90,7 @@ export function WorkBoard({
   }
 
   function renderCard(task: WorkTaskRow) {
+    const isIncident = task.title.toLowerCase().includes("[sự cố");
     return (
       <Item
         key={task.id}
@@ -99,27 +100,87 @@ export function WorkBoard({
           event.dataTransfer.setData("text/task-id", String(task.id));
           event.dataTransfer.effectAllowed = "move";
         }}
-        className="cursor-grab bg-background active:cursor-grabbing"
+        className={`cursor-grab bg-background active:cursor-grabbing ${
+          isIncident ? "border-destructive" : ""
+        }`}
       >
         <ItemContent className="gap-1">
-          <ItemTitle className="text-sm">
-            <Link
-              href={workHref(params, { taskId: task.id })}
-              scroll={false}
-              className="hover:underline"
-            >
-              {task.title}
-            </Link>
-          </ItemTitle>
-          <ItemDescription className="flex flex-wrap gap-2 text-xs">
-            {task.dueAt ? (
-              <span>
-                {workCopy.due}: {formatVNDate(task.dueAt)}
-              </span>
+          <div className="flex items-start justify-between gap-1">
+            <ItemTitle className="text-sm font-semibold">
+              <Link
+                href={workHref(params, { taskId: task.id })}
+                scroll={false}
+                className="hover:underline"
+              >
+                {task.title}
+              </Link>
+            </ItemTitle>
+            {isIncident ? (
+              <Badge variant="destructive" className="shrink-0">
+                {workCopy.incidentBadge}
+              </Badge>
             ) : null}
-            <Badge variant="secondary">
-              {workCopy.priorityLabels[task.priority]}
-            </Badge>
+          </div>
+          <ItemDescription className="flex flex-wrap items-center justify-between gap-1 text-xs">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {task.dueAt ? (
+                <span>
+                  {workCopy.due}: {formatVNDate(task.dueAt)}
+                </span>
+              ) : null}
+              <Badge
+                variant={
+                  task.priority === "urgent"
+                    ? "destructive"
+                    : task.priority === "high"
+                      ? "warning"
+                      : "secondary"
+                }
+              >
+                {workCopy.priorityLabels[task.priority]}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-1">
+              {task.status !== "todo" && task.status !== "backlog" ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  title={workCopy.stepPrev}
+                  aria-label={workCopy.stepPrev}
+                  className="h-6 w-6 p-0 text-xs text-muted-foreground"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const prevIdx =
+                      BOARD_COLUMNS.indexOf(task.status as WorkTaskStatus) - 1;
+                    if (prevIdx >= 0) moveTask(task.id, BOARD_COLUMNS[prevIdx]!);
+                  }}
+                >
+                  ◀
+                </Button>
+              ) : null}
+              {task.status !== "done" ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  title={workCopy.stepNext}
+                  aria-label={workCopy.stepNext}
+                  className="h-6 w-6 p-0 text-xs text-primary font-semibold"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const nextIdx =
+                      BOARD_COLUMNS.indexOf(task.status as WorkTaskStatus) + 1;
+                    if (nextIdx < BOARD_COLUMNS.length)
+                      moveTask(task.id, BOARD_COLUMNS[nextIdx]!);
+                  }}
+                >
+                  ▶
+                </Button>
+              ) : null}
+            </div>
           </ItemDescription>
         </ItemContent>
       </Item>

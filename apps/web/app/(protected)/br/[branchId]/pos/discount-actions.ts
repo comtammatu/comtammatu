@@ -4,6 +4,7 @@ import { z } from "zod";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { messages } from "@lib/messages";
+import { PROMOTIONS_VI } from "@comtammatu/shared/messages";
 import { getAuthContextWithPermission } from "../../_lib/auth";
 import { logAudit } from "@/_lib/audit";
 import { isPosBranchInScope } from "./_lib/auth";
@@ -676,6 +677,11 @@ export async function previewPromotionCode(
       max_units: number;
       parent_name: string;
     }>;
+    giftItems?: Array<{
+      menu_item_id: number;
+      name: string;
+      unit_price: number;
+    }>;
     amountHint: number | null;
   }>
 > {
@@ -715,6 +721,7 @@ export async function previewPromotionCode(
     free_qty?: number;
     candidates?: unknown;
     amount_hint?: number;
+    gift_items?: unknown;
   } | null;
   if (!result) {
     return { success: false, error: "Không thể xem mức giảm." };
@@ -735,6 +742,19 @@ export async function previewPromotionCode(
         ];
       })
     : [];
+  const giftItems = Array.isArray(result.gift_items)
+    ? result.gift_items.flatMap((row) => {
+        if (!row || typeof row !== "object") return [];
+        const r = row as Record<string, unknown>;
+        return [
+          {
+            menu_item_id: Number(r.menu_item_id),
+            name: String(r.name ?? ""),
+            unit_price: Number(r.unit_price ?? 0),
+          },
+        ];
+      })
+    : [];
   return {
     success: true,
     data: {
@@ -748,6 +768,7 @@ export async function previewPromotionCode(
       freeQty:
         result.free_qty == null ? null : Number(result.free_qty),
       candidates,
+      giftItems,
       amountHint:
         result.amount_hint == null ? null : Number(result.amount_hint),
     },
@@ -910,6 +931,64 @@ export async function applyFreeItemSelection(
       p_promotion_id: input.promotionId,
       p_code: input.code.trim().toUpperCase(),
       p_selections: input.selections,
+    },
+  );
+  if (error) {
+    return {
+      success: false,
+      error: mapDiscountRpcError(error.message),
+      errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    };
+  }
+  const result = data as {
+    order_id?: number;
+    name?: string;
+    total_amount?: number;
+    applied_amount?: number;
+  } | null;
+  if (!result) {
+    return { success: false, error: "Không thể áp khuyến mãi tặng món." };
+  }
+  return {
+    success: true,
+    data: {
+      order_id: Number(result.order_id),
+      name: String(result.name ?? ""),
+      total_amount: Number(result.total_amount ?? 0),
+      applied_amount: Number(result.applied_amount ?? 0),
+    },
+  };
+}
+
+export async function applyGiftPromotionSelection(
+  branchId: number,
+  input: {
+    orderId: number;
+    promotionId: number;
+    code: string;
+    menuItemId: number;
+    units?: number;
+  },
+): Promise<
+  ActionResult<{
+    order_id: number;
+    name: string;
+    total_amount: number;
+    applied_amount: number;
+  }>
+> {
+  const scoped = await posUseForBranch(branchId);
+  if (!scoped.ok) {
+    return { success: false, error: scoped.error, errorCode: scoped.errorCode };
+  }
+  const { data, error } = await scoped.ctx.supabase.rpc(
+    "apply_gift_promotion_selection",
+    {
+      p_order_id: input.orderId,
+      p_promotion_id: input.promotionId,
+      p_code: input.code.trim().toUpperCase(),
+      p_menu_item_id: input.menuItemId,
+      p_units: input.units ?? 1,
     },
   );
   if (error) {
@@ -1214,6 +1293,7 @@ const mergeInputSchema = z
     sourceOrderId: orderIdSchema,
     targetOrderId: orderIdSchema,
     idempotencyKey: idempotencyKeySchema,
+    releasePromoIfPresent: z.boolean().optional().default(false),
   })
   .refine((d) => d.sourceOrderId !== d.targetOrderId, {
     error: "Không thể gộp một đơn vào chính nó",
@@ -1226,6 +1306,7 @@ export async function mergeOrders(
     sourceOrderId: number;
     targetOrderId: number;
     idempotencyKey?: string;
+    releasePromoIfPresent?: boolean;
   },
 ): Promise<
   ActionResult<{
@@ -1276,7 +1357,11 @@ export async function mergeOrders(
     };
   }
 
-  const { data, error } = await supabase.rpc("merge_orders", {
+  const rpcName = parsed.data.releasePromoIfPresent
+    ? "merge_orders_auto_clear_promo"
+    : "merge_orders";
+
+  const { data, error } = await supabase.rpc(rpcName, {
     p_source_order_id: parsed.data.sourceOrderId,
     p_target_order_id: parsed.data.targetOrderId,
     p_idempotency_key: parsed.data.idempotencyKey ?? undefined,
@@ -1417,4 +1502,70 @@ export async function fetchSiblingOrdersForTable(input: {
     .filter((r) => r.item_count > 0);
 
   return { success: true, data: rows };
+}
+
+/* ─── listAvailablePromotions ─── */
+
+export type AvailablePromotion = {
+  id: number;
+  name: string;
+  kind: string;
+  code: string | null;
+  minSubtotal: number;
+  discountType: string | null;
+  discountValue: number | null;
+  freeSideQty: number | null;
+  freeItemQty: number | null;
+};
+
+export async function listAvailablePromotions(
+  branchId: number,
+): Promise<ActionResult<{ items: AvailablePromotion[] }>> {
+  const scoped = await posUseForBranch(branchId);
+  if (!scoped.ok) {
+    return { success: false, error: scoped.error, errorCode: scoped.errorCode };
+  }
+  const { data, error } = await scoped.ctx.supabase
+    .from("promotions")
+    .select(
+      `
+      id,
+      name,
+      kind,
+      min_subtotal,
+      discount_type,
+      discount_value,
+      free_side_qty,
+      free_item_qty,
+      promotion_codes (code, kind, status)
+    `,
+    )
+    .eq("tenant_id", scoped.ctx.claims.tenant_id)
+    .eq("status", "active")
+    .order("priority", { ascending: false });
+
+  if (error) {
+    return { success: false, error: PROMOTIONS_VI.loadFailed };
+  }
+
+  const items: AvailablePromotion[] = (data ?? []).map((p) => {
+    const codes = Array.isArray(p.promotion_codes) ? p.promotion_codes : [];
+    const activeCode = codes.find(
+      (c) => c.status === "active" && c.kind === "reusable",
+    );
+
+    return {
+      id: p.id,
+      name: p.name,
+      kind: p.kind,
+      code: activeCode?.code ?? null,
+      minSubtotal: Number(p.min_subtotal ?? 0),
+      discountType: p.discount_type,
+      discountValue: p.discount_value ? Number(p.discount_value) : null,
+      freeSideQty: p.free_side_qty ? Number(p.free_side_qty) : null,
+      freeItemQty: p.free_item_qty ? Number(p.free_item_qty) : null,
+    };
+  });
+
+  return { success: true, data: { items } };
 }

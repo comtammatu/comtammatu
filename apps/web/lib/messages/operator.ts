@@ -306,4 +306,18 @@ export const operator = {
       shiftTasksLoading: "Đang tải việc trong ca…",
     },
   },
+  incident: {
+    triggerAria: "Báo sự cố khẩn cấp",
+    title: "Báo sự cố khẩn cấp",
+    description: "Gửi yêu cầu hỗ trợ trực tiếp đến bộ phận chuyên trách tại trụ sở.",
+    submitLabel: "Gửi báo cáo sự cố",
+    successMessage: "Đã gửi báo cáo sự cố về trụ sở",
+    categoryLabel: "Phân loại sự cố",
+    titleLabel: "Tiêu đề sự cố",
+    titlePlaceholder: "Ví dụ: Máy in kẹt giấy, tủ đông mất điện, hết sườn gấp...",
+    descLabel: "Chi tiết bổ sung (tùy chọn)",
+    descPlaceholder: "Vị trí xảy ra, tình trạng hiện tại, việc đã thử khắc phục...",
+    priorityLabel: "Mức độ khẩn cấp",
+    posMenuLabel: "Báo sự cố",
+  },
 } as const;

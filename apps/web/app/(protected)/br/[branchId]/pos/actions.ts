@@ -47,11 +47,14 @@ export {
   previewPromotionCode,
   applyPromotionCode,
   applyFreeSideSelection,
+  applyGiftPromotionSelection,
   clearPromotion,
   evaluateOrderPromotionOffers,
   splitOrder,
   mergeOrders,
   fetchSiblingOrdersForTable,
+  listAvailablePromotions,
+  type AvailablePromotion,
 } from "./discount-actions";
 
 export { setOrderServiceCharge } from "./service-charge-actions";

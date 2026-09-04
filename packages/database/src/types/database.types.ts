@@ -12830,6 +12830,16 @@ export type Database = {
         }
         Returns: Json
       }
+      apply_gift_promotion_selection: {
+        Args: {
+          p_code: string
+          p_menu_item_id: number
+          p_order_id: number
+          p_promotion_id: number
+          p_units?: number
+        }
+        Returns: Json
+      }
       apply_free_side_selection: {
         Args: {
           p_code: string
@@ -13522,6 +13532,16 @@ export type Database = {
           p_note?: string
           p_order_id: number
           p_source_type: string
+        }
+        Returns: Json
+      }
+      create_branch_incident_task: {
+        Args: {
+          p_branch_id: number
+          p_category: string
+          p_description?: string
+          p_priority?: string
+          p_title: string
         }
         Returns: Json
       }
@@ -14672,6 +14692,14 @@ export type Database = {
         Returns: Json
       }
       merge_orders: {
+        Args: {
+          p_idempotency_key?: string
+          p_source_order_id: number
+          p_target_order_id: number
+        }
+        Returns: Json
+      }
+      merge_orders_auto_clear_promo: {
         Args: {
           p_idempotency_key?: string
           p_source_order_id: number

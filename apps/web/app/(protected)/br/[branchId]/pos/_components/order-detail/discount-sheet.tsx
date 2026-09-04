@@ -51,6 +51,12 @@ export type PromoSideCandidate = {
   parent_name: string;
 };
 
+export type PromoGiftItem = {
+  menu_item_id: number;
+  name: string;
+  unit_price: number;
+};
+
 export type PromoPreviewResult =
   | {
       success: true;
@@ -61,6 +67,7 @@ export type PromoPreviewResult =
       promotionId?: number | null;
       freeQty?: number | null;
       candidates?: PromoSideCandidate[];
+      giftItems?: PromoGiftItem[];
       amountHint?: number | null;
     }
   | { success: false; error: string };
@@ -92,6 +99,17 @@ interface DiscountSheetProps {
     enabled: boolean;
     canManual: boolean;
     hasPromotion: boolean;
+    availablePromos?: Array<{
+      id: number;
+      name: string;
+      kind: string;
+      code: string | null;
+      minSubtotal: number;
+      discountType?: string | null;
+      discountValue?: number | null;
+      freeSideQty?: number | null;
+      freeItemQty?: number | null;
+    }>;
     initialOffer?: {
       promotionId: number;
       name: string;
@@ -110,6 +128,12 @@ interface DiscountSheetProps {
         side_item_id: number;
         units: number;
       }>,
+    ) => void;
+    onApplyGiftItem?: (
+      promotionId: number,
+      code: string,
+      menuItemId: number,
+      units?: number,
     ) => void;
     onApplyFreeSide?: (
       promotionId: number,
@@ -174,6 +198,7 @@ export function DiscountSheet({
     needsSideSelection: boolean;
     freeQty: number | null;
     candidates: PromoSideCandidate[];
+    giftItems?: PromoGiftItem[];
     amountHint: number | null;
     promotionId?: number | null;
   } | null>(null);
@@ -327,6 +352,7 @@ export function DiscountSheet({
         needsSideSelection: result.needsSideSelection === true,
         freeQty: result.freeQty ?? null,
         candidates: result.candidates ?? [],
+        giftItems: result.giftItems ?? [],
         amountHint: result.amountHint ?? null,
         promotionId: result.promotionId ?? null,
       });
@@ -537,6 +563,78 @@ export function DiscountSheet({
 
         {activePane === "code" && promo ? (
           <FieldGroup>
+            {promo.availablePromos && promo.availablePromos.length > 0 && !promo.initialOffer?.code ? (
+              <div className="flex flex-col gap-1.5 pb-1">
+                <span className="text-xs font-semibold text-foreground">
+                  {PROMOTIONS_VI.posAvailableOffers}
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {promo.availablePromos.map((p) => {
+                    const isEligible = subtotal >= p.minSubtotal;
+                    let summary = "";
+                    if (p.kind === "order_pct" && p.discountValue) {
+                      summary = `Giảm ${formatPercent(p.discountValue)}`;
+                    } else if (p.kind === "order_vnd" && p.discountValue) {
+                      summary = `Giảm ${formatVND(p.discountValue)}`;
+                    } else if (p.kind === "free_side") {
+                      summary = `Tặng ${p.freeSideQty ?? 1} món ăn kèm`;
+                    } else if (p.kind === "free_item") {
+                      summary = `Tặng ${p.freeItemQty ?? 1} món`;
+                    } else if (p.kind === "bxgy") {
+                      summary = "Mua X tặng Y";
+                    }
+                    return (
+                      <Button
+                        key={p.id}
+                        type="button"
+                        variant={isEligible && p.code ? "outline" : "ghost"}
+                        size="sm"
+                        disabled={!p.code || !isEligible}
+                        className="h-auto flex-col items-start gap-1 px-2.5 py-1.5 text-left"
+                        onClick={() => {
+                          if (p.code) {
+                            setCodeText(p.code);
+                            setPreview(null);
+                            setPreviewError(null);
+                            setSideUnits({});
+                            void (async () => {
+                              setPreviewPending(true);
+                              const res = await promo.onPreview(p.code!);
+                              setPreviewPending(false);
+                              if (res.success) {
+                                setPreview({
+                                  amount: res.amount,
+                                  name: res.name,
+                                  kind: res.kind ?? "",
+                                  needsSideSelection: res.needsSideSelection === true,
+                                  freeQty: res.freeQty ?? null,
+                                  candidates: res.candidates ?? [],
+                                  giftItems: res.giftItems ?? [],
+                                  amountHint: res.amountHint ?? null,
+                                  promotionId: res.promotionId ?? null,
+                                });
+                                setSideUnits({});
+                                setPreviewError(null);
+                              } else {
+                                setPreview(null);
+                                setPreviewError(res.error);
+                              }
+                            })();
+                          }
+                        }}
+                      >
+                        <span className="text-xs font-semibold">{p.name}</span>
+                        {summary ? (
+                          <span className="text-xs text-muted-foreground">
+                            {summary}
+                          </span>
+                        ) : null}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
             {!promo.initialOffer?.code ? (
               <>
                 <Field>
@@ -713,6 +811,52 @@ export function DiscountSheet({
                         })}
                       </ItemGroup>
                     </Frame>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {needsPick && candidateGroups.length === 0 && (preview?.giftItems?.length ?? 0) > 0 ? (
+              <div className="flex flex-col gap-2 pt-1">
+                <FieldLabel>
+                  {PROMOTIONS_VI.posPickItemsTitle}
+                </FieldLabel>
+                <p className="text-xs text-muted-foreground">
+                  {PROMOTIONS_VI.posGiftSelectDesc}
+                </p>
+                <div className="flex flex-col gap-2">
+                  {preview?.giftItems?.map((gift) => (
+                    <Item
+                      key={gift.menu_item_id}
+                      variant="outline"
+                      className="items-center justify-between gap-3 p-2.5"
+                    >
+                      <ItemContent className="min-w-0">
+                        <ItemTitle className="text-sm font-medium">
+                          {gift.name}
+                        </ItemTitle>
+                        <span className="text-xs text-muted-foreground">
+                          {formatVND(gift.unit_price)} · {PROMOTIONS_VI.posGiftFreeTag}
+                        </span>
+                      </ItemContent>
+                      <Button
+                        type="button"
+                        variant="default"
+                        size="touch"
+                        disabled={isPending}
+                        onClick={() => {
+                          if (preview.promotionId != null && promo?.onApplyGiftItem) {
+                            promo.onApplyGiftItem(
+                              preview.promotionId,
+                              codeTrim,
+                              gift.menu_item_id,
+                              1,
+                            );
+                          }
+                        }}
+                      >
+                        {PROMOTIONS_VI.posClaimGift}
+                      </Button>
+                    </Item>
                   ))}
                 </div>
               </div>

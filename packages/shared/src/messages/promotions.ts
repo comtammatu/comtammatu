@@ -199,6 +199,10 @@ export const PROMOTIONS_VI = {
   minOrderCond: (amount: string) => `Đơn từ ${amount}`,
   noCodeRequired: "Tự động",
   codeColumnTitle: "Mã / Voucher",
+  posAvailableOffers: "Chương trình ưu đãi đang áp dụng:",
+  posGiftSelectDesc: "Chọn món quà tặng để hệ thống tự động thêm vào hóa đơn:",
+  posGiftFreeTag: "Tặng 0đ",
+  posClaimGift: "Nhận món tặng",
 } as const;
 
 export type PromotionsKey = keyof typeof PROMOTIONS_VI;

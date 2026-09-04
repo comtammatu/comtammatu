@@ -66,11 +66,14 @@ import {
   previewPromotionCode,
   applyPromotionCode,
   applyFreeSideSelection,
+  applyGiftPromotionSelection,
   clearPromotion,
   evaluateOrderPromotionOffers,
+  listAvailablePromotions,
   setOrderServiceCharge,
   splitOrder,
   mergeOrders,
+  type AvailablePromotion,
 } from "./actions";
 import { printReceipt } from "./print-actions";
 import { voidPaidOrder } from "./void-paid-actions";
@@ -423,6 +426,9 @@ export function OrderDetailSheet({
   // opened on order A doesn't leak into order B (item ids don't overlap
   // but visual state should be transient per-detail-session).
   const [actionsItemId, setActionsItemId] = useState<number | null>(null);
+  const [availablePromos, setAvailablePromos] = useState<AvailablePromotion[]>(
+    [],
+  );
   const orderIdRef = useRef(orderId);
   useEffect(() => {
     orderIdRef.current = orderId;
@@ -490,6 +496,11 @@ export function OrderDetailSheet({
       } else {
         setFreeSideOffer(null);
       }
+      void listAvailablePromotions(branchId).then((res) => {
+        if (res.success && res.data) {
+          setAvailablePromos(res.data.items);
+        }
+      });
     } else {
       setData(null);
       setFreeSideOffer(null);
@@ -1084,10 +1095,36 @@ export function OrderDetailSheet({
         promotionId: r.data.promotionId,
         freeQty: r.data.freeQty,
         candidates: r.data.candidates,
+        giftItems: r.data.giftItems,
         amountHint: r.data.amountHint,
       };
     }
     return { success: false as const, error: r.error ?? "Không thể xem mức giảm." };
+  };
+
+  const handleApplyGiftItem = (
+    promotionId: number,
+    code: string,
+    menuItemId: number,
+    units?: number,
+  ) => {
+    if (orderId === null) return;
+    startMutation(async () => {
+      const r = await applyGiftPromotionSelection(branchId, {
+        orderId,
+        promotionId,
+        code,
+        menuItemId,
+        units,
+      });
+      if (r.success) {
+        setShowDiscount(false);
+        setInlinePromoCode("");
+        load();
+      } else {
+        notify.error(r.error ?? PROMOTIONS_VI.loadFailed);
+      }
+    });
   };
 
   const handleApplyPromoCode = (
@@ -1304,10 +1341,11 @@ export function OrderDetailSheet({
         sourceOrderId: orderId,
         targetOrderId,
         idempotencyKey,
+        releasePromoIfPresent: true,
       });
       if (r.success) {
         notify.success(
-          "Đã gộp đơn. Vui lòng in lại tạm tính của đơn nhận nếu cần.",
+          "Đã gộp đơn. Khuyến mãi (nếu có) đã được hủy để bảo toàn giỏ hàng.",
         );
         setShowMerge(false);
         await onOrderUpdated?.();
@@ -2053,6 +2091,7 @@ export function OrderDetailSheet({
             enabled: true,
             canManual: canShowManualDiscount,
             hasPromotion: Boolean(hasPromotion),
+            availablePromos,
             initialOffer: freeSideOffer
                 ? {
                     promotionId: freeSideOffer.promotionId,
@@ -2067,6 +2106,7 @@ export function OrderDetailSheet({
                 : null,
             onPreview: handlePreviewPromoCode,
             onApplyCode: handleApplyPromoCode,
+            onApplyGiftItem: handleApplyGiftItem,
             onApplyFreeSide: handleApplyFreeSide,
             onClearPromo: handleClearPromo,
           }}
