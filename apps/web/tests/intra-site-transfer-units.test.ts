@@ -39,6 +39,11 @@ test("intra-site transfer data loader and dialog preserve and expose multi-unit 
   assert.match(dialog, /entryUnitId:\s*selectedUnit\?\.unitId/);
   assert.match(dialog, /<Select/);
   assert.match(dialog, /handleUnitChange/);
+
+  // Reverse dialog matches layout pattern
+  assert.match(dialog, /export function ReverseIntraSiteTransferDialog/);
+  assert.match(dialog, /variant="document"/);
+  assert.match(dialog, /function fillAll/);
 });
 
 test("intra-site transfer unit conversion calculates available and base quantities accurately", () => {
