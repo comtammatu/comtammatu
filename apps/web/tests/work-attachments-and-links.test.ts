@@ -122,6 +122,7 @@ test("Work task actions support setWorkTaskDepartment and relaxed scoped listing
 
 test("WorkBoard organizes by department with collapsible done section and status badge dropdown", () => {
   const board = readWeb("app/(protected)/work/_components/work-board.tsx");
+  const appBoard = readWeb("app/components/surface/app-board.tsx");
   assert.match(board, /departments/);
   assert.match(board, /renderDepartmentColumn/);
   assert.match(board, /moveTaskDepartment/);
@@ -130,10 +131,11 @@ test("WorkBoard organizes by department with collapsible done section and status
   assert.match(board, /doneSectionToggle/);
   assert.match(board, /addDepartmentTask/);
   assert.match(board, /WorkCreateDialog/);
-  assert.match(board, /DropdownMenu/);
-  assert.match(board, /DropdownMenuTrigger/);
-  assert.match(board, /DropdownMenuContent/);
-  assert.match(board, /DropdownMenuItem/);
+  assert.match(board, /AppBoardStatusDropdown/);
+  assert.match(appBoard, /DropdownMenu/);
+  assert.match(appBoard, /DropdownMenuTrigger/);
+  assert.match(appBoard, /DropdownMenuContent/);
+  assert.match(appBoard, /DropdownMenuItem/);
   assert.match(board, /getStatusBadgeProps/);
   assert.match(board, /moveTaskStatus/);
 });

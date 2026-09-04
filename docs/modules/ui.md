@@ -196,9 +196,18 @@ and timeline are **TASK_*** compose recipes inside one `AppListFrame` (ADR 0033)
 | `WorkComposeShell`                   | `AppListFrame` + `data-page-archetype=TASK_*` wrapper                                     |
 | `WorkMonthGrid` + `WorkTaskChip`     | Vietnam month grid from `getVNMonthCalendarCells` — **not** `ui/calendar` DayPicker       |
 | `WorkScopePicker` / `WorkScopeLabel` | URL scope for board (department or project), timeline (project only), calendar (optional) |
+| `AppBoardGrid` / `AppBoardColumn`    | Shared Kanban board horizontal track and department-specific columns                      |
+| `AppBoardCard`                       | Kanban task card with priority tokens, document links, assignee avatar, and due alert      |
+| `AppBoardStatusDropdown`             | 1-tap fast status transition badge button                                                 |
+| `AppBoardCompletedSection`           | Collapsible accordion for completed tasks at the bottom of a board column                 |
+| `AppBoardColumnAction`               | Pinned action button at column bottom for creating tasks pre-scoped to that department     |
+| `AppInspectorGrid`                   | 2-column detail inspector layout (7-part `AppInspectorMain` + 5-part `AppInspectorSidebar`)|
+| `AppFormGrid` / `AppFormRow`         | Responsive multi-column form layout for creation dialogs and setting sheets               |
+| `AppSegmentedControl`                | Pill segmented control supporting route links (`href`) or callback switches (`onChange`)   |
+| `AppFilterChipsBar`                  | Bordered quick-filter chips bar with semantic count badge variants                        |
 
 Registry blocks: `work-task-inbox`, `work-task-board`, `work-task-calendar`.
-Exemplar: `/ds-lab` section 13.
+Exemplar: `/ds-lab` sections 13, 14, 15, 16, 17.
 
 ## control_surface Shell Runtime
 
@@ -317,6 +326,9 @@ registry; routes do not hardcode new operational copy.
 | `AppDialog`                       | Generic app dialog shell; `variant="document"` for list-first PO, GRN, and production documents                            |
 | `FormDialog`                      | Owner (`control_surface`) short CRUD; not Branch operator or station                                                       |
 | `FormSheet`                       | Branch short CRUD: same Zod/RHF contract as `FormDialog`, `AppSheet` chrome                                                |
+| `AppFormGrid`                     | Responsive multi-column form grid (`density="compact"` for dialogs, `"default"` for pages)                                  |
+| `AppFormRow`                      | Grid row container with column spanning (`colSpan="full"`, `colSpan={1 | 2 | 3}`)                                          |
+| `AppFormSection`                  | Form section grouper with subtle eyebrow label                                                                             |
 | `valuesToFormData`                | Adapter for `withFormAction`-wrapped Server Actions                                                                        |
 
 Schemas use Zod 4 with `{ error: "..." }`, never `{ message }`. Schemas imported

@@ -1,10 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Search as IconSearch } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
-import { Frame } from "@comtammatu/ui/components/frame";
 import {
   InputGroup,
   InputGroupAddon,
@@ -17,7 +15,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { AppToolbar } from "@/components/surface";
+import {
+  AppFilterChips,
+  AppFilterChipsBar,
+  AppSegmentedControl,
+  AppToolbar,
+} from "@/components/surface";
 import { useFormControlSize } from "@/components/form/control-size";
 import {
   WORK_TASK_STATUSES,
@@ -64,25 +67,15 @@ export function WorkListToolbar({
     params.view === "timeline";
 
   const viewSwitcher = (
-    <Frame className="inline-flex items-center bg-muted/30 p-0.5">
-      {VIEW_OPTIONS.map((option) => {
-        const active = params.view === option.view;
-        return (
-          <Button
-            key={option.view}
-            variant={active ? "secondary" : "ghost"}
-            size={controlSize}
-            aria-current={active ? "page" : undefined}
-            className={`h-7 px-2.5 text-xs transition-colors ${
-              active ? "bg-background font-medium text-foreground shadow-2xs" : ""
-            }`}
-            render={<Link href={workHref(params, { view: option.view })} />}
-          >
-            {option.label}
-          </Button>
-        );
-      })}
-    </Frame>
+    <AppSegmentedControl
+      value={params.view}
+      aria-label={workCopy.viewMode}
+      options={VIEW_OPTIONS.map((option) => ({
+        value: option.view,
+        label: option.label,
+        href: workHref(params, { view: option.view }),
+      }))}
+    />
   );
 
   const departmentFilter =
@@ -120,31 +113,19 @@ export function WorkListToolbar({
     ) : null;
 
   const quickFilterChips = (
-    <div className="flex flex-wrap items-center gap-1.5 border-t border-border/20 bg-muted/30 px-3 py-1.5">
-      {QUICK_FILTER_OPTIONS.map((option) => {
-        const active = (params.filter ?? "all") === option.value;
-        return (
-          <Button
-            key={option.value}
-            type="button"
-            variant={active ? "secondary" : "outline"}
-            size={controlSize}
-            className={`h-6.5 rounded-md px-2.5 text-xs font-medium transition-colors ${
-              active ? "bg-foreground text-background hover:bg-foreground/90" : ""
-            }`}
-            onClick={() => {
-              router.replace(
-                workHref(params, {
-                  filter: option.value === "all" ? null : option.value,
-                }),
-              );
-            }}
-          >
-            {option.label}
-          </Button>
-        );
-      })}
-    </div>
+    <AppFilterChipsBar>
+      <AppFilterChips
+        value={params.filter ?? "all"}
+        options={QUICK_FILTER_OPTIONS}
+        onChange={(nextFilter) => {
+          router.replace(
+            workHref(params, {
+              filter: nextFilter === "all" ? null : nextFilter,
+            }),
+          );
+        }}
+      />
+    </AppFilterChipsBar>
   );
 
   const searchForm = (

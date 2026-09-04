@@ -51,6 +51,7 @@ export const workCopy = {
   timelineNeedsScope: "Chọn dự án để xem tiến độ công việc.",
   calendarTitle: "Lịch công việc",
   timelineTitle: "Tiến độ dự án",
+  viewMode: "Chế độ xem",
   viewMine: "Việc của tôi",
   viewBoard: "Bảng",
   viewCalendar: "Lịch",

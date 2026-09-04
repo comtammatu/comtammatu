@@ -60,12 +60,30 @@ import { Textarea } from "@comtammatu/ui/components/textarea";
 
 import { AppDialog } from "@/components/form/form-dialog";
 import {
+  AppBoardCard,
+  AppBoardColumn,
+  AppBoardColumnAction,
+  AppBoardColumnHeader,
+  AppBoardCompletedSection,
+  AppBoardGrid,
+  AppBoardStatusDropdown,
   AppDetailFooter,
   AppEmptyState,
+  AppFilterChips,
+  AppFilterChipsBar,
+  AppFormGrid,
+  AppFormRow,
+  AppFormSection,
+  AppInspectorGrid,
+  AppInspectorMain,
+  AppInspectorRow,
+  AppInspectorSection,
+  AppInspectorSidebar,
   AppListFrame,
   AppPage,
   AppPageHeader,
   AppSection,
+  AppSegmentedControl,
   AppToolbar,
   PublicSection,
   StationSection,
@@ -266,6 +284,10 @@ export function DesignLabClient() {
   const [enterDemoKey, setEnterDemoKey] = useState(0);
   const [sliderValue, setSliderValue] = useState(40);
   const [selectValue, setSelectValue] = useState("central");
+  const [labTaskStatus, setLabTaskStatus] = useState("todo");
+  const [labDoneExpanded, setLabDoneExpanded] = useState(true);
+  const [labSegmentedView, setLabSegmentedView] = useState("board");
+  const [labFilterChip, setLabFilterChip] = useState("all");
 
   return (
     <AppPage as="main" width="wide" scroll>
@@ -1231,6 +1253,161 @@ export function DesignLabClient() {
                 </ItemContent>
               </Item>
             </ItemGroup>
+          </div>
+        </AppSection>
+
+        <AppSection
+          title="14 · AppBoard · Kanban adapter"
+          headingLevel="h2"
+          description="Reusable Kanban board adapters: AppBoardGrid, AppBoardColumn, AppBoardCard, AppBoardStatusDropdown."
+        >
+          <AppBoardGrid>
+            <AppBoardColumn>
+              <AppBoardColumnHeader title="Pending" count={1} />
+              <AppBoardCard>
+                <ItemContent className="gap-2">
+                  <ItemTitle className="text-sm font-semibold">
+                    Kitchen POS morning inspection
+                  </ItemTitle>
+                  <ItemDescription className="flex items-center justify-between border-t border-border/20 pt-2 text-xs">
+                    <span className="text-xs text-muted-foreground">Staff Operator</span>
+                    <AppBoardStatusDropdown
+                      status={labTaskStatus}
+                      options={[
+                        { value: "todo", label: "To-do", dotClass: "bg-primary" },
+                        { value: "in_progress", label: "In progress", dotClass: "bg-info" },
+                        { value: "done", label: "Done", dotClass: "bg-success" },
+                      ]}
+                      onStatusChange={setLabTaskStatus}
+                    />
+                  </ItemDescription>
+                </ItemContent>
+              </AppBoardCard>
+
+              <AppBoardCompletedSection
+                count={1}
+                isExpanded={labDoneExpanded}
+                onToggle={() => setLabDoneExpanded(!labDoneExpanded)}
+                label="Completed"
+              >
+                <AppBoardCard>
+                  <ItemContent className="gap-1">
+                    <ItemTitle className="text-sm font-medium text-muted-foreground line-through">
+                      Enable KDS thermal printer
+                    </ItemTitle>
+                  </ItemContent>
+                </AppBoardCard>
+              </AppBoardCompletedSection>
+
+              <AppBoardColumnAction>
+                + Add new task
+              </AppBoardColumnAction>
+            </AppBoardColumn>
+          </AppBoardGrid>
+        </AppSection>
+
+        <AppSection
+          title="15 · AppInspectorGrid · 2-column detail adapter"
+          headingLevel="h2"
+          description="Standard 2-column inspector layout for DETAIL workflows: AppInspectorGrid, AppInspectorMain, AppInspectorSidebar."
+        >
+          <AppInspectorGrid ratio="wide-main">
+            <AppInspectorMain>
+              <Frame className="flex flex-col gap-3 bg-muted/30 p-4">
+                <span className="text-sm font-semibold">Task details</span>
+                <p className="text-sm text-muted-foreground">
+                  Main content area displaying task body, documents, line items, or conversation.
+                </p>
+              </Frame>
+            </AppInspectorMain>
+            <AppInspectorSidebar>
+              <AppInspectorSection eyebrow="Properties & Status">
+                <AppInspectorRow label="Status">
+                  <Badge variant="secondary">In progress</Badge>
+                </AppInspectorRow>
+                <AppInspectorRow label="Priority">
+                  <Badge variant="warning">High</Badge>
+                </AppInspectorRow>
+              </AppInspectorSection>
+            </AppInspectorSidebar>
+          </AppInspectorGrid>
+        </AppSection>
+
+        <AppSection
+          title="16 · AppFormGrid · Dialog & quick-add form grid"
+          headingLevel="h2"
+          description="Standard responsive 2-column form layout for dialogs and sheets: AppFormGrid, AppFormRow, AppFormSection."
+        >
+          <Frame className="p-4">
+            <AppFormGrid density="compact">
+              <AppFormRow colSpan="full">
+                <Field>
+                  <FieldLabel>Task title</FieldLabel>
+                  <Input defaultValue="Weekly equipment maintenance check" />
+                </Field>
+              </AppFormRow>
+              <Field>
+                <FieldLabel>Department</FieldLabel>
+                <Input defaultValue="Kitchen Operations" />
+              </Field>
+              <Field>
+                <FieldLabel>Assignee</FieldLabel>
+                <Input defaultValue="Shift Lead" />
+              </Field>
+              <Field>
+                <FieldLabel>Priority</FieldLabel>
+                <Input defaultValue="High" />
+              </Field>
+              <Field>
+                <FieldLabel>Due date</FieldLabel>
+                <Input defaultValue="2026-09-10" />
+              </Field>
+              <AppFormSection
+                title="Additional Details"
+                description="Optional operational notes and instructions."
+              >
+                <AppFormRow colSpan="full">
+                  <Field>
+                    <FieldLabel>Notes</FieldLabel>
+                    <Textarea defaultValue="Check all grill gas lines and thermal sensors before 9 AM." rows={2} />
+                  </Field>
+                </AppFormRow>
+              </AppFormSection>
+            </AppFormGrid>
+          </Frame>
+        </AppSection>
+
+        <AppSection
+          title="17 · AppSegmentedControl & AppFilterChips · View switcher and filter bar"
+          headingLevel="h2"
+          description="Segmented view switchers and semantic filter chips: AppSegmentedControl, AppFilterChips, AppFilterChipsBar."
+        >
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <AppSegmentedControl
+                value={labSegmentedView}
+                onChange={setLabSegmentedView}
+                options={[
+                  { value: "board", label: "Board", count: 12 },
+                  { value: "calendar", label: "Calendar" },
+                  { value: "timeline", label: "Timeline" },
+                  { value: "mine", label: "Assigned to me", count: 3 },
+                ]}
+              />
+            </div>
+
+            <AppFilterChipsBar>
+              <AppFilterChips
+                value={labFilterChip}
+                onChange={setLabFilterChip}
+                options={[
+                  { value: "all", label: "All tasks", count: 15 },
+                  { value: "today", label: "Due today", count: 4, countVariant: "default" },
+                  { value: "overdue", label: "Overdue", count: 2, countVariant: "destructive" },
+                  { value: "urgent", label: "Urgent", count: 1, countVariant: "warning" },
+                ]}
+              />
+            </AppFilterChipsBar>
           </div>
         </AppSection>
       </div>

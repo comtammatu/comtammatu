@@ -626,7 +626,11 @@ bordered box whose caller owns layout. Other card jobs use `AppSection`,
 | selectable card-shaped row            | `InteractiveCard` with a semantic render target                                                |
 | disclosure                            | `Collapsible`                                                                                  |
 | searchable responsive data            | `DataTable`; raw `Table` only inside an approved adapter                                       |
-| segmented view                        | `Tabs`                                                                                         |
+| segmented view                        | `AppSegmentedControl` for route/view switching; `Tabs` for tabbed subviews                     |
+| quick filter chips                    | `AppFilterChips`, `AppFilterChipsBar`                                                          |
+| kanban / operational task board       | `AppBoardGrid`, `AppBoardColumn`, `AppBoardCard`, `AppBoardStatusDropdown`, `AppBoardCompletedSection`, `AppBoardColumnAction` |
+| 2-column inspector / review grid      | `AppInspectorGrid`, `AppInspectorMain`, `AppInspectorSidebar`, `AppInspectorSection`, `AppInspectorRow` |
+| responsive multi-column form grid     | `AppFormGrid`, `AppFormRow`, `AppFormSection`                                                  |
 | standard app form field               | helpers from `@/components/form`                                                               |
 | short detail or list-first document   | Overlay chooser (plane-specific)                                                               |
 | simple destructive confirmation       | shared `confirm()`; `ReasonConfirmDialog` when a reason is required                            |
@@ -818,6 +822,13 @@ Dates and times render through `@comtammatu/shared/time`, which pins
 `Asia/Ho_Chi_Minh` so server-rendered receipts and reports never drift.
 `BusinessDateField` displays `dd/mm/yyyy` with the `vi` calendar locale; print
 rendering uses the same shared helpers under its `print-format-ssot` guard.
+
+### Board and Inspector surfaces
+
+- **Task Board (Kanban):** Operational and office task boards use `AppBoardGrid` and `AppBoardColumn` (`apps/web/app/components/surface/app-board.tsx`). Columns are organized by domain (such as Department or Queue) with fixed column widths (`w-72 shrink-0 md:w-80`) inside a horizontal scroll container. Each column features `AppBoardColumnHeader` with monospace count badges, `AppBoardCard` items with semantic priority tokens and metadata, `AppBoardStatusDropdown` for direct 1-tap status transitions without modal latency, `AppBoardCompletedSection` for collapsible completed items, and `AppBoardColumnAction` for pinned creation triggers.
+- **Inspector (2-Column Detail Review):** Complex entity inspection and task reviews use `AppInspectorGrid` (`apps/web/app/components/surface/app-inspector-grid.tsx`). The layout splits into a 7-part main content column (`AppInspectorMain`) for title, description, checklists, attachments, and discussions, paired with a 5-part metadata sidebar (`AppInspectorSidebar`) containing structured `AppInspectorSection` and `AppInspectorRow` elements. On desktop (`lg+`), the sidebar can remain sticky while the main body scrolls.
+- **Form Layout:** Responsive multi-column forms inside dialogs and sheets use `AppFormGrid` and `AppFormRow` (`apps/web/app/components/form/app-form-grid.tsx`), automatically adjusting from 1 column on mobile to 2 columns on desktop (`density="compact"` for dialogs, `density="default"` for pages).
+- **Segmented Control & Quick Filter Chips:** Toolbar view switching and state toggling use `AppSegmentedControl` (`apps/web/app/components/surface/app-segmented-control.tsx`) supporting both route links (`href`) and controlled state (`onChange`). Quick list and board filtering uses `AppFilterChipsBar` and `AppFilterChips` (`apps/web/app/components/surface/app-filter-chips.tsx`) with semantic badge count variants (`destructive`, `warning`, `default`).
 
 ### Wrappers
 

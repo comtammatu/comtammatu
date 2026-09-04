@@ -240,7 +240,7 @@ Control Surface Work compose shapes (ADR 0033 — not station BOARD):
 
 | Compose id | Job |
 | --- | --- |
-| `TASK_BOARD` | Office Kanban columns by `work_tasks.status` for **one** department or project; HTML5 drag → status RPC + `expected_revision`; mobile = status tabs + list |
+| `TASK_BOARD` | Department-grouped office Kanban (`AppBoardGrid`, `AppBoardColumn`, `AppBoardCard`, `AppBoardStatusDropdown`, `AppBoardCompletedSection`, `AppBoardColumnAction`); HTML5 drag or 1-tap status dropdown → status RPC + `expected_revision`; responsive horizontal scroll board |
 | `TASK_CALENDAR` | Month/week cells from `due_at` (Vietnam day); click → task DETAIL |
 | `TASK_TIMELINE` | Single-project date bars (read-heavy MVP) |
 
@@ -522,6 +522,21 @@ badge}`).
   `br/[branchId]/kds/lib/status-config.ts`) — an acknowledged exception to the
   `StatusBadge` registry lock, documented in `design-system.md` § Status
   vocabulary.
+
+### TASK_BOARD (Control Surface Work Kanban)
+
+**Exemplar:** `apps/web/app/(protected)/work/page.tsx` + `apps/web/app/(protected)/work/_components/work-board.tsx`.
+
+- Control Surface work board (inside `AppShell` with `AppPage width="full" density="compact" scroll`). Not station BOARD.
+- Board container: `AppBoardGrid` provides a smooth horizontal scrolling track with standard column separation.
+- Columns: `AppBoardColumn` (`w-72 shrink-0 md:w-80`) organized by Department (or scope).
+  - Header: `AppBoardColumnHeader` with department title, brand indicator dot, and monospace count badge.
+  - Cards: `AppBoardCard` displaying 2-line title (`line-clamp-2`), priority token (`StatusBadge`), linked document badge (`[Chứng từ liên kết]` when bound to POS/inventory/feedback), assignee initials avatar, due date with `IconClock` (red warning when overdue), and `AppBoardStatusDropdown` for direct 1-tap status transition without modal latency.
+  - Section for completed tasks: `AppBoardCompletedSection` collapsible accordion tucked neatly at the bottom of the column.
+  - Fixed action: `AppBoardColumnAction` pinned at the bottom of the column to create a task pre-scoped to that department.
+- Task detail inspection: Task click opens addressable D1 overlay (`?task=<id>`) powered by `AppInspectorGrid` (7-part `AppInspectorMain` + 5-part `AppInspectorSidebar`).
+- Task creation: `WorkCreateDialog` powered by `AppFormGrid`, `AppFormRow`, and `AppFormSection`.
+- Toolbar & quick filtering: `WorkListToolbar` uses `AppSegmentedControl` for route/view switching and `AppFilterChipsBar` + `AppFilterChips` for quick filtering with semantic count badges.
 
 ### PUBLIC-WORKFLOW
 

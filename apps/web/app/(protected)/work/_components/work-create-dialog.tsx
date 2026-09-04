@@ -13,7 +13,14 @@ import {
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { Button } from "@comtammatu/ui/components/button";
-import { FormDialog, SelectField, TextField, TextareaField } from "@/components/form";
+import {
+  AppFormGrid,
+  AppFormRow,
+  FormDialog,
+  SelectField,
+  TextField,
+  TextareaField,
+} from "@/components/form";
 import { useFormControlSize } from "@/components/form/control-size";
 import {
   WORK_TASK_PRIORITIES,
@@ -152,60 +159,60 @@ export function WorkCreateDialog({
         }}
       >
         {(form) => (
-          <div className="flex flex-col gap-3">
-            <TextField
-              control={form.control}
-              name="title"
-              label={workCopy.titleLabel}
-            />
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <SelectField
-                control={form.control}
-                name="departmentId"
-                label={workCopy.scopeDepartment}
-                options={departments.map((department) => ({
-                  value: String(department.id),
-                  label: department.name,
-                }))}
-              />
-              <SelectField
-                control={form.control}
-                name="assigneeId"
-                label={workCopy.assignee}
-                options={[
-                  { value: "__none__", label: workCopy.clearAssignee },
-                  ...assigneeOptions,
-                ]}
-              />
-            </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <SelectField
-                control={form.control}
-                name="priority"
-                label={workCopy.priorityLabel}
-                options={WORK_TASK_PRIORITIES.map((priority) => ({
-                  value: priority,
-                  label: workCopy.priorityLabels[priority],
-                }))}
-              />
+          <AppFormGrid density="compact">
+            <AppFormRow colSpan="full">
               <TextField
                 control={form.control}
-                name="dueAt"
-                label={workCopy.dueLabel}
-                type="datetime-local"
+                name="title"
+                label={workCopy.titleLabel}
               />
-            </div>
-            <TextareaField
+            </AppFormRow>
+            <SelectField
               control={form.control}
-              name="description"
-              label={workCopy.descriptionLabel}
-              rows={3}
+              name="departmentId"
+              label={workCopy.scopeDepartment}
+              options={departments.map((department) => ({
+                value: String(department.id),
+                label: department.name,
+              }))}
             />
+            <SelectField
+              control={form.control}
+              name="assigneeId"
+              label={workCopy.assignee}
+              options={[
+                { value: "__none__", label: workCopy.clearAssignee },
+                ...assigneeOptions,
+              ]}
+            />
+            <SelectField
+              control={form.control}
+              name="priority"
+              label={workCopy.priorityLabel}
+              options={WORK_TASK_PRIORITIES.map((priority) => ({
+                value: priority,
+                label: workCopy.priorityLabels[priority],
+              }))}
+            />
+            <TextField
+              control={form.control}
+              name="dueAt"
+              label={workCopy.dueLabel}
+              type="datetime-local"
+            />
+            <AppFormRow colSpan="full">
+              <TextareaField
+                control={form.control}
+                name="description"
+                label={workCopy.descriptionLabel}
+                rows={3}
+              />
+            </AppFormRow>
             <DepartmentSync
               value={form.watch("departmentId")}
               onChange={setDepartmentId}
             />
-          </div>
+          </AppFormGrid>
         )}
       </FormDialog>
     </>

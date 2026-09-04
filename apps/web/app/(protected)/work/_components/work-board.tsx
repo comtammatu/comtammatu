@@ -3,9 +3,6 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import {
-  Check as IconCheck,
-  CheckCircle2 as IconCheckCircle2,
-  ChevronDown as IconChevronDown,
   Clock as IconClock,
   ExternalLink as IconExternalLink,
   Plus as IconPlus,
@@ -20,20 +17,22 @@ import {
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Frame } from "@comtammatu/ui/components/frame";
+import { toast } from "@comtammatu/ui/components/sonner";
 import {
-  Item,
   ItemContent,
   ItemDescription,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@comtammatu/ui/components/dropdown-menu";
-import { toast } from "@comtammatu/ui/components/sonner";
-import { AppEmptyState } from "@/components/surface";
+  AppBoardCard,
+  AppBoardColumn,
+  AppBoardColumnAction,
+  AppBoardColumnHeader,
+  AppBoardCompletedSection,
+  AppBoardGrid,
+  AppBoardStatusDropdown,
+  AppEmptyState,
+} from "@/components/surface";
 import { useFormControlSize } from "@/components/form/control-size";
 import {
   setWorkTaskDepartment,
@@ -44,9 +43,9 @@ import {
   type WorkTaskStatus,
 } from "../actions";
 import { workCopy } from "@lib/messages/work";
-import { WORK_KANBAN_COLUMN } from "../_lib/compose-styles";
 import { workHref, type ParsedWorkParams } from "../_lib/params";
 import { resolveWorkTaskDocumentLink } from "../_lib/document-links";
+import { WORK_KANBAN_COLUMN } from "../_lib/compose-styles";
 import { WorkCreateDialog } from "./work-create-dialog";
 
 const STATUS_OPTIONS: WorkTaskStatus[] = [
@@ -322,10 +321,10 @@ export function WorkBoard({
     const isDragging = draggingId === task.id;
 
     return (
-      <Item
+      <AppBoardCard
         key={task.id}
-        variant="outline"
         draggable={!isPending}
+        isDragging={isDragging}
         onDragStart={(event) => {
           setDraggingId(task.id);
           event.dataTransfer.setData("text/task-id", String(task.id));
@@ -333,9 +332,8 @@ export function WorkBoard({
         }}
         onDragEnd={() => setDraggingId(null)}
         className={cn(
-          "cursor-grab bg-card p-3 shadow-2xs transition-colors hover:border-primary/20 active:cursor-grabbing",
+          "cursor-grab active:cursor-grabbing",
           isIncident && "border-destructive",
-          isDragging && "opacity-40 ring-2 ring-primary/20",
         )}
       >
         <ItemContent className="gap-2">
@@ -432,60 +430,27 @@ export function WorkBoard({
             </div>
 
             <div className="flex items-center justify-between gap-1.5 pt-0.5">
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => e.stopPropagation()}
-                      className="h-6 gap-1 px-2 text-2xs font-medium"
-                    >
-                      <span
-                        className={`size-1.5 rounded-full ${statusBadge.dotClass}`}
-                      />
-                      <span>
-                        {workCopy.statusLabels[task.status as WorkTaskStatus] ??
-                          task.status}
-                      </span>
-                      <IconChevronDown className="size-2.5 opacity-60" />
-                    </Button>
-                  }
-                />
-                <DropdownMenuContent align="start" className="w-auto min-w-36">
-                  {STATUS_OPTIONS.map((statusOption) => {
-                    const optProps = getStatusBadgeProps(statusOption);
-                    const active = task.status === statusOption;
-                    return (
-                      <DropdownMenuItem
-                        key={statusOption}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          moveTaskStatus(task.id, statusOption);
-                        }}
-                        className="flex items-center justify-between gap-2 text-xs"
-                      >
-                        <span className="flex items-center gap-2">
-                          <span
-                            className={`size-2 rounded-full ${optProps.dotClass}`}
-                          />
-                          <span
-                            className={active ? "font-semibold text-foreground" : undefined}
-                          >
-                            {workCopy.statusLabels[statusOption]}
-                          </span>
-                        </span>
-                        {active && <IconCheck className="size-3 text-primary" />}
-                      </DropdownMenuItem>
-                    );
-                  })}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <AppBoardStatusDropdown
+                status={task.status}
+                statusLabel={
+                  workCopy.statusLabels[task.status as WorkTaskStatus] ??
+                  task.status
+                }
+                dotClass={statusBadge.dotClass}
+                options={STATUS_OPTIONS.map((statusOption) => ({
+                  value: statusOption,
+                  label: workCopy.statusLabels[statusOption],
+                  dotClass: getStatusBadgeProps(statusOption).dotClass,
+                }))}
+                onStatusChange={(nextStatus) =>
+                  moveTaskStatus(task.id, nextStatus as WorkTaskStatus)
+                }
+                disabled={isPending}
+              />
             </div>
           </ItemDescription>
         </ItemContent>
-      </Item>
+      </AppBoardCard>
     );
   }
 
@@ -503,13 +468,11 @@ export function WorkBoard({
     const isDoneExpanded = Boolean(collapsedDone[column.id]);
 
     return (
-      <Frame
+      <AppBoardColumn
         key={column.id}
-        className={cn(
-          WORK_KANBAN_COLUMN,
-          "w-80 min-w-80 shrink-0",
-          isDragOver && "ring-2 ring-primary/20 bg-primary/10",
-        )}
+        id={`board-col-${column.id}`}
+        className={WORK_KANBAN_COLUMN}
+        isDragOver={isDragOver}
         onDragOver={(event) => {
           event.preventDefault();
           event.dataTransfer.dropEffect = "move";
@@ -528,18 +491,10 @@ export function WorkBoard({
           moveTaskDepartment(taskId, column.id);
         }}
       >
-        <header className="flex items-center justify-between gap-2 border-b border-border/30 px-1 pb-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="size-2 rounded-full bg-primary shrink-0" />
-            <h3 className="truncate text-sm font-semibold text-foreground">{column.name}</h3>
-          </div>
-          <Badge
-            variant={activeTasks.length > 0 ? "secondary" : "outline"}
-            className="tabular-nums font-mono text-xs px-2"
-          >
-            {activeTasks.length}
-          </Badge>
-        </header>
+        <AppBoardColumnHeader
+          title={column.name}
+          count={activeTasks.length}
+        />
 
         <div className="flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto pr-0.5">
           {activeTasks.length === 0 && doneTasks.length === 0 ? (
@@ -552,63 +507,36 @@ export function WorkBoard({
             activeTasks.map(renderCard)
           )}
 
-          {doneTasks.length > 0 ? (
-            <div className="mt-2 border-t border-border/30 pt-1.5">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() =>
-                  setCollapsedDone((prev) => ({
-                    ...prev,
-                    [column.id]: !prev[column.id],
-                  }))
-                }
-                className="h-7 w-full justify-between px-1.5 py-1 text-xs font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-              >
-                <span className="flex items-center gap-1.5">
-                  <IconCheckCircle2 className="size-3.5 text-success" />
-                  <span>
-                    {workCopy.doneSectionToggle} ({doneTasks.length})
-                  </span>
-                </span>
-                <IconChevronDown
-                  className={`size-3.5 transition-transform duration-200 ${
-                    isDoneExpanded ? "rotate-180" : ""
-                  }`}
-                />
-              </Button>
-              {isDoneExpanded ? (
-                <div className="mt-2 flex flex-col gap-2 opacity-85">
-                  {doneTasks.map(renderCard)}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
+          <AppBoardCompletedSection
+            count={doneTasks.length}
+            isExpanded={isDoneExpanded}
+            onToggle={() =>
+              setCollapsedDone((prev) => ({
+                ...prev,
+                [column.id]: !prev[column.id],
+              }))
+            }
+            label={workCopy.doneSectionToggle}
+          >
+            {doneTasks.map(renderCard)}
+          </AppBoardCompletedSection>
         </div>
 
         {!column.isOther && departments.length > 0 ? (
-          <div className="mt-auto border-t border-border/20 pt-2">
-            <WorkCreateDialog
-              departments={departments}
-              membersByDepartment={membersByDepartment}
-              defaultDepartmentId={column.id}
-              params={params}
-              trigger={
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-center gap-1.5 border border-dashed border-border/60 text-xs text-muted-foreground hover:border-primary/20 hover:bg-background hover:text-foreground"
-                >
-                  <IconPlus className="size-3.5" />
-                  <span>{workCopy.addDepartmentTask}</span>
-                </Button>
-              }
-            />
-          </div>
+          <WorkCreateDialog
+            departments={departments}
+            membersByDepartment={membersByDepartment}
+            defaultDepartmentId={column.id}
+            params={params}
+            trigger={
+              <AppBoardColumnAction>
+                <IconPlus className="size-3.5" />
+                <span>{workCopy.addDepartmentTask}</span>
+              </AppBoardColumnAction>
+            }
+          />
         ) : null}
-      </Frame>
+      </AppBoardColumn>
     );
   }
 
@@ -618,51 +546,49 @@ export function WorkBoard({
     );
   }
 
-  const activeColumn =
-    columns.find((c) => c.id === activeDeptId) ?? columns[0]!;
+  function scrollToColumn(columnId: number) {
+    setActiveDeptId(columnId);
+    if (typeof document !== "undefined") {
+      const element = document.getElementById(`board-col-${columnId}`);
+      element?.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
+    }
+  }
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap gap-1.5 md:hidden">
-        {columns.map((col) => {
-          const colTasks = grouped.get(col.id) ?? [];
-          const activeCount = colTasks.filter((t) => t.status !== "done").length;
-          const isSelected = activeDeptId === col.id;
-          return (
-            <Button
-              key={col.id}
-              type="button"
-              variant={isSelected ? "secondary" : "outline"}
-              size={controlSize}
-              onClick={() => setActiveDeptId(col.id)}
-              className="flex items-center gap-1.5"
-            >
-              <span>{col.name}</span>
-              <Badge
-                variant={isSelected ? "outline" : "secondary"}
-                className="px-1.5 py-0 text-2xs"
+      {columns.length > 1 ? (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {columns.map((col) => {
+            const colTasks = grouped.get(col.id) ?? [];
+            const activeCount = colTasks.filter((t) => t.status !== "done").length;
+            const isSelected = activeDeptId === col.id;
+            return (
+              <Button
+                key={col.id}
+                type="button"
+                variant={isSelected ? "secondary" : "outline"}
+                size={controlSize}
+                onClick={() => scrollToColumn(col.id)}
+                className="flex items-center gap-1.5"
               >
-                {activeCount}
-              </Badge>
-            </Button>
-          );
-        })}
-      </div>
+                <span>{col.name}</span>
+                <Badge
+                  variant={isSelected ? "outline" : "secondary"}
+                  className="px-1.5 py-0 text-2xs"
+                >
+                  {activeCount}
+                </Badge>
+              </Button>
+            );
+          })}
+        </div>
+      ) : null}
 
-      <div className="md:hidden">
-        {activeColumn
-          ? renderDepartmentColumn(
-              activeColumn,
-              grouped.get(activeColumn.id) ?? [],
-            )
-          : null}
-      </div>
-
-      <div className="hidden gap-3.5 overflow-x-auto pb-4 pt-1 md:flex">
+      <AppBoardGrid>
         {columns.map((col) =>
           renderDepartmentColumn(col, grouped.get(col.id) ?? []),
         )}
-      </div>
+      </AppBoardGrid>
     </div>
   );
 }

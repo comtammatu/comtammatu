@@ -25,7 +25,14 @@ import {
 import { Badge } from "@comtammatu/ui/components/badge";
 import { useFormControlSize } from "@/components/form/control-size";
 import { confirm } from "@/components/confirm-dialog";
-import { AppDetailFooter } from "@/components/surface";
+import {
+  AppDetailFooter,
+  AppInspectorGrid,
+  AppInspectorMain,
+  AppInspectorRow,
+  AppInspectorSection,
+  AppInspectorSidebar,
+} from "@/components/surface";
 import {
   addWorkTaskComment,
   deleteWorkTaskAttachment,
@@ -303,9 +310,9 @@ export function WorkTaskDetailBody({ form }: { form: WorkTaskDetailForm }) {
   });
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+    <AppInspectorGrid ratio="wide-main">
       {/* Main Content Column */}
-      <div className="flex flex-col gap-5 lg:col-span-7">
+      <AppInspectorMain>
         {docLink ? (
           <Frame className="flex items-center justify-between gap-3 border-primary/20 bg-primary/10 p-3 text-sm">
             <div className="flex items-center gap-2">
@@ -597,19 +604,14 @@ export function WorkTaskDetailBody({ form }: { form: WorkTaskDetailForm }) {
             </Button>
           </div>
         </Frame>
-      </div>
+      </AppInspectorMain>
 
       {/* Sidebar Inspector Column */}
-      <div className="flex flex-col gap-4 lg:col-span-5">
-        <Frame className="flex flex-col gap-4 bg-muted/30 p-4">
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            {workCopy.statusLabel} & {workCopy.priorityLabel}
-          </span>
-
-          <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium text-muted-foreground">
-              {workCopy.statusLabel}
-            </span>
+      <AppInspectorSidebar>
+        <AppInspectorSection
+          eyebrow={`${workCopy.statusLabel} & ${workCopy.priorityLabel}`}
+        >
+          <AppInspectorRow label={workCopy.statusLabel}>
             <Select
               value={form.status}
               onValueChange={(value) =>
@@ -628,12 +630,9 @@ export function WorkTaskDetailBody({ form }: { form: WorkTaskDetailForm }) {
                 ))}
               </SelectContent>
             </Select>
-          </label>
+          </AppInspectorRow>
 
-          <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium text-muted-foreground">
-              {workCopy.priorityLabel}
-            </span>
+          <AppInspectorRow label={workCopy.priorityLabel}>
             <Select
               value={form.priority}
               onValueChange={(value) =>
@@ -651,12 +650,9 @@ export function WorkTaskDetailBody({ form }: { form: WorkTaskDetailForm }) {
                 ))}
               </SelectContent>
             </Select>
-          </label>
+          </AppInspectorRow>
 
-          <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium text-muted-foreground">
-              {workCopy.assignee}
-            </span>
+          <AppInspectorRow label={workCopy.assignee}>
             <Select
               value={form.assigneeId}
               onValueChange={form.setAssigneeId}
@@ -673,22 +669,19 @@ export function WorkTaskDetailBody({ form }: { form: WorkTaskDetailForm }) {
                 ))}
               </SelectContent>
             </Select>
-          </label>
+          </AppInspectorRow>
 
-          <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium text-muted-foreground">
-              {workCopy.dueLabel}
-            </span>
+          <AppInspectorRow label={workCopy.dueLabel}>
             <Input
               type="datetime-local"
               value={form.dueAt}
               onChange={(event) => form.setDueAt(event.target.value)}
               className="bg-background"
             />
-          </label>
-        </Frame>
-      </div>
-    </div>
+          </AppInspectorRow>
+        </AppInspectorSection>
+      </AppInspectorSidebar>
+    </AppInspectorGrid>
   );
 }
 
