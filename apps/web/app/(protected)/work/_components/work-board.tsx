@@ -29,6 +29,7 @@ import {
   AppBoardColumnAction,
   AppBoardColumnHeader,
   AppBoardCompletedSection,
+  AppBoardDropTarget,
   AppBoardGrid,
   AppBoardStatusDropdown,
   AppEmptyState,
@@ -355,7 +356,7 @@ export function WorkBoard({
                   target="_blank"
                   rel="noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-3xs font-medium text-primary hover:bg-primary/20 hover:underline"
+                  className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-1.5 py-0.5 text-3xs font-medium text-primary hover:bg-primary/20 hover:underline"
                 >
                   <span>{docLink.label}</span>
                   <IconExternalLink className="size-2.5" />
@@ -497,7 +498,14 @@ export function WorkBoard({
         />
 
         <div className="flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto pr-0.5">
-          {activeTasks.length === 0 && doneTasks.length === 0 ? (
+          {isDragOver ? (
+            <AppBoardDropTarget>
+              <IconPlus className="size-4 shrink-0" />
+              <span>{workCopy.dropHere}</span>
+            </AppBoardDropTarget>
+          ) : null}
+
+          {activeTasks.length === 0 && doneTasks.length === 0 && !isDragOver ? (
             <Frame className="flex flex-1 flex-col items-center justify-center border-dashed border-border/40 bg-transparent p-4 text-center">
               <span className="text-xs text-muted-foreground/60">
                 {workCopy.checklistEmpty}

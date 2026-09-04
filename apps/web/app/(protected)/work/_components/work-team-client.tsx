@@ -20,7 +20,13 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { FormDialog, SelectField, TextField } from "@/components/form";
+import {
+  AppFormGrid,
+  AppFormRow,
+  FormDialog,
+  SelectField,
+  TextField,
+} from "@/components/form";
 import { AppEmptyState, AppListFrame, AppToolbar } from "@/components/surface";
 import { useFormControlSize } from "@/components/form/control-size";
 import { workCopy } from "@lib/messages/work";
@@ -112,11 +118,15 @@ export function WorkTeamClient({
       successMessage={workCopy.save}
     >
       {(form) => (
-        <TextField
-          control={form.control}
-          name="name"
-          label={workCopy.departmentNameLabel}
-        />
+        <AppFormGrid density="compact">
+          <AppFormRow colSpan="full">
+            <TextField
+              control={form.control}
+              name="name"
+              label={workCopy.departmentNameLabel}
+            />
+          </AppFormRow>
+        </AppFormGrid>
       )}
     </FormDialog>
   ) : null;
@@ -342,7 +352,7 @@ export function WorkTeamClient({
           successMessage={workCopy.save}
         >
           {(form) => (
-            <>
+            <AppFormGrid density="compact">
               <SelectField
                 control={form.control}
                 name="userId"
@@ -361,7 +371,7 @@ export function WorkTeamClient({
                   { value: "member", label: workCopy.teamRoleMember },
                 ]}
               />
-            </>
+            </AppFormGrid>
           )}
         </FormDialog>
       ) : null}

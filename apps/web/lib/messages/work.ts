@@ -164,4 +164,10 @@ export const workCopy = {
   addDepartmentTask: "Thêm việc mới",
   allDepartments: "Tất cả phòng ban",
   today: "Hôm nay",
+  timelineDays: "ngày",
+  timelineRange: "Khung thời gian",
+  timelineNoDue: "Chưa đặt hạn chót",
+  timelineNextPeriod: "Kỳ tiếp theo",
+  timelinePrevPeriod: "Kỳ trước đó",
+  dropHere: "Thả vào đây để chuyển phòng ban",
 } as const;

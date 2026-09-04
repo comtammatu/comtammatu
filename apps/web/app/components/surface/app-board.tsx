@@ -293,3 +293,27 @@ export function AppBoardColumnAction({
     </div>
   );
 }
+
+export type AppBoardDropTargetProps = ComponentProps<typeof Item> & {
+  children?: ReactNode;
+  className?: string;
+};
+
+export function AppBoardDropTarget({
+  children,
+  className,
+  ...props
+}: AppBoardDropTargetProps) {
+  return (
+    <Item
+      variant="outline"
+      className={cn(
+        "h-14 justify-center border-dashed border-primary/20 bg-primary/10 font-semibold text-primary animate-pulse",
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </Item>
+  );
+}

@@ -126,7 +126,7 @@ export default async function WorkPage({
     const scoped =
       params.departmentId != null
         ? await listScopedWorkTasks({ departmentId: params.departmentId })
-        : params.view === "board"
+        : params.view === "board" || params.view === "timeline"
           ? await listScopedWorkTasks({})
           : await listMyWorkTasks({ includeDone: params.includeDone });
 
@@ -145,7 +145,14 @@ export default async function WorkPage({
     } else if (params.view === "calendar") {
       body = <WorkCalendar tasks={scoped.data.items} params={params} />;
     } else {
-      body = <WorkTimeline tasks={scoped.data.items} params={params} />;
+      body = (
+        <WorkTimeline
+          tasks={scoped.data.items}
+          params={params}
+          departments={departments}
+          assigneeNames={assigneeNames}
+        />
+      );
     }
   }
 

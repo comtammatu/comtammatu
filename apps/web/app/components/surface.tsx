@@ -99,6 +99,7 @@ export {
   AppBoardStatusDropdown,
   AppBoardCompletedSection,
   AppBoardColumnAction,
+  AppBoardDropTarget,
 } from "./surface/app-board";
 export type {
   AppBoardGridProps,
@@ -110,6 +111,7 @@ export type {
   AppBoardStatusOption,
   AppBoardCompletedSectionProps,
   AppBoardColumnActionProps,
+  AppBoardDropTargetProps,
 } from "./surface/app-board";
 
 export {
@@ -155,3 +157,4 @@ export type {
   AppFilterChipsProps,
   AppFilterChipOption,
 } from "./surface/app-filter-chips";
+

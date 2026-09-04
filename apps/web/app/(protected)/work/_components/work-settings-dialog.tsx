@@ -26,7 +26,13 @@ import {
 } from "@comtammatu/ui/components/tabs";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { confirm } from "@/components/confirm-dialog";
-import { FormDialog, SelectField, TextField } from "@/components/form";
+import {
+  AppFormGrid,
+  AppFormRow,
+  FormDialog,
+  SelectField,
+  TextField,
+} from "@/components/form";
 import { AppDialog } from "@/components/form/form-dialog";
 import { useFormControlSize } from "@/components/form/control-size";
 import { AppEmptyState } from "@/components/surface";
@@ -342,11 +348,15 @@ export function WorkSettingsDialog({
         successMessage={workCopy.save}
       >
         {(form) => (
-          <TextField
-            control={form.control}
-            name="name"
-            label={workCopy.departmentNameLabel}
-          />
+          <AppFormGrid density="compact">
+            <AppFormRow colSpan="full">
+              <TextField
+                control={form.control}
+                name="name"
+                label={workCopy.departmentNameLabel}
+              />
+            </AppFormRow>
+          </AppFormGrid>
         )}
       </FormDialog>
 
@@ -379,7 +389,7 @@ export function WorkSettingsDialog({
           successMessage={workCopy.save}
         >
           {(form) => (
-            <>
+            <AppFormGrid density="compact">
               <SelectField
                 control={form.control}
                 name="userId"
@@ -398,7 +408,7 @@ export function WorkSettingsDialog({
                   { value: "member", label: workCopy.teamRoleMember },
                 ]}
               />
-            </>
+            </AppFormGrid>
           )}
         </FormDialog>
       ) : null}
