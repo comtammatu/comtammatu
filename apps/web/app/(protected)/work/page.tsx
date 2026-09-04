@@ -72,6 +72,15 @@ export default async function WorkPage({
     }),
   );
 
+  const assigneeNames: Record<string, string> = {};
+  for (const members of Object.values(membersByDepartment)) {
+    for (const member of members) {
+      if (member.id && member.fullName) {
+        assigneeNames[member.id] = member.fullName;
+      }
+    }
+  }
+
   let taskDetail: WorkTaskDetailPayload | null = null;
   let taskDetailError: string | null = null;
   if (params.taskId != null) {
@@ -122,7 +131,13 @@ export default async function WorkPage({
     if (!scoped.success || !scoped.data) {
       loadError = scoped.error ?? workCopy.loadFailed;
     } else if (params.view === "board") {
-      body = <WorkBoard tasks={scoped.data.items} params={params} />;
+      body = (
+        <WorkBoard
+          tasks={scoped.data.items}
+          params={params}
+          assigneeNames={assigneeNames}
+        />
+      );
     } else if (params.view === "calendar") {
       body = <WorkCalendar tasks={scoped.data.items} params={params} />;
     } else {

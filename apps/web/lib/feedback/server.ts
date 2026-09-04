@@ -150,6 +150,58 @@ export async function submitFeedbackRequest(input: {
     };
   }
 
+  if (payload.ok && !payload.duplicate && input.rating <= 2) {
+    try {
+      const { data: fb } = await service()
+        .from("feedbacks")
+        .select("id, branch_id, tenant_id")
+        .eq("id", payload.feedbackId)
+        .maybeSingle();
+
+      if (fb) {
+        const { data: branch } = await service()
+          .from("branches")
+          .select("name")
+          .eq("id", fb.branch_id)
+          .maybeSingle();
+
+        const { data: depts } = await service()
+          .from("work_departments")
+          .select("id")
+          .eq("tenant_id", fb.tenant_id)
+          .eq("is_active", true);
+
+        const deptId = depts?.[0]?.id;
+
+        const { data: profiles } = await service()
+          .from("profiles")
+          .select("id")
+          .eq("tenant_id", fb.tenant_id);
+
+        const creatorId = profiles?.[0]?.id;
+
+        if (deptId && creatorId) {
+          const branchName = branch?.name ?? "Chi nhánh";
+          const title = `[Sự cố - CSKH] Phản hồi ${input.rating} sao tại ${branchName}`;
+          const commentText = input.comment?.trim() ? input.comment.trim() : "(Không có bình luận)";
+          const description = `Chi nhánh: ${branchName}\nĐánh giá: ${input.rating}/5 sao\nÝ kiến khách: ${commentText}\nĐề nghị Quản lý và CSKH liên hệ xử lý khiếu nại sớm.`;
+
+          await service().from("work_tasks").insert({
+            tenant_id: fb.tenant_id,
+            department_id: deptId,
+            title,
+            description,
+            priority: input.rating === 1 ? "urgent" : "high",
+            status: "todo",
+            created_by: creatorId,
+          });
+        }
+      }
+    } catch {
+      // Non-blocking side effect: feedback submission succeeds regardless
+    }
+  }
+
   return {
     ok: true,
     feedbackId: payload.feedbackId,

@@ -1153,38 +1153,84 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
         </div>
       ) : null}
 
-      {discounts.count > 0 ? (
-        <div>
-          <SectionLabel>
-            {messages.settings.posSessions.discountSection(
-              discounts.count,
-              formatVND(discounts.total),
-            )}
-          </SectionLabel>
-          <ItemGroup>
-            {discounts.top_orders.map((order) => (
-              <Item key={order.order_id} variant="outline">
-                <ItemContent>
-                  <ItemTitle>{order.order_number}</ItemTitle>
-                  <ItemDescription>{order.note ?? "—"}</ItemDescription>
-                </ItemContent>
-                <ItemFooter>
-                  <Badge variant="outline">
-                    {order.type === "pct"
-                      ? formatPercent(order.value ?? 0)
-                      : order.type === "vnd"
-                        ? "VND"
-                        : "—"}
-                  </Badge>
-                  <span className="font-mono text-sm font-semibold tabular-nums text-destructive">
-                    -{formatVND(order.amount)}
-                  </span>
-                </ItemFooter>
-              </Item>
-            ))}
-          </ItemGroup>
-        </div>
-      ) : null}
+      {discounts.count > 0 ? (() => {
+        const promoOrders = discounts.top_orders.filter(
+          (o) =>
+            o.note != null &&
+            (/\[.*?\]/i.test(o.note) ||
+              /khuyến mãi|voucher|quà|tặng/i.test(o.note)),
+        );
+        const promoTotal = promoOrders.reduce((sum, o) => sum + o.amount, 0);
+        const manualOrders = discounts.top_orders.filter(
+          (o) => !promoOrders.includes(o),
+        );
+        const manualTotal = manualOrders.reduce((sum, o) => sum + o.amount, 0);
+
+        return (
+          <div className="flex flex-col gap-3">
+            <SectionLabel>
+              {messages.settings.posSessions.discountSection(
+                discounts.count,
+                formatVND(discounts.total),
+              )}
+            </SectionLabel>
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+              <span>
+                {messages.settings.posSessions.promoDiscount}:{" "}
+                <strong className="font-mono text-sm font-semibold text-foreground">
+                  {formatVND(promoTotal)}
+                </strong>{" "}
+                ({messages.settings.posSessions.billCount(promoOrders.length)})
+              </span>
+              <span>
+                {messages.settings.posSessions.manualDiscount}:{" "}
+                <strong className="font-mono text-sm font-semibold text-foreground">
+                  {formatVND(manualTotal)}
+                </strong>{" "}
+                ({messages.settings.posSessions.billCount(manualOrders.length)})
+              </span>
+            </div>
+            <ItemGroup>
+              {discounts.top_orders.map((order) => {
+                const isPromo =
+                  order.note != null &&
+                  (/\[.*?\]/i.test(order.note) ||
+                    /khuyến mãi|voucher|quà|tặng/i.test(order.note));
+                return (
+                  <Item key={order.order_id} variant="outline">
+                    <ItemContent>
+                      <div className="flex items-center gap-1.5">
+                        <ItemTitle>{order.order_number}</ItemTitle>
+                        <Badge
+                          variant={isPromo ? "secondary" : "outline"}
+                          className="text-xs"
+                        >
+                          {isPromo
+                            ? messages.settings.posSessions.promoDiscount
+                            : messages.settings.posSessions.manualDiscount}
+                        </Badge>
+                      </div>
+                      <ItemDescription>{order.note ?? "—"}</ItemDescription>
+                    </ItemContent>
+                    <ItemFooter>
+                      <Badge variant="outline">
+                        {order.type === "pct"
+                          ? formatPercent(order.value ?? 0)
+                          : order.type === "vnd"
+                            ? "VND"
+                            : "—"}
+                      </Badge>
+                      <span className="font-mono text-sm font-semibold tabular-nums text-destructive">
+                        -{formatVND(order.amount)}
+                      </span>
+                    </ItemFooter>
+                  </Item>
+                );
+              })}
+            </ItemGroup>
+          </div>
+        );
+      })() : null}
     </BranchOperatorPanel>
   );
 }

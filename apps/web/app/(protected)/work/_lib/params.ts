@@ -6,6 +6,17 @@ import {
 export const WORK_VIEWS = ["mine", "board", "calendar", "timeline"] as const;
 export type WorkView = (typeof WORK_VIEWS)[number];
 
+export const WORK_QUICK_FILTERS = [
+  "all",
+  "today",
+  "overdue",
+  "urgent",
+] as const;
+export type WorkQuickFilter = (typeof WORK_QUICK_FILTERS)[number];
+
+export const WORK_GROUPINGS = ["status", "priority"] as const;
+export type WorkGrouping = (typeof WORK_GROUPINGS)[number];
+
 export type WorkSearchParams = {
   view?: string | string[];
   department?: string | string[];
@@ -14,6 +25,8 @@ export type WorkSearchParams = {
   includeDone?: string | string[];
   month?: string | string[];
   task?: string | string[];
+  filter?: string | string[];
+  group?: string | string[];
 };
 
 export type ParsedWorkParams = {
@@ -24,6 +37,8 @@ export type ParsedWorkParams = {
   includeDone: boolean;
   month: string | null;
   taskId: number | null;
+  filter: WorkQuickFilter | null;
+  group: WorkGrouping | null;
 };
 
 function firstParam(
@@ -71,6 +86,22 @@ function parseMonth(raw: string | undefined): string | null {
   return raw;
 }
 
+function parseQuickFilter(raw: string | undefined): WorkQuickFilter | null {
+  if (!raw) return null;
+  if ((WORK_QUICK_FILTERS as readonly string[]).includes(raw)) {
+    return raw as WorkQuickFilter;
+  }
+  return null;
+}
+
+function parseGrouping(raw: string | undefined): WorkGrouping | null {
+  if (!raw) return null;
+  if ((WORK_GROUPINGS as readonly string[]).includes(raw)) {
+    return raw as WorkGrouping;
+  }
+  return null;
+}
+
 export function parseWorkParams(
   searchParams: WorkSearchParams | undefined,
 ): ParsedWorkParams {
@@ -83,6 +114,8 @@ export function parseWorkParams(
     includeDone: parseIncludeDone(firstParam(params.includeDone)),
     month: parseMonth(firstParam(params.month)),
     taskId: parsePositiveInt(firstParam(params.task)),
+    filter: parseQuickFilter(firstParam(params.filter)),
+    group: parseGrouping(firstParam(params.group)),
   };
 }
 
@@ -102,6 +135,8 @@ export function buildWorkSearchParams(
   if (next.includeDone) qs.set("includeDone", "1");
   if (next.month != null) qs.set("month", next.month);
   if (next.taskId != null) qs.set("task", String(next.taskId));
+  if (next.filter != null && next.filter !== "all") qs.set("filter", next.filter);
+  if (next.group != null && next.group !== "status") qs.set("group", next.group);
 
   return qs;
 }

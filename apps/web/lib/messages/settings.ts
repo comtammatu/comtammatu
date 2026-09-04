@@ -999,6 +999,8 @@ export const settings = {
     billCount: (count: number) => `${formatCount(count)} đơn`,
     discountSection: (count: number, total: string) =>
       `Giảm giá (${formatCount(count)} đơn · ${total})`,
+    promoDiscount: "Khuyến mãi",
+    manualDiscount: "Chiết khấu tay",
     discount: "Giảm",
     note: "Ghi chú",
     paymentAttemptWarning: (
