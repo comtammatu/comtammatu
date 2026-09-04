@@ -276,18 +276,20 @@ is shortcut. Row click may mark read then navigate `action_url`.
   operational audio, not durable; no notification bell.
 - **Owner:** full feed + module badges; link to review/finance/staff/inventory
   exceptions.
-- **Inventory:** durable for stock low, stocktake conflict, approvals; Branch
-  requests → central sites; purchase demand → Owner + Accountant; PR/PO →
-  purchase queues; GRN → goods-receipt queues.
+- **Inventory:** durable for stock low, stocktake conflict, waste approval,
+  in-transit transfer, and PO pending. GRN → goods-receipt queues. Do not
+  emit new purchase-request or stock-request kinds (tables dropped).
 - **Staff (`Cổng nhân viên` / `/me`):** operator bell + `/notifications`; personal
   leave/checkout results deep-link `/me` (branch floor hydrates to
   `/br/{id}/shift/*`). Not an Owner control surface.
 
 ## Domain producer matrix (P0–P1)
 
-Inventory: `procurement.purchase_request_submitted` /
-`procurement.po_pending_approval`; `inventory.stock_request_*` /
-`inventory.waste_pending_approval` / `workflow.transfer_in_transit`. Finance:
+Inventory live producers: `procurement.po_pending_approval`,
+`inventory.waste_pending_approval`, `workflow.transfer_in_transit`. Historical
+unread `procurement.purchase_request_submitted` / `inventory.stock_request_*`
+deep-link to PO list / transfer hub; do not insert new rows of those kinds.
+Finance:
 `inventory.valuation_variance` / `inventory.valuation_reconciliation_failed`.
 Orders: `pos.void_*`, `pos.kds_out_of_stock`. Do **not** insert `pos.order_new`
 — live POS/KDS/self-order boards own new sales. HR: `hr.leave_*`, `hr.checkout_*` /

@@ -1068,8 +1068,8 @@ addressable. Full decision table: ADR 0018.
   Branch may use a bottom `Sheet` / `Drawer` at the same depth.
 - **D1 document** — a list-first staged document may render lines and a
   state-transition footer in `AppDialog variant="document"` when each state
-  exposes exactly one primary action. Named tier: purchase demand, PO, GRN,
-  production, and the YCH/Transfer fulfillment journey.
+  exposes exactly one primary action. Named tier: PO, GRN, production, and
+  the Transfer fulfillment journey (request vouchers retired).
 - **D1 task (non-addressable)** — Overlay chooser: Owner `FormDialog` / short
   `AppDialog`; Branch `AppSheet`; station `StationSheet`.
 - **D3** — line-array authoring only; never a row-open target.

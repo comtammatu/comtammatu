@@ -329,8 +329,6 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         val mapping = RelayResponseParser.parse(remoteResponse)
         val values = sentMappingValues(mapping, System.currentTimeMillis()).apply {
             put(COLUMN_STATUS, STATUS_SENT)
-            put(COLUMN_RAW_BASE64, "")
-            putNull(COLUMN_RECEIPT_TEXT)
             if (mapping.orderId == null && mapping.orderNumber == null) {
                 put(COLUMN_REMOTE_RESPONSE, remoteResponse?.take(2 * 1024))
             } else {

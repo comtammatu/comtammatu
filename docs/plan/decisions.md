@@ -10,7 +10,8 @@ changes use an ADR. When no inbound reference remains, delete the compatibility
 entry.
 
 ## D009: Path-based routing
-**Net effect:** Owner `/`; Branch `/br/[branchId]/*`; self-service `/me/*` (Owner denied); ACL at proxy + module ACL. Canonical: `docs/spec/architecture.md`, ADR 0012.
+**Net effect:** Path-based surfaces on one web domain. Landings and planes:
+`docs/spec/architecture.md`, ADR 0012, ADR 0037. ACL at proxy + module ACL.
 
 ## D011: Print-agent LAN-only
 **Net effect:** `apps/print-agent` supports LAN printers only; no USB or runtime transport switch. Canonical: `docs/modules/infrastructure.md`.
@@ -70,7 +71,7 @@ entry.
 **Net effect:** Manual quota and stock availability are distinct sources; NULL capacity fails open; hold tokens prevent double-count. Canonical: `docs/ref/operational-data-contract.md`.
 
 ## D065: One stock-sale-outcome switch
-**Net effect:** Enabling stock outcome also enables availability signalling and posting; posting races fail soft; stocktake detects drift. The no-negative-at-posting clause is reversed by ADR 0026 (post-and-flag after payment). Pre-order `enforce_branch_stock_availability` stays a hard block for cashiers/floor staff; Branch Manager or Owner may reopen the sell path only on the shared menu-limits drawer via re-enable and/or the daily sellable-allowance switch (`stock_allowance_quantity` — UI is boolean; ON writes max headroom on top of stock-derived remaining; not absolute daily sellable; not ignore-stock; former `Bổ sung tồn kho` ledger replenish retired; no POS PIN) without skipping posting. Canonical: ADR 0026.
+**Net effect:** Enabling stock outcome also enables availability signalling and posting; posting races fail soft; stocktake detects drift. No-negative-at-posting is reversed; post-and-flag, pre-order hard-block, and BM/Owner sellable allowance: ADR 0026.
 
 ## D069: Typography and night mode
 **Net effect:** Geist heading/body, Geist Mono for data; warm-dark night mode via cookie; print unaffected. Canonical: `docs/spec/design-system.md`.
@@ -85,10 +86,10 @@ entry.
 **Net effect:** Each active site has one active warehouse; GRN records received/rejected (+ reason/photo); no lot / expiry / temperature / price-QC. Canonical: `docs/ref/inventory.md`.
 
 ## D093: Central-only GRN and branch stock request
-**Net effect:** GRN is Central Supply/Kitchen only; Branch requests stock and receives transfers; no Branch production/GRN. Canonical: `docs/ref/inventory.md` §11.
+**Net effect:** GRN is Central Supply/Kitchen only; a store restocks by dest-initiated transfer (request vouchers dropped); no Branch production/GRN. Canonical: `docs/ref/inventory.md` §11.
 
 ## D099: Nhu cầu mua and supplier selection
-**Net effect:** Happy path is warehouse `Tạo đơn` (ingredient-first; NCC on each PO line; ADR 0040). YCM is history-only until Wave 4. One Auto-GRN per PO; confirm books one NCC group on that GRN. PO carries no commercial price; kept GRN qty amends the PO line (ADR 0040); GRN net unit price is book price; `HĐ NCC` is AP/VAT only and matches line NCC. Canonical: `docs/ref/inventory.md`, ADR 0017, ADR 0040.
+**Net effect:** Happy path is warehouse `Tạo đơn` (ingredient-first; NCC on each PO line; ADR 0040). One Auto-GRN per PO; confirm books one NCC group on that GRN. PO carries no commercial price; kept GRN qty amends the PO line (ADR 0040); GRN net unit price is book price; `HĐ NCC` is AP/VAT only and matches line NCC. Canonical: `docs/ref/inventory.md`, ADR 0017, ADR 0040.
 
 ## D101: Inventory valuation settlement
 **Net effect:** Purchased SKUs share one company WAC across stock-bearing sites (ADR 0040); finished goods are recipe-produced only and keep a production pool. Valuation subledger append-only; never a second quantity. GRN confirm books net unit price into company WAC (ADR 0040). Kept GRN quantity amends the PO line so AP can bill the receipt (ADR 0040). Supplier invoice confirm does not reprice stock. Credit/return paths may still post `legacy_purchase_price_variance`. Canonical: `docs/ref/inventory.md`, ADR 0017, ADR 0040.

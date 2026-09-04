@@ -4,3 +4,8 @@ export {
   formatDeliveryCallLabel,
   formatDeliveryPlatformPrintToken,
 } from "./call-label";
+export {
+  canonicalizeShopeeOrderRef,
+  shopeeKitchenCallRef,
+  shopeeOrderRefLookupKeys,
+} from "./shopee-order-ref";

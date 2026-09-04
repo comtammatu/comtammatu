@@ -14,6 +14,8 @@ Contract vận hành Inventory hiện tại, không phải roadmap. Ý tưởng 
 
 **Từng màn** (route / load / hiển thị / submit / hiện vs mục tiêu): [screen-context-map.md](screen-context-map.md) §2.5A — Landing, Tồn, Catalog, Mua, Nhập, Giao nhận, SX, Hao, Kiểm kê, Branch `/stock`. Không mở tài liệu song song.
 
+**Thẩm quyền.** Contract runtime: file này. AP / thanh toán NCC: [`docs/modules/finance.md`](../modules/finance.md) và ADR 0017. WAC công ty / PO–GRN: ADR 0040. Trừ tồn POS post-and-flag: ADR 0026.
+
 ## Current Contract
 
 | Nội dung                        | Current contract                                                                                                                                                                                                                                                                                                               | Boundary                                                                                               |
@@ -41,6 +43,7 @@ Những thứ dưới đây không thuộc Inventory current contract dù có xu
 - payment proposal batches / approval nhiều cấp
 - labor, overhead, accounting giữa pháp nhân/nội bộ doanh nghiệp
 - location hierarchy enterprise nhiều tầng
+- gom nhiều phiếu yêu cầu thành một dòng PO
 
 ---
 
@@ -246,7 +249,7 @@ Append-only. `type` như §1b. Liên kết: `order_id`, `grn_id`, `transfer_id`,
 
 POS: Sale Runtime ghi `consumption/sale_consumption` tại Kho CN ngay khi KDS bấm hoàn thành món
 (`first_ready_at`, trừ tồn tức thì tại thời điểm bếp xuất món, không chờ thanh toán hay hoàn tất đơn; không KDS chờ dispatch phiếu bếp hoặc thanh toán).
-Cơ chế vi sai (delta posting) tự động trừ theo từng vé/món hoàn thành và trừ bù nếu thêm định mức mới. `pos_stock_outcome_posting` = switch Owner-only tắt trừ/rào tồn theo CN. Báo cáo
+Cơ chế vi sai (delta posting) tự động trừ theo từng vé/món hoàn thành và trừ bù nếu thêm định mức mới. Thiếu tồn vẫn trừ đủ dòng (cho âm) và gắn cờ — không rollback thanh toán (ADR 0026). Cashier/floor bị chặn pre-order trừ khi BM/Owner cộng `stock_allowance_quantity` trên Giới hạn bán (cộng N phần, không sửa sổ kho). `pos_stock_outcome_posting` = switch Owner-only tắt trừ/rào tồn theo CN. Báo cáo
 tiêu hao thủ công không ghi lại NL đã trừ từ POS.
 
 ---
@@ -343,10 +346,12 @@ phạm vi; owner mọi CN.
 
 So sánh `current_quantity` với ngưỡng theo location. `min_stock_level` là mức
 cảnh báo, `target_stock_level` là mức cấp lên. Gợi ý cấp Bếp = nhỏ hơn giữa
-`target-current` và tồn Kho khả dụng. Notification tồn thấp có `location_id`,
-dedup theo chi nhánh + location + nguyên liệu và mở đúng tab Kho/Bếp.
-Không sổ lô/FIFO/FEFO/HSD/route `/inventory/expiry`. GRN: thực nhận/từ chối và
-**Đơn giá** ghi sổ (chưa VAT).
+`target-current` và tồn Kho khả dụng. Gợi ý SL **Tạo đơn** (INV-10):
+`max(0, min_stock_level - current_quantity)` theo Đơn vị chuẩn;
+`max_stock_level` / `reorder_point` không điều khiển. Notification tồn thấp có
+`location_id`, dedup theo chi nhánh + location + nguyên liệu và mở đúng tab
+Kho/Bếp. Không sổ lô/FIFO/FEFO/HSD/route `/inventory/expiry`. GRN: thực nhận/từ
+chối và **Đơn giá** ghi sổ (chưa VAT).
 
 ---
 

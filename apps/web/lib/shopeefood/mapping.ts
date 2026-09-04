@@ -142,7 +142,8 @@ export function resolveParentItemDeliveryVariant<TVariant extends { name: string
 const ITEM_NAME_ALIASES: Record<string, string> = {
   "com suon cot let": "Sườn Cốt Lết",
   "com suon cong": "Sườn Cọng",
-  "com suon mot gang": "Sườn Một Gang",
+    "com suon mot gang": "Sườn Một Gang",
+  "com tam bi": "Cơm Tấm Bì",
   "com them": "Cơm Thêm",
   "tra taac": "Trà Tắc",
 };
@@ -236,7 +237,7 @@ export interface TransformedOrderForRpc {
     sides: Array<{ name: string; price: number; quantity: number; side_item_id: number }>;
     subtotal: number;
     note: string | null;
-    discount_type?: "pct" | "vnd" | null;
+    discount_type?: "vnd" | null;
     discount_value?: number | null;
     discount_note?: string | null;
   }>;
@@ -318,6 +319,7 @@ const SIDE_NAME_ALIASES: Record<string, string> = {
   "com": "Cơm Thêm",
   "extra rice": "Cơm Thêm",
   "trung": "Trứng",
+  "iring": "Trứng",
   "trung op la": "Trứng",
   "trung chien": "Trứng",
   "cha": "Chả",
@@ -490,13 +492,13 @@ export function transformShopeeOrderPayload(
       (si.price !== undefined && rawItemPrice === 0) ||
       /tặng|quà\s*tặng|free\b|0đ|0\s*đ/i.test(si.name);
 
-    let discountType: "pct" | "vnd" | undefined;
+    let discountType: "vnd" | undefined;
     let discountValue: number | undefined;
     let discountNote: string | undefined;
 
     if (isFreeGift) {
-      discountType = "pct";
-      discountValue = 100;
+      discountType = "vnd";
+      discountValue = subtotal;
       discountNote = "Khuyến mãi tặng kèm ShopeeFood (0đ)";
     }
 

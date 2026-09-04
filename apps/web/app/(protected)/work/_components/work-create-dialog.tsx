@@ -1,6 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import {
+  cloneElement,
+  isValidElement,
+  useEffect,
+  useMemo,
+  useState,
+  type MouseEventHandler,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { Button } from "@comtammatu/ui/components/button";
@@ -33,11 +42,13 @@ export function WorkCreateDialog({
   membersByDepartment,
   defaultDepartmentId,
   params,
+  trigger,
 }: {
   departments: WorkDepartmentOption[];
   membersByDepartment: Record<number, WorkProfileOption[]>;
   defaultDepartmentId?: number | null;
   params: ParsedWorkParams;
+  trigger?: ReactNode;
 }) {
   const router = useRouter();
   const controlSize = useFormControlSize();
@@ -60,11 +71,26 @@ export function WorkCreateDialog({
 
   if (departments.length === 0) return null;
 
+  const triggerNode = trigger && isValidElement(trigger) ? (
+    cloneElement(trigger as ReactElement<{ onClick?: MouseEventHandler }>, {
+      onClick: (e: React.MouseEvent) => {
+        (trigger.props as { onClick?: MouseEventHandler })?.onClick?.(e);
+        setOpen(true);
+      },
+    })
+  ) : trigger ? (
+    <span onClick={() => setOpen(true)} className="contents">
+      {trigger}
+    </span>
+  ) : (
+    <Button size={controlSize} type="button" onClick={() => setOpen(true)}>
+      {workCopy.createTask}
+    </Button>
+  );
+
   return (
     <>
-      <Button size={controlSize} type="button" onClick={() => setOpen(true)}>
-        {workCopy.createTask}
-      </Button>
+      {triggerNode}
       <FormDialog
         open={open}
         onOpenChange={setOpen}

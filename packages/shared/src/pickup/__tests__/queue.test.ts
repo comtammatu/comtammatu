@@ -162,6 +162,20 @@ test("formatPickupOrderLabel keeps dine-in table labels unchanged", () => {
   );
 });
 
+test("formatPickupOrderLabel shortens an OCR-corrupted Shopee full reference to the kitchen four digits", () => {
+  assert.equal(
+    formatPickupOrderLabel(
+      makePickupItem({
+        orderNumber: "GH-260901-090-NHT",
+        orderType: "delivery",
+        deliveryPlatform: "shopee",
+        externalOrderRef: "O1096-541066134",
+      }),
+    ),
+    "6134",
+  );
+});
+
 test("formatPickupOrderLabel formats delivery orders with platform ref", () => {
   assert.equal(
     formatPickupOrderLabel(

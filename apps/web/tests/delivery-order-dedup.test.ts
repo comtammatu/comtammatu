@@ -39,6 +39,31 @@ test("rejects malformed, impossible, and stale Shopee references", () => {
   assert.equal(deriveShopeeLegacyLookup("01016-503463626", now), null);
 });
 
+test("treats a leading OCR O as zero in the September Shopee date prefix", () => {
+  assert.deepEqual(
+    deriveShopeeLegacyLookup(
+      "O1096-541066134",
+      new Date("2026-09-01T11:06:00.000Z"),
+    ),
+    {
+      shortRef: "6134",
+      startIso: "2026-08-31T17:00:00.000Z",
+      endIso: "2026-09-01T17:00:00.000Z",
+    },
+  );
+  assert.deepEqual(
+    deriveShopeeLegacyLookup(
+      "03096-503466798",
+      new Date("2026-09-03T07:24:00.000Z"),
+    ),
+    {
+      shortRef: "6798",
+      startIso: "2026-09-02T17:00:00.000Z",
+      endIso: "2026-09-03T17:00:00.000Z",
+    },
+  );
+});
+
 test("matches one manual order with the same core items and ignores packaging", () => {
   assert.deepEqual(
     classifyLegacyOrderCandidates(incomingItems, [
@@ -90,8 +115,9 @@ test("allows creation when no legacy short-reference order exists", () => {
 });
 
 test("stores and returns the four-digit Shopee reference on POS", () => {
-  assert.match(relayRouteSource, /const posDisplayRef = legacyLookup\?\.shortRef \?\? displayRef/);
+  assert.match(relayRouteSource, /const posDisplayRef = legacyLookup\?\.shortRef \?\? identityRef/);
   assert.match(relayRouteSource, /p_external_order_ref: posDisplayRef/);
+  assert.match(relayRouteSource, /shopeeOrderRefLookupKeys/);
   assert.equal(
     relayRouteSource.match(/display_id: posDisplayRef/g)?.length,
     3,

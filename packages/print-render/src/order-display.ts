@@ -1,3 +1,5 @@
+import { shopeeKitchenCallRef } from "@comtammatu/shared/delivery";
+
 export type PrintOrderType = "dine_in" | "takeaway" | "delivery" | string;
 export type PrintTableNumber = number | string | null | undefined;
 export type PrintDeliveryPlatform =
@@ -85,7 +87,9 @@ export function formatOrderHeaderLabel(input: {
     const platformToken = formatDeliveryPlatformPrintToken(
       input.deliveryPlatform,
     );
-    const externalRef = (input.externalOrderRef ?? "").trim();
+    const externalRef =
+      shopeeKitchenCallRef((input.externalOrderRef ?? "").trim()) ??
+      (input.externalOrderRef ?? "").trim();
     if (externalRef !== "") {
       return `${platformToken}\n${externalRef}`;
     }

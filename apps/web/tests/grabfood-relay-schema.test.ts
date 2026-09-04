@@ -144,6 +144,7 @@ test("Grab relay versions fail closed below the item-discount contract", () => {
   assert.equal(isGrabRelayVersionSupported("1.1.7"), false);
   assert.equal(isGrabRelayVersionSupported(MIN_GRAB_RELAY_VERSION), true);
   assert.equal(isGrabRelayVersionSupported("1.2.0"), true);
+  assert.equal(isGrabRelayVersionSupported("1.2.1"), true);
   assert.equal(isGrabRelayVersionSupported("invalid"), false);
 });
 

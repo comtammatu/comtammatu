@@ -2,7 +2,9 @@
 
 Use this file for risk review, task lifecycle, verification, and learning
 closeout. Review depth is evidence-driven; commit tokens and document wording
-are not proof.
+are not proof. Do not copy ADR or runtime-module contracts here — cite the
+owner (`docs/modules/auth.md`, `docs/agent/rules/database.md`,
+`docs/modules/finance.md`, `docs/spec/architecture.md`).
 
 ## Review Depth
 
@@ -29,10 +31,7 @@ generated type, route/link/redirect, and state contract/mutation site. Scope the
 review to the changed boundary. When the same deterministic failure recurs,
 prefer one test or guard at the shared boundary over more prose.
 
-For branch-, tenant-, or site-scoped work, record the identity provenance in
-the review: trusted claim, validated URL/config input, or uniqueness-checked
-database lookup. A label, row order, seed position, or remembered numeric value
-is never provenance. Exercise the boundary with a non-default ID and prove that
+Identity provenance: `AGENTS.md`. Exercise a non-default ID and prove that
 missing or ambiguous scope fails closed.
 
 ## Automation And AI Autonomy Cap
@@ -52,8 +51,7 @@ authorized, or reversible.
    permission-checked, and reviewed as T3.
 5. Agent actions reuse an existing authorized RPC boundary. A new generic
    agent action API is not permitted.
-6. Notifications use `docs/spec/toast-notification-system.md`; channels without
-   an owned runtime and delivery contract do not belong in the roadmap.
+6. Notifications: `docs/spec/toast-notification-system.md`.
 
 Product workflows remain usable without an LLM. A new automation proposal must
 identify its deterministic source, authority, rollback, deduplication, and
@@ -63,15 +61,11 @@ verification before implementation.
 
 For any bug fix, regression repair, or behavior adjustment:
 
-1. **Reproduce before editing**: Capture verifiable proof of the failure first.
-   - *Backend/Database*: Write a failing unit/integration test (`*.test.ts`) or
-     reproduction SQL script (`*_test.sql`).
-   - *UI/Workflow*: Capture a failing runtime state, console error, or visual
-     defect via browser / DevTools MCP tools or test assertion.
-2. **Never guess**: If a bug report is vague or lacks context, triage and build a
-   minimal reproduction case before modifying implementation files.
-3. **Prove the resolution**: The same test or runtime harness must transition
-   cleanly from RED (failing) to GREEN (passing) after the change.
+1. **Reproduce before editing**: Capture verifiable proof of the failure first
+   (failing test, reproduction SQL, or runtime/UI evidence).
+2. **Never guess**: If a report is vague, triage and build a minimal
+   reproduction before modifying implementation files.
+3. **Prove the resolution**: The same harness must go RED → GREEN.
 
 ## Current Task Lifecycle
 
@@ -83,75 +77,40 @@ nonblank lines, or 21 when it includes the required `UI Advisor Gate`. Promote
 stable detail to its owning contract or deterministic guard instead of copying
 tables, snapshots, or implementation inventories into the tracker.
 
-Allowed states:
-
-- `triage`: reproduce and bound the finding.
-- `ready`: outcome and proof are actionable.
-- `doing`: implementation is active.
-- `verify`: implementation exists but named proof is incomplete.
-- `blocked`: an external dependency prevents the Exit; include one `Blocker`.
-
-Delete the H2 after Exit passes; Git is shipped-work history. Do not persist
-checked actions, review transcripts, snapshots, or a `done` state.
+Allowed states: `triage`, `ready`, `doing`, `verify`, `blocked` (include one
+`Blocker`). Delete the H2 after Exit passes; Git is shipped-work history. Do
+not persist checked actions, review transcripts, snapshots, or a `done` state.
 
 ## Four-Tier Verification Harness
 
-Never declare a task complete based on code generation alone. Verification
-proceeds in four progressive tiers:
+Never declare a task complete based on code generation alone. Commands live in
+`AGENTS.md` (`corepack pnpm verify` matches CI `gates`). This file owns what
+each tier means:
 
-### Tier 1 — Deterministic Static Gates
-- Strict TypeScript check (`corepack pnpm typecheck`) with zero errors.
-- Monorepo linting (`corepack pnpm lint`), including `lint:ui-contract`,
-  `lint:copy`, dependency boundaries, and security linters.
+1. **Deterministic static gates** — typecheck, lint (including UI contract,
+   copy, boundaries), and the other `verify` static legs.
+2. **Automated tests** — targeted subsystem tests, then the full suite.
+   Operational tooling is part of the root suite (`test:operational-tools`).
+3. **Runtime and visual inspection** (UI/workflow) — Loading / Empty /
+   Populated / Error; overlay lifecycle; touch ≥44px; theme; browser/network
+   proof when the surface changed.
+4. **Domain invariant rubric** — prove the owning contract still holds:
+   money (`docs/modules/finance.md`), Auth/RLS (`docs/modules/auth.md`,
+   `database.md`), identity (`AGENTS.md`, `lint:runtime-identities`), copy
+   (`language.md`, `lint:copy`).
 
-### Tier 2 — Automated Regression & Unit Tests
-- Targeted test execution covering the modified subsystem (`pnpm test:unit`,
-  `vitest`, or pgTAP).
-- Operational tooling is part of the root suite: browser extension JavaScript
-  syntax plus Má Tư Agent Android compile/unit tests run through
-  `test:operational-tools`; they are not optional side checks.
-- Full suite verification via `corepack pnpm verify` (matches CI `gates`).
-
-### Tier 3 — Runtime & Visual Inspection (UI / Workflow changes)
-When modifying user-facing surfaces or workflow states:
-- Verify all four essential states: **Loading**, **Empty**, **Populated**, and
-  **Error**.
-- Verify overlay and action lifecycles (Dialog/Sheet opening, `confirm()` outside
-  transitions, focus traps, and drawer resets).
-- Verify density and accessibility: Mobile touch targets ($\ge 44\text{px}$),
-  desktop data density, and theme consistency (`.dark` token resolution).
-- Use DevTools MCP / browser automation to inspect network payloads and console
-  logs.
-
-### Tier 4 — Domain Invariant Rubric
-- **Money & Precision**: `numeric(...,2)` for Finance/VAT, whole-VND for POS;
-  zero display-rounding in math formulas.
-- **Auth & RLS**: Server Actions validated with Zod; definer helper bypasses;
-  no raw DB error leakage.
-- **Data Identity**: Branch/tenant/site IDs come from trusted runtime evidence,
-  never names, ordering, seed position, or numeric fallbacks; run
-  `lint:runtime-identities` and test a non-default ID plus the unscoped case.
-- **Copy & Localization**: Vietnamese UI copy adhering strictly to
-  `docs/ref/glossary.md` and `corepack pnpm lint:copy`.
-
-Read command outputs carefully. A background completion notice or cached Turbo
-replay is not fresh proof. After deletions or cross-package source reads in
-tests, run `corepack pnpm exec turbo run test --force` when verify is green
-but confidence is low.
-
-Keep written, review-clean, merged, applied to Production, and deployed as
-separate claims. CI must be green before calling landed work complete.
+Read command outputs. Turbo cache replay is not fresh proof after deletions or
+cross-package test reads. Keep written, review-clean, merged, applied to
+Production, and deployed as separate claims.
 
 ## Learning Closeout
 
-At T2/T3 closeout, decide whether the work produced a reusable fact:
+At T2/T3 closeout, decide whether the work produced a reusable fact (ADR 0021):
 
 - No durable signal: create no artifact.
 - Stable contract: update its owning spec/ref/module/rule.
-- Deterministic recurring failure: encode it in one test/guard and retain only
-  incident context that the check cannot express.
+- Deterministic recurring failure: encode it in one test/guard.
 - Prose-only insight: stage it in `tasks/lessons.md`.
 
-Promotion and deletion are one diff: remove the staging lesson, regression, task
-note, or plan once the final owner carries the fact. Never create another memory
-store, standing review program, or mandatory closeout token.
+Promotion and deletion are one diff. Never create another memory store,
+standing review program, or mandatory closeout token.

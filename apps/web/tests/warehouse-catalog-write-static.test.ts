@@ -135,3 +135,19 @@ test("ADR 0045 wizard keeps the atomic catalog RPC as the only save path", () =>
   assert.doesNotMatch(wizard, /from\("ingredients"\)\.insert/);
   assert.doesNotMatch(wizard, /from\("ingredient_units"\)\.insert/);
 });
+
+test("central_supply_ops has catalog management enabled in protected layout", () => {
+  const protectedLayout = read("apps/web/app/(protected)/layout.tsx");
+  assert.match(
+    protectedLayout,
+    /showCatalogManagement\s*=\s*\([^)]*central_supply_ops[^)]*\)\s*&&\s*canManageCatalog/,
+  );
+});
+
+test("inventory:catalog_write is delegable to staff for central_supply_ops", () => {
+  const seed = read("apps/web/tests/fixtures/supabase-e2e/tenant.sql");
+  assert.match(
+    seed,
+    /SET is_delegable_to_staff = key = ANY \(ARRAY\[[\s\S]*?'inventory:catalog_write'[\s\S]*?\]::text\[\]\)/,
+  );
+});

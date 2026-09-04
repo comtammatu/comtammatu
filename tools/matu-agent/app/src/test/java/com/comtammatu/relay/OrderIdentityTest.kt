@@ -34,6 +34,61 @@ class OrderIdentityTest {
     }
 
     @Test
+    fun `extracts a September Shopee code when OCR drops the order label`() {
+        assertEquals(
+            "03096-503466798",
+            OrderIdentity.extractSourceOrderRef(
+                """
+                    ShopeeFood
+                    Cơm Tấm Má Tư
+                    03096-503466798
+                    1. Cơm Sườn Cốt Lết
+                """.trimIndent()
+            )
+        )
+    }
+
+    @Test
+    fun `extracts a Shopee code after an unaccented OCR order label`() {
+        assertEquals(
+            "03096-503466798",
+            OrderIdentity.extractSourceOrderRef("Ma don hang\n03096-503466798")
+        )
+    }
+
+    @Test
+    fun `extracts a Shopee code when OCR glues trailing customer text onto the same line`() {
+        assertEquals(
+            "03096-503466798",
+            OrderIdentity.extractSourceOrderRef("Mã đơn hàng 03096-503466798 Khách K***")
+        )
+    }
+
+    @Test
+    fun `repairs a leading OCR O in the September date prefix`() {
+        assertEquals(
+            "01096-541066134",
+            OrderIdentity.extractSourceOrderRef("Mã đơn hàng: O1096-541066134")
+        )
+        assertEquals(
+            "6134",
+            OrderIdentity.displaySourceOrderRef("shopee", "O1096-541066134")
+        )
+    }
+
+    @Test
+    fun `shows the POS short reference when local OCR missed the source code`() {
+        assertEquals(
+            "6798",
+            OrderIdentity.operatorVisibleOrderRef(
+                "shopee",
+                null,
+                "6798"
+            )
+        )
+    }
+
+    @Test
     fun `keeps the full Shopee reference as identity but displays the final four digits`() {
         val sourceRef = OrderIdentity.extractSourceOrderRef(
             "ShopeeFood\nMã đơn hàng: 29086-503463626"

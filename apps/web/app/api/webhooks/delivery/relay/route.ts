@@ -19,6 +19,10 @@ import {
 } from "@lib/shopeefood/legacy-order-dedup";
 import { resolveBranchStaffId } from "@lib/grabfood/mapping";
 import { mapRelayCreateOrderRpcError } from "@lib/delivery/create-order-rpc-error";
+import {
+  canonicalizeShopeeOrderRef,
+  shopeeOrderRefLookupKeys,
+} from "@comtammatu/shared/delivery";
 
 const deliveryRelaySchema = z
   .object({
@@ -196,11 +200,25 @@ export async function POST(request: NextRequest) {
     }
 
     const sanitizedDisplayRef = displayRef.replace(/[^A-Za-z0-9_-]/g, "");
+    const identityRef =
+      databasePlatform === "shopee"
+        ? canonicalizeShopeeOrderRef(sanitizedDisplayRef || displayRef)
+        : sanitizedDisplayRef || displayRef;
+    const lookupKeys =
+      databasePlatform === "shopee"
+        ? shopeeOrderRefLookupKeys(sanitizedDisplayRef || displayRef)
+        : [identityRef];
     const legacyLookup =
       databasePlatform === "shopee"
-        ? deriveShopeeLegacyLookup(sanitizedDisplayRef || displayRef)
+        ? deriveShopeeLegacyLookup(identityRef)
         : null;
-    const posDisplayRef = legacyLookup?.shortRef ?? displayRef;
+    const posDisplayRef = legacyLookup?.shortRef ?? identityRef;
+    if (!identityRef || lookupKeys.length === 0) {
+      return NextResponse.json(
+        { success: false, error: "Không thể xác định mã đơn hàng từ hóa đơn in" },
+        { status: 400, headers: CORS_HEADERS },
+      );
+    }
 
     // 3. Check if order was already processed or manually entered on POS (deduplication)
     const { data: existingOrder, error: existingOrderError } = await supabase
@@ -209,7 +227,8 @@ export async function POST(request: NextRequest) {
       .eq("tenant_id", branch.tenant_id)
       .eq("branch_id", branch.id)
       .eq("delivery_platform", databasePlatform)
-      .eq("external_order_ref", sanitizedDisplayRef || displayRef)
+      .in("external_order_ref", lookupKeys)
+      .order("created_at", { ascending: true })
       .limit(1)
       .maybeSingle();
 

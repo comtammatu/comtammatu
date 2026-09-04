@@ -14,7 +14,8 @@ the repo or build a parallel product runtime.
 - [../spec/architecture.md](../spec/architecture.md) — **current** architecture + Product Dual Thesis (`Quản lý hệ thống` + `Vận hành bán hàng`)
 - [../spec/pwa.md](../spec/pwa.md) — installable PWA surfaces, offline/SW, OS matrix
 - [../ref/glossary.md](../ref/glossary.md) — current-state vocabulary for the running system
-- [../plan/decisions.md](../plan/decisions.md) — net-effect decisions, including D015/D091
+- [../plan/adr/README.md](../plan/adr/README.md) — current ADRs in reading order
+- [../plan/decisions.md](../plan/decisions.md) — net-effect `Dxxx` labels
 - [../spec/database-schema.md](../spec/database-schema.md) — canonical schema and data boundaries
 - [../modules/auth.md](../modules/auth.md) — current Auth/ACL + pointer to ADR 0015 cutover
 - [../ref/business-context.md](../ref/business-context.md) — business boundary and product scope

@@ -250,7 +250,7 @@ test("Grab relay worker identifies its contract version and displays the stored 
     optional_host_permissions?: string[];
   };
 
-  assert.equal(manifest.version, "1.2.0");
+  assert.equal(manifest.version, "1.2.1");
   assert.ok(manifest.permissions?.includes("idle"));
   assert.ok(manifest.host_permissions?.includes("https://merchant.grab.com/*"));
   assert.ok(!manifest.host_permissions?.includes("<all_urls>"));

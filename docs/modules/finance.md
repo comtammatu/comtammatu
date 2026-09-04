@@ -206,15 +206,17 @@ inside `Tài sản`. Sidebar: `Tiền` (includes `Thiết bị` and `Thi công`)
 targets stay sibling routes). No `/accounting/*` app surface.
 
 Supplier invoice matching/VAT/payment: actions +
-[ADR 0018](../plan/adr/0018-inventory-finance-route-boundary.md). Invariants:
-goods match confirmed GRN/PO (VAT out of inventory cost; PO/GRN not price
-source); additive VN HĐĐT VAT (`gross = line + vat`; auto
-`round(line*rate/100,2)`; manual VAT authoritative; header `±1 VND` or
-`discrepancy`); service invoices `pending` until Accountant verifies;
-confirm seals lines + price history + receipt settle; payment is AP/cash only
-(never second inventory/COGS); multi-rate → immutable `vat_breakdown`; payment
-needs HĐĐT GTGT path; only Owner pays above allocation (remainder = advance).
-Legacy `/inventory/supplier-invoices` = `REDIRECT-SHIM`. LIST under
+[ADR 0017](../plan/adr/0017-ap-central-operations.md). Invariants:
+goods match confirmed GRN/PO (VAT out of inventory cost; GRN net unit price is
+book price; invoice does not restate stock — ADR 0040); additive VN HĐĐT VAT
+(`gross = line + vat`; auto `round(line*rate/100,2)`; manual VAT authoritative;
+header `±1 VND` or `discrepancy`); service invoices `pending` until Accountant
+verifies; confirm seals lines + price history + receipt settle; payment is
+AP/cash only (never second inventory/COGS); multi-rate → immutable
+`vat_breakdown`; payment needs HĐĐT GTGT path; only Owner pays above allocation
+(remainder = advance). Open periods adjust at the event date; late differences
+post in the current period; no statutory GL or period-reopen UI. Legacy
+`/inventory/supplier-invoices` = `REDIRECT-SHIM`. LIST under
 `finance/supplier-invoices/`; create/match/pay may stay in Inventory actions.
 
 ## VAT And Equipment Boundary

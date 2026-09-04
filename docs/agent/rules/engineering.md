@@ -1,8 +1,8 @@
 # Engineering Rules
 
 `AGENTS.md` owns repository-wide hard constraints, startup, commands, and
-communication. This file owns import/runtime boundaries and Git conventions;
-do not copy the entrypoint policy here.
+communication. This file owns import/runtime boundaries and Git conventions.
+Do not copy ADR, spec, or module contracts here — cite the owner.
 
 ## Import Boundaries
 
@@ -15,15 +15,13 @@ do not copy the entrypoint policy here.
 - Database types: type-only imports from `@comtammatu/database` or
   `@comtammatu/database/types`.
 
-Canonical route families live in `docs/spec/role-route-matrix.md`. Proxy auth,
-surface, branch-scope, and network gates start at `apps/web/proxy.ts`; auth
-claims and ACL rules are owned by `database.md` and `docs/modules/auth.md`.
+Canonical route families: `docs/spec/role-route-matrix.md`. Proxy gates start
+at `apps/web/proxy.ts`. Auth/ACL: `docs/modules/auth.md` and `database.md`.
 
 ## Git And Commit Conventions
 
 - No AI attribution or generated-by trailers.
-- Language separation: `docs/agent/rules/language.md` (English agent/technical
-  surfaces; Vietnamese product UI and `docs/ref/**`). Enforce with
+- Language separation: `docs/agent/rules/language.md`. Enforce with
   `lint:language-policy` and `lint:copy`.
 - Commit subjects are English, imperative, and use a conventional prefix when
   one fits.
@@ -43,8 +41,7 @@ claims and ACL rules are owned by `database.md` and `docs/modules/auth.md`.
 
 ## Documentation gates
 
-`lint:docs-budget` always fails `docs/worklog/**` and line caps on ADRs
-(≤150) and `docs/agent/rules/*` (≤400). Spec, module, and ref line caps
-in `scripts/check-docs-budget.mjs` warn in default mode and fail only
-with `--strict`; they must not block `pnpm lint` / `verify`. Shape budget
+Caps and the worklog ban live in `scripts/check-docs-budget.mjs`. Default
+`lint` / `verify` fail ADRs >150 lines, `docs/agent/rules/*` >400, and
+`docs/worklog/**`. Spec/module/ref caps warn unless `--strict`. Shape budget
 is not behavioral evidence (ADR 0021).

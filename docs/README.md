@@ -32,8 +32,9 @@
 - Auth/ACL (current + ADR 0015 cutover pointer): [modules/auth.md](modules/auth.md)
 - Canonical business/reference docs: [ref/README.md](ref/README.md)
 - Feature/module architecture: `docs/modules/*`, `docs/spec/*`
-- Active work: `tasks/todo.md`; decision records: `docs/plan/decisions.md` and
-  `docs/plan/adr/*`
+- Active work: `tasks/todo.md`; decision records (reading order):
+  [plan/adr/README.md](plan/adr/README.md); compatibility `Dxxx`:
+  [plan/decisions.md](plan/decisions.md)
 - Readiness checklist và smoke gates: [runbooks/README.md](runbooks/README.md)
   (gồm inventory, POS/KDS, finance, và `runbooks/db/*`)
 - Xuất tri thức agent dạng OKF tạm thời: `corepack pnpm docs:okf` -> `.tmp/okf/`

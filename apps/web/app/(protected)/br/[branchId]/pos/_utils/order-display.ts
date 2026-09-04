@@ -1,3 +1,4 @@
+import { shopeeKitchenCallRef } from "@comtammatu/shared/delivery";
 import { getDeliveryPlatformLabelVi } from "@comtammatu/shared/labels";
 import type { SessionOrder } from "../order-history";
 
@@ -32,7 +33,9 @@ export function formatOrderTargetLabel(
 
   if (summary?.order_type === "delivery") {
     const platform = getDeliveryPlatformLabelVi(summary.delivery_platform);
-    const appRef = summary.external_order_ref?.trim();
+    const appRef =
+      shopeeKitchenCallRef(summary.external_order_ref?.trim() ?? "") ??
+      summary.external_order_ref?.trim();
     const parts = [`Giao hàng ${compactOrderNumber}`];
     if (platform) parts.push(platform);
     if (appRef) parts.push(appRef);

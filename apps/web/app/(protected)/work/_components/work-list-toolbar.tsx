@@ -102,7 +102,11 @@ export function WorkListToolbar({
           <SelectValue placeholder={workCopy.scopeDepartment} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">{workCopy.filterAllDepartments}</SelectItem>
+          <SelectItem value="all">
+            {params.view === "board"
+              ? workCopy.allDepartments
+              : workCopy.filterAllDepartments}
+          </SelectItem>
           {departments.map((department) => (
             <SelectItem key={department.id} value={String(department.id)}>
               {department.name}

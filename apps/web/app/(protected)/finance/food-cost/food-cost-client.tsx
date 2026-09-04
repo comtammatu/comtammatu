@@ -62,7 +62,7 @@ function marginKpiTone(
 
 function formatCostAmount(value: number | null | undefined): ReactNode {
   if (value == null) return dash;
-  return <FinanceAmountCell amount={Number(value)} />;
+  return <FinanceAmountCell amount={Math.round(Number(value))} />;
 }
 
 function formatMarginPct(value: number | null | undefined): ReactNode {
@@ -83,7 +83,7 @@ function RecipeCostCell({
       <span className="font-mono text-xs font-normal tabular-nums text-muted-foreground">
         {unit == null
           ? dash
-          : foodCopy.unitCostPerPortion(formatVND(Number(unit)))}
+          : foodCopy.unitCostPerPortion(formatVND(Math.round(Number(unit))))}
       </span>
     </div>
   );

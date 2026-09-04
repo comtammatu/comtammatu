@@ -16,9 +16,13 @@ Canonical role/scope/route boundaries:
 `module-acl.ts`. Keep that spec, `module-acl.ts`, `route-map.ts`, and auth tests
 in sync on route/nav/default-landing changes.
 
-Target cutover model: [ADR 0015](../plan/adr/0015-authorization-model.md).
-Until cutover, this module remains runtime authority — do not treat archived
-authorization-target notes as runtime contract.
+**Authority.** Runtime: this file + `packages/shared/src/auth/module-acl.ts` +
+`apps/web/proxy.ts` + `has_permission` / `has_permission_any`. Target cutover:
+[ADR 0015](../plan/adr/0015-authorization-model.md) — do not implement from that
+ADR. Owner identity columns: [ADR 0005](../plan/adr/0005-owner-identity-source-separation.md)
+— do not dual-source `tenants.owner_user_id` into `has_permission` /
+`auth_is_owner`. DEFINER / RLS / atomic RPC: [`database.md`](database.md) and
+`docs/agent/rules/database.md` (no ADR 0011).
 
 ## Layer Meanings
 
@@ -80,7 +84,9 @@ permission keys outside HRM payroll/base-salary work.
 - **Owner has three meanings.** `tenants.representative` = free-text legal name
   (not auth). `positions.code='owner'` = coarse JWT route bucket.
   `tenants.owner_user_id` = canonical owner auth identity. Do not wire
-  `representative` into auth; action authority needs explicit binding/capability.
+  `representative` into auth; do not OR `owner_user_id` into `has_permission` /
+  `auth_is_owner` until a new decision (ADR 0005). Action authority needs
+  explicit binding/capability.
 - **Private Branch Realtime follows live assignment**, not grant breadth.
   `can_read_branch_ops(branch_id)`: active profile + active target branch in
   tenant. Owner → any active tenant branch; non-Owner → `profiles.branch_id`

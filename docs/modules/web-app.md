@@ -113,7 +113,7 @@ new **page** inside an existing module still needs 1–5 + proof.
 4. Screen-context + archetype census (`page-archetypes.md` / `.mjs`)
 5. Role-route matrix (`gen:route-matrix`); UI contract/registry if chrome changes
 6. Permission keys + seed lint; additive RLS/RPC; `db:types` after apply
-7. Optional: control-home attention, `/me` CTA, same-origin notification URLs
+7. Optional: control-home attention, same-origin notification URLs
 8. No new host/cookie domain. Proof: ACL±, proxy, primary viewport
 
 ## Common Failures
@@ -140,7 +140,7 @@ The service worker never owns mutation retries or operational truth. Run `docs/r
 
 - **Proxy = sole auth gate** — layout/page reads invariant, no second gate
 - **RSC by default** — `"use client"` only for interactive UI
-- **control_surface Owner-only** — BM/Staff on `/br/[branchId]/*`
+- **control_surface is L0** — Owner + office/central/`self_service`; BM/Staff daily work on `/br/[branchId]/*`
 - **Inventory surface independent** — exact `/inventory` is a workflow LANDING
   (lanes); Control home for L0 roles is `/`
 - **Shared staff runtime** — Branch for site-pinned; `/me/*` for accountant;

@@ -24,6 +24,9 @@ export function extractCustomerNoteFromLine(line: string): string | null {
   return note || null;
 }
 
+const TOPPING_OPTION_NAME =
+  /^(?:cơm thêm|thêm cơm|tóp mỡ|trứng|chả|bì|mỡ hành|hộp|dụng cụ)/i;
+
 /** Strips glued OCR quantity prefixes such as `Ix`, `1x`, or `x` before a name. */
 export function sanitizeDeliveryOptionName(name: string): string {
   return name
@@ -31,6 +34,25 @@ export function sanitizeDeliveryOptionName(name: string): string {
     .replace(/^(?:[Il1]|\d+)\s*[xX]\s*/, "")
     .replace(/^[xX](?=\p{L})/u, "")
     .trim();
+}
+
+/**
+ * Raster OCR often prints a side as `1xCơm Thêm` in the quantity column
+ * before the numbered parent name. That is an option, not a second plate.
+ */
+export function isDeliveryToppingLine(line: string): boolean {
+  const stripped = line
+    .trim()
+    .replace(/^[+\-*•>]\s*/, "")
+    .replace(/^\[[^\]]+\]\s*/, "")
+    .replace(/^(?:thêm|món thêm|tùy chọn)[:\s]*/i, "");
+  const name = sanitizeDeliveryOptionName(stripped);
+  if (!name || /cơm tấm/i.test(name)) return false;
+  return TOPPING_OPTION_NAME.test(name);
+}
+
+export function itemAcceptsOrphanToppings(itemName: string): boolean {
+  return /^(?:cơm|sườn)/i.test(itemName.trim());
 }
 
 export function sanitizeDeliveryItemNote(

@@ -4,33 +4,15 @@
 
 **Decision owner:** Owner
 
-**Review tier:** T3 — product scope, package topology, and build sequencing
-
-**Supersedes informal wording** that treated external "Operating ERP" module
-catalogs as a target monorepo layout or a delivery backlog.
-
 **Amended by:** ADR 0038 (native Android clients in repository `app`; this
 ADR still forbids splitting `apps/web` and local-first POS). Naming amendment
-2026-08-24 (Owner): the `F&B Operating ERP` label is retired to stop
-ERP-shaped misreading; the product name is **F&B Operations System**
-(`Hệ thống Vận hành F&B`). Scope and boundaries below are unchanged.
+2026-08-24 (Owner): the `F&B Operating ERP` label is retired; the product name
+is **F&B Operations System** (`Hệ thống Vận hành F&B`). Scope below is
+unchanged.
 
-## Context
-
-`restaurant_operations_system` is single-tenant and multi-branch for CTCP
-Chén Sứ / Cơm Tấm Má Tư. Vendor and industry "Operating ERP" catalogs list
-modules (CRM, HRM, Finance, Inventory, BI) as separate deployables. Reading
-those catalogs as a layout invites two failures this repository has already
-rejected elsewhere: splitting `apps/web` per audience, and creating empty
-`packages/*` for domains that have exactly one runtime consumer. A third
-failure is treating a vendor catalog as a sprint plan, which contradicts
-`docs/agent/rules/references.md` (no snapshot backlogs).
-
-The naming, chrome, and audience facts this direction depends on are already
-promoted to their owners and are not restated here: UI planes and `/me/*`
-audience in `docs/ref/screen-context-map.md` §2.4/§2.4B, station vocabulary
-(`POS`, `KDS`, `pickup_display` → `Gọi số`) in `docs/ref/glossary.md`, package
-and code-placement boundaries in `docs/spec/architecture.md`.
+Runtime topology and package graph: [`docs/spec/architecture.md`](../../spec/architecture.md).
+This ADR owns product scope and evolution boundary; do not implement layout
+from a vendor catalog.
 
 ## Decision
 
@@ -49,14 +31,10 @@ Circular 200 / VAS close UI inside the current Finance boundary.
 
 ### 2. Evolve in place; the catalog is a vision map
 
-Monorepo topology is unchanged: `apps/web` + `apps/print-agent`;
-`packages/{shared,database,ui,security,print-render}`; `supabase/`.
-
+Monorepo topology is unchanged and owned by `docs/spec/architecture.md`.
 New domain capability lands as `apps/web/lib/<domain>` plus a Postgres RPC
 when correctness spans rows. A new package is justified only by a second
-runtime, a trust boundary, or an independently built artifact — the existing
-rule in `docs/spec/architecture.md`, restated here only as the test applied to
-ERP-shaped requests.
+runtime, a trust boundary, or an independently built artifact.
 
 External module catalogs are a **vision map** for deciding what capability
 should exist. They are not a monorepo layout and not a backlog.
@@ -94,13 +72,8 @@ Rejected until this ADR is superseded:
 
 - ERP-shaped feature requests are answered with capability placement under
   `apps/web/lib/<domain>` + RPC, not with a new app or package.
-- Agents cite this ADR when refusing a package/app split, and cite the owning
+- Agents cite this ADR when refusing a package/app split, and cite owning
   docs (not this ADR) for plane, vocabulary, and placement detail.
-- Authority on conflict: `docs/spec/architecture.md` (topology and placement),
-  `docs/ref/glossary.md` + `packages/shared/src/labels/**` (vocabulary),
-  `docs/ref/screen-context-map.md` (audience/device),
-  `docs/modules/finance.md` + D020 (finance boundary),
-  `docs/ref/business-context.md` (business boundary), `docs/agent/rules/workflow.md` (autonomy cap).
 
 ## Verification
 

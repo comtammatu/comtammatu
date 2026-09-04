@@ -1,3 +1,5 @@
+import { shopeeKitchenCallRef } from "./shopee-order-ref";
+
 export type DeliveryPlatform = "grab" | "shopee" | "be" | "green_sm";
 
 const ORDER_SEQUENCE_RE =
@@ -38,7 +40,7 @@ export function formatDeliveryCallLabel(input: {
 }): string {
   const externalRef = (input.externalOrderRef ?? "").trim();
   if (externalRef.length > 0) {
-    return externalRef;
+    return shopeeKitchenCallRef(externalRef) ?? externalRef;
   }
 
   const sequence = extractDeliveryOrderSequence(input.orderNumber);

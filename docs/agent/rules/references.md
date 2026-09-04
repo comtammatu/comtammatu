@@ -20,8 +20,8 @@ HOT — load by default for matching work:
   actor x job x plane per route family, before compose) ->
   `docs/modules/ui.md` (thin implementation map). Product Dual Thesis in
   `docs/spec/architecture.md`. Not a parallel DS or root `DESIGN.md`; optional
-  local Stitch mirror `.stitch/DESIGN.md` (non-SSOT, untracked). Target-only
-  docs under `docs/architecture/target-*` are future.
+  local Stitch mirror `.stitch/DESIGN.md` (non-SSOT, untracked). Do not add
+  `docs/architecture/target-*`; current architecture lives in that spec.
 - Routes/scopes: `docs/spec/role-route-matrix.md`
 - Notifications: `docs/spec/toast-notification-system.md`
 - PWA (install, offline, OS matrix): `docs/spec/pwa.md`

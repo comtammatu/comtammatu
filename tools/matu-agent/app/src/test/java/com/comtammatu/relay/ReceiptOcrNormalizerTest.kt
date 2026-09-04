@@ -208,6 +208,59 @@ class ReceiptOcrNormalizerTest {
     }
 
     @Test
+    fun `keeps dishes when OCR glues the row price or drops the item number punctuation`() {
+        val normalized = RasterReceiptTextNormalizer.normalize(
+            """
+                ShopeeFood
+                Mã đơn hàng
+                03096-558242106
+                1. Sườn Cốt Lết x1 67.000d
+                • 1xDụng cụ ăn uống
+                • 1xīring
+                2 Cơm Tấm Bì
+                • 1xCơm Thêm
+                • 1xDụng cụ ăn uống
+                45.000d
+                Canh Khổ Qua
+                x1 30.000d
+                I. Nước Sâm
+                X1 25.000d
+                Tổng món 4
+            """.trimIndent()
+        )
+
+        assertTrue(normalized.contains("1x Sườn Cốt Lết 67.000"))
+        assertTrue(normalized.contains("+ Dụng cụ ăn uống"))
+        assertTrue(normalized.contains("+ Trứng"))
+        assertTrue(!normalized.contains("īring"))
+        assertTrue(normalized.contains("1x Cơm Tấm Bì 45.000"))
+        assertTrue(normalized.contains("+ Cơm Thêm"))
+        assertTrue(normalized.contains("1x Canh Khổ Qua 30.000"))
+        assertTrue(normalized.contains("1x Nước Sâm 25.000"))
+    }
+
+    @Test
+    fun `promotes an unbulleted named soup under a rice plate instead of leaving it as a note`() {
+        val normalized = RasterReceiptTextNormalizer.normalize(
+            """
+                ShopeeFood
+                Mã đơn hàng
+                03096-555400001
+                1. Cơm Sườn Cốt Lết
+                1xCanh Khổ Qua
+                • 1xDụng cụ ăn uống
+                x1 87.000d
+                Tổng món 2
+            """.trimIndent()
+        )
+
+        assertTrue(normalized.contains("1x Sườn Cốt Lết 87.000"))
+        assertTrue(normalized.contains("1x Canh Khổ Qua 1"))
+        assertTrue(normalized.contains("+ Dụng cụ ăn uống"))
+        assertTrue(!normalized.contains("Ghi chú: Canh"))
+    }
+
+    @Test
     fun `normalizes Green SM raster quantity rows without absorbing receipt totals`() {
         val normalized = RasterReceiptTextNormalizer.normalize(
             """

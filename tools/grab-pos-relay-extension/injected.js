@@ -9,6 +9,81 @@
   let lastSuccessfulPollAt = Date.now();
   let isLeaderTab = true;
 
+  function resolveMerchantIdFromLocation(urlLike) {
+    const targetUrl = urlLike || (typeof window !== 'undefined' ? window.location?.href : '');
+    if (!targetUrl || typeof targetUrl !== 'string') return null;
+    try {
+      const parsed = new URL(targetUrl, 'https://merchant.grab.com');
+      const KNOWN_NON_MERCHANT_SEGMENTS = new Set([
+        'dashboard',
+        'order',
+        'orders',
+        'food',
+        'menu',
+        'inventory',
+        'preparing',
+        'history',
+        'cancelled',
+        'scheduled',
+        'completed',
+        'active',
+      ]);
+      const pathMatch = parsed.pathname.match(/\/(?:food\/(?:menu|inventory)|merchants?|order)\/([A-Za-z0-9\-_]+)/i);
+      if (pathMatch && pathMatch[1] && !KNOWN_NON_MERCHANT_SEGMENTS.has(pathMatch[1].toLowerCase())) {
+        return pathMatch[1];
+      }
+      const queryId =
+        parsed.searchParams.get('merchantID') ||
+        parsed.searchParams.get('merchant_id') ||
+        parsed.searchParams.get('merchantId');
+      if (queryId && !KNOWN_NON_MERCHANT_SEGMENTS.has(queryId.toLowerCase())) {
+        return queryId;
+      }
+    } catch (e) {
+      const fallbackPath = targetUrl.match(/\/(?:food\/(?:menu|inventory)|merchants?|order)\/([A-Za-z0-9\-_]+)/i);
+      if (fallbackPath && fallbackPath[1] && !['preparing', 'history', 'cancelled', 'scheduled', 'completed', 'active'].includes(fallbackPath[1].toLowerCase())) {
+        return fallbackPath[1];
+      }
+      const fallbackQuery = targetUrl.match(/(?:merchantID|merchant_id|merchantId)=([^&]+)/i);
+      if (fallbackQuery && fallbackQuery[1]) return fallbackQuery[1];
+    }
+    return null;
+  }
+
+  function setMerchantId(newId) {
+    if (!newId || newId === merchantId) return;
+    merchantId = newId;
+    console.log(`[Grab POS Relay] Detected active Grab merchant ID: ${merchantId}`);
+    dispatchOrderEvent('MERCHANT_ID_DETECTED', { merchantId });
+  }
+
+  // Active resolution from URL
+  const initialMerchantId = resolveMerchantIdFromLocation();
+  if (initialMerchantId) {
+    setMerchantId(initialMerchantId);
+  }
+
+  try {
+    window.addEventListener('popstate', () => {
+      const locId = resolveMerchantIdFromLocation();
+      if (locId) setMerchantId(locId);
+    });
+
+    const wrapHistory = (method) => {
+      const original = history[method];
+      if (typeof original === 'function') {
+        history[method] = function (...args) {
+          const result = original.apply(this, args);
+          const nextId = resolveMerchantIdFromLocation();
+          if (nextId) setMerchantId(nextId);
+          return result;
+        };
+      }
+    };
+    wrapHistory('pushState');
+    wrapHistory('replaceState');
+  } catch (e) {}
+
   // 1. Keep-Alive: Override visibilityState so Grab portal never pauses background timers / WebSockets
   try {
     Object.defineProperty(document, 'hidden', { get: () => false, configurable: true });
@@ -66,7 +141,7 @@
   const AUTH_FAILURE_THRESHOLD = 2;
   const POLL_INTERVAL_MS = 6000;
   const AUTH_RETRY_INTERVAL_MS = 60000;
-  const ITEM_SYNC_GAP_MS = 150;
+  const ITEM_SYNC_GAP_MS = 400;
   const MAX_MUTATION_ATTEMPTS = 3;
   const MUTATION_TIMEOUT_MS = 15000;
   const MAX_ITEM_MUTATION_SLOTS = 2;
@@ -399,12 +474,10 @@
       captureAuthHeaders(args[1]?.headers || args[0]?.headers);
     }
 
-    // Extract merchantId if present
-    if (url.includes('merchantID=')) {
-      const match = url.match(/merchantID=([^&]+)/);
-      if (match && match[1]) {
-        merchantId = match[1];
-      }
+    // Extract merchantId if present in query or path
+    const extractedId = resolveMerchantIdFromLocation(url);
+    if (extractedId) {
+      setMerchantId(extractedId);
     }
 
     const response = await originalFetch.apply(this, args);
@@ -560,6 +633,19 @@
       });
       return;
     }
+    if (!merchantId) {
+      console.warn(`[Grab POS Relay] Skip status sync for ${itemId}: merchantId not detected yet`);
+      dispatchOrderEvent('SYNC_STATUS_RESULT', {
+        requestId,
+        itemId,
+        availableStatus: null,
+        statusStr: null,
+        success: false,
+        status: 0,
+        error: 'Grab merchant ID not resolved yet',
+      });
+      return;
+    }
     try {
       let statusCode = 1;
       let statusStr = 'AVAILABLE';
@@ -658,6 +744,19 @@
         success: false,
         status: 401,
         error: 'Grab session expired',
+      });
+      return;
+    }
+    if (!merchantId) {
+      console.warn(`[Grab POS Relay] Skip modifier status sync for ${itemId}: merchantId not detected yet`);
+      dispatchOrderEvent('SYNC_MODIFIER_STATUS_RESULT', {
+        requestId,
+        itemId,
+        availableStatus: null,
+        statusStr: null,
+        success: false,
+        status: 0,
+        error: 'Grab merchant ID not resolved yet',
       });
       return;
     }
@@ -765,6 +864,19 @@
       });
       return;
     }
+    if (!merchantId) {
+      console.warn(`[Grab POS Relay] Skip stock sync for ${itemId}: merchantId not detected yet`);
+      dispatchOrderEvent('SYNC_STOCK_RESULT', {
+        requestId,
+        itemId,
+        currentStock,
+        enableIms: false,
+        success: false,
+        status: 0,
+        error: 'Grab merchant ID not resolved yet',
+      });
+      return;
+    }
     try {
       const stockVal = currentStock;
       const stockSignature = `enabled:${stockVal}`;
@@ -831,9 +943,9 @@
     if (isGrabApiUrl(this._relayUrl)) {
       captureAuthHeaders(this._relayHeaders);
 
-      const idMatch = (this._relayUrl || '').match(/merchantID=([^&]+)/);
-      if (idMatch && idMatch[1]) {
-        merchantId = idMatch[1];
+      const extractedId = resolveMerchantIdFromLocation(this._relayUrl || '');
+      if (extractedId) {
+        setMerchantId(extractedId);
       }
 
       this.addEventListener('load', function () {

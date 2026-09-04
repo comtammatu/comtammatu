@@ -481,3 +481,57 @@ test("valid stock has a stable bounded cache signature", () => {
   assert.match(contentSource, /prev\.stockSignature !== stockPayload\.signature/);
   assert.match(contentSource, /stockSignature: pending\?\.signature \|\| data\.stockSignature/);
 });
+
+test("Grab injected script proactively resolves merchant ID across all merchant portal URLs", () => {
+  const functionSource = sourceBlock(
+    injectedSource,
+    "function resolveMerchantIdFromLocation",
+    "function setMerchantId",
+  );
+  const resolveMerchantIdFromLocation = Function(
+    `"use strict"; ${functionSource}; return resolveMerchantIdFromLocation;`,
+  )() as (url: string) => string | null;
+
+  assert.equal(
+    resolveMerchantIdFromLocation("https://merchant.grab.com/food/menu/5-C8DTE75GUGJ3JT"),
+    "5-C8DTE75GUGJ3JT",
+  );
+  assert.equal(
+    resolveMerchantIdFromLocation("https://merchant.grab.com/food/inventory/5-C8DTE75GUGJ3JT"),
+    "5-C8DTE75GUGJ3JT",
+  );
+  assert.equal(
+    resolveMerchantIdFromLocation("https://merchant.grab.com/merchants/5-C8DTE75GUGJ3JT/overview"),
+    "5-C8DTE75GUGJ3JT",
+  );
+  assert.equal(
+    resolveMerchantIdFromLocation("https://merchant.grab.com/order?merchantID=5-C8DTE75GUGJ3JT"),
+    "5-C8DTE75GUGJ3JT",
+  );
+  assert.equal(
+    resolveMerchantIdFromLocation("https://api.grab.com/orders?merchant_id=5-C8DTE75GUGJ3JT"),
+    "5-C8DTE75GUGJ3JT",
+  );
+  assert.equal(
+    resolveMerchantIdFromLocation("https://merchant.grab.com/order/5-C8DTE75GUGJ3JT/preparing"),
+    "5-C8DTE75GUGJ3JT",
+  );
+  assert.equal(
+    resolveMerchantIdFromLocation("https://merchant.grab.com/order/preparing"),
+    null,
+  );
+  assert.equal(
+    resolveMerchantIdFromLocation("https://merchant.grab.com/dashboard"),
+    null,
+  );
+});
+
+test("Grab mutations guard against missing merchant ID and enforce circuit breaker on 400", () => {
+  assert.match(injectedSource, /if \(!merchantId\) \{[\s\S]*?'Grab merchant ID not resolved yet'/);
+  assert.match(injectedSource, /const ITEM_SYNC_GAP_MS = 400;/);
+  assert.match(contentSource, /const TERMINAL_SYNC_HTTP_STATUSES = new Set\(\[400, 403, 404\]\);/);
+  assert.match(contentSource, /const terminalFailedIds = new Set\(\);/);
+  assert.match(contentSource, /if \(!forceAll && terminalFailedIds\.has\(grabId\)\) \{[\s\S]*?continue;/);
+  assert.match(contentSource, /terminalFailedIds\.delete\(itemId\);/);
+  assert.match(contentSource, /terminalFailedIds\.add\(itemId\);/);
+});

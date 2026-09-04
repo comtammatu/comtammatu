@@ -1,6 +1,6 @@
 // content.js - Content script running in merchant.grab.com
 (function () {
-  const extVersion = chrome.runtime.getManifest()?.version || '1.2.0';
+  const extVersion = chrome.runtime.getManifest()?.version || '1.2.1';
   console.log(`[Grab POS Relay v${extVersion}] Content script active`);
 
   // Inject injected.js into page context
@@ -93,6 +93,28 @@
   const ITEM_SYNC_PENDING_TTL_MS = 20 * 1000;
   const LEADER_HEARTBEAT_MS = 5 * 1000;
   const LEADER_STEAL_MS = 15 * 1000;
+  const TERMINAL_SYNC_HTTP_STATUSES = new Set([400, 403, 404]);
+  const terminalFailedIds = new Set();
+  const KNOWN_NON_MERCHANT_SEGMENTS = new Set([
+    'dashboard',
+    'order',
+    'orders',
+    'food',
+    'menu',
+    'inventory',
+    'preparing',
+    'history',
+    'cancelled',
+    'scheduled',
+    'completed',
+    'active',
+  ]);
+  try {
+    const locMatch = window.location.pathname.match(/\/(?:food\/(?:menu|inventory)|merchants?|order)\/([A-Za-z0-9\-_]+)/i);
+    if (locMatch && locMatch[1] && !KNOWN_NON_MERCHANT_SEGMENTS.has(locMatch[1].toLowerCase())) {
+      activeGrabMerchantId = locMatch[1];
+    }
+  } catch (e) {}
 
   // Cache item and modifier state independently. Only item entries carry stock.
   const itemStatusCache = new Map(); // entity:id -> { status, stockSignature? }
@@ -211,6 +233,7 @@
     itemSyncScopeKey = nextScopeKey;
     itemStatusBusinessDateKey = getVietnamBusinessDateKey();
     itemStatusCache.clear();
+    terminalFailedIds.clear();
     pendingStockUpdates.clear();
     pendingItemSyncs.clear();
     clearPendingStockFlushTimer();
@@ -327,12 +350,16 @@
   }
 
   function noteItemSyncSuccess(itemId) {
+    terminalFailedIds.delete(itemId);
     itemSyncHealth.lastOkAt = Date.now();
     itemSyncHealth.failedIds = itemSyncHealth.failedIds.filter((id) => id !== itemId);
     persistItemSyncHealth();
   }
 
-  function noteItemSyncFailure(itemId) {
+  function noteItemSyncFailure(itemId, isTerminal = false) {
+    if (isTerminal) {
+      terminalFailedIds.add(itemId);
+    }
     if (!itemSyncHealth.failedIds.includes(itemId)) {
       itemSyncHealth.failedIds = [...itemSyncHealth.failedIds, itemId].slice(-40);
       persistItemSyncHealth();
@@ -462,10 +489,15 @@
     itemStatusPollInFlight = true;
 
     try {
-      const res = await getStoredValues(['backendUrl', 'branchId', 'relaySecret']);
+      if (forceAll) {
+        terminalFailedIds.clear();
+      }
+
+      const res = await getStoredValues(['backendUrl', 'branchId', 'relaySecret', 'grabMerchantId']);
       const backendUrl = res.backendUrl || 'http://localhost:3000';
       const branchId = Number(res.branchId);
       const relaySecret = res.relaySecret || '';
+      const resolvedMerchantId = activeGrabMerchantId || res.grabMerchantId || '';
 
       if (!Number.isInteger(branchId) || branchId <= 0) {
         updateBadge('⚠️ Chưa cấu hình mã chi nhánh trong tiện ích', false);
@@ -480,7 +512,12 @@
         headers['x-grab-relay-secret'] = relaySecret;
       }
 
-      const response = await fetch(`${backendUrl}/api/webhooks/grabfood/item-status?branch_id=${branchId}`, {
+      const queryParams = new URLSearchParams({ branch_id: String(branchId) });
+      if (resolvedMerchantId) {
+        queryParams.set('merchant_id', resolvedMerchantId);
+      }
+
+      const response = await fetch(`${backendUrl}/api/webhooks/grabfood/item-status?${queryParams.toString()}`, {
         headers,
       });
       if (!response.ok) {
@@ -528,8 +565,12 @@
             const cacheKey = `item:${grabId}`;
             const prev = itemStatusCache.get(cacheKey);
 
+            if (!forceAll && terminalFailedIds.has(grabId)) {
+              continue;
+            }
+
             if (
-              failedIds.has(grabId) ||
+              (!terminalFailedIds.has(grabId) && failedIds.has(grabId)) ||
               shouldSyncAvailabilityStatus(
                 itemGrabStatus,
                 prev?.status,
@@ -557,8 +598,12 @@
             const cacheKey = `modifier:${grabId}`;
             const prev = itemStatusCache.get(cacheKey);
 
+            if (!forceAll && terminalFailedIds.has(grabId)) {
+              continue;
+            }
+
             if (
-              failedIds.has(grabId) ||
+              (!terminalFailedIds.has(grabId) && failedIds.has(grabId)) ||
               shouldSyncAvailabilityStatus(
                 modifierGrabStatus,
                 prev?.status,
@@ -601,6 +646,11 @@
             const statusChanged = prev?.status !== undefined && prev.status !== itemGrabStatus;
             const stockChanged = !prev || prev.stockSignature !== stockPayload.signature;
             const inFlightStock = pendingItemSyncs.get(`stock:${grabId}`);
+
+            if (!forceAll && terminalFailedIds.has(grabId)) {
+              clearPendingStockUpdate(grabId);
+              continue;
+            }
 
             if (!forceAll && !failedIds.has(grabId) && !stockChanged && !statusChanged) {
               if (inFlightStock && inFlightStock.signature !== stockPayload.signature) {
@@ -670,6 +720,12 @@
 
     const { type, data } = event.data;
 
+    if (type === 'MERCHANT_ID_DETECTED' && data?.merchantId) {
+      activeGrabMerchantId = data.merchantId;
+      setStoredValues({ grabMerchantId: data.merchantId }).catch(() => {});
+      return;
+    }
+
     if (type === 'AUTH_EXPIRED') {
       grabSessionExpired = true;
       updateBadge('⚠️ Phiên Grab hết hạn — mở lại hoặc đăng nhập lại Grab Merchant', false);
@@ -699,10 +755,16 @@
         noteItemSyncSuccess(data.itemId);
         console.log(`[Grab POS Relay] Status sync confirmed for item ${data.itemId}`);
       } else {
+        const isTerminal = TERMINAL_SYNC_HTTP_STATUSES.has(data.status);
         const detail = data.error ? `: ${data.error}` : '';
-        console.warn(`[Grab POS Relay] Status sync failed for item ${data.itemId} (HTTP ${data.status})${detail}`);
-        noteItemSyncFailure(data.itemId);
-        updateBadge(`⚠️ Grab từ chối trạng thái món (HTTP ${data.status || 0})`, false);
+        console.warn(`[Grab POS Relay] Status sync failed for item ${data.itemId} (HTTP ${data.status || 0})${detail}${isTerminal ? ' [Terminal - stopped automatic retry]' : ''}`);
+        noteItemSyncFailure(data.itemId, isTerminal);
+        updateBadge(
+          isTerminal
+            ? `⚠️ Grab từ chối món ${data.itemId} (HTTP ${data.status || 0}) — kiểm tra ID`
+            : `⚠️ Grab từ chối trạng thái món (HTTP ${data.status || 0})`,
+          false
+        );
       }
       return;
     }
@@ -721,10 +783,16 @@
         noteItemSyncSuccess(data.itemId);
         console.log(`[Grab POS Relay] Status sync confirmed for modifier ${data.itemId}`);
       } else {
+        const isTerminal = TERMINAL_SYNC_HTTP_STATUSES.has(data.status);
         const detail = data.error ? `: ${data.error}` : '';
-        console.warn(`[Grab POS Relay] Modifier status sync failed for ${data.itemId} (HTTP ${data.status})${detail}`);
-        noteItemSyncFailure(data.itemId);
-        updateBadge(`⚠️ Grab từ chối trạng thái món kèm (HTTP ${data.status || 0})`, false);
+        console.warn(`[Grab POS Relay] Modifier status sync failed for ${data.itemId} (HTTP ${data.status || 0})${detail}${isTerminal ? ' [Terminal - stopped automatic retry]' : ''}`);
+        noteItemSyncFailure(data.itemId, isTerminal);
+        updateBadge(
+          isTerminal
+            ? `⚠️ Grab từ chối món kèm ${data.itemId} (HTTP ${data.status || 0}) — kiểm tra ID`
+            : `⚠️ Grab từ chối trạng thái món kèm (HTTP ${data.status || 0})`,
+          false
+        );
       }
       return;
     }
@@ -750,19 +818,29 @@
         noteItemSyncSuccess(data.itemId);
         console.log(`[Grab POS Relay] Stock sync confirmed for item ${data.itemId}`);
       } else {
-        const queuedStock = pendingStockUpdates.get(data.itemId);
-        if (queuedStock) {
-          pendingStockUpdates.set(data.itemId, {
-            ...queuedStock,
-            dueAt: Date.now() + STOCK_RETRY_DELAY_MS,
-          });
-          persistItemSyncState();
-          schedulePendingStockFlush();
+        const isTerminal = TERMINAL_SYNC_HTTP_STATUSES.has(data.status);
+        if (isTerminal) {
+          clearPendingStockUpdate(data.itemId);
+        } else {
+          const queuedStock = pendingStockUpdates.get(data.itemId);
+          if (queuedStock) {
+            pendingStockUpdates.set(data.itemId, {
+              ...queuedStock,
+              dueAt: Date.now() + STOCK_RETRY_DELAY_MS,
+            });
+            persistItemSyncState();
+            schedulePendingStockFlush();
+          }
         }
         const detail = data.error ? `: ${data.error}` : '';
-        console.warn(`[Grab POS Relay] Stock sync failed for item ${data.itemId} (HTTP ${data.status})${detail}`);
-        noteItemSyncFailure(data.itemId);
-        updateBadge(`⚠️ Grab từ chối tồn món (HTTP ${data.status || 0})`, false);
+        console.warn(`[Grab POS Relay] Stock sync failed for item ${data.itemId} (HTTP ${data.status || 0})${detail}${isTerminal ? ' [Terminal - stopped automatic retry]' : ''}`);
+        noteItemSyncFailure(data.itemId, isTerminal);
+        updateBadge(
+          isTerminal
+            ? `⚠️ Grab từ chối tồn món ${data.itemId} (HTTP ${data.status || 0}) — kiểm tra ID`
+            : `⚠️ Grab từ chối tồn món (HTTP ${data.status || 0})`,
+          false
+        );
       }
       return;
     }

@@ -105,11 +105,11 @@ walk the **UI Review Checklist** below.
 - A row has one canonical view and one address. Legacy DETAIL routes may only
   redirect to that address; they must not render a second view (Record Depth /
   ADR 0018).
-- YCM, PO, GRN, and production are list-first documents opened in a URL-addressable
-  `AppDialog variant="document"` on Owner/Ops. YCH and Transfer share one
-  fulfillment hub and open canonical detail pages in their respective
-  Owner/Ops or Branch route family. Keep queue, filters, pagination, and site
-  scope in the URL.
+- PO, GRN, and production are list-first documents opened in a URL-addressable
+  `AppDialog variant="document"` on Owner/Ops. Transfer shares one fulfillment
+  hub and opens canonical detail pages in the Owner/Ops or Branch route family.
+  Request-voucher routes are shims only. Keep queue, filters, pagination, and
+  site scope in the URL.
 - `Popover` is for pickers and compact anchored controls only — never a record
   view, never a multi-step workflow.
 - An overflow affordance (`⋯`) must open a real menu built from the shared

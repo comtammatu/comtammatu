@@ -126,7 +126,9 @@ export default async function WorkPage({
     const scoped =
       params.departmentId != null
         ? await listScopedWorkTasks({ departmentId: params.departmentId })
-        : await listMyWorkTasks({ includeDone: params.includeDone });
+        : params.view === "board"
+          ? await listScopedWorkTasks({})
+          : await listMyWorkTasks({ includeDone: params.includeDone });
 
     if (!scoped.success || !scoped.data) {
       loadError = scoped.error ?? workCopy.loadFailed;
@@ -136,6 +138,8 @@ export default async function WorkPage({
           tasks={scoped.data.items}
           params={params}
           assigneeNames={assigneeNames}
+          departments={departments}
+          membersByDepartment={membersByDepartment}
         />
       );
     } else if (params.view === "calendar") {

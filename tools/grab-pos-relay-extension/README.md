@@ -47,4 +47,4 @@ Không Remove tiện ích và không Load unpacked đường dẫn khác — vi�
 
 1. Vào `chrome://extensions`, bấm **Reload** đúng tiện ích đang cài (cùng id).
 2. Tải lại tab `merchant.grab.com` (F5) để `injected.js` khớp phiên bản mới.
-3. Nếu ping POS thất bại sau bản 1.2.0, mở popup bấm **Kiểm tra** một lần để cấp quyền origin máy chủ.
+3. Nếu ping POS thất bại sau bản 1.2.0 hoặc 1.2.1, mở popup bấm **Kiểm tra** một lần để cấp quyền origin máy chủ.

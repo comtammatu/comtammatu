@@ -113,7 +113,16 @@ after baseline.
 | `update_staff_profile()`     | Owner updates staff assignment | Atomic PBAC replace on assignment change         |
 
 Auth-bootstrap DEFINER only. Permission RPCs → [`auth.md`](auth.md); print-job
-RPCs → print-agent module. Every DEFINER must pin `search_path` and authorize.
+RPCs → print-agent module. Every DEFINER must pin `search_path` and authorize
+in-body, with explicit revoke/grant (browser least privilege). Guard:
+`packages/shared/src/auth/__tests__/security-definer-rpc-static.test.ts`.
+
+A dated audit snapshot or old migration filename is not an apply plan. Re-derive
+from generated types, applied schema, and live measurement; apply rights stay in
+`docs/agent/rules/database.md`. Keep `REPLICA IDENTITY FULL` / Realtime indexes
+only with a measured consumer. Payroll self-read, cross-branch HR reads, and
+dead-RPC drops need an explicit product/security decision first; paid-slip
+self-read is the payroll SELECT contract in [`auth.md`](auth.md).
 
 ## Failure Modes
 

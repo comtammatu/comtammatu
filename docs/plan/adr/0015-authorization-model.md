@@ -3,20 +3,17 @@
 **Status:** Accepted TARGET cutover, **not** runtime.
 
 Until cutover, runtime authority is
-[`docs/modules/auth.md`](../../modules/auth.md) (JWT custom claims,
-`positions.code` → `user_role`, MODULE_ACL). This ADR is the accepted
-destination model only; do not implement it from this document.
+[`docs/modules/auth.md`](../../modules/auth.md). This ADR is the accepted
+destination only; do not implement it from this document.
 
 **Decision owner:** Owner, 2026-07-27
 
 ## Context
 
-The current model binds one user to one Tenant and one Branch, derives an
-application role from an HR position, carries authority in JWT claims, and
-combines role route gates with live permission grants. It cannot represent
-Company-scoped office staff, multiple operational-site kinds, or multi-site
-assignments without legacy assumptions. Revocation must not wait on JWT role
-refresh. “PBAC” is ambiguous and must not name the architecture.
+The runtime model cannot represent Company-scoped office staff, multiple
+operational-site kinds, or multi-site assignments without legacy assumptions.
+Revocation of route-role admission waits on JWT refresh. “PBAC” is ambiguous
+and must not name the architecture.
 
 Production target after cutoff `baf3720f8` is one Company, one Tenant, and
 sites of kind `central_warehouse`, `central_kitchen`, or `branch` — not a

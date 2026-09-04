@@ -10,101 +10,104 @@
   <header class="app-header">
     <div class="brand-lockup">
       <div class="brand-mark" aria-hidden="true">MT</div>
-      <div>
-        <p class="brand-eyebrow">Cơm Tấm Má Tư</p>
-        <h1>Grab POS Relay</h1>
+      <div class="brand-text">
+        <h1 class="brand-title">Grab POS Relay</h1>
+        <p class="brand-sub">Cơm Tấm Má Tư</p>
       </div>
     </div>
-    <span class="version-badge" id="extVersion">v1.1.11</span>
+    <span class="version-badge" id="extVersion">v1.2.1</span>
   </header>
 
   <main class="popup-main">
+    <!-- Status Card -->
     <section class="relay-card" id="relayStatus" role="status" aria-live="polite" data-tone="loading">
-      <div class="relay-heading">
-        <div>
-          <p class="section-eyebrow section-eyebrow-inverse">Trạng thái chuyển tiếp</p>
-          <p class="relay-title" id="relayStatusTitle">Đang kiểm tra</p>
+      <div class="relay-header-row">
+        <div class="relay-title-group">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span class="relay-title" id="relayStatusTitle">Đang kiểm tra</span>
         </div>
         <span class="status-chip" id="liveStatus">
-          <span class="status-dot" aria-hidden="true"></span>
           <span id="liveStatusLabel">Đang tải</span>
         </span>
       </div>
 
-      <div class="relay-flow" aria-label="Luồng chuyển đơn từ Grab Merchant về POS Má Tư">
-        <div class="flow-node">
-          <span class="flow-node-mark flow-node-mark-grab" aria-hidden="true">G</span>
-          <span>Grab Merchant</span>
-        </div>
-        <div class="flow-track" aria-hidden="true">
-          <span></span>
-          <svg viewBox="0 0 12 12" focusable="false"><path d="M3 2.5 7 6 3 9.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </div>
-        <div class="flow-node">
-          <span class="flow-node-mark flow-node-mark-pos" aria-hidden="true">MT</span>
-          <span>POS Má Tư</span>
-        </div>
+      <div class="relay-route-bar">
+        <span class="route-point">Grab Merchant</span>
+        <span class="route-arrow" aria-hidden="true">→</span>
+        <span class="route-point">POS Má Tư</span>
+        <span class="route-divider" aria-hidden="true">·</span>
+        <span class="route-branch" id="branchMetric">Chưa chọn chi nhánh</span>
       </div>
 
       <p class="relay-description" id="relayStatusMessage">Đang đọc cấu hình tiện ích...</p>
-      <div class="relay-metrics">
-        <span id="branchMetric">Chưa chọn chi nhánh</span>
-        <span aria-hidden="true">·</span>
-        <span id="stockQueueMetric">Đang đọc tồn chờ</span>
-        <span aria-hidden="true">·</span>
-        <span id="queueMetric">Đang đọc hàng đợi</span>
-        <span aria-hidden="true">·</span>
-        <span id="itemSyncHealthMetric">Đang đọc đồng bộ món</span>
+
+      <div class="metrics-grid">
+        <div class="metric-pill" id="stockQueueMetric">Không có tồn chờ</div>
+        <div class="metric-pill" id="queueMetric">Hàng đợi trống</div>
+        <div class="metric-pill" id="itemSyncHealthMetric">Đồng bộ món ổn</div>
       </div>
     </section>
 
-    <section class="section-block" aria-labelledby="recentOrdersTitle">
-      <div class="section-heading">
-        <div>
-          <p class="section-eyebrow">Hoạt động gần đây</p>
-          <h2 id="recentOrdersTitle">Đơn Grab đã chuyển</h2>
-        </div>
+    <!-- Quick Actions -->
+    <section class="actions-card" aria-labelledby="recoveryTitle">
+      <div class="actions-header">
+        <h2 id="recoveryTitle" class="actions-title">Khôi phục đồng bộ</h2>
+        <span class="actions-hint">Chỉ dùng khi trạng thái trên Grab không còn khớp với POS. Đơn lỗi có nút Thử lại.</span>
+      </div>
+      <div class="actions-buttons">
+        <button class="button button-action" type="button" id="btnSyncMenu">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 8A5.5 5.5 0 1 1 9.5 3M13.5 3v5h-5"/></svg>
+          <span class="button-label">Đồng bộ toàn bộ</span>
+        </button>
+        <button class="button button-action" type="button" id="btnRecoverOrders">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 5h4V1M14 11h-4v4M3.5 11A5.5 5.5 0 0 0 13 8.5M12.5 5A5.5 5.5 0 0 0 3 7.5"/></svg>
+          <span class="button-label">Khôi phục đơn</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Recent Orders -->
+    <section class="orders-card" aria-labelledby="recentOrdersTitle">
+      <div class="orders-header">
+        <h2 id="recentOrdersTitle">Đơn Grab đã chuyển</h2>
         <span class="count-badge" id="recentOrderCount">0 đơn</span>
       </div>
       <div class="order-list" id="orderList" aria-live="polite">
         <div class="empty-state">
-          <span class="empty-state-mark" aria-hidden="true">GF</span>
-          <div>
-            <strong>Chưa có đơn gần đây</strong>
-            <p>Đơn đã chuyển về POS sẽ xuất hiện tại đây.</p>
-          </div>
+          <span class="empty-state-dot" aria-hidden="true"></span>
+          <span>Chưa có đơn gần đây. Đơn đã chuyển về POS sẽ xuất hiện tại đây.</span>
         </div>
       </div>
     </section>
 
-    <details class="panel config-panel" id="configPanel">
+    <!-- Settings (Collapsible) -->
+    <details class="config-panel" id="configPanel">
       <summary>
-        <span class="summary-icon" aria-hidden="true">
-          <svg viewBox="0 0 20 20" focusable="false"><path d="M10 2.5v2M10 15.5v2M17.5 10h-2M4.5 10h-2M15.3 4.7l-1.4 1.4M6.1 13.9l-1.4 1.4M15.3 15.3l-1.4-1.4M6.1 6.1 4.7 4.7M13.4 10a3.4 3.4 0 1 1-6.8 0 3.4 3.4 0 0 1 6.8 0Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        </span>
-        <span class="summary-copy">
-          <strong>Cấu hình kết nối</strong>
-          <small id="configSummary">Đang đọc cấu hình...</small>
-        </span>
-        <svg class="summary-chevron" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="m4 6 4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="summary-left">
+          <svg class="summary-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="2.5"/><path d="M13.5 8a5.5 5.5 0 0 0-.2-1.4l1.3-1-1.2-2.1-1.6.5a5.5 5.5 0 0 0-1.2-.7L10.4 1.8H8l-.4 1.5a5.5 5.5 0 0 0-1.2.7l-1.6-.5-1.2 2.1 1.3 1a5.5 5.5 0 0 0 0 2.8l-1.3 1 1.2 2.1 1.6-.5a5.5 5.5 0 0 0 1.2.7l.4 1.5h2.4l.4-1.5a5.5 5.5 0 0 0 1.2-.7l1.6.5 1.2-2.1-1.3-1c.1-.5.2-.9.2-1.4Z"/></svg>
+          <div class="summary-copy">
+            <strong>Cấu hình kết nối</strong>
+            <span id="configSummary">Đang đọc cấu hình...</span>
+          </div>
+        </div>
+        <svg class="summary-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>
       </summary>
 
       <form class="config-form" id="configForm" novalidate>
         <div class="field">
           <label for="backendUrl">Máy chủ POS</label>
           <input type="url" id="backendUrl" inputmode="url" autocomplete="url" placeholder="https://web.comtammatu.com">
-          <p class="field-hint">Có thể dán trực tiếp URL màn hình POS của chi nhánh.</p>
         </div>
 
         <div class="field-row">
-          <div class="field field-branch">
+          <div class="field">
             <label for="branchId">Mã chi nhánh</label>
-            <input type="number" id="branchId" inputmode="numeric" min="1" step="1" placeholder="Ví dụ: 1">
+            <input type="number" id="branchId" inputmode="numeric" min="1" step="1" placeholder="1">
           </div>
-          <div class="field field-secret">
-            <label for="relaySecret">Relay Secret <span>Tùy chọn</span></label>
-            <div class="secret-control">
-              <input type="password" id="relaySecret" autocomplete="current-password" placeholder="Khóa bảo mật">
+          <div class="field">
+            <label for="relaySecret">Relay Secret</label>
+            <div class="secret-wrapper">
+              <input type="password" id="relaySecret" autocomplete="current-password" placeholder="Tùy chọn">
               <button class="secret-toggle" type="button" id="btnToggleSecret" aria-label="Hiện Relay Secret" aria-pressed="false">Hiện</button>
             </div>
           </div>
@@ -112,37 +115,14 @@
 
         <div class="form-actions">
           <button class="button button-secondary" type="button" id="btnPing">
-            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M3 10h3l2-5 4 10 2-5h3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <span class="button-label">Kiểm tra</span>
           </button>
           <button class="button button-primary" type="submit" id="btnSave">
-            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 3.5h10.5L17 6v10.5H4zM7 3.5v5h6v-5M7 16.5v-5h6v5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
             <span class="button-label">Lưu cấu hình</span>
           </button>
         </div>
       </form>
     </details>
-
-    <section class="panel recovery-panel" aria-labelledby="recoveryTitle">
-      <div class="recovery-copy">
-        <span class="recovery-icon" aria-hidden="true">
-          <svg viewBox="0 0 20 20" focusable="false"><path d="M16 7.5A6.5 6.5 0 1 0 16.2 12M16 3.5v4h-4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </span>
-        <div>
-          <h2 id="recoveryTitle">Khôi phục đồng bộ</h2>
-          <p>Chỉ dùng khi trạng thái trên Grab không còn khớp với POS. Đơn lỗi có nút Thử lại trong danh sách.</p>
-        </div>
-      </div>
-      <div class="recovery-actions">
-        <button class="button button-recovery" type="button" id="btnRecoverOrders">
-          <span class="button-label">Khôi phục đơn</span>
-        </button>
-        <button class="button button-recovery" type="button" id="btnSyncMenu">
-          <span class="button-label">Đồng bộ toàn bộ</span>
-          <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="m7.5 5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-      </div>
-    </section>
   </main>
 
   <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true" hidden></div>

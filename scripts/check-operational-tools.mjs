@@ -209,6 +209,25 @@ if (
   fail("Má Tư Agent must use adaptive Material navigation and separate bitmap, text, and OCR receipt inspection");
 }
 
+const markSentStart = queueSource.indexOf("fun markOrderSent(");
+const markSentEnd = queueSource.indexOf("private fun sentMappingValues(");
+const markSent = markSentStart >= 0 && markSentEnd > markSentStart
+  ? queueSource.slice(markSentStart, markSentEnd)
+  : "";
+if (
+  !markSent ||
+  markSent.includes("putNull(COLUMN_RECEIPT_TEXT)") ||
+  /put\(COLUMN_RAW_BASE64,\s*""\)/.test(markSent)
+) {
+  fail("Sending to POS must keep receipt bitmap and OCR for operator inspection; only compactResolvedOrders may drop diagnostic payloads");
+}
+if (
+  !queueSource.includes("fun compactResolvedOrders") ||
+  !queueSource.includes("putNull(COLUMN_RECEIPT_TEXT)")
+) {
+  fail("Resolved-history cleanup must still drop heavy receipt payloads after the cashier no longer needs them");
+}
+
 const gradle = spawnSync(
   "java",
   [

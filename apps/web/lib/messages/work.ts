@@ -157,4 +157,9 @@ export const workCopy = {
   viewIssueSlip: "Xem phiếu xuất",
   viewGrnSlip: "Xem phiếu nhập",
   relatedDocument: "Chứng từ liên kết",
+  doneSectionToggle: "Việc đã xong",
+  departmentColumnOther: "Chưa phân phòng ban",
+  departmentMoved: "Đã chuyển phòng ban",
+  addDepartmentTask: "Thêm việc mới",
+  allDepartments: "Tất cả phòng ban",
 } as const;

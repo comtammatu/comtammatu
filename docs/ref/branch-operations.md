@@ -115,7 +115,7 @@ và dừng; không tạo ticket “để dành soft”.
 
 ## Lỗi phiếu kho (user-addressable)
 
-Mutation phiếu kho (chuyển kho, hủy, kiểm kê, YCM/YCH, GRN, yêu cầu mua, xuất,
+Mutation phiếu kho (điều chuyển, hủy, kiểm kê, GRN, đơn mua, xuất,
 sản xuất) phải trả `ActionResult` với:
 
 - `error`: câu tiếng Việt vận hành (không raw Postgres/Supabase).

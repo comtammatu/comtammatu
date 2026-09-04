@@ -275,6 +275,11 @@ test("finance food cost keeps the resolved period in its filter, not the header"
   assert.match(client, /totals\.grossMarginPct/);
   assert.match(client, /foodCopy\.grossProfitCurrency/);
   assert.match(client, /tableIncompleteHint/);
+  assert.match(client, /amount=\{Math\.round\(Number\(value\)\)\}/);
+  assert.match(
+    client,
+    /foodCopy\.unitCostPerPortion\(formatVND\(Math\.round\(Number\(unit\)\)\)\)/,
+  );
 });
 
 test("finance food cost table totals sum valued định mức rows and flag incomplete", () => {

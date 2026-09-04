@@ -561,3 +561,55 @@ test("ShopeeFood transformation: maps the extra-rice option to a priced POS side
   ]);
   assert.equal(transformed.items[0]?.unit_price, 60000);
 });
+
+test("ShopeeFood mapping: repairs the Trứng OCR token īring as a priced side", () => {
+  const transformed = transformShopeeOrderPayload(
+    {
+      orderId: "03096-558242106",
+      items: [
+        {
+          name: "Sườn Cốt Lết",
+          quantity: 1,
+          price: 67000,
+          options: [
+            { name: "Dụng cụ ăn uống", price: 3000 },
+            { name: "īring" },
+          ],
+        },
+      ],
+    },
+    MOCK_DB_ITEMS,
+  );
+
+  assert.equal(transformed.items[0]?.note, null);
+  assert.deepEqual(
+    transformed.items[0]?.sides.map((side) => side.name),
+    ["Dụng Cụ Mang Về", "Trứng"],
+  );
+});
+
+test("ShopeeFood transformation: maps free gift items to vnd discount matching subtotal", () => {
+  const transformed = transformShopeeOrderPayload(
+    {
+      orderId: "SPF-FREE-01",
+      items: [
+        {
+          itemId: "SPF_ITEM_CANH_KHO_QUA",
+          name: "Canh Khổ Qua (Tặng kèm)",
+          quantity: 1,
+          price: 0,
+        },
+      ],
+    },
+    MOCK_DB_ITEMS,
+  );
+
+  assert.equal(transformed.items.length, 1);
+  const freeItem = transformed.items[0];
+  assert.equal(freeItem?.item_name, "Canh Khổ Qua");
+  assert.equal(freeItem?.discount_type, "vnd");
+  assert.equal(freeItem?.discount_value, 30000);
+  assert.equal(freeItem?.discount_note, "Khuyến mãi tặng kèm ShopeeFood (0đ)");
+});
+
+

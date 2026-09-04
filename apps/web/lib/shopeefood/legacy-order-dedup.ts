@@ -1,3 +1,5 @@
+import { canonicalizeShopeeOrderRef } from "@comtammatu/shared/delivery";
+
 const VIETNAM_UTC_OFFSET_MS = 7 * 60 * 60 * 1000;
 const MAX_REFERENCE_DAY_DISTANCE = 2;
 
@@ -40,7 +42,9 @@ export function deriveShopeeLegacyLookup(
   fullRef: string,
   now = new Date(),
 ): ShopeeLegacyLookup | null {
-  const match = /^(\d{2})(\d{2})(\d)-(\d{4,})$/.exec(fullRef.trim());
+  const match = /^(\d{2})(\d{2})(\d)-(\d{4,})$/.exec(
+    canonicalizeShopeeOrderRef(fullRef),
+  );
   if (!match || Number.isNaN(now.getTime())) return null;
 
   const day = Number(match[1]);

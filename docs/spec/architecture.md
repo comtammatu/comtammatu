@@ -14,6 +14,18 @@ Tenant (L0, single operating tenant)
 `branches` remains the site table; `branch_id` is the technical scope key.
 `Company` and `operational_site` are not runtime hierarchy levels.
 
+**Authority.** Runtime topology, Dual Thesis, and package graph: this file.
+Product scope and evolve-in-place: [ADR 0025](../plan/adr/0025-fnb-operating-erp-scope-and-evolution-boundary.md)
+— do not treat vendor catalogs as layout or backlog. Owner / Branch / Self
+planes: [ADR 0012](../plan/adr/0012-owner-branch-boundary.md) — shared Branch
+capability keys never admit the matching L0 family. Queue-first `/` and `/me`
+as personal plane: [ADR 0037](../plan/adr/0037-control-home-queue-first-and-personal-plane.md)
+(compose: `docs/ref/screen-context-map.md`, `docs/spec/page-archetypes.md`).
+Work hosting: [ADR 0033](../plan/adr/0033-work-control-surface-module.md) — same
+Control Surface, no second app/host. Native Android: [ADR 0038](../plan/adr/0038-native-android-apps-and-pwa-coexistence.md)
+— not a runtime of this monorepo; PWA contract in `docs/spec/pwa.md`. Placement:
+`docs/CODEBASE_MAP.md#project-placement-matrix`; imports: `docs/agent/rules/engineering.md`.
+
 ## System Topology
 
 ```mermaid
@@ -150,7 +162,7 @@ Two product halves — structure, naming, chrome, and adapters must make both ob
 
 | Product half (VI)                 | Job                                                                     | Plane ID          | Route root                                                                                      | Shell                       | Adapter prefix    |
 | --------------------------------- | ----------------------------------------------------------------------- | ----------------- | ----------------------------------------------------------------------------------------------- | --------------------------- | ----------------- |
-| **`Quản lý hệ thống`**            | Tenant/branch oversight, menu, central inventory, finance, HR, settings | `control_surface` | `/`, `/menu`, `/orders`, `/inventory`, `/finance`, `/hr`, `/branches`, `/settings`, `/feedback` | `AppShell` (nav-as-data)    | `App*`            |
+| **`Quản lý hệ thống`**            | Tenant/branch oversight, menu, central inventory, finance, HR, work, settings | `control_surface` | `/`, `/menu`, `/orders`, `/inventory`, `/finance`, `/hr`, `/work`, `/branches`, `/settings`, `/feedback` | `AppShell` (nav-as-data)    | `App*`            |
 | **`Vận hành bán hàng` (ca)**      | Shift work, branch stock, team, branch settings                         | `branch_surface`  | `/br/[branchId]/*` (excl. stations)                                                             | Branch operator chrome      | `BranchOperator*` |
 | **`Vận hành bán hàng` (station)** | Sell / kitchen / pickup queue                                           | `station_chrome`  | `/br/[branchId]/{pos,kds,pickup}`                                                               | Station chrome              | station adapters  |
 | **`Trang cá nhân`**               | Self `/me` (ADR 0012/0037); Owner excluded (`module-acl` `me`)          | `self_surface`    | `/me/*`                                                                                         | Control shell / `Employee*` | `Employee*`       |
@@ -162,6 +174,10 @@ Two product halves — structure, naming, chrome, and adapters must make both ob
   Chrome component is `ControlSurfaceShell`. New docs/UI copy use
   `control_surface` / `Quản trị`.
 - Dual-plane inventory keeps **two jobs** (`/inventory/*` oversight vs `/br/.../stock/*` shift work). Share implementation; do not merge URLs.
+- Shared Branch capability keys such as `inventory` and `orders` may protect
+  Branch-native routes but never grant the matching L0 Owner family (ADR 0012).
+- External module catalogs are a vision map for capability existence (ADR 0025).
+  They are not a monorepo layout and not a sprint backlog.
 - Vocabulary detail: `docs/ref/glossary.md`. Chrome: `docs/spec/design-system.md`. Routes: `docs/modules/web-app.md`, `docs/spec/role-route-matrix.md`.
 
 ### Folder placement (Dual Thesis)
@@ -185,5 +201,6 @@ L0-gated per ADR 0012.
 
 Web + DB remain cloud-authoritative. D012 still rejects local-first POS. This
 repo keeps the PWA (`docs/spec/pwa.md`) and branch print-agent. Native Android
-clients (repository `app`) are ADR 0038 and optional per branch. Topology,
-secrets, CI, promotion: `docs/modules/infrastructure.md`.
+clients (repository `app`) are ADR 0038 and optional per branch; do not add an
+Android/Gradle tree here. Topology, secrets, CI, promotion:
+`docs/modules/infrastructure.md`.

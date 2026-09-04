@@ -184,6 +184,30 @@ Tổng cộng:                      156.000
   assert.equal(parsed.total, 156000);
 });
 
+test("ESC/POS parser: repairs a leading OCR O in the September date prefix", () => {
+  const parsed = parseShopeeReceiptText(`
+ShopeeFood
+Mã đơn hàng: O3096-503466798
+1x Sườn Cốt Lết 54.000
+Tổng tiền 54.000đ
+  `);
+
+  assert.equal(parsed.orderId, "03096-503466798");
+  assert.equal(parsed.displayId, "03096-503466798");
+});
+
+test("ESC/POS parser: reads a Shopee code when OCR drops accents on the label", () => {
+  const parsed = parseShopeeReceiptText(`
+ShopeeFood
+Ma don hang
+03096-503466798
+1x Sườn Cốt Lết 54.000
+Tổng tiền 54.000đ
+  `);
+
+  assert.equal(parsed.orderId, "03096-503466798");
+});
+
 test("ESC/POS parser: labeled code outranks bare numeric and SPF references", () => {
   // Real receipt layout: the display code (Mã đơn) precedes the internal code
   // (Mã đặt món). The last labeled code wins for orderId; SPF stays displayId.
@@ -262,7 +286,7 @@ Tổng tiền 39.298d
   assert.equal(parsed.orderId, "27086-730200001");
   assert.equal(parsed.items?.length, 1);
   assert.equal(parsed.items?.[0]?.name, "Cơm Sườn Cốt Lết");
-  assert.equal(parsed.items?.[0]?.options?.[0]?.name, "IxDụng cụ ăn uống");
+  assert.equal(parsed.items?.[0]?.options?.[0]?.name, "Dụng cụ ăn uống");
   assert.equal(parsed.items?.[0]?.note, "Nước mắm không cay giúp em");
   assert.equal(parsed.customer?.note, "Nước mắm không cay giúp em");
   assert.equal(parsed.total, 39298);
@@ -302,4 +326,83 @@ test("ESC/POS platform detection: recognizes Agent labels and fails closed for u
 test("delivery platform mapping converts the Agent Green SM wire value for the POS RPC", () => {
   assert.equal(toDatabaseDeliveryPlatform("greensm"), "green_sm");
   assert.equal(toDatabaseDeliveryPlatform("shopee"), "shopee");
+});
+
+test("ESC/POS parser: keeps OCR dishes when the number period is missing or the price uses a latin d", () => {
+  const parsed = parseShopeeReceiptText(`
+ShopeeFood
+Mã đơn hàng
+03096-558242106
+1. Sườn Cốt Lết x1 67.000d
+• 1xDụng cụ ăn uống
+• 1xTrứng
+2 Cơm Tấm Bì
+• 1xCơm Thêm
+45.000d
+Canh Khổ Qua
+x1 30.000d
+Tổng món 3
+Tổng tiền 142.000d
+  `);
+
+  assert.equal(parsed.orderId, "03096-558242106");
+  assert.equal(parsed.items?.length, 3);
+  assert.equal(parsed.items?.[0]?.name, "Sườn Cốt Lết");
+  assert.equal(parsed.items?.[0]?.quantity, 1);
+  assert.equal(parsed.items?.[0]?.price, 67000);
+  assert.equal(parsed.items?.[1]?.name, "Cơm Tấm Bì");
+  assert.equal(parsed.items?.[1]?.quantity, 1);
+  assert.equal(parsed.items?.[1]?.price, 45000);
+  assert.equal(parsed.items?.[2]?.name, "Canh Khổ Qua");
+  assert.equal(parsed.items?.[2]?.quantity, 1);
+  assert.equal(parsed.items?.[2]?.price, 30000);
+  assert.equal(parsed.total, 142000);
+});
+
+test("ESC/POS parser: does not turn a leading 1x extra-rice option into a second Cơm Tấm Bì", () => {
+  const parsed = parseShopeeReceiptText(`
+ShopeeFood
+Mã đơn hàng
+03096-555400002
+1xCơm Thêm
+2. Cơm Tấm Bì
+• 1xCơm Thêm
+• 1xDụng cụ ăn uống
+x1 45.000d
+3. Sườn Cốt Lết
+• 1xTóp Mỡ
+x1 63.000d
+Tổng món 2
+Tổng tiền 108.000d
+  `);
+
+  assert.equal(parsed.items?.length, 2);
+  assert.equal(parsed.items?.[0]?.name, "Cơm Tấm Bì");
+  assert.equal(parsed.items?.[0]?.quantity, 1);
+  assert.equal(parsed.items?.[0]?.options?.length, 2);
+  assert.equal(
+    parsed.items?.[0]?.options?.filter((option) =>
+      /cơm thêm/i.test(option.name ?? ""),
+    ).length,
+    1,
+  );
+  assert.equal(parsed.items?.[1]?.name, "Sườn Cốt Lết");
+  assert.equal(
+    parsed.items?.some((item) => /^cơm thêm$/i.test(item.name)),
+    false,
+  );
+});
+
+test("ESC/POS parser: a ticket that is only extra rice still becomes one item", () => {
+  const parsed = parseShopeeReceiptText(`
+ShopeeFood
+Mã đơn hàng
+03096-555400003
+1x Cơm thêm 6.000
+Tổng tiền 6.000d
+  `);
+
+  assert.equal(parsed.items?.length, 1);
+  assert.equal(parsed.items?.[0]?.name, "Cơm thêm");
+  assert.equal(parsed.items?.[0]?.quantity, 1);
 });

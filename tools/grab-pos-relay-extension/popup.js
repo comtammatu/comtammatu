@@ -125,27 +125,31 @@ document.addEventListener('DOMContentLoaded', () => {
     pendingStockCount,
     queueSummary,
     itemSyncHealth,
+    grabMerchantId,
   }) {
+    const merchantSuffix = grabMerchantId ? ` · Quán: ${grabMerchantId}` : '';
     configSummary.textContent = isConfigured
-      ? `CN ${branchId} · ${formatBackendHost(backendUrl)}`
+      ? `CN ${branchId}${merchantSuffix} · ${formatBackendHost(backendUrl)}`
       : 'Chưa thiết lập máy chủ và chi nhánh';
-    branchMetric.textContent = branchId ? `Chi nhánh ${branchId}` : 'Chưa chọn chi nhánh';
+    branchMetric.textContent = branchId
+      ? `CN ${branchId}${grabMerchantId ? ` (${grabMerchantId})` : ''}`
+      : 'Chưa chọn chi nhánh';
     stockQueueMetric.textContent = pendingStockCount > 0
-      ? `${pendingStockCount} cập nhật tồn đang chờ`
-      : 'Không có tồn chờ';
+      ? `Tồn: ${pendingStockCount} chờ`
+      : 'Tồn kho: OK';
     const summary = queueSummary || { pending: 0, retry: 0, error: 0 };
     queueMetric.textContent =
       summary.error > 0 || summary.retry > 0 || summary.pending > 0
-        ? `Hàng đợi ${summary.pending} mới · ${summary.retry} thử lại · ${summary.error} lỗi`
-        : 'Hàng đợi trống';
+        ? `Hàng đợi: ${summary.pending} mới · ${summary.retry} thử lại · ${summary.error} lỗi`
+        : 'Hàng đợi: 0';
     const failedCount = Array.isArray(itemSyncHealth?.failedIds) ? itemSyncHealth.failedIds.length : 0;
     const unmappedCount = Number(itemSyncHealth?.unmappedCount) || 0;
     if (failedCount > 0 || unmappedCount > 0) {
-      itemSyncHealthMetric.textContent = `${failedCount} món lỗi · ${unmappedCount} chưa ánh xạ`;
+      itemSyncHealthMetric.textContent = `Món: ${failedCount} lỗi · ${unmappedCount} chưa ánh xạ`;
     } else if (itemSyncHealth?.lastOkAt) {
-      itemSyncHealthMetric.textContent = 'Đồng bộ món ổn';
+      itemSyncHealthMetric.textContent = 'Đồng bộ món: OK';
     } else {
-      itemSyncHealthMetric.textContent = 'Chưa có đồng bộ món';
+      itemSyncHealthMetric.textContent = 'Đồng bộ món: Chưa chạy';
     }
 
     if (!isConfigured) {
@@ -186,18 +190,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const emptyState = document.createElement('div');
     emptyState.className = 'empty-state';
 
-    const mark = document.createElement('span');
-    mark.className = 'empty-state-mark';
-    mark.setAttribute('aria-hidden', 'true');
-    mark.textContent = 'GF';
+    const dot = document.createElement('span');
+    dot.className = 'empty-state-dot';
+    dot.setAttribute('aria-hidden', 'true');
 
-    const copy = document.createElement('div');
-    const title = document.createElement('strong');
-    title.textContent = 'Chưa có đơn gần đây';
-    const description = document.createElement('p');
-    description.textContent = 'Đơn đã chuyển về POS sẽ xuất hiện tại đây.';
-    copy.append(title, description);
-    emptyState.append(mark, copy);
+    const copy = document.createElement('span');
+    copy.textContent = 'Chưa có đơn gần đây. Đơn đã chuyển về POS sẽ xuất hiện tại đây.';
+    emptyState.append(dot, copy);
     return emptyState;
   }
 
@@ -301,6 +300,7 @@ document.addEventListener('DOMContentLoaded', () => {
       pendingStockCount: getPendingStockCount(settings.grabItemSyncStateV1),
       queueSummary: summarizeQueue(settings.grabRelayQueue),
       itemSyncHealth: settings.grabItemSyncHealth,
+      grabMerchantId: settings.grabMerchantId,
     });
   }
 
@@ -313,6 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
       'grabItemSyncStateV1',
       'grabRelayQueue',
       'grabItemSyncHealth',
+      'grabMerchantId',
     ],
     async (settings) => {
       const backendUrl = settings.backendUrl || 'http://localhost:3000';

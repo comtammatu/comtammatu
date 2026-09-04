@@ -12830,6 +12830,15 @@ export type Database = {
         }
         Returns: Json
       }
+      apply_free_side_selection: {
+        Args: {
+          p_code: string
+          p_order_id: number
+          p_promotion_id: number
+          p_selections: Json
+        }
+        Returns: Json
+      }
       apply_gift_promotion_selection: {
         Args: {
           p_code: string
@@ -12837,15 +12846,6 @@ export type Database = {
           p_order_id: number
           p_promotion_id: number
           p_units?: number
-        }
-        Returns: Json
-      }
-      apply_free_side_selection: {
-        Args: {
-          p_code: string
-          p_order_id: number
-          p_promotion_id: number
-          p_selections: Json
         }
         Returns: Json
       }
@@ -13299,6 +13299,16 @@ export type Database = {
           unread_count: number
         }[]
       }
+      create_branch_incident_task: {
+        Args: {
+          p_branch_id: number
+          p_category: string
+          p_description?: string
+          p_priority?: string
+          p_title: string
+        }
+        Returns: Json
+      }
       create_expense_transfer_intent: {
         Args: {
           p_branch_id: number
@@ -13532,16 +13542,6 @@ export type Database = {
           p_note?: string
           p_order_id: number
           p_source_type: string
-        }
-        Returns: Json
-      }
-      create_branch_incident_task: {
-        Args: {
-          p_branch_id: number
-          p_category: string
-          p_description?: string
-          p_priority?: string
-          p_title: string
         }
         Returns: Json
       }

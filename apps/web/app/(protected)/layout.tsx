@@ -146,7 +146,8 @@ export default async function ProtectedLayout({
 
   const isCentralCatalogViewer =
     role === "central_supply_ops" || role === "central_kitchen_lead";
-  const showCatalogManagement = isOwner && canManageCatalog;
+  const showCatalogManagement =
+    (isOwner || role === "central_supply_ops") && canManageCatalog;
   const salesBranches = activeBranches.filter(
     (branch) => branch.branch_kind === "branch",
   );

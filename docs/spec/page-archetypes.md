@@ -270,10 +270,11 @@ Control Surface Work compose shapes (ADR 0033 — not station BOARD):
   (`design-system.md` § C.1 / ADR 0018): D2 independent workspace →
   `{basePath}/{id}`; D1 view/document → addressable overlay
   (`?<entity>Id=`); D1 task → `FormDialog` / short `AppDialog` without a URL.
-  Purchase demand, PO, GRN, production, and the YCH/Transfer journey are the
-  named D1 document set on Owner/Ops and use `AppDialog variant="document"`.
-  YCH and linked Transfers render once in the fulfillment hub. Branch retains
-  its Page/fullscreen touch detail workflow.
+  PO, GRN, production, and Transfer are the named D1 document set on
+  Owner/Ops and use `AppDialog variant="document"`. Transfers render once in
+  the fulfillment hub. Request vouchers are retired; shims go to `Tạo đơn` or
+  dest-initiated transfer create. Branch retains its Page/fullscreen touch
+  detail workflow.
 - **Row actions.** Build one `RowActionItem[]` per row
   (`apps/web/app/components/row-actions-menu.tsx`). Feed it to `RowActionsMenu`
   for the visible action cell and to `RowActionsContextMenuItems` through
@@ -606,9 +607,10 @@ allowlist, not a precedent for stretching another archetype's definition:
     control_surface table at tablet landscape widths. Classified **LIST** (Branch touch
     variant); control_surface retains the management `DataTable` LIST.
 12. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/page.tsx`
-    — Redirect shim. A normal branch continues to `Yêu cầu hàng`; `Kho Tổng` and
-    `Bếp Trung Tâm` continue to `Yêu cầu mua`. GRN drafts are created only from a
-    sent PO and appear in the GRN queue.
+    — Redirect shim. A store continues to dest-initiated transfer create
+    (`/stock/requests/new` → `/stock/transfer/new?direction=pull`). `Kho Tổng`
+    and `Bếp Trung Tâm` continue to `Tạo đơn`. GRN drafts are created only
+    from a sent PO and appear in the GRN queue.
 13. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/page.tsx`
     — Compatibility redirect shim with the same destination rules as the
     parent `/new` route. It never renders a receipt-entry form.

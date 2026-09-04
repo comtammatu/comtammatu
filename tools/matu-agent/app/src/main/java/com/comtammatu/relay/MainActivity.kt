@@ -1010,10 +1010,16 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun visibleOrderRef(order: OrderQueueDbHelper.QueuedOrder): String =
+        OrderIdentity.operatorVisibleOrderRef(
+            order.platform,
+            order.sourceOrderRef,
+            order.posDisplayId
+        ) ?: getString(R.string.receipt_internal_ref, order.id)
+
     private fun createOrderRow(order: OrderQueueDbHelper.QueuedOrder): View {
         val timeFormat = SimpleDateFormat("dd/MM · HH:mm", Locale.getDefault())
-        val sourceRef = OrderIdentity.displaySourceOrderRef(order.platform, order.sourceOrderRef)
-            ?: getString(R.string.receipt_internal_ref, order.id)
+        val sourceRef = visibleOrderRef(order)
         val status = statusLabel(order.status)
         val statusTone = when (order.status) {
             OrderQueueDbHelper.STATUS_SENT, OrderQueueDbHelper.STATUS_DISMISSED -> color(R.color.success_text)
@@ -1996,8 +2002,7 @@ class MainActivity : AppCompatActivity() {
         val rawBytes = runCatching { Base64.decode(order.rawBase64, Base64.DEFAULT) }
             .getOrDefault(byteArrayOf())
         val layers = ReceiptDataInspector.inspect(rawBytes, order.receiptText)
-        val sourceRef = OrderIdentity.displaySourceOrderRef(order.platform, order.sourceOrderRef)
-            ?: getString(R.string.receipt_internal_ref, order.id)
+        val sourceRef = visibleOrderRef(order)
         var previewBitmap: Bitmap? = null
 
         val dialog = BottomSheetDialog(this)
@@ -2059,8 +2064,11 @@ class MainActivity : AppCompatActivity() {
         infoCard.addView(infoRow(getString(R.string.receipt_source_label), platformLabel(order.platform)))
         infoCard.addView(infoRow(
             getString(R.string.source_order_ref_label),
-            OrderIdentity.displaySourceOrderRef(order.platform, order.sourceOrderRef)
-                ?: getString(R.string.source_order_ref_missing)
+            OrderIdentity.operatorVisibleOrderRef(
+                order.platform,
+                order.sourceOrderRef,
+                order.posDisplayId
+            ) ?: getString(R.string.source_order_ref_missing)
         ))
         if (order.status == OrderQueueDbHelper.STATUS_SENT) {
             val posRef = OrderIdentity.displaySourceOrderRef(
@@ -2431,8 +2439,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun retryWaitingOrder(order: OrderQueueDbHelper.QueuedOrder) {
-        val sourceRef = OrderIdentity.displaySourceOrderRef(order.platform, order.sourceOrderRef)
-            ?: getString(R.string.receipt_internal_ref, order.id)
+        val sourceRef = visibleOrderRef(order)
         if (dbHelper.retryOrderNow(order.id)) {
             Toast.makeText(this, "Đã đưa phiếu $sourceRef lên đầu hàng chờ", Toast.LENGTH_SHORT).show()
             refreshServiceState()
@@ -2440,8 +2447,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun promptDismissWaitingOrder(order: OrderQueueDbHelper.QueuedOrder) {
-        val sourceRef = OrderIdentity.displaySourceOrderRef(order.platform, order.sourceOrderRef)
-            ?: "phiếu #${order.id}"
+        val sourceRef = visibleOrderRef(order)
         MaterialAlertDialogBuilder(this)
             .setTitle(getString(R.string.mark_manual_entry_action))
             .setMessage(getString(R.string.mark_manual_entry_confirm, sourceRef))

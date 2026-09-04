@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   extractCustomerNoteFromLine,
+  isDeliveryToppingLine,
   isReceiptFooterLine,
+  itemAcceptsOrphanToppings,
   sanitizeDeliveryItemNote,
   sanitizeDeliveryOptionName,
 } from "../lib/delivery/receipt-text";
@@ -64,4 +66,13 @@ test("option-name sanitizer strips glued OCR quantity prefixes", () => {
   assert.equal(sanitizeDeliveryOptionName("IxDụng cụ ăn uống"), "Dụng cụ ăn uống");
   assert.equal(sanitizeDeliveryOptionName("1xCanh theo ngày"), "Canh theo ngày");
   assert.equal(sanitizeDeliveryOptionName("Dụng cụ ăn uống"), "Dụng cụ ăn uống");
+});
+
+test("topping-line detection treats 1x extra rice as an option, not a rice plate", () => {
+  assert.equal(isDeliveryToppingLine("1xCơm Thêm"), true);
+  assert.equal(isDeliveryToppingLine("• 1xCơm Thêm"), true);
+  assert.equal(isDeliveryToppingLine("1x Cơm Tấm Bì"), false);
+  assert.equal(isDeliveryToppingLine("2. Cơm Tấm Bì"), false);
+  assert.equal(itemAcceptsOrphanToppings("Cơm Tấm Bì"), true);
+  assert.equal(itemAcceptsOrphanToppings("Nước Sâm"), false);
 });

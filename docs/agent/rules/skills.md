@@ -30,18 +30,10 @@ tracked `.agents/skills` tree or a parallel agent wiki.
 | Monorepo pipeline/package graph | Root `package.json` + lockfile + turbo | More than one package boundary changes |
 | Registry/preset work | `ui.md` + `packages/ui` | Registry configuration is the actual task |
 
-## The Bug-to-Guard & Skill Codification Pipeline
+## Learning Closeout
 
-Never rely on transient session memory or ad-hoc prompt reminders to avoid past
-mistakes. Every discovered defect, hallucination, or unencoded domain edge case
-must be codified into the repository harness:
-
-1. **Mechanical/Deterministic Failures**: Encode as a test assertion (`*.test.ts`,
-   `*_test.sql`) or a static linter guard (`scripts/check-regression-guards.mjs`).
-2. **Named Domain Regressions**: Document the failure pattern, detection command,
-   and root cause in `tasks/regressions.md`.
-3. **Architectural & Novel Patterns**: Stage in `tasks/lessons.md` until promoted
-   to a canonical rule or ADR per ADR 0021.
+Promotion and deletion follow `workflow.md` (ADR 0021). This file does not own
+that loop.
 
 ## Safety
 

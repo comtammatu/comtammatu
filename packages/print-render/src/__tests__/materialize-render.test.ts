@@ -163,6 +163,15 @@ test("order display helpers", () => {
   );
   assert.equal(
     formatOrderHeaderLabel({
+      orderNumber: "GH-260901-090-NHT",
+      orderType: "delivery",
+      deliveryPlatform: "shopee",
+      externalOrderRef: "O1096-541066134",
+    }),
+    "SHOPEEFOOD\n6134",
+  );
+  assert.equal(
+    formatOrderHeaderLabel({
       orderNumber: "GH-260525-042-PH",
       orderType: "delivery",
       deliveryPlatform: "grab",

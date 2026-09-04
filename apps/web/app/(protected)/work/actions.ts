@@ -303,6 +303,84 @@ export const setWorkTaskStatus = withAction<typeof setWorkTaskStatusSchema, Work
   },
 );
 
+const setWorkTaskDepartmentSchema = z.object({
+  taskId: z.number().int().positive(),
+  expectedRevision: z.number().int().positive(),
+  departmentId: z.number().int().positive(),
+});
+
+export const setWorkTaskDepartment = withAction<
+  typeof setWorkTaskDepartmentSchema,
+  WorkTaskRow
+>(
+  {
+    schema: setWorkTaskDepartmentSchema,
+    roles: WORK_ROUTE_ROLES,
+  },
+  async (data, ctx) => {
+    const { data: canWrite, error: canWriteError } = await ctx.supabase.rpc(
+      "can_write_work_task",
+      { p_task_id: data.taskId },
+    );
+    if (canWriteError || !canWrite) {
+      return { success: false, error: workCopy.forbidden };
+    }
+
+    const service = createServiceClient();
+    const { data: dept, error: deptError } = await service
+      .from("work_departments")
+      .select("id")
+      .eq("id", data.departmentId)
+      .eq("tenant_id", ctx.claims.tenant_id)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (deptError || !dept) {
+      return { success: false, error: workCopy.saveFailed };
+    }
+
+    const { data: updated, error: updateError } = await service
+      .from("work_tasks")
+      .update({
+        department_id: data.departmentId,
+        revision: data.expectedRevision + 1,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", data.taskId)
+      .eq("tenant_id", ctx.claims.tenant_id)
+      .eq("revision", data.expectedRevision)
+      .select(
+        "id, tenant_id, department_id, project_id, title, description, status, priority, assignee_id, due_at, started_at, completed_at, revision, created_by, created_at, updated_at",
+      )
+      .maybeSingle();
+
+    if (updateError || !updated) {
+      const { data: current } = await service
+        .from("work_tasks")
+        .select("revision")
+        .eq("id", data.taskId)
+        .eq("tenant_id", ctx.claims.tenant_id)
+        .maybeSingle();
+
+      if (current && current.revision !== data.expectedRevision) {
+        return { success: false, error: workCopy.revisionConflict };
+      }
+      return { success: false, error: workCopy.saveFailed };
+    }
+
+    await service.from("work_task_events").insert({
+      tenant_id: ctx.claims.tenant_id,
+      task_id: data.taskId,
+      actor_id: ctx.userId,
+      event_kind: "task.department_changed",
+      payload: { department_id: data.departmentId },
+    });
+
+    revalidateWorkPaths(data.taskId);
+    return { success: true, data: mapWorkTaskRow(updated) };
+  },
+);
+
 const emptyWorkActionSchema = z.object({});
 
 export const countMyWorkTasksDue = withAction<
@@ -358,17 +436,10 @@ export const ensurePilotDepartment = withAction<
   },
 );
 
-const scopedWorkTasksSchema = z
-  .object({
-    departmentId: z.number().int().positive().optional(),
-    projectId: z.number().int().positive().optional(),
-  })
-  .refine(
-    (value) =>
-      (value.departmentId != null && value.projectId == null) ||
-      (value.projectId != null && value.departmentId == null),
-    { message: "Exactly one of departmentId or projectId is required." },
-  );
+const scopedWorkTasksSchema = z.object({
+  departmentId: z.number().int().positive().optional(),
+  projectId: z.number().int().positive().optional(),
+});
 
 export const listScopedWorkTasks = withAction<typeof scopedWorkTasksSchema, { items: WorkTaskRow[] }>(
   {
