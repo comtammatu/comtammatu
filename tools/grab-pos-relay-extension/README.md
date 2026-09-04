@@ -47,4 +47,7 @@ Không Remove tiện ích và không Load unpacked đường dẫn khác — vi�
 
 1. Vào `chrome://extensions`, bấm **Reload** đúng tiện ích đang cài (cùng id).
 2. Tải lại tab `merchant.grab.com` (F5) để `injected.js` khớp phiên bản mới.
-3. Nếu ping POS thất bại sau bản 1.2.0 hoặc 1.2.1, mở popup bấm **Kiểm tra** một lần để cấp quyền origin máy chủ.
+3. Nếu ping POS thất bại sau bản 1.2.0 trở lên, mở popup bấm **Kiểm tra** một lần để cấp quyền origin máy chủ.
+4. Bản **1.2.2** giảm tần suất gọi Grab API (poll an toàn 15 giây, hủy đơn 45 giây, backoff khi 403/429). Reload tiện ích rồi F5 tab Grab Merchant.
+5. Bản **1.2.3** gửi lại header phiên/identity mà portal vừa dùng (GrabID, MFE, CSRF), không copy `x-request-id` cũ. Cần Reload + F5 nếu poll của tiện ích vẫn 403 trong khi portal chạy bình thường.
+6. Bản **1.2.4** không lấy nhầm `v2`/`v3`/`v4` từ path API Grab làm merchant ID. Reload + F5 bắt buộc.

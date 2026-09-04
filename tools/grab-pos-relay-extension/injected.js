@@ -7,51 +7,83 @@
   const fetchingOrderIds = new Set();
   let merchantId = null;
   let lastSuccessfulPollAt = Date.now();
+  let lastInterceptedPreparingAt = 0;
+  let lastCancelledPollAt = 0;
+  let rateLimitedUntil = 0;
+  let preparingPollInFlight = false;
+  let cancelledPollInFlight = false;
   let isLeaderTab = true;
 
   function resolveMerchantIdFromLocation(urlLike) {
     const targetUrl = urlLike || (typeof window !== 'undefined' ? window.location?.href : '');
     if (!targetUrl || typeof targetUrl !== 'string') return null;
+    const KNOWN_NON_MERCHANT_SEGMENTS = new Set([
+      'dashboard',
+      'order',
+      'orders',
+      'food',
+      'menu',
+      'inventory',
+      'preparing',
+      'history',
+      'cancelled',
+      'scheduled',
+      'completed',
+      'active',
+    ]);
+
+    function isUsableGrabMerchantId(value) {
+      if (value == null || value === '') return false;
+      const id = String(value);
+      if (KNOWN_NON_MERCHANT_SEGMENTS.has(id.toLowerCase())) return false;
+      // API paths such as /merchant/v4/orders-pagination must not overwrite the real ID.
+      if (/^v\d+$/i.test(id)) return false;
+      return true;
+    }
+
+    function merchantIdFromQuery(searchParams, fallbackUrl) {
+      if (searchParams && typeof searchParams.get === 'function') {
+        const queryId =
+          searchParams.get('merchantID') ||
+          searchParams.get('merchant_id') ||
+          searchParams.get('merchantId');
+        if (isUsableGrabMerchantId(queryId)) return queryId;
+      }
+      const fallbackQuery = String(fallbackUrl || '').match(/(?:merchantID|merchant_id|merchantId)=([^&]+)/i);
+      if (fallbackQuery && isUsableGrabMerchantId(fallbackQuery[1])) return fallbackQuery[1];
+      return null;
+    }
+
+    function merchantIdFromPath(pathname) {
+      const pathMatch = String(pathname || '').match(
+        /\/(?:food\/(?:menu|inventory)|merchants?|order)\/([A-Za-z0-9\-_]+)/i,
+      );
+      const candidate = pathMatch && pathMatch[1];
+      return isUsableGrabMerchantId(candidate) ? candidate : null;
+    }
+
+    function isGrabApiHost(hostname) {
+      const host = String(hostname || '').toLowerCase();
+      return host === 'api.grab.com' || host.endsWith('.api.grab.com');
+    }
+
     try {
       const parsed = new URL(targetUrl, 'https://merchant.grab.com');
-      const KNOWN_NON_MERCHANT_SEGMENTS = new Set([
-        'dashboard',
-        'order',
-        'orders',
-        'food',
-        'menu',
-        'inventory',
-        'preparing',
-        'history',
-        'cancelled',
-        'scheduled',
-        'completed',
-        'active',
-      ]);
-      const pathMatch = parsed.pathname.match(/\/(?:food\/(?:menu|inventory)|merchants?|order)\/([A-Za-z0-9\-_]+)/i);
-      if (pathMatch && pathMatch[1] && !KNOWN_NON_MERCHANT_SEGMENTS.has(pathMatch[1].toLowerCase())) {
-        return pathMatch[1];
-      }
-      const queryId =
-        parsed.searchParams.get('merchantID') ||
-        parsed.searchParams.get('merchant_id') ||
-        parsed.searchParams.get('merchantId');
-      if (queryId && !KNOWN_NON_MERCHANT_SEGMENTS.has(queryId.toLowerCase())) {
-        return queryId;
-      }
+      const queryId = merchantIdFromQuery(parsed.searchParams, targetUrl);
+      if (queryId) return queryId;
+      if (isGrabApiHost(parsed.hostname)) return null;
+      return merchantIdFromPath(parsed.pathname);
     } catch (e) {
-      const fallbackPath = targetUrl.match(/\/(?:food\/(?:menu|inventory)|merchants?|order)\/([A-Za-z0-9\-_]+)/i);
-      if (fallbackPath && fallbackPath[1] && !['preparing', 'history', 'cancelled', 'scheduled', 'completed', 'active'].includes(fallbackPath[1].toLowerCase())) {
-        return fallbackPath[1];
-      }
-      const fallbackQuery = targetUrl.match(/(?:merchantID|merchant_id|merchantId)=([^&]+)/i);
-      if (fallbackQuery && fallbackQuery[1]) return fallbackQuery[1];
+      const queryId = merchantIdFromQuery(null, targetUrl);
+      if (queryId) return queryId;
+      if (/api\.grab\.com/i.test(targetUrl)) return null;
+      return merchantIdFromPath(targetUrl);
     }
-    return null;
   }
 
   function setMerchantId(newId) {
     if (!newId || newId === merchantId) return;
+    if (/^v\d+$/i.test(String(newId))) return;
     merchantId = newId;
     console.log(`[Grab POS Relay] Detected active Grab merchant ID: ${merchantId}`);
     dispatchOrderEvent('MERCHANT_ID_DETECTED', { merchantId });
@@ -128,19 +160,74 @@
   // Grab APIs reuse authentication context observed on the portal's own
   // requests: bearer auth for order reads and cookie-session CSRF for mutations.
   let capturedAuthHeaders = null;
+  let portalSendsRequestId = false;
   let consecutiveAuthFailures = 0;
   let authExpired = false;
 
-  const CAPTURED_HEADER_ALLOWLIST = [
+  const HEADER_REPLAY_ALLOWLIST = [
     'authorization',
     'x-csrf-token',
     'x-client-id',
     'x-grabkit-clientid',
+    'requestsource',
+    'merchantid',
+    'accept',
+    'x-mfe-version',
+    'x-gid-sdk-version',
+    'x-gid-session-id',
+    'x-country-code',
+    'x-country-id',
   ];
 
+  const HEADER_REPLAY_DENYLIST = new Set([
+    'accept-charset',
+    'accept-encoding',
+    'access-control-request-headers',
+    'access-control-request-method',
+    'connection',
+    'content-length',
+    'cookie',
+    'cookie2',
+    'date',
+    'dnt',
+    'expect',
+    'host',
+    'keep-alive',
+    'origin',
+    'referer',
+    'set-cookie',
+    'te',
+    'trailer',
+    'transfer-encoding',
+    'upgrade',
+    'via',
+    'user-agent',
+  ]);
+
+  const HEADER_TRACE_DENYLIST = new Set([
+    'x-request-id',
+    'x-trace-id',
+    'x-correlation-id',
+    'request-id',
+    'traceparent',
+    'tracestate',
+    'x-amzn-trace-id',
+    'x-cloud-trace-context',
+  ]);
+
+  const HEADER_BODY_DENYLIST = new Set([
+    'content-type',
+    'content-length',
+    'content-encoding',
+  ]);
+
   const AUTH_FAILURE_THRESHOLD = 2;
-  const POLL_INTERVAL_MS = 6000;
+  const POLL_INTERVAL_MS = 15000;
+  const CANCELLED_POLL_INTERVAL_MS = 45000;
   const AUTH_RETRY_INTERVAL_MS = 60000;
+  const RATE_LIMIT_BACKOFF_MIN_MS = 60000;
+  const RATE_LIMIT_BACKOFF_MS = 120000;
+  const RATE_LIMIT_BACKOFF_MAX_MS = 180000;
   const ITEM_SYNC_GAP_MS = 400;
   const MAX_MUTATION_ATTEMPTS = 3;
   const MUTATION_TIMEOUT_MS = 15000;
@@ -181,35 +268,166 @@
     return obj;
   }
 
-  // Cache only the authentication context used by Grab Portal requests. Merge
-  // cookie-session CSRF headers with bearer auth observed on other API calls.
-  function captureAuthHeaders(headers) {
-    const obj = headersToObject(headers);
-    const nextHeaders = {};
-    for (const name of CAPTURED_HEADER_ALLOWLIST) {
-      if (obj[name]) nextHeaders[name] = obj[name];
+  function isReplayablePortalHeader(name) {
+    const key = String(name || '').toLowerCase();
+    if (!key) return false;
+    if (HEADER_REPLAY_DENYLIST.has(key) || HEADER_BODY_DENYLIST.has(key) || HEADER_TRACE_DENYLIST.has(key)) {
+      return false;
     }
-    if (nextHeaders.authorization || nextHeaders['x-csrf-token']) {
-      capturedAuthHeaders = {
-        ...(capturedAuthHeaders || {}),
-        ...nextHeaders,
-      };
+    if (key.startsWith('proxy-') || key.startsWith('sec-') || key.startsWith('x-b3-')) {
+      return false;
     }
+    if (HEADER_REPLAY_ALLOWLIST.includes(key)) return true;
+    return key.startsWith('x-gid-') || key.startsWith('x-grab') || key.startsWith('x-mfe-');
   }
 
-  function buildGrabHeaders() {
+  function selectReplayablePortalHeaders(headerMap) {
+    const next = {};
+    for (const [name, value] of Object.entries(headerMap || {})) {
+      if (!isReplayablePortalHeader(name)) continue;
+      if (value == null || String(value).trim() === '') continue;
+      next[name.toLowerCase()] = String(value);
+    }
+    return next;
+  }
+
+  function shouldAdoptPortalHeaders(selected) {
+    return Object.keys(selected || {}).length > 0;
+  }
+
+  function hasReplayableSession(captured) {
+    const headers = captured || {};
+    return Boolean(
+      headers.authorization ||
+      headers['x-csrf-token'] ||
+      headers['x-gid-session-id'],
+    );
+  }
+
+  function mergeCapturedPortalHeaders(current, incoming) {
+    if (!shouldAdoptPortalHeaders(incoming)) return current;
+    return { ...(current || {}), ...incoming };
+  }
+
+  function buildGrabHeadersFromCaptured(captured, activeMerchantId, overrides) {
     return {
       accept: 'application/json',
       requestsource: 'troyPortal',
-      merchantid: merchantId,
+      merchantid: activeMerchantId,
       'x-client-id': 'GrabMerchant-Portal',
       'x-grabkit-clientid': 'grabmerchant-portal',
-      ...(capturedAuthHeaders || {}),
+      ...(captured || {}),
+      ...(activeMerchantId ? { merchantid: String(activeMerchantId) } : {}),
+      ...(overrides || {}),
     };
   }
 
+  function applyFreshRequestIds(headers, shouldSend, createId) {
+    const next = { ...(headers || {}) };
+    delete next['x-request-id'];
+    delete next['x-trace-id'];
+    if (shouldSend) {
+      const requestId = createId();
+      if (requestId) next['x-request-id'] = requestId;
+    }
+    return next;
+  }
+
+  function createRequestId() {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+    return `grab-relay-${Date.now()}`;
+  }
+
+  // Replay portal identity/session headers observed on api.grab.com. Skip
+  // forbidden, body, and per-request tracing headers; those either cannot be
+  // set by script or look like a replayed request to Grab's WAF.
+  function captureAuthHeaders(headers) {
+    const obj = headersToObject(headers);
+    if (obj['x-request-id']) portalSendsRequestId = true;
+    capturedAuthHeaders = mergeCapturedPortalHeaders(
+      capturedAuthHeaders,
+      selectReplayablePortalHeaders(obj),
+    );
+  }
+
+  function buildGrabHeaders(overrides) {
+    return applyFreshRequestIds(
+      buildGrabHeadersFromCaptured(capturedAuthHeaders, merchantId, overrides),
+      portalSendsRequestId,
+      createRequestId,
+    );
+  }
+
+  function nextPollDelayMs(now, authExpired, rateLimitedUntil, pollIntervalMs, authRetryMs) {
+    if (rateLimitedUntil > now) {
+      return Math.max(rateLimitedUntil - now, 1000);
+    }
+    return authExpired ? authRetryMs : pollIntervalMs;
+  }
+
+  function shouldSkipActivePreparingPoll(now, lastInterceptedPreparingAt, force, skipWindowMs) {
+    if (force) return false;
+    return (
+      Number.isFinite(lastInterceptedPreparingAt) &&
+      lastInterceptedPreparingAt > 0 &&
+      now - lastInterceptedPreparingAt < skipWindowMs
+    );
+  }
+
+  function shouldPollCancelled(now, lastCancelledPollAt, force, intervalMs) {
+    if (force) return true;
+    return (
+      !Number.isFinite(lastCancelledPollAt) ||
+      lastCancelledPollAt <= 0 ||
+      now - lastCancelledPollAt >= intervalMs
+    );
+  }
+
+  function pollBackoffMs(retryAfterHeader, minMs, defaultMs, maxMs) {
+    const retryAfterSeconds = retryAfterHeader ? Number(retryAfterHeader) : NaN;
+    if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds >= 0) {
+      return Math.min(Math.max(retryAfterSeconds * 1000, minMs), maxMs);
+    }
+    return defaultMs;
+  }
+
+  function nextRateLimitedUntil(now, status, backoffMs, currentUntil) {
+    if (status !== 403 && status !== 429) return currentUntil;
+    return Math.max(currentUntil || 0, now + backoffMs);
+  }
+
+  function shouldCountAuthFailure(status, now, lastInterceptedPreparingAt, healthyInterceptWindowMs) {
+    if (status === 401) return true;
+    if (status !== 403) return false;
+    return !(
+      Number.isFinite(lastInterceptedPreparingAt) &&
+      lastInterceptedPreparingAt > 0 &&
+      now - lastInterceptedPreparingAt < healthyInterceptWindowMs
+    );
+  }
+
+  function shouldBlockGrabMutation(now, authExpired, consecutiveAuthFailures, rateLimitedUntil) {
+    return authExpired || consecutiveAuthFailures > 0 || now < rateLimitedUntil;
+  }
+
+  function delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
   function noteAuthFailure(status, url) {
-    if (status !== 401 && status !== 403) return;
+    if (status === 429) return;
+    if (
+      !shouldCountAuthFailure(
+        status,
+        Date.now(),
+        lastInterceptedPreparingAt,
+        POLL_INTERVAL_MS * 2,
+      )
+    ) {
+      return;
+    }
     consecutiveAuthFailures += 1;
     if (!authExpired && consecutiveAuthFailures >= AUTH_FAILURE_THRESHOLD) {
       authExpired = true;
@@ -227,8 +445,27 @@
     }
   }
 
-  function delay(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+  function applyRateLimitFromStatus(status, retryAfterHeader, options = {}) {
+    const throttle403 = options.fromPoll === true && status === 403;
+    if (status !== 429 && !throttle403) return;
+    if (throttle403 && !hasReplayableSession(capturedAuthHeaders)) return;
+    const backoffMs = pollBackoffMs(
+      retryAfterHeader,
+      RATE_LIMIT_BACKOFF_MIN_MS,
+      RATE_LIMIT_BACKOFF_MS,
+      RATE_LIMIT_BACKOFF_MAX_MS,
+    );
+    rateLimitedUntil = nextRateLimitedUntil(Date.now(), status, backoffMs, rateLimitedUntil);
+  }
+
+  function grabMutationBlockReason(now) {
+    if (!shouldBlockGrabMutation(now, authExpired, consecutiveAuthFailures, rateLimitedUntil)) {
+      return null;
+    }
+    if (now < rateLimitedUntil) {
+      return { status: 429, error: 'Grab API rate limited' };
+    }
+    return { status: 401, error: 'Grab session expired' };
   }
 
   function enqueueItemSync(operation) {
@@ -287,6 +524,9 @@
       }
 
       noteAuthFailure(response.status, url);
+      applyRateLimitFromStatus(response.status, response.headers.get('retry-after'), {
+        fromPoll: false,
+      });
       const retryable = response.status === 429 || response.status >= 500;
       if (!retryable || attempt === MAX_MUTATION_ATTEMPTS - 1) {
         return { response, error: await responseError(response) };
@@ -483,12 +723,21 @@
     const response = await originalFetch.apply(this, args);
 
     if (isGrabApiUrl(url)) {
-      if (response.ok) noteAuthSuccess();
-      else noteAuthFailure(response.status, url);
+      if (response.ok) {
+        lastSuccessfulPollAt = Date.now();
+      } else {
+        noteAuthFailure(response.status, url);
+        applyRateLimitFromStatus(response.status, response.headers.get('retry-after'), {
+          fromPoll: true,
+        });
+      }
     }
 
     try {
-      if (url.includes('/orders-pagination') || url.includes('/food/merchant/v3/orders/')) {
+      if (
+        response.ok &&
+        (url.includes('/orders-pagination') || url.includes('/food/merchant/v3/orders/'))
+      ) {
         const clone = response.clone();
         clone
           .json()
@@ -497,6 +746,7 @@
               dispatchOrderEvent('ORDERS_PAGINATION', { url, data, merchantId });
 
               if (isOrderEligibleForRelay(null, url)) {
+                lastInterceptedPreparingAt = Date.now();
                 for (const order of data.orders) {
                   if (isOrderEligibleForRelay(order, url) && shouldFetchOrder(order)) {
                     fetchingOrderIds.add(order.orderID);
@@ -538,16 +788,24 @@
         }
       } else {
         noteAuthFailure(res.status, url);
+        applyRateLimitFromStatus(res.status, res.headers.get('retry-after'), { fromPoll: true });
       }
     } catch (err) {
       console.error(`[Grab POS Relay] Failed fetching detail for order ${orderId}:`, err);
     }
   }
 
-  // Active polling loop using native page fetch. Backs off to a slow probe
-  // while the Grab session is expired so recovery is detected on its own.
-  async function pollCancelledOrders() {
+  // Active polling is a safety net. Portal intercept is the primary order path.
+  async function pollCancelledOrders(options = {}) {
     if (!isLeaderTab || !merchantId) return;
+    if (!hasReplayableSession(capturedAuthHeaders)) return;
+    if (cancelledPollInFlight) return;
+    const now = Date.now();
+    if (now < rateLimitedUntil) return;
+    if (!shouldPollCancelled(now, lastCancelledPollAt, options.force === true, CANCELLED_POLL_INTERVAL_MS)) {
+      return;
+    }
+    cancelledPollInFlight = true;
     try {
       const url = `https://api.grab.com/delvplatformapi/merchant/v4/orders-pagination?AutoAcceptGroup=1&merchantID=${merchantId}&PageType=Cancelled&searchToken=&size=10`;
       const res = await originalFetch(url, {
@@ -555,6 +813,7 @@
         headers: buildGrabHeaders(),
       });
       if (res.ok) {
+        lastCancelledPollAt = Date.now();
         noteAuthSuccess();
         const data = await res.json();
         if (Array.isArray(data.orders)) {
@@ -569,14 +828,32 @@
         }
       } else {
         noteAuthFailure(res.status, url);
+        applyRateLimitFromStatus(res.status, res.headers.get('retry-after'), { fromPoll: true });
       }
     } catch (err) {
       // Network errors are not auth signals; keep polling quietly.
+    } finally {
+      cancelledPollInFlight = false;
     }
   }
 
-  async function pollOrders() {
+  async function pollOrders(options = {}) {
     if (!isLeaderTab || !merchantId) return;
+    if (!hasReplayableSession(capturedAuthHeaders)) return;
+    if (preparingPollInFlight) return;
+    const now = Date.now();
+    if (now < rateLimitedUntil) return;
+    if (
+      shouldSkipActivePreparingPoll(
+        now,
+        lastInterceptedPreparingAt,
+        options.force === true,
+        POLL_INTERVAL_MS,
+      )
+    ) {
+      return;
+    }
+    preparingPollInFlight = true;
     try {
       const url = `https://api.grab.com/delvplatformapi/merchant/v4/orders-pagination?AutoAcceptGroup=1&merchantID=${merchantId}&PageType=PreparingV2&searchToken=&size=50`;
       const res = await originalFetch(url, {
@@ -600,9 +877,12 @@
         }
       } else {
         noteAuthFailure(res.status, url);
+        applyRateLimitFromStatus(res.status, res.headers.get('retry-after'), { fromPoll: true });
       }
     } catch (err) {
       // Network errors are not auth signals; keep polling quietly.
+    } finally {
+      preparingPollInFlight = false;
     }
   }
 
@@ -621,15 +901,16 @@
       });
       return;
     }
-    if (authExpired) {
+    const blocked = grabMutationBlockReason(Date.now());
+    if (blocked) {
       dispatchOrderEvent('SYNC_STATUS_RESULT', {
         requestId,
         itemId,
         availableStatus: null,
         statusStr: null,
         success: false,
-        status: 401,
-        error: 'Grab session expired',
+        status: blocked.status,
+        error: blocked.error,
       });
       return;
     }
@@ -735,15 +1016,16 @@
       });
       return;
     }
-    if (authExpired) {
+    const blocked = grabMutationBlockReason(Date.now());
+    if (blocked) {
       dispatchOrderEvent('SYNC_MODIFIER_STATUS_RESULT', {
         requestId,
         itemId,
         availableStatus: null,
         statusStr: null,
         success: false,
-        status: 401,
-        error: 'Grab session expired',
+        status: blocked.status,
+        error: blocked.error,
       });
       return;
     }
@@ -852,15 +1134,16 @@
       });
       return;
     }
-    if (authExpired) {
+    const blocked = grabMutationBlockReason(Date.now());
+    if (blocked) {
       dispatchOrderEvent('SYNC_STOCK_RESULT', {
         requestId,
         itemId,
         currentStock,
         enableIms: false,
         success: false,
-        status: 401,
-        error: 'Grab session expired',
+        status: blocked.status,
+        error: blocked.error,
       });
       return;
     }
@@ -949,15 +1232,23 @@
       }
 
       this.addEventListener('load', function () {
-        if (this.status >= 200 && this.status < 300) noteAuthSuccess();
-        else noteAuthFailure(this.status, this._relayUrl);
+        if (this.status >= 200 && this.status < 300) {
+          lastSuccessfulPollAt = Date.now();
+        } else {
+          noteAuthFailure(this.status, this._relayUrl);
+          applyRateLimitFromStatus(this.status, this.getResponseHeader('Retry-After'), {
+            fromPoll: true,
+          });
+        }
 
         try {
+          if (this.status < 200 || this.status >= 300) return;
           const url = this._relayUrl || '';
           const data = JSON.parse(this.responseText);
           if (url.includes('/orders-pagination') && Array.isArray(data.orders)) {
             dispatchOrderEvent('ORDERS_PAGINATION', { url, data, merchantId });
             if (isOrderEligibleForRelay(null, url)) {
+              lastInterceptedPreparingAt = Date.now();
               for (const order of data.orders) {
                 if (isOrderEligibleForRelay(order, url) && shouldFetchOrder(order)) {
                   fetchingOrderIds.add(order.orderID);
@@ -1013,18 +1304,20 @@
         dispatchedOrderFingerprints.delete(payload.orderID);
       }
     } else if (command === 'RECOVER_MISSED_ORDERS') {
-      pollOrders();
-      pollCancelledOrders();
+      void (async () => {
+        await pollOrders({ force: true });
+        await pollCancelledOrders({ force: true });
+      })();
     }
   });
 
-  // Self-scheduling poll loop: slows to a probe while the session is expired.
+  // Self-scheduling poll loop: slows to a probe while rate-limited or expired.
   function schedulePoll() {
     setTimeout(async () => {
       await pollOrders();
       await pollCancelledOrders();
       schedulePoll();
-    }, authExpired ? AUTH_RETRY_INTERVAL_MS : POLL_INTERVAL_MS);
+    }, nextPollDelayMs(Date.now(), authExpired, rateLimitedUntil, POLL_INTERVAL_MS, AUTH_RETRY_INTERVAL_MS));
   }
 
   setTimeout(async () => {

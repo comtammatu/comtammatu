@@ -405,17 +405,14 @@ test("stock normalization enforces the Portal boundary values", () => {
   }
 });
 
-test("Grab mutation headers retain only portal authentication context", () => {
-  assert.match(
-    injectedSource,
-    /const CAPTURED_HEADER_ALLOWLIST = \[[\s\S]*'authorization'[\s\S]*'x-csrf-token'[\s\S]*'x-client-id'[\s\S]*'x-grabkit-clientid'[\s\S]*\]/,
-  );
-  assert.match(
-    injectedSource,
-    /nextHeaders\.authorization \|\| nextHeaders\['x-csrf-token'\]/,
-  );
+test("Grab mutation headers replay portal identity without tracing or forbidden headers", () => {
+  assert.match(injectedSource, /const HEADER_REPLAY_ALLOWLIST = \[/);
+  assert.match(injectedSource, /'x-gid-session-id'/);
+  assert.match(injectedSource, /const HEADER_TRACE_DENYLIST = new Set\(/);
+  assert.match(injectedSource, /'x-request-id'/);
   assert.match(injectedSource, /'x-client-id': 'GrabMerchant-Portal'/);
   assert.match(injectedSource, /'x-grabkit-clientid': 'grabmerchant-portal'/);
+  assert.doesNotMatch(injectedSource, /const CAPTURED_HEADER_ALLOWLIST/);
 });
 
 test("Grab item mutations use bounded slots instead of one exclusive tail", () => {
@@ -524,6 +521,31 @@ test("Grab injected script proactively resolves merchant ID across all merchant 
     resolveMerchantIdFromLocation("https://merchant.grab.com/dashboard"),
     null,
   );
+  assert.equal(
+    resolveMerchantIdFromLocation(
+      "https://api.grab.com/delvplatformapi/merchant/v4/orders-pagination?AutoAcceptGroup=1&merchantID=5-CZFK4JDEDCNATA&PageType=PreparingV2&searchToken=&size=50",
+    ),
+    "5-CZFK4JDEDCNATA",
+  );
+  assert.equal(
+    resolveMerchantIdFromLocation(
+      "https://api.grab.com/food/merchant/v2/modifiers/available",
+    ),
+    null,
+  );
+  assert.equal(
+    resolveMerchantIdFromLocation(
+      "https://api.grab.com/food/merchant/v3/orders/order-1",
+    ),
+    null,
+  );
+  assert.equal(
+    resolveMerchantIdFromLocation(
+      "https://api.grab.com/food/merchant/v1/items/available-status",
+    ),
+    null,
+  );
+  assert.match(injectedSource, /if \(\/\^v\\d\+\$\/i\.test\(String\(newId\)\)\) return;/);
 });
 
 test("Grab mutations guard against missing merchant ID and enforce circuit breaker on 400", () => {

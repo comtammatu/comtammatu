@@ -452,7 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   btnRecoverOrders.addEventListener('click', async () => {
     setButtonBusy(btnRecoverOrders, true, 'Đang khôi phục');
-    chrome.runtime.sendMessage({ action: 'RECOVER_MISSED_ORDERS' }, () => {
+    chrome.runtime.sendMessage({ action: 'RECOVER_MISSED_ORDERS', force: true }, () => {
       setButtonBusy(btnRecoverOrders, false, 'Đang khôi phục');
       if (chrome.runtime.lastError) {
         showToast('Không khôi phục được. Mở lại popup.', 'error');

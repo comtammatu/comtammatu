@@ -252,13 +252,17 @@ async function processRelayQueue() {
   });
 }
 
-async function recoverGrabTabs() {
+async function recoverGrabTabs(options = {}) {
   processRelayQueue().catch(() => {});
   try {
     const tabs = await chrome.tabs.query(RELAY_TAB_QUERY);
+    const message = {
+      action: 'RECOVER_MISSED_ORDERS',
+      force: options.force === true,
+    };
     for (const tab of tabs) {
       if (tab.id === undefined) continue;
-      chrome.tabs.sendMessage(tab.id, { action: 'RECOVER_MISSED_ORDERS' }, () => {
+      chrome.tabs.sendMessage(tab.id, message, () => {
         void chrome.runtime.lastError;
       });
     }
@@ -326,7 +330,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
   if (request.action === 'RECOVER_MISSED_ORDERS') {
-    recoverGrabTabs().then(() => sendResponse({ success: true }));
+    recoverGrabTabs({ force: request.force === true }).then(() => sendResponse({ success: true }));
     return true;
   }
 });

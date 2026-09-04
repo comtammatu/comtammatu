@@ -1,6 +1,6 @@
 // content.js - Content script running in merchant.grab.com
 (function () {
-  const extVersion = chrome.runtime.getManifest()?.version || '1.2.1';
+  const extVersion = chrome.runtime.getManifest()?.version || '1.2.4';
   console.log(`[Grab POS Relay v${extVersion}] Content script active`);
 
   // Inject injected.js into page context
@@ -69,6 +69,24 @@
     );
   }
 
+  function shouldRunDebouncedRecovery(now, lastAt, debounceMs) {
+    return !Number.isFinite(lastAt) || lastAt <= 0 || now - lastAt >= debounceMs;
+  }
+
+  function recoverMissedOrders(options = {}) {
+    const now = Date.now();
+    if (
+      options.debounced === true &&
+      !shouldRunDebouncedRecovery(now, lastRecoveryAt, RECOVERY_DEBOUNCE_MS)
+    ) {
+      return false;
+    }
+    lastRecoveryAt = now;
+    sendCommandToInjected('RECOVER_MISSED_ORDERS', {});
+    if (isLeaderTab) pollPosItemStatus(false);
+    return true;
+  }
+
   const VIETNAM_BUSINESS_DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
     timeZone: 'Asia/Ho_Chi_Minh',
     year: 'numeric',
@@ -87,6 +105,7 @@
   const LEADER_STORAGE_KEY = 'grabRelayLeader';
   const ITEM_STATUS_POLL_INTERVAL_MS = 10 * 1000;
   const INITIAL_ITEM_STATUS_POLL_DELAY_MS = 2 * 1000;
+  const RECOVERY_DEBOUNCE_MS = 30 * 1000;
   const STOCK_FLUSH_DELAY_MS = 5 * 60 * 1000;
   const STOCK_RETRY_DELAY_MS = 30 * 1000;
   const LOW_STOCK_IMMEDIATE_THRESHOLD = 3;
@@ -111,7 +130,7 @@
   ]);
   try {
     const locMatch = window.location.pathname.match(/\/(?:food\/(?:menu|inventory)|merchants?|order)\/([A-Za-z0-9\-_]+)/i);
-    if (locMatch && locMatch[1] && !KNOWN_NON_MERCHANT_SEGMENTS.has(locMatch[1].toLowerCase())) {
+    if (locMatch && locMatch[1] && !KNOWN_NON_MERCHANT_SEGMENTS.has(locMatch[1].toLowerCase()) && !/^v\d+$/i.test(locMatch[1])) {
       activeGrabMerchantId = locMatch[1];
     }
   } catch (e) {}
@@ -121,6 +140,7 @@
   const pendingStockUpdates = new Map(); // itemId -> { currentStock, signature, dueAt }
   const pendingItemSyncs = new Map(); // operation:itemId -> { requestId, signature, desiredValue, scopeKey }
   let grabSessionExpired = false;
+  let lastRecoveryAt = 0;
   let itemStatusPollInFlight = false;
   let forceSyncQueued = false;
   let itemStatusBusinessDateKey = getVietnamBusinessDateKey();
@@ -706,8 +726,7 @@
       return;
     }
     if (request.action === 'RECOVER_MISSED_ORDERS') {
-      sendCommandToInjected('RECOVER_MISSED_ORDERS', {});
-      if (isLeaderTab) pollPosItemStatus(false);
+      recoverMissedOrders({ debounced: request.force !== true });
       sendResponse({ success: true });
     }
   });
@@ -735,8 +754,7 @@
     if (type === 'AUTH_RECOVERED') {
       grabSessionExpired = false;
       updateBadge('✅ Đã kết nối lại Grab — tiếp tục trực đơn');
-      sendCommandToInjected('RECOVER_MISSED_ORDERS', {});
-      if (isLeaderTab) pollPosItemStatus(false);
+      recoverMissedOrders({ debounced: false });
       return;
     }
 
@@ -909,12 +927,11 @@
 
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
-    sendCommandToInjected('RECOVER_MISSED_ORDERS', {});
-    if (isLeaderTab) pollPosItemStatus(false);
+    recoverMissedOrders({ debounced: true });
   });
-  window.addEventListener('pageshow', () => {
-    sendCommandToInjected('RECOVER_MISSED_ORDERS', {});
-    if (isLeaderTab) pollPosItemStatus(false);
+  window.addEventListener('pageshow', (event) => {
+    if (!event.persisted) return;
+    recoverMissedOrders({ debounced: true });
   });
 
   beatLeaderLock();
