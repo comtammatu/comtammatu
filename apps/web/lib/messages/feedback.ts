@@ -53,4 +53,6 @@ export const feedbackCopy = {
   placeholderBranchWide: "Ví dụ: Cổng vào",
   placeholderWithTable: "Ví dụ: Bàn 5 / Cổng vào",
   labelRequired: "Nhập nhãn mã QR.",
+  resolveTaskCta: "Xử lý việc",
+  resolveTaskCskhCta: "Xử lý việc CSKH",
 } as const;

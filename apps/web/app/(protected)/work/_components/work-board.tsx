@@ -2,7 +2,11 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { AlertTriangle as IconAlertTriangle, User as IconUser } from "lucide-react";
+import {
+  AlertTriangle as IconAlertTriangle,
+  ExternalLink as IconExternalLink,
+  User as IconUser,
+} from "lucide-react";
 import {
   formatISODateParts,
   formatVNDate,
@@ -32,6 +36,7 @@ import {
   WORK_TASK_VIEW_SHELL,
 } from "../_lib/compose-styles";
 import { workHref, type ParsedWorkParams } from "../_lib/params";
+import { resolveWorkTaskDocumentLink } from "../_lib/document-links";
 
 const BOARD_COLUMNS: WorkTaskStatus[] = [
   "backlog",
@@ -223,6 +228,10 @@ export function WorkBoard({
 
   function renderCard(task: WorkTaskRow) {
     const { isIncident, subTag, cleanTitle } = parseTaskTitle(task.title);
+    const docLink = resolveWorkTaskDocumentLink({
+      title: task.title,
+      description: task.description,
+    });
     const assigneeName = task.assigneeId ? assigneeNames[task.assigneeId] : null;
 
     const now = Date.now();
@@ -260,6 +269,18 @@ export function WorkBoard({
                 <Badge variant="outline" className="shrink-0 text-2xs">
                   {subTag}
                 </Badge>
+              ) : null}
+              {docLink ? (
+                <a
+                  href={docLink.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-2xs font-medium text-primary hover:bg-primary/20 hover:underline"
+                >
+                  <span>{docLink.label}</span>
+                  <IconExternalLink className="size-2.5" />
+                </a>
               ) : null}
             </div>
             <Badge

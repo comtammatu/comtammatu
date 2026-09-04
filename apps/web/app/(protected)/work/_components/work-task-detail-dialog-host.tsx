@@ -10,6 +10,7 @@ import { AppDetailFooter, AppEmptyState } from "@/components/surface";
 import { workCopy } from "@lib/messages/work";
 import type {
   WorkChecklistItemRow,
+  WorkTaskAttachmentRow,
   WorkTaskCommentRow,
   WorkTaskRow,
 } from "../actions";
@@ -25,6 +26,7 @@ export type WorkTaskDetailPayload = {
   assigneeOptions: Array<{ id: string; fullName: string }>;
   comments: WorkTaskCommentRow[];
   checklist: WorkChecklistItemRow[];
+  attachments: WorkTaskAttachmentRow[];
 };
 
 function WorkTaskDetailCloseFooter({ onClose }: { onClose: () => void }) {
@@ -54,6 +56,7 @@ function WorkTaskDetailDocumentDialog({
     assigneeOptions: detail.assigneeOptions,
     initialComments: detail.comments,
     initialChecklist: detail.checklist,
+    initialAttachments: detail.attachments,
     onSaved,
   });
 

@@ -534,6 +534,24 @@ function SessionContextBar({
                   formatVND(session.cash_difference),
                 )}
           </p>
+          {breached && !isOpen ? (
+            <div className="mt-1">
+              <Button
+                variant="link"
+                size="sm"
+                className="h-auto p-0 text-xs text-primary underline"
+                render={
+                  <Link
+                    href={`/work?q=Ca+POS+%23${session.id}`}
+                    target="_blank"
+                  />
+                }
+              >
+                <span>{messages.settings.posSessions.viewWorkspaceTask}</span>
+                <span aria-hidden="true">↗</span>
+              </Button>
+            </div>
+          ) : null}
         </div>
       </BranchOperatorControlBar>
       {onOpenInsights || isOpen ? (
@@ -745,6 +763,22 @@ function SessionSettlementPanel({
                 )}
               </span>
             ) : null}
+            <div className="mt-3">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1 text-xs"
+                render={
+                  <Link
+                    href={`/work?q=Ca+POS+%23${session.id}`}
+                    target="_blank"
+                  />
+                }
+              >
+                <span>{messages.settings.posSessions.viewWorkspaceTask}</span>
+                <span aria-hidden="true">↗</span>
+              </Button>
+            </div>
           </AlertDescription>
         </Alert>
       ) : !isOpen && (session.cash_difference ?? 0) === 0 ? (

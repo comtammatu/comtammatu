@@ -5,6 +5,7 @@ import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
 import type { ActionResult } from "@comtammatu/shared/types";
+import { formatVND } from "@comtammatu/shared/format";
 import { messages } from "@lib/messages";
 import {
   getAuthContext,
@@ -553,11 +554,55 @@ export const closePosSession = withActionPositional(
       }
     }
 
+    const closeData = data as Record<string, unknown> | null;
+    const cashDiff = Number(closeData?.cash_difference ?? 0);
+    let autoCreatedTaskId: number | undefined;
+
+    if (Math.abs(cashDiff) >= 100_000) {
+      try {
+        const { data: branchRow } = await supabase
+          .from("branches")
+          .select("name")
+          .eq("id", session.branch_id)
+          .maybeSingle();
+
+        const branchName = branchRow?.name ?? `Chi nhánh #${session.branch_id}`;
+        const diffFormatted = (cashDiff > 0 ? "+" : "") + formatVND(cashDiff);
+        const prio = Math.abs(cashDiff) >= 500_000 ? "urgent" : "high";
+
+        const title = `[Sự cố - Tiền két] Ca POS #${sessionId} tại ${branchName} lệch ${diffFormatted}`;
+        const description = [
+          `Chi nhánh: ${branchName} (Mã: #${session.branch_id})`,
+          `Ca POS: #${sessionId}`,
+          `Tiền khai báo đóng ca: ${formatVND(closingCash)}`,
+          `Tiền kỳ vọng hệ thống: ${formatVND(Number(closeData?.expected_cash ?? 0))}`,
+          `Chênh lệch tiền mặt: ${diffFormatted}`,
+          `Ghi chú đóng ca: ${note || "Không có"}`,
+        ].join("\n");
+
+        const incRes = await supabase.rpc("create_branch_incident_task", {
+          p_branch_id: session.branch_id,
+          p_category: "service",
+          p_title: title,
+          p_description: description,
+          p_priority: prio,
+        });
+
+        if (incRes.data) {
+          const incObj = incRes.data as { task_id?: number };
+          autoCreatedTaskId = incObj.task_id ? Number(incObj.task_id) : undefined;
+        }
+      } catch {
+        // Non-blocking: shift close has already succeeded
+      }
+    }
+
     return {
       success: true,
       data: {
         ...(data as Record<string, unknown>),
         print_warning: printWarning,
+        auto_task_id: autoCreatedTaskId,
       },
     };
   },

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Select,
@@ -8,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
+import { Button } from "@comtammatu/ui/components/button";
 import { BRANCH_VI } from "@comtammatu/shared/messages";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import {
@@ -23,6 +25,7 @@ import {
   Item,
   ItemContent,
   ItemDescription,
+  ItemFooter,
   ItemHeader,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
@@ -127,6 +130,28 @@ export function FeedbackInbox({
       header: "QR",
       render: (item) => item.qrLabel,
     },
+    {
+      key: "actions",
+      header: "",
+      className: "text-right",
+      render: (item) =>
+        item.rating <= 2 ? (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 gap-1 text-xs text-destructive hover:bg-destructive/10"
+            render={
+              <Link
+                href={`/work?q=Ph%E1%BA%A3n+h%E1%BB%93i+%23${item.id}`}
+                target="_blank"
+              />
+            }
+          >
+            <span>{feedbackCopy.resolveTaskCta}</span>
+            <span aria-hidden="true">↗</span>
+          </Button>
+        ) : null,
+    },
   ];
 
   return (
@@ -220,6 +245,24 @@ export function FeedbackInbox({
                 QR: {item.qrLabel}
               </ItemDescription>
             </ItemContent>
+            {item.rating <= 2 ? (
+              <ItemFooter className="pt-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 gap-1 text-xs text-destructive hover:bg-destructive/10"
+                  render={
+                    <Link
+                      href={`/work?q=Ph%E1%BA%A3n+h%E1%BB%93i+%23${item.id}`}
+                      target="_blank"
+                    />
+                  }
+                >
+                  <span>{feedbackCopy.resolveTaskCskhCta}</span>
+                  <span aria-hidden="true">↗</span>
+                </Button>
+              </ItemFooter>
+            ) : null}
           </Item>
         )}
       />

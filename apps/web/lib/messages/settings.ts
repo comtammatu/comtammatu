@@ -949,6 +949,7 @@ export const settings = {
     resolving: "Đang lưu",
     resolveSuccess: "Đã ghi nhận xử lý lệch quỹ",
     resolveFailed: "Không thể lưu xử lý lệch quỹ",
+    viewWorkspaceTask: "Xem việc đối soát trên Workspace",
     cashMatched: "Số dư khớp hoàn toàn.",
     totalBills: "Tổng đơn",
     paidRevenue: "Doanh thu (đã thanh toán)",

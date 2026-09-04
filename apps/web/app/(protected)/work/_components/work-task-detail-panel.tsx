@@ -15,19 +15,31 @@ import {
 } from "@comtammatu/ui/components/select";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
+import {
+  Download as IconDownload,
+  ExternalLink as IconExternalLink,
+  FileText as IconFileText,
+  Paperclip as IconPaperclip,
+  Trash2 as IconTrash2,
+} from "lucide-react";
 import { useFormControlSize } from "@/components/form/control-size";
+import { confirm } from "@/components/confirm-dialog";
 import { AppDetailFooter, AppSection } from "@/components/surface";
 import {
   addWorkTaskComment,
+  deleteWorkTaskAttachment,
   setWorkTaskStatus,
   updateWorkTask,
+  uploadWorkTaskAttachmentFile,
   upsertWorkChecklistItem,
   type WorkChecklistItemRow,
+  type WorkTaskAttachmentRow,
   type WorkTaskCommentRow,
   type WorkTaskPriority,
   type WorkTaskRow,
   type WorkTaskStatus,
 } from "../actions";
+import { resolveWorkTaskDocumentLink } from "../_lib/document-links";
 import {
   WORK_TASK_PRIORITIES,
   WORK_TASK_STATUSES,
@@ -44,6 +56,7 @@ export type WorkTaskDetailFormOptions = {
   assigneeOptions: AssigneeOption[];
   initialComments: WorkTaskCommentRow[];
   initialChecklist: WorkChecklistItemRow[];
+  initialAttachments?: WorkTaskAttachmentRow[];
   onSaved?: () => void;
 };
 
@@ -67,6 +80,7 @@ export function useWorkTaskDetailForm({
   assigneeOptions: _assigneeOptions,
   initialComments,
   initialChecklist,
+  initialAttachments,
   onSaved,
 }: WorkTaskDetailFormOptions) {
   const router = useRouter();
@@ -79,6 +93,10 @@ export function useWorkTaskDetailForm({
   const [assigneeId, setAssigneeId] = useState(task.assigneeId ?? "none");
   const [comments, setComments] = useState(initialComments);
   const [checklist, setChecklist] = useState(initialChecklist);
+  const [attachments, setAttachments] = useState<WorkTaskAttachmentRow[]>(
+    initialAttachments ?? [],
+  );
+  const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
   const [commentBody, setCommentBody] = useState("");
   const [checklistTitle, setChecklistTitle] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -202,6 +220,45 @@ export function useWorkTaskDetailForm({
     });
   }
 
+  async function handleUploadFile(file: File) {
+    setIsUploadingAttachment(true);
+    try {
+      const formData = new FormData();
+      formData.append("taskId", String(task.id));
+      formData.append("file", file);
+      const res = await uploadWorkTaskAttachmentFile(formData);
+      if (!res.success || !res.data) {
+        toast.error(res.error ?? workCopy.attachmentUploadFailed);
+        return;
+      }
+      setAttachments((prev) => [...prev, res.data!]);
+      toast.success(workCopy.attachmentUpload);
+      router.refresh();
+      onSaved?.();
+    } catch {
+      toast.error(workCopy.attachmentUploadFailed);
+    } finally {
+      setIsUploadingAttachment(false);
+    }
+  }
+
+  function handleDeleteAttachment(attachmentId: number) {
+    startTransition(async () => {
+      const res = await deleteWorkTaskAttachment({
+        taskId: task.id,
+        attachmentId,
+      });
+      if (!res.success) {
+        handleMutationError(res.error ?? workCopy.attachmentDeleteFailed);
+        return;
+      }
+      setAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
+      toast.success(workCopy.attachmentDelete);
+      router.refresh();
+      onSaved?.();
+    });
+  }
+
   return {
     task,
     assigneeOptions: _assigneeOptions,
@@ -218,6 +275,8 @@ export function useWorkTaskDetailForm({
     setAssigneeId,
     comments,
     checklist,
+    attachments,
+    isUploadingAttachment,
     commentBody,
     setCommentBody,
     checklistTitle,
@@ -228,6 +287,8 @@ export function useWorkTaskDetailForm({
     addChecklistItem,
     toggleChecklistItem,
     submitComment,
+    handleUploadFile,
+    handleDeleteAttachment,
   };
 }
 
@@ -235,9 +296,36 @@ export type WorkTaskDetailForm = ReturnType<typeof useWorkTaskDetailForm>;
 
 export function WorkTaskDetailBody({ form }: { form: WorkTaskDetailForm }) {
   const controlSize = useFormControlSize();
+  const docLink = resolveWorkTaskDocumentLink({
+    title: form.title,
+    description: form.description,
+  });
 
   return (
     <div className="flex flex-col gap-4">
+      {docLink ? (
+        <Frame className="flex items-center justify-between gap-3 border-primary/20 bg-primary/10 p-3 text-sm">
+          <div className="flex items-center gap-2">
+            <IconFileText className="size-4 shrink-0 text-primary" />
+            <div>
+              <span className="block text-xs font-semibold uppercase tracking-wider text-primary">
+                {workCopy.relatedDocument}
+              </span>
+              <span className="font-medium">{docLink.label}</span>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5"
+            render={<a href={docLink.href} target="_blank" rel="noreferrer" />}
+          >
+            <span>{docLink.label}</span>
+            <IconExternalLink className="size-3.5" />
+          </Button>
+        </Frame>
+      ) : null}
+
       <AppSection>
         <div className="grid gap-4 md:grid-cols-2">
           <label className="flex flex-col gap-1.5 text-sm">
@@ -373,6 +461,123 @@ export function WorkTaskDetailBody({ form }: { form: WorkTaskDetailForm }) {
           >
             {workCopy.checklistAdd}
           </Button>
+        </div>
+      </AppSection>
+
+      <AppSection title={workCopy.attachmentsTitle}>
+        {form.attachments.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {workCopy.attachmentsEmpty}
+          </p>
+        ) : (
+          <div className="grid gap-2 sm:grid-cols-2">
+            {form.attachments.map((item) => {
+              const isImg =
+                item.contentType?.startsWith("image/") ||
+                /\.(jpe?g|png|webp|heic)$/i.test(item.storagePath);
+              return (
+                <Frame
+                  key={item.id}
+                  className="flex items-center justify-between gap-2 bg-muted/30 p-2"
+                >
+                  <div className="flex min-w-0 flex-1 items-center gap-2">
+                    {isImg ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={item.storagePath}
+                        alt={item.fileName}
+                        className="size-10 shrink-0 rounded border border-border object-cover"
+                      />
+                    ) : (
+                      <div className="flex size-10 shrink-0 items-center justify-center rounded bg-muted text-xs font-semibold text-muted-foreground">
+                        FILE
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1 text-xs">
+                      <a
+                        href={item.storagePath}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block truncate font-medium hover:underline"
+                      >
+                        {item.fileName}
+                      </a>
+                      <span className="font-mono text-2xs text-muted-foreground">
+                        {formatVNDate(item.createdAt)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="text-muted-foreground hover:text-foreground"
+                      aria-label={workCopy.attachmentDownload}
+                      render={
+                        <a
+                          href={item.storagePath}
+                          target="_blank"
+                          rel="noreferrer"
+                          download
+                        />
+                      }
+                    >
+                      <IconDownload className="size-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="text-destructive hover:bg-destructive/10"
+                      aria-label={workCopy.attachmentDelete}
+                      disabled={form.isPending}
+                      onClick={async () => {
+                        const ok = await confirm({
+                          title: workCopy.attachmentDelete,
+                          description: workCopy.attachmentDeleteConfirm,
+                          confirmText: workCopy.attachmentDelete,
+                          variant: "destructive",
+                        });
+                        if (!ok) return;
+                        form.handleDeleteAttachment(item.id);
+                      }}
+                    >
+                      <IconTrash2 className="size-4" />
+                    </Button>
+                  </div>
+                </Frame>
+              );
+            })}
+          </div>
+        )}
+        <div className="mt-3 flex items-center gap-2">
+          <label className="inline-flex cursor-pointer items-center gap-2">
+            <input
+              type="file"
+              accept="image/*,.pdf"
+              className="sr-only"
+              disabled={form.isUploadingAttachment}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  form.handleUploadFile(file);
+                  e.target.value = "";
+                }
+              }}
+            />
+            <Button
+              size={controlSize}
+              variant="outline"
+              disabled={form.isUploadingAttachment}
+              className="pointer-events-none gap-2"
+            >
+              <IconPaperclip className="size-4" />
+              <span>
+                {form.isUploadingAttachment
+                  ? workCopy.attachmentUploading
+                  : workCopy.attachmentUpload}
+              </span>
+            </Button>
+          </label>
         </div>
       </AppSection>
 

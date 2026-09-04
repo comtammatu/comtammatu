@@ -2,8 +2,11 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import type { ActionResult } from "@comtammatu/shared/types";
 import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import type { Database } from "@comtammatu/database/types";
+import { createServiceClient } from "@comtammatu/database/supabase/service";
+import { loadAuthState } from "@/_lib/auth";
 import { withAction, type ActionContext } from "@/_lib/with-action";
 import { staffDisplayLabel } from "@/_lib/profile-display-names";
 import {
@@ -558,6 +561,227 @@ export const upsertWorkChecklistItem = withAction<typeof upsertWorkChecklistItem
     };
   },
 );
+
+export type WorkTaskAttachmentRow = {
+  id: number;
+  taskId: number;
+  tenantId: number;
+  storagePath: string;
+  fileName: string;
+  contentType: string | null;
+  byteSize: number | null;
+  uploadedBy: string;
+  createdAt: string;
+};
+
+const addWorkTaskAttachmentSchema = z.object({
+  taskId: z.number().int().positive(),
+  storagePath: z.string().trim().min(1).max(1024),
+  fileName: z.string().trim().min(1).max(255),
+  contentType: z.string().trim().max(100).optional(),
+  byteSize: z.number().int().nonnegative().optional(),
+});
+
+export const addWorkTaskAttachment = withAction<
+  typeof addWorkTaskAttachmentSchema,
+  WorkTaskAttachmentRow
+>(
+  {
+    schema: addWorkTaskAttachmentSchema,
+    roles: WORK_ROUTE_ROLES,
+  },
+  async (data, ctx) => {
+    const { data: canWrite, error: checkError } = await ctx.supabase.rpc(
+      "can_write_work_task",
+      { p_task_id: data.taskId },
+    );
+    if (checkError || !canWrite) {
+      return { success: false, error: workCopy.forbidden };
+    }
+
+    const service = createServiceClient();
+    const { data: row, error } = await service
+      .from("work_task_attachments")
+      .insert({
+        tenant_id: ctx.claims.tenant_id,
+        task_id: data.taskId,
+        storage_path: data.storagePath,
+        file_name: data.fileName,
+        content_type: data.contentType ?? null,
+        byte_size: data.byteSize ?? null,
+        uploaded_by: ctx.userId,
+      })
+      .select(
+        "id, task_id, tenant_id, storage_path, file_name, content_type, byte_size, uploaded_by, created_at",
+      )
+      .single();
+
+    if (error || !row) {
+      return { success: false, error: workCopy.attachmentUploadFailed };
+    }
+
+    revalidateWorkPaths(data.taskId);
+    return {
+      success: true,
+      data: {
+        id: row.id,
+        taskId: row.task_id,
+        tenantId: row.tenant_id,
+        storagePath: row.storage_path,
+        fileName: row.file_name,
+        contentType: row.content_type,
+        byteSize: row.byte_size,
+        uploadedBy: row.uploaded_by,
+        createdAt: row.created_at,
+      },
+    };
+  },
+);
+
+const deleteWorkTaskAttachmentSchema = z.object({
+  taskId: z.number().int().positive(),
+  attachmentId: z.number().int().positive(),
+});
+
+export const deleteWorkTaskAttachment = withAction(
+  {
+    schema: deleteWorkTaskAttachmentSchema,
+    roles: WORK_ROUTE_ROLES,
+  },
+  async (data, ctx) => {
+    const { data: canWrite, error: checkError } = await ctx.supabase.rpc(
+      "can_write_work_task",
+      { p_task_id: data.taskId },
+    );
+    if (checkError || !canWrite) {
+      return { success: false, error: workCopy.forbidden };
+    }
+
+    const service = createServiceClient();
+    const { data: existing } = await service
+      .from("work_task_attachments")
+      .select("id, storage_path")
+      .eq("id", data.attachmentId)
+      .eq("task_id", data.taskId)
+      .eq("tenant_id", ctx.claims.tenant_id)
+      .maybeSingle();
+
+    if (!existing) {
+      return { success: false, error: workCopy.attachmentDeleteFailed };
+    }
+
+    if (existing.storage_path) {
+      await service.storage
+        .from("inventory-attachments")
+        .remove([existing.storage_path]);
+    }
+
+    const { error } = await service
+      .from("work_task_attachments")
+      .delete()
+      .eq("id", data.attachmentId)
+      .eq("task_id", data.taskId)
+      .eq("tenant_id", ctx.claims.tenant_id);
+
+    if (error) {
+      return { success: false, error: workCopy.attachmentDeleteFailed };
+    }
+
+    revalidateWorkPaths(data.taskId);
+    return { success: true };
+  },
+);
+
+export async function uploadWorkTaskAttachmentFile(
+  formData: FormData,
+): Promise<ActionResult<WorkTaskAttachmentRow>> {
+  const file = formData.get("file");
+  const taskIdRaw = formData.get("taskId");
+  if (!(file instanceof File) || !taskIdRaw) {
+    return { success: false, error: "Tệp không hợp lệ" };
+  }
+  const taskId = Number(taskIdRaw);
+  if (!Number.isInteger(taskId) || taskId <= 0) {
+    return { success: false, error: "Mã công việc không hợp lệ" };
+  }
+
+  const { supabase, claims, userId } = await loadAuthState();
+  if (!userId || !claims) {
+    return { success: false, error: "Chưa đăng nhập" };
+  }
+
+  const { data: canWrite, error: checkErr } = await supabase.rpc(
+    "can_write_work_task",
+    { p_task_id: taskId },
+  );
+  if (checkErr || !canWrite) {
+    return { success: false, error: workCopy.forbidden };
+  }
+
+  if (file.size > 10 * 1024 * 1024) {
+    return { success: false, error: "Kích thước tệp vượt quá giới hạn 10MB" };
+  }
+
+  const service = createServiceClient();
+  const ext = file.name.includes(".")
+    ? file.name.slice(file.name.lastIndexOf("."))
+    : ".jpg";
+  const storagePath = `${claims.tenant_id}/work-tasks/${taskId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  const { error: upErr } = await service.storage
+    .from("inventory-attachments")
+    .upload(storagePath, buffer, {
+      contentType: file.type || "application/octet-stream",
+      upsert: false,
+    });
+
+  if (upErr) {
+    return { success: false, error: workCopy.attachmentUploadFailed };
+  }
+
+  const { data: urlData } = service.storage
+    .from("inventory-attachments")
+    .getPublicUrl(storagePath);
+
+  const publicUrl = urlData.publicUrl;
+
+  const { data: row, error: dbErr } = await service
+    .from("work_task_attachments")
+    .insert({
+      tenant_id: claims.tenant_id,
+      task_id: taskId,
+      storage_path: publicUrl,
+      file_name: file.name,
+      content_type: file.type || null,
+      byte_size: file.size,
+      uploaded_by: userId,
+    })
+    .select(
+      "id, task_id, tenant_id, storage_path, file_name, content_type, byte_size, uploaded_by, created_at",
+    )
+    .single();
+
+  if (dbErr || !row) {
+    return { success: false, error: workCopy.attachmentUploadFailed };
+  }
+
+  revalidateWorkPaths(taskId);
+  return {
+    success: true,
+    data: {
+      id: row.id,
+      taskId: row.task_id,
+      tenantId: row.tenant_id,
+      storagePath: row.storage_path,
+      fileName: row.file_name,
+      contentType: row.content_type,
+      byteSize: row.byte_size,
+      uploadedBy: row.uploaded_by,
+      createdAt: row.created_at,
+    },
+  };
+}
 
 export type WorkMemberRole = "lead" | "member";
 

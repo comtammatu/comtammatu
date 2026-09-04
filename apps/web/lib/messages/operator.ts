@@ -319,5 +319,10 @@ export const operator = {
     descPlaceholder: "Vị trí xảy ra, tình trạng hiện tại, việc đã thử khắc phục...",
     priorityLabel: "Mức độ khẩn cấp",
     posMenuLabel: "Báo sự cố",
+    photoLabel: "Ảnh chụp hiện trường (tùy chọn)",
+    photoButton: "Chụp / Chọn ảnh",
+    photoUploading: "Đang tải ảnh…",
+    photoDelete: "Xóa ảnh",
+    photoUploadFailed: "Không thể tải ảnh lên",
   },
 } as const;
