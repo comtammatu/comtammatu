@@ -18,7 +18,7 @@ Tenant (L0, single operating tenant)
 Product scope and evolve-in-place: [ADR 0025](../plan/adr/0025-fnb-operating-erp-scope-and-evolution-boundary.md)
 — do not treat vendor catalogs as layout or backlog. Owner / Branch / Self
 planes: [ADR 0012](../plan/adr/0012-owner-branch-boundary.md) — shared Branch
-capability keys never admit the matching L0 family. Queue-first `/` and `/me`
+capability keys never admit the matching L0 family. Coordination `/` and `/me`
 as personal plane: [ADR 0037](../plan/adr/0037-control-home-queue-first-and-personal-plane.md)
 (compose: `docs/ref/screen-context-map.md`, `docs/spec/page-archetypes.md`).
 Work hosting: [ADR 0033](../plan/adr/0033-work-control-surface-module.md) — same
@@ -84,7 +84,7 @@ and `docs/agent/rules/database.md`.
 | Role                         | Route                                                 |
 | ---------------------------- | ----------------------------------------------------- |
 | `owner`                      | `/`, then branch resolver when only one branch exists |
-| L0 adapters + `self_service` | `/` (queue-first Control home)                        |
+| L0 adapters + `self_service` | `/` (coordination Control home, ADR 0037)             |
 | Branch-pinned staff          | `/br/{branchId}`                                      |
 
 Root `/` uses the same resolver (multi-branch → picker). POS/KDS are not

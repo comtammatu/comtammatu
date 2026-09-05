@@ -182,7 +182,7 @@ lifetime, or row-open patterns.
 | **LIST** | LIST (management) | `AppPage width="xwide" density="compact"` → `AppPageHeader` (primary create **only** in `actions`) → `AppListFrame` + `AppToolbar variant="inline"` → `DataTable` + `mobileCardRender` |
 | **DETAIL** | DETAIL | `AppPage` → `AppPageHeader` (code + `StatusBadge` + back) → `DescriptionList` + lines `DataTable` → history → stage actions in `AppDetailFooter` |
 | **DOC** | DOC-WORKFLOW | Authoring: `DocumentFormFrame`. List-first D1 docs: LIST host + addressable `AppDialog variant="document"` |
-| **DASHBOARD_REPORT** | DASHBOARD, REPORT, LANDING hub | Non-sticky period `AppToolbar` / `FilterBar` → optional `KpiRow` → charts / breakdown. Control home `/`: queue-first `AppSection` + attention rows, **no** module grid or KPI mosaic. Printers root: `AppSection` + link cards. Never wrap a cockpit in `AppListFrame` |
+| **DASHBOARD_REPORT** | DASHBOARD, REPORT, LANDING hub | Non-sticky period `AppToolbar` / `FilterBar` → optional `KpiRow` → charts / breakdown. Control home `/` (ADR 0037): three regions Mine / Coordinate / Modules — not a launcher grid, not a Finance chart mosaic. Printers root: `AppSection` + link cards. Never wrap a cockpit in `AppListFrame` |
 | **REDIRECT** | REDIRECT-SHIM | Redirect primitive only (≤ ~25 lines) |
 
 Folds: SETTINGS-PANEL list body → LIST inside `SettingsPageFrame`; SETTINGS
@@ -453,9 +453,11 @@ exemplars.
 - Skeleton: `AppPage width="wide"` → `AppPageHeader` → `AppSection` per group
   → `LinkCardGrid` of `AppLinkCard` (`{title, description, href, icon, tone,
 badge}`).
-- Control home `/` (ADR 0037): queue-first LANDING — `AppPageHeader` → optional
-  office `AppTodayCommandBar` → one `Cần xử lý` `AppSection` + `ItemGroup`.
-  No module launcher grid, no KPI mosaic. Sidebar remains module entry.
+- Control home `/` (ADR 0037): coordination LANDING — `AppPageHeader` →
+  optional office `AppTodayCommandBar` → up to three `AppSection`s in order:
+  Mine, Coordinate, Modules. Module pulses may use a compact `KpiRow` plus
+  named next-action rows. No full-app `LinkCardGrid`. No Finance P&L / revenue
+  mosaic. Sidebar remains module entry.
 - No data tables. No KPI values beyond a small count badge on a link card.
 - Operator variant: `apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx`
   (`resolveBranchToolsGroups` + `buildSettingsLinks`) uses the Branch plane recipe:

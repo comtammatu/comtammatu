@@ -116,12 +116,12 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 
 ### 2.4. control_surface — `/`
 
-- **Archetype:** `LANDING` (queue-first, ADR 0037).
+- **Archetype:** `LANDING` (điều phối, ADR 0037 đã sửa 2026-09-05).
 - **Actor:** `owner`, `accountant`, `central_supply_ops`, `central_kitchen_lead`, và `self_service` có `self:access`. Role chi nhánh giữ `/br/...`.
-- **Job:** «Hôm nay / Cần xử lý» — việc đang thiếu theo ACL, rồi deep-link vào mô-đun.
-- **Goal:** Một cửa → xử lý việc hôm nay; vào mô-đun từ sidebar.
-- **Ưu tiên data:** Hàng đợi `Cần xử lý` (counts + deep-link) trước; khi `count === 1` và bucket có DETAIL thì mở chứng từ (Finance / GRN / Việc). HR duyệt, PO, in, hoàn tiền giữ LIST. Office: `AppTodayCommandBar` trên hàng đợi khi cần chấm công. **Không** lưới Điều hành / Nền tảng / Phân hệ; **không** KPI mosaic / doanh thu trên `/`; **không** Kanban phòng ban; Owner không thấy thanh chấm công.
-- **UX:** `AppPage` + `AppTodayCommandBar` (office) + một `AppSection` `Cần xử lý` + `ItemGroup` + `Item` + `Badge`. Empty: `Không có việc cần xử lý ngay` — sidebar/drawer vẫn vào mô-đun. 1 cột phone.
+- **Job:** «Hôm nay» — việc của tôi, việc cần điều phối xuyên mô-đun, rồi nhịp từng mô-đun được cấp quyền.
+- **Goal:** Một cửa thấy ca L0: việc cá nhân, tắc chuỗi, và số liệu quyết định bước tiếp theo từng mô-đun; vào sâu từ pulse hoặc sidebar.
+- **Ưu tiên data:** Ba vùng theo thứ tự — **Của tôi** (chấm công office, việc Work đến hạn của tôi, thông báo chưa đọc); **Điều phối** (duyệt / ngoại lệ / điều chuyển chờ xe / GRN / HR xuyên mô-đun); **Theo mô-đun** (Kho, Tài chính, Nhân sự, Đơn, Việc — số vận hành + một CTA). `count === 1` + DETAIL vẫn được mở thẳng. Office: `AppTodayCommandBar` khi cần chấm công. **Không** lưới launcher mọi app; **không** biểu đồ P&L / doanh thu trên `/` (ở `/finance`); **không** Kanban phòng ban; **không** nhúng radar phiếu ngày Kho hay board `/work`. Owner không thấy thanh chấm công.
+- **UX:** `AppPage` + `AppTodayCommandBar` (office) + tối đa ba `AppSection`. Pulse mô-đun: `KpiRow` gọn + hàng hành động. Vùng trống thì ẩn. Sidebar/drawer vẫn vào mô-đun. 1 cột phone; desktop densify, không đổi IA.
 
 ### 2.4A. Trung tâm vận hành Chi nhánh — `/br/[branchId]`
 

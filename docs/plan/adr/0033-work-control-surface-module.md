@@ -6,7 +6,7 @@ Accept — Q1=A, Q2=A, Q3=include `/work/team`)
 **Decision owner:** Owner
 
 **Amended by:** ADR 0037 (`/me` stays `Trang cá nhân`; the Work CTA is removed;
-Work due tasks surface as the `/` attention row, not a Work shell on `/`).
+due Work surfaces in the `/` Mine region, not a Work shell on `/`).
 
 Runtime compose: [`docs/spec/page-archetypes.md`](../../spec/page-archetypes.md)
 TASK_* and [`docs/ref/screen-context-map.md`](../../ref/screen-context-map.md)

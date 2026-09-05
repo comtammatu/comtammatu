@@ -27,7 +27,7 @@ spec/module/ref first; open the ADR only for the unique decision.
 | ADR | Owns | Runtime |
 | --- | --- | --- |
 | [0012](0012-owner-branch-boundary.md) | Owner / Branch / Self planes; capability keys | `docs/spec/architecture.md` |
-| [0037](0037-control-home-queue-first-and-personal-plane.md) | Queue-first `/`; `/me` personal | `docs/ref/screen-context-map.md` |
+| [0037](0037-control-home-queue-first-and-personal-plane.md) | `/` coordination home; `/me` personal | `docs/ref/screen-context-map.md` |
 | [0033](0033-work-control-surface-module.md) | Work hosting and membership authority | `docs/spec/page-archetypes.md` |
 | [0038](0038-native-android-apps-and-pwa-coexistence.md) | Native in repo `app`; PWA stays | `docs/spec/pwa.md` |
 | [0008](0008-operational-audio-alerts.md) | Beep + optional voice; not notifications | `docs/spec/operational-audio-alerts.md` |
