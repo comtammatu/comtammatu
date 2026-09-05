@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { readSql, assertSqlMatch, assertSqlNotMatch, sqlIndexOf, looksLikeDump } from "../../test-utils/active-sql";
 
@@ -357,6 +358,21 @@ test("replacement agreement dates use Vietnam calendar midnight", () => {
     replacement,
     /new Date\(parsed\.data\.agreementDate\)\.toISOString\(\)/,
     "UTC parsing moves Vietnam calendar dates seven hours into the future",
+  );
+});
+
+test("replacement reservations can coexist with the issued original", () => {
+  const migrationName = readdirSync(
+    resolve(repoRoot, "supabase/migrations"),
+  ).find((name) => name.endsWith("_allow_pending_invoice_replacements.sql"));
+
+  assert.ok(migrationName, "missing replacement uniqueness migration");
+  const migration = read(`supabase/migrations/${migrationName}`);
+
+  assertSqlMatch(
+    migration,
+    /CREATE UNIQUE INDEX uq_tax_invoices_active_per_order[\s\S]*replaced_for IS NULL/,
+    "the initial-invoice guard must not reject a queued replacement while its original remains issued",
   );
 });
 
