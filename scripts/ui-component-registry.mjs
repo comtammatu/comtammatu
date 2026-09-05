@@ -255,6 +255,13 @@ export const SHARED_COMPONENT_REGISTRY = {
     "custom selected-card state without radio semantics",
     "form mode choices",
   ),
+  "row-actions-menu.tsx": direct(
+    "row overflow actions",
+    "RowActionsMenu",
+    "visible Button for the primary row action",
+    "route-local dropdown action menu",
+    "management tables",
+  ),
   "scroll-area.tsx": workflowOnly(
     "bounded custom scroll region",
     "ScrollArea with a definite height or flex constraint",
