@@ -16,6 +16,9 @@ const archived = read(
 );
 const history = read("app/(protected)/br/[branchId]/pos/order-history.tsx");
 const inner = read("app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx");
+const floorSelect = read(
+  "app/(protected)/br/[branchId]/pos/_hooks/use-pos-floor-select.ts",
+);
 const bill = read(
   "app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx",
 );
@@ -63,7 +66,8 @@ test("POS live orders surface cash-call in the same interrupt language", () => {
   assert.match(history, /SELF_ORDER_VI\.cashCallStaff/);
   assert.match(history, /SELF_ORDER_VI\.vietQrPendingStaff/);
   assert.match(inner, /paymentCallByOrderId/);
-  assert.match(inner, /openBill\(paymentCallOrder\.id, "payment"\)/);
+  assert.match(inner, /usePosFloorSelect/);
+  assert.match(floorSelect, /openBill\(paymentCallOrder\.id, "payment"\)/);
 });
 
 test("POS receipt intent never mounts Self-Order payment chrome", () => {

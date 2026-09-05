@@ -54,7 +54,7 @@ export interface UseDailyLimitHoldsReturn {
  * reset between mint and use rotates cleanly. Two 120ms debounced effects keep
  * the server-side holds in step with the live cart / append-draft snapshots.
  *
- * Mirrors `usePosAppend` / `useDailyLimitSync`: refs created once inside the
+ * Mirrors `usePosAppend` / `useOrderSync` daily-limit catch-up: refs created once inside the
  * hook, ref-based single-flight to avoid stale closures.
  */
 export function useDailyLimitHolds(

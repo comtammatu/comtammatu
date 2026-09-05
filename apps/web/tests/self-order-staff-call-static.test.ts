@@ -58,7 +58,10 @@ test("guest staff-call notifies POS without a second order request", () => {
   const desktop = readWeb(
     "app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx",
   );
-  assert.match(desktop, /kind: "pos\.staff_call"/);
+  const selfOrder = readWeb(
+    "app/(protected)/br/[branchId]/pos/_hooks/use-self-order-pos-state.ts",
+  );
+  assert.match(selfOrder, /kind: "pos\.staff_call"/);
   assert.doesNotMatch(
     desktop,
     /playAppSignal\("pos-payment-call"\)[\s\S]*staffCall/,

@@ -15,8 +15,14 @@ import {
 } from "@lib/operational-audio";
 import { triggerHapticFeedback } from "@lib/haptic-feedback";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { getVNDateString } from "@comtammatu/shared/time";
 import type { BranchTable } from "../page";
 import type { SessionOrder } from "../order-history";
+import {
+  isClosedPosSessionUpdate,
+  isCurrentDailyLimitRealtimeEvent,
+} from "../_lib/pos-idle-realtime";
+import type { PrintJobChangePayload } from "./use-print-job-alerts";
 
 export interface UseOrderSyncArgs {
   branchId: number;
@@ -64,6 +70,23 @@ export interface UseOrderSyncArgs {
    * reconnects) always refresh to catch missed events during disconnect.
    */
   skipFirstSubscribedRefresh?: boolean;
+  /**
+   * Deduped daily-limit refetch. Attached to this channel so idle POS does
+   * not open a second daily-limits JOIN.
+   */
+  refreshLimits?: () => void;
+  /** Open session row this terminal is bound to. */
+  sessionId?: number;
+  /**
+   * Fired only on `pos_sessions` UPDATE to `closed` for `sessionId`.
+   * Reconnect must not call this — a missed close self-heals on submit
+   * (`SCOPE_SESSION_NOT_OPEN`) without an RSC refresh storm.
+   */
+  onSessionClosed?: () => void;
+  /** Print-job failure toast/audio. Same idle POS JOIN — no dedicated print channel. */
+  onPrintJobUpdate?: (payload: PrintJobChangePayload) => void;
+  /** Reconnect sweep for print failures missed during disconnect. */
+  onPrintReconnect?: () => void;
 }
 
 function getOrderContextDescription(order: {
@@ -411,9 +434,10 @@ function buildOptimisticOrder(
   };
 }
 
-// Current transport: Supabase Realtime postgres_changes on `orders` + `tables`,
-// branch-scoped via URL branchId. The transport sits behind a stable interface
-// so the implementation can be replaced without touching callers.
+// Current transport: one `pos-branch-{id}` postgres_changes JOIN for orders,
+// tables, KDS out-of-stock notifications, daily limits, session close, and
+// print-job failures. Branch-scoped via URL branchId. Payload patches stay
+// on this channel — do not replace them with broadcast-only invalidation.
 //
 // Auth-await + setAuth-before-subscribe lives in `useRealtimeChannel` so this
 // hook (and every other realtime sub in the app) doesn't repeat the dance.
@@ -434,15 +458,25 @@ export function useOrderSync({
   onArchivedInvalidate,
   audioMode = "off",
   skipFirstSubscribedRefresh = false,
+  refreshLimits,
+  sessionId,
+  onSessionClosed,
+  onPrintJobUpdate,
+  onPrintReconnect,
 }: UseOrderSyncArgs): void {
   const refreshOrdersRef = useRef(refreshOrders);
   const refreshAllRef = useRef(refreshAll);
+  const refreshLimitsRef = useRef(refreshLimits);
   const setTablesRef = useRef(setTables);
   const setOrdersRef = useRef(setOrders);
   const getTablesRef = useRef(getTables);
   const getOrdersRef = useRef(getOrders);
   const onArchivedInvalidateRef = useRef(onArchivedInvalidate);
   const audioModeRef = useRef(audioMode);
+  const sessionIdRef = useRef(sessionId);
+  const onSessionClosedRef = useRef(onSessionClosed);
+  const onPrintJobUpdateRef = useRef(onPrintJobUpdate);
+  const onPrintReconnectRef = useRef(onPrintReconnect);
   const lastSyncRef = useRef<number>(Date.now());
   const channelHealthRef = useRef<RealtimeChannelHealth>("connecting");
   const initialSubscribeSeenRef = useRef(false);
@@ -450,21 +484,31 @@ export function useOrderSync({
   useEffect(() => {
     refreshOrdersRef.current = refreshOrders;
     refreshAllRef.current = refreshAll;
+    refreshLimitsRef.current = refreshLimits;
     setTablesRef.current = setTables;
     setOrdersRef.current = setOrders;
     getTablesRef.current = getTables;
     getOrdersRef.current = getOrders;
     onArchivedInvalidateRef.current = onArchivedInvalidate;
     audioModeRef.current = audioMode;
+    sessionIdRef.current = sessionId;
+    onSessionClosedRef.current = onSessionClosed;
+    onPrintJobUpdateRef.current = onPrintJobUpdate;
+    onPrintReconnectRef.current = onPrintReconnect;
   }, [
     refreshOrders,
     refreshAll,
+    refreshLimits,
     setTables,
     setOrders,
     getTables,
     getOrders,
     onArchivedInvalidate,
     audioMode,
+    sessionId,
+    onSessionClosed,
+    onPrintJobUpdate,
+    onPrintReconnect,
   ]);
 
   useRealtimeChannel(
@@ -634,6 +678,61 @@ export function useOrderSync({
             notifyOutOfStock(notification, audioModeRef.current, branchId);
           },
         )
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "branch_menu_item_daily_limits",
+            filter: branchFilter,
+          },
+          (payload) => {
+            if (
+              !isCurrentDailyLimitRealtimeEvent(
+                payload.eventType,
+                payload,
+                getVNDateString(),
+              )
+            ) {
+              return;
+            }
+            refreshLimitsRef.current?.();
+          },
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "pos_sessions",
+            filter: branchFilter,
+          },
+          (payload) => {
+            const currentSessionId = sessionIdRef.current;
+            if (
+              currentSessionId == null ||
+              !isClosedPosSessionUpdate(payload.new, currentSessionId)
+            ) {
+              return;
+            }
+            onSessionClosedRef.current?.();
+          },
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "print_jobs",
+            filter: branchFilter,
+          },
+          (payload) => {
+            onPrintJobUpdateRef.current?.({
+              new: payload.new as PrintJobChangePayload["new"],
+              old: (payload.old as PrintJobChangePayload["old"]) ?? null,
+            });
+          },
+        )
         .subscribe((status) => {
           const health = realtimeHealthFromStatus(status);
           if (health !== null) channelHealthRef.current = health;
@@ -642,12 +741,15 @@ export function useOrderSync({
           // the caller has already seeded state (e.g. from RSC prefetch),
           // skip this one refresh — it would duplicate work. Every
           // SUBSCRIBED after that is a genuine reconnect and must refresh
-          // to catch events missed during disconnect.
+          // to catch events missed during disconnect. Session close is
+          // payload-only: reconnect must not refresh the RSC tree.
           if (!initialSubscribeSeenRef.current) {
             initialSubscribeSeenRef.current = true;
             if (skipFirstSubscribedRefresh) return;
           }
           refreshAllRef.current();
+          refreshLimitsRef.current?.();
+          onPrintReconnectRef.current?.();
         });
     },
     [branchId],

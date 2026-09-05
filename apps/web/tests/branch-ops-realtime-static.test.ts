@@ -154,7 +154,6 @@ test("branch ops client gates subscribe on JWT mirror of can_read_branch_ops", (
     branchOpsRuntime,
     /createBranchOpsChannel\([\s\S]*token:\s*string \| null/,
   );
-  assert.match(posMenuClient, /canSubscribeBranchOpsTopic/);
   assert.match(branchOpsRefresh, /useBranchOpsEvents\(\{[\s\S]*branchId/);
 });
 
@@ -279,16 +278,15 @@ test("branch ops topics require an active profile and active assigned branch", (
 
 test("POS menu sync owns branch ops refresh without a layout duplicate", () => {
   assert.doesNotMatch(posLayout, /BranchOpsRefresh/);
-  assert.match(posMenuClient, /`branch:\$\{String\(branchId\)\}:ops`/);
+  assert.match(posMenuClient, /subscribeBranchOps/);
+  assert.doesNotMatch(posMenuClient, /useRealtimeChannel/);
 });
 
 test("POS menu sync listens for matching branch ops menu broadcasts", () => {
-  assert.match(posMenuClient, /`branch:\$\{String\(branchId\)\}:ops`/);
-  assert.match(posMenuClient, /private:\s*true/);
-  assert.match(posMenuClient, /event\?\.domain\s*===\s*"pos"/);
-  assert.match(posMenuClient, /event\?\.domain\s*===\s*"inventory"/);
-  assert.match(posMenuClient, /event\?\.table\s*===\s*"stock_levels"/);
-  assert.match(posMenuClient, /\.subscribe\(\(status,\s*err\)\s*=>/);
+  assert.match(posMenuClient, /subscribeBranchOps/);
+  assert.match(posMenuClient, /domains:\s*\["pos"\]/);
+  assert.match(posMenuClient, /tables:\s*\[\.\.\.POS_MENU_OPS_TABLES\]/);
+  assert.match(posMenuClient, /stock_levels/);
   assert.match(posMenuMigration, /'domain',\s*'pos'/);
   assert.match(
     posMenuMigration,

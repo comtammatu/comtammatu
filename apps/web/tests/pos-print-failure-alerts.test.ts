@@ -14,6 +14,13 @@ const alertsHookSource = readFileSync(
   ),
   "utf8",
 );
+const orderSyncSource = readFileSync(
+  join(
+    process.cwd(),
+    "app/(protected)/br/[branchId]/pos/_hooks/use-order-sync.ts",
+  ),
+  "utf8",
+);
 const providerSource = readFileSync(
   join(
     process.cwd(),
@@ -63,10 +70,11 @@ test("print enqueue actions report agent_offline so callers can downgrade the to
 });
 
 test("POS hears the fate of print jobs after enqueue", () => {
-  assert.match(alertsHookSource, /table: "print_jobs"/);
+  assert.match(orderSyncSource, /table: "print_jobs"/);
   assert.match(alertsHookSource, /FAILED_STATUSES = new Set\(\["failed", "expired"\]\)/);
   assert.match(alertsHookSource, /label: "In lại"/);
   assert.match(alertsHookSource, /retryPrintJob/);
+  assert.doesNotMatch(alertsHookSource, /useRealtimeChannel/);
   assert.match(providerSource, /usePrintJobAlerts\(\{ branchId, audioMode \}\)/);
 });
 

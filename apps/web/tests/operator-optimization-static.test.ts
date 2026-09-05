@@ -191,6 +191,9 @@ test("POS self-order uses the private branch-ops bus plus the 30s poll as a safe
   const inner = read(
     "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx",
   );
+  const selfOrder = read(
+    "apps/web/app/(protected)/br/[branchId]/pos/_hooks/use-self-order-pos-state.ts",
+  );
   const menuSync = read(
     "apps/web/app/(protected)/br/[branchId]/pos/_hooks/use-pos-menu-sync.ts",
   );
@@ -203,13 +206,13 @@ test("POS self-order uses the private branch-ops bus plus the 30s poll as a safe
   // Instant alerts ride the hardened private branch:{id}:ops bus (not a
   // separate private topic without a realtime.messages policy).
   assert.doesNotMatch(inner, /pos-self-order-branch-/);
-  assert.match(inner, /selfOrderSignalRef\.current = refreshSelfOrderPosState/);
+  assert.match(selfOrder, /selfOrderSignalRef\.current = refresh;/);
+  assert.match(inner, /useSelfOrderPosState/);
   assert.match(shell, /onSelfOrderSignal/);
-  assert.match(menuSync, /branch:\$\{String\(branchId\)\}:ops/);
-  assert.match(menuSync, /private:\s*true/);
+  assert.match(menuSync, /subscribeBranchOps/);
   assert.match(menuSync, /self_order_requests/);
   assert.match(menuSync, /self_order_payment_requests/);
-  assert.match(menuSync, /stopRealtimeAuthorizationRejoin/);
+  assert.doesNotMatch(menuSync, /useRealtimeChannel/);
   assertSqlMatch(migration,
     /ON public\.self_order_requests[\s\S]*broadcast_branch_ops/,
   );
@@ -218,7 +221,7 @@ test("POS self-order uses the private branch-ops bus plus the 30s poll as a safe
   );
   assertSqlNotMatch(migration, /ALTER PUBLICATION supabase_realtime/);
   // 30s poll safety net is still present.
-  assert.match(inner, /30_000/);
+  assert.match(selfOrder, /30_000/);
 });
 
 test("floor clock-in stays in the Branch personal flow", () => {
@@ -303,17 +306,14 @@ test("KDS comprehensive board memoizes item rows with a per-row isMutating flag"
 
 test("POS self-order ref is synced in the render body, not a one-frame-stale effect", () => {
   const source = read(
-    "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx",
+    "apps/web/app/(protected)/br/[branchId]/pos/_hooks/use-self-order-pos-state.ts",
   );
   // Assigning in the render body keeps the shell bus ref current on every
   // render, so a realtime event always invokes the latest closure (audioMode).
-  assert.match(
-    source,
-    /selfOrderSignalRef\.current = refreshSelfOrderPosState;/,
-  );
+  assert.match(source, /selfOrderSignalRef\.current = refresh;/);
   assert.doesNotMatch(
     source,
-    /useEffect\(\(\) => \{\s*selfOrderSignalRef\.current = refreshSelfOrderPosState;/,
+    /useEffect\(\(\) => \{\s*selfOrderSignalRef\.current = refresh;/,
   );
 });
 

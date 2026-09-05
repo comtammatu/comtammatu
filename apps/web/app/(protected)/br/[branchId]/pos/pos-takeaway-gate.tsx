@@ -35,7 +35,6 @@ interface PosTakeawayGateProps {
     orderNumber: string,
     summary?: SessionOrder,
   ) => void;
-  hasStackedTouchActions?: boolean;
   headerAction?: ReactNode;
   className?: string;
 }
@@ -165,7 +164,6 @@ function PosTakeawayGateComponent({
   orders,
   onCreateNew,
   onViewDetail,
-  hasStackedTouchActions = false,
   headerAction,
   className,
 }: PosTakeawayGateProps) {
@@ -191,8 +189,7 @@ function PosTakeawayGateComponent({
       <ScrollArea className="min-h-0 flex-1 overflow-hidden">
         <div
           className={cn(
-            "flex w-full flex-col gap-4 px-2 pt-2 md:px-4 md:pt-4",
-            hasStackedTouchActions ? "pb-40 xl:pb-4" : "pb-28 xl:pb-4",
+            "flex w-full flex-col gap-4 px-2 pt-2 pb-28 md:px-4 md:pt-4 xl:pb-4",
           )}
         >
           {headerAction ? (

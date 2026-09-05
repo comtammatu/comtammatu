@@ -254,7 +254,7 @@ export async function fetchMenuForPos(
 }
 
 /**
- * Lean limits-only fetch for realtime catchup. Used by `useDailyLimitSync`
+ * Lean limits-only fetch for realtime catchup. Used by `useOrderSync`
  * on SUBSCRIBED reconnect to fill events missed during disconnect — keeps
  * categories/variants/sides static (set at SSR by `fetchMenuForPos`) and
  * refreshes only the volatile `sold_today` + `is_disabled` slice.

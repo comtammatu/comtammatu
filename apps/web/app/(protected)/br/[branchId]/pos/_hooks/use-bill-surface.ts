@@ -61,8 +61,7 @@ export interface UseBillSurfaceReturn {
  * detail-path seed, and the post-submit payment prompt id.
  *
  * The raw setters are exposed alongside `openBill`/`closeBill` because the
- * orchestrator's `handlePayOrderFromPicker` and `handleSubmitOrder` paths still
- * write them directly (toast action).
+ * orchestrator's submit toast still writes `setPostSubmitPaymentOrderId`.
  */
 export function useBillSurface(args: UseBillSurfaceArgs): UseBillSurfaceReturn {
   const { orders, closeCartDrawer } = args;

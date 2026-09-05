@@ -7,40 +7,34 @@ function read(path: string): string {
   return readFileSync(join(process.cwd(), path), "utf8");
 }
 
-test("POS menu reserves space for a stacked touch dock", () => {
+test("POS menu reserves space for a one-row touch dock", () => {
   const inner = read("app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx");
   const pane = read(
     "app/(protected)/br/[branchId]/pos/_components/menu-pane.tsx",
   );
   const menu = read("app/(protected)/br/[branchId]/pos/pos-menu-grid.tsx");
 
-  assert.match(
-    inner,
-    /<MenuPane[\s\S]*hasStackedTouchActions=\{selfOrderActionVisible\}/,
-  );
-  assert.match(pane, /hasStackedTouchActions=\{hasStackedTouchActions\}/);
-  assert.equal(
-    menu.match(/hasStackedTouchActions \? "pb-40 xl:pb-4" : "pb-32 xl:pb-4"/g)
-      ?.length,
-    2,
-  );
+  assert.match(inner, /<MenuPane[\s\S]*orderType=\{listPriceOrderType\}/);
+  assert.doesNotMatch(pane, /hasStackedTouchActions/);
+  assert.doesNotMatch(menu, /hasStackedTouchActions/);
+  assert.match(menu, /pb-32/);
 });
 
 test("POS stale self-order requests remain openable after a sync failure", () => {
   const inner = read("app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx");
+  const hook = read(
+    "app/(protected)/br/[branchId]/pos/_hooks/use-self-order-pos-state.ts",
+  );
+  const header = read("app/(protected)/br/[branchId]/pos/pos-session-header.tsx");
   const dock = read(
     "app/(protected)/br/[branchId]/pos/_components/pos-mobile-action-bar.tsx",
   );
 
-  assert.match(
-    inner,
-    /selfOrderSyncFailed && selfOrderPosState\.requests\.length === 0/,
-  );
-  assert.match(inner, /setSelfOrderApprovalOpen\(true\)/);
-  assert.match(
-    dock,
-    /const retrySelfOrderOnly = selfOrderSyncFailed && selfOrderRequestCount === 0/,
-  );
+  assert.match(hook, /syncFailed && state\.requests\.length === 0/);
+  assert.match(hook, /setApprovalOpen\(true\)/);
+  assert.match(inner, /handleOpenApproval: handleOpenSelfOrderApproval/);
+  assert.match(header, /selfOrderInterrupt\.failed &&/);
+  assert.match(header, /voidInterrupt\.failed &&/);
   assert.match(dock, /h-\[env\(safe-area-inset-bottom\)\] bg-card\/95/);
   assert.match(dock, /APPEND_ACTION_BAR_CLASS/);
   assert.match(dock, /grid-cols-\[auto_minmax\(0,1fr\)_minmax\(0,1fr\)\]/);

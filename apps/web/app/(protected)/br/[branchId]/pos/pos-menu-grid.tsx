@@ -44,7 +44,6 @@ import { remainingDailyQuotaAfterDemand } from "./_utils/daily-limit-draft";
 interface PosMenuGridProps {
   categories: MenuCategory[];
   dailyLimitDemandByMenuItem?: ReadonlyMap<number, number>;
-  hasStackedTouchActions?: boolean;
   orderType?: OrderType;
   deliveryPlatform?: DeliveryPlatform | null;
   onItemTap: (item: MenuItem) => void;
@@ -278,7 +277,6 @@ const MenuItemGrid = memo(function MenuItemGrid({
 function PosMenuGridComponent({
   categories,
   dailyLimitDemandByMenuItem,
-  hasStackedTouchActions = false,
   orderType = "takeaway",
   deliveryPlatform = null,
   onItemTap,
@@ -510,8 +508,7 @@ function PosMenuGridComponent({
           {visibleItems.length > 0 && isAllMenuActive ? (
             <div
               className={cn(
-                "flex flex-col gap-3 px-2 pt-2 md:gap-5 md:px-3 md:pt-3 lg:px-4",
-                hasStackedTouchActions ? "pb-40 xl:pb-4" : "pb-32 xl:pb-4",
+                "flex flex-col gap-3 px-2 pt-2 pb-32 md:gap-5 md:px-3 md:pt-3 lg:px-4 xl:pb-4",
               )}
             >
               {visibleCategories.map((category) => (
@@ -541,12 +538,7 @@ function PosMenuGridComponent({
           ) : null}
 
           {visibleItems.length > 0 && !isAllMenuActive ? (
-            <div
-              className={cn(
-                "px-2 pt-2 md:px-3 md:pt-3 lg:px-4",
-                hasStackedTouchActions ? "pb-40 xl:pb-4" : "pb-32 xl:pb-4",
-              )}
-            >
+            <div className="px-2 pt-2 pb-32 md:px-3 md:pt-3 lg:px-4 xl:pb-4">
               <MenuItemGrid
                 items={visibleItems}
                 sparseMenu={sparseMenu}

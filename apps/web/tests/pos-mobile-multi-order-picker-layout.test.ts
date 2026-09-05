@@ -16,7 +16,7 @@ test("mobile multi-order picker keeps its order list scrollable inside the drawe
     source,
     /contentClassName="mx-auto flex max-h-dvh-80 w-full max-w-md flex-col overflow-hidden sm:max-w-lg"/,
   );
-  assert.match(source, /<AppDrawer/);
+  assert.match(source, /<StationSheet/);
   assert.doesNotMatch(source, /data-vaul-no-drag/);
   assert.match(
     source,

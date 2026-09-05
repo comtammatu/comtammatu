@@ -9,25 +9,13 @@ import {
   useTransition,
   type MutableRefObject,
 } from "react";
-import { BellRing as IconBell } from "lucide-react";
-import { formatCount } from "@comtammatu/shared/format";
-import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
-import { Badge } from "@comtammatu/ui/components/badge";
-import { Button } from "@comtammatu/ui/components/button";
-import { confirm } from "@/components/confirm-dialog";
-import { Frame } from "@comtammatu/ui/components/frame";
 import { toast } from "@comtammatu/ui/components/sonner";
-
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@comtammatu/ui/components/toggle-group";
-import { cn } from "@comtammatu/ui";
+import { Badge } from "@comtammatu/ui/components/badge";
+import { confirm } from "@/components/confirm-dialog";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { POS_ERROR_CODES } from "./_utils/error-codes";
-import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
 import { useKeyboardShortcut } from "@/_lib/use-keyboard-shortcut";
 import { PosTableGate } from "./pos-table-gate";
 import { PosTakeawayGate } from "./pos-takeaway-gate";
@@ -45,17 +33,7 @@ import {
 } from "./_components/pos-order-target-row";
 import { SelfOrderApprovalSheet } from "./_components/self-order-approval-sheet";
 import { TableQuickActionSheet } from "./_components/table-quick-action-sheet";
-import {
-  acknowledgeSelfOrderStaffCall,
-  fetchSelfOrderPosState,
-  type SelfOrderPosState,
-} from "./self-order-actions";
-import {
-  playOperationalAlert,
-  selectPosGuestAlert,
-  type PosGuestAlertCandidate,
-} from "@lib/operational-audio";
-import { triggerHapticFeedback } from "@lib/haptic-feedback";
+import { acknowledgeSelfOrderStaffCall } from "./self-order-actions";
 
 // Lazy-load these modals OFF the cash path, code-splitting their JS out of
 // the initial POS bundle. Trims first-paint JS without affecting payment
@@ -113,8 +91,9 @@ const loadOrderDetailSheet = () =>
   }));
 const BillReceipt = dynamic(loadBillReceipt, { ssr: false });
 const OrderDetailSheet = dynamic(loadOrderDetailSheet, { ssr: false });
-import { fetchActiveOrderForTable, editPendingOrderItem } from "./actions";
-import { VoidRequestQueue } from "./_components/void-request-queue";
+import { editPendingOrderItem } from "./actions";
+import { VoidRequestSheet } from "./_components/void-request-queue";
+import { PosServiceModeSelector } from "./_components/pos-service-mode-selector";
 import type { OrderItemRowData } from "./_components/order-detail/order-item-row";
 import { usePosAppend } from "./_hooks/use-pos-append";
 import { useDailyLimitHolds } from "./_hooks/use-daily-limit-holds";
@@ -124,6 +103,10 @@ import {
 } from "./_hooks/use-add-to-cart-gate";
 import { useBillSurface } from "./_hooks/use-bill-surface";
 import { useOrderDetailSurface } from "./_hooks/use-order-detail-surface";
+import { usePosFloorSelect } from "./_hooks/use-pos-floor-select";
+import { usePosTableDerived } from "./_hooks/use-pos-table-derived";
+import { usePosVoidRequestQueue } from "./_hooks/use-pos-void-request-queue";
+import { useSelfOrderPosState } from "./_hooks/use-self-order-pos-state";
 import { submitPosOrderWithRetry } from "./_utils/submit-with-retry";
 import { resolvePosMenuListPrice } from "./_lib/delivery-channel";
 import type {
@@ -139,11 +122,8 @@ import type { PaymentMethod } from "@comtammatu/shared/providers";
 import type { VietQrConfig } from "./payment-actions";
 import {
   ACTIVE_POS_STATUSES,
-  compareOrdersByNextAction,
   type SessionOrder,
 } from "./order-history";
-import { deriveTableTimingMap } from "./_lib/table-timing";
-import type { OrderDetailData } from "./order-detail-sheet";
 import {
   usePosOperationalDispatch,
   usePosOrders,
@@ -162,38 +142,10 @@ import {
 } from "./_hooks/use-cart";
 import { useActiveTable } from "./_hooks/use-active-table";
 import { useAppendTarget } from "./_hooks/use-append-target";
-import {
-  deriveTableOrderVisualStates,
-  isActiveUnpaidPosOrder,
-  isPosOrderAmountLocked,
-} from "./_lib/table-order-visual-state";
-import { confirmAndCancelPendingPayment } from "./_lib/confirm-cancel-pending-payment";
+import { isActiveUnpaidPosOrder } from "./_lib/table-order-visual-state";
 import { makeCartKey, makeNotedCartKey } from "./_utils/cart-key";
 import { messages } from "@lib/messages";
 import { StationSheet } from "@/components/surface";
-
-function tableLabelForTableId(
-  tables: readonly BranchTable[],
-  tableId: number,
-): string | undefined {
-  const tableNumber = tables.find((table) => table.id === tableId)?.number;
-  return typeof tableNumber === "number" ? String(tableNumber) : undefined;
-}
-
-function tableLabelForOrderId(
-  tables: readonly BranchTable[],
-  orders: readonly SessionOrder[],
-  orderId: number,
-): string | undefined {
-  const order = orders.find((item) => item.id === orderId);
-  if (typeof order?.tables?.number === "number") {
-    return String(order.tables.number);
-  }
-  if (typeof order?.table_id === "number") {
-    return tableLabelForTableId(tables, order.table_id);
-  }
-  return undefined;
-}
 
 /* ─── Inner (consumes hooks) ─── */
 
@@ -222,6 +174,7 @@ export function PosDesktopInner({
   selfOrderSignalRef: MutableRefObject<(() => void) | null>;
 }) {
   const { branchId, session } = usePosSession();
+  const router = useRouter();
   const orders = usePosOrders();
   const tables = usePosTables();
   const { audioMode } = usePosSound();
@@ -255,58 +208,6 @@ export function PosDesktopInner({
   const selectedTable = activeTable.table;
   const selectedTableAvailable = activeTable.isAvailable;
   const setActiveTable = activeTable.setTable;
-
-  const router = useRouter();
-
-  // Cross-tab realtime: when the session is closed from another tab/device,
-  // the UPDATE payload lands here with `new.status='closed'`; refresh the
-  // route so the page re-fetches the active session (SessionGate renders
-  // when none is open).
-  //
-  // Defense-in-depth (rule REALTIME-SUBSCRIBE-NEEDS-STATUS-CALLBACK): the
-  // status callback skips the first SUBSCRIBED (state already seeded from
-  // RSC) and reloads on later reconnects to catch events missed offline.
-  useRealtimeChannel(
-    (supabase) => {
-      let initialSubscribe = true;
-      return supabase
-        .channel(`pos-session-branch-${String(branchId)}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "UPDATE",
-            schema: "public",
-            table: "pos_sessions",
-            filter: `branch_id=eq.${String(branchId)}`,
-          },
-          (payload) => {
-            const next = payload.new;
-            if (
-              next !== null &&
-              typeof next === "object" &&
-              "id" in next &&
-              "status" in next &&
-              (next as { id: number }).id === session.id &&
-              (next as { status: string }).status === "closed"
-            ) {
-              toast.warning("Ca POS đã đóng — đang tải lại trang.");
-              router.refresh();
-            }
-          },
-        )
-        .subscribe((status) => {
-          if (status === "SUBSCRIBED") {
-            if (initialSubscribe) {
-              initialSubscribe = false;
-              return;
-            }
-            // Reconnect — may have missed a close event mid-disconnect.
-            router.refresh();
-          }
-        });
-    },
-    [branchId, session.id, router],
-  );
 
   // Warm the BillReceipt/OrderDetailSheet chunks during browser idle time so
   // the code-split above never costs a spinner at payment time — by the time
@@ -358,9 +259,6 @@ export function PosDesktopInner({
     latestAwaitingPaymentOrderId,
     openBill,
     closeBill,
-    setBillOrderId,
-    setBillIntent,
-    setBillInitialOrder,
     setPostSubmitPaymentOrderId,
   } = useBillSurface({ orders, closeCartDrawer });
   const {
@@ -377,46 +275,28 @@ export function PosDesktopInner({
     setOrderDetailSummary,
     setOrderDetailSeed,
   } = useOrderDetailSurface({ closeCartDrawer });
+  const focusOrderWorkflow = useCallback(
+    (orderId: number, orderNumber?: string | null) => {
+      setShowOrders(true);
+      setOrderDetailId(orderId);
+      setOrderDetailNumber(orderNumber ?? null);
+      setCartDrawerOpen(false);
+    },
+    [],
+  );
+  const initialOpenOrderIdRef = useRef(initialOpenOrderId ?? null);
+  useEffect(() => {
+    const targetOrderId = initialOpenOrderIdRef.current;
+    if (targetOrderId === null) return;
+    initialOpenOrderIdRef.current = null;
+    const order = orders.find((candidate) => candidate.id === targetOrderId);
+    focusOrderWorkflow(targetOrderId, order?.order_number ?? null);
+  }, [focusOrderWorkflow, orders]);
   const [takeawayDraftActive, setTakeawayDraftActive] = useState(false);
   const [deliveryDraftActive, setDeliveryDraftActive] = useState(false);
   const [appendDraftItems, setAppendDraftItems] = useState<CartItem[]>([]);
   const [appendSubmitting, setAppendSubmitting] = useState(false);
   const [hotkeyOpen, setHotkeyOpen] = useState(false);
-  const [selfOrderPosState, setSelfOrderPosState] = useState<SelfOrderPosState>(
-    {
-      requests: [],
-      paymentRequests: [],
-      staffCalls: [],
-    },
-  );
-  const [selfOrderSyncFailed, setSelfOrderSyncFailed] = useState(false);
-  const [selectedSelfOrderRequestId, setSelectedSelfOrderRequestId] = useState<
-    number | null
-  >(null);
-  const [selfOrderApprovalOpen, setSelfOrderApprovalOpen] = useState(false);
-  const knownSelfOrderRequestIdsRef = useRef<Set<number> | null>(null);
-  const knownSelfOrderPaymentRequestIdsRef = useRef<Set<number> | null>(null);
-  const knownSelfOrderStaffCallIdsRef = useRef<Set<number> | null>(null);
-  const selfOrderLoadGenerationRef = useRef(0);
-  const selfOrderTablesRef = useRef(tables);
-  const selfOrderOrdersRef = useRef(orders);
-  selfOrderTablesRef.current = tables;
-  selfOrderOrdersRef.current = orders;
-  // Multi-order-per-table: when the user taps an occupied table, show a
-  // picker listing active orders + a "Tạo đơn mới" button. The picker is the
-  // only path to start a 2nd order on the same physical table.
-  //
-  // Storing only the table id (not a snapshot of orders) keeps the picker
-  // tied to live `orders` state — when realtime fires (another terminal
-  // creates a 2nd order, or the chef bumps an order to served), the picker
-  // re-derives instantly instead of showing a frozen list.
-  const [pickerTableId, setPickerTableId] = useState<number | null>(null);
-  // When the user explicitly chose to create a new order on an occupied table,
-  // we record the table id here so the auto-clear effect doesn't reset it the
-  // moment table.status becomes !=="available".
-  const [allowOccupiedTableId, setAllowOccupiedTableId] = useState<
-    number | null
-  >(null);
   const [quickActionTable, setQuickActionTable] = useState<BranchTable | null>(
     null,
   );
@@ -449,179 +329,115 @@ export function PosDesktopInner({
     bumpDetailRefresh();
   }, [refreshOrdersDeduped, bumpDetailRefresh]);
 
-  const refreshSelfOrderPosState = useCallback(async () => {
-    const generation = selfOrderLoadGenerationRef.current + 1;
-    selfOrderLoadGenerationRef.current = generation;
-    const result = await fetchSelfOrderPosState(branchId).catch(() => null);
-    if (generation !== selfOrderLoadGenerationRef.current) {
-      return;
-    }
-    if (!result?.success) {
-      setSelfOrderSyncFailed(true);
-      return;
-    }
+  const {
+    state: selfOrderPosState,
+    syncFailed: selfOrderSyncFailed,
+    actionVisible: selfOrderActionVisible,
+    approvalOpen: selfOrderApprovalOpen,
+    selectedRequestId: selectedSelfOrderRequestId,
+    setApprovalOpen: setSelfOrderApprovalOpen,
+    setSelectedRequestId: setSelectedSelfOrderRequestId,
+    refresh: refreshSelfOrderPosState,
+    refreshWorkflow: refreshSelfOrderWorkflow,
+    handleOpenApproval: handleOpenSelfOrderApproval,
+    openApprovalForRequest,
+    pendingSelfOrderRequestByTable,
+    pendingSelfOrderTableIds,
+    staffCallByTable,
+    staffCallTableIds,
+    selfOrderTableNumberById,
+    selfOrderPaymentRequestByOrder,
+    paymentCallByOrderId,
+  } = useSelfOrderPosState({
+    branchId,
+    audioMode,
+    tables,
+    orders,
+    selfOrderSignalRef,
+    refreshOperational,
+  });
 
-    const nextState = result.data ?? {
-      requests: [],
-      paymentRequests: [],
-      staffCalls: [],
-    };
-    const nextRequestIds = new Set(
-      nextState.requests.map((request) => request.id),
-    );
-    const nextPaymentIds = new Set(
-      nextState.paymentRequests.map((request) => request.id),
-    );
-    const nextStaffCalls = nextState.staffCalls ?? [];
-    const nextStaffCallIds = new Set(nextStaffCalls.map((call) => call.id));
-    const knownRequestIds = knownSelfOrderRequestIdsRef.current;
-    const knownPaymentIds = knownSelfOrderPaymentRequestIdsRef.current;
-    const knownStaffCallIds = knownSelfOrderStaffCallIdsRef.current;
-    const guestAlerts: PosGuestAlertCandidate[] = [];
-    if (knownRequestIds !== null) {
-      const newRequest = nextState.requests.find(
-        (request) => !knownRequestIds.has(request.id),
-      );
-      if (newRequest) {
-        guestAlerts.push({
-          kind: "pos.self_order",
-          tableLabel: tableLabelForTableId(
-            selfOrderTablesRef.current,
-            newRequest.tableId,
-          ),
-        });
-      }
-    }
-    if (knownPaymentIds !== null) {
-      const newPayment = nextState.paymentRequests.find(
-        (request) => !knownPaymentIds.has(request.id),
-      );
-      if (newPayment) {
-        guestAlerts.push({
-          kind: "pos.payment_call",
-          tableLabel: tableLabelForOrderId(
-            selfOrderTablesRef.current,
-            selfOrderOrdersRef.current,
-            newPayment.orderId,
-          ),
-        });
-      }
-    }
-    if (knownStaffCallIds !== null) {
-      const newStaffCall = nextStaffCalls.find(
-        (call) => !knownStaffCallIds.has(call.id),
-      );
-      if (newStaffCall) {
-        guestAlerts.push({
-          kind: "pos.staff_call",
-          tableLabel: tableLabelForTableId(
-            selfOrderTablesRef.current,
-            newStaffCall.tableId,
-          ),
-        });
-      }
-    }
-    const guestAlert = selectPosGuestAlert(guestAlerts);
-    if (guestAlert) {
-      triggerHapticFeedback(
-        guestAlert.kind === "pos.staff_call" ? "call" : "warning",
-      );
-      playOperationalAlert({
-        kind: guestAlert.kind,
-        mode: audioMode,
-        branchId,
-        slots: { tableLabel: guestAlert.tableLabel },
-      });
-    }
-    knownSelfOrderRequestIdsRef.current = nextRequestIds;
-    knownSelfOrderPaymentRequestIdsRef.current = nextPaymentIds;
-    knownSelfOrderStaffCallIdsRef.current = nextStaffCallIds;
-    setSelfOrderSyncFailed(false);
-    setSelfOrderPosState(nextState);
-  }, [audioMode, branchId]);
+  const selfOrderInterrupt = useMemo(
+    () =>
+      selfOrderActionVisible
+        ? {
+            visible: true,
+            failed: selfOrderSyncFailed,
+            requestCount: selfOrderPosState.requests.length,
+            onOpen: handleOpenSelfOrderApproval,
+          }
+        : null,
+    [
+      handleOpenSelfOrderApproval,
+      selfOrderActionVisible,
+      selfOrderPosState.requests.length,
+      selfOrderSyncFailed,
+    ],
+  );
 
-  useEffect(() => {
-    void refreshSelfOrderPosState();
-    const timer = window.setInterval(() => {
-      void refreshSelfOrderPosState();
-    }, 30_000);
-    function refreshWhenVisible() {
-      if (document.visibilityState === "visible") {
-        void refreshSelfOrderPosState();
-      }
-    }
-    document.addEventListener("visibilitychange", refreshWhenVisible);
-    return () => {
-      selfOrderLoadGenerationRef.current += 1;
-      window.clearInterval(timer);
-      document.removeEventListener("visibilitychange", refreshWhenVisible);
-    };
-  }, [refreshSelfOrderPosState]);
+  const {
+    requests: voidRequests,
+    syncFailed: voidSyncFailed,
+    actionVisible: voidActionVisible,
+    open: voidSheetOpen,
+    setOpen: setVoidSheetOpen,
+    isPending: voidResolvePending,
+    handleOpen: handleOpenVoidQueue,
+    resolve: resolveVoidRequest,
+  } = usePosVoidRequestQueue(branchId);
 
-  // Instant self-order alert: shell's private branch:{id}:ops bus (same channel
-  // as menu sync) fires this loader when self_order_* rows change. The 30s poll
-  // stays as a safety net for a silently dropped socket (the loader is
-  // idempotent — tone only plays on genuinely new request ids).
-  // Assign in the render body so the bus always calls the latest closure.
-  selfOrderSignalRef.current = refreshSelfOrderPosState;
-  useEffect(() => {
-    return () => {
-      selfOrderSignalRef.current = null;
-    };
-  }, [selfOrderSignalRef]);
+  const voidInterrupt = useMemo(
+    () =>
+      voidActionVisible
+        ? {
+            visible: true,
+            failed: voidSyncFailed,
+            requestCount: voidRequests.length,
+            onOpen: handleOpenVoidQueue,
+          }
+        : null,
+    [
+      handleOpenVoidQueue,
+      voidActionVisible,
+      voidRequests.length,
+      voidSyncFailed,
+    ],
+  );
 
-  const refreshSelfOrderWorkflow = useCallback(async () => {
-    await Promise.all([refreshSelfOrderPosState(), refreshOperational()]);
-  }, [refreshOperational, refreshSelfOrderPosState]);
-
-  const selfOrderActionVisible =
-    selfOrderSyncFailed || selfOrderPosState.requests.length > 0;
-  const handleOpenSelfOrderApproval = useCallback(() => {
-    if (selfOrderSyncFailed && selfOrderPosState.requests.length === 0) {
-      void refreshSelfOrderPosState();
-      return;
-    }
-    if (selfOrderSyncFailed) void refreshSelfOrderPosState();
-    setSelectedSelfOrderRequestId(null);
-    setSelfOrderApprovalOpen(true);
-  }, [
-    refreshSelfOrderPosState,
-    selfOrderPosState.requests.length,
-    selfOrderSyncFailed,
-  ]);
-
-  // Clear selected table if it becomes unavailable while in dine-in mode.
-  // Skip the clear when the user explicitly opted into an occupied table
-  // (multi-order-per-table flow) so their selection survives the status flip.
-  useEffect(() => {
-    if (
-      cartOrderType === "dine_in" &&
-      selectedTableId !== null &&
-      selectedTable != null &&
-      selectedTable.status !== "available" &&
-      selectedTableId !== allowOccupiedTableId
-    ) {
-      setActiveTable(null);
-    }
-  }, [
+  const {
+    pickerTableId,
+    pickerTable,
+    pickerOrders,
     allowOccupiedTableId,
+    handleTableSelect,
+    handleClosePicker,
+    handleOpenOrderFromPicker,
+    handlePayOrderFromPicker,
+    handleAppendOrderFromPicker,
+    handleCreateNewOnOccupied,
+    handleCreateOrderOnTable,
+  } = usePosFloorSelect({
+    branchId,
+    orders,
+    tables,
     cartOrderType,
-    selectedTable,
     selectedTableId,
+    selectedTable,
     setActiveTable,
-  ]);
-
-  // Drop the explicit-occupied flag once the user moves away from that table
-  // (manual switch, post-submit reset, etc.). Keeps the flag tied to one
-  // active selection at a time — never accidentally reused on a later tap.
-  useEffect(() => {
-    if (
-      allowOccupiedTableId !== null &&
-      selectedTableId !== allowOccupiedTableId
-    ) {
-      setAllowOccupiedTableId(null);
-    }
-  }, [allowOccupiedTableId, selectedTableId]);
+    setCartDrawerOpen,
+    setShowOrders,
+    startTransition,
+    focusOrderWorkflow,
+    openBill,
+    openApprovalForRequest,
+    refreshSelfOrderPosState,
+    refreshOperational,
+    startAppendTarget,
+    setOrderDetailSeed,
+    staffCallByTable,
+    pendingSelfOrderRequestByTable,
+    selfOrderPaymentRequestByOrder,
+  });
 
   const isExplicitOccupied =
     selectedTableId !== null && selectedTableId === allowOccupiedTableId;
@@ -698,136 +514,12 @@ export function PosDesktopInner({
     setEditingAppendItem(null);
   }, [appendTarget?.orderId]);
 
-  // Count active orders per table — drives the "N đơn" badge on multi-order
-  // tables and the picker's order list.
-  const orderCountByTable = useMemo(() => {
-    const map = new Map<number, number>();
-    for (const order of orders) {
-      if (isActiveUnpaidPosOrder(order, ACTIVE_POS_STATUSES)) {
-        const tableId = order.table_id;
-        if (tableId !== null) map.set(tableId, (map.get(tableId) ?? 0) + 1);
-      }
-    }
-    return map;
-  }, [orders]);
-  const tableOrderVisualStateByTable = useMemo(
-    () => deriveTableOrderVisualStates(orders, ACTIVE_POS_STATUSES),
-    [orders],
-  );
-  const [nowMs, setNowMs] = useState(() => Date.now());
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setNowMs(Date.now());
-    }, 30_000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const tableTimingByTable = useMemo(
-    () => deriveTableTimingMap(orders, ACTIVE_POS_STATUSES, nowMs),
-    [orders, nowMs],
-  );
-  const tableSeatingTimeByTable = useMemo(() => {
-    const formatted = new Map<number, string>();
-    for (const [tableId, timing] of tableTimingByTable.entries()) {
-      if (timing.seatingDuration) {
-        formatted.set(tableId, timing.seatingDuration);
-      }
-    }
-    return formatted;
-  }, [tableTimingByTable]);
-  const pendingSelfOrderRequestByTable = useMemo(
-    () =>
-      new Map(
-        selfOrderPosState.requests.map((request) => [request.tableId, request]),
-      ),
-    [selfOrderPosState.requests],
-  );
-  const pendingSelfOrderTableIds = useMemo(
-    () => new Set(pendingSelfOrderRequestByTable.keys()),
-    [pendingSelfOrderRequestByTable],
-  );
-  const staffCallByTable = useMemo(
-    () =>
-      new Map(
-        (selfOrderPosState.staffCalls ?? []).map((call) => [
-          call.tableId,
-          call,
-        ]),
-      ),
-    [selfOrderPosState.staffCalls],
-  );
-  const staffCallTableIds = useMemo(
-    () => new Set(staffCallByTable.keys()),
-    [staffCallByTable],
-  );
-  const selfOrderTableNumberById = useMemo(
-    () => new Map(tables.map((table) => [table.id, table.number])),
-    [tables],
-  );
-  const selfOrderPaymentRequestByOrder = useMemo(
-    () =>
-      new Map(
-        selfOrderPosState.paymentRequests.map((request) => [
-          request.orderId,
-          request,
-        ]),
-      ),
-    [selfOrderPosState.paymentRequests],
-  );
-  const paymentCallByOrderId = useMemo(
-    () =>
-      new Map(
-        selfOrderPosState.paymentRequests.map((request) => [
-          request.orderId,
-          request.kind,
-        ]),
-      ),
-    [selfOrderPosState.paymentRequests],
-  );
-  useEffect(() => {
-    if (
-      selectedSelfOrderRequestId !== null &&
-      !selfOrderPosState.requests.some(
-        (request) => request.id === selectedSelfOrderRequestId,
-      )
-    ) {
-      setSelectedSelfOrderRequestId(null);
-    }
-  }, [selectedSelfOrderRequestId, selfOrderPosState.requests]);
-
-  // Live derivation for the multi-order table picker. Re-runs whenever
-  // `orders` or `tables` updates (realtime, post-mutation, refetch) so the
-  // dialog never shows stale data.
-  const pickerTable = useMemo(
-    () =>
-      pickerTableId !== null
-        ? (tables.find((t) => t.id === pickerTableId) ?? null)
-        : null,
-    [pickerTableId, tables],
-  );
-  const pickerOrders = useMemo(
-    () =>
-      pickerTableId !== null
-        ? orders
-            .filter(
-              (o) =>
-                o.table_id === pickerTableId &&
-                isActiveUnpaidPosOrder(o, ACTIVE_POS_STATUSES),
-            )
-            .sort(compareOrdersByNextAction)
-        : [],
-    [pickerTableId, orders],
-  );
-
-  // Auto-close picker when the last active order on the table goes terminal
-  // (paid / cancelled by another terminal mid-picker). Without this the user
-  // sees an empty list with no orders to pick — keeping the dialog open is
-  // worse UX than dropping back to the menu.
-  useEffect(() => {
-    if (pickerTableId !== null && pickerOrders.length === 0) {
-      setPickerTableId(null);
-    }
-  }, [pickerTableId, pickerOrders.length]);
+  const {
+    orderCountByTable,
+    tableOrderVisualStateByTable,
+    tableTimingByTable,
+    tableSeatingTimeByTable,
+  } = usePosTableDerived(orders);
 
   const cartSnapshot = useCartSnapshot();
   // Append / edit-sent prices follow the target order channel, not cart mode.
@@ -886,25 +578,6 @@ export function PosDesktopInner({
       getDailyLimitHoldToken("pos_append"),
     ]);
   }, [registerDailyLimitHoldTokenGetter, getDailyLimitHoldToken]);
-
-  const focusOrderWorkflow = useCallback(
-    (orderId: number, orderNumber?: string | null) => {
-      setShowOrders(true);
-      setOrderDetailId(orderId);
-      setOrderDetailNumber(orderNumber ?? null);
-      setCartDrawerOpen(false);
-    },
-    [],
-  );
-
-  const initialOpenOrderIdRef = useRef(initialOpenOrderId ?? null);
-  useEffect(() => {
-    const targetOrderId = initialOpenOrderIdRef.current;
-    if (targetOrderId === null) return;
-    initialOpenOrderIdRef.current = null;
-    const order = orders.find((candidate) => candidate.id === targetOrderId);
-    focusOrderWorkflow(targetOrderId, order?.order_number ?? null);
-  }, [focusOrderWorkflow, orders]);
 
   const { performAppend } = usePosAppend({
     branchId,
@@ -1036,168 +709,6 @@ export function PosDesktopInner({
     resetDailyLimitHoldToken,
   ]);
 
-  const handleTableSelect = useCallback(
-    (table: BranchTable) => {
-      const staffCall = staffCallByTable.get(table.id);
-      if (staffCall) {
-        void acknowledgeSelfOrderStaffCall({ callId: staffCall.id }).then(
-          () => {
-            void refreshSelfOrderPosState();
-          },
-        );
-      }
-      const pendingSelfOrderRequest = pendingSelfOrderRequestByTable.get(
-        table.id,
-      );
-      if (pendingSelfOrderRequest) {
-        setSelectedSelfOrderRequestId(pendingSelfOrderRequest.id);
-        setSelfOrderApprovalOpen(true);
-        return;
-      }
-
-      if (table.status === "available") {
-        setActiveTable(selectedTableId === table.id ? null : table.id);
-        return;
-      }
-
-      if (table.status !== "occupied") {
-        toast.message("Bàn này chưa sẵn sàng để nhận đơn.");
-        return;
-      }
-
-      // Single active order — the overwhelming case — opens its detail
-      // directly; the picker's "Tạo đơn mới" entry moved into the sheet's
-      // "Thêm đơn cho bàn" menu item. The picker only earns its tap when
-      // the table really holds 2+ orders.
-      const activeOrders = orders.filter(
-        (o) =>
-          o.table_id === table.id &&
-          isActiveUnpaidPosOrder(o, ACTIVE_POS_STATUSES),
-      );
-      const paymentCallOrders = activeOrders.filter((order) =>
-        selfOrderPaymentRequestByOrder.has(order.id),
-      );
-      if (paymentCallOrders.length === 1) {
-        const paymentCallOrder = paymentCallOrders[0];
-        if (paymentCallOrder) {
-          openBill(paymentCallOrder.id, "payment");
-          return;
-        }
-      }
-
-      if (activeOrders.length === 1) {
-        const order = activeOrders[0];
-        if (order) {
-          focusOrderWorkflow(order.id, order.order_number);
-          return;
-        }
-      }
-
-      if (activeOrders.length === 0) {
-        // Edge case: tables.status is occupied but no active order surfaces in
-        // the current orders list (stale realtime, cross-session race). Fall
-        // back to the single-fetch fallback path so the cashier still sees the
-        // row instead of an empty picker.
-        startTransition(async () => {
-          const result = await fetchActiveOrderForTable(branchId, table.id);
-          if (result.success && result.data) {
-            const order = result.data.order as unknown as OrderDetailData;
-            setOrderDetailSeed({
-              order,
-              canManage: result.data.canManageOrders,
-              canCancelOrder: result.data.canCancelOrder,
-            });
-            focusOrderWorkflow(order.id, order.order_number);
-            void refreshOperational();
-            return;
-          }
-          toast.error(
-            result.error ?? "Chưa tìm thấy đơn đang phục vụ của bàn này.",
-          );
-          void refreshOperational();
-        });
-        return;
-      }
-
-      setPickerTableId(table.id);
-    },
-    [
-      branchId,
-      focusOrderWorkflow,
-      orders,
-      openBill,
-      pendingSelfOrderRequestByTable,
-      refreshOperational,
-      refreshSelfOrderPosState,
-      selfOrderPaymentRequestByOrder,
-      staffCallByTable,
-      selectedTableId,
-      setActiveTable,
-      startTransition,
-    ],
-  );
-
-  const handleClosePicker = useCallback(() => {
-    setPickerTableId(null);
-  }, []);
-
-  const handleOpenOrderFromPicker = useCallback(
-    (orderId: number, orderNumber: string) => {
-      setPickerTableId(null);
-      focusOrderWorkflow(orderId, orderNumber);
-    },
-    [focusOrderWorkflow],
-  );
-
-  const handlePayOrderFromPicker = useCallback((orderId: number) => {
-    setPickerTableId(null);
-    setCartDrawerOpen(false);
-    setPostSubmitPaymentOrderId(null);
-    setBillInitialOrder(null);
-    setBillIntent("payment");
-    setBillOrderId(orderId);
-  }, []);
-
-  const handleAppendOrderFromPicker = useCallback(
-    (orderId: number, orderNumber: string) => {
-      const order = orders.find((row) => row.id === orderId);
-      const locked = order != null && isPosOrderAmountLocked(order);
-      void (async () => {
-        const ok = await confirmAndCancelPendingPayment({
-          branchId,
-          orderId,
-          locked,
-        });
-        if (!ok) return;
-        setPickerTableId(null);
-        setCartDrawerOpen(false);
-        startAppendTarget(orderId, orderNumber);
-        setShowOrders(false);
-        toast.message("Chạm món trên menu để thêm");
-        if (locked) void refreshOperational();
-      })();
-    },
-    [branchId, orders, refreshOperational, startAppendTarget],
-  );
-
-  const handleCreateNewOnOccupied = useCallback(() => {
-    if (pickerTableId === null) return;
-    const tableId = pickerTableId;
-    setPickerTableId(null);
-    setAllowOccupiedTableId(tableId);
-    setActiveTable(tableId);
-    setCartDrawerOpen(false);
-  }, [pickerTableId, setActiveTable]);
-
-  const handleCreateOrderOnTable = useCallback(
-    (tableId: number) => {
-      setAllowOccupiedTableId(tableId);
-      setActiveTable(tableId);
-      setCartDrawerOpen(false);
-    },
-    [setActiveTable],
-  );
-
   const handleCreateTakeawayOrder = useCallback(() => {
     setCartOrderType("takeaway");
     setActiveTable(null);
@@ -1301,7 +812,7 @@ export function PosDesktopInner({
           // route so RSC re-fetches the currently open session, instead
           // of looping the cashier through "thử lại" forever.
           if (result.errorCode === POS_ERROR_CODES.SCOPE_SESSION_NOT_OPEN) {
-            toast.error(result.error ?? "Ca POS đã đóng — đang tải lại trang.");
+            toast.error(result.error ?? messages.pos.sessionHeader.closedReload);
             router.refresh();
             return;
           }
@@ -1894,48 +1405,11 @@ export function PosDesktopInner({
   );
 
   const serviceModeSelector = (
-    <Frame className="bg-muted/50 p-1">
-      <ToggleGroup
-        type="single"
-        value={cartOrderType}
-        variant="outline"
-        size="touch"
-        spacing={0}
-        className="grid w-full grid-cols-3"
-        aria-label={messages.pos.desktop.serviceModeAria}
-        onValueChange={(value) => {
-          if (
-            value === "dine_in" ||
-            value === "takeaway" ||
-            value === "delivery"
-          ) {
-            handleOrderTypeChange(value);
-          }
-        }}
-      >
-        <ToggleGroupItem
-          value="dine_in"
-          className="w-full min-w-0 justify-center text-sm font-semibold"
-          disabled={cartItemCount > 0 && cartOrderType !== "dine_in"}
-        >
-          {messages.pos.desktop.dineIn}
-        </ToggleGroupItem>
-        <ToggleGroupItem
-          value="takeaway"
-          className="w-full min-w-0 justify-center text-sm font-semibold"
-          disabled={cartItemCount > 0 && cartOrderType !== "takeaway"}
-        >
-          {messages.pos.desktop.takeaway}
-        </ToggleGroupItem>
-        <ToggleGroupItem
-          value="delivery"
-          className="w-full min-w-0 justify-center text-sm font-semibold"
-          disabled={cartItemCount > 0 && cartOrderType !== "delivery"}
-        >
-          {messages.pos.desktop.delivery}
-        </ToggleGroupItem>
-      </ToggleGroup>
-    </Frame>
+    <PosServiceModeSelector
+      cartOrderType={cartOrderType}
+      cartItemCount={cartItemCount}
+      onOrderTypeChange={handleOrderTypeChange}
+    />
   );
 
   // Back-to-main handler: dine_in → table gate; takeaway draft → takeaway gate.
@@ -2031,46 +1505,6 @@ export function PosDesktopInner({
     </StationSheet>
   ) : null;
 
-  const desktopSelfOrderAction = selfOrderActionVisible ? (
-    <Button
-      type="button"
-      variant="outline"
-      size="touch"
-      className={cn(
-        "w-full min-w-0 justify-between gap-2 text-sm font-semibold transition-colors",
-        selfOrderPosState.requests.length > 0
-          ? "border-warning text-foreground shadow-2xs"
-          : "text-muted-foreground hover:text-foreground",
-      )}
-      onClick={handleOpenSelfOrderApproval}
-      aria-label={
-        selfOrderSyncFailed && selfOrderPosState.requests.length === 0
-          ? messages.pos.selfOrderSync.retry
-          : undefined
-      }
-    >
-      <div className="flex min-w-0 flex-1 items-center gap-2">
-        <IconBell
-          data-icon="inline-start"
-          className={cn(
-            "size-4 shrink-0",
-            selfOrderPosState.requests.length > 0 && "text-warning",
-          )}
-        />
-        <span className="truncate">
-          {selfOrderSyncFailed && selfOrderPosState.requests.length === 0
-            ? messages.pos.selfOrderSync.failed
-            : SELF_ORDER_VI.staffApprove}
-        </span>
-      </div>
-      {selfOrderPosState.requests.length > 0 ? (
-        <Badge variant="warning" className="shrink-0 font-mono font-semibold tabular-nums">
-          {formatCount(selfOrderPosState.requests.length)}
-        </Badge>
-      ) : null}
-    </Button>
-  ) : undefined;
-
   // POS stays touch-first through tablet widths. The desktop split pane starts
   // at xl so tablet portrait/landscape keeps the drawer + sticky CTA workflow.
   const sidebars = isTouchLayout ? null : (
@@ -2078,9 +1512,10 @@ export function PosDesktopInner({
       canCloseShift={canCloseShift}
       canManageMenuLimits={canManageMenuLimits}
       onShowCloseSession={openCloseSession}
+      selfOrderInterrupt={selfOrderInterrupt}
+      voidInterrupt={voidInterrupt}
       isContextGate={!menuContextReady}
       sidebarContentProps={sidebarContentProps}
-      sessionAction={desktopSelfOrderAction}
     />
   );
 
@@ -2099,12 +1534,10 @@ export function PosDesktopInner({
                 ? handleSwitchTableMode
                 : undefined
           }
+          selfOrderInterrupt={selfOrderInterrupt}
+          voidInterrupt={voidInterrupt}
         />
       ) : null}
-
-      <div className="px-3 pt-2 sm:px-4">
-        <VoidRequestQueue branchId={branchId} />
-      </div>
 
       {!menuContextReady ? (
         <div className="flex min-h-0 flex-1 overflow-hidden bg-background/35">
@@ -2121,7 +1554,6 @@ export function PosDesktopInner({
                 tableTimingByTable={tableTimingByTable}
                 pendingSelfOrderTableIds={pendingSelfOrderTableIds}
                 staffCallTableIds={staffCallTableIds}
-                hasStackedTouchActions={selfOrderActionVisible}
                 headerAction={serviceModeSelector}
                 className="min-h-0 flex-1"
               />
@@ -2135,7 +1567,6 @@ export function PosDesktopInner({
                     : handleCreateTakeawayOrder
                 }
                 onViewDetail={openDetail}
-                hasStackedTouchActions={selfOrderActionVisible}
                 headerAction={serviceModeSelector}
                 className="min-h-0 flex-1"
               />
@@ -2150,7 +1581,6 @@ export function PosDesktopInner({
             <MenuPane
               categories={categories}
               dailyLimitDemandByMenuItem={dailyLimitDemandByMenuItem}
-              hasStackedTouchActions={selfOrderActionVisible}
               orderType={listPriceOrderType}
               deliveryPlatform={listPriceDeliveryPlatform}
               onItemTap={handleItemTap}
@@ -2172,8 +1602,6 @@ export function PosDesktopInner({
         isSubmittingNewOrder={isPending}
         canSubmitAppendDraft={appendDraftQuantity > 0 && !appendSubmitting}
         isSubmittingAppendDraft={appendSubmitting}
-        selfOrderRequestCount={selfOrderPosState.requests.length}
-        selfOrderSyncFailed={selfOrderSyncFailed}
         onOpenOrdersDrawer={() => {
           setShowOrders(true);
           void refreshOrders();
@@ -2190,7 +1618,6 @@ export function PosDesktopInner({
         onSubmitNewOrder={() => handleSubmitOrder()}
         onSubmitAppendDraft={handleSubmitAppendDraft}
         onCancelAppend={cancelAppendWorkflow}
-        onOpenSelfOrderApproval={handleOpenSelfOrderApproval}
       />
       <SelfOrderApprovalSheet
         open={selfOrderApprovalOpen}
@@ -2208,6 +1635,13 @@ export function PosDesktopInner({
           await acknowledgeSelfOrderStaffCall({ callId });
           void refreshSelfOrderPosState();
         }}
+      />
+      <VoidRequestSheet
+        open={voidSheetOpen}
+        onOpenChange={setVoidSheetOpen}
+        requests={voidRequests}
+        isPending={voidResolvePending}
+        onResolve={resolveVoidRequest}
       />
       {mobileSidebarDrawer}
 

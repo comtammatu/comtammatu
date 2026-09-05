@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, type ComponentProps, type ReactNode } from "react";
+import { memo, type ComponentProps } from "react";
 import { PosSessionTopBar } from "../pos-session-header";
 import { PosSidebarContent } from "../pos-sidebar-panel";
 import { AppendDraftPane } from "./append-draft-pane";
@@ -13,12 +13,15 @@ interface SidebarHeaderInputs {
   canCloseShift: boolean;
   canManageMenuLimits: boolean;
   onShowCloseSession: () => void;
+  selfOrderInterrupt?: ComponentProps<
+    typeof PosSessionTopBar
+  >["selfOrderInterrupt"];
+  voidInterrupt?: ComponentProps<typeof PosSessionTopBar>["voidInterrupt"];
 }
 
 export interface SplitSidebarProps extends SidebarHeaderInputs {
   isContextGate: boolean;
   sidebarContentProps: SidebarContentProps;
-  sessionAction?: ReactNode;
 }
 
 /** Wide layout (xl+): cart + order-list side by side. */
@@ -26,9 +29,10 @@ function SplitSidebarComponent({
   canCloseShift,
   canManageMenuLimits,
   onShowCloseSession,
+  selfOrderInterrupt,
+  voidInterrupt,
   isContextGate,
   sidebarContentProps,
-  sessionAction,
 }: SplitSidebarProps) {
   const {
     canSubmit,
@@ -41,6 +45,7 @@ function SplitSidebarComponent({
     onViewDetail,
     onOpenArchivedSheet,
     hideTakeawayOrders,
+    paymentCallByOrderId,
   } = sidebarContentProps;
 
   const sessionTopBar = (
@@ -48,6 +53,8 @@ function SplitSidebarComponent({
       canCloseShift={canCloseShift}
       canManageMenuLimits={canManageMenuLimits}
       onShowCloseSession={onShowCloseSession}
+      selfOrderInterrupt={selfOrderInterrupt}
+      voidInterrupt={voidInterrupt}
     />
   );
 
@@ -57,6 +64,7 @@ function SplitSidebarComponent({
       onViewDetail={onViewDetail}
       onOpenArchivedSheet={onOpenArchivedSheet}
       hideTakeawayOrders={hideTakeawayOrders}
+      paymentCallByOrderId={paymentCallByOrderId}
     />
   );
 
@@ -66,11 +74,6 @@ function SplitSidebarComponent({
     return (
       <div className="hidden h-full min-h-0 w-80 shrink-0 flex-col border-l border-border/60 bg-background xl:flex 2xl:w-96">
         {sessionTopBar}
-        {sessionAction ? (
-          <div className="flex shrink-0 border-b border-border/60 bg-background px-3 py-2">
-            {sessionAction}
-          </div>
-        ) : null}
         {orderList}
       </div>
     );
@@ -78,11 +81,12 @@ function SplitSidebarComponent({
 
   // Dual pane: keep session chrome (logo / printer / ⋮) only above the
   // order-list column so it does not span both panes and create a floating
-  // logo cell with misaligned border crosses.
+  // logo cell with misaligned border crosses. xl uses w-72 so the menu
+  // keeps two product columns; 2xl restores a wider cart and list.
   return (
     <div className="hidden h-full min-h-0 shrink-0 flex-col border-l border-border/60 bg-background xl:flex">
       <div className="flex min-h-0 flex-1">
-        <div className="flex h-full min-h-0 w-80 shrink-0 flex-col 2xl:w-88">
+        <div className="flex h-full min-h-0 w-72 shrink-0 flex-col 2xl:w-80">
           {appendDraft.target != null ? (
             <AppendDraftPane
               targetLabel={appendDraft.target.targetLabel}
@@ -103,13 +107,8 @@ function SplitSidebarComponent({
             />
           )}
         </div>
-        <div className="flex h-full min-h-0 w-80 shrink-0 flex-col border-l border-border/60 2xl:w-88">
+        <div className="flex h-full min-h-0 w-72 shrink-0 flex-col border-l border-border/60 2xl:w-88">
           {sessionTopBar}
-          {sessionAction ? (
-            <div className="flex shrink-0 border-b border-border/60 bg-background px-3 py-2">
-              {sessionAction}
-            </div>
-          ) : null}
           {orderList}
         </div>
       </div>

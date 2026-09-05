@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { memo, useState } from "react";
+import { formatCount } from "@comtammatu/shared/format";
 import { Button } from "@comtammatu/ui/components/button";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { messages } from "@lib/messages";
 import {
@@ -19,6 +21,8 @@ import { PrinterStatusIndicator } from "./printer-status-badge";
 import { usePosSession, usePosSound } from "./_providers/pos-desktop-provider";
 import {
   ArrowLeft as IconArrowLeft,
+  Ban as IconBan,
+  ClipboardCheck as IconClipboardCheck,
   Ellipsis as IconEllipsis,
   LogIn as IconDoorEnter,
   Megaphone as IconVoiceOn,
@@ -27,6 +31,14 @@ import {
   Volume2 as IconVolume2,
   VolumeX as IconVolumeX,
 } from "lucide-react";
+import { cn } from "@comtammatu/ui";
+
+export interface PosChromeInterrupt {
+  visible: boolean;
+  failed: boolean;
+  requestCount: number;
+  onOpen: () => void;
+}
 
 interface PosSessionTopBarProps {
   /** Ẩn nút "Chốt ca" cho role không có `pos:close_shift`. */
@@ -45,6 +57,16 @@ interface PosSessionTopBarProps {
    * chính POS hoặc hủy append hiện tại. Hidden khi undefined.
    */
   onBack?: () => void;
+  /**
+   * QR self-order interrupt. Lives in session chrome so the cash dock stays
+   * one row (Gửi bếp / Giỏ). Hidden when there is nothing to duyệt or retry.
+   */
+  selfOrderInterrupt?: PosChromeInterrupt | null;
+  /**
+   * Paid-void approval interrupt. Same chrome as QR approval — never a body
+   * banner that pushes the cash path.
+   */
+  voidInterrupt?: PosChromeInterrupt | null;
 }
 
 function PosSessionTopBarComponent({
@@ -53,6 +75,8 @@ function PosSessionTopBarComponent({
   onShowCloseSession,
   contextLabel,
   onBack,
+  selfOrderInterrupt,
+  voidInterrupt,
 }: PosSessionTopBarProps) {
   const { branchId } = usePosSession();
   const [menuLimitsOpen, setMenuLimitsOpen] = useState(false);
@@ -93,6 +117,63 @@ function PosSessionTopBarComponent({
               opens close-shift quickly on desktop. */}
           <div className="flex shrink-0 items-center gap-2">
             <PrinterStatusIndicator branchId={branchId} />
+            {selfOrderInterrupt?.visible ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-touch"
+                className="relative shrink-0"
+                onClick={selfOrderInterrupt.onOpen}
+                aria-label={
+                  selfOrderInterrupt.failed &&
+                  selfOrderInterrupt.requestCount === 0
+                    ? messages.pos.selfOrderSync.retry
+                    : messages.pos.sessionHeader.selfOrderApproveAria
+                }
+              >
+                <IconClipboardCheck
+                  className={cn(
+                    selfOrderInterrupt.requestCount > 0 && "text-warning",
+                  )}
+                />
+                {selfOrderInterrupt.requestCount > 0 ? (
+                  <Badge
+                    variant="warning"
+                    className="pointer-events-none absolute -top-0.5 -right-0.5 min-w-5 px-1 font-mono font-semibold tabular-nums"
+                  >
+                    {formatCount(selfOrderInterrupt.requestCount)}
+                  </Badge>
+                ) : null}
+              </Button>
+            ) : null}
+            {voidInterrupt?.visible ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-touch"
+                className="relative shrink-0"
+                onClick={voidInterrupt.onOpen}
+                aria-label={
+                  voidInterrupt.failed && voidInterrupt.requestCount === 0
+                    ? messages.pos.sessionHeader.voidRequestRetry
+                    : messages.pos.sessionHeader.voidRequestAria
+                }
+              >
+                <IconBan
+                  className={cn(
+                    voidInterrupt.requestCount > 0 && "text-destructive",
+                  )}
+                />
+                {voidInterrupt.requestCount > 0 ? (
+                  <Badge
+                    variant="destructive"
+                    className="pointer-events-none absolute -top-0.5 -right-0.5 min-w-5 px-1 font-mono font-semibold tabular-nums"
+                  >
+                    {formatCount(voidInterrupt.requestCount)}
+                  </Badge>
+                ) : null}
+              </Button>
+            ) : null}
             {canManageMenuLimits ? (
               <Button
                 type="button"

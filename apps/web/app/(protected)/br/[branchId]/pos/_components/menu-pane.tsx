@@ -8,7 +8,6 @@ import type { DeliveryPlatform, OrderType } from "../types";
 interface MenuPaneProps {
   categories: MenuCategory[];
   dailyLimitDemandByMenuItem?: ReadonlyMap<number, number>;
-  hasStackedTouchActions?: boolean;
   orderType?: OrderType;
   deliveryPlatform?: DeliveryPlatform | null;
   onItemTap: (item: MenuItem) => void;
@@ -17,7 +16,6 @@ interface MenuPaneProps {
 function MenuPaneComponent({
   categories,
   dailyLimitDemandByMenuItem,
-  hasStackedTouchActions,
   orderType = "takeaway",
   deliveryPlatform = null,
   onItemTap,
@@ -26,7 +24,6 @@ function MenuPaneComponent({
     <PosMenuGrid
       categories={categories}
       dailyLimitDemandByMenuItem={dailyLimitDemandByMenuItem}
-      hasStackedTouchActions={hasStackedTouchActions}
       orderType={orderType}
       deliveryPlatform={deliveryPlatform}
       onItemTap={onItemTap}

@@ -61,7 +61,7 @@ export function PosDesktopShell(props: PosDesktopShellProps) {
 
   // Extract the volatile slice (sold_today / is_disabled / available_to_sell)
   // from RSC's `fetchMenuForPos` snapshot so the provider can patch it in
-  // real time via `useDailyLimitSync` without re-fetching the whole menu
+  // real time via `useOrderSync` without re-fetching the whole menu
   // structure on each event. Items without a limit row simply aren't keys.
   const initialDailyLimits = useMemo<DailyLimitsMap>(() => {
     const map = new Map<number, NonNullable<MenuItem["daily_limit"]>>();

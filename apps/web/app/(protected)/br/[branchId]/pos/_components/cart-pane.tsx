@@ -557,7 +557,7 @@ function CartPaneComponent({
                     type="button"
                     variant="outline"
                     className="min-w-0 w-full text-base font-semibold tracking-wide text-muted-foreground"
-                    size="touch-lg"
+                    size="touch"
                     disabled={!canSubmit || isSubmitting || hasRemovingItems}
                     onClick={() => void handlePrioritySubmit()}
                   >

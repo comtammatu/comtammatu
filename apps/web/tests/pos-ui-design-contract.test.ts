@@ -99,10 +99,9 @@ const orderSyncSource = read(
   "app/(protected)/br/[branchId]/pos/_hooks/use-order-sync.ts",
 );
 
-const serviceModeSelector =
-  /const serviceModeSelector = \([\s\S]*?\n\s*\);/.exec(
-    posDesktopSource,
-  )?.[0] ?? "";
+const serviceModeSelector = read(
+  "app/(protected)/br/[branchId]/pos/_components/pos-service-mode-selector.tsx",
+);
 
 test("POS service mode uses ToggleGroup primitive state instead of route-local state colors", () => {
   assert.match(serviceModeSelector, /<ToggleGroup[\s\S]*variant="outline"/);
@@ -164,6 +163,7 @@ test("POS takeaway mode uses a context grid before entering the new-order menu",
   assert.match(posDesktopSource, /currentOrderTarget/);
   assert.match(posDesktopSource, /orderTargetRow/);
   assert.match(posDesktopSource, /headerAction=\{serviceModeSelector\}/);
+  assert.match(posDesktopInnerSource, /<PosServiceModeSelector/);
   assert.match(tableGateSource, /headerAction\?: ReactNode/);
   assert.doesNotMatch(tableGateSource, /tableGate\.tableCount/);
   assert.doesNotMatch(tableGateSource, /tableGate\.availableCount/);
@@ -193,8 +193,14 @@ test("POS takeaway mode uses a context grid before entering the new-order menu",
   );
   assert.match(posDesktopSource, /await confirm\(\{/);
   assert.match(posDesktopSource, /messages\.pos\.appendDraft\.cancelTitle/);
-  assert.match(posDesktopSource, /setSelfOrderSyncFailed\(true\)/);
-  assert.match(posDesktopSource, /messages\.pos\.selfOrderSync\.failed/);
+  assert.match(
+    read("app/(protected)/br/[branchId]/pos/_hooks/use-self-order-pos-state.ts"),
+    /setSyncFailed\(true\)/,
+  );
+  assert.match(
+    read("app/(protected)/br/[branchId]/pos/pos-session-header.tsx"),
+    /messages\.pos\.selfOrderSync\.retry/,
+  );
   assert.match(mobileActionBarSource, /isTouchLayout/);
   assert.match(mobileActionBarSource, /xl:hidden/);
   assert.match(sidebarVariantsSource, /bg-background xl:flex/);
@@ -235,7 +241,11 @@ test("POS takeaway mode uses a context grid before entering the new-order menu",
   );
   assert.match(
     sidebarVariantsSource,
-    /flex h-full min-h-0 w-80 shrink-0 flex-col 2xl:w-88/,
+    /flex h-full min-h-0 w-72 shrink-0 flex-col 2xl:w-80/,
+  );
+  assert.match(
+    sidebarVariantsSource,
+    /flex h-full min-h-0 w-72 shrink-0 flex-col border-l border-border\/60 2xl:w-88/,
   );
   assert.match(sidebarVariantsSource, /const sessionTopBar = \(/);
   assert.doesNotMatch(

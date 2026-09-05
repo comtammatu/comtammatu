@@ -2,12 +2,9 @@
 
 import { memo, type ReactNode } from "react";
 import { formatCount, formatVND } from "@comtammatu/shared/format";
-import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
-  BellRing as IconBell,
   Plus as IconPlus,
   Receipt as IconReceipt,
   ShoppingCart as IconShoppingCart,
@@ -27,8 +24,6 @@ export interface PosMobileActionBarProps {
   isSubmittingNewOrder: boolean;
   canSubmitAppendDraft: boolean;
   isSubmittingAppendDraft: boolean;
-  selfOrderRequestCount: number;
-  selfOrderSyncFailed: boolean;
   /** Opens the orders drawer view (refreshes then shows). */
   onOpenOrdersDrawer: () => void;
   /** Opens the cart drawer in its non-orders view. */
@@ -38,11 +33,10 @@ export interface PosMobileActionBarProps {
   onSubmitNewOrder: () => void;
   onSubmitAppendDraft: () => void;
   onCancelAppend: () => void;
-  onOpenSelfOrderApproval: () => void;
 }
 
 const TOUCH_DOCK_CLASS =
-  "pointer-events-none fixed inset-x-3 bottom-0 z-40 flex flex-col gap-2 pos-safe-bottom select-none chrome-tap xl:hidden";
+  "pointer-events-none fixed inset-x-3 bottom-0 z-40 flex flex-col pos-safe-bottom select-none chrome-tap xl:hidden";
 
 const ACTION_BAR_SURFACE_CLASS =
   "pointer-events-auto rounded-lg bg-card/95 p-2 shadow-2xl ring-1 ring-border/80 backdrop-blur-md";
@@ -52,9 +46,6 @@ const ACTION_BAR_CLASS = `${ACTION_BAR_SURFACE_CLASS} flex gap-2`;
 const APPEND_ACTION_BAR_CLASS = `${ACTION_BAR_SURFACE_CLASS} grid grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)] gap-2`;
 
 const SESSION_ORDERS_BAR_CLASS = "pointer-events-auto flex justify-end";
-
-const SELF_ORDER_BUTTON_CLASS =
-  "pointer-events-auto self-end rounded-lg bg-card/95 ring-1 ring-border/80 backdrop-blur-md transition-transform active:scale-[0.98]";
 
 const ACTION_PRIMARY_BUTTON_CLASS =
   "min-w-0 flex-1 px-2 text-sm font-bold tracking-wide transition-transform sm:min-w-14 sm:px-4 sm:text-base";
@@ -80,53 +71,22 @@ function PosMobileActionBarComponent({
   isSubmittingNewOrder,
   canSubmitAppendDraft,
   isSubmittingAppendDraft,
-  selfOrderRequestCount,
-  selfOrderSyncFailed,
   onOpenOrdersDrawer,
   onOpenCartDrawer,
   onOpenAppendDrawer,
   onSubmitNewOrder,
   onSubmitAppendDraft,
   onCancelAppend,
-  onOpenSelfOrderApproval,
 }: PosMobileActionBarProps) {
   if (!isTouchLayout) return null;
 
-  const showSelfOrderAction = selfOrderSyncFailed || selfOrderRequestCount > 0;
-  const retrySelfOrderOnly = selfOrderSyncFailed && selfOrderRequestCount === 0;
   const renderTouchDock = (actionRow: ReactNode) => (
     <>
       <div
         aria-hidden="true"
         className="pointer-events-none fixed inset-x-0 bottom-0 z-30 h-[env(safe-area-inset-bottom)] bg-card/95 xl:hidden"
       />
-      <div className={TOUCH_DOCK_CLASS}>
-        {showSelfOrderAction ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="touch"
-            className={SELF_ORDER_BUTTON_CLASS}
-            onClick={onOpenSelfOrderApproval}
-            aria-label={
-              retrySelfOrderOnly ? messages.pos.selfOrderSync.retry : undefined
-            }
-          >
-            <IconBell data-icon="inline-start" />
-            <span className="truncate">
-              {retrySelfOrderOnly
-                ? messages.pos.selfOrderSync.failed
-                : SELF_ORDER_VI.staffApprove}
-            </span>
-            {selfOrderRequestCount > 0 ? (
-              <Badge variant="warning">
-                {formatCount(selfOrderRequestCount)}
-              </Badge>
-            ) : null}
-          </Button>
-        ) : null}
-        {actionRow}
-      </div>
+      <div className={TOUCH_DOCK_CLASS}>{actionRow}</div>
     </>
   );
 

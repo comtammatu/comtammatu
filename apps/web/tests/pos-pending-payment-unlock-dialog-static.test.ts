@@ -15,6 +15,9 @@ const picker = read(
   "app/(protected)/br/[branchId]/pos/_components/multi-order-table-picker.tsx",
 );
 const inner = read("app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx");
+const floorSelect = read(
+  "app/(protected)/br/[branchId]/pos/_hooks/use-pos-floor-select.ts",
+);
 const posMessages = read("lib/messages/pos.ts");
 
 test("pending QR unlock performs non-blocking silent unlock without modal disruption", () => {
@@ -63,10 +66,12 @@ test("locked amount mutations stay offered and continue after unlock", () => {
   }
 
   assert.match(picker, /canOfferPosOrderAppend/);
-  assert.match(inner, /confirmAndCancelPendingPayment/);
-  assert.match(inner, /handleAppendOrderFromPicker/);
+  assert.match(floorSelect, /confirmAndCancelPendingPayment/);
+  assert.match(floorSelect, /handleAppendOrderFromPicker/);
   assert.match(
-    inner,
+    floorSelect,
     /isPosOrderAmountLocked\(order\)[\s\S]*confirmAndCancelPendingPayment[\s\S]*startAppendTarget/,
   );
+  assert.match(inner, /usePosFloorSelect/);
+  assert.match(inner, /handleAppendOrderFromPicker/);
 });

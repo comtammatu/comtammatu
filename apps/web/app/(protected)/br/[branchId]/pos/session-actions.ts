@@ -271,40 +271,38 @@ export async function fetchPosPermissionFlags(branchId: number): Promise<{
   if (!ctx) return deny;
   if (!isPosBranchInScope(ctx.claims, parsedBranchId.data)) return deny;
 
-  const [openRes, closeRes, cashRes, printRes, splitMergeRes] = await Promise.all([
-    ctx.supabase.rpc("has_permission", {
-      p_branch_id: parsedBranchId.data,
-      p_key: PERMISSION_KEYS.POS_OPEN_CASHBOX,
-    }),
-    ctx.supabase.rpc("has_permission", {
-      p_branch_id: parsedBranchId.data,
-      p_key: PERMISSION_KEYS.POS_CLOSE_SHIFT,
-    }),
-    ctx.supabase.rpc("has_permission", {
-      p_branch_id: parsedBranchId.data,
-      p_key: PERMISSION_KEYS.POS_CONFIRM_PAYMENT,
-    }),
-    ctx.supabase.rpc("has_permission", {
-      p_branch_id: parsedBranchId.data,
-      p_key: PERMISSION_KEYS.POS_PRINT,
-    }),
-    ctx.supabase
-      .from("system_settings")
-      .select("value")
-      .eq("tenant_id", ctx.claims.tenant_id)
-      .eq("key", SYSTEM_SETTING_KEYS.POS_SPLIT_MERGE_ENABLED)
-      .maybeSingle(),
-  ]);
+  const [canOpenShift, canCloseShift, canConfirmCash, canPrint, splitMergeRes] =
+    await Promise.all([
+      probePermission(
+        ctx,
+        PERMISSION_KEYS.POS_OPEN_CASHBOX,
+        parsedBranchId.data,
+      ),
+      probePermission(
+        ctx,
+        PERMISSION_KEYS.POS_CLOSE_SHIFT,
+        parsedBranchId.data,
+      ),
+      probePermission(
+        ctx,
+        PERMISSION_KEYS.POS_CONFIRM_PAYMENT,
+        parsedBranchId.data,
+      ),
+      probePermission(ctx, PERMISSION_KEYS.POS_PRINT, parsedBranchId.data),
+      ctx.supabase
+        .from("system_settings")
+        .select("value")
+        .eq("tenant_id", ctx.claims.tenant_id)
+        .eq("key", SYSTEM_SETTING_KEYS.POS_SPLIT_MERGE_ENABLED)
+        .maybeSingle(),
+    ]);
 
   const role = ctx.claims.user_role;
   return {
-    canOpenShift: !openRes.error && openRes.data === true,
-    canCloseShift: !closeRes.error && closeRes.data === true,
-    canConfirmCash: !cashRes.error && cashRes.data === true,
-    canPrintProvisional:
-      !printRes.error &&
-      printRes.data === true &&
-      canPrintProvisionalBill(role),
+    canOpenShift,
+    canCloseShift,
+    canConfirmCash,
+    canPrintProvisional: canPrint && canPrintProvisionalBill(role),
     canManageMenuLimits: canManagePosMenuLimits(role),
     // Default ON when no row exists (matches the RPC COALESCE(...,'true')) but
     // fail CLOSED on a read error, like the sibling flags — the RPC stays the hard gate.

@@ -67,7 +67,8 @@ test("WP-C void request queue is wired into POS", () => {
   const actions = readWeb(
     "app/(protected)/br/[branchId]/pos/void-request-actions.ts",
   );
-  assert.match(inner, /VoidRequestQueue/);
+  assert.match(inner, /usePosVoidRequestQueue/);
+  assert.match(inner, /VoidRequestSheet/);
   assert.match(actions, /request_pos_void_after_paid/);
   assert.match(actions, /resolve_pos_void_request/);
 });

@@ -11,6 +11,9 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "@comtammatu/ui/components/sonner";
+import { messages } from "@lib/messages";
 import {
   ReceiptText as IconReceipt,
   RefreshCw as IconRefresh,
@@ -28,7 +31,6 @@ import {
 } from "../actions";
 import { CartStore } from "./cart-store";
 import { useOrderSync } from "../_hooks/use-order-sync";
-import { useDailyLimitSync } from "../_hooks/use-daily-limit-sync";
 import { usePrintJobAlerts } from "../_hooks/use-print-job-alerts";
 import {
   createDailyLimitStore,
@@ -146,7 +148,7 @@ const OperationalDispatchContext = createContext<OperationalDispatch | null>(
 
 /**
  * External store cho daily-limit slice (seeded từ RSC `fetchMenuForPos`,
- * patch realtime qua `useDailyLimitSync`). `useDailyLimit(itemId)` subscribe
+ * patch realtime via `useOrderSync` on `pos-branch-{id}`). `useDailyLimit(itemId)` subscribe
  * theo từng id qua `useSyncExternalStore` — chỉ MenuItemButton của món có
  * limit đổi mới re-render (vs context propagation invalidate cả 50-200 card
  * trên mỗi event realtime — Architect option b).
@@ -225,7 +227,7 @@ interface PosDesktopProviderProps {
   /**
    * Seed map of `menu_item_id → MenuItemDailyLimit` derived from the
    * RSC `fetchMenuForPos` response. Mounts the live slice; subsequent
-   * mutations arrive via `useDailyLimitSync`. Items without a daily
+   * mutations arrive via `useOrderSync` on the idle POS channel. Items without a daily
    * limit row simply aren't keys in the map — semantic equivalent of
    * `daily_limit: null` per `pos-menu-types.ts`.
    */
@@ -243,6 +245,11 @@ export function PosDesktopProvider({
   initialDailyLimits,
   children,
 }: PosDesktopProviderProps) {
+  const router = useRouter();
+  const handleSessionClosed = useCallback(() => {
+    toast.warning(messages.pos.sessionHeader.closedReload);
+    router.refresh();
+  }, [router]);
   const [orders, setOrders] = useState<SessionOrder[]>(initialOrders);
   const [ordersBootstrapState, setOrdersBootstrapState] =
     useState<OrdersBootstrapState>(initialOrdersSeeded ? "ready" : "loading");
@@ -461,6 +468,8 @@ export function PosDesktopProvider({
     [loadDailyLimits],
   );
 
+  const printJobAlerts = usePrintJobAlerts({ branchId, audioMode });
+
   useOrderSync({
     branchId,
     setTables,
@@ -472,17 +481,11 @@ export function PosDesktopProvider({
     onArchivedInvalidate: bumpArchivedToken,
     audioMode,
     skipFirstSubscribedRefresh: true,
-  });
-
-  usePrintJobAlerts({ branchId, audioMode });
-
-  // RSC always seeds the limits map (even if empty) — initial SUBSCRIBED
-  // skips its catchup; reconnect SUBSCRIBED refetches via dedupe to fill
-  // events missed during disconnect.
-  useDailyLimitSync({
-    branchId,
     refreshLimits: refreshDailyLimitsDeduped,
-    skipFirstSubscribedRefresh: true,
+    sessionId: session.id,
+    onSessionClosed: handleSessionClosed,
+    onPrintJobUpdate: printJobAlerts.handlePrintJobUpdate,
+    onPrintReconnect: printJobAlerts.sweepRecentFailures,
   });
 
   const dispatchValue = useMemo<OperationalDispatch>(

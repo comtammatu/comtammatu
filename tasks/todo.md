@@ -5,6 +5,12 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Restore POS cash-path chrome to one dock row
+State: doing
+Exit: QR and paid-void on session chrome; one dock row; idle POS shares `pos-branch-{id}`; xl dual-pane `w-72`.
+Evidence: `pos-interrupt-chrome-static.test.ts`; `realtime-channel-budget-static.test.ts`; `pos-ui-design-contract.test.ts`.
+- [ ] Cashier smoke: header void badge; kitchen-send one dock row; xl two-column menu width
+
 ## Clarify expense list purpose and startup filters
 State: verify
 Exit: Expense LIST leads with spend purpose; URL `q`/`kind` slice operating vs startup.
@@ -37,33 +43,28 @@ UI Advisor Gate
 - Verification: Agent unit/build/lint gates, receipt-layer unit tests, operational static guard, Redmi runtime and primary viewport inspection, then `corepack pnpm verify`
 
 ## Prove PWA recovery on branch devices
-
 State: ready
 Kind: verification
 Tier: T2
 Lane: web/pwa
 Exit: Android/HyperOS canary proves the existing POS, KDS, and Pickup runtimes converge after network loss, resume, process kill, and service-worker update; iOS `/me` recovers after resume. Any runtime change is backed by a captured RED case, and repeated OS kills are evaluated through ADR 0038.
 Evidence: `docs/spec/pwa.md`; `docs/runbooks/pos-kds/pwa-device-operations.md`; `apps/web/tests/pwa-manifest.test.ts`, `pwa-runtime.test.ts`, `realtime-health.test.ts`, `kds-realtime-fallback.test.ts`, and `branch-ops-runtime.test.ts`; real-device canary record pending.
-
 - [ ] Add a direct regression test for same-topic cleanup and auth rejoin against pinned Supabase 2.112.4 before changing the current `_remove` workaround
 - [ ] Run the runbook matrix on Android/HyperOS and iOS, recording recovery time, stale-data outcome, refetch count, and duplicate channel/socket evidence
 - [ ] Capture any failed scenario as RED proof and fix only that boundary; otherwise close with device evidence and no runtime rewrite
 
 ## Finance period integrity: inventory change, startup capital, close readiness
-
 State: verify
 Kind: fix
 Tier: T3
 Lane: finance
 Exit: `/finance` returns server-computed inventory change for branch and company scope, or the explicit without-inventory state before cutover; startup capital and equipment read one summary RPC and stay outside period result; close readiness reports blockers/warnings without blocking manual close. Soft-close reclassification audit remains outside this slice pending an owner decision.
 Evidence: Migrations `20260824010533`, `20260824013553`, `20260824020445`; pgTAP `finance_cockpit_inventory_change_test.sql`, `finance_startup_capital_summary_test.sql`, `finance_period_close_readiness_test.sql`; static tests `finance-period-readiness.test.ts`, `finance-result.test.ts`, `finance-revenue-date-range.test.ts`; contract `finance.period_close.readiness` in `docs/ref/operational-data-contract.md`; `docs/modules/finance.md`; hand-bridge RPC types pending regeneration.
-
 - [ ] Dry-run `node scripts/supabase-production-push.mjs --dry-run`, then owner-authorized apply of `20260824010533`, `20260824013553`, `20260824020445` on Production `enloyfnuerqgaqderbwb`; then `corepack pnpm db:types` to replace the hand-bridge entries
 - [ ] Run the three pgTAP tests against the applied schema
 - [ ] Smoke: company scope shows the inventory term or without-inventory hint; readiness names current blockers; startup capital matches `/finance/expenses`
 
 ## Warehouse catalog write authority and ingredient unit wizard
-
 State: verify
 Kind: feature
 Tier: T3

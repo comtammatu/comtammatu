@@ -31,6 +31,8 @@ export const pos = {
       "Đã gửi yêu cầu trả đơn & hoàn tiền — chờ quản lý duyệt",
     voidPaidFailed: "Không thể trả đơn đã thanh toán",
     voidRequestQueueTitle: "Yêu cầu hủy đơn chờ duyệt",
+    voidRequestQueueDescription:
+      "Duyệt hoặc từ chối yêu cầu hủy đơn đã thanh toán.",
     voidRequestOrderLabel: (orderId: number) => `Đơn #${orderId}`,
     voidRequestApprove: "Duyệt hủy",
     voidRequestReject: "Từ chối",
@@ -345,6 +347,10 @@ export const pos = {
     closeShift: "Chốt ca",
     moreMenuAria: "Mở menu POS",
     menuLimitsAria: "Giới hạn bán",
+    selfOrderApproveAria: "Duyệt đơn QR",
+    voidRequestAria: "Duyệt hủy đơn",
+    voidRequestRetry: "Thử tải lại yêu cầu hủy đơn",
+    closedReload: "Ca POS đã đóng — đang tải lại trang.",
     employeePortal: "Ca của tôi",
   },
   tableGate: {

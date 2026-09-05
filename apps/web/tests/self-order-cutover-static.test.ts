@@ -396,6 +396,13 @@ test("S5 routes pending QR requests through the table and bill surfaces", () => 
   const desktop = read(
     "app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx",
   );
+  const floorSelect = read(
+    "app/(protected)/br/[branchId]/pos/_hooks/use-pos-floor-select.ts",
+  );
+  const selfOrder = read(
+    "app/(protected)/br/[branchId]/pos/_hooks/use-self-order-pos-state.ts",
+  );
+  const header = read("app/(protected)/br/[branchId]/pos/pos-session-header.tsx");
   const bill = read(
     "app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx",
   );
@@ -432,22 +439,24 @@ test("S5 routes pending QR requests through the table and bill surfaces", () => 
   assert.match(tables, /QR ⏳/);
   assert.match(tables, /variant="warning"/);
 
-  assert.match(desktop, /fetchSelfOrderPosState/);
-  assert.match(desktop, /selectPosGuestAlert/);
-  assert.match(desktop, /playOperationalAlert\(\{/);
-  assert.match(desktop, /kind: "pos\.self_order"/);
-  assert.match(desktop, /kind: "pos\.payment_call"/);
-  assert.match(desktop, /kind: "pos\.staff_call"/);
-  assert.doesNotMatch(desktop, /playAppSignal\("pos-payment-call"\)/);
-  assert.match(desktop, /knownSelfOrderPaymentRequestIdsRef/);
-  assert.match(desktop, /30_000/);
-  assert.match(desktop, /pendingSelfOrderRequestByTable\.get/);
-  assert.match(desktop, /const selfOrderActionVisible/);
-  assert.match(desktop, /sessionAction=\{desktopSelfOrderAction\}/);
-  assert.match(desktop, /selfOrderRequestCount=\{/);
+  assert.match(selfOrder, /fetchSelfOrderPosState/);
+  assert.match(selfOrder, /selectPosGuestAlert/);
+  assert.match(selfOrder, /playOperationalAlert\(\{/);
+  assert.match(selfOrder, /kind: "pos\.self_order"/);
+  assert.match(selfOrder, /kind: "pos\.payment_call"/);
+  assert.match(selfOrder, /kind: "pos\.staff_call"/);
+  assert.doesNotMatch(selfOrder, /playAppSignal\("pos-payment-call"\)/);
+  assert.match(selfOrder, /knownPaymentIdsRef/);
+  assert.match(selfOrder, /30_000/);
+  assert.match(desktop, /usePosFloorSelect/);
+  assert.match(floorSelect, /pendingSelfOrderRequestByTable\.get/);
+  assert.match(desktop, /actionVisible: selfOrderActionVisible/);
+  assert.match(desktop, /selfOrderInterrupt=\{selfOrderInterrupt\}/);
+  assert.doesNotMatch(desktop, /sessionAction=\{desktopSelfOrderAction\}/);
+  assert.doesNotMatch(desktop, /selfOrderRequestCount=\{/);
   assert.doesNotMatch(desktop, /fixed right-3 bottom-20/);
-  assert.match(desktop, /SELF_ORDER_VI\.staffApprove/);
-  assert.match(desktop, /setSelfOrderApprovalOpen\(true\)/);
+  assert.match(header, /messages\.pos\.sessionHeader\.selfOrderApproveAria/);
+  assert.match(selfOrder, /setApprovalOpen\(true\)/);
   assert.match(desktop, /setSelectedSelfOrderRequestId\(null\)/);
   assert.match(desktop, /selfOrderPaymentRequestId=/);
 

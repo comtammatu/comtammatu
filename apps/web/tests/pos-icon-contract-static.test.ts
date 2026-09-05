@@ -159,13 +159,13 @@ test("POS session chrome and sheets lock icon-touch plus touch search fields", (
     "utf8",
   );
   const stationSheet = readFileSync(
-    join(process.cwd(), "app/components/surface/station-sheet.tsx"),
+    join(process.cwd(), "../../packages/ui/src/surface/sheet.tsx"),
     "utf8",
   );
 
   assert.match(sessionHeader, /Ellipsis as IconEllipsis/);
   assert.match(sessionHeader, /size="icon-touch"/);
-  assert.equal(sessionHeader.match(/size="icon-touch"/g)?.length, 3);
+  assert.equal(sessionHeader.match(/size="icon-touch"/g)?.length, 5);
   assert.match(cartPane, /Trash as IconTrash/);
   assert.equal(cartPane.match(/size="icon-touch"/g)?.length, 2);
   assert.match(itemCustomizer, /Minus as IconMinus/);

@@ -20,9 +20,7 @@ import { canOfferPosOrderAppend } from "../_lib/table-order-visual-state";
 import { messages } from "@lib/messages";
 
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
-import {
-  AppDrawer,
-} from "@/components/surface";
+import { StationSheet } from "@/components/surface";
 
 interface MultiOrderTablePickerProps {
   open: boolean;
@@ -46,7 +44,7 @@ export function MultiOrderTablePicker({
   onClose,
 }: MultiOrderTablePickerProps) {
   return (
-    <AppDrawer
+    <StationSheet
       open={open}
       onOpenChange={(o) => !o && onClose()}
       title={messages.pos.multiOrderTablePicker.title(
@@ -156,6 +154,6 @@ export function MultiOrderTablePicker({
             })}
           </div>
       </div>
-    </AppDrawer>
+    </StationSheet>
   );
 }
