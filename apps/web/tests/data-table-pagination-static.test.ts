@@ -10,13 +10,16 @@ import { test } from "node:test";
 // otherwise.
 
 const source = readFileSync(
-  join(import.meta.dirname, "../app/components/data-table/data-table.tsx"),
+  join(
+    import.meta.dirname,
+    "../../../packages/ui/src/components/data-table/data-table.tsx",
+  ),
   "utf8",
 );
 const paginationSource = readFileSync(
   join(
     import.meta.dirname,
-    "../app/components/data-table/data-table-pagination.tsx",
+    "../../../packages/ui/src/components/data-table/data-table-pagination.tsx",
   ),
   "utf8",
 );

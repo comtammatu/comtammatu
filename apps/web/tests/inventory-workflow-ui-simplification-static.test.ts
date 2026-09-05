@@ -286,7 +286,9 @@ test("operations management lists keep dense control sizing", () => {
 });
 
 test("table empty rows render inline content instead of a dashed sub-card", () => {
-  const source = read("app/components/table-empty-state-row.tsx");
+  const source = read(
+    "../../packages/ui/src/components/data-table/table-empty-state-row.tsx",
+  );
 
   assert.match(source, /<TableRow className="border-0 hover:bg-transparent">/);
   assert.match(
@@ -450,7 +452,9 @@ test("SelectContent defaults to popper and Inventory LIST filters share field wi
   const frame = read(
     "app/(protected)/inventory/_components/inventory-list-filters.ts",
   );
-  const dataTable = read("app/components/data-table/data-table.tsx");
+  const dataTable = read(
+    "../../packages/ui/src/components/data-table/data-table.tsx",
+  );
   const stock = read("app/(protected)/inventory/stock/stock-client.tsx");
   const grn = read("app/(protected)/inventory/grn/grn-list-client.tsx");
   const ingredients = read(

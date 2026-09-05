@@ -158,7 +158,7 @@ test("Work DETAIL uses StatusBadge work-task domain", () => {
   assert.match(dialog, /domain="work-task"/);
   assert.match(dialog, /variant="document"/);
   assert.match(dialog, /footer=\{/);
-  const statusBadge = readWeb("app/components/status-badge.tsx");
+  const statusBadge = readRepo("packages/ui/src/components/status-badge.tsx");
   assert.match(statusBadge, /"work-task"/);
 });
 

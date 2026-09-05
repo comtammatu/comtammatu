@@ -11,6 +11,9 @@ import {
 } from "@comtammatu/ui/components/alert";
 import { Avatar, AvatarFallback } from "@comtammatu/ui/components/avatar";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { CompareChip } from "@comtammatu/ui/components/compare-chip";
+import { DataTable } from "@comtammatu/ui/components/data-table";
+import { StatusBadge } from "@comtammatu/ui/components/status-badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import {
@@ -530,7 +533,7 @@ export function DesignLabClient() {
         <AppSection
           title="5 · Primitives · chrome"
           headingLevel="h2"
-          description="Badge, Avatar, Tabs, Separator, Skeleton, Alert, and focus-ring sample."
+          description="Badge, StatusBadge, CompareChip, Avatar, Tabs, Separator, Skeleton, Alert, and focus-ring sample."
         >
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center gap-2">
@@ -539,6 +542,25 @@ export function DesignLabClient() {
                   {variant}
                 </Badge>
               ))}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Caption>StatusBadge · business workflow state</Caption>
+              <div className="flex flex-wrap items-center gap-2">
+                <StatusBadge domain="order" value="preparing" />
+                <StatusBadge domain="order-payment" value="paid" />
+                <StatusBadge domain="inventory" value="low" />
+                <StatusBadge domain="work-task" value="in_progress" />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Caption>CompareChip · signed delta</Caption>
+              <div className="flex flex-wrap items-center gap-3">
+                <CompareChip label="+12,3%" tone="good" />
+                <CompareChip label="-4,1%" tone="bad" />
+                <CompareChip label="Mới" tone="neutral" />
+              </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
@@ -784,6 +806,44 @@ export function DesignLabClient() {
                     </Item>
                   ))}
                 </ItemGroup>
+              </AppListFrame>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                control_surface · DataTable
+              </span>
+              <AppListFrame>
+                <DataTable
+                  columns={[
+                    {
+                      key: "name",
+                      header: "Món",
+                      render: (row) => row.name,
+                    },
+                    {
+                      key: "qty",
+                      header: "SL",
+                      className: "text-right font-mono tabular-nums",
+                      render: (row) => row.qty,
+                    },
+                  ]}
+                  data={LIST_ROWS.slice(0, 2).map((row) => ({
+                    name: row.name,
+                    qty: row.qty,
+                  }))}
+                  getRowKey={(row) => row.name}
+                  mobileCardRender={(row) => (
+                    <Item size="xs" variant="outline">
+                      <ItemContent>
+                        <ItemTitle>{row.name}</ItemTitle>
+                      </ItemContent>
+                      <ItemActions>
+                        <span className="font-mono tabular-nums">{row.qty}</span>
+                      </ItemActions>
+                    </Item>
+                  )}
+                />
               </AppListFrame>
             </div>
 

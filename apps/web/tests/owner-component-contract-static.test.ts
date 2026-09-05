@@ -13,7 +13,7 @@ const read = (path: string) =>
     ? readSql(repoRoot, String(path).replace(/^.*?(supabase\/)/, "supabase/"))
     : readFileSync(resolve(repoRoot, path), "utf8");
 
-const DATA_TABLE = "apps/web/app/components/data-table/data-table.tsx";
+const DATA_TABLE = "packages/ui/src/components/data-table/data-table.tsx";
 const SURFACE_TOOLBAR = "packages/ui/src/surface/toolbar.tsx";
 const SURFACE_PAGE_HEADER =
   "apps/web/app/components/surface/app-page-header.tsx";
@@ -31,7 +31,7 @@ const UI_BUTTON = "packages/ui/src/components/button.tsx";
 const UI_INPUT = "packages/ui/src/components/input.tsx";
 const UI_INPUT_GROUP = "packages/ui/src/components/input-group.tsx";
 const UI_SELECT = "packages/ui/src/components/select.tsx";
-const STATUS_BADGE = "apps/web/app/components/status-badge.tsx";
+const STATUS_BADGE = "packages/ui/src/components/status-badge.tsx";
 const SHARED_LABELS = "packages/shared/src/labels/vi.ts";
 const BRANCHES_PAGE = "apps/web/app/(protected)/branches/page.tsx";
 const BRANCH_TABLE = "apps/web/app/(protected)/branches/branch-table.tsx";
@@ -150,7 +150,7 @@ test("DataTable renders the toolbar contract it exposes", () => {
   const dataTable = read(DATA_TABLE);
   const surface = read(SURFACE_TOOLBAR);
 
-  assert.match(dataTable, /@comtammatu\/ui\/components\/input-group/);
+  assert.match(dataTable, /from ["']\.\.\/input-group["']/);
   assert.match(
     dataTable,
     /<InputGroup[\s\S]*<InputGroupAddon[\s\S]*<InputGroupInput/,

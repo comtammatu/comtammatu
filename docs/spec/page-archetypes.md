@@ -159,7 +159,7 @@ export default async function XPage({ searchParams }: { searchParams?: ... }) {
 
 **Shared vocabulary (all archetypes) — never re-implement, always consume:**
 
-- Status: `StatusBadge` / `getStatusBadgeMeta` (`apps/web/app/components/status-badge.tsx`).
+- Status: `StatusBadge` / `getStatusBadgeMeta` (`@comtammatu/ui/components/status-badge`).
 - Money: `formatVND` (`@comtammatu/shared/format`).
 - Dates/times: `@comtammatu/shared/time` (`formatVNDate`, `formatVNDateTime`, `formatVNTime`, …).
 - Navigation contract (route home, back behavior, breadcrumb root, primary

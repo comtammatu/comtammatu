@@ -697,14 +697,14 @@ Forbidden: raw `Dialog`/`Sheet`/`Drawer` in a route; `FormDialog`/`DataTable` on
 ### List surface and the table system
 
 `Table` is the semantic desktop component; `DataTable`
-(`apps/web/app/components/data-table/data-table.tsx`) is the only shared
+(`packages/ui/src/components/data-table.tsx`) is the only shared
 responsive data-table adapter. They are one system — no `DataTableV2`,
 `DesktopTable`, `MobileTable`, or module-specific table wrapper.
 
 | Layer                                                                                    | Owner                                               | Direct route use                                    |
 | ---------------------------------------------------------------------------------------- | --------------------------------------------------- | --------------------------------------------------- |
 | `Table`, `TableHeader`, `TableBody`, `TableFooter`, `TableRow`, `TableHead`, `TableCell` | `packages/ui/src/components/table.tsx`              | No, except a documented document/line-sheet adapter |
-| `DataTable`                                                                              | `apps/web/app/components/data-table/data-table.tsx` | Yes                                                 |
+| `DataTable`                                                                              | `packages/ui/src/components/data-table.tsx`         | Yes                                                 |
 | `DataTablePagination`                                                                    | `data-table-pagination.tsx`                         | No                                                  |
 | `TableEmptyStateRow`                                                                     | `table-empty-state-row.tsx`                         | No                                                  |
 | `AppToolbar`                                                                             | `surface.tsx`                                       | Yes, as the sibling before `DataTable`              |
@@ -781,7 +781,7 @@ in `docs/modules/ui.md`.
 
 - Labels: `packages/shared/src/labels/vi.ts` (`*_STATUS_LABELS_VI`; keys are the
   DB CHECK vocabulary, never invented states).
-- Variant + rendering: `apps/web/app/components/status-badge.tsx`
+- Variant + rendering: `packages/ui/src/components/status-badge.tsx`
   (`StatusBadge`, `getStatusBadgeMeta`).
 - Unknown values render as the raw key with `outline` — never throw on DB data.
 - Intentional exceptions: `pos/_lib/order-status-display.ts` (cashier may

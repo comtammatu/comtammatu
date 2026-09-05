@@ -47,12 +47,14 @@ adapters instead of restyling `Card`, `Empty`, or a page container.
 
 `packages/ui/src/components/`: `alert`, `alert-dialog`, `avatar`, `badge`,
 `breadcrumb`, `button`, `calendar`, `card`, `checkbox`, `collapsible`,
-`combobox`, `context-menu`, `dialog`, `drawer`, `dropdown-menu`, `empty`,
+`combobox`, `compare-chip`, `context-menu`, `data-table`,
+`data-table-pagination`, `dialog`, `drawer`, `dropdown-menu`, `empty`,
 `field`, `frame`, `input`, `input-group`, `interactive-card`, `item`, `kbd`,
 `label`, `note-callout`, `popover`, `progress`, `radio-group`, `scroll-area`,
 `section-label`, `select`, `separator`, `sheet`, `skeleton`, `slider`, `sonner`,
-`spinner`, `switch`, `table`, `tabs`, `textarea`, `theme-provider`,
-`theme-script`, `toggle`, `toggle-group`, `toolbar`, `tooltip`.
+`spinner`, `status-badge`, `switch`, `table`, `table-empty-state-row`, `tabs`,
+`textarea`, `theme-provider`, `theme-script`, `toggle`, `toggle-group`,
+`toolbar`, `tooltip`.
 
 `packages/ui/src/lib/`: `cva`, `field-trigger`, `floating-layer`, `notify`,
 `render`, `theme-cookie`, `utils`.

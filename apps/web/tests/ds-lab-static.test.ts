@@ -62,6 +62,8 @@ test("ds-lab covers foundations, primitives, Item, states; Item section is not f
   assert.match(client, /RadioGroup/);
   assert.match(client, /Textarea/);
   assert.match(client, /5 · Primitives · chrome/);
+  assert.match(client, /StatusBadge/);
+  assert.match(client, /CompareChip/);
   assert.match(client, /AvatarFallback/);
   assert.match(client, /TabsTrigger/);
   assert.match(client, /Skeleton/);
@@ -79,6 +81,7 @@ test("ds-lab covers foundations, primitives, Item, states; Item section is not f
   assert.match(client, /gap-2 px-3 py-3/);
   assert.match(client, /Item-row LIST uses px-3 py-3/);
   assert.match(client, /<ItemGroup className=\{LIST_ITEM_INSET\}>/);
+  assert.match(client, /<DataTable/);
   assert.match(client, /AppEmptyState/);
   assert.match(client, /AppDetailFooter/);
 

@@ -1421,7 +1421,7 @@ const textChecks = [
   },
   {
     id: "data-table-mobile-empty-state-adapter",
-    file: "apps/web/app/components/data-table/data-table.tsx",
+    file: "packages/ui/src/components/data-table/data-table.tsx",
     includes: ["<AppEmptyState", 'mode={emptyMode ?? "no-data"}'],
   },
 ];
@@ -1790,10 +1790,7 @@ const frozenPrimitiveImportBaselines = [
     label: "Table",
     replacement:
       "DataTable, TableEmptyStateRow, or a documented line-sheet adapter",
-    allowlist: {
-      "apps/web/app/components/data-table/data-table.tsx": 1,
-      "apps/web/app/components/table-empty-state-row.tsx": 1,
-    },
+    allowlist: {},
   },
   {
     id: "raw-dialog-import-file-baseline",

@@ -1,3 +1,5 @@
+import { WORK_TASK_STATUS_LABELS_VI } from "@comtammatu/shared/labels";
+
 export const WORK_TASK_STATUSES = [
   "backlog",
   "todo",
@@ -24,14 +26,7 @@ export const workCopy = {
   inboxEmpty: "Chưa có việc nào được giao cho bạn.",
   loadFailed: "Không tải được danh sách công việc.",
   noAccess: "Bạn chưa được thêm vào không gian làm việc Công việc.",
-  statusLabels: {
-    backlog: "Chờ xử lý",
-    todo: "Cần làm",
-    in_progress: "Đang làm",
-    review: "Chờ duyệt",
-    done: "Hoàn thành",
-    canceled: "Đã hủy",
-  } satisfies Record<WorkTaskStatusLabelKey, string>,
+  statusLabels: WORK_TASK_STATUS_LABELS_VI,
   priorityLabels: {
     low: "Thấp",
     normal: "Bình thường",

@@ -59,7 +59,7 @@ test("stuck LIST filter chrome overrides resting card-corner radius", () => {
 test("inline LIST toolbar and pagination use compact vertical pad", () => {
   const surface = read("../../packages/ui/src/surface/toolbar.tsx");
   const pagination = read(
-    "app/components/data-table/data-table-pagination.tsx",
+    "../../packages/ui/src/components/data-table/data-table-pagination.tsx",
   );
   assert.match(
     surface,
@@ -73,7 +73,9 @@ test("inline LIST toolbar and pagination use compact vertical pad", () => {
 });
 
 test("DataTable stack relies on borders, not outer gap-3 chrome", () => {
-  const dataTable = read("app/components/data-table/data-table.tsx");
+  const dataTable = read(
+    "../../packages/ui/src/components/data-table/data-table.tsx",
+  );
   assert.match(dataTable, /className=\{cn\("flex flex-col", className\)\}/);
   assert.doesNotMatch(
     dataTable,

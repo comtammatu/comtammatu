@@ -214,7 +214,7 @@ test("Owner promotions LIST/DOC and POS Mã giảm surfaces exist", () => {
   assert.match(rpcErrors, /promotion_side_selection_required/);
   assert.match(rpcErrors, /promotion_item_selection_required/);
 
-  const statusBadge = readWeb("app/components/status-badge.tsx");
+  const statusBadge = readRepo("packages/ui/src/components/status-badge.tsx");
   assert.match(statusBadge, /promotion:/);
   assert.match(statusBadge, /"promotion-code"/);
 

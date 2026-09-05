@@ -474,7 +474,10 @@ test("Branch setup clients and POS sessions keep mobile-stable surfaces", () => 
   const stockControlCard = read(
     "apps/web/app/(protected)/br/_shared/settings/pos/stock-control-card.tsx",
   );
-  const dataTable = read("apps/web/app/components/data-table/data-table.tsx");
+  const dataTable = [
+    read("packages/ui/src/components/data-table/types.ts"),
+    read("packages/ui/src/components/data-table/data-table.tsx"),
+  ].join("\n");
   const sheet = read("packages/ui/src/components/sheet.tsx");
   const setupClients = [
     terminalsClient,

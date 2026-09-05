@@ -161,7 +161,7 @@ test("AppSection and AppPageHeader clamp secondary description copy", () => {
   ]
     .map((path) => read(path))
     .join("\n");
-  const compareChip = read("apps/web/app/components/kpi/compare-chip.tsx");
+  const compareChip = read("packages/ui/src/components/compare-chip.tsx");
   const card = read("packages/ui/src/components/card.tsx");
 
   assert.match(

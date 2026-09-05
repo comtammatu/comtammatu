@@ -193,6 +193,15 @@ export const PROMOTION_CODE_STATUS_LABELS_VI = {
   void: "Đã hủy",
 } as const;
 
+export const WORK_TASK_STATUS_LABELS_VI = {
+  backlog: "Chờ xử lý",
+  todo: "Cần làm",
+  in_progress: "Đang làm",
+  review: "Chờ duyệt",
+  done: "Hoàn thành",
+  canceled: "Đã hủy",
+} as const;
+
 /** Contract compensation pay basis — never show raw enum keys in Owner UI. */
 export const PAY_BASIS_LABELS_VI = {
   attendance_prorated: "Theo công",

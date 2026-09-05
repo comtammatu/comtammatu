@@ -21,7 +21,7 @@ const FINANCE_FILTER =
   "apps/web/app/(protected)/finance/components/filter-bar.tsx";
 const INGREDIENTS_CLIENT =
   "apps/web/app/(protected)/inventory/ingredients/ingredients-client.tsx";
-const DATA_TABLE = "apps/web/app/components/data-table/data-table.tsx";
+const DATA_TABLE = "packages/ui/src/components/data-table/data-table.tsx";
 const ORDERS_PAGE_BODY = "apps/web/app/(protected)/orders/orders-page-body.tsx";
 const INGREDIENT_IMPORT_EXPORT =
   "apps/web/app/(protected)/inventory/ingredients/import-export-menu.tsx";

@@ -1,4 +1,4 @@
-export { DataTable } from "@comtammatu/ui/components/data-table";
+export { DataTable } from "./data-table/data-table";
 export type {
   DataTableColumn,
   DataTableFilter,
@@ -6,4 +6,4 @@ export type {
   DataTableFooterCell,
   DataTableFooterRow,
   DataTableProps,
-} from "@comtammatu/ui/components/data-table";
+} from "./data-table/types";
