@@ -392,7 +392,7 @@ test("Owner inventory lists share one frame for toolbar, table header, and empty
 });
 
 test("AppToolbar inline shares card surface without muted fill", () => {
-  const surface = read("app/components/surface/app-toolbar.tsx");
+  const surface = read("../../packages/ui/src/surface/toolbar.tsx");
   assert.match(
     surface,
     /if \(variant === "inline"\) \{[\s\S]{0,200}<Toolbar[\s\S]{0,80}className=\{cn\(\s*"gap-2 overflow-visible border-b border-border px-3 py-2"/,
@@ -442,8 +442,8 @@ test("migrated inventory lists use AppListFrame toolbar slot", () => {
 test("SelectContent defaults to popper and Inventory LIST filters share field width", () => {
   const select = read("../../packages/ui/src/components/select.tsx");
   const surface = [
-    "app/components/surface/app-list-frame.tsx",
-    "app/components/surface/app-toolbar.tsx",
+    "../../packages/ui/src/surface/list-frame.tsx",
+    "../../packages/ui/src/surface/toolbar.tsx",
   ]
     .map((path) => read(path))
     .join("\n");

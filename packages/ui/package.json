@@ -8,7 +8,10 @@
     "./globals.css": "./src/styles/globals.css",
     "./components/*": "./src/components/*.tsx",
     "./hooks/*": "./src/hooks/*.ts",
-    "./lib/*": "./src/lib/*.ts"
+    "./lib/*": "./src/lib/*.ts",
+    "./surface": "./src/surface/index.ts",
+    "./surface/types": "./src/surface/types.ts",
+    "./surface/*": "./src/surface/*.tsx"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

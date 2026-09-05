@@ -100,11 +100,11 @@ test("Owner AppShell keeps inset panel viewport-bounded with inner scroll", () =
   );
 
   const surface = [
-    "apps/web/app/components/surface/app-page.tsx",
+    "packages/ui/src/surface/page.tsx",
     "apps/web/app/components/surface/app-page-header.tsx",
-    "apps/web/app/components/surface/app-sticky-filter-chrome.tsx",
-    "apps/web/app/components/surface/app-list-frame.tsx",
-    "apps/web/app/components/surface/app-toolbar.tsx",
+    "packages/ui/src/surface/sticky-filter-chrome.tsx",
+    "packages/ui/src/surface/list-frame.tsx",
+    "packages/ui/src/surface/toolbar.tsx",
   ]
     .map((path) => read(path))
     .join("\n");
@@ -126,7 +126,7 @@ test("Owner AppShell keeps inset panel viewport-bounded with inner scroll", () =
   assert.match(surface, /APP_PAGE_STICKY_FILTER_SHELL_BLEED_CLASSNAME/);
   assert.match(surface, /function AppStickyFilterChrome\(/);
   assert.doesNotMatch(surface, /function AppPageStickyChrome\(/);
-  const listFrame = read("apps/web/app/components/surface/app-list-frame.tsx");
+  const listFrame = read("packages/ui/src/surface/list-frame.tsx");
   assert.doesNotMatch(
     listFrame,
     /AppStickyFilterChrome/,

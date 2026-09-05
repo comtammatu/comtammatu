@@ -70,7 +70,7 @@ const kdsDir = join(process.cwd(), "app/(protected)/br/[branchId]/kds");
 const pickupDir = join(process.cwd(), "app/(protected)/br/[branchId]/pickup");
 const operationalAdapter = join(
   process.cwd(),
-  "app/components/surface/operational.tsx",
+  "../../packages/ui/src/surface/operational.tsx",
 );
 
 test("KDS station routes do not import control_surface AppSection", () => {

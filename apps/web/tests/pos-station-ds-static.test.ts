@@ -139,7 +139,7 @@ test("pos-board block locks StationSection composition and session-gate exemplar
 test("POS station overlays stay on StationSheet except shrinking allowlist", () => {
   const overlay = filesMatching(
     posDir,
-    /\bAppDialog\b|\bAppSheet\b|<SheetContent\b|<DrawerContent\b/,
+    /\bAppDialog\b|\bAppSheet\b|\bAppDrawer\b|<SheetContent\b|<DrawerContent\b/,
   );
   assert.deepEqual(
     overlay.filter((file) => !STATION_OVERLAY_ALLOWLIST.has(file)).sort(),

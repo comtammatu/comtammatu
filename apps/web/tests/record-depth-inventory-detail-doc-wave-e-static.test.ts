@@ -40,7 +40,7 @@ test("GRN document dialog keeps tabs and CTA footer inside the dialog frame", ()
   const client = read(
     "app/(protected)/inventory/grn/[id]/grn-detail-client.tsx",
   );
-  const surface = read("app/components/surface/app-detail-footer.tsx");
+  const surface = read("../../packages/ui/src/surface/detail-footer.tsx");
 
   assert.match(
     client,
@@ -84,9 +84,9 @@ test("Wave E GRN DETAIL confirmed lines use DataTable + physical-QC footer", () 
     "app/(protected)/inventory/grn/[id]/grn-detail-client.tsx",
   );
   const surface = [
-    "app/components/surface/app-page.tsx",
-    "app/components/surface/app-detail-footer.tsx",
-    "app/components/surface/document-form-frame.tsx",
+    "../../packages/ui/src/surface/page.tsx",
+    "../../packages/ui/src/surface/detail-footer.tsx",
+    "../../packages/ui/src/surface/document-form-frame.tsx",
   ]
     .map((path) => read(path))
     .join("\n");

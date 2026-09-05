@@ -38,7 +38,7 @@ test("operator stock sticky action bars route through AppDetailFooter", () => {
   const nestedFooterCallSites = stockFiles.filter((path) =>
     /<AppDetailFooter\s+sticky\s+trailing=\{footer\}/.test(read(path)),
   );
-  const appSurface = read("apps/web/app/components/surface/app-detail-footer.tsx");
+  const appSurface = read("packages/ui/src/surface/detail-footer.tsx");
 
   assert.deepEqual(rawStickyCallSites, []);
   assert.deepEqual(redundantBottomNavPadding, []);
@@ -591,7 +591,7 @@ test("operator stock branch-native extensions keep issue and report actions in t
   const reportsClient = read(
     "apps/web/app/(protected)/inventory/reports/reports-client.tsx",
   );
-  const appSurface = read("apps/web/app/components/surface/app-detail-footer.tsx");
+  const appSurface = read("packages/ui/src/surface/detail-footer.tsx");
   const formDialog = read("apps/web/app/components/form/form-dialog.tsx");
   const formCombobox = read("apps/web/app/components/form/combobox.tsx");
   const sharedCombobox = read("packages/ui/src/components/combobox.tsx");

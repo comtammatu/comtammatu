@@ -1,8 +1,8 @@
 "use client";
 
-// public / system-gate card section — same anatomy as AppSection; plane-correct name.
+export * from "@comtammatu/ui/surface/section";
 export {
-  AppSection as PublicSection,
-  type AppSectionProps as PublicSectionProps,
-  type AppSectionHeadingLevel as PublicSectionHeadingLevel,
-} from "./app-section";
+  PublicSection,
+  type PublicSectionProps,
+  type PublicSectionHeadingLevel,
+} from "@comtammatu/ui/surface/section";

@@ -156,7 +156,7 @@ test("linked KpiCard applies hover feedback to its full card surface", () => {
 
 test("AppSection and AppPageHeader clamp secondary description copy", () => {
   const surface = [
-    "apps/web/app/components/surface/app-section.tsx",
+    "packages/ui/src/surface/section.tsx",
     "apps/web/app/components/surface/app-page-header.tsx",
   ]
     .map((path) => read(path))

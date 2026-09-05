@@ -14,7 +14,7 @@ const read = (path: string) =>
     : readFileSync(resolve(repoRoot, path), "utf8");
 
 const DATA_TABLE = "apps/web/app/components/data-table/data-table.tsx";
-const SURFACE_TOOLBAR = "apps/web/app/components/surface/app-toolbar.tsx";
+const SURFACE_TOOLBAR = "packages/ui/src/surface/toolbar.tsx";
 const SURFACE_PAGE_HEADER =
   "apps/web/app/components/surface/app-page-header.tsx";
 const PACKAGE_JSON = "package.json";

@@ -211,7 +211,7 @@ test("Inventory lists and reports do not render load failures as empty data", ()
 
 test("Owner sticky detail footer reserves the fixed bottom navigation", () => {
   const shell = read("apps/web/app/components/app-shell.tsx");
-  const surface = read("apps/web/app/components/surface/app-detail-footer.tsx");
+  const surface = read("../../packages/ui/src/surface/detail-footer.tsx");
 
   assert.match(shell, /"--app-bottom-nav-offset":/);
   assert.match(

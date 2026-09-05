@@ -1,43 +1,10 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { cn } from "@comtammatu/ui";
-
-export type DescriptionListItem = {
-  term: ReactNode;
-  description: ReactNode;
-};
-
-export type DescriptionListProps = {
-  items: DescriptionListItem[];
-  className?: string;
-  termClassName?: string;
-  descriptionClassName?: string;
-};
-
-export function DescriptionList({
-  items,
-  className,
-  termClassName,
-  descriptionClassName,
-}: DescriptionListProps) {
-  return (
-    <dl className={cn("flex flex-col gap-3", className)}>
-      {items.map((item, index) => (
-        <div key={index} className="flex flex-col gap-1">
-          <dt
-            className={cn(
-              "text-xs font-medium uppercase tracking-wide text-muted-foreground",
-              termClassName,
-            )}
-          >
-            {item.term}
-          </dt>
-          <dd className={cn("text-sm leading-6", descriptionClassName)}>
-            {item.description}
-          </dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
+export * from "@comtammatu/ui/surface/description-list";
+export {
+  DescriptionList,
+} from "@comtammatu/ui/surface/description-list";
+export type {
+  DescriptionListItem,
+  DescriptionListProps,
+} from "@comtammatu/ui/surface/description-list";

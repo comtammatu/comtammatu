@@ -4,7 +4,7 @@ import { test } from "node:test";
 
 test("AppDetailFooter can expose actions as direct flex children", () => {
   const source = readFileSync(
-    "app/components/surface/app-detail-footer.tsx",
+    "../../packages/ui/src/surface/detail-footer.tsx",
     "utf8",
   );
 

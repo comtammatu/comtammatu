@@ -1319,7 +1319,7 @@ const textChecks = [
   },
   {
     id: "app-section-icon-size-contract",
-    file: "apps/web/app/components/surface/app-section.tsx",
+    file: "packages/ui/src/surface/section.tsx",
     includes: ['"inline-flex shrink-0 [&_svg]:size-5"'],
   },
   {
