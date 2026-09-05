@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
+import { useNotificationEvents } from "@/_hooks/use-notification-events";
+import { makeRealtimeCoalescer } from "@/_utils/realtime-scheduler";
+import { dedupeInflight } from "@/_utils/inflight-dedupe";
 import {
   getUnreadCount,
   listNotifications,
@@ -92,8 +94,12 @@ export function useNotifications({
   const inflightRef = useRef(false);
   const feedModeRef = useRef(feedMode);
   const refreshRef = useRef<() => Promise<void>>(() => Promise.resolve());
-  const initialSubscribeSeenRef = useRef(false);
+  const scheduleRefreshRef = useRef<() => void>(() => {});
   const branchIdRef = useRef(branchId);
+  const metricName =
+    channelSuffix === "peek"
+      ? "notifications.peek.refresh"
+      : "notifications.feed.refresh";
 
   const refresh = useCallback(async () => {
     if (inflightRef.current) return;
@@ -101,9 +107,12 @@ export function useNotifications({
     setLoading(true);
     try {
       const modeArgs = listArgsForMode(feedModeRef.current);
+      const listKey = `listNotifications:${String(pageSize)}:${feedModeRef.current}:${modeArgs.unreadOnly ? "unread" : "all"}:${modeArgs.includeExpired ? "expired" : "live"}`;
       const [list, count] = await Promise.all([
-        listNotifications({ limit: pageSize, ...modeArgs }),
-        getUnreadCount(),
+        dedupeInflight(listKey, () =>
+          listNotifications({ limit: pageSize, ...modeArgs }),
+        ),
+        dedupeInflight("getUnreadCount", () => getUnreadCount()),
       ]);
       if (list.success && list.data) {
         setItems(list.data.items);
@@ -206,7 +215,12 @@ export function useNotifications({
 
   useEffect(() => {
     refreshRef.current = refresh;
-  }, [refresh]);
+    scheduleRefreshRef.current = makeRealtimeCoalescer(
+      () => refreshRef.current(),
+      undefined,
+      { metricName },
+    );
+  }, [metricName, refresh]);
 
   useEffect(() => {
     branchIdRef.current = branchId;
@@ -216,60 +230,22 @@ export function useNotifications({
     void refreshRef.current();
   }, []);
 
-  useRealtimeChannel(
-    (supabase) => {
-      if (!subscribe) return null;
-      const topic = channelSuffix
-        ? `notifications-${channelSuffix}-${String(tenantId)}`
-        : `notifications-${String(tenantId)}`;
-      return supabase
-        .channel(topic)
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "notifications",
-            filter: `tenant_id=eq.${String(tenantId)}`,
-          },
-          (payload: {
-            new?: { target_branch_id?: number | null };
-            old?: { target_branch_id?: number | null };
-          }) => {
-            const scopedBranchId = branchIdRef.current;
-            const row = payload.new ?? payload.old;
-            if (
-              scopedBranchId != null &&
-              row?.target_branch_id != null &&
-              row.target_branch_id !== scopedBranchId
-            ) {
-              return;
-            }
-            void refreshRef.current();
-          },
-        )
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "notification_reads",
-          },
-          () => {
-            void refreshRef.current();
-          },
-        )
-        .subscribe((status) => {
-          if (status !== "SUBSCRIBED") return;
-          if (!initialSubscribeSeenRef.current) {
-            initialSubscribeSeenRef.current = true;
-            return;
-          }
-          void refreshRef.current();
-        });
+  useNotificationEvents({
+    enabled: subscribe && tenantId > 0,
+    onEvent: (event) => {
+      const scopedBranchId = branchIdRef.current;
+      if (
+        event !== null &&
+        event.table === "notifications" &&
+        scopedBranchId != null &&
+        event.targetBranchId != null &&
+        event.targetBranchId !== scopedBranchId
+      ) {
+        return;
+      }
+      scheduleRefreshRef.current();
     },
-    [tenantId, channelSuffix, subscribe],
-  );
+  });
 
   useEffect(() => {
     const handleVisibility = () => {

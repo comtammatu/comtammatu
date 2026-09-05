@@ -1,15 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { extractClaimsFromAccessToken } from "@comtammatu/shared/auth";
 import {
   getNotificationBadgeSummary,
   type NotificationBadgeSummary,
 } from "@/(protected)/notifications/actions";
-import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
-import {
-  NOTIFICATIONS_CHANGED_EVENT,
-} from "@lib/notifications/changed-event";
+import { useNotificationEvents } from "@/_hooks/use-notification-events";
+import { makeRealtimeCoalescer } from "@/_utils/realtime-scheduler";
+import { dedupeInflight } from "@/_utils/inflight-dedupe";
+import { NOTIFICATIONS_CHANGED_EVENT } from "@lib/notifications/changed-event";
 
 const EMPTY_SUMMARY: NotificationBadgeSummary = {
   unreadCount: 0,
@@ -22,6 +21,7 @@ export function useNotificationBadges(): NotificationBadgeSummary {
   const inFlightRef = useRef(false);
   const queuedRef = useRef(false);
   const refreshRef = useRef<() => Promise<void>>(() => Promise.resolve());
+  const scheduleRefreshRef = useRef<() => void>(() => {});
 
   const refresh = useCallback(async () => {
     if (inFlightRef.current) {
@@ -31,7 +31,9 @@ export function useNotificationBadges(): NotificationBadgeSummary {
 
     inFlightRef.current = true;
     try {
-      const result = await getNotificationBadgeSummary();
+      const result = await dedupeInflight("getNotificationBadgeSummary", () =>
+        getNotificationBadgeSummary(),
+      );
       if (result.success && result.data) setSummary(result.data);
     } finally {
       inFlightRef.current = false;
@@ -44,38 +46,17 @@ export function useNotificationBadges(): NotificationBadgeSummary {
 
   useEffect(() => {
     refreshRef.current = refresh;
+    scheduleRefreshRef.current = makeRealtimeCoalescer(
+      () => refreshRef.current(),
+      undefined,
+      { metricName: "notifications.badges.refresh" },
+    );
     void refresh();
   }, [refresh]);
 
-  useRealtimeChannel((supabase, token) => {
-    const claims = token ? extractClaimsFromAccessToken(token) : null;
-    if (!claims) return null;
-
-    return supabase
-      .channel(`notification-badges-${String(claims.tenant_id)}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "notifications",
-          filter: `tenant_id=eq.${String(claims.tenant_id)}`,
-        },
-        () => void refreshRef.current(),
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "notification_reads",
-        },
-        () => void refreshRef.current(),
-      )
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") void refreshRef.current();
-      });
-  }, []);
+  useNotificationEvents({
+    onEvent: () => scheduleRefreshRef.current(),
+  });
 
   useEffect(() => {
     const handleVisibility = () => {

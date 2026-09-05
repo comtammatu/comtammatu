@@ -135,6 +135,7 @@ test("stocktake nav badges actionable count work only, not completed FYI", () =>
 test("notification shell uses one realtime summary for footer and tab badges", () => {
   const appShell = read("apps/web/app/components/app-shell.tsx");
   const hook = read("apps/web/app/_hooks/use-notification-badges.ts");
+  const runtime = read("apps/web/app/_hooks/notification-runtime.ts");
   const foreground = read(
     "apps/web/app/_hooks/use-foreground-notifications.ts",
   );
@@ -147,9 +148,9 @@ test("notification shell uses one realtime summary for footer and tab badges", (
     /unreadCount=\{notificationSummary\.unreadCount\}/,
   );
   assert.doesNotMatch(appShell, /href=\{notificationsHref\}/);
-  assert.match(hook, /event: "\*"[\s\S]*table: "notifications"/);
-  assert.match(hook, /table: "notification_reads"/);
-  assert.match(hook, /status === "SUBSCRIBED"[\s\S]*refreshRef\.current/);
+  assert.match(hook, /subscribeNotificationEvents|useNotificationEvents/);
+  assert.match(runtime, /event: "\*"[\s\S]*table: "notifications"/);
+  assert.match(runtime, /table: "notification_reads"/);
   assert.doesNotMatch(hook, /target_branch_id/);
   assert.match(foreground, /showInAppToast[\s\S]*toast\.info/);
   assert.match(foreground, /action:[\s\S]*openCtaLabel|options\.action/);
@@ -234,7 +235,7 @@ test("resolved or deleted GRNs expire receiving notifications in realtime", () =
   const migration = read(
     "supabase/migrations/20260730193000_expire_stale_grn_notifications.sql",
   );
-  const hook = read("apps/web/app/_hooks/use-notification-badges.ts");
+  const runtime = read("apps/web/app/_hooks/notification-runtime.ts");
 
   assertSqlMatch(migration,
     /FUNCTION private\.expire_grn_pending_notification\(\)[\s\S]*SECURITY DEFINER[\s\S]*SET search_path TO ''/,
@@ -252,7 +253,7 @@ test("resolved or deleted GRNs expire receiving notifications in realtime", () =
   assertSqlMatch(migration,
     /AFTER UPDATE OF status OR DELETE[\s\S]*ON public\.goods_received_notes/,
   );
-  assert.match(hook, /event: "\*"/);
+  assert.match(runtime, /event: "\*"/);
 });
 
 test("procurement notifications route to Mua hàng and GRNs route to Nhập kho", () => {

@@ -45,11 +45,13 @@ test("inventory finance orders hr handoff producers are present", () => {
 test("client hooks subscribe to notification_reads and resolve badge URLs", () => {
   const feed = read("apps/web/app/_hooks/use-notifications.ts");
   const badges = read("apps/web/app/_hooks/use-notification-badges.ts");
+  const runtime = read("apps/web/app/_hooks/notification-runtime.ts");
   const actions = read("apps/web/app/(protected)/notifications/actions.ts");
   const foreground = read("apps/web/app/_hooks/use-foreground-notifications.ts");
 
-  assert.match(feed, /table: "notification_reads"/);
-  assert.match(badges, /table: "notification_reads"/);
+  assert.match(runtime, /table: "notification_reads"/);
+  assert.match(feed, /useNotificationEvents/);
+  assert.match(badges, /useNotificationEvents/);
   assert.match(
     actions,
     /getNotificationBadgeSummary[\s\S]*resolveNotificationActionUrl\(claims,/,

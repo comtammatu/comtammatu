@@ -3,12 +3,13 @@
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  extractClaimsFromAccessToken,
   isPickupPublicDisplayPath,
   resolveRouteFamilyContract,
 } from "@comtammatu/shared/auth";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
+import { useNotificationEvents } from "@/_hooks/use-notification-events";
+import { makeRealtimeCoalescer } from "@/_utils/realtime-scheduler";
+import { dedupeInflight } from "@/_utils/inflight-dedupe";
 import {
   listNotifications,
   markNotificationRead,
@@ -61,7 +62,10 @@ async function showPopupsForNewNotifications(
 
   inFlightRef.current = true;
   try {
-    const result = await listNotifications({ limit: SCAN_LIMIT });
+    const result = await dedupeInflight(
+      `listNotifications:${String(SCAN_LIMIT)}:popup`,
+      () => listNotifications({ limit: SCAN_LIMIT }),
+    );
     if (!result.success || !result.data) return;
 
     const seen = highWaterRef.current;
@@ -156,69 +160,46 @@ export function useForegroundNotifications(): void {
   const disabled = isPickupPublicDisplayPath(pathname ?? "");
   const showInAppToast = shouldShowInAppToast(pathname ?? "");
   const muteVisibleFloorAttention = isFloorOpsPath(pathname ?? "");
+  const showInAppToastRef = useRef(showInAppToast);
+  const muteVisibleFloorAttentionRef = useRef(muteVisibleFloorAttention);
+  showInAppToastRef.current = showInAppToast;
+  muteVisibleFloorAttentionRef.current = muteVisibleFloorAttention;
+  const schedulePopupsRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     if (disabled) {
       highWaterRef.current = 0;
       return;
     }
-    void listNotifications({ limit: 1 }).then((result) => {
+    void dedupeInflight("listNotifications:1:highwater", () =>
+      listNotifications({ limit: 1 }),
+    ).then((result) => {
       highWaterRef.current =
         result.success && result.data ? (result.data.items[0]?.id ?? 0) : 0;
     });
   }, [disabled]);
 
-  const initialSubscribeSeenRef = useRef(false);
+  useEffect(() => {
+    schedulePopupsRef.current = makeRealtimeCoalescer(
+      async () => {
+        await showPopupsForNewNotifications(
+          highWaterRef,
+          inFlightRef,
+          showInAppToastRef.current,
+          muteVisibleFloorAttentionRef.current,
+          (url) => navigateRef.current(url),
+        );
+      },
+      undefined,
+      { metricName: "notifications.popup.refresh" },
+    );
+  }, []);
 
-  useRealtimeChannel(
-    (supabase, token) => {
-      if (disabled) return null;
-
-      let tenantId: number | null = null;
-      if (token) {
-        const claims = extractClaimsFromAccessToken(token);
-        if (claims) {
-          tenantId = claims.tenant_id;
-        }
-      }
-      if (tenantId === null) return null;
-
-      return supabase
-        .channel(`notification-popups-${String(tenantId)}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "INSERT",
-            schema: "public",
-            table: "notifications",
-            filter: `tenant_id=eq.${String(tenantId)}`,
-          },
-          () =>
-            void showPopupsForNewNotifications(
-              highWaterRef,
-              inFlightRef,
-              showInAppToast,
-              muteVisibleFloorAttention,
-              (url) => navigateRef.current(url),
-            ),
-        )
-        .subscribe((status) => {
-          if (status !== "SUBSCRIBED") return;
-          if (!initialSubscribeSeenRef.current) {
-            initialSubscribeSeenRef.current = true;
-            return;
-          }
-          void showPopupsForNewNotifications(
-            highWaterRef,
-            inFlightRef,
-            showInAppToast,
-            muteVisibleFloorAttention,
-            (url) => navigateRef.current(url),
-          );
-        });
-    },
-    [disabled, muteVisibleFloorAttention, showInAppToast],
-  );
+  useNotificationEvents({
+    enabled: !disabled,
+    filter: { insertOnly: true },
+    onEvent: () => schedulePopupsRef.current(),
+  });
 
   useEffect(() => {
     if (disabled) return;
@@ -227,8 +208,8 @@ export function useForegroundNotifications(): void {
         void showPopupsForNewNotifications(
           highWaterRef,
           inFlightRef,
-          showInAppToast,
-          muteVisibleFloorAttention,
+          showInAppToastRef.current,
+          muteVisibleFloorAttentionRef.current,
           (url) => navigateRef.current(url),
         );
       }
@@ -237,5 +218,5 @@ export function useForegroundNotifications(): void {
     return () => {
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [disabled, muteVisibleFloorAttention, showInAppToast]);
+  }, [disabled]);
 }
