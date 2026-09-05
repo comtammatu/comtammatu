@@ -115,6 +115,13 @@ export const SHARED_COMPONENT_REGISTRY = {
     "route-local up/down color chip",
     "KpiCard and report section deltas",
   ),
+  "confirm-dialog.tsx": direct(
+    "destructive confirmation flow",
+    "confirm(), ConfirmDialog, or ConfirmDialogProvider",
+    "ReasonConfirmDialog when a reason is required",
+    "raw AlertDialog composition",
+    "delete, void, and irreversible command confirmation",
+  ),
   "context-menu.tsx": workflowOnly(
     "advanced row action opened by right click or long press",
     "ContextMenu",
@@ -254,6 +261,13 @@ export const SHARED_COMPONENT_REGISTRY = {
     "Select for a compact option set",
     "custom selected-card state without radio semantics",
     "form mode choices",
+  ),
+  "reason-confirm-dialog.tsx": direct(
+    "confirmation with required reason input",
+    "ReasonConfirmDialog",
+    "confirm() for simple yes or no confirmation",
+    "route-local reason modal",
+    "void, cancel, and rejection flows with mandatory reason",
   ),
   "row-actions-menu.tsx": direct(
     "row overflow actions",

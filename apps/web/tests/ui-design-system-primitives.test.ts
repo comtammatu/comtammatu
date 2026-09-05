@@ -356,8 +356,10 @@ test("foundations bind typography/motion and gate looping Spinner/Skeleton motio
 });
 
 test("confirm dialog settles every request exactly once", () => {
-  const source = read("apps/web/app/components/confirm-dialog.tsx");
+  const source = read("packages/ui/src/components/confirm-dialog.tsx");
+  const adapter = read("apps/web/app/components/confirm-dialog.tsx");
 
+  assert.match(adapter, /from "@comtammatu\/ui\/components\/confirm-dialog"/);
   assert.match(source, /size=\{actionSize\}/);
   assert.match(source, /const actionSize = isTouchLayout \? "touch" : "default"/);
 

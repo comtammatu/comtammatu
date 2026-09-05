@@ -1807,10 +1807,7 @@ const frozenPrimitiveImportBaselines = [
     label: "AlertDialog",
     replacement:
       "confirm(), FormDialog with reason input, or an approved destructive flow",
-    allowlist: {
-      "apps/web/app/components/confirm-dialog.tsx": 1,
-      "apps/web/app/components/reason-confirm-dialog.tsx": 1,
-    },
+    allowlist: {},
   },
   {
     id: "raw-calendar-import-file-baseline",

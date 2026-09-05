@@ -47,11 +47,11 @@ adapters instead of restyling `Card`, `Empty`, or a page container.
 
 `packages/ui/src/components/`: `alert`, `alert-dialog`, `avatar`, `badge`,
 `breadcrumb`, `button`, `calendar`, `card`, `checkbox`, `collapsible`,
-`combobox`, `compare-chip`, `context-menu`, `data-table`,
+`combobox`, `compare-chip`, `confirm-dialog`, `context-menu`, `data-table`,
 `data-table-pagination`, `dialog`, `drawer`, `dropdown-menu`, `empty`,
 `field`, `frame`, `input`, `input-group`, `interactive-card`, `item`, `kbd`,
 `kpi-card`, `label`, `note-callout`, `popover`, `progress`, `radio-group`,
-`row-actions-menu`, `scroll-area`,
+`reason-confirm-dialog`, `row-actions-menu`, `scroll-area`,
 `section-label`, `select`, `separator`, `sheet`, `skeleton`, `slider`, `sonner`,
 `spinner`, `status-badge`, `switch`, `table`, `table-empty-state-row`, `tabs`,
 `textarea`, `theme-provider`, `theme-script`, `toggle`, `toggle-group`,
