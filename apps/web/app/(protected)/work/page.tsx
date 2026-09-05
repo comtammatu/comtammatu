@@ -81,6 +81,30 @@ export default async function WorkPage({
     }
   }
 
+  const allMembers: WorkProfileOption[] = [];
+  const seenMemberIds = new Set<string>();
+  const candidateMembers =
+    params.departmentId != null
+      ? (membersByDepartment[params.departmentId] ?? [])
+      : Object.values(membersByDepartment).flat();
+
+  for (const m of candidateMembers) {
+    if (m.id && !seenMemberIds.has(m.id)) {
+      seenMemberIds.add(m.id);
+      allMembers.push(m);
+    }
+  }
+  if (params.memberId && !seenMemberIds.has(params.memberId)) {
+    const memberName = assigneeNames[params.memberId];
+    if (memberName) {
+      allMembers.push({
+        id: params.memberId,
+        fullName: memberName,
+      });
+    }
+  }
+  allMembers.sort((a, b) => a.fullName.localeCompare(b.fullName, "vi"));
+
   let taskDetail: WorkTaskDetailPayload | null = null;
   let taskDetailError: string | null = null;
   if (params.taskId != null) {
@@ -171,6 +195,7 @@ export default async function WorkPage({
       <WorkPageShell
         params={params}
         departments={departments}
+        members={allMembers}
         composeArchetype={composeArchetype}
         loadError={loadError}
       >

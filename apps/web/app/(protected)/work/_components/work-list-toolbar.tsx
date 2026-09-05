@@ -53,10 +53,12 @@ const QUICK_FILTER_OPTIONS: Array<{
 export function WorkListToolbar({
   params,
   departments,
+  members = [],
   showFilters = false,
 }: {
   params: ParsedWorkParams;
   departments: Array<{ id: number; name: string }>;
+  members?: Array<{ id: string; fullName: string }>;
   showFilters?: boolean;
 }) {
   const router = useRouter();
@@ -106,6 +108,36 @@ export function WorkListToolbar({
           {departments.map((department) => (
             <SelectItem key={department.id} value={String(department.id)}>
               {department.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    ) : null;
+
+  const memberFilter =
+    members.length > 0 ? (
+      <Select
+        value={params.memberId ?? "all"}
+        onValueChange={(value) => {
+          router.replace(
+            workHref(params, {
+              memberId: value === "all" ? null : value,
+            }),
+          );
+        }}
+      >
+        <SelectTrigger
+          className="w-40"
+          size={controlSize}
+          aria-label={workCopy.filterMember}
+        >
+          <SelectValue placeholder={workCopy.filterMember} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">{workCopy.filterAllMembers}</SelectItem>
+          {members.map((member) => (
+            <SelectItem key={member.id} value={member.id}>
+              {member.fullName}
             </SelectItem>
           ))}
         </SelectContent>
@@ -209,7 +241,14 @@ export function WorkListToolbar({
           </div>
         }
         filters={viewSwitcher}
-        actions={departmentFilter}
+        actions={
+          departmentFilter || memberFilter ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {departmentFilter}
+              {memberFilter}
+            </div>
+          ) : null
+        }
       />
       {quickFilterChips}
     </div>

@@ -136,6 +136,8 @@ export const workCopy = {
   filterDueToday: "Hạn hôm nay",
   filterOverdue: "Quá hạn",
   filterUrgent: "Khẩn cấp",
+  filterMember: "Nhân sự",
+  filterAllMembers: "Tất cả nhân sự",
   unassigned: "Chưa phân công",
   laneUrgent: "Sự cố & Khẩn cấp",
   laneStandard: "Tiêu chuẩn",

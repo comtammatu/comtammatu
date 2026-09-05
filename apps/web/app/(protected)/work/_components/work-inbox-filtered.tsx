@@ -17,6 +17,16 @@ export function WorkInboxFiltered({
   q: string | null;
 }) {
   let filtered = tasks;
+  const memberId = params.memberId;
+  if (memberId) {
+    filtered = filtered.filter(
+      (task) =>
+        task.assigneeId === memberId ||
+        task.participantIds?.includes(memberId) ||
+        task.assigneeIds?.includes(memberId) ||
+        task.supporterIds?.includes(memberId),
+    );
+  }
   if (status) {
     filtered = filtered.filter((task) => task.status === status);
   }

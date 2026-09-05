@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
 import {
   getVNDateString,
@@ -29,6 +30,18 @@ export function WorkCalendar({
   tasks: WorkTaskRow[];
   params: ParsedWorkParams;
 }) {
+  const filteredTasks = useMemo(() => {
+    const memberId = params.memberId;
+    if (!memberId) return tasks;
+    return tasks.filter(
+      (t) =>
+        t.assigneeId === memberId ||
+        t.participantIds?.includes(memberId) ||
+        t.assigneeIds?.includes(memberId) ||
+        t.supporterIds?.includes(memberId),
+    );
+  }, [tasks, params.memberId]);
+
   const monthStart =
     params.month != null ? `${params.month}-01` : getVNMonthStartDateString();
   const year = Number(monthStart.slice(0, 4));
@@ -39,7 +52,7 @@ export function WorkCalendar({
     params.month == null || params.month === currentVNMonth;
 
   const tasksByDate = new Map<string, WorkTaskRow[]>();
-  for (const task of tasks) {
+  for (const task of filteredTasks) {
     if (!task.dueAt) continue;
     const key = getVNDateString(task.dueAt);
     const bucket = tasksByDate.get(key) ?? [];

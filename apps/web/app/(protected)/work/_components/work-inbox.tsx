@@ -11,7 +11,9 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { AppEmptyState } from "@/components/surface";
+import { cn } from "@comtammatu/ui";
 import {
+  CheckSquare as IconCheckSquare,
   ChevronRight as IconChevronRight,
   Clock as IconClock,
   FileText as IconFileText,
@@ -110,6 +112,22 @@ export function WorkInbox({
                 <Badge variant={priorityVariant(task.priority)}>
                   {workCopy.priorityLabels[task.priority]}
                 </Badge>
+                {task.checklistTotal != null && task.checklistTotal > 0 ? (
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1 font-mono tabular-nums text-2xs px-1.5 py-0.5 rounded",
+                      task.checklistDone === task.checklistTotal
+                        ? "font-semibold text-success bg-success/10"
+                        : "text-muted-foreground bg-muted/30",
+                    )}
+                    title={`${task.checklistDone ?? 0}/${task.checklistTotal}`}
+                  >
+                    <IconCheckSquare className="size-3 shrink-0" />
+                    <span>
+                      {task.checklistDone ?? 0}/{task.checklistTotal}
+                    </span>
+                  </span>
+                ) : null}
                 {task.dueAt ? (
                   <span
                     className={`inline-flex items-center gap-1 text-xs ${

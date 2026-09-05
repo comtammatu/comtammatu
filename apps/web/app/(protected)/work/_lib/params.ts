@@ -27,6 +27,7 @@ export type WorkSearchParams = {
   task?: string | string[];
   filter?: string | string[];
   group?: string | string[];
+  member?: string | string[];
 };
 
 export type ParsedWorkParams = {
@@ -39,6 +40,7 @@ export type ParsedWorkParams = {
   taskId: number | null;
   filter: WorkQuickFilter | null;
   group: WorkGrouping | null;
+  memberId: string | null;
 };
 
 function firstParam(
@@ -102,6 +104,13 @@ function parseGrouping(raw: string | undefined): WorkGrouping | null {
   return null;
 }
 
+function parseMemberId(raw: string | undefined): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed || trimmed === "all") return null;
+  return trimmed.slice(0, 100);
+}
+
 export function parseWorkParams(
   searchParams: WorkSearchParams | undefined,
 ): ParsedWorkParams {
@@ -116,6 +125,7 @@ export function parseWorkParams(
     taskId: parsePositiveInt(firstParam(params.task)),
     filter: parseQuickFilter(firstParam(params.filter)),
     group: parseGrouping(firstParam(params.group)),
+    memberId: parseMemberId(firstParam(params.member)),
   };
 }
 
@@ -137,6 +147,9 @@ export function buildWorkSearchParams(
   if (next.taskId != null) qs.set("task", String(next.taskId));
   if (next.filter != null && next.filter !== "all") qs.set("filter", next.filter);
   if (next.group != null && next.group !== "status") qs.set("group", next.group);
+  if (next.memberId != null && next.memberId !== "all") {
+    qs.set("member", next.memberId);
+  }
 
   return qs;
 }

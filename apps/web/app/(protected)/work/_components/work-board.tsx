@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import {
+  CheckSquare as IconCheckSquare,
   Clock as IconClock,
   ExternalLink as IconExternalLink,
   Plus as IconPlus,
@@ -153,6 +154,16 @@ export function WorkBoard({
 
   const filteredTasks = useMemo(() => {
     let list = tasks;
+    const memberId = params.memberId;
+    if (memberId) {
+      list = list.filter(
+        (t) =>
+          t.assigneeId === memberId ||
+          t.participantIds?.includes(memberId) ||
+          t.assigneeIds?.includes(memberId) ||
+          t.supporterIds?.includes(memberId),
+      );
+    }
     if (params.filter === "urgent") {
       list = list.filter((t) => t.priority === "urgent");
     } else if (params.filter === "overdue") {
@@ -175,7 +186,7 @@ export function WorkBoard({
       list = list.filter((t) => t.title.toLowerCase().includes(needle));
     }
     return list;
-  }, [tasks, params.filter, params.q, todayStr]);
+  }, [tasks, params.memberId, params.filter, params.q, todayStr]);
 
   const [items, setItems] = useState(filteredTasks);
   useEffect(() => {
@@ -448,6 +459,22 @@ export function WorkBoard({
                 }
                 disabled={isPending}
               />
+              {task.checklistTotal != null && task.checklistTotal > 0 ? (
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1 font-mono tabular-nums text-2xs px-1.5 py-0.5 rounded",
+                    task.checklistDone === task.checklistTotal
+                      ? "font-semibold text-success bg-success/10"
+                      : "text-muted-foreground bg-muted/30",
+                  )}
+                  title={`${task.checklistDone ?? 0}/${task.checklistTotal}`}
+                >
+                  <IconCheckSquare className="size-3 shrink-0" />
+                  <span>
+                    {task.checklistDone ?? 0}/{task.checklistTotal}
+                  </span>
+                </span>
+              ) : null}
             </div>
           </ItemDescription>
         </ItemContent>

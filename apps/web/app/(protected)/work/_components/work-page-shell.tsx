@@ -12,12 +12,14 @@ import { WorkListToolbar } from "./work-list-toolbar";
 export function WorkPageShell({
   params,
   departments,
+  members = [],
   composeArchetype,
   loadError,
   children,
 }: {
   params: ParsedWorkParams;
   departments: Array<{ id: number; name: string }>;
+  members?: Array<{ id: string; fullName: string }>;
   composeArchetype: WorkComposeArchetype | null;
   loadError: string | null;
   children: ReactNode;
@@ -26,6 +28,7 @@ export function WorkPageShell({
     <WorkListToolbar
       params={params}
       departments={departments}
+      members={members}
       showFilters={params.view === "mine"}
     />
   );

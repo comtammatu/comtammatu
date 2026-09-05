@@ -43,6 +43,11 @@ export type WorkTaskRow = {
   createdBy: string;
   createdAt: string;
   updatedAt: string;
+  checklistTotal?: number;
+  checklistDone?: number;
+  participantIds?: string[];
+  assigneeIds?: string[];
+  supporterIds?: string[];
 };
 
 export type WorkDepartmentOption = {
@@ -116,7 +121,88 @@ function mapWorkTaskRow(row: WorkTaskDbRow): WorkTaskRow {
     createdBy: row.created_by,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    checklistTotal: 0,
+    checklistDone: 0,
+    participantIds: row.assignee_id ? [row.assignee_id] : [],
+    assigneeIds: row.assignee_id ? [row.assignee_id] : [],
+    supporterIds: [],
   };
+}
+
+async function enrichWorkTasks(
+  tasks: WorkTaskRow[],
+  ctx: ActionContext,
+): Promise<WorkTaskRow[]> {
+  if (tasks.length === 0) return tasks;
+  const taskIds = tasks.map((t) => t.id);
+
+  const [checklistRes, participantsRes] = await Promise.all([
+    ctx.supabase
+      .from("work_task_checklist_items")
+      .select("task_id, is_done")
+      .eq("tenant_id", ctx.claims.tenant_id)
+      .in("task_id", taskIds),
+    ctx.supabase
+      .from("work_task_participants")
+      .select("task_id, user_id, kind")
+      .eq("tenant_id", ctx.claims.tenant_id)
+      .in("task_id", taskIds),
+  ]);
+
+  const checklistMap = new Map<number, { total: number; done: number }>();
+  if (checklistRes.data) {
+    for (const item of checklistRes.data) {
+      const entry = checklistMap.get(item.task_id) ?? { total: 0, done: 0 };
+      entry.total += 1;
+      if (item.is_done) entry.done += 1;
+      checklistMap.set(item.task_id, entry);
+    }
+  }
+
+  const participantsMap = new Map<
+    number,
+    { participantIds: Set<string>; assigneeIds: string[]; supporterIds: string[] }
+  >();
+  if (participantsRes.data) {
+    for (const p of participantsRes.data) {
+      let entry = participantsMap.get(p.task_id);
+      if (!entry) {
+        entry = { participantIds: new Set(), assigneeIds: [], supporterIds: [] };
+        participantsMap.set(p.task_id, entry);
+      }
+      entry.participantIds.add(p.user_id);
+      if (p.kind === "assignee") {
+        entry.assigneeIds.push(p.user_id);
+      } else if (p.kind === "collaborator") {
+        entry.supporterIds.push(p.user_id);
+      }
+    }
+  }
+
+  return tasks.map((task) => {
+    const chk = checklistMap.get(task.id) ?? { total: 0, done: 0 };
+    const p = participantsMap.get(task.id);
+    const participantIds = new Set(p?.participantIds ?? []);
+    if (task.assigneeId) {
+      participantIds.add(task.assigneeId);
+    }
+    const assigneeIds =
+      p?.assigneeIds && p.assigneeIds.length > 0
+        ? p.assigneeIds
+        : task.assigneeId
+          ? [task.assigneeId]
+          : [];
+    const supporterIds = p?.supporterIds ?? [];
+
+    return {
+      ...task,
+      checklistTotal: chk.total,
+      checklistDone: chk.done,
+      participantIds: Array.from(participantIds),
+      assigneeIds,
+      supporterIds,
+    };
+  });
 }
 
 function sortWorkTasks(tasks: WorkTaskRow[]): WorkTaskRow[] {
@@ -159,9 +245,11 @@ export const listMyWorkTasks = withAction<typeof includeDoneSchema, { items: Wor
     if (error) {
       return mapRpcError(error, workRpcMappings, workRpcFallback);
     }
+    const mapped = (rows ?? []).map(mapWorkTaskRow);
+    const enriched = await enrichWorkTasks(mapped, ctx);
     return {
       success: true,
-      data: { items: (rows ?? []).map(mapWorkTaskRow) },
+      data: { items: enriched },
     };
   },
 );
@@ -185,7 +273,9 @@ export const getWorkTask = withAction<typeof taskIdSchema, WorkTaskRow>(
     if (!row) {
       return { success: false, error: workCopy.taskNotFound };
     }
-    return { success: true, data: mapWorkTaskRow(row) };
+    const mapped = mapWorkTaskRow(row);
+    const [enriched] = await enrichWorkTasks([mapped], ctx);
+    return { success: true, data: enriched ?? mapped };
   },
 );
 
@@ -538,9 +628,12 @@ export const listScopedWorkTasks = withAction<typeof scopedWorkTasksSchema, { it
       return { success: false, error: workCopy.loadFailed };
     }
 
+    const mapped = (rows ?? []).map(mapWorkTaskRow);
+    const enriched = await enrichWorkTasks(mapped, ctx);
+
     return {
       success: true,
-      data: { items: sortWorkTasks((rows ?? []).map(mapWorkTaskRow)) },
+      data: { items: sortWorkTasks(enriched) },
     };
   },
 );

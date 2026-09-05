@@ -122,7 +122,18 @@ export function WorkTimeline({
     }
     const otherTasks: WorkTaskRow[] = [];
 
-    for (const task of tasks) {
+    const memberId = params.memberId;
+    const effectiveTasks = memberId
+      ? tasks.filter(
+          (t) =>
+            t.assigneeId === memberId ||
+            t.participantIds?.includes(memberId) ||
+            t.assigneeIds?.includes(memberId) ||
+            t.supporterIds?.includes(memberId),
+        )
+      : tasks;
+
+    for (const task of effectiveTasks) {
       if (task.status === "canceled") continue;
       if (task.departmentId != null && map.has(task.departmentId)) {
         map.get(task.departmentId)!.push(task);
@@ -167,7 +178,7 @@ export function WorkTimeline({
     }
 
     return groups;
-  }, [tasks, departments]);
+  }, [tasks, departments, params.memberId]);
 
   if (tasks.filter((t) => t.status !== "canceled").length === 0) {
     return (
