@@ -34,6 +34,17 @@ export const notifications = {
     warning: "Cảnh báo",
     info: "Thông tin",
   },
+  severityAll: "Tất cả mức độ",
+  categoryAriaLabel: "Phân loại thông báo",
+  searchPlaceholder: "Tìm theo tiêu đề, mã số...",
+  categories: {
+    all: "Tất cả",
+    actionable: "Cần xử lý",
+    pos: "Bán hàng & POS",
+    inventory: "Kho & Cung ứng",
+    hr: "Nhân sự",
+    finance: "Tài chính",
+  },
   deviceToggle: "Cài đặt thiết bị",
   kindLabel: {
     "pos.order_new": "Đơn mới",

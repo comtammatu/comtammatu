@@ -366,11 +366,28 @@ export function NotificationItem({ item, onRead, onNavigate }: Props) {
   const row = (
     <div className="flex items-stretch gap-2">
       {primary}
-      {actions.length > 0 ? (
-        <ItemActions className="shrink-0 items-start pt-2">
+      <ItemActions className="shrink-0 items-start gap-1 pt-2">
+        {unread ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onRead(item.id);
+            }}
+            aria-label={messages.notifications.markRead}
+            title={messages.notifications.markRead}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <IconCircleCheck className="size-3.5" />
+          </Button>
+        ) : null}
+        {actions.length > 0 ? (
           <RowActionsMenu items={actions} triggerSize="icon-sm" />
-        </ItemActions>
-      ) : null}
+        ) : null}
+      </ItemActions>
     </div>
   );
 

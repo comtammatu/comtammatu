@@ -55,6 +55,7 @@ function NotificationPeekFeed({
   onNavigate: () => void;
 }) {
   const pathname = usePathname();
+  const [feedMode, setFeedMode] = useState<"active" | "all">("active");
   const [scope, setScope] = useState<{
     tenantId: number;
     branchId: number | null;
@@ -88,7 +89,8 @@ function NotificationPeekFeed({
       items={feed.items.slice(0, PEEK_PAGE_SIZE)}
       unreadCount={feed.unreadCount}
       loading={scope === null || feed.loading}
-      feedMode="active"
+      feedMode={feedMode}
+      onFeedModeChange={setFeedMode}
       onRead={feed.markRead}
       onMarkAll={feed.markAll}
       onItemNavigate={onNavigate}
@@ -175,7 +177,7 @@ export function NotificationBell({
       <PopoverContent
         align={variant === "header" ? "end" : "start"}
         side={variant === "sidebar" ? "top" : "bottom"}
-        className="w-80 max-w-full p-0"
+        className="w-80 sm:w-96 max-w-full p-0"
       >
         {panel}
       </PopoverContent>

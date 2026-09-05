@@ -8,7 +8,10 @@ import {
 import { useNotificationEvents } from "@/_hooks/use-notification-events";
 import { makeRealtimeCoalescer } from "@/_utils/realtime-scheduler";
 import { dedupeInflight } from "@/_utils/inflight-dedupe";
-import { NOTIFICATIONS_CHANGED_EVENT } from "@lib/notifications/changed-event";
+import {
+  initNotificationSync,
+  NOTIFICATIONS_CHANGED_EVENT,
+} from "@lib/notifications/changed-event";
 
 const EMPTY_SUMMARY: NotificationBadgeSummary = {
   unreadCount: 0,
@@ -59,6 +62,7 @@ export function useNotificationBadges(): NotificationBadgeSummary {
   });
 
   useEffect(() => {
+    initNotificationSync();
     const handleVisibility = () => {
       if (document.visibilityState === "visible") void refreshRef.current();
     };

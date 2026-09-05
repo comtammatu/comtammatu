@@ -125,9 +125,10 @@ export function getNavNotificationCount(
     if (NAV_BADGE_EXCLUDED_KINDS.has(target.kind)) return total;
     const actionPath = target.actionUrl?.split(/[?#]/, 1)[0] ?? null;
     const targetPath = notificationKindTargetPath(target.kind) ?? actionPath;
-    return targetPath && isNavItemActive(item, targetPath)
-      ? total + target.unreadCount
-      : total;
+    const isMatched =
+      Boolean(targetPath && isNavItemActive(item, targetPath)) ||
+      Boolean(actionPath && item.href.startsWith("/br/") && isNavItemActive(item, actionPath));
+    return isMatched ? total + target.unreadCount : total;
   }, 0);
 }
 

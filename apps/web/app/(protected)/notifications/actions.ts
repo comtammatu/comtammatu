@@ -56,6 +56,7 @@ const listSchema = z.object({
 const badgeTargetSchema = z.object({
   kind: z.string(),
   action_url: z.string().nullable(),
+  target_branch_id: z.coerce.number().int().nullable().optional(),
   unread_count: z.coerce.number().int().nonnegative(),
 });
 
@@ -162,7 +163,7 @@ export async function getNotificationBadgeSummary(): Promise<
       actionUrl: row.action_url,
       entityId: null,
       kind: row.kind,
-      targetBranchId: null,
+      targetBranchId: row.target_branch_id ?? null,
     }),
     unreadCount: row.unread_count,
   }));
@@ -177,6 +178,32 @@ export async function getNotificationBadgeSummary(): Promise<
       targets,
     },
   };
+}
+
+const markEntitySchema = z.object({
+  entityType: z.string().min(1),
+  entityId: z.number().int().positive(),
+});
+
+export async function markEntityNotificationsRead(
+  input: z.input<typeof markEntitySchema>,
+): Promise<ActionResult<{ count: number }>> {
+  const parsed = markEntitySchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Dữ liệu không hợp lệ" };
+  }
+  const { supabase } = await loadAuthState();
+  const { data, error } = await supabase.rpc(
+    "mark_entity_notifications_read" as never,
+    {
+      p_entity_type: parsed.data.entityType,
+      p_entity_id: parsed.data.entityId,
+    } as never,
+  );
+  if (error) {
+    return { success: false, error: "Không thể đánh dấu đã đọc" };
+  }
+  return { success: true, data: { count: Number(data ?? 0) } };
 }
 
 const markReadSchema = z.object({ id: z.number().int().positive() });

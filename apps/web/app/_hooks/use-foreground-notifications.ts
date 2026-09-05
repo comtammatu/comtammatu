@@ -115,6 +115,11 @@ function showArrivalToast(
   item: NotificationItem,
   navigate: (url: string) => void,
 ): void {
+  // Attention Hygiene: Routine info feeds without actionable work do not pop up;
+  // they update the badge and feed silently. Only critical, warning, or actionable items pop up.
+  if (item.severity === "info" && !item.action_url) {
+    return;
+  }
   const options: {
     description?: string;
     id: string;
