@@ -15,6 +15,13 @@ import {
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
 import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
 import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
@@ -25,15 +32,19 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
+import { confirm } from "@/components/confirm-dialog";
+import { KpiCard } from "@/components/kpi/kpi-card";
 import {
   RowActionsContextMenuItems,
   RowActionsMenu,
   type RowActionItem,
 } from "@/components/row-actions-menu";
 import { StatusBadge } from "@/components/status-badge";
-import { AppListFrame, AppToolbar } from "@/components/surface";
-import { promotionKindLabel } from "@lib/promotions/kinds";
-import { setPromotionStatus } from "./actions";
+import { AppListFrame, AppToolbar, KpiRow } from "@/components/surface";
+import { useDocumentOverlayUrl } from "@lib/navigation/use-document-overlay-url";
+import { PROMOTION_KINDS, promotionKindLabel } from "@lib/promotions/kinds";
+import { deletePromotion, setPromotionStatus } from "./actions";
+import { PromotionQuickViewSheet } from "./promotion-quick-view-sheet";
 
 export type PromotionListRow = {
   id: number;
@@ -55,9 +66,10 @@ export type PromotionListRow = {
   redeemedCodesCount: number;
   startsAt: string | null;
   endsAt: string | null;
+  branchIds?: number[];
 };
 
-function getPromotionBenefit(row: PromotionListRow): string {
+export function getPromotionBenefit(row: PromotionListRow): string {
   if (row.kind === "order_pct") {
     const val = row.discountValue ?? 0;
     const maxText =
@@ -96,13 +108,44 @@ function getPromotionBenefit(row: PromotionListRow): string {
   return "—";
 }
 
-export function PromotionsListClient({ rows }: { rows: PromotionListRow[] }) {
+export function PromotionsListClient({
+  rows,
+  branches = [],
+}: {
+  rows: PromotionListRow[];
+  branches?: Array<{ id: number; name: string }>;
+}) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [kindFilter, setKindFilter] = useState<string>("all");
+  const [branchFilter, setBranchFilter] = useState<string>("all");
+  const { values: overlayValues, patchOverlay } = useDocumentOverlayUrl([
+    "promotionId",
+  ] as const);
+  const selectedId = overlayValues.promotionId
+    ? Number(overlayValues.promotionId)
+    : null;
+  const selectedPromotion = useMemo(
+    () => rows.find((r) => r.id === selectedId) ?? null,
+    [rows, selectedId],
+  );
+
   const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
   const controlSize = isTouchLayout ? "touch" : "default";
+
+  const branchMap = useMemo(
+    () => new Map(branches.map((b) => [b.id, b.name])),
+    [branches],
+  );
+
+  const selectedBranchNames = useMemo(() => {
+    if (!selectedPromotion?.branchIds) return [];
+    return selectedPromotion.branchIds.map(
+      (id) => branchMap.get(id) ?? String(id),
+    );
+  }, [selectedPromotion, branchMap]);
 
   const counts = useMemo(() => {
     return {
@@ -114,10 +157,39 @@ export function PromotionsListClient({ rows }: { rows: PromotionListRow[] }) {
     };
   }, [rows]);
 
+  const kpiMetrics = useMemo(() => {
+    const activeCount = counts.active;
+    const pausedOrDraftCount = counts.paused + counts.draft;
+    const totalCodes = rows.reduce((sum, r) => sum + r.totalCodesCount, 0);
+    const redeemedCodes = rows.reduce(
+      (sum, r) => sum + r.redeemedCodesCount,
+      0,
+    );
+    const rateStr =
+      totalCodes > 0
+        ? formatPercent((redeemedCodes / totalCodes) * 100, 0)
+        : formatPercent(0, 0);
+
+    return {
+      activeCount,
+      pausedOrDraftCount,
+      totalCodes,
+      redeemedCodes,
+      rateStr,
+    };
+  }, [rows, counts]);
+
   const filteredRows = useMemo(() => {
     let list = rows;
     if (statusFilter !== "all") {
       list = list.filter((r) => r.status === statusFilter);
+    }
+    if (kindFilter !== "all") {
+      list = list.filter((r) => r.kind === kindFilter);
+    }
+    if (branchFilter !== "all") {
+      const bId = Number(branchFilter);
+      list = list.filter((r) => r.branchIds?.includes(bId));
     }
     if (search.trim()) {
       const q = search.trim().toLowerCase();
@@ -129,7 +201,7 @@ export function PromotionsListClient({ rows }: { rows: PromotionListRow[] }) {
       });
     }
     return list;
-  }, [rows, statusFilter, search]);
+  }, [rows, statusFilter, kindFilter, branchFilter, search]);
 
   function setStatus(
     row: PromotionListRow,
@@ -142,6 +214,33 @@ export function PromotionsListClient({ rows }: { rows: PromotionListRow[] }) {
         return;
       }
       toast.success(PROMOTIONS_VI.saved);
+      router.refresh();
+    });
+  }
+
+  async function handleDelete(row: PromotionListRow) {
+    const ok = await confirm({
+      title: PROMOTIONS_VI.deleteConfirmTitle,
+      description: PROMOTIONS_VI.deleteConfirmDesc,
+      variant: "destructive",
+      confirmText: PROMOTIONS_VI.deleteAction,
+    });
+    if (!ok) return;
+
+    startTransition(async () => {
+      const result = await deletePromotion({ id: row.id });
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+      if (result.data?.action === "ended") {
+        toast.success(PROMOTIONS_VI.archiveSuccess);
+      } else {
+        toast.success(PROMOTIONS_VI.deleteSuccess);
+      }
+      if (selectedPromotion?.id === row.id) {
+        patchOverlay({ promotionId: null }, "replace");
+      }
       router.refresh();
     });
   }
@@ -179,6 +278,14 @@ export function PromotionsListClient({ rows }: { rows: PromotionListRow[] }) {
         onSelect: () => setStatus(row, "ended"),
       });
     }
+    items.push({
+      key: "delete",
+      label: PROMOTIONS_VI.deleteAction,
+      disabled: isPending,
+      destructive: true,
+      separatorBefore: true,
+      onSelect: () => handleDelete(row),
+    });
     return items;
   }
 
@@ -192,6 +299,7 @@ export function PromotionsListClient({ rows }: { rows: PromotionListRow[] }) {
             variant="link"
             className="h-auto justify-start p-0 font-medium text-foreground"
             render={<Link href={`/promotions/${String(row.id)}`} />}
+            onClick={(event) => event.stopPropagation()}
           >
             {row.name}
           </Button>
@@ -295,78 +403,173 @@ export function PromotionsListClient({ rows }: { rows: PromotionListRow[] }) {
   ];
 
   return (
-    <AppListFrame
-      toolbar={
-        <AppToolbar
-          variant="inline"
-          className="flex-wrap"
-          search={
-            <InputGroup size={controlSize} className="w-full sm:w-72">
-              <InputGroupAddon>
-                <IconSearch className="size-4" />
-              </InputGroupAddon>
-              <InputGroupInput
-                type="search"
-                placeholder={PROMOTIONS_VI.searchPlaceholder}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </InputGroup>
-          }
-          filters={
-            <Tabs
-              value={statusFilter}
-              onValueChange={(val) => setStatusFilter(val)}
-            >
-              <TabsList size={controlSize} className="flex-wrap">
-                <TabsTrigger value="all">
-                  {PROMOTIONS_VI.filterAll}
-                  {counts.all > 0 ? ` (${String(counts.all)})` : ""}
-                </TabsTrigger>
-                <TabsTrigger value="active">
-                  {PROMOTIONS_VI.filterActive}
-                  {counts.active > 0 ? ` (${String(counts.active)})` : ""}
-                </TabsTrigger>
-                <TabsTrigger value="paused">
-                  {PROMOTIONS_VI.filterPaused}
-                  {counts.paused > 0 ? ` (${String(counts.paused)})` : ""}
-                </TabsTrigger>
-                <TabsTrigger value="ended">
-                  {PROMOTIONS_VI.filterEnded}
-                  {counts.ended > 0 ? ` (${String(counts.ended)})` : ""}
-                </TabsTrigger>
-                {counts.draft > 0 ? (
-                  <TabsTrigger value="draft">
-                    {PROMOTIONS_VI.filterDraft} ({String(counts.draft)})
-                  </TabsTrigger>
-                ) : null}
-              </TabsList>
-            </Tabs>
-          }
+    <div className="flex flex-col gap-4">
+      <KpiRow
+        density="compact"
+        className="grid-cols-2 sm:grid-cols-2 lg:grid-cols-4"
+      >
+        <KpiCard
+          density="compact"
+          label={PROMOTIONS_VI.statActive}
+          value={kpiMetrics.activeCount}
+          tone="primary"
         />
-      }
-    >
-      <DataTable
-        columns={columns}
-        data={filteredRows}
-        getRowKey={(row) => row.id}
-        emptyTitle={PROMOTIONS_VI.emptyTitle}
-        emptyDescription={PROMOTIONS_VI.emptyDescription}
-        emptyIcon={<IconTicket className="size-8 text-muted-foreground" />}
-        rowClassName={() => (isPending ? "opacity-60" : undefined)}
-        onRowClick={(row) => router.push(`/promotions/${String(row.id)}`)}
-        renderRowContextMenu={(row) => (
-          <RowActionsContextMenuItems items={rowActions(row)} />
-        )}
-        mobileCardRender={(row) => (
-          <PromotionMobileCard
-            row={row}
-            actions={rowActions(row)}
-            onOpen={() => router.push(`/promotions/${String(row.id)}`)}
+        <KpiCard
+          density="compact"
+          label={PROMOTIONS_VI.statPausedOrDraft}
+          value={kpiMetrics.pausedOrDraftCount}
+          tone="neutral"
+        />
+        <KpiCard
+          density="compact"
+          label={PROMOTIONS_VI.statTotalCodes}
+          value={kpiMetrics.totalCodes}
+          tone="neutral"
+        />
+        <KpiCard
+          density="compact"
+          label={PROMOTIONS_VI.statRedeemedCodes}
+          value={kpiMetrics.redeemedCodes}
+          hint={PROMOTIONS_VI.redemptionRate(kpiMetrics.rateStr)}
+          tone="success"
+        />
+      </KpiRow>
+
+      <AppListFrame
+        toolbar={
+          <AppToolbar
+            variant="inline"
+            className="flex-wrap"
+            search={
+              <InputGroup size={controlSize} className="w-full sm:w-72">
+                <InputGroupAddon>
+                  <IconSearch className="size-4" />
+                </InputGroupAddon>
+                <InputGroupInput
+                  type="search"
+                  placeholder={PROMOTIONS_VI.searchPlaceholder}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </InputGroup>
+            }
+            filters={
+              <div className="flex flex-wrap items-center gap-2">
+                <Tabs
+                  value={statusFilter}
+                  onValueChange={(val) => setStatusFilter(val)}
+                >
+                  <TabsList size={controlSize} className="flex-wrap">
+                    <TabsTrigger value="all">
+                      {PROMOTIONS_VI.filterAll}
+                      {counts.all > 0 ? ` (${String(counts.all)})` : ""}
+                    </TabsTrigger>
+                    <TabsTrigger value="active">
+                      {PROMOTIONS_VI.filterActive}
+                      {counts.active > 0 ? ` (${String(counts.active)})` : ""}
+                    </TabsTrigger>
+                    <TabsTrigger value="paused">
+                      {PROMOTIONS_VI.filterPaused}
+                      {counts.paused > 0 ? ` (${String(counts.paused)})` : ""}
+                    </TabsTrigger>
+                    <TabsTrigger value="ended">
+                      {PROMOTIONS_VI.filterEnded}
+                      {counts.ended > 0 ? ` (${String(counts.ended)})` : ""}
+                    </TabsTrigger>
+                    {counts.draft > 0 ? (
+                      <TabsTrigger value="draft">
+                        {PROMOTIONS_VI.filterDraft} ({String(counts.draft)})
+                      </TabsTrigger>
+                    ) : null}
+                  </TabsList>
+                </Tabs>
+
+                <Select value={kindFilter} onValueChange={setKindFilter}>
+                  <SelectTrigger
+                    size={controlSize}
+                    className="w-40"
+                    aria-label={PROMOTIONS_VI.filterKind}
+                  >
+                    <SelectValue placeholder={PROMOTIONS_VI.filterKind} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">
+                      {PROMOTIONS_VI.filterAllKinds}
+                    </SelectItem>
+                    {PROMOTION_KINDS.map((kind) => (
+                      <SelectItem key={kind} value={kind}>
+                        {promotionKindLabel(kind)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {branches.length > 0 ? (
+                  <Select
+                    value={branchFilter}
+                    onValueChange={setBranchFilter}
+                  >
+                    <SelectTrigger
+                      size={controlSize}
+                      className="w-40"
+                      aria-label={PROMOTIONS_VI.filterBranch}
+                    >
+                      <SelectValue placeholder={PROMOTIONS_VI.filterBranch} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">
+                        {PROMOTIONS_VI.filterAllBranches}
+                      </SelectItem>
+                      {branches.map((b) => (
+                        <SelectItem key={b.id} value={String(b.id)}>
+                          {b.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : null}
+              </div>
+            }
           />
-        )}
+        }
+      >
+        <DataTable
+          columns={columns}
+          data={filteredRows}
+          getRowKey={(row) => row.id}
+          emptyTitle={PROMOTIONS_VI.emptyTitle}
+          emptyDescription={PROMOTIONS_VI.emptyDescription}
+          emptyIcon={<IconTicket className="size-8 text-muted-foreground" />}
+          rowClassName={() => (isPending ? "opacity-60" : undefined)}
+          onRowClick={(row) => patchOverlay({ promotionId: row.id }, "push")}
+          renderRowContextMenu={(row) => (
+            <RowActionsContextMenuItems items={rowActions(row)} />
+          )}
+          mobileCardRender={(row) => (
+            <PromotionMobileCard
+              row={row}
+              actions={rowActions(row)}
+              onOpen={() => patchOverlay({ promotionId: row.id }, "push")}
+            />
+          )}
+        />
+      </AppListFrame>
+
+      <PromotionQuickViewSheet
+        open={selectedPromotion != null}
+        onOpenChange={(open) => {
+          if (!open) patchOverlay({ promotionId: null }, "replace");
+        }}
+        promotion={selectedPromotion}
+        branchNames={selectedBranchNames}
+        benefitText={
+          selectedPromotion ? getPromotionBenefit(selectedPromotion) : ""
+        }
+        onStatusChange={setStatus}
+        onDelete={handleDelete}
+        isPending={isPending}
       />
-    </AppListFrame>
+    </div>
   );
 }
 

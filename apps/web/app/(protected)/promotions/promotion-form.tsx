@@ -4,7 +4,15 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useController, useFieldArray, useForm, type Control } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Download as IconDownload, X as IconX } from "lucide-react";
+import {
+  Download as IconDownload,
+  Pause as IconPause,
+  Play as IconPlay,
+  Search as IconSearch,
+  Sparkles as IconSparkles,
+  Trash2 as IconTrash2,
+  X as IconX,
+} from "lucide-react";
 import { z } from "zod";
 import { ACTIONS_VI, FORM_VI, PROMOTIONS_VI } from "@comtammatu/shared/messages";
 import { formatPercent, formatVND } from "@comtammatu/shared/format";
@@ -14,8 +22,17 @@ import {
   getVNDateString,
 } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
+import { Frame } from "@comtammatu/ui/components/frame";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@comtammatu/ui/components/input-group";
+import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
 import { NoteCallout } from "@comtammatu/ui/components/note-callout";
+import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import {
   Item,
   ItemActions,
@@ -52,6 +69,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
+import { confirm } from "@/components/confirm-dialog";
 import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import {
   ResponsiveActionButton,
@@ -76,7 +94,9 @@ import {
   type PromotionStatus,
 } from "@lib/promotions/kinds";
 import {
+  deletePromotion,
   issuePromotionCodes,
+  setPromotionStatus,
   upsertPromotion,
   voidPromotionCode,
 } from "./actions";
@@ -329,6 +349,8 @@ export function PromotionForm({
   );
   const [voidReason, setVoidReason] = useState("");
   const [voidTarget, setVoidTarget] = useState<PromotionFormCode | null>(null);
+  const [codeSearch, setCodeSearch] = useState("");
+  const [codeStatusFilter, setCodeStatusFilter] = useState<string>("all");
 
   const form = useForm<PromotionFormValues, unknown, PromotionFormValues>({
     resolver: zodResolver(promotionFormSchema),
@@ -343,6 +365,94 @@ export function PromotionForm({
     name: "timeWindows",
   });
   const kindRef = useRef(kind);
+
+  async function handleHeaderDelete() {
+    if (initial.id == null) return;
+    const ok = await confirm({
+      title: PROMOTIONS_VI.deleteConfirmTitle,
+      description: PROMOTIONS_VI.deleteConfirmDesc,
+      variant: "destructive",
+      confirmText: PROMOTIONS_VI.deleteAction,
+    });
+    if (!ok) return;
+
+    startTransition(async () => {
+      const result = await deletePromotion({ id: initial.id! });
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+      if (result.data?.action === "ended") {
+        toast.success(PROMOTIONS_VI.archiveSuccess);
+      } else {
+        toast.success(PROMOTIONS_VI.deleteSuccess);
+      }
+      router.push("/promotions");
+      router.refresh();
+    });
+  }
+
+  function handleQuickToggleStatus() {
+    if (initial.id == null) return;
+    const currentStatus = watch("status");
+    const nextStatus = currentStatus === "active" ? "paused" : "active";
+    setValue("status", nextStatus, { shouldDirty: true });
+    startTransition(async () => {
+      const result = await setPromotionStatus({
+        id: initial.id!,
+        status: nextStatus,
+      });
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(PROMOTIONS_VI.saved);
+      router.refresh();
+    });
+  }
+
+  function applyPreset(
+    type: "happy_hour" | "order_vnd" | "bxgy" | "free_side",
+  ) {
+    if (type === "happy_hour") {
+      setValue("name", "Happy Hour 14h - 17h", { shouldDirty: true });
+      setValue("kind", "auto_order", { shouldDirty: true });
+      setValue("discountType", "pct", { shouldDirty: true });
+      setValue("discountValue", "15", { shouldDirty: true });
+      setValue("maxDiscountAmount", "50000", { shouldDirty: true });
+      setValue("minSubtotal", "0", { shouldDirty: true });
+      setValue("allowAuto", true, { shouldDirty: true });
+      setValue("allowCode", false, { shouldDirty: true });
+      setValue("reusableCode", "", { shouldDirty: true });
+      setValue(
+        "timeWindows",
+        [1, 2, 3, 4, 5].map((dow) => ({ dow, start: "14:00", end: "17:00" })),
+        { shouldDirty: true },
+      );
+    } else if (type === "order_vnd") {
+      setValue("name", "Giảm 20.000đ đơn từ 100.000đ", { shouldDirty: true });
+      setValue("kind", "order_vnd", { shouldDirty: true });
+      setValue("discountType", "vnd", { shouldDirty: true });
+      setValue("discountValue", "20000", { shouldDirty: true });
+      setValue("minSubtotal", "100000", { shouldDirty: true });
+      setValue("reusableCode", "GIAM20K", { shouldDirty: true });
+      setValue("allowCode", true, { shouldDirty: true });
+    } else if (type === "bxgy") {
+      setValue("name", "Mua 2 Tặng 1 Cùng Loại", { shouldDirty: true });
+      setValue("kind", "bxgy", { shouldDirty: true });
+      setValue("bxgyBuyQty", "2", { shouldDirty: true });
+      setValue("bxgyGetQty", "1", { shouldDirty: true });
+      setValue("reusableCode", "MUA2TANG1", { shouldDirty: true });
+      setValue("allowCode", true, { shouldDirty: true });
+    } else if (type === "free_side") {
+      setValue("name", "Tặng Món Ăn Kèm Canh / Trứng", { shouldDirty: true });
+      setValue("kind", "free_side", { shouldDirty: true });
+      setValue("freeSideQty", "1", { shouldDirty: true });
+      setValue("allowAuto", true, { shouldDirty: true });
+      setValue("allowCode", true, { shouldDirty: true });
+      setValue("reusableCode", "TANGAN", { shouldDirty: true });
+    }
+  }
 
   useEffect(() => {
     if (kindRef.current === kind) return;
@@ -399,6 +509,18 @@ export function PromotionForm({
     () => filterMenu(getQuery),
     [menuItems, getQuery],
   );
+
+  const filteredCodes = useMemo(() => {
+    let list = codes;
+    if (codeStatusFilter !== "all") {
+      list = list.filter((c) => c.status === codeStatusFilter);
+    }
+    if (codeSearch.trim()) {
+      const q = codeSearch.trim().toLowerCase();
+      list = list.filter((c) => c.code.toLowerCase().includes(q));
+    }
+    return list;
+  }, [codes, codeStatusFilter, codeSearch]);
 
   function buildItems(values: PromotionFormValues) {
     if (values.kind === "free_side" || values.kind === "bxgy") {
@@ -586,9 +708,47 @@ export function PromotionForm({
         <AppPageHeader
           title={title}
           actions={
-            <ResponsiveBackButton href="/promotions">
-              {ACTIONS_VI.back}
-            </ResponsiveBackButton>
+            <div className="flex items-center gap-2">
+              <ResponsiveBackButton href="/promotions">
+                {ACTIONS_VI.back}
+              </ResponsiveBackButton>
+              {initial.id != null ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size={controlSize === "touch" ? "touch" : "default"}
+                    disabled={isPending}
+                    onClick={handleQuickToggleStatus}
+                  >
+                    {watch("status") === "active" ? (
+                      <>
+                        <IconPause
+                          data-icon="inline-start"
+                          className="size-4"
+                        />
+                        {PROMOTIONS_VI.pause}
+                      </>
+                    ) : (
+                      <>
+                        <IconPlay data-icon="inline-start" className="size-4" />
+                        {PROMOTIONS_VI.activate}
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size={controlSize === "touch" ? "touch" : "default"}
+                    disabled={isPending}
+                    onClick={handleHeaderDelete}
+                  >
+                    <IconTrash2 data-icon="inline-start" className="size-4" />
+                    {PROMOTIONS_VI.deleteAction}
+                  </Button>
+                </>
+              ) : null}
+            </div>
           }
         />
       }
@@ -602,28 +762,129 @@ export function PromotionForm({
         </ResponsiveActionButton>
       }
     >
-      <form
-        id="promotion-form"
-        onSubmit={handleSubmit(onValid)}
-        className="flex min-w-0 flex-col gap-4"
-      >
-        <AppSection title={PROMOTIONS_VI.identitySection}>
-          <div className="flex flex-col gap-3">
-            <TextField
-              control={control}
-              name="name"
-              label={PROMOTIONS_VI.nameLabel}
-              required
-            />
-            <SelectField
-              control={control}
-              name="kind"
-              label={PROMOTIONS_VI.kindLabel}
-              options={PROMOTION_KINDS.map((value) => ({
-                value,
-                label: promotionKindLabel(value),
-              }))}
-            />
+      <div className="flex flex-col gap-4">
+        {initial.id == null ? (
+          <Frame className="flex flex-col gap-3 bg-muted/30 p-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <IconSparkles className="size-4 text-primary" />
+              <span>{PROMOTIONS_VI.presetsTitle}</span>
+            </div>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              <InteractiveCard
+                padding="compact"
+                role="button"
+                tabIndex={0}
+                onClick={() => applyPreset("happy_hour")}
+                onKeyDown={(e) =>
+                  (e.key === "Enter" || e.key === " ") &&
+                  applyPreset("happy_hour")
+                }
+                className="flex cursor-pointer flex-col gap-1 text-left hover:border-primary"
+              >
+                <span className="text-xs font-semibold text-foreground">
+                  {PROMOTIONS_VI.presetHappyHourTitle}
+                </span>
+                <span className="line-clamp-2 text-xs text-muted-foreground">
+                  {PROMOTIONS_VI.presetHappyHourDesc}
+                </span>
+              </InteractiveCard>
+
+              <InteractiveCard
+                padding="compact"
+                role="button"
+                tabIndex={0}
+                onClick={() => applyPreset("order_vnd")}
+                onKeyDown={(e) =>
+                  (e.key === "Enter" || e.key === " ") &&
+                  applyPreset("order_vnd")
+                }
+                className="flex cursor-pointer flex-col gap-1 text-left hover:border-primary"
+              >
+                <span className="text-xs font-semibold text-foreground">
+                  {PROMOTIONS_VI.presetOrderVndTitle}
+                </span>
+                <span className="line-clamp-2 text-xs text-muted-foreground">
+                  {PROMOTIONS_VI.presetOrderVndDesc}
+                </span>
+              </InteractiveCard>
+
+              <InteractiveCard
+                padding="compact"
+                role="button"
+                tabIndex={0}
+                onClick={() => applyPreset("bxgy")}
+                onKeyDown={(e) =>
+                  (e.key === "Enter" || e.key === " ") && applyPreset("bxgy")
+                }
+                className="flex cursor-pointer flex-col gap-1 text-left hover:border-primary"
+              >
+                <span className="text-xs font-semibold text-foreground">
+                  {PROMOTIONS_VI.presetBxgyTitle}
+                </span>
+                <span className="line-clamp-2 text-xs text-muted-foreground">
+                  {PROMOTIONS_VI.presetBxgyDesc}
+                </span>
+              </InteractiveCard>
+
+              <InteractiveCard
+                padding="compact"
+                role="button"
+                tabIndex={0}
+                onClick={() => applyPreset("free_side")}
+                onKeyDown={(e) =>
+                  (e.key === "Enter" || e.key === " ") &&
+                  applyPreset("free_side")
+                }
+                className="flex cursor-pointer flex-col gap-1 text-left hover:border-primary"
+              >
+                <span className="text-xs font-semibold text-foreground">
+                  {PROMOTIONS_VI.presetFreeSideTitle}
+                </span>
+                <span className="line-clamp-2 text-xs text-muted-foreground">
+                  {PROMOTIONS_VI.presetFreeSideDesc}
+                </span>
+              </InteractiveCard>
+            </div>
+          </Frame>
+        ) : null}
+
+        <PromotionLiveMockup
+          name={watch("name")}
+          kind={kind}
+          status={watch("status")}
+          discountType={discountType}
+          discountValue={watch("discountValue")}
+          maxDiscountAmount={watch("maxDiscountAmount")}
+          minSubtotal={watch("minSubtotal")}
+          reusableCode={watch("reusableCode")}
+          bxgyBuyQty={watch("bxgyBuyQty")}
+          bxgyGetQty={watch("bxgyGetQty")}
+          freeSideQty={watch("freeSideQty")}
+          freeItemQty={watch("freeItemQty")}
+        />
+
+        <form
+          id="promotion-form"
+          onSubmit={handleSubmit(onValid)}
+          className="flex min-w-0 flex-col gap-4"
+        >
+          <AppSection title={PROMOTIONS_VI.identitySection}>
+            <div className="flex flex-col gap-3">
+              <TextField
+                control={control}
+                name="name"
+                label={PROMOTIONS_VI.nameLabel}
+                required
+              />
+              <SelectField
+                control={control}
+                name="kind"
+                label={PROMOTIONS_VI.kindLabel}
+                options={PROMOTION_KINDS.map((value) => ({
+                  value,
+                  label: promotionKindLabel(value),
+                }))}
+              />
             <SelectField
               control={control}
               name="status"
@@ -940,42 +1201,87 @@ export function PromotionForm({
         </AppSection>
       </form>
 
-      {needsIssue ? (
+      {needsIssue || codes.length > 0 ? (
         <AppSection title={PROMOTIONS_VI.codesTitle}>
           <div className="flex flex-col gap-3">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <FormField
-                controlId="promo-issue-count"
-                label={PROMOTIONS_VI.issueCountLabel}
-              >
-                <FormattedNumberInput
-                  id="promo-issue-count"
-                  value={issueCount}
-                  onValueChange={setIssueCount}
-                  maxFractionDigits={0}
-                />
-              </FormField>
-              <FormField
-                controlId="promo-issue-face"
-                label={PROMOTIONS_VI.issueFaceLabel}
-              >
-                <FormattedNumberInput
-                  id="promo-issue-face"
-                  value={issueFace}
-                  onValueChange={setIssueFace}
-                  maxFractionDigits={0}
-                />
-              </FormField>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <ResponsiveActionButton
-                type="button"
-                onClick={handleIssue}
-                disabled={isPending}
-              >
-                {PROMOTIONS_VI.issueAction}
-              </ResponsiveActionButton>
-              {codes.length > 0 ? (
+            {needsIssue ? (
+              <>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <FormField
+                    controlId="promo-issue-count"
+                    label={PROMOTIONS_VI.issueCountLabel}
+                  >
+                    <FormattedNumberInput
+                      id="promo-issue-count"
+                      value={issueCount}
+                      onValueChange={setIssueCount}
+                      maxFractionDigits={0}
+                    />
+                  </FormField>
+                  <FormField
+                    controlId="promo-issue-face"
+                    label={PROMOTIONS_VI.issueFaceLabel}
+                  >
+                    <FormattedNumberInput
+                      id="promo-issue-face"
+                      value={issueFace}
+                      onValueChange={setIssueFace}
+                      maxFractionDigits={0}
+                    />
+                  </FormField>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <ResponsiveActionButton
+                    type="button"
+                    onClick={handleIssue}
+                    disabled={isPending}
+                  >
+                    {PROMOTIONS_VI.issueAction}
+                  </ResponsiveActionButton>
+                </div>
+              </>
+            ) : null}
+
+            {codes.length > 0 ? (
+              <div className="flex flex-wrap items-center justify-between gap-2 border-y py-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <InputGroup
+                    size={controlSize === "touch" ? "touch" : "default"}
+                    className="w-full sm:w-60"
+                  >
+                    <InputGroupAddon>
+                      <IconSearch className="size-4" />
+                    </InputGroupAddon>
+                    <InputGroupInput
+                      type="search"
+                      placeholder={PROMOTIONS_VI.searchCodesPlaceholder}
+                      value={codeSearch}
+                      onChange={(e) => setCodeSearch(e.target.value)}
+                    />
+                  </InputGroup>
+                  <Tabs
+                    value={codeStatusFilter}
+                    onValueChange={setCodeStatusFilter}
+                  >
+                    <TabsList
+                      size={controlSize === "touch" ? "touch" : "default"}
+                      className="flex-wrap"
+                    >
+                      <TabsTrigger value="all">
+                        {PROMOTIONS_VI.filterCodeStatusAll}
+                      </TabsTrigger>
+                      <TabsTrigger value="active">
+                        {PROMOTIONS_VI.filterCodeStatusActive}
+                      </TabsTrigger>
+                      <TabsTrigger value="redeemed">
+                        {PROMOTIONS_VI.filterCodeStatusRedeemed}
+                      </TabsTrigger>
+                      <TabsTrigger value="void">
+                        {PROMOTIONS_VI.filterCodeStatusVoid}
+                      </TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                </div>
                 <ResponsiveActionButton
                   type="button"
                   variant="outline"
@@ -985,8 +1291,9 @@ export function PromotionForm({
                   <IconDownload data-icon="inline-start" />
                   {PROMOTIONS_VI.exportCsvAction}
                 </ResponsiveActionButton>
-              ) : null}
-            </div>
+              </div>
+            ) : null}
+
             {codes.length === 0 ? (
               <AppEmptyState
                 compact
@@ -996,7 +1303,7 @@ export function PromotionForm({
             ) : (
               <DataTable
                 columns={codeColumns}
-                data={codes}
+                data={filteredCodes}
                 getRowKey={(row) => row.id}
                 emptyTitle={PROMOTIONS_VI.codesEmpty}
                 mobileCardRender={(row) => (
@@ -1038,6 +1345,7 @@ export function PromotionForm({
         isPending={isPending}
         onConfirm={handleVoid}
       />
+      </div>
     </DocumentFormFrame>
   );
 }
@@ -1492,3 +1800,106 @@ function PromotionCodeMobileCard({
     </Item>
   );
 }
+
+function PromotionLiveMockup({
+  name,
+  kind,
+  status,
+  discountType,
+  discountValue,
+  maxDiscountAmount,
+  minSubtotal,
+  reusableCode,
+  bxgyBuyQty,
+  bxgyGetQty,
+  freeSideQty,
+  freeItemQty,
+}: {
+  name: string;
+  kind: string;
+  status: string;
+  discountType: string | null;
+  discountValue: string;
+  maxDiscountAmount: string;
+  minSubtotal: string;
+  reusableCode: string;
+  bxgyBuyQty: string;
+  bxgyGetQty: string;
+  freeSideQty: string;
+  freeItemQty: string;
+}) {
+  const dVal = parseAmount(discountValue);
+  const maxVal = parseAmount(maxDiscountAmount);
+  const minVal = parseAmount(minSubtotal) ?? 0;
+  const buyQty = parseAmount(bxgyBuyQty) ?? 2;
+  const getQty = parseAmount(bxgyGetQty) ?? 1;
+  const sideQty = parseAmount(freeSideQty) ?? 1;
+  const itemQty = parseAmount(freeItemQty);
+
+  let benefit = "—";
+  if (kind === "order_pct") {
+    benefit = PROMOTIONS_VI.benefitOrderPct(
+      formatPercent(dVal ?? 0),
+      maxVal ? formatVND(maxVal) : undefined,
+    );
+  } else if (kind === "order_vnd" || kind === "voucher_face") {
+    benefit = PROMOTIONS_VI.benefitOrderVnd(formatVND(dVal ?? 0));
+  } else if (kind === "auto_order") {
+    const isPct = discountType === "pct";
+    const valText = isPct ? formatPercent(dVal ?? 0) : formatVND(dVal ?? 0);
+    const maxText = isPct && maxVal ? formatVND(maxVal) : undefined;
+    benefit = PROMOTIONS_VI.benefitAutoOrder(valText, maxText);
+  } else if (kind === "bxgy") {
+    benefit = PROMOTIONS_VI.benefitBxgy(buyQty, getQty);
+  } else if (kind === "free_side") {
+    benefit = PROMOTIONS_VI.benefitFreeSide(sideQty);
+  } else if (kind === "free_item") {
+    benefit = PROMOTIONS_VI.benefitFreeItem(itemQty);
+  }
+
+  return (
+    <Frame className="relative overflow-hidden border border-dashed border-primary/20 bg-gradient-to-br from-primary/10 via-background to-muted/30 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <Badge
+              variant="outline"
+              className="border-primary/20 text-xs font-semibold text-primary"
+            >
+              {PROMOTIONS_VI.voucherMockupTitle}
+            </Badge>
+            <StatusBadge domain="promotion" value={status} size="sm" />
+          </div>
+          <h4 className="text-base font-semibold text-foreground">
+            {name.trim() || PROMOTIONS_VI.nameLabel}
+          </h4>
+          <p className="text-xs text-muted-foreground">
+            {promotionKindLabel(kind)}
+          </p>
+        </div>
+        {reusableCode.trim() ? (
+          <Badge
+            variant="secondary"
+            className="font-mono text-xs uppercase tracking-wider"
+          >
+            {reusableCode.trim()}
+          </Badge>
+        ) : null}
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-baseline justify-between gap-2 border-t border-dashed border-primary/20 pt-2">
+        <span className="text-sm font-semibold text-primary">{benefit}</span>
+        {minVal > 0 ? (
+          <span className="text-xs text-muted-foreground">
+            {PROMOTIONS_VI.minOrderCond(formatVND(minVal))}
+          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground">
+            {PROMOTIONS_VI.rulesTitle}
+          </span>
+        )}
+      </div>
+    </Frame>
+  );
+}
+

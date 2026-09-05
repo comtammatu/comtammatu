@@ -190,6 +190,39 @@ export const setPromotionStatus = withAction(
   },
 );
 
+const deleteSchema = z.object({
+  id: z.number().int().positive(),
+});
+
+export const deletePromotion = withAction(
+  {
+    roles: OWNER_ROLES,
+    schema: deleteSchema,
+    permission: PERMISSION_KEYS.PROMO_WRITE,
+  },
+  async (
+    input,
+    { supabase },
+  ): Promise<ActionResult<{ action: "deleted" | "ended"; id: number }>> => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase.rpc as any)("delete_promotion", {
+      p_id: input.id,
+    });
+    if (error) {
+      return { success: false, error: mapPromotionRpcError(error.message) };
+    }
+    const result = data as { action?: "deleted" | "ended"; id?: number } | null;
+    revalidateSurfacePath("/promotions");
+    return {
+      success: true,
+      data: {
+        action: result?.action ?? "deleted",
+        id: input.id,
+      },
+    };
+  },
+);
+
 export const issuePromotionCodes = withAction(
   {
     roles: OWNER_ROLES,
@@ -242,3 +275,4 @@ export async function loadPromotionsAuth() {
     PERMISSION_KEYS.PROMO_READ,
   );
 }
+

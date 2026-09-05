@@ -26,15 +26,24 @@ export default async function PromotionsPage() {
   }
 
   const { supabase, claims } = ctx;
-  const { data, error } = await supabase
-    .from("promotions")
-    .select(
-      "id, name, kind, status, discount_type, discount_value, min_subtotal, max_discount_amount, bxgy_buy_qty, bxgy_get_qty, free_side_qty, free_item_qty, starts_at, ends_at, updated_at, promotion_codes(code, kind, status)",
-    )
-    .eq("tenant_id", claims.tenant_id)
-    .order("updated_at", { ascending: false });
+  const [promoRes, branchRes] = await Promise.all([
+    supabase
+      .from("promotions")
+      .select(
+        "id, name, kind, status, discount_type, discount_value, min_subtotal, max_discount_amount, bxgy_buy_qty, bxgy_get_qty, free_side_qty, free_item_qty, starts_at, ends_at, updated_at, promotion_codes(code, kind, status), promotion_branches(branch_id)",
+      )
+      .eq("tenant_id", claims.tenant_id)
+      .order("updated_at", { ascending: false }),
+    supabase
+      .from("branches")
+      .select("id, name")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_kind", "branch")
+      .eq("is_active", true)
+      .order("name"),
+  ]);
 
-  if (error) {
+  if (promoRes.error) {
     return (
       <AppPage width="xwide" density="compact">
         <AppPageHeader title={PROMOTIONS_VI.title} />
@@ -43,7 +52,7 @@ export default async function PromotionsPage() {
     );
   }
 
-  const rows: PromotionListRow[] = (data ?? []).map((row) => {
+  const rows: PromotionListRow[] = (promoRes.data ?? []).map((row) => {
     const rawCodes = row.promotion_codes;
     const codes: Array<{ code: string; kind: string; status: string }> =
       Array.isArray(rawCodes) ? rawCodes : rawCodes ? [rawCodes] : [];
@@ -53,6 +62,11 @@ export default async function PromotionsPage() {
     const uniqueCodes = codes.filter((code) => code.kind === "unique");
     const activeCodes = codes.filter((code) => code.status === "active");
     const redeemedCodes = codes.filter((code) => code.status === "redeemed");
+
+    const rawBranches = (row as Record<string, unknown>).promotion_branches;
+    const branchIds = Array.isArray(rawBranches)
+      ? (rawBranches as Array<{ branch_id: number }>).map((b) => b.branch_id)
+      : [];
 
     return {
       id: row.id,
@@ -75,6 +89,7 @@ export default async function PromotionsPage() {
       redeemedCodesCount: redeemedCodes.length,
       startsAt: row.starts_at,
       endsAt: row.ends_at,
+      branchIds,
     };
   });
 
@@ -92,7 +107,10 @@ export default async function PromotionsPage() {
           </ResponsiveActionButton>
         }
       />
-      <PromotionsListClient rows={rows} />
+      <PromotionsListClient
+        rows={rows}
+        branches={branchRes.data ?? []}
+      />
     </AppPage>
   );
 }
