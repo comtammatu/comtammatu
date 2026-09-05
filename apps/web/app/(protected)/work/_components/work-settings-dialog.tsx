@@ -30,7 +30,6 @@ import {
   AppFormGrid,
   AppFormRow,
   FormDialog,
-  SelectField,
   TextField,
 } from "@/components/form";
 import { AppDialog } from "@/components/form/form-dialog";
@@ -44,23 +43,17 @@ import {
   listWorkCandidateProfiles,
   listWorkDepartmentMembers,
   upsertWorkDepartment,
-  upsertWorkDepartmentMember,
   type WorkDepartmentMemberRow,
   type WorkDepartmentOption,
   type WorkProfileOption,
 } from "../actions";
+import { WorkAddMembersDialog } from "./work-add-members-dialog";
 
 const departmentSchema = z.object({
   name: z.string().trim().min(1).max(120),
 });
 
-const addMemberSchema = z.object({
-  userId: z.string().uuid(),
-  role: z.enum(["lead", "member"]),
-});
-
 type DepartmentValues = z.infer<typeof departmentSchema>;
-type AddMemberValues = z.infer<typeof addMemberSchema>;
 
 export function WorkSettingsDialog({
   open,
@@ -84,9 +77,16 @@ export function WorkSettingsDialog({
   const [members, setMembers] = useState<WorkDepartmentMemberRow[]>([]);
   const [candidates, setCandidates] = useState<WorkProfileOption[]>([]);
 
+  const [reloadKey, setReloadKey] = useState(0);
+
   useEffect(() => {
     if (!open) return;
-    setMemberDepartmentId(departments[0]?.id ?? null);
+    setMemberDepartmentId((current) => {
+      if (current != null && departments.some((d) => d.id === current)) {
+        return current;
+      }
+      return departments[0]?.id ?? null;
+    });
   }, [open, departments]);
 
   useEffect(() => {
@@ -116,7 +116,7 @@ export function WorkSettingsDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, memberDepartmentId]);
+  }, [open, memberDepartmentId, reloadKey]);
 
   const departmentDialogTitle = editingDepartment
     ? workCopy.departmentRenameTitle
@@ -361,56 +361,19 @@ export function WorkSettingsDialog({
       </FormDialog>
 
       {memberDepartmentId != null ? (
-        <FormDialog
+        <WorkAddMembersDialog
           open={memberDialogOpen}
           onOpenChange={setMemberDialogOpen}
-          title={workCopy.teamAdd}
-          schema={addMemberSchema}
-          defaultValues={{ userId: "", role: "member" }}
-          submitLabel={workCopy.teamAdd}
-          onSubmit={async (values: AddMemberValues) => {
-            const result = await upsertWorkDepartmentMember({
-              departmentId: memberDepartmentId,
-              userId: values.userId,
-              role: values.role,
-            });
-            if (!result.success) {
-              return {
-                success: false,
-                error: result.error ?? workCopy.teamAddFailed,
-              };
-            }
-            return { success: true };
-          }}
+          departmentId={memberDepartmentId}
+          departmentName={
+            departments.find((d) => d.id === memberDepartmentId)?.name
+          }
+          candidates={candidates}
           onSuccess={() => {
+            setReloadKey((k) => k + 1);
             refreshPage();
-            setMemberDialogOpen(false);
           }}
-          successMessage={workCopy.save}
-        >
-          {(form) => (
-            <AppFormGrid density="compact">
-              <SelectField
-                control={form.control}
-                name="userId"
-                label={workCopy.teamMemberLabel}
-                options={candidates.map((candidate) => ({
-                  value: candidate.id,
-                  label: candidate.fullName,
-                }))}
-              />
-              <SelectField
-                control={form.control}
-                name="role"
-                label={workCopy.teamRoleLabel}
-                options={[
-                  { value: "lead", label: workCopy.teamRoleLead },
-                  { value: "member", label: workCopy.teamRoleMember },
-                ]}
-              />
-            </AppFormGrid>
-          )}
-        </FormDialog>
+        />
       ) : null}
     </>
   );

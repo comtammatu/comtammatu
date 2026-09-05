@@ -29,6 +29,7 @@ export async function loadWorkTaskDetail(
     { data: commentRows },
     { data: checklistRows },
     { data: attachmentRows },
+    { data: participantRows },
   ] = await Promise.all([
     supabase
       .from("work_department_members")
@@ -57,6 +58,11 @@ export async function loadWorkTaskDetail(
       .eq("tenant_id", task.tenantId)
       .eq("task_id", taskId)
       .order("created_at", { ascending: true }),
+    supabase
+      .from("work_task_participants")
+      .select("user_id, kind")
+      .eq("tenant_id", task.tenantId)
+      .eq("task_id", taskId),
   ]);
 
   const assigneeOptions = (memberRows ?? []).flatMap((row) => {
@@ -64,6 +70,20 @@ export async function loadWorkTaskDetail(
     if (!profile) return [];
     return [{ id: row.user_id, fullName: profile.full_name }];
   });
+
+  const participants = participantRows ?? [];
+  const assigneeIdsFromParticipants = participants
+    .filter((p) => p.kind === "assignee")
+    .map((p) => p.user_id);
+  const initialAssigneeIds =
+    assigneeIdsFromParticipants.length > 0
+      ? assigneeIdsFromParticipants
+      : task.assigneeId
+        ? [task.assigneeId]
+        : [];
+  const initialSupporterIds = participants
+    .filter((p) => p.kind === "collaborator")
+    .map((p) => p.user_id);
 
   const comments: WorkTaskCommentRow[] = (commentRows ?? []).map((row) => ({
     id: row.id,
@@ -100,6 +120,8 @@ export async function loadWorkTaskDetail(
     data: {
       task,
       assigneeOptions,
+      initialAssigneeIds,
+      initialSupporterIds,
       comments,
       checklist,
       attachments,

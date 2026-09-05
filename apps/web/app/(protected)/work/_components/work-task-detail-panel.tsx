@@ -21,8 +21,10 @@ import {
   FileText as IconFileText,
   Paperclip as IconPaperclip,
   Trash2 as IconTrash2,
+  X as IconX,
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { MultiSelectCombobox } from "@/components/form";
 import { useFormControlSize } from "@/components/form/control-size";
 import { confirm } from "@/components/confirm-dialog";
 import {
@@ -62,6 +64,8 @@ type AssigneeOption = {
 export type WorkTaskDetailFormOptions = {
   task: WorkTaskRow;
   assigneeOptions: AssigneeOption[];
+  initialAssigneeIds?: string[];
+  initialSupporterIds?: string[];
   initialComments: WorkTaskCommentRow[];
   initialChecklist: WorkChecklistItemRow[];
   initialAttachments?: WorkTaskAttachmentRow[];
@@ -86,6 +90,8 @@ function fromDateTimeLocalValue(value: string): string | undefined {
 export function useWorkTaskDetailForm({
   task: initialTask,
   assigneeOptions: _assigneeOptions,
+  initialAssigneeIds,
+  initialSupporterIds,
   initialComments,
   initialChecklist,
   initialAttachments,
@@ -99,6 +105,12 @@ export function useWorkTaskDetailForm({
   const [status, setStatus] = useState<WorkTaskStatus>(task.status);
   const [dueAt, setDueAt] = useState(toDateTimeLocalValue(task.dueAt));
   const [assigneeId, setAssigneeId] = useState(task.assigneeId ?? "none");
+  const [assigneeIds, setAssigneeIds] = useState<string[]>(
+    initialAssigneeIds ?? (task.assigneeId ? [task.assigneeId] : []),
+  );
+  const [supporterIds, setSupporterIds] = useState<string[]>(
+    initialSupporterIds ?? [],
+  );
   const [comments, setComments] = useState(initialComments);
   const [checklist, setChecklist] = useState(initialChecklist);
   const [attachments, setAttachments] = useState<WorkTaskAttachmentRow[]>(
@@ -121,7 +133,9 @@ export function useWorkTaskDetailForm({
 
   function saveFields() {
     startTransition(async () => {
-      const clearAssignee = assigneeId === "none" && task.assigneeId != null;
+      const clearAssignee =
+        (assigneeIds.length === 0 || assigneeId === "none") &&
+        task.assigneeId != null;
       const nextDueAt = fromDateTimeLocalValue(dueAt);
       const clearDueAt = !dueAt && task.dueAt != null;
 
@@ -131,7 +145,8 @@ export function useWorkTaskDetailForm({
         title,
         description: description || undefined,
         priority,
-        assigneeId: assigneeId !== "none" ? assigneeId : undefined,
+        assigneeIds,
+        supporterIds,
         dueAt: nextDueAt,
         clearAssignee,
         clearDueAt,
@@ -281,6 +296,10 @@ export function useWorkTaskDetailForm({
     setDueAt,
     assigneeId,
     setAssigneeId,
+    assigneeIds,
+    setAssigneeIds,
+    supporterIds,
+    setSupporterIds,
     comments,
     checklist,
     attachments,
@@ -652,23 +671,132 @@ export function WorkTaskDetailBody({ form }: { form: WorkTaskDetailForm }) {
             </Select>
           </AppInspectorRow>
 
-          <AppInspectorRow label={workCopy.assignee}>
-            <Select
-              value={form.assigneeId}
-              onValueChange={form.setAssigneeId}
-            >
-              <SelectTrigger size={controlSize} className="bg-background">
-                <SelectValue placeholder={workCopy.assignee} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">{workCopy.clearAssignee}</SelectItem>
-                {form.assigneeOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.fullName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Multi-assignees */}
+          <AppInspectorRow label={workCopy.assignees}>
+            <div className="flex flex-col gap-1.5 w-full">
+              <div className="flex flex-wrap items-center gap-1 min-h-7">
+                {form.assigneeIds.length === 0 ? (
+                  <span className="text-xs text-muted-foreground italic">
+                    {workCopy.noAssignee}
+                  </span>
+                ) : (
+                  form.assigneeIds.map((id) => {
+                    const option = form.assigneeOptions.find((o) => o.id === id);
+                    const name = option?.fullName ?? id;
+                    return (
+                      <Badge
+                        key={id}
+                        variant="secondary"
+                        className="gap-1 pr-1 text-xs"
+                      >
+                        <span>{name}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          aria-label={`${workCopy.clearAssignee}: ${name}`}
+                          className="-mr-1 ml-0.5 size-4"
+                          disabled={form.isPending}
+                          onClick={() =>
+                            form.setAssigneeIds((prev) =>
+                              prev.filter((v) => v !== id),
+                            )
+                          }
+                        >
+                          <IconX className="size-3" />
+                        </Button>
+                      </Badge>
+                    );
+                  })
+                )}
+              </div>
+              <MultiSelectCombobox
+                options={form.assigneeOptions
+                  .filter((o) => !form.supporterIds.includes(o.id))
+                  .map((o) => ({
+                    value: o.id,
+                    label: o.fullName,
+                    alreadySelected: form.assigneeIds.includes(o.id),
+                  }))}
+                triggerLabel={workCopy.addAssignee}
+                confirmLabel={(count) =>
+                  count > 0
+                    ? `${workCopy.addAssignee} (${count})`
+                    : workCopy.addAssignee
+                }
+                searchPlaceholder={workCopy.teamAddSearchPlaceholder}
+                disabled={form.isPending}
+                onConfirm={(values) =>
+                  form.setAssigneeIds((prev) =>
+                    Array.from(new Set([...prev, ...values])),
+                  )
+                }
+              />
+            </div>
+          </AppInspectorRow>
+
+          {/* Multi-supporters */}
+          <AppInspectorRow label={workCopy.supporterLabel}>
+            <div className="flex flex-col gap-1.5 w-full">
+              <div className="flex flex-wrap items-center gap-1 min-h-7">
+                {form.supporterIds.length === 0 ? (
+                  <span className="text-xs text-muted-foreground italic">
+                    {workCopy.noSupporter}
+                  </span>
+                ) : (
+                  form.supporterIds.map((id) => {
+                    const option = form.assigneeOptions.find((o) => o.id === id);
+                    const name = option?.fullName ?? id;
+                    return (
+                      <Badge
+                        key={id}
+                        variant="secondary"
+                        className="gap-1 pr-1 text-xs"
+                      >
+                        <span>{name}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          aria-label={`${workCopy.clearSupporter}: ${name}`}
+                          className="-mr-1 ml-0.5 size-4"
+                          disabled={form.isPending}
+                          onClick={() =>
+                            form.setSupporterIds((prev) =>
+                              prev.filter((v) => v !== id),
+                            )
+                          }
+                        >
+                          <IconX className="size-3" />
+                        </Button>
+                      </Badge>
+                    );
+                  })
+                )}
+              </div>
+              <MultiSelectCombobox
+                options={form.assigneeOptions
+                  .filter((o) => !form.assigneeIds.includes(o.id))
+                  .map((o) => ({
+                    value: o.id,
+                    label: o.fullName,
+                    alreadySelected: form.supporterIds.includes(o.id),
+                  }))}
+                triggerLabel={workCopy.addSupporter}
+                confirmLabel={(count) =>
+                  count > 0
+                    ? `${workCopy.addSupporter} (${count})`
+                    : workCopy.addSupporter
+                }
+                searchPlaceholder={workCopy.teamAddSearchPlaceholder}
+                disabled={form.isPending}
+                onConfirm={(values) =>
+                  form.setSupporterIds((prev) =>
+                    Array.from(new Set([...prev, ...values])),
+                  )
+                }
+              />
+            </div>
           </AppInspectorRow>
 
           <AppInspectorRow label={workCopy.dueLabel}>

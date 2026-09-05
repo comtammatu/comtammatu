@@ -24,7 +24,6 @@ import {
   AppFormGrid,
   AppFormRow,
   FormDialog,
-  SelectField,
   TextField,
 } from "@/components/form";
 import { AppEmptyState, AppListFrame, AppToolbar } from "@/components/surface";
@@ -35,23 +34,17 @@ import {
   ensurePilotDepartment,
   setWorkDepartmentMemberRole,
   upsertWorkDepartment,
-  upsertWorkDepartmentMember,
   type WorkDepartmentMemberRow,
   type WorkDepartmentOption,
   type WorkMemberRole,
   type WorkProfileOption,
 } from "../actions";
-
-const addMemberSchema = z.object({
-  userId: z.string().uuid({ error: workCopy.teamMemberLabel }),
-  role: z.enum(["lead", "member"]),
-});
+import { WorkAddMembersDialog } from "./work-add-members-dialog";
 
 const createDepartmentSchema = z.object({
   name: z.string().trim().min(1).max(120),
 });
 
-type AddMemberValues = z.infer<typeof addMemberSchema>;
 type CreateDepartmentValues = z.infer<typeof createDepartmentSchema>;
 
 export function WorkTeamClient({
@@ -323,57 +316,17 @@ export function WorkTeamClient({
         )}
       </AppListFrame>
 
-      {canManage ? (
-        <FormDialog
+      {canManage && activeDepartmentId != null ? (
+        <WorkAddMembersDialog
           open={memberOpen}
           onOpenChange={setMemberOpen}
-          title={workCopy.teamAdd}
-          description={departmentName}
-          schema={addMemberSchema}
-          defaultValues={{ userId: "", role: "member" }}
-          submitLabel={workCopy.teamAdd}
-          onSubmit={async (values: AddMemberValues) => {
-            const result = await upsertWorkDepartmentMember({
-              departmentId: activeDepartmentId,
-              userId: values.userId,
-              role: values.role,
-            });
-            if (!result.success) {
-              return {
-                success: false,
-                error: result.error ?? workCopy.teamAddFailed,
-              };
-            }
-            return { success: true };
-          }}
+          departmentId={activeDepartmentId}
+          departmentName={departmentName}
+          candidates={candidates}
           onSuccess={() => {
             router.refresh();
           }}
-          successMessage={workCopy.save}
-        >
-          {(form) => (
-            <AppFormGrid density="compact">
-              <SelectField
-                control={form.control}
-                name="userId"
-                label={workCopy.teamMemberLabel}
-                options={candidates.map((candidate) => ({
-                  value: candidate.id,
-                  label: candidate.fullName,
-                }))}
-              />
-              <SelectField
-                control={form.control}
-                name="role"
-                label={workCopy.teamRoleLabel}
-                options={[
-                  { value: "lead", label: workCopy.teamRoleLead },
-                  { value: "member", label: workCopy.teamRoleMember },
-                ]}
-              />
-            </AppFormGrid>
-          )}
-        </FormDialog>
+        />
       ) : null}
       {departmentDialog}
     </>

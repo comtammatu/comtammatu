@@ -196,6 +196,8 @@ const createWorkTaskSchema = z.object({
   description: z.string().trim().max(4000).optional(),
   priority: z.enum(WORK_TASK_PRIORITIES).optional(),
   assigneeId: z.string().uuid().optional(),
+  assigneeIds: z.array(z.string().uuid()).optional(),
+  supporterIds: z.array(z.string().uuid()).optional(),
   dueAt: z.string().datetime().optional(),
 });
 
@@ -205,13 +207,17 @@ export const createWorkTask = withAction<typeof createWorkTaskSchema, WorkTaskRo
     roles: WORK_ROUTE_ROLES,
   },
   async (data, ctx) => {
+    const resolvedAssignees =
+      data.assigneeIds ?? (data.assigneeId ? [data.assigneeId] : []);
+    const primaryAssignee = resolvedAssignees[0] ?? null;
+
     const { data: row, error } = await ctx.supabase.rpc("create_work_task", {
       p_department_id: data.departmentId,
       p_project_id: data.projectId ?? null,
       p_title: data.title,
       p_description: data.description ?? null,
       p_priority: data.priority ?? null,
-      p_assignee_id: data.assigneeId ?? null,
+      p_assignee_id: primaryAssignee,
       p_due_at: data.dueAt ?? null,
       // Typegen marks nullable SQL args as required non-null; runtime accepts NULL.
     } as Database["public"]["Functions"]["create_work_task"]["Args"]);
@@ -224,6 +230,19 @@ export const createWorkTask = withAction<typeof createWorkTaskSchema, WorkTaskRo
     if (!row) {
       return { success: false, error: workCopy.createFailed };
     }
+
+    if (
+      resolvedAssignees.length > 0 ||
+      (data.supporterIds && data.supporterIds.length > 0)
+    ) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (ctx.supabase.rpc as any)("set_work_task_participants", {
+        p_task_id: row.id,
+        p_assignee_ids: resolvedAssignees,
+        p_supporter_ids: data.supporterIds ?? [],
+      });
+    }
+
     revalidateWorkPaths(row.id);
     return { success: true, data: mapWorkTaskRow(row) };
   },
@@ -236,6 +255,8 @@ const updateWorkTaskSchema = z.object({
   description: z.string().trim().max(4000).optional(),
   priority: z.enum(WORK_TASK_PRIORITIES).optional(),
   assigneeId: z.string().uuid().optional(),
+  assigneeIds: z.array(z.string().uuid()).optional(),
+  supporterIds: z.array(z.string().uuid()).optional(),
   dueAt: z.string().datetime().optional(),
   clearAssignee: z.boolean().optional(),
   clearDueAt: z.boolean().optional(),
@@ -247,15 +268,25 @@ export const updateWorkTask = withAction<typeof updateWorkTaskSchema, WorkTaskRo
     roles: WORK_ROUTE_ROLES,
   },
   async (data, ctx) => {
+    const hasAssigneeIds = data.assigneeIds !== undefined;
+    const hasSupporterIds = data.supporterIds !== undefined;
+    const resolvedAssignees =
+      data.assigneeIds ?? (data.assigneeId ? [data.assigneeId] : []);
+    const primaryAssignee = hasAssigneeIds
+      ? (resolvedAssignees[0] ?? null)
+      : (data.assigneeId ?? null);
+    const clearAssignee =
+      data.clearAssignee ?? (hasAssigneeIds && resolvedAssignees.length === 0);
+
     const { data: row, error } = await ctx.supabase.rpc("update_work_task", {
       p_task_id: data.taskId,
       p_expected_revision: data.expectedRevision,
       p_title: data.title,
       p_description: data.description,
       p_priority: data.priority,
-      p_assignee_id: data.assigneeId,
+      p_assignee_id: primaryAssignee ?? undefined,
       p_due_at: data.dueAt,
-      p_clear_assignee_id: data.clearAssignee ?? false,
+      p_clear_assignee_id: clearAssignee,
       p_clear_due_at: data.clearDueAt ?? false,
     });
     if (error) {
@@ -267,8 +298,50 @@ export const updateWorkTask = withAction<typeof updateWorkTaskSchema, WorkTaskRo
     if (!row) {
       return { success: false, error: workCopy.saveFailed };
     }
+
+    if (hasAssigneeIds || hasSupporterIds) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (ctx.supabase.rpc as any)("set_work_task_participants", {
+        p_task_id: data.taskId,
+        p_assignee_ids: resolvedAssignees,
+        p_supporter_ids: data.supporterIds ?? [],
+      });
+    }
+
     revalidateWorkPaths(row.id);
     return { success: true, data: mapWorkTaskRow(row) };
+  },
+);
+
+const setWorkTaskParticipantsSchema = z.object({
+  taskId: z.number().int().positive(),
+  assigneeIds: z.array(z.string().uuid()),
+  supporterIds: z.array(z.string().uuid()),
+});
+
+export const setWorkTaskParticipants = withAction(
+  {
+    schema: setWorkTaskParticipantsSchema,
+    roles: WORK_ROUTE_ROLES,
+  },
+  async (data, ctx) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (ctx.supabase.rpc as any)(
+      "set_work_task_participants",
+      {
+        p_task_id: data.taskId,
+        p_assignee_ids: data.assigneeIds,
+        p_supporter_ids: data.supporterIds,
+      },
+    );
+    if (error) {
+      return mapRpcError(error, workRpcMappings, {
+        userMessage: workCopy.saveFailed,
+        errorCode: "work.set_participants_failed",
+      });
+    }
+    revalidateWorkPaths(data.taskId);
+    return { success: true, data: { success: true } };
   },
 );
 
@@ -868,6 +941,8 @@ export type WorkDepartmentMemberRow = {
 export type WorkProfileOption = {
   id: string;
   fullName: string;
+  branchId?: number | null;
+  branchName?: string | null;
 };
 
 const workMemberRoleSchema = z.enum(["lead", "member"]);
@@ -993,7 +1068,7 @@ export const listWorkCandidateProfiles = withAction(
     },
   },
   async (data, ctx) => {
-    const [{ data: memberRows }, { data: profiles, error }] = await Promise.all([
+    const [{ data: memberRows }, { data: profiles, error }, { data: branchRows }] = await Promise.all([
       ctx.supabase
         .from("work_department_members")
         .select("user_id")
@@ -1002,19 +1077,75 @@ export const listWorkCandidateProfiles = withAction(
         .eq("is_active", true),
       ctx.supabase
         .from("profiles")
-        .select("id, full_name")
+        .select("id, full_name, branch_id")
         .eq("tenant_id", ctx.claims.tenant_id)
         .eq("is_active", true)
         .order("full_name"),
+      ctx.supabase
+        .from("branches")
+        .select("id, name")
+        .eq("tenant_id", ctx.claims.tenant_id)
+        .eq("is_active", true)
+        .order("name"),
     ]);
     if (error) {
       return { success: false, error: workCopy.loadFailed };
     }
+    const branchNameById = new Map<number, string>(
+      (branchRows ?? []).map((b) => [b.id, b.name]),
+    );
     const taken = new Set((memberRows ?? []).map((row) => row.user_id));
     const items: WorkProfileOption[] = (profiles ?? [])
       .filter((row) => !taken.has(row.id))
-      .map((row) => ({ id: row.id, fullName: row.full_name }));
+      .map((row) => ({
+        id: row.id,
+        fullName: row.full_name,
+        branchId: row.branch_id,
+        branchName: row.branch_id != null ? (branchNameById.get(row.branch_id) ?? null) : null,
+      }));
     return { success: true, data: { items } };
+  },
+);
+
+const upsertMembersSchema = z.object({
+  departmentId: z.number().int().positive(),
+  userIds: z.array(z.string().uuid()).min(1),
+  role: workMemberRoleSchema,
+});
+
+export const upsertWorkDepartmentMembers = withAction(
+  {
+    schema: upsertMembersSchema,
+    customAuth: async () => {
+      const { resolveWorkManageContext } = await import("./_lib/work-manage");
+      return resolveWorkManageContext();
+    },
+  },
+  async (data, ctx) => {
+    const results = await Promise.all(
+      data.userIds.map((userId) =>
+        ctx.supabase.rpc("upsert_work_department_member", {
+          p_department_id: data.departmentId,
+          p_user_id: userId,
+          p_role: data.role,
+        }),
+      ),
+    );
+    const firstError = results.find((r) => r.error)?.error;
+    if (firstError) {
+      return mapRpcError(firstError, workRpcMappings, {
+        userMessage: workCopy.teamAddFailed,
+        errorCode: "work.member_upsert_failed",
+      });
+    }
+    revalidatePath("/work");
+    revalidatePath("/work/team");
+    return {
+      success: true,
+      data: {
+        count: results.filter((r) => r.data != null).length,
+      },
+    };
   },
 );
 

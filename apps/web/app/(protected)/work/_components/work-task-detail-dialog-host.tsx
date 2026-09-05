@@ -24,6 +24,8 @@ import {
 export type WorkTaskDetailPayload = {
   task: WorkTaskRow;
   assigneeOptions: Array<{ id: string; fullName: string }>;
+  initialAssigneeIds?: string[];
+  initialSupporterIds?: string[];
   comments: WorkTaskCommentRow[];
   checklist: WorkChecklistItemRow[];
   attachments: WorkTaskAttachmentRow[];
@@ -54,6 +56,8 @@ function WorkTaskDetailDocumentDialog({
   const form = useWorkTaskDetailForm({
     task: detail.task,
     assigneeOptions: detail.assigneeOptions,
+    initialAssigneeIds: detail.initialAssigneeIds,
+    initialSupporterIds: detail.initialSupporterIds,
     initialComments: detail.comments,
     initialChecklist: detail.checklist,
     initialAttachments: detail.attachments,
