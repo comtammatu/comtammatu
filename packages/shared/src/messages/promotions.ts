@@ -242,6 +242,16 @@ export const PROMOTIONS_VI = {
   filterCodeStatusActive: "Chưa dùng",
   filterCodeStatusRedeemed: "Đã dùng",
   filterCodeStatusVoid: "Đã hủy",
+  stepIdentity: "1. Thông tin & Loại ưu đãi",
+  stepBenefit: "2. Mức ưu đãi & Món",
+  stepSchedule: "3. Thời gian & Phạm vi",
+  stepCodes: "4. Mã voucher & Quản lý",
+  prevStep: "Quay lại",
+  nextStep: "Tiếp tục",
+  stepSummary: "Tóm tắt chiến dịch",
+  viewWizard: "Từng bước",
+  viewFull: "Toàn bộ",
+  stepOf: "trên",
 } as const;
 
 export type PromotionsKey = keyof typeof PROMOTIONS_VI;

@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useController, useFieldArray, useForm, type Control } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
+  ArrowLeft as IconArrowLeft,
+  ArrowRight as IconArrowRight,
   Download as IconDownload,
   Pause as IconPause,
   Play as IconPlay,
@@ -80,8 +82,10 @@ import {
   AppEmptyState,
   AppPageHeader,
   AppSection,
+  AppSegmentedControl,
   DocumentFormFrame,
 } from "@/components/surface";
+import { PromotionStepper } from "./_components/promotion-stepper";
 import { buildSemicolonCsv, downloadSemicolonCsv } from "@/_lib/export-csv";
 import {
   PROMOTION_DOW_LABELS,
@@ -351,6 +355,8 @@ export function PromotionForm({
   const [voidTarget, setVoidTarget] = useState<PromotionFormCode | null>(null);
   const [codeSearch, setCodeSearch] = useState("");
   const [codeStatusFilter, setCodeStatusFilter] = useState<string>("all");
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
+  const [viewMode, setViewMode] = useState<"wizard" | "full">("wizard");
 
   const form = useForm<PromotionFormValues, unknown, PromotionFormValues>({
     resolver: zodResolver(promotionFormSchema),
@@ -365,6 +371,66 @@ export function PromotionForm({
     name: "timeWindows",
   });
   const kindRef = useRef(kind);
+
+  async function handleNextStep() {
+    if (currentStep === 1) {
+      const valid = await form.trigger(["name", "kind", "status"]);
+      if (!valid) return;
+      setCurrentStep(2);
+      if (typeof window !== "undefined") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    } else if (currentStep === 2) {
+      const fieldsToValidate: Array<keyof PromotionFormValues> = ["minSubtotal"];
+      if (needsAmount) fieldsToValidate.push("discountValue");
+      if (kind === "order_pct" || (kind === "auto_order" && discountType === "pct")) {
+        fieldsToValidate.push("maxDiscountAmount");
+      }
+      if (needsBxgy) fieldsToValidate.push("bxgyBuyQty", "bxgyGetQty");
+      if (needsFreeSide) fieldsToValidate.push("freeSideQty");
+      if (needsFreeItem) fieldsToValidate.push("freeItemQty");
+      if (needsCode) fieldsToValidate.push("reusableCode");
+      const valid = await form.trigger(fieldsToValidate);
+      if (!valid) return;
+      setCurrentStep(3);
+      if (typeof window !== "undefined") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    } else if (currentStep === 3) {
+      const valid = await form.trigger([
+        "startsDate",
+        "endsDate",
+        "startsTime",
+        "endsTime",
+        "serviceModes",
+      ]);
+      if (!valid) return;
+      setCurrentStep(4);
+      if (typeof window !== "undefined") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    }
+  }
+
+  function handlePrevStep() {
+    if (currentStep > 1) {
+      setCurrentStep((prev) => (prev - 1) as 1 | 2 | 3 | 4);
+      if (typeof window !== "undefined") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    }
+  }
+
+  async function handleSelectStep(step: number) {
+    if (step < currentStep) {
+      setCurrentStep(step as 1 | 2 | 3 | 4);
+      if (typeof window !== "undefined") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    } else if (step === currentStep + 1) {
+      await handleNextStep();
+    }
+  }
 
   async function handleHeaderDelete() {
     if (initial.id == null) return;
@@ -701,6 +767,23 @@ export function PromotionForm({
     },
   ];
 
+  const liveMockup = (
+    <PromotionLiveMockup
+      name={watch("name")}
+      kind={kind}
+      status={watch("status")}
+      discountType={discountType}
+      discountValue={watch("discountValue")}
+      maxDiscountAmount={watch("maxDiscountAmount")}
+      minSubtotal={watch("minSubtotal")}
+      reusableCode={watch("reusableCode")}
+      bxgyBuyQty={watch("bxgyBuyQty")}
+      bxgyGetQty={watch("bxgyGetQty")}
+      freeSideQty={watch("freeSideQty")}
+      freeItemQty={watch("freeItemQty")}
+    />
+  );
+
   return (
     <DocumentFormFrame
       width="wide"
@@ -753,151 +836,235 @@ export function PromotionForm({
         />
       }
       footer={
-        <ResponsiveActionButton
-          type="submit"
-          form="promotion-form"
-          disabled={isPending}
-        >
-          {PROMOTIONS_VI.save}
-        </ResponsiveActionButton>
+        viewMode === "wizard" ? (
+          <div className="flex w-full items-center justify-between gap-2">
+            <div>
+              {currentStep > 1 ? (
+                <ResponsiveActionButton
+                  type="button"
+                  variant="outline"
+                  onClick={handlePrevStep}
+                  disabled={isPending}
+                >
+                  <IconArrowLeft data-icon="inline-start" className="size-4" />
+                  {PROMOTIONS_VI.prevStep}
+                </ResponsiveActionButton>
+              ) : null}
+            </div>
+            <div className="flex items-center gap-2">
+              {currentStep < 4 ? (
+                <ResponsiveActionButton
+                  type="button"
+                  onClick={handleNextStep}
+                  disabled={isPending}
+                >
+                  {PROMOTIONS_VI.nextStep}
+                  <IconArrowRight data-icon="inline-end" className="size-4" />
+                </ResponsiveActionButton>
+              ) : (
+                <ResponsiveActionButton
+                  type="submit"
+                  form="promotion-form"
+                  disabled={isPending}
+                >
+                  {PROMOTIONS_VI.save}
+                </ResponsiveActionButton>
+              )}
+            </div>
+          </div>
+        ) : (
+          <ResponsiveActionButton
+            type="submit"
+            form="promotion-form"
+            disabled={isPending}
+          >
+            {PROMOTIONS_VI.save}
+          </ResponsiveActionButton>
+        )
       }
     >
       <div className="flex flex-col gap-4">
-        {initial.id == null ? (
-          <Frame className="flex flex-col gap-3 bg-muted/30 p-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-              <IconSparkles className="size-4 text-primary" />
-              <span>{PROMOTIONS_VI.presetsTitle}</span>
+        {/* Stepper navigation & View mode switch */}
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="text-xs font-medium text-muted-foreground">
+              {viewMode === "wizard"
+                ? `Bước ${currentStep} ${PROMOTIONS_VI.stepOf} 4`
+                : PROMOTIONS_VI.viewFull}
             </div>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-              <InteractiveCard
-                padding="compact"
-                role="button"
-                tabIndex={0}
-                onClick={() => applyPreset("happy_hour")}
-                onKeyDown={(e) =>
-                  (e.key === "Enter" || e.key === " ") &&
-                  applyPreset("happy_hour")
-                }
-                className="flex cursor-pointer flex-col gap-1 text-left hover:border-primary"
-              >
-                <span className="text-xs font-semibold text-foreground">
-                  {PROMOTIONS_VI.presetHappyHourTitle}
-                </span>
-                <span className="line-clamp-2 text-xs text-muted-foreground">
-                  {PROMOTIONS_VI.presetHappyHourDesc}
-                </span>
-              </InteractiveCard>
+            <AppSegmentedControl
+              value={viewMode}
+              onChange={(val) => setViewMode(val)}
+              options={[
+                { value: "wizard", label: PROMOTIONS_VI.viewWizard },
+                { value: "full", label: PROMOTIONS_VI.viewFull },
+              ]}
+            />
+          </div>
 
-              <InteractiveCard
-                padding="compact"
-                role="button"
-                tabIndex={0}
-                onClick={() => applyPreset("order_vnd")}
-                onKeyDown={(e) =>
-                  (e.key === "Enter" || e.key === " ") &&
-                  applyPreset("order_vnd")
-                }
-                className="flex cursor-pointer flex-col gap-1 text-left hover:border-primary"
-              >
-                <span className="text-xs font-semibold text-foreground">
-                  {PROMOTIONS_VI.presetOrderVndTitle}
-                </span>
-                <span className="line-clamp-2 text-xs text-muted-foreground">
-                  {PROMOTIONS_VI.presetOrderVndDesc}
-                </span>
-              </InteractiveCard>
-
-              <InteractiveCard
-                padding="compact"
-                role="button"
-                tabIndex={0}
-                onClick={() => applyPreset("bxgy")}
-                onKeyDown={(e) =>
-                  (e.key === "Enter" || e.key === " ") && applyPreset("bxgy")
-                }
-                className="flex cursor-pointer flex-col gap-1 text-left hover:border-primary"
-              >
-                <span className="text-xs font-semibold text-foreground">
-                  {PROMOTIONS_VI.presetBxgyTitle}
-                </span>
-                <span className="line-clamp-2 text-xs text-muted-foreground">
-                  {PROMOTIONS_VI.presetBxgyDesc}
-                </span>
-              </InteractiveCard>
-
-              <InteractiveCard
-                padding="compact"
-                role="button"
-                tabIndex={0}
-                onClick={() => applyPreset("free_side")}
-                onKeyDown={(e) =>
-                  (e.key === "Enter" || e.key === " ") &&
-                  applyPreset("free_side")
-                }
-                className="flex cursor-pointer flex-col gap-1 text-left hover:border-primary"
-              >
-                <span className="text-xs font-semibold text-foreground">
-                  {PROMOTIONS_VI.presetFreeSideTitle}
-                </span>
-                <span className="line-clamp-2 text-xs text-muted-foreground">
-                  {PROMOTIONS_VI.presetFreeSideDesc}
-                </span>
-              </InteractiveCard>
-            </div>
-          </Frame>
-        ) : null}
-
-        <PromotionLiveMockup
-          name={watch("name")}
-          kind={kind}
-          status={watch("status")}
-          discountType={discountType}
-          discountValue={watch("discountValue")}
-          maxDiscountAmount={watch("maxDiscountAmount")}
-          minSubtotal={watch("minSubtotal")}
-          reusableCode={watch("reusableCode")}
-          bxgyBuyQty={watch("bxgyBuyQty")}
-          bxgyGetQty={watch("bxgyGetQty")}
-          freeSideQty={watch("freeSideQty")}
-          freeItemQty={watch("freeItemQty")}
-        />
+          {viewMode === "wizard" ? (
+            <PromotionStepper
+              currentStep={currentStep}
+              onSelectStep={handleSelectStep}
+              canNavigateToStep={(step) => step <= currentStep + 1}
+            />
+          ) : null}
+        </div>
 
         <form
           id="promotion-form"
           onSubmit={handleSubmit(onValid)}
           className="flex min-w-0 flex-col gap-4"
         >
-          <AppSection title={PROMOTIONS_VI.identitySection}>
-            <div className="flex flex-col gap-3">
-              <TextField
-                control={control}
-                name="name"
-                label={PROMOTIONS_VI.nameLabel}
-                required
-              />
-              <SelectField
-                control={control}
-                name="kind"
-                label={PROMOTIONS_VI.kindLabel}
-                options={PROMOTION_KINDS.map((value) => ({
-                  value,
-                  label: promotionKindLabel(value),
-                }))}
-              />
-            <SelectField
-              control={control}
-              name="status"
-              label={PROMOTIONS_VI.statusLabel}
-              options={PROMOTION_STATUSES.map((value) => ({
-                value,
-                label: promotionStatusLabel(value),
-              }))}
-            />
-          </div>
-        </AppSection>
+          {/* STEP 1: IDENTITY */}
+          <div
+            className={
+              viewMode === "wizard" && currentStep !== 1
+                ? "hidden"
+                : "flex flex-col gap-4"
+            }
+          >
+            {initial.id == null ? (
+              <Frame className="flex flex-col gap-3 bg-muted/30 p-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <IconSparkles className="size-4 text-primary" />
+                  <span>{PROMOTIONS_VI.presetsTitle}</span>
+                </div>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                  <InteractiveCard
+                    padding="compact"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => applyPreset("happy_hour")}
+                    onKeyDown={(e) =>
+                      (e.key === "Enter" || e.key === " ") &&
+                      applyPreset("happy_hour")
+                    }
+                    className="flex cursor-pointer flex-col gap-1 text-left hover:border-primary"
+                  >
+                    <span className="text-xs font-semibold text-foreground">
+                      {PROMOTIONS_VI.presetHappyHourTitle}
+                    </span>
+                    <span className="line-clamp-2 text-xs text-muted-foreground">
+                      {PROMOTIONS_VI.presetHappyHourDesc}
+                    </span>
+                  </InteractiveCard>
 
-        <AppSection title={PROMOTIONS_VI.kindConfigSection}>
+                  <InteractiveCard
+                    padding="compact"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => applyPreset("order_vnd")}
+                    onKeyDown={(e) =>
+                      (e.key === "Enter" || e.key === " ") &&
+                      applyPreset("order_vnd")
+                    }
+                    className="flex cursor-pointer flex-col gap-1 text-left hover:border-primary"
+                  >
+                    <span className="text-xs font-semibold text-foreground">
+                      {PROMOTIONS_VI.presetOrderVndTitle}
+                    </span>
+                    <span className="line-clamp-2 text-xs text-muted-foreground">
+                      {PROMOTIONS_VI.presetOrderVndDesc}
+                    </span>
+                  </InteractiveCard>
+
+                  <InteractiveCard
+                    padding="compact"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => applyPreset("bxgy")}
+                    onKeyDown={(e) =>
+                      (e.key === "Enter" || e.key === " ") && applyPreset("bxgy")
+                    }
+                    className="flex cursor-pointer flex-col gap-1 text-left hover:border-primary"
+                  >
+                    <span className="text-xs font-semibold text-foreground">
+                      {PROMOTIONS_VI.presetBxgyTitle}
+                    </span>
+                    <span className="line-clamp-2 text-xs text-muted-foreground">
+                      {PROMOTIONS_VI.presetBxgyDesc}
+                    </span>
+                  </InteractiveCard>
+
+                  <InteractiveCard
+                    padding="compact"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => applyPreset("free_side")}
+                    onKeyDown={(e) =>
+                      (e.key === "Enter" || e.key === " ") &&
+                      applyPreset("free_side")
+                    }
+                    className="flex cursor-pointer flex-col gap-1 text-left hover:border-primary"
+                  >
+                    <span className="text-xs font-semibold text-foreground">
+                      {PROMOTIONS_VI.presetFreeSideTitle}
+                    </span>
+                    <span className="line-clamp-2 text-xs text-muted-foreground">
+                      {PROMOTIONS_VI.presetFreeSideDesc}
+                    </span>
+                  </InteractiveCard>
+                </div>
+              </Frame>
+            ) : null}
+
+            {liveMockup}
+
+            <AppSection title={PROMOTIONS_VI.identitySection}>
+              <div className="flex flex-col gap-3">
+                <TextField
+                  control={control}
+                  name="name"
+                  label={PROMOTIONS_VI.nameLabel}
+                  required
+                />
+                <SelectField
+                  control={control}
+                  name="kind"
+                  label={PROMOTIONS_VI.kindLabel}
+                  options={PROMOTION_KINDS.map((value) => ({
+                    value,
+                    label: promotionKindLabel(value),
+                  }))}
+                />
+                <SelectField
+                  control={control}
+                  name="status"
+                  label={PROMOTIONS_VI.statusLabel}
+                  options={PROMOTION_STATUSES.map((value) => ({
+                    value,
+                    label: promotionStatusLabel(value),
+                  }))}
+                />
+              </div>
+            </AppSection>
+
+            {viewMode === "wizard" ? (
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <ResponsiveActionButton
+                  type="button"
+                  onClick={handleNextStep}
+                  disabled={isPending}
+                >
+                  {PROMOTIONS_VI.nextStep}
+                  <IconArrowRight data-icon="inline-end" className="size-4" />
+                </ResponsiveActionButton>
+              </div>
+            ) : null}
+          </div>
+
+          {/* STEP 2: BENEFIT & ITEMS */}
+          <div
+            className={
+              viewMode === "wizard" && currentStep !== 2
+                ? "hidden"
+                : "flex flex-col gap-4"
+            }
+          >
+            {viewMode === "wizard" ? liveMockup : null}
+
+            <AppSection title={PROMOTIONS_VI.kindConfigSection}>
           <div className="flex flex-col gap-4">
             {kind === "order_pct" ? (
               <div className="grid gap-3 sm:grid-cols-2">
@@ -1122,7 +1289,38 @@ export function PromotionForm({
           </div>
         </AppSection>
 
-        <AppSection title={PROMOTIONS_VI.scheduleSection}>
+            {viewMode === "wizard" ? (
+              <div className="flex items-center justify-between gap-2 pt-2">
+                <ResponsiveActionButton
+                  type="button"
+                  variant="outline"
+                  onClick={handlePrevStep}
+                  disabled={isPending}
+                >
+                  <IconArrowLeft data-icon="inline-start" className="size-4" />
+                  {PROMOTIONS_VI.prevStep}
+                </ResponsiveActionButton>
+                <ResponsiveActionButton
+                  type="button"
+                  onClick={handleNextStep}
+                  disabled={isPending}
+                >
+                  {PROMOTIONS_VI.nextStep}
+                  <IconArrowRight data-icon="inline-end" className="size-4" />
+                </ResponsiveActionButton>
+              </div>
+            ) : null}
+          </div>
+
+          {/* STEP 3: SCHEDULE & SCOPE */}
+          <div
+            className={
+              viewMode === "wizard" && currentStep !== 3
+                ? "hidden"
+                : "flex flex-col gap-4"
+            }
+          >
+            <AppSection title={PROMOTIONS_VI.scheduleSection}>
           <div className="grid gap-3 sm:grid-cols-2">
             <BusinessDateField
               control={control}
@@ -1199,10 +1397,94 @@ export function PromotionForm({
             />
           </div>
         </AppSection>
-      </form>
 
-      {needsIssue || codes.length > 0 ? (
-        <AppSection title={PROMOTIONS_VI.codesTitle}>
+            {viewMode === "wizard" ? (
+              <div className="flex items-center justify-between gap-2 pt-2">
+                <ResponsiveActionButton
+                  type="button"
+                  variant="outline"
+                  onClick={handlePrevStep}
+                  disabled={isPending}
+                >
+                  <IconArrowLeft data-icon="inline-start" className="size-4" />
+                  {PROMOTIONS_VI.prevStep}
+                </ResponsiveActionButton>
+                <ResponsiveActionButton
+                  type="button"
+                  onClick={handleNextStep}
+                  disabled={isPending}
+                >
+                  {PROMOTIONS_VI.nextStep}
+                  <IconArrowRight data-icon="inline-end" className="size-4" />
+                </ResponsiveActionButton>
+              </div>
+            ) : null}
+          </div>
+
+          {/* STEP 4: SUMMARY & FINALIZATION */}
+          <div
+            className={
+              viewMode === "wizard" && currentStep !== 4
+                ? "hidden"
+                : "flex flex-col gap-4"
+            }
+          >
+            {viewMode === "wizard" ? (
+              <AppSection title={PROMOTIONS_VI.stepSummary}>
+                <div className="flex flex-col gap-4">
+                  {liveMockup}
+                  <PromotionRuleSummary
+                    kind={kind}
+                    discountType={discountType}
+                    discountValue={watch("discountValue")}
+                    maxDiscountAmount={watch("maxDiscountAmount")}
+                    minSubtotal={watch("minSubtotal")}
+                    reusableCode={watch("reusableCode")}
+                    itemIds={watch("itemIds")}
+                    bxgyBuyQty={watch("bxgyBuyQty")}
+                    bxgyGetQty={watch("bxgyGetQty")}
+                    freeSideQty={watch("freeSideQty")}
+                    freeItemQty={watch("freeItemQty")}
+                    allowCode={watch("allowCode")}
+                    allowAuto={watch("allowAuto")}
+                  />
+                </div>
+              </AppSection>
+            ) : null}
+
+            {viewMode === "wizard" ? (
+              <div className="flex items-center justify-between gap-2 pt-2">
+                <ResponsiveActionButton
+                  type="button"
+                  variant="outline"
+                  onClick={handlePrevStep}
+                  disabled={isPending}
+                >
+                  <IconArrowLeft data-icon="inline-start" className="size-4" />
+                  {PROMOTIONS_VI.prevStep}
+                </ResponsiveActionButton>
+                <ResponsiveActionButton
+                  type="submit"
+                  form="promotion-form"
+                  disabled={isPending}
+                >
+                  {PROMOTIONS_VI.save}
+                </ResponsiveActionButton>
+              </div>
+            ) : null}
+          </div>
+        </form>
+
+        {/* Step 4 (outside form): Codes Section */}
+        <div
+          className={
+            viewMode === "wizard" && currentStep !== 4
+              ? "hidden"
+              : "flex flex-col gap-4"
+          }
+        >
+          {needsIssue || codes.length > 0 ? (
+            <AppSection title={PROMOTIONS_VI.codesTitle}>
           <div className="flex flex-col gap-3">
             {needsIssue ? (
               <>
@@ -1318,6 +1600,7 @@ export function PromotionForm({
           </div>
         </AppSection>
       ) : null}
+        </div>
 
       <ReasonConfirmDialog
         open={voidTarget != null}
