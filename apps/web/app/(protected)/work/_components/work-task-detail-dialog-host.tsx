@@ -12,6 +12,7 @@ import type {
   WorkChecklistItemRow,
   WorkTaskAttachmentRow,
   WorkTaskCommentRow,
+  WorkTaskEventRow,
   WorkTaskRow,
 } from "../actions";
 import { workHref, type ParsedWorkParams } from "../_lib/params";
@@ -29,6 +30,7 @@ export type WorkTaskDetailPayload = {
   comments: WorkTaskCommentRow[];
   checklist: WorkChecklistItemRow[];
   attachments: WorkTaskAttachmentRow[];
+  events?: WorkTaskEventRow[];
 };
 
 function WorkTaskDetailCloseFooter({ onClose }: { onClose: () => void }) {
@@ -61,6 +63,7 @@ function WorkTaskDetailDocumentDialog({
     initialComments: detail.comments,
     initialChecklist: detail.checklist,
     initialAttachments: detail.attachments,
+    initialEvents: detail.events,
     onSaved,
   });
 

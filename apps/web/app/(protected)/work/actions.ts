@@ -50,6 +50,16 @@ export type WorkTaskRow = {
   supporterIds?: string[];
 };
 
+export type WorkTaskEventRow = {
+  id: number;
+  taskId: number;
+  actorId: string;
+  actorName: string | null;
+  eventKind: string;
+  payload: Record<string, unknown>;
+  createdAt: string;
+};
+
 export type WorkDepartmentOption = {
   id: number;
   name: string;

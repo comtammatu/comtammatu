@@ -260,6 +260,12 @@ function rewriteHrPath(
   return url;
 }
 
+function rewriteWorkTaskPath(url: string): string {
+  const match = /^\/work\/tasks\/(\d+)$/.exec(url);
+  if (!match) return url;
+  return `/work?task=${match[1]}`;
+}
+
 function canOpenTargetBranch(
   claims: JwtClaims,
   targetBranchId: number | null,
@@ -291,8 +297,8 @@ function finalizeNotificationUrl(
             claims.user_role,
             // Branch GRN rewrite only for non-L0 shells (BM / floor).
             isL0InventoryShellRole(claims.user_role)
-              ? url
-              : rewriteRetiredBranchGrnPath(url),
+              ? rewriteWorkTaskPath(url)
+              : rewriteWorkTaskPath(rewriteRetiredBranchGrnPath(url)),
           ),
         ),
       ),

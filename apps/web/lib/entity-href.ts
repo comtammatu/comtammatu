@@ -55,6 +55,8 @@ function controlPlaneHref(entityType: string, entityId: string): string | null {
       return "/finance/expenses";
     case "tax_invoice":
       return "/finance/invoices";
+    case "work_task":
+      return `/work?task=${entityId}`;
     default:
       return null;
   }
@@ -75,6 +77,8 @@ function branchPlaneHref(
       return `/br/${branchId}/stock/requests/${entityId}`;
     case "stocktake_session":
       return `/br/${branchId}/stock/stocktake/${entityId}`;
+    case "work_task":
+      return `/work?task=${entityId}`;
     default:
       return null;
   }

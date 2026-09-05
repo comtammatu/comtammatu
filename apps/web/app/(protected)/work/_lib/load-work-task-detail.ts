@@ -5,6 +5,7 @@ import {
   type WorkChecklistItemRow,
   type WorkTaskAttachmentRow,
   type WorkTaskCommentRow,
+  type WorkTaskEventRow,
 } from "../actions";
 import type { WorkTaskDetailPayload } from "../_components/work-task-detail-dialog-host";
 
@@ -30,6 +31,7 @@ export async function loadWorkTaskDetail(
     { data: checklistRows },
     { data: attachmentRows },
     { data: participantRows },
+    { data: eventRows },
   ] = await Promise.all([
     supabase
       .from("work_department_members")
@@ -63,6 +65,14 @@ export async function loadWorkTaskDetail(
       .select("user_id, kind")
       .eq("tenant_id", task.tenantId)
       .eq("task_id", taskId),
+    supabase
+      .from("work_task_events")
+      .select(
+        "id, task_id, actor_id, event_kind, payload, created_at, profiles(full_name)",
+      )
+      .eq("tenant_id", task.tenantId)
+      .eq("task_id", taskId)
+      .order("created_at", { ascending: false }),
   ]);
 
   const assigneeOptions = (memberRows ?? []).flatMap((row) => {
@@ -115,6 +125,19 @@ export async function loadWorkTaskDetail(
     }),
   );
 
+  const events: WorkTaskEventRow[] = (eventRows ?? []).map((row) => {
+    const profile = row.profiles as unknown as { full_name: string } | null;
+    return {
+      id: row.id,
+      taskId: row.task_id,
+      actorId: row.actor_id,
+      actorName: profile?.full_name ?? null,
+      eventKind: row.event_kind,
+      payload: (row.payload as Record<string, unknown>) ?? {},
+      createdAt: row.created_at,
+    };
+  });
+
   return {
     success: true,
     data: {
@@ -125,6 +148,7 @@ export async function loadWorkTaskDetail(
       comments,
       checklist,
       attachments,
+      events,
     },
   };
 }
