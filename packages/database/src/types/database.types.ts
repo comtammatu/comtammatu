@@ -13296,6 +13296,7 @@ export type Database = {
         Returns: {
           action_url: string
           kind: string
+          target_branch_id: number
           unread_count: number
         }[]
       }
@@ -13630,6 +13631,7 @@ export type Database = {
         Args: { p_adjustment_id: number }
         Returns: undefined
       }
+      delete_promotion: { Args: { p_id: number }; Returns: Json }
       edit_pending_order_item: {
         Args: {
           p_modifiers: Json
@@ -14649,6 +14651,10 @@ export type Database = {
         Returns: number
       }
       mark_all_notifications_read: { Args: never; Returns: number }
+      mark_entity_notifications_read: {
+        Args: { p_entity_id: number; p_entity_type: string }
+        Returns: number
+      }
       mark_kds_item_out_of_stock: {
         Args: {
           p_disable_for_day?: boolean
@@ -15744,6 +15750,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      set_work_task_participants: {
+        Args: {
+          p_assignee_ids?: string[]
+          p_supporter_ids?: string[]
+          p_task_id: number
+        }
+        Returns: Json
       }
       set_work_task_status: {
         Args: {
