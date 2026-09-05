@@ -343,6 +343,23 @@ test("per-order HĐĐT payload expands POS modifiers and sides", () => {
   );
 });
 
+test("replacement agreement dates use Vietnam calendar midnight", () => {
+  const replacement = read(
+    "apps/web/app/(protected)/finance/replace-invoice-actions.ts",
+  );
+
+  assertSqlMatch(
+    replacement,
+    /getVNDayUtcRange\(parsed\.data\.agreementDate\)\.startIso/,
+    "a date-only agreement must reach Postgres as midnight in Vietnam, not UTC",
+  );
+  assertSqlNotMatch(
+    replacement,
+    /new Date\(parsed\.data\.agreementDate\)\.toISOString\(\)/,
+    "UTC parsing moves Vietnam calendar dates seven hours into the future",
+  );
+});
+
 test("order lines snapshot item VAT without annual-revenue inference", () => {
   const createSrc = read("apps/web/lib/hddt-per-order.ts");
   const providerInitSrc = read("apps/web/lib/invoice-provider-init.ts");

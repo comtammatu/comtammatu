@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { getVNDayUtcRange } from "@comtammatu/shared/time";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 
@@ -66,7 +67,7 @@ export async function replaceTaxInvoice(
       p_old_id: parsed.data.originalId,
       p_reason: parsed.data.reason,
       p_agreement_ref: parsed.data.agreementRef,
-      p_agreement_date: new Date(parsed.data.agreementDate).toISOString(),
+      p_agreement_date: getVNDayUtcRange(parsed.data.agreementDate).startIso,
       p_buyer_name: parsed.data.buyerName ?? "",
       p_buyer_tax_code: parsed.data.buyerTaxCode ?? "",
       p_buyer_address: parsed.data.buyerAddress ?? "",
