@@ -592,8 +592,7 @@ DECLARE
   v_item          public.order_items%ROWTYPE;
   v_order         public.orders%ROWTYPE;
   v_promo         public.promotions%ROWTYPE;
-  v_menu_item     public.menu_items%ROWTYPE;
-  v_variant       public.menu_variants%ROWTYPE;
+  v_menu_active   BOOLEAN;
   v_base_price    NUMERIC(15,2);
   v_variant_adj   NUMERIC(15,2) := 0;
   v_modifier_sum  NUMERIC(15,2) := 0;
@@ -606,7 +605,7 @@ DECLARE
   v_base          NUMERIC(15,2);
   v_disc_amount   NUMERIC(15,2);
   v_total_amount  NUMERIC(15,2);
-  v_enriched_sides JSONB;
+  v_enriched_sides JSONB := '[]'::JSONB;
 BEGIN
   v_uid := auth.uid();
   IF v_uid IS NULL THEN
@@ -679,42 +678,42 @@ BEGIN
     RAISE EXCEPTION 'order already paid' USING ERRCODE = '22023';
   END IF;
 
-  SELECT * INTO v_menu_item
+  SELECT is_active INTO v_menu_active
   FROM public.menu_items
   WHERE id = v_item.menu_item_id AND tenant_id = v_order.tenant_id;
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'menu item not found' USING ERRCODE = 'P0002';
+  IF NOT FOUND OR COALESCE(v_menu_active, FALSE) = FALSE THEN
+    RAISE EXCEPTION 'menu item inactive' USING ERRCODE = '22023';
   END IF;
 
-  IF v_menu_item.is_active IS NOT TRUE THEN
-    RAISE EXCEPTION 'menu item not active' USING ERRCODE = '22023';
-  END IF;
-
-  v_base_price := v_menu_item.price;
+  v_base_price := public.pos_resolve_item_list_price(
+    v_order.tenant_id,
+    v_item.menu_item_id,
+    v_order.order_type,
+    v_order.delivery_platform
+  );
 
   IF p_variant_id IS NOT NULL THEN
-    SELECT * INTO v_variant
-    FROM public.menu_variants
+    SELECT price_adjustment INTO v_variant_adj
+    FROM public.menu_item_variants
     WHERE id = p_variant_id
-      AND menu_item_id = v_item.menu_item_id
-      AND tenant_id = v_order.tenant_id;
+      AND item_id = v_item.menu_item_id
+      AND tenant_id = v_order.tenant_id
+      AND is_active = TRUE;
     IF NOT FOUND THEN
-      RAISE EXCEPTION 'variant not found' USING ERRCODE = 'P0002';
+      RAISE EXCEPTION 'variant inactive' USING ERRCODE = '22023';
     END IF;
-    IF v_variant.is_active IS NOT TRUE THEN
-      RAISE EXCEPTION 'variant not active' USING ERRCODE = '22023';
-    END IF;
-    v_variant_adj := COALESCE(v_variant.price_adjustment, 0);
+  ELSE
+    v_variant_adj := 0;
   END IF;
 
-  IF p_modifiers IS NOT NULL AND jsonb_typeof(p_modifiers) = 'array' THEN
-    SELECT COALESCE(SUM((m->>'price')::numeric), 0)
-    INTO v_modifier_sum
-    FROM jsonb_array_elements(p_modifiers) AS m;
-  END IF;
+  v_modifier_sum := public.pos_order_modifier_sum(
+    v_order.tenant_id,
+    v_item.menu_item_id,
+    COALESCE(p_modifiers, '[]'::JSONB)
+  );
 
-  SELECT sides_json, COALESCE(price_total, 0)
-  INTO v_enriched_sides, v_sides_sum
+  SELECT sides_sum, enriched_sides
+  INTO v_sides_sum, v_enriched_sides
   FROM public.pos_enrich_order_sides(
     v_order.tenant_id,
     v_item.menu_item_id,

@@ -95,6 +95,31 @@ test("cart invariant migration enforces auto-revoke on void, reduce, and edit it
   const editBody = extractSqlFunction(activeSql, "edit_pending_order_item");
   assertSqlMatch(
     editBody,
+    /FROM public\.menu_item_variants/,
+    "edit_pending_order_item must use the canonical menu_item_variants table",
+  );
+  assertSqlNotMatch(
+    editBody,
+    /public\.menu_variants/,
+    "edit_pending_order_item must not reference the retired menu_variants table",
+  );
+  assertSqlMatch(
+    editBody,
+    /pos_resolve_item_list_price\(/,
+    "edit_pending_order_item must preserve channel-aware list pricing",
+  );
+  assertSqlMatch(
+    editBody,
+    /pos_order_modifier_sum\(/,
+    "edit_pending_order_item must preserve canonical modifier pricing",
+  );
+  assertSqlMatch(
+    editBody,
+    /SELECT sides_sum, enriched_sides[\s\S]*FROM public\.pos_enrich_order_sides/,
+    "edit_pending_order_item must read the canonical side enrichment result",
+  );
+  assertSqlMatch(
+    editBody,
     /v_order\.promotion_id IS NOT NULL/,
     "edit_pending_order_item must check for active promotion on the order",
   );
