@@ -719,7 +719,7 @@ test("UI component registry classifies and explains every shared component and a
   );
   assert.deepEqual(
     registryModule.findComponentGuidance("KpiCard").map((entry) => entry.layer),
-    ["app-adapter"],
+    ["shared-component", "app-adapter"],
   );
   assert.deepEqual(
     registryModule

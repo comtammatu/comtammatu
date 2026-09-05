@@ -213,6 +213,13 @@ export const SHARED_COMPONENT_REGISTRY = {
     "hand-styled keyboard capsule",
     "desktop command hints",
   ),
+  "kpi-card.tsx": direct(
+    "metric value card",
+    "KpiCard",
+    "DescriptionList for metadata rows",
+    "local StatCard or SummaryCard",
+    "finance and HR metrics",
+  ),
   "label.tsx": direct(
     "control label primitive",
     "FieldLabel or Label with an associated control",

@@ -143,8 +143,10 @@ test("app metrics use KpiCard without the retired Stat primitive", () => {
 });
 
 test("linked KpiCard applies hover feedback to its full card surface", () => {
-  const kpiCard = read("apps/web/app/components/kpi/kpi-card.tsx");
+  const kpiCard = read("packages/ui/src/components/kpi-card.tsx");
+  const adapter = read("apps/web/app/components/kpi/kpi-card.tsx");
 
+  assert.match(adapter, /from "@comtammatu\/ui\/components\/kpi-card"/);
   assert.doesNotMatch(kpiCard, /hover:bg-muted\/50" : undefined/);
   assert.match(kpiCard, /transition-\[background-color,box-shadow\]/);
   assert.match(kpiCard, /hover:bg-muted\/50 hover:shadow-effect-card-hover/);

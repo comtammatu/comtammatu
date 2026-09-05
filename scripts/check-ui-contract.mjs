@@ -1777,7 +1777,6 @@ const frozenPrimitiveImportBaselines = [
     replacement:
       "an app card role: AppSection, StationSection, PublicSection, AppLinkCard, KpiCard for metrics only, InteractiveCard, OperationalBoardCard, or a route-scoped adapter",
     allowlist: {
-      "apps/web/app/components/kpi/kpi-card.tsx": 1,
       "apps/web/app/components/surface/app-link-card.tsx": 1,
       "apps/web/app/components/surface/app-section.tsx": 1,
       "apps/web/app/components/surface/app-toolbar.tsx": 1,
