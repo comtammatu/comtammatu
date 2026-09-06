@@ -7,6 +7,8 @@ trong `docs/spec/pwa.md`.
 ## Phạm vi thiết bị
 
 - Android 13+ và Chrome 120+ là nền tảng chính cho POS và KDS.
+- Máy Android 12 cần Chrome 111 trở lên. Cài được PWA không có nghĩa trình
+  duyệt đủ mới để hiển thị giao diện; Chrome 108–110 cần cập nhật trước.
 - Pickup dùng URL kiosk trên Android TV/Chrome; launcher kiểu ứng dụng không
   được đảm bảo trên mọi Android TV.
 - iOS Home Screen chỉ dùng cho `/me` và công việc quản lý chi nhánh trên điện
@@ -40,6 +42,28 @@ hệ điều hành liệt kê PWA như một ứng dụng riêng:
 PWA không có foreground service như Má Tư Agent. Nếu Chrome/PWA vẫn bị dừng lặp
 lại dù cấu hình đúng, ghi nhận sự cố và đánh giá trigger native Android theo
 ADR 0038; không mở rộng cache để che lỗi hệ điều hành.
+
+## Khi lỗi chỉ xảy ra trên một số máy
+
+Ghi nhận trước khi tải lại hoặc cài lại để giữ bằng chứng:
+
+1. Ghi mẫu máy, phiên bản hệ điều hành, phiên bản Chrome/Safari, tên launcher,
+   trang đang mở và thời điểm lỗi. So sánh cùng trang trên máy đang chạy tốt.
+2. Chụp màn hình dọc/ngang, trước/sau mở bàn phím và sau quay lại từ nền.
+   Ghi rõ nút bị che, trang cuộn sai hay nút nhìn thấy nhưng không phản hồi.
+3. Qua Chrome remote debugging hoặc Safari Web Inspector, ghi lỗi Console và
+   mã HTTP của các tệp CSS/JS bị lỗi. Phân biệt `ChunkLoadError`/404 sau cập
+   nhật, lỗi mạng và lỗi JavaScript trước khi quy lỗi cho thiết bị.
+4. Ghi `innerWidth`, `innerHeight`, `document.documentElement.clientHeight`,
+   `visualViewport.height` và `visualViewport.offsetTop` ở từng trạng thái.
+   Kiểm tra lớp phủ còn tồn tại sau khi đóng hộp thoại nếu toàn trang mất chạm.
+5. Kiểm tra service worker đang điều khiển trang, worker đang chờ và thông báo
+   phiên bản mới. Thử tải lại khi không còn thao tác đang gửi; đối chiếu kết quả
+   trên máy lỗi. Không xóa toàn bộ dữ liệu trang như bước chẩn đoán đầu tiên.
+
+Không gửi cookie, token, bản HAR chưa lọc hoặc dữ liệu nhân viên/khách hàng.
+Đổi user-agent trong DevTools không thay thế kiểm thử đúng phiên bản trình
+duyệt, bàn phím hệ điều hành và launcher Home Screen trên máy thật.
 
 ## Kiểm tra trước ca
 

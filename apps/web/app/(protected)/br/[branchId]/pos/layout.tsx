@@ -38,7 +38,7 @@ export default async function PosLayout({
     <main
       id="main-content"
       tabIndex={-1}
-      className="theme-light-only chrome-safe-pt flex h-dvh min-h-dvh w-full flex-col touch-manipulation overflow-hidden bg-background md:min-h-screen"
+      className="theme-light-only chrome-safe-pt flex h-dvh min-h-dvh w-full flex-col touch-manipulation overflow-hidden bg-background"
     >
       <ForceLightMode />
       <PosPwaProvider>

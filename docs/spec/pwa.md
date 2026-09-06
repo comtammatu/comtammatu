@@ -90,12 +90,24 @@ Next HTML incorrectly.
 | --- | --- | --- | --- |
 | POS / KDS (required floor) | Android 13+ | Chrome 120+ (Chromium) | Primary |
 | Pickup / `Gọi số` | Android TV + Chrome | Chrome (leanback) | Primary display |
-| Older branch devices | Android 12 + Chrome 108+ | Chrome | Secondary |
+| Older branch devices | Android 12 + Chrome 111+ | Chrome | Secondary |
 | Staff `/me`, branch managers on phone | iOS 17+ / iPadOS 17+ | Safari (Add to Home Screen) | Primary iOS |
 | iOS technical floor | iOS 16.4 | Safari installed PWA | Hard floor (SW + Notification API for Home Screen apps). This project does **not** use closed-app push. |
 | Current iOS (2026) | iOS 26 | Safari 26 | Verify (Add to Home Screen opens as a web app by default) |
 | Owner backoffice desktop | Windows 11 / macOS 14+ | Chrome 120+, Edge 120+, Safari 17+ (Add to Dock) | Primary desktop — convenience, not a sale shift |
-| Explicitly unsupported for operations | iOS ≤ 16.3; Android 11 / Chrome < 108; Zalo/Facebook WebView; Firefox as POS; iPad as pickup | — | Wontfix |
+| Explicitly unsupported for operations | iOS ≤ 16.3; Android 11 / Chrome < 111; Zalo/Facebook WebView; Firefox as POS; iPad as pickup | — | Wontfix |
+
+Installability does not prove rendering compatibility. Tailwind 4 requires
+Chrome 111+ or Safari 16.4+ for its core CSS features
+([upstream compatibility](https://tailwindcss.com/docs/compatibility)).
+Chrome 108–110 can install a PWA while failing to render the application CSS.
+Updating Chrome is required on those devices; this is not fixed by reinstalling
+the launcher. The minimum versions are compatibility floors, not real-device
+certification for every manufacturer or OS patch.
+
+Full-height station shells use the dynamic viewport at every breakpoint.
+Do not override them with `min-height: 100vh`: the large viewport can exceed
+the visible area when browser chrome is present.
 
 iOS is **staff-phone floor** (`/me`, BM). It is not a counter or TV device.
 Pickup is not an iPad job. Do not treat Samsung Internet or Firefox as the
@@ -158,7 +170,7 @@ surface-specific acceptance test.
 
 ## Remaining operational proof
 
-Install/cache implementation is complete. The active gap is real-device proof
+Install/cache implementation still requires real-device reliability proof
 on branch Android/HyperOS hardware and iOS Home Screen for the supported phone
 surfaces. Use `docs/runbooks/pos-kds/pwa-device-operations.md`; record observed
 recovery time rather than assigning an unmeasured SLA. Any failed scenario
