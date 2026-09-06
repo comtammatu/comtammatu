@@ -28,6 +28,8 @@ import {
 import { fetchFinanceCockpit } from "./_lib/finance-cockpit";
 import type { FinanceOverviewSearchParams } from "./_lib/finance-overview-types";
 import { CurrentFundsSection } from "./components/current-funds-section";
+import { FinancePeriodReadinessCard } from "./components/finance-period-readiness-card";
+import { FinanceOperationalAttention } from "./components/finance-operational-attention";
 import { Progress } from "@comtammatu/ui/components/progress";
 import {
   clampProgressValue,
@@ -674,6 +676,16 @@ export default async function FinancePage({
           />
         </KpiRow>
       </AppSection>
+
+      {/* SỨC KHOẺ CHỐT SỔ KỲ THÁNG HOẶC ĐIỂM CẦN XỬ LÝ VẬN HÀNH (SUPPORTING) */}
+      {params.range === "last_month" ? (
+        <FinancePeriodReadinessCard
+          readiness={cockpit.readiness}
+          params={params}
+        />
+      ) : (
+        <FinanceOperationalAttention cockpit={cockpit} params={params} />
+      )}
     </AppPage>
   );
 }

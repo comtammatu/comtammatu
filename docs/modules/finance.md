@@ -89,8 +89,9 @@ Landing cards (formulas in Product Boundary):
    `capital`, `construction`, `deposit`, supplier payments, cash↔bank. None → `Chưa ghi nhận`.
 5. **Period result** — revenue − goods-in − opex + inventory change. Not from GP. Not "net profit".
 6. **Assets** — company funds (`Tiền mặt` = sum of sales-branch books + one
-   bank ledger); single-branch scope shows that branch cash book plus period
-   VietQR inflows, not the company bank balance. Then
+   bank ledger); single-branch scope shows that branch cash book plus the company
+   bank ledger (not split by branch; period VietQR belongs on revenue reports,
+   not on `Tài sản`). Then
    **`Tổng tiền + Tồn kho + Thiết bị = Tổng giá trị`**. Inventory term only with
    valuation permission. Funds not opened → do not invent the total.
    **`Chi phí ban đầu`** (`capital`+`construction`+`deposit`) stays outside that
@@ -268,7 +269,7 @@ below-criteria tools → expense/allocate; period consumables → expense).
 ## Current Gaps
 
 - `/finance/expenses` is operating + opening-capital ledger, not a statutory journal. Rows lead with spend purpose; `q` searches note/vendor and `kind` slices operating vs startup (`capital` / `construction` / `deposit`). Deductible VAT / equipment value / period close stay blocked (D020).
-- Period-close readiness (`get_finance_period_close_readiness`) is read-only advisory; `close_period_soft`/`close_period_hard` and the `auto_close_periods` cron stay unconditional until an owner-approved follow-up gates them.
+- Period-close readiness (`get_finance_period_close_readiness`) is read-only advisory; missing operating expense rows are reported as warnings rather than blockers because a 0 VND period total is valid in operations. `close_period_soft`/`close_period_hard` and the `auto_close_periods` cron stay unconditional until an owner-approved follow-up gates them.
 
 ## Source Files
 

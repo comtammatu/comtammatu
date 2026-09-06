@@ -319,6 +319,7 @@ export const finance = {
       readinessLabel: "Sức khoẻ chốt sổ",
       readinessValue: (blockers: string, warnings: string) =>
         `${blockers} chặn · ${warnings} cảnh báo`,
+      unknownFinding: "Điểm cần kiểm tra",
       readinessCodes: {
         valuation_inactive: "Định giá chưa hoạt động",
         valuation_not_reconciled: "Đối soát định giá lệch",
