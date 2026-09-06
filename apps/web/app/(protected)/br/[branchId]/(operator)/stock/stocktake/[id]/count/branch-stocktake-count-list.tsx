@@ -155,6 +155,7 @@ export function BranchStocktakeCountList({
             <div key={line.ingredientId} className="flex flex-col gap-2">
               <Item
                 variant="outline"
+                className="min-h-14 items-center p-3 touch-manipulation cursor-pointer bg-card hover:bg-muted/30 transition-colors"
                 render={
                   <button
                     type="button"

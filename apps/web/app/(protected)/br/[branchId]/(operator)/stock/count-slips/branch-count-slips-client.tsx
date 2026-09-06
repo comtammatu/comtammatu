@@ -614,7 +614,7 @@ export function BranchCountSlipsClient({
         </Item>
       </div>
 
-      <InputGroup size="field" className="w-full bg-card">
+      <InputGroup size="touch" className="w-full bg-card">
         <InputGroupAddon align="inline-start">
           <IconSearch className="size-4 text-muted-foreground" />
         </InputGroupAddon>
@@ -1124,6 +1124,7 @@ function CountSlipLineItem({
           <div className="flex min-w-0 items-center gap-1.5 flex-wrap">
             {selecting ? (
               <Checkbox
+                size="touch"
                 checked={selected}
                 onCheckedChange={onSelectedChange}
                 aria-label={`Chọn ${line.ingredientName} để đếm lại`}

@@ -136,7 +136,7 @@ export function BranchStocktakeDetailClient({
         description={stocktakeCopy.detail.cancelledDescription}
       />
     ) : session.status === "completed" ? (
-      <ItemGroup className="gap-2" role="list">
+      <ItemGroup className="grid gap-2 lg:grid-cols-2" role="list">
         {lines.map((line) => {
           const tone = getBranchStocktakeVarianceTone(line);
           const variance = line.variance ?? 0;
@@ -191,7 +191,7 @@ export function BranchStocktakeDetailClient({
             description={blockedReason}
           />
         ) : null}
-        <ItemGroup className="gap-2" role="list">
+        <ItemGroup className="grid gap-2 lg:grid-cols-2" role="list">
           {lines.map((line) => (
             <div key={line.id} role="listitem">
               <Item variant="outline" className="min-h-16 touch-manipulation">

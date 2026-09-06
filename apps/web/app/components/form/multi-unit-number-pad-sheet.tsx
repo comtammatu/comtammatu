@@ -7,6 +7,10 @@ import {
   parseVietnameseNumericInput,
 } from "@comtammatu/shared/format";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 import { AppDrawer } from "@/components/surface/app-drawer";
 import {
   NumberPadGrid,
@@ -40,6 +44,8 @@ export function MultiUnitNumberPadSheet({
   confirmLabel = ACTIONS_VI.confirm,
   allowDecimal = true,
 }: MultiUnitNumberPadSheetProps) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   // Sort ladder descending
   const ladder = React.useMemo(() => {
     return [...units].sort((a, b) => b.toBaseFactor - a.toBaseFactor);
@@ -124,9 +130,9 @@ export function MultiUnitNumberPadSheet({
           <Button
             type="button"
             variant="ghost"
-            size="sm"
+            size={isTouchLayout ? "touch" : "sm"}
             onClick={handleClearAll}
-            className="h-7 text-xs text-muted-foreground"
+            className="text-xs text-muted-foreground"
           >
             {ACTIONS_VI.reset}
           </Button>
@@ -135,7 +141,7 @@ export function MultiUnitNumberPadSheet({
       footer={
         <Button
           type="button"
-          size="default"
+          size={isTouchLayout ? "touch" : "default"}
           className="w-full text-base font-semibold"
           onClick={handleConfirm}
         >
@@ -156,9 +162,9 @@ export function MultiUnitNumberPadSheet({
                   key={u.unitId}
                   type="button"
                   variant={isSelected ? "default" : "outline"}
-                  size="sm"
+                  size={isTouchLayout ? "touch" : "sm"}
                   onClick={() => setActiveUnitId(u.unitId)}
-                  className="gap-1 text-xs font-medium"
+                  className="gap-1 px-3 text-xs font-semibold"
                 >
                   <span>{u.label || u.code}</span>
                   {buf ? (

@@ -293,10 +293,12 @@ export function BranchWasteCreateClient({
                   <Item
                     key={line.uid}
                     variant="outline"
-                    size="sm"
                     render={<button type="button" />}
                     onClick={() => setEditingUid(line.uid)}
-                    className={cn(isShortage && "border-destructive")}
+                    className={cn(
+                      "min-h-12 cursor-pointer p-3",
+                      isShortage && "border-destructive",
+                    )}
                     data-shortage={isShortage ? "true" : undefined}
                   >
                     <ItemContent>
