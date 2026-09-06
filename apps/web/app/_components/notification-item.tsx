@@ -241,59 +241,120 @@ export function NotificationItem({ item, onRead, onNavigate }: Props) {
     onRead,
   });
 
-  const content = (
-    <>
+  const row = (
+    <Item
+      variant="outline"
+      className={cn(
+        "group relative items-start gap-3 border-l-[3px] bg-card p-3 transition-colors",
+        unread ? tone.rail : "border-l-transparent",
+        unread
+          ? "bg-card hover:bg-muted/50"
+          : "opacity-85 hover:bg-muted/50 hover:opacity-100",
+      )}
+    >
       <ItemMedia
         variant="icon"
         className={cn(
-          "size-10 rounded-md",
+          "size-8 shrink-0 rounded-md mt-0.5",
           unread ? tone.icon : "bg-muted text-muted-foreground",
         )}
         aria-hidden
       >
         <Icon className="size-4" />
       </ItemMedia>
-      <ItemContent className="gap-2">
-        <ItemHeader className="items-start gap-3">
-          <ItemTitle
-            size="heading"
-            className={cn(
-              "min-w-0 flex-1 whitespace-normal",
-              unread ? "text-foreground" : "font-medium text-foreground/80",
-            )}
-          >
-            <span className="line-clamp-2">{item.title}</span>
+      <ItemContent className="min-w-0 flex-1 gap-1.5">
+        <ItemHeader className="items-start justify-between gap-2">
+          <div className="flex min-w-0 flex-1 items-start gap-1.5">
             {unread ? (
               <span
-                className="inline-block size-2 shrink-0 rounded-full bg-primary"
+                className="mt-1.5 inline-block size-2 shrink-0 rounded-full bg-primary"
                 aria-label={messages.notifications.filters.unread}
               />
             ) : null}
-          </ItemTitle>
-          <time
-            dateTime={item.created_at}
-            className="shrink-0 pt-0.5 text-2xs text-muted-foreground tabular-nums"
-          >
-            {relativeTime(item.created_at)}
-          </time>
+            <ItemTitle
+              size="heading"
+              className={cn(
+                "min-w-0 flex-1 whitespace-normal",
+                unread ? "text-foreground" : "font-medium text-foreground/80",
+              )}
+            >
+              {item.action_url != null ? (
+                <Link
+                  href={item.action_url}
+                  className="line-clamp-2 hover:underline after:absolute after:inset-0 after:content-['']"
+                  onClick={() => {
+                    if (unread) onRead(item.id, { quiet: true });
+                    onNavigate?.();
+                  }}
+                >
+                  {item.title}
+                </Link>
+              ) : (
+                <span
+                  role="button"
+                  tabIndex={0}
+                  className="line-clamp-2 cursor-pointer after:absolute after:inset-0 after:content-['']"
+                  onClick={() => {
+                    if (unread) onRead(item.id);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      if (unread) onRead(item.id);
+                    }
+                  }}
+                >
+                  {item.title}
+                </span>
+              )}
+            </ItemTitle>
+          </div>
+          <ItemActions className="relative z-10 shrink-0 items-center gap-1">
+            <time
+              dateTime={item.created_at}
+              className="mr-0.5 text-2xs text-muted-foreground tabular-nums"
+            >
+              {relativeTime(item.created_at)}
+            </time>
+            {unread ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                className="text-muted-foreground hover:text-foreground"
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onRead(item.id);
+                }}
+                aria-label={messages.notifications.markRead}
+                title={messages.notifications.markRead}
+              >
+                <IconCircleCheck className="size-3.5" />
+              </Button>
+            ) : null}
+            {actions.length > 0 ? (
+              <RowActionsMenu items={actions} triggerSize="icon-xs" />
+            ) : null}
+          </ItemActions>
         </ItemHeader>
         {item.body ? (
           <ItemDescription className="line-clamp-2">
             {item.body}
           </ItemDescription>
         ) : null}
-        <ItemFooter className="mt-0.5 gap-2">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <ItemFooter className="mt-1 flex flex-wrap items-center justify-between gap-2 pt-0.5">
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
             {showSeverityBadge ? (
               <Badge variant={tone.badge}>{tone.label}</Badge>
             ) : null}
             <Badge variant="outline">{kindLabel}</Badge>
           </div>
-          <div className="flex shrink-0 flex-col items-end gap-1">
+          <div className="relative z-10 flex shrink-0 items-center gap-2">
             {cta ? (
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-primary">
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-primary group-hover:underline">
                 {cta}
-                <IconChevronRight className="size-3.5" aria-hidden />
+                <IconChevronRight className="size-3 transition-transform group-hover:translate-x-0.5" aria-hidden />
               </span>
             ) : null}
             {item.history_url &&
@@ -302,7 +363,7 @@ export function NotificationItem({ item, onRead, onNavigate }: Props) {
                 type="button"
                 variant="link"
                 size="sm"
-                className="h-auto p-0 text-2xs text-muted-foreground"
+                className="h-auto p-0 text-2xs text-muted-foreground hover:text-foreground"
                 onClick={(event) => {
                   event.preventDefault();
                   event.stopPropagation();
@@ -315,80 +376,7 @@ export function NotificationItem({ item, onRead, onNavigate }: Props) {
           </div>
         </ItemFooter>
       </ItemContent>
-    </>
-  );
-
-  const itemClassName = cn(
-    "items-start gap-3 border-l-[3px] bg-card py-3 transition-colors",
-    unread ? tone.rail : "border-l-transparent",
-    unread
-      ? "hover:bg-primary/10"
-      : "opacity-90 hover:bg-muted/50 hover:opacity-100",
-  );
-
-  const primary =
-    item.action_url != null ? (
-      <Item
-        variant="outline"
-        className={cn(itemClassName, "min-w-0 flex-1")}
-        render={
-          <Link
-            href={item.action_url}
-            onClick={() => {
-              if (unread) onRead(item.id, { quiet: true });
-              onNavigate?.();
-            }}
-          />
-        }
-      >
-        {content}
-      </Item>
-    ) : (
-      <Item
-        variant="outline"
-        className={cn(itemClassName, "min-w-0 flex-1 cursor-pointer")}
-        role="button"
-        tabIndex={0}
-        onClick={() => {
-          if (unread) onRead(item.id);
-        }}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            if (unread) onRead(item.id);
-          }
-        }}
-      >
-        {content}
-      </Item>
-    );
-
-  const row = (
-    <div className="flex items-stretch gap-2">
-      {primary}
-      <ItemActions className="shrink-0 items-start gap-1 pt-2">
-        {unread ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              onRead(item.id);
-            }}
-            aria-label={messages.notifications.markRead}
-            title={messages.notifications.markRead}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <IconCircleCheck className="size-3.5" />
-          </Button>
-        ) : null}
-        {actions.length > 0 ? (
-          <RowActionsMenu items={actions} triggerSize="icon-sm" />
-        ) : null}
-      </ItemActions>
-    </div>
+    </Item>
   );
 
   if (actions.length === 0) return row;
