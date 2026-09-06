@@ -16,3 +16,4 @@ export * from "./document-form-frame";
 export * from "./description-list";
 export * from "./kpi-row";
 export * from "./operational";
+export * from "./link-card";

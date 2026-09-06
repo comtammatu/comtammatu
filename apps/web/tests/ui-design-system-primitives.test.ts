@@ -10,6 +10,10 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { BreadcrumbLink } from "@comtammatu/ui/components/breadcrumb";
 import { Button } from "@comtammatu/ui/components/button";
 import {
+  AppLinkCard,
+  LinkCardGrid,
+} from "@comtammatu/ui/surface/link-card";
+import {
   FormGrid,
   FormRow,
   FormSection,
@@ -704,4 +708,38 @@ test("form grid primitives render responsive columns, spans, and section metadat
   assert.match(gridMarkup, /data-slot="form-section"/);
   assert.match(gridMarkup, /Section 1/);
   assert.match(gridMarkup, /Desc/);
+});
+
+test("app link card primitives render cards, icons, tones, and grids", () => {
+  const linkCardSource = read("packages/ui/src/surface/link-card.tsx");
+  const adapterSource = read(
+    "apps/web/app/components/surface/app-link-card.tsx",
+  );
+
+  assert.match(adapterSource, /from "@comtammatu\/ui\/surface\/link-card"/);
+  assert.match(linkCardSource, /data-slot="app-link-card"/);
+  assert.match(linkCardSource, /data-slot="link-card-grid"/);
+
+  const cardMarkup = renderToStaticMarkup(
+    createElement(
+      LinkCardGrid,
+      null,
+      createElement(AppLinkCard, {
+        href: "/test",
+        title: "Test Hub",
+        description: "Hub description",
+        icon: createElement("span", null, "Icon"),
+        badge: "New",
+        ctaLabel: "Khám phá",
+      }),
+    ),
+  );
+
+  assert.match(cardMarkup, /data-slot="link-card-grid"/);
+  assert.match(cardMarkup, /data-slot="app-link-card"/);
+  assert.match(cardMarkup, /Test Hub/);
+  assert.match(cardMarkup, /Hub description/);
+  assert.match(cardMarkup, /New/);
+  assert.match(cardMarkup, /Khám phá/);
+  assert.match(cardMarkup, /bg-primary\/10/);
 });
