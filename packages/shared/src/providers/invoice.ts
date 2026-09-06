@@ -31,7 +31,7 @@ export const BUYER_NOT_GET_INVOICE_NAME = "Bán cho người tiêu dùng";
 export type InvoiceBuyerKind = "consumer" | "individual" | "business";
 
 /**
- * Replacement context per TT 32/2025 + NĐ 254/2026 (Path C). When present in
+ * Replacement context per TT 91/2026 + NĐ 254/2026. When present in
  * InvoiceRequest, provider MUST send the call as `adjustmentType=3`
  * (HĐ thay thế) and inject original-invoice cross-references in
  * `generalInvoiceInfo` per Viettel HDSD §III.2.
@@ -51,7 +51,7 @@ export interface InvoiceReplacementContext {
   originalTemplateCode: string;
   /** Lý do sai sót — ≤255 chars (Sinvoice `adjustedNote`). */
   reason: string;
-  /** Văn bản thỏa thuận text — ≤225 chars (Sinvoice `additionalReferenceDesc`). REQUIRED. */
+  /** Provider reference text — ≤225 chars (`additionalReferenceDesc`). */
   agreementRef: string;
   /** ISO8601 timestamp of agreement. Provider converts to epoch ms. */
   agreementDate: string;

@@ -23,6 +23,7 @@ export interface InvoiceRow {
   status: string;
   buyer_name: string | null;
   buyer_tax_code: string | null;
+  buyer_address: string | null;
   buyer_email: string | null;
   subtotal: number;
   vat_rate: number;
@@ -31,6 +32,12 @@ export interface InvoiceRow {
   issued_at: string | null;
   cancelled_at: string | null;
   created_at: string;
+  replaced_for: number | null;
+  replaced_by: number | null;
+  replacement_original_invoice_number: string | null;
+  replacement_reason: string | null;
+  replacement_agreement_ref: string | null;
+  replacement_agreement_date: string | null;
   orders: { order_number: string } | null;
 }
 

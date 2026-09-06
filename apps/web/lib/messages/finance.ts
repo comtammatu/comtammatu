@@ -73,12 +73,14 @@ export const finance = {
     invoiceNumberUnavailable: "Chưa cấp số hóa đơn",
     invoiceCreated: "Đã tạo",
     invoiceNotCreated: "Chưa tạo",
-    replaceSuccess: (number: string) => `Đã tạo HĐ thay thế ${number}`,
-    replaceSuccessWithoutNumber: "Đã tạo HĐ thay thế.",
+    replaceSuccess: (number: string) =>
+      `Đã ghi lý do và lập HĐ thay thế ${number}.`,
+    replaceSuccessWithoutNumber:
+      "Đã ghi lý do và đưa HĐ thay thế vào hàng chờ phát hành.",
     cancelDescription: (number: string, _hint: string) =>
       `Hủy hóa đơn ${number}? Lý do hủy sẽ được lưu vào hồ sơ.`,
     replaceDescription: (number: string) =>
-      `Tạo HĐ thay thế cho ${number}; HĐ gốc chuyển sang trạng thái Đã thay thế.`,
+      `Lập HĐ thay thế cho ${number}; HĐ gốc chỉ đổi trạng thái sau khi Viettel chấp nhận.`,
     reconcileTitle: "Đối soát HĐĐT đã phát hành",
     reconcileDescription:
       "Chỉ ghi số hóa đơn sau khi đã đối chiếu trên Viettel.",

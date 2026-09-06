@@ -3,8 +3,8 @@ export const FINANCE_VI = {
   replaceFailed: "Không thể thay thế hóa đơn",
   cancelFailed: "Không thể hủy hóa đơn",
   cancelled: "Đã hủy hóa đơn",
-  replaceInvoice: "Thay thế hóa đơn",
-  replace: "Thay thế",
+  replaceInvoice: "Lập hóa đơn thay thế",
+  replace: "Lập HĐ thay thế",
   cancelInvoice: "Hủy hóa đơn",
   invoiceNumberCol: "Số HĐ",
   buyer: "Người mua",
@@ -30,8 +30,8 @@ export const FINANCE_VI = {
   buyerKindIndividual: "Cá nhân",
   taxCodeFormatError: "MST phải có dạng 10 số hoặc 10-3 số",
   emailFormatError: "Email không hợp lệ",
-  replaceConfirmTitle: "Thay thế hóa đơn",
-  createReplacementInvoice: "Tạo HĐ thay thế",
+  replaceConfirmTitle: "Lập hóa đơn thay thế",
+  createReplacementInvoice: "Lập HĐ thay thế",
 } as const;
 
 export type FinanceKey = keyof typeof FINANCE_VI;

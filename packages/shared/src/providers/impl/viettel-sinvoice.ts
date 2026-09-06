@@ -771,7 +771,7 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
         r.agreementDate,
       );
       generalInvoiceInfo["invoiceNote"] =
-        `Thay thế hóa đơn số ${r.originalInvoiceNumber}`;
+        `Hóa đơn này thay thế hóa đơn điện tử số ${r.originalInvoiceNumber}. Lý do: ${r.reason}`;
     }
 
     const buyerInfo = resolveSinvoiceBuyerInfo(request);

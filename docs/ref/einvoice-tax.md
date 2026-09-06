@@ -25,6 +25,19 @@ hạch toán theo chính sách kế toán đã chọn.
 Khung từ 01/07/2026: Luật 108/2025, NĐ 252/2026, NĐ 254/2026, TT 90/2026, TT 91/2026 (bán trực tiếp NTD kết nối CQT).
 Flow: Payment hoàn tất → snapshot bất biến (seller, branch, buyer, dòng món, thuế, tổng, paid_at) → phát hành/đối soát qua provider → hủy/điều chỉnh/thay thế bằng workflow riêng.
 
+### Lập hóa đơn thay thế
+
+- HĐĐT từ máy tính tiền có ký hiệu chứa `M`; khi hóa đơn đã ghi người mua mặc định
+  nhưng giao dịch thực tế cần ghi đúng doanh nghiệp, dùng **Lập hóa đơn thay thế**.
+- Người lập phải ghi lý do thực tế từ 20–255 ký tự. Má Tư lưu lý do cùng số HĐ
+  gốc và hồ sơ tham chiếu, gửi sang S-Invoice ở `adjustedNote`, đồng thời đưa lý
+  do vào ghi chú hiển thị của hóa đơn thay thế.
+- Sau khi xác nhận, bản thay thế vào hàng chờ phát hành. HĐ gốc chỉ chuyển sang
+  **Đã thay thế** khi Viettel/CQT đã chấp nhận bản thay thế; không đổi trạng thái
+  trước để tránh hồ sơ hiển thị sai.
+- Dòng hàng, giá trị và thuế lấy từ snapshot bất biến của HĐ gốc nếu các nội dung
+  đó không sai. Giữ yêu cầu của người mua và chứng cứ giao dịch trong hồ sơ.
+
 HĐ đã phát hành không dựng lại từ menu hiện tại. Cửa sổ QR: trước 22:00 `min(paid_at + 2 giờ, 23:55)`; từ 22:00 phát hành ngay. `transactionUuid` = `tax_invoices.id`.
 **Dòng bắt buộc:** tên HH/DV thực, ĐVT, SL, đơn giá, thuế suất, tổng trước thuế/VAT/thanh toán, snapshot seller/buyer, thời điểm, provider ref, số HĐ, mã CQT. VND không thập phân: bóc NET nguyên đồng, VAT = GROSS − NET, lệch ±1₫ hấp thụ vào dòng khác; tổng HĐ = `orders.total_amount`.
 **Chiết khấu (ADR 0013):** giá POS gồm VAT; CK trừ trên GROSS rồi bóc NET, nhúng vào đơn giá/thành tiền sau giảm (không dòng CK riêng). CK món chỉ VND; CK đơn `%` materialize VND rồi trừ rẻ→đắt; dòng 0đ omit. `total_amount = 0` → `not_required`. Phụ phí > 0 cộng vào dòng món. ĐVT: `Phần`/`Ly`/`Lon`/`Chai`/`Tô`/`Cái`/`Bộ`.

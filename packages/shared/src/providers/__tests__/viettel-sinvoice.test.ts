@@ -311,7 +311,7 @@ test("createInvoice posts company buyer only on buyerLegalName", async () => {
   }
 });
 
-test("replacement keeps template-1 original references", async () => {
+test("replacement sends the reason and complete original references", async () => {
   const originalFetch = globalThis.fetch;
   let body: { generalInvoiceInfo: Record<string, unknown> } | undefined;
   globalThis.fetch = (async (input, init) => {
@@ -334,8 +334,26 @@ test("replacement keeps template-1 original references", async () => {
     };
     await provider().createInvoice(replacement);
     assert.equal(body?.generalInvoiceInfo["adjustmentType"], "3");
+    assert.equal(
+      body?.generalInvoiceInfo["adjustedNote"],
+      "Điều chỉnh thông tin người mua",
+    );
+    assert.match(
+      String(body?.generalInvoiceInfo["invoiceNote"]),
+      /Lý do: Điều chỉnh thông tin người mua/,
+    );
+    assert.equal(body?.generalInvoiceInfo["originalInvoiceId"], "00000001");
+    assert.equal(
+      body?.generalInvoiceInfo["originalInvoiceIssueDate"],
+      Date.parse("2026-07-27T08:00:00.000Z"),
+    );
     assert.equal(body?.generalInvoiceInfo["originalInvoiceType"], "1");
     assert.equal(body?.generalInvoiceInfo["originalTemplateCode"], "1");
+    assert.equal(body?.generalInvoiceInfo["additionalReferenceDesc"], "BB-01");
+    assert.equal(
+      body?.generalInvoiceInfo["additionalReferenceDate"],
+      Date.parse("2026-07-27T09:00:00.000Z"),
+    );
   } finally {
     globalThis.fetch = originalFetch;
   }

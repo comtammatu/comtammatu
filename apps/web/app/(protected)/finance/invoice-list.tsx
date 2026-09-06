@@ -66,7 +66,11 @@ import {
 } from "@comtammatu/ui/components/item";
 import { BUYER_KIND_TOGGLE_ITEM_CLASS } from "@lib/hddt/buyer-kind-ui";
 import { DescriptionList } from "@/components/surface";
-import { formatVNDateTime, getVNDateString } from "@comtammatu/shared/time";
+import {
+  formatVNDate,
+  formatVNDateTime,
+  getVNDateString,
+} from "@comtammatu/shared/time";
 
 import {
   FINANCE_VI,
@@ -236,7 +240,7 @@ export function InvoiceList({
       buyerKind: replaceTarget?.buyer_tax_code ? "business" : "individual",
       buyerName: replaceTarget?.buyer_name ?? "",
       buyerTaxCode: replaceTarget?.buyer_tax_code ?? "",
-      buyerAddress: "",
+      buyerAddress: replaceTarget?.buyer_address ?? "",
     }),
     [replaceTarget],
   );
@@ -269,11 +273,12 @@ export function InvoiceList({
     });
 
     if (result.success) {
-      setInvoices((prev) =>
-        prev.map((inv) =>
-          inv.id === oldId ? { ...inv, status: "replaced" } : inv,
-        ),
-      );
+      const refreshed = await fetchTaxInvoicesPage({ branchId, queue });
+      if (refreshed.success && refreshed.data) {
+        setInvoices(refreshed.data.items as InvoiceRow[]);
+        setHasMore(refreshed.data.hasMore);
+        setNextCursor(refreshed.data.nextCursor);
+      }
     }
 
     return result;
@@ -644,6 +649,32 @@ export function InvoiceList({
       render: (inv) => <StatusBadge domain="tax-invoice" value={inv.status} />,
     },
     {
+      key: "replacement_reason",
+      header: "Lý do thay thế",
+      className: "max-w-xs",
+      sortable: true,
+      sortValue: (inv) => inv.replacement_reason ?? "",
+      render: (inv) =>
+        inv.replaced_for ? (
+          <div className="flex min-w-0 flex-col gap-1 text-sm">
+            <p className="break-words">
+              {inv.replacement_reason ?? "Chưa ghi nhận lý do"}
+            </p>
+            <p className="break-words text-xs text-muted-foreground">
+              HĐ gốc: {inv.replacement_original_invoice_number ?? "—"}
+              {inv.replacement_agreement_ref
+                ? ` · ${inv.replacement_agreement_ref}`
+                : ""}
+              {inv.replacement_agreement_date
+                ? ` · ${formatVNDate(inv.replacement_agreement_date)}`
+                : ""}
+            </p>
+          </div>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+    },
+    {
       key: "time",
       header: FINANCE_VI.timeCol,
       className: "text-sm text-muted-foreground",
@@ -820,6 +851,30 @@ export function InvoiceList({
                         </span>
                       ),
                     },
+                    ...(inv.replaced_for
+                      ? [
+                          {
+                            term: "Lý do thay thế",
+                            description: (
+                              <div className="min-w-0">
+                                <p className="break-words">
+                                  {inv.replacement_reason ??
+                                    "Chưa ghi nhận lý do"}
+                                </p>
+                                <p className="mt-1 break-words text-2xs text-muted-foreground">
+                                  HĐ gốc: {inv.replacement_original_invoice_number ?? "—"}
+                                  {inv.replacement_agreement_ref
+                                    ? ` · ${inv.replacement_agreement_ref}`
+                                    : ""}
+                                  {inv.replacement_agreement_date
+                                    ? ` · ${formatVNDate(inv.replacement_agreement_date)}`
+                                    : ""}
+                                </p>
+                              </div>
+                            ),
+                          },
+                        ]
+                      : []),
                   ]}
                 />
               </ItemContent>
