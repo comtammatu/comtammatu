@@ -95,7 +95,7 @@ const CompactItemRow = memo(function CompactItemRow({
       data-testid={`kds-heatmap-item-${String(item.id)}`}
       data-kds-effect={rowEffect ?? undefined}
       className={cn(
-        "grid min-w-0 grid-cols-[2.75rem_minmax(0,1fr)_auto] items-start gap-x-2 gap-y-1 rounded-none border-0 p-0 py-2 first:pt-0 last:pb-0 xl:grid-cols-[3.25rem_minmax(0,1fr)_auto] xl:py-2 xl:first:pt-0 xl:last:pb-0",
+        "grid min-w-0 grid-cols-[2.75rem_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 rounded-none border-0 p-0 py-2 first:pt-0 last:pb-0 min-h-12 xl:grid-cols-[3.25rem_minmax(0,1fr)_auto] xl:py-2 xl:first:pt-0 xl:last:pb-0",
         getItemRowStatusClass(status),
         getKdsRowEffectClass(rowEffect),
       )}
@@ -219,7 +219,7 @@ const CompactOrphanRow = memo(function CompactOrphanRow({
     <Item
       data-kds-effect={rowEffect ?? undefined}
       className={cn(
-        "grid min-w-0 grid-cols-[minmax(0,1fr)] items-start gap-2 rounded-none border-0 p-0 py-2 first:pt-0 last:pb-0 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center xl:gap-2 xl:py-2 xl:first:pt-0 xl:last:pb-0",
+        "grid min-w-0 grid-cols-[minmax(0,1fr)] items-start gap-2 rounded-none border-0 p-0 py-2 first:pt-0 last:pb-0 min-h-12 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center xl:gap-2 xl:py-2 xl:first:pt-0 xl:last:pb-0",
         getItemRowStatusClass(ticket.status),
         getKdsRowEffectClass(rowEffect),
       )}

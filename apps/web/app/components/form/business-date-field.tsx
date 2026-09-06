@@ -68,6 +68,7 @@ export interface BusinessDatePickerProps {
   disabled?: boolean;
   className?: string;
   id?: string;
+  size?: "field" | "touch";
   "aria-label"?: string;
   "aria-invalid"?: boolean;
   "aria-describedby"?: string;
@@ -96,6 +97,7 @@ export function BusinessDatePicker({
   disabled,
   className,
   id,
+  size = "field",
   "aria-label": ariaLabel,
   "aria-invalid": ariaInvalid,
   "aria-describedby": ariaDescribedBy,
@@ -113,7 +115,7 @@ export function BusinessDatePicker({
             id={id}
             type="button"
             variant="outline"
-            size="field"
+            size={size}
             aria-label={ariaLabel}
             aria-invalid={ariaInvalid}
             aria-describedby={ariaDescribedBy}
