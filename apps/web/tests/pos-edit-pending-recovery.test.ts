@@ -57,3 +57,19 @@ test("POS closes the stale editor and refreshes the reopened order detail", () =
   assert.match(recovery, /void refreshOperational\(\);/);
   assert.match(recovery, /closeCustomizerAndMaybeReopenDetail\(\);/);
 });
+
+test("terminal and paid order errors recover operational state and close editor", () => {
+  const source = readRepo(
+    "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx",
+  );
+  const recoveryStart = source.indexOf(
+    "r.errorCode === POS_ERROR_CODES.ITEM_NOT_EDITABLE",
+  );
+  const recoveryEnd = source.indexOf("} else {", recoveryStart);
+  const recovery = source.slice(recoveryStart, recoveryEnd);
+
+  assert.match(recovery, /Đơn đã đóng, không thể sửa món/);
+  assert.match(recovery, /Đơn đã thanh toán, không thể sửa món/);
+  assert.match(recovery, /void refreshOperational\(\);/);
+  assert.match(recovery, /closeCustomizerAndMaybeReopenDetail\(\);/);
+});

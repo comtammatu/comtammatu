@@ -1079,7 +1079,9 @@ export function PosDesktopInner({
             // snapshot so cashier sees the freshly-edited order.
             closeCustomizerAndMaybeReopenDetail();
           } else if (
-            r.errorCode === POS_ERROR_CODES.ITEM_NOT_EDITABLE
+            r.errorCode === POS_ERROR_CODES.ITEM_NOT_EDITABLE ||
+            r.error === "Đơn đã đóng, không thể sửa món." ||
+            r.error === "Đơn đã thanh toán, không thể sửa món."
           ) {
             toast.error(r.error ?? "Không thể sửa món.");
             void refreshOperational();

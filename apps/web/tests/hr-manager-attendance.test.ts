@@ -133,6 +133,11 @@ test("Company HR attendance is a dedicated clock and approval surface", () => {
     /supabase\.rpc\(\s*"force_close_stale_attendance"/,
     "Force-close action should use the guarded stale attendance RPC",
   );
+  assert.match(
+    hrActionsSource,
+    /cannot_force_close_own_attendance[\s\S]*Không thể tự đóng ca của chính mình/,
+    "Force-close error mapper must provide a dedicated message when attempting to close own attendance",
+  );
   assert.doesNotMatch(
     hrActionsSource,
     /\.from\("attendance_records"\)[\s\S]*\.update\(\{[\s\S]*check_out: checkOutTime/,

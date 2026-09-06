@@ -1665,11 +1665,13 @@ function mapForceCloseAttendanceError(message: string | undefined): string {
   if (message?.includes("stale_attendance_request_not_found")) {
     return "Ca chưa quá giờ kết thúc hoặc đã kết ca.";
   }
+  if (message?.includes("cannot_force_close_own_attendance")) {
+    return "Không thể tự đóng ca của chính mình. Vui lòng nhờ quản lý khác đóng ca giúp.";
+  }
   if (
     message?.includes("forbidden_checkout_approval") ||
     message?.includes("not_authenticated_or_mismatch") ||
     message?.includes("force_close_scope_mismatch") ||
-    message?.includes("cannot_force_close_own_attendance") ||
     message?.includes("force_close_hierarchy_not_allowed") ||
     message?.includes("force_close_approver_not_allowed")
   ) {
