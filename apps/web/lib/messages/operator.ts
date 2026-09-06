@@ -255,6 +255,7 @@ export const operator = {
     attendanceWorking: "Đang làm",
     attendanceCheckoutPending: "Chờ duyệt kết ca",
     attendanceDone: "Đã kết ca",
+    attendancePastEnd: "Quá giờ ca",
     checklistUnconfigured: "Chưa cấu hình việc",
     checklistNoTasks: "Không có việc bắt buộc",
     checklistProgress: (done: number, total: number) =>

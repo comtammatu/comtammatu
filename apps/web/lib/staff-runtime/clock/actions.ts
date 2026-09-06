@@ -15,7 +15,10 @@ import { messages } from "@lib/messages";
 import { getAuthContext } from "@/_lib/auth";
 import { resolveClockInGate } from "../_lib/default-shift";
 import { getClockInBlockedMessage } from "../_lib/clock-in-copy";
-import { markCompletedCountDutyChecklistItems } from "../_lib/count-duty";
+import {
+  isShiftCountDutyItem,
+  markCompletedCountDutyChecklistItems,
+} from "../_lib/count-duty";
 import { getEmployeeContext } from "../_lib/staff-runtime-context";
 import { getTodayWorkState } from "../_lib/today-work-state";
 
@@ -638,6 +641,17 @@ export async function requestCheckoutApproval(
 
   const workState = await getTodayWorkState();
   if (workState.attendance?.id === record.id) {
+    const pendingCountDuty = workState.checklist.items.find(
+      (item) => isShiftCountDutyItem(item) && !item.done,
+    );
+    if (pendingCountDuty) {
+      return {
+        success: false,
+        error:
+          "Bạn chưa hoàn thành nộp phiếu đếm tồn của ca. Vui lòng nộp phiếu kiểm kê trước khi xin kết ca.",
+      };
+    }
+
     await markCompletedCountDutyChecklistItems({
       service,
       tenantId: ctx.claims.tenant_id,

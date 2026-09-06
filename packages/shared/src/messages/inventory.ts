@@ -479,7 +479,7 @@ export const INVENTORY_VI = {
   countSlipRecoverWasteTitle: "Hoàn tất xuất hủy từ phiếu đếm?",
   countSlipRecoverWasteHint:
     "Phiếu đếm đã duyệt nhưng chưa có phiếu xuất hủy. Thêm ảnh để hoàn tất và cập nhật tồn kho.",
-  recountReasonRequired: "Nhập lý do cần đếm lại.",
+  recountReasonRequired: "Nhập lý do cần đếm lại (tối thiểu 10 ký tự).",
   recountRequestFailed: "Không gửi được yêu cầu đếm lại.",
   recountRequested: "Đã yêu cầu nhân viên đếm lại.",
   recountConfirmTitle: "Xác nhận yêu cầu đếm lại",

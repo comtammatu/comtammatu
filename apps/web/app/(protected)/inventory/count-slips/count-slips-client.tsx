@@ -794,7 +794,7 @@ function CountSlipReviewDialog({
       toast.error("Chọn ít nhất một nguyên liệu cần đếm lại.");
       return;
     }
-    if (note.trim().length < 3) {
+    if (note.trim().length < 10) {
       toast.error(INVENTORY_VI.recountReasonRequired);
       return;
     }

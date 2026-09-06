@@ -177,6 +177,15 @@ function AttendanceBadge({
       />
     );
   }
+  if (isPastShiftEnd(shift)) {
+    return (
+      <StatusBadge
+        domain="attendance"
+        value="stale_open"
+        label={copy.attendancePastEnd}
+      />
+    );
+  }
   return (
     <StatusBadge
       domain="attendance"

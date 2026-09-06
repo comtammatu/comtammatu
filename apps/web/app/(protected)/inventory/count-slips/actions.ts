@@ -156,7 +156,7 @@ export async function approveCountSlip(
 const requestRecountSchema = z.object({
   slipId: z.coerce.number().int().positive(),
   lineIds: z.array(z.coerce.number().int().positive()).min(1),
-  note: z.string().trim().min(3).max(1000),
+  note: z.string().trim().min(10, "Nhập lý do cần đếm lại tối thiểu 10 ký tự.").max(1000),
 });
 
 /**
