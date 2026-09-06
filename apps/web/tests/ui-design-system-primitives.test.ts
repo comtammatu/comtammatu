@@ -9,6 +9,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { BreadcrumbLink } from "@comtammatu/ui/components/breadcrumb";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  FormGrid,
+  FormRow,
+  FormSection,
+} from "@comtammatu/ui/components/form-grid";
 import { Item } from "@comtammatu/ui/components/item";
 import {
   InputGroup,
@@ -671,4 +676,32 @@ test("Item content regions can shrink inside responsive card layouts", () => {
     )?.length,
     2,
   );
+});
+
+test("form grid primitives render responsive columns, spans, and section metadata", () => {
+  const formGridSource = read("packages/ui/src/components/form-grid.tsx");
+  const adapterSource = read("apps/web/app/components/form/app-form-grid.tsx");
+
+  assert.match(adapterSource, /from "@comtammatu\/ui\/components\/form-grid"/);
+  assert.match(formGridSource, /data-slot="form-grid"/);
+  assert.match(formGridSource, /data-slot="form-row"/);
+  assert.match(formGridSource, /data-slot="form-section"/);
+
+  const gridMarkup = renderToStaticMarkup(
+    createElement(
+      FormGrid,
+      { columns: 3, density: "compact" },
+      createElement(FormRow, { colSpan: "full" }, "Header"),
+      createElement(FormSection, { title: "Section 1", description: "Desc" }, "Content"),
+    ),
+  );
+
+  assert.match(gridMarkup, /data-slot="form-grid"/);
+  assert.match(gridMarkup, /gap-3/);
+  assert.match(gridMarkup, /sm:grid-cols-3/);
+  assert.match(gridMarkup, /data-slot="form-row"/);
+  assert.match(gridMarkup, /col-span-full/);
+  assert.match(gridMarkup, /data-slot="form-section"/);
+  assert.match(gridMarkup, /Section 1/);
+  assert.match(gridMarkup, /Desc/);
 });

@@ -49,7 +49,7 @@ adapters instead of restyling `Card`, `Empty`, or a page container.
 `breadcrumb`, `button`, `calendar`, `card`, `checkbox`, `collapsible`,
 `combobox`, `compare-chip`, `confirm-dialog`, `context-menu`, `data-table`,
 `data-table-pagination`, `dialog`, `drawer`, `dropdown-menu`, `empty`,
-`field`, `frame`, `input`, `input-group`, `interactive-card`, `item`, `kbd`,
+`field`, `form-grid`, `frame`, `input`, `input-group`, `interactive-card`, `item`, `kbd`,
 `kpi-card`, `label`, `note-callout`, `popover`, `progress`, `radio-group`,
 `reason-confirm-dialog`, `row-actions-menu`, `scroll-area`,
 `section-label`, `select`, `separator`, `sheet`, `skeleton`, `slider`, `sonner`,

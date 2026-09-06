@@ -178,6 +178,13 @@ export const SHARED_COMPONENT_REGISTRY = {
     "raw label and input spacing without field semantics",
     "all structured forms",
   ),
+  "form-grid.tsx": direct(
+    "responsive multi-column form layout for dialogs, sheets, and popups",
+    "FormGrid, FormRow, FormSection",
+    "FieldGroup for simple vertical forms",
+    "ad-hoc grid-cols-1 sm:grid-cols-2 div with mismatched gaps",
+    "quick task create and incident report dialogs",
+  ),
   "frame.tsx": workflowOnly(
     "bounded media or content frame",
     "Frame when the content contract needs a stable frame",
