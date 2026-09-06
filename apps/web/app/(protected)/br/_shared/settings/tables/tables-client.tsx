@@ -62,6 +62,7 @@ export function TablesClient({
   const [selectedBranchId, setSelectedBranchId] = useState<number | null>(
     firstBranch?.id ?? null,
   );
+  const controlSize = embedded ? "touch" : "field";
   const [zoneDialogOpen, setZoneDialogOpen] = useState(false);
   const [tableDialogOpen, setTableDialogOpen] = useState(false);
   const [bulkTableDialogOpen, setBulkTableDialogOpen] = useState(false);
@@ -130,7 +131,11 @@ export function TablesClient({
                 value={selectedBranchId?.toString() ?? ""}
                 onValueChange={(v) => setSelectedBranchId(Number(v))}
               >
-                <SelectTrigger id="branch-select" className="w-full sm:w-60">
+                <SelectTrigger
+                  id="branch-select"
+                  size={controlSize}
+                  className="w-full sm:w-60"
+                >
                   <SelectValue placeholder={BRANCH_VI.select} />
                 </SelectTrigger>
                 <SelectContent>

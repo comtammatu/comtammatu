@@ -160,7 +160,7 @@ export function OperatorOrdersClient({
                 key={order.id}
                 variant="outline"
                 size="sm"
-                className="chrome-tap min-h-14 bg-card text-left"
+                className="chrome-tap min-h-14 touch-manipulation cursor-pointer bg-card text-left hover:bg-muted/30 transition-colors"
                 render={
                   <button
                     type="button"

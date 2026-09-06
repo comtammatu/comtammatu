@@ -611,7 +611,7 @@ function SessionBillsPanel({
                 variant="default"
                 size="sm"
                 render={<button type="button" />}
-                className="cursor-pointer min-h-12 gap-1 rounded-none border-0 bg-card px-3 py-2 text-left hover:bg-muted active:bg-muted"
+                className="cursor-pointer min-h-12 gap-1 rounded-none border-0 bg-card px-3 py-2 text-left hover:bg-muted active:bg-muted touch-manipulation"
                 onClick={() => onOrderSelect(order.id)}
               >
                 <ItemContent>
@@ -797,10 +797,11 @@ function SessionSettlementPanel({
             {(session.cash_difference ?? 0) < 0 ? (
               <Button
                 type="button"
+                size="touch"
                 variant={
                   resolutionType === "staff_repaid" ? "secondary" : "outline"
                 }
-                className="h-auto justify-start whitespace-normal py-3 text-left"
+                className="justify-start whitespace-normal py-3 text-left"
                 onClick={() => setResolutionType("staff_repaid")}
               >
                 <span>
@@ -817,12 +818,13 @@ function SessionSettlementPanel({
             ) : null}
             <Button
               type="button"
+              size="touch"
               variant={
                 resolutionType === "accepted_adjustment"
                   ? "secondary"
                   : "outline"
               }
-              className="h-auto justify-start whitespace-normal py-3 text-left"
+              className="justify-start whitespace-normal py-3 text-left"
               onClick={() => setResolutionType("accepted_adjustment")}
             >
               <span>

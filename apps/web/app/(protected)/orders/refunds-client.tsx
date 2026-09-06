@@ -313,7 +313,7 @@ export function RefundsClient({
               refund.status === "pending" ? (
                 <div className="flex justify-end gap-2">
                   <Button
-                    size="sm"
+                    size={isTouchLayout ? "touch" : "default"}
                     variant="outline"
                     className="border-success/20 text-success hover:bg-success/10 hover:text-success"
                     disabled={isPending && actioningId === refund.id}
@@ -330,7 +330,7 @@ export function RefundsClient({
                     <span className="ml-1">Duyệt</span>
                   </Button>
                   <Button
-                    size="sm"
+                    size={isTouchLayout ? "touch" : "default"}
                     variant="outline"
                     className="border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive"
                     disabled={isPending && actioningId === refund.id}

@@ -701,7 +701,7 @@ export function OrdersClient({
             action={
               <Button
                 variant="ghost"
-                size="icon-sm"
+                size={controlSize === "touch" ? "icon-touch" : "icon-sm"}
                 aria-label="Đóng chi tiết đơn"
                 onClick={() => selectOrder(null)}
               >
