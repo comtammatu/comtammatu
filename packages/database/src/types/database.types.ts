@@ -15632,6 +15632,10 @@ export type Database = {
         }
         Returns: number
       }
+      self_service_clock_out: {
+        Args: { p_attendance_id: number }
+        Returns: string
+      }
       self_service_request_checkout: {
         Args: { p_attendance_id: number }
         Returns: string
