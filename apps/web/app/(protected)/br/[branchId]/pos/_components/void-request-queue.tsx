@@ -28,7 +28,7 @@ function VoidRequestList({
   ) => void;
 }) {
   return (
-    <ItemGroup className="gap-2">
+    <ItemGroup className="grid gap-2 sm:grid-cols-2">
       {requests.map((request) => (
         <Item key={request.id} variant="outline" size="sm">
           <ItemContent>

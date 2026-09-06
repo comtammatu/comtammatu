@@ -205,7 +205,7 @@ export function BranchFeedbackQrClient({
         <AppEmptyState compact title={feedbackCopy.qrEmpty} symbol="riceGrain" />
       ) : (
         <BranchOperatorPanel contentFlush>
-          <ItemGroup className="gap-2">
+          <ItemGroup className="grid gap-2 sm:grid-cols-2 lg:grid-cols-2">
             {items.map((item) => {
               const url = resolveUrl(item, origin);
               return (
@@ -267,6 +267,7 @@ export function BranchFeedbackQrClient({
         }}
         title={feedbackCopy.qrCreate}
         side="bottom"
+        contentClassName="max-h-dvh-90 sm:mx-auto sm:max-w-xl"
         footer={
           <Button
             type="button"

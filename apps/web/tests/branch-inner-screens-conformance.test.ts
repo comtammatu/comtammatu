@@ -347,4 +347,38 @@ test("Branch shift redirect shims forward legacy routes to canonical team sub-pl
   );
 });
 
+test("Branch menu limits, feedback, and void queue implement responsive multi-column layouts and 48px touch targets", () => {
+  const menuLimits = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/_components/home/branch-quick-menu-limit-sheet.tsx",
+  );
+  const feedbackInbox = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/feedback/_components/branch-feedback-inbox-list.tsx",
+  );
+  const feedbackQr = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/feedback/_components/branch-feedback-qr-client.tsx",
+  );
+  const voidQueue = read(
+    "apps/web/app/(protected)/br/[branchId]/pos/_components/void-request-queue.tsx",
+  );
+  const branchHome = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
+  );
+
+  // Menu limits 2-column grid and 48px touch compliance
+  assert.match(menuLimits, /grid gap-2 p-2 sm:grid-cols-2/);
+  assert.doesNotMatch(menuLimits, /<Button[^>]*size="sm"/);
+  assert.doesNotMatch(menuLimits, /\bh-7\b/);
+  assert.match(menuLimits, /<InputGroup size="touch"/);
+
+  // Feedback inbox and QR lists 2-column grid
+  assert.match(feedbackInbox, /grid gap-2 sm:grid-cols-2 lg:grid-cols-2/);
+  assert.match(feedbackQr, /grid gap-2 sm:grid-cols-2 lg:grid-cols-2/);
+
+  // Void request queue 2-column grid
+  assert.match(voidQueue, /grid gap-2 sm:grid-cols-2/);
+
+  // Branch home sales quick triggers 3-column desktop layout
+  assert.match(branchHome, /grid grid-cols-2 gap-2 lg:grid-cols-3/);
+});
+
 

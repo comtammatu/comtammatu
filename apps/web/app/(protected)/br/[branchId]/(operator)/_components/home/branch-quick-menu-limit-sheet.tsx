@@ -224,11 +224,11 @@ export function BranchQuickMenuLimitSheet({
         </span>
       }
       description={menuCopy.drawerDescription}
-      contentClassName="max-h-dvh-80 overflow-hidden flex flex-col"
+      contentClassName="max-h-dvh-80 overflow-hidden flex flex-col sm:mx-auto sm:max-w-3xl"
       headerClassName="shrink-0 border-b"
     >
       <div className="mb-2">
-        <InputGroup className="w-full">
+        <InputGroup size="touch" className="w-full">
           <InputGroupAddon>
             <IconSearch className="size-4" />
           </InputGroupAddon>
@@ -241,31 +241,31 @@ export function BranchQuickMenuLimitSheet({
         </InputGroup>
       </div>
 
-      <div className="mb-2 flex flex-wrap gap-1.5 px-0.5">
+      <div className="no-scrollbar mb-2 flex touch-pan-x gap-1.5 overflow-x-auto overscroll-x-contain px-0.5">
         <Button
           type="button"
           variant={filterTab === "all" ? "default" : "outline"}
-          size="sm"
+          size="touch"
           onClick={() => setFilterTab("all")}
-          className="h-7 text-xs"
+          className="shrink-0 gap-2 px-3 text-xs"
         >
           {menuCopy.filterAll} ({rows.length})
         </Button>
         <Button
           type="button"
           variant={filterTab === "paused" ? "default" : "outline"}
-          size="sm"
+          size="touch"
           onClick={() => setFilterTab("paused")}
-          className="h-7 text-xs"
+          className="shrink-0 gap-2 px-3 text-xs"
         >
           {menuCopy.filterPaused} ({disabledCount})
         </Button>
         <Button
           type="button"
           variant={filterTab === "limited" ? "default" : "outline"}
-          size="sm"
+          size="touch"
           onClick={() => setFilterTab("limited")}
-          className="h-7 text-xs"
+          className="shrink-0 gap-2 px-3 text-xs"
         >
           {menuCopy.filterLimited} ({limitedCount})
         </Button>
@@ -283,7 +283,7 @@ export function BranchQuickMenuLimitSheet({
             symbol="roundPlate"
           />
         ) : (
-          <ItemGroup className="gap-2 p-2">
+          <ItemGroup className="grid gap-2 p-2 sm:grid-cols-2">
             {filteredRows.map((row) => {
               const draftQty = draftQtyById[row.menu_item_id] ?? "";
               const available = row.available_to_sell ?? menuCopy.unlimited;
