@@ -630,7 +630,7 @@ export function ItemCustomizer({
                               size="touch"
                               variant={isSelected ? "default" : "outline"}
                               className={cn(
-                                "h-9 shrink-0 px-3 text-xs font-semibold tabular-nums",
+                                "shrink-0 px-3 text-xs font-semibold tabular-nums",
                                 isSelected && "shadow-2xs",
                               )}
                               onClick={() =>

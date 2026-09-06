@@ -260,7 +260,7 @@ function PaymentLoadingFixture() {
       </div>
       <StationSection size="sm" contentClassName="gap-3">
         <>
-          <InputGroup className="h-10">
+          <InputGroup size="touch">
             <InputGroupAddon>{PAYMENT_LOADING_TEXT.received}</InputGroupAddon>
             <InputGroupInput
               readOnly
@@ -270,7 +270,7 @@ function PaymentLoadingFixture() {
           </InputGroup>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {[165000, 170000, 200000, 500000].map((amount) => (
-              <Button key={amount} type="button" variant="outline">
+              <Button key={amount} type="button" variant="outline" size="touch">
                 {formatVND(amount)}
               </Button>
             ))}
@@ -1517,7 +1517,7 @@ export function BillReceipt({
                           />
                         ) : null}
 
-                        <InputGroup className="h-10">
+                        <InputGroup size="touch">
                           <InputGroupAddon>
                             {messages.pos.payment.cashReceived}
                           </InputGroupAddon>

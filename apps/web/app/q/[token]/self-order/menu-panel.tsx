@@ -442,7 +442,7 @@ function MenuRowButton({
             <Button
               type="button"
               size="icon-touch"
-              className="size-8 shadow-xs"
+              className="shadow-xs"
               disabled={disabled}
               aria-label={`${SELF_ORDER_VI.addToCart}: ${item.name}`}
               onClick={(e) => {
@@ -450,7 +450,7 @@ function MenuRowButton({
                 onQuickAdd();
               }}
             >
-              <IconPlus className="size-4" />
+              <IconPlus className="size-5" />
             </Button>
           )}
         </div>

@@ -248,8 +248,7 @@ export function SelfOrderApprovalSheet({
                   <Item
                     key={call.id}
                     variant="outline"
-                    size="sm"
-                    className="items-center justify-between bg-card"
+                    className="min-h-12 items-center justify-between bg-card"
                   >
                     <ItemContent>
                       <ItemTitle className="text-sm font-semibold">
@@ -261,16 +260,16 @@ export function SelfOrderApprovalSheet({
                     <ItemActions>
                       <Button
                         type="button"
-                        size="sm"
+                        size="touch"
                         variant="default"
                         disabled={isAcking || isPending}
                         onClick={() => void handleAcknowledgeCall(call.id)}
-                        className="h-8 gap-1 text-xs"
+                        className="gap-1.5 px-3 font-semibold"
                       >
                         {isAcking ? (
-                          <Spinner className="size-3" />
+                          <Spinner className="size-4" />
                         ) : (
-                          <IconCheck className="size-3" />
+                          <IconCheck className="size-4" />
                         )}
                         {SELF_ORDER_VI.staffCallServed}
                       </Button>
@@ -422,7 +421,7 @@ export function SelfOrderApprovalSheet({
                             <Item
                               key={order.id}
                               variant="outline"
-                              size="sm"
+                              className="min-h-12"
                               render={
                                 <FieldLabel
                                   htmlFor={`self-order-target-${request.id}-${order.id}`}
@@ -450,7 +449,7 @@ export function SelfOrderApprovalSheet({
                         })}
                         <Item
                           variant="outline"
-                          size="sm"
+                          className="min-h-12"
                           render={
                             <FieldLabel
                               htmlFor={`self-order-target-${request.id}-new`}

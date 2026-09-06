@@ -284,11 +284,11 @@ export function SelfOrderFeedbackSheet({
                         key={tag}
                         type="button"
                         variant={isSelected ? "secondary" : "outline"}
-                        size="sm"
+                        size="touch"
                         className={cn(
-                          "h-7 rounded-full px-3 text-xs font-normal",
+                          "rounded-full px-4 font-medium",
                           isSelected &&
-                            "border-primary/20 bg-primary/10 font-medium text-primary hover:bg-primary/15",
+                            "border-primary/20 bg-primary/10 text-primary hover:bg-primary/15",
                         )}
                         onClick={() => handleToggleTag(tag)}
                       >

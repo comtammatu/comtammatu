@@ -105,7 +105,8 @@ function loadShouldFlushStockImmediately(): (
 }
 
 function loadGetPendingStockUpdate(): (
-  existing: { currentStock: number; signature: string; dueAt: number } | undefined,
+  existing:
+    { currentStock: number; signature: string; dueAt: number } | undefined,
   stockPayload: { currentStock: number; signature: string },
   immediate: boolean,
   now: number,
@@ -118,7 +119,8 @@ function loadGetPendingStockUpdate(): (
   return Function(
     `"use strict"; const STOCK_FLUSH_DELAY_MS = 5 * 60 * 1000; ${functionSource}; return getPendingStockUpdate;`,
   )() as (
-    existing: { currentStock: number; signature: string; dueAt: number } | undefined,
+    existing:
+      { currentStock: number; signature: string; dueAt: number } | undefined,
     stockPayload: { currentStock: number; signature: string },
     immediate: boolean,
     now: number,
@@ -134,13 +136,13 @@ test("Grab item status sync matches the portal mutation contract", () => {
 
   assert.match(
     statusMutation,
-    /food\/merchant\/v1\/items\/available-status[\s\S]*?method: 'PUT'/,
+    /food\/merchant\/v1\/items\/available-status[\s\S]*?method:\s*["']PUT["']/,
   );
   assert.match(statusMutation, /itemIDs: \[itemId\]/);
   assert.match(statusMutation, /availableStatus: statusCode/);
   assert.doesNotMatch(statusMutation, /\bitems:\s*\[/);
   assert.doesNotMatch(statusMutation, /\bavailableAt:/);
-  assert.match(statusMutation, /error: 'Invalid available status'/);
+  assert.match(statusMutation, /error:\s*["']Invalid available status["']/);
 });
 
 test("Grab modifier status sync matches the observed portal mutation contract", () => {
@@ -150,10 +152,10 @@ test("Grab modifier status sync matches the observed portal mutation contract", 
     "// API Call: Sync Stock / Daily Limit",
   );
 
-  assert.match(modifierMutation, /itemId\.startsWith\('VNMOD'\)/);
+  assert.match(modifierMutation, /itemId\.startsWith\(["']VNMOD["']\)/);
   assert.match(
     modifierMutation,
-    /food\/merchant\/v2\/modifiers\/available[\s\S]*?method: 'PUT'/,
+    /food\/merchant\/v2\/modifiers\/available[\s\S]*?method:\s*["']PUT["']/,
   );
   assert.match(modifierMutation, /modifierIDs: \[itemId\]/);
   assert.match(modifierMutation, /availableStatus: statusCode/);
@@ -183,11 +185,14 @@ test("Grab relay queues modifier availability separately from item stock", () =>
     contentSource,
     /SET_ITEM_STOCK[\s\S]{0,300}grab_modifier_ids/,
   );
-  assert.match(contentSource, /item\.item_available_status \?\? item\.available_status/);
+  assert.match(
+    contentSource,
+    /item\.item_available_status \?\? item\.available_status/,
+  );
   assert.match(contentSource, /item\.modifier_available_status/);
   assert.match(
     contentSource,
-    /'SET_MODIFIER_AVAILABLE_STATUS'[\s\S]*?availableStatus: modifierAvailableStatus/,
+    /["']SET_MODIFIER_AVAILABLE_STATUS["'][\s\S]*?availableStatus:\s*modifierAvailableStatus/,
   );
 });
 
@@ -245,11 +250,17 @@ test("Grab day rollover reconciles today's availability without resending all st
   );
   assert.doesNotMatch(pollSource, /forceAll = true/);
   assert.match(pollSource, /reconcileTodayStatuses/);
-  assert.doesNotMatch(pollSource, /refreshItemStatusBusinessDate[\s\S]{0,120}itemStatusCache\.clear/);
+  assert.doesNotMatch(
+    pollSource,
+    /refreshItemStatusBusinessDate[\s\S]{0,120}itemStatusCache\.clear/,
+  );
 });
 
 test("Grab relay persists confirmed and queued item sync state by backend and branch", () => {
-  assert.match(contentSource, /const ITEM_SYNC_STATE_STORAGE_KEY = 'grabItemSyncStateV1'/);
+  assert.match(
+    contentSource,
+    /const ITEM_SYNC_STATE_STORAGE_KEY = ["']grabItemSyncStateV1["']/,
+  );
   assert.match(contentSource, /function hydrateItemSyncState/);
   assert.match(contentSource, /function persistItemSyncState/);
   assert.match(contentSource, /function ensureItemSyncScope/);
@@ -269,7 +280,10 @@ test("Grab relay coalesces normal stock changes for five minutes", () => {
   const getPendingStockUpdate = loadGetPendingStockUpdate();
 
   assert.match(contentSource, /const STOCK_FLUSH_DELAY_MS = 5 \* 60 \* 1000/);
-  assert.match(contentSource, /const ITEM_STATUS_POLL_INTERVAL_MS = 10 \* 1000/);
+  assert.match(
+    contentSource,
+    /const ITEM_STATUS_POLL_INTERVAL_MS = 10 \* 1000/,
+  );
   assert.match(contentSource, /const pendingStockUpdates = new Map\(\)/);
   assert.match(contentSource, /function stageStockUpdate/);
   assert.match(contentSource, /function schedulePendingStockFlush/);
@@ -321,10 +335,7 @@ test("Grab relay sends first, low-stock, and availability-transition stock immed
     shouldFlushStockImmediately(20, "enabled:21", false, true),
     true,
   );
-  assert.equal(
-    shouldFlushStockImmediately(3, "enabled:4", false, false),
-    true,
-  );
+  assert.equal(shouldFlushStockImmediately(3, "enabled:4", false, false), true);
   assert.equal(
     shouldFlushStockImmediately(4, "enabled:5", false, false),
     false,
@@ -340,7 +351,7 @@ test("Grab item stock sync matches the portal IMS mutation contract", () => {
 
   assert.match(
     stockMutation,
-    /items\/\$\{itemId\}\/upsert-item-stock`[\s\S]*?method: 'POST'/,
+    /items\/\$\{itemId\}\/upsert-item-stock`[\s\S]*?method:\s*["']POST["']/,
   );
   for (const bodyField of [
     "enableIms: true",
@@ -352,7 +363,7 @@ test("Grab item stock sync matches the portal IMS mutation contract", () => {
   }
   assert.doesNotMatch(stockMutation, /\bmaxStock\b/);
   assert.match(stockMutation, /Number\.isInteger\(currentStock\)/);
-  assert.match(stockMutation, /currentStock < 1 \|\| currentStock > 9999/);
+  assert.match(stockMutation, /currentStock < 1\s*\|\|\s*currentStock > 9999/);
 });
 
 test("zero and invalid stock never reach the Grab stock mutation", () => {
@@ -364,19 +375,19 @@ test("zero and invalid stock never reach the Grab stock mutation", () => {
 
   assert.match(
     stockRouting,
-    /currentStock === 0[\s\S]*kind: 'status-only'/,
+    /currentStock === 0[\s\S]*kind:\s*["']status-only["']/,
   );
   assert.match(
     stockRouting,
-    /!Number\.isInteger\(currentStock\) \|\| currentStock < 1 \|\| currentStock > 9999[\s\S]*kind: 'invalid'/,
+    /!Number\.isInteger\(currentStock\)\s*\|\|\s*currentStock < 1\s*\|\|\s*currentStock > 9999[\s\S]*kind:\s*["']invalid["']/,
   );
   assert.match(
     stockRouting,
-    /stockPayload\.kind === 'status-only'[\s\S]*continue/,
+    /stockPayload\.kind === ["']status-only["'][\s\S]*continue/,
   );
   assert.match(
     stockRouting,
-    /stockPayload\.kind === 'invalid'[\s\S]*continue/,
+    /stockPayload\.kind === ["']invalid["'][\s\S]*continue/,
   );
   assert.doesNotMatch(stockRouting, /rawMaxStock|stockPayload\.maxStock/);
 });
@@ -407,20 +418,29 @@ test("stock normalization enforces the Portal boundary values", () => {
 
 test("Grab mutation headers replay portal identity without tracing or forbidden headers", () => {
   assert.match(injectedSource, /const HEADER_REPLAY_ALLOWLIST = \[/);
-  assert.match(injectedSource, /'x-gid-session-id'/);
+  assert.match(injectedSource, /["']x-gid-session-id["']/);
   assert.match(injectedSource, /const HEADER_TRACE_DENYLIST = new Set\(/);
-  assert.match(injectedSource, /'x-request-id'/);
-  assert.match(injectedSource, /'x-client-id': 'GrabMerchant-Portal'/);
-  assert.match(injectedSource, /'x-grabkit-clientid': 'grabmerchant-portal'/);
+  assert.match(injectedSource, /["']x-request-id["']/);
+  assert.match(
+    injectedSource,
+    /["']x-client-id["']:\s*["']GrabMerchant-Portal["']/,
+  );
+  assert.match(
+    injectedSource,
+    /["']x-grabkit-clientid["']:\s*["']grabmerchant-portal["']/,
+  );
   assert.doesNotMatch(injectedSource, /const CAPTURED_HEADER_ALLOWLIST/);
 });
 
 test("Grab item mutations use bounded slots instead of one exclusive tail", () => {
   assert.match(injectedSource, /const MAX_ITEM_MUTATION_SLOTS = 2/);
   assert.match(injectedSource, /itemSyncActive >= MAX_ITEM_MUTATION_SLOTS/);
-  assert.doesNotMatch(injectedSource, /let itemSyncTail = Promise\.resolve\(\)/);
+  assert.doesNotMatch(
+    injectedSource,
+    /let itemSyncTail = Promise\.resolve\(\)/,
+  );
   assert.match(injectedSource, /response\.status === 429/);
-  assert.match(injectedSource, /response\.headers\.get\('retry-after'\)/);
+  assert.match(injectedSource, /response\.headers\.get\(["']retry-after["']\)/);
   assert.match(contentSource, /const pendingItemSyncs = new Map\(\)/);
   assert.match(contentSource, /const ITEM_SYNC_PENDING_TTL_MS = 20 \* 1000/);
   assert.match(contentSource, /isPendingItemSyncFresh/);
@@ -434,10 +454,7 @@ test("Grab item-sync pending keys expire so a lost result can be queued again", 
   );
   const isPendingItemSyncFresh = Function(
     `"use strict"; const ITEM_SYNC_PENDING_TTL_MS = 20 * 1000; ${functionSource}; return isPendingItemSyncFresh;`,
-  )() as (
-    pending: { startedAt: number } | undefined,
-    now: number,
-  ) => boolean;
+  )() as (pending: { startedAt: number } | undefined, now: number) => boolean;
 
   assert.equal(
     isPendingItemSyncFresh({ startedAt: 1000 }, 1000 + 19_999),
@@ -461,7 +478,7 @@ test("Grab item-sync hydrate never clears the confirmed cache", () => {
 });
 
 test("Grab follower tabs do not poll POS item status", () => {
-  assert.match(contentSource, /if \(!isLeaderTab && !forceAll\) return/);
+  assert.match(contentSource, /if \(!isLeaderTab\) return;/);
   assert.match(contentSource, /applyTabRole/);
   assert.match(injectedSource, /isLeaderTab/);
   assert.match(injectedSource, /PageType=Cancelled/);
@@ -475,8 +492,14 @@ test("Grab follower tabs do not poll POS item status", () => {
 
 test("valid stock has a stable bounded cache signature", () => {
   assert.match(contentSource, /signature: `enabled:\$\{currentStock\}`/);
-  assert.match(contentSource, /prev\.stockSignature !== stockPayload\.signature/);
-  assert.match(contentSource, /stockSignature: pending\?\.signature \|\| data\.stockSignature/);
+  assert.match(
+    contentSource,
+    /prev\.stockSignature !== stockPayload\.signature/,
+  );
+  assert.match(
+    contentSource,
+    /stockSignature: pending\?\.signature \|\| data\.stockSignature/,
+  );
 });
 
 test("Grab injected script proactively resolves merchant ID across all merchant portal URLs", () => {
@@ -490,27 +513,39 @@ test("Grab injected script proactively resolves merchant ID across all merchant 
   )() as (url: string) => string | null;
 
   assert.equal(
-    resolveMerchantIdFromLocation("https://merchant.grab.com/food/menu/5-C8DTE75GUGJ3JT"),
+    resolveMerchantIdFromLocation(
+      "https://merchant.grab.com/food/menu/5-C8DTE75GUGJ3JT",
+    ),
     "5-C8DTE75GUGJ3JT",
   );
   assert.equal(
-    resolveMerchantIdFromLocation("https://merchant.grab.com/food/inventory/5-C8DTE75GUGJ3JT"),
+    resolveMerchantIdFromLocation(
+      "https://merchant.grab.com/food/inventory/5-C8DTE75GUGJ3JT",
+    ),
     "5-C8DTE75GUGJ3JT",
   );
   assert.equal(
-    resolveMerchantIdFromLocation("https://merchant.grab.com/merchants/5-C8DTE75GUGJ3JT/overview"),
+    resolveMerchantIdFromLocation(
+      "https://merchant.grab.com/merchants/5-C8DTE75GUGJ3JT/overview",
+    ),
     "5-C8DTE75GUGJ3JT",
   );
   assert.equal(
-    resolveMerchantIdFromLocation("https://merchant.grab.com/order?merchantID=5-C8DTE75GUGJ3JT"),
+    resolveMerchantIdFromLocation(
+      "https://merchant.grab.com/order?merchantID=5-C8DTE75GUGJ3JT",
+    ),
     "5-C8DTE75GUGJ3JT",
   );
   assert.equal(
-    resolveMerchantIdFromLocation("https://api.grab.com/orders?merchant_id=5-C8DTE75GUGJ3JT"),
+    resolveMerchantIdFromLocation(
+      "https://api.grab.com/orders?merchant_id=5-C8DTE75GUGJ3JT",
+    ),
     "5-C8DTE75GUGJ3JT",
   );
   assert.equal(
-    resolveMerchantIdFromLocation("https://merchant.grab.com/order/5-C8DTE75GUGJ3JT/preparing"),
+    resolveMerchantIdFromLocation(
+      "https://merchant.grab.com/order/5-C8DTE75GUGJ3JT/preparing",
+    ),
     "5-C8DTE75GUGJ3JT",
   );
   assert.equal(
@@ -545,15 +580,27 @@ test("Grab injected script proactively resolves merchant ID across all merchant 
     ),
     null,
   );
-  assert.match(injectedSource, /if \(\/\^v\\d\+\$\/i\.test\(String\(newId\)\)\) return;/);
+  assert.match(
+    injectedSource,
+    /if \(\/\^v\\d\+\$\/i\.test\(String\(newId\)\)\) return;/,
+  );
 });
 
 test("Grab mutations guard against missing merchant ID and enforce circuit breaker on 400", () => {
-  assert.match(injectedSource, /if \(!merchantId\) \{[\s\S]*?'Grab merchant ID not resolved yet'/);
+  assert.match(
+    injectedSource,
+    /if \(!merchantId\) \{[\s\S]*?["']Grab merchant ID not resolved yet["']/,
+  );
   assert.match(injectedSource, /const ITEM_SYNC_GAP_MS = 400;/);
-  assert.match(contentSource, /const TERMINAL_SYNC_HTTP_STATUSES = new Set\(\[400, 403, 404\]\);/);
+  assert.match(
+    contentSource,
+    /const TERMINAL_SYNC_HTTP_STATUSES = new Set\(\[400, 403, 404\]\);/,
+  );
   assert.match(contentSource, /const terminalFailedIds = new Set\(\);/);
-  assert.match(contentSource, /if \(!forceAll && terminalFailedIds\.has\(grabId\)\) \{[\s\S]*?continue;/);
+  assert.match(
+    contentSource,
+    /if \(!forceAll && terminalFailedIds\.has\(grabId\)\) \{[\s\S]*?continue;/,
+  );
   assert.match(contentSource, /terminalFailedIds\.delete\(itemId\);/);
   assert.match(contentSource, /terminalFailedIds\.add\(itemId\);/);
 });

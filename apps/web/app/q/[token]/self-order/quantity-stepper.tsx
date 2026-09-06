@@ -28,20 +28,18 @@ export function QuantityStepper({
         type="button"
         variant="outline"
         size="icon-touch"
-        className="size-8"
         disabled={disabled || quantity <= 0}
         aria-label={decreaseLabel}
         onClick={onDecrease}
       >
         <IconMinus className="size-4" />
       </Button>
-      <span className="min-w-6 text-center text-sm font-semibold tabular-nums">
+      <span className="min-w-7 text-center text-base font-semibold tabular-nums">
         {quantity}
       </span>
       <Button
         type="button"
         size="icon-touch"
-        className="size-8"
         disabled={disabled}
         aria-label={increaseLabel}
         onClick={onIncrease}
