@@ -168,9 +168,9 @@ export function TerminalsClient({
           </Button>
         </AppEmptyState>
       ) : (
-        <ItemGroup className="gap-2">
+        <ItemGroup className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {filteredTerminals.map((terminal) => (
-            <Item key={terminal.id} variant="outline">
+            <Item key={terminal.id} variant="outline" className="min-h-12">
               <ItemContent className="min-w-0">
                 <ItemTitle size="heading" className="line-clamp-none w-full">
                   {terminal.name}

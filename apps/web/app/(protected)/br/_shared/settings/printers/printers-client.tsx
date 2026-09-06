@@ -174,98 +174,100 @@ export function PrintersClient(props: {
                   {PRINTER_COPY.emptyBranch}
                 </p>
               ) : (
-                branchPrinters.map((printer) => {
-                  const printTypes = asPrintTypes(printer.print_types);
-                  const categoryIds = printer.category_ids;
-                  const endpoint = formatLanEndpoint(
-                    printer.lan_host,
-                    printer.lan_port,
-                  );
-                  const canTestPrint =
-                    printer.is_active && Boolean(printer.lan_host?.trim());
-                  const isTesting = testPending && testPendingId === printer.id;
-                  return (
-                    <Item
-                      key={printer.id}
-                      variant="outline"
-                      className="items-start gap-3 sm:flex-nowrap sm:items-center"
-                    >
-                      <ItemContent className="min-w-0 gap-1.5">
-                        <ItemHeader className="justify-start gap-2">
-                          <ItemTitle
-                            size="heading"
-                            className="line-clamp-none w-full"
-                          >
-                            {printer.name}
-                          </ItemTitle>
-                          <Badge
-                            variant={printer.is_active ? "default" : "outline"}
-                          >
-                            {printer.is_active
-                              ? PRINTER_COPY.active
-                              : PRINTER_COPY.inactive}
-                          </Badge>
-                        </ItemHeader>
-                        <p className="break-words text-sm leading-5 text-muted-foreground">
-                          {endpoint ?? "—"} · {printer.paper_width_mm}mm
-                        </p>
-                        <div className="flex flex-wrap gap-1">
-                          {printTypes.length > 0 ? (
-                            printTypes.map((type) => (
-                              <Badge key={type} variant="secondary">
-                                {PRINT_TYPE_LABEL[type]}
-                              </Badge>
-                            ))
-                          ) : (
-                            <span className="text-sm text-muted-foreground">
-                              {PRINTER_COPY.noPrintTypes}
-                            </span>
-                          )}
-                        </div>
-                        {showsCategoryRoutes(printTypes) ? (
+                <div className="grid gap-2 lg:grid-cols-2">
+                  {branchPrinters.map((printer) => {
+                    const printTypes = asPrintTypes(printer.print_types);
+                    const categoryIds = printer.category_ids;
+                    const endpoint = formatLanEndpoint(
+                      printer.lan_host,
+                      printer.lan_port,
+                    );
+                    const canTestPrint =
+                      printer.is_active && Boolean(printer.lan_host?.trim());
+                    const isTesting = testPending && testPendingId === printer.id;
+                    return (
+                      <Item
+                        key={printer.id}
+                        variant="outline"
+                        className="min-h-12 items-start gap-3 sm:flex-nowrap sm:items-center"
+                      >
+                        <ItemContent className="min-w-0 gap-1.5">
+                          <ItemHeader className="justify-start gap-2">
+                            <ItemTitle
+                              size="heading"
+                              className="line-clamp-none w-full"
+                            >
+                              {printer.name}
+                            </ItemTitle>
+                            <Badge
+                              variant={printer.is_active ? "default" : "outline"}
+                            >
+                              {printer.is_active
+                                ? PRINTER_COPY.active
+                                : PRINTER_COPY.inactive}
+                            </Badge>
+                          </ItemHeader>
+                          <p className="break-words text-sm leading-5 text-muted-foreground">
+                            {endpoint ?? "—"} · {printer.paper_width_mm}mm
+                          </p>
                           <div className="flex flex-wrap gap-1">
-                            {categoryIds.length > 0 ? (
-                              categoryIds.map((categoryId) => (
-                                <Badge key={categoryId} variant="outline">
-                                  {categoryMap.get(categoryId) ??
-                                    UNKNOWN_LABEL_VI}
+                            {printTypes.length > 0 ? (
+                              printTypes.map((type) => (
+                                <Badge key={type} variant="secondary">
+                                  {PRINT_TYPE_LABEL[type]}
                                 </Badge>
                               ))
                             ) : (
                               <span className="text-sm text-muted-foreground">
-                                {PRINTER_COPY.noCategories}
+                                {PRINTER_COPY.noPrintTypes}
                               </span>
                             )}
                           </div>
-                        ) : null}
-                      </ItemContent>
-                      <ItemActions className="basis-full justify-start gap-2 pt-1 sm:ml-auto sm:basis-auto sm:justify-end sm:pt-0">
-                        <Button
-                          variant="outline"
-                          size={embedded ? "touch" : "sm"}
-                          className="w-full sm:w-auto"
-                          disabled={!canTestPrint || testPending}
-                          onClick={() => handleTestPrint(printer.id)}
-                        >
-                          {isTesting
-                            ? `${PRINTER_COPY.testPrint}…`
-                            : PRINTER_COPY.testPrint}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size={embedded ? "touch" : "sm"}
-                          className="w-full sm:w-auto"
-                          onClick={() => setEditing(printer)}
-                        >
-                          {ACTIONS_VI.edit}
-                        </Button>
-                      </ItemActions>
-                    </Item>
-                  );
-                })
+                          {showsCategoryRoutes(printTypes) ? (
+                            <div className="flex flex-wrap gap-1">
+                              {categoryIds.length > 0 ? (
+                                categoryIds.map((categoryId) => (
+                                  <Badge key={categoryId} variant="outline">
+                                    {categoryMap.get(categoryId) ??
+                                      UNKNOWN_LABEL_VI}
+                                  </Badge>
+                                ))
+                              ) : (
+                                <span className="text-sm text-muted-foreground">
+                                  {PRINTER_COPY.noCategories}
+                                </span>
+                              )}
+                            </div>
+                          ) : null}
+                        </ItemContent>
+                        <ItemActions className="basis-full justify-start gap-2 pt-1 sm:ml-auto sm:basis-auto sm:justify-end sm:pt-0">
+                          <Button
+                            variant="outline"
+                            size="touch"
+                            className="w-full sm:w-auto"
+                            disabled={!canTestPrint || testPending}
+                            onClick={() => handleTestPrint(printer.id)}
+                          >
+                            {isTesting
+                              ? `${PRINTER_COPY.testPrint}…`
+                              : PRINTER_COPY.testPrint}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="touch"
+                            className="w-full sm:w-auto"
+                            onClick={() => setEditing(printer)}
+                          >
+                            {ACTIONS_VI.edit}
+                          </Button>
+                        </ItemActions>
+                      </Item>
+                    );
+                  })}
+                </div>
               )}
               <Button
-                size={embedded ? "touch" : "sm"}
+                size="touch"
                 className="w-full sm:w-auto"
                 onClick={() => setAddingBranchId(branch.id)}
               >
@@ -422,7 +424,7 @@ function PrinterForm({
             <Button
               type="button"
               variant="outline"
-              size={embedded ? "touch" : "default"}
+              size="touch"
               className="w-full sm:w-auto"
               onClick={remove}
               disabled={pending}
@@ -433,7 +435,7 @@ function PrinterForm({
           <Button
             type="button"
             variant="outline"
-            size={embedded ? "touch" : "default"}
+            size="touch"
             className="w-full sm:w-auto"
             onClick={onClose}
             disabled={pending}
@@ -443,7 +445,7 @@ function PrinterForm({
           <Button
             type="submit"
             form={PRINTER_FORM_ID}
-            size={embedded ? "touch" : "default"}
+            size="touch"
             className="w-full sm:w-auto"
             disabled={pending}
           >

@@ -317,12 +317,12 @@ export function DiningTableSettingsList({
           }
         />
       ) : (
-        <ItemGroup className="gap-2">
+        <ItemGroup className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {tables.map((table) => (
             <Item
               key={table.id}
               variant="outline"
-              className={isRowPending(table.id) ? "opacity-60" : ""}
+              className={`min-h-12 ${isRowPending(table.id) ? "opacity-60" : ""}`}
             >
               <ItemContent className="min-w-0">
                 <ItemTitle size="heading" className="line-clamp-none w-full">

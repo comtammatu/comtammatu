@@ -70,7 +70,7 @@ function SessionItem({
       render={
         <Link href={`/br/${branchId}/pos-sessions?session=${session.id}`} />
       }
-      className="transition-colors hover:bg-muted/50"
+      className="min-h-12 transition-colors hover:bg-muted/50"
     >
       <ItemContent>
         <div className="flex min-w-0 items-center justify-between gap-2">
@@ -324,9 +324,9 @@ export function CloseDayClient({
         />
       </div>
       {mixEntries.length > 0 ? (
-        <ItemGroup className="mt-3 gap-2">
+        <ItemGroup className="mt-3 grid gap-2 sm:grid-cols-2">
           {mixEntries.map(([method, amount]) => (
-            <Item key={method} variant="outline" size="sm">
+            <Item key={method} variant="outline" size="sm" className="min-h-12">
               <ItemContent>
                 <ItemTitle className="text-sm">
                   {getPaymentMethodLabelVi(method)}
@@ -353,14 +353,14 @@ export function CloseDayClient({
         <div className="flex shrink-0 gap-1">
           <Button
             variant={itemSort === "qty" ? "secondary" : "ghost"}
-            size="sm"
+            size="touch"
             onClick={() => setItemSort("qty")}
           >
             {copy.closeDaySortQty}
           </Button>
           <Button
             variant={itemSort === "revenue" ? "secondary" : "ghost"}
-            size="sm"
+            size="touch"
             onClick={() => setItemSort("revenue")}
           >
             {copy.closeDaySortRevenue}
@@ -373,13 +373,13 @@ export function CloseDayClient({
         </p>
       ) : (
         <>
-          <ItemGroup className="mt-3 gap-2">
+          <ItemGroup className="mt-3 grid gap-2 sm:grid-cols-2">
             {displayedTopItems.map((item, index) => (
               <Item
                 key={`${item.source}-${item.name}`}
                 variant="outline"
                 size="sm"
-                className="items-center"
+                className="min-h-12 items-center"
               >
                 <span className="w-5 shrink-0 text-center font-mono text-xs font-semibold text-muted-foreground">
                   #{index + 1}
@@ -403,7 +403,7 @@ export function CloseDayClient({
           {topItems.length > 8 ? (
             <Button
               variant="ghost"
-              size="sm"
+              size="touch"
               className="mt-2 w-full text-xs text-muted-foreground"
               onClick={() => setShowAllItems((prev) => !prev)}
             >
@@ -434,7 +434,7 @@ export function CloseDayClient({
             {copy.closeDayNoSessions}
           </p>
         ) : (
-          <ItemGroup className="gap-2">
+          <ItemGroup className="gap-2 sm:grid sm:grid-cols-2">
             {openSessions.map((session) => (
               <SessionItem
                 key={session.id}
@@ -482,11 +482,12 @@ export function CloseDayClient({
           ]}
         />
       </div>
-      <ItemGroup className="mt-3 gap-2">
+      <ItemGroup className="mt-3 grid gap-2 sm:grid-cols-2">
         <Item
           variant="outline"
           size="sm"
           render={<Link href={`/br/${branchId}/stock/waste-approvals`} />}
+          className="min-h-12"
         >
           <ItemContent>
             <ItemTitle className="text-sm">
@@ -507,6 +508,7 @@ export function CloseDayClient({
           variant="outline"
           size="sm"
           render={<Link href={`/br/${branchId}/stock/count-slips`} />}
+          className="min-h-12"
         >
           <ItemContent>
             <ItemTitle className="text-sm">
@@ -532,9 +534,9 @@ export function CloseDayClient({
   const attendanceSection = (
     <BranchOperatorPanel headingLevel="h2">
       <SectionLabel>{copy.closeDayAttendanceTitle}</SectionLabel>
-      <ItemGroup className="mt-3 gap-2">
+      <ItemGroup className="mt-3 grid gap-2 sm:grid-cols-2">
         {attendance.length === 0 ? (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground sm:col-span-2">
             {copy.closeDayNoAttendance}
           </p>
         ) : (
@@ -544,6 +546,7 @@ export function CloseDayClient({
               variant="outline"
               size="sm"
               render={<Link href={`/br/${branchId}/team`} />}
+              className="min-h-12"
             >
               <ItemContent>
                 <ItemTitle className="text-sm font-medium">{row.fullName}</ItemTitle>
@@ -575,6 +578,7 @@ export function CloseDayClient({
           variant="outline"
           size="sm"
           render={<Link href={`/br/${branchId}/team/checkout-approvals`} />}
+          className="min-h-12 sm:col-span-2"
         >
           <ItemContent>
             <ItemTitle className="text-sm">

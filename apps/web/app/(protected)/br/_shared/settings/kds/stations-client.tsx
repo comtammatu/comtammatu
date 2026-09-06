@@ -250,9 +250,9 @@ export function StationsClient({
           </Button>
         </AppEmptyState>
       ) : (
-        <ItemGroup className="gap-2">
+        <ItemGroup className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {filteredStations.map((station) => (
-            <Item key={station.id} variant="outline">
+            <Item key={station.id} variant="outline" className="min-h-12">
               <ItemContent className="min-w-0">
                 <ItemTitle size="heading" className="line-clamp-none w-full">
                   {station.name}

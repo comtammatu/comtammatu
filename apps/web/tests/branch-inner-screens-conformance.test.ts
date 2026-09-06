@@ -414,5 +414,84 @@ test("Branch pos-sessions implements responsive desktop multi-column layouts and
   );
 });
 
+test("Branch settings (tables, zones, printers, kds, pos, audio) implement responsive desktop multi-column layouts and 48px touch targets", () => {
+  const zoneTable = read(
+    "apps/web/app/(protected)/br/_shared/settings/tables/zone-table.tsx",
+  );
+  const tableTable = read(
+    "apps/web/app/(protected)/br/_shared/settings/tables/table-table.tsx",
+  );
+  const printersClient = read(
+    "apps/web/app/(protected)/br/_shared/settings/printers/printers-client.tsx",
+  );
+  const stationsClient = read(
+    "apps/web/app/(protected)/br/_shared/settings/kds/stations-client.tsx",
+  );
+  const terminalsClient = read(
+    "apps/web/app/(protected)/br/_shared/settings/pos/terminals-client.tsx",
+  );
+  const audioForm = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/settings/audio/audio-form.tsx",
+  );
+
+  // Zone and Table multi-column desktop grids and 48px min-h-12
+  assert.match(zoneTable, /grid gap-2 sm:grid-cols-2 lg:grid-cols-3/);
+  assert.match(zoneTable, /min-h-12/);
+  assert.match(tableTable, /grid gap-2 sm:grid-cols-2 lg:grid-cols-3/);
+  assert.match(tableTable, /min-h-12/);
+
+  // Printer client multi-column layout and universal touch targets
+  assert.match(printersClient, /grid gap-2 lg:grid-cols-2/);
+  assert.match(printersClient, /min-h-12/);
+  assert.doesNotMatch(printersClient, /size=\{embedded \? "touch" : "sm"\}/);
+  assert.doesNotMatch(printersClient, /<Button[^>]*size="sm"/);
+
+  // KDS Stations and POS Terminals multi-column desktop grids
+  assert.match(stationsClient, /grid gap-2 sm:grid-cols-2 lg:grid-cols-3/);
+  assert.match(stationsClient, /min-h-12/);
+  assert.match(terminalsClient, /grid gap-2 sm:grid-cols-2 lg:grid-cols-3/);
+  assert.match(terminalsClient, /min-h-12/);
+
+  // Audio settings touch buttons
+  assert.match(audioForm, /size="touch"/);
+  assert.doesNotMatch(audioForm, /<Button[^>]*size="sm"/);
+});
+
+test("Branch close-day implements responsive desktop multi-column layouts and 48px touch targets", () => {
+  const closeDayClient = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/close-day/close-day-client.tsx",
+  );
+
+  // Zero sub-touch buttons
+  assert.doesNotMatch(closeDayClient, /<Button[^>]*size="sm"/);
+
+  // 48px min-h-12 touch target on items
+  assert.match(closeDayClient, /min-h-12 transition-colors hover:bg-muted\/50/);
+
+  // Responsive multi-column layout across sections
+  assert.match(
+    closeDayClient,
+    /mixEntries[\s\S]*?<ItemGroup className="mt-3 grid gap-2 sm:grid-cols-2">/,
+  );
+  assert.match(
+    closeDayClient,
+    /topItemsSection[\s\S]*?<ItemGroup className="mt-3 grid gap-2 sm:grid-cols-2">/,
+  );
+  assert.match(
+    closeDayClient,
+    /sessionsSection[\s\S]*?<ItemGroup className="gap-2 sm:grid sm:grid-cols-2">/,
+  );
+  assert.match(
+    closeDayClient,
+    /stockSection[\s\S]*?<ItemGroup className="mt-3 grid gap-2 sm:grid-cols-2">/,
+  );
+  assert.match(
+    closeDayClient,
+    /attendanceSection[\s\S]*?<ItemGroup className="mt-3 grid gap-2 sm:grid-cols-2">/,
+  );
+  assert.match(closeDayClient, /sm:col-span-2/);
+});
+
+
 
 

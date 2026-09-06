@@ -92,12 +92,12 @@ export function ZoneTable({ zones }: ZoneTableProps) {
           icon={<IconMapPin className="size-8 text-muted-foreground" />}
         />
       ) : (
-        <ItemGroup className="gap-2">
+        <ItemGroup className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {zones.map((zone) => (
             <Item
               key={zone.id}
               variant="outline"
-              className={isPending ? "opacity-60" : ""}
+              className={`min-h-12 ${isPending ? "opacity-60" : ""}`}
             >
               <ItemContent>
                 <ItemTitle size="heading" className="line-clamp-none w-full">

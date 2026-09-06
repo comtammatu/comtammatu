@@ -195,6 +195,7 @@ export function BranchAudioForm({
         <Button
           type="button"
           variant="outline"
+          size="touch"
           onClick={handlePreview}
           disabled={isPlayingPreview}
           className="gap-2"
@@ -207,7 +208,12 @@ export function BranchAudioForm({
           {isPlayingPreview ? copy.previewPlaying : copy.previewButton}
         </Button>
 
-        <Button onClick={handleSave} disabled={isPending} className="gap-2">
+        <Button
+          size="touch"
+          onClick={handleSave}
+          disabled={isPending}
+          className="gap-2"
+        >
           {isPending ? <Spinner className="h-4 w-4" /> : null}
           {copy.saveSettings}
         </Button>
