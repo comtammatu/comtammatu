@@ -5,6 +5,7 @@ import {
   CreditCard,
   FileText,
   ListOrdered,
+  Volume2,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -49,13 +50,14 @@ export function OperatorDesktopNav({
 
   const hasPosAccess = canAccess(userRole, "pos") && branchKind === "branch";
   const hasKdsAccess = canAccess(userRole, "kds") && branchKind === "branch";
+  const hasPickupAccess = canAccess(userRole, "pickup") && branchKind === "branch";
 
   return (
     <aside
       aria-label={APP_COPY_VI.operatorAriaLabel}
       className="hidden lg:flex lg:w-60 lg:flex-col lg:shrink-0 lg:border-r lg:border-border/70 lg:bg-card/40 select-none print:hidden"
     >
-      {(hasPosAccess || hasKdsAccess) ? (
+      {(hasPosAccess || hasKdsAccess || hasPickupAccess) ? (
         <div className="flex flex-col gap-2 p-3 border-b border-border/60">
           <p className="px-1 text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
             {messages.operator.nav.stationsSection}
@@ -80,6 +82,17 @@ export function OperatorDesktopNav({
             >
               <ChefHat className="size-4 shrink-0 text-warning" />
               <span className="truncate">{messages.operator.nav.kdsStation}</span>
+            </Button>
+          ) : null}
+          {hasPickupAccess ? (
+            <Button
+              variant="outline"
+              size="touch"
+              className="justify-start gap-2 px-3 font-medium border-border/80 hover:bg-muted active:scale-[0.97]"
+              render={<Link href={`/br/${branchId}/pickup`} />}
+            >
+              <Volume2 className="size-4 shrink-0 text-info" />
+              <span className="truncate">{messages.operator.nav.pickupStation}</span>
             </Button>
           ) : null}
         </div>

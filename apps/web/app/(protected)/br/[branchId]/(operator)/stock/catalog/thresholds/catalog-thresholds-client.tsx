@@ -170,7 +170,7 @@ export function CatalogThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
     <div className="flex flex-col gap-3">
       <p className="text-xs text-muted-foreground">{editorCopy.hint}</p>
 
-      <InputGroup className="h-11">
+      <InputGroup className="h-12">
         <InputGroupAddon>
           <IconSearch />
         </InputGroupAddon>

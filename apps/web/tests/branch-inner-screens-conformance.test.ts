@@ -21,20 +21,31 @@ function listBranchFiles(dir: string): string[] {
 
 test("Branch surface plane strictly adheres to universal 48px touch target with zero 44px remnants", () => {
   const branchFiles = listBranchFiles("apps/web/app/(protected)/br");
-  const minH11Offenders: string[] = [];
+  const legacy44pxOffenders: string[] = [];
 
   for (const file of branchFiles) {
     const content = read(file);
-    if (/\bmin-h-11\b/.test(content)) {
-      minH11Offenders.push(file);
+    if (/\bmin-h-11\b/.test(content) || /\bh-11\b/.test(content)) {
+      legacy44pxOffenders.push(file);
     }
   }
 
   assert.deepEqual(
-    minH11Offenders,
+    legacy44pxOffenders,
     [],
-    `Found legacy 44px min-h-11 in branch surface files: ${minH11Offenders.join(", ")}. All touch controls must use universal 48px standard (min-h-12 / size="touch").`,
+    `Found legacy 44px (min-h-11 or h-11) in branch surface files: ${legacy44pxOffenders.join(", ")}. All touch controls must use universal 48px standard (min-h-12 / size="touch").`,
   );
+});
+
+test("Operator desktop navigation includes all station shortcuts", () => {
+  const desktopNav = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/operator-desktop-nav.tsx",
+  );
+  assert.match(desktopNav, /hasPosAccess/);
+  assert.match(desktopNav, /hasKdsAccess/);
+  assert.match(desktopNav, /hasPickupAccess/);
+  assert.match(desktopNav, /messages\.operator\.nav\.pickupStation/);
+  assert.match(desktopNav, /\/br\/\$\{branchId\}\/pickup/);
 });
 
 test("Branch inner screens implement responsive desktop multi-column layouts", () => {

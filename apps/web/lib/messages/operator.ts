@@ -13,6 +13,7 @@ export const operator = {
     shortcutsSection: "Lối tắt",
     posStation: "Trạm POS Thu ngân",
     kdsStation: "Trạm Bếp KDS",
+    pickupStation: "Màn Gọi số (Pickup)",
     ordersShortcut: "Đơn bán trong ngày",
     closeDayShortcut: "Báo cáo ngày (04:00)",
     pendingBadge: (count: number) =>

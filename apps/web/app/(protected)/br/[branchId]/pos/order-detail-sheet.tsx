@@ -1616,11 +1616,11 @@ export function OrderDetailSheet({
                         <Button
                           type="button"
                           variant="ghost"
-                          size="sm"
+                          size="touch"
                           onClick={() => setShowEditNote(true)}
-                          className="h-6 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
+                          className="gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
                         >
-                          <IconNotebookPen className="size-3" />
+                          <IconNotebookPen className="size-3.5" />
                           <span>{messages.pos.orderDetail.editNote}</span>
                         </Button>
                       )}

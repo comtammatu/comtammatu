@@ -34,7 +34,7 @@ export function PosOrderTargetRow({
   return (
     <div
       className={cn(
-        "h-11 shrink-0 items-center justify-between gap-2 border-b border-border/60 bg-background px-3 lg:px-4",
+        "min-h-12 shrink-0 items-center justify-between gap-2 border-b border-border/60 bg-background px-3 lg:px-4",
         isDelivery ? "flex" : "hidden md:flex",
       )}
     >
@@ -56,7 +56,7 @@ export function PosOrderTargetRow({
           <Button
             type="button"
             variant="ghost"
-            size="sm"
+            size="touch"
             className="shrink-0 px-2 text-xs font-medium text-primary hover:text-primary sm:text-sm"
             onClick={onEditDelivery}
           >
@@ -67,7 +67,7 @@ export function PosOrderTargetRow({
         <Button
           type="button"
           variant="ghost"
-          size="sm"
+          size="touch"
           className="shrink-0 px-2 text-xs text-muted-foreground sm:text-sm"
           onClick={isExisting ? onCancel : onSwitch}
         >

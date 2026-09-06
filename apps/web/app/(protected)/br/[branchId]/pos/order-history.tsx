@@ -459,10 +459,10 @@ function ActiveOrdersListComponent({
           <Button
             type="button"
             variant={activeTab === "all" ? "default" : "ghost"}
-            size="sm"
+            size="touch"
             data-testid="pos-order-tab-all"
             className={cn(
-              "min-h-9 flex-1 shrink-0 min-w-0 gap-1 rounded-md px-2 text-xs font-semibold whitespace-nowrap transition-colors",
+              "flex-1 shrink-0 min-w-0 gap-1 rounded-md px-2 text-xs font-semibold whitespace-nowrap transition-colors",
               activeTab === "all"
                 ? "bg-background text-foreground shadow-2xs hover:bg-background"
                 : "text-muted-foreground hover:bg-background/50 hover:text-foreground",
@@ -475,10 +475,10 @@ function ActiveOrdersListComponent({
           <Button
             type="button"
             variant={activeTab === "cooking" ? "default" : "ghost"}
-            size="sm"
+            size="touch"
             data-testid="pos-order-tab-cooking"
             className={cn(
-              "min-h-9 flex-1 shrink-0 min-w-0 gap-1 rounded-md px-2 text-xs font-semibold whitespace-nowrap transition-colors",
+              "flex-1 shrink-0 min-w-0 gap-1 rounded-md px-2 text-xs font-semibold whitespace-nowrap transition-colors",
               activeTab === "cooking"
                 ? "bg-background text-foreground shadow-2xs hover:bg-background"
                 : "text-muted-foreground hover:bg-background/50 hover:text-foreground",
@@ -491,10 +491,10 @@ function ActiveOrdersListComponent({
           <Button
             type="button"
             variant={activeTab === "dineIn" ? "default" : "ghost"}
-            size="sm"
+            size="touch"
             data-testid="pos-order-tab-dinein"
             className={cn(
-              "min-h-9 flex-1 shrink-0 min-w-0 gap-1 rounded-md px-2 text-xs font-semibold whitespace-nowrap transition-colors",
+              "flex-1 shrink-0 min-w-0 gap-1 rounded-md px-2 text-xs font-semibold whitespace-nowrap transition-colors",
               activeTab === "dineIn"
                 ? "bg-background text-foreground shadow-2xs hover:bg-background"
                 : "text-muted-foreground hover:bg-background/50 hover:text-foreground",
@@ -507,10 +507,10 @@ function ActiveOrdersListComponent({
           <Button
             type="button"
             variant={activeTab === "takeaway" ? "default" : "ghost"}
-            size="sm"
+            size="touch"
             data-testid="pos-order-tab-takeaway"
             className={cn(
-              "min-h-9 flex-1 shrink-0 min-w-0 gap-1 rounded-md px-2 text-xs font-semibold whitespace-nowrap transition-colors",
+              "flex-1 shrink-0 min-w-0 gap-1 rounded-md px-2 text-xs font-semibold whitespace-nowrap transition-colors",
               activeTab === "takeaway"
                 ? "bg-background text-foreground shadow-2xs hover:bg-background"
                 : "text-muted-foreground hover:bg-background/50 hover:text-foreground",

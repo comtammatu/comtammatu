@@ -84,7 +84,7 @@ export function CatalogSuppliersClient({
 
   return (
     <div className="flex flex-col gap-3">
-      <InputGroup className="h-11">
+      <InputGroup className="h-12">
         <InputGroupAddon>
           <IconSearch />
         </InputGroupAddon>
