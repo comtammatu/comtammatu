@@ -535,11 +535,11 @@ function SessionContextBar({
                 )}
           </p>
           {breached && !isOpen ? (
-            <div className="mt-1">
+            <div className="mt-2">
               <Button
-                variant="link"
-                size="sm"
-                className="h-auto p-0 text-xs text-primary underline"
+                variant="outline"
+                size="touch"
+                className="gap-1 px-3 text-xs"
                 render={
                   <Link
                     href={`/work?q=Ca+POS+%23${session.id}`}
@@ -611,7 +611,7 @@ function SessionBillsPanel({
                 variant="default"
                 size="sm"
                 render={<button type="button" />}
-                className="cursor-pointer gap-1 rounded-none border-0 bg-card px-3 py-2 text-left hover:bg-muted active:bg-muted"
+                className="cursor-pointer min-h-12 gap-1 rounded-none border-0 bg-card px-3 py-2 text-left hover:bg-muted active:bg-muted"
                 onClick={() => onOrderSelect(order.id)}
               >
                 <ItemContent>
@@ -766,8 +766,8 @@ function SessionSettlementPanel({
             <div className="mt-3">
               <Button
                 variant="outline"
-                size="sm"
-                className="gap-1 text-xs"
+                size="touch"
+                className="gap-1 px-3 text-xs"
                 render={
                   <Link
                     href={`/work?q=Ca+POS+%23${session.id}`}
@@ -1106,7 +1106,7 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
       {top_items.length > 0 ? (
         <div>
           <SectionLabel>{messages.settings.posSessions.topItems}</SectionLabel>
-          <ItemGroup>
+          <ItemGroup className="grid gap-2 sm:grid-cols-2">
             {top_items.map((item) => (
               <Item key={`${item.source}-${item.name}`} variant="outline">
                 <ItemContent>
@@ -1224,7 +1224,7 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
                 ({messages.settings.posSessions.billCount(manualOrders.length)})
               </span>
             </div>
-            <ItemGroup>
+            <ItemGroup className="grid gap-2 sm:grid-cols-2">
               {discounts.top_orders.map((order) => {
                 const isPromo =
                   order.note != null &&
@@ -1354,7 +1354,7 @@ function OrderDetailDrawer({
               } · ${formatDateTime(order.created_at)}`
             : undefined
         }
-        contentClassName="flex h-full flex-col overflow-hidden"
+        contentClassName="flex h-full flex-col overflow-hidden sm:mx-auto sm:max-w-2xl"
       >
         {order ? (
           <div className="flex flex-col gap-4">
@@ -1418,7 +1418,7 @@ function OrderDetailDrawer({
                 <SectionLabel>
                   {messages.settings.posSessions.paymentAttempts}
                 </SectionLabel>
-                <ItemGroup className="mt-2">
+                <ItemGroup className="mt-2 grid gap-2 sm:grid-cols-2">
                   {[...order.payments]
                     .sort(
                       (a, b) =>
@@ -1430,7 +1430,7 @@ function OrderDetailDrawer({
                           ).getTime() || b.id - a.id,
                     )
                     .map((payment) => (
-                      <Item key={payment.id} variant="outline" size="xs">
+                      <Item key={payment.id} variant="outline" size="sm" className="min-h-12">
                         <ItemContent>
                           <ItemTitle>
                             {paymentMethodLabel(payment.method)}

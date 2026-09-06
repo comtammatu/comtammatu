@@ -381,4 +381,38 @@ test("Branch menu limits, feedback, and void queue implement responsive multi-co
   assert.match(branchHome, /grid grid-cols-2 gap-2 lg:grid-cols-3/);
 });
 
+test("Branch pos-sessions implements responsive desktop multi-column layouts and 48px touch targets", () => {
+  const posSessionsClient = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/pos-sessions/pos-sessions-client.tsx",
+  );
+
+  // Desktop touch layout contract
+  assert.match(posSessionsClient, /useIsMobile\(1280\)/);
+
+  // Zero sub-touch buttons
+  assert.doesNotMatch(posSessionsClient, /<Button[^>]*size="sm"/);
+  assert.doesNotMatch(posSessionsClient, /<Button[^>]*size="xs"/);
+
+  // Orders list inside session enforces 48px min-h-12 touch target
+  assert.match(posSessionsClient, /min-h-12 gap-1 rounded-none/);
+
+  // Report card top items and discount orders use 2-column grid
+  assert.match(
+    posSessionsClient,
+    /topItems\}<\/SectionLabel>\s*<ItemGroup className="grid gap-2 sm:grid-cols-2">/,
+  );
+  assert.match(
+    posSessionsClient,
+    /discounts\.top_orders[\s\S]*?<ItemGroup className="grid gap-2 sm:grid-cols-2">/,
+  );
+
+  // Order detail drawer content desktop max-w-2xl and 2-column payment attempts
+  assert.match(posSessionsClient, /sm:mx-auto sm:max-w-2xl/);
+  assert.match(
+    posSessionsClient,
+    /paymentAttempts\}[\s\S]*?<\/SectionLabel>\s*<ItemGroup className="mt-2 grid gap-2 sm:grid-cols-2">/,
+  );
+});
+
+
 
