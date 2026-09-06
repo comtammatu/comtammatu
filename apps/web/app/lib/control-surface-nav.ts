@@ -10,7 +10,6 @@ import {
   ReceiptText as IconReceiptText,
   TicketPercent as IconTicketPercent,
   Settings as IconSettings,
-  ListTodo as IconListTodo,
   Users as IconUsers,
   Utensils as IconUtensils,
   Wallet as IconWallet,
@@ -39,7 +38,6 @@ import {
   type ShellNavItem,
 } from "@/lib/shell-primitives";
 import { messages } from "@lib/messages";
-import { workCopy } from "@lib/messages/work";
 
 export type { InventoryNavFlags };
 
@@ -161,31 +159,10 @@ function resolveHrDeepNav(role: StaffRole): ShellNavGroup[] {
   return [{ title: APP_COPY_VI.hrWorkspace, items: peopleItems }];
 }
 
-function resolveWorkDeepNav(canManageTeam: boolean): ShellNavGroup[] {
-  if (!canManageTeam) return [];
-
-  return [
-    {
-      title: MODULE_ACL.work.label,
-      items: [
-        {
-          href: MODULE_ACL.work.path,
-          label: workCopy.viewMine,
-          icon: IconListTodo,
-        },
-      ],
-    },
-    {
-      title: workCopy.teamNavSection,
-      items: [
-        {
-          href: "/work/team",
-          label: workCopy.teamNav,
-          icon: IconUsers,
-        },
-      ],
-    },
-  ];
+function resolveWorkDeepNav(_canManageTeam?: boolean): ShellNavGroup[] {
+  // Work is a flat module; team/department administration is embedded directly
+  // inside the /work settings dialog to prevent duplicate sub-nav groups.
+  return [];
 }
 
 // Core-module deep nav (settings/hr/work). Flat modules emit no sub-nav — the

@@ -6,7 +6,10 @@ Accept — Q1=A, Q2=A, Q3=include `/work/team`)
 **Decision owner:** Owner
 
 **Amended by:** ADR 0037 (`/me` stays `Trang cá nhân`; the Work CTA is removed;
-due Work surfaces in the `/` Mine region, not a Work shell on `/`).
+due Work surfaces in the `/` Mine region, not a Work shell on `/`);
+2026-09-06 Route consolidation: `/work/team` is retired into a redirect shim to
+`/work`, consolidating department and member management into the in-page
+`WorkSettingsDialog` on `/work` to eliminate UX duplication.
 
 Runtime compose: [`docs/spec/page-archetypes.md`](../../spec/page-archetypes.md)
 TASK_* and [`docs/ref/screen-context-map.md`](../../ref/screen-context-map.md)

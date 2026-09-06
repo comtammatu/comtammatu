@@ -213,16 +213,14 @@ for (const surface of FLAT_CONTROL_SURFACE_MODULE_IDS) {
   });
 }
 
-test("resolveControlSurfaceDeepNav exposes work department team section", () => {
+test("resolveControlSurfaceDeepNav treats work as a flat module without redundant sub-nav", () => {
   const ownerGroups = resolveControlSurfaceDeepNav("owner", "work", {
     work: { canManageTeam: true },
   });
-  const ownerHrefs = hrefList(flattenGroups(ownerGroups));
-  assert.ok(ownerHrefs.includes(MODULE_ACL.work.path));
-  assert.ok(ownerHrefs.includes("/work/team"));
-  assert.ok(
-    ownerGroups.some((group) => group.title === "Phòng ban, đội nhóm"),
-    "work deep nav must include the department/team section",
+  assert.deepEqual(
+    ownerGroups,
+    [],
+    "work is a flat module; department/team administration lives inside the /work dialog",
   );
 
   const memberGroups = resolveControlSurfaceDeepNav("accountant", "work", {

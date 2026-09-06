@@ -169,8 +169,9 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 
 - **Gia đình / plane:** `control_surface` (ADR 0033). Cùng shell với `/finance` ·
   `/inventory` · `/hr` — không app/host riêng.
-- **Archetype:** `/work` Inbox = `LIST` (queue); `/work/tasks/[id]` = `DETAIL`;
-  `/work/projects` + `/work/team` = `LIST`; `/work/projects/[id]` = `DETAIL`;
+- **Archetype:** `/work` Inbox = `LIST` (queue); `/work/tasks/[id]` = `DETAIL` (redirect shim `?task=`);
+  `/work/projects` = `LIST`; `/work/projects/[id]` = `DETAIL`; `/work/team` = `REDIRECT` về `/work`
+  (quản trị phòng ban và thành viên tích hợp trực tiếp trong modal Cài đặt của `/work`);
   `?view=board` = compose `TASK_BOARD`; `?view=calendar` = `TASK_CALENDAR`;
   `?view=timeline` = `TASK_TIMELINE`. **Không** dùng archetype `BOARD` /
   `station_chrome` (KDS/POS).

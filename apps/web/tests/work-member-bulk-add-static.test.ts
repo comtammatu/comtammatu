@@ -77,10 +77,10 @@ test("WorkSettingsDialog retains selected department and integrates WorkAddMembe
   assert.match(settings, /departmentId=\{memberDepartmentId\}/);
 });
 
-test("WorkTeamClient integrates WorkAddMembersDialog for department member management", () => {
-  const teamClient = readWeb("app/(protected)/work/_components/work-team-client.tsx");
+test("WorkSettingsDialog integrates member role and deactivation controls", () => {
+  const settings = readWeb("app/(protected)/work/_components/work-settings-dialog.tsx");
 
-  assert.match(teamClient, /WorkAddMembersDialog/);
-  assert.match(teamClient, /activeDepartmentId/);
-  assert.match(teamClient, /candidates=\{candidates\}/);
+  assert.match(settings, /setWorkDepartmentMemberRole/);
+  assert.match(settings, /deactivateWorkDepartmentMember/);
+  assert.match(settings, /workCopy\.teamDeactivate/);
 });

@@ -1325,6 +1325,7 @@ export const setWorkDepartmentMemberRole = withAction(
     if (!row) {
       return { success: false, error: workCopy.teamSaveFailed };
     }
+    revalidatePath("/work");
     revalidatePath("/work/team");
     return {
       success: true,

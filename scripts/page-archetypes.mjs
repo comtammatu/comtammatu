@@ -688,7 +688,7 @@ export const CONTROL_SURFACE_COMPOSE = {
   "apps/web/app/(protected)/promotions/[id]/page.tsx": "DOC",
   "apps/web/app/(protected)/work/page.tsx": "LIST",
   "apps/web/app/(protected)/work/tasks/[id]/page.tsx": "REDIRECT",
-  "apps/web/app/(protected)/work/team/page.tsx": "LIST",
+  "apps/web/app/(protected)/work/team/page.tsx": "REDIRECT",
   "apps/web/app/(protected)/page.tsx": "DASHBOARD_REPORT",
   "apps/web/app/(protected)/settings/(tenant)/audio/page.tsx": "DETAIL",
   "apps/web/app/(protected)/settings/(tenant)/general/page.tsx": "DETAIL",

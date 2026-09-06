@@ -46,11 +46,11 @@ test("Work pages and compose census exist", () => {
   );
   assert.match(
     archetypes,
-    /"apps\/web\/app\/\(protected\)\/work\/tasks\/\[id\]\/page\.tsx": "REDIRECT-SHIM"/,
+    /"apps\/web\/app\/\(protected\)\/work\/tasks\/\[id\]\/page\.tsx": "REDIRECT"/,
   );
   assert.match(
     archetypes,
-    /"apps\/web\/app\/\(protected\)\/work\/team\/page\.tsx": "LIST"/,
+    /"apps\/web\/app\/\(protected\)\/work\/team\/page\.tsx": "REDIRECT"/,
   );
 });
 
@@ -119,6 +119,8 @@ test("Work settings dialog covers department and member admin", () => {
   assert.match(settings, /WorkSettingsDialog/);
   assert.match(settings, /deactivateWorkDepartment/);
   assert.match(settings, /ensurePilotDepartment/);
+  assert.match(settings, /setWorkDepartmentMemberRole/);
+  assert.match(settings, /deactivateWorkDepartmentMember/);
   assert.doesNotMatch(settings, /settingsTabProjects/);
   const header = readWeb(
     "app/(protected)/work/_components/work-page-header-actions.tsx",
@@ -183,11 +185,11 @@ test("Work permission key is registered", () => {
   assert.match(permissions, /WORK_MANAGE: "work:manage"/);
 });
 
-test("Work deep nav exposes department team section for manage", () => {
+test("Work module is flat in deep nav; department admin lives in settings dialog", () => {
   const nav = readWeb("app/lib/control-surface-nav.ts");
-  assert.match(nav, /teamNavSection/);
-  assert.match(nav, /\/work\/team/);
-  const teamClient = readWeb("app/(protected)/work/_components/work-team-client.tsx");
-  assert.match(teamClient, /upsertWorkDepartment/);
-  assert.match(teamClient, /departmentAdd/);
+  assert.match(nav, /resolveWorkDeepNav/);
+  assert.doesNotMatch(nav, /\/work\/team/);
+  const redirectShim = readWeb("app/(protected)/work/team/page.tsx");
+  assert.match(redirectShim, /redirect\(/);
+  assert.match(redirectShim, /\/work/);
 });

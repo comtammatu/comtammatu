@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Input } from "@comtammatu/ui/components/input";
 import {
   Item,
   ItemActions,
@@ -39,12 +40,15 @@ import { workCopy } from "@lib/messages/work";
 import { WORK_LIST_ITEM_INSET } from "../_lib/compose-styles";
 import {
   deactivateWorkDepartment,
+  deactivateWorkDepartmentMember,
   ensurePilotDepartment,
   listWorkCandidateProfiles,
   listWorkDepartmentMembers,
+  setWorkDepartmentMemberRole,
   upsertWorkDepartment,
   type WorkDepartmentMemberRow,
   type WorkDepartmentOption,
+  type WorkMemberRole,
   type WorkProfileOption,
 } from "../actions";
 import { WorkAddMembersDialog } from "./work-add-members-dialog";
@@ -78,6 +82,17 @@ export function WorkSettingsDialog({
   const [candidates, setCandidates] = useState<WorkProfileOption[]>([]);
 
   const [reloadKey, setReloadKey] = useState(0);
+  const [memberSearchQuery, setMemberSearchQuery] = useState("");
+
+  const filteredMembers = useMemo(() => {
+    const q = memberSearchQuery.trim().toLowerCase();
+    if (!q) return members;
+    return members.filter((m) => m.fullName.toLowerCase().includes(q));
+  }, [members, memberSearchQuery]);
+
+  useEffect(() => {
+    setMemberSearchQuery("");
+  }, [memberDepartmentId, open]);
 
   useEffect(() => {
     if (!open) return;
@@ -159,15 +174,21 @@ export function WorkSettingsDialog({
         open={open}
         onOpenChange={onOpenChange}
         title={workCopy.settingsTitle}
-        contentClassName="max-w-lg"
+        contentClassName="max-w-xl"
       >
         <Tabs defaultValue="departments" className="flex flex-col gap-4">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="departments">
-              {workCopy.settingsTabDepartments}
+            <TabsTrigger value="departments" className="gap-1.5">
+              <span>{workCopy.settingsTabDepartments}</span>
+              <Badge variant="secondary" className="px-1.5 py-0 text-xs">
+                {departments.length}
+              </Badge>
             </TabsTrigger>
-            <TabsTrigger value="members">
-              {workCopy.settingsTabMembers}
+            <TabsTrigger value="members" className="gap-1.5">
+              <span>{workCopy.settingsTabMembers}</span>
+              <Badge variant="secondary" className="px-1.5 py-0 text-xs">
+                {members.length}
+              </Badge>
             </TabsTrigger>
           </TabsList>
 
@@ -179,7 +200,7 @@ export function WorkSettingsDialog({
                 compact
               />
             ) : (
-              <div className={`flex flex-col ${WORK_LIST_ITEM_INSET}`}>
+              <div className={`max-h-80 overflow-y-auto pr-1 flex flex-col gap-2 ${WORK_LIST_ITEM_INSET}`}>
                 {departments.map((department) => (
                   <Item key={department.id} variant="outline">
                     <ItemContent>
@@ -261,56 +282,162 @@ export function WorkSettingsDialog({
               />
             ) : (
               <>
-                <Select
-                  value={
-                    memberDepartmentId != null
-                      ? String(memberDepartmentId)
-                      : undefined
-                  }
-                  onValueChange={(value) =>
-                    setMemberDepartmentId(Number(value))
-                  }
-                >
-                  <SelectTrigger size={controlSize} className="w-full">
-                    <SelectValue placeholder={workCopy.scopeDepartment} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {departments.map((department) => (
-                      <SelectItem
-                        key={department.id}
-                        value={String(department.id)}
-                      >
-                        {department.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  type="button"
-                  size={controlSize}
-                  onClick={() => setMemberDialogOpen(true)}
-                  disabled={candidates.length === 0}
-                >
-                  {workCopy.teamAdd}
-                </Button>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={
+                        memberDepartmentId != null
+                          ? String(memberDepartmentId)
+                          : undefined
+                      }
+                      onValueChange={(value) =>
+                        setMemberDepartmentId(Number(value))
+                      }
+                    >
+                      <SelectTrigger size={controlSize} className="flex-1">
+                        <SelectValue placeholder={workCopy.scopeDepartment} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {departments.map((department) => (
+                          <SelectItem
+                            key={department.id}
+                            value={String(department.id)}
+                          >
+                            {department.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      size={controlSize}
+                      onClick={() => setMemberDialogOpen(true)}
+                      disabled={candidates.length === 0}
+                    >
+                      {workCopy.teamAdd}
+                    </Button>
+                  </div>
+                  {members.length > 3 ? (
+                    <Input
+                      placeholder={workCopy.teamMemberSearchPlaceholder}
+                      value={memberSearchQuery}
+                      onChange={(e) => setMemberSearchQuery(e.target.value)}
+                      className="w-full"
+                    />
+                  ) : null}
+                </div>
+
                 {members.length === 0 ? (
                   <AppEmptyState
                     mode="no-data"
                     description={workCopy.teamEmpty}
                     compact
+                  >
+                    <Button
+                      type="button"
+                      size={controlSize}
+                      onClick={() => setMemberDialogOpen(true)}
+                      disabled={candidates.length === 0}
+                    >
+                      {workCopy.teamAdd}
+                    </Button>
+                  </AppEmptyState>
+                ) : filteredMembers.length === 0 ? (
+                  <AppEmptyState
+                    mode="no-data"
+                    description={workCopy.teamAddNoResults}
+                    compact
                   />
                 ) : (
-                  <div className={`flex flex-col ${WORK_LIST_ITEM_INSET}`}>
-                    {members.map((member) => (
-                      <Item key={member.id} variant="outline">
-                        <ItemContent className="gap-1">
-                          <ItemTitle>{member.fullName}</ItemTitle>
-                          <Badge variant="secondary">
+                  <div className={`max-h-80 overflow-y-auto pr-1 flex flex-col gap-2 ${WORK_LIST_ITEM_INSET}`}>
+                    {filteredMembers.map((member) => (
+                      <Item key={member.id} variant="outline" className="p-2.5">
+                        <ItemContent className="gap-1 min-w-0">
+                          <ItemTitle className="truncate font-medium text-sm">
+                            {member.fullName}
+                          </ItemTitle>
+                          <Badge
+                            variant={member.role === "lead" ? "default" : "secondary"}
+                          >
                             {member.role === "lead"
                               ? workCopy.teamRoleLead
                               : workCopy.teamRoleMember}
                           </Badge>
                         </ItemContent>
+                        <ItemActions className="flex items-center gap-2 shrink-0">
+                          <Select
+                            value={member.role}
+                            disabled={isPending}
+                            onValueChange={(value) => {
+                              const role = value as WorkMemberRole;
+                              if (memberDepartmentId == null) return;
+                              startTransition(async () => {
+                                const result = await setWorkDepartmentMemberRole({
+                                  departmentId: memberDepartmentId,
+                                  userId: member.userId,
+                                  role,
+                                });
+                                if (!result.success) {
+                                  toast.error(
+                                    result.error ?? workCopy.teamSaveFailed,
+                                  );
+                                  return;
+                                }
+                                toast.success(workCopy.save);
+                                setReloadKey((k) => k + 1);
+                                refreshPage();
+                              });
+                            }}
+                          >
+                            <SelectTrigger size={controlSize} className="w-32">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="lead">
+                                {workCopy.teamRoleLead}
+                              </SelectItem>
+                              <SelectItem value="member">
+                                {workCopy.teamRoleMember}
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            type="button"
+                            size={controlSize}
+                            variant="outline"
+                            disabled={isPending}
+                            onClick={async () => {
+                              if (memberDepartmentId == null) return;
+                              const ok = await confirm({
+                                title: workCopy.teamDeactivate,
+                                description:
+                                  workCopy.teamDeactivateConfirmDescription(
+                                    member.fullName,
+                                  ),
+                                confirmText: workCopy.teamDeactivate,
+                                variant: "destructive",
+                              });
+                              if (!ok) return;
+                              startTransition(async () => {
+                                const result = await deactivateWorkDepartmentMember({
+                                  departmentId: memberDepartmentId,
+                                  userId: member.userId,
+                                });
+                                if (!result.success) {
+                                  toast.error(
+                                    result.error ?? workCopy.teamSaveFailed,
+                                  );
+                                  return;
+                                }
+                                toast.success(workCopy.save);
+                                setReloadKey((k) => k + 1);
+                                refreshPage();
+                              });
+                            }}
+                          >
+                            {workCopy.teamDeactivate}
+                          </Button>
+                        </ItemActions>
                       </Item>
                     ))}
                   </div>
