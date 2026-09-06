@@ -820,7 +820,7 @@ test("operator today shift and profile screens use responsive branch layout", ()
   assert.match(layout, /md:max-w-3xl lg:max-w-5xl xl:max-w-6xl/);
   assert.doesNotMatch(layout, /\s+mobile\s+contentClassName=/);
   assert.match(bottomNav, /position="static"/);
-  assert.match(bottomNav, /hideOnDesktop=\{false\}/);
+  assert.match(bottomNav, /hideOnDesktop=\{hideOnDesktop\}/);
   assert.doesNotMatch(
     home,
     /<BranchOperatorPage[\s\S]*?<div className="flex flex-col gap-3"[\s\S]*?<\/BranchOperatorPage>/,

@@ -65,7 +65,7 @@ test("operator entry owns the mobile shell and keeps bottom nav outside scroll c
   assert.match(layout, /id="main-content"[\s\S]*overflow-y-auto/);
   assert.match(
     layout,
-    /contentClassName="[^"]*max-w-lg md:max-w-3xl lg:max-w-5xl xl:max-w-6xl"/,
+    /contentClassName="[^"]*max-w-lg md:max-w-3xl lg:max-w-5xl xl:max-w-6xl(?: 2xl:max-w-7xl)?"/,
   );
   assert.match(bottomNav, /position="static"/);
   assert.match(appBottomNav, /"static shrink-0"/);

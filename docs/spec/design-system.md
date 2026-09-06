@@ -892,6 +892,11 @@ explanatory copy only for temporary operational blockers.
 shell. Use the same typography, tokens, and state vocabulary as the other
 planes.
 
+**Branch operator surface.** Responsive dual navigation:
+- Mobile/Tablet (< 1024px): Single vertical scrollport with compact header and `OperatorBottomNav` carrying primary tabs.
+- Desktop PC (≥ 1024px): `OperatorDesktopNav` left sidebar rail (`w-60`) hosting quick station launcher (`/pos`, `/kds`), primary tabs, and status badges; bottom nav is hidden (`lg:hidden`); main content expands (`xl:max-w-7xl`).
+- Touch Target SSOT: Single 48px standard (`min-h-12` / `size="touch"`) across Tablet and Mobile (meeting both Apple HIG ≥44px and Android Material 3 48dp without OS branching); hero actions use 56px (`min-h-14` / `size="touch-lg"`).
+
 **Layout baseline (all surfaces).** Mobile is the baseline; desktop densifies,
 never a different IA. Root viewport must allow zoom. One toolbar per workflow;
 never repeat the same state in header, rail, sidebar, gate, and board.

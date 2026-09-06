@@ -8,6 +8,13 @@ export const operator = {
   nav: {
     schedule: "Lịch ca",
     profileShort: "Hồ sơ",
+    stationsSection: "Trạm vận hành",
+    workspacesSection: "Khu vực làm việc",
+    shortcutsSection: "Lối tắt",
+    posStation: "Trạm POS Thu ngân",
+    kdsStation: "Trạm Bếp KDS",
+    ordersShortcut: "Đơn bán trong ngày",
+    closeDayShortcut: "Báo cáo ngày (04:00)",
     pendingBadge: (count: number) =>
       `${formatCount(count)} việc cần xử lý`,
   },

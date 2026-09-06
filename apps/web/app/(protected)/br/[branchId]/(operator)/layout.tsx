@@ -35,6 +35,7 @@ import { parseOperatorBranchId } from "../_lib/parse-branch-id";
 import { branchNavBadgeCounts } from "./_lib/branch-nav-badges";
 import { fetchBranchQueueCounts } from "./dashboard/data";
 import { OperatorBottomNav } from "./operator-bottom-nav";
+import { OperatorDesktopNav } from "./operator-desktop-nav";
 import { OperatorNotificationBell } from "./operator-notification-bell";
 import { OperatorPwaToolbar } from "./operator-pwa-toolbar";
 import { BranchIncidentDialog } from "../_components/branch-incident-dialog";
@@ -183,18 +184,27 @@ export default async function OperatorLayout({
           }
         />
         <OperatorPwaToolbar />
-        <div
-          id="main-content"
-          tabIndex={-1}
-          role="main"
-          className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-contain"
-        >
-          <AppPage
-            className="flex min-h-0 flex-1 flex-col"
-            contentClassName="min-h-0 flex-1 max-w-lg md:max-w-3xl lg:max-w-5xl xl:max-w-6xl"
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          <OperatorDesktopNav
+            branchId={context.branchId}
+            tabs={primaryTabs}
+            branchKind={branchKind}
+            badges={navBadges}
+            userRole={claims.user_role}
+          />
+          <div
+            id="main-content"
+            tabIndex={-1}
+            role="main"
+            className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-contain"
           >
-            {children}
-          </AppPage>
+            <AppPage
+              className="flex min-h-0 flex-1 flex-col"
+              contentClassName="min-h-0 flex-1 max-w-lg md:max-w-3xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl"
+            >
+              {children}
+            </AppPage>
+          </div>
         </div>
         <OperatorBottomNav
           branchId={context.branchId}
@@ -202,6 +212,7 @@ export default async function OperatorLayout({
           branchKind={branchKind}
           badges={navBadges}
           wide
+          hideOnDesktop={true}
         />
       </div>
     </PwaRuntimeProvider>

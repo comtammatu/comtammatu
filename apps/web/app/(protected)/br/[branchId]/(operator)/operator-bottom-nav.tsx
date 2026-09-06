@@ -144,18 +144,27 @@ function projectPrimaryTabs(
   }));
 }
 
+export {
+  TAB_ICONS,
+  centralResidualNavItems,
+  pendingBadgeLabel,
+  projectPrimaryTabs,
+};
+
 export function OperatorBottomNav({
   branchId,
   tabs,
   branchKind = "branch",
   badges,
   wide = true,
+  hideOnDesktop = true,
 }: {
   branchId: number;
   tabs: readonly ResolvedBranchPrimaryTab[];
   branchKind?: BranchKind;
   badges?: BranchNavBadgeCounts;
   wide?: boolean;
+  hideOnDesktop?: boolean;
 }) {
   const pathname = usePathname();
 
@@ -167,7 +176,7 @@ export function OperatorBottomNav({
   return (
     <AppBottomNav
       ariaLabel={APP_COPY_VI.operatorAriaLabel}
-      hideOnDesktop={false}
+      hideOnDesktop={hideOnDesktop}
       position="static"
       wide={wide}
       prefetchItems
