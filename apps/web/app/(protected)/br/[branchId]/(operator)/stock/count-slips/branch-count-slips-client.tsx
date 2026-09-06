@@ -125,6 +125,7 @@ export function BranchCountSlipsClient({
   initialRows,
   loadFailed,
   focusFirstPending,
+  tierEnabled = true,
 }: {
   tenantId: number;
   branchId: number;
@@ -132,6 +133,7 @@ export function BranchCountSlipsClient({
   initialRows: CountSlipRow[];
   loadFailed: boolean;
   focusFirstPending: boolean;
+  tierEnabled?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -233,10 +235,10 @@ export function BranchCountSlipsClient({
 
   const incompleteResolutionCount = selectedShortageLines.filter(
     (line) =>
-      isShortagePhotoRequired(wasteReasons[line.id]) &&
+      isShortagePhotoRequired(wasteReasons[line.id], tierEnabled) &&
       (wastePhotoUrls[line.id]?.length ?? 0) === 0,
   ).length;
-  const wasteEvidenceComplete = incompleteResolutionCount === 0;
+  const wasteEvidenceComplete = !tierEnabled || incompleteResolutionCount === 0;
   const needsWasteRecovery =
     selected?.status === "approved" &&
     selectedShortageLines.length > 0 &&
@@ -1004,6 +1006,7 @@ export function BranchCountSlipsClient({
                   disabled={isPending}
                   touch
                   compact
+                  tierEnabled={tierEnabled}
                   onChange={(lineId, url) =>
                     setWastePhotoUrls((current) => ({
                       ...current,

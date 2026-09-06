@@ -184,3 +184,65 @@ test("approve_inventory_count_slip_with_waste auto-approves and confirms shortag
   );
 });
 
+test("_post_writeoff_movements supports branch kitchen location for staff count auto waste", () => {
+  const actionsSource = readRepoFile(
+    "apps/web/app/(protected)/inventory/count-slips/actions.ts",
+  );
+  const migrationSource = readdirSync(join(repoRoot, "supabase/migrations"))
+    .filter((name) => name.endsWith(".sql"))
+    .map((name) => readRepoFile(`supabase/migrations/${name}`))
+    .join("\n");
+
+  assertSqlMatch(
+    migrationSource,
+    /CREATE OR REPLACE FUNCTION public\._post_writeoff_movements[\s\S]*?location\.location_kind\s*=\s*ANY\s*\(ARRAY\['warehouse'::text,\s*'kitchen'::text/,
+    "_post_writeoff_movements must allow kitchen location_kind for post-split staff counts",
+  );
+  assert.match(
+    actionsSource,
+    /case\s*"23514":/,
+    "mapCountSlipError must map Postgres 23514 location error code",
+  );
+});
+
+test("count slip auto waste photo validation respects inventory_waste_tier_enabled setting", () => {
+  const migrationSource = readdirSync(join(repoRoot, "supabase/migrations"))
+    .filter((name) => name.endsWith(".sql"))
+    .map((name) => readRepoFile(`supabase/migrations/${name}`))
+    .join("\n");
+  const evidenceSource = readRepoFile(
+    "apps/web/app/components/inventory/count-slip-waste-evidence.tsx",
+  );
+  const branchClientSource = readRepoFile(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-slips/branch-count-slips-client.tsx",
+  );
+  const desktopClientSource = readRepoFile(
+    "apps/web/app/(protected)/inventory/count-slips/count-slips-client.tsx",
+  );
+
+  assertSqlMatch(
+    migrationSource,
+    /CREATE OR REPLACE FUNCTION public\.approve_inventory_count_slip_with_waste[\s\S]*?key\s*=\s*'inventory_waste_tier_enabled'[\s\S]*?IF\s+v_tier_enabled\s+AND\s+EXISTS/,
+    "approve_inventory_count_slip_with_waste must check inventory_waste_tier_enabled before enforcing photos",
+  );
+
+  assert.match(
+    evidenceSource,
+    /export function isShortagePhotoRequired\(\s*reasonCode:\s*string\s*\|\s*undefined,\s*tierEnabled:\s*boolean\s*=\s*true,\s*\):\s*boolean\s*\{\s*if\s*\(!tierEnabled\)\s*return\s*false;/,
+    "isShortagePhotoRequired must return false when tierEnabled is false",
+  );
+
+  assert.match(
+    branchClientSource,
+    /wasteEvidenceComplete\s*=\s*!tierEnabled\s*\|\|\s*incompleteResolutionCount\s*===\s*0/,
+    "branch client must treat waste evidence as complete when tierEnabled is false",
+  );
+
+  assert.match(
+    desktopClientSource,
+    /wasteEvidenceComplete\s*=\s*!tierEnabled\s*\|\|/,
+    "desktop client must treat waste evidence as complete when tierEnabled is false",
+  );
+});
+
+

@@ -191,11 +191,13 @@ export function CountSlipsClient({
   branchId,
   initial,
   initialSlipId = null,
+  tierEnabled = true,
 }: {
   tenantId: number;
   branchId: number;
   initial: CountSlipRow[];
   initialSlipId?: number | null;
+  tierEnabled?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -496,6 +498,7 @@ export function CountSlipsClient({
         row={selectedRow}
         onClose={closeSlip}
         onStatusChange={applyStatus}
+        tierEnabled={tierEnabled}
       />
     </AppPage>
   );
@@ -506,11 +509,13 @@ function CountSlipReviewDialog({
   row,
   onClose,
   onStatusChange,
+  tierEnabled = true,
 }: {
   tenantId: number;
   row: CountSlipRow | null;
   onClose: () => void;
   onStatusChange: (slipId: number, status: CountSlipStatus) => void;
+  tierEnabled?: boolean;
 }) {
   const router = useRouter();
   const [recounting, setRecounting] = useState(false);
@@ -570,11 +575,13 @@ function CountSlipReviewDialog({
   const surplusLines = activeRow.lines.filter(
     (line) => line.variance !== null && line.variance > 0,
   );
-  const wasteEvidenceComplete = shortageLines.every(
-    (line) =>
-      !isShortagePhotoRequired(wasteReasons[line.id]) ||
-      (wastePhotoUrls[line.id]?.length ?? 0) > 0,
-  );
+  const wasteEvidenceComplete =
+    !tierEnabled ||
+    shortageLines.every(
+      (line) =>
+        !isShortagePhotoRequired(wasteReasons[line.id], tierEnabled) ||
+        (wastePhotoUrls[line.id]?.length ?? 0) > 0,
+    );
   const needsWasteRecovery =
     activeRow.status === "approved" &&
     shortageLines.length > 0 &&
@@ -1126,6 +1133,7 @@ function CountSlipReviewDialog({
           reasons={wasteReasons}
           disabled={pendingAction !== null}
           touch={controlSize === "touch"}
+          tierEnabled={tierEnabled}
           onChange={(lineId, url) =>
             setWastePhotoUrls((current) => ({
               ...current,

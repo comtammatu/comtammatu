@@ -33,6 +33,7 @@ export default async function OperatorCountSlipsPage({
       initialRows={data.rows}
       loadFailed={data.loadFailed}
       focusFirstPending={employeeId !== undefined}
+      tierEnabled={data.tierEnabled}
     />
   );
 }

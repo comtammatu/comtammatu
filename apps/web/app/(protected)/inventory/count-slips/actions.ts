@@ -246,6 +246,8 @@ function mapCountSlipError(error: { code?: string; message?: string }): string {
       return "Không tìm thấy phiếu đếm.";
     case "22001":
       return "Lý do đếm lại quá dài.";
+    case "23514":
+      return "Vị trí kiểm đếm của phiếu không hợp lệ.";
     case "28000":
       return "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
     default:

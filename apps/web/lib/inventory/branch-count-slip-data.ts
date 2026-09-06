@@ -48,6 +48,7 @@ export type BranchCountSlipData = {
   branchName: string;
   rows: CountSlipRow[];
   loadFailed: boolean;
+  tierEnabled: boolean;
 };
 
 function normalizeStatus(value: unknown): CountSlipStatus {
@@ -385,11 +386,35 @@ export async function loadBranchCountSlipData(
     };
   });
 
+  const [branchSettingRes, systemSettingRes] = await Promise.all([
+    supabase
+      .from("branch_settings")
+      .select("value")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", routeBranchId)
+      .eq("key", "inventory_waste_tier_enabled")
+      .maybeSingle(),
+    supabase
+      .from("system_settings")
+      .select("value")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("key", "inventory_waste_tier_enabled")
+      .maybeSingle(),
+  ]);
+
+  const rawTierEnabled =
+    branchSettingRes.data?.value ?? systemSettingRes.data?.value;
+  const tierEnabled =
+    rawTierEnabled !== undefined && rawTierEnabled !== null
+      ? rawTierEnabled === "true"
+      : true;
+
   return {
     tenantId: claims.tenant_id,
     branchId: routeBranchId,
     branchName,
     rows,
     loadFailed: slipsResult.error != null,
+    tierEnabled,
   };
 }

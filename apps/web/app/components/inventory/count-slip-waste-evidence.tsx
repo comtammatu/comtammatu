@@ -37,7 +37,9 @@ export const SHORTAGE_REASONS = [
 
 export function isShortagePhotoRequired(
   reasonCode: string | undefined,
+  tierEnabled: boolean = true,
 ): boolean {
+  if (!tierEnabled) return false;
   return (
     reasonCode === "spoiled" ||
     reasonCode === "expired" ||
@@ -58,6 +60,7 @@ export function CountSlipWasteEvidence({
   defaultExpanded = false,
   onChange,
   onReasonChange,
+  tierEnabled = true,
 }: {
   tenantId: number;
   branchId: number;
@@ -71,13 +74,14 @@ export function CountSlipWasteEvidence({
   defaultExpanded?: boolean;
   onChange: (lineId: number, url: string | null) => void;
   onReasonChange?: (lineId: number, reason: string) => void;
+  tierEnabled?: boolean;
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   if (lines.length === 0) return null;
 
-  const hasPhotoLines = lines.some((l) =>
-    isShortagePhotoRequired(reasons[l.id]),
-  );
+  const hasPhotoLines =
+    tierEnabled &&
+    lines.some((l) => isShortagePhotoRequired(reasons[l.id], tierEnabled));
 
   function applyReasonToAll(reason: string) {
     if (!onReasonChange) return;
@@ -185,7 +189,7 @@ export function CountSlipWasteEvidence({
           <div className="grid gap-2 sm:grid-cols-2">
             {lines.map((line) => {
               const currentReason = reasons[line.id] ?? "discrepancy";
-              const requiresPhoto = isShortagePhotoRequired(currentReason);
+              const requiresPhoto = isShortagePhotoRequired(currentReason, tierEnabled);
 
               return (
                 <Frame

@@ -428,12 +428,24 @@ export async function CountSlipsPageContent({
       ? initialSlipId
       : null;
 
+  const { data: systemSetting } = await supabase
+    .from("system_settings")
+    .select("value")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("key", "inventory_waste_tier_enabled")
+    .maybeSingle();
+  const tierEnabled =
+    systemSetting?.value !== undefined && systemSetting?.value !== null
+      ? systemSetting.value === "true"
+      : true;
+
   return (
     <CountSlipsClient
       tenantId={claims.tenant_id}
       branchId={selectedBranchId}
       initial={rows}
       initialSlipId={resolvedSlipId}
+      tierEnabled={tierEnabled}
     />
   );
 }

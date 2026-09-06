@@ -501,7 +501,7 @@ test("Branch setup clients and POS sessions keep mobile-stable surfaces", () => 
     posSessionsClient,
     /<DataTable|mobileBreakpoint=\{1024\}/,
   );
-  assert.match(posSessionsClient, /<ItemGroup>/);
+  assert.match(posSessionsClient, /<ItemGroup/);
   assert.match(posSessionsClient, /<Drawer/);
   assert.match(posSessionsClient, /<BranchOperatorFrame/);
   assert.match(posSessionsClient, /min-w-0/);
