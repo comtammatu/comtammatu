@@ -55,7 +55,7 @@ import { useLiveCamera } from "../_lib/use-live-camera";
 import {
   cancelCheckoutRequest,
   clockInWithPhoto,
-  clockOutManagerShift,
+  clockOutDirectShift,
   requestCheckoutApproval,
 } from "./actions";
 
@@ -216,7 +216,7 @@ export function ClockClient({
   const [isPending, startTransition] = useTransition();
   const photoInputRef = useRef<HTMLInputElement>(null);
   const autoStartCameraRef = useRef(false);
-  const managerAttendanceOnly = state.managerAttendanceOnly;
+  const directCheckoutAllowed = state.directCheckoutAllowed;
   const todayShiftName =
     state.attendance?.shiftName ??
     state.todayShifts.find((shift) => shift.isCurrent)?.shiftName ??
@@ -345,7 +345,7 @@ export function ClockClient({
       return;
     }
 
-    if (managerAttendanceOnly) {
+    if (directCheckoutAllowed) {
       const ok = await confirm({
         title: "Đóng ca của bạn?",
         description:
@@ -359,8 +359,8 @@ export function ClockClient({
     setCheckoutState("submitting");
     setError(null);
     startTransition(async () => {
-      const result = managerAttendanceOnly
-        ? await clockOutManagerShift({ attendanceId })
+      const result = directCheckoutAllowed
+        ? await clockOutDirectShift({ attendanceId })
         : await requestCheckoutApproval({ attendanceId });
       if (result.success) {
         setCheckoutState("success");
@@ -377,7 +377,7 @@ export function ClockClient({
   }, [
     embedded,
     isOnline,
-    managerAttendanceOnly,
+    directCheckoutAllowed,
     router,
     routes.home,
     state.attendance?.checkIn,
@@ -561,10 +561,10 @@ export function ClockClient({
 
   if (state.status === "working") {
     const pastShiftEnd = isPastShiftEnd(state);
-    const checkoutButtonLabel = managerAttendanceOnly
+    const checkoutButtonLabel = directCheckoutAllowed
       ? clockCopy.managerCheckoutButton
       : clockCopy.staffCheckoutButton;
-    const checkoutPendingLabel = managerAttendanceOnly
+    const checkoutPendingLabel = directCheckoutAllowed
       ? clockCopy.managerCheckoutSubmitting
       : clockCopy.staffCheckoutSubmitting;
     const checkoutBody = (
@@ -606,7 +606,7 @@ export function ClockClient({
       <Panel
         icon={IconClock}
         title={
-          managerAttendanceOnly
+          directCheckoutAllowed
             ? clockCopy.managerCheckoutTitle
             : clockCopy.staffCheckoutTitle
         }

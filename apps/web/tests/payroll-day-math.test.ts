@@ -25,3 +25,18 @@ test("buildCompletedWorkdays uses hour-ratio and strict 0 without frozen window"
 
   assert.equal(workdays.get(1), 0.5);
 });
+
+test("buildCompletedWorkdays uses completed quarter-day buckets from September 2026", () => {
+  const workdays = buildCompletedWorkdays([
+    {
+      employeeId: 47,
+      date: "2026-09-10",
+      checkIn: "2026-09-10T01:00:00.000Z",
+      checkOut: "2026-09-10T08:00:00.000Z",
+      scheduledStart: "2026-09-10T01:00:00.000Z",
+      scheduledEnd: "2026-09-10T09:00:00.000Z",
+    },
+  ]);
+
+  assert.equal(workdays.get(47), 0.75);
+});

@@ -59,10 +59,10 @@ test("Employee clock client and actions no longer use GPS for clock-in/out", () 
   const clientSrc = read("apps/web/lib/staff-runtime/clock/clock-client.tsx");
 
   assert.ok(
-    actionSrc.includes("clockInWithPhoto") &&
+      actionSrc.includes("clockInWithPhoto") &&
       actionSrc.includes("toggleChecklistItem") &&
       actionSrc.includes("requestCheckoutApproval") &&
-      actionSrc.includes("clockOutManagerShift"),
+      actionSrc.includes("clockOutDirectShift"),
     "expected new Employee Daily Work server actions",
   );
   assert.ok(
@@ -445,9 +445,11 @@ test("archived checkout lineage remains testable with branch-scoped manager auth
     "expected approval action to use the authenticated DB-side hierarchy contract",
   );
   assert.ok(
-    workStateSrc.includes('"checkout_pending"') &&
+      workStateSrc.includes('"checkout_pending"') &&
       workStateSrc.includes('"not_required"') &&
       workStateSrc.includes("managerAttendanceOnly") &&
+      workStateSrc.includes("directCheckoutAllowed") &&
+      workStateSrc.includes("canDirectlyCheckoutAttendance") &&
       workStateSrc.includes("isManagerSimpleAttendanceRole") &&
       workStateSrc.includes("DEFAULT_ATTENDANCE_ROLES") &&
       workStateSrc.includes("requiredRemaining") &&

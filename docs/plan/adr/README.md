@@ -67,6 +67,6 @@ spec/module/ref first; open the ADR only for the unique decision.
 
 | ADR | Owns | Runtime |
 | --- | --- | --- |
-| [0019](0019-hrm-roster-contract-options.md) | Roster required; hour-ratio work credit; `wage_unit` | `docs/ref/payroll-pit.md` |
+| [0019](0019-hrm-roster-contract-options.md) | Roster required; versioned quarter-day work credit; direct self-checkout; `wage_unit` | `docs/ref/payroll-pit.md` |
 | [0022](0022-hr-control-surface-information-architecture.md) | `/hr` vs `/br/…/team` vs `/me` IA | `docs/ref/screen-context-map.md` |
 | [0023](0023-shift-leader-delegation.md) | Shift-leader flag; void queue; no PIN | `docs/ref/branch-operations.md` |

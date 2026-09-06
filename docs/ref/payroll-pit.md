@@ -126,9 +126,21 @@ state machine cho phép; không sửa snapshot đã giao Finance.
 
 Công mỗi ca đã kết (ADR 0019 / D027):
 
-`công = min(1.0, round_1dp(|(check_in, check_out) ∩ scheduled_window| / scheduled_len))`.
+- Trước tháng 09/2026: giữ nguyên cách tính lịch sử theo tỷ lệ giờ và làm tròn
+  một chữ số thập phân.
+- Từ tháng 09/2026: chỉ tính theo phần tư ca đã làm đủ:
+  `công = min(1.0, floor(4 × thời_gian_trùng_ca / thời_lượng_ca) / 4)`.
+  Với ca 8 giờ: làm đủ 2/4/6/8 giờ được 0,25/0,5/0,75/1 công; làm 7 giờ được
+  0,75 công; dưới 2 giờ được 0 công.
 
 Chưa kết ca → không cộng. `working_days = Σ công`.
+Các bảng lương đã chốt không tính lại theo quy tắc mới.
+
+Nhân viên khối văn phòng (không gắn chi nhánh) và các chức danh quản lý
+`branch_manager`, `hr_manager`, `central_supply_ops`, `central_kitchen_lead`
+được ghi giờ ra ngay, không chờ duyệt kết ca. Các yêu cầu bắt buộc trong ca,
+ảnh minh chứng và phiếu kiểm kê vẫn phải hoàn thành. Nhân viên còn lại tiếp tục
+gửi yêu cầu kết ca theo luồng phê duyệt hiện hành.
 
 `payable_days = min(standard_days, working_days + paid_leave_days)`
 `base = monthly_salary × payable_days / standard_days`.

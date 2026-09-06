@@ -23,6 +23,30 @@ export const STAFF_ROLES = [
 
 export type StaffRole = (typeof STAFF_ROLES)[number];
 
+/** Canonical HR positions allowed to close their own attendance immediately. */
+export const ATTENDANCE_DIRECT_CHECKOUT_POSITION_CODES = [
+  "branch_manager",
+  "hr_manager",
+  "central_supply_ops",
+  "central_kitchen_lead",
+] as const;
+
+/**
+ * Office-scoped employees have no branch assignment. Site-scoped employees
+ * need one of the explicitly approved management positions. Owner is not an
+ * employee self-service subject.
+ */
+export function canDirectlyCheckoutAttendance(input: {
+  branchId: number | null;
+  positionCode: string | null | undefined;
+}): boolean {
+  if (!input.positionCode || input.positionCode === "owner") return false;
+  if (input.branchId === null) return true;
+  return ATTENDANCE_DIRECT_CHECKOUT_POSITION_CODES.some(
+    (code) => code === input.positionCode,
+  );
+}
+
 /** Roles that operate at branch level (POS/KDS) */
 export const BRANCH_ROLES: readonly StaffRole[] = ["cashier", "chef"] as const;
 

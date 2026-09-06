@@ -1,5 +1,8 @@
 import { cache } from "react";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import {
+  canDirectlyCheckoutAttendance,
+  type StaffRole,
+} from "@comtammatu/shared/auth";
 import {
   addVNDateDays,
   getVNDateString,
@@ -83,6 +86,7 @@ export interface TodayWorkState {
   branchName: string | null;
   userRole: StaffRole | null;
   managerAttendanceOnly: boolean;
+  directCheckoutAllowed: boolean;
   attendanceRequired: boolean;
   approvalTargetLabel: string;
   shiftUnassigned: boolean;
@@ -197,6 +201,7 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
       branchName: null,
       userRole: null,
       managerAttendanceOnly: false,
+      directCheckoutAllowed: false,
       attendanceRequired: false,
       approvalTargetLabel: getApprovalTargetLabel(null),
       shiftUnassigned: false,
@@ -218,6 +223,10 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
 
   const { supabase, claims, employeeId } = ctx;
   const managerAttendanceOnly = isManagerSimpleAttendanceRole(claims.user_role);
+  const directCheckoutAllowed = canDirectlyCheckoutAttendance({
+    branchId: ctx.branchId,
+    positionCode: claims.position_code,
+  });
 
   // Per-shift attendance: a day may have a morning and an evening record.
   // An open punch owns the current shift after the clock-in window closes.
@@ -631,6 +640,7 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
     branchName: attendance?.branchName ?? ctx.branchName,
     userRole: claims.user_role,
     managerAttendanceOnly,
+    directCheckoutAllowed,
     attendanceRequired,
     approvalTargetLabel: getApprovalTargetLabel(claims.user_role),
     shiftUnassigned,

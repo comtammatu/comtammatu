@@ -57,6 +57,52 @@ test("hour-ratio công rounds 475/480 to 1.0 on 8h shift", () => {
   );
 });
 
+test("quarter-day công uses completed 2-hour quarters from September 2026", () => {
+  const scheduledStart = "2026-09-10T08:00:00+07:00";
+  const scheduledEnd = "2026-09-10T16:00:00+07:00";
+
+  for (const [checkOut, expected] of [
+    ["2026-09-10T10:00:00+07:00", 0.25],
+    ["2026-09-10T12:00:00+07:00", 0.5],
+    ["2026-09-10T14:00:00+07:00", 0.75],
+    ["2026-09-10T16:00:00+07:00", 1],
+  ] as const) {
+    assert.equal(
+      countShiftWorkdaysFromOverlap({
+        checkIn: scheduledStart,
+        checkOut,
+        scheduledStart,
+        scheduledEnd,
+      }),
+      expected,
+    );
+  }
+});
+
+test("quarter-day công floors partial quarters instead of rounding", () => {
+  const scheduledStart = "2026-09-10T08:00:00+07:00";
+  const scheduledEnd = "2026-09-10T16:00:00+07:00";
+
+  assert.equal(
+    countShiftWorkdaysFromOverlap({
+      checkIn: scheduledStart,
+      checkOut: "2026-09-10T15:00:00+07:00",
+      scheduledStart,
+      scheduledEnd,
+    }),
+    0.75,
+  );
+  assert.equal(
+    countShiftWorkdaysFromOverlap({
+      checkIn: scheduledStart,
+      checkOut: "2026-09-10T09:59:00+07:00",
+      scheduledStart,
+      scheduledEnd,
+    }),
+    0,
+  );
+});
+
 test("shiftWorkdaysFromAttendanceRecord returns 0 without frozen window", () => {
   assert.equal(
     shiftWorkdaysFromAttendanceRecord({

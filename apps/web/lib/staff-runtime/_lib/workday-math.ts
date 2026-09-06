@@ -10,7 +10,11 @@ export type WorkdayAttendanceRecord = {
   scheduledEnd?: string | null;
 };
 
-/** Hour-ratio công; mirrors SQL `attendance_shift_workdays`. */
+const QUARTER_DAY_CREDIT_EFFECTIVE_AT = Date.parse(
+  "2026-09-01T00:00:00+07:00",
+);
+
+/** Versioned công calculation; mirrors SQL `attendance_shift_workdays`. */
 export function countShiftWorkdaysFromOverlap(input: {
   checkIn: string | Date;
   checkOut: string | Date;
@@ -45,8 +49,14 @@ export function countShiftWorkdaysFromOverlap(input: {
     return 0;
   }
 
-  const rounded = Math.round((workedSeconds / shiftSeconds) * 10) / 10;
-  return Math.min(1, rounded);
+  const ratio = workedSeconds / shiftSeconds;
+  if (scheduledStart >= QUARTER_DAY_CREDIT_EFFECTIVE_AT) {
+    const completedQuarters = Math.floor(ratio * 4 + 1e-12);
+    return Math.min(1, completedQuarters / 4);
+  }
+
+  const legacyRounded = Math.round(ratio * 10) / 10;
+  return Math.min(1, legacyRounded);
 }
 
 export function shiftWorkdaysFromAttendanceRecord(

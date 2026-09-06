@@ -2,6 +2,11 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import {
+  ATTENDANCE_DIRECT_CHECKOUT_POSITION_CODES,
+  canDirectlyCheckoutAttendance,
+} from "@comtammatu/shared/auth";
+import { readActiveMigrationSql } from "./_lib/active-sql";
 
 const employeeHomeSource = readFileSync(
   join(process.cwd(), "lib/staff-runtime/page.tsx"),
@@ -60,29 +65,83 @@ test("Employee profile stays focused on self-service actions", () => {
   );
 });
 
-test("Branch Manager self-attendance uses the universal approval lifecycle", () => {
+test("office and management positions can close their own attendance directly", () => {
+  assert.deepEqual(ATTENDANCE_DIRECT_CHECKOUT_POSITION_CODES, [
+    "branch_manager",
+    "hr_manager",
+    "central_supply_ops",
+    "central_kitchen_lead",
+  ]);
+  assert.equal(
+    canDirectlyCheckoutAttendance({
+      branchId: null,
+      positionCode: "accountant",
+    }),
+    true,
+  );
+  assert.equal(
+    canDirectlyCheckoutAttendance({
+      branchId: null,
+      positionCode: "office_staff",
+    }),
+    true,
+  );
+  assert.equal(
+    canDirectlyCheckoutAttendance({
+      branchId: 47,
+      positionCode: "branch_manager",
+    }),
+    true,
+  );
+  assert.equal(
+    canDirectlyCheckoutAttendance({
+      branchId: 47,
+      positionCode: "hr_manager",
+    }),
+    true,
+  );
+  assert.equal(
+    canDirectlyCheckoutAttendance({ branchId: 47, positionCode: "cashier" }),
+    false,
+  );
+  assert.equal(
+    canDirectlyCheckoutAttendance({ branchId: null, positionCode: "owner" }),
+    false,
+  );
+  assert.equal(
+    canDirectlyCheckoutAttendance({ branchId: null, positionCode: null }),
+    false,
+  );
+});
+
+test("direct attendance checkout uses the authenticated guarded RPC", () => {
   assert.match(
     employeeClockActionSource,
-    /MANAGER_SIMPLE_ATTENDANCE_ROLES: readonly StaffRole\[\] = \[\]/,
-    "Branch Manager must not bypass the approval lifecycle",
+    /canDirectlyCheckoutAttendance\([\s\S]*claims\.position_code/,
+    "The action must use canonical position and live branch scope",
   );
   assert.match(
     employeeClockActionSource,
-    /"self_service_clock_in"[\s\S]*"self_service_request_checkout"/,
-    "Branch Manager attendance must use guarded universal RPCs",
+    /ctx\.supabase\.rpc\(\s*"self_service_clock_out"/,
+    "Direct checkout must be enforced by the authenticated database RPC",
+  );
+  assert.match(
+    readActiveMigrationSql(),
+    /CREATE OR REPLACE FUNCTION public\.self_service_clock_out\(\s*p_attendance_id bigint\s*\)/,
+    "The database must expose a dedicated guarded direct-checkout RPC",
   );
   assert.doesNotMatch(employeeClockPageSource, /DEFAULT_CLOCK_ROUTES|"\/hr"/);
 });
 
-test("Staff checkout request stays single tap while manager direct checkout confirms", () => {
+test("Staff checkout request stays single tap while direct checkout confirms", () => {
   const submitCheckoutBlock = employeeClockClientSource.match(
     /const submitCheckout = useCallback\(async \(\) => \{[\s\S]*?\n\s*\]\);/,
   )?.[0];
   assert.ok(submitCheckoutBlock, "Clock client should define submitCheckout");
   assert.match(
     submitCheckoutBlock,
-    /if \(managerAttendanceOnly\) \{[\s\S]*await confirm\(/,
-    "Manager direct checkout should keep confirmation because it writes check_out immediately",
+    /if \(directCheckoutAllowed\) \{[\s\S]*await confirm\(/,
+    "Direct checkout should keep confirmation because it writes check_out immediately",
   );
   assert.doesNotMatch(
     submitCheckoutBlock,
@@ -91,8 +150,8 @@ test("Staff checkout request stays single tap while manager direct checkout conf
   );
   assert.match(
     submitCheckoutBlock,
-    /managerAttendanceOnly\s*\?\s*await clockOutManagerShift\(\{ attendanceId \}\)\s*:\s*await requestCheckoutApproval\(\{ attendanceId \}\)/,
-    "Staff and manager checkout should target the current attendance record",
+    /directCheckoutAllowed\s*\?\s*await clockOutDirectShift\(\{ attendanceId \}\)\s*:\s*await requestCheckoutApproval\(\{ attendanceId \}\)/,
+    "Staff and direct checkout should target the current attendance record",
   );
   assert.match(
     employeeClockActionSource,
@@ -106,16 +165,16 @@ test("Staff checkout request stays single tap while manager direct checkout conf
   );
 });
 
-test("checkout request and reject stay on the current branch shift contract", () => {
+test("checkout request and reject stay on the employee ownership contract", () => {
   assert.match(
     employeeClockActionSource,
     /async function resolveAssignedShiftForEmployee[\s\S]*\.from\("shift_assignments" as never\)/,
-    "Checkout should reuse the assigned-shift resolver used by clock-in",
+    "Clock-in should keep the assigned-shift resolver",
   );
   assert.match(
     employeeClockActionSource,
-    /export async function requestCheckoutApproval[\s\S]*\.eq\("branch_id", ctx\.branchId\)[\s\S]*\.eq\("date", currentShift\.businessDate\)[\s\S]*\.eq\("shift_id", currentShift\.shiftId\)/,
-    "Checkout request must not close stale or other-branch attendance rows",
+    /export async function requestCheckoutApproval[\s\S]*\.eq\("employee_id", ctx\.employeeId\)[\s\S]*\.eq\("tenant_id", ctx\.claims\.tenant_id\)[\s\S]*\.eq\("id", parsed\.data\.attendanceId\)/,
+    "Checkout request must only target the caller-owned attendance id",
   );
   assert.match(
     employeeClockActionSource,

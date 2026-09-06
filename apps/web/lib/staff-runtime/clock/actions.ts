@@ -4,7 +4,11 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
-import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import {
+  PERMISSION_KEYS,
+  canDirectlyCheckoutAttendance,
+  type StaffRole,
+} from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import {
   addVNDateDays,
@@ -92,7 +96,7 @@ const checklistToggleSchema = z.object({
 const attendanceActionSchema = z.object({
   attendanceId: z.coerce.number().int().positive(),
 });
-const managerClockOutSchema = attendanceActionSchema.strict();
+const directClockOutSchema = attendanceActionSchema.strict();
 
 function getTodayVN(value: Date = new Date()): string {
   return getVNDateString(value);
@@ -300,6 +304,16 @@ function mapCheckoutError(message: string | undefined): string {
     return "Quản lý chi nhánh chỉ duyệt kết ca cho nhân viên thuộc chi nhánh.";
   }
   return "Không thể gửi yêu cầu kết ca. Vui lòng thử lại.";
+}
+
+function mapDirectCheckoutError(message: string | undefined): string {
+  if (message?.includes("direct_checkout_not_allowed")) {
+    return "Tài khoản này cần gửi yêu cầu kết ca để quản lý duyệt.";
+  }
+  const mapped = mapCheckoutError(message);
+  return mapped === "Không thể gửi yêu cầu kết ca. Vui lòng thử lại."
+    ? "Không thể kết ca. Vui lòng thử lại."
+    : mapped;
 }
 
 export async function clockInWithPhoto(
@@ -715,10 +729,10 @@ export async function cancelCheckoutRequest(
   return { success: true, data: { cancelled: true } };
 }
 
-export async function clockOutManagerShift(
+export async function clockOutDirectShift(
   input: unknown = {},
 ): Promise<ActionResult<{ checkOutTime: string }>> {
-  const parsed = managerClockOutSchema.safeParse(input);
+  const parsed = directClockOutSchema.safeParse(input);
   if (!parsed.success) {
     return {
       success: false,
@@ -728,68 +742,74 @@ export async function clockOutManagerShift(
 
   const ctx = await getEmployeeContext();
   if (!ctx) return { success: false, error: "Chưa đăng nhập" };
-  if (!isManagerSimpleAttendanceRole(ctx.claims.user_role)) {
-    return {
-      success: false,
-      error: "Chỉ tài khoản quản lý chi nhánh được ra ca trực tiếp.",
-    };
-  }
-  if (!ctx.branchId) {
-    return {
-      success: false,
-      error: "Tài khoản chưa được gắn chi nhánh. Liên hệ quản lý.",
-    };
-  }
-
-  const now = new Date();
-  const service = createServiceClient();
-  const currentShift = await resolveAssignedShiftForEmployee(
-    service,
-    ctx,
-    getTodayVN(now),
-    getVNMinutesOfDay(now),
-  );
-  if (!currentShift.ok) {
-    return {
-      success: false,
-      error: "Chi nhánh chưa khai ca làm. Liên hệ quản lý.",
-    };
-  }
-
-  const checkOutTime = now.toISOString();
-  const { data: result, error } = await service
-    .from("attendance_records")
-    .update({
-      check_out: checkOutTime,
-      checkout_requested_at: null,
-      checkout_requested_by_role: null,
-      checkout_approval_target_roles: [],
-      checkout_approved_at: null,
-      checkout_approved_by: null,
-      checkout_approval_note: null,
-      updated_at: checkOutTime,
+  if (
+    !canDirectlyCheckoutAttendance({
+      branchId: ctx.branchId,
+      positionCode: ctx.claims.position_code,
     })
+  ) {
+    return {
+      success: false,
+      error: "Tài khoản này cần gửi yêu cầu kết ca để quản lý duyệt.",
+    };
+  }
+
+  const service = createServiceClient();
+  let recordQuery = service
+    .from("attendance_records")
+    .select("id")
     .eq("employee_id", ctx.employeeId)
     .eq("tenant_id", ctx.claims.tenant_id)
-    .eq("branch_id", ctx.branchId)
     .eq("id", parsed.data.attendanceId)
-    .eq("date", currentShift.businessDate)
-    .eq("shift_id", currentShift.shiftId)
-    .is("check_out", null)
-    .select("id, check_out")
-    .maybeSingle();
+    .is("check_out", null);
+  recordQuery =
+    ctx.branchId === null
+      ? recordQuery.is("branch_id", null)
+      : recordQuery.eq("branch_id", ctx.branchId);
+  const { data: record } = await recordQuery.maybeSingle();
 
-  if (error || !result?.check_out) {
+  if (!record) {
+    return { success: false, error: "Không tìm thấy ca đang mở để kết ca." };
+  }
+
+  const workState = await getTodayWorkState();
+  if (workState.attendance?.id === record.id) {
+    const pendingCountDuty = workState.checklist.items.find(
+      (item) => isShiftCountDutyItem(item) && !item.done,
+    );
+    if (pendingCountDuty) {
+      return {
+        success: false,
+        error:
+          "Bạn chưa hoàn thành nộp phiếu đếm tồn của ca. Vui lòng nộp phiếu kiểm kê trước khi kết ca.",
+      };
+    }
+
+    await markCompletedCountDutyChecklistItems({
+      service,
+      tenantId: ctx.claims.tenant_id,
+      attendanceId: record.id,
+      items: workState.checklist.items,
+    });
+  }
+
+  const { data, error } = await ctx.supabase.rpc(
+    "self_service_clock_out" as never,
+    { p_attendance_id: record.id } as never,
+  );
+  const checkOutTime = data as string | null;
+
+  if (error || !checkOutTime) {
     if (error) {
-      console.error("[employee/clock] manager direct checkout failed", {
+      console.error("[employee/clock] direct checkout failed", {
         code: error.code,
       });
     }
-    return { success: false, error: mapCheckoutError(error?.message) };
+    return { success: false, error: mapDirectCheckoutError(error?.message) };
   }
 
   revalidateEmployeeWorkPaths(ctx.branchId);
-  return { success: true, data: { checkOutTime: result.check_out } };
+  return { success: true, data: { checkOutTime } };
 }
 
 const checklistTaskPhotoSchema = z.object({

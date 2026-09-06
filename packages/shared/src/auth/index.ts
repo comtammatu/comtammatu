@@ -1,6 +1,7 @@
 export type { BranchKind, StaffRole, JwtClaims, ScopeIds } from "./types";
 export {
   STAFF_ROLES,
+  ATTENDANCE_DIRECT_CHECKOUT_POSITION_CODES,
   BRANCH_ROLES,
   TENANT_LEVEL_ROLES,
   MANAGEABLE_STAFF_ROLES,
@@ -9,6 +10,7 @@ export {
   TENANT_STRATEGY_SETTINGS_ROLES,
   canManageBranchFloorSettings,
   canManageTenantStrategySettings,
+  canDirectlyCheckoutAttendance,
   ROLE_LABEL_VI,
   requiredBranchKindForPositionCode,
   requiredOperatorBranchKindForRole,

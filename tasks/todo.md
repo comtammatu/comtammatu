@@ -178,19 +178,19 @@ Evidence: `invoice-line-items.test.ts`, `invoice-units.test.ts`, `pos-mandatory-
 
 - [ ] Smoke one issued invoice after deploy: drinks use `Ly`/`Lon`/`Chai`, rice uses `Phần`
 
-## Early clock-in, delayed checkout auto-approve, and upcoming schedule
+## Early clock-in, direct/approved checkout, quarter-day credit, and upcoming schedule
 
 State: doing
 Kind: feature
 Tier: T3
 Lane: hr/self-service
-Exit: Assigned staff can punch 60 minutes before shift start; Ca names the wait ("chưa đến giờ chấm công") instead of "chưa phân ca"; "Lịch" shows rostered upcoming shifts; "Kết ca" waits for manager and auto-closes only after 2 hours if still pending.
-Evidence: `employee-default-shift.test.ts`, `schedule-month.test.ts`, `shift-clock-window-static.test.ts`, `checkout-auto-approve.test.ts`.
+Exit: Assigned staff can punch 60 minutes early and see upcoming shifts; office and canonical management positions check out directly while ordinary staff wait for approval/2-hour recovery; 2026-09 attendance uses completed 0.25-day buckets without changing finalized payroll snapshots.
+Evidence: migration `20260906152211_attendance_direct_checkout_quarter_day_credit.sql`; SQL `attendance_direct_checkout_quarter_day_test.sql`; `employee-default-shift.test.ts`, `employee-branch-manager-tools.test.ts`, `employee-workday-math.test.ts`, `payroll-day-math.test.ts`, `schedule-month.test.ts`, `shift-clock-window-static.test.ts`, `checkout-auto-approve.test.ts`; ADR 0019.
 
 UI Advisor Gate
 - Surface: `/br/[branchId]/shift` + `/shift/schedule` + `/me/clock` + `/me/schedule`; route family: branch personal / staff; plane: `branch` / `staff`; change: behavior + copy
 - Context: screen-context-map §2.4A Ca / "Lịch ca"; actor: cashier/chef/branch_staff; job: punch the assigned shift at the workplace and see the next rostered shifts
-- Journey: arrive early → wait copy with start/open time → punch from T-60; end of shift → "Kết ca" waits for manager → leftover pending auto-closes after 2 hours; "Lịch" lists upcoming roster
+- Journey: arrive early → wait copy with start/open time → punch from T-60; end of shift → eligible office/management closes directly while ordinary staff waits for approval → leftover pending auto-closes after 2 hours; "Lịch" lists upcoming roster
 - Information order: 1) assigned shift name/window 2) punch-open time 3) upcoming roster; exclude: wall-clock default shift
 - Pattern: LANDING + SETTINGS-PANEL punch; exemplar `lib/staff-runtime/page.tsx` + `schedule-client.tsx`
 - States: too_early / open / too_late / unassigned / working / checkout_pending / done
@@ -199,9 +199,9 @@ UI Advisor Gate
 - Verification: unit + static tests, cron registration
 
 - [ ] Smoke: arrive 30 minutes before a rostered shift and punch; "Lịch" shows the next assigned shift
-- [ ] Smoke: "Kết ca" stays pending for the manager; a leftover request older than 2 hours auto-closes
+- [ ] Preview/Smoke: office and management close directly; ordinary staff stays pending and auto-closes after 2 hours; 2/4/6/8-hour rows show 0.25/0.5/0.75/1 workdays
 
-UI Advisor Gate extras: clock-in still requires `shift_assignments`. Leftover checkout auto-approve runs on Vercel cron (`/api/cron/attendance-checkout-auto-approve`) because two unrelated pending migrations already occupy `supabase/migrations/`. Fold into a service-role RPC + pg_cron when that apply window is clean.
+UI Advisor Gate extras: clock-in still requires `shift_assignments`. Direct checkout still requires checklist/photo/count evidence. Ordinary leftover checkout auto-approve remains on Vercel cron (`/api/cron/attendance-checkout-auto-approve`) pending a later service-role RPC + pg_cron fold. Production apply and `db:types` require explicit owner delegation after Preview rehearsal.
 
 ## Self-Order guest UX: header, qty, bill, VAT payment
 
