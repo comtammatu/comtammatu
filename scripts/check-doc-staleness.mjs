@@ -6,6 +6,7 @@ const DURABLE = [
   /^docs\/plan\/decisions\.md$/,
   /^docs\/plan\/adr\//,
   /^docs\/plan\/branch-operations-chrome-rebuild\.md$/,
+  /^docs\/plan\/inventory-operations-expansion\.md$/,
   /(^|\/)README\.md$/i,
 ];
 const SNAPSHOT_MARKERS = [
