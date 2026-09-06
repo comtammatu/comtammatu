@@ -625,7 +625,7 @@ function PrinterForm({
             {PRINT_TYPE_ORDER.map((type) => (
               <div
                 key={type}
-                className="flex min-h-11 items-center gap-2 rounded-md px-1"
+                className="flex min-h-12 items-center gap-2 rounded-md px-1"
               >
                 <Checkbox
                   id={`print-type-${type}`}
@@ -658,7 +658,7 @@ function PrinterForm({
               {categories.map((category) => (
                 <div
                   key={category.id}
-                  className="flex min-h-11 items-center gap-2 rounded-md px-1"
+                  className="flex min-h-12 items-center gap-2 rounded-md px-1"
                 >
                   <Checkbox
                     id={`print-category-${category.id}`}

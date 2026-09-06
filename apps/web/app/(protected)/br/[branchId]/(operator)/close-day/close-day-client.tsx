@@ -641,16 +641,22 @@ export function CloseDayClient({
         ]}
       >
         <TabsContent value="all" className="flex flex-col gap-4 pt-2">
-          {pnlSection}
-          {collectedSection}
+          <div className="grid gap-4 lg:grid-cols-2">
+            {pnlSection}
+            {collectedSection}
+          </div>
           {topItemsSection}
           {sessionsSection}
-          {stockSection}
-          {attendanceSection}
+          <div className="grid gap-4 lg:grid-cols-2">
+            {stockSection}
+            {attendanceSection}
+          </div>
         </TabsContent>
         <TabsContent value="finance" className="flex flex-col gap-4 pt-2">
-          {pnlSection}
-          {collectedSection}
+          <div className="grid gap-4 lg:grid-cols-2">
+            {pnlSection}
+            {collectedSection}
+          </div>
         </TabsContent>
         <TabsContent value="items" className="flex flex-col gap-4 pt-2">
           {topItemsSection}
@@ -659,8 +665,10 @@ export function CloseDayClient({
           {sessionsSection}
         </TabsContent>
         <TabsContent value="ops" className="flex flex-col gap-4 pt-2">
-          {stockSection}
-          {attendanceSection}
+          <div className="grid gap-4 lg:grid-cols-2">
+            {stockSection}
+            {attendanceSection}
+          </div>
         </TabsContent>
       </AppPageTabs>
     </div>

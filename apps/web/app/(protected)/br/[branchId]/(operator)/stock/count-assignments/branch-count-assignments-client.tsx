@@ -1155,7 +1155,7 @@ export function BranchCountAssignmentsClient({
 
           {/* Role Filter & Search */}
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <InputGroup className="min-h-11 flex-1">
+            <InputGroup className="min-h-12 flex-1">
               <InputGroupAddon>
                 <IconSearch className="size-4" />
               </InputGroupAddon>
@@ -1866,7 +1866,7 @@ export function BranchCountAssignmentsClient({
             </div>
           </div>
 
-          <InputGroup className="min-h-11">
+          <InputGroup className="min-h-12">
             <InputGroupAddon>
               <IconSearch className="size-4" />
             </InputGroupAddon>
@@ -2068,7 +2068,7 @@ export function BranchCountAssignmentsClient({
             </div>
           </div>
 
-          <InputGroup className="min-h-11">
+          <InputGroup className="min-h-12">
             <InputGroupAddon>
               <IconSearch className="size-4" />
             </InputGroupAddon>

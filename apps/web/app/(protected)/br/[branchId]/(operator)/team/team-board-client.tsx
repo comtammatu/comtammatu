@@ -502,7 +502,7 @@ function TeamStripRows({ rows }: { rows: TeamStripRow[] }) {
             key={row.key}
             variant={hasPending ? "outline" : "muted"}
             size="sm"
-            className="chrome-tap min-h-11 select-none bg-card transition-transform motion-safe:active:scale-[0.97]"
+            className="chrome-tap min-h-12 select-none bg-card transition-transform motion-safe:active:scale-[0.97]"
             render={<Link href={row.href} />}
           >
             <ItemMedia

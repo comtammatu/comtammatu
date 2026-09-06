@@ -209,7 +209,7 @@ export function BranchTransferDetailClient({
                     </ItemDescription>
                   </ItemContent>
                   {item.received != null ? (
-                    <div className="flex min-h-11 items-center justify-between gap-3 rounded-md bg-muted/50 px-3 text-sm">
+                    <div className="flex min-h-12 items-center justify-between gap-3 rounded-md bg-muted/50 px-3 text-sm">
                       <span className="text-muted-foreground">
                         {copy.receivedQty}
                       </span>
