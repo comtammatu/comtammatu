@@ -226,9 +226,8 @@ function sortWorkTasks(tasks: WorkTaskRow[]): WorkTaskRow[] {
   });
 }
 
-function revalidateWorkPaths(taskId?: number) {
+function revalidateWorkPaths(_taskId?: number) {
   revalidatePath("/work");
-  if (taskId != null) revalidatePath("/work");
 }
 
 export async function canAccessWorkspace(

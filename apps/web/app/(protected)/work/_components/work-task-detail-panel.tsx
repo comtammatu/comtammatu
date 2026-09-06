@@ -47,6 +47,7 @@ import {
 import {
   addWorkTaskComment,
   deleteWorkTaskAttachment,
+  setWorkTaskParticipants,
   setWorkTaskStatus,
   updateWorkTask,
   uploadWorkTaskAttachmentFile,
@@ -175,6 +176,33 @@ export function useWorkTaskDetailForm({
 
       setTask(result.data);
       setStatus(result.data.status);
+      toast.success(workCopy.save);
+      router.refresh();
+      onSaved?.();
+    });
+  }
+
+  function saveParticipants(
+    nextAssigneeIds: string[],
+    nextSupporterIds: string[],
+  ) {
+    const prevAssigneeIds = assigneeIds;
+    const prevSupporterIds = supporterIds;
+    setAssigneeIds(nextAssigneeIds);
+    setSupporterIds(nextSupporterIds);
+
+    startTransition(async () => {
+      const result = await setWorkTaskParticipants({
+        taskId: task.id,
+        assigneeIds: nextAssigneeIds,
+        supporterIds: nextSupporterIds,
+      });
+      if (!result.success) {
+        setAssigneeIds(prevAssigneeIds);
+        setSupporterIds(prevSupporterIds);
+        handleMutationError(result.error ?? workCopy.saveFailed);
+        return;
+      }
       toast.success(workCopy.save);
       router.refresh();
       onSaved?.();
@@ -330,6 +358,7 @@ export function useWorkTaskDetailForm({
     setChecklistTitle,
     isPending,
     saveFields,
+    saveParticipants,
     saveStatus,
     addChecklistItem,
     toggleChecklistItem,
@@ -822,11 +851,10 @@ export function WorkTaskDetailBody({ form }: { form: WorkTaskDetailForm }) {
                           aria-label={`${workCopy.clearAssignee}: ${name}`}
                           className="-mr-1 ml-0.5 size-4"
                           disabled={form.isPending}
-                          onClick={() =>
-                            form.setAssigneeIds((prev) =>
-                              prev.filter((v) => v !== id),
-                            )
-                          }
+                          onClick={() => {
+                            const next = form.assigneeIds.filter((v) => v !== id);
+                            form.saveParticipants(next, form.supporterIds);
+                          }}
                         >
                           <IconX className="size-3" />
                         </Button>
@@ -851,11 +879,11 @@ export function WorkTaskDetailBody({ form }: { form: WorkTaskDetailForm }) {
                 }
                 searchPlaceholder={workCopy.teamAddSearchPlaceholder}
                 disabled={form.isPending}
-                onConfirm={(values) =>
-                  form.setAssigneeIds((prev) =>
-                    Array.from(new Set([...prev, ...values])),
-                  )
-                }
+                instantSelect
+                onConfirm={(values) => {
+                  const next = Array.from(new Set([...form.assigneeIds, ...values]));
+                  form.saveParticipants(next, form.supporterIds);
+                }}
               />
             </div>
           </AppInspectorRow>
@@ -886,11 +914,10 @@ export function WorkTaskDetailBody({ form }: { form: WorkTaskDetailForm }) {
                           aria-label={`${workCopy.clearSupporter}: ${name}`}
                           className="-mr-1 ml-0.5 size-4"
                           disabled={form.isPending}
-                          onClick={() =>
-                            form.setSupporterIds((prev) =>
-                              prev.filter((v) => v !== id),
-                            )
-                          }
+                          onClick={() => {
+                            const next = form.supporterIds.filter((v) => v !== id);
+                            form.saveParticipants(form.assigneeIds, next);
+                          }}
                         >
                           <IconX className="size-3" />
                         </Button>
@@ -915,11 +942,11 @@ export function WorkTaskDetailBody({ form }: { form: WorkTaskDetailForm }) {
                 }
                 searchPlaceholder={workCopy.teamAddSearchPlaceholder}
                 disabled={form.isPending}
-                onConfirm={(values) =>
-                  form.setSupporterIds((prev) =>
-                    Array.from(new Set([...prev, ...values])),
-                  )
-                }
+                instantSelect
+                onConfirm={(values) => {
+                  const next = Array.from(new Set([...form.supporterIds, ...values]));
+                  form.saveParticipants(form.assigneeIds, next);
+                }}
               />
             </div>
           </AppInspectorRow>

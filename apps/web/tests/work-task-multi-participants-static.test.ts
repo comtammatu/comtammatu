@@ -81,6 +81,9 @@ test("WorkCreateDialog supports multi-assignees and multi-supporters with mutual
   assert.match(dialog, /MultiSelectCombobox/);
   assert.match(dialog, /!supporterSet\.has\(/);
   assert.match(dialog, /!assigneeSet\.has\(/);
+  assert.match(dialog, /handleDepartmentChange/);
+  assert.match(dialog, /prevValueRef/);
+  assert.match(dialog, /onChangeRef/);
 });
 
 test("WorkTaskDetailPanel supports multi-assignees and multi-supporters", () => {
@@ -93,4 +96,6 @@ test("WorkTaskDetailPanel supports multi-assignees and multi-supporters", () => 
   assert.match(panel, /workCopy\.assignees/);
   assert.match(panel, /workCopy\.supporterLabel/);
   assert.match(panel, /MultiSelectCombobox/);
+  assert.match(panel, /saveParticipants/);
+  assert.match(panel, /setWorkTaskParticipants/);
 });

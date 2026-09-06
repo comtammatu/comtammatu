@@ -211,6 +211,7 @@ export interface MultiSelectComboboxProps {
   disabled?: boolean;
   triggerClassName?: string;
   filter: ComboboxFilter<MultiSelectComboboxOption>;
+  instantSelect?: boolean;
 }
 
 function MultiSelectCombobox({
@@ -226,6 +227,7 @@ function MultiSelectCombobox({
   disabled,
   triggerClassName,
   filter,
+  instantSelect = false,
 }: MultiSelectComboboxProps) {
   const [open, setOpen] = React.useState(false);
   const [pending, setPending] = React.useState<Set<string>>(() => new Set());
@@ -272,9 +274,17 @@ function MultiSelectCombobox({
       isItemEqualToValue={(left, right) => left.value === right.value}
       filter={filter}
       onOpenChange={setOpen}
-      onValueChange={(nextOptions) =>
-        setPending(new Set(nextOptions.map((option) => option.value)))
-      }
+      onValueChange={(nextOptions) => {
+        if (instantSelect) {
+          const newest = nextOptions[nextOptions.length - 1];
+          if (newest) {
+            onConfirm([newest.value]);
+            setOpen(false);
+          }
+          return;
+        }
+        setPending(new Set(nextOptions.map((option) => option.value)));
+      }}
     >
       <BaseCombobox.Trigger
         render={
@@ -358,19 +368,21 @@ function MultiSelectCombobox({
                 );
               }}
             </BaseCombobox.List>
-            <div className="flex items-center justify-between border-t px-2 py-2">
-              <span className="text-xs text-muted-foreground">
-                {pending.size > 0 ? pendingHint(pending.size) : pickHint}
-              </span>
-              <Button
-                type="button"
-                size="sm"
-                disabled={pending.size === 0}
-                onClick={handleConfirm}
-              >
-                {confirmLabel(pending.size)}
-              </Button>
-            </div>
+            {!instantSelect ? (
+              <div className="flex items-center justify-between border-t px-2 py-2">
+                <span className="text-xs text-muted-foreground">
+                  {pending.size > 0 ? pendingHint(pending.size) : pickHint}
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={pending.size === 0}
+                  onClick={handleConfirm}
+                >
+                  {confirmLabel(pending.size)}
+                </Button>
+              </div>
+            ) : null}
           </BaseCombobox.Popup>
         </BaseCombobox.Positioner>
       </BaseCombobox.Portal>

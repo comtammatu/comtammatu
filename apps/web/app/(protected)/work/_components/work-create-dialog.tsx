@@ -3,8 +3,10 @@
 import {
   cloneElement,
   isValidElement,
+  useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type MouseEventHandler,
   type ReactElement,
@@ -62,16 +64,22 @@ export function WorkCreateDialog({
 }) {
   const router = useRouter();
   const controlSize = useFormControlSize();
-  const [open, setOpen] = useState(false);
-  const [departmentId, setDepartmentId] = useState(
+  const defaultDeptStr =
     defaultDepartmentId != null
       ? String(defaultDepartmentId)
       : departments[0]
         ? String(departments[0].id)
-        : "",
-  );
+        : "";
+  const [open, setOpen] = useState(false);
+  const [departmentId, setDepartmentId] = useState(defaultDeptStr);
   const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
   const [supporterIds, setSupporterIds] = useState<string[]>([]);
+
+  const handleDepartmentChange = useCallback((nextDept: string) => {
+    setDepartmentId(nextDept);
+    setAssigneeIds([]);
+    setSupporterIds([]);
+  }, []);
 
   const deptMembers = useMemo(() => {
     const dept = Number(departmentId);
@@ -124,6 +132,7 @@ export function WorkCreateDialog({
         onOpenChange={(next) => {
           setOpen(next);
           if (!next) {
+            setDepartmentId(defaultDeptStr);
             setAssigneeIds([]);
             setSupporterIds([]);
           }
@@ -168,6 +177,7 @@ export function WorkCreateDialog({
         }}
         onSuccess={(result) => {
           setOpen(false);
+          setDepartmentId(defaultDeptStr);
           setAssigneeIds([]);
           setSupporterIds([]);
           if (!result.success || result.data == null) {
@@ -259,6 +269,7 @@ export function WorkCreateDialog({
                       : workCopy.addAssignee
                   }
                   searchPlaceholder={workCopy.teamAddSearchPlaceholder}
+                  instantSelect
                   onConfirm={(values) =>
                     setAssigneeIds((prev) =>
                       Array.from(new Set([...prev, ...values])),
@@ -317,6 +328,7 @@ export function WorkCreateDialog({
                       : workCopy.addSupporter
                   }
                   searchPlaceholder={workCopy.teamAddSearchPlaceholder}
+                  instantSelect
                   onConfirm={(values) =>
                     setSupporterIds((prev) =>
                       Array.from(new Set([...prev, ...values])),
@@ -342,11 +354,7 @@ export function WorkCreateDialog({
             </AppFormRow>
             <DepartmentSync
               value={form.watch("departmentId")}
-              onChange={(dept) => {
-                setDepartmentId(dept);
-                setAssigneeIds([]);
-                setSupporterIds([]);
-              }}
+              onChange={handleDepartmentChange}
             />
           </AppFormGrid>
         )}
@@ -362,8 +370,16 @@ function DepartmentSync({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const prevValueRef = useRef(value);
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
   useEffect(() => {
-    onChange(value);
-  }, [value, onChange]);
+    if (prevValueRef.current !== value) {
+      prevValueRef.current = value;
+      onChangeRef.current(value);
+    }
+  }, [value]);
+
   return null;
 }
