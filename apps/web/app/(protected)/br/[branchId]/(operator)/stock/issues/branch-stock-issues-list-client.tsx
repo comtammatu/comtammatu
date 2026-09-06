@@ -182,7 +182,7 @@ export function BranchStockIssuesListClient({
               }
             />
           ) : (
-            <ItemGroup className="gap-2" role="list">
+            <ItemGroup className="grid gap-2 lg:grid-cols-2" role="list">
               {filteredIssues.map((issue) => (
                 <div key={issue.id} role="listitem">
                   <Item

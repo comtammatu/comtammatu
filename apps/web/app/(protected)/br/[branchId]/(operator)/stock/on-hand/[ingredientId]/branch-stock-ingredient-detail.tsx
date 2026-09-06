@@ -394,7 +394,7 @@ export function BranchStockIngredientDetail({
               ) : (
                 <div className="flex min-w-0 flex-col gap-2">
                   <div
-                    className="flex flex-wrap gap-1.5 pb-1"
+                    className="no-scrollbar flex min-w-0 touch-pan-x gap-1.5 overflow-x-auto overscroll-x-contain pb-1 md:flex-wrap md:overflow-visible"
                     role="tablist"
                     aria-label={detailCopy.movementTitle}
                   >
@@ -405,7 +405,7 @@ export function BranchStockIngredientDetail({
                         <Button
                           key={catKey}
                           type="button"
-                          size="xs"
+                          size="touch"
                           role="tab"
                           aria-selected={isSelected}
                           variant={isSelected ? "default" : "outline"}
@@ -413,7 +413,7 @@ export function BranchStockIngredientDetail({
                             setSelectedCategory(catKey);
                             setIsExpanded(false);
                           }}
-                          className="h-7 touch-manipulation rounded-full px-2.5 text-xs font-normal"
+                          className="shrink-0 gap-1.5 rounded-full px-3 text-xs font-normal"
                         >
                           <span>{detailCopy.movementCategories[catKey]}</span>
                           <Badge
@@ -448,7 +448,7 @@ export function BranchStockIngredientDetail({
                     </AppEmptyState>
                   ) : (
                     <>
-                      <ItemGroup className="gap-2" role="list">
+                      <ItemGroup className="grid gap-2 lg:grid-cols-2" role="list">
                         {visibleMovements.map((movement) => {
                           const signedQty =
                             movement.quantityChange > 0

@@ -49,7 +49,7 @@ export function CatalogList<TRow>({
       {rows.length === 0 ? (
         <AppEmptyState compact title={emptyTitle} symbol="riceGrain" />
       ) : (
-        <ItemGroup className="gap-2">
+        <ItemGroup className="grid gap-2 lg:grid-cols-2">
           {rows.map((row) => {
             const secondary = renderSecondary?.(row);
             return (

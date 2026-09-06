@@ -142,3 +142,98 @@ test("Role gating strictly empowers branch_manager while isolating subordinate r
     );
   }
 });
+
+test("Branch stock sub-screens implement responsive desktop multi-column layouts", () => {
+  const stockDoors = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/page.tsx",
+  );
+  const stockOnHand = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/branch-stock-on-hand-client.tsx",
+  );
+  const fulfillmentHub = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/branch-stock-fulfillment-hub-client.tsx",
+  );
+  const wasteApprovals = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste-approvals/branch-waste-approvals-client.tsx",
+  );
+  const countAssignments = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-assignments/branch-count-assignments-client.tsx",
+  );
+  const countSlips = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-slips/branch-count-slips-client.tsx",
+  );
+  const catalogList = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/catalog-list.tsx",
+  );
+  const catalogIngredients = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/ingredients/catalog-ingredients-client.tsx",
+  );
+  const catalogUnits = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/units/catalog-units-client.tsx",
+  );
+  const catalogThresholds = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/thresholds/catalog-thresholds-client.tsx",
+  );
+  const stockIssues = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/issues/branch-stock-issues-list-client.tsx",
+  );
+  const stocktake = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/stocktake/branch-stocktake-list-client.tsx",
+  );
+  const stockReports = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/reports/branch-stock-reports-client.tsx",
+  );
+  const purchaseRequests = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/purchase-requests/branch-purchase-requests-client.tsx",
+  );
+  const ingredientDetail = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/[ingredientId]/branch-stock-ingredient-detail.tsx",
+  );
+
+  assert.match(stockDoors, /lg:grid-cols-4/);
+  assert.match(stockOnHand, /lg:grid lg:grid-cols-2/);
+  assert.match(fulfillmentHub, /grid gap-2 lg:grid-cols-2/);
+  assert.match(wasteApprovals, /lg:grid lg:grid-cols-2/);
+  assert.match(wasteApprovals, /variant="outline"/);
+  assert.match(countAssignments, /lg:grid-cols-2/);
+  assert.match(countSlips, /lg:grid-cols-2/);
+  assert.match(catalogList, /grid gap-2 lg:grid-cols-2/);
+  assert.match(catalogIngredients, /lg:grid lg:grid-cols-2/);
+  assert.match(catalogUnits, /lg:grid lg:grid-cols-2/);
+  assert.match(catalogThresholds, /grid gap-2 lg:grid-cols-2/);
+  assert.match(stockIssues, /grid gap-2 lg:grid-cols-2/);
+  assert.match(stocktake, /grid gap-2 lg:grid-cols-2/);
+  assert.match(stockReports, /grid gap-2 lg:grid-cols-2/);
+  assert.match(purchaseRequests, /grid gap-2 lg:grid-cols-2/);
+  assert.match(purchaseRequests, /variant="outline"/);
+  assert.match(ingredientDetail, /grid gap-2 lg:grid-cols-2/);
+});
+
+test("Branch stock touch targets strictly comply with universal 48px standard", () => {
+  const ingredientDetail = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/[ingredientId]/branch-stock-ingredient-detail.tsx",
+  );
+  const countSlips = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-slips/branch-count-slips-client.tsx",
+  );
+
+  assert.doesNotMatch(ingredientDetail, /size="xs"/);
+  assert.doesNotMatch(ingredientDetail, /\bh-7\b/);
+  assert.doesNotMatch(countSlips, /size="xs"/);
+});
+
+test("Branch stock data loaders preserve branch surface boundaries on unauthorized access", () => {
+  const countSlipData = read(
+    "apps/web/lib/inventory/branch-count-slip-data.ts",
+  );
+  const countAssignmentData = read(
+    "apps/web/lib/inventory/branch-count-assignment-data.ts",
+  );
+
+  assert.match(countSlipData, /redirect\(`\/br\/\$\{routeBranchId\}\/stock`\)/);
+  assert.match(
+    countAssignmentData,
+    /redirect\(`\/br\/\$\{routeBranchId\}\/stock`\)/,
+  );
+});
+

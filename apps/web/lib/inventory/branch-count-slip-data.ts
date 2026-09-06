@@ -100,7 +100,7 @@ export async function loadBranchCountSlipData(
       routeBranchId,
     ))
   ) {
-    redirect("/");
+    redirect(`/br/${routeBranchId}/stock`);
   }
   const { supabase, claims, userId } = ctx;
   const reviewerEmployeeId = await resolveCountSlipReviewerEmployeeId(

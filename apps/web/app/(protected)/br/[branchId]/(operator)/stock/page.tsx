@@ -224,7 +224,7 @@ function BranchStockDoors({ basePath }: { basePath: string }) {
       headingLevel="h2"
     >
       {/* Plain grid — ItemGroup is flex-col and fights grid-cols-2. */}
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         {doors.map((door) => (
           <Item
             key={door.key}

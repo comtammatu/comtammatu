@@ -612,7 +612,7 @@ export function BranchStockOnHandClient({
                 ) : null}
               </AppEmptyState>
             ) : (
-              <div role="list" className="flex flex-col">
+              <div role="list" className="flex flex-col lg:grid lg:grid-cols-2 lg:gap-2">
                 {filtered.map((item) => (
                   <StockTouchRow
                     key={item.id}

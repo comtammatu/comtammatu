@@ -121,7 +121,7 @@ export function CatalogUnitsClient({ rows }: { rows: UnitRow[] }) {
       {packagingRows.length === 0 ? (
         <AppEmptyState compact title={copy.empty} symbol="riceGrain" />
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 lg:grid lg:grid-cols-2">
           {packagingRows.map((row) => (
             <Item key={row.id} variant="outline" size="sm">
               <ItemContent className="min-w-0">

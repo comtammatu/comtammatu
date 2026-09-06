@@ -266,7 +266,7 @@ test("operator stock on-hand list forks Branch presentation over the shared load
   assert.match(branchClientSource, /BranchOperatorPanel/);
   assert.match(
     branchClientSource,
-    /<div role="list" className="flex flex-col">/,
+    /<div role="list" className="flex flex-col lg:grid lg:grid-cols-2 lg:gap-2">/,
   );
   assert.match(branchClientSource, /StockTouchRow/);
   assert.match(branchClientSource, /isStockReorderRisk/);

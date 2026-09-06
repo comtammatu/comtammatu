@@ -283,7 +283,7 @@ export function BranchStockReportsClient({
                 description={reportCopy.branchVarianceEmptyDescription}
               />
             ) : (
-              <ItemGroup className="gap-2" role="list">
+              <ItemGroup className="grid gap-2 lg:grid-cols-2" role="list">
                 {varianceExceptions.map((variance) => (
                   <BranchVarianceItem
                     key={variance.ingredientId}
@@ -328,7 +328,7 @@ export function BranchStockReportsClient({
                 description={reportCopy.branchMovementEmptyDescription}
               />
             ) : (
-              <ItemGroup className="gap-2" role="list">
+              <ItemGroup className="grid gap-2 lg:grid-cols-2" role="list">
                 {movementHighlights.map((movement) => (
                   <BranchMovementItem
                     key={movement.ingredientId}

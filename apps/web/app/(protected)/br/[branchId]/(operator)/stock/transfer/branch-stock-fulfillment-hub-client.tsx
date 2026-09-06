@@ -307,7 +307,7 @@ export function BranchStockFulfillmentHubClient({
             }
           />
         ) : (
-          <ItemGroup className="grid gap-2">
+          <ItemGroup className="grid gap-2 lg:grid-cols-2">
             {filtered.map((row) => {
               const href = stockFulfillmentRowHref(row, branchId, {
                 // Branch list opens YCH; receive pad only from receive focus

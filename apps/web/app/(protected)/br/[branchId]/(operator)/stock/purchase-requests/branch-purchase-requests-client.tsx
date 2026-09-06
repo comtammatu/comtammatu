@@ -801,13 +801,13 @@ export function BranchPurchaseRequestsClient({
               description={copy.emptyDescription}
             />
           ) : (
-            <ItemGroup role="list">
+            <ItemGroup role="list" className="grid gap-2 lg:grid-cols-2">
               {filtered.map((row) => (
                 <Item
                   key={row.id}
                   role="listitem"
-                  variant="default"
-                  className="min-h-20 min-w-0 flex-nowrap touch-manipulation gap-2 rounded-none border-x-0 border-t-0 border-b border-border px-2 py-1.5 last:border-b-0"
+                  variant="outline"
+                  className="min-h-20 min-w-0 flex-nowrap touch-manipulation gap-2 px-3 py-2"
                   render={
                     <button
                       type="button"

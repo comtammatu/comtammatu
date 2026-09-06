@@ -629,7 +629,7 @@ export function BranchCountSlipsClient({
           <Button
             type="button"
             variant="ghost"
-            size="xs"
+            size="touch"
             onClick={() => {
               const params = new URLSearchParams(searchParams.toString());
               params.delete("employeeId");

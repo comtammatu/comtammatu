@@ -222,15 +222,15 @@ export function BranchWasteApprovalsClient({
               description="Không còn phiếu hao hụt cần xử lý tại chi nhánh này."
             />
           ) : (
-            <div role="list" className="flex flex-col">
+            <div role="list" className="flex flex-col lg:grid lg:grid-cols-2 lg:gap-3">
               {rows.map((row) => {
                 const highestTier = getHighestTier(row);
                 return (
                   <Item
                     key={row.issueId}
                     role="listitem"
-                    variant="default"
-                    className="min-h-20 min-w-0 flex-nowrap touch-manipulation gap-2 rounded-none border-x-0 border-t-0 border-b border-border px-2 py-1 last:border-b-0"
+                    variant="outline"
+                    className="min-h-20 min-w-0 flex-nowrap touch-manipulation gap-2 px-3 py-2"
                     render={
                       <button
                         type="button"

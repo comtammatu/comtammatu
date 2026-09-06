@@ -218,7 +218,7 @@ export function CatalogThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
         <AppEmptyState compact title={emptyTitle} symbol="riceGrain" />
       ) : (
         <BranchOperatorPanel contentFlush>
-          <ItemGroup className="gap-2">
+          <ItemGroup className="grid gap-2 lg:grid-cols-2">
             {filtered.map((row) => {
               const parsed = minValue(row);
               return (

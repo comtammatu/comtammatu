@@ -157,7 +157,7 @@ export function BranchStocktakeListClient({
               description={hasFilter ? undefined : stocktakeCopy.noSessionsHint}
             />
           ) : (
-            <ItemGroup className="gap-2" role="list">
+            <ItemGroup className="grid gap-2 lg:grid-cols-2" role="list">
               {filteredSessions.map((session) => {
                 const progress = getBranchStocktakeProgress(session);
                 return (

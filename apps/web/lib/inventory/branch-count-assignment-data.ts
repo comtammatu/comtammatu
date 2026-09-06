@@ -55,7 +55,7 @@ export async function loadBranchCountAssignmentData({
     routeBranchId,
   );
   if (!ctx) {
-    redirect("/");
+    redirect(`/br/${routeBranchId}/stock`);
   }
 
   const { claims, supabase } = ctx;
