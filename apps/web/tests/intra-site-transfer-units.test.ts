@@ -40,10 +40,44 @@ test("intra-site transfer data loader and dialog preserve and expose multi-unit 
   assert.match(dialog, /<Select/);
   assert.match(dialog, /handleUnitChange/);
 
+  // Dialog supports Combobox search, ingredient selection, and line removal
+  assert.match(dialog, /<Combobox/);
+  assert.match(dialog, /selectedIngredientIds/);
+  assert.match(dialog, /handleAddIngredient/);
+  assert.match(dialog, /handleRemoveIngredient/);
+  assert.match(dialog, /IconTrash/);
+
   // Reverse dialog matches layout pattern
   assert.match(dialog, /export function ReverseIntraSiteTransferDialog/);
   assert.match(dialog, /variant="document"/);
   assert.match(dialog, /function fillAll/);
+});
+
+test("branch stock on-hand page and client expose intra-site transfer for owner and branch_manager", () => {
+  const stockOnHandPage = readFileSync(
+    new URL(
+      "../app/(protected)/br/[branchId]/(operator)/stock/on-hand/page.tsx",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const stockOnHandClient = readFileSync(
+    new URL(
+      "../app/(protected)/br/[branchId]/(operator)/stock/on-hand/branch-stock-on-hand-client.tsx",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+
+  // Page loads intra-site data for owner as well as branch_manager
+  assert.match(
+    stockOnHandPage,
+    /claims\.user_role === "owner"\s*\|\|\s*claims\.user_role === "branch_manager"/,
+  );
+
+  // Client places IntraSiteTransferDialog in BranchOperatorPage action prop
+  assert.match(stockOnHandClient, /<BranchOperatorPage[\s\S]*action=\{/);
+  assert.match(stockOnHandClient, /<IntraSiteTransferDialog/);
 });
 
 test("intra-site transfer unit conversion calculates available and base quantities accurately", () => {

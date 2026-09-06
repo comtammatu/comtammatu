@@ -2094,7 +2094,7 @@ export const inventory = {
     cancelBack: "Quay lại",
     cancelSuccess: "Đã hủy phiếu điều chuyển.",
     intraSite: {
-      defaultTrigger: "Cấp Kho ↔ Bếp",
+      defaultTrigger: "Chuyển Kho ↔ Bếp",
       quantityExceedsSource: (ingredient: string) =>
         `Số lượng ${ingredient} vượt tồn tại nơi xuất.`,
       lineRequired: "Nhập số lượng cần chuyển cho ít nhất một mặt hàng.",
@@ -2108,9 +2108,16 @@ export const inventory = {
       warehouseToKitchen: "Kho → Bếp",
       kitchenToWarehouse: "Bếp → Kho",
       transferAll: "Chuyển toàn bộ tồn",
+      chooseIngredient: "Chọn nguyên liệu cần chuyển…",
+      searchIngredient: "Tìm theo tên nguyên liệu…",
+      addIngredientAria: "Thêm nguyên liệu vào phiếu",
+      removeLineAria: "Xóa dòng",
       emptySourceTitle: "Nơi xuất chưa có tồn",
       emptySourceDescription:
         "Chọn chiều ngược lại hoặc nhập hàng vào Kho trước.",
+      emptySelectedTitle: "Chưa chọn nguyên liệu",
+      emptySelectedDescription:
+        "Tìm và chọn nguyên liệu ở trên để bắt đầu chuyển.",
       availableQuantity: (quantity: number, unit: string) =>
         `Có ${quantity} ${unit}`,
       quantityAria: (ingredient: string) => `Số lượng ${ingredient}`,

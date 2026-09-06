@@ -376,6 +376,29 @@ export function BranchStockOnHandClient({
       title={stockCopy.title}
       description={stockCopy.operatorDescription}
       back={<AppBackLink href={`/br/${branchId}/stock`} />}
+      action={
+        intraSiteTransferData ||
+        (selectedLocationObj && selectedLocationLabel) ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {intraSiteTransferData ? (
+              <IntraSiteTransferDialog
+                data={intraSiteTransferData}
+                triggerSize="touch"
+                detailBasePath={`/br/${branchId}/stock/transfer`}
+              />
+            ) : null}
+            {selectedLocationObj && selectedLocationLabel ? (
+              <BranchStockThresholdsDialog
+                key={selectedLocationObj.id}
+                branchId={branchId}
+                locationId={selectedLocationObj.id}
+                locationLabel={selectedLocationLabel}
+                initialRows={branchThresholds}
+              />
+            ) : null}
+          </div>
+        ) : undefined
+      }
     >
       {locations.length > 1 ? (
         <Tabs value={selectedLocation} onValueChange={changeLocation}>
@@ -397,26 +420,6 @@ export function BranchStockOnHandClient({
             </TabsTrigger>
           </TabsList>
         </Tabs>
-      ) : null}
-      {selectedLocationObj || intraSiteTransferData ? (
-        <div className="flex flex-wrap items-center gap-2">
-          {intraSiteTransferData ? (
-            <IntraSiteTransferDialog
-              data={intraSiteTransferData}
-              triggerSize="touch"
-              detailBasePath={`/br/${branchId}/stock/transfer`}
-            />
-          ) : null}
-          {selectedLocationObj && selectedLocationLabel ? (
-            <BranchStockThresholdsDialog
-              key={selectedLocationObj.id}
-              branchId={branchId}
-              locationId={selectedLocationObj.id}
-              locationLabel={selectedLocationLabel}
-              initialRows={branchThresholds}
-            />
-          ) : null}
-        </div>
       ) : null}
       {!coreDataLoadFailed && underThresholdCount > 0 ? (
         <NoteCallout tone="warning" className="min-h-12 items-center py-2">

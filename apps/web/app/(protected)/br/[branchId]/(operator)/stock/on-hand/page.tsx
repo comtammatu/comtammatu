@@ -127,7 +127,10 @@ async function OperatorStockOnHandBody({ params, searchParams }: PageProps) {
   let intraSiteTransferData: import("@lib/inventory/intra-site-transfer-data").IntraSiteTransferData | null =
     null;
 
-  if (claims.user_role === "branch_manager") {
+  if (
+    claims.user_role === "owner" ||
+    claims.user_role === "branch_manager"
+  ) {
     const thresholdPromise =
       initialLocationId == null
         ? Promise.resolve(null)

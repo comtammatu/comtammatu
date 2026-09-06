@@ -6,11 +6,14 @@ import {
   useState,
   useTransition,
   type ComponentProps,
+  type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeftRight as IconArrowLeftRight,
+  Plus as IconPlus,
   RotateCcw as IconRotateCcw,
+  Trash2 as IconTrash,
 } from "lucide-react";
 import { FORM_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
@@ -38,6 +41,7 @@ import {
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { Combobox } from "@/components/form/combobox";
 import { QuantityInput } from "@/components/form/domain-number-inputs";
 import { AppDialog } from "@/components/form";
 import { AppEmptyState } from "@/components/surface";
@@ -101,12 +105,14 @@ export function IntraSiteTransferDialog({
   detailBasePath,
   initialQuantities = {},
   triggerLabel = copy.defaultTrigger,
+  trigger,
 }: {
   data: IntraSiteTransferData;
   triggerSize?: ComponentProps<typeof Button>["size"];
   detailBasePath?: string;
   initialQuantities?: Record<number, number>;
   triggerLabel?: string;
+  trigger?: ReactNode;
 }) {
   const router = useRouter();
   const isTouchLayout = useIsMobile(1024);
@@ -118,6 +124,12 @@ export function IntraSiteTransferDialog({
   const [selectedUnits, setSelectedUnits] = useState<Record<number, number>>(
     () => getInitialUnits(data.ingredients),
   );
+  const [selectedIngredientIds, setSelectedIngredientIds] = useState<number[]>(
+    () =>
+      Object.keys(initialQuantities)
+        .map(Number)
+        .filter((id) => Number(initialQuantities[id]) > 0),
+  );
   const [quantities, setQuantities] = useState<Record<number, string>>(() =>
     Object.fromEntries(
       Object.entries(initialQuantities).map(([id, quantity]) => [
@@ -126,6 +138,7 @@ export function IntraSiteTransferDialog({
       ]),
     ),
   );
+  const [pickerIngredientId, setPickerIngredientId] = useState("");
   const [notes, setNotes] = useState("");
   const [isPending, startTransition] = useTransition();
   const idempotencyKey = useRef<string | null>(null);
@@ -154,9 +167,65 @@ export function IntraSiteTransferDialog({
       : ingredient.kitchenQuantity;
   }
 
+  const selectedIngredients = useMemo(() => {
+    const idSet = new Set(selectedIngredientIds);
+    return availableIngredients.filter((ingredient) =>
+      idSet.has(ingredient.ingredientId),
+    );
+  }, [availableIngredients, selectedIngredientIds]);
+
+  const pickerOptions = useMemo(() => {
+    const selectedSet = new Set(selectedIngredientIds);
+    return availableIngredients
+      .filter((ingredient) => !selectedSet.has(ingredient.ingredientId))
+      .map((ingredient) => {
+        const selectedUnit = resolveSelectedUnit(
+          ingredient,
+          selectedUnits[ingredient.ingredientId],
+        );
+        const maxQty = getIssueMaxEntryQuantity(
+          availableQuantity(ingredient.ingredientId),
+          selectedUnit,
+        );
+        const unitLabel = selectedUnit?.label ?? ingredient.unit;
+        return {
+          value: String(ingredient.ingredientId),
+          label: `${ingredient.name} (${copy.availableQuantity(
+            Number(formatIssueMaxEntryQuantity(maxQty) || "0"),
+            unitLabel,
+          )})`,
+          keywords: [ingredient.name, unitLabel],
+        };
+      });
+  }, [availableIngredients, selectedIngredientIds, selectedUnits, direction]);
+
+  function handleAddIngredient(idToAdd?: number) {
+    const targetId = idToAdd ?? Number(pickerIngredientId);
+    if (!Number.isFinite(targetId) || targetId <= 0) return;
+    if (!selectedIngredientIds.includes(targetId)) {
+      setSelectedIngredientIds((current) => [...current, targetId]);
+    }
+    setPickerIngredientId("");
+    idempotencyKey.current = null;
+  }
+
+  function handleRemoveIngredient(ingredientId: number) {
+    setSelectedIngredientIds((current) =>
+      current.filter((id) => id !== ingredientId),
+    );
+    setQuantities((current) => {
+      const next = { ...current };
+      delete next[ingredientId];
+      return next;
+    });
+    idempotencyKey.current = null;
+  }
+
   function changeDirection(nextDirection: Direction) {
     setDirection(nextDirection);
+    setSelectedIngredientIds([]);
     setQuantities({});
+    setPickerIngredientId("");
     idempotencyKey.current = null;
   }
 
@@ -186,6 +255,7 @@ export function IntraSiteTransferDialog({
   }
 
   function fillAll() {
+    setSelectedIngredientIds(availableIngredients.map((i) => i.ingredientId));
     setQuantities(
       Object.fromEntries(
         availableIngredients.map((ingredient) => {
@@ -207,9 +277,27 @@ export function IntraSiteTransferDialog({
     idempotencyKey.current = null;
   }
 
+  function handleOpen() {
+    setSelectedIngredientIds(
+      Object.keys(initialQuantities)
+        .map(Number)
+        .filter((id) => Number(initialQuantities[id]) > 0),
+    );
+    setQuantities(
+      Object.fromEntries(
+        Object.entries(initialQuantities).map(([id, quantity]) => [
+          id,
+          String(quantity),
+        ]),
+      ),
+    );
+    setPickerIngredientId("");
+    setOpen(true);
+  }
+
   function submit() {
     let invalidIngredient: string | null = null;
-    const lines = availableIngredients.flatMap((ingredient) => {
+    const lines = selectedIngredients.flatMap((ingredient) => {
       const quantity = positiveQuantity(quantities[ingredient.ingredientId]);
       if (quantity == null) return [];
       const selectedUnit = resolveSelectedUnit(
@@ -256,6 +344,7 @@ export function IntraSiteTransferDialog({
       const transferId = (result.data as { id?: number } | undefined)?.id;
       toast.success(copy.commitSuccess);
       setOpen(false);
+      setSelectedIngredientIds([]);
       setQuantities({});
       setNotes("");
       idempotencyKey.current = null;
@@ -269,15 +358,32 @@ export function IntraSiteTransferDialog({
 
   return (
     <>
-      <Button
-        type="button"
-        variant="outline"
-        size={triggerSize}
-        onClick={() => setOpen(true)}
-      >
-        <IconArrowLeftRight data-icon="inline-start" />
-        {triggerLabel}
-      </Button>
+      {trigger ? (
+        <span
+          onClick={handleOpen}
+          className="inline-flex cursor-pointer"
+          role="button"
+          tabIndex={0}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              handleOpen();
+            }
+          }}
+        >
+          {trigger}
+        </span>
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          size={triggerSize}
+          onClick={handleOpen}
+        >
+          <IconArrowLeftRight data-icon="inline-start" />
+          {triggerLabel}
+        </Button>
+      )}
       <AppDialog
         variant="document"
         open={open}
@@ -342,135 +448,192 @@ export function IntraSiteTransferDialog({
               description={copy.emptySourceDescription}
             />
           ) : (
-            <ScrollArea className="h-80">
-              <div className="flex flex-col gap-2 pr-2">
-                {availableIngredients.map((ingredient) => {
-                  const unitOptions = getIssueUnitOptions(ingredient);
-                  const selectedUnit = resolveSelectedUnit(
-                    ingredient,
-                    selectedUnits[ingredient.ingredientId],
-                  );
-                  const selectedUnitId =
-                    selectedUnit?.unitId ?? ingredient.baseUnitId;
-                  const maxEntryQuantity = getIssueMaxEntryQuantity(
-                    availableQuantity(ingredient.ingredientId),
-                    selectedUnit,
-                  );
-                  const maxQuantityValue =
-                    formatIssueMaxEntryQuantity(maxEntryQuantity);
+            <>
+              <div className="flex items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <Combobox
+                    value={pickerIngredientId}
+                    onValueChange={(value) => {
+                      if (!value) return;
+                      const numId = Number(value);
+                      if (Number.isFinite(numId)) {
+                        handleAddIngredient(numId);
+                      }
+                    }}
+                    options={pickerOptions}
+                    size={controlSize}
+                    className="w-full"
+                    placeholder={copy.chooseIngredient}
+                    searchPlaceholder={copy.searchIngredient}
+                    aria-label={copy.chooseIngredient}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size={controlSize}
+                  className="shrink-0"
+                  onClick={() => handleAddIngredient()}
+                  disabled={!pickerIngredientId}
+                  aria-label={copy.addIngredientAria}
+                >
+                  <IconPlus />
+                </Button>
+              </div>
 
-                  return (
-                    <Item
-                      key={ingredient.ingredientId}
-                      variant="outline"
-                      size="sm"
-                      className="w-full flex-col items-stretch gap-3 sm:flex-row sm:flex-nowrap sm:items-center sm:justify-between"
-                    >
-                      <ItemContent className="w-full min-w-0 flex-1 sm:w-auto">
-                        <ItemTitle className="truncate">
-                          {ingredient.name}
-                        </ItemTitle>
-                        <ItemDescription>
-                          {copy.availableQuantity(
-                            Number(maxQuantityValue || "0"),
-                            selectedUnit?.label ?? ingredient.unit,
-                          )}
-                        </ItemDescription>
-                      </ItemContent>
-                      <ItemActions className="flex w-full items-center justify-between gap-2 sm:w-auto sm:shrink-0">
-                        <InputGroup
-                          size={controlSize}
-                          className="col-span-2 w-full sm:w-40"
+              {selectedIngredients.length === 0 ? (
+                <AppEmptyState
+                  compact
+                  title={copy.emptySelectedTitle}
+                  description={copy.emptySelectedDescription}
+                />
+              ) : (
+                <ScrollArea className="h-80">
+                  <div className="flex flex-col gap-2 pr-2">
+                    {selectedIngredients.map((ingredient) => {
+                      const unitOptions = getIssueUnitOptions(ingredient);
+                      const selectedUnit = resolveSelectedUnit(
+                        ingredient,
+                        selectedUnits[ingredient.ingredientId],
+                      );
+                      const selectedUnitId =
+                        selectedUnit?.unitId ?? ingredient.baseUnitId;
+                      const maxEntryQuantity = getIssueMaxEntryQuantity(
+                        availableQuantity(ingredient.ingredientId),
+                        selectedUnit,
+                      );
+                      const maxQuantityValue =
+                        formatIssueMaxEntryQuantity(maxEntryQuantity);
+
+                      return (
+                        <Item
+                          key={ingredient.ingredientId}
+                          variant="outline"
+                          size="sm"
+                          className="w-full flex-col items-stretch gap-3 sm:flex-row sm:flex-nowrap sm:items-center sm:justify-between"
                         >
-                          <QuantityInput
-                            value={quantities[ingredient.ingredientId] ?? ""}
-                            onValueChange={(value) => {
-                              setQuantities((current) => ({
-                                ...current,
-                                [ingredient.ingredientId]:
-                                  clampIssueEntryQuantity(
-                                    value,
-                                    maxEntryQuantity,
-                                  ),
-                              }));
-                              idempotencyKey.current = null;
-                            }}
-                            maxFractionDigits={3}
-                            placeholder="0"
-                            aria-label={copy.quantityAria(ingredient.name)}
-                            className="h-full"
-                          />
-                          {maxQuantityValue ? (
-                            <InputGroupAddon
-                              align="inline-end"
-                              className="py-0"
+                          <ItemContent className="w-full min-w-0 flex-1 sm:w-auto">
+                            <ItemTitle className="truncate">
+                              {ingredient.name}
+                            </ItemTitle>
+                            <ItemDescription>
+                              {copy.availableQuantity(
+                                Number(maxQuantityValue || "0"),
+                                selectedUnit?.label ?? ingredient.unit,
+                              )}
+                            </ItemDescription>
+                          </ItemContent>
+                          <ItemActions className="flex w-full items-center justify-between gap-2 sm:w-auto sm:shrink-0">
+                            <InputGroup
+                              size={controlSize}
+                              className="col-span-2 w-full sm:w-40"
                             >
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size={isTouchLayout ? "touch" : "sm"}
-                                className="shadow-none"
-                                onClick={() => {
+                              <QuantityInput
+                                value={quantities[ingredient.ingredientId] ?? ""}
+                                onValueChange={(value) => {
                                   setQuantities((current) => ({
                                     ...current,
-                                    [ingredient.ingredientId]: maxQuantityValue,
+                                    [ingredient.ingredientId]:
+                                      clampIssueEntryQuantity(
+                                        value,
+                                        maxEntryQuantity,
+                                      ),
                                   }));
                                   idempotencyKey.current = null;
                                 }}
-                              >
-                                {FORM_VI.max}
-                              </Button>
-                            </InputGroupAddon>
-                          ) : null}
-                        </InputGroup>
-                        {unitOptions.length > 1 ? (
-                          <Select
-                            value={String(selectedUnitId)}
-                            onValueChange={(value) =>
-                              handleUnitChange(
-                                ingredient.ingredientId,
-                                Number(value),
-                              )
-                            }
-                          >
-                            <SelectTrigger
-                              size={controlSize}
-                              className="w-full sm:w-24"
-                              aria-label={messages.inventory.transfer.unit}
-                            >
-                              <SelectValue
-                                placeholder={messages.inventory.transfer.selectUnit}
+                                maxFractionDigits={3}
+                                placeholder="0"
+                                aria-label={copy.quantityAria(ingredient.name)}
+                                className="h-full"
                               />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectGroup>
-                                {unitOptions.map((option) => (
-                                  <SelectItem
-                                    key={option.unitId}
-                                    value={String(option.unitId)}
-                                    size={optionSize}
+                              {maxQuantityValue ? (
+                                <InputGroupAddon
+                                  align="inline-end"
+                                  className="py-0"
+                                >
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size={isTouchLayout ? "touch" : "sm"}
+                                    className="shadow-none"
+                                    onClick={() => {
+                                      setQuantities((current) => ({
+                                        ...current,
+                                        [ingredient.ingredientId]:
+                                          maxQuantityValue,
+                                      }));
+                                      idempotencyKey.current = null;
+                                    }}
                                   >
-                                    {option.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectGroup>
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <Input
-                            controlSize={controlSize}
-                            className="w-full sm:w-20"
-                            value={selectedUnit?.label ?? ingredient.unit}
-                            readOnly
-                            aria-readonly="true"
-                          />
-                        )}
-                      </ItemActions>
-                    </Item>
-                  );
-                })}
-              </div>
-            </ScrollArea>
+                                    {FORM_VI.max}
+                                  </Button>
+                                </InputGroupAddon>
+                              ) : null}
+                            </InputGroup>
+                            {unitOptions.length > 1 ? (
+                              <Select
+                                value={String(selectedUnitId)}
+                                onValueChange={(value) =>
+                                  handleUnitChange(
+                                    ingredient.ingredientId,
+                                    Number(value),
+                                  )
+                                }
+                              >
+                                <SelectTrigger
+                                  size={controlSize}
+                                  className="w-full sm:w-24"
+                                  aria-label={messages.inventory.transfer.unit}
+                                >
+                                  <SelectValue
+                                    placeholder={
+                                      messages.inventory.transfer.selectUnit
+                                    }
+                                  />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectGroup>
+                                    {unitOptions.map((option) => (
+                                      <SelectItem
+                                        key={option.unitId}
+                                        value={String(option.unitId)}
+                                        size={optionSize}
+                                      >
+                                        {option.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectGroup>
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <Input
+                                controlSize={controlSize}
+                                className="w-full sm:w-20"
+                                value={selectedUnit?.label ?? ingredient.unit}
+                                readOnly
+                                aria-readonly="true"
+                              />
+                            )}
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size={isTouchLayout ? "icon-touch" : "icon-sm"}
+                              className="shrink-0 text-muted-foreground hover:text-destructive"
+                              onClick={() =>
+                                handleRemoveIngredient(ingredient.ingredientId)
+                              }
+                              aria-label={copy.removeLineAria}
+                            >
+                              <IconTrash />
+                            </Button>
+                          </ItemActions>
+                        </Item>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              )}
+            </>
           )}
           <Textarea
             value={notes}
