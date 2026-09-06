@@ -300,8 +300,8 @@ export function projectStockFulfillmentRows({
     },
   );
 
-  // Central: all orphan DCs. Branch: inbound receive-ready inter-site DCs and
-  // every local warehouse/kitchen document for immutable operating history.
+  // Central: all orphan DCs. Branch: all inter-site DCs involving the branch
+  // (inbound requests/deliveries and outbound dispatches) and intra-site documents.
   const manualTransferRows = transfers.flatMap<StockFulfillmentJourneyRow>(
     (transfer) => {
       if (transfer.stockRequestId != null) return [];
@@ -311,8 +311,12 @@ export function projectStockFulfillmentRows({
         if (transfer.transferScope === "intra_site") {
           if (transfer.fromSite.id !== viewer.branchId) return [];
         } else {
-          if (transfer.toSite.id !== viewer.branchId) return [];
-          if (!workKinds.includes("receive")) return [];
+          if (
+            transfer.fromSite.id !== viewer.branchId &&
+            transfer.toSite.id !== viewer.branchId
+          ) {
+            return [];
+          }
         }
       }
       return [

@@ -191,7 +191,7 @@ test("branch mode keeps YCH and omits draft/central-bound manual DCs", () => {
   );
 });
 
-test("branch mode emits inbound receive-ready manual DCs only", () => {
+test("branch mode keeps branch manual DCs (draft, in-transit, received) for tracking and review", () => {
   const inboundReady: StockFulfillmentTransferRecord = {
     id: 204,
     transferNumber: "DC-204",
@@ -214,10 +214,38 @@ test("branch mode emits inbound receive-ready manual DCs only", () => {
     createdAt: "2026-07-30T10:05:00Z",
     lines: [{ quantity: 1, quantityReceived: null }],
   };
+  const inboundReceived: StockFulfillmentTransferRecord = {
+    id: 207,
+    transferNumber: "DC-207",
+    status: "received",
+    transferScope: "inter_site",
+    stockRequestId: null,
+    fromSite: supply,
+    toSite: branch,
+    createdAt: "2026-07-30T10:06:00Z",
+    lines: [{ quantity: 1, quantityReceived: 1 }],
+  };
+  const unrelatedDraft: StockFulfillmentTransferRecord = {
+    id: 208,
+    transferNumber: "DC-208",
+    status: "draft",
+    transferScope: "inter_site",
+    stockRequestId: null,
+    fromSite: supply,
+    toSite: kitchen,
+    createdAt: "2026-07-30T10:07:00Z",
+    lines: [{ quantity: 1, quantityReceived: null }],
+  };
   const rows = projectStockFulfillmentRows({
     requests: [],
     items: [],
-    transfers: [...transfers, inboundReady, inboundDraft],
+    transfers: [
+      ...transfers,
+      inboundReady,
+      inboundDraft,
+      inboundReceived,
+      unrelatedDraft,
+    ],
     viewer: {
       mode: "branch",
       branchId: branch.id,
@@ -225,13 +253,26 @@ test("branch mode emits inbound receive-ready manual DCs only", () => {
     },
   });
 
+  // 207 (received, 10:06), 205 (draft, 10:05), 204 (in_transit, 10:04). 208 is omitted (different branch).
   assert.deepEqual(
     rows.map((row) =>
       row.kind === "manual_transfer" ? row.transferId : row.requestId,
     ),
-    [204],
+    [207, 205, 204],
   );
-  assert.deepEqual(rows[0]?.workKinds, ["receive"]);
+  const receivedRow = rows.find(
+    (row) => row.kind === "manual_transfer" && row.transferId === 207,
+  );
+  assert.equal(receivedRow?.lifecycle, "completed");
+  const draftRow = rows.find(
+    (row) => row.kind === "manual_transfer" && row.transferId === 205,
+  );
+  assert.equal(draftRow?.lifecycle, "active");
+  const readyRow = rows.find(
+    (row) => row.kind === "manual_transfer" && row.transferId === 204,
+  );
+  assert.equal(readyRow?.lifecycle, "active");
+  assert.deepEqual(readyRow?.workKinds, ["receive"]);
 });
 
 test("branch mode keeps completed intra-site documents as local history", () => {

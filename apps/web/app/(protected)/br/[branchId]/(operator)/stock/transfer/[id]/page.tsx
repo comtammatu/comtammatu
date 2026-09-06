@@ -39,21 +39,22 @@ export default async function OperatorTransferDetailPage({
     includeCorrections: false,
   });
 
-  // Store branch: DC detail is central-only. Route to YCH / receive / stock.
+  // Store branch: redirect legacy YCH or active receive sessions to their dedicated surfaces.
   if (
     context.branch.branch_kind === "branch" &&
-    data.transfer.transferScope === "inter_site" &&
-    data.transfer.status !== "received"
+    data.transfer.transferScope === "inter_site"
   ) {
     if (data.transfer.stockRequestId != null) {
       redirect(
         `/br/${branchId}/stock/requests/${data.transfer.stockRequestId}`,
       );
     }
-    if (isTransferReceiveWorkspaceStatus(data.transfer.status)) {
+    if (
+      data.transfer.toBranchId === branchId &&
+      isTransferReceiveWorkspaceStatus(data.transfer.status)
+    ) {
       redirect(`/br/${branchId}/stock/receive/${transferId}`);
     }
-    redirect(`/br/${branchId}/stock`);
   }
 
   const copy = messages.inventory.transfer;

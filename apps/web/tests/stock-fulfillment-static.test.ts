@@ -43,8 +43,8 @@ test("stock requests and transfers share job-based canonical hubs", () => {
     "apps/web/lib/inventory/stock-fulfillment-projection.ts",
   );
   assert.match(projection, /viewer\.mode === "branch"/);
-  assert.match(projection, /inbound receive-ready/);
-  assert.match(projection, /workKinds\.includes\("receive"\)/);
+  assert.match(projection, /transfer\.fromSite\.id !== viewer\.branchId/);
+  assert.match(projection, /transfer\.toSite\.id !== viewer\.branchId/);
   assert.match(branchHubClient, /omitLinkedTransferSearch: mode === "branch"/);
   assert.match(branchHubClient, /Đang lọc: cần nhận/);
   assert.match(branchHubClient, /Điều chuyển và phiếu đang tới/);
