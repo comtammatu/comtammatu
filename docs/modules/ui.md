@@ -108,7 +108,7 @@ Frame and § Structural Governance. This table only maps plane to code.
 | Plane                 | Adapters                                                                                                                      |
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `control_surface`     | `AppPage` → `AppPageHeader` → `AppListFrame` / `AppSection` / `DocumentFormFrame` → `AppToolbar` / `AppDetailFooter`          |
-| Branch operator       | `BranchOperatorPage`, `BranchOperatorPanel`, `BranchOperatorActionSection`, `ItemGroup`                                       |
+| Branch operator       | `BranchOperatorPage`, `BranchOperatorPanel`, `BranchOperatorActionSection`, `OperatorDesktopNav`, `OperatorBottomNav`, `ItemGroup` |
 | Station               | `StationSection`, `Frame`, `OperationalBoardCard`                                                                             |
 | Public                | `AppPage` + `PublicSection` / `AppEmptyState`                                                                                 |
 | Employee self-service | `EmployeePage`, `EmployeePanel`, `EmployeeActionSection`, and the rest of the `Employee*` exports in `staff-runtime-page.tsx` |

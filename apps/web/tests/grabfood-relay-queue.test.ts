@@ -73,12 +73,6 @@ interface GrabRelayQueueApi {
     queue: Array<Pick<QueueItem, "isTerminal">>,
     health?: { failedIds?: string[] } | null,
   ): string;
-  isLeaderTab(
-    leader: { tabId?: number; heartbeatAt?: number } | null,
-    tabId: number,
-    now: number,
-    stealMs?: number,
-  ): boolean;
 }
 
 const queueSource = readFileSync(
@@ -250,7 +244,7 @@ test("Grab relay worker identifies its contract version and displays the stored 
     optional_host_permissions?: string[];
   };
 
-  assert.equal(manifest.version, "1.2.4");
+  assert.equal(manifest.version, "1.3.0");
   assert.ok(manifest.permissions?.includes("idle"));
   assert.ok(manifest.host_permissions?.includes("https://merchant.grab.com/*"));
   assert.ok(!manifest.host_permissions?.includes("<all_urls>"));
@@ -424,17 +418,3 @@ test("Grab relay toolbar badge counts terminal queue items and failed item syncs
   );
 });
 
-test("Grab relay leader lock expires after the steal window", () => {
-  assert.equal(
-    queueApi.isLeaderTab({ tabId: 11, heartbeatAt: 1000 }, 22, 1000 + 14_999, 15_000),
-    false,
-  );
-  assert.equal(
-    queueApi.isLeaderTab({ tabId: 11, heartbeatAt: 1000 }, 22, 1000 + 15_001, 15_000),
-    true,
-  );
-  assert.equal(
-    queueApi.isLeaderTab({ tabId: 11, heartbeatAt: 1000 }, 11, 2000, 15_000),
-    true,
-  );
-});

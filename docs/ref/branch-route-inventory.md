@@ -13,6 +13,8 @@ Bảng khóa presentation plane cho mọi `page.tsx` dưới
   duyệt nghỉ (xong). Class A = chrome family (`BranchOperator*` + Item/Sheet);
   interiors (field, tab, overlay Owner) vẫn được diet. Wave 6 plane-compiler:
   settings/catalog overlay + stocktake count fork + station StationSheet.
+  Wave 7–15: Universal 48px touch target & Desktop multi-column layouts
+  (OperatorDesktopNav ≥1024px, lưới 2–3 cột mọi phân hệ, zero 44px remnants).
 
 ## Rubric class
 
@@ -88,7 +90,7 @@ URL bỏ prefix `/br/[branchId]`. Class mặc định **A / keep** trừ khi ghi
 | **stock shim** | 6 | requests, receive, grn/new(+supplier), production(+new/+id) → **C** (bảng C) |
 | **stocktake / count / waste** | 9 | stocktake list/new/[id] **A**; `[id]/count` **A**; `/count` **D**; count-assignments/slips, waste-approvals, consumption(+id), issues(+id), `/waste` **A** (`DOC-WORKFLOW`, `branch-touch-document`, GRN line sheet exemplar) |
 | **stock catalog / reports** | 7 | reports, catalog(+ingredients/categories/units/suppliers/thresholds) **A** |
-| **settings** | 5 | `/settings` + tables/pos/kds/printers — shared `br/_shared` **A** |
+| **settings** | 5 | `/settings` + tables/pos/kds/printers/audio — shared `br/_shared` **A** |
 | **dashboard / feedback / ops** | 8 | `/dashboard` **C** shim→`/`; orders, menu-limits (Drawer host), pos-sessions, close-day **A**; feedback(+qr) **A**; profile(+payslip) **D** |
 | **station** | 3 | `/pos`, `/kds`, `/pickup` → **E** |
 

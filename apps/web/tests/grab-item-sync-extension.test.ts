@@ -462,7 +462,7 @@ test("Grab item-sync hydrate never clears the confirmed cache", () => {
 
 test("Grab follower tabs do not poll POS item status", () => {
   assert.match(contentSource, /if \(!isLeaderTab && !forceAll\) return/);
-  assert.match(contentSource, /grabRelayLeader/);
+  assert.match(contentSource, /applyTabRole/);
   assert.match(injectedSource, /isLeaderTab/);
   assert.match(injectedSource, /PageType=Cancelled/);
   assert.match(injectedSource, /MARK_ORDER_QUEUED/);

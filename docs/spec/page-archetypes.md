@@ -464,7 +464,8 @@ badge}`).
   `BranchOperatorPage` → `BranchOperatorActionSection` from
   `@lib/branch-operator/components/branch-operator-page`. It does not render
   `AppPageHeader`, `AppSection`, `AppLinkCard`, or an control_surface `*PageContent`
-  wrapper at the Branch landing/root level.
+  wrapper at the Branch landing/root level. Actions support responsive multi-column
+  desktop layouts (`wideColumns` → `lg:grid-cols-3`).
 - Navigation: per this family's `ROUTE_FAMILY_CONTRACTS` entry.
 
 ### REPORT
@@ -477,7 +478,9 @@ badge}`).
 - Branch operator variant: `BranchOperatorPage` → mobile
   `BranchOperatorControlBar` → `BranchOperatorPanel` + full-row `ItemGroup`
   drill-ins. Not a control_surface cockpit: no branch picker, chart,
-  `DataTable`, or export. **Stock qty REPORT** (thresholds, consumption lists):
+  `DataTable`, or export. On desktop (≥1024px), panels and `ItemGroup` rows
+  densify into responsive 2-column grids (`sm:grid-cols-2`, `lg:grid-cols-2`)
+  under `OperatorDesktopNav`. **Stock qty REPORT** (thresholds, consumption lists):
   no money aggregation; every quantity stays with its ingredient unit.
   **Money REPORT** (`pos-sessions`, `close-day`): session or business-day
   totals via `ItemGroup` / status strip. `close-day` may use a date toolbar
