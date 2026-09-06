@@ -237,3 +237,114 @@ test("Branch stock data loaders preserve branch surface boundaries on unauthoriz
   );
 });
 
+test("Branch team sub-screens implement responsive desktop multi-column layouts", () => {
+  const teamBoard = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/team/team-board-client.tsx",
+  );
+  const members = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/team/members/members-client.tsx",
+  );
+  const attendance = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/team/attendance/branch-attendance-client.tsx",
+  );
+  const leaveApprovals = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/team/leave-approvals/branch-leave-approvals-client.tsx",
+  );
+  const checkoutApprovals = read(
+    "apps/web/lib/staff-runtime/checkout-approvals/checkout-approvals-client.tsx",
+  );
+  const rosterWeek = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/team/roster/branch-roster-week-client.tsx",
+  );
+
+  // Shift groups and tools strip on team board
+  assert.match(teamBoard, /grid gap-1\.5 lg:grid-cols-2/);
+  assert.match(teamBoard, /grid gap-1\.5 sm:grid-cols-2 lg:grid-cols-3/);
+
+  // Members list responsive 2-column grid
+  assert.match(members, /grid gap-2 lg:grid-cols-2/);
+
+  // Attendance records and summary 3-column grid
+  assert.match(attendance, /grid gap-2 sm:grid-cols-2 lg:grid-cols-3/);
+
+  // Leave approvals responsive multi-column grid
+  assert.match(
+    leaveApprovals,
+    /grid gap-2 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3/,
+  );
+
+  // Checkout approvals responsive 3-column grid
+  assert.match(checkoutApprovals, /grid gap-2 sm:grid-cols-2 lg:grid-cols-3/);
+
+  // Roster week 7-column day selector on desktop and 3-column assigned staff
+  assert.match(rosterWeek, /lg:grid lg:grid-cols-7/);
+  assert.match(rosterWeek, /gap-2 sm:grid sm:grid-cols-2 lg:grid-cols-3/);
+});
+
+test("Branch team and staff-runtime touch targets strictly comply with universal 48px standard", () => {
+  const rosterWeek = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/team/roster/branch-roster-week-client.tsx",
+  );
+  const employeeTasksSheet = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/team/members/branch-employee-tasks-sheet.tsx",
+  );
+  const staffRuntimePage = read("apps/web/lib/staff-runtime/page.tsx");
+  const tasksClient = read(
+    "apps/web/lib/staff-runtime/tasks/tasks-client.tsx",
+  );
+  const countClient = read(
+    "apps/web/lib/staff-runtime/count/count-client.tsx",
+  );
+  const profilePref = read(
+    "apps/web/lib/staff-runtime/profile/profile-preferences-section.tsx",
+  );
+  const yearPicker = read(
+    "apps/web/lib/staff-runtime/payslip/year-picker.tsx",
+  );
+
+  assert.doesNotMatch(rosterWeek, /\bh-8\b/);
+  assert.doesNotMatch(rosterWeek, /\bsm:h-9\b/);
+  assert.doesNotMatch(employeeTasksSheet, /size="icon-xs"/);
+  assert.doesNotMatch(staffRuntimePage, /<Button[^>]*size="xs"/);
+  assert.doesNotMatch(tasksClient, /<Button[^>]*size="xs"/);
+  assert.doesNotMatch(tasksClient, /<Button[^>]*size="icon"(?!-touch)/);
+  assert.doesNotMatch(countClient, /\bh-7\b/);
+  assert.doesNotMatch(countClient, /<Button[^>]*size="sm"/);
+  assert.doesNotMatch(profilePref, /\bh-7\b/);
+  assert.doesNotMatch(profilePref, /<Button[^>]*size="sm"/);
+  assert.doesNotMatch(yearPicker, /<Button[^>]*size="sm"/);
+});
+
+test("Branch shift redirect shims forward legacy routes to canonical team sub-plane", () => {
+  const shiftAttendance = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/attendance/page.tsx",
+  );
+  const shiftCheckout = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/checkout-approvals/page.tsx",
+  );
+  const shiftLeave = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/page.tsx",
+  );
+  const shiftRoster = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/roster/page.tsx",
+  );
+
+  assert.match(
+    shiftAttendance,
+    /redirect\(`\/br\/\$\{branchId\}\/team\/attendance`\)/,
+  );
+  assert.match(
+    shiftCheckout,
+    /redirect\(`\/br\/\$\{branchId\}\/team\/checkout-approvals/,
+  );
+  assert.match(
+    shiftLeave,
+    /redirect\(`\/br\/\$\{branchId\}\/team\/leave-approvals/,
+  );
+  assert.match(
+    shiftRoster,
+    /redirect\(`\/br\/\$\{branchId\}\/team\/roster/,
+  );
+});
+
+

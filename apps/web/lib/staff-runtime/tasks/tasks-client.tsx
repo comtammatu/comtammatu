@@ -466,7 +466,7 @@ export function TasksClient({
                       <div className="flex shrink-0 pt-0.5">
                         <Button
                           type="button"
-                          size="icon"
+                          size="icon-touch"
                           variant={item.done ? "outline" : "default"}
                           className={cn(
                             item.done
@@ -551,7 +551,7 @@ export function TasksClient({
                           <Button
                             type="button"
                             variant="outline"
-                            size="icon"
+                            size="icon-touch"
                             className="relative size-12 shrink-0 overflow-hidden p-0"
                             aria-label={taskCopy.viewPhoto}
                             onClick={() => {
@@ -589,8 +589,8 @@ export function TasksClient({
                             <Button
                               type="button"
                               variant="ghost"
-                              size="xs"
-                              className="gap-1 px-1.5 text-xs text-muted-foreground hover:text-foreground"
+                              size="touch"
+                              className="gap-1 px-3 text-xs text-muted-foreground hover:text-foreground"
                               disabled={disabled || isItemPending}
                               onClick={() => setCapturingItemId(item.id)}
                             >

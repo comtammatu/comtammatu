@@ -471,7 +471,7 @@ export function BranchRosterWeekClient({
       </div>
 
       <div
-        className="no-scrollbar flex touch-pan-x gap-2 overflow-x-auto overscroll-x-contain pb-1"
+        className="no-scrollbar flex touch-pan-x gap-2 overflow-x-auto overscroll-x-contain pb-1 lg:grid lg:grid-cols-7 lg:overflow-visible"
         role="group"
         aria-label={copy.selectDayAria}
       >
@@ -485,7 +485,7 @@ export function BranchRosterWeekClient({
               variant={active ? "secondary" : "outline"}
               size="touch-lg"
               aria-pressed={active}
-              className="min-w-28 shrink-0 flex-col items-start gap-1 px-3 py-2 text-sm"
+              className="min-w-28 shrink-0 flex-col items-start gap-1 px-3 py-2 text-sm lg:min-w-0 lg:w-full"
               onClick={() => setSelectedDay(date)}
             >
               <span className="font-semibold">
@@ -531,12 +531,12 @@ export function BranchRosterWeekClient({
         ) : null}
 
         {data.shifts.length > 0 ? (
-          <div className="mb-3 flex flex-wrap items-center gap-1.5 border-b pb-3">
+          <div className="no-scrollbar mb-3 flex touch-pan-x items-center gap-1.5 overflow-x-auto overscroll-x-contain border-b pb-3">
             <Button
               type="button"
               variant={shiftGroupFilter === "all" ? "secondary" : "outline"}
               size="touch"
-              className="h-8 px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm"
+              className="shrink-0 gap-2 px-3 text-xs sm:text-sm"
               onClick={() => setShiftGroupFilter("all")}
             >
               {copy.shiftGroupAll} ({data.shifts.length})
@@ -545,7 +545,7 @@ export function BranchRosterWeekClient({
               type="button"
               variant={shiftGroupFilter === "operations" ? "secondary" : "outline"}
               size="touch"
-              className="h-8 px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm"
+              className="shrink-0 gap-2 px-3 text-xs sm:text-sm"
               onClick={() => setShiftGroupFilter("operations")}
             >
               {copy.shiftGroupOperations} (
@@ -555,7 +555,7 @@ export function BranchRosterWeekClient({
               type="button"
               variant={shiftGroupFilter === "guard" ? "secondary" : "outline"}
               size="touch"
-              className="h-8 px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm"
+              className="shrink-0 gap-2 px-3 text-xs sm:text-sm"
               onClick={() => setShiftGroupFilter("guard")}
             >
               {copy.shiftGroupGuard} (
@@ -639,7 +639,7 @@ export function BranchRosterWeekClient({
                           type="button"
                           variant="outline"
                           size="touch"
-                          className="h-8 text-xs"
+                          className="text-xs px-3"
                           onClick={() => {
                             setAssignmentSearch("");
                             setAssignSheetShiftId(shift.id);

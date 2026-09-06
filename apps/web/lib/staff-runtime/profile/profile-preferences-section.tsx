@@ -74,11 +74,11 @@ export function ProfilePreferencesSection() {
             <Button
               type="button"
               variant="outline"
-              size="sm"
-              className="h-7 text-xs"
+              size="touch"
+              className="gap-1.5 px-3 text-xs"
               onClick={handleTestSound}
             >
-              <IconVolume className="size-3.5 mr-1" />
+              <IconVolume className="size-4" />
               {copy.testSoundButton}
             </Button>
           </div>

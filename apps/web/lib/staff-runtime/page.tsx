@@ -1174,8 +1174,9 @@ export async function StaffWorkdayPageContent({
               <ItemActions>
                 {isCount ? (
                   <Button
-                    size="xs"
+                    size="touch"
                     variant="outline"
+                    className="text-xs px-3"
                     render={<Link href={routes.tasks} />}
                   >
                     <IconCount data-icon="inline-start" />
@@ -1183,8 +1184,9 @@ export async function StaffWorkdayPageContent({
                   </Button>
                 ) : (
                   <Button
-                    size="xs"
+                    size="touch"
                     variant="outline"
+                    className="text-xs px-3"
                     render={<Link href={routes.tasks} />}
                   >
                     {isPhoto ? (

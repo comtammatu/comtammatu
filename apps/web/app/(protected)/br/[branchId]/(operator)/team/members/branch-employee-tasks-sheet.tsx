@@ -112,21 +112,20 @@ function IngredientChips({
           <span className="text-xs text-muted-foreground">{copy.empty}</span>
         ) : (
           selectedIds.map((id) => (
-            <Badge key={id} variant="secondary" className="gap-1">
-              {ingredientById.get(id)?.name ?? id}
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-xs"
-                aria-label={copy.removeIngredient}
-                className="-mr-1 ml-0.5 size-5"
-                onClick={() =>
-                  onChange(selectedIds.filter((value) => value !== id))
-                }
-              >
-                <IconX />
-              </Button>
-            </Badge>
+            <Button
+              key={id}
+              type="button"
+              variant="secondary"
+              size="touch"
+              className="gap-1.5 px-3 text-xs"
+              aria-label={`${copy.removeIngredient}: ${ingredientById.get(id)?.name ?? id}`}
+              onClick={() =>
+                onChange(selectedIds.filter((value) => value !== id))
+              }
+            >
+              <span>{ingredientById.get(id)?.name ?? id}</span>
+              <IconX className="size-4 text-muted-foreground" />
+            </Button>
           ))
         )}
       </div>

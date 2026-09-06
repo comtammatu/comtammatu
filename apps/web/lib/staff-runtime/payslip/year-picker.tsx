@@ -61,7 +61,7 @@ export function YearPicker({
           <Button
             type="button"
             variant="link"
-            size="sm"
+            size="touch"
             disabled={isPending}
             onClick={() => go(currentYear)}
           >

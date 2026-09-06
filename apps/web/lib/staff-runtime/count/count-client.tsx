@@ -608,27 +608,27 @@ export function CountSlipClient({
                 <div className="flex flex-wrap items-center gap-2 pt-1">
                   <Button
                     type="button"
-                    size="sm"
+                    size="touch"
                     variant={activeFilter === "all" ? "default" : "outline"}
-                    className="h-7 px-2 text-xs"
+                    className="text-xs px-3"
                     onClick={() => setActiveFilter("all")}
                   >
                     Tất cả ({assignmentsToConsider.length})
                   </Button>
                   <Button
                     type="button"
-                    size="sm"
+                    size="touch"
                     variant={activeFilter === "uncounted" ? "default" : "outline"}
-                    className="h-7 px-2 text-xs"
+                    className="text-xs px-3"
                     onClick={() => setActiveFilter("uncounted")}
                   >
                     Chưa đếm ({uncountedCount})
                   </Button>
                   <Button
                     type="button"
-                    size="sm"
+                    size="touch"
                     variant={activeFilter === "counted" ? "default" : "outline"}
-                    className="h-7 px-2 text-xs"
+                    className="text-xs px-3"
                     onClick={() => setActiveFilter("counted")}
                   >
                     Đã đếm ({countedItems.length})
