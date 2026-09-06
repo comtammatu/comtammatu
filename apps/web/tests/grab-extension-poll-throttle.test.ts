@@ -108,7 +108,7 @@ test("Grab relay poll intervals stay slower than the portal and split cancelled 
   assert.match(injectedSource, /nextPollDelayMs\(/);
   assert.match(
     injectedSource,
-    /schedulePoll\(\) \{[\s\S]*nextPollDelayMs\(Date\.now\(\), authExpired, rateLimitedUntil/,
+    /schedulePoll\(\) \{[\s\S]*nextPollDelayMs\(\s*Date\.now\(\),\s*authExpired,\s*rateLimitedUntil/,
   );
 });
 
@@ -116,9 +116,18 @@ test("Grab relay skips a preparing poll when the portal intercept just succeeded
   const { shouldSkipActivePreparingPoll, shouldPollCancelled } =
     loadInjectedThrottleHelpers();
 
-  assert.equal(shouldSkipActivePreparingPoll(20_000, 10_000, false, 15_000), true);
-  assert.equal(shouldSkipActivePreparingPoll(20_000, 4_000, false, 15_000), false);
-  assert.equal(shouldSkipActivePreparingPoll(20_000, 8_000, true, 15_000), false);
+  assert.equal(
+    shouldSkipActivePreparingPoll(20_000, 10_000, false, 15_000),
+    true,
+  );
+  assert.equal(
+    shouldSkipActivePreparingPoll(20_000, 4_000, false, 15_000),
+    false,
+  );
+  assert.equal(
+    shouldSkipActivePreparingPoll(20_000, 8_000, true, 15_000),
+    false,
+  );
   assert.equal(shouldSkipActivePreparingPoll(20_000, 0, false, 15_000), false);
 
   assert.equal(shouldPollCancelled(45_000, 0, false, 45_000), true);
@@ -173,12 +182,15 @@ test("Grab relay recovery coalesces wake storms and keeps explicit recover immed
   assert.match(contentSource, /if \(!event\.persisted\) return;/);
   assert.match(
     contentSource,
-    /recoverMissedOrders\(\{ debounced: request\.force !== true \}\)/,
+    /recoverMissedOrders\(\s*\{\s*debounced:\s*request\.force !== true,?\s*\}\s*\)/,
   );
-  assert.match(popupSource, /action: 'RECOVER_MISSED_ORDERS',\s*force: true/);
+  assert.match(
+    popupSource,
+    /action:\s*["']RECOVER_MISSED_ORDERS["'],\s*force:\s*true/,
+  );
   assert.match(
     backgroundSource,
-    /recoverGrabTabs\(\{ force: request\.force === true \}\)/,
+    /routeToLeader\(\s*["']RECOVER_MISSED_ORDERS["'],\s*\{\s*force:\s*request\.force === true,?\s*\}\s*\)/,
   );
   assert.match(injectedSource, /pollOrders\(\{ force: true \}\)/);
   assert.match(injectedSource, /pollCancelledOrders\(\{ force: true \}\)/);
@@ -203,6 +215,6 @@ test("Grab relay does not parse failed Grab bodies and does not reset rate limit
   assert.match(injectedSource, /shouldBlockGrabMutation\(/);
   assert.match(
     injectedSource,
-    /applyRateLimitFromStatus\(res\.status, res\.headers\.get\('retry-after'\), \{ fromPoll: true \}\)/,
+    /applyRateLimitFromStatus\(\s*res\.status,\s*res\.headers\.get\(["']retry-after["']\),\s*\{\s*fromPoll:\s*true,?\s*\}\s*\)/,
   );
 });

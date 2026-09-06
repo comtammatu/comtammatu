@@ -56,10 +56,7 @@ interface GrabRelayQueueApi {
     inFlight: Iterable<string>,
     maxSlots?: number,
   ): DispatchJob[];
-  mergeQueueByOrderId(
-    persisted: QueueItem[],
-    local: QueueItem[],
-  ): QueueItem[];
+  mergeQueueByOrderId(persisted: QueueItem[], local: QueueItem[]): QueueItem[];
   applyDispatchOutcome(
     item: QueueItem,
     outcome: {
@@ -252,7 +249,10 @@ test("Grab relay worker identifies its contract version and displays the stored 
   assert.ok(manifest.optional_host_permissions?.includes("https://*/*"));
   assert.match(backgroundSource, /relay_version: RELAY_VERSION/);
   assert.match(backgroundSource, /responseJson\.total_amount/);
-  assert.match(queueSource, /TERMINAL_HTTP = new Set\(\[400, 401, 403, 422, 426\]\)/);
+  assert.match(
+    queueSource,
+    /TERMINAL_HTTP = new Set\(\[400, 401, 403, 422, 426\]\)/,
+  );
   assert.match(backgroundSource, /AbortController/);
   assert.match(backgroundSource, /selectDispatchJobs/);
   assert.doesNotMatch(backgroundSource, /isProcessingQueue/);
@@ -364,8 +364,14 @@ test("Grab relay dispatch never opens two jobs for the same order or more than t
 
   const jobs = queueApi.selectDispatchJobs(items, now, ["order-1"], 3);
   assert.equal(jobs.length, 3);
-  assert.equal(jobs.some((job) => job.orderID === "order-1"), false);
-  assert.equal(jobs.map((job) => job.orderID).join(","), "order-2,order-3,order-4");
+  assert.equal(
+    jobs.some((job) => job.orderID === "order-1"),
+    false,
+  );
+  assert.equal(
+    jobs.map((job) => job.orderID).join(","),
+    "order-2,order-3,order-4",
+  );
 });
 
 test("Grab relay retry items only take a slot when the live lane is empty", () => {
@@ -410,11 +416,9 @@ test("Grab relay retry items only take a slot when the live lane is empty", () =
 test("Grab relay toolbar badge counts terminal queue items and failed item syncs", () => {
   assert.equal(queueApi.toolbarBadgeText([], { failedIds: [] }), "");
   assert.equal(
-    queueApi.toolbarBadgeText(
-      [{ isTerminal: true }, { isTerminal: false }],
-      { failedIds: ["VNITE1", "VNITE2"] },
-    ),
+    queueApi.toolbarBadgeText([{ isTerminal: true }, { isTerminal: false }], {
+      failedIds: ["VNITE1", "VNITE2"],
+    }),
     "3",
   );
 });
-

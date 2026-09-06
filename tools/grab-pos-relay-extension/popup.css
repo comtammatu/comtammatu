@@ -29,8 +29,12 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 html {
-  width: 360px;
+  width: 400px;
   max-width: 100%;
   background: var(--bg);
 }
@@ -41,17 +45,23 @@ body {
   padding: 0;
   background: var(--bg);
   color: var(--text-body);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
   font-size: 12px;
   line-height: 1.4;
   -webkit-font-smoothing: antialiased;
 }
 
-button, input, summary {
+button,
+input,
+summary {
   font: inherit;
 }
 
-button:focus-visible, input:focus-visible, summary:focus-visible {
+button:focus-visible,
+input:focus-visible,
+summary:focus-visible {
   outline: 2px solid var(--brand);
   outline-offset: 1px;
 }
@@ -126,7 +136,9 @@ button:focus-visible, input:focus-visible, summary:focus-visible {
   padding: 10px 12px;
   background: var(--surface);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-  transition: border-color 160ms ease, background 160ms ease;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease;
 }
 
 .relay-card[data-tone="ready"] {
@@ -210,7 +222,30 @@ button:focus-visible, input:focus-visible, summary:focus-visible {
 }
 
 .route-point {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-weight: 600;
+}
+
+.route-point::before {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-subtle);
+  content: "";
+}
+
+.route-point[data-state="ready"]::before {
+  background: var(--emerald);
+}
+
+.route-point[data-state="warning"]::before {
+  background: var(--amber);
+}
+
+.route-point[data-state="error"]::before {
+  background: var(--rose);
 }
 
 .route-arrow {
@@ -232,6 +267,11 @@ button:focus-visible, input:focus-visible, summary:focus-visible {
   font-size: 11px;
   color: var(--text-muted);
   line-height: 1.35;
+}
+
+.status-action {
+  width: 100%;
+  margin-bottom: 8px;
 }
 
 .metrics-grid {
@@ -300,7 +340,7 @@ button:focus-visible, input:focus-visible, summary:focus-visible {
   align-items: center;
   justify-content: center;
   gap: 5px;
-  height: 32px;
+  min-height: 40px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: #ffffff;
@@ -309,7 +349,9 @@ button:focus-visible, input:focus-visible, summary:focus-visible {
   font-weight: 600;
   cursor: pointer;
   padding: 0 10px;
-  transition: background 120ms ease, border-color 120ms ease;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
   white-space: nowrap;
 }
 
@@ -563,6 +605,60 @@ button:focus-visible, input:focus-visible, summary:focus-visible {
   background: #fafafa;
 }
 
+.log-content {
+  display: grid;
+  gap: 8px;
+  padding: 10px 11px 11px;
+  border-top: 1px solid var(--border);
+}
+
+.log-list {
+  display: grid;
+  gap: 5px;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.log-entry {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 7px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--amber);
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+}
+
+.log-entry[data-level="error"] {
+  border-left-color: var(--rose);
+}
+
+.log-time {
+  color: var(--text-subtle);
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+}
+
+.log-message {
+  min-width: 0;
+  color: var(--text-body);
+  font-size: 11px;
+}
+
+.log-code {
+  grid-column: 2;
+  color: var(--text-subtle);
+  font-family: ui-monospace, monospace;
+  font-size: 9px;
+}
+
+.log-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
 .field {
   display: grid;
   gap: 3px;
@@ -575,7 +671,7 @@ button:focus-visible, input:focus-visible, summary:focus-visible {
 }
 
 .field input {
-  height: 30px;
+  min-height: 40px;
   padding: 4px 8px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -609,7 +705,7 @@ button:focus-visible, input:focus-visible, summary:focus-visible {
   position: absolute;
   right: 3px;
   top: 3px;
-  height: 24px;
+  height: 34px;
   border: 0;
   border-radius: 4px;
   padding: 0 6px;
@@ -657,15 +753,38 @@ button:focus-visible, input:focus-visible, summary:focus-visible {
 }
 
 @keyframes status-breathe {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.45; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
 }
 
 @keyframes busy-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes toast-enter {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

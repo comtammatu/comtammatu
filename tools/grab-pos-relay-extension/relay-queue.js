@@ -1,6 +1,5 @@
 (function attachGrabRelayQueue(root) {
   const MAX_LIVE_SLOTS = 3;
-  const LEADER_STEAL_MS = 15 * 1000;
   const TERMINAL_HTTP = new Set([400, 401, 403, 422, 426]);
 
   function stableStringify(value) {
@@ -194,15 +193,6 @@
     return total > 99 ? '!' : String(total);
   }
 
-  function isLeaderTab(leader, tabId, now, stealMs = LEADER_STEAL_MS) {
-    if (!Number.isInteger(tabId) || tabId <= 0) return false;
-    if (!leader || !Number.isInteger(leader.tabId) || !Number.isFinite(leader.heartbeatAt)) {
-      return true;
-    }
-    if (now - leader.heartbeatAt > stealMs) return true;
-    return leader.tabId === tabId;
-  }
-
   root.GrabRelayQueue = Object.freeze({
     MAX_LIVE_SLOTS,
     contentFingerprint,
@@ -211,6 +201,5 @@
     applyDispatchOutcome,
     mergeQueueByOrderId,
     toolbarBadgeText,
-    isLeaderTab,
   });
 })(typeof self === 'undefined' ? globalThis : self);

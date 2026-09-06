@@ -1,19 +1,20 @@
 // content.js - Content script running in merchant.grab.com
 (function () {
-  const extVersion = chrome.runtime.getManifest()?.version || '1.2.4';
+  const extVersion = chrome.runtime.getManifest()?.version || "1.3.0";
   console.log(`[Grab POS Relay v${extVersion}] Content script active`);
 
   // Inject injected.js into page context
-  const script = document.createElement('script');
-  script.src = chrome.runtime.getURL('injected.js');
+  const script = document.createElement("script");
+  script.src = chrome.runtime.getURL("injected.js");
   script.onload = function () {
     this.remove();
+    sendCommandToInjected("REPORT_SESSION_STATUS", {});
   };
   (document.head || document.documentElement).appendChild(script);
 
   // Floating Status Indicator on GrabMerchant Web page
-  const badge = document.createElement('div');
-  badge.id = 'comtammatu-pos-relay-badge';
+  const badge = document.createElement("div");
+  badge.id = "comtammatu-pos-relay-badge";
   badge.style.cssText = `
     position: fixed;
     bottom: 12px;
@@ -34,15 +35,25 @@
     transition: all 0.2s ease;
     user-select: none;
   `;
-  badge.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;"></span> <strong>POS Relay</strong> <span style="font-size:11px;color:#94a3b8;">v${extVersion}</span>`;
+  const badgeDot = document.createElement("span");
+  badgeDot.style.cssText =
+    "display:inline-block;width:8px;height:8px;border-radius:50%;background:#94a3b8;";
+  const badgeTitle = document.createElement("strong");
+  badgeTitle.textContent = `POS v${extVersion}`;
+  const badgeMessage = document.createElement("span");
+  badgeMessage.textContent = "Đang kết nối...";
+  badge.append(badgeDot, badgeTitle, badgeMessage);
 
   function ensureBadgeAttached() {
-    if (!document.getElementById('comtammatu-pos-relay-badge')) {
+    if (!document.getElementById("comtammatu-pos-relay-badge")) {
       if (document.body) {
         document.body.appendChild(badge);
       } else {
-        document.addEventListener('DOMContentLoaded', () => {
-          if (document.body && !document.getElementById('comtammatu-pos-relay-badge')) {
+        document.addEventListener("DOMContentLoaded", () => {
+          if (
+            document.body &&
+            !document.getElementById("comtammatu-pos-relay-badge")
+          ) {
             document.body.appendChild(badge);
           }
         });
@@ -54,26 +65,30 @@
 
   function updateBadge(message, isSuccess = true) {
     ensureBadgeAttached();
-    badge.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${isSuccess ? '#22c55e' : '#ef4444'};"></span> <strong>POS v${extVersion}</strong>: ${message}`;
-    badge.style.borderColor = isSuccess ? '#22c55e' : '#ef4444';
+    badgeDot.style.background = isSuccess ? "#22c55e" : "#ef4444";
+    badgeMessage.textContent = message;
+    badge.style.borderColor = isSuccess ? "#22c55e" : "#ef4444";
   }
 
   function sendCommandToInjected(command, payload) {
     window.postMessage(
       {
-        source: 'GRAB_POS_RELAY_CONTENT',
+        source: "GRAB_POS_RELAY_CONTENT",
         command: command,
         payload: payload,
       },
-      '*'
+      "*",
     );
   }
 
   function shouldRunDebouncedRecovery(now, lastAt, debounceMs) {
-    return !Number.isFinite(lastAt) || lastAt <= 0 || now - lastAt >= debounceMs;
+    return (
+      !Number.isFinite(lastAt) || lastAt <= 0 || now - lastAt >= debounceMs
+    );
   }
 
   function recoverMissedOrders(options = {}) {
+    if (!isLeaderTab) return false;
     const now = Date.now();
     if (
       options.debounced === true &&
@@ -82,27 +97,26 @@
       return false;
     }
     lastRecoveryAt = now;
-    sendCommandToInjected('RECOVER_MISSED_ORDERS', {});
-    if (isLeaderTab) pollPosItemStatus(false);
+    sendCommandToInjected("RECOVER_MISSED_ORDERS", {});
+    pollPosItemStatus(false);
     return true;
   }
 
-  const VIETNAM_BUSINESS_DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Asia/Ho_Chi_Minh',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
+  const VIETNAM_BUSINESS_DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
   });
 
   function getVietnamBusinessDateKey(value = new Date()) {
     const parts = VIETNAM_BUSINESS_DATE_FORMATTER.formatToParts(value);
     const datePart = (type) => parts.find((part) => part.type === type)?.value;
-    return `${datePart('year')}-${datePart('month')}-${datePart('day')}`;
+    return `${datePart("year")}-${datePart("month")}-${datePart("day")}`;
   }
 
-  const ITEM_SYNC_STATE_STORAGE_KEY = 'grabItemSyncStateV1';
-  const ITEM_SYNC_HEALTH_STORAGE_KEY = 'grabItemSyncHealth';
-  const LEADER_STORAGE_KEY = 'grabRelayLeader';
+  const ITEM_SYNC_STATE_STORAGE_KEY = "grabItemSyncStateV1";
+  const ITEM_SYNC_HEALTH_STORAGE_KEY = "grabItemSyncHealth";
   const ITEM_STATUS_POLL_INTERVAL_MS = 10 * 1000;
   const INITIAL_ITEM_STATUS_POLL_DELAY_MS = 2 * 1000;
   const RECOVERY_DEBOUNCE_MS = 30 * 1000;
@@ -110,27 +124,34 @@
   const STOCK_RETRY_DELAY_MS = 30 * 1000;
   const LOW_STOCK_IMMEDIATE_THRESHOLD = 3;
   const ITEM_SYNC_PENDING_TTL_MS = 20 * 1000;
-  const LEADER_HEARTBEAT_MS = 5 * 1000;
-  const LEADER_STEAL_MS = 15 * 1000;
+  const TAB_HEARTBEAT_MS = 10 * 1000;
   const TERMINAL_SYNC_HTTP_STATUSES = new Set([400, 403, 404]);
   const terminalFailedIds = new Set();
   const KNOWN_NON_MERCHANT_SEGMENTS = new Set([
-    'dashboard',
-    'order',
-    'orders',
-    'food',
-    'menu',
-    'inventory',
-    'preparing',
-    'history',
-    'cancelled',
-    'scheduled',
-    'completed',
-    'active',
+    "dashboard",
+    "order",
+    "orders",
+    "food",
+    "menu",
+    "inventory",
+    "preparing",
+    "history",
+    "cancelled",
+    "scheduled",
+    "completed",
+    "active",
   ]);
+  let activeGrabMerchantId = "";
   try {
-    const locMatch = window.location.pathname.match(/\/(?:food\/(?:menu|inventory)|merchants?|order)\/([A-Za-z0-9\-_]+)/i);
-    if (locMatch && locMatch[1] && !KNOWN_NON_MERCHANT_SEGMENTS.has(locMatch[1].toLowerCase()) && !/^v\d+$/i.test(locMatch[1])) {
+    const locMatch = window.location.pathname.match(
+      /\/(?:food\/(?:menu|inventory)|merchants?|order)\/([A-Za-z0-9\-_]+)/i,
+    );
+    if (
+      locMatch &&
+      locMatch[1] &&
+      !KNOWN_NON_MERCHANT_SEGMENTS.has(locMatch[1].toLowerCase()) &&
+      !/^v\d+$/i.test(locMatch[1])
+    ) {
       activeGrabMerchantId = locMatch[1];
     }
   } catch (e) {}
@@ -147,8 +168,11 @@
   let itemSyncScopeKey = null;
   let pendingStockFlushTimer = null;
   let itemSyncPersistTail = Promise.resolve();
-  let myTabId = null;
-  let isLeaderTab = true;
+  let isLeaderTab = false;
+  let tabGeneration = 0;
+  let authState = "unknown";
+  let lastGrabActivityAt = null;
+  let lastPollSuccessAt = null;
   let itemSyncHealth = { lastOkAt: null, failedIds: [], unmappedCount: 0 };
 
   function getStoredValues(keys) {
@@ -170,16 +194,20 @@
   }
 
   function isConfirmedState(value) {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
-    const validStatus = value.status === undefined || typeof value.status === 'string';
-    const validStock = value.stockSignature === undefined || typeof value.stockSignature === 'string';
+    if (!value || typeof value !== "object" || Array.isArray(value))
+      return false;
+    const validStatus =
+      value.status === undefined || typeof value.status === "string";
+    const validStock =
+      value.stockSignature === undefined ||
+      typeof value.stockSignature === "string";
     return validStatus && validStock;
   }
 
   function isPendingStockState(value) {
     return (
       value &&
-      typeof value === 'object' &&
+      typeof value === "object" &&
       !Array.isArray(value) &&
       Number.isInteger(value.currentStock) &&
       value.currentStock >= 1 &&
@@ -193,30 +221,44 @@
     try {
       const storedValues = await getStoredValues([ITEM_SYNC_STATE_STORAGE_KEY]);
       const storedState = storedValues[ITEM_SYNC_STATE_STORAGE_KEY];
-      if (!storedState || typeof storedState !== 'object' || Array.isArray(storedState)) return;
+      if (
+        !storedState ||
+        typeof storedState !== "object" ||
+        Array.isArray(storedState)
+      )
+        return;
 
-      itemSyncScopeKey = typeof storedState.scopeKey === 'string' ? storedState.scopeKey : null;
-      if (typeof storedState.businessDateKey === 'string') {
+      itemSyncScopeKey =
+        typeof storedState.scopeKey === "string" ? storedState.scopeKey : null;
+      if (typeof storedState.businessDateKey === "string") {
         itemStatusBusinessDateKey = storedState.businessDateKey;
       }
 
-      if (storedState.confirmed && typeof storedState.confirmed === 'object') {
+      if (storedState.confirmed && typeof storedState.confirmed === "object") {
         for (const [cacheKey, value] of Object.entries(storedState.confirmed)) {
-          if (/^(item:VNITE|modifier:VNMOD)/.test(cacheKey) && isConfirmedState(value)) {
+          if (
+            /^(item:VNITE|modifier:VNMOD)/.test(cacheKey) &&
+            isConfirmedState(value)
+          ) {
             itemStatusCache.set(cacheKey, value);
           }
         }
       }
 
-      if (storedState.pendingStock && typeof storedState.pendingStock === 'object') {
-        for (const [itemId, value] of Object.entries(storedState.pendingStock)) {
-          if (itemId.startsWith('VNITE') && isPendingStockState(value)) {
+      if (
+        storedState.pendingStock &&
+        typeof storedState.pendingStock === "object"
+      ) {
+        for (const [itemId, value] of Object.entries(
+          storedState.pendingStock,
+        )) {
+          if (itemId.startsWith("VNITE") && isPendingStockState(value)) {
             pendingStockUpdates.set(itemId, value);
           }
         }
       }
     } catch (error) {
-      console.warn('[Grab POS Relay] Failed hydrating item sync state:', error);
+      console.warn("[Grab POS Relay] Failed hydrating item sync state:", error);
     }
   }
 
@@ -231,9 +273,14 @@
     };
 
     itemSyncPersistTail = itemSyncPersistTail
-      .then(() => setStoredValues({ [ITEM_SYNC_STATE_STORAGE_KEY]: storedState }))
+      .then(() =>
+        setStoredValues({ [ITEM_SYNC_STATE_STORAGE_KEY]: storedState }),
+      )
       .catch((error) => {
-        console.warn('[Grab POS Relay] Failed persisting item sync state:', error);
+        console.warn(
+          "[Grab POS Relay] Failed persisting item sync state:",
+          error,
+        );
       });
     return itemSyncPersistTail;
   }
@@ -246,7 +293,7 @@
   }
 
   async function ensureItemSyncScope(backendUrl, branchId) {
-    const normalizedBackendUrl = backendUrl.replace(/\/+$/, '');
+    const normalizedBackendUrl = backendUrl.replace(/\/+$/, "");
     const nextScopeKey = `${normalizedBackendUrl}|branch:${branchId}`;
     if (nextScopeKey === itemSyncScopeKey) return;
 
@@ -266,7 +313,7 @@
 
     itemStatusBusinessDateKey = nextBusinessDateKey;
     for (const [cacheKey, value] of itemStatusCache) {
-      if (value.status !== 'UNAVAILABLE_TODAY') continue;
+      if (value.status !== "UNAVAILABLE_TODAY") continue;
 
       const nextValue = { ...value };
       delete nextValue.status;
@@ -280,15 +327,25 @@
     return true;
   }
 
-  function shouldSyncAvailabilityStatus(currentStatus, previousStatus, forceAll, reconcileTodayStatuses) {
+  function shouldSyncAvailabilityStatus(
+    currentStatus,
+    previousStatus,
+    forceAll,
+    reconcileTodayStatuses,
+  ) {
     return (
       forceAll ||
       previousStatus !== currentStatus ||
-      (reconcileTodayStatuses && currentStatus === 'UNAVAILABLE_TODAY')
+      (reconcileTodayStatuses && currentStatus === "UNAVAILABLE_TODAY")
     );
   }
 
-  function shouldFlushStockImmediately(currentStock, previousStockSignature, forceAll, statusChanged) {
+  function shouldFlushStockImmediately(
+    currentStock,
+    previousStockSignature,
+    forceAll,
+    statusChanged,
+  ) {
     return (
       forceAll ||
       previousStockSignature === undefined ||
@@ -300,24 +357,28 @@
   function normalizeStockPayload(currentStock) {
     if (currentStock == null) {
       return {
-        kind: 'not-managed',
+        kind: "not-managed",
       };
     }
 
     if (currentStock === 0) {
       return {
-        kind: 'status-only',
+        kind: "status-only",
       };
     }
 
-    if (!Number.isInteger(currentStock) || currentStock < 1 || currentStock > 9999) {
+    if (
+      !Number.isInteger(currentStock) ||
+      currentStock < 1 ||
+      currentStock > 9999
+    ) {
       return {
-        kind: 'invalid',
+        kind: "invalid",
       };
     }
 
     return {
-      kind: 'stock',
+      kind: "stock",
       currentStock,
       signature: `enabled:${currentStock}`,
     };
@@ -326,12 +387,19 @@
   function isPendingItemSyncFresh(pending, now = Date.now()) {
     return Boolean(
       pending &&
-        Number.isFinite(pending.startedAt) &&
-        now - pending.startedAt < ITEM_SYNC_PENDING_TTL_MS
+      Number.isFinite(pending.startedAt) &&
+      now - pending.startedAt < ITEM_SYNC_PENDING_TTL_MS,
     );
   }
 
-  function queueItemSync(operation, command, itemId, signature, desiredValue, payload) {
+  function queueItemSync(
+    operation,
+    command,
+    itemId,
+    signature,
+    desiredValue,
+    payload,
+  ) {
     const key = `${operation}:${itemId}`;
     const pending = pendingItemSyncs.get(key);
     if (isPendingItemSyncFresh(pending)) return false;
@@ -345,7 +413,12 @@
       scopeKey: itemSyncScopeKey,
       startedAt: Date.now(),
     });
-    sendCommandToInjected(command, { requestId, itemId, ...payload });
+    sendCommandToInjected(command, {
+      requestId,
+      itemId,
+      generation: tabGeneration,
+      ...payload,
+    });
     return true;
   }
 
@@ -364,15 +437,22 @@
   }
 
   function persistItemSyncHealth() {
-    return setStoredValues({ [ITEM_SYNC_HEALTH_STORAGE_KEY]: itemSyncHealth }).catch((error) => {
-      console.warn('[Grab POS Relay] Failed persisting item sync health:', error);
+    return setStoredValues({
+      [ITEM_SYNC_HEALTH_STORAGE_KEY]: itemSyncHealth,
+    }).catch((error) => {
+      console.warn(
+        "[Grab POS Relay] Failed persisting item sync health:",
+        error,
+      );
     });
   }
 
   function noteItemSyncSuccess(itemId) {
     terminalFailedIds.delete(itemId);
     itemSyncHealth.lastOkAt = Date.now();
-    itemSyncHealth.failedIds = itemSyncHealth.failedIds.filter((id) => id !== itemId);
+    itemSyncHealth.failedIds = itemSyncHealth.failedIds.filter(
+      (id) => id !== itemId,
+    );
     persistItemSyncHealth();
   }
 
@@ -381,56 +461,101 @@
       terminalFailedIds.add(itemId);
     }
     if (!itemSyncHealth.failedIds.includes(itemId)) {
-      itemSyncHealth.failedIds = [...itemSyncHealth.failedIds, itemId].slice(-40);
+      itemSyncHealth.failedIds = [...itemSyncHealth.failedIds, itemId].slice(
+        -40,
+      );
       persistItemSyncHealth();
     }
   }
 
-  function isGrabRelayLeader(leader, tabId, now, stealMs = LEADER_STEAL_MS) {
-    if (!Number.isInteger(tabId) || tabId <= 0) return false;
-    if (!leader || !Number.isInteger(leader.tabId) || !Number.isFinite(leader.heartbeatAt)) {
-      return true;
+  function applyTabRole(role, generation) {
+    const nextGeneration = Number.isInteger(generation)
+      ? generation
+      : tabGeneration;
+    if (nextGeneration < tabGeneration) return;
+    const nextIsLeader = role === "leader";
+    const changed =
+      nextIsLeader !== isLeaderTab || nextGeneration !== tabGeneration;
+    const becameLeader = nextIsLeader && !isLeaderTab;
+    isLeaderTab = nextIsLeader;
+    tabGeneration = nextGeneration;
+    sendCommandToInjected("SET_TAB_ROLE", {
+      role: isLeaderTab ? "leader" : "follower",
+      generation: tabGeneration,
+    });
+    if (!changed) return;
+    if (isLeaderTab) {
+      schedulePendingStockFlush();
+      updateBadge("Tab trực chính — đang nhận đơn", true);
+      if (becameLeader)
+        setTimeout(() => recoverMissedOrders({ debounced: false }), 0);
+    } else if (authState === "expired") {
+      clearPendingStockFlushTimer();
+      updateBadge("Cần đăng nhập lại Grab Merchant", false);
+    } else {
+      clearPendingStockFlushTimer();
+      updateBadge("Tab phụ — vẫn lắng nghe", true);
     }
-    if (now - leader.heartbeatAt > stealMs) return true;
-    return leader.tabId === tabId;
   }
 
-  async function beatLeaderLock() {
-    if (!Number.isInteger(myTabId)) {
-      myTabId = await new Promise((resolve) => {
-        chrome.runtime.sendMessage({ action: 'GET_TAB_ID' }, (response) => {
-          resolve(response?.tabId ?? null);
-        });
-      });
-    }
-    const now = Date.now();
-    const stored = await getStoredValues([LEADER_STORAGE_KEY]);
-    const nextLeader = isGrabRelayLeader(stored[LEADER_STORAGE_KEY], myTabId, now, LEADER_STEAL_MS);
-    isLeaderTab = nextLeader;
-    if (isLeaderTab) {
-      await setStoredValues({
-        [LEADER_STORAGE_KEY]: { tabId: myTabId, heartbeatAt: now },
-      }).catch(() => {});
-    }
-    sendCommandToInjected('SET_LEADER', { isLeader: isLeaderTab });
-    if (!isLeaderTab) {
-      updateBadge('Đang phụ — tab khác đang trực', true);
-    }
-    return isLeaderTab;
+  function reportTabHealth(reason = "heartbeat") {
+    chrome.runtime.sendMessage(
+      {
+        action: "TAB_HEALTH",
+        payload: {
+          reason,
+          pageReady: true,
+          merchantId: activeGrabMerchantId,
+          authState,
+          visible: document.visibilityState === "visible",
+          lastGrabActivityAt,
+          lastPollSuccessAt,
+        },
+      },
+      (response) => {
+        if (chrome.runtime.lastError || !response?.success) return;
+        applyTabRole(response.role, response.generation);
+      },
+    );
+  }
+
+  function logTabEvent(level, code, message, context = {}) {
+    chrome.runtime.sendMessage(
+      {
+        action: "LOG_EVENT",
+        payload: { level, area: "grab_session", code, message, context },
+      },
+      () => {
+        void chrome.runtime.lastError;
+      },
+    );
   }
 
   const itemSyncStateReady = hydrateItemSyncState();
 
   function normalizeGrabIds(value, fallback, prefix) {
-    const candidates = Array.isArray(value) ? value : fallback ? [fallback] : [];
-    return [...new Set(candidates.filter((id) => typeof id === 'string' && id.startsWith(prefix)))];
+    const candidates = Array.isArray(value)
+      ? value
+      : fallback
+        ? [fallback]
+        : [];
+    return [
+      ...new Set(
+        candidates.filter(
+          (id) => typeof id === "string" && id.startsWith(prefix),
+        ),
+      ),
+    ];
   }
 
   function schedulePendingStockFlush() {
     clearPendingStockFlushTimer();
-    if (grabSessionExpired || pendingStockUpdates.size === 0) return;
+    if (!isLeaderTab || grabSessionExpired || pendingStockUpdates.size === 0)
+      return;
 
-    const nextDueAt = Math.min(...Array.from(pendingStockUpdates.values(), (entry) => entry.dueAt));
+    const nextDueAt = Math.min(
+      ...Array.from(pendingStockUpdates.values(), (entry) => entry.dueAt),
+    );
     const delay = Math.max(0, nextDueAt - Date.now());
     pendingStockFlushTimer = setTimeout(flushPendingStockUpdates, delay);
   }
@@ -439,13 +564,18 @@
     return {
       currentStock: stockPayload.currentStock,
       signature: stockPayload.signature,
-      dueAt: immediate ? now : existing?.dueAt ?? now + STOCK_FLUSH_DELAY_MS,
+      dueAt: immediate ? now : (existing?.dueAt ?? now + STOCK_FLUSH_DELAY_MS),
     };
   }
 
   function stageStockUpdate(itemId, stockPayload, immediate) {
     const existing = pendingStockUpdates.get(itemId);
-    const nextStockUpdate = getPendingStockUpdate(existing, stockPayload, immediate, Date.now());
+    const nextStockUpdate = getPendingStockUpdate(
+      existing,
+      stockPayload,
+      immediate,
+      Date.now(),
+    );
 
     if (
       existing &&
@@ -471,7 +601,7 @@
 
   function flushPendingStockUpdates() {
     pendingStockFlushTimer = null;
-    if (grabSessionExpired) return;
+    if (!isLeaderTab || grabSessionExpired) return;
 
     const now = Date.now();
     let changed = false;
@@ -479,12 +609,12 @@
       if (pendingStock.dueAt > now) continue;
 
       queueItemSync(
-        'stock',
-        'SET_ITEM_STOCK',
+        "stock",
+        "SET_ITEM_STOCK",
         itemId,
         pendingStock.signature,
         pendingStock.signature,
-        { currentStock: pendingStock.currentStock }
+        { currentStock: pendingStock.currentStock },
       );
       pendingStockUpdates.set(itemId, {
         ...pendingStock,
@@ -500,7 +630,8 @@
   // Poll POS Backend for Menu Limits / Item Status changes
   async function pollPosItemStatus(forceAll = false) {
     await itemSyncStateReady;
-    if (!isLeaderTab && !forceAll) return;
+    if (!isLeaderTab) return;
+    const pollGeneration = tabGeneration;
     if (grabSessionExpired) return;
     if (itemStatusPollInFlight) {
       forceSyncQueued = forceSyncQueued || forceAll;
@@ -513,14 +644,21 @@
         terminalFailedIds.clear();
       }
 
-      const res = await getStoredValues(['backendUrl', 'branchId', 'relaySecret', 'grabMerchantId']);
-      const backendUrl = res.backendUrl || 'http://localhost:3000';
+      const res = await getStoredValues([
+        "backendUrl",
+        "branchId",
+        "relaySecret",
+        "grabMerchantId",
+      ]);
+      if (!isLeaderTab || tabGeneration !== pollGeneration) return;
+      const backendUrl = res.backendUrl || "http://localhost:3000";
       const branchId = Number(res.branchId);
-      const relaySecret = res.relaySecret || '';
-      const resolvedMerchantId = activeGrabMerchantId || res.grabMerchantId || '';
+      const relaySecret = res.relaySecret || "";
+      const resolvedMerchantId =
+        activeGrabMerchantId || res.grabMerchantId || "";
 
       if (!Number.isInteger(branchId) || branchId <= 0) {
-        updateBadge('⚠️ Chưa cấu hình mã chi nhánh trong tiện ích', false);
+        updateBadge("⚠️ Chưa cấu hình mã chi nhánh trong tiện ích", false);
         return;
       }
 
@@ -529,25 +667,33 @@
 
       const headers = {};
       if (relaySecret) {
-        headers['x-grab-relay-secret'] = relaySecret;
+        headers["x-grab-relay-secret"] = relaySecret;
       }
 
       const queryParams = new URLSearchParams({ branch_id: String(branchId) });
       if (resolvedMerchantId) {
-        queryParams.set('merchant_id', resolvedMerchantId);
+        queryParams.set("merchant_id", resolvedMerchantId);
       }
 
-      const response = await fetch(`${backendUrl}/api/webhooks/grabfood/item-status?${queryParams.toString()}`, {
-        headers,
-      });
+      const response = await fetch(
+        `${backendUrl}/api/webhooks/grabfood/item-status?${queryParams.toString()}`,
+        {
+          headers,
+        },
+      );
+      if (!isLeaderTab || tabGeneration !== pollGeneration) return;
       if (!response.ok) {
         if (response.status === 401) {
-          updateBadge('⚠️ POS từ chối xác thực (401) — kiểm tra lại Relay Secret', false);
+          updateBadge(
+            "⚠️ POS từ chối xác thực (401) — kiểm tra lại Relay Secret",
+            false,
+          );
         }
         return;
       }
 
       const data = await response.json();
+      if (!isLeaderTab || tabGeneration !== pollGeneration) return;
       if (data.success && Array.isArray(data.items)) {
         itemSyncHealth.unmappedCount = Array.isArray(data.unmapped_items)
           ? data.unmapped_items.length
@@ -557,28 +703,39 @@
         const seenGrabItemIds = new Set();
         const failedIds = new Set(itemSyncHealth.failedIds);
         for (const item of data.items) {
-          const grabItemIds = normalizeGrabIds(item.grab_item_ids, item.grab_item_id, 'VNITE');
-          const grabModifierIds = normalizeGrabIds(item.grab_modifier_ids, null, 'VNMOD');
-          if (grabItemIds.length === 0 && grabModifierIds.length === 0) continue;
+          if (!isLeaderTab || tabGeneration !== pollGeneration) return;
+          const grabItemIds = normalizeGrabIds(
+            item.grab_item_ids,
+            item.grab_item_id,
+            "VNITE",
+          );
+          const grabModifierIds = normalizeGrabIds(
+            item.grab_modifier_ids,
+            null,
+            "VNMOD",
+          );
+          if (grabItemIds.length === 0 && grabModifierIds.length === 0)
+            continue;
           for (const grabId of grabItemIds) seenGrabItemIds.add(grabId);
 
-          const itemAvailableStatus = item.item_available_status ?? item.available_status;
+          const itemAvailableStatus =
+            item.item_available_status ?? item.available_status;
           const itemGrabStatus =
             item.item_grab_status ||
             item.grab_status ||
             (itemAvailableStatus === 3
-              ? 'UNAVAILABLE_INDEFINITELY'
+              ? "UNAVAILABLE_INDEFINITELY"
               : itemAvailableStatus === 7
-                ? 'HIDDEN'
+                ? "HIDDEN"
                 : itemAvailableStatus === 2
-                  ? 'UNAVAILABLE_TODAY'
-                  : 'AVAILABLE');
+                  ? "UNAVAILABLE_TODAY"
+                  : "AVAILABLE");
           const modifierAvailableStatus =
             item.modifier_available_status ??
             (item.is_disabled || item.available_to_sell === 0 ? 2 : 1);
           const modifierGrabStatus =
             item.modifier_grab_status ||
-            (modifierAvailableStatus === 2 ? 'UNAVAILABLE_TODAY' : 'AVAILABLE');
+            (modifierAvailableStatus === 2 ? "UNAVAILABLE_TODAY" : "AVAILABLE");
           const currentStock = item.available_to_sell;
 
           for (const grabId of grabItemIds) {
@@ -595,18 +752,20 @@
                 itemGrabStatus,
                 prev?.status,
                 forceAll,
-                reconcileTodayStatuses
+                reconcileTodayStatuses,
               )
             ) {
-              console.log(`[Grab POS Relay] Item status sync for ${item.name}: ${prev?.status} -> ${itemGrabStatus} (code: ${itemAvailableStatus})`);
+              console.log(
+                `[Grab POS Relay] Item status sync for ${item.name}: ${prev?.status} -> ${itemGrabStatus} (code: ${itemAvailableStatus})`,
+              );
               if (
                 queueItemSync(
-                  'status',
-                  'SET_AVAILABLE_STATUS',
+                  "status",
+                  "SET_AVAILABLE_STATUS",
                   grabId,
                   String(itemAvailableStatus ?? itemGrabStatus),
                   itemGrabStatus,
-                  { availableStatus: itemAvailableStatus ?? itemGrabStatus }
+                  { availableStatus: itemAvailableStatus ?? itemGrabStatus },
                 )
               ) {
                 syncedCount++;
@@ -628,18 +787,20 @@
                 modifierGrabStatus,
                 prev?.status,
                 forceAll,
-                reconcileTodayStatuses
+                reconcileTodayStatuses,
               )
             ) {
-              console.log(`[Grab POS Relay] Modifier status sync for ${item.name}: ${prev?.status} -> ${modifierGrabStatus} (code: ${modifierAvailableStatus})`);
+              console.log(
+                `[Grab POS Relay] Modifier status sync for ${item.name}: ${prev?.status} -> ${modifierGrabStatus} (code: ${modifierAvailableStatus})`,
+              );
               if (
                 queueItemSync(
-                  'modifier-status',
-                  'SET_MODIFIER_AVAILABLE_STATUS',
+                  "modifier-status",
+                  "SET_MODIFIER_AVAILABLE_STATUS",
                   grabId,
                   String(modifierAvailableStatus),
                   modifierGrabStatus,
-                  { availableStatus: modifierAvailableStatus }
+                  { availableStatus: modifierAvailableStatus },
                 )
               ) {
                 syncedCount++;
@@ -650,21 +811,28 @@
           // Modifier availability is binary. Numeric stock is sent only to
           // standalone Grab items through the IMS endpoint.
           const stockPayload = normalizeStockPayload(currentStock);
-          if (stockPayload.kind === 'not-managed' || stockPayload.kind === 'status-only') {
+          if (
+            stockPayload.kind === "not-managed" ||
+            stockPayload.kind === "status-only"
+          ) {
             for (const grabId of grabItemIds) clearPendingStockUpdate(grabId);
             continue;
           }
-          if (stockPayload.kind === 'invalid') {
+          if (stockPayload.kind === "invalid") {
             for (const grabId of grabItemIds) clearPendingStockUpdate(grabId);
-            console.warn(`[Grab POS Relay] Skip invalid stock for ${item.name}: ${currentStock}`);
+            console.warn(
+              `[Grab POS Relay] Skip invalid stock for ${item.name}: ${currentStock}`,
+            );
             continue;
           }
 
           for (const grabId of grabItemIds) {
             const cacheKey = `item:${grabId}`;
             const prev = itemStatusCache.get(cacheKey);
-            const statusChanged = prev?.status !== undefined && prev.status !== itemGrabStatus;
-            const stockChanged = !prev || prev.stockSignature !== stockPayload.signature;
+            const statusChanged =
+              prev?.status !== undefined && prev.status !== itemGrabStatus;
+            const stockChanged =
+              !prev || prev.stockSignature !== stockPayload.signature;
             const inFlightStock = pendingItemSyncs.get(`stock:${grabId}`);
 
             if (!forceAll && terminalFailedIds.has(grabId)) {
@@ -672,8 +840,16 @@
               continue;
             }
 
-            if (!forceAll && !failedIds.has(grabId) && !stockChanged && !statusChanged) {
-              if (inFlightStock && inFlightStock.signature !== stockPayload.signature) {
+            if (
+              !forceAll &&
+              !failedIds.has(grabId) &&
+              !stockChanged &&
+              !statusChanged
+            ) {
+              if (
+                inFlightStock &&
+                inFlightStock.signature !== stockPayload.signature
+              ) {
                 stageStockUpdate(grabId, stockPayload, true);
               } else {
                 clearPendingStockUpdate(grabId);
@@ -681,12 +857,14 @@
               continue;
             }
 
-            console.log(`[Grab POS Relay] Stock sync staged for ${item.name}: ${prev?.stockSignature} -> ${stockPayload.signature}`);
+            console.log(
+              `[Grab POS Relay] Stock sync staged for ${item.name}: ${prev?.stockSignature} -> ${stockPayload.signature}`,
+            );
             const immediate = shouldFlushStockImmediately(
               stockPayload.currentStock,
               prev?.stockSignature,
               forceAll,
-              statusChanged
+              statusChanged,
             );
             if (stageStockUpdate(grabId, stockPayload, immediate)) {
               syncedCount++;
@@ -704,7 +882,7 @@
         }
       }
     } catch (err) {
-      console.warn('[Grab POS Relay] Failed polling item status:', err);
+      console.warn("[Grab POS Relay] Failed polling item status:", err);
     } finally {
       itemStatusPollInFlight = false;
       if (forceSyncQueued) {
@@ -716,108 +894,160 @@
 
   // Listen to messages from popup
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === 'FORCE_FULL_SYNC') {
+    if (request.action === "SET_TAB_ROLE") {
+      applyTabRole(request.role, request.generation);
+      sendResponse({ success: true });
+      return;
+    }
+    if (request.action === "FORCE_FULL_SYNC") {
       if (!isLeaderTab) {
-        sendResponse({ success: false, reason: 'follower' });
+        sendResponse({ success: false, reason: "follower" });
         return;
       }
       pollPosItemStatus(true);
       sendResponse({ success: true });
       return;
     }
-    if (request.action === 'RECOVER_MISSED_ORDERS') {
-      recoverMissedOrders({ debounced: request.force !== true });
-      sendResponse({ success: true });
+    if (request.action === "RECOVER_MISSED_ORDERS") {
+      const accepted = recoverMissedOrders({
+        debounced: request.force !== true,
+      });
+      sendResponse({
+        success: accepted,
+        reason: accepted ? undefined : "follower",
+      });
     }
   });
 
   // Listen to messages from injected.js
-  window.addEventListener('message', async (event) => {
-    if (event.source !== window || event.data?.source !== 'GRAB_POS_RELAY_INJECTED') {
+  window.addEventListener("message", async (event) => {
+    if (
+      event.source !== window ||
+      event.data?.source !== "GRAB_POS_RELAY_INJECTED"
+    ) {
       return;
     }
 
     const { type, data } = event.data;
 
-    if (type === 'MERCHANT_ID_DETECTED' && data?.merchantId) {
+    if (type === "MERCHANT_ID_DETECTED" && data?.merchantId) {
       activeGrabMerchantId = data.merchantId;
       setStoredValues({ grabMerchantId: data.merchantId }).catch(() => {});
+      reportTabHealth("merchant_detected");
       return;
     }
 
-    if (type === 'AUTH_EXPIRED') {
-      grabSessionExpired = true;
-      updateBadge('⚠️ Phiên Grab hết hạn — mở lại hoặc đăng nhập lại Grab Merchant', false);
-      return;
-    }
-
-    if (type === 'AUTH_RECOVERED') {
+    if (type === "SESSION_READY") {
+      authState = "ready";
       grabSessionExpired = false;
-      updateBadge('✅ Đã kết nối lại Grab — tiếp tục trực đơn');
-      recoverMissedOrders({ debounced: false });
+      lastGrabActivityAt = Number.isFinite(data?.at) ? data.at : Date.now();
+      reportTabHealth("session_ready");
+      return;
+    }
+
+    if (type === "SESSION_ACTIVITY") {
+      authState = "ready";
+      grabSessionExpired = false;
+      lastGrabActivityAt = Number.isFinite(data?.at) ? data.at : Date.now();
+      if (data?.poll === true) lastPollSuccessAt = lastGrabActivityAt;
+      reportTabHealth("session_activity");
+      return;
+    }
+
+    if (type === "AUTH_EXPIRED") {
+      grabSessionExpired = true;
+      authState = "expired";
+      updateBadge(
+        "⚠️ Phiên Grab hết hạn — mở lại hoặc đăng nhập lại Grab Merchant",
+        false,
+      );
+      logTabEvent("warning", "auth_expired", "Phiên Grab đã hết hạn.", {
+        status: data?.status || null,
+      });
+      reportTabHealth("auth_expired");
+      return;
+    }
+
+    if (type === "AUTH_RECOVERED") {
+      grabSessionExpired = false;
+      authState = "ready";
+      lastGrabActivityAt = Date.now();
+      updateBadge("✅ Đã kết nối lại Grab — tiếp tục trực đơn");
+      logTabEvent("info", "auth_recovered", "Phiên Grab đã hoạt động trở lại.");
+      reportTabHealth("auth_recovered");
       return;
     }
 
     // Confirm status sync success before caching
-    if (type === 'SYNC_STATUS_RESULT' && data?.itemId) {
-      const pending = finishItemSync('status', data);
+    if (type === "SYNC_STATUS_RESULT" && data?.itemId) {
+      const pending = finishItemSync("status", data);
       if (!pending) return;
       if (data.success) {
         const cacheKey = `item:${data.itemId}`;
         const prev = itemStatusCache.get(cacheKey) || {};
         itemStatusCache.set(cacheKey, {
           ...prev,
-          status: pending?.desiredValue || data.statusStr || data.availableStatus,
+          status:
+            pending?.desiredValue || data.statusStr || data.availableStatus,
         });
         persistItemSyncState();
         noteItemSyncSuccess(data.itemId);
-        console.log(`[Grab POS Relay] Status sync confirmed for item ${data.itemId}`);
+        console.log(
+          `[Grab POS Relay] Status sync confirmed for item ${data.itemId}`,
+        );
       } else {
         const isTerminal = TERMINAL_SYNC_HTTP_STATUSES.has(data.status);
-        const detail = data.error ? `: ${data.error}` : '';
-        console.warn(`[Grab POS Relay] Status sync failed for item ${data.itemId} (HTTP ${data.status || 0})${detail}${isTerminal ? ' [Terminal - stopped automatic retry]' : ''}`);
+        const detail = data.error ? `: ${data.error}` : "";
+        console.warn(
+          `[Grab POS Relay] Status sync failed for item ${data.itemId} (HTTP ${data.status || 0})${detail}${isTerminal ? " [Terminal - stopped automatic retry]" : ""}`,
+        );
         noteItemSyncFailure(data.itemId, isTerminal);
         updateBadge(
           isTerminal
             ? `⚠️ Grab từ chối món ${data.itemId} (HTTP ${data.status || 0}) — kiểm tra ID`
             : `⚠️ Grab từ chối trạng thái món (HTTP ${data.status || 0})`,
-          false
+          false,
         );
       }
       return;
     }
 
-    if (type === 'SYNC_MODIFIER_STATUS_RESULT' && data?.itemId) {
-      const pending = finishItemSync('modifier-status', data);
+    if (type === "SYNC_MODIFIER_STATUS_RESULT" && data?.itemId) {
+      const pending = finishItemSync("modifier-status", data);
       if (!pending) return;
       if (data.success) {
         const cacheKey = `modifier:${data.itemId}`;
         const prev = itemStatusCache.get(cacheKey) || {};
         itemStatusCache.set(cacheKey, {
           ...prev,
-          status: pending?.desiredValue || data.statusStr || data.availableStatus,
+          status:
+            pending?.desiredValue || data.statusStr || data.availableStatus,
         });
         persistItemSyncState();
         noteItemSyncSuccess(data.itemId);
-        console.log(`[Grab POS Relay] Status sync confirmed for modifier ${data.itemId}`);
+        console.log(
+          `[Grab POS Relay] Status sync confirmed for modifier ${data.itemId}`,
+        );
       } else {
         const isTerminal = TERMINAL_SYNC_HTTP_STATUSES.has(data.status);
-        const detail = data.error ? `: ${data.error}` : '';
-        console.warn(`[Grab POS Relay] Modifier status sync failed for ${data.itemId} (HTTP ${data.status || 0})${detail}${isTerminal ? ' [Terminal - stopped automatic retry]' : ''}`);
+        const detail = data.error ? `: ${data.error}` : "";
+        console.warn(
+          `[Grab POS Relay] Modifier status sync failed for ${data.itemId} (HTTP ${data.status || 0})${detail}${isTerminal ? " [Terminal - stopped automatic retry]" : ""}`,
+        );
         noteItemSyncFailure(data.itemId, isTerminal);
         updateBadge(
           isTerminal
             ? `⚠️ Grab từ chối món kèm ${data.itemId} (HTTP ${data.status || 0}) — kiểm tra ID`
             : `⚠️ Grab từ chối trạng thái món kèm (HTTP ${data.status || 0})`,
-          false
+          false,
         );
       }
       return;
     }
 
     // Confirm stock sync success before caching
-    if (type === 'SYNC_STOCK_RESULT' && data?.itemId) {
-      const pending = finishItemSync('stock', data);
+    if (type === "SYNC_STOCK_RESULT" && data?.itemId) {
+      const pending = finishItemSync("stock", data);
       if (!pending) return;
       if (data.success) {
         const cacheKey = `item:${data.itemId}`;
@@ -834,7 +1064,9 @@
         persistItemSyncState();
         schedulePendingStockFlush();
         noteItemSyncSuccess(data.itemId);
-        console.log(`[Grab POS Relay] Stock sync confirmed for item ${data.itemId}`);
+        console.log(
+          `[Grab POS Relay] Stock sync confirmed for item ${data.itemId}`,
+        );
       } else {
         const isTerminal = TERMINAL_SYNC_HTTP_STATUSES.has(data.status);
         if (isTerminal) {
@@ -850,27 +1082,31 @@
             schedulePendingStockFlush();
           }
         }
-        const detail = data.error ? `: ${data.error}` : '';
-        console.warn(`[Grab POS Relay] Stock sync failed for item ${data.itemId} (HTTP ${data.status || 0})${detail}${isTerminal ? ' [Terminal - stopped automatic retry]' : ''}`);
+        const detail = data.error ? `: ${data.error}` : "";
+        console.warn(
+          `[Grab POS Relay] Stock sync failed for item ${data.itemId} (HTTP ${data.status || 0})${detail}${isTerminal ? " [Terminal - stopped automatic retry]" : ""}`,
+        );
         noteItemSyncFailure(data.itemId, isTerminal);
         updateBadge(
           isTerminal
             ? `⚠️ Grab từ chối tồn món ${data.itemId} (HTTP ${data.status || 0}) — kiểm tra ID`
             : `⚠️ Grab từ chối tồn món (HTTP ${data.status || 0})`,
-          false
+          false,
         );
       }
       return;
     }
 
-    if (type === 'ORDER_DETAIL' && data?.order) {
+    if (type === "ORDER_DETAIL" && data?.order) {
       const order = data.order;
-      console.log(`[Grab POS Relay] Received order ${order.displayID}, queuing for relay...`);
+      console.log(
+        `[Grab POS Relay] Received order ${order.displayID}, queuing for relay...`,
+      );
       updateBadge(`Đang tiếp nhận đơn ${order.displayID}...`);
 
       chrome.runtime.sendMessage(
         {
-          action: 'ENQUEUE_ORDER',
+          action: "ENQUEUE_ORDER",
           payload: {
             order: order,
             merchantId: data.merchantId || order.merchant?.ID,
@@ -878,8 +1114,11 @@
         },
         (res) => {
           if (chrome.runtime.lastError) {
-            console.warn('[Grab POS Relay] Background communication error:', chrome.runtime.lastError);
-            sendCommandToInjected('MARK_ORDER_QUEUE_FAILED', {
+            console.warn(
+              "[Grab POS Relay] Background communication error:",
+              chrome.runtime.lastError,
+            );
+            sendCommandToInjected("MARK_ORDER_QUEUE_FAILED", {
               orderID: order.orderID,
               contentFingerprint: order.contentFingerprint,
             });
@@ -887,36 +1126,38 @@
           }
           if (res?.success) {
             updateBadge(`✅ Đã tiếp nhận đơn ${order.displayID}`);
-            sendCommandToInjected('MARK_ORDER_QUEUED', {
+            sendCommandToInjected("MARK_ORDER_QUEUED", {
               orderID: order.orderID,
               contentFingerprint: order.contentFingerprint,
             });
           } else {
-            sendCommandToInjected('MARK_ORDER_QUEUE_FAILED', {
+            sendCommandToInjected("MARK_ORDER_QUEUE_FAILED", {
               orderID: order.orderID,
               contentFingerprint: order.contentFingerprint,
             });
           }
-        }
+        },
       );
       return;
     }
 
-    if (type === 'ORDER_CANCELLED' && data?.orderID) {
-      getStoredValues(['grabRelayedOrders']).then((stored) => {
-        const relayed = Array.isArray(stored.grabRelayedOrders) ? stored.grabRelayedOrders : [];
+    if (type === "ORDER_CANCELLED" && data?.orderID) {
+      getStoredValues(["grabRelayedOrders"]).then((stored) => {
+        const relayed = Array.isArray(stored.grabRelayedOrders)
+          ? stored.grabRelayedOrders
+          : [];
         const known = relayed.find((entry) => entry?.orderID === data.orderID);
         if (!known) return;
         chrome.runtime.sendMessage({
-          action: 'ENQUEUE_ORDER',
+          action: "ENQUEUE_ORDER",
           payload: {
             order: {
               orderID: data.orderID,
               displayID: data.displayID || known.displayID,
-              action: 'cancel',
+              action: "cancel",
               contentFingerprint: `cancel:${data.orderID}`,
-              orderState: 'CANCELLED',
-              itemInfo: { items: [{ name: 'Hủy đơn Grab', quantity: 1 }] },
+              orderState: "CANCELLED",
+              itemInfo: { items: [{ name: "Hủy đơn Grab", quantity: 1 }] },
             },
             merchantId: data.merchantId,
           },
@@ -925,19 +1166,27 @@
     }
   });
 
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState !== 'visible') return;
-    recoverMissedOrders({ debounced: true });
+  document.addEventListener("visibilitychange", () => {
+    reportTabHealth("visibility_changed");
+    if (document.visibilityState === "visible")
+      recoverMissedOrders({ debounced: true });
   });
-  window.addEventListener('pageshow', (event) => {
+  window.addEventListener("pageshow", (event) => {
     if (!event.persisted) return;
     recoverMissedOrders({ debounced: true });
   });
 
-  beatLeaderLock();
-  setInterval(() => {
-    beatLeaderLock();
-  }, LEADER_HEARTBEAT_MS);
+  window.addEventListener("pagehide", () => {
+    chrome.runtime.sendMessage(
+      { action: "TAB_UNAVAILABLE", reason: "pagehide" },
+      () => {
+        void chrome.runtime.lastError;
+      },
+    );
+  });
+
+  reportTabHealth("content_ready");
+  setInterval(() => reportTabHealth("heartbeat"), TAB_HEARTBEAT_MS);
 
   // Start polling POS backend for menu limit & availability changes
   setInterval(() => pollPosItemStatus(false), ITEM_STATUS_POLL_INTERVAL_MS);

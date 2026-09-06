@@ -1,6 +1,6 @@
 // injected.js - Runs in page context of merchant.grab.com
 (function () {
-  console.log('[Grab POS Relay] Injected script loaded into page context');
+  console.log("[Grab POS Relay] Injected script loaded into page context");
 
   const queuedOrderFingerprints = new Map();
   const dispatchedOrderFingerprints = new Map();
@@ -12,28 +12,30 @@
   let rateLimitedUntil = 0;
   let preparingPollInFlight = false;
   let cancelledPollInFlight = false;
-  let isLeaderTab = true;
+  let isLeaderTab = false;
+  let leaderGeneration = 0;
 
   function resolveMerchantIdFromLocation(urlLike) {
-    const targetUrl = urlLike || (typeof window !== 'undefined' ? window.location?.href : '');
-    if (!targetUrl || typeof targetUrl !== 'string') return null;
+    const targetUrl =
+      urlLike || (typeof window !== "undefined" ? window.location?.href : "");
+    if (!targetUrl || typeof targetUrl !== "string") return null;
     const KNOWN_NON_MERCHANT_SEGMENTS = new Set([
-      'dashboard',
-      'order',
-      'orders',
-      'food',
-      'menu',
-      'inventory',
-      'preparing',
-      'history',
-      'cancelled',
-      'scheduled',
-      'completed',
-      'active',
+      "dashboard",
+      "order",
+      "orders",
+      "food",
+      "menu",
+      "inventory",
+      "preparing",
+      "history",
+      "cancelled",
+      "scheduled",
+      "completed",
+      "active",
     ]);
 
     function isUsableGrabMerchantId(value) {
-      if (value == null || value === '') return false;
+      if (value == null || value === "") return false;
       const id = String(value);
       if (KNOWN_NON_MERCHANT_SEGMENTS.has(id.toLowerCase())) return false;
       // API paths such as /merchant/v4/orders-pagination must not overwrite the real ID.
@@ -42,20 +44,23 @@
     }
 
     function merchantIdFromQuery(searchParams, fallbackUrl) {
-      if (searchParams && typeof searchParams.get === 'function') {
+      if (searchParams && typeof searchParams.get === "function") {
         const queryId =
-          searchParams.get('merchantID') ||
-          searchParams.get('merchant_id') ||
-          searchParams.get('merchantId');
+          searchParams.get("merchantID") ||
+          searchParams.get("merchant_id") ||
+          searchParams.get("merchantId");
         if (isUsableGrabMerchantId(queryId)) return queryId;
       }
-      const fallbackQuery = String(fallbackUrl || '').match(/(?:merchantID|merchant_id|merchantId)=([^&]+)/i);
-      if (fallbackQuery && isUsableGrabMerchantId(fallbackQuery[1])) return fallbackQuery[1];
+      const fallbackQuery = String(fallbackUrl || "").match(
+        /(?:merchantID|merchant_id|merchantId)=([^&]+)/i,
+      );
+      if (fallbackQuery && isUsableGrabMerchantId(fallbackQuery[1]))
+        return fallbackQuery[1];
       return null;
     }
 
     function merchantIdFromPath(pathname) {
-      const pathMatch = String(pathname || '').match(
+      const pathMatch = String(pathname || "").match(
         /\/(?:food\/(?:menu|inventory)|merchants?|order)\/([A-Za-z0-9\-_]+)/i,
       );
       const candidate = pathMatch && pathMatch[1];
@@ -63,12 +68,12 @@
     }
 
     function isGrabApiHost(hostname) {
-      const host = String(hostname || '').toLowerCase();
-      return host === 'api.grab.com' || host.endsWith('.api.grab.com');
+      const host = String(hostname || "").toLowerCase();
+      return host === "api.grab.com" || host.endsWith(".api.grab.com");
     }
 
     try {
-      const parsed = new URL(targetUrl, 'https://merchant.grab.com');
+      const parsed = new URL(targetUrl, "https://merchant.grab.com");
       const queryId = merchantIdFromQuery(parsed.searchParams, targetUrl);
       if (queryId) return queryId;
       if (isGrabApiHost(parsed.hostname)) return null;
@@ -85,8 +90,10 @@
     if (!newId || newId === merchantId) return;
     if (/^v\d+$/i.test(String(newId))) return;
     merchantId = newId;
-    console.log(`[Grab POS Relay] Detected active Grab merchant ID: ${merchantId}`);
-    dispatchOrderEvent('MERCHANT_ID_DETECTED', { merchantId });
+    console.log(
+      `[Grab POS Relay] Detected active Grab merchant ID: ${merchantId}`,
+    );
+    dispatchOrderEvent("MERCHANT_ID_DETECTED", { merchantId });
   }
 
   // Active resolution from URL
@@ -96,14 +103,14 @@
   }
 
   try {
-    window.addEventListener('popstate', () => {
+    window.addEventListener("popstate", () => {
       const locId = resolveMerchantIdFromLocation();
       if (locId) setMerchantId(locId);
     });
 
     const wrapHistory = (method) => {
       const original = history[method];
-      if (typeof original === 'function') {
+      if (typeof original === "function") {
         history[method] = function (...args) {
           const result = original.apply(this, args);
           const nextId = resolveMerchantIdFromLocation();
@@ -112,15 +119,25 @@
         };
       }
     };
-    wrapHistory('pushState');
-    wrapHistory('replaceState');
+    wrapHistory("pushState");
+    wrapHistory("replaceState");
   } catch (e) {}
 
   // 1. Keep-Alive: Override visibilityState so Grab portal never pauses background timers / WebSockets
   try {
-    Object.defineProperty(document, 'hidden', { get: () => false, configurable: true });
-    Object.defineProperty(document, 'visibilityState', { get: () => 'visible', configurable: true });
-    window.addEventListener('visibilitychange', (e) => e.stopImmediatePropagation(), true);
+    Object.defineProperty(document, "hidden", {
+      get: () => false,
+      configurable: true,
+    });
+    Object.defineProperty(document, "visibilityState", {
+      get: () => "visible",
+      configurable: true,
+    });
+    window.addEventListener(
+      "visibilitychange",
+      (e) => e.stopImmediatePropagation(),
+      true,
+    );
   } catch (e) {}
 
   // 2. Keep-Alive: Silent AudioContext oscillator prevents Chrome from freezing background tab
@@ -139,23 +156,21 @@
       // policy; a suspended context plays nothing, so Chrome does not treat the tab
       // as active media. Resume on the first gesture.
       const resumeAudio = () => {
-        if (ctx.state !== 'running') {
+        if (ctx.state !== "running") {
           ctx.resume().catch(() => {});
         }
       };
-      window.addEventListener('pointerdown', resumeAudio, { once: false, capture: true });
-      window.addEventListener('keydown', resumeAudio, { once: false, capture: true });
+      window.addEventListener("pointerdown", resumeAudio, {
+        once: false,
+        capture: true,
+      });
+      window.addEventListener("keydown", resumeAudio, {
+        once: false,
+        capture: true,
+      });
       resumeAudio();
     }
   } catch (e) {}
-
-  // 4. Auto-Recovery: Reload if stuck or disconnected for > 5 minutes
-  setInterval(() => {
-    if (Date.now() - lastSuccessfulPollAt > 5 * 60 * 1000) {
-      console.log('[Grab POS Relay] Inactive for >5m, auto-reloading to restore connection...');
-      window.location.reload();
-    }
-  }, 60000);
 
   // Grab APIs reuse authentication context observed on the portal's own
   // requests: bearer auth for order reads and cookie-session CSRF for mutations.
@@ -163,62 +178,64 @@
   let portalSendsRequestId = false;
   let consecutiveAuthFailures = 0;
   let authExpired = false;
+  let sessionReadyDispatched = false;
+  let lastSessionActivityDispatchAt = 0;
 
   const HEADER_REPLAY_ALLOWLIST = [
-    'authorization',
-    'x-csrf-token',
-    'x-client-id',
-    'x-grabkit-clientid',
-    'requestsource',
-    'merchantid',
-    'accept',
-    'x-mfe-version',
-    'x-gid-sdk-version',
-    'x-gid-session-id',
-    'x-country-code',
-    'x-country-id',
+    "authorization",
+    "x-csrf-token",
+    "x-client-id",
+    "x-grabkit-clientid",
+    "requestsource",
+    "merchantid",
+    "accept",
+    "x-mfe-version",
+    "x-gid-sdk-version",
+    "x-gid-session-id",
+    "x-country-code",
+    "x-country-id",
   ];
 
   const HEADER_REPLAY_DENYLIST = new Set([
-    'accept-charset',
-    'accept-encoding',
-    'access-control-request-headers',
-    'access-control-request-method',
-    'connection',
-    'content-length',
-    'cookie',
-    'cookie2',
-    'date',
-    'dnt',
-    'expect',
-    'host',
-    'keep-alive',
-    'origin',
-    'referer',
-    'set-cookie',
-    'te',
-    'trailer',
-    'transfer-encoding',
-    'upgrade',
-    'via',
-    'user-agent',
+    "accept-charset",
+    "accept-encoding",
+    "access-control-request-headers",
+    "access-control-request-method",
+    "connection",
+    "content-length",
+    "cookie",
+    "cookie2",
+    "date",
+    "dnt",
+    "expect",
+    "host",
+    "keep-alive",
+    "origin",
+    "referer",
+    "set-cookie",
+    "te",
+    "trailer",
+    "transfer-encoding",
+    "upgrade",
+    "via",
+    "user-agent",
   ]);
 
   const HEADER_TRACE_DENYLIST = new Set([
-    'x-request-id',
-    'x-trace-id',
-    'x-correlation-id',
-    'request-id',
-    'traceparent',
-    'tracestate',
-    'x-amzn-trace-id',
-    'x-cloud-trace-context',
+    "x-request-id",
+    "x-trace-id",
+    "x-correlation-id",
+    "request-id",
+    "traceparent",
+    "tracestate",
+    "x-amzn-trace-id",
+    "x-cloud-trace-context",
   ]);
 
   const HEADER_BODY_DENYLIST = new Set([
-    'content-type',
-    'content-length',
-    'content-encoding',
+    "content-type",
+    "content-length",
+    "content-encoding",
   ]);
 
   const AUTH_FAILURE_THRESHOLD = 2;
@@ -238,17 +255,17 @@
   function dispatchOrderEvent(type, data) {
     window.postMessage(
       {
-        source: 'GRAB_POS_RELAY_INJECTED',
+        source: "GRAB_POS_RELAY_INJECTED",
         type: type,
         data: data,
         timestamp: Date.now(),
       },
-      '*'
+      "*",
     );
   }
 
   function isGrabApiUrl(url) {
-    return typeof url === 'string' && url.includes('api.grab.com');
+    return typeof url === "string" && url.includes("api.grab.com");
   }
 
   function headersToObject(headers) {
@@ -261,31 +278,45 @@
       return obj;
     }
     if (Array.isArray(headers)) {
-      for (const [key, value] of headers) obj[String(key).toLowerCase()] = value;
+      for (const [key, value] of headers)
+        obj[String(key).toLowerCase()] = value;
       return obj;
     }
-    for (const [key, value] of Object.entries(headers)) obj[key.toLowerCase()] = value;
+    for (const [key, value] of Object.entries(headers))
+      obj[key.toLowerCase()] = value;
     return obj;
   }
 
   function isReplayablePortalHeader(name) {
-    const key = String(name || '').toLowerCase();
+    const key = String(name || "").toLowerCase();
     if (!key) return false;
-    if (HEADER_REPLAY_DENYLIST.has(key) || HEADER_BODY_DENYLIST.has(key) || HEADER_TRACE_DENYLIST.has(key)) {
+    if (
+      HEADER_REPLAY_DENYLIST.has(key) ||
+      HEADER_BODY_DENYLIST.has(key) ||
+      HEADER_TRACE_DENYLIST.has(key)
+    ) {
       return false;
     }
-    if (key.startsWith('proxy-') || key.startsWith('sec-') || key.startsWith('x-b3-')) {
+    if (
+      key.startsWith("proxy-") ||
+      key.startsWith("sec-") ||
+      key.startsWith("x-b3-")
+    ) {
       return false;
     }
     if (HEADER_REPLAY_ALLOWLIST.includes(key)) return true;
-    return key.startsWith('x-gid-') || key.startsWith('x-grab') || key.startsWith('x-mfe-');
+    return (
+      key.startsWith("x-gid-") ||
+      key.startsWith("x-grab") ||
+      key.startsWith("x-mfe-")
+    );
   }
 
   function selectReplayablePortalHeaders(headerMap) {
     const next = {};
     for (const [name, value] of Object.entries(headerMap || {})) {
       if (!isReplayablePortalHeader(name)) continue;
-      if (value == null || String(value).trim() === '') continue;
+      if (value == null || String(value).trim() === "") continue;
       next[name.toLowerCase()] = String(value);
     }
     return next;
@@ -299,8 +330,8 @@
     const headers = captured || {};
     return Boolean(
       headers.authorization ||
-      headers['x-csrf-token'] ||
-      headers['x-gid-session-id'],
+      headers["x-csrf-token"] ||
+      headers["x-gid-session-id"],
     );
   }
 
@@ -311,11 +342,11 @@
 
   function buildGrabHeadersFromCaptured(captured, activeMerchantId, overrides) {
     return {
-      accept: 'application/json',
-      requestsource: 'troyPortal',
+      accept: "application/json",
+      requestsource: "troyPortal",
       merchantid: activeMerchantId,
-      'x-client-id': 'GrabMerchant-Portal',
-      'x-grabkit-clientid': 'grabmerchant-portal',
+      "x-client-id": "GrabMerchant-Portal",
+      "x-grabkit-clientid": "grabmerchant-portal",
       ...(captured || {}),
       ...(activeMerchantId ? { merchantid: String(activeMerchantId) } : {}),
       ...(overrides || {}),
@@ -324,17 +355,20 @@
 
   function applyFreshRequestIds(headers, shouldSend, createId) {
     const next = { ...(headers || {}) };
-    delete next['x-request-id'];
-    delete next['x-trace-id'];
+    delete next["x-request-id"];
+    delete next["x-trace-id"];
     if (shouldSend) {
       const requestId = createId();
-      if (requestId) next['x-request-id'] = requestId;
+      if (requestId) next["x-request-id"] = requestId;
     }
     return next;
   }
 
   function createRequestId() {
-    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    if (
+      typeof crypto !== "undefined" &&
+      typeof crypto.randomUUID === "function"
+    ) {
       return crypto.randomUUID();
     }
     return `grab-relay-${Date.now()}`;
@@ -345,11 +379,15 @@
   // set by script or look like a replayed request to Grab's WAF.
   function captureAuthHeaders(headers) {
     const obj = headersToObject(headers);
-    if (obj['x-request-id']) portalSendsRequestId = true;
+    if (obj["x-request-id"]) portalSendsRequestId = true;
     capturedAuthHeaders = mergeCapturedPortalHeaders(
       capturedAuthHeaders,
       selectReplayablePortalHeaders(obj),
     );
+    if (!sessionReadyDispatched && hasReplayableSession(capturedAuthHeaders)) {
+      sessionReadyDispatched = true;
+      dispatchOrderEvent("SESSION_READY", { at: Date.now() });
+    }
   }
 
   function buildGrabHeaders(overrides) {
@@ -360,14 +398,25 @@
     );
   }
 
-  function nextPollDelayMs(now, authExpired, rateLimitedUntil, pollIntervalMs, authRetryMs) {
+  function nextPollDelayMs(
+    now,
+    authExpired,
+    rateLimitedUntil,
+    pollIntervalMs,
+    authRetryMs,
+  ) {
     if (rateLimitedUntil > now) {
       return Math.max(rateLimitedUntil - now, 1000);
     }
     return authExpired ? authRetryMs : pollIntervalMs;
   }
 
-  function shouldSkipActivePreparingPoll(now, lastInterceptedPreparingAt, force, skipWindowMs) {
+  function shouldSkipActivePreparingPoll(
+    now,
+    lastInterceptedPreparingAt,
+    force,
+    skipWindowMs,
+  ) {
     if (force) return false;
     return (
       Number.isFinite(lastInterceptedPreparingAt) &&
@@ -398,7 +447,12 @@
     return Math.max(currentUntil || 0, now + backoffMs);
   }
 
-  function shouldCountAuthFailure(status, now, lastInterceptedPreparingAt, healthyInterceptWindowMs) {
+  function shouldCountAuthFailure(
+    status,
+    now,
+    lastInterceptedPreparingAt,
+    healthyInterceptWindowMs,
+  ) {
     if (status === 401) return true;
     if (status !== 403) return false;
     return !(
@@ -408,7 +462,12 @@
     );
   }
 
-  function shouldBlockGrabMutation(now, authExpired, consecutiveAuthFailures, rateLimitedUntil) {
+  function shouldBlockGrabMutation(
+    now,
+    authExpired,
+    consecutiveAuthFailures,
+    rateLimitedUntil,
+  ) {
     return authExpired || consecutiveAuthFailures > 0 || now < rateLimitedUntil;
   }
 
@@ -431,17 +490,27 @@
     consecutiveAuthFailures += 1;
     if (!authExpired && consecutiveAuthFailures >= AUTH_FAILURE_THRESHOLD) {
       authExpired = true;
-      console.warn(`[Grab POS Relay] Grab API returned ${status}; session appears expired (${url})`);
-      dispatchOrderEvent('AUTH_EXPIRED', { status });
+      console.warn(
+        `[Grab POS Relay] Grab API returned ${status}; session appears expired (${url})`,
+      );
+      dispatchOrderEvent("AUTH_EXPIRED", { status });
     }
   }
 
-  function noteAuthSuccess() {
-    lastSuccessfulPollAt = Date.now();
+  function dispatchSessionActivity(poll = false) {
+    const now = Date.now();
+    lastSuccessfulPollAt = now;
+    if (now - lastSessionActivityDispatchAt < 5000) return;
+    lastSessionActivityDispatchAt = now;
+    dispatchOrderEvent("SESSION_ACTIVITY", { at: now, poll });
+  }
+
+  function noteAuthSuccess(poll = false) {
+    dispatchSessionActivity(poll);
     consecutiveAuthFailures = 0;
     if (authExpired) {
       authExpired = false;
-      dispatchOrderEvent('AUTH_RECOVERED', {});
+      dispatchOrderEvent("AUTH_RECOVERED", {});
     }
   }
 
@@ -455,17 +524,29 @@
       RATE_LIMIT_BACKOFF_MS,
       RATE_LIMIT_BACKOFF_MAX_MS,
     );
-    rateLimitedUntil = nextRateLimitedUntil(Date.now(), status, backoffMs, rateLimitedUntil);
+    rateLimitedUntil = nextRateLimitedUntil(
+      Date.now(),
+      status,
+      backoffMs,
+      rateLimitedUntil,
+    );
   }
 
   function grabMutationBlockReason(now) {
-    if (!shouldBlockGrabMutation(now, authExpired, consecutiveAuthFailures, rateLimitedUntil)) {
+    if (
+      !shouldBlockGrabMutation(
+        now,
+        authExpired,
+        consecutiveAuthFailures,
+        rateLimitedUntil,
+      )
+    ) {
       return null;
     }
     if (now < rateLimitedUntil) {
-      return { status: 429, error: 'Grab API rate limited' };
+      return { status: 429, error: "Grab API rate limited" };
     }
-    return { status: 401, error: 'Grab session expired' };
+    return { status: 401, error: "Grab session expired" };
   }
 
   function enqueueItemSync(operation) {
@@ -487,7 +568,7 @@
   }
 
   function retryDelayMs(response, attempt) {
-    const retryAfter = response.headers.get('retry-after');
+    const retryAfter = response.headers.get("retry-after");
     const retryAfterSeconds = retryAfter ? Number(retryAfter) : NaN;
     if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds >= 0) {
       return Math.min(retryAfterSeconds * 1000, 30000);
@@ -508,9 +589,15 @@
     let response = null;
     for (let attempt = 0; attempt < MAX_MUTATION_ATTEMPTS; attempt += 1) {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), MUTATION_TIMEOUT_MS);
+      const timeoutId = setTimeout(
+        () => controller.abort(),
+        MUTATION_TIMEOUT_MS,
+      );
       try {
-        response = await originalFetch(url, { ...init, signal: controller.signal });
+        response = await originalFetch(url, {
+          ...init,
+          signal: controller.signal,
+        });
       } catch (error) {
         if (attempt === MAX_MUTATION_ATTEMPTS - 1) throw error;
         await delay(Math.min(1000 * 2 ** attempt, 10000));
@@ -524,9 +611,13 @@
       }
 
       noteAuthFailure(response.status, url);
-      applyRateLimitFromStatus(response.status, response.headers.get('retry-after'), {
-        fromPoll: false,
-      });
+      applyRateLimitFromStatus(
+        response.status,
+        response.headers.get("retry-after"),
+        {
+          fromPoll: false,
+        },
+      );
       const retryable = response.status === 429 || response.status >= 500;
       if (!retryable || attempt === MAX_MUTATION_ATTEMPTS - 1) {
         return { response, error: await responseError(response) };
@@ -534,23 +625,32 @@
       await delay(retryDelayMs(response, attempt));
     }
 
-    return { response, error: 'Grab request failed' };
+    return { response, error: "Grab request failed" };
   }
 
-  function isOrderEligibleForRelay(order, url = '') {
-    const urlStr = String(url || '');
+  function isOrderEligibleForRelay(order, url = "") {
+    const urlStr = String(url || "");
     if (
-      urlStr.includes('PageType=History') ||
-      urlStr.includes('PageType=Cancelled') ||
-      urlStr.includes('PageType=Completed')
+      urlStr.includes("PageType=History") ||
+      urlStr.includes("PageType=Cancelled") ||
+      urlStr.includes("PageType=Completed")
     ) {
       return false;
     }
 
     if (!order) return true; // URL-only check
 
-    const rawState = String(order.orderState || order.state || order.status || '').toUpperCase();
-    const terminalStates = ['COMPLETED', 'CANCELLED', 'DELIVERED', 'FAILED', 'EXPIRED', 'HISTORY'];
+    const rawState = String(
+      order.orderState || order.state || order.status || "",
+    ).toUpperCase();
+    const terminalStates = [
+      "COMPLETED",
+      "CANCELLED",
+      "DELIVERED",
+      "FAILED",
+      "EXPIRED",
+      "HISTORY",
+    ];
     if (terminalStates.includes(rawState)) {
       return false;
     }
@@ -563,19 +663,34 @@
   }
 
   function optionalNonnegativeNumber(value) {
-    return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : undefined;
+    return typeof value === "number" && Number.isFinite(value) && value >= 0
+      ? value
+      : undefined;
   }
 
   function projectDiscountInfoEntry(rawDiscount) {
-    if (!rawDiscount || typeof rawDiscount !== 'object' || Array.isArray(rawDiscount)) return null;
+    if (
+      !rawDiscount ||
+      typeof rawDiscount !== "object" ||
+      Array.isArray(rawDiscount)
+    )
+      return null;
     return {
       discountName: optionalString(rawDiscount.discountName),
       discountType: optionalString(rawDiscount.discountType),
-      itemDiscountPriceDisplay: optionalString(rawDiscount.itemDiscountPriceDisplay),
-      itemDiscountPriceFloat: optionalNonnegativeNumber(rawDiscount.itemDiscountPriceFloat),
-      itemDiscountPriceInMin: optionalNonnegativeNumber(rawDiscount.itemDiscountPriceInMin),
+      itemDiscountPriceDisplay: optionalString(
+        rawDiscount.itemDiscountPriceDisplay,
+      ),
+      itemDiscountPriceFloat: optionalNonnegativeNumber(
+        rawDiscount.itemDiscountPriceFloat,
+      ),
+      itemDiscountPriceInMin: optionalNonnegativeNumber(
+        rawDiscount.itemDiscountPriceInMin,
+      ),
       discountAmountDisplay: optionalString(rawDiscount.discountAmountDisplay),
-      discountAmountFloat: optionalNonnegativeNumber(rawDiscount.discountAmountFloat),
+      discountAmountFloat: optionalNonnegativeNumber(
+        rawDiscount.discountAmountFloat,
+      ),
     };
   }
 
@@ -586,11 +701,13 @@
   }
 
   function projectOrderDiscount(rawDiscount) {
-    if (!rawDiscount || typeof rawDiscount !== 'object') return null;
+    if (!rawDiscount || typeof rawDiscount !== "object") return null;
     return {
       discountType: optionalString(rawDiscount.discountType),
       discountAmountDisplay: optionalString(rawDiscount.discountAmountDisplay),
-      discountAmountFloat: optionalNonnegativeNumber(rawDiscount.discountAmountFloat),
+      discountAmountFloat: optionalNonnegativeNumber(
+        rawDiscount.discountAmountFloat,
+      ),
       description: optionalString(rawDiscount.description),
       code: optionalString(rawDiscount.code),
       itemID: optionalString(rawDiscount.itemID),
@@ -598,12 +715,16 @@
   }
 
   function projectOrderDiscounts(rawDiscounts) {
-    return Array.isArray(rawDiscounts) ? rawDiscounts.map(projectOrderDiscount).filter(Boolean) : undefined;
+    return Array.isArray(rawDiscounts)
+      ? rawDiscounts.map(projectOrderDiscount).filter(Boolean)
+      : undefined;
   }
 
   function projectAllowlistedOrder(rawOrder) {
     if (!rawOrder) return null;
-    const rawOrderLevelDiscounts = Array.isArray(rawOrder.fare?.orderLevelDiscounts)
+    const rawOrderLevelDiscounts = Array.isArray(
+      rawOrder.fare?.orderLevelDiscounts,
+    )
       ? rawOrder.fare.orderLevelDiscounts
       : Array.isArray(rawOrder.orderLevelDiscounts)
         ? rawOrder.orderLevelDiscounts
@@ -611,23 +732,27 @@
           ? rawOrder.promotions
           : undefined;
     return {
-      orderID: String(rawOrder.orderID || ''),
-      displayID: String(rawOrder.displayID || ''),
-      orderState: String(rawOrder.orderState || rawOrder.state || rawOrder.status || ''),
+      orderID: String(rawOrder.orderID || ""),
+      displayID: String(rawOrder.displayID || ""),
+      orderState: String(
+        rawOrder.orderState || rawOrder.state || rawOrder.status || "",
+      ),
       merchant: {
-        ID: String(rawOrder.merchant?.ID || merchantId || ''),
+        ID: String(rawOrder.merchant?.ID || merchantId || ""),
       },
       itemInfo: {
         items: Array.isArray(rawOrder.itemInfo?.items)
           ? rawOrder.itemInfo.items.map((i) => ({
               itemID: optionalString(i.itemID),
-              name: String(i.name || ''),
+              name: String(i.name || ""),
               quantity: Number(i.quantity) || 1,
               comment: i.comment ? String(i.comment).slice(0, 200) : null,
               fare: i.fare
                 ? {
                     priceDisplay: optionalString(i.fare.priceDisplay),
-                    originalItemPriceDisplay: optionalString(i.fare.originalItemPriceDisplay),
+                    originalItemPriceDisplay: optionalString(
+                      i.fare.originalItemPriceDisplay,
+                    ),
                     priceFloat: optionalNonnegativeNumber(i.fare.priceFloat),
                     priceInMin: optionalNonnegativeNumber(i.fare.priceInMin),
                     discountInfo: projectDiscountInfo(i.fare.discountInfo),
@@ -643,7 +768,10 @@
                           modifierID: optionalString(m.modifierID),
                           modifierName: optionalString(m.modifierName),
                           priceDisplay: optionalString(m.priceDisplay),
-                          quantity: Number.isInteger(m.quantity) && m.quantity > 0 ? m.quantity : 1,
+                          quantity:
+                            Number.isInteger(m.quantity) && m.quantity > 0
+                              ? m.quantity
+                              : 1,
                         }))
                       : [],
                   }))
@@ -659,18 +787,20 @@
             orderLevelDiscounts: projectOrderDiscounts(rawOrderLevelDiscounts),
           }
         : undefined,
-      cutlery: Number.isInteger(rawOrder.cutlery) ? rawOrder.cutlery : undefined,
-      paymentMethod: 'platform',
+      cutlery: Number.isInteger(rawOrder.cutlery)
+        ? rawOrder.cutlery
+        : undefined,
+      paymentMethod: "platform",
     };
   }
 
   function contentFingerprint(order) {
-    if (!order) return '';
+    if (!order) return "";
     return JSON.stringify({
       items: Array.isArray(order.itemInfo?.items)
         ? order.itemInfo.items.map((item) => ({
-            itemID: item.itemID || '',
-            name: item.name || '',
+            itemID: item.itemID || "",
+            name: item.name || "",
             quantity: item.quantity || 1,
             comment: item.comment || null,
             fare: item.fare || null,
@@ -685,9 +815,13 @@
 
   function shouldFetchOrder(order) {
     if (!order?.orderID || !isOrderEligibleForRelay(order)) return false;
-    const fingerprint = contentFingerprint(projectAllowlistedOrder(order) || order);
-    if (queuedOrderFingerprints.get(order.orderID) === fingerprint) return false;
-    if (dispatchedOrderFingerprints.get(order.orderID) === fingerprint) return false;
+    const fingerprint = contentFingerprint(
+      projectAllowlistedOrder(order) || order,
+    );
+    if (queuedOrderFingerprints.get(order.orderID) === fingerprint)
+      return false;
+    if (dispatchedOrderFingerprints.get(order.orderID) === fingerprint)
+      return false;
     if (fetchingOrderIds.has(order.orderID)) return false;
     return true;
   }
@@ -699,16 +833,19 @@
     const fingerprint = contentFingerprint(cleanOrder);
     cleanOrder.contentFingerprint = fingerprint;
     if (queuedOrderFingerprints.get(cleanOrder.orderID) === fingerprint) return;
-    if (dispatchedOrderFingerprints.get(cleanOrder.orderID) === fingerprint) return;
+    if (dispatchedOrderFingerprints.get(cleanOrder.orderID) === fingerprint)
+      return;
     dispatchedOrderFingerprints.set(cleanOrder.orderID, fingerprint);
-    console.log(`[Grab POS Relay] Caught order detail: ${cleanOrder.displayID} (${cleanOrder.orderID})`);
-    dispatchOrderEvent('ORDER_DETAIL', { order: cleanOrder, merchantId });
+    console.log(
+      `[Grab POS Relay] Caught order detail: ${cleanOrder.displayID} (${cleanOrder.orderID})`,
+    );
+    dispatchOrderEvent("ORDER_DETAIL", { order: cleanOrder, merchantId });
   }
 
   // Intercept fetch
   const originalFetch = window.fetch;
   window.fetch = async function (...args) {
-    const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
+    const url = typeof args[0] === "string" ? args[0] : args[0]?.url || "";
 
     if (isGrabApiUrl(url)) {
       captureAuthHeaders(args[1]?.headers || args[0]?.headers);
@@ -724,31 +861,46 @@
 
     if (isGrabApiUrl(url)) {
       if (response.ok) {
-        lastSuccessfulPollAt = Date.now();
+        dispatchSessionActivity(false);
       } else {
         noteAuthFailure(response.status, url);
-        applyRateLimitFromStatus(response.status, response.headers.get('retry-after'), {
-          fromPoll: true,
-        });
+        applyRateLimitFromStatus(
+          response.status,
+          response.headers.get("retry-after"),
+          {
+            fromPoll: true,
+          },
+        );
       }
     }
 
     try {
       if (
         response.ok &&
-        (url.includes('/orders-pagination') || url.includes('/food/merchant/v3/orders/'))
+        (url.includes("/orders-pagination") ||
+          url.includes("/food/merchant/v3/orders/"))
       ) {
         const clone = response.clone();
         clone
           .json()
           .then((data) => {
-            if (url.includes('/orders-pagination') && Array.isArray(data.orders)) {
-              dispatchOrderEvent('ORDERS_PAGINATION', { url, data, merchantId });
+            if (
+              url.includes("/orders-pagination") &&
+              Array.isArray(data.orders)
+            ) {
+              dispatchOrderEvent("ORDERS_PAGINATION", {
+                url,
+                data,
+                merchantId,
+              });
 
               if (isOrderEligibleForRelay(null, url)) {
                 lastInterceptedPreparingAt = Date.now();
                 for (const order of data.orders) {
-                  if (isOrderEligibleForRelay(order, url) && shouldFetchOrder(order)) {
+                  if (
+                    isOrderEligibleForRelay(order, url) &&
+                    shouldFetchOrder(order)
+                  ) {
                     fetchingOrderIds.add(order.orderID);
                     fetchOrderDetail(order.orderID).finally(() => {
                       fetchingOrderIds.delete(order.orderID);
@@ -756,7 +908,10 @@
                   }
                 }
               }
-            } else if (url.includes('/food/merchant/v3/orders/') && data.order) {
+            } else if (
+              url.includes("/food/merchant/v3/orders/") &&
+              data.order
+            ) {
               if (isOrderEligibleForRelay(data.order, url)) {
                 dispatchOrderDetailOnce(data.order);
               }
@@ -765,7 +920,7 @@
           .catch(() => {});
       }
     } catch (e) {
-      console.error('[Grab POS Relay] Intercept error:', e);
+      console.error("[Grab POS Relay] Intercept error:", e);
     }
 
     return response;
@@ -776,50 +931,67 @@
     try {
       const url = `https://api.grab.com/food/merchant/v3/orders/${orderId}`;
       const res = await originalFetch(url, {
-        credentials: 'include',
+        credentials: "include",
         headers: buildGrabHeaders(),
       });
       if (res.ok) {
-        noteAuthSuccess();
+        noteAuthSuccess(true);
         const data = await res.json();
         if (data.order) {
-          console.log(`[Grab POS Relay] Fetched full detail for ${data.order.displayID}`);
+          console.log(
+            `[Grab POS Relay] Fetched full detail for ${data.order.displayID}`,
+          );
           dispatchOrderDetailOnce(data.order);
         }
       } else {
         noteAuthFailure(res.status, url);
-        applyRateLimitFromStatus(res.status, res.headers.get('retry-after'), { fromPoll: true });
+        applyRateLimitFromStatus(res.status, res.headers.get("retry-after"), {
+          fromPoll: true,
+        });
       }
     } catch (err) {
-      console.error(`[Grab POS Relay] Failed fetching detail for order ${orderId}:`, err);
+      console.error(
+        `[Grab POS Relay] Failed fetching detail for order ${orderId}:`,
+        err,
+      );
     }
   }
 
   // Active polling is a safety net. Portal intercept is the primary order path.
   async function pollCancelledOrders(options = {}) {
     if (!isLeaderTab || !merchantId) return;
+    const pollGeneration = leaderGeneration;
     if (!hasReplayableSession(capturedAuthHeaders)) return;
     if (cancelledPollInFlight) return;
     const now = Date.now();
     if (now < rateLimitedUntil) return;
-    if (!shouldPollCancelled(now, lastCancelledPollAt, options.force === true, CANCELLED_POLL_INTERVAL_MS)) {
+    if (
+      !shouldPollCancelled(
+        now,
+        lastCancelledPollAt,
+        options.force === true,
+        CANCELLED_POLL_INTERVAL_MS,
+      )
+    ) {
       return;
     }
     cancelledPollInFlight = true;
     try {
       const url = `https://api.grab.com/delvplatformapi/merchant/v4/orders-pagination?AutoAcceptGroup=1&merchantID=${merchantId}&PageType=Cancelled&searchToken=&size=10`;
       const res = await originalFetch(url, {
-        credentials: 'include',
+        credentials: "include",
         headers: buildGrabHeaders(),
       });
+      if (!isLeaderTab || leaderGeneration !== pollGeneration) return;
       if (res.ok) {
         lastCancelledPollAt = Date.now();
-        noteAuthSuccess();
+        noteAuthSuccess(true);
         const data = await res.json();
+        if (!isLeaderTab || leaderGeneration !== pollGeneration) return;
         if (Array.isArray(data.orders)) {
           for (const order of data.orders) {
             if (!order?.orderID) continue;
-            dispatchOrderEvent('ORDER_CANCELLED', {
+            dispatchOrderEvent("ORDER_CANCELLED", {
               orderID: order.orderID,
               displayID: order.displayID,
               merchantId,
@@ -828,7 +1000,9 @@
         }
       } else {
         noteAuthFailure(res.status, url);
-        applyRateLimitFromStatus(res.status, res.headers.get('retry-after'), { fromPoll: true });
+        applyRateLimitFromStatus(res.status, res.headers.get("retry-after"), {
+          fromPoll: true,
+        });
       }
     } catch (err) {
       // Network errors are not auth signals; keep polling quietly.
@@ -839,6 +1013,7 @@
 
   async function pollOrders(options = {}) {
     if (!isLeaderTab || !merchantId) return;
+    const pollGeneration = leaderGeneration;
     if (!hasReplayableSession(capturedAuthHeaders)) return;
     if (preparingPollInFlight) return;
     const now = Date.now();
@@ -857,12 +1032,14 @@
     try {
       const url = `https://api.grab.com/delvplatformapi/merchant/v4/orders-pagination?AutoAcceptGroup=1&merchantID=${merchantId}&PageType=PreparingV2&searchToken=&size=50`;
       const res = await originalFetch(url, {
-        credentials: 'include',
+        credentials: "include",
         headers: buildGrabHeaders(),
       });
+      if (!isLeaderTab || leaderGeneration !== pollGeneration) return;
       if (res.ok) {
-        noteAuthSuccess();
+        noteAuthSuccess(true);
         const data = await res.json();
+        if (!isLeaderTab || leaderGeneration !== pollGeneration) return;
         if (Array.isArray(data.orders)) {
           for (const o of data.orders) {
             if (shouldFetchOrder(o)) {
@@ -877,7 +1054,9 @@
         }
       } else {
         noteAuthFailure(res.status, url);
-        applyRateLimitFromStatus(res.status, res.headers.get('retry-after'), { fromPoll: true });
+        applyRateLimitFromStatus(res.status, res.headers.get("retry-after"), {
+          fromPoll: true,
+        });
       }
     } catch (err) {
       // Network errors are not auth signals; keep polling quietly.
@@ -887,23 +1066,29 @@
   }
 
   // API Call: Sync Available Status (1: Có bán, 2: Hết hàng hôm nay, 3: Không về hàng nữa, 7: Ẩn giấu)
-  async function setGrabItemAvailableStatus(requestId, itemId, availableStatus) {
-    if (!itemId || !itemId.startsWith('VNITE')) {
-      console.warn(`[Grab POS Relay] Skip status sync for non-item ID: ${itemId}`);
-      dispatchOrderEvent('SYNC_STATUS_RESULT', {
+  async function setGrabItemAvailableStatus(
+    requestId,
+    itemId,
+    availableStatus,
+  ) {
+    if (!itemId || !itemId.startsWith("VNITE")) {
+      console.warn(
+        `[Grab POS Relay] Skip status sync for non-item ID: ${itemId}`,
+      );
+      dispatchOrderEvent("SYNC_STATUS_RESULT", {
         requestId,
         itemId,
         availableStatus: null,
         statusStr: null,
         success: false,
         status: 0,
-        error: 'Invalid item ID format',
+        error: "Invalid item ID format",
       });
       return;
     }
     const blocked = grabMutationBlockReason(Date.now());
     if (blocked) {
-      dispatchOrderEvent('SYNC_STATUS_RESULT', {
+      dispatchOrderEvent("SYNC_STATUS_RESULT", {
         requestId,
         itemId,
         availableStatus: null,
@@ -915,61 +1100,76 @@
       return;
     }
     if (!merchantId) {
-      console.warn(`[Grab POS Relay] Skip status sync for ${itemId}: merchantId not detected yet`);
-      dispatchOrderEvent('SYNC_STATUS_RESULT', {
+      console.warn(
+        `[Grab POS Relay] Skip status sync for ${itemId}: merchantId not detected yet`,
+      );
+      dispatchOrderEvent("SYNC_STATUS_RESULT", {
         requestId,
         itemId,
         availableStatus: null,
         statusStr: null,
         success: false,
         status: 0,
-        error: 'Grab merchant ID not resolved yet',
+        error: "Grab merchant ID not resolved yet",
       });
       return;
     }
     try {
       let statusCode = 1;
-      let statusStr = 'AVAILABLE';
+      let statusStr = "AVAILABLE";
 
       // 1: Có bán (AVAILABLE)
-      if (availableStatus === 1 || availableStatus === 'AVAILABLE') {
+      if (availableStatus === 1 || availableStatus === "AVAILABLE") {
         statusCode = 1;
-        statusStr = 'AVAILABLE';
+        statusStr = "AVAILABLE";
       }
       // 2: Hết hàng hôm nay (UNAVAILABLE_TODAY - tự động mở lại 00:00 sáng mai)
-      else if (availableStatus === 2 || availableStatus === 'UNAVAILABLE_TODAY' || availableStatus === 'UNAVAILABLE') {
+      else if (
+        availableStatus === 2 ||
+        availableStatus === "UNAVAILABLE_TODAY" ||
+        availableStatus === "UNAVAILABLE"
+      ) {
         statusCode = 2;
-        statusStr = 'UNAVAILABLE_TODAY';
+        statusStr = "UNAVAILABLE_TODAY";
       }
       // 3: Không về hàng nữa (UNAVAILABLE_INDEFINITELY / DISCONTINUED)
-      else if (availableStatus === 3 || availableStatus === 'UNAVAILABLE_INDEFINITELY' || availableStatus === 'DISCONTINUED') {
+      else if (
+        availableStatus === 3 ||
+        availableStatus === "UNAVAILABLE_INDEFINITELY" ||
+        availableStatus === "DISCONTINUED"
+      ) {
         statusCode = 3;
-        statusStr = 'UNAVAILABLE_INDEFINITELY';
+        statusStr = "UNAVAILABLE_INDEFINITELY";
       }
       // 7: Ẩn giấu (HIDDEN)
-      else if (availableStatus === 7 || availableStatus === 'HIDDEN' || availableStatus === 'INACTIVE') {
+      else if (
+        availableStatus === 7 ||
+        availableStatus === "HIDDEN" ||
+        availableStatus === "INACTIVE"
+      ) {
         statusCode = 7;
-        statusStr = 'HIDDEN';
+        statusStr = "HIDDEN";
       } else {
-        dispatchOrderEvent('SYNC_STATUS_RESULT', {
+        dispatchOrderEvent("SYNC_STATUS_RESULT", {
           requestId,
           itemId,
           availableStatus: null,
           statusStr: null,
           success: false,
           status: 0,
-          error: 'Invalid available status',
+          error: "Invalid available status",
         });
         return;
       }
 
-      const url = 'https://api.grab.com/food/merchant/v1/items/available-status';
+      const url =
+        "https://api.grab.com/food/merchant/v1/items/available-status";
       const { response: res, error } = await sendGrabMutation(url, {
-        method: 'PUT',
-        credentials: 'include',
+        method: "PUT",
+        credentials: "include",
         headers: {
           ...buildGrabHeaders(),
-          'content-type': 'application/json',
+          "content-type": "application/json",
         },
         body: JSON.stringify({
           itemIDs: [itemId],
@@ -977,8 +1177,10 @@
         }),
       });
 
-      console.log(`[Grab POS Relay] Updated status for item ${itemId} -> code: ${statusCode} (${statusStr}) (HTTP ${res.status})`);
-      dispatchOrderEvent('SYNC_STATUS_RESULT', {
+      console.log(
+        `[Grab POS Relay] Updated status for item ${itemId} -> code: ${statusCode} (${statusStr}) (HTTP ${res.status})`,
+      );
+      dispatchOrderEvent("SYNC_STATUS_RESULT", {
         requestId,
         itemId,
         availableStatus: statusCode,
@@ -988,8 +1190,11 @@
         error,
       });
     } catch (err) {
-      console.error(`[Grab POS Relay] Failed to update item status for ${itemId}:`, err);
-      dispatchOrderEvent('SYNC_STATUS_RESULT', {
+      console.error(
+        `[Grab POS Relay] Failed to update item status for ${itemId}:`,
+        err,
+      );
+      dispatchOrderEvent("SYNC_STATUS_RESULT", {
         requestId,
         itemId,
         availableStatus: null,
@@ -1002,23 +1207,29 @@
   }
 
   // API Call: Sync Modifier Available Status (1: Có bán, 2: Hết hàng hôm nay)
-  async function setGrabModifierAvailableStatus(requestId, itemId, availableStatus) {
-    if (!itemId || !itemId.startsWith('VNMOD')) {
-      console.warn(`[Grab POS Relay] Skip modifier status sync for invalid ID: ${itemId}`);
-      dispatchOrderEvent('SYNC_MODIFIER_STATUS_RESULT', {
+  async function setGrabModifierAvailableStatus(
+    requestId,
+    itemId,
+    availableStatus,
+  ) {
+    if (!itemId || !itemId.startsWith("VNMOD")) {
+      console.warn(
+        `[Grab POS Relay] Skip modifier status sync for invalid ID: ${itemId}`,
+      );
+      dispatchOrderEvent("SYNC_MODIFIER_STATUS_RESULT", {
         requestId,
         itemId,
         availableStatus: null,
         statusStr: null,
         success: false,
         status: 0,
-        error: 'Invalid modifier ID format',
+        error: "Invalid modifier ID format",
       });
       return;
     }
     const blocked = grabMutationBlockReason(Date.now());
     if (blocked) {
-      dispatchOrderEvent('SYNC_MODIFIER_STATUS_RESULT', {
+      dispatchOrderEvent("SYNC_MODIFIER_STATUS_RESULT", {
         requestId,
         itemId,
         availableStatus: null,
@@ -1030,52 +1241,54 @@
       return;
     }
     if (!merchantId) {
-      console.warn(`[Grab POS Relay] Skip modifier status sync for ${itemId}: merchantId not detected yet`);
-      dispatchOrderEvent('SYNC_MODIFIER_STATUS_RESULT', {
+      console.warn(
+        `[Grab POS Relay] Skip modifier status sync for ${itemId}: merchantId not detected yet`,
+      );
+      dispatchOrderEvent("SYNC_MODIFIER_STATUS_RESULT", {
         requestId,
         itemId,
         availableStatus: null,
         statusStr: null,
         success: false,
         status: 0,
-        error: 'Grab merchant ID not resolved yet',
+        error: "Grab merchant ID not resolved yet",
       });
       return;
     }
 
     let statusCode;
     let statusStr;
-    if (availableStatus === 1 || availableStatus === 'AVAILABLE') {
+    if (availableStatus === 1 || availableStatus === "AVAILABLE") {
       statusCode = 1;
-      statusStr = 'AVAILABLE';
+      statusStr = "AVAILABLE";
     } else if (
       availableStatus === 2 ||
-      availableStatus === 'UNAVAILABLE_TODAY' ||
-      availableStatus === 'UNAVAILABLE'
+      availableStatus === "UNAVAILABLE_TODAY" ||
+      availableStatus === "UNAVAILABLE"
     ) {
       statusCode = 2;
-      statusStr = 'UNAVAILABLE_TODAY';
+      statusStr = "UNAVAILABLE_TODAY";
     } else {
-      dispatchOrderEvent('SYNC_MODIFIER_STATUS_RESULT', {
+      dispatchOrderEvent("SYNC_MODIFIER_STATUS_RESULT", {
         requestId,
         itemId,
         availableStatus: null,
         statusStr: null,
         success: false,
         status: 0,
-        error: 'Invalid modifier available status',
+        error: "Invalid modifier available status",
       });
       return;
     }
 
     try {
-      const url = 'https://api.grab.com/food/merchant/v2/modifiers/available';
+      const url = "https://api.grab.com/food/merchant/v2/modifiers/available";
       const { response: res, error } = await sendGrabMutation(url, {
-        method: 'PUT',
-        credentials: 'include',
+        method: "PUT",
+        credentials: "include",
         headers: {
           ...buildGrabHeaders(),
-          'content-type': 'application/json',
+          "content-type": "application/json",
         },
         body: JSON.stringify({
           availableStatus: statusCode,
@@ -1083,8 +1296,10 @@
         }),
       });
 
-      console.log(`[Grab POS Relay] Updated modifier ${itemId} -> code: ${statusCode} (${statusStr}) (HTTP ${res.status})`);
-      dispatchOrderEvent('SYNC_MODIFIER_STATUS_RESULT', {
+      console.log(
+        `[Grab POS Relay] Updated modifier ${itemId} -> code: ${statusCode} (${statusStr}) (HTTP ${res.status})`,
+      );
+      dispatchOrderEvent("SYNC_MODIFIER_STATUS_RESULT", {
         requestId,
         itemId,
         availableStatus: statusCode,
@@ -1094,8 +1309,11 @@
         error,
       });
     } catch (err) {
-      console.error(`[Grab POS Relay] Failed to update modifier status for ${itemId}:`, err);
-      dispatchOrderEvent('SYNC_MODIFIER_STATUS_RESULT', {
+      console.error(
+        `[Grab POS Relay] Failed to update modifier status for ${itemId}:`,
+        err,
+      );
+      dispatchOrderEvent("SYNC_MODIFIER_STATUS_RESULT", {
         requestId,
         itemId,
         availableStatus: null,
@@ -1109,34 +1327,40 @@
 
   // API Call: Sync Stock / Daily Limit (IMS)
   async function setGrabItemStock(requestId, itemId, currentStock) {
-    if (!itemId || !itemId.startsWith('VNITE')) {
-      console.warn(`[Grab POS Relay] Skip stock sync for non-item ID: ${itemId}`);
-      dispatchOrderEvent('SYNC_STOCK_RESULT', {
+    if (!itemId || !itemId.startsWith("VNITE")) {
+      console.warn(
+        `[Grab POS Relay] Skip stock sync for non-item ID: ${itemId}`,
+      );
+      dispatchOrderEvent("SYNC_STOCK_RESULT", {
         requestId,
         itemId,
         currentStock,
         enableIms: false,
         success: false,
         status: 0,
-        error: 'Invalid item ID format',
+        error: "Invalid item ID format",
       });
       return;
     }
-    if (!Number.isInteger(currentStock) || currentStock < 1 || currentStock > 9999) {
-      dispatchOrderEvent('SYNC_STOCK_RESULT', {
+    if (
+      !Number.isInteger(currentStock) ||
+      currentStock < 1 ||
+      currentStock > 9999
+    ) {
+      dispatchOrderEvent("SYNC_STOCK_RESULT", {
         requestId,
         itemId,
         currentStock,
         enableIms: false,
         success: false,
         status: 0,
-        error: 'Stock must be an integer from 1 to 9999',
+        error: "Stock must be an integer from 1 to 9999",
       });
       return;
     }
     const blocked = grabMutationBlockReason(Date.now());
     if (blocked) {
-      dispatchOrderEvent('SYNC_STOCK_RESULT', {
+      dispatchOrderEvent("SYNC_STOCK_RESULT", {
         requestId,
         itemId,
         currentStock,
@@ -1148,15 +1372,17 @@
       return;
     }
     if (!merchantId) {
-      console.warn(`[Grab POS Relay] Skip stock sync for ${itemId}: merchantId not detected yet`);
-      dispatchOrderEvent('SYNC_STOCK_RESULT', {
+      console.warn(
+        `[Grab POS Relay] Skip stock sync for ${itemId}: merchantId not detected yet`,
+      );
+      dispatchOrderEvent("SYNC_STOCK_RESULT", {
         requestId,
         itemId,
         currentStock,
         enableIms: false,
         success: false,
         status: 0,
-        error: 'Grab merchant ID not resolved yet',
+        error: "Grab merchant ID not resolved yet",
       });
       return;
     }
@@ -1166,11 +1392,11 @@
 
       const url = `https://api.grab.com/food/merchant/v1/items/${itemId}/upsert-item-stock`;
       const { response: res, error } = await sendGrabMutation(url, {
-        method: 'POST',
-        credentials: 'include',
+        method: "POST",
+        credentials: "include",
         headers: {
           ...buildGrabHeaders(),
-          'content-type': 'application/json',
+          "content-type": "application/json",
         },
         body: JSON.stringify({
           enableIms: true,
@@ -1180,8 +1406,10 @@
         }),
       });
 
-      console.log(`[Grab POS Relay] Updated stock for item ${itemId} -> current: ${stockVal} (HTTP ${res.status})`);
-      dispatchOrderEvent('SYNC_STOCK_RESULT', {
+      console.log(
+        `[Grab POS Relay] Updated stock for item ${itemId} -> current: ${stockVal} (HTTP ${res.status})`,
+      );
+      dispatchOrderEvent("SYNC_STOCK_RESULT", {
         requestId,
         itemId,
         currentStock: stockVal,
@@ -1192,8 +1420,11 @@
         error,
       });
     } catch (err) {
-      console.error(`[Grab POS Relay] Failed to update stock for ${itemId}:`, err);
-      dispatchOrderEvent('SYNC_STOCK_RESULT', {
+      console.error(
+        `[Grab POS Relay] Failed to update stock for ${itemId}:`,
+        err,
+      );
+      dispatchOrderEvent("SYNC_STOCK_RESULT", {
         requestId,
         itemId,
         currentStock,
@@ -1218,7 +1449,8 @@
   };
 
   XMLHttpRequest.prototype.setRequestHeader = function (name, value) {
-    if (this._relayHeaders) this._relayHeaders[String(name).toLowerCase()] = value;
+    if (this._relayHeaders)
+      this._relayHeaders[String(name).toLowerCase()] = value;
     return originalXhrSetHeader.apply(this, [name, value]);
   };
 
@@ -1226,31 +1458,41 @@
     if (isGrabApiUrl(this._relayUrl)) {
       captureAuthHeaders(this._relayHeaders);
 
-      const extractedId = resolveMerchantIdFromLocation(this._relayUrl || '');
+      const extractedId = resolveMerchantIdFromLocation(this._relayUrl || "");
       if (extractedId) {
         setMerchantId(extractedId);
       }
 
-      this.addEventListener('load', function () {
+      this.addEventListener("load", function () {
         if (this.status >= 200 && this.status < 300) {
-          lastSuccessfulPollAt = Date.now();
+          dispatchSessionActivity(false);
         } else {
           noteAuthFailure(this.status, this._relayUrl);
-          applyRateLimitFromStatus(this.status, this.getResponseHeader('Retry-After'), {
-            fromPoll: true,
-          });
+          applyRateLimitFromStatus(
+            this.status,
+            this.getResponseHeader("Retry-After"),
+            {
+              fromPoll: true,
+            },
+          );
         }
 
         try {
           if (this.status < 200 || this.status >= 300) return;
-          const url = this._relayUrl || '';
+          const url = this._relayUrl || "";
           const data = JSON.parse(this.responseText);
-          if (url.includes('/orders-pagination') && Array.isArray(data.orders)) {
-            dispatchOrderEvent('ORDERS_PAGINATION', { url, data, merchantId });
+          if (
+            url.includes("/orders-pagination") &&
+            Array.isArray(data.orders)
+          ) {
+            dispatchOrderEvent("ORDERS_PAGINATION", { url, data, merchantId });
             if (isOrderEligibleForRelay(null, url)) {
               lastInterceptedPreparingAt = Date.now();
               for (const order of data.orders) {
-                if (isOrderEligibleForRelay(order, url) && shouldFetchOrder(order)) {
+                if (
+                  isOrderEligibleForRelay(order, url) &&
+                  shouldFetchOrder(order)
+                ) {
                   fetchingOrderIds.add(order.orderID);
                   fetchOrderDetail(order.orderID).finally(() => {
                     fetchingOrderIds.delete(order.orderID);
@@ -1258,7 +1500,7 @@
                 }
               }
             }
-          } else if (url.includes('/food/merchant/v3/orders/') && data.order) {
+          } else if (url.includes("/food/merchant/v3/orders/") && data.order) {
             if (isOrderEligibleForRelay(data.order, url)) {
               dispatchOrderDetailOnce(data.order);
             }
@@ -1272,38 +1514,77 @@
   };
 
   // Listen to commands from content.js
-  window.addEventListener('message', (event) => {
-    if (event.source !== window || event.data?.source !== 'GRAB_POS_RELAY_CONTENT') {
+  window.addEventListener("message", (event) => {
+    if (
+      event.source !== window ||
+      event.data?.source !== "GRAB_POS_RELAY_CONTENT"
+    ) {
       return;
     }
 
     const { command, payload } = event.data;
-    if (command === 'SET_AVAILABLE_STATUS') {
-      enqueueItemSync(() =>
-        setGrabItemAvailableStatus(payload?.requestId, payload?.itemId, payload?.availableStatus)
-      );
-    } else if (command === 'SET_MODIFIER_AVAILABLE_STATUS') {
-      enqueueItemSync(() =>
-        setGrabModifierAvailableStatus(payload?.requestId, payload?.itemId, payload?.availableStatus)
-      );
-    } else if (command === 'SET_ITEM_STOCK') {
-      enqueueItemSync(() =>
-        setGrabItemStock(payload?.requestId, payload?.itemId, payload?.currentStock)
-      );
-    } else if (command === 'SET_LEADER') {
-      isLeaderTab = Boolean(payload?.isLeader);
-    } else if (command === 'MARK_ORDER_QUEUED') {
-      if (payload?.orderID && payload?.contentFingerprint) {
-        queuedOrderFingerprints.set(payload.orderID, payload.contentFingerprint);
+    if (command === "SET_AVAILABLE_STATUS") {
+      const commandGeneration = payload?.generation;
+      enqueueItemSync(() => {
+        if (!isLeaderTab || commandGeneration !== leaderGeneration) return;
+        return setGrabItemAvailableStatus(
+          payload?.requestId,
+          payload?.itemId,
+          payload?.availableStatus,
+        );
+      });
+    } else if (command === "SET_MODIFIER_AVAILABLE_STATUS") {
+      const commandGeneration = payload?.generation;
+      enqueueItemSync(() => {
+        if (!isLeaderTab || commandGeneration !== leaderGeneration) return;
+        return setGrabModifierAvailableStatus(
+          payload?.requestId,
+          payload?.itemId,
+          payload?.availableStatus,
+        );
+      });
+    } else if (command === "SET_ITEM_STOCK") {
+      const commandGeneration = payload?.generation;
+      enqueueItemSync(() => {
+        if (!isLeaderTab || commandGeneration !== leaderGeneration) return;
+        return setGrabItemStock(
+          payload?.requestId,
+          payload?.itemId,
+          payload?.currentStock,
+        );
+      });
+    } else if (command === "SET_TAB_ROLE") {
+      const generation = Number.isInteger(payload?.generation)
+        ? payload.generation
+        : leaderGeneration;
+      if (generation < leaderGeneration) return;
+      leaderGeneration = generation;
+      isLeaderTab = payload?.role === "leader";
+    } else if (command === "REPORT_SESSION_STATUS") {
+      if (merchantId)
+        dispatchOrderEvent("MERCHANT_ID_DETECTED", { merchantId });
+      if (authExpired) dispatchOrderEvent("AUTH_EXPIRED", {});
+      else if (hasReplayableSession(capturedAuthHeaders)) {
+        dispatchOrderEvent("SESSION_READY", {
+          at: lastSuccessfulPollAt || Date.now(),
+        });
       }
-    } else if (command === 'MARK_ORDER_QUEUE_FAILED') {
+    } else if (command === "MARK_ORDER_QUEUED") {
+      if (payload?.orderID && payload?.contentFingerprint) {
+        queuedOrderFingerprints.set(
+          payload.orderID,
+          payload.contentFingerprint,
+        );
+      }
+    } else if (command === "MARK_ORDER_QUEUE_FAILED") {
       if (
         payload?.orderID &&
-        dispatchedOrderFingerprints.get(payload.orderID) === payload.contentFingerprint
+        dispatchedOrderFingerprints.get(payload.orderID) ===
+          payload.contentFingerprint
       ) {
         dispatchedOrderFingerprints.delete(payload.orderID);
       }
-    } else if (command === 'RECOVER_MISSED_ORDERS') {
+    } else if (command === "RECOVER_MISSED_ORDERS") {
       void (async () => {
         await pollOrders({ force: true });
         await pollCancelledOrders({ force: true });
@@ -1313,11 +1594,20 @@
 
   // Self-scheduling poll loop: slows to a probe while rate-limited or expired.
   function schedulePoll() {
-    setTimeout(async () => {
-      await pollOrders();
-      await pollCancelledOrders();
-      schedulePoll();
-    }, nextPollDelayMs(Date.now(), authExpired, rateLimitedUntil, POLL_INTERVAL_MS, AUTH_RETRY_INTERVAL_MS));
+    setTimeout(
+      async () => {
+        await pollOrders();
+        await pollCancelledOrders();
+        schedulePoll();
+      },
+      nextPollDelayMs(
+        Date.now(),
+        authExpired,
+        rateLimitedUntil,
+        POLL_INTERVAL_MS,
+        AUTH_RETRY_INTERVAL_MS,
+      ),
+    );
   }
 
   setTimeout(async () => {
