@@ -8,8 +8,8 @@ Accept — Q1=A, Q2=A, Q3=include `/work/team`)
 **Amended by:** ADR 0037 (`/me` stays `Trang cá nhân`; the Work CTA is removed;
 due Work surfaces in the `/` Mine region, not a Work shell on `/`);
 2026-09-06 Route consolidation: `/work/team` is a redirect shim to `/work`;
-2026-09-07 Assignment visibility: read/write follow assignment RLS +
-`created_by`; create is grantable `work:create`, not department membership.
+2026-09-07 Assignment visibility: Owner reads all tenant work; staff read/write
+requires assignment or participation. Create is grantable `work:create`.
 
 Runtime compose: [`docs/spec/page-archetypes.md`](../../spec/page-archetypes.md)
 TASK_* and [`docs/ref/screen-context-map.md`](../../ref/screen-context-map.md)
@@ -24,19 +24,26 @@ here.
 - `ModuleKey` `work` with `path: "/work"`. Candidate roles may include all
   staff; live authority is `can_access_workspace()` + assignment RLS — not nav
   ACL or `work_department_members`.
-- `/work` opens Inbox (`view=mine`). Inbox stays *my* assigned/supporting
-  tasks (`list_my_work_tasks`). Org-wide Kanban is forbidden as default and on
+- `/work` opens Inbox (`view=mine`). `list_my_work_tasks` returns all tenant
+  tasks for Owner and assigned/supporting tasks for staff. Completed/canceled
+  work remains opt-in. Org-wide Kanban is forbidden as default and on
   `/`. Filters never take `tenant_id` from the client. Task DETAIL is the
   `/work?task=` overlay (`/work/tasks/[id]` redirects). `/work/team` remains a
   redirect shim.
 - Create is Owner, `work:manage`, or granted `work:create`. `work:manage`
-  stays `is_delegable_to_staff=false` (settings + see-all). Settings grant
-  creators, not department members.
-- Read every task / filter people: Owner or `work:manage` only. Everyone else
-  reads `created_by`, `assignee_id`, or `work_task_participants`.
+  stays `is_delegable_to_staff=false` (settings). Settings grant creators,
+  not department members. Create requires a readable, active department.
+- Only Owner reads every task and department. Everyone else reads through
+  `assignee_id` or `work_task_participants`; authorship grants no read access.
   `can_read_work_task` does not inherit department or project membership.
+- Every inbox can filter its visible departments through URL scope. Owner's
+  list scope is all departments; staff scope remains personal work.
+- Create and initial participants are one atomic RPC. A creator outside the
+  final assignee/supporter set cannot reopen the task; the dialog refreshes
+  the list instead. No implicit creator participation is added.
 - Assign fields (title, description, priority, due, people, department):
-  `can_assign_work_task` (Owner, `work:manage`, `created_by`). Status,
+  `can_assign_work_task` requires read access plus Owner, `work:manage`, or
+  `created_by`. Status,
   checklist, comment, attach: `can_write_work_task` (those plus
   assignee/supporter).
 - Tasks may link to Finance/Inventory/HR records later but must not copy money,

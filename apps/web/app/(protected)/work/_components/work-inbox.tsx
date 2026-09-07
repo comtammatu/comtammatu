@@ -52,12 +52,19 @@ function priorityVariant(
 export function WorkInbox({
   tasks,
   params,
+  isOwner = false,
 }: {
   tasks: WorkTaskRow[];
   params: ParsedWorkParams;
+  isOwner?: boolean;
 }) {
   if (tasks.length === 0) {
-    return <AppEmptyState mode="no-data" description={workCopy.inboxEmpty} />;
+    return (
+      <AppEmptyState
+        mode="no-data"
+        description={isOwner ? workCopy.listEmpty : workCopy.inboxEmpty}
+      />
+    );
   }
 
   return (

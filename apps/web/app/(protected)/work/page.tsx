@@ -106,6 +106,7 @@ export default async function WorkPage({
     } else {
       body = (
         <WorkInboxFiltered
+          isOwner={claims.user_role === "owner"}
           tasks={result.data.items}
           params={params}
           status={params.status}
@@ -166,7 +167,7 @@ export default async function WorkPage({
         params={params}
         departments={departments}
         members={canManage ? allMembers : []}
-        canManage={canManage}
+        isOwner={claims.user_role === "owner"}
         composeArchetype={composeArchetype}
         loadError={loadError}
       >

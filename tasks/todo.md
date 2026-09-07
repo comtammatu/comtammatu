@@ -5,6 +5,15 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Align Work inbox and staff assignment scope
+State: verify
+Tier: T3
+Exit: Owner inbox lists tenant work; staff read only assigned/supporting work and departments; creation persists participants atomically.
+Evidence: `work-assignment-scope.test.ts` RED to GREEN; `corepack pnpm verify` exit 0; owner-delegated Production migration `20260907125134` is in the ledger; RPC grants and regenerated types match the overload. `work_assignment_scope_test.sql` awaits database execution.
+UI Advisor Gate: `/work`, family `work`, plane `control_surface`, archetype `LIST`, block `work-task-inbox`, exemplar `apps/web/app/(protected)/work/page.tsx`.
+Context: Owner scans tenant work; staff filter personal work by department. Existing toolbar and URL scope; desktop and touch; loading/empty/error/populated states.
+- [ ] Run SQL on an approved isolated schema and authenticated Owner/Staff viewport checks after deploying the client.
+
 ## Restore POS cash-path chrome to one dock row
 State: doing
 Exit: QR and paid-void on session chrome; one dock row; idle POS shares `pos-branch-{id}`; xl dual-pane `w-72`.

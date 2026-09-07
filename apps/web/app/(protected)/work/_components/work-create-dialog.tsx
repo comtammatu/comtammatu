@@ -25,10 +25,7 @@ import {
   TextareaField,
 } from "@/components/form";
 import { useFormControlSize } from "@/components/form/control-size";
-import {
-  WORK_TASK_PRIORITIES,
-  workCopy,
-} from "@lib/messages/work";
+import { WORK_TASK_PRIORITIES, workCopy } from "@lib/messages/work";
 import {
   createWorkTask,
   type WorkDepartmentOption,
@@ -86,22 +83,23 @@ export function WorkCreateDialog({
 
   if (departments.length === 0) return null;
 
-  const triggerNode = trigger && isValidElement(trigger) ? (
-    cloneElement(trigger as ReactElement<{ onClick?: MouseEventHandler }>, {
-      onClick: (e: React.MouseEvent) => {
-        (trigger.props as { onClick?: MouseEventHandler })?.onClick?.(e);
-        setOpen(true);
-      },
-    })
-  ) : trigger ? (
-    <span onClick={() => setOpen(true)} className="contents">
-      {trigger}
-    </span>
-  ) : (
-    <Button size={controlSize} type="button" onClick={() => setOpen(true)}>
-      {workCopy.createTask}
-    </Button>
-  );
+  const triggerNode =
+    trigger && isValidElement(trigger) ? (
+      cloneElement(trigger as ReactElement<{ onClick?: MouseEventHandler }>, {
+        onClick: (e: React.MouseEvent) => {
+          (trigger.props as { onClick?: MouseEventHandler })?.onClick?.(e);
+          setOpen(true);
+        },
+      })
+    ) : trigger ? (
+      <span onClick={() => setOpen(true)} className="contents">
+        {trigger}
+      </span>
+    ) : (
+      <Button size={controlSize} type="button" onClick={() => setOpen(true)}>
+        {workCopy.createTask}
+      </Button>
+    );
 
   return (
     <>
@@ -157,11 +155,14 @@ export function WorkCreateDialog({
           setOpen(false);
           setAssigneeIds([]);
           setSupporterIds([]);
-          if (!result.success || result.data == null) {
+          const created = z
+            .object({ id: z.number().positive(), canOpen: z.boolean() })
+            .safeParse(result.data);
+          if (!result.success || !created.success || !created.data.canOpen) {
             router.refresh();
             return;
           }
-          const id = Number((result.data as { id?: unknown }).id);
+          const id = created.data.id;
           if (Number.isFinite(id) && id > 0) {
             router.push(workHref(params, { taskId: id }));
             return;
@@ -212,7 +213,11 @@ export function WorkCreateDialog({
                     assigneeIds.map((id) => {
                       const name = memberMap.get(id) ?? id;
                       return (
-                        <Badge key={id} variant="secondary" className="gap-1 pr-1 text-xs">
+                        <Badge
+                          key={id}
+                          variant="secondary"
+                          className="gap-1 pr-1 text-xs"
+                        >
                           <span>{name}</span>
                           <Button
                             type="button"
@@ -271,7 +276,11 @@ export function WorkCreateDialog({
                     supporterIds.map((id) => {
                       const name = memberMap.get(id) ?? id;
                       return (
-                        <Badge key={id} variant="secondary" className="gap-1 pr-1 text-xs">
+                        <Badge
+                          key={id}
+                          variant="secondary"
+                          className="gap-1 pr-1 text-xs"
+                        >
                           <span>{name}</span>
                           <Button
                             type="button"

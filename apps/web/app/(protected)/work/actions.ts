@@ -244,9 +244,13 @@ export async function canAccessWorkspace(
 
 const includeDoneSchema = z.object({
   includeDone: z.boolean().optional().default(false),
+  personalOnly: z.boolean().optional(),
 });
 
-export const listMyWorkTasks = withAction<typeof includeDoneSchema, { items: WorkTaskRow[] }>(
+export const listMyWorkTasks = withAction<
+  typeof includeDoneSchema,
+  { items: WorkTaskRow[] }
+>(
   {
     schema: includeDoneSchema,
     roles: WORK_ROUTE_ROLES,
@@ -260,9 +264,16 @@ export const listMyWorkTasks = withAction<typeof includeDoneSchema, { items: Wor
     }
     const mapped = (rows ?? []).map(mapWorkTaskRow);
     const enriched = await enrichWorkTasks(mapped, ctx);
+    const items = data.personalOnly
+      ? enriched.filter(
+          (task) =>
+            task.assigneeId === ctx.userId ||
+            task.participantIds?.includes(ctx.userId),
+        )
+      : enriched;
     return {
       success: true,
-      data: { items: enriched },
+      data: { items },
     };
   },
 );
@@ -304,7 +315,10 @@ const createWorkTaskSchema = z.object({
   dueAt: z.string().datetime().optional(),
 });
 
-export const createWorkTask = withAction<typeof createWorkTaskSchema, WorkTaskRow>(
+export const createWorkTask = withAction<
+  typeof createWorkTaskSchema,
+  WorkTaskRow & { canOpen: boolean }
+>(
   {
     schema: createWorkTaskSchema,
     customAuth: async () => resolveWorkCreateContext(),
@@ -322,6 +336,8 @@ export const createWorkTask = withAction<typeof createWorkTaskSchema, WorkTaskRo
       p_priority: data.priority ?? null,
       p_assignee_id: primaryAssignee,
       p_due_at: data.dueAt ?? null,
+      p_assignee_ids: resolvedAssignees,
+      p_supporter_ids: data.supporterIds ?? [],
       // Typegen marks nullable SQL args as required non-null; runtime accepts NULL.
     } as Database["public"]["Functions"]["create_work_task"]["Args"]);
     if (error) {
@@ -334,19 +350,15 @@ export const createWorkTask = withAction<typeof createWorkTaskSchema, WorkTaskRo
       return { success: false, error: workCopy.createFailed };
     }
 
-    if (
-      resolvedAssignees.length > 0 ||
-      (data.supporterIds && data.supporterIds.length > 0)
-    ) {
-      await ctx.supabase.rpc("set_work_task_participants", {
-        p_task_id: row.id,
-        p_assignee_ids: resolvedAssignees,
-        p_supporter_ids: data.supporterIds ?? [],
-      });
-    }
+    const { data: canOpen } = await ctx.supabase.rpc("can_read_work_task", {
+      p_task_id: row.id,
+    });
 
     revalidateWorkPaths(row.id);
-    return { success: true, data: mapWorkTaskRow(row) };
+    return {
+      success: true,
+      data: { ...mapWorkTaskRow(row), canOpen: canOpen === true },
+    };
   },
 );
 

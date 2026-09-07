@@ -211,7 +211,7 @@ test("Work permission keys are registered", () => {
 test("Work assignment visibility helpers drop membership inheritance", () => {
   const activeSql = readActiveMigrationSql(repoRoot);
   const readTask = extractSqlFunction(activeSql, "can_read_work_task");
-  assert.match(readTask, /task\.created_by = auth\.uid\(\)/);
+  assert.doesNotMatch(readTask, /task\.created_by = auth\.uid\(\)/);
   assert.match(readTask, /task\.assignee_id = auth\.uid\(\)/);
   assert.doesNotMatch(readTask, /can_read_work_department/);
   assert.doesNotMatch(readTask, /can_read_work_project/);

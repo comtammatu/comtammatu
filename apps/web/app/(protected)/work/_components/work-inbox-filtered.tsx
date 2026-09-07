@@ -10,11 +10,13 @@ export function WorkInboxFiltered({
   params,
   status,
   q,
+  isOwner = false,
 }: {
   tasks: WorkTaskRow[];
   params: ParsedWorkParams;
   status: string | null;
   q: string | null;
+  isOwner?: boolean;
 }) {
   let filtered = tasks;
   const memberId = params.memberId;
@@ -59,5 +61,5 @@ export function WorkInboxFiltered({
       return formatISODateParts(getVNDateParts(new Date(task.dueAt))) === todayStr;
     });
   }
-  return <WorkInbox tasks={filtered} params={params} />;
+  return <WorkInbox tasks={filtered} params={params} isOwner={isOwner} />;
 }

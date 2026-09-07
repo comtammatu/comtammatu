@@ -13,7 +13,7 @@ export function WorkPageShell({
   params,
   departments,
   members = [],
-  canManage = false,
+  isOwner = false,
   composeArchetype,
   loadError,
   children,
@@ -21,7 +21,7 @@ export function WorkPageShell({
   params: ParsedWorkParams;
   departments: Array<{ id: number; name: string }>;
   members?: Array<{ id: string; fullName: string }>;
-  canManage?: boolean;
+  isOwner?: boolean;
   composeArchetype: WorkComposeArchetype | null;
   loadError: string | null;
   children: ReactNode;
@@ -31,7 +31,7 @@ export function WorkPageShell({
       params={params}
       departments={departments}
       members={members}
-      canManage={canManage}
+      isOwner={isOwner}
       showFilters={params.view === "mine"}
     />
   );

@@ -22,10 +22,7 @@ import {
   AppToolbar,
 } from "@/components/surface";
 import { useFormControlSize } from "@/components/form/control-size";
-import {
-  WORK_TASK_STATUSES,
-  workCopy,
-} from "@lib/messages/work";
+import { WORK_TASK_STATUSES, workCopy } from "@lib/messages/work";
 import {
   type ParsedWorkParams,
   type WorkQuickFilter,
@@ -54,22 +51,17 @@ export function WorkListToolbar({
   params,
   departments,
   members = [],
-  canManage = false,
+  isOwner = false,
   showFilters = false,
 }: {
   params: ParsedWorkParams;
   departments: Array<{ id: number; name: string }>;
   members?: Array<{ id: string; fullName: string }>;
-  canManage?: boolean;
+  isOwner?: boolean;
   showFilters?: boolean;
 }) {
   const router = useRouter();
   const controlSize = useFormControlSize();
-  const showDepartmentFilter =
-    params.view === "board" ||
-    params.view === "calendar" ||
-    params.view === "timeline" ||
-    (params.view === "mine" && canManage);
 
   const viewSwitcher = (
     <AppSegmentedControl
@@ -77,16 +69,19 @@ export function WorkListToolbar({
       aria-label={workCopy.viewMode}
       options={VIEW_OPTIONS.map((option) => ({
         value: option.view,
-        label: option.label,
+        label:
+          option.view === "mine" && isOwner ? workCopy.viewList : option.label,
         href: workHref(params, { view: option.view }),
       }))}
     />
   );
 
   const departmentFilter =
-    showDepartmentFilter && departments.length > 0 ? (
+    departments.length > 0 ? (
       <Select
-        value={params.departmentId != null ? String(params.departmentId) : "all"}
+        value={
+          params.departmentId != null ? String(params.departmentId) : "all"
+        }
         onValueChange={(value) => {
           router.replace(
             workHref(params, {
@@ -104,9 +99,7 @@ export function WorkListToolbar({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">
-            {params.view === "mine"
-              ? workCopy.filterAllDepartments
-              : workCopy.allDepartments}
+            {isOwner ? workCopy.allDepartments : workCopy.filterAllDepartments}
           </SelectItem>
           {departments.map((department) => (
             <SelectItem key={department.id} value={String(department.id)}>
@@ -216,7 +209,9 @@ export function WorkListToolbar({
                     router.replace(
                       workHref(params, {
                         status:
-                          value === "all" ? null : (value as typeof params.status),
+                          value === "all"
+                            ? null
+                            : (value as typeof params.status),
                       }),
                     );
                   }}

@@ -176,13 +176,14 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
   `?view=board` = compose `TASK_BOARD`; `?view=calendar` = `TASK_CALENDAR`;
   `?view=timeline` = `TASK_TIMELINE`. **Không** dùng archetype `BOARD` /
   `station_chrome` (KDS/POS).
-- **Actor:** Owner / `work:manage` quản trị và xem tất cả; `work:create` tạo việc
-  và xem việc mình tạo; Staff chỉ việc được giao / hỗ trợ. Candidate ACL `work`
-  chỉ là cửa vào; RLS/RPC là authority (assignment + `created_by`, không membership phòng).
+- **Actor:** Owner xem tất cả; Staff chỉ xem phòng ban và việc được giao / hỗ trợ.
+  `work:create` cho phép tạo trong phòng ban đang được xem, không mở rộng quyền đọc.
+  Candidate ACL `work` chỉ là cửa vào; RLS/RPC quyết định theo phân công, không theo thành viên phòng hay người tạo.
 - **Job:** Việc được giao / theo dõi liên phòng ban; board/calendar/timeline theo
-  việc caller được đọc — không tường công ty trừ Owner/`work:manage`.
-- **Goal:** Mở Inbox (`view=mine` = việc của tôi) → đúng việc → đổi trạng thái /
-  comment; người tạo/`work:manage` gán người; không tường Kanban cả công ty trên `/`.
+  việc người dùng được đọc — chỉ Owner xem toàn công ty.
+- **Goal:** Mở danh sách (`view=mine`: Owner xem toàn bộ, Staff xem việc của mình)
+  → lọc phòng ban → đúng việc → đổi trạng thái / bình luận. Người tạo chỉ gán lại
+  người khi còn quyền đọc; tạo việc và gán người ban đầu được lưu cùng nhau.
 - **Ưu tiên data:** Tên việc, trạng thái, người, hạn, dự án/phòng. **Không:**
   số tiền, tồn kho, lương; không trộn `position_shift_tasks` (Việc trong ca).
 - **UX:** View switcher URL `view=`; filter trên URL; desktop primary cho board;

@@ -35,7 +35,7 @@ If UI hiding is not enough during the pilot window:
 This runbook does **not** require a full RLS leak audit for the 7-day pilot.
 Routine rollback checks:
 
-- Users with no assignment, no `created_by` row, and no `work:create` /
+- Users with no assignment/support role and no `work:create` /
   `work:manage` cannot open `/work` (empty / no-access state).
 - Removed nav entry does not reappear via deep links for branch station roles.
 - Attention card `work:mine-due` disappears after attention loader removal.
@@ -47,3 +47,16 @@ Routine rollback checks:
 3. Owner runs `ensure_pilot_work_department()` once if the pilot department row
    was deactivated.
 4. Smoke `/work`, `/work/tasks/[id]`, control-home attention, and `/me` CTA.
+
+## Owner inbox and staff assignment scope rollout
+
+Apply the atomic create overload and visibility migration before deploying its
+caller. Regenerate database types from the approved type source after apply.
+The nine-argument create overload persists the task and all participants in one
+transaction. The seven-argument compatibility path accepts staff creation only
+when the creator is the primary assignee, so an older client cannot silently
+lose its follow-up participant write during rollout.
+
+If the new client must be rolled back, retain the restrictive read helpers and
+the compatibility overload; do not restore broad creator visibility. Any schema
+rollback is a reviewed forward migration, never an edit to applied history.

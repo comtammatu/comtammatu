@@ -13582,41 +13582,79 @@ export type Database = {
         }
         Returns: Json
       }
-      create_work_task: {
-        Args: {
-          p_assignee_id: string
-          p_department_id: number
-          p_description: string
-          p_due_at: string
-          p_priority: string
-          p_project_id: number
-          p_title: string
-        }
-        Returns: {
-          assignee_id: string | null
-          completed_at: string | null
-          created_at: string
-          created_by: string
-          department_id: number
-          description: string | null
-          due_at: string | null
-          id: number
-          priority: string
-          project_id: number | null
-          revision: number
-          started_at: string | null
-          status: string
-          tenant_id: number
-          title: string
-          updated_at: string
-        }
-        SetofOptions: {
-          from: "*"
-          to: "work_tasks"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+      create_work_task:
+        | {
+            Args: {
+              p_assignee_id: string
+              p_department_id: number
+              p_description: string
+              p_due_at: string
+              p_priority: string
+              p_project_id: number
+              p_title: string
+            }
+            Returns: {
+              assignee_id: string | null
+              completed_at: string | null
+              created_at: string
+              created_by: string
+              department_id: number
+              description: string | null
+              due_at: string | null
+              id: number
+              priority: string
+              project_id: number | null
+              revision: number
+              started_at: string | null
+              status: string
+              tenant_id: number
+              title: string
+              updated_at: string
+            }
+            SetofOptions: {
+              from: "*"
+              to: "work_tasks"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: {
+              p_assignee_id: string
+              p_assignee_ids: string[]
+              p_department_id: number
+              p_description: string
+              p_due_at: string
+              p_priority: string
+              p_project_id: number
+              p_supporter_ids: string[]
+              p_title: string
+            }
+            Returns: {
+              assignee_id: string | null
+              completed_at: string | null
+              created_at: string
+              created_by: string
+              department_id: number
+              description: string | null
+              due_at: string | null
+              id: number
+              priority: string
+              project_id: number | null
+              revision: number
+              started_at: string | null
+              status: string
+              tenant_id: number
+              title: string
+              updated_at: string
+            }
+            SetofOptions: {
+              from: "*"
+              to: "work_tasks"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
       current_position: { Args: never; Returns: string }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       deactivate_work_department: {

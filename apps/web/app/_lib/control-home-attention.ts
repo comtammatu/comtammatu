@@ -36,9 +36,7 @@ export type ControlHomeAttentionItem = {
 
 const copy = messages.controlSurface.dashboard;
 
-async function settledCount(
-  promise: Promise<number>,
-): Promise<number> {
+async function settledCount(promise: Promise<number>): Promise<number> {
   try {
     return await promise;
   } catch {
@@ -224,7 +222,10 @@ async function loadWorkAttention(
 ): Promise<ControlHomeAttentionItem[]> {
   if (!canAccess(role, "work")) return [];
   try {
-    const result = await listMyWorkTasks({ includeDone: false });
+    const result = await listMyWorkTasks({
+      includeDone: false,
+      personalOnly: true,
+    });
     if (!result.success || !result.data) return [];
     const { endIso } = getVNDayUtcRange(getVNDateString());
     const beforeIso = new Date(new Date(endIso).getTime() - 1).toISOString();
@@ -263,7 +264,9 @@ async function loadWorkAttention(
   }
 }
 
-async function loadNotificationAttention(): Promise<ControlHomeAttentionItem[]> {
+async function loadNotificationAttention(): Promise<
+  ControlHomeAttentionItem[]
+> {
   try {
     const result = await getUnreadCount();
     if (!result.success || !result.data || result.data.count <= 0) return [];
