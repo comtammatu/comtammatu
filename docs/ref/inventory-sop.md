@@ -105,7 +105,7 @@ Một cửa **Kiểm kê**. QL mở phiên tại kho của site → đếm số 
 
 Nhân viên được giao trong ca dùng **Đếm tồn** (phiếu đếm). Phiếu đó không tự sửa tồn; QL duyệt hoặc đếm trong phiên Kiểm kê.
 
-Thu ngân chi nhánh được gán đếm tồn nước theo ca (sáng/chiều/tối). Tạm thời chỉ Coca, Sprite, Fanta cam, Fanta xá xị, Nước suối (chưa sâm/rau má). Việc cuối ca có **Đếm tồn nước**. Cửa nhân viên: tab **Ca** → phiếu đếm; QL xem/duyệt tại **Đội** / `/stock/count-slips`. Nhân viên chọn đơn vị đếm (mặc định đơn vị lớn nhất). Phiếu và màn duyệt đối chiếu tồn sổ / thực đếm / lệch cùng đơn vị đó.
+Thu ngân chi nhánh được gán đếm tồn nước theo ca (sáng/chiều/tối). Tạm thời chỉ Coca, Sprite, Fanta cam, Fanta xá xị, Nước suối (chưa sâm/rau má). Việc cuối ca có **Đếm tồn nước**. Cửa nhân viên: tab **Ca** → phiếu đếm; QL xem/duyệt tại **Đội** / `/stock/count-slips`. Nhân viên chọn đơn vị đếm (mặc định đơn vị lớn nhất). Tồn lúc gửi / Thực đếm / lệch trên phiếu và màn duyệt luôn cùng một thang khóa (đơn vị nhân viên đếm + Đơn vị chuẩn).
 
 1. Nhân viên đếm hằng ngày tại Bếp. QL/Owner tạo phiên kiểm kê Kho hoặc Bếp bằng location tường minh.
 2. Đếm theo Đơn vị đang dùng; hệ thống quy về Đơn vị chuẩn.

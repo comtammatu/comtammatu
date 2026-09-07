@@ -330,7 +330,7 @@ nhiều cấp, AP liên pháp nhân.
 
 ## 8. Kiểm kê kho (Stocktake)
 
-Routes: `/inventory/stocktake`, `/inventory/stocktake/[id]`. Pad nhân viên `/me` là **Đếm tồn** (phiếu được giao, không phiên Kiểm kê thứ hai): chọn đơn vị đếm (mặc định Đơn vị chuẩn); duyệt tồn sổ / thực đếm / lệch cùng đơn vị đó; sổ theo Đơn vị chuẩn.
+Routes: `/inventory/stocktake`, `/inventory/stocktake/[id]`. Pad nhân viên `/me` là **Đếm tồn** (phiếu được giao, không phiên Kiểm kê thứ hai): chọn đơn vị đếm (mặc định Đơn vị chuẩn). Tồn lúc gửi, Thực đếm và Chênh lệch luôn cùng một thang khóa (đơn vị nhân viên đếm + Đơn vị chuẩn); sổ ledger theo Đơn vị chuẩn.
 
 1. **Tạo:** chọn location tường minh. Nhân viên đếm hằng ngày tại Bếp; Quản lý/Owner kiểm kê Kho hoặc Bếp riêng. UI không chọn daily/weekly/monthly/quarterly/spot; phiên mới đếm số đang có, không hiện sổ (`spot`).
 2. **Đếm** (`get_stocktake_lines_blind`): màn đếm là viewport đầu. Số sổ ẩn đến khi đếm đủ dòng. Bản nháp tự lưu theo đúng vòng đếm và được khôi phục khi mở lại; bản nháp không thay thế kết quả đã gửi.
@@ -386,7 +386,7 @@ Tóm tắt vai (D093):
   DC xin hàng hoặc giao đi (nháp); ship outbound từ CN mình; nhận DC inbound;
   **không** GRN, PO, production, giá mua, `procurement:read` /
   `supplier_manage` / `supplier_return:*` (R08/R09). YCH đã gỡ; xin hàng bằng Điều chuyển.
-- `cashier`: tạm thời đếm Coca, Sprite, Fanta cam, Fanta xá xị, Nước suối theo ca được gán; phiếu/duyệt cùng đơn vị nhân viên chọn, không tự sửa sổ. `chef` / `branch_staff`: chỉ đếm khi được gán.
+- `cashier`: tạm thời đếm Coca, Sprite, Fanta cam, Fanta xá xị, Nước suối theo ca được gán; phiếu/duyệt cùng thang khóa đơn vị nhân viên chọn + Đơn vị chuẩn, không tự sửa sổ. `chef` / `branch_staff`: chỉ đếm khi được gán.
 
 Ma trận thao tác hiệu lực (role là cửa thô; permission + RLS/RPC là cửa cuối):
 

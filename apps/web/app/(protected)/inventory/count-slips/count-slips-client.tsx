@@ -62,13 +62,13 @@ import {
   AppToolbar,
 } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
-import type {
-  CountSlipLineView as CountSlipLine,
-  CountSlipRow,
-  CountSlipStatus,
+import {
+  formatCountSlipComparableQuantities,
+  type CountSlipLineView as CountSlipLine,
+  type CountSlipRow,
+  type CountSlipStatus,
 } from "@lib/inventory/count-slip-model";
 import { formatQty } from "@lib/inventory/format";
-import { formatQuantityInLargestUnits } from "@lib/inventory/quantity-unit-format";
 import { inventoryListFilterSelectClassName } from "../_components/inventory-list-filters";
 import { StocktakeNavTabs } from "../_components/stocktake-nav-tabs";
 import { approveCountSlip, requestCountRecount } from "./actions";
@@ -93,20 +93,8 @@ function formatVariance(value: number | null): string {
   return formatted;
 }
 
-function formatLineBaseQuantity(line: CountSlipLine, quantity: number): string {
-  return formatQuantityInLargestUnits(quantity, line.displayUnits, formatQty);
-}
-
-function formatLineCountedQuantity(line: CountSlipLine): string {
-  return line.countedBaseQuantity === null
-    ? `${formatQty(line.countedQuantity)} ${line.countedUnit}`.trim()
-    : formatLineBaseQuantity(line, line.countedBaseQuantity);
-}
-
-function formatLineVariance(line: CountSlipLine): string {
-  if (line.varianceBaseQuantity === null) return "—";
-  const formatted = formatLineBaseQuantity(line, line.varianceBaseQuantity);
-  return line.varianceBaseQuantity > 0 ? `+${formatted}` : formatted;
+function formatLineQuantities(line: CountSlipLine) {
+  return formatCountSlipComparableQuantities(line, formatQty);
 }
 
 function varianceClassName(value: number | null): string {
@@ -899,11 +887,11 @@ function CountSlipReviewDialog({
 
         return (
           <div className="whitespace-nowrap text-right font-mono tabular-nums">
-            <div>{formatLineBaseQuantity(line, line.systemBaseQuantity)}</div>
+            <div>{formatLineQuantities(line).system}</div>
             {hasLiveDelta ? (
               <div className="text-2xs text-muted-foreground">
                 {INVENTORY_VI.liveStockColon}{" "}
-                {formatLineBaseQuantity(line, line.currentLiveBaseQuantity!)}
+                {formatLineQuantities(line).live}
               </div>
             ) : null}
           </div>
@@ -916,7 +904,7 @@ function CountSlipReviewDialog({
       className: "w-40 text-right",
       render: (line) => (
         <div className="whitespace-nowrap text-right font-mono tabular-nums">
-          {formatLineCountedQuantity(line)}
+          {formatLineQuantities(line).counted}
         </div>
       ),
     },
@@ -932,7 +920,7 @@ function CountSlipReviewDialog({
               varianceClassName(line.variance),
             )}
           >
-            {formatLineVariance(line)}
+            {formatLineQuantities(line).variance}
           </span>
         </div>
       ),
@@ -1088,10 +1076,10 @@ function CountSlipReviewDialog({
                   </ItemTitle>
                   <ItemDescription>
                     Hệ thống:{" "}
-                    {formatLineBaseQuantity(line, line.systemBaseQuantity)}
+                    {formatLineQuantities(line).system}
                   </ItemDescription>
                   <ItemDescription>
-                    Thực đếm: {formatLineCountedQuantity(line)}
+                    Thực đếm: {formatLineQuantities(line).counted}
                   </ItemDescription>
                 </ItemContent>
                 <ItemActions>
@@ -1114,7 +1102,7 @@ function CountSlipReviewDialog({
                       varianceClassName(line.variance),
                     )}
                   >
-                    {formatLineVariance(line)}
+                    {formatLineQuantities(line).variance}
                   </span>
                 </ItemActions>
               </Item>

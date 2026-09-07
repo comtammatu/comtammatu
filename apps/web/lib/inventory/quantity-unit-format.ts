@@ -171,3 +171,24 @@ export function formatQuantityInLargestUnits<T extends QuantityUnitFormatRow>(
   );
   return `${sign}${big ?? base}`;
 }
+
+/**
+ * One locked ladder for quantities that will be compared. `lockUnitCode` is the
+ * employee/document unit; the base unit stays for leftovers. Sibling catalog
+ * units (for example "trái" next to kg/g) are excluded so each number cannot
+ * pick a different remainder unit.
+ */
+export function lockComparableDisplayUnits<T extends QuantityUnitFormatRow>(
+  units: readonly T[] | undefined,
+  lockUnitCode?: string | null,
+): T[] {
+  const usable = usableUnits(units);
+  if (usable.length <= 1) return usable;
+  const lock = lockUnitCode?.trim() ?? "";
+  const largest = unitLadder(usable)[0];
+  const lockedCode = lock || largest?.unit_code || "";
+  const comparable = usable.filter(
+    (unit) => unit.is_base || unit.unit_code === lockedCode,
+  );
+  return comparable.length > 0 ? comparable : usable;
+}

@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
-import { buildCountSlipLineView } from "../lib/inventory/count-slip-model";
+import {
+  buildCountSlipLineView,
+  countSlipQuantityDisplayUnits,
+  formatCountSlipComparableQuantities,
+} from "../lib/inventory/count-slip-model";
+import { formatQty } from "../lib/inventory/format";
 import { formatQuantityInLargestUnits } from "../lib/inventory/quantity-unit-format";
 
 const viNumber = (value: number): string =>
@@ -55,6 +60,108 @@ test("count slip review promotes base quantities into the largest convertible un
   assert.equal(line.varianceBaseQuantity, -5317);
   assert.equal(line.currentLiveBaseQuantity, 4960);
   assert.deepEqual(line.displayUnits, units);
+});
+
+test("count slip review keeps book and counted leftovers on the employee unit ladder", () => {
+  const orangeUnits = [
+    {
+      unit_code: "g",
+      to_base_factor: 1,
+      is_base: true,
+      is_active: true,
+      sort_order: 0,
+    },
+    {
+      unit_code: "kg",
+      to_base_factor: 1000,
+      is_base: false,
+      is_active: true,
+      sort_order: 1,
+    },
+    {
+      unit_code: "trái",
+      to_base_factor: 20,
+      is_base: false,
+      is_active: true,
+      sort_order: 2,
+    },
+  ];
+
+  assert.equal(
+    formatQuantityInLargestUnits(1542, orangeUnits, formatQty),
+    "1 kg 542 g",
+  );
+  assert.equal(
+    formatQuantityInLargestUnits(2380, orangeUnits, formatQty),
+    "2 kg 19 trái",
+  );
+
+  const line = buildCountSlipLineView({
+    id: 1004,
+    ingredientId: 72,
+    ingredientName: "Trái cam",
+    systemQuantity: 1542,
+    countedQuantity: 2.38,
+    countedBaseQuantity: 2380,
+    entryUnitId: 16,
+    entryUnitCode: "kg",
+    baseUnitCode: "g",
+    toBaseFactor: 1000,
+    displayUnits: orangeUnits,
+    note: null,
+  });
+  const comparable = countSlipQuantityDisplayUnits(line);
+  const formatted = formatCountSlipComparableQuantities(line, formatQty);
+
+  assert.equal(
+    formatQuantityInLargestUnits(line.systemBaseQuantity, comparable, formatQty),
+    "1 kg 542 g",
+  );
+  assert.equal(
+    formatQuantityInLargestUnits(line.countedBaseQuantity ?? 0, comparable, formatQty),
+    "2 kg 380 g",
+  );
+  assert.equal(formatted.system, "1 kg 542 g");
+  assert.equal(formatted.counted, "2 kg 380 g");
+  assert.equal(formatted.variance, "+838 g");
+  assert.equal(line.varianceBaseQuantity, 838);
+});
+
+test("count slip review keeps packaging remainder on the same locked ladder", () => {
+  const units = [
+    {
+      unit_code: "lon",
+      to_base_factor: 1,
+      is_base: true,
+      is_active: true,
+      sort_order: 0,
+    },
+    {
+      unit_code: "thùng",
+      to_base_factor: 24,
+      is_base: false,
+      is_active: true,
+      sort_order: 1,
+    },
+  ];
+  const line = buildCountSlipLineView({
+    id: 4,
+    ingredientId: 143,
+    ingredientName: "Coca Cola",
+    systemQuantity: 93,
+    countedQuantity: 4,
+    countedBaseQuantity: 96,
+    entryUnitId: 2,
+    entryUnitCode: "thùng",
+    baseUnitCode: "lon",
+    toBaseFactor: 24,
+    displayUnits: units,
+    note: null,
+  });
+  const formatted = formatCountSlipComparableQuantities(line, formatQty);
+  assert.equal(formatted.system, "3 thùng 21 lon");
+  assert.equal(formatted.counted, "4 thùng");
+  assert.equal(formatted.variance, "+3 lon");
 });
 
 test("count slip review compares book and counted qty in the employee unit", () => {
@@ -163,6 +270,39 @@ test("count slip review withholds variance when the entry unit cannot convert", 
   assert.equal(line.countedUnit, "thùng");
   assert.equal(line.countedBaseQuantity, null);
   assert.equal(line.variance, null);
+});
+
+test("count slip review formats book counted and variance through one locked formatter", () => {
+  const ownerSource = readFileSync(
+    join(process.cwd(), "app/(protected)/inventory/count-slips/count-slips-client.tsx"),
+    "utf8",
+  );
+  const branchSource = readFileSync(
+    join(
+      process.cwd(),
+      "app/(protected)/br/[branchId]/(operator)/stock/count-slips/branch-count-slips-client.tsx",
+    ),
+    "utf8",
+  );
+  const inventory = readFileSync(
+    join(import.meta.dirname, "../../../docs/ref/inventory.md"),
+    "utf8",
+  );
+  const screenMap = readFileSync(
+    join(import.meta.dirname, "../../../docs/ref/screen-context-map.md"),
+    "utf8",
+  );
+
+  assert.match(ownerSource, /formatCountSlipComparableQuantities/);
+  assert.match(branchSource, /formatCountSlipComparableQuantities/);
+  assert.doesNotMatch(ownerSource, /formatQuantityInLargestUnits/);
+  assert.doesNotMatch(branchSource, /formatQuantityInLargestUnits/);
+  assert.match(
+    inventory,
+    /Tồn lúc gửi, Thực đếm và Chênh lệch luôn cùng một thang khóa/,
+  );
+  assert.match(screenMap, /luôn cùng một thang khóa/);
+  assert.doesNotMatch(screenMap, /đơn vị lớn nhất có số lượng ít nhất 1/);
 });
 
 test("count slip review no longer trusts mixed-unit generated variance", () => {

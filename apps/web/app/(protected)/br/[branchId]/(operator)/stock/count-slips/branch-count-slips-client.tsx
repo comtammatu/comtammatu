@@ -71,11 +71,11 @@ import {
   type CountSlipSurplusReasons,
 } from "@/components/inventory/count-slip-surplus-evidence";
 import { formatQty } from "@lib/inventory/format";
-import { formatQuantityInLargestUnits } from "@lib/inventory/quantity-unit-format";
-import type {
-  CountSlipLineView,
-  CountSlipRow,
-  CountSlipStatus,
+import {
+  formatCountSlipComparableQuantities,
+  type CountSlipLineView,
+  type CountSlipRow,
+  type CountSlipStatus,
 } from "@lib/inventory/count-slip-model";
 
 type QueueView = "pending" | "history";
@@ -88,23 +88,8 @@ function formatVariance(value: number | null): string {
   return formatted;
 }
 
-function formatLineBaseQuantity(
-  line: CountSlipLineView,
-  quantity: number,
-): string {
-  return formatQuantityInLargestUnits(quantity, line.displayUnits, formatQty);
-}
-
-function formatLineCountedQuantity(line: CountSlipLineView): string {
-  return line.countedBaseQuantity === null
-    ? `${formatQty(line.countedQuantity)} ${line.countedUnit}`.trim()
-    : formatLineBaseQuantity(line, line.countedBaseQuantity);
-}
-
-function formatLineVariance(line: CountSlipLineView): string {
-  if (line.varianceBaseQuantity === null) return "—";
-  const formatted = formatLineBaseQuantity(line, line.varianceBaseQuantity);
-  return line.varianceBaseQuantity > 0 ? `+${formatted}` : formatted;
+function formatLineQuantities(line: CountSlipLineView) {
+  return formatCountSlipComparableQuantities(line, formatQty);
 }
 
 function varianceClassName(value: number | null): string {
@@ -1113,6 +1098,7 @@ function CountSlipLineItem({
   const isShortage = line.variance !== null && line.variance < 0;
   const isSurplus = line.variance !== null && line.variance > 0;
   const isMatched = line.variance === 0;
+  const qty = formatLineQuantities(line);
   const hasLiveDelta =
     line.currentLiveBaseQuantity !== null &&
     Math.abs(line.currentLiveBaseQuantity - line.systemBaseQuantity) > 0.0001;
@@ -1165,11 +1151,11 @@ function CountSlipLineItem({
               {INVENTORY_VI.systemStockLabel}
             </span>
             <span className="font-mono font-medium tabular-nums text-foreground mt-0.5 truncate">
-              {formatLineBaseQuantity(line, line.systemBaseQuantity)}
+              {qty.system}
             </span>
             {hasLiveDelta ? (
               <span className="text-2xs text-muted-foreground truncate">
-                {INVENTORY_VI.currentStockShort} {formatLineBaseQuantity(line, line.currentLiveBaseQuantity!)}
+                {INVENTORY_VI.currentStockShort} {qty.live}
               </span>
             ) : null}
           </div>
@@ -1178,7 +1164,7 @@ function CountSlipLineItem({
               {INVENTORY_VI.countedLabel}
             </span>
             <span className="font-mono font-semibold tabular-nums text-foreground mt-0.5 truncate">
-              {formatLineCountedQuantity(line)}
+              {qty.counted}
             </span>
           </div>
           <div className="flex flex-col min-w-0">
@@ -1191,7 +1177,7 @@ function CountSlipLineItem({
                 varianceClassName(line.variance),
               )}
             >
-              {formatLineVariance(line)}
+              {qty.variance}
             </span>
           </div>
         </div>

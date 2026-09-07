@@ -1,4 +1,8 @@
-import type { QuantityUnitFormatRow } from "./quantity-unit-format";
+import {
+  formatQuantityInLargestUnits,
+  lockComparableDisplayUnits,
+  type QuantityUnitFormatRow,
+} from "./quantity-unit-format";
 
 export type CountSlipStatus = "submitted" | "needs_changes" | "approved";
 
@@ -161,5 +165,55 @@ export function buildCountSlipLineView(
     recountRequired: input.recountRequired === true,
     lastRecountRound: input.lastRecountRound ?? 0,
     note: input.note,
+  };
+}
+
+export function countSlipQuantityDisplayUnits(
+  line: Pick<CountSlipLineView, "displayUnits" | "countedUnit">,
+): QuantityUnitFormatRow[] {
+  return lockComparableDisplayUnits(line.displayUnits, line.countedUnit);
+}
+
+export type CountSlipComparableQuantities = {
+  system: string;
+  counted: string;
+  variance: string;
+  live: string | null;
+};
+
+/**
+ * Format book-at-submit, counted, variance, and live stock on one locked
+ * ladder. Callers must not format those columns through separate unit lists.
+ */
+export function formatCountSlipComparableQuantities(
+  line: CountSlipLineView,
+  formatNumber: (value: number) => string,
+): CountSlipComparableQuantities {
+  const units = countSlipQuantityDisplayUnits(line);
+  const formatBase = (quantity: number) =>
+    formatQuantityInLargestUnits(quantity, units, formatNumber);
+
+  const system = formatBase(line.systemBaseQuantity);
+  const live =
+    line.currentLiveBaseQuantity == null
+      ? null
+      : formatBase(line.currentLiveBaseQuantity);
+
+  if (line.countedBaseQuantity === null || line.varianceBaseQuantity === null) {
+    return {
+      system,
+      counted: `${formatNumber(line.countedQuantity)} ${line.countedUnit}`.trim(),
+      variance: "—",
+      live,
+    };
+  }
+
+  const varianceRaw = formatBase(line.varianceBaseQuantity);
+  return {
+    system,
+    counted: formatBase(line.countedBaseQuantity),
+    variance:
+      line.varianceBaseQuantity > 0 ? `+${varianceRaw}` : varianceRaw,
+    live,
   };
 }
