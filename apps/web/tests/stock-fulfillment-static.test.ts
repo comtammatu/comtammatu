@@ -74,6 +74,22 @@ test("fulfillment loader is transfers-only after Wave 5", () => {
   assert.match(loader, /from\("stock_transfers"\)/);
 });
 
+test("fulfillment list does not bulk-load transfer items", () => {
+  const loader = read("apps/web/lib/inventory/stock-fulfillment-data.ts");
+  const hub = read(
+    "apps/web/app/(protected)/inventory/transfers/stock-fulfillment-hub-client.tsx",
+  );
+
+  // Header list + RLS on stock_transfer_items timed out (57014) when the
+  // landing page loaded every line for limit=200 transfers.
+  assert.doesNotMatch(loader, /from\("stock_transfer_items"\)/);
+  assert.match(loader, /lines: \[\]/);
+  assert.match(
+    hub,
+    /row\.lineCount > 0[\s\S]{0,120}copy\.ingredientCount\(row\.lineCount\)/,
+  );
+});
+
 test("stock request details stay canonical and expose the full timeline", () => {
   const detail = read("apps/web/app/components/stock-request-detail-view.tsx");
   const branchDetail = read(

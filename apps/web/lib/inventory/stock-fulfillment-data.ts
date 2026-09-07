@@ -71,19 +71,6 @@ export async function loadStockFulfillmentRows({
 
   const transfers = (transfersResult.data ??
     []) as unknown as TransferRecord[];
-  const transferIds = transfers.map((transfer) => transfer.id);
-  const transferLinesResult =
-    transferIds.length === 0
-      ? { data: [], error: null }
-      : await supabase
-          .from("stock_transfer_items")
-          .select("transfer_id, quantity, quantity_received")
-          .eq("tenant_id", tenantId)
-          .in("transfer_id", transferIds);
-  if (transferLinesResult.error) {
-    throw new Error("inventory.stock_fulfillment.load_failed");
-  }
-
   const branches = (branchesResult.data ?? []) as unknown as BranchRecord[];
   const branchById = new Map(branches.map((branch) => [branch.id, branch]));
   const site = (id: number) => {
@@ -94,20 +81,10 @@ export async function loadStockFulfillmentRows({
       kind: branch?.branch_kind ?? ("branch" as const),
     };
   };
-  const transferLines = new Map<
-    number,
-    Array<{ quantity: number; quantityReceived: number | null }>
-  >();
-  for (const line of transferLinesResult.data ?? []) {
-    const lines = transferLines.get(line.transfer_id) ?? [];
-    lines.push({
-      quantity: Number(line.quantity),
-      quantityReceived:
-        line.quantity_received == null ? null : Number(line.quantity_received),
-    });
-    transferLines.set(line.transfer_id, lines);
-  }
 
+  // List projection uses header status only. Loading every transfer's
+  // items through stock_transfer_items RLS timed out (SQLSTATE 57014) on
+  // Production landing refreshes. Line quantities belong on the document.
   const transferRows: StockFulfillmentTransferRecord[] = transfers.map(
     (transfer) => ({
       id: transfer.id,
@@ -118,7 +95,7 @@ export async function loadStockFulfillmentRows({
       fromSite: site(transfer.from_branch_id),
       toSite: site(transfer.to_branch_id),
       createdAt: transfer.created_at,
-      lines: transferLines.get(transfer.id) ?? [],
+      lines: [],
     }),
   );
 

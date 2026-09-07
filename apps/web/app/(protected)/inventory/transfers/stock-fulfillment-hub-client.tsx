@@ -297,12 +297,15 @@ export function StockFulfillmentHubClient({
               </Badge>
             </div>
             <div className="font-medium">{rowTitle(row)}</div>
-            <div className="text-sm text-muted-foreground">
-              {copy.ingredientCount(row.lineCount)}
-              {row.kind === "request" && row.sources.length > 1
-                ? ` · ${row.sources.length} nguồn`
-                : ""}
-            </div>
+            {row.lineCount > 0 ||
+            (row.kind === "request" && row.sources.length > 1) ? (
+              <div className="text-sm text-muted-foreground">
+                {row.lineCount > 0 ? copy.ingredientCount(row.lineCount) : null}
+                {row.kind === "request" && row.sources.length > 1
+                  ? `${row.lineCount > 0 ? " · " : ""}${row.sources.length} nguồn`
+                  : ""}
+              </div>
+            ) : null}
             {linkedTransfers.length > 0 ? (
               <div className="text-sm text-muted-foreground">
                 {copy.linkedTransferLabel}: {linkedTransfers.join(", ")}
