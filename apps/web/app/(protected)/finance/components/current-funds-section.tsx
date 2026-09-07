@@ -9,7 +9,11 @@ import {
   formatAccountingVND as formatVND,
   formatCompactVND,
 } from "@comtammatu/shared/format";
-import { parseMoneyToMinorUnits } from "@comtammatu/shared/money";
+import {
+  isWithinFundRange,
+  MAX_FUND_MINOR_UNITS,
+  parseMoneyToMinorUnits,
+} from "@comtammatu/shared/money";
 import { formatVNDateTime, getVNDateString } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
@@ -37,36 +41,35 @@ import type { FinanceLocation } from "../_lib/finance-params";
 const copy = messages.finance;
 const formulaOperatorClass =
   "flex min-h-6 items-center justify-center font-heading text-lg font-semibold text-muted-foreground xl:min-h-0 xl:self-center";
-const FUND_AMOUNT = /^(?:0|[1-9]\d{0,12})(?:\.\d{1,2})?$/;
-const SIGNED_FUND_AMOUNT = /^-?(?:0|[1-9]\d{0,12})(?:\.\d{1,2})?$/;
-const MAX_FUND_MINOR_UNITS = 999_999_999_999_999n;
+const FUND_AMOUNT = /^(?:0|[1-9]\d{0,11})(?:\.\d{1,2})?$/;
+const SIGNED_FUND_AMOUNT = /^-?(?:0|[1-9]\d{0,11})(?:\.\d{1,2})?$/;
 const requiredFundAmount = z
   .string()
   .trim()
   .min(1, copy.cash.openingAmountRequired)
+  .refine((value) => FUND_AMOUNT.test(value), copy.cash.openingAmountInvalid)
   .refine(
     (value) =>
-      FUND_AMOUNT.test(value) &&
+      !FUND_AMOUNT.test(value) ||
       parseMoneyToMinorUnits(value) <= MAX_FUND_MINOR_UNITS,
-    copy.cash.openingAmountInvalid,
+    copy.cash.openingAmountTooLarge,
   );
 const requiredFundDelta = z
   .string()
   .trim()
   .min(1, copy.cash.adjustmentZero)
+  .refine(
+    (value) => SIGNED_FUND_AMOUNT.test(value),
+    copy.cash.adjustmentAmountInvalid,
+  )
   .refine((value) => {
-    return (
-      SIGNED_FUND_AMOUNT.test(value) &&
-      (() => {
-        const amount = parseMoneyToMinorUnits(value);
-        return (
-          amount !== 0n &&
-          amount >= -MAX_FUND_MINOR_UNITS &&
-          amount <= MAX_FUND_MINOR_UNITS
-        );
-      })()
-    );
-  }, copy.cash.adjustmentAmountInvalid);
+    if (!SIGNED_FUND_AMOUNT.test(value)) return true;
+    return parseMoneyToMinorUnits(value) !== 0n;
+  }, copy.cash.adjustmentAmountInvalid)
+  .refine((value) => {
+    if (!SIGNED_FUND_AMOUNT.test(value)) return true;
+    return isWithinFundRange(parseMoneyToMinorUnits(value));
+  }, copy.cash.adjustmentAmountTooLarge);
 
 function openingSchema(requireBank: boolean, branchIds: number[]) {
   const branchCash = Object.fromEntries(

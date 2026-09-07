@@ -123,16 +123,39 @@ test("Finance money KPI cards use compact values at large scales", () => {
   }
 });
 
-test("Finance money entry limits align to the numeric(15,2) ceiling", () => {
+test("Finance fund entry uses the ledger amount-range ceiling, not numeric(15,2)", () => {
+  const money = readFileSync(
+    path.join(webRoot, "../../packages/shared/src/money/index.ts"),
+    "utf8",
+  );
+  assert.match(money, /MAX_FUND_AMOUNT = "100000000000"/);
+  assert.doesNotMatch(money, /999_999_999_999_999n/);
+
+  for (const relativePath of [
+    "app/(protected)/finance/cash-actions.ts",
+    "app/(protected)/finance/components/current-funds-section.tsx",
+  ]) {
+    const source = read(relativePath);
+    assert.match(source, /MAX_FUND_MINOR_UNITS/, relativePath);
+    assert.match(source, /from "@comtammatu\/shared\/money"/, relativePath);
+    assert.doesNotMatch(source, /999_999_999_999_999n/, relativePath);
+    assert.doesNotMatch(source, /MAX_FUND_MINOR_UNITS = /, relativePath);
+    assert.match(source, /\\d\{0,11\}/, relativePath);
+  }
+
+  const financeCopy = read("lib/messages/finance.ts");
+  assert.match(
+    financeCopy,
+    /openingAmountTooLarge: "Số tiền tối đa 100 tỷ đồng"/,
+  );
+  assert.match(
+    financeCopy,
+    /adjustmentAmountTooLarge: "Số tiền điều chỉnh tối đa 100 tỷ đồng"/,
+  );
+});
+
+test("Finance expense and target entry limits align to the numeric(15,2) ceiling", () => {
   const maximum = "999_999_999_999_999";
-  assert.match(
-    read("app/(protected)/finance/cash-actions.ts"),
-    new RegExp(`MAX_FUND_MINOR_UNITS = ${maximum}n`),
-  );
-  assert.match(
-    read("app/(protected)/finance/components/current-funds-section.tsx"),
-    new RegExp(`MAX_FUND_MINOR_UNITS = ${maximum}n`),
-  );
   assert.match(
     read("app/(protected)/finance/expense-actions.ts"),
     new RegExp(`MAX_EXPENSE_MINOR_UNITS = ${maximum}n`),

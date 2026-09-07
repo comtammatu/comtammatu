@@ -5,6 +5,9 @@ import {
   calculateVatAmount,
   canonicalizeMoney,
   hasMaximumScale,
+  isWithinFundRange,
+  MAX_FUND_AMOUNT,
+  MAX_FUND_MINOR_UNITS,
   minorUnitsToCanonical,
   multiplyUnitPrice,
   parseMoneyToMinorUnits,
@@ -44,6 +47,16 @@ test("database numeric values normalize scientific notation before money arithme
   assert.equal(canonicalizeMoney(1e21), "1000000000000000000000.00");
   assert.equal(canonicalizeMoney(1234.5), "1234.50");
   assert.throws(() => canonicalizeMoney(Number.NaN));
+});
+
+test("fund range matches the ledger 100 billion VND ceiling", () => {
+  assert.equal(MAX_FUND_AMOUNT, "100000000000");
+  assert.equal(MAX_FUND_MINOR_UNITS, parseMoneyToMinorUnits(MAX_FUND_AMOUNT));
+  assert.equal(minorUnitsToCanonical(MAX_FUND_MINOR_UNITS), "100000000000.00");
+  assert.equal(isWithinFundRange(MAX_FUND_MINOR_UNITS), true);
+  assert.equal(isWithinFundRange(-MAX_FUND_MINOR_UNITS), true);
+  assert.equal(isWithinFundRange(MAX_FUND_MINOR_UNITS + 1n), false);
+  assert.equal(isWithinFundRange(-(MAX_FUND_MINOR_UNITS + 1n)), false);
 });
 
 test("roundToCanonicalMoney half-up converts valuation floats to money", () => {

@@ -41,7 +41,10 @@ at `apps/web/proxy.ts`. Auth/ACL: `docs/modules/auth.md` and `database.md`.
 
 ## Documentation gates
 
-Caps and the worklog ban live in `scripts/check-docs-budget.mjs`. Default
-`lint` / `verify` fail ADRs >150 lines, `docs/agent/rules/*` >400, and
-`docs/worklog/**`. Spec/module/ref caps warn unless `--strict`. Shape budget
-is not behavioral evidence (ADR 0021).
+Caps live in `scripts/check-docs-budget.mjs` and apply only to files the
+agent loads as a whole: `docs/agent/rules/*` (400; `AGENTS.md` reads one
+topic rule), ADRs (150), and the worklog ban. Spec/module/ref are on-demand
+`Read`/`rg` via `references.md`; CodeGraph indexes supported source, not
+markdown. Do not add spec/module/ref line caps — shape budget is not
+behavioral evidence (ADR 0021). `tasks/todo.md` finiteness is
+`check-doc-staleness.mjs`.

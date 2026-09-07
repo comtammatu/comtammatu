@@ -26,6 +26,7 @@ Funds formula:
 - **Sales-branch `Tiền mặt`**: that branch's immutable cash opening + completed cash collections − cash refunds, cash expenses, cash supplier payments, cash bank deposits + append-only audited adjustments. POS-session variances are reconciliation evidence only.
 - **Company `Tiền tài khoản`**: one company bank ledger — immutable bank opening + every canonical SePay movement in `bank_transactions` + append-only audited adjustments. Not split by branch; shown on `/finance` **`Tài sản`** for every location scope.
 - **`Tổng tiền`**: scoped cash (company sum of sales-branch books, or one branch book) + company bank.
+- Opening and adjustment amounts cannot exceed 100 billion VND (`finance_fund_entries_amount_range`); app entry uses `MAX_FUND_MINOR_UNITS`.
 - Period `vietqr_revenue` belongs on revenue reports — not on **`Tài sản`**. `platform_revenue` is completed `platform` GROSS. `delivery_revenue` is completed delivery orders at channel list GROSS. Commission invoices from Foody/partners are AP later (D104).
 
 Show `Chưa mở sổ` until `initialize_finance_funds` (company bank) and

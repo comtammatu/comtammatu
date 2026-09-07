@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Default (`lint` / `verify`): fail `docs/worklog/**`, ADR >150 lines,
- * and `docs/agent/rules/*` >400 lines. `--strict` also fails LINE_BUDGETS
- * (optional local check; not wired into `lint`). Policy: `engineering.md`.
+ * Caps files the agent loads as a whole: `docs/agent/rules/*` (400),
+ * ADRs (150), and the retired worklog tree. Spec/module/ref are on-demand
+ * Read/rg and are not line-capped. Policy: `engineering.md`, ADR 0021.
  */
 import assert from "node:assert/strict";
 import {
@@ -18,34 +18,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const REPO_ROOT = process.cwd();
-
-const LINE_BUDGETS = [
-  { path: "docs/spec/design-system.md", maxLines: 1200 },
-  { path: "docs/ref/glossary.md", maxLines: 600 },
-  { path: "docs/modules/ui.md", maxLines: 400 },
-  { path: "docs/plan/decisions.md", maxLines: 160 },
-  { path: "docs/ref/finance-assets-vat-fnb.md", maxLines: 350 },
-  { path: "docs/spec/toast-notification-system.md", maxLines: 360 },
-  { path: "docs/spec/page-archetypes.md", maxLines: 700 },
-  { path: "docs/ref/inventory.md", maxLines: 400 },
-  { path: "docs/ref/screen-context-map.md", maxLines: 540 },
-  { path: "docs/ref/payroll-pit.md", maxLines: 300 },
-  { path: "docs/modules/finance.md", maxLines: 280 },
-  { path: "docs/modules/auth.md", maxLines: 260 },
-  { path: "docs/ref/accounting-books-tt133-tt99.md", maxLines: 200 },
-  { path: "docs/ref/labor-contracts.md", maxLines: 200 },
-  { path: "docs/spec/self-order-guest-ui.md", maxLines: 250 },
-  { path: "docs/spec/architecture.md", maxLines: 220 },
-  { path: "docs/ref/operational-data-contract.md", maxLines: 200 },
-  { path: "docs/modules/database.md", maxLines: 150 },
-  { path: "docs/modules/web-app.md", maxLines: 150 },
-  { path: "docs/ref/third-party-integrations.md", maxLines: 120 },
-  { path: "docs/spec/operational-audio-alerts.md", maxLines: 120 },
-  { path: "docs/spec/pwa.md", maxLines: 200 },
-  { path: "docs/ref/branch-route-inventory.md", maxLines: 150 },
-  { path: "docs/ref/einvoice-tax.md", maxLines: 120 },
-];
-
 const AGENT_RULE_MAX_LINES = 400;
 const ADR_MAX_LINES = 150;
 
@@ -65,15 +37,6 @@ export function collectDocsBudgetErrors(repoRoot = REPO_ROOT) {
     errors.push(
       "docs/worklog/** is retired; delete the directory (git is the archive)",
     );
-  }
-
-  for (const { path, maxLines } of LINE_BUDGETS) {
-    const full = join(repoRoot, path);
-    if (!existsSync(full)) continue;
-    const lines = countLines(full);
-    if (lines > maxLines) {
-      errors.push(`${path}: ${lines} lines exceeds budget ${maxLines}`);
-    }
   }
 
   const rulesDir = join(repoRoot, "docs/agent/rules");
@@ -131,13 +94,9 @@ function writeLines(filePath, lineCount) {
 function runSelfTest() {
   const fixture = mkdtempSync(join(tmpdir(), "comtammatu-docs-budget-"));
   try {
-    // Join segments so this source file never embeds a contiguous
-    // docs/worklog/*.md path (dead-doc-reference scans scripts/).
     mkdirSync(join(fixture, "docs", "worklog"), { recursive: true });
     writeFileSync(join(fixture, "docs", "worklog", "README.md"), "# worklog\n");
-    // Segment paths so this source never embeds contiguous docs/*/*.md
-    // fixture names (dead-doc-reference scans scripts/).
-    writeLines(join(fixture, "docs", "spec", "design-system.md"), 1201);
+    writeLines(join(fixture, "docs", "spec", "design-system.md"), 2000);
     writeLines(join(fixture, "docs", "plan", "adr", "9999-over.md"), 151);
     writeLines(join(fixture, "docs", "agent", "rules", "over.md"), 401);
 
@@ -145,7 +104,7 @@ function runSelfTest() {
     assert.match(all.join("\n"), /docs\/worklog/);
     assert.match(all.join("\n"), /docs\/plan\/adr\/9999-over\.md/);
     assert.match(all.join("\n"), /docs\/agent\/rules\/over\.md/);
-    assert.match(all.join("\n"), /docs\/spec\/design-system\.md/);
+    assert.doesNotMatch(all.join("\n"), /design-system/);
 
     const { errors, advisories } = selectDocsBudgetErrors(all, {
       strict: false,
@@ -153,11 +112,10 @@ function runSelfTest() {
     assert.match(errors.join("\n"), /docs\/worklog/);
     assert.match(errors.join("\n"), /docs\/plan\/adr\/9999-over\.md/);
     assert.match(errors.join("\n"), /docs\/agent\/rules\/over\.md/);
-    assert.doesNotMatch(errors.join("\n"), /design-system/);
-    assert.match(advisories.join("\n"), /design-system/);
+    assert.equal(advisories.length, 0);
 
     const strict = selectDocsBudgetErrors(all, { strict: true });
-    assert.match(strict.errors.join("\n"), /design-system/);
+    assert.equal(strict.errors.length, errors.length);
     assert.equal(strict.advisories.length, 0);
   } finally {
     rmSync(fixture, { recursive: true, force: true });
@@ -187,9 +145,7 @@ function main() {
   }
 
   console.log(
-    strict
-      ? "[docs-budget] worklog ban, ADR/agent-rule caps, and spec line budgets ok"
-      : "[docs-budget] worklog ban, ADR cap (150), and agent-rule cap (400) ok",
+    "[docs-budget] worklog ban, ADR cap (150), and agent-rule cap (400) ok",
   );
 }
 

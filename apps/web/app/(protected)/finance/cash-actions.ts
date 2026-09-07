@@ -2,27 +2,32 @@
 
 import { z } from "zod";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
-import { parseMoneyToMinorUnits } from "@comtammatu/shared/money";
+import {
+  isWithinFundRange,
+  MAX_FUND_MINOR_UNITS,
+  parseMoneyToMinorUnits,
+} from "@comtammatu/shared/money";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
+import { messages } from "@lib/messages";
 
+const copy = messages.finance.cash;
 const FINANCE_ROLES = MODULE_ACL.finance.allowedRoles;
 const BUSINESS_DATE = /^\d{4}-\d{2}-\d{2}$/;
-const MAX_FUND_MINOR_UNITS = 999_999_999_999_999n;
-const MONEY = /^(?:0|[1-9]\d{0,12})(?:\.\d{1,2})?$/;
-const SIGNED_MONEY = /^-?(?:0|[1-9]\d{0,12})(?:\.\d{1,2})?$/;
+const MONEY = /^(?:0|[1-9]\d{0,11})(?:\.\d{1,2})?$/;
+const SIGNED_MONEY = /^-?(?:0|[1-9]\d{0,11})(?:\.\d{1,2})?$/;
 const requiredFundAmount = z.preprocess(
   (value) =>
     typeof value === "string" && value.trim() === "" ? undefined : value,
   z
     .string()
     .trim()
-    .regex(MONEY, "Số tiền không hợp lệ")
+    .regex(MONEY, copy.openingAmountInvalid)
     .refine(
       (value) => parseMoneyToMinorUnits(value) <= MAX_FUND_MINOR_UNITS,
-      "Số tiền vượt ngưỡng hợp lệ",
+      copy.openingAmountTooLarge,
     ),
 );
 const fundDelta = z.preprocess(
@@ -30,11 +35,11 @@ const fundDelta = z.preprocess(
   z
     .string()
     .trim()
-    .regex(SIGNED_MONEY, "Số tiền điều chỉnh không hợp lệ")
-    .refine((value) => {
-      const amount = parseMoneyToMinorUnits(value);
-      return amount >= -MAX_FUND_MINOR_UNITS && amount <= MAX_FUND_MINOR_UNITS;
-    }, "Số tiền điều chỉnh vượt ngưỡng hợp lệ"),
+    .regex(SIGNED_MONEY, copy.adjustmentAmountInvalid)
+    .refine(
+      (value) => isWithinFundRange(parseMoneyToMinorUnits(value)),
+      copy.adjustmentAmountTooLarge,
+    ),
 );
 
 const initializeFinanceFundsSchema = z.object({

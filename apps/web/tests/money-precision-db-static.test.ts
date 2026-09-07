@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
-import { readActiveMigrationSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
+import {
+  readActiveMigrationSql,
+  extractSqlFunction,
+  assertSqlMatch,
+  assertSqlNotMatch,
+} from "./_lib/active-sql.ts";
 
 
 const repoRoot = path.resolve(import.meta.dirname, "../../..");
@@ -64,4 +69,29 @@ test("supplier invoice wrapper uses SQL COALESCE with matching numeric types", (
   assertSqlMatch(migration, /v_raw_discount := COALESCE\(/);
   assertSqlMatch(migration, /0::numeric/);
   assertSqlNotMatch(migration, /pg_catalog\.coalesce/);
+});
+
+test("finance fund entries cap amounts at 100 billion VND", () => {
+  const migration = readActiveMigrationSql();
+  const opening = extractSqlFunction(
+    migration,
+    "public.initialize_finance_funds",
+  );
+  const branchOpening = extractSqlFunction(
+    migration,
+    "public.initialize_branch_cash_opening",
+  );
+  const adjustment = extractSqlFunction(
+    migration,
+    "public.create_finance_fund_adjustment",
+  );
+
+  assertSqlMatch(
+    migration,
+    /CONSTRAINT finance_fund_entries_amount_range CHECK \(\(\(abs\(cash_delta\) <= \('100000000000'::bigint\)::numeric\) AND \(abs\(bank_delta\) <= \('100000000000'::bigint\)::numeric\)\)\)/,
+  );
+  assertSqlMatch(opening, /abs\(p_bank_opening\) > 100000000000/);
+  assertSqlMatch(branchOpening, /abs\(p_cash_opening\) > 100000000000/);
+  assertSqlMatch(adjustment, /abs\(v_cash\) > 100000000000/);
+  assertSqlMatch(adjustment, /abs\(v_bank\) > 100000000000/);
 });

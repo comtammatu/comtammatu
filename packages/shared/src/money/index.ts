@@ -71,6 +71,16 @@ export function parseMoneyToMinorUnits(value: string): bigint {
   return parseScaledInteger(value, 2);
 }
 
+/** Inclusive VND ceiling matching `finance_fund_entries_amount_range`. */
+export const MAX_FUND_AMOUNT = "100000000000";
+export const MAX_FUND_MINOR_UNITS = parseMoneyToMinorUnits(MAX_FUND_AMOUNT);
+
+export function isWithinFundRange(minorUnits: bigint): boolean {
+  return (
+    minorUnits >= -MAX_FUND_MINOR_UNITS && minorUnits <= MAX_FUND_MINOR_UNITS
+  );
+}
+
 export function canonicalizeMoney(value: string | number): string {
   if (typeof value === "number" && !Number.isFinite(value)) {
     throw new RangeError("Expected a finite money value");
