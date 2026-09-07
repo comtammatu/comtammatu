@@ -50,14 +50,15 @@ interface ModuleAcl {
 export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   owner: {
     path: "/",
-    // Control home («Hôm nay»): Owner + L0 ops adapters. Pure VP
-    // (JWT self_service + tenant self:access) reach `/` via proxy/login —
-    // not via this JWT allow-list. Branch roles stay on `/br/[id]`.
+    // Control home («Hôm nay»): Owner, L0 ops adapters, and office
+    // `self_service`. Proxy still requires live `self:access` for VP.
+    // Branch roles stay on `/br/[id]`.
     allowedRoles: [
       "owner",
       "accountant",
       "central_supply_ops",
       "central_kitchen_lead",
+      "self_service",
     ],
     label: getModuleLabelVi("owner"),
   },

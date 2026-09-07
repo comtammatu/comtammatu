@@ -985,8 +985,8 @@ contract change; route-local chrome outside this list is drift.
 
 1. **control_surface chrome** — the shared `AppShell`
    (`apps/web/app/components/app-shell.tsx`): one multi-group sidebar and one
-   top header for L0 routes (`/`, `/inventory`, `/orders`, `/hr`, `/finance`,
-   `/menu`, `/branches`, `/settings`, `/feedback`). Primary module tabs render
+   top header for L0 routes (`/`, `/work`, `/inventory`, `/orders`, `/hr`,
+   `/finance`, `/menu`, `/branches`, `/settings`, `/feedback`). Primary module tabs render
    first, with the active module's deep nav nested as sub-tabs. Bottom nav shows
    on phone and tablet portrait (`<lg`, `useIsMobile(1024)`); only desktop
    (`≥lg`) uses the fixed sidebar. Scroll: the inset `SidebarInset` card is

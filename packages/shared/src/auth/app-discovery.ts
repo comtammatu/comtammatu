@@ -79,10 +79,8 @@ function resolveBlockedLink(
 export function resolveControlSurfaceDiscoveryGroups(
   role: StaffRole,
 ): DiscoveredAppGroup[] {
-  if (role === "self_service") return [];
-
-  // Filter by MODULE_ACL so accountant / central / Control-home roles only see
-  // modules they can open (Owner-only tiles stay hidden).
+  // Filter by MODULE_ACL so accountant / central / office / Control-home
+  // roles only see modules they can open (Owner-only tiles stay hidden).
   return CONTROL_SURFACE_NAV_GROUPS.map((group) => ({
     title: group.title,
     surface: "owner" as const,

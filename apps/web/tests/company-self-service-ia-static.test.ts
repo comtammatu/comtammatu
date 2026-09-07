@@ -66,9 +66,9 @@ test("Self module keeps Owner denied and grants actor-only capability", () => {
   assert.match(acl, /role === "owner" && moduleKey === "me"/);
   assert.match(acl, /return false;/);
 
-  // A zero-module office employee (`self_service`) receives no work module;
-  // landing on `/me` grants self-service only, never Finance/Inventory/HR.
-  assert.match(discovery, /if \(role === "self_service"\) return \[\];/);
+  // Office staff (`self_service`) share Control Surface nav, filtered by
+  // MODULE_ACL: Hôm nay + Công việc. Finance/Inventory/HR stay hidden.
+  assert.doesNotMatch(discovery, /if \(role === "self_service"\) return \[\];/);
 
   // `self_service` is tenant-level, not a branch-required operational role.
   const staffRoles = /export const STAFF_ROLES = \[([\s\S]*?)\] as const/.exec(

@@ -4,6 +4,7 @@ import {
   Building2 as IconBuilding2,
   ClipboardList as IconClipboardList,
   LayoutDashboard as IconLayoutDashboard,
+  ListTodo as IconListTodo,
   MessageSquareHeart as IconMessageSquareHeart,
   Package as IconPackage,
   Printer as IconPrinter,
@@ -57,6 +58,7 @@ export type WorkNavFlags = {
 
 const CONTROL_SURFACE_ICON_MAP: Record<string, ElementType> = {
   LayoutDashboard: IconLayoutDashboard,
+  ListTodo: IconListTodo,
   BarChart3: IconBarChart3,
   Users: IconUsers,
   Settings: IconSettings,

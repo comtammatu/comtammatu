@@ -64,9 +64,8 @@ phases of the three regions.
 
 ## Consequences
 
-The 2026-08-12 queue-only body is retired as the `/` contract. Runtime
-`ControlSurfaceOverview` + `loadControlHomeAttention` (one `ItemGroup`) no
-longer matches this ADR until rebuilt. `/inventory` is not bound by this
+The 2026-08-12 queue-only body is retired. `/` composes Mine / Coordinate /
+Work-module pulse (empty regions omit). `/inventory` is not bound by this
 decision.
 
 ## Verification

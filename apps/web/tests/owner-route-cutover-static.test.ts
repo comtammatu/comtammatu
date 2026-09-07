@@ -22,7 +22,7 @@ test("root route owns the Control home", () => {
   assert.match(rootPage, /getTodayWorkState/);
   assert.doesNotMatch(overview, /MODULE_ACL\.finance\.path/);
   assert.doesNotMatch(overview, /operationsModules|ModuleLinks/);
-  assert.match(overview, /attentionTitle|AttentionQueue/);
+  assert.match(overview, /mineTitle|coordinateTitle|modulesTitle/);
   assert.doesNotMatch(rootPage, /redirect\(/);
 });
 

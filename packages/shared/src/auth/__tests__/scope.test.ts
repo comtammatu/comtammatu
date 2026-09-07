@@ -219,15 +219,15 @@ test("getDefaultRedirect → branch roles without scope fail closed", () => {
 
 test("resolveRoleHomeLink → shell home link follows role-accessible landing", () => {
   assert.deepEqual(resolveRoleHomeLink("owner"), {
-    label: "Tổng quan",
+    label: "Hôm nay",
     href: "/",
   });
   assert.deepEqual(resolveRoleHomeLink("owner", 3), {
-    label: "Tổng quan",
+    label: "Hôm nay",
     href: "/",
   });
   assert.deepEqual(resolveRoleHomeLink("self_service"), {
-    label: "Tổng quan",
+    label: "Hôm nay",
     href: "/",
   });
   assert.deepEqual(resolveRoleHomeLink("branch_manager"), {
@@ -256,13 +256,13 @@ test("resolveRoleHomeLink → shell home link follows role-accessible landing", 
 
   for (const role of ["central_supply_ops", "central_kitchen_lead"] as const) {
     assert.deepEqual(resolveRoleHomeLink(role, 3), {
-      label: "Tổng quan",
+      label: "Hôm nay",
       href: "/",
     });
   }
 
   assert.deepEqual(resolveRoleHomeLink("accountant"), {
-    label: "Tổng quan",
+    label: "Hôm nay",
     href: "/",
   });
 });
@@ -1023,10 +1023,15 @@ test("resolveDiscoveredApps → settings entries are discoverable for authorized
     ),
   );
 
-  assert.deepEqual(resolveControlSurfaceDiscoveryGroups("self_service"), []);
+  assert.deepEqual(
+    resolveControlSurfaceDiscoveryGroups("self_service").flatMap((group) =>
+      group.items.map((item) => item.moduleKey),
+    ),
+    ["owner", "work"],
+  );
   assert.deepEqual(
     resolveDiscoveredApps("self_service").map((app) => app.moduleKey),
-    ["me"],
+    ["owner", "work", "me"],
   );
 });
 

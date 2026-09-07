@@ -213,6 +213,22 @@ for (const surface of FLAT_CONTROL_SURFACE_MODULE_IDS) {
   });
 }
 
+test("self_service primary tabs are Hôm nay and Công việc", () => {
+  const items = resolveControlSurfacePrimaryTabs("self_service");
+  assert.deepEqual(
+    items.map((item) => item.href),
+    ["/", "/work"],
+  );
+  assert.deepEqual(
+    items.map((item) => item.label),
+    ["Hôm nay", "Công việc"],
+  );
+  assert.equal(
+    items.some((item) => item.href.startsWith("/finance")),
+    false,
+  );
+});
+
 test("resolveControlSurfaceDeepNav treats work as a flat module without redundant sub-nav", () => {
   const ownerGroups = resolveControlSurfaceDeepNav("owner", "work", {
     work: { canManageTeam: true },

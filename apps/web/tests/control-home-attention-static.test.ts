@@ -17,13 +17,15 @@ const login = readFileSync(
   "utf8",
 );
 
-test("Control home page loads ACL-gated attention and a queue-only overview", () => {
+test("Control home page loads ACL-gated attention and a three-region overview", () => {
   assert.match(page, /loadControlHomeAttention/);
   assert.match(page, /getTodayWorkState/);
   assert.match(page, /ControlSurfaceOverview/);
-  assert.match(overview, /AttentionQueue|attentionTitle/);
+  assert.match(overview, /mineTitle|coordinateTitle|modulesTitle/);
   assert.match(overview, /AppTodayCommandBar/);
   assert.match(overview, /canAccess\(role, "me"\)/);
+  assert.match(overview, /canAccess\(role, "work"\)/);
+  assert.match(overview, /MODULE_ACL\.work\.path|"\/work"/);
   assert.doesNotMatch(overview, /KpiCard|KpiRow/);
   assert.doesNotMatch(overview, /operationsModules|ModuleLinks/);
   assert.doesNotMatch(overview, /operationsTitle|foundationTitle|shortcutsTitle/);

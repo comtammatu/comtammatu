@@ -53,7 +53,7 @@ export const CONTROL_SURFACE_NAV_GROUPS: NavGroupConfig[] = [
       {
         moduleKey: "owner",
         icon: "LayoutDashboard",
-        label: APP_COPY_VI.ownerTitle,
+        label: MODULE_LABELS_VI.owner,
       },
       { moduleKey: "finance", icon: "Wallet", label: MODULE_LABELS_VI.finance },
       { moduleKey: "orders", icon: "ClipboardList", label: MODULE_LABELS_VI.orders },

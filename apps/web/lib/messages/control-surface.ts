@@ -6,6 +6,9 @@ import { BRANCH_VI } from "@comtammatu/shared/messages";
 export const controlSurface = {
   dashboard: {
     title: "Hôm nay",
+    mineTitle: "Của tôi",
+    coordinateTitle: "Điều phối",
+    modulesTitle: "Theo phân hệ",
     attentionTitle: "Cần xử lý",
     attentionEmpty: "Không có việc cần xử lý ngay.",
     todayBar: {

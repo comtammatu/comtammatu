@@ -42,7 +42,7 @@ type SiteLike = {
 };
 
 export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
-  owner: "Tổng quan",
+  owner: "Hôm nay",
   menu: "Thực đơn",
   promotions: "Khuyến mãi",
   inventory: "Kho hàng",

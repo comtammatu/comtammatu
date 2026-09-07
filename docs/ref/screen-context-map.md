@@ -33,7 +33,7 @@ archetype. Chỉ dựa Dual Thesis + ACL hiện có — không thêm persona ngh
 | Kho Tổng / Bếp TT | Inventory L0 + stock site trung tâm | `control_surface` + `branch_surface` (site) |
 | Quản lý chi nhánh (`branch_manager`) | Ca CN, đội, kho CN, settings CN, ngoại lệ trong ngày | `branch_surface` |
 | Thu ngân / Bếp / Runner | Bán hàng · chế biến · giao món | `station_chrome` |
-| NV ngoài Branch (Kế toán / Kho / Văn phòng) | Chấm công, lịch, phép, hồ sơ, phiếu lương | employee (`/me/*`) |
+| NV văn phòng (`self_service`) | Hôm nay `/` + Công việc `/work`; chấm công / hồ sơ / phép / lương trên `/me` | `control_surface` (+ employee trên `/me`) |
 | Khách / hệ thống auth | Self-order, HĐĐT, feedback QR, đăng nhập / từ chối truy cập | `public` |
 
 Owner **không** dùng `/me`. Role ACL `owner` ≠ tên plane; UI gọi nửa L0 là

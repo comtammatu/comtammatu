@@ -30,6 +30,7 @@ test("control_surface routes share one persistent protected shell", () => {
   assert.doesNotMatch(shell, /flattenInventoryDeepNav/);
   assert.match(nav, /export function resolveControlSurfacePrimaryTabs/);
   assert.match(nav, /export function resolveControlSurfaceDeepNav/);
+  assert.match(nav, /ListTodo:/);
   assert.match(nav, /resolveControlSurfaceCoreDeepNav/);
   assert.match(nav, /resolveControlSurfaceNavGroups/);
   assert.match(nav, /resolveInventoryNav/);

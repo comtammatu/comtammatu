@@ -48,7 +48,15 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "staff",
     "work",
   ],
-  self_service: ["hr", "hr_payroll", "me", "notifications", "staff", "work"],
+  self_service: [
+    "hr",
+    "hr_payroll",
+    "me",
+    "notifications",
+    "owner",
+    "staff",
+    "work",
+  ],
   branch_manager: [
     "branch_close_day",
     "branch_dashboard",

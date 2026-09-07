@@ -5,6 +5,12 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Restore office staff Control Surface IA
+State: verify
+Exit: Office `self_service` sees Control home + Work in chrome; `/` is Mine / Coordinate / Work pulse; `/me` stays personal.
+Evidence: `office-control-surface-nav.test.ts`; `control-home-attention-static.test.ts`; Gate `/`+`/work` `LANDING` `none` `apps/web/app/(protected)/page.tsx`.
+- [ ] Authenticated office viewport: home + Work tabs; `/work` inbox; `/me` has no Work CTA
+
 ## Align Work inbox and staff assignment scope
 State: verify
 Tier: T3
@@ -824,14 +830,9 @@ Evidence: Production `enloyfnuerqgaqderbwb` applied `20260903025327` in the owne
 - [ ] Smoke: 200k-min code, void below min, promo clears
 
 ## Burn down frozen Má Tư DS debt
-
 State: doing
-Kind: debt
-Tier: T3
-Lane: design-system/enforcement
 Exit: Every frozen budget below trends down by removing allowlist entries (ratchet only fails on growth, so burned files may be dropped); the 40 `tune` pages reach `keep`/`final` disposition through the three exemplar waves. Never raise a budget; new files start at 0.
 Evidence: `scripts/check-ui-contract.mjs` owns the frozen `legacy-debt-ratchet` counts; `corepack pnpm audit:ui-components` owns Page Disposition Coverage; exemplar fixes in `finance/components/filter-bar.tsx`, `team/team-workspace-tabs.tsx`, `work/_lib/compose-styles.ts`, and the icon-tier batch.
-
 - [ ] Wave 1 — control_surface LIST/DETAIL pages follow `apps/web/app/(protected)/inventory/grn/page.tsx`.
 - [ ] Wave 2 — branch `(operator)` pages follow `apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx`.
 - [ ] Wave 3 — station plane pages follow `apps/web/app/(protected)/br/[branchId]/kds/page.tsx`; spot-check light + dark at the station viewport.
