@@ -111,6 +111,18 @@ Thu ngân chi nhánh được gán đếm tồn nước theo ca (sáng/chiều/t
 2. Đếm theo Đơn vị đang dùng; hệ thống quy về Đơn vị chuẩn.
 3. RPC hoàn tất mới post `count_adjustment`.
 
+### Sửa sai đơn vị trên phiếu đã duyệt
+
+Khi nhập nhầm đơn vị làm phiếu ghi tăng tồn sai, Chủ sở hữu xác nhận lại số
+đếm, đơn vị và lý do sửa. Hệ thống ghi thêm chênh lệch giữa số đúng và số sai
+vào đúng vị trí của phiếu; toàn bộ nhập, xuất và tiêu hao phát sinh sau phiếu
+vẫn được giữ nguyên. Tồn hiện tại vì vậy có thể khác số đếm đã sửa.
+
+Bản sửa lưu số trước/sau và bút toán gốc để đối chiếu, đồng thời đối soát lại
+giá trị tồn; không ghi phần sửa sai thành tiêu hao bán hàng hoặc hao hụt.
+Gửi lại cùng một yêu cầu không trừ tồn thêm lần nữa. Nhiều dòng trong cùng
+yêu cầu được sửa toàn bộ hoặc không dòng nào được ghi nhận.
+
 ## 6. Đóng ngày và bằng chứng
 
 - GRN trung tâm confirmed đúng; yêu cầu CN không kẹt; DC nhận đủ hoặc có bước tiếp.

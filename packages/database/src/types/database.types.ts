@@ -13321,6 +13321,10 @@ export type Database = {
         Args: { p_new_method: string; p_payment_id: number; p_reason: string }
         Returns: Json
       }
+      correct_posted_count_lines: {
+        Args: { p_corrections: Json; p_reason: string }
+        Returns: Json
+      }
       count_my_work_tasks_due: { Args: { p_before: string }; Returns: number }
       count_unread_notifications: { Args: never; Returns: number }
       count_unread_notifications_by_target: {
