@@ -182,6 +182,14 @@ export const transferReceiveRpcMappings: readonly RpcErrorMapping[] = [
     userMessage:
       "Lệch số dư giá vốn chuyển kho. Vui lòng tải lại hoặc liên hệ quản trị.",
   },
+  {
+    match: includesAny(
+      "transfer_to_location_invalid",
+      "transfer_to_location_missing",
+    ),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,
+    userMessage: "Vị trí nhận không hợp lệ.",
+  },
   privilege,
   notFound,
 ];

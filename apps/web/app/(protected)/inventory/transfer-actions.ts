@@ -785,6 +785,7 @@ export async function transferReceive(
     string,
     number | { qty: number; note?: string; shortfall_class?: string }
   > | null,
+  toLocationId?: number | null,
 ): Promise<ActionResult> {
   const id = z.coerce.number().int().positive().safeParse(transferId);
   if (!id.success)
@@ -823,10 +824,36 @@ export async function transferReceive(
     };
   }
 
-  const { error } = await authz.supabase.rpc("stock_transfer_receive", {
+  const destination = z.coerce
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .nullable()
+    .safeParse(toLocationId);
+  if (!destination.success) {
+    return { success: false, error: "Vị trí nhận không hợp lệ." };
+  }
+
+  const receiveArgs: {
+    p_transfer_id: number;
+    p_items: typeof items;
+    p_to_location_id?: number;
+  } = {
     p_transfer_id: id.data,
     p_items: items ?? null,
-  });
+  };
+  if (
+    destination.data != null &&
+    destination.data !== authz.transfer.to_location_id
+  ) {
+    receiveArgs.p_to_location_id = destination.data;
+  }
+
+  const { error } = await authz.supabase.rpc(
+    "stock_transfer_receive" as never,
+    receiveArgs as never,
+  );
   if (error) {
     console.error("inventory.transfer.receive_failed", {
       error: error instanceof Error ? error.message : String(error),

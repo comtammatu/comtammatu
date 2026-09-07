@@ -15,6 +15,10 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import { Item } from "@comtammatu/ui/components/item";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@comtammatu/ui/components/toggle-group";
 import { QuantityInput } from "@/components/form/domain-number-inputs";
 import { useIsOnline } from "@/components/pwa-runtime";
 import {
@@ -50,10 +54,13 @@ import {
 } from "../../transfer-actions";
 import { messages } from "@lib/messages";
 import {
+  defaultTransferReceiveLocationId,
   getTransferActionConfig,
   isTransferReceiveReady,
+  resolveTransferReceiveLocationId,
   type TransferActionKind,
   type TransferDetail,
+  type TransferReceiveLocations,
 } from "@lib/inventory/transfer-detail-model";
 import { computeTransferLineDisplayUnitCost } from "./line-view-model";
 import {
@@ -105,6 +112,7 @@ export function TransferDetailClient({
   embeddedHeader = true,
   listHref,
   intraSiteData = null,
+  receiveLocations = null,
 }: {
   transfer: TransferDetail;
   userRole: StaffRole;
@@ -115,6 +123,7 @@ export function TransferDetailClient({
   embeddedHeader?: boolean;
   listHref?: string;
   intraSiteData?: IntraSiteTransferData | null;
+  receiveLocations?: TransferReceiveLocations | null;
 }) {
   const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
 
@@ -130,6 +139,9 @@ export function TransferDetailClient({
         userBranchId === transfer.fromBranchId));
   const statusBadge = getStatusBadgeMeta("inventory", transfer.status);
   const [isPending, startTransition] = useTransition();
+  const [receiveLocationId, setReceiveLocationId] = useState<number | null>(() =>
+    defaultTransferReceiveLocationId(transfer, receiveLocations),
+  );
   const [receiveQty, setReceiveQty] = useState<Record<number, string>>(() => {
     const initial: Record<number, string> = {};
     for (const item of transfer.items) {
@@ -216,6 +228,15 @@ export function TransferDetailClient({
           toast.error(copy.shortageNoteMinLength);
           return;
         }
+        const toLocationId = resolveTransferReceiveLocationId({
+          selectedId: receiveLocationId,
+          locations: receiveLocations,
+          fallbackLocationId: transfer.toLocationId,
+        });
+        if (toLocationId == null) {
+          toast.error(copy.receiveNative.receiveLocationRequired);
+          return;
+        }
         const trimmedNote = shortNote.trim();
         const payload: Record<
           string,
@@ -243,7 +264,7 @@ export function TransferDetailClient({
                 }
               : { qty };
         }
-        res = await transferReceive(transfer.id, payload);
+        res = await transferReceive(transfer.id, payload, toLocationId);
       }
 
       if (!res?.success) {
@@ -555,6 +576,42 @@ export function TransferDetailClient({
       </Item>
       <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
         <div className="order-2 flex min-w-0 flex-col gap-4 lg:order-1">
+          {isReceiveMode && receiveLocations ? (
+            <AppSection
+              className="min-w-0"
+              title={copy.receiveNative.receiveLocationTitle}
+            >
+              <ToggleGroup
+                type="single"
+                value={
+                  receiveLocationId == null ? "" : String(receiveLocationId)
+                }
+                onValueChange={(next) => {
+                  if (next === "") return;
+                  setReceiveLocationId(Number(next));
+                }}
+                variant="outline"
+                size="sm"
+                spacing={0}
+                disabled={isPending || !isOnline}
+                className="grid w-full min-w-0 grid-cols-2"
+                aria-label={copy.receiveNative.receiveLocationTitle}
+              >
+                <ToggleGroupItem
+                  value={String(receiveLocations.warehouse.id)}
+                  className="min-w-0"
+                >
+                  {copy.receiveNative.receiveLocationWarehouse}
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value={String(receiveLocations.kitchen.id)}
+                  className="min-w-0"
+                >
+                  {copy.receiveNative.receiveLocationKitchen}
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </AppSection>
+          ) : null}
           <AppSection
             className="min-w-0"
             title={tTerm("ingredientsList")}
@@ -821,7 +878,14 @@ export function TransferDetailClient({
                   isPending ||
                   !isOnline ||
                   !actionConfig.enabled ||
-                  (isReceiveMode && actionConfig.kind === "receive" && !noteOk)
+                  (isReceiveMode &&
+                    actionConfig.kind === "receive" &&
+                    (!noteOk ||
+                      resolveTransferReceiveLocationId({
+                        selectedId: receiveLocationId,
+                        locations: receiveLocations,
+                        fallbackLocationId: transfer.toLocationId,
+                      }) == null))
                 }
                 size="default"
                 className="px-4 font-semibold"

@@ -42,8 +42,51 @@ export interface TransferDetail {
   }>;
 }
 
+export type TransferReceiveLocationKind = "warehouse" | "kitchen";
+
+export type TransferReceiveLocationOption = {
+  id: number;
+  kind: TransferReceiveLocationKind;
+  label: string;
+};
+
+export type TransferReceiveLocations = {
+  warehouse: TransferReceiveLocationOption;
+  kitchen: TransferReceiveLocationOption;
+};
+
 export type TransferActionKind =
   "confirm_ship" | "mark_in_transit" | "confirm_receive" | "receive";
+
+export function defaultTransferReceiveLocationId(
+  transfer: Pick<TransferDetail, "toLocationId">,
+  locations: TransferReceiveLocations | null,
+): number | null {
+  if (locations == null) return transfer.toLocationId;
+  if (transfer.toLocationId === locations.kitchen.id) {
+    return locations.kitchen.id;
+  }
+  return locations.warehouse.id;
+}
+
+export function resolveTransferReceiveLocationId({
+  selectedId,
+  locations,
+  fallbackLocationId,
+}: {
+  selectedId: number | null;
+  locations: TransferReceiveLocations | null;
+  fallbackLocationId: number;
+}): number | null {
+  if (locations == null) return fallbackLocationId;
+  if (
+    selectedId === locations.warehouse.id ||
+    selectedId === locations.kitchen.id
+  ) {
+    return selectedId;
+  }
+  return null;
+}
 
 export interface TransferActionConfig {
   kind: TransferActionKind;

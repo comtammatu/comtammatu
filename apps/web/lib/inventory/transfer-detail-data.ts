@@ -9,11 +9,16 @@ import { fetchEntityAuditLogs, type AuditLogRow } from "@/_lib/audit";
 import { currentUserHasPermission } from "@/_lib/permissions";
 import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
 import { formatDateTime } from "@lib/inventory/format";
+import type { TenantSupabase } from "@lib/inventory/types";
 import { fetchStockTransferDetail } from "@/(protected)/inventory/transfer-actions";
 import { computeTransferLineTotal } from "@/(protected)/inventory/transfers/[id]/line-view-model";
-import type { TransferDetail } from "./transfer-detail-model";
+import type {
+  TransferDetail,
+  TransferReceiveLocations,
+} from "./transfer-detail-model";
 import {
   formatInventoryLocationLabelVi,
+  getInventoryLocationKindLabelVi,
   UNKNOWN_LABEL_VI,
 } from "@comtammatu/shared/labels";
 import {
@@ -46,6 +51,73 @@ function relatedOne<T>(value: T | T[] | null | undefined): T | null {
   return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
+type ReceiveLocationRow = {
+  id: number;
+  location_kind: string | null;
+};
+
+export async function loadTransferReceiveLocations({
+  supabase,
+  tenantId,
+  destBranchId,
+}: {
+  supabase: TenantSupabase;
+  tenantId: number;
+  destBranchId: number;
+}): Promise<TransferReceiveLocations | null> {
+  const { data: destBranch, error: destBranchError } = await supabase
+    .from("branches")
+    .select("id, branch_kind")
+    .eq("tenant_id", tenantId)
+    .eq("id", destBranchId)
+    .maybeSingle();
+  if (destBranchError) {
+    throw new Error("inventory.transfer.receive_locations_failed");
+  }
+  if (destBranch?.branch_kind !== "branch") return null;
+
+  const { data: rawLocations, error: locationsError } = await supabase
+    .from("inventory_locations")
+    .select("id, location_kind")
+    .eq("tenant_id", tenantId)
+    .eq("branch_id", destBranchId)
+    .eq("is_active", true)
+    .in("location_kind", ["warehouse", "kitchen"]);
+  if (locationsError) {
+    throw new Error("inventory.transfer.receive_locations_failed");
+  }
+
+  const locations = (rawLocations ?? []) as unknown as ReceiveLocationRow[];
+  const warehouse = locations.find(
+    (location) => location.location_kind === "warehouse",
+  );
+  const kitchen = locations.find(
+    (location) => location.location_kind === "kitchen",
+  );
+  if (!warehouse || !kitchen) return null;
+
+  return {
+    warehouse: {
+      id: warehouse.id,
+      kind: "warehouse",
+      label: getInventoryLocationKindLabelVi({
+        siteKind: "branch",
+        locationKind: "warehouse",
+        length: "short",
+      }),
+    },
+    kitchen: {
+      id: kitchen.id,
+      kind: "kitchen",
+      label: getInventoryLocationKindLabelVi({
+        siteKind: "branch",
+        locationKind: "kitchen",
+        length: "short",
+      }),
+    },
+  };
+}
+
 function formatTransferLocationLabel(
   location: TransferLocationRow | undefined,
   fallbackBranchName: string | null,
@@ -68,6 +140,7 @@ export interface TransferDetailPageData {
   correctionBranches: Array<{ id: number; name: string }>;
   auditLogs: AuditLogRow[];
   intraSiteData: IntraSiteTransferData | null;
+  receiveLocations: TransferReceiveLocations | null;
 }
 
 export async function loadTransferDetailPageData({
@@ -301,6 +374,17 @@ export async function loadTransferDetailPageData({
         })
       : null;
 
+  const receiveLocations =
+    transferScope === "inter_site" &&
+    (transfer.status === "in_transit" ||
+      transfer.status === "confirmed_receive")
+      ? await loadTransferReceiveLocations({
+          supabase,
+          tenantId: claims.tenant_id,
+          destBranchId: transfer.toBranchId,
+        })
+      : null;
+
   return {
     transfer,
     userRole: claims.user_role,
@@ -308,5 +392,6 @@ export async function loadTransferDetailPageData({
     correctionBranches,
     auditLogs,
     intraSiteData,
+    receiveLocations,
   };
 }

@@ -19,7 +19,8 @@ single-warehouse sites.
 
 `stock_transfers.transfer_scope`:
 
-- `inter_site`: distinct branches, warehouse endpoints, ship/receive lifecycle.
+- `inter_site`: distinct branches; source warehouse; destination warehouse, or
+  the store kitchen chosen at receive; ship/receive lifecycle.
 - `intra_site`: one store, warehouse↔kitchen, immediate `received`, atomic
   `commit_intra_site_transfer`. Completed intra-site transfers are immutable;
   reverse via `reverse_intra_site_transfer`.

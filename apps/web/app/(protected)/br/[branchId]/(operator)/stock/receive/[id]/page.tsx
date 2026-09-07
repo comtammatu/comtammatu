@@ -49,6 +49,7 @@ export default async function OperatorStockReceiveDetailPage({
           : `/br/${branchId}/stock/transfer/${transferId}`
       }
       documentTitle={documentTitle}
+      receiveLocations={data.receiveLocations}
     />
   );
 }

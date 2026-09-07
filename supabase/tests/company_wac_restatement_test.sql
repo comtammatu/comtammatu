@@ -116,7 +116,7 @@ BEGIN
   INTO v_definition
   FROM pg_catalog.pg_proc AS procedure
   WHERE procedure.oid =
-    'private.execute_stock_transfer_receive(bigint,jsonb)'::pg_catalog.regprocedure;
+    'private.execute_stock_transfer_receive(bigint,jsonb,bigint)'::pg_catalog.regprocedure;
   IF v_definition ~ 'avg_unit_cost = v_new_wac' THEN
     RAISE EXCEPTION 'COMPANY WAC: transfer receive must not overwrite site WAC';
   END IF;

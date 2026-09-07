@@ -17,12 +17,17 @@ import {
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
+import { Field, FieldLabel } from "@comtammatu/ui/components/field";
 import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
 import { Item, ItemGroup } from "@comtammatu/ui/components/item";
 import { Progress } from "@comtammatu/ui/components/progress";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@comtammatu/ui/components/toggle-group";
 import { cn } from "@comtammatu/ui";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { useIsOnline } from "@/components/pwa-runtime";
@@ -37,9 +42,12 @@ import {
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
 import {
+  defaultTransferReceiveLocationId,
   isTransferReceiveReady,
   isTransferReceiveStartable,
+  resolveTransferReceiveLocationId,
   type TransferDetail,
+  type TransferReceiveLocations,
 } from "@lib/inventory/transfer-detail-model";
 import { messages } from "@lib/messages";
 import { applyInventoryActionError } from "@lib/inventory/apply-inventory-action-error";
@@ -51,6 +59,7 @@ type TransferReceiveClientProps = {
   detailHref?: string | null;
   /** Prefer parent YCH number on store branch receive chrome. */
   documentTitle?: string | null;
+  receiveLocations?: TransferReceiveLocations | null;
 };
 
 /** Prevents Strict Mode / remount double-start for the same transfer. */
@@ -81,11 +90,58 @@ function ReceiveChrome({
   );
 }
 
+function ReceiveLocationField({
+  locations,
+  value,
+  disabled,
+  onChange,
+}: {
+  locations: TransferReceiveLocations;
+  value: number | null;
+  disabled: boolean;
+  onChange: (locationId: number) => void;
+}) {
+  const receiveCopy = messages.inventory.transfer.receiveNative;
+  return (
+    <Field className="gap-2">
+      <FieldLabel>{receiveCopy.receiveLocationTitle}</FieldLabel>
+      <ToggleGroup
+        type="single"
+        value={value == null ? "" : String(value)}
+        onValueChange={(next) => {
+          if (next === "") return;
+          onChange(Number(next));
+        }}
+        variant="outline"
+        size="touch"
+        spacing={0}
+        disabled={disabled}
+        className="grid w-full min-w-0 grid-cols-2"
+        aria-label={receiveCopy.receiveLocationTitle}
+      >
+        <ToggleGroupItem
+          value={String(locations.warehouse.id)}
+          className="min-w-0"
+        >
+          {receiveCopy.receiveLocationWarehouse}
+        </ToggleGroupItem>
+        <ToggleGroupItem
+          value={String(locations.kitchen.id)}
+          className="min-w-0"
+        >
+          {receiveCopy.receiveLocationKitchen}
+        </ToggleGroupItem>
+      </ToggleGroup>
+    </Field>
+  );
+}
+
 export function TransferReceiveClient({
   transfer,
   backHref,
   detailHref = null,
   documentTitle = null,
+  receiveLocations = null,
 }: TransferReceiveClientProps) {
   const router = useRouter();
   const isOnline = useIsOnline();
@@ -116,15 +172,24 @@ export function TransferReceiveClient({
     isTransferReceiveStartable(transfer.status),
   );
   const [startError, setStartError] = useState<string | null>(null);
+  const [receiveLocationId, setReceiveLocationId] = useState<number | null>(() =>
+    defaultTransferReceiveLocationId(transfer, receiveLocations),
+  );
 
   const isReceiveMode = isTransferReceiveReady(transfer.status);
   const canStartReceive = isTransferReceiveStartable(transfer.status);
   const showReceiveWorkspace = isReceiveMode || canStartReceive;
   const remaining = total - confirmed.size;
   const progress = total === 0 ? 0 : confirmed.size / total;
+  const resolvedLocationId = resolveTransferReceiveLocationId({
+    selectedId: receiveLocationId,
+    locations: receiveLocations,
+    fallbackLocationId: transfer.toLocationId,
+  });
   const confirmBlocked =
     isPending ||
     !isOnline ||
+    resolvedLocationId == null ||
     (canStartReceive && (isStarting || startError != null));
 
   const sheetItem = useMemo(
@@ -191,6 +256,15 @@ export function TransferReceiveClient({
       toast.error(messages.inventory.stockRequests.journey.offlineMutation);
       return;
     }
+    const toLocationId = resolveTransferReceiveLocationId({
+      selectedId: receiveLocationId,
+      locations: receiveLocations,
+      fallbackLocationId: transfer.toLocationId,
+    });
+    if (toLocationId == null) {
+      toast.error(receiveCopy.receiveLocationRequired);
+      return;
+    }
     const payload: Record<
       string,
       { qty: number; note?: string; shortfall_class?: string }
@@ -231,7 +305,11 @@ export function TransferReceiveClient({
           return;
         }
       }
-      const result = await transferReceive(transfer.id, payload);
+      const result = await transferReceive(
+        transfer.id,
+        payload,
+        toLocationId,
+      );
       if (result.success) {
         toast.success(receiveCopy.receiveSuccess);
         router.push(backHref);
@@ -313,20 +391,25 @@ export function TransferReceiveClient({
         </Alert>
       ) : null}
 
-      <BranchOperatorPanel size="sm" contentClassName="gap-2">
+      <BranchOperatorPanel size="sm" contentClassName="gap-3">
+        {receiveLocations ? (
+          <ReceiveLocationField
+            locations={receiveLocations}
+            value={receiveLocationId}
+            disabled={isPending || !isOnline}
+            onChange={setReceiveLocationId}
+          />
+        ) : null}
         <div className="flex items-center gap-2">
           <Progress
             value={progress * 100}
             className="h-1.5 flex-1"
             aria-label={receiveCopy.receiveProgress(confirmed.size, total)}
           />
-          <span className="text-xs font-medium text-muted-foreground tabular-nums">
+          <span className="shrink-0 text-xs font-medium text-muted-foreground tabular-nums">
             {receiveCopy.receiveProgress(confirmed.size, total)}
           </span>
         </div>
-        <p className="text-xs text-muted-foreground">
-          {receiveCopy.receiveReviewHint}
-        </p>
       </BranchOperatorPanel>
 
       <ItemGroup className="gap-2">
@@ -334,6 +417,8 @@ export function TransferReceiveClient({
           const isConfirmed = confirmed.has(item.ingredientId);
           const value = values[item.ingredientId] ?? item.qty;
           const isShortage = isConfirmed && value < item.qty;
+          const classification =
+            shortfallClass[item.ingredientId] ?? "source_variance";
           return (
             <div key={item.ingredientId} className="flex flex-col gap-2">
               <InteractiveCard
@@ -364,7 +449,9 @@ export function TransferReceiveClient({
                   className={cn(
                     "shrink-0 rounded-md px-3 py-1 font-mono text-sm font-semibold tabular-nums",
                     isConfirmed
-                      ? "bg-primary/10 text-primary"
+                      ? isShortage
+                        ? "bg-destructive/10 text-destructive"
+                        : "bg-primary/10 text-primary"
                       : "text-muted-foreground",
                   )}
                 >
@@ -374,62 +461,50 @@ export function TransferReceiveClient({
               {isShortage ? (
                 <Item
                   variant="outline"
-                  className="flex-col items-stretch gap-1.5"
+                  className="flex-col items-stretch gap-2"
                   render={<label />}
                 >
                   <span className="text-xs font-medium text-destructive">
                     {copy.shortageNoteTitle}
                   </span>
-                  <div className="flex flex-col gap-2">
-                    <span className="text-xs font-medium">
-                      {copy.shortfallClassTitle}
-                    </span>
-                    <div className="grid grid-cols-1 gap-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant={
-                          (shortfallClass[item.ingredientId] ??
-                            "source_variance") === "source_variance"
-                            ? "default"
-                            : "outline"
+                  <Field className="gap-1.5">
+                    <FieldLabel>{copy.shortfallClassTitle}</FieldLabel>
+                    <ToggleGroup
+                      type="single"
+                      value={classification}
+                      onValueChange={(next) => {
+                        if (
+                          next !== "source_variance" &&
+                          next !== "transit_loss"
+                        ) {
+                          return;
                         }
-                        disabled={isPending || !isOnline}
-                        onClick={() =>
-                          setShortfallClass((current) => ({
-                            ...current,
-                            [item.ingredientId]: "source_variance",
-                          }))
-                        }
+                        setShortfallClass((current) => ({
+                          ...current,
+                          [item.ingredientId]: next,
+                        }));
+                      }}
+                      variant="outline"
+                      size="sm"
+                      spacing={0}
+                      disabled={isPending || !isOnline}
+                      className="grid w-full min-w-0 grid-cols-1"
+                      aria-label={copy.shortfallClassTitle}
+                    >
+                      <ToggleGroupItem
+                        value="source_variance"
+                        className="min-w-0 justify-start"
                       >
                         {copy.shortfallClassSourceVariance}
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant={
-                          shortfallClass[item.ingredientId] === "transit_loss"
-                            ? "default"
-                            : "outline"
-                        }
-                        disabled={isPending || !isOnline}
-                        onClick={() =>
-                          setShortfallClass((current) => ({
-                            ...current,
-                            [item.ingredientId]: "transit_loss",
-                          }))
-                        }
+                      </ToggleGroupItem>
+                      <ToggleGroupItem
+                        value="transit_loss"
+                        className="min-w-0 justify-start"
                       >
                         {copy.shortfallClassTransitLoss}
-                      </Button>
-                    </div>
-                    <p className="text-2xs text-muted-foreground">
-                      {(shortfallClass[item.ingredientId] ??
-                        "source_variance") === "transit_loss"
-                        ? copy.shortfallClassTransitLossHint
-                        : copy.shortfallClassSourceVarianceHint}
-                    </p>
-                  </div>
+                      </ToggleGroupItem>
+                    </ToggleGroup>
+                  </Field>
                   <Textarea
                     value={notes[item.ingredientId] ?? ""}
                     onChange={(event) =>

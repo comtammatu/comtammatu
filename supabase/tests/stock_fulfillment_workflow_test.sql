@@ -14,7 +14,7 @@ DECLARE
     'public.cancel_stock_transfer(bigint,text)',
     'public.stock_transfer_confirm_ship(bigint)',
     'public.stock_transfer_confirm_receive(bigint)',
-    'public.stock_transfer_receive(bigint,jsonb)'
+    'public.stock_transfer_receive(bigint,jsonb,bigint)'
   ];
   v_retired_signatures constant text[] := ARRAY[
     'public.create_stock_request_draft(bigint,text)',
@@ -52,7 +52,7 @@ BEGIN
   END IF;
 
   IF pg_get_functiondef(
-    'private.execute_stock_transfer_receive(bigint,jsonb)'::regprocedure
+    'private.execute_stock_transfer_receive(bigint,jsonb,bigint)'::regprocedure
   ) ~ 'avg_unit_cost = v_new_wac' THEN
     RAISE EXCEPTION
       'STOCK FULFILLMENT: receive must not overwrite company WAC';

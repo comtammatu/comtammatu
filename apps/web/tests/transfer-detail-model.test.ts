@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  defaultTransferReceiveLocationId,
   getTransferActionConfig,
   isTransferReceiveReady,
+  resolveTransferReceiveLocationId,
   type TransferDetail,
+  type TransferReceiveLocations,
 } from "../lib/inventory/transfer-detail-model";
 
 function makeTransfer(patch: Partial<TransferDetail> = {}): TransferDetail {
@@ -139,4 +142,54 @@ test("receive-ready status contract stays shared by Owner surface and Branch", (
   assert.equal(isTransferReceiveReady("confirmed_receive"), true);
   assert.equal(isTransferReceiveReady("confirmed_ship"), false);
   assert.equal(isTransferReceiveReady("received"), false);
+});
+
+const storeReceiveLocations: TransferReceiveLocations = {
+  warehouse: { id: 200, kind: "warehouse", label: "Kho" },
+  kitchen: { id: 201, kind: "kitchen", label: "Bếp" },
+};
+
+test("store receive defaults to Kho unless the slip already points at Bếp", () => {
+  assert.equal(
+    defaultTransferReceiveLocationId(makeTransfer(), storeReceiveLocations),
+    200,
+  );
+  assert.equal(
+    defaultTransferReceiveLocationId(
+      makeTransfer({ toLocationId: 201 }),
+      storeReceiveLocations,
+    ),
+    201,
+  );
+  assert.equal(
+    defaultTransferReceiveLocationId(makeTransfer({ toLocationId: 200 }), null),
+    200,
+  );
+});
+
+test("store receive only accepts the destination Kho or Bếp", () => {
+  assert.equal(
+    resolveTransferReceiveLocationId({
+      selectedId: 201,
+      locations: storeReceiveLocations,
+      fallbackLocationId: 200,
+    }),
+    201,
+  );
+  assert.equal(
+    resolveTransferReceiveLocationId({
+      selectedId: 999,
+      locations: storeReceiveLocations,
+      fallbackLocationId: 200,
+    }),
+    null,
+  );
+  assert.equal(
+    resolveTransferReceiveLocationId({
+      selectedId: null,
+      locations: null,
+      fallbackLocationId: 200,
+    }),
+    200,
+  );
 });

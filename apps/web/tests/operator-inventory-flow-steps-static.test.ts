@@ -68,7 +68,7 @@ test("transfer receive keeps the phone first viewport on line receiving", () => 
   assert.doesNotMatch(source, /OperatorFlowSteps/);
   assert.match(source, /@comtammatu\/ui\/components\/progress/);
   assert.match(source, /receiveProgress/);
-  assert.match(source, /receiveReviewHint/);
+  assert.match(source, /receiveLocationTitle/);
   assert.match(source, /receiveTapToEnter/);
   assert.doesNotMatch(
     source,

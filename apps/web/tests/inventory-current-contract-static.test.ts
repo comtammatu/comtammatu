@@ -51,6 +51,7 @@ test("Inventory references expose mandatory branch warehouse-kitchen topology an
     /Mọi chi nhánh thường luôn có đúng một `warehouse`[^\n]*một `kitchen`/,
   );
   assert.match(inventory, /site trung tâm giữ một `warehouse`/);
+  assert.match(inventory, /chi nhánh thường nhận vào Kho hoặc Bếp/);
   assert.doesNotMatch(inventory, /Chi nhánh chưa tách|chi nhánh đã tách/);
   assert.doesNotMatch(sop, /Chi nhánh chưa tách|chi nhánh đã tách/);
   assert.match(inventory, /received_quantity - rejected_quantity/);

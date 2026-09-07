@@ -26,7 +26,7 @@ Contract vận hành Inventory hiện tại, không phải roadmap. Ý tưởng 
 | Mô hình site                    | `branches` là site table Production; kinds active: `branch`, `central_supply` (Kho Tổng), `central_kitchen` (Bếp Trung Tâm). Mọi chi nhánh thường luôn có đúng một `warehouse` mặc định nhận/cấp và một `kitchen` mặc định tiêu hao. Kho Tổng và Bếp Trung Tâm không có cặp Kho/Bếp của chi nhánh; site trung tâm giữ một `warehouse`.                     | `production_storage` chỉ dùng tường minh cho production trung tâm; không mở location hierarchy khác Kho/Bếp tại chi nhánh |
 | Nhu cầu mua / PO / GRN / NCC    | Kho trung tâm **Tạo đơn** theo NL (NCC trên dòng; một phiếu có thể nhiều NCC, ADR 0040). YCM/YCH đã gỡ sau soak (Wave 5); danh sách Đơn mua là nguồn sự thật. Một PO → một GRN nháp. Chốt GRN theo nhóm NCC đang giao. PO không giá. Số giữ viết lại SL dòng PO khi giao dư (ADR 0040). **Đơn giá** net trên dòng GRN. HĐ NCC công nợ + VAT theo NCC của dòng đã `po_applied`. | Không promotion engine, duyệt nhiều cấp, OCR hoặc price-QC tại GRN                                     |
 | QC nhận hàng                    | Kho nhập `received_quantity` và `rejected_quantity`; số đạt = thực nhận − từ chối. Có hàng từ chối thì bắt buộc lý do + ảnh. Trạng thái chỉ là giá trị hiển thị được suy ra.                                                                                                                                                   | Không lưu status, tolerance, lot/HSD/nhiệt độ, price variance hoặc auto-approval                       |
-| Luân chuyển nội bộ              | ĐC liên điểm đi giữa hai warehouse khác site; ĐC nội bộ đi đúng cặp Kho↔Bếp cùng chi nhánh và hoàn tất nguyên tử. Tiêu hao, write-off và production không được mô phỏng bằng transfer.                                                                                                                                         | Không có location hierarchy ngoài Kho/Bếp tại chi nhánh                                                |
+| Luân chuyển nội bộ              | ĐC liên điểm xuất từ warehouse nguồn; chi nhánh thường nhận vào Kho hoặc Bếp của điểm đến. Site trung tâm vẫn nhận vào warehouse. ĐC nội bộ đi đúng cặp Kho↔Bếp cùng chi nhánh và hoàn tất nguyên tử. Tiêu hao, write-off và production không được mô phỏng bằng transfer.                                                                                                                                         | Không có location hierarchy ngoài Kho/Bếp tại chi nhánh                                                |
 | HĐ NCC                          | `supplier_invoices` + đối soát GRN + thanh toán NCC là Finance handoff; thanh toán bắt buộc có file HĐ GTGT đính kèm (ADR 0017)                                                                                                                                                                                                | Không mở payment proposal engine trong Inventory                                                       |
 | Định mức món bán (`recipes`)    | Menu recipe theo món bán + RPC tiêu hao theo order                                                                                                                                                                                                                                                                             | Không mở multi-level BOM                                                                               |
 | Thành phẩm + production landing | `finished_good` chỉ SKU có công thức sản xuất; `production_recipes`, `production_runs`; chi nhánh thường luôn dùng Kho để nhận/cấp và Bếp để tiêu hao, production trung tâm chỉ dùng `production_storage` khi workflow chọn tường minh                                                                                             | Không thực hiện central-production cutover trong lát D091                                              |
@@ -76,10 +76,12 @@ Bếp/Kho CN → [phiếu hao hụt HH / waste] → `writeoff` (không vào giá
 
 ### 1b. Luân chuyển nội bộ
 
-`stock_transfers.transfer_scope = inter_site` chỉ chuyển giữa hai warehouse khác
-site và giữ lifecycle giao/nhận. `intra_site` chuyển đúng cặp Kho↔Bếp cùng chi
-nhánh, hoàn tất ngay và post hai đầu ledger trong một transaction. Phiếu đã hoàn
-tất không sửa/xóa/hủy; sai thì dùng **Đảo phiếu** toàn phần hoặc một phần.
+`stock_transfers.transfer_scope = inter_site` xuất từ warehouse nguồn, giữ
+lifecycle giao/nhận, và cho chi nhánh thường nhận vào Kho hoặc Bếp lúc kiểm
+nhận. Site trung tâm vẫn nhận vào warehouse. `intra_site` chuyển đúng cặp
+Kho↔Bếp cùng chi nhánh, hoàn tất ngay và post hai đầu ledger trong một
+transaction. Phiếu đã hoàn tất không sửa/xóa/hủy; sai thì dùng **Đảo phiếu**
+toàn phần hoặc một phần.
 
 ### Các loại phiếu kho
 
@@ -428,8 +430,9 @@ Flow thao tác chuẩn:
 4. **Sản xuất:** Owner/Kho Tổng/Bếp TT quản lý công thức → tạo/bắt đầu/hoàn tất
    lệnh tại Bếp TT; confirm trừ nguyên liệu và cộng thành phẩm nguyên tử. Giao
    thành phẩm cho CN bằng Điều chuyển, không GRN/tiêu hao giả.
-5. **Cấp hàng:** liên điểm dùng nháp → ship → nhận; nội bộ Kho↔Bếp CN xác nhận
-   một lần và có phiếu đảo. Chi nhánh không mua/GRN; QL CN tạo DC xin hoặc giao.
+5. **Cấp hàng:** liên điểm dùng nháp → ship → nhận; lúc nhận, chi nhánh thường
+   chọn Kho hoặc Bếp. Nội bộ Kho↔Bếp CN xác nhận một lần và có phiếu đảo. Chi
+   nhánh không mua/GRN; QL CN tạo DC xin hoặc giao.
 6. **Tiêu hao/hao hụt:** POS ghi `sale_consumption` tại snapshot Bếp; phiếu tay
    ghi consumption; hủy hỏng ghi writeoff và đi qua tier duyệt/bằng chứng.
 7. **Kiểm kê:** chọn location → đếm mù → review → `complete_stocktake` ghi

@@ -785,7 +785,7 @@ test("transfer receive requires inspection and keeps the atomic receive action",
     /const noteOk = !hasShort \|\| shortNote\.trim\(\)\.length >= 5;/,
   );
   assert.match(detailClient, /transferConfirmReceive\(transfer\.id\)/);
-  assert.match(detailClient, /transferReceive\(transfer\.id, payload\)/);
+  assert.match(detailClient, /transferReceive\(transfer\.id, payload/);
   assert.match(
     detailClient,
     /className=\{embedded \? "h-12 text-right" : "h-9 text-right"\}/,
