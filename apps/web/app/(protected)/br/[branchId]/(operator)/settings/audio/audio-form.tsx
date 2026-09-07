@@ -62,7 +62,7 @@ export function BranchAudioForm({
       const primed = primeOperationalVoice(utterance, branchId);
       primed.play();
     } catch {
-      toast.error("Không thể phát âm thanh xem trước.");
+      toast.error(copy.previewFailed);
     } finally {
       setTimeout(() => {
         setIsPlayingPreview(false);
@@ -130,7 +130,7 @@ export function BranchAudioForm({
                   }
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger size="touch">
                   <SelectValue placeholder={copy.modelLabel} />
                 </SelectTrigger>
                 <SelectContent>
@@ -160,13 +160,16 @@ export function BranchAudioForm({
                   value={voice || DEFAULT_TTS_VOICE}
                   onValueChange={(val) => setVoice(val)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger size="touch">
                     <SelectValue placeholder={copy.voiceLabel} />
                   </SelectTrigger>
                   <SelectContent>
                     {OPENAI_TTS_VOICES.map((v) => (
                       <SelectItem key={v} value={v}>
-                        {v} {v === DEFAULT_TTS_VOICE ? "(mặc định)" : ""}
+                        {v}
+                        {v === DEFAULT_TTS_VOICE
+                          ? ` ${copy.defaultVoiceSuffix}`
+                          : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -179,6 +182,7 @@ export function BranchAudioForm({
               <FieldLabel>{copy.customVoiceLabel}</FieldLabel>
               <FieldContent>
                 <Input
+                  controlSize="touch"
                   value={voice}
                   onChange={(e) => setVoice(e.target.value)}
                   placeholder={copy.voiceDefaultFishAudio}
@@ -201,9 +205,9 @@ export function BranchAudioForm({
           className="gap-2"
         >
           {isPlayingPreview ? (
-            <Spinner className="h-4 w-4" />
+            <Spinner className="size-4" />
           ) : (
-            <Play className="h-4 w-4" />
+            <Play className="size-4" />
           )}
           {isPlayingPreview ? copy.previewPlaying : copy.previewButton}
         </Button>
@@ -214,7 +218,7 @@ export function BranchAudioForm({
           disabled={isPending}
           className="gap-2"
         >
-          {isPending ? <Spinner className="h-4 w-4" /> : null}
+          {isPending ? <Spinner className="size-4" /> : null}
           {copy.saveSettings}
         </Button>
       </div>

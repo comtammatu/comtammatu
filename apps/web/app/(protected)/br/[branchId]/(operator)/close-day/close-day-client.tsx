@@ -409,12 +409,12 @@ export function CloseDayClient({
             >
               {showAllItems ? (
                 <>
-                  <ChevronUp className="size-3.5" data-icon="inline-start" />
+                  <ChevronUp className="size-4" data-icon="inline-start" />
                   {copy.closeDayCollapse}
                 </>
               ) : (
                 <>
-                  <ChevronDown className="size-3.5" data-icon="inline-start" />
+                  <ChevronDown className="size-4" data-icon="inline-start" />
                   {copy.closeDayShowAll(topItems.length)}
                 </>
               )}

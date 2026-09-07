@@ -117,7 +117,11 @@ export function TerminalsClient({
                 value={selectedBranchId?.toString() ?? ""}
                 onValueChange={(v) => setSelectedBranchId(Number(v))}
               >
-                <SelectTrigger id="branch-select" className="w-full sm:w-60">
+                <SelectTrigger
+                  id="branch-select"
+                  size={embedded ? "touch" : "field"}
+                  className="w-full sm:w-60"
+                >
                   <SelectValue placeholder={BRANCH_VI.select} />
                 </SelectTrigger>
                 <SelectContent>

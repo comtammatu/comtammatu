@@ -1061,6 +1061,8 @@ export const settings = {
     previewButton: "Nghe thử",
     previewPlaying: "Đang phát…",
     previewSampleText: "Phiếu mới bàn 5",
+    previewFailed: "Không thể phát âm thanh xem trước.",
+    defaultVoiceSuffix: "(mặc định)",
     inheritTenantLabel: "Kế thừa thiết lập của chuỗi",
     inheritTenantHelp: "Dùng cấu hình âm thanh chung của chuỗi.",
     customBranchLabel: "Tùy chỉnh riêng cho chi nhánh này",
