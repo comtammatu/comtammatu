@@ -30,6 +30,34 @@ test("Inventory page mounts the unified operational shift cockpit above module n
   );
 });
 
+test("Inventory page does not pass a function across the cockpit client boundary", () => {
+  const page = read("app/(protected)/inventory/page.tsx");
+  const cockpit = read(
+    "app/(protected)/inventory/_components/inventory-shift-cockpit.tsx",
+  );
+
+  assert.match(
+    cockpit,
+    /^["']use client["'];/m,
+    "InventoryShiftCockpit is a Client Component",
+  );
+  assert.doesNotMatch(
+    page,
+    /scopeHref\s*=/,
+    "RSC inventory page must not pass a scopeHref function to the client cockpit",
+  );
+  assert.doesNotMatch(
+    cockpit,
+    /scopeHref\s*:\s*\(href:\s*string\)\s*=>\s*string/,
+    "Client cockpit must not accept a function scopeHref prop",
+  );
+  assert.match(
+    cockpit,
+    /withControlSurfaceBranchScope/,
+    "Client cockpit must scope hrefs from serializable branchId",
+  );
+});
+
 test("InventoryShiftCockpit adheres to Má Tư Design System Class A Cockpit invariants", () => {
   const cockpit = read(
     "app/(protected)/inventory/_components/inventory-shift-cockpit.tsx",

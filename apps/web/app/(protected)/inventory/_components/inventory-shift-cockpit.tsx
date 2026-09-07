@@ -21,6 +21,7 @@ import {
 import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import { AppSection } from "@/components/surface";
 import { KpiCard } from "@/components/kpi/kpi-card";
+import { withControlSurfaceBranchScope } from "@/lib/control-surface-scope";
 import { messages } from "@lib/messages";
 
 const copy = messages.inventory.shiftCockpit;
@@ -33,7 +34,13 @@ export interface InventoryShiftCockpitProps {
   transferCount: number;
   canAccessProduction: boolean;
   canAccessProcurement: boolean;
-  scopeHref: (href: string) => string;
+}
+
+function scopeHref(href: string, branchId: number | null): string {
+  if (branchId == null) return href;
+  return withControlSurfaceBranchScope(href, String(branchId) as `${number}`, {
+    prefixes: ["/inventory"],
+  });
 }
 
 interface DeficitItem {
@@ -75,11 +82,10 @@ interface DispatchShipment {
 }
 
 export function InventoryShiftCockpit({
-  branchId: _branchId,
+  branchId,
   wasteCount,
   transferCount,
   grnPriceCount,
-  scopeHref,
 }: InventoryShiftCockpitProps) {
   const sampleDeficits: DeficitItem[] = [
     {
@@ -230,7 +236,7 @@ export function InventoryShiftCockpit({
           value={formatCount(totalDeficits)}
           hint={copy.deficitAlertsHint}
           tone="destructive"
-          href={scopeHref("/inventory/stock")}
+          href={scopeHref("/inventory/stock", branchId)}
         />
 
         <KpiCard
@@ -238,7 +244,7 @@ export function InventoryShiftCockpit({
           value={`${completedBatchLines}/${sampleBatchItems.length}`}
           hint={copy.centralKitchenBatchHint}
           tone="primary"
-          href={scopeHref("/inventory/production")}
+          href={scopeHref("/inventory/production", branchId)}
         />
 
         <KpiCard
@@ -246,7 +252,7 @@ export function InventoryShiftCockpit({
           value={formatCount(transferCount > 0 ? transferCount : activeDispatches)}
           hint={copy.transfersAndLogisticsHint}
           tone="neutral"
-          href={scopeHref("/inventory/transfers")}
+          href={scopeHref("/inventory/transfers", branchId)}
         />
 
         <KpiCard
@@ -254,7 +260,7 @@ export function InventoryShiftCockpit({
           value={formatCount(wasteCount + grnPriceCount)}
           hint={wasteCount > 0 ? copy.wastePendingCount(wasteCount) : copy.wasteAndExceptionsHintNormal}
           tone={wasteCount > 0 ? "warning" : "neutral"}
-          href={scopeHref("/inventory/waste/approvals")}
+          href={scopeHref("/inventory/waste/approvals", branchId)}
         />
       </div>
 
@@ -327,7 +333,7 @@ export function InventoryShiftCockpit({
                       variant={item.isUrgent ? "default" : "outline"}
                       size="sm"
                       className="w-full sm:w-auto"
-                      render={<Link href={scopeHref(item.actionHref)} />}
+                      render={<Link href={scopeHref(item.actionHref, branchId)} />}
                     >
                       <IconZap data-icon="inline-start" className="size-4" />
                       <span>{item.actionLabel}</span>
@@ -340,7 +346,7 @@ export function InventoryShiftCockpit({
             <div className="flex items-center justify-between rounded-md bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
               <span>{copy.formulaHint}</span>
               <Link
-                href={scopeHref("/inventory/stock")}
+                href={scopeHref("/inventory/stock", branchId)}
                 className="font-medium text-primary hover:underline"
               >
                 {copy.viewFullMatrix}
@@ -402,7 +408,7 @@ export function InventoryShiftCockpit({
                   variant="outline"
                   size="sm"
                   className="flex-1 text-xs"
-                  render={<Link href={scopeHref("/inventory/production")} />}
+                  render={<Link href={scopeHref("/inventory/production", branchId)} />}
                 >
                   <IconPlus data-icon="inline-start" className="size-4" />
                   {copy.addToBatch}
@@ -411,7 +417,7 @@ export function InventoryShiftCockpit({
                   variant="default"
                   size="sm"
                   className="flex-1 text-xs"
-                  render={<Link href={scopeHref("/inventory/production")} />}
+                  render={<Link href={scopeHref("/inventory/production", branchId)} />}
                 >
                   {copy.manageProduction}
                 </Button>
@@ -475,7 +481,7 @@ export function InventoryShiftCockpit({
               variant="outline"
               size="sm"
               className="w-full text-xs"
-              render={<Link href={scopeHref("/inventory/transfers")} />}
+              render={<Link href={scopeHref("/inventory/transfers", branchId)} />}
             >
               {copy.viewAllTransfers(sampleDispatches.length)}
             </Button>
@@ -511,7 +517,7 @@ export function InventoryShiftCockpit({
               variant="outline"
               size="sm"
               className="text-xs"
-              render={<Link href={scopeHref("/inventory/consumption")} />}
+              render={<Link href={scopeHref("/inventory/consumption", branchId)} />}
             >
               {copy.consumptionDetailAction}
             </Button>
@@ -526,7 +532,7 @@ export function InventoryShiftCockpit({
                   {copy.wasteAlertCallout(wasteCount)}
                 </span>
                 <Link
-                  href={scopeHref("/inventory/waste/approvals")}
+                  href={scopeHref("/inventory/waste/approvals", branchId)}
                   className="font-semibold text-xs underline hover:no-underline"
                 >
                   {copy.resolveNow}

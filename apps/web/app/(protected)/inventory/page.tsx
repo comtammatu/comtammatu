@@ -238,7 +238,6 @@ export default async function InventoryPage({
         transferCount={transferCount}
         canAccessProduction={flags.showProduction}
         canAccessProcurement={flags.showProcurement}
-        scopeHref={(href) => scopeHref(href, branchId)}
       />
       {attentionItems.length > 0 ? (
         <AppSection title={copy.attentionTitle} headingLevel="h2">
