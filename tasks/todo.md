@@ -7,10 +7,14 @@
 
 ## Cut Production RPC load
 State: verify
-Tier: T3
-Exit: Permission batch, live mutation `getUser`, Realtime safety polls, today-work snapshot, and DEFINER list/first-paint RPCs are in tree and on Production.
-Evidence: Production ledger `20260907200642` `20260907201453` `20260907202220`; `corepack pnpm db:types`; `corepack pnpm verify` exit 0.
+Exit: Permission batch, live `getUser`, safety polls, today-work snapshot, DEFINER list RPCs on Production.
+Evidence: ledger `20260907200642` `20260907201453` `20260907202220`; `db:types`; `verify` exit 0.
 - [ ] Owner pastes Studio log SQL or Preview `EXPLAIN` as `authenticated` to confirm the load-cut hypothesis
+## Cut remaining PostgREST inventory and badge reads
+State: verify
+Exit: Badge by_target DEFINER; supplier/GRN/allocation/transfer list RPCs match RLS; GRN pages at 500.
+Evidence: ledger `20260908012613`; catalog DEFINER signatures; `db:types`; `slow-read-notification-procurement-rpc-static.test.ts`; `slow_read_notification_procurement_rpcs_test.sql` (fulfill-only + GRN paging).
+- [ ] Preview `EXPLAIN (ANALYZE, BUFFERS)` as `authenticated` on transfer/GRN RPCs
 ## Restore office staff Control Surface IA
 State: verify
 Exit: Office `self_service` sees Control home + Work in chrome; `/` is Mine / Coordinate / Work pulse; `/me` stays personal.

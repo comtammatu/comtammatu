@@ -179,23 +179,10 @@ export async function countOpenStockTransfers(
     ],
   );
   if (!ctx) return 0;
-  const { supabase, claims } = ctx;
-  let query = supabase
-    .from("stock_transfers")
-    .select("id", { count: "exact", head: true })
-    .eq("tenant_id", claims.tenant_id)
-    .in("status", [
-      "draft",
-      "confirmed",
-      "confirmed_ship",
-      "in_transit",
-      "confirmed_receive",
-    ]);
-  if (branchId != null) {
-    query = query.or(
-      `from_branch_id.eq.${branchId},to_branch_id.eq.${branchId}`,
-    );
-  }
-  const { count, error } = await query;
-  return error ? 0 : (count ?? 0);
+  const { supabase } = ctx;
+  const { data, error } = await supabase.rpc(
+    "count_open_stock_transfers",
+    branchId != null ? { p_branch_id: branchId } : {},
+  );
+  return error ? 0 : Number(data ?? 0);
 }

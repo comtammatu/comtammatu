@@ -45,20 +45,11 @@ export async function loadStockFulfillmentRows({
   scopeSiteKind?: StockFulfillmentSiteKind;
   seeAllSources?: boolean;
 }): Promise<StockFulfillmentRow[]> {
-  let transfersQuery = supabase
-    .from("stock_transfers")
-    .select(
-      "id, transfer_number, status, transfer_scope, stock_request_id, from_branch_id, to_branch_id, created_at",
-    )
-    .eq("tenant_id", tenantId);
-  if (branchId != null) {
-    transfersQuery = transfersQuery.or(
-      `from_branch_id.eq.${branchId},to_branch_id.eq.${branchId}`,
-    );
-  }
-
   const [transfersResult, branchesResult] = await Promise.all([
-    transfersQuery.order("created_at", { ascending: false }).limit(200),
+    supabase.rpc("list_stock_transfers_for_branch", {
+      ...(branchId != null ? { p_branch_id: branchId } : {}),
+      p_limit: 200,
+    }),
     supabase
       .from("branches")
       .select("id, name, branch_kind")

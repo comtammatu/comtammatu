@@ -14,9 +14,13 @@ export const PURCHASE_WORKSPACE_LIST_LIMIT = 200;
 /** Large `.in(id)` lists on child tables hit statement timeout on Production. */
 export const PURCHASE_WORKSPACE_IN_CHUNK_SIZE = 40;
 
+/** Page size for DEFINER table RPCs. Must stay at or below PostgREST db-max-rows. */
+export const PROCUREMENT_RPC_PAGE_SIZE = 500;
+
 // Nested PostgREST embeds re-evaluate RLS EXISTS + has_permission per parent
 // row and timed out (SQLSTATE 57014) on /inventory/purchase-orders. Keep
-// parent selects flat and load children with chunked `.in(id)`.
+// parent selects flat, page GRN lines through list_grn_receive_lines, and
+// chunk remaining `.in(id)` child reads.
 
 /** Parent rows only. Child rows load in a follow-up `.in(id)` query. */
 export const DEMAND_LIST_SELECT =
@@ -178,6 +182,26 @@ async function fetchRowsInChunks<T>({
     rows.push(...(data ?? []));
   }
   return { data: rows, error: null };
+}
+
+export async function fetchRpcTablePages<T>(
+  fetchPage: (
+    offset: number,
+    limit: number,
+  ) => Promise<{ data: T[] | null; error: unknown | null }>,
+  pageSize = PROCUREMENT_RPC_PAGE_SIZE,
+): Promise<{ data: T[]; error: unknown | null }> {
+  const rows: T[] = [];
+  let offset = 0;
+  for (let pageCount = 0; pageCount < 40; pageCount += 1) {
+    const { data, error } = await fetchPage(offset, pageSize);
+    if (error) return { data: [], error };
+    const page = data ?? [];
+    rows.push(...page);
+    if (page.length < pageSize) return { data: rows, error: null };
+    offset += page.length;
+  }
+  return { data: [], error: new Error("rpc_page_limit") };
 }
 
 function unitLabel(units: UnitEmbed): string {
@@ -483,17 +507,14 @@ export async function loadPurchaseOrderRows({
   const grnItemResult =
     grnIds.length === 0
       ? { data: [] as GrnItemRecord[], error: null }
-      : await fetchRowsInChunks({
-          ids: grnIds,
-          fetchChunk: async (idChunk) =>
-            supabase
-              .from("grn_items")
-              .select(
-                "grn_id, purchase_order_item_id, received_quantity, rejected_quantity, confirmed_at" as never,
-              )
-              .eq("tenant_id", tenantId)
-              .in("grn_id", idChunk),
-        });
+      : await fetchRpcTablePages<GrnItemRecord>(
+          async (offset, limit) =>
+            await supabase.rpc("list_grn_receive_lines", {
+              p_grn_ids: grnIds,
+              p_limit: limit,
+              p_offset: offset,
+            }),
+        );
 
   if (grnItemResult.error) return { success: false };
 

@@ -221,8 +221,10 @@ test("PO list keeps its URL-addressable document dialog and never shows an empty
   assert.match(loader, /\.in\("po_id", idChunk\)/);
   assert.match(loader, /from\("goods_received_notes"\)/);
   assert.match(loader, /\.in\("po_id", idChunk\)/);
-  assert.match(loader, /from\("grn_items"\)/);
-  assert.match(loader, /\.in\("grn_id", idChunk\)/);
+  assert.match(loader, /list_grn_receive_lines/);
+  assert.match(loader, /fetchRpcTablePages/);
+  assert.match(loader, /p_offset: offset/);
+  assert.doesNotMatch(loader, /from\("grn_items"\)/);
   assert.match(loader, /PURCHASE_WORKSPACE_IN_CHUNK_SIZE/);
   assert.match(loader, /fetchRowsInChunks/);
   assert.match(loader, /purchase_group_key/);

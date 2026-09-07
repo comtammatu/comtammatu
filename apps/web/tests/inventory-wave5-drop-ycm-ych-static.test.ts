@@ -175,7 +175,8 @@ test("Wave 5 app no longer queries dropped request tables", () => {
   const fulfillment = read("apps/web/lib/inventory/stock-fulfillment-data.ts");
   assert.doesNotMatch(fulfillment, /from\("stock_requests"\)/);
   assert.doesNotMatch(fulfillment, /from\("stock_request_items"\)/);
-  assert.match(fulfillment, /from\("stock_transfers"\)/);
+  assert.match(fulfillment, /list_stock_transfers_for_branch/);
+  assert.doesNotMatch(fulfillment, /from\("stock_transfers"\)/);
 
   const counts = read(
     "apps/web/app/(protected)/inventory/_lib/receiving-counts.ts",

@@ -13335,6 +13335,10 @@ export type Database = {
         Returns: Json
       }
       count_my_work_tasks_due: { Args: { p_before: string }; Returns: number }
+      count_open_stock_transfers: {
+        Args: { p_branch_id?: number }
+        Returns: number
+      }
       count_unread_notifications: { Args: never; Returns: number }
       count_unread_notifications_by_target: {
         Args: never
@@ -14697,6 +14701,16 @@ export type Database = {
         }
         Returns: Json
       }
+      list_grn_receive_lines: {
+        Args: { p_grn_ids: number[]; p_limit?: number; p_offset?: number }
+        Returns: {
+          confirmed_at: string
+          grn_id: number
+          purchase_order_item_id: number
+          received_quantity: number
+          rejected_quantity: number
+        }[]
+      }
       list_inventory_count_slip_lines: {
         Args: { p_slip_ids: number[] }
         Returns: {
@@ -14767,6 +14781,15 @@ export type Database = {
           title: string
         }[]
       }
+      list_receipt_allocations_for_grns: {
+        Args: { p_grn_ids: number[]; p_limit?: number; p_offset?: number }
+        Returns: {
+          billed_quantity: number
+          grn_id: number
+          purchase_order_item_id: number
+          supplier_invoice_id: number
+        }[]
+      }
       list_stock_on_hand: {
         Args: { p_branch_id: number; p_location_ids?: number[] }
         Returns: {
@@ -14793,6 +14816,37 @@ export type Database = {
           tenant_id: number
           transfer_id: number
           unit_cost_at_ship: number
+        }[]
+      }
+      list_stock_transfers_for_branch: {
+        Args: { p_branch_id?: number; p_limit?: number }
+        Returns: {
+          created_at: string
+          from_branch_id: number
+          id: number
+          status: string
+          stock_request_id: number
+          to_branch_id: number
+          transfer_number: string
+          transfer_scope: string
+        }[]
+      }
+      list_suppliers_with_item_counts: {
+        Args: never
+        Returns: {
+          address: string
+          created_at: string
+          id: number
+          ingredient_count: number
+          is_active: boolean
+          name: string
+          notes: string
+          payment_terms_days: number
+          payment_terms_note: string
+          phone: string
+          tax_code: string
+          tenant_id: number
+          updated_at: string
         }[]
       }
       list_unpriced_confirmed_grn_lines: { Args: never; Returns: Json }

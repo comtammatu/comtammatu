@@ -71,7 +71,8 @@ test("fulfillment loader is transfers-only after Wave 5", () => {
   assert.doesNotMatch(loader, /missingParentIds/);
   assert.doesNotMatch(loader, /from\("stock_requests"\)/);
   assert.match(loader, /requests: \[\]/);
-  assert.match(loader, /from\("stock_transfers"\)/);
+  assert.match(loader, /list_stock_transfers_for_branch/);
+  assert.doesNotMatch(loader, /from\("stock_transfers"\)/);
 });
 
 test("fulfillment list does not bulk-load transfer items", () => {

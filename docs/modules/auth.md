@@ -83,8 +83,16 @@ central_supply_ops / central_kitchen_lead on Control L0 + GRN/PO per D076/D091.
   Forgotten open punches stay a separate `LIMIT 1` read; do not bound that
   finder to today/yesterday.
 - **DEFINER list RPCs** (`list_stock_on_hand`, `list_stock_transfer_items`,
-  `list_inventory_count_slip_lines`) authorize once then filter
-  `tenant_id = auth_tenant_id()`. Direct PostgREST policies stay for other
+  `list_inventory_count_slip_lines`, `list_suppliers_with_item_counts`,
+  `list_grn_receive_lines`, `list_receipt_allocations_for_grns`,
+  `list_stock_transfers_for_branch`, `count_open_stock_transfers`) authorize
+  once then filter `tenant_id = auth_tenant_id()`. Transfer list/count compute
+  the `inventory:read` branch set once and join it (matches
+  `stock_transfers_select`; fulfill-only is empty/forbidden). GRN lines and
+  receipt allocations page at 500 with stable `grn_id, id` order. Receipt
+  allocations require `can_read_inventory_monetary('procurement:price_list_read')`.
+  `count_unread_notifications_by_target` is DEFINER with the same visibility
+  as `count_unread_notifications`. Direct PostgREST policies stay for other
   callers. A loader-side `has_permission` check does not skip per-row RLS.
 - **`auth_role()`** — live role from `profiles.position_id → positions.code`.
   Route/scope only; action grants still use `has_permission*()`.

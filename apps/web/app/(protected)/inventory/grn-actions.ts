@@ -16,6 +16,7 @@ import { getAuthContextWithPermission } from "./_lib/auth";
 import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
 import { fetchProcurementBranches } from "./_lib/procurement-branches";
 import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
+import { fetchRpcTablePages } from "@lib/inventory/load-purchase-workspace";
 import { inventoryNonnegativeQuantitySchema } from "./_lib/inventory-quantity-schema";
 import { mapInventoryRpcFailure } from "./_lib/rpc-failure";
 import {
@@ -377,15 +378,22 @@ export async function fetchGrnIdsForDropdown(
   }
 
   const billedByLine = new Map<string, number>();
-  if (grnIds.length > 0) {
-    const { data: linkedRows, error: linkedError } = await supabase
-      .from("supplier_invoice_receipt_allocations")
-      .select(
-        "supplier_invoice_id, grn_id, purchase_order_item_id, billed_quantity",
-      )
-      .eq("tenant_id", claims.tenant_id)
-      .in("grn_id", grnIds)
-      .not("purchase_order_item_id", "is", null);
+  // Allocations are monetary; DEFINER RPC matches
+  // supplier_invoice_receipt_allocations_select. Skip when the caller cannot
+  // read price lists so the dropdown still loads without billed reductions.
+  if (grnIds.length > 0 && monetary.purchasePrice) {
+    const { data: linkedRows, error: linkedError } = await fetchRpcTablePages<{
+      supplier_invoice_id: number;
+      grn_id: number;
+      purchase_order_item_id: number;
+      billed_quantity: number;
+    }>(async (offset, limit) =>
+      await supabase.rpc("list_receipt_allocations_for_grns", {
+        p_grn_ids: grnIds,
+        p_limit: limit,
+        p_offset: offset,
+      }),
+    );
     if (linkedError) return { success: false, error: grnLoadFailedError };
     for (const row of linkedRows ?? []) {
       if (Number(row.supplier_invoice_id) === excludeInvoiceId) continue;

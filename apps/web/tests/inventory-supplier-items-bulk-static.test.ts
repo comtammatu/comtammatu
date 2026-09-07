@@ -53,8 +53,9 @@ test("supplier UI supports bulk selection and displays active ingredient counts"
     "apps/web/app/(protected)/inventory/suppliers/suppliers-client.tsx",
   );
 
-  assert.match(supplierActions, /supplier_items\(count\)/);
-  assert.match(supplierActions, /\.eq\("supplier_items\.is_active", true\)/);
+  assert.match(supplierActions, /list_suppliers_with_item_counts/);
+  assert.doesNotMatch(supplierActions, /supplier_items\(count\)/);
+  assert.match(supplierActions, /ingredient_count/);
   assert.match(itemsClient, /MultiSelectCombobox/);
   assert.match(itemsClient, /useFieldArray/);
   assert.match(itemsClient, /createSupplierItems/);

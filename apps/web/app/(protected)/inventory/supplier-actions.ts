@@ -34,21 +34,16 @@ export async function fetchSuppliers(): Promise<ActionResult> {
     PERMISSION_KEYS.PROCUREMENT_READ,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase, claims } = ctx;
-  const { data, error } = await supabase
-    .from("suppliers")
-    .select("*, supplier_items(count)")
-    .eq("tenant_id", claims.tenant_id)
-    .eq("supplier_items.is_active", true)
-    .order("name");
+  const { supabase } = ctx;
+  const { data, error } = await supabase.rpc("list_suppliers_with_item_counts");
   if (error) {
     return { success: false, error: messages.inventory.suppliers.loadFailed };
   }
   return {
     success: true,
-    data: (data ?? []).map(({ supplier_items, ...supplier }) => ({
+    data: (data ?? []).map((supplier) => ({
       ...supplier,
-      ingredient_count: supplier_items[0]?.count ?? 0,
+      ingredient_count: Number(supplier.ingredient_count ?? 0),
     })),
   };
 }
