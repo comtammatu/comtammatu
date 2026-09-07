@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   Camera as IconCamera,
   ListChecks as IconListChecks,
+  LogOut as IconLogOut,
 } from "lucide-react";
 import { formatVNClockTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -80,7 +81,17 @@ export async function BranchTodayStatus({
     state.status === "working" && state.checklist.requiredRemaining === 0;
 
   const cta =
-    state.status === "working" && state.checklist.remaining > 0 ? (
+    isReadyToCheckout ? (
+      <Button
+        variant="default"
+        size="touch"
+        className="w-full"
+        render={<Link href={`/br/${branchId}/shift`} />}
+      >
+        <IconLogOut data-icon="inline-start" />
+        {copy.clockOut}
+      </Button>
+    ) : state.status === "working" && state.checklist.remaining > 0 ? (
       <Button
         variant="outline"
         size="touch"

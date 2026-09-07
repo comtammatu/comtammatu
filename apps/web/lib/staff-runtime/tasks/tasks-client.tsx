@@ -445,7 +445,7 @@ export function TasksClient({
                     variant="outline"
                     size="sm"
                     className={cn(
-                      "items-start bg-card",
+                      "min-h-12 touch-manipulation items-start bg-card",
                       item.done
                         ? "border-success/20 bg-success/10"
                         : "hover:bg-muted/50",

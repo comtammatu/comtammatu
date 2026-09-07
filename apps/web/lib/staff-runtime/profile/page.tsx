@@ -302,6 +302,7 @@ export async function StaffProfilePageContent({
           title={copy.personalToolsTitle}
           description={copy.personalToolsDescription}
           columns={2}
+          wideColumns
           links={personalToolsLinks}
         />
 

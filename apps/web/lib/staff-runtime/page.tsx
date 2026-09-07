@@ -219,6 +219,7 @@ type WorkdayActionSectionComponent = (props: {
   }>;
   columns?: 1 | 2;
   mobileColumns?: 1 | 2;
+  wideColumns?: boolean;
   size?: "default" | "sm";
 }) => ReactNode;
 
@@ -1143,7 +1144,7 @@ export async function StaffWorkdayPageContent({
         {copy.workflowCheckoutBlockedListTitle ??
           "Việc bắt buộc cần hoàn thành:"}
       </p>
-      <ItemGroup className="gap-1.5">
+      <ItemGroup className="gap-1.5 sm:grid sm:grid-cols-2">
         {incompleteRequiredItems.map((item) => {
           const isCount = item.taskKind === "inventory_count";
           const isPhoto = item.allowsPhoto && !isCount;
@@ -1152,7 +1153,7 @@ export async function StaffWorkdayPageContent({
               key={item.id}
               variant="outline"
               size="sm"
-              className="items-center bg-card"
+              className="min-h-12 touch-manipulation items-center bg-card"
             >
               <ItemMedia
                 variant="icon"
@@ -1277,7 +1278,8 @@ export async function StaffWorkdayPageContent({
           title: messages.employee.home.payslipTitle,
         },
       ]}
-      columns={1}
+      columns={2}
+      wideColumns
       mobileColumns={1}
       size="sm"
     />

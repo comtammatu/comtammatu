@@ -499,7 +499,7 @@ function SelectedDayDetail({
               {copy.noAttendance}
             </p>
           ) : (
-            <div className="flex flex-col gap-2">
+            <div className="grid gap-2 sm:grid-cols-2">
               {attendances.map((att, index) => {
                 const hasClock = Boolean(att.check_in || att.check_out);
                 const timeText = hasClock

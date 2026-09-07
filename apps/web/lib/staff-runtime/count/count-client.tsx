@@ -679,7 +679,7 @@ export function CountSlipClient({
                     <Item
                       key={assignment.ingredientId}
                       variant="outline"
-                      className="min-w-0 items-start gap-2 bg-card text-left hover:bg-muted/50"
+                      className="min-h-14 touch-manipulation min-w-0 items-start gap-2 bg-card text-left hover:bg-muted/50"
                       render={
                         <button
                           type="button"

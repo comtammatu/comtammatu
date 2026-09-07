@@ -136,22 +136,24 @@ export function LeaveRequestClient({
               icon={<IconCalendarX />}
             />
           ) : (
-            <ItemGroup className="grid gap-2 lg:grid-cols-2">
+            <ItemGroup className="grid gap-2 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
               {requests.map((request) => {
                 const days = countInclusiveDays(
                   request.start_date,
                   request.end_date,
                 );
                 return (
-                  <Item key={request.id} variant="outline">
-                    <ItemContent>
-                      <ItemTitle>
-                        {LEAVE_TYPE_LABELS_VI[request.leave_type]}
+                  <Item key={request.id} variant="outline" className="min-h-14 touch-manipulation min-w-0">
+                    <ItemContent className="min-w-0">
+                      <div className="flex flex-wrap items-center justify-between gap-1.5">
+                        <ItemTitle className="truncate">
+                          {LEAVE_TYPE_LABELS_VI[request.leave_type]}
+                        </ItemTitle>
                         <StatusBadge
                           domain="leave-request"
                           value={request.status}
                         />
-                      </ItemTitle>
+                      </div>
                       <ItemDescription>
                         {formatLeaveDateRange(
                           request.start_date,

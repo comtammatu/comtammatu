@@ -746,7 +746,7 @@ export function MembersClient({
                       {copy.membersCount(group.members.length)}
                     </span>
                   </div>
-                  <div className="grid gap-2 lg:grid-cols-2">
+                  <div className="grid gap-2 lg:grid-cols-2 sm:grid-cols-2 xl:grid-cols-3">
                     {group.members.map((member) => (
                       <MemberCard
                         key={member.id}
@@ -759,7 +759,7 @@ export function MembersClient({
               ))}
             </div>
           ) : (
-            <div className="grid gap-2 lg:grid-cols-2">
+            <div className="grid gap-2 lg:grid-cols-2 sm:grid-cols-2 xl:grid-cols-3">
               {filteredMembers.map((member) => (
                 <MemberCard
                   key={member.id}

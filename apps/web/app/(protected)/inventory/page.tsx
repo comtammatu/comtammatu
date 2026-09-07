@@ -49,6 +49,7 @@ import {
 } from "./production-data";
 import { withControlSurfaceBranchScope } from "@/lib/control-surface-scope";
 import { messages } from "@lib/messages";
+import { InventoryShiftCockpit } from "./_components/inventory-shift-cockpit";
 
 const INVENTORY_SETTINGS_PERMISSIONS = [
   PERMISSION_KEYS.SETTINGS_BRANCH,
@@ -229,6 +230,16 @@ export default async function InventoryPage({
   return (
     <AppPage density="compact" width="wide">
       <AppPageHeader title={copy.title} />
+      <InventoryShiftCockpit
+        branchId={branchId}
+        grnCount={grnCount}
+        grnPriceCount={grnPriceCount}
+        wasteCount={wasteCount}
+        transferCount={transferCount}
+        canAccessProduction={flags.showProduction}
+        canAccessProcurement={flags.showProcurement}
+        scopeHref={(href) => scopeHref(href, branchId)}
+      />
       {attentionItems.length > 0 ? (
         <AppSection title={copy.attentionTitle} headingLevel="h2">
           <ItemGroup>
