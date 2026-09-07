@@ -88,7 +88,7 @@ export function RosterDayCell({
             >
               <span className="truncate">
                 {shift
-                  ? formatShiftLabel(shift.name, shift.startTime, shift.endTime)
+                  ? formatShiftLabel(shift.name, shift.startTime, shift.endTime, shift.isSplit, shift.startTime2, shift.endTime2)
                   : UNKNOWN_LABEL_VI}
               </span>
             </Badge>
@@ -163,6 +163,9 @@ export function RosterDayCell({
                       shift.name,
                       shift.startTime,
                       shift.endTime,
+                      shift.isSplit,
+                      shift.startTime2,
+                      shift.endTime2,
                     )}
                   </DropdownMenuItem>
                 ))}
@@ -186,6 +189,9 @@ export function RosterDayCell({
                       shift.name,
                       shift.startTime,
                       shift.endTime,
+                      shift.isSplit,
+                      shift.startTime2,
+                      shift.endTime2,
                     )}
                   </DropdownMenuItem>
                 ))}

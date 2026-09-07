@@ -154,3 +154,64 @@ test("schedule derives monthly leave from tenant policy and annual leave from en
   assert.match(source, /calculateAnnualLeaveUsedThroughMonth/);
   assert.match(source, /leave_type/);
 });
+
+test("split shift công yields 1.0 when working full 4h + 4h across 2 windows", () => {
+  assert.equal(
+    shiftWorkdaysFromAttendanceRecord({
+      checkIn: "2026-09-10T10:00:00+07:00",
+      window1OutAt: "2026-09-10T14:00:00+07:00",
+      checkIn2: "2026-09-10T18:00:00+07:00",
+      checkOut: "2026-09-10T22:00:00+07:00",
+      scheduledStart: "2026-09-10T10:00:00+07:00",
+      scheduledEnd: "2026-09-10T14:00:00+07:00",
+      scheduledStart2: "2026-09-10T18:00:00+07:00",
+      scheduledEnd2: "2026-09-10T22:00:00+07:00",
+    }),
+    1.0,
+  );
+});
+
+test("split shift công yields 0.5 when early ending after window 1 (4h/8h)", () => {
+  assert.equal(
+    shiftWorkdaysFromAttendanceRecord({
+      checkIn: "2026-09-10T10:00:00+07:00",
+      checkOut: "2026-09-10T14:00:00+07:00",
+      scheduledStart: "2026-09-10T10:00:00+07:00",
+      scheduledEnd: "2026-09-10T14:00:00+07:00",
+      scheduledStart2: "2026-09-10T18:00:00+07:00",
+      scheduledEnd2: "2026-09-10T22:00:00+07:00",
+    }),
+    0.5,
+  );
+});
+
+test("split shift công excludes break period between 14:00 and 18:00", () => {
+  assert.equal(
+    shiftWorkdaysFromAttendanceRecord({
+      checkIn: "2026-09-10T10:00:00+07:00",
+      window1OutAt: "2026-09-10T14:00:00+07:00",
+      checkIn2: "2026-09-10T18:00:00+07:00",
+      checkOut: "2026-09-10T20:00:00+07:00", // 4h w1 + 2h w2 = 6h / 8h
+      scheduledStart: "2026-09-10T10:00:00+07:00",
+      scheduledEnd: "2026-09-10T14:00:00+07:00",
+      scheduledStart2: "2026-09-10T18:00:00+07:00",
+      scheduledEnd2: "2026-09-10T22:00:00+07:00",
+    }),
+    0.75,
+  );
+});
+
+test("split shift công yields 0.5 when employee only works window 2 (4h/8h)", () => {
+  assert.equal(
+    shiftWorkdaysFromAttendanceRecord({
+      checkIn: "2026-09-10T18:00:00+07:00",
+      checkOut: "2026-09-10T22:00:00+07:00",
+      scheduledStart: "2026-09-10T10:00:00+07:00",
+      scheduledEnd: "2026-09-10T14:00:00+07:00",
+      scheduledStart2: "2026-09-10T18:00:00+07:00",
+      scheduledEnd2: "2026-09-10T22:00:00+07:00",
+    }),
+    0.5,
+  );
+});
+

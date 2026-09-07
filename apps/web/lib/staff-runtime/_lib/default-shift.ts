@@ -10,6 +10,9 @@ export interface BranchShiftWindow {
   id: number;
   start_time: string;
   end_time: string;
+  is_split?: boolean;
+  start_time_2?: string | null;
+  end_time_2?: string | null;
 }
 
 interface ParsedShiftWindow {
@@ -30,6 +33,9 @@ export interface ShiftAssignmentCandidate {
   shiftName: string | null;
   startTime: string;
   endTime: string;
+  isSplit?: boolean;
+  startTime2?: string | null;
+  endTime2?: string | null;
 }
 
 /** Floor staff may punch this many minutes before scheduled start. */
@@ -117,9 +123,28 @@ export function listAssignedShiftsInWindow(
       const endMin = parseClockTimeToMinutes(assignment.endTime);
       if (startMin === null || endMin === null) return null;
 
-      const inWindowToday =
+      let inWindowToday =
         assignment.workDate === calendarDate &&
         isInClockInWindow(nowMinutes, startMin, endMin, earlyMinutes);
+
+      if (
+        !inWindowToday &&
+        assignment.workDate === calendarDate &&
+        assignment.isSplit &&
+        assignment.startTime2 &&
+        assignment.endTime2
+      ) {
+        const startMin2 = parseClockTimeToMinutes(assignment.startTime2);
+        const endMin2 = parseClockTimeToMinutes(assignment.endTime2);
+        if (startMin2 !== null && endMin2 !== null) {
+          inWindowToday = isInClockInWindow(
+            nowMinutes,
+            startMin2,
+            endMin2,
+            earlyMinutes,
+          );
+        }
+      }
       const overnightYesterday =
         assignment.workDate === previousDate &&
         !isDayShiftWindow(startMin, endMin) &&
@@ -168,29 +193,77 @@ export function resolveClockInGate(
   if (open.length > 1) return { kind: "multiple" };
   const current = open[0];
   if (current) {
+    let startTime = current.startTime;
+    let endTime = current.endTime;
+    if (current.isSplit && current.startTime2 && current.endTime2) {
+      const startMin2 = parseClockTimeToMinutes(current.startTime2);
+      const endMin2 = parseClockTimeToMinutes(current.endTime2);
+      if (
+        startMin2 !== null &&
+        endMin2 !== null &&
+        isInClockInWindow(nowMinutes, startMin2, endMin2, earlyMinutes)
+      ) {
+        startTime = current.startTime2;
+        endTime = current.endTime2;
+      }
+    }
     return {
       kind: "open",
       shiftId: current.shiftId,
       businessDate: current.workDate,
       shiftName: current.shiftName,
-      startTime: current.startTime,
-      endTime: current.endTime,
+      startTime,
+      endTime,
     };
   }
 
   const upcoming = assignments
-    .map((assignment) => {
-      if (assignment.workDate !== calendarDate) return null;
+    .flatMap((assignment) => {
+      if (assignment.workDate !== calendarDate) return [];
+      const windows: Array<{
+        startMin: number;
+        endMin: number;
+        startTime: string;
+        endTime: string;
+      }> = [];
+
       const startMin = parseClockTimeToMinutes(assignment.startTime);
       const endMin = parseClockTimeToMinutes(assignment.endTime);
-      if (startMin === null || endMin === null) return null;
-      if (!isBeforeClockInWindow(nowMinutes, startMin, endMin, earlyMinutes)) {
-        return null;
+      if (startMin !== null && endMin !== null) {
+        windows.push({
+          startMin,
+          endMin,
+          startTime: assignment.startTime,
+          endTime: assignment.endTime,
+        });
       }
-      return { assignment, startMin };
+
+      if (assignment.isSplit && assignment.startTime2 && assignment.endTime2) {
+        const startMin2 = parseClockTimeToMinutes(assignment.startTime2);
+        const endMin2 = parseClockTimeToMinutes(assignment.endTime2);
+        if (startMin2 !== null && endMin2 !== null) {
+          windows.push({
+            startMin: startMin2,
+            endMin: endMin2,
+            startTime: assignment.startTime2,
+            endTime: assignment.endTime2,
+          });
+        }
+      }
+
+      return windows
+        .filter((w) =>
+          isBeforeClockInWindow(nowMinutes, w.startMin, w.endMin, earlyMinutes),
+        )
+        .map((w) => ({
+          assignment,
+          startMin: w.startMin,
+          startTime: w.startTime,
+          endTime: w.endTime,
+        }));
     })
-    .filter((row): row is NonNullable<typeof row> => row !== null)
     .sort((a, b) => a.startMin - b.startMin);
+
   const next = upcoming[0];
   if (next) {
     return {
@@ -198,29 +271,33 @@ export function resolveClockInGate(
       shiftId: next.assignment.shiftId,
       businessDate: next.assignment.workDate,
       shiftName: next.assignment.shiftName,
-      startTime: next.assignment.startTime,
-      endTime: next.assignment.endTime,
+      startTime: next.startTime,
+      endTime: next.endTime,
       clockInFromMinutes: next.startMin - earlyMinutes,
     };
   }
 
   const ended = assignments
-    .map((assignment) => {
-      if (assignment.workDate !== calendarDate) return null;
+    .flatMap((assignment) => {
+      if (assignment.workDate !== calendarDate) return [];
+      const endTime =
+        assignment.isSplit && assignment.endTime2
+          ? assignment.endTime2
+          : assignment.endTime;
+      const endMin = parseClockTimeToMinutes(endTime);
       const startMin = parseClockTimeToMinutes(assignment.startTime);
-      const endMin = parseClockTimeToMinutes(assignment.endTime);
-      if (startMin === null || endMin === null) return null;
-      if (!isAfterClockInWindow(nowMinutes, startMin, endMin)) return null;
-      return { assignment, endMin };
+      if (startMin === null || endMin === null) return [];
+      if (!isAfterClockInWindow(nowMinutes, startMin, endMin)) return [];
+      return [{ assignment, endMin, endTime }];
     })
-    .filter((row): row is NonNullable<typeof row> => row !== null)
     .sort((a, b) => b.endMin - a.endMin);
+
   const last = ended[0];
   if (last) {
     return {
       kind: "too_late",
       shiftName: last.assignment.shiftName,
-      endTime: last.assignment.endTime,
+      endTime: last.endTime,
     };
   }
 

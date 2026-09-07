@@ -11,6 +11,9 @@ export type RosterShift = {
   name: string;
   startTime: string;
   endTime: string;
+  isSplit?: boolean;
+  startTime2?: string | null;
+  endTime2?: string | null;
 };
 
 export type RosterAssignment = {

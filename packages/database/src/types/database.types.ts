@@ -448,7 +448,9 @@ export type Database = {
         Row: {
           branch_id: number | null
           check_in: string | null
+          check_in_2: string | null
           check_in_photo_path: string | null
+          check_in_photo_path_2: string | null
           check_out: string | null
           checklist_template_id: number | null
           checkout_approval_note: string | null
@@ -466,17 +468,22 @@ export type Database = {
           method: string | null
           note: string | null
           scheduled_end_at: string | null
+          scheduled_end_at_2: string | null
           scheduled_start_at: string | null
+          scheduled_start_at_2: string | null
           shift_assignment_id: number | null
           shift_id: number
           status: string
           tenant_id: number
           updated_at: string
+          window_1_out_at: string | null
         }
         Insert: {
           branch_id?: number | null
           check_in?: string | null
+          check_in_2?: string | null
           check_in_photo_path?: string | null
+          check_in_photo_path_2?: string | null
           check_out?: string | null
           checklist_template_id?: number | null
           checkout_approval_note?: string | null
@@ -494,17 +501,22 @@ export type Database = {
           method?: string | null
           note?: string | null
           scheduled_end_at?: string | null
+          scheduled_end_at_2?: string | null
           scheduled_start_at?: string | null
+          scheduled_start_at_2?: string | null
           shift_assignment_id?: number | null
           shift_id: number
           status?: string
           tenant_id: number
           updated_at?: string
+          window_1_out_at?: string | null
         }
         Update: {
           branch_id?: number | null
           check_in?: string | null
+          check_in_2?: string | null
           check_in_photo_path?: string | null
+          check_in_photo_path_2?: string | null
           check_out?: string | null
           checklist_template_id?: number | null
           checkout_approval_note?: string | null
@@ -522,12 +534,15 @@ export type Database = {
           method?: string | null
           note?: string | null
           scheduled_end_at?: string | null
+          scheduled_end_at_2?: string | null
           scheduled_start_at?: string | null
+          scheduled_start_at_2?: string | null
           shift_assignment_id?: number | null
           shift_id?: number
           status?: string
           tenant_id?: number
           updated_at?: string
+          window_1_out_at?: string | null
         }
         Relationships: [
           {
@@ -8796,12 +8811,15 @@ export type Database = {
           branch_id: number | null
           created_at: string
           end_time: string
+          end_time_2: string | null
           id: number
           is_active: boolean
           is_closing: boolean
           is_opening: boolean
+          is_split: boolean
           name: string
           start_time: string
+          start_time_2: string | null
           tenant_id: number
           updated_at: string
         }
@@ -8809,12 +8827,15 @@ export type Database = {
           branch_id?: number | null
           created_at?: string
           end_time: string
+          end_time_2?: string | null
           id?: never
           is_active?: boolean
           is_closing?: boolean
           is_opening?: boolean
+          is_split?: boolean
           name: string
           start_time: string
+          start_time_2?: string | null
           tenant_id: number
           updated_at?: string
         }
@@ -8822,12 +8843,15 @@ export type Database = {
           branch_id?: number | null
           created_at?: string
           end_time?: string
+          end_time_2?: string | null
           id?: never
           is_active?: boolean
           is_closing?: boolean
           is_opening?: boolean
+          is_split?: boolean
           name?: string
           start_time?: string
+          start_time_2?: string | null
           tenant_id?: number
           updated_at?: string
         }
@@ -12953,6 +12977,12 @@ export type Database = {
         }
         Returns: number
       }
+      attendance_shift_workdays_for_record: {
+        Args: {
+          p_record: Database["public"]["Tables"]["attendance_records"]["Row"]
+        }
+        Returns: number
+      }
       auth_branch_id: { Args: never; Returns: number }
       auth_is_owner: { Args: { p_user: string }; Returns: boolean }
       auth_role: { Args: never; Returns: string }
@@ -15638,6 +15668,14 @@ export type Database = {
       }
       self_service_request_checkout: {
         Args: { p_attendance_id: number }
+        Returns: string
+      }
+      self_service_split_pause: {
+        Args: { p_attendance_id: number }
+        Returns: string
+      }
+      self_service_split_resume: {
+        Args: { p_attendance_id: number; p_photo_path: string }
         Returns: string
       }
       self_service_toggle_task: {

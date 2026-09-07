@@ -355,3 +355,69 @@ test("canonical 2 guard shifts (12H) resolve correctly and preserve overnight wo
   }
 });
 
+
+test("split shift: clock-in gate opens for both interval 1 and interval 2", () => {
+  const splitAssignment = {
+    workDate: "2026-09-07",
+    shiftId: 50,
+    shiftName: "Ca Gãy NHT (10-14, 18-22)",
+    startTime: "10:00:00",
+    endTime: "14:00:00",
+    isSplit: true,
+    startTime2: "18:00:00",
+    endTime2: "22:00:00",
+  };
+
+  // 1. Before window 1 (08:30 -> too early, opens at 09:00)
+  const gateBeforeW1 = resolveClockInGate([splitAssignment], "2026-09-07", minutes("08:30"));
+  assert.equal(gateBeforeW1.kind, "too_early");
+  if (gateBeforeW1.kind === "too_early") {
+    assert.equal(gateBeforeW1.clockInFromMinutes, 9 * 60);
+    assert.equal(gateBeforeW1.startTime, "10:00:00");
+  }
+
+  // 2. Window 1 early punch (09:15 -> open)
+  const gateW1Early = resolveClockInGate([splitAssignment], "2026-09-07", minutes("09:15"));
+  assert.equal(gateW1Early.kind, "open");
+  if (gateW1Early.kind === "open") {
+    assert.equal(gateW1Early.shiftId, 50);
+    assert.equal(gateW1Early.startTime, "10:00:00");
+  }
+
+  // 3. During window 1 (11:00 -> open)
+  const gateW1During = resolveClockInGate([splitAssignment], "2026-09-07", minutes("11:00"));
+  assert.equal(gateW1During.kind, "open");
+
+  // 4. In gap between window 1 and window 2 (15:00 -> too early for window 2, opens at 17:00)
+  const gateGap = resolveClockInGate([splitAssignment], "2026-09-07", minutes("15:00"));
+  assert.equal(gateGap.kind, "too_early");
+  if (gateGap.kind === "too_early") {
+    assert.equal(gateGap.clockInFromMinutes, 17 * 60);
+    assert.equal(gateGap.startTime, "18:00:00");
+  }
+
+  // 5. Window 2 early punch (17:15 -> open, shows window 2 times)
+  const gateW2Early = resolveClockInGate([splitAssignment], "2026-09-07", minutes("17:15"));
+  assert.equal(gateW2Early.kind, "open");
+  if (gateW2Early.kind === "open") {
+    assert.equal(gateW2Early.shiftId, 50);
+    assert.equal(gateW2Early.startTime, "18:00:00");
+    assert.equal(gateW2Early.endTime, "22:00:00");
+  }
+
+  // 6. During window 2 (19:00 -> open)
+  const gateW2During = resolveClockInGate([splitAssignment], "2026-09-07", minutes("19:00"));
+  assert.equal(gateW2During.kind, "open");
+
+  // 7. After window 2 (22:30 -> too late)
+  const gateAfter = resolveClockInGate([splitAssignment], "2026-09-07", minutes("22:30"));
+  assert.equal(gateAfter.kind, "too_late");
+  if (gateAfter.kind === "too_late") {
+    assert.equal(gateAfter.endTime, "22:00:00");
+  }
+
+  // 8. pickAssignedShiftInWindow picking logic
+  assert.notEqual(pickAssignedShiftInWindow([splitAssignment], "2026-09-07", minutes("10:30")), null);
+  assert.equal(pickAssignedShiftInWindow([splitAssignment], "2026-09-07", minutes("15:00")), null);
+  assert.notEqual(pickAssignedShiftInWindow([splitAssignment], "2026-09-07", minutes("18:30")), null);
+});

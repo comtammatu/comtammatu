@@ -21,6 +21,7 @@ export const operator = {
   },
   todayStatus: {
     statusWorking: "Đang làm việc",
+    statusSplitBreak: "Nghỉ giữa ca",
     statusReadyToCheckout: "Sẵn sàng kết ca",
     statusNotStarted: "Chưa chấm công",
     statusCheckoutPending: "Chờ quản lý duyệt",
@@ -66,6 +67,7 @@ export const operator = {
     statusNoProfile: "Thiếu hồ sơ nhân viên",
     statusNoBranch: "Thiếu chi nhánh",
     descriptionCheckoutPending: "Chờ quản lý duyệt.",
+    descriptionSplitBreak: "Đã tạm ra giữa ca. Chụp ảnh chấm công vào khung 2 khi đến giờ.",
     descriptionNotRequired: "Tài khoản này không có ca cần chấm công hôm nay.",
     descriptionClockInTooEarly: (
       shiftName: string,

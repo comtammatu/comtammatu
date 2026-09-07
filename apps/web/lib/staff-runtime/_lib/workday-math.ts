@@ -8,6 +8,10 @@ export type WorkdayAttendanceRecord = {
   checkOut?: string | null;
   scheduledStart?: string | null;
   scheduledEnd?: string | null;
+  window1OutAt?: string | null;
+  checkIn2?: string | null;
+  scheduledStart2?: string | null;
+  scheduledEnd2?: string | null;
 };
 
 const QUARTER_DAY_CREDIT_EFFECTIVE_AT = Date.parse(
@@ -59,6 +63,27 @@ export function countShiftWorkdaysFromOverlap(input: {
   return Math.min(1, legacyRounded);
 }
 
+function calculateOverlapSeconds(
+  punchStartMs: number,
+  punchEndMs: number,
+  windowStartMs: number,
+  windowEndMs: number,
+): number {
+  if (
+    !Number.isFinite(punchStartMs) ||
+    !Number.isFinite(punchEndMs) ||
+    !Number.isFinite(windowStartMs) ||
+    !Number.isFinite(windowEndMs) ||
+    punchEndMs <= punchStartMs ||
+    windowEndMs <= windowStartMs
+  ) {
+    return 0;
+  }
+  const overlapStart = Math.max(punchStartMs, windowStartMs);
+  const overlapEnd = Math.min(punchEndMs, windowEndMs);
+  return overlapEnd > overlapStart ? (overlapEnd - overlapStart) / 1000 : 0;
+}
+
 export function shiftWorkdaysFromAttendanceRecord(
   record: WorkdayAttendanceRecord,
 ): number {
@@ -66,6 +91,62 @@ export function shiftWorkdaysFromAttendanceRecord(
   if (!record.checkIn || !record.scheduledStart || !record.scheduledEnd) {
     return 0;
   }
+
+  // Split shift: two scheduled windows
+  if (record.scheduledStart2 && record.scheduledEnd2) {
+    const w1Start = toEpochMs(record.scheduledStart);
+    const w1End = toEpochMs(record.scheduledEnd);
+    const w2Start = toEpochMs(record.scheduledStart2);
+    const w2End = toEpochMs(record.scheduledEnd2);
+
+    if (w1End <= w1Start || w2End <= w2Start) return 0;
+    const shiftSeconds = (w1End - w1Start) / 1000 + (w2End - w2Start) / 1000;
+    if (shiftSeconds <= 0) return 0;
+
+    const punch1Start = toEpochMs(record.checkIn);
+    const punch1End = record.window1OutAt
+      ? toEpochMs(record.window1OutAt)
+      : toEpochMs(record.checkOut);
+
+    const overlap1Seconds = calculateOverlapSeconds(
+      punch1Start,
+      punch1End,
+      w1Start,
+      w1End,
+    );
+
+    let overlap2Seconds = 0;
+    if (record.checkIn2) {
+      const punch2Start = toEpochMs(record.checkIn2);
+      const punch2End = toEpochMs(record.checkOut);
+      overlap2Seconds = calculateOverlapSeconds(
+        punch2Start,
+        punch2End,
+        w2Start,
+        w2End,
+      );
+    } else if (punch1Start >= w1End) {
+      overlap2Seconds = calculateOverlapSeconds(
+        punch1Start,
+        punch1End,
+        w2Start,
+        w2End,
+      );
+    }
+
+    const totalWorkedSeconds = overlap1Seconds + overlap2Seconds;
+    if (totalWorkedSeconds <= 0) return 0;
+
+    const ratio = totalWorkedSeconds / shiftSeconds;
+    if (w1Start >= QUARTER_DAY_CREDIT_EFFECTIVE_AT) {
+      const completedQuarters = Math.floor(ratio * 4 + 1e-12);
+      return Math.min(1, completedQuarters / 4);
+    }
+
+    const legacyRounded = Math.round(ratio * 10) / 10;
+    return Math.min(1, legacyRounded);
+  }
+
   return countShiftWorkdaysFromOverlap({
     checkIn: record.checkIn,
     checkOut: record.checkOut,

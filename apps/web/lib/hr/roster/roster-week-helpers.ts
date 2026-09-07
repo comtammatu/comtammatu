@@ -44,6 +44,12 @@ export function formatShiftLabel(
   name: string,
   startTime: string,
   endTime: string,
+  isSplit?: boolean,
+  startTime2?: string | null,
+  endTime2?: string | null,
 ) {
+  if (isSplit && startTime2 && endTime2) {
+    return `${name} (${startTime.slice(0, 5)}–${endTime.slice(0, 5)}, ${startTime2.slice(0, 5)}–${endTime2.slice(0, 5)})`;
+  }
   return `${name} (${startTime.slice(0, 5)}–${endTime.slice(0, 5)})`;
 }

@@ -21,7 +21,7 @@ import type { BadgeProps } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { confirm } from "@/components/confirm-dialog";
-import { formatVNTime, getVNMinutesOfDay } from "@comtammatu/shared/time";
+import { formatVNClockTime, formatVNTime, getVNMinutesOfDay } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
 import { useIsOnline } from "@/components/pwa-runtime";
 import { AppEmptyState } from "@/components/surface";
@@ -57,6 +57,8 @@ import {
   clockInWithPhoto,
   clockOutDirectShift,
   requestCheckoutApproval,
+  splitPauseAttendance,
+  splitResumeAttendanceWithPhoto,
 } from "./actions";
 
 export type EmployeeClockRoutes = {
@@ -217,6 +219,7 @@ export function ClockClient({
   const photoInputRef = useRef<HTMLInputElement>(null);
   const autoStartCameraRef = useRef(false);
   const directCheckoutAllowed = state.directCheckoutAllowed;
+  const isSplitBreak = state.status === "split_break";
   const todayShiftName =
     state.attendance?.shiftName ??
     state.todayShifts.find((shift) => shift.isCurrent)?.shiftName ??
@@ -232,7 +235,7 @@ export function ClockClient({
 
   useEffect(() => {
     if (autoStartCameraRef.current) return;
-    if (state.status !== "not_started" || isClockInBlocked(state)) return;
+    if ((state.status !== "not_started" && state.status !== "split_break") || isClockInBlocked(state)) return;
     autoStartCameraRef.current = true;
     void camera.start();
   }, [camera.start, state.clockInGate.kind, state.shiftUnassigned, state.status]);
@@ -250,6 +253,28 @@ export function ClockClient({
       startTransition(async () => {
         const formData = new FormData();
         formData.set("photo", file);
+        if (isSplitBreak && state.attendance?.id) {
+          formData.set("attendanceId", String(state.attendance.id));
+          const result = await splitResumeAttendanceWithPhoto(null, formData);
+          if (result.success) {
+            camera.stop();
+            setPhotoState("success");
+            if (navigator.vibrate) navigator.vibrate(150);
+            if (!embedded) {
+              router.replace(routes.home);
+            }
+            router.refresh();
+          } else {
+            setPhotoState("error");
+            setPreviewUrl((current) => {
+              if (current) URL.revokeObjectURL(current);
+              return URL.createObjectURL(file);
+            });
+            setError(result.error ?? clockCopy.splitResumeFailed);
+          }
+          return;
+        }
+
         const result = await clockInWithPhoto(null, formData);
 
         if (result.success) {
@@ -384,6 +409,36 @@ export function ClockClient({
     state.attendance?.id,
   ]);
 
+
+  const submitSplitPause = useCallback(async () => {
+    if (!isOnline) {
+      setError(clockCopy.offline);
+      return;
+    }
+    const attendanceId = state.attendance?.id;
+    if (!attendanceId) return;
+    const ok = await confirm({
+      title: clockCopy.splitPauseConfirmTitle,
+      description: clockCopy.splitPauseConfirmDescription,
+      confirmText: clockCopy.splitPauseConfirmButton,
+      variant: "default",
+    });
+    if (!ok) return;
+
+    setCheckoutState("submitting");
+    setError(null);
+    startTransition(async () => {
+      const result = await splitPauseAttendance({ attendanceId });
+      if (result.success) {
+        setCheckoutState("idle");
+        if (navigator.vibrate) navigator.vibrate(100);
+        router.refresh();
+      } else {
+        setCheckoutState("error");
+        setError(result.error ?? clockCopy.splitPauseFailed);
+      }
+    });
+  }, [isOnline, router, state.attendance?.id]);
   const cancelCheckout = useCallback(() => {
     if (!isOnline) {
       setError(clockCopy.offline);
@@ -559,6 +614,7 @@ export function ClockClient({
     );
   }
 
+
   if (state.status === "working") {
     const pastShiftEnd = isPastShiftEnd(state);
     const checkoutButtonLabel = directCheckoutAllowed
@@ -580,6 +636,23 @@ export function ClockClient({
           />
         )}
         {visibleError ? <ErrorAlert message={visibleError} /> : null}
+        {state.attendance?.isSplit && !state.attendance?.window1OutAt ? (
+          <Button
+            type="button"
+            size="touch-lg"
+            variant="outline"
+            className="w-full"
+            onClick={submitSplitPause}
+            disabled={!isOnline || isPending || checkoutState === "submitting"}
+          >
+            {checkoutState === "submitting" || isPending ? (
+              <Spinner data-icon="inline-start" />
+            ) : (
+              <IconClock data-icon="inline-start" />
+            )}
+            {clockCopy.splitPauseButton}
+          </Button>
+        ) : null}
         <Button
           size="touch-lg"
           className="w-full"
@@ -688,7 +761,7 @@ export function ClockClient({
       {photoState === "submitting" || isPending ? (
         <Button size="touch-lg" className="w-full" disabled>
           <Spinner data-icon="inline-start" />
-          {clockCopy.clockInSubmitting}
+          {isSplitBreak ? clockCopy.splitResumeSubmitting : clockCopy.clockInSubmitting}
         </Button>
       ) : camera.state === "starting" ? (
         <Button size="touch-lg" className="w-full" disabled>
@@ -708,7 +781,7 @@ export function ClockClient({
           ) : (
             <IconCamera data-icon="inline-start" />
           )}
-          {clockCopy.clockInButton}
+          {isSplitBreak ? clockCopy.splitResumeButton : clockCopy.clockInButton}
         </Button>
       ) : (
         <ActionGrid>
@@ -729,7 +802,7 @@ export function ClockClient({
             ) : (
               <IconCamera data-icon="inline-start" />
             )}
-            {photo ? clockCopy.clockInButton : clockCopy.openCamera}
+            {photo ? (isSplitBreak ? clockCopy.splitResumeButton : clockCopy.clockInButton) : clockCopy.openCamera}
           </Button>
           <Button
             type="button"
@@ -751,6 +824,51 @@ export function ClockClient({
       )}
     </>
   );
+
+  if (isSplitBreak) {
+    const splitBreakBody = (
+      <>
+        {embedded ? null : (
+          <DetailList
+            rows={[
+              {
+                label: clockCopy.checkInLabel,
+                value: formatTime(state.attendance?.checkIn ?? null),
+              },
+              {
+                label: clockCopy.window1OutLabel,
+                value: formatTime(state.attendance?.window1OutAt ?? null),
+              },
+              {
+                label: clockCopy.window2StartLabel,
+                value:
+                  state.attendance?.shiftStartTime2 && state.attendance?.shiftEndTime2
+                    ? `${formatVNClockTime(state.attendance.shiftStartTime2)} – ${formatVNClockTime(state.attendance.shiftEndTime2)}`
+                    : "—",
+              },
+            ]}
+          />
+        )}
+        {punchBody}
+      </>
+    );
+
+    if (embedded) {
+      return <div className="flex w-full flex-col gap-3">{splitBreakBody}</div>;
+    }
+
+    return (
+      <Panel
+        icon={IconClock}
+        title={clockCopy.splitBreakTitle}
+        description={clockCopy.splitBreakDescription}
+        tone="warning"
+        badge={{ children: clockCopy.splitBreakBadge, variant: "warning" }}
+      >
+        {splitBreakBody}
+      </Panel>
+    );
+  }
 
   if (embedded) {
     return <div className="flex w-full flex-col gap-3">{punchBody}</div>;

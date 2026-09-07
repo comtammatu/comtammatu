@@ -86,6 +86,7 @@ type WorkdayCopy = {
   title: string;
   description: string;
   statusWorking: string;
+  statusSplitBreak?: string;
   statusCheckoutPending: string;
   statusNotRequired: string;
   statusDone: string;
@@ -96,6 +97,7 @@ type WorkdayCopy = {
   statusNoProfile: string;
   statusNoBranch: string;
   descriptionCheckoutPending: string;
+  descriptionSplitBreak?: string;
   descriptionNotRequired: string;
   descriptionClockInTooEarly: (
     shiftName: string,
@@ -358,13 +360,16 @@ function getShiftStateBadge(
   if (shift.checkoutRequestedAt) {
     return { label: copy.shiftPending, variant: "warning" };
   }
+  if (shift.isSplit && shift.window1OutAt && !shift.checkIn2) {
+    return { label: copy.statusSplitBreak ?? "Nghỉ giữa ca", variant: "warning" };
+  }
   if (shift.checkIn) return { label: copy.shiftWorking, variant: "info" };
   return { label: copy.shiftNotStarted, variant: "secondary" };
 }
 
 function getWorkTone(status: TodayWorkStatus) {
   if (status === "done") return "success" as const;
-  if (status === "checkout_pending") return "warning" as const;
+  if (status === "checkout_pending" || status === "split_break") return "warning" as const;
   if (status === "working" || status === "not_required") {
     return "info" as const;
   }
@@ -392,6 +397,7 @@ function getWorkTitle(state: TodayWorkState, copy: WorkdayCopy): string {
     return copy.statusNotStarted;
   }
   if (status === "working") return copy.statusWorking;
+  if (status === "split_break") return copy.statusSplitBreak ?? "Nghỉ giữa ca";
   if (status === "checkout_pending") return copy.statusCheckoutPending;
   return copy.statusDone;
 }
@@ -400,6 +406,9 @@ function getWorkDescription(
   state: TodayWorkState,
   copy: WorkdayCopy,
 ): string | undefined {
+  if (state.status === "split_break") {
+    return copy.descriptionSplitBreak ?? "Đã tạm ra giữa ca. Chụp ảnh chấm công vào khung 2 khi đến giờ.";
+  }
   if (state.status !== "not_started") return undefined;
   return getClockInBlockedMessage(state.clockInGate, copy)?.description;
 }
@@ -744,6 +753,15 @@ export async function StaffWorkdayPageContent({
       >
         <IconCamera data-icon="inline-start" />
         {copy.clockIn}
+      </Button>
+    ) : state.status === "split_break" ? (
+      <Button
+        size="touch-lg"
+        className={primaryActionClassName}
+        render={<Link href={routes.clock} />}
+      >
+        <IconCamera data-icon="inline-start" />
+        {"Chấm vào Khung 2"}
       </Button>
     ) : state.status === "working" ? (
       canRequestCheckout(state) ? (

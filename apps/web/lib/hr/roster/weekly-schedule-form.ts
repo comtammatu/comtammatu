@@ -10,6 +10,7 @@ import {
   type RosterShift,
   type RosterWeekdayKey,
 } from "./roster-model";
+import { formatShiftLabel } from "./roster-week-helpers";
 
 export const WEEKLY_SCHEDULE_OFF = "__off__";
 
@@ -69,7 +70,7 @@ export function weeklyScheduleShiftOptions(
 
   return sorted.map((shift) => ({
     value: String(shift.id),
-    label: `${shift.name} (${shift.startTime.slice(0, 5)}–${shift.endTime.slice(0, 5)})`,
+    label: formatShiftLabel(shift.name, shift.startTime, shift.endTime, shift.isSplit, shift.startTime2, shift.endTime2),
   }));
 }
 

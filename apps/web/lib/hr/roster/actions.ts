@@ -73,7 +73,7 @@ const weeklyScheduleSchema = z.object({
     ),
 });
 
-const SHIFT_SELECT = "id, name, start_time, end_time, is_active";
+const SHIFT_SELECT = "id, name, start_time, end_time, is_active, is_split, start_time_2, end_time_2";
 
 function assertBranchManagerScope(
   claims: { user_role: StaffRole; branch_id: number | null },
@@ -94,12 +94,18 @@ function mapShiftRow(row: {
   name: string;
   start_time: string;
   end_time: string;
+  is_split?: boolean;
+  start_time_2?: string | null;
+  end_time_2?: string | null;
 }): RosterShift {
   return {
     id: row.id,
     name: row.name,
     startTime: row.start_time,
     endTime: row.end_time,
+    isSplit: row.is_split ?? false,
+    startTime2: row.start_time_2 ?? null,
+    endTime2: row.end_time_2 ?? null,
   };
 }
 

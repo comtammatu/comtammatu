@@ -115,6 +115,9 @@ type ShiftAssignmentQueryRow = {
     start_time: string;
     end_time: string;
     is_active: boolean;
+    is_split?: boolean;
+    start_time_2?: string | null;
+    end_time_2?: string | null;
   };
 };
 
@@ -138,7 +141,10 @@ async function resolveAssignedShiftForEmployee(
           name,
           start_time,
           end_time,
-          is_active
+          is_active,
+          is_split,
+          start_time_2,
+          end_time_2
         )
       `,
     )
@@ -164,6 +170,9 @@ async function resolveAssignedShiftForEmployee(
         shiftName: shift.name ?? null,
         startTime: shift.start_time,
         endTime: shift.end_time,
+        isSplit: shift.is_split ?? false,
+        startTime2: shift.start_time_2 ?? null,
+        endTime2: shift.end_time_2 ?? null,
       };
     })
     .filter((row): row is NonNullable<typeof row> => row !== null);
@@ -1001,4 +1010,160 @@ export async function rejectCheckoutRequest(input: {
 
   revalidateEmployeeWorkPaths(review.branch_id);
   return { success: true, data: { rejected: true } };
+}
+
+function mapSplitPauseError(message: string | undefined): string {
+  if (message?.includes("self_service_not_allowed")) {
+    return "Tài khoản không thuộc diện thực hiện việc trong ca của nhân viên.";
+  }
+  if (message?.includes("open_attendance_not_found")) {
+    return "Không tìm thấy ca làm đang mở để tạm ra.";
+  }
+  if (message?.includes("attendance_already_closed")) {
+    return "Ca làm việc đã kết thúc.";
+  }
+  if (message?.includes("split_pause_not_applicable")) {
+    return "Ca làm việc này không phải ca gãy.";
+  }
+  return "Không thể tạm ra giữa ca. Vui lòng thử lại.";
+}
+
+function mapSplitResumeError(message: string | undefined): string {
+  if (message?.includes("self_service_not_allowed")) {
+    return "Tài khoản không thuộc diện thực hiện việc trong ca của nhân viên.";
+  }
+  if (message?.includes("open_attendance_not_found")) {
+    return "Không tìm thấy ca làm đang mở để chấm vào khung 2.";
+  }
+  if (message?.includes("attendance_already_closed")) {
+    return "Ca làm việc đã kết thúc.";
+  }
+  if (message?.includes("split_resume_not_applicable")) {
+    return "Ca làm việc này không phải ca gãy.";
+  }
+  if (message?.includes("split_pause_required_before_resume")) {
+    return "Cần tạm ra giữa ca trước khi chấm vào khung 2.";
+  }
+  if (message?.includes("too_early_for_window_2")) {
+    return "Chưa đến giờ vào khung 2 (chỉ mở trước tối đa 60 phút).";
+  }
+  if (message?.includes("too_late_for_window_2")) {
+    return "Đã quá giờ kết thúc khung 2.";
+  }
+  return "Không thể chấm vào khung 2. Vui lòng thử lại.";
+}
+
+export async function splitPauseAttendance(
+  input: unknown,
+): Promise<ActionResult<{ pausedAt: string }>> {
+  const parsed = attendanceActionSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+
+  const ctx = await getEmployeeContext();
+  if (!ctx) return { success: false, error: "Chưa đăng nhập" };
+
+  const { data: pausedAt, error } = await ctx.supabase.rpc(
+    "self_service_split_pause" as never,
+    { p_attendance_id: parsed.data.attendanceId } as never,
+  );
+
+  if (error || !pausedAt) {
+    if (error) {
+      console.error("[employee/clock] split pause rpc failed", {
+        code: (error as { code?: string }).code,
+      });
+    }
+    return {
+      success: false,
+      error: mapSplitPauseError((error as { message?: string })?.message),
+    };
+  }
+
+  revalidateEmployeeWorkPaths(ctx.branchId);
+  return { success: true, data: { pausedAt: pausedAt as string } };
+}
+
+export async function splitResumeAttendanceWithPhoto(
+  _prevState: ActionResult<{ resumedAt: string }> | null,
+  formData: FormData,
+): Promise<ActionResult<{ resumedAt: string }>> {
+  const ctx = await getEmployeeContext();
+  if (!ctx) return { success: false, error: "Chưa đăng nhập" };
+
+  const attendanceIdRaw = formData.get("attendanceId");
+  const attendanceId = Number(attendanceIdRaw);
+  if (!Number.isInteger(attendanceId) || attendanceId <= 0) {
+    return { success: false, error: "Dữ liệu ca làm không hợp lệ" };
+  }
+
+  const photo = getPhotoFromFormData(formData);
+  if (!photo || photo.size <= 0) {
+    return { success: false, error: "Cần chụp hoặc chọn ảnh chấm công." };
+  }
+  if (!isValidPhotoUpload(photo)) {
+    if (photo.size > MAX_PHOTO_BYTES) {
+      return {
+        success: false,
+        error: "Ảnh quá lớn. Vui lòng chụp lại hoặc chọn ảnh nhẹ hơn.",
+      };
+    }
+    return {
+      success: false,
+      error: "Ảnh chấm công chỉ nhận JPG, PNG hoặc WebP.",
+    };
+  }
+
+  const now = new Date();
+  const calendarDate = getTodayVN(now);
+  const service = createServiceClient();
+  const ext = resolvePhotoExtension(photo);
+  const mimeType = resolvePhotoMimeType(photo);
+  const photoPath = `${ctx.claims.tenant_id}/${calendarDate}/${ctx.employeeId}/split-${randomUUID()}.${ext}`;
+  const bytes = Buffer.from(await photo.arrayBuffer());
+
+  const { error: uploadError } = await service.storage
+    .from(ATTENDANCE_PHOTO_BUCKET)
+    .upload(photoPath, bytes, {
+      contentType: mimeType,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    return {
+      success: false,
+      error: "Không thể lưu ảnh chấm công. Vui lòng thử lại.",
+    };
+  }
+
+  const { data: resumedAt, error: rpcError } = await ctx.supabase.rpc(
+    "self_service_split_resume" as never,
+    {
+      p_attendance_id: attendanceId,
+      p_photo_path: photoPath,
+    } as never,
+  );
+
+  if (rpcError || !resumedAt) {
+    await service.storage.from(ATTENDANCE_PHOTO_BUCKET).remove([photoPath]);
+    if (rpcError) {
+      console.error("[employee/clock] split resume rpc failed", {
+        code: (rpcError as { code?: string }).code,
+      });
+    }
+    return {
+      success: false,
+      error: mapSplitResumeError((rpcError as { message?: string })?.message),
+    };
+  }
+
+  revalidateEmployeeWorkPaths(ctx.branchId);
+  return {
+    success: true,
+    data: { resumedAt: resumedAt as string },
+  };
 }

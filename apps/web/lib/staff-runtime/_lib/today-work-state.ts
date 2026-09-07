@@ -25,6 +25,7 @@ export type TodayWorkStatus =
   | "not_required"
   | "not_started"
   | "working"
+  | "split_break"
   | "checkout_pending"
   | "done";
 
@@ -66,6 +67,14 @@ interface TodayAttendance {
   shiftName: string | null;
   shiftStartTime: string | null;
   shiftEndTime: string | null;
+  isSplit?: boolean;
+  shiftStartTime2?: string | null;
+  shiftEndTime2?: string | null;
+  window1OutAt?: string | null;
+  checkIn2?: string | null;
+  checkInPhotoPath2?: string | null;
+  scheduledStartAt2?: string | null;
+  scheduledEndAt2?: string | null;
 }
 
 export interface TodayShiftEntry {
@@ -73,9 +82,14 @@ export interface TodayShiftEntry {
   shiftName: string | null;
   startTime: string | null;
   endTime: string | null;
+  isSplit?: boolean;
+  startTime2?: string | null;
+  endTime2?: string | null;
   checkIn: string | null;
   checkOut: string | null;
   checkoutRequestedAt: string | null;
+  window1OutAt?: string | null;
+  checkIn2?: string | null;
   isCurrent: boolean;
 }
 
@@ -143,17 +157,26 @@ function normalizeShift(shift: unknown): {
   name: string | null;
   start_time: string | null;
   end_time: string | null;
+  is_split?: boolean;
+  start_time_2?: string | null;
+  end_time_2?: string | null;
 } | null {
   if (!shift || typeof shift !== "object") return null;
   const maybe = shift as {
     name?: unknown;
     start_time?: unknown;
     end_time?: unknown;
+    is_split?: unknown;
+    start_time_2?: unknown;
+    end_time_2?: unknown;
   };
   return {
     name: typeof maybe.name === "string" ? maybe.name : null,
     start_time: typeof maybe.start_time === "string" ? maybe.start_time : null,
     end_time: typeof maybe.end_time === "string" ? maybe.end_time : null,
+    is_split: maybe.is_split === true,
+    start_time_2: typeof maybe.start_time_2 === "string" ? maybe.start_time_2 : null,
+    end_time_2: typeof maybe.end_time_2 === "string" ? maybe.end_time_2 : null,
   };
 }
 
@@ -176,6 +199,9 @@ type ShiftAssignmentQueryRow = {
     start_time: string;
     end_time: string;
     is_active: boolean;
+    is_split?: boolean;
+    start_time_2?: string | null;
+    end_time_2?: string | null;
   };
 };
 
@@ -240,7 +266,10 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
           name,
           start_time,
           end_time,
-          is_active
+          is_active,
+          is_split,
+          start_time_2,
+          end_time_2
         )
       `,
     )
@@ -257,7 +286,7 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
     await Promise.all([
       supabase
         .from("shifts")
-        .select("id, name, start_time, end_time")
+        .select("id, name, start_time, end_time, is_split, start_time_2, end_time_2")
         .eq("tenant_id", claims.tenant_id)
         .or(`branch_id.is.null,branch_id.eq.${ctx.branchId ?? -1}`)
         .eq("is_active", true)
@@ -279,8 +308,13 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
       checkout_approved_by,
       checkout_approval_note,
       check_in_photo_path,
+      window_1_out_at,
+      check_in_2,
+      check_in_photo_path_2,
+      scheduled_start_at_2,
+      scheduled_end_at_2,
       branches ( name ),
-      shifts ( name, start_time, end_time )
+      shifts ( name, start_time, end_time, is_split, start_time_2, end_time_2 )
     `,
         )
         .eq("employee_id", employeeId)
@@ -305,6 +339,9 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
         shiftName: shift.name ?? null,
         startTime: shift.start_time,
         endTime: shift.end_time,
+        isSplit: shift.is_split ?? false,
+        startTime2: shift.start_time_2 ?? null,
+        endTime2: shift.end_time_2 ?? null,
       };
     })
     .filter((row): row is NonNullable<typeof row> => row !== null);
@@ -326,6 +363,9 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
           shiftName: defaultShift.name ?? null,
           startTime: defaultShift.start_time,
           endTime: defaultShift.end_time,
+          isSplit: defaultShift.is_split ?? false,
+          startTime2: defaultShift.start_time_2 ?? null,
+          endTime2: defaultShift.end_time_2 ?? null,
         },
       ];
     }
@@ -396,9 +436,14 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
         shiftName: catalog?.name ?? assignment.shiftName,
         startTime: assignment.startTime,
         endTime: assignment.endTime,
+        isSplit: catalog?.is_split ?? assignment.isSplit,
+        startTime2: catalog?.start_time_2 ?? assignment.startTime2,
+        endTime2: catalog?.end_time_2 ?? assignment.endTime2,
         checkIn: rec?.check_in ?? null,
         checkOut: rec?.check_out ?? null,
         checkoutRequestedAt: rec?.checkout_requested_at ?? null,
+        window1OutAt: rec?.window_1_out_at ?? null,
+        checkIn2: rec?.check_in_2 ?? null,
         isCurrent: displayShiftId === assignment.shiftId,
       };
     });
@@ -424,6 +469,14 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
         shiftName: shiftData?.name ?? null,
         shiftStartTime: shiftData?.start_time ?? null,
         shiftEndTime: shiftData?.end_time ?? null,
+        isSplit: shiftData?.is_split ?? false,
+        shiftStartTime2: shiftData?.start_time_2 ?? null,
+        shiftEndTime2: shiftData?.end_time_2 ?? null,
+        window1OutAt: record.window_1_out_at ?? null,
+        checkIn2: record.check_in_2 ?? null,
+        checkInPhotoPath2: record.check_in_photo_path_2 ?? null,
+        scheduledStartAt2: record.scheduled_start_at_2 ?? null,
+        scheduledEndAt2: record.scheduled_end_at_2 ?? null,
       }
     : null;
 
@@ -611,6 +664,8 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
     status = "done";
   } else if (attendance.checkoutRequestedAt) {
     status = "checkout_pending";
+  } else if (attendance.isSplit && attendance.window1OutAt && !attendance.checkIn2) {
+    status = "split_break";
   } else {
     status = "working";
   }
