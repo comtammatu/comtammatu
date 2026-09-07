@@ -101,8 +101,8 @@ class OrderIdentityTest {
     @Test
     fun `does not shorten non-Shopee references`() {
         assertEquals(
-            "GSM-829173",
-            OrderIdentity.displaySourceOrderRef("greensm", "GSM-829173")
+            "29086-503463626",
+            OrderIdentity.displaySourceOrderRef("unknown", "29086-503463626")
         )
     }
 

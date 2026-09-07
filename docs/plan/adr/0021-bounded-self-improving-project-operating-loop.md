@@ -50,6 +50,15 @@ commit-token declarations, duplicated-rule synchronization, and incidental
 implementation-shape budgets are not substitutes for behavioral evidence.
 Removing a safety gate still requires equivalent failure proof.
 
+Document length is a reading/navigation signal, not a blocking gate. Rules,
+ADRs, and active tasks may exceed advisory thresholds without failing verify;
+there is no per-outcome line cap. Do not shorten WIP, rationale, exceptions, or
+evidence to pass a size check. Move live detail only with equivalent coverage
+in its canonical owner and a verified section pointer; otherwise preserve it.
+Git history alone is not adequate storage for unresolved requirements.
+`engineering.md` owns preservation checks; `references.md` owns scoped reading
+and handoff behavior. Paths and summaries do not automatically load sources.
+
 ### Keep active work finite
 
 `tasks/todo.md` contains outcomes that have not passed Exit. Completed work is
@@ -66,8 +75,9 @@ search tools instead of blocking repository work.
 
 ## Consequences
 
-- Entry rules and active tasks become smaller without weakening Production,
-  auth/RLS, money, migration, validation, or accessibility controls.
+- Entry rules and active tasks remain navigable while retaining all necessary
+  context and Production, auth/RLS, money, migration, validation, and
+  accessibility controls.
 - Historical detail remains recoverable from Git instead of competing with
   current authority.
 - Judgment is still required to prove that a canonical owner or guard fully

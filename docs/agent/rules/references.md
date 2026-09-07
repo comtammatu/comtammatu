@@ -3,6 +3,35 @@
 Use this index to find authority. Load only the sources needed for the task;
 runtime adapters, local tool state, and `tasks/todo.md` are not parallel SSOTs.
 
+## Reading Protocol
+
+Paths in this map are routing instructions, not proof that a runtime has loaded
+their contents. `agent:start` refreshes the source graph and installs hooks; it
+does not load all Markdown into model context. CodeGraph does not index these
+Markdown contracts. Agents must explicitly read the relevant sources.
+
+1. Read `AGENTS.md`, `engineering.md`, and the topic rules selected by the
+   entrypoint. Read applicable rule files completely, in bounded chunks when
+   tool output is truncated; a search hit alone does not establish the policy.
+2. For the tracker, scan headings to locate related outcomes, then read each
+   matching H2 through the next H2, including all actions, blockers, evidence,
+   and UI gates. Read linked owning sections before implementation or closure.
+3. For specs/modules/refs/runbooks, inspect headings and search relevant terms,
+   then read complete matching sections with definitions, exceptions, and linked
+   prerequisites. For a relevant ADR, read context, decision, consequences, and
+   verification/rollback, not just its title or accepted status.
+4. Search is navigation, not a substitute for reading. If output is truncated,
+   continue from the last visible line until the relevant scope is complete.
+   Re-read current source after compaction or a handoff when details are absent
+   or may have changed; do not infer missing constraints from a short summary.
+5. A delegated task or handoff must identify the outcome heading, owning paths
+   and sections, unresolved constraints, and evidence limits. The receiving
+   agent reads those sources itself; shared disk and links do not guarantee
+   shared model context. Keep concise handoffs backed by intact source content.
+
+Line counts do not measure tokens or comprehension. Manage context through
+scoped reads and source pointers, never by discarding live project knowledge.
+
 ## System Sources
 
 HOT — load by default for matching work:

@@ -45,10 +45,10 @@ class OperatorErrorFormatterTest {
     }
 
     @Test
-    fun `explains a held platform that Redmi cannot take directly`() {
+    fun `explains a ShopeeFood source that is turned off`() {
         assertEquals(
-            "Nguồn này chưa nhận trực tiếp trên Redmi. Nhập tay nếu đơn đã lên POS.",
-            OperatorErrorFormatter.format("beFood chưa hỗ trợ gửi trực tiếp tới Agent trên Redmi")
+            "Nguồn này đang tắt. Bật lại ở Thiết bị rồi gửi lại, hoặc nhập tay.",
+            OperatorErrorFormatter.format("Nguồn ShopeeFood đang tắt trong cấu hình")
         )
     }
 }

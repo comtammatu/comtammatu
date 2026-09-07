@@ -28,9 +28,6 @@ const ARCHITECTURE_REQUIRED_POINTERS = [
 ];
 const REQUIRED_TASK_FIELDS = ["State", "Exit", "Evidence"];
 const TASK_STATES = new Set(["triage", "ready", "doing", "verify", "blocked"]);
-const TASK_TRACKER_MAX_LINES = 840;
-const TASK_OUTCOME_MAX_NONBLANK_LINES = 15;
-const TASK_UI_OUTCOME_MAX_NONBLANK_LINES = 21;
 
 function isDurablePath(path) {
   return DURABLE.some((pattern) => pattern.test(path));
@@ -42,26 +39,8 @@ function fieldValues(body, field) {
   );
 }
 
-function countLines(text) {
-  if (text.length === 0) return 0;
-  const normalized = text.replaceAll("\r\n", "\n");
-  return normalized.endsWith("\n")
-    ? normalized.slice(0, -1).split("\n").length
-    : normalized.split("\n").length;
-}
-
-function countNonblankLines(text) {
-  return text.split(/\r?\n/).filter((line) => line.trim().length > 0).length;
-}
-
 function validateTaskDoc(taskDoc) {
   const reasons = [];
-  const trackerLines = countLines(taskDoc);
-  if (trackerLines > TASK_TRACKER_MAX_LINES) {
-    reasons.push(
-      `${trackerLines} lines exceeds tracker budget ${TASK_TRACKER_MAX_LINES}`,
-    );
-  }
   const headings = [...taskDoc.matchAll(/^## (.+)$/gm)];
   const preamble = taskDoc.slice(0, headings[0]?.index ?? taskDoc.length);
   if (
@@ -77,18 +56,6 @@ function validateTaskDoc(taskDoc) {
     const bodyStart = heading.index + heading[0].length;
     const bodyEnd = headings[index + 1]?.index ?? taskDoc.length;
     const body = taskDoc.slice(bodyStart, bodyEnd);
-    const hasUiAdvisorGate = /^UI Advisor Gate\s*$/m.test(body);
-    const maxNonblankLines = hasUiAdvisorGate
-      ? TASK_UI_OUTCOME_MAX_NONBLANK_LINES
-      : TASK_OUTCOME_MAX_NONBLANK_LINES;
-    const nonblankLines = 1 + countNonblankLines(body);
-
-    if (nonblankLines > maxNonblankLines) {
-      reasons.push(
-        `"${title}" has ${nonblankLines} nonblank lines; exceeds ${maxNonblankLines} nonblank lines`,
-      );
-    }
-
     for (const field of REQUIRED_TASK_FIELDS) {
       if (fieldValues(body, field).length !== 1) {
         reasons.push(`"${title}" must contain exactly one ${field} field`);
@@ -222,6 +189,23 @@ Blocker: External dependency.
 - [ ] Run the proof.
 `;
   assert.deepEqual(validateTaskDoc(valid), []);
+  for (const field of REQUIRED_TASK_FIELDS) {
+    assert.ok(
+      validateTaskDoc(`${valid}${field}: Duplicate.\n`).some((reason) =>
+        reason.includes(`exactly one ${field} field`),
+      ),
+    );
+  }
+  assert.ok(
+    validateTaskDoc(valid.replace("State: blocked", "State: ready")).some(
+      (reason) => /Blocker only in blocked state/.test(reason),
+    ),
+  );
+  assert.ok(
+    validateTaskDoc(valid.replace("- [ ] Run the proof.", "")).some((reason) =>
+      /at least one unchecked action/.test(reason),
+    ),
+  );
   assert.deepEqual(validateTaskDoc("# Current Tasks\n"), []);
   assert.ok(
     validateTaskDoc("# Current Tasks\nState: ready\n- [ ] Orphan\n").length > 0,
@@ -242,26 +226,23 @@ Blocker: External dependency.
     ),
   );
   const oversizedOutcome = `${valid}${"- [ ] Extra proof.\n".repeat(10)}`;
-  assert.ok(
-    validateTaskDoc(oversizedOutcome).some((reason) =>
-      /exceeds 15 nonblank lines/.test(reason),
-    ),
-  );
+  assert.deepEqual(validateTaskDoc(oversizedOutcome), []);
   const uiAdvisorAtLimit = valid.replace(
     "- [ ] Run the proof.\n",
     `UI Advisor Gate\n${"- Detail.\n".repeat(14)}- [ ] Run the proof.\n`,
   );
   assert.deepEqual(validateTaskDoc(uiAdvisorAtLimit), []);
-  assert.ok(
-    validateTaskDoc(`${uiAdvisorAtLimit}- One line too many.\n`).some(
-      (reason) => /exceeds 21 nonblank lines/.test(reason),
-    ),
+  assert.deepEqual(validateTaskDoc(`${uiAdvisorAtLimit}- More context.\n`), []);
+  const oversizedTracker = `${valid}${"- [ ] Preserve this required check.\n".repeat(840)}`;
+  assert.deepEqual(validateTaskDoc(oversizedTracker), []);
+  assert.deepEqual(
+    validateTaskDoc(oversizedTracker.replaceAll("\n", "\r\n")),
+    [],
   );
-  const oversizedTracker = `# Current Tasks\n${"note\n".repeat(840)}`;
   assert.ok(
-    validateTaskDoc(oversizedTracker).some((reason) =>
-      /841 lines exceeds tracker budget 840/.test(reason),
-    ),
+    validateTaskDoc(
+      oversizedTracker.replace("Blocker: External dependency.\n", ""),
+    ).some((reason) => /needs one Blocker/.test(reason)),
   );
   assert.deepEqual(
     validateDecisionDoc("## D001: Accepted\n\n**Decision:** Keep it.\n"),

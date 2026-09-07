@@ -53,6 +53,27 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         const val COLUMN_RESOLVED_AT = "resolved_at"
         const val COLUMN_RESOLUTION_NOTE = "resolution_note"
 
+        private val LEDGER_COLUMNS = arrayOf(
+            COLUMN_ID,
+            COLUMN_BRANCH_ID,
+            COLUMN_PLATFORM,
+            COLUMN_STATUS,
+            COLUMN_RETRY_COUNT,
+            COLUMN_CREATED_AT,
+            COLUMN_LAST_ERROR,
+            COLUMN_NEXT_RETRY_AT,
+            COLUMN_SOURCE_ORDER_REF,
+            COLUMN_POS_ORDER_ID,
+            COLUMN_POS_ORDER_NUMBER,
+            COLUMN_POS_DISPLAY_ID,
+            COLUMN_SENT_AT,
+            COLUMN_DUPLICATE_COUNT,
+            COLUMN_LAST_SEEN_AT,
+            COLUMN_IDEMPOTENT,
+            COLUMN_RESOLVED_AT,
+            COLUMN_RESOLUTION_NOTE
+        )
+
         const val STATUS_PENDING = "PENDING"
         const val STATUS_SENDING = "SENDING"
         const val STATUS_BLOCKED = "BLOCKED"
@@ -511,6 +532,32 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         resolutionNote = c.getString(c.getColumnIndexOrThrow(COLUMN_RESOLUTION_NOTE))
     )
 
+    private fun readLedgerOrder(c: android.database.Cursor): QueuedOrder = QueuedOrder(
+        id = c.getLong(c.getColumnIndexOrThrow(COLUMN_ID)),
+        rawBase64 = "",
+        branchId = c.getInt(c.getColumnIndexOrThrow(COLUMN_BRANCH_ID)),
+        platform = c.getString(c.getColumnIndexOrThrow(COLUMN_PLATFORM)),
+        receiptText = null,
+        retryCount = c.getInt(c.getColumnIndexOrThrow(COLUMN_RETRY_COUNT)),
+        createdAt = c.getLong(c.getColumnIndexOrThrow(COLUMN_CREATED_AT)),
+        status = c.getString(c.getColumnIndexOrThrow(COLUMN_STATUS)),
+        lastError = c.getString(c.getColumnIndexOrThrow(COLUMN_LAST_ERROR)),
+        nextRetryAt = c.getLong(c.getColumnIndexOrThrow(COLUMN_NEXT_RETRY_AT)),
+        remoteResponse = null,
+        sourceOrderRef = c.getString(c.getColumnIndexOrThrow(COLUMN_SOURCE_ORDER_REF)),
+        posOrderId = c.getColumnIndexOrThrow(COLUMN_POS_ORDER_ID).let { index ->
+            if (c.isNull(index)) null else c.getLong(index)
+        },
+        posOrderNumber = c.getString(c.getColumnIndexOrThrow(COLUMN_POS_ORDER_NUMBER)),
+        posDisplayId = c.getString(c.getColumnIndexOrThrow(COLUMN_POS_DISPLAY_ID)),
+        sentAt = c.getLong(c.getColumnIndexOrThrow(COLUMN_SENT_AT)),
+        duplicateCount = c.getInt(c.getColumnIndexOrThrow(COLUMN_DUPLICATE_COUNT)),
+        lastSeenAt = c.getLong(c.getColumnIndexOrThrow(COLUMN_LAST_SEEN_AT)),
+        idempotent = c.getInt(c.getColumnIndexOrThrow(COLUMN_IDEMPOTENT)) == 1,
+        resolvedAt = c.getLong(c.getColumnIndexOrThrow(COLUMN_RESOLVED_AT)),
+        resolutionNote = c.getString(c.getColumnIndexOrThrow(COLUMN_RESOLUTION_NOTE))
+    )
+
     fun getPendingOrders(limit: Int = 20): List<QueuedOrder> {
         val list = mutableListOf<QueuedOrder>()
         val db = readableDatabase
@@ -588,6 +635,28 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
 
     fun getResolvedCount(): Int = countByStatuses(QueueLifecycle.resolvedStatuses)
 
+    fun getActionNeededCount(): Int =
+        countByStatuses(listOf(STATUS_BLOCKED, STATUS_UNCLASSIFIED))
+
+    fun getInFlightCount(): Int =
+        countByStatuses(listOf(STATUS_PENDING, STATUS_SENDING))
+
+    fun getOrder(orderId: Long): QueuedOrder? {
+        val cursor = readableDatabase.query(
+            TABLE_ORDERS,
+            null,
+            "$COLUMN_ID = ?",
+            arrayOf(orderId.toString()),
+            null,
+            null,
+            null,
+            "1"
+        )
+        return cursor.use { c ->
+            if (c.moveToFirst()) readQueuedOrder(c) else null
+        }
+    }
+
     private fun countByStatuses(statuses: List<String>): Int {
         val placeholders = statuses.joinToString(",") { "?" }
         val cursor = readableDatabase.rawQuery(
@@ -597,12 +666,30 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         return cursor.use { if (it.moveToFirst()) it.getInt(0) else 0 }
     }
 
+    fun getOrdersWithPayloads(limit: Int = 200): List<QueuedOrder> {
+        val cursor = readableDatabase.query(
+            TABLE_ORDERS,
+            null,
+            "$COLUMN_RAW_BASE64 IS NOT NULL AND $COLUMN_RAW_BASE64 <> ''",
+            null,
+            null,
+            null,
+            "$COLUMN_CREATED_AT DESC",
+            limit.toString()
+        )
+        return cursor.use { c ->
+            buildList {
+                while (c.moveToNext()) add(readQueuedOrder(c))
+            }
+        }
+    }
+
     fun getOrders(resolved: Boolean, limit: Int = 100): List<QueuedOrder> {
         val statuses = if (resolved) QueueLifecycle.resolvedStatuses else QueueLifecycle.waitingStatuses
         val placeholders = statuses.joinToString(",") { "?" }
         val cursor = readableDatabase.query(
             TABLE_ORDERS,
-            null,
+            LEDGER_COLUMNS,
             "$COLUMN_STATUS IN ($placeholders)",
             statuses.toTypedArray(),
             null,
@@ -612,7 +699,7 @@ class OrderQueueDbHelper(context: Context) : SQLiteOpenHelper(
         )
         return cursor.use { c ->
             buildList {
-                while (c.moveToNext()) add(readQueuedOrder(c))
+                while (c.moveToNext()) add(readLedgerOrder(c))
             }
         }
     }

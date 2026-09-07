@@ -49,10 +49,4 @@
     <color name="shopee_orange">#FF8A70</color>
     <color name="shopee_surface">#42201A</color>
     <color name="shopee_border">#764138</color>
-    <color name="greensm_green">#61D68B</color>
-    <color name="greensm_surface">#153922</color>
-    <color name="greensm_border">#376B48</color>
-    <color name="befood_yellow">#E8C45D</color>
-    <color name="befood_surface">#3C3211</color>
-    <color name="befood_border">#6D5C24</color>
 </resources>

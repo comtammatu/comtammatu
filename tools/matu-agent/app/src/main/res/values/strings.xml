@@ -17,13 +17,7 @@
     <string name="configuration_title">Cấu hình</string>
     <string name="configuration_description">Thiết lập điểm nhận và nơi chuyển tiếp đơn hàng.</string>
     <string name="platform_configuration_title">Nguồn nhận phiếu</string>
-    <string name="platform_configuration_description">Hiển thị đúng khả năng nhận đơn trực tiếp của thiết bị này.</string>
-    <string name="source_not_supported_status">CHƯA HỖ TRỢ</string>
-    <string name="greensm_not_supported_description">Trên Redmi, Green SM Food yêu cầu máy in Bluetooth hoặc thiết bị SUNMI. Cùng máy không thể ghép Bluetooth với Má Tư Agent.</string>
-    <string name="greensm_bluetooth_installed">Green SM Food đang cài trên máy. App này chỉ in Bluetooth hoặc SUNMI, không gửi vào cổng nhận phiếu.</string>
-    <string name="greensm_bluetooth_absent">Chưa cài Green SM Merchant trên máy này.</string>
-    <string name="check_greensm_transport_action">Kiểm tra Green SM Food</string>
-    <string name="befood_not_supported_description">Chưa xác nhận beFood có thể gửi phiếu trực tiếp tới Agent trên Redmi.</string>
+    <string name="platform_configuration_description">Agent chỉ nhận phiếu ShopeeFood qua cổng máy in mạng, đọc OCR và chuyển đơn lên POS.</string>
     <string name="backend_url_label">Địa chỉ máy chủ POS</string>
     <string name="branch_id_label">Mã chi nhánh</string>
     <string name="tcp_port_label">Cổng TCP</string>
@@ -41,7 +35,7 @@
     <string name="marketplace_connection_empty">Chưa thấy ShopeeFood hay app sàn nào kết nối tới cổng nhận phiếu.</string>
     <string name="marketplace_connection_probe">App sàn đã hỏi máy in lúc %1$s từ %2$s.</string>
     <string name="marketplace_connection_job">App sàn đã gửi phiếu lúc %1$s từ %2$s.</string>
-    <string name="marketplace_connection_check_empty">Chưa thấy app sàn trên cổng nhận phiếu. Mở ShopeeFood, xác nhận máy in 127.0.0.1 cổng 9100, rồi in thử một đơn. Green SM Food in Bluetooth nên không hiện ở đây.</string>
+    <string name="marketplace_connection_check_empty">Chưa thấy ShopeeFood trên cổng nhận phiếu. Mở ShopeeFood, xác nhận máy in 127.0.0.1 cổng 9100, rồi in thử một đơn.</string>
     <string name="view_queue_action">Xem tổng kết hàng đợi</string>
 
     <string name="orders_title">Sổ đối chiếu đơn</string>
@@ -59,7 +53,7 @@
     <string name="order_row_metadata">%1$s · %2$s · %3$s</string>
 
     <string name="home_attention_title">Việc cần xử lý</string>
-    <string name="home_attention_description">Phiếu lỗi lên trước; đơn đang gửi và lịch sử nằm ngay dưới.</string>
+    <string name="home_attention_description">Phiếu lỗi lên trước; đơn đang gửi nằm dưới.</string>
     <string name="home_action_needed_title">Cần xử lý</string>
     <string name="home_action_needed_description">Phiếu lỗi ánh xạ hoặc chưa rõ sàn. Gửi lại hoặc nhập tay.</string>
     <string name="home_sending_title">Đang gửi</string>
@@ -80,10 +74,13 @@
     <string name="stop_service_action">Dừng nhận đơn</string>
     <string name="service_starting_title">Đang khởi động</string>
     <string name="service_starting_description">Đang mở cổng TCP %1$d…</string>
-    <string name="service_running_title">Agent đang nhận đơn</string>
-    <string name="service_running_description">Đang nhận phiếu ShopeeFood và chuyển đơn lên POS.</string>
-    <string name="service_stopped_title">Agent đang dừng</string>
-    <string name="service_stopped_description">Bật nhận đơn khi bắt đầu vận hành.</string>
+    <string name="service_running_title">Máy in ShopeeFood đang mở</string>
+    <string name="service_running_description">Giữ 127.0.0.1 cổng 9100 để ShopeeFood không mất máy in.</string>
+    <string name="service_stopped_title">Máy in ShopeeFood đang tắt</string>
+    <string name="service_stopped_description">Bật nhận đơn để giữ IP máy in 24/7.</string>
+    <string name="printer_health_live">Máy in 127.0.0.1:%1$d đang mở</string>
+    <string name="printer_health_recovering">Đang mở lại máy in 127.0.0.1:%1$d</string>
+    <string name="printer_health_down">Bật nhận đơn để giữ máy in 127.0.0.1:9100</string>
     <string name="status_processing">ĐANG XỬ LÝ</string>
     <string name="status_running">ĐANG CHẠY</string>
     <string name="status_stopped">ĐANG DỪNG</string>
@@ -107,6 +104,11 @@
     <string name="copy_logs_action">Sao chép</string>
     <string name="logs_copied_toast">Đã sao chép toàn bộ nhật ký vào bộ nhớ tạm</string>
     <string name="run_all_diagnostics_action">Kiểm tra toàn diện</string>
+    <string name="run_ocr_bench_action">Đối chiếu OCR phiếu đã lưu</string>
+    <string name="run_ocr_bench_running">Đang đọc lại các phiếu ShopeeFood còn giữ ảnh gốc…</string>
+    <string name="run_ocr_bench_empty">Không còn phiếu nào giữ ảnh gốc để đọc lại.</string>
+    <string name="run_ocr_bench_success">Đã đối chiếu %1$d phiếu. Kết quả lưu trong nhật ký.</string>
+    <string name="run_ocr_bench_failed">Không đối chiếu được OCR. Xem nhật ký để biết chi tiết.</string>
     <string name="clear_resolved_orders_action">Dọn dữ liệu đã xử lý</string>
     <string name="clear_resolved_orders_confirm">Agent sẽ xóa ảnh phiếu, nội dung OCR và dữ liệu chẩn đoán. Mã đơn, mã phiếu POS và dấu chống trùng vẫn được giữ.</string>
     <string name="clear_resolved_orders_success">Đã dọn dữ liệu nặng của %1$d đơn; lịch sử và dấu chống trùng vẫn được giữ</string>

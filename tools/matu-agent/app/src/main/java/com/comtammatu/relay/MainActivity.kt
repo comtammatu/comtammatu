@@ -18,6 +18,8 @@ import android.graphics.drawable.StateListDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.PowerManager
 import android.provider.Settings
 import android.text.InputType
@@ -78,6 +80,8 @@ import kotlin.math.roundToInt
 class MainActivity : AppCompatActivity() {
     companion object {
         const val ACTION_START_AGENT = "com.comtammatu.relay.action.START_AGENT"
+        const val ACTION_RUN_OCR_BENCH = "com.comtammatu.relay.action.RUN_OCR_BENCH"
+        const val EXTRA_RUN_OCR_BENCH = "run_ocr_bench"
         private const val NOTIFICATION_PERMISSION_REQUEST = 401
         private const val STATE_DESTINATION = "selected_destination"
         private const val DESTINATION_OVERVIEW = 100
@@ -99,10 +103,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvStatus: TextView
     private lateinit var tvStatusBadge: TextView
     private lateinit var tvEndpoint: TextView
+    private lateinit var tvPrinterHealth: TextView
     private var tvMarketplaceHome: TextView? = null
     private var tvMarketplaceDiagnostics: TextView? = null
-    private var tvGreenSmHome: TextView? = null
-    private var tvGreenSmDiagnostics: TextView? = null
     private lateinit var tvWaitingKpi: TextView
     private lateinit var tvActionKpi: TextView
     private lateinit var tvSentKpi: TextView
@@ -118,6 +121,7 @@ class MainActivity : AppCompatActivity() {
     private val destinationViews = mutableMapOf<Int, View>()
     private var currentDestination = DESTINATION_OVERVIEW
     private var showingResolvedOrders = false
+    private var ocrBenchRunning = false
     private var navigationBar: BottomNavigationView? = null
     private var navigationRail: NavigationRailView? = null
     private var applyingProgrammaticSelection = false
@@ -126,10 +130,21 @@ class MainActivity : AppCompatActivity() {
     private lateinit var dbHelper: OrderQueueDbHelper
     private lateinit var dispatcher: WebhookDispatcher
     private var startAfterNotificationPermission = false
+    private var uiRefreshQueued = false
+    private val uiHandler = Handler(Looper.getMainLooper())
+    private val uiRefreshRunnable = Runnable {
+        uiRefreshQueued = false
+        if (currentDestination == DESTINATION_LOGS && ::tvLogs.isInitialized) {
+            updateLogsView()
+        }
+        refreshServiceState()
+    }
 
     private val logListener = { _: String ->
-        updateLogsView()
-        refreshServiceState()
+        if (!uiRefreshQueued) {
+            uiRefreshQueued = true
+            uiHandler.postDelayed(uiRefreshRunnable, 250)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -190,6 +205,9 @@ class MainActivity : AppCompatActivity() {
         if (intent.action == ACTION_START_AGENT && !PrintIntakeService.isServiceRunning) {
             btnToggle.post { toggleService() }
         }
+        if (intent.action == ACTION_RUN_OCR_BENCH || intent.getBooleanExtra(EXTRA_RUN_OCR_BENCH, false)) {
+            btnToggle.post { runOcrBenchmark() }
+        }
     }
 
     override fun onStart() {
@@ -197,14 +215,18 @@ class MainActivity : AppCompatActivity() {
         AppLogger.addListener(logListener)
         updateLogsView()
         refreshServiceState()
+        uiHandler.post(uiRefreshRunnable)
     }
 
     override fun onStop() {
         super.onStop()
         AppLogger.removeListener(logListener)
+        uiHandler.removeCallbacks(uiRefreshRunnable)
+        uiRefreshQueued = false
     }
 
     override fun onDestroy() {
+        uiHandler.removeCallbacks(uiRefreshRunnable)
         activityScope.cancel()
         dbHelper.close()
         super.onDestroy()
@@ -674,6 +696,15 @@ class MainActivity : AppCompatActivity() {
         endpointContainer.addView(tvEndpoint)
         endpointContainer.addView(btnCopyEndpoint)
 
+        tvPrinterHealth = TextView(this).apply {
+            text = getString(R.string.printer_health_down)
+            textSize = 13f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            setTextColor(color(R.color.ink_secondary))
+            setPadding(0, dp(10), 0, 0)
+            setLineSpacing(dp(2).toFloat(), 1f)
+        }
+
         val marketplaceBlock = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             isClickable = true
@@ -704,15 +735,7 @@ class MainActivity : AppCompatActivity() {
             setPadding(0, dp(4), 0, 0)
             setLineSpacing(dp(2).toFloat(), 1f)
         }
-        tvGreenSmHome = TextView(this).apply {
-            textSize = 12.5f
-            setTextColor(color(R.color.warning_text))
-            setPadding(0, dp(6), 0, 0)
-            setLineSpacing(dp(2).toFloat(), 1f)
-            visibility = View.GONE
-        }
         marketplaceBlock.addView(tvMarketplaceHome)
-        marketplaceBlock.addView(tvGreenSmHome)
 
         btnToggle = MaterialButton(this).apply {
             isAllCaps = false
@@ -731,6 +754,7 @@ class MainActivity : AppCompatActivity() {
         panel.addView(tvStatus)
         panel.addView(space(14))
         panel.addView(endpointContainer)
+        panel.addView(tvPrinterHealth)
         panel.addView(space(10))
         panel.addView(marketplaceBlock)
         panel.addView(space(16))
@@ -911,24 +935,6 @@ class MainActivity : AppCompatActivity() {
             saved.shopeeEnabled
         )
         panel.addView(cbShopeeEnabled)
-        panel.addView(space(8))
-        panel.addView(sourceStatusCard(
-            platformName = "Green SM Food",
-            status = getString(R.string.source_not_supported_status),
-            description = greenSmTransportCopy(),
-            colorRes = R.color.greensm_green,
-            surfaceRes = R.color.greensm_surface,
-            borderRes = R.color.greensm_border
-        ))
-        panel.addView(space(8))
-        panel.addView(sourceStatusCard(
-            platformName = "beFood",
-            status = getString(R.string.source_not_supported_status),
-            description = getString(R.string.befood_not_supported_description),
-            colorRes = R.color.befood_yellow,
-            surfaceRes = R.color.befood_surface,
-            borderRes = R.color.befood_border
-        ))
 
         section.addView(panel)
         return section
@@ -1180,14 +1186,6 @@ class MainActivity : AppCompatActivity() {
             setTextColor(color(R.color.ink))
         })
         panel.addView(tvMarketplaceDiagnostics)
-        tvGreenSmDiagnostics = TextView(this).apply {
-            text = greenSmTransportCopy()
-            textSize = 13f
-            setTextColor(color(R.color.warning_text))
-            setPadding(0, dp(8), 0, 0)
-            setLineSpacing(dp(2).toFloat(), 1f)
-        }
-        panel.addView(tvGreenSmDiagnostics)
         panel.addView(space(12))
         panel.addView(secondaryButton(getString(R.string.check_pos_action)) { testPingPos() })
         panel.addView(space(8))
@@ -1197,13 +1195,11 @@ class MainActivity : AppCompatActivity() {
             checkMarketplaceConnection()
         })
         panel.addView(space(8))
-        panel.addView(secondaryButton(getString(R.string.check_greensm_transport_action)) {
-            checkGreenSmTransport()
-        })
-        panel.addView(space(8))
         panel.addView(secondaryButton(getString(R.string.view_queue_action)) { viewQueueSummary() })
         panel.addView(space(8))
         panel.addView(secondaryButton(getString(R.string.run_all_diagnostics_action)) { testRunAllDiagnostics() })
+        panel.addView(space(8))
+        panel.addView(secondaryButton(getString(R.string.run_ocr_bench_action)) { runOcrBenchmark() })
         section.addView(panel)
         return section
     }
@@ -1349,52 +1345,6 @@ class MainActivity : AppCompatActivity() {
                 intArrayOf(color(colorRes), color(R.color.ink_muted))
             )
             background = roundedBackground(color(surfaceRes), color(borderRes), 10)
-        }
-    }
-
-    private fun sourceStatusCard(
-        platformName: String,
-        status: String,
-        description: String,
-        colorRes: Int,
-        surfaceRes: Int,
-        borderRes: Int
-    ): LinearLayout {
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            minimumHeight = dp(72)
-            setPadding(dp(14), dp(11), dp(14), dp(11))
-            background = roundedBackground(color(surfaceRes), color(borderRes), 10)
-
-            addView(LinearLayout(this@MainActivity).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                addView(View(this@MainActivity).apply {
-                    layoutParams = LinearLayout.LayoutParams(dp(8), dp(8)).apply {
-                        marginEnd = dp(9)
-                    }
-                    background = circleBackground(color(colorRes))
-                })
-                addView(TextView(this@MainActivity).apply {
-                    text = platformName
-                    textSize = 14f
-                    typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-                    setTextColor(color(R.color.ink))
-                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                })
-                addView(TextView(this@MainActivity).apply {
-                    text = status
-                    textSize = 11.5f
-                    typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-                    setTextColor(color(R.color.warning_text))
-                })
-            })
-            addView(TextView(this@MainActivity).apply {
-                text = description
-                textSize = 12f
-                setTextColor(color(R.color.ink_muted))
-                setPadding(dp(17), dp(4), 0, 0)
-            })
         }
     }
 
@@ -1866,9 +1816,39 @@ class MainActivity : AppCompatActivity() {
             } else {
                 AppLogger.w("CHẨN ĐOÁN", "4. Kết nối app sàn: ${getString(R.string.marketplace_connection_empty)}")
             }
-            AppLogger.w("CHẨN ĐOÁN", "5. Green SM Food: ${greenSmTransportCopy()}")
             AppLogger.i("CHẨN ĐOÁN", "--- Hoàn thành kiểm tra toàn diện ---")
             Toast.makeText(this@MainActivity, "Đã hoàn thành chẩn đoán, xem kết quả trong nhật ký", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun runOcrBenchmark() {
+        if (ocrBenchRunning) {
+            Toast.makeText(this, getString(R.string.run_ocr_bench_running), Toast.LENGTH_SHORT).show()
+            return
+        }
+        ocrBenchRunning = true
+        Toast.makeText(this, getString(R.string.run_ocr_bench_running), Toast.LENGTH_LONG).show()
+        activityScope.launch {
+            val result = withContext(Dispatchers.Default) {
+                runCatching { OcrBenchmarkRunner(this@MainActivity, dbHelper).run() }
+            }
+            ocrBenchRunning = false
+            result.onSuccess { file ->
+                val count = dbHelper.getOrdersWithPayloads().size
+                if (count == 0) {
+                    Toast.makeText(this@MainActivity, getString(R.string.run_ocr_bench_empty), Toast.LENGTH_LONG).show()
+                } else {
+                    Toast.makeText(
+                        this@MainActivity,
+                        getString(R.string.run_ocr_bench_success, count),
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+                AppLogger.s("OCR", "Đã ghi kết quả đối chiếu ${file.name}")
+            }.onFailure { error ->
+                AppLogger.e("OCR", error.message ?: error.javaClass.simpleName)
+                Toast.makeText(this@MainActivity, getString(R.string.run_ocr_bench_failed), Toast.LENGTH_LONG).show()
+            }
         }
     }
 
@@ -1888,35 +1868,6 @@ class MainActivity : AppCompatActivity() {
         val copy = marketplaceStatusCopy()
         tvMarketplaceHome?.text = copy
         tvMarketplaceDiagnostics?.text = copy
-        refreshGreenSmStatus()
-    }
-
-    private fun greenSmInstalled(): Boolean =
-        GreenSmTransportPolicy.isMerchantInstalled(packageManager)
-
-    private fun greenSmTransportCopy(): String =
-        when (GreenSmTransportPolicy.classify(greenSmInstalled())) {
-            GreenSmTransportKind.BLUETOOTH_OR_SUNMI ->
-                getString(R.string.greensm_bluetooth_installed)
-            GreenSmTransportKind.ABSENT ->
-                getString(R.string.greensm_bluetooth_absent)
-        }
-
-    private fun refreshGreenSmStatus() {
-        val installed = greenSmInstalled()
-        val copy = greenSmTransportCopy()
-        tvGreenSmHome?.apply {
-            text = copy
-            visibility = if (installed) View.VISIBLE else View.GONE
-        }
-        tvGreenSmDiagnostics?.text = copy
-    }
-
-    private fun checkGreenSmTransport() {
-        refreshGreenSmStatus()
-        val copy = greenSmTransportCopy()
-        AppLogger.w("GREEN SM", copy)
-        Toast.makeText(this, copy, Toast.LENGTH_LONG).show()
     }
 
     private fun checkMarketplaceConnection() {
@@ -1942,9 +1893,8 @@ class MainActivity : AppCompatActivity() {
         val lanMode = cbLanMode.isChecked
         tvEndpoint.text = endpointSummary(port, branchId, lanMode)
 
-        val waiting = dbHelper.getOrders(false)
         val resolvedCount = dbHelper.getResolvedCount()
-        val actionNeeded = QueuePresentation.actionNeededCount(waiting)
+        val actionNeeded = dbHelper.getActionNeededCount()
 
         if (::tvActionKpi.isInitialized) {
             tvActionKpi.text = actionNeeded.toString()
@@ -1953,14 +1903,17 @@ class MainActivity : AppCompatActivity() {
             )
         }
         if (::tvWaitingKpi.isInitialized) {
-            tvWaitingKpi.text = QueuePresentation.inFlightCount(waiting).toString()
+            tvWaitingKpi.text = dbHelper.getInFlightCount().toString()
         }
         if (::tvSentKpi.isInitialized) {
             tvSentKpi.text = resolvedCount.toString()
         }
         updateReceiptsBadge(actionNeeded)
-        renderOrderList()
+        if (currentDestination == DESTINATION_RECEIPTS) {
+            renderOrderList()
+        }
         refreshMarketplaceStatus()
+        refreshPrinterHealth(port)
 
         if (PrintIntakeService.isServiceRunning) {
             btnToggle.text = getString(R.string.stop_service_action)
@@ -1991,6 +1944,23 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun refreshPrinterHealth(port: Int) {
+        if (!::tvPrinterHealth.isInitialized) return
+        val health = PrinterHealth.snapshot()
+        val live = PrintIntakeService.isServiceRunning &&
+            (health.listening || PrinterWatchdogPolicy.isFresh(health.lastOkAtMs, System.currentTimeMillis()))
+        if (live) {
+            tvPrinterHealth.text = getString(R.string.printer_health_live, port)
+            tvPrinterHealth.setTextColor(color(R.color.success_text))
+        } else if (PrintIntakeService.isServiceRunning) {
+            tvPrinterHealth.text = getString(R.string.printer_health_recovering, port)
+            tvPrinterHealth.setTextColor(color(R.color.warning_text))
+        } else {
+            tvPrinterHealth.text = getString(R.string.printer_health_down)
+            tvPrinterHealth.setTextColor(color(R.color.ink_muted))
+        }
+    }
+
     private fun viewQueueSummary() {
         val summary = dbHelper.getQueueSummary()
         AppLogger.i("HÀNG ĐỢI", "\n$summary")
@@ -1998,10 +1968,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showOrderDetail(order: OrderQueueDbHelper.QueuedOrder) {
+        val detail = dbHelper.getOrder(order.id) ?: order
         val timeFormat = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault())
-        val rawBytes = runCatching { Base64.decode(order.rawBase64, Base64.DEFAULT) }
+        val rawBytes = runCatching { Base64.decode(detail.rawBase64, Base64.DEFAULT) }
             .getOrDefault(byteArrayOf())
-        val layers = ReceiptDataInspector.inspect(rawBytes, order.receiptText)
+        val layers = ReceiptDataInspector.inspect(rawBytes, detail.receiptText)
         val sourceRef = visibleOrderRef(order)
         var previewBitmap: Bitmap? = null
 
@@ -2471,9 +2442,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun platformLabel(platform: String): String = when (platform) {
-        "shopee" -> "ShopeeFood"
-        "greensm" -> "Green SM Food"
-        "be" -> "beFood"
+        DeliveryPlatform.SHOPEE_FOOD.wireValue -> DeliveryPlatform.SHOPEE_FOOD.displayName
         else -> "Chưa rõ sàn"
     }
 

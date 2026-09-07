@@ -35,6 +35,7 @@ apps/web/test-results/
 
 # QA/tmp artifacts
 .tmp/
+tools/matu-agent/.tmp-ocr/
 apps/web/tmp/
 *.pem
 *.tsbuildinfo

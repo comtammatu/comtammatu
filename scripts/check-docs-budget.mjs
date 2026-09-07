@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Caps files the agent loads as a whole: `docs/agent/rules/*` (400),
- * ADRs (150), and the retired worklog tree. Spec/module/ref are on-demand
- * Read/rg and are not line-capped. Policy: `engineering.md`, ADR 0021.
+ * Reports document size for reading/navigation review, never content removal.
+ * Only the retired worklog tree blocks lint. Size remains advisory even with
+ * legacy --strict callers. Policy: `engineering.md`, ADR 0021.
  */
 import assert from "node:assert/strict";
 import {
@@ -18,8 +18,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const REPO_ROOT = process.cwd();
-const AGENT_RULE_MAX_LINES = 400;
-const ADR_MAX_LINES = 150;
+const AGENT_RULE_REVIEW_LINES = 400;
+const ADR_REVIEW_LINES = 150;
+const TASK_TRACKER_REVIEW_LINES = 840;
 
 function countLines(filePath) {
   const text = readFileSync(filePath, "utf8");
@@ -45,9 +46,9 @@ export function collectDocsBudgetErrors(repoRoot = REPO_ROOT) {
       if (!entry.isFile() || !entry.name.endsWith(".md")) continue;
       const rel = `docs/agent/rules/${entry.name}`;
       const lines = countLines(join(rulesDir, entry.name));
-      if (lines > AGENT_RULE_MAX_LINES) {
+      if (lines > AGENT_RULE_REVIEW_LINES) {
         errors.push(
-          `${rel}: ${lines} lines exceeds budget ${AGENT_RULE_MAX_LINES}`,
+          `${rel}: ${lines} lines; reading review threshold ${AGENT_RULE_REVIEW_LINES}`,
         );
       }
     }
@@ -59,27 +60,31 @@ export function collectDocsBudgetErrors(repoRoot = REPO_ROOT) {
       if (!entry.isFile() || !entry.name.endsWith(".md")) continue;
       const rel = `docs/plan/adr/${entry.name}`;
       const lines = countLines(join(adrDir, entry.name));
-      if (lines > ADR_MAX_LINES) {
+      if (lines > ADR_REVIEW_LINES) {
         errors.push(
-          `${rel}: ${lines} lines exceeds budget ${ADR_MAX_LINES}`,
+          `${rel}: ${lines} lines; reading review threshold ${ADR_REVIEW_LINES}`,
         );
       }
     }
   }
 
+  const tracker = join(repoRoot, "tasks/todo.md");
+  if (existsSync(tracker)) {
+    const lines = countLines(tracker);
+    if (lines > TASK_TRACKER_REVIEW_LINES) {
+      errors.push(
+        `tasks/todo.md: ${lines} lines; reading review threshold ${TASK_TRACKER_REVIEW_LINES}`,
+      );
+    }
+  }
   return errors;
 }
 
 export function isDocsBudgetLintGate(error) {
-  return (
-    error.includes("docs/worklog") ||
-    error.startsWith("docs/agent/rules/") ||
-    error.startsWith("docs/plan/adr/")
-  );
+  return error.startsWith("docs/worklog/** is retired;");
 }
 
-export function selectDocsBudgetErrors(allErrors, { strict }) {
-  if (strict) return { errors: allErrors, advisories: [] };
+export function selectDocsBudgetErrors(allErrors) {
   return {
     errors: allErrors.filter(isDocsBudgetLintGate),
     advisories: allErrors.filter((error) => !isDocsBudgetLintGate(error)),
@@ -110,13 +115,29 @@ function runSelfTest() {
       strict: false,
     });
     assert.match(errors.join("\n"), /docs\/worklog/);
-    assert.match(errors.join("\n"), /docs\/plan\/adr\/9999-over\.md/);
-    assert.match(errors.join("\n"), /docs\/agent\/rules\/over\.md/);
-    assert.equal(advisories.length, 0);
+    assert.equal(errors.length, 1);
+    assert.match(advisories.join("\n"), /docs\/plan\/adr\/9999-over\.md/);
+    assert.match(advisories.join("\n"), /docs\/agent\/rules\/over\.md/);
+    assert.equal(advisories.length, 2);
 
     const strict = selectDocsBudgetErrors(all, { strict: true });
     assert.equal(strict.errors.length, errors.length);
-    assert.equal(strict.advisories.length, 0);
+    assert.deepEqual(strict.advisories, advisories);
+    rmSync(join(fixture, "docs", "worklog"), { recursive: true });
+    assert.deepEqual(
+      selectDocsBudgetErrors(collectDocsBudgetErrors(fixture), { strict: true })
+        .errors,
+      [],
+    );
+    writeLines(join(fixture, "tasks", "todo.md"), 841);
+    const withTracker = selectDocsBudgetErrors(
+      collectDocsBudgetErrors(fixture),
+    );
+    assert.deepEqual(withTracker.errors, []);
+    assert.match(
+      withTracker.advisories.join("\n"),
+      /tasks\/todo\.md: 841 lines/,
+    );
   } finally {
     rmSync(fixture, { recursive: true, force: true });
   }
@@ -129,14 +150,14 @@ function main() {
     return;
   }
 
-  const strict = process.argv.includes("--strict");
   const { errors, advisories } = selectDocsBudgetErrors(
     collectDocsBudgetErrors(REPO_ROOT),
-    { strict },
   );
 
   for (const advisory of advisories) {
-    console.warn(`[docs-budget] advisory (not a lint fail): ${advisory}`);
+    console.warn(
+      `[docs-budget] advisory (not a lint fail): ${advisory}; preserve required content and review navigation, not line count`,
+    );
   }
 
   if (errors.length > 0) {
@@ -145,7 +166,7 @@ function main() {
   }
 
   console.log(
-    "[docs-budget] worklog ban, ADR cap (150), and agent-rule cap (400) ok",
+    "[docs-budget] worklog boundary ok; document sizes are advisory only",
   );
 }
 

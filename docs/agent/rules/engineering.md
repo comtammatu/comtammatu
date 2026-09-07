@@ -41,10 +41,21 @@ at `apps/web/proxy.ts`. Auth/ACL: `docs/modules/auth.md` and `database.md`.
 
 ## Documentation gates
 
-Caps live in `scripts/check-docs-budget.mjs` and apply only to files the
-agent loads as a whole: `docs/agent/rules/*` (400; `AGENTS.md` reads one
-topic rule), ADRs (150), and the worklog ban. Spec/module/ref are on-demand
-`Read`/`rg` via `references.md`; CodeGraph indexes supported source, not
-markdown. Do not add spec/module/ref line caps — shape budget is not
-behavioral evidence (ADR 0021). `tasks/todo.md` finiteness is
-`check-doc-staleness.mjs`.
+`scripts/check-docs-budget.mjs` reports reading-review thresholds for topic
+rules (400 lines), ADRs (150), and `tasks/todo.md` (840). These are advisory
+navigation signals, not content limits, model context limits, or permission to
+delete information. They never block lint/verify, including legacy `--strict`
+invocations. Spec/module/ref have no line thresholds. The retired worklog
+boundary remains blocking; `check-doc-staleness.mjs` checks task lifecycle and
+source ownership, not document length. Behavioral debt and runtime resource
+budgets are separate contracts and are not relaxed by this policy (ADR 0021).
+
+Never delete, abbreviate, join lines, or weaken required content to meet a
+size target. Preserve constraints, rationale, exceptions, unresolved questions,
+blockers, pending actions, exact evidence, and verification/rollout status.
+Prefer headings and scoped reads; the reading protocol is in `references.md`.
+When moving detail to its existing canonical owner, preserve its meaning and
+qualifiers, add a direct path and section link at the source, verify the target
+exists, and compare the before/after content before removing the duplicate.
+If equivalent coverage cannot be established, keep the original. A shorter
+summary and a Git history reference are not substitutes for live requirements.

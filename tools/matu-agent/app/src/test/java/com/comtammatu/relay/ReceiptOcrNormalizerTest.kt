@@ -261,12 +261,12 @@ class ReceiptOcrNormalizerTest {
     }
 
     @Test
-    fun `normalizes Green SM raster quantity rows without absorbing receipt totals`() {
+    fun `normalizes Shopee raster quantity rows without absorbing receipt totals`() {
         val normalized = RasterReceiptTextNormalizer.normalize(
             """
-                XANH SM NGON
+                ShopeeFood
                 Mã đơn hàng
-                GSM-829173
+                07096-766851190
                 1. Cơm Sườn Cốt Lết
                 • 1xTrứng
                 2 x 114.000d
@@ -274,7 +274,7 @@ class ReceiptOcrNormalizerTest {
             """.trimIndent()
         )
 
-        assertTrue(normalized.contains("Mã đơn hàng: GSM-829173"))
+        assertTrue(normalized.contains("Mã đơn hàng: 07096-766851190"))
         assertTrue(normalized.contains("2x Sườn Cốt Lết 114.000"))
         assertTrue(normalized.contains("+ Trứng"))
         assertTrue(!normalized.contains("Ghi chú: Tổng cộng"))

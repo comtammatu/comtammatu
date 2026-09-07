@@ -5,43 +5,36 @@ import org.junit.Test
 
 class DeliveryPlatformDetectorTest {
     @Test
-    fun `detects the three supported delivery platforms`() {
+    fun `detects ShopeeFood receipts only`() {
         assertEquals(
             DeliveryPlatform.SHOPEE_FOOD,
             DeliveryPlatformDetector.detect("ShopeeFood\nMã đơn: SPF-123")
         )
         assertEquals(
-            DeliveryPlatform.GREEN_SM_FOOD,
-            DeliveryPlatformDetector.detect("GreenSM Food\nMã đơn: GSM-456")
-        )
-        assertEquals(
-            DeliveryPlatform.BE_FOOD,
-            DeliveryPlatformDetector.detect("Be Food\nMã đơn: BE-789")
+            DeliveryPlatform.SHOPEE_FOOD,
+            DeliveryPlatformDetector.detect("Thanh toán: ShopeePay\nSPF-8891")
         )
     }
 
     @Test
-    fun `fails closed for unknown or conflicting receipt signatures`() {
+    fun `fails closed for unknown receipts`() {
         assertEquals(null, DeliveryPlatformDetector.detect("Phiếu giao hàng\nMã đơn: 123456"))
-        assertEquals(
-            null,
-            DeliveryPlatformDetector.detect("ShopeeFood\nGreenSM Food\nMã đơn: SPF-GSM-1")
-        )
+        assertEquals(null, DeliveryPlatformDetector.detect("Đơn mạng\nMã đơn: ABC-456"))
     }
 
     @Test
-    fun `does not treat accidental ASCII inside a raster payload as a platform`() {
-        val rasterWithBeFoodLikeBytes = byteArrayOf(
+    fun `does not treat accidental ASCII inside a raster payload as ShopeeFood`() {
+        val rasterWithSpfLikeBytes = byteArrayOf(
             0x1B, 0x40,
             0x1D, 0x76, 0x30, 0x00,
             0x04, 0x00, 0x01, 0x00,
-            'B'.code.toByte(),
-            'E'.code.toByte(),
-            '-'.code.toByte(),
-            '9'.code.toByte()
+            'S'.code.toByte(),
+            'P'.code.toByte(),
+            'F'.code.toByte(),
+            '-'.code.toByte()
         )
 
-        assertEquals(null, DeliveryPlatformDetector.detect(rasterWithBeFoodLikeBytes))
+        assertEquals(null, DeliveryPlatformDetector.detect(rasterWithSpfLikeBytes))
         assertEquals(
             DeliveryPlatform.SHOPEE_FOOD,
             DeliveryPlatformDetector.detect(

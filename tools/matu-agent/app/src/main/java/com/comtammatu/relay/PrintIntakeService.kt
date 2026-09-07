@@ -4,6 +4,7 @@ import android.app.Service
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
@@ -18,6 +19,7 @@ import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.InetAddress
+import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
 import java.net.SocketTimeoutException
@@ -68,6 +70,8 @@ class PrintIntakeService : Service() {
     private lateinit var receiptTextRecognizer: ReceiptTextRecognizer
     private lateinit var printerDiscovery: PrinterDiscovery
     private var runtimeWakeLock: PowerManager.WakeLock? = null
+    private var wifiLock: WifiManager.WifiLock? = null
+    private var watchdogStarted = false
 
     override fun onCreate() {
         super.onCreate()
@@ -89,6 +93,7 @@ class PrintIntakeService : Service() {
         serviceScope.launch {
             dispatcher.startRetryLoop()
         }
+        startWatchdog()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -137,7 +142,7 @@ class PrintIntakeService : Service() {
             AgentNotifications.SERVICE_NOTIFICATION_ID,
             AgentNotifications.buildServiceNotification(
                 this,
-                "Đang nhận phiếu tại cổng TCP $port · ${dispatcher.getPendingCount()} đang chờ"
+                printerStatusText(port)
             )
         )
         startServer(port, lanMode)
@@ -164,8 +169,13 @@ class PrintIntakeService : Service() {
         )
     }
 
-    private fun startServer(port: Int, lanMode: Boolean) {
-        if (isServiceRunning) return
+    private fun startServer(port: Int, lanMode: Boolean, force: Boolean = false) {
+        if (isServiceRunning && !force) return
+        if (force) {
+            isServiceRunning = false
+            printerDiscovery.unregister()
+            closeServerSockets()
+        }
 
         // Bind synchronously so a failed bind never leaves the service in a
         // zombie "running" state. Loopback only by default: the intake port is
@@ -174,7 +184,10 @@ class PrintIntakeService : Service() {
         for (host in PrinterEndpoint.bindHosts(lanMode)) {
             try {
                 val bindAddress = InetAddress.getByName(host)
-                bound += ServerSocket(port, 50, bindAddress)
+                val server = ServerSocket()
+                server.reuseAddress = true
+                server.bind(InetSocketAddress(bindAddress, port), 50)
+                bound += server
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to bind $host:$port: ${e.message}", e)
                 AppLogger.w("NHẬN PHIẾU", "Không mở được $host:$port: ${e.message}")
@@ -182,6 +195,7 @@ class PrintIntakeService : Service() {
         }
         if (bound.isEmpty()) {
             isServiceRunning = false
+            PrinterHealth.recordListen(false)
             AppLogger.e("NHẬN PHIẾU", "Không mở được cổng TCP $port (Có thể cổng 9100 đang bị chiếm dụng)")
             startForeground(
                 AgentNotifications.SERVICE_NOTIFICATION_ID,
@@ -197,8 +211,12 @@ class PrintIntakeService : Service() {
             serverSockets.addAll(bound)
         }
         isServiceRunning = true
+        PrinterHealth.recordListen(true)
         acquireRuntimeWakeLock()
-        if (lanMode) printerDiscovery.register(port)
+        if (lanMode) {
+            acquireWifiLock()
+            printerDiscovery.register(port)
+        }
         val endpointLabel = if (lanMode) "0.0.0.0 Mạng LAN" else "127.0.0.1 + ::1 Cục bộ"
         Log.i(TAG, "Print intake server listening on $endpointLabel:$port")
         AppLogger.s("NHẬN PHIẾU", "Đang mở cổng TCP $port ($endpointLabel). Sẵn sàng nhận đơn!")
@@ -206,16 +224,9 @@ class PrintIntakeService : Service() {
             AgentNotifications.SERVICE_NOTIFICATION_ID,
             AgentNotifications.buildServiceNotification(
                 this,
-                "Đang nhận phiếu tại cổng TCP $port · ${dispatcher.getPendingCount()} đang chờ"
+                printerStatusText(port)
             )
         )
-        if (GreenSmTransportPolicy.isMerchantInstalled(packageManager)) {
-            AppLogger.w(
-                "GREEN SM",
-                "Green SM Food đang cài trên máy; in Bluetooth hoặc SUNMI, không vào cổng $port"
-            )
-        }
-
         for (server in bound) {
             serviceScope.launch { acceptLoop(server) }
         }
@@ -283,6 +294,7 @@ class PrintIntakeService : Service() {
         var loggedMarketplaceProbe = false
         try {
             socket.keepAlive = true
+            socket.tcpNoDelay = true
             socket.soTimeout = READ_TIMEOUT_MS
             val inputStream: InputStream = socket.getInputStream()
             val clientOutput: OutputStream = socket.getOutputStream()
@@ -419,16 +431,13 @@ class PrintIntakeService : Service() {
         noteIntakePeer(remoteAddress, rawBytes, sessionEnded = false)
 
         serviceScope.launch {
-            var receiptText: String? = null
-            var platform = DeliveryPlatformDetector.detect(rawBytes)
-            val hasRaster = EscPosRasterDecoder.hasDecodableRaster(rawBytes)
-
-            if (AgentOcrPolicy.shouldRunOcr(platform, hasRaster)) {
+            val plan = ShopeeReceiptPipeline.plan(rawBytes)
+            var ocrText: String? = null
+            if (plan.shouldRunOcr) {
                 AppLogger.i("OCR", "Phiếu là ảnh; đang đọc chữ trực tiếp trên thiết bị...")
                 try {
-                    receiptText = receiptTextRecognizer.recognize(rawBytes)
-                    platform = receiptText?.let(DeliveryPlatformDetector::detect)
-                    if (receiptText != null) {
+                    ocrText = receiptTextRecognizer.recognize(rawBytes)
+                    if (ocrText != null) {
                         AppLogger.s("OCR", "Đã đọc xong nội dung phiếu in bằng OCR")
                     }
                 } catch (error: Exception) {
@@ -437,23 +446,21 @@ class PrintIntakeService : Service() {
                 }
             }
 
+            val classification = ShopeeReceiptPipeline.finish(plan.rawPlatform, ocrText)
+            val platform = classification.platform
+            val receiptText = classification.receiptText
             if (platform == null) {
                 val queuedId = dispatcher.storeUnclassifiedReceipt(rawBytes, receiptText)
                 AppLogger.e(
                     "PHÂN LOẠI",
-                    "Phiếu #$queuedId chưa xác định được nguồn hỗ trợ; đã giữ lại và không gửi lên POS."
+                    "Phiếu #$queuedId chưa xác định được ShopeeFood; đã giữ lại và không gửi lên POS."
                 )
             } else if (!isPlatformEnabled(platform)) {
-                val reason = when (platform) {
-                    DeliveryPlatform.SHOPEE_FOOD -> "Nguồn ShopeeFood đang tắt trong cấu hình"
-                    DeliveryPlatform.GREEN_SM_FOOD -> "Green SM Food chưa hỗ trợ gửi trực tiếp tới Agent trên Redmi"
-                    DeliveryPlatform.BE_FOOD -> "beFood chưa hỗ trợ gửi trực tiếp tới Agent trên Redmi"
-                }
                 val queuedId = dispatcher.storeHeldReceipt(
                     rawBytes,
                     platform,
                     receiptText,
-                    reason
+                    "Nguồn ShopeeFood đang tắt trong cấu hình"
                 )
                 AppLogger.w(
                     "NGUỒN PHIẾU",
@@ -488,10 +495,55 @@ class PrintIntakeService : Service() {
         }
     }
 
+    private fun printerStatusText(port: Int): String =
+        if (isServiceRunning) {
+            "Máy in 127.0.0.1:$port đang mở · ${dispatcher.getPendingCount()} đang chờ"
+        } else {
+            "Đang mở máy in 127.0.0.1:$port"
+        }
+
+    private fun startWatchdog() {
+        if (watchdogStarted) return
+        watchdogStarted = true
+        serviceScope.launch {
+            while (true) {
+                delay(PrinterWatchdogPolicy.INTERVAL_MS)
+                val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                if (!prefs.getBoolean(KEY_AGENT_ENABLED, false)) continue
+                val saved = configFromPrefs()
+                val probeOk = probeListenPort(saved.port)
+                PrinterHealth.recordProbe(probeOk, System.currentTimeMillis())
+                if (
+                    PrinterWatchdogPolicy.shouldRebind(
+                        agentEnabled = true,
+                        probeOk = probeOk,
+                        listening = isServiceRunning
+                    )
+                ) {
+                    AppLogger.w("CHẠY NỀN", "Máy in 127.0.0.1:${saved.port} không trả lời; đang mở lại")
+                    startServer(saved.port, saved.lanMode, force = true)
+                }
+            }
+        }
+    }
+
+    private fun probeListenPort(port: Int): Boolean =
+        runCatching {
+            Socket().use { socket ->
+                socket.connect(
+                    InetSocketAddress("127.0.0.1", port),
+                    PrinterWatchdogPolicy.PROBE_TIMEOUT_MS
+                )
+            }
+            true
+        }.getOrDefault(false)
+
     private fun stopServer() {
         isServiceRunning = false
+        PrinterHealth.recordListen(false)
         printerDiscovery.unregister()
         releaseRuntimeWakeLock()
+        releaseWifiLock()
         try {
             closeServerSockets()
             AppLogger.w("NHẬN PHIẾU", "Đã đóng cổng nhận phiếu")
@@ -504,12 +556,6 @@ class PrintIntakeService : Service() {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return when (platform) {
             DeliveryPlatform.SHOPEE_FOOD -> prefs.getBoolean(KEY_SHOPEE_ENABLED, true)
-            DeliveryPlatform.GREEN_SM_FOOD -> GreenSmTransportPolicy.canUseAgentTcpIntake(
-                GreenSmTransportPolicy.isMerchantInstalled(packageManager),
-                Build.MANUFACTURER,
-                Build.BRAND
-            )
-            DeliveryPlatform.BE_FOOD -> false
         }
     }
 
@@ -551,5 +597,25 @@ class PrintIntakeService : Service() {
             if (lock.isHeld) lock.release()
         }
         runtimeWakeLock = null
+    }
+
+    @SuppressLint("WakelockTimeout")
+    private fun acquireWifiLock() {
+        if (wifiLock?.isHeld == true) return
+        val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        wifiLock = wifiManager.createWifiLock(
+            WifiManager.WIFI_MODE_FULL_HIGH_PERF,
+            "$packageName:OrderIntakeWifi"
+        ).apply {
+            setReferenceCounted(false)
+            acquire()
+        }
+    }
+
+    private fun releaseWifiLock() {
+        wifiLock?.let { lock ->
+            if (lock.isHeld) lock.release()
+        }
+        wifiLock = null
     }
 }

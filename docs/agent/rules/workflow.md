@@ -72,13 +72,18 @@ For any bug fix, regression repair, or behavior adjustment:
 `tasks/todo.md` holds active outcomes only. Each H2 requires exactly one
 `State`, `Exit`, and `Evidence`, plus at least one unchecked action.
 `Kind`, `Tier`, and `Lane` are optional routing hints.
-Keep the tracker at or below 840 lines. Keep each outcome at or below 15
-nonblank lines, or 21 when it includes the required `UI Advisor Gate`. Promote
-stable detail to its owning contract or deterministic guard instead of copying
-tables, snapshots, or implementation inventories into the tracker.
+There is no total or per-outcome line cap, including `UI Advisor Gate` sections.
+Retain enough detail for another agent to resume without guessing: scope,
+constraints and rationale, remaining actions, blockers, evidence and its limits,
+and the distinction between implemented, verified, applied, and deployed.
+Length advisories must not trigger WIP compression or deletion. Promote stable
+detail to its existing owning contract or deterministic guard only with the
+preservation checks in `engineering.md`; keep a direct section pointer here.
 
 Allowed states: `triage`, `ready`, `doing`, `verify`, `blocked` (include one
-`Blocker`). Delete the H2 after Exit passes; Git is shipped-work history. Do
+`Blocker`). Delete the H2 only after Exit passes and all still-relevant constraints,
+follow-ups, and failure context are retained in their canonical owners. Git is
+shipped-work history, not the only location of an unresolved requirement. Do
 not persist checked actions, review transcripts, snapshots, or a `done` state.
 
 ## Four-Tier Verification Harness

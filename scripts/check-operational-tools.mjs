@@ -37,6 +37,28 @@ const MATU_AGENT_ACTIVITY_SOURCE = path.join(
   "relay",
   "MainActivity.kt",
 );
+const MATU_AGENT_PLATFORM_SOURCE = path.join(
+  MATU_AGENT_ROOT,
+  "app",
+  "src",
+  "main",
+  "java",
+  "com",
+  "comtammatu",
+  "relay",
+  "DeliveryPlatform.kt",
+);
+const MATU_AGENT_PIPELINE_SOURCE = path.join(
+  MATU_AGENT_ROOT,
+  "app",
+  "src",
+  "main",
+  "java",
+  "com",
+  "comtammatu",
+  "relay",
+  "ShopeeReceiptPipeline.kt",
+);
 const MATU_AGENT_RECEIPT_INSPECTOR_SOURCE = path.join(
   MATU_AGENT_ROOT,
   "app",
@@ -167,7 +189,24 @@ if (
 const activitySource = fs.readFileSync(MATU_AGENT_ACTIVITY_SOURCE, "utf8");
 const bootSource = fs.readFileSync(MATU_AGENT_BOOT_SOURCE, "utf8");
 const serviceSource = fs.readFileSync(MATU_AGENT_SERVICE_SOURCE, "utf8");
+const platformSource = fs.readFileSync(MATU_AGENT_PLATFORM_SOURCE, "utf8");
+const pipelineSource = fs.readFileSync(MATU_AGENT_PIPELINE_SOURCE, "utf8");
 const manifestSource = fs.readFileSync(MATU_AGENT_MANIFEST, "utf8");
+if (
+  !pipelineSource.includes("object ShopeeReceiptPipeline") ||
+  !pipelineSource.includes("fun plan(") ||
+  !pipelineSource.includes("fun finish(")
+) {
+  fail("Má Tư Agent must classify ShopeeFood receipts through ShopeeReceiptPipeline");
+}
+if (
+  !platformSource.includes("SHOPEE_FOOD") ||
+  /GREEN_SM_FOOD|BE_FOOD|GreenSmTransport/.test(
+    `${activitySource}\n${serviceSource}\n${platformSource}\n${pipelineSource}`,
+  )
+) {
+  fail("Má Tư Agent intake is ShopeeFood-only; remove Green SM and beFood Agent paths");
+}
 if (activitySource.includes("scrollLogs.fullScroll(")) {
   fail("Má Tư Agent log scrolling must not steal focus from the queue-first home viewport");
 }
@@ -188,9 +227,11 @@ if (
   !serviceSource.includes("AgentNotifications.showIncomingOrder") ||
   !serviceSource.includes("restartServerAfterFailure()") ||
   !serviceSource.includes("receivedAnyBytes") ||
-  !serviceSource.includes("IntakeListenPolicy.shouldRebindAll")
+  !serviceSource.includes("IntakeListenPolicy.shouldRebindAll") ||
+  !serviceSource.includes("PrinterWatchdogPolicy.shouldRebind") ||
+  !serviceSource.includes("probeListenPort")
 ) {
-  fail("Má Tư Agent must hold its intake runtime awake and surface each new order through a dedicated alert channel");
+  fail("Má Tư Agent must hold its intake runtime awake, probe 9100, and surface each new order through a dedicated alert channel");
 }
 if (
   !activitySource.includes("ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS") ||
