@@ -6,12 +6,17 @@ import { Frame } from "@comtammatu/ui/components/frame";
 import { messages } from "@lib/messages";
 import type { PeriodReadinessRpc, PeriodReadinessFinding } from "../_lib/finance-period-readiness";
 import { financeHref, type FinanceParams } from "../_lib/finance-params";
+import { FinancePeriodActions } from "./finance-period-actions";
 
 const copy = messages.finance.basic.exceptions;
 
 interface FinancePeriodReadinessCardProps {
   readiness: PeriodReadinessRpc | null;
   params: FinanceParams;
+  year?: number;
+  month?: number;
+  canClosePeriod?: boolean;
+  canReopenPeriod?: boolean;
 }
 
 function resolveFindingHref(code: string, params: FinanceParams): string | null {
@@ -40,6 +45,10 @@ function resolveFindingHref(code: string, params: FinanceParams): string | null 
 export function FinancePeriodReadinessCard({
   readiness,
   params,
+  year,
+  month,
+  canClosePeriod = false,
+  canReopenPeriod = false,
 }: FinancePeriodReadinessCardProps) {
   if (!readiness) return null;
 
@@ -73,6 +82,19 @@ export function FinancePeriodReadinessCard({
             hint={copy.readinessValue(String(blockerCount), String(warningCount))}
           />
         </KpiRow>
+
+        {year != null && month != null && (
+          <FinancePeriodActions
+            year={year}
+            month={month}
+            periodStatus={readiness.periodStatus}
+            canClose={canClose}
+            blockerCount={blockerCount}
+            warningCount={warningCount}
+            canClosePeriod={canClosePeriod}
+            canReopenPeriod={canReopenPeriod}
+          />
+        )}
 
         {allFindings.length > 0 && (
           <Frame className="grid gap-2 p-3">

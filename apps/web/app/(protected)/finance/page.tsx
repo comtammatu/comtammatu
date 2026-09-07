@@ -30,6 +30,8 @@ import type { FinanceOverviewSearchParams } from "./_lib/finance-overview-types"
 import { CurrentFundsSection } from "./components/current-funds-section";
 import { FinancePeriodReadinessCard } from "./components/finance-period-readiness-card";
 import { FinanceOperationalAttention } from "./components/finance-operational-attention";
+import { FinanceLaborCostCard } from "./components/finance-labor-cost-card";
+import { fetchPeriodLaborCostAction } from "./_actions/labor-cost-actions";
 import { Progress } from "@comtammatu/ui/components/progress";
 import {
   clampProgressValue,
@@ -57,18 +59,39 @@ export default async function FinancePage({
   const rawParams = searchParams ? await searchParams : {};
   const params = parseFinanceParams(rawParams);
   const resolved = resolveFinanceRange(params);
-  const [cockpit, canManageTargets] = await Promise.all([
+  const isMonthRange = isSingleCalendarMonth(
+    resolved.start,
+    resolved.end,
+  );
+  const periodYear = Number(resolved.start.slice(0, 4));
+  const periodMonth = Number(resolved.start.slice(5, 7));
+
+  const [
+    cockpit,
+    canManageTargets,
+    canClosePeriod,
+    canReopenPeriod,
+    canManageExpenses,
+    laborCostRes,
+  ] = await Promise.all([
     fetchFinanceCockpit(params, resolved, { includeCash: true }),
     currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_VIEW),
+    currentUserHasPermissionAny(PERMISSION_KEYS.ACCOUNTING_PERIOD_CLOSE),
+    currentUserHasPermissionAny(PERMISSION_KEYS.ACCOUNTING_PERIOD_REOPEN),
+    currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_EXPENSE_CREATE),
+    isMonthRange
+      ? fetchPeriodLaborCostAction({
+          year: periodYear,
+          month: periodMonth,
+          branchId: params.branch,
+        })
+      : null,
   ]);
   if (!cockpit.cash) {
     throw new Error("Finance hub requires current funds");
   }
   const cash = cockpit.cash;
-  const showTargetProgress = isSingleCalendarMonth(
-    resolved.start,
-    resolved.end,
-  );
+  const showTargetProgress = isMonthRange;
   const yearMonth = monthStartFromIsoDate(resolved.start);
   const targetProgressRes = showTargetProgress
     ? params.location === "company"
@@ -682,9 +705,25 @@ export default async function FinancePage({
         <FinancePeriodReadinessCard
           readiness={cockpit.readiness}
           params={params}
+          year={periodYear}
+          month={periodMonth}
+          canClosePeriod={canClosePeriod}
+          canReopenPeriod={canReopenPeriod}
         />
       ) : (
         <FinanceOperationalAttention cockpit={cockpit} params={params} />
+      )}
+
+      {/* CHI PHÍ NHÂN SỰ TỪ BẢNG LƯƠNG HR (SUPPORTING) */}
+      {isMonthRange && laborCostRes?.success && (
+        <FinanceLaborCostCard
+          summary={laborCostRes.data ?? null}
+          netRevenue={cockpit.kpis.netRevenueBeforeVat}
+          year={periodYear}
+          month={periodMonth}
+          params={params}
+          canManageExpenses={canManageExpenses}
+        />
       )}
     </AppPage>
   );
