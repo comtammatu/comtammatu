@@ -328,20 +328,34 @@ $$\text{Waste Ratio} = \frac{\sum \text{Total Waste Value in Period}}{\text{Deno
 
 ### 8.1. Bucket Architecture & Separation
 - **Public Catalog Bucket (`inventory-attachments/{tenant_id}/ingredients/**`):**
-  - Publicly accessible WebP thumbnails optimized via Next.js `<Image>`.
-  - Storage RLS: restricted to actors with `inventory:catalog_write`, `central_supply_ops`, or `owner`.
+  - Publicly accessible WebP thumbnails compressed before upload and rendered with Next.js `<Image unoptimized>`.
+  - Storage RLS: restricted to actors with `inventory:catalog_write` or the `central_supply_ops` position adapter, within their live tenant scope.
 - **Private QC Bucket (`grn-evidence`):**
   - Private storage holding rejection proof and damage evidence.
 
 ### 8.2. Client-Side WebP Compression
 - Input images resized client-side via `createImageBitmap` and `canvas.toBlob("image/webp", 0.82)`.
 - Maximum dimension: 800px.
-- Typical camera shots (2–5MB) are compressed to ~150–250KB before upload, slashing mobile upload latency by 90%.
+- Accept JPEG, PNG, or WebP inputs up to 10 MiB; reduce WebP quality when needed to enforce a 512 KiB upload limit. Actual compression depends on image content.
 
 ### 8.3. Transactional Mismatch Handling
-1. **Client Cleanup on RPC Failure:** If the image upload succeeds but `save_ingredient_catalog` fails, the client catch-block deletes the uploaded storage object.
-2. **Delete-on-Replace:** Updating an existing image queues physical deletion of the superseded storage object.
-3. **Orphan Cleanup Cron:** Periodic maintenance job pruning objects in `ingredients/` older than 24 hours that are unreferenced in `ingredients.image_url`.
+1. **Client Cleanup on RPC Failure:** If upload succeeds but catalog save fails, attempt deletion of the uploaded object. A referenced image remains protected even when a network failure obscures a successful save.
+2. **Delete-on-Replace:** After catalog save succeeds, attempt deletion of the superseded storage object. Referenced objects remain protected by Storage RLS.
+3. **Orphan Cleanup Cron:** `/api/cron/ingredient-image-cleanup` runs hourly at minute 17, with Bearer `CRON_SECRET` authentication. Each run claims up to 50 unreferenced catalog objects older than 24 hours, deletes through Storage API, and confirms metadata removal. Service-role-only RPCs derive tenant identity from stored paths joined to live tenants. Claims block new publication under the same object lock and remain retryable after failure; recent images and other namespaces are excluded.
+
+### 8.4. Implementation and Release Boundary
+
+- The existing ingredient dialog selects and previews locally; upload starts only on submit. Canceling before submit creates no Storage object.
+- Immutable object paths include the authenticated tenant, uploader UUID, and a random UUID. Server Actions validate inputs and keep Storage errors private.
+- Migration `20260907144730_ingredient_images.sql` extends the catalog RPC, authorizes the Storage namespace, revokes anonymous execution, and provides bounded cleanup claims. Image publication and deletion take the same object advisory lock; failed image validation rolls back the entire catalog save.
+- UI Advisor Gate: `plane=control_surface`, `archetype=DOC-WORKFLOW`; exemplar: existing ingredient dialog; registered `Field`, `Input`, and `Button`; no new page pattern. Verify selection, removal, cancel, submit failure, and populated edit on touch and desktop viewports.
+- The owner-delegated Production apply of `20260907144730_ingredient_images.sql` completed on 2026-09-07 through the registered Session Pooler wrapper. All 30 ledger statements match the reviewed source, the post-apply dry-run has no pending migration, and `corepack pnpm db:types` regenerated the Production types. Catalog reads may now release against the verified schema.
+- Evidence: image unit tests and `supabase/tests/ingredient_image_*_test.sql` scripts cover scope, atomic rollback, age limits, cleanup retries, and system-only execution. Browser compression produced a valid 800x400 WebP from a 2400x1200 source. Preview tests proved Storage access and publication/deletion races. The real cron endpoint rejected missing credentials, deleted one old orphan, retained recent/referenced images, and removed zero objects on retry. All disposable Preview branches were deleted and absence verified.
+- Security review: anonymous execution is revoked; authenticated SECURITY DEFINER execution is intentional because the RPC enforces live tenant and catalog authorization. See the [Supabase advisor explanation](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable).
+- The authenticated Next.js dialog passed cancel without upload, invalid-file recovery, save, replacement, and removal at 390, 768, and 1280 pixels with live Storage verification and no browser errors. The isolated input harness also covered dark theme, touch size, and overflow.
+- Cleanup claims intentionally have RLS enabled with no direct table policies: all access is through service-role-only SECURITY DEFINER RPCs. See the [RLS advisor explanation](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy).
+- `corepack pnpm verify` passed after Production type generation with Turbo cache disabled, including 2,959 web tests (10 existing skips), 423 shared/print tests, and Android operational checks; it passed again after deployment exclusions were added. The Git-hook reader asks Git for effective configuration so verification works in linked worktrees.
+- The release worktree includes the exact already-applied `absorb_origin_allocation_rounding_residual` source, verified against the Production ledger. Only the image migration appeared in the apply batch. Production deployment `dpl_HgNqj2d5HJjPKVt5kVKcxZhDK7jE` was promoted on 2026-09-07; `web.comtammatu.com` resolves to that READY deployment, and all four cron schedules are registered. Deployment-scoped error/fatal logs were empty at release verification.
 
 ---
 

@@ -2936,6 +2936,7 @@ export type Database = {
           fulfill_from_central_kitchen: boolean
           fulfill_from_central_supply: boolean
           id: number
+          image_url: string | null
           is_active: boolean
           issue_unit_id: number | null
           item_kind: string
@@ -2960,6 +2961,7 @@ export type Database = {
           fulfill_from_central_kitchen?: boolean
           fulfill_from_central_supply?: boolean
           id?: never
+          image_url?: string | null
           is_active?: boolean
           issue_unit_id?: number | null
           item_kind?: string
@@ -2984,6 +2986,7 @@ export type Database = {
           fulfill_from_central_kitchen?: boolean
           fulfill_from_central_supply?: boolean
           id?: never
+          image_url?: string | null
           is_active?: boolean
           issue_unit_id?: number | null
           item_kind?: string
@@ -13103,6 +13106,12 @@ export type Database = {
       }
       check_cron_jobs_health: { Args: never; Returns: undefined }
       check_order_ready: { Args: { p_order_id: number }; Returns: undefined }
+      claim_ingredient_image_cleanup: {
+        Args: { p_limit?: number }
+        Returns: {
+          object_name: string
+        }[]
+      }
       claim_print_job: {
         Args: { p_agent_id: string; p_job_id: number }
         Returns: boolean
@@ -13850,6 +13859,10 @@ export type Database = {
           payment_status: string
           tenant_id: number
         }[]
+      }
+      finish_ingredient_image_cleanup: {
+        Args: { p_object_names: string[] }
+        Returns: number
       }
       finish_tax_invoice_issue_job_as_system: {
         Args: { p_job_id: number; p_last_error?: string; p_status: string }
@@ -15490,6 +15503,8 @@ export type Database = {
           p_default_fulfill_site_kind: string
           p_fulfill_from_central_kitchen?: boolean
           p_fulfill_from_central_supply?: boolean
+          p_image_url?: string
+          p_image_url_set?: boolean
           p_ingredient_id: number
           p_issue_unit_id: number
           p_item_kind: string

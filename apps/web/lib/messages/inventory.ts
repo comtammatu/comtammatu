@@ -1,6 +1,16 @@
 import { formatCount, formatQuantity } from "@comtammatu/shared/format";
 
 export const inventory = {
+  ingredientImage: {
+    label: "Ảnh nguyên liệu",
+    choose: "Chọn ảnh",
+    remove: "Bỏ ảnh",
+    invalid: "Chọn ảnh JPG, PNG hoặc WebP không quá 10 MB.",
+    prepareFailed: "Không xử lý được ảnh. Vui lòng chọn ảnh khác.",
+    uploadFailed: "Không tải được ảnh. Vui lòng thử lại.",
+    cleanupFailed: "Chưa xóa được ảnh cũ.",
+    forbidden: "Không có quyền thay đổi ảnh nguyên liệu.",
+  },
   common: {
     noValue: "—",
     all: "Tất cả",
@@ -60,33 +70,39 @@ export const inventory = {
     transfersAndLogisticsHint: "1 đang lăn bánh · 1 đang bốc dỡ",
     wasteAndExceptions: "Ngoại lệ và hao hụt",
     wasteAndExceptionsHintNormal: "Hao hụt trong mức cho phép",
-    wastePendingCount: (count: number) => `${formatCount(count)} phiếu hao hụt chờ duyệt`,
+    wastePendingCount: (count: number) =>
+      `${formatCount(count)} phiếu hao hụt chờ duyệt`,
     deficitRadarTitle: "Radar Thiếu Hụt và Bổ Hàng Toàn Chuỗi",
     deficitRadarAria: "Radar thiếu hụt toàn chuỗi",
     deficitBadge: (count: number) => `${formatCount(count)} nguyên liệu`,
-    deficitAmount: (deficit: number, unit: string) => `Thiếu ${deficit} ${unit}`,
+    deficitAmount: (deficit: number, unit: string) =>
+      `Thiếu ${deficit} ${unit}`,
     sourcePrefix: "Nguồn:",
     stockPrefix: "Tồn:",
     needTransferPrefix: "Cần điều:",
-    formulaHint: "Định mức bù hàng tự động tính theo công thức Min/Target/Capacity",
+    formulaHint:
+      "Định mức bù hàng tự động tính theo công thức Min/Target/Capacity",
     viewFullMatrix: "Xem ma trận kho đầy đủ →",
     batchTitle: "Mẻ Sản Xuất Bếp Trung Tâm",
     batchAria: "Bếp trung tâm và hàng đợi vận chuyển",
     morningShift: "Ca Sáng",
-    progressLabel: (actual: number, target: number, unit: string) => `Tiến độ: ${actual}/${target} ${unit}`,
+    progressLabel: (actual: number, target: number, unit: string) =>
+      `Tiến độ: ${actual}/${target} ${unit}`,
     addToBatch: "Thêm vào mẻ",
     manageProduction: "Quản lý sản xuất",
     dispatchQueueTitle: "Hàng Đợi Giao Nhận Chi Nhánh",
     shipmentCountBadge: (count: number) => `${formatCount(count)} chuyến`,
     itemCount: (count: number) => `${formatCount(count)} mặt hàng`,
-    viewAllTransfers: (count: number) => `Xem tất cả đơn điều chuyển (${formatCount(count)})`,
+    viewAllTransfers: (count: number) =>
+      `Xem tất cả đơn điều chuyển (${formatCount(count)})`,
     posConsumptionTitle: "Đối Soát Tiêu Hao POS Thời Gian Thực",
     autoDeductionTitle: "Khấu Trừ Tự Động Theo Món Bán",
     autoDeductionDesc: (pork: number, rice: number, sauce: number) =>
       `Hệ thống tự động trừ kho nguyên liệu theo dòng món hoàn tất từ KDS: đã trừ ${pork} kg Sườn cốt lết, ${rice} kg Gạo ST25, ${sauce} lít Nước mắm pha.`,
     kdsStreamActive: "KDS Stream: Hoạt động",
     consumptionDetailAction: "Chi tiết tiêu hao",
-    wasteAlertCallout: (count: number) => `⚠️ Có ${formatCount(count)} phiếu hao hụt cần phê duyệt trước khi chốt ca kho.`,
+    wasteAlertCallout: (count: number) =>
+      `⚠️ Có ${formatCount(count)} phiếu hao hụt cần phê duyệt trước khi chốt ca kho.`,
     resolveNow: "Xử lý ngay",
     sources: {
       centralKitchen: "Bếp trung tâm",

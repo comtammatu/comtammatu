@@ -114,6 +114,7 @@ const unitRowSchema = z.object({
 });
 
 const ingredientBaseSchema = z.object({
+  image_url: z.string().url().max(2048).nullable().optional(),
   name: z
     .string()
     .trim()
@@ -238,6 +239,8 @@ function buildRpcUnits(units: IngredientInput["units"]) {
 }
 
 type SaveCatalogArgs = {
+  p_image_url?: string | null;
+  p_image_url_set?: boolean;
   p_ingredient_id: number | null;
   p_name: string;
   p_sku: string | null;
@@ -293,6 +296,9 @@ function rpcCatalogArgs(
   });
   return {
     p_ingredient_id: ingredientId,
+    ...(data.image_url !== undefined
+      ? { p_image_url: data.image_url, p_image_url_set: true }
+      : {}),
     p_name: data.name,
     p_sku: data.sku?.trim() || null,
     p_category_id: data.category_id ?? null,
@@ -350,11 +356,11 @@ const getIngredientsCached = cache(
     const withUnitsMonetary =
       "*, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))";
     const withUnitsLean =
-      "id, tenant_id, name, sku, category, category_id, item_kind, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active, updated_at, default_fulfill_site_kind, fulfill_from_central_supply, fulfill_from_central_kitchen, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))";
+      "id, tenant_id, name, sku, image_url, category, category_id, item_kind, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active, updated_at, default_fulfill_site_kind, fulfill_from_central_supply, fulfill_from_central_kitchen, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))";
     const withoutUnitsMonetary =
       "*, ingredient_categories!ingredients_category_tenant_fkey(name)";
     const withoutUnitsLean =
-      "id, tenant_id, name, sku, category, category_id, item_kind, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active, updated_at, default_fulfill_site_kind, fulfill_from_central_supply, fulfill_from_central_kitchen, ingredient_categories!ingredients_category_tenant_fkey(name)";
+      "id, tenant_id, name, sku, image_url, category, category_id, item_kind, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active, updated_at, default_fulfill_site_kind, fulfill_from_central_supply, fulfill_from_central_kitchen, ingredient_categories!ingredients_category_tenant_fkey(name)";
 
     const select = includeUnits
       ? includeMonetary
@@ -477,9 +483,7 @@ export async function fetchIngredients(
     for (const row of baseUnitsResult.data ?? []) {
       const ingredientId = Number(row.ingredient_id);
       const units = row.units as
-        | { code?: string | null; name?: string | null }
-        | null
-        | undefined;
+        { code?: string | null; name?: string | null } | null | undefined;
       const label = units?.name?.trim() || units?.code?.trim() || "";
       if (label) baseUnitByIngredientId.set(ingredientId, label);
     }
@@ -490,6 +494,7 @@ export async function fetchIngredients(
       id: number;
       name?: string | null;
       sku?: string | null;
+      image_url?: string | null;
       category?: string | null;
       category_id?: number | null;
       item_kind?: string | null;
@@ -497,10 +502,7 @@ export async function fetchIngredients(
       max_stock_level?: number | null;
       reorder_point?: number | null;
       storage_type?: string | null;
-      default_fulfill_site_kind?:
-        | "central_supply"
-        | "central_kitchen"
-        | null;
+      default_fulfill_site_kind?: "central_supply" | "central_kitchen" | null;
       fulfill_from_central_supply?: boolean | null;
       fulfill_from_central_kitchen?: boolean | null;
       is_active?: boolean | null;
@@ -509,22 +511,16 @@ export async function fetchIngredients(
       ingredient_categories?: { name?: string | null } | null;
       ingredient_units?: IngredientUnitEmbed[] | null;
     };
-    const {
-      ingredient_categories,
-      ingredient_units,
-      unit_cost,
-      ...rest
-    } = row;
+    const { ingredient_categories, ingredient_units, unit_cost, ...rest } = row;
     const ingredientId = Number(rest.id);
     const stockWac = wacByIngredientId.get(ingredientId);
-    const unitCost =
-      monetary.purchasePrice
-        ? stockWac != null
-          ? stockWac
-          : unit_cost != null && Number(unit_cost) > 0
-            ? Number(unit_cost)
-            : null
-        : null;
+    const unitCost = monetary.purchasePrice
+      ? stockWac != null
+        ? stockWac
+        : unit_cost != null && Number(unit_cost) > 0
+          ? Number(unit_cost)
+          : null
+      : null;
     const units = includeUnits
       ? mapIngredientUnitRows(ingredient_units)
       : undefined;
@@ -534,6 +530,7 @@ export async function fetchIngredients(
       id: ingredientId,
       name: String(rest.name ?? ""),
       sku: rest.sku ?? null,
+      image_url: rest.image_url ?? null,
       category: rest.category ?? null,
       category_id: rest.category_id ?? null,
       item_kind: String(rest.item_kind ?? "raw_material"),
@@ -576,43 +573,44 @@ export async function fetchIngredientDetail(
     ? (monetary.client ?? supabase)
     : supabase;
 
-  const [ingredientResult, supplierLinkResult, stockLevelResult] = await Promise.all([
-    monetary.purchasePrice
-      ? readClient
-          .from("ingredients")
-          .select(
-            "*, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
-          )
-          .eq("tenant_id", claims.tenant_id)
-          .eq("id", parsedId.data)
-          .maybeSingle()
-      : readClient
-          .from("ingredients")
-          .select(
-            "id, tenant_id, name, sku, category, category_id, item_kind, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active, updated_at, default_fulfill_site_kind, fulfill_from_central_supply, fulfill_from_central_kitchen, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
-          )
-          .eq("tenant_id", claims.tenant_id)
-          .eq("id", parsedId.data)
-          .maybeSingle(),
-    supabase
-      .from("supplier_items")
-      .select("ingredient_id, suppliers!inner(id)")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("ingredient_id", parsedId.data)
-      .eq("is_active", true)
-      .eq("suppliers.is_active", true)
-      .limit(1),
-    monetary.purchasePrice
-      ? readClient
-          .from("stock_levels")
-          .select("avg_unit_cost")
-          .eq("tenant_id", claims.tenant_id)
-          .eq("ingredient_id", parsedId.data)
-          .not("avg_unit_cost", "is", null)
-          .gt("avg_unit_cost", 0)
-          .limit(1)
-      : Promise.resolve({ data: null, error: null }),
-  ]);
+  const [ingredientResult, supplierLinkResult, stockLevelResult] =
+    await Promise.all([
+      monetary.purchasePrice
+        ? readClient
+            .from("ingredients")
+            .select(
+              "*, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+            )
+            .eq("tenant_id", claims.tenant_id)
+            .eq("id", parsedId.data)
+            .maybeSingle()
+        : readClient
+            .from("ingredients")
+            .select(
+              "id, tenant_id, name, sku, image_url, category, category_id, item_kind, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active, updated_at, default_fulfill_site_kind, fulfill_from_central_supply, fulfill_from_central_kitchen, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+            )
+            .eq("tenant_id", claims.tenant_id)
+            .eq("id", parsedId.data)
+            .maybeSingle(),
+      supabase
+        .from("supplier_items")
+        .select("ingredient_id, suppliers!inner(id)")
+        .eq("tenant_id", claims.tenant_id)
+        .eq("ingredient_id", parsedId.data)
+        .eq("is_active", true)
+        .eq("suppliers.is_active", true)
+        .limit(1),
+      monetary.purchasePrice
+        ? readClient
+            .from("stock_levels")
+            .select("avg_unit_cost")
+            .eq("tenant_id", claims.tenant_id)
+            .eq("ingredient_id", parsedId.data)
+            .not("avg_unit_cost", "is", null)
+            .gt("avg_unit_cost", 0)
+            .limit(1)
+        : Promise.resolve({ data: null, error: null }),
+    ]);
 
   if (
     ingredientResult.error ||
@@ -632,6 +630,7 @@ export async function fetchIngredientDetail(
     id: number;
     name?: string | null;
     sku?: string | null;
+    image_url?: string | null;
     category?: string | null;
     category_id?: number | null;
     item_kind?: string | null;
@@ -648,24 +647,18 @@ export async function fetchIngredientDetail(
     ingredient_categories?: { name?: string | null } | null;
     ingredient_units?: IngredientUnitEmbed[] | null;
   };
-  const {
-    ingredient_categories,
-    ingredient_units,
-    unit_cost,
-    ...rest
-  } = row;
+  const { ingredient_categories, ingredient_units, unit_cost, ...rest } = row;
   const stockWac =
     stockLevelResult.data?.[0]?.avg_unit_cost != null
       ? Number(stockLevelResult.data[0].avg_unit_cost)
       : null;
-  const unitCost =
-    monetary.purchasePrice
-      ? stockWac != null && Number.isFinite(stockWac) && stockWac > 0
-        ? stockWac
-        : unit_cost != null && Number(unit_cost) > 0
-          ? Number(unit_cost)
-          : null
-      : null;
+  const unitCost = monetary.purchasePrice
+    ? stockWac != null && Number.isFinite(stockWac) && stockWac > 0
+      ? stockWac
+      : unit_cost != null && Number(unit_cost) > 0
+        ? Number(unit_cost)
+        : null
+    : null;
   const units = mapIngredientUnitRows(ingredient_units);
   const baseUnit = units.find((unit) => unit.is_base);
 
@@ -675,6 +668,7 @@ export async function fetchIngredientDetail(
       id: parsedId.data,
       name: String(rest.name ?? ""),
       sku: rest.sku ?? null,
+      image_url: rest.image_url ?? null,
       category: rest.category ?? null,
       category_id: rest.category_id ?? null,
       item_kind: String(rest.item_kind ?? "raw_material"),
@@ -739,12 +733,7 @@ export const createIngredient = withAction<
   async (data, { supabase }) => {
     const { data: id, error } = await saveIngredientCatalog(
       supabase,
-      rpcCatalogArgs(
-        null,
-        data,
-        null,
-        data.default_fulfill_site_kind ?? null,
-      ),
+      rpcCatalogArgs(null, data, null, data.default_fulfill_site_kind ?? null),
     );
 
     if (error) {

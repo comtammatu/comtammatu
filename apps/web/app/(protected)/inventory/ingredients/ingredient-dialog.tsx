@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   ArrowLeftRight as IconArrowLeftRight,
   ChevronDown as IconChevronDown,
@@ -29,11 +35,7 @@ import {
   FieldSet,
 } from "@comtammatu/ui/components/field";
 import { Input } from "@comtammatu/ui/components/input";
-import {
-  Item,
-  ItemActions,
-  ItemGroup,
-} from "@comtammatu/ui/components/item";
+import { Item, ItemActions, ItemGroup } from "@comtammatu/ui/components/item";
 import {
   Select,
   SelectContent,
@@ -91,6 +93,13 @@ import type {
   UnitRelationInput,
 } from "./ingredient-unit-form-model";
 
+import { IngredientImageInput } from "./ingredient-image-input";
+import { prepareIngredientImage } from "@lib/inventory/ingredient-image";
+import {
+  uploadIngredientImage,
+  discardIngredientImage,
+} from "../ingredient-image-actions";
+
 const copy = messages.inventoryMaster.ingredientForm;
 const dialogCopy = messages.inventory.ingredients.dialog;
 const NO_CATEGORY = "none";
@@ -113,7 +122,8 @@ function groupUnitSelectOptions(
     if (include != null && !include.has(unit.id)) continue;
     const option = { value: String(unit.id), label: unit.name };
     if (unit.is_standard && unit.dimension === "mass") mass.push(option);
-    else if (unit.is_standard && unit.dimension === "volume") volume.push(option);
+    else if (unit.is_standard && unit.dimension === "volume")
+      volume.push(option);
     else packaging.push(option);
   }
 
@@ -149,6 +159,7 @@ function UnitSelectOptionGroups({
 }
 
 const ingredientSchemaBase = z.object({
+  image: z.union([z.string().url(), z.instanceof(File), z.null()]),
   name: z.string().trim().min(1, { error: dialogCopy.nameRequired }),
   sku: z.string().trim().optional(),
   category_id: z.string().trim().optional(),
@@ -396,6 +407,7 @@ function toFormValues(
 
   return {
     name: ingredient?.name ?? "",
+    image: ingredient?.image_url ?? null,
     sku: ingredient?.sku ?? "",
     category_id:
       ingredient?.category_id != null ? String(ingredient.category_id) : "",
@@ -610,6 +622,7 @@ export function IngredientDialog({
   );
 
   async function handleSubmit(values: IngredientFormValues) {
+    let uploadedImage: string | null = null;
     try {
       const relations = toUnitRelations(values, mergedUnitOptions);
       const units = buildCatalogUnits(relations);
@@ -626,7 +639,29 @@ export function IngredientDialog({
         fulfill_from_central_supply: values.fulfill_from_central_supply,
         fulfill_from_central_kitchen: values.fulfill_from_central_kitchen,
       };
+      let imageUrl = typeof values.image === "string" ? values.image : null;
+      if (values.image instanceof File) {
+        let image: File;
+        try {
+          image = await prepareIngredientImage(values.image);
+        } catch {
+          return {
+            success: false,
+            error: messages.inventory.ingredientImage.prepareFailed,
+          };
+        }
+        const data = new FormData();
+        data.set("file", image);
+        const upload = await uploadIngredientImage(data);
+        if (!upload.success) return upload;
+        if (!upload.data) {
+          return { success: false, error: messages.inventory.ingredientImage.uploadFailed };
+        }
+        uploadedImage = upload.data.url;
+        imageUrl = uploadedImage;
+      }
       const payload = {
+        image_url: imageUrl,
         name: values.name,
         sku: values.sku || undefined,
         category_id: categoryId,
@@ -646,14 +681,25 @@ export function IngredientDialog({
           ? await updateIngredient(resolvedIngredient.id, payload)
           : await createIngredient(payload);
 
-      if (!result.success) return result;
+      if (!result.success) {
+        if (uploadedImage)
+          await discardIngredientImage(uploadedImage).catch(() => undefined);
+        return result;
+      }
+      uploadedImage = null;
+      if (
+        resolvedIngredient?.image_url &&
+        resolvedIngredient.image_url !== imageUrl
+      ) {
+        await discardIngredientImage(resolvedIngredient.image_url).catch(
+          () => undefined,
+        );
+      }
 
       const savedId =
         isEdit && resolvedIngredient
           ? resolvedIngredient.id
-          : Number(
-              (result.data as { id?: number } | undefined)?.id ?? NaN,
-            );
+          : Number((result.data as { id?: number } | undefined)?.id ?? NaN);
       if (!Number.isInteger(savedId) || savedId <= 0) {
         return { success: false, error: dialogCopy.saveFailed };
       }
@@ -663,6 +709,7 @@ export function IngredientDialog({
         categoryOptions.find((category) => category.id === categoryId)?.name ??
         null;
       const row: IngredientRow = {
+        image_url: imageUrl,
         id: savedId,
         name: values.name.trim(),
         sku: values.sku?.trim() ? values.sku.trim() : null,
@@ -681,8 +728,8 @@ export function IngredientDialog({
         has_active_supplier_link:
           resolvedIngredient?.has_active_supplier_link === true,
         unit: baseUnit
-          ? mergedUnitOptions.find((option) => option.id === baseUnit.unit_id)
-              ?.name ?? ""
+          ? (mergedUnitOptions.find((option) => option.id === baseUnit.unit_id)
+              ?.name ?? "")
           : "",
         is_active: resolvedIngredient?.is_active ?? true,
         updated_at: resolvedIngredient?.updated_at ?? null,
@@ -719,6 +766,8 @@ export function IngredientDialog({
       }
       return result;
     } catch (error) {
+      if (uploadedImage)
+        await discardIngredientImage(uploadedImage).catch(() => undefined);
       if (error instanceof IngredientUnitModelError) {
         return {
           success: false,
@@ -784,7 +833,9 @@ export function IngredientDialog({
           categorySelectOptions={categorySelectOptions}
           unitOptions={mergedUnitOptions}
           focusField={focusField}
-          defaultUnitsOpen={!isEdit || (resolvedIngredient?.units?.length ?? 0) > 1}
+          defaultUnitsOpen={
+            !isEdit || (resolvedIngredient?.units?.length ?? 0) > 1
+          }
           referenceIngredient={resolvedIngredient}
           wizardStep={wizardStep}
           onWizardStepChange={setWizardStep}
@@ -1130,7 +1181,9 @@ function IngredientDialogFields({
     Boolean(formErrors.name),
     Boolean(baseFieldState.error),
     Boolean(
-      formErrors.unit_ids || formErrors.unit_anchor_ids || formErrors.unit_factors,
+      formErrors.unit_ids ||
+      formErrors.unit_anchor_ids ||
+      formErrors.unit_factors,
     ),
   ];
 
@@ -1143,127 +1196,143 @@ function IngredientDialogFields({
         onSelect={onWizardStepChange}
       />
       <div hidden={wizardStep !== 0}>
-      <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
-        <TextField
-          control={form.control}
-          name="name"
-          label={dialogCopy.nameLabel}
-          placeholder={dialogCopy.namePlaceholder}
-          required
+        <IngredientImageInput
+          value={form.watch("image")}
+          onChange={(image) =>
+            form.setValue("image", image, {
+              shouldDirty: true,
+              shouldValidate: true,
+            })
+          }
+          disabled={form.formState.isSubmitting}
         />
-        <TextField
-          control={form.control}
-          name="sku"
-          label={dialogCopy.skuLabel}
-          placeholder="SKU-001"
-        />
-        <SelectField
-          control={form.control}
-          name="category_id"
-          label={copy.category.label}
-          placeholder={copy.category.placeholder}
-          options={categorySelectOptions}
-        />
-        <QuantityField
-          control={form.control}
-          name="min_stock_level"
-          label={dialogCopy.minStockLabel}
-        />
-        <div className="sm:col-span-2 flex flex-col gap-2">
-          <span className="text-sm font-medium">
-            {dialogCopy.defaultFulfillSiteKindLabel}
-          </span>
-          <FieldDescription>
-            {dialogCopy.defaultFulfillSiteKindHint}
-          </FieldDescription>
-          <Field orientation="horizontal">
-            <FieldLabel htmlFor="fulfill-from-central-supply">
-              {dialogCopy.defaultFulfillSiteKindCentralSupply}
-            </FieldLabel>
-            <Switch
-              id="fulfill-from-central-supply"
-              checked={form.watch("fulfill_from_central_supply")}
-              onCheckedChange={(checked) =>
-                form.setValue("fulfill_from_central_supply", checked, {
-                  shouldDirty: true,
-                })
-              }
-            />
-          </Field>
-          <Field orientation="horizontal">
-            <FieldLabel htmlFor="fulfill-from-central-kitchen">
-              {dialogCopy.defaultFulfillSiteKindCentralKitchen}
-            </FieldLabel>
-            <Switch
-              id="fulfill-from-central-kitchen"
-              checked={form.watch("fulfill_from_central_kitchen")}
-              onCheckedChange={(checked) =>
-                form.setValue("fulfill_from_central_kitchen", checked, {
-                  shouldDirty: true,
-                })
-              }
-            />
-          </Field>
-        </div>
-        {referenceIngredient?.monetary != null ? (
-          <Field className="sm:col-span-2">
-            <div className="flex items-center justify-between gap-2">
-              <FieldLabel>{dialogCopy.referenceCostLabel}</FieldLabel>
-              {onSetCompanyWac && referenceIngredient.item_kind === "raw_material" ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onSetCompanyWac(referenceIngredient)}
-                >
-                  {messages.inventory.stock.actions.setCompanyWac}
-                </Button>
-              ) : null}
-            </div>
-            <output className="text-sm font-mono tabular-nums">
-              {referenceCost
-                ? `${formatVND(referenceCost.value)}${
-                    referenceCost.unit ? `/${referenceCost.unit}` : ""
-                  }`
-                : dialogCopy.referenceCostEmpty}
-            </output>
-            <FieldDescription>{dialogCopy.referenceCostHint}</FieldDescription>
-          </Field>
-        ) : null}
-        <div className="sm:col-span-2">
-          <Field orientation="horizontal">
-            <FieldLabel htmlFor="item-kind-finished-good">
-              {dialogCopy.finishedGoodLabel}
-            </FieldLabel>
-            <Switch
-              id="item-kind-finished-good"
-              checked={itemKind === "finished_good"}
-              onCheckedChange={(checked) => {
-                form.setValue(
-                  "item_kind",
-                  checked ? "finished_good" : "raw_material",
-                );
-                if (checked && !form.getValues("fulfill_from_central_kitchen")) {
-                  form.setValue("fulfill_from_central_kitchen", true, {
+        <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
+          <TextField
+            control={form.control}
+            name="name"
+            label={dialogCopy.nameLabel}
+            placeholder={dialogCopy.namePlaceholder}
+            required
+          />
+          <TextField
+            control={form.control}
+            name="sku"
+            label={dialogCopy.skuLabel}
+            placeholder="SKU-001"
+          />
+          <SelectField
+            control={form.control}
+            name="category_id"
+            label={copy.category.label}
+            placeholder={copy.category.placeholder}
+            options={categorySelectOptions}
+          />
+          <QuantityField
+            control={form.control}
+            name="min_stock_level"
+            label={dialogCopy.minStockLabel}
+          />
+          <div className="sm:col-span-2 flex flex-col gap-2">
+            <span className="text-sm font-medium">
+              {dialogCopy.defaultFulfillSiteKindLabel}
+            </span>
+            <FieldDescription>
+              {dialogCopy.defaultFulfillSiteKindHint}
+            </FieldDescription>
+            <Field orientation="horizontal">
+              <FieldLabel htmlFor="fulfill-from-central-supply">
+                {dialogCopy.defaultFulfillSiteKindCentralSupply}
+              </FieldLabel>
+              <Switch
+                id="fulfill-from-central-supply"
+                checked={form.watch("fulfill_from_central_supply")}
+                onCheckedChange={(checked) =>
+                  form.setValue("fulfill_from_central_supply", checked, {
                     shouldDirty: true,
-                  });
+                  })
                 }
-              }}
-            />
-          </Field>
-          <FieldDescription>{dialogCopy.finishedGoodHint}</FieldDescription>
+              />
+            </Field>
+            <Field orientation="horizontal">
+              <FieldLabel htmlFor="fulfill-from-central-kitchen">
+                {dialogCopy.defaultFulfillSiteKindCentralKitchen}
+              </FieldLabel>
+              <Switch
+                id="fulfill-from-central-kitchen"
+                checked={form.watch("fulfill_from_central_kitchen")}
+                onCheckedChange={(checked) =>
+                  form.setValue("fulfill_from_central_kitchen", checked, {
+                    shouldDirty: true,
+                  })
+                }
+              />
+            </Field>
+          </div>
+          {referenceIngredient?.monetary != null ? (
+            <Field className="sm:col-span-2">
+              <div className="flex items-center justify-between gap-2">
+                <FieldLabel>{dialogCopy.referenceCostLabel}</FieldLabel>
+                {onSetCompanyWac &&
+                referenceIngredient.item_kind === "raw_material" ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onSetCompanyWac(referenceIngredient)}
+                  >
+                    {messages.inventory.stock.actions.setCompanyWac}
+                  </Button>
+                ) : null}
+              </div>
+              <output className="text-sm font-mono tabular-nums">
+                {referenceCost
+                  ? `${formatVND(referenceCost.value)}${
+                      referenceCost.unit ? `/${referenceCost.unit}` : ""
+                    }`
+                  : dialogCopy.referenceCostEmpty}
+              </output>
+              <FieldDescription>
+                {dialogCopy.referenceCostHint}
+              </FieldDescription>
+            </Field>
+          ) : null}
+          <div className="sm:col-span-2">
+            <Field orientation="horizontal">
+              <FieldLabel htmlFor="item-kind-finished-good">
+                {dialogCopy.finishedGoodLabel}
+              </FieldLabel>
+              <Switch
+                id="item-kind-finished-good"
+                checked={itemKind === "finished_good"}
+                onCheckedChange={(checked) => {
+                  form.setValue(
+                    "item_kind",
+                    checked ? "finished_good" : "raw_material",
+                  );
+                  if (
+                    checked &&
+                    !form.getValues("fulfill_from_central_kitchen")
+                  ) {
+                    form.setValue("fulfill_from_central_kitchen", true, {
+                      shouldDirty: true,
+                    });
+                  }
+                }}
+              />
+            </Field>
+            <FieldDescription>{dialogCopy.finishedGoodHint}</FieldDescription>
+          </div>
+          <div className="sm:col-span-2 flex justify-end pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onWizardStepChange(1)}
+            >
+              {copy.wizard.stepBase} →
+            </Button>
+          </div>
         </div>
-        <div className="sm:col-span-2 flex justify-end pt-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => onWizardStepChange(1)}
-          >
-            {copy.wizard.stepBase} →
-          </Button>
-        </div>
-      </div>
       </div>
 
       <div hidden={wizardStep !== 1} className="flex flex-col gap-2">
@@ -1288,7 +1357,9 @@ function IngredientDialogFields({
                 />
               </SelectContent>
             </Select>
-            <FieldDescription>{copy.units.baseUnitDescription}</FieldDescription>
+            <FieldDescription>
+              {copy.units.baseUnitDescription}
+            </FieldDescription>
           </Field>
         ) : selectedUnitIds.length > 0 && baseUnit && relations ? (
           <Field data-invalid={Boolean(baseFieldState.error)}>
@@ -1329,7 +1400,9 @@ function IngredientDialogFields({
                 })}
               </SelectContent>
             </Select>
-            <FieldDescription>{copy.units.baseUnitDescription}</FieldDescription>
+            <FieldDescription>
+              {copy.units.baseUnitDescription}
+            </FieldDescription>
             {baseFieldState.error ? (
               <FieldError id={baseErrorId} errors={[baseFieldState.error]} />
             ) : null}
@@ -1361,146 +1434,152 @@ function IngredientDialogFields({
       </div>
 
       <div hidden={wizardStep !== 2}>
-      <Collapsible open={unitsOpen || wizardStep === 2} onOpenChange={setUnitsOpen}>
-        <FieldSet data-invalid={Boolean(baseFieldState.error)}>
-          <CollapsibleTrigger
-            render={
-              <Button
-                type="button"
-                variant="ghost"
-                size={controlSize}
-                className="group -mx-2 h-auto w-[calc(100%+1rem)] justify-between px-2 py-2 font-normal"
+        <Collapsible
+          open={unitsOpen || wizardStep === 2}
+          onOpenChange={setUnitsOpen}
+        >
+          <FieldSet data-invalid={Boolean(baseFieldState.error)}>
+            <CollapsibleTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size={controlSize}
+                  className="group -mx-2 h-auto w-[calc(100%+1rem)] justify-between px-2 py-2 font-normal"
+                />
+              }
+            >
+              <span className="flex min-w-0 flex-col items-start gap-1 text-left">
+                <span className="text-sm font-medium">
+                  {copy.units.sectionToggle}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {copy.units.sectionToggleHint}
+                </span>
+              </span>
+              <IconChevronDown
+                className={cn(
+                  "size-4 shrink-0 text-muted-foreground transition-transform",
+                  unitsOpen && "rotate-180",
+                )}
+                aria-hidden
               />
-            }
-          >
-            <span className="flex min-w-0 flex-col items-start gap-1 text-left">
-              <span className="text-sm font-medium">
-                {copy.units.sectionToggle}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {copy.units.sectionToggleHint}
-              </span>
-            </span>
-            <IconChevronDown
-              className={cn(
-                "size-4 shrink-0 text-muted-foreground transition-transform",
-                unitsOpen && "rotate-180",
-              )}
-              aria-hidden
-            />
-          </CollapsibleTrigger>
-          <CollapsibleContent className="flex flex-col gap-3 pt-2">
-            {selectedUnitIds.length > 0 && baseUnit && relations ? (
-              <ItemGroup className="gap-2" role="list">
-                {selectedUnitIds
-                  .filter((unitId) => unitId !== baseUnit.id)
-                  .map((unitId) => {
-                    const unit = unitsById.get(unitId);
-                    if (!unit) return null;
-                    const effectiveFactor = (() => {
-                      try {
-                        return deriveEffectiveUnitFactor(relations, unitId);
-                      } catch {
-                        return null;
-                      }
-                    })();
-                    const anchorUnitId = relations.anchorUnitIds[unitId] ?? null;
-                    const anchorOptions = selectedUnitIds
-                      .filter(
-                        (candidateId) =>
-                          candidateId !== unitId &&
-                          !wouldCreateUnitCycle(
-                            relations.anchorUnitIds,
-                            unitId,
-                            candidateId,
-                          ),
-                      )
-                      .flatMap((candidateId) => {
-                        const candidate = unitsById.get(candidateId);
-                        return candidate == null
-                          ? []
-                          : [
-                              {
-                                value: String(candidateId),
-                                label: candidate.name,
-                              },
-                            ];
-                      });
+            </CollapsibleTrigger>
+            <CollapsibleContent className="flex flex-col gap-3 pt-2">
+              {selectedUnitIds.length > 0 && baseUnit && relations ? (
+                <ItemGroup className="gap-2" role="list">
+                  {selectedUnitIds
+                    .filter((unitId) => unitId !== baseUnit.id)
+                    .map((unitId) => {
+                      const unit = unitsById.get(unitId);
+                      if (!unit) return null;
+                      const effectiveFactor = (() => {
+                        try {
+                          return deriveEffectiveUnitFactor(relations, unitId);
+                        } catch {
+                          return null;
+                        }
+                      })();
+                      const anchorUnitId =
+                        relations.anchorUnitIds[unitId] ?? null;
+                      const anchorOptions = selectedUnitIds
+                        .filter(
+                          (candidateId) =>
+                            candidateId !== unitId &&
+                            !wouldCreateUnitCycle(
+                              relations.anchorUnitIds,
+                              unitId,
+                              candidateId,
+                            ),
+                        )
+                        .flatMap((candidateId) => {
+                          const candidate = unitsById.get(candidateId);
+                          return candidate == null
+                            ? []
+                            : [
+                                {
+                                  value: String(candidateId),
+                                  label: candidate.name,
+                                },
+                              ];
+                        });
 
-                    return (
-                      <UnitRelationRow
-                        key={unitId}
-                        control={form.control}
-                        unit={unit}
-                        anchorOptions={anchorOptions}
-                        effectiveFactor={effectiveFactor}
-                        automatic={isAutomaticStandardRelation(
-                          unit,
-                          baseUnit,
-                          anchorUnitId,
-                          relations.anchorFactors[unitId] ?? null,
-                        )}
-                        baseUnitId={baseUnit.id}
-                        baseUnitName={baseUnit.name}
-                        anchorLabel={
-                          unitsById.get(anchorUnitId ?? Number.NaN)?.name ??
-                          baseUnit.name
-                        }
-                        initialAdvanced={
-                          anchorUnitId != null && anchorUnitId !== baseUnit.id
-                        }
-                        removalError={blockedRemovalErrors[unitId]}
-                        removeDisabled={selectedUnitIds.length === 1}
-                        onRemove={() => removeUnit(unitId)}
-                        onToggleDirection={() => toggleFactorDirection(unitId)}
+                      return (
+                        <UnitRelationRow
+                          key={unitId}
+                          control={form.control}
+                          unit={unit}
+                          anchorOptions={anchorOptions}
+                          effectiveFactor={effectiveFactor}
+                          automatic={isAutomaticStandardRelation(
+                            unit,
+                            baseUnit,
+                            anchorUnitId,
+                            relations.anchorFactors[unitId] ?? null,
+                          )}
+                          baseUnitId={baseUnit.id}
+                          baseUnitName={baseUnit.name}
+                          anchorLabel={
+                            unitsById.get(anchorUnitId ?? Number.NaN)?.name ??
+                            baseUnit.name
+                          }
+                          initialAdvanced={
+                            anchorUnitId != null && anchorUnitId !== baseUnit.id
+                          }
+                          removalError={blockedRemovalErrors[unitId]}
+                          removeDisabled={selectedUnitIds.length === 1}
+                          onRemove={() => removeUnit(unitId)}
+                          onToggleDirection={() =>
+                            toggleFactorDirection(unitId)
+                          }
+                        />
+                      );
+                    })}
+                </ItemGroup>
+              ) : null}
+              {availableUnitGroups.length > 0 && unitIds.length < 20 ? (
+                <div className="flex w-full flex-col gap-2">
+                  <Select value="" onValueChange={addUnit}>
+                    <SelectTrigger
+                      size={controlSize}
+                      className="w-full"
+                      aria-label={copy.units.add}
+                    >
+                      <SelectValue placeholder={copy.units.add} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <UnitSelectOptionGroups
+                        groups={availableUnitGroups}
+                        controlSize={controlSize}
                       />
-                    );
-                  })}
-              </ItemGroup>
-            ) : null}
-            {availableUnitGroups.length > 0 && unitIds.length < 20 ? (
-              <div className="flex w-full flex-col gap-2">
-                <Select value="" onValueChange={addUnit}>
-                  <SelectTrigger
-                    size={controlSize}
-                    className="w-full"
-                    aria-label={copy.units.add}
-                  >
-                    <SelectValue placeholder={copy.units.add} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <UnitSelectOptionGroups
-                      groups={availableUnitGroups}
-                      controlSize={controlSize}
-                    />
-                  </SelectContent>
-                </Select>
+                    </SelectContent>
+                  </Select>
+                  <InlineUnitCreator
+                    controlSize={controlSize}
+                    onCreateUnit={onCreateUnit}
+                    onCreated={(unitId) => addUnit(String(unitId))}
+                  />
+                </div>
+              ) : (
                 <InlineUnitCreator
                   controlSize={controlSize}
                   onCreateUnit={onCreateUnit}
                   onCreated={(unitId) => addUnit(String(unitId))}
                 />
-              </div>
-            ) : (
-              <InlineUnitCreator
-                controlSize={controlSize}
-                onCreateUnit={onCreateUnit}
-                onCreated={(unitId) => addUnit(String(unitId))}
-              />
-            )}
-          </CollapsibleContent>
-        </FieldSet>
-      </Collapsible>
-      <div className="flex justify-start pt-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => onWizardStepChange(1)}
-        >
-          ← {copy.wizard.stepBase}
-        </Button>
-      </div>
+              )}
+            </CollapsibleContent>
+          </FieldSet>
+        </Collapsible>
+        <div className="flex justify-start pt-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => onWizardStepChange(1)}
+          >
+            ← {copy.wizard.stepBase}
+          </Button>
+        </div>
       </div>
     </>
   );
@@ -1634,7 +1713,11 @@ function InlineUnitCreator({
           disabled={busy || code.trim().length === 0}
           onClick={() => void handleCreate()}
         >
-          {busy ? <Spinner className="size-4" /> : copy.units.createInlineSubmit}
+          {busy ? (
+            <Spinner className="size-4" />
+          ) : (
+            copy.units.createInlineSubmit
+          )}
         </Button>
         <Button
           type="button"
@@ -1726,7 +1809,10 @@ function UnitRelationRow({
         aria-describedby={removalErrorId}
       >
         <div className="grid w-full min-w-0 items-center gap-2 sm:grid-cols-[minmax(5rem,1fr)_auto_7rem_minmax(9rem,1.25fr)_auto]">
-          <div className="truncate font-heading text-sm font-semibold" title={unit.name}>
+          <div
+            className="truncate font-heading text-sm font-semibold"
+            title={unit.name}
+          >
             {unit.name}
           </div>
           <span className="whitespace-nowrap text-sm tabular-nums">
@@ -1802,7 +1888,10 @@ function UnitRelationRow({
               variant="ghost"
               size={controlSize === "touch" ? "icon-touch" : "icon-sm"}
               aria-pressed={isInverse}
-              aria-label={copy.units.toggleDirectionAria(unit.name, anchorLabel)}
+              aria-label={copy.units.toggleDirectionAria(
+                unit.name,
+                anchorLabel,
+              )}
               onClick={() => {
                 mode.field.onBlur();
                 onToggleDirection();

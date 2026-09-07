@@ -344,8 +344,8 @@ State: doing
 Kind: feature
 Tier: T2
 Lane: inventory
-Exit: Every Inventory and Branch-stock `page.tsx` is listed in `docs/ref/screen-context-map.md` §2.5A with load / display / submit / current-vs-target. Control `/inventory` attention queue splits stock requests vs transfers and adds missing GRN unit-price. Catalog form and allocate 1-supplier drafts stay.
-Evidence: Static landing attention + wave23 tests. `lint:copy`. Canvas `inventory-screens.canvas.tsx`.
+Exit: Every Inventory and Branch-stock `page.tsx` is listed in `docs/ref/screen-context-map.md` §2.5A with load / display / submit / current-vs-target. Control `/inventory` attention queue splits stock requests vs transfers and adds missing GRN unit-price. Catalog image save passes the release gates in `docs/plan/inventory-operations-expansion.md` §8.4; allocate 1-supplier drafts stay.
+Evidence: Static landing attention + wave23 tests; authenticated image dialog at 390/768/1280 and live orphan-cleanup cron passed. Preview schema/authorization/Storage API races passed; all temporary branches deleted. Image migration, regenerated types, verification, and Production deployment are complete; see expansion plan §8.4.
 
 UI Advisor Gate
 - Surface: `/inventory` landing + `/inventory/purchase-orders` chrome; route family: control inventory; plane: `control_surface`; change: copy + attention queues

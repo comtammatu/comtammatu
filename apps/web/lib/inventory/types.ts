@@ -16,6 +16,7 @@ export interface IngredientUnitRow {
 }
 
 export interface IngredientRow {
+  image_url?: string | null;
   id: number;
   name: string;
   sku: string | null;

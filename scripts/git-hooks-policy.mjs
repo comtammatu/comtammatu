@@ -1,5 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { spawnSync } from "node:child_process";
 
 export const GIT_HOOKS_DIR = "git-hooks";
 export const PRE_PUSH_HOOK = "pre-push";
@@ -41,15 +40,14 @@ export function shouldRunCiGatesVerify({
 }
 
 export function readGitHooksPath(repoRoot) {
-  const configPath = join(repoRoot, ".git", "config");
-  if (!existsSync(configPath)) {
-    return null;
-  }
-  const match = readFileSync(configPath, "utf8").match(
-    /^\s*hooksPath\s*=\s*(.+)\s*$/m,
+  // Git resolves linked worktrees and included config files itself.
+  const result = spawnSync(
+    "git",
+    ["-C", repoRoot, "config", "--get", "core.hooksPath"],
+    {
+      encoding: "utf8",
+      windowsHide: true,
+    },
   );
-  if (!match) {
-    return null;
-  }
-  return match[1].trim().replace(/^"(.*)"$/, "$1");
+  return result.status === 0 ? result.stdout.trim() || null : null;
 }

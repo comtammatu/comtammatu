@@ -11,6 +11,10 @@
   "regions": ["sin1"],
   "crons": [
     {
+      "path": "/api/cron/ingredient-image-cleanup",
+      "schedule": "17 * * * *"
+    },
+    {
       "path": "/api/cron/kds-maintenance",
       "schedule": "0 5,11,17,23 * * *"
     },
