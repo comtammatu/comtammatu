@@ -125,7 +125,7 @@ export function shiftWorkdaysFromAttendanceRecord(
         w2Start,
         w2End,
       );
-    } else if (punch1Start >= w1End) {
+    } else if (!record.window1OutAt || punch1Start >= w1End) {
       overlap2Seconds = calculateOverlapSeconds(
         punch1Start,
         punch1End,

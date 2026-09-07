@@ -215,3 +215,33 @@ test("split shift công yields 0.5 when employee only works window 2 (4h/8h)", (
   );
 });
 
+test("split shift công yields 1.0 on 2-touch flow (checkIn at 10:00, checkOut at 22:00, no pause/resume)", () => {
+  assert.equal(
+    shiftWorkdaysFromAttendanceRecord({
+      checkIn: "2026-09-10T10:00:00+07:00",
+      checkOut: "2026-09-10T22:00:00+07:00",
+      scheduledStart: "2026-09-10T10:00:00+07:00",
+      scheduledEnd: "2026-09-10T14:00:00+07:00",
+      scheduledStart2: "2026-09-10T18:00:00+07:00",
+      scheduledEnd2: "2026-09-10T22:00:00+07:00",
+    }),
+    1.0,
+  );
+});
+
+test("split shift công yields 0.5 when paused after window 1 and employee never returned for window 2", () => {
+  assert.equal(
+    shiftWorkdaysFromAttendanceRecord({
+      checkIn: "2026-09-10T10:00:00+07:00",
+      window1OutAt: "2026-09-10T14:00:00+07:00",
+      checkOut: "2026-09-10T22:00:00+07:00",
+      scheduledStart: "2026-09-10T10:00:00+07:00",
+      scheduledEnd: "2026-09-10T14:00:00+07:00",
+      scheduledStart2: "2026-09-10T18:00:00+07:00",
+      scheduledEnd2: "2026-09-10T22:00:00+07:00",
+    }),
+    0.5,
+  );
+});
+
+
