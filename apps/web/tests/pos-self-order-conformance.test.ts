@@ -100,8 +100,8 @@ test("Self-Order and POS preserve responsive multi-column layouts across device 
   // Self-Order responsive menu grid: 1 col on mobile, 2 cols on md+
   assert.match(menuPanel, /grid grid-cols-1 gap-3 md:grid-cols-2/);
 
-  // POS desktop breakpoint at 1280px for touch action bar vs split sidebar
-  assert.match(posInner, /useIsMobile\(1280\)/);
+  // POS desktop breakpoint at 1024px for touch action bar vs split sidebar
+  assert.match(posInner, /useIsMobile\(1024\)/);
 
   // POS menu grid: 2 cols on mobile, 3 cols on lg, 4 cols on 2xl
   assert.match(posMenuGrid, /grid grid-cols-2 gap-2 sm:gap-3/);

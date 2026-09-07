@@ -40,7 +40,7 @@ const voidQueue = read(
 test("POS touch actions share one safe-area-aware fixed dock", () => {
   assert.match(
     mobileDock,
-    /TOUCH_DOCK_CLASS\s*=\s*\n?\s*"[^"]*fixed inset-x-3 bottom-0[^"]*pos-safe-bottom[^"]*xl:hidden"/,
+    /TOUCH_DOCK_CLASS\s*=\s*\n?\s*"[^"]*fixed inset-x-3 bottom-0[^"]*pos-safe-bottom[^"]*lg:hidden"/,
   );
   assert.doesNotMatch(mobileDock, /onOpenSelfOrderApproval/);
   assert.doesNotMatch(mobileDock, /showSelfOrderAction/);
@@ -74,7 +74,7 @@ test("POS desktop dual-pane keeps session chrome only above the order list", () 
 test("POS context gates and menu keep one-row dock clearance", () => {
   for (const source of [tableGate, takeawayGate]) {
     assert.doesNotMatch(source, /hasStackedTouchActions/);
-    assert.match(source, /pb-28 xl:pb-4|pb-28 md:px-4 md:pt-4 xl:pb-4/);
+    assert.match(source, /pb-28 lg:pb-4|pb-28 md:px-4 md:pt-4 lg:pb-4/);
     assert.doesNotMatch(source, /md:py-4/);
   }
   assert.doesNotMatch(menuPane, /hasStackedTouchActions/);

@@ -68,11 +68,13 @@ test("close-day is Daily Summary only (ADR 0024)", () => {
   );
   assert.match(
     dateNav,
-    /<div className="flex w-full min-w-0 flex-nowrap items-center gap-2">/,
+    /<div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-2 sm:flex-nowrap">/,
   );
   assert.match(dateNav, /size="icon-touch"/);
   assert.match(dateNav, /aria-label=\{copy\.closeDayPrevDate\}/);
   assert.match(dateNav, /aria-label=\{copy\.closeDayNextDate\}/);
+  assert.match(dateNav, /window\.print\(\)/);
+  assert.match(dateNav, /size="touch"/);
   assert.doesNotMatch(dateNav, /size="sm"/);
   assert.doesNotMatch(dateNav, />\s*\{copy\.closeDayPrevDate\}/);
   assert.doesNotMatch(dateNav, />\s*\{copy\.closeDayNextDate\}/);
@@ -80,6 +82,8 @@ test("close-day is Daily Summary only (ADR 0024)", () => {
     client,
     /<BranchOperatorControlBar className="sm:hidden">/,
   );
+  assert.match(client, /closeDayCashReconTitle/);
+  assert.match(client, /cashReconciliationSection/);
   assert.match(data, /get_branch_day_report/);
   assert.match(page, /searchParams/);
   assert.match(page, /date\?: string/);
