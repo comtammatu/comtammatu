@@ -5,6 +5,7 @@ import {
 import { loadAuthState } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
 import { currentUserHasPermissionAny } from "@/_lib/permissions";
+import { fetchOverduePayables } from "./finance-overdue-payables";
 import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 import { messages } from "@lib/messages";
 import {
@@ -119,6 +120,10 @@ export interface FinanceCockpitData {
    * close/reopen action.
    */
   readiness: PeriodReadinessRpc | null;
+  overduePayables?: {
+    count: number;
+    amount: number;
+  } | null;
 }
 
 interface BranchOption {
@@ -584,6 +589,7 @@ export async function fetchFinanceCockpit(
     startupCapitalSummary,
     cash,
     readiness,
+    overduePayables,
   ] = await Promise.all([
     fetchAccessibleBranches(),
     fetchOperatingCockpitRpc({
@@ -615,6 +621,13 @@ export async function fetchFinanceCockpit(
           supabase,
           year: readinessYear,
           month: readinessMonth,
+          branchId: params.branch,
+        })
+      : Promise.resolve(null),
+    monetary.client != null
+      ? fetchOverduePayables({
+          client: monetary.client,
+          tenantId: claims.tenant_id,
           branchId: params.branch,
         })
       : Promise.resolve(null),
@@ -710,5 +723,6 @@ export async function fetchFinanceCockpit(
     dashboardSummary,
     ...(cash != null ? { cash } : {}),
     readiness,
+    overduePayables,
   };
 }

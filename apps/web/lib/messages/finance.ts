@@ -227,6 +227,9 @@ export const finance = {
       invoiceAttentionHint: "Có hóa đơn còn nháp, đang ký hoặc chưa hoàn tất.",
       supplierInvoiceLabel: "Hóa đơn nhà cung cấp chưa thanh toán",
       supplierInvoiceHint: (count: string) => `${count} hóa đơn đang mở`,
+      supplierInvoiceOverdueLabel: "Nợ NCC quá hạn",
+      supplierInvoiceOverdueHint: (count: string) =>
+        `${count} hóa đơn đã quá hạn thanh toán`,
       paymentDesyncLabel: "Lệch thanh toán với đơn",
       paymentDesyncHint: (count: string) =>
         `${count} thanh toán đã thu nhưng đơn chưa ghi "đã thanh toán"`,

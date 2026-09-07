@@ -112,6 +112,7 @@ export default async function FinanceSupplierInvoicesPage({
       matchStatus: filters.matchStatus ?? undefined,
       paymentStatus: filters.paymentStatus ?? undefined,
       overdueOnly: filters.overdueOnly,
+      agingBucket: filters.agingBucket ?? undefined,
       vatEvidence: filters.vatEvidence ?? undefined,
       viewMode: filters.viewMode,
     }),

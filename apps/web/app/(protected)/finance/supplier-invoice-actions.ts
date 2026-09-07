@@ -23,6 +23,7 @@ import {
   SUPPLIER_INVOICE_PAYMENT_STATUSES,
   SUPPLIER_INVOICE_VAT_EVIDENCE_FILTERS,
   SUPPLIER_INVOICE_VIEW_MODES,
+  SUPPLIER_INVOICE_AGING_BUCKETS,
   type SupplierInvoiceGroup,
   type SupplierInvoiceListFilters,
 } from "./supplier-invoices/supplier-invoice-list-model";
@@ -961,6 +962,7 @@ const fetchSupplierInvoicesPaginatedSchema = z.object({
   matchStatus: z.enum(SUPPLIER_INVOICE_MATCH_STATUSES).optional(),
   paymentStatus: z.enum(SUPPLIER_INVOICE_PAYMENT_STATUSES).optional(),
   overdueOnly: z.boolean().optional().default(false),
+  agingBucket: z.enum(SUPPLIER_INVOICE_AGING_BUCKETS).optional(),
   vatEvidence: z.enum(SUPPLIER_INVOICE_VAT_EVIDENCE_FILTERS).optional(),
   viewMode: z.enum(SUPPLIER_INVOICE_VIEW_MODES).optional().default("supplier"),
   before: supplierInvoiceCursorSchema.optional(),
@@ -1000,6 +1002,7 @@ export async function fetchSupplierInvoicesPage(
     matchStatus,
     paymentStatus,
     overdueOnly,
+    agingBucket,
     vatEvidence,
     viewMode,
     before,
@@ -1078,6 +1081,7 @@ export async function fetchSupplierInvoicesPage(
     matchStatus: matchStatus ?? null,
     paymentStatus: paymentStatus ?? null,
     overdueOnly,
+    agingBucket: agingBucket ?? null,
     vatEvidence: vatEvidence ?? null,
     viewMode,
   };

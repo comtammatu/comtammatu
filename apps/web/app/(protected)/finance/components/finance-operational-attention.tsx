@@ -19,9 +19,13 @@ export function FinanceOperationalAttention({
     cockpit.dashboardSummary?.invoice_attention_count ?? 0;
   const opexMissing = !cockpit.kpis.operatingExpenseRecorded;
   const costIncomplete = !cockpit.kpis.costAvailable;
+  const overduePayableCount = cockpit.overduePayables?.count ?? 0;
 
   const hasAttentionItems =
-    invoiceAttentionCount > 0 || opexMissing || costIncomplete;
+    invoiceAttentionCount > 0 ||
+    opexMissing ||
+    costIncomplete ||
+    overduePayableCount > 0;
 
   if (!hasAttentionItems) {
     return null;
@@ -33,6 +37,18 @@ export function FinanceOperationalAttention({
       title={financeCopy.powerLite.ownerNewsTitle}
     >
       <KpiRow density="compact" className="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        {overduePayableCount > 0 && (
+          <KpiCard
+            density="compact"
+            label={financeCopy.powerLite.exceptions.supplierInvoiceOverdueLabel}
+            value={`${overduePayableCount} hóa đơn`}
+            tone="destructive"
+            hint={financeCopy.powerLite.exceptions.supplierInvoiceOverdueHint(
+              String(overduePayableCount),
+            )}
+            href={financeHref("/finance/supplier-invoices", params, { overdue: "1" })}
+          />
+        )}
         {invoiceAttentionCount > 0 && (
           <KpiCard
             density="compact"

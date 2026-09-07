@@ -22,6 +22,14 @@ export const SUPPLIER_INVOICE_VIEW_MODES = ["supplier", "po"] as const;
 
 export const SUPPLIER_INVOICE_VAT_EVIDENCE_FILTERS = ["missing"] as const;
 
+export const SUPPLIER_INVOICE_AGING_BUCKETS = [
+  "due_soon",
+  "current_later",
+  "overdue_1_15",
+  "overdue_16_30",
+  "overdue_30_plus",
+] as const;
+
 export type SupplierInvoiceMatchStatus =
   (typeof SUPPLIER_INVOICE_MATCH_STATUSES)[number];
 export type SupplierInvoicePaymentStatus =
@@ -30,6 +38,8 @@ export type SupplierInvoiceViewMode =
   (typeof SUPPLIER_INVOICE_VIEW_MODES)[number];
 export type SupplierInvoiceVatEvidenceFilter =
   (typeof SUPPLIER_INVOICE_VAT_EVIDENCE_FILTERS)[number];
+export type SupplierInvoiceAgingBucket =
+  (typeof SUPPLIER_INVOICE_AGING_BUCKETS)[number];
 
 export type SupplierInvoiceListFilters = {
   query: string;
@@ -37,6 +47,7 @@ export type SupplierInvoiceListFilters = {
   matchStatus: SupplierInvoiceMatchStatus | null;
   paymentStatus: SupplierInvoicePaymentStatus | null;
   overdueOnly: boolean;
+  agingBucket: SupplierInvoiceAgingBucket | null;
   vatEvidence: SupplierInvoiceVatEvidenceFilter | null;
   viewMode: SupplierInvoiceViewMode;
 };
@@ -101,6 +112,7 @@ export function parseSupplierInvoiceListFilters(
   const rawQuery = firstParam(params.q)?.trim() ?? "";
   const rawMatchStatus = firstParam(params.matchStatus);
   const rawPaymentStatus = firstParam(params.paymentStatus);
+  const rawAgingBucket = firstParam(params.agingBucket);
   const rawViewMode = firstParam(params.view);
 
   return {
@@ -113,6 +125,9 @@ export function parseSupplierInvoiceListFilters(
       ? rawPaymentStatus
       : null,
     overdueOnly: firstParam(params.overdue) === "1",
+    agingBucket: isOneOf(rawAgingBucket, SUPPLIER_INVOICE_AGING_BUCKETS)
+      ? rawAgingBucket
+      : null,
     vatEvidence: isOneOf(
       firstParam(params.vat),
       SUPPLIER_INVOICE_VAT_EVIDENCE_FILTERS,
@@ -132,6 +147,7 @@ export function supplierInvoiceFiltersKey(filters: SupplierInvoiceListFilters) {
     filters.matchStatus ?? "",
     filters.paymentStatus ?? "",
     filters.overdueOnly ? "1" : "0",
+    filters.agingBucket ?? "",
     filters.vatEvidence ?? "",
     filters.viewMode,
   ].join("|");
@@ -146,6 +162,7 @@ export function hasSupplierInvoiceListFilters(
     filters.matchStatus != null ||
     filters.paymentStatus != null ||
     filters.overdueOnly ||
+    filters.agingBucket != null ||
     filters.vatEvidence != null
   );
 }
@@ -170,6 +187,104 @@ export function isSupplierInvoiceOverdue(
   }
 
   return diffVNDateDays(invoice.dueDate, today) > 0;
+}
+
+export function getSupplierInvoiceAgingBucket(
+  invoice: Pick<
+    SupplierInvoiceRow,
+    "amount" | "creditAppliedAmount" | "dueDate" | "paidAmount"
+  >,
+  today = getVNDateString(),
+): SupplierInvoiceAgingBucket | null {
+  if (!invoice.dueDate || getSupplierInvoiceOutstandingAmount(invoice) <= 0) {
+    return null;
+  }
+
+  const diff = diffVNDateDays(invoice.dueDate, today);
+  if (diff > 30) {
+    return "overdue_30_plus";
+  }
+  if (diff >= 16) {
+    return "overdue_16_30";
+  }
+  if (diff >= 1) {
+    return "overdue_1_15";
+  }
+
+  const daysUntilDue = -diff;
+  if (daysUntilDue <= 7) {
+    return "due_soon";
+  }
+
+  return "current_later";
+}
+
+export type SupplierInvoiceAgingSummary = {
+  totalOutstandingAmount: number;
+  totalOutstandingCount: number;
+  overdueAmount: number;
+  overdueCount: number;
+  dueSoonAmount: number;
+  dueSoonCount: number;
+  currentLaterAmount: number;
+  currentLaterCount: number;
+  buckets: {
+    due_soon: { count: number; amount: number };
+    current_later: { count: number; amount: number };
+    overdue_1_15: { count: number; amount: number };
+    overdue_16_30: { count: number; amount: number };
+    overdue_30_plus: { count: number; amount: number };
+  };
+};
+
+export function computeSupplierInvoiceAgingSummary(
+  invoices: readonly SupplierInvoiceRow[],
+  today = getVNDateString(),
+): SupplierInvoiceAgingSummary {
+  const summary: SupplierInvoiceAgingSummary = {
+    totalOutstandingAmount: 0,
+    totalOutstandingCount: 0,
+    overdueAmount: 0,
+    overdueCount: 0,
+    dueSoonAmount: 0,
+    dueSoonCount: 0,
+    currentLaterAmount: 0,
+    currentLaterCount: 0,
+    buckets: {
+      due_soon: { count: 0, amount: 0 },
+      current_later: { count: 0, amount: 0 },
+      overdue_1_15: { count: 0, amount: 0 },
+      overdue_16_30: { count: 0, amount: 0 },
+      overdue_30_plus: { count: 0, amount: 0 },
+    },
+  };
+
+  for (const invoice of invoices) {
+    const outstanding = getSupplierInvoiceOutstandingAmount(invoice);
+    if (outstanding <= 0) continue;
+
+    summary.totalOutstandingAmount += outstanding;
+    summary.totalOutstandingCount += 1;
+
+    const bucket = getSupplierInvoiceAgingBucket(invoice, today);
+    if (!bucket) continue;
+
+    summary.buckets[bucket].count += 1;
+    summary.buckets[bucket].amount += outstanding;
+
+    if (bucket === "due_soon") {
+      summary.dueSoonCount += 1;
+      summary.dueSoonAmount += outstanding;
+    } else if (bucket === "current_later") {
+      summary.currentLaterCount += 1;
+      summary.currentLaterAmount += outstanding;
+    } else {
+      summary.overdueCount += 1;
+      summary.overdueAmount += outstanding;
+    }
+  }
+
+  return summary;
 }
 
 /**
@@ -217,6 +332,13 @@ export function filterSupplierInvoices(
     }
 
     if (filters.overdueOnly && !isSupplierInvoiceOverdue(invoice, today)) {
+      return false;
+    }
+
+    if (
+      filters.agingBucket != null &&
+      getSupplierInvoiceAgingBucket(invoice, today) !== filters.agingBucket
+    ) {
       return false;
     }
 

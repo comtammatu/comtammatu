@@ -269,7 +269,7 @@ below-criteria tools → expense/allocate; period consumables → expense).
 ## Current Gaps
 
 - `/finance/expenses` is operating + opening-capital ledger, not a statutory journal. Rows lead with spend purpose; `q` searches note/vendor and `kind` slices operating vs startup (`capital` / `construction` / `deposit`). Deductible VAT / equipment value / period close stay blocked (D020).
-- Period-close readiness (`get_finance_period_close_readiness`) is read-only advisory; missing operating expense rows are reported as warnings rather than blockers because a 0 VND period total is valid in operations. `close_period_soft`/`close_period_hard` and the `auto_close_periods` cron stay unconditional until an owner-approved follow-up gates them.
+- Period-close readiness (`get_finance_period_close_readiness`) is read-only advisory; missing operating expense rows are reported as warnings rather than blockers because a 0 VND period total is valid in operations. `close_period_soft`/`close_period_hard` are surfaced in `FinancePeriodActions` gated by `canClose` (`blocker_count = 0`). Late supplier adjustments and invoices post in the current open period (ADR 0017). Operational benchmarks follow `docs/spec/finance-benchmarks.md`.
 
 ## Source Files
 

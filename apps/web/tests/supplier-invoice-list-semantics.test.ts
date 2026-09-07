@@ -29,6 +29,7 @@ const DEFAULT_FILTERS: SupplierInvoiceListFilters = {
   matchStatus: null,
   paymentStatus: null,
   overdueOnly: false,
+  agingBucket: null,
   vatEvidence: null,
   viewMode: "supplier",
 };
@@ -80,6 +81,7 @@ test("supplier invoice URL filters parse canonical values and ignore invalid sta
     matchStatus: "discrepancy",
     paymentStatus: "partial",
     overdueOnly: true,
+    agingBucket: null,
     vatEvidence: "missing",
     viewMode: "po",
   });
