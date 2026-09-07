@@ -139,13 +139,19 @@ export function WorkBoard({
   params,
   assigneeNames = {},
   departments = [],
-  membersByDepartment = {},
+  members = [],
+  canCreate = false,
+  canManage = false,
+  userId = null,
 }: {
   tasks: WorkTaskRow[];
   params: ParsedWorkParams;
   assigneeNames?: Record<string, string>;
   departments?: WorkDepartmentOption[];
-  membersByDepartment?: Record<number, WorkProfileOption[]>;
+  members?: WorkProfileOption[];
+  canCreate?: boolean;
+  canManage?: boolean;
+  userId?: string | null;
 }) {
   const todayStr = useMemo(
     () => formatISODateParts(getVNDateParts(new Date())),
@@ -280,10 +286,15 @@ export function WorkBoard({
     });
   }
 
+  function canAssignTask(task: WorkTaskRow): boolean {
+    return canManage || (userId != null && task.createdBy === userId);
+  }
+
   function moveTaskDepartment(taskId: number, targetDepartmentId: number) {
     if (targetDepartmentId <= 0) return;
     const current = items.find((task) => task.id === taskId);
     if (!current || current.departmentId === targetDepartmentId) return;
+    if (!canAssignTask(current)) return;
 
     setItems((prev) =>
       prev.map((task) =>
@@ -335,7 +346,7 @@ export function WorkBoard({
     return (
       <AppBoardCard
         key={task.id}
-        draggable={!isPending}
+        draggable={!isPending && canAssignTask(task)}
         isDragging={isDragging}
         onDragStart={(event) => {
           setDraggingId(task.id);
@@ -344,7 +355,7 @@ export function WorkBoard({
         }}
         onDragEnd={() => setDraggingId(null)}
         className={cn(
-          "cursor-grab active:cursor-grabbing",
+          canAssignTask(task) && "cursor-grab active:cursor-grabbing",
           isIncident && "border-destructive",
         )}
       >
@@ -557,10 +568,10 @@ export function WorkBoard({
           </AppBoardCompletedSection>
         </div>
 
-        {!column.isOther && departments.length > 0 ? (
+        {canCreate && !column.isOther && departments.length > 0 ? (
           <WorkCreateDialog
             departments={departments}
-            membersByDepartment={membersByDepartment}
+            members={members}
             defaultDepartmentId={column.id}
             params={params}
             trigger={
@@ -575,7 +586,10 @@ export function WorkBoard({
     );
   }
 
-  if (items.filter((task) => task.status !== "canceled").length === 0) {
+  if (
+    items.filter((task) => task.status !== "canceled").length === 0 &&
+    !(canCreate && departments.length > 0)
+  ) {
     return (
       <AppEmptyState mode="no-data" description={workCopy.inboxEmpty} />
     );

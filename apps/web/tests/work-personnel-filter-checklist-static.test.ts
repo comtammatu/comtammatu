@@ -89,5 +89,5 @@ test("Work toolbar and page shell wire member filter", () => {
 
   const page = readWeb("app/(protected)/work/page.tsx");
   assert.match(page, /allMembers/);
-  assert.match(page, /members=\{allMembers\}/);
+  assert.match(page, /members=\{canManage \? allMembers : \[\]\}/);
 });

@@ -19,6 +19,10 @@ import {
   WORK_TASK_STATUSES,
   workCopy,
 } from "@lib/messages/work";
+import {
+  resolveWorkCreateContext,
+  resolveWorkManageContext,
+} from "./_lib/work-manage";
 import { WORK_ROUTE_ROLES } from "./_lib/work-roles";
 
 type WorkTaskDbRow = Database["public"]["Tables"]["work_tasks"]["Row"];
@@ -303,7 +307,7 @@ const createWorkTaskSchema = z.object({
 export const createWorkTask = withAction<typeof createWorkTaskSchema, WorkTaskRow>(
   {
     schema: createWorkTaskSchema,
-    roles: WORK_ROUTE_ROLES,
+    customAuth: async () => resolveWorkCreateContext(),
   },
   async (data, ctx) => {
     const resolvedAssignees =
@@ -334,8 +338,7 @@ export const createWorkTask = withAction<typeof createWorkTaskSchema, WorkTaskRo
       resolvedAssignees.length > 0 ||
       (data.supporterIds && data.supporterIds.length > 0)
     ) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (ctx.supabase.rpc as any)("set_work_task_participants", {
+      await ctx.supabase.rpc("set_work_task_participants", {
         p_task_id: row.id,
         p_assignee_ids: resolvedAssignees,
         p_supporter_ids: data.supporterIds ?? [],
@@ -399,8 +402,7 @@ export const updateWorkTask = withAction<typeof updateWorkTaskSchema, WorkTaskRo
     }
 
     if (hasAssigneeIds || hasSupporterIds) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (ctx.supabase.rpc as any)("set_work_task_participants", {
+      await ctx.supabase.rpc("set_work_task_participants", {
         p_task_id: data.taskId,
         p_assignee_ids: resolvedAssignees,
         p_supporter_ids: data.supporterIds ?? [],
@@ -424,15 +426,11 @@ export const setWorkTaskParticipants = withAction(
     roles: WORK_ROUTE_ROLES,
   },
   async (data, ctx) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (ctx.supabase.rpc as any)(
-      "set_work_task_participants",
-      {
-        p_task_id: data.taskId,
-        p_assignee_ids: data.assigneeIds,
-        p_supporter_ids: data.supporterIds,
-      },
-    );
+    const { error } = await ctx.supabase.rpc("set_work_task_participants", {
+      p_task_id: data.taskId,
+      p_assignee_ids: data.assigneeIds,
+      p_supporter_ids: data.supporterIds,
+    });
     if (error) {
       return mapRpcError(error, workRpcMappings, {
         userMessage: workCopy.saveFailed,
@@ -490,11 +488,11 @@ export const setWorkTaskDepartment = withAction<
     roles: WORK_ROUTE_ROLES,
   },
   async (data, ctx) => {
-    const { data: canWrite, error: canWriteError } = await ctx.supabase.rpc(
-      "can_write_work_task",
+    const { data: canAssign, error: canAssignError } = await ctx.supabase.rpc(
+      "can_assign_work_task",
       { p_task_id: data.taskId },
     );
-    if (canWriteError || !canWrite) {
+    if (canAssignError || !canAssign) {
       return { success: false, error: workCopy.forbidden };
     }
 
@@ -1029,25 +1027,12 @@ export async function uploadWorkTaskAttachmentFile(
   };
 }
 
-export type WorkMemberRole = "lead" | "member";
-
-export type WorkDepartmentMemberRow = {
-  id: number;
-  departmentId: number;
-  userId: string;
-  fullName: string;
-  role: WorkMemberRole;
-  isActive: boolean;
-};
-
 export type WorkProfileOption = {
   id: string;
   fullName: string;
   branchId?: number | null;
   branchName?: string | null;
 };
-
-const workMemberRoleSchema = z.enum(["lead", "member"]);
 
 const workDepartmentNameSchema = z.object({
   name: z.string().trim().min(1).max(120),
@@ -1057,10 +1042,7 @@ const workDepartmentNameSchema = z.object({
 export const upsertWorkDepartment = withAction(
   {
     schema: workDepartmentNameSchema,
-    customAuth: async () => {
-      const { resolveWorkManageContext } = await import("./_lib/work-manage");
-      return resolveWorkManageContext();
-    },
+    customAuth: async () => resolveWorkManageContext(),
   },
   async (data, ctx) => {
     const { data: row, error } = await ctx.supabase.rpc("upsert_work_department", {
@@ -1101,10 +1083,7 @@ export const deactivateWorkDepartment = withAction(
     schema: z.object({
       departmentId: z.number().int().positive(),
     }),
-    customAuth: async () => {
-      const { resolveWorkManageContext } = await import("./_lib/work-manage");
-      return resolveWorkManageContext();
-    },
+    customAuth: async () => resolveWorkManageContext(),
   },
   async (data, ctx) => {
     const { error } = await ctx.supabase.rpc("deactivate_work_department", {
@@ -1122,255 +1101,137 @@ export const deactivateWorkDepartment = withAction(
   },
 );
 
-function mapMemberRole(value: string): WorkMemberRole {
-  return value === "lead" ? "lead" : "member";
+type WorkActorProfileRow = {
+  id: string;
+  full_name: string | null;
+  branch_id: number | null;
+  branch_name: string | null;
+};
+
+function mapActorProfile(row: WorkActorProfileRow): WorkProfileOption {
+  return {
+    id: row.id,
+    fullName: staffDisplayLabel(row.full_name),
+    branchId: row.branch_id,
+    branchName: row.branch_name,
+  };
 }
 
-export const listWorkDepartmentMembers = withAction(
+export const listWorkActorProfiles = withAction<
+  typeof emptyWorkActionSchema,
+  { items: WorkProfileOption[] }
+>(
   {
-    schema: z.object({
-      departmentId: z.number().int().positive(),
-    }),
+    schema: emptyWorkActionSchema,
     roles: WORK_ROUTE_ROLES,
   },
-  async (data, ctx) => {
-    const { data: rows, error } = await ctx.supabase
-      .from("work_department_members")
-      .select("id, department_id, user_id, role, is_active, profiles!inner(full_name)")
-      .eq("tenant_id", ctx.claims.tenant_id)
-      .eq("department_id", data.departmentId)
-      .eq("is_active", true)
-      .order("role", { ascending: true });
+  async (_data, ctx) => {
+    const { data: rows, error } = await ctx.supabase.rpc(
+      "list_work_actor_profiles",
+    );
     if (error) {
       return { success: false, error: workCopy.loadFailed };
     }
-    const items: WorkDepartmentMemberRow[] = (rows ?? []).map((row) => {
-      const profile = row.profiles as unknown as { full_name: string } | null;
-      return {
-        id: row.id,
-        departmentId: row.department_id,
-        userId: row.user_id,
-        fullName: staffDisplayLabel(profile?.full_name),
-        role: mapMemberRole(row.role),
-        isActive: row.is_active,
-      };
-    });
+    const items = (rows ?? []).map(mapActorProfile);
     return { success: true, data: { items } };
   },
 );
 
-export const listWorkCandidateProfiles = withAction(
+export const listWorkCandidateProfiles = withAction<
+  typeof emptyWorkActionSchema,
+  { items: WorkProfileOption[] }
+>(
+  {
+    schema: emptyWorkActionSchema,
+    customAuth: async () => resolveWorkCreateContext(),
+  },
+  async (_data, ctx) => {
+    const { data: rows, error } = await ctx.supabase.rpc(
+      "list_work_actor_profiles",
+    );
+    if (error) {
+      return { success: false, error: workCopy.loadFailed };
+    }
+    const items = (rows ?? []).map(mapActorProfile);
+    return { success: true, data: { items } };
+  },
+);
+
+export const listWorkTaskCreators = withAction<
+  typeof emptyWorkActionSchema,
+  { items: WorkProfileOption[] }
+>(
+  {
+    schema: emptyWorkActionSchema,
+    customAuth: async () => resolveWorkManageContext(),
+  },
+  async (_data, ctx) => {
+    const { data: rows, error } = await ctx.supabase.rpc(
+      "list_work_task_creators",
+    );
+    if (error) {
+      return mapRpcError(error, workRpcMappings, {
+        userMessage: workCopy.loadFailed,
+        errorCode: "work.creators_load_failed",
+      });
+    }
+    const items = (rows ?? []).map(mapActorProfile);
+    return { success: true, data: { items } };
+  },
+);
+
+export const setWorkTaskCreator = withAction(
   {
     schema: z.object({
-      departmentId: z.number().int().positive(),
+      userId: z.string().uuid(),
+      active: z.boolean(),
     }),
-    customAuth: async () => {
-      const { resolveWorkManageContext } = await import("./_lib/work-manage");
-      return resolveWorkManageContext();
-    },
+    customAuth: async () => resolveWorkManageContext(),
   },
   async (data, ctx) => {
-    const [{ data: memberRows }, { data: profiles, error }, { data: branchRows }] = await Promise.all([
-      ctx.supabase
-        .from("work_department_members")
-        .select("user_id")
-        .eq("tenant_id", ctx.claims.tenant_id)
-        .eq("department_id", data.departmentId)
-        .eq("is_active", true),
-      ctx.supabase
-        .from("profiles")
-        .select("id, full_name, branch_id")
-        .eq("tenant_id", ctx.claims.tenant_id)
-        .eq("is_active", true)
-        .order("full_name"),
-      ctx.supabase
-        .from("branches")
-        .select("id, name")
-        .eq("tenant_id", ctx.claims.tenant_id)
-        .eq("is_active", true)
-        .order("name"),
-    ]);
+    const { error } = await ctx.supabase.rpc("set_work_task_creator", {
+      p_user_id: data.userId,
+      p_active: data.active,
+    });
     if (error) {
-      return { success: false, error: workCopy.loadFailed };
+      return mapRpcError(error, workRpcMappings, {
+        userMessage: workCopy.creatorSaveFailed,
+        errorCode: "work.creator_set_failed",
+      });
     }
-    const branchNameById = new Map<number, string>(
-      (branchRows ?? []).map((b) => [b.id, b.name]),
-    );
-    const taken = new Set((memberRows ?? []).map((row) => row.user_id));
-    const items: WorkProfileOption[] = (profiles ?? [])
-      .filter((row) => !taken.has(row.id))
-      .map((row) => ({
-        id: row.id,
-        fullName: row.full_name,
-        branchId: row.branch_id,
-        branchName: row.branch_id != null ? (branchNameById.get(row.branch_id) ?? null) : null,
-      }));
-    return { success: true, data: { items } };
+    revalidatePath("/work");
+    return { success: true };
   },
 );
 
-const upsertMembersSchema = z.object({
-  departmentId: z.number().int().positive(),
-  userIds: z.array(z.string().uuid()).min(1),
-  role: workMemberRoleSchema,
-});
-
-export const upsertWorkDepartmentMembers = withAction(
+export const setWorkTaskCreators = withAction(
   {
-    schema: upsertMembersSchema,
-    customAuth: async () => {
-      const { resolveWorkManageContext } = await import("./_lib/work-manage");
-      return resolveWorkManageContext();
-    },
+    schema: z.object({
+      userIds: z.array(z.string().uuid()).min(1),
+      active: z.boolean(),
+    }),
+    customAuth: async () => resolveWorkManageContext(),
   },
   async (data, ctx) => {
     const results = await Promise.all(
       data.userIds.map((userId) =>
-        ctx.supabase.rpc("upsert_work_department_member", {
-          p_department_id: data.departmentId,
+        ctx.supabase.rpc("set_work_task_creator", {
           p_user_id: userId,
-          p_role: data.role,
+          p_active: data.active,
         }),
       ),
     );
-    const firstError = results.find((r) => r.error)?.error;
+    const firstError = results.find((result) => result.error)?.error;
     if (firstError) {
       return mapRpcError(firstError, workRpcMappings, {
-        userMessage: workCopy.teamAddFailed,
-        errorCode: "work.member_upsert_failed",
+        userMessage: workCopy.creatorSaveFailed,
+        errorCode: "work.creator_set_failed",
       });
     }
     revalidatePath("/work");
-    revalidatePath("/work/team");
     return {
       success: true,
-      data: {
-        count: results.filter((r) => r.data != null).length,
-      },
+      data: { count: data.userIds.length },
     };
-  },
-);
-
-const upsertMemberSchema = z.object({
-  departmentId: z.number().int().positive(),
-  userId: z.string().uuid(),
-  role: workMemberRoleSchema,
-});
-
-export const upsertWorkDepartmentMember = withAction(
-  {
-    schema: upsertMemberSchema,
-    customAuth: async () => {
-      const { resolveWorkManageContext } = await import("./_lib/work-manage");
-      return resolveWorkManageContext();
-    },
-  },
-  async (data, ctx) => {
-    const { data: row, error } = await ctx.supabase.rpc(
-      "upsert_work_department_member",
-      {
-        p_department_id: data.departmentId,
-        p_user_id: data.userId,
-        p_role: data.role,
-      },
-    );
-    if (error) {
-      return mapRpcError(error, workRpcMappings, {
-        userMessage: workCopy.teamAddFailed,
-        errorCode: "work.member_upsert_failed",
-      });
-    }
-    if (!row) {
-      return { success: false, error: workCopy.teamAddFailed };
-    }
-    revalidatePath("/work");
-    revalidatePath("/work/team");
-    return {
-      success: true,
-      data: {
-        id: row.id,
-        departmentId: row.department_id,
-        userId: row.user_id,
-        fullName: "",
-        role: mapMemberRole(row.role),
-        isActive: row.is_active,
-      } satisfies WorkDepartmentMemberRow,
-    };
-  },
-);
-
-export const setWorkDepartmentMemberRole = withAction(
-  {
-    schema: upsertMemberSchema,
-    customAuth: async () => {
-      const { resolveWorkManageContext } = await import("./_lib/work-manage");
-      return resolveWorkManageContext();
-    },
-  },
-  async (data, ctx) => {
-    const { data: row, error } = await ctx.supabase.rpc(
-      "set_work_department_member_role",
-      {
-        p_department_id: data.departmentId,
-        p_user_id: data.userId,
-        p_role: data.role,
-      },
-    );
-    if (error) {
-      return mapRpcError(error, workRpcMappings, {
-        userMessage: workCopy.teamSaveFailed,
-        errorCode: "work.member_role_failed",
-      });
-    }
-    if (!row) {
-      return { success: false, error: workCopy.teamSaveFailed };
-    }
-    revalidatePath("/work");
-    revalidatePath("/work/team");
-    return {
-      success: true,
-      data: {
-        id: row.id,
-        departmentId: row.department_id,
-        userId: row.user_id,
-        fullName: "",
-        role: mapMemberRole(row.role),
-        isActive: row.is_active,
-      } satisfies WorkDepartmentMemberRow,
-    };
-  },
-);
-
-export const deactivateWorkDepartmentMember = withAction(
-  {
-    schema: z.object({
-      departmentId: z.number().int().positive(),
-      userId: z.string().uuid(),
-    }),
-    customAuth: async () => {
-      const { resolveWorkManageContext } = await import("./_lib/work-manage");
-      return resolveWorkManageContext();
-    },
-  },
-  async (data, ctx) => {
-    const { data: row, error } = await ctx.supabase.rpc(
-      "deactivate_work_department_member",
-      {
-        p_department_id: data.departmentId,
-        p_user_id: data.userId,
-      },
-    );
-    if (error) {
-      return mapRpcError(error, workRpcMappings, {
-        userMessage: workCopy.teamSaveFailed,
-        errorCode: "work.member_deactivate_failed",
-      });
-    }
-    if (!row) {
-      return { success: false, error: workCopy.teamSaveFailed };
-    }
-    revalidatePath("/work");
-    revalidatePath("/work/team");
-    return { success: true };
   },
 );

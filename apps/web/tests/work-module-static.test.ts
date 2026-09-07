@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
-import { readSql } from "./_lib/active-sql.ts";
+import {
+  extractSqlFunction,
+  readActiveMigrationSql,
+  readSql,
+} from "./_lib/active-sql.ts";
 
 
 const repoRoot = resolve(process.cwd(), "../..");
@@ -112,20 +116,25 @@ test("Work views default to mine tasks without scope dialog", () => {
   assert.match(toolbar, /filterAllDepartments/);
 });
 
-test("Work settings dialog covers department and member admin", () => {
+test("Work settings dialog covers departments and creator grants", () => {
   const settings = readWeb(
     "app/(protected)/work/_components/work-settings-dialog.tsx",
   );
   assert.match(settings, /WorkSettingsDialog/);
   assert.match(settings, /deactivateWorkDepartment/);
   assert.match(settings, /ensurePilotDepartment/);
-  assert.match(settings, /setWorkDepartmentMemberRole/);
-  assert.match(settings, /deactivateWorkDepartmentMember/);
+  assert.match(settings, /settingsTabCreators/);
+  assert.match(settings, /WorkAddCreatorsDialog/);
+  assert.match(settings, /setWorkTaskCreator/);
+  assert.doesNotMatch(settings, /setWorkDepartmentMemberRole/);
+  assert.doesNotMatch(settings, /deactivateWorkDepartmentMember/);
+  assert.doesNotMatch(settings, /settingsTabMembers/);
   assert.doesNotMatch(settings, /settingsTabProjects/);
   const header = readWeb(
     "app/(protected)/work/_components/work-page-header-actions.tsx",
   );
   assert.match(header, /settingsOpen/);
+  assert.match(header, /canManage/);
 });
 
 test("Work compose blocks are registered", () => {
@@ -133,6 +142,18 @@ test("Work compose blocks are registered", () => {
   assert.match(registry, /"work-task-inbox"/);
   assert.match(registry, /"work-task-board"/);
   assert.match(registry, /"work-task-calendar"/);
+});
+
+test("Work create dialog is gated by canCreate", () => {
+  const page = readWeb("app/(protected)/work/page.tsx");
+  assert.match(page, /canCreateWorkTask/);
+  assert.match(page, /canCreate && departments\.length > 0/);
+  assert.match(page, /members=\{allMembers\}/);
+  const board = readWeb("app/(protected)/work/_components/work-board.tsx");
+  assert.match(board, /canCreate && !column\.isOther/);
+  const manage = readWeb("app/(protected)/work/_lib/work-manage.ts");
+  assert.match(manage, /PERMISSION_KEYS\.WORK_CREATE/);
+  assert.match(manage, /canCreateWorkTask/);
 });
 
 test("Work create dialog and list toolbar exist", () => {
@@ -180,9 +201,55 @@ test("Work membership admin RPCs are in migration", () => {
   assert.match(departmentMigration, /deactivate_work_department/);
 });
 
-test("Work permission key is registered", () => {
+test("Work permission keys are registered", () => {
   const permissions = readRepo("packages/shared/src/auth/permissions.ts");
   assert.match(permissions, /WORK_MANAGE: "work:manage"/);
+  assert.match(permissions, /WORK_CREATE: "work:create"/);
+  assert.match(permissions, /PERMISSION_KEY_COUNT = 114/);
+});
+
+test("Work assignment visibility helpers drop membership inheritance", () => {
+  const activeSql = readActiveMigrationSql(repoRoot);
+  const readTask = extractSqlFunction(activeSql, "can_read_work_task");
+  assert.match(readTask, /task\.created_by = auth\.uid\(\)/);
+  assert.match(readTask, /task\.assignee_id = auth\.uid\(\)/);
+  assert.doesNotMatch(readTask, /can_read_work_department/);
+  assert.doesNotMatch(readTask, /can_read_work_project/);
+
+  const createTask = extractSqlFunction(activeSql, "create_work_task");
+  assert.match(createTask, /can_create_work_task\(\)/);
+
+  const assignTask = extractSqlFunction(activeSql, "can_assign_work_task");
+  assert.match(assignTask, /task\.created_by = auth\.uid\(\)/);
+  assert.match(assignTask, /work:manage/);
+
+  const setCreator = extractSqlFunction(activeSql, "set_work_task_creator");
+  assert.match(setCreator, /work:manage/);
+  assert.match(setCreator, /auth_is_owner\(v_actor\)/);
+  assert.match(setCreator, /'work:create'/);
+
+  const visibilityMigration = readRepo(
+    "supabase/migrations/20260907104521_work_task_visibility_by_assignment.sql",
+  );
+  assert.match(
+    visibilityMigration,
+    /REVOKE ALL ON FUNCTION public\.upsert_work_department_member/,
+  );
+  assert.match(
+    visibilityMigration,
+    /REVOKE ALL ON FUNCTION public\.set_work_department_member_role/,
+  );
+  assert.match(
+    visibilityMigration,
+    /REVOKE ALL ON FUNCTION public\.deactivate_work_department_member/,
+  );
+  assert.match(visibilityMigration, /FROM authenticated;/);
+
+  const revokeAnon = readRepo(
+    "supabase/migrations/20260907111230_work_task_visibility_revoke_anon.sql",
+  );
+  assert.match(revokeAnon, /FROM PUBLIC, anon;/);
+  assert.match(revokeAnon, /set_work_task_creator/);
 });
 
 test("Work module is flat in deep nav; department admin lives in settings dialog", () => {

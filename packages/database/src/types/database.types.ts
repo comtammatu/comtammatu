@@ -13053,6 +13053,8 @@ export type Database = {
         Returns: Json
       }
       can_access_workspace: { Args: never; Returns: boolean }
+      can_assign_work_task: { Args: { p_task_id: number }; Returns: boolean }
+      can_create_work_task: { Args: never; Returns: boolean }
       can_manage_work_membership: { Args: never; Returns: boolean }
       can_read_branch_ops: { Args: { p_branch_id: number }; Returns: boolean }
       can_read_inventory_monetary: { Args: { p_key: string }; Returns: boolean }
@@ -14670,6 +14672,24 @@ export type Database = {
         }[]
       }
       list_unpriced_confirmed_grn_lines: { Args: never; Returns: Json }
+      list_work_actor_profiles: {
+        Args: never
+        Returns: {
+          branch_id: number
+          branch_name: string
+          full_name: string
+          id: string
+        }[]
+      }
+      list_work_task_creators: {
+        Args: never
+        Returns: {
+          branch_id: number
+          branch_name: string
+          full_name: string
+          id: string
+        }[]
+      }
       log_audit: {
         Args: {
           p_action: string
@@ -15792,6 +15812,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      set_work_task_creator: {
+        Args: { p_active: boolean; p_user_id: string }
+        Returns: Json
       }
       set_work_task_participants: {
         Args: {

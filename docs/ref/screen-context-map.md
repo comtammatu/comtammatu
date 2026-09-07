@@ -172,16 +172,17 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
   `/inventory` · `/hr` — không app/host riêng.
 - **Archetype:** `/work` Inbox = `LIST` (queue); `/work/tasks/[id]` = `DETAIL` (redirect shim `?task=`);
   `/work/projects` = `LIST`; `/work/projects/[id]` = `DETAIL`; `/work/team` = `REDIRECT` về `/work`
-  (quản trị phòng ban và thành viên tích hợp trực tiếp trong modal Cài đặt của `/work`);
+  (Thiết lập trên `/work`: phòng ban + **Người thêm việc**; không quản trị thành viên phòng);
   `?view=board` = compose `TASK_BOARD`; `?view=calendar` = `TASK_CALENDAR`;
   `?view=timeline` = `TASK_TIMELINE`. **Không** dùng archetype `BOARD` /
   `station_chrome` (KDS/POS).
-- **Actor:** Thành viên `work_*` (membership) + Owner (`work:manage`). Candidate
-  ACL `work` chỉ là cửa vào; RLS/RPC là authority.
-- **Job:** Việc được giao / theo dõi liên phòng ban; sau đó board/calendar/
-  timeline theo scope một phòng hoặc một dự án.
-- **Goal:** Mở Inbox → đúng việc → đổi trạng thái / comment; lead mở board một
-  scope — không tường Kanban cả công ty trên `/`.
+- **Actor:** Owner / `work:manage` quản trị và xem tất cả; `work:create` tạo việc
+  và xem việc mình tạo; Staff chỉ việc được giao / hỗ trợ. Candidate ACL `work`
+  chỉ là cửa vào; RLS/RPC là authority (assignment + `created_by`, không membership phòng).
+- **Job:** Việc được giao / theo dõi liên phòng ban; board/calendar/timeline theo
+  việc caller được đọc — không tường công ty trừ Owner/`work:manage`.
+- **Goal:** Mở Inbox (`view=mine` = việc của tôi) → đúng việc → đổi trạng thái /
+  comment; người tạo/`work:manage` gán người; không tường Kanban cả công ty trên `/`.
 - **Ưu tiên data:** Tên việc, trạng thái, người, hạn, dự án/phòng. **Không:**
   số tiền, tồn kho, lương; không trộn `position_shift_tasks` (Việc trong ca).
 - **UX:** View switcher URL `view=`; filter trên URL; desktop primary cho board;

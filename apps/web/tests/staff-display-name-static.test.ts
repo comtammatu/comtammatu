@@ -54,7 +54,7 @@ test("staff display names come from profiles.full_name and never fall back to UU
   assert.doesNotMatch(wasteData, /\?\? creatorId/);
   assert.doesNotMatch(wasteData, /full_name \?\? profile\.id/);
 
-  assert.match(workActions, /staffDisplayLabel\(profile\?\.full_name\)/);
+  assert.match(workActions, /staffDisplayLabel\(row\.full_name\)/);
   assert.doesNotMatch(workActions, /full_name \?\? row\.user_id/);
 
   assert.match(audit, /resolveProfileDisplayNames/);

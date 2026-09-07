@@ -81,6 +81,7 @@ export type WorkTaskDetailFormOptions = {
   initialChecklist: WorkChecklistItemRow[];
   initialAttachments?: WorkTaskAttachmentRow[];
   initialEvents?: WorkTaskEventRow[];
+  canAssign?: boolean;
   onSaved?: () => void;
 };
 
@@ -108,6 +109,7 @@ export function useWorkTaskDetailForm({
   initialChecklist,
   initialAttachments,
   initialEvents,
+  canAssign = false,
   onSaved,
 }: WorkTaskDetailFormOptions) {
   const router = useRouter();
@@ -149,6 +151,7 @@ export function useWorkTaskDetailForm({
   }
 
   function saveFields() {
+    if (!canAssign) return;
     startTransition(async () => {
       const clearAssignee =
         (assigneeIds.length === 0 || assigneeId === "none") &&
@@ -186,6 +189,7 @@ export function useWorkTaskDetailForm({
     nextAssigneeIds: string[],
     nextSupporterIds: string[],
   ) {
+    if (!canAssign) return;
     const prevAssigneeIds = assigneeIds;
     const prevSupporterIds = supporterIds;
     setAssigneeIds(nextAssigneeIds);
@@ -365,6 +369,7 @@ export function useWorkTaskDetailForm({
     submitComment,
     handleUploadFile,
     handleDeleteAttachment,
+    canAssign,
   };
 }
 
@@ -431,6 +436,7 @@ export function WorkTaskDetailBody({ form }: { form: WorkTaskDetailForm }) {
                 <Input
                   value={form.title}
                   onChange={(event) => form.setTitle(event.target.value)}
+                  disabled={!form.canAssign}
                   className="text-base font-semibold"
                 />
               </label>
@@ -442,6 +448,7 @@ export function WorkTaskDetailBody({ form }: { form: WorkTaskDetailForm }) {
                 <Textarea
                   value={form.description}
                   onChange={(event) => form.setDescription(event.target.value)}
+                  disabled={!form.canAssign}
                   rows={4}
                   className="resize-y"
                 />
@@ -811,6 +818,7 @@ export function WorkTaskDetailBody({ form }: { form: WorkTaskDetailForm }) {
               onValueChange={(value) =>
                 form.setPriority(value as WorkTaskPriority)
               }
+              disabled={!form.canAssign || form.isPending}
             >
               <SelectTrigger size={controlSize} className="bg-background">
                 <SelectValue />
@@ -844,6 +852,7 @@ export function WorkTaskDetailBody({ form }: { form: WorkTaskDetailForm }) {
                         className="gap-1 pr-1 text-xs"
                       >
                         <span>{name}</span>
+                        {form.canAssign ? (
                         <Button
                           type="button"
                           variant="ghost"
@@ -858,11 +867,13 @@ export function WorkTaskDetailBody({ form }: { form: WorkTaskDetailForm }) {
                         >
                           <IconX className="size-3" />
                         </Button>
+                        ) : null}
                       </Badge>
                     );
                   })
                 )}
               </div>
+              {form.canAssign ? (
               <MultiSelectCombobox
                 options={form.assigneeOptions
                   .filter((o) => !form.supporterIds.includes(o.id))
@@ -885,6 +896,7 @@ export function WorkTaskDetailBody({ form }: { form: WorkTaskDetailForm }) {
                   form.saveParticipants(next, form.supporterIds);
                 }}
               />
+              ) : null}
             </div>
           </AppInspectorRow>
 
@@ -907,6 +919,7 @@ export function WorkTaskDetailBody({ form }: { form: WorkTaskDetailForm }) {
                         className="gap-1 pr-1 text-xs"
                       >
                         <span>{name}</span>
+                        {form.canAssign ? (
                         <Button
                           type="button"
                           variant="ghost"
@@ -921,11 +934,13 @@ export function WorkTaskDetailBody({ form }: { form: WorkTaskDetailForm }) {
                         >
                           <IconX className="size-3" />
                         </Button>
+                        ) : null}
                       </Badge>
                     );
                   })
                 )}
               </div>
+              {form.canAssign ? (
               <MultiSelectCombobox
                 options={form.assigneeOptions
                   .filter((o) => !form.assigneeIds.includes(o.id))
@@ -948,6 +963,7 @@ export function WorkTaskDetailBody({ form }: { form: WorkTaskDetailForm }) {
                   form.saveParticipants(form.assigneeIds, next);
                 }}
               />
+              ) : null}
             </div>
           </AppInspectorRow>
 
@@ -956,6 +972,7 @@ export function WorkTaskDetailBody({ form }: { form: WorkTaskDetailForm }) {
               type="datetime-local"
               value={form.dueAt}
               onChange={(event) => form.setDueAt(event.target.value)}
+              disabled={!form.canAssign}
               className="bg-background"
             />
           </AppInspectorRow>
@@ -967,6 +984,7 @@ export function WorkTaskDetailBody({ form }: { form: WorkTaskDetailForm }) {
 
 export function WorkTaskDetailFooter({ form }: { form: WorkTaskDetailForm }) {
   const controlSize = useFormControlSize();
+  if (!form.canAssign) return null;
 
   return (
     <AppDetailFooter

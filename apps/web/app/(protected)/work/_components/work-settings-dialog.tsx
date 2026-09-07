@@ -13,13 +13,6 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
-import {
   Tabs,
   TabsContent,
   TabsList,
@@ -40,18 +33,15 @@ import { workCopy } from "@lib/messages/work";
 import { WORK_LIST_ITEM_INSET } from "../_lib/compose-styles";
 import {
   deactivateWorkDepartment,
-  deactivateWorkDepartmentMember,
   ensurePilotDepartment,
   listWorkCandidateProfiles,
-  listWorkDepartmentMembers,
-  setWorkDepartmentMemberRole,
+  listWorkTaskCreators,
+  setWorkTaskCreator,
   upsertWorkDepartment,
-  type WorkDepartmentMemberRow,
   type WorkDepartmentOption,
-  type WorkMemberRole,
   type WorkProfileOption,
 } from "../actions";
-import { WorkAddMembersDialog } from "./work-add-members-dialog";
+import { WorkAddCreatorsDialog } from "./work-add-creators-dialog";
 
 const departmentSchema = z.object({
   name: z.string().trim().min(1).max(120),
@@ -74,64 +64,54 @@ export function WorkSettingsDialog({
   const [departmentDialogOpen, setDepartmentDialogOpen] = useState(false);
   const [editingDepartment, setEditingDepartment] =
     useState<WorkDepartmentOption | null>(null);
-  const [memberDialogOpen, setMemberDialogOpen] = useState(false);
-  const [memberDepartmentId, setMemberDepartmentId] = useState<number | null>(
-    departments[0]?.id ?? null,
-  );
-  const [members, setMembers] = useState<WorkDepartmentMemberRow[]>([]);
+  const [creatorDialogOpen, setCreatorDialogOpen] = useState(false);
+  const [creators, setCreators] = useState<WorkProfileOption[]>([]);
   const [candidates, setCandidates] = useState<WorkProfileOption[]>([]);
-
   const [reloadKey, setReloadKey] = useState(0);
-  const [memberSearchQuery, setMemberSearchQuery] = useState("");
+  const [creatorSearchQuery, setCreatorSearchQuery] = useState("");
 
-  const filteredMembers = useMemo(() => {
-    const q = memberSearchQuery.trim().toLowerCase();
-    if (!q) return members;
-    return members.filter((m) => m.fullName.toLowerCase().includes(q));
-  }, [members, memberSearchQuery]);
-
-  useEffect(() => {
-    setMemberSearchQuery("");
-  }, [memberDepartmentId, open]);
+  const filteredCreators = useMemo(() => {
+    const q = creatorSearchQuery.trim().toLowerCase();
+    if (!q) return creators;
+    return creators.filter((creator) =>
+      creator.fullName.toLowerCase().includes(q),
+    );
+  }, [creators, creatorSearchQuery]);
 
   useEffect(() => {
     if (!open) return;
-    setMemberDepartmentId((current) => {
-      if (current != null && departments.some((d) => d.id === current)) {
-        return current;
-      }
-      return departments[0]?.id ?? null;
-    });
-  }, [open, departments]);
+    setCreatorSearchQuery("");
+  }, [open]);
 
   useEffect(() => {
-    if (!open || memberDepartmentId == null) {
-      setMembers([]);
+    if (!open) {
+      setCreators([]);
       setCandidates([]);
       return;
     }
     let cancelled = false;
     void (async () => {
-      const [membersResult, candidatesResult] = await Promise.all([
-        listWorkDepartmentMembers({ departmentId: memberDepartmentId }),
-        listWorkCandidateProfiles({ departmentId: memberDepartmentId }),
+      const [creatorsResult, candidatesResult] = await Promise.all([
+        listWorkTaskCreators({}),
+        listWorkCandidateProfiles({}),
       ]);
       if (cancelled) return;
-      setMembers(
-        membersResult.success && membersResult.data
-          ? membersResult.data.items
-          : [],
-      );
-      setCandidates(
+      const nextCreators =
+        creatorsResult.success && creatorsResult.data
+          ? creatorsResult.data.items
+          : [];
+      const creatorIds = new Set(nextCreators.map((row) => row.id));
+      const nextCandidates =
         candidatesResult.success && candidatesResult.data
-          ? candidatesResult.data.items
-          : [],
-      );
+          ? candidatesResult.data.items.filter((row) => !creatorIds.has(row.id))
+          : [];
+      setCreators(nextCreators);
+      setCandidates(nextCandidates);
     })();
     return () => {
       cancelled = true;
     };
-  }, [open, memberDepartmentId, reloadKey]);
+  }, [open, reloadKey]);
 
   const departmentDialogTitle = editingDepartment
     ? workCopy.departmentRenameTitle
@@ -184,10 +164,10 @@ export function WorkSettingsDialog({
                 {departments.length}
               </Badge>
             </TabsTrigger>
-            <TabsTrigger value="members" className="gap-1.5">
-              <span>{workCopy.settingsTabMembers}</span>
+            <TabsTrigger value="creators" className="gap-1.5">
+              <span>{workCopy.settingsTabCreators}</span>
               <Badge variant="secondary" className="px-1.5 py-0 text-xs">
-                {members.length}
+                {creators.length}
               </Badge>
             </TabsTrigger>
           </TabsList>
@@ -273,176 +253,86 @@ export function WorkSettingsDialog({
             </div>
           </TabsContent>
 
-          <TabsContent value="members" className="flex flex-col gap-3">
-            {departments.length === 0 ? (
+          <TabsContent value="creators" className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                size={controlSize}
+                onClick={() => setCreatorDialogOpen(true)}
+                disabled={candidates.length === 0}
+              >
+                {workCopy.creatorsAdd}
+              </Button>
+              {creators.length > 3 ? (
+                <Input
+                  placeholder={workCopy.teamAddSearchPlaceholder}
+                  value={creatorSearchQuery}
+                  onChange={(event) => setCreatorSearchQuery(event.target.value)}
+                  className="min-w-0 flex-1"
+                />
+              ) : null}
+            </div>
+
+            {creators.length === 0 ? (
               <AppEmptyState
                 mode="no-data"
-                description={workCopy.teamNoDepartment}
+                description={workCopy.creatorsEmpty}
+                compact
+              />
+            ) : filteredCreators.length === 0 ? (
+              <AppEmptyState
+                mode="no-data"
+                description={workCopy.teamAddNoResults}
                 compact
               />
             ) : (
-              <>
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-2">
-                    <Select
-                      value={
-                        memberDepartmentId != null
-                          ? String(memberDepartmentId)
-                          : undefined
-                      }
-                      onValueChange={(value) =>
-                        setMemberDepartmentId(Number(value))
-                      }
-                    >
-                      <SelectTrigger size={controlSize} className="flex-1">
-                        <SelectValue placeholder={workCopy.scopeDepartment} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {departments.map((department) => (
-                          <SelectItem
-                            key={department.id}
-                            value={String(department.id)}
-                          >
-                            {department.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      type="button"
-                      size={controlSize}
-                      onClick={() => setMemberDialogOpen(true)}
-                      disabled={candidates.length === 0}
-                    >
-                      {workCopy.teamAdd}
-                    </Button>
-                  </div>
-                  {members.length > 3 ? (
-                    <Input
-                      placeholder={workCopy.teamMemberSearchPlaceholder}
-                      value={memberSearchQuery}
-                      onChange={(e) => setMemberSearchQuery(e.target.value)}
-                      className="w-full"
-                    />
-                  ) : null}
-                </div>
-
-                {members.length === 0 ? (
-                  <AppEmptyState
-                    mode="no-data"
-                    description={workCopy.teamEmpty}
-                    compact
-                  >
-                    <Button
-                      type="button"
-                      size={controlSize}
-                      onClick={() => setMemberDialogOpen(true)}
-                      disabled={candidates.length === 0}
-                    >
-                      {workCopy.teamAdd}
-                    </Button>
-                  </AppEmptyState>
-                ) : filteredMembers.length === 0 ? (
-                  <AppEmptyState
-                    mode="no-data"
-                    description={workCopy.teamAddNoResults}
-                    compact
-                  />
-                ) : (
-                  <div className={`max-h-80 overflow-y-auto pr-1 flex flex-col gap-2 ${WORK_LIST_ITEM_INSET}`}>
-                    {filteredMembers.map((member) => (
-                      <Item key={member.id} variant="outline" className="p-2.5">
-                        <ItemContent className="gap-1 min-w-0">
-                          <ItemTitle className="truncate font-medium text-sm">
-                            {member.fullName}
-                          </ItemTitle>
-                          <Badge
-                            variant={member.role === "lead" ? "default" : "secondary"}
-                          >
-                            {member.role === "lead"
-                              ? workCopy.teamRoleLead
-                              : workCopy.teamRoleMember}
-                          </Badge>
-                        </ItemContent>
-                        <ItemActions className="flex items-center gap-2 shrink-0">
-                          <Select
-                            value={member.role}
-                            disabled={isPending}
-                            onValueChange={(value) => {
-                              const role = value as WorkMemberRole;
-                              if (memberDepartmentId == null) return;
-                              startTransition(async () => {
-                                const result = await setWorkDepartmentMemberRole({
-                                  departmentId: memberDepartmentId,
-                                  userId: member.userId,
-                                  role,
-                                });
-                                if (!result.success) {
-                                  toast.error(
-                                    result.error ?? workCopy.teamSaveFailed,
-                                  );
-                                  return;
-                                }
-                                toast.success(workCopy.save);
-                                setReloadKey((k) => k + 1);
-                                refreshPage();
-                              });
-                            }}
-                          >
-                            <SelectTrigger size={controlSize} className="w-32">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="lead">
-                                {workCopy.teamRoleLead}
-                              </SelectItem>
-                              <SelectItem value="member">
-                                {workCopy.teamRoleMember}
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Button
-                            type="button"
-                            size={controlSize}
-                            variant="outline"
-                            disabled={isPending}
-                            onClick={async () => {
-                              if (memberDepartmentId == null) return;
-                              const ok = await confirm({
-                                title: workCopy.teamDeactivate,
-                                description:
-                                  workCopy.teamDeactivateConfirmDescription(
-                                    member.fullName,
-                                  ),
-                                confirmText: workCopy.teamDeactivate,
-                                variant: "destructive",
-                              });
-                              if (!ok) return;
-                              startTransition(async () => {
-                                const result = await deactivateWorkDepartmentMember({
-                                  departmentId: memberDepartmentId,
-                                  userId: member.userId,
-                                });
-                                if (!result.success) {
-                                  toast.error(
-                                    result.error ?? workCopy.teamSaveFailed,
-                                  );
-                                  return;
-                                }
-                                toast.success(workCopy.save);
-                                setReloadKey((k) => k + 1);
-                                refreshPage();
-                              });
-                            }}
-                          >
-                            {workCopy.teamDeactivate}
-                          </Button>
-                        </ItemActions>
-                      </Item>
-                    ))}
-                  </div>
-                )}
-              </>
+              <div className={`max-h-80 overflow-y-auto pr-1 flex flex-col gap-2 ${WORK_LIST_ITEM_INSET}`}>
+                {filteredCreators.map((creator) => (
+                  <Item key={creator.id} variant="outline" className="p-2.5">
+                    <ItemContent className="min-w-0 gap-1">
+                      <ItemTitle className="truncate text-sm font-medium">
+                        {creator.fullName}
+                      </ItemTitle>
+                    </ItemContent>
+                    <ItemActions className="shrink-0">
+                      <Button
+                        type="button"
+                        size={controlSize}
+                        variant="outline"
+                        disabled={isPending}
+                        onClick={async () => {
+                          const ok = await confirm({
+                            title: workCopy.creatorsRemove,
+                            description: workCopy.creatorsRemoveConfirm(
+                              creator.fullName,
+                            ),
+                            confirmText: workCopy.creatorsRemove,
+                            variant: "destructive",
+                          });
+                          if (!ok) return;
+                          startTransition(async () => {
+                            const result = await setWorkTaskCreator({
+                              userId: creator.id,
+                              active: false,
+                            });
+                            if (!result.success) {
+                              toast.error(
+                                result.error ?? workCopy.creatorSaveFailed,
+                              );
+                              return;
+                            }
+                            toast.success(workCopy.save);
+                            setReloadKey((key) => key + 1);
+                            refreshPage();
+                          });
+                        }}
+                      >
+                        {workCopy.creatorsRemove}
+                      </Button>
+                    </ItemActions>
+                  </Item>
+                ))}
+              </div>
             )}
           </TabsContent>
         </Tabs>
@@ -487,21 +377,15 @@ export function WorkSettingsDialog({
         )}
       </FormDialog>
 
-      {memberDepartmentId != null ? (
-        <WorkAddMembersDialog
-          open={memberDialogOpen}
-          onOpenChange={setMemberDialogOpen}
-          departmentId={memberDepartmentId}
-          departmentName={
-            departments.find((d) => d.id === memberDepartmentId)?.name
-          }
-          candidates={candidates}
-          onSuccess={() => {
-            setReloadKey((k) => k + 1);
-            refreshPage();
-          }}
-        />
-      ) : null}
+      <WorkAddCreatorsDialog
+        open={creatorDialogOpen}
+        onOpenChange={setCreatorDialogOpen}
+        candidates={candidates}
+        onSuccess={() => {
+          setReloadKey((key) => key + 1);
+          refreshPage();
+        }}
+      />
     </>
   );
 }

@@ -54,11 +54,13 @@ export function WorkListToolbar({
   params,
   departments,
   members = [],
+  canManage = false,
   showFilters = false,
 }: {
   params: ParsedWorkParams;
   departments: Array<{ id: number; name: string }>;
   members?: Array<{ id: string; fullName: string }>;
+  canManage?: boolean;
   showFilters?: boolean;
 }) {
   const router = useRouter();
@@ -66,7 +68,8 @@ export function WorkListToolbar({
   const showDepartmentFilter =
     params.view === "board" ||
     params.view === "calendar" ||
-    params.view === "timeline";
+    params.view === "timeline" ||
+    (params.view === "mine" && canManage);
 
   const viewSwitcher = (
     <AppSegmentedControl
@@ -101,9 +104,9 @@ export function WorkListToolbar({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">
-            {params.view === "board"
-              ? workCopy.allDepartments
-              : workCopy.filterAllDepartments}
+            {params.view === "mine"
+              ? workCopy.filterAllDepartments
+              : workCopy.allDepartments}
           </SelectItem>
           {departments.map((department) => (
             <SelectItem key={department.id} value={String(department.id)}>

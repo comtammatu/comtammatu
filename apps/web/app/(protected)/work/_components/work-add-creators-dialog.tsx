@@ -23,35 +23,28 @@ import { matchesSearch } from "@lib/search";
 import { workCopy } from "@lib/messages/work";
 import { cn } from "@comtammatu/ui/lib/utils";
 import {
-  upsertWorkDepartmentMembers,
+  setWorkTaskCreators,
   type WorkProfileOption,
 } from "../actions";
 
-export function WorkAddMembersDialog({
+export function WorkAddCreatorsDialog({
   open,
   onOpenChange,
-  departmentId,
-  departmentName,
   candidates,
   onSuccess,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  departmentId: number;
-  departmentName?: string;
   candidates: WorkProfileOption[];
   onSuccess: () => void;
 }) {
   const controlSize = useFormControlSize();
   const selectAllId = useId();
   const [isPending, startTransition] = useTransition();
-
-  const [role, setRole] = useState<"lead" | "member">("member");
   const [selectedBranch, setSelectedBranch] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // Distinct branch list from candidates
   const branchOptions = useMemo(() => {
     const branches = new Map<number, string>();
     let hasOffice = false;
@@ -76,17 +69,14 @@ export function WorkAddMembersDialog({
     return list;
   }, [candidates]);
 
-  // Filtered candidate list based on branch and search
   const filteredCandidates = useMemo(() => {
     return candidates.filter((candidate) => {
-      // Branch filter
       if (selectedBranch === "office") {
         if (candidate.branchId != null) return false;
       } else if (selectedBranch !== "all") {
         if (String(candidate.branchId) !== selectedBranch) return false;
       }
 
-      // Search filter
       if (searchQuery.trim().length > 0) {
         const searchable = [
           candidate.fullName,
@@ -101,13 +91,12 @@ export function WorkAddMembersDialog({
     });
   }, [candidates, selectedBranch, searchQuery]);
 
-  // Check if all filtered candidates are selected
   const allFilteredSelected =
     filteredCandidates.length > 0 &&
-    filteredCandidates.every((c) => selectedIds.has(c.id));
+    filteredCandidates.every((candidate) => selectedIds.has(candidate.id));
 
   const someFilteredSelected =
-    filteredCandidates.some((c) => selectedIds.has(c.id)) &&
+    filteredCandidates.some((candidate) => selectedIds.has(candidate.id)) &&
     !allFilteredSelected;
 
   function toggleCandidate(id: string) {
@@ -143,25 +132,23 @@ export function WorkAddMembersDialog({
     setSelectedIds(new Set());
     setSearchQuery("");
     setSelectedBranch("all");
-    setRole("member");
   }
 
   function handleSubmit() {
     if (selectedIds.size === 0) return;
 
     startTransition(async () => {
-      const result = await upsertWorkDepartmentMembers({
-        departmentId,
+      const result = await setWorkTaskCreators({
         userIds: Array.from(selectedIds),
-        role,
+        active: true,
       });
 
       if (!result.success) {
-        toast.error(result.error ?? workCopy.teamAddFailed);
+        toast.error(result.error ?? workCopy.creatorSaveFailed);
         return;
       }
 
-      toast.success(workCopy.teamAddSuccess);
+      toast.success(workCopy.creatorsAddSuccess);
       onSuccess();
       handleClose();
     });
@@ -174,8 +161,7 @@ export function WorkAddMembersDialog({
         if (!next) handleClose();
         else onOpenChange(true);
       }}
-      title={workCopy.teamAdd}
-      description={departmentName}
+      title={workCopy.creatorsAdd}
       contentClassName="max-w-lg"
       footer={
         <AppDialogFooter>
@@ -202,8 +188,8 @@ export function WorkAddMembersDialog({
                 onClick={handleSubmit}
               >
                 {selectedIds.size > 0
-                  ? `${workCopy.teamAdd} (${selectedIds.size})`
-                  : workCopy.teamAdd}
+                  ? `${workCopy.creatorsAdd} (${selectedIds.size})`
+                  : workCopy.creatorsAdd}
               </Button>
             </div>
           </div>
@@ -211,61 +197,35 @@ export function WorkAddMembersDialog({
       }
     >
       <div className="flex flex-col gap-3 py-1">
-        {/* Controls: Role & Branch Filter */}
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-xs text-muted-foreground">
-              {workCopy.teamRoleLabel}
-            </Label>
-            <Select
-              value={role}
-              onValueChange={(value) => setRole(value as "lead" | "member")}
-              disabled={isPending}
-            >
-              <SelectTrigger size={controlSize} className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="member">{workCopy.teamRoleMember}</SelectItem>
-                <SelectItem value="lead">{workCopy.teamRoleLead}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-xs text-muted-foreground">
-              {workCopy.teamAddBranchFilter}
-            </Label>
-            <Select
-              value={selectedBranch}
-              onValueChange={setSelectedBranch}
-              disabled={isPending}
-            >
-              <SelectTrigger size={controlSize} className="w-full">
-                <SelectValue placeholder={workCopy.teamAddBranchFilter} />
-              </SelectTrigger>
-              <SelectContent>
-                {branchOptions.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Search Input */}
         <div className="flex flex-col gap-1.5">
-          <Input
-            placeholder={workCopy.teamAddSearchPlaceholder}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+          <Label className="text-xs text-muted-foreground">
+            {workCopy.teamAddBranchFilter}
+          </Label>
+          <Select
+            value={selectedBranch}
+            onValueChange={setSelectedBranch}
             disabled={isPending}
-          />
+          >
+            <SelectTrigger size={controlSize} className="w-full">
+              <SelectValue placeholder={workCopy.teamAddBranchFilter} />
+            </SelectTrigger>
+            <SelectContent>
+              {branchOptions.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        {/* Select All Toggle Bar */}
+        <Input
+          placeholder={workCopy.teamAddSearchPlaceholder}
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          disabled={isPending}
+        />
+
         {filteredCandidates.length > 0 ? (
           <div className="flex items-center justify-between rounded-md bg-muted/30 px-3 py-2 text-xs">
             <div className="flex items-center gap-2">
@@ -296,12 +256,11 @@ export function WorkAddMembersDialog({
           </div>
         ) : null}
 
-        {/* Candidate Checkbox List */}
         <Frame className="no-scrollbar max-h-64 overflow-y-auto p-1">
           {candidates.length === 0 ? (
             <AppEmptyState
               mode="no-data"
-              description={workCopy.teamAddNoCandidates}
+              description={workCopy.creatorsNoCandidates}
               compact
             />
           ) : filteredCandidates.length === 0 ? (
@@ -314,7 +273,7 @@ export function WorkAddMembersDialog({
             <div className="flex flex-col gap-1">
               {filteredCandidates.map((candidate) => {
                 const isChecked = selectedIds.has(candidate.id);
-                const checkboxId = `candidate-${candidate.id}`;
+                const checkboxId = `creator-candidate-${candidate.id}`;
                 const branchLabel =
                   candidate.branchName ?? workCopy.teamAddOfficeBranch;
 

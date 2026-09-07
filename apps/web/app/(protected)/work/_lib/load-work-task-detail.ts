@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@comtammatu/database/types";
 import {
   getWorkTask,
+  listWorkActorProfiles,
   type WorkChecklistItemRow,
   type WorkTaskAttachmentRow,
   type WorkTaskCommentRow,
@@ -10,8 +11,9 @@ import {
 import type { WorkTaskDetailPayload } from "../_components/work-task-detail-dialog-host";
 
 export async function loadWorkTaskDetail(
-  supabase: SupabaseClient<Database>,
+  _supabase: SupabaseClient<Database>,
   taskId: number,
+  options: { userId: string; canManage: boolean },
 ): Promise<
   | { success: true; data: WorkTaskDetailPayload }
   | { success: false; error: string }
@@ -26,33 +28,28 @@ export async function loadWorkTaskDetail(
 
   const task = taskResult.data;
   const [
-    { data: memberRows },
+    actorsResult,
     { data: commentRows },
     { data: checklistRows },
     { data: attachmentRows },
     { data: participantRows },
     { data: eventRows },
   ] = await Promise.all([
-    supabase
-      .from("work_department_members")
-      .select("user_id, profiles!inner(full_name)")
-      .eq("tenant_id", task.tenantId)
-      .eq("department_id", task.departmentId)
-      .eq("is_active", true),
-    supabase
+    listWorkActorProfiles({}),
+    _supabase
       .from("work_task_comments")
       .select("id, task_id, author_id, body, created_at")
       .eq("tenant_id", task.tenantId)
       .eq("task_id", taskId)
       .order("created_at", { ascending: true }),
-    supabase
+    _supabase
       .from("work_task_checklist_items")
       .select("id, task_id, title, is_done, sort_order")
       .eq("tenant_id", task.tenantId)
       .eq("task_id", taskId)
       .order("sort_order", { ascending: true })
       .order("id", { ascending: true }),
-    supabase
+    _supabase
       .from("work_task_attachments")
       .select(
         "id, task_id, tenant_id, storage_path, file_name, content_type, byte_size, uploaded_by, created_at",
@@ -60,12 +57,12 @@ export async function loadWorkTaskDetail(
       .eq("tenant_id", task.tenantId)
       .eq("task_id", taskId)
       .order("created_at", { ascending: true }),
-    supabase
+    _supabase
       .from("work_task_participants")
       .select("user_id, kind")
       .eq("tenant_id", task.tenantId)
       .eq("task_id", taskId),
-    supabase
+    _supabase
       .from("work_task_events")
       .select(
         "id, task_id, actor_id, event_kind, payload, created_at, profiles(full_name)",
@@ -75,11 +72,13 @@ export async function loadWorkTaskDetail(
       .order("created_at", { ascending: false }),
   ]);
 
-  const assigneeOptions = (memberRows ?? []).flatMap((row) => {
-    const profile = row.profiles as unknown as { full_name: string } | null;
-    if (!profile) return [];
-    return [{ id: row.user_id, fullName: profile.full_name }];
-  });
+  const assigneeOptions =
+    actorsResult.success && actorsResult.data
+      ? actorsResult.data.items.map((row) => ({
+          id: row.id,
+          fullName: row.fullName,
+        }))
+      : [];
 
   const participants = participantRows ?? [];
   const assigneeIdsFromParticipants = participants
@@ -149,6 +148,7 @@ export async function loadWorkTaskDetail(
       checklist,
       attachments,
       events,
+      canAssign: options.canManage || task.createdBy === options.userId,
     },
   };
 }

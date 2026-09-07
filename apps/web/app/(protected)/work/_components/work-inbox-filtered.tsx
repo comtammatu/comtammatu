@@ -27,6 +27,11 @@ export function WorkInboxFiltered({
         task.supporterIds?.includes(memberId),
     );
   }
+  if (params.departmentId != null) {
+    filtered = filtered.filter(
+      (task) => task.departmentId === params.departmentId,
+    );
+  }
   if (status) {
     filtered = filtered.filter((task) => task.status === status);
   }

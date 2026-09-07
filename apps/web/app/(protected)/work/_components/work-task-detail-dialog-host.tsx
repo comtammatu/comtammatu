@@ -31,6 +31,7 @@ export type WorkTaskDetailPayload = {
   checklist: WorkChecklistItemRow[];
   attachments: WorkTaskAttachmentRow[];
   events?: WorkTaskEventRow[];
+  canAssign: boolean;
 };
 
 function WorkTaskDetailCloseFooter({ onClose }: { onClose: () => void }) {
@@ -64,6 +65,7 @@ function WorkTaskDetailDocumentDialog({
     initialChecklist: detail.checklist,
     initialAttachments: detail.attachments,
     initialEvents: detail.events,
+    canAssign: detail.canAssign,
     onSaved,
   });
 

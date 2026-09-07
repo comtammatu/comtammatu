@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
-import { readSql } from "./_lib/active-sql.ts";
+import { extractSqlFunction, readActiveMigrationSql, readSql } from "./_lib/active-sql.ts";
 
 const repoRoot = resolve(process.cwd(), "../..");
 const webRoot = process.cwd();
@@ -31,7 +31,6 @@ test("set_work_task_participants migration exists and manages multi-assignee and
   );
   assert.match(sql, /SECURITY DEFINER/);
   assert.match(sql, /SET search_path TO 'pg_catalog', 'public'/);
-  assert.match(sql, /can_write_work_task\(p_task_id\)/);
   assert.match(sql, /DELETE FROM public\.work_task_participants/);
   assert.match(
     sql,
@@ -40,6 +39,13 @@ test("set_work_task_participants migration exists and manages multi-assignee and
   assert.match(sql, /'assignee'/);
   assert.match(sql, /'collaborator'/);
   assert.match(sql, /UPDATE public\.work_tasks[\s\S]*?SET assignee_id = v_primary_assignee/);
+
+  const latest = extractSqlFunction(
+    readActiveMigrationSql(repoRoot),
+    "set_work_task_participants",
+  );
+  assert.match(latest, /can_assign_work_task\(p_task_id\)/);
+  assert.doesNotMatch(latest, /can_write_work_task\(p_task_id\)/);
 });
 
 test("Work task actions support multi-assignee and supporter sync", () => {
@@ -67,6 +73,9 @@ test("loadWorkTaskDetail queries participants and returns initialAssigneeIds and
   assert.match(loader, /from\("work_task_participants"\)/);
   assert.match(loader, /initialAssigneeIds/);
   assert.match(loader, /initialSupporterIds/);
+  assert.match(loader, /canAssign/);
+  assert.match(loader, /listWorkActorProfiles/);
+  assert.doesNotMatch(loader, /work_department_members/);
 });
 
 test("WorkCreateDialog supports multi-assignees and multi-supporters with mutual exclusion", () => {
@@ -81,9 +90,9 @@ test("WorkCreateDialog supports multi-assignees and multi-supporters with mutual
   assert.match(dialog, /MultiSelectCombobox/);
   assert.match(dialog, /!supporterSet\.has\(/);
   assert.match(dialog, /!assigneeSet\.has\(/);
-  assert.match(dialog, /handleDepartmentChange/);
-  assert.match(dialog, /prevValueRef/);
-  assert.match(dialog, /onChangeRef/);
+  assert.match(dialog, /members: WorkProfileOption\[\]/);
+  assert.doesNotMatch(dialog, /handleDepartmentChange/);
+  assert.doesNotMatch(dialog, /prevValueRef/);
 });
 
 test("WorkTaskDetailPanel supports multi-assignees and multi-supporters", () => {
@@ -98,4 +107,5 @@ test("WorkTaskDetailPanel supports multi-assignees and multi-supporters", () => 
   assert.match(panel, /MultiSelectCombobox/);
   assert.match(panel, /saveParticipants/);
   assert.match(panel, /setWorkTaskParticipants/);
+  assert.match(panel, /canAssign/);
 });

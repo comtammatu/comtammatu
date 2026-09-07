@@ -8,8 +8,9 @@ leaving navigation or RPC exposure in place.
 1. Remove or narrow `MODULE_ACL.work.allowedRoles` in
    `packages/shared/src/auth/module-acl.ts` so the module no longer appears in
    control-surface nav for pilot roles.
-2. Revoke delegated `work:manage` grants from non-owner profiles if the pilot
-   used permission-based access instead of department membership.
+2. Revoke delegated `work:manage` and `work:create` grants from non-owner
+   profiles (`staff_permissions` rows with those keys). Do not rely on
+   department membership to hide the module.
 
 ## Disable server entry points (optional hard stop)
 
@@ -34,7 +35,8 @@ If UI hiding is not enough during the pilot window:
 This runbook does **not** require a full RLS leak audit for the 7-day pilot.
 Routine rollback checks:
 
-- Non-member users cannot open `/work` (empty / no-access state).
+- Users with no assignment, no `created_by` row, and no `work:create` /
+  `work:manage` cannot open `/work` (empty / no-access state).
 - Removed nav entry does not reappear via deep links for branch station roles.
 - Attention card `work:mine-due` disappears after attention loader removal.
 

@@ -3,10 +3,7 @@
 import {
   cloneElement,
   isValidElement,
-  useCallback,
-  useEffect,
   useMemo,
-  useRef,
   useState,
   type MouseEventHandler,
   type ReactElement,
@@ -51,59 +48,41 @@ type CreateValues = z.infer<typeof createSchema>;
 
 export function WorkCreateDialog({
   departments,
-  membersByDepartment,
+  members,
   defaultDepartmentId,
   params,
   trigger,
 }: {
   departments: WorkDepartmentOption[];
-  membersByDepartment: Record<number, WorkProfileOption[]>;
+  members: WorkProfileOption[];
   defaultDepartmentId?: number | null;
   params: ParsedWorkParams;
   trigger?: ReactNode;
 }) {
   const router = useRouter();
   const controlSize = useFormControlSize();
-  const defaultDeptStr =
-    defaultDepartmentId != null
-      ? String(defaultDepartmentId)
-      : departments[0]
-        ? String(departments[0].id)
-        : "";
   const [open, setOpen] = useState(false);
-  const [departmentId, setDepartmentId] = useState(defaultDeptStr);
   const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
   const [supporterIds, setSupporterIds] = useState<string[]>([]);
 
-  const handleDepartmentChange = useCallback((nextDept: string) => {
-    setDepartmentId(nextDept);
-    setAssigneeIds([]);
-    setSupporterIds([]);
-  }, []);
-
-  const deptMembers = useMemo(() => {
-    const dept = Number(departmentId);
-    return membersByDepartment[dept] ?? [];
-  }, [departmentId, membersByDepartment]);
-
   const memberMap = useMemo(() => {
     const map = new Map<string, string>();
-    for (const m of deptMembers) {
-      map.set(m.id, m.fullName);
+    for (const member of members) {
+      map.set(member.id, member.fullName);
     }
     return map;
-  }, [deptMembers]);
+  }, [members]);
 
   const assigneeSet = useMemo(() => new Set(assigneeIds), [assigneeIds]);
   const supporterSet = useMemo(() => new Set(supporterIds), [supporterIds]);
 
   const assigneeCandidates = useMemo(() => {
-    return deptMembers.filter((m) => !supporterSet.has(m.id));
-  }, [deptMembers, supporterSet]);
+    return members.filter((member) => !supporterSet.has(member.id));
+  }, [members, supporterSet]);
 
   const supporterCandidates = useMemo(() => {
-    return deptMembers.filter((m) => !assigneeSet.has(m.id));
-  }, [deptMembers, assigneeSet]);
+    return members.filter((member) => !assigneeSet.has(member.id));
+  }, [members, assigneeSet]);
 
   if (departments.length === 0) return null;
 
@@ -132,7 +111,6 @@ export function WorkCreateDialog({
         onOpenChange={(next) => {
           setOpen(next);
           if (!next) {
-            setDepartmentId(defaultDeptStr);
             setAssigneeIds([]);
             setSupporterIds([]);
           }
@@ -177,7 +155,6 @@ export function WorkCreateDialog({
         }}
         onSuccess={(result) => {
           setOpen(false);
-          setDepartmentId(defaultDeptStr);
           setAssigneeIds([]);
           setSupporterIds([]);
           if (!result.success || result.data == null) {
@@ -352,34 +329,9 @@ export function WorkCreateDialog({
                 rows={3}
               />
             </AppFormRow>
-            <DepartmentSync
-              value={form.watch("departmentId")}
-              onChange={handleDepartmentChange}
-            />
           </AppFormGrid>
         )}
       </FormDialog>
     </>
   );
-}
-
-function DepartmentSync({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  const prevValueRef = useRef(value);
-  const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
-
-  useEffect(() => {
-    if (prevValueRef.current !== value) {
-      prevValueRef.current = value;
-      onChangeRef.current(value);
-    }
-  }, [value]);
-
-  return null;
 }

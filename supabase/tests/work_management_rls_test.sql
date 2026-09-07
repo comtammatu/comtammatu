@@ -5,7 +5,7 @@ BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgtap;
 
-SELECT plan(13);
+SELECT plan(18);
 
 SELECT has_function(
   'public',
@@ -33,6 +33,20 @@ SELECT has_function(
   'can_read_work_task',
   ARRAY['bigint'::text],
   'can_read_work_task helper exists'
+);
+
+SELECT has_function(
+  'public',
+  'can_create_work_task',
+  ARRAY[]::text[],
+  'can_create_work_task helper exists'
+);
+
+SELECT has_function(
+  'public',
+  'can_assign_work_task',
+  ARRAY['bigint'::text],
+  'can_assign_work_task helper exists'
 );
 
 SELECT has_function(
@@ -111,6 +125,33 @@ SELECT ok(
       AND privilege.privilege_type IN ('INSERT', 'UPDATE', 'DELETE')
   ),
   'authenticated has no direct write on work_department_members'
+);
+
+SELECT ok(
+  NOT has_function_privilege(
+    'authenticated',
+    'public.upsert_work_department_member(bigint, uuid, text)',
+    'execute'
+  ),
+  'authenticated cannot execute upsert_work_department_member'
+);
+
+SELECT ok(
+  NOT has_function_privilege(
+    'authenticated',
+    'public.set_work_department_member_role(bigint, uuid, text)',
+    'execute'
+  ),
+  'authenticated cannot execute set_work_department_member_role'
+);
+
+SELECT ok(
+  NOT has_function_privilege(
+    'authenticated',
+    'public.deactivate_work_department_member(bigint, uuid)',
+    'execute'
+  ),
+  'authenticated cannot execute deactivate_work_department_member'
 );
 
 SELECT finish();

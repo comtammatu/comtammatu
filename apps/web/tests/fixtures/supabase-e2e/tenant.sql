@@ -312,6 +312,7 @@ VALUES
   ('supplier_return:read','inventory_procurement','Xem phiếu trả hàng nhà cung cấp','either'),
   ('feedback:view','feedback','Xem phản hồi khách hàng','branch'),
   ('feedback:manage_qr','feedback','Tạo/xoay/vô hiệu hoá mã QR phản hồi','branch'),
+  ('work:create','work','Tạo việc trong Workspace','tenant'),
   ('auth:audit_read','auth','Read authorization audit history','tenant'),
   ('auth:binding_manage','auth','Grant and revoke access role bindings','tenant'),
   ('auth:binding_read','auth','Read access role bindings','tenant')
@@ -399,6 +400,7 @@ SET is_delegable_to_staff = key = ANY (ARRAY[
   'finance:expense_approve',
   'finance:ap_pay',
   'finance:targets_write',
+  'work:create',
   'auth:audit_read',
   'auth:binding_read'
 ]::text[]);

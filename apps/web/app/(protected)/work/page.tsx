@@ -9,13 +9,13 @@ import { workCopy } from "@lib/messages/work";
 import {
   listMyWorkTasks,
   listScopedWorkTasks,
-  listWorkDepartmentMembers,
+  listWorkActorProfiles,
   listWorkDepartments,
   type WorkProfileOption,
 } from "./actions";
 import { loadWorkTaskDetail } from "./_lib/load-work-task-detail";
 import { parseWorkParams, type WorkSearchParams } from "./_lib/params";
-import { canManageWorkTeam } from "./_lib/work-manage";
+import { canCreateWorkTask, canManageWorkTeam } from "./_lib/work-manage";
 import { WorkBoard } from "./_components/work-board";
 import { WorkCalendar } from "./_components/work-calendar";
 import type { WorkComposeArchetype } from "./_components/compose/work-compose-shell";
@@ -35,7 +35,7 @@ export default async function WorkPage({
   searchParams?: Promise<WorkSearchParams>;
 }) {
   const params = parseWorkParams(searchParams ? await searchParams : undefined);
-  const { supabase, claims } = await loadAuthState();
+  const { supabase, claims, userId } = await loadAuthState();
 
   const { data: canAccess, error: accessError } = await supabase.rpc(
     "can_access_workspace",
@@ -50,65 +50,32 @@ export default async function WorkPage({
   }
 
   const canManage = await canManageWorkTeam({ supabase, claims });
+  const canCreate = await canCreateWorkTask({ supabase, claims });
   const departmentsResult = await listWorkDepartments({});
   const departments =
     departmentsResult.success && departmentsResult.data
       ? departmentsResult.data.items
       : [];
 
-  const membersByDepartment: Record<number, WorkProfileOption[]> = {};
-  await Promise.all(
-    departments.map(async (department) => {
-      const members = await listWorkDepartmentMembers({
-        departmentId: department.id,
-      });
-      membersByDepartment[department.id] =
-        members.success && members.data
-          ? members.data.items.map((member) => ({
-              id: member.userId,
-              fullName: member.fullName,
-            }))
-          : [];
-    }),
-  );
+  const actorsResult = await listWorkActorProfiles({});
+  const allMembers: WorkProfileOption[] =
+    actorsResult.success && actorsResult.data ? actorsResult.data.items : [];
+  allMembers.sort((a, b) => a.fullName.localeCompare(b.fullName, "vi"));
 
   const assigneeNames: Record<string, string> = {};
-  for (const members of Object.values(membersByDepartment)) {
-    for (const member of members) {
-      if (member.id && member.fullName) {
-        assigneeNames[member.id] = member.fullName;
-      }
+  for (const member of allMembers) {
+    if (member.id && member.fullName) {
+      assigneeNames[member.id] = member.fullName;
     }
   }
-
-  const allMembers: WorkProfileOption[] = [];
-  const seenMemberIds = new Set<string>();
-  const candidateMembers =
-    params.departmentId != null
-      ? (membersByDepartment[params.departmentId] ?? [])
-      : Object.values(membersByDepartment).flat();
-
-  for (const m of candidateMembers) {
-    if (m.id && !seenMemberIds.has(m.id)) {
-      seenMemberIds.add(m.id);
-      allMembers.push(m);
-    }
-  }
-  if (params.memberId && !seenMemberIds.has(params.memberId)) {
-    const memberName = assigneeNames[params.memberId];
-    if (memberName) {
-      allMembers.push({
-        id: params.memberId,
-        fullName: memberName,
-      });
-    }
-  }
-  allMembers.sort((a, b) => a.fullName.localeCompare(b.fullName, "vi"));
 
   let taskDetail: WorkTaskDetailPayload | null = null;
   let taskDetailError: string | null = null;
-  if (params.taskId != null) {
-    const detailResult = await loadWorkTaskDetail(supabase, params.taskId);
+  if (params.taskId != null && userId) {
+    const detailResult = await loadWorkTaskDetail(supabase, params.taskId, {
+      userId,
+      canManage,
+    });
     if (!detailResult.success) {
       taskDetailError = workCopy.taskNotFound;
     } else {
@@ -118,10 +85,10 @@ export default async function WorkPage({
 
   const headerActions = (
     <WorkPageHeaderActions canManage={canManage} departments={departments}>
-      {departments.length > 0 ? (
+      {canCreate && departments.length > 0 ? (
         <WorkCreateDialog
           departments={departments}
-          membersByDepartment={membersByDepartment}
+          members={allMembers}
           defaultDepartmentId={params.departmentId}
           params={params}
         />
@@ -163,7 +130,10 @@ export default async function WorkPage({
           params={params}
           assigneeNames={assigneeNames}
           departments={departments}
-          membersByDepartment={membersByDepartment}
+          members={allMembers}
+          canCreate={canCreate}
+          canManage={canManage}
+          userId={userId}
         />
       );
     } else if (params.view === "calendar") {
@@ -195,7 +165,8 @@ export default async function WorkPage({
       <WorkPageShell
         params={params}
         departments={departments}
-        members={allMembers}
+        members={canManage ? allMembers : []}
+        canManage={canManage}
         composeArchetype={composeArchetype}
         loadError={loadError}
       >

@@ -14,73 +14,79 @@ function existsWeb(path: string): boolean {
   return existsSync(resolve(webRoot, path));
 }
 
-test("WorkAddMembersDialog component exists and supports bulk selection, search, and branch filtering", () => {
+test("WorkAddCreatorsDialog supports bulk selection, search, and branch filtering", () => {
   assert.ok(
-    existsWeb("app/(protected)/work/_components/work-add-members-dialog.tsx"),
-    "work-add-members-dialog.tsx must exist",
+    existsWeb("app/(protected)/work/_components/work-add-creators-dialog.tsx"),
+    "work-add-creators-dialog.tsx must exist",
+  );
+  assert.ok(
+    !existsWeb("app/(protected)/work/_components/work-add-members-dialog.tsx"),
+    "work-add-members-dialog.tsx must be removed",
   );
 
-  const dialog = readWeb("app/(protected)/work/_components/work-add-members-dialog.tsx");
+  const dialog = readWeb(
+    "app/(protected)/work/_components/work-add-creators-dialog.tsx",
+  );
 
-  // Branch filter
   assert.match(dialog, /workCopy\.teamAddBranchFilter/);
   assert.match(dialog, /workCopy\.teamAddAllBranches/);
   assert.match(dialog, /workCopy\.teamAddOfficeBranch/);
   assert.match(dialog, /selectedBranch/);
-
-  // Search input and matchesSearch
   assert.match(dialog, /workCopy\.teamAddSearchPlaceholder/);
   assert.match(dialog, /matchesSearch/);
   assert.match(dialog, /searchQuery/);
-
-  // Select all / deselect all
   assert.match(dialog, /workCopy\.teamAddSelectAll/);
   assert.match(dialog, /workCopy\.teamAddDeselectAll/);
   assert.match(dialog, /allFilteredSelected/);
   assert.match(dialog, /toggleSelectAll/);
-
-  // Selection tracking and count
   assert.match(dialog, /selectedIds/);
   assert.match(dialog, /workCopy\.teamAddSelectedCount/);
-
-  // Mutation call
-  assert.match(dialog, /upsertWorkDepartmentMembers/);
+  assert.match(dialog, /setWorkTaskCreators/);
   assert.match(dialog, /userIds:\s*Array\.from\(selectedIds\)/);
 });
 
-test("Work actions support candidate branch data and batch member upsert", () => {
+test("Work actions list company actors and grant work:create", () => {
   const actions = readWeb("app/(protected)/work/actions.ts");
 
-  // Candidate profiles with branch
   assert.match(actions, /export type WorkProfileOption\s*=\s*\{[\s\S]*?branchId\?:/);
+  assert.match(actions, /listWorkActorProfiles/);
+  assert.match(actions, /list_work_actor_profiles/);
   assert.match(actions, /listWorkCandidateProfiles/);
-  assert.match(actions, /from\("branches"\)/);
-  assert.match(actions, /branchNameById/);
-
-  // Batch member upsert
-  assert.match(actions, /export const upsertWorkDepartmentMembers = withAction/);
+  assert.match(actions, /resolveWorkCreateContext/);
+  assert.match(actions, /listWorkTaskCreators/);
+  assert.match(actions, /list_work_task_creators/);
+  assert.match(actions, /export const setWorkTaskCreator = withAction/);
+  assert.match(actions, /export const setWorkTaskCreators = withAction/);
+  assert.match(actions, /set_work_task_creator/);
   assert.match(actions, /userIds:\s*z\.array\(z\.string\(\)\.uuid\(\)\)\.min\(1\)/);
-  assert.match(actions, /upsert_work_department_member/);
+  assert.match(actions, /resolveWorkManageContext/);
   assert.match(actions, /revalidatePath\("\/work"\)/);
-  assert.match(actions, /revalidatePath\("\/work\/team"\)/);
+  assert.doesNotMatch(actions, /upsert_work_department_member/);
+  assert.doesNotMatch(actions, /export const upsertWorkDepartmentMembers/);
 });
 
-test("WorkSettingsDialog retains selected department and integrates WorkAddMembersDialog", () => {
-  const settings = readWeb("app/(protected)/work/_components/work-settings-dialog.tsx");
+test("WorkSettingsDialog grants creators from the company picker", () => {
+  const settings = readWeb(
+    "app/(protected)/work/_components/work-settings-dialog.tsx",
+  );
 
-  // Department dropdown retains selection without resetting to default on render
-  assert.match(settings, /current != null && departments\.some\(\(d\) => d\.id === current\)/);
-
-  // Integrates WorkAddMembersDialog
-  assert.match(settings, /WorkAddMembersDialog/);
+  assert.match(settings, /WorkAddCreatorsDialog/);
   assert.match(settings, /candidates=\{candidates\}/);
-  assert.match(settings, /departmentId=\{memberDepartmentId\}/);
+  assert.match(settings, /listWorkTaskCreators/);
+  assert.match(settings, /listWorkCandidateProfiles/);
+  assert.match(settings, /setWorkTaskCreator/);
+  assert.doesNotMatch(settings, /WorkAddMembersDialog/);
+  assert.doesNotMatch(settings, /setWorkDepartmentMemberRole/);
+  assert.doesNotMatch(settings, /deactivateWorkDepartmentMember/);
 });
 
-test("WorkSettingsDialog integrates member role and deactivation controls", () => {
-  const settings = readWeb("app/(protected)/work/_components/work-settings-dialog.tsx");
+test("WorkCreateDialog uses the company picker and keeps assignees on department change", () => {
+  const dialog = readWeb(
+    "app/(protected)/work/_components/work-create-dialog.tsx",
+  );
 
-  assert.match(settings, /setWorkDepartmentMemberRole/);
-  assert.match(settings, /deactivateWorkDepartmentMember/);
-  assert.match(settings, /workCopy\.teamDeactivate/);
+  assert.match(dialog, /members: WorkProfileOption\[\]/);
+  assert.match(dialog, /members\.filter/);
+  assert.doesNotMatch(dialog, /membersByDepartment/);
+  assert.doesNotMatch(dialog, /handleDepartmentChange/);
 });
