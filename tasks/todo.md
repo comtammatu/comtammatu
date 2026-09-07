@@ -592,7 +592,6 @@ Exit: Pending GRN uses last-invoice/WAC provisional so site WAC does not collaps
 Evidence: ADR 0040 + glossary/inventory copy; migration `20260817183130_company_wac_and_cost_restatement.sql` applied on Production `enloyfnuerqgaqderbwb` 2026-08-17; SQL + static tests. Scoped 17 Aug restatement `20260817201330` (one-gang raw meat and finished good only): origin 2125 provisional 2982000 VND; FG WAC 51611 VND/portion; 13 sold portions food_cost 51611 VND. Remaining: other 17 Aug pending invoices, then company-wide `repair_company_wac_valuation`.
 
 - [ ] Confirm remaining 17 Aug pending invoices (chop, spare-rib, produce), then `repair_company_wac_valuation` dry-run then apply.
-- [x] Apply `20260907161322_price_unpriced_count_surplus.sql` to Production, then retry any leftover unpriced surplus counts.
 
 UI Advisor Gate
 - Surface: inventory stock/issue/transfer + GRN pending hint; plane: `control_surface`; change: copy
