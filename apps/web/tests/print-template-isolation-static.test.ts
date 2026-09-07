@@ -11,6 +11,7 @@ const PRINT_DIALOGS = [
   "apps/web/app/components/inventory/stock-on-hand-print-dialog.tsx",
   "apps/web/app/components/inventory/stocktake-print-dialog.tsx",
   "apps/web/app/components/inventory/inventory-a4-print-dialog.tsx",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/[id]/branch-transfer-receipt-dialog.tsx",
 ] as const;
 
 const INVENTORY_MOVEMENT_PRINT_DIALOGS = [
