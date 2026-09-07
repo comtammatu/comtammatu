@@ -132,12 +132,8 @@ export async function loadBranchCountSlipData(
       review_note,
       submitted_at,
       reviewed_at,
-      shifts ( name ),
-      inventory_locations ( name ),
-      employees (
-        employee_code,
-        profiles ( full_name )
-      )
+      recount_round,
+      last_resubmitted_round
     `,
     )
     .eq("tenant_id", claims.tenant_id)
@@ -149,9 +145,10 @@ export async function loadBranchCountSlipData(
   if (focusEmployeeId !== undefined) {
     slipsQuery = slipsQuery.eq("employee_id", focusEmployeeId);
   }
-  const slipsResult = await slipsQuery.order("submitted_at", {
-    ascending: false,
-  });
+  const slipsResult = await slipsQuery
+    .order("count_date", { ascending: false })
+    .order("submitted_at", { ascending: false, nullsFirst: false })
+    .order("id", { ascending: false });
   const slipRows = slipsResult.data ?? [];
   const slipIds = slipRows
     .map((slip) => Number(slip.id))
@@ -160,61 +157,97 @@ export async function loadBranchCountSlipData(
     number,
     { recountRound: number; lastResubmittedRound: number }
   >();
-  if (slipIds.length > 0) {
-    const { data: recountRows } = await supabase
-      .from("inventory_count_slips")
-      .select("id, recount_round, last_resubmitted_round")
-      .eq("tenant_id", claims.tenant_id)
-      .in("id", slipIds);
-    for (const row of (recountRows ?? []) as unknown as Array<{
-      id: number;
-      recount_round: number;
-      last_resubmitted_round: number;
-    }>) {
-      recountRoundBySlipId.set(Number(row.id), {
-        recountRound: Number(row.recount_round ?? 0),
-        lastResubmittedRound: Number(row.last_resubmitted_round ?? 0),
-      });
-    }
-  }
-  const lineResult =
-    slipIds.length === 0
-      ? {
-          data: [] as Array<CountSlipQueryLine & { slip_id: number }>,
-          error: null,
-        }
-      : await supabase.rpc("list_inventory_count_slip_lines", {
-          p_slip_ids: slipIds,
-        }).then((result) => ({
-          data: (result.data ?? []).map((row) => ({
-            id: Number(row.id),
-            slip_id: Number(row.slip_id),
-            ingredient_id: Number(row.ingredient_id),
-            system_quantity: row.system_quantity,
-            counted_quantity: row.counted_quantity,
-            entry_unit_id: row.entry_unit_id,
-            entry_to_base_factor: row.entry_to_base_factor,
-            counted_base_quantity: row.counted_base_quantity,
-            recount_required: row.recount_required,
-            last_recount_round: row.last_recount_round,
-            note: row.note,
-            ingredients: { name: row.ingredient_name },
-            units: row.unit_code ? { code: row.unit_code } : null,
-          })),
-          error: result.error,
-        }));
-  if (lineResult.error) {
-    console.error("inventory.count_slips.fetch_failed", {
-      code: lineResult.error.code,
+  for (const row of slipRows) {
+    recountRoundBySlipId.set(Number(row.id), {
+      recountRound: Number(row.recount_round ?? 0),
+      lastResubmittedRound: Number(row.last_resubmitted_round ?? 0),
     });
   }
+
+  const SLIP_CHUNK_SIZE = 30;
+  let lineError: { code?: string; message?: string } | null = null;
+  const rawLineRows: Array<CountSlipQueryLine & { slip_id: number }> = [];
+
+  if (slipIds.length > 0) {
+    for (let i = 0; i < slipIds.length; i += SLIP_CHUNK_SIZE) {
+      const chunk = slipIds.slice(i, i + SLIP_CHUNK_SIZE);
+      const rpcResult = await supabase.rpc("list_inventory_count_slip_lines", {
+        p_slip_ids: chunk,
+      });
+      if (rpcResult.error) {
+        lineError = rpcResult.error;
+        console.error("inventory.count_slips.fetch_failed", {
+          code: rpcResult.error.code,
+          message: rpcResult.error.message,
+        });
+        break;
+      }
+      for (const row of rpcResult.data ?? []) {
+        rawLineRows.push({
+          id: Number(row.id),
+          slip_id: Number(row.slip_id),
+          ingredient_id: Number(row.ingredient_id),
+          system_quantity: row.system_quantity,
+          counted_quantity: row.counted_quantity,
+          entry_unit_id: row.entry_unit_id,
+          entry_to_base_factor: row.entry_to_base_factor,
+          counted_base_quantity: row.counted_base_quantity,
+          recount_required: row.recount_required,
+          last_recount_round: row.last_recount_round,
+          note: row.note,
+          ingredients: { name: row.ingredient_name },
+          units: row.unit_code ? { code: row.unit_code } : null,
+        });
+      }
+    }
+  }
+
   const linesBySlipId = new Map<number, CountSlipQueryLine[]>();
-  for (const line of (lineResult.data ?? []) as Array<
-    CountSlipQueryLine & { slip_id: number }
-  >) {
+  for (const line of rawLineRows) {
     const list = linesBySlipId.get(line.slip_id) ?? [];
     list.push(line);
     linesBySlipId.set(line.slip_id, list);
+  }
+
+  const locationIds = [
+    ...new Set(
+      slipRows
+        .map((slip) => Number(slip.location_id))
+        .filter((id) => Number.isFinite(id)),
+    ),
+  ];
+  const shiftIds = [
+    ...new Set(
+      slipRows
+        .map((slip) => Number(slip.shift_id))
+        .filter((id) => Number.isFinite(id)),
+    ),
+  ];
+
+  const [locationsRes, shiftsRes] = await Promise.all([
+    locationIds.length === 0
+      ? Promise.resolve({ data: [] as Array<{ id: number; name: string }> })
+      : supabase
+          .from("inventory_locations")
+          .select("id, name")
+          .eq("tenant_id", claims.tenant_id)
+          .in("id", locationIds),
+    shiftIds.length === 0
+      ? Promise.resolve({ data: [] as Array<{ id: number; name: string }> })
+      : supabase
+          .from("shifts")
+          .select("id, name")
+          .eq("tenant_id", claims.tenant_id)
+          .in("id", shiftIds),
+  ]);
+
+  const locationNameById = new Map<number, string>();
+  for (const loc of locationsRes.data ?? []) {
+    locationNameById.set(Number(loc.id), loc.name);
+  }
+  const shiftNameById = new Map<number, string>();
+  for (const shift of shiftsRes.data ?? []) {
+    shiftNameById.set(Number(shift.id), shift.name);
   }
   const employeeIds = [
     ...new Set(
@@ -328,12 +361,13 @@ export async function loadBranchCountSlipData(
           : INVENTORY_VI.documentNumberPending,
       branchName,
       locationName:
-        embeddedString(slip.inventory_locations, "name") ?? UNKNOWN_LABEL_VI,
+        locationNameById.get(Number(slip.location_id)) ?? UNKNOWN_LABEL_VI,
       employeeName:
-        employeeNameById.get(Number(slip.employee_id)) ??
-        employeeName(slip.employees) ??
-        "Nhân viên",
-      shiftName: embeddedString(slip.shifts, "name"),
+        employeeNameById.get(Number(slip.employee_id)) ?? "Nhân viên",
+      shiftName:
+        slip.shift_id != null
+          ? (shiftNameById.get(Number(slip.shift_id)) ?? null)
+          : null,
       countDate: slip.count_date,
       status: normalizeStatus(slip.status),
       note: slip.note ?? null,
@@ -412,8 +446,8 @@ export async function loadBranchCountSlipData(
     tenantId: claims.tenant_id,
     branchId: routeBranchId,
     branchName,
-    rows,
-    loadFailed: slipsResult.error != null,
+    rows: lineError != null ? [] : rows,
+    loadFailed: slipsResult.error != null || lineError != null,
     tierEnabled,
   };
 }

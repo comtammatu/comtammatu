@@ -8,6 +8,9 @@ const read = (path: string) => readSql(repoRoot, path);
 const migration = read(
   "supabase/migrations/20260907202220_slow_read_list_rpcs.sql",
 );
+const countSlipOptimizeMigration = read(
+  "supabase/migrations/20260908023737_optimize_count_slip_slow_reads.sql",
+);
 
 test("DEFINER list RPCs authorize once and keep PostgREST policies", () => {
   assertSqlMatch(migration, /CREATE OR REPLACE FUNCTION public\.list_stock_on_hand/);
@@ -33,6 +36,19 @@ test("DEFINER list RPCs authorize once and keep PostgREST policies", () => {
     /idx_stock_levels_tenant_branch_location/,
   );
 
+  assertSqlMatch(
+    countSlipOptimizeMigration,
+    /requested_branches AS MATERIALIZED/,
+  );
+  assertSqlMatch(
+    countSlipOptimizeMigration,
+    /allowed_branches AS MATERIALIZED/,
+  );
+  assertSqlMatch(
+    countSlipOptimizeMigration,
+    /has_permission\(rb\.branch_id, 'inventory:count_approve'\)/,
+  );
+
   const stockOnHand = read("apps/web/lib/inventory/stock-on-hand-data.ts");
   const transferActions = read(
     "apps/web/app/(protected)/inventory/transfer-actions.ts",
@@ -48,8 +64,28 @@ test("DEFINER list RPCs authorize once and keep PostgREST policies", () => {
   assert.doesNotMatch(transferActions, /from\("stock_transfer_items"\)/);
   assert.match(branchSlips, /list_inventory_count_slip_lines/);
   assert.doesNotMatch(branchSlips, /from\("inventory_count_slip_lines"\)/);
+  assert.match(branchSlips, /SLIP_CHUNK_SIZE\s*=\s*30/);
+  assert.match(branchSlips, /loadFailed:\s*slipsResult\.error != null \|\| lineError != null/);
+
+  const branchSlipsSelect = branchSlips.match(
+    /from\("inventory_count_slips"\)\s*\.select\(\s*`([^`]+)`/,
+  )?.[1] ?? "";
+  assert.ok(branchSlipsSelect);
+  assert.doesNotMatch(branchSlipsSelect, /profiles/);
+  assert.doesNotMatch(branchSlipsSelect, /inventory_locations/);
+  assert.doesNotMatch(branchSlipsSelect, /shifts/);
+
   assert.match(managementSlips, /list_inventory_count_slip_lines/);
   assert.doesNotMatch(managementSlips, /from\("inventory_count_slip_lines"\)/);
+  assert.match(managementSlips, /SLIP_CHUNK_SIZE\s*=\s*30/);
+
+  const managementSlipsSelect = managementSlips.match(
+    /from\("inventory_count_slips"\)\s*\.select\(\s*`([^`]+)`/,
+  )?.[1] ?? "";
+  assert.ok(managementSlipsSelect);
+  assert.doesNotMatch(managementSlipsSelect, /profiles/);
+  assert.doesNotMatch(managementSlipsSelect, /inventory_locations/);
+  assert.doesNotMatch(managementSlipsSelect, /shifts/);
 });
 
 test("finance home attention uses first-paint RPC; hub keeps full cockpit", () => {

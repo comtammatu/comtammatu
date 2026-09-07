@@ -98,15 +98,84 @@ BEGIN
   )
   VALUES (v_tenant, v_slip, v_ingredient, 10, 9, v_unit);
 
-  PERFORM set_config('test.slow_read', jsonb_build_object(
-    'user', v_user,
-    'other', v_other,
-    'branch_a', v_branch_a,
-    'branch_b', v_branch_b,
-    'loc_a', v_loc_a,
-    'transfer', v_transfer,
-    'slip', v_slip
-  )::text, true);
+  DECLARE
+    v_slip_2 bigint;
+    v_slip_b bigint;
+    v_tenant_2 bigint;
+    v_branch_t2 bigint;
+    v_loc_t2 bigint;
+    v_unit_t2 bigint;
+    v_ingredient_t2 bigint;
+    v_employee_t2 bigint;
+    v_slip_t2 bigint;
+  BEGIN
+    INSERT INTO public.inventory_count_slips (
+      tenant_id, branch_id, location_id, employee_id, count_date, status, slip_number
+    )
+    VALUES (
+      v_tenant, v_branch_a, v_loc_a, v_employee, current_date, 'submitted', 'PD-SLOW-2'
+    )
+    RETURNING id INTO v_slip_2;
+    INSERT INTO public.inventory_count_slip_lines (
+      tenant_id, slip_id, ingredient_id, system_quantity, counted_quantity, entry_unit_id
+    )
+    VALUES (v_tenant, v_slip_2, v_ingredient, 20, 18, v_unit);
+
+    INSERT INTO public.inventory_count_slips (
+      tenant_id, branch_id, location_id, employee_id, count_date, status, slip_number
+    )
+    VALUES (
+      v_tenant, v_branch_b, v_loc_b, v_employee, current_date, 'submitted', 'PD-SLOW-B'
+    )
+    RETURNING id INTO v_slip_b;
+    INSERT INTO public.inventory_count_slip_lines (
+      tenant_id, slip_id, ingredient_id, system_quantity, counted_quantity, entry_unit_id
+    )
+    VALUES (v_tenant, v_slip_b, v_ingredient, 30, 28, v_unit);
+
+    INSERT INTO public.tenants (name, slug, owner_user_id)
+    VALUES ('Slow read other tenant', 'slow-read-t2-' || v_user, v_other)
+    RETURNING id INTO v_tenant_2;
+    INSERT INTO public.branches (tenant_id, name, slug, branch_kind)
+    VALUES (v_tenant_2, 'Slow T2', 'slow-t2-' || v_user, 'branch')
+    RETURNING id INTO v_branch_t2;
+    INSERT INTO public.units (tenant_id, code, name)
+    VALUES (v_tenant_2, 'kg', 'Kg')
+    RETURNING id INTO v_unit_t2;
+    INSERT INTO public.ingredients (tenant_id, name, receipt_unit_id, issue_unit_id, unit_cost)
+    VALUES (v_tenant_2, 'Slow rice T2', v_unit_t2, v_unit_t2, 10000)
+    RETURNING id INTO v_ingredient_t2;
+    INSERT INTO public.inventory_locations (tenant_id, branch_id, code, name, location_kind)
+    VALUES (v_tenant_2, v_branch_t2, 'slow-t2-wh', 'Kho T2', 'warehouse')
+    RETURNING id INTO v_loc_t2;
+    INSERT INTO public.employees (tenant_id, profile_id, is_active)
+    VALUES (v_tenant_2, v_other, true)
+    RETURNING id INTO v_employee_t2;
+    INSERT INTO public.inventory_count_slips (
+      tenant_id, branch_id, location_id, employee_id, count_date, status, slip_number
+    )
+    VALUES (
+      v_tenant_2, v_branch_t2, v_loc_t2, v_employee_t2, current_date, 'submitted', 'PD-SLOW-T2'
+    )
+    RETURNING id INTO v_slip_t2;
+    INSERT INTO public.inventory_count_slip_lines (
+      tenant_id, slip_id, ingredient_id, system_quantity, counted_quantity, entry_unit_id
+    )
+    VALUES (v_tenant_2, v_slip_t2, v_ingredient_t2, 40, 39, v_unit_t2);
+
+    PERFORM set_config('test.slow_read', jsonb_build_object(
+      'user', v_user,
+      'other', v_other,
+      'branch_a', v_branch_a,
+      'branch_b', v_branch_b,
+      'loc_a', v_loc_a,
+      'transfer', v_transfer,
+      'slip', v_slip,
+      'slip_2', v_slip_2,
+      'slip_b', v_slip_b,
+      'slip_t2', v_slip_t2
+    )::text, true);
+  END;
 END;
 $$;
 SET LOCAL session_replication_role = origin;
@@ -122,6 +191,9 @@ DECLARE
   v_loc_a bigint := (f->>'loc_a')::bigint;
   v_transfer bigint := (f->>'transfer')::bigint;
   v_slip bigint := (f->>'slip')::bigint;
+  v_slip_2 bigint := (f->>'slip_2')::bigint;
+  v_slip_b bigint := (f->>'slip_b')::bigint;
+  v_slip_t2 bigint := (f->>'slip_t2')::bigint;
   v_qty numeric;
   v_other_qty numeric;
   v_lines integer;
@@ -163,6 +235,42 @@ BEGIN
   FROM public.list_inventory_count_slip_lines(ARRAY[v_slip]);
   IF v_lines <> 1 THEN
     RAISE EXCEPTION 'TEST slip lines missing: %', v_lines;
+  END IF;
+
+  SELECT count(*) INTO v_lines
+  FROM public.list_inventory_count_slip_lines(ARRAY[v_slip, v_slip_2]);
+  IF v_lines <> 2 THEN
+    RAISE EXCEPTION 'TEST multi-slip lines missing: expected 2, got %', v_lines;
+  END IF;
+
+  SELECT count(*) INTO v_lines
+  FROM public.list_inventory_count_slip_lines(ARRAY[v_slip, v_slip_b]);
+  IF v_lines <> 1 THEN
+    RAISE EXCEPTION 'TEST mixed-branch slip lines leak: expected 1, got %', v_lines;
+  END IF;
+
+  SELECT count(*) INTO v_lines
+  FROM public.list_inventory_count_slip_lines(ARRAY[v_slip_t2]);
+  IF v_lines <> 0 THEN
+    RAISE EXCEPTION 'TEST cross-tenant slip lines leaked: expected 0, got %', v_lines;
+  END IF;
+
+  SELECT count(*) INTO v_lines
+  FROM public.list_inventory_count_slip_lines(ARRAY[v_slip, v_slip]);
+  IF v_lines <> 1 THEN
+    RAISE EXCEPTION 'TEST duplicate slip IDs returned duplicate lines: expected 1, got %', v_lines;
+  END IF;
+
+  SELECT count(*) INTO v_lines
+  FROM public.list_inventory_count_slip_lines(ARRAY[]::bigint[]);
+  IF v_lines <> 0 THEN
+    RAISE EXCEPTION 'TEST empty slip array expected 0, got %', v_lines;
+  END IF;
+
+  SELECT count(*) INTO v_lines
+  FROM public.list_inventory_count_slip_lines(NULL);
+  IF v_lines <> 0 THEN
+    RAISE EXCEPTION 'TEST null slip array expected 0, got %', v_lines;
   END IF;
 
   PERFORM set_config('request.jwt.claim.sub', v_other::text, true);
