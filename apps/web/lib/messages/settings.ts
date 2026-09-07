@@ -585,9 +585,19 @@ export const settings = {
     closeDayCashLabel: "Quỹ",
     closeDayOpenSessionsWarning: (count: number) =>
       `${count} ca POS của ngày kinh doanh đang mở — đóng ca tại Đối soát ca POS. Ca của ngày mới (sau 04:00) thuộc ngày kế tiếp.`,
-    closeDayCashReconTitle: "Đối soát quỹ",
+    closeDayCashReconTitle: "Đối soát két tiền mặt",
     closeDayCashReconDescription:
       "Bảng tổng quỹ các ca đã đóng. Số đếm quỹ đã ghi nhận tại lúc đóng ca.",
+    closeDayPrintButton: "In báo cáo",
+    closeDayPrintAria: "In báo cáo ngày",
+    closeDayPrintBusinessDate: (date: string) => `Ngày hoạt động: ${date}`,
+    closeDayCashDiffLabel: "Chênh lệch két",
+    closeDayCashStatusMatched: "Khớp két",
+    closeDayCashStatusSurplus: (amount: string) => `Thừa két: +${amount}`,
+    closeDayCashStatusShortage: (amount: string) => `Thiếu két: ${amount}`,
+    closeDayCashStatusActive: "Đang hoạt động",
+    closeDayCashReconNote: (count: number) =>
+      `Tổng hợp từ ${count} phiên bán hàng trong ngày. Tiền dự kiến = Tiền đầu ca + Doanh thu tiền mặt.`,
     closeDayStatusOk: "Ổn",
     closeDayStatusAttention: "Cần xử lý",
     closeDayHistoricalClosedNote: "Đã từng chốt (lịch sử trước ADR 0024)",

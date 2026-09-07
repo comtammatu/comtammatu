@@ -12,6 +12,8 @@ import {
 import { applyInventoryActionError } from "../lib/inventory/apply-inventory-action-error";
 import {
   INVENTORY_ERROR_CODES,
+  productionRpcFallback,
+  productionRpcMappings,
   transferShipRpcFallback,
   transferShipRpcMappings,
   wasteCreateRpcFallback,
@@ -105,6 +107,23 @@ describe("mapInventoryRpcFailure", () => {
     assert.equal(
       evidence.errorCode,
       INVENTORY_ERROR_CODES.WASTE_EVIDENCE_REQUIRED,
+    );
+  });
+
+  test("maps inventory_origin_allocation_incomplete for production complete", () => {
+    const result = mapInventoryRpcFailure(
+      {
+        message: "inventory_origin_allocation_incomplete",
+        code: "23514",
+      },
+      productionRpcMappings,
+      productionRpcFallback,
+    );
+    assert.equal(result.success, false);
+    assert.equal(result.errorCode, INVENTORY_ERROR_CODES.INVALID_STATUS);
+    assert.equal(
+      result.error,
+      "Giá vốn các lô chưa phân bổ hết. Thử lại sau khi hệ thống được cập nhật.",
     );
   });
 });

@@ -508,7 +508,7 @@ function PosMenuGridComponent({
           {visibleItems.length > 0 && isAllMenuActive ? (
             <div
               className={cn(
-                "flex flex-col gap-3 px-2 pt-2 pb-32 md:gap-5 md:px-3 md:pt-3 lg:px-4 xl:pb-4",
+                "flex flex-col gap-3 px-2 pt-2 pb-32 md:gap-5 md:px-3 md:pt-3 lg:px-4 lg:pb-4",
               )}
             >
               {visibleCategories.map((category) => (
@@ -538,7 +538,7 @@ function PosMenuGridComponent({
           ) : null}
 
           {visibleItems.length > 0 && !isAllMenuActive ? (
-            <div className="px-2 pt-2 pb-32 md:px-3 md:pt-3 lg:px-4 xl:pb-4">
+            <div className="px-2 pt-2 pb-32 md:px-3 md:pt-3 lg:px-4 lg:pb-4">
               <MenuItemGrid
                 items={visibleItems}
                 sparseMenu={sparseMenu}

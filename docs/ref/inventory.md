@@ -334,7 +334,7 @@ Routes: `/inventory/stocktake`, `/inventory/stocktake/[id]`. Pad nhân viên `/m
 
 1. **Tạo:** chọn location tường minh. Nhân viên đếm hằng ngày tại Bếp; Quản lý/Owner kiểm kê Kho hoặc Bếp riêng. UI không chọn daily/weekly/monthly/quarterly/spot; phiên mới đếm số đang có, không hiện sổ (`spot`).
 2. **Đếm** (`get_stocktake_lines_blind`): màn đếm là viewport đầu. Số sổ ẩn đến khi đếm đủ dòng. Bản nháp tự lưu theo đúng vòng đếm và được khôi phục khi mở lại; bản nháp không thay thế kết quả đã gửi.
-3. **Chốt kết quả:** `complete_stocktake` lấy số thực đếm làm căn cứ, tính chênh lệch và ghi `count_adjustment`; không yêu cầu người kiểm kê giải thích nguyên nhân chênh lệch. `reason_code` và `variance_reason` cũ được giữ làm dữ liệu lịch sử tùy chọn, không phải điều kiện hoàn tất phiếu. Ownership thiếu hụt điều chuyển vẫn là `movement_subtype` (`transfer_source_variance` / `transfer_transit_loss`) — không nằm trong catalog nguyên nhân.
+3. **Chốt kết quả:** `complete_stocktake` lấy số thực đếm làm căn cứ, tính chênh lệch và ghi `count_adjustment`; không yêu cầu người kiểm kê giải thích nguyên nhân chênh lệch. Lượng đếm thừa (`count_adjustment` / `adjustment` dương, chưa có đơn giá) được gắn Giá vốn BQ công ty trước khi ghi sổ; nguyên liệu chưa có Giá vốn thì chốt thất bại, không mở lô 0 ₫. `reason_code` và `variance_reason` cũ được giữ làm dữ liệu lịch sử tùy chọn, không phải điều kiện hoàn tất phiếu. Ownership thiếu hụt điều chuyển vẫn là `movement_subtype` (`transfer_source_variance` / `transfer_transit_loss`) — không nằm trong catalog nguyên nhân.
 
 `stocktake_sessions`: `in_progress`|`completed`|`cancelled`, `current_round` 1..4.
 `stocktake_lines.variance = counted_quantity - system_quantity`. ACL: BM trong

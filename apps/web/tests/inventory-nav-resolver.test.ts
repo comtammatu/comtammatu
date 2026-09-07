@@ -6,6 +6,7 @@ import {
   resolveInventoryNav,
   withInventoryBranchNavScope,
 } from "../app/(protected)/inventory/_lib/inventory-nav";
+import { selectControlSurfaceBottomNavItems } from "../app/lib/control-surface-nav";
 
 function hrefs(groups: ReturnType<typeof resolveInventoryNav>): Set<string> {
   return new Set(
@@ -59,7 +60,10 @@ test("accountant inventory nav contains only the GRN to PO workflow", () => {
     "/inventory/purchase-orders",
   ]);
   assert.match(inventoryPageSource, /resolveInventoryNav/);
-  assert.doesNotMatch(inventoryPageSource, /resolveInventoryHomePath|redirect\(/);
+  assert.doesNotMatch(
+    inventoryPageSource,
+    /resolveInventoryHomePath|redirect\(/,
+  );
 });
 
 test("owner inventory nav keeps primary flow entry routes visible", () => {
@@ -137,7 +141,7 @@ test("inventory sidebar removes duplicate stock-control and finance entries", ()
   assert.equal(
     visible.has("/inventory/stocktake"),
     true,
-    "Kiểm kê must be discoverable in sidebar group 1",
+    "Kiểm kê must be discoverable in the documents group",
   );
   for (const href of [
     "/inventory/count-assignments",
@@ -163,20 +167,22 @@ test("inventory nav click targets preserve branch URL scope", () => {
     showCatalogManagement: true,
     showSettings: true,
   });
-  const scoped = withInventoryBranchNavScope(groups, 3);
+  const scoped = withInventoryBranchNavScope(groups, 419);
   const stockItem = scoped
     .flatMap((group) => group.items)
     .find((item) => item.href === "/inventory/stock");
 
   assert.equal(stockItem?.href, "/inventory/stock");
-  assert.equal(stockItem?.linkHref, "/inventory/stock?branch=3");
+  assert.equal(stockItem?.linkHref, "/inventory/stock?branch=419");
   assert.match(
     appShellSource,
     /href=\{\s*subItem\.linkHref\s*\?\?\s*subItem\.href\s*\}/,
   );
   assert.match(ownerBottomNavSource, /href: item\.linkHref \?\? item\.href/);
   assert.equal(withInventoryBranchNavScope(groups, null), groups);
-  const allScoped = withInventoryBranchNavScope(groups, null, { scopeAll: true });
+  const allScoped = withInventoryBranchNavScope(groups, null, {
+    scopeAll: true,
+  });
   const allStock = allScoped
     .flatMap((group) => group.items)
     .find((item) => item.href === "/inventory/stock");
@@ -237,21 +243,106 @@ test("inventory desktop workflow groups keep the canonical operator order", () =
 
   assert.deepEqual(
     groups.map((group) => group.title),
-    [
-      "1 · Kiểm soát tồn",
-      "2 · Nhập hàng",
-      "3 · Sản xuất",
-      "4 · Danh mục & thiết lập",
-    ],
+    ["Điều hành", "Chứng từ", "Danh mục & thiết lập"],
   );
   assert.deepEqual(
     groups.map((group) => group.items[0]?.href),
     [
       "/inventory/stock",
       "/inventory/purchase-orders",
-      "/inventory/production",
-      "/inventory/settings",
+      "/inventory/ingredients",
     ],
+  );
+});
+
+test("inventory groups separate operations, documents, and catalog without duplicate routes", () => {
+  const groups = resolveInventoryNav({
+    userRole: "owner",
+    showProcurement: true,
+    showProduction: true,
+    showCatalogManagement: true,
+    showSettings: true,
+  });
+  assert.deepEqual(
+    groups.map((group) => group.items.map((item) => item.href)),
+    [
+      ["/inventory/stock", "/inventory/production", "/inventory/transfers"],
+      [
+        "/inventory/purchase-orders",
+        "/inventory/grn",
+        "/inventory/stocktake",
+        "/inventory/consumption",
+      ],
+      [
+        "/inventory/ingredients",
+        "/inventory/suppliers",
+        "/inventory/menu-recipes",
+        "/inventory/settings",
+      ],
+    ],
+  );
+  const items = groups.flatMap((group) => group.items);
+  assert.equal(new Set(items.map((item) => item.href)).size, items.length);
+});
+
+test("regrouped inventory preserves scoped mobile work slots and active-page recovery", () => {
+  const groups = withInventoryBranchNavScope(
+    resolveInventoryNav({
+      userRole: "owner",
+      showProcurement: true,
+      showProduction: true,
+      showCatalogManagement: true,
+      showSettings: true,
+    }),
+    419,
+  );
+  const selected = selectControlSurfaceBottomNavItems({
+    groups,
+    fallbackItems: [],
+    pathname: "/inventory/stock",
+    inventory: true,
+  });
+  assert.deepEqual(
+    selected.map((item) => item.linkHref),
+    [
+      "/inventory/stock?branch=419",
+      "/inventory/grn?branch=419",
+      "/inventory/transfers?branch=419",
+      "/inventory/production?branch=419",
+    ],
+  );
+  const active = selectControlSurfaceBottomNavItems({
+    groups,
+    fallbackItems: [],
+    pathname: "/inventory/settings/units",
+    inventory: true,
+  });
+  assert.equal(active.length, 4);
+  assert.equal(active.at(-1)?.linkHref, "/inventory/settings?branch=419");
+});
+
+test("grouping retains role restrictions and omits unavailable catalog groups", () => {
+  const flags = {
+    showProcurement: false,
+    showProduction: false,
+    showCatalogManagement: false,
+    showSettings: false,
+  };
+  assert.deepEqual(
+    resolveInventoryNav({ ...flags, userRole: "accountant" }),
+    [],
+  );
+  const groups = resolveInventoryNav({
+    ...flags,
+    userRole: "central_kitchen_lead",
+  });
+  assert.deepEqual(
+    groups.map((group) => group.title),
+    ["Điều hành", "Chứng từ"],
+  );
+  assert.deepEqual(
+    [...hrefs(groups)],
+    ["/inventory/stock", "/inventory/stocktake", "/inventory/consumption"],
   );
 });
 

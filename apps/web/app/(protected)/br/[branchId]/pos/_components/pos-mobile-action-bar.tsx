@@ -36,7 +36,7 @@ export interface PosMobileActionBarProps {
 }
 
 const TOUCH_DOCK_CLASS =
-  "pointer-events-none fixed inset-x-3 bottom-0 z-40 flex flex-col pos-safe-bottom select-none chrome-tap xl:hidden";
+  "pointer-events-none fixed inset-x-3 bottom-0 z-40 flex flex-col pos-safe-bottom select-none chrome-tap lg:hidden";
 
 const ACTION_BAR_SURFACE_CLASS =
   "pointer-events-auto rounded-lg bg-card/95 p-2 shadow-2xl ring-1 ring-border/80 backdrop-blur-md";
@@ -84,7 +84,7 @@ function PosMobileActionBarComponent({
     <>
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-30 h-[env(safe-area-inset-bottom)] bg-card/95 xl:hidden"
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-30 h-[env(safe-area-inset-bottom)] bg-card/95 lg:hidden"
       />
       <div className={TOUCH_DOCK_CLASS}>{actionRow}</div>
     </>

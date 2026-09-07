@@ -288,6 +288,13 @@ export async function completeStocktake(
     if (msg.includes("session_not_found")) {
       return { success: false, error: "Không tìm thấy phiên kiểm kê." };
     }
+    if (msg.includes("stocktake_gain_unit_cost_missing")) {
+      return {
+        success: false,
+        error:
+          "Nguyên liệu chưa có Giá vốn để ghi lượng đếm thừa. Nhập hàng hoặc ghi Giá vốn trước.",
+      };
+    }
     return { success: false, error: "Không thể hoàn tất kiểm kê." };
   }
 

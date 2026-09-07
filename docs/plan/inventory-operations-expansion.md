@@ -7,7 +7,15 @@
 
 ## Architecture Status Matrix
 
-To ensure absolute fidelity between the existing production codebase (`baseline.sql`, `apps/web`) and the proposed expansions, every entity and RPC is explicitly classified:
+This matrix describes the planning baseline, not proof of deployment. Reconcile
+each entry with current migrations and runtime contracts before its phase starts.
+The first Phase 0 slice lives in
+`apps/web/lib/inventory/replenishment-contract.ts`, with executable examples in
+`apps/web/tests/inventory-replenishment-contract.test.ts`. It defines threshold
+resolution and demand projection only; no production loader or mutation uses it
+yet. Database views, RPC enforcement, and their integration proofs remain open.
+
+Every entity and RPC is explicitly classified:
 - `[EXISTS]`: Already present in the active schema or codebase.
 - `[PROPOSED]`: New architectural entity or table introduced in this plan.
 - `[REVISE]`: Existing entity or function requiring contract relaxation or enhancement.
@@ -127,6 +135,12 @@ The system resolves effective operational thresholds deterministically, treating
   $$\text{Effective Capacity} = \text{COALESCE}(\text{branch\_threshold.capacity\_limit}, \text{ingredient.capacity\_limit}, \infty)$$
 - **Structural Invariant:** $\text{Effective Min} \le \text{Effective Target} \le \text{Effective Capacity}$.
 - All surfaces (Cockpit, Stock Matrix, Store Count, Requisition) must utilize the single shared helper `resolveEffectiveThresholds()`.
+- The TypeScript contract encodes unbounded capacity as `null`, not JSON-unsafe
+  infinity. Invalid effective ordering fails validation; it is never silently
+  clamped. Location overrides are resolved independently for each field.
+- Adoption requires matching SQL semantics first. Existing `reorder_quantity`
+  fallbacks and INV-10 minimum-based PO suggestions keep their current behavior
+  until the corresponding runtime contract and migration are revised together.
 
 ---
 
@@ -134,10 +148,22 @@ The system resolves effective operational thresholds deterministically, treating
 
 The management and operational planes maintain a single unified navigation tree across desktop sidebar and mobile drawer:
 
+`resolveInventoryNav()` supplies the three groups to the landing page and shared
+shell. The primary module entry opens `/inventory`; it is not duplicated inside
+its own landing links. Accountant navigation remains limited to PO and GRN.
+The four mobile work slots remain stock, GRN, transfers, and production, with
+the active route replacing the last slot when necessary.
+
+UI Advisor Gate: `plane=control_surface`; `archetype=LANDING`;
+`block=none` (existing shell navigation data, no new composition);
+`exemplar=apps/web/app/(protected)/inventory/page.tsx` and
+`apps/web/app/components/app-shell.tsx`. Actor/job: owner and central operators
+choose the next inventory workflow. Verify role-filtered groups, branch scope,
+active-route recovery, and authenticated rendering at 390/768/1280px.
+
 ```text
 INVENTORY ("Kho Hàng")
 ├─ 1 · OPERATIONS ("Điều hành")
-│  ├─ Shift Cockpit         (/inventory)                 [Unified shift command canvas]
 │  ├─ Stock Matrix          (/inventory/stock)           [Comprehensive multi-site on-hand ledger]
 │  ├─ Daily Production      (/inventory/production)      [Central kitchen daily batch container]
 │  └─ Stock Transfers       (/inventory/transfers)       [Inter-site transfers & dispatch queue]
@@ -145,7 +171,7 @@ INVENTORY ("Kho Hàng")
 │  ├─ Purchase Orders (PO)  (/inventory/purchase-orders) [Central and branch vendor purchase orders]
 │  ├─ Goods Receipts (GRN)  (/inventory/grn)             [Receiving slips matched against POs]
 │  ├─ Stocktaking           (/inventory/stocktake)       [Periodic audit sessions & count slips]
-│  └─ Waste & Writeoffs     (/inventory/waste)           [Spillage, spoilage, and POS sales depletion]
+│  └─ Consumption & Waste  (/inventory/consumption)      [Consumption list and waste view]
 └─ 3 · MASTER DATA & SETTINGS ("Danh mục & thiết lập")
    ├─ Ingredients           (/inventory/ingredients)     [Item catalog, photos, unit ladders]
    ├─ Suppliers             (/inventory/suppliers)       [Vendor profiles & item mapping]
@@ -159,7 +185,10 @@ INVENTORY ("Kho Hàng")
 ```
 
 ### URL Scope Preservation
-Navigating between inventory routes preserves active query parameters (`?branchId=...`, `?siteKind=...`, `?date=...`) via `withInventoryBranchNavScope()`.
+`withInventoryBranchNavScope()` preserves the canonical `?branch=<id|all>` on
+shell and landing links without changing the route used for active matching.
+Date and site-kind propagation remains a later contract change; the current
+navigation does not promise to carry those page-specific filters.
 
 ---
 
@@ -234,6 +263,18 @@ One pulse card per authorized module (Inventory, Finance, HR, Sales, Work):
 
 ### 6.1. Demand Lifecycle State Machine
 Each unit of deficit is tracked through an unbroken state transition chain, ensuring **each quantity is accounted for exactly once without double-counting**:
+
+The Phase 0 projection consumes one consistent stock/allocation snapshot for an
+explicit tenant, destination branch, destination location, ingredient, and base
+unit. Every open stage covers demand; `fulfilled` no longer covers it because
+receipt is already reflected in on-hand stock. Duplicate allocation IDs, mixed
+scopes, non-finite quantities, and precision beyond three decimal places fail
+closed. Arithmetic uses integer milliunits. Net deficit is
+`max(0, target - on_hand - open_allocations)`; negative on-hand is preserved.
+This pure projection neither reserves stock nor authorizes a mutation. The
+later allocation RPC must enforce locking, authorization, transitions, and
+atomic receipt reconciliation. Cancellation and partial-receipt transitions
+must be specified before that RPC is implemented.
 
 ```text
 [Deficit Detected on Radar]

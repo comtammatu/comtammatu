@@ -18,6 +18,38 @@ const QUARTER_DAY_CREDIT_EFFECTIVE_AT = Date.parse(
   "2026-09-01T00:00:00+07:00",
 );
 
+/** Late-in / early-out forgiveness when computing frozen-window overlap. */
+export const WORKDAY_CREDIT_GRACE_MS = 15 * 60 * 1000;
+
+function applyWorkdayCreditGrace(
+  punchStartMs: number,
+  punchEndMs: number,
+  windowStartMs: number,
+  windowEndMs: number,
+): { startMs: number; endMs: number } | null {
+  if (
+    !Number.isFinite(punchStartMs) ||
+    !Number.isFinite(punchEndMs) ||
+    !Number.isFinite(windowStartMs) ||
+    !Number.isFinite(windowEndMs) ||
+    punchEndMs <= punchStartMs ||
+    windowEndMs <= windowStartMs
+  ) {
+    return null;
+  }
+
+  const startMs =
+    punchStartMs <= windowStartMs + WORKDAY_CREDIT_GRACE_MS
+      ? windowStartMs
+      : punchStartMs;
+  const endMs =
+    punchEndMs >= windowEndMs - WORKDAY_CREDIT_GRACE_MS
+      ? windowEndMs
+      : punchEndMs;
+  if (endMs <= startMs) return null;
+  return { startMs, endMs };
+}
+
 /** Versioned công calculation; mirrors SQL `attendance_shift_workdays`. */
 export function countShiftWorkdaysFromOverlap(input: {
   checkIn: string | Date;
@@ -41,8 +73,16 @@ export function countShiftWorkdaysFromOverlap(input: {
     return 0;
   }
 
-  const overlapStart = Math.max(checkIn, scheduledStart);
-  const overlapEnd = Math.min(checkOut, scheduledEnd);
+  const effective = applyWorkdayCreditGrace(
+    checkIn,
+    checkOut,
+    scheduledStart,
+    scheduledEnd,
+  );
+  if (!effective) return 0;
+
+  const overlapStart = Math.max(effective.startMs, scheduledStart);
+  const overlapEnd = Math.min(effective.endMs, scheduledEnd);
   if (overlapEnd <= overlapStart) {
     return 0;
   }
@@ -69,18 +109,15 @@ function calculateOverlapSeconds(
   windowStartMs: number,
   windowEndMs: number,
 ): number {
-  if (
-    !Number.isFinite(punchStartMs) ||
-    !Number.isFinite(punchEndMs) ||
-    !Number.isFinite(windowStartMs) ||
-    !Number.isFinite(windowEndMs) ||
-    punchEndMs <= punchStartMs ||
-    windowEndMs <= windowStartMs
-  ) {
-    return 0;
-  }
-  const overlapStart = Math.max(punchStartMs, windowStartMs);
-  const overlapEnd = Math.min(punchEndMs, windowEndMs);
+  const effective = applyWorkdayCreditGrace(
+    punchStartMs,
+    punchEndMs,
+    windowStartMs,
+    windowEndMs,
+  );
+  if (!effective) return 0;
+  const overlapStart = Math.max(effective.startMs, windowStartMs);
+  const overlapEnd = Math.min(effective.endMs, windowEndMs);
   return overlapEnd > overlapStart ? (overlapEnd - overlapStart) / 1000 : 0;
 }
 

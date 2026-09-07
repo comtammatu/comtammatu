@@ -300,7 +300,7 @@ export function PosDesktopInner({
   const [quickActionTable, setQuickActionTable] = useState<BranchTable | null>(
     null,
   );
-  const isTouchLayout = useIsMobile(1280);
+  const isTouchLayout = useIsMobile(1024);
 
   const handleTableQuickAction = useCallback((table: BranchTable) => {
     setQuickActionTable(table);
@@ -1507,8 +1507,8 @@ export function PosDesktopInner({
     </StationSheet>
   ) : null;
 
-  // POS stays touch-first through tablet widths. The desktop split pane starts
-  // at xl so tablet portrait/landscape keeps the drawer + sticky CTA workflow.
+  // POS stays touch-first on mobile and tablet portrait (< 1024px). The split
+  // pane starts at lg (1024px) for tablet landscape and xl (1280px) for dual-pane desktop.
   const sidebars = isTouchLayout ? null : (
     <SplitSidebar
       canCloseShift={canCloseShift}
@@ -1518,6 +1518,10 @@ export function PosDesktopInner({
       voidInterrupt={voidInterrupt}
       isContextGate={!menuContextReady}
       sidebarContentProps={sidebarContentProps}
+      onToggleShowOrders={setShowOrders}
+      cartQuantity={cartQuantity}
+      cartTotal={cartTotal}
+      ordersCount={orders.length}
     />
   );
 

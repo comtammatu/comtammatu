@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import test from "node:test";
 import { readActiveMigrationSql, assertSqlMatch, assertSqlNotMatch } from "./_lib/active-sql.ts";
@@ -47,4 +48,27 @@ test("valuation allocation carries value-only origins through inventory holders"
   assertSqlMatch(migration, /v_match_count <> 7/);
   assertSqlMatch(migration, /Value-only origins remain in transfer and production lineage/);
   assertSqlNotMatch(migration, /branch_id\s*=\s*\d+|valuation_account_id\s*=\s*996/);
+});
+
+test("issue allocation absorbs a rounding residual onto value-bearing lots", () => {
+  const migration = readFileSync(
+    resolve(_migrationsDir, "20260907140202_absorb_origin_allocation_rounding_residual.sql"),
+    "utf8",
+  );
+  const proof = readFileSync(
+    resolve(root, "supabase/tests/inventory_origin_allocation_residual_test.sql"),
+    "utf8",
+  );
+
+  assert.match(migration, /CREATE OR REPLACE FUNCTION private\.absorb_origin_allocation_residual/);
+  assert.match(migration, /origin_allocation_residual_anchor_changed/);
+  assert.match(migration, /ORDER BY \(balance\.book_value > 0\) DESC/);
+  assert.match(
+    migration,
+    /FROM private\.absorb_origin_allocation_residual\(/,
+  );
+  assert.match(proof, /ORIGIN ALLOCATION: poster must absorb rounding residual/);
+  assert.match(proof, /__origin_allocation_residual_600__/);
+  assert.match(proof, /4357\.303/);
+  assert.doesNotMatch(migration, /Nguyễn Hữu Thọ|branch_id\s*=\s*\d+/);
 });

@@ -41,7 +41,7 @@ entry.
 **Net effect:** HR reads operations sources; payroll snapshots on close; `pay_basis` from HĐLĐ; both bases use `working_days` (D027 / ADR 0019); HR closes obligations, Finance records payment. Canonical: `docs/ref/payroll-pit.md`, `docs/ref/labor-contracts.md`, ADR 0019.
 
 ## D027: Shift-based attendance
-**Net effect:** Attendance follows assigned shifts (multi-shift per day); work credit preserves legacy tenth-day rounding before 2026-09 and uses completed quarter-day buckets from 2026-09, capped at 1.0 per shift; `wage_unit` drives monthly vs daily base gross; Owner does not punch; office and approved management positions check out directly while other staff keep approval. Canonical: `docs/spec/database-schema.md`, `docs/ref/payroll-pit.md`, ADR 0019.
+**Net effect:** Attendance follows assigned shifts (multi-shift per day); work credit preserves legacy tenth-day rounding before 2026-09 and uses completed quarter-day buckets from 2026-09 with a 15-minute late-in/early-out grace, capped at 1.0 per shift; `wage_unit` drives monthly vs daily base gross; Owner does not punch; office and approved management positions check out directly while other staff keep approval. Canonical: `docs/spec/database-schema.md`, `docs/ref/payroll-pit.md`, ADR 0019.
 
 ## D028: Kết quả vận hành and ingredient control
 **Net effect:** Consumption follows physical counts and the stock ledger; Finance shows Kết quả vận hành / cash flow / fund balances, not Lợi nhuận ròng. Canonical: `docs/ref/operational-data-contract.md`, `docs/modules/finance.md`.

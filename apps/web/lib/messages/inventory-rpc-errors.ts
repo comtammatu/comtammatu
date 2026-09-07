@@ -67,6 +67,13 @@ const notFound: RpcErrorMapping = {
   userMessage: "Không tìm thấy chứng từ.",
 };
 
+const originAllocationIncomplete: RpcErrorMapping = {
+  match: includesAny("inventory_origin_allocation_incomplete"),
+  errorCode: INVENTORY_ERROR_CODES.INVALID_STATUS,
+  userMessage:
+    "Giá vốn các lô chưa phân bổ hết. Thử lại sau khi hệ thống được cập nhật.",
+};
+
 /* ─── Transfer ─── */
 
 export const transferCreateRpcMappings: readonly RpcErrorMapping[] = [
@@ -89,6 +96,7 @@ export const transferCreateRpcFallback: RpcErrorFallback = {
 };
 
 export const transferShipRpcMappings: readonly RpcErrorMapping[] = [
+  originAllocationIncomplete,
   {
     match: includesAny("insufficient_stock"),
     errorCode: INVENTORY_ERROR_CODES.INSUFFICIENT_STOCK,
@@ -144,6 +152,7 @@ export const transferConfirmReceiveRpcFallback: RpcErrorFallback = {
 };
 
 export const transferReceiveRpcMappings: readonly RpcErrorMapping[] = [
+  originAllocationIncomplete,
   {
     match: includesAny("invalid_status", "confirmed_receive"),
     errorCode: INVENTORY_ERROR_CODES.INVALID_STATUS,
@@ -205,6 +214,7 @@ export const transferCancelRpcFallback: RpcErrorFallback = {
 /* ─── Waste ─── */
 
 export const wasteCreateRpcMappings: readonly RpcErrorMapping[] = [
+  originAllocationIncomplete,
   {
     match: includesAny("insufficient_stock"),
     errorCode: INVENTORY_ERROR_CODES.INSUFFICIENT_STOCK,
@@ -308,6 +318,7 @@ export const issueLineRpcFallback: RpcErrorFallback = {
 };
 
 export const issueConfirmRpcMappings: readonly RpcErrorMapping[] = [
+  originAllocationIncomplete,
   {
     match: includesAny("writeoff_pending_approval"),
     errorCode: INVENTORY_ERROR_CODES.INVALID_STATUS,
@@ -781,6 +792,7 @@ export const procurementRpcMappings: readonly RpcErrorMapping[] = [
 /* ─── Production ─── */
 
 export const productionRpcMappings: readonly RpcErrorMapping[] = [
+  originAllocationIncomplete,
   {
     match: includesAny("entry_unit_not_configured"),
     errorCode: INVENTORY_ERROR_CODES.PRODUCTION_OUTPUT_UNIT_NOT_CONFIGURED,

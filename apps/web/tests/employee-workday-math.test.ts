@@ -103,6 +103,39 @@ test("quarter-day công floors partial quarters instead of rounding", () => {
   );
 });
 
+test("quarter-day công forgives 15-minute late-in or early-out", () => {
+  const scheduledStart = "2026-09-10T08:00:00+07:00";
+  const scheduledEnd = "2026-09-10T16:00:00+07:00";
+
+  assert.equal(
+    countShiftWorkdaysFromOverlap({
+      checkIn: "2026-09-10T08:15:00+07:00",
+      checkOut: scheduledEnd,
+      scheduledStart,
+      scheduledEnd,
+    }),
+    1,
+  );
+  assert.equal(
+    countShiftWorkdaysFromOverlap({
+      checkIn: scheduledStart,
+      checkOut: "2026-09-10T15:45:00+07:00",
+      scheduledStart,
+      scheduledEnd,
+    }),
+    1,
+  );
+  assert.equal(
+    countShiftWorkdaysFromOverlap({
+      checkIn: "2026-09-10T08:16:00+07:00",
+      checkOut: scheduledEnd,
+      scheduledStart,
+      scheduledEnd,
+    }),
+    0.75,
+  );
+});
+
 test("shiftWorkdaysFromAttendanceRecord returns 0 without frozen window", () => {
   assert.equal(
     shiftWorkdaysFromAttendanceRecord({

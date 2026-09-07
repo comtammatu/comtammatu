@@ -9,6 +9,7 @@ import {
   ChevronUp,
   ClipboardCheck,
   Package,
+  Printer,
   Users,
 } from "lucide-react";
 import { formatPercent, formatVND } from "@comtammatu/shared/format";
@@ -170,40 +171,53 @@ export function CloseDayClient({
   const mixEntries = Object.entries(report?.payment_mix ?? {});
 
   const dateNav = (
-    <div className="flex w-full min-w-0 flex-nowrap items-center gap-2">
+    <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-2 sm:flex-nowrap">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <Button
+          variant="ghost"
+          size="icon-touch"
+          className="shrink-0"
+          aria-label={copy.closeDayPrevDate}
+          render={<Link href={`/br/${branchId}/close-day?date=${prevDate}`} />}
+        >
+          <ChevronLeft />
+        </Button>
+        <span className="min-w-0 flex-1 truncate text-center text-sm font-semibold tabular-nums">
+          {formatVNDate(businessDate)}
+        </span>
+        {canGoNext ? (
+          <Button
+            variant="ghost"
+            size="icon-touch"
+            className="shrink-0"
+            aria-label={copy.closeDayNextDate}
+            render={<Link href={`/br/${branchId}/close-day?date=${nextDate}`} />}
+          >
+            <ChevronRight />
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            size="icon-touch"
+            className="shrink-0"
+            disabled
+            aria-label={copy.closeDayNextDate}
+          >
+            <ChevronRight />
+          </Button>
+        )}
+      </div>
       <Button
-        variant="ghost"
-        size="icon-touch"
-        className="shrink-0"
-        aria-label={copy.closeDayPrevDate}
-        render={<Link href={`/br/${branchId}/close-day?date=${prevDate}`} />}
+        type="button"
+        variant="outline"
+        size="touch"
+        onClick={() => window.print()}
+        className="shrink-0 gap-1.5 print:hidden"
+        aria-label={copy.closeDayPrintAria}
       >
-        <ChevronLeft />
+        <Printer className="size-4" />
+        <span>{copy.closeDayPrintButton}</span>
       </Button>
-      <span className="min-w-0 flex-1 truncate text-center text-sm font-medium tabular-nums">
-        {formatVNDate(businessDate)}
-      </span>
-      {canGoNext ? (
-        <Button
-          variant="ghost"
-          size="icon-touch"
-          className="shrink-0"
-          aria-label={copy.closeDayNextDate}
-          render={<Link href={`/br/${branchId}/close-day?date=${nextDate}`} />}
-        >
-          <ChevronRight />
-        </Button>
-      ) : (
-        <Button
-          variant="ghost"
-          size="icon-touch"
-          className="shrink-0"
-          disabled
-          aria-label={copy.closeDayNextDate}
-        >
-          <ChevronRight />
-        </Button>
-      )}
     </div>
   );
 
@@ -341,6 +355,108 @@ export function CloseDayClient({
           ))}
         </ItemGroup>
       ) : null}
+    </BranchOperatorPanel>
+  );
+
+  const cashReconciliation = useMemo(() => {
+    let totalOpeningCash = 0;
+    let totalClosingCash = 0;
+    let totalExpectedCash = 0;
+    let hasClosedSessions = false;
+
+    for (const s of sessions) {
+      totalOpeningCash += s.opening_cash ?? 0;
+      if (s.closing_cash != null) {
+        totalClosingCash += s.closing_cash;
+        hasClosedSessions = true;
+      }
+      if (s.expected_cash != null) {
+        totalExpectedCash += s.expected_cash;
+      }
+    }
+
+    const cashRevenue = report?.cash_revenue ?? 0;
+    const expectedTotal =
+      totalExpectedCash > 0
+        ? totalExpectedCash
+        : totalOpeningCash + cashRevenue;
+    const totalDiff = hasClosedSessions
+      ? totalClosingCash - expectedTotal
+      : null;
+
+    return {
+      totalOpeningCash,
+      cashRevenue,
+      expectedTotal,
+      totalClosingCash: hasClosedSessions ? totalClosingCash : null,
+      totalDiff,
+      hasClosedSessions,
+    };
+  }, [sessions, report?.cash_revenue]);
+
+  const cashReconciliationSection = (
+    <BranchOperatorPanel headingLevel="h2">
+      <div className="flex min-w-0 items-center justify-between gap-2">
+        <SectionLabel>{copy.closeDayCashReconTitle}</SectionLabel>
+        {cashReconciliation.totalDiff != null ? (
+          <Badge
+            variant={
+              cashReconciliation.totalDiff === 0
+                ? "secondary"
+                : cashReconciliation.totalDiff > 0
+                  ? "info"
+                  : "warning"
+            }
+          >
+            {cashReconciliation.totalDiff === 0
+              ? copy.closeDayCashStatusMatched
+              : cashReconciliation.totalDiff > 0
+                ? copy.closeDayCashStatusSurplus(formatVND(cashReconciliation.totalDiff))
+                : copy.closeDayCashStatusShortage(formatVND(cashReconciliation.totalDiff))}
+          </Badge>
+        ) : (
+          <Badge variant="outline">{copy.closeDayCashStatusActive}</Badge>
+        )}
+      </div>
+      <div className="mt-3">
+        <BranchOperatorStatusStrip
+          items={[
+            {
+              label: copy.closeDayOpeningCash,
+              value: formatVND(cashReconciliation.totalOpeningCash),
+              mono: true,
+            },
+            {
+              label: copy.closeDayCashRevenueLabel,
+              value: formatVND(cashReconciliation.cashRevenue),
+              mono: true,
+            },
+            {
+              label: copy.closeDayExpectedCash,
+              value: formatVND(cashReconciliation.expectedTotal),
+              mono: true,
+            },
+            {
+              label: copy.closeDayClosingCash,
+              value: moneyOrDash(cashReconciliation.totalClosingCash),
+              mono: true,
+              muted: cashReconciliation.totalClosingCash == null,
+            },
+            {
+              label: copy.closeDayCashDiffLabel,
+              value:
+                cashReconciliation.totalDiff == null
+                  ? copy.closeDayUnavailable
+                  : `${cashReconciliation.totalDiff >= 0 ? "+" : ""}${formatVND(cashReconciliation.totalDiff)}`,
+              mono: true,
+              muted: cashReconciliation.totalDiff == null,
+            },
+          ]}
+        />
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground">
+        {copy.closeDayCashReconNote(sessions.length)}
+      </p>
     </BranchOperatorPanel>
   );
 
@@ -603,24 +719,35 @@ export function CloseDayClient({
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-4">
-      {dateNav}
-      <p className="text-xs text-muted-foreground">{copy.closeDayCutoffNote}</p>
+      <div className="hidden print:flex print:flex-col print:gap-1 print:border-b print:pb-3">
+        <h1 className="text-xl font-semibold text-foreground">{copy.closeDayTitle}</h1>
+        <p className="text-sm text-muted-foreground">
+          {copy.closeDayPrintBusinessDate(formatVNDate(businessDate))}
+        </p>
+      </div>
+
+      <div className="print:hidden">
+        {dateNav}
+        <p className="mt-2 text-xs text-muted-foreground">{copy.closeDayCutoffNote}</p>
+      </div>
 
       {attentionCount > 0 ? (
-        <NoteCallout tone="warning" title={copy.closeDayAttentionTitle}>
-          {copy.closeDayAttentionBody(
-            report?.open_session_count ?? 0,
-            pendingWasteCount,
-            pendingCountSlipsCount,
-            pendingCheckoutsCount,
-          )}
-        </NoteCallout>
+        <div className="print:hidden">
+          <NoteCallout tone="warning" title={copy.closeDayAttentionTitle}>
+            {copy.closeDayAttentionBody(
+              report?.open_session_count ?? 0,
+              pendingWasteCount,
+              pendingCountSlipsCount,
+              pendingCheckoutsCount,
+            )}
+          </NoteCallout>
+        </div>
       ) : null}
 
       <AppPageTabs
         paramKey="tab"
         defaultValue="all"
-        className="min-h-0 flex-1 overflow-hidden"
+        className="min-h-0 flex-1 overflow-hidden print:[&_[data-slot=app-page-tabs-list]]:hidden"
         items={[
           {
             value: "all",
@@ -649,6 +776,7 @@ export function CloseDayClient({
             {pnlSection}
             {collectedSection}
           </div>
+          {cashReconciliationSection}
           {topItemsSection}
           {sessionsSection}
           <div className="grid gap-4 lg:grid-cols-2">
@@ -661,11 +789,13 @@ export function CloseDayClient({
             {pnlSection}
             {collectedSection}
           </div>
+          {cashReconciliationSection}
         </TabsContent>
         <TabsContent value="items" className="flex flex-col gap-4 pt-2">
           {topItemsSection}
         </TabsContent>
         <TabsContent value="sessions" className="flex flex-col gap-4 pt-2">
+          {cashReconciliationSection}
           {sessionsSection}
         </TabsContent>
         <TabsContent value="ops" className="flex flex-col gap-4 pt-2">

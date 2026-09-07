@@ -130,12 +130,15 @@ Công mỗi ca đã kết (ADR 0019 / D027):
   một chữ số thập phân.
 - Từ tháng 09/2026: chỉ tính theo phần tư ca đã làm đủ:
   `công = min(1.0, floor(4 × thời_gian_trùng_ca / thời_lượng_ca) / 4)`.
-  Với ca 8 giờ: làm đủ 2/4/6/8 giờ được 0,25/0,5/0,75/1 công; làm 7 giờ được
-  0,75 công; dưới 2 giờ được 0 công.
+  Khi tính trùng ca, cho phép **ân hạn 15 phút** vào trễ hoặc ra sớm so với
+  khung giờ xếp sẵn (vẫn không cộng giờ ngoài khung). Với ca 8 giờ: làm đủ
+  2/4/6/8 giờ được 0,25/0,5/0,75/1 công; làm 7 giờ được 0,75 công; dưới 2 giờ
+  được 0 công; vào trễ/ra sớm ≤ 15 phút vẫn được 1 công nếu phủ hết phần còn lại.
   Với ca gãy (`is_split = true`): thời lượng ca = tổng thời gian của cả 2 khung
   giờ làm việc; thời gian trùng ca = tổng thời gian làm thực tế trong khung 1
   (`check_in` đến `window_1_out_at` hoặc `check_out`) và khung 2 (`check_in_2`
-  đến `check_out`). Khoảng nghỉ giữa 2 khung không tính vào giờ làm.
+  đến `check_out`), mỗi khung cùng ân hạn. Khoảng nghỉ giữa 2 khung không tính
+  vào giờ làm.
 
 Chưa kết ca → không cộng. `working_days = Σ công`.
 Các bảng lương đã chốt không tính lại theo quy tắc mới.

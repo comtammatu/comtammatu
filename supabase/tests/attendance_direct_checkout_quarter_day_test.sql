@@ -41,6 +41,33 @@ BEGIN
     RAISE EXCEPTION 'TEST FAILED: pre-cutover attendance must preserve legacy rounding';
   END IF;
 
+  IF public.attendance_shift_workdays(
+    timestamptz '2026-09-10 08:15:00+07',
+    timestamptz '2026-09-10 16:00:00+07',
+    timestamptz '2026-09-10 08:00:00+07',
+    timestamptz '2026-09-10 16:00:00+07'
+  ) <> 1 THEN
+    RAISE EXCEPTION 'TEST FAILED: 15-minute late-in grace must still yield 1.0 công';
+  END IF;
+
+  IF public.attendance_shift_workdays(
+    timestamptz '2026-09-10 08:00:00+07',
+    timestamptz '2026-09-10 15:45:00+07',
+    timestamptz '2026-09-10 08:00:00+07',
+    timestamptz '2026-09-10 16:00:00+07'
+  ) <> 1 THEN
+    RAISE EXCEPTION 'TEST FAILED: 15-minute early-out grace must still yield 1.0 công';
+  END IF;
+
+  IF public.attendance_shift_workdays(
+    timestamptz '2026-09-10 08:16:00+07',
+    timestamptz '2026-09-10 16:00:00+07',
+    timestamptz '2026-09-10 08:00:00+07',
+    timestamptz '2026-09-10 16:00:00+07'
+  ) <> 0.75 THEN
+    RAISE EXCEPTION 'TEST FAILED: late-in beyond grace must keep quarter-day flooring';
+  END IF;
+
   IF to_regprocedure('public.self_service_clock_out(bigint)') IS NULL THEN
     RAISE EXCEPTION 'TEST FAILED: direct checkout RPC is missing';
   END IF;

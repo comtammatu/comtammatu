@@ -189,7 +189,7 @@ function PosTakeawayGateComponent({
       <ScrollArea className="min-h-0 flex-1 overflow-hidden">
         <div
           className={cn(
-            "flex w-full flex-col gap-4 px-2 pt-2 pb-28 md:px-4 md:pt-4 xl:pb-4",
+            "flex w-full flex-col gap-4 px-2 pt-2 pb-28 md:px-4 md:pt-4 lg:pb-4",
           )}
         >
           {headerAction ? (

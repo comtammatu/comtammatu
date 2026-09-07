@@ -27,14 +27,18 @@ export function withInventoryBranchNavScope(
     ...group,
     items: group.items.map((item) => ({
       ...item,
-      linkHref: withControlSurfaceBranchScope(item.href, scope as `${number}` | "all", {
-        prefixes: ["/inventory"],
-      }),
+      linkHref: withControlSurfaceBranchScope(
+        item.href,
+        scope as `${number}` | "all",
+        {
+          prefixes: ["/inventory"],
+        },
+      ),
     })),
   }));
 }
 
-/** Full Mua hàng workspace (PO lifecycle + remaining YCM tab). */
+/** Purchase-order workspace access follows the procurement role boundary. */
 function canShowPurchaseOrders(role: StaffRole): boolean {
   return (
     role === "owner" ||
@@ -77,7 +81,7 @@ export function resolveInventoryNav({
     return showProcurement
       ? [
           {
-            title: "Nhập hàng",
+            title: "Chứng từ",
             items: [
               {
                 href: "/inventory/purchase-orders",
@@ -96,27 +100,32 @@ export function resolveInventoryNav({
       : [];
   }
 
-  const groups: ShellNavGroup[] = [
+  const operationItems: ShellNavGroup["items"] = [
     {
-      title: "1 · Kiểm soát tồn",
-      items: [
-        {
-          href: "/inventory/stock",
-          label: tNav("stock", "navigation"),
-          icon: IconPackage,
-        },
-        {
-          href: "/inventory/stocktake",
-          label: tNav("stocktake", "navigation"),
-          icon: IconClipboardList,
-          matchPrefixes: [
-            "/inventory/stocktake/",
-            "/inventory/count-assignments",
-            "/inventory/count-slips",
-          ],
-        },
-      ],
+      href: "/inventory/stock",
+      label: tNav("stock", "navigation"),
+      icon: IconPackage,
     },
+  ];
+  if (showProduction) {
+    operationItems.push({
+      href: "/inventory/production",
+      label: tNav("production", "navigation"),
+      icon: IconToolsKitchen,
+      matchPrefixes: ["/inventory/production/"],
+      exact: true,
+    });
+  }
+  if (showStockRequestInbox || userRole === "owner") {
+    operationItems.push({
+      href: "/inventory/transfers",
+      label: tNav("transfers", "navigation"),
+      icon: IconArrowRightLeft,
+      matchPrefixes: ["/inventory/transfers/", "/inventory/stock-requests"],
+    });
+  }
+  const groups: ShellNavGroup[] = [
+    { title: "Điều hành", items: operationItems },
   ];
 
   const inboundItems: ShellNavGroup["items"] = [];
@@ -136,6 +145,16 @@ export function resolveInventoryNav({
     });
   }
   inboundItems.push({
+    href: "/inventory/stocktake",
+    label: tNav("stocktake", "navigation"),
+    icon: IconClipboardList,
+    matchPrefixes: [
+      "/inventory/stocktake/",
+      "/inventory/count-assignments",
+      "/inventory/count-slips",
+    ],
+  });
+  inboundItems.push({
     href: "/inventory/consumption",
     label: tNav("consumption", "navigation"),
     icon: IconCircleMinus,
@@ -145,45 +164,18 @@ export function resolveInventoryNav({
       "/inventory/waste",
     ],
   });
-  if (showStockRequestInbox || userRole === "owner") {
-    inboundItems.push({
-      href: "/inventory/transfers",
-      label: tNav("transfers", "navigation"),
-      icon: IconArrowRightLeft,
-      matchPrefixes: ["/inventory/transfers/", "/inventory/stock-requests"],
-    });
-  }
-
   groups.push({
-    title: "2 · Nhập hàng",
+    title: "Chứng từ",
     items: inboundItems,
   });
 
-  if (showProduction) {
-    groups.push({
-      title: "3 · Sản xuất",
-      items: [
-        {
-          href: "/inventory/production",
-          label: tNav("production", "navigation"),
-          icon: IconToolsKitchen,
-          matchPrefixes: [
-            "/inventory/production/",
-          ],
-          exact: true,
-        },
-      ],
-    });
-  }
-
   const catalogItems: ShellNavGroup["items"] = [];
 
-  if (showSettings) {
+  if (showCatalogManagement || showCatalogRead) {
     catalogItems.push({
-      href: "/inventory/settings",
-      label: tNav("settings", "navigation"),
-      icon: IconSettings,
-      matchPrefixes: ["/inventory/settings/"],
+      href: "/inventory/ingredients",
+      label: tNav("ingredients", "navigation"),
+      icon: IconFileText,
     });
   }
   if (showProcurement) {
@@ -191,13 +183,6 @@ export function resolveInventoryNav({
       href: "/inventory/suppliers",
       label: tNav("suppliers", "navigation"),
       icon: IconUsers,
-    });
-  }
-  if (showCatalogManagement || showCatalogRead) {
-    catalogItems.push({
-      href: "/inventory/ingredients",
-      label: tNav("ingredients", "navigation"),
-      icon: IconFileText,
     });
   }
 
@@ -208,10 +193,18 @@ export function resolveInventoryNav({
       icon: IconToolsKitchen,
     });
   }
+  if (showSettings) {
+    catalogItems.push({
+      href: "/inventory/settings",
+      label: tNav("settings", "navigation"),
+      icon: IconSettings,
+      matchPrefixes: ["/inventory/settings/"],
+    });
+  }
 
   if (catalogItems.length > 0) {
     groups.push({
-      title: "4 · Danh mục & thiết lập",
+      title: "Danh mục & thiết lập",
       items: catalogItems,
     });
   }

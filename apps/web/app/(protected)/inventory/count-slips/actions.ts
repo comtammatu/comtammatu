@@ -220,6 +220,9 @@ export async function requestCountRecount(
  * Postgres `error.message` to the UI.
  */
 function mapCountSlipError(error: { code?: string; message?: string }): string {
+  if (error.message?.includes("stocktake_gain_unit_cost_missing")) {
+    return "Nguyên liệu chưa có Giá vốn để ghi lượng đếm thừa. Nhập hàng hoặc ghi Giá vốn trước.";
+  }
   if (error.message?.includes("count_slip_waste_photo_required")) {
     return "Thêm ảnh bằng chứng cho từng mặt hàng thiếu trước khi xuất hủy.";
   }

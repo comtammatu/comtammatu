@@ -10,7 +10,6 @@ State: verify
 Exit: Office `self_service` sees Control home + Work in chrome; `/` is Mine / Coordinate / Work pulse; `/me` stays personal.
 Evidence: `office-control-surface-nav.test.ts`; `control-home-attention-static.test.ts`; Gate `/`+`/work` `LANDING` `none` `apps/web/app/(protected)/page.tsx`.
 - [ ] Authenticated office viewport: home + Work tabs; `/work` inbox; `/me` has no Work CTA
-
 ## Align Work inbox and staff assignment scope
 State: verify
 Tier: T3
@@ -351,7 +350,7 @@ Kind: feature
 Tier: T2
 Lane: inventory
 Exit: Every Inventory and Branch-stock `page.tsx` is listed in `docs/ref/screen-context-map.md` §2.5A with load / display / submit / current-vs-target. Control `/inventory` attention queue splits stock requests vs transfers and adds missing GRN unit-price. Catalog image save passes the release gates in `docs/plan/inventory-operations-expansion.md` §8.4; allocate 1-supplier drafts stay.
-Evidence: Static landing attention + wave23 tests; authenticated image dialog at 390/768/1280 and live orphan-cleanup cron passed. Preview schema/authorization/Storage API races passed; all temporary branches deleted. Image migration, regenerated types, verification, and Production deployment are complete; see expansion plan §8.4.
+Evidence: Static landing attention + wave23 tests; `inventory-nav-resolver`, `control-surface-layout-contracts`, and recipe-boundary tests cover the three navigation groups, role restrictions, and scoped mobile slots. Authenticated navigation smoke remains open: local runtime lacks `NEXT_PUBLIC_SUPABASE_URL`. Image catalog: authenticated image dialog at 390/768/1280 and live orphan-cleanup cron passed. Preview schema/authorization/Storage API races passed; all temporary branches deleted. Image migration, regenerated types, verification, and Production deployment are complete; see expansion plan §8.4.
 
 UI Advisor Gate
 - Surface: `/inventory` landing + `/inventory/purchase-orders` chrome; route family: control inventory; plane: `control_surface`; change: copy + attention queues
@@ -364,7 +363,7 @@ UI Advisor Gate
 - Responsive: same IA, compact density
 - Verification: static tests, `lint:copy`, typecheck/lint/web tests owned here
 
-- [ ] Owner browse canvas + confirm next page family (fulfillment hub vs Branch doors)
+- [ ] Verify Inventory landing/sidebar/mobile navigation after login at 390/768/1280; confirm next page family (fulfillment hub vs Branch doors).
 
 ## POS leftover cash counts on the paying till
 
@@ -593,6 +592,7 @@ Exit: Pending GRN uses last-invoice/WAC provisional so site WAC does not collaps
 Evidence: ADR 0040 + glossary/inventory copy; migration `20260817183130_company_wac_and_cost_restatement.sql` applied on Production `enloyfnuerqgaqderbwb` 2026-08-17; SQL + static tests. Scoped 17 Aug restatement `20260817201330` (one-gang raw meat and finished good only): origin 2125 provisional 2982000 VND; FG WAC 51611 VND/portion; 13 sold portions food_cost 51611 VND. Remaining: other 17 Aug pending invoices, then company-wide `repair_company_wac_valuation`.
 
 - [ ] Confirm remaining 17 Aug pending invoices (chop, spare-rib, produce), then `repair_company_wac_valuation` dry-run then apply.
+- [x] Apply `20260907161322_price_unpriced_count_surplus.sql` to Production, then retry any leftover unpriced surplus counts.
 
 UI Advisor Gate
 - Surface: inventory stock/issue/transfer + GRN pending hint; plane: `control_surface`; change: copy

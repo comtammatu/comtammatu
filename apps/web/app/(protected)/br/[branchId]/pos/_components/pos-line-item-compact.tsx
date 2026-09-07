@@ -168,7 +168,7 @@ export function PosLineItemCompact({
     >
       {onIncreaseQuantity && onDecreaseQuantity ? (
         <div
-          className="flex h-7 shrink-0 items-center gap-1 self-start pt-0.5"
+          className="flex h-auto shrink-0 items-center gap-1 self-start pt-0.5"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -178,7 +178,7 @@ export function PosLineItemCompact({
             type="button"
             variant="outline"
             size="icon-touch"
-            className="size-8 shrink-0 rounded-md text-muted-foreground hover:bg-background hover:text-foreground active:scale-90 touch-manipulation"
+            className="shrink-0 rounded-md text-muted-foreground hover:bg-background hover:text-foreground active:scale-90"
             aria-label={`Bớt 1 phần ${title}`}
             onClick={(e) => {
               e.preventDefault();
@@ -188,14 +188,14 @@ export function PosLineItemCompact({
           >
             <IconMinus className="size-4" />
           </Button>
-          <span className="min-w-4 shrink-0 px-0.5 text-center font-mono text-sm font-semibold tabular-nums text-foreground">
+          <span className="min-w-5 shrink-0 px-1 text-center font-mono text-sm font-semibold tabular-nums text-foreground">
             {formatPortionQuantity(quantity)}
           </span>
           <Button
             type="button"
             variant="outline"
             size="icon-touch"
-            className="size-8 shrink-0 rounded-md text-muted-foreground hover:bg-background hover:text-foreground active:scale-90 touch-manipulation"
+            className="shrink-0 rounded-md text-muted-foreground hover:bg-background hover:text-foreground active:scale-90"
             aria-label={`Thêm 1 phần ${title}`}
             onClick={(e) => {
               e.preventDefault();

@@ -26,16 +26,18 @@ roster-required punch, versioned quarter-day `công`, direct self-checkout, and
    window and capped at 1.0. Before 2026-09-01, preserve the historical
    `round_1dp(overlap / scheduled_length)` result. From 2026-09-01, count only
    completed quarters:
-   `shift_workdays = min(1.0, floor(4 * overlap / scheduled_length) / 4)`.
-   For an eight-hour shift, 2/4/6/8 hours yield 0.25/0.5/0.75/1.0; seven hours
-   yield 0.75 and less than two hours yields 0. No `check_out` or missing
+   `shift_workdays = min(1.0, floor(4 * overlap / scheduled_length) / 4)`,
+   after applying a **15-minute late-in / early-out grace** on the frozen
+   window edges (minutes outside the window still do not count). For an
+   eight-hour shift, 2/4/6/8 hours yield 0.25/0.5/0.75/1.0; seven hours yield
+   0.75 and less than two hours yields 0. No `check_out` or missing
    `scheduled_*` → **0**. For split shifts (`is_split = true`), `scheduled_length`
    is the sum of interval 1 (`scheduled_end_at - scheduled_start_at`) and
    interval 2 (`scheduled_end_at_2 - scheduled_start_at_2`), and `overlap` is the sum
    of overlap in interval 1 (`check_in` to `window_1_out_at` or `check_out`) and
-   interval 2 (`check_in_2` to `check_out`). Break duration between intervals is
-   excluded. No daily cap: two closed shifts on the same
-   `work_date` sum independently. Finalized payroll snapshots are not
+   interval 2 (`check_in_2` to `check_out`), each with the same grace. Break
+   duration between intervals is excluded. No daily cap: two closed shifts on
+   the same `work_date` sum independently. Finalized payroll snapshots are not
    recalculated. SSOT: `countShiftWorkdaysFromOverlap` /
    `shiftWorkdaysFromAttendanceRecord` and SQL
    `attendance_shift_workdays` / `attendance_shift_workdays_for_record`.
