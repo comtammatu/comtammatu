@@ -25,7 +25,7 @@ test("mutation SA schemas require positive branchId (no null/all)", () => {
   assert.match(stocktake, /start_stocktake[\s\S]*p_branch_id:\s*parsed\.data\.branchId/);
   assert.doesNotMatch(waste, /p_branch_id:\s*null/);
   assert.doesNotMatch(stocktake, /p_branch_id:\s*null/);
-  assert.match(transfer, /p_branch_id:\s*(branchId|fromBranch\.id)/);
+  assert.match(transfer, /p_branch_id:\s*(branchId|fromBranch\.id|parsed\.data\.branchId)/);
 });
 
 test("list/report SA pass null branch only where RPC documents null=all", () => {

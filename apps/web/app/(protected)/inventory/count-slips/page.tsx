@@ -199,27 +199,26 @@ export async function CountSlipsPageContent({
           data: [] as Array<CountSlipQueryLine & { slip_id: number }>,
           error: null,
         }
-      : await supabase
-          .from("inventory_count_slip_lines")
-          .select(
-            `
-            id,
-            slip_id,
-            ingredient_id,
-            system_quantity,
-            counted_quantity,
-            entry_unit_id,
-            entry_to_base_factor,
-            counted_base_quantity,
-            recount_required,
-            last_recount_round,
-            note,
-            ingredients ( name ),
-            units!inventory_count_slip_lines_entry_unit_id_fkey ( code )
-          `,
-          )
-          .eq("tenant_id", claims.tenant_id)
-          .in("slip_id", slipIds);
+      : await supabase.rpc("list_inventory_count_slip_lines", {
+          p_slip_ids: slipIds,
+        }).then((result) => ({
+          data: (result.data ?? []).map((row) => ({
+            id: Number(row.id),
+            slip_id: Number(row.slip_id),
+            ingredient_id: Number(row.ingredient_id),
+            system_quantity: row.system_quantity,
+            counted_quantity: row.counted_quantity,
+            entry_unit_id: row.entry_unit_id,
+            entry_to_base_factor: row.entry_to_base_factor,
+            counted_base_quantity: row.counted_base_quantity,
+            recount_required: row.recount_required,
+            last_recount_round: row.last_recount_round,
+            note: row.note,
+            ingredients: { name: row.ingredient_name },
+            units: row.unit_code ? { code: row.unit_code } : null,
+          })),
+          error: result.error,
+        }));
   if (lineResult.error) {
     console.error("inventory.count_slips.fetch_failed", {
       code: lineResult.error.code,

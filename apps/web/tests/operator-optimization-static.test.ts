@@ -187,7 +187,7 @@ test("Pickup board uses realtime invalidation with a 6s degraded fallback", () =
   assert.match(source, /router\.refresh\(\)/);
 });
 
-test("POS self-order uses the private branch-ops bus plus the 30s poll as a safety net", () => {
+test("POS self-order uses the private branch-ops bus plus the safety poll", () => {
   const inner = read(
     "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx",
   );
@@ -220,8 +220,8 @@ test("POS self-order uses the private branch-ops bus plus the 30s poll as a safe
     /ON public\.self_order_payment_requests[\s\S]*broadcast_branch_ops/,
   );
   assertSqlNotMatch(migration, /ALTER PUBLICATION supabase_realtime/);
-  // 30s poll safety net is still present.
-  assert.match(selfOrder, /30_000/);
+  // Safety poll is the degraded SLO when Realtime is down (300s).
+  assert.match(selfOrder, /REALTIME_SAFETY_POLL_MS/);
 });
 
 test("floor clock-in stays in the Branch personal flow", () => {

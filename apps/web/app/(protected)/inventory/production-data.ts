@@ -3,11 +3,13 @@ import { createClient } from "@comtammatu/database/supabase/server";
 import {
   PERMISSION_KEYS,
   type JwtClaims,
-  type PermissionKey,
 } from "@comtammatu/shared/auth";
 import { normalizeInventoryLocationNameVi } from "@comtammatu/shared/labels";
 import { loadAuthState } from "@/_lib/auth";
-import { currentUserHasAnyPermissionAny } from "@/_lib/permissions";
+import {
+  currentUserHasAnyPermissionAny,
+  currentUserHasPermissionAny,
+} from "@/_lib/permissions";
 import { messages } from "@lib/messages";
 import { fetchIngredients, fetchUnitOptions } from "./ingredient-actions";
 import { CATALOG_MANAGE_PERMISSIONS } from "./_lib/catalog-permissions";
@@ -88,16 +90,6 @@ export interface ProductionSurfaceData {
   recipeLoadError: string | null;
 }
 
-async function currentUserHasAnyPermission(
-  supabase: InventorySupabase,
-  key: PermissionKey,
-): Promise<boolean> {
-  const { data, error } = await supabase.rpc("has_permission_any", {
-    p_key: key,
-  });
-  return !error && data === true;
-}
-
 /**
  * `branch_manager` claims are always pinned to a branch, but embedded
  * operator routes pass their own `routeBranchId` (URL segment) which must
@@ -155,15 +147,9 @@ export async function loadProductionSurfaceData({
       : currentUserHasAnyPermissionAny(PRODUCTION_OPEN_PERMISSIONS),
     currentUserHasAnyPermissionAny(CATALOG_MANAGE_PERMISSIONS),
     currentUserHasAnyPermissionAny(PRODUCTION_RECIPE_MANAGE_PERMISSIONS),
-    currentUserHasAnyPermission(
-      supabase,
-      PERMISSION_KEYS.INVENTORY_PRODUCTION_CREATE,
-    ),
-    currentUserHasAnyPermission(
-      supabase,
-      PERMISSION_KEYS.INVENTORY_PRODUCTION_CONFIRM,
-    ),
-    currentUserHasAnyPermission(supabase, PERMISSION_KEYS.INVENTORY_WRITE),
+    currentUserHasPermissionAny(PERMISSION_KEYS.INVENTORY_PRODUCTION_CREATE),
+    currentUserHasPermissionAny(PERMISSION_KEYS.INVENTORY_PRODUCTION_CONFIRM),
+    currentUserHasPermissionAny(PERMISSION_KEYS.INVENTORY_WRITE),
     hasCurrentProductionBranchAccess(supabase, claims, routeBranchId),
   ]);
 

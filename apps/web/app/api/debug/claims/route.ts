@@ -4,6 +4,7 @@ import {
   extractClaimsFromAccessToken,
   PERMISSION_KEYS,
 } from "@comtammatu/shared/auth";
+import { probePermissionKey } from "@/_lib/permission-coalescer";
 
 function decodeJwtPayload(token: string): unknown {
   const parts = token.split(".");
@@ -44,11 +45,10 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { data: canInspectClaims, error: permissionError } = await supabase.rpc(
-    "has_permission_any",
-    { p_key: PERMISSION_KEYS.STAFF_ASSIGN_PERMISSION },
+  const canInspectClaims = await probePermissionKey(
+    PERMISSION_KEYS.STAFF_ASSIGN_PERMISSION,
   );
-  if (permissionError || canInspectClaims !== true) {
+  if (!canInspectClaims) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

@@ -159,14 +159,18 @@ export function selectOperatorBranchScope(
 export const fetchActiveBranches = cache(async function fetchActiveBranches(
   supabase: unknown,
   tenantId: number,
+  onlyBranchId?: number | null,
 ): Promise<OperatorBranchOption[]> {
   const client = supabase as BranchContextClient;
-  const { data, error } = await client
+  let query = client
     .from("branches")
     .select("id, name, branch_kind")
     .eq("tenant_id", tenantId)
-    .eq("is_active", true)
-    .order("id");
+    .eq("is_active", true);
+  if (onlyBranchId != null) {
+    query = query.eq("id", onlyBranchId);
+  }
+  const { data, error } = await query.order("id");
 
   if (error) return [];
   return data ?? [];

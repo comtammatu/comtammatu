@@ -340,12 +340,14 @@ async function main() {
   // Presence: re-register every 5 min so trusted-IP row stays fresh within
   // the 30-min grace window enforced by web proxy.
   setInterval(() => void registerPresence(), 5 * 60_000);
-  // Safety-net drain: catches INSERT/UPDATE-to-pending events missed during a
-  // WS gap, and reprints that only UPDATE an existing row (no INSERT event).
+  const drainAndReap = async () => {
+    await reapStuckJobs(supabase);
+    await drainPending(supabase);
+  };
+  // Safety-net drain: 5 min SLO without Realtime. Startup and reconnect
+  // drain stay immediate above. Fold reap into the same timer.
   // claim_print_job is idempotent, so overlapping drain + realtime is safe.
-  setInterval(() => void drainPending(supabase), 60_000);
-  // Janitor: re-pending stuck 'processing' jobs every 60s.
-  setInterval(() => void reapStuckJobs(supabase), 60_000);
+  setInterval(() => void drainAndReap(), 5 * 60_000);
 
   const shutdown = () => {
     console.log("[agent] shutting down");

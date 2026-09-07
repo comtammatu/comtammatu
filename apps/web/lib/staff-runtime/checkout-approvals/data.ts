@@ -3,6 +3,7 @@ import "server-only";
 import { z } from "zod";
 import type { SupabaseClient } from "@comtammatu/database";
 import { PERMISSION_KEYS, type JwtClaims } from "@comtammatu/shared/auth";
+import { probePermission } from "@/_lib/auth";
 import { formatVNClockTime } from "@comtammatu/shared/time";
 import { formatDateVN, formatTimeVN } from "../_lib/vn-business-date";
 import { loadCheckoutChecklistPhotoMeta } from "./checklist-photo-meta";
@@ -66,16 +67,15 @@ export async function loadCheckoutReviewQueue(
     (routeBranchId == null || claims.branch_id !== routeBranchId);
 
   const canApprovePromise =
-    claims.user_role === "owner"
-      ? Promise.resolve({ data: true })
-      : routeBranchId != null
-        ? supabase.rpc("has_permission", {
-            p_branch_id: routeBranchId,
-            p_key: PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
-          })
-        : Promise.resolve({ data: false });
+    routeBranchId != null
+      ? probePermission(
+          { supabase, claims },
+          PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
+          routeBranchId,
+        )
+      : Promise.resolve(false);
 
-  const [{ data: canApprove }, queueResult] = await Promise.all([
+  const [canApprove, queueResult] = await Promise.all([
     canApprovePromise,
     scopedOut
       ? Promise.resolve({ data: [] })

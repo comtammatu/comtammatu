@@ -136,7 +136,7 @@ export async function fetchCloseDayData(
     countSlipsRes,
     checkoutsRes,
   ] = await Promise.all([
-    supabase.rpc("get_branch_day_report", {
+    supabase.rpc("get_branch_day_report_totals", {
       p_branch_id: branchId,
       p_business_date: businessDate,
     }),

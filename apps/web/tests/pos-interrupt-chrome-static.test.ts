@@ -85,7 +85,7 @@ test("POS context gates and menu keep one-row dock clearance", () => {
 
 test("POS self-order poll stays in a dedicated hook; session close rides pos-branch", () => {
   assert.match(selfOrderHook, /fetchSelfOrderPosState/);
-  assert.match(selfOrderHook, /30_000/);
+  assert.match(selfOrderHook, /REALTIME_SAFETY_POLL_MS/);
   assert.match(selfOrderHook, /selfOrderSignalRef\.current = refresh;/);
   assert.match(selfOrderHook, /kind: "pos\.self_order"/);
   assert.match(selfOrderHook, /kind: "pos\.payment_call"/);

@@ -89,12 +89,20 @@ const GUARDS = [
   },
   {
     rule: "MULTI-KEY-PERMISSION-PARALLEL",
+    expect: "present",
+    pattern: /has_permission_batch/,
+    paths: ["apps/web/app/_lib/permission-coalescer.ts"],
+    reason:
+      "multi-key permission probes coalesce into has_permission_batch, never N HTTP RPCs",
+  },
+  {
+    rule: "MULTI-KEY-PERMISSION-PARALLEL",
     expect: "absent",
     pattern:
-      /for\s*\(\s*const\s+\w+\s+of\s+\w+\s*\)\s*\{[^}]*await\s+(?:currentUserHasPermissionAny|hasPermissionGrant)/,
+      /for\s*\(\s*const\s+\w+\s+of\s+\w+\s*\)\s*\{[^}]*await\s+(?:currentUserHasPermissionAny|hasPermissionGrant|probePermissionKey)/,
     paths: ["apps/web/app/_lib"],
     reason:
-      "multi-key permission probes fan out via Promise.all, never sequential for-await (N×RTT)",
+      "multi-key permission probes fan out via Promise.all into the coalescer, never sequential for-await (N×RTT)",
   },
   {
     rule: "PAYROLL-CALCULATE-MUST-BE-ATOMIC-RPC",

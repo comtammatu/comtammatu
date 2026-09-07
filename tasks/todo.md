@@ -5,6 +5,12 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Cut Production RPC load
+State: verify
+Tier: T3
+Exit: Permission batch, live mutation `getUser`, Realtime safety polls, today-work snapshot, and DEFINER list/first-paint RPCs are in tree and on Production.
+Evidence: Production ledger `20260907200642` `20260907201453` `20260907202220`; `corepack pnpm db:types`; `corepack pnpm verify` exit 0.
+- [ ] Owner pastes Studio log SQL or Preview `EXPLAIN` as `authenticated` to confirm the load-cut hypothesis
 ## Restore office staff Control Surface IA
 State: verify
 Exit: Office `self_service` sees Control home + Work in chrome; `/` is Mine / Coordinate / Work pulse; `/me` stays personal.
@@ -807,7 +813,6 @@ Exit: Legacy `create_supplier_payment` and authenticated direct `payments` UPDAT
 Evidence: Production `enloyfnuerqgaqderbwb` applied `20260903021552` and parked revoke `20260903005112` in the same 10-file batch; catalog: `create_supplier_payment` gone; `payments` authenticated SELECT only; `db:types` regenerated. Remaining: deploy matching Next app + smoke; advisors not re-run here.
 
 - [ ] Deploy the matching Next app, then smoke POS/payment flows and run security advisors
-
 ## Work assignment visibility
 
 State: verify
@@ -819,15 +824,12 @@ Evidence: Production `enloyfnuerqgaqderbwb` applied `20260907104521` and `202609
 UI Advisor Gate: plane `control_surface`; archetype `/work` LIST + TASK_* + DETAIL overlay; block existing `work-task-*`; density compact Work chrome; audience Owner/`work:manage` administer, `work:create` file, Staff execute assigned work; change replace member admin with the creator-grant tab; no new route.
 
 - [ ] Browser Owner / creator / Staff / no-access after schema apply
-
 ## Promotion cart min_subtotal (Gemini promotions/workspace plan)
-
 State: verify
 Exit: Cart mutations below `min_subtotal` clear order-level campaigns. Gift auto-add and merge auto-release stay out unless ADR 0039 is amended.
 Evidence: Production `enloyfnuerqgaqderbwb` applied `20260903025327` in the owner-delegated 10-file batch. Gemini phases 2–4 still need a new Accepted ADR. ADR 0039 still requires existing-line picks and fail-closed merge. Static `promotions-static`.
 
 - [ ] Smoke: 200k-min code, void below min, promo clears
-
 ## Burn down frozen Má Tư DS debt
 State: doing
 Exit: Every frozen budget below trends down by removing allowlist entries (ratchet only fails on growth, so burned files may be dropped); the 40 `tune` pages reach `keep`/`final` disposition through the three exemplar waves. Never raise a budget; new files start at 0.

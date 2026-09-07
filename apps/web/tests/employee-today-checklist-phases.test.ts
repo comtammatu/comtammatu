@@ -29,7 +29,7 @@ test("today work state deduplicates and parallelizes independent reads", () => {
   assert.match(todayWorkStateSource, /import \{ cache \} from "react"/);
   assert.match(
     todayWorkStateSource,
-    /await Promise\.all\(\[[\s\S]*\.from\("shifts"\)[\s\S]*\.from\("attendance_records"\)[\s\S]*\]\)/,
+    /rpc\("get_today_work_snapshot"/,
   );
   assert.match(
     todayWorkStateSource,
@@ -63,13 +63,18 @@ test("today work state preserves inventory count and groups start/end phases", (
 test("inventory count task status comes from today's submitted or approved slips", () => {
   assert.match(
     todayWorkStateSource,
-    /\.from\("inventory_count_assignments"\)[\s\S]*\.select\("location_id, ingredient_id, shift_id"\)[\s\S]*\.eq\("employee_id", employeeId\)[\s\S]*\.eq\("is_active", true\)/,
-    "today work state should load the employee's active count locations",
+    /rpc\("get_today_work_snapshot"/,
+    "today work state should load employee detail through one snapshot RPC",
   );
   assert.match(
     todayWorkStateSource,
-    /\.from\("inventory_count_slips"\)[\s\S]*\.select\("location_id, status"\)[\s\S]*\.eq\("count_date", calendarDate\)[\s\S]*\.in\("location_id", countLocationIds\)/,
-    "today work state should load the calendar-date count slips written by the count RPC",
+    /snapshot\.countAssignments/,
+    "today work state should use snapshot count assignments",
+  );
+  assert.match(
+    todayWorkStateSource,
+    /snapshot\.countSlips/,
+    "today work state should use snapshot count slips written by the count RPC",
   );
   assert.match(
     todayWorkStateSource,
@@ -91,7 +96,7 @@ test("inventory count task status comes from today's submitted or approved slips
 test("employee inventory count is scoped to the current shift", () => {
   assert.match(
     todayWorkStateSource,
-    /countAssignmentsQuery[\s\S]*shift_id\.is\.null,shift_id\.eq\.\$\{currentShiftId\}/,
+    /currentShiftId === null[\s\S]*row\.shift_id === null[\s\S]*row\.shift_id === null \|\| row\.shift_id === currentShiftId/,
     "today work state should include every-shift assignments and current-shift assignments",
   );
   assert.match(
@@ -101,7 +106,7 @@ test("employee inventory count is scoped to the current shift", () => {
   );
   assert.match(
     todayWorkStateSource,
-    /countSlipsQuery[\s\S]*countSlipsQuery\.eq\("shift_id", currentShiftId\)/,
+    /snapshot\.countSlips[\s\S]*currentShiftId === null[\s\S]*row\.shift_id === currentShiftId/,
     "today work state should mark the count task done only from the current-shift slip",
   );
   assert.match(

@@ -11,6 +11,7 @@ import type {
 } from "@comtammatu/shared/auth";
 import type { Session, User } from "@supabase/supabase-js";
 import { probeAuthSessionLiveness } from "./auth-session-liveness";
+import { probePermissionKey } from "./permission-coalescer";
 
 /**
  * Get authenticated user context with role authorization.
@@ -66,30 +67,16 @@ type AuthContext = NonNullable<Awaited<ReturnType<typeof getAuthContext>>>;
 type PermissionContext = Pick<AuthContext, "supabase" | "claims">;
 
 /**
- * Cached: identical (ctx, permission, branchId) tuples within one RSC render
- * dedupe to a single `has_permission`/`has_permission_any` RPC. POS reload
- * has 6 actions that all check `pos:use` with the same shared `ctx` (from
- * cached getAuthContext) — collapsing those 6 RPCs to 1 is the second-half
- * of the auth-fanout fix. Cache is per-request only.
+ * Request-scoped coalescer: identical `(key, branchId)` probes share one
+ * `has_permission_batch` RPC with sibling layout/page/action checks.
  */
-const hasPermissionGrant = cache(async function hasPermissionGrant(
-  ctx: PermissionContext,
+async function hasPermissionGrant(
+  _ctx: PermissionContext,
   permission: PermissionLike,
   branchId?: number | null,
 ): Promise<boolean> {
-  if (branchId == null) {
-    const { data, error } = await ctx.supabase.rpc("has_permission_any", {
-      p_key: permission,
-    });
-    return !error && data === true;
-  }
-
-  const { data, error } = await ctx.supabase.rpc("has_permission", {
-    p_branch_id: branchId,
-    p_key: permission,
-  });
-  return !error && data === true;
-});
+  return probePermissionKey(permission, branchId);
+}
 
 // Cheap permission probe for callers that already have authenticated
 // `{ supabase, claims }`. Use this for UI hints like `canManageOrders` so the
@@ -123,10 +110,8 @@ export async function getAuthContextWithPermission(
 
 /**
  * OR-semantics: returns ctx if user has ANY of the listed permissions on the
- * branch (or tenant-wide if branchId null). Probes fire in parallel — single
- * RTT — instead of the prior `for…await` waterfall. `hasPermissionGrant` is
- * already cache()-wrapped so duplicate `(ctx, key, branch)` tuples across
- * sibling helpers in one render dedupe to a single RPC.
+ * branch (or tenant-wide if branchId null). Probes enqueue into one
+ * `has_permission_batch` wave via `probePermissionKey`.
  */
 export async function getAuthContextWithAnyPermission(
   allowedRoles: readonly StaffRole[],

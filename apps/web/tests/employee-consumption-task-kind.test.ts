@@ -45,8 +45,8 @@ test("consumption task kind remains stable but no longer drives Employee tasks",
   );
   assert.match(
     todayWorkStateSource,
-    /select\([\s\S]*task_kind/,
-    "Today work state should select task_kind from attendance checklist rows",
+    /taskKind: normalizeTaskKind\(item\.task_kind\)/,
+    "Today work state should map task_kind from the snapshot checklist rows",
   );
 });
 

@@ -62,9 +62,10 @@ test("close-day is Daily Summary only (ADR 0024)", () => {
     /className="flex min-h-0 flex-1 flex-col gap-4"/,
     "close-day must not height-constrain its panel stack",
   );
+  const dateNavStart = client.indexOf("const dateNav = (");
   const dateNav = client.slice(
-    client.indexOf("const dateNav = ("),
-    client.indexOf("if (loadFailed)"),
+    dateNavStart,
+    client.indexOf("if (loadFailed)", dateNavStart),
   );
   assert.match(
     dateNav,
@@ -84,7 +85,13 @@ test("close-day is Daily Summary only (ADR 0024)", () => {
   );
   assert.match(client, /closeDayCashReconTitle/);
   assert.match(client, /cashReconciliationSection/);
-  assert.match(data, /get_branch_day_report/);
+  assert.match(data, /get_branch_day_report_totals/);
+  assert.match(
+    read(
+      "apps/web/app/(protected)/br/[branchId]/(operator)/close-day/close-day-report-detail.ts",
+    ),
+    /get_branch_day_report/,
+  );
   assert.match(page, /searchParams/);
   assert.match(page, /date\?: string/);
   assert.match(messages, /Báo cáo tổng hợp ngày/);

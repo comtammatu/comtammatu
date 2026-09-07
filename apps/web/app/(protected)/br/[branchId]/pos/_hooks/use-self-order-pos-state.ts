@@ -8,6 +8,7 @@ import {
   useState,
   type MutableRefObject,
 } from "react";
+import { REALTIME_SAFETY_POLL_MS } from "@/_utils/realtime-health";
 import {
   playOperationalAlert,
   selectPosGuestAlert,
@@ -188,7 +189,7 @@ export function useSelfOrderPosState({
     void refresh();
     const timer = window.setInterval(() => {
       void refresh();
-    }, 30_000);
+    }, REALTIME_SAFETY_POLL_MS);
     function refreshWhenVisible() {
       if (document.visibilityState === "visible") {
         void refresh();

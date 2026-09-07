@@ -8,6 +8,7 @@ import {
   normalizeMenuName,
   type ShopeeMappingItem,
 } from "@lib/shopeefood/mapping";
+import { loadCachedBranchMenuLimitAvailability } from "@lib/menu-limit-availability-cache";
 
 const querySchema = z.object({
   branch_id: z.coerce.number().int().positive(),
@@ -86,15 +87,13 @@ export async function GET(request: NextRequest) {
     const todayStr = getVNDateString();
 
     // 2. Fetch menu limits and availability for branch via service-role enabled RPC
-    const { data: limitsData, error: limitsError } = await supabase.rpc(
-      "branch_menu_limit_availability",
-      {
-        p_tenant_id: branch.tenant_id,
-        p_branch_id: branch.id,
-        p_limit_date: todayStr,
-        p_stock_gate_enabled: true,
-      },
-    );
+    const { data: limitsData, error: limitsError } =
+      await loadCachedBranchMenuLimitAvailability(supabase, {
+        tenantId: branch.tenant_id,
+        branchId: branch.id,
+        limitDate: todayStr,
+        stockGateEnabled: true,
+      });
 
     if (limitsError) {
       console.error("[ShopeeFood Item Status API] RPC error:", limitsError);

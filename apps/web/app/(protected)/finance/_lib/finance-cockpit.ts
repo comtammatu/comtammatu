@@ -222,6 +222,37 @@ async function fetchStartupCapitalSummary({
   return parseStartupCapitalSummaryRpc(data);
 }
 
+async function fetchOperatingFirstPaintRpc({
+  supabase,
+  location,
+  branchId,
+  startDate,
+  endDate,
+}: {
+  supabase: SupabaseClient;
+  location: FinanceLocation;
+  branchId: number | null;
+  startDate: string;
+  endDate: string;
+}): Promise<FinanceOperatingCockpitRpc | null> {
+  const { data, error } = await supabase.rpc(
+    "get_finance_operating_first_paint",
+    {
+      p_location: location,
+      p_start_date: startDate,
+      p_end_date: endDate,
+      ...(location === "branch" && branchId != null
+        ? { p_branch_id: branchId }
+        : {}),
+    },
+  );
+  if (error) {
+    console.error("[finance:operating-first-paint] RPC failed", error.code);
+    return null;
+  }
+  return parseFinanceOperatingCockpitRpc(data);
+}
+
 async function fetchOperatingCockpitRpc({
   supabase,
   location,
@@ -529,7 +560,7 @@ export async function fetchFinanceAttentionExceptions(
   );
   if (!canView) return [];
 
-  const cockpit = await fetchOperatingCockpitRpc({
+  const cockpit = await fetchOperatingFirstPaintRpc({
     supabase,
     location: params.location,
     branchId: params.branch,

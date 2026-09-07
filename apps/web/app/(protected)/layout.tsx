@@ -96,7 +96,11 @@ export default async function ProtectedLayout({
     canOpenInventory
       ? resolveInventoryBranchScope(supabase, claims, null)
       : Promise.resolve(null),
-    fetchActiveBranches(supabase, claims.tenant_id),
+    fetchActiveBranches(
+      supabase,
+      claims.tenant_id,
+      role === "owner" || role === "accountant" ? null : claims.branch_id,
+    ),
     isOwner
       ? granted
       : canOpenInventory

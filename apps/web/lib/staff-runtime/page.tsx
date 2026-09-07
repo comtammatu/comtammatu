@@ -41,7 +41,7 @@ import {
   ItemMedia,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import { loadAuthState } from "@/_lib/auth";
+import { loadAuthState, probePermission } from "@/_lib/auth";
 import { BranchOpsRefresh } from "@/_components/branch-ops-refresh";
 import { NotificationPopupControl } from "@/_components/notification-popup-control";
 import { messages } from "@lib/messages";
@@ -257,13 +257,6 @@ const BRANCH_WORKDAY_PRIMITIVES: WorkdayRenderPrimitives = {
 const employeeWorkdayCopy: WorkdayCopy = messages.employee.home;
 const employeeWorkdayTasksCopy: WorkdayTasksCopy = messages.employee.tasks;
 
-function assignmentCellKey(row: {
-  location_id: number;
-  ingredient_id: number;
-}) {
-  return `${row.location_id}:${row.ingredient_id}`;
-}
-
 // Must mirror CHECKOUT_APPROVER_ROLES in checkout-approvals/page.tsx —
 // the card and its destination route gate on the same set.
 const CHECKOUT_APPROVER_ROLES: readonly StaffRole[] = [
@@ -461,11 +454,12 @@ export async function StaffWorkdayPageContent({
     const approvalBranchId = claims.branch_id ?? state.branchId;
     const permissionPromise =
       typeof approvalBranchId === "number"
-        ? supabase.rpc("has_permission", {
-            p_branch_id: approvalBranchId,
-            p_key: PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
-          })
-        : Promise.resolve({ data: false });
+        ? probePermission(
+            { supabase, claims },
+            PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
+            approvalBranchId,
+          )
+        : Promise.resolve(false);
     const countPromise =
       typeof approvalBranchId === "number"
         ? supabase.rpc("get_checkout_review_queue", {
@@ -477,7 +471,7 @@ export async function StaffWorkdayPageContent({
       permissionPromise,
       countPromise,
     ]);
-    if (permissionResult.data === true) {
+    if (permissionResult) {
       pendingCheckouts = countResult.data?.[0]?.pending_count ?? 0;
     }
   }
@@ -497,18 +491,21 @@ export async function StaffWorkdayPageContent({
     }
     const wastePermissionPromise =
       typeof claims.branch_id === "number"
-        ? supabase.rpc("has_permission", {
-            p_branch_id: claims.branch_id,
-            p_key: PERMISSION_KEYS.INVENTORY_WASTE_APPROVE,
-          })
-        : supabase.rpc("has_permission_any", {
-            p_key: PERMISSION_KEYS.INVENTORY_WASTE_APPROVE,
-          });
+        ? probePermission(
+            { supabase, claims },
+            PERMISSION_KEYS.INVENTORY_WASTE_APPROVE,
+            claims.branch_id,
+          )
+        : probePermission(
+            { supabase, claims },
+            PERMISSION_KEYS.INVENTORY_WASTE_APPROVE,
+            null,
+          );
     const [wastePermissionResult, wasteCountResult] = await Promise.all([
       wastePermissionPromise,
       wasteQuery,
     ]);
-    if (wastePermissionResult.data === true) {
+    if (wastePermissionResult) {
       pendingWaste = wasteCountResult.count ?? 0;
     }
   }
@@ -520,15 +517,18 @@ export async function StaffWorkdayPageContent({
 
     const countPermissionResult =
       typeof claims.branch_id === "number"
-        ? await supabase.rpc("has_permission", {
-            p_branch_id: claims.branch_id,
-            p_key: PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
-          })
-        : await supabase.rpc("has_permission_any", {
-            p_key: PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
-          });
+        ? await probePermission(
+            { supabase, claims },
+            PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
+            claims.branch_id,
+          )
+        : await probePermission(
+            { supabase, claims },
+            PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
+            null,
+          );
 
-    if (countPermissionResult.data === true) {
+    if (countPermissionResult) {
       const reviewerEmployeeId = await resolveCountSlipReviewerEmployeeId(
         claims.tenant_id,
         profileId,
@@ -551,56 +551,8 @@ export async function StaffWorkdayPageContent({
   }
 
   // Surface the count-slip task only when this employee actually has active
-  // assignments — RLS + the inner-join on profile_id keep it to their own rows
-  // (a manager who can read branch-wide assignments still only sees their own).
-  let countAssignmentCount = 0;
-  const currentShiftId =
-    state.attendance?.shiftId ??
-    state.todayShifts.find((shift) => shift.isCurrent)?.shiftId ??
-    null;
-  if (profileId) {
-    const service = createServiceClient();
-    const countBranchId = state.attendance?.branchId ?? state.branchId;
-    let countAssignmentQuery = service
-      .from("inventory_count_assignments")
-      .select(
-        "location_id, ingredient_id, shift_id, employees!inner(profile_id)",
-      )
-      .eq("tenant_id", claims.tenant_id)
-      .eq("is_active", true)
-      .eq("employees.profile_id", profileId);
-    if (countBranchId !== null) {
-      countAssignmentQuery = countAssignmentQuery.eq(
-        "branch_id",
-        countBranchId,
-      );
-    }
-    countAssignmentQuery =
-      currentShiftId === null
-        ? countAssignmentQuery.is("shift_id", null)
-        : countAssignmentQuery.or(
-            `shift_id.is.null,shift_id.eq.${currentShiftId}`,
-          );
-    const { data: countAssignments } = await countAssignmentQuery;
-    const shiftSpecificCells = new Set<string>();
-    if (currentShiftId !== null && countBranchId !== null) {
-      const { data: shiftSpecificAssignments } = await service
-        .from("inventory_count_assignments")
-        .select("location_id, ingredient_id")
-        .eq("tenant_id", claims.tenant_id)
-        .eq("branch_id", countBranchId)
-        .eq("shift_id", currentShiftId)
-        .eq("is_active", true);
-      for (const row of shiftSpecificAssignments ?? []) {
-        shiftSpecificCells.add(assignmentCellKey(row));
-      }
-    }
-    countAssignmentCount = (countAssignments ?? []).filter(
-      (row) =>
-        row.shift_id !== null ||
-        !shiftSpecificCells.has(assignmentCellKey(row)),
-    ).length;
-  }
+  // assignments. Snapshot already scoped those rows to the signed-in employee.
+  const countAssignmentCount = state.countAssignmentCount;
   const activeBranchId = claims.branch_id ?? -1;
   const teamRoute = routes.team ?? `/br/${activeBranchId}/team`;
 
@@ -886,7 +838,7 @@ export async function StaffWorkdayPageContent({
           baseHref={routes.tasks}
           profileHref={routes.profile}
           plane={plane}
-          shiftId={currentShiftId}
+          shiftId={currentShift?.shiftId ?? state.attendance?.shiftId ?? null}
         />
       </div>
     ) : null;

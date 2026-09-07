@@ -352,6 +352,7 @@ test("branch command landing redirects into Hôm nay; tools live on nav-config",
 test("branch runtime reads stay session-scoped with hierarchy-aware checkout projections", () => {
   const data = read(BRANCH_DATA);
   const todayWorkState = read(TODAY_WORK_STATE);
+  const staffRuntime = read("apps/web/lib/staff-runtime/page.tsx");
   const attendancePolicy = read(ATTENDANCE_POLICY_MIGRATION);
 
   assert.doesNotMatch(data, /fetchBranchDayStatus|list_branch_menu_daily_limits/);
@@ -359,9 +360,15 @@ test("branch runtime reads stay session-scoped with hierarchy-aware checkout pro
   assert.doesNotMatch(data, /\.from\("menu_items"\)/);
   assert.doesNotMatch(data, /createServiceClient|\bservice\b/);
   assert.doesNotMatch(todayWorkState, /createServiceClient|countReadClient/);
+  assert.match(todayWorkState, /rpc\("get_today_work_snapshot"/);
+  assert.doesNotMatch(todayWorkState, /from\("inventory_count_assignments"\)/);
   assert.match(
     todayWorkState,
-    /supabase\s*\.from\("inventory_count_assignments"\)[\s\S]{0,240}?\.eq\("employee_id", employeeId\)/,
+    /\.order\("date", \{ ascending: true \}\)[\s\S]*\.limit\(1\)/,
+  );
+  assert.doesNotMatch(
+    staffRuntime,
+    /from\("inventory_count_assignments"\)/,
   );
   assert.match(
     data,

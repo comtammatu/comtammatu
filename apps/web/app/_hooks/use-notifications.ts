@@ -220,7 +220,7 @@ export function useNotifications({
       undefined,
       { metricName },
     );
-  }, [metricName, refresh]);
+  }, [channelSuffix, metricName, refresh]);
 
   useEffect(() => {
     branchIdRef.current = branchId;

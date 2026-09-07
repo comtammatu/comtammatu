@@ -11,7 +11,11 @@ import {
 import type { ActionResult } from "@comtammatu/shared/types";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { messages } from "@lib/messages";
-import { getAuthContext, getAuthContextWithPermission } from "./_lib/auth";
+import {
+  getAuthContext,
+  getAuthContextWithPermission,
+  probePermission,
+} from "./_lib/auth";
 import type { TenantSupabase } from "@lib/inventory/types";
 import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
 import { getIssueBaseQuantity } from "./_lib/issue-units";
@@ -159,14 +163,8 @@ async function loadTransferForPermission(
   if (scopeError) {
     return { success: false, error: scopeError };
   }
-  const { data: allowed, error: permissionError } = await supabase.rpc(
-    "has_permission",
-    {
-      p_branch_id: branchId,
-      p_key: requiredPermission,
-    },
-  );
-  if (permissionError || allowed !== true) {
+  const allowed = await probePermission(ctx, requiredPermission, branchId);
+  if (!allowed) {
     return { success: false, error: "Không có quyền" };
   }
 
@@ -217,22 +215,26 @@ export async function fetchStockTransferDetail(
     return { success: false, error: "Không tìm thấy phiếu chuyển." };
   }
   const monetary = await loadInventoryMonetaryAccess(claims.user_role);
-  const lineReadClient = monetary.valuation
-    ? (monetary.client ?? supabase)
-    : supabase;
-  const lineQuery = monetary.valuation
-    ? lineReadClient
-        .from("stock_transfer_items")
-        .select("*, ingredients ( id, name )")
-    : lineReadClient
-        .from("stock_transfer_items")
-        .select(
-          "id, tenant_id, transfer_id, ingredient_id, quantity, quantity_received, receive_note, entry_unit_id, ingredients ( id, name )",
-        );
-  const { data: lines, error: e2 } = await lineQuery
-    .eq("transfer_id", id.data)
-    .eq("tenant_id", claims.tenant_id);
+  const { data: lineRows, error: e2 } = await supabase.rpc(
+    "list_stock_transfer_items",
+    { p_transfer_id: id.data },
+  );
   if (e2) return { success: false, error: "Không tải được dòng chuyển." };
+  const lines = (lineRows ?? []).map((line) => ({
+    id: line.id,
+    tenant_id: line.tenant_id,
+    transfer_id: line.transfer_id,
+    ingredient_id: line.ingredient_id,
+    quantity: line.quantity,
+    quantity_received: line.quantity_received,
+    receive_note: line.receive_note,
+    entry_unit_id: line.entry_unit_id,
+    unit_cost_at_ship: line.unit_cost_at_ship,
+    ingredients: {
+      id: line.ingredient_id,
+      name: line.ingredient_name,
+    },
+  }));
   const { data: branches } = await supabase
     .from("branches")
     .select("id, name, branch_kind")
@@ -280,8 +282,8 @@ export async function fetchStockTransferDetail(
   }
   const linesWithFactor = (lines ?? []).map((line) => {
     const unitCost =
-      monetary.valuation && "unit_cost_at_ship" in line
-        ? Number(line.unit_cost_at_ship ?? 0)
+      monetary.valuation && line.unit_cost_at_ship != null
+        ? Number(line.unit_cost_at_ship)
         : null;
     return {
       ...line,
@@ -531,25 +533,11 @@ export async function createStockTransfer(
         "Luồng luân chuyển không hợp lệ. Chỉ hỗ trợ Kho Tổng/Bếp Trung Tâm cấp chi nhánh, Kho Tổng ↔ Bếp Trung Tâm, hoặc điều chuyển giữa các chi nhánh.",
     };
   }
-  const { data: canCreateFrom, error: canCreateFromError } = await supabase.rpc(
-    "has_permission",
-    {
-      p_branch_id: fromBranch.id,
-      p_key: PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE,
-    },
-  );
-  const { data: canCreateTo, error: canCreateToError } = await supabase.rpc(
-    "has_permission",
-    {
-      p_branch_id: toBranch.id,
-      p_key: PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE,
-    },
-  );
-  if (
-    canCreateFromError ||
-    canCreateToError ||
-    (canCreateFrom !== true && canCreateTo !== true)
-  ) {
+  const [canCreateFrom, canCreateTo] = await Promise.all([
+    probePermission(ctx, PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE, fromBranch.id),
+    probePermission(ctx, PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE, toBranch.id),
+  ]);
+  if (!canCreateFrom && !canCreateTo) {
     return { success: false, error: "Không có quyền tạo phiếu chuyển." };
   }
 
@@ -851,8 +839,8 @@ export async function transferReceive(
   }
 
   const { error } = await authz.supabase.rpc(
-    "stock_transfer_receive" as never,
-    receiveArgs as never,
+    "stock_transfer_receive",
+    receiveArgs,
   );
   if (error) {
     console.error("inventory.transfer.receive_failed", {

@@ -21,6 +21,11 @@ const BRANCH_CONTEXT_SOURCE = readFileSync(
   "utf8",
 );
 
+const PROTECTED_LAYOUT_SOURCE = readFileSync(
+  new URL("../app/(protected)/layout.tsx", import.meta.url),
+  "utf8",
+);
+
 const BRANCHES: InventoryBranchOption[] = [
   { id: 1, name: "Branch 1", branch_kind: "branch" },
   { id: 2, name: "Branch 2", branch_kind: "branch" },
@@ -75,6 +80,14 @@ test("inventory-scope no longer owns a branches query — engine is shared", () 
 
   const branchQueries = BRANCH_CONTEXT_SOURCE.match(/\.from\("branches"\)/g);
   assert.equal(branchQueries?.length, 1);
+  assert.match(
+    BRANCH_CONTEXT_SOURCE,
+    /onlyBranchId\?: number \| null/,
+  );
+  assert.match(
+    PROTECTED_LAYOUT_SOURCE,
+    /role === "owner" \|\| role === "accountant" \? null : claims\.branch_id/,
+  );
 });
 
 test("inventory-scope's list-scope reader delegates to the shared resolveListScope engine (D058 W3b)", () => {

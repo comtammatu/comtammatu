@@ -203,7 +203,15 @@ export function useForegroundNotifications(): void {
   useNotificationEvents({
     enabled: !disabled,
     filter: { insertOnly: true },
-    onEvent: () => schedulePopupsRef.current(),
+    onEvent: () => {
+      const willToast = showInAppToastRef.current;
+      const willPopup =
+        !muteVisibleFloorAttentionRef.current &&
+        typeof Notification !== "undefined" &&
+        Notification.permission === "granted";
+      if (!willToast && !willPopup) return;
+      schedulePopupsRef.current();
+    },
   });
 
   useEffect(() => {

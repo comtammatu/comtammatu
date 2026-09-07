@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { PERMISSION_KEYS, type JwtClaims } from "@comtammatu/shared/auth";
-import type { loadAuthState } from "@/_lib/auth";
+import { probePermission, type loadAuthState } from "@/_lib/auth";
 import { resolveCountSlipReviewerEmployeeId } from "@lib/inventory/count-slip-reviewer";
 import { STOCK_FULFILLMENT_RECEIVE_READY_STATUSES } from "@lib/inventory/stock-fulfillment-hub-model";
 import { requestNow } from "@/_lib/request-now";
@@ -55,6 +55,7 @@ export const fetchBranchQueueCounts = cache(
       (claims.user_role === "owner" ||
         claims.user_role === "branch_manager" ||
         claims.user_role === "cashier");
+    const ctx = { supabase, claims };
     const [
       checkoutPermission,
       leavePermission,
@@ -63,29 +64,34 @@ export const fetchBranchQueueCounts = cache(
       transferPermission,
     ] = await Promise.all([
       isStoreBranch
-        ? supabase.rpc("has_permission", {
-            p_branch_id: branchId,
-            p_key: PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
-          })
-        : Promise.resolve({ data: false as boolean | null }),
+        ? probePermission(
+            ctx,
+            PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
+            branchId,
+          )
+        : Promise.resolve(false),
       isStoreBranch
-        ? supabase.rpc("has_permission", {
-            p_branch_id: branchId,
-            p_key: PERMISSION_KEYS.HR_APPROVE_LEAVE_REQUEST,
-          })
-        : Promise.resolve({ data: false as boolean | null }),
-      supabase.rpc("has_permission", {
-        p_branch_id: branchId,
-        p_key: PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
-      }),
-      supabase.rpc("has_permission", {
-        p_branch_id: branchId,
-        p_key: PERMISSION_KEYS.INVENTORY_WASTE_APPROVE,
-      }),
-      supabase.rpc("has_permission", {
-        p_branch_id: branchId,
-        p_key: PERMISSION_KEYS.INVENTORY_TRANSFER_RECEIVE,
-      }),
+        ? probePermission(
+            ctx,
+            PERMISSION_KEYS.HR_APPROVE_LEAVE_REQUEST,
+            branchId,
+          )
+        : Promise.resolve(false),
+      probePermission(
+        ctx,
+        PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
+        branchId,
+      ),
+      probePermission(
+        ctx,
+        PERMISSION_KEYS.INVENTORY_WASTE_APPROVE,
+        branchId,
+      ),
+      probePermission(
+        ctx,
+        PERMISSION_KEYS.INVENTORY_TRANSFER_RECEIVE,
+        branchId,
+      ),
     ]);
     const reviewerEmployeeId = await reviewerEmployeeIdPromise;
     let countSlipsQuery = supabase
@@ -106,20 +112,20 @@ export const fetchBranchQueueCounts = cache(
       voidRes,
       outOfStockRes,
     ] = await Promise.all([
-      checkoutPermission.data === true
+      checkoutPermission
         ? supabase.rpc("get_checkout_review_queue", {
             p_branch_id: branchId,
             p_include_rows: false,
           })
         : Promise.resolve(null),
-      leavePermission.data === true
+      leavePermission
         ? supabase.rpc("get_leave_review_queue", {
             p_branch_id: branchId,
             p_include_rows: false,
           })
         : Promise.resolve(null),
-      countPermission.data === true ? countSlipsQuery : Promise.resolve(null),
-      wastePermission.data === true
+      countPermission ? countSlipsQuery : Promise.resolve(null),
+      wastePermission
         ? supabase
             .from("stock_issues")
             .select("id", { count: "exact", head: true })
@@ -128,7 +134,7 @@ export const fetchBranchQueueCounts = cache(
             .eq("issue_type", "writeoff")
             .eq("approval_status", "pending")
         : Promise.resolve(null),
-      transferPermission.data === true
+      transferPermission
         ? supabase
             .from("stock_transfers")
             .select("id", { count: "exact", head: true })

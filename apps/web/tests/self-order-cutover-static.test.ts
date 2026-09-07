@@ -447,7 +447,7 @@ test("S5 routes pending QR requests through the table and bill surfaces", () => 
   assert.match(selfOrder, /kind: "pos\.staff_call"/);
   assert.doesNotMatch(selfOrder, /playAppSignal\("pos-payment-call"\)/);
   assert.match(selfOrder, /knownPaymentIdsRef/);
-  assert.match(selfOrder, /30_000/);
+  assert.match(selfOrder, /REALTIME_SAFETY_POLL_MS/);
   assert.match(desktop, /usePosFloorSelect/);
   assert.match(floorSelect, /pendingSelfOrderRequestByTable\.get/);
   assert.match(desktop, /actionVisible: selfOrderActionVisible/);

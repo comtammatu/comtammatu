@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ChevronDown,
   ChevronLeft,
@@ -42,6 +42,7 @@ import type {
   CloseDayAttendanceRow,
   CloseDaySessionRow,
 } from "./data";
+import { loadCloseDayReportDetail } from "./close-day-report-detail";
 
 const copy = messages.settings.branch;
 
@@ -121,7 +122,7 @@ function SessionItem({
 
 export function CloseDayClient({
   branchId,
-  report,
+  report: totalsReport,
   sessions,
   attendance,
   businessDate,
@@ -144,6 +145,19 @@ export function CloseDayClient({
 }) {
   const [itemSort, setItemSort] = useState<"qty" | "revenue">("qty");
   const [showAllItems, setShowAllItems] = useState(false);
+  const [detailReport, setDetailReport] = useState<BranchDayReport | null>(null);
+  useEffect(() => {
+    if (loadFailed) return;
+    let cancelled = false;
+    void loadCloseDayReportDetail({ branchId, businessDate }).then((result) => {
+      if (cancelled || !result.success || result.data == null) return;
+      setDetailReport(result.data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [branchId, businessDate, loadFailed]);
+  const report = detailReport ?? totalsReport;
   const prevDate = addVNDateDays(businessDate, -1);
   const nextDate = addVNDateDays(businessDate, 1);
   const canGoNext = businessDate < todayBusinessDate;
@@ -169,6 +183,42 @@ export function CloseDayClient({
 
   const displayedTopItems = showAllItems ? topItems : topItems.slice(0, 8);
   const mixEntries = Object.entries(report?.payment_mix ?? {});
+
+  const cashReconciliation = useMemo(() => {
+    let totalOpeningCash = 0;
+    let totalClosingCash = 0;
+    let totalExpectedCash = 0;
+    let hasClosedSessions = false;
+
+    for (const s of sessions) {
+      totalOpeningCash += s.opening_cash ?? 0;
+      if (s.closing_cash != null) {
+        totalClosingCash += s.closing_cash;
+        hasClosedSessions = true;
+      }
+      if (s.expected_cash != null) {
+        totalExpectedCash += s.expected_cash;
+      }
+    }
+
+    const cashRevenue = report?.cash_revenue ?? 0;
+    const expectedTotal =
+      totalExpectedCash > 0
+        ? totalExpectedCash
+        : totalOpeningCash + cashRevenue;
+    const totalDiff = hasClosedSessions
+      ? totalClosingCash - expectedTotal
+      : null;
+
+    return {
+      totalOpeningCash,
+      cashRevenue,
+      expectedTotal,
+      totalClosingCash: hasClosedSessions ? totalClosingCash : null,
+      totalDiff,
+      hasClosedSessions,
+    };
+  }, [sessions, report?.cash_revenue]);
 
   const dateNav = (
     <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-2 sm:flex-nowrap">
@@ -357,42 +407,6 @@ export function CloseDayClient({
       ) : null}
     </BranchOperatorPanel>
   );
-
-  const cashReconciliation = useMemo(() => {
-    let totalOpeningCash = 0;
-    let totalClosingCash = 0;
-    let totalExpectedCash = 0;
-    let hasClosedSessions = false;
-
-    for (const s of sessions) {
-      totalOpeningCash += s.opening_cash ?? 0;
-      if (s.closing_cash != null) {
-        totalClosingCash += s.closing_cash;
-        hasClosedSessions = true;
-      }
-      if (s.expected_cash != null) {
-        totalExpectedCash += s.expected_cash;
-      }
-    }
-
-    const cashRevenue = report?.cash_revenue ?? 0;
-    const expectedTotal =
-      totalExpectedCash > 0
-        ? totalExpectedCash
-        : totalOpeningCash + cashRevenue;
-    const totalDiff = hasClosedSessions
-      ? totalClosingCash - expectedTotal
-      : null;
-
-    return {
-      totalOpeningCash,
-      cashRevenue,
-      expectedTotal,
-      totalClosingCash: hasClosedSessions ? totalClosingCash : null,
-      totalDiff,
-      hasClosedSessions,
-    };
-  }, [sessions, report?.cash_revenue]);
 
   const cashReconciliationSection = (
     <BranchOperatorPanel headingLevel="h2">

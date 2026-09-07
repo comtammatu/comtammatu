@@ -38,22 +38,6 @@ import {
   resolveEffectiveMinimum,
 } from "./branch-stock-threshold-model";
 
-type StockLevelLocationRow = {
-  id: number;
-  name: string | null;
-  code: string | null;
-  location_kind: string | null;
-};
-
-type StockLevelRow = {
-  ingredient_id: number;
-  location_id: number;
-  current_quantity: number;
-  avg_unit_cost: number | null;
-  last_counted_at: string | null;
-  inventory_locations: StockLevelLocationRow | StockLevelLocationRow[] | null;
-};
-
 type TenantStockLevelRow = {
   current_quantity: number | null;
   avg_unit_cost: number | null;
@@ -193,21 +177,9 @@ export async function loadStockOnHandPageData({
       )?.id ??
       null)
     : null;
-  const stockLevelQuery = monetaryAccess.valuation
-    ? stockReadClient
-        .from("stock_levels")
-        .select(
-          "ingredient_id, location_id, current_quantity, avg_unit_cost, last_counted_at, inventory_locations ( id, name, code, location_kind )",
-        )
-    : stockReadClient
-        .from("stock_levels")
-        .select(
-          "ingredient_id, location_id, current_quantity, last_counted_at, inventory_locations ( id, name, code, location_kind )",
-        );
-
   const [
     ingredientsResult,
-    stockResult,
+    stockRpcResult,
     thresholdResult,
     canCreateStockRequest,
     canReceiveGrn,
@@ -221,11 +193,10 @@ export async function loadStockOnHandPageData({
   ] = await Promise.all([
     fetchIngredients(),
     stockBearingLocations.ok && stockBearingLocationIds.length > 0
-      ? stockLevelQuery
-          .eq("tenant_id", claims.tenant_id)
-          .eq("branch_id", branchId)
-          .in("location_id", stockBearingLocationIds)
-          .order("ingredient_id")
+      ? supabase.rpc("list_stock_on_hand", {
+          p_branch_id: branchId,
+          p_location_ids: stockBearingLocationIds,
+        })
       : Promise.resolve({ data: [], error: null }),
     supabase
       .from("branch_ingredient_thresholds")
@@ -272,7 +243,32 @@ export async function loadStockOnHandPageData({
   if (ingredientsResult.success) {
     dbIngredients = (ingredientsResult.data ?? []) as StockIngredientRow[];
   }
-  const stockRows = (stockResult.data ?? []) as StockLevelRow[];
+  const stockResult = {
+    data: ((stockRpcResult.data ?? []) as Array<{
+      ingredient_id: number;
+      location_id: number;
+      current_quantity: number;
+      avg_unit_cost: number | null;
+      last_counted_at: string | null;
+      location_name: string | null;
+      location_code: string | null;
+      location_kind: string | null;
+    }>).map((row) => ({
+      ingredient_id: row.ingredient_id,
+      location_id: row.location_id,
+      current_quantity: Number(row.current_quantity),
+      avg_unit_cost: row.avg_unit_cost,
+      last_counted_at: row.last_counted_at,
+      inventory_locations: {
+        id: row.location_id,
+        name: row.location_name,
+        code: row.location_code,
+        location_kind: row.location_kind,
+      },
+    })),
+    error: stockRpcResult.error,
+  };
+  const stockRows = stockResult.data;
   const thresholdRows = (thresholdResult.data ??
     []) as unknown as LocationThresholdRow[];
   const defaultThresholdRows = thresholdRows.filter(

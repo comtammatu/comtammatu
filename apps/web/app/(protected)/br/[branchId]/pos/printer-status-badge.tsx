@@ -63,26 +63,28 @@ export function PrinterStatusIndicator({
   // and the heartbeat cadence is itself 30s so push would add no freshness.
   const fetchStatus = useCallback(async () => {
     const supabase = createClient();
-    const sinceIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const [statusRes, failedRes] = await Promise.all([
-      supabase
-        .from("printer_agent_status")
-        .select("agent_id, last_seen_at")
-        .eq("branch_id", branchId)
-        .maybeSingle(),
-      supabase
-        .from("print_jobs")
-        .select("id", { count: "exact", head: true })
-        .eq("branch_id", branchId)
-        .in("status", ["failed", "expired"])
-        .gte("created_at", sinceIso),
-    ]);
+    const statusRes = await supabase
+      .from("printer_agent_status")
+      .select("agent_id, last_seen_at")
+      .eq("branch_id", branchId)
+      .maybeSingle();
     setStatus(
       computeStatus(
         (statusRes.data?.agent_id as string | undefined) ?? null,
         (statusRes.data?.last_seen_at as string | undefined) ?? null,
       ),
     );
+  }, [branchId]);
+
+  const fetchFailedCount = useCallback(async () => {
+    const supabase = createClient();
+    const sinceIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const failedRes = await supabase
+      .from("print_jobs")
+      .select("id", { count: "exact", head: true })
+      .eq("branch_id", branchId)
+      .in("status", ["failed", "expired"])
+      .gte("created_at", sinceIso);
     setFailedCount(failedRes.count ?? 0);
   }, [branchId]);
 
@@ -166,9 +168,15 @@ export function PrinterStatusIndicator({
       <PrinterStatusSheet
         branchId={branchId}
         open={sheetOpen}
-        onOpenChange={setSheetOpen}
+        onOpenChange={(open) => {
+          setSheetOpen(open);
+          if (open) void fetchFailedCount();
+        }}
         status={status}
-        onRefresh={() => void fetchStatus()}
+        onRefresh={() => {
+          void fetchStatus();
+          void fetchFailedCount();
+        }}
         settingsHref={settingsHref ?? `/br/${branchId}/settings/printers`}
       />
     </>

@@ -496,7 +496,7 @@ test("archived checkout lineage remains testable with branch-scoped manager auth
   assert.ok(
     approvalsPageSrc.includes("CHECKOUT_APPROVER_ROLES") &&
       approvalsPageSrc.includes("checkout_approval_target_roles") &&
-      approvalsPageSrc.includes("has_permission") &&
+      approvalsPageSrc.includes("probePermission") &&
       approvalsPageSrc.includes("get_checkout_review_queue") &&
       approvalsPageSrc.includes("HR_APPROVE_CHECKOUT"),
     "expected approval page to remain permission scoped",

@@ -16,6 +16,6 @@ test("agent claims print jobs that flip back to pending", () => {
   assert.match(source, /function isNewlyPending/);
   assert.match(
     source,
-    /setInterval\(\(\) => void drainPending\(supabase\), 60_000\)/,
+    /setInterval\(\(\) => void drainAndReap\(\), 5 \* 60_000\)/,
   );
 });

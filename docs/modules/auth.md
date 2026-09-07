@@ -76,6 +76,16 @@ central_supply_ops / central_kitchen_lead on Control L0 + GRN/PO per D076/D091.
 
 - **`has_permission(branch_id, key)`** — live bindings + compat grants; revoke
   **immediate**. Use for destructive UPDATE/DELETE and instant-grant gates.
+- **`has_permission_batch(jsonb)`** — UI/action probes only. The request-scoped
+  coalescer unions overlapping keys into one HTTP wave; RLS still calls
+  `has_permission*` per row. Proxy and login keep single-key RPCs.
+- **`get_today_work_snapshot`** — signed-in employee today/yesterday detail.
+  Forgotten open punches stay a separate `LIMIT 1` read; do not bound that
+  finder to today/yesterday.
+- **DEFINER list RPCs** (`list_stock_on_hand`, `list_stock_transfer_items`,
+  `list_inventory_count_slip_lines`) authorize once then filter
+  `tenant_id = auth_tenant_id()`. Direct PostgREST policies stay for other
+  callers. A loader-side `has_permission` check does not skip per-row RLS.
 - **`auth_role()`** — live role from `profiles.position_id → positions.code`.
   Route/scope only; action grants still use `has_permission*()`.
 

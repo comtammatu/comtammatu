@@ -13896,6 +13896,10 @@ export type Database = {
         Args: { p_branch_id: number; p_business_date: string }
         Returns: Json
       }
+      get_branch_day_report_totals: {
+        Args: { p_branch_id: number; p_business_date: string }
+        Returns: Json
+      }
       get_branch_day_summary: {
         Args: { p_branch_id: number; p_business_date: string }
         Returns: Json
@@ -14015,6 +14019,15 @@ export type Database = {
         Returns: Json
       }
       get_finance_operating_cockpit: {
+        Args: {
+          p_branch_id?: number
+          p_end_date: string
+          p_location: string
+          p_start_date: string
+        }
+        Returns: Json
+      }
+      get_finance_operating_first_paint: {
         Args: {
           p_branch_id?: number
           p_end_date: string
@@ -14445,6 +14458,15 @@ export type Database = {
           theoretical_qty: number
         }[]
       }
+      get_today_work_snapshot: {
+        Args: {
+          p_branch_id?: number
+          p_employee_id: number
+          p_from_date: string
+          p_to_date: string
+        }
+        Returns: Json
+      }
       get_top_items:
         | {
             Args: {
@@ -14524,6 +14546,7 @@ export type Database = {
         Returns: boolean
       }
       has_permission_any: { Args: { p_key: string }; Returns: boolean }
+      has_permission_batch: { Args: { p_items: Json }; Returns: boolean[] }
       has_position: { Args: { p_code: string }; Returns: boolean }
       import_sepay_bank_transactions: { Args: { p_rows: Json }; Returns: Json }
       initialize_branch_cash_opening: {
@@ -14674,6 +14697,24 @@ export type Database = {
         }
         Returns: Json
       }
+      list_inventory_count_slip_lines: {
+        Args: { p_slip_ids: number[] }
+        Returns: {
+          counted_base_quantity: number
+          counted_quantity: number
+          entry_to_base_factor: number
+          entry_unit_id: number
+          id: number
+          ingredient_id: number
+          ingredient_name: string
+          last_recount_round: number
+          note: string
+          recount_required: boolean
+          slip_id: number
+          system_quantity: number
+          unit_code: string
+        }[]
+      }
       list_my_work_tasks: {
         Args: { p_include_done?: boolean }
         Returns: {
@@ -14724,6 +14765,34 @@ export type Database = {
           target_roles: string[]
           tenant_id: number
           title: string
+        }[]
+      }
+      list_stock_on_hand: {
+        Args: { p_branch_id: number; p_location_ids?: number[] }
+        Returns: {
+          avg_unit_cost: number
+          current_quantity: number
+          ingredient_id: number
+          last_counted_at: string
+          location_code: string
+          location_id: number
+          location_kind: string
+          location_name: string
+        }[]
+      }
+      list_stock_transfer_items: {
+        Args: { p_transfer_id: number }
+        Returns: {
+          entry_unit_id: number
+          id: number
+          ingredient_id: number
+          ingredient_name: string
+          quantity: number
+          quantity_received: number
+          receive_note: string
+          tenant_id: number
+          transfer_id: number
+          unit_cost_at_ship: number
         }[]
       }
       list_unpriced_confirmed_grn_lines: { Args: never; Returns: Json }
@@ -15980,7 +16049,11 @@ export type Database = {
         Returns: Json
       }
       stock_transfer_receive: {
-        Args: { p_items?: Json; p_transfer_id: number }
+        Args: {
+          p_items?: Json
+          p_to_location_id?: number
+          p_transfer_id: number
+        }
         Returns: Json
       }
       submit_count_round: {

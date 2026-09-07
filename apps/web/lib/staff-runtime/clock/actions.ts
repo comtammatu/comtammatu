@@ -16,7 +16,7 @@ import {
   getVNMinutesOfDay,
 } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
-import { getAuthContext } from "@/_lib/auth";
+import { getAuthContext, probePermission } from "@/_lib/auth";
 import { resolveClockInGate } from "../_lib/default-shift";
 import { getClockInBlockedMessage } from "../_lib/clock-in-copy";
 import {
@@ -887,11 +887,12 @@ export async function getCheckoutChecklistTaskPhotoUrl(
     ) {
       return { success: false, error: "Không có quyền" };
     }
-    const { data: allowed } = await ctx.supabase.rpc("has_permission", {
-      p_branch_id: attendance.branch_id,
-      p_key: PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
-    });
-    if (allowed !== true) {
+    const allowed = await probePermission(
+      ctx,
+      PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
+      attendance.branch_id,
+    );
+    if (!allowed) {
       return { success: false, error: "Không có quyền" };
     }
   } else if (

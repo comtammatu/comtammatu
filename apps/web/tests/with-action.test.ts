@@ -81,6 +81,46 @@ test("withAction returns forbidden when customAuth returns null", async () => {
   assert.equal(result.error, "Không có quyền");
 });
 
+test("withAction live-probes getUser on every mutation with no success TTL", async () => {
+  let revoked = false;
+  let getUserCalls = 0;
+  const ctx = fakeCtx();
+  ctx.supabase = {
+    auth: {
+      getUser: async () => {
+        getUserCalls += 1;
+        if (revoked) {
+          return {
+            data: { user: null },
+            error: { name: "AuthSessionMissingError", code: "session_not_found" },
+          };
+        }
+        return { data: { user: { id: "user-1" } }, error: null };
+      },
+      signOut: async () => ({ error: null }),
+    },
+  } as ActionContext["supabase"];
+
+  const action = withAction(
+    {
+      schema: sampleSchema,
+      customAuth: async () => ctx,
+    },
+    async () => ({ success: true }),
+  );
+
+  const first = await action({ orderItemId: 1, reason: "valid reason" });
+  assert.equal(first.success, true);
+  assert.equal(getUserCalls, 1);
+
+  revoked = true;
+  const second = await action({ orderItemId: 1, reason: "valid reason" });
+  assert.equal(second.success, false);
+  assert.equal(second.errorCode, "session_expired");
+  assert.notEqual(second.error, "Không có quyền");
+  assert.equal(getUserCalls, 2);
+});
+
 test("withAction maps revoked Auth session to session_expired not forbidden", async () => {
   const action = withAction(
     {
@@ -109,6 +149,7 @@ test("withAction source probes getUser for mutation Auth liveness", () => {
   assert.match(source, /auth\.getUser/);
   assert.match(source, /SESSION_EXPIRED_CODE/);
   assert.match(source, /signOut\(\{\s*scope:\s*["']local["']/);
+  assert.doesNotMatch(source, /TTL|lastLiveProbe|probeCache|expires_at/);
 });
 
 test("withAction passes parsed data and ctx to handler on success", async () => {
