@@ -184,7 +184,7 @@ test("POS takeaway mode uses a context grid before entering the new-order menu",
   assert.match(mobileActionBarSource, /onCancelAppend/);
   assert.match(mobileActionBarSource, /messages\.pos\.appendDraft\.cancel/);
   assert.match(mobileActionBarSource, /messages\.pos\.appendDraft\.cancelAria/);
-  assert.match(posDesktopSource, /const isTouchLayout = useIsMobile\(1280\);/);
+  assert.match(posDesktopSource, /const isTouchLayout = useIsMobile\(1024\);/);
   assert.match(posDesktopSource, /const sidebars = isTouchLayout \? null : \(/);
   assert.match(posDesktopSource, /\{isTouchLayout \? \(\s*<PosSessionTopBar/);
   assert.doesNotMatch(
@@ -202,7 +202,8 @@ test("POS takeaway mode uses a context grid before entering the new-order menu",
     /messages\.pos\.selfOrderSync\.retry/,
   );
   assert.match(mobileActionBarSource, /isTouchLayout/);
-  assert.match(mobileActionBarSource, /xl:hidden/);
+  assert.match(mobileActionBarSource, /lg:hidden/);
+  assert.doesNotMatch(mobileActionBarSource, /xl:hidden/);
   assert.match(sidebarVariantsSource, /bg-background xl:flex/);
   assert.doesNotMatch(posDesktopSource, /useIsLargeUp/);
   assert.doesNotMatch(posDesktopSource, /<TabbedSidebar/);
