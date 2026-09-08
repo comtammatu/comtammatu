@@ -28,8 +28,13 @@ xử lý lineage/runtime trước khi dùng branch làm evidence.
 
 1. Chạy `corepack pnpm lint:migration-lineage` để xác nhận baseline và active
    migration layout hợp lệ.
-2. Lấy chi phí Preview Branch hiện hành, báo đúng số tiền và chờ chủ dự án xác
-   nhận.
+2. Read the registered parent with exact MCP input
+   `get_project({"id":"enloyfnuerqgaqderbwb"})`. Verify the returned ID,
+   current status, and owning organization. Follow the Environment Registry's
+   scoped cost-read rule; do not enumerate organizations or infer their identity.
+   Report the current Preview price and wait for the owner's approval of that
+   amount before cost confirmation or branch creation. Metadata access does not
+   authorize spending or Production writes.
 3. Tạo một Preview Branch throwaway bằng tooling Supabase được kết nối cho task.
 4. Ghi project ref, xác minh ref không trùng protected refs trong Environment
    Registry, rồi dùng MCP với `project_id` tường minh. Guard sẽ tự xác minh
@@ -51,11 +56,24 @@ xử lý lineage/runtime trước khi dùng branch làm evidence.
    chạy `corepack pnpm db:types` và review diff; Preview không phải type source
    của repository.
 10. Thu thập evidence: ref, migration versions, test result và cleanup result.
-11. Xóa Preview Branch trong cùng task và xác minh resource không còn. Nếu xóa
-    hoặc xác minh thất bại, giữ task ở trạng thái blocked và báo owner.
+11. Delete the created Preview in the same task. After the provider confirms
+    success, replay only the `delete_branch` guard payload for its recorded
+    branch ID and project ref. Both must report
+    `Preview branch absent from validated Production parent snapshot`.
+    Do not send a second delete request. Lookup failure, malformed rows, or
+    mismatched lineage do not prove cleanup; keep the task blocked and report
+    the unresolved resource if deletion or verification fails.
 
 ## Preconditions
 
+- When optional local hook adapters are absent, run each exact tool payload
+  through `corepack pnpm exec node scripts/guard-prod-db.mjs` before dispatch.
+  This resolves the repository-pinned Supabase CLI for the fresh parent lookup;
+  successful manual proof does not install or imply automatic hook enforcement.
+- Before applying the reviewed Preview migration, run the exact guarded command
+  `corepack pnpm exec supabase db push --project-ref <verified-preview-ref> --dry-run --skip-vault`.
+  Its complete pending list must equal the reviewed task-owned files. Do not
+  remove either flag or add selectors, seed, roles, or include-all options.
 - Migration chain replay được từ empty DB.
 - `corepack pnpm lint:migration-lineage` pass cho active migration layout.
 - `corepack pnpm lint:seed-permissions` xác nhận không có auto-seed path cho

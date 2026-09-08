@@ -37,6 +37,7 @@ const PROTECTED_REFS = {
 const REGISTERED_WRITE_REFS = new Set(["enloyfnuerqgaqderbwb"]);
 
 const APPROVED_PREVIEW_PARENT_REF = "enloyfnuerqgaqderbwb";
+const APPROVED_PREVIEW_COST_ORGANIZATION_ID = "xpjqpshpmqggrhmvujjd";
 
 const CODEX_CONFIG = new URL("../.codex/config.toml", import.meta.url);
 
@@ -93,11 +94,7 @@ function codexSupabaseBindingVerified() {
   }
 }
 
-function trustedPreviewBranch(candidate) {
-  if (typeof candidate !== "string" || !/^[a-z0-9-]{1,64}$/.test(candidate)) {
-    return null;
-  }
-
+function previewBranchSnapshot() {
   try {
     const result = spawnSync(
       "supabase",
@@ -120,7 +117,19 @@ function trustedPreviewBranch(candidate) {
     );
     if (result.status !== 0 || result.error) return null;
 
-    const branch = JSON.parse(result.stdout).find(
+    const branches = JSON.parse(result.stdout);
+    return Array.isArray(branches) ? branches : null;
+  } catch {
+    return null;
+  }
+}
+
+function trustedPreviewBranch(candidate) {
+  if (typeof candidate !== "string" || !/^[a-z0-9-]{1,64}$/.test(candidate)) {
+    return null;
+  }
+  try {
+    const branch = previewBranchSnapshot()?.find(
       (item) =>
         item?.id === candidate ||
         item?.name === candidate ||
@@ -901,6 +910,15 @@ function readOnlySupabaseCli(args) {
       "status",
       "completion",
     ].includes(args[0])
+  ) {
+    return true;
+  }
+  // Preview rehearsal needs a literal target and must not synchronize Vault.
+  if (
+    args.length === 6 &&
+    args[0] === "db" && args[1] === "push" &&
+    args[2] === "--project-ref" && /^[a-z0-9]{20}$/.test(args[3]) &&
+    args[4] === "--dry-run" && args[5] === "--skip-vault"
   ) {
     return true;
   }
@@ -1758,6 +1776,24 @@ if (toolName === "Bash") {
 const mcpMatch = toolName.match(MCP_GUARDED_TOOL);
 if (mcpMatch) {
   const action = mcpMatch[1];
+  // Ownership discovery must not inherit an implicit project or accept aliases.
+  if (action === "get_project" && toolInput.id === APPROVED_PREVIEW_PARENT_REF) {
+    if (Object.keys(toolInput).length !== 1) {
+      block("Production metadata requires only the literal registered id");
+    }
+    process.exit(0);
+  }
+  if (action === "get_cost") {
+    if (
+      !/^[a-z0-9]{20}$/.test(APPROVED_PREVIEW_COST_ORGANIZATION_ID) ||
+      Object.keys(toolInput).length !== 2 ||
+      toolInput.organization_id !== APPROVED_PREVIEW_COST_ORGANIZATION_ID ||
+      toolInput.type !== "branch"
+    ) {
+      block("Preview cost requires only the registered organization_id and branch type");
+    }
+    process.exit(0);
+  }
   if (MCP_UNSCOPED_SAFE_ACTIONS.has(action)) {
     process.exit(0);
   }
@@ -1778,7 +1814,36 @@ if (mcpMatch) {
     if (action !== "delete_branch") {
       block(`${action} is never allowed against a Preview branch`);
     }
-    if (!trustedPreviewBranch(toolInput.branch_id.trim())) {
+    const candidate = toolInput.branch_id;
+    if (!/^[a-z0-9-]{1,64}$/.test(candidate)) {
+      block("malformed Preview deletion candidate");
+    }
+    const snapshot = previewBranchSnapshot();
+    if (snapshot === null) {
+      block("Preview deletion lookup unavailable");
+    }
+    const validParentRow = (item) =>
+      item !== null && typeof item === "object" && !Array.isArray(item) &&
+      typeof item.id === "string" && /^[a-z0-9-]{1,64}$/.test(item.id) &&
+      typeof item.project_ref === "string" && /^[a-z0-9]{20}$/.test(item.project_ref) &&
+      item.parent_project_ref === APPROVED_PREVIEW_PARENT_REF;
+    const matches = snapshot.filter((item) =>
+      item?.id === candidate || item?.name === candidate || item?.project_ref === candidate,
+    );
+    if (matches.length === 0) {
+      if (!snapshot.every(validParentRow)) {
+        block("Preview deletion lookup has invalid row identity or lineage");
+      }
+      block("Preview branch absent from validated Production parent snapshot");
+    }
+    if (matches.length !== 1 || matches[0].id !== candidate) {
+      block("Preview deletion requires one unambiguous branch ID");
+    }
+    const branch = matches[0];
+    if (
+      !validParentRow(branch) || branch.is_default === true ||
+      branch.project_ref === APPROVED_PREVIEW_PARENT_REF
+    ) {
       block("Preview branch deletion without a verified Production parent");
     }
     process.exit(0);

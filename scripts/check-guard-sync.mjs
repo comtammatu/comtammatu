@@ -111,6 +111,20 @@ const documentedProdRef = registrySection.match(
 if (!documentedProdRef) {
   fail(`${REGISTRY_PATH}: could not parse the comtammatu Production ref`);
 }
+const costBindings = [...registrySection.matchAll(
+  /^Preview cost organization: `([a-z0-9]{20})` \(parent: `([a-z0-9]{20})`\)\.$/gm,
+)];
+const hookCostBindings = [...hookSource.matchAll(
+  /const APPROVED_PREVIEW_COST_ORGANIZATION_ID = "([a-z0-9]{20})";/g,
+)];
+if (
+  costBindings.length !== 1 || hookCostBindings.length !== 1 ||
+  [...registrySection.matchAll(/^Preview cost organization:/gm)].length !== 1 ||
+  costBindings[0]?.[2] !== documentedProdRef ||
+  costBindings[0]?.[1] !== hookCostBindings[0]?.[1]
+) {
+  fail(`${HOOK_PATH}: Preview cost organization must uniquely match the registry and its Production parent`);
+}
 const hookPreviewParentRef = hookSource.match(
   /const APPROVED_PREVIEW_PARENT_REF = "([a-z0-9]{20})";/,
 )?.[1];
@@ -434,6 +448,7 @@ const previewFixtureDir = fs.mkdtempSync(
 const previewFixtureBranches = {
   [TRUSTED_PREVIEW]: {
     id: "preview-branch-id",
+    name: "preview-branch-name",
     project_ref: TRUSTED_PREVIEW,
     parent_project_ref: PROD,
   },
@@ -443,8 +458,8 @@ const previewFixtureBranches = {
     parent_project_ref: UNREGISTERED_REF,
   },
   [MISMATCHED_PREVIEW]: {
-    id: "mismatched-branch-id",
-    project_ref: TRUSTED_PREVIEW,
+    id: MISMATCHED_PREVIEW,
+    project_ref: "missabcdefghijklmnop",
     parent_project_ref: PROD,
   },
 };
@@ -460,6 +475,18 @@ const branch =
     ? Object.values(branches)
     : null;
 if (!branch) process.exit(1);
+const failure = process.env.PREVIEW_GUARD_TEST_RESPONSE;
+if (failure === "failure") process.exit(1);
+if (failure === "malformed") { process.stdout.write("invalid-json"); process.exit(0); }
+if (failure === "object") { process.stdout.write("{}"); process.exit(0); }
+if (failure === "empty") { process.stdout.write("[]"); process.exit(0); }
+if (failure === "valid") { process.stdout.write(JSON.stringify([branches[${JSON.stringify(TRUSTED_PREVIEW)}]])); process.exit(0); }
+if (failure === "malformed-row") { process.stdout.write("[{}]"); process.exit(0); }
+if (failure === "wrong-parent") { process.stdout.write(JSON.stringify([branches[${JSON.stringify(WRONG_PARENT_PREVIEW)}]])); process.exit(0); }
+if (failure === "default") { process.stdout.write(JSON.stringify([{id:"production-branch-id",project_ref:${JSON.stringify(PROD)},parent_project_ref:${JSON.stringify(PROD)},is_default:true}])); process.exit(0); }
+if (failure === "default-collision") { process.stdout.write(JSON.stringify([{...branches[${JSON.stringify(TRUSTED_PREVIEW)}],name:"production-branch-id"},{id:"production-branch-id",project_ref:${JSON.stringify(PROD)},parent_project_ref:${JSON.stringify(PROD)},is_default:true}])); process.exit(0); }
+if (failure === "hidden-default-collision") { process.stdout.write(JSON.stringify([{...branches[${JSON.stringify(TRUSTED_PREVIEW)}],name:"production-branch-id"}])); process.exit(0); }
+if (failure === "duplicate-id") { process.stdout.write(JSON.stringify([branches[${JSON.stringify(TRUSTED_PREVIEW)}],branches[${JSON.stringify(TRUSTED_PREVIEW)}]])); process.exit(0); }
 process.stdout.write(JSON.stringify(branch));
 `;
 fs.writeFileSync(
@@ -1363,7 +1390,7 @@ const FIXTURES = [
   [
     "allow: mcp delete_branch with a verified Production parent",
     0,
-    mcp("delete_branch", { project_id: PROD, branch_id: TRUSTED_PREVIEW }),
+    mcp("delete_branch", { project_id: PROD, branch_id: "preview-branch-id" }),
   ],
   [
     "block: mcp delete_branch cannot target an unregistered parent",
@@ -1390,7 +1417,7 @@ const FIXTURES = [
     0,
     mcpConnector("delete_branch", {
       project_id: PROD,
-      branch_id: TRUSTED_PREVIEW,
+      branch_id: "preview-branch-id",
     }),
   ],
   [
@@ -1842,10 +1869,119 @@ const FIXTURES = [
     mcp("get_publishable_keys", { project_id: PROD }),
   ],
   [
-    "block: Production project metadata is outside database read rights",
-    2,
+    "allow: exact Production project metadata for Preview ownership verification",
+    0,
     mcp("get_project", { id: PROD }),
   ],
+  [
+    "allow: exact Preview migration dry-run without vault updates",
+    0,
+    bash(`supabase db push --project-ref ${TRUSTED_PREVIEW} --dry-run --skip-vault`),
+  ],
+  ...[PROD, UNREGISTERED_REF, WRONG_PARENT_PREVIEW].map((ref) => [
+    `block: Preview dry-run with untrusted or Production ref ${ref}`, 2,
+    bash(`supabase db push --project-ref ${ref} --dry-run --skip-vault`),
+  ]),
+  ...[
+    "", " --skip-vault", " --dry-run", " --dry-run=false --skip-vault",
+    " --dry-run --skip-vault=false", " --dry-run --skip-vault --include-all",
+    " --dry-run --skip-vault --include-seed", " --dry-run --skip-vault --include-roles",
+    " --dry-run --skip-vault --linked", " --dry-run --skip-vault --local",
+    " --dry-run --skip-vault --dry-run", " --dry-run --skip-vault --skip-vault",
+    " --dry-run --skip-vault --password example",
+    ` --dry-run --skip-vault --project-ref ${PROD}`,
+    ` --dry-run --skip-vault --db-url postgres://u@db.${PROD}.supabase.co/postgres`,
+  ].map((flags, variant) => [
+    `block: Preview dry-run must preserve exact flags variant ${variant}`, 2,
+    bash(`supabase db push --project-ref ${TRUSTED_PREVIEW}${flags}`),
+  ]),
+  ...[mcp, mcpConnector, mcpConnectorLive].flatMap((wrap, index) => [
+    [`allow: exact Production metadata wrapper ${index}`, 0,
+      wrap("get_project", { id: PROD })],
+    ...[
+      {}, { id: "" }, { id: ` ${PROD}` }, { id: `${PROD} ` },
+      { id: null }, { id: [PROD] }, { id: 73 },
+      { id: UNREGISTERED_REF }, { project_id: PROD }, { ref: PROD },
+      { id: PROD, project_id: PROD }, { id: PROD, ref: PROD },
+      { id: PROD, ref: UNREGISTERED_REF }, { id: PROD, include_keys: true },
+    ].map((input, variant) => [
+      `block: metadata scope wrapper ${index} variant ${variant}`, 2,
+      wrap("get_project", input),
+    ]),
+    [`allow: Preview metadata retains live parent verification wrapper ${index}`, 0,
+      wrap("get_project", { id: TRUSTED_PREVIEW })],
+    [`block: Preview metadata wrong parent wrapper ${index}`, 2,
+      wrap("get_project", { id: WRONG_PARENT_PREVIEW })],
+    ...["failure", "malformed", "object", "empty"].map((response) => [
+      `block: unavailable Preview lineage ${response} wrapper ${index}`, 2,
+      wrap("get_project", { id: TRUSTED_PREVIEW }),
+      { PREVIEW_GUARD_TEST_RESPONSE: response },
+    ]),
+    [`block: consumed one-branch cost confirmation wrapper ${index}`, 2,
+      wrap("confirm_cost", { amount: 0.01344, recurrence: "hourly", type: "branch" })],
+    ...["valid", "empty"].flatMap((response) => ["gone-preview-id", "goneabcdefghijklmnop"].map((candidate) => [
+      `block: confirmed Preview absence ${response} ${candidate} wrapper ${index}`, 2,
+      wrap("delete_branch", { branch_id: candidate }),
+      { PREVIEW_GUARD_TEST_RESPONSE: response }, undefined,
+      "Preview branch absent from validated Production parent snapshot",
+    ])),
+    ...["failure", "malformed", "object", "malformed-row", "wrong-parent"].map((response) => [
+      `block: failed lookup is not Preview absence ${response} wrapper ${index}`, 2,
+      wrap("delete_branch", { branch_id: "gone-preview-id" }),
+      { PREVIEW_GUARD_TEST_RESPONSE: response }, undefined,
+      response === "malformed-row" || response === "wrong-parent"
+        ? "Preview deletion lookup has invalid row identity or lineage"
+        : "Preview deletion lookup unavailable",
+    ]),
+    [`block: Production default branch is never cleanup wrapper ${index}`, 2,
+      wrap("delete_branch", { branch_id: "production-branch-id" }),
+      { PREVIEW_GUARD_TEST_RESPONSE: "default" }],
+    ...["default-collision", "hidden-default-collision"].map((response) => [
+      `block: branch name cannot impersonate deletion ID ${response} wrapper ${index}`, 2,
+      wrap("delete_branch", { branch_id: "production-branch-id" }),
+      { PREVIEW_GUARD_TEST_RESPONSE: response },
+    ]),
+    [`block: duplicate branch ID is ambiguous wrapper ${index}`, 2,
+      wrap("delete_branch", { branch_id: "preview-branch-id" }),
+      { PREVIEW_GUARD_TEST_RESPONSE: "duplicate-id" }],
+    ...[TRUSTED_PREVIEW, "preview-branch-name", " preview-branch-id", "preview-branch-id "].map((candidate) => [
+      `block: deletion requires exact provider ID ${candidate} wrapper ${index}`, 2,
+      wrap("delete_branch", { branch_id: candidate }),
+    ]),
+    ...["list_organizations", "list_projects", "get_organization",
+      "confirm_cost", "create_project"].map((action) => [
+      `block: metadata does not authorize ${action} wrapper ${index}`, 2,
+      wrap(action, {}),
+    ]),
+  ]),
+  ...[mcp, mcpConnector, mcpConnectorLive].flatMap((wrap, index) => {
+    const quote = { organization_id: costBindings[0]?.[1], type: "branch" };
+    return [
+      [`allow: exact registered branch cost wrapper ${index}`, 0,
+        wrap("get_cost", quote)],
+      ...[
+        {}, { organization_id: quote.organization_id }, { type: "branch" },
+        { ...quote, organization_id: "" },
+        { ...quote, organization_id: ` ${quote.organization_id}` },
+        { ...quote, organization_id: `${quote.organization_id} ` },
+        { ...quote, organization_id: null },
+        { ...quote, organization_id: [quote.organization_id] },
+        { ...quote, organization_id: 73 },
+        { ...quote, organization_id: UNREGISTERED_REF },
+        { ...quote, organization_id: PROD },
+        { ...quote, type: "project" }, { ...quote, type: "" },
+        { ...quote, type: null }, { ...quote, type: ["branch"] },
+        { ...quote, project_id: PROD }, { ...quote, ref: PROD },
+        { ...quote, id: quote.organization_id }, { ...quote, amount: 0 },
+        { organizationId: quote.organization_id, type: "branch" },
+      ].map((input, variant) => [
+        `block: cost scope wrapper ${index} variant ${variant}`, 2,
+        wrap("get_cost", input),
+      ]),
+      [`block: read quote does not authorize cost confirmation wrapper ${index}`, 2,
+        wrap("confirm_cost", { amount: 0, recurrence: "hourly", type: "branch" })],
+    ];
+  }),
   [
     "block: project-less MCP read without pinned Codex binding",
     2,
@@ -2128,7 +2264,7 @@ const FIXTURES = [
   [
     "allow: live connector Preview deletion with a verified Production parent",
     0,
-    mcpConnectorLive("delete_branch", { branch_id: TRUSTED_PREVIEW }),
+    mcpConnectorLive("delete_branch", { branch_id: "preview-branch-id" }),
   ],
   [
     "block: direct Preview deletion without parent binding",
@@ -2188,9 +2324,54 @@ for (const name of [
   delete hookBaseEnv[name];
 }
 
-for (const [desc, want, payload, fixtureEnv = {}] of FIXTURES) {
+// Exercise implicit project binding without changing the workstation's config.
+const pinnedFixtureRoot = path.join(previewFixtureDir, "pinned-project");
+const pinnedHookPath = path.join(pinnedFixtureRoot, HOOK_PATH);
+fs.mkdirSync(path.dirname(pinnedHookPath), { recursive: true });
+fs.mkdirSync(path.join(pinnedFixtureRoot, ".codex"), { recursive: true });
+fs.writeFileSync(pinnedHookPath, hookSource);
+fs.writeFileSync(
+  path.join(pinnedFixtureRoot, CODEX_CONFIG_PATH),
+  `[mcp_servers.supabase]\nurl = "https://mcp.supabase.com/mcp?project_ref=${PROD}&read_only=true"\n`,
+);
+const unboundCostHookPath = path.join(pinnedFixtureRoot, "scripts/unbound-cost.mjs");
+fs.writeFileSync(
+  unboundCostHookPath,
+  hookSource.replace(
+    /const APPROVED_PREVIEW_COST_ORGANIZATION_ID = "[a-z0-9]{20}";/,
+    'const APPROVED_PREVIEW_COST_ORGANIZATION_ID = "";',
+  ),
+);
+FIXTURES.push(
+  ["allow: fixture proves pinned catalog binding", 0,
+    mcp("list_tables", { schemas: ["public"] }), {}, pinnedHookPath],
+  ...[mcp, mcpConnector, mcpConnectorLive].flatMap((wrap, index) => [
+    [`allow: explicit metadata with pinned config wrapper ${index}`, 0,
+      wrap("get_project", { id: PROD }), {}, pinnedHookPath],
+    ...[{}, { id: "" }, { project_id: PROD }, { id: PROD, ref: PROD }].map(
+      (input, variant) => [
+        `block: pinned metadata scope wrapper ${index} variant ${variant}`, 2,
+        wrap("get_project", input), {}, pinnedHookPath,
+      ],
+    ),
+    [`block: pinned project cannot infer cost organization wrapper ${index}`, 2,
+      wrap("get_cost", { type: "branch" }), {}, pinnedHookPath],
+    ...["", costBindings[0]?.[1]].map((organization_id, variant) => [
+      `block: absent cost binding wrapper ${index} variant ${variant}`, 2,
+      wrap("get_cost", { organization_id, type: "branch" }), {}, unboundCostHookPath,
+    ]),
+    ...["get_project", "get_cost"].flatMap((action) => [null, []].map(
+      (input, variant) => [
+        `block: malformed ${action} payload wrapper ${index} variant ${variant}`, 2,
+        wrap(action, input),
+      ],
+    )),
+  ]),
+);
+
+for (const [desc, want, payload, fixtureEnv = {}, fixtureHookPath, expectedReason] of FIXTURES) {
   const input = typeof payload === "string" ? payload : JSON.stringify(payload);
-  const run = spawnSync("node", [path.join(REPO_ROOT, HOOK_PATH)], {
+  const run = spawnSync("node", [fixtureHookPath ?? path.join(REPO_ROOT, HOOK_PATH)], {
     input,
     encoding: "utf8",
     env: { ...hookBaseEnv, ...fixtureEnv },
@@ -2198,11 +2379,17 @@ for (const [desc, want, payload, fixtureEnv = {}] of FIXTURES) {
   if (run.status !== want) {
     fail(`fixture "${desc}": expected exit ${want}, got ${run.status}`);
   }
+  if (expectedReason && !run.stderr.includes(expectedReason)) {
+    fail(`fixture "${desc}": expected diagnostic "${expectedReason}"`);
+  }
   if (run.status === 2 && !run.stderr.trim()) {
     fail(
       `fixture "${desc}": blocked without a stderr reason (Codex treats exit 2 with empty stderr as non-blocking)`,
     );
   }
+}
+if (path.dirname(path.resolve(previewFixtureDir)) !== path.resolve(tmpdir())) {
+  throw new Error("Guard fixture cleanup must remain inside the temporary directory");
 }
 fs.rmSync(previewFixtureDir, { recursive: true, force: true });
 

@@ -13,6 +13,25 @@ over older task notes, regressions, and memory.
 | ---------------------- | --------------------------------------------- | --------------------------------------------------------------------------------- |
 | `enloyfnuerqgaqderbwb` | **PRODUCTION** — CTCP Chén Sứ / Cơm Tấm Má Tư | Project/schema reads, owner-delegated migrations, and the repository type source. |
 
+Preview ownership discovery permits only MCP `get_project` with exact input
+`{"id":"enloyfnuerqgaqderbwb"}`. Aliases, extra fields, and implicit pinned
+project selection do not grant Production metadata access. Verify the returned
+project ID, current status, and owning organization before obtaining a Preview
+quote. Organization/project enumeration and cost confirmation remain blocked;
+resource creation and Production writes require their separate authorization.
+
+Preview cost organization: `xpjqpshpmqggrhmvujjd` (parent: `enloyfnuerqgaqderbwb`).
+
+MCP `get_cost` permits exactly `organization_id` equal to that binding and
+`type` equal to `branch`, with no additional fields. This binding limits read
+scope; it is not live ownership proof. Before each task quote, repeat the exact
+parent `get_project` read and require its ID and organization to match this
+registry. Missing identity, an unhealthy project, or an ownership mismatch stops
+the workflow. Organization drift needs scoped registry/guard maintenance;
+never derive the organization from names, list order, environment fallbacks, or
+Preview branch output. This exception permits no project cost lookup, cost
+confirmation, organization/project enumeration, or Production mutation.
+
 ### Vercel Deployment Registry
 
 | Project ID                         | Project      | Required Supabase ref  | Deploy rights from this repo           |
@@ -41,6 +60,18 @@ over older task notes, regressions, and memory.
   failure, mismatched parent, branch merge/reset/rebase, or every Preview CLI
   mutation fails closed. File replay is allowed only against a verified Preview
   Branch; it remains blocked against Production.
+  A Preview migration dry-run also accepts the exact CLI arguments
+  `db push --project-ref <verified-preview-ref> --dry-run --skip-vault`.
+  Both flags are mandatory, no additional arguments are accepted, and the guard
+  repeats parent verification. This read path never permits raw Production
+  dry-runs or a CLI apply through `--project-ref`.
+  Preview deletion requires the exact, unambiguous provider branch ID and never
+  accepts a name, project-ref alias, or the Production/default branch. After a
+  successful deletion, replay only the guard payload for the recorded branch ID
+  and project ref; do not dispatch a second delete. Project refs are only
+  absence-probe candidates, never substitute API deletion IDs. Both probes must report
+  absence from a successfully fetched parent snapshot with valid row identities
+  and parent bindings. Lookup failure or malformed rows are not cleanup proof.
 - Org-scoped MCP servers and the Supabase CLI are write-capable. This repo has
   no tracked `.mcp.json`; never infer a project binding from one. An optional
   local Codex `.codex/config.toml` may pin comtammatu Production with
@@ -58,8 +89,9 @@ over older task notes, regressions, and memory.
   stored-link state, env-indirected URLs/refs, unregistered refs, and ambiguous
   target selectors fail closed. Project-scoped CLI reads use a literal
   `--project-ref` or direct registered `--db-url` as supported by that command.
-  Production CLI and MCP reads are limited to schema/catalog surfaces; project
-  metadata, logs, advisors, API keys, and secrets remain blocked. A verified
+  Production CLI and MCP reads are limited to schema/catalog surfaces plus the
+  exact MCP ownership-discovery exception above. Broader project metadata,
+  logs, advisors, API keys, and secrets remain blocked. A verified
   Preview Branch may use the broader project-read actions required for QA.
 - Protected HTTP reads must also disable hidden request input: use `curl -q`,
   `wget --no-config`, or HTTPie/xh `--ignore-stdin`. Explicit client config,
@@ -143,9 +175,11 @@ over older task notes, regressions, and memory.
   chain. Every apply requires the literal registered Production ref and explicit
   owner delegation in the current session. Stored-link state is never authority,
   and Production is the repository type source.
-- Delegation never authorizes changing or disabling repo guards. If the guarded
-  runtime still blocks the operation, the owner applies outside it or provides a
-  scoped approval path.
+- Operational delegation does not authorize changing or disabling repo guards.
+  Guard-policy maintenance requires separate owner authorization naming the
+  exact scope, a T3 review, and matching rule/guard regression coverage. If the
+  guarded runtime still blocks an operation, the owner applies outside it or
+  provides a scoped approval path.
 - Production reads through `execute_sql` are limited to tables, views, catalogs,
   and the guard's small read-only built-in allowlist. Production CLI/MCP reads
   stay within schema/catalog actions. Never invoke an RPC or user-defined
