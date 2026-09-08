@@ -93,3 +93,14 @@ test("direct Branch dest-initiated create reaches the transfer RPC; foreign site
     [result.stdout, result.stderr].filter(Boolean).join("\n"),
   );
 });
+
+test("Branch transfer create supports bulk ingredient picker with search and deduplication", () => {
+  const createClient = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/new/branch-transfer-create-client.tsx",
+  );
+  assert.match(createClient, /copy\.bulkPickerTrigger/);
+  assert.match(createClient, /addMultipleIngredientLines/);
+  assert.match(createClient, /selectedBulkIds/);
+  assert.match(createClient, /copy\.bulkItemsCount/);
+});
+

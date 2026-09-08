@@ -471,7 +471,7 @@ export function BranchRosterWeekClient({
       </div>
 
       <div
-        className="no-scrollbar flex touch-pan-x gap-2 overflow-x-auto overscroll-x-contain pb-1 lg:grid lg:grid-cols-7 lg:overflow-visible"
+        className="no-scrollbar flex touch-pan-x gap-2 overflow-x-auto overscroll-x-contain pb-1 xl:grid xl:grid-cols-7 xl:overflow-visible"
         role="group"
         aria-label={copy.selectDayAria}
       >
@@ -485,7 +485,7 @@ export function BranchRosterWeekClient({
               variant={active ? "secondary" : "outline"}
               size="touch-lg"
               aria-pressed={active}
-              className="min-w-28 shrink-0 flex-col items-start gap-1 px-3 py-2 text-sm lg:min-w-0 lg:w-full"
+              className="min-w-28 shrink-0 flex-col items-start gap-1 px-3 py-2 text-sm xl:min-w-0 xl:w-full"
               onClick={() => setSelectedDay(date)}
             >
               <span className="font-semibold">

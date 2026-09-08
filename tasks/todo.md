@@ -5,6 +5,24 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Establish SQL parity for replenishment thresholds
+State: doing
+Tier: T3
+Exit: A private scalar SQL resolver matches the TypeScript threshold contract, has no direct API grants, and passes shared numeric/inheritance cases on an approved Preview; existing inventory readers and writers keep their behavior.
+Evidence: Production catalog read confirms global target/capacity fields are absent and location min/target are non-null. Read-only schema/runtime reviews identified legacy fallback divergence and the base-unit rebase dependency. No database mutation has been performed.
+Review: Product — establish the SQL prerequisite for real replenishment reads. Business/data — NULL inherits per field, zero is explicit, min <= target <= capacity, numeric(15,3), invalid inputs fail even when shadowed. Engineering — private immutable invoker helper only; no new writable fields or public RPC. QA/ops — one shared case corpus for TS and SQL, direct-execution denial checks, full verify; rollback drops only the new unused helper. Runtime adoption additionally requires coordinated nullable schema, authorized writes, base-unit rebasing, and snapshot/allocation contracts in `docs/plan/inventory-operations-expansion.md` section 2.3.
+- [ ] Implement and review SQL helper and shared executable cases; run repository verification.
+- [ ] Obtain the organization-specific Preview cost and owner confirmation, replay and test on a verified child of Production, then delete the Preview.
+
+## Make Inventory cockpit operational counts trustworthy
+State: verify
+Tier: T2
+Exit: `/inventory` shows only real scoped counts; zero, unavailable, and forbidden states differ; sample stock/production/dispatch/POS facts are absent; responsive and authenticated checks pass.
+Evidence: `inventory-cockpit-data-truth.test.ts` reproduced sample publication and false-zero fallback RED then GREEN. Loader fixture checks tenant 29 / branch 73, permission denial, query failure, exact zero, and truncated GRN results. Render tests cover scoped links, denied regions, zero, and recovery. Edge/Playwright component harness passed 390/768/1280 light/dark, overflow, keyboard reload recovery, 44px link targets, and denied regions with no browser errors. `corepack pnpm verify` exit 0 on the isolated checkout at `d1638a825` plus this change: 3,013 web tests passed, 10 existing skips, shared/print tests and Android debug/release tests passed. Typecheck, lint, build, and web/shared tests ran fresh before the final unchanged-source cache replay; Android SDK local configuration was copied before the final successful run. The real-time rate-limit test now uses a controlled monotonic clock after a reproduced wall-clock scheduling failure. Shared-workspace runs encountered concurrent transfer-editor type errors and one native Next worker exit; isolated validation passed. Authenticated UI remains unverified because local Supabase URL and QA credentials are absent.
+UI Advisor Gate: `/inventory`, plane `control_surface`, archetype `LANDING`, block `none` (route-local binding of existing sections and Items), exemplar `apps/web/app/(protected)/page.tsx`.
+Context: Owner, central operators, and accountant choose the next inventory action; phone/tablet/desktop 390/768/1280; populated, empty, partial failure, and permission states. Existing AppSection / ItemGroup / ResponsiveActionButton; recovery retains URL scope.
+- [ ] Verify authenticated Owner / central operator / accountant views on the deployed matching app; retain pending phases in `docs/plan/inventory-operations-expansion.md`.
+
 ## Cut Production RPC load
 State: verify
 Exit: Permission batch, live `getUser`, safety polls, today-work snapshot, DEFINER list RPCs on Production.
@@ -46,13 +64,13 @@ Exit: Separate `capital`/`construction`; construction outside total operational 
 Evidence: `20260903124906`; `finance-construction-split-static.test.ts`.
 - [ ] Owner applies the migration on Production and reclassifies fit-out `capital` rows
 ## Keep ShopeeFood printer IP live 24/7
-State: doing
+State: verify
 Tier: T2
-Exit: Watchdog rebinds 9100; home shows printer health; ledger refresh does not load rasters.
-Evidence: `PrinterWatchdogPolicyTest`; slim `getOrders`; Agent 1.7.3.
-- [ ] Confirm ShopeeFood still sees 127.0.0.1:9100 after overnight lock on Redmi
+Exit: Port hero OPEN/RECOVERING/STOPPED; ShopeeFood unconfirmed without marketplace evidence; watchdog unchanged; overnight lock proof to close.
+Evidence: `PrinterPortStatusPolicyTest`; `:app:testDebugUnitTest` + `:app:assembleDebug`; Agent `versionCode=30` `versionName=1.7.4` on Redmi `6ded1ffa`. A–E 2026-09-08 VN: localhost `nc` EXIT 0 logged `KIỂM TRA CỔNG` / SELF_CHECK while ShopeeFood stayed `Chưa xác nhận`; stop hero `Đã dừng`, FGS gone, probe refused; occupy `nc -L` 127.0.0.1+::1 → hero+notif `Đang khôi phục`; occupier kill 03:26:24, probe EXIT 0 by T+7s, hero OPEN after Overview bounce, notif `Cổng nhận đơn đang mở · 127.0.0.1:9100`; status-only DLE/EOT updated Overview `App sàn đã hỏi máy in` with KPI 0; Device→Overview and 3x home/resume kept OPEN; cashier stop 03:32:44 `KEY_AGENT_ENABLED=false`, probe refused at +22s, no FGS. Overnight lock still required to close. Do not claim 24/7.
+- [ ] Overnight lock: start/end clock, reprint after unlock, recover logs if any
 UI Advisor Gate
-- Surface: native Agent BOARD; printer health → queue; live/recovering/stopped; unit tests + 1.7.3
+- Surface: native Agent BOARD; port then ShopeeFood then queue; 1.7.4 device matrix
 ## Focus Má Tư Agent on ShopeeFood OCR intake
 State: verify
 Exit: One APK; Agent classifies ShopeeFood only through `ShopeeReceiptPipeline`; unknown receipts stay `UNCLASSIFIED`; queue identity and cleanup unchanged.

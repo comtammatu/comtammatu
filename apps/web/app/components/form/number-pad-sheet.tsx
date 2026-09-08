@@ -33,6 +33,9 @@ type NumberPadSheetProps = {
   confirmLabel?: string;
   allowDecimal?: boolean;
   maxFractionDigits?: number;
+  onConfirmAndNext?: (value: number) => void;
+  hasNext?: boolean;
+  confirmAndNextLabel?: string;
 };
 
 export function NumberPadSheet({
@@ -48,6 +51,9 @@ export function NumberPadSheet({
   confirmLabel = ACTIONS_VI.confirm,
   allowDecimal = true,
   maxFractionDigits = 3,
+  onConfirmAndNext,
+  hasNext = false,
+  confirmAndNextLabel,
 }: NumberPadSheetProps) {
   const initial = React.useMemo(
     () =>
@@ -75,6 +81,11 @@ export function NumberPadSheet({
     if (parsed.state !== "valid" || parsed.value < 0) return;
     onConfirm(parsed.value);
     onOpenChange(false);
+  }
+
+  function handleConfirmAndNext() {
+    if (parsed.state !== "valid" || parsed.value < 0) return;
+    onConfirmAndNext?.(parsed.value);
   }
 
   return (
@@ -122,16 +133,40 @@ export function NumberPadSheet({
           allowDecimal={allowDecimal}
           className="p-3"
         />
-        <SheetFooter>
-          <Button
-            type="button"
-            size="touch-lg"
-            className="w-full"
-            onClick={handleConfirm}
-            disabled={!valid}
-          >
-            {confirmLabel}
-          </Button>
+        <SheetFooter className="gap-2 sm:gap-2">
+          {onConfirmAndNext && hasNext ? (
+            <div className="flex w-full items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="touch-lg"
+                className="flex-1"
+                onClick={handleConfirm}
+                disabled={!valid}
+              >
+                {confirmLabel}
+              </Button>
+              <Button
+                type="button"
+                size="touch-lg"
+                className="flex-1 font-semibold"
+                onClick={handleConfirmAndNext}
+                disabled={!valid}
+              >
+                {confirmAndNextLabel ?? "Lưu & Tiếp"}
+              </Button>
+            </div>
+          ) : (
+            <Button
+              type="button"
+              size="touch-lg"
+              className="w-full"
+              onClick={handleConfirm}
+              disabled={!valid}
+            >
+              {confirmLabel}
+            </Button>
+          )}
         </SheetFooter>
       </SheetContent>
     </Sheet>

@@ -107,3 +107,34 @@ test("Owner surface count management keeps desktop-responsive presenters", () =>
   assert.match(assignments, /width="xwide"/);
   assert.match(slips, /width="xwide"/);
 });
+
+test("Staff count and stocktake count support fast counting with Lưu & Tiếp", () => {
+  const staffClient = read(
+    "apps/web/lib/staff-runtime/count/count-client.tsx",
+  );
+  const stocktakeList = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/stocktake/[id]/count/branch-stocktake-count-list.tsx",
+  );
+  const numberPadSheet = read(
+    "apps/web/app/components/form/number-pad-sheet.tsx",
+  );
+  const multiUnitNumberPadSheet = read(
+    "apps/web/app/components/form/multi-unit-number-pad-sheet.tsx",
+  );
+
+  assert.match(numberPadSheet, /onConfirmAndNext/);
+  assert.match(multiUnitNumberPadSheet, /onConfirmAndNext/);
+  assert.match(staffClient, /handleSheetConfirmAndNext/);
+  assert.match(staffClient, /Lưu & Tiếp/);
+  assert.match(stocktakeList, /handleSheetConfirmAndNext/);
+  assert.match(stocktakeList, /Lưu & Tiếp/);
+});
+
+test("Roster activates 7-column grid at xl:grid-cols-7 to prevent crushing", () => {
+  const roster = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/team/roster/branch-roster-week-client.tsx",
+  );
+  assert.match(roster, /xl:grid xl:grid-cols-7/);
+  assert.doesNotMatch(roster, /lg:grid lg:grid-cols-7/);
+});
+

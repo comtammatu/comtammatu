@@ -85,6 +85,15 @@ export function BranchStocktakeCountList({
       )
     : [];
 
+  const currentLineIndex =
+    sheetLine != null
+      ? lines.findIndex((line) => line.ingredientId === sheetLine.ingredientId)
+      : -1;
+  const nextLine =
+    currentLineIndex >= 0 && currentLineIndex < lines.length - 1
+      ? (lines[currentLineIndex + 1] ?? null)
+      : null;
+
   function handleSheetConfirm(unitValues: Record<number, number>) {
     if (sheetLine == null || !editable) return;
     const ladder = normalizeCountUnitLadder(
@@ -101,6 +110,28 @@ export function BranchStocktakeCountList({
     const { totalBaseQty } = normalizeEnteredUnitValues(unitValues, ladder);
     onCountChange(sheetLine.ingredientId, totalBaseQty > 0 ? totalBaseQty : null);
     setSheetIngredientId(null);
+  }
+
+  function handleSheetConfirmAndNext(unitValues: Record<number, number>) {
+    if (sheetLine == null || !editable) return;
+    const ladder = normalizeCountUnitLadder(
+      unitOptionsByIngredient[sheetLine.ingredientId] ?? [
+        {
+          unitId: 0,
+          code: sheetLine.unit,
+          label: sheetLine.unit,
+          isBase: true,
+          toBaseFactor: 1,
+        },
+      ],
+    );
+    const { totalBaseQty } = normalizeEnteredUnitValues(unitValues, ladder);
+    onCountChange(sheetLine.ingredientId, totalBaseQty > 0 ? totalBaseQty : null);
+    if (nextLine) {
+      setSheetIngredientId(nextLine.ingredientId);
+    } else {
+      setSheetIngredientId(null);
+    }
   }
 
   return (
@@ -216,6 +247,9 @@ export function BranchStocktakeCountList({
           units={sheetLadder}
           initialBaseQty={sheetEntry?.qty ?? null}
           onConfirm={handleSheetConfirm}
+          onConfirmAndNext={handleSheetConfirmAndNext}
+          hasNext={nextLine !== null}
+          confirmAndNextLabel="Lưu & Tiếp"
         />
       ) : null}
     </div>

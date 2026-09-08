@@ -277,7 +277,7 @@ test("Branch team sub-screens implement responsive desktop multi-column layouts"
   assert.match(checkoutApprovals, /grid gap-2 sm:grid-cols-2 lg:grid-cols-3/);
 
   // Roster week 7-column day selector on desktop and 3-column assigned staff
-  assert.match(rosterWeek, /lg:grid lg:grid-cols-7/);
+  assert.match(rosterWeek, /xl:grid xl:grid-cols-7/);
   assert.match(rosterWeek, /gap-2 sm:grid sm:grid-cols-2 lg:grid-cols-3/);
 });
 

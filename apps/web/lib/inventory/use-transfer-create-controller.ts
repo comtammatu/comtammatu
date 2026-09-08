@@ -328,6 +328,38 @@ export function useTransferCreateController({
     setPickerIngredientId("");
   }
 
+  function addMultipleIngredientLines(ingredientIds: number[]) {
+    const existingIds = new Set(draftLines.map((line) => line.ingredientId));
+    const toAdd = activeIngredients.filter(
+      (ingredient) =>
+        ingredientIds.includes(ingredient.id) && !existingIds.has(ingredient.id),
+    );
+    if (toAdd.length === 0) return;
+
+    if (isPull && !pullFromBranchId) {
+      const first = toAdd[0];
+      if (first) {
+        const preferred = preferPullFromSite({
+          allowSupply: first.fulfillFromCentralSupply === true,
+          allowKitchen: first.fulfillFromCentralKitchen === true,
+          supplyOnHand: onHandAtKind("central_supply", first.id),
+          kitchenOnHand: onHandAtKind("central_kitchen", first.id),
+        });
+        const option = policy.pullSourceOptions.find(
+          (item) => item.branch.branch_kind === preferred,
+        );
+        if (option) setPullFromBranchIdState(option.value);
+      }
+    }
+
+    const now = Date.now();
+    const newLines = toAdd.map((ingredient, idx) =>
+      createTransferDraftLine(ingredient, `${ingredient.id}-${now}-${idx}`),
+    );
+    setDraftLines((current) => [...current, ...newLines]);
+    setPickerIngredientId("");
+  }
+
   function addAllAvailableStockLines() {
     if (selectedSourceLocationId == null) {
       toast.error(messages.inventory.transfer.chooseSourceError);
@@ -508,6 +540,7 @@ export function useTransferCreateController({
     activeIngredients,
     addAllAvailableStockLines,
     addIngredientLine,
+    addMultipleIngredientLines,
     canCreate,
     direction,
     draftLines,

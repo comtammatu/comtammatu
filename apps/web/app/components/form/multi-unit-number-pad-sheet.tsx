@@ -32,6 +32,9 @@ type MultiUnitNumberPadSheetProps = {
   onConfirm: (unitValues: Record<number, number>) => void;
   confirmLabel?: string;
   allowDecimal?: boolean;
+  onConfirmAndNext?: (unitValues: Record<number, number>) => void;
+  hasNext?: boolean;
+  confirmAndNextLabel?: string;
 };
 
 export function MultiUnitNumberPadSheet({
@@ -43,6 +46,9 @@ export function MultiUnitNumberPadSheet({
   onConfirm,
   confirmLabel = ACTIONS_VI.confirm,
   allowDecimal = true,
+  onConfirmAndNext,
+  hasNext = false,
+  confirmAndNextLabel,
 }: MultiUnitNumberPadSheetProps) {
   const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
 
@@ -120,6 +126,10 @@ export function MultiUnitNumberPadSheet({
     onOpenChange(false);
   }
 
+  function handleConfirmAndNext() {
+    onConfirmAndNext?.(parsedUnitValues);
+  }
+
   return (
     <AppDrawer
       open={open}
@@ -139,15 +149,37 @@ export function MultiUnitNumberPadSheet({
         </div>
       }
       footer={
-        <Button
-          type="button"
-          size={isTouchLayout ? "touch" : "default"}
-          className="w-full text-base font-semibold"
-          onClick={handleConfirm}
-        >
-          {confirmLabel}
-          {preview.totalBaseQty > 0 ? ` (${preview.formattedBreakdown})` : ""}
-        </Button>
+        onConfirmAndNext && hasNext ? (
+          <div className="flex w-full items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size={isTouchLayout ? "touch" : "default"}
+              className="flex-1 text-base font-semibold"
+              onClick={handleConfirm}
+            >
+              {confirmLabel}
+            </Button>
+            <Button
+              type="button"
+              size={isTouchLayout ? "touch" : "default"}
+              className="flex-1 text-base font-semibold"
+              onClick={handleConfirmAndNext}
+            >
+              {confirmAndNextLabel ?? "Lưu & Tiếp"}
+            </Button>
+          </div>
+        ) : (
+          <Button
+            type="button"
+            size={isTouchLayout ? "touch" : "default"}
+            className="w-full text-base font-semibold"
+            onClick={handleConfirm}
+          >
+            {confirmLabel}
+            {preview.totalBaseQty > 0 ? ` (${preview.formattedBreakdown})` : ""}
+          </Button>
+        )
       }
     >
       <div className="flex flex-col gap-3">

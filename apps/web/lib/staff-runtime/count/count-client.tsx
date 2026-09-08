@@ -357,6 +357,18 @@ export function CountSlipClient({
     router.replace(`${baseHref}?${params.toString()}`);
   }
 
+  const currentAssignmentIndex =
+    selectedIngredientId !== null
+      ? visibleAssignments.findIndex(
+          (assignment) => assignment.ingredientId === selectedIngredientId,
+        )
+      : -1;
+  const nextAssignment =
+    currentAssignmentIndex >= 0 &&
+    currentAssignmentIndex < visibleAssignments.length - 1
+      ? (visibleAssignments[currentAssignmentIndex + 1] ?? null)
+      : null;
+
   function openIngredientSheet(ingredientId: number) {
     ignoreSheetDismissRef.current = true;
     setSelectedIngredientId(ingredientId);
@@ -371,6 +383,23 @@ export function CountSlipClient({
       quantity: formatCountQuantity(value),
     });
     setSelectedIngredientId(null);
+  }
+
+  function handleSheetConfirmAndNext(value: number) {
+    if (selectedIngredientId == null) return;
+    updateLine(selectedIngredientId, {
+      quantity: formatCountQuantity(value),
+    });
+    if (nextAssignment) {
+      ignoreSheetDismissRef.current = true;
+      setSelectedIngredientId(nextAssignment.ingredientId);
+      window.setTimeout(() => {
+        ignoreSheetDismissRef.current = false;
+      }, 400);
+    } else {
+      setSelectedIngredientId(null);
+      toast.success("Đã nhập xong tất cả mặt hàng trong danh sách.");
+    }
   }
 
   function cycleSelectedUnit() {
@@ -754,6 +783,9 @@ export function CountSlipClient({
               initialValue={selectedQuantity}
               allowDecimal
               onConfirm={handleSheetConfirm}
+              onConfirmAndNext={handleSheetConfirmAndNext}
+              hasNext={nextAssignment !== null}
+              confirmAndNextLabel="Lưu & Tiếp"
             />
 
             {!locked ? (
